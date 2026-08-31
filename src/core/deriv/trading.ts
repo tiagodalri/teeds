@@ -188,6 +188,17 @@ export async function comprarDireto(
   }
 }
 
+/** Pergunta o estado de um contrato, sem abrir assinatura. */
+export async function buscarContrato(
+  socket: TeedsSocket,
+  contractId: number,
+): Promise<OpenContract> {
+  const res = await socket.send({ proposal_open_contract: 1, contract_id: contractId })
+  const p = res.proposal_open_contract as Record<string, any> | undefined
+  if (!p || !p.contract_id) throw new Error('Contrato não encontrado')
+  return toOpenContract(p)
+}
+
 /** Vende um contrato aberto. price 0 = a mercado. */
 export async function sellContract(
   socket: TeedsSocket,

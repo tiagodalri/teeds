@@ -17,6 +17,8 @@ interface Props {
   identidade: Identidade
   /** Estado da conexao autenticada. */
   conexao?: string
+  /** Fecha este bloco. Ausente quando so ha um robo na tela. */
+  onRemover?: () => void
 }
 
 const PADRAO: ConfigEstrategia = {
@@ -34,7 +36,7 @@ const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export function LocalRobotPanel({
-  socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
+  socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open', onRemover,
 }: Props) {
   const estrategia = ESTRATEGIAS_LOCAIS.find((e) => e.id === identidade.id) ?? ESTRATEGIAS_LOCAIS[0]
   const [cfg, setCfg] = useState<ConfigEstrategia>(PADRAO)
@@ -113,6 +115,9 @@ export function LocalRobotPanel({
           <button className="pronto-btn" disabled={!socket} onClick={() => setPreparando(true)}>
             Ligar robô
           </button>
+          {onRemover && (
+            <button className="pronto-fechar" onClick={onRemover}>Fechar este bloco</button>
+          )}
           <span className="pronto-nota">
             {ultimo.cfg
               ? `da última vez: ${din(ultimo.cfg.valorAoVencer ?? 0.35, moeda)} por entrada${ativoUltimo ? ` em ${ativoUltimo.replace(' Index', '')}` : ''}`
@@ -154,6 +159,7 @@ export function LocalRobotPanel({
         conexao={conexao}
         onDesligar={rodando ? () => motorRef.current?.desligar() : undefined}
         onLigarDeNovo={!rodando ? () => setPreparando(true) : undefined}
+        onRemover={onRemover ? () => { motorRef.current?.desligar('bloco fechado'); onRemover() } : undefined}
       />
 
       {preparando && (

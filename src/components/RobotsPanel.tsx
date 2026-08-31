@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { TeedsSocket } from '../core/deriv/client'
 import { publicSocket } from '../core/deriv/client'
 import {
@@ -24,6 +24,9 @@ interface Props {
   /** Estado da conexao autenticada, para avisar quando o robo perde o sinal. */
   conexao?: string
 }
+
+/** Teto de robos simultaneos: cada um consome assinaturas da mesma conexao. */
+const MAX_BLOCOS = 4
 
 const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -51,6 +54,14 @@ export function RobotsPanel({
   const [renomeando, setRenomeando] = useState<string | null>(null)
   const [nomes, setNomes] = useState<Record<string, string>>({})
   const [ident, setIdent] = useState<Identidade>(IDENTIDADES[0])
+  // Cada bloco e uma sessao de robo independente, com sua propria cabine.
+  const [blocos, setBlocos] = useState<string[]>(['bloco-1'])
+  const proximoBloco = useRef(2)
+
+  const abrirBloco = () =>
+    setBlocos((b) => (b.length >= MAX_BLOCOS ? b : [...b, `bloco-${proximoBloco.current++}`]))
+  const fecharBloco = (id: string) =>
+    setBlocos((b) => (b.length <= 1 ? b : b.filter((x) => x !== id)))
   const modelo: ModeloRobo = MODELOS.find((m) => m.contractType === ident.contrato) ?? MODELOS[0]
 
   useEffect(() => { if (symbolPadrao) setSymbol(symbolPadrao) }, [symbolPadrao])
@@ -195,9 +206,28 @@ export function RobotsPanel({
       </div>}
 
       {ident.onde === 'teeds' && (
-        <LocalRobotPanel socket={socket} isDemo={isDemo} moeda={moeda}
-          symbols={symbols} symbolPadrao={symbolPadrao} identidade={ident}
-          conexao={conexao} />
+        <>
+          <div className={`blocos ${blocos.length > 1 ? 'duplo' : ''}`}>
+            {blocos.map((idBloco) => (
+              <LocalRobotPanel key={idBloco}
+                socket={socket} isDemo={isDemo} moeda={moeda}
+                symbols={symbols} symbolPadrao={symbolPadrao} identidade={ident}
+                conexao={conexao}
+                onRemover={blocos.length > 1 ? () => fecharBloco(idBloco) : undefined} />
+            ))}
+          </div>
+
+          <div className="blocos-rodape">
+            <button className="blocos-add" onClick={abrirBloco} disabled={blocos.length >= MAX_BLOCOS}>
+              + Adicionar robô
+            </button>
+            <span className="blocos-nota">
+              {blocos.length >= MAX_BLOCOS
+                ? `Máximo de ${MAX_BLOCOS} robôs ao mesmo tempo.`
+                : 'Cada bloco opera sozinho, com seu ativo e seus freios — mas todos gastam do mesmo saldo.'}
+            </span>
+          </div>
+        </>
       )}
 
       {/* Modelos antigos saíram da vitrine, mas quem ficou ligado no servidor

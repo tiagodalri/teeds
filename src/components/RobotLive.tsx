@@ -19,6 +19,7 @@ interface Props {
   conexao?: string
   onDesligar?: () => void
   onLigarDeNovo?: () => void
+  onRemover?: () => void
 }
 
 const num = (v: number) =>
@@ -84,7 +85,7 @@ function Cronometro({ desde }: { desde: number }) {
 
 export function RobotLive({
   estado, config, moeda, nomeEstrategia, ativo, regra, ganhaCom,
-  parametros = [], conexao = 'open', onDesligar, onLigarDeNovo,
+  parametros = [], conexao = 'open', onDesligar, onLigarDeNovo, onRemover,
 }: Props) {
   const [verParametros, setVerParametros] = useState(false)
   const acerto = estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
@@ -150,6 +151,10 @@ export function RobotLive({
           )}
           {!estado.rodando && onLigarDeNovo && (
             <button className="tv-btn ligar" onClick={onLigarDeNovo}>Ligar de novo</button>
+          )}
+          {onRemover && (
+            <button className="tv-btn sair" onClick={onRemover}
+              title="Fechar este bloco" aria-label="Fechar este bloco">×</button>
           )}
         </div>
       </header>

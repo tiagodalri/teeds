@@ -1,6 +1,7 @@
 import type { TeedsSocket } from './client'
 import { fetchTickHistory, subscribeTicks } from './market'
-import { comprarDireto, subscribeContract } from './trading'
+import { buscarContrato, comprarDireto, subscribeContract } from './trading'
+import type { OpenContract } from './trading'
 import { marcarOrigem } from './robotNames'
 import { ultimoDigito } from './digits'
 
@@ -141,6 +142,9 @@ export interface EstadoMotor {
 /** Tempo sem nenhum tick que ja e motivo para desconfiar da conexao. */
 const SILENCIO_MAXIMO_MS = 25_000
 
+/** Contrato aberto por mais tempo que isto merece uma consulta direta. */
+const CONTRATO_PRESO_MS = 15_000
+
 const VAZIO: EstadoMotor = {
   rodando: false, emOperacao: false, operacoes: 0, vitorias: 0, derrotas: 0,
   perdasSeguidas: 0, resultado: 0, movimentado: 0, valorAtual: 0,
@@ -167,6 +171,8 @@ export class MotorTeeds {
   /** Quanto a sequencia de perdas atual ja custou. Zera a cada vitoria. */
   private prejuizoDaSequencia = 0
   private ultimoTickEm = 0
+  private contratoDesde = 0
+  private liquidados = new Set<number>()
   private vigia: ReturnType<typeof setInterval> | null = null
 
   constructor(opts: {
@@ -220,6 +226,7 @@ export class MotorTeeds {
     this.latencias = []
     this.esperaAtual = 0
     this.prejuizoDaSequencia = 0
+    this.liquidados = new Set()
     this.registrar(`Robô ligado — ${this.estrategia.nome}`, 'info')
     this.estado.aguardando = 'lendo o histórico do ativo…'
     this.emitir()
@@ -257,6 +264,11 @@ export class MotorTeeds {
     this.vigia = setInterval(() => {
       if (!this.estado.rodando) return
       const silencio = Date.now() - this.ultimoTickEm
+      // contrato de 1 tick nao passa de meio minuto aberto: algo se perdeu
+      if (this.contratoDesde && Date.now() - this.contratoDesde > CONTRATO_PRESO_MS) {
+        const emCurso = this.estado.emCurso
+        if (emCurso) void this.conferirContrato(emCurso.contractId, emCurso.valor)
+      }
       if (silencio < SILENCIO_MAXIMO_MS) return
       this.ultimoTickEm = Date.now()
       this.registrar('Sem preço há um tempo — refazendo a conexão', 'info')
@@ -360,7 +372,9 @@ export class MotorTeeds {
 
   private acompanhar(contractId: number, valor: number) {
     this.pararContrato?.()
-    this.pararContrato = subscribeContract(this.socket, contractId, (c) => {
+    this.contratoDesde = Date.now()
+
+    const receber = (c: OpenContract) => {
       const casas = c.pipSize || this.pipSize
 
       // enquanto corre, alimenta o cartao da operacao em andamento
@@ -379,7 +393,56 @@ export class MotorTeeds {
         }
         return
       }
-      this.pararContrato?.(); this.pararContrato = null
+      this.liquidar(c, contractId, valor)
+    }
+
+    try {
+      this.pararContrato = subscribeContract(
+        this.socket, contractId, receber,
+        (erro) => {
+          // Assinatura recusada (teto da Deriv, por exemplo): em vez de
+          // esperar para sempre, passamos a perguntar pelo contrato.
+          this.registrar(`Sem stream do contrato (${erro}) — consultando direto`, 'info')
+          this.pararContrato = null
+          void this.conferirContrato(contractId, valor)
+        },
+      )
+    } catch (e) {
+      this.registrar(`Não consegui acompanhar o contrato: ${(e as Error).message}`, 'info')
+      this.pararContrato = null
+      void this.conferirContrato(contractId, valor)
+    }
+  }
+
+  /**
+   * Pergunta o estado de um contrato sem assinar nada.
+   *
+   * Rede de seguranca para quando o stream nao chega: um contrato de 1 tick
+   * que passa de meio minuto aberto nao esta correndo, esta perdido.
+   */
+  private async conferirContrato(contractId: number, valor: number) {
+    if (!this.estado.rodando || this.estado.emCurso?.contractId !== contractId) return
+    try {
+      const c = await buscarContrato(this.socket, contractId)
+      if (this.estado.emCurso?.contractId !== contractId) return
+      if (c.status === 'open' && !c.isExpired) return
+      this.liquidar(c, contractId, valor)
+    } catch {
+      // segue tentando no proximo ciclo do vigia
+    }
+  }
+
+  private liquidar(c: OpenContract, contractId: number, valor: number) {
+    // O stream e a consulta direta podem chegar juntos: cada contrato so
+    // pode ser contabilizado uma vez.
+    if (this.liquidados.has(contractId)) return
+    this.liquidados.add(contractId)
+    if (this.liquidados.size > 300) {
+      this.liquidados = new Set([...this.liquidados].slice(-150))
+    }
+    this.pararContrato?.(); this.pararContrato = null
+    this.contratoDesde = 0
+    const casas = c.pipSize || this.pipSize
 
       const ganhou = c.status === 'won' || c.profit > 0
       this.estado.operacoes += 1
@@ -461,6 +524,5 @@ export class MotorTeeds {
         const ctx = this.contexto
         if (this.estrategia.entrar(ctx)) void this.comprar()
       }
-    })
   }
 }

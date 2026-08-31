@@ -82,7 +82,7 @@ export function useAccount() {
     if (!session || !accountId) return
     let alive = true
     const paradas: Array<() => void> = []
-    const acompanhados = new Set<number>()
+    const seguindo = new Map<number, { parar?: () => void; encerrado?: boolean }>()
 
     setConnecting(true)
     setBalance(null)
@@ -90,22 +90,46 @@ export function useAccount() {
     // historico de outra conta nao vale para esta
     limparCacheOperacoes()
 
-    /** Passa a acompanhar um contrato em tempo real (sem duplicar assinatura). */
+    /**
+     * Passa a acompanhar um contrato em tempo real.
+     *
+     * A assinatura **precisa** ser cancelada quando o contrato liquida: a
+     * Deriv permite 100 assinaturas por conexao, e um robo que compra a cada
+     * segundo estoura esse teto em menos de dois minutos — a partir dai
+     * nenhuma assinatura nova funciona e tudo parece travado.
+     */
     const acompanhar = (sock: TeedsSocket, id: number) => {
-      if (acompanhados.has(id)) return
-      acompanhados.add(id)
-      paradas.push(
-        subscribeContract(sock, id, (c) => {
-          if (!alive) return
-          setContracts((prev) => {
-            const next = new Map(prev)
-            // sai da lista quando vendido, expirado ou liquidado
-            if (c.status !== 'open' || c.isExpired) next.delete(c.contractId)
-            else next.set(c.contractId, c)
-            return next
-          })
-        }),
-      )
+      if (seguindo.has(id)) return
+      const reg: { parar?: () => void; encerrado?: boolean } = {}
+      seguindo.set(id, reg)
+
+      const soltar = () => {
+        seguindo.delete(id)
+        if (reg.parar) reg.parar()
+        else reg.encerrado = true
+      }
+
+      try {
+        reg.parar = subscribeContract(
+          sock, id,
+          (c) => {
+            if (!alive) return
+            const fechou = c.status !== 'open' || c.isExpired
+            setContracts((prev) => {
+              const next = new Map(prev)
+              if (fechou) next.delete(c.contractId)
+              else next.set(c.contractId, c)
+              return next
+            })
+            if (fechou) soltar()
+          },
+          () => soltar(),
+        )
+        if (reg.encerrado) { reg.parar(); seguindo.delete(id) }
+      } catch {
+        // teto de assinaturas atingido: seguimos sem acompanhar este contrato
+        seguindo.delete(id)
+      }
     }
 
     fetchTradingSocketUrl(session, accountId)
@@ -151,6 +175,8 @@ export function useAccount() {
 
     return () => {
       alive = false
+      seguindo.forEach((r) => r.parar?.())
+      seguindo.clear()
       paradas.forEach((p) => p())
       socketRef.current?.disconnect()
       socketRef.current = null
