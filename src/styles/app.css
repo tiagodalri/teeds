@@ -1063,3 +1063,6 @@ button, input { font: inherit; color: inherit; }
 /* operação em andamento, no painel do robô */
 .viv-operando { flex-direction: column; align-items: stretch; gap: 9px; }
 .viv-operando-txt { display: flex; align-items: center; gap: 9px; }
+
+/* configuração sem painel ao lado ocupa a largura toda, com limite de leitura */
+.rob-grade.sozinho { grid-template-columns: minmax(0, 760px); }

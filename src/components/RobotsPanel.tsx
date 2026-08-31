@@ -174,7 +174,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
       {erro && ident.onde === 'servidor' && <div className="ger-erro">{erro}</div>}
 
       {ident.onde === 'servidor' && <>
-      <div className="rob-grade config-robo" style={{ ['--robo' as any]: ident.cor, ['--robo-suave' as any]: ident.corSuave }}>
+      <div className="rob-grade config-robo sozinho" style={{ ['--robo' as any]: ident.cor, ['--robo-suave' as any]: ident.corSuave }}>
         {/* ---------------- configuração ---------------- */}
         <section className="ger-bloco">
           <div className="config-cab">
