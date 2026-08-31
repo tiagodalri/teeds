@@ -14,7 +14,7 @@ const ultimos = (d: number[], n: number) => d.slice(-n)
 
 export const SUPERIOR_5: Estrategia = {
   id: 'superior5',
-  nome: 'Superior 5',
+  nome: 'Teeds - AG7',
   origem: 'importado do Deriv Bot (SUPERIOR 5 VIP)',
   descricao:
     'Espera três dígitos seguidos menores ou iguais a 6 antes de entrar. ' +
@@ -71,7 +71,7 @@ export const SUPERIOR_5_FIXO: Estrategia = {
   nome: 'Superior 5 (valor fixo)',
   origem: 'variação sem martingale',
   descricao:
-    'Mesma leitura de dígitos do Superior 5, mas o valor da entrada nunca muda. ' +
+    'Mesma leitura de dígitos do AG7, mas o valor da entrada nunca muda. ' +
     'Sem progressão depois de perder.',
   proximoValor: ({ valorAoVencer }) => valorAoVencer,
 }

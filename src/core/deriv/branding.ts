@@ -22,8 +22,12 @@ export interface Identidade {
   contrato: string
 }
 
-/** Robos executados nos servidores da Deriv. */
-export const IDENTIDADES: Identidade[] = [
+/**
+ * Catalogo completo — inclui modelos que nao estao mais em oferta.
+ * Serve para reconhecer robos ja criados na conta da Deriv, que continuam
+ * aparecendo no historico mesmo depois de sairem da vitrine.
+ */
+export const CATALOGO: Identidade[] = [
   {
     id: 'acima', nome: 'Acima de 5', chamada: 'O otimista',
     descricao: 'Ganha quando o último dígito é 6, 7, 8 ou 9.',
@@ -53,7 +57,7 @@ export const IDENTIDADES: Identidade[] = [
     chance: 50, contrato: 'DIGITODD',
   },
   {
-    id: 'superior5', nome: 'Superior 5', chamada: 'O vigia',
+    id: 'superior5', nome: 'Teeds - AG7', chamada: 'O vigia',
     descricao: 'Espera três dígitos ≤ 6 antes de entrar. Depois de perder, entra a cada tick.',
     cor: '#e8892b', corSuave: '#fdf0e2', onde: 'teeds',
     emblema: 'M20 8 a12 12 0 1 0 0.1 0 M20 14 a6 6 0 1 0 0.1 0 M20 19 v-3',
@@ -68,11 +72,22 @@ export const IDENTIDADES: Identidade[] = [
   },
 ]
 
+/**
+ * Robos oferecidos hoje na vitrine.
+ * Por ora so o Teeds - AG7; os demais seguem no catalogo para leitura do
+ * historico, mas nao podem mais ser criados.
+ */
+export const EM_OFERTA = ['superior5'] as const
+
+export const IDENTIDADES: Identidade[] = CATALOGO.filter((i) =>
+  (EM_OFERTA as readonly string[]).includes(i.id),
+)
+
 export function identidade(id: string): Identidade {
-  return IDENTIDADES.find((i) => i.id === id) ?? IDENTIDADES[0]
+  return CATALOGO.find((i) => i.id === id) ?? IDENTIDADES[0]
 }
 
 /** Descobre a identidade a partir do tipo de contrato, para robôs já criados. */
 export function identidadePorContrato(contrato: string): Identidade | null {
-  return IDENTIDADES.find((i) => i.onde === 'servidor' && i.contrato === contrato) ?? null
+  return CATALOGO.find((i) => i.onde === 'servidor' && i.contrato === contrato) ?? null
 }

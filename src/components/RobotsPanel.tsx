@@ -153,14 +153,13 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
         <div>
           <h2>Robôs</h2>
           <p className="ger-sub">
-            Escolha um robô, ajuste os freios e ligue. Os do servidor da Deriv
-          continuam operando com seu computador desligado.
+            Ajuste os freios e ligue. Acompanhe cada entrada ao vivo enquanto ele opera.
           </p>
         </div>
         {!isDemo && <span className="badge badge-real">conta real selecionada</span>}
       </div>
 
-      {lista.length > 0 && (
+      {rodando.length > 0 && (
         <div className="resumo-robos">
           <div><b>{lista.length}</b><span>robôs criados</span></div>
           <div><b className={rodando.length ? 'ganho' : ''}>{rodando.length}</b><span>em operação</span></div>
@@ -192,6 +191,47 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
       {ident.onde === 'teeds' && (
         <LocalRobotPanel socket={socket} isDemo={isDemo} moeda={moeda}
           symbols={symbols} symbolPadrao={symbolPadrao} identidade={ident} />
+      )}
+
+      {/* Modelos antigos saíram da vitrine, mas quem ficou ligado no servidor
+          da Deriv precisa continuar podendo ser desligado daqui. */}
+      {ident.onde !== 'servidor' && rodando.length > 0 && (
+        <section className="ger-bloco">
+          <div className="ger-bloco-topo">
+            <span className="rot">Ainda ligados no servidor da Deriv</span>
+            <span className="ger-tag">{rodando.length} em operação</span>
+          </div>
+          <p className="ger-nota">
+            Robôs de modelos que saíram da vitrine. Você pode desligá-los por aqui.
+          </p>
+          <div className="rob-lista">
+            {rodando.map((r) => {
+              const identDele = identidadePorContrato(r.contrato.contract_type ?? '')
+              const padrao = identDele?.nome ?? r.contrato.contract_type ?? 'Robô'
+              return (
+                <div key={r.runId} className={`rob-card ${r.status}`}>
+                  <div className="rob-card-topo">
+                    {identDele && <Emblema id={identDele} tamanho={26} />}
+                    <b className="rob-apelido">{nomes[r.runId] ?? nomeDoRobo(r.runId, padrao)}</b>
+                    <span className={`rob-status ${r.status}`}>
+                      {r.status === 'running' ? 'operando' : 'pausado'}
+                    </span>
+                  </div>
+                  <div className="rob-nums">
+                    <div><span>Operações</span><b>{r.contratos}</b></div>
+                    <div><span>Resultado</span>
+                      <b className={r.resultado >= 0 ? 'ganho' : 'perda'}>
+                        {r.resultado >= 0 ? '+' : '−'}{din(Math.abs(r.resultado), moeda)}
+                      </b></div>
+                  </div>
+                  <div className="rob-acoes">
+                    <button className="parar" onClick={() => acao(r.runId, 'parar')}>Desligar</button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
       )}
 
       {erro && ident.onde === 'servidor' && <div className="ger-erro">{erro}</div>}
