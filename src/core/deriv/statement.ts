@@ -17,12 +17,65 @@ export interface Movimento {
   contratoId: number | null
   /** Qual aplicacao originou o movimento (a Teeds tem id proprio). */
   appId: string | null
+  shortcode: string | null
   pagamento: number | null
+}
+
+const NOMES_CONTRATO: Record<string, string> = {
+  DIGITOVER: 'Acima de', DIGITUNDER: 'Abaixo de', DIGITMATCH: 'Igual a',
+  DIGITDIFF: 'Diferente de', DIGITEVEN: 'Par', DIGITODD: 'Ímpar',
+  CALL: 'Subir', PUT: 'Descer', CALLE: 'Subir ou igual', PUTE: 'Descer ou igual',
+  ONETOUCH: 'Toca', NOTOUCH: 'Não toca', RANGE: 'Dentro da faixa',
+  UPORDOWN: 'Fora da faixa', MULTUP: 'Multiplicador para cima',
+  MULTDOWN: 'Multiplicador para baixo', ACCU: 'Acumulador',
+  RESETCALL: 'Reset para cima', RESETPUT: 'Reset para baixo',
+  TICKHIGH: 'Tick mais alto', TICKLOW: 'Tick mais baixo',
+  TURBOSLONG: 'Turbo para cima', TURBOSSHORT: 'Turbo para baixo',
+  VANILLALONGCALL: 'Vanilla de alta', VANILLALONGPUT: 'Vanilla de baixa',
+}
+
+const COM_BARREIRA = ['DIGITOVER', 'DIGITUNDER', 'DIGITMATCH', 'DIGITDIFF']
+
+/**
+ * Descricao em portugues montada a partir do codigo do contrato.
+ * A Deriv devolve o texto so em ingles; aqui reescrevemos com os nossos termos.
+ * Ex.: DIGITOVER_1HZ100V_17.78_1788198268_1T_5_0 -> "Acima de 5 · 1 tick · Volatility 100 (1s)"
+ */
+export function descreverContrato(
+  shortcode: string | null | undefined,
+  nomeAtivo?: (codigo: string) => string,
+): string | null {
+  if (!shortcode) return null
+  const partes = shortcode.split('_')
+  const tipo = partes[0]
+  if (!tipo || !NOMES_CONTRATO[tipo]) return null
+
+  const ativo = partes[1] ?? ''
+  const nome = NOMES_CONTRATO[tipo]
+  const pedacos: string[] = []
+
+  if (COM_BARREIRA.includes(tipo)) {
+    const barreira = partes.find((p, i) => i >= 4 && /^[0-9]$/.test(p))
+    pedacos.push(barreira !== undefined ? `${nome} ${barreira}` : nome)
+  } else {
+    pedacos.push(nome)
+  }
+
+  const duracao = partes.find((p) => /^[0-9]+T$/i.test(p))
+  if (duracao) {
+    const n = Number(duracao.slice(0, -1))
+    pedacos.push(`${n} ${n === 1 ? 'tick' : 'ticks'}`)
+  }
+
+  const legivel = nomeAtivo ? nomeAtivo(ativo) : ativo
+  if (legivel) pedacos.push(legivel)
+
+  return pedacos.join(' · ')
 }
 
 const ROTULOS: Record<string, string> = {
   buy: 'Compra',
-  sell: 'Venda',
+  sell: 'Liquidação',
   deposit: 'Depósito',
   withdrawal: 'Saque',
 }
@@ -59,6 +112,7 @@ export async function buscarExtrato(
       descricao: t.longcode ?? '',
       contratoId: t.contract_id != null ? Number(t.contract_id) : null,
       appId: t.app_id != null ? String(t.app_id) : null,
+      shortcode: t.shortcode ?? null,
       pagamento: t.payout != null ? Number(t.payout) : null,
     })),
   }

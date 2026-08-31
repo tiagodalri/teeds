@@ -215,6 +215,7 @@ export default function App() {
           socket={conta.socket}
           logado={conta.status === 'logado'}
           moeda={conta.account?.currency ?? 'USD'}
+          symbols={symbols}
         />
       ) : tela === 'gestao' ? (
         <ManagementPanel

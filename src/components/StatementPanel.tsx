@@ -2,13 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { TeedsSocket } from '../core/deriv/client'
 import { DERIV } from '../core/deriv/config'
 import {
-  buscarExtrato, resumirExtrato, rotuloTipo,
+  buscarExtrato, descreverContrato, resumirExtrato, rotuloTipo,
   type Movimento, type TipoMovimento,
 } from '../core/deriv/statement'
+import type { ActiveSymbol } from '../core/deriv/types'
 
 interface Props {
   socket: TeedsSocket | null
   moeda: string
+  symbols?: ActiveSymbol[]
 }
 
 const FILTROS: Array<{ id: TipoMovimento | 'todos'; nome: string }> = [
@@ -30,7 +32,9 @@ const quando = (e: number) => {
   }
 }
 
-export function StatementPanel({ socket, moeda }: Props) {
+export function StatementPanel({ socket, moeda, symbols = [] }: Props) {
+  const nomeAtivo = (codigo: string) =>
+    symbols.find((s) => s.symbol === codigo)?.name ?? codigo
   const [movs, setMovs] = useState<Movimento[]>([])
   const [tipo, setTipo] = useState<TipoMovimento | 'todos'>('todos')
   const [limite, setLimite] = useState(50)
@@ -141,15 +145,18 @@ export function StatementPanel({ socket, moeda }: Props) {
                   <td className="ops-quando"><b>{q.hora}</b><span>{q.dia}</span></td>
                   <td><span className={`mov mov-${m.tipo}`}>{rotuloTipo(m.tipo)}</span></td>
                   <td className="ext-desc" title={m.descricao}>
-                    {m.descricao || (m.tipo === 'deposit' ? 'Depósito na conta' : m.tipo === 'withdrawal' ? 'Saque da conta' : '—')}
+                    {descreverContrato(m.shortcode, nomeAtivo)
+                      || (m.tipo === 'deposit' ? 'Depósito na conta'
+                        : m.tipo === 'withdrawal' ? 'Saque da conta'
+                        : m.descricao || '—')}
                   </td>
                   <td>
                     {m.appId === DERIV.appId
                       ? <span className="tag-robo">Teeds</span>
                       : <span className="tag-manual">{m.appId === '2' ? 'Deriv' : (m.appId ?? '—')}</span>}
                   </td>
-                  <td className={`num ${entrada ? 'ganho' : 'perda'}`}>
-                    {entrada ? '+' : '−'}{din(m.valor, '').trim()}
+                  <td className={`num ${m.valor > 0 ? 'ganho' : m.valor < 0 ? 'perda' : ''}`}>
+                    {m.valor === 0 ? '—' : `${entrada ? '+' : '−'}${din(m.valor, '').trim()}`}
                   </td>
                   <td className="num ext-saldo">{din(m.saldoDepois, '').trim()}</td>
                 </tr>

@@ -9,6 +9,7 @@ interface Props {
   socket: TeedsSocket | null
   logado: boolean
   moeda: string
+  symbols?: import('../core/deriv/types').ActiveSymbol[]
 }
 
 const NOMES: Record<string, string> = {
@@ -26,7 +27,7 @@ const hora = (e: number) =>
 const dia = (e: number) =>
   new Date(e * 1000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 
-export function OperationsPanel({ socket, logado, moeda }: Props) {
+export function OperationsPanel({ socket, logado, moeda, symbols = [] }: Props) {
   const [ops, setOps] = useState<Operacao[]>([])
   const [carregando, setCarregando] = useState(false)
   const [progresso, setProgresso] = useState<{ feitas: number; total: number } | null>(null)
@@ -114,7 +115,7 @@ export function OperationsPanel({ socket, logado, moeda }: Props) {
         </div>
       </div>
 
-      {aba === 'extrato' && <StatementPanel socket={socket} moeda={moeda} />}
+      {aba === 'extrato' && <StatementPanel socket={socket} moeda={moeda} symbols={symbols} />}
 
       {aba === 'contratos' && <>
       {erro && <div className="ger-erro">{erro}</div>}
