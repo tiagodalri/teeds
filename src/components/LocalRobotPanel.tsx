@@ -19,6 +19,8 @@ interface Props {
   conexao?: string
   /** Fecha este bloco. Ausente quando so ha um robo na tela. */
   onRemover?: () => void
+  /** Como este bloco se chama: "Robô 1", "Robô 2"... */
+  titulo: string
 }
 
 const PADRAO: ConfigEstrategia = {
@@ -36,7 +38,8 @@ const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export function LocalRobotPanel({
-  socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open', onRemover,
+  socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
+  onRemover, titulo,
 }: Props) {
   const estrategia = ESTRATEGIAS_LOCAIS.find((e) => e.id === identidade.id) ?? ESTRATEGIAS_LOCAIS[0]
   const [cfg, setCfg] = useState<ConfigEstrategia>(PADRAO)
@@ -110,6 +113,7 @@ export function LocalRobotPanel({
       <>
         <div className="pronto" style={{ ['--robo' as any]: identidade.cor, ['--robo-suave' as any]: identidade.corSuave }}>
           <Emblema id={identidade} tamanho={56} />
+          {onRemover && <span className="pronto-tag">{titulo}</span>}
           <h3>{estrategia.nome}</h3>
           <p>{estrategia.descricao}</p>
           <button className="pronto-btn" disabled={!socket} onClick={() => setPreparando(true)}>
@@ -152,6 +156,7 @@ export function LocalRobotPanel({
         moeda={moeda}
         nomeEstrategia={estrategia.nome}
         ativo={nomeAtivo}
+        titulo={titulo}
         regra={regra}
         cor={identidade.cor}
         ganhaCom={ganhaCom}

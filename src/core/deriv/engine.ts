@@ -142,8 +142,11 @@ export interface EstadoMotor {
 /** Tempo sem nenhum tick que ja e motivo para desconfiar da conexao. */
 const SILENCIO_MAXIMO_MS = 25_000
 
-/** Contrato aberto por mais tempo que isto merece uma consulta direta. */
-const CONTRATO_PRESO_MS = 15_000
+/**
+ * Contrato aberto por mais tempo que isto merece uma consulta direta.
+ * Um contrato de 1 tick liquida em ~1 s; passou de 4 s, algo se perdeu.
+ */
+const CONTRATO_PRESO_MS = 4_000
 
 const VAZIO: EstadoMotor = {
   rodando: false, emOperacao: false, operacoes: 0, vitorias: 0, derrotas: 0,
@@ -275,7 +278,7 @@ export class MotorTeeds {
       this.estado.aguardando = 'sem sinal do mercado — reconectando'
       this.emitir()
       this.socket.reconectarAgora()
-    }, 5_000)
+    }, 2_000)
   }
 
   /** Carrega os ultimos digitos do ativo para o robo comecar ja abastecido. */

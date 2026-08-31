@@ -208,8 +208,9 @@ export function RobotsPanel({
       {ident.onde === 'teeds' && (
         <>
           <div className={`blocos ${blocos.length > 1 ? 'duplo' : ''}`}>
-            {blocos.map((idBloco) => (
+            {blocos.map((idBloco, i) => (
               <LocalRobotPanel key={idBloco}
+                titulo={`Robô ${i + 1}`}
                 socket={socket} isDemo={isDemo} moeda={moeda}
                 symbols={symbols} symbolPadrao={symbolPadrao} identidade={ident}
                 conexao={conexao}

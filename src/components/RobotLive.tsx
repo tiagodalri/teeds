@@ -8,6 +8,8 @@ interface Props {
   nomeEstrategia: string
   /** Nome do ativo, por extenso. */
   ativo: string
+  /** Como este bloco se chama na tela: "Robô 1", "Robô 2"... */
+  titulo: string
   /** A regra em uma frase: "maior que 5", "par"... */
   regra: string
   cor?: string
@@ -84,13 +86,13 @@ function Cronometro({ desde }: { desde: number }) {
 /* -------------------------------------------------------------- principal */
 
 export function RobotLive({
-  estado, config, moeda, nomeEstrategia, ativo, regra, ganhaCom,
+  estado, config, moeda, nomeEstrategia, ativo, titulo, regra, ganhaCom,
   parametros = [], conexao = 'open', onDesligar, onLigarDeNovo, onRemover,
 }: Props) {
   const [verParametros, setVerParametros] = useState(false)
   const acerto = estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
   const positivo = estado.resultado >= 0
-  const fita = estado.digitos.slice(-26)
+  const fita = estado.digitos.slice(-30)
   const emCurso = estado.emCurso
 
   // acumulado por operacao, para a coluna da direita da tabela
@@ -127,8 +129,8 @@ export function RobotLive({
         <div className="tv-quem">
           <i className="tv-farol" />
           <div>
-            <b>{fase.texto}</b>
-            <span>{nomeEstrategia} · {ativo}</span>
+            <b>{titulo}<span className="tv-fase">{fase.texto}</span></b>
+            <span className="tv-onde">{nomeEstrategia} · {ativo}</span>
           </div>
         </div>
         <div className="tv-placar">
@@ -185,10 +187,18 @@ export function RobotLive({
         <section className="tv-palco quatro">
           <div className="tv-passo">
             <span className="tv-rot">Entrou em</span>
-            <b className="tv-preco">{emCurso.entrada !== null ? emCurso.entrada.toFixed(2) : '—'}</b>
-            <span className={`tv-digitao ${emCurso.digitoEntrada !== null && ganhaCom(emCurso.digitoEntrada) ? 'up' : 'neutro'}`}>
-              {emCurso.digitoEntrada ?? '·'}
-            </span>
+            {emCurso.entrada !== null ? (
+              <>
+                <b className="tv-preco">{emCurso.entrada.toFixed(2)}</b>
+                {emCurso.digitoEntrada !== null && (
+                  <span className={`tv-digitao ${ganhaCom(emCurso.digitoEntrada) ? 'up' : 'down'}`}>
+                    {emCurso.digitoEntrada}
+                  </span>
+                )}
+              </>
+            ) : (
+              <b className="tv-esperando">aguardando o tick de entrada</b>
+            )}
           </div>
 
           <div className="tv-passo alvo">
@@ -199,12 +209,18 @@ export function RobotLive({
 
           <div className="tv-passo">
             <span className="tv-rot">Agora</span>
-            <b className="tv-preco">{emCurso.spot !== null ? emCurso.spot.toFixed(2) : '—'}</b>
-            <span className={`tv-digitao ${
-              emCurso.digitoAtual === null ? 'neutro' : ganhaCom(emCurso.digitoAtual) ? 'up' : 'down'
-            }`}>
-              {emCurso.digitoAtual ?? '·'}
-            </span>
+            {emCurso.spot !== null ? (
+              <>
+                <b className="tv-preco">{emCurso.spot.toFixed(2)}</b>
+                {emCurso.digitoAtual !== null && (
+                  <span className={`tv-digitao ${ganhaCom(emCurso.digitoAtual) ? 'up' : 'down'}`}>
+                    {emCurso.digitoAtual}
+                  </span>
+                )}
+              </>
+            ) : (
+              <b className="tv-esperando">o mercado ainda não respondeu</b>
+            )}
           </div>
 
           <div className="tv-passo">

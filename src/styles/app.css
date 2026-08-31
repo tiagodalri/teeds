@@ -760,9 +760,11 @@ button, input { font: inherit; color: inherit; }
   --tv-ambar-suave: #fdf4e5;
   container-type: inline-size;
   display: flex; flex-direction: column;
+  height: 100%; min-height: 0;
   background: var(--bg); border: 1px solid var(--border);
   border-radius: 14px; overflow: hidden; box-shadow: var(--shadow);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'cv05' 1;
 }
 .tv .up { color: var(--up); }
 .tv .down { color: var(--down); }
@@ -778,9 +780,21 @@ button, input { font: inherit; color: inherit; }
   border-bottom: 1px solid var(--border);
 }
 .tv-quem { display: flex; align-items: center; gap: 11px; min-width: 0; }
-.tv-quem b { display: block; font-size: 14.5px; font-weight: 650; letter-spacing: -.01em; }
-.tv-quem span {
-  display: block; font-size: 11.5px; color: var(--muted);
+.tv-quem > div { min-width: 0; }
+.tv-quem b {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14.5px; font-weight: 650; letter-spacing: -.01em;
+}
+.tv-fase {
+  font-size: 9.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 20px; white-space: nowrap;
+  background: var(--surface); color: var(--muted);
+}
+.tv.cacando .tv-fase { background: var(--primary-soft); color: var(--primary); }
+.tv.operando .tv-fase { background: #fbecd2; color: #8a5a12; }
+.tv.recuperando .tv-fase { background: var(--down-soft); color: var(--down); }
+.tv-onde {
+  display: block; font-size: 11.5px; color: var(--muted); margin-top: 1px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .tv-farol {
@@ -849,8 +863,13 @@ button, input { font: inherit; color: inherit; }
 
 /* ---------------- palco ---------------- */
 .tv-palco {
-  position: relative; padding: 17px 18px 19px;
-  border-bottom: 1px solid var(--border); min-height: 96px;
+  position: relative; padding: 16px 18px 18px; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  height: 104px; overflow: hidden;
+}
+.tv-esperando {
+  font-size: 12px; font-weight: 500; color: var(--muted); line-height: 1.4;
+  max-width: 18ch;
 }
 .tv.operando .tv-palco { background: var(--tv-ambar-suave); }
 .tv-palco.quatro { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
@@ -922,8 +941,14 @@ button, input { font: inherit; color: inherit; }
 .tv-off { font-size: 13px; color: var(--muted); }
 
 /* ---------------- fita de dígitos ---------------- */
-.tv-fita-bloco { padding: 13px 18px; border-bottom: 1px solid var(--border); }
-.tv-fita { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+.tv-fita-bloco { padding: 12px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+/* Uma linha só, sempre: os mais novos ficam à direita e os antigos saem
+   pela esquerda. Assim a altura do bloco não muda com o tamanho da fita. */
+.tv-fita {
+  display: flex; gap: 4px; margin-top: 8px;
+  flex-wrap: nowrap; overflow: hidden; justify-content: flex-end;
+}
+.tv-d { flex-shrink: 0; }
 .tv-d {
   width: 25px; height: 27px; border-radius: 6px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -936,7 +961,7 @@ button, input { font: inherit; color: inherit; }
 .tv-nada { font-size: 11.5px; color: var(--muted); }
 
 /* ---------------- sessão ---------------- */
-.tv-sessao { border-bottom: 1px solid var(--border); }
+.tv-sessao { border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .tv-curva-caixa { padding: 12px 18px 10px; }
 .tv-curva { width: 100%; height: 44px; display: block; }
 .tv-curva-vazia {
@@ -975,14 +1000,23 @@ button, input { font: inherit; color: inherit; }
 .tv-nums em { font-style: normal; font-size: 10px; color: var(--muted); }
 
 /* ---------------- tabela de operações ---------------- */
-.tv-ops { padding: 13px 18px 4px; }
+.tv-ops {
+  padding: 12px 18px 0; flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+}
 .tv-ops-topo { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
 .tv-conta {
   font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
   background: var(--surface); color: var(--muted);
 }
 .tv-nada-ops { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
-.tv-rolo { max-height: 280px; overflow-y: auto; overflow-x: auto; margin: 0 -18px; }
+.tv-rolo {
+  flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; margin: 0 -18px;
+  scrollbar-width: thin;
+}
+.tv-rolo::-webkit-scrollbar { width: 8px; height: 8px; }
+.tv-rolo::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.tv-rolo::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 .tv-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .tv-tabela th {
   position: sticky; top: 0; z-index: 1;
@@ -1031,7 +1065,11 @@ button, input { font: inherit; color: inherit; }
 }
 
 /* ==================== blocos de robôs ==================== */
-.blocos { display: grid; gap: 16px; align-items: start; }
+/* Altura fixa: quatro linhas de operação aparecem, o resto rola dentro da
+   tabela. Sem isso um robô com mais histórico esticava o bloco e a grade
+   ficava desalinhada. */
+.blocos { display: grid; gap: 16px; grid-auto-rows: 532px; }
+.blocos > * { min-height: 0; height: 100%; }
 .blocos.duplo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 1100px) { .blocos.duplo { grid-template-columns: 1fr; } }
 .blocos-rodape {
@@ -1443,8 +1481,9 @@ button, input { font: inherit; color: inherit; }
 
 /* ==================== cartão de partida do robô ==================== */
 .pronto {
-  display: flex; flex-direction: column; align-items: center; text-align: center;
-  gap: 12px; padding: 44px 24px 40px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; height: 100%;
+  gap: 12px; padding: 40px 24px;
   background: var(--bg); border: 1px solid var(--border);
   border-radius: 16px; box-shadow: var(--shadow);
 }
@@ -1614,3 +1653,11 @@ button, input { font: inherit; color: inherit; }
   font-size: 12px; padding: 4px 8px; text-decoration: underline; text-underline-offset: 3px;
 }
 .pronto-fechar:hover { color: var(--text); }
+
+/* o bloco inteiro ocupa a altura da linha da grade */
+.cabine-caixa { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.pronto-tag {
+  font-size: 9.5px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--muted); background: var(--surface);
+  padding: 3px 10px; border-radius: 20px;
+}
