@@ -43,7 +43,11 @@ export function OperationsPanel({ socket, logado, moeda, symbols = [] }: Props) 
     setErro(null)
     setProgresso(null)
     try {
-      const lista = await buscarOperacoes(socket, limite, (feitas, total) => setProgresso({ feitas, total }))
+      const lista = await buscarOperacoes(socket, limite, (feitas, total, parciais) => {
+        setProgresso({ feitas, total })
+        // mostra o que ja chegou em vez de deixar a tela vazia ate o fim
+        setOps(parciais)
+      })
       setOps(lista)
     } catch (e) {
       setErro((e as Error).message)

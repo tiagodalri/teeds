@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { completeLogin, loadSession, logout as clearSession, startLogin, type AuthSession } from '../core/deriv/auth'
 import { fetchAccounts, fetchTradingSocketUrl, resetDemoBalance, type TradingAccount } from '../core/deriv/account'
 import { TeedsSocket } from '../core/deriv/client'
+import { limparCacheOperacoes } from '../core/deriv/history'
 import {
   fetchPortfolio, subscribeBalance, subscribeContract, subscribeTransactions,
   type Balance, type OpenContract,
@@ -81,6 +82,8 @@ export function useAccount() {
     setConnecting(true)
     setBalance(null)
     setContracts(new Map())
+    // historico de outra conta nao vale para esta
+    limparCacheOperacoes()
 
     /** Passa a acompanhar um contrato em tempo real (sem duplicar assinatura). */
     const acompanhar = (sock: TeedsSocket, id: number) => {

@@ -89,11 +89,23 @@ export default function App() {
 
   const pipSize = activeSymbol?.pipSize ?? tick?.pipSize ?? 2
   const price = tick?.quote ?? (candles.length ? candles[candles.length - 1].close : null)
-  const doAtivo = conta.contracts.filter((c) => c.symbol === symbolCode)
-  const marcadores: ContractMarker[] = doAtivo.map((c) => ({
-    id: c.contractId, type: c.contractType, entryEpoch: c.startTime,
-    entryPrice: c.entrySpot, expiryEpoch: c.expiryTime, profit: c.profit,
-  }))
+  const doAtivo = useMemo(
+    () => conta.contracts.filter((c) => c.symbol === symbolCode),
+    [conta.contracts, symbolCode],
+  )
+  // memorizado por assinatura: o grafico so redesenha quando algo muda de verdade
+  const chaveMarcadores = doAtivo
+    .map((c) => `${c.contractId}:${c.entrySpot}:${c.expiryTime}:${c.profit.toFixed(2)}`)
+    .join('|')
+  const marcadores: ContractMarker[] = useMemo(
+    () =>
+      doAtivo.map((c) => ({
+        id: c.contractId, type: c.contractType, entryEpoch: c.startTime,
+        entryPrice: c.entrySpot, expiryEpoch: c.expiryTime, profit: c.profit,
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [chaveMarcadores],
+  )
   const investido = conta.contracts.reduce((t, c) => t + c.buyPrice, 0)
   const resultadoAberto = conta.contracts.reduce((t, c) => t + c.profit, 0)
 

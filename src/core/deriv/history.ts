@@ -69,22 +69,50 @@ function montar(p: Record<string, any>): Operacao {
 }
 
 /**
+ * Cache de contratos ja detalhados.
+ *
+ * Contrato fechado nao muda mais: uma vez buscado o detalhe, ele vale para
+ * sempre nesta sessao. Isso faz a segunda abertura do painel ser instantanea
+ * e evita repetir dezenas de chamadas a cada troca de filtro ou de limite.
+ */
+const cache = new Map<number, Operacao>()
+
+/** Descarta o cache (usado ao trocar de conta). */
+export function limparCacheOperacoes(): void {
+  cache.clear()
+}
+
+/**
  * Busca as ultimas operacoes fechadas, ja com entrada, saida e robo de origem.
- * Faz uma consulta para a lista e depois uma por contrato, em lotes.
+ * Faz uma consulta para a lista e depois uma por contrato, em lotes — pulando
+ * o que ja esta em cache e entregando resultados parciais conforme chegam.
  */
 export async function buscarOperacoes(
   socket: TeedsSocket,
   limite = 60,
-  aoProgredir?: (feitas: number, total: number) => void,
+  aoProgredir?: (feitas: number, total: number, parciais: Operacao[]) => void,
 ): Promise<Operacao[]> {
   const tabela = await socket.send({ profit_table: 1, description: 1, limit: limite, sort: 'DESC' })
   const linhas = ((tabela.profit_table as any)?.transactions ?? []) as Array<Record<string, any>>
   const ids = linhas.map((l) => Number(l.contract_id)).filter(Boolean)
 
+  const ordenar = (lista: Operacao[]) => [...lista].sort((a, b) => b.compra - a.compra)
   const detalhes: Operacao[] = []
-  const lote = 15
-  for (let i = 0; i < ids.length; i += lote) {
-    const parte = ids.slice(i, i + lote)
+  const faltam: number[] = []
+
+  for (const id of ids) {
+    const guardado = cache.get(id)
+    if (guardado) detalhes.push(guardado)
+    else faltam.push(id)
+  }
+
+  // O que ja estava em cache aparece na tela na hora.
+  if (detalhes.length) aoProgredir?.(detalhes.length, ids.length, ordenar(detalhes))
+  if (!faltam.length) return ordenar(detalhes)
+
+  const lote = 25
+  for (let i = 0; i < faltam.length; i += lote) {
+    const parte = faltam.slice(i, i + lote)
     const res = await Promise.all(
       parte.map(async (id) => {
         try {
@@ -103,10 +131,15 @@ export async function buscarOperacoes(
         }
       }),
     )
-    detalhes.push(...(res.filter(Boolean) as Operacao[]))
-    aoProgredir?.(Math.min(i + lote, ids.length), ids.length)
+    for (const op of res) {
+      if (!op) continue
+      // So vale guardar contrato encerrado; o aberto ainda vai mudar.
+      if (op.fim > 0) cache.set(op.contractId, op)
+      detalhes.push(op)
+    }
+    aoProgredir?.(detalhes.length, ids.length, ordenar(detalhes))
   }
-  return detalhes.sort((a, b) => b.compra - a.compra)
+  return ordenar(detalhes)
 }
 
 /** Estatisticas de um conjunto de operacoes. */
