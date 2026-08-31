@@ -1174,64 +1174,105 @@ button, input { font: inherit; color: inherit; }
 .blocos-add:disabled { opacity: .45; cursor: not-allowed; }
 .blocos-nota { font-size: 11.5px; color: var(--muted); }
 
-/* ========================= troca de conta ========================= */
-.troca { position: relative; }
-.troca-botao {
-  display: flex; align-items: center; gap: 10px;
-  border: 1px solid var(--border); background: var(--bg);
-  border-radius: 11px; padding: 6px 11px 6px 8px; cursor: pointer;
-  transition: border-color 0.18s, box-shadow 0.18s;
-}
-.troca-botao:hover { border-color: var(--muted); }
-.troca-botao.aberto { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
-.troca-botao.real { border-color: #f3c8ca; background: #fffafa; }
-.troca-tag {
-  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
-  padding: 4px 8px; border-radius: 6px; flex-shrink: 0;
-}
-.troca-tag.demo { background: var(--primary-soft); color: var(--primary); }
-.troca-tag.real { background: var(--down-soft); color: var(--down); }
-.troca-meio { display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
-.troca-meio em {
-  font-style: normal; font-size: 9.5px; color: var(--muted);
-  letter-spacing: 0.02em; margin-left: 8px;
-}
-.troca-seta { color: var(--muted); flex-shrink: 0; }
+/* ================== canto da conta, no alto à direita ==================
+   Três coisas com três linguagens visuais moravam ali: um botão azul
+   pesado, uma pílula verde e um texto solto. Agora é um conjunto: um sinal
+   discreto, uma pastilha de conta e um avatar. */
+.conta { position: relative; }
 
-.troca-menu {
+.conta-chip {
+  display: flex; align-items: center; gap: 9px; height: 38px;
+  border: 1px solid var(--border); background: var(--bg);
+  border-radius: 10px; padding: 0 10px 0 8px; cursor: pointer;
+  transition: border-color .16s, background .16s, box-shadow .16s;
+}
+.conta-chip:hover { border-color: var(--muted); background: var(--surface-alt); }
+.conta-chip.aberto { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+/* dinheiro real: um traço, não um fundo colorido — sinaliza sem gritar */
+.conta-chip.real { box-shadow: inset 3px 0 0 var(--down); padding-left: 11px; }
+.conta-chip.real.aberto {
+  box-shadow: inset 3px 0 0 var(--down), 0 0 0 3px var(--down-soft);
+  border-color: var(--down);
+}
+.conta-seta { color: var(--muted); flex-shrink: 0; }
+
+.selo {
+  font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+  padding: 3px 7px; border-radius: 5px; flex-shrink: 0; line-height: 1.4;
+}
+.selo.demo { background: var(--primary-soft); color: var(--primary); }
+.selo.real { background: var(--down-soft); color: var(--down); }
+
+.avatar-botao {
+  display: flex; align-items: center; gap: 5px; height: 38px;
+  border: 1px solid transparent; background: none; border-radius: 10px;
+  padding: 0 7px 0 4px; cursor: pointer;
+  transition: background .16s, border-color .16s;
+}
+.avatar-botao:hover { background: var(--surface); }
+.avatar-botao.aberto { background: var(--surface); border-color: var(--border); }
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center;
+  background: var(--text); color: var(--bg);
+  font-size: 11px; font-weight: 650; letter-spacing: .02em;
+}
+.avatar.grande { width: 38px; height: 38px; font-size: 14px; }
+
+.menu {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
-  width: 300px; background: var(--bg); border: 1px solid var(--border);
-  border-radius: 13px; box-shadow: 0 4px 8px rgba(26,34,51,.05), 0 18px 40px -12px rgba(26,34,51,.22);
-  padding: 7px; animation: cair 0.14s ease-out;
+  width: 310px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 14px; padding: 6px;
+  box-shadow: 0 2px 6px rgba(26,34,51,.05), 0 20px 44px -14px rgba(26,34,51,.26);
+  animation: cair .14s ease-out;
 }
+.menu-curto { width: 250px; }
 @keyframes cair { from { opacity: 0; transform: translateY(-5px); } }
-@media (prefers-reduced-motion: reduce) { .troca-menu { animation: none; } }
-.troca-titulo {
-  margin: 5px 9px 8px; font-size: 10px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+@media (prefers-reduced-motion: reduce) { .menu { animation: none; } }
+
+.menu-titulo {
+  margin: 8px 10px 6px; font-size: 9.5px; font-weight: 650;
+  text-transform: uppercase; letter-spacing: .09em; color: var(--muted);
 }
-.troca-item {
+.menu-linha { height: 1px; background: var(--border); margin: 6px 4px; }
+
+.menu-conta {
   display: flex; align-items: center; gap: 10px; width: 100%;
-  padding: 9px 9px; border: 0; background: none; border-radius: 9px;
+  padding: 9px 10px; border: 0; background: none; border-radius: 9px;
   cursor: pointer; text-align: left;
 }
-.troca-item:hover { background: var(--surface); }
-.troca-item.ativa { background: var(--surface); }
-.troca-info { flex: 1; display: flex; flex-direction: column; }
-.troca-info b { font-size: 12.5px; font-weight: 600; }
-.troca-info em { font-style: normal; font-size: 10px; color: var(--muted); }
-.troca-saldo { font-size: 12.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
-.troca-check { color: var(--up); flex-shrink: 0; }
-.troca-rodape {
-  display: flex; gap: 6px; margin-top: 6px; padding-top: 7px;
-  border-top: 1px solid var(--border);
+.menu-conta:hover { background: var(--surface); }
+.menu-conta.ativa { background: var(--surface); }
+.menu-conta-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.menu-conta-info b { font-size: 12.5px; font-weight: 600; }
+.menu-conta-info em {
+  font-style: normal; font-size: 10px; color: var(--muted); letter-spacing: .02em;
 }
-.troca-rodape button {
-  flex: 1; border: 0; background: var(--surface); border-radius: 8px;
-  padding: 8px; font-size: 11.5px; cursor: pointer; color: var(--text); font-weight: 500;
+.menu-conta-saldo {
+  display: flex; align-items: baseline; gap: 4px; flex-shrink: 0;
+  font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums;
 }
-.troca-rodape button:hover { background: var(--border); }
-.troca-rodape .sair { color: var(--down); }
+.menu-conta-saldo i { font-style: normal; font-size: 9.5px; font-weight: 600; color: var(--muted); }
+.menu-conta-marca { width: 13px; flex-shrink: 0; color: var(--up); display: grid; place-items: center; }
+
+.menu-acao {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 10px; border: 0; background: none; border-radius: 9px;
+  cursor: pointer; text-align: left; text-decoration: none;
+  font-size: 12.5px; font-weight: 500; color: var(--text);
+}
+.menu-acao svg { color: var(--muted); flex-shrink: 0; }
+.menu-acao:hover { background: var(--surface); }
+.menu-acao.perigo { color: var(--down); }
+.menu-acao.perigo svg { color: var(--down); }
+.menu-acao.perigo:hover { background: var(--down-soft); }
+
+.menu-eu { display: flex; align-items: center; gap: 11px; padding: 10px 10px 8px; }
+.menu-eu b { display: block; font-size: 13px; font-weight: 650; }
+.menu-eu em {
+  display: block; font-style: normal; font-size: 11px; color: var(--muted);
+  max-width: 165px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 /* ========================= galeria de robôs ========================= */
 .galeria {

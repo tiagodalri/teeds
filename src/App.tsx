@@ -6,6 +6,7 @@ import { ManagementPanel } from './components/ManagementPanel'
 import { RobotsPanel } from './components/RobotsPanel'
 import { OperationsPanel } from './components/OperationsPanel'
 import { AccountSwitcher } from './components/AccountSwitcher'
+import { UserMenu } from './components/UserMenu'
 import { Brand } from './components/Brand'
 import { LoginScreen } from './components/LoginScreen'
 import { NovaSenha } from './components/NovaSenha'
@@ -240,12 +241,7 @@ export default function App() {
           })()}
 
           {teeds.usuario && (
-            <div className="usuario">
-              <button title={teeds.usuario.email} onClick={() => void teeds.sair()}>
-                {(teeds.usuario.nome || teeds.usuario.email).split(' ')[0]}
-                <span>sair</span>
-              </button>
-            </div>
+            <UserMenu usuario={teeds.usuario} onSair={() => void teeds.sair()} />
           )}
         </div>
       </header>
