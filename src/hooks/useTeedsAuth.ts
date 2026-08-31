@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  cadastrar as criarConta, entrar as fazerLogin, recuperarSenha,
-  renovar, sair as encerrar, sessaoGuardada,
+  buscarUsuario, cadastrar as criarConta, capturarRetorno, entrar as fazerLogin,
+  recuperarSenha, renovar, sair as encerrar, sessaoGuardada, trocarSenha,
   type SessaoTeeds,
 } from '../core/teeds/conta'
 import { autenticacaoConfigurada } from '../core/teeds/config'
@@ -21,6 +21,9 @@ export function useTeedsAuth() {
   const [sessao, setSessao] = useState<SessaoTeeds | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
+  /** Quando a pessoa chega pelo link de "esqueci a senha". */
+  const [redefinindo, setRedefinindo] = useState(false)
+  const [recado, setRecado] = useState<string | null>(null)
   const relogio = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   /** Agenda a renovacao para um minuto antes do vencimento. */
@@ -40,10 +43,31 @@ export function useTeedsAuth() {
     }, daqui)
   }, [])
 
-  // sessao guardada, ao abrir
+  // sessao guardada — ou a que acabou de chegar pelo link do e-mail
   useEffect(() => {
     if (!autenticacaoConfigurada()) return
     let vivo = true
+
+    // O link do e-mail volta com o token no endereco; isso vem primeiro.
+    const retorno = capturarRetorno()
+    if (retorno.erro) setErro(retorno.erro)
+    if (retorno.sessao) {
+      const s = retorno.sessao
+      if (retorno.tipo === 'recovery') setRedefinindo(true)
+      else setRecado('E-mail confirmado. Bem-vindo à Teeds.')
+      void (async () => {
+        try {
+          const usuario = await buscarUsuario(s.token)
+          if (!vivo) return
+          const completa = { ...s, usuario }
+          setSessao(completa); setStatus('logado'); agendarRenovacao(completa)
+        } catch {
+          if (vivo) { setSessao(s); setStatus('logado') }
+        }
+      })()
+      return () => { vivo = false }
+    }
+
     const guardada = sessaoGuardada()
     if (!guardada) { setStatus('deslogado'); return }
 
@@ -118,5 +142,24 @@ export function useTeedsAuth() {
     setStatus('deslogado')
   }, [sessao])
 
-  return { status, sessao, usuario: sessao?.usuario ?? null, erro, setErro, ocupado, entrar, cadastrar, esqueci, sair }
+  const definirNovaSenha = useCallback(async (nova: string) => {
+    if (!sessao) return false
+    setOcupado(true); setErro(null)
+    try {
+      await trocarSenha(sessao.token, nova)
+      setRedefinindo(false)
+      setRecado('Senha trocada.')
+      return true
+    } catch (e) {
+      setErro((e as Error).message)
+      return false
+    } finally {
+      setOcupado(false)
+    }
+  }, [sessao])
+
+  return {
+    status, sessao, usuario: sessao?.usuario ?? null, erro, setErro, recado, setRecado,
+    ocupado, entrar, cadastrar, esqueci, sair, redefinindo, definirNovaSenha,
+  }
 }

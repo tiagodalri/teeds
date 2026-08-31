@@ -8,6 +8,7 @@ import { OperationsPanel } from './components/OperationsPanel'
 import { AccountSwitcher } from './components/AccountSwitcher'
 import { Brand } from './components/Brand'
 import { LoginScreen } from './components/LoginScreen'
+import { NovaSenha } from './components/NovaSenha'
 import { AFILIADO } from './core/deriv/config'
 import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
@@ -170,6 +171,12 @@ export default function App() {
     return <div className="entrada"><div className="entrada-esperando">abrindo a Teeds…</div></div>
   }
 
+  if (teeds.redefinindo) {
+    return (
+      <NovaSenha ocupado={teeds.ocupado} erro={teeds.erro} onDefinir={teeds.definirNovaSenha} />
+    )
+  }
+
   if (teeds.status === 'deslogado') {
     return (
       <LoginScreen
@@ -242,6 +249,13 @@ export default function App() {
           )}
         </div>
       </header>
+
+      {teeds.recado && (
+        <div className="faixa faixa-ok">
+          {teeds.recado}
+          <button onClick={() => teeds.setRecado(null)}>fechar</button>
+        </div>
+      )}
 
       {conta.aviso && (
         <div className="faixa faixa-ok">

@@ -156,3 +156,76 @@ export async function recuperarSenha(email: string): Promise<void> {
     corpo: { email: email.trim() },
   })
 }
+
+/* ------------------------------------------------------------- retorno */
+
+export interface Retorno {
+  sessao: SessaoTeeds | null
+  /** 'signup' = confirmou o e-mail · 'recovery' = veio redefinir a senha. */
+  tipo: string | null
+  erro: string | null
+}
+
+/**
+ * Lê o que o Supabase devolve no endereço depois do e-mail.
+ *
+ * Os links de confirmação e de nova senha voltam para a Teeds com os
+ * tokens no fragmento (`#access_token=...`). Sem ler isso aqui, a pessoa
+ * clica no e-mail, chega na plataforma e continua vendo a tela de login.
+ * O endereço é limpo em seguida para o token não ficar visível na barra.
+ */
+export function capturarRetorno(): Retorno {
+  const bruto = window.location.hash.replace(/^#/, '')
+  if (!bruto) return { sessao: null, tipo: null, erro: null }
+
+  const p = new URLSearchParams(bruto)
+  const token = p.get('access_token')
+  const erroBruto = p.get('error_description') || p.get('error')
+  if (!token && !erroBruto) return { sessao: null, tipo: null, erro: null }
+
+  limparEndereco()
+
+  if (!token) {
+    const m = (erroBruto || '').toLowerCase()
+    return {
+      sessao: null,
+      tipo: p.get('type'),
+      erro: m.includes('expired')
+        ? 'Esse link já expirou. Peça um novo.'
+        : (erroBruto || 'O link não funcionou.'),
+    }
+  }
+
+  const sessao: SessaoTeeds = {
+    token,
+    refresh: p.get('refresh_token') ?? '',
+    expiraEm: Date.now() + Number(p.get('expires_in') ?? 3600) * 1000,
+    usuario: { id: '', email: '', nome: null, criadoEm: '' },
+  }
+  guardar(sessao)
+  return { sessao, tipo: p.get('type'), erro: null }
+}
+
+function limparEndereco() {
+  try {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+  } catch {
+    /* navegador sem history: o token some no proximo carregamento */
+  }
+}
+
+/** Busca os dados do usuario a partir do token — usado depois do retorno. */
+export async function buscarUsuario(token: string): Promise<Usuario> {
+  const u = await chamar('/user', { token })
+  return {
+    id: u.id,
+    email: u.email ?? '',
+    nome: u.user_metadata?.nome ?? null,
+    criadoEm: u.created_at ?? '',
+  }
+}
+
+/** Troca a senha da conta logada. */
+export async function trocarSenha(token: string, nova: string): Promise<void> {
+  await chamar('/user', { corpo: { password: nova }, token, metodo: 'PUT' })
+}
