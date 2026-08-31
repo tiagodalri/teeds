@@ -215,6 +215,7 @@ export function ManagementPanel({
         <p className="ger-texto">
           Calculado operação por operação, com a regra real da Deriv: <b>3% do pagamento</b> de
           cada contrato comprado pela Teeds. {isDemo && 'Como a conta é demo, o dinheiro é fictício — mas o cálculo é o mesmo que valeria numa conta real.'}
+          {' '}O período é o mesmo que você escolheu aí em cima.
         </p>
 
         {simErro && <div className="ger-erro">{simErro}</div>}
@@ -227,7 +228,9 @@ export function ManagementPanel({
                 <span className="rot">Comissão que teria gerado</span>
                 <strong>{dinheiro(sim.comissao, 'USD')}</strong>
                 <span className="kpi-nota">
-                  em {sim.operacoes} operações · média de {dinheiro(sim.comissaoMedia)} por operação
+                  em {sim.operacoes.toLocaleString('pt-BR')} operações{' '}
+                  {sim.dias === 1 ? 'hoje' : `nos últimos ${sim.dias} dias`}
+                  {' · '}média de {dinheiro(sim.comissaoMedia)} por operação
                 </span>
               </div>
               <div className="kpi">
@@ -240,6 +243,13 @@ export function ManagementPanel({
                 <span className="kpi-nota">base do cálculo</span>
               </div>
             </div>
+
+            {sim.truncado && (
+              <p className="ger-nota">
+                São tantas operações que parei em {sim.operacoes.toLocaleString('pt-BR')} —
+                há mais coisa nesse período que não entrou nesta conta.
+              </p>
+            )}
 
             {sim.porDia.length > 0 && (
               <div className="sim-dias">
