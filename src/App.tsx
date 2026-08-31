@@ -189,7 +189,18 @@ export default function App() {
             </button>
           )}
 
-          <div className={`status status-${connection}`}><i /> {STATUS_LABEL[connection] ?? connection}</div>
+          {/* Logado, o que importa e a conexao da conta: e por ela que o
+              saldo anda e os robos operam. */}
+          {(() => {
+            const alvo = conta.status === 'logado' ? conta.conexao : connection
+            return (
+              <div className={`status status-${alvo}`} title={
+                conta.status === 'logado' ? 'conexão da sua conta na Deriv' : 'conexão de mercado'
+              }>
+                <i /> {STATUS_LABEL[alvo] ?? alvo}
+              </div>
+            )
+          })()}
         </div>
       </header>
 
@@ -215,6 +226,7 @@ export default function App() {
           moeda={conta.account?.currency ?? 'USD'}
           symbols={symbols}
           symbolPadrao={symbolCode}
+          conexao={conta.conexao}
         />
       ) : tela === 'operacoes' ? (
         <OperationsPanel

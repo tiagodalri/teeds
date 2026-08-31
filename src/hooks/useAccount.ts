@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { completeLogin, loadSession, logout as clearSession, startLogin, type AuthSession } from '../core/deriv/auth'
 import { fetchAccounts, fetchTradingSocketUrl, resetDemoBalance, type TradingAccount } from '../core/deriv/account'
 import { TeedsSocket } from '../core/deriv/client'
+import type { ConnectionState } from '../core/deriv/types'
 import { limparCacheOperacoes } from '../core/deriv/history'
 import {
   fetchPortfolio, subscribeBalance, subscribeContract, subscribeTransactions,
@@ -25,6 +26,8 @@ export function useAccount() {
   const [connecting, setConnecting] = useState(false)
   /** Sobe a cada transacao na conta — quem depende do historico se atualiza. */
   const [pulso, setPulso] = useState(0)
+  /** Estado da conexao autenticada — diferente da conexao publica do grafico. */
+  const [conexao, setConexao] = useState<ConnectionState>('idle')
 
   const socketRef = useRef<TeedsSocket | null>(null)
   const [, setTick] = useState(0)
@@ -109,8 +112,13 @@ export function useAccount() {
       .then(async (url) => {
         if (!alive) return
         socketRef.current?.disconnect()
-        const sock = new TeedsSocket({ url })
+        // O OTP da URL e de uso unico: cada reconexao precisa de um novo.
+        const sock = new TeedsSocket({
+          url,
+          renovarUrl: () => fetchTradingSocketUrl(session, accountId),
+        })
         socketRef.current = sock
+        paradas.push(sock.onStateChange((e) => { if (alive) setConexao(e) }))
         sock.connect()
 
         paradas.push(subscribeBalance(sock, (b) => alive && setBalance(b)))
@@ -204,7 +212,7 @@ export function useAccount() {
     status, error, setError, session,
     accounts, account, accountId, setAccountId, isDemo,
     balance, contracts: [...contracts.values()],
-    socket: socketRef.current, connecting, aviso, setAviso, pulso,
+    socket: socketRef.current, connecting, aviso, setAviso, pulso, conexao,
     login, logout, recarregarDemo,
   }
 }

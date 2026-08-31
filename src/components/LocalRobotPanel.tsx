@@ -15,6 +15,8 @@ interface Props {
   symbols: ActiveSymbol[]
   symbolPadrao: string | null
   identidade: Identidade
+  /** Estado da conexao autenticada. */
+  conexao?: string
 }
 
 const PADRAO: ConfigEstrategia = {
@@ -31,7 +33,9 @@ const PADRAO: ConfigEstrategia = {
 const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-export function LocalRobotPanel({ socket, isDemo, moeda, symbols, symbolPadrao, identidade }: Props) {
+export function LocalRobotPanel({
+  socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
+}: Props) {
   const estrategia = ESTRATEGIAS_LOCAIS.find((e) => e.id === identidade.id) ?? ESTRATEGIAS_LOCAIS[0]
   const [cfg, setCfg] = useState<ConfigEstrategia>(PADRAO)
   const [symbol, setSymbol] = useState(symbolPadrao ?? '1HZ10V')
@@ -147,6 +151,7 @@ export function LocalRobotPanel({ socket, isDemo, moeda, symbols, symbolPadrao, 
         cor={identidade.cor}
         ganhaCom={ganhaCom}
         parametros={parametros}
+        conexao={conexao}
         onDesligar={rodando ? () => motorRef.current?.desligar() : undefined}
         onLigarDeNovo={!rodando ? () => setPreparando(true) : undefined}
       />

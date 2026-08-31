@@ -1600,3 +1600,18 @@ button, input { font: inherit; color: inherit; }
   .tv-topo { flex-wrap: wrap; }
   .tv-acoes { width: 100%; }
 }
+
+/* aviso de conexão dentro da cabine */
+.tv-alerta {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 11px 18px; font-size: 12.5px; line-height: 1.5;
+  background: rgba(243, 183, 63, .12); color: #f3b73f;
+  border-bottom: 1px solid var(--tv-linha);
+}
+.tv-alerta i {
+  width: 7px; height: 7px; border-radius: 50%; background: currentColor;
+  flex-shrink: 0; margin-top: 6px;
+  animation: tv-pisca 1.2s ease-in-out infinite;
+}
+@keyframes tv-pisca { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .tv-alerta i { animation: none; } }

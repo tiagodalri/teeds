@@ -21,12 +21,16 @@ interface Props {
   moeda: string
   symbols: ActiveSymbol[]
   symbolPadrao: string | null
+  /** Estado da conexao autenticada, para avisar quando o robo perde o sinal. */
+  conexao?: string
 }
 
 const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadrao }: Props) {
+export function RobotsPanel({
+  socket, logado, isDemo, moeda, symbols, symbolPadrao, conexao = 'open',
+}: Props) {
   const [symbol, setSymbol] = useState<string>(symbolPadrao ?? '1HZ100V')
   const [valorInicial, setValorInicial] = useState(1)
   const [ticks, setTicks] = useState(1)
@@ -192,7 +196,8 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
 
       {ident.onde === 'teeds' && (
         <LocalRobotPanel socket={socket} isDemo={isDemo} moeda={moeda}
-          symbols={symbols} symbolPadrao={symbolPadrao} identidade={ident} />
+          symbols={symbols} symbolPadrao={symbolPadrao} identidade={ident}
+          conexao={conexao} />
       )}
 
       {/* Modelos antigos saíram da vitrine, mas quem ficou ligado no servidor

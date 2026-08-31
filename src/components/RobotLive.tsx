@@ -15,6 +15,8 @@ interface Props {
   ganhaCom: (d: number) => boolean
   /** Os parametros escolhidos, escondidos atras de um botao. */
   parametros?: Array<{ rot: string; valor: string }>
+  /** Estado da conexao autenticada — se cair, o robo para de receber preco. */
+  conexao?: string
   onDesligar?: () => void
   onLigarDeNovo?: () => void
 }
@@ -82,7 +84,7 @@ function Cronometro({ desde }: { desde: number }) {
 
 export function RobotLive({
   estado, config, moeda, nomeEstrategia, ativo, regra, ganhaCom,
-  parametros = [], onDesligar, onLigarDeNovo,
+  parametros = [], conexao = 'open', onDesligar, onLigarDeNovo,
 }: Props) {
   const [verParametros, setVerParametros] = useState(false)
   const acerto = estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
@@ -151,6 +153,19 @@ export function RobotLive({
           )}
         </div>
       </header>
+
+      {/* Sem conexão da conta não chega preço nem dá para comprar: melhor
+          dizer isso do que deixar a tela parecendo travada. */}
+      {estado.rodando && conexao !== 'open' && (
+        <div className="tv-alerta">
+          <i />
+          <span>
+            {conexao === 'reconnecting' || conexao === 'connecting'
+              ? 'Sem conexão com a sua conta na Deriv — reconectando. O robô volta a operar sozinho assim que o sinal voltar.'
+              : 'A conexão com a sua conta caiu. O robô está parado até ela voltar.'}
+          </span>
+        </div>
+      )}
 
       {verParametros && parametros.length > 0 && (
         <div className="tv-params">

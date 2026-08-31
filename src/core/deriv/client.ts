@@ -21,6 +21,14 @@ export interface TeedsSocketOptions {
   url?: string
   /** Reenviar as assinaturas ativas apos reconectar. Padrao: true. */
   resubscribe?: boolean
+  /**
+   * Devolve uma URL nova para a proxima tentativa de conexao.
+   *
+   * A conexao autenticada da Deriv usa um OTP de **uso unico** na propria
+   * URL. Reconectar com a mesma URL falha para sempre — e a sessao morre
+   * calada. Quem cria o socket passa aqui uma funcao que pede um OTP novo.
+   */
+  renovarUrl?: () => Promise<string>
 }
 
 /**
@@ -45,12 +53,17 @@ export class TeedsSocket {
   private closedByUser = false
   private resubscribe: boolean
   private queue: string[] = []
+  private renovarUrl?: () => Promise<string>
+  private renovando = false
+  /** Ultimo motivo de falha, para a tela poder explicar. */
+  ultimoErro: string | null = null
 
   state: ConnectionState = 'idle'
 
   constructor(opts: TeedsSocketOptions = {}) {
     this.url = opts.url ?? DERIV.ws.public
     this.resubscribe = opts.resubscribe ?? true
+    this.renovarUrl = opts.renovarUrl
   }
 
   // ---------------------------------------------------------------- conexao
@@ -143,7 +156,27 @@ export class TeedsSocket {
     // Recuo exponencial com teto de 30s, como recomenda a documentacao.
     const delay = Math.min(1000 * 2 ** (this.attempts - 1), 30_000)
     this.setState('reconnecting')
-    this.reconnectTimer = setTimeout(() => this.connect(), delay)
+    this.reconnectTimer = setTimeout(() => { void this.reconectar() }, delay)
+  }
+
+  /** Renova a credencial da URL, quando houver, e tenta de novo. */
+  private async reconectar() {
+    if (this.closedByUser) return
+    if (this.renovarUrl && !this.renovando) {
+      this.renovando = true
+      try {
+        this.url = await this.renovarUrl()
+        this.ultimoErro = null
+      } catch (e) {
+        // sem credencial nova nao adianta conectar: espera o proximo ciclo
+        this.ultimoErro = (e as Error).message
+        this.renovando = false
+        if (!this.closedByUser) this.scheduleReconnect()
+        return
+      }
+      this.renovando = false
+    }
+    this.connect()
   }
 
   private startPing() {
