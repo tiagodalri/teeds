@@ -93,8 +93,8 @@ const FAIXAS: Record<keyof ConfigEstrategia, [number, number]> = {
   fatorGale: [0, 3],
   galeApos: [1, 20],
   valorMaximo: [0.35, 50_000],
-  takeProfit: [0, 100_000],
-  stopLoss: [0, 100_000],
+  takeProfit: [0, 10_000],
+  stopLoss: [0, 10_000],
   maxOperacoes: [1, 5_000],
 }
 
@@ -217,12 +217,12 @@ export function RobotSetup({
         <div className="qz-dupla">
           <label>
             <span className="rot">Parar se ganhar</span>
-            <Numero auto valor={cfg.takeProfit} passo={1} sufixo={moeda} maximo={100_000}
+            <Numero auto valor={cfg.takeProfit} passo={1} sufixo={moeda} maximo={10_000}
               aoMudar={(n) => muda({ takeProfit: n })} />
           </label>
           <label>
             <span className="rot">Parar se perder</span>
-            <Numero valor={cfg.stopLoss} passo={1} sufixo={moeda} maximo={100_000}
+            <Numero valor={cfg.stopLoss} passo={1} sufixo={moeda} maximo={10_000}
               aoMudar={(n) => muda({ stopLoss: n })} />
           </label>
           <label>
