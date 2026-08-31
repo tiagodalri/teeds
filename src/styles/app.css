@@ -39,14 +39,9 @@ button, input { font: inherit; color: inherit; }
   background: var(--bg); border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-.brand { display: flex; align-items: center; gap: 10px; }
-.brand .mark {
-  width: 28px; height: 28px; border-radius: 8px;
-  background: var(--primary); color: #fff;
-  display: grid; place-items: center;
-  font-weight: 700; font-size: 15px; letter-spacing: -0.02em;
-}
-.brand .name { font-weight: 650; font-size: 17px; letter-spacing: -0.01em; }
+
+
+
 
 .status {
   display: flex; align-items: center; gap: 7px;
@@ -277,12 +272,6 @@ button, input { font: inherit; color: inherit; }
   background: var(--surface); padding: 2px 7px; border-radius: 5px;
 }
 .pos-tempo.urgente { background: var(--down-soft); color: var(--down); }
-
-.pos-barra {
-  height: 3px; background: var(--border); border-radius: 2px;
-  overflow: hidden; margin-bottom: 12px;
-}
-.pos-barra span { display: block; height: 100%; background: var(--primary); transition: width 1s linear; }
 
 .pos-resultado {
   display: flex; justify-content: space-between; align-items: flex-start;
@@ -1012,3 +1001,65 @@ button, input { font: inherit; color: inherit; }
 .config-robo .btn-ligar:disabled { background: #cfd6e2; }
 .config-robo .rob-linha input:focus, .config-robo .rob-linha select:focus { border-color: var(--robo); }
 .config-robo .rob-estrat button.on { border-color: var(--robo); background: var(--robo-suave); }
+
+/* ============================== a marca ============================== */
+.marca { display: flex; align-items: center; gap: 11px; }
+.marca-selo {
+  display: grid; place-items: center; border-radius: 10px; flex-shrink: 0;
+  background: radial-gradient(circle at 30% 25%, #2b2b30, #0d0d10 70%);
+  box-shadow: 0 1px 2px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.09);
+  padding: 4px;
+}
+.marca-selo img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.marca-nome {
+  font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+  font-weight: 600; font-size: 17px; letter-spacing: 0.18em;
+  color: var(--text); padding-left: 2px;
+}
+
+/* ========================= barra de progresso ========================= */
+.prog {
+  position: relative; width: 100%; border-radius: 99px; overflow: hidden;
+  background: var(--border);
+}
+.prog-fill {
+  display: block; height: 100%; border-radius: 99px;
+  background: var(--prog-cor);
+  transition: width 0.85s cubic-bezier(.4,0,.2,1);
+  position: relative; overflow: hidden;
+}
+/* brilho que percorre a barra enquanto ela está viva */
+.prog-fill.vivo::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(100deg,
+    transparent 20%, rgba(255,255,255,.55) 50%, transparent 80%);
+  transform: translateX(-100%);
+  animation: brilho 1.9s ease-in-out infinite;
+}
+@keyframes brilho { to { transform: translateX(220%); } }
+
+/* modo de espera: o traço percorre a barra inteira */
+.prog-espera .prog-fill {
+  width: 42%; transition: none;
+  animation: percorrer 1.25s cubic-bezier(.6,0,.4,1) infinite;
+}
+.prog-espera .prog-fill::after { animation: none; }
+@keyframes percorrer {
+  0% { transform: translateX(-115%); }
+  100% { transform: translateX(255%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prog-fill.vivo::after, .prog-espera .prog-fill { animation: none; }
+  .prog-espera .prog-fill { width: 100%; opacity: .45; }
+}
+
+/* progresso dentro do cartão de posição */
+.pos-progresso { margin-bottom: 12px; }
+.pos-progresso-txt {
+  display: block; margin-top: 5px; font-size: 10.5px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* operação em andamento, no painel do robô */
+.viv-operando { flex-direction: column; align-items: stretch; gap: 9px; }
+.viv-operando-txt { display: flex; align-items: center; gap: 9px; }

@@ -133,6 +133,7 @@ export function LocalRobotPanel({ socket, isDemo, moeda, symbols, symbolPadrao, 
             config={cfg}
             moeda={moeda}
             nomeEstrategia={estrategia.nome}
+            cor={identidade.cor}
             ganhaCom={(d) => {
               const b = estrategia.barreira ?? 5
               switch (estrategia.contractType) {

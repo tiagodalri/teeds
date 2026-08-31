@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { OpenContract } from '../core/deriv/trading'
+import { Progress } from './Progress'
 
 /** Contagem regressiva ate a expiracao, atualizada a cada segundo. */
 function useCountdown(expiryEpoch: number) {
@@ -47,7 +48,15 @@ export function PositionCard({ contrato: c, nomeAtivo, onVender, vendendo }: Pro
         <span className={`pos-tempo ${restante <= 15 ? 'urgente' : ''}`}>{texto}</span>
       </div>
 
-      <div className="pos-barra"><span style={{ width: `${progresso}%` }} /></div>
+      <div className="pos-progresso">
+        <Progress valor={progresso} altura={5}
+          cor={ganhando ? 'var(--up)' : 'var(--down)'} vivo={restante > 0} />
+        <span className="pos-progresso-txt">
+          {restante > 0
+            ? `${Math.round(progresso)}% do contrato · faltam ${texto}`
+            : 'liquidando…'}
+        </span>
+      </div>
 
       <div className="pos-resultado">
         <div>

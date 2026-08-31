@@ -1,11 +1,13 @@
 import { useMemo } from 'react'
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
+import { Progress } from './Progress'
 
 interface Props {
   estado: EstadoMotor
   config: ConfigEstrategia
   moeda: string
   nomeEstrategia: string
+  cor?: string
   /** Dígitos que fazem a operação ganhar, para pintar a fita. */
   ganhaCom: (d: number) => boolean
 }
@@ -45,7 +47,7 @@ function Curva({ pontos, positivo }: { pontos: number[]; positivo: boolean }) {
   )
 }
 
-export function RobotLive({ estado, config, moeda, nomeEstrategia, ganhaCom }: Props) {
+export function RobotLive({ estado, config, moeda, nomeEstrategia, ganhaCom, cor = 'var(--primary)' }: Props) {
   const acerto = estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
   const positivo = estado.resultado >= 0
   const fita = estado.digitos.slice(-20)
@@ -117,7 +119,8 @@ export function RobotLive({ estado, config, moeda, nomeEstrategia, ganhaCom }: P
 
       {estado.emOperacao && (
         <div className="viv-operando">
-          <i /> operação em andamento — aguardando o resultado
+          <div className="viv-operando-txt"><i /> operação em andamento — aguardando o resultado</div>
+          <Progress cor={cor} altura={4} />
         </div>
       )}
 
