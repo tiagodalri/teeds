@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AuthSession } from '../core/deriv/auth'
 import { DERIV } from '../core/deriv/config'
 import {
@@ -15,6 +15,8 @@ interface Props {
   /** Pagamento de referencia sem markup, para o simulador. */
   payoutBase: number
   moeda: string
+  /** Sobe a cada transacao na conta: dispara o recalculo ao vivo. */
+  pulso?: number
 }
 
 const PERIODOS = [
@@ -27,7 +29,9 @@ const PERIODOS = [
 const dinheiro = (v: number, moeda = 'USD') =>
   `${moeda} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-export function ManagementPanel({ session, socket, isDemo, onReautorizar, payoutBase, moeda }: Props) {
+export function ManagementPanel({
+  session, socket, isDemo, onReautorizar, payoutBase, moeda, pulso = 0,
+}: Props) {
   const [sim, setSim] = useState<MarkupSimulado | null>(null)
   const [simCarregando, setSimCarregando] = useState(false)
   const [simErro, setSimErro] = useState<string | null>(null)
@@ -68,17 +72,34 @@ export function ManagementPanel({ session, socket, isDemo, onReautorizar, payout
     return () => { vivo = false }
   }, [session, dias])
 
+  /**
+   * Comissao ao vivo.
+   *
+   * Cada transacao na conta faz o pulso subir. Recalcular a cada uma seria
+   * varrer o extrato inteiro varias vezes por segundo com um robo ligado —
+   * entao o recalculo espera um respiro de 4 s depois da ultima movimentacao.
+   */
+  const ultimoCalculo = useRef(0)
   useEffect(() => {
     if (!socket) return
     let vivo = true
-    setSimCarregando(true)
-    setSimErro(null)
-    simularComissao(socket, 0.03)
-      .then((r) => vivo && setSim(r))
-      .catch((e: Error) => vivo && setSimErro(e.message))
-      .finally(() => vivo && setSimCarregando(false))
-    return () => { vivo = false }
-  }, [socket])
+
+    const calcular = () => {
+      if (!vivo) return
+      ultimoCalculo.current = Date.now()
+      setSimCarregando(true)
+      setSimErro(null)
+      simularComissao(socket, 0.03)
+        .then((r) => vivo && setSim(r))
+        .catch((e: Error) => vivo && setSimErro(e.message))
+        .finally(() => vivo && setSimCarregando(false))
+    }
+
+    // a primeira carga e imediata; as seguintes esperam o mercado acalmar
+    const espera = ultimoCalculo.current === 0 ? 0 : 4000
+    const id = setTimeout(calcular, espera)
+    return () => { vivo = false; clearTimeout(id) }
+  }, [socket, pulso])
 
   const simulacao = useMemo(() => simular(payoutBase, markupSim), [payoutBase, markupSim])
   const simAtual = useMemo(() => simular(payoutBase, 3), [payoutBase])

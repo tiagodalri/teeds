@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { TeedsSocket } from '../core/deriv/client'
 import { buscarOperacoes, paraCSV, resumir, type Operacao } from '../core/deriv/history'
 import { MODELOS } from '../core/deriv/robots'
-import { nomeDoRobo } from '../core/deriv/robotNames'
+import { nomeDoRobo, todasAsOrigens } from '../core/deriv/robotNames'
 import { StatementPanel } from './StatementPanel'
 
 interface Props {
@@ -10,6 +10,8 @@ interface Props {
   logado: boolean
   moeda: string
   symbols?: import('../core/deriv/types').ActiveSymbol[]
+  /** Sobe a cada transacao na conta: recarrega a lista sozinha. */
+  pulso?: number
 }
 
 const NOMES: Record<string, string> = {
@@ -27,7 +29,7 @@ const hora = (e: number) =>
 const dia = (e: number) =>
   new Date(e * 1000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 
-export function OperationsPanel({ socket, logado, moeda, symbols = [] }: Props) {
+export function OperationsPanel({ socket, logado, moeda, symbols = [], pulso = 0 }: Props) {
   const [ops, setOps] = useState<Operacao[]>([])
   const [carregando, setCarregando] = useState(false)
   const [progresso, setProgresso] = useState<{ feitas: number; total: number } | null>(null)
@@ -57,23 +59,52 @@ export function OperationsPanel({ socket, logado, moeda, symbols = [] }: Props) 
     }
   }, [socket, limite])
 
-  useEffect(() => { carregar() }, [carregar])
+  // Recarrega ao abrir e, depois, sempre que a conta se movimenta — com um
+  // respiro de 4 s para nao varrer o historico a cada tick de um robo ligado.
+  const jaCarregou = useRef(false)
+  useEffect(() => {
+    const espera = jaCarregou.current ? 4000 : 0
+    jaCarregou.current = true
+    const id = setTimeout(() => { void carregar() }, espera)
+    return () => clearTimeout(id)
+  }, [carregar, pulso])
 
-  const robos = useMemo(() => {
-    const set = new Map<string, number>()
-    for (const o of ops) if (o.runId) set.set(o.runId, (set.get(o.runId) ?? 0) + 1)
-    return [...set.entries()]
+  // Nome legivel do ativo: a API devolve o codigo (1HZ10V), nao o nome.
+  const nomeAtivo = useMemo(() => {
+    const m = new Map(symbols.map((x) => [x.symbol, x.name]))
+    return (codigo: string) => m.get(codigo) ?? codigo
+  }, [symbols])
+
+  // De quem foi cada operacao: robo de servidor (runId), robo da Teeds
+  // (marcado no navegador na hora da compra) ou entrada manual.
+  const origem = useMemo(() => {
+    const marcas = todasAsOrigens()
+    return (o: Operacao) => {
+      if (o.runId) return { chave: o.runId, nome: nomeDoRobo(o.runId, 'Robô ' + o.runId.slice(-4)), robo: true }
+      const local = marcas[String(o.contractId)]
+      if (local) return { chave: 'teeds:' + local, nome: local, robo: true }
+      return { chave: 'manual', nome: 'Manual', robo: false }
+    }
   }, [ops])
+
+  const origens = useMemo(() => {
+    const set = new Map<string, { nome: string; n: number }>()
+    for (const o of ops) {
+      const g = origem(o)
+      const at = set.get(g.chave)
+      set.set(g.chave, { nome: g.nome, n: (at?.n ?? 0) + 1 })
+    }
+    return [...set.entries()].sort((a, b) => b[1].n - a[1].n)
+  }, [ops, origem])
 
   const filtradas = useMemo(() => {
     return ops.filter((o) => {
-      if (filtroRobo === 'manual' && o.runId) return false
-      if (filtroRobo !== 'todos' && filtroRobo !== 'manual' && o.runId !== filtroRobo) return false
+      if (filtroRobo !== 'todos' && origem(o).chave !== filtroRobo) return false
       if (filtroResultado === 'ganhos' && !o.ganhou) return false
       if (filtroResultado === 'perdas' && o.ganhou) return false
       return true
     })
-  }, [ops, filtroRobo, filtroResultado])
+  }, [ops, filtroRobo, filtroResultado, origem])
 
   const r = useMemo(() => resumir(filtradas), [filtradas])
 
@@ -138,10 +169,6 @@ export function OperationsPanel({ socket, logado, moeda, symbols = [] }: Props) 
           <span className="kpi-nota">{r.ganhos} ganhas · {r.perdas} perdidas</span>
         </div>
         <div className="kpi">
-          <span className="rot">Taxa de acerto</span>
-          <strong>{r.acerto.toFixed(1)}%</strong>
-        </div>
-        <div className="kpi">
           <span className="rot">Total movimentado</span>
           <strong>{din(r.movimentado, moeda)}</strong>
         </div>
@@ -152,28 +179,19 @@ export function OperationsPanel({ socket, logado, moeda, symbols = [] }: Props) 
           </strong>
           <span className="kpi-nota">{r.retorno >= 0 ? '+' : ''}{r.retorno.toFixed(1)}% do movimentado</span>
         </div>
-        <div className="kpi">
-          <span className="rot">Maior sequência</span>
-          <strong className="seq">
-            <em className="ganho">{r.maiorSequenciaGanho}</em>
-            <i>/</i>
-            <em className="perda">{r.maiorSequenciaPerda}</em>
-          </strong>
-          <span className="kpi-nota">ganhos seguidos / perdas seguidas</span>
-        </div>
       </div>
 
       {/* -------- filtros -------- */}
       <div className="ops-filtros">
-        <div className="segmented">
-          <button className={filtroRobo === 'todos' ? 'on' : ''} onClick={() => setFiltroRobo('todos')}>Tudo</button>
-          <button className={filtroRobo === 'manual' ? 'on' : ''} onClick={() => setFiltroRobo('manual')}>Manuais</button>
-          {robos.map(([id, n]) => (
-            <button key={id} className={filtroRobo === id ? 'on' : ''} onClick={() => setFiltroRobo(id)}>
-              {nomeDoRobo(id, 'Robô ' + id.slice(-4))} ({n})
-            </button>
-          ))}
-        </div>
+        <label className="ops-seletor">
+          <span className="rot">Origem</span>
+          <select value={filtroRobo} onChange={(e) => setFiltroRobo(e.target.value)}>
+            <option value="todos">Todas as origens ({ops.length})</option>
+            {origens.map(([chave, o]) => (
+              <option key={chave} value={chave}>{o.nome} ({o.n})</option>
+            ))}
+          </select>
+        </label>
         <div className="segmented">
           <button className={filtroResultado === 'todos' ? 'on' : ''} onClick={() => setFiltroResultado('todos')}>Todas</button>
           <button className={filtroResultado === 'ganhos' ? 'on' : ''} onClick={() => setFiltroResultado('ganhos')}>Ganhas</button>
@@ -187,8 +205,9 @@ export function OperationsPanel({ socket, logado, moeda, symbols = [] }: Props) 
           <thead>
             <tr>
               <th>Quando</th><th>Origem</th><th>Operação</th><th>Ativo</th>
-              <th className="num">Valor</th><th>Entrada</th><th>Saída</th>
-              <th>Resultado</th><th className="num">Lucro</th>
+              <th className="num">Valor</th><th className="num">Entrada</th>
+              <th className="num">Saída</th>
+              <th className="meio">Resultado</th><th className="num">Lucro</th>
             </tr>
           </thead>
           <tbody>
@@ -202,15 +221,18 @@ export function OperationsPanel({ socket, logado, moeda, symbols = [] }: Props) 
                     <b>{hora(o.compra)}</b><span>{dia(o.compra)}</span>
                   </td>
                   <td>
-                    {o.runId
-                      ? <span className="tag-robo">{nomeDoRobo(o.runId, 'robô ' + o.runId.slice(-4))}</span>
-                      : <span className="tag-manual">manual</span>}
+                    {(() => {
+                      const g = origem(o)
+                      return g.robo
+                        ? <span className="tag-robo">{g.nome}</span>
+                        : <span className="tag-manual">manual</span>
+                    })()}
                   </td>
                   <td className="ops-operação">
                     {nome}{comBarreira && o.barreira !== null ? ` ${o.barreira}` : ''}
                     {o.ticks > 0 && <em> · {o.ticks}t</em>}
                   </td>
-                  <td className="ops-ativo">{o.ativo}</td>
+                  <td className="ops-ativo">{nomeAtivo(o.ativo)}</td>
                   <td className="num">{o.valor.toFixed(2)}</td>
                   <td className="num ops-spot">
                     {o.entrada?.toFixed(o.pipSize) ?? '—'}
@@ -222,7 +244,7 @@ export function OperationsPanel({ socket, logado, moeda, symbols = [] }: Props) 
                       <b className={`dig-chip ${o.ganhou ? 'ok' : 'nao'}`}>{o.digitoSaida}</b>
                     )}
                   </td>
-                  <td>
+                  <td className="meio">
                     <span className={`ops-res ${o.ganhou ? 'ok' : 'nao'}`}>
                       {o.ganhou ? 'ganhou' : 'perdeu'}
                     </span>

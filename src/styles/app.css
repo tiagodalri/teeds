@@ -513,6 +513,10 @@ button, input { font: inherit; color: inherit; }
 
 /* ------------------------------------------------------------------ robôs */
 .rob-grade { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; align-items: start; }
+/* Com o robo ligado a cabine vira o assunto principal: ocupa a largura
+   toda e sobe para cima da configuracao. */
+.rob-grade.em-acao { grid-template-columns: 1fr; }
+.rob-grade.em-acao .viv-bloco { order: -1; }
 @media (max-width: 900px) { .rob-grade { grid-template-columns: 1fr; } }
 
 .rob-modelos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
@@ -642,16 +646,23 @@ button, input { font: inherit; color: inherit; }
   background: var(--primary); border-radius: 2px; transition: width 0.3s;
 }
 
-.ops-kpis { grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); }
+.ops-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .ops-kpis .kpi strong { font-size: 19px; }
-.seq { display: flex; align-items: baseline; gap: 4px; }
-.seq i { font-style: normal; color: var(--border); font-weight: 400; }
-.seq em { font-style: normal; }
+@media (max-width: 760px) { .ops-kpis { grid-template-columns: 1fr; } }
 
 .ops-filtros {
-  display: flex; gap: 10px; flex-wrap: wrap;
-  align-items: center; margin-bottom: 14px;
+  display: flex; gap: 12px; flex-wrap: wrap;
+  align-items: flex-end; margin-bottom: 14px;
 }
+/* Um seletor no lugar da fileira de chips: com muitos robos a fileira
+   quebrava em varias linhas e nenhum nome cabia inteiro. */
+.ops-seletor { display: flex; flex-direction: column; gap: 5px; min-width: 230px; }
+.ops-seletor select {
+  border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  border-radius: 8px; padding: 7px 10px; font-size: 12.5px; cursor: pointer;
+  box-shadow: var(--shadow);
+}
+.ops-seletor select:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 
 .ops-tabela-caixa {
   background: var(--bg); border: 1px solid var(--border);
@@ -665,6 +676,7 @@ button, input { font: inherit; color: inherit; }
   position: sticky; top: 0; background: var(--bg);
 }
 .ops-tabela th.num, .ops-tabela td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.ops-tabela th.meio, .ops-tabela td.meio { text-align: center; }
 .ops-tabela td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
 .ops-tabela tbody tr:last-child td { border-bottom: 0; }
 .ops-tabela tbody tr:hover { background: var(--surface); }
@@ -740,148 +752,268 @@ button, input { font: inherit; color: inherit; }
 
 .btn-parar { background: var(--down) !important; }
 
-/* ============================ robô em operação ============================ */
-.viv-bloco { padding: 0; overflow: hidden; }
-.viv { display: flex; flex-direction: column; }
+/* ==================== robô em operação — a cabine ====================
+   Uma ilha escura dentro do app claro: separa "a máquina trabalhando"
+   das configurações e dá contraste para o verde e o vermelho do
+   resultado aparecerem de longe. */
+.viv-bloco {
+  padding: 0; overflow: hidden; border: 0; background: transparent; box-shadow: none;
+}
+.tv {
+  --tv-fundo: #0f141d;
+  --tv-painel: #161e2b;
+  --tv-linha: #27313f;
+  --tv-txt: #e9eef7;
+  --tv-fraco: #8493ab;
+  --tv-up: #35d07f;
+  --tv-down: #ff5a6a;
+  --tv-ambar: #f3b73f;
+  display: flex; flex-direction: column;
+  background: var(--tv-fundo); color: var(--tv-txt);
+  border-radius: 14px; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 20, 29, .18), 0 20px 44px -20px rgba(15, 20, 29, .5);
+  font-variant-numeric: tabular-nums;
+}
+.tv-rot {
+  display: block; font-size: 9.5px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--tv-fraco);
+}
 
-/* --- cabeçalho --- */
-.viv-cab {
+/* ---------------- faixa de estado ---------------- */
+.tv-topo {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 16px 18px; border-bottom: 1px solid var(--border);
+  padding: 14px 18px; background: var(--tv-painel);
+  border-bottom: 1px solid var(--tv-linha);
 }
-.viv-cab.cacando { background: var(--primary-soft); }
-.viv-cab.operando { background: #fff8e6; }
-.viv-cab.recuperando { background: var(--down-soft); }
-.viv-cab.parado { background: var(--surface); }
-
-.viv-situacao { display: flex; align-items: center; gap: 11px; }
-.viv-situacao b { display: block; font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
-.viv-situacao span { font-size: 11.5px; color: var(--muted); }
-.viv-pulso {
+.tv-quem { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.tv-quem b {
+  display: block; font-size: 15px; font-weight: 600; letter-spacing: -.01em;
+}
+.tv-quem span {
+  display: block; font-size: 11.5px; color: var(--tv-fraco);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tv-farol {
   width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
-  background: var(--muted); position: relative;
+  background: var(--tv-fraco); position: relative;
 }
-.cacando .viv-pulso { background: var(--primary); }
-.operando .viv-pulso { background: #e8a33d; }
-.recuperando .viv-pulso { background: var(--down); }
-.cacando .viv-pulso::after, .operando .viv-pulso::after, .recuperando .viv-pulso::after {
-  content: ''; position: absolute; inset: -4px; border-radius: 50%;
-  border: 2px solid currentColor; color: inherit; opacity: 0;
-  background: inherit; animation: pulsar 1.8s ease-out infinite;
+.tv.cacando .tv-farol { background: var(--robo, #4c6fff); }
+.tv.operando .tv-farol { background: var(--tv-ambar); }
+.tv.recuperando .tv-farol { background: var(--tv-down); }
+.tv:not(.parado) .tv-farol::after {
+  content: ''; position: absolute; inset: -5px; border-radius: 50%;
+  border: 1.5px solid currentColor; color: inherit;
+  background: inherit; opacity: .35;
+  animation: tv-pulso 1.6s ease-out infinite;
 }
-@keyframes pulsar {
-  0% { transform: scale(0.7); opacity: 0.55; }
-  100% { transform: scale(1.7); opacity: 0; }
+@keyframes tv-pulso {
+  0% { transform: scale(.6); opacity: .5; }
+  100% { transform: scale(1.5); opacity: 0; }
 }
-@media (prefers-reduced-motion: reduce) { .viv-pulso::after { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .tv-farol::after { animation: none; } }
 
-.viv-resultado { text-align: right; }
-.viv-resultado .rot { margin-bottom: 1px; }
-.viv-resultado strong {
-  font-size: 26px; font-weight: 700; letter-spacing: -0.025em;
-  font-variant-numeric: tabular-nums; display: block;
+.tv-placar { text-align: right; flex-shrink: 0; }
+.tv-placar span {
+  display: block; font-size: 9.5px; font-weight: 600; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--tv-fraco);
 }
+.tv-placar strong {
+  font-size: 26px; font-weight: 650; letter-spacing: -.025em; line-height: 1.15;
+}
+.tv-placar em { font-style: normal; font-size: 12px; font-weight: 500; opacity: .6; }
+.tv .up { color: var(--tv-up); }
+.tv .down { color: var(--tv-down); }
 
-/* --- curva e trilho --- */
-.viv-curva { padding: 14px 18px 12px; border-bottom: 1px solid var(--border); }
-.curva { width: 100%; height: 58px; display: block; }
-.curva-vazia {
-  height: 58px; display: grid; place-items: center;
-  font-size: 11.5px; color: var(--muted);
+/* ---------------- palco ---------------- */
+.tv-palco {
+  position: relative; padding: 18px;
+  border-bottom: 1px solid var(--tv-linha);
+  min-height: 104px;
 }
-.viv-trilho { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-.viv-trilho .lado { font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.viv-trilho .barra {
-  flex: 1; height: 5px; background: var(--surface); border-radius: 3px;
-  position: relative; border: 1px solid var(--border);
+.tv-palco.quatro {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
 }
-.viv-trilho .barra i {
-  position: absolute; top: 50%; width: 11px; height: 11px; border-radius: 50%;
-  transform: translate(-50%, -50%); border: 2px solid var(--bg);
-  transition: left 0.5s ease;
+.tv-passo { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.tv-passo.alvo {
+  padding-left: 14px; border-left: 1px solid var(--tv-linha);
+  margin-left: -7px;
 }
-.viv-trilho .barra i.ganho { background: var(--up); }
-.viv-trilho .barra i.perda { background: var(--down); }
-.viv-trilho .barra u {
-  position: absolute; top: -3px; bottom: -3px; width: 1px;
-  background: var(--border); transform: translateX(-50%);
+.tv-preco {
+  font-size: 21px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1;
 }
+.tv-regra {
+  font-size: 19px; font-weight: 600; letter-spacing: -.015em;
+  color: var(--robo, var(--tv-ambar)); line-height: 1.15;
+}
+.tv-sub { font-size: 11px; color: var(--tv-fraco); }
+.tv-crono { font-variant-numeric: tabular-nums; }
+.tv-digitao {
+  align-self: flex-start;
+  min-width: 34px; height: 34px; padding: 0 7px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 9px; font-size: 19px; font-weight: 650;
+  border: 1.5px solid var(--tv-linha); background: var(--tv-painel);
+  color: var(--tv-txt);
+}
+.tv-digitao.up { border-color: var(--tv-up); color: var(--tv-up); background: rgba(53, 208, 127, .12); }
+.tv-digitao.down { border-color: var(--tv-down); color: var(--tv-down); background: rgba(255, 90, 106, .12); }
+.tv-digitao.neutro { color: var(--tv-fraco); }
 
-/* --- condição de entrada --- */
-.viv-condicao { padding: 14px 18px; border-bottom: 1px solid var(--border); }
-.viv-slots { display: flex; align-items: center; gap: 6px; }
-.viv-slots .slot {
-  width: 36px; height: 36px; border-radius: 9px; display: grid; place-items: center;
-  font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums;
-  border: 1.5px solid var(--border); background: var(--bg); color: var(--muted);
-  transition: background-color 0.25s, border-color 0.25s, color 0.25s;
+.tv-esteira {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: var(--tv-linha); overflow: hidden;
 }
-.viv-slots .slot.ok { background: var(--up-soft); border-color: var(--up); color: var(--up); }
-.viv-slots .slot.nao { background: var(--down-soft); border-color: #f3c8ca; color: var(--down); }
-.viv-slots .slot.vazio { border-style: dashed; }
-.viv-slots .slot.alvo {
-  width: auto; padding: 0 12px; font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.05em;
+.tv-esteira i {
+  position: absolute; inset: 0; width: 34%;
+  background: linear-gradient(90deg, transparent, var(--tv-ambar), transparent);
+  animation: tv-corre 1.15s linear infinite;
 }
-.viv-slots .slot.alvo.pronto { background: var(--up); border-color: var(--up); color: #fff; }
-.viv-seta { font-style: normal; color: var(--border); font-size: 15px; margin: 0 2px; }
+@keyframes tv-corre { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
+@media (prefers-reduced-motion: reduce) { .tv-esteira i { animation: none; opacity: .5; } }
 
-.viv-operando, .viv-parado {
-  padding: 13px 18px; font-size: 12.5px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 9px;
+.tv-enviando { display: flex; align-items: center; gap: 13px; }
+.tv-enviando b { display: block; font-size: 15px; font-weight: 600; }
+.tv-enviando span { font-size: 11.5px; color: var(--tv-fraco); }
+.tv-spin {
+  width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid var(--tv-linha); border-top-color: var(--tv-ambar);
+  animation: tv-gira .7s linear infinite;
 }
-.viv-operando { background: #fff8e6; color: #96690f; }
-.viv-operando i {
-  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
-  border: 2px solid currentColor; border-top-color: transparent;
-  animation: girar 0.85s linear infinite;
-}
-@keyframes girar { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .viv-operando i { animation: none; } }
-.viv-parado { background: var(--surface); color: var(--muted); }
+@keyframes tv-gira { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .tv-spin { animation: none; } }
 
-/* --- fita --- */
-.viv-fita-bloco { padding: 14px 18px; border-bottom: 1px solid var(--border); }
-.viv-fita { display: flex; gap: 4px; flex-wrap: wrap; }
-.vd {
-  width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center;
-  font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;
-  background: var(--surface); color: var(--muted);
+.tv-palco.caca {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
 }
-.vd.alvo { background: var(--up-soft); color: var(--up); }
-.vd.agora { outline: 2px solid var(--primary); outline-offset: -2px; font-weight: 700; }
-.viv-nada { font-size: 11.5px; color: var(--muted); }
+.tv-caca-cond { min-width: 0; }
+.tv-slots { display: flex; align-items: center; gap: 7px; margin-top: 9px; flex-wrap: wrap; }
+.tv-slot {
+  min-width: 36px; height: 36px; padding: 0 9px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 9px; font-size: 17px; font-weight: 650;
+  border: 1.5px solid var(--tv-linha); background: var(--tv-painel); color: var(--tv-fraco);
+}
+.tv-slot.ok { border-color: var(--tv-up); color: var(--tv-up); background: rgba(53, 208, 127, .12); }
+.tv-slot.nao { border-color: var(--tv-down); color: var(--tv-down); background: rgba(255, 90, 106, .12); }
+.tv-slot.vazio { border-style: dashed; }
+.tv-slot.destino {
+  font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  padding: 0 13px; color: var(--tv-fraco);
+}
+.tv-slot.destino.pronto {
+  background: var(--tv-up); border-color: var(--tv-up); color: #08160e;
+}
+.tv-seta { font-style: normal; color: var(--tv-linha); font-size: 17px; }
+.tv-caca-num { text-align: right; flex-shrink: 0; }
+.tv-caca-num b {
+  display: block; font-size: 25px; font-weight: 600; letter-spacing: -.02em;
+  color: var(--tv-txt);
+}
+.tv-caca-num span { font-size: 10.5px; color: var(--tv-fraco); }
+.tv-off { font-size: 13px; color: var(--tv-fraco); }
 
-/* --- números --- */
-.viv-nums {
+/* ---------------- fita de dígitos ---------------- */
+.tv-fita-bloco { padding: 14px 18px; border-bottom: 1px solid var(--tv-linha); }
+.tv-fita { display: flex; gap: 4px; margin-top: 9px; flex-wrap: wrap; }
+.tv-d {
+  width: 26px; height: 28px; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600;
+  background: var(--tv-painel); color: var(--tv-fraco);
+  border: 1px solid transparent;
+}
+.tv-d.up { color: var(--tv-up); background: rgba(53, 208, 127, .11); }
+.tv-d.down { color: var(--tv-down); background: rgba(255, 90, 106, .09); }
+.tv-d.agora { border-color: currentColor; transform: scale(1.1); }
+.tv-nada { font-size: 11.5px; color: var(--tv-fraco); }
+
+/* ---------------- sessão ---------------- */
+.tv-sessao { border-bottom: 1px solid var(--tv-linha); }
+.tv-curva-caixa { padding: 12px 18px 10px; }
+.tv-curva { width: 100%; height: 46px; display: block; }
+.tv-curva-vazia {
+  height: 46px; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--tv-fraco);
+}
+.tv-trilho { display: flex; align-items: center; gap: 10px; margin-top: 9px; }
+.tv-trilho span { font-size: 10px; font-weight: 600; }
+.tv-barra {
+  flex: 1; height: 4px; border-radius: 2px; position: relative;
+  background: linear-gradient(90deg, rgba(255,90,106,.35), var(--tv-linha), rgba(53,208,127,.35));
+}
+.tv-barra u {
+  position: absolute; left: 50%; top: -3px; width: 1px; height: 10px;
+  background: var(--tv-linha);
+}
+.tv-barra i {
+  position: absolute; top: 50%; width: 9px; height: 9px; border-radius: 50%;
+  transform: translate(-50%, -50%); border: 2px solid var(--tv-fundo);
+  transition: left .35s ease;
+}
+.tv-barra i.up { background: var(--tv-up); }
+.tv-barra i.down { background: var(--tv-down); }
+
+.tv-nums {
   display: grid; grid-template-columns: repeat(4, 1fr);
-  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--tv-linha);
 }
-.viv-nums > div {
-  padding: 13px 14px; display: flex; flex-direction: column; gap: 1px;
-  border-right: 1px solid var(--border);
+.tv-nums > div {
+  padding: 12px 18px; border-right: 1px solid var(--tv-linha);
+  display: flex; flex-direction: column; gap: 2px;
 }
-.viv-nums > div:last-child { border-right: 0; }
-.viv-nums b { font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-.viv-nums em { font-style: normal; font-size: 10px; color: var(--muted); }
+.tv-nums > div:last-child { border-right: 0; }
+.tv-nums span {
+  font-size: 9.5px; font-weight: 600; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--tv-fraco);
+}
+.tv-nums b { font-size: 18px; font-weight: 600; letter-spacing: -.02em; }
+.tv-nums em { font-style: normal; font-size: 10px; color: var(--tv-fraco); }
 
-/* --- histórico --- */
-.viv-log { max-height: 230px; overflow-y: auto; padding: 8px; }
-.viv-linha {
-  display: flex; gap: 10px; align-items: baseline;
-  padding: 6px 9px; border-radius: 7px; font-size: 12px;
+/* ---------------- tabela de operações ---------------- */
+.tv-ops { padding: 14px 18px 6px; }
+.tv-ops-topo { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.tv-conta {
+  font-size: 10px; font-weight: 650; padding: 2px 7px; border-radius: 20px;
+  background: var(--tv-painel); color: var(--tv-fraco);
 }
-.viv-linha span { color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; flex-shrink: 0; }
-.viv-linha b { font-weight: 500; }
-.viv-linha.ganho { background: var(--up-soft); }
-.viv-linha.ganho b { color: var(--up); font-weight: 650; }
-.viv-linha.perda { background: var(--down-soft); }
-.viv-linha.perda b { color: var(--down); font-weight: 650; }
-.viv-linha.compra b { color: var(--primary); }
-.viv-linha.parada { background: var(--surface); }
-.viv-linha.parada b { color: var(--text); font-weight: 600; }
+.tv-nada-ops { font-size: 12px; color: var(--tv-fraco); margin: 0 0 12px; }
+.tv-rolo { max-height: 290px; overflow-y: auto; overflow-x: auto; margin: 0 -18px; }
+.tv-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.tv-tabela th {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--tv-fundo); text-align: right; font-weight: 600;
+  font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--tv-fraco); padding: 6px 10px; white-space: nowrap;
+  border-bottom: 1px solid var(--tv-linha);
+}
+.tv-tabela th:first-child, .tv-tabela th:nth-child(2) { text-align: left; }
+.tv-tabela td {
+  padding: 8px 10px; text-align: right; white-space: nowrap;
+  border-bottom: 1px solid rgba(39, 49, 63, .55);
+}
+.tv-tabela td:first-child, .tv-tabela td:nth-child(2) { text-align: left; }
+.tv-tabela tbody tr:hover { background: var(--tv-painel); }
+.tv-tabela .tv-n { color: var(--tv-fraco); font-size: 11px; padding-left: 18px; }
+.tv-tabela .tv-hora { color: var(--tv-fraco); font-size: 11.5px; }
+.tv-tabela td:last-child { padding-right: 18px; }
+.tv-tabela .forte { font-weight: 650; }
+.tv-par { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; }
+.tv-chip {
+  min-width: 19px; height: 19px; border-radius: 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 650;
+  background: var(--tv-painel); color: var(--tv-fraco);
+}
+.tv-chip.up { background: rgba(53, 208, 127, .16); color: var(--tv-up); }
+.tv-chip.down { background: rgba(255, 90, 106, .16); color: var(--tv-down); }
 
-@media (max-width: 700px) { .viv-nums { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 900px) {
+  .tv-palco.quatro { grid-template-columns: repeat(2, 1fr); }
+  .tv-passo.alvo { padding-left: 0; border-left: 0; margin-left: 0; }
+  .tv-nums { grid-template-columns: repeat(2, 1fr); }
+  .tv-palco.caca { flex-direction: column; align-items: flex-start; }
+  .tv-caca-num { text-align: left; }
+}
 
 /* ========================= troca de conta ========================= */
 .troca { position: relative; }

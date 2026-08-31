@@ -1,6 +1,7 @@
 import type { TeedsSocket } from './client'
-import { subscribeTicks } from './market'
-import { buyFromProposal, requestProposal, subscribeContract } from './trading'
+import { fetchTickHistory, subscribeTicks } from './market'
+import { comprarDireto, subscribeContract } from './trading'
+import { marcarOrigem } from './robotNames'
 import { ultimoDigito } from './digits'
 
 /**
@@ -62,6 +63,37 @@ export interface ConfigEstrategia {
   maxOperacoes: number
 }
 
+/** Uma operacao ja encerrada, do jeito que a tela precisa mostrar. */
+export interface OperacaoMotor {
+  n: number
+  contractId: number
+  valor: number
+  entrada: number | null
+  saida: number | null
+  digitoEntrada: number | null
+  digitoSaida: number | null
+  lucro: number
+  ganhou: boolean
+  quando: number
+  /** Quantos ticks o robo esperou antes desta entrada. */
+  esperou: number
+}
+
+/** A operacao que esta correndo agora. */
+export interface EmCurso {
+  contractId: number
+  valor: number
+  payout: number
+  entrada: number | null
+  digitoEntrada: number | null
+  spot: number | null
+  digitoAtual: number | null
+  lucro: number
+  comprouEm: number
+  /** Milissegundos entre decidir e a Deriv confirmar a compra. */
+  latencia: number
+}
+
 export interface Registro {
   hora: number
   texto: string
@@ -86,6 +118,14 @@ export interface EstadoMotor {
   curva: number[]
   condicao: { rotulo: string; itens: Array<{ valor: string; ok: boolean }> } | null
   ultimoLucro: number | null
+  /** Operacoes encerradas, da mais recente para a mais antiga. */
+  historico: OperacaoMotor[]
+  /** A operacao em andamento, quando ha uma. */
+  emCurso: EmCurso | null
+  /** Ticks analisados desde a ultima entrada — mostra que o robo esta vivo. */
+  ticksAnalisados: number
+  /** Media de milissegundos entre decidir e a compra ser confirmada. */
+  latenciaMedia: number | null
 }
 
 const VAZIO: EstadoMotor = {
@@ -93,6 +133,7 @@ const VAZIO: EstadoMotor = {
   perdasSeguidas: 0, resultado: 0, movimentado: 0, valorAtual: 0,
   aguardando: '', motivoParada: null, registros: [], digitos: [],
   curva: [0], condicao: null, ultimoLucro: null,
+  historico: [], emCurso: null, ticksAnalisados: 0, latenciaMedia: null,
 }
 
 export class MotorTeeds {
@@ -107,6 +148,9 @@ export class MotorTeeds {
   private ouvintes = new Set<(e: EstadoMotor) => void>()
   private estado: EstadoMotor = { ...VAZIO }
   private vitoriasSeguidas = 0
+  private ultimoEpoch = 0
+  private latencias: number[] = []
+  private esperaAtual = 0
 
   constructor(opts: {
     socket: TeedsSocket
@@ -153,13 +197,28 @@ export class MotorTeeds {
   ligar() {
     if (this.estado.rodando) return
     this.estado = { ...VAZIO, rodando: true, valorAtual: this.config.valorInicial, digitos: [], curva: [0] }
+    this.ultimoEpoch = 0
+    this.latencias = []
+    this.esperaAtual = 0
     this.registrar(`Robô ligado — ${this.estrategia.nome}`, 'info')
+    this.estado.aguardando = 'lendo o histórico do ativo…'
     this.emitir()
 
+    // Sem isto o robo precisaria de tres ticks so para poder olhar a condicao.
+    // Com o historico na mao ele ja pode entrar no primeiro tick que chegar.
+    void this.semear()
+
     this.pararTicks = subscribeTicks(this.symbol, (t) => {
+      // o mesmo tick pode chegar duas vezes (replay da central + stream)
+      if (t.epoch && t.epoch === this.ultimoEpoch) return
+      this.ultimoEpoch = t.epoch ?? 0
+
       const d = ultimoDigito(t.quote, t.pipSize || this.pipSize)
-      this.estado.digitos = [...this.estado.digitos, d].slice(-60)
+      this.estado.digitos = [...this.estado.digitos, d].slice(-120)
       if (!this.estado.rodando || this.estado.emOperacao) { this.emitir(); return }
+
+      this.estado.ticksAnalisados += 1
+      this.esperaAtual += 1
 
       const ctx = this.contexto
       if (this.estrategia.entrar(ctx)) {
@@ -170,6 +229,23 @@ export class MotorTeeds {
         this.emitir()
       }
     }, this.socket)
+  }
+
+  /** Carrega os ultimos digitos do ativo para o robo comecar ja abastecido. */
+  private async semear() {
+    try {
+      const ticks = await fetchTickHistory(this.symbol, 60, this.socket)
+      if (!this.estado.rodando || this.estado.digitos.length >= 3) return
+      const lidos = ticks.map((t) => ultimoDigito(t.quote, t.pipSize || this.pipSize))
+      // o que ja chegou pelo stream tem prioridade: entra no fim
+      this.estado.digitos = [...lidos, ...this.estado.digitos].slice(-120)
+      const ctx = this.contexto
+      this.estado.aguardando = this.estrategia.aguardando(ctx)
+      this.estado.condicao = this.estrategia.progresso?.(ctx) ?? null
+      this.emitir()
+    } catch {
+      // sem historico o robo so demora alguns ticks a mais para se orientar
+    }
   }
 
   desligar(motivo = 'você desligou') {
@@ -191,25 +267,57 @@ export class MotorTeeds {
       Math.max(0.35, Number(this.estado.valorAtual.toFixed(2))),
       this.config.valorMaximo || Infinity,
     )
+    const partiu = Date.now()
 
     try {
-      const p = await requestProposal(this.socket, {
-        symbol: this.symbol,
-        contractType: this.estrategia.contractType,
-        amount: valor,
-        duration: this.estrategia.ticks,
-        durationUnit: 't',
-        currency: this.moeda,
-        ...(this.estrategia.barreira !== undefined ? { barrier: String(this.estrategia.barreira) } : {}),
-      })
-      const recibo = await buyFromProposal(this.socket, p.id, p.askPrice)
-      this.estado.movimentado += valor
-      this.registrar(`Entrou com ${this.moeda} ${valor.toFixed(2)}`, 'compra')
+      // Uma chamada so: no proposal->buy o tick que disparou a entrada ja
+      // teria passado antes da compra chegar.
+      const recibo = await comprarDireto(
+        this.socket,
+        {
+          symbol: this.symbol,
+          contractType: this.estrategia.contractType,
+          amount: valor,
+          duration: this.estrategia.ticks,
+          durationUnit: 't',
+          currency: this.moeda,
+          ...(this.estrategia.barreira !== undefined ? { barrier: String(this.estrategia.barreira) } : {}),
+        },
+        // teto de deslizamento: o custo nunca deve passar do valor da entrada
+        Number((valor * 1.01).toFixed(2)),
+      )
+
+      // deixa a marca para o historico saber de quem foi a operacao
+      marcarOrigem(recibo.contractId, this.estrategia.nome)
+
+      const latencia = Date.now() - partiu
+      this.latencias = [...this.latencias, latencia].slice(-30)
+      this.estado.latenciaMedia = Math.round(
+        this.latencias.reduce((t, n) => t + n, 0) / this.latencias.length,
+      )
+      this.estado.movimentado += recibo.buyPrice || valor
+      this.estado.emCurso = {
+        contractId: recibo.contractId,
+        valor: recibo.buyPrice || valor,
+        payout: recibo.payout,
+        entrada: null,
+        digitoEntrada: null,
+        spot: null,
+        digitoAtual: null,
+        lucro: 0,
+        comprouEm: Date.now(),
+        latencia,
+      }
+      this.registrar(
+        `Entrou com ${this.moeda} ${(recibo.buyPrice || valor).toFixed(2)} · pagamento ${this.moeda} ${recibo.payout.toFixed(2)}`,
+        'compra',
+      )
       this.emitir()
-      this.acompanhar(recibo.contractId, valor)
+      this.acompanhar(recibo.contractId, recibo.buyPrice || valor)
     } catch (e) {
       this.registrar(`Falha ao comprar: ${(e as Error).message}`, 'parada')
       this.estado.emOperacao = false
+      this.estado.emCurso = null
       this.emitir()
     }
   }
@@ -217,7 +325,24 @@ export class MotorTeeds {
   private acompanhar(contractId: number, valor: number) {
     this.pararContrato?.()
     this.pararContrato = subscribeContract(this.socket, contractId, (c) => {
-      if (c.status === 'open' && !c.isExpired) return
+      const casas = c.pipSize || this.pipSize
+
+      // enquanto corre, alimenta o cartao da operacao em andamento
+      if (c.status === 'open' && !c.isExpired) {
+        if (this.estado.emCurso?.contractId === contractId) {
+          this.estado.emCurso = {
+            ...this.estado.emCurso,
+            entrada: c.entrySpot,
+            digitoEntrada: c.entrySpot !== null ? ultimoDigito(c.entrySpot, casas) : null,
+            spot: c.currentSpot,
+            digitoAtual: c.currentSpot !== null ? ultimoDigito(c.currentSpot, casas) : null,
+            lucro: c.profit,
+            payout: c.payout || this.estado.emCurso.payout,
+          }
+          this.emitir()
+        }
+        return
+      }
       this.pararContrato?.(); this.pararContrato = null
 
       const ganhou = c.status === 'won' || c.profit > 0
@@ -226,6 +351,28 @@ export class MotorTeeds {
       this.estado.emOperacao = false
       this.estado.ultimoLucro = c.profit
       this.estado.curva = [...this.estado.curva, this.estado.resultado].slice(-200)
+
+      const entrada = c.entrySpot ?? this.estado.emCurso?.entrada ?? null
+      const saida = c.exitSpot ?? c.currentSpot ?? null
+      this.estado.historico = [
+        {
+          n: this.estado.operacoes,
+          contractId,
+          valor,
+          entrada,
+          saida,
+          digitoEntrada: entrada !== null ? ultimoDigito(entrada, casas) : null,
+          digitoSaida: saida !== null ? ultimoDigito(saida, casas) : null,
+          lucro: c.profit,
+          ganhou,
+          quando: Date.now(),
+          esperou: this.esperaAtual,
+        },
+        ...this.estado.historico,
+      ].slice(0, 60)
+      this.esperaAtual = 0
+      this.estado.ticksAnalisados = 0
+      this.estado.emCurso = null
 
       if (ganhou) {
         this.estado.vitorias += 1

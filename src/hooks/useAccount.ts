@@ -23,6 +23,8 @@ export function useAccount() {
   const [balance, setBalance] = useState<Balance | null>(null)
   const [contracts, setContracts] = useState<Map<number, OpenContract>>(new Map())
   const [connecting, setConnecting] = useState(false)
+  /** Sobe a cada transacao na conta — quem depende do historico se atualiza. */
+  const [pulso, setPulso] = useState(0)
 
   const socketRef = useRef<TeedsSocket | null>(null)
   const [, setTick] = useState(0)
@@ -123,7 +125,9 @@ export function useAccount() {
         // qualquer compra nova entra na lista automaticamente
         paradas.push(
           subscribeTransactions(sock, (t) => {
-            if (!alive || !t.contractId) return
+            if (!alive) return
+            setPulso((n) => n + 1)
+            if (!t.contractId) return
             if (t.action === 'buy') acompanhar(sock, t.contractId)
           }),
         )
@@ -200,7 +204,7 @@ export function useAccount() {
     status, error, setError, session,
     accounts, account, accountId, setAccountId, isDemo,
     balance, contracts: [...contracts.values()],
-    socket: socketRef.current, connecting, aviso, setAviso,
+    socket: socketRef.current, connecting, aviso, setAviso, pulso,
     login, logout, recarregarDemo,
   }
 }

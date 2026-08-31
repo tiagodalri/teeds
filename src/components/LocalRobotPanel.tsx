@@ -43,7 +43,31 @@ export function LocalRobotPanel({ socket, isDemo, moeda, symbols, symbolPadrao, 
   useEffect(() => () => { motorRef.current?.desligar('página fechada') }, [])
 
   const pip = symbols.find((s) => s.symbol === symbol)?.pipSize ?? 2
+  const nomeAtivo = symbols.find((s) => s.symbol === symbol)?.name ?? symbol
   const rodando = estado?.rodando ?? false
+
+  // a regra do contrato dita em uma frase, para a tela nao falar em codigo
+  const b = estrategia.barreira ?? 5
+  const regra = {
+    DIGITOVER: `maior que ${b}`,
+    DIGITUNDER: `menor que ${b}`,
+    DIGITMATCH: `igual a ${b}`,
+    DIGITDIFF: `diferente de ${b}`,
+    DIGITEVEN: 'par',
+    DIGITODD: 'ímpar',
+  }[estrategia.contractType] ?? estrategia.contractType
+
+  const ganhaCom = (d: number) => {
+    switch (estrategia.contractType) {
+      case 'DIGITOVER': return d > b
+      case 'DIGITUNDER': return d < b
+      case 'DIGITMATCH': return d === b
+      case 'DIGITDIFF': return d !== b
+      case 'DIGITEVEN': return d % 2 === 0
+      case 'DIGITODD': return d % 2 === 1
+      default: return false
+    }
+  }
 
   function ligar() {
     if (!socket) return
@@ -68,7 +92,8 @@ export function LocalRobotPanel({ socket, isDemo, moeda, symbols, symbolPadrao, 
   )
 
   return (
-    <div className="rob-grade config-robo" style={{ ["--robo" as any]: identidade.cor, ["--robo-suave" as any]: identidade.corSuave }}>
+    <div className={`rob-grade config-robo ${rodando ? 'em-acao' : ''}`}
+      style={{ ["--robo" as any]: identidade.cor, ["--robo-suave" as any]: identidade.corSuave }}>
       <section className="ger-bloco">
         <div className="config-cab">
           <Emblema id={identidade} tamanho={44} />
@@ -133,19 +158,10 @@ export function LocalRobotPanel({ socket, isDemo, moeda, symbols, symbolPadrao, 
             config={cfg}
             moeda={moeda}
             nomeEstrategia={estrategia.nome}
+            ativo={nomeAtivo}
+            regra={regra}
             cor={identidade.cor}
-            ganhaCom={(d) => {
-              const b = estrategia.barreira ?? 5
-              switch (estrategia.contractType) {
-                case 'DIGITOVER': return d > b
-                case 'DIGITUNDER': return d < b
-                case 'DIGITMATCH': return d === b
-                case 'DIGITDIFF': return d !== b
-                case 'DIGITEVEN': return d % 2 === 0
-                case 'DIGITODD': return d % 2 === 1
-                default: return false
-              }
-            }}
+            ganhaCom={ganhaCom}
           />
         )}
       </section>

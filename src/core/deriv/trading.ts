@@ -31,6 +31,7 @@ export interface OpenContract {
   isExpired: boolean
   entrySpot: number | null
   currentSpot: number | null
+  exitSpot: number | null
   barrier: number | null
   longcode: string
   shortcode: string
@@ -57,6 +58,7 @@ function toOpenContract(p: Record<string, any>): OpenContract {
     isExpired: p.is_expired === 1,
     entrySpot: num(p.entry_spot),
     currentSpot: num(p.current_spot),
+    exitSpot: num(p.exit_spot),
     barrier: num(p.barrier),
     longcode: p.longcode ?? '',
     shortcode: p.shortcode ?? '',
@@ -124,6 +126,56 @@ export async function buyFromProposal(
   price: number,
 ): Promise<BuyReceipt> {
   const res = await socket.send({ buy: proposalId, price })
+  const b = res.buy as Record<string, any>
+  return {
+    contractId: Number(b.contract_id),
+    transactionId: Number(b.transaction_id),
+    buyPrice: Number(b.buy_price),
+    payout: Number(b.payout),
+    balanceAfter: Number(b.balance_after),
+    longcode: String(b.longcode ?? ''),
+    purchaseTime: Number(b.purchase_time),
+  }
+}
+
+/**
+ * Compra direto, sem cotar antes.
+ *
+ * O caminho normal e proposal -> buy: duas idas e voltas ate a Deriv. Num
+ * contrato de 1 tick num indice de 1 segundo, essa espera custa o tick que
+ * disparou a entrada. A Deriv aceita `buy: "1"` com os mesmos parametros do
+ * proposal, resolvendo tudo numa chamada so — e o robo entra no tick certo.
+ *
+ * `precoMaximo` protege contra deslizamento: a compra e recusada se o custo
+ * subir acima dele.
+ */
+export async function comprarDireto(
+  socket: TeedsSocket,
+  params: {
+    symbol: string
+    contractType: string
+    amount: number
+    duration: number
+    durationUnit: string
+    currency: string
+    barrier?: string
+  },
+  precoMaximo?: number,
+): Promise<BuyReceipt> {
+  const res = await socket.send({
+    buy: '1',
+    price: precoMaximo ?? params.amount,
+    parameters: {
+      amount: params.amount,
+      basis: 'stake',
+      contract_type: params.contractType,
+      currency: params.currency,
+      duration: params.duration,
+      duration_unit: params.durationUnit,
+      underlying_symbol: params.symbol,
+      ...(params.barrier !== undefined ? { barrier: params.barrier } : {}),
+    },
+  })
   const b = res.buy as Record<string, any>
   return {
     contractId: Number(b.contract_id),

@@ -51,3 +51,49 @@ export function sugerirNome(base: string): string {
   }
   return base
 }
+
+/* ------------------------------------------------------------------ origem
+ * A Deriv marca com `auto_run_id` so os contratos comprados pelos robos de
+ * servidor. O que o motor da Teeds compra chega ao historico indistinguivel
+ * de uma compra manual — entao a propria Teeds anota, no navegador, qual
+ * contrato saiu de qual robo.
+ */
+
+const CHAVE_ORIGEM = 'teeds.contratos.origem'
+const LIMITE = 800
+
+function lerOrigens(): Mapa {
+  try {
+    return JSON.parse(localStorage.getItem(CHAVE_ORIGEM) || '{}') as Mapa
+  } catch {
+    return {}
+  }
+}
+
+/** Anota que este contrato foi comprado por um robo da Teeds. */
+export function marcarOrigem(contractId: number, nome: string): void {
+  const m = lerOrigens()
+  m[String(contractId)] = nome
+  // mantem o arquivo pequeno: so os mais recentes interessam
+  const chaves = Object.keys(m)
+  if (chaves.length > LIMITE) {
+    for (const k of chaves.sort((a, b) => Number(a) - Number(b)).slice(0, chaves.length - LIMITE)) {
+      delete m[k]
+    }
+  }
+  try {
+    localStorage.setItem(CHAVE_ORIGEM, JSON.stringify(m))
+  } catch {
+    /* sem armazenamento: a operacao aparece como manual */
+  }
+}
+
+/** Nome do robo da Teeds que comprou este contrato, se houver. */
+export function origemDoContrato(contractId: number): string | null {
+  return lerOrigens()[String(contractId)] ?? null
+}
+
+/** Todas as marcacoes de uma vez, para listas grandes. */
+export function todasAsOrigens(): Mapa {
+  return lerOrigens()
+}

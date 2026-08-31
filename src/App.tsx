@@ -222,6 +222,7 @@ export default function App() {
           logado={conta.status === 'logado'}
           moeda={conta.account?.currency ?? 'USD'}
           symbols={symbols}
+          pulso={conta.pulso}
         />
       ) : tela === 'gestao' ? (
         <ManagementPanel
@@ -231,6 +232,7 @@ export default function App() {
           onReautorizar={() => startLogin()}
           payoutBase={payoutBase}
           moeda={conta.account?.currency ?? 'USD'}
+          pulso={conta.pulso}
         />
       ) : (
       <div className="layout">

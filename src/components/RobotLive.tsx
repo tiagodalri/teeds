@@ -1,179 +1,315 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
-import { Progress } from './Progress'
 
 interface Props {
   estado: EstadoMotor
   config: ConfigEstrategia
   moeda: string
   nomeEstrategia: string
+  /** Nome do ativo, por extenso. */
+  ativo: string
+  /** A regra em uma frase: "maior que 5", "par"... */
+  regra: string
   cor?: string
-  /** Dígitos que fazem a operação ganhar, para pintar a fita. */
+  /** Digitos que fazem a operacao ganhar, para pintar a fita. */
   ganhaCom: (d: number) => boolean
 }
 
-const din = (v: number, m = 'USD') =>
-  `${m} ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const num = (v: number) =>
+  Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-const hora = (e: number) =>
-  new Date(e * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+const assinado = (v: number) => `${v >= 0 ? '+' : '−'}${num(v)}`
 
-/** Curva do resultado acumulado, desenhada como um traço só. */
+const relogio = (ms: number) =>
+  new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+
+/* ------------------------------------------------------------------ curva */
+
 function Curva({ pontos, positivo }: { pontos: number[]; positivo: boolean }) {
   const d = useMemo(() => {
     if (pontos.length < 2) return null
     const min = Math.min(...pontos, 0)
     const max = Math.max(...pontos, 0)
     const faixa = max - min || 1
-    const L = 100, A = 42
+    const L = 100, A = 34
     const px = (i: number) => (i / (pontos.length - 1)) * L
     const py = (v: number) => A - ((v - min) / faixa) * A
     const linha = pontos.map((v, i) => `${i === 0 ? 'M' : 'L'} ${px(i).toFixed(2)} ${py(v).toFixed(2)}`).join(' ')
-    const area = `${linha} L ${L} ${A} L 0 ${A} Z`
-    return { linha, area, zero: py(0), temZero: min < 0 && max > 0 }
+    return {
+      linha,
+      area: `${linha} L ${L} ${A} L 0 ${A} Z`,
+      zero: py(0),
+      temZero: min < 0 && max > 0,
+      fimX: px(pontos.length - 1),
+      fimY: py(pontos[pontos.length - 1]),
+    }
   }, [pontos])
 
-  if (!d) return <div className="curva-vazia">a curva aparece na primeira operação</div>
+  if (!d) return <div className="tv-curva-vazia">a curva desenha na primeira operação</div>
 
-  const cor = positivo ? 'var(--up)' : 'var(--down)'
+  const cor = positivo ? 'var(--tv-up)' : 'var(--tv-down)'
   return (
-    <svg className="curva" viewBox="0 0 100 42" preserveAspectRatio="none" aria-hidden="true">
-      <path d={d.area} fill={cor} opacity="0.12" />
+    <svg className="tv-curva" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true">
+      <path d={d.area} fill={cor} opacity="0.14" />
       {d.temZero && (
-        <line x1="0" x2="100" y1={d.zero} y2={d.zero} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2 2" />
+        <line x1="0" x2="100" y1={d.zero} y2={d.zero}
+          stroke="var(--tv-linha)" strokeWidth="0.4" strokeDasharray="2 2" />
       )}
-      <path d={d.linha} fill="none" stroke={cor} strokeWidth="1.4" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <path d={d.linha} fill="none" stroke={cor} strokeWidth="1.5"
+        strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <circle cx={d.fimX} cy={d.fimY} r="1.6" fill={cor} vectorEffect="non-scaling-stroke" />
     </svg>
   )
 }
 
-export function RobotLive({ estado, config, moeda, nomeEstrategia, ganhaCom, cor = 'var(--primary)' }: Props) {
+/* --------------------------------------------------- contador de segundos */
+
+function Cronometro({ desde }: { desde: number }) {
+  const [, redesenha] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => redesenha((n) => n + 1), 200)
+    return () => clearInterval(id)
+  }, [])
+  const s = Math.max(0, (Date.now() - desde) / 1000)
+  return <span className="tv-crono">{s.toFixed(1)}s</span>
+}
+
+/* -------------------------------------------------------------- principal */
+
+export function RobotLive({
+  estado, config, moeda, nomeEstrategia, ativo, regra, ganhaCom,
+}: Props) {
   const acerto = estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
   const positivo = estado.resultado >= 0
-  const fita = estado.digitos.slice(-20)
+  const fita = estado.digitos.slice(-26)
+  const emCurso = estado.emCurso
 
-  // posição entre o limite de perda e a meta de lucro
+  // acumulado por operacao, para a coluna da direita da tabela
+  const acumulados = useMemo(() => {
+    const antigas = [...estado.historico].reverse()
+    let soma = 0
+    const mapa = new Map<number, number>()
+    for (const o of antigas) { soma += o.lucro; mapa.set(o.n, soma) }
+    return mapa
+  }, [estado.historico])
+
   const teto = config.takeProfit || 1
   const piso = config.stopLoss || 1
-  const pos = estado.resultado >= 0
+  const pos = positivo
     ? 50 + Math.min(50, (estado.resultado / teto) * 50)
     : 50 - Math.min(50, (Math.abs(estado.resultado) / piso) * 50)
 
-  const situacao = !estado.rodando
-    ? { chave: 'parado', texto: 'Parado' }
-    : estado.emOperacao
-      ? { chave: 'operando', texto: 'Em operação' }
-      : estado.perdasSeguidas >= 1
-        ? { chave: 'recuperando', texto: 'Recuperando' }
-        : { chave: 'cacando', texto: 'Caçando entrada' }
+  const fase = !estado.rodando
+    ? { chave: 'parado', texto: 'Robô parado' }
+    : emCurso
+      ? { chave: 'operando', texto: 'Operação em andamento' }
+      : estado.emOperacao
+        ? { chave: 'operando', texto: 'Enviando ordem…' }
+        : estado.perdasSeguidas >= 1
+          ? { chave: 'recuperando', texto: 'Recuperando' }
+          : { chave: 'cacando', texto: 'Procurando entrada' }
+
+  const prontoParaEntrar = !!estado.condicao?.itens.every((i) => i.ok)
 
   return (
-    <div className="viv">
-      {/* ---------- cabeçalho ---------- */}
-      <div className={`viv-cab ${situacao.chave}`}>
-        <div className="viv-situacao">
-          <i className="viv-pulso" />
+    <div className={`tv ${fase.chave}`}>
+      {/* ===================== faixa de estado ===================== */}
+      <header className="tv-topo">
+        <div className="tv-quem">
+          <i className="tv-farol" />
           <div>
-            <b>{situacao.texto}</b>
-            <span>{nomeEstrategia}</span>
+            <b>{fase.texto}</b>
+            <span>{nomeEstrategia} · {ativo}</span>
           </div>
         </div>
-        <div className="viv-resultado">
-          <span className="rot">Resultado</span>
-          <strong className={positivo ? 'ganho' : 'perda'}>
-            {positivo ? '+' : '−'}{din(estado.resultado, moeda)}
+        <div className="tv-placar">
+          <span>Resultado da sessão</span>
+          <strong className={positivo ? 'up' : 'down'}>
+            {assinado(estado.resultado)} <em>{moeda}</em>
           </strong>
         </div>
-      </div>
+      </header>
 
-      {/* ---------- curva + trilho dos freios ---------- */}
-      <div className="viv-curva">
-        <Curva pontos={estado.curva} positivo={positivo} />
-        <div className="viv-trilho">
-          <span className="lado perda">−{din(config.stopLoss, '')}</span>
-          <div className="barra">
-            <i style={{ left: `${pos}%` }} className={positivo ? 'ganho' : 'perda'} />
-            <u style={{ left: '50%' }} />
-          </div>
-          <span className="lado ganho">+{din(config.takeProfit, '')}</span>
-        </div>
-      </div>
-
-      {/* ---------- condição de entrada ---------- */}
-      {estado.rodando && estado.condicao && !estado.emOperacao && (
-        <div className="viv-condicao">
-          <span className="rot">{estado.condicao.rotulo}</span>
-          <div className="viv-slots">
-            {estado.condicao.itens.map((it, i) => (
-              <span key={i} className={`slot ${it.ok ? 'ok' : it.valor === '–' ? 'vazio' : 'nao'}`}>
-                {it.valor}
-              </span>
-            ))}
-            <em className="viv-seta">→</em>
-            <span className={`slot alvo ${estado.condicao.itens.every((i) => i.ok) ? 'pronto' : ''}`}>
-              {estado.condicao.itens.every((i) => i.ok) ? 'entra' : 'espera'}
+      {/* ===================== palco ===================== */}
+      {emCurso ? (
+        <section className="tv-palco quatro">
+          <div className="tv-passo">
+            <span className="tv-rot">Entrou em</span>
+            <b className="tv-preco">{emCurso.entrada !== null ? emCurso.entrada.toFixed(2) : '—'}</b>
+            <span className={`tv-digitao ${emCurso.digitoEntrada !== null && ganhaCom(emCurso.digitoEntrada) ? 'up' : 'neutro'}`}>
+              {emCurso.digitoEntrada ?? '·'}
             </span>
           </div>
-        </div>
-      )}
 
-      {estado.emOperacao && (
-        <div className="viv-operando">
-          <div className="viv-operando-txt"><i /> operação em andamento — aguardando o resultado</div>
-          <Progress cor={cor} altura={4} />
-        </div>
-      )}
-
-      {!estado.rodando && estado.motivoParada && (
-        <div className="viv-parado">Parou porque {estado.motivoParada}.</div>
-      )}
-
-      {/* ---------- fita de dígitos ---------- */}
-      <div className="viv-fita-bloco">
-        <span className="rot">Últimos dígitos</span>
-        <div className="viv-fita">
-          {fita.map((d, i) => (
-            <span key={i} className={`vd ${ganhaCom(d) ? 'alvo' : ''} ${i === fita.length - 1 ? 'agora' : ''}`}>{d}</span>
-          ))}
-          {fita.length === 0 && <span className="viv-nada">lendo o mercado…</span>}
-        </div>
-      </div>
-
-      {/* ---------- números ---------- */}
-      <div className="viv-nums">
-        <div>
-          <span className="rot">Operações</span>
-          <b>{estado.operacoes}</b>
-          <em>{estado.vitorias}G · {estado.derrotas}P</em>
-        </div>
-        <div>
-          <span className="rot">Acerto</span>
-          <b>{acerto.toFixed(0)}%</b>
-          <em>{estado.perdasSeguidas > 0 ? `${estado.perdasSeguidas} perdas seguidas` : 'sem sequência'}</em>
-        </div>
-        <div>
-          <span className="rot">Próxima entrada</span>
-          <b>{din(estado.valorAtual, moeda)}</b>
-          <em>{estado.valorAtual > config.valorAoVencer ? 'progressão ativa' : 'valor base'}</em>
-        </div>
-        <div>
-          <span className="rot">Movimentado</span>
-          <b>{din(estado.movimentado, moeda)}</b>
-          <em>{estado.ultimoLucro !== null
-            ? `última: ${estado.ultimoLucro >= 0 ? '+' : '−'}${din(estado.ultimoLucro, '')}`
-            : '—'}</em>
-        </div>
-      </div>
-
-      {/* ---------- histórico ---------- */}
-      <div className="viv-log">
-        {estado.registros.map((r, i) => (
-          <div key={i} className={`viv-linha ${r.tipo}`}>
-            <span>{hora(r.hora)}</span>
-            <b>{r.texto}</b>
+          <div className="tv-passo alvo">
+            <span className="tv-rot">Precisa ser</span>
+            <b className="tv-regra">{regra}</b>
+            <span className="tv-sub">apostou {moeda} {num(emCurso.valor)}</span>
           </div>
-        ))}
-      </div>
+
+          <div className="tv-passo">
+            <span className="tv-rot">Agora</span>
+            <b className="tv-preco">{emCurso.spot !== null ? emCurso.spot.toFixed(2) : '—'}</b>
+            <span className={`tv-digitao ${
+              emCurso.digitoAtual === null ? 'neutro' : ganhaCom(emCurso.digitoAtual) ? 'up' : 'down'
+            }`}>
+              {emCurso.digitoAtual ?? '·'}
+            </span>
+          </div>
+
+          <div className="tv-passo">
+            <span className="tv-rot">Se ganhar</span>
+            <b className="tv-preco up">+{num(emCurso.payout - emCurso.valor)}</b>
+            <span className="tv-sub">
+              pagamento {num(emCurso.payout)} · <Cronometro desde={emCurso.comprouEm} />
+            </span>
+          </div>
+
+          <div className="tv-esteira"><i /></div>
+        </section>
+      ) : estado.emOperacao ? (
+        <section className="tv-palco">
+          <div className="tv-enviando">
+            <i className="tv-spin" />
+            <div>
+              <b>Comprando na Deriv…</b>
+              <span>{moeda} {num(estado.valorAtual)} · {regra}</span>
+            </div>
+          </div>
+          <div className="tv-esteira"><i /></div>
+        </section>
+      ) : estado.rodando ? (
+        <section className="tv-palco caca">
+          <div className="tv-caca-cond">
+            <span className="tv-rot">{estado.condicao?.rotulo ?? estado.aguardando}</span>
+            <div className="tv-slots">
+              {(estado.condicao?.itens ?? []).map((it, i) => (
+                <span key={i} className={`tv-slot ${it.ok ? 'ok' : it.valor === '–' ? 'vazio' : 'nao'}`}>
+                  {it.valor}
+                </span>
+              ))}
+              <em className="tv-seta">→</em>
+              <span className={`tv-slot destino ${prontoParaEntrar ? 'pronto' : ''}`}>
+                {prontoParaEntrar ? 'entra agora' : 'espera'}
+              </span>
+            </div>
+          </div>
+          <div className="tv-caca-num">
+            <b>{estado.ticksAnalisados}</b>
+            <span>ticks lidos desde a última entrada</span>
+          </div>
+        </section>
+      ) : (
+        <section className="tv-palco">
+          <div className="tv-off">
+            {estado.motivoParada ? `Parou porque ${estado.motivoParada}.` : 'Desligado.'}
+          </div>
+        </section>
+      )}
+
+      {/* ===================== fita de digitos ===================== */}
+      <section className="tv-fita-bloco">
+        <span className="tv-rot">Dígitos do mercado — os verdes fariam ganhar</span>
+        <div className="tv-fita">
+          {fita.map((d, i) => (
+            <span key={i}
+              className={`tv-d ${ganhaCom(d) ? 'up' : 'down'} ${i === fita.length - 1 ? 'agora' : ''}`}>
+              {d}
+            </span>
+          ))}
+          {fita.length === 0 && <span className="tv-nada">lendo o mercado…</span>}
+        </div>
+      </section>
+
+      {/* ===================== sessao ===================== */}
+      <section className="tv-sessao">
+        <div className="tv-curva-caixa">
+          <Curva pontos={estado.curva} positivo={positivo} />
+          <div className="tv-trilho">
+            <span className="down">−{num(config.stopLoss)}</span>
+            <div className="tv-barra">
+              <u />
+              <i style={{ left: `${pos}%` }} className={positivo ? 'up' : 'down'} />
+            </div>
+            <span className="up">+{num(config.takeProfit)}</span>
+          </div>
+        </div>
+        <div className="tv-nums">
+          <div>
+            <span>Operações</span>
+            <b>{estado.operacoes}</b>
+            <em>{estado.vitorias}G · {estado.derrotas}P</em>
+          </div>
+          <div>
+            <span>Acerto</span>
+            <b>{acerto.toFixed(0)}%</b>
+            <em>{estado.perdasSeguidas > 0 ? `${estado.perdasSeguidas} perdas seguidas` : 'sem sequência'}</em>
+          </div>
+          <div>
+            <span>Próxima entrada</span>
+            <b>{num(estado.valorAtual)}</b>
+            <em>{estado.valorAtual > config.valorAoVencer ? 'progressão ativa' : 'valor base'}</em>
+          </div>
+          <div>
+            <span>Movimentado</span>
+            <b>{num(estado.movimentado)}</b>
+            <em>{estado.latenciaMedia !== null ? `compra em ${estado.latenciaMedia} ms` : '—'}</em>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== operacoes ===================== */}
+      <section className="tv-ops">
+        <div className="tv-ops-topo">
+          <span className="tv-rot">Operações desta sessão</span>
+          {estado.historico.length > 0 && <span className="tv-conta">{estado.historico.length}</span>}
+        </div>
+
+        {estado.historico.length === 0 ? (
+          <p className="tv-nada-ops">
+            Nenhuma ainda. Cada entrada aparece aqui assim que for liquidada.
+          </p>
+        ) : (
+          <div className="tv-rolo">
+            <table className="tv-tabela">
+              <thead>
+                <tr>
+                  <th>#</th><th>Hora</th><th>Valor</th>
+                  <th>Entrada</th><th>Saída</th><th>Resultado</th><th>Acumulado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {estado.historico.map((o) => {
+                  const ac = acumulados.get(o.n) ?? 0
+                  return (
+                    <tr key={o.contractId} className={o.ganhou ? 'ganhou' : 'perdeu'}>
+                      <td className="tv-n">{o.n}</td>
+                      <td className="tv-hora">{relogio(o.quando)}</td>
+                      <td>{num(o.valor)}</td>
+                      <td>
+                        <span className="tv-par">
+                          {o.entrada !== null ? o.entrada.toFixed(2) : '—'}
+                          {o.digitoEntrada !== null && <b className="tv-chip">{o.digitoEntrada}</b>}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="tv-par">
+                          {o.saida !== null ? o.saida.toFixed(2) : '—'}
+                          {o.digitoSaida !== null && (
+                            <b className={`tv-chip ${o.ganhou ? 'up' : 'down'}`}>{o.digitoSaida}</b>
+                          )}
+                        </span>
+                      </td>
+                      <td className={o.ganhou ? 'up forte' : 'down forte'}>{assinado(o.lucro)}</td>
+                      <td className={ac >= 0 ? 'up' : 'down'}>{assinado(ac)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   )
 }
