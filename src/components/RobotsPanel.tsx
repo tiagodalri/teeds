@@ -284,6 +284,24 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
           </button>
         </section>
 
+        <RobotScope
+          symbol={symbol}
+          pipSize={symbols.find((s) => s.symbol === symbol)?.pipSize ?? 2}
+          ident={ident}
+          ganhaCom={(d) => {
+            switch (ident.contrato) {
+              case 'DIGITOVER': return d > 5
+              case 'DIGITUNDER': return d < 5
+              case 'DIGITEVEN': return d % 2 === 0
+              case 'DIGITODD': return d % 2 === 1
+              default: return false
+            }
+          }}
+          valor={valorInicial}
+          ticks={ticks}
+          moeda={moeda}
+          socket={socket}
+        />
       </div>
 
       {emDestaque.length > 0 && (
