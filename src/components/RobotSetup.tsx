@@ -47,13 +47,14 @@ function guardarPreparo(cfg: ConfigEstrategia, symbol: string) {
 /* ------------------------------------------------------------ campo numero */
 
 function Numero({
-  valor, aoMudar, sufixo, passo = 0.05, minimo = 0, auto,
+  valor, aoMudar, sufixo, passo = 0.05, minimo = 0, maximo = Infinity, auto,
 }: {
   valor: number
   aoMudar: (n: number) => void
   sufixo?: string
   passo?: number
   minimo?: number
+  maximo?: number
   auto?: boolean
 }) {
   const ref = useRef<HTMLInputElement>(null)
@@ -61,13 +62,51 @@ function Numero({
   return (
     <div className="qz-campo">
       <input
-        ref={ref} type="number" inputMode="decimal" step={passo} min={minimo}
+        ref={ref} type="number" inputMode="decimal" step={passo}
+        min={minimo} max={Number.isFinite(maximo) ? maximo : undefined}
         value={valor}
-        onChange={(e) => aoMudar(Math.max(minimo, Number(e.target.value) || 0))}
+        // Sem isto, clicar no campo deixa o valor antigo e o que a pessoa
+        // digita e inserido no meio dele: 10 vira 1080000.
+        onFocus={(e) => e.currentTarget.select()}
+        onMouseUp={(e) => e.preventDefault()}
+        onChange={(e) => {
+          const n = Number(e.target.value)
+          if (!Number.isFinite(n)) return
+          aoMudar(Math.min(maximo, Math.max(minimo, n)))
+        }}
       />
       {sufixo && <span>{sufixo}</span>}
     </div>
   )
+}
+
+/**
+ * Limites de sanidade para o que volta do navegador.
+ *
+ * Um valor fora da faixa quase sempre e erro de digitacao, e um freio
+ * gigante e o mesmo que freio nenhum — entao esses voltam para o padrao
+ * em vez de serem só aparados.
+ */
+const FAIXAS: Record<keyof ConfigEstrategia, [number, number]> = {
+  valorInicial: [0.35, 10_000],
+  valorAoVencer: [0.35, 10_000],
+  fatorGale: [0, 3],
+  galeApos: [1, 20],
+  valorMaximo: [0.35, 50_000],
+  takeProfit: [0, 100_000],
+  stopLoss: [0, 100_000],
+  maxOperacoes: [1, 5_000],
+}
+
+function sanear(cfg: ConfigEstrategia, padrao: ConfigEstrategia): ConfigEstrategia {
+  const limpo = { ...cfg }
+  for (const chave of Object.keys(FAIXAS) as Array<keyof ConfigEstrategia>) {
+    const [min, max] = FAIXAS[chave]
+    const v = Number(limpo[chave])
+    if (!Number.isFinite(v) || v < min || v > max) limpo[chave] = padrao[chave]
+  }
+  if (limpo.valorMaximo < limpo.valorAoVencer) limpo.valorMaximo = limpo.valorAoVencer
+  return limpo
 }
 
 /* ------------------------------------------------------------- assistente */
@@ -77,7 +116,9 @@ export function RobotSetup({
   moeda, isDemo, onCancelar, onLigar,
 }: Props) {
   const guardado = useMemo(lerPreparo, [])
-  const [cfg, setCfg] = useState<ConfigEstrategia>({ ...configInicial, ...guardado.cfg })
+  const [cfg, setCfg] = useState<ConfigEstrategia>(
+    sanear({ ...configInicial, ...guardado.cfg }, configInicial),
+  )
   const [symbol, setSymbol] = useState(
     symbols.some((s) => s.symbol === guardado.symbol) ? guardado.symbol! : symbolInicial,
   )
@@ -113,7 +154,7 @@ export function RobotSetup({
       valido: cfg.valorAoVencer >= 0.35,
       corpo: (
         <>
-          <Numero auto valor={cfg.valorAoVencer} sufixo={moeda} minimo={0.35}
+          <Numero auto valor={cfg.valorAoVencer} sufixo={moeda} minimo={0.35} maximo={10_000}
             aoMudar={(n) => muda({ valorAoVencer: n, valorInicial: n })} />
           <div className="qz-atalhos">
             {[0.35, 1, 2, 5].map((v) => (
@@ -147,16 +188,17 @@ export function RobotSetup({
           <div className="qz-dupla">
             <label>
               <span className="rot">Fator</span>
-              <Numero valor={cfg.fatorGale} passo={0.1} aoMudar={(n) => muda({ fatorGale: n })} />
+              <Numero valor={cfg.fatorGale} passo={0.1} maximo={3}
+                aoMudar={(n) => muda({ fatorGale: n })} />
             </label>
             <label>
               <span className="rot">Ligar após quantas perdas</span>
-              <Numero valor={cfg.galeApos} passo={1} minimo={1}
-                aoMudar={(n) => muda({ galeApos: Math.max(1, Math.round(n)) })} />
+              <Numero valor={cfg.galeApos} passo={1} minimo={1} maximo={20}
+                aoMudar={(n) => muda({ galeApos: Math.round(n) })} />
             </label>
             <label>
               <span className="rot">Entrada máxima</span>
-              <Numero valor={cfg.valorMaximo} passo={1} minimo={cfg.valorAoVencer}
+              <Numero valor={cfg.valorMaximo} passo={1} minimo={cfg.valorAoVencer} maximo={50_000}
                 sufixo={moeda} aoMudar={(n) => muda({ valorMaximo: n })} />
             </label>
           </div>
@@ -175,17 +217,17 @@ export function RobotSetup({
         <div className="qz-dupla">
           <label>
             <span className="rot">Parar se ganhar</span>
-            <Numero auto valor={cfg.takeProfit} passo={1} sufixo={moeda}
+            <Numero auto valor={cfg.takeProfit} passo={1} sufixo={moeda} maximo={100_000}
               aoMudar={(n) => muda({ takeProfit: n })} />
           </label>
           <label>
             <span className="rot">Parar se perder</span>
-            <Numero valor={cfg.stopLoss} passo={1} sufixo={moeda}
+            <Numero valor={cfg.stopLoss} passo={1} sufixo={moeda} maximo={100_000}
               aoMudar={(n) => muda({ stopLoss: n })} />
           </label>
           <label>
             <span className="rot">Máximo de operações</span>
-            <Numero valor={cfg.maxOperacoes} passo={10}
+            <Numero valor={cfg.maxOperacoes} passo={10} minimo={1} maximo={5_000}
               aoMudar={(n) => muda({ maxOperacoes: Math.round(n) })} />
           </label>
         </div>
