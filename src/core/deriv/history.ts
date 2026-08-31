@@ -1,3 +1,4 @@
+import { casasDecimais } from './types'
 import type { TeedsSocket } from './client'
 
 /**
@@ -40,7 +41,7 @@ function ultimoDigito(valor: number | null, pip: number): number | null {
 
 function montar(p: Record<string, any>): Operacao {
   const num = (v: any) => (v === null || v === undefined || v === '' ? null : Number(v))
-  const pip = Number(p.pip_size ?? 2)
+  const pip = casasDecimais(p.pip_size)
   const entrada = num(p.entry_spot)
   const saida = num(p.exit_spot)
   const valor = Number(p.buy_price ?? 0)

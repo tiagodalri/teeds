@@ -1,4 +1,5 @@
 import { TeedsSocket } from './client'
+import { casasDecimais } from './types'
 import type { Candle, DerivMessage } from './types'
 
 /** Resultado de uma compra. */
@@ -63,7 +64,7 @@ function toOpenContract(p: Record<string, any>): OpenContract {
     purchaseTime: Number(p.purchase_time ?? 0),
     startTime: Number(p.date_start ?? p.purchase_time ?? 0),
     expiryTime: Number(p.date_expiry ?? p.expiry_time ?? 0),
-    pipSize: Number(p.pip_size ?? 2),
+    pipSize: casasDecimais(p.pip_size),
   }
 }
 

@@ -1,5 +1,17 @@
 /** Tipos do dominio da Teeds, espelhando o contrato da API da Deriv. */
 
+/**
+ * A Deriv usa o nome pip_size para duas coisas: na lista de ativos ele e o
+ * passo minimo (0.01), nos ticks e a quantidade de casas decimais (2).
+ * Esta funcao normaliza os dois para casas decimais.
+ */
+export function casasDecimais(valor: unknown): number {
+  const n = Number(valor)
+  if (!Number.isFinite(n) || n <= 0) return 2
+  if (n >= 1) return Math.round(n)
+  return Math.max(0, Math.round(-Math.log10(n)))
+}
+
 export interface Tick {
   symbol: string
   quote: number

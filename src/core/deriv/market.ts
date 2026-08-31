@@ -1,5 +1,6 @@
 import { publicSocket, TeedsSocket } from './client'
 import { ATIVOS_PERMITIDOS } from './config'
+import { casasDecimais } from './types'
 import type { ActiveSymbol, Candle, Granularity, Tick } from './types'
 
 /** Lista os ativos negociaveis, ja normalizados para o dominio da Teeds. */
@@ -61,7 +62,7 @@ export async function fetchTickHistory(
     style: 'ticks',
   })
   const history = res.history as { times: number[]; prices: number[] } | undefined
-  const pipSize = (res.pip_size as number) ?? 2
+  const pipSize = casasDecimais(res.pip_size)
   if (!history) return []
   return history.times.map((t, i) => ({
     symbol,
@@ -86,7 +87,7 @@ export function subscribeTicks(
       bid: t.bid !== undefined ? Number(t.bid) : undefined,
       ask: t.ask !== undefined ? Number(t.ask) : undefined,
       epoch: t.epoch,
-      pipSize: t.pip_size ?? 2,
+      pipSize: casasDecimais(t.pip_size),
     })
   })
 }
