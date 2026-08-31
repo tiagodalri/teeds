@@ -90,6 +90,7 @@ export function RobotLive({
   parametros = [], conexao = 'open', onDesligar, onLigarDeNovo, onRemover,
 }: Props) {
   const [verParametros, setVerParametros] = useState(false)
+  const [verRegistro, setVerRegistro] = useState(false)
   const acerto = estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
   const positivo = estado.resultado >= 0
   const fita = estado.digitos.slice(-30)
@@ -141,6 +142,12 @@ export function RobotLive({
         </div>
 
         <div className="tv-acoes">
+          {estado.registros.length > 0 && (
+            <button className={`tv-btn ${verRegistro ? 'on' : ''}`}
+              onClick={() => setVerRegistro((v) => !v)} aria-expanded={verRegistro}>
+              Registro
+            </button>
+          )}
           {parametros.length > 0 && (
             <button className={`tv-btn ${verParametros ? 'on' : ''}`}
               onClick={() => setVerParametros((v) => !v)}
@@ -160,6 +167,18 @@ export function RobotLive({
           )}
         </div>
       </header>
+
+      {/* Uma compra recusada precisa aparecer. Antes ela ia só para um
+          registro que a tela não mostrava — e o robô parecia travado. */}
+      {estado.falha && (
+        <div className="tv-alerta grave">
+          <i />
+          <span>
+            <b>A Deriv recusou a compra.</b> {estado.falha.texto}
+            {!estado.rodando && ' O robô foi desligado.'}
+          </span>
+        </div>
+      )}
 
       {/* Sem conexão da conta não chega preço nem dá para comprar: melhor
           dizer isso do que deixar a tela parecendo travada. */}
@@ -319,11 +338,22 @@ export function RobotLive({
       {/* ===================== operacoes ===================== */}
       <section className="tv-ops">
         <div className="tv-ops-topo">
-          <span className="tv-rot">Operações desta sessão</span>
+          <span className="tv-rot">{verRegistro ? 'Registro do robô' : 'Operações desta sessão'}</span>
           {estado.historico.length > 0 && <span className="tv-conta">{estado.historico.length}</span>}
         </div>
 
-        {estado.historico.length === 0 ? (
+        {verRegistro ? (
+          <div className="tv-rolo">
+            <ul className="tv-registro">
+              {estado.registros.map((r, i) => (
+                <li key={i} className={r.tipo}>
+                  <span>{relogio(r.hora * 1000)}</span>
+                  <b>{r.texto}</b>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : estado.historico.length === 0 ? (
           <p className="tv-nada-ops">
             Nenhuma ainda. Cada entrada aparece aqui assim que for liquidada.
           </p>

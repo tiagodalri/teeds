@@ -137,7 +137,17 @@ export interface EstadoMotor {
   ticksAnalisados: number
   /** Media de milissegundos entre decidir e a compra ser confirmada. */
   latenciaMedia: number | null
+  /**
+   * A ultima recusa da Deriv, do jeito que ela veio.
+   *
+   * Sem isto na tela, uma compra recusada some: o robo parece rodando e
+   * simplesmente nao entra, sem dizer por que.
+   */
+  falha: { texto: string; quando: number } | null
 }
+
+/** Recusas seguidas ate o robo desistir e se desligar, dizendo o motivo. */
+const LIMITE_FALHAS = 3
 
 /** Tempo sem nenhum tick que ja e motivo para desconfiar da conexao. */
 const SILENCIO_MAXIMO_MS = 25_000
@@ -154,6 +164,7 @@ const VAZIO: EstadoMotor = {
   aguardando: '', motivoParada: null, registros: [], digitos: [],
   curva: [0], condicao: null, ultimoLucro: null,
   historico: [], emCurso: null, ticksAnalisados: 0, latenciaMedia: null,
+  falha: null,
 }
 
 export class MotorTeeds {
@@ -176,6 +187,7 @@ export class MotorTeeds {
   private ultimoTickEm = 0
   private contratoDesde = 0
   private valorEmCurso = 0
+  private falhasSeguidas = 0
   private liquidados = new Set<number>()
   private vigia: ReturnType<typeof setInterval> | null = null
 
@@ -307,6 +319,16 @@ export class MotorTeeds {
     }
   }
 
+  /** O socket que este motor usa — serve para detectar troca de conta. */
+  get conexao(): TeedsSocket {
+    return this.socket
+  }
+
+  /** Leitura do estado atual, sem precisar assinar. */
+  get estadoAtual(): EstadoMotor {
+    return this.estado
+  }
+
   desligar(motivo = 'você desligou') {
     if (!this.estado.rodando) return
     this.estado.rodando = false
@@ -368,6 +390,8 @@ export class MotorTeeds {
         comprouEm: Date.now(),
         latencia,
       }
+      this.falhasSeguidas = 0
+      this.estado.falha = null
       this.registrar(
         `Entrou com ${this.moeda} ${(recibo.buyPrice || valor).toFixed(2)} · pagamento ${this.moeda} ${recibo.payout.toFixed(2)}`,
         'compra',
@@ -375,9 +399,19 @@ export class MotorTeeds {
       this.emitir()
       this.acompanhar(recibo.contractId, recibo.buyPrice || valor)
     } catch (e) {
-      this.registrar(`Falha ao comprar: ${(e as Error).message}`, 'parada')
+      const texto = (e as Error).message
+      this.falhasSeguidas += 1
+      this.estado.falha = { texto, quando: Date.now() }
       this.estado.emOperacao = false
       this.estado.emCurso = null
+      this.registrar(`Compra recusada: ${texto}`, 'parada')
+
+      // Insistir numa recusa que nao vai mudar so queima requisicao — e
+      // esconde o problema atras de dezenas de tentativas iguais.
+      if (this.falhasSeguidas >= LIMITE_FALHAS) {
+        this.desligar(`a Deriv recusou ${LIMITE_FALHAS} compras seguidas — ${texto}`)
+        return
+      }
       this.emitir()
     }
   }

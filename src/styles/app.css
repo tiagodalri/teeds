@@ -1989,3 +1989,24 @@ button, input { font: inherit; color: inherit; }
 .usuario button span { font-size: 10px; font-weight: 500; color: var(--muted); }
 .usuario button:hover { background: var(--surface); }
 .usuario button:hover span { color: var(--down); }
+
+/* recusa da corretora — vermelha, não âmbar: isso não é espera, é bloqueio */
+.tv-alerta.grave { background: var(--down-soft); color: #a3272c; }
+.tv-alerta b { font-weight: 650; }
+
+/* registro de eventos do robô */
+.tv-registro { list-style: none; margin: 0; padding: 0 18px; }
+.tv-registro li {
+  display: flex; gap: 10px; align-items: baseline;
+  padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12.5px;
+}
+.tv-registro li:last-child { border-bottom: 0; }
+.tv-registro span {
+  font-size: 11px; color: var(--muted); flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.tv-registro b { font-weight: 500; }
+.tv-registro li.ganho b { color: var(--up); font-weight: 600; }
+.tv-registro li.perda b { color: var(--down); font-weight: 600; }
+.tv-registro li.compra b { color: var(--primary); }
+.tv-registro li.parada b { color: var(--down); font-weight: 600; }

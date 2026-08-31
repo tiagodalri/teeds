@@ -51,6 +51,19 @@ export function LocalRobotPanel({
   useEffect(() => { if (symbolPadrao) setSymbol(symbolPadrao) }, [symbolPadrao])
   useEffect(() => () => { motorRef.current?.desligar('página fechada') }, [])
 
+  /**
+   * Trocar de conta cria uma conexão nova na Deriv e derruba a antiga.
+   * Um robô ligado ficaria segurando a conexão morta: sem receber preço e
+   * sem conseguir comprar — parado, sem dizer por quê. Pior ainda seria
+   * ele continuar comprando na conta que você acabou de deixar.
+   */
+  useEffect(() => {
+    const motor = motorRef.current
+    if (!motor || !motor.estadoAtual.rodando) return
+    if (socket && motor.conexao === socket) return
+    motor.desligar('você trocou de conta — ligue de novo para operar na conta atual')
+  }, [socket])
+
   const nomeAtivo = symbols.find((s) => s.symbol === symbol)?.name ?? symbol
   const rodando = estado?.rodando ?? false
 
