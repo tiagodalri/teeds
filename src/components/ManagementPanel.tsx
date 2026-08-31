@@ -181,7 +181,7 @@ export function ManagementPanel({ session, onReautorizar, payoutBase, moeda }: P
 
         <div className="sim-grade">
           <div className="sim-card">
-            <span className="rot">Cliente aposta</span>
+            <span className="rot">Cliente opera</span>
             <strong>{dinheiro(10, moeda)}</strong>
           </div>
           <div className="sim-card">

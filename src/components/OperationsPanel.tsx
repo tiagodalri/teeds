@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { TeedsSocket } from '../core/deriv/client'
 import { buscarOperacoes, paraCSV, resumir, type Operacao } from '../core/deriv/history'
 import { MODELOS } from '../core/deriv/robots'
+import { nomeDoRobo } from '../core/deriv/robotNames'
+import { StatementPanel } from './StatementPanel'
 
 interface Props {
   socket: TeedsSocket | null
@@ -32,6 +34,7 @@ export function OperationsPanel({ socket, logado, moeda }: Props) {
   const [filtroRobo, setFiltroRobo] = useState<string>('todos')
   const [filtroResultado, setFiltroResultado] = useState<'todos' | 'ganhos' | 'perdas'>('todos')
   const [limite, setLimite] = useState(60)
+  const [aba, setAba] = useState<'contratos' | 'extrato'>('contratos')
 
   const carregar = useCallback(async () => {
     if (!socket) return
@@ -88,9 +91,17 @@ export function OperationsPanel({ socket, logado, moeda }: Props) {
       <div className="ger-topo">
         <div>
           <h2>Operações</h2>
-          <p className="ger-sub">Tudo que foi negociado — pelos robôs e por você</p>
+          <p className="ger-sub">
+            {aba === 'contratos'
+              ? 'Cada contrato negociado — pelos robôs e por você'
+              : 'Todo o dinheiro que entrou e saiu da conta'}
+          </p>
+          <div className="segmented sub-abas">
+            <button className={aba === 'contratos' ? 'on' : ''} onClick={() => setAba('contratos')}>Contratos</button>
+            <button className={aba === 'extrato' ? 'on' : ''} onClick={() => setAba('extrato')}>Extrato</button>
+          </div>
         </div>
-        <div className="ops-acoes">
+        <div className="ops-acoes" hidden={aba === 'extrato'}>
           <div className="segmented">
             {[30, 60, 120].map((n) => (
               <button key={n} className={limite === n ? 'on' : ''} onClick={() => setLimite(n)}>{n}</button>
@@ -103,6 +114,9 @@ export function OperationsPanel({ socket, logado, moeda }: Props) {
         </div>
       </div>
 
+      {aba === 'extrato' && <StatementPanel socket={socket} moeda={moeda} />}
+
+      {aba === 'contratos' && <>
       {erro && <div className="ger-erro">{erro}</div>}
       {progresso && (
         <div className="ops-progresso">
@@ -123,15 +137,15 @@ export function OperationsPanel({ socket, logado, moeda }: Props) {
           <strong>{r.acerto.toFixed(1)}%</strong>
         </div>
         <div className="kpi">
-          <span className="rot">Total apostado</span>
-          <strong>{din(r.apostado, moeda)}</strong>
+          <span className="rot">Total movimentado</span>
+          <strong>{din(r.movimentado, moeda)}</strong>
         </div>
         <div className="kpi">
           <span className="rot">Resultado</span>
           <strong className={r.resultado >= 0 ? 'ganho' : 'perda'}>
             {r.resultado >= 0 ? '+' : '−'}{din(Math.abs(r.resultado), moeda)}
           </strong>
-          <span className="kpi-nota">{r.retorno >= 0 ? '+' : ''}{r.retorno.toFixed(1)}% do apostado</span>
+          <span className="kpi-nota">{r.retorno >= 0 ? '+' : ''}{r.retorno.toFixed(1)}% do movimentado</span>
         </div>
         <div className="kpi">
           <span className="rot">Maior sequência</span>
@@ -151,7 +165,7 @@ export function OperationsPanel({ socket, logado, moeda }: Props) {
           <button className={filtroRobo === 'manual' ? 'on' : ''} onClick={() => setFiltroRobo('manual')}>Manuais</button>
           {robos.map(([id, n]) => (
             <button key={id} className={filtroRobo === id ? 'on' : ''} onClick={() => setFiltroRobo(id)}>
-              Robô {id.slice(-4)} ({n})
+              {nomeDoRobo(id, 'Robô ' + id.slice(-4))} ({n})
             </button>
           ))}
         </div>
@@ -167,7 +181,7 @@ export function OperationsPanel({ socket, logado, moeda }: Props) {
         <table className="ops-tabela">
           <thead>
             <tr>
-              <th>Quando</th><th>Origem</th><th>Aposta</th><th>Ativo</th>
+              <th>Quando</th><th>Origem</th><th>Operação</th><th>Ativo</th>
               <th className="num">Valor</th><th>Entrada</th><th>Saída</th>
               <th>Resultado</th><th className="num">Lucro</th>
             </tr>
@@ -184,10 +198,10 @@ export function OperationsPanel({ socket, logado, moeda }: Props) {
                   </td>
                   <td>
                     {o.runId
-                      ? <span className="tag-robo">robô {o.runId.slice(-4)}</span>
+                      ? <span className="tag-robo">{nomeDoRobo(o.runId, 'robô ' + o.runId.slice(-4))}</span>
                       : <span className="tag-manual">manual</span>}
                   </td>
-                  <td className="ops-aposta">
+                  <td className="ops-operação">
                     {nome}{comBarreira && o.barreira !== null ? ` ${o.barreira}` : ''}
                     {o.ticks > 0 && <em> · {o.ticks}t</em>}
                   </td>
@@ -219,10 +233,13 @@ export function OperationsPanel({ socket, logado, moeda }: Props) {
 
         {!carregando && filtradas.length === 0 && (
           <p className="ger-nota" style={{ padding: 20, textAlign: 'center' }}>
-            Nenhuma operação encontrada com esses filtros.
+            {ops.length === 0
+              ? 'Nenhum contrato encontrado nesta conta ainda.'
+              : `Nenhum contrato com esses filtros (${ops.length} carregados no total).`}
           </p>
         )}
       </div>
+      </>}
     </div>
   )
 }

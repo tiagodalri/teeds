@@ -131,9 +131,9 @@ export function DigitsPanel(props: Props) {
         </p>
       </div>
 
-      {/* ---------- tipo de aposta ---------- */}
+      {/* ---------- tipo de operação ---------- */}
       <div className="dig-sec">
-        <span className="rot">Tipo de aposta</span>
+        <span className="rot">Tipo de operação</span>
         <div className="dig-tipos">
           {TIPOS_DIGITO.map((t) => (
             <button key={t.tipo} className={tipoSel === t.tipo ? 'on' : ''} onClick={() => setTipoSel(t.tipo)}>
@@ -172,7 +172,7 @@ export function DigitsPanel(props: Props) {
       {/* ---------- resumo e compra ---------- */}
       <div className="dig-resumo">
         <p className="dig-frase">
-          Você ganha se <strong>{kind.descricao(digito)}</strong> depois de {ticks} {ticks === 1 ? 'tick' : 'ticks'}.
+          Resultado positivo se <strong>{kind.descricao(digito)}</strong> depois de {ticks} {ticks === 1 ? 'tick' : 'ticks'}.
         </p>
         <div className="dig-numeros">
           <div>

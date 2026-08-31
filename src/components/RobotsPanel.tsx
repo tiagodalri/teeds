@@ -7,6 +7,7 @@ import {
   type ConfigRobo, type EstrategiaId, type ModeloRobo, type Robo,
 } from '../core/deriv/robots'
 import type { ActiveSymbol } from '../core/deriv/types'
+import { batizarRobo, nomeDoRobo, sugerirNome } from '../core/deriv/robotNames'
 
 interface Props {
   socket: TeedsSocket | null
@@ -38,8 +39,12 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
   const [erro, setErro] = useState<string | null>(null)
   const [confirmaReal, setConfirmaReal] = useState(false)
   const [pagamento, setPagamento] = useState<number | null>(null)
+  const [nome, setNome] = useState('')
+  const [renomeando, setRenomeando] = useState<string | null>(null)
+  const [nomes, setNomes] = useState<Record<string, string>>({})
 
   useEffect(() => { if (symbolPadrao) setSymbol(symbolPadrao) }, [symbolPadrao])
+  useEffect(() => { setNome(sugerirNome(modelo.nome)) }, [modelo])
 
   // cotacao do contrato configurado, para mostrar a matematica real
   useEffect(() => {
@@ -69,6 +74,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
   }, [socket])
 
   useEffect(() => { carregar() }, [carregar])
+  useEffect(() => { import('../core/deriv/robotNames').then((m) => setNomes(m.todosOsNomes())) }, [])
 
   useEffect(() => {
     if (!socket) return
@@ -104,6 +110,10 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
     }
     try {
       const r = await ligarRobo(socket, config)
+      const apelido = nome.trim() || sugerirNome(modelo.nome)
+      batizarRobo(r.runId, apelido)
+      setNomes((prev) => ({ ...prev, [r.runId]: apelido }))
+      setNome(sugerirNome(modelo.nome))
       setRobos((prev) => new Map(prev).set(r.runId, r))
     } catch (e) { setErro((e as Error).message) }
     finally { setLigando(false) }
@@ -178,7 +188,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
               <b>D'Alembert</b><span>soma uma unidade após perder, tira uma após ganhar</span>
             </button>
             <button className={estrategia === 'martingale' ? 'on' : ''} onClick={() => setEstrategia('martingale')}>
-              <b>Martingale</b><span>multiplica a aposta após cada perda</span>
+              <b>Martingale</b><span>multiplica o valor após cada perda</span>
             </button>
           </div>
 
@@ -192,7 +202,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
                 <input type="number" min={0.1} step={0.1} value={unidade}
                   onChange={(e) => setUnidade(Math.max(0.1, Number(e.target.value) || 0))} /></label>
             )}
-            <label><span className="rot">Aposta máxima</span>
+            <label><span className="rot">Valor máximo</span>
               <input type="number" min={valorInicial} value={valorMaximo}
                 onChange={(e) => setValorMaximo(Number(e.target.value) || 0)} /></label>
             <label><span className="rot">Máx. operações</span>
@@ -209,6 +219,12 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
               <input type="number" min={1} value={takeProfit}
                 onChange={(e) => setTakeProfit(Math.max(1, Number(e.target.value) || 0))} /></label>
           </div>
+
+          <label className="rob-nome">
+            <span className="rot">Nome do robô</span>
+            <input value={nome} maxLength={40} placeholder={modelo.nome}
+              onChange={(e) => setNome(e.target.value)} />
+          </label>
 
           {confirmaReal && (
             <p className="rob-alerta">
@@ -233,7 +249,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
           {mat ? (
             <>
               <div className="mat-linhas">
-                <div><span>Chance de ganhar cada operação</span><b>{mat.chancePct.toFixed(0)}%</b></div>
+                <div><span>Chance de acerto</span><b>{mat.chancePct.toFixed(0)}%</b></div>
                 <div><span>Pagamento</span><b>{din(pagamento ?? 0, moeda)} ({mat.multiplicador.toFixed(2)}×)</b></div>
               </div>
 
@@ -244,7 +260,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
                   de {din(stopLoss, moeda)}.
                   {estrategia === 'martingale' && risco.perdasSuportadas <= 6 && (
                     <> Numa sequência de {risco.perdasSuportadas + 1} perdas — que acontece
-                    com frequência real — a aposta já teria ido para {din(risco.proximaAposta, moeda)}.</>
+                    com frequência real — o valor já teria ido para {din(risco.proximaOperação, moeda)}.</>
                   )}
                 </p>
               </div>
@@ -264,25 +280,40 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
 
         <div className="rob-lista">
           {lista.map((r) => {
-            const nome = MODELOS.find((m) => m.contractType === r.contrato.contract_type)?.nome
-              ?? r.contrato.contract_type ?? '—'
+            const modeloDele = MODELOS.find((m) => m.contractType === r.contrato.contract_type)
+            const padrao = modeloDele?.nome ?? r.contrato.contract_type ?? 'Robô'
+            const apelido = nomes[r.runId] ?? nomeDoRobo(r.runId, padrao)
             const ativo = r.status === 'running'
             return (
               <div key={r.runId} className={`rob-card ${r.status}`}>
                 <div className="rob-card-topo">
-                  <b>{nome}</b>
+                  {renomeando === r.runId ? (
+                    <input
+                      className="rob-renomear" autoFocus defaultValue={apelido} maxLength={40}
+                      onBlur={(e) => {
+                        batizarRobo(r.runId, e.target.value)
+                        setNomes((prev) => ({ ...prev, [r.runId]: e.target.value.trim() || padrao }))
+                        setRenomeando(null)
+                      }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                    />
+                  ) : (
+                    <b className="rob-apelido" title="clique para renomear"
+                      onClick={() => setRenomeando(r.runId)}>{apelido}</b>
+                  )}
                   <span className={`rob-status ${r.status}`}>
                     {r.status === 'running' ? 'operando' : r.status === 'paused' ? 'pausado' : 'parado'}
                   </span>
                 </div>
                 <div className="rob-nums">
-                  <div><span>Operações</span><b>{r.contratos}</b></div>
-                  <div><span>Apostado</span><b>{din(r.totalApostado, moeda)}</b></div>
+                  {r.contratos > 0 && <div><span>Operações</span><b>{r.contratos}</b></div>}
+                  <div><span>Movimentado</span><b>{din(r.totalMovimentado, moeda)}</b></div>
                   <div><span>Resultado</span>
                     <b className={r.resultado >= 0 ? 'ganho' : 'perda'}>
                       {r.resultado >= 0 ? '+' : '−'}{din(Math.abs(r.resultado), moeda)}
                     </b></div>
                 </div>
+                <p className="rob-tipo">{padrao}{r.contrato.duration ? ` · ${r.contrato.duration}t` : ''}</p>
                 {r.motivoParada && (
                   <p className="rob-motivo">
                     parou: {r.motivoParada === 'user_stopped' ? 'você desligou'

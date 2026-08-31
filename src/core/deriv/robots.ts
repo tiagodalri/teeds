@@ -21,7 +21,7 @@ export interface Robo {
   motivoParada?: string
   codigoParada?: string
   contratos: number
-  totalApostado: number
+  totalMovimentado: number
   totalRecebido: number
   resultado: number
   parametros: Record<string, any>
@@ -29,7 +29,7 @@ export interface Robo {
 }
 
 function toRobo(r: Record<string, any>): Robo {
-  const apostado = Number(r.total_stake ?? 0)
+  const movimentado = Number(r.total_stake ?? 0)
   const recebido = Number(r.total_payout ?? 0)
   return {
     runId: String(r.run_id ?? ''),
@@ -40,9 +40,9 @@ function toRobo(r: Record<string, any>): Robo {
     motivoParada: r.stop_reason,
     codigoParada: r.stop_reason_code,
     contratos: Array.isArray(r.contracts) ? r.contracts.length : Number(r.contract_count ?? 0),
-    totalApostado: apostado,
+    totalMovimentado: movimentado,
     totalRecebido: recebido,
-    resultado: recebido - apostado,
+    resultado: recebido - movimentado,
     parametros: r.strategy_parameters ?? {},
     contrato: r.contract_template ?? {},
   }
@@ -64,19 +64,19 @@ export interface ModeloRobo {
 
 export const MODELOS: ModeloRobo[] = [
   {
-    id: 'acima', nome: 'Acima de 5', frase: 'aposta que o último dígito é 6, 7, 8 ou 9',
+    id: 'acima', nome: 'Acima de 5', frase: 'resultado positivo se o último dígito for 6, 7, 8 ou 9',
     contractType: 'DIGITOVER', barreira: 5, digitosQueGanham: 4, cor: 'verde',
   },
   {
-    id: 'abaixo', nome: 'Abaixo de 5', frase: 'aposta que o último dígito é 0, 1, 2, 3 ou 4',
+    id: 'abaixo', nome: 'Abaixo de 5', frase: 'resultado positivo se o último dígito for 0, 1, 2, 3 ou 4',
     contractType: 'DIGITUNDER', barreira: 5, digitosQueGanham: 5, cor: 'vermelho',
   },
   {
-    id: 'par', nome: 'Par', frase: 'aposta que o último dígito é 0, 2, 4, 6 ou 8',
+    id: 'par', nome: 'Par', frase: 'resultado positivo se o último dígito for 0, 2, 4, 6 ou 8',
     contractType: 'DIGITEVEN', digitosQueGanham: 5, cor: 'azul',
   },
   {
-    id: 'impar', nome: 'Ímpar', frase: 'aposta que o último dígito é 1, 3, 5, 7 ou 9',
+    id: 'impar', nome: 'Ímpar', frase: 'resultado positivo se o último dígito for 1, 3, 5, 7 ou 9',
     contractType: 'DIGITODD', digitosQueGanham: 5, cor: 'roxo',
   },
 ]
@@ -197,7 +197,7 @@ export function matematica(digitosQueGanham: number, pagamento: number, valor: n
 
 /**
  * Quantas perdas seguidas o stop loss aguenta numa progressao.
- * Martingale dobra a aposta a cada perda: o risco cresce exponencialmente.
+ * Martingale dobra a operação a cada perda: o risco cresce exponencialmente.
  */
 export function perdasAteOStop(
   estrategia: EstrategiaId,
@@ -206,15 +206,15 @@ export function perdasAteOStop(
   valorMaximo: number,
   stopLoss: number,
 ) {
-  let aposta = valorInicial
+  let operação = valorInicial
   let acumulado = 0
   let n = 0
-  while (acumulado + aposta <= stopLoss && n < 60) {
-    acumulado += aposta
+  while (acumulado + operação <= stopLoss && n < 60) {
+    acumulado += operação
     n += 1
     const proxima =
-      estrategia === 'martingale' ? aposta * fatorOuUnidade : aposta + fatorOuUnidade
-    aposta = Math.min(proxima, valorMaximo || proxima)
+      estrategia === 'martingale' ? operação * fatorOuUnidade : operação + fatorOuUnidade
+    operação = Math.min(proxima, valorMaximo || proxima)
   }
-  return { perdasSuportadas: n, totalPerdido: acumulado, proximaAposta: aposta }
+  return { perdasSuportadas: n, totalPerdido: acumulado, proximaOperação: operação }
 }

@@ -1,7 +1,7 @@
 /**
  * Contratos de digito da Deriv.
  *
- * A aposta e sempre sobre o ULTIMO digito da cotacao, considerando a
+ * A operação e sempre sobre o ULTIMO digito da cotacao, considerando a
  * precisao do ativo (pip size). Ex.: cotacao 724.86 com 2 casas -> digito 6.
  * Duracao e contada em ticks (1 a 10), nao em minutos.
  */

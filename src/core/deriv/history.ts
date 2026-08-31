@@ -124,7 +124,7 @@ export function resumir(ops: Operacao[]) {
   return {
     total, ganhos, perdas: total - ganhos,
     acerto: total ? (ganhos / total) * 100 : 0,
-    apostado, resultado,
+    apostado, movimentado: apostado, resultado,
     retorno: apostado ? (resultado / apostado) * 100 : 0,
     maiorSequenciaGanho: maxG, maiorSequenciaPerda: maxP,
     sequenciaAtualGanho: seqG, sequenciaAtualPerda: seqP,
