@@ -214,6 +214,8 @@ export default function App() {
       ) : tela === 'gestao' ? (
         <ManagementPanel
           session={conta.session}
+          socket={conta.socket}
+          isDemo={conta.isDemo}
           onReautorizar={() => startLogin()}
           payoutBase={payoutBase}
           moeda={conta.account?.currency ?? 'USD'}

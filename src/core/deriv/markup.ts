@@ -130,3 +130,64 @@ export function simular(payoutSemMarkup: number, markupPct: number) {
     clientePerde: payoutSemMarkup - payout,
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Markup calculado a partir das operacoes reais da conta             */
+/* ------------------------------------------------------------------ */
+
+import type { TeedsSocket } from './client'
+import { buscarExtrato } from './statement'
+
+export interface MarkupSimulado {
+  operacoes: number
+  movimentado: number
+  pagamentoTotal: number
+  comissao: number
+  comissaoMedia: number
+  porDia: Array<{ data: string; comissao: number; operacoes: number }>
+  taxa: number
+}
+
+/**
+ * Calcula a comissao que as operacoes teriam gerado.
+ *
+ * A regra da Deriv, medida em 31/08/2026: markup = taxa x PAGAMENTO do
+ * contrato. Percorremos as compras feitas pela Teeds (identificadas pelo
+ * app_id no extrato) e aplicamos a taxa sobre o pagamento de cada uma.
+ * Vale para conta demo tambem — a conta e ficticia, o calculo e o mesmo.
+ */
+export async function simularComissao(
+  socket: TeedsSocket,
+  taxa = 0.03,
+  limite = 500,
+): Promise<MarkupSimulado> {
+  const { movimentos } = await buscarExtrato(socket, { limite, tipo: 'buy' })
+  const daTeeds = movimentos.filter((m) => m.appId === DERIV.appId && m.pagamento)
+
+  const porDia = new Map<string, { comissao: number; operacoes: number }>()
+  let comissao = 0
+  let movimentado = 0
+  let pagamentoTotal = 0
+
+  for (const m of daTeeds) {
+    const c = (m.pagamento ?? 0) * taxa
+    comissao += c
+    pagamentoTotal += m.pagamento ?? 0
+    movimentado += Math.abs(m.valor)
+    const dia = new Date(m.quando * 1000).toISOString().slice(0, 10)
+    const atual = porDia.get(dia) ?? { comissao: 0, operacoes: 0 }
+    porDia.set(dia, { comissao: atual.comissao + c, operacoes: atual.operacoes + 1 })
+  }
+
+  return {
+    operacoes: daTeeds.length,
+    movimentado,
+    pagamentoTotal,
+    comissao,
+    comissaoMedia: daTeeds.length ? comissao / daTeeds.length : 0,
+    taxa,
+    porDia: [...porDia.entries()]
+      .map(([data, v]) => ({ data, ...v }))
+      .sort((a, b) => a.data.localeCompare(b.data)),
+  }
+}

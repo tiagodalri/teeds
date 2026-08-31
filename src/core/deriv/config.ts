@@ -24,6 +24,15 @@ export const DERIV = {
   scopes: ['trade', 'account_manage', 'application_read'],
 } as const
 
+/**
+ * Ativos habilitados na Teeds. Por enquanto so os indices de volatilidade
+ * de 1 segundo — sao os que operam 24 horas e tem tick a cada segundo.
+ */
+export const ATIVOS_PERMITIDOS = [
+  '1HZ10V', '1HZ15V', '1HZ25V', '1HZ30V',
+  '1HZ50V', '1HZ75V', '1HZ90V', '1HZ100V',
+] as const
+
 /** Limites publicados pela Deriv, que a Teeds respeita por conta propria. */
 export const LIMITS = {
   maxRequestsPerSecond: 100,

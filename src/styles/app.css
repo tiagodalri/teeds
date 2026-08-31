@@ -1223,3 +1223,57 @@ button, input { font: inherit; color: inherit; }
 /* cards da galeria com mais respiro */
 .rcard { min-height: 178px; }
 .rcard-desc { min-height: 34px; }
+
+/* =============== operação em andamento, sozinha na tela =============== */
+.foco {
+  padding: 26px 20px 22px; text-align: center;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--robo-suave), transparent);
+}
+.foco-tag {
+  display: inline-block; font-size: 9.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.09em;
+  padding: 4px 11px; border-radius: 6px; background: var(--robo); color: #fff;
+  margin-bottom: 16px;
+}
+.foco-valor .rot { display: block; margin-bottom: 2px; }
+.foco-valor strong {
+  display: block; font-size: 38px; font-weight: 700;
+  letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1.05;
+}
+.foco-linha {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: 12px; color: var(--muted); margin: 8px 0 18px;
+}
+.foco-linha em { font-style: normal; color: var(--border); }
+.foco .prog { max-width: 420px; margin: 0 auto; }
+.foco-espera { margin: 11px 0 0; font-size: 12.5px; color: var(--robo); font-weight: 600; }
+.foco-entrada { margin: 4px 0 0; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.teatro-abrir {
+  width: 100%; border: 0; background: var(--surface); cursor: pointer;
+  padding: 10px; font-size: 12px; color: var(--muted);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.teatro-abrir:hover { color: var(--text); }
+.teatro-abrir i {
+  width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 5px solid currentColor; transition: transform 0.2s;
+}
+.teatro-abrir i.aberta { transform: rotate(180deg); }
+
+/* =============== comissão por dia =============== */
+.sim-dias { margin-top: 18px; }
+.sim-dia {
+  display: grid; grid-template-columns: 46px 1fr 78px 52px;
+  align-items: center; gap: 10px; padding: 6px 0; font-size: 12px;
+}
+.sim-dia > span { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 11px; }
+.sim-dia-barra { height: 7px; background: var(--surface); border-radius: 4px; overflow: hidden; }
+.sim-dia-barra i {
+  display: block; height: 100%; background: var(--up); border-radius: 4px;
+  transition: width 0.5s cubic-bezier(.4,0,.2,1);
+}
+.sim-dia b { text-align: right; font-variant-numeric: tabular-nums; font-weight: 650; }
+.sim-dia em { font-style: normal; text-align: right; font-size: 10.5px; color: var(--muted); }

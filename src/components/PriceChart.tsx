@@ -67,11 +67,17 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
   const view = useMemo(() => slice(candles, vp), [candles, vp])
   const range = useMemo(() => priceRange(view.items), [view.items])
 
+  // a faixa da direita cresce conforme o tamanho do numero, para nunca cortar
+  const padRight = useMemo(() => {
+    const exemplo = formatPrice(range.max, pipSize)
+    return Math.max(CHART.padRight, exemplo.length * 6.6 + 22)
+  }, [range.max, pipSize])
+
   const plot = useMemo(() => {
-    const w = Math.max(0, size.w - CHART.padRight - CHART.padLeft)
+    const w = Math.max(0, size.w - padRight - CHART.padLeft)
     const h = Math.max(0, size.h - CHART.padBottom - CHART.padTop)
     return { x: CHART.padLeft, y: CHART.padTop, w, h }
-  }, [size])
+  }, [size, padRight])
 
   const toY = useCallback(
     (price: number) => plot.y + ((range.max - price) / (range.max - range.min)) * plot.h,

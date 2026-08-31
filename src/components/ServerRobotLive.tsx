@@ -60,6 +60,7 @@ function Curva({ pontos, cor }: { pontos: number[]; cor: string }) {
 export function ServerRobotLive(props: Props) {
   const { robo, ident, nome, moeda, socket, onPausar, onRetomar, onParar } = props
   const [detalhes, setDetalhes] = useState<Record<number, Partial<Operacao>>>({})
+  const [verHistorico, setVerHistorico] = useState(false)
   const buscados = useRef(new Set<number>())
 
   const brutos = (robo.contratosDetalhe ?? []) as Array<Record<string, any>>
@@ -163,18 +164,37 @@ export function ServerRobotLive(props: Props) {
         </div>
       </div>
 
-      {/* operação acontecendo agora */}
+      {/* a operação acontecendo agora ocupa a tela sozinha */}
       {emAndamento && (
-        <div className="teatro-agora">
-          <div className="ta-topo">
-            <span className="ta-tag">agora</span>
-            <b>Entrou com {din(emAndamento.valor, moeda)}</b>
-            <em>{hora(emAndamento.compra)}</em>
+        <div className="foco">
+          <span className="foco-tag">operação em andamento</span>
+          <div className="foco-valor">
+            <span className="rot">Entrou com</span>
+            <strong>{din(emAndamento.valor, moeda)}</strong>
           </div>
-          <Progress cor={ident.cor} altura={5} />
+          <div className="foco-linha">
+            <span>{ident.nome}</span>
+            <em>·</em>
+            <span>{robo.contrato.duration ?? 1} {(robo.contrato.duration ?? 1) === 1 ? 'tick' : 'ticks'}</span>
+            <em>·</em>
+            <span>desde {hora(emAndamento.compra)}</span>
+          </div>
+          <Progress cor={ident.cor} altura={6} />
+          <p className="foco-espera">aguardando o resultado…</p>
+          {emAndamento.entrada !== null && (
+            <p className="foco-entrada">preço de entrada {emAndamento.entrada.toFixed(emAndamento.pip)}</p>
+          )}
         </div>
       )}
 
+      {emAndamento && (
+        <button className="teatro-abrir" onClick={() => setVerHistorico((v) => !v)}>
+          {verHistorico ? 'Ocultar' : 'Ver'} histórico da corrida
+          <i className={verHistorico ? 'aberta' : ''} />
+        </button>
+      )}
+
+      {(!emAndamento || verHistorico) && <>
       <div className="teatro-curva">
         {curva.length >= 2 && <Curva pontos={curva} cor={ident.cor} />}
         <div className="viv-trilho">
@@ -196,7 +216,7 @@ export function ServerRobotLive(props: Props) {
 
       <div className="teatro-feed">
         {operacoes.length === 0 && <p className="ger-nota" style={{ padding: 14 }}>Nenhuma operação ainda.</p>}
-        {operacoes.map((o) => (
+        {(emAndamento ? fechadas : operacoes).map((o) => (
           <div key={o.id} className={`op ${o.aberta ? 'aberta' : o.ganhou ? 'ganhou' : 'perdeu'}`}>
             <span className="op-hora">{hora(o.compra)}</span>
             <span className="op-valor">{din(o.valor, '')}</span>
@@ -218,6 +238,7 @@ export function ServerRobotLive(props: Props) {
           </div>
         ))}
       </div>
+      </>}
     </div>
   )
 }

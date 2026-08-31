@@ -1,4 +1,5 @@
 import { publicSocket, TeedsSocket } from './client'
+import { ATIVOS_PERMITIDOS } from './config'
 import type { ActiveSymbol, Candle, Granularity, Tick } from './types'
 
 /** Lista os ativos negociaveis, ja normalizados para o dominio da Teeds. */
@@ -7,7 +8,12 @@ export async function fetchActiveSymbols(
 ): Promise<ActiveSymbol[]> {
   const res = await socket.send({ active_symbols: 'brief' })
   const list = (res.active_symbols ?? []) as Array<Record<string, any>>
-  return list.map((s) => ({
+  const ordem = new Map(ATIVOS_PERMITIDOS.map((c, i) => [c as string, i]))
+  return list
+    .filter((s) => ordem.has(s.underlying_symbol ?? s.symbol))
+    .sort((a, b) =>
+      (ordem.get(a.underlying_symbol) ?? 99) - (ordem.get(b.underlying_symbol) ?? 99))
+    .map((s) => ({
     symbol: s.underlying_symbol ?? s.symbol,
     name: s.underlying_symbol_name ?? s.display_name ?? s.underlying_symbol,
     market: s.market ?? '',

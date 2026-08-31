@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import type { AuthSession } from '../core/deriv/auth'
 import { DERIV } from '../core/deriv/config'
 import {
-  buscarResumo, buscarSerieDiaria, periodo, simular, SemPermissao,
-  type DiaMarkup, type MarkupResumo,
+  buscarResumo, buscarSerieDiaria, periodo, simular, simularComissao, SemPermissao,
+  type DiaMarkup, type MarkupResumo, type MarkupSimulado,
 } from '../core/deriv/markup'
+import type { TeedsSocket } from '../core/deriv/client'
 
 interface Props {
   session: AuthSession | null
+  socket: TeedsSocket | null
+  isDemo: boolean
   onReautorizar: () => void
   /** Pagamento de referencia sem markup, para o simulador. */
   payoutBase: number
@@ -24,7 +27,10 @@ const PERIODOS = [
 const dinheiro = (v: number, moeda = 'USD') =>
   `${moeda} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-export function ManagementPanel({ session, onReautorizar, payoutBase, moeda }: Props) {
+export function ManagementPanel({ session, socket, isDemo, onReautorizar, payoutBase, moeda }: Props) {
+  const [sim, setSim] = useState<MarkupSimulado | null>(null)
+  const [simCarregando, setSimCarregando] = useState(false)
+  const [simErro, setSimErro] = useState<string | null>(null)
   const [dias, setDias] = useState(30)
   const [resumo, setResumo] = useState<MarkupResumo | null>(null)
   const [serie, setSerie] = useState<DiaMarkup[]>([])
@@ -62,7 +68,19 @@ export function ManagementPanel({ session, onReautorizar, payoutBase, moeda }: P
     return () => { vivo = false }
   }, [session, dias])
 
-  const sim = useMemo(() => simular(payoutBase, markupSim), [payoutBase, markupSim])
+  useEffect(() => {
+    if (!socket) return
+    let vivo = true
+    setSimCarregando(true)
+    setSimErro(null)
+    simularComissao(socket, 0.03)
+      .then((r) => vivo && setSim(r))
+      .catch((e: Error) => vivo && setSimErro(e.message))
+      .finally(() => vivo && setSimCarregando(false))
+    return () => { vivo = false }
+  }, [socket])
+
+  const simulacao = useMemo(() => simular(payoutBase, markupSim), [payoutBase, markupSim])
   const simAtual = useMemo(() => simular(payoutBase, 3), [payoutBase])
   const maxSerie = Math.max(0.01, ...serie.map((d) => d.comissao))
 
@@ -132,6 +150,70 @@ export function ManagementPanel({ session, onReautorizar, payoutBase, moeda }: P
         </div>
       </div>
 
+      {/* -------- comissão calculada sobre as operações reais -------- */}
+      <section className="ger-bloco">
+        <div className="ger-bloco-topo">
+          <span className="rot">Comissão gerada pelas suas operações</span>
+          {isDemo && <span className="ger-tag">conta demo · simulação</span>}
+        </div>
+        <p className="ger-texto">
+          Calculado operação por operação, com a regra real da Deriv: <b>3% do pagamento</b> de
+          cada contrato comprado pela Teeds. {isDemo && 'Como a conta é demo, o dinheiro é fictício — mas o cálculo é o mesmo que valeria numa conta real.'}
+        </p>
+
+        {simErro && <div className="ger-erro">{simErro}</div>}
+        {simCarregando && !sim && <p className="ger-nota">somando suas operações…</p>}
+
+        {sim && (
+          <>
+            <div className="kpis">
+              <div className="kpi kpi-grande">
+                <span className="rot">Comissão que teria gerado</span>
+                <strong>{dinheiro(sim.comissao, 'USD')}</strong>
+                <span className="kpi-nota">
+                  em {sim.operacoes} operações · média de {dinheiro(sim.comissaoMedia)} por operação
+                </span>
+              </div>
+              <div className="kpi">
+                <span className="rot">Movimentado</span>
+                <strong>{dinheiro(sim.movimentado)}</strong>
+              </div>
+              <div className="kpi">
+                <span className="rot">Pagamentos contratados</span>
+                <strong>{dinheiro(sim.pagamentoTotal)}</strong>
+                <span className="kpi-nota">base do cálculo</span>
+              </div>
+            </div>
+
+            {sim.porDia.length > 0 && (
+              <div className="sim-dias">
+                <span className="rot">Por dia</span>
+                {sim.porDia.map((d) => {
+                  const maior = Math.max(...sim.porDia.map((x) => x.comissao), 0.01)
+                  return (
+                    <div key={d.data} className="sim-dia">
+                      <span>{d.data.slice(8)}/{d.data.slice(5, 7)}</span>
+                      <div className="sim-dia-barra">
+                        <i style={{ width: `${(d.comissao / maior) * 100}%` }} />
+                      </div>
+                      <b>{dinheiro(d.comissao)}</b>
+                      <em>{d.operacoes} op.</em>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {sim.operacoes === 0 && (
+              <p className="ger-nota">
+                Nenhuma compra pela Teeds ainda no período carregado. Opere um pouco
+                (na demo mesmo) e os números aparecem aqui.
+              </p>
+            )}
+          </>
+        )}
+      </section>
+
       {/* ---------------- gráfico diário ---------------- */}
       {serie.length > 0 && (
         <section className="ger-bloco">
@@ -186,14 +268,14 @@ export function ManagementPanel({ session, onReautorizar, payoutBase, moeda }: P
           </div>
           <div className="sim-card">
             <span className="rot">Ele recebe se ganhar</span>
-            <strong>{dinheiro(sim.payoutCliente, moeda)}</strong>
+            <strong>{dinheiro(simulacao.payoutCliente, moeda)}</strong>
             <span className="sim-sub perda">
-              −{dinheiro(sim.clientePerde, moeda)} vs. sem markup
+              −{dinheiro(simulacao.clientePerde, moeda)} vs. sem markup
             </span>
           </div>
           <div className="sim-card destaque">
             <span className="rot">Você ganha</span>
-            <strong className="ganho">{dinheiro(sim.suaComissao, moeda)}</strong>
+            <strong className="ganho">{dinheiro(simulacao.suaComissao, moeda)}</strong>
             <span className="sim-sub">por operação de {dinheiro(10, moeda)}</span>
           </div>
         </div>
@@ -201,11 +283,11 @@ export function ManagementPanel({ session, onReautorizar, payoutBase, moeda }: P
         <div className="sim-escala">
           <div className="sim-linha">
             <span>A cada {dinheiro(10000)} movimentados</span>
-            <strong className="ganho">{dinheiro(sim.suaComissao * 1000)}</strong>
+            <strong className="ganho">{dinheiro(simulacao.suaComissao * 1000)}</strong>
           </div>
           <div className="sim-linha">
             <span>Diferença de pagamento que o cliente percebe</span>
-            <strong>{((sim.clientePerde / (payoutBase || 1)) * 100).toFixed(1)}%</strong>
+            <strong>{((simulacao.clientePerde / (payoutBase || 1)) * 100).toFixed(1)}%</strong>
           </div>
         </div>
 
