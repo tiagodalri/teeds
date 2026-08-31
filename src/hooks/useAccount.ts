@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { completeLogin, loadSession, logout as clearSession, startLogin, type AuthSession } from '../core/deriv/auth'
 import { fetchAccounts, fetchTradingSocketUrl, resetDemoBalance, type TradingAccount } from '../core/deriv/account'
 import { TeedsSocket } from '../core/deriv/client'
-import { subscribeBalance, subscribeOpenContracts, type Balance, type OpenContract } from '../core/deriv/trading'
+import {
+  fetchPortfolio, subscribeBalance, subscribeContract, subscribeTransactions,
+  type Balance, type OpenContract,
+} from '../core/deriv/trading'
 
 export type AuthStatus = 'deslogado' | 'entrando' | 'logado' | 'erro'
 
@@ -21,6 +24,7 @@ export function useAccount() {
   const [connecting, setConnecting] = useState(false)
 
   const socketRef = useRef<TeedsSocket | null>(null)
+  const [, setTick] = useState(0)
 
   // --- retorno da Deriv + sessao guardada
   useEffect(() => {
@@ -71,31 +75,58 @@ export function useAccount() {
   useEffect(() => {
     if (!session || !accountId) return
     let alive = true
-    let stopBalance: (() => void) | undefined
-    let stopContracts: (() => void) | undefined
+    const paradas: Array<() => void> = []
+    const acompanhados = new Set<number>()
 
     setConnecting(true)
     setBalance(null)
     setContracts(new Map())
 
+    /** Passa a acompanhar um contrato em tempo real (sem duplicar assinatura). */
+    const acompanhar = (sock: TeedsSocket, id: number) => {
+      if (acompanhados.has(id)) return
+      acompanhados.add(id)
+      paradas.push(
+        subscribeContract(sock, id, (c) => {
+          if (!alive) return
+          setContracts((prev) => {
+            const next = new Map(prev)
+            // sai da lista quando vendido, expirado ou liquidado
+            if (c.status !== 'open' || c.isExpired) next.delete(c.contractId)
+            else next.set(c.contractId, c)
+            return next
+          })
+        }),
+      )
+    }
+
     fetchTradingSocketUrl(session, accountId)
-      .then((url) => {
+      .then(async (url) => {
         if (!alive) return
         socketRef.current?.disconnect()
         const sock = new TeedsSocket({ url })
         socketRef.current = sock
         sock.connect()
-        stopBalance = subscribeBalance(sock, (b) => alive && setBalance(b))
-        stopContracts = subscribeOpenContracts(sock, (c) => {
+
+        paradas.push(subscribeBalance(sock, (b) => alive && setBalance(b)))
+
+        // contratos que ja estavam abertos
+        try {
+          const abertos = await fetchPortfolio(sock)
           if (!alive) return
-          setContracts((prev) => {
-            const next = new Map(prev)
-            if (c.status === 'open') next.set(c.contractId, c)
-            else next.delete(c.contractId)
-            return next
-          })
-        })
+          for (const c of abertos) acompanhar(sock, c.contractId)
+        } catch { /* portfolio vazio ou indisponivel: seguimos pelo fluxo de transacoes */ }
+
+        // qualquer compra nova entra na lista automaticamente
+        paradas.push(
+          subscribeTransactions(sock, (t) => {
+            if (!alive || !t.contractId) return
+            if (t.action === 'buy') acompanhar(sock, t.contractId)
+          }),
+        )
+
         setConnecting(false)
+        setTick((n) => n + 1)
       })
       .catch((e: Error) => {
         if (!alive) return
@@ -105,8 +136,7 @@ export function useAccount() {
 
     return () => {
       alive = false
-      stopBalance?.()
-      stopContracts?.()
+      paradas.forEach((p) => p())
       socketRef.current?.disconnect()
       socketRef.current = null
     }

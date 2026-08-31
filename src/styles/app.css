@@ -240,18 +240,78 @@ button, input { font: inherit; color: inherit; }
 
 .trade h3.sec { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
 
-.posicoes { display: flex; flex-direction: column; gap: 8px; }
-.posicao {
+/* ------------------------------------------------------- posições abertas */
+.pos-cabecalho { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
+.trade h3.sec { margin: 0 0 8px; padding: 0; border: 0; }
+.pos-resumo {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  font-size: 11.5px; color: var(--muted); margin-bottom: 12px;
+}
+.pos-resumo b { color: var(--text); font-variant-numeric: tabular-nums; }
+.ganho { color: var(--up); }
+.perda { color: var(--down); }
+
+.posicoes { display: flex; flex-direction: column; gap: 12px; }
+
+.pos {
   border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 10px; background: var(--surface);
+  background: var(--bg); padding: 12px; box-shadow: var(--shadow);
+  border-left-width: 3px;
 }
-.pos-topo { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; }
-.pos-tipo { font-weight: 600; }
-.pos-lucro { font-weight: 650; font-variant-numeric: tabular-nums; }
-.pos-lucro.pos { color: var(--up); }
-.pos-lucro.neg { color: var(--down); }
-.pos-sub {
-  display: flex; justify-content: space-between;
-  font-size: 11px; color: var(--muted); margin: 3px 0 8px;
+.pos-ganhando { border-left-color: var(--up); }
+.pos-perdendo { border-left-color: var(--down); }
+
+.pos-cab {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; margin-bottom: 8px;
 }
-.btn-sm { margin-top: 0; padding: 6px; font-size: 12px; }
+.pos-dir { font-weight: 650; }
+.pos-dir.up { color: var(--up); }
+.pos-dir.down { color: var(--down); }
+.pos-ativo {
+  color: var(--muted); overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; flex: 1;
+}
+.pos-tempo {
+  font-variant-numeric: tabular-nums; font-weight: 650;
+  background: var(--surface); padding: 2px 7px; border-radius: 5px;
+}
+.pos-tempo.urgente { background: var(--down-soft); color: var(--down); }
+
+.pos-barra {
+  height: 3px; background: var(--border); border-radius: 2px;
+  overflow: hidden; margin-bottom: 12px;
+}
+.pos-barra span { display: block; height: 100%; background: var(--primary); transition: width 1s linear; }
+
+.pos-resultado {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 12px; margin-bottom: 12px;
+}
+.pos-resultado .rot {
+  display: block; font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--muted); margin-bottom: 2px;
+}
+.pos-resultado strong {
+  font-size: 19px; font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em; display: block;
+}
+.pos-resultado .pct { font-size: 11.5px; font-weight: 600; }
+.pos-alvo { text-align: right; }
+.pos-alvo strong { font-size: 14px; color: var(--text); }
+.pos-alvo .sub { font-size: 10.5px; color: var(--muted); }
+
+.pos-dados {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 7px 12px;
+  margin: 0 0 12px; padding: 10px 0 0; border-top: 1px dashed var(--border);
+}
+.pos-dados div { display: flex; justify-content: space-between; gap: 6px; }
+.pos-dados dt { font-size: 11px; color: var(--muted); }
+.pos-dados dd {
+  margin: 0; font-size: 11.5px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.pos-dados dd em { font-style: normal; font-weight: 500; font-size: 10.5px; }
+
+.btn-vender { margin-top: 0; background: var(--primary); }
+.btn-vender:disabled { background: #cfd6e2; }

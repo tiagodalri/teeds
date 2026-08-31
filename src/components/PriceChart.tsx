@@ -13,12 +13,25 @@ import {
 
 export type ChartMode = 'candles' | 'line'
 
+/** Uma operacao aberta, desenhada sobre o grafico. */
+export interface ContractMarker {
+  id: number
+  /** CALL (subir) ou PUT (descer). */
+  type: string
+  entryEpoch: number
+  entryPrice: number | null
+  expiryEpoch: number
+  profit: number
+}
+
 interface Props {
   candles: Candle[]
   mode: ChartMode
   pipSize: number
   symbolName: string
   loading?: boolean
+  /** Operacoes abertas neste ativo. */
+  markers?: ContractMarker[]
 }
 
 interface Cursor {
@@ -31,7 +44,7 @@ interface Cursor {
  * Grafico da Teeds - desenhado do zero em canvas.
  * Sem bibliotecas de terceiros: controle total sobre desenho e interacao.
  */
-export function PriceChart({ candles, mode, pipSize, symbolName, loading }: Props) {
+export function PriceChart({ candles, mode, pipSize, symbolName, loading, markers = [] }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -191,6 +204,95 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading }: Prop
     ctx.textBaseline = 'middle'
     ctx.fillText(label, bx + 5, yLast)
 
+    // --- operacoes abertas: entrada, faixa de duracao e expiracao
+    if (markers.length && items.length > 1) {
+      const passo = items[1].epoch - items[0].epoch || 60
+      const inicio = items[0].epoch
+      const xPara = (epoch: number) => plot.x + ((epoch - inicio) / passo) * stepX + stepX / 2
+
+      for (const m of markers) {
+        const subiu = m.type === 'CALL' || m.type === 'MULTUP' || m.type === 'HIGHER'
+        const cor = subiu ? T.up : T.down
+        const xEntrada = xPara(m.entryEpoch)
+        const xFim = xPara(m.expiryEpoch)
+        const dentro = (x: number) => x >= plot.x && x <= plot.x + plot.w
+
+        // faixa da duracao do contrato
+        const a = Math.max(plot.x, Math.min(xEntrada, xFim))
+        const b = Math.min(plot.x + plot.w, Math.max(xEntrada, xFim))
+        if (b > a) {
+          ctx.fillStyle = subiu ? 'rgba(18,161,80,0.05)' : 'rgba(229,72,77,0.05)'
+          ctx.fillRect(a, plot.y, b - a, plot.h)
+        }
+
+        // linha do preco de entrada
+        if (m.entryPrice != null) {
+          const y = toY(m.entryPrice)
+          if (y >= plot.y && y <= plot.y + plot.h) {
+            ctx.save()
+            ctx.setLineDash([2, 3])
+            ctx.strokeStyle = cor
+            ctx.lineWidth = 1.25
+            ctx.beginPath()
+            ctx.moveTo(Math.max(plot.x, a), Math.round(y) + 0.5)
+            ctx.lineTo(plot.x + plot.w, Math.round(y) + 0.5)
+            ctx.stroke()
+            ctx.restore()
+
+            // etiqueta "entrada" a esquerda da linha
+            ctx.font = '600 10px ui-sans-serif, -apple-system, system-ui, sans-serif'
+            const txt = `entrada ${formatPrice(m.entryPrice, pipSize)}`
+            const tw2 = ctx.measureText(txt).width
+            const lx = Math.min(Math.max(plot.x + 4, xEntrada + 8), plot.x + plot.w - tw2 - 12)
+            ctx.fillStyle = cor
+            roundRect(ctx, lx - 4, y - 17, tw2 + 8, 14, 3)
+            ctx.fill()
+            ctx.fillStyle = '#fff'
+            ctx.textAlign = 'left'
+            ctx.textBaseline = 'middle'
+            ctx.fillText(txt, lx, y - 10)
+
+            // seta no ponto exato de entrada
+            if (dentro(xEntrada)) {
+              ctx.fillStyle = cor
+              ctx.beginPath()
+              if (subiu) {
+                ctx.moveTo(xEntrada, y - 7); ctx.lineTo(xEntrada - 5, y + 2); ctx.lineTo(xEntrada + 5, y + 2)
+              } else {
+                ctx.moveTo(xEntrada, y + 7); ctx.lineTo(xEntrada - 5, y - 2); ctx.lineTo(xEntrada + 5, y - 2)
+              }
+              ctx.closePath()
+              ctx.fill()
+            }
+          }
+        }
+
+        // linha vertical da expiracao
+        if (dentro(xFim)) {
+          ctx.save()
+          ctx.setLineDash([3, 3])
+          ctx.strokeStyle = cor
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.moveTo(Math.round(xFim) + 0.5, plot.y)
+          ctx.lineTo(Math.round(xFim) + 0.5, plot.y + plot.h)
+          ctx.stroke()
+          ctx.restore()
+
+          ctx.font = '600 9.5px ui-sans-serif, -apple-system, system-ui, sans-serif'
+          const ft = 'fim'
+          const fw = ctx.measureText(ft).width
+          ctx.fillStyle = cor
+          roundRect(ctx, xFim - fw / 2 - 4, plot.y + 2, fw + 8, 13, 3)
+          ctx.fill()
+          ctx.fillStyle = '#fff'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText(ft, xFim, plot.y + 8.5)
+        }
+      }
+    }
+
     // --- crosshair
     if (cursor && cursor.index >= 0 && cursor.index < items.length) {
       const cx = toX(cursor.index)
@@ -217,7 +319,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading }: Prop
       ctx.fillStyle = '#fff'
       ctx.fillText(pl, plot.x + plot.w + 9, cursor.y)
     }
-  }, [size, view.items, range, plot, mode, pipSize, cursor, stepX, toX, toY])
+  }, [size, view.items, range, plot, mode, pipSize, cursor, stepX, toX, toY, markers])
 
   // ------------------------------------------------------------ interacao
   const onWheel = useCallback((e: React.WheelEvent) => {

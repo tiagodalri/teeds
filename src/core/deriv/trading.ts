@@ -17,17 +17,97 @@ export interface OpenContract {
   contractId: number
   symbol: string
   contractType: string
+  /** Valor investido. */
   buyPrice: number
+  /** Quanto vale agora, se vendido. */
   bidPrice: number
+  /** Quanto paga se ganhar. */
+  payout: number
   profit: number
   profitPercentage: number
   status: string
   isValidToSell: boolean
+  isExpired: boolean
   entrySpot: number | null
   currentSpot: number | null
+  barrier: number | null
   longcode: string
+  shortcode: string
+  currency: string
   purchaseTime: number
+  startTime: number
   expiryTime: number
+  pipSize: number
+}
+
+function toOpenContract(p: Record<string, any>): OpenContract {
+  const num = (v: any) => (v === null || v === undefined || v === '' ? null : Number(v))
+  return {
+    contractId: Number(p.contract_id),
+    symbol: p.underlying_symbol ?? '',
+    contractType: p.contract_type ?? '',
+    buyPrice: Number(p.buy_price ?? 0),
+    bidPrice: Number(p.bid_price ?? p.buy_price ?? 0),
+    payout: Number(p.payout ?? 0),
+    profit: Number(p.profit ?? 0),
+    profitPercentage: Number(p.profit_percentage ?? 0),
+    status: p.status ?? 'open',
+    isValidToSell: p.is_valid_to_sell === 1,
+    isExpired: p.is_expired === 1,
+    entrySpot: num(p.entry_spot),
+    currentSpot: num(p.current_spot),
+    barrier: num(p.barrier),
+    longcode: p.longcode ?? '',
+    shortcode: p.shortcode ?? '',
+    currency: p.currency ?? 'USD',
+    purchaseTime: Number(p.purchase_time ?? 0),
+    startTime: Number(p.date_start ?? p.purchase_time ?? 0),
+    expiryTime: Number(p.date_expiry ?? p.expiry_time ?? 0),
+    pipSize: Number(p.pip_size ?? 2),
+  }
+}
+
+/** Lista os contratos abertos agora (fonte autoritativa ao conectar). */
+export async function fetchPortfolio(socket: TeedsSocket): Promise<OpenContract[]> {
+  const res = await socket.send({ portfolio: 1 })
+  const lista = ((res.portfolio as any)?.contracts ?? []) as Array<Record<string, any>>
+  return lista.map(toOpenContract)
+}
+
+/**
+ * Acompanha UM contrato especifico em tempo real.
+ * Assinar por contrato e mais confiavel do que assinar o portfolio inteiro:
+ * cada contrato tem seu proprio fluxo, e a falha de um nao derruba os outros.
+ */
+export function subscribeContract(
+  socket: TeedsSocket,
+  contractId: number,
+  onUpdate: (c: OpenContract) => void,
+  onError?: (msg: string) => void,
+): () => void {
+  return socket.subscribe({ proposal_open_contract: 1, contract_id: contractId }, (msg) => {
+    if (msg.error) { onError?.(msg.error.message); return }
+    const p = msg.proposal_open_contract as Record<string, any> | undefined
+    if (!p || !p.contract_id) return
+    onUpdate(toOpenContract(p))
+  })
+}
+
+/** Avisa sempre que uma transacao acontece (compra ou venda) na conta. */
+export function subscribeTransactions(
+  socket: TeedsSocket,
+  onTransaction: (t: { action: string; contractId: number | null; amount: number; balance: number }) => void,
+): () => void {
+  return socket.subscribe({ transaction: 1 }, (msg) => {
+    if (msg.error || !msg.transaction) return
+    const t = msg.transaction as Record<string, any>
+    onTransaction({
+      action: t.action ?? '',
+      contractId: t.contract_id != null ? Number(t.contract_id) : null,
+      amount: Number(t.amount ?? 0),
+      balance: Number(t.balance ?? 0),
+    })
+  })
 }
 
 export interface Balance {
@@ -76,34 +156,6 @@ export function subscribeBalance(socket: TeedsSocket, onBalance: (b: Balance) =>
     if (msg.error || !msg.balance) return
     const b = msg.balance as Record<string, any>
     onBalance({ amount: Number(b.balance), currency: b.currency ?? 'USD', loginId: b.loginid ?? '' })
-  })
-}
-
-/** Assina TODOS os contratos abertos da conta, com atualizacao continua. */
-export function subscribeOpenContracts(
-  socket: TeedsSocket,
-  onContract: (c: OpenContract) => void,
-): () => void {
-  return socket.subscribe({ proposal_open_contract: 1 }, (msg: DerivMessage) => {
-    if (msg.error || !msg.proposal_open_contract) return
-    const p = msg.proposal_open_contract as Record<string, any>
-    if (!p.contract_id) return
-    onContract({
-      contractId: Number(p.contract_id),
-      symbol: p.underlying_symbol ?? '',
-      contractType: p.contract_type ?? '',
-      buyPrice: Number(p.buy_price ?? 0),
-      bidPrice: Number(p.bid_price ?? 0),
-      profit: Number(p.profit ?? 0),
-      profitPercentage: Number(p.profit_percentage ?? 0),
-      status: p.status ?? 'open',
-      isValidToSell: p.is_valid_to_sell === 1,
-      entrySpot: p.entry_spot != null ? Number(p.entry_spot) : null,
-      currentSpot: p.current_spot != null ? Number(p.current_spot) : null,
-      longcode: p.longcode ?? '',
-      purchaseTime: Number(p.purchase_time ?? 0),
-      expiryTime: Number(p.date_expiry ?? 0),
-    })
   })
 }
 

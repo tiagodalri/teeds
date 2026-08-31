@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { PriceChart, type ChartMode } from './components/PriceChart'
+import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
+import { PositionCard } from './components/PositionCard'
 import { useCandleSeries, useConnection, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { useAccount } from './hooks/useAccount'
 import type { Granularity } from './core/deriv/types'
@@ -30,6 +31,7 @@ export default function App() {
   const [comprando, setComprando] = useState<string | null>(null)
   const [aviso, setAviso] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
   const [confirmar, setConfirmar] = useState<'CALL' | 'PUT' | null>(null)
+  const [vendendo, setVendendo] = useState<number | null>(null)
 
   const activeSymbol = useMemo(() => {
     if (selected) return symbols.find((s) => s.symbol === selected) ?? null
@@ -59,6 +61,14 @@ export default function App() {
 
   const pipSize = activeSymbol?.pipSize ?? tick?.pipSize ?? 2
   const price = tick?.quote ?? (candles.length ? candles[candles.length - 1].close : null)
+  const doAtivo = conta.contracts.filter((c) => c.symbol === symbolCode)
+  const marcadores: ContractMarker[] = doAtivo.map((c) => ({
+    id: c.contractId, type: c.contractType, entryEpoch: c.startTime,
+    entryPrice: c.entrySpot, expiryEpoch: c.expiryTime, profit: c.profit,
+  }))
+  const investido = conta.contracts.reduce((t, c) => t + c.buyPrice, 0)
+  const resultadoAberto = conta.contracts.reduce((t, c) => t + c.profit, 0)
+
   const podeOperar = conta.status === 'logado' && !!conta.socket && !conta.connecting && !!symbolCode
 
   async function comprar(tipo: 'CALL' | 'PUT') {
@@ -83,11 +93,15 @@ export default function App() {
 
   async function vender(contractId: number) {
     if (!conta.socket) return
+    setVendendo(contractId)
+    setAviso(null)
     try {
       const r = await sellContract(conta.socket, contractId, 0)
       setAviso({ tipo: 'ok', texto: `Vendido por ${r.soldFor.toFixed(2)}` })
     } catch (e) {
       setAviso({ tipo: 'erro', texto: (e as Error).message })
+    } finally {
+      setVendendo(null)
     }
   }
 
@@ -186,7 +200,8 @@ export default function App() {
           </div>
 
           <PriceChart candles={candles} mode={mode} pipSize={pipSize}
-            symbolName={activeSymbol?.name ?? ''} loading={loadingCandles} />
+            symbolName={activeSymbol?.name ?? ''} loading={loadingCandles}
+            markers={marcadores} />
         </main>
 
         <aside className="trade">
@@ -222,29 +237,33 @@ export default function App() {
             <p className={`aviso ${aviso.tipo === 'ok' ? 'aviso-ok' : 'aviso-erro'}`}>{aviso.texto}</p>
           )}
 
-          <h3 className="sec">Posições abertas</h3>
+          <div className="pos-cabecalho">
+            <h3 className="sec">Posições abertas</h3>
+            {conta.contracts.length > 0 && (
+              <div className="pos-resumo">
+                <span>{conta.contracts.length} aberta{conta.contracts.length > 1 ? 's' : ''}</span>
+                <span>investido <b>{investido.toFixed(2)}</b></span>
+                <span className={resultadoAberto >= 0 ? 'ganho' : 'perda'}>
+                  {resultadoAberto >= 0 ? '+' : '−'}{Math.abs(resultadoAberto).toFixed(2)}
+                </span>
+              </div>
+            )}
+          </div>
+
           {conta.status !== 'logado' && <p className="note">Entre com sua conta Deriv para operar.</p>}
           {conta.status === 'logado' && conta.contracts.length === 0 && (
-            <p className="note">Nenhuma posição aberta.</p>
+            <p className="note">Nenhuma posição aberta. Suas operações aparecem aqui, com o resultado ao vivo.</p>
           )}
+
           <div className="posicoes">
             {conta.contracts.map((c) => (
-              <div key={c.contractId} className="posicao">
-                <div className="pos-topo">
-                  <span className="pos-tipo">{c.contractType === 'CALL' ? '▲ Subir' : c.contractType === 'PUT' ? '▼ Descer' : c.contractType}</span>
-                  <span className={`pos-lucro ${c.profit >= 0 ? 'pos' : 'neg'}`}>
-                    {c.profit >= 0 ? '+' : ''}{c.profit.toFixed(2)}
-                  </span>
-                </div>
-                <div className="pos-sub">
-                  <span>{c.symbol}</span>
-                  <span>entrada {c.buyPrice.toFixed(2)}</span>
-                </div>
-                <button className="btn btn-sm" disabled={!c.isValidToSell}
-                  onClick={() => vender(c.contractId)}>
-                  {c.isValidToSell ? `Vender por ${c.bidPrice.toFixed(2)}` : 'não pode vender agora'}
-                </button>
-              </div>
+              <PositionCard
+                key={c.contractId}
+                contrato={c}
+                nomeAtivo={symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol}
+                onVender={vender}
+                vendendo={vendendo === c.contractId}
+              />
             ))}
           </div>
         </aside>
