@@ -128,14 +128,14 @@ export function RobotSetup({
     },
     {
       chave: 'gale',
-      titulo: 'Depois de perder, ele aumenta a entrada?',
-      ajuda: 'O fator diz quanto do prejuízo ele tenta recuperar na entrada seguinte. 0,7 recupera 70%. Em zero, a entrada nunca muda.',
+      titulo: 'Quando ele deve tentar recuperar?',
+      ajuda: `Ele entra em todas as operações. Até ${cfg.galeApos} ${cfg.galeApos === 1 ? 'perda seguida' : 'perdas seguidas'} a entrada continua no valor base; a partir daí o martingale soma o prejuízo da sequência à próxima entrada. O fator diz quanto desse prejuízo ele persegue de uma vez.`,
       valido: cfg.valorMaximo >= cfg.valorAoVencer,
       corpo: (
         <>
           <div className="qz-atalhos largo">
             <button className={cfg.fatorGale === 0 ? 'on' : ''} onClick={() => muda({ fatorGale: 0 })}>
-              Não aumentar
+              Nunca aumentar
             </button>
             <button className={cfg.fatorGale === 0.7 ? 'on' : ''} onClick={() => muda({ fatorGale: 0.7 })}>
               Suave (0,7)
@@ -150,8 +150,9 @@ export function RobotSetup({
               <Numero valor={cfg.fatorGale} passo={0.1} aoMudar={(n) => muda({ fatorGale: n })} />
             </label>
             <label>
-              <span className="rot">Só depois de quantas perdas</span>
-              <Numero valor={cfg.galeApos} passo={1} aoMudar={(n) => muda({ galeApos: Math.round(n) })} />
+              <span className="rot">Ligar após quantas perdas</span>
+              <Numero valor={cfg.galeApos} passo={1} minimo={1}
+                aoMudar={(n) => muda({ galeApos: Math.max(1, Math.round(n)) })} />
             </label>
             <label>
               <span className="rot">Entrada máxima</span>
@@ -200,12 +201,13 @@ export function RobotSetup({
           <dl className="qz-resumo">
             <div><dt>Ativo</dt><dd>{nomeAtivo}</dd></div>
             <div><dt>Entrada</dt><dd>{din(cfg.valorAoVencer, moeda)}</dd></div>
+            <div><dt>Entradas</dt><dd>em todas as operações</dd></div>
             <div>
-              <dt>Depois de perder</dt>
+              <dt>Martingale</dt>
               <dd>
                 {cfg.fatorGale === 0
-                  ? 'entrada sempre igual'
-                  : `recupera ${(cfg.fatorGale * 100).toFixed(0)}% após ${cfg.galeApos} perdas, até ${din(cfg.valorMaximo, moeda)}`}
+                  ? 'desligado — entrada sempre igual'
+                  : `liga na ${cfg.galeApos}ª perda seguida, recuperando ${(cfg.fatorGale * 100).toFixed(0)}%, até ${din(cfg.valorMaximo, moeda)}`}
               </dd>
             </div>
             <div><dt>Para se ganhar</dt><dd>{din(cfg.takeProfit, moeda)}</dd></div>

@@ -21,6 +21,9 @@ export interface Contexto {
   vitoriasSeguidas: number
   operacoes: number
   resultado: number
+  /** Quanto a sequencia de perdas atual ja custou (numero positivo). */
+  prejuizoDaSequencia: number
+  config: ConfigEstrategia
 }
 
 export interface Estrategia {
@@ -40,6 +43,11 @@ export interface Estrategia {
    * Cada item e um requisito: o valor lido e se ele passou.
    */
   progresso?: (c: Contexto) => { rotulo: string; itens: Array<{ valor: string; ok: boolean }> }
+  /**
+   * Entra de novo assim que o contrato liquida, sem esperar o proximo tick.
+   * Para estrategias sem filtro de entrada, que operam continuamente.
+   */
+  entradaContinua?: boolean
   /** Proximo valor apos o resultado de uma operacao. */
   proximoValor: (args: {
     valorAtual: number
@@ -48,6 +56,8 @@ export interface Estrategia {
     ganhou: boolean
     lucro: number
     perdasSeguidas: number
+    /** Soma das perdas da sequencia atual, em positivo. */
+    prejuizoDaSequencia: number
     config: ConfigEstrategia
   }) => number
 }
@@ -151,6 +161,8 @@ export class MotorTeeds {
   private ultimoEpoch = 0
   private latencias: number[] = []
   private esperaAtual = 0
+  /** Quanto a sequencia de perdas atual ja custou. Zera a cada vitoria. */
+  private prejuizoDaSequencia = 0
 
   constructor(opts: {
     socket: TeedsSocket
@@ -191,6 +203,8 @@ export class MotorTeeds {
       vitoriasSeguidas: this.vitoriasSeguidas,
       operacoes: this.estado.operacoes,
       resultado: this.estado.resultado,
+      prejuizoDaSequencia: this.prejuizoDaSequencia,
+      config: this.config,
     }
   }
 
@@ -200,6 +214,7 @@ export class MotorTeeds {
     this.ultimoEpoch = 0
     this.latencias = []
     this.esperaAtual = 0
+    this.prejuizoDaSequencia = 0
     this.registrar(`Robô ligado — ${this.estrategia.nome}`, 'info')
     this.estado.aguardando = 'lendo o histórico do ativo…'
     this.emitir()
@@ -377,11 +392,13 @@ export class MotorTeeds {
       if (ganhou) {
         this.estado.vitorias += 1
         this.estado.perdasSeguidas = 0
+        this.prejuizoDaSequencia = 0
         this.vitoriasSeguidas += 1
         this.registrar(`Ganhou ${this.moeda} ${c.profit.toFixed(2)}`, 'ganho')
       } else {
         this.estado.derrotas += 1
         this.estado.perdasSeguidas += 1
+        this.prejuizoDaSequencia += Math.abs(c.profit)
         this.vitoriasSeguidas = 0
         this.registrar(`Perdeu ${this.moeda} ${Math.abs(c.profit).toFixed(2)}`, 'perda')
       }
@@ -393,6 +410,7 @@ export class MotorTeeds {
         ganhou,
         lucro: c.profit,
         perdasSeguidas: this.estado.perdasSeguidas,
+        prejuizoDaSequencia: this.prejuizoDaSequencia,
         config: this.config,
       })
 
@@ -413,7 +431,15 @@ export class MotorTeeds {
         this.desligar(`próxima entrada (${this.estado.valorAtual.toFixed(2)}) passaria do teto`)
         return
       }
+
       this.emitir()
+
+      // Sem filtro de entrada nao ha o que esperar: emenda a proxima assim
+      // que esta liquida, em vez de perder um tick parado.
+      if (this.estrategia.entradaContinua && this.estado.rodando) {
+        const ctx = this.contexto
+        if (this.estrategia.entrar(ctx)) void this.comprar()
+      }
     })
   }
 }

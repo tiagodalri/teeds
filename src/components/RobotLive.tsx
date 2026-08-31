@@ -225,8 +225,8 @@ export function RobotLive({
             </div>
           </div>
           <div className="tv-caca-num">
-            <b>{estado.ticksAnalisados}</b>
-            <span>ticks lidos desde a última entrada</span>
+            <b>{num(estado.valorAtual)}</b>
+            <span>valor da próxima entrada</span>
           </div>
         </section>
       ) : (
@@ -278,7 +278,11 @@ export function RobotLive({
           <div>
             <span>Próxima entrada</span>
             <b>{num(estado.valorAtual)}</b>
-            <em>{estado.valorAtual > config.valorAoVencer ? 'progressão ativa' : 'valor base'}</em>
+            <em>{config.fatorGale === 0
+              ? 'valor fixo'
+              : estado.perdasSeguidas >= config.galeApos
+                ? 'martingale ligado'
+                : `valor base · ${estado.perdasSeguidas}/${config.galeApos} perdas`}</em>
           </div>
           <div>
             <span>Movimentado</span>

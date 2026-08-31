@@ -21,7 +21,7 @@ const PADRAO: ConfigEstrategia = {
   valorInicial: 0.35,
   valorAoVencer: 0.35,
   fatorGale: 0.7,
-  galeApos: 2,
+  galeApos: 3,
   valorMaximo: 10,
   takeProfit: 5,
   stopLoss: 10,
@@ -86,10 +86,10 @@ export function LocalRobotPanel({ socket, isDemo, moeda, symbols, symbolPadrao, 
     { rot: 'Ativo', valor: nomeAtivo.replace(' Index', '') },
     { rot: 'Entrada', valor: din(cfg.valorAoVencer, moeda) },
     {
-      rot: 'Após perder',
+      rot: 'Martingale',
       valor: cfg.fatorGale === 0
-        ? 'entrada fixa'
-        : `${(cfg.fatorGale * 100).toFixed(0)}% após ${cfg.galeApos}`,
+        ? 'desligado'
+        : `${(cfg.fatorGale * 100).toFixed(0)}% após ${cfg.galeApos} perdas`,
     },
     { rot: 'Teto', valor: din(cfg.valorMaximo, moeda) },
     { rot: 'Para se ganhar', valor: din(cfg.takeProfit, moeda) },
