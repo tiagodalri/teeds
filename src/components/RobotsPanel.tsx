@@ -7,6 +7,7 @@ import {
   type ConfigRobo, type EstrategiaId, type ModeloRobo, type Robo,
 } from '../core/deriv/robots'
 import type { ActiveSymbol } from '../core/deriv/types'
+import { LocalRobotPanel } from './LocalRobotPanel'
 import { batizarRobo, nomeDoRobo, sugerirNome } from '../core/deriv/robotNames'
 
 interface Props {
@@ -42,6 +43,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
   const [nome, setNome] = useState('')
   const [renomeando, setRenomeando] = useState<string | null>(null)
   const [nomes, setNomes] = useState<Record<string, string>>({})
+  const [onde, setOnde] = useState<'servidor' | 'teeds'>('servidor')
 
   useEffect(() => { if (symbolPadrao) setSymbol(symbolPadrao) }, [symbolPadrao])
   useEffect(() => { setNome(sugerirNome(modelo.nome)) }, [modelo])
@@ -141,14 +143,31 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
         <div>
           <h2>Robôs</h2>
           <p className="ger-sub">
-            Operam nos servidores da Deriv — continuam trabalhando com seu computador desligado.
+            {onde === 'servidor'
+            ? 'Operam nos servidores da Deriv — continuam trabalhando com seu computador desligado.'
+            : 'Estratégias com filtro de entrada, executadas pela própria Teeds.'}
           </p>
         </div>
         {!isDemo && <span className="badge badge-real">conta real selecionada</span>}
       </div>
 
-      {erro && <div className="ger-erro">{erro}</div>}
+      <div className="segmented sub-abas onde-roda">
+        <button className={onde === 'servidor' ? 'on' : ''} onClick={() => setOnde('servidor')}>
+          No servidor da Deriv
+        </button>
+        <button className={onde === 'teeds' ? 'on' : ''} onClick={() => setOnde('teeds')}>
+          Na Teeds (avançados)
+        </button>
+      </div>
 
+      {onde === 'teeds' && (
+        <LocalRobotPanel socket={socket} isDemo={isDemo} moeda={moeda}
+          symbols={symbols} symbolPadrao={symbolPadrao} />
+      )}
+
+      {erro && onde === 'servidor' && <div className="ger-erro">{erro}</div>}
+
+      {onde === 'servidor' && <>
       <div className="rob-grade">
         {/* ---------------- configuração ---------------- */}
         <section className="ger-bloco">
@@ -334,6 +353,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
           })}
         </div>
       </section>
+      </>}
     </div>
   )
 }
