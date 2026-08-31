@@ -153,7 +153,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
         <div>
           <h2>Robôs</h2>
           <p className="ger-sub">
-            Ajuste os freios e ligue. Acompanhe cada entrada ao vivo enquanto ele opera.
+            Ligue o robô e acompanhe cada entrada ao vivo. Ele pergunta os valores na hora.
           </p>
         </div>
         {!isDemo && <span className="badge badge-real">conta real selecionada</span>}
