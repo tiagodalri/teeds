@@ -83,7 +83,10 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
 
   useEffect(() => {
     if (!socket) return
-    const ativos = [...robos.values()].filter((r) => r.status !== 'stopped').slice(0, 6)
+    const todos = [...robos.values()]
+    const emCurso = todos.filter((r) => r.status !== 'stopped')
+    const recente = todos.filter((r) => r.status === 'stopped').sort((a, b) => b.inicio - a.inicio)[0]
+    const ativos = (emCurso.length ? emCurso : recente ? [recente] : []).slice(0, 6)
     const paradas = ativos.map((r) =>
       acompanharRobo(socket, r.runId, (novo) =>
         setRobos((prev) => new Map(prev).set(novo.runId, novo)),
@@ -135,6 +138,9 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
 
   const lista = [...robos.values()].sort((a, b) => b.inicio - a.inicio)
   const rodando = lista.filter((r) => r.status === 'running' || r.status === 'paused')
+  // além dos ativos, o teatro mostra a última corrida encerrada, para revisão
+  const ultimaParada = lista.find((r) => r.status === 'stopped')
+  const emDestaque = [...rodando, ...(rodando.length === 0 && ultimaParada ? [ultimaParada] : [])]
 
   if (!logado) {
     return <div className="ger-vazio"><h2>Robôs</h2><p>Entre com sua conta Deriv para criar robôs.</p></div>
@@ -264,9 +270,9 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
 
       </div>
 
-      {rodando.length > 0 && (
+      {emDestaque.length > 0 && (
         <div className="teatros">
-          {rodando.map((r) => {
+          {emDestaque.map((r) => {
             const idr = identidadePorContrato(r.contrato.contract_type ?? '') ?? ident
             return (
               <ServerRobotLive
@@ -295,7 +301,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
         {lista.length === 0 && <p className="ger-nota">Nenhum robô criado ainda.</p>}
 
         <div className="rob-lista">
-          {lista.filter((r) => r.status === 'stopped').map((r) => {
+          {lista.filter((r) => r.status === 'stopped' && r.runId !== emDestaque[0]?.runId).map((r) => {
             const identDele = identidadePorContrato(r.contrato.contract_type ?? '')
             const padrao = identDele?.nome ?? r.contrato.contract_type ?? 'Robô'
             const apelido = nomes[r.runId] ?? nomeDoRobo(r.runId, padrao)
