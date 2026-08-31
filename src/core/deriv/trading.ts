@@ -188,6 +188,66 @@ export async function comprarDireto(
   }
 }
 
+/**
+ * Central de contratos abertos.
+ *
+ * `proposal_open_contract` com `subscribe` e **sem** contract_id devolve um
+ * stream de todos os contratos da conta. Uma assinatura so, compartilhada,
+ * no lugar de uma por contrato — que era o que estourava o teto de 100
+ * assinaturas da Deriv e deixava o robo esperando para sempre.
+ */
+type OuvinteContrato = (c: OpenContract) => void
+
+interface CanalContratos {
+  ouvintes: Set<OuvinteContrato>
+  parar: (() => void) | null
+  encerrar: ReturnType<typeof setTimeout> | null
+}
+
+const canaisContrato = new WeakMap<TeedsSocket, CanalContratos>()
+
+export function assinarContratos(
+  socket: TeedsSocket,
+  onContrato: OuvinteContrato,
+  onFalha?: (msg: string) => void,
+): () => void {
+  let canal = canaisContrato.get(socket)
+  if (!canal) {
+    canal = { ouvintes: new Set(), parar: null, encerrar: null }
+    canaisContrato.set(socket, canal)
+  }
+  const c = canal
+  c.ouvintes.add(onContrato)
+  if (c.encerrar) { clearTimeout(c.encerrar); c.encerrar = null }
+
+  if (!c.parar) {
+    c.parar = socket.subscribe({ proposal_open_contract: 1 }, (msg) => {
+      if (msg.error) {
+        onFalha?.(msg.error.message)
+        return
+      }
+      const p = msg.proposal_open_contract as Record<string, any> | undefined
+      if (!p || !p.contract_id) return
+      const contrato = toOpenContract(p)
+      c.ouvintes.forEach((fn) => {
+        try { fn(contrato) } catch { /* um ouvinte quebrado nao derruba os outros */ }
+      })
+    })
+  }
+
+  return () => {
+    c.ouvintes.delete(onContrato)
+    if (c.ouvintes.size > 0 || c.encerrar) return
+    c.encerrar = setTimeout(() => {
+      c.encerrar = null
+      if (c.ouvintes.size > 0) return
+      c.parar?.()
+      c.parar = null
+      canaisContrato.delete(socket)
+    }, 5_000)
+  }
+}
+
 /** Pergunta o estado de um contrato, sem abrir assinatura. */
 export async function buscarContrato(
   socket: TeedsSocket,

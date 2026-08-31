@@ -5,7 +5,7 @@ import { TeedsSocket } from '../core/deriv/client'
 import type { ConnectionState } from '../core/deriv/types'
 import { limparCacheOperacoes } from '../core/deriv/history'
 import {
-  fetchPortfolio, subscribeBalance, subscribeContract, subscribeTransactions,
+  assinarContratos, fetchPortfolio, subscribeBalance, subscribeTransactions,
   type Balance, type OpenContract,
 } from '../core/deriv/trading'
 
@@ -82,7 +82,7 @@ export function useAccount() {
     if (!session || !accountId) return
     let alive = true
     const paradas: Array<() => void> = []
-    const seguindo = new Map<number, { parar?: () => void; encerrado?: boolean }>()
+
 
     setConnecting(true)
     setBalance(null)
@@ -91,45 +91,23 @@ export function useAccount() {
     limparCacheOperacoes()
 
     /**
-     * Passa a acompanhar um contrato em tempo real.
+     * Guarda um contrato na lista de posicoes abertas.
      *
-     * A assinatura **precisa** ser cancelada quando o contrato liquida: a
-     * Deriv permite 100 assinaturas por conexao, e um robo que compra a cada
-     * segundo estoura esse teto em menos de dois minutos — a partir dai
-     * nenhuma assinatura nova funciona e tudo parece travado.
+     * Uma unica assinatura cobre todos os contratos da conta. Antes era uma
+     * por contrato, que nunca era cancelada: a Deriv permite 100 por conexao
+     * e um robo comprando a cada segundo estourava esse teto em menos de dois
+     * minutos — dali em diante nada mais era acompanhado.
      */
-    const acompanhar = (sock: TeedsSocket, id: number) => {
-      if (seguindo.has(id)) return
-      const reg: { parar?: () => void; encerrado?: boolean } = {}
-      seguindo.set(id, reg)
-
-      const soltar = () => {
-        seguindo.delete(id)
-        if (reg.parar) reg.parar()
-        else reg.encerrado = true
-      }
-
-      try {
-        reg.parar = subscribeContract(
-          sock, id,
-          (c) => {
-            if (!alive) return
-            const fechou = c.status !== 'open' || c.isExpired
-            setContracts((prev) => {
-              const next = new Map(prev)
-              if (fechou) next.delete(c.contractId)
-              else next.set(c.contractId, c)
-              return next
-            })
-            if (fechou) soltar()
-          },
-          () => soltar(),
-        )
-        if (reg.encerrado) { reg.parar(); seguindo.delete(id) }
-      } catch {
-        // teto de assinaturas atingido: seguimos sem acompanhar este contrato
-        seguindo.delete(id)
-      }
+    const guardar = (c: OpenContract) => {
+      if (!alive) return
+      const fechou = c.status !== 'open' || c.isExpired
+      setContracts((prev) => {
+        if (fechou && !prev.has(c.contractId)) return prev
+        const next = new Map(prev)
+        if (fechou) next.delete(c.contractId)
+        else next.set(c.contractId, c)
+        return next
+      })
     }
 
     fetchTradingSocketUrl(session, accountId)
@@ -147,20 +125,21 @@ export function useAccount() {
 
         paradas.push(subscribeBalance(sock, (b) => alive && setBalance(b)))
 
-        // contratos que ja estavam abertos
+        // uma assinatura so, para todos os contratos da conta
+        paradas.push(assinarContratos(sock, guardar))
+
+        // contratos que ja estavam abertos quando conectamos
         try {
           const abertos = await fetchPortfolio(sock)
           if (!alive) return
-          for (const c of abertos) acompanhar(sock, c.contractId)
-        } catch { /* portfolio vazio ou indisponivel: seguimos pelo fluxo de transacoes */ }
+          for (const c of abertos) guardar(c)
+        } catch { /* portfolio vazio ou indisponivel: o stream cobre daqui */ }
 
         // qualquer compra nova entra na lista automaticamente
         paradas.push(
-          subscribeTransactions(sock, (t) => {
+          subscribeTransactions(sock, () => {
             if (!alive) return
             setPulso((n) => n + 1)
-            if (!t.contractId) return
-            if (t.action === 'buy') acompanhar(sock, t.contractId)
           }),
         )
 
@@ -175,8 +154,6 @@ export function useAccount() {
 
     return () => {
       alive = false
-      seguindo.forEach((r) => r.parar?.())
-      seguindo.clear()
       paradas.forEach((p) => p())
       socketRef.current?.disconnect()
       socketRef.current = null

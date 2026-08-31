@@ -873,14 +873,35 @@ button, input { font: inherit; color: inherit; }
 }
 .tv.operando .tv-palco { background: var(--tv-ambar-suave); }
 .tv-palco.quatro { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+
+/* A aposta lida como uma frase: apostou X · se o dígito for Y · agora Z.
+   Quatro colunas de rótulo com frases dentro ficavam burocráticas. */
+.tv-palco.aposta { display: flex; align-items: center; gap: 16px; }
+.tv-ap { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tv-ap.cresce { flex: 1; }
+.tv-ap.fim { align-items: center; gap: 6px; flex-shrink: 0; }
+.tv-liga {
+  font-style: normal; font-size: 11px; font-weight: 600; color: var(--muted);
+  flex-shrink: 0; align-self: center; padding-top: 12px;
+}
+.tv-digitao.grande {
+  min-width: 54px; height: 54px; border-radius: 13px;
+  font-size: 30px; font-weight: 700; border-width: 2px;
+}
+.tv-digitao.esperando {
+  color: var(--border); border-style: dashed;
+  animation: tv-espera 1.1s ease-in-out infinite;
+}
+@keyframes tv-espera { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .tv-digitao.esperando { animation: none; } }
 .tv-passo {
   display: flex; flex-direction: column; gap: 5px; min-width: 0;
   padding: 0 16px; border-left: 1px solid var(--border);
 }
 .tv-passo:first-child { padding-left: 0; border-left: 0; }
-.tv-preco { font-size: 20px; font-weight: 650; letter-spacing: -.02em; line-height: 1.15; }
+.tv-preco { font-size: 19px; font-weight: 650; letter-spacing: -.02em; line-height: 1.15; }
 .tv-regra {
-  font-size: 18px; font-weight: 650; letter-spacing: -.015em; line-height: 1.2;
+  font-size: 21px; font-weight: 650; letter-spacing: -.02em; line-height: 1.2;
   color: var(--robo, var(--primary));
 }
 .tv-sub { font-size: 11px; color: var(--muted); }
@@ -1052,6 +1073,9 @@ button, input { font: inherit; color: inherit; }
    lado a lado cada um fica estreito mesmo numa tela larga. */
 @container (max-width: 720px) {
   .tv-palco.quatro { grid-template-columns: repeat(2, 1fr); row-gap: 16px; }
+  .tv-palco.aposta { gap: 11px; }
+  .tv-regra { font-size: 18px; }
+  .tv-digitao.grande { min-width: 46px; height: 46px; font-size: 25px; }
   .tv-passo:nth-child(3) { padding-left: 0; border-left: 0; }
   .tv-nums { grid-template-columns: repeat(2, 1fr); }
   .tv-nums > div:nth-child(2) { border-right: 0; }
@@ -1068,7 +1092,7 @@ button, input { font: inherit; color: inherit; }
 /* Altura fixa: quatro linhas de operação aparecem, o resto rola dentro da
    tabela. Sem isso um robô com mais histórico esticava o bloco e a grade
    ficava desalinhada. */
-.blocos { display: grid; gap: 16px; grid-auto-rows: 584px; }
+.blocos { display: grid; gap: 16px; grid-auto-rows: 620px; }
 .blocos > * { min-height: 0; height: 100%; }
 .blocos.duplo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 1100px) { .blocos.duplo { grid-template-columns: 1fr; } }

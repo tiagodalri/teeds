@@ -1,6 +1,6 @@
 import type { TeedsSocket } from './client'
 import { fetchTickHistory, subscribeTicks } from './market'
-import { buscarContrato, comprarDireto, subscribeContract } from './trading'
+import { assinarContratos, buscarContrato, comprarDireto } from './trading'
 import type { OpenContract } from './trading'
 import { marcarOrigem } from './robotNames'
 import { ultimoDigito } from './digits'
@@ -164,7 +164,7 @@ export class MotorTeeds {
   private moeda: string
   private pipSize: number
   private pararTicks: (() => void) | null = null
-  private pararContrato: (() => void) | null = null
+  private pararContratos: (() => void) | null = null
   private ouvintes = new Set<(e: EstadoMotor) => void>()
   private estado: EstadoMotor = { ...VAZIO }
   private vitoriasSeguidas = 0
@@ -175,6 +175,7 @@ export class MotorTeeds {
   private prejuizoDaSequencia = 0
   private ultimoTickEm = 0
   private contratoDesde = 0
+  private valorEmCurso = 0
   private liquidados = new Set<number>()
   private vigia: ReturnType<typeof setInterval> | null = null
 
@@ -261,6 +262,14 @@ export class MotorTeeds {
       }
     }, this.socket)
 
+    // Uma assinatura para todos os contratos da conta, em vez de uma por
+    // operacao: e o que impede o teto de 100 assinaturas de estourar.
+    this.pararContratos = assinarContratos(
+      this.socket,
+      (c) => this.receber(c),
+      (erro) => this.registrar(`Stream de contratos recusado (${erro})`, 'info'),
+    )
+
     // Vigia: um socket "meio aberto" nao dispara onclose, e o robo ficaria
     // esperando um preco que nunca chega. Silencio longo = reconecta.
     this.ultimoTickEm = Date.now()
@@ -303,7 +312,7 @@ export class MotorTeeds {
     this.estado.rodando = false
     this.estado.motivoParada = motivo
     this.pararTicks?.(); this.pararTicks = null
-    this.pararContrato?.(); this.pararContrato = null
+    this.pararContratos?.(); this.pararContratos = null
     if (this.vigia) { clearInterval(this.vigia); this.vigia = null }
     this.registrar(`Robô parado — ${motivo}`, 'parada')
     this.emitir()
@@ -373,48 +382,32 @@ export class MotorTeeds {
     }
   }
 
+  /** Marca o inicio do acompanhamento. O stream ja esta aberto desde o ligar. */
   private acompanhar(contractId: number, valor: number) {
-    this.pararContrato?.()
     this.contratoDesde = Date.now()
+    this.valorEmCurso = valor
+  }
 
-    const receber = (c: OpenContract) => {
-      const casas = c.pipSize || this.pipSize
+  /** Recebe qualquer contrato da conta e reage se for o nosso. */
+  private receber(c: OpenContract) {
+    const emCurso = this.estado.emCurso
+    if (!emCurso || c.contractId !== emCurso.contractId) return
+    const casas = c.pipSize || this.pipSize
 
-      // enquanto corre, alimenta o cartao da operacao em andamento
-      if (c.status === 'open' && !c.isExpired) {
-        if (this.estado.emCurso?.contractId === contractId) {
-          this.estado.emCurso = {
-            ...this.estado.emCurso,
-            entrada: c.entrySpot,
-            digitoEntrada: c.entrySpot !== null ? ultimoDigito(c.entrySpot, casas) : null,
-            spot: c.currentSpot,
-            digitoAtual: c.currentSpot !== null ? ultimoDigito(c.currentSpot, casas) : null,
-            lucro: c.profit,
-            payout: c.payout || this.estado.emCurso.payout,
-          }
-          this.emitir()
-        }
-        return
+    if (c.status === 'open' && !c.isExpired) {
+      this.estado.emCurso = {
+        ...emCurso,
+        entrada: c.entrySpot,
+        digitoEntrada: c.entrySpot !== null ? ultimoDigito(c.entrySpot, casas) : null,
+        spot: c.currentSpot,
+        digitoAtual: c.currentSpot !== null ? ultimoDigito(c.currentSpot, casas) : null,
+        lucro: c.profit,
+        payout: c.payout || emCurso.payout,
       }
-      this.liquidar(c, contractId, valor)
+      this.emitir()
+      return
     }
-
-    try {
-      this.pararContrato = subscribeContract(
-        this.socket, contractId, receber,
-        (erro) => {
-          // Assinatura recusada (teto da Deriv, por exemplo): em vez de
-          // esperar para sempre, passamos a perguntar pelo contrato.
-          this.registrar(`Sem stream do contrato (${erro}) — consultando direto`, 'info')
-          this.pararContrato = null
-          void this.conferirContrato(contractId, valor)
-        },
-      )
-    } catch (e) {
-      this.registrar(`Não consegui acompanhar o contrato: ${(e as Error).message}`, 'info')
-      this.pararContrato = null
-      void this.conferirContrato(contractId, valor)
-    }
+    this.liquidar(c, c.contractId, this.valorEmCurso || emCurso.valor)
   }
 
   /**
@@ -443,7 +436,6 @@ export class MotorTeeds {
     if (this.liquidados.size > 300) {
       this.liquidados = new Set([...this.liquidados].slice(-150))
     }
-    this.pararContrato?.(); this.pararContrato = null
     this.contratoDesde = 0
     const casas = c.pipSize || this.pipSize
 

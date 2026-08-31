@@ -184,51 +184,33 @@ export function RobotLive({
 
       {/* ===================== palco ===================== */}
       {emCurso ? (
-        <section className="tv-palco quatro">
-          <div className="tv-passo">
-            <span className="tv-rot">Entrou em</span>
-            {emCurso.entrada !== null ? (
-              <>
-                <b className="tv-preco">{emCurso.entrada.toFixed(2)}</b>
-                {emCurso.digitoEntrada !== null && (
-                  <span className={`tv-digitao ${ganhaCom(emCurso.digitoEntrada) ? 'up' : 'down'}`}>
-                    {emCurso.digitoEntrada}
-                  </span>
-                )}
-              </>
-            ) : (
-              <b className="tv-esperando">aguardando o tick de entrada</b>
-            )}
+        <section className="tv-palco aposta">
+          <div className="tv-ap">
+            <span className="tv-rot">Apostou</span>
+            <b className="tv-preco">{moeda} {num(emCurso.valor)}</b>
+            <span className="tv-sub up">ganha +{num(emCurso.payout - emCurso.valor)}</span>
           </div>
 
-          <div className="tv-passo alvo">
-            <span className="tv-rot">Precisa ser</span>
+          <em className="tv-liga">se</em>
+
+          <div className="tv-ap cresce">
+            <span className="tv-rot">o último dígito for</span>
             <b className="tv-regra">{regra}</b>
-            <span className="tv-sub">apostou {moeda} {num(emCurso.valor)}</span>
-          </div>
-
-          <div className="tv-passo">
-            <span className="tv-rot">Agora</span>
-            {emCurso.spot !== null ? (
-              <>
-                <b className="tv-preco">{emCurso.spot.toFixed(2)}</b>
-                {emCurso.digitoAtual !== null && (
-                  <span className={`tv-digitao ${ganhaCom(emCurso.digitoAtual) ? 'up' : 'down'}`}>
-                    {emCurso.digitoAtual}
-                  </span>
-                )}
-              </>
-            ) : (
-              <b className="tv-esperando">o mercado ainda não respondeu</b>
+            {emCurso.entrada !== null && (
+              <span className="tv-sub">entrou em {emCurso.entrada.toFixed(2)}</span>
             )}
           </div>
 
-          <div className="tv-passo">
-            <span className="tv-rot">Se ganhar</span>
-            <b className="tv-preco up">+{num(emCurso.payout - emCurso.valor)}</b>
-            <span className="tv-sub">
-              pagamento {num(emCurso.payout)} · <Cronometro desde={emCurso.comprouEm} />
+          <em className="tv-liga">agora</em>
+
+          <div className="tv-ap fim">
+            <span className={`tv-digitao grande ${
+              emCurso.digitoAtual === null ? 'esperando'
+                : ganhaCom(emCurso.digitoAtual) ? 'up' : 'down'
+            }`}>
+              {emCurso.digitoAtual ?? '·'}
             </span>
+            <span className="tv-sub"><Cronometro desde={emCurso.comprouEm} /></span>
           </div>
 
           <div className="tv-esteira"><i /></div>
