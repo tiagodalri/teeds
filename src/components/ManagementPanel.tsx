@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AuthSession } from '../core/deriv/auth'
-import { DERIV } from '../core/deriv/config'
+import { AFILIADO, DERIV } from '../core/deriv/config'
 import {
   buscarResumo, buscarSerieDiaria, periodo, simular, simularComissao, SemPermissao,
   type DiaMarkup, type MarkupResumo, type MarkupSimulado,
@@ -100,6 +100,17 @@ export function ManagementPanel({
     const id = setTimeout(calcular, espera)
     return () => { vivo = false; clearTimeout(id) }
   }, [socket, pulso])
+
+  const [copiado, setCopiado] = useState(false)
+  const copiarLink = async () => {
+    try {
+      await navigator.clipboard.writeText(AFILIADO)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch {
+      // sem permissao de area de transferencia: o link fica visivel para copiar a mao
+    }
+  }
 
   const simulacao = useMemo(() => simular(payoutBase, markupSim), [payoutBase, markupSim])
   const simAtual = useMemo(() => simular(payoutBase, 3), [payoutBase])
@@ -258,6 +269,25 @@ export function ManagementPanel({
           )}
         </section>
       )}
+
+      {/* ---------------- convite ---------------- */}
+      <section className="ger-bloco convite">
+        <div className="convite-texto">
+          <span className="rot">Traga clientes para a Teeds</span>
+          <p>
+            Toda conta aberta por este link fica ligada a você. As operações
+            que essas pessoas fizerem pela Teeds geram os 3% de comissão que
+            aparecem aqui em cima.
+          </p>
+        </div>
+        <div className="convite-acao">
+          <code>{AFILIADO}</code>
+          <div className="convite-botoes">
+            <button onClick={copiarLink}>{copiado ? 'copiado!' : 'Copiar link'}</button>
+            <a href={AFILIADO} target="_blank" rel="noopener noreferrer">Abrir</a>
+          </div>
+        </div>
+      </section>
 
       {/* ---------------- simulador ---------------- */}
       <section className="ger-bloco">

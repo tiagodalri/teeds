@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { TradingAccount } from '../core/deriv/account'
 import { BalanceLive } from './BalanceLive'
+import { AFILIADO } from '../core/deriv/config'
 
 interface Props {
   contas: TradingAccount[]
@@ -89,6 +90,9 @@ export function AccountSwitcher(props: Props) {
             {isDemo && (
               <button onClick={() => { onRecarregar(); setAberto(false) }}>Recarregar saldo demo</button>
             )}
+            <a href={AFILIADO} target="_blank" rel="noopener noreferrer" className="troca-link">
+              Abrir outra conta na Deriv
+            </a>
             <button className="sair" onClick={onSair}>Sair da conta</button>
           </div>
         </div>

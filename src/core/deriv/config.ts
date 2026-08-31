@@ -25,6 +25,14 @@ export const DERIV = {
 } as const
 
 /**
+ * Link de afiliado da Teeds na Deriv.
+ *
+ * Quem abre conta por aqui fica ligado a esta parceria — e as operacoes
+ * feitas pela Teeds passam a gerar o markup de 3%.
+ */
+export const AFILIADO = 'https://t.deriv.link?t=W7L5WVEEQGHY'
+
+/**
  * Ativos habilitados na Teeds. Por enquanto so os indices de volatilidade
  * de 1 segundo — sao os que operam 24 horas e tem tick a cada segundo.
  */

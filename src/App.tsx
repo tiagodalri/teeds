@@ -7,6 +7,8 @@ import { RobotsPanel } from './components/RobotsPanel'
 import { OperationsPanel } from './components/OperationsPanel'
 import { AccountSwitcher } from './components/AccountSwitcher'
 import { Brand } from './components/Brand'
+import { LoginScreen } from './components/LoginScreen'
+import { AFILIADO } from './core/deriv/config'
 import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
@@ -156,6 +158,18 @@ export default function App() {
     }
   }
 
+  // Antes de entrar, a Teeds e uma porta: marca, o que ela faz e dois
+  // caminhos — entrar, ou abrir conta na Deriv.
+  if (conta.status !== 'logado') {
+    return (
+      <LoginScreen
+        entrando={conta.status === 'entrando'}
+        onEntrar={conta.login}
+        erro={conta.error}
+      />
+    )
+  }
+
   return (
     <div className="app">
       <header className="topbar">
@@ -181,12 +195,6 @@ export default function App() {
               onRecarregar={() => conta.recarregarDemo()}
               onSair={conta.logout}
             />
-          )}
-
-          {conta.status !== 'logado' && (
-            <button className="btn-login" onClick={conta.login}>
-              {conta.status === 'entrando' ? 'abrindo…' : 'Entrar com Deriv'}
-            </button>
           )}
 
           {/* Logado, o que importa e a conexao da conta: e por ela que o
