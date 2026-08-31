@@ -193,3 +193,65 @@ button, input { font: inherit; color: inherit; }
   .layout { grid-template-columns: 200px 1fr; }
   .trade { display: none; }
 }
+
+/* ------------------------------------------------- conta, login e posicoes */
+.topbar-right { display: flex; align-items: center; gap: 14px; }
+
+.btn-login {
+  border: 0; border-radius: 8px; padding: 7px 14px;
+  background: var(--primary); color: #fff; font-weight: 600; font-size: 13px;
+  cursor: pointer;
+}
+.btn-login:hover { filter: brightness(1.06); }
+
+.account-box { display: flex; align-items: center; gap: 10px; }
+.account-select {
+  border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px;
+  background: var(--surface); font-size: 12px; cursor: pointer; outline: none;
+}
+.badge {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+  padding: 3px 7px; border-radius: 5px; text-transform: uppercase;
+}
+.badge-demo { background: var(--primary-soft); color: var(--primary); }
+.badge-real { background: #fdeced; color: var(--down); }
+.saldo { font-size: 14px; font-variant-numeric: tabular-nums; }
+.link-btn {
+  border: 0; background: none; color: var(--muted); font-size: 12px;
+  cursor: pointer; text-decoration: underline; padding: 0;
+}
+.link-btn:hover { color: var(--text); }
+
+.faixa {
+  padding: 9px 16px; font-size: 12.5px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.faixa-erro { background: var(--down-soft); color: var(--down); border-bottom: 1px solid #f6d4d5; }
+.faixa button { border: 0; background: none; color: inherit; cursor: pointer; text-decoration: underline; }
+
+.btn-confirmar { background: var(--down) !important; }
+
+.aviso {
+  margin-top: 12px; padding: 9px 11px; border-radius: 8px;
+  font-size: 12px; line-height: 1.45;
+}
+.aviso-ok { background: var(--up-soft); color: #0d7a3d; }
+.aviso-erro { background: var(--down-soft); color: var(--down); }
+
+.trade h3.sec { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+.posicoes { display: flex; flex-direction: column; gap: 8px; }
+.posicao {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 10px; background: var(--surface);
+}
+.pos-topo { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; }
+.pos-tipo { font-weight: 600; }
+.pos-lucro { font-weight: 650; font-variant-numeric: tabular-nums; }
+.pos-lucro.pos { color: var(--up); }
+.pos-lucro.neg { color: var(--down); }
+.pos-sub {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--muted); margin: 3px 0 8px;
+}
+.btn-sm { margin-top: 0; padding: 6px; font-size: 12px; }

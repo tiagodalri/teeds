@@ -6,7 +6,7 @@
   "description": "Teeds - plataforma de operacoes manuais e automatizadas",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/versao.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

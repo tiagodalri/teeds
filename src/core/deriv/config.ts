@@ -16,8 +16,12 @@ export const DERIV = {
     authorize: 'https://auth.deriv.com/oauth2/auth',
     token: 'https://auth.deriv.com/oauth2/token',
   },
-  /** App ID da Teeds, registrado no dashboard da Deriv. */
-  appId: import.meta.env?.VITE_TEEDS_APP_ID ?? '',
+  /** App ID da Teeds, registrado no dashboard da Deriv. Identificador publico. */
+  appId: '34gMUQCaYNX1M93Q7aq5R',
+  /** Endereco de retorno registrado na Deriv - precisa bater exatamente. */
+  redirectUri: 'https://tiagodalri.github.io/teeds/',
+  /** Escopos concedidos ao app. */
+  scopes: ['trade', 'account_manage'],
 } as const
 
 /** Limites publicados pela Deriv, que a Teeds respeita por conta propria. */
