@@ -4,6 +4,7 @@ import { MotorTeeds, type ConfigEstrategia, type EstadoMotor } from '../core/der
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { RobotLive } from './RobotLive'
+import { RobotSetup, lerPreparo } from './RobotSetup'
 import { Emblema } from './RobotCard'
 import type { Identidade } from '../core/deriv/branding'
 
@@ -16,33 +17,31 @@ interface Props {
   identidade: Identidade
 }
 
+const PADRAO: ConfigEstrategia = {
+  valorInicial: 0.35,
+  valorAoVencer: 0.35,
+  fatorGale: 0.7,
+  galeApos: 2,
+  valorMaximo: 10,
+  takeProfit: 5,
+  stopLoss: 10,
+  maxOperacoes: 100,
+}
+
 const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-const hora = (e: number) =>
-  new Date(e * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-
 export function LocalRobotPanel({ socket, isDemo, moeda, symbols, symbolPadrao, identidade }: Props) {
   const estrategia = ESTRATEGIAS_LOCAIS.find((e) => e.id === identidade.id) ?? ESTRATEGIAS_LOCAIS[0]
-  const [symbol, setSymbol] = useState(symbolPadrao ?? 'R_10')
-  const [cfg, setCfg] = useState<ConfigEstrategia>({
-    valorInicial: 0.35,
-    valorAoVencer: 0.35,
-    fatorGale: 0.7,
-    galeApos: 2,
-    valorMaximo: 10,
-    takeProfit: 5,
-    stopLoss: 10,
-    maxOperacoes: 100,
-  })
+  const [cfg, setCfg] = useState<ConfigEstrategia>(PADRAO)
+  const [symbol, setSymbol] = useState(symbolPadrao ?? '1HZ10V')
   const [estado, setEstado] = useState<EstadoMotor | null>(null)
-  const [confirmaReal, setConfirmaReal] = useState(false)
+  const [preparando, setPreparando] = useState(false)
   const motorRef = useRef<MotorTeeds | null>(null)
 
   useEffect(() => { if (symbolPadrao) setSymbol(symbolPadrao) }, [symbolPadrao])
   useEffect(() => () => { motorRef.current?.desligar('página fechada') }, [])
 
-  const pip = symbols.find((s) => s.symbol === symbol)?.pipSize ?? 2
   const nomeAtivo = symbols.find((s) => s.symbol === symbol)?.name ?? symbol
   const rodando = estado?.rodando ?? false
 
@@ -69,102 +68,102 @@ export function LocalRobotPanel({ socket, isDemo, moeda, symbols, symbolPadrao, 
     }
   }
 
-  function ligar() {
+  function ligar(config: ConfigEstrategia, ativo: string) {
     if (!socket) return
-    if (!isDemo && !confirmaReal) { setConfirmaReal(true); return }
-    setConfirmaReal(false)
-    const motor = new MotorTeeds({ socket, estrategia, config: cfg, symbol, moeda, pipSize: pip })
+    setPreparando(false)
+    setCfg(config)
+    setSymbol(ativo)
+    const pip = symbols.find((s) => s.symbol === ativo)?.pipSize ?? 2
+    const motor = new MotorTeeds({
+      socket, estrategia, config, symbol: ativo, moeda, pipSize: pip,
+    })
     motorRef.current = motor
     motor.escutar(setEstado)
     motor.ligar()
   }
 
-  function desligar() {
-    motorRef.current?.desligar()
-  }
+  const parametros = [
+    { rot: 'Ativo', valor: nomeAtivo.replace(' Index', '') },
+    { rot: 'Entrada', valor: din(cfg.valorAoVencer, moeda) },
+    {
+      rot: 'Após perder',
+      valor: cfg.fatorGale === 0
+        ? 'entrada fixa'
+        : `${(cfg.fatorGale * 100).toFixed(0)}% após ${cfg.galeApos}`,
+    },
+    { rot: 'Teto', valor: din(cfg.valorMaximo, moeda) },
+    { rot: 'Para se ganhar', valor: din(cfg.takeProfit, moeda) },
+    { rot: 'Para se perder', valor: din(cfg.stopLoss, moeda) },
+  ]
 
-  const campo = (k: keyof ConfigEstrategia, rotulo: string, passo = 0.05) => (
-    <label>
-      <span className="rot">{rotulo}</span>
-      <input type="number" step={passo} min={0} value={cfg[k]} disabled={rodando}
-        onChange={(e) => setCfg((c) => ({ ...c, [k]: Math.max(0, Number(e.target.value) || 0) }))} />
-    </label>
-  )
-
-  return (
-    <div className={`rob-grade config-robo ${rodando ? 'em-acao' : ''}`}
-      style={{ ["--robo" as any]: identidade.cor, ["--robo-suave" as any]: identidade.corSuave }}>
-      <section className="ger-bloco">
-        <div className="config-cab">
-          <Emblema id={identidade} tamanho={44} />
-          <div>
-            <b>{identidade.nome}</b>
-            <span>{identidade.descricao}</span>
-          </div>
+  // ------------------------------------------------------------ sem sessão
+  if (!estado) {
+    const ultimo = lerPreparo()
+    const ativoUltimo = symbols.find((s) => s.symbol === ultimo.symbol)?.name
+    return (
+      <>
+        <div className="pronto" style={{ ['--robo' as any]: identidade.cor, ['--robo-suave' as any]: identidade.corSuave }}>
+          <Emblema id={identidade} tamanho={56} />
+          <h3>{estrategia.nome}</h3>
+          <p>{estrategia.descricao}</p>
+          <button className="pronto-btn" disabled={!socket} onClick={() => setPreparando(true)}>
+            Ligar robô
+          </button>
+          <span className="pronto-nota">
+            {ultimo.cfg
+              ? `da última vez: ${din(ultimo.cfg.valorAoVencer ?? 0.35, moeda)} por entrada${ativoUltimo ? ` em ${ativoUltimo.replace(' Index', '')}` : ''}`
+              : 'você escolhe os valores no próximo passo'}
+          </span>
         </div>
 
-        <div className="rob-linha">
-          <label><span className="rot">Ativo</span>
-            <select value={symbol} disabled={rodando} onChange={(e) => setSymbol(e.target.value)}>
-              {symbols.filter((s) => s.isOpen).map((s) => (
-                <option key={s.symbol} value={s.symbol}>{s.name}</option>
-              ))}
-            </select>
-          </label>
-          {campo('valorAoVencer', 'Valor da entrada')}
-          {campo('valorMaximo', 'Valor máximo', 1)}
-        </div>
-
-        <span className="rot" style={{ marginTop: 16 }}>Progressão após perder</span>
-        <div className="rob-linha">
-          {campo('fatorGale', 'Fator de gale', 0.1)}
-          {campo('galeApos', 'Ativar após (perdas)', 1)}
-          {campo('maxOperacoes', 'Máx. operações', 10)}
-        </div>
-
-        <span className="rot" style={{ marginTop: 16 }}>Freios</span>
-        <div className="rob-linha">
-          {campo('takeProfit', 'Parar se ganhar', 1)}
-          {campo('stopLoss', 'Parar se perder', 1)}
-        </div>
-
-        {confirmaReal && (
-          <p className="rob-alerta">
-            Você está na <strong>conta real</strong>. Clique de novo para confirmar.
-          </p>
-        )}
-
-        <button className={`btn btn-ligar ${rodando ? 'btn-parar' : ''} ${confirmaReal ? 'btn-confirmar' : ''}`}
-          disabled={!socket} onClick={rodando ? desligar : ligar}>
-          {rodando ? 'Desligar robô' : confirmaReal ? 'Confirmar com dinheiro real' : `Ligar ${estrategia.nome}`}
-        </button>
-
-        <p className="ger-nota">
-          Este robô roda dentro da Teeds. Ele para se você fechar a aba — diferente dos robôs
-          de servidor, que continuam sozinhos.
-        </p>
-      </section>
-
-      {/* ------------- acompanhamento ao vivo ------------- */}
-      <section className="ger-bloco viv-bloco">
-        {!estado ? (
-          <>
-            <span className="rot">Ao vivo</span>
-            <p className="ger-nota">Ligue o robô para acompanhar aqui.</p>
-          </>
-        ) : (
-          <RobotLive
-            estado={estado}
-            config={cfg}
-            moeda={moeda}
+        {preparando && (
+          <RobotSetup
+            identidade={identidade}
             nomeEstrategia={estrategia.nome}
-            ativo={nomeAtivo}
-            regra={regra}
-            cor={identidade.cor}
-            ganhaCom={ganhaCom}
+            symbols={symbols}
+            symbolInicial={symbol}
+            configInicial={cfg}
+            moeda={moeda}
+            isDemo={isDemo}
+            onCancelar={() => setPreparando(false)}
+            onLigar={ligar}
           />
         )}
-      </section>
+      </>
+    )
+  }
+
+  // ------------------------------------------------------------ com sessão
+  return (
+    <div className="cabine-caixa"
+      style={{ ['--robo' as any]: identidade.cor, ['--robo-suave' as any]: identidade.corSuave }}>
+      <RobotLive
+        estado={estado}
+        config={cfg}
+        moeda={moeda}
+        nomeEstrategia={estrategia.nome}
+        ativo={nomeAtivo}
+        regra={regra}
+        cor={identidade.cor}
+        ganhaCom={ganhaCom}
+        parametros={parametros}
+        onDesligar={rodando ? () => motorRef.current?.desligar() : undefined}
+        onLigarDeNovo={!rodando ? () => setPreparando(true) : undefined}
+      />
+
+      {preparando && (
+        <RobotSetup
+          identidade={identidade}
+          nomeEstrategia={estrategia.nome}
+          symbols={symbols}
+          symbolInicial={symbol}
+          configInicial={cfg}
+          moeda={moeda}
+          isDemo={isDemo}
+          onCancelar={() => setPreparando(false)}
+          onLigar={ligar}
+        />
+      )}
     </div>
   )
 }

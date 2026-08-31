@@ -174,7 +174,9 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
         </div>
       )}
 
-      <div className="galeria">
+      {/* Com um robo so na vitrine a galeria nao escolhe nada: o proprio
+          painel dele ja carrega a marca. */}
+      {IDENTIDADES.length > 1 && <div className="galeria">
         {IDENTIDADES.map((i) => (
           <RobotCard key={i.id} id={i} selecionado={ident.id === i.id}
             onSelecionar={() => setIdent(i)}
@@ -186,7 +188,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
                 : 0
             } />
         ))}
-      </div>
+      </div>}
 
       {ident.onde === 'teeds' && (
         <LocalRobotPanel socket={socket} isDemo={isDemo} moeda={moeda}

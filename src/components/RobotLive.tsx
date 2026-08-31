@@ -13,6 +13,10 @@ interface Props {
   cor?: string
   /** Digitos que fazem a operacao ganhar, para pintar a fita. */
   ganhaCom: (d: number) => boolean
+  /** Os parametros escolhidos, escondidos atras de um botao. */
+  parametros?: Array<{ rot: string; valor: string }>
+  onDesligar?: () => void
+  onLigarDeNovo?: () => void
 }
 
 const num = (v: number) =>
@@ -78,7 +82,9 @@ function Cronometro({ desde }: { desde: number }) {
 
 export function RobotLive({
   estado, config, moeda, nomeEstrategia, ativo, regra, ganhaCom,
+  parametros = [], onDesligar, onLigarDeNovo,
 }: Props) {
+  const [verParametros, setVerParametros] = useState(false)
   const acerto = estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
   const positivo = estado.resultado >= 0
   const fita = estado.digitos.slice(-26)
@@ -128,7 +134,31 @@ export function RobotLive({
             {assinado(estado.resultado)} <em>{moeda}</em>
           </strong>
         </div>
+
+        <div className="tv-acoes">
+          {parametros.length > 0 && (
+            <button className={`tv-btn ${verParametros ? 'on' : ''}`}
+              onClick={() => setVerParametros((v) => !v)}
+              aria-expanded={verParametros}>
+              Parâmetros
+            </button>
+          )}
+          {estado.rodando && onDesligar && (
+            <button className="tv-btn parar" onClick={onDesligar}>Desligar</button>
+          )}
+          {!estado.rodando && onLigarDeNovo && (
+            <button className="tv-btn ligar" onClick={onLigarDeNovo}>Ligar de novo</button>
+          )}
+        </div>
       </header>
+
+      {verParametros && parametros.length > 0 && (
+        <div className="tv-params">
+          {parametros.map((p) => (
+            <span key={p.rot}><i>{p.rot}</i>{p.valor}</span>
+          ))}
+        </div>
+      )}
 
       {/* ===================== palco ===================== */}
       {emCurso ? (
