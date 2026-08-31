@@ -521,3 +521,86 @@ button, input { font: inherit; color: inherit; }
 .ficha dd { margin: 0; font-size: 12px; font-weight: 600; text-align: right; }
 .ficha .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
 .ficha .quebra { word-break: break-all; }
+
+/* ------------------------------------------------------------------ robôs */
+.rob-grade { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .rob-grade { grid-template-columns: 1fr; } }
+
+.rob-modelos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+.rob-modelo {
+  text-align: left; border: 1px solid var(--border); background: var(--bg);
+  border-radius: var(--radius); padding: 11px 12px; cursor: pointer;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.rob-modelo b { font-size: 13.5px; }
+.rob-modelo span { font-size: 11px; color: var(--muted); line-height: 1.4; }
+.rob-modelo.on { border-width: 2px; padding: 10px 11px; }
+.rob-modelo.verde.on { border-color: var(--up); background: var(--up-soft); }
+.rob-modelo.vermelho.on { border-color: var(--down); background: var(--down-soft); }
+.rob-modelo.azul.on { border-color: var(--primary); background: var(--primary-soft); }
+.rob-modelo.roxo.on { border-color: #8b5cf6; background: #f3efff; }
+
+.rob-linha { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; }
+.rob-linha label { display: block; }
+.rob-linha .rot { margin-bottom: 4px; }
+.rob-linha input, .rob-linha select {
+  width: 100%; border: 1px solid var(--border); border-radius: 8px;
+  padding: 7px 9px; background: var(--surface); outline: none;
+  font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px;
+}
+.rob-linha input:focus, .rob-linha select:focus { border-color: var(--primary); background: var(--bg); }
+
+.rob-estrat { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rob-estrat button {
+  text-align: left; border: 1px solid var(--border); background: var(--bg);
+  border-radius: var(--radius); padding: 10px 11px; cursor: pointer;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.rob-estrat button b { font-size: 12.5px; }
+.rob-estrat button span { font-size: 10.5px; color: var(--muted); line-height: 1.35; }
+.rob-estrat button.on { border-color: var(--primary); background: var(--primary-soft); }
+
+.rob-alerta {
+  margin: 14px 0 0; padding: 10px 12px; border-radius: 8px;
+  background: var(--down-soft); color: var(--down); font-size: 12px; line-height: 1.5;
+}
+.btn-ligar { width: 100%; margin-top: 16px; background: var(--primary); padding: 11px; }
+
+.rob-mat .mat-linhas { display: flex; flex-direction: column; gap: 1px; }
+.rob-mat .mat-linhas > div {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12.5px;
+}
+.rob-mat .mat-linhas span { color: var(--muted); }
+.rob-mat .mat-linhas b { font-variant-numeric: tabular-nums; font-size: 14px; }
+.rob-mat .destaque b { font-size: 17px; }
+.mat-texto { font-size: 12.5px; line-height: 1.6; color: var(--muted); margin: 14px 0 0; }
+.mat-texto strong { color: var(--down); }
+.mat-risco { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); }
+.mat-risco p { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--muted); }
+.mat-risco strong { color: var(--text); }
+
+.rob-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.rob-card {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 13px; background: var(--bg); border-left-width: 3px;
+}
+.rob-card.running { border-left-color: var(--up); }
+.rob-card.paused { border-left-color: #f0a020; }
+.rob-card.stopped { border-left-color: var(--border); opacity: .72; }
+.rob-card-topo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.rob-status { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  padding: 3px 7px; border-radius: 5px; background: var(--surface); color: var(--muted); }
+.rob-status.running { background: var(--up-soft); color: var(--up); }
+.rob-status.paused { background: #fff3e0; color: #b26a00; }
+.rob-nums { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.rob-nums div { display: flex; flex-direction: column; gap: 1px; }
+.rob-nums span { font-size: 10px; color: var(--muted); }
+.rob-nums b { font-size: 13px; font-variant-numeric: tabular-nums; }
+.rob-motivo { margin: 0 0 10px; font-size: 11px; color: var(--muted); }
+.rob-acoes { display: flex; gap: 6px; }
+.rob-acoes button {
+  flex: 1; border: 1px solid var(--border); background: var(--bg);
+  border-radius: 7px; padding: 6px; font-size: 12px; cursor: pointer;
+}
+.rob-acoes .parar { border-color: #f6d4d5; color: var(--down); background: var(--down-soft); }

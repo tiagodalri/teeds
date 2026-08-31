@@ -3,6 +3,7 @@ import { PriceChart, type ChartMode, type ContractMarker } from './components/Pr
 import { PositionCard } from './components/PositionCard'
 import { DigitsPanel } from './components/DigitsPanel'
 import { ManagementPanel } from './components/ManagementPanel'
+import { RobotsPanel } from './components/RobotsPanel'
 import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
@@ -37,7 +38,7 @@ export default function App() {
   const [confirmar, setConfirmar] = useState<'CALL' | 'PUT' | null>(null)
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
-  const [tela, setTela] = useState<'operar' | 'gestao'>('operar')
+  const [tela, setTela] = useState<'operar' | 'robos' | 'gestao'>('operar')
   const [payoutBase, setPayoutBase] = useState(19.55)
 
   const activeSymbol = useMemo(() => {
@@ -147,6 +148,7 @@ export default function App() {
 
         <nav className="telas">
           <button className={tela === 'operar' ? 'on' : ''} onClick={() => setTela('operar')}>Operar</button>
+          <button className={tela === 'robos' ? 'on' : ''} onClick={() => setTela('robos')}>Robôs</button>
           <button className={tela === 'gestao' ? 'on' : ''} onClick={() => setTela('gestao')}>Gestão</button>
         </nav>
 
@@ -196,7 +198,16 @@ export default function App() {
         </div>
       )}
 
-      {tela === 'gestao' ? (
+      {tela === 'robos' ? (
+        <RobotsPanel
+          socket={conta.socket}
+          logado={conta.status === 'logado'}
+          isDemo={conta.isDemo}
+          moeda={conta.account?.currency ?? 'USD'}
+          symbols={symbols}
+          symbolPadrao={symbolCode}
+        />
+      ) : tela === 'gestao' ? (
         <ManagementPanel
           session={conta.session}
           onReautorizar={() => startLogin()}
