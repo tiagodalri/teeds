@@ -47,7 +47,7 @@ function Curva({ pontos, cor }: { pontos: number[]; cor: string }) {
     const linha = pontos.map((v, i) => `${i === 0 ? 'M' : 'L'} ${px(i).toFixed(2)} ${py(v).toFixed(2)}`).join(' ')
     return { linha, area: `${linha} L 100 40 L 0 40 Z`, zero: py(0), temZero: min < 0 && max > 0 }
   }, [pontos])
-  if (!d) return <div className="curva-vazia">a curva aparece na segunda operação</div>
+  if (!d) return null
   return (
     <svg className="curva" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
       <path d={d.area} fill={cor} opacity="0.12" />
@@ -176,7 +176,7 @@ export function ServerRobotLive(props: Props) {
       )}
 
       <div className="teatro-curva">
-        <Curva pontos={curva} cor={ident.cor} />
+        {curva.length >= 2 && <Curva pontos={curva} cor={ident.cor} />}
         <div className="viv-trilho">
           <span className="lado perda">−{din(sl, '')}</span>
           <div className="barra">
@@ -204,7 +204,7 @@ export function ServerRobotLive(props: Props) {
               {o.entrada !== null ? o.entrada.toFixed(o.pip) : '—'}
               <em>→</em>
               {o.saida !== null ? o.saida.toFixed(o.pip) : (o.aberta ? '…' : '—')}
-              {o.digitoSaida !== null && (
+              {o.digitoSaida !== null && !o.aberta && (
                 <b className={`dig-chip ${o.ganhou ? 'ok' : 'nao'}`}>{o.digitoSaida}</b>
               )}
             </span>
