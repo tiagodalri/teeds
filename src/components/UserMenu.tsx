@@ -4,6 +4,7 @@ import type { Usuario } from '../core/teeds/conta'
 interface Props {
   usuario: Usuario
   onSair: () => void
+  onPerfil: () => void
 }
 
 /** Iniciais do nome — duas no máximo, que é o que cabe num círculo pequeno. */
@@ -15,7 +16,7 @@ function iniciais(nome: string, email: string): string {
 }
 
 /** A conta da Teeds — a da plataforma, não a da corretora. */
-export function UserMenu({ usuario, onSair }: Props) {
+export function UserMenu({ usuario, onSair, onPerfil }: Props) {
   const [aberto, setAberto] = useState(false)
   const caixa = useRef<HTMLDivElement>(null)
 
@@ -50,15 +51,29 @@ export function UserMenu({ usuario, onSair }: Props) {
 
       {aberto && (
         <div className="menu menu-curto" role="menu">
-          <div className="menu-eu">
+          <button className="menu-eu" role="menuitem"
+            onClick={() => { setAberto(false); onPerfil() }}>
             <span className="avatar grande">{iniciais(usuario.nome ?? '', usuario.email)}</span>
             <div>
               <b>{usuario.nome || primeiro}</b>
               <em>{usuario.email}</em>
             </div>
-          </div>
+            <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" className="menu-eu-seta">
+              <path d="M4.5 2.5 L8 6 L4.5 9.5" fill="none" stroke="currentColor"
+                strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
 
           <div className="menu-linha" />
+
+          <button className="menu-acao" role="menuitem"
+            onClick={() => { setAberto(false); onPerfil() }}>
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
+              fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="8" cy="5.5" r="2.5" /><path d="M2.8 13.5a5.2 5.2 0 0 1 10.4 0" />
+            </svg>
+            Minha conta
+          </button>
 
           <button className="menu-acao perigo" role="menuitem" onClick={onSair}>
             <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"

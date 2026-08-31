@@ -302,6 +302,19 @@ export async function buscarUsuario(token: string): Promise<Usuario> {
   return montarUsuario(await chamar('/user', { token }))
 }
 
+/** Atualiza nome e telefone. O e-mail e o CPF não mudam por aqui. */
+export async function atualizarPerfil(
+  token: string,
+  dados: { nome: string; telefone: string },
+): Promise<Usuario> {
+  const u = await chamar('/user', {
+    corpo: { data: { nome: dados.nome.trim(), telefone: soDigitos(dados.telefone) } },
+    token,
+    metodo: 'PUT',
+  })
+  return montarUsuario(u)
+}
+
 /** Troca a senha da conta logada. */
 export async function trocarSenha(token: string, nova: string): Promise<void> {
   await chamar('/user', { corpo: { password: nova }, token, metodo: 'PUT' })

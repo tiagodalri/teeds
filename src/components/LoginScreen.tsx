@@ -5,6 +5,7 @@ import {
   type DadosCadastro,
 } from '../core/teeds/conta'
 import { Brand } from './Brand'
+import { DerivNome } from './DerivMarca'
 
 type Modo = 'entrar' | 'criar' | 'esqueci'
 
@@ -157,12 +158,14 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
         </div>
 
         <div className="entrada-corretora">
-          <b>Ainda não tem conta na Deriv?</b>
+          <b>Ainda não tem conta na <DerivNome tamanho={13} />?</b>
           <p>
             A Teeds opera pela sua própria conta na corretora — é lá que o
             dinheiro fica. Abrir é grátis e você começa na conta demo.
           </p>
-          <a href={AFILIADO} target="_blank" rel="noopener noreferrer">Abrir conta na Deriv</a>
+          <a className="btn-deriv" href={AFILIADO} target="_blank" rel="noopener noreferrer">
+            Abrir conta na <DerivNome tamanho={13} />
+          </a>
         </div>
 
         <p className="entrada-rodape">

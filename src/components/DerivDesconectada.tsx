@@ -1,4 +1,5 @@
 import { AFILIADO } from '../core/deriv/config'
+import { DerivNome, IconeElo } from './DerivMarca'
 
 interface Props {
   /** O que a pessoa estava tentando fazer, para o texto falar disso. */
@@ -26,14 +27,15 @@ export function DerivDesconectada({ acao, entrando, onConectar, compacto = false
           <path d="M15 25 l10-10" strokeDasharray="3 4" />
         </svg>
       </div>
-      <b>Conecte a sua conta da Deriv</b>
+      <b>Conecte a sua conta da <DerivNome tamanho={17} /></b>
       <p>
         {acao} Você está na Teeds, mas o dinheiro fica na corretora — e é
         preciso ligar as duas.
       </p>
       <div className="sem-deriv-acoes">
-        <button onClick={onConectar} disabled={entrando}>
-          {entrando ? 'abrindo a Deriv…' : 'Conectar minha Deriv'}
+        <button className="btn-deriv" onClick={onConectar} disabled={entrando}>
+          <IconeElo />
+          {entrando ? 'Abrindo…' : <>Conectar minha <DerivNome tamanho={13.5} /></>}
         </button>
         <a href={AFILIADO} target="_blank" rel="noopener noreferrer">Ainda não tenho conta</a>
       </div>

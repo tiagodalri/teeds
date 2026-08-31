@@ -7,6 +7,8 @@ import { RobotsPanel } from './components/RobotsPanel'
 import { OperationsPanel } from './components/OperationsPanel'
 import { AccountSwitcher } from './components/AccountSwitcher'
 import { UserMenu } from './components/UserMenu'
+import { ProfilePanel } from './components/ProfilePanel'
+import { DerivNome, IconeElo } from './components/DerivMarca'
 import { Brand } from './components/Brand'
 import { LoginScreen } from './components/LoginScreen'
 import { NovaSenha } from './components/NovaSenha'
@@ -27,8 +29,8 @@ const TIMEFRAMES: { label: string; value: Granularity }[] = [
 ]
 
 const STATUS_LABEL: Record<string, string> = {
-  idle: 'iniciando', connecting: 'conectando', open: 'ao vivo',
-  reconnecting: 'reconectando', closed: 'desconectado',
+  idle: 'Iniciando', connecting: 'Conectando', open: 'Ao vivo',
+  reconnecting: 'Reconectando', closed: 'Desconectado',
 }
 
 export default function App() {
@@ -36,6 +38,7 @@ export default function App() {
   const { symbols, loading: loadingSymbols, error: symbolsError } = useSymbols()
   const conta = useAccount()
   const teeds = useTeedsAuth()
+  const [verPerfil, setVerPerfil] = useState(false)
 
   const [selected, setSelected] = useState<string | null>(null)
   const [granularity, setGranularity] = useState<Granularity>(60)
@@ -207,9 +210,10 @@ export default function App() {
 
         <div className="topbar-right">
           {!derivPronta && (
-            <button className="btn-conectar" onClick={conta.login}
+            <button className="btn-deriv" onClick={conta.login}
               disabled={conta.status === 'entrando'}>
-              {conta.status === 'entrando' ? 'abrindo a Deriv…' : 'Conectar minha Deriv'}
+              <IconeElo />
+              {conta.status === 'entrando' ? 'Abrindo…' : <>Conectar <DerivNome tamanho={13} /></>}
             </button>
           )}
 
@@ -241,10 +245,18 @@ export default function App() {
           })()}
 
           {teeds.usuario && (
-            <UserMenu usuario={teeds.usuario} onSair={() => void teeds.sair()} />
+            <UserMenu usuario={teeds.usuario} onSair={() => void teeds.sair()}
+              onPerfil={() => setVerPerfil(true)} />
           )}
         </div>
       </header>
+
+      {verPerfil && teeds.sessao && (
+        <ProfilePanel
+          sessao={teeds.sessao}
+          onAtualizar={teeds.atualizarUsuario}
+          onFechar={() => setVerPerfil(false)} />
+      )}
 
       {teeds.recado && (
         <div className="faixa faixa-ok">

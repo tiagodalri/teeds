@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   buscarUsuario, cadastrar as criarConta, capturarRetorno, entrar as fazerLogin,
   recuperarSenha, renovar, sair as encerrar, sessaoGuardada, trocarSenha,
-  type DadosCadastro, type SessaoTeeds,
+  type DadosCadastro, type SessaoTeeds, type Usuario,
 } from '../core/teeds/conta'
 import { autenticacaoConfigurada } from '../core/teeds/config'
 
@@ -158,7 +158,14 @@ export function useTeedsAuth() {
     }
   }, [sessao])
 
+  /** Troca os dados do usuário depois de salvar o perfil. */
+  const atualizarUsuario = useCallback((usuario: Usuario) => {
+    setSessao((s) => (s ? { ...s, usuario } : s))
+    setRecado('Dados atualizados.')
+  }, [])
+
   return {
+    atualizarUsuario,
     status, sessao, usuario: sessao?.usuario ?? null, erro, setErro, recado, setRecado,
     ocupado, entrar, cadastrar, esqueci, sair, redefinindo, definirNovaSenha,
   }
