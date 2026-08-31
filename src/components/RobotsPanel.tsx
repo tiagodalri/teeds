@@ -25,7 +25,6 @@ const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadrao }: Props) {
-  const modelo: ModeloRobo = MODELOS.find((m) => m.contractType === ident.contrato) ?? MODELOS[0]
   const [symbol, setSymbol] = useState<string>(symbolPadrao ?? '1HZ100V')
   const [valorInicial, setValorInicial] = useState(1)
   const [ticks, setTicks] = useState(1)
@@ -46,6 +45,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
   const [renomeando, setRenomeando] = useState<string | null>(null)
   const [nomes, setNomes] = useState<Record<string, string>>({})
   const [ident, setIdent] = useState<Identidade>(IDENTIDADES[0])
+  const modelo: ModeloRobo = MODELOS.find((m) => m.contractType === ident.contrato) ?? MODELOS[0]
 
   useEffect(() => { if (symbolPadrao) setSymbol(symbolPadrao) }, [symbolPadrao])
   useEffect(() => { setNome(sugerirNome(modelo.nome)) }, [modelo])
