@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { TeedsSocket } from '../core/deriv/client'
 import { MotorTeeds, type ConfigEstrategia, type EstadoMotor } from '../core/deriv/engine'
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 import type { ActiveSymbol } from '../core/deriv/types'
+import { RobotLive } from './RobotLive'
 
 interface Props {
   socket: TeedsSocket | null
@@ -63,9 +64,6 @@ export function LocalRobotPanel({ socket, isDemo, moeda, symbols, symbolPadrao }
     </label>
   )
 
-  const acerto = estado && estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
-  const ultimos = useMemo(() => (estado?.digitos ?? []).slice(-18), [estado?.digitos])
-
   return (
     <div className="rob-grade">
       <section className="ger-bloco">
@@ -124,48 +122,31 @@ export function LocalRobotPanel({ socket, isDemo, moeda, symbols, symbolPadrao }
       </section>
 
       {/* ------------- acompanhamento ao vivo ------------- */}
-      <section className="ger-bloco loc-vivo">
-        <div className="ger-bloco-topo">
-          <span className="rot">Ao vivo</span>
-          {estado?.rodando && <span className="rob-status running">operando</span>}
-        </div>
-
-        {!estado && <p className="ger-nota">Ligue o robô para acompanhar aqui.</p>}
-
-        {estado && (
+      <section className="ger-bloco viv-bloco">
+        {!estado ? (
           <>
-            <div className="loc-fita">
-              {ultimos.map((d, i) => (
-                <span key={i} className={`fita-d ${d > 5 ? 'alvo' : ''} ${i === ultimos.length - 1 ? 'ultimo' : ''}`}>{d}</span>
-              ))}
-            </div>
-
-            <p className="loc-aguardando">
-              {estado.rodando
-                ? (estado.emOperacao ? 'operação em andamento…' : estado.aguardando)
-                : `parado — ${estado.motivoParada ?? ''}`}
-            </p>
-
-            <div className="loc-nums">
-              <div><span>Operações</span><b>{estado.operacoes}</b></div>
-              <div><span>Acerto</span><b>{acerto.toFixed(0)}%</b></div>
-              <div><span>Entrada atual</span><b>{din(estado.valorAtual, moeda)}</b></div>
-              <div><span>Resultado</span>
-                <b className={estado.resultado >= 0 ? 'ganho' : 'perda'}>
-                  {estado.resultado >= 0 ? '+' : '−'}{din(Math.abs(estado.resultado), moeda)}
-                </b>
-              </div>
-            </div>
-
-            <div className="loc-log">
-              {estado.registros.map((r, i) => (
-                <div key={i} className={`loc-linha ${r.tipo}`}>
-                  <span>{hora(r.hora)}</span>
-                  <b>{r.texto}</b>
-                </div>
-              ))}
-            </div>
+            <span className="rot">Ao vivo</span>
+            <p className="ger-nota">Ligue o robô para acompanhar aqui.</p>
           </>
+        ) : (
+          <RobotLive
+            estado={estado}
+            config={cfg}
+            moeda={moeda}
+            nomeEstrategia={estrategia.nome}
+            ganhaCom={(d) => {
+              const b = estrategia.barreira ?? 5
+              switch (estrategia.contractType) {
+                case 'DIGITOVER': return d > b
+                case 'DIGITUNDER': return d < b
+                case 'DIGITMATCH': return d === b
+                case 'DIGITDIFF': return d !== b
+                case 'DIGITEVEN': return d % 2 === 0
+                case 'DIGITODD': return d % 2 === 1
+                default: return false
+              }
+            }}
+          />
         )}
       </section>
     </div>

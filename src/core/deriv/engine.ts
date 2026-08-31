@@ -34,6 +34,11 @@ export interface Estrategia {
   entrar: (c: Contexto) => boolean
   /** Texto do que o robo esta esperando, para mostrar na tela. */
   aguardando: (c: Contexto) => string
+  /**
+   * Estado da condicao de entrada, para a tela desenhar.
+   * Cada item e um requisito: o valor lido e se ele passou.
+   */
+  progresso?: (c: Contexto) => { rotulo: string; itens: Array<{ valor: string; ok: boolean }> }
   /** Proximo valor apos o resultado de uma operacao. */
   proximoValor: (args: {
     valorAtual: number
@@ -77,12 +82,17 @@ export interface EstadoMotor {
   motivoParada: string | null
   registros: Registro[]
   digitos: number[]
+  /** Resultado acumulado depois de cada operacao, para desenhar a curva. */
+  curva: number[]
+  condicao: { rotulo: string; itens: Array<{ valor: string; ok: boolean }> } | null
+  ultimoLucro: number | null
 }
 
 const VAZIO: EstadoMotor = {
   rodando: false, emOperacao: false, operacoes: 0, vitorias: 0, derrotas: 0,
   perdasSeguidas: 0, resultado: 0, movimentado: 0, valorAtual: 0,
   aguardando: '', motivoParada: null, registros: [], digitos: [],
+  curva: [0], condicao: null, ultimoLucro: null,
 }
 
 export class MotorTeeds {
@@ -142,7 +152,7 @@ export class MotorTeeds {
 
   ligar() {
     if (this.estado.rodando) return
-    this.estado = { ...VAZIO, rodando: true, valorAtual: this.config.valorInicial, digitos: [] }
+    this.estado = { ...VAZIO, rodando: true, valorAtual: this.config.valorInicial, digitos: [], curva: [0] }
     this.registrar(`Robô ligado — ${this.estrategia.nome}`, 'info')
     this.emitir()
 
@@ -156,6 +166,7 @@ export class MotorTeeds {
         void this.comprar()
       } else {
         this.estado.aguardando = this.estrategia.aguardando(ctx)
+        this.estado.condicao = this.estrategia.progresso?.(ctx) ?? null
         this.emitir()
       }
     }, this.socket)
@@ -213,6 +224,8 @@ export class MotorTeeds {
       this.estado.operacoes += 1
       this.estado.resultado += c.profit
       this.estado.emOperacao = false
+      this.estado.ultimoLucro = c.profit
+      this.estado.curva = [...this.estado.curva, this.estado.resultado].slice(-200)
 
       if (ganhou) {
         this.estado.vitorias += 1

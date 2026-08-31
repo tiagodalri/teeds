@@ -40,6 +40,20 @@ export const SUPERIOR_5: Estrategia = {
       (faltam ? ` (${faltam} acima de 6)` : '')
   },
 
+  progresso: ({ digitos, perdasSeguidas }) => {
+    if (perdasSeguidas >= 1) {
+      return { rotulo: 'Modo recuperação', itens: [{ valor: 'entra já', ok: true }] }
+    }
+    const tres = ultimos(digitos, 3)
+    const itens = [0, 1, 2].map((i) => {
+      const d = tres[i]
+      return d === undefined
+        ? { valor: '–', ok: false }
+        : { valor: String(d), ok: d <= 6 }
+    })
+    return { rotulo: 'Precisa de 3 dígitos ≤ 6', itens }
+  },
+
   proximoValor: ({ ganhou, lucro, valorAoVencer, perdasSeguidas, config }) => {
     // ganhou: volta para o valor fixo de entrada
     if (ganhou) return valorAoVencer
