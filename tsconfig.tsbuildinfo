@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/PriceChart.tsx","./src/core/chart/scales.ts","./src/core/chart/theme.ts","./src/core/deriv/client.ts","./src/core/deriv/config.ts","./src/core/deriv/market.ts","./src/core/deriv/types.ts","./src/hooks/useMarket.ts"],"version":"5.9.3"}
