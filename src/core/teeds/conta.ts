@@ -16,7 +16,27 @@ export interface Usuario {
   id: string
   email: string
   nome: string | null
+  telefone: string | null
+  /** Guardado só com dígitos. Exibido formatado. */
+  cpf: string | null
   criadoEm: string
+}
+
+export interface DadosCadastro {
+  nome: string
+  email: string
+  senha: string
+  telefone: string
+  cpf: string
+}
+
+/**
+ * Para onde a Deriv... perdão, o Supabase deve devolver a pessoa depois do
+ * e-mail. Sem mandar explicitamente, ele usa o Site URL do projeto — que
+ * pode vir sem o caminho `/teeds/` e cair num 404 do GitHub Pages.
+ */
+export function enderecoDeRetorno(): string {
+  return `${window.location.origin}${window.location.pathname}`
 }
 
 export interface SessaoTeeds {
@@ -79,12 +99,18 @@ function montarSessao(d: any): SessaoTeeds {
     token: d.access_token,
     refresh: d.refresh_token,
     expiraEm: Date.now() + Number(d.expires_in ?? 3600) * 1000,
-    usuario: {
-      id: u.id,
-      email: u.email ?? '',
-      nome: u.user_metadata?.nome ?? null,
-      criadoEm: u.created_at ?? '',
-    },
+    usuario: montarUsuario(u),
+  }
+}
+
+function montarUsuario(u: any): Usuario {
+  return {
+    id: u?.id ?? '',
+    email: u?.email ?? '',
+    nome: u?.user_metadata?.nome ?? null,
+    telefone: u?.user_metadata?.telefone ?? null,
+    cpf: u?.user_metadata?.cpf ?? null,
+    criadoEm: u?.created_at ?? '',
   }
 }
 
@@ -113,10 +139,18 @@ export function sessaoGuardada(): SessaoTeeds | null {
 
 /** Cria a conta. Se o projeto exigir confirmação, devolve `confirmar: true`. */
 export async function cadastrar(
-  email: string, senha: string, nome: string,
+  dados: DadosCadastro,
 ): Promise<{ sessao: SessaoTeeds | null; confirmar: boolean }> {
-  const d = await chamar('/signup', {
-    corpo: { email: email.trim(), password: senha, data: { nome: nome.trim() } },
+  const d = await chamar(`/signup?redirect_to=${encodeURIComponent(enderecoDeRetorno())}`, {
+    corpo: {
+      email: dados.email.trim(),
+      password: dados.senha,
+      data: {
+        nome: dados.nome.trim(),
+        telefone: soDigitos(dados.telefone),
+        cpf: soDigitos(dados.cpf),
+      },
+    },
   })
   if (!d.access_token) return { sessao: null, confirmar: true }
   const s = montarSessao(d)
@@ -152,9 +186,58 @@ export async function sair(token?: string): Promise<void> {
 
 /** Manda o e-mail de redefinição de senha. */
 export async function recuperarSenha(email: string): Promise<void> {
-  await chamar('/recover', {
+  await chamar(`/recover?redirect_to=${encodeURIComponent(enderecoDeRetorno())}`, {
     corpo: { email: email.trim() },
   })
+}
+
+/* ------------------------------------------------------- documentos */
+
+export const soDigitos = (v: string) => (v || '').replace(/\D+/g, '')
+
+/** Formata 12345678901 como 123.456.789-01, conforme a pessoa digita. */
+export function formatarCPF(v: string): string {
+  const d = soDigitos(v).slice(0, 11)
+  if (d.length <= 3) return d
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
+}
+
+/** (11) 91234-5678 */
+export function formatarTelefone(v: string): string {
+  const d = soDigitos(v).slice(0, 11)
+  if (d.length <= 2) return d
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+}
+
+/**
+ * Valida o CPF pelos dois dígitos verificadores.
+ *
+ * Vale a pena validar de verdade: um CPF digitado errado só aparece
+ * quando alguém precisa dele, e aí é tarde.
+ */
+export function cpfValido(bruto: string): boolean {
+  const d = soDigitos(bruto)
+  if (d.length !== 11) return false
+  if (/^(\d)\1{10}$/.test(d)) return false
+  const digito = (ate: number) => {
+    let soma = 0
+    for (let i = 0; i < ate; i += 1) soma += Number(d[i]) * (ate + 1 - i)
+    const r = (soma * 10) % 11
+    return r === 10 ? 0 : r
+  }
+  return digito(9) === Number(d[9]) && digito(10) === Number(d[10])
+}
+
+/** DDD válido (11 a 99) e 10 ou 11 dígitos no total. */
+export function telefoneValido(bruto: string): boolean {
+  const d = soDigitos(bruto)
+  if (d.length < 10 || d.length > 11) return false
+  const ddd = Number(d.slice(0, 2))
+  return ddd >= 11 && ddd <= 99
 }
 
 /* ------------------------------------------------------------- retorno */
@@ -200,7 +283,7 @@ export function capturarRetorno(): Retorno {
     token,
     refresh: p.get('refresh_token') ?? '',
     expiraEm: Date.now() + Number(p.get('expires_in') ?? 3600) * 1000,
-    usuario: { id: '', email: '', nome: null, criadoEm: '' },
+    usuario: { id: '', email: '', nome: null, telefone: null, cpf: null, criadoEm: '' },
   }
   guardar(sessao)
   return { sessao, tipo: p.get('type'), erro: null }
@@ -216,13 +299,7 @@ function limparEndereco() {
 
 /** Busca os dados do usuario a partir do token — usado depois do retorno. */
 export async function buscarUsuario(token: string): Promise<Usuario> {
-  const u = await chamar('/user', { token })
-  return {
-    id: u.id,
-    email: u.email ?? '',
-    nome: u.user_metadata?.nome ?? null,
-    criadoEm: u.created_at ?? '',
-  }
+  return montarUsuario(await chamar('/user', { token }))
 }
 
 /** Troca a senha da conta logada. */

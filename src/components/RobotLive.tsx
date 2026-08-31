@@ -185,32 +185,38 @@ export function RobotLive({
       {/* ===================== palco ===================== */}
       {emCurso ? (
         <section className="tv-palco aposta">
-          <div className="tv-ap">
-            <span className="tv-rot">Apostou</span>
-            <b className="tv-preco">{moeda} {num(emCurso.valor)}</b>
-            <span className="tv-sub up">ganha +{num(emCurso.payout - emCurso.valor)}</span>
-          </div>
+          <div className="tv-mesa">
+            {/* o que está em jogo */}
+            <div className="tv-jogo">
+              <span className="tv-rot">Aposta</span>
+              <b>{num(emCurso.valor)}<i>{moeda}</i></b>
+              <span className="tv-ganha">ganha +{num(emCurso.payout - emCurso.valor)}</span>
+            </div>
 
-          <em className="tv-liga">se</em>
+            {/* a regra, desenhada: os dígitos que pagam ficam acesos */}
+            <div className="tv-regra-bloco">
+              <span className="tv-rot">O último dígito precisa ser {regra}</span>
+              <div className="tv-escala">
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
+                  <span key={d}
+                    className={`tv-alvo ${ganhaCom(d) ? 'paga' : ''} ${
+                      emCurso.digitoAtual === d ? 'caiu' : ''}`}>
+                    {d}
+                  </span>
+                ))}
+              </div>
+            </div>
 
-          <div className="tv-ap cresce">
-            <span className="tv-rot">o último dígito for</span>
-            <b className="tv-regra">{regra}</b>
-            {emCurso.entrada !== null && (
-              <span className="tv-sub">entrou em {emCurso.entrada.toFixed(2)}</span>
-            )}
-          </div>
-
-          <em className="tv-liga">agora</em>
-
-          <div className="tv-ap fim">
-            <span className={`tv-digitao grande ${
-              emCurso.digitoAtual === null ? 'esperando'
-                : ganhaCom(emCurso.digitoAtual) ? 'up' : 'down'
-            }`}>
-              {emCurso.digitoAtual ?? '·'}
-            </span>
-            <span className="tv-sub"><Cronometro desde={emCurso.comprouEm} /></span>
+            {/* onde caiu */}
+            <div className="tv-dial">
+              <div className={`tv-anel ${
+                emCurso.digitoAtual === null ? 'girando'
+                  : ganhaCom(emCurso.digitoAtual) ? 'ganhou' : 'perdeu'
+              }`}>
+                <span>{emCurso.digitoAtual ?? ''}</span>
+              </div>
+              <span className="tv-sub"><Cronometro desde={emCurso.comprouEm} /></span>
+            </div>
           </div>
 
           <div className="tv-esteira"><i /></div>

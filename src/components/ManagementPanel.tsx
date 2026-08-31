@@ -93,7 +93,7 @@ export function ManagementPanel({
       ultimoCalculo.current = Date.now()
       setSimCarregando(true)
       setSimErro(null)
-      simularComissao(socket, 0.03)
+      simularComissao(socket, 0.03, dias)
         .then((r) => vivo && setSim(r))
         .catch((e: Error) => vivo && setSimErro(e.message))
         .finally(() => vivo && setSimCarregando(false))
@@ -103,7 +103,7 @@ export function ManagementPanel({
     const espera = ultimoCalculo.current === 0 ? 0 : 4000
     const id = setTimeout(calcular, espera)
     return () => { vivo = false; clearTimeout(id) }
-  }, [socket, pulso])
+  }, [socket, pulso, dias])
 
   const [copiado, setCopiado] = useState(false)
   const copiarLink = async () => {

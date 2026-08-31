@@ -36,6 +36,19 @@ function iso(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
+/** Quantas paginas de extrato o simulador aceita percorrer, e de que tamanho. */
+const POR_PAGINA = 999
+const MAX_PAGINAS = 12
+
+/** Mesma janela, em epoch de segundos — o que o `statement` exige. */
+export function janelaEpoch(dias: number): { de: number; ate: number } {
+  const agora = new Date()
+  const inicio = new Date()
+  inicio.setDate(inicio.getDate() - (dias - 1))
+  inicio.setHours(0, 0, 0, 0)
+  return { de: Math.floor(inicio.getTime() / 1000), ate: Math.floor(agora.getTime() / 1000) + 60 }
+}
+
 export function periodo(dias: number): { de: string; ate: string } {
   const ate = new Date()
   const de = new Date()
@@ -136,10 +149,14 @@ export function simular(payoutSemMarkup: number, markupPct: number) {
 /* ------------------------------------------------------------------ */
 
 import type { TeedsSocket } from './client'
-import { buscarExtrato } from './statement'
+import { buscarExtrato, type Movimento } from './statement'
 
 export interface MarkupSimulado {
   operacoes: number
+  /** Janela considerada, em dias. */
+  dias: number
+  /** Bateu no teto de paginas: ha operacoes mais antigas nao contadas. */
+  truncado: boolean
   movimentado: number
   pagamentoTotal: number
   comissao: number
@@ -159,10 +176,27 @@ export interface MarkupSimulado {
 export async function simularComissao(
   socket: TeedsSocket,
   taxa = 0.03,
-  limite = 500,
+  dias = 30,
 ): Promise<MarkupSimulado> {
-  const { movimentos } = await buscarExtrato(socket, { limite, tipo: 'buy' })
-  const daTeeds = movimentos.filter((m) => m.appId === DERIV.appId && m.pagamento)
+  const { de, ate } = janelaEpoch(dias)
+
+  // O statement devolve no maximo 999 por vez. Sem paginar, um robo que
+  // faz centenas de operacoes por dia empurra as mais antigas para fora da
+  // janela e a comissao *diminui* — foi exatamente o que aconteceu.
+  const daTeeds: Movimento[] = []
+  let pular = 0
+  let truncado = false
+  for (let pagina = 0; pagina < MAX_PAGINAS; pagina += 1) {
+    const { movimentos } = await buscarExtrato(socket, {
+      limite: POR_PAGINA, pular, tipo: 'buy', de, ate,
+    })
+    for (const m of movimentos) {
+      if (m.appId === DERIV.appId && m.pagamento) daTeeds.push(m)
+    }
+    if (movimentos.length < POR_PAGINA) break
+    pular += POR_PAGINA
+    if (pagina === MAX_PAGINAS - 1) truncado = true
+  }
 
   const porDia = new Map<string, { comissao: number; operacoes: number }>()
   let comissao = 0
@@ -186,6 +220,8 @@ export async function simularComissao(
     comissao,
     comissaoMedia: daTeeds.length ? comissao / daTeeds.length : 0,
     taxa,
+    dias,
+    truncado,
     porDia: [...porDia.entries()]
       .map(([data, v]) => ({ data, ...v }))
       .sort((a, b) => a.data.localeCompare(b.data)),

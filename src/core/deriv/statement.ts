@@ -86,9 +86,16 @@ export function rotuloTipo(t: string): string {
 
 export async function buscarExtrato(
   socket: TeedsSocket,
-  opcoes: { limite?: number; pular?: number; tipo?: TipoMovimento | 'todos' } = {},
+  opcoes: {
+    limite?: number
+    pular?: number
+    tipo?: TipoMovimento | 'todos'
+    /** Recorte de tempo, em epoch de segundos. O statement exige inteiro. */
+    de?: number
+    ate?: number
+  } = {},
 ): Promise<{ movimentos: Movimento[]; total: number }> {
-  const { limite = 50, pular = 0, tipo = 'todos' } = opcoes
+  const { limite = 50, pular = 0, tipo = 'todos', de, ate } = opcoes
   const pedido: Record<string, any> = {
     statement: 1,
     description: 1,
@@ -96,6 +103,8 @@ export async function buscarExtrato(
     offset: pular,
   }
   if (tipo !== 'todos') pedido.action_type = tipo
+  if (de !== undefined) pedido.date_from = Math.floor(de)
+  if (ate !== undefined) pedido.date_to = Math.floor(ate)
 
   const res = await socket.send(pedido)
   const s = res.statement as Record<string, any> | undefined

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   buscarUsuario, cadastrar as criarConta, capturarRetorno, entrar as fazerLogin,
   recuperarSenha, renovar, sair as encerrar, sessaoGuardada, trocarSenha,
-  type SessaoTeeds,
+  type DadosCadastro, type SessaoTeeds,
 } from '../core/teeds/conta'
 import { autenticacaoConfigurada } from '../core/teeds/config'
 
@@ -108,10 +108,10 @@ export function useTeedsAuth() {
     }
   }, [agendarRenovacao])
 
-  const cadastrar = useCallback(async (email: string, senha: string, nome: string) => {
+  const cadastrar = useCallback(async (dados: DadosCadastro) => {
     setOcupado(true); setErro(null)
     try {
-      const { sessao: s, confirmar } = await criarConta(email, senha, nome)
+      const { sessao: s, confirmar } = await criarConta(dados)
       if (s) { setSessao(s); setStatus('logado'); agendarRenovacao(s) }
       return { ok: true, confirmar }
     } catch (e) {
