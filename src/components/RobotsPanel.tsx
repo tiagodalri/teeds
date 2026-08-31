@@ -9,6 +9,7 @@ import {
 import type { ActiveSymbol } from '../core/deriv/types'
 import { LocalRobotPanel } from './LocalRobotPanel'
 import { RobotCard, Emblema } from './RobotCard'
+import { ServerRobotLive } from './ServerRobotLive'
 import { IDENTIDADES, identidade, identidadePorContrato, type Identidade } from '../core/deriv/branding'
 import { batizarRobo, nomeDoRobo, sugerirNome } from '../core/deriv/robotNames'
 
@@ -82,7 +83,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
 
   useEffect(() => {
     if (!socket) return
-    const ativos = [...robos.values()].filter((r) => r.status !== 'stopped')
+    const ativos = [...robos.values()].filter((r) => r.status !== 'stopped').slice(0, 6)
     const paradas = ativos.map((r) =>
       acompanharRobo(socket, r.runId, (novo) =>
         setRobos((prev) => new Map(prev).set(novo.runId, novo)),
@@ -263,6 +264,27 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
 
       </div>
 
+      {rodando.length > 0 && (
+        <div className="teatros">
+          {rodando.map((r) => {
+            const idr = identidadePorContrato(r.contrato.contract_type ?? '') ?? ident
+            return (
+              <ServerRobotLive
+                key={r.runId}
+                robo={r}
+                ident={idr}
+                nome={nomes[r.runId] ?? nomeDoRobo(r.runId, idr.nome)}
+                moeda={moeda}
+                socket={socket}
+                onPausar={() => acao(r.runId, 'pausar')}
+                onRetomar={() => acao(r.runId, 'retomar')}
+                onParar={() => acao(r.runId, 'parar')}
+              />
+            )
+          })}
+        </div>
+      )}
+
       {/* ---------------- robôs em operação ---------------- */}
       <section className="ger-bloco">
         <div className="ger-bloco-topo">
@@ -273,7 +295,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
         {lista.length === 0 && <p className="ger-nota">Nenhum robô criado ainda.</p>}
 
         <div className="rob-lista">
-          {lista.map((r) => {
+          {lista.filter((r) => r.status === 'stopped').map((r) => {
             const identDele = identidadePorContrato(r.contrato.contract_type ?? '')
             const padrao = identDele?.nome ?? r.contrato.contract_type ?? 'Robô'
             const apelido = nomes[r.runId] ?? nomeDoRobo(r.runId, padrao)

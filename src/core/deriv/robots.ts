@@ -26,6 +26,8 @@ export interface Robo {
   resultado: number
   parametros: Record<string, any>
   contrato: Record<string, any>
+  /** Contratos comprados nesta corrida, como a Deriv devolve. */
+  contratosDetalhe: Array<Record<string, any>>
 }
 
 function toRobo(r: Record<string, any>): Robo {
@@ -45,6 +47,7 @@ function toRobo(r: Record<string, any>): Robo {
     resultado: recebido - movimentado,
     parametros: r.strategy_parameters ?? {},
     contrato: r.contract_template ?? {},
+    contratosDetalhe: Array.isArray(r.contracts) ? r.contracts : [],
   }
 }
 

@@ -181,6 +181,13 @@ export default function App() {
         </div>
       </header>
 
+      {conta.aviso && (
+        <div className="faixa faixa-ok">
+          {conta.aviso}
+          <button onClick={() => conta.setAviso(null)}>fechar</button>
+        </div>
+      )}
+
       {conta.error && (
         <div className="faixa faixa-erro">
           {conta.error}

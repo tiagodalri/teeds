@@ -163,12 +163,32 @@ export function useAccount() {
     setError(null)
   }, [])
 
+  const [aviso, setAviso] = useState<string | null>(null)
+
   const recarregarDemo = useCallback(async () => {
     if (!session || !accountId) return
     const conta = accounts.find((a) => a.accountId === accountId)
-    if (conta?.type !== 'demo') return
-    await resetDemoBalance(session, accountId)
+    if (conta?.type !== 'demo') {
+      setAviso('Só a conta demo pode ser recarregada.')
+      return
+    }
+    try {
+      const novo = await resetDemoBalance(session, accountId)
+      // a assinatura de saldo pode demorar a empurrar o valor novo:
+      // usamos o que a propria resposta devolveu
+      setBalance((b) => (b ? { ...b, amount: novo } : { amount: novo, currency: conta.currency, loginId: accountId }))
+      setAccounts((lista) => lista.map((a) => (a.accountId === accountId ? { ...a, balance: novo } : a)))
+      setAviso(`Saldo demo recarregado para ${conta.currency} ${novo.toFixed(2)}.`)
+    } catch (e) {
+      setAviso(`Não consegui recarregar: ${(e as Error).message}`)
+    }
   }, [session, accountId, accounts])
+
+  useEffect(() => {
+    if (!aviso) return
+    const t = setTimeout(() => setAviso(null), 5000)
+    return () => clearTimeout(t)
+  }, [aviso])
 
   const account = accounts.find((a) => a.accountId === accountId) ?? null
   const isDemo = account?.type === 'demo'
@@ -177,7 +197,7 @@ export function useAccount() {
     status, error, setError, session,
     accounts, account, accountId, setAccountId, isDemo,
     balance, contracts: [...contracts.values()],
-    socket: socketRef.current, connecting,
+    socket: socketRef.current, connecting, aviso, setAviso,
     login, logout, recarregarDemo,
   }
 }

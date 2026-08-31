@@ -1066,3 +1066,106 @@ button, input { font: inherit; color: inherit; }
 
 /* configuração sem painel ao lado ocupa a largura toda, com limite de leitura */
 .rob-grade.sozinho { grid-template-columns: minmax(0, 760px); }
+
+/* faixa de confirmação */
+.faixa-ok { background: var(--up-soft); color: #0d7a3d; border-bottom: 1px solid #cdead9; }
+
+/* ======================= teatro do robô em operação ======================= */
+.teatros { display: flex; flex-direction: column; gap: 14px; margin-bottom: 16px; }
+.teatro {
+  --robo: var(--primary); --robo-suave: var(--primary-soft);
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden; box-shadow: var(--shadow);
+  border-left: 3px solid var(--robo);
+}
+
+.teatro-cab {
+  display: flex; align-items: center; gap: 13px;
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  background: var(--robo-suave);
+}
+.teatro-id { flex: 1; min-width: 0; }
+.teatro-id b { display: block; font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
+.teatro-id span {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11.5px; color: var(--muted); margin-top: 1px;
+}
+.teatro-pulso {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--robo);
+  position: relative; flex-shrink: 0;
+}
+.teatro-cab.operando .teatro-pulso::after,
+.teatro-cab.cacando .teatro-pulso::after {
+  content: ''; position: absolute; inset: -3px; border-radius: 50%;
+  background: var(--robo); opacity: 0.35;
+  animation: pulsar 1.8s ease-out infinite;
+}
+.teatro-cab.parado .teatro-pulso, .teatro-cab.pausado .teatro-pulso { background: var(--muted); }
+
+.teatro-res { text-align: right; }
+.teatro-res strong {
+  display: block; font-size: 22px; font-weight: 700;
+  letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+}
+.teatro-acoes { display: flex; gap: 6px; flex-shrink: 0; }
+.teatro-acoes button {
+  border: 1px solid var(--border); background: var(--bg); border-radius: 8px;
+  padding: 7px 13px; font-size: 12px; cursor: pointer; font-weight: 500;
+}
+.teatro-acoes button:hover { border-color: var(--muted); }
+.teatro-acoes .parar { border-color: #f6d4d5; color: var(--down); background: var(--down-soft); }
+
+/* a operação acontecendo agora */
+.teatro-agora {
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, var(--robo-suave), transparent 65%);
+}
+.ta-topo { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.ta-tag {
+  font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+  padding: 3px 8px; border-radius: 5px; background: var(--robo); color: #fff;
+}
+.ta-topo b { font-size: 13px; font-weight: 600; }
+.ta-topo em { font-style: normal; margin-left: auto; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.teatro-curva { padding: 14px 16px 12px; border-bottom: 1px solid var(--border); }
+.teatro-curva .curva { height: 54px; }
+
+.teatro-nums { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--border); }
+.teatro-nums > div {
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 1px;
+  border-right: 1px solid var(--border);
+}
+.teatro-nums > div:last-child { border-right: 0; }
+.teatro-nums b { font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.teatro-nums em { font-style: normal; font-size: 10px; color: var(--muted); }
+
+/* feed das operações */
+.teatro-feed { max-height: 290px; overflow-y: auto; }
+.op {
+  display: grid; grid-template-columns: 68px 68px 1fr 96px;
+  align-items: center; gap: 10px; padding: 9px 16px;
+  border-bottom: 1px solid var(--border-soft, var(--border)); font-size: 12px;
+  animation: entrar 0.32s ease-out;
+}
+@keyframes entrar { from { opacity: 0; transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) { .op { animation: none; } }
+.op:last-child { border-bottom: 0; }
+.op.ganhou { box-shadow: inset 2px 0 0 var(--up); }
+.op.perdeu { box-shadow: inset 2px 0 0 var(--down); }
+.op.aberta { background: var(--robo-suave); box-shadow: inset 2px 0 0 var(--robo); }
+.op-hora { color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.op-valor { font-weight: 600; font-variant-numeric: tabular-nums; }
+.op-spots {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--muted); font-variant-numeric: tabular-nums; font-size: 11.5px;
+}
+.op-spots em { font-style: normal; color: var(--border); }
+.op-res { text-align: right; font-variant-numeric: tabular-nums; }
+.op-res b { font-weight: 650; }
+.op-rodando { font-style: normal; font-size: 10.5px; color: var(--robo); font-weight: 600; }
+
+@media (max-width: 720px) {
+  .teatro-nums { grid-template-columns: repeat(2, 1fr); }
+  .op { grid-template-columns: 56px 60px 1fr 80px; }
+}

@@ -76,10 +76,12 @@ export async function createAccount(
   }
 }
 
-/** Recarrega o saldo ficticio de uma conta demo. */
-export async function resetDemoBalance(session: AuthSession, accountId: string): Promise<void> {
-  await call(`/trading/v1/options/accounts/${encodeURIComponent(accountId)}/reset-demo-balance`, session, {
-    method: 'POST',
-    body: JSON.stringify({}),
-  })
+/** Recarrega o saldo ficticio de uma conta demo. Devolve o novo saldo. */
+export async function resetDemoBalance(session: AuthSession, accountId: string): Promise<number> {
+  const body = await call<{ data?: { balance?: string | number } }>(
+    `/trading/v1/options/accounts/${encodeURIComponent(accountId)}/reset-demo-balance`,
+    session,
+    { method: 'POST', body: JSON.stringify({}) },
+  )
+  return Number(body.data?.balance ?? 0)
 }
