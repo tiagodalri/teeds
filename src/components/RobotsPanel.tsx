@@ -226,7 +226,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
         {/* ---------------- a matemática, sem ilusão ---------------- */}
         <section className="ger-bloco rob-mat">
           <div className="ger-bloco-topo">
-            <span className="rot">O que a matemática diz</span>
+            <span className="rot">Dados do contrato</span>
             <span className="ger-tag">cotação real da Deriv</span>
           </div>
 
@@ -235,18 +235,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
               <div className="mat-linhas">
                 <div><span>Chance de ganhar cada operação</span><b>{mat.chancePct.toFixed(0)}%</b></div>
                 <div><span>Pagamento</span><b>{din(pagamento ?? 0, moeda)} ({mat.multiplicador.toFixed(2)}×)</b></div>
-                <div className="destaque">
-                  <span>Perda esperada por operação</span>
-                  <b className="perda">−{din(mat.perdaEsperada, moeda)} ({mat.perdaEsperadaPct.toFixed(1)}%)</b>
-                </div>
               </div>
-
-              <p className="mat-texto">
-                A cada {maxContratos || 100} operações, a expectativa matemática é perder cerca de{' '}
-                <strong>{din(mat.perdaEsperada * (maxContratos || 100), moeda)}</strong>. Nenhuma gestão de
-                banca muda isso — Martingale e D'Alembert alteram <em>quando</em> você ganha ou perde,
-                nunca a expectativa.
-              </p>
 
               <div className="mat-risco">
                 <span className="rot">O que seu stop loss aguenta</span>

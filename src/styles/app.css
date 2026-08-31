@@ -604,3 +604,106 @@ button, input { font: inherit; color: inherit; }
   border-radius: 7px; padding: 6px; font-size: 12px; cursor: pointer;
 }
 .rob-acoes .parar { border-color: #f6d4d5; color: var(--down); background: var(--down-soft); }
+
+/* -------------------------------------------------------- saldo ao vivo */
+.saldo-caixa { display: inline-flex; align-items: baseline; gap: 7px; }
+.saldo {
+  font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em; padding: 3px 8px; border-radius: 7px;
+  transition: background-color 0.35s, color 0.35s;
+}
+.saldo em { font-style: normal; font-size: 11px; color: var(--muted); font-weight: 500; }
+.saldo.sobe { background: var(--up-soft); color: var(--up); }
+.saldo.sobe em { color: var(--up); }
+.saldo.cai { background: var(--down-soft); color: var(--down); }
+.saldo.cai em { color: var(--down); }
+.saldo-vazio { color: var(--muted); font-size: 13px; font-weight: 500; }
+.saldo-delta {
+  font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums;
+  animation: sobe-some 4s ease-out forwards;
+}
+.saldo-delta.sobe { color: var(--up); }
+.saldo-delta.cai { color: var(--down); }
+@keyframes sobe-some {
+  0% { opacity: 0; transform: translateY(5px); }
+  12% { opacity: 1; transform: translateY(0); }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .saldo-delta { animation: none; }
+  .saldo { transition: none; }
+}
+
+/* ---------------------------------------------------------- operações */
+.ops-acoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ops-btn {
+  border: 1px solid var(--border); background: var(--bg); border-radius: 8px;
+  padding: 6px 12px; font-size: 12.5px; cursor: pointer; font-weight: 500;
+}
+.ops-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.ops-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ops-progresso {
+  position: relative; font-size: 11.5px; color: var(--muted);
+  padding: 8px 0 12px; margin-bottom: 4px;
+}
+.ops-progresso span {
+  position: absolute; left: 0; bottom: 6px; height: 2px;
+  background: var(--primary); border-radius: 2px; transition: width 0.3s;
+}
+
+.ops-kpis { grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); }
+.ops-kpis .kpi strong { font-size: 19px; }
+.seq { display: flex; align-items: baseline; gap: 4px; }
+.seq i { font-style: normal; color: var(--border); font-weight: 400; }
+.seq em { font-style: normal; }
+
+.ops-filtros {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  align-items: center; margin-bottom: 14px;
+}
+
+.ops-tabela-caixa {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow-x: auto; box-shadow: var(--shadow);
+}
+.ops-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 780px; }
+.ops-tabela th {
+  text-align: left; padding: 10px 12px; font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+  position: sticky; top: 0; background: var(--bg);
+}
+.ops-tabela th.num, .ops-tabela td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.ops-tabela td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+.ops-tabela tbody tr:last-child td { border-bottom: 0; }
+.ops-tabela tbody tr:hover { background: var(--surface); }
+.ops-tabela tr.venceu { box-shadow: inset 2px 0 0 var(--up); }
+.ops-tabela tr.perdeu { box-shadow: inset 2px 0 0 var(--down); }
+
+.ops-quando { white-space: nowrap; }
+.ops-quando b { display: block; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ops-quando span { font-size: 10.5px; color: var(--muted); }
+.ops-aposta { font-weight: 500; white-space: nowrap; }
+.ops-aposta em { font-style: normal; color: var(--muted); font-size: 11px; }
+.ops-ativo { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+.ops-spot { white-space: nowrap; }
+.dig-chip {
+  display: inline-grid; place-items: center; width: 18px; height: 18px;
+  border-radius: 5px; margin-left: 6px; font-size: 11px; font-weight: 700;
+  background: var(--surface); color: var(--muted); vertical-align: middle;
+}
+.dig-chip.ok { background: var(--up); color: #fff; }
+.dig-chip.nao { background: var(--down); color: #fff; }
+.ops-res {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.04em; padding: 3px 8px; border-radius: 5px;
+}
+.ops-res.ok { background: var(--up-soft); color: var(--up); }
+.ops-res.nao { background: var(--down-soft); color: var(--down); }
+.tag-robo, .tag-manual {
+  font-size: 10.5px; padding: 3px 8px; border-radius: 5px; white-space: nowrap;
+}
+.tag-robo { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.tag-manual { background: var(--surface); color: var(--muted); }

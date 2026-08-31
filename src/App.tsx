@@ -4,6 +4,8 @@ import { PositionCard } from './components/PositionCard'
 import { DigitsPanel } from './components/DigitsPanel'
 import { ManagementPanel } from './components/ManagementPanel'
 import { RobotsPanel } from './components/RobotsPanel'
+import { OperationsPanel } from './components/OperationsPanel'
+import { BalanceLive } from './components/BalanceLive'
 import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
@@ -38,7 +40,7 @@ export default function App() {
   const [confirmar, setConfirmar] = useState<'CALL' | 'PUT' | null>(null)
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
-  const [tela, setTela] = useState<'operar' | 'robos' | 'gestao'>('operar')
+  const [tela, setTela] = useState<'operar' | 'robos' | 'operacoes' | 'gestao'>('operar')
   const [payoutBase, setPayoutBase] = useState(19.55)
 
   const activeSymbol = useMemo(() => {
@@ -149,6 +151,7 @@ export default function App() {
         <nav className="telas">
           <button className={tela === 'operar' ? 'on' : ''} onClick={() => setTela('operar')}>Operar</button>
           <button className={tela === 'robos' ? 'on' : ''} onClick={() => setTela('robos')}>Robôs</button>
+          <button className={tela === 'operacoes' ? 'on' : ''} onClick={() => setTela('operacoes')}>Operações</button>
           <button className={tela === 'gestao' ? 'on' : ''} onClick={() => setTela('gestao')}>Gestão</button>
         </nav>
 
@@ -169,11 +172,11 @@ export default function App() {
               <span className={`badge ${conta.isDemo ? 'badge-demo' : 'badge-real'}`}>
                 {conta.isDemo ? 'dinheiro fictício' : 'DINHEIRO REAL'}
               </span>
-              <strong className="saldo">
-                {conta.balance
-                  ? `${conta.balance.currency} ${conta.balance.amount.toFixed(2)}`
-                  : conta.connecting ? 'conectando…' : '—'}
-              </strong>
+              <BalanceLive
+                valor={conta.balance ? conta.balance.amount : null}
+                moeda={conta.balance?.currency ?? conta.account?.currency ?? 'USD'}
+                conectando={conta.connecting}
+              />
               {conta.isDemo && (
                 <button className="link-btn" onClick={() => conta.recarregarDemo()}>recarregar</button>
               )}
@@ -206,6 +209,12 @@ export default function App() {
           moeda={conta.account?.currency ?? 'USD'}
           symbols={symbols}
           symbolPadrao={symbolCode}
+        />
+      ) : tela === 'operacoes' ? (
+        <OperationsPanel
+          socket={conta.socket}
+          logado={conta.status === 'logado'}
+          moeda={conta.account?.currency ?? 'USD'}
         />
       ) : tela === 'gestao' ? (
         <ManagementPanel
