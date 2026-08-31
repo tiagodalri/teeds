@@ -10,6 +10,7 @@ import type { ActiveSymbol } from '../core/deriv/types'
 import { LocalRobotPanel } from './LocalRobotPanel'
 import { RobotCard, Emblema } from './RobotCard'
 import { ServerRobotLive } from './ServerRobotLive'
+import { RobotScope } from './RobotScope'
 import { IDENTIDADES, identidade, identidadePorContrato, type Identidade } from '../core/deriv/branding'
 import { batizarRobo, nomeDoRobo, sugerirNome } from '../core/deriv/robotNames'
 
@@ -159,6 +160,21 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
         {!isDemo && <span className="badge badge-real">conta real selecionada</span>}
       </div>
 
+      {lista.length > 0 && (
+        <div className="resumo-robos">
+          <div><b>{lista.length}</b><span>robôs criados</span></div>
+          <div><b className={rodando.length ? 'ganho' : ''}>{rodando.length}</b><span>em operação</span></div>
+          <div>
+            <b className={lista.reduce((t, r) => t + r.resultado, 0) >= 0 ? 'ganho' : 'perda'}>
+              {lista.reduce((t, r) => t + r.resultado, 0) >= 0 ? '+' : '−'}
+              {din(Math.abs(lista.reduce((t, r) => t + r.resultado, 0)), moeda)}
+            </b>
+            <span>resultado somado</span>
+          </div>
+          <div><b>{din(lista.reduce((t, r) => t + r.totalMovimentado, 0), moeda)}</b><span>movimentado</span></div>
+        </div>
+      )}
+
       <div className="galeria">
         {IDENTIDADES.map((i) => (
           <RobotCard key={i.id} id={i} selecionado={ident.id === i.id}
@@ -181,7 +197,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
       {erro && ident.onde === 'servidor' && <div className="ger-erro">{erro}</div>}
 
       {ident.onde === 'servidor' && <>
-      <div className="rob-grade config-robo sozinho" style={{ ['--robo' as any]: ident.cor, ['--robo-suave' as any]: ident.corSuave }}>
+      <div className="rob-grade config-robo" style={{ ['--robo' as any]: ident.cor, ['--robo-suave' as any]: ident.corSuave }}>
         {/* ---------------- configuração ---------------- */}
         <section className="ger-bloco">
           <div className="config-cab">
