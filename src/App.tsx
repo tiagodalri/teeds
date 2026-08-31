@@ -5,7 +5,7 @@ import { DigitsPanel } from './components/DigitsPanel'
 import { ManagementPanel } from './components/ManagementPanel'
 import { RobotsPanel } from './components/RobotsPanel'
 import { OperationsPanel } from './components/OperationsPanel'
-import { BalanceLive } from './components/BalanceLive'
+import { AccountSwitcher } from './components/AccountSwitcher'
 import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
@@ -157,31 +157,17 @@ export default function App() {
 
         <div className="topbar-right">
           {conta.status === 'logado' && conta.accounts.length > 0 && (
-            <div className="account-box">
-              <select
-                className="account-select"
-                value={conta.accountId ?? ''}
-                onChange={(e) => conta.setAccountId(e.target.value)}
-              >
-                {conta.accounts.map((a) => (
-                  <option key={a.accountId} value={a.accountId}>
-                    {a.type === 'demo' ? 'Demo' : 'Real'} · {a.accountId}
-                  </option>
-                ))}
-              </select>
-              <span className={`badge ${conta.isDemo ? 'badge-demo' : 'badge-real'}`}>
-                {conta.isDemo ? 'dinheiro fictício' : 'DINHEIRO REAL'}
-              </span>
-              <BalanceLive
-                valor={conta.balance ? conta.balance.amount : null}
-                moeda={conta.balance?.currency ?? conta.account?.currency ?? 'USD'}
-                conectando={conta.connecting}
-              />
-              {conta.isDemo && (
-                <button className="link-btn" onClick={() => conta.recarregarDemo()}>recarregar</button>
-              )}
-              <button className="link-btn" onClick={conta.logout}>sair</button>
-            </div>
+            <AccountSwitcher
+              contas={conta.accounts}
+              selecionada={conta.accountId}
+              isDemo={conta.isDemo}
+              saldo={conta.balance ? conta.balance.amount : null}
+              moeda={conta.balance?.currency ?? conta.account?.currency ?? 'USD'}
+              conectando={conta.connecting}
+              onTrocar={conta.setAccountId}
+              onRecarregar={() => conta.recarregarDemo()}
+              onSair={conta.logout}
+            />
           )}
 
           {conta.status !== 'logado' && (

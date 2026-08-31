@@ -4,6 +4,8 @@ import { MotorTeeds, type ConfigEstrategia, type EstadoMotor } from '../core/der
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { RobotLive } from './RobotLive'
+import { Emblema } from './RobotCard'
+import type { Identidade } from '../core/deriv/branding'
 
 interface Props {
   socket: TeedsSocket | null
@@ -11,6 +13,7 @@ interface Props {
   moeda: string
   symbols: ActiveSymbol[]
   symbolPadrao: string | null
+  identidade: Identidade
 }
 
 const din = (v: number, m = 'USD') =>
@@ -19,8 +22,8 @@ const din = (v: number, m = 'USD') =>
 const hora = (e: number) =>
   new Date(e * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
-export function LocalRobotPanel({ socket, isDemo, moeda, symbols, symbolPadrao }: Props) {
-  const [estrategia, setEstrategia] = useState(ESTRATEGIAS_LOCAIS[0])
+export function LocalRobotPanel({ socket, isDemo, moeda, symbols, symbolPadrao, identidade }: Props) {
+  const estrategia = ESTRATEGIAS_LOCAIS.find((e) => e.id === identidade.id) ?? ESTRATEGIAS_LOCAIS[0]
   const [symbol, setSymbol] = useState(symbolPadrao ?? 'R_10')
   const [cfg, setCfg] = useState<ConfigEstrategia>({
     valorInicial: 0.35,
@@ -65,18 +68,14 @@ export function LocalRobotPanel({ socket, isDemo, moeda, symbols, symbolPadrao }
   )
 
   return (
-    <div className="rob-grade">
+    <div className="rob-grade config-robo" style={{ ["--robo" as any]: identidade.cor, ["--robo-suave" as any]: identidade.corSuave }}>
       <section className="ger-bloco">
-        <span className="rot">Estratégia</span>
-        <div className="rob-modelos loc-modelos">
-          {ESTRATEGIAS_LOCAIS.map((e) => (
-            <button key={e.id} className={`rob-modelo azul ${estrategia.id === e.id ? 'on' : ''}`}
-              disabled={rodando} onClick={() => setEstrategia(e)}>
-              <b>{e.nome}</b>
-              <span>{e.descricao}</span>
-              {e.origem && <i className="loc-origem">{e.origem}</i>}
-            </button>
-          ))}
+        <div className="config-cab">
+          <Emblema id={identidade} tamanho={44} />
+          <div>
+            <b>{identidade.nome}</b>
+            <span>{identidade.descricao}</span>
+          </div>
         </div>
 
         <div className="rob-linha">

@@ -893,3 +893,122 @@ button, input { font: inherit; color: inherit; }
 .viv-linha.parada b { color: var(--text); font-weight: 600; }
 
 @media (max-width: 700px) { .viv-nums { grid-template-columns: repeat(2, 1fr); } }
+
+/* ========================= troca de conta ========================= */
+.troca { position: relative; }
+.troca-botao {
+  display: flex; align-items: center; gap: 10px;
+  border: 1px solid var(--border); background: var(--bg);
+  border-radius: 11px; padding: 6px 11px 6px 8px; cursor: pointer;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.troca-botao:hover { border-color: var(--muted); }
+.troca-botao.aberto { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.troca-botao.real { border-color: #f3c8ca; background: #fffafa; }
+.troca-tag {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 4px 8px; border-radius: 6px; flex-shrink: 0;
+}
+.troca-tag.demo { background: var(--primary-soft); color: var(--primary); }
+.troca-tag.real { background: var(--down-soft); color: var(--down); }
+.troca-meio { display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
+.troca-meio em {
+  font-style: normal; font-size: 9.5px; color: var(--muted);
+  letter-spacing: 0.02em; margin-left: 8px;
+}
+.troca-seta { color: var(--muted); flex-shrink: 0; }
+
+.troca-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
+  width: 300px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 13px; box-shadow: 0 4px 8px rgba(26,34,51,.05), 0 18px 40px -12px rgba(26,34,51,.22);
+  padding: 7px; animation: cair 0.14s ease-out;
+}
+@keyframes cair { from { opacity: 0; transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) { .troca-menu { animation: none; } }
+.troca-titulo {
+  margin: 5px 9px 8px; font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+}
+.troca-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 9px; border: 0; background: none; border-radius: 9px;
+  cursor: pointer; text-align: left;
+}
+.troca-item:hover { background: var(--surface); }
+.troca-item.ativa { background: var(--surface); }
+.troca-info { flex: 1; display: flex; flex-direction: column; }
+.troca-info b { font-size: 12.5px; font-weight: 600; }
+.troca-info em { font-style: normal; font-size: 10px; color: var(--muted); }
+.troca-saldo { font-size: 12.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.troca-check { color: var(--up); flex-shrink: 0; }
+.troca-rodape {
+  display: flex; gap: 6px; margin-top: 6px; padding-top: 7px;
+  border-top: 1px solid var(--border);
+}
+.troca-rodape button {
+  flex: 1; border: 0; background: var(--surface); border-radius: 8px;
+  padding: 8px; font-size: 11.5px; cursor: pointer; color: var(--text); font-weight: 500;
+}
+.troca-rodape button:hover { background: var(--border); }
+.troca-rodape .sair { color: var(--down); }
+
+/* ========================= galeria de robôs ========================= */
+.galeria {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 12px; margin-bottom: 20px;
+}
+.rcard {
+  text-align: left; border: 1.5px solid var(--border); background: var(--bg);
+  border-radius: 14px; padding: 15px; cursor: pointer;
+  display: flex; flex-direction: column; gap: 9px;
+  transition: transform 0.16s, box-shadow 0.16s, border-color 0.16s;
+  box-shadow: var(--shadow);
+}
+.rcard:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(26,34,51,.05), 0 14px 30px -12px rgba(26,34,51,.22); }
+.rcard.on { border-width: 2px; padding: 14px; }
+@media (prefers-reduced-motion: reduce) { .rcard:hover { transform: none; } }
+
+.rcard-topo { display: flex; align-items: flex-start; justify-content: space-between; }
+.emblema { display: block; flex-shrink: 0; }
+.rcard-operando {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 6px;
+}
+.rcard-operando i { width: 5px; height: 5px; border-radius: 50%; }
+
+.rcard-nome { display: flex; flex-direction: column; gap: 1px; }
+.rcard-nome b { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
+.rcard-nome span { font-size: 11px; font-weight: 600; }
+.rcard-desc { margin: 0; font-size: 11.5px; line-height: 1.5; color: var(--muted); flex: 1; }
+.rcard-rodape {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; padding-top: 9px; border-top: 1px solid var(--border);
+}
+.rcard-chance { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rcard-onde { font-size: 9.5px; padding: 3px 7px; border-radius: 5px; background: var(--surface); color: var(--muted); }
+.rcard-onde.teeds { background: var(--primary-soft); color: var(--primary); }
+
+/* ------------- configuração com a cor do robô ------------- */
+.config-robo { --robo: var(--primary); --robo-suave: var(--primary-soft); }
+.config-cab {
+  display: flex; align-items: center; gap: 13px;
+  padding-bottom: 15px; margin-bottom: 4px; border-bottom: 1px solid var(--border);
+}
+.config-cab b { display: block; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+.config-cab span { font-size: 11.5px; color: var(--muted); line-height: 1.45; }
+.config-robo .btn-ligar {
+  background: var(--robo); font-size: 14px; padding: 13px;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+}
+.config-robo .btn-ligar::before {
+  content: ''; width: 0; height: 0; flex-shrink: 0;
+  border-left: 9px solid currentColor;
+  border-top: 6px solid transparent; border-bottom: 6px solid transparent;
+}
+.config-robo .btn-parar::before {
+  border: 0; width: 9px; height: 9px; background: currentColor; border-radius: 1px;
+}
+.config-robo .btn-ligar:disabled { background: #cfd6e2; }
+.config-robo .rob-linha input:focus, .config-robo .rob-linha select:focus { border-color: var(--robo); }
+.config-robo .rob-estrat button.on { border-color: var(--robo); background: var(--robo-suave); }

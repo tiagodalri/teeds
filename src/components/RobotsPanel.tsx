@@ -8,6 +8,8 @@ import {
 } from '../core/deriv/robots'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { LocalRobotPanel } from './LocalRobotPanel'
+import { RobotCard, Emblema } from './RobotCard'
+import { IDENTIDADES, identidade, identidadePorContrato, type Identidade } from '../core/deriv/branding'
 import { batizarRobo, nomeDoRobo, sugerirNome } from '../core/deriv/robotNames'
 
 interface Props {
@@ -23,7 +25,7 @@ const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadrao }: Props) {
-  const [modelo, setModelo] = useState<ModeloRobo>(MODELOS[0])
+  const modelo: ModeloRobo = MODELOS.find((m) => m.contractType === ident.contrato) ?? MODELOS[0]
   const [symbol, setSymbol] = useState<string>(symbolPadrao ?? '1HZ100V')
   const [valorInicial, setValorInicial] = useState(1)
   const [ticks, setTicks] = useState(1)
@@ -43,7 +45,7 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
   const [nome, setNome] = useState('')
   const [renomeando, setRenomeando] = useState<string | null>(null)
   const [nomes, setNomes] = useState<Record<string, string>>({})
-  const [onde, setOnde] = useState<'servidor' | 'teeds'>('servidor')
+  const [ident, setIdent] = useState<Identidade>(IDENTIDADES[0])
 
   useEffect(() => { if (symbolPadrao) setSymbol(symbolPadrao) }, [symbolPadrao])
   useEffect(() => { setNome(sugerirNome(modelo.nome)) }, [modelo])
@@ -143,43 +145,44 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
         <div>
           <h2>Robôs</h2>
           <p className="ger-sub">
-            {onde === 'servidor'
-            ? 'Operam nos servidores da Deriv — continuam trabalhando com seu computador desligado.'
-            : 'Estratégias com filtro de entrada, executadas pela própria Teeds.'}
+            Escolha um robô, ajuste os freios e ligue. Os do servidor da Deriv
+          continuam operando com seu computador desligado.
           </p>
         </div>
         {!isDemo && <span className="badge badge-real">conta real selecionada</span>}
       </div>
 
-      <div className="segmented sub-abas onde-roda">
-        <button className={onde === 'servidor' ? 'on' : ''} onClick={() => setOnde('servidor')}>
-          No servidor da Deriv
-        </button>
-        <button className={onde === 'teeds' ? 'on' : ''} onClick={() => setOnde('teeds')}>
-          Na Teeds (avançados)
-        </button>
+      <div className="galeria">
+        {IDENTIDADES.map((i) => (
+          <RobotCard key={i.id} id={i} selecionado={ident.id === i.id}
+            onSelecionar={() => setIdent(i)}
+            operando={
+              i.onde === 'servidor'
+                ? [...robos.values()].filter(
+                    (r) => r.status === 'running' && r.contrato.contract_type === i.contrato,
+                  ).length
+                : 0
+            } />
+        ))}
       </div>
 
-      {onde === 'teeds' && (
+      {ident.onde === 'teeds' && (
         <LocalRobotPanel socket={socket} isDemo={isDemo} moeda={moeda}
-          symbols={symbols} symbolPadrao={symbolPadrao} />
+          symbols={symbols} symbolPadrao={symbolPadrao} identidade={ident} />
       )}
 
-      {erro && onde === 'servidor' && <div className="ger-erro">{erro}</div>}
+      {erro && ident.onde === 'servidor' && <div className="ger-erro">{erro}</div>}
 
-      {onde === 'servidor' && <>
-      <div className="rob-grade">
+      {ident.onde === 'servidor' && <>
+      <div className="rob-grade config-robo" style={{ ['--robo' as any]: ident.cor, ['--robo-suave' as any]: ident.corSuave }}>
         {/* ---------------- configuração ---------------- */}
         <section className="ger-bloco">
-          <span className="rot">Escolha o robô</span>
-          <div className="rob-modelos">
-            {MODELOS.map((m) => (
-              <button key={m.id} className={`rob-modelo ${m.cor} ${modelo.id === m.id ? 'on' : ''}`}
-                onClick={() => setModelo(m)}>
-                <b>{m.nome}</b>
-                <span>{m.frase}</span>
-              </button>
-            ))}
+          <div className="config-cab">
+            <Emblema id={ident} tamanho={44} />
+            <div>
+              <b>{ident.nome}</b>
+              <span>{ident.descricao}</span>
+            </div>
           </div>
 
           <div className="rob-linha">
@@ -258,34 +261,6 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
           </button>
         </section>
 
-        {/* ---------------- a matemática, sem ilusão ---------------- */}
-        <section className="ger-bloco rob-mat">
-          <div className="ger-bloco-topo">
-            <span className="rot">Dados do contrato</span>
-            <span className="ger-tag">cotação real da Deriv</span>
-          </div>
-
-          {mat ? (
-            <>
-              <div className="mat-linhas">
-                <div><span>Chance de acerto</span><b>{mat.chancePct.toFixed(0)}%</b></div>
-                <div><span>Pagamento</span><b>{din(pagamento ?? 0, moeda)} ({mat.multiplicador.toFixed(2)}×)</b></div>
-              </div>
-
-              <div className="mat-risco">
-                <span className="rot">O que seu stop loss aguenta</span>
-                <p>
-                  <strong>{risco.perdasSuportadas} perdas seguidas</strong> antes de bater o freio
-                  de {din(stopLoss, moeda)}.
-                  {estrategia === 'martingale' && risco.perdasSuportadas <= 6 && (
-                    <> Numa sequência de {risco.perdasSuportadas + 1} perdas — que acontece
-                    com frequência real — o valor já teria ido para {din(risco.proximaOperação, moeda)}.</>
-                  )}
-                </p>
-              </div>
-            </>
-          ) : <p className="ger-nota">calculando…</p>}
-        </section>
       </div>
 
       {/* ---------------- robôs em operação ---------------- */}
@@ -299,13 +274,14 @@ export function RobotsPanel({ socket, logado, isDemo, moeda, symbols, symbolPadr
 
         <div className="rob-lista">
           {lista.map((r) => {
-            const modeloDele = MODELOS.find((m) => m.contractType === r.contrato.contract_type)
-            const padrao = modeloDele?.nome ?? r.contrato.contract_type ?? 'Robô'
+            const identDele = identidadePorContrato(r.contrato.contract_type ?? '')
+            const padrao = identDele?.nome ?? r.contrato.contract_type ?? 'Robô'
             const apelido = nomes[r.runId] ?? nomeDoRobo(r.runId, padrao)
             const ativo = r.status === 'running'
             return (
               <div key={r.runId} className={`rob-card ${r.status}`}>
                 <div className="rob-card-topo">
+                  {identDele && <Emblema id={identDele} tamanho={26} />}
                   {renomeando === r.runId ? (
                     <input
                       className="rob-renomear" autoFocus defaultValue={apelido} maxLength={40}
