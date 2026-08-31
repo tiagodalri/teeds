@@ -1713,6 +1713,46 @@ button, input { font: inherit; color: inherit; }
   font-size: 13.5px; line-height: 1.6; color: var(--muted);
 }
 .entrada-botoes { display: flex; flex-direction: column; gap: 9px; }
+.entrada-form { display: flex; flex-direction: column; gap: 12px; text-align: left; }
+.entrada-form label { display: flex; flex-direction: column; gap: 5px; }
+.entrada-form input {
+  border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  border-radius: 10px; padding: 11px 13px; font-size: 14px;
+}
+.entrada-form input::placeholder { color: var(--muted); opacity: .8; }
+.entrada-form input:focus-visible {
+  outline: 0; border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.entrada-form .entrada-btn { margin-top: 4px; }
+.entrada-esperando { font-size: 13px; color: var(--muted); }
+.entrada-recado {
+  margin-top: 14px; padding: 11px 13px; border-radius: 9px;
+  background: var(--up-soft); color: #0d6b38; font-size: 12.5px; line-height: 1.55;
+}
+.entrada-troca {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 16px; font-size: 12.5px; color: var(--muted);
+}
+.entrada-troca button {
+  border: 0; background: none; cursor: pointer; padding: 2px;
+  color: var(--primary); font-size: 12.5px; font-weight: 550;
+}
+.entrada-troca button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.entrada-corretora {
+  margin-top: 26px; padding: 18px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--border); text-align: left;
+}
+.entrada-corretora b { display: block; font-size: 13px; font-weight: 650; }
+.entrada-corretora p {
+  margin: 6px 0 12px; font-size: 12.5px; line-height: 1.55; color: var(--muted);
+}
+.entrada-corretora a {
+  display: inline-block; text-decoration: none;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  border-radius: 9px; padding: 9px 16px; font-size: 12.5px; font-weight: 600;
+}
+.entrada-corretora a:hover { border-color: var(--primary); color: var(--primary); }
 .entrada-btn {
   display: block; width: 100%; box-sizing: border-box;
   border: 0; cursor: pointer; text-decoration: none;
@@ -1779,3 +1819,57 @@ button, input { font: inherit; color: inherit; }
   padding: 8px 12px; border-radius: 7px;
 }
 .troca-link:hover { background: var(--primary-soft); }
+
+/* ==================== corretora desconectada ====================
+   Estado normal da Teeds: logado na plataforma, sem a Deriv ligada.
+   O gráfico e os dígitos funcionam; comprar é que não. */
+.sem-deriv {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 10px; padding: 40px 24px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow);
+}
+.sem-deriv-icone {
+  width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center;
+  background: var(--primary-soft); color: var(--primary); margin-bottom: 4px;
+}
+.sem-deriv b { font-size: 17px; font-weight: 650; letter-spacing: -.015em; }
+.sem-deriv p {
+  margin: 0; max-width: 44ch; font-size: 13px; line-height: 1.6; color: var(--muted);
+}
+.sem-deriv-acoes { display: flex; gap: 9px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
+.sem-deriv-acoes button, .sem-deriv-acoes a {
+  cursor: pointer; text-decoration: none; border-radius: 10px;
+  padding: 11px 20px; font-size: 13.5px; font-weight: 600;
+}
+.sem-deriv-acoes button { border: 0; background: var(--primary); color: #fff; }
+.sem-deriv-acoes button:hover:not(:disabled) { filter: brightness(1.06); }
+.sem-deriv-acoes button:disabled { opacity: .55; cursor: not-allowed; }
+.sem-deriv-acoes a { border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+.sem-deriv-acoes a:hover { border-color: var(--primary); color: var(--primary); }
+
+.sem-deriv.compacto {
+  padding: 20px 16px; gap: 7px; margin-bottom: 14px;
+  border-color: var(--primary); background: var(--primary-soft); box-shadow: none;
+}
+.sem-deriv.compacto .sem-deriv-icone { display: none; }
+.sem-deriv.compacto b { font-size: 14px; }
+.sem-deriv.compacto p { font-size: 12px; color: var(--text); }
+.sem-deriv.compacto .sem-deriv-acoes button,
+.sem-deriv.compacto .sem-deriv-acoes a { padding: 8px 14px; font-size: 12.5px; }
+
+/* ==================== conta Teeds no topo ==================== */
+.btn-conectar {
+  border: 0; cursor: pointer; background: var(--primary); color: #fff;
+  border-radius: 9px; padding: 8px 16px; font-size: 13px; font-weight: 600;
+}
+.btn-conectar:hover:not(:disabled) { filter: brightness(1.06); }
+.btn-conectar:disabled { opacity: .55; cursor: not-allowed; }
+.usuario button {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+  border: 0; background: none; cursor: pointer; padding: 4px 6px; border-radius: 8px;
+  font-size: 12.5px; font-weight: 600; color: var(--text); line-height: 1.2;
+}
+.usuario button span { font-size: 10px; font-weight: 500; color: var(--muted); }
+.usuario button:hover { background: var(--surface); }
+.usuario button:hover span { color: var(--down); }

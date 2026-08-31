@@ -13,6 +13,7 @@ import { ServerRobotLive } from './ServerRobotLive'
 import { RobotScope } from './RobotScope'
 import { IDENTIDADES, identidade, identidadePorContrato, type Identidade } from '../core/deriv/branding'
 import { batizarRobo, nomeDoRobo, sugerirNome } from '../core/deriv/robotNames'
+import { DerivDesconectada } from './DerivDesconectada'
 
 interface Props {
   socket: TeedsSocket | null
@@ -23,6 +24,8 @@ interface Props {
   symbolPadrao: string | null
   /** Estado da conexao autenticada, para avisar quando o robo perde o sinal. */
   conexao?: string
+  entrandoNaDeriv?: boolean
+  onConectarDeriv?: () => void
 }
 
 /** Teto de robos simultaneos: cada um consome assinaturas da mesma conexao. */
@@ -33,6 +36,7 @@ const din = (v: number, m = 'USD') =>
 
 export function RobotsPanel({
   socket, logado, isDemo, moeda, symbols, symbolPadrao, conexao = 'open',
+  entrandoNaDeriv = false, onConectarDeriv,
 }: Props) {
   const [symbol, setSymbol] = useState<string>(symbolPadrao ?? '1HZ100V')
   const [valorInicial, setValorInicial] = useState(1)
@@ -159,7 +163,15 @@ export function RobotsPanel({
   const emDestaque = [...rodando, ...(rodando.length === 0 && ultimaParada ? [ultimaParada] : [])]
 
   if (!logado) {
-    return <div className="ger-vazio"><h2>Robôs</h2><p>Entre com sua conta Deriv para criar robôs.</p></div>
+    return (
+      <div className="ger">
+        <div className="ger-topo"><div><h2>Robôs</h2></div></div>
+        <DerivDesconectada
+          acao="Os robôs compram e vendem contratos de verdade."
+          entrando={entrandoNaDeriv}
+          onConectar={() => onConectarDeriv?.()} />
+      </div>
+    )
   }
 
   return (

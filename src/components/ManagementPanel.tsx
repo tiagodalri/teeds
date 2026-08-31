@@ -6,6 +6,7 @@ import {
   type DiaMarkup, type MarkupResumo, type MarkupSimulado,
 } from '../core/deriv/markup'
 import type { TeedsSocket } from '../core/deriv/client'
+import { DerivDesconectada } from './DerivDesconectada'
 
 interface Props {
   session: AuthSession | null
@@ -17,6 +18,8 @@ interface Props {
   moeda: string
   /** Sobe a cada transacao na conta: dispara o recalculo ao vivo. */
   pulso?: number
+  entrandoNaDeriv?: boolean
+  onConectarDeriv?: () => void
 }
 
 const PERIODOS = [
@@ -31,6 +34,7 @@ const dinheiro = (v: number, moeda = 'USD') =>
 
 export function ManagementPanel({
   session, socket, isDemo, onReautorizar, payoutBase, moeda, pulso = 0,
+  entrandoNaDeriv = false, onConectarDeriv,
 }: Props) {
   const [sim, setSim] = useState<MarkupSimulado | null>(null)
   const [simCarregando, setSimCarregando] = useState(false)
@@ -121,9 +125,29 @@ export function ManagementPanel({
 
   if (!session) {
     return (
-      <div className="ger-vazio">
-        <h2>Painel de gestão</h2>
-        <p>Entre com sua conta Deriv para ver o faturamento da Teeds.</p>
+      <div className="ger">
+        <div className="ger-topo"><div><h2>Painel de gestão</h2></div></div>
+        <DerivDesconectada
+          acao="A comissão é calculada sobre as operações da sua conta."
+          entrando={entrandoNaDeriv}
+          onConectar={() => onConectarDeriv?.()} />
+
+        <section className="ger-bloco convite">
+          <div className="convite-texto">
+            <span className="rot">Traga clientes para a Teeds</span>
+            <p>
+              Isto funciona mesmo sem a corretora conectada: toda conta aberta
+              por este link fica ligada a você.
+            </p>
+          </div>
+          <div className="convite-acao">
+            <code>{AFILIADO}</code>
+            <div className="convite-botoes">
+              <button onClick={copiarLink}>{copiado ? 'copiado!' : 'Copiar link'}</button>
+              <a href={AFILIADO} target="_blank" rel="noopener noreferrer">Abrir</a>
+            </div>
+          </div>
+        </section>
       </div>
     )
   }

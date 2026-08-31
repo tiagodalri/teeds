@@ -4,6 +4,7 @@ import { buscarOperacoes, paraCSV, resumir, type Operacao } from '../core/deriv/
 import { MODELOS } from '../core/deriv/robots'
 import { nomeDoRobo, todasAsOrigens } from '../core/deriv/robotNames'
 import { StatementPanel } from './StatementPanel'
+import { DerivDesconectada } from './DerivDesconectada'
 
 interface Props {
   socket: TeedsSocket | null
@@ -12,6 +13,8 @@ interface Props {
   symbols?: import('../core/deriv/types').ActiveSymbol[]
   /** Sobe a cada transacao na conta: recarrega a lista sozinha. */
   pulso?: number
+  entrandoNaDeriv?: boolean
+  onConectarDeriv?: () => void
 }
 
 const NOMES: Record<string, string> = {
@@ -29,7 +32,10 @@ const hora = (e: number) =>
 const dia = (e: number) =>
   new Date(e * 1000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 
-export function OperationsPanel({ socket, logado, moeda, symbols = [], pulso = 0 }: Props) {
+export function OperationsPanel({
+  socket, logado, moeda, symbols = [], pulso = 0,
+  entrandoNaDeriv = false, onConectarDeriv,
+}: Props) {
   const [ops, setOps] = useState<Operacao[]>([])
   const [carregando, setCarregando] = useState(false)
   const [progresso, setProgresso] = useState<{ feitas: number; total: number } | null>(null)
@@ -119,7 +125,15 @@ export function OperationsPanel({ socket, logado, moeda, symbols = [], pulso = 0
   }
 
   if (!logado) {
-    return <div className="ger-vazio"><h2>Operações</h2><p>Entre com sua conta Deriv para ver o histórico.</p></div>
+    return (
+      <div className="ger">
+        <div className="ger-topo"><div><h2>Operações</h2></div></div>
+        <DerivDesconectada
+          acao="O histórico vem da sua conta na corretora."
+          entrando={entrandoNaDeriv}
+          onConectar={() => onConectarDeriv?.()} />
+      </div>
+    )
   }
 
   return (

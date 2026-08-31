@@ -1,65 +1,135 @@
+import { useState } from 'react'
 import { AFILIADO } from '../core/deriv/config'
 import { Brand } from './Brand'
 
+type Modo = 'entrar' | 'criar' | 'esqueci'
+
 interface Props {
-  entrando: boolean
-  onEntrar: () => void
+  ocupado: boolean
   erro?: string | null
+  limparErro: () => void
+  onEntrar: (email: string, senha: string) => Promise<boolean>
+  onCadastrar: (email: string, senha: string, nome: string) => Promise<{ ok: boolean; confirmar: boolean }>
+  onEsqueci: (email: string) => Promise<boolean>
 }
 
-/** Um argumento por linha, do que a plataforma faz de concreto. */
-const PILARES = [
-  {
-    titulo: 'Robôs que operam por você',
-    texto: 'Ligue o AG7, defina os freios e acompanhe cada entrada ao vivo — entrada, dígito, resultado, tudo na tela.',
+const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
+  entrar: {
+    titulo: 'Bem-vindo de volta.',
+    linha: 'Entre na sua conta Teeds. A conexão com a corretora vem depois, lá dentro.',
+    acao: 'Entrar',
   },
-  {
-    titulo: 'Vários ao mesmo tempo',
-    texto: 'Rode até quatro robôs lado a lado, cada um no seu índice e com os seus próprios limites.',
+  criar: {
+    titulo: 'Crie a sua conta Teeds.',
+    linha: 'É a conta da plataforma. A conta da Deriv, onde o dinheiro fica, é separada.',
+    acao: 'Criar conta',
   },
-  {
-    titulo: 'Sua conta, seu dinheiro',
-    texto: 'A Teeds opera pela API da Deriv com a sua própria conta. Comece na conta demo, com dinheiro fictício.',
+  esqueci: {
+    titulo: 'Esqueceu a senha?',
+    linha: 'Diga o seu e-mail e mandamos um link para você criar uma nova.',
+    acao: 'Enviar link',
   },
-]
+}
 
-export function LoginScreen({ entrando, onEntrar, erro }: Props) {
+export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, onEsqueci }: Props) {
+  const [modo, setModo] = useState<Modo>('entrar')
+  const [nome, setNome] = useState('')
+  const [email, setEmail] = useState('')
+  const [senha, setSenha] = useState('')
+  const [recado, setRecado] = useState<string | null>(null)
+
+  const t = TEXTOS[modo]
+  const valido = modo === 'esqueci'
+    ? email.includes('@')
+    : email.includes('@') && senha.length >= 6 && (modo === 'entrar' || nome.trim().length >= 2)
+
+  function trocarModo(m: Modo) {
+    setModo(m); setRecado(null); limparErro()
+  }
+
+  async function enviar(e: React.FormEvent) {
+    e.preventDefault()
+    if (!valido || ocupado) return
+    setRecado(null)
+    if (modo === 'entrar') {
+      await onEntrar(email, senha)
+      return
+    }
+    if (modo === 'criar') {
+      const r = await onCadastrar(email, senha, nome)
+      if (r.ok && r.confirmar) {
+        setRecado(`Conta criada. Confirme o e-mail que enviamos para ${email} e depois entre.`)
+        setModo('entrar')
+      }
+      return
+    }
+    const ok = await onEsqueci(email)
+    if (ok) setRecado(`Se existir uma conta com ${email}, o link está a caminho.`)
+  }
+
   return (
     <div className="entrada">
       <div className="entrada-caixa">
-        <div className="entrada-marca">
-          <Brand tamanho={44} />
-        </div>
+        <div className="entrada-marca"><Brand tamanho={44} /></div>
 
-        <h1>Opere na Deriv com robôs seus.</h1>
-        <p className="entrada-linha">
-          Plataforma de operações automatizadas em índices sintéticos.
-          Entre com a sua conta da Deriv — a Teeds nunca guarda a sua senha.
-        </p>
+        <h1>{t.titulo}</h1>
+        <p className="entrada-linha">{t.linha}</p>
 
-        <div className="entrada-botoes">
-          <button className="entrada-btn" onClick={onEntrar} disabled={entrando}>
-            {entrando ? 'abrindo a Deriv…' : 'Entrar com a Deriv'}
+        <form className="entrada-form" onSubmit={enviar}>
+          {modo === 'criar' && (
+            <label>
+              <span className="rot">Como quer ser chamado</span>
+              <input value={nome} onChange={(e) => setNome(e.target.value)}
+                autoComplete="name" placeholder="Seu nome" />
+            </label>
+          )}
+
+          <label>
+            <span className="rot">E-mail</span>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email" placeholder="voce@email.com" />
+          </label>
+
+          {modo !== 'esqueci' && (
+            <label>
+              <span className="rot">Senha</span>
+              <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)}
+                autoComplete={modo === 'criar' ? 'new-password' : 'current-password'}
+                placeholder={modo === 'criar' ? 'pelo menos 6 caracteres' : '••••••••'} />
+            </label>
+          )}
+
+          <button className="entrada-btn" type="submit" disabled={!valido || ocupado}>
+            {ocupado ? 'um instante…' : t.acao}
           </button>
-          <a className="entrada-btn secundario" href={AFILIADO} target="_blank" rel="noopener noreferrer">
-            Ainda não tenho conta
-          </a>
-        </div>
-
-        <p className="entrada-nota">
-          Abrir conta é grátis e leva alguns minutos. Depois é só voltar aqui e entrar.
-        </p>
+        </form>
 
         {erro && <div className="entrada-erro">{erro}</div>}
+        {recado && <div className="entrada-recado">{recado}</div>}
 
-        <ul className="entrada-pilares">
-          {PILARES.map((p) => (
-            <li key={p.titulo}>
-              <b>{p.titulo}</b>
-              <span>{p.texto}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="entrada-troca">
+          {modo === 'entrar' && (
+            <>
+              <button onClick={() => trocarModo('criar')}>Criar uma conta</button>
+              <span>·</span>
+              <button onClick={() => trocarModo('esqueci')}>Esqueci a senha</button>
+            </>
+          )}
+          {modo !== 'entrar' && (
+            <button onClick={() => trocarModo('entrar')}>Já tenho conta — entrar</button>
+          )}
+        </div>
+
+        <div className="entrada-corretora">
+          <b>Ainda não tem conta na Deriv?</b>
+          <p>
+            A Teeds opera pela sua própria conta na corretora — é lá que o
+            dinheiro fica. Abrir é grátis e você começa na conta demo.
+          </p>
+          <a href={AFILIADO} target="_blank" rel="noopener noreferrer">
+            Abrir conta na Deriv
+          </a>
+        </div>
 
         <p className="entrada-rodape">
           Negociar envolve risco de perda. Opere só o que você pode perder,

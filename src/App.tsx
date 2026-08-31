@@ -13,6 +13,8 @@ import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { useAccount } from './hooks/useAccount'
+import { useTeedsAuth } from './hooks/useTeedsAuth'
+import { DerivDesconectada } from './components/DerivDesconectada'
 import type { Granularity } from './core/deriv/types'
 import { formatPrice } from './core/chart/scales'
 import { buyFromProposal, requestProposal, sellContract } from './core/deriv/trading'
@@ -31,6 +33,7 @@ export default function App() {
   const connection = useConnection()
   const { symbols, loading: loadingSymbols, error: symbolsError } = useSymbols()
   const conta = useAccount()
+  const teeds = useTeedsAuth()
 
   const [selected, setSelected] = useState<string | null>(null)
   const [granularity, setGranularity] = useState<Granularity>(60)
@@ -158,17 +161,29 @@ export default function App() {
     }
   }
 
-  // Antes de entrar, a Teeds e uma porta: marca, o que ela faz e dois
-  // caminhos — entrar, ou abrir conta na Deriv.
-  if (conta.status !== 'logado') {
+  // ------------------------------------------------------------------
+  // São dois logins. Este é o primeiro: a conta da Teeds, que abre a
+  // plataforma. Conectar a Deriv é o segundo, e só faz falta na hora de
+  // operar de verdade.
+  // ------------------------------------------------------------------
+  if (teeds.status === 'carregando') {
+    return <div className="entrada"><div className="entrada-esperando">abrindo a Teeds…</div></div>
+  }
+
+  if (teeds.status === 'deslogado') {
     return (
       <LoginScreen
-        entrando={conta.status === 'entrando'}
-        onEntrar={conta.login}
-        erro={conta.error}
+        ocupado={teeds.ocupado}
+        erro={teeds.erro}
+        limparErro={() => teeds.setErro(null)}
+        onEntrar={teeds.entrar}
+        onCadastrar={teeds.cadastrar}
+        onEsqueci={teeds.esqueci}
       />
     )
   }
+
+  const derivPronta = conta.status === 'logado'
 
   return (
     <div className="app">
@@ -183,6 +198,13 @@ export default function App() {
         </nav>
 
         <div className="topbar-right">
+          {!derivPronta && (
+            <button className="btn-conectar" onClick={conta.login}
+              disabled={conta.status === 'entrando'}>
+              {conta.status === 'entrando' ? 'abrindo a Deriv…' : 'Conectar minha Deriv'}
+            </button>
+          )}
+
           {conta.status === 'logado' && conta.accounts.length > 0 && (
             <AccountSwitcher
               contas={conta.accounts}
@@ -197,18 +219,27 @@ export default function App() {
             />
           )}
 
-          {/* Logado, o que importa e a conexao da conta: e por ela que o
+          {/* Conectado, o que importa e a conexao da conta: e por ela que o
               saldo anda e os robos operam. */}
           {(() => {
-            const alvo = conta.status === 'logado' ? conta.conexao : connection
+            const alvo = derivPronta ? conta.conexao : connection
             return (
               <div className={`status status-${alvo}`} title={
-                conta.status === 'logado' ? 'conexão da sua conta na Deriv' : 'conexão de mercado'
+                derivPronta ? 'conexão da sua conta na Deriv' : 'conexão de mercado'
               }>
                 <i /> {STATUS_LABEL[alvo] ?? alvo}
               </div>
             )
           })()}
+
+          {teeds.usuario && (
+            <div className="usuario">
+              <button title={teeds.usuario.email} onClick={() => void teeds.sair()}>
+                {(teeds.usuario.nome || teeds.usuario.email).split(' ')[0]}
+                <span>sair</span>
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -235,6 +266,8 @@ export default function App() {
           symbols={symbols}
           symbolPadrao={symbolCode}
           conexao={conta.conexao}
+          entrandoNaDeriv={conta.status === 'entrando'}
+          onConectarDeriv={conta.login}
         />
       ) : tela === 'operacoes' ? (
         <OperationsPanel
@@ -243,6 +276,8 @@ export default function App() {
           moeda={conta.account?.currency ?? 'USD'}
           symbols={symbols}
           pulso={conta.pulso}
+          entrandoNaDeriv={conta.status === 'entrando'}
+          onConectarDeriv={conta.login}
         />
       ) : tela === 'gestao' ? (
         <ManagementPanel
@@ -253,6 +288,8 @@ export default function App() {
           payoutBase={payoutBase}
           moeda={conta.account?.currency ?? 'USD'}
           pulso={conta.pulso}
+          entrandoNaDeriv={conta.status === 'entrando'}
+          onConectarDeriv={conta.login}
         />
       ) : (
       <div className="layout">
@@ -304,6 +341,13 @@ export default function App() {
         </main>
 
         <aside className="trade">
+          {!derivPronta && (
+            <DerivDesconectada compacto
+              acao="O gráfico e os dígitos são públicos, mas comprar exige a sua conta."
+              entrando={conta.status === 'entrando'}
+              onConectar={conta.login} />
+          )}
+
           <div className="modo-troca">
             <button className={modo === 'direcao' ? 'on' : ''} onClick={() => setModo('direcao')}>
               Subir / Descer
@@ -372,7 +416,7 @@ export default function App() {
             )}
           </div>
 
-          {conta.status !== 'logado' && <p className="note">Entre com sua conta Deriv para operar.</p>}
+          {!derivPronta && <p className="note">Conecte a sua Deriv para ver as posições aqui.</p>}
           {conta.status === 'logado' && conta.contracts.length === 0 && (
             <p className="note">Nenhuma posição aberta. Suas operações aparecem aqui, com o resultado ao vivo.</p>
           )}
