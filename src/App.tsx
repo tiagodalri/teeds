@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
 import { PositionCard } from './components/PositionCard'
+import { DigitsPanel } from './components/DigitsPanel'
+import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { useAccount } from './hooks/useAccount'
 import type { Granularity } from './core/deriv/types'
@@ -32,6 +34,7 @@ export default function App() {
   const [aviso, setAviso] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
   const [confirmar, setConfirmar] = useState<'CALL' | 'PUT' | null>(null)
   const [vendendo, setVendendo] = useState<number | null>(null)
+  const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
 
   const activeSymbol = useMemo(() => {
     if (selected) return symbols.find((s) => s.symbol === selected) ?? null
@@ -71,16 +74,27 @@ export default function App() {
 
   const podeOperar = conta.status === 'logado' && !!conta.socket && !conta.connecting && !!symbolCode
 
+  async function comprarDigito(tipo: DigitContract, barreira: string | undefined, ticks: number) {
+    await executar(tipo, { duration: ticks, durationUnit: 't', barrier: barreira })
+  }
+
   async function comprar(tipo: 'CALL' | 'PUT') {
-    if (!conta.socket || !symbolCode) return
     if (!conta.isDemo && confirmar !== tipo) { setConfirmar(tipo); return }
     setConfirmar(null)
+    await executar(tipo, { duration, durationUnit: 'm' })
+  }
+
+  async function executar(
+    tipo: string,
+    extra: { duration: number; durationUnit: string; barrier?: string },
+  ) {
+    if (!conta.socket || !symbolCode) return
     setComprando(tipo)
     setAviso(null)
     try {
       const p = await requestProposal(conta.socket, {
         symbol: symbolCode, contractType: tipo, amount: stake,
-        duration, durationUnit: 'm', currency: conta.account?.currency ?? 'USD',
+        currency: conta.account?.currency ?? 'USD', ...extra,
       })
       const r = await buyFromProposal(conta.socket, p.id, p.askPrice)
       setAviso({ tipo: 'ok', texto: `Comprado por ${r.buyPrice.toFixed(2)} — pagamento potencial ${r.payout.toFixed(2)}` })
@@ -205,7 +219,14 @@ export default function App() {
         </main>
 
         <aside className="trade">
-          <h3>Operar</h3>
+          <div className="modo-troca">
+            <button className={modo === 'direcao' ? 'on' : ''} onClick={() => setModo('direcao')}>
+              Subir / Descer
+            </button>
+            <button className={modo === 'digitos' ? 'on' : ''} onClick={() => setModo('digitos')}>
+              Dígitos
+            </button>
+          </div>
 
           <label className="field"><span>Valor</span>
             <div className="input-wrap"><em>US$</em>
@@ -214,24 +235,39 @@ export default function App() {
             </div>
           </label>
 
-          <label className="field"><span>Duração</span>
-            <div className="input-wrap">
-              <input type="number" min={1} value={duration}
-                onChange={(e) => setDuration(Math.max(1, Number(e.target.value) || 0))} />
-              <em>min</em>
-            </div>
-          </label>
+          {modo === 'direcao' ? (
+            <>
+              <label className="field"><span>Duração</span>
+                <div className="input-wrap">
+                  <input type="number" min={1} value={duration}
+                    onChange={(e) => setDuration(Math.max(1, Number(e.target.value) || 0))} />
+                  <em>min</em>
+                </div>
+              </label>
 
-          <div className="quotes">
-            <QuoteCard kind="up" title="Subir" payout={call.payout} stake={stake}
-              loading={call.loading} error={call.error} podeOperar={podeOperar}
-              comprando={comprando === 'CALL'} confirmando={confirmar === 'CALL'}
-              onBuy={() => comprar('CALL')} logado={conta.status === 'logado'} />
-            <QuoteCard kind="down" title="Descer" payout={put.payout} stake={stake}
-              loading={put.loading} error={put.error} podeOperar={podeOperar}
-              comprando={comprando === 'PUT'} confirmando={confirmar === 'PUT'}
-              onBuy={() => comprar('PUT')} logado={conta.status === 'logado'} />
-          </div>
+              <div className="quotes">
+                <QuoteCard kind="up" title="Subir" payout={call.payout} stake={stake}
+                  loading={call.loading} error={call.error} podeOperar={podeOperar}
+                  comprando={comprando === 'CALL'} confirmando={confirmar === 'CALL'}
+                  onBuy={() => comprar('CALL')} logado={conta.status === 'logado'} />
+                <QuoteCard kind="down" title="Descer" payout={put.payout} stake={stake}
+                  loading={put.loading} error={put.error} podeOperar={podeOperar}
+                  comprando={comprando === 'PUT'} confirmando={confirmar === 'PUT'}
+                  onBuy={() => comprar('PUT')} logado={conta.status === 'logado'} />
+              </div>
+            </>
+          ) : (
+            <DigitsPanel
+              symbol={symbolCode}
+              pipSize={pipSize}
+              stake={stake}
+              moeda={conta.account?.currency ?? 'USD'}
+              podeOperar={podeOperar}
+              logado={conta.status === 'logado'}
+              comprando={!!comprando && comprando.startsWith('DIGIT')}
+              onComprar={comprarDigito}
+            />
+          )}
 
           {aviso && (
             <p className={`aviso ${aviso.tipo === 'ok' ? 'aviso-ok' : 'aviso-erro'}`}>{aviso.texto}</p>

@@ -169,6 +169,8 @@ export async function requestProposal(
     duration: number
     durationUnit: string
     currency: string
+    /** Barreira - nos contratos de digito, o digito escolhido. */
+    barrier?: string
   },
 ): Promise<{ id: string; askPrice: number; payout: number; longcode: string }> {
   const res = await socket.send({
@@ -180,6 +182,7 @@ export async function requestProposal(
     duration: params.duration,
     duration_unit: params.durationUnit,
     underlying_symbol: params.symbol,
+    ...(params.barrier !== undefined ? { barrier: params.barrier } : {}),
   })
   const p = res.proposal as Record<string, any>
   return {

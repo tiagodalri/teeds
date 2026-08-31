@@ -315,3 +315,103 @@ button, input { font: inherit; color: inherit; }
 
 .btn-vender { margin-top: 0; background: var(--primary); }
 .btn-vender:disabled { background: #cfd6e2; }
+
+/* ------------------------------------------------------------- dígitos */
+.modo-troca {
+  display: flex; gap: 2px; padding: 2px; margin-bottom: 14px;
+  background: var(--surface); border-radius: 9px;
+}
+.modo-troca button {
+  flex: 1; border: 0; background: none; padding: 7px; border-radius: 7px;
+  cursor: pointer; color: var(--muted); font-size: 12.5px; font-weight: 600;
+}
+.modo-troca button.on { background: var(--bg); color: var(--text); box-shadow: var(--shadow); }
+
+.dig { display: flex; flex-direction: column; gap: 16px; }
+.dig .rot {
+  display: block; font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px;
+}
+
+.dig-agora {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px; background: var(--surface); border-radius: var(--radius);
+}
+.dig-atual { text-align: center; flex-shrink: 0; }
+.dig-atual strong {
+  display: block; font-size: 30px; font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.dig-atual strong.ganho { color: var(--up); }
+.dig-fita {
+  display: flex; flex-wrap: wrap; gap: 3px; align-content: flex-start;
+  max-height: 52px; overflow: hidden;
+}
+.fita-d {
+  width: 17px; height: 17px; display: grid; place-items: center;
+  border-radius: 4px; font-size: 10.5px; font-weight: 600;
+  background: var(--bg); color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.fita-d.alvo { background: var(--up-soft); color: var(--up); }
+.fita-d.ultimo { outline: 2px solid var(--primary); outline-offset: -2px; color: var(--text); }
+
+.dig-sec-topo { display: flex; align-items: center; justify-content: space-between; }
+.segmented.mini button { padding: 3px 6px; font-size: 10.5px; }
+
+.dig-barras {
+  display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px;
+  height: 92px; align-items: end;
+}
+.dig-barra {
+  border: 0; background: none; padding: 0; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  height: 100%; gap: 2px;
+}
+.dig-barra .col {
+  width: 100%; background: #dfe5ee; border-radius: 3px 3px 0 0;
+  min-height: 2px; transition: height 0.3s;
+}
+.dig-barra.alvo .col { background: var(--up); }
+.dig-barra.sel .col { background: var(--primary); }
+.dig-barra em {
+  font-style: normal; font-size: 8.5px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.dig-barra b {
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.dig-barra.sel b { color: var(--primary); }
+.dig-nota { margin: 6px 0 0; font-size: 10.5px; color: var(--muted); }
+
+.dig-tipos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.dig-tipos button {
+  border: 1px solid var(--border); background: var(--bg); border-radius: 7px;
+  padding: 7px 4px; font-size: 11.5px; cursor: pointer; color: var(--muted);
+}
+.dig-tipos button.on {
+  border-color: var(--primary); background: var(--primary-soft);
+  color: var(--primary); font-weight: 600;
+}
+
+.dig-escolha, .dig-ticks { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+.dig-escolha button, .dig-ticks button {
+  border: 1px solid var(--border); background: var(--bg); border-radius: 6px;
+  padding: 6px 0; font-size: 12px; cursor: pointer; color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.dig-escolha button.on, .dig-ticks button.on {
+  border-color: var(--primary); background: var(--primary); color: #fff; font-weight: 600;
+}
+.dig-escolha button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.dig-resumo {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px; background: var(--surface);
+}
+.dig-frase { margin: 0 0 10px; font-size: 12px; line-height: 1.5; }
+.dig-frase strong { color: var(--primary); }
+.dig-numeros { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.dig-numeros strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+.dig-erro { margin: 0 0 10px; font-size: 11px; color: var(--down); }
+.btn-dig { margin-top: 0; background: var(--primary); width: 100%; }
