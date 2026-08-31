@@ -138,6 +138,9 @@ export interface EstadoMotor {
   latenciaMedia: number | null
 }
 
+/** Tempo sem nenhum tick que ja e motivo para desconfiar da conexao. */
+const SILENCIO_MAXIMO_MS = 25_000
+
 const VAZIO: EstadoMotor = {
   rodando: false, emOperacao: false, operacoes: 0, vitorias: 0, derrotas: 0,
   perdasSeguidas: 0, resultado: 0, movimentado: 0, valorAtual: 0,
@@ -163,6 +166,8 @@ export class MotorTeeds {
   private esperaAtual = 0
   /** Quanto a sequencia de perdas atual ja custou. Zera a cada vitoria. */
   private prejuizoDaSequencia = 0
+  private ultimoTickEm = 0
+  private vigia: ReturnType<typeof setInterval> | null = null
 
   constructor(opts: {
     socket: TeedsSocket
@@ -228,6 +233,7 @@ export class MotorTeeds {
       if (t.epoch && t.epoch === this.ultimoEpoch) return
       this.ultimoEpoch = t.epoch ?? 0
 
+      this.ultimoTickEm = Date.now()
       const d = ultimoDigito(t.quote, t.pipSize || this.pipSize)
       this.estado.digitos = [...this.estado.digitos, d].slice(-120)
       if (!this.estado.rodando || this.estado.emOperacao) { this.emitir(); return }
@@ -244,6 +250,20 @@ export class MotorTeeds {
         this.emitir()
       }
     }, this.socket)
+
+    // Vigia: um socket "meio aberto" nao dispara onclose, e o robo ficaria
+    // esperando um preco que nunca chega. Silencio longo = reconecta.
+    this.ultimoTickEm = Date.now()
+    this.vigia = setInterval(() => {
+      if (!this.estado.rodando) return
+      const silencio = Date.now() - this.ultimoTickEm
+      if (silencio < SILENCIO_MAXIMO_MS) return
+      this.ultimoTickEm = Date.now()
+      this.registrar('Sem preço há um tempo — refazendo a conexão', 'info')
+      this.estado.aguardando = 'sem sinal do mercado — reconectando'
+      this.emitir()
+      this.socket.reconectarAgora()
+    }, 5_000)
   }
 
   /** Carrega os ultimos digitos do ativo para o robo comecar ja abastecido. */
@@ -269,6 +289,7 @@ export class MotorTeeds {
     this.estado.motivoParada = motivo
     this.pararTicks?.(); this.pararTicks = null
     this.pararContrato?.(); this.pararContrato = null
+    if (this.vigia) { clearInterval(this.vigia); this.vigia = null }
     this.registrar(`Robô parado — ${motivo}`, 'parada')
     this.emitir()
   }

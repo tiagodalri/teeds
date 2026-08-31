@@ -159,6 +159,28 @@ export class TeedsSocket {
     this.reconnectTimer = setTimeout(() => { void this.reconectar() }, delay)
   }
 
+  /**
+   * Derruba e refaz a conexao agora.
+   *
+   * Serve para o caso do socket "meio aberto": o navegador ainda acha que
+   * esta ligado, mas nada mais chega. Sem isso o `onclose` nunca dispara e
+   * a espera e infinita.
+   */
+  reconectarAgora(): void {
+    if (this.closedByUser) return
+    if (this.ws) {
+      const antigo = this.ws
+      this.ws = null
+      antigo.onclose = null
+      antigo.onmessage = null
+      antigo.onerror = null
+      try { antigo.close() } catch { /* ja estava fechado */ }
+    }
+    this.stopPing()
+    this.setState('reconnecting')
+    void this.reconectar()
+  }
+
   /** Renova a credencial da URL, quando houver, e tenta de novo. */
   private async reconectar() {
     if (this.closedByUser) return
