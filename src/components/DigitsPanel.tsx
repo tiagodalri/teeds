@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { publicSocket } from '../core/deriv/client'
+import { publicSocket, type TeedsSocket } from '../core/deriv/client'
 import { chanceTeorica, TIPOS_DIGITO, type DigitContract } from '../core/deriv/digits'
 import { useDigits } from '../hooks/useDigits'
 
@@ -11,13 +11,15 @@ interface Props {
   podeOperar: boolean
   logado: boolean
   comprando: boolean
+  /** Conexao da conta: cota com o markup real do app. */
+  socket?: TeedsSocket | null
   onComprar: (tipo: DigitContract, barreira: string | undefined, ticks: number) => void
 }
 
 const JANELAS = [50, 100, 500, 1000]
 
 export function DigitsPanel(props: Props) {
-  const { symbol, pipSize, stake, moeda, podeOperar, logado, comprando, onComprar } = props
+  const { symbol, pipSize, stake, moeda, podeOperar, logado, comprando, socket, onComprar } = props
   const [janela, setJanela] = useState(100)
   const [tipoSel, setTipoSel] = useState<DigitContract>('DIGITUNDER')
   const [digito, setDigito] = useState(5)
@@ -44,7 +46,8 @@ export function DigitsPanel(props: Props) {
       setCotando(true)
       setErroCotacao(null)
       try {
-        const res = await publicSocket.send({
+        const conexao = socket ?? publicSocket
+        const res = await conexao.send({
           proposal: 1, amount: stake, basis: 'stake', currency: moeda,
           contract_type: tipoSel, duration: ticks, duration_unit: 't',
           underlying_symbol: symbol,
@@ -61,7 +64,7 @@ export function DigitsPanel(props: Props) {
       }
     }, 350)
     return () => { vivo = false; clearTimeout(id) }
-  }, [symbol, stake, moeda, tipoSel, digito, ticks, kind.usaDigito])
+  }, [symbol, stake, moeda, tipoSel, digito, ticks, kind.usaDigito, socket])
 
   const lucro = payout !== null ? payout - stake : null
   const chance = chanceTeorica(kind, digito)

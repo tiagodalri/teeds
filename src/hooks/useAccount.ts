@@ -174,7 +174,7 @@ export function useAccount() {
   const isDemo = account?.type === 'demo'
 
   return {
-    status, error, setError,
+    status, error, setError, session,
     accounts, account, accountId, setAccountId, isDemo,
     balance, contracts: [...contracts.values()],
     socket: socketRef.current, connecting,

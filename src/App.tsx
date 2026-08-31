@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
 import { PositionCard } from './components/PositionCard'
 import { DigitsPanel } from './components/DigitsPanel'
+import { ManagementPanel } from './components/ManagementPanel'
+import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { useAccount } from './hooks/useAccount'
@@ -35,6 +37,8 @@ export default function App() {
   const [confirmar, setConfirmar] = useState<'CALL' | 'PUT' | null>(null)
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
+  const [tela, setTela] = useState<'operar' | 'gestao'>('operar')
+  const [payoutBase, setPayoutBase] = useState(19.55)
 
   const activeSymbol = useMemo(() => {
     if (selected) return symbols.find((s) => s.symbol === selected) ?? null
@@ -45,8 +49,25 @@ export default function App() {
   const { candles, loading: loadingCandles } = useCandleSeries(symbolCode, granularity)
   const { tick, direction } = useLiveTick(symbolCode)
 
-  const call = useProposal({ symbol: symbolCode, contractType: 'CALL', amount: stake, duration, durationUnit: 'm' })
-  const put = useProposal({ symbol: symbolCode, contractType: 'PUT', amount: stake, duration, durationUnit: 'm' })
+  const call = useProposal({
+    symbol: symbolCode, contractType: 'CALL', amount: stake,
+    duration, durationUnit: 'm', socket: conta.socket,
+    currency: conta.account?.currency ?? 'USD',
+  })
+  const put = useProposal({
+    symbol: symbolCode, contractType: 'PUT', amount: stake,
+    duration, durationUnit: 'm', socket: conta.socket,
+    currency: conta.account?.currency ?? 'USD',
+  })
+
+  // referencia sem markup, para o simulador do painel de gestao
+  const semMarkup = useProposal({
+    symbol: symbolCode, contractType: 'CALL', amount: 10,
+    duration: 5, durationUnit: 'm', enabled: tela === 'gestao',
+  })
+  useEffect(() => {
+    if (semMarkup.payout) setPayoutBase(semMarkup.payout)
+  }, [semMarkup.payout])
 
   const groups = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -124,6 +145,11 @@ export default function App() {
       <header className="topbar">
         <div className="brand"><span className="mark">T</span><span className="name">Teeds</span></div>
 
+        <nav className="telas">
+          <button className={tela === 'operar' ? 'on' : ''} onClick={() => setTela('operar')}>Operar</button>
+          <button className={tela === 'gestao' ? 'on' : ''} onClick={() => setTela('gestao')}>Gestão</button>
+        </nav>
+
         <div className="topbar-right">
           {conta.status === 'logado' && conta.accounts.length > 0 && (
             <div className="account-box">
@@ -170,6 +196,14 @@ export default function App() {
         </div>
       )}
 
+      {tela === 'gestao' ? (
+        <ManagementPanel
+          session={conta.session}
+          onReautorizar={() => startLogin()}
+          payoutBase={payoutBase}
+          moeda={conta.account?.currency ?? 'USD'}
+        />
+      ) : (
       <div className="layout">
         <aside className="sidebar">
           <input className="search" placeholder="Buscar ativo…" value={search}
@@ -265,6 +299,7 @@ export default function App() {
               podeOperar={podeOperar}
               logado={conta.status === 'logado'}
               comprando={!!comprando && comprando.startsWith('DIGIT')}
+              socket={conta.socket}
               onComprar={comprarDigito}
             />
           )}
@@ -304,6 +339,7 @@ export default function App() {
           </div>
         </aside>
       </div>
+      )}
     </div>
   )
 }

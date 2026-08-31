@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { publicSocket } from '../core/deriv/client'
+import { publicSocket, TeedsSocket } from '../core/deriv/client'
 import { fetchActiveSymbols, subscribeCandles, subscribeTicks } from '../core/deriv/market'
 import type { ActiveSymbol, Candle, ConnectionState, Granularity, Tick } from '../core/deriv/types'
 
@@ -123,10 +123,16 @@ export function useProposal(params: {
   durationUnit: 'm' | 't' | 's' | 'h'
   currency?: string
   enabled?: boolean
+  /** Conexao a usar. Logado: a da conta, que ja inclui o markup do app. */
+  socket?: TeedsSocket | null
 }) {
-  const { symbol, contractType, amount, duration, durationUnit, currency = 'USD', enabled = true } = params
+  const {
+    symbol, contractType, amount, duration, durationUnit,
+    currency = 'USD', enabled = true, socket,
+  } = params
   const [payout, setPayout] = useState<number | null>(null)
   const [askPrice, setAskPrice] = useState<number | null>(null)
+  const [markup, setMarkup] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -135,7 +141,8 @@ export function useProposal(params: {
     setLoading(true)
     setError(null)
     try {
-      const res = await publicSocket.send({
+      const conexao = socket ?? publicSocket
+      const res = await conexao.send({
         proposal: 1,
         amount,
         basis: 'stake',
@@ -148,6 +155,8 @@ export function useProposal(params: {
       const p = res.proposal as Record<string, any> | undefined
       setPayout(p ? Number(p.payout) : null)
       setAskPrice(p ? Number(p.ask_price) : null)
+      const mk = p?.contract_details?.app_markup_amount
+      setMarkup(mk !== undefined && mk !== null ? Number(mk) : null)
     } catch (e) {
       setError((e as Error).message)
       setPayout(null)
@@ -155,12 +164,12 @@ export function useProposal(params: {
     } finally {
       setLoading(false)
     }
-  }, [symbol, contractType, amount, duration, durationUnit, currency, enabled])
+  }, [symbol, contractType, amount, duration, durationUnit, currency, enabled, socket])
 
   useEffect(() => {
     const id = setTimeout(request, 350)
     return () => clearTimeout(id)
   }, [request])
 
-  return { payout, askPrice, error, loading, refresh: request }
+  return { payout, askPrice, markup, error, loading, refresh: request }
 }

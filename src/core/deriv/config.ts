@@ -21,7 +21,7 @@ export const DERIV = {
   /** Endereco de retorno registrado na Deriv - precisa bater exatamente. */
   redirectUri: 'https://tiagodalri.github.io/teeds/',
   /** Escopos concedidos ao app. */
-  scopes: ['trade', 'account_manage'],
+  scopes: ['trade', 'account_manage', 'application_read'],
 } as const
 
 /** Limites publicados pela Deriv, que a Teeds respeita por conta propria. */
