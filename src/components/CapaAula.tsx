@@ -96,12 +96,15 @@ function Chao({ cx, cy, rx }: { cx: number; cy: number; rx: number }) {
 /** O touro da marca, em traço dourado. */
 function Touro({ u, x, y, s, opacity = 1 }: { u: string; x: number; y: number; s: number; opacity?: number }) {
   return (
-    <g transform={`translate(${x} ${y}) scale(${s})`} opacity={opacity}
-      fill="none" stroke={`url(#ouro-${u})`} strokeLinecap="round">
-      <circle cx="50" cy="42" r="19" strokeWidth="5" />
-      <path d="M31 38 C14 34 8 20 10 6 C20 14 30 16 38 24" strokeWidth="6" />
-      <path d="M69 38 C86 34 92 20 90 6 C80 14 70 16 62 24" strokeWidth="6" />
-      <path d="M43 58 q7 6 14 0" strokeWidth="4" />
+    <g transform={`translate(${x} ${y}) scale(${s})`} opacity={opacity}>
+      {/* chifres em lamina, varrendo para fora e para cima como no logotipo */}
+      <path d="M41 27 C27 24 14 14 10 0 C22 10 34 15 46 20 C43 22 41 24 41 27 Z"
+        fill={`url(#ouro-${u})`} />
+      <path d="M59 27 C73 24 86 14 90 0 C78 10 66 15 54 20 C57 22 59 24 59 27 Z"
+        fill={`url(#ouro-${u})`} />
+      <circle cx="50" cy="43" r="17.5" fill="none" stroke={`url(#ouro-${u})`} strokeWidth="4.5" />
+      <path d="M42 59 q8 7 16 0" fill="none" stroke={`url(#ouro-${u})`}
+        strokeWidth="3.5" strokeLinecap="round" />
     </g>
   )
 }
