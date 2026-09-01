@@ -161,7 +161,7 @@ export interface MarkupSimulado {
   pagamentoTotal: number
   comissao: number
   comissaoMedia: number
-  porDia: Array<{ data: string; comissao: number; operacoes: number }>
+  porDia: Array<{ data: string; comissao: number; operacoes: number; pagamentos: number }>
   taxa: number
 }
 
@@ -198,7 +198,7 @@ export async function simularComissao(
     if (pagina === MAX_PAGINAS - 1) truncado = true
   }
 
-  const porDia = new Map<string, { comissao: number; operacoes: number }>()
+  const porDia = new Map<string, { comissao: number; operacoes: number; pagamentos: number }>()
   let comissao = 0
   let movimentado = 0
   let pagamentoTotal = 0
@@ -209,8 +209,12 @@ export async function simularComissao(
     pagamentoTotal += m.pagamento ?? 0
     movimentado += Math.abs(m.valor)
     const dia = new Date(m.quando * 1000).toISOString().slice(0, 10)
-    const atual = porDia.get(dia) ?? { comissao: 0, operacoes: 0 }
-    porDia.set(dia, { comissao: atual.comissao + c, operacoes: atual.operacoes + 1 })
+    const atual = porDia.get(dia) ?? { comissao: 0, operacoes: 0, pagamentos: 0 }
+    porDia.set(dia, {
+      comissao: atual.comissao + c,
+      operacoes: atual.operacoes + 1,
+      pagamentos: atual.pagamentos + (m.pagamento ?? 0),
+    })
   }
 
   return {

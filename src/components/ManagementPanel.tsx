@@ -6,6 +6,9 @@ import {
   type DiaMarkup, type MarkupResumo, type MarkupSimulado,
 } from '../core/deriv/markup'
 import type { TeedsSocket } from '../core/deriv/client'
+import { enviarComissoes } from '../core/teeds/clientes'
+import type { SessaoTeeds } from '../core/teeds/conta'
+import { ClientesAdmin } from './ClientesAdmin'
 import { DerivDesconectada } from './DerivDesconectada'
 
 interface Props {
@@ -20,6 +23,10 @@ interface Props {
   pulso?: number
   entrandoNaDeriv?: boolean
   onConectarDeriv?: () => void
+  /** Sessao da conta Teeds — alimenta o cadastro de clientes no Supabase. */
+  sessaoTeeds: SessaoTeeds | null
+  /** Conta Deriv escolhida, para gravar a comissao no lugar certo. */
+  contaId?: string | null
 }
 
 const PERIODOS = [
@@ -34,7 +41,7 @@ const dinheiro = (v: number, moeda = 'USD') =>
 
 export function ManagementPanel({
   session, socket, isDemo, onReautorizar, payoutBase, moeda, pulso = 0,
-  entrandoNaDeriv = false, onConectarDeriv,
+  entrandoNaDeriv = false, onConectarDeriv, sessaoTeeds, contaId = null,
 }: Props) {
   const [sim, setSim] = useState<MarkupSimulado | null>(null)
   const [simCarregando, setSimCarregando] = useState(false)
@@ -94,7 +101,14 @@ export function ManagementPanel({
       setSimCarregando(true)
       setSimErro(null)
       simularComissao(socket, 0.03, dias)
-        .then((r) => vivo && setSim(r))
+        .then((r) => {
+          if (!vivo) return
+          setSim(r)
+          // o mesmo calculo alimenta o cadastro de clientes — sem custo extra
+          if (sessaoTeeds && contaId) {
+            void enviarComissoes(sessaoTeeds, contaId, isDemo, moeda, r.porDia)
+          }
+        })
         .catch((e: Error) => vivo && setSimErro(e.message))
         .finally(() => vivo && setSimCarregando(false))
     }
@@ -131,6 +145,8 @@ export function ManagementPanel({
           acao="A comissão é calculada sobre as operações da sua conta."
           entrando={entrandoNaDeriv}
           onConectar={() => onConectarDeriv?.()} />
+
+        <ClientesAdmin sessao={sessaoTeeds} dias={dias} />
 
         <section className="ger-bloco convite">
           <div className="convite-texto">
@@ -205,6 +221,8 @@ export function ManagementPanel({
           <strong>{(resumo?.clientes ?? 0).toLocaleString('pt-BR')}</strong>
         </div>
       </div>
+
+      <ClientesAdmin sessao={sessaoTeeds} dias={dias} />
 
       {/* -------- comissão calculada sobre as operações reais -------- */}
       <section className="ger-bloco">

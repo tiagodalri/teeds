@@ -17,6 +17,7 @@ import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { useAccount } from './hooks/useAccount'
+import { registrarContaDeriv, registrarPresenca } from './core/teeds/clientes'
 import { useTeedsAuth } from './hooks/useTeedsAuth'
 import { DerivDesconectada } from './components/DerivDesconectada'
 import type { Granularity } from './core/deriv/types'
@@ -82,6 +83,24 @@ export default function App() {
   useEffect(() => {
     if (semMarkup.payout) setPayoutBase(semMarkup.payout)
   }, [semMarkup.payout])
+
+  // ------------------------------------------------------------------
+  // Cadastro de clientes no Supabase: registra a presenca de quem abriu
+  // a plataforma logado e cada conta Deriv que conectou. Falha em
+  // silencio — o cadastro e util, nunca condicao para operar.
+  // ------------------------------------------------------------------
+  const usuarioTeedsId = teeds.sessao?.usuario.id ?? null
+  useEffect(() => {
+    if (!teeds.sessao) return
+    void registrarPresenca(teeds.sessao)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioTeedsId])
+
+  useEffect(() => {
+    if (!teeds.sessao || !conta.account) return
+    void registrarContaDeriv(teeds.sessao, conta.account)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioTeedsId, conta.account?.accountId])
 
   const groups = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -304,6 +323,8 @@ export default function App() {
       ) : tela === 'gestao' ? (
         <ManagementPanel
           session={conta.session}
+          sessaoTeeds={teeds.sessao}
+          contaId={conta.accountId}
           socket={conta.socket}
           isDemo={conta.isDemo}
           onReautorizar={() => startLogin()}
