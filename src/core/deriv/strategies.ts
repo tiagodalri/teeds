@@ -4,8 +4,10 @@ import type { Estrategia } from './engine'
  * Estrategias que rodam no motor da Teeds.
  *
  * O AG7 nasceu de um arquivo XML do Deriv Bot (SUPERIOR 5 VIP), traduzido
- * bloco a bloco. A regra de entrada mudou depois, a pedido: o filtro de
- * tres digitos <= 6 saiu e o robo passou a entrar em toda operacao.
+ * bloco a bloco. A regra mudou depois, a pedido: o filtro de entrada saiu
+ * (entra em toda operacao) e, em 01/09, a barreira subiu para 6 — o AG7
+ * ganha so nos digitos 7, 8 e 9. O AG2 e o espelho dele nos digitos
+ * baixos: DIGITUNDER 3, ganha so no 0, 1 e 2.
  */
 
 export const SUPERIOR_5: Estrategia = {
@@ -13,10 +15,11 @@ export const SUPERIOR_5: Estrategia = {
   nome: 'Teeds - AG7',
   origem: 'baseado no Deriv Bot SUPERIOR 5 VIP',
   descricao:
-    'Entra em todas as operações. Mantém o valor da entrada enquanto as perdas ' +
-    'seguidas não chegam ao gatilho; a partir daí liga o martingale para recuperar.',
+    'Ganha quando o último dígito é 7, 8 ou 9. Entra em todas as operações; ' +
+    'mantém o valor enquanto as perdas seguidas não chegam ao gatilho e a ' +
+    'partir daí liga o martingale para recuperar.',
   contractType: 'DIGITOVER',
-  barreira: 5,
+  barreira: 6,
   ticks: 1,
 
   // Sem filtro: emenda uma operacao na outra.
@@ -56,6 +59,20 @@ export const SUPERIOR_5: Estrategia = {
   },
 }
 
+/** O espelho do AG7 nos digitos baixos: ganha so no 0, 1 e 2. */
+export const AG_2: Estrategia = {
+  ...SUPERIOR_5,
+  id: 'ag2',
+  nome: 'Teeds - AG2',
+  origem: 'espelho do AG7 nos dígitos baixos',
+  descricao:
+    'Ganha quando o último dígito é 0, 1 ou 2. Entra em todas as operações; ' +
+    'mantém o valor enquanto as perdas seguidas não chegam ao gatilho e a ' +
+    'partir daí liga o martingale para recuperar.',
+  contractType: 'DIGITUNDER',
+  barreira: 3,
+}
+
 /** Variacao conservadora: entra igual, mas a entrada nunca muda. */
 export const SUPERIOR_5_FIXO: Estrategia = {
   ...SUPERIOR_5,
@@ -68,4 +85,4 @@ export const SUPERIOR_5_FIXO: Estrategia = {
   proximoValor: ({ valorAoVencer }) => valorAoVencer,
 }
 
-export const ESTRATEGIAS_LOCAIS: Estrategia[] = [SUPERIOR_5, SUPERIOR_5_FIXO]
+export const ESTRATEGIAS_LOCAIS: Estrategia[] = [SUPERIOR_5, AG_2, SUPERIOR_5_FIXO]

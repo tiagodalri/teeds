@@ -58,26 +58,33 @@ export const CATALOGO: Identidade[] = [
   },
   {
     id: 'superior5', nome: 'Teeds - AG7', chamada: 'O insistente',
-    descricao: 'Entra em todas as operações. Depois de três perdas seguidas, liga o martingale.',
+    descricao: 'Ganha quando o último dígito é 7, 8 ou 9. Depois de três perdas seguidas, liga o martingale.',
     cor: '#e8892b', corSuave: '#fdf0e2', onde: 'teeds',
     emblema: 'M20 8 a12 12 0 1 0 0.1 0 M20 14 a6 6 0 1 0 0.1 0 M20 19 v-3',
-    chance: 40, contrato: 'DIGITOVER',
+    chance: 30, contrato: 'DIGITOVER',
+  },
+  {
+    id: 'ag2', nome: 'Teeds - AG2', chamada: 'O espelho',
+    descricao: 'Ganha quando o último dígito é 0, 1 ou 2. Depois de três perdas seguidas, liga o martingale.',
+    cor: '#0ea5e9', corSuave: '#e6f6fd', onde: 'teeds',
+    emblema: 'M20 8 v16 M20 24 l-6 -6 M20 24 l6 -6 M11 30 h18',
+    chance: 30, contrato: 'DIGITUNDER',
   },
   {
     id: 'superior5fixo', nome: 'AG7 sem martingale', chamada: 'O disciplinado',
     descricao: 'Entra em todas as operações com o valor sempre igual, sem progressão.',
     cor: '#0d9488', corSuave: '#e3f5f3', onde: 'teeds',
     emblema: 'M8 20 h6 M17 20 h6 M26 20 h6 M20 10 v20',
-    chance: 40, contrato: 'DIGITOVER',
+    chance: 30, contrato: 'DIGITOVER',
   },
 ]
 
 /**
  * Robos oferecidos hoje na vitrine.
- * Por ora so o Teeds - AG7; os demais seguem no catalogo para leitura do
- * historico, mas nao podem mais ser criados.
+ * AG7 (digitos altos) e AG2 (digitos baixos); os demais seguem no catalogo
+ * para leitura do historico, mas nao podem mais ser criados.
  */
-export const EM_OFERTA = ['superior5'] as const
+export const EM_OFERTA = ['superior5', 'ag2'] as const
 
 export const IDENTIDADES: Identidade[] = CATALOGO.filter((i) =>
   (EM_OFERTA as readonly string[]).includes(i.id),

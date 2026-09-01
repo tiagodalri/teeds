@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { TeedsSocket } from '../core/deriv/client'
-import { MotorTeeds, type ConfigEstrategia, type EstadoMotor } from '../core/deriv/engine'
+import { MotorTeeds, type ConfigEstrategia, type EstadoMotor, type Estrategia } from '../core/deriv/engine'
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { RobotLive } from './RobotLive'
@@ -41,12 +41,18 @@ export function LocalRobotPanel({
   socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
   onRemover, titulo,
 }: Props) {
-  const estrategia = ESTRATEGIAS_LOCAIS.find((e) => e.id === identidade.id) ?? ESTRATEGIAS_LOCAIS[0]
+  // O cartao escolhido na vitrine dita a estrategia deste bloco…
+  const daVitrine = ESTRATEGIAS_LOCAIS.find((e) => e.id === identidade.id) ?? ESTRATEGIAS_LOCAIS[0]
+  // …mas uma sessao em andamento (ou parada na cabine) fica presa a
+  // estrategia com que foi ligada: trocar de cartao nao muda um robo vivo.
+  const sessaoRef = useRef<{ estrategia: Estrategia; ident: Identidade } | null>(null)
   const [cfg, setCfg] = useState<ConfigEstrategia>(PADRAO)
   const [symbol, setSymbol] = useState(symbolPadrao ?? '1HZ10V')
   const [estado, setEstado] = useState<EstadoMotor | null>(null)
   const [preparando, setPreparando] = useState(false)
   const motorRef = useRef<MotorTeeds | null>(null)
+  const estrategia = estado && sessaoRef.current ? sessaoRef.current.estrategia : daVitrine
+  const ident = estado && sessaoRef.current ? sessaoRef.current.ident : identidade
 
   useEffect(() => { if (symbolPadrao) setSymbol(symbolPadrao) }, [symbolPadrao])
   useEffect(() => () => { motorRef.current?.desligar('página fechada') }, [])
@@ -95,9 +101,11 @@ export function LocalRobotPanel({
     setPreparando(false)
     setCfg(config)
     setSymbol(ativo)
+    // a sessao nasce com o cartao escolhido AGORA na vitrine, e fica com ele
+    sessaoRef.current = { estrategia: daVitrine, ident: identidade }
     const pip = symbols.find((s) => s.symbol === ativo)?.pipSize ?? 2
     const motor = new MotorTeeds({
-      socket, estrategia, config, symbol: ativo, moeda, pipSize: pip,
+      socket, estrategia: daVitrine, config, symbol: ativo, moeda, pipSize: pip,
     })
     motorRef.current = motor
     motor.escutar(setEstado)
@@ -145,7 +153,7 @@ export function LocalRobotPanel({
         {preparando && (
           <RobotSetup
             identidade={identidade}
-            nomeEstrategia={estrategia.nome}
+            nomeEstrategia={daVitrine.nome}
             symbols={symbols}
             symbolInicial={symbol}
             configInicial={cfg}
@@ -162,7 +170,7 @@ export function LocalRobotPanel({
   // ------------------------------------------------------------ com sessão
   return (
     <div className="cabine-caixa"
-      style={{ ['--robo' as any]: identidade.cor, ['--robo-suave' as any]: identidade.corSuave }}>
+      style={{ ['--robo' as any]: ident.cor, ['--robo-suave' as any]: ident.corSuave }}>
       <RobotLive
         estado={estado}
         config={cfg}
@@ -171,7 +179,7 @@ export function LocalRobotPanel({
         ativo={nomeAtivo}
         titulo={titulo}
         regra={regra}
-        cor={identidade.cor}
+        cor={ident.cor}
         ganhaCom={ganhaCom}
         parametros={parametros}
         conexao={conexao}
@@ -183,7 +191,7 @@ export function LocalRobotPanel({
       {preparando && (
         <RobotSetup
           identidade={identidade}
-          nomeEstrategia={estrategia.nome}
+          nomeEstrategia={daVitrine.nome}
           symbols={symbols}
           symbolInicial={symbol}
           configInicial={cfg}
