@@ -215,7 +215,7 @@ button, input { font: inherit; color: inherit; }
 }
 .btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.06); }
 .btn:active:not(:disabled) { transform: translateY(0); }
-.btn:disabled { background: var(--desativado); color: var(--bg); cursor: not-allowed; transform: none; }
+.btn:disabled { background: var(--desativado); color: var(--muted); cursor: not-allowed; transform: none; }
 
 /* a acao principal tem a cor da direcao — como nas grandes mesas */
 .quote-up .btn {
@@ -227,7 +227,7 @@ button, input { font: inherit; color: inherit; }
   box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--down) 75%, transparent);
 }
 .quote-up .btn:disabled, .quote-down .btn:disabled {
-  background: var(--desativado); color: var(--bg); box-shadow: none;
+  background: var(--desativado); color: var(--muted); box-shadow: none;
 }
 
 .note {
