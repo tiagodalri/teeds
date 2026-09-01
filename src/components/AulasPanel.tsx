@@ -93,47 +93,60 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
   return (
     <div className="ger aulas">
       <div className="aulas-capa">
-        <div>
-          <span className="rot">Sala de aula</span>
+        <div className="aulas-capa-texto">
+          <span className="aulas-selo">Sala de aula</span>
           <h2>Aprenda a usar a Teeds{nome ? `, ${nome.split(' ')[0]}` : ''}</h2>
-          <p>
-            Da conta na corretora ao primeiro robô ligado, uma aula de cada vez.
-            Seu progresso fica guardado.
-          </p>
+          <p>Da conta na corretora ao primeiro robô ligado, uma aula de cada vez.</p>
           <div className="aulas-progresso">
             <div className="aulas-barra">
               <i style={{ width: `${(assistidas / aulas.length) * 100}%` }} />
             </div>
-            <span>{assistidas} de {aulas.length} aulas assistidas</span>
+            <span>{assistidas} de {aulas.length} assistidas</span>
           </div>
-          {proxima && (
+          {proxima ? (
             <button className="aulas-continuar" onClick={() => abrir(proxima)}>
-              ▶ {assistidas > 0 ? 'Continuar' : 'Começar'}: Aula {proxima.numero} — {proxima.titulo}
+              <i>▶</i> {assistidas > 0 ? 'Continuar' : 'Começar'} — Aula {proxima.numero}
             </button>
+          ) : (
+            <span className="aulas-embreve-selo">As primeiras aulas chegam em breve</span>
           )}
+        </div>
+        <div className="aulas-capa-arte" aria-hidden>
+          <img src="teeds-marca.png" alt="" />
+        </div>
+        <div className="aulas-capa-numeros" aria-hidden>
+          <span>{MODULOS.length}</span><em>trilhas</em>
+          <span>{aulas.length}</span><em>aulas</em>
         </div>
       </div>
 
-      {MODULOS.map((m) => {
+      {MODULOS.map((m, mi) => {
         const doModulo = aulas.filter((a) => a.modulo.id === m.id)
         return (
           <section key={m.id} className="aulas-modulo" style={{ ['--aula' as any]: m.cor }}>
             <div className="aulas-modulo-topo">
-              <h3>{m.titulo}</h3>
-              <p>{m.chamada}</p>
+              <span className="aulas-trilha-num">{String(mi + 1).padStart(2, '0')}</span>
+              <div>
+                <h3>{m.titulo}</h3>
+                <p>{m.chamada}</p>
+              </div>
+              <span className="aulas-conta">
+                {doModulo.filter((a) => vistas.has(a.id)).length}/{doModulo.length}
+              </span>
             </div>
             <div className="aulas-fileira">
               {doModulo.map((a) => (
                 <button key={a.id} className={`aula-cartao ${a.video ? '' : 'sem'}`}
                   onClick={() => abrir(a)} disabled={!a.video}>
                   <span className="aula-cartao-capa">
-                    <b>{a.numero}</b>
+                    <b className="aula-capa-num">{String(a.numero).padStart(2, '0')}</b>
                     {vistas.has(a.id) && <i className="aula-vista">✓</i>}
-                    {!a.video && <em>em breve</em>}
+                    {!a.video && <em>Em breve</em>}
                     {a.video && <span className="aula-play">▶</span>}
+                    {a.duracao && <span className="aula-dur">{a.duracao}</span>}
                   </span>
                   <span className="aula-cartao-corpo">
-                    <span className="aula-num">Aula {a.numero}{a.duracao ? ` · ${a.duracao}` : ''}</span>
+                    <span className="aula-num">Aula {a.numero}</span>
                     <b>{a.titulo}</b>
                     <p>{a.descricao}</p>
                   </span>
