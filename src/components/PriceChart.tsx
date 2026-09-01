@@ -147,7 +147,10 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
 
       // --- serie
       if (mode === 'candles') {
-        const bodyW = Math.max(1, Math.min(14, stepX * 0.66))
+        // O corpo acompanha o passo: com zoom, velas largas e vao pequeno —
+        // um teto fixo aqui deixava o grafico cheio de palitos espacados.
+        const bodyW = Math.max(1, Math.min(stepX * 0.72, stepX - 3))
+        const pavio = Math.max(1, Math.min(2.5, bodyW * 0.1))
         for (let i = 0; i < items.length; i++) {
           const c = items[i]
           const up = c.close >= c.open
@@ -155,7 +158,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
           const x = toX(i)
           ctx.strokeStyle = color
           ctx.fillStyle = color
-          ctx.lineWidth = 1
+          ctx.lineWidth = pavio
           // pavio
           ctx.beginPath()
           ctx.moveTo(Math.round(x) + 0.5, toY(c.high))
