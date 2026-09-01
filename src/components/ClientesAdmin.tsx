@@ -129,6 +129,7 @@ export function ClientesAdmin({ sessao, dias }: { sessao: SessaoTeeds | null; di
             <div className="cli-linha cli-cabecalho">
               <span>Cliente</span>
               <span>Contas Deriv</span>
+              <span>Saldo</span>
               <span>Comissão real</span>
               <span>Demo</span>
               <span>Visto por último</span>
@@ -149,6 +150,16 @@ export function ClientesAdmin({ sessao, dias }: { sessao: SessaoTeeds | null; di
                           </i>
                         ))
                       : <em>nenhuma</em>}
+                  </span>
+                  <span className="cli-saldos">
+                    {extra && extra.contas.length > 0
+                      ? extra.contas.map((k) => (
+                          <em key={k.contaId} className={k.tipo === 'demo' ? '' : 'cli-saldo-real'}
+                            title={`${k.contaId} · visto ${quando(k.vistaEm)}`}>
+                            {k.saldo === null ? '—' : dinheiro(k.saldo, k.moeda ?? 'USD')}
+                          </em>
+                        ))
+                      : <em>—</em>}
                   </span>
                   <span className="cli-num">{dinheiro(extra?.real ?? 0)}</span>
                   <span className="cli-num cli-demo">{dinheiro(extra?.demo ?? 0)}</span>

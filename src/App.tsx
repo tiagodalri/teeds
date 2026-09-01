@@ -5,6 +5,7 @@ import { DigitsPanel } from './components/DigitsPanel'
 import { ManagementPanel } from './components/ManagementPanel'
 import { RobotsPanel } from './components/RobotsPanel'
 import { OperationsPanel } from './components/OperationsPanel'
+import { AulasPanel } from './components/AulasPanel'
 import { AccountSwitcher } from './components/AccountSwitcher'
 import { UserMenu } from './components/UserMenu'
 import { ProfilePanel } from './components/ProfilePanel'
@@ -59,7 +60,7 @@ export default function App() {
   const [confirmar, setConfirmar] = useState<'CALL' | 'PUT' | null>(null)
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
-  const [tela, setTela] = useState<'operar' | 'robos' | 'operacoes' | 'gestao'>('operar')
+  const [tela, setTela] = useState<'operar' | 'robos' | 'operacoes' | 'gestao' | 'aulas'>('operar')
   const [payoutBase, setPayoutBase] = useState(19.55)
 
   const activeSymbol = useMemo(() => {
@@ -232,6 +233,7 @@ export default function App() {
           <button className={tela === 'robos' ? 'on' : ''} onClick={() => setTela('robos')}>Robôs</button>
           <button className={tela === 'operacoes' ? 'on' : ''} onClick={() => setTela('operacoes')}>Operações</button>
           <button className={tela === 'gestao' ? 'on' : ''} onClick={() => setTela('gestao')}>Gestão</button>
+          <button className={tela === 'aulas' ? 'on' : ''} onClick={() => setTela('aulas')}>Aulas</button>
         </nav>
 
         <div className="topbar-right">
@@ -286,6 +288,9 @@ export default function App() {
       {verPerfil && teeds.sessao && (
         <ProfilePanel
           sessao={teeds.sessao}
+          contas={conta.accounts}
+          derivConectada={conta.status === 'logado'}
+          onConectarDeriv={conta.login}
           onAtualizar={teeds.atualizarUsuario}
           onFechar={() => setVerPerfil(false)} />
       )}
@@ -333,6 +338,8 @@ export default function App() {
           entrandoNaDeriv={conta.status === 'entrando'}
           onConectarDeriv={conta.login}
         />
+      ) : tela === 'aulas' ? (
+        <AulasPanel nome={teeds.usuario?.nome} />
       ) : tela === 'gestao' ? (
         <ManagementPanel
           session={conta.session}

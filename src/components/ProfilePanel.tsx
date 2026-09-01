@@ -3,11 +3,16 @@ import {
   atualizarPerfil, formatarCPF, formatarTelefone, telefoneValido, trocarSenha,
   type SessaoTeeds, type Usuario,
 } from '../core/teeds/conta'
+import type { TradingAccount } from '../core/deriv/account'
 
 interface Props {
   sessao: SessaoTeeds
   onAtualizar: (u: Usuario) => void
   onFechar: () => void
+  /** Contas Deriv conectadas nesta sessao, para a pessoa se enxergar inteira. */
+  contas?: TradingAccount[]
+  derivConectada?: boolean
+  onConectarDeriv?: () => void
 }
 
 const iniciais = (nome: string, email: string) => {
@@ -26,7 +31,7 @@ const desde = (iso: string) => {
 }
 
 /** A conta da Teeds, por dentro. O que dá para mudar, muda aqui. */
-export function ProfilePanel({ sessao, onAtualizar, onFechar }: Props) {
+export function ProfilePanel({ sessao, onAtualizar, onFechar, contas = [], derivConectada = false, onConectarDeriv }: Props) {
   const u = sessao.usuario
   const [nome, setNome] = useState(u.nome ?? '')
   const [telefone, setTelefone] = useState(formatarTelefone(u.telefone ?? ''))
@@ -104,6 +109,38 @@ export function ProfilePanel({ sessao, onAtualizar, onFechar }: Props) {
               onClick={salvarDados}>
               {salvando ? 'salvando…' : 'Salvar dados'}
             </button>
+          </section>
+
+          <div className="perfil-linha" />
+
+          <section>
+            <span className="rot">Sua corretora</span>
+            {derivConectada && contas.length > 0 ? (
+              <div className="perfil-contas">
+                {contas.map((c) => (
+                  <div key={c.accountId} className="perfil-conta">
+                    <i className={c.type === 'demo' ? 'demo' : 'real'}>
+                      {c.type === 'demo' ? 'demo' : 'real'}
+                    </i>
+                    <b>{c.accountId}</b>
+                    <span>
+                      {c.currency}{' '}
+                      {c.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="perfil-contas">
+                <p className="perfil-nota">
+                  Nenhuma conta Deriv conectada agora. É ela que compra e vende —
+                  a conta Teeds só abre a plataforma.
+                </p>
+                {onConectarDeriv && (
+                  <button className="perfil-btn" onClick={onConectarDeriv}>Conectar minha Deriv</button>
+                )}
+              </div>
+            )}
           </section>
 
           <div className="perfil-linha" />
