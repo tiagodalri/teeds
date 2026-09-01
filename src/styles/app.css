@@ -12,8 +12,33 @@
   --up-soft: #e8f6ee;
   --down: #e5484d;
   --down-soft: #fdeced;
+  --desativado: #cfd6e2;
+  --trilho: #dfe5ee;
   --radius: 10px;
   --shadow: 0 1px 2px rgba(26, 34, 51, 0.04), 0 8px 24px rgba(26, 34, 51, 0.06);
+  color-scheme: light;
+}
+
+/* ------------------------------ modo escuro ------------------------------
+   As mesmas variaveis, com a noite ligada. Quem usa var() nao precisa
+   saber que o tema mudou. A cabine do robo ja era escura e continua igual. */
+:root[data-tema='escuro'] {
+  --bg: #0f1420;
+  --surface: #151c2c;
+  --surface-alt: #121a29;
+  --border: #232d45;
+  --text: #e6eaf3;
+  --muted: #8b96ad;
+  --primary: #6c89ff;
+  --primary-soft: #1c2542;
+  --up: #1fc06a;
+  --up-soft: rgba(31, 192, 106, 0.14);
+  --down: #f0555a;
+  --down-soft: rgba(240, 85, 90, 0.16);
+  --desativado: #333d54;
+  --trilho: #27314a;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -84,7 +109,7 @@ button, input { font: inherit; color: inherit; }
 .sym-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .dot.on { background: var(--up); }
-.dot.off { background: #d3d9e3; }
+.dot.off { background: var(--desativado); }
 .hint { padding: 12px; color: var(--muted); font-size: 13px; }
 .hint.error { color: var(--down); }
 
@@ -177,7 +202,7 @@ button, input { font: inherit; color: inherit; }
   background: var(--text); color: #fff; font-weight: 600; font-size: 13px;
   cursor: pointer;
 }
-.btn:disabled { background: #cfd6e2; cursor: not-allowed; }
+.btn:disabled { background: var(--desativado); cursor: not-allowed; }
 
 .note {
   margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);
@@ -309,7 +334,7 @@ button, input { font: inherit; color: inherit; }
 .pos-dados dd em { font-style: normal; font-weight: 500; font-size: 10.5px; }
 
 .btn-vender { margin-top: 0; background: var(--primary); }
-.btn-vender:disabled { background: #cfd6e2; }
+.btn-vender:disabled { background: var(--desativado); }
 
 /* ------------------------------------------------------------- dígitos */
 .modo-troca {
@@ -363,7 +388,7 @@ button, input { font: inherit; color: inherit; }
   height: 100%; gap: 2px;
 }
 .dig-barra .col {
-  width: 100%; background: #dfe5ee; border-radius: 3px 3px 0 0;
+  width: 100%; background: var(--trilho); border-radius: 3px 3px 0 0;
   min-height: 2px; transition: height 0.3s;
 }
 .dig-barra.alvo .col { background: var(--up); }
@@ -1330,7 +1355,7 @@ button, input { font: inherit; color: inherit; }
 .config-robo .btn-parar::before {
   border: 0; width: 9px; height: 9px; background: currentColor; border-radius: 1px;
 }
-.config-robo .btn-ligar:disabled { background: #cfd6e2; }
+.config-robo .btn-ligar:disabled { background: var(--desativado); }
 .config-robo .rob-linha input:focus, .config-robo .rob-linha select:focus { border-color: var(--robo); }
 .config-robo .rob-estrat button.on { border-color: var(--robo); background: var(--robo-suave); }
 
@@ -2153,3 +2178,15 @@ button, input { font: inherit; color: inherit; }
   .cli-linha { grid-template-columns: 1.8fr 1.2fr 1fr; }
   .cli-linha > :nth-child(4), .cli-linha > :nth-child(5) { display: none; }
 }
+
+
+/* ------------------------- botao claro/escuro ------------------------- */
+
+.tema-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); color: var(--muted); cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tema-btn:hover { color: var(--text); border-color: var(--muted); }
