@@ -3,6 +3,7 @@ import {
   aulasVistas, marcarVista, MODULOS, playerDoVideo, todasAsAulas,
   type AulaNumerada,
 } from '../core/teeds/aulas'
+import { CapaAula } from './CapaAula'
 
 /**
  * A sala de aula da Teeds, no estilo de vitrine de filmes: trilhas por
@@ -50,7 +51,10 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
               <iframe src={player.src} title={aberta.titulo} allowFullScreen
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
             ) : (
-              <div className="aula-embreve-palco">em breve</div>
+              <div className="aula-embreve-palco">
+                <CapaAula aula={aberta.id} cor={aberta.modulo.cor} />
+                <span>em breve</span>
+              </div>
             )}
           </div>
 
@@ -139,7 +143,7 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
                 <button key={a.id} className={`aula-cartao ${a.video ? '' : 'sem'}`}
                   onClick={() => abrir(a)} disabled={!a.video}>
                   <span className="aula-cartao-capa">
-                    <b className="aula-capa-num">{String(a.numero).padStart(2, '0')}</b>
+                    <CapaAula aula={a.id} cor={m.cor} />
                     {vistas.has(a.id) && <i className="aula-vista">✓</i>}
                     {!a.video && <em>Em breve</em>}
                     {a.video && <span className="aula-play">▶</span>}

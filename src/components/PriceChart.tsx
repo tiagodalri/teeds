@@ -85,7 +85,22 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
   )
 
   const stepX = view.items.length ? plot.w / view.items.length : 0
+
+  // --- batimento do tempo real: guarda o instante do ultimo tick para o
+  // pulso no grafico. So refs: nada disso re-renderiza o React.
+  const ultimoTickRef = useRef(0)
+  const precoAnteriorRef = useRef<number | null>(null)
+  const frameRef = useRef(0)
   const toX = useCallback((i: number) => plot.x + i * stepX + stepX / 2, [plot, stepX])
+
+  const ultimoFechamento = view.items.length ? view.items[view.items.length - 1].close : null
+  useEffect(() => {
+    if (ultimoFechamento === null) return
+    if (precoAnteriorRef.current !== null && ultimoFechamento !== precoAnteriorRef.current) {
+      ultimoTickRef.current = performance.now()
+    }
+    precoAnteriorRef.current = ultimoFechamento
+  }, [ultimoFechamento])
 
   // ------------------------------------------------------------ desenho
   useEffect(() => {
@@ -208,6 +223,39 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
       ctx.lineTo(plot.x + plot.w, Math.round(yLast) + 0.5)
       ctx.stroke()
       ctx.restore()
+
+      // --- o mercado respira: ponto vivo no ultimo preco, com uma onda
+      // que se expande a cada tick novo. Enquanto a onda dura, o desenho
+      // se agenda de novo — passada a onda, volta a pintar so quando os
+      // dados mudam.
+      const corViva = mode === 'candles' ? (lastUp ? T.up : T.down) : T.primary
+      const xLast = toX(items.length - 1)
+      const idade = performance.now() - ultimoTickRef.current
+      if (idade < 900) {
+        const t = idade / 900
+        ctx.beginPath()
+        ctx.arc(xLast, yLast, 4 + t * 16, 0, Math.PI * 2)
+        ctx.strokeStyle = corViva
+        ctx.globalAlpha = 0.55 * (1 - t)
+        ctx.lineWidth = 2
+        ctx.stroke()
+        ctx.globalAlpha = 1
+      }
+      ctx.beginPath()
+      ctx.arc(xLast, yLast, 3.5, 0, Math.PI * 2)
+      ctx.fillStyle = corViva
+      ctx.fill()
+      ctx.beginPath()
+      ctx.arc(xLast, yLast, 6, 0, Math.PI * 2)
+      ctx.strokeStyle = corViva
+      ctx.globalAlpha = 0.3
+      ctx.lineWidth = 1.5
+      ctx.stroke()
+      ctx.globalAlpha = 1
+      if (idade < 900) {
+        cancelAnimationFrame(frameRef.current)
+        frameRef.current = requestAnimationFrame(pintar)
+      }
 
       // etiqueta do preco atual
       const label = formatPrice(last.close, pipSize)
@@ -339,8 +387,9 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
       }
     }
 
-    const frame = requestAnimationFrame(pintar)
-    return () => cancelAnimationFrame(frame)
+    cancelAnimationFrame(frameRef.current)
+    frameRef.current = requestAnimationFrame(pintar)
+    return () => cancelAnimationFrame(frameRef.current)
   }, [size, view.items, range, plot, mode, pipSize, cursor, stepX, toX, toY, markers])
 
   // ------------------------------------------------------------ interacao
