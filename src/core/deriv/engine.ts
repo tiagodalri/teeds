@@ -59,6 +59,8 @@ export interface Estrategia {
     perdasSeguidas: number
     /** Soma das perdas da sequencia atual, em positivo. */
     prejuizoDaSequencia: number
+    /** Lucro esperado para cada 1 unidade apostada, já com margem de segurança. */
+    retornoLiquidoPorUnidade: number
     config: ConfigEstrategia
   }) => number
 }
@@ -184,6 +186,8 @@ export class MotorTeeds {
   private esperaAtual = 0
   /** Quanto a sequencia de perdas atual ja custou. Zera a cada vitoria. */
   private prejuizoDaSequencia = 0
+  /** Atualizado em cada compra com o payout efetivamente contratado. */
+  private retornoLiquidoPorUnidade = 1
   private ultimoTickEm = 0
   private contratoDesde = 0
   private valorEmCurso = 0
@@ -390,6 +394,9 @@ export class MotorTeeds {
         comprouEm: Date.now(),
         latencia,
       }
+      const custo = recibo.buyPrice || valor
+      const retorno = custo > 0 ? (recibo.payout - custo) / custo : 0
+      if (Number.isFinite(retorno) && retorno > 0) this.retornoLiquidoPorUnidade = retorno
       this.falhasSeguidas = 0
       this.estado.falha = null
       this.registrar(
@@ -524,6 +531,7 @@ export class MotorTeeds {
         lucro: c.profit,
         perdasSeguidas: this.estado.perdasSeguidas,
         prejuizoDaSequencia: this.prejuizoDaSequencia,
+        retornoLiquidoPorUnidade: this.retornoLiquidoPorUnidade,
         config: this.config,
       })
 

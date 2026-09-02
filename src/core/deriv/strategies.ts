@@ -49,13 +49,19 @@ export const SUPERIOR_5: Estrategia = {
     }
   },
 
-  proximoValor: ({ ganhou, valorAoVencer, perdasSeguidas, prejuizoDaSequencia, config }) => {
+  proximoValor: ({
+    ganhou, valorAoVencer, perdasSeguidas, prejuizoDaSequencia,
+    retornoLiquidoPorUnidade, config,
+  }) => {
     // ganhou: a sequencia fecha e tudo volta ao valor base
     if (ganhou) return valorAoVencer
     // ainda dentro das entradas de valor fixo
     if (perdasSeguidas < config.galeApos) return valorAoVencer
-    // martingale: o valor base mais o que a sequencia inteira ja custou
-    return valorAoVencer + prejuizoDaSequencia * config.fatorGale
+    // Recuperação calibrada pelo payout realmente comprado. O desconto de 3%
+    // absorve pequenas oscilações do retorno entre um contrato e o seguinte.
+    const retornoSeguro = Math.max(0.01, retornoLiquidoPorUnidade * 0.97)
+    const lucroMinimo = Math.max(0.01, valorAoVencer * config.fatorGale)
+    return Math.ceil(((prejuizoDaSequencia + lucroMinimo) / retornoSeguro) * 100) / 100
   },
 }
 

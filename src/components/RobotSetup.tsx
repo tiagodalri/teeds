@@ -107,6 +107,9 @@ function sanear(cfg: ConfigEstrategia, padrao: ConfigEstrategia): ConfigEstrateg
     if (!Number.isFinite(v) || v < min || v > max) limpo[chave] = padrao[chave]
   }
   if (limpo.valorMaximo < limpo.valorAoVencer) limpo.valorMaximo = limpo.valorAoVencer
+  // Migra a configuração antiga (70%/100% do prejuízo) para a nova margem
+  // pequena sobre a entrada base, evitando manter uma progressão excessiva.
+  if (limpo.fatorGale > 0.25) limpo.fatorGale = 0.05
   return limpo
 }
 
@@ -154,7 +157,7 @@ export function RobotSetup({
     {
       chave: 'gale',
       titulo: 'Quando ele deve tentar recuperar?',
-      ajuda: `Ele entra em todas as operações. Até ${cfg.galeApos} ${cfg.galeApos === 1 ? 'perda seguida' : 'perdas seguidas'} a entrada continua no valor base; a partir daí o martingale soma o prejuízo da sequência à próxima entrada. O fator diz quanto desse prejuízo ele persegue de uma vez.`,
+      ajuda: `Ele entra em todas as operações. Até ${cfg.galeApos} ${cfg.galeApos === 1 ? 'perda seguida' : 'perdas seguidas'} a entrada continua no valor base; a partir daí a Teeds calcula somente o necessário para recuperar a sequência e buscar uma pequena margem de lucro.`,
       valido: cfg.valorMaximo >= cfg.valorAoVencer,
       corpo: (
         <>
@@ -162,17 +165,17 @@ export function RobotSetup({
             <button className={cfg.fatorGale === 0 ? 'on' : ''} onClick={() => muda({ fatorGale: 0 })}>
               Nunca aumentar
             </button>
-            <button className={cfg.fatorGale === 0.7 ? 'on' : ''} onClick={() => muda({ fatorGale: 0.7 })}>
-              Suave (0,7)
+            <button className={cfg.fatorGale === 0.05 ? 'on' : ''} onClick={() => muda({ fatorGale: 0.05 })}>
+              Mínimo (+5%)
             </button>
-            <button className={cfg.fatorGale === 1 ? 'on' : ''} onClick={() => muda({ fatorGale: 1 })}>
-              Cheio (1,0)
+            <button className={cfg.fatorGale === 0.1 ? 'on' : ''} onClick={() => muda({ fatorGale: 0.1 })}>
+              Leve (+10%)
             </button>
           </div>
           <div className="qz-dupla">
             <label>
-              <span className="rot">Fator</span>
-              <Numero valor={cfg.fatorGale} passo={0.1} maximo={3}
+              <span className="rot">Margem sobre a entrada base</span>
+              <Numero valor={cfg.fatorGale} passo={0.01} maximo={0.25}
                 aoMudar={(n) => muda({ fatorGale: n })} />
             </label>
             <label>
@@ -233,7 +236,7 @@ export function RobotSetup({
               <dd>
                 {cfg.fatorGale === 0
                   ? 'desligado — entrada sempre igual'
-                  : `liga na ${cfg.galeApos}ª perda seguida, recuperando ${(cfg.fatorGale * 100).toFixed(0)}%, até ${din(cfg.valorMaximo, moeda)}`}
+                  : `liga na ${cfg.galeApos}ª perda seguida, recupera a sequência e busca mais ${(cfg.fatorGale * 100).toFixed(0)}% da entrada base, até ${din(cfg.valorMaximo, moeda)}`}
               </dd>
             </div>
             <div><dt>Para se ganhar</dt><dd>{din(cfg.takeProfit, moeda)}</dd></div>

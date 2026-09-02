@@ -30,7 +30,7 @@ interface Props {
 const PADRAO: ConfigEstrategia = {
   valorInicial: 0.35,
   valorAoVencer: 0.35,
-  fatorGale: 0.7,
+  fatorGale: 0.05,
   galeApos: 3,
   valorMaximo: 10,
   takeProfit: 5,
@@ -129,7 +129,7 @@ export function LocalRobotPanel({
       rot: 'Martingale',
       valor: cfg.fatorGale === 0
         ? 'desligado'
-        : `${(cfg.fatorGale * 100).toFixed(0)}% após ${cfg.galeApos} perdas`,
+        : `recuperação exata + ${(cfg.fatorGale * 100).toFixed(0)}% da entrada base`,
     },
     { rot: 'Teto', valor: din(cfg.valorMaximo, moeda) },
     { rot: 'Para se ganhar', valor: din(cfg.takeProfit, moeda) },
