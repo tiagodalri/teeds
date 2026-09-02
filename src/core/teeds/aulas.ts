@@ -29,6 +29,9 @@ export interface Modulo {
   aulas: Aula[]
 }
 
+/** Placeholder oficial usado somente enquanto os vídeos Teeds não chegaram. */
+export const VIDEO_DEMONSTRACAO = 'https://www.youtube.com/watch?v=M7lc1UVf-VE'
+
 export const MODULOS: Modulo[] = [
   {
     id: 'comeco',
@@ -160,7 +163,12 @@ export function todasAsAulas(): AulaNumerada[] {
   const lista: AulaNumerada[] = []
   let n = 1
   for (const m of MODULOS) {
-    for (const a of m.aulas) lista.push({ ...a, numero: n++, modulo: m })
+    for (const a of m.aulas) lista.push({
+      ...a,
+      video: a.video || VIDEO_DEMONSTRACAO,
+      duracao: a.duracao || 'Vídeo demonstrativo',
+      numero: n++, modulo: m,
+    })
   }
   return lista
 }

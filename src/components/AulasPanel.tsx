@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  aulasVistas, marcarVista, MODULOS, playerDoVideo, todasAsAulas,
+  aulasVistas, marcarVista, MODULOS, playerDoVideo, todasAsAulas, VIDEO_DEMONSTRACAO,
   type AulaNumerada,
 } from '../core/teeds/aulas'
 
@@ -96,6 +96,7 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
             <span className="aula-num">Aula {aberta.numero}</span>
             <h2>{aberta.titulo}</h2>
             <p>{aberta.descricao}</p>
+            {aberta.video === VIDEO_DEMONSTRACAO && <span className="aula-demo">Demonstração temporária · o vídeo desta aula será substituído</span>}
           </div>
           <div className="aula-acoes">
             <button className={`aula-check ${vista ? 'on' : ''}`} onClick={() => alternarVista(aberta.id)}>
