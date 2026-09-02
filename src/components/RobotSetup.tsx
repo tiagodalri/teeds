@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ConfigEstrategia } from '../core/deriv/engine'
+import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
 import type { Identidade } from '../core/deriv/branding'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { Emblema } from './RobotCard'
@@ -119,34 +120,17 @@ export function RobotSetup({
   const [cfg, setCfg] = useState<ConfigEstrategia>(
     sanear({ ...configInicial, ...guardado.cfg }, configInicial),
   )
-  const [symbol, setSymbol] = useState(
-    symbols.some((s) => s.symbol === guardado.symbol) ? guardado.symbol! : symbolInicial,
-  )
+  // O ativo nao se escolhe: e o da casa. `symbolInicial` continua na
+  // assinatura para quem ja chama o componente, mas nao manda mais nada.
+  void symbolInicial
+  const symbol = ATIVO_DOS_ROBOS
   const [passo, setPasso] = useState(0)
   const [confirmaReal, setConfirmaReal] = useState(false)
 
-  const abertos = symbols.filter((s) => s.isOpen)
   const nomeAtivo = symbols.find((s) => s.symbol === symbol)?.name ?? symbol
   const muda = (p: Partial<ConfigEstrategia>) => setCfg((c) => ({ ...c, ...p }))
 
   const passos = [
-    {
-      chave: 'ativo',
-      titulo: 'Onde ele vai operar?',
-      ajuda: 'Cada índice tem seu próprio ritmo. Os de 1 segundo dão um dígito novo por segundo.',
-      valido: !!symbol,
-      corpo: (
-        <div className="qz-opcoes">
-          {abertos.map((s) => (
-            <button key={s.symbol}
-              className={`qz-opcao ${symbol === s.symbol ? 'on' : ''}`}
-              onClick={() => { setSymbol(s.symbol); setPasso(1) }}>
-              {s.name.replace(' Index', '')}
-            </button>
-          ))}
-        </div>
-      ),
-    },
     {
       chave: 'valor',
       titulo: 'Quanto vale cada entrada?',
@@ -241,7 +225,7 @@ export function RobotSetup({
       corpo: (
         <>
           <dl className="qz-resumo">
-            <div><dt>Ativo</dt><dd>{nomeAtivo}</dd></div>
+            <div><dt>Ativo</dt><dd>{nomeAtivo.replace(' Index', '')} <em className="qz-fixo">definido pela Teeds</em></dd></div>
             <div><dt>Entrada</dt><dd>{din(cfg.valorAoVencer, moeda)}</dd></div>
             <div><dt>Entradas</dt><dd>em todas as operações</dd></div>
             <div>

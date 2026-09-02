@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { TeedsSocket } from '../core/deriv/client'
 import { MotorTeeds, type ConfigEstrategia, type EstadoMotor, type Estrategia } from '../core/deriv/engine'
+import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { RobotLive } from './RobotLive'
@@ -50,7 +51,10 @@ export function LocalRobotPanel({
   // estrategia com que foi ligada: trocar de cartao nao muda um robo vivo.
   const sessaoRef = useRef<{ estrategia: Estrategia; ident: Identidade } | null>(null)
   const [cfg, setCfg] = useState<ConfigEstrategia>(PADRAO)
-  const [symbol, setSymbol] = useState(symbolPadrao ?? '1HZ10V')
+  // O robo opera sempre no ativo da casa — o que estiver escolhido no
+  // grafico nao interfere. Ver ATIVO_DOS_ROBOS em core/deriv/config.
+  const symbol = ATIVO_DOS_ROBOS
+  void symbolPadrao
   const [estado, setEstado] = useState<EstadoMotor | null>(null)
   const [preparando, setPreparando] = useState(false)
   const motorRef = useRef<MotorTeeds | null>(null)
@@ -60,7 +64,6 @@ export function LocalRobotPanel({
   const estrategia = estado && sessaoRef.current ? sessaoRef.current.estrategia : daVitrine
   const ident = estado && sessaoRef.current ? sessaoRef.current.ident : identidade
 
-  useEffect(() => { if (symbolPadrao) setSymbol(symbolPadrao) }, [symbolPadrao])
   useEffect(() => () => { motorRef.current?.desligar('página fechada') }, [])
   useEffect(() => { onSessaoChangeRef.current?.(sessaoAtiva) }, [sessaoAtiva])
   useEffect(() => () => { onSessaoChangeRef.current?.(false) }, [])
@@ -108,7 +111,6 @@ export function LocalRobotPanel({
     if (!socket) return
     setPreparando(false)
     setCfg(config)
-    setSymbol(ativo)
     // a sessao nasce com o cartao escolhido AGORA na vitrine, e fica com ele
     sessaoRef.current = { estrategia: daVitrine, ident: identidade }
     const pip = symbols.find((s) => s.symbol === ativo)?.pipSize ?? 2
@@ -137,7 +139,6 @@ export function LocalRobotPanel({
   // ------------------------------------------------------------ sem sessão
   if (!estado) {
     const ultimo = lerPreparo()
-    const ativoUltimo = symbols.find((s) => s.symbol === ultimo.symbol)?.name
     return (
       <>
         <div className="pronto" style={{ ['--robo' as any]: identidade.cor, ['--robo-suave' as any]: identidade.corSuave }}>
@@ -164,8 +165,8 @@ export function LocalRobotPanel({
           )}
           <span className="pronto-nota">
             {ultimo.cfg
-              ? `da última vez: ${din(ultimo.cfg.valorAoVencer ?? 0.35, moeda)} por entrada${ativoUltimo ? ` em ${ativoUltimo.replace(' Index', '')}` : ''}`
-              : 'você escolhe os valores no próximo passo'}
+              ? `da última vez: ${din(ultimo.cfg.valorAoVencer ?? 0.35, moeda)} por entrada em ${nomeAtivo.replace(' Index', '')}`
+              : `opera em ${nomeAtivo.replace(' Index', '')} — você escolhe os valores no próximo passo`}
           </span>
           </div>
         </div>

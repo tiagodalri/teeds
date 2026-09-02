@@ -41,6 +41,14 @@ export const ATIVOS_PERMITIDOS = [
   '1HZ50V', '1HZ75V', '1HZ90V', '1HZ100V',
 ] as const
 
+/**
+ * O ativo dos robos — fixo, decidido pela casa (02/09: Volatility 75 (1s)).
+ * A pessoa NAO escolhe onde o robo opera: menos uma decisao para errar, e o
+ * comportamento dos robos fica comparavel entre todos os clientes.
+ * Para mudar a aposta da casa, e so trocar aqui.
+ */
+export const ATIVO_DOS_ROBOS = '1HZ75V'
+
 /** Limites publicados pela Deriv, que a Teeds respeita por conta propria. */
 export const LIMITS = {
   maxRequestsPerSecond: 100,
