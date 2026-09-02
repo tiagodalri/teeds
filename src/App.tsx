@@ -237,7 +237,13 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <Brand />
+        <button className="marca-inicio" onClick={() => {
+          setTela('operar')
+          setVerPerfil(false)
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }} aria-label="Voltar para a tela inicial" title="Ir para o início">
+          <Brand />
+        </button>
 
         <nav className="telas">
           <button className={tela === 'operar' ? 'on' : ''} onClick={() => setTela('operar')}>Operar</button>
@@ -511,13 +517,14 @@ export default function App() {
             )}
           </div>
 
-          {!derivPronta && <p className="note">Conecte a sua Deriv para ver as posições aqui.</p>}
-          {conta.status === 'logado' && conta.contracts.length === 0 && (
-            <p className="note">Nenhuma posição aberta. Suas operações aparecem aqui, com o resultado ao vivo.</p>
-          )}
-
-          <div className="posicoes">
-            {conta.contracts.map((c) => (
+          <div className={`posicoes ${conta.contracts.length + conta.recentContracts.length === 0 ? 'posicoes-vazias' : ''}`}>
+            {!derivPronta && (
+              <div className="pos-vazio">Conecte a sua Deriv para ver as posições aqui.</div>
+            )}
+            {conta.status === 'logado' && conta.contracts.length + conta.recentContracts.length === 0 && (
+              <div className="pos-vazio">Nenhuma posição aberta. Suas operações aparecem aqui, com o resultado ao vivo.</div>
+            )}
+            {[...conta.contracts, ...conta.recentContracts].map((c) => (
               <PositionCard
                 key={c.contractId}
                 contrato={c}

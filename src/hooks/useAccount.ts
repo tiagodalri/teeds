@@ -23,6 +23,10 @@ export function useAccount() {
   const [accountId, setAccountId] = useState<string | null>(null)
   const [balance, setBalance] = useState<Balance | null>(null)
   const [contracts, setContracts] = useState<Map<number, OpenContract>>(new Map())
+  // Mantém o último quadro do contrato por alguns instantes após a liquidação.
+  // Assim a posição muda para "concluída" sem piscar nem desmontar a lateral.
+  const [recentContracts, setRecentContracts] = useState<Map<number, OpenContract>>(new Map())
+  const contractTimersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
   const [connecting, setConnecting] = useState(false)
   /** Sobe a cada transacao na conta — quem depende do historico se atualiza. */
   const [pulso, setPulso] = useState(0)
@@ -87,6 +91,9 @@ export function useAccount() {
     setConnecting(true)
     setBalance(null)
     setContracts(new Map())
+    setRecentContracts(new Map())
+    contractTimersRef.current.forEach(clearTimeout)
+    contractTimersRef.current.clear()
     // historico de outra conta nao vale para esta
     limparCacheOperacoes()
 
@@ -104,8 +111,29 @@ export function useAccount() {
       setContracts((prev) => {
         if (fechou && !prev.has(c.contractId)) return prev
         const next = new Map(prev)
-        if (fechou) next.delete(c.contractId)
-        else next.set(c.contractId, c)
+        if (fechou) {
+          const ultimo = { ...(prev.get(c.contractId) ?? c), ...c }
+          next.delete(c.contractId)
+          setRecentContracts((atuais) => new Map(atuais).set(c.contractId, ultimo))
+          const anterior = contractTimersRef.current.get(c.contractId)
+          if (anterior) clearTimeout(anterior)
+          contractTimersRef.current.set(c.contractId, setTimeout(() => {
+            setRecentContracts((atuais) => {
+              const restantes = new Map(atuais)
+              restantes.delete(c.contractId)
+              return restantes
+            })
+            contractTimersRef.current.delete(c.contractId)
+          }, 1800))
+        } else {
+          next.set(c.contractId, c)
+          setRecentContracts((atuais) => {
+            if (!atuais.has(c.contractId)) return atuais
+            const restantes = new Map(atuais)
+            restantes.delete(c.contractId)
+            return restantes
+          })
+        }
         return next
       })
     }
@@ -162,6 +190,8 @@ export function useAccount() {
       paradas.forEach((p) => p())
       socketRef.current?.disconnect()
       socketRef.current = null
+      contractTimersRef.current.forEach(clearTimeout)
+      contractTimersRef.current.clear()
     }
   }, [session, accountId])
 
@@ -182,6 +212,9 @@ export function useAccount() {
     setAccountId(null)
     setBalance(null)
     setContracts(new Map())
+    setRecentContracts(new Map())
+    contractTimersRef.current.forEach(clearTimeout)
+    contractTimersRef.current.clear()
     setStatus('deslogado')
     setError(null)
   }, [])
@@ -219,7 +252,7 @@ export function useAccount() {
   return {
     status, error, setError, session,
     accounts, account, accountId, setAccountId, isDemo,
-    balance, contracts: [...contracts.values()],
+    balance, contracts: [...contracts.values()], recentContracts: [...recentContracts.values()],
     socket: socketRef.current, connecting, aviso, setAviso, pulso, conexao,
     login, logout, recarregarDemo,
   }

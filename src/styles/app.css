@@ -3482,20 +3482,45 @@ button, input { font: inherit; color: inherit; }
   overflow-y: auto; overflow-x: hidden; padding-right: 3px;
   scrollbar-gutter: stable; overscroll-behavior: contain;
 }
+.posicoes-vazias { min-height: 276px; }
+.pos-vazio {
+  box-sizing: border-box; min-height: 276px; padding: 22px 0;
+  color: var(--muted); font-size: 13px; line-height: 1.55;
+  border-top: 1px solid var(--border);
+}
 .pos {
   box-sizing: border-box; height: 276px; min-height: 276px;
-  display: grid; grid-template-rows: 26px 25px 58px 67px 38px;
+  display: grid; grid-template-rows: 26px 30px 64px 68px 42px;
   align-content: start; overflow: hidden; contain: layout paint;
 }
 .pos-cab, .pos-resultado, .pos-dados { min-width: 0; margin-bottom: 0; }
 .pos-cab { height: 26px; }
-.pos-progresso { height: 25px; margin-bottom: 0; }
-.pos-resultado { height: 58px; }
-.pos-dados { height: 67px; box-sizing: border-box; margin-bottom: 0; }
-.pos .btn-vender { height: 38px; min-height: 38px; align-self: end; }
+.pos-progresso { height: 30px; margin-bottom: 0; }
+.pos-resultado { height: 64px; }
+.pos-dados { height: 68px; box-sizing: border-box; margin-bottom: 0; }
+.pos-dados div { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: baseline; }
+.pos-dados dt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pos .btn-vender {
+  box-sizing: border-box; width: 100%; height: 42px; min-height: 42px;
+  padding: 0 12px; align-self: end; display: flex; align-items: center;
+  justify-content: center; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; line-height: 1;
+}
+.pos-concluida { animation: posicao-concluida 1.8s ease both; }
+.pos-concluida .pos-tempo { color: var(--up); background: var(--up-soft); }
+@keyframes posicao-concluida {
+  0%, 72% { opacity: 1; }
+  100% { opacity: 0; }
+}
 .pos-resultado strong, .pos-alvo strong, .pos-dados dd, .pos-tempo {
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
+
+.marca-inicio {
+  appearance: none; border: 0; background: transparent; color: inherit;
+  padding: 2px; margin: -2px; border-radius: 10px; cursor: pointer;
+}
+.marca-inicio:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
 
 .tv-topo {
   box-sizing: border-box; min-height: 78px;

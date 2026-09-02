@@ -13,6 +13,9 @@ function useCountdown(expiryEpoch: number) {
 
 const NOMES: Record<string, string> = {
   CALL: 'Subir', PUT: 'Descer', HIGHER: 'Acima', LOWER: 'Abaixo',
+  DIGITOVER: 'Último dígito acima', DIGITUNDER: 'Último dígito abaixo',
+  DIGITMATCH: 'Dígito exato', DIGITDIFF: 'Dígito diferente',
+  DIGITEVEN: 'Dígito par', DIGITODD: 'Dígito ímpar',
   MULTUP: 'Multiplicador ↑', MULTDOWN: 'Multiplicador ↓', ACCU: 'Acumulador',
   ONETOUCH: 'Toca', NOTOUCH: 'Não toca',
 }
@@ -26,6 +29,7 @@ interface Props {
 
 export function PositionCard({ contrato: c, nomeAtivo, onVender, vendendo }: Props) {
   const { restante, texto } = useCountdown(c.expiryTime)
+  const concluido = c.status !== 'open' || c.isExpired
   const subiu = c.contractType === 'CALL' || c.contractType === 'HIGHER' || c.contractType === 'MULTUP'
   const ganhando = c.profit >= 0
   const duracaoTotal = Math.max(1, c.expiryTime - c.startTime)
@@ -35,20 +39,24 @@ export function PositionCard({ contrato: c, nomeAtivo, onVender, vendendo }: Pro
     c.entrySpot !== null && c.currentSpot !== null ? c.currentSpot - c.entrySpot : null
 
   return (
-    <div className={`pos ${ganhando ? 'pos-ganhando' : 'pos-perdendo'}`}>
+    <div className={`pos ${ganhando ? 'pos-ganhando' : 'pos-perdendo'} ${concluido ? 'pos-concluida' : ''}`}>
       <div className="pos-cab">
         <span className={`pos-dir ${subiu ? 'up' : 'down'}`}>
           {subiu ? '▲' : '▼'} {NOMES[c.contractType] ?? c.contractType}
         </span>
         <span className="pos-ativo">{nomeAtivo}</span>
-        <span className={`pos-tempo ${restante <= 15 ? 'urgente' : ''}`}>{texto}</span>
+        <span className={`pos-tempo ${!concluido && restante <= 15 ? 'urgente' : ''}`}>
+          {concluido ? 'Concluído' : texto}
+        </span>
       </div>
 
       <div className="pos-progresso">
         <Progress valor={progresso} altura={5}
           cor={ganhando ? 'var(--up)' : 'var(--down)'} vivo={restante > 0} />
         <span className="pos-progresso-txt">
-          {restante > 0
+          {concluido
+            ? 'Contrato encerrado · atualizando histórico'
+            : restante > 0
             ? `${Math.round(progresso)}% do contrato · faltam ${texto}`
             : 'liquidando…'}
         </span>
@@ -80,19 +88,21 @@ export function PositionCard({ contrato: c, nomeAtivo, onVender, vendendo }: Pro
             <em>{variacao >= 0 ? ' +' : ' '}{variacao.toFixed(c.pipSize)}</em>
           )}
         </dd></div>
-        <div><dt>Valor de venda</dt><dd>{c.currency} {c.bidPrice.toFixed(2)}</dd></div>
+        <div><dt>Venda</dt><dd>{c.currency} {c.bidPrice.toFixed(2)}</dd></div>
       </dl>
 
       <button
         className="btn btn-vender"
-        disabled={!c.isValidToSell || vendendo}
+        disabled={concluido || !c.isValidToSell || vendendo}
         onClick={() => onVender(c.contractId)}
       >
-        {vendendo
-          ? 'vendendo…'
+        {concluido
+          ? 'Contrato concluído'
+          : vendendo
+          ? 'Vendendo…'
           : c.isValidToSell
-            ? `Vender agora por ${c.currency} ${c.bidPrice.toFixed(2)}`
-            : 'Venda indisponível neste contrato'}
+            ? `Vender · ${c.currency} ${c.bidPrice.toFixed(2)}`
+            : 'Aguardar vencimento'}
       </button>
     </div>
   )
