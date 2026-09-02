@@ -1047,6 +1047,14 @@ button, input { font: inherit; color: inherit; }
   color: var(--muted); letter-spacing: 0;
 }
 .tv-ganha { font-size: 12px; font-weight: 600; color: var(--up); }
+.tv-status-operacao {
+  display: block; width: min(210px, 100%); height: 18px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 11.5px; font-weight: 600; color: var(--muted);
+}
+.tv-status-operacao.ganho { color: var(--up); }
+.tv-palco-fixo .tv-jogo { width: 150px; min-width: 150px; }
+.tv-palco-fixo .tv-regra-bloco { width: min(560px, 100%); }
 
 .tv-regra-bloco { min-width: 0; }
 .tv-escala {
@@ -1132,6 +1140,7 @@ button, input { font: inherit; color: inherit; }
   background: linear-gradient(90deg, transparent, var(--robo, var(--primary)), transparent);
   animation: tv-corre 1.15s linear infinite;
 }
+.tv-esteira:not(.ativa) i { animation: none; opacity: 0; }
 @keyframes tv-corre { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
 @media (prefers-reduced-motion: reduce) { .tv-esteira i { animation: none; opacity: .5; } }
 

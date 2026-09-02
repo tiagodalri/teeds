@@ -119,8 +119,6 @@ export function RobotLive({
           ? { chave: 'recuperando', texto: 'Recuperando' }
           : { chave: 'cacando', texto: 'Procurando entrada' }
 
-  const prontoParaEntrar = !!estado.condicao?.itens.every((i) => i.ok)
-
   return (
     <div className={`tv ${fase.chave} ${expandido ? 'tv-expandido' : ''}`}>
       {/* ===================== faixa de estado ===================== */}
@@ -239,73 +237,39 @@ export function RobotLive({
           </span>
         </div>
       </section>
-      {emCurso ? (
-        <section className="tv-palco aposta">
-          <div className="tv-mesa">
-            {/* o que está em jogo */}
-            <div className="tv-jogo">
-              <span className="tv-rot">Aposta</span>
-              <b>{num(emCurso.valor)}<i>{moeda}</i></b>
-              <span className="tv-ganha">ganha +{num(emCurso.payout - emCurso.valor)}</span>
-            </div>
-
-            {/* a regra, desenhada: os dígitos que pagam ficam acesos */}
-            <div className="tv-regra-bloco">
-              <span className="tv-rot">O último dígito precisa ser {regra}</span>
-              <div className="tv-escala">
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
-                  <span key={d}
-                    className={`tv-alvo ${ganhaCom(d) ? 'paga' : ''} ${
-                      emCurso.digitoAtual === d ? 'caiu' : ''}`}>
-                    {d}
-                  </span>
-                ))}
-              </div>
-            </div>
-
+      <section className={`tv-palco aposta tv-palco-fixo ${estado.emOperacao ? 'enviando' : ''}`}>
+        <div className="tv-mesa">
+          <div className="tv-jogo">
+            <span className="tv-rot">{emCurso ? 'Aposta' : 'Próxima entrada'}</span>
+            <b>{num(emCurso?.valor ?? estado.valorAtual)}<i>{moeda}</i></b>
+            <span className={`tv-status-operacao ${emCurso ? 'ganho' : ''}`} aria-live="polite">
+              {emCurso
+                ? `ganha +${num(emCurso.payout - emCurso.valor)}`
+                : estado.emOperacao
+                  ? 'Comprando na Deriv…'
+                  : estado.rodando
+                    ? (estado.condicao?.rotulo ?? estado.aguardando ?? 'Aguardando entrada')
+                    : estado.motivoParada
+                      ? `Parado: ${estado.motivoParada}`
+                      : 'Robô desligado'}
+            </span>
           </div>
 
-          <div className="tv-esteira"><i /></div>
-        </section>
-      ) : estado.emOperacao ? (
-        <section className="tv-palco">
-          <div className="tv-enviando">
-            <i className="tv-spin" />
-            <div>
-              <b>Comprando na Deriv…</b>
-              <span>{moeda} {num(estado.valorAtual)} · {regra}</span>
-            </div>
-          </div>
-          <div className="tv-esteira"><i /></div>
-        </section>
-      ) : estado.rodando ? (
-        <section className="tv-palco caca">
-          <div className="tv-caca-cond">
-            <span className="tv-rot">{estado.condicao?.rotulo ?? estado.aguardando}</span>
-            <div className="tv-slots">
-              {(estado.condicao?.itens ?? []).map((it, i) => (
-                <span key={i} className={`tv-slot ${it.ok ? 'ok' : it.valor === '–' ? 'vazio' : 'nao'}`}>
-                  {it.valor}
+          <div className="tv-regra-bloco">
+            <span className="tv-rot">O último dígito precisa ser {regra}</span>
+            <div className="tv-escala">
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
+                <span key={d}
+                  className={`tv-alvo ${ganhaCom(d) ? 'paga' : ''} ${
+                    emCurso?.digitoAtual === d ? 'caiu' : ''}`}>
+                  {d}
                 </span>
               ))}
-              <em className="tv-seta">→</em>
-              <span className={`tv-slot destino ${prontoParaEntrar ? 'pronto' : ''}`}>
-                {prontoParaEntrar ? 'entra agora' : 'espera'}
-              </span>
             </div>
           </div>
-          <div className="tv-caca-num">
-            <b>{num(estado.valorAtual)}</b>
-            <span>valor da próxima entrada</span>
-          </div>
-        </section>
-      ) : (
-        <section className="tv-palco">
-          <div className="tv-off">
-            {estado.motivoParada ? `Parou porque ${estado.motivoParada}.` : 'Desligado.'}
-          </div>
-        </section>
-      )}
+        </div>
+        <div className={`tv-esteira ${estado.rodando && !emCurso ? 'ativa' : ''}`}><i /></div>
+      </section>
 
       {/* ===================== fita de digitos ===================== */}
       <section className="tv-fita-bloco">
