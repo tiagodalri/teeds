@@ -147,6 +147,29 @@ button, input { font: inherit; color: inherit; }
 .segmented button.on { background: var(--bg); color: var(--text); box-shadow: var(--shadow); }
 
 .chart { position: relative; flex: 1; min-height: 0; }
+.chart canvas { position: relative; z-index: 2; }
+.chart-marca {
+  position: absolute; z-index: 1; inset: 50% auto auto 50%; transform: translate(-50%, -50%);
+  display: flex; align-items: center; gap: 14px; pointer-events: none; user-select: none;
+  color: var(--text); opacity: .035;
+}
+.chart-marca img { width: clamp(76px, 9vw, 126px); height: auto; filter: grayscale(1); }
+.chart-marca span { font: 650 clamp(24px, 3.4vw, 48px)/1 Georgia, serif; letter-spacing: .23em; }
+.chart-contratos {
+  position: absolute; z-index: 4; top: 30px; right: max(74px, 7%); display: grid; gap: 6px;
+  pointer-events: none;
+}
+.chart-contratos > div {
+  display: grid; grid-template-columns: auto auto; align-items: center; gap: 2px 14px;
+  min-width: 164px; padding: 8px 10px; border: 1px solid var(--border); border-left: 3px solid var(--up);
+  border-radius: 9px; background: color-mix(in srgb, var(--bg) 88%, transparent);
+  box-shadow: 0 10px 28px -18px rgba(0,0,0,.72); backdrop-filter: blur(8px);
+}
+.chart-contratos > div.abaixo { border-left-color: var(--down); }
+.chart-contratos span { color: var(--up); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.chart-contratos .abaixo span { color: var(--down); }
+.chart-contratos b { justify-self: end; font-size: 15px; font-variant-numeric: tabular-nums; letter-spacing: .03em; }
+.chart-contratos small { grid-column: 1 / -1; color: var(--muted); font-size: 8.5px; }
 .chart-loading {
   position: absolute; inset: 0; display: grid; place-items: center;
   color: var(--muted); font-size: 13px; pointer-events: none;
@@ -3351,6 +3374,11 @@ button, input { font: inherit; color: inherit; }
   .indicadores { padding: 8px 12px; align-items: flex-start; flex-direction: column; gap: 6px; }
   .indicadores > div { width: 100%; }
   .chart-tip { display: none; }
+  .chart-contratos { top: 22px; right: 48px; max-width: 154px; }
+  .chart-contratos > div { min-width: 142px; padding: 6px 8px; gap: 1px 8px; }
+  .chart-contratos b { font-size: 13px; }
+  .chart-marca { gap: 8px; }
+  .chart-marca span { font-size: 22px; }
   .trade { display: block; order: 3; overflow: visible; padding: 16px 14px 30px; border: 0; }
   .quotes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .quote { padding: 12px; min-width: 0; }

@@ -52,7 +52,15 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
   const [size, setSize] = useState({ w: 0, h: 0 })
   const [vp, setVp] = useState<Viewport>({ size: CHART.defaultCandles, offset: 0 })
   const [cursor, setCursor] = useState<Cursor | null>(null)
+  const [agora, setAgora] = useState(() => Math.floor(Date.now() / 1000))
   const drag = useRef<{ x: number; offset: number } | null>(null)
+
+  useEffect(() => {
+    if (!markers.length) return
+    setAgora(Math.floor(Date.now() / 1000))
+    const timer = window.setInterval(() => setAgora(Math.floor(Date.now() / 1000)), 1000)
+    return () => window.clearInterval(timer)
+  }, [markers.length])
 
   // ------------------------------------------------------------ dimensoes
   useEffect(() => {
@@ -397,28 +405,31 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
             }
           }
 
-          // linha vertical da expiracao
-          if (dentro(xFim)) {
+          // linha vertical da expiração. Quando o vencimento ainda está além
+          // da janela visível, ela fica ancorada na borda direita do gráfico.
+          if (xFim >= plot.x) {
+            const xFimVisivel = Math.min(plot.x + plot.w, xFim)
             ctx.save()
             ctx.setLineDash([3, 3])
             ctx.strokeStyle = cor
             ctx.lineWidth = 1
             ctx.beginPath()
-            ctx.moveTo(Math.round(xFim) + 0.5, plot.y)
-            ctx.lineTo(Math.round(xFim) + 0.5, plot.y + plot.h)
+            ctx.moveTo(Math.round(xFimVisivel) + 0.5, plot.y)
+            ctx.lineTo(Math.round(xFimVisivel) + 0.5, plot.y + plot.h)
             ctx.stroke()
             ctx.restore()
 
             ctx.font = '600 9.5px ui-sans-serif, -apple-system, system-ui, sans-serif'
-            const ft = 'fim'
+            const ft = `expira ${tempoRestante(m.expiryEpoch - agora)}`
             const fw = ctx.measureText(ft).width
             ctx.fillStyle = cor
-            roundRect(ctx, xFim - fw / 2 - 4, plot.y + 2, fw + 8, 13, 3)
+            const etiquetaX = Math.min(plot.x + plot.w - fw - 8, Math.max(plot.x, xFimVisivel - fw / 2 - 4))
+            roundRect(ctx, etiquetaX, plot.y + 2, fw + 8, 15, 4)
             ctx.fill()
             ctx.fillStyle = '#fff'
-            ctx.textAlign = 'center'
+            ctx.textAlign = 'left'
             ctx.textBaseline = 'middle'
-            ctx.fillText(ft, xFim, plot.y + 8.5)
+            ctx.fillText(ft, etiquetaX + 4, plot.y + 9.5)
           }
         }
       }
@@ -454,7 +465,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
     cancelAnimationFrame(frameRef.current)
     frameRef.current = requestAnimationFrame(pintar)
     return () => cancelAnimationFrame(frameRef.current)
-  }, [size, view.items, range, plot, mode, pipSize, cursor, stepX, toX, toY, markers, indicators])
+  }, [size, view.items, range, plot, mode, pipSize, cursor, stepX, toX, toY, markers, indicators, agora])
 
   // ------------------------------------------------------------ interacao
   const onWheel = useCallback((e: React.WheelEvent) => {
@@ -501,6 +512,10 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
 
   return (
     <div className="chart" ref={wrapRef}>
+      <div className="chart-marca" aria-hidden>
+        <img src={`${import.meta.env.BASE_URL}teeds-marca.png`} alt="" />
+        <span>TEEDS</span>
+      </div>
       <canvas
         ref={canvasRef}
         style={{ width: '100%', height: '100%', display: 'block', cursor: drag.current ? 'grabbing' : 'crosshair' }}
@@ -514,6 +529,17 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
           setCursor(null)
         }}
       />
+
+      {markers.length > 0 && <div className="chart-contratos" aria-live="polite">
+        {markers.map((m) => {
+          const acima = m.type === 'CALL' || m.type === 'MULTUP' || m.type === 'HIGHER'
+          return <div key={m.id} className={acima ? 'acima' : 'abaixo'}>
+            <span>{acima ? '▲ Acima' : '▼ Abaixo'}</span>
+            <b>{tempoRestante(m.expiryEpoch - agora)}</b>
+            <small>{m.entryPrice == null ? 'entrada registrada' : `entrada ${formatPrice(m.entryPrice, pipSize)}`}</small>
+          </div>
+        })}
+      </div>}
 
       {hovered && (
         <div className="chart-tip" style={{ left: Math.min(cursor!.x + 14, size.w - 190) }}>
@@ -536,6 +562,16 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
       {!loading && !candles.length && <div className="chart-loading">sem dados para este ativo</div>}
     </div>
   )
+}
+
+function tempoRestante(segundos: number) {
+  const total = Math.max(0, Math.ceil(segundos))
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  return h > 0
+    ? `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
 function mediaSimples(valores: number[], periodo: number): Array<number | null> {
