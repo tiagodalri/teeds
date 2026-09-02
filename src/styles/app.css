@@ -3692,8 +3692,8 @@ input, select, textarea, button { vertical-align: middle; }
   position: absolute; z-index: 12; top: 118px; left: 18px; width: 318px;
   border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   border-radius: 12px; overflow: hidden;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  box-shadow: 0 16px 44px -22px rgba(0,0,0,.85); backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--bg) 98%, var(--surface));
+  box-shadow: 0 16px 44px -22px rgba(0,0,0,.85);
 }
 .pos-flutuante-topo {
   width: 100%; height: 42px; padding: 0 12px; border: 0; background: transparent;
@@ -3712,6 +3712,10 @@ input, select, textarea, button { vertical-align: middle; }
   width: 100%; height: 202px; min-height: 202px; padding: 10px;
   grid-template-rows: 26px 30px 70px 44px; border-radius: 10px; box-shadow: none;
 }
+.posicoes-flutuantes .pos-ganhando,
+.posicoes-flutuantes .pos-perdendo { border-left-color: var(--primary); }
+.posicoes-flutuantes .prog { --prog-cor: var(--primary) !important; }
+.posicoes-flutuantes .prog-fill.vivo::after { display: none; }
 .posicoes-flutuantes .pos-dados { display: none; }
 .posicoes-flutuantes .pos-resultado { height: 70px; padding-top: 4px; }
 .posicoes-flutuantes .pos .btn-vender { height: 40px; min-height: 40px; }

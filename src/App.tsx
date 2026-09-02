@@ -472,10 +472,10 @@ export default function App() {
                   </div>
                 )}
                 {!derivPronta && <div className="pos-vazio">Conecte sua Deriv para acompanhar posições.</div>}
-                {derivPronta && conta.contracts.length + conta.recentContracts.length === 0 && (
+                {derivPronta && conta.contracts.length === 0 && (
                   <div className="pos-vazio">Suas operações aparecerão aqui.</div>
                 )}
-                {[...conta.contracts, ...conta.recentContracts].map((c) => (
+                {conta.contracts.map((c) => (
                   <PositionCard key={c.contractId} contrato={c}
                     nomeAtivo={symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol}
                     onVender={vender} vendendo={vendendo === c.contractId} />
