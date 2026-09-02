@@ -3295,3 +3295,129 @@ button, input { font: inherit; color: inherit; }
   .aulas-seta { display: none; }
   .aulas-carrossel .aulas-fileira { padding-bottom: 24px; }
 }
+
+/* Indicadores do gráfico */
+.indicadores { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 9px 18px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 56%, var(--bg)); }
+.indicadores > span { flex: 0 0 auto; color: var(--muted); font-size: 9px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.indicadores > div { display: flex; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.indicadores > div::-webkit-scrollbar { display: none; }
+.indicadores button { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; padding: 6px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--muted); cursor: pointer; font-size: 10px; font-weight: 650; }
+.indicadores button i { width: 5px; height: 5px; border-radius: 50%; background: var(--desativado); }
+.indicadores button.on { border-color: color-mix(in srgb, var(--primary) 46%, var(--border)); color: var(--text); background: var(--primary-soft); }
+.indicadores button.on i { background: var(--primary); box-shadow: 0 0 7px var(--primary); }
+
+/* O cockpit responde à coluna em que está, evitando conteúdo atravessado. */
+.pronto-compacto { container-type: inline-size; }
+@container (max-width: 760px) {
+  .pronto-compacto .pc-conteudo { grid-template-columns: 1fr; gap: 13px; }
+  .pronto-compacto .pc-ultima { display: flex; padding: 0; border: 0; }
+  .pronto-compacto .pc-metricas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pronto-compacto .pc-metricas > div:nth-child(2) { border-right: 0; }
+  .pronto-compacto .pc-metricas > div:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+  .pronto-compacto .pronto-btn { width: 100%; }
+}
+
+/* Revisão mobile integral */
+@media (max-width: 760px) {
+  html, body, #root { min-height: 100%; height: auto; }
+  body { overflow-x: hidden; }
+  .app { min-height: 100dvh; height: auto; }
+  .topbar { position: sticky; top: 0; z-index: 60; min-height: 54px; padding: 8px 12px 0; gap: 8px; background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(16px); }
+  .marca-selo { width: 28px !important; height: 28px !important; }
+  .marca-nome { font-size: 14px; letter-spacing: .15em; }
+  .topbar-right { margin-left: auto; gap: 6px; }
+  .tema-btn { width: 32px; height: 32px; }
+  .conta-chip { height: 34px; padding-inline: 7px; }
+  .conta-chip .conta-saldo em { display: none; }
+  .telas { margin-inline: -12px; width: calc(100% + 24px); padding: 5px 12px 7px; border-radius: 0; border-top: 1px solid var(--border); scroll-snap-type: x proximity; }
+  .telas button { padding: 7px 11px; scroll-snap-align: start; }
+
+  .layout { display: flex; flex-direction: column; min-height: auto; flex: none; }
+  .sidebar { order: 1; min-height: 0; border: 0; border-bottom: 1px solid var(--border); padding: 9px 0 8px; }
+  .search { margin: 0 12px 8px; padding: 9px 11px; }
+  .symbol-list { display: flex; gap: 7px; overflow-x: auto; padding: 0 12px; scrollbar-width: none; }
+  .symbol-list::-webkit-scrollbar { display: none; }
+  .symbol-list section { display: contents; }
+  .symbol-list h4 { display: none; }
+  .symbol { flex: 0 0 auto; width: auto; max-width: 210px; margin: 0; padding: 8px 10px; border: 1px solid var(--border); background: var(--surface); }
+  .main { order: 2; min-height: 460px; height: 58dvh; border-bottom: 1px solid var(--border); }
+  .chart-head { padding: 11px 12px; gap: 9px; }
+  .chart-title { width: 100%; justify-content: space-between; gap: 8px; }
+  .chart-title h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  .price { font-size: 16px; }
+  .controls { width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .segmented { flex: 0 0 auto; }
+  .segmented button { padding: 5px 9px; }
+  .indicadores { padding: 8px 12px; align-items: flex-start; flex-direction: column; gap: 6px; }
+  .indicadores > div { width: 100%; }
+  .chart-tip { display: none; }
+  .trade { display: block; order: 3; overflow: visible; padding: 16px 14px 30px; border: 0; }
+  .quotes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .quote { padding: 12px; min-width: 0; }
+  .quote strong { font-size: 18px; }
+  .quote .btn { min-height: 44px; padding: 9px 6px; font-size: 11px; }
+  .modo-troca { position: sticky; top: 99px; z-index: 5; background: var(--bg); }
+
+  .ger, .ger-vazio { flex: none; min-height: calc(100dvh - 100px); padding: 18px 12px 30px; overflow: visible; }
+  .ger-topo { margin-bottom: 15px; }
+  .ger h2 { font-size: 19px; }
+  .ger-bloco { padding: 15px; }
+  .resumo-robos, .ops-kpis, .sim-cards { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .blocos, .blocos.tem-expandido { grid-auto-rows: auto; }
+  .blocos > *, .blocos.tem-expandido > * { height: auto; min-height: 0; }
+  .blocos.duplo { grid-template-columns: 1fr; }
+  .cabine-caixa .tv { height: min(690px, calc(100dvh - 130px)); min-height: 560px; }
+  .tv-topo { padding: 12px; }
+  .tv-acoes { overflow-x: auto; }
+  .tv-acoes .tv-btn { white-space: nowrap; }
+  .tv-abas { overflow-x: auto; scrollbar-width: none; }
+  .tv-abas button { flex: 0 0 auto; white-space: nowrap; }
+  .tv-mesa { grid-template-columns: 1fr; }
+  .tv-dial { grid-column: 1; grid-row: auto; justify-self: start; }
+  .tv-regra-bloco { grid-column: 1; }
+  .tv-fita { overflow-x: auto; }
+  .tv-nums { grid-template-columns: repeat(2, 1fr); }
+  .tv-nums > div:nth-child(2) { border-right: 0; }
+  .tv-ops { min-height: 260px; }
+  .rv-seletor { padding: 12px; border-radius: 14px; }
+  .rv-seletor .rv-galeria { grid-template-columns: 1fr; }
+  .rv-seletor .rv-carta { min-height: 132px; }
+  .rv-seletor .rv-corpo { padding-top: 68px; }
+  .rv-galeria-cab { align-items: flex-start; }
+  .blocos-rodape { align-items: stretch; flex-direction: column; }
+  .blocos-add { width: 100%; }
+
+  .aulas-capa { min-height: 360px; padding: 24px 18px; border-radius: 14px; }
+  .aulas-capa-texto { max-width: 100%; }
+  .aulas-capa h2 { font-size: clamp(25px, 8vw, 36px); }
+  .aulas-meta { flex-wrap: wrap; }
+  .aulas-modulo-topo { align-items: flex-start; }
+  .aulas-trilha-num { font-size: 34px; }
+  .aulas-carrossel .aula-cartao { flex-basis: 62vw; width: 62vw; }
+  .aula-palco { grid-template-columns: 1fr; }
+  .aula-trilha { max-height: 240px; }
+  .aula-ficha { padding: 16px; }
+  .aula-ficha-acoes { align-items: stretch; flex-direction: column; }
+
+  .go-cards { grid-template-columns: 1fr; }
+  .go-config, .go-exposicao, .go-planilha { border-radius: 14px; }
+  .go-planilha { overflow-x: auto; }
+  .go-tabela-cab, .go-tabela-corpo { min-width: 520px; }
+  .go-tabela-cab, .go-tabela-corpo > div { grid-template-columns: 1.1fr .9fr 1fr .9fr; }
+  .go-tabela-cab span:last-child, .go-tabela-corpo em { display: block; }
+
+  .ops-topo, .ops-filtros, .ops-acoes { align-items: stretch; flex-direction: column; }
+  .ops-btn { min-height: 42px; }
+  .ops-tabela-caixa { margin-inline: -12px; border-left: 0; border-right: 0; border-radius: 0; }
+  .qz-atalhos, .qz-dupla { grid-template-columns: 1fr; }
+  .qz-rodape { position: sticky; bottom: 0; background: var(--bg); }
+}
+
+@media (max-width: 390px) {
+  .marca-nome { display: none; }
+  .quotes { grid-template-columns: 1fr; }
+  .resumo-robos, .ops-kpis, .sim-cards { grid-template-columns: 1fr; }
+  .aulas-carrossel .aula-cartao { flex-basis: 72vw; width: 72vw; }
+  .pc-metricas { grid-template-columns: 1fr !important; }
+  .pc-metricas > div { border-right: 0 !important; border-bottom: 1px solid var(--border); }
+}

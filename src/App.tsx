@@ -27,6 +27,14 @@ import type { Granularity } from './core/deriv/types'
 import { formatPrice } from './core/chart/scales'
 import { buyFromProposal, requestProposal, sellContract } from './core/deriv/trading'
 
+const INDICADORES = [
+  { id: 'sma', label: 'Média 20', titulo: 'Média móvel simples de 20 períodos' },
+  { id: 'ema', label: 'EMA 50', titulo: 'Média móvel exponencial de 50 períodos' },
+  { id: 'bollinger', label: 'Bollinger', titulo: 'Bandas de Bollinger de 20 períodos' },
+  { id: 'rsi', label: 'RSI 14', titulo: 'Índice de força relativa de 14 períodos' },
+  { id: 'macd', label: 'MACD', titulo: 'Convergência e divergência de médias móveis' },
+] as const
+
 const TIMEFRAMES: { label: string; value: Granularity }[] = [
   { label: '1m', value: 60 }, { label: '5m', value: 300 }, { label: '15m', value: 900 },
   { label: '1h', value: 3600 }, { label: '4h', value: 14400 }, { label: '1d', value: 86400 },
@@ -53,6 +61,7 @@ export default function App() {
   const [selected, setSelected] = useState<string | null>(null)
   const [granularity, setGranularity] = useState<Granularity>(60)
   const [mode, setMode] = useState<ChartMode>('candles')
+  const [indicadores, setIndicadores] = useState<string[]>(['sma'])
   const [search, setSearch] = useState('')
   const [stake, setStake] = useState(10)
   const [duration, setDuration] = useState(5)
@@ -406,9 +415,23 @@ export default function App() {
             </div>
           </div>
 
+          <div className="indicadores" aria-label="Indicadores do gráfico">
+            <span>Indicadores</span>
+            <div>
+              {INDICADORES.map((item) => {
+                const ativo = indicadores.includes(item.id)
+                return <button key={item.id} className={ativo ? 'on' : ''} title={item.titulo}
+                  aria-pressed={ativo} onClick={() => setIndicadores((atuais) =>
+                    ativo ? atuais.filter((id) => id !== item.id) : [...atuais, item.id])}>
+                  <i />{item.label}
+                </button>
+              })}
+            </div>
+          </div>
+
           <PriceChart candles={candles} mode={mode} pipSize={pipSize}
             symbolName={activeSymbol?.name ?? ''} loading={loadingCandles}
-            markers={marcadores} />
+            markers={marcadores} indicators={indicadores} />
         </main>
 
         <aside className="trade">
@@ -446,11 +469,11 @@ export default function App() {
               </label>
 
               <div className="quotes">
-                <QuoteCard kind="up" title="Subir" payout={call.payout} stake={stake}
+                <QuoteCard kind="up" title="Acima" action="Operar acima" payout={call.payout} stake={stake}
                   loading={call.loading} error={call.error} podeOperar={podeOperar}
                   comprando={comprando === 'CALL'} confirmando={confirmar === 'CALL'}
                   onBuy={() => comprar('CALL')} logado={conta.status === 'logado'} />
-                <QuoteCard kind="down" title="Descer" payout={put.payout} stake={stake}
+                <QuoteCard kind="down" title="Abaixo" action="Operar abaixo" payout={put.payout} stake={stake}
                   loading={put.loading} error={put.error} podeOperar={podeOperar}
                   comprando={comprando === 'PUT'} confirmando={confirmar === 'PUT'}
                   onBuy={() => comprar('PUT')} logado={conta.status === 'logado'} />
@@ -530,11 +553,11 @@ function IconeSol() {
 }
 
 function QuoteCard(props: {
-  kind: 'up' | 'down'; title: string; payout: number | null; stake: number
+  kind: 'up' | 'down'; title: string; action: string; payout: number | null; stake: number
   loading: boolean; error: string | null; podeOperar: boolean; logado: boolean
   comprando: boolean; confirmando: boolean; onBuy: () => void
 }) {
-  const { kind, title, payout, stake, loading, error, podeOperar, logado, comprando, confirmando, onBuy } = props
+  const { kind, title, action, payout, stake, loading, error, podeOperar, logado, comprando, confirmando, onBuy } = props
   const lucro = payout !== null ? payout - stake : null
   const pct = payout !== null && stake > 0 ? ((payout - stake) / stake) * 100 : null
 
@@ -556,7 +579,7 @@ function QuoteCard(props: {
         {comprando ? 'comprando…'
           : confirmando ? 'Confirmar (dinheiro real)'
           : !logado ? 'Entre para operar'
-          : 'Comprar'}
+          : action}
       </button>
     </div>
   )

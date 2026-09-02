@@ -32,6 +32,8 @@ interface Props {
   loading?: boolean
   /** Operacoes abertas neste ativo. */
   markers?: ContractMarker[]
+  /** Indicadores técnicos selecionados no painel. */
+  indicators?: string[]
 }
 
 interface Cursor {
@@ -44,7 +46,7 @@ interface Cursor {
  * Grafico da Teeds - desenhado do zero em canvas.
  * Sem bibliotecas de terceiros: controle total sobre desenho e interacao.
  */
-export function PriceChart({ candles, mode, pipSize, symbolName, loading, markers = [] }: Props) {
+export function PriceChart({ candles, mode, pipSize, symbolName, loading, markers = [], indicators = [] }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -209,6 +211,46 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
         ctx.lineJoin = 'round'
         ctx.stroke()
       }
+
+      // --- indicadores técnicos. São calculados sobre a janela visível para
+      // manter o gráfico leve mesmo quando o mercado envia muitos ticks.
+      const closes = items.map((c) => c.close)
+      const desenharLinha = (valores: Array<number | null>, cor: string, largura = 1.5) => {
+        ctx.save(); ctx.beginPath(); let iniciou = false
+        valores.forEach((valor, i) => {
+          if (valor == null) return
+          const x = toX(i); const y = toY(valor)
+          if (!iniciou) { ctx.moveTo(x, y); iniciou = true } else ctx.lineTo(x, y)
+        })
+        ctx.strokeStyle = cor; ctx.lineWidth = largura; ctx.lineJoin = 'round'; ctx.stroke(); ctx.restore()
+      }
+      if (indicators.includes('bollinger')) {
+        const bandas = bollinger(closes, 20)
+        ctx.save(); ctx.beginPath(); let comecou = false
+        bandas.superior.forEach((v, i) => { if (v == null) return; const x=toX(i), y=toY(v); if (!comecou) { ctx.moveTo(x,y); comecou=true } else ctx.lineTo(x,y) })
+        for (let i=bandas.inferior.length-1;i>=0;i--) { const v=bandas.inferior[i]; if (v!=null) ctx.lineTo(toX(i),toY(v)) }
+        ctx.closePath(); ctx.fillStyle='rgba(124, 92, 255, .075)'; ctx.fill(); ctx.restore()
+        desenharLinha(bandas.superior, '#8f79ff', 1); desenharLinha(bandas.inferior, '#8f79ff', 1)
+      }
+      if (indicators.includes('sma')) desenharLinha(mediaSimples(closes, 20), '#e0b84f', 1.8)
+      if (indicators.includes('ema')) desenharLinha(mediaExponencial(closes, 50), '#35a9ff', 1.7)
+
+      const paineis: Array<{ nome: string; valor: number; cor: string; minimo: number; maximo: number }> = []
+      if (indicators.includes('rsi')) paineis.push({ nome: 'RSI 14', valor: rsi(closes, 14), cor: '#c18cff', minimo: 0, maximo: 100 })
+      if (indicators.includes('macd')) {
+        const valor = macd(closes)
+        paineis.push({ nome: 'MACD', valor, cor: valor >= 0 ? T.up : T.down, minimo: -Math.max(Math.abs(valor) * 2, .001), maximo: Math.max(Math.abs(valor) * 2, .001) })
+      }
+      paineis.forEach((painel, indice) => {
+        const w = Math.min(170, Math.max(118, plot.w * .2)); const h = 31
+        const x = plot.x + 9; const y = plot.y + plot.h - 10 - h - indice * (h + 7)
+        ctx.fillStyle = 'rgba(9, 12, 20, .84)'; roundRect(ctx, x, y, w, h, 7); ctx.fill()
+        ctx.font = '700 9px ui-sans-serif, system-ui'; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillStyle=painel.cor
+        ctx.fillText(`${painel.nome}  ${painel.valor.toFixed(2)}`, x+9, y+10)
+        const pct=Math.max(0,Math.min(1,(painel.valor-painel.minimo)/(painel.maximo-painel.minimo)))
+        ctx.fillStyle='rgba(255,255,255,.12)'; roundRect(ctx,x+9,y+21,w-18,3,2);ctx.fill()
+        ctx.fillStyle=painel.cor; roundRect(ctx,x+9,y+21,(w-18)*pct,3,2);ctx.fill()
+      })
 
       // --- linha do preco atual
       const last = items[items.length - 1]
@@ -390,7 +432,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
     cancelAnimationFrame(frameRef.current)
     frameRef.current = requestAnimationFrame(pintar)
     return () => cancelAnimationFrame(frameRef.current)
-  }, [size, view.items, range, plot, mode, pipSize, cursor, stepX, toX, toY, markers])
+  }, [size, view.items, range, plot, mode, pipSize, cursor, stepX, toX, toY, markers, indicators])
 
   // ------------------------------------------------------------ interacao
   const onWheel = useCallback((e: React.WheelEvent) => {
@@ -472,6 +514,42 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
       {!loading && !candles.length && <div className="chart-loading">sem dados para este ativo</div>}
     </div>
   )
+}
+
+function mediaSimples(valores: number[], periodo: number): Array<number | null> {
+  return valores.map((_, i) => i < periodo - 1 ? null : valores.slice(i - periodo + 1, i + 1).reduce((a, b) => a + b, 0) / periodo)
+}
+
+function mediaExponencial(valores: number[], periodo: number): Array<number | null> {
+  if (!valores.length) return []
+  const k = 2 / (periodo + 1); let atual = valores[0]
+  return valores.map((valor, i) => { atual = i ? valor * k + atual * (1 - k) : valor; return i < periodo - 1 ? null : atual })
+}
+
+function bollinger(valores: number[], periodo: number) {
+  const media = mediaSimples(valores, periodo)
+  const superior: Array<number | null> = []; const inferior: Array<number | null> = []
+  media.forEach((m, i) => {
+    if (m == null) { superior.push(null); inferior.push(null); return }
+    const janela = valores.slice(i - periodo + 1, i + 1)
+    const desvio = Math.sqrt(janela.reduce((s, v) => s + Math.pow(v - m, 2), 0) / periodo)
+    superior.push(m + 2 * desvio); inferior.push(m - 2 * desvio)
+  })
+  return { superior, inferior }
+}
+
+function rsi(valores: number[], periodo: number) {
+  if (valores.length < 2) return 50
+  const inicio = Math.max(1, valores.length - periodo); let ganhos = 0; let perdas = 0
+  for (let i = inicio; i < valores.length; i++) { const d = valores[i] - valores[i - 1]; if (d >= 0) ganhos += d; else perdas -= d }
+  if (!perdas) return 100
+  return 100 - 100 / (1 + ganhos / perdas)
+}
+
+function macd(valores: number[]) {
+  const curta = mediaExponencial(valores, 12); const longa = mediaExponencial(valores, 26)
+  const i = valores.length - 1
+  return (curta[i] ?? valores[i] ?? 0) - (longa[i] ?? valores[i] ?? 0)
 }
 
 function roundRect(
