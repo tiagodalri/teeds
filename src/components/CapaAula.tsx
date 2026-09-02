@@ -421,6 +421,13 @@ function Cena({ aula, u, cor }: { aula: string; u: string; cor: string }) {
   }
 }
 
+/** Qual cena veste cada robo da vitrine. */
+export function capaDoRobo(id: string): string {
+  if (id === 'ag2') return 'robo-ag2'
+  if (id === 'superior5' || id === 'superior5fixo') return 'robo-ag7'
+  return 'boas-vindas'
+}
+
 /* ------------------------------------------------------------- a capa */
 
 export function CapaAula({ aula, cor }: Props) {

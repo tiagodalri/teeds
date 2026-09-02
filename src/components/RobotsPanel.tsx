@@ -8,7 +8,8 @@ import {
 } from '../core/deriv/robots'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { LocalRobotPanel } from './LocalRobotPanel'
-import { RobotCard, Emblema } from './RobotCard'
+import { Emblema } from './RobotCard'
+import { CapaAula, capaDoRobo } from './CapaAula'
 import { ServerRobotLive } from './ServerRobotLive'
 import { RobotScope } from './RobotScope'
 import { IDENTIDADES, identidade, identidadePorContrato, type Identidade } from '../core/deriv/branding'
@@ -201,20 +202,34 @@ export function RobotsPanel({
         </div>
       )}
 
-      {/* Com um robo so na vitrine a galeria nao escolhe nada: o proprio
-          painel dele ja carrega a marca. */}
-      {IDENTIDADES.length > 1 && <div className="galeria">
-        {IDENTIDADES.map((i) => (
-          <RobotCard key={i.id} id={i} selecionado={ident.id === i.id}
-            onSelecionar={() => setIdent(i)}
-            operando={
-              i.onde === 'servidor'
-                ? [...robos.values()].filter(
-                    (r) => r.status === 'running' && r.contrato.contract_type === i.contrato,
-                  ).length
-                : 0
-            } />
-        ))}
+      {/* A escolha do robo: cartas com a arte de cada um, como uma
+          selecao de personagem — nada de quadradinhos. */}
+      {IDENTIDADES.length > 1 && <div className="rv-galeria">
+        {IDENTIDADES.map((i) => {
+          const digitos =
+            i.id === 'ag2' ? ['0', '1', '2'] : i.id === 'superior5' ? ['7', '8', '9'] : []
+          const escolhido = ident.id === i.id
+          return (
+            <button key={i.id} className={`rv-carta ${escolhido ? 'on' : ''}`}
+              style={{ ['--robo' as any]: i.cor }} onClick={() => setIdent(i)}>
+              <span className="rv-arte" aria-hidden><CapaAula aula={capaDoRobo(i.id)} cor={i.cor} /></span>
+              <span className="rv-veu" aria-hidden />
+              <span className="rv-corpo">
+                <span className="rv-chamada">{i.chamada}</span>
+                <b>{i.nome}</b>
+                <span className="rv-info">
+                  {digitos.length > 0 && (
+                    <span className="rv-digitos">
+                      ganha no {digitos.map((d) => <i key={d}>{d}</i>)}
+                    </span>
+                  )}
+                  <em>{i.chance}% de chance · paga mais por acerto</em>
+                </span>
+              </span>
+              {escolhido && <span className="rv-sel">✓ escolhido</span>}
+            </button>
+          )
+        })}
       </div>}
 
       {ident.onde === 'teeds' && (

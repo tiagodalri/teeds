@@ -5,7 +5,7 @@ import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { RobotLive } from './RobotLive'
 import { RobotSetup, lerPreparo } from './RobotSetup'
-import { Emblema } from './RobotCard'
+import { CapaAula, capaDoRobo } from './CapaAula'
 import type { Identidade } from '../core/deriv/branding'
 
 interface Props {
@@ -133,8 +133,11 @@ export function LocalRobotPanel({
     return (
       <>
         <div className="pronto" style={{ ['--robo' as any]: identidade.cor, ['--robo-suave' as any]: identidade.corSuave }}>
-          <Emblema id={identidade} tamanho={56} />
+          <span className="pronto-arte" aria-hidden>
+            <CapaAula aula={capaDoRobo(identidade.id)} cor={identidade.cor} />
+          </span>
           {onRemover && <span className="pronto-tag">{titulo}</span>}
+          <div className="pronto-corpo">
           <h3>{estrategia.nome}</h3>
           <p>{estrategia.descricao}</p>
           <button className="pronto-btn" disabled={!socket} onClick={() => setPreparando(true)}>
@@ -148,6 +151,7 @@ export function LocalRobotPanel({
               ? `da última vez: ${din(ultimo.cfg.valorAoVencer ?? 0.35, moeda)} por entrada${ativoUltimo ? ` em ${ativoUltimo.replace(' Index', '')}` : ''}`
               : 'você escolhe os valores no próximo passo'}
           </span>
+          </div>
         </div>
 
         {preparando && (
