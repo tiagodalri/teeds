@@ -1,10 +1,25 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   aulasVistas, marcarVista, MODULOS, playerDoVideo, todasAsAulas,
   type AulaNumerada,
 } from '../core/teeds/aulas'
 
 const capa = (id: string) => `${import.meta.env.BASE_URL}aulas/${id}.jpg`
+
+function Fileira({ children, rotulo }: { children: ReactNode; rotulo: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const mover = (direcao: -1 | 1) => ref.current?.scrollBy({
+    left: direcao * Math.max(280, ref.current.clientWidth * .82), behavior: 'smooth',
+  })
+
+  return (
+    <div className="aulas-carrossel">
+      <button className="aulas-seta anterior" onClick={() => mover(-1)} aria-label={`Voltar em ${rotulo}`}>‹</button>
+      <div className="aulas-fileira" ref={ref}>{children}</div>
+      <button className="aulas-seta proxima" onClick={() => mover(1)} aria-label={`Avançar em ${rotulo}`}>›</button>
+    </div>
+  )
+}
 
 /**
  * A sala de aula da Teeds, no estilo de vitrine de filmes: trilhas por
@@ -139,12 +154,12 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
       {assistidas > 0 && proxima && (
         <section className="aulas-modulo aulas-continue">
           <div className="aulas-modulo-topo"><div><h3>Continue assistindo</h3><p>Retome de onde parou.</p></div></div>
-          <div className="aulas-fileira">
+          <Fileira rotulo="Continue assistindo">
             <button className="aula-cartao continuar" onClick={() => abrir(proxima)}>
               <span className="aula-cartao-capa"><img src={capa(proxima.id)} alt="" /><span className="aula-play">▶</span></span>
               <span className="aula-cartao-corpo"><span className="aula-num">Aula {proxima.numero}</span><b>{proxima.titulo}</b><i className="aula-progresso-card"><u style={{ width: '35%' }} /></i></span>
             </button>
-          </div>
+          </Fileira>
         </section>
       )}
 
@@ -162,7 +177,7 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
                 {doModulo.filter((a) => vistas.has(a.id)).length}/{doModulo.length}
               </span>
             </div>
-            <div className="aulas-fileira">
+            <Fileira rotulo={m.titulo}>
               {doModulo.map((a) => (
                 <button key={a.id} data-num={String(a.numero).padStart(2, '0')}
                   className={`aula-cartao ${a.video ? '' : 'sem'}`}
@@ -182,7 +197,7 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
                   </span>
                 </button>
               ))}
-            </div>
+            </Fileira>
           </section>
         )
       })}
