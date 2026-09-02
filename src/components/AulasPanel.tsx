@@ -4,7 +4,7 @@ import {
   type AulaNumerada,
 } from '../core/teeds/aulas'
 
-const capa = (id: string) => `${import.meta.env.BASE_URL}aulas/${id}.jpg`
+const capa = (id: string) => `${import.meta.env.BASE_URL}aulas-especialista/${id}.jpg`
 
 function Fileira({ children, rotulo }: { children: ReactNode; rotulo: string }) {
   const ref = useRef<HTMLDivElement>(null)

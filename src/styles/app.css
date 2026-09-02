@@ -3097,6 +3097,38 @@ button, input { font: inherit; color: inherit; }
   .aulas-carrossel .aula-cartao { flex-basis: 46vw; width: 46vw; }
 }
 
+/* acabamento do cockpit: nada truncado e painel sem altura artificial */
+.qz-fundo { place-items: center end; padding: 22px; }
+.qz {
+  width: min(560px, calc(100vw - 44px)); height: auto; max-height: calc(100vh - 44px);
+  border-radius: 18px; border: 1px solid var(--border);
+}
+.qz-corpo { overflow-y: auto; }
+.qz-resumo > div { align-items: flex-start; }
+.qz-resumo dd { max-width: 68%; line-height: 1.4; overflow-wrap: anywhere; }
+.pc-metricas dd { white-space: normal; line-height: 1.25; overflow-wrap: anywhere; }
+
+@media (max-width: 1380px) {
+  .pc-conteudo { grid-template-columns: minmax(180px, 1fr) minmax(330px, 1.6fr) auto; }
+  .pc-ultima { display: none; }
+  .pc-metricas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pc-metricas > div:nth-child(2) { border-right: 0; }
+  .pc-metricas > div:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+}
+@media (max-width: 880px) {
+  .pc-conteudo { grid-template-columns: 1fr; }
+  .pc-ultima { display: flex; padding: 0; border: 0; }
+  .pronto-compacto .pronto-btn { width: 100%; }
+}
+@media (max-width: 600px) {
+  .qz-fundo { padding: 0; place-items: stretch; }
+  .qz { width: 100%; max-height: 100%; border: 0; border-radius: 0; }
+  .qz-topo { padding-inline: 16px; }
+  .qz-corpo, .qz-rodape { padding-inline: 18px; }
+  .qz-resumo > div { gap: 10px; }
+  .qz-resumo dd { max-width: 62%; }
+}
+
 /* cockpit compacto antes de ligar: sem repetir o banner do modelo */
 .blocos > .pronto.pronto-compacto { height: auto; min-height: 0; }
 .pronto-compacto { text-align: left; overflow: visible; box-shadow: 0 16px 38px -32px rgba(0,0,0,.7); border-color: color-mix(in srgb, var(--robo) 22%, var(--border)); }
