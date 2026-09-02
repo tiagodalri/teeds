@@ -6,8 +6,8 @@ import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { RobotLive } from './RobotLive'
 import { RobotSetup, lerPreparo } from './RobotSetup'
-import { CapaAula, capaDoRobo } from './CapaAula'
 import type { Identidade } from '../core/deriv/branding'
+import { Emblema } from './RobotCard'
 
 interface Props {
   socket: TeedsSocket | null
@@ -141,33 +141,33 @@ export function LocalRobotPanel({
     const ultimo = lerPreparo()
     return (
       <>
-        <div className="pronto" style={{ ['--robo' as any]: identidade.cor, ['--robo-suave' as any]: identidade.corSuave }}>
-          <span className="pronto-arte" aria-hidden>
-            <CapaAula aula={capaDoRobo(identidade.id)} cor={identidade.cor} />
-          </span>
-          {onRemover && <span className="pronto-tag">{titulo}</span>}
-          <div className="pronto-corpo">
-          <h3>{estrategia.nome}</h3>
-          <p>{estrategia.descricao}</p>
-          <div className="pronto-specs">
-            <span className="ps-digitos" title="dígitos que pagam">
-              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter(ganhaCom).map((d) => <i key={d}>{d}</i>)}
-            </span>
-            <span className="ps-chip">{identidade.chance}% de chance</span>
-            <span className="ps-chip">1 tick por entrada</span>
-            <span className="ps-chip">freios de ganho e perda</span>
-          </div>
-          <button className="pronto-btn" disabled={!socket} onClick={() => setPreparando(true)}>
-            Configurar {identidade.nome.replace('Teeds - ', '')}
-          </button>
-          {onRemover && (
-            <button className="pronto-fechar" onClick={onRemover}>Fechar este bloco</button>
-          )}
-          <span className="pronto-nota">
-            {ultimo.cfg
-              ? `da última vez: ${din(ultimo.cfg.valorAoVencer ?? 0.35, moeda)} por entrada em ${nomeAtivo.replace(' Index', '')}`
-              : `opera em ${nomeAtivo.replace(' Index', '')} — você escolhe os valores no próximo passo`}
-          </span>
+        <div className="pronto pronto-compacto" style={{ ['--robo' as any]: identidade.cor, ['--robo-suave' as any]: identidade.corSuave }}>
+          <header className="pc-topo">
+            <span className="pc-emblema"><Emblema id={identidade} tamanho={46} /></span>
+            <div><span className="rot">{titulo} · pronto para configurar</span><h3>{estrategia.nome}</h3><p>{identidade.chamada}</p></div>
+            {onRemover && <button className="pc-fechar" onClick={onRemover} aria-label={`Fechar ${titulo}`} title="Fechar robô">×</button>}
+          </header>
+
+          <div className="pc-conteudo">
+            <div className="pc-regra">
+              <span className="rot">Como ele opera</span>
+              <strong>Último dígito {regra}</strong>
+              <small>{estrategia.descricao}</small>
+            </div>
+            <dl className="pc-metricas">
+              <div><dt>Dígitos vencedores</dt><dd className="ps-digitos">{[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter(ganhaCom).map((d) => <i key={d}>{d}</i>)}</dd></div>
+              <div><dt>Chance teórica</dt><dd>{identidade.chance}%</dd></div>
+              <div><dt>Ritmo</dt><dd>1 tick</dd></div>
+              <div><dt>Ativo</dt><dd>{nomeAtivo.replace(' Index', '')}</dd></div>
+            </dl>
+            <div className="pc-ultima">
+              <span className="rot">Última configuração</span>
+              <b>{din(ultimo.cfg?.valorAoVencer ?? cfg.valorAoVencer, moeda)} por entrada</b>
+              <small>Freios automáticos de ganho e perda</small>
+            </div>
+            <button className="pronto-btn" disabled={!socket} onClick={() => setPreparando(true)}>
+              Configurar e ligar <span>→</span>
+            </button>
           </div>
         </div>
 
