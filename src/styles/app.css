@@ -3421,3 +3421,29 @@ button, input { font: inherit; color: inherit; }
   .pc-metricas { grid-template-columns: 1fr !important; }
   .pc-metricas > div { border-right: 0 !important; border-bottom: 1px solid var(--border); }
 }
+
+/* Identidade da sala: grafite, marfim e dourado Teeds — sem azul residual. */
+.aulas { --aula: #d0aa52 !important; }
+.aulas .aula-item.on { color: #f3eee2; background: rgba(208,170,82,.13); box-shadow: inset 2px 0 0 #d0aa52; }
+.aulas .aula-item.on i { color: #111216; border-color: #d0aa52; background: linear-gradient(145deg, #f0cf79, #b88931); box-shadow: 0 5px 14px rgba(208,170,82,.2); }
+.aulas .aula-num, .aulas .aula-demo { color: #d9b65f; }
+.aulas .aula-demo { border-color: rgba(208,170,82,.3); background: rgba(208,170,82,.06); }
+.aulas .aula-proxima { color: #111216; background: linear-gradient(135deg, #e5c36d, #bd8e35); box-shadow: 0 10px 24px -12px rgba(208,170,82,.8); }
+.aulas .aulas-trilha-num { color: rgba(224,190,108,.2); }
+.aulas .aulas-conta { color: #c8a957; }
+.aulas .aula-cartao:focus-visible { outline-color: #d0aa52; }
+
+/* Tablet e notebooks estreitos: a mesa de operação passa para baixo do
+   gráfico. Nunca desaparece e nunca fica espremida na lateral. */
+@media (min-width: 761px) and (max-width: 1080px) {
+  html, body, #root { min-height: 100%; height: auto; }
+  .app { min-height: 100vh; height: auto; }
+  .layout { grid-template-columns: 190px minmax(0,1fr); grid-template-rows: minmax(580px, 72vh) auto; flex: none; min-height: calc(100vh - 56px); }
+  .sidebar { grid-column: 1; grid-row: 1; }
+  .main { grid-column: 2; grid-row: 1; min-height: 0; }
+  .trade { display: block; grid-column: 1 / -1; grid-row: 2; padding: 20px clamp(22px, 5vw, 58px) 34px; border-top: 1px solid var(--border); border-left: 0; overflow: visible; }
+  .trade > .modo-troca { max-width: 420px; }
+  .trade > .field { display: inline-block; width: min(250px, calc(50% - 8px)); margin: 16px 12px 0 0; vertical-align: top; }
+  .trade .quotes { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .trade .pos-cabecalho { margin-top: 22px; }
+}
