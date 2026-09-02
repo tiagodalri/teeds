@@ -126,7 +126,12 @@ export function useAccount() {
         paradas.push(subscribeBalance(sock, (b) => alive && setBalance(b)))
 
         // uma assinatura so, para todos os contratos da conta
-        paradas.push(assinarContratos(sock, guardar))
+        paradas.push(
+          assinarContratos(sock, guardar, (msg) => {
+            // sem este stream a pessoa compra e nao ve a posicao: melhor dizer
+            if (alive) setError(`A Deriv recusou o acompanhamento das posições (${msg}).`)
+          }),
+        )
 
         // contratos que ja estavam abertos quando conectamos
         try {

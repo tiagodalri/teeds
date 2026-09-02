@@ -266,7 +266,21 @@ export class TeedsSocket {
     this.streams.set(req_id, { request, handler, reqId: req_id })
 
     if (this.state === 'idle' || this.state === 'closed') this.connect()
-    this.raw(payload)
+
+    /**
+     * So envia se a conexao JA esta aberta.
+     *
+     * Enfileirar aqui mandava a assinatura duas vezes: uma pela fila
+     * (`flushQueue`) e outra pelo `restoreStreams`, os dois no mesmo
+     * `onopen`. A Deriv respondia `AlreadySubscribed` a segunda, o
+     * roteador apagava o stream e, dali em diante, saldo e posicoes
+     * chegavam mas nao encontravam mais ninguem para receber: a tela
+     * ficava congelada com o mercado andando por baixo.
+     *
+     * Com o socket fechado, quem envia e o `restoreStreams` ao abrir —
+     * exatamente uma vez, em qualquer cenario.
+     */
+    if (this.ws?.readyState === WebSocket.OPEN) this.raw(payload)
 
     return () => this.unsubscribe(req_id)
   }
@@ -307,8 +321,12 @@ export class TeedsSocket {
       if (stream) {
         if (msg.subscription?.id) stream.subscriptionId = msg.subscription.id
         if (msg.error) {
-          this.streams.delete(reqId)
-          stream.handler(msg)
+          // `AlreadySubscribed` significa que o stream existe e esta vivo —
+          // derrubar o registro por causa dela deixaria a tela cega.
+          if (msg.error.code !== 'AlreadySubscribed') {
+            this.streams.delete(reqId)
+            stream.handler(msg)
+          }
           return
         }
         stream.handler(msg)
