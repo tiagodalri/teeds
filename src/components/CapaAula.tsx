@@ -72,21 +72,7 @@ function Defs({ u, cor }: { u: string; cor: string }) {
   )
 }
 
-function Fundo({ u }: { u: string }) {
-  const pontos: JSX.Element[] = []
-  for (let x = 20; x < 400; x += 34) {
-    for (let y = 16; y < 224; y += 34) {
-      pontos.push(<circle key={`${x}-${y}`} cx={x} cy={y} r="1" fill="#ffffff" opacity="0.05" />)
-    }
-  }
-  return (
-    <g>
-      <rect width="400" height="224" fill={`url(#bg-${u})`} />
-      {pontos}
-      <rect width="400" height="224" fill={`url(#luz-${u})`} />
-    </g>
-  )
-}
+
 
 /** Sombra elíptica no chão — o truque mais barato de profundidade. */
 function Chao({ cx, cy, rx }: { cx: number; cy: number; rx: number }) {
@@ -433,10 +419,9 @@ export function capaDoRobo(id: string): string {
 export function CapaAula({ aula, cor }: Props) {
   const u = aula
   return (
-    <svg viewBox="0 0 400 224" width="100%" height="100%" preserveAspectRatio="xMidYMid slice"
+    <svg viewBox="0 0 400 224" preserveAspectRatio="xMidYMid meet"
       role="img" aria-hidden style={{ display: 'block' }}>
       <Defs u={u} cor={cor} />
-      <Fundo u={u} />
       <Cena aula={aula} u={u} cor={cor} />
       <Assinatura u={u} />
     </svg>
