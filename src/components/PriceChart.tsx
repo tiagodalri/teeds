@@ -368,9 +368,10 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
             const y = toY(m.entryPrice)
             if (y >= plot.y && y <= plot.y + plot.h) {
               ctx.save()
-              ctx.setLineDash([2, 3])
+              ctx.setLineDash([4, 5])
               ctx.strokeStyle = cor
-              ctx.lineWidth = 1.25
+              ctx.globalAlpha = .46
+              ctx.lineWidth = 1
               ctx.beginPath()
               ctx.moveTo(Math.max(plot.x, a), Math.round(y) + 0.5)
               ctx.lineTo(plot.x + plot.w, Math.round(y) + 0.5)
@@ -378,20 +379,27 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
               ctx.restore()
 
               // etiqueta "entrada" a esquerda da linha
-              ctx.font = '600 10px ui-sans-serif, -apple-system, system-ui, sans-serif'
+              ctx.font = '650 9px ui-sans-serif, -apple-system, system-ui, sans-serif'
               const txt = `entrada ${formatPrice(m.entryPrice, pipSize)}`
               const tw2 = ctx.measureText(txt).width
               const lx = Math.min(Math.max(plot.x + 4, xEntrada + 8), plot.x + plot.w - tw2 - 12)
-              ctx.fillStyle = cor
-              roundRect(ctx, lx - 4, y - 17, tw2 + 8, 14, 3)
+              ctx.fillStyle = 'rgba(9, 12, 20, .78)'
+              roundRect(ctx, lx - 4, y - 16, tw2 + 8, 13, 3)
               ctx.fill()
-              ctx.fillStyle = '#fff'
+              ctx.strokeStyle = cor
+              ctx.globalAlpha = .52
+              ctx.lineWidth = .75
+              ctx.stroke()
+              ctx.globalAlpha = .82
+              ctx.fillStyle = cor
               ctx.textAlign = 'left'
               ctx.textBaseline = 'middle'
-              ctx.fillText(txt, lx, y - 10)
+              ctx.fillText(txt, lx, y - 9.5)
+              ctx.globalAlpha = 1
 
               // seta no ponto exato de entrada
               if (dentro(xEntrada)) {
+                ctx.globalAlpha = .72
                 ctx.fillStyle = cor
                 ctx.beginPath()
                 if (subiu) {
@@ -401,6 +409,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
                 }
                 ctx.closePath()
                 ctx.fill()
+                ctx.globalAlpha = 1
               }
             }
           }
