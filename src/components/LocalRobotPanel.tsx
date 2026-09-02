@@ -21,6 +21,9 @@ interface Props {
   onRemover?: () => void
   /** Como este bloco se chama: "Robô 1", "Robô 2"... */
   titulo: string
+  expandido?: boolean
+  onExpandir?: () => void
+  onSessaoChange?: (ativa: boolean) => void
 }
 
 const PADRAO: ConfigEstrategia = {
@@ -39,7 +42,7 @@ const din = (v: number, m = 'USD') =>
 
 export function LocalRobotPanel({
   socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
-  onRemover, titulo,
+  onRemover, titulo, expandido = false, onExpandir, onSessaoChange,
 }: Props) {
   // O cartao escolhido na vitrine dita a estrategia deste bloco…
   const daVitrine = ESTRATEGIAS_LOCAIS.find((e) => e.id === identidade.id) ?? ESTRATEGIAS_LOCAIS[0]
@@ -51,11 +54,16 @@ export function LocalRobotPanel({
   const [estado, setEstado] = useState<EstadoMotor | null>(null)
   const [preparando, setPreparando] = useState(false)
   const motorRef = useRef<MotorTeeds | null>(null)
+  const onSessaoChangeRef = useRef(onSessaoChange)
+  onSessaoChangeRef.current = onSessaoChange
+  const sessaoAtiva = estado !== null
   const estrategia = estado && sessaoRef.current ? sessaoRef.current.estrategia : daVitrine
   const ident = estado && sessaoRef.current ? sessaoRef.current.ident : identidade
 
   useEffect(() => { if (symbolPadrao) setSymbol(symbolPadrao) }, [symbolPadrao])
   useEffect(() => () => { motorRef.current?.desligar('página fechada') }, [])
+  useEffect(() => { onSessaoChangeRef.current?.(sessaoAtiva) }, [sessaoAtiva])
+  useEffect(() => () => { onSessaoChangeRef.current?.(false) }, [])
 
   /**
    * Trocar de conta cria uma conexão nova na Deriv e derruba a antiga.
@@ -181,7 +189,7 @@ export function LocalRobotPanel({
 
   // ------------------------------------------------------------ com sessão
   return (
-    <div className="cabine-caixa"
+    <div className={`cabine-caixa ${expandido ? 'expandido' : ''}`}
       style={{ ['--robo' as any]: ident.cor, ['--robo-suave' as any]: ident.corSuave }}>
       <RobotLive
         estado={estado}
@@ -195,6 +203,8 @@ export function LocalRobotPanel({
         ganhaCom={ganhaCom}
         parametros={parametros}
         conexao={conexao}
+        expandido={expandido}
+        onExpandir={onExpandir}
         onDesligar={rodando ? () => motorRef.current?.desligar() : undefined}
         onLigarDeNovo={!rodando ? () => setPreparando(true) : undefined}
         onRemover={onRemover ? () => { motorRef.current?.desligar('bloco fechado'); onRemover() } : undefined}

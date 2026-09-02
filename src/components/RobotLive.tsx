@@ -22,6 +22,8 @@ interface Props {
   onDesligar?: () => void
   onLigarDeNovo?: () => void
   onRemover?: () => void
+  expandido?: boolean
+  onExpandir?: () => void
 }
 
 const num = (v: number) =>
@@ -88,9 +90,9 @@ function Cronometro({ desde }: { desde: number }) {
 export function RobotLive({
   estado, config, moeda, nomeEstrategia, ativo, titulo, regra, ganhaCom,
   parametros = [], conexao = 'open', onDesligar, onLigarDeNovo, onRemover,
+  expandido = false, onExpandir,
 }: Props) {
-  const [verParametros, setVerParametros] = useState(false)
-  const [verRegistro, setVerRegistro] = useState(false)
+  const [aba, setAba] = useState<'ao-vivo' | 'operacoes' | 'parametros' | 'registro'>('ao-vivo')
   const acerto = estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
   const positivo = estado.resultado >= 0
   const fita = estado.digitos.slice(-30)
@@ -141,18 +143,16 @@ export function RobotLive({
           </strong>
         </div>
 
+        <div className="tv-resumo-fixo">
+          <span><i>Operações</i><b>{estado.operacoes}</b></span>
+          <span><i>Acerto</i><b>{acerto.toFixed(0)}%</b></span>
+          <span><i>Próxima</i><b>{num(estado.valorAtual)}</b></span>
+        </div>
+
         <div className="tv-acoes">
-          {estado.registros.length > 0 && (
-            <button className={`tv-btn ${verRegistro ? 'on' : ''}`}
-              onClick={() => setVerRegistro((v) => !v)} aria-expanded={verRegistro}>
-              Registro
-            </button>
-          )}
-          {parametros.length > 0 && (
-            <button className={`tv-btn ${verParametros ? 'on' : ''}`}
-              onClick={() => setVerParametros((v) => !v)}
-              aria-expanded={verParametros}>
-              Parâmetros
+          {onExpandir && (
+            <button className={`tv-btn ${expandido ? 'on' : ''}`} onClick={onExpandir}>
+              {expandido ? 'Reduzir' : 'Expandir'}
             </button>
           )}
           {estado.rodando && onDesligar && (
@@ -167,6 +167,15 @@ export function RobotLive({
           )}
         </div>
       </header>
+
+      <nav className="tv-abas" aria-label={`Visões de ${titulo}`}>
+        <button className={aba === 'ao-vivo' ? 'on' : ''} onClick={() => setAba('ao-vivo')}>Ao vivo</button>
+        <button className={aba === 'operacoes' ? 'on' : ''} onClick={() => setAba('operacoes')}>
+          Operações {estado.historico.length > 0 && <span>{estado.historico.length}</span>}
+        </button>
+        <button className={aba === 'parametros' ? 'on' : ''} onClick={() => setAba('parametros')}>Parâmetros</button>
+        <button className={aba === 'registro' ? 'on' : ''} onClick={() => setAba('registro')}>Registro</button>
+      </nav>
 
       <div className="tv-corpo">
 
@@ -195,15 +204,16 @@ export function RobotLive({
         </div>
       )}
 
-      {verParametros && parametros.length > 0 && (
+      {aba === 'parametros' && (
         <div className="tv-params">
-          {parametros.map((p) => (
+          {parametros.length > 0 ? parametros.map((p) => (
             <span key={p.rot}><i>{p.rot}</i>{p.valor}</span>
-          ))}
+          )) : <span>Nenhum parâmetro disponível.</span>}
         </div>
       )}
 
       {/* ===================== palco ===================== */}
+      {aba === 'ao-vivo' && <>
       {emCurso ? (
         <section className="tv-palco aposta">
           <div className="tv-mesa">
@@ -336,15 +346,17 @@ export function RobotLive({
           </div>
         </div>
       </section>
+      </>}
 
       {/* ===================== operacoes ===================== */}
+      {(aba === 'operacoes' || aba === 'registro') && (
       <section className="tv-ops">
         <div className="tv-ops-topo">
-          <span className="tv-rot">{verRegistro ? 'Registro do robô' : 'Operações desta sessão'}</span>
+          <span className="tv-rot">{aba === 'registro' ? 'Registro do robô' : 'Operações desta sessão'}</span>
           {estado.historico.length > 0 && <span className="tv-conta">{estado.historico.length}</span>}
         </div>
 
-        {verRegistro ? (
+        {aba === 'registro' ? (
           <div className="tv-rolo">
             <ul className="tv-registro">
               {estado.registros.map((r, i) => (
@@ -400,6 +412,7 @@ export function RobotLive({
           </div>
         )}
       </section>
+      )}
       </div>
     </div>
   )

@@ -61,12 +61,17 @@ export function RobotsPanel({
   const [ident, setIdent] = useState<Identidade>(IDENTIDADES[0])
   // Cada bloco e uma sessao de robo independente, com sua propria cabine.
   const [blocos, setBlocos] = useState<string[]>(['bloco-1'])
+  const [blocoExpandido, setBlocoExpandido] = useState<string | null>(null)
+  const [sessoesLocais, setSessoesLocais] = useState<Set<string>>(new Set())
+  const [vitrineAberta, setVitrineAberta] = useState(true)
   const proximoBloco = useRef(2)
 
   const abrirBloco = () =>
     setBlocos((b) => (b.length >= MAX_BLOCOS ? b : [...b, `bloco-${proximoBloco.current++}`]))
-  const fecharBloco = (id: string) =>
+  const fecharBloco = (id: string) => {
     setBlocos((b) => (b.length <= 1 ? b : b.filter((x) => x !== id)))
+    setBlocoExpandido((atual) => atual === id ? null : atual)
+  }
   const modelo: ModeloRobo = MODELOS.find((m) => m.contractType === ident.contrato) ?? MODELOS[0]
 
   useEffect(() => { if (symbolPadrao) setSymbol(symbolPadrao) }, [symbolPadrao])
@@ -162,6 +167,9 @@ export function RobotsPanel({
   // além dos ativos, o teatro mostra a última corrida encerrada, para revisão
   const ultimaParada = lista.find((r) => r.status === 'stopped')
   const emDestaque = [...rodando, ...(rodando.length === 0 && ultimaParada ? [ultimaParada] : [])]
+  const temSessaoLocal = sessoesLocais.size > 0
+
+  useEffect(() => { if (temSessaoLocal) setVitrineAberta(false) }, [temSessaoLocal])
 
   if (!logado) {
     return (
@@ -204,7 +212,15 @@ export function RobotsPanel({
 
       {/* A escolha do robo: cartas com a arte de cada um, como uma
           selecao de personagem — nada de quadradinhos. */}
-      {IDENTIDADES.length > 1 && <div className="rv-galeria">
+      {IDENTIDADES.length > 1 && temSessaoLocal && (
+        <div className="rv-galeria-cab">
+          <span><b>{ident.nome}</b> selecionado</span>
+          <button onClick={() => setVitrineAberta((v) => !v)}>
+            {vitrineAberta ? 'Recolher modelos' : 'Trocar modelo'}
+          </button>
+        </div>
+      )}
+      {IDENTIDADES.length > 1 && (!temSessaoLocal || vitrineAberta) && <div className="rv-galeria">
         {IDENTIDADES.map((i) => {
           const digitos =
             i.id === 'ag2' ? ['0', '1', '2'] : i.id === 'superior5' ? ['7', '8', '9'] : []
@@ -234,13 +250,20 @@ export function RobotsPanel({
 
       {ident.onde === 'teeds' && (
         <>
-          <div className={`blocos ${blocos.length > 1 ? 'duplo' : ''}`}>
+          <div className={`blocos ${blocos.length > 1 ? 'duplo' : ''} ${blocoExpandido ? 'tem-expandido' : ''}`}>
             {blocos.map((idBloco, i) => (
               <LocalRobotPanel key={idBloco}
                 titulo={`Robô ${i + 1}`}
                 socket={socket} isDemo={isDemo} moeda={moeda}
                 symbols={symbols} symbolPadrao={symbolPadrao} identidade={ident}
                 conexao={conexao}
+                expandido={blocoExpandido === idBloco}
+                onExpandir={() => setBlocoExpandido((atual) => atual === idBloco ? null : idBloco)}
+                onSessaoChange={(ativa) => setSessoesLocais((atuais) => {
+                  const proximas = new Set(atuais)
+                  ativa ? proximas.add(idBloco) : proximas.delete(idBloco)
+                  return proximas
+                })}
                 onRemover={blocos.length > 1 ? () => fecharBloco(idBloco) : undefined} />
             ))}
           </div>
