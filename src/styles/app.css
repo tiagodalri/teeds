@@ -3518,6 +3518,32 @@ button, input { font: inherit; color: inherit; }
   .tv-sessao { height: 202px; min-height: 202px; }
 }
 
+/* O expandido tem uma geometria própria: a coluna da sessão acompanha toda
+   a altura das três faixas da esquerda, sem herdar os cortes do card normal. */
+.tv-expandido .tv-corpo {
+  grid-template-rows: 104px minmax(228px, 1fr) 94px;
+  align-content: stretch;
+}
+.tv-expandido .tv-fluxo {
+  box-sizing: border-box; height: 76px; min-height: 76px;
+  align-self: start;
+}
+.tv-expandido .tv-palco {
+  box-sizing: border-box; height: auto; min-height: 0;
+  align-self: stretch;
+}
+.tv-expandido .tv-fita-bloco {
+  box-sizing: border-box; height: 94px; min-height: 94px;
+}
+.tv-expandido .tv-sessao {
+  box-sizing: border-box; height: auto; min-height: 0;
+  overflow: auto; align-self: stretch;
+}
+.tv-expandido .tv-ops {
+  grid-column: 1 / -1; grid-row: 1 / -1;
+  height: 100%; min-height: 0;
+}
+
 /* Tablet e notebooks estreitos: a mesa de operação passa para baixo do
    gráfico. Nunca desaparece e nunca fica espremida na lateral. */
 @media (min-width: 761px) and (max-width: 1080px) {
