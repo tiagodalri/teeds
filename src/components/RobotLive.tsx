@@ -184,6 +184,10 @@ export function RobotLive({
       </nav>
 
       <div className="tv-corpo">
+      <div className="tv-assinatura" aria-hidden>
+        <img src={`${import.meta.env.BASE_URL}teeds-marca.png`} alt="" />
+        <span>TEEDS ENGINE</span>
+      </div>
 
       {/* Uma compra recusada precisa aparecer. Antes ela ia só para um
           registro que a tela não mostrava — e o robô parecia travado. */}
@@ -220,6 +224,25 @@ export function RobotLive({
 
       {/* ===================== palco ===================== */}
       {aba === 'ao-vivo' && <>
+      <section className={`tv-fluxo ${emCurso ? 'aberto' : estado.historico.length ? 'fechado' : 'aguardando'}`}>
+        <div className="tv-fluxo-etapa ativa">
+          <i>{emCurso ? '●' : estado.historico.length ? '✓' : '1'}</i>
+          <span><b>{emCurso ? 'Contrato aberto' : estado.historico.length ? 'Último contrato' : 'Aguardando entrada'}</b>
+            <small>{emCurso ? relogio(emCurso.comprouEm) : estado.historico[0] ? relogio(estado.historico[0].quando) : 'monitorando o mercado'}</small>
+          </span>
+        </div>
+        <div className="tv-fluxo-linha"><span /></div>
+        <div className={`tv-fluxo-etapa ${!emCurso && estado.historico.length ? 'ativa concluida' : ''}`}>
+          <i>{!emCurso && estado.historico.length ? '✓' : '2'}</i>
+          <span><b>Contrato fechado</b>
+            <small>{emCurso
+              ? <>aguardando resultado · <Cronometro desde={emCurso.comprouEm} /></>
+              : estado.historico[0]
+                ? `${estado.historico[0].ganhou ? 'ganho' : 'perda'} ${assinado(estado.historico[0].lucro)} ${moeda}`
+                : 'próxima etapa'}</small>
+          </span>
+        </div>
+      </section>
       {emCurso ? (
         <section className="tv-palco aposta">
           <div className="tv-mesa">
@@ -244,16 +267,6 @@ export function RobotLive({
               </div>
             </div>
 
-            {/* onde caiu */}
-            <div className="tv-dial">
-              <div className={`tv-anel ${
-                emCurso.digitoAtual === null ? 'girando'
-                  : ganhaCom(emCurso.digitoAtual) ? 'ganhou' : 'perdeu'
-              }`}>
-                <span>{emCurso.digitoAtual ?? ''}</span>
-              </div>
-              <span className="tv-sub"><Cronometro desde={emCurso.comprouEm} /></span>
-            </div>
           </div>
 
           <div className="tv-esteira"><i /></div>

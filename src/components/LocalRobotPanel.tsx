@@ -189,7 +189,7 @@ export function LocalRobotPanel({
 
   // ------------------------------------------------------------ com sessão
   return (
-    <div className={`cabine-caixa ${expandido ? 'expandido' : ''}`}
+    <div className={`cabine-caixa ${expandido ? 'expandido' : ''} ${rodando ? 'rodando' : 'parado'}`}
       style={{ ['--robo' as any]: ident.cor, ['--robo-suave' as any]: ident.corSuave }}>
       <RobotLive
         estado={estado}
