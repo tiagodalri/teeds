@@ -3131,7 +3131,7 @@ button, input { font: inherit; color: inherit; }
 .go-aviso { margin-top: 14px; color: var(--muted); font-size: 9.5px; line-height: 1.5; text-align: center; }
 
 /* Player da sala de aula */
-.aula-palco { min-width: 0; }
+.aula-palco { width: 100%; min-width: 0; margin-inline: auto; }
 .aula-video { border: 1px solid rgba(255,255,255,.1); box-shadow: 0 28px 70px -30px rgba(0,0,0,.85); }
 .aula-video iframe { display: block; }
 .aula-demo { display: inline-flex; margin-top: 10px; padding: 6px 9px; border: 1px solid color-mix(in srgb, var(--aula) 32%, var(--border)); border-radius: 99px; color: var(--aula); font-size: 9px; font-weight: 700; letter-spacing: .04em; }
