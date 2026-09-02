@@ -3076,6 +3076,27 @@ button, input { font: inherit; color: inherit; }
   .qz { max-width: 100%; border-radius: 0; }
 }
 
+/* catálogo em pôster: proporção vertical e eixo único entre todas as trilhas */
+.aulas > .aulas-modulo { align-self: stretch; width: 100%; min-width: 0; box-sizing: border-box; }
+.aulas-modulo-topo, .aulas-carrossel { width: 100%; min-width: 0; box-sizing: border-box; }
+.aulas-carrossel .aulas-fileira { width: 100%; min-width: 0; box-sizing: border-box; }
+.aulas-carrossel .aula-cartao {
+  flex: 0 0 clamp(172px, 14vw, 218px); width: clamp(172px, 14vw, 218px);
+  align-self: flex-start;
+}
+.aulas-carrossel .aula-cartao-capa { aspect-ratio: 2 / 3; }
+.aulas-carrossel .aula-cartao-capa > img { object-fit: cover; }
+.aulas-carrossel .aula-cartao-corpo { min-height: 90px; justify-content: flex-start; }
+.aulas-carrossel .aula-cartao-corpo > b { white-space: normal; line-height: 1.3; min-height: 34px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.aulas-carrossel .aula-hover-info { padding-top: 80px; }
+.aulas-carrossel .aula-hover-info small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.aulas-seta { width: 42px; }
+.aulas-continue .aulas-carrossel { max-width: 218px; }
+
+@media (max-width: 700px) {
+  .aulas-carrossel .aula-cartao { flex-basis: 46vw; width: 46vw; }
+}
+
 /* cockpit compacto antes de ligar: sem repetir o banner do modelo */
 .blocos > .pronto.pronto-compacto { height: auto; min-height: 0; }
 .pronto-compacto { text-align: left; overflow: visible; box-shadow: 0 16px 38px -32px rgba(0,0,0,.7); border-color: color-mix(in srgb, var(--robo) 22%, var(--border)); }
