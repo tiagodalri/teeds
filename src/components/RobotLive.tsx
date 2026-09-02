@@ -130,7 +130,7 @@ export function RobotLive({
         <div className="tv-quem">
           <i className="tv-farol" />
           <div>
-            <b>{titulo}<span className="tv-fase">{fase.texto}</span></b>
+            <b><span className="tv-nome">{titulo}</span><span className="tv-fase">{fase.texto}</span></b>
             <span className="tv-onde">{nomeEstrategia} · {ativo}</span>
           </div>
         </div>

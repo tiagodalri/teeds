@@ -841,7 +841,7 @@ button, input { font: inherit; color: inherit; }
   color: var(--text);
   background:
     radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1.5px) 0 0 / 22px 22px,
-    radial-gradient(85% 70% at 50% -15%, color-mix(in srgb, var(--robo, #4c6fff) 22%, transparent), transparent 60%),
+    radial-gradient(90% 24% at 50% 0%, color-mix(in srgb, var(--robo, #4c6fff) 22%, transparent), transparent 100%),
     linear-gradient(180deg, #101a2e, #0a101f);
   border: 1px solid color-mix(in srgb, var(--robo, #4c6fff) 28%, #243049);
   border-radius: 16px; overflow: hidden;
@@ -858,7 +858,8 @@ button, input { font: inherit; color: inherit; }
 
 /* ---------------- faixa de estado ---------------- */
 .tv-topo {
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px 16px; flex-wrap: wrap;
   padding: 14px 18px; background: rgba(255, 255, 255, 0.03);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(4px);
@@ -866,9 +867,10 @@ button, input { font: inherit; color: inherit; }
 .tv-quem { display: flex; align-items: center; gap: 11px; min-width: 0; }
 .tv-quem > div { min-width: 0; }
 .tv-quem b {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   font-size: 14.5px; font-weight: 650; letter-spacing: -.01em;
 }
+.tv-nome { white-space: nowrap; }
 .tv-fase {
   font-size: 9.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase;
   padding: 3px 8px; border-radius: 20px; white-space: nowrap;
@@ -949,13 +951,13 @@ button, input { font: inherit; color: inherit; }
 .tv-palco {
   position: relative; padding: 16px 18px 18px; flex-shrink: 0;
   border-bottom: 1px solid var(--border);
-  height: 132px; overflow: hidden;
+  min-height: 132px; overflow: hidden;
 }
 .tv-esperando {
   font-size: 12px; font-weight: 500; color: var(--muted); line-height: 1.4;
   max-width: 18ch;
 }
-.tv.operando .tv-palco { background: var(--tv-ambar-suave); }
+
 .tv-palco.quatro { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
 
 /* A aposta em andamento.
@@ -989,8 +991,8 @@ button, input { font: inherit; color: inherit; }
   height: 34px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   font-size: 14px; font-weight: 600;
-  background: var(--bg); color: var(--border);
-  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.045); color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   transition: transform .18s ease, box-shadow .18s ease;
 }
 /* aceso = esse dígito paga */
@@ -1211,7 +1213,7 @@ button, input { font: inherit; color: inherit; }
 
 /* A cabine se adapta à largura do bloco, não da janela: com dois robôs
    lado a lado cada um fica estreito mesmo numa tela larga. */
-@container (max-width: 720px) {
+@container (max-width: 980px) {
   .tv-palco.quatro { grid-template-columns: repeat(2, 1fr); row-gap: 16px; }
   .tv-mesa { grid-template-columns: auto 1fr; gap: 18px; row-gap: 14px; }
   .tv-dial { grid-column: 2; grid-row: 1; justify-self: end; }
@@ -1238,6 +1240,7 @@ button, input { font: inherit; color: inherit; }
    ficava desalinhada. */
 .blocos { display: grid; gap: 16px; grid-auto-rows: 648px; }
 .blocos > * { min-height: 0; height: 100%; }
+.blocos > .pronto { height: auto; align-self: start; }
 .blocos.duplo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 1100px) { .blocos.duplo { grid-template-columns: 1fr; } }
 .blocos-rodape {
@@ -2701,3 +2704,7 @@ button, input { font: inherit; color: inherit; }
 /* a tela dos robôs fica montada para o motor nunca morrer na troca de aba */
 .tela-viva { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .tela-viva[hidden] { display: none; }
+
+
+/* a fita mostra o agora: ancorada a direita, o passado e que sai da tela */
+.tv-fita { justify-content: flex-end !important; overflow: hidden; }
