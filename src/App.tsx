@@ -33,6 +33,7 @@ const INDICADORES = [
   { id: 'bollinger', label: 'Bollinger', titulo: 'Bandas de Bollinger de 20 períodos' },
   { id: 'rsi', label: 'RSI 14', titulo: 'Índice de força relativa de 14 períodos' },
   { id: 'macd', label: 'MACD', titulo: 'Convergência e divergência de médias móveis' },
+  { id: 'fibonacci', label: 'Fibonacci', titulo: 'Retração de Fibonacci entre a mínima e a máxima visíveis' },
 ] as const
 
 const TIMEFRAMES: { label: string; value: Granularity }[] = [

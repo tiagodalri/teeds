@@ -234,6 +234,28 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
       }
       if (indicators.includes('sma')) desenharLinha(mediaSimples(closes, 20), '#e0b84f', 1.8)
       if (indicators.includes('ema')) desenharLinha(mediaExponencial(closes, 50), '#35a9ff', 1.7)
+      if (indicators.includes('fibonacci')) {
+        const maximo = Math.max(...items.map((c) => c.high))
+        const minimo = Math.min(...items.map((c) => c.low))
+        const amplitude = maximo - minimo
+        const niveis = [0, .236, .382, .5, .618, .786, 1]
+        ctx.save()
+        ctx.font = '700 8.5px ui-sans-serif, system-ui'
+        ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'
+        niveis.forEach((nivel) => {
+          const preco = maximo - amplitude * nivel
+          const y = toY(preco)
+          ctx.setLineDash(nivel === .5 || nivel === .618 ? [5, 4] : [2, 5])
+          ctx.strokeStyle = nivel === .618 ? 'rgba(229, 192, 103, .78)' : 'rgba(229, 192, 103, .38)'
+          ctx.lineWidth = nivel === .618 ? 1.35 : 1
+          ctx.beginPath(); ctx.moveTo(plot.x, y); ctx.lineTo(plot.x + plot.w, y); ctx.stroke()
+          const texto = `${(nivel * 100).toFixed(nivel === 0 || nivel === 1 ? 0 : 1)}%`
+          const largura = ctx.measureText(texto).width
+          ctx.fillStyle = 'rgba(8, 11, 18, .82)'; roundRect(ctx, plot.x + 5, y - 13, largura + 8, 13, 3); ctx.fill()
+          ctx.fillStyle = nivel === .618 ? '#e5c067' : '#bfa86d'; ctx.fillText(texto, plot.x + 9, y - 2)
+        })
+        ctx.restore()
+      }
 
       const paineis: Array<{ nome: string; valor: number; cor: string; minimo: number; maximo: number }> = []
       if (indicators.includes('rsi')) paineis.push({ nome: 'RSI 14', valor: rsi(closes, 14), cor: '#c18cff', minimo: 0, maximo: 100 })
