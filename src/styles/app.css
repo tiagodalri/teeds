@@ -3461,6 +3461,63 @@ button, input { font: inherit; color: inherit; }
 .aulas .aulas-conta { color: #c8a957; }
 .aulas .aula-cartao:focus-visible { outline-color: #d0aa52; }
 
+/* ================= estabilidade em tempo real =================
+   Valores mudam; a geometria não. Cada região reserva seu espaço e listas
+   crescentes rolam por dentro, sem empurrar o restante da interface. */
+.trade { scrollbar-gutter: stable; }
+.pos-cabecalho { min-height: 54px; }
+.pos-resumo { min-height: 18px; }
+.posicoes {
+  max-height: min(620px, calc(100dvh - 250px));
+  overflow-y: auto; overflow-x: hidden; padding-right: 3px;
+  scrollbar-gutter: stable; overscroll-behavior: contain;
+}
+.pos {
+  box-sizing: border-box; height: 276px; min-height: 276px;
+  display: grid; grid-template-rows: 26px 25px 58px 67px 38px;
+  align-content: start; overflow: hidden; contain: layout paint;
+}
+.pos-cab, .pos-resultado, .pos-dados { min-width: 0; margin-bottom: 0; }
+.pos-cab { height: 26px; }
+.pos-progresso { height: 25px; margin-bottom: 0; }
+.pos-resultado { height: 58px; }
+.pos-dados { height: 67px; box-sizing: border-box; margin-bottom: 0; }
+.pos .btn-vender { height: 38px; min-height: 38px; align-self: end; }
+.pos-resultado strong, .pos-alvo strong, .pos-dados dd, .pos-tempo {
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+.tv-topo {
+  box-sizing: border-box; min-height: 78px;
+  display: grid; grid-template-columns: minmax(190px, 1fr) auto auto auto;
+  align-items: center; flex-wrap: nowrap;
+}
+.tv-quem b { min-height: 22px; flex-wrap: nowrap; }
+.tv-fase { display: inline-block; width: 148px; text-align: center; overflow: hidden; text-overflow: ellipsis; }
+.tv-placar { width: 150px; margin-left: 0; }
+.tv-placar strong { display: block; min-width: 8ch; white-space: nowrap; }
+.tv-resumo-fixo { min-width: 224px; }
+.tv-resumo-fixo b, .tv-crono { font-variant-numeric: tabular-nums; }
+.tv-corpo { scrollbar-gutter: stable; }
+.tv-fluxo { box-sizing: border-box; height: 58px; min-height: 58px; }
+.tv-palco { box-sizing: border-box; height: 188px; min-height: 188px; }
+.tv-fita-bloco { box-sizing: border-box; height: 78px; min-height: 78px; overflow: hidden; }
+.tv-sessao { box-sizing: border-box; height: 184px; min-height: 184px; overflow: hidden; }
+.tv-ops { height: 100%; min-height: 0; overflow: hidden; }
+.tv-rolo { flex: 1; min-height: 0; overflow: auto; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.tv-tabela { table-layout: fixed; font-variant-numeric: tabular-nums; }
+.tv-tabela th, .tv-tabela td { overflow: hidden; text-overflow: ellipsis; }
+.cabine-caixa { contain: layout paint; }
+
+@container (max-width: 980px) {
+  .tv-topo { grid-template-columns: minmax(180px,1fr) 140px; grid-template-rows: 46px 38px; min-height: 102px; }
+  .tv-resumo-fixo { grid-column: 1; grid-row: 2; min-width: 0; border-left: 0; padding-left: 0; }
+  .tv-acoes { grid-column: 2; grid-row: 2; justify-self: end; }
+  .tv-placar { width: 140px; }
+  .tv-palco { height: 208px; min-height: 208px; }
+  .tv-sessao { height: 202px; min-height: 202px; }
+}
+
 /* Tablet e notebooks estreitos: a mesa de operação passa para baixo do
    gráfico. Nunca desaparece e nunca fica espremida na lateral. */
 @media (min-width: 761px) and (max-width: 1080px) {
@@ -3474,4 +3531,30 @@ button, input { font: inherit; color: inherit; }
   .trade > .field { display: inline-block; width: min(250px, calc(50% - 8px)); margin: 16px 12px 0 0; vertical-align: top; }
   .trade .quotes { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
   .trade .pos-cabecalho { margin-top: 22px; }
+}
+
+/* As regras responsivas acima mudam a disposição, mas preservam alturas e
+   espaços reservados. Isso evita o salto mais perceptível nos celulares. */
+@media (max-width: 760px) {
+  .trade { overflow: hidden; }
+  .trade .posicoes { max-height: 584px; overflow-y: auto; }
+  .trade .pos { height: 276px; min-height: 276px; }
+  .cabine-caixa { height: clamp(620px, 78dvh, 700px) !important; min-height: 620px !important; }
+  .cabine-caixa .tv { height: 100%; min-height: 0; }
+  .tv-fluxo { height: 116px; min-height: 116px; }
+  .tv-palco { height: 228px; min-height: 228px; }
+  .tv-fita-bloco { height: 82px; min-height: 82px; }
+  .tv-sessao { height: 220px; min-height: 220px; }
+}
+
+@container (max-width: 460px) {
+  .tv-topo {
+    display: grid; grid-template-columns: minmax(0,1fr) 118px;
+    grid-template-rows: 46px 38px 40px; min-height: 142px;
+  }
+  .tv-quem { grid-column: 1; grid-row: 1; }
+  .tv-placar { grid-column: 2; grid-row: 1; width: 118px; }
+  .tv-resumo-fixo { grid-column: 1 / -1; grid-row: 2; width: 100%; padding-top: 7px; }
+  .tv-acoes { grid-column: 1 / -1; grid-row: 3; width: 100%; overflow: hidden; }
+  .tv-fase { width: 112px; }
 }

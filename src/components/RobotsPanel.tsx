@@ -13,7 +13,7 @@ import { CapaAula, capaDoRobo } from './CapaAula'
 import { ServerRobotLive } from './ServerRobotLive'
 import { RobotScope } from './RobotScope'
 import { IDENTIDADES, identidade, identidadePorContrato, type Identidade } from '../core/deriv/branding'
-import { batizarRobo, nomeDoRobo, sugerirNome } from '../core/deriv/robotNames'
+import { batizarRobo, nomeDoRobo, sugerirNome, todosOsNomes } from '../core/deriv/robotNames'
 import { DerivDesconectada } from './DerivDesconectada'
 
 interface Props {
@@ -57,7 +57,7 @@ export function RobotsPanel({
   const [pagamento, setPagamento] = useState<number | null>(null)
   const [nome, setNome] = useState('')
   const [renomeando, setRenomeando] = useState<string | null>(null)
-  const [nomes, setNomes] = useState<Record<string, string>>({})
+  const [nomes, setNomes] = useState<Record<string, string>>(todosOsNomes)
   const [ident, setIdent] = useState<Identidade>(IDENTIDADES[0])
   // Cada bloco e uma sessao de robo independente, com sua propria cabine.
   const [blocos, setBlocos] = useState<string[]>(['bloco-1'])
@@ -106,8 +106,6 @@ export function RobotsPanel({
   }, [socket])
 
   useEffect(() => { carregar() }, [carregar])
-  useEffect(() => { import('../core/deriv/robotNames').then((m) => setNomes(m.todosOsNomes())) }, [])
-
   useEffect(() => {
     if (!socket) return
     const todos = [...robos.values()]

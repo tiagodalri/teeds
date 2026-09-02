@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
+import { useClock } from '../hooks/useClock'
 
 interface Props {
   estado: EstadoMotor
@@ -76,13 +77,8 @@ function Curva({ pontos, positivo }: { pontos: number[]; positivo: boolean }) {
 /* --------------------------------------------------- contador de segundos */
 
 function Cronometro({ desde }: { desde: number }) {
-  const [, redesenha] = useState(0)
-  useEffect(() => {
-    const id = setInterval(() => redesenha((n) => n + 1), 200)
-    return () => clearInterval(id)
-  }, [])
-  const s = Math.max(0, (Date.now() - desde) / 1000)
-  return <span className="tv-crono">{s.toFixed(1)}s</span>
+  const s = Math.max(0, (useClock() - desde) / 1000)
+  return <span className="tv-crono">{Math.floor(s)}s</span>
 }
 
 /* -------------------------------------------------------------- principal */

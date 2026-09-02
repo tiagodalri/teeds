@@ -1,14 +1,10 @@
-import { useEffect, useState } from 'react'
 import type { OpenContract } from '../core/deriv/trading'
 import { Progress } from './Progress'
+import { useClock } from '../hooks/useClock'
 
 /** Contagem regressiva ate a expiracao, atualizada a cada segundo. */
 function useCountdown(expiryEpoch: number) {
-  const [agora, setAgora] = useState(() => Math.floor(Date.now() / 1000))
-  useEffect(() => {
-    const id = setInterval(() => setAgora(Math.floor(Date.now() / 1000)), 1000)
-    return () => clearInterval(id)
-  }, [])
+  const agora = Math.floor(useClock() / 1000)
   const restante = Math.max(0, expiryEpoch - agora)
   const mm = String(Math.floor(restante / 60)).padStart(2, '0')
   const ss = String(restante % 60).padStart(2, '0')
