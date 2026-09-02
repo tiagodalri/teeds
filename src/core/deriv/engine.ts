@@ -497,7 +497,7 @@ export class MotorTeeds {
           esperou: this.esperaAtual,
         },
         ...this.estado.historico,
-      ].slice(0, 60)
+      ]
       this.esperaAtual = 0
       this.estado.ticksAnalisados = 0
       this.estado.emCurso = null
