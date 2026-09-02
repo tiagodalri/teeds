@@ -156,6 +156,65 @@ function Seta({ u, x, y, s, cor, rot = 0 }: { u: string; x: number; y: number; s
   )
 }
 
+/** Tecla 3D: um digito como tecla de mesa, com espessura e verniz. */
+function Tecla({ u, ch, x, y, s = 30, cor, acesa = true }: {
+  u: string; ch: string; x: number; y: number; s?: number; cor: string; acesa?: boolean
+}) {
+  const meio = s / 2
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <rect x={-meio} y={-meio + s * 0.12} width={s} height={s} rx={s * 0.3}
+        fill={mix(cor, '#000000', 0.62)} />
+      <rect x={-meio} y={-meio} width={s} height={s} rx={s * 0.3}
+        fill={acesa ? `url(#cor-${u})` : '#25304c'}
+        stroke={acesa ? mix(cor, '#ffffff', 0.35) : '#33405f'} strokeWidth={s * 0.035} />
+      <rect x={-meio + s * 0.08} y={-meio + s * 0.06} width={s * 0.84} height={s * 0.4}
+        rx={s * 0.2} fill="#ffffff" opacity={acesa ? 0.22 : 0.06} />
+      <text y={s * 0.22} textAnchor="middle" fontFamily="system-ui" fontWeight="800"
+        fontSize={s * 0.62} fill={acesa ? '#ffffff' : '#5a6a8f'}>{ch}</text>
+    </g>
+  )
+}
+
+/** Digito heroi: extrusao em camadas + verniz, nada de sombra jogada. */
+function DigitoHeroi({ u, ch, x, y, s, cor }: {
+  u: string; ch: string; x: number; y: number; s: number; cor: string
+}) {
+  const fatias = 7
+  const passo = s * 0.011
+  return (
+    <g transform={`translate(${x} ${y})`} fontFamily="system-ui" fontWeight="800" fontSize={s}>
+      {Array.from({ length: fatias }, (_, i) => (
+        <text key={i} x={(fatias - i) * passo} y={(fatias - i) * passo * 1.2}
+          textAnchor="middle" fill={mix(cor, '#000000', 0.68)}>{ch}</text>
+      ))}
+      <text textAnchor="middle" fill={`url(#cor-${u})`}
+        stroke={mix(cor, '#ffffff', 0.45)} strokeWidth={s * 0.012}>{ch}</text>
+    </g>
+  )
+}
+
+/** Placa de emblema: hexagono metalico com aro na cor do robo. */
+function Placa({ u, cor, cx, cy, r }: { u: string; cor: string; cx: number; cy: number; r: number }) {
+  const px = (a: number) => cx + r * Math.sin(a)
+  const py = (a: number) => cy - r * Math.cos(a)
+  const pontos = [0, 1, 2, 3, 4, 5].map((i) => `${px((i * Math.PI) / 3)},${py((i * Math.PI) / 3)}`).join(' ')
+  const internos = [0, 1, 2, 3, 4, 5]
+    .map((i) => `${cx + r * 0.88 * Math.sin((i * Math.PI) / 3)},${cy - r * 0.88 * Math.cos((i * Math.PI) / 3)}`)
+    .join(' ')
+  return (
+    <g filter={`url(#sombra-${u})`}>
+      <polygon points={pontos} fill="#111a30"
+        stroke={mix(cor, '#ffffff', 0.15)} strokeWidth="3" strokeLinejoin="round" />
+      <polygon points={pontos} fill="none"
+        stroke={cor} strokeWidth="1.5" strokeLinejoin="round" opacity="0.9"
+        filter={`url(#brilho-${u})`} />
+      <polygon points={internos} fill="none"
+        stroke="#ffffff" strokeOpacity="0.08" strokeWidth="1" strokeLinejoin="round" />
+    </g>
+  )
+}
+
 /** Dígito flutuante com extrusão. */
 function Digito({ u, ch, x, y, s, cor, aceso = false }: { u: string; ch: string; x: number; y: number; s: number; cor: string; aceso?: boolean }) {
   return (
@@ -164,6 +223,20 @@ function Digito({ u, ch, x, y, s, cor, aceso = false }: { u: string; ch: string;
         fontSize={s} fill="#000000" opacity="0.5">{ch}</text>
       <text textAnchor="middle" fontFamily="system-ui" fontWeight="800" fontSize={s}
         fill={aceso ? cor : '#3d4b6e'}>{ch}</text>
+    </g>
+  )
+}
+
+/** Emblema de patente dos robos AG: placa metalica e o digito heroi. */
+function EmblemaAG({ u, cor, heroi }: { u: string; cor: string; heroi: string }) {
+  return (
+    <g>
+      <Chao cx={200} cy={198} rx={95} />
+      <circle cx="200" cy="108" r="84" fill="none" stroke={cor} strokeOpacity="0.22"
+        strokeWidth="1.2" strokeDasharray="2 9" />
+      <circle cx="200" cy="108" r="98" fill="none" stroke={cor} strokeOpacity="0.1" strokeWidth="1" />
+      <Placa u={u} cor={cor} cx={200} cy={108} r={74} />
+      <DigitoHeroi u={u} ch={heroi} x={200} y={138} s={88} cor={cor} />
     </g>
   )
 }
@@ -309,13 +382,13 @@ function Cena({ aula, u, cor }: { aula: string; u: string; cor: string }) {
       return (
         <g>
           <Chao cx={200} cy={196} rx={110} />
-          <Digito u={u} ch="3" x={96} y={92} s={40} cor={cor} />
-          <Digito u={u} ch="8" x={150} y={140} s={54} cor={cor} />
-          <Digito u={u} ch="5" x={210} y={96} s={66} cor={cor} aceso />
-          <Digito u={u} ch="1" x={268} y={140} s={48} cor={cor} />
-          <Digito u={u} ch="9" x={316} y={90} s={38} cor={cor} />
-          <circle cx="210" cy="76" r="52" fill="none" stroke={cor} strokeOpacity="0.35"
-            strokeWidth="1.5" strokeDasharray="3 7" />
+          <circle cx="200" cy="100" r="64" fill="none" stroke={cor} strokeOpacity="0.3"
+            strokeWidth="1.2" strokeDasharray="2 9" />
+          <Tecla u={u} ch="3" x={116} y={78} s={30} cor={cor} acesa={false} />
+          <Tecla u={u} ch="8" x={148} y={142} s={38} cor={cor} acesa={false} />
+          <Tecla u={u} ch="5" x={200} y={100} s={58} cor={cor} />
+          <Tecla u={u} ch="1" x={256} y={146} s={34} cor={cor} acesa={false} />
+          <Tecla u={u} ch="9" x={288} y={82} s={28} cor={cor} acesa={false} />
         </g>
       )
     case 'posicoes-operacoes':
@@ -356,35 +429,9 @@ function Cena({ aula, u, cor }: { aula: string; u: string; cor: string }) {
         </g>
       )
     case 'robo-ag7':
-      return (
-        <g>
-          <Chao cx={200} cy={192} rx={100} />
-          <g filter={`url(#brilho-${u})`}>
-            <circle cx="200" cy="102" r="56" fill="none" stroke={cor} strokeWidth="3" strokeOpacity="0.75" />
-            <circle cx="200" cy="102" r="36" fill="none" stroke={cor} strokeWidth="2.5" strokeOpacity="0.5" />
-          </g>
-          <Digito u={u} ch="7" x={162} y={128} s={62} cor={cor} aceso />
-          <Digito u={u} ch="8" x={206} y={122} s={50} cor={cor} aceso />
-          <Digito u={u} ch="9" x={244} y={126} s={42} cor={cor} aceso />
-          <text x="200" y="34" textAnchor="middle" fontSize="12" letterSpacing="5" fontWeight="700"
-            fill={mix(cor, '#ffffff', 0.5)}>AG7</text>
-        </g>
-      )
+      return <EmblemaAG u={u} cor={cor} heroi="7" />
     case 'robo-ag2':
-      return (
-        <g>
-          <Chao cx={200} cy={192} rx={100} />
-          <g filter={`url(#brilho-${u})`}>
-            <circle cx="200" cy="102" r="56" fill="none" stroke={cor} strokeWidth="3" strokeOpacity="0.75" />
-            <circle cx="200" cy="102" r="36" fill="none" stroke={cor} strokeWidth="2.5" strokeOpacity="0.5" />
-          </g>
-          <Digito u={u} ch="0" x={158} y={126} s={44} cor={cor} aceso />
-          <Digito u={u} ch="1" x={196} y={122} s={52} cor={cor} aceso />
-          <Digito u={u} ch="2" x={238} y={128} s={62} cor={cor} aceso />
-          <text x="200" y="34" textAnchor="middle" fontSize="12" letterSpacing="5" fontWeight="700"
-            fill={mix(cor, '#ffffff', 0.5)}>AG2</text>
-        </g>
-      )
+      return <EmblemaAG u={u} cor={cor} heroi="2" />
     case 'freios':
       return (
         <g>
