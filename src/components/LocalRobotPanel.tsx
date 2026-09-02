@@ -140,6 +140,14 @@ export function LocalRobotPanel({
           <div className="pronto-corpo">
           <h3>{estrategia.nome}</h3>
           <p>{estrategia.descricao}</p>
+          <div className="pronto-specs">
+            <span className="ps-digitos" title="dígitos que pagam">
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter(ganhaCom).map((d) => <i key={d}>{d}</i>)}
+            </span>
+            <span className="ps-chip">{identidade.chance}% de chance</span>
+            <span className="ps-chip">1 tick por entrada</span>
+            <span className="ps-chip">freios de ganho e perda</span>
+          </div>
           <button className="pronto-btn" disabled={!socket} onClick={() => setPreparando(true)}>
             Ligar robô
           </button>
