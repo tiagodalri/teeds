@@ -863,7 +863,26 @@ button, input { font: inherit; color: inherit; }
   padding: 14px 18px; background: rgba(255, 255, 255, 0.03);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(4px);
+  flex-shrink: 0;
 }
+.tv-corpo {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.tv-corpo::-webkit-scrollbar { width: 9px; }
+.tv-corpo::-webkit-scrollbar-track { background: transparent; }
+.tv-corpo::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+.tv-corpo::-webkit-scrollbar-thumb:hover { background-color: var(--muted); }
 .tv-quem { display: flex; align-items: center; gap: 11px; min-width: 0; }
 .tv-quem > div { min-width: 0; }
 .tv-quem b {
@@ -1164,7 +1183,7 @@ button, input { font: inherit; color: inherit; }
 
 /* ---------------- tabela de operações ---------------- */
 .tv-ops {
-  padding: 12px 18px 0; flex: 1; min-height: 0;
+  padding: 12px 18px 0; min-height: 220px;
   display: flex; flex-direction: column;
 }
 .tv-ops-topo { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-shrink: 0; }
@@ -1174,7 +1193,7 @@ button, input { font: inherit; color: inherit; }
 }
 .tv-nada-ops { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
 .tv-rolo {
-  flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; margin: 0 -18px;
+  overflow-x: auto; margin: 0 -18px;
   scrollbar-width: thin;
 }
 .tv-rolo::-webkit-scrollbar { width: 8px; height: 8px; }

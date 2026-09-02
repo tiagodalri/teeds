@@ -168,6 +168,8 @@ export function RobotLive({
         </div>
       </header>
 
+      <div className="tv-corpo">
+
       {/* Uma compra recusada precisa aparecer. Antes ela ia só para um
           registro que a tela não mostrava — e o robô parecia travado. */}
       {estado.falha && (
@@ -398,6 +400,7 @@ export function RobotLive({
           </div>
         )}
       </section>
+      </div>
     </div>
   )
 }
