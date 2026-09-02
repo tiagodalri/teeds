@@ -18,7 +18,7 @@ interface Props {
   identidade: Identidade
   /** Estado da conexao autenticada. */
   conexao?: string
-  /** Fecha este bloco. Ausente quando so ha um robo na tela. */
+  /** Fecha este bloco, inclusive quando ele e o ultimo da tela. */
   onRemover?: () => void
   /** Como este bloco se chama: "Robô 1", "Robô 2"... */
   titulo: string
@@ -158,7 +158,7 @@ export function LocalRobotPanel({
             <span className="ps-chip">freios de ganho e perda</span>
           </div>
           <button className="pronto-btn" disabled={!socket} onClick={() => setPreparando(true)}>
-            Ligar robô
+            Configurar {identidade.nome.replace('Teeds - ', '')}
           </button>
           {onRemover && (
             <button className="pronto-fechar" onClick={onRemover}>Fechar este bloco</button>
@@ -208,7 +208,11 @@ export function LocalRobotPanel({
         onExpandir={onExpandir}
         onDesligar={rodando ? () => motorRef.current?.desligar() : undefined}
         onLigarDeNovo={!rodando ? () => setPreparando(true) : undefined}
-        onRemover={onRemover ? () => { motorRef.current?.desligar('bloco fechado'); onRemover() } : undefined}
+        onRemover={onRemover ? () => {
+          if (rodando && !window.confirm('Este robô está operando. Deseja desligar e fechar o bloco?')) return
+          motorRef.current?.desligar('bloco fechado')
+          onRemover()
+        } : undefined}
       />
 
       {preparando && (

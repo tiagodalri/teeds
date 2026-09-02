@@ -3030,3 +3030,48 @@ button, input { font: inherit; color: inherit; }
   border: 1px solid var(--border); border-radius: 999px;
   padding: 2px 8px; margin-left: 6px; white-space: nowrap;
 }
+
+/* escolha guiada dos robôs */
+.rv-seletor { margin-bottom: 18px; padding: 18px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--surface) 74%, transparent); }
+.rv-seletor-topo { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 14px; }
+.rv-seletor-topo h3 { margin: 4px 0 0; font-size: 19px; letter-spacing: -.02em; }
+.rv-seletor-topo button { border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; padding: 9px 14px; border-radius: 10px; font-size: 12px; font-weight: 650; }
+.rv-seletor-topo button:hover { border-color: var(--primary); color: var(--primary); }
+.rv-seletor .rv-galeria { margin-bottom: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rv-seletor .rv-carta { min-height: 148px; border-radius: 14px; }
+.rv-seletor .rv-corpo { padding: 81px 16px 14px; }
+.rv-seletor .rv-corpo > b { font-size: 17px; }
+.rv-compara-fundo { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 20px; background: rgba(2, 4, 8, .76); backdrop-filter: blur(8px); animation: qz-entra .16s ease-out; }
+.rv-compara { width: min(720px, 100%); background: var(--bg); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,.38); padding: 22px; }
+.rv-compara > header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 18px; }
+.rv-compara h3 { margin: 5px 0 0; font-size: 22px; }
+.rv-compara > header > button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 28px; }
+.rv-compara-grade { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.rv-compara article { padding: 20px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); }
+.rv-compara article > span { display: block; margin-top: 12px; color: var(--robo); text-transform: uppercase; letter-spacing: .12em; font-size: 10px; font-weight: 750; }
+.rv-compara h4 { margin: 3px 0 14px; font-size: 19px; }
+.rv-compara dl { margin: 0 0 16px; }
+.rv-compara dl div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.rv-compara dt { color: var(--muted); }
+.rv-compara dd { margin: 0; font-weight: 700; }
+.rv-compara article > button { width: 100%; border: 0; border-radius: 9px; padding: 10px; background: var(--robo); color: #fff; font-weight: 700; cursor: pointer; }
+.blocos-vazio { grid-column: 1 / -1; min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border: 1.5px dashed var(--border); border-radius: 18px; background: var(--surface); padding: 32px; }
+.blocos-vazio > span { color: var(--primary); font-size: 24px; }
+.blocos-vazio h3 { margin: 12px 0 5px; }
+.blocos-vazio p { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
+.blocos-vazio button { border: 0; border-radius: 10px; padding: 11px 18px; background: var(--primary); color: #fff; font-weight: 700; cursor: pointer; }
+/* o preparo entra como painel lateral e mantém a escolha visível */
+.qz-fundo { place-items: stretch end; padding: 0; }
+.qz { height: 100%; max-height: none; max-width: 520px; border-radius: 20px 0 0 20px; animation: qz-lateral .22s ease-out; }
+@keyframes qz-lateral { from { transform: translateX(40px); opacity: .6; } to { transform: none; opacity: 1; } }
+/* capas editoriais exclusivas para cada aula */
+.aula-cartao-capa > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .45s ease, filter .3s ease; }
+.aula-cartao:hover:not(:disabled) .aula-cartao-capa > img { transform: scale(1.055); }
+.aula-modal-capa > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.aula-embreve-palco > img { width: 100%; height: 100%; object-fit: cover; opacity: .72; }
+@media (max-width: 700px) {
+  .rv-seletor { padding: 13px; }
+  .rv-seletor-topo { align-items: start; flex-direction: column; gap: 10px; }
+  .rv-seletor .rv-galeria, .rv-compara-grade { grid-template-columns: 1fr; }
+  .qz { max-width: 100%; border-radius: 0; }
+}

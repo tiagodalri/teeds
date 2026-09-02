@@ -64,12 +64,13 @@ export function RobotsPanel({
   const [blocoExpandido, setBlocoExpandido] = useState<string | null>(null)
   const [sessoesLocais, setSessoesLocais] = useState<Set<string>>(new Set())
   const [vitrineAberta, setVitrineAberta] = useState(true)
+  const [comparando, setComparando] = useState(false)
   const proximoBloco = useRef(2)
 
   const abrirBloco = () =>
     setBlocos((b) => (b.length >= MAX_BLOCOS ? b : [...b, `bloco-${proximoBloco.current++}`]))
   const fecharBloco = (id: string) => {
-    setBlocos((b) => (b.length <= 1 ? b : b.filter((x) => x !== id)))
+    setBlocos((b) => b.filter((x) => x !== id))
     setBlocoExpandido((atual) => atual === id ? null : atual)
   }
   const modelo: ModeloRobo = MODELOS.find((m) => m.contractType === ident.contrato) ?? MODELOS[0]
@@ -220,7 +221,12 @@ export function RobotsPanel({
           </button>
         </div>
       )}
-      {IDENTIDADES.length > 1 && (!temSessaoLocal || vitrineAberta) && <div className="rv-galeria">
+      {IDENTIDADES.length > 1 && (!temSessaoLocal || vitrineAberta) && <section className="rv-seletor">
+        <div className="rv-seletor-topo">
+          <div><span className="rot">Escolha sua estratégia</span><h3>Qual robô combina com a sua sessão?</h3></div>
+          <button onClick={() => setComparando(true)}>Comparar robôs</button>
+        </div>
+        <div className="rv-galeria">
         {IDENTIDADES.map((i) => {
           const digitos =
             i.id === 'ag2' ? ['0', '1', '2'] : i.id === 'superior5' ? ['7', '8', '9'] : []
@@ -246,7 +252,26 @@ export function RobotsPanel({
             </button>
           )
         })}
-      </div>}
+        </div>
+      </section>}
+
+      {comparando && (
+        <div className="rv-compara-fundo" onMouseDown={(e) => e.target === e.currentTarget && setComparando(false)}>
+          <section className="rv-compara" role="dialog" aria-modal="true" aria-label="Comparar robôs">
+            <header><div><span className="rot">Comparativo Teeds</span><h3>Dois estilos, uma decisão simples</h3></div><button onClick={() => setComparando(false)} aria-label="Fechar">×</button></header>
+            <div className="rv-compara-grade">
+              {IDENTIDADES.map((i) => {
+                const ag2 = i.id === 'ag2'
+                return <article key={i.id} style={{ ['--robo' as any]: i.cor }}>
+                  <Emblema id={i} tamanho={58} /><span>{i.chamada}</span><h4>{i.nome}</h4>
+                  <dl><div><dt>Ganha com</dt><dd>{ag2 ? '0, 1 ou 2' : '7, 8 ou 9'}</dd></div><div><dt>Chance</dt><dd>{i.chance}%</dd></div><div><dt>Perfil</dt><dd>{ag2 ? 'Espelho' : 'Insistente'}</dd></div></dl>
+                  <button onClick={() => { setIdent(i); setComparando(false) }}>Escolher {i.nome.replace('Teeds - ', '')}</button>
+                </article>
+              })}
+            </div>
+          </section>
+        </div>
+      )}
 
       {ident.onde === 'teeds' && (
         <>
@@ -264,8 +289,15 @@ export function RobotsPanel({
                   ativa ? proximas.add(idBloco) : proximas.delete(idBloco)
                   return proximas
                 })}
-                onRemover={blocos.length > 1 ? () => fecharBloco(idBloco) : undefined} />
+                onRemover={() => fecharBloco(idBloco)} />
             ))}
+            {blocos.length === 0 && (
+              <div className="blocos-vazio">
+                <span>◆</span><h3>Nenhum robô aberto</h3>
+                <p>Escolha um modelo acima e abra uma nova cabine quando quiser operar.</p>
+                <button onClick={abrirBloco}>+ Abrir robô</button>
+              </div>
+            )}
           </div>
 
           <div className="blocos-rodape">

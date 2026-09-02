@@ -3,7 +3,8 @@ import {
   aulasVistas, marcarVista, MODULOS, playerDoVideo, todasAsAulas,
   type AulaNumerada,
 } from '../core/teeds/aulas'
-import { CapaAula } from './CapaAula'
+
+const capa = (id: string) => `${import.meta.env.BASE_URL}aulas/${id}.jpg`
 
 /**
  * A sala de aula da Teeds, no estilo de vitrine de filmes: trilhas por
@@ -55,7 +56,7 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
             ) : (
               <div className="aula-embreve-palco">
-                <CapaAula aula={aberta.id} cor={aberta.modulo.cor} />
+                <img src={capa(aberta.id)} alt="" />
                 <span>em breve</span>
               </div>
             )}
@@ -140,7 +141,7 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
           <div className="aulas-modulo-topo"><div><h3>Continue assistindo</h3><p>Retome de onde parou.</p></div></div>
           <div className="aulas-fileira">
             <button className="aula-cartao continuar" onClick={() => abrir(proxima)}>
-              <span className="aula-cartao-capa"><CapaAula aula={proxima.id} cor={proxima.modulo.cor} /><span className="aula-play">▶</span></span>
+              <span className="aula-cartao-capa"><img src={capa(proxima.id)} alt="" /><span className="aula-play">▶</span></span>
               <span className="aula-cartao-corpo"><span className="aula-num">Aula {proxima.numero}</span><b>{proxima.titulo}</b><i className="aula-progresso-card"><u style={{ width: '35%' }} /></i></span>
             </button>
           </div>
@@ -167,7 +168,7 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
                   className={`aula-cartao ${a.video ? '' : 'sem'}`}
                   onClick={() => a.video ? abrir(a) : setDetalheId(a.id)}>
                   <span className="aula-cartao-capa" data-num={String(a.numero).padStart(2, '0')}>
-                    <CapaAula aula={a.id} cor={m.cor} />
+                    <img src={capa(a.id)} alt={`Capa da aula ${a.titulo}`} loading="lazy" />
                     {vistas.has(a.id) && <i className="aula-vista">✓</i>}
                     {!a.video && <em>Em breve</em>}
                     {a.video && <span className="aula-play">▶</span>}
@@ -191,7 +192,7 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
           <section className="aula-modal" role="dialog" aria-modal="true" aria-label={detalhe.titulo}
             style={{ ['--aula' as any]: detalhe.modulo.cor }} onClick={(e) => e.stopPropagation()}>
             <button className="aula-modal-fechar" onClick={() => setDetalheId(null)} aria-label="Fechar">×</button>
-            <div className="aula-modal-capa"><CapaAula aula={detalhe.id} cor={detalhe.modulo.cor} /></div>
+            <div className="aula-modal-capa"><img src={capa(detalhe.id)} alt={`Capa da aula ${detalhe.titulo}`} /></div>
             <div className="aula-modal-corpo">
               <span className="aula-num">Aula {detalhe.numero} · {detalhe.modulo.titulo}</span>
               <h2>{detalhe.titulo}</h2>
