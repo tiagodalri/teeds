@@ -64,6 +64,8 @@ export default function App() {
   const [mode, setMode] = useState<ChartMode>('candles')
   const [indicadores, setIndicadores] = useState<string[]>(['sma'])
   const [search, setSearch] = useState('')
+  const [seletorAtivo, setSeletorAtivo] = useState(false)
+  const [posicoesAbertas, setPosicoesAbertas] = useState(true)
   const [stake, setStake] = useState(10)
   const [duration, setDuration] = useState(5)
   const [comprando, setComprando] = useState<string | null>(null)
@@ -379,33 +381,43 @@ export default function App() {
           onConectarDeriv={conta.login}
         />
       ) : (
-      <div className="layout">
-        <aside className="sidebar">
-          <input className="search" placeholder="Buscar ativo…" value={search}
-            onChange={(e) => setSearch(e.target.value)} />
-          <div className="symbol-list">
-            {loadingSymbols && <p className="hint">carregando ativos…</p>}
-            {symbolsError && <p className="hint error">{symbolsError}</p>}
-            {groups.map(([market, list]) => (
-              <section key={market}>
-                <h4>{market.replace(/_/g, ' ')}</h4>
-                {list.map((s) => (
-                  <button key={s.symbol}
-                    className={`symbol ${s.symbol === symbolCode ? 'is-active' : ''}`}
-                    onClick={() => setSelected(s.symbol)}>
-                    <span className="sym-name">{s.name}</span>
-                    <span className={`dot ${s.isOpen && !s.isSuspended ? 'on' : 'off'}`} />
-                  </button>
-                ))}
-              </section>
-            ))}
-          </div>
-        </aside>
-
+      <div className="layout layout-operar">
         <main className="main">
           <div className="chart-head">
             <div className="chart-title">
-              <h2>{activeSymbol?.name ?? '—'}</h2>
+              <div className="ativo-seletor-wrap">
+                <button className="ativo-seletor" onClick={() => setSeletorAtivo((aberto) => !aberto)}
+                  aria-expanded={seletorAtivo} aria-haspopup="dialog">
+                  <span>{activeSymbol?.name ?? 'Escolher ativo'}</span><i aria-hidden>⌄</i>
+                </button>
+                {seletorAtivo && (
+                  <div className="ativo-menu" role="dialog" aria-label="Escolher ativo">
+                    <div className="ativo-menu-topo">
+                      <b>Trocar ativo</b>
+                      <button onClick={() => setSeletorAtivo(false)} aria-label="Fechar seletor">×</button>
+                    </div>
+                    <input className="search" autoFocus placeholder="Buscar ativo…" value={search}
+                      onChange={(e) => setSearch(e.target.value)} />
+                    <div className="symbol-list">
+                      {loadingSymbols && <p className="hint">carregando ativos…</p>}
+                      {symbolsError && <p className="hint error">{symbolsError}</p>}
+                      {groups.map(([market, list]) => (
+                        <section key={market}>
+                          <h4>{market.replace(/_/g, ' ')}</h4>
+                          {list.map((s) => (
+                            <button key={s.symbol}
+                              className={`symbol ${s.symbol === symbolCode ? 'is-active' : ''}`}
+                              onClick={() => { setSelected(s.symbol); setSeletorAtivo(false); setSearch('') }}>
+                              <span className="sym-name">{s.name}</span>
+                              <span className={`dot ${s.isOpen && !s.isSuspended ? 'on' : 'off'}`} />
+                            </button>
+                          ))}
+                        </section>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               {price !== null && <span className={`price ${direction ?? ''}`}>{formatPrice(price, pipSize)}</span>}
             </div>
             <div className="controls">
@@ -435,6 +447,42 @@ export default function App() {
               })}
             </div>
           </div>
+
+          <section className={`posicoes-flutuantes ${posicoesAbertas ? 'aberto' : 'fechado'}`}
+            aria-label="Posições abertas">
+            <button className="pos-flutuante-topo" onClick={() => setPosicoesAbertas((aberto) => !aberto)}
+              aria-expanded={posicoesAbertas}>
+              <span><i className={conta.contracts.length ? 'vivo' : ''} />
+                {conta.contracts.length === 0
+                  ? 'Nenhuma posição'
+                  : `${conta.contracts.length} ${conta.contracts.length === 1 ? 'posição' : 'posições'}`}
+              </span>
+              {conta.contracts.length > 0 && (
+                <strong className={resultadoAberto >= 0 ? 'ganho' : 'perda'}>
+                  {resultadoAberto >= 0 ? '+' : '−'}{Math.abs(resultadoAberto).toFixed(2)}
+                </strong>
+              )}
+              <em>{posicoesAbertas ? '−' : '+'}</em>
+            </button>
+            {posicoesAbertas && (
+              <div className="pos-flutuante-corpo">
+                {conta.contracts.length > 0 && (
+                  <div className="pos-resumo">
+                    <span>Investido <b>{conta.account?.currency ?? 'USD'} {investido.toFixed(2)}</b></span>
+                  </div>
+                )}
+                {!derivPronta && <div className="pos-vazio">Conecte sua Deriv para acompanhar posições.</div>}
+                {derivPronta && conta.contracts.length + conta.recentContracts.length === 0 && (
+                  <div className="pos-vazio">Suas operações aparecerão aqui.</div>
+                )}
+                {[...conta.contracts, ...conta.recentContracts].map((c) => (
+                  <PositionCard key={c.contractId} contrato={c}
+                    nomeAtivo={symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol}
+                    onVender={vender} vendendo={vendendo === c.contractId} />
+                ))}
+              </div>
+            )}
+          </section>
 
           <PriceChart candles={candles} mode={mode} pipSize={pipSize}
             symbolName={activeSymbol?.name ?? ''} loading={loadingCandles}
@@ -504,36 +552,6 @@ export default function App() {
             <p className={`aviso ${aviso.tipo === 'ok' ? 'aviso-ok' : 'aviso-erro'}`}>{aviso.texto}</p>
           )}
 
-          <div className="pos-cabecalho">
-            <h3 className="sec">Posições abertas</h3>
-            {conta.contracts.length > 0 && (
-              <div className="pos-resumo">
-                <span>{conta.contracts.length} aberta{conta.contracts.length > 1 ? 's' : ''}</span>
-                <span>investido <b>{investido.toFixed(2)}</b></span>
-                <span className={resultadoAberto >= 0 ? 'ganho' : 'perda'}>
-                  {resultadoAberto >= 0 ? '+' : '−'}{Math.abs(resultadoAberto).toFixed(2)}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className={`posicoes ${conta.contracts.length + conta.recentContracts.length === 0 ? 'posicoes-vazias' : ''}`}>
-            {!derivPronta && (
-              <div className="pos-vazio">Conecte a sua Deriv para ver as posições aqui.</div>
-            )}
-            {conta.status === 'logado' && conta.contracts.length + conta.recentContracts.length === 0 && (
-              <div className="pos-vazio">Nenhuma posição aberta. Suas operações aparecem aqui, com o resultado ao vivo.</div>
-            )}
-            {[...conta.contracts, ...conta.recentContracts].map((c) => (
-              <PositionCard
-                key={c.contractId}
-                contrato={c}
-                nomeAtivo={symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol}
-                onVender={vender}
-                vendendo={vendendo === c.contractId}
-              />
-            ))}
-          </div>
         </aside>
       </div>
       )}

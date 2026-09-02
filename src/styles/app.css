@@ -3661,6 +3661,81 @@ input, select, textarea, button { vertical-align: middle; }
 .entrada-form input, .perfil-corpo input { min-height: 44px; }
 .ops-seletor select { min-height: 40px; }
 
+/* ================= mesa manual ampla =================
+   O ativo agora mora no cabeçalho e as posições ficam sobre o gráfico. */
+.layout-operar { grid-template-columns: minmax(0, 1fr) 330px; }
+.layout-operar .main { position: relative; }
+.ativo-seletor-wrap { position: relative; min-width: 0; }
+.ativo-seletor {
+  display: flex; align-items: center; gap: 9px; max-width: min(420px, 42vw);
+  padding: 7px 9px; margin: -7px -9px; border: 1px solid transparent;
+  border-radius: 9px; background: transparent; cursor: pointer; font-weight: 700;
+}
+.ativo-seletor:hover, .ativo-seletor[aria-expanded='true'] { background: var(--surface); border-color: var(--border); }
+.ativo-seletor span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ativo-seletor i { color: var(--muted); font-style: normal; font-size: 18px; line-height: 1; }
+.ativo-menu {
+  position: absolute; z-index: 30; top: calc(100% + 14px); left: -9px;
+  width: min(360px, calc(100vw - 28px)); max-height: min(560px, 70vh);
+  display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid var(--border); border-radius: 14px;
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  box-shadow: 0 24px 70px rgba(0,0,0,.34); backdrop-filter: blur(18px);
+}
+.ativo-menu-topo { display: flex; align-items: center; justify-content: space-between; padding: 13px 15px 4px; }
+.ativo-menu-topo b { font-size: 13px; }
+.ativo-menu-topo button { width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; font-size: 20px; }
+.ativo-menu .search { flex: 0 0 auto; margin: 9px 12px; }
+.ativo-menu .symbol-list { flex: 1; min-height: 0; }
+
+.posicoes-flutuantes {
+  position: absolute; z-index: 12; top: 118px; left: 18px; width: 318px;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  border-radius: 12px; overflow: hidden;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  box-shadow: 0 16px 44px -22px rgba(0,0,0,.85); backdrop-filter: blur(14px);
+}
+.pos-flutuante-topo {
+  width: 100%; height: 42px; padding: 0 12px; border: 0; background: transparent;
+  display: grid; grid-template-columns: minmax(0,1fr) auto 20px; align-items: center; gap: 8px;
+  cursor: pointer; text-align: left; font-size: 11px; font-weight: 750;
+}
+.pos-flutuante-topo > span { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.pos-flutuante-topo i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.pos-flutuante-topo i.vivo { background: var(--up); box-shadow: 0 0 0 3px var(--up-soft); }
+.pos-flutuante-topo strong { font-variant-numeric: tabular-nums; }
+.pos-flutuante-topo em { font-style: normal; color: var(--muted); font-size: 17px; text-align: right; }
+.pos-flutuante-corpo { max-height: min(440px, calc(100dvh - 235px)); overflow-y: auto; padding: 0 8px 8px; scrollbar-gutter: stable; }
+.pos-flutuante-corpo .pos-resumo { min-height: 24px; margin: 0; padding: 2px 4px 7px; }
+.pos-flutuante-corpo .pos-vazio { min-height: 72px; padding: 13px 5px; border-top: 1px solid var(--border); }
+.posicoes-flutuantes .pos {
+  width: 100%; height: 202px; min-height: 202px; padding: 10px;
+  grid-template-rows: 26px 30px 70px 44px; border-radius: 10px; box-shadow: none;
+}
+.posicoes-flutuantes .pos-dados { display: none; }
+.posicoes-flutuantes .pos-resultado { height: 70px; padding-top: 4px; }
+.posicoes-flutuantes .pos .btn-vender { height: 40px; min-height: 40px; }
+.posicoes-flutuantes .pos-ativo { font-size: 10px; }
+.posicoes-flutuantes .pos-resultado strong { font-size: 18px; }
+
+@media (min-width: 761px) and (max-width: 1080px) {
+  .layout-operar { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(580px,72vh) auto; }
+  .layout-operar .main { grid-column: 1; grid-row: 1; }
+  .layout-operar .trade { grid-column: 1; grid-row: 2; }
+}
+
+@media (max-width: 760px) {
+  .layout-operar { display: flex; }
+  .layout-operar .main { order: 1; height: 66dvh; min-height: 510px; }
+  .layout-operar .trade { order: 2; }
+  .ativo-seletor { max-width: 62vw; }
+  .ativo-menu { position: fixed; top: 108px; left: 12px; right: 12px; width: auto; max-height: 62dvh; }
+  .posicoes-flutuantes { position: fixed; z-index: 55; top: auto; left: 10px; right: 10px; bottom: 10px; width: auto; }
+  .posicoes-flutuantes.aberto { max-height: min(62dvh, 480px); }
+  .pos-flutuante-corpo { max-height: min(52dvh, 420px); }
+  .posicoes-flutuantes .pos { height: 202px; min-height: 202px; }
+}
+
 @media (max-width: 520px) {
   .qz-dupla label { grid-template-rows: auto 52px; }
   .qz-dupla label > .rot { min-height: 20px; }
