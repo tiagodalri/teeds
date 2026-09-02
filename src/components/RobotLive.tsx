@@ -126,7 +126,7 @@ export function RobotLive({
   const prontoParaEntrar = !!estado.condicao?.itens.every((i) => i.ok)
 
   return (
-    <div className={`tv ${fase.chave}`}>
+    <div className={`tv ${fase.chave} ${expandido ? 'tv-expandido' : ''}`}>
       {/* ===================== faixa de estado ===================== */}
       <header className="tv-topo">
         <div className="tv-quem">
@@ -169,12 +169,18 @@ export function RobotLive({
       </header>
 
       <nav className="tv-abas" aria-label={`Visões de ${titulo}`}>
-        <button className={aba === 'ao-vivo' ? 'on' : ''} onClick={() => setAba('ao-vivo')}>Ao vivo</button>
-        <button className={aba === 'operacoes' ? 'on' : ''} onClick={() => setAba('operacoes')}>
-          Operações {estado.historico.length > 0 && <span>{estado.historico.length}</span>}
+        <button className={aba === 'ao-vivo' ? 'on' : ''} onClick={() => setAba('ao-vivo')}>
+          <i aria-hidden>●</i> Ao vivo
         </button>
-        <button className={aba === 'parametros' ? 'on' : ''} onClick={() => setAba('parametros')}>Parâmetros</button>
-        <button className={aba === 'registro' ? 'on' : ''} onClick={() => setAba('registro')}>Registro</button>
+        <button className={aba === 'operacoes' ? 'on' : ''} onClick={() => setAba('operacoes')}>
+          <i aria-hidden>≡</i> Operações {estado.historico.length > 0 && <span>{estado.historico.length}</span>}
+        </button>
+        <button className={aba === 'parametros' ? 'on' : ''} onClick={() => setAba('parametros')}>
+          <i aria-hidden>⌁</i> Parâmetros
+        </button>
+        <button className={aba === 'registro' ? 'on' : ''} onClick={() => setAba('registro')}>
+          <i aria-hidden>▤</i> Registro
+        </button>
       </nav>
 
       <div className="tv-corpo">
@@ -381,10 +387,10 @@ export function RobotLive({
                 </tr>
               </thead>
               <tbody>
-                {estado.historico.map((o) => {
+                {estado.historico.map((o, indice) => {
                   const ac = acumulados.get(o.n) ?? 0
                   return (
-                    <tr key={o.contractId} className={o.ganhou ? 'ganhou' : 'perdeu'}>
+                    <tr key={o.contractId} className={`${o.ganhou ? 'ganhou' : 'perdeu'} ${indice === 0 ? 'recente' : ''}`}>
                       <td className="tv-n">{o.n}</td>
                       <td className="tv-hora">{relogio(o.quando)}</td>
                       <td>{num(o.valor)}</td>

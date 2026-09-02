@@ -1253,6 +1253,84 @@ button, input { font: inherit; color: inherit; }
 .tv-chip.up { background: var(--up-soft); color: var(--up); }
 .tv-chip.down { background: var(--down-soft); color: var(--down); }
 
+/* ==================== refinamento visual da cabine ==================== */
+/* Mais hierarquia, menos contornos e uma leitura mais calma durante uso longo. */
+.tv {
+  background:
+    radial-gradient(80% 28% at 50% 0%, color-mix(in srgb, var(--robo, #4c6fff) 16%, transparent), transparent 100%),
+    linear-gradient(180deg, #111a2d, #0b1221);
+  border-color: color-mix(in srgb, var(--robo, #4c6fff) 20%, #25314a);
+  transition: box-shadow .24s ease, border-color .24s ease, transform .24s ease;
+}
+.tv-topo {
+  padding: 10px 14px; gap: 8px 14px;
+  background: rgba(255, 255, 255, .018); border-bottom-color: rgba(139, 150, 173, .14);
+}
+.tv-quem b { font-size: 14px; }
+.tv-onde { font-size: 10.5px; }
+.tv-placar strong { font-size: 27px; font-weight: 700; }
+.tv-resumo-fixo { gap: 12px; padding-left: 14px; border-left: 1px solid rgba(139, 150, 173, .18); }
+.tv-resumo-fixo b { color: #d9dfeb; font-size: 12.5px; }
+.tv-btn { border-color: rgba(139, 150, 173, .22); background: rgba(10, 16, 31, .62); }
+.tv-btn.parar { border-color: rgba(240, 85, 90, .4); }
+.tv-btn.ligar { border-color: rgba(31, 192, 106, .4); }
+
+.tv-abas {
+  padding: 6px 12px; gap: 5px; background: rgba(8, 13, 25, .35);
+  border-bottom-color: rgba(139, 150, 173, .12);
+}
+.tv-abas button {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid transparent; border-radius: 8px; padding: 7px 10px;
+  transition: color .16s ease, background .16s ease, border-color .16s ease, transform .16s ease;
+}
+.tv-abas button > i { color: var(--muted); font-size: 11px; font-style: normal; line-height: 1; }
+.tv-abas button:hover { background: rgba(255, 255, 255, .035); transform: translateY(-1px); }
+.tv-abas button.on {
+  color: #f5f7fb; border-color: color-mix(in srgb, var(--robo, var(--primary)) 38%, transparent);
+  background: color-mix(in srgb, var(--robo, var(--primary)) 12%, transparent);
+  box-shadow: inset 0 -2px 0 var(--robo, var(--primary));
+}
+.tv-abas button.on > i { color: var(--robo, var(--primary)); }
+
+.tv-corpo { scrollbar-color: rgba(139, 150, 173, .28) transparent; }
+.tv-corpo::-webkit-scrollbar { width: 7px; }
+.tv-corpo::-webkit-scrollbar-thumb { background-color: rgba(139, 150, 173, .22); }
+.tv-corpo:hover::-webkit-scrollbar-thumb { background-color: rgba(139, 150, 173, .48); }
+.tv-corpo > * { animation: tv-entrada .18s ease-out; }
+@keyframes tv-entrada { from { opacity: .55; transform: translateY(3px); } }
+
+.tv-palco, .tv-fita-bloco, .tv-sessao { border-bottom-color: rgba(139, 150, 173, .12); }
+.tv-palco { padding-top: 20px; padding-bottom: 22px; }
+.tv-fita-bloco { padding-top: 16px; padding-bottom: 16px; }
+.tv-sessao { padding-top: 5px; }
+.tv-nums { border-top-color: rgba(139, 150, 173, .12); background: rgba(255, 255, 255, .026); }
+.tv-nums > div { border-right-color: rgba(139, 150, 173, .12); }
+.tv-tabela th { border-bottom-color: rgba(139, 150, 173, .18); background: #0d1525; }
+.tv-tabela td { border-bottom-color: rgba(139, 150, 173, .10); }
+.tv-tabela tbody tr { transition: background .18s ease, box-shadow .18s ease; }
+.tv-tabela tbody tr.recente {
+  background: color-mix(in srgb, var(--robo, var(--primary)) 9%, transparent);
+  box-shadow: inset 0 0 18px color-mix(in srgb, var(--robo, var(--primary)) 7%, transparent);
+  animation: tv-recente 1.1s ease-out;
+}
+@keyframes tv-recente { from { background: color-mix(in srgb, var(--robo, var(--primary)) 22%, transparent); } }
+
+/* Em tela cheia, operação/gráfico e indicadores ocupam colunas distintas. */
+.tv-expandido .tv-corpo { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); align-content: start; }
+.tv-expandido .tv-alerta, .tv-expandido .tv-params, .tv-expandido .tv-ops { grid-column: 1 / -1; }
+.tv-expandido .tv-palco { grid-column: 1; grid-row: 1; min-height: 190px; }
+.tv-expandido .tv-fita-bloco { grid-column: 1; grid-row: 2; }
+.tv-expandido .tv-sessao { grid-column: 2; grid-row: 1 / span 2; border-left: 1px solid rgba(139, 150, 173, .12); }
+.tv-expandido .tv-curva { height: 92px; }
+.tv-expandido .tv-nums { grid-template-columns: repeat(2, 1fr); }
+.tv-expandido .tv-nums > div:nth-child(2) { border-right: 0; }
+.tv-expandido .tv-ops { min-height: 420px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tv, .tv-abas button, .tv-corpo > *, .tv-tabela tbody tr.recente { animation: none; transition: none; }
+}
+
 /* A cabine se adapta à largura do bloco, não da janela: com dois robôs
    lado a lado cada um fica estreito mesmo numa tela larga. */
 @container (max-width: 980px) {
@@ -1274,6 +1352,18 @@ button, input { font: inherit; color: inherit; }
 @container (max-width: 460px) {
   .tv-topo { flex-wrap: wrap; }
   .tv-acoes { width: 100%; }
+  .tv-placar { margin-left: 0; text-align: left; }
+  .tv-resumo-fixo { width: 100%; padding: 9px 0 0; border-left: 0; border-top: 1px solid rgba(139, 150, 173, .14); }
+  .tv-resumo-fixo span { flex: 1; min-width: 0; }
+  .tv-acoes .tv-btn { flex: 1; }
+  .tv-abas { padding-inline: 8px; }
+  .tv-abas button { padding-inline: 8px; }
+}
+
+@container (max-width: 760px) {
+  .tv-expandido .tv-corpo { display: block; }
+  .tv-expandido .tv-sessao { border-left: 0; }
+  .tv-expandido .tv-curva { height: 54px; }
 }
 
 /* ==================== blocos de robôs ==================== */
