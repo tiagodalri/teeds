@@ -14,11 +14,14 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
   const aulas = useMemo(() => todasAsAulas(), [])
   const [vistas, setVistas] = useState<Set<string>>(() => aulasVistas())
   const [abertaId, setAbertaId] = useState<string | null>(null)
+  const [detalheId, setDetalheId] = useState<string | null>(null)
 
   const aberta = aulas.find((a) => a.id === abertaId) ?? null
   const comVideo = aulas.filter((a) => a.video)
   const proxima = aulas.find((a) => a.video && !vistas.has(a.id)) ?? comVideo[0] ?? null
   const assistidas = aulas.filter((a) => vistas.has(a.id)).length
+  const destaque = proxima ?? aulas[0] ?? null
+  const detalhe = aulas.find((a) => a.id === detalheId) ?? null
 
   const alternarVista = (id: string) => {
     setVistas(new Set(marcarVista(id, !vistas.has(id))))
@@ -96,33 +99,53 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
   /* ---------------------------------------------------------- vitrine */
   return (
     <div className="ger aulas">
-      <div className="aulas-capa">
+      <div className="aulas-capa" style={{
+        backgroundImage: `linear-gradient(90deg, rgba(5,6,8,.98) 0%, rgba(5,6,8,.86) 38%, rgba(5,6,8,.2) 72%, rgba(5,6,8,.55) 100%), url(${import.meta.env.BASE_URL}aulas-hero-teeds.png)`,
+      }}>
         <div className="aulas-capa-texto">
-          <span className="aulas-selo">Sala de aula</span>
-          <h2>Aprenda a usar a Teeds{nome ? `, ${nome.split(' ')[0]}` : ''}</h2>
-          <p>Da conta na corretora ao primeiro robô ligado, uma aula de cada vez.</p>
+          <span className="aulas-selo">Treinamento original Teeds</span>
+          <h2>{destaque?.titulo ?? `Aprenda a usar a Teeds${nome ? `, ${nome.split(' ')[0]}` : ''}`}</h2>
+          <p>{destaque?.descricao ?? 'Da conta na corretora ao primeiro robô ligado, uma aula de cada vez.'}</p>
+          <div className="aulas-meta">
+            <b>{destaque ? `Aula ${destaque.numero} de ${aulas.length}` : `${aulas.length} aulas`}</b>
+            <span>Iniciante</span>
+            <span>{destaque?.duracao || 'Em breve'}</span>
+          </div>
           <div className="aulas-progresso">
             <div className="aulas-barra">
               <i style={{ width: `${(assistidas / aulas.length) * 100}%` }} />
             </div>
-            <span>{assistidas} de {aulas.length} assistidas</span>
+            <span>{Math.round((assistidas / aulas.length) * 100)}% concluído</span>
           </div>
-          {proxima ? (
-            <button className="aulas-continuar" onClick={() => abrir(proxima)}>
-              <i>▶</i> {assistidas > 0 ? 'Continuar' : 'Começar'} — Aula {proxima.numero}
+          <div className="aulas-hero-acoes">
+          {destaque?.video ? (
+            <button className="aulas-continuar" onClick={() => abrir(destaque)}>
+              <i>▶</i> {assistidas > 0 ? 'Continuar assistindo' : 'Começar agora'}
             </button>
           ) : (
-            <span className="aulas-embreve-selo">As primeiras aulas chegam em breve</span>
+            <button className="aulas-continuar indisponivel" onClick={() => destaque && setDetalheId(destaque.id)}>
+              <i>▶</i> Ver apresentação
+            </button>
           )}
+          {destaque && (
+            <button className="aulas-detalhes" onClick={() => setDetalheId(destaque.id)}>ⓘ Mais informações</button>
+          )}
+          </div>
         </div>
-        <div className="aulas-capa-arte" aria-hidden>
-          <img src="teeds-marca.png" alt="" />
-        </div>
-        <div className="aulas-capa-numeros" aria-hidden>
-          <span>{MODULOS.length}</span><em>trilhas</em>
-          <span>{aulas.length}</span><em>aulas</em>
-        </div>
+        <div className="aulas-hero-marca" aria-hidden>TEEDS ORIGINAL</div>
       </div>
+
+      {assistidas > 0 && proxima && (
+        <section className="aulas-modulo aulas-continue">
+          <div className="aulas-modulo-topo"><div><h3>Continue assistindo</h3><p>Retome de onde parou.</p></div></div>
+          <div className="aulas-fileira">
+            <button className="aula-cartao continuar" onClick={() => abrir(proxima)}>
+              <span className="aula-cartao-capa"><CapaAula aula={proxima.id} cor={proxima.modulo.cor} /><span className="aula-play">▶</span></span>
+              <span className="aula-cartao-corpo"><span className="aula-num">Aula {proxima.numero}</span><b>{proxima.titulo}</b><i className="aula-progresso-card"><u style={{ width: '35%' }} /></i></span>
+            </button>
+          </div>
+        </section>
+      )}
 
       {MODULOS.map((m, mi) => {
         const doModulo = aulas.filter((a) => a.modulo.id === m.id)
@@ -140,19 +163,21 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
             </div>
             <div className="aulas-fileira">
               {doModulo.map((a) => (
-                <button key={a.id} className={`aula-cartao ${a.video ? '' : 'sem'}`}
-                  onClick={() => abrir(a)} disabled={!a.video}>
-                  <span className="aula-cartao-capa">
+                <button key={a.id} data-num={String(a.numero).padStart(2, '0')}
+                  className={`aula-cartao ${a.video ? '' : 'sem'}`}
+                  onClick={() => a.video ? abrir(a) : setDetalheId(a.id)}>
+                  <span className="aula-cartao-capa" data-num={String(a.numero).padStart(2, '0')}>
                     <CapaAula aula={a.id} cor={m.cor} />
                     {vistas.has(a.id) && <i className="aula-vista">✓</i>}
                     {!a.video && <em>Em breve</em>}
                     {a.video && <span className="aula-play">▶</span>}
                     {a.duracao && <span className="aula-dur">{a.duracao}</span>}
+                    <span className="aula-hover-info"><b>{a.titulo}</b><small>{a.descricao}</small></span>
                   </span>
                   <span className="aula-cartao-corpo">
                     <span className="aula-num">Aula {a.numero}</span>
                     <b>{a.titulo}</b>
-                    <p>{a.descricao}</p>
+                    <span className="aula-card-meta"><i>{a.video ? 'Disponível' : 'Em breve'}</i><i>{a.duracao || 'Duração a definir'}</i></span>
                   </span>
                 </button>
               ))}
@@ -160,6 +185,25 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
           </section>
         )
       })}
+
+      {detalhe && (
+        <div className="aula-modal-fundo" role="presentation" onClick={() => setDetalheId(null)}>
+          <section className="aula-modal" role="dialog" aria-modal="true" aria-label={detalhe.titulo}
+            style={{ ['--aula' as any]: detalhe.modulo.cor }} onClick={(e) => e.stopPropagation()}>
+            <button className="aula-modal-fechar" onClick={() => setDetalheId(null)} aria-label="Fechar">×</button>
+            <div className="aula-modal-capa"><CapaAula aula={detalhe.id} cor={detalhe.modulo.cor} /></div>
+            <div className="aula-modal-corpo">
+              <span className="aula-num">Aula {detalhe.numero} · {detalhe.modulo.titulo}</span>
+              <h2>{detalhe.titulo}</h2>
+              <p>{detalhe.descricao}</p>
+              <div className="aulas-meta"><b>Iniciante</b><span>{detalhe.duracao || 'Duração a definir'}</span></div>
+              {detalhe.video ? (
+                <button className="aulas-continuar" onClick={() => { setDetalheId(null); abrir(detalhe) }}><i>▶</i> Assistir agora</button>
+              ) : <span className="aula-modal-breve">Esta aula será liberada em breve.</span>}
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
