@@ -316,7 +316,10 @@ export default function App() {
         </div>
       )}
 
-      {tela === 'robos' ? (
+      {/* Os robôs vivem FORA da troca de telas: mudar de aba não pode
+          desligar um motor no meio de uma recuperação de martingale.
+          A tela apenas se esconde — o motor continua operando. */}
+      <div className="tela-viva" hidden={tela !== 'robos'}>
         <RobotsPanel
           socket={conta.socket}
           logado={conta.status === 'logado'}
@@ -328,7 +331,8 @@ export default function App() {
           entrandoNaDeriv={conta.status === 'entrando'}
           onConectarDeriv={conta.login}
         />
-      ) : tela === 'operacoes' ? (
+      </div>
+      {tela === 'robos' ? null : tela === 'operacoes' ? (
         <OperationsPanel
           socket={conta.socket}
           logado={conta.status === 'logado'}
