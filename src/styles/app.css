@@ -3585,3 +3585,51 @@ button, input { font: inherit; color: inherit; }
   .tv-acoes { grid-column: 1 / -1; grid-row: 3; width: 100%; overflow: hidden; }
   .tv-fase { width: 112px; }
 }
+
+/* ================= alinhamento de formulários =================
+   Textos podem quebrar, mas nunca deslocam apenas um campo da mesma linha. */
+input, select, textarea, button { vertical-align: middle; }
+.input-wrap { min-height: 44px; }
+.field > span { min-height: 18px; line-height: 18px; }
+
+.qz-atalhos.largo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.qz-atalhos.largo button {
+  min-width: 0; min-height: 42px; margin: 0;
+  display: grid; place-items: center; line-height: 1.2;
+}
+.qz-dupla { align-items: stretch; }
+.qz-dupla label {
+  display: grid; grid-template-rows: 34px 52px;
+  align-content: end; gap: 6px;
+}
+.qz-dupla label > .rot {
+  min-height: 34px; margin: 0;
+  display: flex; align-items: flex-end; line-height: 1.35;
+}
+.qz-dupla .qz-campo {
+  box-sizing: border-box; height: 52px; min-height: 52px;
+  align-items: center;
+}
+.qz-dupla .qz-campo input { height: 30px; line-height: 30px; }
+
+.rob-linha { align-items: stretch; }
+.rob-linha label { display: grid; grid-template-rows: 28px 40px; align-content: end; }
+.rob-linha .rot { min-height: 28px; margin: 0; display: flex; align-items: flex-end; }
+.rob-linha input, .rob-linha select { height: 40px; min-height: 40px; }
+
+.go-campos label { display: grid; grid-template-rows: 22px 44px; }
+.go-campos label > span { min-height: 22px; margin: 0 0 6px 2px; line-height: 16px; }
+.go-campos label > div { height: 44px; min-height: 44px; overflow: hidden; }
+.go-campos input { height: 42px; }
+
+.entrada-par { align-items: stretch; }
+.entrada-par label, .perfil-fixo label { display: grid; grid-template-rows: minmax(22px, auto) 44px; align-content: end; }
+.entrada-form input, .perfil-corpo input { min-height: 44px; }
+.ops-seletor select { min-height: 40px; }
+
+@media (max-width: 520px) {
+  .qz-dupla label { grid-template-rows: auto 52px; }
+  .qz-dupla label > .rot { min-height: 20px; }
+  .qz-atalhos.largo { grid-template-columns: 1fr; }
+  .qz-atalhos.largo button { min-height: 46px; }
+}
