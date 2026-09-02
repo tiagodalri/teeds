@@ -1373,9 +1373,10 @@ button, input { font: inherit; color: inherit; }
 @keyframes tv-contrato { 0% { transform: scaleX(.08); opacity: .45; } 65% { transform: scaleX(.82); opacity: 1; } 100% { transform: scaleX(1); opacity: .35; } }
 
 .tv-mesa { grid-template-columns: auto 1fr; max-width: none; }
-.cabine-caixa.parado .tv { height: auto; min-height: 0; }
-.cabine-caixa.parado .tv-corpo, .cabine-caixa.parado .tv-abas { display: none; }
-.cabine-caixa.parado .tv-topo { border-bottom: 0; }
+.cabine-caixa.parado .tv {
+  /* Desligar encerra novas entradas, mas não encerra a sessão visual. */
+  height: 100%; min-height: 0;
+}
 
 /* Em tela cheia, operação/gráfico e indicadores ocupam colunas distintas. */
 .tv-expandido .tv-corpo { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); align-content: start; }
