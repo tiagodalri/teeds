@@ -128,7 +128,7 @@ export async function buscarSerieDiaria(session: AuthSession, dias: number): Pro
 
 /**
  * Simulador de markup, calibrado com medicao real feita em 31/08/2026:
- * a 3%, o pagamento cai para 91,25% do valor sem markup, em qualquer aposta.
+ * a 3%, o pagamento cai para 91,25% do valor sem markup, em qualquer entrada.
  * Interpolamos linearmente entre os dois pontos medidos (0% e 3%).
  */
 const QUEDA_A_3 = 0.0875

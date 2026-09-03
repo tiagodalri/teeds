@@ -448,42 +448,6 @@ export default function App() {
             </div>
           </div>
 
-          <section className={`posicoes-flutuantes ${posicoesAbertas ? 'aberto' : 'fechado'}`}
-            aria-label="Posições abertas">
-            <button className="pos-flutuante-topo" onClick={() => setPosicoesAbertas((aberto) => !aberto)}
-              aria-expanded={posicoesAbertas}>
-              <span><i className={conta.contracts.length ? 'vivo' : ''} />
-                {conta.contracts.length === 0
-                  ? 'Nenhuma posição'
-                  : `${conta.contracts.length} ${conta.contracts.length === 1 ? 'posição' : 'posições'}`}
-              </span>
-              {conta.contracts.length > 0 && (
-                <strong className={resultadoAberto >= 0 ? 'ganho' : 'perda'}>
-                  {resultadoAberto >= 0 ? '+' : '−'}{Math.abs(resultadoAberto).toFixed(2)}
-                </strong>
-              )}
-              <em>{posicoesAbertas ? '−' : '+'}</em>
-            </button>
-            {posicoesAbertas && (
-              <div className="pos-flutuante-corpo">
-                {conta.contracts.length > 0 && (
-                  <div className="pos-resumo">
-                    <span>Investido <b>{conta.account?.currency ?? 'USD'} {investido.toFixed(2)}</b></span>
-                  </div>
-                )}
-                {!derivPronta && <div className="pos-vazio">Conecte sua Deriv para acompanhar posições.</div>}
-                {derivPronta && conta.contracts.length === 0 && (
-                  <div className="pos-vazio">Suas operações aparecerão aqui.</div>
-                )}
-                {conta.contracts.map((c) => (
-                  <PositionCard key={c.contractId} contrato={c}
-                    nomeAtivo={symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol}
-                    onVender={vender} vendendo={vendendo === c.contractId} />
-                ))}
-              </div>
-            )}
-          </section>
-
           <PriceChart candles={candles} mode={mode} pipSize={pipSize}
             symbolName={activeSymbol?.name ?? ''} loading={loadingCandles}
             markers={marcadores} indicators={indicadores} />
@@ -524,11 +488,11 @@ export default function App() {
               </label>
 
               <div className="quotes">
-                <QuoteCard kind="up" title="Acima" action="Operar acima" payout={call.payout} stake={stake}
+                <QuoteCard kind="up" title="Acima" action="Comprar" payout={call.payout} stake={stake}
                   loading={call.loading} error={call.error} podeOperar={podeOperar}
                   comprando={comprando === 'CALL'} confirmando={confirmar === 'CALL'}
                   onBuy={() => comprar('CALL')} logado={conta.status === 'logado'} />
-                <QuoteCard kind="down" title="Abaixo" action="Operar abaixo" payout={put.payout} stake={stake}
+                <QuoteCard kind="down" title="Abaixo" action="Vender" payout={put.payout} stake={stake}
                   loading={put.loading} error={put.error} podeOperar={podeOperar}
                   comprando={comprando === 'PUT'} confirmando={confirmar === 'PUT'}
                   onBuy={() => comprar('PUT')} logado={conta.status === 'logado'} />
@@ -547,6 +511,42 @@ export default function App() {
               onComprar={comprarDigito}
             />
           )}
+
+          <section className={`posicoes-flutuantes posicoes-na-operacao ${posicoesAbertas ? 'aberto' : 'fechado'}`}
+            aria-label="Posições abertas">
+            <button className="pos-flutuante-topo" onClick={() => setPosicoesAbertas((aberto) => !aberto)}
+              aria-expanded={posicoesAbertas}>
+              <span><i className={conta.contracts.length ? 'vivo' : ''} />
+                {conta.contracts.length === 0
+                  ? 'Nenhuma posição'
+                  : `${conta.contracts.length} ${conta.contracts.length === 1 ? 'posição' : 'posições'}`}
+              </span>
+              {conta.contracts.length > 0 && (
+                <strong className={resultadoAberto >= 0 ? 'ganho' : 'perda'}>
+                  {resultadoAberto >= 0 ? '+' : '−'}{Math.abs(resultadoAberto).toFixed(2)}
+                </strong>
+              )}
+              <em>{posicoesAbertas ? '−' : '+'}</em>
+            </button>
+            {posicoesAbertas && (
+              <div className="pos-flutuante-corpo">
+                {conta.contracts.length > 0 && (
+                  <div className="pos-resumo">
+                    <span>Investido <b>{conta.account?.currency ?? 'USD'} {investido.toFixed(2)}</b></span>
+                  </div>
+                )}
+                {!derivPronta && <div className="pos-vazio">Conecte sua Deriv para acompanhar posições.</div>}
+                {derivPronta && conta.contracts.length === 0 && (
+                  <div className="pos-vazio">Suas operações aparecerão aqui.</div>
+                )}
+                {conta.contracts.map((c) => (
+                  <PositionCard key={c.contractId} contrato={c}
+                    nomeAtivo={symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol}
+                    onVender={vender} vendendo={vendendo === c.contractId} />
+                ))}
+              </div>
+            )}
+          </section>
 
           {aviso && (
             <p className={`aviso ${aviso.tipo === 'ok' ? 'aviso-ok' : 'aviso-erro'}`}>{aviso.texto}</p>

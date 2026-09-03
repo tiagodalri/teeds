@@ -146,7 +146,7 @@ export async function buscarOperacoes(
 export function resumir(ops: Operacao[]) {
   const total = ops.length
   const ganhos = ops.filter((o) => o.ganhou).length
-  const apostado = ops.reduce((t, o) => t + o.valor, 0)
+  const totalEntradas = ops.reduce((t, o) => t + o.valor, 0)
   const resultado = ops.reduce((t, o) => t + o.lucro, 0)
 
   // maiores sequencias (a lista vem da mais recente para a mais antiga)
@@ -158,8 +158,8 @@ export function resumir(ops: Operacao[]) {
   return {
     total, ganhos, perdas: total - ganhos,
     acerto: total ? (ganhos / total) * 100 : 0,
-    apostado, movimentado: apostado, resultado,
-    retorno: apostado ? (resultado / apostado) * 100 : 0,
+    movimentado: totalEntradas, resultado,
+    retorno: totalEntradas ? (resultado / totalEntradas) * 100 : 0,
     maiorSequenciaGanho: maxG, maiorSequenciaPerda: maxP,
     sequenciaAtualGanho: seqG, sequenciaAtualPerda: seqP,
   }

@@ -59,7 +59,7 @@ export interface Estrategia {
     perdasSeguidas: number
     /** Soma das perdas da sequencia atual, em positivo. */
     prejuizoDaSequencia: number
-    /** Lucro esperado para cada 1 unidade apostada, já com margem de segurança. */
+    /** Lucro esperado para cada 1 unidade de entrada, já com margem de segurança. */
     retornoLiquidoPorUnidade: number
     config: ConfigEstrategia
   }) => number

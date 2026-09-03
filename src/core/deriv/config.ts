@@ -45,7 +45,7 @@ export const ATIVOS_PERMITIDOS = [
  * O ativo dos robos — fixo, decidido pela casa (02/09: Volatility 75 (1s)).
  * A pessoa NAO escolhe onde o robo opera: menos uma decisao para errar, e o
  * comportamento dos robos fica comparavel entre todos os clientes.
- * Para mudar a aposta da casa, e so trocar aqui.
+ * Para mudar a entrada da casa, e so trocar aqui.
  */
 export const ATIVO_DOS_ROBOS = '1HZ75V'
 
