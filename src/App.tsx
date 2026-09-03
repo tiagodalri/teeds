@@ -20,7 +20,7 @@ import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { useAccount } from './hooks/useAccount'
-import { registrarContaDeriv, registrarPresenca } from './core/teeds/clientes'
+import { registrarContaDeriv, registrarPresenca, souAdmin } from './core/teeds/clientes'
 import { useTeedsAuth } from './hooks/useTeedsAuth'
 import { aplicarTema, temaGuardado, type Tema } from './core/tema'
 import { DerivDesconectada } from './components/DerivDesconectada'
@@ -75,6 +75,7 @@ export default function App() {
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
   const [tela, setTela] = useState<'operar' | 'robos' | 'operacoes' | 'gestao' | 'gerenciamento' | 'marketplace' | 'aulas'>('operar')
+  const [admin, setAdmin] = useState<boolean | null>(null)
   const [payoutBase, setPayoutBase] = useState(19.55)
 
   const activeSymbol = useMemo(() => {
@@ -112,6 +113,22 @@ export default function App() {
   // silencio — o cadastro e util, nunca condicao para operar.
   // ------------------------------------------------------------------
   const usuarioTeedsId = teeds.sessao?.usuario.id ?? null
+  useEffect(() => {
+    if (!teeds.sessao) { setAdmin(false); return }
+    let ativo = true
+    setAdmin(null)
+    souAdmin(teeds.sessao).then((permitido) => {
+      if (ativo) setAdmin(permitido)
+    })
+    return () => { ativo = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioTeedsId])
+
+  // Nunca mantém um cliente numa rota administrativa, nem após troca de conta.
+  useEffect(() => {
+    if (admin === false && tela === 'gestao') setTela('operar')
+  }, [admin, tela])
+
   useEffect(() => {
     if (!teeds.sessao) return
     void registrarPresenca(teeds.sessao)
@@ -252,7 +269,9 @@ export default function App() {
           <button className={tela === 'operar' ? 'on' : ''} onClick={() => setTela('operar')}>Operar</button>
           <button className={tela === 'robos' ? 'on' : ''} onClick={() => setTela('robos')}>Robôs</button>
           <button className={tela === 'operacoes' ? 'on' : ''} onClick={() => setTela('operacoes')}>Operações</button>
-          <button className={tela === 'gestao' ? 'on' : ''} onClick={() => setTela('gestao')}>Gestão</button>
+          {admin === true && (
+            <button className={tela === 'gestao' ? 'on' : ''} onClick={() => setTela('gestao')}>Administração</button>
+          )}
           <button className={tela === 'gerenciamento' ? 'on' : ''} onClick={() => setTela('gerenciamento')}>Gerenciamento Operacional</button>
           <button className={tela === 'marketplace' ? 'on' : ''} onClick={() => setTela('marketplace')}>Marketplace</button>
           <button className={tela === 'aulas' ? 'on' : ''} onClick={() => setTela('aulas')}>Aulas</button>
@@ -370,7 +389,7 @@ export default function App() {
         <MarketplacePanel />
       ) : tela === 'gerenciamento' ? (
         <OperationalManagementPanel moeda={conta.account?.currency ?? 'USD'} />
-      ) : tela === 'gestao' ? (
+      ) : tela === 'gestao' && admin === true ? (
         <ManagementPanel
           session={conta.session}
           sessaoTeeds={teeds.sessao}
