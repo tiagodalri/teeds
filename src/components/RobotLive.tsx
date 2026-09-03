@@ -216,13 +216,6 @@ export function RobotLive({
             <span className="tv-fluxo-entrada">
               <em>{emCurso ? 'Entrada atual' : 'Próxima entrada'}</em>
               <strong>{num(emCurso?.valor ?? estado.valorAtual)} <i>{moeda}</i></strong>
-              <small>{emCurso
-                ? `retorno +${num(emCurso.payout - emCurso.valor)}`
-                : estado.emOperacao
-                  ? 'comprando na Deriv…'
-                  : estado.rodando
-                    ? (estado.condicao?.rotulo ?? estado.aguardando ?? 'aguardando')
-                    : 'robô desligado'}</small>
             </span>
           </span>
         </div>
