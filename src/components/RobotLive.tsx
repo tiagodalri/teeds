@@ -213,6 +213,17 @@ export function RobotLive({
           <i>{emCurso ? '●' : estado.historico.length ? '✓' : '1'}</i>
           <span><b>{emCurso ? 'Contrato aberto' : estado.historico.length ? 'Último contrato' : 'Aguardando entrada'}</b>
             <small>{emCurso ? relogio(emCurso.comprouEm) : estado.historico[0] ? relogio(estado.historico[0].quando) : 'monitorando o mercado'}</small>
+            <span className="tv-fluxo-entrada">
+              <em>{emCurso ? 'Entrada atual' : 'Próxima entrada'}</em>
+              <strong>{num(emCurso?.valor ?? estado.valorAtual)} <i>{moeda}</i></strong>
+              <small>{emCurso
+                ? `retorno +${num(emCurso.payout - emCurso.valor)}`
+                : estado.emOperacao
+                  ? 'comprando na Deriv…'
+                  : estado.rodando
+                    ? (estado.condicao?.rotulo ?? estado.aguardando ?? 'aguardando')
+                    : 'robô desligado'}</small>
+            </span>
           </span>
         </div>
         <div className="tv-fluxo-linha"><span /></div>
@@ -227,42 +238,15 @@ export function RobotLive({
           </span>
         </div>
       </section>
-      <section className={`tv-palco aposta tv-palco-fixo ${estado.emOperacao ? 'enviando' : ''}`}>
-        <div className="tv-mesa">
-          <div className="tv-jogo">
-            <span className="tv-rot">{emCurso ? 'Entrada atual' : 'Próxima entrada'}</span>
-            <b>{num(emCurso?.valor ?? estado.valorAtual)}<i>{moeda}</i></b>
-            <span className={`tv-status-operacao ${emCurso ? 'ganho' : ''}`} aria-live="polite">
-              {emCurso
-                ? `ganha +${num(emCurso.payout - emCurso.valor)}`
-                : estado.emOperacao
-                  ? 'Comprando na Deriv…'
-                  : estado.rodando
-                    ? (estado.condicao?.rotulo ?? estado.aguardando ?? 'Aguardando entrada')
-                    : estado.motivoParada
-                      ? `Parado: ${estado.motivoParada}`
-                      : 'Robô desligado'}
-            </span>
-          </div>
-
-          <div className="tv-regra-bloco">
-            <span className="tv-rot">O último dígito precisa ser {regra}</span>
-            <div className="tv-escala">
-              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
-                <span key={d}
-                  className={`tv-alvo ${ganhaCom(d) ? 'paga' : ''} ${
-                    emCurso?.digitoAtual === d ? 'caiu' : ''}`}>
-                  {d}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className={`tv-esteira ${estado.rodando && !emCurso ? 'ativa' : ''}`}><i /></div>
-      </section>
 
       {/* ===================== fita de digitos ===================== */}
       {detalhes && <section className="tv-fita-bloco">
+        <span className="tv-rot">O último dígito precisa ser {regra}</span>
+        <div className="tv-escala tv-escala-detalhes">
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
+            <span key={d} className={`tv-alvo ${ganhaCom(d) ? 'paga' : ''} ${emCurso?.digitoAtual === d ? 'caiu' : ''}`}>{d}</span>
+          ))}
+        </div>
         <span className="tv-rot">Dígitos do mercado — os verdes fariam ganhar</span>
         <div className="tv-fita">
           {fita.map((d, i) => (
