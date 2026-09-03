@@ -1,5 +1,20 @@
 import type { Estrategia } from './engine'
 
+/** Recuperação oficial, interna e não editável de cada modelo. */
+export const RECUPERACAO_POR_ROBO: Record<string, { galeApos: number; margem: number }> = {
+  superior5: { galeApos: 3, margem: 0.05 },
+  ag2: { galeApos: 3, margem: 0.05 },
+  smart03: { galeApos: 3, margem: 0.05 },
+  goreme: { galeApos: 3, margem: 0.05 },
+  firstblock: { galeApos: 3, margem: 0.05 },
+  secondblock: { galeApos: 3, margem: 0.05 },
+  superior5fixo: { galeApos: 3, margem: 0 },
+}
+
+export function recuperacaoDoRobo(id: string) {
+  return RECUPERACAO_POR_ROBO[id] ?? { galeApos: 3, margem: 0.05 }
+}
+
 /**
  * Estrategias que rodam no motor da Teeds.
  *

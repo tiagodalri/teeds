@@ -22,7 +22,7 @@ const centavosAcima = (v: number) => Math.ceil(v * 100) / 100
 export function OperationalManagementPanel({ moeda = 'USD' }: { moeda?: string }) {
   const [roboId, setRoboId] = useState<RoboId>('superior5')
   const [banca, setBanca] = useState('1000')
-  const [entrada, setEntrada] = useState('5')
+  const [entrada, setEntrada] = useState('0.35')
   const [stopPct, setStopPct] = useState('10')
   const [metaPct, setMetaPct] = useState('3')
   const [recuperacoesDesejadas, setRecuperacoesDesejadas] = useState('3')
@@ -30,7 +30,7 @@ export function OperationalManagementPanel({ moeda = 'USD' }: { moeda?: string }
 
   const calc = useMemo(() => {
     const saldo = Math.max(.01, n(banca, 1000))
-    const base = Math.max(.01, n(entrada, 5))
+    const base = Math.max(.35, n(entrada, .35))
     const stop = saldo * Math.min(100, n(stopPct, 10)) / 100
     const meta = saldo * Math.min(100, n(metaPct, 3)) / 100
     const desejadas = Math.min(12, Math.max(0, Math.round(n(recuperacoesDesejadas, 3))))
@@ -106,7 +106,10 @@ export function OperationalManagementPanel({ moeda = 'USD' }: { moeda?: string }
           <div className="go-bloco-titulo"><span>02</span><div><h3>Monte seu plano</h3><p>Altere os valores e veja tudo recalculado na hora.</p></div></div>
           <div className="go-campos">
             <label><span>Banca disponível</span><div><em>{moeda}</em><input inputMode="decimal" value={banca} onChange={(e) => setBanca(e.target.value)} /></div></label>
-            <label><span>Entrada inicial</span><div><em>{moeda}</em><input inputMode="decimal" value={entrada} onChange={(e) => setEntrada(e.target.value)} /></div></label>
+            <label><span>Entrada inicial</span><div><em>{moeda}</em><input type="number" inputMode="decimal" min="0.35" step="0.01" value={entrada} onFocus={(e) => e.currentTarget.select()} onChange={(e) => {
+              const valor = Number(e.target.value)
+              setEntrada(String(Number.isFinite(valor) ? Math.max(.35, valor) : .35))
+            }} /></div></label>
             <label><span>Stop diário</span><div><input inputMode="decimal" value={stopPct} onChange={(e) => setStopPct(e.target.value)} /><em>%</em></div></label>
             <label><span>Meta diária</span><div><input inputMode="decimal" value={metaPct} onChange={(e) => setMetaPct(e.target.value)} /><em>%</em></div></label>
             <label><span>Recuperações que deseja suportar</span><div><input inputMode="numeric" value={recuperacoesDesejadas} onChange={(e) => setRecuperacoesDesejadas(e.target.value)} /><em>níveis</em></div></label>

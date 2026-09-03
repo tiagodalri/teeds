@@ -4,6 +4,7 @@ import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
 import type { Identidade } from '../core/deriv/branding'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { Emblema } from './RobotCard'
+import { recuperacaoDoRobo } from '../core/deriv/strategies'
 
 /**
  * Preparo do robo, uma pergunta por vez.
@@ -120,8 +121,14 @@ export function RobotSetup({
   moeda, isDemo, onCancelar, onLigar,
 }: Props) {
   const guardado = useMemo(lerPreparo, [])
+  const recuperacao = useMemo(() => recuperacaoDoRobo(identidade.id), [identidade.id])
   const [cfg, setCfg] = useState<ConfigEstrategia>(
-    sanear({ ...configInicial, ...guardado.cfg }, configInicial),
+    sanear({
+      ...configInicial,
+      ...guardado.cfg,
+      fatorGale: recuperacao.margem,
+      galeApos: recuperacao.galeApos,
+    }, configInicial),
   )
   // O ativo nao se escolhe: e o da casa. `symbolInicial` continua na
   // assinatura para quem ja chama o componente, mas nao manda mais nada.
@@ -142,56 +149,15 @@ export function RobotSetup({
       corpo: (
         <>
           <Numero auto valor={cfg.valorAoVencer} sufixo={moeda} minimo={0.35} maximo={10_000}
-            aoMudar={(n) => muda({ valorAoVencer: n, valorInicial: n })} />
+            aoMudar={(n) => muda({ valorAoVencer: n, valorInicial: n, valorMaximo: Math.max(cfg.valorMaximo, n) })} />
           <div className="qz-atalhos">
             {[0.35, 1, 2, 5].map((v) => (
               <button key={v} className={cfg.valorAoVencer === v ? 'on' : ''}
-                onClick={() => muda({ valorAoVencer: v, valorInicial: v })}>
+                onClick={() => muda({ valorAoVencer: v, valorInicial: v, valorMaximo: Math.max(cfg.valorMaximo, v) })}>
                 {din(v, '')}
               </button>
             ))}
           </div>
-        </>
-      ),
-    },
-    {
-      chave: 'gale',
-      titulo: 'Quando ele deve tentar recuperar?',
-      ajuda: `Ele entra em todas as operações. Até ${cfg.galeApos} ${cfg.galeApos === 1 ? 'perda seguida' : 'perdas seguidas'} a entrada continua no valor base; a partir daí a Teeds calcula somente o necessário para recuperar a sequência e buscar uma pequena margem de lucro.`,
-      valido: cfg.valorMaximo >= cfg.valorAoVencer,
-      corpo: (
-        <>
-          <div className="qz-atalhos largo">
-            <button className={cfg.fatorGale === 0 ? 'on' : ''} onClick={() => muda({ fatorGale: 0 })}>
-              Nunca aumentar
-            </button>
-            <button className={cfg.fatorGale === 0.05 ? 'on' : ''} onClick={() => muda({ fatorGale: 0.05 })}>
-              Mínimo (+5%)
-            </button>
-            <button className={cfg.fatorGale === 0.1 ? 'on' : ''} onClick={() => muda({ fatorGale: 0.1 })}>
-              Leve (+10%)
-            </button>
-          </div>
-          <div className="qz-dupla">
-            <label>
-              <span className="rot">Margem sobre a entrada base</span>
-              <Numero valor={cfg.fatorGale} passo={0.01} maximo={0.25}
-                aoMudar={(n) => muda({ fatorGale: n })} />
-            </label>
-            <label>
-              <span className="rot">Ligar após quantas perdas</span>
-              <Numero valor={cfg.galeApos} passo={1} minimo={1} maximo={20}
-                aoMudar={(n) => muda({ galeApos: Math.round(n) })} />
-            </label>
-            <label>
-              <span className="rot">Entrada máxima</span>
-              <Numero valor={cfg.valorMaximo} passo={1} minimo={cfg.valorAoVencer} maximo={50_000}
-                sufixo={moeda} aoMudar={(n) => muda({ valorMaximo: n })} />
-            </label>
-          </div>
-          {cfg.valorMaximo < cfg.valorAoVencer && (
-            <p className="qz-erro">A entrada máxima não pode ser menor que o valor da entrada.</p>
-          )}
         </>
       ),
     },
@@ -235,8 +201,8 @@ export function RobotSetup({
               <dt>Martingale</dt>
               <dd>
                 {cfg.fatorGale === 0
-                  ? 'desligado — entrada sempre igual'
-                  : `liga na ${cfg.galeApos}ª perda seguida, recupera a sequência e busca mais ${(cfg.fatorGale * 100).toFixed(0)}% da entrada base, até ${din(cfg.valorMaximo, moeda)}`}
+                  ? 'desligado neste modelo — entrada sempre igual'
+                  : 'recuperação automática protegida pela Teeds'}
               </dd>
             </div>
             <div><dt>Para se ganhar</dt><dd>{din(cfg.takeProfit, moeda)}</dd></div>

@@ -126,10 +126,10 @@ export function LocalRobotPanel({
     { rot: 'Ativo', valor: nomeAtivo.replace(' Index', '') },
     { rot: 'Entrada', valor: din(cfg.valorAoVencer, moeda) },
     {
-      rot: 'Martingale',
+      rot: 'Recuperação',
       valor: cfg.fatorGale === 0
         ? 'desligado'
-        : `recuperação exata + ${(cfg.fatorGale * 100).toFixed(0)}% da entrada base`,
+        : 'automática Teeds',
     },
     { rot: 'Teto', valor: din(cfg.valorMaximo, moeda) },
     { rot: 'Para se ganhar', valor: din(cfg.takeProfit, moeda) },

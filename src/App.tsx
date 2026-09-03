@@ -476,8 +476,9 @@ export default function App() {
 
           <label className="field"><span>Valor</span>
             <div className="input-wrap"><em>US$</em>
-              <input type="number" min={1} value={stake}
-                onChange={(e) => setStake(Math.max(1, Number(e.target.value) || 0))} />
+              <input type="number" min={0.35} step={0.01} value={stake}
+                onFocus={(e) => e.currentTarget.select()}
+                onChange={(e) => setStake(Math.max(0.35, Number(e.target.value) || 0.35))} />
             </div>
           </label>
 

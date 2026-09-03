@@ -389,8 +389,9 @@ export function RobotsPanel({
               </select>
             </label>
             <label><span className="rot">Valor inicial</span>
-              <input type="number" min={0.35} step={0.5} value={valorInicial}
-                onChange={(e) => setValorInicial(Math.max(0.35, Number(e.target.value) || 0))} />
+              <input type="number" min={0.35} step={0.01} value={valorInicial}
+                onFocus={(e) => e.currentTarget.select()}
+                onChange={(e) => setValorInicial(Math.max(0.35, Number(e.target.value) || 0.35))} />
             </label>
           </div>
 
