@@ -88,7 +88,8 @@ export function RobotLive({
   parametros = [], conexao = 'open', onDesligar, onLigarDeNovo, onRemover,
   expandido = false, onExpandir,
 }: Props) {
-  const [aba, setAba] = useState<'ao-vivo' | 'operacoes' | 'parametros' | 'registro'>('ao-vivo')
+  const [detalhes, setDetalhes] = useState(false)
+  const [registroAberto, setRegistroAberto] = useState(false)
   const acerto = estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
   const positivo = estado.resultado >= 0
   const fita = estado.digitos.slice(-30)
@@ -130,17 +131,11 @@ export function RobotLive({
             <span className="tv-onde">{nomeEstrategia} · {ativo}</span>
           </div>
         </div>
-        <div className="tv-placar">
-          <span>Resultado da sessão</span>
-          <strong className={positivo ? 'up' : 'down'}>
-            {assinado(estado.resultado)} <em>{moeda}</em>
-          </strong>
-        </div>
-
-        <div className="tv-resumo-fixo">
-          <span><i>Operações</i><b>{estado.operacoes}</b></span>
-          <span><i>Acerto</i><b>{acerto.toFixed(0)}%</b></span>
-          <span><i>Próxima</i><b>{num(estado.valorAtual)}</b></span>
+        <div className="tv-resumo-fixo tv-resumo-sessao">
+          <span><i>Operações realizadas</i><b>{estado.operacoes}</b></span>
+          <span><i>Ganhadoras</i><b className="up">{estado.vitorias}</b></span>
+          <span><i>Perdedoras</i><b className="down">{estado.derrotas}</b></span>
+          <span className="tv-resultado-resumo"><i>Resultado da sessão</i><b className={positivo ? 'up' : 'down'}>{assinado(estado.resultado)} <small>{moeda}</small></b></span>
         </div>
 
         <div className="tv-acoes">
@@ -162,17 +157,12 @@ export function RobotLive({
         </div>
       </header>
 
-      <nav className="tv-abas" aria-label={`Visões de ${titulo}`}>
-        <button className={aba === 'ao-vivo' ? 'on' : ''} onClick={() => setAba('ao-vivo')}>
-          <i aria-hidden>●</i> Ao vivo
+      <nav className="tv-abas tv-atalhos" aria-label={`Detalhes de ${titulo}`}>
+        <span><i /> Acompanhamento ao vivo</span>
+        <button className={detalhes ? 'on' : ''} onClick={() => setDetalhes((v) => !v)}>
+          <i aria-hidden>⌁</i> {detalhes ? 'Ocultar estratégia' : 'Detalhes da estratégia'}
         </button>
-        <button className={aba === 'operacoes' ? 'on' : ''} onClick={() => setAba('operacoes')}>
-          <i aria-hidden>≡</i> Operações {estado.historico.length > 0 && <span>{estado.historico.length}</span>}
-        </button>
-        <button className={aba === 'parametros' ? 'on' : ''} onClick={() => setAba('parametros')}>
-          <i aria-hidden>⌁</i> Parâmetros
-        </button>
-        <button className={aba === 'registro' ? 'on' : ''} onClick={() => setAba('registro')}>
+        <button className={registroAberto ? 'on' : ''} onClick={() => setRegistroAberto((v) => !v)}>
           <i aria-hidden>▤</i> Registro
         </button>
       </nav>
@@ -208,7 +198,7 @@ export function RobotLive({
         </div>
       )}
 
-      {aba === 'parametros' && (
+      {detalhes && (
         <div className="tv-params">
           {parametros.length > 0 ? parametros.map((p) => (
             <span key={p.rot}><i>{p.rot}</i>{p.valor}</span>
@@ -217,7 +207,7 @@ export function RobotLive({
       )}
 
       {/* ===================== palco ===================== */}
-      {aba === 'ao-vivo' && <>
+      <div className="tv-painel-principal">
       <section className={`tv-fluxo ${emCurso ? 'aberto' : estado.historico.length ? 'fechado' : 'aguardando'}`}>
         <div className="tv-fluxo-etapa ativa">
           <i>{emCurso ? '●' : estado.historico.length ? '✓' : '1'}</i>
@@ -240,7 +230,7 @@ export function RobotLive({
       <section className={`tv-palco aposta tv-palco-fixo ${estado.emOperacao ? 'enviando' : ''}`}>
         <div className="tv-mesa">
           <div className="tv-jogo">
-            <span className="tv-rot">{emCurso ? 'Aposta' : 'Próxima entrada'}</span>
+            <span className="tv-rot">{emCurso ? 'Entrada atual' : 'Próxima entrada'}</span>
             <b>{num(emCurso?.valor ?? estado.valorAtual)}<i>{moeda}</i></b>
             <span className={`tv-status-operacao ${emCurso ? 'ganho' : ''}`} aria-live="polite">
               {emCurso
@@ -272,7 +262,7 @@ export function RobotLive({
       </section>
 
       {/* ===================== fita de digitos ===================== */}
-      <section className="tv-fita-bloco">
+      {detalhes && <section className="tv-fita-bloco">
         <span className="tv-rot">Dígitos do mercado — os verdes fariam ganhar</span>
         <div className="tv-fita">
           {fita.map((d, i) => (
@@ -283,11 +273,16 @@ export function RobotLive({
           ))}
           {fita.length === 0 && <span className="tv-nada">lendo o mercado…</span>}
         </div>
-      </section>
+      </section>}
 
       {/* ===================== sessao ===================== */}
       <section className="tv-sessao">
         <div className="tv-curva-caixa">
+          <div className="tv-meta-resumo">
+            <span><i>Margem até o stop</i><b className="down">{moeda} {num(Math.max(0, config.stopLoss + estado.resultado))}</b></span>
+            <span className="atual"><i>Resultado atual</i><b className={positivo ? 'up' : 'down'}>{assinado(estado.resultado)} {moeda}</b></span>
+            <span><i>Falta para a meta</i><b className="up">{moeda} {num(Math.max(0, config.takeProfit - estado.resultado))}</b></span>
+          </div>
           <Curva pontos={estado.curva} positivo={positivo} />
           <div className="tv-trilho">
             <span className="down">−{num(config.stopLoss)}</span>
@@ -325,28 +320,16 @@ export function RobotLive({
           </div>
         </div>
       </section>
-      </>}
+      </div>
 
       {/* ===================== operacoes ===================== */}
-      {(aba === 'operacoes' || aba === 'registro') && (
       <section className="tv-ops">
         <div className="tv-ops-topo">
-          <span className="tv-rot">{aba === 'registro' ? 'Registro do robô' : 'Operações desta sessão'}</span>
+          <span className="tv-rot">Operações desta sessão</span>
           {estado.historico.length > 0 && <span className="tv-conta">{estado.historico.length}</span>}
         </div>
 
-        {aba === 'registro' ? (
-          <div className="tv-rolo">
-            <ul className="tv-registro">
-              {estado.registros.map((r, i) => (
-                <li key={i} className={r.tipo}>
-                  <span>{relogio(r.hora * 1000)}</span>
-                  <b>{r.texto}</b>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : estado.historico.length === 0 ? (
+        {estado.historico.length === 0 ? (
           <p className="tv-nada-ops">
             Nenhuma ainda. Cada entrada aparece aqui assim que for liquidada.
           </p>
@@ -364,16 +347,16 @@ export function RobotLive({
                   const ac = acumulados.get(o.n) ?? 0
                   return (
                     <tr key={o.contractId} className={`${o.ganhou ? 'ganhou' : 'perdeu'} ${indice === 0 ? 'recente' : ''}`}>
-                      <td className="tv-n">{o.n}</td>
-                      <td className="tv-hora">{relogio(o.quando)}</td>
-                      <td>{num(o.valor)}</td>
-                      <td>
+                      <td className="tv-n" data-label="Operação">{o.n}</td>
+                      <td className="tv-hora" data-label="Hora">{relogio(o.quando)}</td>
+                      <td data-label="Valor">{num(o.valor)}</td>
+                      <td data-label="Entrada">
                         <span className="tv-par">
                           {o.entrada !== null ? o.entrada.toFixed(2) : '—'}
                           {o.digitoEntrada !== null && <b className="tv-chip">{o.digitoEntrada}</b>}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Saída">
                         <span className="tv-par">
                           {o.saida !== null ? o.saida.toFixed(2) : '—'}
                           {o.digitoSaida !== null && (
@@ -381,8 +364,8 @@ export function RobotLive({
                           )}
                         </span>
                       </td>
-                      <td className={o.ganhou ? 'up forte' : 'down forte'}>{assinado(o.lucro)}</td>
-                      <td className={ac >= 0 ? 'up' : 'down'}>{assinado(ac)}</td>
+                      <td data-label="Resultado" className={o.ganhou ? 'up forte' : 'down forte'}>{assinado(o.lucro)}</td>
+                      <td data-label="Acumulado" className={ac >= 0 ? 'up' : 'down'}>{assinado(ac)}</td>
                     </tr>
                   )
                 })}
@@ -391,6 +374,17 @@ export function RobotLive({
           </div>
         )}
       </section>
+      {registroAberto && (
+        <section className="tv-registro-painel">
+          <div className="tv-ops-topo"><span className="tv-rot">Registro técnico do robô</span></div>
+          <div className="tv-rolo">
+            <ul className="tv-registro">
+              {estado.registros.map((r, i) => (
+                <li key={i} className={r.tipo}><span>{relogio(r.hora * 1000)}</span><b>{r.texto}</b></li>
+              ))}
+            </ul>
+          </div>
+        </section>
       )}
       </div>
     </div>

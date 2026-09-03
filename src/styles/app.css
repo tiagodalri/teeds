@@ -3661,6 +3661,86 @@ input, select, textarea, button { vertical-align: middle; }
 .entrada-form input, .perfil-corpo input { min-height: 44px; }
 .ops-seletor select { min-height: 40px; }
 
+/* ================= cabine operacional unificada ================= */
+.tv-topo {
+  display: grid; grid-template-columns: minmax(210px,1fr) minmax(420px,auto) auto;
+  align-items: center; min-height: 78px;
+}
+.tv-resumo-sessao {
+  display: grid; grid-template-columns: repeat(3, minmax(70px,auto)) minmax(150px,auto);
+  gap: 0; padding-left: 0; border-left: 0;
+}
+.tv-resumo-sessao > span { min-width: 0; padding: 2px 15px; border-left: 1px solid rgba(139,150,173,.16); }
+.tv-resumo-sessao i { white-space: nowrap; }
+.tv-resumo-sessao b { min-height: 21px; font-size: 16px; line-height: 21px; }
+.tv-resumo-sessao .tv-resultado-resumo b { font-size: 19px; }
+.tv-resumo-sessao small { font-size: 10px; font-weight: 600; opacity: .7; }
+.tv-atalhos { align-items: center; padding-block: 7px; }
+.tv-atalhos > span { margin-right: auto; display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.tv-atalhos > span i { width: 7px; height: 7px; border-radius: 50%; background: var(--up); box-shadow: 0 0 0 4px var(--up-soft); }
+.tv-painel-principal { display: contents; }
+.tv-meta-resumo { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: end; gap: 12px; margin-bottom: 9px; }
+.tv-meta-resumo span { display: grid; gap: 2px; }
+.tv-meta-resumo span:nth-child(2) { text-align: center; }
+.tv-meta-resumo span:last-child { text-align: right; }
+.tv-meta-resumo i { color: var(--muted); font-style: normal; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }
+.tv-meta-resumo b { font-size: 12px; white-space: nowrap; }
+.tv-meta-resumo .atual b { color: var(--text); font-size: 14px; }
+.tv-registro-painel { min-height: 180px; padding: 13px 0 0; border-top: 1px solid rgba(139,150,173,.12); }
+.tv-registro-painel .tv-ops-topo { padding-inline: 18px; }
+.tv-registro-painel .tv-rolo { max-height: 230px; }
+
+/* O ciclo é legível, mas não pisca nem reinicia uma animação agressiva a cada tick. */
+.tv-fluxo { min-height: 72px; }
+.tv-fluxo-linha { height: 3px; }
+.tv-fluxo.aberto .tv-fluxo-linha span { animation: none; width: 58%; transform: none; opacity: 1; background: linear-gradient(90deg,#9a7130,#e0b95d); }
+.tv-fluxo.aberto .tv-fluxo-linha::after { content: ''; display: block; width: 7px; height: 7px; margin: -5px 0 0 57%; border-radius: 50%; background: #e5c36d; box-shadow: 0 0 0 4px rgba(208,170,82,.12); }
+
+/* A lista é parte permanente da tela ao vivo. */
+.tv-ops { min-height: 260px; border-top: 1px solid rgba(139,150,173,.12); padding-top: 14px; }
+.tv-rolo { min-height: 150px; max-height: 420px; }
+
+/* O novo fluxo é linear mesmo no modo expandido. */
+.tv-expandido .tv-corpo { display: block; }
+.tv-expandido .tv-fluxo,
+.tv-expandido .tv-palco,
+.tv-expandido .tv-fita-bloco,
+.tv-expandido .tv-sessao,
+.tv-expandido .tv-ops { width: 100%; min-height: 0; border-left: 0; }
+.tv-expandido .tv-curva { height: 64px; }
+
+@container (max-width: 900px) {
+  .tv-topo { grid-template-columns: minmax(180px,1fr) auto; grid-template-rows: auto auto; }
+  .tv-resumo-sessao { grid-column: 1 / -1; grid-row: 2; width: 100%; border-top: 1px solid rgba(139,150,173,.14); padding-top: 8px; }
+  .tv-resumo-sessao > span:first-child { border-left: 0; }
+  .tv-acoes { grid-column: 2; grid-row: 1; }
+}
+
+@container (max-width: 560px) {
+  .tv-topo { display: grid; grid-template-columns: minmax(0,1fr) auto; grid-template-rows: auto auto auto; min-height: 0; }
+  .tv-quem { grid-column: 1; grid-row: 1; }
+  .tv-acoes { grid-column: 2; grid-row: 1; width: auto; }
+  .tv-resumo-sessao { grid-column: 1 / -1; grid-row: 2; grid-template-columns: repeat(3,1fr); }
+  .tv-resumo-sessao .tv-resultado-resumo { grid-column: 1 / -1; border-left: 0; border-top: 1px solid rgba(139,150,173,.12); margin-top: 7px; padding-top: 7px; }
+  .tv-resumo-sessao > span { padding-inline: 8px; }
+  .tv-resumo-sessao i { overflow: hidden; text-overflow: ellipsis; }
+  .tv-atalhos { flex-wrap: wrap; }
+  .tv-atalhos > span { width: 100%; margin-bottom: 2px; }
+  .tv-meta-resumo { grid-template-columns: 1fr 1fr; }
+  .tv-meta-resumo .atual { grid-column: 1 / -1; grid-row: 1; text-align: left; }
+  .tv-meta-resumo span:nth-child(2) { text-align: left; }
+  .tv-sessao { height: auto !important; min-height: 0 !important; }
+  .tv-ops { min-height: 320px; }
+  .tv-rolo { max-height: 440px; overflow-x: hidden; }
+  .tv-tabela, .tv-tabela tbody { display: block; }
+  .tv-tabela thead { display: none; }
+  .tv-tabela tr { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px 14px; padding: 12px 14px; border-bottom: 1px solid rgba(139,150,173,.12); }
+  .tv-tabela td, .tv-tabela td:first-child, .tv-tabela td:nth-child(2), .tv-tabela td:last-child { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0; border: 0; text-align: right; min-width: 0; }
+  .tv-tabela td::before { content: attr(data-label); color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .tv-tabela td[data-label='Resultado'], .tv-tabela td[data-label='Acumulado'] { padding-top: 7px; border-top: 1px solid rgba(139,150,173,.10); font-size: 14px; }
+  .tv-tabela tr.ganhou td:first-child, .tv-tabela tr.perdeu td:first-child { box-shadow: none; }
+}
+
 /* ================= mesa manual ampla =================
    O ativo agora mora no cabeçalho e as posições ficam sobre o gráfico. */
 .layout-operar { grid-template-columns: minmax(0, 1fr) 330px; }
