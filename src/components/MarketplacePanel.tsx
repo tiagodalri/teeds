@@ -39,6 +39,12 @@ const PRODUTOS: Produto[] = [
     itens: ['Um robô premium à escolha', 'Atualizações da estratégia', 'Painel completo de acompanhamento'],
   },
   {
+    id: 'teeds-atlas', categoria: 'Robôs', nome: 'Teeds Atlas',
+    descricao: 'Robô premium com motor adaptativo e proteção inteligente para navegar diferentes condições de mercado.',
+    precoDe: 'R$ 997', preco: 'R$ 697', desconto: '30% OFF', imagem: 'teeds-atlas.jpg', selo: 'Robô premium', simbolo: 'TA', tom: 'azul',
+    itens: ['Motor adaptativo exclusivo', 'Proteção inteligente de sessão', 'Atualizações premium incluídas'],
+  },
+  {
     id: 'simulador-treino', categoria: 'Ferramentas', nome: 'Simulador de Treinamento',
     descricao: 'Ambiente seguro para praticar estratégias e decisões usando dinheiro fictício antes de operar.',
     precoDe: 'R$ 597', preco: 'R$ 397', desconto: '34% OFF', imagem: 'simulador-treino.jpg', selo: 'Treino sem risco', simbolo: 'ST', tom: 'azul',
