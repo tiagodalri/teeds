@@ -65,10 +65,24 @@ export const CATALOGO: Identidade[] = [
   },
   {
     id: 'ag2', nome: 'Teeds - AG2', chamada: 'O espelho',
-    descricao: 'Ganha quando o último dígito é 0, 1 ou 2. Depois de três perdas seguidas, liga o martingale.',
+    descricao: 'Espera 0, 1 e 2 alcançarem 36% dos últimos 25 dígitos antes de entrar.',
     cor: '#0ea5e9', corSuave: '#e6f6fd', onde: 'teeds',
     emblema: 'M20 8 v16 M20 24 l-6 -6 M20 24 l6 -6 M11 30 h18',
     chance: 30, contrato: 'DIGITUNDER',
+  },
+  {
+    id: 'smart03', nome: 'Teeds Smart 03', chamada: 'O bloco superior',
+    descricao: 'Ganha quando o último dígito é 4, 5, 6, 7, 8 ou 9.',
+    cor: '#d0aa52', corSuave: '#f7f0df', onde: 'teeds',
+    emblema: 'M9 29 L15 22 L20 25 L31 10 M31 10 L24 11 M31 10 L30 18',
+    chance: 60, contrato: 'DIGITOVER',
+  },
+  {
+    id: 'goreme', nome: 'Teeds Göreme', chamada: 'O seletivo',
+    descricao: 'Ganha quando o último dígito está entre 0 e 8.',
+    cor: '#b86f3c', corSuave: '#f8ebe3', onde: 'teeds',
+    emblema: 'M8 26 Q13 12 20 12 Q27 12 32 26 M12 26 h16 M20 8 v4',
+    chance: 90, contrato: 'DIGITUNDER',
   },
   {
     id: 'firstblock', nome: 'First Block', chamada: 'A primeira metade',
@@ -98,7 +112,7 @@ export const CATALOGO: Identidade[] = [
  * AG7 (digitos altos) e AG2 (digitos baixos); os demais seguem no catalogo
  * para leitura do historico, mas nao podem mais ser criados.
  */
-export const EM_OFERTA = ['superior5', 'ag2', 'firstblock', 'secondblock'] as const
+export const EM_OFERTA = ['superior5', 'ag2', 'smart03', 'goreme', 'firstblock', 'secondblock'] as const
 
 export const IDENTIDADES: Identidade[] = CATALOGO.filter((i) =>
   (EM_OFERTA as readonly string[]).includes(i.id),

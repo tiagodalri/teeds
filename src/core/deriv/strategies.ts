@@ -65,18 +65,76 @@ export const SUPERIOR_5: Estrategia = {
   },
 }
 
-/** O espelho do AG7 nos digitos baixos: ganha so no 0, 1 e 2. */
+/**
+ * Reconstrucao do Teeds Smart AG2 mostrado no video original.
+ *
+ * A tela antiga exibe mensagens como "0 1 2 = 24%" e a narracao informa
+ * que a entrada conservadora acontece a partir de 36%. Como os percentuais
+ * andam de quatro em quatro pontos, a amostra observavel tem 25 digitos:
+ * 9 ocorrencias de 0/1/2 representam 36%.
+ */
 export const AG_2: Estrategia = {
   ...SUPERIOR_5,
   id: 'ag2',
   nome: 'Teeds - AG2',
-  origem: 'espelho do AG7 nos dígitos baixos',
+  origem: 'reconstruído a partir do Teeds Smart AG2 original',
   descricao:
-    'Ganha quando o último dígito é 0, 1 ou 2. Entra em todas as operações; ' +
-    'mantém o valor enquanto as perdas seguidas não chegam ao gatilho e a ' +
-    'partir daí liga o martingale para recuperar.',
+    'Analisa os 25 últimos dígitos e entra quando 0, 1 e 2 somam pelo menos 36%. ' +
+    'O contrato ganha se o próximo último dígito for 0, 1 ou 2.',
   contractType: 'DIGITUNDER',
   barreira: 3,
+  entradaContinua: false,
+  entrar: ({ digitos }) => {
+    const janela = digitos.slice(-25)
+    return janela.length === 25 && janela.filter((d) => d <= 2).length >= 9
+  },
+  aguardando: ({ digitos }) => {
+    const janela = digitos.slice(-25)
+    const favoraveis = janela.filter((d) => d <= 2).length
+    const percentual = janela.length ? Math.round((favoraveis / janela.length) * 100) : 0
+    return janela.length < 25
+      ? `lendo o mercado — ${janela.length}/25 dígitos`
+      : `concentração de 0, 1 e 2 em ${percentual}% — entrada a partir de 36%`
+  },
+  progresso: ({ digitos }) => {
+    const janela = digitos.slice(-25)
+    const favoraveis = janela.filter((d) => d <= 2).length
+    return {
+      rotulo: janela.length < 25
+        ? `Amostra do mercado — ${janela.length}/25`
+        : `0, 1 e 2 representam ${Math.round((favoraveis / 25) * 100)}%`,
+      itens: [0, 1, 2].map((valor) => ({
+        valor: String(valor),
+        ok: janela.filter((d) => d === valor).length > 0,
+      })),
+    }
+  },
+}
+
+/** Smart 03 observável no vídeo: último dígito superior a 3, após 1 tick. */
+export const SMART_03: Estrategia = {
+  ...SUPERIOR_5,
+  id: 'smart03',
+  nome: 'Teeds Smart 03',
+  origem: 'reconstruído a partir do vídeo do robô original',
+  descricao:
+    'Opera contratos de 1 tick e ganha quando o último dígito é 4, 5, 6, 7, 8 ou 9. ' +
+    'A progressão recupera a sequência usando o retorno real do contrato.',
+  contractType: 'DIGITOVER',
+  barreira: 3,
+}
+
+/** Göreme observável no vídeo: último dígito estritamente inferior a 9. */
+export const GOREME: Estrategia = {
+  ...SUPERIOR_5,
+  id: 'goreme',
+  nome: 'Teeds Göreme',
+  origem: 'reconstruído a partir do vídeo do robô original',
+  descricao:
+    'Opera contratos de 1 tick e ganha quando o último dígito está entre 0 e 8. ' +
+    'O retorno por acerto é pequeno, por isso exige limite de entrada rigoroso.',
+  contractType: 'DIGITUNDER',
+  barreira: 9,
 }
 
 /** Primeiro bloco da dezena: vence com qualquer último dígito entre 0 e 4. */
@@ -118,5 +176,5 @@ export const SUPERIOR_5_FIXO: Estrategia = {
 }
 
 export const ESTRATEGIAS_LOCAIS: Estrategia[] = [
-  SUPERIOR_5, AG_2, FIRST_BLOCK, SECOND_BLOCK, SUPERIOR_5_FIXO,
+  SUPERIOR_5, AG_2, SMART_03, GOREME, FIRST_BLOCK, SECOND_BLOCK, SUPERIOR_5_FIXO,
 ]

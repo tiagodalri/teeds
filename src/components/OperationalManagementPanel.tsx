@@ -1,11 +1,13 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 
-type RoboId = 'superior5' | 'ag2' | 'firstblock' | 'secondblock'
+type RoboId = 'superior5' | 'ag2' | 'smart03' | 'goreme' | 'firstblock' | 'secondblock'
 type PerfilRobo = { id: RoboId; nome: string; regra: string; chance: number; retornoLiquido: number; galeApos: number; cor: string }
 
 const ROBOS: PerfilRobo[] = [
   { id: 'superior5', nome: 'Teeds - AG7', regra: 'vence com os dígitos 7, 8 e 9', chance: 30, retornoLiquido: 1.92, galeApos: 3, cor: '#e8892b' },
   { id: 'ag2', nome: 'Teeds - AG2', regra: 'vence com os dígitos 0, 1 e 2', chance: 30, retornoLiquido: 1.92, galeApos: 3, cor: '#0ea5e9' },
+  { id: 'smart03', nome: 'Teeds Smart 03', regra: 'vence com os dígitos de 4 a 9', chance: 60, retornoLiquido: .38, galeApos: 3, cor: '#d0aa52' },
+  { id: 'goreme', nome: 'Teeds Göreme', regra: 'vence com os dígitos de 0 a 8', chance: 90, retornoLiquido: .10, galeApos: 3, cor: '#b86f3c' },
   { id: 'firstblock', nome: 'First Block', regra: 'vence com os dígitos de 0 a 4', chance: 50, retornoLiquido: .92, galeApos: 3, cor: '#d0aa52' },
   { id: 'secondblock', nome: 'Second Block', regra: 'vence com os dígitos de 5 a 9', chance: 50, retornoLiquido: .92, galeApos: 3, cor: '#b86f3c' },
 ]
