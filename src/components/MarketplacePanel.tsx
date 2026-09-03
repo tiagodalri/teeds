@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 
-type Categoria = 'Todos' | 'Robôs' | 'Mentorias' | 'Sinais' | 'Ferramentas'
+type Categoria = 'Todos' | 'Robôs' | 'Mentorias' | 'Ferramentas'
 
 type Produto = {
   id: string
@@ -8,6 +8,8 @@ type Produto = {
   nome: string
   descricao: string
   preco: string
+  precoDe: string
+  desconto: string
   periodo?: string
   selo: string
   simbolo: string
@@ -18,44 +20,38 @@ type Produto = {
 
 const PRODUTOS: Produto[] = [
   {
-    id: 'quantum-pro', categoria: 'Robôs', nome: 'Quantum Pro',
-    descricao: 'Automação premium com leitura adaptativa, proteção de sessão e parâmetros exclusivos.',
-    preco: 'Em breve', selo: 'Robô premium', simbolo: 'QP', tom: 'ouro', destaque: true,
-    itens: ['Estratégias exclusivas', 'Painel de risco avançado', 'Atualizações incluídas'],
+    id: 'mentoria-alavancagem', categoria: 'Mentorias', nome: 'Mentoria de Alavancagem',
+    descricao: 'Acompanhamento premium para estruturar crescimento, proteger capital e executar um plano de evolução consistente.',
+    precoDe: 'R$ 1.497', preco: 'R$ 997', desconto: '33% OFF', selo: 'Vagas limitadas', simbolo: 'MA', tom: 'ouro', destaque: true,
+    itens: ['Encontros estratégicos ao vivo', 'Plano individual de evolução', 'Acompanhamento de performance'],
   },
   {
-    id: 'mesa-elite', categoria: 'Mentorias', nome: 'Mesa Elite',
-    descricao: 'Acompanhamento próximo para transformar leitura, disciplina e execução em um processo claro.',
-    preco: 'Lista de espera', selo: 'Vagas limitadas', simbolo: 'ME', tom: 'violeta',
-    itens: ['Encontros ao vivo', 'Plano operacional pessoal', 'Análise de desempenho'],
+    id: 'gerenciamento-estrategico', categoria: 'Mentorias', nome: 'Gerenciamento Estratégico',
+    descricao: 'Método prático para transformar banca, metas e limites em um plano operacional claro e sustentável.',
+    precoDe: 'R$ 797', preco: 'R$ 497', desconto: '38% OFF', selo: 'Método Teeds', simbolo: 'GE', tom: 'violeta',
+    itens: ['Plano de banca personalizado', 'Definição de meta e proteção', 'Rotina de revisão de resultados'],
   },
   {
-    id: 'sala-prime', categoria: 'Sinais', nome: 'Sala Prime',
-    descricao: 'Contexto de mercado, oportunidades selecionadas e acompanhamento durante as sessões.',
-    preco: 'Em breve', periodo: '/ mês', selo: 'Ao vivo', simbolo: 'SP', tom: 'verde',
-    itens: ['Alertas em tempo real', 'Leitura comentada', 'Resumo diário'],
+    id: 'robos-exclusivos', categoria: 'Robôs', nome: 'Acesso a Robôs Exclusivos',
+    descricao: 'Escolha automações premium com estratégias distintas e gestão integrada ao ecossistema Teeds.',
+    precoDe: 'R$ 297', preco: 'R$ 197', desconto: '34% OFF', periodo: 'por robô', selo: 'Coleção premium', simbolo: 'RX', tom: 'verde',
+    itens: ['Um robô premium à escolha', 'Atualizações da estratégia', 'Painel completo de acompanhamento'],
   },
   {
-    id: 'first-block-pro', categoria: 'Robôs', nome: 'First Block Pro',
-    descricao: 'Uma evolução do First Block com controles adicionais e gestão refinada de recuperação.',
-    preco: 'Em breve', selo: 'Nova geração', simbolo: '01', tom: 'azul',
-    itens: ['Faixa de 0 a 4', 'Gestão inteligente', 'Relatórios completos'],
+    id: 'simulador-treino', categoria: 'Ferramentas', nome: 'Simulador de Treinamento',
+    descricao: 'Ambiente seguro para praticar estratégias e decisões usando dinheiro fictício antes de operar.',
+    precoDe: 'R$ 597', preco: 'R$ 397', desconto: '34% OFF', selo: 'Treino sem risco', simbolo: 'ST', tom: 'azul',
+    itens: ['Saldo totalmente fictício', 'Cenários próximos do mercado', 'Relatório de evolução'],
   },
   {
-    id: 'second-block-pro', categoria: 'Robôs', nome: 'Second Block Pro',
-    descricao: 'Estratégia dedicada à faixa superior, com proteção dinâmica e leitura contínua.',
-    preco: 'Em breve', selo: 'Nova geração', simbolo: '02', tom: 'rubi',
-    itens: ['Faixa de 5 a 9', 'Proteção dinâmica', 'Sessões configuráveis'],
-  },
-  {
-    id: 'risk-lab', categoria: 'Ferramentas', nome: 'Risk Lab',
-    descricao: 'Planejador profissional de banca, cenários e limites para decisões mais consistentes.',
-    preco: 'Em breve', selo: 'Ferramenta', simbolo: 'RL', tom: 'ouro',
-    itens: ['Simulação de cenários', 'Mapa de exposição', 'Plano exportável'],
+    id: 'indicadores-manuais', categoria: 'Ferramentas', nome: 'Indicadores para Operações Manuais',
+    descricao: 'Pacote visual de indicadores para apoiar leitura de tendência, força e zonas importantes no gráfico.',
+    precoDe: 'R$ 797', preco: 'R$ 497', desconto: '38% OFF', selo: 'Pack profissional', simbolo: 'IM', tom: 'rubi',
+    itens: ['Indicadores selecionados', 'Configurações recomendadas', 'Guia prático de utilização'],
   },
 ]
 
-const CATEGORIAS: Categoria[] = ['Todos', 'Robôs', 'Mentorias', 'Sinais', 'Ferramentas']
+const CATEGORIAS: Categoria[] = ['Todos', 'Robôs', 'Mentorias', 'Ferramentas']
 
 export function MarketplacePanel() {
   const [categoria, setCategoria] = useState<Categoria>('Todos')
@@ -80,12 +76,12 @@ export function MarketplacePanel() {
           <p>Robôs premium, acompanhamento especializado e ferramentas criadas para evoluir cada etapa da sua jornada.</p>
           <div className="market-hero-acoes">
             <button onClick={() => setSelecionado(destaque)}>Conhecer lançamento</button>
-            <span><i /> Novidades chegando em breve</span>
+            <span><i /> Condições especiais de lançamento</span>
           </div>
         </div>
         <div className="market-hero-produto" aria-hidden="true">
           <div className="market-orbita"><i /><i /><i /></div>
-          <div className="market-emblema"><small>TEEDS</small><b>QP</b><span>QUANTUM PRO</span></div>
+          <div className="market-emblema"><small>TEEDS</small><b>MA</b><span>MENTORIA</span></div>
           <span className="market-edicao">FOUNDERS EDITION · 01</span>
         </div>
       </section>
@@ -105,6 +101,7 @@ export function MarketplacePanel() {
             <article key={produto.id} className={`market-card ${produto.tom}`}>
               <button className="market-card-capa" onClick={() => setSelecionado(produto)} aria-label={`Conhecer ${produto.nome}`}>
                 <span className="market-card-selo">{produto.selo}</span>
+                <span className="market-card-desconto">{produto.desconto}</span>
                 <span className="market-card-num">0{indice + 1}</span>
                 <div className="market-card-arte"><i /><b>{produto.simbolo}</b><small>TEEDS ORIGINAL</small></div>
                 <span className="market-card-tipo">{produto.categoria}</span>
@@ -113,7 +110,7 @@ export function MarketplacePanel() {
                 <div><span>{produto.categoria}</span><h3>{produto.nome}</h3></div>
                 <p>{produto.descricao}</p>
                 <footer>
-                  <strong>{produto.preco}<small>{produto.periodo}</small></strong>
+                  <span className="market-preco"><del>{produto.precoDe}</del><strong>{produto.preco}<small>{produto.periodo}</small></strong></span>
                   <button onClick={() => setSelecionado(produto)}>Ver detalhes <span>→</span></button>
                 </footer>
               </div>
@@ -139,7 +136,7 @@ export function MarketplacePanel() {
               <p>{selecionado.descricao}</p>
               <ul>{selecionado.itens.map((item) => <li key={item}>✓ <span>{item}</span></li>)}</ul>
               <div className="market-modal-compra">
-                <strong>{selecionado.preco}<small>{selecionado.periodo}</small></strong>
+                <span className="market-preco"><del>{selecionado.precoDe}</del><strong>{selecionado.preco}<small>{selecionado.periodo}</small></strong><em>{selecionado.desconto}</em></span>
                 <button onClick={() => registrarInteresse(selecionado)}>Quero ser avisado</button>
               </div>
               <small className="market-aviso">Nenhuma cobrança será realizada. Avisaremos quando esta oferta estiver disponível.</small>
