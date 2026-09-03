@@ -3129,6 +3129,24 @@ button, input { font: inherit; color: inherit; }
 .go-status { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 99px; background: var(--surface); font-size: 11px; font-weight: 700; position: relative; z-index: 1; }
 .go-status i { width: 7px; height: 7px; border-radius: 50%; background: var(--go-red); box-shadow: 0 0 10px var(--go-red); }
 .go-status.ok i { background: var(--go-green); box-shadow: 0 0 10px var(--go-green); }
+.go-robo-seletor { display: grid; grid-template-columns: minmax(250px, .72fr) minmax(0, 1.7fr); gap: 18px; align-items: center; margin-bottom: 18px; padding: 18px 20px; border: 1px solid color-mix(in srgb, var(--go-robo) 30%, var(--border)); border-radius: 18px; background: linear-gradient(120deg, color-mix(in srgb, var(--go-robo) 8%, var(--bg)), var(--bg) 52%); }
+.go-robo-intro { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.go-robo-intro > span { display: grid; place-items: center; flex: 0 0 36px; height: 36px; border: 1px solid color-mix(in srgb, var(--go-robo) 48%, var(--border)); border-radius: 10px; color: var(--go-robo); font-size: 10px; font-weight: 850; }
+.go-robo-intro div { min-width: 0; }
+.go-robo-intro small { display: block; color: var(--muted); font-size: 8.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.go-robo-intro strong { display: block; margin-top: 3px; color: var(--text); font-size: 16px; }
+.go-robo-intro p { margin: 4px 0 0; color: var(--muted); font-size: 10px; line-height: 1.4; }
+.go-robos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; min-width: 0; }
+.go-robos button { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 54px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); color: var(--muted); text-align: left; cursor: pointer; transition: border-color .15s, background .15s, transform .15s; }
+.go-robos button:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--robo-cor) 50%, var(--border)); }
+.go-robos button > i { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--robo-cor); box-shadow: 0 0 10px color-mix(in srgb, var(--robo-cor) 60%, transparent); }
+.go-robos button > span { min-width: 0; }
+.go-robos button b, .go-robos button small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.go-robos button b { color: var(--text); font-size: 10.5px; }
+.go-robos button small { margin-top: 3px; color: var(--muted); font-size: 8px; }
+.go-robos button em { display: none; margin-left: auto; color: var(--robo-cor); font-size: 10px; font-style: normal; }
+.go-robos button.on { border-color: color-mix(in srgb, var(--robo-cor) 62%, var(--border)); background: color-mix(in srgb, var(--robo-cor) 10%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--robo-cor) 12%, transparent); }
+.go-robos button.on em { display: block; }
 .go-grade { display: grid; grid-template-columns: minmax(290px, 350px) minmax(0, 1fr); gap: 18px; align-items: start; }
 .go-config, .go-exposicao, .go-planilha { border: 1px solid var(--border); border-radius: 18px; background: var(--bg); }
 .go-config { padding: 21px; position: sticky; top: 0; }
@@ -3158,7 +3176,7 @@ button, input { font: inherit; color: inherit; }
 .go-barra { height: 8px; margin-top: 20px; border-radius: 9px; background: var(--surface); overflow: hidden; }
 .go-barra i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #159b69, var(--go-green)); box-shadow: 0 0 15px color-mix(in srgb, var(--go-green) 38%, transparent); transition: width .25s ease; }
 .go-barra i.perigo { background: linear-gradient(90deg, #e08a36, var(--go-red)); }
-.go-legenda { display: flex; justify-content: space-between; gap: 12px; margin-top: 9px; color: var(--muted); font-size: 9.5px; }
+.go-legenda { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 7px 12px; margin-top: 9px; color: var(--muted); font-size: 9.5px; }
 .go-legenda b { color: var(--text); }
 .go-planilha { padding: 19px 21px 10px; overflow: hidden; }
 .go-tabela-cab, .go-tabela-corpo > div { display: grid; grid-template-columns: 1.15fr .85fr 1.15fr .9fr; gap: 12px; align-items: center; }
@@ -3180,6 +3198,7 @@ button, input { font: inherit; color: inherit; }
 @media (max-width: 1280px) {
   .telas button { padding-inline: 10px; font-size: 11px; }
   .go-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .go-robo-seletor { grid-template-columns: 1fr; }
 }
 @media (max-width: 900px) {
   .topbar { flex-wrap: wrap; height: auto; }
@@ -3188,11 +3207,15 @@ button, input { font: inherit; color: inherit; }
   .telas button { flex: 0 0 auto; }
   .go-grade { grid-template-columns: 1fr; }
   .go-config { position: static; }
+  .go-robos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 650px) {
   .go { padding: 16px; }
   .go-hero { align-items: flex-start; flex-direction: column; padding: 20px; }
   .go-status { align-self: flex-start; }
+  .go-robo-seletor { padding: 15px; border-radius: 14px; }
+  .go-robos { grid-template-columns: 1fr 1fr; }
+  .go-robos button { min-height: 58px; }
   .go-cards { grid-template-columns: 1fr 1fr; }
   .go-tabela-cab, .go-tabela-corpo > div { grid-template-columns: 1.1fr .9fr 1fr; }
   .go-tabela-cab span:last-child, .go-tabela-corpo em { display: none; }
