@@ -168,6 +168,8 @@ export interface ComissaoDia {
   comissao: number
   moeda: string | null
   demo: boolean
+  /** Quando esta linha foi gravada — diz se veio do cálculo novo. */
+  atualizadoEm: string | null
 }
 
 export async function listarClientes(sessao: SessaoTeeds): Promise<ClienteRegistro[]> {
@@ -197,5 +199,6 @@ export async function listarComissoes(sessao: SessaoTeeds, dias: number): Promis
     userId: l.user_id, contaId: l.conta_id, dia: l.dia,
     operacoes: Number(l.operacoes), pagamentos: Number(l.pagamentos),
     comissao: Number(l.comissao), moeda: l.moeda, demo: Boolean(l.demo),
+    atualizadoEm: l.atualizado_em ?? null,
   }))
 }

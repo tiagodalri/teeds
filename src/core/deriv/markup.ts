@@ -39,6 +39,8 @@ function iso(d: Date): string {
 /** Quantas paginas de extrato o simulador aceita percorrer, e de que tamanho. */
 const POR_PAGINA = 999
 const MAX_PAGINAS = 12
+/** Teto por dia: um dia sozinho dificilmente passa disso. */
+const MAX_PAGINAS_DIA = 30
 
 /** Mesma janela, em epoch de segundos — o que o `statement` exige. */
 export function janelaEpoch(dias: number): { de: number; ate: number } {
@@ -128,7 +130,7 @@ export async function buscarSerieDiaria(session: AuthSession, dias: number): Pro
 
 /**
  * Simulador de markup, calibrado com medicao real feita em 31/08/2026:
- * a 3%, o pagamento cai para 91,25% do valor sem markup, em qualquer entrada.
+ * a 3%, o pagamento cai para 91,25% do valor sem markup, em qualquer aposta.
  * Interpolamos linearmente entre os dois pontos medidos (0% e 3%).
  */
 const QUEDA_A_3 = 0.0875
@@ -162,6 +164,8 @@ export interface MarkupSimulado {
   comissao: number
   comissaoMedia: number
   porDia: Array<{ data: string; comissao: number; operacoes: number; pagamentos: number }>
+  /** Dias que foram varridos agora (os demais vieram do banco). */
+  diasCalculados?: string[]
   taxa: number
 }
 
@@ -173,6 +177,130 @@ export interface MarkupSimulado {
  * app_id no extrato) e aplicamos a taxa sobre o pagamento de cada uma.
  * Vale para conta demo tambem — a conta e ficticia, o calculo e o mesmo.
  */
+/**
+ * A partir deste instante, todo dia gravado em `comissoes_diarias` veio da
+ * varredura POR DIA — completa por construcao. Registros mais antigos
+ * nasceram do calculo em janela unica, que truncava em ~12 mil operacoes:
+ * nao dao para confiar e sao recalculados uma vez.
+ */
+export const CALCULO_POR_DIA_DESDE = Date.parse('2026-09-03T00:00:00Z')
+
+/** Dias do periodo, do mais recente para o mais antigo, em UTC (AAAA-MM-DD). */
+export function diasDoPeriodo(dias: number): string[] {
+  const hoje = new Date()
+  const lista: string[] = []
+  for (let i = 0; i < dias; i += 1) {
+    const d = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), hoje.getUTCDate() - i))
+    lista.push(d.toISOString().slice(0, 10))
+  }
+  return lista
+}
+
+/** Comeco e fim de um dia (UTC), em epoch de segundos. */
+function janelaDoDia(dia: string): { de: number; ate: number } {
+  const [a, m, d] = dia.split('-').map(Number)
+  return {
+    de: Math.floor(Date.UTC(a, m - 1, d, 0, 0, 0) / 1000),
+    ate: Math.floor(Date.UTC(a, m - 1, d, 23, 59, 59) / 1000),
+  }
+}
+
+export interface DiaJaGravado {
+  comissao: number
+  operacoes: number
+  pagamentos: number
+}
+
+/**
+ * Comissao varrendo **um dia de cada vez**.
+ *
+ * A versao anterior pedia o periodo inteiro numa janela so e parava em 12
+ * paginas de 999 (~12 mil compras). Com um robo de martingale isso se
+ * esgota dentro do proprio dia de hoje: os dias anteriores nunca mais eram
+ * recalculados e o total parecia congelado, sempre mentindo para baixo.
+ *
+ * Agora cada dia tem a sua propria paginacao — nenhum dia divide teto com
+ * outro — e os dias ja gravados no banco (pelo calculo novo) sao
+ * reaproveitados: a primeira conta e lenta, as seguintes sao instantaneas.
+ */
+export async function simularComissaoPorDia(
+  socket: TeedsSocket,
+  taxa = 0.03,
+  dias = 30,
+  jaGravados: Map<string, DiaJaGravado> = new Map(),
+  aoProgredir?: (feitos: number, total: number) => void,
+): Promise<MarkupSimulado> {
+  const lista = diasDoPeriodo(dias)
+  const hoje = new Date().toISOString().slice(0, 10)
+
+  const porDia = new Map<string, { comissao: number; operacoes: number; pagamentos: number }>()
+  let comissao = 0
+  let movimentado = 0
+  let pagamentoTotal = 0
+  let operacoes = 0
+  let truncado = false
+  const novos: string[] = []
+
+  for (let i = 0; i < lista.length; i += 1) {
+    const dia = lista[i]
+    aoProgredir?.(i, lista.length)
+
+    // dia fechado que o calculo novo ja gravou: nao se recalcula
+    const gravado = dia !== hoje ? jaGravados.get(dia) : undefined
+    if (gravado) {
+      porDia.set(dia, { ...gravado })
+      comissao += gravado.comissao
+      pagamentoTotal += gravado.pagamentos
+      operacoes += gravado.operacoes
+      continue
+    }
+
+    const { de, ate } = janelaDoDia(dia)
+    let pular = 0
+    let doDia = { comissao: 0, operacoes: 0, pagamentos: 0 }
+    for (let pagina = 0; pagina < MAX_PAGINAS_DIA; pagina += 1) {
+      const { movimentos } = await buscarExtrato(socket, {
+        limite: POR_PAGINA, pular, tipo: 'buy', de, ate,
+      })
+      for (const m of movimentos) {
+        if (m.appId !== DERIV.appId || !m.pagamento) continue
+        const c = (m.pagamento ?? 0) * taxa
+        doDia = {
+          comissao: doDia.comissao + c,
+          operacoes: doDia.operacoes + 1,
+          pagamentos: doDia.pagamentos + (m.pagamento ?? 0),
+        }
+        movimentado += Math.abs(m.valor)
+      }
+      if (movimentos.length < POR_PAGINA) break
+      pular += POR_PAGINA
+      if (pagina === MAX_PAGINAS_DIA - 1) truncado = true
+    }
+
+    porDia.set(dia, doDia)
+    comissao += doDia.comissao
+    pagamentoTotal += doDia.pagamentos
+    operacoes += doDia.operacoes
+    novos.push(dia)
+  }
+  aoProgredir?.(lista.length, lista.length)
+
+  return {
+    operacoes,
+    movimentado,
+    pagamentoTotal,
+    comissao,
+    comissaoMedia: operacoes ? comissao / operacoes : 0,
+    taxa,
+    dias,
+    truncado,
+    diasCalculados: novos,
+    porDia: [...porDia.entries()]
+      .map(([data, v]) => ({ data, ...v }))
+      .sort((a, b) => a.data.localeCompare(b.data)),
+  }
+}
+
 export async function simularComissao(
   socket: TeedsSocket,
   taxa = 0.03,

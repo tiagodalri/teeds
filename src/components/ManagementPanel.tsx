@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AuthSession } from '../core/deriv/auth'
 import { AFILIADO, DERIV } from '../core/deriv/config'
 import {
-  buscarResumo, buscarSerieDiaria, periodo, simular, simularComissao, SemPermissao,
+  buscarResumo, buscarSerieDiaria, periodo, simular, simularComissaoPorDia,
+  CALCULO_POR_DIA_DESDE, SemPermissao,
   type DiaMarkup, type MarkupResumo, type MarkupSimulado,
 } from '../core/deriv/markup'
 import type { TeedsSocket } from '../core/deriv/client'
-import { enviarComissoes } from '../core/teeds/clientes'
+import { enviarComissoes, listarComissoes } from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { ClientesAdmin } from './ClientesAdmin'
 import { DerivDesconectada } from './DerivDesconectada'
@@ -53,6 +54,7 @@ export function ManagementPanel({
   const [semPermissao, setSemPermissao] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [markupSim, setMarkupSim] = useState(3)
+  const [progresso, setProgresso] = useState<{ feitos: number; total: number } | null>(null)
 
   useEffect(() => {
     if (!session) return
@@ -100,17 +102,46 @@ export function ManagementPanel({
       ultimoCalculo.current = Date.now()
       setSimCarregando(true)
       setSimErro(null)
-      simularComissao(socket, 0.03, dias)
+      // Dias que o calculo novo ja gravou nao precisam ser varridos de novo:
+      // a primeira conta e lenta, as seguintes saem na hora.
+      const cache = async () => {
+        const mapa = new Map<string, { comissao: number; operacoes: number; pagamentos: number }>()
+        if (!sessaoTeeds || !contaId) return mapa
+        try {
+          const linhas = await listarComissoes(sessaoTeeds, dias)
+          for (const l of linhas) {
+            if (l.contaId !== contaId) continue
+            const quando = l.atualizadoEm ? Date.parse(l.atualizadoEm) : 0
+            if (!quando || quando < CALCULO_POR_DIA_DESDE) continue
+            mapa.set(l.dia, {
+              comissao: l.comissao, operacoes: l.operacoes, pagamentos: l.pagamentos,
+            })
+          }
+        } catch { /* sem cache: calcula tudo */ }
+        return mapa
+      }
+
+      cache()
+        .then((jaGravados) =>
+          simularComissaoPorDia(socket, 0.03, dias, jaGravados, (feitos, total) => {
+            if (vivo) setProgresso({ feitos, total })
+          }),
+        )
         .then((r) => {
           if (!vivo) return
           setSim(r)
-          // o mesmo calculo alimenta o cadastro de clientes — sem custo extra
+          setProgresso(null)
+          // grava so os dias varridos agora — os demais ja estavam no banco
           if (sessaoTeeds && contaId) {
-            void enviarComissoes(sessaoTeeds, contaId, isDemo, moeda, r.porDia)
+            const novos = r.diasCalculados
+            const enviar = novos?.length
+              ? r.porDia.filter((d) => novos.includes(d.data))
+              : r.porDia
+            if (enviar.length) void enviarComissoes(sessaoTeeds, contaId, isDemo, moeda, enviar)
           }
         })
         .catch((e: Error) => vivo && setSimErro(e.message))
-        .finally(() => vivo && setSimCarregando(false))
+        .finally(() => { if (vivo) { setSimCarregando(false); setProgresso(null) } })
     }
 
     // a primeira carga e imediata; as seguintes esperam o mercado acalmar
@@ -237,7 +268,13 @@ export function ManagementPanel({
         </p>
 
         {simErro && <div className="ger-erro">{simErro}</div>}
-        {simCarregando && !sim && <p className="ger-nota">somando suas operações…</p>}
+        {simCarregando && (
+          <p className="ger-nota">
+            {progresso
+              ? `somando dia a dia — ${progresso.feitos} de ${progresso.total}…`
+              : 'somando suas operações…'}
+          </p>
+        )}
 
         {sim && (
           <>
