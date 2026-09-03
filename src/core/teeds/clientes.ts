@@ -148,7 +148,16 @@ export interface ClienteRegistro {
   cpf: string | null
   criadoEm: string
   vistoEm: string
+  planoId: string
+  statusAcesso: 'ativo' | 'suspenso' | 'expirado' | 'cancelado'
+  acessoInicio: string | null
+  acessoExpiraEm: string | null
+  observacoes: string | null
 }
+
+export interface PlanoRegistro { id: string; nome: string; duracaoDias: number | null; ativo: boolean }
+export interface ProdutoRegistro { id: string; nome: string; categoria: string; precoCentavos: number | null; ativo: boolean }
+export interface ClienteProdutoRegistro { userId: string; produtoId: string; concedidoEm: string; expiraEm: string | null; ativo: boolean }
 
 export interface ContaDerivRegistro {
   userId: string
@@ -177,7 +186,41 @@ export async function listarClientes(sessao: SessaoTeeds): Promise<ClienteRegist
   return (linhas ?? []).map((l) => ({
     userId: l.user_id, nome: l.nome, email: l.email, telefone: l.telefone,
     cpf: l.cpf, criadoEm: l.criado_em, vistoEm: l.visto_em,
+    planoId: l.plano_id ?? 'essencial', statusAcesso: l.status_acesso ?? 'ativo',
+    acessoInicio: l.acesso_inicio ?? null, acessoExpiraEm: l.acesso_expira_em ?? null,
+    observacoes: l.observacoes ?? null,
   }))
+}
+
+export async function listarPlanos(sessao: SessaoTeeds): Promise<PlanoRegistro[]> {
+  const linhas = await rest<any[]>('/planos?select=*&order=nome.asc', sessao.token)
+  return (linhas ?? []).map((l) => ({ id: l.id, nome: l.nome, duracaoDias: l.duracao_dias, ativo: Boolean(l.ativo) }))
+}
+
+export async function listarProdutos(sessao: SessaoTeeds): Promise<ProdutoRegistro[]> {
+  const linhas = await rest<any[]>('/produtos?select=*&order=nome.asc', sessao.token)
+  return (linhas ?? []).map((l) => ({ id: l.id, nome: l.nome, categoria: l.categoria, precoCentavos: l.preco_centavos, ativo: Boolean(l.ativo) }))
+}
+
+export async function listarProdutosClientes(sessao: SessaoTeeds): Promise<ClienteProdutoRegistro[]> {
+  const linhas = await rest<any[]>('/cliente_produtos?select=*&ativo=eq.true', sessao.token)
+  return (linhas ?? []).map((l) => ({ userId: l.user_id, produtoId: l.produto_id, concedidoEm: l.concedido_em, expiraEm: l.expira_em, ativo: Boolean(l.ativo) }))
+}
+
+export async function atualizarAcessoCliente(sessao: SessaoTeeds, userId: string, dados: {
+  planoId: string; statusAcesso: ClienteRegistro['statusAcesso']; acessoExpiraEm: string | null; observacoes: string | null
+}): Promise<void> {
+  await rest(`/clientes?user_id=eq.${encodeURIComponent(userId)}`, sessao.token, {
+    method: 'PATCH', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({ plano_id: dados.planoId, status_acesso: dados.statusAcesso, acesso_expira_em: dados.acessoExpiraEm, observacoes: dados.observacoes }),
+  })
+}
+
+export async function definirProdutoCliente(sessao: SessaoTeeds, userId: string, produtoId: string, ativo: boolean): Promise<void> {
+  await rest('/cliente_produtos?on_conflict=user_id,produto_id', sessao.token, {
+    method: 'POST', headers: MESCLAR,
+    body: JSON.stringify({ user_id: userId, produto_id: produtoId, ativo, origem: 'admin', concedido_em: new Date().toISOString() }),
+  })
 }
 
 export async function listarContasDeriv(sessao: SessaoTeeds): Promise<ContaDerivRegistro[]> {
