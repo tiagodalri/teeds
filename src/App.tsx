@@ -7,6 +7,7 @@ import { RobotsPanel } from './components/RobotsPanel'
 import { OperationsPanel } from './components/OperationsPanel'
 import { AulasPanel } from './components/AulasPanel'
 import { OperationalManagementPanel } from './components/OperationalManagementPanel'
+import { MarketplacePanel } from './components/MarketplacePanel'
 import { AccountSwitcher } from './components/AccountSwitcher'
 import { UserMenu } from './components/UserMenu'
 import { ProfilePanel } from './components/ProfilePanel'
@@ -73,7 +74,7 @@ export default function App() {
   const [confirmar, setConfirmar] = useState<'CALL' | 'PUT' | null>(null)
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
-  const [tela, setTela] = useState<'operar' | 'robos' | 'operacoes' | 'gestao' | 'gerenciamento' | 'aulas'>('operar')
+  const [tela, setTela] = useState<'operar' | 'robos' | 'operacoes' | 'gestao' | 'gerenciamento' | 'marketplace' | 'aulas'>('operar')
   const [payoutBase, setPayoutBase] = useState(19.55)
 
   const activeSymbol = useMemo(() => {
@@ -253,6 +254,7 @@ export default function App() {
           <button className={tela === 'operacoes' ? 'on' : ''} onClick={() => setTela('operacoes')}>Operações</button>
           <button className={tela === 'gestao' ? 'on' : ''} onClick={() => setTela('gestao')}>Gestão</button>
           <button className={tela === 'gerenciamento' ? 'on' : ''} onClick={() => setTela('gerenciamento')}>Gerenciamento Operacional</button>
+          <button className={tela === 'marketplace' ? 'on' : ''} onClick={() => setTela('marketplace')}>Marketplace</button>
           <button className={tela === 'aulas' ? 'on' : ''} onClick={() => setTela('aulas')}>Aulas</button>
         </nav>
 
@@ -364,6 +366,8 @@ export default function App() {
         />
       ) : tela === 'aulas' ? (
         <AulasPanel nome={teeds.usuario?.nome} />
+      ) : tela === 'marketplace' ? (
+        <MarketplacePanel />
       ) : tela === 'gerenciamento' ? (
         <OperationalManagementPanel moeda={conta.account?.currency ?? 'USD'} />
       ) : tela === 'gestao' ? (
