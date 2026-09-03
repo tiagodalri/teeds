@@ -277,32 +277,6 @@ export function RobotLive({
             <span className="up">+{num(config.takeProfit)}</span>
           </div>
         </div>
-        <div className="tv-nums">
-          <div>
-            <span>Operações</span>
-            <b>{estado.operacoes}</b>
-            <em>{estado.vitorias}G · {estado.derrotas}P</em>
-          </div>
-          <div>
-            <span>Acerto</span>
-            <b>{acerto.toFixed(0)}%</b>
-            <em>{estado.perdasSeguidas > 0 ? `${estado.perdasSeguidas} perdas seguidas` : 'sem sequência'}</em>
-          </div>
-          <div>
-            <span>Próxima entrada</span>
-            <b>{num(estado.valorAtual)}</b>
-            <em>{config.fatorGale === 0
-              ? 'valor fixo'
-              : estado.perdasSeguidas >= config.galeApos
-                ? 'martingale ligado'
-                : `valor base · ${estado.perdasSeguidas}/${config.galeApos} perdas`}</em>
-          </div>
-          <div>
-            <span>Movimentado</span>
-            <b>{num(estado.movimentado)}</b>
-            <em>{estado.latenciaMedia !== null ? `compra em ${estado.latenciaMedia} ms` : '—'}</em>
-          </div>
-        </div>
       </section>
       </div>
 

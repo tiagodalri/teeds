@@ -3695,6 +3695,7 @@ input, select, textarea, button { vertical-align: middle; }
 .tv-meta-resumo i { color: var(--muted); font-style: normal; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }
 .tv-meta-resumo b { font-size: 12px; white-space: nowrap; }
 .tv-meta-resumo .atual b { color: var(--text); font-size: 14px; }
+.tv-sessao { height: auto; min-height: 0; }
 .tv-registro-painel { min-height: 180px; padding: 13px 0 0; border-top: 1px solid rgba(139,150,173,.12); }
 .tv-registro-painel .tv-ops-topo { padding-inline: 18px; }
 .tv-registro-painel .tv-rolo { max-height: 230px; }
