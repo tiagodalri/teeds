@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { listarProdutos } from '../core/teeds/clientes'
+import type { SessaoTeeds } from '../core/teeds/conta'
 
 type Categoria = 'Todos' | 'Robôs' | 'Mentorias' | 'Ferramentas'
 
@@ -61,14 +63,37 @@ const PRODUTOS: Produto[] = [
 const CATEGORIAS: Categoria[] = ['Todos', 'Robôs', 'Mentorias', 'Ferramentas']
 const capaProduto = (arquivo: string) => `${import.meta.env.BASE_URL}marketplace/${arquivo}`
 
-export function MarketplacePanel() {
+const categoriaBanco = (valor: string): Produto['categoria'] => valor === 'robo' ? 'Robôs' : valor === 'mentoria' ? 'Mentorias' : 'Ferramentas'
+const precoBR = (centavos: number) => (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
+
+export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
   const [categoria, setCategoria] = useState<Categoria>('Todos')
   const [selecionado, setSelecionado] = useState<Produto | null>(null)
   const [interesse, setInteresse] = useState<string | null>(null)
-  const destaque = PRODUTOS.find((produto) => produto.destaque)!
+  const [catalogo, setCatalogo] = useState<Produto[]>(PRODUTOS)
+  useEffect(() => {
+    if (!sessao) return
+    listarProdutos(sessao).then((itens) => {
+      const ativos = itens.filter((p) => p.ativo).map((p, indice) => {
+        const base = PRODUTOS.find((x) => x.id === p.id)
+        const valor = p.precoCentavos ?? 0
+        return {
+          ...(base ?? {
+            id: p.id, descricao: 'Produto exclusivo integrado ao ecossistema Teeds.', imagem: 'teeds-atlas.jpg',
+            selo: 'Teeds Original', simbolo: p.nome.split(/\s+/).slice(0, 2).map(x => x[0]).join('').toUpperCase(),
+            tom: (['ouro','verde','rubi','azul','violeta'] as const)[indice % 5], itens: ['Acesso integrado à plataforma', 'Conteúdo e atualizações exclusivas'],
+          }),
+          id: p.id, nome: p.nome, categoria: categoriaBanco(p.categoria), preco: precoBR(valor),
+          precoDe: precoBR(Math.ceil(valor * 1.45 / 100) * 100), desconto: '31% OFF',
+        } as Produto
+      })
+      if (ativos.length) setCatalogo(ativos)
+    }).catch(() => {})
+  }, [sessao?.usuario.id])
+  const destaque = catalogo.find((produto) => produto.destaque) ?? catalogo[0]
   const visiveis = useMemo(() => categoria === 'Todos'
-    ? PRODUTOS
-    : PRODUTOS.filter((produto) => produto.categoria === categoria), [categoria])
+    ? catalogo
+    : catalogo.filter((produto) => produto.categoria === categoria), [categoria, catalogo])
 
   const registrarInteresse = (produto: Produto) => {
     setInteresse(produto.id)
@@ -83,7 +108,7 @@ export function MarketplacePanel() {
           <h1>O próximo nível da sua <em>operação.</em></h1>
           <p>Robôs premium, acompanhamento especializado e ferramentas criadas para evoluir cada etapa da sua jornada.</p>
           <div className="market-hero-acoes">
-            <button onClick={() => setSelecionado(destaque)}>Conhecer lançamento</button>
+            <button onClick={() => destaque && setSelecionado(destaque)}>Conhecer lançamento</button>
             <span><i /> Condições especiais de lançamento</span>
           </div>
         </div>

@@ -223,6 +223,53 @@ export async function definirProdutoCliente(sessao: SessaoTeeds, userId: string,
   })
 }
 
+export async function salvarPlano(sessao: SessaoTeeds, plano: PlanoRegistro): Promise<void> {
+  await rest('/planos?on_conflict=id', sessao.token, {
+    method: 'POST', headers: MESCLAR,
+    body: JSON.stringify({ id: plano.id, nome: plano.nome, duracao_dias: plano.duracaoDias, ativo: plano.ativo }),
+  })
+}
+
+export async function salvarProduto(sessao: SessaoTeeds, produto: ProdutoRegistro): Promise<void> {
+  await rest('/produtos?on_conflict=id', sessao.token, {
+    method: 'POST', headers: MESCLAR,
+    body: JSON.stringify({ id: produto.id, nome: produto.nome, categoria: produto.categoria, preco_centavos: produto.precoCentavos, ativo: produto.ativo }),
+  })
+}
+
+/**
+ * Cria o login pelo endpoint público de cadastro sem trocar a sessão do ADM.
+ * O trigger do banco cria a ficha de cliente; depois o painel configura plano
+ * e validade. Se a confirmação de e-mail estiver ativa, o cliente confirma no
+ * próprio e-mail antes do primeiro acesso.
+ */
+export async function criarAcessoCliente(sessao: SessaoTeeds, dados: {
+  nome: string; email: string; telefone?: string; cpf?: string; senha: string
+}): Promise<{ userId: string | null; precisaConfirmar: boolean }> {
+  const res = await fetch(`${SUPABASE.url}/auth/v1/signup`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE.anonKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: dados.email.trim().toLowerCase(), senha: undefined, password: dados.senha,
+      data: { nome: dados.nome.trim(), telefone: dados.telefone?.trim() || null, cpf: dados.cpf?.trim() || null },
+    }),
+  })
+  const corpo = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(corpo?.msg || corpo?.message || 'Não foi possível criar este acesso.')
+  const userId = corpo?.user?.id ?? null
+  // Garante a ficha quando o trigger ainda estiver processando.
+  if (userId) {
+    await new Promise((resolve) => setTimeout(resolve, 350))
+    try {
+      await rest('/clientes?on_conflict=user_id', sessao.token, {
+        method: 'POST', headers: MESCLAR,
+        body: JSON.stringify({ user_id: userId, nome: dados.nome.trim(), email: dados.email.trim().toLowerCase(), telefone: dados.telefone?.trim() || null, cpf: dados.cpf?.trim() || null }),
+      })
+    } catch { /* o trigger já criou ou a confirmação ainda está pendente */ }
+  }
+  return { userId, precisaConfirmar: !corpo?.session }
+}
+
 export async function listarContasDeriv(sessao: SessaoTeeds): Promise<ContaDerivRegistro[]> {
   const linhas = await rest<any[]>('/contas_deriv?select=*&order=vista_em.desc', sessao.token)
   return (linhas ?? []).map((l) => ({
