@@ -71,6 +71,20 @@ export const CATALOGO: Identidade[] = [
     chance: 30, contrato: 'DIGITUNDER',
   },
   {
+    id: 'firstblock', nome: 'First Block', chamada: 'A primeira metade',
+    descricao: 'Ganha quando o último dígito é 0, 1, 2, 3 ou 4. Recuperação precisa após o gatilho.',
+    cor: '#d0aa52', corSuave: '#f7f0df', onde: 'teeds',
+    emblema: 'M9 11 h8 M9 11 v18 M9 29 h8 M31 11 h-8 M31 11 v18 M31 29 h-8',
+    chance: 50, contrato: 'DIGITUNDER',
+  },
+  {
+    id: 'secondblock', nome: 'Second Block', chamada: 'A segunda metade',
+    descricao: 'Ganha quando o último dígito é 5, 6, 7, 8 ou 9. Recuperação precisa após o gatilho.',
+    cor: '#b86f3c', corSuave: '#f8ebe3', onde: 'teeds',
+    emblema: 'M8 14 h10 v12 H8 M22 14 h10 v12 H22 M20 8 v24',
+    chance: 50, contrato: 'DIGITOVER',
+  },
+  {
     id: 'superior5fixo', nome: 'AG7 sem martingale', chamada: 'O disciplinado',
     descricao: 'Entra em todas as operações com o valor sempre igual, sem progressão.',
     cor: '#0d9488', corSuave: '#e3f5f3', onde: 'teeds',
@@ -84,7 +98,7 @@ export const CATALOGO: Identidade[] = [
  * AG7 (digitos altos) e AG2 (digitos baixos); os demais seguem no catalogo
  * para leitura do historico, mas nao podem mais ser criados.
  */
-export const EM_OFERTA = ['superior5', 'ag2'] as const
+export const EM_OFERTA = ['superior5', 'ag2', 'firstblock', 'secondblock'] as const
 
 export const IDENTIDADES: Identidade[] = CATALOGO.filter((i) =>
   (EM_OFERTA as readonly string[]).includes(i.id),

@@ -3075,7 +3075,7 @@ button, input { font: inherit; color: inherit; }
 .rv-seletor .rv-corpo { padding: 81px 16px 14px; }
 .rv-seletor .rv-corpo > b { font-size: 17px; }
 .rv-compara-fundo { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 20px; background: rgba(2, 4, 8, .76); backdrop-filter: blur(8px); animation: qz-entra .16s ease-out; }
-.rv-compara { width: min(720px, 100%); background: var(--bg); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,.38); padding: 22px; }
+.rv-compara { width: min(920px, 100%); max-height: calc(100dvh - 40px); overflow-y: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,.38); padding: 22px; }
 .rv-compara > header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 18px; }
 .rv-compara h3 { margin: 5px 0 0; font-size: 22px; }
 .rv-compara > header > button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 28px; }

@@ -236,7 +236,8 @@ function EmblemaAG({ u, cor, heroi }: { u: string; cor: string; heroi: string })
         strokeWidth="1.2" strokeDasharray="2 9" />
       <circle cx="200" cy="108" r="98" fill="none" stroke={cor} strokeOpacity="0.1" strokeWidth="1" />
       <Placa u={u} cor={cor} cx={200} cy={108} r={74} />
-      <DigitoHeroi u={u} ch={heroi} x={200} y={138} s={88} cor={cor} />
+      <DigitoHeroi u={u} ch={heroi} x={200} y={heroi.length > 1 ? 124 : 138}
+        s={heroi.length > 1 ? 42 : 88} cor={cor} />
     </g>
   )
 }
@@ -432,6 +433,10 @@ function Cena({ aula, u, cor }: { aula: string; u: string; cor: string }) {
       return <EmblemaAG u={u} cor={cor} heroi="7" />
     case 'robo-ag2':
       return <EmblemaAG u={u} cor={cor} heroi="2" />
+    case 'robo-first-block':
+      return <EmblemaAG u={u} cor={cor} heroi="0–4" />
+    case 'robo-second-block':
+      return <EmblemaAG u={u} cor={cor} heroi="5–9" />
     case 'freios':
       return (
         <g>
@@ -457,6 +462,8 @@ function Cena({ aula, u, cor }: { aula: string; u: string; cor: string }) {
 /** Qual cena veste cada robo da vitrine. */
 export function capaDoRobo(id: string): string {
   if (id === 'ag2') return 'robo-ag2'
+  if (id === 'firstblock') return 'robo-first-block'
+  if (id === 'secondblock') return 'robo-second-block'
   if (id === 'superior5' || id === 'superior5fixo') return 'robo-ag7'
   return 'boas-vindas'
 }

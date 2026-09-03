@@ -35,6 +35,16 @@ const MAX_BLOCOS = 4
 const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
+const digitosDoModelo = (id: string): string[] => ({
+  ag2: ['0', '1', '2'], superior5: ['7', '8', '9'],
+  firstblock: ['0', '1', '2', '3', '4'], secondblock: ['5', '6', '7', '8', '9'],
+}[id] ?? [])
+
+const perfilDoModelo = (id: string) => ({
+  ag2: 'Espelho', superior5: 'Insistente',
+  firstblock: 'Bloco inferior', secondblock: 'Bloco superior',
+}[id] ?? 'Automático')
+
 export function RobotsPanel({
   socket, logado, isDemo, moeda, symbols, symbolPadrao, conexao = 'open',
   entrandoNaDeriv = false, onConectarDeriv,
@@ -226,8 +236,7 @@ export function RobotsPanel({
         </div>
         <div className="rv-galeria">
         {IDENTIDADES.map((i) => {
-          const digitos =
-            i.id === 'ag2' ? ['0', '1', '2'] : i.id === 'superior5' ? ['7', '8', '9'] : []
+          const digitos = digitosDoModelo(i.id)
           const escolhido = ident.id === i.id
           return (
             <button key={i.id} className={`rv-carta ${escolhido ? 'on' : ''}`}
@@ -256,13 +265,13 @@ export function RobotsPanel({
       {comparando && (
         <div className="rv-compara-fundo" onMouseDown={(e) => e.target === e.currentTarget && setComparando(false)}>
           <section className="rv-compara" role="dialog" aria-modal="true" aria-label="Comparar robôs">
-            <header><div><span className="rot">Comparativo Teeds</span><h3>Dois estilos, uma decisão simples</h3></div><button onClick={() => setComparando(false)} aria-label="Fechar">×</button></header>
+            <header><div><span className="rot">Comparativo Teeds</span><h3>Quatro estratégias, uma decisão simples</h3></div><button onClick={() => setComparando(false)} aria-label="Fechar">×</button></header>
             <div className="rv-compara-grade">
               {IDENTIDADES.map((i) => {
-                const ag2 = i.id === 'ag2'
+                const digitos = digitosDoModelo(i.id)
                 return <article key={i.id} style={{ ['--robo' as any]: i.cor }}>
                   <Emblema id={i} tamanho={58} /><span>{i.chamada}</span><h4>{i.nome}</h4>
-                  <dl><div><dt>Ganha com</dt><dd>{ag2 ? '0, 1 ou 2' : '7, 8 ou 9'}</dd></div><div><dt>Chance</dt><dd>{i.chance}%</dd></div><div><dt>Perfil</dt><dd>{ag2 ? 'Espelho' : 'Insistente'}</dd></div></dl>
+                  <dl><div><dt>Ganha com</dt><dd>{digitos.join(', ')}</dd></div><div><dt>Chance</dt><dd>{i.chance}%</dd></div><div><dt>Perfil</dt><dd>{perfilDoModelo(i.id)}</dd></div></dl>
                   <button onClick={() => { setIdent(i); setComparando(false) }}>Escolher {i.nome.replace('Teeds - ', '')}</button>
                 </article>
               })}

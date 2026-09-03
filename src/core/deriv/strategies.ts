@@ -79,6 +79,32 @@ export const AG_2: Estrategia = {
   barreira: 3,
 }
 
+/** Primeiro bloco da dezena: vence com qualquer último dígito entre 0 e 4. */
+export const FIRST_BLOCK: Estrategia = {
+  ...SUPERIOR_5,
+  id: 'firstblock',
+  nome: 'First Block',
+  origem: 'primeiro bloco dos dígitos decimais',
+  descricao:
+    'Ganha quando o último dígito é 0, 1, 2, 3 ou 4. Entra em todas as operações; ' +
+    'usa o valor base até o gatilho e depois recupera somente o necessário.',
+  contractType: 'DIGITUNDER',
+  barreira: 5,
+}
+
+/** Segundo bloco da dezena: vence com qualquer último dígito entre 5 e 9. */
+export const SECOND_BLOCK: Estrategia = {
+  ...SUPERIOR_5,
+  id: 'secondblock',
+  nome: 'Second Block',
+  origem: 'segundo bloco dos dígitos decimais',
+  descricao:
+    'Ganha quando o último dígito é 5, 6, 7, 8 ou 9. Entra em todas as operações; ' +
+    'usa o valor base até o gatilho e depois recupera somente o necessário.',
+  contractType: 'DIGITOVER',
+  barreira: 4,
+}
+
 /** Variacao conservadora: entra igual, mas a entrada nunca muda. */
 export const SUPERIOR_5_FIXO: Estrategia = {
   ...SUPERIOR_5,
@@ -91,4 +117,6 @@ export const SUPERIOR_5_FIXO: Estrategia = {
   proximoValor: ({ valorAoVencer }) => valorAoVencer,
 }
 
-export const ESTRATEGIAS_LOCAIS: Estrategia[] = [SUPERIOR_5, AG_2, SUPERIOR_5_FIXO]
+export const ESTRATEGIAS_LOCAIS: Estrategia[] = [
+  SUPERIOR_5, AG_2, FIRST_BLOCK, SECOND_BLOCK, SUPERIOR_5_FIXO,
+]
