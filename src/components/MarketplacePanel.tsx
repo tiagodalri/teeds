@@ -10,6 +10,7 @@ type Produto = {
   preco: string
   precoDe: string
   desconto: string
+  imagem: string
   periodo?: string
   selo: string
   simbolo: string
@@ -22,36 +23,37 @@ const PRODUTOS: Produto[] = [
   {
     id: 'mentoria-alavancagem', categoria: 'Mentorias', nome: 'Mentoria de Alavancagem',
     descricao: 'Acompanhamento premium para estruturar crescimento, proteger capital e executar um plano de evolução consistente.',
-    precoDe: 'R$ 1.497', preco: 'R$ 997', desconto: '33% OFF', selo: 'Vagas limitadas', simbolo: 'MA', tom: 'ouro', destaque: true,
+    precoDe: 'R$ 1.497', preco: 'R$ 997', desconto: '33% OFF', imagem: 'mentoria-alavancagem.jpg', selo: 'Vagas limitadas', simbolo: 'MA', tom: 'ouro', destaque: true,
     itens: ['Encontros estratégicos ao vivo', 'Plano individual de evolução', 'Acompanhamento de performance'],
   },
   {
     id: 'gerenciamento-estrategico', categoria: 'Mentorias', nome: 'Gerenciamento Estratégico',
     descricao: 'Método prático para transformar banca, metas e limites em um plano operacional claro e sustentável.',
-    precoDe: 'R$ 797', preco: 'R$ 497', desconto: '38% OFF', selo: 'Método Teeds', simbolo: 'GE', tom: 'violeta',
+    precoDe: 'R$ 797', preco: 'R$ 497', desconto: '38% OFF', imagem: 'gerenciamento-estrategico.jpg', selo: 'Método Teeds', simbolo: 'GE', tom: 'violeta',
     itens: ['Plano de banca personalizado', 'Definição de meta e proteção', 'Rotina de revisão de resultados'],
   },
   {
     id: 'robos-exclusivos', categoria: 'Robôs', nome: 'Acesso a Robôs Exclusivos',
     descricao: 'Escolha automações premium com estratégias distintas e gestão integrada ao ecossistema Teeds.',
-    precoDe: 'R$ 297', preco: 'R$ 197', desconto: '34% OFF', periodo: 'por robô', selo: 'Coleção premium', simbolo: 'RX', tom: 'verde',
+    precoDe: 'R$ 297', preco: 'R$ 197', desconto: '34% OFF', imagem: 'robos-exclusivos.jpg', periodo: 'por robô', selo: 'Coleção premium', simbolo: 'RX', tom: 'verde',
     itens: ['Um robô premium à escolha', 'Atualizações da estratégia', 'Painel completo de acompanhamento'],
   },
   {
     id: 'simulador-treino', categoria: 'Ferramentas', nome: 'Simulador de Treinamento',
     descricao: 'Ambiente seguro para praticar estratégias e decisões usando dinheiro fictício antes de operar.',
-    precoDe: 'R$ 597', preco: 'R$ 397', desconto: '34% OFF', selo: 'Treino sem risco', simbolo: 'ST', tom: 'azul',
+    precoDe: 'R$ 597', preco: 'R$ 397', desconto: '34% OFF', imagem: 'simulador-treino.jpg', selo: 'Treino sem risco', simbolo: 'ST', tom: 'azul',
     itens: ['Saldo totalmente fictício', 'Cenários próximos do mercado', 'Relatório de evolução'],
   },
   {
     id: 'indicadores-manuais', categoria: 'Ferramentas', nome: 'Indicadores para Operações Manuais',
     descricao: 'Pacote visual de indicadores para apoiar leitura de tendência, força e zonas importantes no gráfico.',
-    precoDe: 'R$ 797', preco: 'R$ 497', desconto: '38% OFF', selo: 'Pack profissional', simbolo: 'IM', tom: 'rubi',
+    precoDe: 'R$ 797', preco: 'R$ 497', desconto: '38% OFF', imagem: 'indicadores-manuais.jpg', selo: 'Pack profissional', simbolo: 'IM', tom: 'rubi',
     itens: ['Indicadores selecionados', 'Configurações recomendadas', 'Guia prático de utilização'],
   },
 ]
 
 const CATEGORIAS: Categoria[] = ['Todos', 'Robôs', 'Mentorias', 'Ferramentas']
+const capaProduto = (arquivo: string) => `${import.meta.env.BASE_URL}marketplace/${arquivo}`
 
 export function MarketplacePanel() {
   const [categoria, setCategoria] = useState<Categoria>('Todos')
@@ -100,10 +102,11 @@ export function MarketplacePanel() {
           {visiveis.map((produto, indice) => (
             <article key={produto.id} className={`market-card ${produto.tom}`}>
               <button className="market-card-capa" onClick={() => setSelecionado(produto)} aria-label={`Conhecer ${produto.nome}`}>
+                <img src={capaProduto(produto.imagem)} alt="" loading="lazy" />
                 <span className="market-card-selo">{produto.selo}</span>
                 <span className="market-card-desconto">{produto.desconto}</span>
                 <span className="market-card-num">0{indice + 1}</span>
-                <div className="market-card-arte"><i /><b>{produto.simbolo}</b><small>TEEDS ORIGINAL</small></div>
+                <div className="market-card-identidade"><b>{produto.simbolo}</b><small>TEEDS ORIGINAL</small></div>
                 <span className="market-card-tipo">{produto.categoria}</span>
               </button>
               <div className="market-card-corpo">
@@ -129,7 +132,10 @@ export function MarketplacePanel() {
         <div className="market-modal-fundo" role="presentation" onMouseDown={() => setSelecionado(null)}>
           <section className={`market-modal ${selecionado.tom}`} role="dialog" aria-modal="true" aria-labelledby="market-modal-titulo" onMouseDown={(e) => e.stopPropagation()}>
             <button className="market-modal-fechar" onClick={() => setSelecionado(null)} aria-label="Fechar">×</button>
-            <div className="market-modal-arte"><span>{selecionado.selo}</span><b>{selecionado.simbolo}</b><small>TEEDS ORIGINAL</small></div>
+            <div className="market-modal-arte">
+              <img src={capaProduto(selecionado.imagem)} alt="" />
+              <span>{selecionado.selo}</span><b>{selecionado.simbolo}</b><small>TEEDS ORIGINAL</small>
+            </div>
             <div className="market-modal-corpo">
               <span className="market-eyebrow">{selecionado.categoria}</span>
               <h2 id="market-modal-titulo">{selecionado.nome}</h2>
