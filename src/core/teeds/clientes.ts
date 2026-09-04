@@ -180,6 +180,11 @@ export interface ComissaoDia {
   /** Quando esta linha foi gravada — diz se veio do cálculo novo. */
   atualizadoEm: string | null
 }
+export interface OperacaoRoboRegistro {
+  contractId: number; userId: string; contaId: string; roboId: string; roboNome: string
+  ativo: string; tipoContrato: string; moeda: string; demo: boolean; entrada: number
+  pagamento: number; resultado: number; markup: number; ganhou: boolean; executadaEm: string
+}
 
 /** Corrige registros antigos que foram salvos com UTF-8 interpretado como MacRoman. */
 const textoLegivel = (valor: string | null): string | null => {
@@ -298,4 +303,21 @@ export async function listarComissoes(sessao: SessaoTeeds, dias: number): Promis
     comissao: Number(l.comissao), moeda: l.moeda, demo: Boolean(l.demo),
     atualizadoEm: l.atualizado_em ?? null,
   }))
+}
+
+export async function registrarOperacaoRobo(sessao: SessaoTeeds, op: Omit<OperacaoRoboRegistro, 'userId'>): Promise<void> {
+  try {
+    await rest('/operacoes_robos?on_conflict=user_id,contract_id', sessao.token, {
+      method: 'POST', headers: MESCLAR,
+      body: JSON.stringify({ contract_id: op.contractId, user_id: sessao.usuario.id, conta_id: op.contaId, robo_id: op.roboId, robo_nome: op.roboNome, ativo: op.ativo, tipo_contrato: op.tipoContrato, moeda: op.moeda, demo: op.demo, entrada: op.entrada, pagamento: op.pagamento, resultado: op.resultado, markup: op.markup, ganhou: op.ganhou, executada_em: op.executadaEm }),
+    })
+  } catch (e) { console.warn('[teeds] telemetria do robô indisponível:', (e as Error).message) }
+}
+
+export async function listarOperacoesRobos(sessao: SessaoTeeds, dias = 90): Promise<OperacaoRoboRegistro[]> {
+  const corte = new Date(Date.now() - (dias - 1) * 864e5).toISOString()
+  try {
+    const linhas = await rest<any[]>(`/operacoes_robos?select=*&executada_em=gte.${encodeURIComponent(corte)}&order=executada_em.desc`, sessao.token)
+    return (linhas ?? []).map(l => ({ contractId:Number(l.contract_id),userId:l.user_id,contaId:l.conta_id,roboId:l.robo_id,roboNome:l.robo_nome,ativo:l.ativo,tipoContrato:l.tipo_contrato,moeda:l.moeda,demo:Boolean(l.demo),entrada:Number(l.entrada),pagamento:Number(l.pagamento),resultado:Number(l.resultado),markup:Number(l.markup),ganhou:Boolean(l.ganhou),executadaEm:l.executada_em }))
+  } catch { return [] }
 }

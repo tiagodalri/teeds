@@ -86,6 +86,8 @@ export interface OperacaoMotor {
   digitoEntrada: number | null
   digitoSaida: number | null
   lucro: number
+  /** Pagamento potencial contratado, base exata do markup. */
+  payout: number
   ganhou: boolean
   quando: number
   /** Quantos ticks o robo esperou antes desta entrada. */
@@ -499,6 +501,7 @@ export class MotorTeeds {
           digitoEntrada: entrada !== null ? ultimoDigito(entrada, casas) : null,
           digitoSaida: saida !== null ? ultimoDigito(saida, casas) : null,
           lucro: c.profit,
+          payout: this.estado.emCurso?.payout ?? c.payout ?? 0,
           ganhou,
           quando: Date.now(),
           esperou: this.esperaAtual,

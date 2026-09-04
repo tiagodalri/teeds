@@ -369,6 +369,8 @@ export default function App() {
           conexao={conta.conexao}
           entrandoNaDeriv={conta.status === 'entrando'}
           onConectarDeriv={conta.login}
+          sessaoTeeds={teeds.sessao}
+          contaId={conta.accountId}
         />
       </div>
       {tela === 'robos' ? null : tela === 'operacoes' ? (

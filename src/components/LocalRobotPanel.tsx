@@ -8,6 +8,8 @@ import { RobotLive } from './RobotLive'
 import { RobotSetup, lerPreparo } from './RobotSetup'
 import type { Identidade } from '../core/deriv/branding'
 import { Emblema } from './RobotCard'
+import type { SessaoTeeds } from '../core/teeds/conta'
+import { registrarOperacaoRobo } from '../core/teeds/clientes'
 
 interface Props {
   socket: TeedsSocket | null
@@ -25,6 +27,8 @@ interface Props {
   expandido?: boolean
   onExpandir?: () => void
   onSessaoChange?: (ativa: boolean) => void
+  sessaoTeeds?: SessaoTeeds | null
+  contaId?: string | null
 }
 
 const PADRAO: ConfigEstrategia = {
@@ -43,7 +47,7 @@ const din = (v: number, m = 'USD') =>
 
 export function LocalRobotPanel({
   socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
-  onRemover, titulo, expandido = false, onExpandir, onSessaoChange,
+  onRemover, titulo, expandido = false, onExpandir, onSessaoChange, sessaoTeeds, contaId,
 }: Props) {
   // O cartao escolhido na vitrine dita a estrategia deste bloco…
   const daVitrine = ESTRATEGIAS_LOCAIS.find((e) => e.id === identidade.id) ?? ESTRATEGIAS_LOCAIS[0]
@@ -83,6 +87,18 @@ export function LocalRobotPanel({
 
   const nomeAtivo = symbols.find((s) => s.symbol === symbol)?.name ?? symbol
   const rodando = estado?.rodando ?? false
+  const ultimoEnviado = useRef<number | null>(null)
+  useEffect(() => {
+    const op = estado?.historico[0]
+    if (!op || !sessaoTeeds || !contaId || ultimoEnviado.current === op.contractId) return
+    ultimoEnviado.current = op.contractId
+    void registrarOperacaoRobo(sessaoTeeds, {
+      contractId: op.contractId, contaId, roboId: estrategia.id, roboNome: estrategia.nome,
+      ativo: symbol, tipoContrato: estrategia.contractType, moeda, demo: isDemo,
+      entrada: op.valor, pagamento: op.payout, resultado: op.lucro,
+      markup: op.payout * .03, ganhou: op.ganhou, executadaEm: new Date(op.quando).toISOString(),
+    })
+  }, [estado?.historico[0]?.contractId, sessaoTeeds?.usuario.id, contaId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // a regra do contrato dita em uma frase, para a tela nao falar em codigo
   const b = estrategia.barreira ?? 5

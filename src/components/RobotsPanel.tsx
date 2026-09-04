@@ -15,6 +15,8 @@ import { RobotScope } from './RobotScope'
 import { IDENTIDADES, identidade, identidadePorContrato, type Identidade } from '../core/deriv/branding'
 import { batizarRobo, nomeDoRobo, sugerirNome, todosOsNomes } from '../core/deriv/robotNames'
 import { DerivDesconectada } from './DerivDesconectada'
+import type { SessaoTeeds } from '../core/teeds/conta'
+import { registrarOperacaoRobo } from '../core/teeds/clientes'
 
 interface Props {
   socket: TeedsSocket | null
@@ -27,6 +29,8 @@ interface Props {
   conexao?: string
   entrandoNaDeriv?: boolean
   onConectarDeriv?: () => void
+  sessaoTeeds?: SessaoTeeds | null
+  contaId?: string | null
 }
 
 /** Teto de robos simultaneos: cada um consome assinaturas da mesma conexao. */
@@ -47,7 +51,7 @@ const perfilDoModelo = (id: string) => ({
 
 export function RobotsPanel({
   socket, logado, isDemo, moeda, symbols, symbolPadrao, conexao = 'open',
-  entrandoNaDeriv = false, onConectarDeriv,
+  entrandoNaDeriv = false, onConectarDeriv, sessaoTeeds, contaId,
 }: Props) {
   const [symbol, setSymbol] = useState<string>(symbolPadrao ?? '1HZ100V')
   const [valorInicial, setValorInicial] = useState(1)
@@ -76,6 +80,7 @@ export function RobotsPanel({
   const [vitrineAberta, setVitrineAberta] = useState(true)
   const [comparando, setComparando] = useState(false)
   const proximoBloco = useRef(2)
+  const contratosEnviados = useRef(new Set<number>())
 
   const abrirBloco = () =>
     setBlocos((b) => (b.length >= MAX_BLOCOS ? b : [...b, `bloco-${proximoBloco.current++}`]))
@@ -172,6 +177,19 @@ export function RobotsPanel({
   }
 
   const lista = [...robos.values()].sort((a, b) => b.inicio - a.inicio)
+  useEffect(() => {
+    if (!sessaoTeeds || !contaId) return
+    for (const r of lista) for (const c of r.contratosDetalhe) {
+      const id = Number(c.contract_id ?? c.id ?? 0)
+      const encerrado = c.status && c.status !== 'open'
+      if (!id || !encerrado || contratosEnviados.current.has(id)) continue
+      contratosEnviados.current.add(id)
+      const idr = identidadePorContrato(r.contrato.contract_type ?? '')
+      const entrada = Number(c.buy_price ?? c.stake ?? 0), payout = Number(c.payout ?? c.payout_value ?? 0)
+      const resultado = Number(c.profit ?? payout - entrada)
+      void registrarOperacaoRobo(sessaoTeeds, { contractId:id, contaId, roboId:idr?.id ?? r.estrategia, roboNome:nomes[r.runId] ?? idr?.nome ?? 'Robô', ativo:r.contrato.underlying_symbol ?? r.contrato.symbol ?? '', tipoContrato:r.contrato.contract_type ?? '', moeda, demo:isDemo, entrada, pagamento:payout, resultado, markup:payout*.03, ganhou:resultado>0, executadaEm:new Date(Number(c.sell_time ?? c.date_expiry ?? Date.now()/1000)*1000).toISOString() })
+    }
+  }, [lista.map(r=>`${r.runId}:${r.contratos}`).join('|'), sessaoTeeds?.usuario.id, contaId]) // eslint-disable-line react-hooks/exhaustive-deps
   const rodando = lista.filter((r) => r.status === 'running' || r.status === 'paused')
   // além dos ativos, o teatro mostra a última corrida encerrada, para revisão
   const ultimaParada = lista.find((r) => r.status === 'stopped')
@@ -289,6 +307,7 @@ export function RobotsPanel({
                 socket={socket} isDemo={isDemo} moeda={moeda}
                 symbols={symbols} symbolPadrao={symbolPadrao} identidade={ident}
                 conexao={conexao}
+                sessaoTeeds={sessaoTeeds} contaId={contaId}
                 expandido={blocoExpandido === idBloco}
                 onExpandir={() => setBlocoExpandido((atual) => atual === idBloco ? null : idBloco)}
                 onSessaoChange={(ativa) => setSessoesLocais((atuais) => {
