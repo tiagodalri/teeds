@@ -5,6 +5,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import { writeFileSync, chmodSync, existsSync, readFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
 import { atender } from './mcp'
+import { limparSessoesOrfas, supabaseConfigurado } from './supabase'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -203,10 +204,15 @@ const servidor = createServer(async (req, res) => {
   responder(404, pagina('Nada aqui', '<h1>404</h1><p>Endereço desconhecido.</p><a class="botao" href="/">Ir para o login</a>'))
 })
 
+// Sessao que ficou "rodando" depois de um reinicio e tela mentindo para o
+// cliente: o robo nao existe mais, mas a Teeds diz que sim.
+void limparSessoesOrfas()
+
 servidor.listen(PORTA, () => {
   const publico = RETORNO.replace(/\/callback$/, '')
   console.log(`\nServidor da Teeds no ar na porta ${PORTA}`)
   console.log(`Login:  ${publico}`)
   console.log(`MCP:    ${publico}/mcp/${SEGREDO}`)
+  console.log(`Supabase: ${supabaseConfigurado() ? 'ligado — as sessoes aparecem na tela do cliente' : 'nao configurado (rode servidor/chave.sh)'}`)
   console.log(`\nO endereco do MCP e uma senha: quem tiver ele comanda os robos.\n`)
 })

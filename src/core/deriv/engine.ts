@@ -348,15 +348,62 @@ export class MotorTeeds {
     this.emitir()
   }
 
+  /** A menor entrada que a Deriv aceita nos indices de volatilidade. */
+  private static readonly ENTRADA_MINIMA = 0.35
+
+  /**
+   * O quanto ainda cabe dentro do stop loss.
+   *
+   * O motor conferia o stop **depois** de cada operacao, entao a perda final
+   * passava do limite — e com o martingale ligado passava muito: uma sessao
+   * de AG7 com stop 2 fechou em -3,00, uma de AG2 com stop 20 fechou em
+   * -21,31. Quem contratou um freio de 20 nao espera perder 21.
+   *
+   * Agora a entrada e aparada para caber no que resta. Se o que resta for
+   * menor que a entrada minima da Deriv, nao da para operar sem furar o
+   * limite: a sessao para, dizendo isso.
+   */
+  private valorQueCabeNoStop(desejado: number): { valor: number; cabe: boolean } {
+    const stop = this.config.stopLoss
+    if (!(stop > 0)) return { valor: desejado, cabe: true }
+
+    // resultado e negativo quando ha prejuizo; a folga e o que falta para o stop
+    const folga = stop + Math.min(0, this.estado.resultado)
+    if (folga >= desejado) return { valor: desejado, cabe: true }
+    if (folga >= MotorTeeds.ENTRADA_MINIMA) {
+      return { valor: Number(folga.toFixed(2)), cabe: true }
+    }
+    return { valor: 0, cabe: false }
+  }
+
   private async comprar() {
+    const desejado = Math.min(
+      Math.max(MotorTeeds.ENTRADA_MINIMA, Number(this.estado.valorAtual.toFixed(2))),
+      this.config.valorMaximo || Infinity,
+    )
+
+    const { valor, cabe } = this.valorQueCabeNoStop(desejado)
+    if (!cabe) {
+      this.registrar(
+        `Parou antes de furar o limite de perda: a próxima entrada de ${this.moeda} ` +
+        `${desejado.toFixed(2)} passaria do stop de ${this.moeda} ${this.config.stopLoss.toFixed(2)}.`,
+        'parada',
+      )
+      this.desligar(`limite de perda protegido (${this.moeda} ${this.config.stopLoss.toFixed(2)})`)
+      return
+    }
+    if (valor < desejado) {
+      this.registrar(
+        `Entrada reduzida de ${this.moeda} ${desejado.toFixed(2)} para ${this.moeda} ` +
+        `${valor.toFixed(2)} para não passar do limite de perda.`,
+        'info',
+      )
+    }
+
     this.estado.emOperacao = true
     this.estado.aguardando = 'comprando…'
     this.emitir()
 
-    const valor = Math.min(
-      Math.max(0.35, Number(this.estado.valorAtual.toFixed(2))),
-      this.config.valorMaximo || Infinity,
-    )
     const partiu = Date.now()
 
     try {

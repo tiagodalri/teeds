@@ -9,6 +9,10 @@ import { ESTRATEGIAS_LOCAIS, recuperacaoDoRobo } from '../../src/core/deriv/stra
 import { ATIVO_DOS_ROBOS } from '../../src/core/deriv/config'
 import type { AuthSession } from '../../src/core/deriv/auth'
 import type { ConfigEstrategia, Estrategia } from '../../src/core/deriv/engine'
+import {
+  abrirSessao, encerrarSessao, registrarOperacao, supabaseConfigurado,
+  type SessaoGravada,
+} from './supabase'
 
 /**
  * As sessões de robô que estão vivas no servidor.
@@ -44,6 +48,8 @@ export interface Sessao {
   terminouEm: number | null
   estado: EstadoMotor
   erro: string | null
+  /** A linha desta sessão no Supabase, quando o banco está configurado. */
+  gravada: SessaoGravada | null
 }
 
 const vivas = new Map<string, Sessao>()
@@ -163,14 +169,84 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
     terminouEm: null,
     estado: {} as EstadoMotor,
     erro: null,
+    gravada: null,
   }
 
+  // A sessão aparece no banco ANTES da primeira entrada: assim a tela do
+  // cliente mostra o robô ligado desde o primeiro instante, e não só depois
+  // que a primeira operação liquida.
+  if (supabaseConfigurado()) {
+    try {
+      sessao.gravada = await abrirSessao({
+        sessaoRef: id,
+        contaId: conta.accountId,
+        roboId: estrategia.id,
+        roboNome: estrategia.nome,
+        ativo: ATIVO_DOS_ROBOS,
+        entrada: p.valorInicial,
+        stopLoss: p.stopLoss,
+        takeProfit: p.takeProfit,
+        maxOperacoes: p.maxOperacoes ?? 0,
+        origem: 'chat',
+      })
+    } catch (e) {
+      // o robô não deixa de operar porque o espelho falhou
+      console.warn(`[sessao ${id}] não consegui abrir no Supabase: ${(e as Error).message}`)
+    }
+  }
+
+  let jaGravadas = 0
   motor.escutar((e) => {
+    const anterior = sessao.estado
     sessao.estado = e
+
+    // operação nova fechou: espelha no banco, uma vez só
+    if (sessao.gravada && e.historico && e.historico.length > jaGravadas) {
+      const novas = e.historico.slice(0, e.historico.length - jaGravadas).reverse()
+      jaGravadas = e.historico.length
+      for (const op of novas) {
+        void registrarOperacao(
+          sessao.gravada,
+          {
+            contractId: op.contractId,
+            contaId: conta.accountId,
+            roboId: estrategia.id,
+            roboNome: estrategia.nome,
+            ativo: ATIVO_DOS_ROBOS,
+            tipoContrato: estrategia.contractType,
+            demo: conta.type === 'demo',
+            moeda: conta.currency,
+            entrada: op.valor,
+            pagamento: op.payout,
+            resultado: op.lucro,
+            ganhou: op.ganhou,
+            markupDeriv: op.markupDeriv ?? null,
+            executadaEm: new Date(op.quando).toISOString(),
+            seq: op.n,
+            precoEntrada: op.entrada,
+            digitoEntrada: op.digitoEntrada,
+            precoSaida: op.saida,
+            digitoSaida: op.digitoSaida,
+            acumulado: Number(e.resultado.toFixed(2)),
+          },
+          {
+            operacoes: e.operacoes,
+            ganhas: e.vitorias,
+            perdidas: e.derrotas,
+            resultado: e.resultado,
+            movimentado: e.movimentado,
+            proximaEntrada: e.valorAtual,
+          },
+        )
+      }
+    }
+    void anterior
+
     if (!e.rodando && e.motivoParada && sessao.terminouEm === null) {
       sessao.terminouEm = Date.now()
       try { socket.disconnect() } catch { /* já caiu */ }
       motores.delete(id)
+      if (sessao.gravada) void encerrarSessao(sessao.gravada, { motivo: e.motivoParada })
       setTimeout(() => vivas.delete(id), GUARDAR_ENCERRADA_MS).unref?.()
       console.log(`[sessao ${id}] parou: ${e.motivoParada} · ${e.operacoes} operações · ${e.resultado.toFixed(2)}`)
     }
@@ -186,6 +262,7 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
     sessao.terminouEm = Date.now()
     try { socket.disconnect() } catch { /* já caiu */ }
     motores.delete(id)
+    if (sessao.gravada) void encerrarSessao(sessao.gravada, { motivo: 'falhou ao ligar', erro: sessao.erro })
     throw erro
   }
 

@@ -39,4 +39,25 @@ if (typeof (globalThis as any).localStorage === 'undefined') {
   }
 }
 
+/**
+ * Carrega o .env para o process.env.
+ *
+ * O servico do systemd chama o node direto, sem shell, entao ninguem le o
+ * .env por nos. Fica aqui para valer tanto no servico quanto quando alguem
+ * roda um script na mao.
+ */
+import { readFileSync } from 'node:fs'
+try {
+  const bruto = readFileSync(new URL('../.env', import.meta.url), 'utf8')
+  for (const linha of bruto.split('\n')) {
+    const corte = linha.indexOf('=')
+    if (corte < 1 || linha.trimStart().startsWith('#')) continue
+    const chave = linha.slice(0, corte).trim()
+    const valor = linha.slice(corte + 1).trim().replace(/^["']|["']$/g, '')
+    if (chave && process.env[chave] === undefined) process.env[chave] = valor
+  }
+} catch {
+  // sem .env ainda: o login grava o primeiro, e o chave.sh o resto
+}
+
 export {}
