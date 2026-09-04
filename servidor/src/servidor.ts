@@ -4,8 +4,10 @@ import { createServer } from 'node:http'
 import { createHash, randomBytes } from 'node:crypto'
 import { writeFileSync, chmodSync, existsSync, readFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
-import { atender } from './mcp'
-import { limparSessoesOrfas, supabaseConfigurado } from './supabase'
+import { atender, autorizacao } from './mcp'
+import { contasDoUsuario, limparSessoesOrfas, supabaseConfigurado, usuarioDoToken } from './supabase'
+import { iniciar, montarConfig, parar, todas, ver } from './sessoes'
+import type { ConfigEstrategia } from '../../src/core/deriv/engine'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -81,6 +83,19 @@ code{padding:2px 6px;border-radius:5px;background:#1a2330;color:#7dd3fc;font-siz
 }
 
 const SEGREDO = segredoMcp()
+
+/**
+ * Uma sessão é sua quando ela roda numa conta Deriv que está no seu login
+ * da Teeds. Vale para as duas portas de entrada: a que o chat abriu e a
+ * que o botão da tela abriu. Sem esta regra, bastaria chutar o número de
+ * uma sessão para desligar o robô de outra pessoa.
+ */
+async function minhaSessao(userId: string, id: string) {
+  const s = ver(id)
+  if (!s) return null
+  const minhas = await contasDoUsuario(userId)
+  return minhas.includes(s.contaId) ? s : null
+}
 
 const servidor = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
@@ -171,6 +186,136 @@ const servidor = createServer(async (req, res) => {
         <div class="erro">✕</div><h1>Não consegui trocar o código</h1>
         <p><code>${(e as Error).message}</code></p>
         <a class="botao" href="/">Tentar de novo</a>`, '#f87171'))
+    }
+  }
+
+  // ------------------------------------------------------- a tela da Teeds
+  //
+  // O botão "Ligar robô" da plataforma cai aqui. A diferença para o chat é
+  // só quem aperta: o robô continua nascendo e morrendo dentro deste
+  // servidor, com os mesmos freios e o mesmo espelho no banco. Antes, o
+  // botão ligava um motor dentro do navegador — que morria junto com a aba
+  // e não deixava rastro nenhum no histórico.
+  //
+  // Quem manda o pedido se identifica com o mesmo crachá que já usa para
+  // falar com o banco. O servidor confere esse crachá com o Supabase e
+  // depois confere se a conta Deriv pedida é mesmo daquela pessoa: um
+  // crachá válido de alguém não pode ligar robô na conta de outro.
+  if (url.pathname.startsWith('/api/')) {
+    // O estado inteiro do motor a cada consulta seria um exagero: a tela
+    // mostra as últimas operações, não as mil. Cortar aqui deixa a consulta
+    // barata mesmo numa sessão de horas.
+    // Tudo que a tela precisa para desenhar o painel ao vivo — inclusive
+    // qual robô e com que ajustes, senão ela não sabe montar a régua do
+    // stop nem dizer com quais dígitos aquele robô ganha.
+    const resumo = (s: any) => ({
+      id: s.id,
+      roboId: s.roboId,
+      roboNome: s.roboNome,
+      contaId: s.contaId,
+      demo: s.demo,
+      moeda: s.moeda,
+      origem: s.parametros?.origem ?? 'chat',
+      config: montarConfig(s.parametros),
+      erro: s.erro ?? null,
+      estado: enxuto(s.estado),
+    })
+    const enxuto = (e: any) => !e ? e : ({
+      ...e,
+      historico: (e.historico ?? []).slice(0, 200),
+      registros: (e.registros ?? []).slice(0, 60),
+      curva: (e.curva ?? []).slice(-300),
+      digitos: (e.digitos ?? []).slice(-60),
+    })
+    const origem = req.headers.origin ?? ''
+    const liberadas = ['https://tiagodalri.github.io', 'http://localhost:5173', 'http://127.0.0.1:5173']
+    const cabecalhos: Record<string, string> = {
+      'content-type': 'application/json; charset=utf-8',
+      vary: 'Origin',
+    }
+    if (liberadas.includes(origem)) {
+      cabecalhos['access-control-allow-origin'] = origem
+      cabecalhos['access-control-allow-headers'] = 'authorization, content-type'
+      cabecalhos['access-control-allow-methods'] = 'GET, POST, OPTIONS'
+      cabecalhos['access-control-max-age'] = '86400'
+    }
+    const json = (status: number, corpo: unknown) => {
+      res.writeHead(status, cabecalhos)
+      res.end(JSON.stringify(corpo))
+    }
+
+    if (req.method === 'OPTIONS') { res.writeHead(204, cabecalhos); return res.end() }
+
+    const cracha = (req.headers.authorization ?? '').replace(/^Bearer\s+/i, '').trim()
+    const dono = cracha ? await usuarioDoToken(cracha) : null
+    if (!dono) return json(401, { erro: 'Faça login na Teeds de novo — sua sessão expirou.' })
+
+    let corpo: any = {}
+    if (req.method === 'POST') {
+      const pedacos: Buffer[] = []
+      for await (const p of req) pedacos.push(p as Buffer)
+      const cru = Buffer.concat(pedacos).toString('utf8')
+      if (cru) { try { corpo = JSON.parse(cru) } catch { return json(400, { erro: 'Pedido malformado.' }) } }
+    }
+
+    try {
+      // ---- ligar
+      if (url.pathname === '/api/sessao' && req.method === 'POST') {
+        const contaId = String(corpo.contaId ?? '').trim()
+        if (!contaId) return json(400, { erro: 'Diga em qual conta o robô deve operar.' })
+
+        const minhas = await contasDoUsuario(dono.id)
+        if (!minhas.includes(contaId)) {
+          return json(403, { erro: `A conta ${contaId} não está no seu login da Teeds.` })
+        }
+
+        const config = corpo.config as ConfigEstrategia | undefined
+        const s = await iniciar(autorizacao(), {
+          roboId: String(corpo.roboId ?? ''),
+          contaId,
+          valorInicial: Number(config?.valorInicial ?? corpo.valorInicial ?? 0),
+          stopLoss: Number(config?.stopLoss ?? corpo.stopLoss ?? 0),
+          takeProfit: Number(config?.takeProfit ?? corpo.takeProfit ?? 0),
+          config,
+          origem: 'navegador',
+        })
+        return json(200, resumo(s))
+      }
+
+      // ---- acompanhar
+      const acompanhar = url.pathname.match(/^\/api\/sessao\/([a-f0-9]{6,32})$/)
+      if (acompanhar && req.method === 'GET') {
+        const s = await minhaSessao(dono.id, acompanhar[1])
+        if (!s) return json(404, { erro: 'Sessão não encontrada.' })
+        return json(200, resumo(s))
+      }
+
+      // ---- o que está no ar agora, tenha sido ligado por onde for
+      //
+      // É isto que faz o robô ligado pelo chat aparecer na tela com o mesmo
+      // painel ao vivo do robô ligado no botão. Quem opera é o mesmo
+      // servidor; não faria sentido a Teeds mostrar dois mundos diferentes
+      // dependendo de onde a pessoa apertou.
+      if (url.pathname === '/api/sessoes' && req.method === 'GET') {
+        const minhas = await contasDoUsuario(dono.id)
+        const lista = todas()
+          .filter((s) => minhas.includes(s.contaId) && s.estado?.rodando)
+          .map((s) => resumo(s))
+        return json(200, { sessoes: lista })
+      }
+
+      // ---- desligar
+      const desligar = url.pathname.match(/^\/api\/sessao\/([a-f0-9]{6,32})\/parar$/)
+      if (desligar && req.method === 'POST') {
+        const s = await minhaSessao(dono.id, desligar[1])
+        if (!s) return json(404, { erro: 'Sessão não encontrada.' })
+        parar(s.id)
+        return json(200, resumo(s))
+      }
+
+      return json(404, { erro: 'Endereço desconhecido.' })
+    } catch (e) {
+      return json(400, { erro: (e as Error).message })
     }
   }
 

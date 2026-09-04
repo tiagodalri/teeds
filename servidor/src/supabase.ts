@@ -263,3 +263,32 @@ export async function limparSessoesOrfas(): Promise<void> {
     console.error('[supabase] limparSessoesOrfas:', (e as Error).message)
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * Quem é o dono deste pedido?
+ *
+ * A tela da Teeds manda o mesmo crachá que ela já usa para falar com o
+ * banco (o token do login Supabase). Aqui ele é conferido com o próprio
+ * Supabase — o servidor não acredita em quem o navegador diz ser.
+ * ------------------------------------------------------------------ */
+export async function usuarioDoToken(token: string): Promise<{ id: string } | null> {
+  if (!URL_BASE || !token) return null
+  try {
+    const res = await fetch(`${URL_BASE}/auth/v1/user`, {
+      headers: { apikey: CHAVE, Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return null
+    const u = (await res.json()) as any
+    return u?.id ? { id: String(u.id) } : null
+  } catch {
+    return null
+  }
+}
+
+/** As contas Deriv que este usuário Teeds registrou. */
+export async function contasDoUsuario(userId: string): Promise<string[]> {
+  const linhas = await rest<any[]>(
+    `/contas_deriv?select=conta_id&user_id=eq.${encodeURIComponent(userId)}`,
+  )
+  return (linhas ?? []).map((l) => String(l.conta_id))
+}

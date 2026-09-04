@@ -34,6 +34,19 @@ export interface Parametros {
   takeProfit: number
   maxOperacoes?: number
   valorMaximo?: number
+  /**
+   * A configuração inteira, quando quem pede já sabe o que quer.
+   *
+   * O chat manda só os três números que uma pessoa fala em voz alta
+   * (entrada, stop, meta) e o resto vem do padrão do robô. A tela da Teeds
+   * é outra história: ali a pessoa escolhe recuperação, teto por entrada e
+   * quantas operações no máximo. Se o servidor remontasse a configuração a
+   * partir dos três números, a tela mentiria — mostraria um ajuste e o
+   * robô rodaria com outro.
+   */
+  config?: ConfigEstrategia
+  /** De onde veio o comando: muda só o rótulo que aparece no histórico. */
+  origem?: 'navegador' | 'chat' | 'api'
 }
 
 export interface Sessao {
@@ -100,6 +113,25 @@ export function montarConfig(p: Parametros): ConfigEstrategia {
   if (!(p.valorInicial > 0)) throw new Error('A entrada precisa ser maior que zero.')
   if (!(p.stopLoss > 0)) throw new Error('Defina o stop loss: nenhuma sessão roda sem freio de perda.')
   if (!(p.takeProfit > 0)) throw new Error('Defina o take profit: nenhuma sessão roda sem meta de ganho.')
+
+  // Configuração inteira vinda da tela: os dois freios continuam obrigatórios
+  // aqui também — a regra combinada com a Deriv não tem porta dos fundos.
+  if (p.config) {
+    const c = p.config
+    if (!(c.valorInicial > 0)) throw new Error('A entrada precisa ser maior que zero.')
+    if (!(c.stopLoss > 0)) throw new Error('Defina o stop loss: nenhuma sessão roda sem freio de perda.')
+    if (!(c.takeProfit > 0)) throw new Error('Defina o take profit: nenhuma sessão roda sem meta de ganho.')
+    return {
+      valorInicial: c.valorInicial,
+      valorAoVencer: c.valorAoVencer > 0 ? c.valorAoVencer : c.valorInicial,
+      fatorGale: Math.max(0, c.fatorGale),
+      galeApos: Math.max(0, Math.trunc(c.galeApos)),
+      valorMaximo: c.valorMaximo > 0 ? c.valorMaximo : Math.max(c.valorInicial * 50, c.stopLoss),
+      takeProfit: c.takeProfit,
+      stopLoss: c.stopLoss,
+      maxOperacoes: Math.max(0, Math.trunc(c.maxOperacoes ?? 0)),
+    }
+  }
 
   const { galeApos } = recuperacaoDoRobo(p.roboId)
   return {
@@ -183,11 +215,11 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
         roboId: estrategia.id,
         roboNome: estrategia.nome,
         ativo: ATIVO_DOS_ROBOS,
-        entrada: p.valorInicial,
-        stopLoss: p.stopLoss,
-        takeProfit: p.takeProfit,
-        maxOperacoes: p.maxOperacoes ?? 0,
-        origem: 'chat',
+        entrada: config.valorInicial,
+        stopLoss: config.stopLoss,
+        takeProfit: config.takeProfit,
+        maxOperacoes: config.maxOperacoes,
+        origem: p.origem ?? 'chat',
       })
     } catch (e) {
       // o robô não deixa de operar porque o espelho falhou

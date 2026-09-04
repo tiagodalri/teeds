@@ -20,3 +20,14 @@ export const SUPABASE = {
 export function autenticacaoConfigurada(): boolean {
   return Boolean(SUPABASE.url && SUPABASE.anonKey)
 }
+
+/**
+ * O servidor da Teeds — onde os robôs realmente operam.
+ *
+ * A tela é o visor; quem compra e vende é esta máquina, em Nova York. Por
+ * isso o robô continua rodando com o notebook fechado, e por isso toda
+ * operação aparece no histórico mesmo quando ninguém está olhando.
+ */
+export const SERVIDOR = {
+  url: 'https://198-211-96-238.nip.io',
+} as const

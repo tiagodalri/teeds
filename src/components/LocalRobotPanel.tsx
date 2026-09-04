@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TeedsSocket } from '../core/deriv/client'
-import { MotorTeeds, type ConfigEstrategia, type EstadoMotor, type Estrategia } from '../core/deriv/engine'
+import { type ConfigEstrategia, type EstadoMotor, type Estrategia } from '../core/deriv/engine'
 import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 import type { ActiveSymbol } from '../core/deriv/types'
@@ -9,7 +9,7 @@ import { RobotSetup, lerPreparo } from './RobotSetup'
 import type { Identidade } from '../core/deriv/branding'
 import { Emblema } from './RobotCard'
 import type { SessaoTeeds } from '../core/teeds/conta'
-import { registrarOperacaoRobo } from '../core/teeds/clientes'
+import { acompanharNoServidor, ligarNoServidor, pararNoServidor } from '../core/teeds/servidorRobos'
 
 interface Props {
   socket: TeedsSocket | null
@@ -26,9 +26,17 @@ interface Props {
   titulo: string
   expandido?: boolean
   onExpandir?: () => void
-  onSessaoChange?: (ativa: boolean) => void
+  /** Avisa o pai que este bloco tem (ou deixou de ter) sessão, e qual. */
+  onSessaoChange?: (ativa: boolean, sessaoId?: string | null) => void
   sessaoTeeds?: SessaoTeeds | null
   contaId?: string | null
+  /**
+   * Uma sessão que já está rodando no servidor — tipicamente ligada pelo
+   * chat. O bloco não pergunta nada: ele entra direto no acompanhamento ao
+   * vivo, com o mesmo painel de sempre. Era o que faltava para o robô
+   * comandado por conversa não virar um cidadão de segunda classe na tela.
+   */
+  adotar?: { id: string; config: ConfigEstrategia; origem?: string }
 }
 
 const PADRAO: ConfigEstrategia = {
@@ -48,58 +56,55 @@ const din = (v: number, m = 'USD') =>
 export function LocalRobotPanel({
   socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
   onRemover, titulo, expandido = false, onExpandir, onSessaoChange, sessaoTeeds, contaId,
+  adotar,
 }: Props) {
   // O cartao escolhido na vitrine dita a estrategia deste bloco…
   const daVitrine = ESTRATEGIAS_LOCAIS.find((e) => e.id === identidade.id) ?? ESTRATEGIAS_LOCAIS[0]
   // …mas uma sessao em andamento (ou parada na cabine) fica presa a
   // estrategia com que foi ligada: trocar de cartao nao muda um robo vivo.
   const sessaoRef = useRef<{ estrategia: Estrategia; ident: Identidade } | null>(null)
-  const [cfg, setCfg] = useState<ConfigEstrategia>(PADRAO)
+  const [cfg, setCfg] = useState<ConfigEstrategia>(adotar?.config ?? PADRAO)
   // O robo opera sempre no ativo da casa — o que estiver escolhido no
   // grafico nao interfere. Ver ATIVO_DOS_ROBOS em core/deriv/config.
   const symbol = ATIVO_DOS_ROBOS
   void symbolPadrao
   const [estado, setEstado] = useState<EstadoMotor | null>(null)
   const [preparando, setPreparando] = useState(false)
-  const motorRef = useRef<MotorTeeds | null>(null)
+  // A sessão vive no servidor; aqui ficam só o número dela e o jeito de
+  // parar de olhar. Fechar esta aba não desliga robô nenhum — era o que
+  // acontecia quando o motor morava dentro do navegador.
+  const sessaoIdRef = useRef<string | null>(null)
+  const pararDeOlharRef = useRef<(() => void) | null>(null)
+  const [ligando, setLigando] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
   const onSessaoChangeRef = useRef(onSessaoChange)
   onSessaoChangeRef.current = onSessaoChange
   const sessaoAtiva = estado !== null
   const estrategia = estado && sessaoRef.current ? sessaoRef.current.estrategia : daVitrine
   const ident = estado && sessaoRef.current ? sessaoRef.current.ident : identidade
 
-  useEffect(() => () => { motorRef.current?.desligar('página fechada') }, [])
-  useEffect(() => { onSessaoChangeRef.current?.(sessaoAtiva) }, [sessaoAtiva])
-  useEffect(() => () => { onSessaoChangeRef.current?.(false) }, [])
-
-  /**
-   * Trocar de conta cria uma conexão nova na Deriv e derruba a antiga.
-   * Um robô ligado ficaria segurando a conexão morta: sem receber preço e
-   * sem conseguir comprar — parado, sem dizer por quê. Pior ainda seria
-   * ele continuar comprando na conta que você acabou de deixar.
-   */
+  useEffect(() => () => { pararDeOlharRef.current?.() }, [])
   useEffect(() => {
-    const motor = motorRef.current
-    if (!motor || !motor.estadoAtual.rodando) return
-    if (socket && motor.conexao === socket) return
-    motor.desligar('você trocou de conta — ligue de novo para operar na conta atual')
-  }, [socket])
+    onSessaoChangeRef.current?.(sessaoAtiva, sessaoAtiva ? sessaoIdRef.current : null)
+  }, [sessaoAtiva, estado?.rodando])
+  useEffect(() => () => { onSessaoChangeRef.current?.(false, null) }, [])
+
+  /*
+   * Antes, trocar de conta desligava o robô: ele estava preso à conexão do
+   * navegador, e essa conexão morria na troca. Agora o robô tem a conexão
+   * dele, no servidor, na conta em que foi ligado. Trocar de conta aqui é
+   * só trocar o que você está olhando — quem está operando segue operando,
+   * na conta certa, e continua aparecendo em "Sessões recentes".
+   */
 
   const nomeAtivo = symbols.find((s) => s.symbol === symbol)?.name ?? symbol
   const rodando = estado?.rodando ?? false
-  const ultimoEnviado = useRef<number | null>(null)
-  useEffect(() => {
-    const op = estado?.historico[0]
-    if (!op || !sessaoTeeds || !contaId || ultimoEnviado.current === op.contractId) return
-    ultimoEnviado.current = op.contractId
-    void registrarOperacaoRobo(sessaoTeeds, {
-      contractId: op.contractId, contaId, roboId: estrategia.id, roboNome: estrategia.nome,
-      ativo: symbol, tipoContrato: estrategia.contractType, moeda, demo: isDemo,
-      entrada: op.valor, pagamento: op.payout, resultado: op.lucro,
-      markup: op.payout * .03, markupDeriv: op.markupDeriv ?? null,
-      ganhou: op.ganhou, executadaEm: new Date(op.quando).toISOString(),
-    })
-  }, [estado?.historico[0]?.contractId, sessaoTeeds?.usuario.id, contaId]) // eslint-disable-line react-hooks/exhaustive-deps
+  /*
+   * O espelho no banco saiu daqui. Quem grava cada operação é o servidor,
+   * no mesmo instante em que ela fecha — inclusive com esta aba fechada.
+   * Se a tela também gravasse, seriam dois lugares escrevendo a mesma
+   * linha, e é assim que os números começam a divergir.
+   */
 
   // a regra do contrato dita em uma frase, para a tela nao falar em codigo
   const b = estrategia.barreira ?? 5
@@ -124,19 +129,69 @@ export function LocalRobotPanel({
     }
   }
 
-  function ligar(config: ConfigEstrategia, ativo: string) {
-    if (!socket) return
+  /**
+   * Passa a olhar uma sessão do servidor.
+   *
+   * Um estado vazio não vira tela: a sessão nasce e só um instante depois
+   * tem número para mostrar. Desenhar o painel com o vazio piscaria uma
+   * cabine sem nada dentro.
+   */
+  const olhar = useCallback((id: string) => {
+    if (!sessaoTeeds) return
+    pararDeOlharRef.current?.()
+    sessaoIdRef.current = id
+    pararDeOlharRef.current = acompanharNoServidor(
+      sessaoTeeds, id,
+      (s) => { if (typeof s.estado?.rodando === 'boolean') setEstado(s.estado) },
+      (msg) => setErro(msg),
+    )
+  }, [sessaoTeeds?.token]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // sessão que já estava no ar quando esta tela abriu (a do chat, em geral)
+  useEffect(() => {
+    if (!adotar?.id || sessaoIdRef.current === adotar.id) return
+    sessaoRef.current = { estrategia: daVitrine, ident: identidade }
+    setCfg(adotar.config)
+    olhar(adotar.id)
+  }, [adotar?.id, olhar]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * Liga o robô — no servidor, não aqui.
+   *
+   * Antes esta função criava um motor dentro do navegador. Ele operava de
+   * verdade, mas morria com a aba e não deixava rastro no histórico: o robô
+   * existia só enquanto alguém estivesse olhando. Agora o pedido vai para o
+   * servidor, o mesmo que o chat usa — e o que a tela faz daqui em diante é
+   * assistir.
+   */
+  async function ligar(config: ConfigEstrategia, ativo: string) {
+    void ativo // o robô opera sempre no ativo da casa
+    if (!sessaoTeeds || !contaId) {
+      setErro('Entre na sua conta Teeds e conecte a Deriv para ligar o robô.')
+      return
+    }
     setPreparando(false)
     setCfg(config)
+    setErro(null)
+    setLigando(true)
     // a sessao nasce com o cartao escolhido AGORA na vitrine, e fica com ele
     sessaoRef.current = { estrategia: daVitrine, ident: identidade }
-    const pip = symbols.find((s) => s.symbol === ativo)?.pipSize ?? 2
-    const motor = new MotorTeeds({
-      socket, estrategia: daVitrine, config, symbol: ativo, moeda, pipSize: pip,
-    })
-    motorRef.current = motor
-    motor.escutar(setEstado)
-    motor.ligar()
+    try {
+      const s = await ligarNoServidor(sessaoTeeds, { roboId: daVitrine.id, contaId, config })
+      olhar(s.id)
+      if (typeof s.estado?.rodando === 'boolean') setEstado(s.estado)
+    } catch (e) {
+      setErro((e as Error).message)
+    } finally {
+      setLigando(false)
+    }
+  }
+
+  /** Desliga a sessão lá no servidor. */
+  function desligar() {
+    const id = sessaoIdRef.current
+    if (!id || !sessaoTeeds) return
+    void pararNoServidor(sessaoTeeds, id).catch((e: Error) => setErro(e.message))
   }
 
   const parametros = [
@@ -182,9 +237,12 @@ export function LocalRobotPanel({
               <b>{din(ultimo.cfg?.valorAoVencer ?? cfg.valorAoVencer, moeda)} por entrada</b>
               <small>Freios automáticos de ganho e perda</small>
             </div>
-            <button className="pronto-btn" disabled={!socket} onClick={() => setPreparando(true)}>
-              Configurar e ligar <span>→</span>
+            <button className="pronto-btn" disabled={!socket || ligando || !sessaoTeeds || !contaId}
+              onClick={() => { setErro(null); setPreparando(true) }}>
+              {ligando ? 'ligando no servidor…' : <>Configurar e ligar <span>→</span></>}
             </button>
+            {erro && <p className="pc-erro">{erro}</p>}
+            <p className="pc-nota">Os robôs operam no servidor da Teeds: seguem rodando com esta aba fechada.</p>
           </div>
         </div>
 
@@ -223,11 +281,12 @@ export function LocalRobotPanel({
         conexao={conexao}
         expandido={expandido}
         onExpandir={onExpandir}
-        onDesligar={rodando ? () => motorRef.current?.desligar() : undefined}
+        onDesligar={rodando ? desligar : undefined}
         onLigarDeNovo={!rodando ? () => setPreparando(true) : undefined}
         onRemover={onRemover ? () => {
-          if (rodando && !window.confirm('Este robô está operando. Deseja desligar e fechar o bloco?')) return
-          motorRef.current?.desligar('bloco fechado')
+          if (rodando && !window.confirm('Este robô está operando no servidor. Deseja desligar e fechar o bloco?')) return
+          desligar()
+          pararDeOlharRef.current?.()
           onRemover()
         } : undefined}
       />

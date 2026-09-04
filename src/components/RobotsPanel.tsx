@@ -18,6 +18,7 @@ import { DerivDesconectada } from './DerivDesconectada'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { registrarOperacaoRobo } from '../core/teeds/clientes'
 import { SessoesServidor } from './SessoesServidor'
+import { acompanharVivas, type SessaoViva } from '../core/teeds/servidorRobos'
 
 interface Props {
   socket: TeedsSocket | null
@@ -78,10 +79,26 @@ export function RobotsPanel({
   const [blocos, setBlocos] = useState<string[]>(['bloco-1'])
   const [blocoExpandido, setBlocoExpandido] = useState<string | null>(null)
   const [sessoesLocais, setSessoesLocais] = useState<Set<string>>(new Set())
+  /**
+   * O que está operando no servidor agora.
+   *
+   * Um robô ligado pelo chat — do celular, com o computador desligado —
+   * aparece aqui sozinho e ganha o mesmo painel ao vivo do robô ligado no
+   * botão. Antes ele só existia como um cartãozinho de resumo, como se
+   * fosse outra categoria de robô. É o mesmo robô, no mesmo servidor.
+   */
+  const [vivasNoServidor, setVivasNoServidor] = useState<SessaoViva[]>([])
+  /** Sessões que algum bloco desta tela já está mostrando — não duplicar. */
+  const [adotadas, setAdotadas] = useState<Record<string, string | null>>({})
   const [vitrineAberta, setVitrineAberta] = useState(true)
   const [comparando, setComparando] = useState(false)
   const proximoBloco = useRef(2)
   const contratosEnviados = useRef(new Set<number>())
+
+  useEffect(() => {
+    if (!sessaoTeeds) { setVivasNoServidor([]); return }
+    return acompanharVivas(sessaoTeeds, setVivasNoServidor)
+  }, [sessaoTeeds?.token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const abrirBloco = () =>
     setBlocos((b) => (b.length >= MAX_BLOCOS ? b : [...b, `bloco-${proximoBloco.current++}`]))
@@ -196,6 +213,11 @@ export function RobotsPanel({
   const ultimaParada = lista.find((r) => r.status === 'stopped')
   const emDestaque = [...rodando, ...(rodando.length === 0 && ultimaParada ? [ultimaParada] : [])]
   const temSessaoLocal = sessoesLocais.size > 0
+  // as que já estão dentro de um bloco não viram um segundo painel
+  const jaNaTela = new Set(Object.values(adotadas).filter(Boolean) as string[])
+  const doChat = vivasNoServidor.filter((v) => !jaNaTela.has(v.id))
+  // tudo que já tem painel ao vivo nesta tela, para o resumo não repetir
+  const comPainel = [...jaNaTela, ...doChat.map((v) => v.id)]
 
   useEffect(() => { if (temSessaoLocal) setVitrineAberta(false) }, [temSessaoLocal])
 
@@ -242,7 +264,7 @@ export function RobotsPanel({
           navegador nenhum aberto — sem isto aqui, a Teeds pareceria nao
           saber da propria operacao. O bloco some sozinho quando nao ha
           sessao alguma. */}
-      {sessaoTeeds && <SessoesServidor sessao={sessaoTeeds} />}
+      {sessaoTeeds && <SessoesServidor sessao={sessaoTeeds} escondidas={comPainel} />}
 
       {/* A escolha do robo: cartas com a arte de cada um, como uma
           selecao de personagem — nada de quadradinhos. */}
@@ -305,6 +327,30 @@ export function RobotsPanel({
         </div>
       )}
 
+      {/*
+        O robô ligado pelo chat mora aqui em cima, fora da vitrine: ele já
+        existe, já tem estratégia e já está operando. Qual cartão está
+        selecionado embaixo não muda nada para ele — e esconder o painel
+        dele porque a vitrine estava noutro cartão seria a tela fingindo
+        que o robô não existe.
+      */}
+      {doChat.length > 0 && (
+        <div className={`blocos ${doChat.length > 1 ? 'duplo' : ''} ${blocoExpandido ? 'tem-expandido' : ''}`}>
+          {doChat.map((v, i) => (
+            <LocalRobotPanel key={v.id}
+              titulo={`Robô do chat${doChat.length > 1 ? ` ${i + 1}` : ''}`}
+              socket={socket} isDemo={v.demo} moeda={v.moeda}
+              symbols={symbols} symbolPadrao={symbolPadrao}
+              identidade={identidade(v.roboId)}
+              conexao={conexao}
+              sessaoTeeds={sessaoTeeds} contaId={v.contaId}
+              adotar={{ id: v.id, config: v.config, origem: v.origem }}
+              expandido={blocoExpandido === v.id}
+              onExpandir={() => setBlocoExpandido((atual) => atual === v.id ? null : v.id)} />
+          ))}
+        </div>
+      )}
+
       {ident.onde === 'teeds' && (
         <>
           <div className={`blocos ${blocos.length > 1 ? 'duplo' : ''} ${blocoExpandido ? 'tem-expandido' : ''}`}>
@@ -317,11 +363,14 @@ export function RobotsPanel({
                 sessaoTeeds={sessaoTeeds} contaId={contaId}
                 expandido={blocoExpandido === idBloco}
                 onExpandir={() => setBlocoExpandido((atual) => atual === idBloco ? null : idBloco)}
-                onSessaoChange={(ativa) => setSessoesLocais((atuais) => {
-                  const proximas = new Set(atuais)
-                  ativa ? proximas.add(idBloco) : proximas.delete(idBloco)
-                  return proximas
-                })}
+                onSessaoChange={(ativa, sessaoId) => {
+                  setSessoesLocais((atuais) => {
+                    const proximas = new Set(atuais)
+                    ativa ? proximas.add(idBloco) : proximas.delete(idBloco)
+                    return proximas
+                  })
+                  setAdotadas((atuais) => ({ ...atuais, [idBloco]: ativa ? sessaoId ?? null : null }))
+                }}
                 onRemover={() => fecharBloco(idBloco)} />
             ))}
             {blocos.length === 0 && (

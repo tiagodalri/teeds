@@ -4048,3 +4048,22 @@ input, select, textarea, button { vertical-align: middle; }
 .ss-tabela>.cab{border-top:0;color:var(--muted);font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
 .ss-tabela .positivo{color:var(--up)}.ss-tabela .negativo{color:var(--down)}
 @media (max-width:520px){.ss-lista{grid-template-columns:1fr}.ss-numeros{grid-template-columns:repeat(2,1fr)}}
+
+/* Recado do bloco de robô: por que ele às vezes não liga, e onde ele roda. */
+.pc-erro {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(248, 113, 113, .32);
+  background: rgba(248, 113, 113, .08);
+  color: #fca5a5;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.pc-nota {
+  margin: 10px 0 0;
+  color: rgba(230, 237, 243, .42);
+  font-size: 11.5px;
+  line-height: 1.45;
+  text-align: center;
+}

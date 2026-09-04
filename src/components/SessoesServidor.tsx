@@ -27,7 +27,18 @@ const ORIGEM: Record<string, string> = {
   navegador: 'ligado por aqui',
 }
 
-export function SessoesServidor({ sessao }: { sessao: SessaoTeeds }) {
+export function SessoesServidor({ sessao, escondidas = [] }: {
+  sessao: SessaoTeeds
+  /**
+   * Sessões que já estão com painel ao vivo aberto na tela.
+   *
+   * Mostrar o mesmo robô duas vezes — cartão de resumo em cima, painel
+   * completo embaixo — faz a pessoa contar duas operações onde há uma. O
+   * cartão continua existindo para o que o painel não pega: sessões
+   * encerradas, e as que estão no ar mas o servidor não respondeu agora.
+   */
+  escondidas?: string[]
+}) {
   const [sessoes, setSessoes] = useState<SessaoServidor[]>([])
   const [aberta, setAberta] = useState<string | null>(null)
   const [extrato, setExtrato] = useState<OperacaoServidor[]>([])
@@ -47,10 +58,15 @@ export function SessoesServidor({ sessao }: { sessao: SessaoTeeds }) {
     return () => { vivo = false; clearInterval(t) }
   }, [aberta, sessao.token])
 
-  const rodando = useMemo(() => sessoes.filter((s) => s.situacao === 'rodando'), [sessoes])
-  const encerradas = useMemo(() => sessoes.filter((s) => s.situacao !== 'rodando').slice(0, 6), [sessoes])
+  const oculta = useMemo(() => new Set(escondidas), [escondidas.join('|')]) // eslint-disable-line react-hooks/exhaustive-deps
+  const visiveis = useMemo(
+    () => sessoes.filter((s) => !(s.sessaoRef && oculta.has(s.sessaoRef))),
+    [sessoes, oculta],
+  )
+  const rodando = useMemo(() => visiveis.filter((s) => s.situacao === 'rodando'), [visiveis])
+  const encerradas = useMemo(() => visiveis.filter((s) => s.situacao !== 'rodando').slice(0, 6), [visiveis])
 
-  if (!sessoes.length) return null
+  if (!visiveis.length) return null
 
   const cartao = (s: SessaoServidor) => {
     const viva = s.situacao === 'rodando'
