@@ -7,7 +7,7 @@ import {
   type DiaMarkup, type MarkupResumo, type MarkupSimulado,
 } from '../core/deriv/markup'
 import type { TeedsSocket } from '../core/deriv/client'
-import { enviarComissoes, listarComissoes } from '../core/teeds/clientes'
+import { enviarComissoes, enviarMarkupOficial, listarComissoes } from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { ClientesAdmin } from './ClientesAdmin'
 import { DerivDesconectada } from './DerivDesconectada'
@@ -71,6 +71,10 @@ export function ManagementPanel({
         if (dias > 1 && dias <= 30) {
           const s = await buscarSerieDiaria(session, dias)
           if (vivo) setSerie(s)
+          // so quem tem application_read chega aqui: e o dono do app. O total
+          // oficial vai para o banco e a conferencia por cliente passa a ter
+          // com o que se comparar.
+          if (sessaoTeeds) void enviarMarkupOficial(sessaoTeeds, DERIV.appId, s)
         } else {
           setSerie([])
         }

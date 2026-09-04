@@ -391,6 +391,11 @@ export interface LinhaRelatorioCliente {
   /** Quanto o cliente ganhou (+) ou perdeu (-) no período. */
   resultado: number
   comissaoCalculada: number
+  /** A parte da comissão calculada que veio de conta real. */
+  comissaoReal: number
+  /** Dias com operação no período, e quantos deles a varredura antiga gravou sem resultado. */
+  diasComDados: number
+  diasSemResultado: number
   operacoesRobos: number; resultadoRobos: number; markupRobos: number
   ultimoDia: string | null; vistoEm: string | null
 }
@@ -409,6 +414,9 @@ export async function relatorioClientes(
       operacoes: Number(l.operacoes), entradas: Number(l.entradas),
       pagamentos: Number(l.pagamentos), resultado: Number(l.resultado),
       comissaoCalculada: Number(l.comissao_calculada),
+      comissaoReal: Number(l.comissao_real ?? 0),
+      diasComDados: Number(l.dias_com_dados ?? 0),
+      diasSemResultado: Number(l.dias_sem_resultado ?? 0),
       operacoesRobos: Number(l.operacoes_robos), resultadoRobos: Number(l.resultado_robos),
       markupRobos: Number(l.markup_robos),
       ultimoDia: l.ultimo_dia ?? null, vistoEm: l.visto_em ?? null,

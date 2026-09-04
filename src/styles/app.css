@@ -3981,3 +3981,36 @@ input, select, textarea, button { vertical-align: middle; }
 @media (max-width: 700px) {
   .market-hero { min-height: auto; grid-template-columns: 1fr; gap: 26px; padding: 44px 20px 34px; }.market-hero-conteudo { text-align: left; }.market-hero h1 { font-size: 43px; }.market-hero-produto { width: 240px; height: 240px; }.market-emblema { width: 132px; height: 154px; }.market-emblema b { font-size: 43px; }.market-hero-acoes { align-items: flex-start; flex-direction: column; gap: 16px; }.market-vitrine { padding: 34px 14px 44px; }.market-cabecalho { align-items: stretch; flex-direction: column; gap: 18px; }.market-cabecalho nav { margin-right: -14px; padding-right: 14px; }.market-grade { display: flex; gap: 12px; margin-right: -14px; padding-right: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }.market-card { flex: 0 0 84vw; scroll-snap-align: start; }.market-garantia { grid-template-columns: 1fr; margin: 0 14px 44px; }.market-modal { grid-template-columns: 1fr; }.market-modal-arte { min-height: 210px; }.market-modal-corpo { padding: 30px 22px 25px; }.market-modal-compra { align-items: stretch; flex-direction: column; }.market-modal-compra button { width: 100%; }.market-toast { right: 16px; bottom: 16px; }
 }
+
+/* ===== Administração · Resultados por cliente ===== */
+.rc-filtros{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-bottom:16px}
+.rc-periodo{display:inline-flex;padding:3px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.rc-periodo button{padding:7px 12px;border:0;border-radius:8px;color:var(--muted);background:transparent;font-size:11px;font-weight:700;cursor:pointer}
+.rc-periodo button.on{color:var(--text);background:var(--bg);box-shadow:0 1px 2px #0002}
+.rc-demo{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:11px;cursor:pointer}
+.rc-carregando{color:var(--muted);font-size:10px}
+.rc-aviso{margin-bottom:14px;padding:12px 16px;border:1px solid var(--primary);border-radius:12px;color:var(--text);background:var(--primary-soft);font-size:11px;line-height:1.5}
+.rc-aviso.neutro{border-color:var(--border);background:var(--surface);color:var(--muted)}
+.rc-aviso b{color:var(--text)}.rc-aviso em{font-style:normal;font-weight:700}
+.admin-card.full+.admin-card.full{margin-top:18px}
+.admin-card>header>small{color:var(--muted);font-size:10px}
+.rc-totais{display:flex;gap:16px;color:var(--muted);font-size:10px}
+.rc-totais b{display:block;margin-top:3px;color:var(--text);font-size:14px;font-variant-numeric:tabular-nums}
+.rc-totais .positivo b{color:var(--up)}.rc-totais .negativo b{color:var(--down)}
+.rc-tabela{overflow-x:auto}
+.rc-tabela>*{width:100%;min-width:980px;display:grid;grid-template-columns:2fr .8fr .9fr 1fr 1fr 1.1fr 1.1fr .9fr .8fr;gap:12px;align-items:center;padding:12px 20px;border:0;border-top:1px solid var(--border);color:var(--text);background:transparent;text-align:left;font-size:11px;font-variant-numeric:tabular-nums}
+.rc-tabela>button{cursor:pointer}.rc-tabela>button:hover{background:var(--surface)}
+.rc-tabela>.cab{border-top:0;color:var(--muted);background:var(--surface);font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+.rc-tabela>*>span,.rc-tabela>*>strong{display:grid;gap:3px;min-width:0}
+.rc-tabela small{color:var(--muted);font-size:8.5px;font-weight:500;white-space:nowrap}
+.rc-tabela .positivo,.rc-tabela small.positivo{color:var(--up)}.rc-tabela .negativo,.rc-tabela small.negativo{color:var(--down)}
+.rc-tabela>*>strong{color:var(--primary)}
+.rc-tabela.dias>*{min-width:720px;grid-template-columns:.7fr 1fr 1fr 1fr .7fr .9fr .7fr}
+.rc-tabela.ops>*{min-width:860px;grid-template-columns:1.1fr 1.3fr 1fr 1.1fr .8fr .9fr .9fr;padding:9px 16px;font-size:10.5px}
+.rc-tabela .adm-vazio{grid-column:1/-1;padding:16px}
+.rc-extrato{width:min(1040px,100%);max-height:90vh;display:grid;grid-template-rows:auto auto 1fr}
+.rc-extrato-corpo{overflow:auto}
+.rc-extrato-resumo{padding:16px 20px;border-bottom:1px solid var(--border)}
+.rc-extrato-resumo p{margin:8px 0 0;color:var(--muted);font-size:11px;line-height:1.6}
+.rc-extrato-resumo b{color:var(--text)}
+@media (max-width:760px){.adm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.rc-totais{flex-wrap:wrap}}
