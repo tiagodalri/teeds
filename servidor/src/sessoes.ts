@@ -1,0 +1,243 @@
+import './ambiente'
+
+import { randomBytes } from 'node:crypto'
+import { TeedsSocket } from '../../src/core/deriv/client'
+import { MotorTeeds, type EstadoMotor } from '../../src/core/deriv/engine'
+import { fetchAccounts, fetchTradingSocketUrl, type TradingAccount } from '../../src/core/deriv/account'
+import { fetchActiveSymbols } from '../../src/core/deriv/market'
+import { ESTRATEGIAS_LOCAIS, recuperacaoDoRobo } from '../../src/core/deriv/strategies'
+import { ATIVO_DOS_ROBOS } from '../../src/core/deriv/config'
+import type { AuthSession } from '../../src/core/deriv/auth'
+import type { ConfigEstrategia, Estrategia } from '../../src/core/deriv/engine'
+
+/**
+ * As sessões de robô que estão vivas no servidor.
+ *
+ * A diferença para o `teste.ts` é o tempo: lá a chamada só volta quando o
+ * robô para. Aqui `iniciar` devolve na hora um identificador, e o robô
+ * segue operando sozinho. É o que o chat precisa — a pessoa manda ligar,
+ * recebe "ligado", e pergunta o resultado quando quiser.
+ *
+ * Tudo vive na memória deste processo. Se ele reiniciar, as sessões morrem
+ * junto: um robô sem ninguém acompanhando é pior que um robô parado.
+ */
+
+export interface Parametros {
+  roboId: string
+  contaId?: string
+  valorInicial: number
+  stopLoss: number
+  takeProfit: number
+  maxOperacoes?: number
+  valorMaximo?: number
+}
+
+export interface Sessao {
+  id: string
+  roboId: string
+  roboNome: string
+  contaId: string
+  demo: boolean
+  moeda: string
+  parametros: Parametros
+  comecouEm: number
+  terminouEm: number | null
+  estado: EstadoMotor
+  erro: string | null
+}
+
+const vivas = new Map<string, Sessao>()
+const motores = new Map<string, { motor: MotorTeeds; socket: TeedsSocket }>()
+
+/** Sessões encerradas somem depois disto — o chat não precisa de arquivo morto. */
+const GUARDAR_ENCERRADA_MS = 60 * 60_000
+
+export function robo(id: string): Estrategia {
+  const e = ESTRATEGIAS_LOCAIS.find((x) => x.id === id)
+  if (!e) throw new Error(`Robô "${id}" não existe. Disponíveis: ${ESTRATEGIAS_LOCAIS.map((x) => x.id).join(', ')}`)
+  return e
+}
+
+export function listarRobos() {
+  return ESTRATEGIAS_LOCAIS.map((e) => ({
+    id: e.id,
+    nome: e.nome,
+    contrato: e.contractType,
+    barreira: e.barreira,
+    ganhaQuando: descreverRegra(e),
+    ativo: ATIVO_DOS_ROBOS,
+  }))
+}
+
+/** A regra do robô em uma frase, para o chat não falar em código. */
+function descreverRegra(e: Estrategia): string {
+  const b = e.barreira ?? 5
+  if (e.contractType === 'DIGITOVER') {
+    const digitos = Array.from({ length: 9 - b }, (_, i) => b + 1 + i)
+    return `o último dígito do preço é ${digitos.join(', ')}`
+  }
+  if (e.contractType === 'DIGITUNDER') {
+    const digitos = Array.from({ length: b }, (_, i) => i)
+    return `o último dígito do preço é ${digitos.join(', ')}`
+  }
+  return e.contractType
+}
+
+/**
+ * Monta a configuração do motor.
+ *
+ * Stop loss e take profit são obrigatórios de propósito — é a regra que o
+ * Tiago combinou com a Deriv, e a única defesa contra alguém pedir "liga o
+ * robô aí" no chat sem dizer onde parar.
+ */
+export function montarConfig(p: Parametros): ConfigEstrategia {
+  if (!(p.valorInicial > 0)) throw new Error('A entrada precisa ser maior que zero.')
+  if (!(p.stopLoss > 0)) throw new Error('Defina o stop loss: nenhuma sessão roda sem freio de perda.')
+  if (!(p.takeProfit > 0)) throw new Error('Defina o take profit: nenhuma sessão roda sem meta de ganho.')
+
+  const { galeApos } = recuperacaoDoRobo(p.roboId)
+  return {
+    valorInicial: p.valorInicial,
+    valorAoVencer: p.valorInicial,
+    fatorGale: 1,
+    galeApos,
+    valorMaximo: p.valorMaximo ?? Math.max(p.valorInicial * 50, p.stopLoss),
+    takeProfit: p.takeProfit,
+    stopLoss: p.stopLoss,
+    maxOperacoes: p.maxOperacoes ?? 0,
+  }
+}
+
+export async function contas(sessao: AuthSession): Promise<TradingAccount[]> {
+  return fetchAccounts(sessao)
+}
+
+async function acharConta(sessao: AuthSession, contaId?: string): Promise<TradingAccount> {
+  const lista = await fetchAccounts(sessao)
+  if (!lista.length) throw new Error('Esta autorização não enxerga nenhuma conta na Deriv.')
+  if (contaId) {
+    const achada = lista.find((c) => c.accountId === contaId)
+    if (!achada) throw new Error(`Conta ${contaId} não está entre as suas: ${lista.map((c) => c.accountId).join(', ')}`)
+    return achada
+  }
+  return lista.find((c) => c.type === 'demo') ?? lista[0]
+}
+
+/** Liga um robô e devolve na hora. Ele segue operando até bater um freio. */
+export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao> {
+  const estrategia = robo(p.roboId)
+  const config = montarConfig(p)
+  const conta = await acharConta(auth, p.contaId)
+
+  const url = await fetchTradingSocketUrl(auth, conta.accountId)
+  const socket = new TeedsSocket({
+    url,
+    renovarUrl: () => fetchTradingSocketUrl(auth, conta.accountId),
+  })
+  socket.connect()
+
+  const simbolos = await fetchActiveSymbols(socket)
+  const alvo = simbolos.find((s) => s.symbol === ATIVO_DOS_ROBOS)
+  if (!alvo) {
+    socket.disconnect()
+    throw new Error(`A Deriv não ofereceu ${ATIVO_DOS_ROBOS} nesta conta.`)
+  }
+
+  const motor = new MotorTeeds({
+    socket, estrategia, config,
+    symbol: ATIVO_DOS_ROBOS,
+    moeda: conta.currency,
+    pipSize: alvo.pipSize,
+  })
+
+  const id = randomBytes(6).toString('hex')
+  const sessao: Sessao = {
+    id,
+    roboId: estrategia.id,
+    roboNome: estrategia.nome,
+    contaId: conta.accountId,
+    demo: conta.type === 'demo',
+    moeda: conta.currency,
+    parametros: p,
+    comecouEm: Date.now(),
+    terminouEm: null,
+    estado: {} as EstadoMotor,
+    erro: null,
+  }
+
+  motor.escutar((e) => {
+    sessao.estado = e
+    if (!e.rodando && e.motivoParada && sessao.terminouEm === null) {
+      sessao.terminouEm = Date.now()
+      try { socket.disconnect() } catch { /* já caiu */ }
+      motores.delete(id)
+      setTimeout(() => vivas.delete(id), GUARDAR_ENCERRADA_MS).unref?.()
+      console.log(`[sessao ${id}] parou: ${e.motivoParada} · ${e.operacoes} operações · ${e.resultado.toFixed(2)}`)
+    }
+  })
+
+  vivas.set(id, sessao)
+  motores.set(id, { motor, socket })
+
+  try {
+    motor.ligar()
+  } catch (erro) {
+    sessao.erro = (erro as Error).message
+    sessao.terminouEm = Date.now()
+    try { socket.disconnect() } catch { /* já caiu */ }
+    motores.delete(id)
+    throw erro
+  }
+
+  console.log(`[sessao ${id}] ${estrategia.nome} · ${conta.accountId} · entrada ${p.valorInicial} · stop ${p.stopLoss} · gain ${p.takeProfit}`)
+  return sessao
+}
+
+export function ver(id: string): Sessao | undefined {
+  return vivas.get(id)
+}
+
+export function todas(): Sessao[] {
+  return [...vivas.values()].sort((a, b) => b.comecouEm - a.comecouEm)
+}
+
+export function parar(id: string): Sessao {
+  const sessao = vivas.get(id)
+  if (!sessao) throw new Error(`Sessão ${id} não existe (ou já foi encerrada há mais de uma hora).`)
+  const vivo = motores.get(id)
+  if (!vivo) return sessao
+  vivo.motor.desligar('você pediu para parar')
+  return sessao
+}
+
+/** O resumo de uma sessão, do jeito que o chat vai ler em voz alta. */
+export function resumir(s: Sessao) {
+  const e = s.estado ?? ({} as EstadoMotor)
+  const rodando = !!e.rodando
+  return {
+    id: s.id,
+    robo: s.roboNome,
+    conta: `${s.contaId} (${s.demo ? 'demonstração' : 'REAL'})`,
+    situacao: s.erro ? 'falhou' : rodando ? 'rodando' : 'encerrada',
+    operacoes: e.operacoes ?? 0,
+    ganhas: e.vitorias ?? 0,
+    perdidas: e.derrotas ?? 0,
+    entrada_atual: e.valorAtual ?? s.parametros.valorInicial,
+    resultado: Number((e.resultado ?? 0).toFixed(2)),
+    movimentado: Number((e.movimentado ?? 0).toFixed(2)),
+    moeda: s.moeda,
+    stop_loss: s.parametros.stopLoss,
+    take_profit: s.parametros.takeProfit,
+    motivo_da_parada: e.motivoParada ?? null,
+    erro: s.erro,
+    duracao_segundos: Math.round(((s.terminouEm ?? Date.now()) - s.comecouEm) / 1000),
+    ultima_operacao: e.historico?.[0]
+      ? {
+          resultado: Number(e.historico[0].lucro.toFixed(2)),
+          entrada: e.historico[0].valor,
+          digito: e.historico[0].digitoSaida,
+          ganhou: e.historico[0].ganhou,
+        }
+      : null,
+  }
+}

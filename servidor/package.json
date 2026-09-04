@@ -7,9 +7,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "esbuild src/teste.ts src/login.ts --bundle --platform=node --target=node22 --format=esm --outdir=dist --out-extension:.js=.mjs",
+    "build": "esbuild src/teste.ts src/servidor.ts --bundle --platform=node --target=node22 --format=esm --outdir=dist --out-extension:.js=.mjs",
     "teste": "node dist/teste.mjs",
-    "login": "node dist/login.mjs"
+    "servidor": "node dist/servidor.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.24.0"

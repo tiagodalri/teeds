@@ -46,7 +46,7 @@ After=network.target
 Type=simple
 WorkingDirectory=$(pwd)
 Environment=RETORNO=https://${DOMINIO}/callback
-ExecStart=/usr/bin/node $(pwd)/dist/login.mjs
+ExecStart=/usr/bin/node $(pwd)/dist/servidor.mjs
 Restart=on-failure
 User=root
 
@@ -59,12 +59,18 @@ systemctl restart teeds-login
 sleep 2
 
 echo
+SEGREDO=$(cat .mcp-segredo 2>/dev/null || true)
 echo "-------------------------------------------------"
-echo " Login no ar. Abra no navegador:"
-echo
+echo " Login (abra e clique em Conectar Deriv):"
 echo "   https://${DOMINIO}"
 echo
-echo " Endereco de retorno para cadastrar na Deriv:"
+echo " Endereco de retorno cadastrado na Deriv:"
 echo "   https://${DOMINIO}/callback"
+if [ -n "${SEGREDO}" ]; then
+echo
+echo " MCP para ligar no chat:"
+echo "   https://${DOMINIO}/mcp/${SEGREDO}"
+echo "   ^ isto e uma senha: quem tiver, comanda os robos."
+fi
 echo "-------------------------------------------------"
 systemctl is-active teeds-login caddy | tr '\n' ' '; echo

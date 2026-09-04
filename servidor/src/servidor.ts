@@ -2,8 +2,9 @@ import './ambiente'
 
 import { createServer } from 'node:http'
 import { createHash, randomBytes } from 'node:crypto'
-import { writeFileSync, chmodSync } from 'node:fs'
+import { writeFileSync, chmodSync, existsSync, readFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
+import { atender } from './mcp'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -26,6 +27,22 @@ import { DERIV } from '../../src/core/deriv/config'
  */
 
 const PORTA = Number(process.env.PORTA ?? 8080)
+/**
+ * O caminho secreto do MCP.
+ *
+ * Quem souber esta URL comanda os robos desta conta Deriv — entao ela e uma
+ * senha, e mora num arquivo com permissao 600, nunca no repositorio. Isto e
+ * suficiente para o dono testar; para clientes de verdade cada um vai ter a
+ * propria autorizacao, e ai o segredo compartilhado sai de cena.
+ */
+const ARQ_SEGREDO = new URL('../.mcp-segredo', import.meta.url)
+function segredoMcp(): string {
+  if (existsSync(ARQ_SEGREDO)) return readFileSync(ARQ_SEGREDO, 'utf8').trim()
+  const novo = base64url(randomBytes(24))
+  writeFileSync(ARQ_SEGREDO, novo + '\n')
+  chmodSync(ARQ_SEGREDO, 0o600)
+  return novo
+}
 const RETORNO = process.env.RETORNO ?? 'https://198-211-96-238.nip.io/callback'
 const DESTINO = new URL('../.env', import.meta.url)
 
@@ -61,6 +78,8 @@ code{padding:2px 6px;border-radius:5px;background:#1a2330;color:#7dd3fc;font-siz
 .erro{color:#f87171;font-size:44px;line-height:1;margin-bottom:10px}
 </style></head><body><div class="cartao">${corpo}</div></body></html>`
 }
+
+const SEGREDO = segredoMcp()
 
 const servidor = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
@@ -154,11 +173,40 @@ const servidor = createServer(async (req, res) => {
     }
   }
 
+  // ------------------------------------------------------------- o MCP
+  if (url.pathname === `/mcp/${SEGREDO}`) {
+    if (req.method === 'GET') {
+      // alguns clientes abrem um stream antes de falar; nao usamos
+      res.writeHead(405, { 'content-type': 'text/plain' })
+      return res.end('Use POST com JSON-RPC.')
+    }
+    if (req.method !== 'POST') {
+      res.writeHead(405); return res.end()
+    }
+    const pedacos: Buffer[] = []
+    for await (const p of req) pedacos.push(p as Buffer)
+    let corpo: any
+    try {
+      corpo = JSON.parse(Buffer.concat(pedacos).toString('utf8'))
+    } catch {
+      res.writeHead(400, { 'content-type': 'application/json' })
+      return res.end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32700, message: 'JSON invalido' } }))
+    }
+
+    const lote = Array.isArray(corpo) ? corpo : [corpo]
+    const saidas = (await Promise.all(lote.map(atender))).filter((r) => r !== null)
+    if (!saidas.length) { res.writeHead(202); return res.end() }
+    res.writeHead(200, { 'content-type': 'application/json' })
+    return res.end(JSON.stringify(Array.isArray(corpo) ? saidas : saidas[0]))
+  }
+
   responder(404, pagina('Nada aqui', '<h1>404</h1><p>Endereço desconhecido.</p><a class="botao" href="/">Ir para o login</a>'))
 })
 
 servidor.listen(PORTA, () => {
-  console.log(`\nLogin da Teeds no ar na porta ${PORTA}`)
-  console.log(`Endereço de retorno registrado: ${RETORNO}`)
-  console.log(`Abra o endereço no navegador e clique em Conectar Deriv.\n`)
+  const publico = RETORNO.replace(/\/callback$/, '')
+  console.log(`\nServidor da Teeds no ar na porta ${PORTA}`)
+  console.log(`Login:  ${publico}`)
+  console.log(`MCP:    ${publico}/mcp/${SEGREDO}`)
+  console.log(`\nO endereco do MCP e uma senha: quem tiver ele comanda os robos.\n`)
 })
