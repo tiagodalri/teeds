@@ -3,6 +3,7 @@ import { PriceChart, type ChartMode, type ContractMarker } from './components/Pr
 import { PositionCard } from './components/PositionCard'
 import { DigitsPanel } from './components/DigitsPanel'
 import { AdminPanel } from './components/AdminPanel'
+import { ManagementPanel } from './components/ManagementPanel'
 import { RobotsPanel } from './components/RobotsPanel'
 import { OperationsPanel } from './components/OperationsPanel'
 import { AulasPanel } from './components/AulasPanel'
@@ -16,6 +17,7 @@ import { Brand } from './components/Brand'
 import { LoginScreen } from './components/LoginScreen'
 import { NovaSenha } from './components/NovaSenha'
 import { AFILIADO } from './core/deriv/config'
+import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { useAccount } from './hooks/useAccount'
@@ -75,6 +77,7 @@ export default function App() {
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
   const [tela, setTela] = useState<'operar' | 'robos' | 'operacoes' | 'gestao' | 'gerenciamento' | 'marketplace' | 'aulas'>('operar')
   const [admin, setAdmin] = useState<boolean | null>(null)
+  const [payoutBase, setPayoutBase] = useState(19.55)
 
   const activeSymbol = useMemo(() => {
     if (selected) return symbols.find((s) => s.symbol === selected) ?? null
@@ -95,6 +98,12 @@ export default function App() {
     duration, durationUnit: 'm', socket: conta.socket,
     currency: conta.account?.currency ?? 'USD',
   })
+
+  const semMarkup = useProposal({
+    symbol: symbolCode, contractType: 'CALL', amount: 10,
+    duration: 5, durationUnit: 'm', enabled: tela === 'gestao',
+  })
+  useEffect(() => { if (semMarkup.payout) setPayoutBase(semMarkup.payout) }, [semMarkup.payout])
 
   // ------------------------------------------------------------------
   // Cadastro de clientes no Supabase: registra a presenca de quem abriu
@@ -379,7 +388,12 @@ export default function App() {
       ) : tela === 'gerenciamento' ? (
         <OperationalManagementPanel moeda={conta.account?.currency ?? 'USD'} />
       ) : tela === 'gestao' && admin === true ? (
-        teeds.sessao ? <AdminPanel sessao={teeds.sessao} /> : null
+        teeds.sessao ? <AdminPanel sessao={teeds.sessao} comissoes={<ManagementPanel
+          session={conta.session} sessaoTeeds={null} contaId={conta.accountId}
+          socket={conta.socket} isDemo={conta.isDemo} onReautorizar={() => startLogin()}
+          payoutBase={payoutBase} moeda={conta.account?.currency ?? 'USD'} pulso={conta.pulso}
+          entrandoNaDeriv={conta.status === 'entrando'} onConectarDeriv={conta.login}
+        />} /> : null
       ) : (
       <div className="layout layout-operar">
         <main className="main">
