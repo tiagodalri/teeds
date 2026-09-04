@@ -4014,3 +4014,37 @@ input, select, textarea, button { vertical-align: middle; }
 .rc-extrato-resumo p{margin:8px 0 0;color:var(--muted);font-size:11px;line-height:1.6}
 .rc-extrato-resumo b{color:var(--text)}
 @media (max-width:760px){.adm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.rc-totais{flex-wrap:wrap}}
+
+/* ===== Robôs · sessões que rodam no servidor ===== */
+.ss-bloco{display:grid;gap:14px}
+.ss-cabecalho{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.ss-cabecalho h3{margin:4px 0 0;font-size:17px}
+.ss-cabecalho small{color:var(--muted);font-size:10px}
+.ss-lista{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+.ss-cartao{display:grid;gap:12px;padding:16px;border:1px solid var(--border);border-radius:14px;background:var(--bg)}
+.ss-cartao.viva{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary-soft)}
+.ss-cartao>header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ss-cartao>header b{display:block;font-size:14px}
+.ss-cartao>header small{display:flex;align-items:center;gap:5px;margin-top:3px;color:var(--muted);font-size:9.5px}
+.ss-cartao>header strong{font-size:19px;font-variant-numeric:tabular-nums}
+.ss-pulso{width:7px;height:7px;border-radius:99px;background:var(--up);animation:ss-bate 1.4s ease-in-out infinite}
+@keyframes ss-bate{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
+.ss-numeros{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ss-numeros>div{display:grid;gap:2px}
+.ss-numeros span{color:var(--muted);font-size:8.5px;text-transform:uppercase;letter-spacing:.05em}
+.ss-numeros b{font-size:13px;font-variant-numeric:tabular-nums}
+.ss-trilho{display:flex;align-items:center;gap:8px}
+.ss-trilho>i{position:relative;flex:1;height:5px;border-radius:99px;background:linear-gradient(90deg,var(--down-soft),var(--surface),var(--up-soft))}
+.ss-trilho em{position:absolute;top:50%;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:99px;background:var(--text);transition:left .4s ease}
+.ss-trilho em.positivo{background:var(--up)}.ss-trilho em.negativo{background:var(--down)}
+.ss-marca{color:var(--muted);font-size:8.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ss-motivo{margin:0;color:var(--muted);font-size:10.5px}
+.ss-motivo.erro{color:var(--down)}
+.ss-cartao>footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:10px;border-top:1px solid var(--border);color:var(--muted);font-size:9.5px}
+.ss-cartao>footer button{border:0;color:var(--primary);background:none;cursor:pointer;font-size:10.5px;font-weight:700}
+.ss-extrato{max-height:280px;overflow:auto;border-top:1px solid var(--border);padding-top:10px}
+.ss-vazio{margin:0;padding:14px;text-align:center;color:var(--muted);font-size:10.5px}
+.ss-tabela>*{display:grid;grid-template-columns:.5fr 1fr .9fr .6fr 1fr 1fr;gap:8px;padding:7px 4px;border-top:1px solid var(--border);font-size:10px;font-variant-numeric:tabular-nums}
+.ss-tabela>.cab{border-top:0;color:var(--muted);font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.ss-tabela .positivo{color:var(--up)}.ss-tabela .negativo{color:var(--down)}
+@media (max-width:520px){.ss-lista{grid-template-columns:1fr}.ss-numeros{grid-template-columns:repeat(2,1fr)}}

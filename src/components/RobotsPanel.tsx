@@ -17,6 +17,7 @@ import { batizarRobo, nomeDoRobo, sugerirNome, todosOsNomes } from '../core/deri
 import { DerivDesconectada } from './DerivDesconectada'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { registrarOperacaoRobo } from '../core/teeds/clientes'
+import { SessoesServidor } from './SessoesServidor'
 
 interface Props {
   socket: TeedsSocket | null
@@ -236,6 +237,12 @@ export function RobotsPanel({
           <div><b>{din(lista.reduce((t, r) => t + r.totalMovimentado, 0), moeda)}</b><span>movimentado</span></div>
         </div>
       )}
+
+      {/* Os robos que rodam no servidor. Um ligado pelo chat opera sem
+          navegador nenhum aberto — sem isto aqui, a Teeds pareceria nao
+          saber da propria operacao. O bloco some sozinho quando nao ha
+          sessao alguma. */}
+      {sessaoTeeds && <SessoesServidor sessao={sessaoTeeds} />}
 
       {/* A escolha do robo: cartas com a arte de cada um, como uma
           selecao de personagem — nada de quadradinhos. */}
