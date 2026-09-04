@@ -181,10 +181,17 @@ export interface ComissaoDia {
   atualizadoEm: string | null
 }
 
+/** Corrige registros antigos que foram salvos com UTF-8 interpretado como MacRoman. */
+const textoLegivel = (valor: string | null): string | null => {
+  if (!valor) return valor
+  const mapa: Array<[string,string]> = [['√¥','ô'],['√©','é'],['√ß','ç'],['√µ','õ'],['√£','ã'],['√°','à'],['√≠','í'],['√Å','Á'],['√ì','Ó']]
+  return mapa.reduce((texto,[ruim,bom]) => texto.split(ruim).join(bom), valor)
+}
+
 export async function listarClientes(sessao: SessaoTeeds): Promise<ClienteRegistro[]> {
   const linhas = await rest<any[]>('/clientes?select=*&order=criado_em.desc', sessao.token)
   return (linhas ?? []).map((l) => ({
-    userId: l.user_id, nome: l.nome, email: l.email, telefone: l.telefone,
+    userId: l.user_id, nome: textoLegivel(l.nome), email: l.email, telefone: l.telefone,
     cpf: l.cpf, criadoEm: l.criado_em, vistoEm: l.visto_em,
     planoId: l.plano_id ?? 'essencial', statusAcesso: l.status_acesso ?? 'ativo',
     acessoInicio: l.acesso_inicio ?? null, acessoExpiraEm: l.acesso_expira_em ?? null,
@@ -194,12 +201,12 @@ export async function listarClientes(sessao: SessaoTeeds): Promise<ClienteRegist
 
 export async function listarPlanos(sessao: SessaoTeeds): Promise<PlanoRegistro[]> {
   const linhas = await rest<any[]>('/planos?select=*&order=nome.asc', sessao.token)
-  return (linhas ?? []).map((l) => ({ id: l.id, nome: l.nome, duracaoDias: l.duracao_dias, ativo: Boolean(l.ativo) }))
+  return (linhas ?? []).map((l) => ({ id: l.id, nome: textoLegivel(l.nome) ?? l.nome, duracaoDias: l.duracao_dias, ativo: Boolean(l.ativo) }))
 }
 
 export async function listarProdutos(sessao: SessaoTeeds): Promise<ProdutoRegistro[]> {
   const linhas = await rest<any[]>('/produtos?select=*&order=nome.asc', sessao.token)
-  return (linhas ?? []).map((l) => ({ id: l.id, nome: l.nome, categoria: l.categoria, precoCentavos: l.preco_centavos, ativo: Boolean(l.ativo) }))
+  return (linhas ?? []).map((l) => ({ id: l.id, nome: textoLegivel(l.nome) ?? l.nome, categoria: textoLegivel(l.categoria) ?? l.categoria, precoCentavos: l.preco_centavos, ativo: Boolean(l.ativo) }))
 }
 
 export async function listarProdutosClientes(sessao: SessaoTeeds): Promise<ClienteProdutoRegistro[]> {
