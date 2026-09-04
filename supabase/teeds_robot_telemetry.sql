@@ -18,11 +18,11 @@ create index if not exists operacoes_robos_cliente_idx on public.operacoes_robos
 alter table public.operacoes_robos enable row level security;
 
 drop policy if exists "cliente grava suas operacoes de robo" on public.operacoes_robos;
-create policy "cliente grava suas operacoes de robo" on public.operacoes_robos for insert to authenticated with check (user_id = auth.uid());
+create policy "cliente grava suas operacoes de robo" on public.operacoes_robos for insert to authenticated with check (user_id = (select auth.uid()));
 drop policy if exists "cliente atualiza suas operacoes de robo" on public.operacoes_robos;
-create policy "cliente atualiza suas operacoes de robo" on public.operacoes_robos for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "cliente atualiza suas operacoes de robo" on public.operacoes_robos for update to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 drop policy if exists "cliente ve suas operacoes de robo" on public.operacoes_robos;
-create policy "cliente ve suas operacoes de robo" on public.operacoes_robos for select to authenticated using (user_id = auth.uid() or public.teeds_sou_admin());
+create policy "cliente ve suas operacoes de robo" on public.operacoes_robos for select to authenticated using (user_id = (select auth.uid()) or (select public.teeds_sou_admin()));
 
 -- O painel não precisa transferir centenas de milhares de contratos para o
 -- navegador. A agregação acontece no PostgreSQL e devolve somente uma linha
@@ -54,4 +54,5 @@ as $$
 $$;
 
 revoke all on function public.teeds_metricas_robos(integer) from public;
+revoke all on function public.teeds_metricas_robos(integer) from anon;
 grant execute on function public.teeds_metricas_robos(integer) to authenticated;
