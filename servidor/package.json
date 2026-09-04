@@ -1,0 +1,12 @@
+{
+  "name": "teeds-motor",
+  "private": true,
+  "type": "module",
+  "description": "O motor dos robos da Teeds rodando fora do navegador.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "esbuild src/teste.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/teste.mjs",
+    "teste": "node dist/teste.mjs"
+  },
+  "devDependencies": { "esbuild": "^0.24.0" }
+}
