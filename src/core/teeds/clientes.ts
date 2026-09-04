@@ -102,7 +102,10 @@ export async function enviarComissoes(
   contaId: string,
   demo: boolean,
   moeda: string,
-  porDia: Array<{ data: string; comissao: number; operacoes: number; pagamentos: number }>,
+  porDia: Array<{
+    data: string; comissao: number; operacoes: number; pagamentos: number
+    entradas?: number; resultado?: number
+  }>,
 ): Promise<void> {
   if (!autenticacaoConfigurada() || porDia.length === 0) return
   const linhas = porDia.map((d) => ({
@@ -112,6 +115,8 @@ export async function enviarComissoes(
     operacoes: d.operacoes,
     pagamentos: d.pagamentos,
     comissao: d.comissao,
+    entradas: d.entradas ?? 0,
+    resultado: d.resultado ?? 0,
     moeda,
     demo,
     atualizado_em: new Date().toISOString(),
@@ -175,6 +180,10 @@ export interface ComissaoDia {
   operacoes: number
   pagamentos: number
   comissao: number
+  /** Soma das entradas do cliente no dia (o que ele apostou). */
+  entradas: number
+  /** Lucro (+) ou prejuízo (-) do cliente no dia. */
+  resultado: number
   moeda: string | null
   demo: boolean
   /** Quando esta linha foi gravada — diz se veio do cálculo novo. */
@@ -183,7 +192,10 @@ export interface ComissaoDia {
 export interface OperacaoRoboRegistro {
   contractId: number; userId: string; contaId: string; roboId: string; roboNome: string
   ativo: string; tipoContrato: string; moeda: string; demo: boolean; entrada: number
-  pagamento: number; resultado: number; markup: number; ganhou: boolean; executadaEm: string
+  pagamento: number; resultado: number; markup: number
+  /** O markup que a Deriv informou. Null = ela nao informou nesta operacao. */
+  markupDeriv?: number | null
+  ganhou: boolean; executadaEm: string
 }
 export interface MetricaRoboRegistro {
   roboId: string; roboNome: string; operacoes: number; vitorias: number
@@ -304,7 +316,9 @@ export async function listarComissoes(sessao: SessaoTeeds, dias: number): Promis
   return (linhas ?? []).map((l) => ({
     userId: l.user_id, contaId: l.conta_id, dia: l.dia,
     operacoes: Number(l.operacoes), pagamentos: Number(l.pagamentos),
-    comissao: Number(l.comissao), moeda: l.moeda, demo: Boolean(l.demo),
+    comissao: Number(l.comissao),
+    entradas: Number(l.entradas ?? 0), resultado: Number(l.resultado ?? 0),
+    moeda: l.moeda, demo: Boolean(l.demo),
     atualizadoEm: l.atualizado_em ?? null,
   }))
 }
@@ -313,7 +327,7 @@ export async function registrarOperacaoRobo(sessao: SessaoTeeds, op: Omit<Operac
   try {
     await rest('/operacoes_robos?on_conflict=user_id,contract_id', sessao.token, {
       method: 'POST', headers: MESCLAR,
-      body: JSON.stringify({ contract_id: op.contractId, user_id: sessao.usuario.id, conta_id: op.contaId, robo_id: op.roboId, robo_nome: op.roboNome, ativo: op.ativo, tipo_contrato: op.tipoContrato, moeda: op.moeda, demo: op.demo, entrada: op.entrada, pagamento: op.pagamento, resultado: op.resultado, markup: op.markup, ganhou: op.ganhou, executada_em: op.executadaEm }),
+      body: JSON.stringify({ contract_id: op.contractId, user_id: sessao.usuario.id, conta_id: op.contaId, robo_id: op.roboId, robo_nome: op.roboNome, ativo: op.ativo, tipo_contrato: op.tipoContrato, moeda: op.moeda, demo: op.demo, entrada: op.entrada, pagamento: op.pagamento, resultado: op.resultado, markup: op.markup, markup_deriv: op.markupDeriv ?? null, ganhou: op.ganhou, executada_em: op.executadaEm }),
     })
   } catch (e) { console.warn('[teeds] telemetria do robô indisponível:', (e as Error).message) }
 }
@@ -322,7 +336,7 @@ export async function listarOperacoesRobos(sessao: SessaoTeeds, dias = 90): Prom
   const corte = new Date(Date.now() - (dias - 1) * 864e5).toISOString()
   try {
     const linhas = await rest<any[]>(`/operacoes_robos?select=*&executada_em=gte.${encodeURIComponent(corte)}&order=executada_em.desc`, sessao.token)
-    return (linhas ?? []).map(l => ({ contractId:Number(l.contract_id),userId:l.user_id,contaId:l.conta_id,roboId:l.robo_id,roboNome:l.robo_nome,ativo:l.ativo,tipoContrato:l.tipo_contrato,moeda:l.moeda,demo:Boolean(l.demo),entrada:Number(l.entrada),pagamento:Number(l.pagamento),resultado:Number(l.resultado),markup:Number(l.markup),ganhou:Boolean(l.ganhou),executadaEm:l.executada_em }))
+    return (linhas ?? []).map(l => ({ contractId:Number(l.contract_id),userId:l.user_id,contaId:l.conta_id,roboId:l.robo_id,roboNome:l.robo_nome,ativo:l.ativo,tipoContrato:l.tipo_contrato,moeda:l.moeda,demo:Boolean(l.demo),entrada:Number(l.entrada),pagamento:Number(l.pagamento),resultado:Number(l.resultado),markup:Number(l.markup),markupDeriv:l.markup_deriv===null||l.markup_deriv===undefined?null:Number(l.markup_deriv),ganhou:Boolean(l.ganhou),executadaEm:l.executada_em }))
   } catch { return [] }
 }
 
@@ -336,6 +350,117 @@ export async function listarMetricasRobos(sessao: SessaoTeeds, dias = 90): Promi
       roboId: l.robo_id, roboNome: l.robo_nome, operacoes: Number(l.operacoes),
       vitorias: Number(l.vitorias), clientes: Number(l.clientes), volume: Number(l.volume),
       resultado: Number(l.resultado), markup: Number(l.markup),
+    }))
+  } catch { return [] }
+}
+
+/* ------------------------------------------------- relatórios do admin */
+
+/**
+ * O número OFICIAL da Deriv, dia a dia.
+ *
+ * A API `markup-statistics` só devolve totais do app inteiro — não há quebra
+ * por cliente nem por contrato, e só o dono do app consegue lê-la. Então o
+ * painel do admin guarda esse total aqui, e a comparação com o que a Teeds
+ * calculou acontece no banco (`teeds_comissao_conferencia`).
+ */
+export async function enviarMarkupOficial(
+  sessao: SessaoTeeds,
+  appId: string,
+  porDia: Array<{ data: string; comissao: number; volume: number; contratos: number }>,
+): Promise<void> {
+  if (!autenticacaoConfigurada() || porDia.length === 0) return
+  try {
+    await rest('/markup_oficial_diario?on_conflict=dia', sessao.token, {
+      method: 'POST', headers: MESCLAR,
+      body: JSON.stringify(porDia.map((d) => ({
+        dia: d.data, app_id: appId, comissao: d.comissao,
+        volume: d.volume, contratos: d.contratos,
+        atualizado_em: new Date().toISOString(),
+      }))),
+    })
+  } catch (e) {
+    console.warn('[teeds] não consegui gravar o markup oficial:', (e as Error).message)
+  }
+}
+
+export interface LinhaRelatorioCliente {
+  userId: string; nome: string | null; email: string | null
+  contas: number; contasReais: number
+  operacoes: number; entradas: number; pagamentos: number
+  /** Quanto o cliente ganhou (+) ou perdeu (-) no período. */
+  resultado: number
+  comissaoCalculada: number
+  operacoesRobos: number; resultadoRobos: number; markupRobos: number
+  ultimoDia: string | null; vistoEm: string | null
+}
+
+/** Uma linha por cliente: quanto operou, quanto ganhou ou perdeu, quanto rendeu. */
+export async function relatorioClientes(
+  sessao: SessaoTeeds, dias = 30, incluirDemo = true,
+): Promise<LinhaRelatorioCliente[]> {
+  try {
+    const linhas = await rest<any[]>('/rpc/teeds_relatorio_clientes', sessao.token, {
+      method: 'POST', body: JSON.stringify({ p_dias: dias, p_incluir_demo: incluirDemo }),
+    })
+    return (linhas ?? []).map((l) => ({
+      userId: l.user_id, nome: textoLegivel(l.nome), email: l.email,
+      contas: Number(l.contas), contasReais: Number(l.contas_reais),
+      operacoes: Number(l.operacoes), entradas: Number(l.entradas),
+      pagamentos: Number(l.pagamentos), resultado: Number(l.resultado),
+      comissaoCalculada: Number(l.comissao_calculada),
+      operacoesRobos: Number(l.operacoes_robos), resultadoRobos: Number(l.resultado_robos),
+      markupRobos: Number(l.markup_robos),
+      ultimoDia: l.ultimo_dia ?? null, vistoEm: l.visto_em ?? null,
+    }))
+  } catch { return [] }
+}
+
+/** O extrato de operações de um cliente (o admin vê de qualquer um). */
+export async function operacoesDoCliente(
+  sessao: SessaoTeeds, userId: string, dias = 30,
+): Promise<OperacaoRoboRegistro[]> {
+  try {
+    const linhas = await rest<any[]>('/rpc/teeds_operacoes_cliente', sessao.token, {
+      method: 'POST', body: JSON.stringify({ p_user_id: userId, p_dias: dias }),
+    })
+    return (linhas ?? []).map((l) => ({
+      contractId: Number(l.contract_id), userId, contaId: l.conta_id,
+      roboId: l.robo_id, roboNome: l.robo_nome, ativo: l.ativo,
+      tipoContrato: l.tipo_contrato, moeda: 'USD', demo: Boolean(l.demo),
+      entrada: Number(l.entrada), pagamento: Number(l.pagamento),
+      resultado: Number(l.resultado), markup: Number(l.markup),
+      markupDeriv: l.markup_deriv === null || l.markup_deriv === undefined ? null : Number(l.markup_deriv),
+      ganhou: Boolean(l.ganhou), executadaEm: l.executada_em,
+    }))
+  } catch { return [] }
+}
+
+export interface DiaConferencia {
+  dia: string
+  /** O que a Teeds calculou (3% do pagamento, cliente a cliente). */
+  calculada: number
+  /** O que a Deriv registrou de fato, no app inteiro. */
+  oficial: number
+  diferenca: number
+  diferencaPct: number | null
+  operacoes: number
+  contratosDeriv: number
+  clientes: number
+}
+
+/** Os dois números lado a lado, dia a dia. Só conta real. */
+export async function conferenciaComissao(sessao: SessaoTeeds, dias = 30): Promise<DiaConferencia[]> {
+  try {
+    const linhas = await rest<any[]>('/rpc/teeds_comissao_conferencia', sessao.token, {
+      method: 'POST', body: JSON.stringify({ p_dias: dias }),
+    })
+    return (linhas ?? []).map((l) => ({
+      dia: l.dia, calculada: Number(l.calculada), oficial: Number(l.oficial),
+      diferenca: Number(l.diferenca),
+      diferencaPct: l.diferenca_pct === null ? null : Number(l.diferenca_pct),
+      operacoes: Number(l.operacoes), contratosDeriv: Number(l.contratos_deriv),
+      clientes: Number(l.clientes),
     }))
   } catch { return [] }
 }

@@ -1,0 +1,35 @@
+-- TEEDS · relatórios por cliente + comissão calculada vs oficial (04/09/2026)
+--
+-- Três problemas resolvidos aqui:
+--  1. a mesma conta Deriv estava ligada a dois logins, e o painel do admin
+--     somava cliente a cliente — inflava USD 3.707,60 em comissão demo;
+--  2. só existia UM número de comissão (3% do pagamento, calculado por nós),
+--     apresentado como se fosse o da Deriv;
+--  3. não havia como saber quanto cada cliente ganhou ou perdeu.
+--
+-- Aplicado no projeto wonxykovfvfnuhzpqsle em 04/09/2026 via MCP do Supabase.
+-- As três migrations estão no histórico do projeto com estes nomes:
+--   conta_deriv_pertence_a_um_login_so
+--   comissao_calculada_vs_oficial_e_resultado
+--   relatorio_por_cliente_e_conferencia_de_comissao
+--
+-- Regra que o banco passou a impor:
+--   contas_deriv     unique (conta_id)        -- uma conta Deriv, um dono
+--   comissoes_diarias unique (conta_id, dia)  -- um dia, uma linha por conta
+-- O que saiu na deduplicação NÃO foi apagado: está em public.arquivo_duplicatas.
+--
+-- Colunas novas:
+--   comissoes_diarias.entradas   volume apostado no dia
+--   comissoes_diarias.resultado  lucro (+) ou prejuízo (-) do cliente no dia
+--   operacoes_robos.markup_deriv app_markup_amount informado pela Deriv
+--                                (null = ela não informou naquela operação)
+--
+-- Tabela nova:
+--   markup_oficial_diario  o total da Deriv por dia, do app inteiro.
+--                          A API markup-statistics não quebra por cliente,
+--                          então esta tabela não tem user_id de propósito.
+--
+-- Funções (todas security invoker, todas checam teeds_sou_admin()):
+--   teeds_relatorio_clientes(dias, incluir_demo)  uma linha por cliente
+--   teeds_operacoes_cliente(user_id, dias)        o extrato de um cliente
+--   teeds_comissao_conferencia(dias)              nosso número x o da Deriv

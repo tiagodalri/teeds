@@ -36,11 +36,13 @@ function iso(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-/** Quantas paginas de extrato o simulador aceita percorrer, e de que tamanho. */
-const POR_PAGINA = 999
-const MAX_PAGINAS = 12
-/** Teto por dia: um dia sozinho dificilmente passa disso. */
-const MAX_PAGINAS_DIA = 30
+/**
+ * A tabela de lucros devolve no maximo 500 por vez (o extrato aceita 999),
+ * entao o teto por dia precisa de mais paginas para cobrir o mesmo volume.
+ * 80 x 500 = 40 mil contratos num unico dia — o recorde ate hoje foi 15.893.
+ */
+const POR_PAGINA_LUCROS = 500
+const MAX_PAGINAS_LUCROS = 80
 
 /** Mesma janela, em epoch de segundos — o que o `statement` exige. */
 export function janelaEpoch(dias: number): { de: number; ate: number } {
@@ -151,7 +153,6 @@ export function simular(payoutSemMarkup: number, markupPct: number) {
 /* ------------------------------------------------------------------ */
 
 import type { TeedsSocket } from './client'
-import { buscarExtrato, type Movimento } from './statement'
 
 export interface MarkupSimulado {
   operacoes: number
@@ -163,10 +164,24 @@ export interface MarkupSimulado {
   pagamentoTotal: number
   comissao: number
   comissaoMedia: number
-  porDia: Array<{ data: string; comissao: number; operacoes: number; pagamentos: number }>
+  /** Soma das entradas (o que o cliente apostou) no periodo. */
+  entradaTotal: number
+  /** Lucro (+) ou prejuizo (-) do cliente no periodo. */
+  resultado: number
+  porDia: DiaDeComissao[]
   /** Dias que foram varridos agora (os demais vieram do banco). */
   diasCalculados?: string[]
   taxa: number
+}
+
+/** O que sabemos de um dia: quanto operou, quanto rendeu, quanto sobrou. */
+export interface DiaDeComissao {
+  data: string
+  comissao: number
+  operacoes: number
+  pagamentos: number
+  entradas: number
+  resultado: number
 }
 
 /**
@@ -184,6 +199,14 @@ export interface MarkupSimulado {
  * nao dao para confiar e sao recalculados uma vez.
  */
 export const CALCULO_POR_DIA_DESDE = Date.parse('2026-09-03T00:00:00Z')
+
+/**
+ * A partir daqui cada dia tambem carrega ENTRADAS e RESULTADO, porque a
+ * varredura passou a usar a tabela de lucros (entrada e saida na mesma
+ * linha) no lugar do extrato de compras. Dias gravados antes disso tem
+ * comissao correta mas resultado zerado — sao recalculados uma vez.
+ */
+export const CALCULO_COM_RESULTADO_DESDE = Date.parse('2026-09-04T00:00:00Z')
 
 /** Dias do periodo, do mais recente para o mais antigo, em UTC (AAAA-MM-DD). */
 export function diasDoPeriodo(dias: number): string[] {
@@ -209,6 +232,60 @@ export interface DiaJaGravado {
   comissao: number
   operacoes: number
   pagamentos: number
+  entradas: number
+  resultado: number
+}
+
+/**
+ * Uma operacao fechada, como a tabela de lucros da Deriv devolve.
+ *
+ * Trocamos o extrato (`statement`, so compras) pela tabela de lucros
+ * (`profit_table`) porque ela traz **entrada e saida na mesma linha** — e e
+ * dai que sai o quanto o cliente ganhou ou perdeu. O extrato nunca soube
+ * dizer isso: uma compra sozinha nao tem resultado.
+ */
+interface ContratoFechado {
+  appId: string | null
+  entrada: number
+  pagamento: number
+  saida: number
+}
+
+/** Todos os contratos fechados de um dia (UTC), paginando ate o fim. */
+async function contratosDoDia(
+  socket: TeedsSocket,
+  dia: string,
+): Promise<{ contratos: ContratoFechado[]; truncado: boolean }> {
+  const { de, ate } = janelaDoDia(dia)
+  const contratos: ContratoFechado[] = []
+  let pular = 0
+  let truncado = false
+
+  for (let pagina = 0; pagina < MAX_PAGINAS_LUCROS; pagina += 1) {
+    const res = await socket.send({
+      profit_table: 1,
+      description: 1,
+      limit: POR_PAGINA_LUCROS,
+      offset: pular,
+      date_from: String(de),
+      date_to: String(ate),
+      sort: 'ASC',
+    })
+    const linhas = ((res.profit_table as any)?.transactions ?? []) as Array<Record<string, any>>
+    for (const l of linhas) {
+      contratos.push({
+        appId: l.app_id != null ? String(l.app_id) : null,
+        entrada: Number(l.buy_price ?? 0),
+        pagamento: Number(l.payout ?? 0),
+        saida: Number(l.sell_price ?? 0),
+      })
+    }
+    if (linhas.length < POR_PAGINA_LUCROS) break
+    pular += POR_PAGINA_LUCROS
+    if (pagina === MAX_PAGINAS_LUCROS - 1) truncado = true
+  }
+
+  return { contratos, truncado }
 }
 
 /**
@@ -233,10 +310,12 @@ export async function simularComissaoPorDia(
   const lista = diasDoPeriodo(dias)
   const hoje = new Date().toISOString().slice(0, 10)
 
-  const porDia = new Map<string, { comissao: number; operacoes: number; pagamentos: number }>()
+  const porDia = new Map<string, Omit<DiaDeComissao, 'data'>>()
   let comissao = 0
   let movimentado = 0
   let pagamentoTotal = 0
+  let entradaTotal = 0
+  let resultado = 0
   let operacoes = 0
   let truncado = false
   const novos: string[] = []
@@ -251,35 +330,36 @@ export async function simularComissaoPorDia(
       porDia.set(dia, { ...gravado })
       comissao += gravado.comissao
       pagamentoTotal += gravado.pagamentos
+      entradaTotal += gravado.entradas
+      resultado += gravado.resultado
+      movimentado += gravado.entradas
       operacoes += gravado.operacoes
       continue
     }
 
-    const { de, ate } = janelaDoDia(dia)
-    let pular = 0
-    let doDia = { comissao: 0, operacoes: 0, pagamentos: 0 }
-    for (let pagina = 0; pagina < MAX_PAGINAS_DIA; pagina += 1) {
-      const { movimentos } = await buscarExtrato(socket, {
-        limite: POR_PAGINA, pular, tipo: 'buy', de, ate,
-      })
-      for (const m of movimentos) {
-        if (m.appId !== DERIV.appId || !m.pagamento) continue
-        const c = (m.pagamento ?? 0) * taxa
-        doDia = {
-          comissao: doDia.comissao + c,
-          operacoes: doDia.operacoes + 1,
-          pagamentos: doDia.pagamentos + (m.pagamento ?? 0),
-        }
-        movimentado += Math.abs(m.valor)
+    const { contratos, truncado: cortou } = await contratosDoDia(socket, dia)
+    if (cortou) truncado = true
+
+    let doDia = { comissao: 0, operacoes: 0, pagamentos: 0, entradas: 0, resultado: 0 }
+    for (const c of contratos) {
+      // so o que passou pela Teeds gera markup
+      if (c.appId !== DERIV.appId || !c.pagamento) continue
+      doDia = {
+        comissao: doDia.comissao + c.pagamento * taxa,
+        operacoes: doDia.operacoes + 1,
+        pagamentos: doDia.pagamentos + c.pagamento,
+        entradas: doDia.entradas + c.entrada,
+        // o que o cliente levou menos o que ele pos: e o ganho ou a perda dele
+        resultado: doDia.resultado + (c.saida - c.entrada),
       }
-      if (movimentos.length < POR_PAGINA) break
-      pular += POR_PAGINA
-      if (pagina === MAX_PAGINAS_DIA - 1) truncado = true
     }
 
     porDia.set(dia, doDia)
     comissao += doDia.comissao
     pagamentoTotal += doDia.pagamentos
+    entradaTotal += doDia.entradas
+    resultado += doDia.resultado
+    movimentado += doDia.entradas
     operacoes += doDia.operacoes
     novos.push(dia)
   }
@@ -289,71 +369,14 @@ export async function simularComissaoPorDia(
     operacoes,
     movimentado,
     pagamentoTotal,
+    entradaTotal,
+    resultado,
     comissao,
     comissaoMedia: operacoes ? comissao / operacoes : 0,
     taxa,
     dias,
     truncado,
     diasCalculados: novos,
-    porDia: [...porDia.entries()]
-      .map(([data, v]) => ({ data, ...v }))
-      .sort((a, b) => a.data.localeCompare(b.data)),
-  }
-}
-
-export async function simularComissao(
-  socket: TeedsSocket,
-  taxa = 0.03,
-  dias = 30,
-): Promise<MarkupSimulado> {
-  const { de, ate } = janelaEpoch(dias)
-
-  // O statement devolve no maximo 999 por vez. Sem paginar, um robo que
-  // faz centenas de operacoes por dia empurra as mais antigas para fora da
-  // janela e a comissao *diminui* — foi exatamente o que aconteceu.
-  const daTeeds: Movimento[] = []
-  let pular = 0
-  let truncado = false
-  for (let pagina = 0; pagina < MAX_PAGINAS; pagina += 1) {
-    const { movimentos } = await buscarExtrato(socket, {
-      limite: POR_PAGINA, pular, tipo: 'buy', de, ate,
-    })
-    for (const m of movimentos) {
-      if (m.appId === DERIV.appId && m.pagamento) daTeeds.push(m)
-    }
-    if (movimentos.length < POR_PAGINA) break
-    pular += POR_PAGINA
-    if (pagina === MAX_PAGINAS - 1) truncado = true
-  }
-
-  const porDia = new Map<string, { comissao: number; operacoes: number; pagamentos: number }>()
-  let comissao = 0
-  let movimentado = 0
-  let pagamentoTotal = 0
-
-  for (const m of daTeeds) {
-    const c = (m.pagamento ?? 0) * taxa
-    comissao += c
-    pagamentoTotal += m.pagamento ?? 0
-    movimentado += Math.abs(m.valor)
-    const dia = new Date(m.quando * 1000).toISOString().slice(0, 10)
-    const atual = porDia.get(dia) ?? { comissao: 0, operacoes: 0, pagamentos: 0 }
-    porDia.set(dia, {
-      comissao: atual.comissao + c,
-      operacoes: atual.operacoes + 1,
-      pagamentos: atual.pagamentos + (m.pagamento ?? 0),
-    })
-  }
-
-  return {
-    operacoes: daTeeds.length,
-    movimentado,
-    pagamentoTotal,
-    comissao,
-    comissaoMedia: daTeeds.length ? comissao / daTeeds.length : 0,
-    taxa,
-    dias,
-    truncado,
     porDia: [...porDia.entries()]
       .map(([data, v]) => ({ data, ...v }))
       .sort((a, b) => a.data.localeCompare(b.data)),

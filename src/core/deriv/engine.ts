@@ -86,8 +86,10 @@ export interface OperacaoMotor {
   digitoEntrada: number | null
   digitoSaida: number | null
   lucro: number
-  /** Pagamento potencial contratado, base exata do markup. */
+  /** Pagamento potencial contratado, base exata do markup calculado. */
   payout: number
+  /** O markup medido pela Deriv, quando ela informa. Null = nao medido. */
+  markupDeriv: number | null
   ganhou: boolean
   quando: number
   /** Quantos ticks o robo esperou antes desta entrada. */
@@ -502,6 +504,7 @@ export class MotorTeeds {
           digitoSaida: saida !== null ? ultimoDigito(saida, casas) : null,
           lucro: c.profit,
           payout: this.estado.emCurso?.payout ?? c.payout ?? 0,
+          markupDeriv: c.appMarkup ?? null,
           ganhou,
           quando: Date.now(),
           esperou: this.esperaAtual,

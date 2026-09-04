@@ -40,6 +40,15 @@ export interface OpenContract {
   startTime: number
   expiryTime: number
   pipSize: number
+  /**
+   * O markup que a Deriv registrou neste contrato (`app_markup_amount`).
+   *
+   * A documentacao so garante esse campo na resposta de `proposal`. Os robos
+   * compram sem proposal, para nao perder tempo — entao aqui ele pode nao
+   * vir. Quando nao vem, fica `null`: melhor um vazio honesto do que 3% do
+   * pagamento fingindo ser medicao.
+   */
+  appMarkup: number | null
 }
 
 function toOpenContract(p: Record<string, any>): OpenContract {
@@ -51,6 +60,7 @@ function toOpenContract(p: Record<string, any>): OpenContract {
     buyPrice: Number(p.buy_price ?? 0),
     bidPrice: Number(p.bid_price ?? p.buy_price ?? 0),
     payout: Number(p.payout ?? 0),
+    appMarkup: num(p.app_markup_amount ?? p.contract_details?.app_markup_amount),
     profit: Number(p.profit ?? 0),
     profitPercentage: Number(p.profit_percentage ?? 0),
     status: p.status ?? 'open',

@@ -3,7 +3,7 @@ import type { AuthSession } from '../core/deriv/auth'
 import { AFILIADO, DERIV } from '../core/deriv/config'
 import {
   buscarResumo, buscarSerieDiaria, periodo, simular, simularComissaoPorDia,
-  CALCULO_POR_DIA_DESDE, SemPermissao,
+  CALCULO_COM_RESULTADO_DESDE, SemPermissao, type DiaJaGravado,
   type DiaMarkup, type MarkupResumo, type MarkupSimulado,
 } from '../core/deriv/markup'
 import type { TeedsSocket } from '../core/deriv/client'
@@ -105,16 +105,19 @@ export function ManagementPanel({
       // Dias que o calculo novo ja gravou nao precisam ser varridos de novo:
       // a primeira conta e lenta, as seguintes saem na hora.
       const cache = async () => {
-        const mapa = new Map<string, { comissao: number; operacoes: number; pagamentos: number }>()
+        const mapa = new Map<string, DiaJaGravado>()
         if (!sessaoTeeds || !contaId) return mapa
         try {
           const linhas = await listarComissoes(sessaoTeeds, dias)
           for (const l of linhas) {
             if (l.contaId !== contaId) continue
             const quando = l.atualizadoEm ? Date.parse(l.atualizadoEm) : 0
-            if (!quando || quando < CALCULO_POR_DIA_DESDE) continue
+            // o corte mais novo manda: dias gravados antes dele nao tem
+            // resultado, e resultado zerado seria uma mentira silenciosa
+            if (!quando || quando < CALCULO_COM_RESULTADO_DESDE) continue
             mapa.set(l.dia, {
               comissao: l.comissao, operacoes: l.operacoes, pagamentos: l.pagamentos,
+              entradas: l.entradas, resultado: l.resultado,
             })
           }
         } catch { /* sem cache: calcula tudo */ }

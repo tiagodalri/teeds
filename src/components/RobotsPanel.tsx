@@ -187,7 +187,7 @@ export function RobotsPanel({
       const idr = identidadePorContrato(r.contrato.contract_type ?? '')
       const entrada = Number(c.buy_price ?? c.stake ?? 0), payout = Number(c.payout ?? c.payout_value ?? 0)
       const resultado = Number(c.profit ?? payout - entrada)
-      void registrarOperacaoRobo(sessaoTeeds, { contractId:id, contaId, roboId:idr?.id ?? r.estrategia, roboNome:nomes[r.runId] ?? idr?.nome ?? 'Robô', ativo:r.contrato.underlying_symbol ?? r.contrato.symbol ?? '', tipoContrato:r.contrato.contract_type ?? '', moeda, demo:isDemo, entrada, pagamento:payout, resultado, markup:payout*.03, ganhou:resultado>0, executadaEm:new Date(Number(c.sell_time ?? c.date_expiry ?? Date.now()/1000)*1000).toISOString() })
+      void registrarOperacaoRobo(sessaoTeeds, { contractId:id, contaId, roboId:idr?.id ?? r.estrategia, roboNome:nomes[r.runId] ?? idr?.nome ?? 'Robô', ativo:r.contrato.underlying_symbol ?? r.contrato.symbol ?? '', tipoContrato:r.contrato.contract_type ?? '', moeda, demo:isDemo, entrada, pagamento:payout, resultado, markup:payout*.03, markupDeriv:(c as any).app_markup_amount ?? null, ganhou:resultado>0, executadaEm:new Date(Number(c.sell_time ?? c.date_expiry ?? Date.now()/1000)*1000).toISOString() })
     }
   }, [lista.map(r=>`${r.runId}:${r.contratos}`).join('|'), sessaoTeeds?.usuario.id, contaId]) // eslint-disable-line react-hooks/exhaustive-deps
   const rodando = lista.filter((r) => r.status === 'running' || r.status === 'paused')

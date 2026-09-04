@@ -96,7 +96,8 @@ export function LocalRobotPanel({
       contractId: op.contractId, contaId, roboId: estrategia.id, roboNome: estrategia.nome,
       ativo: symbol, tipoContrato: estrategia.contractType, moeda, demo: isDemo,
       entrada: op.valor, pagamento: op.payout, resultado: op.lucro,
-      markup: op.payout * .03, ganhou: op.ganhou, executadaEm: new Date(op.quando).toISOString(),
+      markup: op.payout * .03, markupDeriv: op.markupDeriv ?? null,
+      ganhou: op.ganhou, executadaEm: new Date(op.quando).toISOString(),
     })
   }, [estado?.historico[0]?.contractId, sessaoTeeds?.usuario.id, contaId]) // eslint-disable-line react-hooks/exhaustive-deps
 
