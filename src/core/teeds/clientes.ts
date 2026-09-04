@@ -185,6 +185,10 @@ export interface OperacaoRoboRegistro {
   ativo: string; tipoContrato: string; moeda: string; demo: boolean; entrada: number
   pagamento: number; resultado: number; markup: number; ganhou: boolean; executadaEm: string
 }
+export interface MetricaRoboRegistro {
+  roboId: string; roboNome: string; operacoes: number; vitorias: number
+  clientes: number; volume: number; resultado: number; markup: number
+}
 
 /** Corrige registros antigos que foram salvos com UTF-8 interpretado como MacRoman. */
 const textoLegivel = (valor: string | null): string | null => {
@@ -319,5 +323,19 @@ export async function listarOperacoesRobos(sessao: SessaoTeeds, dias = 90): Prom
   try {
     const linhas = await rest<any[]>(`/operacoes_robos?select=*&executada_em=gte.${encodeURIComponent(corte)}&order=executada_em.desc`, sessao.token)
     return (linhas ?? []).map(l => ({ contractId:Number(l.contract_id),userId:l.user_id,contaId:l.conta_id,roboId:l.robo_id,roboNome:l.robo_nome,ativo:l.ativo,tipoContrato:l.tipo_contrato,moeda:l.moeda,demo:Boolean(l.demo),entrada:Number(l.entrada),pagamento:Number(l.pagamento),resultado:Number(l.resultado),markup:Number(l.markup),ganhou:Boolean(l.ganhou),executadaEm:l.executada_em }))
+  } catch { return [] }
+}
+
+/** Resumo calculado no banco: o painel recebe uma linha por robô, não o histórico inteiro. */
+export async function listarMetricasRobos(sessao: SessaoTeeds, dias = 90): Promise<MetricaRoboRegistro[]> {
+  try {
+    const linhas = await rest<any[]>('/rpc/teeds_metricas_robos', sessao.token, {
+      method: 'POST', body: JSON.stringify({ p_dias: dias }),
+    })
+    return (linhas ?? []).map((l) => ({
+      roboId: l.robo_id, roboNome: l.robo_nome, operacoes: Number(l.operacoes),
+      vitorias: Number(l.vitorias), clientes: Number(l.clientes), volume: Number(l.volume),
+      resultado: Number(l.resultado), markup: Number(l.markup),
+    }))
   } catch { return [] }
 }
