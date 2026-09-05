@@ -109,24 +109,88 @@ async function renovar(userId: string, sessao: AuthSession): Promise<AuthSession
 }
 
 /**
- * A autorização deste cliente, pronta para operar — ou nada.
+ * O que o cofre tem para este cliente.
  *
- * Nada significa "ele nunca conectou a Deriv, ou a autorização venceu e não
- * deu para renovar". Quem chama transforma isso numa frase para a tela.
+ * São quatro respostas, não duas, e a diferença importa. Antes isto devolvia
+ * a autorização ou `null`, e quem chamava caía no token do servidor em
+ * qualquer caso de `null` — silenciosamente. Ou seja: uma autorização
+ * corrompida virava um robô operando com a credencial de outra pessoa, sem
+ * uma linha de aviso em lugar nenhum. Rede de segurança que esconde a falha
+ * não é rede, é tapete.
+ *
+ *  - `ok`        tem, abriu, está válida
+ *  - `sem-cofre` nunca conectou pela plataforma. Normal, e é o único caso em
+ *                que faz sentido cair na autorização do servidor
+ *  - `quebrado`  tem linha e não abriu. Defeito: o cliente reconecta
+ *  - `vencido`   venceu e a renovação não deu certo: o cliente reconecta
  */
-export async function autorizacaoDoCliente(userId: string): Promise<AuthSession | null> {
+export type DoCofre =
+  | { tipo: 'ok'; sessao: AuthSession }
+  | { tipo: 'sem-cofre' }
+  | { tipo: 'quebrado' }
+  | { tipo: 'vencido' }
+
+/** Um pedaço do identificador, o bastante para achar no log sem expor o cliente. */
+const marca = (userId: string) => `${userId.slice(0, 8)}…`
+
+export async function autorizacaoDoCliente(userId: string): Promise<DoCofre> {
   const linha = await lerSegredoDeriv(userId)
-  if (!linha) return null
+  if (!linha) return { tipo: 'sem-cofre' }
+
   let sessao: AuthSession
   try {
     sessao = JSON.parse(decifrar(linha.segredo)) as AuthSession
   } catch {
-    console.warn(`[cofre] nao consegui abrir a autorizacao do cliente ${userId.slice(0, 8)}… — ele precisa reconectar.`)
-    return null
+    console.warn(`[cofre] a autorizacao do cliente ${marca(userId)} nao abriu — ele precisa reconectar a Deriv.`)
+    return { tipo: 'quebrado' }
   }
-  if (!sessao.accessToken) return null
+  if (!sessao.accessToken) {
+    console.warn(`[cofre] a autorizacao do cliente ${marca(userId)} abriu vazia — ele precisa reconectar a Deriv.`)
+    return { tipo: 'quebrado' }
+  }
+
   if (sessao.expiresAt && Date.now() > sessao.expiresAt - FOLGA) {
-    return await renovar(userId, sessao)
+    const nova = await renovar(userId, sessao)
+    if (!nova) {
+      console.warn(`[cofre] a autorizacao do cliente ${marca(userId)} venceu e nao deu para renovar.`)
+      return { tipo: 'vencido' }
+    }
+    return { tipo: 'ok', sessao: nova }
   }
-  return sessao
+  return { tipo: 'ok', sessao }
+}
+
+/**
+ * A autorização para operar por este cliente, ou o motivo em português.
+ *
+ * A autorização do próprio servidor entra só quando o cofre está vazio —
+ * cliente que entrou antes disto existir, e o dono antes de reconectar uma
+ * vez. Nunca entra para encobrir defeito: cofre quebrado ou vencido devolve
+ * recusa, e o cliente resolve com um clique em Conectar Deriv.
+ */
+export async function autorizacaoParaOperar(
+  userId: string, doServidor: () => AuthSession,
+): Promise<{ ok: true; sessao: AuthSession } | { ok: false; motivo: string }> {
+  const r = await autorizacaoDoCliente(userId)
+  if (r.tipo === 'ok') return { ok: true, sessao: r.sessao }
+
+  if (r.tipo === 'sem-cofre') {
+    try {
+      const rede = doServidor()
+      console.log(`[cofre] cliente ${marca(userId)} sem autorizacao propria — usando a do servidor.`)
+      return { ok: true, sessao: rede }
+    } catch {
+      return {
+        ok: false,
+        motivo: 'Conecte sua conta Deriv na plataforma para a Teeds poder operar por você.',
+      }
+    }
+  }
+
+  return {
+    ok: false,
+    motivo: r.tipo === 'vencido'
+      ? 'Sua autorização da Deriv venceu. Clique em Conectar Deriv na plataforma para renovar.'
+      : 'Não consegui usar sua autorização da Deriv. Clique em Conectar Deriv na plataforma para autorizar de novo.',
+  }
 }

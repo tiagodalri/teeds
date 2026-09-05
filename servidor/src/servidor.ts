@@ -9,7 +9,7 @@ import { contasDoUsuario, limitesDoCliente, limparSessoesOrfas, supabaseConfigur
 import { contas, iniciar, montarConfig, parar, todas, ver } from './sessoes'
 import { PADRAO, conferir } from './limites'
 import { conversar } from './chat'
-import { autorizacaoDoCliente, guardar } from './cofre'
+import { autorizacaoParaOperar, guardar } from './cofre'
 import type { ConfigEstrategia } from '../../src/core/deriv/engine'
 
 /**
@@ -289,12 +289,11 @@ const servidor = createServer(async (req, res) => {
         // freio. Ate agora dava para digitar stop de 5000 numa conta de
         // 2000, e o servidor obedecia.
         // A autorizacao e a do proprio cliente, guardada no cofre quando ele
-        // clicou em "Conectar Deriv" na plataforma. Se ele ainda nao tem uma
-        // — porque entrou antes disto existir — o servidor cai na sua propria,
-        // do .env. Isso mantem o dono operando sem reconectar, e e seguro:
-        // para qualquer outra pessoa a conta simplesmente nao aparece nessa
-        // autorizacao, e o pedido morre logo abaixo.
-        const auth = (await autorizacaoDoCliente(dono.id)) ?? autorizacao()
+        // clicou em "Conectar Deriv" na plataforma. A do servidor entra so
+        // quando o cofre esta vazio — nunca para encobrir defeito.
+        const cofre = await autorizacaoParaOperar(dono.id, autorizacao)
+        if (!cofre.ok) return json(403, { erro: cofre.motivo })
+        const auth = cofre.sessao
         const conta = (await contas(auth)).find((c) => c.accountId === contaId)
         if (!conta) {
           return json(403, {

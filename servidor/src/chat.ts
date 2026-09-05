@@ -2,7 +2,7 @@ import './ambiente'
 
 import Anthropic from '@anthropic-ai/sdk'
 import { autorizacao } from './mcp'
-import { autorizacaoDoCliente } from './cofre'
+import { autorizacaoParaOperar } from './cofre'
 import { contas, listarRobos, parar, resumir, todas, ver } from './sessoes'
 import { contasDoUsuario, limitesDoCliente, registrarUsoDoChat } from './supabase'
 import { PADRAO, conferir, sugerir, type Limites } from './limites'
@@ -148,11 +148,12 @@ interface Dono { id: string }
 /** As contas Deriv que são deste cliente E que a autorização enxerga. */
 async function contasDele(dono: Dono) {
   const minhas = await contasDoUsuario(dono.id)
-  // A autorizacao do proprio cliente, com a do servidor como rede — a mesma
-  // regra da rota /api/sessao. Uma conta que a autorizacao nao enxerga
-  // simplesmente nao entra na lista, entao o chat nunca fala de conta alheia.
-  const auth = (await autorizacaoDoCliente(dono.id)) ?? autorizacao()
-  const lista = await contas(auth)
+  // A mesma regra da rota /api/sessao: a autorizacao do proprio cliente, e a
+  // do servidor so quando o cofre esta vazio. Uma conta que a autorizacao nao
+  // enxerga nao entra na lista, entao o chat nunca fala de conta alheia.
+  const cofre = await autorizacaoParaOperar(dono.id, autorizacao)
+  if (!cofre.ok) throw new Error(cofre.motivo)
+  const lista = await contas(cofre.sessao)
   return lista.filter((c) => minhas.includes(c.accountId))
 }
 
