@@ -6,3 +6,4 @@ dist
 tsconfig.tsbuildinfo
 .git_desativado_*
 docs/assets/index-*
+vite.config.ts.timestamp-*
