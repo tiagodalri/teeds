@@ -48,6 +48,30 @@ async function api<T>(
   return corpo as T
 }
 
+/**
+ * Entrega ao servidor a autorização que o cliente deu à Teeds na Deriv.
+ *
+ * Ele já autorizou — uma vez, na página oficial da Deriv, no "Conectar
+ * Deriv". O resultado disso vivia só aqui no navegador, e o robô roda em
+ * Nova York com o navegador fechado: sem esta entrega, o servidor não teria
+ * como operar na conta dele.
+ *
+ * Falhar aqui não pode atrapalhar quem está usando a plataforma. Se o
+ * servidor estiver fora do ar, a operação manual continua funcionando
+ * normalmente pelo navegador; o que não vai dar é ligar robô — e aí a
+ * própria tela de robôs explica o porquê.
+ */
+export async function entregarAutorizacao(
+  sessao: SessaoTeeds,
+  deriv: { accessToken: string; refreshToken?: string; expiresAt?: number },
+): Promise<void> {
+  try {
+    await api(sessao, '/deriv', { method: 'POST', body: JSON.stringify(deriv) })
+  } catch (e) {
+    console.warn('[teeds] nao consegui entregar a autorizacao ao servidor:', (e as Error).message)
+  }
+}
+
 /** Liga o robô no servidor e devolve a sessão recém-nascida. */
 export function ligarNoServidor(
   sessao: SessaoTeeds,

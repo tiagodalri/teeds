@@ -292,3 +292,82 @@ export async function contasDoUsuario(userId: string): Promise<string[]> {
   )
   return (linhas ?? []).map((l) => String(l.conta_id))
 }
+
+/* ------------------------------------------------------------------ *
+ * O chat: limites por cliente e contagem de uso
+ *
+ * A contagem existe desde o primeiro dia de propósito. Sem ela, o custo do
+ * chat só aparece na fatura — e aí já foi gasto.
+ * ------------------------------------------------------------------ */
+
+/** Os limites deste cliente, ou nada se ele nunca teve ajuste. */
+export async function limitesDoCliente(userId: string): Promise<Partial<{
+  entradaMaxima: number; fracaoDoSaldo: number; robosSimultaneos: number; mensagensPorDia: number
+}> | null> {
+  if (!URL_BASE) return null
+  try {
+    const linhas = await rest<any[]>(
+      `/chat_limites?select=*&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
+    )
+    const l = linhas?.[0]
+    if (!l) return null
+    return {
+      ...(l.entrada_maxima != null ? { entradaMaxima: Number(l.entrada_maxima) } : {}),
+      ...(l.fracao_do_saldo != null ? { fracaoDoSaldo: Number(l.fracao_do_saldo) } : {}),
+      ...(l.robos_simultaneos != null ? { robosSimultaneos: Number(l.robos_simultaneos) } : {}),
+      ...(l.mensagens_por_dia != null ? { mensagensPorDia: Number(l.mensagens_por_dia) } : {}),
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Marca mais uma mensagem no dia de hoje e devolve o total já gasto.
+ *
+ * Some e devolve numa ida só, do lado do banco. Ler-somar-gravar daqui
+ * deixaria duas abas abertas contarem a mesma mensagem duas vezes — ou,
+ * pior, nenhuma.
+ */
+export async function registrarUsoDoChat(userId: string): Promise<number> {
+  if (!URL_BASE) return 0
+  const r = await rest<any>('/rpc/chat_registrar_uso', {
+    method: 'POST',
+    body: JSON.stringify({ p_user: userId }),
+  })
+  return Number(Array.isArray(r) ? r[0] : r) || 0
+}
+
+/* ------------------------------------------------------------------ *
+ * O cofre: a autorizacao da Deriv de cada cliente
+ *
+ * O conteudo chega e sai daqui ja cifrado — este arquivo nunca ve um token
+ * da Deriv em claro, e nao tem como ver: a chave da cifra mora em cofre.ts.
+ * ------------------------------------------------------------------ */
+
+export async function guardarSegredoDeriv(
+  userId: string, segredo: string, expiraEm: string | null,
+): Promise<void> {
+  if (!URL_BASE) throw new Error('O servidor nao esta ligado ao banco da Teeds.')
+  await rest('/deriv_autorizacoes?on_conflict=user_id', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      user_id: userId, segredo, expira_em: expiraEm,
+      atualizado_em: new Date().toISOString(),
+    }),
+  })
+}
+
+export async function lerSegredoDeriv(userId: string): Promise<{ segredo: string } | null> {
+  if (!URL_BASE) return null
+  try {
+    const linhas = await rest<any[]>(
+      `/deriv_autorizacoes?select=segredo&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
+    )
+    const l = linhas?.[0]
+    return l?.segredo ? { segredo: String(l.segredo) } : null
+  } catch {
+    return null
+  }
+}

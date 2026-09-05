@@ -22,6 +22,7 @@ import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { useAccount } from './hooks/useAccount'
 import { registrarContaDeriv, registrarPresenca, souAdmin } from './core/teeds/clientes'
+import { entregarAutorizacao } from './core/teeds/servidorRobos'
 import { useTeedsAuth } from './hooks/useTeedsAuth'
 import { aplicarTema, temaGuardado, type Tema } from './core/tema'
 import { DerivDesconectada } from './components/DerivDesconectada'
@@ -138,6 +139,25 @@ export default function App() {
     void registrarContaDeriv(teeds.sessao, conta.account)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioTeedsId, conta.account?.accountId])
+
+  /*
+    A autorização da Deriv sobe para o servidor.
+
+    Acontece quando os dois logins existem ao mesmo tempo — o da Teeds e o da
+    Deriv — e de novo sempre que a autorização mudar, que é o caso de quem
+    acabou de conectar e o de quem teve a antiga renovada. É uma entrega
+    silenciosa: o cliente já autorizou na tela da Deriv, e não há nada de
+    novo para ele decidir aqui.
+  */
+  useEffect(() => {
+    if (!teeds.sessao || !conta.session?.accessToken) return
+    void entregarAutorizacao(teeds.sessao, {
+      accessToken: conta.session.accessToken,
+      refreshToken: conta.session.refreshToken,
+      expiresAt: conta.session.expiresAt,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioTeedsId, conta.session?.accessToken])
 
   const groups = useMemo(() => {
     const term = search.trim().toLowerCase()

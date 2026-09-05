@@ -5,8 +5,11 @@ import { createHash, randomBytes } from 'node:crypto'
 import { writeFileSync, chmodSync, existsSync, readFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
 import { atender, autorizacao } from './mcp'
-import { contasDoUsuario, limparSessoesOrfas, supabaseConfigurado, usuarioDoToken } from './supabase'
-import { iniciar, montarConfig, parar, todas, ver } from './sessoes'
+import { contasDoUsuario, limitesDoCliente, limparSessoesOrfas, supabaseConfigurado, usuarioDoToken } from './supabase'
+import { contas, iniciar, montarConfig, parar, todas, ver } from './sessoes'
+import { PADRAO, conferir } from './limites'
+import { conversar } from './chat'
+import { autorizacaoDoCliente, guardar } from './cofre'
 import type { ConfigEstrategia } from '../../src/core/deriv/engine'
 
 /**
@@ -270,16 +273,84 @@ const servidor = createServer(async (req, res) => {
         }
 
         const config = corpo.config as ConfigEstrategia | undefined
-        const s = await iniciar(autorizacao(), {
+        const valorInicial = Number(config?.valorInicial ?? corpo.valorInicial ?? 0)
+        const stopLoss = Number(config?.stopLoss ?? corpo.stopLoss ?? 0)
+        const takeProfit = Number(config?.takeProfit ?? corpo.takeProfit ?? 0)
+
+        // ---- as travas ----
+        //
+        // Elas moram aqui, e não na proposta que o chat monta, porque esta é
+        // a porta por onde TUDO passa: o botao da tela, o cartao do chat e o
+        // que vier depois. O cartao do chat tem campos editaveis de
+        // proposito — se a trava vivesse la, ela seria um pedido educado
+        // para o cliente nao digitar um numero maior antes de clicar.
+        //
+        // Efeito colateral desejado: o botao da tela Robos passa a ter
+        // freio. Ate agora dava para digitar stop de 5000 numa conta de
+        // 2000, e o servidor obedecia.
+        // A autorizacao e a do proprio cliente, guardada no cofre quando ele
+        // clicou em "Conectar Deriv" na plataforma. Se ele ainda nao tem uma
+        // — porque entrou antes disto existir — o servidor cai na sua propria,
+        // do .env. Isso mantem o dono operando sem reconectar, e e seguro:
+        // para qualquer outra pessoa a conta simplesmente nao aparece nessa
+        // autorizacao, e o pedido morre logo abaixo.
+        const auth = (await autorizacaoDoCliente(dono.id)) ?? autorizacao()
+        const conta = (await contas(auth)).find((c) => c.accountId === contaId)
+        if (!conta) {
+          return json(403, {
+            erro: 'A Teeds nao tem autorizacao para operar nesta conta. ' +
+              'Clique em Conectar Deriv na plataforma e autorize de novo.',
+          })
+        }
+
+        const limites = { ...PADRAO, ...(await limitesDoCliente(dono.id) ?? {}) }
+        const veredito = conferir({
+          entrada: valorInicial, stopLoss, takeProfit,
+          saldo: conta.balance, demo: conta.type === 'demo', moeda: conta.currency,
+          robosAtivos: todas().filter((s) => minhas.includes(s.contaId) && s.estado?.rodando).length,
+        }, limites)
+        if (!veredito.ok) return json(422, { erro: veredito.motivo })
+
+        const s = await iniciar(auth, {
           roboId: String(corpo.roboId ?? ''),
           contaId,
-          valorInicial: Number(config?.valorInicial ?? corpo.valorInicial ?? 0),
-          stopLoss: Number(config?.stopLoss ?? corpo.stopLoss ?? 0),
-          takeProfit: Number(config?.takeProfit ?? corpo.takeProfit ?? 0),
+          valorInicial, stopLoss, takeProfit,
           config,
           origem: 'navegador',
         })
         return json(200, resumo(s))
+      }
+
+      // ---- guardar a autorizacao da Deriv
+      //
+      // O cliente ja autorizou a Teeds na pagina oficial da Deriv; o que
+      // chega aqui e o resultado disso, que ate agora vivia so no navegador
+      // dele. O robo roda em Nova York com o navegador fechado, entao sem
+      // esta rota ele nao teria como operar na conta de ninguem.
+      //
+      // Nada volta na resposta. Uma rota que devolve a autorizacao que
+      // acabou de receber e uma rota que vaza autorizacao.
+      if (url.pathname === '/api/deriv' && req.method === 'POST') {
+        const accessToken = String(corpo.accessToken ?? '').trim()
+        if (!accessToken) return json(400, { erro: 'Autorizacao vazia.' })
+        await guardar(dono.id, {
+          accessToken,
+          refreshToken: corpo.refreshToken ? String(corpo.refreshToken) : undefined,
+          expiresAt: corpo.expiresAt ? Number(corpo.expiresAt) : undefined,
+        })
+        return json(200, { guardado: true })
+      }
+
+      // ---- conversar
+      //
+      // A chave da IA fica deste lado. O navegador manda a pergunta e recebe
+      // texto — nunca a credencial, que nem chega a existir por la.
+      if (url.pathname === '/api/chat' && req.method === 'POST') {
+        const pergunta = String(corpo.pergunta ?? '').trim()
+        if (!pergunta) return json(400, { erro: 'Escreva alguma coisa.' })
+        if (pergunta.length > 2000) return json(400, { erro: 'Mensagem longa demais.' })
+        const historico = Array.isArray(corpo.historico) ? corpo.historico.slice(-12) : []
+        return json(200, await conversar({ id: dono.id }, historico, pergunta))
       }
 
       // ---- acompanhar
