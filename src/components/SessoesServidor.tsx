@@ -42,6 +42,7 @@ export function SessoesServidor({ sessao, escondidas = [] }: {
 }) {
   const [sessoes, setSessoes] = useState<SessaoServidor[]>([])
   const [aberta, setAberta] = useState<string | null>(null)
+  const [verEncerradas, setVerEncerradas] = useState(false)
   const [extrato, setExtrato] = useState<OperacaoServidor[]>([])
 
   useEffect(() => acompanharSessoes(sessao, setSessoes), [sessao.token])
@@ -147,19 +148,55 @@ export function SessoesServidor({ sessao, escondidas = [] }: {
     )
   }
 
+  /*
+    O que encerrou não disputa espaço com o que está operando.
+
+    Antes as sessões encerradas vinham como uma parede de cartões grandes no
+    fim da tela — e viravam entulho visual, ainda mais depois de uma tarde de
+    testes. Mas jogar fora não dava: o motivo da parada ("limite de perda
+    protegido") não existe em nenhum outro lugar da Teeds, e é a primeira
+    pergunta de quem vê o robô desligado.
+
+    Então elas viram uma linha só, com o essencial já escrito nela: qual robô
+    parou por último, com quanto e por quê. Quem quiser o resto abre.
+  */
+  const ultima = encerradas[0]
+
   return (
-    <section className="ger-bloco ss-bloco">
-      <div className="ss-cabecalho">
-        <div>
-          <span className="rot">No servidor</span>
-          <h3>{rodando.length ? `${rodando.length} robô${rodando.length > 1 ? 's' : ''} operando agora` : 'Sessões recentes'}</h3>
+    <section className={rodando.length ? 'ger-bloco ss-bloco' : 'ss-bloco ss-so-resumo'}>
+      {rodando.length > 0 && (
+        <>
+          <div className="ss-cabecalho">
+            <div>
+              <span className="rot">No servidor</span>
+              <h3>{rodando.length} robô{rodando.length > 1 ? 's' : ''} operando agora</h3>
+            </div>
+            <small>Estes robôs rodam mesmo com esta aba fechada.</small>
+          </div>
+          <div className="ss-lista">{rodando.map(cartao)}</div>
+        </>
+      )}
+
+      {encerradas.length > 0 && (
+        <div className={`ss-encerradas ${verEncerradas ? 'aberta' : ''}`}>
+          <button type="button" className="ss-resumo" onClick={() => setVerEncerradas((v) => !v)}>
+            <b className="ss-resumo-n">{encerradas.length}</b>
+            <span className="ss-resumo-txt">
+              {encerradas.length > 1 ? 'sessões encerradas' : 'sessão encerrada'}
+              {ultima && (
+                <>
+                  {' · última: '}
+                  <b>{ultima.roboNome}</b>{' '}
+                  <b className={classe(ultima.resultado)}>{din(ultima.resultado, ultima.moeda, true)}</b>
+                  {ultima.motivoDaParada ? ` · ${ultima.motivoDaParada}` : ''}
+                </>
+              )}
+            </span>
+            <span className="ss-resumo-acao">{verEncerradas ? 'ocultar' : 'ver'}</span>
+          </button>
+          {verEncerradas && <div className="ss-lista">{encerradas.map(cartao)}</div>}
         </div>
-        <small>Estes robôs rodam mesmo com esta aba fechada.</small>
-      </div>
-      <div className="ss-lista">
-        {rodando.map(cartao)}
-        {encerradas.map(cartao)}
-      </div>
+      )}
     </section>
   )
 }
