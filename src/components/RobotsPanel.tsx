@@ -245,6 +245,37 @@ export function RobotsPanel({
         {!isDemo && <span className="badge badge-real">conta real selecionada</span>}
       </div>
 
+      {/*
+        O robô do chat vem primeiro, antes de tudo o mais.
+
+        Se ele está operando agora, é a coisa mais importante desta tela.
+        Quem abre Robôs com um robô rodando quer ver o que está acontecendo
+        com o dinheiro — não rolar a página atrás disso. A vitrine de
+        modelos serve a quem vai ligar um robô novo, e essa pessoa pode
+        esperar dois palmos de rolagem; quem já tem robô operando, não.
+
+        Fora da vitrine também de propósito: ele já existe e já tem
+        estratégia. Qual cartão está selecionado embaixo não muda nada para
+        ele — e esconder o painel porque a vitrine estava noutro cartão
+        seria a tela fingindo que o robô não existe.
+      */}
+      {doChat.length > 0 && (
+        <div className={`blocos ${doChat.length > 1 ? 'duplo' : ''} ${blocoExpandido ? 'tem-expandido' : ''}`}>
+          {doChat.map((v, i) => (
+            <LocalRobotPanel key={v.id}
+              titulo={`Robô do chat${doChat.length > 1 ? ` ${i + 1}` : ''}`}
+              socket={socket} isDemo={v.demo} moeda={v.moeda}
+              symbols={symbols} symbolPadrao={symbolPadrao}
+              identidade={identidade(v.roboId)}
+              conexao={conexao}
+              sessaoTeeds={sessaoTeeds} contaId={v.contaId}
+              adotar={{ id: v.id, config: v.config, origem: v.origem }}
+              expandido={blocoExpandido === v.id}
+              onExpandir={() => setBlocoExpandido((atual) => atual === v.id ? null : v.id)} />
+          ))}
+        </div>
+      )}
+
       {rodando.length > 0 && (
         <div className="resumo-robos">
           <div><b>{lista.length}</b><span>robôs criados</span></div>
@@ -324,30 +355,6 @@ export function RobotsPanel({
               })}
             </div>
           </section>
-        </div>
-      )}
-
-      {/*
-        O robô ligado pelo chat mora aqui em cima, fora da vitrine: ele já
-        existe, já tem estratégia e já está operando. Qual cartão está
-        selecionado embaixo não muda nada para ele — e esconder o painel
-        dele porque a vitrine estava noutro cartão seria a tela fingindo
-        que o robô não existe.
-      */}
-      {doChat.length > 0 && (
-        <div className={`blocos ${doChat.length > 1 ? 'duplo' : ''} ${blocoExpandido ? 'tem-expandido' : ''}`}>
-          {doChat.map((v, i) => (
-            <LocalRobotPanel key={v.id}
-              titulo={`Robô do chat${doChat.length > 1 ? ` ${i + 1}` : ''}`}
-              socket={socket} isDemo={v.demo} moeda={v.moeda}
-              symbols={symbols} symbolPadrao={symbolPadrao}
-              identidade={identidade(v.roboId)}
-              conexao={conexao}
-              sessaoTeeds={sessaoTeeds} contaId={v.contaId}
-              adotar={{ id: v.id, config: v.config, origem: v.origem }}
-              expandido={blocoExpandido === v.id}
-              onExpandir={() => setBlocoExpandido((atual) => atual === v.id ? null : v.id)} />
-          ))}
         </div>
       )}
 
