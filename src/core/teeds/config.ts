@@ -31,3 +31,19 @@ export function autenticacaoConfigurada(): boolean {
 export const SERVIDOR = {
   url: 'https://198-211-96-238.nip.io',
 } as const
+
+/**
+ * O ritmo unico do acompanhamento dos robos.
+ *
+ * A tela de Robos e alimentada por duas fontes que nao tem como virar uma
+ * so: o Supabase (o que o servidor ja gravou) e o proprio servidor (o que
+ * ele esta fazendo agora). O que da para unificar — e o que estava faltando
+ * — e o *compasso*: antes uma perguntava a cada 1,5s e a outra a cada 4s, e
+ * as duas escreviam no mesmo bloco. A mais lenta chegava com uma foto velha
+ * e desfazia o que a mais rapida tinha acabado de desenhar. Era o pisca.
+ *
+ * Dois segundos porque a decisao de produto ja esta tomada: no
+ * acompanhamento dos robos, firmeza vale mais que tempo real. Um atraso de
+ * 1 a 3 segundos nao muda decisao nenhuma; painel que pisca, sim.
+ */
+export const RITMO_ROBOS = 2000

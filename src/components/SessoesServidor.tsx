@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
+import { RITMO_ROBOS } from '../core/teeds/config'
 import {
   acompanharSessoes, operacoesDaSessao,
   type OperacaoServidor, type SessaoServidor,
@@ -50,11 +51,15 @@ export function SessoesServidor({ sessao, escondidas = [] }: {
     if (!aberta) { setExtrato([]); return }
     let vivo = true
     const puxar = async () => {
-      const ops = await operacoesDaSessao(sessao, aberta)
-      if (vivo) setExtrato(ops)
+      try {
+        const ops = await operacoesDaSessao(sessao, aberta)
+        if (vivo) setExtrato(ops)
+      } catch {
+        // Consulta perdida não apaga o extrato que já está certo na tela.
+      }
     }
     void puxar()
-    const t = setInterval(puxar, 2000)
+    const t = setInterval(puxar, RITMO_ROBOS)
     return () => { vivo = false; clearInterval(t) }
   }, [aberta, sessao.token])
 

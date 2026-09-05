@@ -1,4 +1,4 @@
-import { SERVIDOR } from './config'
+import { RITMO_ROBOS, SERVIDOR } from './config'
 import type { SessaoTeeds } from './conta'
 import type { ConfigEstrategia, EstadoMotor } from '../deriv/engine'
 
@@ -140,13 +140,11 @@ export interface SessaoViva {
 
 /** O que está operando agora — tenha sido ligado pelo chat ou pelo botão. */
 export async function sessoesVivas(sessao: SessaoTeeds): Promise<SessaoViva[]> {
-  try {
-    const r = await api<{ sessoes: SessaoViva[] }>(sessao, '/sessoes')
-    return r.sessoes ?? []
-  } catch {
-    // servidor fora do ar não pode derrubar a tela de robôs
-    return []
-  }
+  // O erro sobe de propósito: devolver lista vazia aqui fazia a tela
+  // entender "não há robô operando" toda vez que o servidor demorava a
+  // responder — e apagar o painel de um robô que estava vivo.
+  const r = await api<{ sessoes: SessaoViva[] }>(sessao, '/sessoes')
+  return r.sessoes ?? []
 }
 
 /**
@@ -160,7 +158,7 @@ export async function sessoesVivas(sessao: SessaoTeeds): Promise<SessaoViva[]> {
 export function acompanharVivas(
   sessao: SessaoTeeds,
   aoAtualizar: (lista: SessaoViva[]) => void,
-  intervalo = 4000,
+  intervalo = RITMO_ROBOS,
 ): () => void {
   let vivo = true
   let timer: ReturnType<typeof setTimeout> | null = null
@@ -171,7 +169,16 @@ export function acompanharVivas(
       timer = setTimeout(ciclo, 15_000)
       return
     }
-    const lista = await sessoesVivas(sessao)
+    let lista: SessaoViva[]
+    try {
+      lista = await sessoesVivas(sessao)
+    } catch {
+      // Silêncio do servidor não é "parou de operar". A tela mantém o que já
+      // sabia e a gente pergunta de novo no compasso normal.
+      if (!vivo) return
+      timer = setTimeout(ciclo, intervalo)
+      return
+    }
     if (!vivo) return
     aoAtualizar(lista)
     timer = setTimeout(ciclo, intervalo)

@@ -1,4 +1,4 @@
-import { SUPABASE, autenticacaoConfigurada } from './config'
+import { RITMO_ROBOS, SUPABASE, autenticacaoConfigurada } from './config'
 import type { SessaoTeeds } from './conta'
 
 /**
@@ -125,16 +125,15 @@ const paraOperacao = (l: any): OperacaoServidor => ({
 export async function listarSessoes(sessao: SessaoTeeds, horas = 12): Promise<SessaoServidor[]> {
   if (!autenticacaoConfigurada()) return []
   const corte = new Date(Date.now() - horas * 3600_000).toISOString()
-  try {
-    const linhas = await rest<any[]>(
-      `/sessoes_robos?select=*&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc&limit=40`,
-      sessao.token,
-    )
-    return (linhas ?? []).map(paraSessao)
-  } catch {
-    // banco fora do ar não pode derrubar a tela de robôs
-    return []
-  }
+  // O erro sobe de propósito. Antes ele virava lista vazia aqui dentro, e
+  // quem chamava não tinha como distinguir "não há sessão nenhuma" de "não
+  // consegui perguntar agora" — então a tela apagava um robô que estava
+  // vivo e operando. Quem acompanha é que decide o que fazer com a falha.
+  const linhas = await rest<any[]>(
+    `/sessoes_robos?select=*&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc&limit=40`,
+    sessao.token,
+  )
+  return (linhas ?? []).map(paraSessao)
 }
 
 /** O extrato de uma sessão, da mais recente para a mais antiga. */
@@ -142,16 +141,14 @@ export async function operacoesDaSessao(
   sessao: SessaoTeeds, sessaoId: string, limite = 200,
 ): Promise<OperacaoServidor[]> {
   if (!autenticacaoConfigurada()) return []
-  try {
-    const linhas = await rest<any[]>(
-      `/operacoes_robos?select=contract_id,seq,executada_em,entrada,preco_entrada,digito_entrada,preco_saida,digito_saida,resultado,acumulado,ganhou,robo_nome` +
-      `&sessao_id=eq.${encodeURIComponent(sessaoId)}&order=seq.desc&limit=${limite}`,
-      sessao.token,
-    )
-    return (linhas ?? []).map(paraOperacao)
-  } catch {
-    return []
-  }
+  // Também deixa o erro subir: uma consulta perdida não pode esvaziar um
+  // extrato que já estava correto na tela.
+  const linhas = await rest<any[]>(
+    `/operacoes_robos?select=contract_id,seq,executada_em,entrada,preco_entrada,digito_entrada,preco_saida,digito_saida,resultado,acumulado,ganhou,robo_nome` +
+    `&sessao_id=eq.${encodeURIComponent(sessaoId)}&order=seq.desc&limit=${limite}`,
+    sessao.token,
+  )
+  return (linhas ?? []).map(paraOperacao)
 }
 
 /**
@@ -165,7 +162,7 @@ export async function operacoesDaSessao(
 export function acompanharSessoes(
   sessao: SessaoTeeds,
   aoAtualizar: (sessoes: SessaoServidor[]) => void,
-  intervaloRodando = 1500,
+  intervaloRodando = RITMO_ROBOS,
   intervaloParado = 10_000,
 ): () => void {
   let vivo = true
@@ -177,7 +174,17 @@ export function acompanharSessoes(
       timer = setTimeout(ciclo, intervaloParado)
       return
     }
-    const lista = await listarSessoes(sessao)
+    let lista: SessaoServidor[]
+    try {
+      lista = await listarSessoes(sessao)
+    } catch {
+      // "Não consegui saber agora" não é "não há robô nenhum". Não avisamos
+      // a tela: ela segue mostrando o último estado conhecido, e tentamos de
+      // novo no compasso normal.
+      if (!vivo) return
+      timer = setTimeout(ciclo, intervaloRodando)
+      return
+    }
     if (!vivo) return
     aoAtualizar(lista)
     const rodando = lista.some((s) => s.situacao === 'rodando')
