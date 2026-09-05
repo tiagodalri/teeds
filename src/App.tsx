@@ -23,6 +23,7 @@ import { useCandleSeries, useConnection, useLiveTick, useProposal, useSymbols } 
 import { useAccount } from './hooks/useAccount'
 import { registrarContaDeriv, registrarPresenca, souAdmin } from './core/teeds/clientes'
 import { entregarAutorizacao } from './core/teeds/servidorRobos'
+import { AssistentePanel } from './components/AssistentePanel'
 import { useTeedsAuth } from './hooks/useTeedsAuth'
 import { aplicarTema, temaGuardado, type Tema } from './core/tema'
 import { DerivDesconectada } from './components/DerivDesconectada'
@@ -76,7 +77,7 @@ export default function App() {
   const [confirmar, setConfirmar] = useState<'CALL' | 'PUT' | null>(null)
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
-  const [tela, setTela] = useState<'operar' | 'robos' | 'operacoes' | 'gestao' | 'gerenciamento' | 'marketplace' | 'aulas'>('operar')
+  const [tela, setTela] = useState<'operar' | 'robos' | 'assistente' | 'operacoes' | 'gestao' | 'gerenciamento' | 'marketplace' | 'aulas'>('operar')
   const [admin, setAdmin] = useState<boolean | null>(null)
   const [payoutBase, setPayoutBase] = useState(19.55)
 
@@ -286,6 +287,7 @@ export default function App() {
         <nav className="telas">
           <button className={tela === 'operar' ? 'on' : ''} onClick={() => setTela('operar')}>Operar</button>
           <button className={tela === 'robos' ? 'on' : ''} onClick={() => setTela('robos')}>Robôs</button>
+          <button className={tela === 'assistente' ? 'on' : ''} onClick={() => setTela('assistente')}>Assistente</button>
           <button className={tela === 'operacoes' ? 'on' : ''} onClick={() => setTela('operacoes')}>Operações</button>
           {admin === true && (
             <button className={tela === 'gestao' ? 'on' : ''} onClick={() => setTela('gestao')}>Administração</button>
@@ -378,6 +380,23 @@ export default function App() {
       {/* Os robôs vivem FORA da troca de telas: mudar de aba não pode
           desligar um motor no meio de uma recuperação de martingale.
           A tela apenas se esconde — o motor continua operando. */}
+      {/* O assistente fica montado o tempo todo, escondido quando nao e a
+          aba escolhida — como a tela de Robos ja fazia. Trocar de aba no meio
+          de uma conversa e voltar nao pode apagar o que foi dito, e um robo
+          ligado por aqui nao pode parar de ser acompanhado porque alguem foi
+          olhar o grafico. */}
+      {teeds.sessao && (
+        <div className="tela-viva" hidden={tela !== 'assistente'}>
+          <AssistentePanel
+            sessao={teeds.sessao}
+            socket={conta.socket}
+            symbols={symbols}
+            symbolPadrao={symbolCode}
+            conexao={conta.conexao}
+          />
+        </div>
+      )}
+
       <div className="tela-viva" hidden={tela !== 'robos'}>
         <RobotsPanel
           socket={conta.socket}
@@ -393,7 +412,7 @@ export default function App() {
           contaId={conta.accountId}
         />
       </div>
-      {tela === 'robos' ? null : tela === 'operacoes' ? (
+      {tela === 'robos' || tela === 'assistente' ? null : tela === 'operacoes' ? (
         <OperationsPanel
           socket={conta.socket}
           logado={conta.status === 'logado'}
