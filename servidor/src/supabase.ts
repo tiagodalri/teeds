@@ -352,19 +352,28 @@ export async function registrarGastoDoChat(
 }
 
 /**
- * Marca mais uma mensagem no dia de hoje e devolve o total já gasto.
+ * Quantas mensagens este cliente já gastou hoje. Só lê.
  *
- * Some e devolve numa ida só, do lado do banco. Ler-somar-gravar daqui
- * deixaria duas abas abertas contarem a mesma mensagem duas vezes — ou,
- * pior, nenhuma.
+ * Antes isto somava um antes de falar com a IA, para poder recusar quem
+ * passou do teto. O efeito colateral só apareceu quando a API recusou por
+ * falta de crédito: cinco tentativas frustradas consumiram cinco das trinta
+ * mensagens do dia, sem uma resposta sequer. Conferir o teto é leitura;
+ * quem soma é registrarGastoDoChat, depois da resposta chegar.
  */
-export async function registrarUsoDoChat(userId: string): Promise<number> {
+export async function usoDeHojeDoChat(userId: string): Promise<number> {
   if (!URL_BASE) return 0
-  const r = await rest<any>('/rpc/chat_registrar_uso', {
-    method: 'POST',
-    body: JSON.stringify({ p_user: userId }),
-  })
-  return Number(Array.isArray(r) ? r[0] : r) || 0
+  try {
+    const r = await rest<any>('/rpc/chat_uso_de_hoje', {
+      method: 'POST',
+      body: JSON.stringify({ p_user: userId }),
+    })
+    return Number(Array.isArray(r) ? r[0] : r) || 0
+  } catch {
+    // Não dá para saber o quanto já foi gasto? Deixa passar. Um teto que
+    // bloqueia por não conseguir consultar transforma soluço de banco em
+    // cliente sem assistente.
+    return 0
+  }
 }
 
 /* ------------------------------------------------------------------ *

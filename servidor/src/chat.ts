@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { autorizacao } from './mcp'
 import { autorizacaoParaOperar } from './cofre'
 import { contas, listarRobos, parar, resumir, todas, ver } from './sessoes'
-import { contasDoUsuario, limitesDoCliente, registrarGastoDoChat, registrarUsoDoChat } from './supabase'
+import { contasDoUsuario, limitesDoCliente, registrarGastoDoChat, usoDeHojeDoChat } from './supabase'
 import { PADRAO, conferir, sugerir, type Limites } from './limites'
 
 /**
@@ -292,8 +292,8 @@ function anthropic(): Anthropic {
  */
 export async function conversar(dono: Dono, historico: Turno[], pergunta: string): Promise<Resposta> {
   const limites = await limitesDe(dono)
-  const hoje = await registrarUsoDoChat(dono.id)
-  if (hoje > limites.mensagensPorDia) {
+  const hoje = await usoDeHojeDoChat(dono.id)
+  if (hoje >= limites.mensagensPorDia) {
     return {
       texto: `Você chegou ao limite de ${limites.mensagensPorDia} mensagens por hoje. ` +
         'Os robôs continuam operando normalmente — o limite é só da conversa. Amanhã zera.',
@@ -325,13 +325,33 @@ export async function conversar(dono: Dono, historico: Turno[], pergunta: string
   }
 
   for (let volta = 0; volta < MAX_VOLTAS; volta++) {
-    const resposta = await anthropic().messages.create({
-      model: MODELO,
-      max_tokens: 1024,
-      system: INSTRUCOES,
-      tools: FERRAMENTAS,
-      messages: mensagens,
-    })
+    let resposta: Anthropic.Message
+    try {
+      resposta = await anthropic().messages.create({
+        model: MODELO,
+        max_tokens: 1024,
+        system: INSTRUCOES,
+        tools: FERRAMENTAS,
+        messages: mensagens,
+      })
+    } catch (e) {
+      /*
+        O cliente não tem nada a ver com a nossa conta.
+
+        Sem isto, um erro de faturamento da Anthropic chegava cru na tela
+        dele — JSON, código 400 e um pedido em inglês para comprar crédito.
+        Isso é problema da Teeds, não dele. O motivo real fica no registro
+        do servidor, que é onde alguém pode agir sobre ele.
+      */
+      console.error(`[chat] a IA recusou: ${(e as Error).message}`)
+      if (gasto.idas > 0) anotar()
+      return {
+        texto: 'O assistente está indisponível agora. Seus robôs continuam ' +
+          'operando normalmente, e a tela de Robôs mostra tudo.',
+        proposta,
+        uso: { hoje, teto: limites.mensagensPorDia },
+      }
+    }
 
     const u = resposta.usage
     gasto.idas += 1
