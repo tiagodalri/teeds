@@ -323,6 +323,35 @@ export async function limitesDoCliente(userId: string): Promise<Partial<{
 }
 
 /**
+ * Anota o que uma mensagem consumiu.
+ *
+ * Roda DEPOIS de falar com a IA, quando o gasto já é conhecido — por isso é
+ * separada de registrarUsoDoChat, que roda antes para poder recusar quem
+ * passou do teto do dia. Juntar as duas obrigaria a adivinhar o gasto antes
+ * de gastá-lo.
+ *
+ * Falhar aqui não pode derrubar a resposta do cliente: perder uma anotação
+ * de custo é chato; perder a resposta que ele esperou é pior.
+ */
+export async function registrarGastoDoChat(
+  userId: string,
+  g: { entrada: number; saida: number; cache: number; idas: number },
+): Promise<void> {
+  if (!URL_BASE) return
+  try {
+    await rest('/rpc/chat_registrar_gasto', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_user: userId, p_entrada: g.entrada, p_saida: g.saida,
+        p_cache: g.cache, p_idas: g.idas,
+      }),
+    })
+  } catch (e) {
+    console.warn('[chat] nao consegui anotar o gasto:', (e as Error).message)
+  }
+}
+
+/**
  * Marca mais uma mensagem no dia de hoje e devolve o total já gasto.
  *
  * Some e devolve numa ida só, do lado do banco. Ler-somar-gravar daqui

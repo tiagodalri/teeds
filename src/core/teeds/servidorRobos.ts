@@ -75,7 +75,7 @@ export async function entregarAutorizacao(
 /** Liga o robô no servidor e devolve a sessão recém-nascida. */
 export function ligarNoServidor(
   sessao: SessaoTeeds,
-  pedido: { roboId: string; contaId: string; config: ConfigEstrategia },
+  pedido: { roboId: string; contaId: string; config: ConfigEstrategia; origem?: 'navegador' | 'chat' },
 ): Promise<SessaoNoServidor> {
   return api<SessaoNoServidor>(sessao, '/sessao', {
     method: 'POST',

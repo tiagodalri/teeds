@@ -310,12 +310,18 @@ const servidor = createServer(async (req, res) => {
         }, limites)
         if (!veredito.ok) return json(422, { erro: veredito.motivo })
 
+        // De onde veio o comando. O cartao do chat usa esta mesma rota que o
+        // botao da tela — sem isto, um robo ligado pela conversa se rotularia
+        // "ligado por aqui", e o rotulo existe justamente para responder
+        // "como esse robo foi ligado?". Vem do cliente, entao so dois valores
+        // sao aceitos: qualquer outra coisa vira 'navegador'.
+        const origem = corpo.origem === 'chat' ? 'chat' as const : 'navegador' as const
         const s = await iniciar(auth, {
           roboId: String(corpo.roboId ?? ''),
           contaId,
           valorInicial, stopLoss, takeProfit,
           config,
-          origem: 'navegador',
+          origem,
         })
         return json(200, resumo(s))
       }

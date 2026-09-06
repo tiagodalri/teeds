@@ -69,6 +69,8 @@ export function ChatProposta({ proposta, sessao, onLigado }: Props) {
       }
       const s = await ligarNoServidor(sessao, {
         roboId: proposta.roboId, contaId: proposta.contaId, config,
+        // Nasceu de uma conversa, e o histórico tem que saber disso.
+        origem: 'chat',
       })
       setLigado(true)
       onLigado(s.id, config, proposta.roboId, proposta.contaId, proposta.demo, proposta.moeda)

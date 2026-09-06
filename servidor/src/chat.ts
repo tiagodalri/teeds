@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { autorizacao } from './mcp'
 import { autorizacaoParaOperar } from './cofre'
 import { contas, listarRobos, parar, resumir, todas, ver } from './sessoes'
-import { contasDoUsuario, limitesDoCliente, registrarUsoDoChat } from './supabase'
+import { contasDoUsuario, limitesDoCliente, registrarGastoDoChat, registrarUsoDoChat } from './supabase'
 import { PADRAO, conferir, sugerir, type Limites } from './limites'
 
 /**
@@ -308,6 +308,22 @@ export async function conversar(dono: Dono, historico: Turno[], pergunta: string
 
   let proposta: Proposta | undefined
 
+  /*
+    O que esta mensagem consumiu.
+    
+    Sem isto, o custo do chat só apareceria na fatura — quando já foi gasto.
+    A resposta da API diz exatamente quantos tokens foram; era só não jogar
+    fora. `cache` é a coluna que responde, com número medido, se vale ligar o
+    desconto de repetição: enquanto ela ficar em zero, o desconto não pegou.
+  */
+  const gasto = { entrada: 0, saida: 0, cache: 0, idas: 0 }
+  const anotar = () => {
+    console.log(
+      `[chat] cliente ${dono.id.slice(0, 8)}… · ${gasto.idas} ida(s) · ` +
+      `entrada ${gasto.entrada} · saida ${gasto.saida} · cache ${gasto.cache}`)
+    void registrarGastoDoChat(dono.id, gasto)
+  }
+
   for (let volta = 0; volta < MAX_VOLTAS; volta++) {
     const resposta = await anthropic().messages.create({
       model: MODELO,
@@ -317,10 +333,17 @@ export async function conversar(dono: Dono, historico: Turno[], pergunta: string
       messages: mensagens,
     })
 
+    const u = resposta.usage
+    gasto.idas += 1
+    gasto.entrada += u.input_tokens ?? 0
+    gasto.saida += u.output_tokens ?? 0
+    gasto.cache += u.cache_read_input_tokens ?? 0
+
     if (resposta.stop_reason !== 'tool_use') {
       const texto = resposta.content
         .filter((b): b is Anthropic.TextBlock => b.type === 'text')
         .map((b) => b.text).join('\n').trim()
+      anotar()
       return { texto, proposta, uso: { hoje, teto: limites.mensagensPorDia } }
     }
 
@@ -346,6 +369,8 @@ export async function conversar(dono: Dono, historico: Turno[], pergunta: string
     mensagens.push({ role: 'user', content: resultados })
   }
 
+  // Desistir também custou: anota antes de sair.
+  anotar()
   return {
     texto: 'Me embolei tentando responder isso. Pergunta de outro jeito?',
     proposta,
