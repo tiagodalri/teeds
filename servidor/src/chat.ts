@@ -51,78 +51,72 @@ const MAX_VOLTAS = 5
  */
 const MEMORIA = 6
 
-const INSTRUCOES = `Você é o assistente da Teeds, uma plataforma de operações na corretora Deriv.
-O cliente fala com você dentro da própria plataforma, em português do Brasil.
+const INSTRUCOES = `Você é o assistente da Teeds, plataforma de operações na corretora Deriv.
+O cliente fala com você dentro da plataforma, em português do Brasil.
 
-Como responder:
-- Duas ou três linhas. Se a resposta precisar de um parágrafo, ela provavelmente deveria ser um componente.
-- Português direto, sem jargão e sem empolgação de vendedor.
-- Quando o cliente perde dinheiro, informe. Não comemore nem console.
+Responda em duas ou três linhas, direto, sem jargão e sem empolgação de vendedor.
+Quando o cliente perde dinheiro, informe: não comemore nem console.
 
-O que você nunca faz:
-- Nunca prometa resultado, ganho ou probabilidade de sucesso.
-- Nunca diga que um robô "está quente", "vai virar" ou "está numa boa fase". Robôs não têm fase.
-- Nunca sugira aumentar a entrada depois de uma perda.
-- Nunca invente número. Todo valor que você disser precisa ter vindo de uma ferramenta
-  nesta conversa. Se você não sabe, diga que não sabe e chame a ferramenta.
+Nunca:
+- prometa resultado, ganho ou probabilidade de sucesso;
+- diga que um robô "está quente" ou "vai virar" — robôs não têm fase;
+- sugira aumentar a entrada depois de uma perda;
+- invente número. Todo valor que você disser veio de uma ferramenta desta conversa.
+  Se não sabe, diga que não sabe e chame a ferramenta.
 
-Sobre ligar robôs:
-- Você não liga robô. Você chama propor_sessao e a tela mostra um cartão para o cliente conferir e clicar.
-- Antes de propor, use minhas_contas para saber a conta e o saldo, e listar_robos se o cliente não disse qual robô quer.
-- Se o cliente não disser onde parar, proponha assim mesmo: propor_sessao devolve valores sugeridos para o saldo dele.
-- Se propor_sessao recusar, explique o motivo que ela devolveu, em uma linha. Não tente contornar.`
+Ligar robô:
+- Você não liga. Chame propor_sessao e a tela mostra um cartão para o cliente clicar.
+- Chame propor_sessao direto: ela descobre conta, saldo e sugere os valores sozinha.
+- Se ela recusar, explique em uma linha o motivo devolvido. Não tente contornar.`
 
 /* ------------------------------------------------------------ ferramentas */
 
 const FERRAMENTAS: Anthropic.Tool[] = [
   {
     name: 'listar_robos',
-    description: 'Lista os robôs da Teeds e a regra de cada um (quais dígitos pagam). ' +
-      'Use quando o cliente não disser qual robô quer, ou perguntar o que existe.',
+    description: 'Os robôs da Teeds e a regra de cada um.',
     input_schema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
     name: 'minhas_contas',
-    description: 'As contas Deriv deste cliente, com tipo (demonstração ou real), moeda e saldo. ' +
-      'Use antes de propor qualquer robô.',
+    description: 'As contas Deriv deste cliente: tipo, moeda e saldo.',
     input_schema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
     name: 'sessoes',
-    description: 'Os robôs deste cliente que estão operando agora e os que encerraram há pouco.',
+    description: 'Os robôs deste cliente operando agora e os encerrados há pouco.',
     input_schema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
     name: 'status_sessao',
-    description: 'Como está uma sessão: operações, ganhos, perdas, resultado e se ainda roda.',
+    description: 'Como está uma sessão.',
     input_schema: {
       type: 'object',
-      properties: { id: { type: 'string', description: 'Identificador da sessão.' } },
+      properties: { id: { type: 'string' } },
       required: ['id'], additionalProperties: false,
     },
   },
   {
     name: 'parar_sessao',
-    description: 'Desliga um robô que está rodando. Uma operação já aberta ainda vai liquidar.',
+    description: 'Desliga um robô. Uma operação já aberta ainda liquida.',
     input_schema: {
       type: 'object',
-      properties: { id: { type: 'string', description: 'Identificador da sessão.' } },
+      properties: { id: { type: 'string' } },
       required: ['id'], additionalProperties: false,
     },
   },
   {
     name: 'propor_sessao',
-    description: 'Monta a proposta de ligar um robô e devolve para a tela desenhar um cartão. ' +
-      'NÃO liga nada: quem liga é o clique do cliente no cartão. ' +
-      'Se os valores estourarem os limites do cliente, devolve a recusa e o motivo.',
+    description: 'Monta o cartão de ligar um robô. NÃO liga: quem liga é o clique do cliente. ' +
+      'Descobre conta e saldo sozinha, e sugere os valores se você não passar.',
     input_schema: {
       type: 'object',
       properties: {
-        robo: { type: 'string', description: 'Identificador do robô, como em listar_robos (ex.: ag2, superior5).' },
-        conta: { type: 'string', description: 'Conta Deriv. Se omitida, usa a de demonstração.' },
-        entrada: { type: 'number', description: 'Valor de cada entrada. Se omitido, o servidor sugere pelo saldo.' },
-        stop_loss: { type: 'number', description: 'Perda que encerra a sessão. Se omitido, o servidor sugere.' },
-        take_profit: { type: 'number', description: 'Ganho que encerra a sessão. Se omitido, o servidor sugere.' },
+        robo: { type: 'string', description: 'Id do robô (ex.: ag2, superior5).' },
+        conta: { type: 'string', description: 'Conta Deriv. Omitida = a de demonstração.' },
+        entrada: { type: 'number' },
+        stop_loss: { type: 'number' },
+        take_profit: { type: 'number' },
       },
       required: ['robo'], additionalProperties: false,
     },
