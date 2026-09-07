@@ -1,0 +1,78 @@
+/*
+ * O tema da OMNI — a escrita e as cores que a diferenciam da Teeds.
+ *
+ * A Teeds fala em serifa dourada (Cinzel) sobre quase-preto: casa de operacao
+ * com peso. A OMNI e banco: bastao geometrico, azul-marinho, ar limpo.
+ * Duas familias, uma para o texto corrido (Manrope, boa em numero e em
+ * tela pequena) e uma para a palavra da marca (Sora, mais larga e firme).
+ *
+ * Este arquivo VENCE o app.css (entra depois dele) e so existe no build da
+ * OMNI — a Teeds continua com o padrao. Ver src/casca/LEIA-ME.md.
+ *
+ * O --primary (marinho no claro, azul-aco no escuro) ja vem da tabela de
+ * marcas em tempo de execucao (src/core/tema.ts). Aqui entram o que la nao
+ * alcanca: a fonte, a tinta do texto, os fundos, e o dourado que o app.css
+ * escreveu a mao em alguns cantos e que aqui vira a cor da marca.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap');
+
+:root {
+  --fonte-corpo: 'Manrope', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --fonte-marca: 'Sora', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+
+  /* tinta azul-marinho em vez de quase-preto; fundos um grau mais frios */
+  --text: #13233b;
+  --muted: #66768e;
+  --surface: #f4f7fb;
+  --surface-alt: #fbfcfe;
+  --border: #dde5ef;
+  --trilho: #d9e2ee;
+  --desativado: #c9d4e3;
+}
+
+:root[data-tema='escuro'] {
+  /* noite azul, nao noite preta */
+  --bg: #0a111d;
+  --surface: #0e1727;
+  --surface-alt: #132038;
+  --border: #213047;
+  --text: #e7edf6;
+  --muted: #8d9fb8;
+  --trilho: #22314a;
+  --desativado: #2b3a52;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(3, 10, 24, 0.5);
+}
+
+body { font-family: var(--fonte-corpo); letter-spacing: 0.004em; }
+
+/* ------------------------------------------------ a palavra da marca */
+.marca-nome {
+  font-family: var(--fonte-marca);
+  font-weight: 600; font-size: 15px; letter-spacing: 0.32em;
+  background: none; -webkit-background-clip: initial; background-clip: initial;
+  color: var(--primary); -webkit-text-fill-color: var(--primary);
+}
+.marca-selo {
+  background: radial-gradient(circle at 30% 25%, #1d3d6b, #0a1a33 72%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .25), inset 0 1px 0 rgba(255, 255, 255, .10);
+}
+
+/* ------------------------- o dourado escrito a mao vira cor da marca */
+.tv-abas button.on {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+.tv-abas button.on > i { color: var(--primary); }
+.tv-tabela tbody tr.recente {
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
+  box-shadow: inset 0 0 18px color-mix(in srgb, var(--primary) 6%, transparent);
+}
+.tv-assinatura { color: var(--primary); font-family: var(--fonte-marca); font-weight: 600; }
+.tv-fluxo-etapa.ativa > i {
+  border-color: var(--primary);
+  color: color-mix(in srgb, var(--primary) 70%, #ffffff);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.tv-fluxo-linha span { background: var(--primary); }
+.aula-progresso-card u { background: var(--primary); }
+.go { --go-gold: var(--primary); }

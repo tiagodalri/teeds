@@ -1,0 +1,10 @@
+/*
+ * O tema da marca — fonte e cores que diferenciam uma casca da outra.
+ *
+ * Este arquivo, o compartilhado, e de proposito VAZIO: a Teeds usa o que o
+ * app.css ja define (sistema no corpo, Cinzel dourada na marca). Uma marca
+ * que queira outra escrita poe a copia dela em src/casca/<marca>/styles/tema.css
+ * e o build daquela marca usa a copia no lugar deste (ver src/casca/LEIA-ME.md).
+ *
+ * Entra depois do app.css, entao o que estiver aqui vence.
+ */
