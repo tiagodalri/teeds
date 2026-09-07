@@ -146,11 +146,14 @@ export function montarConfig(p: Parametros): ConfigEstrategia {
     }
   }
 
-  const { galeApos } = recuperacaoDoRobo(p.roboId)
+  // A mesma regra da tela: gatilho e margem vem da tabela do robo. Antes o
+  // servidor usava margem 1 (recuperar + uma entrada inteira) e a tela 0.05 —
+  // o mesmo robo se comportava diferente conforme quem o ligava.
+  const { galeApos, margem } = recuperacaoDoRobo(p.roboId)
   return {
     valorInicial: p.valorInicial,
     valorAoVencer: p.valorInicial,
-    fatorGale: 1,
+    fatorGale: margem,
     galeApos,
     valorMaximo: p.valorMaximo ?? Math.max(p.valorInicial * 50, p.stopLoss),
     takeProfit: p.takeProfit,

@@ -5,7 +5,11 @@ export const RECUPERACAO_POR_ROBO: Record<string, { galeApos: number; margem: nu
   superior5: { galeApos: 3, margem: 0.05 },
   ag2: { galeApos: 3, margem: 0.05 },
   smart03: { galeApos: 3, margem: 0.05 },
-  goreme: { galeApos: 3, margem: 0.05 },
+  // Goreme paga 6%: recuperar 3 perdas exigiria 52x a base, e a segunda
+  // recuperacao 930x. Ligando na primeira perda a escada comeca em 18x —
+  // ainda alta, porque e o payout que dita o tamanho, mas o buraco a cobrir
+  // e um terco. Perda rara, recuperacao cedo.
+  goreme: { galeApos: 1, margem: 0.05 },
   firstblock: { galeApos: 3, margem: 0.05 },
   secondblock: { galeApos: 3, margem: 0.05 },
   superior5fixo: { galeApos: 3, margem: 0 },
@@ -147,7 +151,7 @@ export const GOREME: Estrategia = {
   origem: 'reconstruído a partir do vídeo do robô original',
   descricao:
     'Opera contratos de 1 tick e ganha quando o último dígito está entre 0 e 8. ' +
-    'O retorno por acerto é pequeno, por isso exige limite de entrada rigoroso.',
+    'O retorno por acerto é pequeno, por isso a recuperação liga já na primeira perda.',
   contractType: 'DIGITUNDER',
   barreira: 9,
 }
