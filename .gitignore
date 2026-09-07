@@ -9,3 +9,4 @@ docs/assets/index-*
 vite.config.ts.timestamp-*
 .claude/settings.local.json
 docs-omni/
+.omni-publicacao/
