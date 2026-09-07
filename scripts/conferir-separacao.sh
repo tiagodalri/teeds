@@ -74,9 +74,18 @@ fi
 if [ "$nada" = 0 ] && [ "$so_teeds" = 1 ] && [ "$omni_mudou" = 1 ]; then
   echo; echo "✕ A mudanca era so na casca da Teeds, mas o site da OMNI saiu diferente."; falhou=1
 fi
+# A referencia da OMNI so e regravada quando a conferencia passa. Se alguem
+# montou e guardou fonte sem rodar a trava, a referencia envelhece e a trava
+# passaria a barrar para sempre. ACEITAR_OMNI=1 diz "esta montagem e a boa":
+# regrava a referencia e segue. So a da OMNI — a da Teeds e o proprio commit.
+if [ "$nada" = 1 ] && [ "$omni_mudou" = 1 ] && [ "${ACEITAR_OMNI:-0}" = 1 ]; then
+  echo; echo "• Aceitando a montagem atual da OMNI como nova referencia (ACEITAR_OMNI=1)."
+  omni_mudou=0
+fi
 if [ "$nada" = 1 ] && { [ "$teeds_mudou" = 1 ] || [ "$omni_mudou" = 1 ]; }; then
   echo; echo "✕ Nenhuma fonte mudou, mas o site nao bate com o do commit: alguem guardou fonte sem montar,"
-  echo "  ou o build deixou de ser deterministico. Monte e faca commit de docs/ e de $REF_OMNI."; falhou=1
+  echo "  ou o build deixou de ser deterministico. Monte e faca commit de docs/ e de $REF_OMNI."
+  echo "  Se a montagem atual da OMNI e a boa: ACEITAR_OMNI=1 npm run separacao"; falhou=1
 fi
 
 if [ "$falhou" = 1 ]; then
