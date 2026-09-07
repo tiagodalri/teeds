@@ -16,8 +16,11 @@ REPO="${REPO_OMNI:-https://github.com/tiagodalri/omni.git}"
 DOMINIO="omnifinanc.com"
 CLONE=".omni-publicacao"     # ignorado pelo git deste repositorio
 
-echo "== 1/4 montando a OMNI =="
-MARCA=omni npm run build
+echo "== 1/4 montando os dois e conferindo a separacao =="
+# Monta a OMNI e a Teeds e confere que uma mudanca de casca nao vazou para a
+# outra marca. Se vazou, para aqui — melhor nao publicar do que publicar
+# uma Teeds alterada sem querer.
+bash scripts/conferir-separacao.sh
 
 echo "== 2/4 preparando a casa =="
 if [ ! -d "$CLONE/.git" ]; then
