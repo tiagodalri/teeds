@@ -80,7 +80,11 @@ if [ "$nada" = 1 ] && { [ "$teeds_mudou" = 1 ] || [ "$omni_mudou" = 1 ]; }; then
 fi
 
 if [ "$falhou" = 1 ]; then
-  echo "  Arquivos alterados:"; echo "$MUDADOS" | sed 's/^/    /'
+  [ "$nada" = 0 ] && { echo "  Arquivos alterados:"; echo "$MUDADOS" | sed 's/^/    /'; }
+  # Sobra na pasta (arquivo gerado por um build antigo, que o git nem ve) e a
+  # causa mais comum de "nao bate sem fonte ter mudado" — e vai publicado.
+  SOBRAS="$(comm -13 <(echo "$ANTES_TEEDS" | awk '{print $2}' | sort) <(echo "$DEPOIS_TEEDS" | awk '{print $2}' | sort))"
+  [ -n "$SOBRAS" ] && { echo "  Em docs/assets ha arquivo que o commit nao conhece (sobra de build antigo?):"; echo "$SOBRAS" | sed 's/^/    docs\/assets\//'; }
   exit 1
 fi
 
