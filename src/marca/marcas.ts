@@ -54,6 +54,15 @@ export interface Marca {
    */
   robos: string[]
   /**
+   * Nomes próprios desta marca para robôs específicos, por id.
+   *
+   * O padrão é o molde do catálogo ("{marca} - AG7" vira "OMNI - AG7").
+   * Quando a marca quer um nome de verdade — "OMNI Over" em vez de
+   * "OMNI - AG7" — ele entra aqui. Só o nome muda: o id, o motor, o
+   * histórico e os produtos comprados continuam amarrados ao mesmo robô.
+   */
+  nomesDosRobos?: Record<string, string>
+  /**
    * A cor da marca, uma por tema.
    *
    * Duas porque uma só não serve: um azul-marinho profundo desaparece sobre
@@ -118,7 +127,15 @@ export const MARCAS: Record<string, Marca> = {
     appId: '34gMUQCaYNX1M93Q7aq5R',
     redirectUri: 'https://teedscompany.com/',
     afiliado: 'https://t.deriv.link?t=W7L5WVEEQGHY',
-    robos: ['superior5', 'ag2', 'smart03', 'goreme', 'firstblock', 'secondblock'],
+    // Quatro robôs, com nomes da casa. Under/Over pelos dígitos que ganham;
+    // Bull/Bear pelas metades da dezena. O motor é o mesmo da Teeds.
+    robos: ['ag2', 'superior5', 'firstblock', 'secondblock'],
+    nomesDosRobos: {
+      ag2: 'OMNI Under',
+      superior5: 'OMNI Over',
+      firstblock: 'OMNI Bull',
+      secondblock: 'OMNI Bear',
+    },
     base: '/',
     emblema: 'teeds-marca.png',
     cor: { claro: '#4c6fff', escuro: '#d0aa52' },

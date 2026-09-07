@@ -5,7 +5,7 @@ import { TeedsSocket } from '../../src/core/deriv/client'
 import { MotorTeeds, type EstadoMotor } from '../../src/core/deriv/engine'
 import { fetchAccounts, fetchTradingSocketUrl, type TradingAccount } from '../../src/core/deriv/account'
 import { fetchActiveSymbols } from '../../src/core/deriv/market'
-import { ESTRATEGIAS_LOCAIS, nomeDoRobo, recuperacaoDoRobo } from '../../src/core/deriv/strategies'
+import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca, recuperacaoDoRobo } from '../../src/core/deriv/strategies'
 import { marcaPorId } from '../../src/marca/marcas'
 import { ATIVO_DOS_ROBOS } from '../../src/core/deriv/config'
 import type { AuthSession } from '../../src/core/deriv/auth'
@@ -88,12 +88,11 @@ export function robo(id: string): Estrategia {
 
 export function listarRobos(marca?: string) {
   const m = marcaPorId(marca)
-  const prefixo = m.prefixoRobo
   // Só os robôs desta plataforma. Sem o filtro, o assistente da OMNI
   // ofereceria robôs que a tela dela nem mostra.
   return ESTRATEGIAS_LOCAIS.filter((e) => m.robos.includes(e.id)).map((e) => ({
     id: e.id,
-    nome: nomeDoRobo(e, prefixo),
+    nome: nomeDoRoboNaMarca(e, m),
     contrato: e.contractType,
     barreira: e.barreira,
     ganhaQuando: descreverRegra(e),
@@ -210,7 +209,7 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
   const sessao: Sessao = {
     id,
     roboId: estrategia.id,
-    roboNome: nomeDoRobo(estrategia, marcaPorId(p.marca).prefixoRobo),
+    roboNome: nomeDoRoboNaMarca(estrategia, marcaPorId(p.marca)),
     contaId: conta.accountId,
     demo: conta.type === 'demo',
     moeda: conta.currency,
@@ -231,7 +230,7 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
         sessaoRef: id,
         contaId: conta.accountId,
         roboId: estrategia.id,
-        roboNome: nomeDoRobo(estrategia, marcaPorId(p.marca).prefixoRobo),
+        roboNome: nomeDoRoboNaMarca(estrategia, marcaPorId(p.marca)),
         ativo: ATIVO_DOS_ROBOS,
         entrada: config.valorInicial,
         stopLoss: config.stopLoss,
@@ -262,7 +261,7 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
             contractId: op.contractId,
             contaId: conta.accountId,
             roboId: estrategia.id,
-            roboNome: nomeDoRobo(estrategia, marcaPorId(p.marca).prefixoRobo),
+            roboNome: nomeDoRoboNaMarca(estrategia, marcaPorId(p.marca)),
             ativo: ATIVO_DOS_ROBOS,
             tipoContrato: estrategia.contractType,
             demo: conta.type === 'demo',

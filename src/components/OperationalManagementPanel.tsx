@@ -14,14 +14,16 @@ const nomeDeRobo = (id: string) => identidade(id).nome
 type RoboId = 'superior5' | 'ag2' | 'smart03' | 'goreme' | 'firstblock' | 'secondblock'
 type PerfilRobo = { id: RoboId; nome: string; regra: string; chance: number; retornoLiquido: number; galeApos: number; cor: string }
 
-const ROBOS: PerfilRobo[] = [
+const TODOS_OS_ROBOS: PerfilRobo[] = [
   { id: 'superior5', nome: nomeDeRobo('superior5'), regra: 'vence com os dígitos 7, 8 e 9', chance: 30, retornoLiquido: 1.92, galeApos: 3, cor: '#e8892b' },
   { id: 'ag2', nome: nomeDeRobo('ag2'), regra: 'vence com os dígitos 0, 1 e 2', chance: 30, retornoLiquido: 1.92, galeApos: 3, cor: '#0ea5e9' },
   { id: 'smart03', nome: nomeDeRobo('smart03'), regra: 'vence com os dígitos de 4 a 9', chance: 60, retornoLiquido: .38, galeApos: 3, cor: '#d0aa52' },
   { id: 'goreme', nome: nomeDeRobo('goreme'), regra: 'vence com os dígitos de 0 a 8', chance: 90, retornoLiquido: .10, galeApos: 3, cor: '#b86f3c' },
-  { id: 'firstblock', nome: 'First Block', regra: 'vence com os dígitos de 0 a 4', chance: 50, retornoLiquido: .92, galeApos: 3, cor: '#d0aa52' },
-  { id: 'secondblock', nome: 'Second Block', regra: 'vence com os dígitos de 5 a 9', chance: 50, retornoLiquido: .92, galeApos: 3, cor: '#b86f3c' },
+  { id: 'firstblock', nome: nomeDeRobo('firstblock'), regra: 'vence com os dígitos de 0 a 4', chance: 50, retornoLiquido: .92, galeApos: 3, cor: '#d0aa52' },
+  { id: 'secondblock', nome: nomeDeRobo('secondblock'), regra: 'vence com os dígitos de 5 a 9', chance: 50, retornoLiquido: .92, galeApos: 3, cor: '#b86f3c' },
 ]
+// So os robos que esta plataforma oferece — a OMNI nao mostra os que nao vende.
+const ROBOS: PerfilRobo[] = TODOS_OS_ROBOS.filter((r) => MARCA.robos.includes(r.id))
 
 const formatarMoeda = (v: number, codigo: string) => v.toLocaleString('pt-BR', { style: 'currency', currency: codigo })
 const n = (v: string, fallback: number) => {

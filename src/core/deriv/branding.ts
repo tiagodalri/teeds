@@ -5,7 +5,7 @@
  * pelo desenho antes de ler o nome.
  */
 
-import { ESTRATEGIAS_LOCAIS, nomeDoRobo } from './strategies'
+import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca } from './strategies'
 import { MARCA } from '../../marca'
 
 export type OndeRoda = 'servidor' | 'teeds'
@@ -38,9 +38,9 @@ export interface Identidade {
  * palavra nos dois lugares foi o que quase deixou a OMNI mostrar robôs
  * chamados "Teeds".
  */
-function nomeDaEstrategia(id: string): string {
+export function nomeDaEstrategia(id: string): string {
   const e = ESTRATEGIAS_LOCAIS.find((x) => x.id === id)
-  return nomeDoRobo(e ?? { nome: id }, MARCA.prefixoRobo)
+  return nomeDoRoboNaMarca(e ?? { id, nome: id }, MARCA)
 }
 
 export const CATALOGO: Identidade[] = [
@@ -101,14 +101,14 @@ export const CATALOGO: Identidade[] = [
     chance: 90, contrato: 'DIGITUNDER',
   },
   {
-    id: 'firstblock', nome: 'First Block', chamada: 'A primeira metade',
+    id: 'firstblock', nome: nomeDaEstrategia('firstblock'), chamada: 'A primeira metade',
     descricao: 'Ganha quando o último dígito é 0, 1, 2, 3 ou 4. Recuperação precisa após o gatilho.',
     cor: '#d0aa52', corSuave: '#f7f0df', onde: 'teeds',
     emblema: 'M9 11 h8 M9 11 v18 M9 29 h8 M31 11 h-8 M31 11 v18 M31 29 h-8',
     chance: 50, contrato: 'DIGITUNDER',
   },
   {
-    id: 'secondblock', nome: 'Second Block', chamada: 'A segunda metade',
+    id: 'secondblock', nome: nomeDaEstrategia('secondblock'), chamada: 'A segunda metade',
     descricao: 'Ganha quando o último dígito é 5, 6, 7, 8 ou 9. Recuperação precisa após o gatilho.',
     cor: '#b86f3c', corSuave: '#f8ebe3', onde: 'teeds',
     emblema: 'M8 14 h10 v12 H8 M22 14 h10 v12 H22 M20 8 v24',

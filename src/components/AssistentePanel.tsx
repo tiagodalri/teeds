@@ -9,6 +9,7 @@ import { acompanharVivas, pararNoServidor, sessoesVivas, type SessaoViva } from 
 import { ChatProposta } from './ChatProposta'
 import { LocalRobotPanel } from './LocalRobotPanel'
 import { MARCA } from '../marca'
+import { nomeDaEstrategia } from '../core/deriv/branding'
 
 /**
  * O assistente da Teeds — uma aba inteira, não uma gaveta.
@@ -37,8 +38,8 @@ const din = (v: number, moeda = 'USD') =>
 type Sugestao = { texto: string; atalho?: 'robos' | 'parar' }
 const SUGESTOES: Sugestao[] = [
   { texto: 'Como estão meus robôs?', atalho: 'robos' },
-  { texto: 'Qual a diferença entre o AG2 e o AG7?' },
-  { texto: 'Ligar o AG2 com 1 dólar na demo' },
+  { texto: `Qual a diferença entre o ${nomeDaEstrategia('ag2')} e o ${nomeDaEstrategia('superior5')}?` },
+  { texto: `Ligar o ${nomeDaEstrategia('ag2')} com 1 dólar na demo` },
   { texto: 'Parar tudo', atalho: 'parar' },
 ]
 

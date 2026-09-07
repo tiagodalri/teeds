@@ -207,6 +207,16 @@ export const SUPERIOR_5_FIXO: Estrategia = {
 export const nomeDoRobo = (e: { nome: string }, prefixo: string): string =>
   e.nome.replace('{marca}', prefixo)
 
+/**
+ * O nome do robô numa marca: o apelido próprio dela, se houver, senão o
+ * molde com o prefixo. É por aqui que "superior5" vira "OMNI Over" numa
+ * plataforma e "Teeds - AG7" na outra.
+ */
+export const nomeDoRoboNaMarca = (
+  e: { id: string; nome: string },
+  marca: { prefixoRobo: string; nomesDosRobos?: Record<string, string> },
+): string => marca.nomesDosRobos?.[e.id] ?? nomeDoRobo(e, marca.prefixoRobo)
+
 export const ESTRATEGIAS_LOCAIS: Estrategia[] = [
   SUPERIOR_5, AG_2, SMART_03, GOREME, FIRST_BLOCK, SECOND_BLOCK, SUPERIOR_5_FIXO,
 ]
