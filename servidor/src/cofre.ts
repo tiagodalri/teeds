@@ -3,6 +3,7 @@ import './ambiente'
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
+import { marcaPorId } from '../../src/marca/marcas'
 import { guardarSegredoDeriv, lerSegredoDeriv } from './supabase'
 import type { AuthSession } from '../../src/core/deriv/auth'
 
@@ -61,12 +62,15 @@ function decifrar(guardado: string): string {
 }
 
 /** Guarda (ou substitui) a autorização deste cliente. */
-export async function guardar(userId: string, sessao: AuthSession): Promise<void> {
+export async function guardar(
+  userId: string, sessao: AuthSession, marca = 'teeds',
+): Promise<void> {
   if (!sessao.accessToken) throw new Error('Autorização vazia.')
   await guardarSegredoDeriv(
     userId,
     cifrar(JSON.stringify(sessao)),
     sessao.expiresAt ? new Date(sessao.expiresAt).toISOString() : null,
+    marca,
   )
 }
 
@@ -79,7 +83,9 @@ const FOLGA = 5 * 60_000
  * Sem isto, um robô que roda por horas morre no meio da sessão quando a
  * autorização vence — e o cliente descobre pelo resultado, não pelo aviso.
  */
-async function renovar(userId: string, sessao: AuthSession): Promise<AuthSession | null> {
+async function renovar(
+  userId: string, sessao: AuthSession, marca: string,
+): Promise<AuthSession | null> {
   if (!sessao.refreshToken) return null
   try {
     const res = await fetch(DERIV.oauth.token, {
@@ -87,7 +93,9 @@ async function renovar(userId: string, sessao: AuthSession): Promise<AuthSession
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         grant_type: 'refresh_token',
-        client_id: DERIV.appId,
+        // A app que emitiu é a que renova. Uma autorização da OMNI não se
+        // renova com a app da Teeds — a Deriv recusa, e o robô morreria.
+        client_id: marcaPorId(marca).appId,
         refresh_token: sessao.refreshToken,
       }).toString(),
     })
@@ -98,7 +106,7 @@ async function renovar(userId: string, sessao: AuthSession): Promise<AuthSession
       refreshToken: dados.refresh_token ?? sessao.refreshToken,
       expiresAt: dados.expires_in ? Date.now() + Number(dados.expires_in) * 1000 : undefined,
     }
-    await guardar(userId, nova)
+    await guardar(userId, nova, marca)
     console.log(`[cofre] autorizacao renovada para o cliente ${userId.slice(0, 8)}…`)
     return nova
   } catch {
@@ -150,7 +158,7 @@ export async function autorizacaoDoCliente(userId: string): Promise<DoCofre> {
   }
 
   if (sessao.expiresAt && Date.now() > sessao.expiresAt - FOLGA) {
-    const nova = await renovar(userId, sessao)
+    const nova = await renovar(userId, sessao, linha.marca)
     if (!nova) {
       console.warn(`[cofre] a autorizacao do cliente ${marca(userId)} venceu e nao deu para renovar.`)
       return { tipo: 'vencido' }

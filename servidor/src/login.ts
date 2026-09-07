@@ -4,6 +4,7 @@ import { createServer } from 'node:http'
 import { createHash, randomBytes } from 'node:crypto'
 import { writeFileSync, chmodSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
+import { marcaPorId } from '../../src/marca/marcas'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -79,7 +80,7 @@ const servidor = createServer(async (req, res) => {
 
     const ida = new URL(DERIV.oauth.authorize)
     ida.searchParams.set('response_type', 'code')
-    ida.searchParams.set('client_id', DERIV.appId)
+    ida.searchParams.set('client_id', marcaPorId(process.env.MARCA).appId)
     ida.searchParams.set('redirect_uri', RETORNO)
     ida.searchParams.set('scope', DERIV.scopes.join(' '))
     ida.searchParams.set('state', state)
@@ -118,7 +119,7 @@ const servidor = createServer(async (req, res) => {
     try {
       const corpo = new URLSearchParams({
         grant_type: 'authorization_code',
-        client_id: DERIV.appId,
+        client_id: marcaPorId(process.env.MARCA).appId,
         code,
         redirect_uri: RETORNO,
         code_verifier: tentativa.verifier,

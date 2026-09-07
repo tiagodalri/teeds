@@ -1,5 +1,6 @@
 import { DERIV, LIMITS } from './config'
 import type { ConnectionState, DerivMessage } from './types'
+import { MARCA } from '../../marca'
 
 type Handler = (msg: DerivMessage) => void
 type StateListener = (state: ConnectionState) => void
@@ -73,8 +74,8 @@ export class TeedsSocket {
     this.closedByUser = false
     this.setState(this.attempts === 0 ? 'connecting' : 'reconnecting')
 
-    const target = DERIV.appId && !this.url.includes('otp=')
-      ? `${this.url}?app_id=${encodeURIComponent(DERIV.appId)}`
+    const target = MARCA.appId && !this.url.includes('otp=')
+      ? `${this.url}?app_id=${encodeURIComponent(MARCA.appId)}`
       : this.url
 
     const ws = new WebSocket(target)

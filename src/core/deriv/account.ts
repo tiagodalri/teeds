@@ -1,5 +1,6 @@
 import { DERIV } from './config'
 import type { AuthSession } from './auth'
+import { MARCA } from '../../marca'
 
 export interface TradingAccount {
   accountId: string
@@ -12,7 +13,7 @@ export interface TradingAccount {
 
 function headers(session: AuthSession): HeadersInit {
   return {
-    'Deriv-App-ID': DERIV.appId,
+    'Deriv-App-ID': MARCA.appId,
     Authorization: `Bearer ${session.accessToken}`,
     'Content-Type': 'application/json',
   }

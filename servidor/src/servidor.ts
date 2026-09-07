@@ -4,6 +4,7 @@ import { createServer } from 'node:http'
 import { createHash, randomBytes } from 'node:crypto'
 import { writeFileSync, chmodSync, existsSync, readFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
+import { marcaPorId } from '../../src/marca/marcas'
 import { atender, autorizacao } from './mcp'
 import { contasDoUsuario, limitesDoCliente, limparSessoesOrfas, supabaseConfigurado, usuarioDoToken } from './supabase'
 import { contas, iniciar, montarConfig, parar, todas, ver } from './sessoes'
@@ -117,7 +118,7 @@ const servidor = createServer(async (req, res) => {
 
     const ida = new URL(DERIV.oauth.authorize)
     ida.searchParams.set('response_type', 'code')
-    ida.searchParams.set('client_id', DERIV.appId)
+    ida.searchParams.set('client_id', marcaPorId(process.env.MARCA).appId)
     ida.searchParams.set('redirect_uri', RETORNO)
     ida.searchParams.set('scope', DERIV.scopes.join(' '))
     ida.searchParams.set('state', state)
@@ -156,7 +157,7 @@ const servidor = createServer(async (req, res) => {
     try {
       const corpo = new URLSearchParams({
         grant_type: 'authorization_code',
-        client_id: DERIV.appId,
+        client_id: marcaPorId(process.env.MARCA).appId,
         code,
         redirect_uri: RETORNO,
         code_verifier: tentativa.verifier,
@@ -316,12 +317,14 @@ const servidor = createServer(async (req, res) => {
         // "como esse robo foi ligado?". Vem do cliente, entao so dois valores
         // sao aceitos: qualquer outra coisa vira 'navegador'.
         const origem = corpo.origem === 'chat' ? 'chat' as const : 'navegador' as const
+        // De qual marca veio o pedido — muda só o nome do robô no histórico.
+        const marca = typeof corpo.marca === 'string' ? corpo.marca : undefined
         const s = await iniciar(auth, {
           roboId: String(corpo.roboId ?? ''),
           contaId,
           valorInicial, stopLoss, takeProfit,
           config,
-          origem,
+          origem, marca,
         })
         return json(200, resumo(s))
       }
@@ -342,7 +345,7 @@ const servidor = createServer(async (req, res) => {
           accessToken,
           refreshToken: corpo.refreshToken ? String(corpo.refreshToken) : undefined,
           expiresAt: corpo.expiresAt ? Number(corpo.expiresAt) : undefined,
-        })
+        }, typeof corpo.marca === 'string' ? corpo.marca : 'teeds')
         return json(200, { guardado: true })
       }
 

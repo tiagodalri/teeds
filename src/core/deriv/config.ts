@@ -1,5 +1,10 @@
 /**
- * Teeds - configuracao de conexao com a Deriv
+ * Conexao com a Deriv — o que vale para qualquer marca.
+ *
+ * Este arquivo nao sabe que marcas existem, e nao pode saber: ele e
+ * importado tanto pelo app quanto pelo servidor em Node. O que muda de
+ * marca para marca (a app da Deriv, o endereco de retorno, o afiliado)
+ * mora em `src/marca/marcas.ts`.
  *
  * Tres superficies de WebSocket, conforme a documentacao oficial:
  *  - public: dados de mercado, sem autenticacao
@@ -16,24 +21,12 @@ export const DERIV = {
     authorize: 'https://auth.deriv.com/oauth2/auth',
     token: 'https://auth.deriv.com/oauth2/token',
   },
-  /** App ID da Teeds, registrado no dashboard da Deriv. Identificador publico. */
-  appId: '34gMUQCaYNX1M93Q7aq5R',
-  /** Endereco de retorno registrado na Deriv - precisa bater exatamente. */
-  redirectUri: 'https://tiagodalri.github.io/teeds/',
   /** Escopos concedidos ao app. */
   scopes: ['trade', 'account_manage', 'application_read'],
 } as const
 
 /**
- * Link de afiliado da Teeds na Deriv.
- *
- * Quem abre conta por aqui fica ligado a esta parceria — e as operacoes
- * feitas pela Teeds passam a gerar o markup de 3%.
- */
-export const AFILIADO = 'https://t.deriv.link?t=W7L5WVEEQGHY'
-
-/**
- * Ativos habilitados na Teeds. Por enquanto so os indices de volatilidade
+ * Ativos habilitados. Por enquanto so os indices de volatilidade
  * de 1 segundo — sao os que operam 24 horas e tem tick a cada segundo.
  */
 export const ATIVOS_PERMITIDOS = [

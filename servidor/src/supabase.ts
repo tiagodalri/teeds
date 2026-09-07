@@ -384,27 +384,29 @@ export async function usoDeHojeDoChat(userId: string): Promise<number> {
  * ------------------------------------------------------------------ */
 
 export async function guardarSegredoDeriv(
-  userId: string, segredo: string, expiraEm: string | null,
+  userId: string, segredo: string, expiraEm: string | null, marca: string,
 ): Promise<void> {
   if (!URL_BASE) throw new Error('O servidor nao esta ligado ao banco da Teeds.')
   await rest('/deriv_autorizacoes?on_conflict=user_id', {
     method: 'POST',
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify({
-      user_id: userId, segredo, expira_em: expiraEm,
+      user_id: userId, segredo, expira_em: expiraEm, marca,
       atualizado_em: new Date().toISOString(),
     }),
   })
 }
 
-export async function lerSegredoDeriv(userId: string): Promise<{ segredo: string } | null> {
+export async function lerSegredoDeriv(
+  userId: string,
+): Promise<{ segredo: string; marca: string } | null> {
   if (!URL_BASE) return null
   try {
     const linhas = await rest<any[]>(
-      `/deriv_autorizacoes?select=segredo&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
+      `/deriv_autorizacoes?select=segredo,marca&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
     )
     const l = linhas?.[0]
-    return l?.segredo ? { segredo: String(l.segredo) } : null
+    return l?.segredo ? { segredo: String(l.segredo), marca: String(l.marca ?? 'teeds') } : null
   } catch {
     return null
   }

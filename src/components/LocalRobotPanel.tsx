@@ -10,6 +10,7 @@ import type { Identidade } from '../core/deriv/branding'
 import { Emblema } from './RobotCard'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { acompanharNoServidor, ligarNoServidor, pararNoServidor } from '../core/teeds/servidorRobos'
+import { MARCA } from '../marca'
 
 interface Props {
   socket: TeedsSocket | null
@@ -167,7 +168,7 @@ export function LocalRobotPanel({
   async function ligar(config: ConfigEstrategia, ativo: string) {
     void ativo // o robô opera sempre no ativo da casa
     if (!sessaoTeeds || !contaId) {
-      setErro('Entre na sua conta Teeds e conecte a Deriv para ligar o robô.')
+      setErro(`Entre na sua conta ${MARCA.prosa} e conecte a Deriv para ligar o robô.`)
       return
     }
     setPreparando(false)
@@ -201,7 +202,7 @@ export function LocalRobotPanel({
       rot: 'Recuperação',
       valor: cfg.fatorGale === 0
         ? 'desligado'
-        : 'automática Teeds',
+        : `automática ${MARCA.prosa}`,
     },
     { rot: 'Teto', valor: din(cfg.valorMaximo, moeda) },
     { rot: 'Para se ganhar', valor: din(cfg.takeProfit, moeda) },
@@ -242,7 +243,7 @@ export function LocalRobotPanel({
               {ligando ? 'ligando no servidor…' : <>Configurar e ligar <span>→</span></>}
             </button>
             {erro && <p className="pc-erro">{erro}</p>}
-            <p className="pc-nota">Os robôs operam no servidor da Teeds: seguem rodando com esta aba fechada.</p>
+            <p className="pc-nota">Os robôs operam no servidor da {MARCA.prosa}: seguem rodando com esta aba fechada.</p>
           </div>
         </div>
 

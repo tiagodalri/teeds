@@ -27,7 +27,7 @@ export function recuperacaoDoRobo(id: string) {
 
 export const SUPERIOR_5: Estrategia = {
   id: 'superior5',
-  nome: 'Teeds - AG7',
+  nome: '{marca} - AG7',
   origem: 'baseado no Deriv Bot SUPERIOR 5 VIP',
   descricao:
     'Ganha quando o último dígito é 7, 8 ou 9. Entra em todas as operações; ' +
@@ -91,7 +91,7 @@ export const SUPERIOR_5: Estrategia = {
 export const AG_2: Estrategia = {
   ...SUPERIOR_5,
   id: 'ag2',
-  nome: 'Teeds - AG2',
+  nome: '{marca} - AG2',
   origem: 'reconstruído a partir do Teeds Smart AG2 original',
   descricao:
     'Analisa os 25 últimos dígitos e entra quando 0, 1 e 2 somam pelo menos 36%. ' +
@@ -130,7 +130,7 @@ export const AG_2: Estrategia = {
 export const SMART_03: Estrategia = {
   ...SUPERIOR_5,
   id: 'smart03',
-  nome: 'Teeds Smart 03',
+  nome: '{marca} Smart 03',
   origem: 'reconstruído a partir do vídeo do robô original',
   descricao:
     'Opera contratos de 1 tick e ganha quando o último dígito é 4, 5, 6, 7, 8 ou 9. ' +
@@ -143,7 +143,7 @@ export const SMART_03: Estrategia = {
 export const GOREME: Estrategia = {
   ...SUPERIOR_5,
   id: 'goreme',
-  nome: 'Teeds Göreme',
+  nome: '{marca} Göreme',
   origem: 'reconstruído a partir do vídeo do robô original',
   descricao:
     'Opera contratos de 1 tick e ganha quando o último dígito está entre 0 e 8. ' +
@@ -189,6 +189,19 @@ export const SUPERIOR_5_FIXO: Estrategia = {
   aguardando: () => 'entrando na próxima',
   proximoValor: ({ valorAoVencer }) => valorAoVencer,
 }
+
+/**
+ * O nome do robô, com a marca no lugar.
+ *
+ * Os nomes guardam `{marca}` em vez da palavra: os mesmos robôs se chamam
+ * "Teeds - AG7" numa marca e "OMNI - AG7" noutra. Alguns não levam marca
+ * nenhuma ("First Block") — esses simplesmente não têm o lugar marcado.
+ *
+ * Antes o nome estava escrito duas vezes, aqui e em `branding.ts`. Duas
+ * cópias já eram um convite a divergir; com duas marcas seriam quatro.
+ */
+export const nomeDoRobo = (e: { nome: string }, prefixo: string): string =>
+  e.nome.replace('{marca}', prefixo)
 
 export const ESTRATEGIAS_LOCAIS: Estrategia[] = [
   SUPERIOR_5, AG_2, SMART_03, GOREME, FIRST_BLOCK, SECOND_BLOCK, SUPERIOR_5_FIXO,

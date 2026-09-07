@@ -64,7 +64,7 @@ async function consultar(session: AuthSession, de: string, ate: string): Promise
   const url = `${DERIV.restBase}/applications/v1/markup-statistics?date_from=${de}&date_to=${ate}`
   const res = await fetch(url, {
     headers: {
-      'Deriv-App-ID': DERIV.appId,
+      'Deriv-App-ID': MARCA.appId,
       Authorization: `Bearer ${session.accessToken}`,
     },
   })
@@ -153,6 +153,7 @@ export function simular(payoutSemMarkup: number, markupPct: number) {
 /* ------------------------------------------------------------------ */
 
 import type { TeedsSocket } from './client'
+import { MARCA } from '../../marca'
 
 export interface MarkupSimulado {
   operacoes: number
@@ -343,7 +344,7 @@ export async function simularComissaoPorDia(
     let doDia = { comissao: 0, operacoes: 0, pagamentos: 0, entradas: 0, resultado: 0 }
     for (const c of contratos) {
       // so o que passou pela Teeds gera markup
-      if (c.appId !== DERIV.appId || !c.pagamento) continue
+      if (c.appId !== MARCA.appId || !c.pagamento) continue
       doDia = {
         comissao: doDia.comissao + c.pagamento * taxa,
         operacoes: doDia.operacoes + 1,

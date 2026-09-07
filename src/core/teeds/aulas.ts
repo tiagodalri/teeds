@@ -1,3 +1,4 @@
+import { MARCA } from '../../marca'
 /**
  * O catalogo de aulas da Teeds — a "sala de aula" da plataforma.
  *
@@ -131,13 +132,13 @@ export const MODULOS: Modulo[] = [
       },
       {
         id: 'robo-ag7',
-        titulo: 'Teeds - AG7',
+        titulo: `${MARCA.prefixoRobo} - AG7`,
         descricao: 'O robô dos dígitos altos: ganha no 7, 8 e 9. Configuração passo a passo.',
         video: '', duracao: '',
       },
       {
         id: 'robo-ag2',
-        titulo: 'Teeds - AG2',
+        titulo: `${MARCA.prefixoRobo} - AG2`,
         descricao: 'O espelho do AG7 nos dígitos baixos: ganha no 0, 1 e 2.',
         video: '', duracao: '',
       },

@@ -1,4 +1,5 @@
 import { RITMO_ROBOS, SERVIDOR } from './config'
+import { MARCA } from '../../marca'
 import type { SessaoTeeds } from './conta'
 import type { ConfigEstrategia, EstadoMotor } from '../deriv/engine'
 
@@ -66,7 +67,9 @@ export async function entregarAutorizacao(
   deriv: { accessToken: string; refreshToken?: string; expiresAt?: number },
 ): Promise<void> {
   try {
-    await api(sessao, '/deriv', { method: 'POST', body: JSON.stringify(deriv) })
+    // A marca vai junto: renovar a autorização depois exige saber qual app
+    // da Deriv a emitiu, e só o navegador sabe de qual plataforma ele é.
+    await api(sessao, '/deriv', { method: 'POST', body: JSON.stringify({ ...deriv, marca: MARCA.id }) })
   } catch (e) {
     console.warn('[teeds] nao consegui entregar a autorizacao ao servidor:', (e as Error).message)
   }
@@ -77,9 +80,10 @@ export function ligarNoServidor(
   sessao: SessaoTeeds,
   pedido: { roboId: string; contaId: string; config: ConfigEstrategia; origem?: 'navegador' | 'chat' },
 ): Promise<SessaoNoServidor> {
+  // A marca vai junto para o robô se chamar pelo nome certo no histórico.
   return api<SessaoNoServidor>(sessao, '/sessao', {
     method: 'POST',
-    body: JSON.stringify(pedido),
+    body: JSON.stringify({ ...pedido, marca: MARCA.id }),
   })
 }
 

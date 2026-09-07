@@ -11,6 +11,7 @@
  */
 
 import { SUPABASE, autenticacaoConfigurada } from './config'
+import { MARCA } from '../../marca'
 
 export interface Usuario {
   id: string
@@ -47,7 +48,7 @@ export interface SessaoTeeds {
   usuario: Usuario
 }
 
-const CHAVE = 'teeds.conta'
+const CHAVE = `${MARCA.id}.conta`
 
 /* ---------------------------------------------------------------- baixo nivel */
 

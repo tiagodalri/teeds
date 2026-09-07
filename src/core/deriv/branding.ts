@@ -5,6 +5,9 @@
  * pelo desenho antes de ler o nome.
  */
 
+import { ESTRATEGIAS_LOCAIS, nomeDoRobo } from './strategies'
+import { MARCA } from '../../marca'
+
 export type OndeRoda = 'servidor' | 'teeds'
 
 export interface Identidade {
@@ -27,6 +30,19 @@ export interface Identidade {
  * Serve para reconhecer robos ja criados na conta da Deriv, que continuam
  * aparecendo no historico mesmo depois de sairem da vitrine.
  */
+/**
+ * O nome vem da estratégia, não daqui.
+ *
+ * Este arquivo cuida do desenho: cor, emblema, apelido. O nome é um dado só,
+ * e mora em `strategies.ts` — que é de onde o servidor também lê. Repetir a
+ * palavra nos dois lugares foi o que quase deixou a OMNI mostrar robôs
+ * chamados "Teeds".
+ */
+function nomeDaEstrategia(id: string): string {
+  const e = ESTRATEGIAS_LOCAIS.find((x) => x.id === id)
+  return nomeDoRobo(e ?? { nome: id }, MARCA.prefixoRobo)
+}
+
 export const CATALOGO: Identidade[] = [
   {
     id: 'acima', nome: 'Acima de 5', chamada: 'O otimista',
@@ -57,28 +73,28 @@ export const CATALOGO: Identidade[] = [
     chance: 50, contrato: 'DIGITODD',
   },
   {
-    id: 'superior5', nome: 'Teeds - AG7', chamada: 'O insistente',
+    id: 'superior5', nome: nomeDaEstrategia('superior5'), chamada: 'O insistente',
     descricao: 'Ganha quando o último dígito é 7, 8 ou 9. Depois de três perdas seguidas, liga o martingale.',
     cor: '#e8892b', corSuave: '#fdf0e2', onde: 'teeds',
     emblema: 'M20 8 a12 12 0 1 0 0.1 0 M20 14 a6 6 0 1 0 0.1 0 M20 19 v-3',
     chance: 30, contrato: 'DIGITOVER',
   },
   {
-    id: 'ag2', nome: 'Teeds - AG2', chamada: 'O espelho',
+    id: 'ag2', nome: nomeDaEstrategia('ag2'), chamada: 'O espelho',
     descricao: 'Espera 0, 1 e 2 alcançarem 36% dos últimos 25 dígitos antes de entrar.',
     cor: '#0ea5e9', corSuave: '#e6f6fd', onde: 'teeds',
     emblema: 'M20 8 v16 M20 24 l-6 -6 M20 24 l6 -6 M11 30 h18',
     chance: 30, contrato: 'DIGITUNDER',
   },
   {
-    id: 'smart03', nome: 'Teeds Smart 03', chamada: 'O bloco superior',
+    id: 'smart03', nome: nomeDaEstrategia('smart03'), chamada: 'O bloco superior',
     descricao: 'Ganha quando o último dígito é 4, 5, 6, 7, 8 ou 9.',
     cor: '#d0aa52', corSuave: '#f7f0df', onde: 'teeds',
     emblema: 'M9 29 L15 22 L20 25 L31 10 M31 10 L24 11 M31 10 L30 18',
     chance: 60, contrato: 'DIGITOVER',
   },
   {
-    id: 'goreme', nome: 'Teeds Göreme', chamada: 'O seletivo',
+    id: 'goreme', nome: nomeDaEstrategia('goreme'), chamada: 'O seletivo',
     descricao: 'Ganha quando o último dígito está entre 0 e 8.',
     cor: '#b86f3c', corSuave: '#f8ebe3', onde: 'teeds',
     emblema: 'M8 26 Q13 12 20 12 Q27 12 32 26 M12 26 h16 M20 8 v4',

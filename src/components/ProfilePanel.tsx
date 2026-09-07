@@ -4,6 +4,7 @@ import {
   type SessaoTeeds, type Usuario,
 } from '../core/teeds/conta'
 import type { TradingAccount } from '../core/deriv/account'
+import { MARCA } from '../marca'
 
 interface Props {
   sessao: SessaoTeeds
@@ -134,7 +135,7 @@ export function ProfilePanel({ sessao, onAtualizar, onFechar, contas = [], deriv
               <div className="perfil-contas">
                 <p className="perfil-nota">
                   Nenhuma conta Deriv conectada agora. É ela que compra e vende —
-                  a conta Teeds só abre a plataforma.
+                  a conta {MARCA.prosa} só abre a plataforma.
                 </p>
                 {onConectarDeriv && (
                   <button className="perfil-btn" onClick={onConectarDeriv}>Conectar minha Deriv</button>

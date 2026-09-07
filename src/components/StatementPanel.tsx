@@ -6,6 +6,7 @@ import {
   type Movimento, type TipoMovimento,
 } from '../core/deriv/statement'
 import type { ActiveSymbol } from '../core/deriv/types'
+import { MARCA } from '../marca'
 
 interface Props {
   socket: TeedsSocket | null
@@ -67,7 +68,7 @@ export function StatementPanel({ socket, moeda, symbols = [] }: Props) {
         q.dia, q.hora, rotuloTipo(m.tipo),
         `"${m.descricao.replace(/"/g, "'")}"`,
         m.valor.toFixed(2), m.saldoDepois.toFixed(2),
-        m.appId === DERIV.appId ? 'Teeds' : (m.appId ?? ''),
+        m.appId === MARCA.appId ? MARCA.nome : (m.appId ?? ''),
       ].join(';')
     })
     const blob = new Blob(['﻿' + [cab.join(';'), ...linhas].join('\n')], { type: 'text/csv;charset=utf-8' })
@@ -151,7 +152,7 @@ export function StatementPanel({ socket, moeda, symbols = [] }: Props) {
                         : m.descricao || '—')}
                   </td>
                   <td>
-                    {m.appId === DERIV.appId
+                    {m.appId === MARCA.appId
                       ? <span className="tag-robo">Teeds</span>
                       : <span className="tag-manual">{m.appId === '2' ? 'Deriv' : (m.appId ?? '—')}</span>}
                   </td>

@@ -1,4 +1,5 @@
 import { DERIV } from './config'
+import { MARCA } from '../../marca'
 
 /**
  * Login da Teeds - OAuth 2.0 com PKCE, inteiramente no navegador.
@@ -8,9 +9,16 @@ import { DERIV } from './config'
  * embutido, nao ha o que vazar no codigo publico.
  */
 
-const KEY_VERIFIER = 'teeds.pkce.verifier'
-const KEY_STATE = 'teeds.pkce.state'
-const KEY_TOKEN = 'teeds.auth'
+/*
+  As chaves carregam a marca.
+
+  Duas marcas no mesmo endereço são o mesmo site para o navegador. Sem o
+  carimbo, entrar na Teeds logaria na OMNI com o token da app errada — e o
+  markup de cada operação iria para a marca errada, em silêncio.
+*/
+const KEY_VERIFIER = `${MARCA.id}.pkce.verifier`
+const KEY_STATE = `${MARCA.id}.pkce.state`
+const KEY_TOKEN = `${MARCA.id}.auth`
 
 export interface AuthSession {
   accessToken: string
@@ -46,8 +54,8 @@ export async function startLogin(): Promise<void> {
 
   const params = new URLSearchParams({
     response_type: 'code',
-    client_id: DERIV.appId,
-    redirect_uri: DERIV.redirectUri,
+    client_id: MARCA.appId,
+    redirect_uri: MARCA.redirectUri,
     scope: DERIV.scopes.join(' '),
     state,
     code_challenge: await challengeFor(verifier),
@@ -84,9 +92,9 @@ export async function completeLogin(): Promise<AuthSession | null> {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type: 'authorization_code',
-      client_id: DERIV.appId,
+      client_id: MARCA.appId,
       code,
-      redirect_uri: DERIV.redirectUri,
+      redirect_uri: MARCA.redirectUri,
       code_verifier: verifier,
     }),
   })

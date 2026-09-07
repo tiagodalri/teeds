@@ -16,7 +16,6 @@ import { DerivNome, IconeElo } from './components/DerivMarca'
 import { Brand } from './components/Brand'
 import { LoginScreen } from './components/LoginScreen'
 import { NovaSenha } from './components/NovaSenha'
-import { AFILIADO } from './core/deriv/config'
 import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
@@ -30,6 +29,7 @@ import { DerivDesconectada } from './components/DerivDesconectada'
 import type { Granularity } from './core/deriv/types'
 import { formatPrice } from './core/chart/scales'
 import { buyFromProposal, requestProposal, sellContract } from './core/deriv/trading'
+import { MARCA } from './marca'
 
 const INDICADORES = [
   { id: 'sma', label: 'Média 20', titulo: 'Média móvel simples de 20 períodos' },

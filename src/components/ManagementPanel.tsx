@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AuthSession } from '../core/deriv/auth'
-import { AFILIADO, DERIV } from '../core/deriv/config'
+import { DERIV } from '../core/deriv/config'
 import {
   buscarResumo, buscarSerieDiaria, periodo, simular, simularComissaoPorDia,
   CALCULO_COM_RESULTADO_DESDE, SemPermissao, type DiaJaGravado,
@@ -11,6 +11,7 @@ import { enviarComissoes, enviarMarkupOficial, listarComissoes } from '../core/t
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { ClientesAdmin } from './ClientesAdmin'
 import { DerivDesconectada } from './DerivDesconectada'
+import { MARCA } from '../marca'
 
 interface Props {
   session: AuthSession | null
@@ -74,7 +75,7 @@ export function ManagementPanel({
           // so quem tem application_read chega aqui: e o dono do app. O total
           // oficial vai para o banco e a conferencia por cliente passa a ter
           // com o que se comparar.
-          if (sessaoTeeds) void enviarMarkupOficial(sessaoTeeds, DERIV.appId, s)
+          if (sessaoTeeds) void enviarMarkupOficial(sessaoTeeds, MARCA.appId, s)
         } else {
           setSerie([])
         }
@@ -160,7 +161,7 @@ export function ManagementPanel({
   const [copiado, setCopiado] = useState(false)
   const copiarLink = async () => {
     try {
-      await navigator.clipboard.writeText(AFILIADO)
+      await navigator.clipboard.writeText(MARCA.afiliado)
       setCopiado(true)
       setTimeout(() => setCopiado(false), 2000)
     } catch {
@@ -195,10 +196,10 @@ export function ManagementPanel({
             </p>
           </div>
           <div className="convite-acao">
-            <code>{AFILIADO}</code>
+            <code>{MARCA.afiliado}</code>
             <div className="convite-botoes">
               <button onClick={copiarLink}>{copiado ? 'copiado!' : 'Copiar link'}</button>
-              <a href={AFILIADO} target="_blank" rel="noopener noreferrer">Abrir</a>
+              <a href={MARCA.afiliado} target="_blank" rel="noopener noreferrer">Abrir</a>
             </div>
           </div>
         </section>
@@ -377,10 +378,10 @@ export function ManagementPanel({
           </p>
         </div>
         <div className="convite-acao">
-          <code>{AFILIADO}</code>
+          <code>{MARCA.afiliado}</code>
           <div className="convite-botoes">
             <button onClick={copiarLink}>{copiado ? 'copiado!' : 'Copiar link'}</button>
-            <a href={AFILIADO} target="_blank" rel="noopener noreferrer">Abrir</a>
+            <a href={MARCA.afiliado} target="_blank" rel="noopener noreferrer">Abrir</a>
           </div>
         </div>
       </section>
@@ -451,9 +452,9 @@ export function ManagementPanel({
         <span className="rot">Aplicação registrada</span>
         <dl className="ficha">
           <div><dt>Nome</dt><dd>Teeds</dd></div>
-          <div><dt>App ID</dt><dd className="mono">{DERIV.appId}</dd></div>
+          <div><dt>App ID</dt><dd className="mono">{MARCA.appId}</dd></div>
           <div><dt>Markup</dt><dd>3,00%</dd></div>
-          <div><dt>Endereço de retorno</dt><dd className="mono quebra">{DERIV.redirectUri}</dd></div>
+          <div><dt>Endereço de retorno</dt><dd className="mono quebra">{MARCA.redirectUri}</dd></div>
           <div><dt>Permissões</dt><dd>{DERIV.scopes.join(', ')}</dd></div>
         </dl>
       </section>

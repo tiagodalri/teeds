@@ -8,6 +8,7 @@ import { perguntar, type Proposta, type Turno } from '../core/teeds/chat'
 import { acompanharVivas, pararNoServidor, sessoesVivas, type SessaoViva } from '../core/teeds/servidorRobos'
 import { ChatProposta } from './ChatProposta'
 import { LocalRobotPanel } from './LocalRobotPanel'
+import { MARCA } from '../marca'
 
 /**
  * O assistente da Teeds — uma aba inteira, não uma gaveta.
@@ -231,7 +232,7 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
             })
           )}
 
-          {pensando && <div className="as-pensando"><em /> consultando o servidor da Teeds…</div>}
+          {pensando && <div className="as-pensando"><em /> consultando o servidor da {MARCA.prosa}…</div>}
           {erro && <p className="as-erro">{erro}</p>}
           <div ref={fim} />
         </div>

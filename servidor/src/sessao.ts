@@ -4,7 +4,8 @@ import { TeedsSocket } from '../../src/core/deriv/client'
 import { MotorTeeds, type EstadoMotor } from '../../src/core/deriv/engine'
 import { fetchAccounts, fetchTradingSocketUrl, type TradingAccount } from '../../src/core/deriv/account'
 import { fetchActiveSymbols } from '../../src/core/deriv/market'
-import { ESTRATEGIAS_LOCAIS, recuperacaoDoRobo } from '../../src/core/deriv/strategies'
+import { ESTRATEGIAS_LOCAIS, nomeDoRobo, recuperacaoDoRobo } from '../../src/core/deriv/strategies'
+import { marcaPorId } from '../../src/marca/marcas'
 import { ATIVO_DOS_ROBOS } from '../../src/core/deriv/config'
 import type { AuthSession } from '../../src/core/deriv/auth'
 import type { ConfigEstrategia, Estrategia } from '../../src/core/deriv/engine'
@@ -52,7 +53,7 @@ export function robo(id: string): Estrategia {
 }
 
 export function listarRobos() {
-  return ESTRATEGIAS_LOCAIS.map((e) => ({ id: e.id, nome: e.nome, contrato: e.contractType, barreira: e.barreira }))
+  return ESTRATEGIAS_LOCAIS.map((e) => ({ id: e.id, nome: nomeDoRobo(e, marcaPorId(undefined).prefixoRobo), contrato: e.contractType, barreira: e.barreira }))
 }
 
 /**

@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { AFILIADO } from '../core/deriv/config'
 import {
   cpfValido, formatarCPF, formatarTelefone, telefoneValido,
   type DadosCadastro,
 } from '../core/teeds/conta'
 import { Brand } from './Brand'
 import { DerivNome } from './DerivMarca'
+import { MARCA } from '../marca'
 
 type Modo = 'entrar' | 'criar' | 'esqueci'
 
@@ -21,11 +21,11 @@ interface Props {
 const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
   entrar: {
     titulo: 'Bem-vindo de volta.',
-    linha: 'Entre na sua conta Teeds. A conexão com a corretora vem depois, lá dentro.',
+    linha: `Entre na sua conta ${MARCA.prosa}. A conexão com a corretora vem depois, lá dentro.`,
     acao: 'Entrar',
   },
   criar: {
-    titulo: 'Crie a sua conta Teeds.',
+    titulo: `Crie a sua conta ${MARCA.prosa}.`,
     linha: 'É a conta da plataforma. A conta da Deriv, onde o dinheiro fica, é separada.',
     acao: 'Criar conta',
   },
@@ -160,10 +160,10 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
         <div className="entrada-corretora">
           <b>Ainda não tem conta na <DerivNome tamanho={13} />?</b>
           <p>
-            A Teeds opera pela sua própria conta na corretora — é lá que o
+            A {MARCA.prosa} opera pela sua própria conta na corretora — é lá que o
             dinheiro fica. Abrir é grátis e você começa na conta demo.
           </p>
-          <a className="btn-deriv" href={AFILIADO} target="_blank" rel="noopener noreferrer">
+          <a className="btn-deriv" href={MARCA.afiliado} target="_blank" rel="noopener noreferrer">
             Abrir conta na <DerivNome tamanho={13} />
           </a>
         </div>
