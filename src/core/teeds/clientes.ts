@@ -73,13 +73,24 @@ export async function registrarPresenca(sessao: SessaoTeeds): Promise<void> {
 }
 
 /** A conta Deriv que a pessoa conectou agora. */
+/**
+ * Liga esta conta da corretora a este login — e diz quando não consegue.
+ *
+ * Dentro de uma plataforma, uma conta da Deriv tem um dono só. Se ela já
+ * pertence a outro login, o banco recusa. Durante meses essa recusa caía
+ * num `console.warn` e mais nada: a pessoa conectava a Deriv, a tela dizia
+ * que estava tudo certo, e na hora de ligar o robô vinha um "esta conta não
+ * é sua" que ninguém sabia explicar.
+ *
+ * Agora a recusa volta escrita, e quem chamou decide o que mostrar.
+ */
 export async function registrarContaDeriv(
   sessao: SessaoTeeds,
   conta: { accountId: string; type: string; currency: string; balance: number },
-): Promise<void> {
-  if (!autenticacaoConfigurada()) return
+): Promise<string | null> {
+  if (!autenticacaoConfigurada()) return null
   try {
-    await rest('/contas_deriv?on_conflict=user_id,conta_id', sessao.token, {
+    await rest('/contas_deriv?on_conflict=user_id,conta_id,marca', sessao.token, {
       method: 'POST',
       headers: MESCLAR,
       body: JSON.stringify({
@@ -92,8 +103,18 @@ export async function registrarContaDeriv(
         vista_em: new Date().toISOString(),
       }),
     })
+    return null
   } catch (e) {
-    console.warn('[teeds] nao consegui registrar a conta Deriv:', (e as Error).message)
+    const cru = (e as Error).message
+    // 23505 é a violação de unicidade: a conta já tem outro dono aqui.
+    const jaTemDono = /23505|duplicate key|already exists|conta_por_marca/i.test(cru)
+    const recado = jaTemDono
+      ? `A conta ${conta.accountId} da Deriv já está ligada a outro login da ${MARCA.prosa}. ` +
+        'Cada conta da corretora pertence a uma pessoa só. Entre com o login que já a usa, ' +
+        'ou conecte outra conta da Deriv.'
+      : `Não consegui ligar a conta ${conta.accountId} ao seu login: ${cru}`
+    console.warn('[teeds] conta Deriv:', cru)
+    return recado
   }
 }
 

@@ -282,9 +282,20 @@ const servidor = createServer(async (req, res) => {
         const contaId = String(corpo.contaId ?? '').trim()
         if (!contaId) return json(400, { erro: 'Diga em qual conta o robô deve operar.' })
 
-        const minhas = await contasDoUsuario(dono.id)
+        // A conta precisa estar ligada a este login NESTA plataforma. A mesma
+        // pessoa pode usar a mesma conta da Deriv nas duas, mas cada ficha é
+        // separada — e é a ficha desta marca que autoriza aqui.
+        const marcaDoPedido = typeof corpo.marca === 'string' ? corpo.marca : 'teeds'
+        const minhas = await contasDoUsuario(dono.id, marcaDoPedido)
         if (!minhas.includes(contaId)) {
-          return json(403, { erro: `A conta ${contaId} não está no seu login da Teeds.` })
+          // Recusa silenciosa custa horas de investigação: fica registrada.
+          console.warn(
+            `[api] recusei ${contaId} para o cliente ${dono.id.slice(0, 8)}… em ${marcaDoPedido}: ` +
+            `as contas dele aqui sao [${minhas.join(', ') || 'nenhuma'}]`)
+          return json(403, {
+            erro: `A conta ${contaId} não está ligada ao seu login na ${marcaPorId(marcaDoPedido).prosa}. ` +
+              'Conecte a Deriv por aqui uma vez e tente de novo.',
+          })
         }
 
         const config = corpo.config as ConfigEstrategia | undefined

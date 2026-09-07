@@ -292,9 +292,12 @@ export async function usuarioDoToken(token: string): Promise<{ id: string } | nu
 }
 
 /** As contas Deriv que este usuário Teeds registrou. */
-export async function contasDoUsuario(userId: string): Promise<string[]> {
+export async function contasDoUsuario(userId: string, marca?: string): Promise<string[]> {
+  // Sem marca, devolve as de todas as plataformas — é o que o MCP e o chat
+  // precisam. Com marca, só as daquela, que é o que autoriza uma operação.
+  const filtroMarca = marca ? `&marca=eq.${encodeURIComponent(marca)}` : ''
   const linhas = await rest<any[]>(
-    `/contas_deriv?select=conta_id&user_id=eq.${encodeURIComponent(userId)}`,
+    `/contas_deriv?select=conta_id&user_id=eq.${encodeURIComponent(userId)}${filtroMarca}`,
   )
   return (linhas ?? []).map((l) => String(l.conta_id))
 }

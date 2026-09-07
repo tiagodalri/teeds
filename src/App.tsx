@@ -137,7 +137,15 @@ export default function App() {
 
   useEffect(() => {
     if (!teeds.sessao || !conta.account) return
-    void registrarContaDeriv(teeds.sessao, conta.account)
+    /*
+      Se a conta da corretora já pertence a outro login, o cliente precisa
+      saber AGORA — e não quando tentar ligar um robô e levar um "esta conta
+      não é sua" sem explicação. Era assim até hoje: a recusa do banco caía
+      num aviso de console que ninguém lê.
+    */
+    void registrarContaDeriv(teeds.sessao, conta.account).then((recado) => {
+      if (recado) conta.setAviso(recado)
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioTeedsId, conta.account?.accountId])
 
