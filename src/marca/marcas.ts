@@ -76,10 +76,7 @@ export const MARCAS: Record<string, Marca> = {
     prefixoRobo: 'OMNI',
     appId: '34kKoxRsAd3xEcyFNw7v5',
     redirectUri: 'https://omnifinanc.com/',
-    // TODO: trocar pelo link de afiliado da OMNI quando ele existir. Até lá
-    // aponta para a página de cadastro comum — sem parceria, sem markup de
-    // indicação. O markup de operação (3%) não depende disto: ele vem da app.
-    afiliado: 'https://deriv.com/signup/',
+    afiliado: 'https://t.deriv.link?t=2HFMXE246P62',
     base: '/',
     emblema: 'omni-marca.png',
     cor: { claro: '#0E2A4E', escuro: '#6C93C6' },
