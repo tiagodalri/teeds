@@ -42,7 +42,7 @@ async function api<T>(
   } catch {
     // servidor fora do ar, wi-fi caiu, certificado recusado — para quem
     // está olhando é tudo a mesma coisa: não deu para falar com ele
-    throw new Error('Não consegui falar com o servidor da Teeds. Tente de novo em instantes.')
+    throw new Error(`Não consegui falar com o servidor da ${MARCA.prosa}. Tente de novo em instantes.`)
   }
   const corpo = await res.json().catch(() => ({} as any))
   if (!res.ok) throw new Error(corpo?.erro || `O servidor recusou o pedido (${res.status}).`)

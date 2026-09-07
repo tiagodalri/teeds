@@ -3,6 +3,8 @@ import type { TeedsSocket } from '../core/deriv/client'
 import { type ConfigEstrategia, type EstadoMotor, type Estrategia } from '../core/deriv/engine'
 import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
+// apelidada porque a propriedade deste componente ja se chama `identidade`
+import { identidade as doCatalogo } from '../core/deriv/branding'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { RobotLive } from './RobotLive'
 import { RobotSetup, lerPreparo } from './RobotSetup'
@@ -217,7 +219,7 @@ export function LocalRobotPanel({
         <div className="pronto pronto-compacto" style={{ ['--robo' as any]: identidade.cor, ['--robo-suave' as any]: identidade.corSuave }}>
           <header className="pc-topo">
             <span className="pc-emblema"><Emblema id={identidade} tamanho={46} /></span>
-            <div><span className="rot">{titulo} · pronto para configurar</span><h3>{estrategia.nome}</h3><p>{identidade.chamada}</p></div>
+            <div><span className="rot">{titulo} · pronto para configurar</span><h3>{ident.nome}</h3><p>{identidade.chamada}</p></div>
             {onRemover && <button className="pc-fechar" onClick={onRemover} aria-label={`Fechar ${titulo}`} title="Fechar robô">×</button>}
           </header>
 
@@ -250,7 +252,7 @@ export function LocalRobotPanel({
         {preparando && (
           <RobotSetup
             identidade={identidade}
-            nomeEstrategia={daVitrine.nome}
+            nomeEstrategia={doCatalogo(daVitrine.id).nome}
             symbols={symbols}
             symbolInicial={symbol}
             configInicial={cfg}
@@ -272,7 +274,7 @@ export function LocalRobotPanel({
         estado={estado}
         config={cfg}
         moeda={moeda}
-        nomeEstrategia={estrategia.nome}
+        nomeEstrategia={ident.nome}
         ativo={nomeAtivo}
         titulo={titulo}
         regra={regra}
@@ -295,7 +297,7 @@ export function LocalRobotPanel({
       {preparando && (
         <RobotSetup
           identidade={identidade}
-          nomeEstrategia={daVitrine.nome}
+          nomeEstrategia={doCatalogo(daVitrine.id).nome}
           symbols={symbols}
           symbolInicial={symbol}
           configInicial={cfg}

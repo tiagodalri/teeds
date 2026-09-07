@@ -42,7 +42,7 @@ export const MODULOS: Modulo[] = [
     aulas: [
       {
         id: 'boas-vindas',
-        titulo: 'Bem-vindo à Teeds',
+        titulo: `Bem-vindo à ${MARCA.prosa}`,
         descricao: 'O que é a plataforma, o que dá para fazer nela e o caminho das primeiras aulas.',
         video: '', duracao: '',
       },
@@ -54,8 +54,8 @@ export const MODULOS: Modulo[] = [
       },
       {
         id: 'conectar-corretora',
-        titulo: 'Conectando a corretora à Teeds',
-        descricao: 'O botão "Conectar minha Deriv": autorizando a Teeds a operar na sua conta.',
+        titulo: `Conectando a corretora à ${MARCA.prosa}`,
+        descricao: `O botão "Conectar minha Deriv": autorizando a ${MARCA.prosa} a operar na sua conta.`,
         video: '', duracao: '',
       },
       {
@@ -94,7 +94,7 @@ export const MODULOS: Modulo[] = [
   },
   {
     id: 'operando',
-    titulo: 'Operando na Teeds',
+    titulo: `Operando na ${MARCA.prosa}`,
     chamada: 'A mesa de operação, na prática.',
     cor: '#e8892b',
     aulas: [
@@ -127,7 +127,7 @@ export const MODULOS: Modulo[] = [
       {
         id: 'robos-como-funcionam',
         titulo: 'Como os robôs funcionam',
-        descricao: 'O motor da Teeds, o que o robô compra e por que a aba precisa ficar aberta.',
+        descricao: `O motor da ${MARCA.prosa}, o que o robô compra e por que a aba precisa ficar aberta.`,
         video: '', duracao: '',
       },
       {

@@ -153,7 +153,7 @@ export function StatementPanel({ socket, moeda, symbols = [] }: Props) {
                   </td>
                   <td>
                     {m.appId === MARCA.appId
-                      ? <span className="tag-robo">Teeds</span>
+                      ? <span className="tag-robo">{MARCA.prosa}</span>
                       : <span className="tag-manual">{m.appId === '2' ? 'Deriv' : (m.appId ?? '—')}</span>}
                   </td>
                   <td className={`num ${m.valor > 0 ? 'ganho' : m.valor < 0 ? 'perda' : ''}`}>

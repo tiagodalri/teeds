@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Usuario } from '../core/teeds/conta'
+import { MARCA } from '../marca'
 
 interface Props {
   usuario: Usuario
@@ -81,7 +82,7 @@ export function UserMenu({ usuario, onSair, onPerfil }: Props) {
               <path d="M6.5 13.5h-3a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3" />
               <path d="M10 11l3-3-3-3M13 8H6" />
             </svg>
-            Sair da Teeds
+            Sair da {MARCA.prosa}
           </button>
         </div>
       )}

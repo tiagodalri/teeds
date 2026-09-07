@@ -136,7 +136,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
 
           {modo === 'criar' && (
             <p className="entrada-mini">
-              Pedimos telefone e CPF para identificar você como cliente da Teeds.
+              Pedimos telefone e CPF para identificar você como cliente da {MARCA.prosa}.
               Não repassamos esses dados a ninguém.
             </p>
           )}

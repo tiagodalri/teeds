@@ -5,6 +5,7 @@ import {
   type DadosCadastro, type SessaoTeeds, type Usuario,
 } from '../core/teeds/conta'
 import { autenticacaoConfigurada } from '../core/teeds/config'
+import { MARCA } from '../marca'
 
 export type StatusTeeds = 'carregando' | 'deslogado' | 'logado' | 'dispensado'
 
@@ -54,7 +55,7 @@ export function useTeedsAuth() {
     if (retorno.sessao) {
       const s = retorno.sessao
       if (retorno.tipo === 'recovery') setRedefinindo(true)
-      else setRecado('E-mail confirmado. Bem-vindo à Teeds.')
+      else setRecado(`E-mail confirmado. Bem-vindo à ${MARCA.prosa}.`)
       void (async () => {
         try {
           const usuario = await buscarUsuario(s.token)

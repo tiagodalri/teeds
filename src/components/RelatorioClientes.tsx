@@ -4,6 +4,7 @@ import {
   conferenciaComissao, operacoesDoCliente, relatorioClientes,
   type DiaConferencia, type LinhaRelatorioCliente, type OperacaoRoboRegistro,
 } from '../core/teeds/clientes'
+import { MARCA } from '../marca'
 
 /**
  * Resultados por cliente — a tela que responde três perguntas do admin:
@@ -193,7 +194,7 @@ function ExtratoCliente({ sessao, cliente, dias, fechar }: { sessao: SessaoTeeds
         <div className="rc-extrato-resumo">
           <span className="rot">Extrato dos robôs</span>
           {ops === null ? <p>Carregando…</p> : ops.length === 0
-            ? <p>Nenhuma operação de robô registrada nesse período. O extrato operação a operação existe só para o que os robôs da Teeds executaram a partir de 04/09 — o que veio antes, ou foi manual, entra só nos totais do dia.</p>
+            ? <p>Nenhuma operação de robô registrada nesse período. O extrato operação a operação existe só para o que os robôs da {MARCA.prosa} executaram a partir de 04/09 — o que veio antes, ou foi manual, entra só nos totais do dia.</p>
             : <p>{ops.length >= TETO_CONSULTA ? <>últimas <b>{inteiro(ops.length)}</b> operações <small>(teto da consulta — o cliente tem {inteiro(cliente.operacoesRobos)} no período)</small></> : <>{inteiro(ops.length)} operações</>} · {resumo.vitorias} vitórias ({ops.length ? Math.round(resumo.vitorias / ops.length * 100) : 0}%) · {resumo.robos.join(', ')}<br />
               markup calculado <b>{usd(resumo.markupCalc)}</b> · markup medido pela Deriv <b>{resumo.medidas ? usd(resumo.markupDeriv) : '—'}</b> <small>({resumo.medidas} de {ops.length} operações com o valor da Deriv)</small></p>}
         </div>

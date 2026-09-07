@@ -19,6 +19,7 @@ import type { SessaoTeeds } from '../core/teeds/conta'
 import { registrarOperacaoRobo } from '../core/teeds/clientes'
 import { SessoesServidor } from './SessoesServidor'
 import { acompanharVivas, type SessaoViva } from '../core/teeds/servidorRobos'
+import { MARCA } from '../marca'
 
 interface Props {
   socket: TeedsSocket | null
@@ -343,14 +344,14 @@ export function RobotsPanel({
       {comparando && (
         <div className="rv-compara-fundo" onMouseDown={(e) => e.target === e.currentTarget && setComparando(false)}>
           <section className="rv-compara" role="dialog" aria-modal="true" aria-label="Comparar robôs">
-            <header><div><span className="rot">Comparativo Teeds</span><h3>Quatro estratégias, uma decisão simples</h3></div><button onClick={() => setComparando(false)} aria-label="Fechar">×</button></header>
+            <header><div><span className="rot">Comparativo {MARCA.prosa}</span><h3>Quatro estratégias, uma decisão simples</h3></div><button onClick={() => setComparando(false)} aria-label="Fechar">×</button></header>
             <div className="rv-compara-grade">
               {IDENTIDADES.map((i) => {
                 const digitos = digitosDoModelo(i.id)
                 return <article key={i.id} style={{ ['--robo' as any]: i.cor }}>
                   <Emblema id={i} tamanho={58} /><span>{i.chamada}</span><h4>{i.nome}</h4>
                   <dl><div><dt>Ganha com</dt><dd>{digitos.join(', ')}</dd></div><div><dt>Chance</dt><dd>{i.chance}%</dd></div><div><dt>Perfil</dt><dd>{perfilDoModelo(i.id)}</dd></div></dl>
-                  <button onClick={() => { setIdent(i); setComparando(false) }}>Escolher {i.nome.replace('Teeds - ', '')}</button>
+                  <button onClick={() => { setIdent(i); setComparando(false) }}>Escolher {i.nome.replace(`${MARCA.prefixoRobo} - `, '')}</button>
                 </article>
               })}
             </div>

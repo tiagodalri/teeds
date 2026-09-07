@@ -249,7 +249,7 @@ export default function App() {
   // operar de verdade.
   // ------------------------------------------------------------------
   if (teeds.status === 'carregando') {
-    return <div className="entrada"><div className="entrada-esperando">abrindo a Teeds…</div></div>
+    return <div className="entrada"><div className="entrada-esperando">abrindo a {MARCA.prosa}…</div></div>
   }
 
   if (teeds.redefinindo) {

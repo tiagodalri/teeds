@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { listarProdutos } from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
+import { MARCA } from '../marca'
 
 type Categoria = 'Todos' | 'Robôs' | 'Mentorias' | 'Ferramentas'
 
@@ -31,17 +32,17 @@ const PRODUTOS: Produto[] = [
   {
     id: 'gerenciamento-estrategico', categoria: 'Mentorias', nome: 'Gerenciamento Estratégico',
     descricao: 'Método prático para transformar banca, metas e limites em um plano operacional claro e sustentável.',
-    precoDe: 'R$ 797', preco: 'R$ 497', desconto: '38% OFF', imagem: 'gerenciamento-estrategico.jpg', selo: 'Método Teeds', simbolo: 'GE', tom: 'violeta',
+    precoDe: 'R$ 797', preco: 'R$ 497', desconto: '38% OFF', imagem: 'gerenciamento-estrategico.jpg', selo: `Método ${MARCA.prosa}`, simbolo: 'GE', tom: 'violeta',
     itens: ['Plano de banca personalizado', 'Definição de meta e proteção', 'Rotina de revisão de resultados'],
   },
   {
     id: 'robos-exclusivos', categoria: 'Robôs', nome: 'Acesso a Robôs Exclusivos',
-    descricao: 'Escolha automações premium com estratégias distintas e gestão integrada ao ecossistema Teeds.',
+    descricao: `Escolha automações premium com estratégias distintas e gestão integrada ao ecossistema ${MARCA.prosa}.`,
     precoDe: 'R$ 297', preco: 'R$ 197', desconto: '34% OFF', imagem: 'robos-exclusivos.jpg', periodo: 'por robô', selo: 'Coleção premium', simbolo: 'RX', tom: 'verde',
     itens: ['Um robô premium à escolha', 'Atualizações da estratégia', 'Painel completo de acompanhamento'],
   },
   {
-    id: 'teeds-atlas', categoria: 'Robôs', nome: 'Teeds Atlas',
+    id: 'teeds-atlas', categoria: 'Robôs', nome: `${MARCA.prosa} Atlas`,
     descricao: 'Robô premium com motor adaptativo e proteção inteligente para navegar diferentes condições de mercado.',
     precoDe: 'R$ 997', preco: 'R$ 697', desconto: '30% OFF', imagem: 'teeds-atlas.jpg', selo: 'Robô premium', simbolo: 'TA', tom: 'azul',
     itens: ['Motor adaptativo exclusivo', 'Proteção inteligente de sessão', 'Atualizações premium incluídas'],
@@ -79,8 +80,8 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
         const valor = p.precoCentavos ?? 0
         return {
           ...(base ?? {
-            id: p.id, descricao: 'Produto exclusivo integrado ao ecossistema Teeds.', imagem: 'teeds-atlas.jpg',
-            selo: 'Teeds Original', simbolo: p.nome.split(/\s+/).slice(0, 2).map(x => x[0]).join('').toUpperCase(),
+            id: p.id, descricao: `Produto exclusivo integrado ao ecossistema ${MARCA.prosa}.`, imagem: 'teeds-atlas.jpg',
+            selo: `${MARCA.prosa} Original`, simbolo: p.nome.split(/\s+/).slice(0, 2).map(x => x[0]).join('').toUpperCase(),
             tom: (['ouro','verde','rubi','azul','violeta'] as const)[indice % 5], itens: ['Acesso integrado à plataforma', 'Conteúdo e atualizações exclusivas'],
           }),
           id: p.id, nome: p.nome, categoria: categoriaBanco(p.categoria), preco: precoBR(valor),
@@ -104,7 +105,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
     <main className="marketplace">
       <section className="market-hero">
         <div className="market-hero-conteudo">
-          <span className="market-eyebrow">Teeds Marketplace</span>
+          <span className="market-eyebrow">{MARCA.prosa} Marketplace</span>
           <h1>O próximo nível da sua <em>operação.</em></h1>
           <p>Robôs premium, acompanhamento especializado e ferramentas criadas para evoluir cada etapa da sua jornada.</p>
           <div className="market-hero-acoes">
@@ -154,7 +155,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
       </section>
 
       <section className="market-garantia">
-        <div><i>◇</i><span><b>Ecossistema Teeds</b><small>Tudo integrado à sua plataforma</small></span></div>
+        <div><i>◇</i><span><b>Ecossistema {MARCA.prosa}</b><small>Tudo integrado à sua plataforma</small></span></div>
         <div><i>◎</i><span><b>Experiência premium</b><small>Produtos selecionados e exclusivos</small></span></div>
         <div><i>↗</i><span><b>Evolução contínua</b><small>Novos recursos e coleções</small></span></div>
       </section>

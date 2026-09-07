@@ -1,5 +1,6 @@
 import { SERVIDOR } from './config'
 import type { SessaoTeeds } from './conta'
+import { MARCA } from '../../marca'
 
 /**
  * A conversa com o assistente da Teeds.
@@ -60,7 +61,7 @@ export async function perguntar(
       body: JSON.stringify({ pergunta, historico }),
     })
   } catch {
-    throw new Error('Não consegui falar com o servidor da Teeds. Tente de novo em instantes.')
+    throw new Error(`Não consegui falar com o servidor da ${MARCA.prosa}. Tente de novo em instantes.`)
   }
   const corpo = await res.json().catch(() => ({} as any))
   if (!res.ok) throw new Error(corpo?.erro || `O servidor recusou o pedido (${res.status}).`)

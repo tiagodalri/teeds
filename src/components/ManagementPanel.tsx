@@ -189,7 +189,7 @@ export function ManagementPanel({
 
         <section className="ger-bloco convite">
           <div className="convite-texto">
-            <span className="rot">Traga clientes para a Teeds</span>
+            <span className="rot">Traga clientes para a {MARCA.prosa}</span>
             <p>
               Isto funciona mesmo sem a corretora conectada: toda conta aberta
               por este link fica ligada a você.
@@ -212,7 +212,7 @@ export function ManagementPanel({
       <div className="ger-topo">
         <div>
           <h2>Painel de gestão</h2>
-          <p className="ger-sub">Sua comissão sobre as operações feitas na Teeds</p>
+          <p className="ger-sub">Sua comissão sobre as operações feitas na {MARCA.prosa}</p>
         </div>
         <div className="segmented">
           {PERIODOS.map((p) => (
@@ -229,7 +229,7 @@ export function ManagementPanel({
             <strong>Falta uma permissão</strong>
             <p>
               Seu login atual autoriza negociar e gerenciar conta, mas não ler as estatísticas
-              de faturamento. É um clique para liberar — você volta para a Teeds em seguida.
+              de faturamento. É um clique para liberar — você volta para a {MARCA.prosa} em seguida.
             </p>
           </div>
           <button className="btn-login" onClick={onReautorizar}>Liberar acesso</button>
@@ -271,7 +271,7 @@ export function ManagementPanel({
         </div>
         <p className="ger-texto">
           Calculado operação por operação, com a regra real da Deriv: <b>3% do pagamento</b> de
-          cada contrato comprado pela Teeds. {isDemo && 'Como a conta é demo, o dinheiro é fictício — mas o cálculo é o mesmo que valeria numa conta real.'}
+          cada contrato comprado pela {MARCA.prosa}. {isDemo && 'Como a conta é demo, o dinheiro é fictício — mas o cálculo é o mesmo que valeria numa conta real.'}
           {' '}O período é o mesmo que você escolheu aí em cima.
         </p>
 
@@ -335,7 +335,7 @@ export function ManagementPanel({
 
             {sim.operacoes === 0 && (
               <p className="ger-nota">
-                Nenhuma compra pela Teeds ainda no período carregado. Opere um pouco
+                Nenhuma compra pela {MARCA.prosa} ainda no período carregado. Opere um pouco
                 (na demo mesmo) e os números aparecem aqui.
               </p>
             )}
@@ -361,7 +361,7 @@ export function ManagementPanel({
           {resumo?.contratos === 0 && (
             <p className="ger-nota">
               Nada ainda — o faturamento aparece quando clientes operarem com dinheiro real
-              pela Teeds. Operações em conta demo não geram comissão.
+              pela {MARCA.prosa}. Operações em conta demo não geram comissão.
             </p>
           )}
         </section>
@@ -370,10 +370,10 @@ export function ManagementPanel({
       {/* ---------------- convite ---------------- */}
       <section className="ger-bloco convite">
         <div className="convite-texto">
-          <span className="rot">Traga clientes para a Teeds</span>
+          <span className="rot">Traga clientes para a {MARCA.prosa}</span>
           <p>
             Toda conta aberta por este link fica ligada a você. As operações
-            que essas pessoas fizerem pela Teeds geram os 3% de comissão que
+            que essas pessoas fizerem pela {MARCA.prosa} geram os 3% de comissão que
             aparecem aqui em cima.
           </p>
         </div>
@@ -394,7 +394,7 @@ export function ManagementPanel({
         </div>
         <p className="ger-texto">
           Quanto maior sua comissão, menor o pagamento que seu cliente enxerga — e mais fácil
-          ele comparar a Teeds com a concorrência. Arraste para ver os dois lados.
+          ele comparar a {MARCA.prosa} com a concorrência. Arraste para ver os dois lados.
         </p>
 
         <div className="sim-controle">
@@ -451,7 +451,7 @@ export function ManagementPanel({
       <section className="ger-bloco">
         <span className="rot">Aplicação registrada</span>
         <dl className="ficha">
-          <div><dt>Nome</dt><dd>Teeds</dd></div>
+          <div><dt>Nome</dt><dd>{MARCA.prosa}</dd></div>
           <div><dt>App ID</dt><dd className="mono">{MARCA.appId}</dd></div>
           <div><dt>Markup</dt><dd>3,00%</dd></div>
           <div><dt>Endereço de retorno</dt><dd className="mono quebra">{MARCA.redirectUri}</dd></div>

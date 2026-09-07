@@ -5,6 +5,7 @@ import type { Identidade } from '../core/deriv/branding'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { Emblema } from './RobotCard'
 import { recuperacaoDoRobo } from '../core/deriv/strategies'
+import { MARCA } from '../marca'
 
 /**
  * Preparo do robo, uma pergunta por vez.
@@ -194,7 +195,7 @@ export function RobotSetup({
       corpo: (
         <>
           <dl className="qz-resumo">
-            <div><dt>Ativo</dt><dd>{nomeAtivo.replace(' Index', '')} <em className="qz-fixo">definido pela Teeds</em></dd></div>
+            <div><dt>Ativo</dt><dd>{nomeAtivo.replace(' Index', '')} <em className="qz-fixo">definido pela {MARCA.prosa}</em></dd></div>
             <div><dt>Entrada</dt><dd>{din(cfg.valorAoVencer, moeda)}</dd></div>
             <div><dt>Entradas</dt><dd>em todas as operações</dd></div>
             <div>
@@ -202,7 +203,7 @@ export function RobotSetup({
               <dd>
                 {cfg.fatorGale === 0
                   ? 'desligado neste modelo — entrada sempre igual'
-                  : 'recuperação automática protegida pela Teeds'}
+                  : `recuperação automática protegida pela ${MARCA.prosa}`}
               </dd>
             </div>
             <div><dt>Para se ganhar</dt><dd>{din(cfg.takeProfit, moeda)}</dd></div>

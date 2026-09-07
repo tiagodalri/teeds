@@ -92,7 +92,7 @@ export const AG_2: Estrategia = {
   ...SUPERIOR_5,
   id: 'ag2',
   nome: '{marca} - AG2',
-  origem: 'reconstruído a partir do Teeds Smart AG2 original',
+  origem: 'reconstruído a partir do robô Smart AG2 original',
   descricao:
     'Analisa os 25 últimos dígitos e entra quando 0, 1 e 2 somam pelo menos 36%. ' +
     'O contrato ganha se o próximo último dígito for 0, 1 ou 2.',

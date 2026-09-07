@@ -1,5 +1,6 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import { identidade } from '../core/deriv/branding'
+import { MARCA } from '../marca'
 
 /*
   O nome vem do catálogo, não daqui.
@@ -98,7 +99,7 @@ export function OperationalManagementPanel({ moeda = 'USD' }: { moeda?: string }
   return (
     <main className="go ger" style={{ '--go-robo': robo.cor } as CSSProperties}>
       <header className="go-hero">
-        <div><span className="go-selo">Planejamento Teeds</span><h2>Gerenciamento Operacional</h2><p>Calcule banca e stop com a progressão específica de cada robô.</p></div>
+        <div><span className="go-selo">Planejamento {MARCA.prosa}</span><h2>Gerenciamento Operacional</h2><p>Calcule banca e stop com a progressão específica de cada robô.</p></div>
         <div className={`go-status ${saudavel ? 'ok' : 'alerta'}`}><i />{saudavel ? 'Plano dentro do limite' : 'Risco acima do stop diário'}</div>
       </header>
 

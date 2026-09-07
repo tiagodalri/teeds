@@ -32,7 +32,7 @@ async function rest<T>(caminho: string, token: string, init: RequestInit = {}): 
   })
   if (!res.ok) {
     const corpo = await res.json().catch(() => ({}))
-    throw new Error(corpo?.message || `Erro ${res.status} ao falar com o banco da Teeds`)
+    throw new Error(corpo?.message || `Erro ${res.status} ao falar com o banco da ${MARCA.prosa}`)
   }
   if (res.status === 204) return undefined as T
   return (await res.json().catch(() => undefined)) as T

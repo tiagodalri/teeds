@@ -4,7 +4,7 @@ import { createServer } from 'node:http'
 import { createHash, randomBytes } from 'node:crypto'
 import { writeFileSync, chmodSync, existsSync, readFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
-import { marcaPorId } from '../../src/marca/marcas'
+import { MARCAS, marcaPorId } from '../../src/marca/marcas'
 import { atender, autorizacao } from './mcp'
 import { contasDoUsuario, limitesDoCliente, limparSessoesOrfas, supabaseConfigurado, usuarioDoToken } from './supabase'
 import { contas, iniciar, montarConfig, parar, todas, ver } from './sessoes'
@@ -232,7 +232,21 @@ const servidor = createServer(async (req, res) => {
       digitos: (e.digitos ?? []).slice(-60),
     })
     const origem = req.headers.origin ?? ''
-    const liberadas = ['https://tiagodalri.github.io', 'http://localhost:5173', 'http://127.0.0.1:5173']
+    /*
+      Os endereços que podem falar com este servidor.
+      
+      Sai da lista de marcas, e não de uma lista escrita à mão: marca nova
+      entra sozinha. Enquanto estava fixo, a OMNI subiu e o navegador dela
+      levava "não consegui falar com o servidor" em toda tentativa de ligar
+      robô — sem nenhum erro do lado de cá, porque o pedido morria no
+      navegador antes de chegar.
+    */
+    const liberadas = [
+      ...Object.values(MARCAS).map((m) => new URL(m.redirectUri).origin),
+      'https://www.omnifinanc.com',
+      'http://localhost:5173', 'http://127.0.0.1:5173',
+      'http://localhost:5180', 'http://127.0.0.1:5180',
+    ]
     const cabecalhos: Record<string, string> = {
       'content-type': 'application/json; charset=utf-8',
       vary: 'Origin',

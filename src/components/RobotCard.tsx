@@ -1,4 +1,5 @@
 import type { Identidade } from '../core/deriv/branding'
+import { MARCA } from '../marca'
 
 interface Props {
   id: Identidade
@@ -45,7 +46,7 @@ export function RobotCard({ id, selecionado, onSelecionar, operando = 0 }: Props
       <div className="rcard-rodape">
         <span className="rcard-chance">{id.chance}% de chance</span>
         <span className={`rcard-onde ${id.onde}`}>
-          {id.onde === 'servidor' ? 'servidor da Deriv' : 'roda na Teeds'}
+          {id.onde === 'servidor' ? 'servidor da Deriv' : `roda na ${MARCA.prosa}`}
         </span>
       </div>
     </button>

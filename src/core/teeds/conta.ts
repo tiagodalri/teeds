@@ -61,7 +61,7 @@ async function chamar(
   opcoes: { corpo?: unknown; token?: string; metodo?: string } = {},
 ): Promise<any> {
   if (!autenticacaoConfigurada()) {
-    throw new Error('O login da Teeds ainda não foi configurado.')
+    throw new Error(`O login da ${MARCA.prosa} ainda não foi configurado.`)
   }
   const res = await fetch(url(caminho), {
     method: opcoes.metodo ?? (opcoes.corpo ? 'POST' : 'GET'),
@@ -91,7 +91,7 @@ function traduzir(dados: any): string {
   if (m.includes('password should be at least')) return 'A senha precisa de pelo menos 6 caracteres.'
   if (m.includes('unable to validate email') || m.includes('invalid email')) return 'Esse e-mail não parece válido.'
   if (m.includes('rate limit') || m.includes('too many')) return 'Muitas tentativas. Espere um minuto e tente de novo.'
-  return bruto || 'Não consegui falar com o servidor da Teeds.'
+  return bruto || `Não consegui falar com o servidor da ${MARCA.prosa}.`
 }
 
 function montarSessao(d: any): SessaoTeeds {

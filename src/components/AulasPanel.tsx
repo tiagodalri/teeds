@@ -3,6 +3,7 @@ import {
   aulasVistas, marcarVista, MODULOS, playerDoVideo, todasAsAulas, VIDEO_DEMONSTRACAO,
   type AulaNumerada,
 } from '../core/teeds/aulas'
+import { MARCA } from '../marca'
 
 const capa = (id: string) => `${import.meta.env.BASE_URL}aulas-especialista/${id}.jpg`
 
@@ -120,8 +121,8 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
         backgroundImage: `linear-gradient(90deg, rgba(5,6,8,.98) 0%, rgba(5,6,8,.86) 38%, rgba(5,6,8,.2) 72%, rgba(5,6,8,.55) 100%), url(${import.meta.env.BASE_URL}aulas-hero-teeds.png)`,
       }}>
         <div className="aulas-capa-texto">
-          <span className="aulas-selo">Treinamento original Teeds</span>
-          <h2>{destaque?.titulo ?? `Aprenda a usar a Teeds${nome ? `, ${nome.split(' ')[0]}` : ''}`}</h2>
+          <span className="aulas-selo">Treinamento original {MARCA.prosa}</span>
+          <h2>{destaque?.titulo ?? `Aprenda a usar a ${MARCA.prosa}${nome ? `, ${nome.split(' ')[0]}` : ''}`}</h2>
           <p>{destaque?.descricao ?? 'Da conta na corretora ao primeiro robô ligado, uma aula de cada vez.'}</p>
           <div className="aulas-meta">
             <b>{destaque ? `Aula ${destaque.numero} de ${aulas.length}` : `${aulas.length} aulas`}</b>
