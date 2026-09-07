@@ -62,6 +62,51 @@ export interface Marca {
    * banco entre o papel e o letreiro noturno.
    */
   cor: { claro: string; escuro: string }
+  /**
+   * Como a marca se apresenta num e-mail.
+   *
+   * E-mail não é site: não há tema claro e escuro, não há CSS externo e
+   * metade dos programas de e-mail recorta o que não entende. Então a
+   * identidade tem que caber em quatro cores e uma fonte — e ser decidida
+   * aqui, uma vez, em vez de espalhada por cinco arquivos que envelhecem
+   * em ritmos diferentes.
+   */
+  email: {
+    /** A faixa do topo, onde fica o emblema. */
+    faixa: string
+    /** A cor do nome escrito sobre a faixa. */
+    letreiro: string
+    /** O botão de ação — a única coisa que a pessoa precisa clicar. */
+    botao: string
+    /** O texto dentro do botão. Ouro pede tinta escura; marinho pede branca. */
+    tintaDoBotao: string
+    /** A família do letreiro. A Teeds assina em serifa; a OMNI, em bastão. */
+    fonteDoLetreiro: string
+    /**
+     * A chapa atrás do emblema, ou `null` para ele ficar solto na faixa.
+     *
+     * O emblema da OMNI é azul-marinho, a mesma cor da faixa — sem uma chapa
+     * clara por trás ele simplesmente some. O touro da Teeds é dourado sobre
+     * quase-preto e não precisa de nada: uma chapa ali só atrapalharia.
+     */
+    chapaDoEmblema: string | null
+    /** O fundo da página, atrás do cartão branco. */
+    fundo: string
+    /** Uma linha só, no rodapé, dizendo o que é a plataforma. */
+    rodape: string
+    /**
+     * De quem o e-mail sai — nome e endereço, no formato `Nome <caixa@dominio>`.
+     *
+     * O domínio precisa estar verificado no serviço de envio. Não é
+     * burocracia: é o que impede qualquer um de mandar e-mail se passando
+     * pela marca. Enquanto o domínio de uma marca não existir, o valor fica
+     * `null` — e o servidor se recusa a mandar por ela, em vez de mandar
+     * com o remetente errado. Errar aqui é pior que não mandar: um e-mail
+     * com remetente que não bate com a marca vai direto para o lixo
+     * eletrônico e queima a reputação do domínio junto.
+     */
+    remetente: string | null
+  }
 }
 
 export const MARCAS: Record<string, Marca> = {
@@ -77,6 +122,22 @@ export const MARCAS: Record<string, Marca> = {
     base: '/teeds/',
     emblema: 'teeds-marca.png',
     cor: { claro: '#4c6fff', escuro: '#d0aa52' },
+    email: {
+      faixa: '#12151c',
+      letreiro: '#d9b465',
+      botao: '#c9a24a',
+      tintaDoBotao: '#1a1408',
+      fonteDoLetreiro: "Georgia,'Times New Roman',serif",
+      chapaDoEmblema: null,
+      fundo: '#f6f4ef',
+      rodape:
+        'A Teeds é uma plataforma de operações que funciona com a sua própria conta na Deriv. ' +
+        'Negociar envolve risco de perda.',
+      // O site da Teeds continua em tiagodalri.github.io (mudar isso quebraria
+      // o endereço registrado na app da Deriv). O domínio próprio existe para
+      // o e-mail ter de onde sair com a marca certa.
+      remetente: 'Teeds <nao-responda@teedscompany.com>',
+    },
   },
 
   omni: {
@@ -91,6 +152,19 @@ export const MARCAS: Record<string, Marca> = {
     base: '/',
     emblema: 'omni-marca.png',
     cor: { claro: '#0E2A4E', escuro: '#6C93C6' },
+    email: {
+      faixa: '#0E2A4E',
+      letreiro: '#dce6f2',
+      botao: '#0E2A4E',
+      tintaDoBotao: '#ffffff',
+      fonteDoLetreiro: "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif",
+      chapaDoEmblema: '#ffffff',
+      fundo: '#f2f5f9',
+      rodape:
+        'A OMNI é uma plataforma de operações que funciona com a sua própria conta na Deriv. ' +
+        'Negociar envolve risco de perda.',
+      remetente: 'OMNI <nao-responda@omnifinanc.com>',
+    },
   },
 }
 

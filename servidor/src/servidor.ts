@@ -12,6 +12,7 @@ import { PADRAO, conferir } from './limites'
 import { conversar } from './chat'
 import { autorizacaoParaOperar, guardar } from './cofre'
 import type { ConfigEstrategia } from '../../src/core/deriv/engine'
+import { tratarGanchoDeEmail } from './gancho-email'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -205,6 +206,22 @@ const servidor = createServer(async (req, res) => {
   // falar com o banco. O servidor confere esse crachá com o Supabase e
   // depois confere se a conta Deriv pedida é mesmo daquela pessoa: um
   // crachá válido de alguém não pode ligar robô na conta de outro.
+  // ------------------------------------------------- os e-mails de acesso
+  // Fica ANTES do bloco /api porque não tem como carregar crachá: quem bate
+  // aqui é o Supabase, não uma pessoa logada. Quem prova quem é, aqui, é a
+  // assinatura no cabeçalho — conferida lá dentro, antes de qualquer coisa.
+  if (url.pathname === '/gancho/email') {
+    if (req.method !== 'POST') { res.writeHead(405); return res.end() }
+    const pedacos: Buffer[] = []
+    for await (const p of req) pedacos.push(p as Buffer)
+    const { status, corpo } = await tratarGanchoDeEmail(
+      Buffer.concat(pedacos).toString('utf8'),
+      req.headers as Record<string, string | string[] | undefined>,
+    )
+    res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' })
+    return res.end(JSON.stringify(corpo))
+  }
+
   if (url.pathname.startsWith('/api/')) {
     // O estado inteiro do motor a cada consulta seria um exagero: a tela
     // mostra as últimas operações, não as mil. Cortar aqui deixa a consulta

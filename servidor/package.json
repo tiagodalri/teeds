@@ -7,10 +7,12 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "esbuild src/teste.ts src/servidor.ts src/teste-limites.ts --bundle --platform=node --target=node22 --format=esm --outdir=dist --out-extension:.js=.mjs",
+    "build": "esbuild src/teste.ts src/servidor.ts src/teste-limites.ts src/previa-emails.ts src/teste-gancho.ts --bundle --platform=node --target=node22 --format=esm --outdir=dist --out-extension:.js=.mjs",
     "teste": "node dist/teste.mjs",
     "servidor": "node dist/servidor.mjs",
-    "travas": "npm run build --silent && node dist/teste-limites.mjs"
+    "travas": "npm run build --silent && node dist/teste-limites.mjs",
+    "emails": "npm run build --silent && node dist/previa-emails.mjs",
+    "email-travas": "npm run build --silent && node dist/teste-gancho.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
