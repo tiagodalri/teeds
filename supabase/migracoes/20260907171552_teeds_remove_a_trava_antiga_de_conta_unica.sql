@@ -1,0 +1,14 @@
+-- A trava velha sobreviveu porque eu chutei o nome dela.
+--
+-- A migração anterior fez `drop constraint if exists contas_deriv_conta_id_key`
+-- — o nome que o Postgres daria por padrão. Mas esta foi criada à mão como
+-- `contas_deriv_conta_unica`. O `if exists` não reclama de não achar nada,
+-- então a remoção passou em silêncio e a regra antiga continuou lá,
+-- recusando toda tentativa de ligar a mesma conta da Deriv na OMNI.
+--
+-- O sintoma era um 409 do banco que nunca chegava a lugar nenhum. Foi
+-- preciso ler o registro do Postgres para ver o nome da constraint.
+--
+-- Fica valendo só a regra por plataforma, que já está criada:
+--   contas_deriv_conta_por_marca UNIQUE (conta_id, marca)
+alter table public.contas_deriv drop constraint if exists contas_deriv_conta_unica;

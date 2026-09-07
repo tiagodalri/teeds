@@ -313,7 +313,7 @@ export async function criarAcessoCliente(sessao: SessaoTeeds, dados: {
     headers: { apikey: SUPABASE.anonKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       email: dados.email.trim().toLowerCase(), senha: undefined, password: dados.senha,
-      data: { nome: dados.nome.trim(), telefone: dados.telefone?.trim() || null, cpf: dados.cpf?.trim() || null },
+      data: { nome: dados.nome.trim(), telefone: dados.telefone?.trim() || null, cpf: dados.cpf?.trim() || null, marca: MARCA.id },
     }),
   })
   const corpo = await res.json().catch(() => ({}))

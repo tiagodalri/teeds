@@ -10,6 +10,7 @@ import {
   slice,
   type Viewport,
 } from '../core/chart/scales'
+import { MARCA } from '../marca'
 
 export type ChartMode = 'candles' | 'line'
 
@@ -522,8 +523,8 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
   return (
     <div className="chart" ref={wrapRef}>
       <div className="chart-marca" aria-hidden>
-        <img src={`${import.meta.env.BASE_URL}teeds-marca.png`} alt="" />
-        <span>TEEDS</span>
+        <img src={`${import.meta.env.BASE_URL}${MARCA.emblema}`} alt="" />
+        <span>{MARCA.nome}</span>
       </div>
       <canvas
         ref={canvasRef}

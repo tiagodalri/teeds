@@ -3,12 +3,13 @@
  *
  * Cada aula tem uma cena propria sobre o assunto dela, todas na mesma
  * linguagem: noite profunda, luz da cor do modulo, materiais (ouro
- * metalico da marca, vidro, extrusao) e a assinatura TEEDS.
+ * metalico da marca, vidro, extrusao) e a assinatura da marca.
  *
  * Tudo SVG: nitido em qualquer tela, zero peso de imagem. Os ids de
  * gradiente levam o id da aula para nao colidir entre capas na mesma
  * pagina.
  */
+import { MARCA } from '../marca'
 
 interface Props {
   aula: string
@@ -101,7 +102,7 @@ function Assinatura({ u }: { u: string }) {
     <g opacity="0.85">
       <Touro u={u} x={14} y={196} s={0.22} />
       <text x="42" y="212" fontFamily="Georgia, 'Times New Roman', serif" fontSize="11"
-        letterSpacing="4" fill={`url(#ouro-${u})`}>TEEDS</text>
+        letterSpacing="4" fill={`url(#ouro-${u})`}>{MARCA.nome}</text>
     </g>
   )
 }

@@ -118,7 +118,7 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
   return (
     <div className="ger aulas">
       <div className="aulas-capa" style={{
-        backgroundImage: `linear-gradient(90deg, rgba(5,6,8,.98) 0%, rgba(5,6,8,.86) 38%, rgba(5,6,8,.2) 72%, rgba(5,6,8,.55) 100%), url(${import.meta.env.BASE_URL}aulas-hero-teeds.png)`,
+        backgroundImage: `linear-gradient(90deg, rgba(5,6,8,.98) 0%, rgba(5,6,8,.86) 38%, rgba(5,6,8,.2) 72%, rgba(5,6,8,.55) 100%), url(${import.meta.env.BASE_URL}aulas-hero.png)`,
       }}>
         <div className="aulas-capa-texto">
           <span className="aulas-selo">Treinamento original {MARCA.prosa}</span>
@@ -150,7 +150,7 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
           )}
           </div>
         </div>
-        <div className="aulas-hero-marca" aria-hidden>TEEDS ORIGINAL</div>
+        <div className="aulas-hero-marca" aria-hidden>{MARCA.nome} ORIGINAL</div>
       </div>
 
       {assistidas > 0 && proxima && (

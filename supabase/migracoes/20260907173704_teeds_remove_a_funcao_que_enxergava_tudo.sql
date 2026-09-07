@@ -1,0 +1,12 @@
+-- Sai de cena a função que enxergava as duas plataformas.
+--
+-- `teeds_sou_admin()` respondia "esta pessoa administra alguma coisa?" — sem
+-- perguntar qual. Foi ela que deixou a Administração da OMNI mostrar 38 mil
+-- operações da Teeds, e foi por ela que eu escorreguei três vezes em dias
+-- diferentes: enquanto existir uma versão fácil e errada ao lado da certa,
+-- uma hora a errada é a que vai ser escrita.
+--
+-- Já não há permissão, função nem tela que a use — só `teeds_sou_admin_da(marca)`,
+-- que exige dizer de qual plataforma se está falando. Removê-la fecha a porta:
+-- de agora em diante não dá para perguntar errado por distração.
+drop function if exists public.teeds_sou_admin();

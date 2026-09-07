@@ -150,6 +150,10 @@ export async function cadastrar(
         nome: dados.nome.trim(),
         telefone: soDigitos(dados.telefone),
         cpf: soDigitos(dados.cpf),
+        // Em qual plataforma esta pessoa se cadastrou. O gatilho do banco le
+        // daqui para criar a ficha na marca certa — sem isto, quem entra pela
+        // OMNI nasce como cliente da Teeds.
+        marca: MARCA.id,
       },
     },
   })

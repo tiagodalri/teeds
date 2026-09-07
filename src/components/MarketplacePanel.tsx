@@ -44,7 +44,7 @@ const PRODUTOS: Produto[] = [
   {
     id: 'teeds-atlas', categoria: 'Robôs', nome: `${MARCA.prosa} Atlas`,
     descricao: 'Robô premium com motor adaptativo e proteção inteligente para navegar diferentes condições de mercado.',
-    precoDe: 'R$ 997', preco: 'R$ 697', desconto: '30% OFF', imagem: 'teeds-atlas.jpg', selo: 'Robô premium', simbolo: 'TA', tom: 'azul',
+    precoDe: 'R$ 997', preco: 'R$ 697', desconto: '30% OFF', imagem: 'robo-atlas.jpg', selo: 'Robô premium', simbolo: 'TA', tom: 'azul',
     itens: ['Motor adaptativo exclusivo', 'Proteção inteligente de sessão', 'Atualizações premium incluídas'],
   },
   {
@@ -80,7 +80,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
         const valor = p.precoCentavos ?? 0
         return {
           ...(base ?? {
-            id: p.id, descricao: `Produto exclusivo integrado ao ecossistema ${MARCA.prosa}.`, imagem: 'teeds-atlas.jpg',
+            id: p.id, descricao: `Produto exclusivo integrado ao ecossistema ${MARCA.prosa}.`, imagem: 'robo-atlas.jpg',
             selo: `${MARCA.prosa} Original`, simbolo: p.nome.split(/\s+/).slice(0, 2).map(x => x[0]).join('').toUpperCase(),
             tom: (['ouro','verde','rubi','azul','violeta'] as const)[indice % 5], itens: ['Acesso integrado à plataforma', 'Conteúdo e atualizações exclusivas'],
           }),
@@ -115,7 +115,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
         </div>
         <div className="market-hero-produto" aria-hidden="true">
           <div className="market-orbita"><i /><i /><i /></div>
-          <div className="market-emblema"><small>TEEDS</small><b>MA</b><span>MENTORIA</span></div>
+          <div className="market-emblema"><small>{MARCA.nome}</small><b>MA</b><span>MENTORIA</span></div>
           <span className="market-edicao">FOUNDERS EDITION · 01</span>
         </div>
       </section>
@@ -138,7 +138,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
                 <span className="market-card-selo">{produto.selo}</span>
                 <span className="market-card-desconto">{produto.desconto}</span>
                 <span className="market-card-num">0{indice + 1}</span>
-                <div className="market-card-identidade"><b>{produto.simbolo}</b><small>TEEDS ORIGINAL</small></div>
+                <div className="market-card-identidade"><b>{produto.simbolo}</b><small>{MARCA.nome} ORIGINAL</small></div>
                 <span className="market-card-tipo">{produto.categoria}</span>
               </button>
               <div className="market-card-corpo">
@@ -166,7 +166,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
             <button className="market-modal-fechar" onClick={() => setSelecionado(null)} aria-label="Fechar">×</button>
             <div className="market-modal-arte">
               <img src={capaProduto(selecionado.imagem)} alt="" />
-              <span>{selecionado.selo}</span><b>{selecionado.simbolo}</b><small>TEEDS ORIGINAL</small>
+              <span>{selecionado.selo}</span><b>{selecionado.simbolo}</b><small>{MARCA.nome} ORIGINAL</small>
             </div>
             <div className="market-modal-corpo">
               <span className="market-eyebrow">{selecionado.categoria}</span>

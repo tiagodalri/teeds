@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { useClock } from '../hooks/useClock'
+import { MARCA } from '../marca'
 
 interface Props {
   estado: EstadoMotor
@@ -169,8 +170,8 @@ export function RobotLive({
 
       <div className="tv-corpo">
       <div className="tv-assinatura" aria-hidden>
-        <img src={`${import.meta.env.BASE_URL}teeds-marca.png`} alt="" />
-        <span>TEEDS ENGINE</span>
+        <img src={`${import.meta.env.BASE_URL}${MARCA.emblema}`} alt="" />
+        <span>{MARCA.nome} ENGINE</span>
       </div>
 
       {/* Uma compra recusada precisa aparecer. Antes ela ia só para um

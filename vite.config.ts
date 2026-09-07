@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { marcaPorId } from './src/marca/marcas'
+import { rmSync } from 'node:fs'
+import { join } from 'node:path'
+import { MARCAS, marcaPorId } from './src/marca/marcas'
 
 /**
  * Qual marca este build monta.
@@ -35,6 +37,20 @@ export default defineConfig({
             .replaceAll('%BASE%', MARCA.base)
             .replaceAll('%EMBLEMA%', MARCA.emblema)
             .replaceAll('%NOME%', MARCA.nome === 'TEEDS' ? 'Teeds' : MARCA.nome),
+      },
+    },
+    {
+      // A pasta public/ e copiada inteira, entao o emblema da Teeds ia parar
+      // dentro do site da OMNI. Ninguem ve na tela — mas quem digitar o
+      // endereco do arquivo ve, e a regra e nao ter marca alheia la dentro.
+      name: 'teeds:so-o-emblema-desta-marca',
+      closeBundle: () => {
+        for (const outra of Object.values(MARCAS)) {
+          if (outra.id === MARCA.id) continue
+          rmSync(join(SAIDA, outra.emblema), { force: true })
+        }
+        // O logotipo completo da Teeds so faz sentido no site da Teeds.
+        if (MARCA.id !== 'teeds') rmSync(join(SAIDA, 'teeds-completo.png'), { force: true })
       },
     },
   ],

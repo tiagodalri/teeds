@@ -75,7 +75,7 @@ export function StatementPanel({ socket, moeda, symbols = [] }: Props) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `teeds-extrato-${new Date().toISOString().slice(0, 10)}.csv`
+    a.download = `${MARCA.id}-extrato-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }

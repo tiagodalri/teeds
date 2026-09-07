@@ -5,6 +5,7 @@ import { MODELOS } from '../core/deriv/robots'
 import { nomeDoRobo, todasAsOrigens } from '../core/deriv/robotNames'
 import { StatementPanel } from './StatementPanel'
 import { DerivDesconectada } from './DerivDesconectada'
+import { MARCA } from '../marca'
 
 interface Props {
   socket: TeedsSocket | null
@@ -119,7 +120,7 @@ export function OperationsPanel({
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `teeds-operacoes-${new Date().toISOString().slice(0, 10)}.csv`
+    a.download = `${MARCA.id}-operacoes-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }

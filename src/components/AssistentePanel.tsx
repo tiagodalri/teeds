@@ -173,7 +173,7 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
           {vazio ? (
             <div className="as-abertura">
               <span className="as-selo">
-                <img src={`${import.meta.env.BASE_URL}teeds-marca.png`} alt="" width={46} height={46} />
+                <img src={`${import.meta.env.BASE_URL}${MARCA.emblema}`} alt="" width={46} height={46} />
               </span>
               <h2>Como posso ajudar?</h2>
               <p>
@@ -195,7 +195,7 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
                 return (
                   <div key={i} className="as-ele">
                     <span className="as-marca">
-                      <img src={`${import.meta.env.BASE_URL}teeds-marca.png`} alt="" width={22} height={22} />
+                      <img src={`${import.meta.env.BASE_URL}${MARCA.emblema}`} alt="" width={22} height={22} />
                     </span>
                     <div>
                       <p>{item.texto}</p>
