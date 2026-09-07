@@ -383,7 +383,8 @@ const servidor = createServer(async (req, res) => {
         if (!pergunta) return json(400, { erro: 'Escreva alguma coisa.' })
         if (pergunta.length > 2000) return json(400, { erro: 'Mensagem longa demais.' })
         const historico = Array.isArray(corpo.historico) ? corpo.historico.slice(-12) : []
-        return json(200, await conversar({ id: dono.id }, historico, pergunta))
+        const marcaDoChat = typeof corpo.marca === 'string' ? corpo.marca : 'teeds'
+        return json(200, await conversar({ id: dono.id }, historico, pergunta, marcaDoChat))
       }
 
       // ---- acompanhar

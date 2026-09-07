@@ -150,7 +150,7 @@ export async function enviarComissoes(
     atualizado_em: new Date().toISOString(),
   }))
   try {
-    await rest('/comissoes_diarias?on_conflict=user_id,conta_id,dia', sessao.token, {
+    await rest('/comissoes_diarias?on_conflict=user_id,conta_id,dia,marca', sessao.token, {
       method: 'POST',
       headers: MESCLAR,
       body: JSON.stringify(linhas),
@@ -262,37 +262,40 @@ export async function listarProdutos(sessao: SessaoTeeds): Promise<ProdutoRegist
 }
 
 export async function listarProdutosClientes(sessao: SessaoTeeds): Promise<ClienteProdutoRegistro[]> {
-  const linhas = await rest<any[]>('/cliente_produtos?select=*&ativo=eq.true', sessao.token)
+  const linhas = await rest<any[]>(`/cliente_produtos?select=*&ativo=eq.true&marca=eq.${MARCA.id}`, sessao.token)
   return (linhas ?? []).map((l) => ({ userId: l.user_id, produtoId: l.produto_id, concedidoEm: l.concedido_em, expiraEm: l.expira_em, ativo: Boolean(l.ativo) }))
 }
 
 export async function atualizarAcessoCliente(sessao: SessaoTeeds, userId: string, dados: {
   planoId: string; statusAcesso: ClienteRegistro['statusAcesso']; acessoExpiraEm: string | null; observacoes: string | null
 }): Promise<void> {
-  await rest(`/clientes?user_id=eq.${encodeURIComponent(userId)}`, sessao.token, {
+  await rest(`/clientes?user_id=eq.${encodeURIComponent(userId)}&marca=eq.${MARCA.id}`, sessao.token, {
     method: 'PATCH', headers: { Prefer: 'return=minimal' },
     body: JSON.stringify({ plano_id: dados.planoId, status_acesso: dados.statusAcesso, acesso_expira_em: dados.acessoExpiraEm, observacoes: dados.observacoes }),
   })
 }
 
 export async function definirProdutoCliente(sessao: SessaoTeeds, userId: string, produtoId: string, ativo: boolean): Promise<void> {
-  await rest('/cliente_produtos?on_conflict=user_id,produto_id', sessao.token, {
+  await rest('/cliente_produtos?on_conflict=user_id,produto_id,marca', sessao.token, {
     method: 'POST', headers: MESCLAR,
-    body: JSON.stringify({ user_id: userId, produto_id: produtoId, ativo, origem: 'admin', concedido_em: new Date().toISOString() }),
+    body: JSON.stringify({ user_id: userId, produto_id: produtoId, marca: MARCA.id, ativo, origem: 'admin', concedido_em: new Date().toISOString() }),
   })
 }
 
 export async function salvarPlano(sessao: SessaoTeeds, plano: PlanoRegistro): Promise<void> {
   await rest('/planos?on_conflict=id', sessao.token, {
     method: 'POST', headers: MESCLAR,
-    body: JSON.stringify({ id: plano.id, nome: plano.nome, duracao_dias: plano.duracaoDias, ativo: plano.ativo }),
+    // Nasce visível na plataforma onde foi criado. Para valer nas duas, é
+    // acrescentar a outra marca à lista — decisão de quem administra, não
+    // um efeito colateral de onde a pessoa estava quando criou.
+    body: JSON.stringify({ id: plano.id, nome: plano.nome, duracao_dias: plano.duracaoDias, ativo: plano.ativo, marcas: [MARCA.id] }),
   })
 }
 
 export async function salvarProduto(sessao: SessaoTeeds, produto: ProdutoRegistro): Promise<void> {
   await rest('/produtos?on_conflict=id', sessao.token, {
     method: 'POST', headers: MESCLAR,
-    body: JSON.stringify({ id: produto.id, nome: produto.nome, categoria: produto.categoria, preco_centavos: produto.precoCentavos, ativo: produto.ativo }),
+    body: JSON.stringify({ id: produto.id, nome: produto.nome, categoria: produto.categoria, preco_centavos: produto.precoCentavos, ativo: produto.ativo, marcas: [MARCA.id] }),
   })
 }
 
@@ -384,7 +387,7 @@ export async function listarOperacoesRobos(sessao: SessaoTeeds, dias = 90): Prom
 export async function listarMetricasRobos(sessao: SessaoTeeds, dias = 90): Promise<MetricaRoboRegistro[]> {
   try {
     const linhas = await rest<any[]>('/rpc/teeds_metricas_robos', sessao.token, {
-      method: 'POST', body: JSON.stringify({ p_dias: dias }),
+      method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: MARCA.id }),
     })
     return (linhas ?? []).map((l) => ({
       roboId: l.robo_id, roboNome: l.robo_nome, operacoes: Number(l.operacoes),
@@ -411,7 +414,7 @@ export async function enviarMarkupOficial(
 ): Promise<void> {
   if (!autenticacaoConfigurada() || porDia.length === 0) return
   try {
-    await rest('/markup_oficial_diario?on_conflict=dia', sessao.token, {
+    await rest('/markup_oficial_diario?on_conflict=dia,app_id', sessao.token, {
       method: 'POST', headers: MESCLAR,
       body: JSON.stringify(porDia.map((d) => ({
         dia: d.data, app_id: appId, comissao: d.comissao,
@@ -446,7 +449,7 @@ export async function relatorioClientes(
 ): Promise<LinhaRelatorioCliente[]> {
   try {
     const linhas = await rest<any[]>('/rpc/teeds_relatorio_clientes', sessao.token, {
-      method: 'POST', body: JSON.stringify({ p_dias: dias, p_incluir_demo: incluirDemo }),
+      method: 'POST', body: JSON.stringify({ p_dias: dias, p_incluir_demo: incluirDemo, p_marca: MARCA.id }),
     })
     return (linhas ?? []).map((l) => ({
       userId: l.user_id, nome: textoLegivel(l.nome), email: l.email,
@@ -470,7 +473,7 @@ export async function operacoesDoCliente(
 ): Promise<OperacaoRoboRegistro[]> {
   try {
     const linhas = await rest<any[]>('/rpc/teeds_operacoes_cliente', sessao.token, {
-      method: 'POST', body: JSON.stringify({ p_user_id: userId, p_dias: dias }),
+      method: 'POST', body: JSON.stringify({ p_user_id: userId, p_dias: dias, p_marca: MARCA.id }),
     })
     return (linhas ?? []).map((l) => ({
       contractId: Number(l.contract_id), userId, contaId: l.conta_id,

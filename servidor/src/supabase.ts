@@ -345,6 +345,7 @@ export async function limitesDoCliente(userId: string): Promise<Partial<{
 export async function registrarGastoDoChat(
   userId: string,
   g: { entrada: number; saida: number; cache: number; idas: number },
+  marca = 'teeds',
 ): Promise<void> {
   if (!URL_BASE) return
   try {
@@ -352,7 +353,7 @@ export async function registrarGastoDoChat(
       method: 'POST',
       body: JSON.stringify({
         p_user: userId, p_entrada: g.entrada, p_saida: g.saida,
-        p_cache: g.cache, p_idas: g.idas,
+        p_cache: g.cache, p_idas: g.idas, p_marca: marca,
       }),
     })
   } catch (e) {
@@ -369,12 +370,12 @@ export async function registrarGastoDoChat(
  * mensagens do dia, sem uma resposta sequer. Conferir o teto é leitura;
  * quem soma é registrarGastoDoChat, depois da resposta chegar.
  */
-export async function usoDeHojeDoChat(userId: string): Promise<number> {
+export async function usoDeHojeDoChat(userId: string, marca = 'teeds'): Promise<number> {
   if (!URL_BASE) return 0
   try {
     const r = await rest<any>('/rpc/chat_uso_de_hoje', {
       method: 'POST',
-      body: JSON.stringify({ p_user: userId }),
+      body: JSON.stringify({ p_user: userId, p_marca: marca }),
     })
     return Number(Array.isArray(r) ? r[0] : r) || 0
   } catch {

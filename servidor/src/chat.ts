@@ -290,9 +290,12 @@ function anthropic(): Anthropic {
  * volta para ela em texto. É por isso que a autorização da Deriv nunca
  * entra numa resposta — ela não passa por aqui, fica dentro de `sessoes.ts`.
  */
-export async function conversar(dono: Dono, historico: Turno[], pergunta: string): Promise<Resposta> {
+export async function conversar(
+  dono: Dono, historico: Turno[], pergunta: string, marca = 'teeds',
+): Promise<Resposta> {
   const limites = await limitesDe(dono)
-  const hoje = await usoDeHojeDoChat(dono.id)
+  // O custo do chat é contado por plataforma: o da OMNI não some no da Teeds.
+  const hoje = await usoDeHojeDoChat(dono.id, marca)
   if (hoje >= limites.mensagensPorDia) {
     return {
       texto: `Você chegou ao limite de ${limites.mensagensPorDia} mensagens por hoje. ` +
@@ -321,7 +324,7 @@ export async function conversar(dono: Dono, historico: Turno[], pergunta: string
     console.log(
       `[chat] cliente ${dono.id.slice(0, 8)}… · ${gasto.idas} ida(s) · ` +
       `entrada ${gasto.entrada} · saida ${gasto.saida} · cache ${gasto.cache}`)
-    void registrarGastoDoChat(dono.id, gasto)
+    void registrarGastoDoChat(dono.id, gasto, marca)
   }
 
   for (let volta = 0; volta < MAX_VOLTAS; volta++) {

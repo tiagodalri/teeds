@@ -58,7 +58,7 @@ export async function perguntar(
         Authorization: `Bearer ${sessao.token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ pergunta, historico }),
+      body: JSON.stringify({ pergunta, historico, marca: MARCA.id }),
     })
   } catch {
     throw new Error(`Não consegui falar com o servidor da ${MARCA.prosa}. Tente de novo em instantes.`)

@@ -1,4 +1,5 @@
 import { RITMO_ROBOS, SUPABASE, autenticacaoConfigurada } from './config'
+import { MARCA } from '../../marca'
 import type { SessaoTeeds } from './conta'
 
 /**
@@ -130,7 +131,7 @@ export async function listarSessoes(sessao: SessaoTeeds, horas = 12): Promise<Se
   // consegui perguntar agora" — então a tela apagava um robô que estava
   // vivo e operando. Quem acompanha é que decide o que fazer com a falha.
   const linhas = await rest<any[]>(
-    `/sessoes_robos?select=*&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc&limit=40`,
+    `/sessoes_robos?select=*&marca=eq.${MARCA.id}&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc&limit=40`,
     sessao.token,
   )
   return (linhas ?? []).map(paraSessao)
