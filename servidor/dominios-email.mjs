@@ -9,9 +9,20 @@
  * Rodar de novo nao duplica nada — se o dominio ja existir, ele so mostra os
  * registros outra vez e diz como esta a verificacao.
  *
- * Sobre a regiao: sa-east-1 e Sao Paulo. Nao e detalhe — e-mail que sai
- * daqui chega antes e tem menos chance de ser barrado por provedor
- * brasileiro do que um que atravessa o Atlantico duas vezes.
+ * ATENCAO — este script precisa de uma chave de acesso TOTAL.
+ *
+ * A chave que mora no .env do servidor e de ENVIO APENAS, de proposito: e a
+ * unica permissao que o servidor precisa, e se ela vazar o estrago para no
+ * envio, sem deixar ninguem mexer nos dominios. Rodar isto com ela devolve
+ * 401 "restricted_api_key" — e o comportamento certo, nao um defeito.
+ *
+ * Ou seja: cadastrar dominio se faz uma vez, no painel do Resend
+ * (resend.com/domains). Este script existe para quem preferir a linha de
+ * comando e tiver uma chave total a mao.
+ *
+ * Sobre a regiao: sa-east-1 e Sao Paulo — que ja e o padrao do Resend para
+ * esta conta. E-mail que sai daqui chega antes e tem menos chance de ser
+ * barrado por provedor brasileiro do que um que atravessa o Atlantico.
  */
 import { readFileSync } from 'node:fs'
 
