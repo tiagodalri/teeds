@@ -63,6 +63,9 @@ export function RelatorioClientes({ sessao }: { sessao: SessaoTeeds }) {
   const oficialTotal = conferencia.reduce((s, d) => s + d.oficial, 0)
   const calculadaTotal = conferencia.reduce((s, d) => s + d.calculada, 0)
   const temOficial = conferencia.some((d) => d.oficial > 0)
+  /* Só houve demonstração no período: não há comissão a conferir, e a
+     ausência do número oficial está certa. */
+  const soDemo = conferencia.length > 0 && conferencia.every((d) => d.soDemo)
 
   return <>
     <div className="rc-filtros">
@@ -108,9 +111,26 @@ export function RelatorioClientes({ sessao }: { sessao: SessaoTeeds }) {
         <div><span className="rot">Conferência · só conta real</span><h3>O nosso número e o da Deriv, dia a dia</h3></div>
         <div className="rc-totais"><span>calculada <b>{usd(calculadaTotal)}</b></span><span>oficial <b>{usd(oficialTotal)}</b></span>{temOficial && <span className={classe(calculadaTotal - oficialTotal)}>diferença <b>{usd(calculadaTotal - oficialTotal, true)}</b></span>}</div>
       </header>
-      {!temOficial && <div className="rc-aviso neutro">
-        <b>O total oficial ainda não foi gravado.</b> A Deriv só entrega esse número para o dono do app, pela aba <em>Comissões</em>. Abra ela com a sua conta uma vez por período e a coluna preenche — a comparação passa a ser automática daí em diante.
-      </div>}
+      {/*
+        Falta o número oficial? Antes de acusar problema, é preciso saber por
+        quê. Só uma das três razões é defeito.
+      */}
+      {!temOficial && (soDemo ? (
+        <div className="rc-aviso neutro">
+          <b>Nada a conferir ainda.</b> No período todo só houve operação em
+          conta de demonstração, e demonstração não gera comissão. Assim que a
+          primeira operação em conta real acontecer, a coluna oficial começa a
+          preencher sozinha.
+        </div>
+      ) : (
+        <div className="rc-aviso neutro">
+          <b>O total oficial ainda não chegou.</b> A Deriv leva de uma a duas
+          horas para publicar o número do dia — o de hoje quase sempre aparece
+          vazio, e isso é atraso, não erro. Se um dia antigo continuar vazio,
+          abra a aba <em>Comissões</em> uma vez: é ela que grava o número
+          oficial, e só o dono do app consegue lê-lo.
+        </div>
+      ))}
       {conferencia.length > 0 && <div className="rc-tabela dias">
         <div className="cab"><span>Dia</span><span>Calculada</span><span>Oficial</span><span>Diferença</span><span>%</span><span>Operações</span><span>Clientes</span></div>
         {conferencia.map((d) => (
@@ -119,7 +139,9 @@ export function RelatorioClientes({ sessao }: { sessao: SessaoTeeds }) {
             <span>{usd(d.calculada)}</span>
             <span>{d.oficial ? usd(d.oficial) : <small>—</small>}</span>
             <span className={d.oficial ? classe(d.diferenca) : ''}>{d.oficial ? usd(d.diferenca, true) : <small>—</small>}</span>
-            <span>{d.diferencaPct === null ? <small>—</small> : `${d.diferencaPct > 0 ? '+' : ''}${d.diferencaPct.toFixed(2)}%`}</span>
+            <span>{d.diferencaPct === null
+              ? <small title={d.soDemo ? 'Só demonstração nesse dia — não gera comissão' : 'O número da Deriv ainda não chegou'}>—</small>
+              : `${d.diferencaPct > 0 ? '+' : ''}${d.diferencaPct.toFixed(2)}%`}</span>
             <span>{inteiro(d.operacoes)}</span>
             <span>{d.clientes}</span>
           </div>

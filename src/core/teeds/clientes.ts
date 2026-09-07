@@ -316,6 +316,15 @@ export async function listarContasDeriv(sessao: SessaoTeeds): Promise<ContaDeriv
   }))
 }
 
+/**
+ * A comissão de tudo — robô e operação manual — desta marca.
+ *
+ * Vem de `comissoes_diarias`, que é calculada a partir do extrato da Deriv
+ * e por isso enxerga também o que a pessoa operou na mão. O preço disso é
+ * que a tabela só é escrita quando alguém abre a tela de Gestão: se ninguém
+ * abre, ela congela. Para o número que nunca atrasa (mas que só conta
+ * robôs), use `comissaoDosRobos`.
+ */
 export async function listarComissoes(sessao: SessaoTeeds, dias: number): Promise<ComissaoDia[]> {
   const de = new Date()
   de.setDate(de.getDate() - (dias - 1))
@@ -454,6 +463,30 @@ export async function operacoesDoCliente(
   } catch { return [] }
 }
 
+/**
+ * A comissão dos robôs, ao vivo.
+ *
+ * Sai direto das operações que o servidor grava a cada liquidação, então
+ * nunca atrasa e nunca depende de alguém abrir tela nenhuma. Em troca,
+ * enxerga só robô: quem quiser o total, incluindo operação manual, usa
+ * `listarComissoes`.
+ */
+export async function comissaoDosRobos(sessao: SessaoTeeds, dias = 30): Promise<ComissaoDia[]> {
+  try {
+    const linhas = await rest<any[]>('/rpc/teeds_comissao_viva', sessao.token, {
+      method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: MARCA.id }),
+    })
+    return (linhas ?? []).map((l) => ({
+      userId: l.user_id, contaId: l.conta_id, dia: l.dia,
+      operacoes: Number(l.operacoes), pagamentos: Number(l.pagamentos),
+      comissao: Number(l.comissao),
+      entradas: Number(l.entradas ?? 0), resultado: Number(l.resultado ?? 0),
+      moeda: l.moeda, demo: Boolean(l.demo),
+      atualizadoEm: l.atualizado_em ?? null,
+    }))
+  } catch { return [] }
+}
+
 export interface DiaConferencia {
   dia: string
   /** O que a Teeds calculou (3% do pagamento, cliente a cliente). */
@@ -465,13 +498,22 @@ export interface DiaConferencia {
   operacoes: number
   contratosDeriv: number
   clientes: number
+  /**
+   * Naquele dia só houve operação em conta de demonstração.
+   *
+   * Demo não gera markup: o lado oficial fica zerado e está certo. Sem esta
+   * marca, a tela acusaria uma diferença de 100% num dia em que não havia
+   * nada a conferir.
+   */
+  soDemo: boolean
 }
 
 /** Os dois números lado a lado, dia a dia. Só conta real. */
 export async function conferenciaComissao(sessao: SessaoTeeds, dias = 30): Promise<DiaConferencia[]> {
   try {
     const linhas = await rest<any[]>('/rpc/teeds_comissao_conferencia', sessao.token, {
-      method: 'POST', body: JSON.stringify({ p_dias: dias }),
+      method: 'POST',
+      body: JSON.stringify({ p_dias: dias, p_marca: MARCA.id, p_app_id: MARCA.appId }),
     })
     return (linhas ?? []).map((l) => ({
       dia: l.dia, calculada: Number(l.calculada), oficial: Number(l.oficial),
@@ -479,6 +521,7 @@ export async function conferenciaComissao(sessao: SessaoTeeds, dias = 30): Promi
       diferencaPct: l.diferenca_pct === null ? null : Number(l.diferenca_pct),
       operacoes: Number(l.operacoes), contratosDeriv: Number(l.contratos_deriv),
       clientes: Number(l.clientes),
+      soDemo: Boolean(l.so_demo),
     }))
   } catch { return [] }
 }
