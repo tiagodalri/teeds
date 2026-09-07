@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { existsSync, rmSync, statSync } from 'node:fs'
+import { existsSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { MARCAS, marcaPorId } from './src/marca/marcas'
 
@@ -109,6 +109,10 @@ export default defineConfig({
         }
         // O logotipo completo da Teeds so faz sentido no site da Teeds.
         if (MARCA.id !== 'teeds') rmSync(join(SAIDA, 'teeds-completo.png'), { force: true })
+        // O CNAME e o que diz ao GitHub Pages qual dominio serve esta pasta.
+        // Sai da tabela de marcas, nao de um arquivo escrito a mao: dominio
+        // trocado num lugar so.
+        writeFileSync(join(SAIDA, 'CNAME'), new URL(MARCA.redirectUri).hostname + '\n')
       },
     },
   ],

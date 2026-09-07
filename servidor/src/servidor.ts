@@ -259,8 +259,10 @@ const servidor = createServer(async (req, res) => {
       navegador antes de chegar.
     */
     const liberadas = [
-      ...Object.values(MARCAS).map((m) => new URL(m.redirectUri).origin),
-      'https://www.omnifinanc.com',
+      ...Object.values(MARCAS).flatMap((m) => {
+        const u = new URL(m.redirectUri)
+        return [u.origin, `${u.protocol}//www.${u.hostname}`]
+      }),
       'http://localhost:5173', 'http://127.0.0.1:5173',
       'http://localhost:5180', 'http://127.0.0.1:5180',
     ]

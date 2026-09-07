@@ -16,7 +16,7 @@ export type Tema = 'claro' | 'escuro'
 /*
   A chave carrega a marca.
 
-  Duas marcas servidas do mesmo endereço (tiagodalri.github.io/teeds/ e
+  Duas marcas servidas do mesmo endereço (teedscompany.com e
   /omni/) são, para o navegador, o mesmo site: dividiriam a mesma gaveta.
   Sem o carimbo, escolher o tema claro numa mudaria a outra — e, pior, a
   autorização da Deriv de uma valeria na outra, com a app errada.

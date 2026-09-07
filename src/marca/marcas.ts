@@ -116,10 +116,10 @@ export const MARCAS: Record<string, Marca> = {
     prosa: 'Teeds',
     prefixoRobo: 'Teeds',
     appId: '34gMUQCaYNX1M93Q7aq5R',
-    redirectUri: 'https://tiagodalri.github.io/teeds/',
+    redirectUri: 'https://teedscompany.com/',
     afiliado: 'https://t.deriv.link?t=W7L5WVEEQGHY',
     robos: ['superior5', 'ag2', 'smart03', 'goreme', 'firstblock', 'secondblock'],
-    base: '/teeds/',
+    base: '/',
     emblema: 'teeds-marca.png',
     cor: { claro: '#4c6fff', escuro: '#d0aa52' },
     email: {
@@ -133,9 +133,7 @@ export const MARCAS: Record<string, Marca> = {
       rodape:
         'A Teeds é uma plataforma de operações que funciona com a sua própria conta na Deriv. ' +
         'Negociar envolve risco de perda.',
-      // O site da Teeds continua em tiagodalri.github.io (mudar isso quebraria
-      // o endereço registrado na app da Deriv). O domínio próprio existe para
-      // o e-mail ter de onde sair com a marca certa.
+      // Mesmo domínio do site. O e-mail sai de onde a plataforma mora.
       remetente: 'Teeds <nao-responda@teedscompany.com>',
     },
   },

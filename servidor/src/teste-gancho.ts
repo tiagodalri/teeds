@@ -68,7 +68,7 @@ conferir('endereco de volta da OMNI => OMNI',
   marcaDoAviso({ email_data: { redirect_to: 'https://omnifinanc.com/' } }).id, 'omni')
 
 conferir('endereco de volta da Teeds => Teeds',
-  marcaDoAviso({ email_data: { redirect_to: 'https://tiagodalri.github.io/teeds/' } }).id, 'teeds')
+  marcaDoAviso({ email_data: { redirect_to: 'https://teedscompany.com/' } }).id, 'teeds')
 
 conferir('sem volta, vale a marca do cadastro',
   marcaDoAviso({ user: { user_metadata: { marca: 'omni' } } }).id, 'omni')
