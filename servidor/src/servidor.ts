@@ -6,13 +6,13 @@ import { writeFileSync, chmodSync, existsSync, readFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
 import { MARCAS, marcaPorId } from '../../src/marca/marcas'
 import { atender, autorizacao } from './mcp'
-import { contasDoUsuario, limitesDoCliente, limparSessoesOrfas, supabaseConfigurado, usuarioDoToken } from './supabase'
+import { contasDoUsuario, emailEntregue, emailFalhou, emailsPendentes, limitesDoCliente, limparSessoesOrfas, supabaseConfigurado, usuarioDoToken } from './supabase'
 import { contas, iniciar, montarConfig, parar, todas, ver } from './sessoes'
 import { PADRAO, conferir } from './limites'
 import { conversar } from './chat'
 import { autorizacaoParaOperar, guardar } from './cofre'
 import type { ConfigEstrategia } from '../../src/core/deriv/engine'
-import { tratarGanchoDeEmail } from './gancho-email'
+import { ligarCarteiro, tratarGanchoDeEmail } from './gancho-email'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -474,6 +474,15 @@ const servidor = createServer(async (req, res) => {
 // Sessao que ficou "rodando" depois de um reinicio e tela mentindo para o
 // cliente: o robo nao existe mais, mas a Teeds diz que sim.
 void limparSessoesOrfas()
+
+// Os e-mails de acesso saem daqui, com a marca certa. Sem a chave do
+// Resend o carteiro nem liga — e o Supabase segue mandando o padrao dele.
+if (process.env.RESEND_CHAVE && supabaseConfigurado()) {
+  ligarCarteiro({ pendentes: emailsPendentes, entregue: emailEntregue, falhou: emailFalhou })
+  console.log('E-mails: o servidor manda, um por marca (Resend)')
+} else {
+  console.log('E-mails: sem RESEND_CHAVE — o Supabase continua mandando o padrao dele')
+}
 
 servidor.listen(PORTA, () => {
   const publico = RETORNO.replace(/\/callback$/, '')

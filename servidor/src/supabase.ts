@@ -421,3 +421,31 @@ export async function lerSegredoDeriv(
     return null
   }
 }
+
+
+/* ------------------------------------------------------------------ *
+ * A fila dos e-mails de acesso.
+ * O Supabase enfileira (ver a migracao teeds_fila_de_emails_de_acesso);
+ * o servidor pega, manda com a marca certa e apaga. Nenhum segredo novo:
+ * a chave que ja le o banco e a que le a fila.
+ * ------------------------------------------------------------------ */
+export interface EmailPendente { id: number; aviso: unknown; tentativas: number }
+
+export async function emailsPendentes(limite = 10): Promise<EmailPendente[]> {
+  // Depois de 5 tentativas a linha fica para tras, com o erro gravado —
+  // insistir para sempre num e-mail que o Resend recusa so gasta cota.
+  return (await rest<EmailPendente[]>(
+    `/emails_pendentes?select=id,aviso,tentativas&tentativas=lt.5&order=criado_em.asc&limit=${limite}`,
+  )) ?? []
+}
+
+export async function emailEntregue(id: number): Promise<void> {
+  await rest(`/emails_pendentes?id=eq.${id}`, { method: 'DELETE' })
+}
+
+export async function emailFalhou(id: number, tentativas: number, erro: string): Promise<void> {
+  await rest(`/emails_pendentes?id=eq.${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ tentativas: tentativas + 1, ultimo_erro: erro.slice(0, 500) }),
+  })
+}

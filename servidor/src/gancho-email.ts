@@ -10,12 +10,19 @@
  * descobre de qual plataforma a pessoa veio, monta o e-mail com a marca
  * certa (ver emails.ts) e entrega ao serviço de envio.
  *
+ * O aviso chega por uma FILA no banco (tabela emails_pendentes): o gancho
+ * do Supabase Auth só enfileira, e o carteiro daqui entrega. Escolhido em
+ * vez da porta HTTP por dois motivos: não precisa de nenhuma senha nova
+ * (a chave que já lê o banco lê a fila), e se este servidor estiver
+ * reiniciando naquele segundo o cadastro não falha — o e-mail só espera.
+ * A porta HTTP /gancho/email continua abaixo, por completude.
+ *
  * Duas coisas delicadas moram aqui:
  *
- *  - A assinatura. Este endereço fica aberto na internet, sem login — tem
- *    que ficar, senão o Supabase não alcança. O que separa um aviso legítimo
- *    de alguém batendo na porta é a assinatura que vem no cabeçalho. Sem ela
- *    conferida, qualquer um mandaria e-mail em nome da sua marca.
+ *  - A assinatura da porta HTTP. Ela fica aberta na internet, sem login —
+ *    o que separa um aviso legítimo de alguém batendo na porta é a
+ *    assinatura no cabeçalho. Sem ela conferida, qualquer um mandaria
+ *    e-mail em nome da sua marca.
  *
  *  - O remetente. Se a marca ainda não tem domínio verificado, este arquivo
  *    RECUSA em vez de mandar com o endereço da outra. Um e-mail cuja marca
@@ -163,22 +170,44 @@ async function entregarPeloResend(
 export interface RespostaDoGancho { status: number; corpo: unknown }
 
 /**
- * Trata um aviso do Supabase. Devolve o que responder — nunca lança.
+ * Manda o e-mail de um aviso. E o miolo comum da porta HTTP e da fila.
+ * Lanca erro com mensagem curta quando nao consegue — quem chama decide
+ * se responde 500 ou se deixa a linha na fila para tentar de novo.
+ */
+export async function entregarAviso(aviso: AvisoDoSupabase): Promise<{ marca: string; tipo: TipoDeEmail }> {
+  const chaveResend = process.env.RESEND_CHAVE ?? ''
+  const supabaseUrl = process.env.SUPABASE_URL ?? ''
+  if (!chaveResend || !supabaseUrl) throw new Error('servidor sem RESEND_CHAVE ou SUPABASE_URL')
+
+  const para = aviso.user?.email
+  const tipo = tipoDoAviso(aviso.email_data?.email_action_type)
+  if (!para || !tipo) throw new Error(`aviso incompleto (${aviso.email_data?.email_action_type ?? 'sem tipo'})`)
+
+  const marca = marcaDoAviso(aviso)
+  if (!marca.email.remetente) {
+    // Recusar e melhor que mandar com o remetente de outra marca: isso
+    // queima a reputacao do dominio e o estrago dura meses.
+    throw new Error(`a ${marca.prosa} nao tem remetente verificado`)
+  }
+
+  const { assunto, html, texto } = montarEmail(marca, tipo, linkDoAviso(aviso, supabaseUrl, marca))
+  await entregarPeloResend(chaveResend, marca.email.remetente, para, assunto, html, texto)
+  return { marca: marca.prosa, tipo }
+}
+
+/**
+ * Trata um aviso vindo pela porta HTTP. Devolve o que responder — nunca lanca.
  *
- * Um detalhe de propósito: quando dá errado, a resposta diz o mínimo. Este
- * endereço é público, e mensagem de erro detalhada em porta aberta é mapa
- * para quem está tentando entrar. O detalhe fica no registro do servidor,
- * onde só você lê.
+ * Um detalhe de proposito: quando da errado, a resposta diz o minimo. Este
+ * endereco e publico, e mensagem de erro detalhada em porta aberta e mapa
+ * para quem esta tentando entrar. O detalhe fica no registro do servidor.
  */
 export async function tratarGanchoDeEmail(
   corpoCru: string,
   cabecalhos: Record<string, string | string[] | undefined>,
 ): Promise<RespostaDoGancho> {
   const segredo = process.env.GANCHO_EMAIL_SEGREDO ?? ''
-  const chaveResend = process.env.RESEND_CHAVE ?? ''
-  const supabaseUrl = process.env.SUPABASE_URL ?? ''
-
-  if (!segredo || !chaveResend || !supabaseUrl) {
+  if (!segredo || !process.env.RESEND_CHAVE || !process.env.SUPABASE_URL) {
     console.warn('[email] gancho chamado sem configuração completa — nada foi enviado')
     return { status: 500, corpo: { error: { message: 'servico indisponivel' } } }
   }
@@ -192,30 +221,59 @@ export async function tratarGanchoDeEmail(
     return { status: 400, corpo: { error: { message: 'pedido malformado' } } }
   }
 
-  const para = aviso.user?.email
-  const tipo = tipoDoAviso(aviso.email_data?.email_action_type)
-  if (!para || !tipo) {
-    console.warn(`[email] nao sei tratar "${aviso.email_data?.email_action_type}" — nada enviado`)
-    return { status: 400, corpo: { error: { message: 'pedido incompleto' } } }
-  }
-
-  const marca = marcaDoAviso(aviso)
-  if (!marca.email.remetente) {
-    console.error(
-      `[email] a ${marca.prosa} ainda nao tem remetente verificado: ` +
-      `nao mandei o "${tipo}" em vez de mandar com o endereco de outra marca`,
-    )
-    return { status: 500, corpo: { error: { message: 'remetente nao configurado' } } }
-  }
-
-  const { assunto, html, texto } = montarEmail(marca, tipo, linkDoAviso(aviso, supabaseUrl, marca))
   try {
-    await entregarPeloResend(chaveResend, marca.email.remetente, para, assunto, html, texto)
+    const { marca, tipo } = await entregarAviso(aviso)
+    console.log(`[email] "${tipo}" da ${marca} entregue`)
+    return { status: 200, corpo: {} }
   } catch (e) {
-    console.error(`[email] falhei ao mandar o "${tipo}" da ${marca.prosa}:`, (e as Error).message)
+    console.error('[email] falhei:', (e as Error).message)
     return { status: 500, corpo: { error: { message: 'nao consegui enviar' } } }
   }
+}
 
-  console.log(`[email] "${tipo}" da ${marca.prosa} entregue`)
-  return { status: 200, corpo: {} }
+/* ------------------------------------------------------------------ fila */
+
+/**
+ * O carteiro: olha a fila do banco a cada pouco e entrega o que houver.
+ *
+ * E o caminho que esta ligado de fato. A porta HTTP acima continua existindo
+ * por completude, mas a fila e melhor para um servidor so: se ele estiver
+ * fora do ar por dez segundos, ninguem tem o cadastro recusado — o e-mail
+ * espera. Uma linha que falha fica com o erro gravado e volta a ser tentada
+ * ate cinco vezes; depois para, para nao gastar cota num endereco invalido.
+ */
+export function ligarCarteiro(
+  fila: {
+    pendentes: () => Promise<Array<{ id: number; aviso: unknown; tentativas: number }>>
+    entregue: (id: number) => Promise<void>
+    falhou: (id: number, tentativas: number, erro: string) => Promise<void>
+  },
+  intervaloMs = 1500,
+): () => void {
+  let ocupado = false
+  const passo = async () => {
+    if (ocupado) return
+    ocupado = true
+    try {
+      for (const linha of await fila.pendentes()) {
+        try {
+          const { marca, tipo } = await entregarAviso(linha.aviso as AvisoDoSupabase)
+          await fila.entregue(linha.id)
+          console.log(`[email] "${tipo}" da ${marca} entregue (fila #${linha.id})`)
+        } catch (e) {
+          const erro = (e as Error).message
+          console.error(`[email] fila #${linha.id} falhou (${linha.tentativas + 1}/5): ${erro}`)
+          await fila.falhou(linha.id, linha.tentativas, erro).catch(() => {})
+        }
+      }
+    } catch (e) {
+      // Banco fora do ar por um instante: o proximo passo tenta de novo.
+      console.warn('[email] nao consegui ler a fila:', (e as Error).message)
+    } finally {
+      ocupado = false
+    }
+  }
+  const timer = setInterval(() => { void passo() }, intervaloMs)
+  void passo()
+  return () => clearInterval(timer)
 }
