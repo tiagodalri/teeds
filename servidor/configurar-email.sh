@@ -47,5 +47,9 @@ systemctl restart teeds-login
 sleep 2
 systemctl is-active teeds-login
 
-printf '\n== 3/3 cadastrando os dominios no Resend ==\n'
-node dominios-email.mjs
+printf '\n== 3/3 dominios ==\n'
+printf 'A chave que o Resend gera no onboarding so sabe ENVIAR — e e a certa para\n'
+printf 'o servidor. Cadastrar dominio se faz uma vez, no painel: resend.com/domains\n'
+printf '(teedscompany.com e omnifinanc.com ja estao la, verificados).\n'
+printf '\nPara conferir que tudo funciona de ponta a ponta:\n'
+printf '  node dist/teste-email.mjs voce@seuemail.com\n'
