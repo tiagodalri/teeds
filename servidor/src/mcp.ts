@@ -2,6 +2,7 @@ import './ambiente'
 
 import { readFileSync } from 'node:fs'
 import { contas, iniciar, listarRobos, parar, resumir, todas, ver } from './sessoes'
+import { marcaPorId } from '../../src/marca/marcas'
 import type { AuthSession } from '../../src/core/deriv/auth'
 
 /**
@@ -29,7 +30,9 @@ export function autorizacao(): AuthSession {
   const linha = bruto.split('\n').find((l) => l.startsWith('DERIV_TOKEN='))
   const token = linha?.slice('DERIV_TOKEN='.length).trim()
   if (!token) throw new Error('A conta Deriv não está conectada. Abra a página de login e autorize de novo.')
-  return { accessToken: token }
+  // A app do servidor sai do ambiente. Vale para o MCP e para quem ainda
+  // nao guardou autorizacao propria no cofre.
+  return { accessToken: token, appId: marcaPorId(process.env.MARCA).appId }
 }
 
 /* ------------------------------------------------------------ ferramentas */

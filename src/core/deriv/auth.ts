@@ -24,6 +24,15 @@ export interface AuthSession {
   accessToken: string
   refreshToken?: string
   expiresAt?: number
+  /**
+   * A app da Deriv que emitiu esta autorização — e que recebe o markup.
+   *
+   * No navegador é sempre a da marca do build, e por isso pode faltar. No
+   * servidor NÃO pode: lá roda robô de qualquer marca, e sem este campo
+   * toda operação cairia na app padrão. O markup de um cliente OMNI seria
+   * creditado na Teeds, em silêncio, e ninguém descobriria olhando a tela.
+   */
+  appId?: string
 }
 
 // ---------------------------------------------------------------- PKCE

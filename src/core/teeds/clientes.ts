@@ -15,6 +15,7 @@
 
 import { SUPABASE, autenticacaoConfigurada } from './config'
 import type { SessaoTeeds } from './conta'
+import { MARCA } from '../../marca'
 
 function cabecalhos(token: string): Record<string, string> {
   return {
@@ -51,11 +52,14 @@ export async function registrarPresenca(sessao: SessaoTeeds): Promise<void> {
   if (!autenticacaoConfigurada()) return
   const u = sessao.usuario
   try {
-    await rest('/clientes?on_conflict=user_id', sessao.token, {
+    await rest('/clientes?on_conflict=user_id,marca', sessao.token, {
       method: 'POST',
       headers: MESCLAR,
       body: JSON.stringify({
         user_id: u.id,
+        // Em qual plataforma esta pessoa entrou. É o que separa a lista de
+        // clientes de cada admin.
+        marca: MARCA.id,
         nome: u.nome,
         email: u.email,
         telefone: u.telefone,
@@ -80,6 +84,7 @@ export async function registrarContaDeriv(
       headers: MESCLAR,
       body: JSON.stringify({
         user_id: sessao.usuario.id,
+        marca: MARCA.id,
         conta_id: conta.accountId,
         tipo: conta.type,
         moeda: conta.currency,
@@ -110,6 +115,8 @@ export async function enviarComissoes(
   if (!autenticacaoConfigurada() || porDia.length === 0) return
   const linhas = porDia.map((d) => ({
     user_id: sessao.usuario.id,
+    // Sem isto não dá para responder "quanto a OMNI rendeu esse mês".
+    marca: MARCA.id,
     conta_id: contaId,
     dia: d.data,
     operacoes: d.operacoes,
@@ -138,7 +145,10 @@ export async function enviarComissoes(
 export async function souAdmin(sessao: SessaoTeeds): Promise<boolean> {
   if (!autenticacaoConfigurada()) return false
   try {
-    const linhas = await rest<Array<{ user_id: string }>>('/administradores?select=user_id', sessao.token)
+    // Admin de uma plataforma não é admin da outra. Quem administra as duas
+    // tem uma linha para cada — explícito, em vez de por acidente.
+    const linhas = await rest<Array<{ user_id: string }>>(
+      `/administradores?select=user_id&marca=eq.${MARCA.id}`, sessao.token)
     return Array.isArray(linhas) && linhas.length > 0
   } catch {
     return false
@@ -210,7 +220,7 @@ const textoLegivel = (valor: string | null): string | null => {
 }
 
 export async function listarClientes(sessao: SessaoTeeds): Promise<ClienteRegistro[]> {
-  const linhas = await rest<any[]>('/clientes?select=*&order=criado_em.desc', sessao.token)
+  const linhas = await rest<any[]>(`/clientes?select=*&marca=eq.${MARCA.id}&order=criado_em.desc`, sessao.token)
   return (linhas ?? []).map((l) => ({
     userId: l.user_id, nome: textoLegivel(l.nome), email: l.email, telefone: l.telefone,
     cpf: l.cpf, criadoEm: l.criado_em, vistoEm: l.visto_em,
@@ -221,12 +231,12 @@ export async function listarClientes(sessao: SessaoTeeds): Promise<ClienteRegist
 }
 
 export async function listarPlanos(sessao: SessaoTeeds): Promise<PlanoRegistro[]> {
-  const linhas = await rest<any[]>('/planos?select=*&order=nome.asc', sessao.token)
+  const linhas = await rest<any[]>(`/planos?select=*&marcas=cs.{${MARCA.id}}&order=nome.asc`, sessao.token)
   return (linhas ?? []).map((l) => ({ id: l.id, nome: textoLegivel(l.nome) ?? l.nome, duracaoDias: l.duracao_dias, ativo: Boolean(l.ativo) }))
 }
 
 export async function listarProdutos(sessao: SessaoTeeds): Promise<ProdutoRegistro[]> {
-  const linhas = await rest<any[]>('/produtos?select=*&order=nome.asc', sessao.token)
+  const linhas = await rest<any[]>(`/produtos?select=*&marcas=cs.{${MARCA.id}}&order=nome.asc`, sessao.token)
   return (linhas ?? []).map((l) => ({ id: l.id, nome: textoLegivel(l.nome) ?? l.nome, categoria: textoLegivel(l.categoria) ?? l.categoria, precoCentavos: l.preco_centavos, ativo: Boolean(l.ativo) }))
 }
 
@@ -289,9 +299,9 @@ export async function criarAcessoCliente(sessao: SessaoTeeds, dados: {
   if (userId) {
     await new Promise((resolve) => setTimeout(resolve, 350))
     try {
-      await rest('/clientes?on_conflict=user_id', sessao.token, {
+      await rest('/clientes?on_conflict=user_id,marca', sessao.token, {
         method: 'POST', headers: MESCLAR,
-        body: JSON.stringify({ user_id: userId, nome: dados.nome.trim(), email: dados.email.trim().toLowerCase(), telefone: dados.telefone?.trim() || null, cpf: dados.cpf?.trim() || null }),
+        body: JSON.stringify({ user_id: userId, marca: MARCA.id, nome: dados.nome.trim(), email: dados.email.trim().toLowerCase(), telefone: dados.telefone?.trim() || null, cpf: dados.cpf?.trim() || null }),
       })
     } catch { /* o trigger já criou ou a confirmação ainda está pendente */ }
   }
@@ -299,7 +309,7 @@ export async function criarAcessoCliente(sessao: SessaoTeeds, dados: {
 }
 
 export async function listarContasDeriv(sessao: SessaoTeeds): Promise<ContaDerivRegistro[]> {
-  const linhas = await rest<any[]>('/contas_deriv?select=*&order=vista_em.desc', sessao.token)
+  const linhas = await rest<any[]>(`/contas_deriv?select=*&marca=eq.${MARCA.id}&order=vista_em.desc`, sessao.token)
   return (linhas ?? []).map((l) => ({
     userId: l.user_id, contaId: l.conta_id, tipo: l.tipo,
     moeda: l.moeda, saldo: l.saldo === null ? null : Number(l.saldo), vistaEm: l.vista_em,
@@ -311,7 +321,7 @@ export async function listarComissoes(sessao: SessaoTeeds, dias: number): Promis
   de.setDate(de.getDate() - (dias - 1))
   const corte = de.toISOString().slice(0, 10)
   const linhas = await rest<any[]>(
-    `/comissoes_diarias?select=*&dia=gte.${corte}&order=dia.desc`, sessao.token,
+    `/comissoes_diarias?marca=eq.${MARCA.id}&select=*&dia=gte.${corte}&order=dia.desc`, sessao.token,
   )
   return (linhas ?? []).map((l) => ({
     userId: l.user_id, contaId: l.conta_id, dia: l.dia,
@@ -327,7 +337,7 @@ export async function registrarOperacaoRobo(sessao: SessaoTeeds, op: Omit<Operac
   try {
     await rest('/operacoes_robos?on_conflict=user_id,contract_id', sessao.token, {
       method: 'POST', headers: MESCLAR,
-      body: JSON.stringify({ contract_id: op.contractId, user_id: sessao.usuario.id, conta_id: op.contaId, robo_id: op.roboId, robo_nome: op.roboNome, ativo: op.ativo, tipo_contrato: op.tipoContrato, moeda: op.moeda, demo: op.demo, entrada: op.entrada, pagamento: op.pagamento, resultado: op.resultado, markup: op.markup, markup_deriv: op.markupDeriv ?? null, ganhou: op.ganhou, executada_em: op.executadaEm }),
+      body: JSON.stringify({ contract_id: op.contractId, user_id: sessao.usuario.id, marca: MARCA.id, conta_id: op.contaId, robo_id: op.roboId, robo_nome: op.roboNome, ativo: op.ativo, tipo_contrato: op.tipoContrato, moeda: op.moeda, demo: op.demo, entrada: op.entrada, pagamento: op.pagamento, resultado: op.resultado, markup: op.markup, markup_deriv: op.markupDeriv ?? null, ganhou: op.ganhou, executada_em: op.executadaEm }),
     })
   } catch (e) { console.warn('[teeds] telemetria do robô indisponível:', (e as Error).message) }
 }
@@ -335,7 +345,7 @@ export async function registrarOperacaoRobo(sessao: SessaoTeeds, op: Omit<Operac
 export async function listarOperacoesRobos(sessao: SessaoTeeds, dias = 90): Promise<OperacaoRoboRegistro[]> {
   const corte = new Date(Date.now() - (dias - 1) * 864e5).toISOString()
   try {
-    const linhas = await rest<any[]>(`/operacoes_robos?select=*&executada_em=gte.${encodeURIComponent(corte)}&order=executada_em.desc`, sessao.token)
+    const linhas = await rest<any[]>(`/operacoes_robos?marca=eq.${MARCA.id}&select=*&executada_em=gte.${encodeURIComponent(corte)}&order=executada_em.desc`, sessao.token)
     return (linhas ?? []).map(l => ({ contractId:Number(l.contract_id),userId:l.user_id,contaId:l.conta_id,roboId:l.robo_id,roboNome:l.robo_nome,ativo:l.ativo,tipoContrato:l.tipo_contrato,moeda:l.moeda,demo:Boolean(l.demo),entrada:Number(l.entrada),pagamento:Number(l.pagamento),resultado:Number(l.resultado),markup:Number(l.markup),markupDeriv:l.markup_deriv===null||l.markup_deriv===undefined?null:Number(l.markup_deriv),ganhou:Boolean(l.ganhou),executadaEm:l.executada_em }))
   } catch { return [] }
 }

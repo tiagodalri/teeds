@@ -76,7 +76,7 @@ export function ultimoDigito(precoTexto: unknown): number | null {
   return d >= 0 && d <= 9 ? d : null
 }
 
-export interface SessaoGravada { id: string; user_id: string }
+export interface SessaoGravada { id: string; user_id: string; marca: string }
 
 /* ------------------------------------------------------------------ *
  * Abre a sessão, antes da 1ª entrada, para a tela já mostrar o robô
@@ -93,6 +93,8 @@ export async function abrirSessao(dados: {
   takeProfit: number
   maxOperacoes?: number
   origem?: 'navegador' | 'chat' | 'api'
+  /** De qual plataforma veio. Separa histórico e comissão entre as marcas. */
+  marca?: string
 }): Promise<SessaoGravada> {
   const { user_id, tipo, moeda } = await usuarioDaConta(dados.contaId)
 
@@ -102,6 +104,7 @@ export async function abrirSessao(dados: {
     body: JSON.stringify({
       sessao_ref: dados.sessaoRef,
       user_id,
+      marca: dados.marca ?? 'teeds',
       conta_id: dados.contaId,
       demo: tipo === 'demo',
       moeda: moeda || 'USD',
@@ -119,7 +122,9 @@ export async function abrirSessao(dados: {
   })
   const criada = linhas?.[0]
   if (!criada) throw new Error('abrirSessao: o banco não devolveu a sessão criada.')
-  return criada
+  // A marca segue junto para cada operação desta sessão herdar sem consultar
+  // o banco de novo.
+  return { ...criada, marca: dados.marca ?? 'teeds' }
 }
 
 /* ------------------------------------------------------------------ *
@@ -171,6 +176,7 @@ export async function registrarOperacao(
       body: JSON.stringify({
         contract_id: op.contractId,
         user_id: sessao.user_id,
+        marca: sessao.marca,
         conta_id: op.contaId,
         robo_id: op.roboId,
         robo_nome: op.roboNome,

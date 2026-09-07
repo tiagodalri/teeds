@@ -30,6 +30,11 @@ export interface TeedsSocketOptions {
    * calada. Quem cria o socket passa aqui uma funcao que pede um OTP novo.
    */
   renovarUrl?: () => Promise<string>
+  /**
+   * A app da Deriv desta conexão — é ela que recebe o markup das operações.
+   * Sem isto, o servidor operaria tudo pela app do build padrão.
+   */
+  appId?: string
 }
 
 /**
@@ -55,6 +60,7 @@ export class TeedsSocket {
   private resubscribe: boolean
   private queue: string[] = []
   private renovarUrl?: () => Promise<string>
+  private appId: string
   private renovando = false
   /** Ultimo motivo de falha, para a tela poder explicar. */
   ultimoErro: string | null = null
@@ -65,6 +71,7 @@ export class TeedsSocket {
     this.url = opts.url ?? DERIV.ws.public
     this.resubscribe = opts.resubscribe ?? true
     this.renovarUrl = opts.renovarUrl
+    this.appId = opts.appId ?? MARCA.appId
   }
 
   // ---------------------------------------------------------------- conexao
@@ -74,8 +81,8 @@ export class TeedsSocket {
     this.closedByUser = false
     this.setState(this.attempts === 0 ? 'connecting' : 'reconnecting')
 
-    const target = MARCA.appId && !this.url.includes('otp=')
-      ? `${this.url}?app_id=${encodeURIComponent(MARCA.appId)}`
+    const target = this.appId && !this.url.includes('otp=')
+      ? `${this.url}?app_id=${encodeURIComponent(this.appId)}`
       : this.url
 
     const ws = new WebSocket(target)

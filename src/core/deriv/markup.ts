@@ -64,7 +64,7 @@ async function consultar(session: AuthSession, de: string, ate: string): Promise
   const url = `${DERIV.restBase}/applications/v1/markup-statistics?date_from=${de}&date_to=${ate}`
   const res = await fetch(url, {
     headers: {
-      'Deriv-App-ID': MARCA.appId,
+      'Deriv-App-ID': session.appId ?? MARCA.appId,
       Authorization: `Bearer ${session.accessToken}`,
     },
   })

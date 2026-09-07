@@ -124,15 +124,21 @@ export const CATALOGO: Identidade[] = [
 ]
 
 /**
- * Robos oferecidos hoje na vitrine.
- * AG7 (digitos altos) e AG2 (digitos baixos); os demais seguem no catalogo
- * para leitura do historico, mas nao podem mais ser criados.
+ * A vitrine desta marca.
+ *
+ * Quem decide quais robôs aparecem é `src/marca/marcas.ts` — assim a OMNI
+ * pode ter um robô que a Teeds não tem, e vice-versa. O CATALOGO acima
+ * continua completo de propósito: sem ele, o histórico de um robô que saiu
+ * de oferta apareceria sem nome e sem cor.
+ *
+ * A ordem é a da marca, não a do catálogo: quem escolhe o que aparece
+ * primeiro na vitrine é quem monta a plataforma.
  */
-export const EM_OFERTA = ['superior5', 'ag2', 'smart03', 'goreme', 'firstblock', 'secondblock'] as const
+export const EM_OFERTA: readonly string[] = MARCA.robos
 
-export const IDENTIDADES: Identidade[] = CATALOGO.filter((i) =>
-  (EM_OFERTA as readonly string[]).includes(i.id),
-)
+export const IDENTIDADES: Identidade[] = MARCA.robos
+  .map((id) => CATALOGO.find((i) => i.id === id))
+  .filter((i): i is Identidade => Boolean(i))
 
 export function identidade(id: string): Identidade {
   return CATALOGO.find((i) => i.id === id) ?? IDENTIDADES[0]

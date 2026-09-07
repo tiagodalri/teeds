@@ -11,7 +11,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-REPO="${REPO_OMNI:-git@github.com:tiagodalri/omni.git}"
+# HTTPS, e nao SSH: e assim que este Mac ja guarda a credencial do GitHub.
+REPO="${REPO_OMNI:-https://github.com/tiagodalri/omni.git}"
 DOMINIO="omnifinanc.com"
 CLONE=".omni-publicacao"     # ignorado pelo git deste repositorio
 

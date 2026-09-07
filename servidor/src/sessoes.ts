@@ -87,8 +87,11 @@ export function robo(id: string): Estrategia {
 }
 
 export function listarRobos(marca?: string) {
-  const prefixo = marcaPorId(marca).prefixoRobo
-  return ESTRATEGIAS_LOCAIS.map((e) => ({
+  const m = marcaPorId(marca)
+  const prefixo = m.prefixoRobo
+  // Só os robôs desta plataforma. Sem o filtro, o assistente da OMNI
+  // ofereceria robôs que a tela dela nem mostra.
+  return ESTRATEGIAS_LOCAIS.filter((e) => m.robos.includes(e.id)).map((e) => ({
     id: e.id,
     nome: nomeDoRobo(e, prefixo),
     contrato: e.contractType,
@@ -181,6 +184,8 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
   const socket = new TeedsSocket({
     url,
     renovarUrl: () => fetchTradingSocketUrl(auth, conta.accountId),
+    // É por aqui que o markup vai para a marca certa.
+    appId: auth.appId,
   })
   socket.connect()
 
@@ -230,6 +235,7 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
         takeProfit: config.takeProfit,
         maxOperacoes: config.maxOperacoes,
         origem: p.origem ?? 'chat',
+        marca: marcaPorId(p.marca).id,
       })
     } catch (e) {
       // o robô não deixa de operar porque o espelho falhou

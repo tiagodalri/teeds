@@ -157,8 +157,19 @@ export async function autorizacaoDoCliente(userId: string): Promise<DoCofre> {
     return { tipo: 'quebrado' }
   }
 
+  /*
+    A app viaja junto com a autorização.
+
+    Sem isto, o servidor operaria tudo pela app do build padrão — e o markup
+    de um cliente OMNI seria creditado na Teeds, em silêncio. O navegador não
+    precisa deste campo (cada site é montado com uma marca só); o servidor
+    precisa, porque atende as duas no mesmo processo.
+  */
+  sessao.appId = marcaPorId(linha.marca).appId
+
   if (sessao.expiresAt && Date.now() > sessao.expiresAt - FOLGA) {
     const nova = await renovar(userId, sessao, linha.marca)
+    if (nova) nova.appId = marcaPorId(linha.marca).appId
     if (!nova) {
       console.warn(`[cofre] a autorizacao do cliente ${marca(userId)} venceu e nao deu para renovar.`)
       return { tipo: 'vencido' }

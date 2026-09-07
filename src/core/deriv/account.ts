@@ -13,7 +13,8 @@ export interface TradingAccount {
 
 function headers(session: AuthSession): HeadersInit {
   return {
-    'Deriv-App-ID': MARCA.appId,
+    // A app da autorização manda; a do build é só o padrão do navegador.
+    'Deriv-App-ID': session.appId ?? MARCA.appId,
     Authorization: `Bearer ${session.accessToken}`,
     'Content-Type': 'application/json',
   }

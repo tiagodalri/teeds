@@ -115,6 +115,8 @@ export async function rodar(
   const socket = new TeedsSocket({
     url,
     renovarUrl: () => fetchTradingSocketUrl(sessao, conta.accountId),
+    // É por aqui que o markup vai para a marca certa.
+    appId: sessao.appId,
   })
   socket.connect()
 

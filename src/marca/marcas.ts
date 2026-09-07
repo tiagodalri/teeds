@@ -45,6 +45,15 @@ export interface Marca {
   /** Arquivo do emblema, dentro de `public/`. */
   emblema: string
   /**
+   * Quais robôs esta plataforma oferece, e em que ordem.
+   *
+   * O catálogo inteiro continua em `branding.ts` — é ele que permite ler o
+   * histórico de um robô que saiu de oferta. O que a marca decide é a
+   * vitrine: quais aparecem para ligar. Uma marca pode ter robô exclusivo,
+   * e pode esconder um que a outra mostra.
+   */
+  robos: string[]
+  /**
    * A cor da marca, uma por tema.
    *
    * Duas porque uma só não serve: um azul-marinho profundo desaparece sobre
@@ -64,6 +73,7 @@ export const MARCAS: Record<string, Marca> = {
     appId: '34gMUQCaYNX1M93Q7aq5R',
     redirectUri: 'https://tiagodalri.github.io/teeds/',
     afiliado: 'https://t.deriv.link?t=W7L5WVEEQGHY',
+    robos: ['superior5', 'ag2', 'smart03', 'goreme', 'firstblock', 'secondblock'],
     base: '/teeds/',
     emblema: 'teeds-marca.png',
     cor: { claro: '#4c6fff', escuro: '#d0aa52' },
@@ -77,6 +87,7 @@ export const MARCAS: Record<string, Marca> = {
     appId: '34kKoxRsAd3xEcyFNw7v5',
     redirectUri: 'https://omnifinanc.com/',
     afiliado: 'https://t.deriv.link?t=2HFMXE246P62',
+    robos: ['superior5', 'ag2', 'smart03', 'goreme', 'firstblock', 'secondblock'],
     base: '/',
     emblema: 'omni-marca.png',
     cor: { claro: '#0E2A4E', escuro: '#6C93C6' },
