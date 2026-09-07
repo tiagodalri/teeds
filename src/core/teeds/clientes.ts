@@ -106,13 +106,9 @@ export async function registrarContaDeriv(
     return null
   } catch (e) {
     const cru = (e as Error).message
-    // 23505 é a violação de unicidade: a conta já tem outro dono aqui.
-    const jaTemDono = /23505|duplicate key|already exists|conta_por_marca/i.test(cru)
-    const recado = jaTemDono
-      ? `A conta ${conta.accountId} da Deriv já está ligada a outro login da ${MARCA.prosa}. ` +
-        'Cada conta da corretora pertence a uma pessoa só. Entre com o login que já a usa, ' +
-        'ou conecte outra conta da Deriv.'
-      : `Não consegui ligar a conta ${conta.accountId} ao seu login: ${cru}`
+    // Desde 07/09 a mesma conta pode estar em mais de um login: nao ha mais
+    // "outro dono". Se falhar, e problema de rede ou de permissao — diz qual.
+    const recado = `Não consegui ligar a conta ${conta.accountId} ao seu login: ${cru}`
     console.warn('[teeds] conta Deriv:', cru)
     return recado
   }

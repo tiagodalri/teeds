@@ -49,6 +49,12 @@ export interface Parametros {
   /** De onde veio o comando: muda só o rótulo que aparece no histórico. */
   origem?: 'navegador' | 'chat' | 'api'
   /**
+   * Quem pediu. A sessão é gravada no nome deste login — nunca "de quem for
+   * a conta": a mesma conta da Deriv pode estar em mais de um login, e o
+   * dono da operação é quem a mandou, não quem ligou a conta primeiro.
+   */
+  userId?: string
+  /**
    * De qual marca é o cliente.
    *
    * Só muda o nome do robô: o mesmo motor se apresenta como "Teeds - AG7"
@@ -238,6 +244,7 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
         maxOperacoes: config.maxOperacoes,
         origem: p.origem ?? 'chat',
         marca: marcaPorId(p.marca).id,
+        userId: p.userId,
       })
     } catch (e) {
       // o robô não deixa de operar porque o espelho falhou

@@ -95,8 +95,21 @@ export async function abrirSessao(dados: {
   origem?: 'navegador' | 'chat' | 'api'
   /** De qual plataforma veio. Separa histórico e comissão entre as marcas. */
   marca?: string
+  /** O login que pediu. Sem ele (MCP do dono), cai em usuarioDaConta. */
+  userId?: string
 }): Promise<SessaoGravada> {
-  const { user_id, tipo, moeda } = await usuarioDaConta(dados.contaId)
+  // A mesma conta da Deriv pode estar ligada a mais de um login. A sessão é
+  // de quem pediu — procurar "o dono da conta" com limit 1 atribuiria a
+  // operação ao login errado quando houver dois.
+  let dono: { user_id: string; tipo: string; moeda: string | null } | null = null
+  if (dados.userId) {
+    const linhas = await rest<any[]>(
+      `/contas_deriv?select=user_id,tipo,moeda&user_id=eq.${encodeURIComponent(dados.userId)}` +
+      `&conta_id=eq.${encodeURIComponent(dados.contaId)}&order=marca.eq.${encodeURIComponent(dados.marca ?? 'teeds')}.desc&limit=1`,
+    ).catch(() => [] as any[])
+    dono = linhas?.[0] ?? null
+  }
+  const { user_id, tipo, moeda } = dono ?? await usuarioDaConta(dados.contaId)
 
   const linhas = await rest<any[]>('/sessoes_robos?select=id,user_id', {
     method: 'POST',

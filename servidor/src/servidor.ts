@@ -369,6 +369,7 @@ const servidor = createServer(async (req, res) => {
           valorInicial, stopLoss, takeProfit,
           config,
           origem, marca,
+          userId: dono.id,
         })
         return json(200, resumo(s))
       }
