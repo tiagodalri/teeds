@@ -127,15 +127,7 @@ export const MARCAS: Record<string, Marca> = {
     appId: '34gMUQCaYNX1M93Q7aq5R',
     redirectUri: 'https://teedscompany.com/',
     afiliado: 'https://t.deriv.link?t=W7L5WVEEQGHY',
-    // Quatro robôs, com nomes da casa. Under/Over pelos dígitos que ganham;
-    // Bull/Bear pelas metades da dezena. O motor é o mesmo da Teeds.
-    robos: ['ag2', 'superior5', 'firstblock', 'secondblock'],
-    nomesDosRobos: {
-      ag2: 'OMNI Under',
-      superior5: 'OMNI Over',
-      firstblock: 'OMNI Bull',
-      secondblock: 'OMNI Bear',
-    },
+    robos: ['superior5', 'ag2', 'smart03', 'goreme', 'firstblock', 'secondblock'],
     base: '/',
     emblema: 'teeds-marca.png',
     cor: { claro: '#4c6fff', escuro: '#d0aa52' },
@@ -163,7 +155,15 @@ export const MARCAS: Record<string, Marca> = {
     appId: '34kKoxRsAd3xEcyFNw7v5',
     redirectUri: 'https://omnifinanc.com/',
     afiliado: 'https://t.deriv.link?t=2HFMXE246P62',
-    robos: ['superior5', 'ag2', 'smart03', 'goreme', 'firstblock', 'secondblock'],
+    // Quatro robôs, com nomes da casa. Under/Over pelos dígitos que ganham;
+    // Bull/Bear pelas metades da dezena. O motor é o mesmo da Teeds.
+    robos: ['ag2', 'superior5', 'firstblock', 'secondblock'],
+    nomesDosRobos: {
+      ag2: 'OMNI Under',
+      superior5: 'OMNI Over',
+      firstblock: 'OMNI Bull',
+      secondblock: 'OMNI Bear',
+    },
     base: '/',
     emblema: 'omni-marca.png',
     cor: { claro: '#0E2A4E', escuro: '#6C93C6' },
