@@ -95,10 +95,10 @@ const FAIXAS: Record<keyof ConfigEstrategia, [number, number]> = {
   valorAoVencer: [0.35, 10_000],
   fatorGale: [0, 3],
   galeApos: [1, 20],
-  valorMaximo: [0.35, 50_000],
+  valorMaximo: [0, 50_000],   // 0 = sem teto
   takeProfit: [0, 10_000],
   stopLoss: [0, 10_000],
-  maxOperacoes: [1, 5_000],
+  maxOperacoes: [0, 5_000],   // 0 = sem limite
 }
 
 function sanear(cfg: ConfigEstrategia, padrao: ConfigEstrategia): ConfigEstrategia {
@@ -108,7 +108,7 @@ function sanear(cfg: ConfigEstrategia, padrao: ConfigEstrategia): ConfigEstrateg
     const v = Number(limpo[chave])
     if (!Number.isFinite(v) || v < min || v > max) limpo[chave] = padrao[chave]
   }
-  if (limpo.valorMaximo < limpo.valorAoVencer) limpo.valorMaximo = limpo.valorAoVencer
+  if (limpo.valorMaximo > 0 && limpo.valorMaximo < limpo.valorAoVencer) limpo.valorMaximo = limpo.valorAoVencer
   // Migra a configuração antiga (70%/100% do prejuízo) para a nova margem
   // pequena sobre a entrada base, evitando manter uma progressão excessiva.
   if (limpo.fatorGale > 0.25) limpo.fatorGale = 0.05
@@ -150,11 +150,11 @@ export function RobotSetup({
       corpo: (
         <>
           <Numero auto valor={cfg.valorAoVencer} sufixo={moeda} minimo={0.35} maximo={10_000}
-            aoMudar={(n) => muda({ valorAoVencer: n, valorInicial: n, valorMaximo: Math.max(cfg.valorMaximo, n) })} />
+            aoMudar={(n) => muda({ valorAoVencer: n, valorInicial: n, valorMaximo: cfg.valorMaximo > 0 ? Math.max(cfg.valorMaximo, n) : 0 })} />
           <div className="qz-atalhos">
             {[0.35, 1, 2, 5].map((v) => (
               <button key={v} className={cfg.valorAoVencer === v ? 'on' : ''}
-                onClick={() => muda({ valorAoVencer: v, valorInicial: v, valorMaximo: Math.max(cfg.valorMaximo, v) })}>
+                onClick={() => muda({ valorAoVencer: v, valorInicial: v, valorMaximo: cfg.valorMaximo > 0 ? Math.max(cfg.valorMaximo, v) : 0 })}>
                 {din(v, '')}
               </button>
             ))}
@@ -180,8 +180,8 @@ export function RobotSetup({
               aoMudar={(n) => muda({ stopLoss: n })} />
           </label>
           <label>
-            <span className="rot">Máximo de operações</span>
-            <Numero valor={cfg.maxOperacoes} passo={10} minimo={1} maximo={5_000}
+            <span className="rot">Máximo de operações <small>(0 = sem limite)</small></span>
+            <Numero valor={cfg.maxOperacoes} passo={10} minimo={0} maximo={5_000}
               aoMudar={(n) => muda({ maxOperacoes: Math.round(n) })} />
           </label>
         </div>
@@ -208,7 +208,7 @@ export function RobotSetup({
             </div>
             <div><dt>Para se ganhar</dt><dd>{din(cfg.takeProfit, moeda)}</dd></div>
             <div><dt>Para se perder</dt><dd>{din(cfg.stopLoss, moeda)}</dd></div>
-            <div><dt>Máximo de operações</dt><dd>{cfg.maxOperacoes}</dd></div>
+            <div><dt>Máximo de operações</dt><dd>{cfg.maxOperacoes > 0 ? cfg.maxOperacoes : 'sem limite'}</dd></div>
           </dl>
           {!isDemo && (
             <p className="qz-alerta">

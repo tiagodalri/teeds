@@ -32,7 +32,7 @@ const din = (v: number, moeda: string) =>
 
 const PADRAO: ConfigEstrategia = {
   valorInicial: 0.35, valorAoVencer: 0.35, fatorGale: 0.05, galeApos: 3,
-  valorMaximo: 10, takeProfit: 5, stopLoss: 10, maxOperacoes: 100,
+  valorMaximo: 0, takeProfit: 5, stopLoss: 10, maxOperacoes: 0,
 }
 
 interface Props {
@@ -65,7 +65,7 @@ export function ChatProposta({ proposta, sessao, onLigado }: Props) {
         ...PADRAO,
         valorInicial: entrada, valorAoVencer: entrada,
         stopLoss: stop, takeProfit: meta,
-        valorMaximo: Math.max(entrada * 50, stop),
+        valorMaximo: 0,
       }
       const s = await ligarNoServidor(sessao, {
         roboId: proposta.roboId, contaId: proposta.contaId, config,

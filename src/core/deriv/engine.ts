@@ -153,7 +153,20 @@ export interface EstadoMotor {
 }
 
 /** Recusas seguidas ate o robo desistir e se desligar, dizendo o motivo. */
-const LIMITE_FALHAS = 3
+/**
+ * Quando uma compra recusada deve DESLIGAR o robô.
+ *
+ * Só quando a recusa não vai mudar sozinha: saldo insuficiente, autorização
+ * inválida, conta bloqueada, mercado fechado. Todo o resto — oscilação da
+ * conexão, limite de requisições, um "tente de novo" da Deriv — é passageiro:
+ * o robô espera um pouco e volta. Desligar num tropeço desses era o que fazia
+ * a sessão "parar do nada" sem ter batido em stop nenhum.
+ */
+export function recusaDefinitiva(texto: string): boolean {
+  return /InsufficientBalance|InvalidToken|AuthorizationRequired|InvalidAccount|AccountDisabled|DisabledClient|MarketIsClosed|PermissionDenied/i.test(texto)
+}
+/** Recusas passageiras seguidas antes de desistir (com espera crescente entre elas). */
+const LIMITE_FALHAS_PASSAGEIRAS = 12
 
 /** Tempo sem nenhum tick que ja e motivo para desconfiar da conexao. */
 const SILENCIO_MAXIMO_MS = 25_000
@@ -196,6 +209,8 @@ export class MotorTeeds {
   private contratoDesde = 0
   private valorEmCurso = 0
   private falhasSeguidas = 0
+  /** Até quando o robô espera antes de tentar comprar de novo (recusa passageira). */
+  private pausaAte = 0
   private liquidados = new Set<number>()
   private vigia: ReturnType<typeof setInterval> | null = null
 
@@ -377,6 +392,8 @@ export class MotorTeeds {
   }
 
   private async comprar() {
+    // Depois de uma recusa passageira, espera passar o intervalo antes de insistir.
+    if (Date.now() < this.pausaAte) return
     const desejado = Math.min(
       Math.max(MotorTeeds.ENTRADA_MINIMA, Number(this.estado.valorAtual.toFixed(2))),
       this.config.valorMaximo || Infinity,
@@ -464,12 +481,20 @@ export class MotorTeeds {
       this.estado.emCurso = null
       this.registrar(`Compra recusada: ${texto}`, 'parada')
 
-      // Insistir numa recusa que nao vai mudar so queima requisicao — e
-      // esconde o problema atras de dezenas de tentativas iguais.
-      if (this.falhasSeguidas >= LIMITE_FALHAS) {
-        this.desligar(`a Deriv recusou ${LIMITE_FALHAS} compras seguidas — ${texto}`)
+      // Recusa que nao vai mudar sozinha: desliga e diz o motivo exato.
+      if (recusaDefinitiva(texto)) {
+        this.desligar(`a Deriv recusou a compra — ${texto}`)
         return
       }
+      // Recusa passageira: espera (2s, 4s, 6s... ate 30s) e tenta de novo.
+      // So desiste depois de muitas seguidas — e ai diz quantas e por que.
+      if (this.falhasSeguidas >= LIMITE_FALHAS_PASSAGEIRAS) {
+        this.desligar(`a Deriv recusou ${LIMITE_FALHAS_PASSAGEIRAS} compras seguidas — ${texto}`)
+        return
+      }
+      const espera = Math.min(30_000, 2_000 * this.falhasSeguidas)
+      this.pausaAte = Date.now() + espera
+      this.estado.aguardando = `a Deriv recusou a compra — tentando de novo em ${Math.round(espera / 1000)}s`
       this.emitir()
     }
   }

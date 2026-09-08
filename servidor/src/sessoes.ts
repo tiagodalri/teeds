@@ -144,7 +144,8 @@ export function montarConfig(p: Parametros): ConfigEstrategia {
       valorAoVencer: c.valorAoVencer > 0 ? c.valorAoVencer : c.valorInicial,
       fatorGale: Math.max(0, c.fatorGale),
       galeApos: Math.max(0, Math.trunc(c.galeApos)),
-      valorMaximo: c.valorMaximo > 0 ? c.valorMaximo : Math.max(c.valorInicial * 50, c.stopLoss),
+      // Teto so se a pessoa definiu. Um teto inventado aqui parava o robo "do nada".
+      valorMaximo: c.valorMaximo > 0 ? c.valorMaximo : 0,
       takeProfit: c.takeProfit,
       stopLoss: c.stopLoss,
       maxOperacoes: Math.max(0, Math.trunc(c.maxOperacoes ?? 0)),
@@ -160,7 +161,7 @@ export function montarConfig(p: Parametros): ConfigEstrategia {
     valorAoVencer: p.valorInicial,
     fatorGale: margem,
     galeApos,
-    valorMaximo: p.valorMaximo ?? Math.max(p.valorInicial * 50, p.stopLoss),
+    valorMaximo: p.valorMaximo ?? 0,
     takeProfit: p.takeProfit,
     stopLoss: p.stopLoss,
     maxOperacoes: p.maxOperacoes ?? 0,

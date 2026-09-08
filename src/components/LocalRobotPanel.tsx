@@ -47,10 +47,10 @@ const PADRAO: ConfigEstrategia = {
   valorAoVencer: 0.35,
   fatorGale: 0.05,
   galeApos: 3,
-  valorMaximo: 10,
+  valorMaximo: 0,
   takeProfit: 5,
   stopLoss: 10,
-  maxOperacoes: 100,
+  maxOperacoes: 0,
 }
 
 const din = (v: number, m = 'USD') =>
@@ -206,7 +206,7 @@ export function LocalRobotPanel({
         ? 'desligado'
         : `automática ${MARCA.prosa}`,
     },
-    { rot: 'Teto', valor: din(cfg.valorMaximo, moeda) },
+    { rot: 'Teto', valor: cfg.valorMaximo > 0 ? din(cfg.valorMaximo, moeda) : 'sem teto' },
     { rot: 'Para se ganhar', valor: din(cfg.takeProfit, moeda) },
     { rot: 'Para se perder', valor: din(cfg.stopLoss, moeda) },
   ]

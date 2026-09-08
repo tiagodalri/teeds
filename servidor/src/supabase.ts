@@ -273,7 +273,7 @@ export async function limparSessoesOrfas(): Promise<void> {
       body: JSON.stringify({
         situacao: 'erro',
         erro: 'servidor reiniciado durante a sessão',
-        motivo_da_parada: 'sessão interrompida',
+        motivo_da_parada: 'o servidor foi reiniciado (publicação ou manutenção) — ligue o robô de novo',
         encerrada_em: new Date().toISOString(),
       }),
     })
