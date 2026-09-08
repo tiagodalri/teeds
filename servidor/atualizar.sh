@@ -29,8 +29,14 @@ npm run build 2>&1 | tail -2
 # pergunta ao banco se ha sessao rodando — e se houver, para aqui. Quem tiver
 # certeza de que pode derrubar (manutencao combinada) passa FORCAR=1.
 if [ "${FORCAR:-0}" != "1" ] && [ -f "$AQUI/.env" ]; then
-  SB_URL="$(grep -E '^SUPABASE_URL=' "$AQUI/.env" | cut -d= -f2- | tr -d "\"'")"
-  SB_KEY="$(grep -E '^(SUPABASE_SECRET|SUPABASE_SERVICE_ROLE_KEY)=' "$AQUI/.env" | head -1 | cut -d= -f2- | tr -d "\"'")"
+  SB_URL="$(grep -E '^SUPABASE_URL=' "$AQUI/.env" | cut -d= -f2-)"
+  SB_KEY="$(grep -E '^(SUPABASE_SECRET|SUPABASE_SERVICE_ROLE_KEY)=' "$AQUI/.env" | head -1 | cut -d= -f2-)"
+  # Aceita .env com ou sem aspas, sem depender de uma expressão de shell
+  # difícil de transportar entre o Bash do Mac e o Bash do servidor.
+  SB_URL="${SB_URL%\"}"; SB_URL="${SB_URL#\"}"
+  SB_URL="${SB_URL%\'}"; SB_URL="${SB_URL#\'}"
+  SB_KEY="${SB_KEY%\"}"; SB_KEY="${SB_KEY#\"}"
+  SB_KEY="${SB_KEY%\'}"; SB_KEY="${SB_KEY#\'}"
   if [ -n "$SB_URL" ] && [ -n "$SB_KEY" ]; then
     RODANDO="$(curl -s "$SB_URL/rest/v1/sessoes_robos?situacao=eq.rodando&select=id" -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY" | grep -o '"id"' | wc -l | tr -d ' ')"
     if [ "${RODANDO:-0}" -gt 0 ]; then
