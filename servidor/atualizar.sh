@@ -38,7 +38,10 @@ if [ "${FORCAR:-0}" != "1" ] && [ -f "$AQUI/.env" ]; then
   SB_KEY="${SB_KEY%\"}"; SB_KEY="${SB_KEY#\"}"
   SB_KEY="${SB_KEY%\'}"; SB_KEY="${SB_KEY#\'}"
   if [ -n "$SB_URL" ] && [ -n "$SB_KEY" ]; then
-    RODANDO="$(curl -s "$SB_URL/rest/v1/sessoes_robos?situacao=eq.rodando&select=id" -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY" | grep -o '"id"' | wc -l | tr -d ' ')"
+    # `grep` devolve erro quando encontra zero linhas; com `pipefail`, isso
+    # abortava justamente no caso seguro (nenhum robô rodando). O awk conta
+    # zero sem transformar ausência de sessão em falha do publicador.
+    RODANDO="$(curl -s "$SB_URL/rest/v1/sessoes_robos?situacao=eq.rodando&select=id" -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY" | awk -F'"id"' '{ total += NF - 1 } END { print total + 0 }')"
     if [ "${RODANDO:-0}" -gt 0 ]; then
       echo "!! Ha $RODANDO robo(s) operando agora. Reiniciar derrubaria todos."
       echo "   O codigo novo ja esta baixado e montado; reinicie quando nao houver sessao:"
