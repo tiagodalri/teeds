@@ -25,6 +25,13 @@ export interface Contexto {
   /** Quanto a sequencia de perdas atual ja custou (numero positivo). */
   prejuizoDaSequencia: number
   config: ConfigEstrategia
+  /** Estado privado desta execução; nunca é compartilhado entre clientes. */
+  memoria: Record<string, unknown>
+}
+
+export interface ContratoEstrategia {
+  contractType: string
+  barreira?: number
 }
 
 export interface Estrategia {
@@ -49,6 +56,14 @@ export interface Estrategia {
    * Para estrategias sem filtro de entrada, que operam continuamente.
    */
   entradaContinua?: boolean
+  /** Permite que uma estratégia adaptativa escolha o contrato a cada entrada. */
+  contrato?: (c: Contexto) => ContratoEstrategia
+  /** Atualiza a máquina de estados somente depois da liquidação confirmada. */
+  aposResultado?: (c: Contexto & {
+    ganhou: boolean
+    contractType: string
+    digitoSaida: number | null
+  }) => void
   /** Proximo valor apos o resultado de uma operacao. */
   proximoValor: (args: {
     valorAtual: number
@@ -62,6 +77,8 @@ export interface Estrategia {
     /** Lucro esperado para cada 1 unidade de entrada, já com margem de segurança. */
     retornoLiquidoPorUnidade: number
     config: ConfigEstrategia
+    memoria: Record<string, unknown>
+    contractType: string
   }) => number
 }
 
@@ -94,6 +111,8 @@ export interface OperacaoMotor {
   quando: number
   /** Quantos ticks o robo esperou antes desta entrada. */
   esperou: number
+  contractType: string
+  barreira?: number
 }
 
 /** A operacao que esta correndo agora. */
@@ -109,6 +128,8 @@ export interface EmCurso {
   comprouEm: number
   /** Milissegundos entre decidir e a Deriv confirmar a compra. */
   latencia: number
+  contractType: string
+  barreira?: number
 }
 
 export interface Registro {
@@ -211,6 +232,7 @@ export class MotorTeeds {
   private falhasSeguidas = 0
   /** Até quando o robô espera antes de tentar comprar de novo (recusa passageira). */
   private pausaAte = 0
+  private memoria: Record<string, unknown> = {}
   private liquidados = new Set<number>()
   private vigia: ReturnType<typeof setInterval> | null = null
 
@@ -255,6 +277,7 @@ export class MotorTeeds {
       resultado: this.estado.resultado,
       prejuizoDaSequencia: this.prejuizoDaSequencia,
       config: this.config,
+      memoria: this.memoria,
     }
   }
 
@@ -265,6 +288,7 @@ export class MotorTeeds {
     this.latencias = []
     this.esperaAtual = 0
     this.prejuizoDaSequencia = 0
+    this.memoria = {}
     this.liquidados = new Set()
     this.registrar(`Robô ligado — ${this.estrategia.nome}`, 'info')
     this.estado.aguardando = 'lendo o histórico do ativo…'
@@ -422,6 +446,10 @@ export class MotorTeeds {
     this.emitir()
 
     const partiu = Date.now()
+    const contrato = this.estrategia.contrato?.(this.contexto) ?? {
+      contractType: this.estrategia.contractType,
+      barreira: this.estrategia.barreira,
+    }
 
     try {
       // Uma chamada so: no proposal->buy o tick que disparou a entrada ja
@@ -430,12 +458,12 @@ export class MotorTeeds {
         this.socket,
         {
           symbol: this.symbol,
-          contractType: this.estrategia.contractType,
+          contractType: contrato.contractType,
           amount: valor,
           duration: this.estrategia.ticks,
           durationUnit: 't',
           currency: this.moeda,
-          ...(this.estrategia.barreira !== undefined ? { barrier: String(this.estrategia.barreira) } : {}),
+          ...(contrato.barreira !== undefined ? { barrier: String(contrato.barreira) } : {}),
         },
         // teto de deslizamento: o custo nunca deve passar do valor da entrada
         Number((valor * 1.01).toFixed(2)),
@@ -461,6 +489,8 @@ export class MotorTeeds {
         lucro: 0,
         comprouEm: Date.now(),
         latencia,
+        contractType: contrato.contractType,
+        ...(contrato.barreira !== undefined ? { barreira: contrato.barreira } : {}),
       }
       const custo = recibo.buyPrice || valor
       const retorno = custo > 0 ? (recibo.payout - custo) / custo : 0
@@ -580,6 +610,8 @@ export class MotorTeeds {
           ganhou,
           quando: Date.now(),
           esperou: this.esperaAtual,
+          contractType: this.estado.emCurso?.contractType ?? this.estrategia.contractType,
+          ...(this.estado.emCurso?.barreira !== undefined ? { barreira: this.estado.emCurso.barreira } : {}),
         },
         ...this.estado.historico,
       ]
@@ -601,6 +633,14 @@ export class MotorTeeds {
         this.registrar(`Perdeu ${this.moeda} ${Math.abs(c.profit).toFixed(2)}`, 'perda')
       }
 
+      const contratoLiquidado = this.estado.historico[0]?.contractType ?? this.estrategia.contractType
+      this.estrategia.aposResultado?.({
+        ...this.contexto,
+        ganhou,
+        contractType: contratoLiquidado,
+        digitoSaida: saida !== null ? ultimoDigito(saida, casas) : null,
+      })
+
       this.estado.valorAtual = this.estrategia.proximoValor({
         valorAtual: valor,
         valorInicial: this.config.valorInicial,
@@ -611,6 +651,8 @@ export class MotorTeeds {
         prejuizoDaSequencia: this.prejuizoDaSequencia,
         retornoLiquidoPorUnidade: this.retornoLiquidoPorUnidade,
         config: this.config,
+        memoria: this.memoria,
+        contractType: contratoLiquidado,
       })
 
       // freios

@@ -12,6 +12,7 @@ export const RECUPERACAO_POR_ROBO: Record<string, { galeApos: number; margem: nu
   goreme: { galeApos: 1, margem: 0.05 },
   firstblock: { galeApos: 3, margem: 0.05 },
   secondblock: { galeApos: 3, margem: 0.05 },
+  thepalm: { galeApos: 1, margem: 0.95 },
   superior5fixo: { galeApos: 3, margem: 0 },
 }
 
@@ -182,6 +183,105 @@ export const SECOND_BLOCK: Estrategia = {
   barreira: 4,
 }
 
+type FasePalm = 'aquecendo' | 'base-real' | 'recuperacao-espera' | 'recuperacao-real'
+
+const janelaPalm = (digitos: number[]) => digitos.slice(-25)
+const pctPalm = (digitos: number[], aceita: (d: number) => boolean) =>
+  janelaPalm(digitos).filter(aceita).length * 4
+const fasePalm = (memoria: Record<string, unknown>): FasePalm =>
+  (memoria.fasePalm as FasePalm | undefined) ?? 'aquecendo'
+
+/**
+ * The Palm, reconstruído quadro a quadro a partir do robô original.
+ *
+ * A entrada-base é Under 9: primeiro observa em virtual até o 9 aparecer e
+ * então abre um ciclo real. Uma perda troca a recuperação para Under 5. A
+ * recuperação só é exposta quando 0–4 ocupam ao menos 48% dos 25 dígitos e
+ * um resultado 5–9 (loss virtual ou real) acaba de ocorrer.
+ */
+export const THE_PALM: Estrategia = {
+  id: 'thepalm',
+  nome: 'The Palm',
+  origem: 'reconstruído a partir do The Palm 2.0 original',
+  descricao:
+    'Analisa 25 dígitos, arma entradas reais em Under 9 após uma perda virtual e ' +
+    'troca para Under 5 na recuperação, sempre usando o payout real para calcular o valor.',
+  contractType: 'DIGITUNDER',
+  barreira: 9,
+  ticks: 1,
+  entradaContinua: true,
+  contrato: ({ memoria }) => fasePalm(memoria) === 'recuperacao-real'
+    ? { contractType: 'DIGITUNDER', barreira: 5 }
+    : { contractType: 'DIGITUNDER', barreira: 9 },
+  entrar: ({ digitos, memoria }) => {
+    const janela = janelaPalm(digitos)
+    if (janela.length < 25) return false
+    const ultimo = janela[janela.length - 1]
+    const fase = fasePalm(memoria)
+
+    if (fase === 'base-real' || fase === 'recuperacao-real') return true
+    if (fase === 'aquecendo') {
+      if (pctPalm(janela, (d) => d === 9) <= 12 && ultimo === 9) {
+        memoria.fasePalm = 'base-real'
+        return true
+      }
+      return false
+    }
+    if (pctPalm(janela, (d) => d <= 4) >= 48 && ultimo >= 5) {
+      memoria.fasePalm = 'recuperacao-real'
+      return true
+    }
+    return false
+  },
+  aguardando: ({ digitos, memoria }) => {
+    const janela = janelaPalm(digitos)
+    if (janela.length < 25) return `lendo o mercado — ${janela.length}/25 dígitos`
+    const nove = pctPalm(janela, (d) => d === 9)
+    const baixos = pctPalm(janela, (d) => d <= 4)
+    return fasePalm(memoria) === 'recuperacao-espera'
+      ? `recuperação em análise — 0 a 4 em ${baixos}% (libera em 48% após loss virtual)`
+      : `análise virtual Under 9 — dígito 9 em ${nove}% (limite 12%)`
+  },
+  progresso: ({ digitos, memoria }) => {
+    const janela = janelaPalm(digitos)
+    const nove = janela.length === 25 ? pctPalm(janela, (d) => d === 9) : 0
+    const baixos = janela.length === 25 ? pctPalm(janela, (d) => d <= 4) : 0
+    const recuperando = fasePalm(memoria).startsWith('recuperacao')
+    return {
+      rotulo: recuperando
+        ? `Under 5 virtual · 0–4 em ${baixos}%`
+        : `Under 9 virtual · dígito 9 em ${nove}%`,
+      itens: recuperando
+        ? [{ valor: `${baixos}%`, ok: janela.length === 25 && baixos >= 48 }, { valor: '5–9', ok: janela[janela.length - 1] >= 5 }]
+        : [{ valor: `${nove}%`, ok: janela.length === 25 && nove <= 12 }, { valor: '9', ok: janela[janela.length - 1] === 9 }],
+    }
+  },
+  aposResultado: ({ ganhou, contractType, memoria, digitos }) => {
+    const eraRecuperacao = contractType === 'DIGITUNDER' && fasePalm(memoria) === 'recuperacao-real'
+    if (ganhou) {
+      memoria.fasePalm = eraRecuperacao ? 'aquecendo' : 'base-real'
+      return
+    }
+    const baixos = pctPalm(digitos, (d) => d <= 4)
+    const janela = janelaPalm(digitos)
+    const ultimo = janela[janela.length - 1]
+    memoria.fasePalm = baixos >= 48 && ultimo !== undefined && ultimo >= 5
+      ? 'recuperacao-real'
+      : 'recuperacao-espera'
+  },
+  proximoValor: ({ ganhou, valorAoVencer, prejuizoDaSequencia, retornoLiquidoPorUnidade, contractType }) => {
+    if (ganhou) return valorAoVencer
+    // Antes da primeira compra Under 5, o último payout conhecido ainda é o
+    // pequeno retorno do Under 9. Depois usamos a cotação realmente comprada.
+    const retornoObservado = contractType === 'DIGITUNDER' && retornoLiquidoPorUnidade > 0.5
+      ? retornoLiquidoPorUnidade
+      : 0.9233
+    const retornoSeguro = Math.max(0.01, retornoObservado * 0.99)
+    const lucroAlvo = Math.max(0.01, valorAoVencer * 0.95)
+    return Math.ceil(((prejuizoDaSequencia + lucroAlvo) / retornoSeguro) * 100) / 100
+  },
+}
+
 /** Variacao conservadora: entra igual, mas a entrada nunca muda. */
 export const SUPERIOR_5_FIXO: Estrategia = {
   ...SUPERIOR_5,
@@ -218,5 +318,5 @@ export const nomeDoRoboNaMarca = (
 ): string => marca.nomesDosRobos?.[e.id] ?? nomeDoRobo(e, marca.prefixoRobo)
 
 export const ESTRATEGIAS_LOCAIS: Estrategia[] = [
-  SUPERIOR_5, AG_2, SMART_03, GOREME, FIRST_BLOCK, SECOND_BLOCK, SUPERIOR_5_FIXO,
+  SUPERIOR_5, AG_2, SMART_03, GOREME, FIRST_BLOCK, SECOND_BLOCK, THE_PALM, SUPERIOR_5_FIXO,
 ]

@@ -197,13 +197,15 @@ export function RobotSetup({
           <dl className="qz-resumo">
             <div><dt>Ativo</dt><dd>{nomeAtivo.replace(' Index', '')} <em className="qz-fixo">definido pela {MARCA.prosa}</em></dd></div>
             <div><dt>Entrada</dt><dd>{din(cfg.valorAoVencer, moeda)}</dd></div>
-            <div><dt>Entradas</dt><dd>em todas as operações</dd></div>
+            <div><dt>Entradas</dt><dd>{identidade.id === 'thepalm' ? 'após análise virtual dos últimos 25 dígitos' : 'em todas as operações'}</dd></div>
             <div>
               <dt>Martingale</dt>
               <dd>
                 {cfg.fatorGale === 0
                   ? 'desligado neste modelo — entrada sempre igual'
-                  : `recuperação automática protegida pela ${MARCA.prosa}`}
+                  : identidade.id === 'thepalm'
+                    ? 'recuperação adaptativa em Under 5 pelo payout real'
+                    : `recuperação automática protegida pela ${MARCA.prosa}`}
               </dd>
             </div>
             <div><dt>Para se ganhar</dt><dd>{din(cfg.takeProfit, moeda)}</dd></div>

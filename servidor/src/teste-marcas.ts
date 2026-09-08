@@ -21,11 +21,12 @@ const vitrine = (id: string) => {
   return m.robos.map((r) => nomeDoRoboNaMarca(ESTRATEGIAS_LOCAIS.find((e) => e.id === r)!, m))
 }
 
-conferir('Teeds: seis robos, nomes de sempre', vitrine('teeds'),
-  ['Teeds - AG7', 'Teeds - AG2', 'Teeds Smart 03', 'Teeds Göreme', 'First Block', 'Second Block'])
+conferir('Teeds: sete robos, incluindo o exclusivo The Palm', vitrine('teeds'),
+  ['Teeds - AG7', 'Teeds - AG2', 'Teeds Smart 03', 'Teeds Göreme', 'First Block', 'Second Block', 'The Palm'])
 conferir('OMNI: quatro robos, nomes da casa', vitrine('omni'),
   ['OMNI Under', 'OMNI Over', 'OMNI Bull', 'OMNI Bear'])
 conferir('Teeds nao tem apelido nenhum', MARCAS.teeds.nomesDosRobos, undefined)
+conferir('The Palm existe somente na Teeds', MARCAS.teeds.robos.includes('thepalm') && !MARCAS.omni.robos.includes('thepalm'), true)
 for (const m of Object.values(MARCAS)) {
   for (const r of m.robos) conferir(`${m.prosa}: robo "${r}" existe no motor`, ESTRATEGIAS_LOCAIS.some((e) => e.id === r), true)
   conferir(`${m.prosa}: nenhum nome de outra marca`, vitrine(m.id).some((n) => Object.values(MARCAS).some((o) => o.id !== m.id && n.startsWith(o.nome))), false)

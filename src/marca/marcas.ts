@@ -127,7 +127,7 @@ export const MARCAS: Record<string, Marca> = {
     appId: '34gMUQCaYNX1M93Q7aq5R',
     redirectUri: 'https://teedscompany.com/',
     afiliado: 'https://t.deriv.link?t=W7L5WVEEQGHY',
-    robos: ['superior5', 'ag2', 'smart03', 'goreme', 'firstblock', 'secondblock'],
+    robos: ['superior5', 'ag2', 'smart03', 'goreme', 'firstblock', 'secondblock', 'thepalm'],
     base: '/',
     emblema: 'teeds-marca.png',
     cor: { claro: '#4c6fff', escuro: '#d0aa52' },

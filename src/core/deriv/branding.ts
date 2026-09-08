@@ -115,6 +115,13 @@ export const CATALOGO: Identidade[] = [
     chance: 50, contrato: 'DIGITOVER',
   },
   {
+    id: 'thepalm', nome: nomeDaEstrategia('thepalm'), chamada: 'O adaptativo',
+    descricao: 'Analisa 25 dígitos e alterna entre Under 9 e Under 5 com proteção virtual.',
+    cor: '#16a36a', corSuave: '#e5f7ef', onde: 'teeds',
+    emblema: 'M20 31 V16 M20 20 C13 20 9 16 9 10 C16 10 20 13 20 20 M20 23 C27 23 31 19 31 13 C24 13 20 16 20 23 M14 31 h12',
+    chance: 90, contrato: 'DIGITUNDER',
+  },
+  {
     id: 'superior5fixo', nome: 'AG7 sem martingale', chamada: 'O disciplinado',
     descricao: 'Entra em todas as operações com o valor sempre igual, sem progressão.',
     cor: '#0d9488', corSuave: '#e3f5f3', onde: 'teeds',

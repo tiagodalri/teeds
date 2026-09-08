@@ -271,7 +271,7 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
             roboId: estrategia.id,
             roboNome: nomeDoRoboNaMarca(estrategia, marcaPorId(p.marca)),
             ativo: ATIVO_DOS_ROBOS,
-            tipoContrato: estrategia.contractType,
+            tipoContrato: op.contractType,
             demo: conta.type === 'demo',
             moeda: conta.currency,
             entrada: op.valor,

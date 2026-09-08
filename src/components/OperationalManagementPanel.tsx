@@ -11,8 +11,8 @@ import { MARCA } from '../marca'
 */
 const nomeDeRobo = (id: string) => identidade(id).nome
 
-type RoboId = 'superior5' | 'ag2' | 'smart03' | 'goreme' | 'firstblock' | 'secondblock'
-type PerfilRobo = { id: RoboId; nome: string; regra: string; chance: number; retornoLiquido: number; galeApos: number; cor: string }
+type RoboId = 'superior5' | 'ag2' | 'smart03' | 'goreme' | 'firstblock' | 'secondblock' | 'thepalm'
+type PerfilRobo = { id: RoboId; nome: string; regra: string; chance: number; retornoLiquido: number; galeApos: number; margem?: number; cor: string }
 
 const TODOS_OS_ROBOS: PerfilRobo[] = [
   { id: 'superior5', nome: nomeDeRobo('superior5'), regra: 'vence com os dígitos 7, 8 e 9', chance: 30, retornoLiquido: 1.92, galeApos: 3, cor: '#e8892b' },
@@ -21,6 +21,7 @@ const TODOS_OS_ROBOS: PerfilRobo[] = [
   { id: 'goreme', nome: nomeDeRobo('goreme'), regra: 'vence com os dígitos de 0 a 8', chance: 90, retornoLiquido: .10, galeApos: 3, cor: '#b86f3c' },
   { id: 'firstblock', nome: nomeDeRobo('firstblock'), regra: 'vence com os dígitos de 0 a 4', chance: 50, retornoLiquido: .92, galeApos: 3, cor: '#d0aa52' },
   { id: 'secondblock', nome: nomeDeRobo('secondblock'), regra: 'vence com os dígitos de 5 a 9', chance: 50, retornoLiquido: .92, galeApos: 3, cor: '#b86f3c' },
+  { id: 'thepalm', nome: nomeDeRobo('thepalm'), regra: 'alterna Under 9 e Under 5 após análise de 25 dígitos', chance: 90, retornoLiquido: .9233, galeApos: 1, margem: .95, cor: '#16a36a' },
 ]
 // So os robos que esta plataforma oferece — a OMNI nao mostra os que nao vende.
 const ROBOS: PerfilRobo[] = TODOS_OS_ROBOS.filter((r) => MARCA.robos.includes(r.id))
@@ -48,7 +49,7 @@ export function OperationalManagementPanel({ moeda = 'USD' }: { moeda?: string }
     const meta = saldo * Math.min(100, n(metaPct, 3)) / 100
     const desejadas = Math.min(12, Math.max(0, Math.round(n(recuperacoesDesejadas, 3))))
     const retornoSeguro = Math.max(.01, robo.retornoLiquido * .97)
-    const lucroMinimo = Math.max(.01, base * .05)
+    const lucroMinimo = Math.max(.01, base * (robo.margem ?? .05))
     const limite = Math.min(stop, saldo)
     const linhas: Array<{ passo: number; rotulo: string; valor: number; acumulado: number; dentro: boolean; recuperacao: boolean }> = []
     let acumulado = 0
@@ -127,7 +128,7 @@ export function OperationalManagementPanel({ moeda = 'USD' }: { moeda?: string }
             <label><span>Meta diária</span><div><input inputMode="decimal" value={metaPct} onChange={(e) => setMetaPct(e.target.value)} /><em>%</em></div></label>
             <label><span>Recuperações que deseja suportar</span><div><input inputMode="numeric" value={recuperacoesDesejadas} onChange={(e) => setRecuperacoesDesejadas(e.target.value)} /><em>níveis</em></div></label>
           </div>
-          <div className="go-regra"><b>Como o {robo.nome} calcula</b><p>Após {robo.galeApos} perdas no valor-base, cada nova entrada busca recuperar o acumulado e acrescentar uma margem pequena. O retorno usado é conservador e varia conforme o robô.</p></div>
+          <div className="go-regra"><b>Como o {robo.nome} calcula</b><p>Após {robo.galeApos} perda{robo.galeApos === 1 ? '' : 's'} no valor-base, cada nova entrada busca recuperar o acumulado e acrescentar a margem própria do modelo. O retorno usado é conservador e varia conforme o robô.</p></div>
         </aside>
 
         <div className="go-resultados">
