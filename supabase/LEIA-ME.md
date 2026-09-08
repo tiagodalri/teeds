@@ -22,11 +22,25 @@ Estes arquivos são **cópia fiel**, tirada direto do banco por um programa —
 ninguém os digita à mão. Não edite nada aqui: mudança se faz no banco, e
 depois se roda o export de novo.
 
-**Os quatro `.sql` soltos** (`teeds_admin_setup`, `teeds_chat`,
-`teeds_relatorio_clientes`, `teeds_robot_telemetry`) — são anteriores a
-setembro de 2026, de quando as mudanças ainda eram feitas colando SQL na mão
-no painel. `teeds_admin_setup.sql` em especial é o alicerce: a estrutura
-original, que nenhum arquivo de `migracoes/` repete. Ficam aqui como história.
+### Arquivos legados — história, não migrações pendentes
+
+Os quatro `.sql` soltos (`teeds_admin_setup`, `teeds_chat`,
+`teeds_relatorio_clientes`, `teeds_robot_telemetry`) são anteriores a setembro
+de 2026, de quando as mudanças ainda eram feitas colando SQL à mão no painel.
+
+Eles ficam na raiz desta pasta deliberadamente como registro histórico:
+
+| Arquivo | Papel histórico |
+| --- | --- |
+| `teeds_admin_setup.sql` | Alicerce original do banco, que nenhuma migração versionada repete. |
+| `teeds_chat.sql` | Implantação manual original do chat. |
+| `teeds_relatorio_clientes.sql` | Implantação manual original dos relatórios de clientes. |
+| `teeds_robot_telemetry.sql` | Implantação manual original da telemetria dos robôs. |
+
+**Não aplique, não renomeie e não mova esses arquivos como se fossem migrações
+novas.** Eles podem conter estruturas que o banco atual já substituiu. Toda
+mudança nova deve nascer no banco e voltar versionada em `migracoes/` pelo
+processo de exportação descrito abaixo.
 
 ## Como atualizar depois de mexer no banco
 
