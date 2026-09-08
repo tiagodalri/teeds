@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 #
 # Deixa o servidor pronto: dependencias, build e o Caddy servindo o login
-# com certificado valido (Let's Encrypt automatico via nip.io).
+# com certificado valido (Let's Encrypt automatico).
+#
+# servidor/Caddyfile e a fonte da verdade. A instalacao apenas copia esse
+# arquivo para o Caddy de producao; nao mantenha uma segunda configuracao aqui.
 #
 # Existe porque o console web da DigitalOcean embaralha comando longo — aqui
 # tudo vira uma linha so: bash servidor/instalar.sh
@@ -9,8 +12,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-IP=$(curl -s --max-time 10 https://api.ipify.org || echo "198.211.96.238")
-DOMINIO="${IP//./-}.nip.io"
+DOMINIO_PRINCIPAL="motor.teedscompany.com"
+DOMINIO_LEGADO="198-211-96-238.nip.io"
 
 echo "== 1/4 dependencias =="
 npm install --no-audit --no-fund --silent
@@ -29,11 +32,7 @@ if ! command -v caddy >/dev/null 2>&1; then
   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq caddy >/dev/null 2>&1
 fi
 
-cat > /etc/caddy/Caddyfile <<CADDY
-${DOMINIO} {
-  reverse_proxy 127.0.0.1:8080
-}
-CADDY
+install -m 0644 Caddyfile /etc/caddy/Caddyfile
 systemctl reload caddy 2>/dev/null || systemctl restart caddy
 
 echo "== 4/4 servico do login =="
@@ -45,7 +44,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=$(pwd)
-Environment=RETORNO=https://${DOMINIO}/callback
+Environment=RETORNO=https://${DOMINIO_PRINCIPAL}/callback
 ExecStart=/usr/bin/node $(pwd)/dist/servidor.mjs
 Restart=on-failure
 User=root
@@ -62,14 +61,17 @@ echo
 SEGREDO=$(cat .mcp-segredo 2>/dev/null || true)
 echo "-------------------------------------------------"
 echo " Login (abra e clique em Conectar Deriv):"
-echo "   https://${DOMINIO}"
+echo "   https://${DOMINIO_PRINCIPAL}"
 echo
 echo " Endereco de retorno cadastrado na Deriv:"
-echo "   https://${DOMINIO}/callback"
+echo "   https://${DOMINIO_PRINCIPAL}/callback"
+echo
+echo " Endereco legado mantido em paralelo:"
+echo "   https://${DOMINIO_LEGADO}"
 if [ -n "${SEGREDO}" ]; then
 echo
 echo " MCP para ligar no chat:"
-echo "   https://${DOMINIO}/mcp/${SEGREDO}"
+echo "   https://${DOMINIO_PRINCIPAL}/mcp/${SEGREDO}"
 echo "   ^ isto e uma senha: quem tiver, comanda os robos."
 fi
 echo "-------------------------------------------------"

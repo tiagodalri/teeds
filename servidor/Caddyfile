@@ -1,0 +1,5 @@
+# Fonte da verdade do proxy do motor Teeds.
+# Em producao, copie este arquivo para /etc/caddy/Caddyfile.
+motor.teedscompany.com, 198-211-96-238.nip.io {
+  reverse_proxy 127.0.0.1:8080
+}
