@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { useClock } from '../hooks/useClock'
 import { MARCA } from '../marca'
@@ -7,6 +7,7 @@ interface Props {
   estado: EstadoMotor
   config: ConfigEstrategia
   moeda: string
+  estrategiaId?: string
   nomeEstrategia: string
   /** Nome do ativo, por extenso. */
   ativo: string
@@ -85,16 +86,37 @@ function Cronometro({ desde }: { desde: number }) {
 /* -------------------------------------------------------------- principal */
 
 export function RobotLive({
-  estado, config, moeda, nomeEstrategia, ativo, titulo, regra, ganhaCom,
+  estado, config, moeda, estrategiaId, nomeEstrategia, ativo, titulo, regra, ganhaCom,
   parametros = [], conexao = 'open', onDesligar, onLigarDeNovo, onRemover,
   expandido = false, onExpandir,
 }: Props) {
   const [detalhes, setDetalhes] = useState(false)
   const [registroAberto, setRegistroAberto] = useState(false)
+  const [analisesPalm, setAnalisesPalm] = useState<Array<{ id: number; hora: number; texto: string }>>([])
   const acerto = estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
   const positivo = estado.resultado >= 0
   const fita = estado.digitos.slice(-30)
   const emCurso = estado.emCurso
+
+  useEffect(() => {
+    if (estrategiaId !== 'thepalm') return
+    if (estado.ticksAnalisados === 0) {
+      setAnalisesPalm([])
+      return
+    }
+    if (!estado.rodando || emCurso) return
+
+    const ultimo = estado.digitos[estado.digitos.length - 1]
+    const leitura = estado.condicao?.rotulo ?? estado.aguardando
+    const texto = ultimo === undefined
+      ? leitura
+      : `Dígito ${ultimo} recebido · ${leitura}`
+
+    setAnalisesPalm((atuais) => {
+      if (atuais[atuais.length - 1]?.id === estado.ticksAnalisados) return atuais
+      return [...atuais, { id: estado.ticksAnalisados, hora: Date.now(), texto }].slice(-4)
+    })
+  }, [estrategiaId, estado.ticksAnalisados, estado.rodando, estado.aguardando, estado.condicao, estado.digitos, emCurso])
 
   // acumulado por operacao, para a coluna da direita da tabela
   const acumulados = useMemo(() => {
@@ -232,6 +254,27 @@ export function RobotLive({
           </span>
         </div>
       </section>
+
+      {estrategiaId === 'thepalm' && (
+        <section className="tv-palm-analise" aria-label="Análises recentes do The Palm">
+          <header>
+            <span><i /> Análise ao vivo</span>
+            <small>{estado.rodando ? `${estado.ticksAnalisados} ticks analisados` : 'análise pausada'}</small>
+          </header>
+          <div className="tv-palm-feed" aria-live="polite">
+            {analisesPalm.length > 0 ? analisesPalm.map((aviso) => (
+              <div key={aviso.id} className="tv-palm-aviso">
+                <time>{relogio(aviso.hora)}</time>
+                <span>{aviso.texto}</span>
+              </div>
+            )) : (
+              <div className="tv-palm-vazio">
+                {estado.rodando ? 'Preparando a leitura dos 25 dígitos…' : 'As últimas análises aparecerão aqui ao ligar o robô.'}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ===================== fita de digitos ===================== */}
       {detalhes && <section className="tv-fita-bloco">

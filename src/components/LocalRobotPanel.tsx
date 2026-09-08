@@ -274,6 +274,7 @@ export function LocalRobotPanel({
         estado={estado}
         config={cfg}
         moeda={moeda}
+        estrategiaId={estrategia.id}
         nomeEstrategia={ident.nome}
         ativo={nomeAtivo}
         titulo={titulo}

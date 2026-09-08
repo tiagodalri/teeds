@@ -3754,6 +3754,43 @@ input, select, textarea, button { vertical-align: middle; }
 .tv-registro-painel .tv-ops-topo { padding-inline: 18px; }
 .tv-registro-painel .tv-rolo { max-height: 230px; }
 
+/* The Palm toma decisões por leitura de janela. O feed mostra essa atividade
+   sem alterar a altura do painel nem fazer o restante da cabine saltar. */
+.tv-palm-analise {
+  box-sizing: border-box; height: 146px; min-height: 146px; padding: 13px 20px 12px;
+  border-bottom: 1px solid rgba(139,150,173,.12); background: rgba(255,255,255,.012);
+}
+.tv-palm-analise header {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  height: 22px; margin-bottom: 8px;
+}
+.tv-palm-analise header span {
+  display: inline-flex; align-items: center; gap: 8px; color: var(--text);
+  font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase;
+}
+.tv-palm-analise header span i {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--up);
+  box-shadow: 0 0 0 4px var(--up-soft);
+}
+.tv-palm-analise header small { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.tv-palm-feed {
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 4px;
+  height: 92px; overflow: hidden;
+}
+.tv-palm-aviso {
+  display: grid; grid-template-columns: 58px minmax(0,1fr); align-items: center; gap: 10px;
+  min-height: 20px; color: var(--muted); font-size: 11px; line-height: 20px;
+}
+.tv-palm-aviso time { color: #6f7075; font-size: 10px; font-variant-numeric: tabular-nums; }
+.tv-palm-aviso span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tv-palm-aviso:last-child { color: var(--text); }
+.tv-palm-vazio { margin: auto 0; color: var(--muted); font-size: 11px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .tv-palm-aviso:last-child { animation: tv-palm-sobe .22s ease-out; }
+  @keyframes tv-palm-sobe { from { opacity: .25; transform: translateY(7px); } }
+}
+
 /* O ciclo é legível, mas não pisca nem reinicia uma animação agressiva a cada tick. */
 .tv-fluxo {
   grid-template-columns: minmax(190px,230px) minmax(120px,1fr) minmax(180px,220px);
