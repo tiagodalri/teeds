@@ -27,7 +27,7 @@ import { marcaPorId } from '../../src/marca/marcas'
  */
 
 const PORTA = Number(process.env.PORTA ?? 8080)
-const RETORNO = process.env.RETORNO ?? 'https://198-211-96-238.nip.io/callback'
+const RETORNO = process.env.RETORNO ?? 'https://motor.teedscompany.com/callback'
 const DESTINO = new URL('../.env', import.meta.url)
 
 const base64url = (b: Buffer) => b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')

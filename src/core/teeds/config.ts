@@ -29,7 +29,9 @@ export function autenticacaoConfigurada(): boolean {
  * operação aparece no histórico mesmo quando ninguém está olhando.
  */
 export const SERVIDOR = {
-  url: 'https://198-211-96-238.nip.io',
+  // Um nome, nao o IP: esconde o endereco real do servidor e deixa trocar
+  // de maquina no futuro sem republicar o app (basta reapontar o DNS).
+  url: 'https://motor.teedscompany.com',
 } as const
 
 /**

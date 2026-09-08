@@ -51,7 +51,7 @@ function segredoMcp(): string {
   chmodSync(ARQ_SEGREDO, 0o600)
   return novo
 }
-const RETORNO = process.env.RETORNO ?? 'https://198-211-96-238.nip.io/callback'
+const RETORNO = process.env.RETORNO ?? 'https://motor.teedscompany.com/callback'
 const DESTINO = new URL('../.env', import.meta.url)
 
 const base64url = (b: Buffer) => b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
