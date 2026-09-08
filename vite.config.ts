@@ -108,7 +108,12 @@ export default defineConfig({
           rmSync(join(SAIDA, outra.emblema), { force: true })
         }
         // O logotipo completo da Teeds so faz sentido no site da Teeds.
-        if (MARCA.id !== 'teeds') rmSync(join(SAIDA, 'teeds-completo.png'), { force: true })
+        if (MARCA.id !== 'teeds') {
+          rmSync(join(SAIDA, 'teeds-completo.png'), { force: true })
+          // As capas editoriais novas sao exclusivas da sala de aula Teeds.
+          // A OMNI conserva as capas anteriores e nem recebe estes arquivos.
+          rmSync(join(SAIDA, 'aulas-teeds'), { recursive: true, force: true })
+        }
         // O CNAME e o que diz ao GitHub Pages qual dominio serve esta pasta.
         // Sai da tabela de marcas, nao de um arquivo escrito a mao: dominio
         // trocado num lugar so.
