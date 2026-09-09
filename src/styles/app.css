@@ -4115,6 +4115,11 @@ input, select, textarea, button { vertical-align: middle; }
 .rc-tabela>*>strong{color:var(--primary)}
 .rc-tabela.dias>*{min-width:720px;grid-template-columns:.7fr 1fr 1fr 1fr .7fr .9fr .7fr}
 .rc-tabela.ops>*{min-width:860px;grid-template-columns:1.1fr 1.3fr 1fr 1.1fr .8fr .9fr .9fr;padding:9px 16px;font-size:10.5px}
+.rc-tabela.mov>*{min-width:680px;grid-template-columns:.8fr 1fr .6fr 1fr .6fr 1fr .7fr}
+.rc-tabela.movs>*{min-width:860px;grid-template-columns:1.1fr 2fr 1fr .9fr 1fr 1fr 1.8fr;padding:9px 16px;font-size:10.5px}
+.rc-coletas{display:grid;gap:8px;padding:12px 20px;font-size:11px}
+.rc-coletas>div{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-variant-numeric:tabular-nums}
+.rc-coletas>div>b{min-width:120px}.rc-coletas small{color:var(--muted)}.rc-coletas .erro{color:var(--down)}.rc-coletas .ok{color:var(--up)}
 .rc-tabela .adm-vazio{grid-column:1/-1;padding:16px}
 .rc-extrato{width:min(1040px,100%);max-height:90vh;display:grid;grid-template-rows:auto auto 1fr}
 .rc-extrato-corpo{overflow:auto}

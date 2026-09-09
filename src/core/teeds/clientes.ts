@@ -545,3 +545,76 @@ export async function conferenciaComissao(sessao: SessaoTeeds, dias = 30): Promi
     }))
   } catch { return [] }
 }
+
+/* ------------------------------------------------- depósitos e saques */
+
+export interface DiaMovimentacao {
+  dia: string
+  depositos: number; qtdDepositos: number
+  saques: number; qtdSaques: number
+  clientes: number
+}
+
+export interface MovimentacaoRegistro {
+  userId: string; nome: string | null; email: string | null
+  contaId: string; transacaoId: number
+  tipo: 'deposit' | 'withdrawal'
+  valor: number; moeda: string
+  saldoDepois: number | null; descricao: string | null
+  ocorridaEm: string
+}
+
+export interface ColetaExtrato {
+  contaId: string; userId: string; nome: string | null; email: string | null
+  ultimaTentativaEm: string; ultimoSucessoEm: string | null
+  ultimaMovimentacaoEm: string | null; ultimoErro: string | null
+  movimentacoes: number
+}
+
+/** Quanto entrou e quanto saiu por dia (UTC), só conta real. Agregado no banco. */
+export async function movimentacoesDiarias(sessao: SessaoTeeds, dias = 30): Promise<DiaMovimentacao[]> {
+  try {
+    const linhas = await rest<any[]>('/rpc/teeds_movimentacoes_diarias', sessao.token, {
+      method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: MARCA.id }),
+    })
+    return (linhas ?? []).map((l) => ({
+      dia: l.dia,
+      depositos: Number(l.depositos), qtdDepositos: Number(l.qtd_depositos),
+      saques: Number(l.saques), qtdSaques: Number(l.qtd_saques),
+      clientes: Number(l.clientes),
+    }))
+  } catch { return [] }
+}
+
+/** As movimentações uma a uma, com o nome do cliente, da mais recente para a mais antiga. */
+export async function movimentacoesRecentes(sessao: SessaoTeeds, dias = 30, limite = 500): Promise<MovimentacaoRegistro[]> {
+  try {
+    const linhas = await rest<any[]>('/rpc/teeds_movimentacoes_recentes', sessao.token, {
+      method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: MARCA.id, p_limite: limite }),
+    })
+    return (linhas ?? []).map((l) => ({
+      userId: l.user_id, nome: textoLegivel(l.nome), email: l.email,
+      contaId: l.conta_id, transacaoId: Number(l.transacao_id),
+      tipo: l.tipo === 'withdrawal' ? 'withdrawal' : 'deposit',
+      valor: Number(l.valor), moeda: l.moeda ?? 'USD',
+      saldoDepois: l.saldo_depois === null || l.saldo_depois === undefined ? null : Number(l.saldo_depois),
+      descricao: l.descricao ?? null,
+      ocorridaEm: l.ocorrida_em,
+    }))
+  } catch { return [] }
+}
+
+/** A coleta está viva? Uma linha por conta real conectada. */
+export async function coletasDeExtrato(sessao: SessaoTeeds): Promise<ColetaExtrato[]> {
+  try {
+    const linhas = await rest<any[]>('/rpc/teeds_extrato_coletas', sessao.token, {
+      method: 'POST', body: JSON.stringify({ p_marca: MARCA.id }),
+    })
+    return (linhas ?? []).map((l) => ({
+      contaId: l.conta_id, userId: l.user_id, nome: textoLegivel(l.nome), email: l.email,
+      ultimaTentativaEm: l.ultima_tentativa_em, ultimoSucessoEm: l.ultimo_sucesso_em ?? null,
+      ultimaMovimentacaoEm: l.ultima_movimentacao_em ?? null, ultimoErro: l.ultimo_erro ?? null,
+      movimentacoes: Number(l.movimentacoes ?? 0),
+    }))
+  } catch { return [] }
+}
