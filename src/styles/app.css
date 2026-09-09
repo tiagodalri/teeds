@@ -4283,6 +4283,8 @@ input, select, textarea, button { vertical-align: middle; }
 :root:not([data-tema='escuro']) .tv-topo{background:rgba(255,255,255,.72);border-bottom-color:#e3e7ee}
 :root:not([data-tema='escuro']) .tv-resumo-fixo{border-left-color:#e1e6ef}
 :root:not([data-tema='escuro']) .tv-resumo-fixo b{color:var(--text)}
+:root:not([data-tema='escuro']) .tv-resumo-fixo b.up{color:var(--up)}
+:root:not([data-tema='escuro']) .tv-resumo-fixo b.down{color:var(--down)}
 :root:not([data-tema='escuro']) .tv-btn{background:#fff;border-color:#dbe1eb;color:#667389}
 :root:not([data-tema='escuro']) .tv-btn:hover{background:#f6f8fb;border-color:#bdc6d4}
 :root:not([data-tema='escuro']) .tv-btn.parar{border-color:rgba(220,66,73,.35)}

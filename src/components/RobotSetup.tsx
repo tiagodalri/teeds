@@ -127,6 +127,12 @@ export function RobotSetup({
     sanear({
       ...configInicial,
       ...guardado.cfg,
+      // Este fluxo nao tem campo de teto por entrada. Um teto invisivel,
+      // herdado de uma configuracao antiga guardada no navegador, desligava
+      // o robo com "passaria do teto" no meio da recuperacao — travando o
+      // prejuizo bem na hora de recupera-lo. Quem freia aqui e so o "Parar
+      // se perder", que o motor ja respeita sem deixar passar do limite.
+      valorMaximo: 0,
       fatorGale: recuperacao.margem,
       galeApos: recuperacao.galeApos,
     }, configInicial),
@@ -150,11 +156,11 @@ export function RobotSetup({
       corpo: (
         <>
           <Numero auto valor={cfg.valorAoVencer} sufixo={moeda} minimo={0.35} maximo={10_000}
-            aoMudar={(n) => muda({ valorAoVencer: n, valorInicial: n, valorMaximo: cfg.valorMaximo > 0 ? Math.max(cfg.valorMaximo, n) : 0 })} />
+            aoMudar={(n) => muda({ valorAoVencer: n, valorInicial: n })} />
           <div className="qz-atalhos">
             {[0.35, 1, 2, 5].map((v) => (
               <button key={v} className={cfg.valorAoVencer === v ? 'on' : ''}
-                onClick={() => muda({ valorAoVencer: v, valorInicial: v, valorMaximo: cfg.valorMaximo > 0 ? Math.max(cfg.valorMaximo, v) : 0 })}>
+                onClick={() => muda({ valorAoVencer: v, valorInicial: v })}>
                 {din(v, '')}
               </button>
             ))}
