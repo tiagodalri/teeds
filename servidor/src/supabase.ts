@@ -531,15 +531,31 @@ export interface MovimentacaoGravavel {
   demo: boolean
 }
 
-/** Guarda o que ainda não estava lá e devolve quantas entraram. Repetida é ignorada, não é erro. */
+/**
+ * Guarda o que ainda não estava lá e devolve quantas entraram. Repetida é
+ * ignorada, não é erro.
+ *
+ * A contagem vem de uma consulta antes de gravar, e não da resposta do
+ * upsert: com `ignore-duplicates` o PostgREST devolveu lista vazia mesmo
+ * tendo inserido, e o log dizia "0 novas" com linhas novas no banco.
+ */
 export async function gravarMovimentacoes(linhas: MovimentacaoGravavel[]): Promise<number> {
   if (!linhas.length) return 0
-  const gravadas = await rest<any[]>('/movimentacoes_deriv?on_conflict=conta_id,transacao_id', {
+  const jaGuardadas = new Set<string>()
+  const contas = [...new Set(linhas.map((l) => l.conta_id))]
+  for (const conta of contas) {
+    const ids = linhas.filter((l) => l.conta_id === conta).map((l) => l.transacao_id)
+    const existentes = await rest<any[]>(
+      `/movimentacoes_deriv?select=transacao_id&conta_id=eq.${encodeURIComponent(conta)}&transacao_id=in.(${ids.join(',')})`,
+    )
+    for (const e of existentes ?? []) jaGuardadas.add(`${conta}:${e.transacao_id}`)
+  }
+  await rest('/movimentacoes_deriv?on_conflict=conta_id,transacao_id', {
     method: 'POST',
-    headers: { Prefer: 'resolution=ignore-duplicates,return=representation' },
+    headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },
     body: JSON.stringify(linhas),
   })
-  return gravadas?.length ?? 0
+  return linhas.filter((l) => !jaGuardadas.has(`${l.conta_id}:${l.transacao_id}`)).length
 }
 
 /** Anota a tentativa desta conta. No sucesso limpa o erro; na falha preserva o último sucesso. */
