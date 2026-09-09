@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { cpSync, existsSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { MARCAS, marcaPorId } from './src/marca/marcas'
 
@@ -110,6 +110,16 @@ export default defineConfig({
         rmSync(destinoCaptura, { recursive: true, force: true })
         cpSync(join(RAIZ, 'captura'), destinoCaptura, { recursive: true })
         rmSync(join(destinoCaptura, 'LEIA-ME.md'), { force: true })
+        // O GitHub Pages e alguns navegadores guardaram o primeiro 404 dos
+        // recursos externos e exibiram apenas HTML cru. A landing e pequena:
+        // embutir CSS e JS no próprio documento elimina essa dependência e
+        // garante uma única resposta completa, inclusive no primeiro acesso.
+        const htmlCaptura = readFileSync(join(destinoCaptura, 'index.html'), 'utf8')
+          .replace('<link rel="stylesheet" href="./landing.css?v=202609091" />', `<style>${readFileSync(join(destinoCaptura, 'landing.css'), 'utf8')}</style>`)
+          .replace('<script src="./landing.js?v=202609091"></script>', `<script>${readFileSync(join(destinoCaptura, 'landing.js'), 'utf8')}</script>`)
+        writeFileSync(join(destinoCaptura, 'index.html'), htmlCaptura)
+        rmSync(join(destinoCaptura, 'landing.css'), { force: true })
+        rmSync(join(destinoCaptura, 'landing.js'), { force: true })
         for (const outra of Object.values(MARCAS)) {
           if (outra.id === MARCA.id) continue
           rmSync(join(SAIDA, outra.emblema), { force: true })
