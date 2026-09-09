@@ -13,7 +13,6 @@ import { conversar } from './chat'
 import { autorizacaoParaOperar, guardar } from './cofre'
 import type { ConfigEstrategia } from '../../src/core/deriv/engine'
 import { ligarCarteiro, tratarGanchoDeEmail } from './gancho-email'
-import { ligarColetorDeExtrato } from './extrato'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -527,19 +526,6 @@ if (process.env.RESEND_CHAVE && supabaseConfigurado()) {
   console.log('E-mails: o servidor manda, um por marca (Resend)')
 } else {
   console.log('E-mails: sem RESEND_CHAVE — o Supabase continua mandando o padrao dele')
-}
-
-// Depósitos e saques: o servidor lê o extrato de cada cliente de tempos em
-// tempos e guarda só o que entrou e saiu. Sem o banco não há onde guardar.
-// EXTRATO_DESLIGADO=1 no .env desliga sem mexer em código; EXTRATO_INTERVALO_MIN
-// muda o ritmo (mínimo 5). A primeira passada pode ser feita à mão antes:
-// `npm run extrato` mostra sem gravar.
-if (supabaseConfigurado() && process.env.EXTRATO_DESLIGADO !== '1') {
-  const minutos = Math.max(5, Number(process.env.EXTRATO_INTERVALO_MIN) || 30)
-  ligarColetorDeExtrato(minutos * 60_000)
-  console.log(`Extrato: depósitos e saques coletados a cada ${minutos} min (EXTRATO_DESLIGADO=1 desliga)`)
-} else {
-  console.log('Extrato: coleta de depósitos e saques desligada')
 }
 
 servidor.listen(PORTA, () => {
