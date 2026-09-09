@@ -11,7 +11,9 @@ const config = marca === 'omni' ? {
 document.documentElement.dataset.marca = marca
 document.documentElement.style.setProperty('--cor', config.cor)
 document.documentElement.style.setProperty('--cor-escura', config.escura)
-document.querySelectorAll('[data-marca]').forEach(el => { el.textContent = config.nome })
+// Apenas os espaços de texto recebem o nome. O <html> também carrega
+// data-marca para o tema; incluí-lo aqui apagaria a página inteira.
+document.querySelectorAll('body [data-marca]').forEach(el => { el.textContent = config.nome })
 document.querySelector('[data-intro]').textContent = config.intro
 document.title = `${config.nome} · Conheça a plataforma`
 
