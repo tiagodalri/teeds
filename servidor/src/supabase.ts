@@ -507,6 +507,28 @@ export async function clientesComAutorizacao(): Promise<Array<{ user_id: string;
   return (linhas ?? []).map((l) => ({ user_id: String(l.user_id), marca: String(l.marca ?? 'teeds') }))
 }
 
+/** Atualiza a fotografia da conta que o painel administrativo exibe. */
+export async function atualizarContaDeriv(dados: {
+  userId: string; marca: string; contaId: string; tipo: string
+  moeda: string; saldo: number
+}): Promise<void> {
+  await rest(
+    `/contas_deriv?user_id=eq.${encodeURIComponent(dados.userId)}` +
+    `&conta_id=eq.${encodeURIComponent(dados.contaId)}` +
+    `&marca=eq.${encodeURIComponent(dados.marca)}`,
+    {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        tipo: dados.tipo,
+        moeda: dados.moeda,
+        saldo: dados.saldo,
+        vista_em: new Date().toISOString(),
+      }),
+    },
+  )
+}
+
 /** A movimentação mais recente já guardada desta conta, ou nada. É o cursor da coleta. */
 export async function ultimaMovimentacaoDaConta(contaId: string): Promise<Date | null> {
   const linhas = await rest<any[]>(

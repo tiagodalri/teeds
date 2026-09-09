@@ -6,7 +6,7 @@ import { buscarExtrato, type Movimento } from '../../src/core/deriv/statement'
 import type { AuthSession } from '../../src/core/deriv/auth'
 import { autorizacaoDoCliente } from './cofre'
 import {
-  anotarColetaDeExtrato, clientesComAutorizacao, gravarMovimentacoes,
+  anotarColetaDeExtrato, atualizarContaDeriv, clientesComAutorizacao, gravarMovimentacoes,
   ultimaMovimentacaoDaConta, type MovimentacaoGravavel,
 } from './supabase'
 
@@ -60,6 +60,8 @@ export interface OpcoesColeta {
   gravar: boolean
   /** Chamado com o que cada conta devolveu — a passada manual imprime. */
   aoLer?: (conta: TradingAccount, linhas: MovimentacaoGravavel[]) => void
+  /** Só para carga inicial manual; a rotina periódica permanece leve (30 dias). */
+  janelaInicialDias?: number
 }
 
 /** Um pedaço do identificador, o bastante para achar no log sem expor o cliente. */
@@ -110,7 +112,7 @@ export async function coletarConta(
   const agora = Math.floor(Date.now() / 1000)
   const de = ultima
     ? Math.floor(ultima.getTime() / 1000) - FOLGA_HORAS * 3600
-    : agora - JANELA_INICIAL_DIAS * 86400
+    : agora - Math.max(1, opcoes.janelaInicialDias ?? JANELA_INICIAL_DIAS) * 86400
 
   // O OTP da URL é de uso único, como nos robôs: cada conexão pede o seu.
   const url = await fetchTradingSocketUrl(sessao, conta.accountId)
@@ -179,6 +181,12 @@ export async function coletarTudo(opcoes: OpcoesColeta = { gravar: true }): Prom
     for (const conta of contas.filter((c) => c.type !== 'demo')) {
       r.contas++
       try {
+        if (opcoes.gravar) {
+          await atualizarContaDeriv({
+            userId, marca, contaId: conta.accountId, tipo: conta.type,
+            moeda: conta.currency, saldo: conta.balance,
+          })
+        }
         const { lidas, novas } = await coletarConta(cofre.sessao, userId, marca, conta, opcoes)
         r.novas += novas
         if (opcoes.gravar) {

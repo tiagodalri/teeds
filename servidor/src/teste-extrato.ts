@@ -13,6 +13,11 @@ import './ambiente'
 import { coletarTudo } from './extrato'
 
 const gravar = process.argv.includes('--gravar')
+const diasArg = process.argv.find((a) => a.startsWith('--dias='))
+const janelaInicialDias = diasArg ? Number(diasArg.slice('--dias='.length)) : undefined
+if (janelaInicialDias !== undefined && (!Number.isFinite(janelaInicialDias) || janelaInicialDias < 1 || janelaInicialDias > 3650)) {
+  throw new Error('--dias deve ficar entre 1 e 3650.')
+}
 console.log(gravar
   ? 'Lendo o extrato de cada conta real e GRAVANDO no banco…\n'
   : 'Lendo o extrato de cada conta real. Nada será gravado — use --gravar para gravar.\n')
@@ -21,6 +26,7 @@ const quando = (iso: string) => new Date(iso).toLocaleString('pt-BR', { timeZone
 
 const r = await coletarTudo({
   gravar,
+  janelaInicialDias,
   aoLer: (conta, linhas) => {
     console.log(`── ${conta.accountId} (${conta.currency}) · ${linhas.length} movimentação(ões)`)
     for (const l of [...linhas].sort((a, b) => a.ocorrida_em.localeCompare(b.ocorrida_em))) {
