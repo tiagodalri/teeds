@@ -131,7 +131,11 @@ export default function App() {
 
   useEffect(() => {
     if (!teeds.sessao) return
-    void registrarPresenca(teeds.sessao)
+    const inicio = Date.now()
+    const marcar = () => void registrarPresenca(teeds.sessao!, (Date.now() - inicio) / 1000)
+    marcar()
+    const relogio = window.setInterval(marcar, 60_000)
+    return () => { window.clearInterval(relogio); marcar() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioTeedsId])
 

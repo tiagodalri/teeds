@@ -48,7 +48,9 @@ const MESCLAR = { Prefer: 'resolution=merge-duplicates,return=minimal' }
  * Chamado ao abrir a plataforma logado. Falha em silencio: o cadastro e
  * util, nunca condicao para operar.
  */
-export async function registrarPresenca(sessao: SessaoTeeds): Promise<void> {
+const sessaoDeUso = (() => { try { const k=`${MARCA.id}.sessao-uso`; const v=sessionStorage.getItem(k); if(v)return v; const n=crypto.randomUUID(); sessionStorage.setItem(k,n); return n } catch { return `${Date.now()}-${Math.random()}` } })()
+
+export async function registrarPresenca(sessao: SessaoTeeds, segundos = 0): Promise<void> {
   if (!autenticacaoConfigurada()) return
   const u = sessao.usuario
   try {
@@ -67,6 +69,7 @@ export async function registrarPresenca(sessao: SessaoTeeds): Promise<void> {
         visto_em: new Date().toISOString(),
       }),
     })
+    await rest('/rpc/teeds_registrar_acesso', sessao.token, { method:'POST', body:JSON.stringify({ p_marca:MARCA.id, p_sessao:sessaoDeUso, p_segundos:Math.max(0,Math.round(segundos)), p_fuso:Intl.DateTimeFormat().resolvedOptions().timeZone||null, p_idioma:navigator.language||null }) })
   } catch (e) {
     console.warn('[teeds] nao consegui registrar a presenca:', (e as Error).message)
   }
@@ -185,6 +188,10 @@ export interface ClienteRegistro {
   acessoInicio: string | null
   acessoExpiraEm: string | null
   observacoes: string | null
+  totalAcessos: number
+  tempoTotalSegundos: number
+  fusoHorario: string | null
+  idioma: string | null
 }
 
 export interface PlanoRegistro { id: string; nome: string; duracaoDias: number | null; ativo: boolean }
@@ -243,7 +250,7 @@ export async function listarClientes(sessao: SessaoTeeds): Promise<ClienteRegist
     cpf: l.cpf, criadoEm: l.criado_em, vistoEm: l.visto_em,
     planoId: l.plano_id ?? 'essencial', statusAcesso: l.status_acesso ?? 'ativo',
     acessoInicio: l.acesso_inicio ?? null, acessoExpiraEm: l.acesso_expira_em ?? null,
-    observacoes: l.observacoes ?? null,
+    observacoes: l.observacoes ?? null, totalAcessos: Number(l.total_acessos ?? 0), tempoTotalSegundos: Number(l.tempo_total_segundos ?? 0), fusoHorario: l.fuso_horario ?? null, idioma: l.idioma ?? null,
   }))
 }
 

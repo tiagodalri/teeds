@@ -4393,3 +4393,4 @@ input, select, textarea, button { vertical-align: middle; }
 :root:not([data-tema='escuro']) .tv-corpo{scrollbar-color:#cbd3df transparent}
 :root:not([data-tema='escuro']) .tv-corpo::-webkit-scrollbar-thumb{background-color:#cbd3df}
 :root:not([data-tema='escuro']) .tv-corpo:hover::-webkit-scrollbar-thumb{background-color:#9ca7b8}
+.admin-acessos{margin-top:18px}.rc-tabela.acessos>div{grid-template-columns:1.5fr 1fr .5fr .7fr 1fr}.rc-tabela.acessos span{display:grid;gap:3px}.rc-tabela.acessos small{color:var(--muted);font-size:9px}
