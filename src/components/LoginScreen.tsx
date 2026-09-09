@@ -4,7 +4,7 @@ import {
   type DadosCadastro,
 } from '../core/teeds/conta'
 import { Brand } from './Brand'
-import { DerivNome } from './DerivMarca'
+import { DerivLogo, IconeSaida } from './DerivMarca'
 import { MARCA } from '../marca'
 
 type Modo = 'entrar' | 'criar' | 'esqueci'
@@ -103,11 +103,22 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
 
   return (
     <div className="entrada">
-      <div className="entrada-caixa">
-        <div className="entrada-marca"><Brand tamanho={44} /></div>
+      <div className="entrada-aurora" aria-hidden="true" />
+      <div className="entrada-grade" aria-hidden="true" />
 
-        <h1>{t.titulo}</h1>
-        <p className="entrada-linha">{t.linha}</p>
+      <div className="entrada-caixa">
+        <header className="entrada-topo">
+          <div className="entrada-marca"><Brand tamanho={46} /></div>
+          <div className="entrada-opera">
+            <span>opera com</span>
+            <DerivLogo altura={15} />
+          </div>
+        </header>
+
+        <div className="entrada-cabecalho">
+          <h1>{t.titulo}</h1>
+          <p className="entrada-linha">{t.linha}</p>
+        </div>
 
         <form className="entrada-form" onSubmit={enviar}>
           {modo === 'criar' && campo('nome', 'Nome completo', nome, setNome,
@@ -158,14 +169,25 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
         </div>
 
         <div className="entrada-corretora">
-          <b>Ainda não tem conta na <DerivNome tamanho={13} />?</b>
+          <div className="corretora-topo">
+            <DerivLogo altura={22} />
+            <span className="corretora-selo">corretora oficial</span>
+          </div>
+          <b>Ainda não tem conta na Deriv?</b>
           <p>
             A {MARCA.prosa} opera pela sua própria conta na corretora — é lá que o
             dinheiro fica. Abrir é grátis e você começa na conta demo.
           </p>
           <a className="btn-deriv" href={MARCA.afiliado} target="_blank" rel="noopener noreferrer">
-            Abrir conta na <DerivNome tamanho={13} />
+            <span>Abrir conta na Deriv</span>
+            <IconeSaida tamanho={16} />
           </a>
+        </div>
+
+        <div className="entrada-seguranca" aria-hidden="true">
+          <span><IconeCadeado /> Conexão criptografada</span>
+          <span className="entrada-seguranca-ponto" />
+          <span><IconeEscudo /> Seus dados protegidos</span>
         </div>
 
         <p className="entrada-rodape">
@@ -174,5 +196,25 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
         </p>
       </div>
     </div>
+  )
+}
+
+function IconeCadeado() {
+  return (
+    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"
+      fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="7" width="10" height="7" rx="1.6" />
+      <path d="M5.2 7V5.2a2.8 2.8 0 0 1 5.6 0V7" />
+    </svg>
+  )
+}
+
+function IconeEscudo() {
+  return (
+    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"
+      fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 1.8 3 3.6v4.1c0 3 2.1 5 5 6.5 2.9-1.5 5-3.5 5-6.5V3.6L8 1.8Z" />
+      <path d="m6 8 1.5 1.5L10.5 6.5" />
+    </svg>
   )
 }
