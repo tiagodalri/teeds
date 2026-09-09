@@ -13,6 +13,7 @@ import { conversar } from './chat'
 import { autorizacaoParaOperar, guardar } from './cofre'
 import type { ConfigEstrategia } from '../../src/core/deriv/engine'
 import { ligarCarteiro, tratarGanchoDeEmail } from './gancho-email'
+import { ligarColetorDeExtrato } from './extrato'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -260,7 +261,7 @@ const servidor = createServer(async (req, res) => {
       const pontuacao = Math.min(100, 45 + Math.min(20, Math.floor(tempo / 6)) + (profundidade >= 75 ? 20 : profundidade >= 40 ? 10 : 0) + Math.min(15, (visitas - 1) * 5))
       await salvarLeadCapturado({ marca, nome, email, telefone, tempo, profundidade, visitas, pontuacao, temperatura: pontuacao >= 75 ? 'quente' : pontuacao >= 55 ? 'morno' : 'frio', campanha: String(d.campanha ?? '').slice(0,100), origem: String(d.origem ?? '').slice(0,100), meio: String(d.meio ?? '').slice(0,100), conteudo: String(d.conteudo ?? '').slice(0,100), termo: String(d.termo ?? '').slice(0,100), pagina: String(d.pagina ?? '').slice(0,300) })
       res.writeHead(201, headers); return res.end(JSON.stringify({ ok: true }))
-    } catch (e) { res.writeHead(400, headers); return res.end(JSON.stringify({ erro: (e as Error).message || 'Não foi possível enviar.' })) }
+    } catch (e) { console.error('[leads] cadastro recusado:', (e as Error).message); res.writeHead(400, headers); return res.end(JSON.stringify({ erro: 'Não foi possível enviar agora. Tente novamente em instantes.' })) }
   }
 
   if (url.pathname.startsWith('/api/')) {
@@ -526,6 +527,19 @@ if (process.env.RESEND_CHAVE && supabaseConfigurado()) {
   console.log('E-mails: o servidor manda, um por marca (Resend)')
 } else {
   console.log('E-mails: sem RESEND_CHAVE — o Supabase continua mandando o padrao dele')
+}
+
+// Depósitos e saques: o servidor lê o extrato de cada cliente de tempos em
+// tempos e guarda só o que entrou e saiu. Sem o banco não há onde guardar.
+// EXTRATO_DESLIGADO=1 no .env desliga sem mexer em código; EXTRATO_INTERVALO_MIN
+// muda o ritmo (mínimo 5). A primeira passada pode ser feita à mão antes:
+// `npm run extrato` mostra sem gravar.
+if (supabaseConfigurado() && process.env.EXTRATO_DESLIGADO !== '1') {
+  const minutos = Math.max(5, Number(process.env.EXTRATO_INTERVALO_MIN) || 30)
+  ligarColetorDeExtrato(minutos * 60_000)
+  console.log(`Extrato: depósitos e saques coletados a cada ${minutos} min (EXTRATO_DESLIGADO=1 desliga)`)
+} else {
+  console.log('Extrato: coleta de depósitos e saques desligada')
 }
 
 servidor.listen(PORTA, () => {

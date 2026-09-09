@@ -469,17 +469,92 @@ export async function salvarLeadCapturado(d: {
   campanha?: string; origem?: string; meio?: string; conteudo?: string; termo?: string; pagina?: string
   tempo: number; profundidade: number; visitas: number; pontuacao: number; temperatura: 'frio' | 'morno' | 'quente'
 }): Promise<void> {
-  await rest('/leads_capturados?on_conflict=marca,email_normalizado', {
+  const linha = {
+    marca: d.marca, nome: d.nome, email: d.email, telefone: d.telefone,
+    email_normalizado: d.email.trim().toLowerCase(), telefone_normalizado: d.telefone.replace(/\D/g, ''),
+    campanha: d.campanha || null, origem: d.origem || null, meio: d.meio || null,
+    conteudo: d.conteudo || null, termo: d.termo || null, pagina: d.pagina || null,
+    tempo_na_pagina: d.tempo, profundidade: d.profundidade, visitas: d.visitas,
+    pontuacao: d.pontuacao, temperatura: d.temperatura, consentiu_contato: true,
+    atualizado_em: new Date().toISOString(),
+  }
+  try {
+    await rest('/leads_capturados?on_conflict=marca,email_normalizado', {
+      method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(linha),
+    })
+  } catch (erro) {
+    // A landing não pode perder cadastros enquanto a migração aguarda acesso
+    // ao painel do Supabase. A auditoria já existe, tem RLS por marca e aceita
+    // JSON: funciona como caixa de entrada segura e o painel também a lê.
+    await rest('/auditoria_admin', {
+      method: 'POST', headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ marca: d.marca, acao: 'lead_capturado', detalhes: linha }),
+    })
+    console.warn('[leads] tabela definitiva indisponível; cadastro preservado na auditoria:', (erro as Error).message)
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Depósitos e saques: o que o coletor de extrato (extrato.ts) precisa.
+ * Nenhuma política de escrita nas tabelas, de propósito: só a chave
+ * secreta do servidor passa.
+ * ------------------------------------------------------------------ */
+
+/** Quem conectou a Deriv pela plataforma — é de quem dá para ler o extrato. */
+export async function clientesComAutorizacao(): Promise<Array<{ user_id: string; marca: string }>> {
+  const linhas = await rest<any[]>('/deriv_autorizacoes?select=user_id,marca&order=atualizado_em.asc')
+  return (linhas ?? []).map((l) => ({ user_id: String(l.user_id), marca: String(l.marca ?? 'teeds') }))
+}
+
+/** A movimentação mais recente já guardada desta conta, ou nada. É o cursor da coleta. */
+export async function ultimaMovimentacaoDaConta(contaId: string): Promise<Date | null> {
+  const linhas = await rest<any[]>(
+    `/movimentacoes_deriv?select=ocorrida_em&conta_id=eq.${encodeURIComponent(contaId)}&order=ocorrida_em.desc&limit=1`,
+  )
+  const v = linhas?.[0]?.ocorrida_em
+  return v ? new Date(v) : null
+}
+
+export interface MovimentacaoGravavel {
+  conta_id: string
+  transacao_id: number
+  user_id: string
+  marca: string
+  tipo: 'deposit' | 'withdrawal'
+  /** Sempre positivo: o sentido está em `tipo`. */
+  valor: number
+  moeda: string
+  saldo_depois: number | null
+  descricao: string | null
+  ocorrida_em: string
+  demo: boolean
+}
+
+/** Guarda o que ainda não estava lá e devolve quantas entraram. Repetida é ignorada, não é erro. */
+export async function gravarMovimentacoes(linhas: MovimentacaoGravavel[]): Promise<number> {
+  if (!linhas.length) return 0
+  const gravadas = await rest<any[]>('/movimentacoes_deriv?on_conflict=conta_id,transacao_id', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=ignore-duplicates,return=representation' },
+    body: JSON.stringify(linhas),
+  })
+  return gravadas?.length ?? 0
+}
+
+/** Anota a tentativa desta conta. No sucesso limpa o erro; na falha preserva o último sucesso. */
+export async function anotarColetaDeExtrato(d: {
+  contaId: string; userId: string; marca: string; ok: boolean; erro?: string
+}): Promise<void> {
+  const agora = new Date().toISOString()
+  await rest('/extrato_coletas?on_conflict=conta_id', {
     method: 'POST',
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify({
-      marca: d.marca, nome: d.nome, email: d.email, telefone: d.telefone,
-      email_normalizado: d.email.trim().toLowerCase(), telefone_normalizado: d.telefone.replace(/\D/g, ''),
-      campanha: d.campanha || null, origem: d.origem || null, meio: d.meio || null,
-      conteudo: d.conteudo || null, termo: d.termo || null, pagina: d.pagina || null,
-      tempo_na_pagina: d.tempo, profundidade: d.profundidade, visitas: d.visitas,
-      pontuacao: d.pontuacao, temperatura: d.temperatura, consentiu_contato: true,
-      atualizado_em: new Date().toISOString(),
+      conta_id: d.contaId, user_id: d.userId, marca: d.marca, ultima_tentativa_em: agora,
+      ...(d.ok
+        ? { ultimo_sucesso_em: agora, ultimo_erro: null }
+        : { ultimo_erro: (d.erro ?? 'erro desconhecido').slice(0, 500) }),
     }),
   })
 }
