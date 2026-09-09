@@ -1,0 +1,5 @@
+import { SUPABASE } from './config'
+import type { SessaoTeeds } from './conta'
+import { MARCA } from '../../marca'
+export interface LeadCapturado { id:string;nome:string;email:string;telefone:string;campanha:string|null;origem:string|null;meio:string|null;temperatura:'frio'|'morno'|'quente';pontuacao:number;tempo:number;profundidade:number;visitas:number;convertidoEm:string }
+export async function listarLeads(sessao:SessaoTeeds):Promise<LeadCapturado[]>{const r=await fetch(`${SUPABASE.url}/rest/v1/leads_capturados?select=*&marca=eq.${MARCA.id}&order=convertido_em.desc&limit=2000`,{headers:{apikey:SUPABASE.anonKey,Authorization:`Bearer ${sessao.token}`}});if(!r.ok)throw new Error('Não foi possível carregar os interessados.');return(await r.json()).map((l:any)=>({id:l.id,nome:l.nome,email:l.email,telefone:l.telefone,campanha:l.campanha,origem:l.origem,meio:l.meio,temperatura:l.temperatura,pontuacao:l.pontuacao,tempo:l.tempo_na_pagina,profundidade:l.profundidade,visitas:l.visitas,convertidoEm:l.convertido_em}))}

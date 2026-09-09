@@ -462,3 +462,24 @@ export async function emailFalhou(id: number, tentativas: number, erro: string):
     body: JSON.stringify({ tentativas: tentativas + 1, ultimo_erro: erro.slice(0, 500) }),
   })
 }
+
+/** Captura publica: o navegador fala com o motor; a chave do banco nunca sai daqui. */
+export async function salvarLeadCapturado(d: {
+  marca: 'teeds' | 'omni'; nome: string; email: string; telefone: string
+  campanha?: string; origem?: string; meio?: string; conteudo?: string; termo?: string; pagina?: string
+  tempo: number; profundidade: number; visitas: number; pontuacao: number; temperatura: 'frio' | 'morno' | 'quente'
+}): Promise<void> {
+  await rest('/leads_capturados?on_conflict=marca,email_normalizado', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      marca: d.marca, nome: d.nome, email: d.email, telefone: d.telefone,
+      email_normalizado: d.email.trim().toLowerCase(), telefone_normalizado: d.telefone.replace(/\D/g, ''),
+      campanha: d.campanha || null, origem: d.origem || null, meio: d.meio || null,
+      conteudo: d.conteudo || null, termo: d.termo || null, pagina: d.pagina || null,
+      tempo_na_pagina: d.tempo, profundidade: d.profundidade, visitas: d.visitas,
+      pontuacao: d.pontuacao, temperatura: d.temperatura, consentiu_contato: true,
+      atualizado_em: new Date().toISOString(),
+    }),
+  })
+}

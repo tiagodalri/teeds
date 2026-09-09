@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { existsSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { MARCAS, marcaPorId } from './src/marca/marcas'
 
@@ -103,6 +103,13 @@ export default defineConfig({
       // endereco do arquivo ve, e a regra e nao ter marca alheia la dentro.
       name: 'teeds:so-o-emblema-desta-marca',
       closeBundle: () => {
+        // A landing de captacao e a mesma estrutura nas duas marcas; ela
+        // identifica a marca pelo dominio e fica disponivel em /cadastro/.
+        // Copiar no build evita manter duas versoes que poderiam divergir.
+        const destinoCaptura = join(SAIDA, 'cadastro')
+        rmSync(destinoCaptura, { recursive: true, force: true })
+        cpSync(join(RAIZ, 'captura'), destinoCaptura, { recursive: true })
+        rmSync(join(destinoCaptura, 'LEIA-ME.md'), { force: true })
         for (const outra of Object.values(MARCAS)) {
           if (outra.id === MARCA.id) continue
           rmSync(join(SAIDA, outra.emblema), { force: true })

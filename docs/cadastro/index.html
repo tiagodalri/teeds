@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Conheça uma nova forma de organizar suas operações." />
+  <title>Conheça a plataforma</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./landing.css" />
+</head>
+<body>
+  <header class="topo"><a class="marca" href="#inicio" aria-label="Início"><span class="simbolo">◇</span><strong data-marca></strong></a><a class="topo-acao" href="#cadastro">Quero conhecer</a></header>
+  <main id="inicio">
+    <section class="hero">
+      <div class="brilho"></div>
+      <div class="hero-texto">
+        <span class="sobretitulo">Lista antecipada · vagas limitadas</span>
+        <h1>Mais clareza para operar.<br><em>Mais controle para decidir.</em></h1>
+        <p data-intro></p>
+        <div class="hero-acoes"><a class="botao" href="#cadastro">Quero receber os detalhes <span>→</span></a><small>Cadastro gratuito e sem compromisso.</small></div>
+        <div class="provas"><div><b>01</b><span>Ambiente<br>organizado</span></div><div><b>02</b><span>Gestão de<br>risco visual</span></div><div><b>03</b><span>Tecnologia<br>em um só lugar</span></div></div>
+      </div>
+      <div class="painel" aria-hidden="true">
+        <div class="painel-top"><i></i><i></i><i></i><span>Visão da sessão</span></div>
+        <div class="saldo"><span>Resultado da sessão</span><strong>+ 18,42</strong><small>Desempenho acompanhado em tempo real</small></div>
+        <div class="grafico"><svg viewBox="0 0 560 190" preserveAspectRatio="none"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--cor)" stop-opacity=".32"/><stop offset="1" stop-color="var(--cor)" stop-opacity="0"/></linearGradient></defs><path class="area" d="M0 160 C35 151,48 166,78 139 S128 151,160 116 S215 132,246 101 S301 117,336 78 S391 100,420 61 S488 88,560 26 L560 190 L0 190Z"/><path class="linha" d="M0 160 C35 151,48 166,78 139 S128 151,160 116 S215 132,246 101 S301 117,336 78 S391 100,420 61 S488 88,560 26"/></svg></div>
+        <div class="painel-cards"><div><span>Operações</span><b>128</b></div><div><span>Consistência</span><b>Ativa</b></div><div><span>Proteção</span><b>Configurada</b></div></div>
+        <div class="flutuante"><i>✓</i><span><b>Análise concluída</b><small>Condições verificadas</small></span></div>
+      </div>
+    </section>
+
+    <section class="beneficios"><div><span>O que você encontra</span><h2>Uma experiência pensada nos detalhes</h2></div><div class="grade"><article><i>◎</i><h3>Visão completa</h3><p>Acompanhe suas informações em uma interface limpa, objetiva e fácil de entender.</p></article><article><i>⌁</i><h3>Gestão inteligente</h3><p>Defina seus limites antes de começar e visualize sua evolução com clareza.</p></article><article><i>◇</i><h3>Recursos exclusivos</h3><p>Ferramentas, automações e conteúdos reunidos em um único ambiente.</p></article></div></section>
+
+    <section class="convite"><span>Feito para quem leva suas decisões a sério</span><h2>Você no controle.<br>Do início ao resultado.</h2><p>Estamos preparando uma experiência completa para quem busca método, organização e tecnologia. Entre na lista para receber a apresentação em primeira mão.</p></section>
+
+    <section class="cadastro" id="cadastro">
+      <div class="cadastro-texto"><span class="sobretitulo">Acesso antecipado</span><h2>Quer conhecer por dentro?</h2><p>Deixe seus dados. Nossa equipe entrará em contato para apresentar a plataforma e entender o que faz sentido para você.</p><ul><li><i>✓</i> Apresentação personalizada</li><li><i>✓</i> Prioridade nas novidades</li><li><i>✓</i> Sem compromisso</li></ul></div>
+      <form id="form-lead" novalidate>
+        <div class="form-top"><span>Leva menos de 1 minuto</span><b>Seus dados estão protegidos</b></div>
+        <label>Nome completo<input name="nome" autocomplete="name" maxlength="120" placeholder="Como podemos chamar você?" required></label>
+        <label>Seu melhor e-mail<input name="email" type="email" autocomplete="email" maxlength="180" placeholder="voce@email.com" required></label>
+        <label>WhatsApp com DDD<input name="telefone" type="tel" autocomplete="tel" maxlength="19" placeholder="(00) 00000-0000" required></label>
+        <input class="armadilha" name="empresa" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <label class="consentimento"><input name="consentiu" type="checkbox" required><span>Autorizo o contato da <b data-marca></b> por WhatsApp, telefone ou e-mail sobre esta apresentação. Posso cancelar a qualquer momento.</span></label>
+        <button class="botao enviar" type="submit">Quero conhecer a plataforma <span>→</span></button>
+        <p class="mensagem" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+  <footer><a class="marca" href="#inicio"><span class="simbolo">◇</span><strong data-marca></strong></a><p>Conteúdo informativo. Operações financeiras envolvem riscos e resultados anteriores não garantem resultados futuros.</p><small>© 2026 <span data-marca></span>. Todos os direitos reservados.</small></footer>
+  <script src="./landing.js"></script>
+</body>
+</html>

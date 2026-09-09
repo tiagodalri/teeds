@@ -6,7 +6,7 @@ import { writeFileSync, chmodSync, existsSync, readFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
 import { MARCAS, marcaPorId } from '../../src/marca/marcas'
 import { atender, autorizacao } from './mcp'
-import { contasDoUsuario, emailEntregue, emailFalhou, emailsPendentes, limitesDoCliente, limparSessoesOrfas, supabaseConfigurado, usuarioDoToken } from './supabase'
+import { contasDoUsuario, emailEntregue, emailFalhou, emailsPendentes, limitesDoCliente, limparSessoesOrfas, salvarLeadCapturado, supabaseConfigurado, usuarioDoToken } from './supabase'
 import { contas, iniciar, montarConfig, parar, todas, ver } from './sessoes'
 import { PADRAO, conferir } from './limites'
 import { conversar } from './chat'
@@ -59,6 +59,7 @@ const base64url = (b: Buffer) => b.toString('base64').replace(/\+/g, '-').replac
 /** Uma tentativa de login em andamento. Vive poucos minutos, na memória. */
 interface Tentativa { verifier: string; criadaEm: number }
 const tentativas = new Map<string, Tentativa>()
+const tentativasLead = new Map<string, { inicio: number; total: number }>()
 
 /** Descarta tentativas velhas: um `state` que sobra é superfície de ataque. */
 function limpar() {
@@ -220,6 +221,46 @@ const servidor = createServer(async (req, res) => {
     )
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' })
     return res.end(JSON.stringify(corpo))
+  }
+
+  // Landing pages publicas. Fica fora do /api autenticado, mas aceita apenas
+  // origens das duas marcas, limita repeticoes e possui campo-armadilha.
+  if (url.pathname === '/publico/leads') {
+    const origem = String(req.headers.origin ?? '')
+    const permitidas = [
+      'https://cadastro.teedscompany.com', 'https://teedscompany.com',
+      'https://cadastro.omnifinanc.com', 'https://omnifinanc.com',
+      'http://localhost:4174',
+    ]
+    const headers: Record<string,string> = { 'content-type': 'application/json; charset=utf-8', vary: 'Origin' }
+    if (permitidas.includes(origem)) headers['access-control-allow-origin'] = origem
+    headers['access-control-allow-headers'] = 'content-type'
+    headers['access-control-allow-methods'] = 'POST, OPTIONS'
+    if (req.method === 'OPTIONS') { res.writeHead(204, headers); return res.end() }
+    if (req.method !== 'POST' || !permitidas.includes(origem)) { res.writeHead(403, headers); return res.end(JSON.stringify({ erro: 'Origem não autorizada.' })) }
+    const ip = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim()
+    const agora = Date.now(), faixa = tentativasLead.get(ip)
+    const uso = !faixa || agora - faixa.inicio > 3600_000 ? { inicio: agora, total: 1 } : { ...faixa, total: faixa.total + 1 }
+    tentativasLead.set(ip, uso)
+    if (uso.total > 12) { res.writeHead(429, headers); return res.end(JSON.stringify({ erro: 'Muitas tentativas. Aguarde um pouco.' })) }
+    const partes: Buffer[] = []; let tamanho = 0
+    for await (const p of req) { tamanho += (p as Buffer).length; if (tamanho > 16_384) break; partes.push(p as Buffer) }
+    if (tamanho > 16_384) { res.writeHead(413, headers); return res.end(JSON.stringify({ erro: 'Pedido muito grande.' })) }
+    try {
+      const d = JSON.parse(Buffer.concat(partes).toString('utf8'))
+      if (d.empresa) { res.writeHead(200, headers); return res.end(JSON.stringify({ ok: true })) }
+      const marca = d.marca === 'omni' ? 'omni' : d.marca === 'teeds' ? 'teeds' : null
+      const nome = String(d.nome ?? '').trim().replace(/\s+/g, ' ').slice(0, 120)
+      const email = String(d.email ?? '').trim().toLowerCase().slice(0, 180)
+      const telefone = String(d.telefone ?? '').trim().slice(0, 32)
+      if (!marca || nome.length < 3 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || telefone.replace(/\D/g,'').length < 10 || d.consentiu !== true) throw new Error('Revise nome, e-mail, celular e autorização de contato.')
+      const tempo = Math.max(0, Math.min(86400, Number(d.tempo) || 0))
+      const profundidade = Math.max(0, Math.min(100, Number(d.profundidade) || 0))
+      const visitas = Math.max(1, Math.min(1000, Number(d.visitas) || 1))
+      const pontuacao = Math.min(100, 45 + Math.min(20, Math.floor(tempo / 6)) + (profundidade >= 75 ? 20 : profundidade >= 40 ? 10 : 0) + Math.min(15, (visitas - 1) * 5))
+      await salvarLeadCapturado({ marca, nome, email, telefone, tempo, profundidade, visitas, pontuacao, temperatura: pontuacao >= 75 ? 'quente' : pontuacao >= 55 ? 'morno' : 'frio', campanha: String(d.campanha ?? '').slice(0,100), origem: String(d.origem ?? '').slice(0,100), meio: String(d.meio ?? '').slice(0,100), conteudo: String(d.conteudo ?? '').slice(0,100), termo: String(d.termo ?? '').slice(0,100), pagina: String(d.pagina ?? '').slice(0,300) })
+      res.writeHead(201, headers); return res.end(JSON.stringify({ ok: true }))
+    } catch (e) { res.writeHead(400, headers); return res.end(JSON.stringify({ erro: (e as Error).message || 'Não foi possível enviar.' })) }
   }
 
   if (url.pathname.startsWith('/api/')) {
