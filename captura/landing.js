@@ -3,10 +3,10 @@ const params = new URLSearchParams(location.search)
 const local = host === 'localhost' || host === '127.0.0.1'
 const marca = host.includes('omni') || (local && params.get('marca') === 'omni') ? 'omni' : 'teeds'
 const config = marca === 'omni' ? {
-  nome: 'OMNI', cor: '#5579a8', escura: '#0e2a4e', serif: false,
+  nome: 'OMNI', cor: '#6c93c6', escura: '#0e2a4e', serif: false, emblema: '/omni-marca.png', assinatura: 'FINANCIAL INTELLIGENCE',
   intro: 'Tecnologia, organização e inteligência para transformar a forma como você acompanha suas operações.',
 } : {
-  nome: 'TEEDS', cor: '#d2aa51', escura: '#8c6926', serif: true,
+  nome: 'TEEDS', cor: '#d2aa51', escura: '#8c6926', serif: true, emblema: '/teeds-marca.png', assinatura: 'TRADING TECHNOLOGY',
   intro: 'Uma plataforma completa que reúne tecnologia, gestão e automação para você operar com mais método e consciência.',
 }
 document.documentElement.dataset.marca = marca
@@ -15,6 +15,8 @@ document.documentElement.style.setProperty('--cor-escura', config.escura)
 // Apenas os espaços de texto recebem o nome. O <html> também carrega
 // data-marca para o tema; incluí-lo aqui apagaria a página inteira.
 document.querySelectorAll('body [data-marca]').forEach(el => { el.textContent = config.nome })
+document.querySelectorAll('[data-logo]').forEach(el => { el.src = config.emblema })
+document.querySelectorAll('[data-assinatura]').forEach(el => { el.textContent = config.assinatura })
 document.querySelector('[data-intro]').textContent = config.intro
 document.title = `${config.nome} · Conheça a plataforma`
 

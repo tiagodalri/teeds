@@ -9,10 +9,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./landing.css?v=202609091" />
-  <style>.brilho{position:absolute;inset:0;z-index:-1;pointer-events:none}</style>
+  <style>
+    .brilho{position:absolute;inset:0;z-index:-1;pointer-events:none}
+    .simbolo{overflow:hidden;padding:5px}.simbolo img{display:block;width:100%;height:100%;object-fit:contain}.assinatura{display:grid;gap:2px}.assinatura strong{font-size:15px;line-height:1;letter-spacing:.25em}.assinatura small{font-size:6px;font-weight:700;letter-spacing:.24em;color:#656d78}.painel-marca{position:absolute;right:-46px;bottom:-62px;width:245px;height:245px;object-fit:contain;opacity:.035;filter:grayscale(1);pointer-events:none}
+    [data-marca=teeds] .simbolo{padding:3px;background:#090b0f}[data-marca=teeds] .simbolo img{filter:drop-shadow(0 2px 5px #d2aa5155)}
+    [data-marca=omni] .marca strong{font-family:"DM Sans",sans-serif;font-weight:700;color:#dce6f2}[data-marca=omni] .simbolo{padding:7px;border-radius:50%;background:#edf4fb}[data-marca=omni] .simbolo img{filter:saturate(.82)}[data-marca=omni] body:before{background:radial-gradient(circle at 70% 5%,#315f9940,transparent 34%)}[data-marca=omni] .painel{background:linear-gradient(145deg,#121d2b,#080d14);border-color:#26384d}[data-marca=omni] .beneficios{background:#0a111b}[data-marca=omni] .cadastro{background:linear-gradient(135deg,#142337,#0a1019)}
+  </style>
 </head>
 <body>
-  <header class="topo"><a class="marca" href="#inicio" aria-label="Início"><span class="simbolo">◇</span><strong data-marca></strong></a><a class="topo-acao" href="#cadastro">Quero conhecer</a></header>
+  <header class="topo"><a class="marca" href="#inicio" aria-label="Início"><span class="simbolo"><img data-logo alt=""></span><span class="assinatura"><strong data-marca></strong><small data-assinatura></small></span></a><a class="topo-acao" href="#cadastro">Quero conhecer</a></header>
   <main id="inicio">
     <section class="hero">
       <div class="brilho"></div>
@@ -24,6 +29,7 @@
         <div class="provas"><div><b>01</b><span>Ambiente<br>organizado</span></div><div><b>02</b><span>Gestão de<br>risco visual</span></div><div><b>03</b><span>Tecnologia<br>em um só lugar</span></div></div>
       </div>
       <div class="painel" aria-hidden="true">
+        <img class="painel-marca" data-logo alt="">
         <div class="painel-top"><i></i><i></i><i></i><span>Visão da sessão</span></div>
         <div class="saldo"><span>Resultado da sessão</span><strong>+ 18,42</strong><small>Desempenho acompanhado em tempo real</small></div>
         <div class="grafico"><svg viewBox="0 0 560 190" preserveAspectRatio="none"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--cor)" stop-opacity=".32"/><stop offset="1" stop-color="var(--cor)" stop-opacity="0"/></linearGradient></defs><path class="area" d="M0 160 C35 151,48 166,78 139 S128 151,160 116 S215 132,246 101 S301 117,336 78 S391 100,420 61 S488 88,560 26 L560 190 L0 190Z"/><path class="linha" d="M0 160 C35 151,48 166,78 139 S128 151,160 116 S215 132,246 101 S301 117,336 78 S391 100,420 61 S488 88,560 26"/></svg></div>
@@ -50,7 +56,7 @@
       </form>
     </section>
   </main>
-  <footer><a class="marca" href="#inicio"><span class="simbolo">◇</span><strong data-marca></strong></a><p>Conteúdo informativo. Operações financeiras envolvem riscos e resultados anteriores não garantem resultados futuros.</p><small>© 2026 <span data-marca></span>. Todos os direitos reservados.</small></footer>
+  <footer><a class="marca" href="#inicio"><span class="simbolo"><img data-logo alt=""></span><span class="assinatura"><strong data-marca></strong><small data-assinatura></small></span></a><p>Conteúdo informativo. Operações financeiras envolvem riscos e resultados anteriores não garantem resultados futuros.</p><small>© 2026 <span data-marca></span>. Todos os direitos reservados.</small></footer>
   <script src="./landing.js?v=202609091"></script>
 </body>
 </html>
