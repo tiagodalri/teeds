@@ -110,9 +110,13 @@ export async function coletarConta(
 ): Promise<{ lidas: number; novas: number }> {
   const ultima = await ultimaMovimentacaoDaConta(conta.accountId)
   const agora = Math.floor(Date.now() / 1000)
-  const de = ultima
-    ? Math.floor(ultima.getTime() / 1000) - FOLGA_HORAS * 3600
-    : agora - Math.max(1, opcoes.janelaInicialDias ?? JANELA_INICIAL_DIAS) * 86400
+  // Uma janela informada manualmente força a releitura histórica. Sem ela,
+  // o coletor periódico continua incremental a partir da última linha.
+  const de = opcoes.janelaInicialDias
+    ? agora - Math.max(1, opcoes.janelaInicialDias) * 86400
+    : ultima
+      ? Math.floor(ultima.getTime() / 1000) - FOLGA_HORAS * 3600
+      : agora - JANELA_INICIAL_DIAS * 86400
 
   // O OTP da URL é de uso único, como nos robôs: cada conexão pede o seu.
   const url = await fetchTradingSocketUrl(sessao, conta.accountId)
