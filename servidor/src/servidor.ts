@@ -13,6 +13,7 @@ import { conversar } from './chat'
 import { autorizacaoParaOperar, guardar } from './cofre'
 import type { ConfigEstrategia } from '../../src/core/deriv/engine'
 import { ligarCarteiro, tratarGanchoDeEmail } from './gancho-email'
+import { ligarColetorDeExtrato } from './extrato'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -526,6 +527,17 @@ if (process.env.RESEND_CHAVE && supabaseConfigurado()) {
   console.log('E-mails: o servidor manda, um por marca (Resend)')
 } else {
   console.log('E-mails: sem RESEND_CHAVE — o Supabase continua mandando o padrao dele')
+}
+
+// Coleta somente leitura do extrato das contas reais já autorizadas pelos
+// clientes. Uma conta por vez, a cada 30 minutos, sem disputar conexão com
+// os robôs. EXTRATO_DESLIGADO=1 permite suspender sem alterar o código.
+if (supabaseConfigurado() && process.env.EXTRATO_DESLIGADO !== '1') {
+  const minutos = Math.max(5, Number(process.env.EXTRATO_INTERVALO_MIN) || 30)
+  ligarColetorDeExtrato(minutos * 60_000)
+  console.log(`Extrato: depósitos e saques coletados a cada ${minutos} min`)
+} else {
+  console.log('Extrato: coleta de depósitos e saques desligada')
 }
 
 servidor.listen(PORTA, () => {
