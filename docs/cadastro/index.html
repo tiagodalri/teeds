@@ -54,7 +54,8 @@
   <footer><a class="marca" href="#inicio"><span class="simbolo">◇</span><strong data-marca></strong></a><p>Conteúdo informativo. Operações financeiras envolvem riscos e resultados anteriores não garantem resultados futuros.</p><small>© 2026 <span data-marca></span>. Todos os direitos reservados.</small></footer>
   <script>const host = location.hostname.toLowerCase()
 const params = new URLSearchParams(location.search)
-const marca = host.includes('omni') || params.get('marca') === 'omni' ? 'omni' : 'teeds'
+const local = host === 'localhost' || host === '127.0.0.1'
+const marca = host.includes('omni') || (local && params.get('marca') === 'omni') ? 'omni' : 'teeds'
 const config = marca === 'omni' ? {
   nome: 'OMNI', cor: '#5579a8', escura: '#0e2a4e', serif: false,
   intro: 'Tecnologia, organização e inteligência para transformar a forma como você acompanha suas operações.',
@@ -103,7 +104,15 @@ form.addEventListener('submit', async event => {
     })
     const corpo = await resposta.json().catch(() => ({}))
     if (!resposta.ok) throw new Error(corpo.erro || 'Não foi possível enviar agora.')
-    form.innerHTML = `<div class="sucesso"><i>✓</i><span>Cadastro recebido</span><h3>Obrigado, ${dados.nome.split(' ')[0]}.</h3><p>Nossa equipe entrará em contato pelos dados informados.</p></div>`
+    // Só avança depois de o motor confirmar que o lead foi preservado.
+    // Nome é levado apenas para personalizar a próxima tela; a página usa
+    // textContent e nunca injeta o valor como HTML.
+    const proxima = new URL('./obrigado/', location.href)
+    proxima.searchParams.set('nome', String(dados.nome).trim().split(/\s+/)[0])
+    for (const [chave, valor] of utm) {
+      if (chave.startsWith('utm_')) proxima.searchParams.set(chave, valor)
+    }
+    location.assign(proxima)
   } catch (e) {
     mensagem.textContent = e.message; mensagem.className = 'mensagem erro'
     botao.disabled = false; botao.innerHTML = 'Tentar novamente <span>→</span>'
