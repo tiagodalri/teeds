@@ -21,8 +21,19 @@
 .workspace-sidebar.compact nav { padding-top: 20px; }
 .workspace-app .topbar { height: 76px; min-height: 76px; padding: 0 28px; flex-wrap: nowrap; gap: 16px; }
 .workspace-heading { display: flex; flex-direction: column; gap: 2px; }
-.workspace-heading > span { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; }
-.workspace-heading strong { font-size: 18px; letter-spacing: -.03em; }
+.workspace-heading > span { font-size: 11px; color: var(--muted); letter-spacing: .01em; }
+.workspace-heading strong { font-size: 20px; font-weight: 700; letter-spacing: -.04em; line-height: 1.3; }
+.workspace-heading { padding-left: 14px; border-left: 3px solid var(--primary); gap: 4px; }
+.brand-signature { display: flex; align-items: center; gap: 12px; color: #98701e; }
+:root[data-tema='escuro'] .brand-signature-teeds { color: #e8c573; }
+.brand-signature-omni { color: #214f88; }
+:root[data-tema='escuro'] .brand-signature-omni { color: #9dc9ff; }
+.brand-symbol { width: 40px; height: 40px; flex-shrink: 0; }
+.brand-wordmark { display: flex; flex-direction: column; gap: 5px; font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 25px; font-weight: 750; line-height: 1; letter-spacing: .13em; }
+.brand-signature-omni .brand-wordmark { font-weight: 850; letter-spacing: .08em; }
+.brand-wordmark > span { font-size: 7px; font-weight: 600; letter-spacing: .2em; color: var(--muted); }
+.workspace-sidebar.compact .brand-wordmark { display: none; }
+.workspace-sidebar.compact .workspace-brand { justify-content: center; }
 .workspace-app .topbar-right { margin-left: auto; font-variant-numeric: tabular-nums; }
 .workspace-app .ger.rob { width: 100%; max-width: 1480px; padding: 28px 32px; }
 .workspace-app .rv-galeria { grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }
@@ -34,6 +45,7 @@
   .workspace-sidebar.mobile-open { transform: translateX(0); top: 64px; }
   .workspace-sidebar.compact .workspace-label { display: initial; }
   .workspace-sidebar.compact .marca-nome { display: initial; }
+  .workspace-sidebar.compact .brand-wordmark { display: flex; }
   .workspace-sidebar.compact .workspace-link { justify-content: flex-start; }
   .workspace-collapse { display: none; }
   .workspace-mobile-toggle { display: block; position: fixed; top: 17px; left: 12px; z-index: 71; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; }

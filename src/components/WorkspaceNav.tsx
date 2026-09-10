@@ -23,7 +23,7 @@ export function WorkspaceNav({ page, admin, onNavigate }: { page: WorkspacePage;
     <button className="workspace-mobile-toggle" aria-expanded={open} aria-controls="workspace-navigation" onClick={() => setOpen(!open)}>{open ? '× Fechar' : '☰ Menu'}</button>
     {open && <button className="workspace-shade" aria-label="Fechar menu" onClick={() => setOpen(false)} />}
     <aside className={`workspace-sidebar ${compact ? 'compact' : ''} ${open ? 'mobile-open' : ''}`} onKeyDown={e => { if (e.key === 'Escape') setOpen(false) }}>
-      <button className="workspace-brand" aria-label="Página inicial" onClick={() => navigate('operar')}><Brand /></button>
+      <button className="workspace-brand" aria-label="Página inicial" onClick={() => navigate('operar')}><Brand assinatura /></button>
       <nav id="workspace-navigation" aria-label="Navegação principal">
         <p className="workspace-label">Seu workspace</p>
         {item('operar')}{item('robos')}
