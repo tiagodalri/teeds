@@ -3,6 +3,7 @@ import { completeLogin, loadSession, logout as clearSession, startLogin, type Au
 import { fetchAccounts, fetchTradingSocketUrl, resetDemoBalance, type TradingAccount } from '../core/deriv/account'
 import { TeedsSocket } from '../core/deriv/client'
 import type { ConnectionState } from '../core/deriv/types'
+import { acessoSomenteDemo, contasPermitidas, selecionarContaPermitida } from '../core/deriv/accountAccess'
 import { limparCacheOperacoes } from '../core/deriv/history'
 import {
   assinarContratos, fetchPortfolio, subscribeBalance, subscribeTransactions,
@@ -15,12 +16,19 @@ export type AuthStatus = 'deslogado' | 'entrando' | 'logado' | 'erro'
  * Cuida de todo o ciclo de conta: login, escolha da conta,
  * conexao autenticada, saldo e posicoes abertas.
  */
-export function useAccount() {
+export function useAccount(acesso: { admin?: boolean | null; email?: string | null } = {}) {
   const [status, setStatus] = useState<AuthStatus>('deslogado')
   const [error, setError] = useState<string | null>(null)
   const [session, setSession] = useState<AuthSession | null>(null)
   const [accounts, setAccounts] = useState<TradingAccount[]>([])
-  const [accountId, setAccountId] = useState<string | null>(null)
+  const [chosenAccountId, setChosenAccountId] = useState<string | null>(null)
+  const somenteDemo = acessoSomenteDemo(acesso.admin, acesso.email)
+  const permitidas = contasPermitidas(accounts, somenteDemo)
+  const account = selecionarContaPermitida(permitidas, chosenAccountId)
+  const accountId = account?.accountId ?? null
+  const setAccountId = (id: string) => {
+    if (permitidas.some(c => c.accountId === id)) setChosenAccountId(id)
+  }
   const [balance, setBalance] = useState<Balance | null>(null)
   const [contracts, setContracts] = useState<Map<number, OpenContract>>(new Map())
   const [connecting, setConnecting] = useState(false)
@@ -30,6 +38,7 @@ export function useAccount() {
   const [conexao, setConexao] = useState<ConnectionState>('idle')
 
   const socketRef = useRef<TeedsSocket | null>(null)
+  const socketAccountRef = useRef<string | null>(null)
   const [, setTick] = useState(0)
 
   // --- retorno da Deriv + sessao guardada
@@ -63,7 +72,7 @@ export function useAccount() {
         setAccounts(list)
         // comeca sempre pela demo: dinheiro ficticio por padrao
         const demo = list.find((a) => a.type === 'demo')
-        setAccountId((prev) => prev ?? (demo?.accountId ?? list[0]?.accountId ?? null))
+        setChosenAccountId((prev) => prev ?? (demo?.accountId ?? list[0]?.accountId ?? null))
       })
       .catch((e: Error) => {
         if (!alive) return
@@ -151,6 +160,7 @@ export function useAccount() {
           renovarUrl: () => fetchTradingSocketUrl(session, accountId),
         })
         socketRef.current = sock
+        socketAccountRef.current = accountId
         paradas.push(sock.onStateChange((e) => { if (alive) setConexao(e) }))
         sock.connect()
 
@@ -193,6 +203,7 @@ export function useAccount() {
       paradas.forEach((p) => p())
       socketRef.current?.disconnect()
       socketRef.current = null
+      socketAccountRef.current = null
     }
   }, [session, accountId])
 
@@ -210,7 +221,7 @@ export function useAccount() {
     clearSession()
     setSession(null)
     setAccounts([])
-    setAccountId(null)
+    setChosenAccountId(null)
     setBalance(null)
     setContracts(new Map())
     setStatus('deslogado')
@@ -244,14 +255,14 @@ export function useAccount() {
     return () => clearTimeout(t)
   }, [aviso])
 
-  const account = accounts.find((a) => a.accountId === accountId) ?? null
   const isDemo = account?.type === 'demo'
+  const conexaoDaConta = accountId !== null && socketAccountRef.current === accountId
 
   return {
     status, error, setError, session,
-    accounts, account, accountId, setAccountId, isDemo,
-    balance, contracts: [...contracts.values()],
-    socket: socketRef.current, connecting, aviso, setAviso, pulso, conexao,
+    accounts: permitidas, demonstrationAccounts: accounts, account, accountId, setAccountId, isDemo, somenteDemo,
+    balance: conexaoDaConta ? balance : null, contracts: conexaoDaConta ? [...contracts.values()] : [],
+    socket: conexaoDaConta ? socketRef.current : null, connecting, aviso, setAviso, pulso, conexao,
     login, logout, recarregarDemo,
   }
 }

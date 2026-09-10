@@ -9,6 +9,8 @@ interface Props {
   admin?: boolean | null
   email?: string | null
   contas: TradingAccount[]
+  contasDemonstracao?: TradingAccount[]
+  somenteDemo?: boolean
   selecionada: string | null
   isDemo: boolean
   saldo: number | null
@@ -23,7 +25,7 @@ interface Props {
  * Troca de conta.
  *
  * O gatilho fica discreto — é a barra do topo, não o assunto da tela — mas
- * demo e real nunca se confundem: a conta real ganha um traço vermelho na
+ * demo e real nunca se confundem: a conta real ganha um traço verde na
  * lateral e a etiqueta muda. O número da conta sai do gatilho e vai para o
  * menu, onde tem espaço e faz falta.
  */
@@ -66,6 +68,7 @@ export function AccountSwitcher(props: Props) {
       {aberto && (
         <div className="menu" role="menu">
           <p className="menu-titulo">Suas contas na Deriv</p>
+          {props.somenteDemo && <p className="menu-restricao">Este acesso opera somente em conta demo.</p>}
 
           {contas.map((c) => {
             const demo = c.type === 'demo'
@@ -132,7 +135,7 @@ export function AccountSwitcher(props: Props) {
           </button>
         </div>
       )}
-      {demonstrando && <AccountDemonstration admin={props.admin} email={props.email} onClose={() => setDemonstrando(false)} contas={contas.map(c => c.accountId === selecionada && saldo !== null && c.currency === moeda ? { ...c, balance: saldo } : c)} />}
+      {demonstrando && <AccountDemonstration admin={props.admin} email={props.email} onClose={() => setDemonstrando(false)} contas={(props.contasDemonstracao ?? contas).map(c => c.accountId === selecionada && saldo !== null && c.currency === moeda ? { ...c, balance: saldo } : c)} />}
     </div>
   )
 }

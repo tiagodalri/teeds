@@ -1,4 +1,5 @@
 import './ambiente'
+import { emailDeDemonstracao } from '../../src/core/deriv/accountAccess'
 
 /**
  * Espelha no Supabase tudo que o robô faz.
@@ -290,7 +291,7 @@ export async function limparSessoesOrfas(): Promise<void> {
  * banco (o token do login Supabase). Aqui ele é conferido com o próprio
  * Supabase — o servidor não acredita em quem o navegador diz ser.
  * ------------------------------------------------------------------ */
-export async function usuarioDoToken(token: string): Promise<{ id: string } | null> {
+export async function usuarioDoToken(token: string): Promise<{ id: string; email: string } | null> {
   if (!URL_BASE || !token) return null
   try {
     const res = await fetch(`${URL_BASE}/auth/v1/user`, {
@@ -298,10 +299,22 @@ export async function usuarioDoToken(token: string): Promise<{ id: string } | nu
     })
     if (!res.ok) return null
     const u = (await res.json()) as any
-    return u?.id ? { id: String(u.id) } : null
+    return u?.id ? { id: String(u.id), email: String(u.email ?? '') } : null
   } catch {
     return null
   }
+}
+
+/** Auth identity comes from Supabase, never from the request body. No cache of permissions. */
+export async function somenteDemoDoUsuario(token: string, dono: { id: string; email: string }, marca: string): Promise<boolean> {
+  if (!emailDeDemonstracao(dono.email)) return false
+  const res = await fetch(`${URL_BASE}/rest/v1/administradores?select=user_id&user_id=eq.${encodeURIComponent(dono.id)}&marca=eq.${encodeURIComponent(marca)}`, {
+    headers: { apikey: CHAVE, Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error('Não foi possível conferir a permissão de operação. Tente novamente.')
+  const linhas = await res.json()
+  if (!Array.isArray(linhas)) throw new Error('Resposta inválida ao conferir a permissão de operação.')
+  return linhas.some(linha => linha.user_id === dono.id)
 }
 
 /** As contas Deriv que este usuário Teeds registrou. */

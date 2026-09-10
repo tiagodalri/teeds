@@ -137,7 +137,7 @@ export interface Proposta {
   takeProfit: number
 }
 
-interface Dono { id: string }
+interface Dono { id: string; somenteDemo?: boolean }
 
 /** As contas Deriv que são deste cliente E que a autorização enxerga. */
 async function contasDele(dono: Dono) {
@@ -148,7 +148,7 @@ async function contasDele(dono: Dono) {
   const cofre = await autorizacaoParaOperar(dono.id, autorizacao)
   if (!cofre.ok) throw new Error(cofre.motivo)
   const lista = await contas(cofre.sessao)
-  return lista.filter((c) => minhas.includes(c.accountId))
+  return lista.filter((c) => minhas.includes(c.accountId) && (!dono.somenteDemo || c.type === 'demo'))
 }
 
 /**

@@ -98,6 +98,7 @@ try {
           export { recuperacaoDoRobo } from './src/core/deriv/strategies.ts';
           export { AccountDemonstration, podeDemonstrarSaldos, saldosDemonstrativos } from './src/components/AccountDemonstration.tsx';
           export { WorkspaceNav } from './src/components/WorkspaceNav.tsx';
+          export { acessoSomenteDemo, contasPermitidas, selecionarContaPermitida } from './src/core/deriv/accountAccess.ts';
           export { createElement } from 'react';
           export { renderToStaticMarkup } from 'react-dom/server';`,
         resolveDir: raiz,
@@ -115,6 +116,23 @@ try {
     })
     const { resumirSessoes, RobotOverview, RobotLive, RobotCatalog, RobotSetup, ETAPAS_PREPARO, valorDePreparo, configurarPreparo, IDENTIDADES, recuperacaoDoRobo, AccountDemonstration, podeDemonstrarSaldos, saldosDemonstrativos, WorkspaceNav, createElement, renderToStaticMarkup } = await import(pathToFileURL(saida).href)
     const verificar = (nome, executar) => teste(`${marca}: ${nome}`, executar)
+    const { acessoSomenteDemo, contasPermitidas, selecionarContaPermitida } = await import(pathToFileURL(saida).href)
+    verificar('somente o ADM designado fica limitado à demo, inclusive ao restaurar seleção real', () => {
+      const lista = [{ accountId: 'ROT123', type: 'real' }, { accountId: 'DOT456', type: 'demo' }]
+      assert.equal(acessoSomenteDemo(true, ' TEEDS@gmail.com '), true)
+      assert.equal(acessoSomenteDemo(null, 'teeds@gmail.com'), true)
+      assert.equal(acessoSomenteDemo(false, 'teeds@gmail.com'), false)
+      for (const email of ['cliente@example.com', 'outro-adm@example.com', undefined]) {
+        assert.equal(acessoSomenteDemo(true, email), false)
+        assert.strictEqual(contasPermitidas(lista, acessoSomenteDemo(true, email)), lista)
+      }
+      const permitidas = contasPermitidas(lista, true)
+      assert.deepEqual(permitidas, [lista[1]])
+      assert.equal(selecionarContaPermitida(permitidas, 'ROT123').accountId, 'DOT456')
+      assert.equal(selecionarContaPermitida(contasPermitidas([lista[0]], true), 'ROT123'), null)
+      assert.equal(lista.length, 2)
+      assert.equal(selecionarContaPermitida(lista, 'ROT123').accountId, 'ROT123')
+    })
     const render = (componente, props) => renderToStaticMarkup(createElement(componente, props))
     verificar('demonstração exclusiva para o ADM autorizado, nunca clientes', () => {
       assert.equal(podeDemonstrarSaldos(true, 'teeds@gmail.com'), true)

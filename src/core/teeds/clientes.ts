@@ -162,7 +162,7 @@ export async function enviarComissoes(
 /* --------------------------------------------------------- leitura */
 
 /** A tabela so devolve a propria linha — se vier algo, a pessoa e admin. */
-export async function souAdmin(sessao: SessaoTeeds): Promise<boolean> {
+export async function souAdmin(sessao: SessaoTeeds, propagarFalha = false): Promise<boolean> {
   if (!autenticacaoConfigurada()) return false
   try {
     // Admin de uma plataforma não é admin da outra. Quem administra as duas
@@ -170,7 +170,8 @@ export async function souAdmin(sessao: SessaoTeeds): Promise<boolean> {
     const linhas = await rest<Array<{ user_id: string }>>(
       `/administradores?select=user_id&marca=eq.${MARCA.id}`, sessao.token)
     return Array.isArray(linhas) && linhas.length > 0
-  } catch {
+  } catch (erro) {
+    if (propagarFalha) throw erro
     return false
   }
 }

@@ -69,8 +69,10 @@ function assistenteBetaJaLiberado() {
 export default function App() {
   const connection = useConnection()
   const { symbols, loading: loadingSymbols, error: symbolsError } = useSymbols()
-  const conta = useAccount()
   const teeds = useTeedsAuth()
+  const [admin, setAdmin] = useState<boolean | null>(null)
+  const [adminUserId, setAdminUserId] = useState<string | null>(null)
+  const conta = useAccount({ admin: adminUserId === teeds.sessao?.usuario.id ? admin : null, email: teeds.sessao?.usuario.email })
   const [verPerfil, setVerPerfil] = useState(false)
   const [tema, setTema] = useState<Tema>(temaGuardado)
   const alternarTema = () => {
@@ -96,7 +98,6 @@ export default function App() {
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
   const [tela, setTela] = useState<WorkspacePage>('operar')
-  const [admin, setAdmin] = useState<boolean | null>(null)
   const [pedirCodigoAssistente, setPedirCodigoAssistente] = useState(false)
   const [assistenteLiberado, setAssistenteLiberado] = useState(assistenteBetaJaLiberado)
   const [payoutBase, setPayoutBase] = useState(19.55)
@@ -166,9 +167,10 @@ export default function App() {
     if (!teeds.sessao) { setAdmin(false); return }
     let ativo = true
     setAdmin(null)
-    souAdmin(teeds.sessao).then((permitido) => {
-      if (ativo) setAdmin(permitido)
-    })
+    setAdminUserId(null)
+    souAdmin(teeds.sessao, true).then((permitido) => {
+      if (ativo) { setAdminUserId(usuarioTeedsId); setAdmin(permitido) }
+    }).catch(() => { if (ativo) setAdmin(false) })
     return () => { ativo = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioTeedsId])
@@ -414,6 +416,8 @@ export default function App() {
               admin={admin}
               email={teeds.sessao?.usuario.email}
               contas={conta.accounts}
+              contasDemonstracao={conta.demonstrationAccounts}
+              somenteDemo={conta.somenteDemo}
               selecionada={conta.accountId}
               isDemo={conta.isDemo}
               saldo={conta.balance ? conta.balance.amount : null}

@@ -29,7 +29,7 @@ export function AccountDemonstration({ contas, admin, email, onClose }: {
       <div className="account-demo-content">
         <p className="account-demo-notice">Os saldos abaixo estão invertidos para demonstração. <strong>Não representam o dinheiro disponível nas contas da Deriv.</strong></p>
         <div className="account-demo-list">{linhas.map(conta => <article key={conta.accountId}>
-          <div><span className="account-demo-tag">{conta.type === 'real' ? 'REAL' : 'DEMO'} · SIMULADA</span><b>{conta.type === 'real' ? 'Visualização da conta real' : 'Visualização da conta demo'}</b><small>Referência: {conta.accountId}</small></div>
+          <div><span className={`account-demo-tag ${conta.type}`}>{conta.type === 'real' ? 'REAL' : 'DEMO'} · SIMULADA</span><b>{conta.type === 'real' ? 'Visualização da conta real' : 'Visualização da conta demo'}</b><small>Referência: {conta.accountId}</small></div>
           <strong>{conta.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <small>{conta.currency}</small></strong>
         </article>)}</div>
         {linhas.length === 0 && <p>É necessário ter um par de contas real/demo na mesma moeda para esta demonstração.</p>}

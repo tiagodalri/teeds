@@ -13,6 +13,7 @@ import { conversar } from './chat'
 import { autorizacaoParaOperar, guardar } from './cofre'
 import type { ConfigEstrategia } from '../../src/core/deriv/engine'
 import { ligarCarteiro, tratarGanchoDeEmail } from './gancho-email'
+import { somenteDemoDoUsuario } from './supabase'
 import { ligarColetorDeExtrato } from './extrato'
 
 /**
@@ -389,6 +390,10 @@ const servidor = createServer(async (req, res) => {
           })
         }
 
+        if (conta.type !== 'demo' && await somenteDemoDoUsuario(cracha, dono, marcaDoPedido)) {
+          return json(403, { erro: 'Este acesso está limitado à conta demo. Operações reais não estão disponíveis.' })
+        }
+
         const limites = { ...PADRAO, ...(await limitesDoCliente(dono.id) ?? {}) }
         const veredito = conferir({
           entrada: valorInicial, stopLoss, takeProfit,
@@ -446,7 +451,8 @@ const servidor = createServer(async (req, res) => {
         if (pergunta.length > 2000) return json(400, { erro: 'Mensagem longa demais.' })
         const historico = Array.isArray(corpo.historico) ? corpo.historico.slice(-12) : []
         const marcaDoChat = typeof corpo.marca === 'string' ? corpo.marca : 'teeds'
-        return json(200, await conversar({ id: dono.id }, historico, pergunta, marcaDoChat))
+        const somenteDemo = await somenteDemoDoUsuario(cracha, dono, marcaDoChat)
+        return json(200, await conversar({ id: dono.id, somenteDemo }, historico, pergunta, marcaDoChat))
       }
 
       // ---- acompanhar

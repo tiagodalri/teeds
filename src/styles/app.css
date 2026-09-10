@@ -12,6 +12,8 @@
   --up-soft: #e8f6ee;
   --down: #e5484d;
   --down-soft: #fdeced;
+  --account-demo: #a94908;
+  --account-demo-soft: #fff1e5;
   --desativado: #cfd6e2;
   --trilho: #dfe5ee;
   --radius: 10px;
@@ -35,6 +37,8 @@
   --up-soft: rgba(31, 192, 106, 0.14);
   --down: #f0555a;
   --down-soft: rgba(240, 85, 90, 0.16);
+  --account-demo: #ffad60;
+  --account-demo-soft: rgba(255, 149, 58, .14);
   --desativado: #383940;
   --trilho: #2c2d32;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -403,11 +407,13 @@ button, input { font: inherit; color: inherit; }
 .trade-conta i { width: 7px; height: 7px; border-radius: 50%; background: var(--up); flex-shrink: 0; }
 .trade-conta b { margin-left: auto; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .trade-conta.real {
-  background: var(--down-soft); color: var(--down);
-  border-color: color-mix(in srgb, var(--down) 35%, var(--border));
+  background: var(--up-soft); color: var(--up);
+  border-color: color-mix(in srgb, var(--up) 35%, var(--border));
 }
-.trade-conta.real i { background: var(--down); box-shadow: 0 0 0 3px color-mix(in srgb, var(--down) 25%, transparent); }
-.trade-conta.real b { color: var(--down); }
+.trade-conta.real i { background: var(--up); box-shadow: 0 0 0 3px var(--up-soft); }
+.trade-conta.real b { color: var(--up); }
+.trade-conta.demo { color: var(--account-demo); background: var(--account-demo-soft); }
+.trade-conta.demo i { background: var(--account-demo); }
 
 .trade-atalhos { display: flex; gap: 5px; margin: -6px 0 12px; }
 .trade-atalhos button {
@@ -1570,19 +1576,21 @@ button, input { font: inherit; color: inherit; }
 .conta-chip:hover { border-color: var(--muted); background: var(--surface-alt); }
 .conta-chip.aberto { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
 /* dinheiro real: um traço, não um fundo colorido — sinaliza sem gritar */
-.conta-chip.real { box-shadow: inset 3px 0 0 var(--down); padding-left: 11px; }
+.conta-chip.real { box-shadow: inset 3px 0 0 var(--up); padding-left: 11px; }
 .conta-chip.real.aberto {
-  box-shadow: inset 3px 0 0 var(--down), 0 0 0 3px var(--down-soft);
-  border-color: var(--down);
+  box-shadow: inset 3px 0 0 var(--up), 0 0 0 3px var(--up-soft);
+  border-color: var(--up);
 }
+.conta-chip.demo.aberto { border-color: var(--account-demo); box-shadow: 0 0 0 3px var(--account-demo-soft); }
+.menu-restricao { margin: 0 12px 12px; font-size: 12px; color: var(--account-demo); }
 .conta-seta { color: var(--muted); flex-shrink: 0; }
 
 .selo {
   font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
   padding: 3px 7px; border-radius: 5px; flex-shrink: 0; line-height: 1.4;
 }
-.selo.demo { background: var(--primary-soft); color: var(--primary); }
-.selo.real { background: var(--down-soft); color: var(--down); }
+.selo.demo { background: var(--account-demo-soft); color: var(--account-demo); }
+.selo.real { background: var(--up-soft); color: var(--up); }
 
 .avatar-botao {
   display: flex; align-items: center; gap: 5px; height: 38px;

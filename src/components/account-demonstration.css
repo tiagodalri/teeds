@@ -8,7 +8,8 @@
 .account-demo-list { display: grid; gap: 12px; }
 .account-demo-list article { display: flex; gap: 18px; justify-content: space-between; align-items: center; padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .account-demo-list article > div { display: grid; gap: 5px; }
-.account-demo-tag { font-size: 11px; letter-spacing: .05em; font-weight: 750; color: var(--primary); }
+.account-demo-tag { font-size: 11px; letter-spacing: .05em; font-weight: 750; color: var(--account-demo); }
+.account-demo-tag.real { color: var(--up); }
 .account-demo-list article b { font-size: 14px; }
 .account-demo-list article small { font-size: 12px; color: var(--muted); }
 .account-demo-list article > strong { white-space: nowrap; font-size: 23px; font-variant-numeric: tabular-nums; }
