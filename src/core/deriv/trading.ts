@@ -135,7 +135,7 @@ export async function buyFromProposal(
   proposalId: string,
   price: number,
 ): Promise<BuyReceipt> {
-  const res = await socket.send({ buy: proposalId, price })
+  const res = await socket.send({ buy: proposalId, price }, 20_000, { imediato: true })
   const b = res.buy as Record<string, any>
   return {
     contractId: Number(b.contract_id),
@@ -185,7 +185,7 @@ export async function comprarDireto(
       underlying_symbol: params.symbol,
       ...(params.barrier !== undefined ? { barrier: params.barrier } : {}),
     },
-  })
+  }, 20_000, { imediato: true })
   const b = res.buy as Record<string, any>
   return {
     contractId: Number(b.contract_id),
@@ -275,7 +275,7 @@ export async function sellContract(
   contractId: number,
   price = 0,
 ): Promise<{ soldFor: number; balanceAfter: number; transactionId: number }> {
-  const res = await socket.send({ sell: contractId, price })
+  const res = await socket.send({ sell: contractId, price }, 20_000, { imediato: true })
   const s = res.sell as Record<string, any>
   return {
     soldFor: Number(s.sold_for),
@@ -317,7 +317,7 @@ export async function requestProposal(
     duration_unit: params.durationUnit,
     underlying_symbol: params.symbol,
     ...(params.barrier !== undefined ? { barrier: params.barrier } : {}),
-  })
+  }, 20_000, { imediato: true })
   const p = res.proposal as Record<string, any>
   return {
     id: String(p.id),

@@ -98,16 +98,47 @@ export function useAccount() {
      * e um robo comprando a cada segundo estourava esse teto em menos de dois
      * minutos — dali em diante nada mais era acompanhado.
      */
+    /*
+      Um contrato que fecha NAO some na hora.
+
+      Antes, o cartao era apagado no mesmo instante em que o contrato
+      vencia — e o estado "Ganhou / Perdeu" desenhado na tela nunca chegava a
+      aparecer. A pessoa via a posicao sumir sem saber o resultado. Agora o
+      cartao fica alguns segundos mostrando o resultado final e so entao sai.
+      Enquanto a Deriv liquida (venceu, mas ainda sem won/lost), ele continua
+      na lista como "liquidando", com um prazo de seguranca caso o estado final
+      nunca chegue.
+    */
+    const FINAIS = new Set(['won', 'lost', 'sold', 'cancelled'])
+    const remocoes = new Map<number, ReturnType<typeof setTimeout>>()
+    const agendarRemocao = (id: number, ms: number) => {
+      const antigo = remocoes.get(id)
+      if (antigo) clearTimeout(antigo)
+      remocoes.set(id, setTimeout(() => {
+        remocoes.delete(id)
+        if (!alive) return
+        setContracts((prev) => {
+          if (!prev.has(id)) return prev
+          const next = new Map(prev)
+          next.delete(id)
+          return next
+        })
+      }, ms))
+    }
+    paradas.push(() => { remocoes.forEach((t) => clearTimeout(t)); remocoes.clear() })
+
     const guardar = (c: OpenContract) => {
       if (!alive) return
-      const fechou = c.status !== 'open' || c.isExpired
+      const finalizado = FINAIS.has(c.status)
       setContracts((prev) => {
-        if (fechou && !prev.has(c.contractId)) return prev
+        // ja saiu da lista (ou nunca esteve): nao volta
+        if (finalizado && !prev.has(c.contractId)) return prev
         const next = new Map(prev)
-        if (fechou) next.delete(c.contractId)
-        else next.set(c.contractId, c)
+        next.set(c.contractId, c)
         return next
       })
+      if (finalizado) agendarRemocao(c.contractId, 7_000)
+      else if (c.isExpired) agendarRemocao(c.contractId, 25_000)
     }
 
     fetchTradingSocketUrl(session, accountId)

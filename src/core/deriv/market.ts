@@ -214,6 +214,56 @@ export function subscribeCandles(
   )
 }
 
+/**
+ * Ate onde vai a duracao de um Subir/Descer neste ativo, segundo a Deriv.
+ *
+ * A tela oferecia so "minutos", sem teto, e o que a Deriv recusava virava
+ * um "indisponivel" mudo. A propria API diz o que aceita (`contracts_for`):
+ * no Volatility 75 (1s), por exemplo, 1 a 10 ticks, 15 segundos a 1 dia.
+ * `null` numa faixa significa que aquela unidade nao existe para o ativo.
+ */
+export interface LimitesDuracao {
+  ticks: [number, number] | null
+  segundos: [number, number] | null
+  minutos: [number, number] | null
+}
+
+export const LIMITES_PADRAO: LimitesDuracao = {
+  ticks: [1, 10], segundos: [15, 86_400], minutos: [1, 1_440],
+}
+
+function emSegundos(texto: unknown): number | null {
+  const m = /^(\d+)([smhd])$/.exec(String(texto ?? ''))
+  if (!m) return null
+  const n = Number(m[1])
+  return { s: n, m: n * 60, h: n * 3600, d: n * 86_400 }[m[2] as 's' | 'm' | 'h' | 'd']
+}
+
+export async function fetchLimitesSubirDescer(
+  symbol: string,
+  socket: TeedsSocket = publicSocket,
+): Promise<LimitesDuracao> {
+  const res = await socket.send({ contracts_for: symbol })
+  const lista = ((res.contracts_for as any)?.available ?? []) as Array<Record<string, any>>
+  const limites: LimitesDuracao = { ticks: null, segundos: null, minutos: null }
+  for (const a of lista) {
+    if (a.contract_type !== 'CALL') continue
+    if (a.expiry_type === 'tick') {
+      const mi = Number(String(a.min_contract_duration).replace('t', ''))
+      const ma = Number(String(a.max_contract_duration).replace('t', ''))
+      if (mi > 0 && ma >= mi) limites.ticks = [mi, ma]
+    } else if (a.expiry_type === 'intraday') {
+      const mi = emSegundos(a.min_contract_duration)
+      const ma = emSegundos(a.max_contract_duration)
+      if (mi !== null && ma !== null && ma >= mi) {
+        limites.segundos = [mi, ma]
+        limites.minutos = [Math.max(1, Math.ceil(mi / 60)), Math.max(1, Math.floor(ma / 60))]
+      }
+    }
+  }
+  return limites
+}
+
 /** Hora do servidor da Deriv (util para alinhar o relogio do grafico). */
 export async function fetchServerTime(socket: TeedsSocket = publicSocket): Promise<number> {
   const res = await socket.send({ time: 1 })

@@ -242,8 +242,26 @@ export class TeedsSocket {
     }
   }
 
-  /** Envia uma requisicao e resolve com a primeira resposta correspondente. */
-  send(request: Record<string, unknown>, timeoutMs = 20_000): Promise<DerivMessage> {
+  /**
+   * Envia uma requisicao e resolve com a primeira resposta correspondente.
+   *
+   * `imediato`: o pedido so sai se a linha estiver aberta AGORA; senao e
+   * recusado na hora. Sem isso, um clique em "comprar" durante uma queda de
+   * conexao ficava guardado na fila e disparava sozinho quando a linha
+   * voltava — segundos depois, num preco e num momento que ninguem escolheu.
+   * Compra, venda e cotacao usam isto; assinaturas e consultas podem esperar.
+   */
+  send(
+    request: Record<string, unknown>,
+    timeoutMs = 20_000,
+    opts: { imediato?: boolean } = {},
+  ): Promise<DerivMessage> {
+    if (opts.imediato && this.ws?.readyState !== WebSocket.OPEN) {
+      return Promise.reject(new Error(
+        '[LinhaFechada] A linha com a Deriv não está aberta agora — nada foi enviado. Aguarde reconectar e tente de novo.',
+      ))
+    }
+
     const req_id = this.nextId()
     const payload = { ...request, req_id }
 

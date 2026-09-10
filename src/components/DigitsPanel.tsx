@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { publicSocket, type TeedsSocket } from '../core/deriv/client'
 import { chanceTeorica, TIPOS_DIGITO, type DigitContract } from '../core/deriv/digits'
+import { traduzirErro } from '../core/deriv/erros'
 import { useDigits } from '../hooks/useDigits'
 
 interface Props {
@@ -14,12 +15,21 @@ interface Props {
   /** Conexao da conta: cota com o markup real do app. */
   socket?: TeedsSocket | null
   onComprar: (tipo: DigitContract, barreira: string | undefined, ticks: number) => void
+  /** Tipo armado para confirmar em conta real (ou null). Mesma trava do Subir/Descer. */
+  confirmando: string | null
+  /** Qualquer mudanca de parametro desarma a confirmacao. */
+  onDesarmar: () => void
+  /** Por que o botao esta travado, para mostrar no lugar de um botao mudo. */
+  motivoBloqueio: string | null
 }
 
 const JANELAS = [50, 100, 500, 1000]
 
 export function DigitsPanel(props: Props) {
-  const { symbol, pipSize, stake, moeda, podeOperar, logado, comprando, socket, onComprar } = props
+  const {
+    symbol, pipSize, stake, moeda, podeOperar, logado, comprando, socket, onComprar,
+    confirmando, onDesarmar, motivoBloqueio,
+  } = props
   const [janela, setJanela] = useState(100)
   const [tipoSel, setTipoSel] = useState<DigitContract>('DIGITUNDER')
   const [digito, setDigito] = useState(5)
@@ -37,6 +47,9 @@ export function DigitsPanel(props: Props) {
       setDigito(kind.digitosValidos[Math.floor(kind.digitosValidos.length / 2)])
     }
   }, [kind, digito])
+
+  // Mudou o tipo, o digito ou a duracao: a confirmacao em conta real cai.
+  useEffect(() => { onDesarmar() }, [tipoSel, digito, ticks]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // cotacao ao vivo (conexao publica, nao exige login)
   useEffect(() => {
@@ -58,7 +71,7 @@ export function DigitsPanel(props: Props) {
       } catch (e) {
         if (!vivo) return
         setPayout(null)
-        setErroCotacao((e as Error).message)
+        setErroCotacao(traduzirErro((e as Error).message))
       } finally {
         if (vivo) setCotando(false)
       }
@@ -176,7 +189,7 @@ export function DigitsPanel(props: Props) {
         </p>
         <div className="dig-numeros">
           <div>
-            <span className="rot">Chance</span>
+            <span className="rot">Chance teórica</span>
             <strong>{chance}%</strong>
           </div>
           <div>
@@ -186,17 +199,27 @@ export function DigitsPanel(props: Props) {
           <div>
             <span className="rot">Lucro</span>
             <strong className={lucro !== null && lucro > 0 ? 'ganho' : ''}>
-              {lucro !== null ? `+${lucro.toFixed(2)}` : '—'}
+              {lucro !== null
+                ? `+${lucro.toFixed(2)}${stake > 0 ? ` · ${((lucro / stake) * 100).toFixed(0)}%` : ''}`
+                : '—'}
             </strong>
           </div>
         </div>
         {erroCotacao && <p className="dig-erro">{erroCotacao}</p>}
         <button
-          className="btn btn-dig"
+          className={`btn btn-dig ${confirmando === tipoSel ? 'btn-confirmar' : ''}`}
           disabled={!podeOperar || comprando || cotando || payout === null}
           onClick={() => onComprar(tipoSel, kind.usaDigito ? String(digito) : undefined, ticks)}
         >
-          {comprando ? 'comprando…' : !logado ? 'Entre para operar' : `Comprar por ${moeda} ${stake.toFixed(2)}`}
+          {comprando
+            ? 'comprando…'
+            : !logado
+              ? 'Conecte a Deriv para operar'
+              : motivoBloqueio
+                ? motivoBloqueio
+                : confirmando === tipoSel
+                  ? 'Confirmar (dinheiro real)'
+                  : `Comprar por ${moeda} ${stake.toFixed(2)}`}
         </button>
       </div>
     </div>

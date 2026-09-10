@@ -1,7 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { publicSocket, TeedsSocket } from '../core/deriv/client'
-import { fetchActiveSymbols, subscribeCandles, subscribeTicks } from '../core/deriv/market'
+import {
+  fetchActiveSymbols, fetchLimitesSubirDescer, LIMITES_PADRAO, subscribeCandles, subscribeTicks,
+  type LimitesDuracao,
+} from '../core/deriv/market'
 import type { ActiveSymbol, Candle, ConnectionState, Granularity, Tick } from '../core/deriv/types'
+
+/**
+ * Faixas de duracao que a Deriv aceita para Subir/Descer no ativo.
+ * Enquanto nao responde (ou se falhar), valem os limites padrao dos
+ * indices sinteticos — melhor um teto conhecido do que nenhum.
+ */
+export function useLimitesDuracao(symbol: string | null): LimitesDuracao {
+  const [limites, setLimites] = useState<LimitesDuracao>(LIMITES_PADRAO)
+  useEffect(() => {
+    if (!symbol) return
+    let alive = true
+    setLimites(LIMITES_PADRAO)
+    fetchLimitesSubirDescer(symbol)
+      .then((l) => { if (alive) setLimites(l) })
+      .catch(() => { /* fica no padrao */ })
+    return () => { alive = false }
+  }, [symbol])
+  return limites
+}
 
 /** Estado da conexao com a Deriv. */
 export function useConnection(): ConnectionState {
@@ -170,6 +192,14 @@ export function useProposal(params: {
     const id = setTimeout(request, 350)
     return () => clearTimeout(id)
   }, [request])
+
+  // A cotacao era feita uma vez e ficava velha na tela. Recota de tempos em
+  // tempos para o "se ganhar" acompanhar o que a Deriv paga agora.
+  useEffect(() => {
+    if (!symbol || !enabled) return
+    const id = setInterval(request, 15_000)
+    return () => clearInterval(id)
+  }, [request, symbol, enabled])
 
   return { payout, askPrice, markup, error, loading, refresh: request }
 }
