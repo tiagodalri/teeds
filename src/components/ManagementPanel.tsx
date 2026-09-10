@@ -10,7 +10,7 @@ import { publicSocket, type TeedsSocket } from '../core/deriv/client'
 import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 import { IDENTIDADES, nomeDaEstrategia } from '../core/deriv/branding'
-import { enviarComissoes, enviarMarkupOficial, listarComissoes } from '../core/teeds/clientes'
+import { enviarComissoes, enviarMarkupOficial, listarComissoes, type ComissaoDia } from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { ClientesAdmin } from './ClientesAdmin'
 import { DerivDesconectada } from './DerivDesconectada'
@@ -205,11 +205,52 @@ export function ManagementPanel({
   }, [socket, pulso, lerHoje])
 
   /**
-   * O numero da plataforma: dias anteriores vem do calculo grande, hoje vem
-   * da leitura ao vivo. E o que a Deriv vai confirmar depois, quando fechar
-   * a conta dela.
+   * Comissao do negocio: SO CONTAS REAIS, de todos os clientes da marca.
+   *
+   * Vem de `comissoes_diarias`, que o servidor recalcula a cada 5 minutos a
+   * partir da tabela de lucros da Deriv. Demo nao entra: dinheiro ficticio
+   * nao gera markup — e um robo de martingale na demo faria o numero parecer
+   * uma fortuna. A conta escolhida, se for real, entra pela leitura ao vivo
+   * (mais fresca que a do servidor).
    */
+  const [reais, setReais] = useState<ComissaoDia[] | null>(null)
+  useEffect(() => {
+    if (!sessaoTeeds) { setReais(null); return }
+    let vivo = true
+    const ler = () => listarComissoes(sessaoTeeds, dias)
+      .then((l) => { if (vivo) setReais(l.filter((x) => !x.demo)) })
+      .catch(() => { /* sem banco agora: fica o que ja tinha */ })
+    void ler()
+    const id = setInterval(() => { void ler() }, 60_000)
+    return () => { vivo = false; clearInterval(id) }
+  }, [sessaoTeeds, dias])
+
   const hojeIso = diasDoPeriodo(1)[0]
+  const negocio = useMemo(() => {
+    if (!reais) return null
+    // a mesma conta Deriv pode estar em dois cadastros: uma linha por conta e dia
+    const porChave = new Map<string, ComissaoDia>()
+    for (const r of reais) {
+      const k = `${r.contaId}:${r.dia}`
+      const j = porChave.get(k)
+      if (!j || Date.parse(r.atualizadoEm ?? '') > Date.parse(j.atualizadoEm ?? '')) porChave.set(k, r)
+    }
+    let comissao = 0, operacoes = 0, pagamentos = 0, movimentado = 0
+    const aoVivoAqui = !!hoje && !isDemo && !!contaId
+    for (const r of porChave.values()) {
+      if (aoVivoAqui && r.contaId === contaId && r.dia === hojeIso) continue
+      comissao += r.comissao; operacoes += r.operacoes; pagamentos += r.pagamentos; movimentado += r.entradas
+    }
+    if (aoVivoAqui && hoje) {
+      comissao += hoje.comissao; operacoes += hoje.operacoes; pagamentos += hoje.pagamentos; movimentado += hoje.entradas
+    }
+    return { comissao, operacoes, pagamentos, movimentado, aoVivoAqui }
+  }, [reais, hoje, isDemo, contaId, hojeIso])
+
+  /**
+   * O numero DESTA conta: dias anteriores vem do calculo grande, hoje vem
+   * da leitura ao vivo. Na demo e so simulacao — e o cartao diz isso.
+   */
   const vivo = useMemo(() => {
     const simHoje = sim?.porDia.find((d) => d.data === hojeIso)
     const base = sim
@@ -235,7 +276,13 @@ export function ManagementPanel({
       parcial: !sim && dias > 1,
     }
   }, [sim, hoje, hojeIso, dias])
-  const derivAtrasada = vivo.pronto && resumo ? vivo.comissao - resumo.comissao : 0
+  // sem sessao Teeds nao ha banco: cai no numero desta conta, se ela for real
+  const topo = negocio
+    ? { comissao: negocio.comissao, operacoes: negocio.operacoes, pronto: true }
+    : isDemo
+      ? { comissao: 0, operacoes: 0, pronto: true }
+      : { comissao: vivo.comissao, operacoes: vivo.operacoes, pronto: vivo.pronto }
+  const derivAtrasada = topo.pronto && resumo ? topo.comissao - resumo.comissao : 0
 
   const [copiado, setCopiado] = useState(false)
   const copiarLink = async () => {
@@ -357,10 +404,14 @@ export function ManagementPanel({
       <div className="kpis">
         <div className="kpi kpi-grande kpi-vivo">
           <span className="rot"><i className="ponto-vivo" aria-hidden />Sua comissão · calculada ao vivo</span>
-          <strong>{vivo.pronto ? dinheiro(vivo.comissao, 'USD') : '…'}</strong>
+          <strong>{topo.pronto ? dinheiro(topo.comissao, 'USD') : '…'}</strong>
           <span className="kpi-nota">
-            3% do pagamento de cada contrato desta conta · {vivo.operacoes.toLocaleString('pt-BR')} operações
-            {vivo.parcial && ' · dias anteriores ainda somando'}
+            3% do pagamento · só contas reais · {topo.operacoes.toLocaleString('pt-BR')} operações
+            {negocio
+              ? (negocio.aoVivoAqui ? ' · sobe a cada contrato desta conta' : ' · o servidor recalcula a cada 5 min')
+              : isDemo
+                ? ' · você está na demo, que não gera comissão'
+                : vivo.parcial ? ' · dias anteriores ainda somando' : ''}
           </span>
         </div>
         <div className="kpi kpi-grande kpi-deriv">
@@ -415,7 +466,7 @@ export function ManagementPanel({
           <>
             <div className="kpis">
               <div className="kpi kpi-grande kpi-vivo">
-                <span className="rot"><i className="ponto-vivo" aria-hidden />Comissão gerada</span>
+                <span className="rot"><i className="ponto-vivo" aria-hidden />{isDemo ? 'Comissão que geraria (demo)' : 'Comissão gerada'}</span>
                 <strong>{dinheiro(vivo.comissao, 'USD')}</strong>
                 <span className="kpi-nota">
                   em {vivo.operacoes.toLocaleString('pt-BR')} operações{' '}

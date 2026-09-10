@@ -574,7 +574,7 @@ export default function App() {
         <OperationalManagementPanel moeda={conta.account?.currency ?? 'USD'} />
       ) : tela === 'gestao' && admin === true ? (
         teeds.sessao ? <AdminPanel sessao={teeds.sessao} comissoes={<ManagementPanel
-          session={conta.session} sessaoTeeds={null} contaId={conta.accountId}
+          session={conta.session} sessaoTeeds={teeds.sessao} contaId={conta.accountId}
           socket={conta.socket} isDemo={conta.isDemo} onReautorizar={() => startLogin()}
           payoutBase={payoutBase} moeda={conta.account?.currency ?? 'USD'} pulso={conta.pulso}
           entrandoNaDeriv={conta.status === 'entrando'} onConectarDeriv={conta.login}
