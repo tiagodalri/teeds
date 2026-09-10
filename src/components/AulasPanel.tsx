@@ -121,8 +121,9 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
   return (
     <div className="ger aulas">
       <div className="aulas-capa" style={{
-        ['--aulas-hero-mobile' as string]: `linear-gradient(90deg, rgba(5,6,8,.96), rgba(5,6,8,.65)), url(${import.meta.env.BASE_URL}aulas-hero-mobile.webp)`,
-        backgroundImage: `linear-gradient(90deg, rgba(5,6,8,.98) 0%, rgba(5,6,8,.86) 38%, rgba(5,6,8,.2) 72%, rgba(5,6,8,.55) 100%), image-set(url(${import.meta.env.BASE_URL}aulas-hero.webp) type("image/webp"), url(${import.meta.env.BASE_URL}aulas-hero.png) type("image/png"))`,
+        ['--aulas-hero-mobile' as string]: `linear-gradient(90deg, rgba(5,6,8,.96), rgba(5,6,8,.65)), url(${import.meta.env.BASE_URL}${MARCA.heroAulas.celular})`,
+        backgroundImage: `linear-gradient(90deg, rgba(5,6,8,.98) 0%, rgba(5,6,8,.86) 38%, rgba(5,6,8,.2) 72%, rgba(5,6,8,.55) 100%), image-set(url(${import.meta.env.BASE_URL}${MARCA.heroAulas.principal}) type("image/webp"), url(${import.meta.env.BASE_URL}${MARCA.heroAulas.reserva}) type("image/${MARCA.heroAulas.reserva.endsWith('.png') ? 'png' : 'jpeg'}"))`,
+        backgroundPosition: MARCA.heroAulas.posicao ?? 'center right',
       }}>
         <div className="aulas-capa-texto">
           <span className="aulas-selo">Treinamento original {MARCA.prosa}</span>

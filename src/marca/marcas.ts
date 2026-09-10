@@ -45,6 +45,12 @@ export interface Marca {
   /** Arquivo do emblema, dentro de `public/`. */
   emblema: string
   /**
+   * A imagem do herói da tela de Aulas, dentro de `public/`.
+   * Era um arquivo só, o touro dourado — e a OMNI abria as aulas com a cara
+   * da Teeds. Cada marca aponta a sua: principal (webp), reserva e a do celular.
+   */
+  heroAulas: { principal: string; reserva: string; celular: string; /** recorte (background-position); padrao 'center right' */ posicao?: string }
+  /**
    * Quais robôs esta plataforma oferece, e em que ordem.
    *
    * O catálogo inteiro continua em `branding.ts` — é ele que permite ler o
@@ -130,6 +136,7 @@ export const MARCAS: Record<string, Marca> = {
     robos: ['superior5', 'ag2', 'smart03', 'goreme', 'firstblock', 'secondblock', 'thepalm'],
     base: '/',
     emblema: 'teeds-marca.png',
+    heroAulas: { principal: 'aulas-hero.webp', reserva: 'aulas-hero.png', celular: 'aulas-hero-mobile.webp' },
     cor: { claro: '#4c6fff', escuro: '#d0aa52' },
     email: {
       faixa: '#12151c',
@@ -166,6 +173,7 @@ export const MARCAS: Record<string, Marca> = {
     },
     base: '/',
     emblema: 'omni-marca.png',
+    heroAulas: { principal: 'aulas-especialista/boas-vindas.webp', reserva: 'aulas-especialista/boas-vindas.jpg', celular: 'aulas-especialista/boas-vindas-mobile.webp', posicao: 'right 18%' },
     cor: { claro: '#0E2A4E', escuro: '#6C93C6' },
     email: {
       faixa: '#0E2A4E',

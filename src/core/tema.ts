@@ -40,6 +40,10 @@ export function aplicarTema(tema: Tema): void {
   const cor = tema === 'escuro' ? MARCA.cor.escuro : MARCA.cor.claro
   document.documentElement.style.setProperty('--primary', cor)
   document.documentElement.style.setProperty('--primary-soft', `${cor}22`)
+  // A cor da marca sobre fundo escuro, independente do tema: as telas
+  // cinematograficas (Aulas) sao sempre escuras e a usam no lugar do dourado
+  // que estava escrito a mao — na OMNI vira azul-aco.
+  document.documentElement.style.setProperty('--marca-noite', MARCA.cor.escuro)
   try {
     localStorage.setItem(CHAVE, tema)
   } catch {
