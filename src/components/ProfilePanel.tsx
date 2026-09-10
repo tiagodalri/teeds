@@ -5,6 +5,7 @@ import {
 } from '../core/teeds/conta'
 import type { TradingAccount } from '../core/deriv/account'
 import { MARCA } from '../marca'
+import { IconeFechar } from './IconeFechar'
 
 interface Props {
   sessao: SessaoTeeds
@@ -84,7 +85,7 @@ export function ProfilePanel({ sessao, onAtualizar, onFechar, contas = [], deriv
             <b>{u.nome || u.email}</b>
             <span>{u.email}</span>
           </div>
-          <button className="qz-fechar" onClick={onFechar} aria-label="Fechar">×</button>
+          <button className="qz-fechar" onClick={onFechar} aria-label="Fechar"><IconeFechar /></button>
         </header>
 
         <div className="perfil-corpo">

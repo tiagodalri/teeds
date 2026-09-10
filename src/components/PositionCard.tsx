@@ -85,7 +85,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
     : liquidando
       ? 'venceu · a Deriv está fechando as contas'
       : ticks
-        ? `vence depois de ${ticks} ${ticks === '1' ? 'tick' : 'ticks'} · cada tick é uma cotação nova`
+        ? `vence em ${ticks} ${ticks === '1' ? 'tick' : 'ticks'}`
         : restante > 0
           ? `${Math.round(progresso)}% do contrato · faltam ${texto}`
           : 'liquidando…'
@@ -128,7 +128,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
             {ganhando ? '+' : '−'}{c.currency} {Math.abs(c.profit).toFixed(2)}
           </strong>
           <span className={`pct ${ganhando ? 'ganho' : 'perda'}`}>
-            {ganhando ? '+' : ''}{c.profitPercentage.toFixed(1)}%
+            {ganhando ? '+' : '−'}{Math.abs(c.profitPercentage).toFixed(1)}%
           </span>
         </div>
         <div className="pos-alvo">
@@ -153,7 +153,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
             )}
           </dd></div>
         )}
-        <div><dt>{concluido ? 'Pagou' : 'Encerrar por'}</dt><dd>{dinheiro(c.bidPrice)}</dd></div>
+        <div><dt>{concluido ? 'Pagou' : 'Encerrar'}</dt><dd>{dinheiro(c.bidPrice)}</dd></div>
       </dl>
 
       <button

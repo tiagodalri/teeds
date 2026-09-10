@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react'
 import { Brand } from './Brand'
+import { IconeFechar } from './IconeFechar'
 
 interface Props {
   onFechar: () => void
@@ -48,7 +49,7 @@ export function AssistenteBetaGate({ onFechar, onLiberar }: Props) {
 
   return <div className="beta-fundo" role="presentation" onMouseDown={onFechar}>
     <section className="beta-modal" role="dialog" aria-modal="true" aria-labelledby="beta-titulo" onMouseDown={(e) => e.stopPropagation()}>
-      <button className="beta-fechar" onClick={onFechar} aria-label="Fechar">×</button>
+      <button className="beta-fechar" onClick={onFechar} aria-label="Fechar"><IconeFechar /></button>
       <div className="beta-marca"><Brand tamanho={38} /></div>
       <span className="beta-selo">BETA · ACESSO RESTRITO</span>
       <h2 id="beta-titulo">Assistente em fase de testes</h2>

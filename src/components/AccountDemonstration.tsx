@@ -2,6 +2,7 @@ import type { TradingAccount } from '../core/deriv/account'
 import { RobotDialog } from './RobotDialog'
 import './robot-launch.css'
 import './account-demonstration.css'
+import { IconeFechar } from './IconeFechar'
 
 export const podeDemonstrarSaldos = (admin?: boolean | null, email?: string | null) =>
   admin === true && email?.trim().toLowerCase() === 'teeds@gmail.com'
@@ -25,7 +26,7 @@ export function AccountDemonstration({ contas, admin, email, onClose }: {
   const linhas = saldosDemonstrativos(contas)
   return <RobotDialog label="Demonstração — saldos simulados" onCancel={onClose}>
     <section className="account-demonstration">
-      <header><div><span>VISUALIZAÇÃO EXCLUSIVA DE ADM</span><h2>Demonstração — saldos simulados</h2></div><button onClick={onClose} aria-label="Fechar demonstração">×</button></header>
+      <header><div><span>VISUALIZAÇÃO EXCLUSIVA DE ADM</span><h2>Demonstração — saldos simulados</h2></div><button onClick={onClose} aria-label="Fechar demonstração"><IconeFechar /></button></header>
       <div className="account-demo-content">
         <p className="account-demo-notice">Os saldos abaixo estão invertidos para demonstração. <strong>Não representam o dinheiro disponível nas contas da Deriv.</strong></p>
         <div className="account-demo-list">{linhas.map(conta => <article key={conta.accountId}>

@@ -6,6 +6,7 @@ import {
 } from '../core/teeds/aulas'
 import { MARCA } from '../marca'
 import { capaDaAula } from './capasAulas'
+import { IconeFechar } from './IconeFechar'
 
 const capa = capaDaAula
 
@@ -211,7 +212,7 @@ export function AulasPanel({ nome }: { nome?: string | null }) {
         <div className="aula-modal-fundo" role="presentation" onClick={() => setDetalheId(null)}>
           <section className="aula-modal" role="dialog" aria-modal="true" aria-label={detalhe.titulo}
             style={{ ['--aula' as any]: detalhe.modulo.cor }} onClick={(e) => e.stopPropagation()}>
-            <button className="aula-modal-fechar" onClick={() => setDetalheId(null)} aria-label="Fechar">×</button>
+            <button className="aula-modal-fechar" onClick={() => setDetalheId(null)} aria-label="Fechar"><IconeFechar /></button>
             <div className="aula-modal-capa"><ResponsiveImage src={capa(detalhe.id)} alt={`Capa da aula ${detalhe.titulo}`} /></div>
             <div className="aula-modal-corpo">
               <span className="aula-num">Aula {detalhe.numero} · {detalhe.modulo.titulo}</span>

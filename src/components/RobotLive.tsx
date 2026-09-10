@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { useClock } from '../hooks/useClock'
 import { MARCA } from '../marca'
+import { IconeFechar } from './IconeFechar'
 
 interface Props {
   estado: EstadoMotor
@@ -186,7 +187,7 @@ export function RobotLive({
           )}
           {onRemover && (
             <button className="tv-btn sair" onClick={onRemover}
-              title="Fechar este bloco" aria-label="Fechar este bloco">×</button>
+              title="Fechar este bloco" aria-label="Fechar este bloco"><IconeFechar /></button>
           )}
         </div>
       </header>

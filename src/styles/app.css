@@ -1653,6 +1653,12 @@ button, input { font: inherit; color: inherit; }
 }
 .selo.demo { background: var(--account-demo-soft); color: var(--account-demo); }
 .selo.real { background: var(--up-soft); color: var(--up); }
+/*
+  Botoes de fechar: o icone vetorial fica centrado por flex em qualquer
+  tamanho. O botao continua ditando o tamanho pelo proprio font-size.
+*/
+button:has(> .icone-fechar) { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+.icone-fechar { width: .62em; height: .62em; display: block; flex-shrink: 0; }
 /* Logotipo da Deriv dentro de um item de menu: alinha pela linha do texto. */
 /* o item ja tem gap de 10px entre os filhos; encosta o logotipo na palavra anterior */
 .menu-acao-logo { display: inline-flex; align-items: center; margin-left: -4px; }
@@ -4560,3 +4566,16 @@ input, select, textarea, button { vertical-align: middle; }
 :root:not([data-tema='escuro']) .tv-corpo::-webkit-scrollbar-thumb{background-color:#cbd3df}
 :root:not([data-tema='escuro']) .tv-corpo:hover::-webkit-scrollbar-thumb{background-color:#9ca7b8}
 .admin-acessos{margin-top:18px}.rc-tabela.acessos>div{grid-template-columns:1.5fr 1fr .5fr .7fr 1fr}.rc-tabela.acessos span{display:grid;gap:3px}.rc-tabela.acessos small{color:var(--muted);font-size:9px}
+
+/* ---------------------------------------- revisao visual 10/09/2026 */
+/* Marca: o mesmo lockup da sidebar em qualquer tamanho (login, modais). */
+.brand-escala.brand-signature { gap: calc(var(--brand-tam) * .24); }
+.brand-escala.brand-signature .brand-symbol,
+.brand-escala.brand-signature-teeds .brand-original { width: var(--brand-tam); height: var(--brand-tam); }
+.brand-escala.brand-signature .brand-wordmark { font-size: calc(var(--brand-tam) * .52); gap: calc(var(--brand-tam) * .11); }
+.brand-escala.brand-signature .brand-wordmark > span { font-size: max(6px, calc(var(--brand-tam) * .15)); }
+.entrada-marca .brand-signature, .beta-marca .brand-signature { display: inline-flex; }
+/* Logotipo da Deriv dentro de uma frase. */
+.deriv-inline { display: inline-flex; align-items: center; vertical-align: -3px; margin-left: 4px; }
+/* Cartao de posicao: a legenda da barra cabe numa linha (a grade tem altura fixa). */
+.pos .pos-progresso-txt { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }

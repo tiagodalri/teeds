@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { listarProdutos } from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA } from '../marca'
+import { IconeFechar } from './IconeFechar'
 
 type Categoria = 'Todos' | 'Robôs' | 'Mentorias' | 'Ferramentas'
 
@@ -164,7 +165,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
       {selecionado && (
         <div className="market-modal-fundo" role="presentation" onMouseDown={() => setSelecionado(null)}>
           <section className={`market-modal ${selecionado.tom}`} role="dialog" aria-modal="true" aria-labelledby="market-modal-titulo" onMouseDown={(e) => e.stopPropagation()}>
-            <button className="market-modal-fechar" onClick={() => setSelecionado(null)} aria-label="Fechar">×</button>
+            <button className="market-modal-fechar" onClick={() => setSelecionado(null)} aria-label="Fechar"><IconeFechar /></button>
             <div className="market-modal-arte">
               <ResponsiveImage src={capaProduto(selecionado.imagem)} alt="" />
               <span>{selecionado.selo}</span><b>{selecionado.simbolo}</b><small>{MARCA.nome} ORIGINAL</small>
@@ -185,7 +186,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
       )}
 
       {interesse && (
-        <div className="market-toast" role="status"><i>✓</i><span><b>Interesse registrado</b><small>Você verá a novidade aqui quando ela for lançada.</small></span><button onClick={() => setInteresse(null)}>×</button></div>
+        <div className="market-toast" role="status"><i>✓</i><span><b>Interesse registrado</b><small>Você verá a novidade aqui quando ela for lançada.</small></span><button onClick={() => setInteresse(null)}><IconeFechar /></button></div>
       )}
     </main>
   )

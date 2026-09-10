@@ -1,4 +1,4 @@
-import { DerivNome, IconeElo } from './DerivMarca'
+import { DerivLogo, IconeElo } from './DerivMarca'
 import { MARCA } from '../marca'
 
 interface Props {
@@ -27,7 +27,7 @@ export function DerivDesconectada({ acao, entrando, onConectar, compacto = false
           <path d="M15 25 l10-10" strokeDasharray="3 4" />
         </svg>
       </div>
-      <b>Conecte a sua conta da <DerivNome tamanho={17} /></b>
+      <b>Conecte a sua conta da <span className="deriv-inline"><DerivLogo altura={17} /></span></b>
       <p>
         {acao} Você está na {MARCA.prosa}, mas o dinheiro fica na corretora — e é
         preciso ligar as duas.
@@ -35,7 +35,7 @@ export function DerivDesconectada({ acao, entrando, onConectar, compacto = false
       <div className="sem-deriv-acoes">
         <button className="btn-deriv" onClick={onConectar} disabled={entrando}>
           <IconeElo />
-          {entrando ? 'Abrindo…' : <>Conectar minha <DerivNome tamanho={13.5} /></>}
+          {entrando ? 'Abrindo…' : <>Conectar minha <DerivLogo altura={13} cor="#fff" /></>}
         </button>
         <a href={MARCA.afiliado} target="_blank" rel="noopener noreferrer">Ainda não tenho conta</a>
       </div>

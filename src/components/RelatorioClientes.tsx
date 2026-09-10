@@ -5,6 +5,7 @@ import {
   type DiaConferencia, type LinhaRelatorioCliente, type OperacaoRoboRegistro,
 } from '../core/teeds/clientes'
 import { MARCA } from '../marca'
+import { IconeFechar } from './IconeFechar'
 
 /**
  * Resultados por cliente — a tela que responde três perguntas do admin:
@@ -182,7 +183,7 @@ function ExtratoCliente({ sessao, cliente, dias, fechar }: { sessao: SessaoTeeds
     <section className="adm-modal rc-extrato" onMouseDown={(e) => e.stopPropagation()}>
       <header>
         <div className="adm-pessoa"><i>{(cliente.nome || cliente.email || '?')[0].toUpperCase()}</i><b>{cliente.nome || 'Sem nome'}<small>{cliente.email}</small></b></div>
-        <button onClick={fechar}>×</button>
+        <button onClick={fechar}><IconeFechar /></button>
       </header>
       <div className="adm-detail-kpis">
         <div><span>Operações · {dias}d</span><b>{inteiro(cliente.operacoes)}</b></div>

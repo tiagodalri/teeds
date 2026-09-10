@@ -12,7 +12,7 @@ import { MarketplacePanel } from './components/MarketplacePanel'
 import { AccountSwitcher } from './components/AccountSwitcher'
 import { UserMenu } from './components/UserMenu'
 import { ProfilePanel } from './components/ProfilePanel'
-import { DerivNome, IconeElo } from './components/DerivMarca'
+import { DerivLogo, IconeElo } from './components/DerivMarca'
 import { LoginScreen } from './components/LoginScreen'
 import { NovaSenha } from './components/NovaSenha'
 import { startLogin } from './core/deriv/auth'
@@ -31,6 +31,7 @@ import type { Granularity } from './core/deriv/types'
 import { formatPrice } from './core/chart/scales'
 import { buyFromProposal, requestProposal, sellContract } from './core/deriv/trading'
 import { MARCA } from './marca'
+import { IconeFechar } from './components/IconeFechar'
 
 const INDICADORES = [
   { id: 'sma', label: 'Média 20', titulo: 'Média móvel simples de 20 períodos' },
@@ -445,7 +446,7 @@ export default function App() {
             <button className="btn-deriv" onClick={conta.login}
               disabled={conta.status === 'entrando'}>
               <IconeElo />
-              {conta.status === 'entrando' ? 'Abrindo…' : <>Conectar <DerivNome tamanho={13} /></>}
+              {conta.status === 'entrando' ? 'Abrindo…' : <>Conectar <DerivLogo altura={13} cor="#fff" /></>}
             </button>
           )}
 
@@ -590,7 +591,7 @@ export default function App() {
                   <div className="ativo-menu" role="dialog" aria-label="Escolher ativo">
                     <div className="ativo-menu-topo">
                       <b>Trocar ativo</b>
-                      <button onClick={() => setSeletorAtivo(false)} aria-label="Fechar seletor">×</button>
+                      <button onClick={() => setSeletorAtivo(false)} aria-label="Fechar seletor"><IconeFechar /></button>
                     </div>
                     <input className="search" autoFocus placeholder="Buscar ativo…" value={search}
                       onChange={(e) => setSearch(e.target.value)} />

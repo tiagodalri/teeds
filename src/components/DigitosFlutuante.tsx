@@ -4,6 +4,7 @@ import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca } from '../core/deriv/strategies'
 import { identidade } from '../core/deriv/branding'
 import { useDigits } from '../hooks/useDigits'
 import { MARCA } from '../marca'
+import { IconeFechar } from './IconeFechar'
 
 /**
  * Painel flutuante "Dígitos ao vivo" da área dos robôs.
@@ -164,7 +165,7 @@ export function DigitosFlutuante({ roboId, nomeAtivo, aoFechar }: Props) {
           <b>Dígitos ao vivo</b>
           <small>{nomeAtivo ?? ATIVO_DOS_ROBOS} · último dígito <strong>{estat.ultimo ?? '—'}</strong></small>
         </div>
-        <button className="df-fechar" onClick={aoFechar} aria-label="Fechar">×</button>
+        <button className="df-fechar" onClick={aoFechar} aria-label="Fechar"><IconeFechar /></button>
       </div>
 
       <div className="df-corpo">

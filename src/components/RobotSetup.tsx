@@ -8,6 +8,7 @@ import { recuperacaoDoRobo } from '../core/deriv/strategies'
 import { RobotCatalog } from './RobotCatalog'
 import { RobotDialog } from './RobotDialog'
 import './robot-launch.css'
+import { IconeFechar } from './IconeFechar'
 
 interface Props {
   identidade: Identidade
@@ -120,7 +121,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
     }} onKeyDown={e => { if (e.key === 'Enter' && (e.repeat || e.nativeEvent.isComposing)) e.preventDefault() }}>
       <header className="robot-launch-top">
         <div className="robot-launch-title"><Emblema id={modelo} tamanho={32} /><div><b>{passo === -1 ? 'Novo robô' : modelo.nome}</b><span>Preparar sessão</span></div></div>
-        <button type="button" className="robot-launch-close" onClick={onCancelar} disabled={ligando} aria-label="Cancelar configuração">×</button>
+        <button type="button" className="robot-launch-close" onClick={onCancelar} disabled={ligando} aria-label="Cancelar configuração"><IconeFechar /></button>
       </header>
       <div className="robot-launch-progress" aria-label={`Etapa ${numero} de ${quantidade}`}><span style={{ width: `${numero / quantidade * 100}%` }} /></div>
       <div className="robot-launch-body" ref={scrollRef}>
