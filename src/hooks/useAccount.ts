@@ -34,6 +34,14 @@ export function useAccount(acesso: { admin?: boolean | null; email?: string | nu
   const [connecting, setConnecting] = useState(false)
   /** Sobe a cada transacao na conta — quem depende do historico se atualiza. */
   const [pulso, setPulso] = useState(0)
+  /**
+   * Ultimas compras vistas no fluxo de transacoes da conta.
+   *
+   * Serve para a tela reconhecer uma compra sua cuja resposta se perdeu
+   * (tempo esgotado, linha caiu depois do envio): o contrato existe, chega
+   * por aqui, e a tela precisa saber que foi ela quem comprou.
+   */
+  const [comprasRecentes, setComprasRecentes] = useState<Array<{ contractId: number; valor: number; quando: number }>>([])
   /** Estado da conexao autenticada — diferente da conexao publica do grafico. */
   const [conexao, setConexao] = useState<ConnectionState>('idle')
 
@@ -183,9 +191,13 @@ export function useAccount(acesso: { admin?: boolean | null; email?: string | nu
 
         // qualquer compra nova entra na lista automaticamente
         paradas.push(
-          subscribeTransactions(sock, () => {
+          subscribeTransactions(sock, (t) => {
             if (!alive) return
             setPulso((n) => n + 1)
+            if (t.action === 'buy' && t.contractId !== null) {
+              const compra = { contractId: t.contractId, valor: Math.abs(t.amount), quando: Date.now() }
+              setComprasRecentes((lista) => [...lista, compra].slice(-20))
+            }
           }),
         )
 
@@ -263,6 +275,7 @@ export function useAccount(acesso: { admin?: boolean | null; email?: string | nu
     accounts: permitidas, demonstrationAccounts: accounts, account, accountId, setAccountId, isDemo, somenteDemo,
     balance: conexaoDaConta ? balance : null, contracts: conexaoDaConta ? [...contracts.values()] : [],
     socket: conexaoDaConta ? socketRef.current : null, connecting, aviso, setAviso, pulso, conexao,
+    comprasRecentes: conexaoDaConta ? comprasRecentes : [],
     login, logout, recarregarDemo,
   }
 }

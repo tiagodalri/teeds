@@ -100,8 +100,19 @@ export function DigitosFlutuante({ roboId, nomeAtivo, aoFechar }: Props) {
     return () => mq.removeEventListener('change', ouvir)
   }, [])
   const caixa = useRef<HTMLDivElement>(null)
-  const [pos, setPos] = useState<{ x: number; y: number }>(() =>
-    ler(CHAVE_POS, { x: Math.max(12, window.innerWidth - LARGURA - 24), y: 120 }))
+  const [pos, setPos] = useState<{ x: number; y: number }>(() => {
+    // A posicao guardada pode ser de outro monitor (ou estar corrompida):
+    // valida e traz para dentro da tela ja na abertura, senao o painel
+    // nasce fora da vista e nao ha como puxa-lo de volta.
+    const padrao = { x: Math.max(12, window.innerWidth - LARGURA - 24), y: 120 }
+    const g = ler<Partial<{ x: number; y: number }>>(CHAVE_POS, padrao)
+    const x = typeof g?.x === 'number' && Number.isFinite(g.x) ? g.x : padrao.x
+    const y = typeof g?.y === 'number' && Number.isFinite(g.y) ? g.y : padrao.y
+    return {
+      x: Math.min(Math.max(0, x), Math.max(0, window.innerWidth - LARGURA)),
+      y: Math.min(Math.max(0, y), Math.max(0, window.innerHeight - 120)),
+    }
+  })
   const arrasto = useRef<{ dx: number; dy: number } | null>(null)
 
   const dentroDaTela = (p: { x: number; y: number }) => {

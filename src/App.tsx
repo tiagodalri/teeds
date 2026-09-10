@@ -71,6 +71,8 @@ export default function App() {
   const { symbols, loading: loadingSymbols, error: symbolsError } = useSymbols()
   const teeds = useTeedsAuth()
   const [admin, setAdmin] = useState<boolean | null>(null)
+  /** A conferencia de administrador falhou (rede, token) — diferente de "nao e admin". */
+  const [adminFalhou, setAdminFalhou] = useState(false)
   const [adminUserId, setAdminUserId] = useState<string | null>(null)
   const conta = useAccount({ admin: adminUserId === teeds.sessao?.usuario.id ? admin : null, email: teeds.sessao?.usuario.email })
   const [verPerfil, setVerPerfil] = useState(false)
@@ -168,17 +170,27 @@ export default function App() {
     let ativo = true
     setAdmin(null)
     setAdminUserId(null)
+    setAdminFalhou(false)
     souAdmin(teeds.sessao, true).then((permitido) => {
       if (ativo) { setAdminUserId(usuarioTeedsId); setAdmin(permitido) }
-    }).catch(() => { if (ativo) setAdmin(false) })
+    }).catch(() => {
+      /*
+        Falhou a conferencia (Supabase fora, token vencido): NAO e "nao e
+        admin". `admin` fica null — e null e o que mantem um acesso restrito
+        a demo fechado (fail closed). Gravar false aqui abria a conta real
+        para o login somente-demo justamente quando a rede falha.
+      */
+      if (ativo) { setAdmin(null); setAdminFalhou(true) }
+    })
     return () => { ativo = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioTeedsId])
 
-  // Nunca mantém um cliente numa rota administrativa, nem após troca de conta.
+  // Nunca mantém um cliente numa rota administrativa, nem após troca de conta
+  // ou falha na conferência.
   useEffect(() => {
-    if (admin === false && tela === 'gestao') setTela('operar')
-  }, [admin, tela])
+    if ((admin === false || adminFalhou) && tela === 'gestao') setTela('operar')
+  }, [admin, adminFalhou, tela])
 
   useEffect(() => {
     if (!teeds.sessao) return
@@ -257,6 +269,27 @@ export default function App() {
     try { if (conta.accountId) sessionStorage.setItem(chaveManuais(conta.accountId), JSON.stringify(next)) } catch { /* sem armazenamento: vale ate recarregar */ }
     return next
   })
+  /*
+    Compra enviada cuja resposta se perdeu (tempo esgotado, linha caiu logo
+    depois do envio): o contrato pode existir mesmo assim. Sem isto ele
+    chegava pelo fluxo da conta mas nunca era marcado como seu — sumia da
+    lista, e o aviso mandava "conferir em Posições": o cliente conferia,
+    via vazio e comprava de novo, em dobro. Agora a tela fica de olho por
+    90 s e adota a proxima compra com aquele valor.
+  */
+  const [compraPendente, setCompraPendente] = useState<{ valor: number; desde: number } | null>(null)
+  useEffect(() => {
+    if (!compraPendente) return
+    if (Date.now() - compraPendente.desde > 90_000) { setCompraPendente(null); return }
+    const achada = conta.comprasRecentes.find((c) =>
+      c.quando >= compraPendente.desde - 2_000 && Math.abs(c.valor - compraPendente.valor) < 0.005 && !manuais.includes(c.contractId))
+    if (achada) {
+      marcarManual(achada.contractId)
+      setCompraPendente(null)
+      setAviso({ tipo: 'ok', texto: `A entrada de ${moeda} ${achada.valor.toFixed(2)} foi confirmada e está em Posições.` })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conta.comprasRecentes, compraPendente, manuais])
   const idsManuais = useMemo(() => new Set(manuais), [manuais])
   const minhas = useMemo(
     () => conta.contracts.filter((c) => idsManuais.has(c.contractId)),
@@ -322,7 +355,12 @@ export default function App() {
       const p = await requestProposal(conta.socket, {
         symbol: symbolCode, contractType: tipo, amount: stake, currency: moeda, ...extra,
       })
-      const r = await buyFromProposal(conta.socket, p.id, p.askPrice)
+      const r = await buyFromProposal(conta.socket, p.id, p.askPrice).catch((e: Error) => {
+        // "[LinhaFechada]" e a unica recusa em que NADA foi enviado. Qualquer
+        // outra falha depois do envio pode ter comprado: fica de olho.
+        if (!/LinhaFechada/.test(e.message)) setCompraPendente({ valor: stake, desde: Date.now() })
+        throw e
+      })
       marcarManual(r.contractId)
       setAviso({
         tipo: 'ok',
