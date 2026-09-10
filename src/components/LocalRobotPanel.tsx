@@ -72,6 +72,7 @@ export function LocalRobotPanel({
   const symbol = ATIVO_DOS_ROBOS
   void symbolPadrao
   const [estado, setEstado] = useState<EstadoMotor | null>(null)
+  const [contaDaSessao, setContaDaSessao] = useState<{ contaId: string; demo: boolean; moeda: string } | null>(null)
   const [preparando, setPreparando] = useState(false)
   // A sessão vive no servidor; aqui ficam só o número dela e o jeito de
   // parar de olhar. Fechar esta aba não desliga robô nenhum — era o que
@@ -145,7 +146,12 @@ export function LocalRobotPanel({
     sessaoIdRef.current = id
     pararDeOlharRef.current = acompanharNoServidor(
       sessaoTeeds, id,
-      (s) => { if (typeof s.estado?.rodando === 'boolean') setEstado(s.estado) },
+      (s) => {
+        if (typeof s.estado?.rodando === 'boolean') {
+          setEstado(s.estado)
+          setContaDaSessao({ contaId: s.contaId, demo: s.demo, moeda: s.moeda })
+        }
+      },
       (msg) => setErro(msg),
     )
   }, [sessaoTeeds?.token]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -181,6 +187,7 @@ export function LocalRobotPanel({
     sessaoRef.current = { estrategia: daVitrine, ident: identidade }
     try {
       const s = await ligarNoServidor(sessaoTeeds, { roboId: daVitrine.id, contaId, config })
+      setContaDaSessao({ contaId: s.contaId, demo: s.demo, moeda: s.moeda })
       olhar(s.id)
       if (typeof s.estado?.rodando === 'boolean') setEstado(s.estado)
     } catch (e) {
@@ -197,18 +204,19 @@ export function LocalRobotPanel({
     void pararNoServidor(sessaoTeeds, id).catch((e: Error) => setErro(e.message))
   }
 
+  const moedaDosParametros = contaDaSessao?.moeda ?? moeda
   const parametros = [
     { rot: 'Ativo', valor: nomeAtivo.replace(' Index', '') },
-    { rot: 'Entrada', valor: din(cfg.valorAoVencer, moeda) },
+    { rot: 'Entrada', valor: din(cfg.valorAoVencer, moedaDosParametros) },
     {
       rot: 'Recuperação',
       valor: cfg.fatorGale === 0
         ? 'desligado'
         : `automática ${MARCA.prosa}`,
     },
-    { rot: 'Teto', valor: cfg.valorMaximo > 0 ? din(cfg.valorMaximo, moeda) : 'sem teto' },
-    { rot: 'Para se ganhar', valor: din(cfg.takeProfit, moeda) },
-    { rot: 'Para se perder', valor: din(cfg.stopLoss, moeda) },
+    { rot: 'Teto', valor: cfg.valorMaximo > 0 ? din(cfg.valorMaximo, moedaDosParametros) : 'sem teto' },
+    { rot: 'Para se ganhar', valor: din(cfg.takeProfit, moedaDosParametros) },
+    { rot: 'Para se perder', valor: din(cfg.stopLoss, moedaDosParametros) },
   ]
 
   // ------------------------------------------------------------ sem sessão
@@ -273,7 +281,8 @@ export function LocalRobotPanel({
       <RobotLive
         estado={estado}
         config={cfg}
-        moeda={moeda}
+        moeda={contaDaSessao?.moeda ?? moeda}
+        contaDaSessao={contaDaSessao}
         estrategiaId={estrategia.id}
         nomeEstrategia={ident.nome}
         ativo={nomeAtivo}

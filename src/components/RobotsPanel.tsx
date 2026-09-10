@@ -9,7 +9,7 @@ import {
 import type { ActiveSymbol } from '../core/deriv/types'
 import { LocalRobotPanel } from './LocalRobotPanel'
 import { Emblema } from './RobotCard'
-import { CapaAula, capaDoRobo } from './CapaAula'
+import { RobotCatalog } from './RobotCatalog'
 import { ServerRobotLive } from './ServerRobotLive'
 import { RobotScope } from './RobotScope'
 import { IDENTIDADES, identidade, identidadePorContrato, type Identidade } from '../core/deriv/branding'
@@ -20,6 +20,8 @@ import { registrarOperacaoRobo } from '../core/teeds/clientes'
 import { SessoesServidor } from './SessoesServidor'
 import { acompanharVivas, type SessaoViva } from '../core/teeds/servidorRobos'
 import { MARCA } from '../marca'
+import { RobotOverview } from './RobotOverview'
+import './robot-workspace.css'
 
 interface Props {
   socket: TeedsSocket | null
@@ -46,11 +48,6 @@ const digitosDoModelo = (id: string): string[] => ({
   ag2: ['0', '1', '2'], superior5: ['7', '8', '9'],
   firstblock: ['0', '1', '2', '3', '4'], secondblock: ['5', '6', '7', '8', '9'],
 }[id] ?? [])
-
-const perfilDoModelo = (id: string) => ({
-  ag2: 'Espelho', superior5: 'Insistente',
-  firstblock: 'Bloco inferior', secondblock: 'Bloco superior',
-}[id] ?? 'Automático')
 
 export function RobotsPanel({
   socket, logado, isDemo, moeda, symbols, symbolPadrao, conexao = 'open',
@@ -93,6 +90,9 @@ export function RobotsPanel({
   const [adotadas, setAdotadas] = useState<Record<string, string | null>>({})
   const [vitrineAberta, setVitrineAberta] = useState(true)
   const [comparando, setComparando] = useState(false)
+  const [disposicao, setDisposicao] = useState<'grade' | 'lista'>('grade')
+  const catalogoRef = useRef<HTMLDivElement>(null)
+  const mesaRef = useRef<HTMLDivElement>(null)
   const proximoBloco = useRef(2)
   const contratosEnviados = useRef(new Set<number>())
 
@@ -101,8 +101,19 @@ export function RobotsPanel({
     return acompanharVivas(sessaoTeeds, setVivasNoServidor)
   }, [sessaoTeeds?.token]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const abrirBloco = () =>
-    setBlocos((b) => (b.length >= MAX_BLOCOS ? b : [...b, `bloco-${proximoBloco.current++}`]))
+  const abrirBloco = () => {
+    setBlocoExpandido(null)
+    setVitrineAberta(true)
+    // Reutiliza um preparo vazio. Abrir o catálogo nunca inicia um robô.
+    setBlocos((b) => b.some(id => !sessoesLocais.has(id)) || b.length >= MAX_BLOCOS
+      ? b : [...b, `bloco-${proximoBloco.current++}`])
+    requestAnimationFrame(() => catalogoRef.current?.scrollIntoView({ block: 'start' }))
+  }
+  const escolherModelo = (modelo: Identidade) => {
+    setIdent(modelo)
+    setBlocos(b => b.some(id => !sessoesLocais.has(id)) || b.length >= MAX_BLOCOS ? b : [...b, `bloco-${proximoBloco.current++}`])
+    requestAnimationFrame(() => mesaRef.current?.querySelector('.em-preparo')?.scrollIntoView({ block: 'center' }))
+  }
   const fecharBloco = (id: string) => {
     setBlocos((b) => b.filter((x) => x !== id))
     setBlocoExpandido((atual) => atual === id ? null : atual)
@@ -219,8 +230,14 @@ export function RobotsPanel({
   const doChat = vivasNoServidor.filter((v) => !jaNaTela.has(v.id))
   // tudo que já tem painel ao vivo nesta tela, para o resumo não repetir
   const comPainel = [...jaNaTela, ...doChat.map((v) => v.id)]
+  const temAcompanhamento = temSessaoLocal || doChat.length > 0
+  const temPreparoDisponivel = blocos.some(id => !sessoesLocais.has(id))
 
-  useEffect(() => { if (temSessaoLocal) setVitrineAberta(false) }, [temSessaoLocal])
+  useEffect(() => { if (temAcompanhamento) setVitrineAberta(false) }, [temAcompanhamento])
+  useEffect(() => {
+    // Um foco que desapareceu do servidor não pode deixar a grade vazia.
+    if (blocoExpandido && !blocos.includes(blocoExpandido) && !doChat.some(v => v.id === blocoExpandido)) setBlocoExpandido(null)
+  }, [blocoExpandido, blocos, doChat])
 
   if (!logado) {
     return (
@@ -235,16 +252,39 @@ export function RobotsPanel({
   }
 
   return (
-    <div className="ger rob">
-      <div className="ger-topo">
+    <div className={`ger rob robot-workspace ${temAcompanhamento ? 'tem-acompanhamento' : ''}`}>
+      <div className="ger-topo rob-workspace-header">
         <div>
-          <h2>Robôs</h2>
+          <span className="rob-eyebrow">CENTRAL DE ROBÔS</span>
+          <h2>{temAcompanhamento ? 'Tudo sob seu controle.' : 'Sua próxima estratégia começa aqui.'}</h2>
           <p className="ger-sub">
-            Ligue o robô e acompanhe cada entrada ao vivo. Ele pergunta os valores na hora.
+            {temAcompanhamento ? 'Acompanhe cada sessão. Abra os detalhes quando precisar.' : 'Escolha um modelo, defina seus limites e acompanhe a sessão.'}
           </p>
         </div>
-        {!isDemo && <span className="badge badge-real">conta real selecionada</span>}
+        <div className="rob-workspace-actions">
+          <span className={`rob-account-tag ${isDemo ? 'demo' : 'real'}`}>{isDemo ? 'DEMO' : 'CONTA REAL'} · novos robôs</span>
+          <button className="rob-new-button" onClick={abrirBloco} disabled={blocos.length >= MAX_BLOCOS && !temPreparoDisponivel}>+ Adicionar robô</button>
+        </div>
       </div>
+
+      <RobotOverview sessoes={vivasNoServidor} />
+      <div className="rob-workspace-toolbar">
+        <div><b>{blocoExpandido ? 'Modo foco' : 'Área de acompanhamento'}</b><span>{blocoExpandido ? 'Os outros robôs continuam operando.' : 'Cada robô mantém sua estratégia e seus limites.'}</span></div>
+        <div className="rob-view-options" role="group" aria-label="Disposição dos robôs">
+          {blocoExpandido ? <button onClick={() => setBlocoExpandido(null)}>← Ver todos os robôs</button> : <>
+            <button aria-pressed={disposicao === 'grade'} onClick={() => setDisposicao('grade')}>▦ Lado a lado</button>
+            <button aria-pressed={disposicao === 'lista'} onClick={() => setDisposicao('lista')}>☰ Em lista</button>
+          </>}
+        </div>
+      </div>
+
+      <div ref={catalogoRef} className="robot-catalog-anchor" hidden={!!blocoExpandido || (temAcompanhamento && !vitrineAberta)}>
+        <RobotCatalog selected={ident.id} onSelect={escolherModelo} onCompare={() => setComparando(true)} indisponivel={blocos.length >= MAX_BLOCOS && !temPreparoDisponivel} />
+      </div>
+
+      {/* Uma única grade, com identidade estável. Foco e catálogo só ocultam
+          visualmente: nunca desmontam a sessão ou mudam seus parâmetros. */}
+      <div ref={mesaRef} className={`rob-workspace-board modo-${disposicao} ${blocoExpandido ? 'em-foco' : ''}`}>
 
       {/*
         O robô do chat vem primeiro, antes de tudo o mais.
@@ -261,10 +301,11 @@ export function RobotsPanel({
         seria a tela fingindo que o robô não existe.
       */}
       {doChat.length > 0 && (
-        <div className={`blocos ${doChat.length > 1 ? 'duplo' : ''} ${blocoExpandido ? 'tem-expandido' : ''}`}>
+        <div className="rob-board-group">
           {doChat.map((v, i) => (
-            <LocalRobotPanel key={v.id}
-              titulo={`Robô do chat${doChat.length > 1 ? ` ${i + 1}` : ''}`}
+            <div key={v.id} className="rob-board-slot" hidden={!!blocoExpandido && blocoExpandido !== v.id}>
+            <LocalRobotPanel
+              titulo={`${v.origem === 'chat' ? 'Via assistente' : 'Sessão'} ${i + 1}`}
               socket={socket} isDemo={v.demo} moeda={v.moeda}
               symbols={symbols} symbolPadrao={symbolPadrao}
               identidade={identidade(v.roboId)}
@@ -273,9 +314,38 @@ export function RobotsPanel({
               adotar={{ id: v.id, config: v.config, origem: v.origem }}
               expandido={blocoExpandido === v.id}
               onExpandir={() => setBlocoExpandido((atual) => atual === v.id ? null : v.id)} />
+            </div>
           ))}
         </div>
       )}
+
+      {ident.onde === 'teeds' && <div className="rob-board-group">
+        {blocos.map((idBloco, i) => (
+          <div key={idBloco} className={`rob-board-slot ${sessoesLocais.has(idBloco) ? '' : 'em-preparo'}`}
+            hidden={(!!blocoExpandido && blocoExpandido !== idBloco) || (!sessoesLocais.has(idBloco) && temAcompanhamento && !vitrineAberta)}>
+            <LocalRobotPanel
+              titulo={`Robô ${i + 1}`}
+              socket={socket} isDemo={isDemo} moeda={moeda}
+              symbols={symbols} symbolPadrao={symbolPadrao} identidade={ident}
+              conexao={conexao}
+              sessaoTeeds={sessaoTeeds} contaId={contaId}
+              expandido={blocoExpandido === idBloco}
+              onExpandir={() => setBlocoExpandido((atual) => atual === idBloco ? null : idBloco)}
+              onSessaoChange={(ativa, sessaoId) => {
+                if (ativa && !sessoesLocais.has(idBloco)) setVitrineAberta(false)
+                setSessoesLocais((atuais) => {
+                  const proximas = new Set(atuais)
+                  ativa ? proximas.add(idBloco) : proximas.delete(idBloco)
+                  return proximas
+                })
+                setAdotadas((atuais) => ({ ...atuais, [idBloco]: ativa ? sessaoId ?? null : null }))
+              }}
+              onRemover={() => fecharBloco(idBloco)} />
+          </div>
+        ))}
+        {blocos.length === 0 && !temAcompanhamento && <div className="blocos-vazio"><h3>Nenhum robô aberto</h3><p>Escolha uma estratégia e configure uma nova sessão.</p><button onClick={abrirBloco}>+ Adicionar robô</button></div>}
+      </div>}
+      </div>
 
       {rodando.length > 0 && (
         <div className="resumo-robos">
@@ -300,58 +370,26 @@ export function RobotsPanel({
 
       {/* A escolha do robo: cartas com a arte de cada um, como uma
           selecao de personagem — nada de quadradinhos. */}
-      {IDENTIDADES.length > 1 && temSessaoLocal && (
+      {IDENTIDADES.length > 1 && temAcompanhamento && !blocoExpandido && (
         <div className="rv-galeria-cab">
-          <span><b>{ident.nome}</b> selecionado</span>
-          <button onClick={() => setVitrineAberta((v) => !v)}>
-            {vitrineAberta ? 'Recolher modelos' : 'Trocar modelo'}
+          <span><b>Catálogo de estratégias</b> · {IDENTIDADES.length} modelos disponíveis</span>
+          <button onClick={() => { setVitrineAberta((v) => !v); if (!vitrineAberta) requestAnimationFrame(() => catalogoRef.current?.scrollIntoView({ block: 'start' })) }}>
+            {vitrineAberta ? 'Recolher catálogo' : 'Explorar modelos'}
           </button>
         </div>
       )}
-      {IDENTIDADES.length > 1 && (!temSessaoLocal || vitrineAberta) && <section className="rv-seletor">
-        <div className="rv-seletor-topo">
-          <div><span className="rot">Escolha sua estratégia</span><h3>Qual robô combina com a sua sessão?</h3></div>
-          <button onClick={() => setComparando(true)}>Comparar robôs</button>
-        </div>
-        <div className="rv-galeria">
-        {IDENTIDADES.map((i) => {
-          const digitos = digitosDoModelo(i.id)
-          const escolhido = ident.id === i.id
-          return (
-            <button key={i.id} className={`rv-carta ${escolhido ? 'on' : ''}`}
-              style={{ ['--robo' as any]: i.cor }} onClick={() => setIdent(i)}>
-              <span className="rv-arte" aria-hidden><CapaAula aula={capaDoRobo(i.id)} cor={i.cor} /></span>
-              <span className="rv-veu" aria-hidden />
-              <span className="rv-corpo">
-                <span className="rv-chamada">{i.chamada}</span>
-                <b>{i.nome}</b>
-                <span className="rv-info">
-                  {digitos.length > 0 && (
-                    <span className="rv-digitos">
-                      ganha no {digitos.map((d) => <i key={d}>{d}</i>)}
-                    </span>
-                  )}
-                  <em>{i.chance}% de chance · paga mais por acerto</em>
-                </span>
-              </span>
-              {escolhido && <span className="rv-sel">✓ escolhido</span>}
-            </button>
-          )
-        })}
-        </div>
-      </section>}
 
       {comparando && (
         <div className="rv-compara-fundo" onMouseDown={(e) => e.target === e.currentTarget && setComparando(false)}>
           <section className="rv-compara" role="dialog" aria-modal="true" aria-label="Comparar robôs">
-            <header><div><span className="rot">Comparativo {MARCA.prosa}</span><h3>Quatro estratégias, uma decisão simples</h3></div><button onClick={() => setComparando(false)} aria-label="Fechar">×</button></header>
+            <header><div><span className="rot">Comparativo {MARCA.prosa}</span><h3>{IDENTIDADES.length} estratégias, uma decisão simples</h3></div><button onClick={() => setComparando(false)} aria-label="Fechar">×</button></header>
             <div className="rv-compara-grade">
               {IDENTIDADES.map((i) => {
                 const digitos = digitosDoModelo(i.id)
                 return <article key={i.id} style={{ ['--robo' as any]: i.cor }}>
                   <Emblema id={i} tamanho={58} /><span>{i.chamada}</span><h4>{i.nome}</h4>
-                  <dl><div><dt>Ganha com</dt><dd>{digitos.join(', ')}</dd></div><div><dt>Chance</dt><dd>{i.chance}%</dd></div><div><dt>Perfil</dt><dd>{perfilDoModelo(i.id)}</dd></div></dl>
-                  <button onClick={() => { setIdent(i); setComparando(false) }}>Escolher {i.nome.replace(`${MARCA.prefixoRobo} - `, '')}</button>
+                  <dl><div><dt>Como funciona</dt><dd>{i.descricao}</dd></div>{digitos.length > 0 && <div><dt>Dígitos vencedores</dt><dd>{digitos.join(', ')}</dd></div>}<div><dt>Perfil</dt><dd>{i.chamada}</dd></div></dl>
+                  <button onClick={() => { escolherModelo(i); setComparando(false) }}>Escolher {i.nome.replace(`${MARCA.prefixoRobo} - `, '')}</button>
                 </article>
               })}
             </div>
@@ -359,48 +397,17 @@ export function RobotsPanel({
         </div>
       )}
 
-      {ident.onde === 'teeds' && (
-        <>
-          <div className={`blocos ${blocos.length > 1 ? 'duplo' : ''} ${blocoExpandido ? 'tem-expandido' : ''}`}>
-            {blocos.map((idBloco, i) => (
-              <LocalRobotPanel key={idBloco}
-                titulo={`Robô ${i + 1}`}
-                socket={socket} isDemo={isDemo} moeda={moeda}
-                symbols={symbols} symbolPadrao={symbolPadrao} identidade={ident}
-                conexao={conexao}
-                sessaoTeeds={sessaoTeeds} contaId={contaId}
-                expandido={blocoExpandido === idBloco}
-                onExpandir={() => setBlocoExpandido((atual) => atual === idBloco ? null : idBloco)}
-                onSessaoChange={(ativa, sessaoId) => {
-                  setSessoesLocais((atuais) => {
-                    const proximas = new Set(atuais)
-                    ativa ? proximas.add(idBloco) : proximas.delete(idBloco)
-                    return proximas
-                  })
-                  setAdotadas((atuais) => ({ ...atuais, [idBloco]: ativa ? sessaoId ?? null : null }))
-                }}
-                onRemover={() => fecharBloco(idBloco)} />
-            ))}
-            {blocos.length === 0 && (
-              <div className="blocos-vazio">
-                <span>◆</span><h3>Nenhum robô aberto</h3>
-                <p>Escolha um modelo acima e abra uma nova cabine quando quiser operar.</p>
-                <button onClick={abrirBloco}>+ Abrir robô</button>
-              </div>
-            )}
-          </div>
-
+      {ident.onde === 'teeds' && !blocoExpandido && (
           <div className="blocos-rodape">
-            <button className="blocos-add" onClick={abrirBloco} disabled={blocos.length >= MAX_BLOCOS}>
+            <button className="blocos-add" onClick={abrirBloco} disabled={blocos.length >= MAX_BLOCOS && !temPreparoDisponivel}>
               + Adicionar robô
             </button>
             <span className="blocos-nota">
               {blocos.length >= MAX_BLOCOS
-                ? `Máximo de ${MAX_BLOCOS} robôs ao mesmo tempo.`
+                ? `Máximo de ${MAX_BLOCOS} painéis abertos. Os limites operacionais da conta continuam valendo.`
                 : 'Cada bloco opera sozinho, com seu ativo e seus freios — mas todos gastam do mesmo saldo.'}
             </span>
           </div>
-        </>
       )}
 
       {/* Modelos antigos saíram da vitrine, mas quem ficou ligado no servidor

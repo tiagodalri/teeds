@@ -1,0 +1,135 @@
+/* The robot desk owns its width. Never change the trading engine or shell. */
+.workspace-app .ger.rob.robot-workspace { width: 100%; max-width: none; min-width: 0; padding: 26px 28px 32px; display: flex; flex-direction: column; gap: 20px; container: robot-desk / inline-size; }
+.workspace-app .ger.robot-workspace > * { width: 100%; max-width: none; margin: 0; flex-shrink: 0; }
+.robot-workspace .rob-workspace-header { align-items: center; margin: 0; }
+.robot-workspace .rob-eyebrow { display: block; margin-bottom: 7px; color: var(--primary); font-size: 10px; font-weight: 750; letter-spacing: .12em; }
+.robot-workspace .ger-topo h2 { font-size: clamp(22px, 1.8vw, 29px); letter-spacing: -.035em; line-height: 1.25; }
+.robot-workspace .ger-sub { margin-top: 7px; }
+.rob-workspace-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.rob-overview-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+.rob-overview-heading > div { display: flex; align-items: center; gap: 10px; }
+.rob-overview-heading h3 { margin: 0; font-size: 12px; font-weight: 600; }
+.rob-overview-eyebrow { font-size: 9px; color: var(--primary); letter-spacing: .08em; text-transform: uppercase; font-weight: 750; }
+.rob-overview-heading p { margin: 0; color: var(--muted); font-size: 10px; }
+.rob-overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 12px; }
+.rob-overview-card { padding: 16px 20px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; }
+.rob-overview-account { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 10px; }
+.rob-overview-account > small { margin-left: auto; }
+.rob-overview-badge { color: var(--primary); background: var(--primary-soft); padding: 3px 6px; border-radius: 4px; font-size: 8px; font-weight: 800; letter-spacing: .06em; }
+.rob-overview-real { color: var(--down); background: var(--down-soft); }
+.rob-overview-metrics { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(2,minmax(0,1fr)); gap: 16px; margin: 14px 0 0; font-variant-numeric: tabular-nums; }
+.rob-overview-metrics dt { font-size: 10px; color: var(--muted); }
+.rob-overview-metrics dd { margin: 3px 0 0; font-size: 21px; font-weight: 700; letter-spacing: -.035em; }
+.rob-overview-metrics dd small { margin-left: 5px; font-size: 10px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.rob-overview-positive { color: var(--up); }
+.rob-overview-negative { color: var(--down); }
+.rob-overview-empty { padding: 12px 16px; margin: 0; color: var(--muted); border: 1px dashed var(--border); border-radius: 10px; font-size: 12px; }
+.rob-account-tag { font-size: 10px; color: var(--muted); font-weight: 650; }
+.rob-account-tag.real { color: var(--down); }
+.robot-workspace .rob-new-button { min-height: 42px; padding: 10px 18px; border: 1px solid var(--primary); border-radius: 9px; color: var(--text); background: var(--primary-soft); font-size: 13px; font-weight: 700; cursor: pointer; }
+.robot-workspace .rob-new-button:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--primary-soft); }
+.robot-workspace .rob-new-button:disabled { opacity: .5; cursor: not-allowed; }
+.rob-workspace-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.rob-workspace-toolbar > div:first-child { display: flex; flex-direction: column; gap: 3px; }
+.rob-workspace-toolbar b { font-size: 13px; }
+.rob-workspace-toolbar span { color: var(--muted); font-size: 11px; }
+.rob-view-options { display: flex; gap: 3px; padding: 4px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; }
+.rob-view-options button { padding: 7px 12px; border: 0; background: none; color: var(--text); border-radius: 6px; cursor: pointer; font-size: 12px; }
+.rob-view-options button[aria-pressed='true'] { background: var(--primary-soft); color: var(--primary); }
+.robot-workspace .rob-workspace-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 570px), 1fr)); gap: 18px; align-items: start; }
+.robot-workspace .rob-workspace-board.modo-lista, .robot-workspace .rob-workspace-board.em-foco { grid-template-columns: minmax(0, 1fr); }
+.robot-workspace .rob-board-group { display: contents; }
+.robot-workspace .rob-board-slot { min-width: 0; }
+.robot-workspace .rob-board-slot[hidden] { display: none; }
+.robot-workspace .rob-board-slot.em-preparo { grid-column: 1 / -1; }
+.robot-workspace .cabine-caixa { height: auto !important; min-height: 0 !important; contain: none; }
+.robot-workspace .cabine-caixa .tv { height: auto; min-height: 0; background: var(--bg); border-color: var(--border); box-shadow: 0 2px 10px #00000008; border-radius: 14px; }
+.robot-workspace .tv-topo { padding: 16px 18px; background: var(--surface); }
+.robot-workspace .tv-nome { font-size: 16px; font-weight: 700; letter-spacing: -.02em; }
+.robot-workspace .tv-quem b { flex-wrap: wrap; gap: 5px 8px; }
+.robot-workspace .tv-fase { max-width: none; font-size: 8px; }
+.robot-workspace .tv-onde { margin-top: 4px; }
+.robot-workspace .tv-account-label { display: inline-block; margin-top: 6px; font-size: 9px; font-weight: 750; letter-spacing: .04em; color: var(--primary); }
+.robot-workspace .tv-account-label.real { color: var(--down); }
+.robot-workspace .tv-corpo { flex: none; overflow: visible; scrollbar-gutter: auto; }
+.robot-workspace .tv-assinatura { display: none; }
+.robot-workspace .tv-atalhos { background: transparent; padding: 6px 12px; }
+.robot-workspace .tv-atalhos > span { font-size: 9px; letter-spacing: .035em; }
+.robot-workspace .tv-atalhos button { font-size: 11px; }
+.robot-workspace .tv-fluxo { margin: 14px 16px 0; padding: 12px; grid-template-columns: minmax(0, 1fr) minmax(30px, .4fr) minmax(0, 1fr); }
+.robot-workspace .tv-fluxo-etapa small { white-space: normal; }
+.robot-workspace .tv-curva-caixa { padding: 16px; }
+.robot-workspace .tv-curva { height: 55px; }
+.robot-workspace .tv-ops, .robot-workspace .tv-expandido .tv-ops { height: auto; min-height: 0; padding-top: 12px; }
+.robot-workspace .tv-ops-topo { display: flex; justify-content: space-between; align-items: center; padding: 0 16px 10px; gap: 10px; }
+.robot-workspace .tv-history-toggle { padding: 4px 0; border: 0; background: transparent; color: var(--primary); font-size: 11px; font-weight: 650; cursor: pointer; }
+.robot-workspace .tv-rolo { height: auto; min-height: 0; max-height: 320px; overflow: auto; }
+.robot-workspace .tv-tabela th { background: var(--surface); font-size: 9px; letter-spacing: .04em; }
+.robot-workspace .tv-tabela td { padding-top: 9px; padding-bottom: 9px; }
+.robot-workspace .tv-nada-ops { padding: 12px 16px 24px; }
+.robot-workspace .tv-registro-painel { min-height: 0; }
+.robot-workspace .rv-galeria-cab { padding: 16px 18px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; }
+.robot-workspace .rv-seletor { background: transparent; padding: 0; border: 0; }
+.robot-workspace .rv-seletor .rv-galeria { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.robot-workspace .rv-seletor .rv-carta { min-height: 132px; }
+.robot-workspace .rv-seletor .rv-corpo { padding-top: 65px; }
+.robot-workspace .rv-seletor .rv-corpo > b { font-size: 16px; }
+.robot-workspace:not(.tem-acompanhamento) .rob-overview { display: none; }
+.robot-catalog-anchor[hidden] { display: none; }
+.robot-catalog-anchor { scroll-margin-top: 20px; }
+.robot-catalog { padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); }
+.robot-catalog header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.robot-catalog h3 { margin: 0; font-size: 20px; letter-spacing: -.025em; }
+.robot-catalog header p { margin: 5px 0 0; font-size: 12px; color: var(--muted); }
+.robot-catalog header > button, .robot-catalog-empty button { padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); cursor: pointer; font-size: 12px; }
+.robot-catalog-tools { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 20px 0 16px; }
+.robot-catalog-tools ol { display: flex; flex-wrap: wrap; list-style: none; padding: 0; margin: 0; gap: 16px; color: var(--muted); font-size: 11px; }
+.robot-catalog-tools li { display: flex; align-items: center; gap: 6px; }
+.robot-catalog-tools b { display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid var(--border); border-radius: 50%; font-size: 10px; }
+.robot-catalog-tools li:first-child { color: var(--primary); }
+.robot-catalog-tools input { width: 210px; max-width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: 12px; }
+.robot-catalog-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 275px), 1fr)); gap: 12px; }
+.robot-model { display: flex; flex-direction: column; padding: 16px; gap: 14px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 10px; text-align: left; cursor: pointer; }
+.robot-model:hover { border-color: var(--primary); }
+.robot-model.selected { background: var(--primary-soft); border-color: var(--primary); }
+.robot-model-heading { display: flex; align-items: center; gap: 11px; }
+.robot-model-heading > span:not(.robot-model-check) { display: grid; gap: 3px; }
+.robot-model-heading small { color: var(--muted); font-size: 9px; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; }
+.robot-model-heading strong { font-size: 15px; letter-spacing: -.02em; }
+.robot-model-check { margin-left: auto; color: var(--primary); }
+.robot-model-description { font-size: 12px; color: var(--muted); line-height: 1.65; }
+.robot-model-footer { display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 12px; margin-top: auto; font-size: 11px; font-weight: 650; }
+.robot-model.selected .robot-model-footer { color: var(--primary); }
+.robot-catalog-note { display: block; margin-top: 14px; font-size: 10px; color: var(--muted); }
+.robot-catalog-empty { padding: 16px 0; font-size: 13px; }
+.robot-workspace .pc-conteudo { padding: 18px; }
+.robot-workspace button:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+@container robot-desk (min-width: 1150px) {
+  .robot-workspace .tv.tv-expandido .tv-corpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); grid-template-rows: auto; align-items: start; }
+  .robot-workspace .tv-expandido .tv-painel-principal { display: block; min-width: 0; }
+  .robot-workspace .tv-expandido .tv-ops { grid-column: 2; grid-row: auto; border-top: 0; border-left: 1px solid var(--border); }
+  .robot-workspace .tv-expandido .tv-alerta, .robot-workspace .tv-expandido .tv-params, .robot-workspace .tv-expandido .tv-registro-painel { grid-column: 1 / -1; }
+  .robot-workspace .tv-expandido .tv-rolo { max-height: 520px; }
+}
+@container (max-width: 900px) {
+  .robot-workspace .tv-resumo-sessao { grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(115px, 1.35fr); }
+  .robot-workspace .tv-resumo-sessao > span { padding: 4px 9px; }
+  .robot-workspace .tv-resumo-sessao i { font-size: 8px; white-space: normal; letter-spacing: .035em; }
+  .robot-workspace .tv-resumo-sessao b { font-size: 17px; }
+  .robot-workspace .tv-topo { gap: 12px; }
+  .robot-workspace .tv-fluxo-etapa b { white-space: normal; }
+}
+@media (max-width: 700px) {
+  .robot-catalog { padding: 15px; }
+  .robot-catalog header { align-items: flex-start; flex-direction: column; }
+  .workspace-app .ger.rob.robot-workspace { padding: 18px 12px 24px; gap: 16px; }
+  .rob-workspace-actions { justify-content: space-between; width: 100%; }
+  .rob-overview-heading { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .rob-overview-card { padding: 14px; }
+  .robot-workspace .rob-workspace-board { grid-template-columns: minmax(0, 1fr); }
+  .robot-workspace .tv-atalhos { flex-wrap: wrap; }
+  .robot-workspace .tv-atalhos > span { width: 100%; }
+  .robot-workspace .tv-fluxo { height: auto; min-height: 82px; grid-template-columns: 1fr; }
+  .robot-workspace .tv-fluxo-linha { height: 2px; width: 100%; margin: 4px 0; }
+  .robot-workspace .tv-rolo { max-height: 360px; }
+}

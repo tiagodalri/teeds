@@ -7,6 +7,7 @@ interface Props {
   estado: EstadoMotor
   config: ConfigEstrategia
   moeda: string
+  contaDaSessao?: { contaId: string; demo: boolean; moeda: string } | null
   estrategiaId?: string
   nomeEstrategia: string
   /** Nome do ativo, por extenso. */
@@ -88,10 +89,11 @@ function Cronometro({ desde }: { desde: number }) {
 export function RobotLive({
   estado, config, moeda, estrategiaId, nomeEstrategia, ativo, titulo, regra, ganhaCom,
   parametros = [], conexao = 'open', onDesligar, onLigarDeNovo, onRemover,
-  expandido = false, onExpandir,
+  expandido = false, onExpandir, contaDaSessao,
 }: Props) {
   const [detalhes, setDetalhes] = useState(false)
   const [registroAberto, setRegistroAberto] = useState(false)
+  const [historicoCompleto, setHistoricoCompleto] = useState(false)
   const [analisesPalm, setAnalisesPalm] = useState<Array<{ id: number; hora: number; texto: string }>>([])
   const acerto = estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
   const positivo = estado.resultado >= 0
@@ -121,11 +123,13 @@ export function RobotLive({
   // acumulado por operacao, para a coluna da direita da tabela
   const acumulados = useMemo(() => {
     const antigas = [...estado.historico].reverse()
-    let soma = 0
+    // O servidor conserva apenas a cauda do histórico. O saldo anterior a
+    // ela precisa entrar no acumulado para coincidir com o placar da sessão.
+    let soma = estado.resultado - antigas.reduce((total, o) => total + o.lucro, 0)
     const mapa = new Map<number, number>()
     for (const o of antigas) { soma += o.lucro; mapa.set(o.n, soma) }
     return mapa
-  }, [estado.historico])
+  }, [estado.historico, estado.resultado])
 
   const teto = config.takeProfit || 1
   const piso = config.stopLoss || 1
@@ -150,8 +154,9 @@ export function RobotLive({
         <div className="tv-quem">
           <i className="tv-farol" />
           <div>
-            <b><span className="tv-nome">{titulo}</span><span className="tv-fase">{fase.texto}</span></b>
-            <span className="tv-onde">{nomeEstrategia} · {ativo}</span>
+            <b><span className="tv-nome">{nomeEstrategia}</span><span className="tv-fase" title={fase.texto}>{fase.texto}</span></b>
+            <span className="tv-onde">{titulo} · {ativo}</span>
+            {contaDaSessao && <span className={`tv-account-label ${contaDaSessao.demo ? 'demo' : 'real'}`}>{contaDaSessao.demo ? 'DEMO' : 'REAL'} · conta …{contaDaSessao.contaId.slice(-4)}</span>}
           </div>
         </div>
         <div className="tv-resumo-fixo tv-resumo-sessao">
@@ -164,7 +169,7 @@ export function RobotLive({
         <div className="tv-acoes">
           {onExpandir && (
             <button className={`tv-btn ${expandido ? 'on' : ''}`} onClick={onExpandir}>
-              {expandido ? 'Reduzir' : 'Expandir'}
+              {expandido ? 'Ver todos' : 'Focar'}
             </button>
           )}
           {estado.rodando && onDesligar && (
@@ -320,8 +325,8 @@ export function RobotLive({
       {/* ===================== operacoes ===================== */}
       <section className="tv-ops">
         <div className="tv-ops-topo">
-          <span className="tv-rot">Operações desta sessão</span>
-          {estado.historico.length > 0 && <span className="tv-conta">{estado.historico.length}</span>}
+          <span className="tv-rot">{historicoCompleto || expandido ? 'Histórico disponível' : 'Últimas operações'}</span>
+          {estado.historico.length > 5 && !expandido && <button className="tv-history-toggle" aria-expanded={historicoCompleto} onClick={() => setHistoricoCompleto(v => !v)}>{historicoCompleto ? 'Mostrar só as últimas' : `Ver histórico (${estado.historico.length})`}</button>}
         </div>
 
         {estado.historico.length === 0 ? (
@@ -338,7 +343,7 @@ export function RobotLive({
                 </tr>
               </thead>
               <tbody>
-                {estado.historico.map((o, indice) => {
+                {(historicoCompleto || expandido ? estado.historico : estado.historico.slice(0, 5)).map((o, indice) => {
                   const ac = acumulados.get(o.n) ?? 0
                   return (
                     <tr key={o.contractId} className={`${o.ganhou ? 'ganhou' : 'perdeu'} ${indice === 0 ? 'recente' : ''}`}>
