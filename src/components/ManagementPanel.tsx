@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AuthSession } from '../core/deriv/auth'
 import { DERIV } from '../core/deriv/config'
 import {
-  atualizarHoje, buscarResumo, buscarSerieDiaria, diasDoPeriodo, novoHojeAoVivo, periodo, simular,
+  atualizarHoje, buscarResumo, buscarSerieEntre, diasDoPeriodo, novoHojeAoVivo, simular,
   simularComissaoPorDia, CALCULO_COM_RESULTADO_DESDE, SemPermissao, type DiaJaGravado,
   type DiaMarkup, type HojeAoVivo, type MarkupResumo, type MarkupSimulado, type ResumoHoje,
 } from '../core/deriv/markup'
@@ -10,7 +10,10 @@ import { publicSocket, type TeedsSocket } from '../core/deriv/client'
 import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 import { IDENTIDADES, nomeDaEstrategia } from '../core/deriv/branding'
-import { enviarComissoes, enviarMarkupOficial, listarComissoes, type ComissaoDia } from '../core/teeds/clientes'
+import {
+  analiseOperacoes, enviarComissoes, enviarMarkupOficial, listarComissoes,
+  type AnaliseOperacoes, type ComissaoDia,
+} from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { ClientesAdmin } from './ClientesAdmin'
 import { DerivDesconectada } from './DerivDesconectada'
@@ -41,8 +44,22 @@ const PERIODOS = [
   { label: '90 dias', dias: 90 },
 ]
 
+const HORAS = Array.from({ length: 24 }, (_, i) => i)
+
 const dinheiro = (v: number, moeda = 'USD') =>
   `${moeda} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const sinal = (v: number, moeda = 'USD') => `${v >= 0 ? '+' : '−'}${dinheiro(Math.abs(v), moeda)}`
+
+/* datas no calendario de quem olha (AAAA-MM-DD), para os filtros */
+const isoLocal = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const diasAtras = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return isoLocal(d) }
+const inicioDoDia = (dia: string) => new Date(dia + 'T00:00:00').toISOString()
+const diaSeguinte = (dia: string) => { const d = new Date(dia + 'T00:00:00'); d.setDate(d.getDate() + 1); return isoLocal(d) }
+const entreDias = (de: string, ate: string) =>
+  Math.round((new Date(ate + 'T00:00:00').getTime() - new Date(de + 'T00:00:00').getTime()) / 864e5)
+const dataCurta = (dia: string) => `${dia.slice(8)}/${dia.slice(5, 7)}`
+const hh = (h: number) => `${String(h).padStart(2, '0')}h`
 
 export function ManagementPanel({
   session, socket, isDemo, onReautorizar, payoutBase, moeda, pulso = 0,
@@ -51,7 +68,31 @@ export function ManagementPanel({
   const [sim, setSim] = useState<MarkupSimulado | null>(null)
   const [simCarregando, setSimCarregando] = useState(false)
   const [simErro, setSimErro] = useState<string | null>(null)
-  const [dias, setDias] = useState(30)
+  /**
+   * Filtros.
+   *
+   * O periodo vale para tudo (Deriv, comissao diaria, analise). Horario,
+   * robo e contas so valem para a analise das operacoes dos robos — a Deriv
+   * e a comissao diaria fecham por dia, nao ha como fatiar por hora.
+   */
+  const [preset, setPreset] = useState<number | 'custom'>(30)
+  const [deCustom, setDeCustom] = useState(diasAtras(6))
+  const [ateCustom, setAteCustom] = useState(diasAtras(0))
+  const [horaDe, setHoraDe] = useState(0)
+  const [horaAte, setHoraAte] = useState(23)
+  const [roboFiltro, setRoboFiltro] = useState('')
+  const [demoFiltro, setDemoFiltro] = useState<boolean | null>(false)
+  const hojeLocal = diasAtras(0)
+  const intervalo = useMemo(() => {
+    if (preset === 'custom') {
+      const [a, b] = [deCustom, ateCustom].sort()
+      return { de: a, ate: b > hojeLocal ? hojeLocal : b }
+    }
+    return { de: diasAtras(preset - 1), ate: hojeLocal }
+  }, [preset, deCustom, ateCustom, hojeLocal])
+  /** Dias do periodo (para medias) e do inicio ate hoje (para as buscas que contam para tras). */
+  const dias = entreDias(intervalo.de, intervalo.ate) + 1
+  const diasAteHoje = entreDias(intervalo.de, hojeLocal) + 1
   const [resumo, setResumo] = useState<MarkupResumo | null>(null)
   const [serie, setSerie] = useState<DiaMarkup[]>([])
   const [carregando, setCarregando] = useState(false)
@@ -66,14 +107,14 @@ export function ManagementPanel({
     setCarregando(true)
     setErro(null)
     setSemPermissao(false)
-    const { de, ate } = periodo(dias)
+    const { de, ate } = intervalo
 
     buscarResumo(session, de, ate)
       .then(async (r) => {
         if (!vivo) return
         setResumo(r)
-        if (dias > 1 && dias <= 30) {
-          const s = await buscarSerieDiaria(session, dias)
+        if (dias > 1 && dias <= 31) {
+          const s = await buscarSerieEntre(session, de, ate)
           if (vivo) setSerie(s)
           // so quem tem application_read chega aqui: e o dono do app. O total
           // oficial vai para o banco e a conferencia por cliente passa a ter
@@ -91,7 +132,7 @@ export function ManagementPanel({
       .finally(() => vivo && setCarregando(false))
 
     return () => { vivo = false }
-  }, [session, dias])
+  }, [session, intervalo.de, intervalo.ate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Comissao ao vivo.
@@ -116,7 +157,7 @@ export function ManagementPanel({
         const mapa = new Map<string, DiaJaGravado>()
         if (!sessaoTeeds || !contaId) return mapa
         try {
-          const linhas = await listarComissoes(sessaoTeeds, dias)
+          const linhas = await listarComissoes(sessaoTeeds, diasAteHoje)
           for (const l of linhas) {
             if (l.contaId !== contaId) continue
             const quando = l.atualizadoEm ? Date.parse(l.atualizadoEm) : 0
@@ -134,7 +175,7 @@ export function ManagementPanel({
 
       cache()
         .then((jaGravados) =>
-          simularComissaoPorDia(socket, 0.03, dias, jaGravados, (feitos, total) => {
+          simularComissaoPorDia(socket, 0.03, diasAteHoje, jaGravados, (feitos, total) => {
             if (vivo) setProgresso({ feitos, total })
           }),
         )
@@ -159,7 +200,7 @@ export function ManagementPanel({
     const espera = ultimoCalculo.current === 0 ? 0 : 4000
     const id = setTimeout(calcular, espera)
     return () => { vivo = false; clearTimeout(id) }
-  }, [socket, pulso, dias])
+  }, [socket, pulso, diasAteHoje]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Hoje, ao vivo.
@@ -217,26 +258,31 @@ export function ManagementPanel({
   useEffect(() => {
     if (!sessaoTeeds) { setReais(null); return }
     let vivo = true
-    const ler = () => listarComissoes(sessaoTeeds, dias)
+    const ler = () => listarComissoes(sessaoTeeds, diasAteHoje)
       .then((l) => { if (vivo) setReais(l.filter((x) => !x.demo)) })
       .catch(() => { /* sem banco agora: fica o que ja tinha */ })
     void ler()
     const id = setInterval(() => { void ler() }, 60_000)
     return () => { vivo = false; clearInterval(id) }
-  }, [sessaoTeeds, dias])
+  }, [sessaoTeeds, diasAteHoje])
 
   const hojeIso = diasDoPeriodo(1)[0]
+  const noPeriodo = useCallback(
+    (dia: string) => dia >= intervalo.de && dia <= intervalo.ate,
+    [intervalo.de, intervalo.ate],
+  )
   const negocio = useMemo(() => {
     if (!reais) return null
     // a mesma conta Deriv pode estar em dois cadastros: uma linha por conta e dia
     const porChave = new Map<string, ComissaoDia>()
     for (const r of reais) {
+      if (!noPeriodo(r.dia)) continue
       const k = `${r.contaId}:${r.dia}`
       const j = porChave.get(k)
       if (!j || Date.parse(r.atualizadoEm ?? '') > Date.parse(j.atualizadoEm ?? '')) porChave.set(k, r)
     }
     let comissao = 0, operacoes = 0, pagamentos = 0, movimentado = 0
-    const aoVivoAqui = !!hoje && !isDemo && !!contaId
+    const aoVivoAqui = !!hoje && !isDemo && !!contaId && noPeriodo(hojeIso)
     for (const r of porChave.values()) {
       if (aoVivoAqui && r.contaId === contaId && r.dia === hojeIso) continue
       comissao += r.comissao; operacoes += r.operacoes; pagamentos += r.pagamentos; movimentado += r.entradas
@@ -245,37 +291,68 @@ export function ManagementPanel({
       comissao += hoje.comissao; operacoes += hoje.operacoes; pagamentos += hoje.pagamentos; movimentado += hoje.entradas
     }
     return { comissao, operacoes, pagamentos, movimentado, aoVivoAqui }
-  }, [reais, hoje, isDemo, contaId, hojeIso])
+  }, [reais, hoje, isDemo, contaId, hojeIso, noPeriodo])
+
+  /**
+   * Analise das operacoes dos robos, com os filtros finos. O banco filtra e
+   * resume (sao dezenas de milhares de linhas); a tela so desenha.
+   */
+  const [analise, setAnalise] = useState<AnaliseOperacoes | null>(null)
+  const [analiseCarregando, setAnaliseCarregando] = useState(false)
+  useEffect(() => {
+    if (!sessaoTeeds) { setAnalise(null); return }
+    let vivo = true
+    const ler = async () => {
+      setAnaliseCarregando(true)
+      const r = await analiseOperacoes(sessaoTeeds, {
+        de: inicioDoDia(intervalo.de), ate: inicioDoDia(diaSeguinte(intervalo.ate)),
+        horaDe, horaAte, robo: roboFiltro || null, demo: demoFiltro,
+      })
+      if (vivo) { setAnalise(r); setAnaliseCarregando(false) }
+    }
+    const primeira = setTimeout(() => { void ler() }, 250)
+    const id = setInterval(() => { void ler() }, 60_000)
+    return () => { vivo = false; clearTimeout(primeira); clearInterval(id) }
+  }, [sessaoTeeds, intervalo.de, intervalo.ate, horaDe, horaAte, roboFiltro, demoFiltro])
+
+  const rotuloFiltro = [
+    dias === 1 ? dataCurta(intervalo.de) : `${dataCurta(intervalo.de)} a ${dataCurta(intervalo.ate)}`,
+    horaDe === 0 && horaAte === 23 ? 'o dia todo' : `${hh(horaDe)}–${hh(horaAte)}`,
+    roboFiltro ? nomeDaEstrategia(roboFiltro) : 'todos os robôs',
+    demoFiltro === false ? 'contas reais' : demoFiltro === true ? 'contas demo' : 'reais e demo',
+  ].join(' · ')
+  const maxHora = Math.max(0.0001, ...(analise?.porHora.map((h) => h.markup) ?? []))
+  const maxDia = Math.max(0.0001, ...(analise?.porDia.map((d) => d.markup) ?? []))
+  const acertoAnalise = analise && analise.total.operacoes
+    ? Math.round((analise.total.ganhas / analise.total.operacoes) * 100) : 0
 
   /**
    * O numero DESTA conta: dias anteriores vem do calculo grande, hoje vem
    * da leitura ao vivo. Na demo e so simulacao — e o cartao diz isso.
    */
   const vivo = useMemo(() => {
-    const simHoje = sim?.porDia.find((d) => d.data === hojeIso)
-    const base = sim
-      ? {
-        comissao: sim.comissao - (simHoje?.comissao ?? 0),
-        operacoes: sim.operacoes - (simHoje?.operacoes ?? 0),
-        pagamentos: sim.pagamentoTotal - (simHoje?.pagamentos ?? 0),
-        entradas: sim.movimentado - (simHoje?.entradas ?? 0),
-      }
-      : { comissao: 0, operacoes: 0, pagamentos: 0, entradas: 0 }
-    // hoje: o que a leitura ao vivo souber; senao, o que o calculo grande achou
-    const h = hoje ?? simHoje ?? null
-    const comissao = base.comissao + (h?.comissao ?? 0)
-    const operacoes = base.operacoes + (h?.operacoes ?? 0)
+    const hojeAoVivo = !!hoje && noPeriodo(hojeIso)
+    let comissao = 0, operacoes = 0, pagamentos = 0, movimentado = 0
+    for (const d of sim?.porDia ?? []) {
+      if (!noPeriodo(d.data)) continue
+      // hoje entra pela leitura ao vivo, que e mais fresca
+      if (hojeAoVivo && d.data === hojeIso) continue
+      comissao += d.comissao; operacoes += d.operacoes; pagamentos += d.pagamentos; movimentado += d.entradas
+    }
+    if (hojeAoVivo && hoje) {
+      comissao += hoje.comissao; operacoes += hoje.operacoes; pagamentos += hoje.pagamentos; movimentado += hoje.entradas
+    }
     return {
       comissao,
       operacoes,
-      pagamentos: base.pagamentos + (h?.pagamentos ?? 0),
-      movimentado: base.entradas + (h?.entradas ?? 0),
+      pagamentos,
+      movimentado,
       media: operacoes ? comissao / operacoes : 0,
       pronto: !!(hoje || sim),
       // periodo maior que hoje e o calculo grande ainda nao chegou
       parcial: !sim && dias > 1,
     }
-  }, [sim, hoje, hojeIso, dias])
+  }, [sim, hoje, hojeIso, noPeriodo, dias])
   // sem sessao Teeds nao ha banco: cai no numero desta conta, se ela for real
   const topo = negocio
     ? { comissao: negocio.comissao, operacoes: negocio.operacoes, pronto: true }
@@ -376,14 +453,68 @@ export function ManagementPanel({
           <h2>Painel de gestão</h2>
           <p className="ger-sub">Sua comissão sobre as operações feitas na {MARCA.prosa}</p>
         </div>
-        <div className="segmented">
-          {PERIODOS.map((p) => (
-            <button key={p.dias} className={dias === p.dias ? 'on' : ''} onClick={() => setDias(p.dias)}>
-              {p.label}
-            </button>
-          ))}
-        </div>
       </div>
+
+      {/* ---------------- filtros ---------------- */}
+      <section className="ger-filtros" aria-label="Filtros">
+        <div className="filtro">
+          <span className="filtro-rot">Período</span>
+          <div className="segmented">
+            {PERIODOS.map((p) => (
+              <button key={p.dias} className={preset === p.dias ? 'on' : ''} onClick={() => setPreset(p.dias)}>
+                {p.label}
+              </button>
+            ))}
+            <button className={preset === 'custom' ? 'on' : ''} onClick={() => setPreset('custom')}>Personalizado</button>
+          </div>
+          {preset === 'custom' && (
+            <div className="filtro-datas">
+              <label>de <input type="date" value={deCustom} max={hojeLocal} onChange={(e) => e.target.value && setDeCustom(e.target.value)} /></label>
+              <label>até <input type="date" value={ateCustom} max={hojeLocal} onChange={(e) => e.target.value && setAteCustom(e.target.value)} /></label>
+            </div>
+          )}
+        </div>
+        <div className="filtro">
+          <span className="filtro-rot">Horário</span>
+          <div className="filtro-horas">
+            <label>das
+              <select value={horaDe} onChange={(e) => setHoraDe(Number(e.target.value))}>
+                {HORAS.map((h) => <option key={h} value={h}>{hh(h)}</option>)}
+              </select>
+            </label>
+            <label>às
+              <select value={horaAte} onChange={(e) => setHoraAte(Number(e.target.value))}>
+                {HORAS.map((h) => <option key={h} value={h}>{hh(h)}59</option>)}
+              </select>
+            </label>
+            {(horaDe !== 0 || horaAte !== 23) && (
+              <button className="filtro-limpar" onClick={() => { setHoraDe(0); setHoraAte(23) }}>o dia todo</button>
+            )}
+          </div>
+        </div>
+        <div className="filtro">
+          <span className="filtro-rot">Robô</span>
+          <select value={roboFiltro} onChange={(e) => setRoboFiltro(e.target.value)}>
+            <option value="">Todos</option>
+            {robosSimulaveis.map((i) => <option key={i.id} value={i.id}>{nomeDaEstrategia(i.id)}</option>)}
+            {(analise?.porRobo ?? [])
+              .filter((r) => !robosSimulaveis.some((i) => i.id === r.roboId))
+              .map((r) => <option key={r.roboId} value={r.roboId}>{r.roboNome}</option>)}
+          </select>
+        </div>
+        <div className="filtro">
+          <span className="filtro-rot">Contas</span>
+          <div className="segmented">
+            <button className={demoFiltro === false ? 'on' : ''} onClick={() => setDemoFiltro(false)}>Reais</button>
+            <button className={demoFiltro === true ? 'on' : ''} onClick={() => setDemoFiltro(true)}>Demo</button>
+            <button className={demoFiltro === null ? 'on' : ''} onClick={() => setDemoFiltro(null)}>Todas</button>
+          </div>
+        </div>
+        <p className="filtro-nota">
+          O período vale para tudo. Horário, robô e contas valem para a <b>análise das operações dos robôs</b>,
+          mais abaixo — a Deriv e a comissão diária só fecham por dia.
+        </p>
+      </section>
 
       {semPermissao && (
         <div className="ger-aviso">
@@ -470,7 +601,9 @@ export function ManagementPanel({
                 <strong>{dinheiro(vivo.comissao, 'USD')}</strong>
                 <span className="kpi-nota">
                   em {vivo.operacoes.toLocaleString('pt-BR')} operações{' '}
-                  {sim.dias === 1 ? 'hoje' : `nos últimos ${sim.dias} dias`}
+                  {dias === 1
+                    ? (intervalo.ate === hojeLocal ? 'hoje' : `em ${dataCurta(intervalo.de)}`)
+                    : `de ${dataCurta(intervalo.de)} a ${dataCurta(intervalo.ate)}`}
                   {' · '}média de {dinheiro(vivo.media)} por operação
                 </span>
               </div>
@@ -520,6 +653,135 @@ export function ManagementPanel({
           </>
         )}
       </section>
+
+      {/* -------- análise das operações dos robôs (filtros finos) -------- */}
+      {sessaoTeeds && (
+        <section className="ger-bloco">
+          <div className="ger-bloco-topo">
+            <span className="rot">Análise das operações dos robôs</span>
+            <span className="ger-tag">{rotuloFiltro}</span>
+          </div>
+          <p className="ger-texto">
+            Só operações feitas pelos robôs — a operação manual não entra aqui. Markup calculado é
+            3% do pagamento de cada contrato; quando a Deriv informou o markup no próprio contrato,
+            ele aparece ao lado. Horário no relógio do seu computador.
+          </p>
+
+          {analiseCarregando && !analise && <p className="ger-nota">filtrando no banco…</p>}
+          {analise && analise.total.operacoes === 0 && (
+            <p className="ger-nota">Nenhuma operação de robô neste filtro.</p>
+          )}
+          {!analise && !analiseCarregando && (
+            <p className="ger-nota">Não consegui ler a análise agora — tente atualizar.</p>
+          )}
+
+          {analise && analise.total.operacoes > 0 && (
+            <>
+              <div className="kpis">
+                <div className="kpi kpi-grande">
+                  <span className="rot">Markup calculado</span>
+                  <strong>{dinheiro(analise.total.markup)}</strong>
+                  <span className="kpi-nota">
+                    {analise.total.markupDeriv > 0
+                      ? `medido pela Deriv nestes contratos: ${dinheiro(analise.total.markupDeriv)}`
+                      : 'a Deriv ainda não informou markup nestes contratos'}
+                  </span>
+                </div>
+                <div className="kpi">
+                  <span className="rot">Operações</span>
+                  <strong>{analise.total.operacoes.toLocaleString('pt-BR')}</strong>
+                  <span className="kpi-nota">{acertoAnalise}% de acerto</span>
+                </div>
+                <div className="kpi">
+                  <span className="rot">Entradas</span>
+                  <strong>{dinheiro(analise.total.entradas)}</strong>
+                </div>
+                <div className="kpi">
+                  <span className="rot">Pagamentos</span>
+                  <strong>{dinheiro(analise.total.pagamentos)}</strong>
+                </div>
+                <div className="kpi">
+                  <span className="rot">Resultado dos clientes</span>
+                  <strong className={analise.total.resultado >= 0 ? 'ganho' : 'perda'}>{sinal(analise.total.resultado)}</strong>
+                  <span className="kpi-nota">
+                    {analise.total.clientes} cliente{analise.total.clientes === 1 ? '' : 's'} · {analise.total.contas} conta{analise.total.contas === 1 ? '' : 's'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="ana-grade">
+                <div>
+                  <span className="rot">Markup por hora do dia</span>
+                  <div className="ana-barras" role="img" aria-label="Markup por hora do dia">
+                    {HORAS.map((h) => {
+                      const x = analise.porHora.find((p) => p.hora === h)
+                      const v = x?.markup ?? 0
+                      return (
+                        <div
+                          key={h} className={`ana-col ${x ? '' : 'vazia'}`}
+                          title={x ? `${hh(h)}: ${x.operacoes} op · markup ${dinheiro(v)} · resultado ${sinal(x.resultado)}` : `${hh(h)}: sem operações`}
+                        >
+                          <i style={{ height: `${(v / maxHora) * 100}%` }} />
+                          {h % 3 === 0 && <b>{hh(h)}</b>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+                {analise.porDia.length > 1 && (
+                  <div>
+                    <span className="rot">Markup por dia</span>
+                    <div className="ana-barras" role="img" aria-label="Markup por dia">
+                      {analise.porDia.map((d, i) => (
+                        <div
+                          key={d.dia} className="ana-col"
+                          title={`${dataCurta(d.dia)}: ${d.operacoes} op · markup ${dinheiro(d.markup)} · resultado ${sinal(d.resultado)}`}
+                        >
+                          <i style={{ height: `${(d.markup / maxDia) * 100}%` }} />
+                          {(analise.porDia.length <= 14 || i === 0 || i === analise.porDia.length - 1) && <b>{dataCurta(d.dia)}</b>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="ana-tabela">
+                <div className="ana-linha cab">
+                  <span>Robô</span><span>Operações</span><span>Acerto</span><span>Entradas</span><span>Resultado</span><span>Markup</span>
+                </div>
+                {analise.porRobo.map((r) => (
+                  <div key={r.roboId} className="ana-linha">
+                    <span><b>{r.roboNome}</b><small>{r.clientes} cliente{r.clientes === 1 ? '' : 's'}</small></span>
+                    <span>{r.operacoes.toLocaleString('pt-BR')}</span>
+                    <span>{r.operacoes ? Math.round((r.ganhas / r.operacoes) * 100) : 0}%</span>
+                    <span>{dinheiro(r.entradas)}</span>
+                    <span className={r.resultado >= 0 ? 'ganho' : 'perda'}>{sinal(r.resultado)}</span>
+                    <strong>{dinheiro(r.markup)}</strong>
+                  </div>
+                ))}
+              </div>
+
+              {analise.porConta.length > 1 && (
+                <div className="ana-tabela ana-contas">
+                  <div className="ana-linha cab">
+                    <span>Conta</span><span>Operações</span><span /><span /><span>Resultado</span><span>Markup</span>
+                  </div>
+                  {analise.porConta.map((c) => (
+                    <div key={c.contaId} className="ana-linha">
+                      <span><b>{c.contaId}</b><small>{c.demo ? 'demonstração' : 'conta real'}</small></span>
+                      <span>{c.operacoes.toLocaleString('pt-BR')}</span>
+                      <span /><span />
+                      <span className={c.resultado >= 0 ? 'ganho' : 'perda'}>{sinal(c.resultado)}</span>
+                      <strong>{dinheiro(c.markup)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      )}
 
       {/* ---------------- gráfico diário ---------------- */}
       {serie.length > 0 && (

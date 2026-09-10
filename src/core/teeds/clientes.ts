@@ -388,6 +388,66 @@ export async function listarOperacoesRobos(sessao: SessaoTeeds, dias = 90): Prom
 }
 
 /** Resumo calculado no banco: o painel recebe uma linha por robô, não o histórico inteiro. */
+/* ------------------------------------------- análise com filtros finos */
+
+export interface FiltroAnalise {
+  /** Início e fim, em ISO (instantes; o fim é exclusivo). */
+  de: string
+  ate: string
+  /** Faixa de horas no fuso informado; pode cruzar a meia-noite (22 → 2). */
+  horaDe?: number
+  horaAte?: number
+  fuso?: string
+  robo?: string | null
+  /** true = só demo, false = só real, null = as duas. */
+  demo?: boolean | null
+  conta?: string | null
+}
+
+export interface AnaliseOperacoes {
+  total: {
+    operacoes: number; ganhas: number; entradas: number; pagamentos: number
+    markup: number; markupDeriv: number; resultado: number; clientes: number; contas: number
+  }
+  porHora: Array<{ hora: number; operacoes: number; ganhas: number; markup: number; resultado: number }>
+  porDia: Array<{ dia: string; operacoes: number; ganhas: number; entradas: number; markup: number; resultado: number }>
+  porRobo: Array<{ roboId: string; roboNome: string; operacoes: number; ganhas: number; clientes: number; entradas: number; markup: number; resultado: number }>
+  porConta: Array<{ contaId: string; demo: boolean; operacoes: number; markup: number; resultado: number }>
+}
+
+/**
+ * Operações de ROBÔ no filtro, já resumidas pelo banco: totais, por hora do
+ * dia, por dia, por robô e por conta. O banco filtra porque a tabela tem
+ * dezenas de milhares de linhas — trazer tudo para o navegador cortaria em
+ * mil e ninguém perceberia. Operação manual não entra (não está na tabela).
+ */
+export async function analiseOperacoes(sessao: SessaoTeeds, f: FiltroAnalise): Promise<AnaliseOperacoes | null> {
+  const n = (v: unknown) => Number(v ?? 0)
+  try {
+    const r = await rest<any>('/rpc/teeds_analise_operacoes', sessao.token, {
+      method: 'POST',
+      body: JSON.stringify({
+        p_marca: MARCA.id, p_de: f.de, p_ate: f.ate,
+        p_hora_de: f.horaDe ?? 0, p_hora_ate: f.horaAte ?? 23,
+        p_fuso: f.fuso ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'America/Sao_Paulo',
+        p_robo: f.robo ?? null, p_demo: f.demo === undefined ? false : f.demo, p_conta: f.conta ?? null,
+      }),
+    })
+    if (!r || !r.total) return null
+    return {
+      total: {
+        operacoes: n(r.total.operacoes), ganhas: n(r.total.ganhas), entradas: n(r.total.entradas),
+        pagamentos: n(r.total.pagamentos), markup: n(r.total.markup), markupDeriv: n(r.total.markup_deriv),
+        resultado: n(r.total.resultado), clientes: n(r.total.clientes), contas: n(r.total.contas),
+      },
+      porHora: (r.por_hora ?? []).map((x: any) => ({ hora: n(x.hora), operacoes: n(x.operacoes), ganhas: n(x.ganhas), markup: n(x.markup), resultado: n(x.resultado) })),
+      porDia: (r.por_dia ?? []).map((x: any) => ({ dia: String(x.dia), operacoes: n(x.operacoes), ganhas: n(x.ganhas), entradas: n(x.entradas), markup: n(x.markup), resultado: n(x.resultado) })),
+      porRobo: (r.por_robo ?? []).map((x: any) => ({ roboId: String(x.robo_id), roboNome: textoLegivel(x.robo_nome) ?? String(x.robo_id), operacoes: n(x.operacoes), ganhas: n(x.ganhas), clientes: n(x.clientes), entradas: n(x.entradas), markup: n(x.markup), resultado: n(x.resultado) })),
+      porConta: (r.por_conta ?? []).map((x: any) => ({ contaId: String(x.conta_id), demo: Boolean(x.demo), operacoes: n(x.operacoes), markup: n(x.markup), resultado: n(x.resultado) })),
+    }
+  } catch { return null }
+}
+
 export async function listarMetricasRobos(sessao: SessaoTeeds, dias = 90): Promise<MetricaRoboRegistro[]> {
   try {
     const linhas = await rest<any[]>('/rpc/teeds_metricas_robos', sessao.token, {

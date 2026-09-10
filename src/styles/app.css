@@ -657,6 +657,54 @@ button, input { font: inherit; color: inherit; }
   font-size: 10.5px; color: var(--muted); margin-top: 6px;
 }
 
+/* filtros da gestao: periodo, horario, robo, contas */
+.ger-filtros {
+  display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: flex-start;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 14px;
+  padding: 14px 18px; margin-bottom: 18px; box-shadow: var(--shadow);
+}
+.filtro { display: flex; flex-direction: column; gap: 7px; }
+.filtro-rot { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.filtro select, .filtro-datas input {
+  padding: 6px 9px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font: inherit; font-size: 12.5px;
+}
+.filtro-datas, .filtro-horas { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.filtro-datas label, .filtro-horas label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.filtro-limpar { border: 0; background: none; color: var(--primary); font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
+.filtro-nota { flex-basis: 100%; margin: 0; font-size: 11.5px; color: var(--muted); }
+.filtro-nota b { color: var(--text); font-weight: 600; }
+
+/* analise das operacoes dos robos */
+.ana-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px 28px; margin: 4px 0 26px; }
+.ana-grade .rot { display: block; margin-bottom: 10px; }
+.ana-barras { display: flex; align-items: flex-end; gap: 3px; height: 120px; margin-bottom: 22px; }
+.ana-col {
+  flex: 1; height: 100%; min-width: 0; position: relative;
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+}
+.ana-col i { display: block; width: 100%; background: var(--up); border-radius: 3px 3px 0 0; min-height: 2px; opacity: .85; }
+.ana-col.vazia i { background: var(--border); }
+.ana-col:hover i { opacity: 1; }
+.ana-col b { position: absolute; top: 100%; margin-top: 5px; font-size: 9.5px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.ana-tabela { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.ana-tabela + .ana-tabela { margin-top: 12px; }
+.ana-linha {
+  display: grid; grid-template-columns: 1.8fr repeat(5, 1fr); gap: 10px; align-items: center;
+  padding: 10px 14px; font-size: 12.5px; border-top: 1px solid var(--border); font-variant-numeric: tabular-nums;
+}
+.ana-linha:first-child { border-top: 0; }
+.ana-linha.cab { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--surface); font-weight: 700; }
+.ana-linha span:not(:first-child), .ana-linha strong { text-align: right; }
+.ana-linha b { display: block; font-weight: 600; }
+.ana-linha small { display: block; color: var(--muted); font-size: 11px; }
+.ana-linha .ganho, .kpi strong.ganho { color: var(--up); }
+.ana-linha .perda, .kpi strong.perda { color: var(--down); }
+@media (max-width: 720px) {
+  .ana-linha { grid-template-columns: 1.6fr repeat(3, 1fr); }
+  .ana-linha span:nth-child(4), .ana-linha span:nth-child(5) { display: none; }
+}
+
 /* simulador: com qual robo (ou na mao) e com que entrada */
 .sim-robos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .sim-robos button {

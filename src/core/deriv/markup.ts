@@ -130,6 +130,40 @@ export async function buscarSerieDiaria(session: AuthSession, dias: number): Pro
   return saida
 }
 
+/** Serie diaria entre duas datas (AAAA-MM-DD, inclusivas), ate 31 dias. */
+export async function buscarSerieEntre(session: AuthSession, de: string, ate: string): Promise<DiaMarkup[]> {
+  const datas: string[] = []
+  const d = new Date(de + 'T00:00:00Z')
+  const fim = new Date(ate + 'T00:00:00Z')
+  while (d <= fim && datas.length < 31) {
+    datas.push(d.toISOString().slice(0, 10))
+    d.setUTCDate(d.getUTCDate() + 1)
+  }
+  const saida: DiaMarkup[] = []
+  const lote = 6 // respeita o limite de 60 requisicoes por minuto
+  for (let i = 0; i < datas.length; i += lote) {
+    const parte = datas.slice(i, i + lote)
+    const res = await Promise.all(
+      parte.map(async (data) => {
+        try {
+          const r = await consultar(session, data, data)
+          return {
+            data,
+            comissao: Number(r.total_app_markup_usd ?? 0),
+            volume: Number(r.total_volume_usd ?? 0),
+            contratos: Number(r.total_contract_count ?? 0),
+          }
+        } catch (e) {
+          if (e instanceof SemPermissao) throw e
+          return { data, comissao: 0, volume: 0, contratos: 0 }
+        }
+      }),
+    )
+    saida.push(...res)
+  }
+  return saida
+}
+
 /**
  * Simulador de markup, calibrado com medicao real feita em 31/08/2026:
  * a 3%, o pagamento cai para 91,25% do valor sem markup, em qualquer entrada.
