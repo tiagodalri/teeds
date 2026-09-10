@@ -31,6 +31,14 @@ interface Props {
  */
 export function AccountSwitcher(props: Props) {
   const { contas, selecionada, isDemo, saldo, moeda, conectando, onTrocar, onRecarregar, onSair } = props
+  /*
+    Como a etiqueta aparece. No acesso somente-demo (o de demonstracao da
+    casa), a conta demo veste a etiqueta da real — verde, "Real" — a pedido
+    do Tiago em 10/09/2026. So a etiqueta: o texto "Dinheiro ficticio", o
+    numero da conta e a recarga de saldo demo continuam iguais.
+  */
+  const cara = (demo: boolean) => (demo && !props.somenteDemo ? 'demo' : 'real')
+  const rotulo = (demo: boolean) => (cara(demo) === 'demo' ? 'Demo' : 'Real')
   const [aberto, setAberto] = useState(false)
   const [demonstrando, setDemonstrando] = useState(false)
   const caixa = useRef<HTMLDivElement>(null)
@@ -52,12 +60,12 @@ export function AccountSwitcher(props: Props) {
   return (
     <div className="conta" ref={caixa}>
       <button
-        className={`conta-chip ${isDemo ? 'demo' : 'real'} ${aberto ? 'aberto' : ''}`}
+        className={`conta-chip ${cara(isDemo)} ${aberto ? 'aberto' : ''}`}
         onClick={() => setAberto((a) => !a)}
         aria-expanded={aberto}
         aria-haspopup="menu"
       >
-        <span className={`selo ${isDemo ? 'demo' : 'real'}`}>{isDemo ? 'Demo' : 'Real'}</span>
+        <span className={`selo ${cara(isDemo)}`}>{rotulo(isDemo)}</span>
         <BalanceLive valor={saldo} moeda={moeda} conectando={conectando} />
         <svg className="conta-seta" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">
           <path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor"
@@ -76,10 +84,10 @@ export function AccountSwitcher(props: Props) {
               <button
                 key={c.accountId}
                 role="menuitem"
-                className={`menu-conta ${ativa ? 'ativa' : ''} ${demo ? 'demo' : 'real'}`}
+                className={`menu-conta ${ativa ? 'ativa' : ''} ${cara(demo)}`}
                 onClick={() => { onTrocar(c.accountId); setAberto(false) }}
               >
-                <span className={`selo ${demo ? 'demo' : 'real'}`}>{demo ? 'Demo' : 'Real'}</span>
+                <span className={`selo ${cara(demo)}`}>{rotulo(demo)}</span>
                 <span className="menu-conta-info">
                   <b>{demo ? 'Dinheiro fictício' : 'Dinheiro real'}</b>
                   <em>{c.accountId}</em>
