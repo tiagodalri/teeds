@@ -15,6 +15,7 @@ import type { ConfigEstrategia } from '../../src/core/deriv/engine'
 import { ligarCarteiro, tratarGanchoDeEmail } from './gancho-email'
 import { somenteDemoDoUsuario } from './supabase'
 import { ligarColetorDeExtrato } from './extrato'
+import { ligarSincronizadorDeComissoes } from './comissoes'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -551,6 +552,17 @@ if (supabaseConfigurado() && process.env.EXTRATO_DESLIGADO !== '1') {
   console.log(`Extrato: depósitos e saques coletados a cada ${minutos} min`)
 } else {
   console.log('Extrato: coleta de depósitos e saques desligada')
+}
+
+// Comissão calculada (3% do pagamento) e saldo de cada conta real, lidos da
+// Deriv pelo servidor a cada poucos minutos — é o que alimenta os números da
+// Administração sem depender de alguém abrir a tela de Gestão.
+if (supabaseConfigurado() && process.env.COMISSOES_DESLIGADO !== '1') {
+  const minutos = Math.max(2, Number(process.env.COMISSOES_INTERVALO_MIN) || 5)
+  ligarSincronizadorDeComissoes(minutos * 60_000)
+  console.log(`Comissões: calculadas e saldos atualizados a cada ${minutos} min`)
+} else {
+  console.log('Comissões: sincronia desligada')
 }
 
 servidor.listen(PORTA, () => {

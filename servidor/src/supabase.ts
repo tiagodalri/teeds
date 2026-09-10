@@ -593,6 +593,31 @@ export async function gravarMovimentacoes(linhas: MovimentacaoGravavel[]): Promi
   return linhas.filter((l) => !jaGuardadas.has(`${l.conta_id}:${l.transacao_id}`)).length
 }
 
+export interface ComissaoDiariaGravavel {
+  user_id: string
+  marca: string
+  conta_id: string
+  dia: string
+  operacoes: number
+  pagamentos: number
+  comissao: number
+  entradas: number
+  resultado: number
+  moeda: string
+  demo: boolean
+  atualizado_em: string
+}
+
+/** Grava (ou atualiza) a comissão calculada de cada dia — a mesma chave que o navegador usa. */
+export async function gravarComissoesDiarias(linhas: ComissaoDiariaGravavel[]): Promise<void> {
+  if (!linhas.length) return
+  await rest('/comissoes_diarias?on_conflict=user_id,conta_id,dia,marca', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(linhas),
+  })
+}
+
 /** Anota a tentativa desta conta. No sucesso limpa o erro; na falha preserva o último sucesso. */
 export async function anotarColetaDeExtrato(d: {
   contaId: string; userId: string; marca: string; ok: boolean; erro?: string

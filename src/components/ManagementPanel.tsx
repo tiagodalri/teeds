@@ -6,7 +6,10 @@ import {
   simularComissaoPorDia, CALCULO_COM_RESULTADO_DESDE, SemPermissao, type DiaJaGravado,
   type DiaMarkup, type HojeAoVivo, type MarkupResumo, type MarkupSimulado, type ResumoHoje,
 } from '../core/deriv/markup'
-import type { TeedsSocket } from '../core/deriv/client'
+import { publicSocket, type TeedsSocket } from '../core/deriv/client'
+import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
+import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
+import { IDENTIDADES, nomeDaEstrategia } from '../core/deriv/branding'
 import { enviarComissoes, enviarMarkupOficial, listarComissoes } from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { ClientesAdmin } from './ClientesAdmin'
@@ -245,8 +248,44 @@ export function ManagementPanel({
     }
   }
 
-  const simulacao = useMemo(() => simular(payoutBase, markupSim), [payoutBase, markupSim])
-  const simAtual = useMemo(() => simular(payoutBase, 3), [payoutBase])
+  /**
+   * Simulador por robô.
+   *
+   * Cada robô compra um contrato diferente (acima de 6, abaixo de 3…) e o
+   * pagamento muda com o contrato — logo o markup também. A cotação vem da
+   * conexão pública da Deriv, sem app e sem markup, para a régua começar do
+   * mesmo zero que a operação manual.
+   */
+  const robosSimulaveis = useMemo(
+    () => IDENTIDADES.filter((i) => ESTRATEGIAS_LOCAIS.some((e) => e.id === i.id)),
+    [],
+  )
+  const [roboSim, setRoboSim] = useState<string>('manual')
+  const [entradaSim, setEntradaSim] = useState(0.35)
+  const [payoutRobo, setPayoutRobo] = useState<number | null>(null)
+  const estrategiaSim = ESTRATEGIAS_LOCAIS.find((e) => e.id === roboSim) ?? null
+  useEffect(() => {
+    if (!estrategiaSim) return
+    let vivo = true
+    setPayoutRobo(null)
+    const id = setTimeout(async () => {
+      try {
+        const res = await publicSocket.send({
+          proposal: 1, amount: entradaSim, basis: 'stake', currency: moeda,
+          contract_type: estrategiaSim.contractType, duration: estrategiaSim.ticks, duration_unit: 't',
+          underlying_symbol: ATIVO_DOS_ROBOS,
+          ...(estrategiaSim.barreira !== undefined ? { barrier: String(estrategiaSim.barreira) } : {}),
+        })
+        if (vivo) setPayoutRobo(Number((res.proposal as any).payout) || null)
+      } catch { if (vivo) setPayoutRobo(null) }
+    }, 400)
+    return () => { vivo = false; clearTimeout(id) }
+  }, [estrategiaSim, entradaSim, moeda])
+
+  const entradaBase = estrategiaSim ? entradaSim : 10
+  const payoutRef = estrategiaSim ? (payoutRobo ?? 0) : payoutBase
+  const simulacao = useMemo(() => simular(payoutRef, markupSim), [payoutRef, markupSim])
+  const simAtual = useMemo(() => simular(payoutRef, 3), [payoutRef])
   const maxSerie = Math.max(0.01, ...serie.map((d) => d.comissao))
 
   // projecao simples: media diaria do periodo aplicada a 30 dias
@@ -485,6 +524,40 @@ export function ManagementPanel({
           ele comparar a {MARCA.prosa} com a concorrência. Arraste para ver os dois lados.
         </p>
 
+        <div className="sim-robos" role="tablist" aria-label="Simular com">
+          <button role="tab" aria-selected={roboSim === 'manual'} className={roboSim === 'manual' ? 'ativo' : ''} onClick={() => setRoboSim('manual')}>
+            Operação manual
+          </button>
+          {robosSimulaveis.map((i) => (
+            <button
+              key={i.id} role="tab" aria-selected={roboSim === i.id}
+              className={roboSim === i.id ? 'ativo' : ''}
+              style={{ ['--robo' as any]: i.cor }}
+              onClick={() => setRoboSim(i.id)}
+            >
+              <i aria-hidden />{nomeDaEstrategia(i.id)}
+            </button>
+          ))}
+        </div>
+
+        {estrategiaSim && (
+          <div className="sim-entrada">
+            <label>
+              Entrada do robô
+              <input
+                type="number" min={0.35} step={0.05} inputMode="decimal"
+                value={entradaSim}
+                onChange={(e) => setEntradaSim(Math.max(0.35, Number(e.target.value) || 0.35))}
+              />
+            </label>
+            <span className="ger-nota">
+              {estrategiaSim.contractType === 'DIGITOVER' ? `dígito acima de ${estrategiaSim.barreira}` : `dígito abaixo de ${estrategiaSim.barreira}`}
+              {' · '}{estrategiaSim.ticks} tick{estrategiaSim.ticks === 1 ? '' : 's'} · Volatility 75 (1s)
+              {payoutRobo === null && ' · cotando na Deriv…'}
+            </span>
+          </div>
+        )}
+
         <div className="sim-controle">
           <input
             type="range" min={0} max={3} step={0.25}
@@ -499,8 +572,8 @@ export function ManagementPanel({
 
         <div className="sim-grade">
           <div className="sim-card">
-            <span className="rot">Cliente opera</span>
-            <strong>{dinheiro(10, moeda)}</strong>
+            <span className="rot">{estrategiaSim ? 'Robô entra com' : 'Cliente opera'}</span>
+            <strong>{dinheiro(entradaBase, moeda)}</strong>
           </div>
           <div className="sim-card">
             <span className="rot">Ele recebe se ganhar</span>
@@ -512,25 +585,31 @@ export function ManagementPanel({
           <div className="sim-card destaque">
             <span className="rot">Você ganha</span>
             <strong className="ganho">{dinheiro(simulacao.suaComissao, moeda)}</strong>
-            <span className="sim-sub">por operação de {dinheiro(10, moeda)}</span>
+            <span className="sim-sub">por operação de {dinheiro(entradaBase, moeda)}</span>
           </div>
         </div>
 
         <div className="sim-escala">
+          {estrategiaSim && (
+            <div className="sim-linha">
+              <span>A cada 100 operações deste robô</span>
+              <strong className="ganho">{dinheiro(simulacao.suaComissao * 100)}</strong>
+            </div>
+          )}
           <div className="sim-linha">
             <span>A cada {dinheiro(10000)} movimentados</span>
-            <strong className="ganho">{dinheiro(simulacao.suaComissao * 1000)}</strong>
+            <strong className="ganho">{dinheiro(simulacao.suaComissao * (10000 / entradaBase))}</strong>
           </div>
           <div className="sim-linha">
             <span>Diferença de pagamento que o cliente percebe</span>
-            <strong>{((simulacao.clientePerde / (payoutBase || 1)) * 100).toFixed(1)}%</strong>
+            <strong>{((simulacao.clientePerde / (payoutRef || 1)) * 100).toFixed(1)}%</strong>
           </div>
         </div>
 
         {markupSim !== 3 && (
           <p className="ger-nota">
             Para valer, o ajuste precisa ser feito no painel da Deriv — aqui é só simulação.
-            Hoje você está em 3%, rendendo {dinheiro(simAtual.suaComissao, moeda)} por operação de {dinheiro(10, moeda)}.
+            Hoje você está em 3%, rendendo {dinheiro(simAtual.suaComissao, moeda)} por operação de {dinheiro(entradaBase, moeda)}.
           </p>
         )}
       </section>
