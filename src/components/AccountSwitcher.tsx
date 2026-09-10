@@ -3,8 +3,11 @@ import type { TradingAccount } from '../core/deriv/account'
 import { BalanceLive } from './BalanceLive'
 import { DerivNome } from './DerivMarca'
 import { MARCA } from '../marca'
+import { AccountDemonstration, podeDemonstrarSaldos } from './AccountDemonstration'
 
 interface Props {
+  admin?: boolean | null
+  email?: string | null
   contas: TradingAccount[]
   selecionada: string | null
   isDemo: boolean
@@ -27,6 +30,7 @@ interface Props {
 export function AccountSwitcher(props: Props) {
   const { contas, selecionada, isDemo, saldo, moeda, conectando, onTrocar, onRecarregar, onSair } = props
   const [aberto, setAberto] = useState(false)
+  const [demonstrando, setDemonstrando] = useState(false)
   const caixa = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -96,6 +100,8 @@ export function AccountSwitcher(props: Props) {
 
           <div className="menu-linha" />
 
+          {podeDemonstrarSaldos(props.admin, props.email) && <button className="menu-acao" role="menuitem" onClick={() => { setAberto(false); setDemonstrando(true) }}>Demonstração de saldos · simulados</button>}
+
           {isDemo && (
             <button className="menu-acao" role="menuitem"
               onClick={() => { onRecarregar(); setAberto(false) }}>
@@ -126,6 +132,7 @@ export function AccountSwitcher(props: Props) {
           </button>
         </div>
       )}
+      {demonstrando && <AccountDemonstration admin={props.admin} email={props.email} onClose={() => setDemonstrando(false)} contas={contas.map(c => c.accountId === selecionada && saldo !== null && c.currency === moeda ? { ...c, balance: saldo } : c)} />}
     </div>
   )
 }

@@ -96,6 +96,7 @@ try {
           export { RobotSetup, ETAPAS_PREPARO, valorDePreparo, configurarPreparo } from './src/components/RobotSetup.tsx';
           export { IDENTIDADES } from './src/core/deriv/branding.ts';
           export { recuperacaoDoRobo } from './src/core/deriv/strategies.ts';
+          export { AccountDemonstration, podeDemonstrarSaldos, saldosDemonstrativos } from './src/components/AccountDemonstration.tsx';
           export { WorkspaceNav } from './src/components/WorkspaceNav.tsx';
           export { createElement } from 'react';
           export { renderToStaticMarkup } from 'react-dom/server';`,
@@ -112,9 +113,26 @@ try {
       banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
       logLevel: 'silent',
     })
-    const { resumirSessoes, RobotOverview, RobotLive, RobotCatalog, RobotSetup, ETAPAS_PREPARO, valorDePreparo, configurarPreparo, IDENTIDADES, recuperacaoDoRobo, WorkspaceNav, createElement, renderToStaticMarkup } = await import(pathToFileURL(saida).href)
+    const { resumirSessoes, RobotOverview, RobotLive, RobotCatalog, RobotSetup, ETAPAS_PREPARO, valorDePreparo, configurarPreparo, IDENTIDADES, recuperacaoDoRobo, AccountDemonstration, podeDemonstrarSaldos, saldosDemonstrativos, WorkspaceNav, createElement, renderToStaticMarkup } = await import(pathToFileURL(saida).href)
     const verificar = (nome, executar) => teste(`${marca}: ${nome}`, executar)
     const render = (componente, props) => renderToStaticMarkup(createElement(componente, props))
+    verificar('demonstração exclusiva para o ADM autorizado, nunca clientes', () => {
+      assert.equal(podeDemonstrarSaldos(true, 'teeds@gmail.com'), true)
+      for (const admin of [false, null, undefined]) assert.ok(!podeDemonstrarSaldos(admin, 'teeds@gmail.com'))
+      assert.ok(!podeDemonstrarSaldos(true, 'outro@gmail.com'))
+      const contas = [{ accountId: 'ROT123', type: 'real', currency: 'USD', balance: .01 }, { accountId: 'DOT456', type: 'demo', currency: 'USD', balance: 9770.47 }]
+      const antes = JSON.stringify(contas)
+      assert.deepEqual(saldosDemonstrativos(contas).map(c => c.balance), [9770.47, .01])
+      assert.equal(JSON.stringify(contas), antes)
+      const props = { contas, email: 'teeds@gmail.com', onClose() {} }
+      assert.equal(render(AccountDemonstration, { ...props, admin: false }), '')
+      const html = render(AccountDemonstration, { ...props, admin: true })
+      assert.match(html, /Demonstração — saldos simulados/)
+      assert.match(html, /Não representam o dinheiro disponível/)
+      assert.doesNotMatch(html, /Iniciar robô|Comprar|Vender/)
+      assert.deepEqual(saldosDemonstrativos([{ ...contas[0], currency: 'EUR' }, contas[1]]), [])
+      assert.deepEqual(saldosDemonstrativos([contas[0], { ...contas[0], accountId: 'ROT999' }, contas[1]]), [])
+    })
     verificar('catálogo mostra somente os modelos da marca e uma seleção', () => {
       const html = render(RobotCatalog, { selected: 'ag2', onSelect() {}, onCompare() {} })
       assert.equal((html.match(/aria-pressed=/g) ?? []).length, marca === 'teeds' ? 7 : 4)

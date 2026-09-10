@@ -21,10 +21,9 @@ export function RobotCatalog({ selected, onSelect, indisponivel = false }: {
       </div>
     </div>
     <article className="robot-picker-detail" style={{ ['--model-color' as string]: atual.cor }} aria-live="polite">
-      <div className="robot-picker-emblem"><Emblema id={atual} tamanho={56} /></div>
+      <div className="robot-picker-emblem"><Emblema id={atual} tamanho={40} /></div>
       <span className="robot-picker-kicker">{atual.chamada}</span><h4>{atual.nome}</h4>
       <p>{atual.descricao}</p>
-      <div className="robot-picker-next"><b>Você define os limites</b><span>Na sequência, escolha a entrada e quando a sessão deve parar.</span></div>
       <small>Nenhuma estratégia garante resultado. Os robôs da mesma conta compartilham o saldo.</small>
     </article>
   </section>

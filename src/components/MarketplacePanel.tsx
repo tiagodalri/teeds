@@ -1,3 +1,4 @@
+import { ResponsiveImage } from './ResponsiveImage'
 import { useEffect, useMemo, useState } from 'react'
 import { listarProdutos } from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
@@ -134,7 +135,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
           {visiveis.map((produto, indice) => (
             <article key={produto.id} className={`market-card ${produto.tom}`}>
               <button className="market-card-capa" onClick={() => setSelecionado(produto)} aria-label={`Conhecer ${produto.nome}`}>
-                <img src={capaProduto(produto.imagem)} alt="" loading="lazy" />
+                <ResponsiveImage src={capaProduto(produto.imagem)} alt="" loading="lazy" />
                 <span className="market-card-selo">{produto.selo}</span>
                 <span className="market-card-desconto">{produto.desconto}</span>
                 <span className="market-card-num">0{indice + 1}</span>
@@ -165,7 +166,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
           <section className={`market-modal ${selecionado.tom}`} role="dialog" aria-modal="true" aria-labelledby="market-modal-titulo" onMouseDown={(e) => e.stopPropagation()}>
             <button className="market-modal-fechar" onClick={() => setSelecionado(null)} aria-label="Fechar">×</button>
             <div className="market-modal-arte">
-              <img src={capaProduto(selecionado.imagem)} alt="" />
+              <ResponsiveImage src={capaProduto(selecionado.imagem)} alt="" />
               <span>{selecionado.selo}</span><b>{selecionado.simbolo}</b><small>{MARCA.nome} ORIGINAL</small>
             </div>
             <div className="market-modal-corpo">

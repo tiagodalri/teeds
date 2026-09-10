@@ -411,6 +411,8 @@ export default function App() {
 
           {conta.status === 'logado' && conta.accounts.length > 0 && (
             <AccountSwitcher
+              admin={admin}
+              email={teeds.sessao?.usuario.email}
               contas={conta.accounts}
               selecionada={conta.accountId}
               isDemo={conta.isDemo}
