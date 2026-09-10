@@ -32,6 +32,8 @@ interface Props {
   /** Abre/fecha o painel flutuante de dígitos do ativo. */
   onDigitos?: () => void
   digitosAberto?: boolean
+  /** Coluna de markup (3% do pagamento) nas últimas operações. */
+  mostrarMarkup?: boolean
 }
 
 const num = (v: number) =>
@@ -94,6 +96,7 @@ export function RobotLive({
   estado, config, moeda, estrategiaId, nomeEstrategia, ativo, titulo, regra, ganhaCom,
   parametros = [], conexao = 'open', onDesligar, onLigarDeNovo, onRemover,
   expandido = false, onExpandir, contaDaSessao, onDigitos, digitosAberto = false,
+  mostrarMarkup = false,
 }: Props) {
   const [detalhes, setDetalhes] = useState(false)
   const [registroAberto, setRegistroAberto] = useState(false)
@@ -347,6 +350,7 @@ export function RobotLive({
                 <tr>
                   <th>#</th><th>Hora</th><th>Valor</th>
                   <th>Entrada</th><th>Saída</th><th>Resultado</th><th>Acumulado</th>
+                  {mostrarMarkup && <th>Markup</th>}
                 </tr>
               </thead>
               <tbody>
@@ -373,6 +377,20 @@ export function RobotLive({
                       </td>
                       <td data-label="Resultado" className={o.ganhou ? 'up forte' : 'down forte'}>{assinado(o.lucro)}</td>
                       <td data-label="Acumulado" className={ac >= 0 ? 'up' : 'down'}>{assinado(ac)}</td>
+                      {mostrarMarkup && (
+                        <td
+                          data-label="Markup"
+                          className="tv-markup"
+                          title={o.markupDeriv != null
+                            ? 'Markup medido pela Deriv neste contrato'
+                            : `3% do pagamento de ${num(o.payout)}`}
+                        >
+                          {o.markupDeriv != null
+                            ? num(o.markupDeriv)
+                            : o.payout ? num(o.payout * 0.03) : '—'}
+                          {o.markupDeriv != null && <small>DERIV</small>}
+                        </td>
+                      )}
                     </tr>
                   )
                 })}

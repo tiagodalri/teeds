@@ -42,6 +42,8 @@ interface Props {
   adotar?: { id: string; config: ConfigEstrategia; origem?: string }
   solicitarPreparo?: boolean
   onFecharPreparo?: () => void
+  /** Coluna de markup nas últimas operações (só para o dono da plataforma). */
+  mostrarMarkup?: boolean
 }
 
 const PADRAO: ConfigEstrategia = {
@@ -62,6 +64,7 @@ export function LocalRobotPanel({
   socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
   onRemover, titulo, expandido = false, onExpandir, onSessaoChange, sessaoTeeds, contaId,
   adotar, solicitarPreparo = false, onFecharPreparo, onDigitos, digitosAberto = false,
+  mostrarMarkup = false,
 }: Props) {
   // O cartao escolhido na vitrine dita a estrategia deste bloco…
   const daVitrine = ESTRATEGIAS_LOCAIS.find((e) => e.id === identidade.id) ?? ESTRATEGIAS_LOCAIS[0]
@@ -275,6 +278,7 @@ export function LocalRobotPanel({
         onExpandir={onExpandir}
         onDigitos={onDigitos}
         digitosAberto={digitosAberto}
+        mostrarMarkup={mostrarMarkup}
         onDesligar={rodando ? desligar : undefined}
         onLigarDeNovo={!rodando ? () => { setErro(null); setPreparando(true) } : undefined}
         onRemover={onRemover ? () => {

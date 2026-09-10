@@ -37,6 +37,8 @@ interface Props {
   onConectarDeriv?: () => void
   sessaoTeeds?: SessaoTeeds | null
   contaId?: string | null
+  /** Dono da plataforma: enxerga o markup de cada operacao nas cabines. */
+  admin?: boolean
 }
 
 /** Teto de robos simultaneos: cada um consome assinaturas da mesma conexao. */
@@ -47,7 +49,7 @@ const din = (v: number, m = 'USD') =>
 
 export function RobotsPanel({
   socket, logado, isDemo, moeda, symbols, symbolPadrao, conexao = 'open',
-  entrandoNaDeriv = false, onConectarDeriv, sessaoTeeds, contaId,
+  entrandoNaDeriv = false, onConectarDeriv, sessaoTeeds, contaId, admin = false,
 }: Props) {
   const [symbol, setSymbol] = useState<string>(symbolPadrao ?? '1HZ100V')
   const [valorInicial, setValorInicial] = useState(1)
@@ -307,7 +309,8 @@ export function RobotsPanel({
               expandido={blocoExpandido === v.id}
               onExpandir={() => setBlocoExpandido((atual) => atual === v.id ? null : v.id)}
               onDigitos={() => alternarDigitos(v.id, v.roboId)}
-              digitosAberto={digitosDe?.chave === v.id} />
+              digitosAberto={digitosDe?.chave === v.id}
+              mostrarMarkup={admin} />
             </div>
           ))}
         </div>
@@ -327,6 +330,7 @@ export function RobotsPanel({
               onExpandir={() => setBlocoExpandido((atual) => atual === idBloco ? null : idBloco)}
               onDigitos={() => alternarDigitos(idBloco, ident.id)}
               digitosAberto={digitosDe?.chave === idBloco}
+              mostrarMarkup={admin}
               solicitarPreparo={blocoEmPreparo === idBloco}
               onFecharPreparo={() => setBlocoEmPreparo(null)}
               onSessaoChange={(ativa, sessaoId) => {

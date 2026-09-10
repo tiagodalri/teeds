@@ -563,6 +563,7 @@ export default function App() {
           onConectarDeriv={conta.login}
           sessaoTeeds={teeds.sessao}
           contaId={conta.accountId}
+          admin={admin === true}
         />
       </div>
       {tela === 'robos' || tela === 'assistente' ? null : tela === 'aulas' ? (

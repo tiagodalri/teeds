@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AuthSession } from '../core/deriv/auth'
 import { DERIV } from '../core/deriv/config'
 import {
-  buscarResumo, buscarSerieDiaria, periodo, simular, simularComissaoPorDia,
-  CALCULO_COM_RESULTADO_DESDE, SemPermissao, type DiaJaGravado,
-  type DiaMarkup, type MarkupResumo, type MarkupSimulado,
+  atualizarHoje, buscarResumo, buscarSerieDiaria, diasDoPeriodo, novoHojeAoVivo, periodo, simular,
+  simularComissaoPorDia, CALCULO_COM_RESULTADO_DESDE, SemPermissao, type DiaJaGravado,
+  type DiaMarkup, type HojeAoVivo, type MarkupResumo, type MarkupSimulado, type ResumoHoje,
 } from '../core/deriv/markup'
 import type { TeedsSocket } from '../core/deriv/client'
 import { enviarComissoes, enviarMarkupOficial, listarComissoes } from '../core/teeds/clientes'
@@ -158,6 +158,82 @@ export function ManagementPanel({
     return () => { vivo = false; clearTimeout(id) }
   }, [socket, pulso, dias])
 
+  /**
+   * Hoje, ao vivo.
+   *
+   * O calculo grande espera o mercado acalmar — com robo ligado, ele pode
+   * nunca acalmar. Esta leitura e a que faz o numero da plataforma subir a
+   * cada contrato liquidado: no maximo uma a cada 2,5 s (compra e venda
+   * disparam duas transacoes por operacao), e a proxima espera a atual acabar.
+   */
+  const [hoje, setHoje] = useState<ResumoHoje | null>(null)
+  const hojeRef = useRef<HojeAoVivo>(novoHojeAoVivo())
+  const hojeUltima = useRef(0)
+  const hojeOcupado = useRef(false)
+  const hojePendente = useRef(false)
+  const socketRef = useRef(socket)
+  socketRef.current = socket
+  const montado = useRef(true)
+  useEffect(() => () => { montado.current = false }, [])
+  useEffect(() => { hojeRef.current = novoHojeAoVivo(); setHoje(null) }, [socket])
+
+  const lerHoje = useCallback(async () => {
+    const s = socketRef.current
+    if (!s) return
+    if (hojeOcupado.current) { hojePendente.current = true; return }
+    hojeOcupado.current = true
+    hojeUltima.current = Date.now()
+    try {
+      const r = await atualizarHoje(s, hojeRef.current)
+      if (montado.current && socketRef.current === s) setHoje(r)
+    } catch {
+      /* a proxima transacao tenta de novo */
+    } finally {
+      hojeOcupado.current = false
+      if (hojePendente.current && montado.current) { hojePendente.current = false; void lerHoje() }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!socket) return
+    const espera = Math.max(0, 2500 - (Date.now() - hojeUltima.current))
+    const id = setTimeout(() => { void lerHoje() }, espera)
+    return () => clearTimeout(id)
+  }, [socket, pulso, lerHoje])
+
+  /**
+   * O numero da plataforma: dias anteriores vem do calculo grande, hoje vem
+   * da leitura ao vivo. E o que a Deriv vai confirmar depois, quando fechar
+   * a conta dela.
+   */
+  const hojeIso = diasDoPeriodo(1)[0]
+  const vivo = useMemo(() => {
+    const simHoje = sim?.porDia.find((d) => d.data === hojeIso)
+    const base = sim
+      ? {
+        comissao: sim.comissao - (simHoje?.comissao ?? 0),
+        operacoes: sim.operacoes - (simHoje?.operacoes ?? 0),
+        pagamentos: sim.pagamentoTotal - (simHoje?.pagamentos ?? 0),
+        entradas: sim.movimentado - (simHoje?.entradas ?? 0),
+      }
+      : { comissao: 0, operacoes: 0, pagamentos: 0, entradas: 0 }
+    // hoje: o que a leitura ao vivo souber; senao, o que o calculo grande achou
+    const h = hoje ?? simHoje ?? null
+    const comissao = base.comissao + (h?.comissao ?? 0)
+    const operacoes = base.operacoes + (h?.operacoes ?? 0)
+    return {
+      comissao,
+      operacoes,
+      pagamentos: base.pagamentos + (h?.pagamentos ?? 0),
+      movimentado: base.entradas + (h?.entradas ?? 0),
+      media: operacoes ? comissao / operacoes : 0,
+      pronto: !!(hoje || sim),
+      // periodo maior que hoje e o calculo grande ainda nao chegou
+      parcial: !sim && dias > 1,
+    }
+  }, [sim, hoje, hojeIso, dias])
+  const derivAtrasada = vivo.pronto && resumo ? vivo.comissao - resumo.comissao : 0
+
   const [copiado, setCopiado] = useState(false)
   const copiarLink = async () => {
     try {
@@ -240,12 +316,24 @@ export function ManagementPanel({
 
       {/* ---------------- números do período ---------------- */}
       <div className="kpis">
-        <div className="kpi kpi-grande">
-          <span className="rot">Sua comissão</span>
+        <div className="kpi kpi-grande kpi-vivo">
+          <span className="rot"><i className="ponto-vivo" aria-hidden />Sua comissão · calculada ao vivo</span>
+          <strong>{vivo.pronto ? dinheiro(vivo.comissao, 'USD') : '…'}</strong>
+          <span className="kpi-nota">
+            3% do pagamento de cada contrato desta conta · {vivo.operacoes.toLocaleString('pt-BR')} operações
+            {vivo.parcial && ' · dias anteriores ainda somando'}
+          </span>
+        </div>
+        <div className="kpi kpi-grande kpi-deriv">
+          <span className="rot">Sua comissão · informada pela Deriv</span>
           <strong>{carregando && !resumo ? '…' : dinheiro(resumo?.comissao ?? 0, 'USD')}</strong>
-          {projecao !== null && (
-            <span className="kpi-nota">≈ {dinheiro(projecao)} por mês neste ritmo</span>
-          )}
+          <span className="kpi-nota">
+            {derivAtrasada > 0.005
+              ? `pelo menos ${dinheiro(derivAtrasada)} ainda não entraram na conta da Deriv — ela fecha com atraso`
+              : projecao !== null
+                ? `toda a aplicação, todos os clientes · ≈ ${dinheiro(projecao)} por mês neste ritmo`
+                : 'toda a aplicação, todos os clientes · fecha com atraso'}
+          </span>
         </div>
         <div className="kpi">
           <span className="rot">Volume negociado</span>
@@ -287,22 +375,22 @@ export function ManagementPanel({
         {sim && (
           <>
             <div className="kpis">
-              <div className="kpi kpi-grande">
-                <span className="rot">Comissão que teria gerado</span>
-                <strong>{dinheiro(sim.comissao, 'USD')}</strong>
+              <div className="kpi kpi-grande kpi-vivo">
+                <span className="rot"><i className="ponto-vivo" aria-hidden />Comissão gerada</span>
+                <strong>{dinheiro(vivo.comissao, 'USD')}</strong>
                 <span className="kpi-nota">
-                  em {sim.operacoes.toLocaleString('pt-BR')} operações{' '}
+                  em {vivo.operacoes.toLocaleString('pt-BR')} operações{' '}
                   {sim.dias === 1 ? 'hoje' : `nos últimos ${sim.dias} dias`}
-                  {' · '}média de {dinheiro(sim.comissaoMedia)} por operação
+                  {' · '}média de {dinheiro(vivo.media)} por operação
                 </span>
               </div>
               <div className="kpi">
                 <span className="rot">Movimentado</span>
-                <strong>{dinheiro(sim.movimentado)}</strong>
+                <strong>{dinheiro(vivo.movimentado)}</strong>
               </div>
               <div className="kpi">
                 <span className="rot">Pagamentos contratados</span>
-                <strong>{dinheiro(sim.pagamentoTotal)}</strong>
+                <strong>{dinheiro(vivo.pagamentos)}</strong>
                 <span className="kpi-nota">base do cálculo</span>
               </div>
             </div>

@@ -619,6 +619,18 @@ button, input { font: inherit; color: inherit; }
 .kpi-grande { grid-column: span 2; }
 .kpi-grande strong { font-size: 32px; color: var(--up); }
 .kpi-nota { display: block; margin-top: 5px; font-size: 11.5px; color: var(--muted); }
+/* comissao calculada pela plataforma (sobe ao vivo) x informada pela Deriv (fecha depois) */
+.kpi-vivo { border-color: color-mix(in srgb, var(--up) 38%, var(--border)); }
+.kpi-deriv strong { color: inherit; }
+.ponto-vivo {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px;
+  vertical-align: 1px; background: var(--up); animation: ponto-vivo 1.6s ease-out infinite;
+}
+@keyframes ponto-vivo {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--up) 55%, transparent); }
+  100% { box-shadow: 0 0 0 7px transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .ponto-vivo { animation: none; } }
 
 .ger-bloco {
   background: var(--bg); border: 1px solid var(--border);
@@ -1357,6 +1369,9 @@ button, input { font: inherit; color: inherit; }
 .tv-tabela .tv-hora { color: var(--muted); font-size: 11.5px; }
 .tv-tabela td:last-child { padding-right: 18px; }
 .tv-tabela .forte { font-weight: 700; }
+/* markup da operacao: 3% do pagamento, calculado aqui; o medido pela Deriv ganha a marca */
+.tv-tabela .tv-markup { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tv-tabela .tv-markup small { font-size: 9px; font-weight: 700; letter-spacing: .04em; margin-left: 4px; color: var(--up); }
 .tv-par { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; }
 .tv-chip {
   min-width: 19px; height: 19px; border-radius: 5px;
@@ -4039,6 +4054,7 @@ input, select, textarea, button { vertical-align: middle; }
   .tv-tabela td, .tv-tabela td:first-child, .tv-tabela td:nth-child(2), .tv-tabela td:last-child { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0; border: 0; text-align: right; min-width: 0; }
   .tv-tabela td::before { content: attr(data-label); color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
   .tv-tabela td[data-label='Resultado'], .tv-tabela td[data-label='Acumulado'] { padding-top: 7px; border-top: 1px solid rgba(139,150,173,.10); font-size: 14px; }
+  .tv-tabela td[data-label='Markup'] { grid-column: 1 / -1; font-size: 12px; }
   .tv-tabela tr.ganhou td:first-child, .tv-tabela tr.perdeu td:first-child { box-shadow: none; }
 }
 

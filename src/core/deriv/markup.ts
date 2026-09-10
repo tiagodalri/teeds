@@ -383,3 +383,98 @@ export async function simularComissaoPorDia(
       .sort((a, b) => a.data.localeCompare(b.data)),
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Hoje, ao vivo                                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * O que ja sabemos dos contratos de hoje. Guarda entrada e pagamento de
+ * cada um para que as varreduras seguintes so precisem olhar a primeira
+ * pagina — a das operacoes mais novas — em vez de reler o dia inteiro.
+ */
+export interface HojeAoVivo {
+  dia: string
+  /** Todo contrato ja visto hoje, da Teeds ou nao: e o que diz onde parar. */
+  vistos: Set<number>
+  /** Entrada e pagamento dos contratos que passaram pela Teeds. */
+  contratos: Map<number, { entrada: number; pagamento: number }>
+  /** A primeira passada chegou ao fim do dia. */
+  completo: boolean
+  truncado: boolean
+}
+
+export interface ResumoHoje {
+  comissao: number
+  operacoes: number
+  pagamentos: number
+  entradas: number
+  truncado: boolean
+}
+
+export function novoHojeAoVivo(): HojeAoVivo {
+  return { dia: '', vistos: new Set(), contratos: new Map(), completo: false, truncado: false }
+}
+
+/**
+ * Atualiza a comissao de hoje a partir da tabela de lucros da Deriv.
+ *
+ * A primeira passada le o dia inteiro, paginando. As seguintes leem so as
+ * paginas mais novas e param assim que reencontram um contrato conhecido:
+ * com robo ligado isso da uma requisicao a cada poucos segundos, nao o dia
+ * inteiro a cada operacao. Contrato ainda aberto nao aparece — entra quando
+ * liquida, como na propria estatistica da Deriv.
+ */
+export async function atualizarHoje(socket: TeedsSocket, estado: HojeAoVivo, taxa = 0.03): Promise<ResumoHoje> {
+  const dia = diasDoPeriodo(1)[0]
+  if (estado.dia !== dia) {
+    estado.dia = dia
+    estado.vistos = new Set()
+    estado.contratos = new Map()
+    estado.completo = false
+    estado.truncado = false
+  }
+  const { de, ate } = janelaDoDia(dia)
+  const jaConhecia = estado.completo
+  let pular = 0
+
+  for (let pagina = 0; pagina < MAX_PAGINAS_LUCROS; pagina += 1) {
+    const res = await socket.send({
+      profit_table: 1,
+      description: 1,
+      limit: POR_PAGINA_LUCROS,
+      offset: pular,
+      date_from: String(de),
+      date_to: String(ate),
+      sort: 'DESC',
+    })
+    const linhas = ((res.profit_table as any)?.transactions ?? []) as Array<Record<string, any>>
+    let repetidos = 0
+    for (const l of linhas) {
+      const id = Number(l.contract_id)
+      if (!id) continue
+      if (estado.vistos.has(id)) { repetidos += 1; continue }
+      estado.vistos.add(id)
+      const pagamento = Number(l.payout ?? 0)
+      // so o que passou pela Teeds gera markup
+      if (l.app_id != null && String(l.app_id) === MARCA.appId && pagamento) {
+        estado.contratos.set(id, { entrada: Number(l.buy_price ?? 0), pagamento })
+      }
+    }
+    if (linhas.length < POR_PAGINA_LUCROS) { estado.completo = true; break }
+    // o resto do dia ja era conhecido e esta pagina reencontrou contratos antigos
+    if (jaConhecia && repetidos > 0) break
+    pular += POR_PAGINA_LUCROS
+    if (pagina === MAX_PAGINAS_LUCROS - 1) estado.truncado = true
+  }
+
+  let comissao = 0
+  let pagamentos = 0
+  let entradas = 0
+  for (const c of estado.contratos.values()) {
+    comissao += c.pagamento * taxa
+    pagamentos += c.pagamento
+    entradas += c.entrada
+  }
+  return { comissao, operacoes: estado.contratos.size, pagamentos, entradas, truncado: estado.truncado }
+}
