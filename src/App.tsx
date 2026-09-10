@@ -23,6 +23,7 @@ import { useAccount } from './hooks/useAccount'
 import { registrarContaDeriv, registrarPresenca, souAdmin } from './core/teeds/clientes'
 import { entregarAutorizacao } from './core/teeds/servidorRobos'
 import { AssistentePanel } from './components/AssistentePanel'
+import { AssistenteBetaGate } from './components/AssistenteBetaGate'
 import { useTeedsAuth } from './hooks/useTeedsAuth'
 import { aplicarTema, temaGuardado, type Tema } from './core/tema'
 import { DerivDesconectada } from './components/DerivDesconectada'
@@ -48,6 +49,11 @@ const TIMEFRAMES: { label: string; value: Granularity }[] = [
 const STATUS_LABEL: Record<string, string> = {
   idle: 'Iniciando', connecting: 'Conectando', open: 'Ao vivo',
   reconnecting: 'Reconectando', closed: 'Desconectado',
+}
+
+function assistenteBetaJaLiberado() {
+  try { return sessionStorage.getItem(`assistente-beta:${MARCA.id}`) === 'liberado' }
+  catch { return false }
 }
 
 export default function App() {
@@ -79,6 +85,8 @@ export default function App() {
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
   const [tela, setTela] = useState<'operar' | 'robos' | 'assistente' | 'operacoes' | 'gestao' | 'gerenciamento' | 'marketplace' | 'aulas'>('operar')
   const [admin, setAdmin] = useState<boolean | null>(null)
+  const [pedirCodigoAssistente, setPedirCodigoAssistente] = useState(false)
+  const [assistenteLiberado, setAssistenteLiberado] = useState(assistenteBetaJaLiberado)
   const [payoutBase, setPayoutBase] = useState(19.55)
 
   const activeSymbol = useMemo(() => {
@@ -285,6 +293,18 @@ export default function App() {
 
   const derivPronta = conta.status === 'logado'
 
+  function abrirAssistente() {
+    if (assistenteLiberado) { setTela('assistente'); return }
+    setPedirCodigoAssistente(true)
+  }
+
+  function liberarAssistente() {
+    try { sessionStorage.setItem(`assistente-beta:${MARCA.id}`, 'liberado') } catch { /* acesso vale enquanto a tela ficar aberta */ }
+    setAssistenteLiberado(true)
+    setPedirCodigoAssistente(false)
+    setTela('assistente')
+  }
+
   return (
     <div className="app">
       <header className="topbar">
@@ -299,7 +319,7 @@ export default function App() {
         <nav className="telas">
           <button className={tela === 'operar' ? 'on' : ''} onClick={() => setTela('operar')}>Operar</button>
           <button className={tela === 'robos' ? 'on' : ''} onClick={() => setTela('robos')}>Robôs</button>
-          <button className={tela === 'assistente' ? 'on' : ''} onClick={() => setTela('assistente')}>Assistente</button>
+          <button className={`nav-assistente ${tela === 'assistente' ? 'on' : ''}`} onClick={abrirAssistente}>Assistente <span>BETA</span></button>
           <button className={tela === 'operacoes' ? 'on' : ''} onClick={() => setTela('operacoes')}>Operações</button>
           {admin === true && (
             <button className={tela === 'gestao' ? 'on' : ''} onClick={() => setTela('gestao')}>Administração</button>
@@ -368,6 +388,10 @@ export default function App() {
           onFechar={() => setVerPerfil(false)} />
       )}
 
+      {pedirCodigoAssistente && (
+        <AssistenteBetaGate onFechar={() => setPedirCodigoAssistente(false)} onLiberar={liberarAssistente} />
+      )}
+
       {teeds.recado && (
         <div className="faixa faixa-ok">
           {teeds.recado}
@@ -397,7 +421,7 @@ export default function App() {
           de uma conversa e voltar nao pode apagar o que foi dito, e um robo
           ligado por aqui nao pode parar de ser acompanhado porque alguem foi
           olhar o grafico. */}
-      {teeds.sessao && (
+      {teeds.sessao && assistenteLiberado && (
         <div className="tela-viva" hidden={tela !== 'assistente'}>
           <AssistentePanel
             sessao={teeds.sessao}

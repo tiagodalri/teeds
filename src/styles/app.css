@@ -495,6 +495,33 @@ button, input { font: inherit; color: inherit; }
 }
 .telas button:hover { color: var(--text); }
 .telas button.on { background: var(--bg); color: var(--primary); box-shadow: var(--shadow); }
+.telas .nav-assistente { display: inline-flex; align-items: center; gap: 6px; }
+.telas .nav-assistente span { padding: 2px 5px; border: 1px solid color-mix(in srgb,var(--primary) 40%,var(--border)); border-radius: 4px; color: var(--primary); background: var(--primary-soft); font-size: 7px; font-weight: 850; line-height: 1; letter-spacing: .08em; }
+
+/* ---------------------------------------------------------- acesso beta */
+.beta-fundo { position: fixed; z-index: 300; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(4,6,10,.76); backdrop-filter: blur(16px); animation: beta-aparecer .18s ease-out; }
+.beta-modal { position: relative; width: min(440px,100%); padding: 34px; overflow: hidden; border: 1px solid color-mix(in srgb,var(--primary) 42%,var(--border)); border-radius: 20px; color: var(--text); background: radial-gradient(circle at 90% 0,color-mix(in srgb,var(--primary) 12%,transparent),transparent 38%),var(--bg); box-shadow: 0 36px 100px rgba(0,0,0,.48); }
+.beta-modal::after { content: ''; position: absolute; right: -80px; bottom: -95px; width: 210px; height: 210px; border: 1px solid color-mix(in srgb,var(--primary) 12%,transparent); border-radius: 50%; pointer-events: none; }
+.beta-fechar { position: absolute; z-index: 2; top: 16px; right: 16px; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 50%; color: var(--muted); background: var(--surface); cursor: pointer; font-size: 22px; line-height: 1; }
+.beta-marca { margin-bottom: 27px; }
+.beta-selo { display: inline-flex; padding: 6px 9px; border: 1px solid color-mix(in srgb,var(--primary) 35%,var(--border)); border-radius: 6px; color: var(--primary); background: var(--primary-soft); font-size: 8px; font-weight: 850; letter-spacing: .14em; }
+.beta-modal h2 { margin: 16px 0 9px; font-size: 27px; line-height: 1.12; letter-spacing: -.035em; }
+.beta-modal>p { margin: 0 0 25px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.beta-modal form { display: grid; gap: 9px; position: relative; z-index: 1; }
+.beta-modal label { color: var(--muted); font-size: 9px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+.beta-campo { display: flex; align-items: center; height: 52px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); transition: border-color .15s,box-shadow .15s; }
+.beta-campo:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.beta-campo.com-erro { border-color: var(--down); }
+.beta-campo>span { padding-left: 16px; color: var(--primary); font-size: 14px; }
+.beta-campo input { width: 100%; height: 100%; padding: 0 15px 0 11px; border: 0; outline: 0; color: var(--text); background: transparent; font-family: inherit; font-size: 14px; font-weight: 650; letter-spacing: .08em; }
+.beta-campo input::placeholder { color: var(--muted); font-weight: 500; letter-spacing: 0; }
+.beta-erro { color: var(--down); font-size: 10px; }
+.beta-entrar { height: 50px; margin-top: 8px; padding: 0 18px; display: flex; align-items: center; justify-content: space-between; border: 0; border-radius: 11px; color: #17130b; background: linear-gradient(135deg,color-mix(in srgb,var(--primary) 86%,#fff),var(--primary)); box-shadow: 0 12px 28px color-mix(in srgb,var(--primary) 20%,transparent); cursor: pointer; font-weight: 800; }
+.beta-entrar:disabled { opacity: .62; cursor: wait; }
+.beta-nota { display: block; margin-top: 18px; color: var(--muted); font-size: 8px; text-align: center; }
+@keyframes beta-aparecer { from { opacity: 0 } to { opacity: 1 } }
+@media(max-width:520px){.beta-fundo{padding:12px}.beta-modal{padding:28px 22px;border-radius:17px}.beta-modal h2{font-size:24px}}
+@media(prefers-reduced-motion:reduce){.beta-fundo{animation:none}}
 
 .ger, .ger-vazio { padding: 28px; overflow-y: auto; background: var(--surface); flex: 1; }
 .ger-vazio { display: grid; place-content: center; text-align: center; color: var(--muted); }
