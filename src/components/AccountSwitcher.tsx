@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { TradingAccount } from '../core/deriv/account'
 import { BalanceLive } from './BalanceLive'
-import { DerivNome } from './DerivMarca'
+import { DerivLogo } from './DerivMarca'
 import { MARCA } from '../marca'
 import { AccountDemonstration } from './AccountDemonstration'
 
@@ -128,7 +128,7 @@ export function AccountSwitcher(props: Props) {
               fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M8 3.5v9M3.5 8h9" />
             </svg>
-            Abrir outra conta na <DerivNome tamanho={12.5} />
+            Abrir outra conta na <span className="menu-acao-logo"><DerivLogo altura={13} /></span>
           </a>
 
           <button className="menu-acao perigo" role="menuitem" onClick={onSair}>
@@ -137,7 +137,7 @@ export function AccountSwitcher(props: Props) {
               <path d="M6.5 13.5h-3a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3" />
               <path d="M10 11l3-3-3-3M13 8H6" />
             </svg>
-            Desconectar a <DerivNome tamanho={12.5} />
+            Desconectar a <span className="menu-acao-logo"><DerivLogo altura={13} /></span>
           </button>
         </div>
       )}

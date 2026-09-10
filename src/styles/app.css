@@ -1653,6 +1653,10 @@ button, input { font: inherit; color: inherit; }
 }
 .selo.demo { background: var(--account-demo-soft); color: var(--account-demo); }
 .selo.real { background: var(--up-soft); color: var(--up); }
+/* Logotipo da Deriv dentro de um item de menu: alinha pela linha do texto. */
+/* o item ja tem gap de 10px entre os filhos; encosta o logotipo na palavra anterior */
+.menu-acao-logo { display: inline-flex; align-items: center; margin-left: -4px; }
+.menu-acao.perigo .menu-acao-logo svg path { fill: currentColor; }
 /*
   No chip do topo, a etiqueta e o saldo se alinham pelo CENTRO OPTICO, nao
   pela caixa: a etiqueta vira uma caixa de altura fixa com o texto centrado
