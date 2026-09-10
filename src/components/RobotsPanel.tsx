@@ -259,7 +259,6 @@ export function RobotsPanel({
           </p>
         </div>
         <div className="rob-workspace-actions">
-          <span className={`rob-account-tag ${isDemo ? 'demo' : 'real'}`}>{isDemo ? 'DEMO' : 'CONTA REAL'} · novos robôs</span>
           <button className="rob-new-button" onClick={abrirBloco} disabled={blocos.length >= MAX_BLOCOS && !temPreparoDisponivel}>+ Novo robô</button>
         </div>
       </div>
