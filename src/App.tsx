@@ -324,7 +324,7 @@ export default function App() {
           {admin === true && (
             <button className={tela === 'gestao' ? 'on' : ''} onClick={() => setTela('gestao')}>Administração</button>
           )}
-          <button className={tela === 'gerenciamento' ? 'on' : ''} onClick={() => setTela('gerenciamento')}>Gerenciamento Operacional</button>
+          <button className={tela === 'gerenciamento' ? 'on' : ''} onClick={() => setTela('gerenciamento')}>Gerenciamento</button>
           <button className={tela === 'marketplace' ? 'on' : ''} onClick={() => setTela('marketplace')}>Marketplace</button>
           <button className={tela === 'aulas' ? 'on' : ''} onClick={() => setTela('aulas')}>Aulas</button>
         </nav>
