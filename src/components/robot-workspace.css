@@ -36,7 +36,15 @@
 .rob-view-options { display: flex; gap: 3px; padding: 4px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; }
 .rob-view-options button { padding: 7px 12px; border: 0; background: none; color: var(--text); border-radius: 6px; cursor: pointer; font-size: 12px; }
 .rob-view-options button[aria-pressed='true'] { background: var(--primary-soft); color: var(--primary); }
-.robot-workspace .rob-workspace-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 570px), 1fr)); gap: 18px; align-items: start; }
+.robot-workspace .rob-workspace-board { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
+.robot-workspace .rob-workspace-toolbar[hidden] { display: none; }
+.robot-workspace-empty { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 60px 24px; text-align: center; border: 1px dashed var(--border); border-radius: 18px; background: var(--bg); }
+.robot-workspace-empty h3 { font-size: 24px; margin: 0; letter-spacing: -.03em; }
+.robot-workspace-empty p { margin: 0; color: var(--muted); font-size: 16px; }
+.robot-workspace-empty small { color: var(--muted); }
+.robot-empty-symbol { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 18px; color: var(--primary); background: var(--primary-soft); font-size: 36px; }
+.robot-session-loading { display: grid; gap: 8px; padding: 24px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; }
+.robot-session-loading span { color: var(--muted); }
 .robot-workspace .rob-workspace-board.modo-lista, .robot-workspace .rob-workspace-board.em-foco { grid-template-columns: minmax(0, 1fr); }
 .robot-workspace .rob-board-group { display: contents; }
 .robot-workspace .rob-board-slot { min-width: 0; }
@@ -105,6 +113,7 @@
 .robot-workspace .pc-conteudo { padding: 18px; }
 .robot-workspace button:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 @container robot-desk (min-width: 1150px) {
+  .robot-workspace .rob-workspace-board.modo-grade:not(.em-foco):not(.painel-unico) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .robot-workspace .tv.tv-expandido .tv-corpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); grid-template-rows: auto; align-items: start; }
   .robot-workspace .tv-expandido .tv-painel-principal { display: block; min-width: 0; }
   .robot-workspace .tv-expandido .tv-ops { grid-column: 2; grid-row: auto; border-top: 0; border-left: 1px solid var(--border); }

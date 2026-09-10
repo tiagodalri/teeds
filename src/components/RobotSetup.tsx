@@ -5,14 +5,9 @@ import type { Identidade } from '../core/deriv/branding'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { Emblema } from './RobotCard'
 import { recuperacaoDoRobo } from '../core/deriv/strategies'
-import { MARCA } from '../marca'
-
-/**
- * Preparo do robo, uma pergunta por vez.
- *
- * A configuracao so aparece na hora de ligar: fora daqui a tela inteira e
- * da operacao. As respostas ficam guardadas para a proxima vez.
- */
+import { RobotCatalog } from './RobotCatalog'
+import { RobotDialog } from './RobotDialog'
+import './robot-launch.css'
 
 interface Props {
   identidade: Identidade
@@ -22,74 +17,21 @@ interface Props {
   configInicial: ConfigEstrategia
   moeda: string
   isDemo: boolean
+  contaId?: string | null
+  escolherModelo?: boolean
   onCancelar: () => void
-  onLigar: (cfg: ConfigEstrategia, symbol: string) => void
+  onLigar: (cfg: ConfigEstrategia, symbol: string, modelo?: Identidade) => void
+  ligando?: boolean
+  erro?: string | null
 }
-
 const CHAVE = 'teeds.robo.preparo'
-
-const din = (v: number, m = 'USD') =>
-  `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-
+const din = (v: number, m = 'USD') => `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 export function lerPreparo(): { cfg?: Partial<ConfigEstrategia>; symbol?: string } {
   try {
-    return JSON.parse(localStorage.getItem(CHAVE) || '{}')
-  } catch {
-    return {}
-  }
+    const valor = JSON.parse(localStorage.getItem(CHAVE) || '{}')
+    return valor && typeof valor === 'object' && !Array.isArray(valor) ? valor : {}
+  } catch { return {} }
 }
-
-function guardarPreparo(cfg: ConfigEstrategia, symbol: string) {
-  try {
-    localStorage.setItem(CHAVE, JSON.stringify({ cfg, symbol }))
-  } catch {
-    /* sem armazenamento: na proxima vez os valores voltam ao padrao */
-  }
-}
-
-/* ------------------------------------------------------------ campo numero */
-
-function Numero({
-  valor, aoMudar, sufixo, passo = 0.05, minimo = 0, maximo = Infinity, auto,
-}: {
-  valor: number
-  aoMudar: (n: number) => void
-  sufixo?: string
-  passo?: number
-  minimo?: number
-  maximo?: number
-  auto?: boolean
-}) {
-  const ref = useRef<HTMLInputElement>(null)
-  useEffect(() => { if (auto) ref.current?.select() }, [auto])
-  return (
-    <div className="qz-campo">
-      <input
-        ref={ref} type="number" inputMode="decimal" step={passo}
-        min={minimo} max={Number.isFinite(maximo) ? maximo : undefined}
-        value={valor}
-        // Sem isto, clicar no campo deixa o valor antigo e o que a pessoa
-        // digita e inserido no meio dele: 10 vira 1080000.
-        onFocus={(e) => e.currentTarget.select()}
-        onMouseUp={(e) => e.preventDefault()}
-        onChange={(e) => {
-          const n = Number(e.target.value)
-          if (!Number.isFinite(n)) return
-          aoMudar(Math.min(maximo, Math.max(minimo, n)))
-        }}
-      />
-      {sufixo && <span>{sufixo}</span>}
-    </div>
-  )
-}
-
-/**
- * Limites de sanidade para o que volta do navegador.
- *
- * Um valor fora da faixa quase sempre e erro de digitacao, e um freio
- * gigante e o mesmo que freio nenhum — entao esses voltam para o padrao
- * em vez de serem só aparados.
- */
 const FAIXAS: Record<keyof ConfigEstrategia, [number, number]> = {
   valorInicial: [0.35, 10_000],
   valorAoVencer: [0.35, 10_000],
@@ -115,179 +57,104 @@ function sanear(cfg: ConfigEstrategia, padrao: ConfigEstrategia): ConfigEstrateg
   return limpo
 }
 
-/* ------------------------------------------------------------- assistente */
 
-export function RobotSetup({
-  identidade, nomeEstrategia, symbols, symbolInicial, configInicial,
-  moeda, isDemo, onCancelar, onLigar,
-}: Props) {
-  const guardado = useMemo(lerPreparo, [])
-  const recuperacao = useMemo(() => recuperacaoDoRobo(identidade.id), [identidade.id])
-  const [cfg, setCfg] = useState<ConfigEstrategia>(
-    sanear({
-      ...configInicial,
-      ...guardado.cfg,
-      // Este fluxo nao tem campo de teto por entrada. Um teto invisivel,
-      // herdado de uma configuracao antiga guardada no navegador, desligava
-      // o robo com "passaria do teto" no meio da recuperacao — travando o
-      // prejuizo bem na hora de recupera-lo. Quem freia aqui e so o "Parar
-      // se perder", que o motor ja respeita sem deixar passar do limite.
-      valorMaximo: 0,
-      fatorGale: recuperacao.margem,
-      galeApos: recuperacao.galeApos,
-    }, configInicial),
-  )
-  // O ativo nao se escolhe: e o da casa. `symbolInicial` continua na
-  // assinatura para quem ja chama o componente, mas nao manda mais nada.
-  void symbolInicial
-  const symbol = ATIVO_DOS_ROBOS
-  const [passo, setPasso] = useState(0)
+export const ETAPAS_PREPARO = [
+  { key: 'valorAoVencer', titulo: 'Qual o valor de cada entrada?', ajuda: 'É a entrada base. A recuperação do modelo pode aumentar as entradas seguintes.', min: .35, max: 10_000, atalhos: [.35, 1, 2, 5] },
+  { key: 'takeProfit', titulo: 'Qual é a meta de ganho?', ajuda: 'O robô para quando o resultado da sessão atingir esta meta. Zero desativa este limite.', min: 0, max: 10_000, atalhos: [5, 10, 25, 50] },
+  { key: 'stopLoss', titulo: 'Qual é o limite de perda?', ajuda: 'O motor também verifica a próxima entrada: pode parar antes do limite para não ultrapassá-lo. Zero desativa este freio.', min: 0, max: 10_000, atalhos: [5, 10, 25, 50] },
+  { key: 'maxOperacoes', titulo: 'Quantas operações no máximo?', ajuda: 'A sessão termina ao atingir essa quantidade ou um dos limites anteriores. Zero deixa a quantidade sem limite.', min: 0, max: 5_000, atalhos: [0, 50, 100, 200] },
+] as const
+
+export function valorDePreparo(texto: string, min: number, max: number, inteiro = false): number | null {
+  if (!texto.trim() || !/^\d+(?:[.,]\d{0,2})?$/.test(texto.trim())) return null
+  const n = Number(texto.replace(',', '.'))
+  return Number.isFinite(n) && n >= min && n <= max && (!inteiro || Number.isInteger(n)) ? n : null
+}
+
+export function configurarPreparo(inicial: ConfigEstrategia, valores: Record<string, string>, modeloId: string): ConfigEstrategia | null {
+  if (!ETAPAS_PREPARO.every(e => valorDePreparo(valores[e.key] ?? '', e.min, e.max, e.key === 'maxOperacoes') !== null)) return null
+  const rec = recuperacaoDoRobo(modeloId)
+  const cfg = { ...inicial, ...Object.fromEntries(ETAPAS_PREPARO.map(e => [e.key, valorDePreparo(valores[e.key], e.min, e.max, e.key === 'maxOperacoes')!])) } as ConfigEstrategia
+  return { ...cfg, valorInicial: cfg.valorAoVencer, valorMaximo: 0, fatorGale: rec.margem, galeApos: rec.galeApos }
+}
+
+export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, contaId, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
+  const [modelo, setModelo] = useState(identidade)
+  const inicial = useMemo(() => sanear({ ...configInicial, ...lerPreparo().cfg, valorMaximo: 0 }, configInicial), [])
+  const [valores, setValores] = useState(() => Object.fromEntries(ETAPAS_PREPARO.map(e => [e.key, String(inicial[e.key])])))
+  // -1 is the model picker; 0..3 contain exactly one input; 4 is review.
+  const [passo, setPasso] = useState(escolherModelo ? -1 : 0)
   const [confirmaReal, setConfirmaReal] = useState(false)
-
-  const nomeAtivo = symbols.find((s) => s.symbol === symbol)?.name ?? symbol
-  const muda = (p: Partial<ConfigEstrategia>) => setCfg((c) => ({ ...c, ...p }))
-
-  const passos = [
-    {
-      chave: 'valor',
-      titulo: 'Quanto vale cada entrada?',
-      ajuda: `O mínimo da Deriv é ${din(0.35, moeda)}. É o valor de partida — e o valor para o qual ele volta toda vez que ganha.`,
-      valido: cfg.valorAoVencer >= 0.35,
-      corpo: (
-        <>
-          <Numero auto valor={cfg.valorAoVencer} sufixo={moeda} minimo={0.35} maximo={10_000}
-            aoMudar={(n) => muda({ valorAoVencer: n, valorInicial: n })} />
-          <div className="qz-atalhos">
-            {[0.35, 1, 2, 5].map((v) => (
-              <button key={v} className={cfg.valorAoVencer === v ? 'on' : ''}
-                onClick={() => muda({ valorAoVencer: v, valorInicial: v })}>
-                {din(v, '')}
-              </button>
-            ))}
-          </div>
-        </>
-      ),
-    },
-    {
-      chave: 'freios',
-      titulo: 'Quando ele deve parar sozinho?',
-      ajuda: 'Os dois freios contam o resultado da sessão. Ele desliga assim que qualquer um for atingido.',
-      valido: true,
-      corpo: (
-        <div className="qz-dupla">
-          <label>
-            <span className="rot">Parar se ganhar</span>
-            <Numero auto valor={cfg.takeProfit} passo={1} sufixo={moeda} maximo={10_000}
-              aoMudar={(n) => muda({ takeProfit: n })} />
-          </label>
-          <label>
-            <span className="rot">Parar se perder</span>
-            <Numero valor={cfg.stopLoss} passo={1} sufixo={moeda} maximo={10_000}
-              aoMudar={(n) => muda({ stopLoss: n })} />
-          </label>
-          <label>
-            <span className="rot">Máximo de operações <small>(0 = sem limite)</small></span>
-            <Numero valor={cfg.maxOperacoes} passo={10} minimo={0} maximo={5_000}
-              aoMudar={(n) => muda({ maxOperacoes: Math.round(n) })} />
-          </label>
-        </div>
-      ),
-    },
-    {
-      chave: 'conferir',
-      titulo: 'Tudo certo?',
-      ajuda: 'Confira antes de soltar o robô. Dá para voltar e mudar qualquer coisa.',
-      valido: true,
-      corpo: (
-        <>
-          <dl className="qz-resumo">
-            <div><dt>Ativo</dt><dd>{nomeAtivo.replace(' Index', '')} <em className="qz-fixo">definido pela {MARCA.prosa}</em></dd></div>
-            <div><dt>Entrada</dt><dd>{din(cfg.valorAoVencer, moeda)}</dd></div>
-            <div><dt>Entradas</dt><dd>{identidade.id === 'thepalm' ? 'após análise virtual dos últimos 25 dígitos' : 'em todas as operações'}</dd></div>
-            <div>
-              <dt>Martingale</dt>
-              <dd>
-                {cfg.fatorGale === 0
-                  ? 'desligado neste modelo — entrada sempre igual'
-                  : identidade.id === 'thepalm'
-                    ? 'recuperação adaptativa em Under 5 pelo payout real'
-                    : `recuperação automática protegida pela ${MARCA.prosa}`}
-              </dd>
-            </div>
-            <div><dt>Para se ganhar</dt><dd>{din(cfg.takeProfit, moeda)}</dd></div>
-            <div><dt>Para se perder</dt><dd>{din(cfg.stopLoss, moeda)}</dd></div>
-            <div><dt>Máximo de operações</dt><dd>{cfg.maxOperacoes > 0 ? cfg.maxOperacoes : 'sem limite'}</dd></div>
-          </dl>
-          {!isDemo && (
-            <p className="qz-alerta">
-              Esta é a sua <strong>conta real</strong>. O robô vai operar com dinheiro de verdade.
-            </p>
-          )}
-        </>
-      ),
-    },
-  ]
-
-  const atual = passos[passo]
-  const ultimo = passo === passos.length - 1
-
-  function avancar() {
-    if (!atual.valido) return
-    if (!ultimo) { setPasso(passo + 1); return }
-    if (!isDemo && !confirmaReal) { setConfirmaReal(true); return }
-    guardarPreparo(cfg, symbol)
-    onLigar(cfg, symbol)
-  }
-
-  // teclado: Enter avanca, Esc desiste
+  const inputRef = useRef<HTMLInputElement>(null)
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const submitted = useRef(false)
+  const etapa = passo >= 0 && passo < ETAPAS_PREPARO.length ? ETAPAS_PREPARO[passo] : null
+  const revisao = passo === ETAPAS_PREPARO.length
+  const minimo = etapa?.key === 'stopLoss' && !isDemo ? Number(valores.valorAoVencer.replace(',', '.')) : etapa?.min ?? 0
+  const valido = !etapa || valorDePreparo(valores[etapa.key], minimo, etapa.max, etapa.key === 'maxOperacoes') !== null
+  const nomeAtivo = symbols.find(s => s.symbol === ATIVO_DOS_ROBOS)?.name ?? ATIVO_DOS_ROBOS
+  const todasValidas = ETAPAS_PREPARO.every(e => valorDePreparo(valores[e.key], e.min, e.max, e.key === 'maxOperacoes') !== null)
+    && (isDemo || Number(valores.stopLoss.replace(',', '.')) >= Number(valores.valorAoVencer.replace(',', '.')))
+  const quantidade = ETAPAS_PREPARO.length + 1 + (escolherModelo ? 1 : 0)
+  const numero = passo + (escolherModelo ? 2 : 1)
   useEffect(() => {
-    const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { onCancelar(); return }
-      if (e.key === 'Enter') { e.preventDefault(); avancar() }
-    }
-    window.addEventListener('keydown', aoTeclar)
-    return () => window.removeEventListener('keydown', aoTeclar)
-  })
-
-  return (
-    <div className="qz-fundo" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancelar() }}>
-      <div className="qz" style={{ ['--robo' as any]: identidade.cor, ['--robo-suave' as any]: identidade.corSuave }}
-        role="dialog" aria-modal="true" aria-label={`Preparar ${nomeEstrategia}`}>
-
-        <header className="qz-topo">
-          <Emblema id={identidade} tamanho={34} />
-          <div>
-            <b>{nomeEstrategia}</b>
-            <span>preparando para operar</span>
-          </div>
-          <button className="qz-fechar" onClick={onCancelar} aria-label="Fechar">×</button>
-        </header>
-
-        <div className="qz-passos" aria-hidden="true">
-          {passos.map((p, i) => (
-            <i key={p.chave} className={i < passo ? 'feito' : i === passo ? 'agora' : ''} />
-          ))}
-        </div>
-
-        <div className="qz-corpo" key={atual.chave}>
-          <span className="qz-conta">Passo {passo + 1} de {passos.length}</span>
-          <h3>{atual.titulo}</h3>
-          <p className="qz-ajuda">{atual.ajuda}</p>
-          {atual.corpo}
-        </div>
-
-        <footer className="qz-rodape">
-          <button className="qz-voltar" disabled={passo === 0} onClick={() => setPasso(passo - 1)}>
-            Voltar
-          </button>
-          <button className={`qz-seguir ${confirmaReal ? 'confirmar' : ''}`}
-            disabled={!atual.valido} onClick={avancar}>
-            {ultimo
-              ? (confirmaReal ? 'Confirmar com dinheiro real' : `Ligar ${nomeEstrategia}`)
-              : 'Continuar'}
-          </button>
-        </footer>
+    scrollRef.current?.scrollTo({ top: 0 })
+    if (inputRef.current) { inputRef.current.focus(); inputRef.current.select() } else titleRef.current?.focus()
+  }, [passo])
+  useEffect(() => { if (!ligando) submitted.current = false }, [ligando, erro])
+  const voltar = () => { if (ligando) return; setConfirmaReal(false); setPasso(p => p - 1) }
+  function iniciar() {
+    if (submitted.current || ligando || !todasValidas || (!isDemo && !confirmaReal)) return
+    submitted.current = true
+    const cfg = configurarPreparo(inicial, valores, modelo.id)
+    if (!cfg) { submitted.current = false; return }
+    try { localStorage.setItem(CHAVE, JSON.stringify({ cfg, symbol: ATIVO_DOS_ROBOS })) } catch { /* optional browser preferences */ }
+    onLigar(cfg, ATIVO_DOS_ROBOS, modelo)
+  }
+  return <RobotDialog label="Configurar robô" busy={ligando} onCancel={onCancelar}>
+    <form className={`robot-launch ${passo === -1 ? 'picking' : ''}`} onSubmit={e => {
+      e.preventDefault()
+      // Enter in a value field advances once, but can never send an order.
+      if (!revisao && valido && !ligando) setPasso(p => p + 1)
+    }} onKeyDown={e => { if (e.key === 'Enter' && (e.repeat || e.nativeEvent.isComposing)) e.preventDefault() }}>
+      <header className="robot-launch-top">
+        <div className="robot-launch-title"><Emblema id={modelo} tamanho={32} /><div><b>{passo === -1 ? 'Novo robô' : modelo.nome}</b><span>Preparar sessão</span></div></div>
+        <span className={`robot-launch-account ${isDemo ? 'demo' : 'real'}`}>{isDemo ? 'DEMO' : 'CONTA REAL'}{contaId ? ` · …${contaId.slice(-4)}` : ''} · {moeda}</span>
+        <button type="button" className="robot-launch-close" onClick={onCancelar} disabled={ligando} aria-label="Cancelar configuração">×</button>
+      </header>
+      <div className="robot-launch-progress" aria-label={`Etapa ${numero} de ${quantidade}`}><span style={{ width: `${numero / quantidade * 100}%` }} /></div>
+      <div className="robot-launch-body" ref={scrollRef}>
+        <span className="robot-launch-step">ETAPA {numero} DE {quantidade} · {passo === -1 ? 'MODELO' : revisao ? 'REVISÃO' : 'SEUS LIMITES'}</span>
+        <h3 ref={titleRef} tabIndex={-1}>{passo === -1 ? 'Escolha seu robô.' : revisao ? 'Revise. Depois, dê o play.' : etapa?.titulo}</h3>
+        {passo === -1 ? <RobotCatalog selected={modelo.id} onSelect={setModelo} /> : etapa ? <div className="robot-launch-question" key={etapa.key}>
+          <p id="robot-step-help">{etapa.key === 'stopLoss' && !isDemo ? 'Na conta real, o limite de perda é obrigatório e não pode ser menor que a entrada. O motor pode parar antes para impedir que a próxima entrada ultrapasse esse valor.' : etapa.ajuda}</p>
+          <label className="robot-launch-number"><span className="sr-only">{etapa.titulo}</span>
+            <input ref={inputRef} aria-describedby="robot-step-help" aria-invalid={!valido} autoComplete="off" inputMode={etapa.key === 'maxOperacoes' ? 'numeric' : 'decimal'}
+              value={valores[etapa.key]} onFocus={e => e.currentTarget.select()}
+              onChange={e => setValores(v => ({ ...v, [etapa.key]: e.target.value }))} />
+            <span>{etapa.key === 'maxOperacoes' ? 'operações' : moeda}</span>
+          </label>
+          <div className="robot-launch-presets">{etapa.atalhos.map(v => <button type="button" key={v} aria-pressed={Number(valores[etapa.key].replace(',', '.')) === v}
+            onClick={() => setValores(prev => ({ ...prev, [etapa.key]: String(v) }))}>{etapa.key === 'maxOperacoes' ? v === 0 ? 'Sem limite' : v : din(v, '')}</button>)}</div>
+          <p className={valido ? 'robot-launch-hint' : 'robot-launch-error'} role={!valido ? 'status' : undefined}>
+            {valido ? etapa.key === 'valorAoVencer' ? `Mínimo: ${din(.35, moeda)} por entrada.` : Number(valores[etapa.key].replace(',', '.')) === 0 ? 'Este limite está desativado.' : 'Você pode voltar e ajustar antes de iniciar.' : `Informe ${etapa.key === 'maxOperacoes' ? 'um número inteiro' : 'um valor'} de ${minimo.toLocaleString('pt-BR')} a ${etapa.max.toLocaleString('pt-BR')}.`}
+          </p>
+        </div> : <div className="robot-launch-review">
+          <p>{modelo.descricao}</p>
+          <dl><div><dt>Ativo</dt><dd>{nomeAtivo.replace(' Index', '')}</dd></div>{ETAPAS_PREPARO.map((e, i) => <div key={e.key}><dt>{['Entrada base', 'Meta de ganho', 'Limite de perda', 'Máximo de operações'][i]}</dt><dd>{Number(valores[e.key].replace(',', '.')) === 0 ? 'Sem limite' : e.key === 'maxOperacoes' ? valores[e.key] : din(Number(valores[e.key].replace(',', '.')), moeda)}<button type="button" onClick={() => { setConfirmaReal(false); setPasso(i) }} disabled={ligando} aria-label={`Editar ${e.titulo}`}>Editar</button></dd></div>)}</dl>
+          <p className="robot-launch-risk">A recuperação pode aumentar o valor das entradas. Os robôs desta conta compartilham o saldo. Não há garantia de lucro.</p>
+          {!isDemo && <label className="robot-launch-consent"><input type="checkbox" checked={confirmaReal} disabled={ligando} onChange={e => setConfirmaReal(e.target.checked)} /><span>Entendo que esta sessão usará <strong>dinheiro real</strong> e confirmo os valores acima.</span></label>}
+        </div>}
+        {erro && <p className="robot-launch-error" role="alert">{erro}</p>}
+        {revisao && !todasValidas && <p className="robot-launch-error" role="alert">Revise os valores acima. Na conta real, o limite de perda precisa ser pelo menos igual à entrada base.</p>}
       </div>
-    </div>
-  )
+      <footer className="robot-launch-footer">
+        <button type="button" className="robot-launch-back" disabled={ligando} onClick={passo === (escolherModelo ? -1 : 0) ? onCancelar : voltar}>{passo === (escolherModelo ? -1 : 0) ? 'Cancelar' : '← Voltar'}</button>
+        <span>{passo === -1 ? modelo.nome : revisao ? isDemo ? 'Dinheiro fictício' : 'Dinheiro real' : 'Nada será operado ainda'}</span>
+        {revisao ? <button type="button" className="robot-launch-next" disabled={ligando || !todasValidas || (!isDemo && !confirmaReal)} onClick={iniciar}>{ligando ? 'Iniciando…' : '▶ Iniciar robô'}</button>
+          : <button type="submit" className="robot-launch-next" disabled={!valido || ligando}>Continuar <span aria-hidden="true">→</span></button>}
+      </footer>
+    </form>
+  </RobotDialog>
 }

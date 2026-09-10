@@ -93,6 +93,9 @@ try {
         contents: `export { resumirSessoes, RobotOverview } from './src/components/RobotOverview.tsx';
           export { RobotLive } from './src/components/RobotLive.tsx';
           export { RobotCatalog } from './src/components/RobotCatalog.tsx';
+          export { RobotSetup, ETAPAS_PREPARO, valorDePreparo, configurarPreparo } from './src/components/RobotSetup.tsx';
+          export { IDENTIDADES } from './src/core/deriv/branding.ts';
+          export { recuperacaoDoRobo } from './src/core/deriv/strategies.ts';
           export { WorkspaceNav } from './src/components/WorkspaceNav.tsx';
           export { createElement } from 'react';
           export { renderToStaticMarkup } from 'react-dom/server';`,
@@ -109,12 +112,12 @@ try {
       banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
       logLevel: 'silent',
     })
-    const { resumirSessoes, RobotOverview, RobotLive, RobotCatalog, WorkspaceNav, createElement, renderToStaticMarkup } = await import(pathToFileURL(saida).href)
+    const { resumirSessoes, RobotOverview, RobotLive, RobotCatalog, RobotSetup, ETAPAS_PREPARO, valorDePreparo, configurarPreparo, IDENTIDADES, recuperacaoDoRobo, WorkspaceNav, createElement, renderToStaticMarkup } = await import(pathToFileURL(saida).href)
     const verificar = (nome, executar) => teste(`${marca}: ${nome}`, executar)
     const render = (componente, props) => renderToStaticMarkup(createElement(componente, props))
     verificar('catálogo mostra somente os modelos da marca e uma seleção', () => {
       const html = render(RobotCatalog, { selected: 'ag2', onSelect() {}, onCompare() {} })
-      assert.equal((html.match(/class="robot-model-heading"/g) ?? []).length, marca === 'teeds' ? 7 : 4)
+      assert.equal((html.match(/aria-pressed=/g) ?? []).length, marca === 'teeds' ? 7 : 4)
       assert.equal((html.match(/aria-pressed="true"/g) ?? []).length, 1)
       assert.equal(html.includes('The Palm'), marca === 'teeds')
       assert.ok(!html.includes('% de chance'))
@@ -122,7 +125,43 @@ try {
     verificar('catálogo não permite preparar mais painéis quando estão ocupados', () => {
       const html = render(RobotCatalog, { selected: 'ag2', onSelect() {}, onCompare() {}, indisponivel: true })
       assert.equal((html.match(/disabled=""/g) ?? []).length, marca === 'teeds' ? 7 : 4)
-      assert.ok(html.includes('Todos os painéis estão ocupados'))
+      assert.ok(!html.includes('Iniciar robô'))
+    })
+    verificar('cada valor tem etapa própria e os limites existentes são mantidos', () => {
+      assert.deepEqual(ETAPAS_PREPARO.map(e => e.key), ['valorAoVencer', 'takeProfit', 'stopLoss', 'maxOperacoes'])
+      assert.equal(valorDePreparo('0,35', .35, 10000), .35)
+      assert.equal(valorDePreparo('', .35, 10000), null)
+      assert.equal(valorDePreparo('0,20', .35, 10000), null)
+      assert.equal(valorDePreparo('10001', 0, 10000), null)
+      assert.equal(valorDePreparo('1e3', 0, 10000), null)
+      assert.equal(valorDePreparo('1,5', 0, 5000, true), null)
+      assert.equal(valorDePreparo('0', 0, 5000, true), 0)
+    })
+    verificar('configuração acompanha o modelo escolhido sem herdar recuperação de outro', () => {
+      const valores = { valorAoVencer: '0,35', takeProfit: '5', stopLoss: '10', maxOperacoes: '50' }
+      for (const modelo of IDENTIDADES) {
+        const cfg = configurarPreparo(config, valores, modelo.id)
+        const rec = recuperacaoDoRobo(modelo.id)
+        assert.equal(cfg.valorInicial, .35)
+        assert.equal(cfg.valorAoVencer, .35)
+        assert.equal(cfg.valorMaximo, 0)
+        assert.equal(cfg.fatorGale, rec.margem)
+        assert.equal(cfg.galeApos, rec.galeApos)
+        assert.equal(cfg.maxOperacoes, 50)
+      }
+      assert.equal(configurarPreparo(config, { ...valores, stopLoss: '' }, IDENTIDADES[0].id), null)
+    })
+    verificar('preparo usa diálogo independente com um campo e sem botão de iniciar antecipado', () => {
+      const props = { identidade: IDENTIDADES[0], nomeEstrategia: IDENTIDADES[0].nome, symbols: [], symbolInicial: '', configInicial: config, moeda: 'USD', isDemo: true, contaId: 'DOT1234', onLigar() {}, onCancelar() {} }
+      const html = render(RobotSetup, props)
+      assert.match(html, /<dialog[^>]*class="robot-launch-dialog"/)
+      assert.equal((html.match(/<input/g) ?? []).length, 1)
+      assert.match(html, /DEMO/)
+      assert.doesNotMatch(html, /▶ Iniciar robô/)
+      const catalogo = render(RobotSetup, { ...props, escolherModelo: true, isDemo: false })
+      assert.match(catalogo, /CONTA REAL/)
+      assert.match(catalogo, /robot-picker/)
+      assert.doesNotMatch(catalogo, /robot-launch-number/)
     })
     verificar('menu sem Operações e Administração exclusiva para ADM', () => {
       const cliente = render(WorkspaceNav, { page: 'robos', admin: false, onNavigate() {} })

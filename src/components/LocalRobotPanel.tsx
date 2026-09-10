@@ -3,13 +3,10 @@ import type { TeedsSocket } from '../core/deriv/client'
 import { type ConfigEstrategia, type EstadoMotor, type Estrategia } from '../core/deriv/engine'
 import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
-// apelidada porque a propriedade deste componente ja se chama `identidade`
-import { identidade as doCatalogo } from '../core/deriv/branding'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { RobotLive } from './RobotLive'
-import { RobotSetup, lerPreparo } from './RobotSetup'
+import { RobotSetup } from './RobotSetup'
 import type { Identidade } from '../core/deriv/branding'
-import { Emblema } from './RobotCard'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { acompanharNoServidor, ligarNoServidor, pararNoServidor } from '../core/teeds/servidorRobos'
 import { MARCA } from '../marca'
@@ -40,6 +37,8 @@ interface Props {
    * comandado por conversa não virar um cidadão de segunda classe na tela.
    */
   adotar?: { id: string; config: ConfigEstrategia; origem?: string }
+  solicitarPreparo?: boolean
+  onFecharPreparo?: () => void
 }
 
 const PADRAO: ConfigEstrategia = {
@@ -59,7 +58,7 @@ const din = (v: number, m = 'USD') =>
 export function LocalRobotPanel({
   socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
   onRemover, titulo, expandido = false, onExpandir, onSessaoChange, sessaoTeeds, contaId,
-  adotar,
+  adotar, solicitarPreparo = false, onFecharPreparo,
 }: Props) {
   // O cartao escolhido na vitrine dita a estrategia deste bloco…
   const daVitrine = ESTRATEGIAS_LOCAIS.find((e) => e.id === identidade.id) ?? ESTRATEGIAS_LOCAIS[0]
@@ -80,17 +79,19 @@ export function LocalRobotPanel({
   const sessaoIdRef = useRef<string | null>(null)
   const pararDeOlharRef = useRef<(() => void) | null>(null)
   const [ligando, setLigando] = useState(false)
+  const envioPendente = useRef(false)
+  const [idDaSessao, setIdDaSessao] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const onSessaoChangeRef = useRef(onSessaoChange)
   onSessaoChangeRef.current = onSessaoChange
-  const sessaoAtiva = estado !== null
-  const estrategia = estado && sessaoRef.current ? sessaoRef.current.estrategia : daVitrine
-  const ident = estado && sessaoRef.current ? sessaoRef.current.ident : identidade
+  const sessaoAtiva = estado !== null || idDaSessao !== null
+  const estrategia = sessaoAtiva && sessaoRef.current ? sessaoRef.current.estrategia : daVitrine
+  const ident = sessaoAtiva && sessaoRef.current ? sessaoRef.current.ident : identidade
 
   useEffect(() => () => { pararDeOlharRef.current?.() }, [])
   useEffect(() => {
     onSessaoChangeRef.current?.(sessaoAtiva, sessaoAtiva ? sessaoIdRef.current : null)
-  }, [sessaoAtiva, estado?.rodando])
+  }, [sessaoAtiva, estado?.rodando, idDaSessao])
   useEffect(() => () => { onSessaoChangeRef.current?.(false, null) }, [])
 
   /*
@@ -144,6 +145,7 @@ export function LocalRobotPanel({
     if (!sessaoTeeds) return
     pararDeOlharRef.current?.()
     sessaoIdRef.current = id
+    setIdDaSessao(id)
     pararDeOlharRef.current = acompanharNoServidor(
       sessaoTeeds, id,
       (s) => {
@@ -173,26 +175,33 @@ export function LocalRobotPanel({
    * servidor, o mesmo que o chat usa — e o que a tela faz daqui em diante é
    * assistir.
    */
-  async function ligar(config: ConfigEstrategia, ativo: string) {
-    void ativo // o robô opera sempre no ativo da casa
+  async function ligar(config: ConfigEstrategia, ativo: string, modelo = ident) {
+    void ativo
+    if (envioPendente.current) return
     if (!sessaoTeeds || !contaId) {
       setErro(`Entre na sua conta ${MARCA.prosa} e conecte a Deriv para ligar o robô.`)
       return
     }
-    setPreparando(false)
-    setCfg(config)
+    const escolhida = ESTRATEGIAS_LOCAIS.find(e => e.id === modelo.id)
+    if (!escolhida) { setErro('Modelo indisponível. Escolha outro robô.'); return }
+    envioPendente.current = true
     setErro(null)
     setLigando(true)
-    // a sessao nasce com o cartao escolhido AGORA na vitrine, e fica com ele
-    sessaoRef.current = { estrategia: daVitrine, ident: identidade }
     try {
-      const s = await ligarNoServidor(sessaoTeeds, { roboId: daVitrine.id, contaId, config })
+      const s = await ligarNoServidor(sessaoTeeds, { roboId: escolhida.id, contaId, config })
+      // Commit the new identity/config only after the server accepts it.
+      sessaoRef.current = { estrategia: escolhida, ident: modelo }
+      setCfg(config)
       setContaDaSessao({ contaId: s.contaId, demo: s.demo, moeda: s.moeda })
       olhar(s.id)
+      onSessaoChangeRef.current?.(true, s.id)
       if (typeof s.estado?.rodando === 'boolean') setEstado(s.estado)
+      setPreparando(false)
+      onFecharPreparo?.()
     } catch (e) {
       setErro((e as Error).message)
     } finally {
+      envioPendente.current = false
       setLigando(false)
     }
   }
@@ -219,60 +228,27 @@ export function LocalRobotPanel({
     { rot: 'Para se perder', valor: din(cfg.stopLoss, moedaDosParametros) },
   ]
 
-  // ------------------------------------------------------------ sem sessão
-  if (!estado) {
-    const ultimo = lerPreparo()
-    return (
-      <>
-        <div className="pronto pronto-compacto" style={{ ['--robo' as any]: identidade.cor, ['--robo-suave' as any]: identidade.corSuave }}>
-          <header className="pc-topo">
-            <span className="pc-emblema"><Emblema id={identidade} tamanho={46} /></span>
-            <div><span className="rot">{titulo} · pronto para configurar</span><h3>{ident.nome}</h3><p>{identidade.chamada}</p></div>
-            {onRemover && <button className="pc-fechar" onClick={onRemover} aria-label={`Fechar ${titulo}`} title="Fechar robô">×</button>}
-          </header>
+  const preparo = (preparando || solicitarPreparo) && <RobotSetup
+    key={`${contaId}:${isDemo}:${moeda}`}
+    identidade={ident}
+    nomeEstrategia={ident.nome}
+    symbols={symbols}
+    symbolInicial={symbol}
+    configInicial={cfg}
+    moeda={moeda}
+    isDemo={isDemo}
+    contaId={contaId}
+    escolherModelo={solicitarPreparo}
+    ligando={ligando}
+    erro={erro}
+    onCancelar={() => { if (envioPendente.current) return; setPreparando(false); setErro(null); onFecharPreparo?.() }}
+    onLigar={ligar}
+  />
 
-          <div className="pc-conteudo">
-            <div className="pc-regra">
-              <span className="rot">Como ele opera</span>
-              <strong>Último dígito {regra}</strong>
-              <small>{estrategia.descricao}</small>
-            </div>
-            <dl className="pc-metricas">
-              <div><dt>Dígitos vencedores</dt><dd className="ps-digitos">{[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter(ganhaCom).map((d) => <i key={d}>{d}</i>)}</dd></div>
-              <div><dt>Chance teórica</dt><dd>{identidade.chance}%</dd></div>
-              <div><dt>Ritmo</dt><dd>1 tick</dd></div>
-              <div><dt>Ativo</dt><dd>{nomeAtivo.replace(' Index', '')}</dd></div>
-            </dl>
-            <div className="pc-ultima">
-              <span className="rot">Última configuração</span>
-              <b>{din(ultimo.cfg?.valorAoVencer ?? cfg.valorAoVencer, moeda)} por entrada</b>
-              <small>Freios automáticos de ganho e perda</small>
-            </div>
-            <button className="pronto-btn" disabled={!socket || ligando || !sessaoTeeds || !contaId}
-              onClick={() => { setErro(null); setPreparando(true) }}>
-              {ligando ? 'ligando no servidor…' : <>Configurar e ligar <span>→</span></>}
-            </button>
-            {erro && <p className="pc-erro">{erro}</p>}
-            <p className="pc-nota">Os robôs operam no servidor da {MARCA.prosa}: seguem rodando com esta aba fechada.</p>
-          </div>
-        </div>
-
-        {preparando && (
-          <RobotSetup
-            identidade={identidade}
-            nomeEstrategia={doCatalogo(daVitrine.id).nome}
-            symbols={symbols}
-            symbolInicial={symbol}
-            configInicial={cfg}
-            moeda={moeda}
-            isDemo={isDemo}
-            onCancelar={() => setPreparando(false)}
-            onLigar={ligar}
-          />
-        )}
-      </>
-    )
-  }
+  // Draft panels are invisible; the dialog is portaled above the whole app.
+  if (!estado) return <>{(adotar || idDaSessao) && <div className="robot-session-loading" role="status">
+    <b>{ident.nome}</b><span>{erro ?? 'Conectando ao acompanhamento da sessão…'}</span>
+  </div>}{preparo}</>
 
   // ------------------------------------------------------------ com sessão
   return (
@@ -295,7 +271,7 @@ export function LocalRobotPanel({
         expandido={expandido}
         onExpandir={onExpandir}
         onDesligar={rodando ? desligar : undefined}
-        onLigarDeNovo={!rodando ? () => setPreparando(true) : undefined}
+        onLigarDeNovo={!rodando ? () => { setErro(null); setPreparando(true) } : undefined}
         onRemover={onRemover ? () => {
           if (rodando && !window.confirm('Este robô está operando no servidor. Deseja desligar e fechar o bloco?')) return
           desligar()
@@ -304,19 +280,8 @@ export function LocalRobotPanel({
         } : undefined}
       />
 
-      {preparando && (
-        <RobotSetup
-          identidade={identidade}
-          nomeEstrategia={doCatalogo(daVitrine.id).nome}
-          symbols={symbols}
-          symbolInicial={symbol}
-          configInicial={cfg}
-          moeda={moeda}
-          isDemo={isDemo}
-          onCancelar={() => setPreparando(false)}
-          onLigar={ligar}
-        />
-      )}
+      {preparo}
+
     </div>
   )
 }

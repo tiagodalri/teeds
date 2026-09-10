@@ -2,22 +2,30 @@ import { useState } from 'react'
 import { IDENTIDADES, type Identidade } from '../core/deriv/branding'
 import { Emblema } from './RobotCard'
 
-/** Selection only: starting an order still requires the existing setup. */
-export function RobotCatalog({ selected, onSelect, onCompare, indisponivel = false }: {
-  selected: string; onSelect: (modelo: Identidade) => void; onCompare: () => void; indisponivel?: boolean
+/** Browse and compare in place. Selection never sends an order. */
+export function RobotCatalog({ selected, onSelect, indisponivel = false }: {
+  selected: string; onSelect: (modelo: Identidade) => void; indisponivel?: boolean
 }) {
   const [search, setSearch] = useState('')
-  const normalizar = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-  const modelos = IDENTIDADES.filter(i => normalizar(`${i.nome} ${i.chamada} ${i.descricao}`).includes(normalizar(search.trim())))
-  return <section className="robot-catalog" aria-label="Escolher robô">
-    <header><div><span className="rob-eyebrow">ESCOLHA SUA ESTRATÉGIA</span><h3>Qual será seu próximo robô?</h3><p>Selecionar um modelo não altera robôs em execução.</p></div><button onClick={onCompare}>Comparar modelos</button></header>
-    <div className="robot-catalog-tools"><ol aria-label="Etapas para iniciar"><li><b>1</b> Escolha o modelo</li><li><b>2</b> Defina os limites</li><li><b>3</b> Revise e ligue</li></ol><input type="search" aria-label="Buscar modelo de robô" placeholder="Buscar modelo…" value={search} onChange={e => setSearch(e.target.value)} /></div>
-    <div className="robot-catalog-grid">{modelos.map(i => <button key={i.id} className={`robot-model ${selected === i.id ? 'selected' : ''}`} aria-pressed={selected === i.id} disabled={indisponivel} onClick={() => onSelect(i)}>
-      <span className="robot-model-heading"><Emblema id={i} tamanho={38} /><span><small>{i.chamada}</small><strong>{i.nome}</strong></span>{selected === i.id && <span className="robot-model-check" aria-label="Selecionado">✓</span>}</span>
-      <span className="robot-model-description">{i.descricao}</span>
-      <span className="robot-model-footer">{selected === i.id ? 'Modelo selecionado' : 'Selecionar modelo'}<span aria-hidden="true">→</span></span>
-    </button>)}</div>
-    {modelos.length === 0 && <div className="robot-catalog-empty">Nenhum modelo encontrado. <button onClick={() => setSearch('')}>Limpar busca</button></div>}
-    <small className="robot-catalog-note">{indisponivel ? 'Todos os painéis estão ocupados. Feche um painel encerrado para preparar outro robô. ' : ''}Os limites operacionais da conta continuam valendo. Nenhuma estratégia garante resultado.</small>
+  const normalize = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const modelos = IDENTIDADES.filter(i => normalize(`${i.nome} ${i.chamada} ${i.descricao}`).includes(normalize(search.trim())))
+  const atual = IDENTIDADES.find(i => i.id === selected) ?? IDENTIDADES[0]
+  return <section className="robot-picker" aria-label="Escolher robô">
+    <div className="robot-picker-list">
+      <input type="search" aria-label="Buscar modelo de robô" placeholder="Buscar robô…" value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="robot-picker-options" role="group" aria-label="Modelos disponíveis">{modelos.map(i =>
+        <button type="button" key={i.id} className={`robot-model ${selected === i.id ? 'selected' : ''}`} aria-pressed={selected === i.id} disabled={indisponivel} onClick={() => onSelect(i)}>
+          <Emblema id={i} tamanho={32} /><span><strong>{i.nome}</strong><small>{i.chamada}</small></span><span className="robot-model-check" aria-hidden="true">{selected === i.id ? '✓' : '›'}</span>
+        </button>)}
+        {modelos.length === 0 && <p>Nenhum robô encontrado. <button type="button" onClick={() => setSearch('')}>Limpar busca</button></p>}
+      </div>
+    </div>
+    <article className="robot-picker-detail" style={{ ['--model-color' as string]: atual.cor }} aria-live="polite">
+      <div className="robot-picker-emblem"><Emblema id={atual} tamanho={56} /></div>
+      <span className="robot-picker-kicker">{atual.chamada}</span><h4>{atual.nome}</h4>
+      <p>{atual.descricao}</p>
+      <div className="robot-picker-next"><b>Você define os limites</b><span>Na sequência, escolha a entrada e quando a sessão deve parar.</span></div>
+      <small>Nenhuma estratégia garante resultado. Os robôs da mesma conta compartilham o saldo.</small>
+    </article>
   </section>
 }
