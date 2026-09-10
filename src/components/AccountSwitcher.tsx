@@ -18,6 +18,8 @@ interface Props {
   conectando: boolean
   onTrocar: (id: string) => void
   onRecarregar: () => void
+  /** Chamado ao abrir o menu: hora de reler os saldos de todas as contas. */
+  onAbrir?: () => void
   onSair: () => void
 }
 
@@ -61,7 +63,7 @@ export function AccountSwitcher(props: Props) {
     <div className="conta" ref={caixa}>
       <button
         className={`conta-chip ${cara(isDemo)} ${aberto ? 'aberto' : ''}`}
-        onClick={() => setAberto((a) => !a)}
+        onClick={() => setAberto((a) => { if (!a) props.onAbrir?.(); return !a })}
         aria-expanded={aberto}
         aria-haspopup="menu"
       >
@@ -92,7 +94,7 @@ export function AccountSwitcher(props: Props) {
                   <b>{cara(demo) === 'demo' ? 'Conta Demo' : 'Conta Real'}</b>
                 </span>
                 <span className="menu-conta-saldo">
-                  {c.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {(ativa && saldo !== null && c.currency === moeda ? saldo : c.balance).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   <i>{c.currency}</i>
                 </span>
                 <span className="menu-conta-marca" aria-hidden="true">

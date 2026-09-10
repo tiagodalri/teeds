@@ -464,6 +464,7 @@ export default function App() {
               conectando={conta.connecting}
               onTrocar={conta.setAccountId}
               onRecarregar={() => conta.recarregarDemo()}
+              onAbrir={() => void conta.atualizarContas()}
               onSair={conta.logout}
             />
           )}

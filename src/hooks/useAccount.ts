@@ -219,6 +219,30 @@ export function useAccount(acesso: { admin?: boolean | null; email?: string | nu
     }
   }, [session, accountId])
 
+  /*
+    Os saldos da LISTA eram uma foto tirada no login: so a conta escolhida
+    tinha saldo ao vivo (pela assinatura da propria linha). A conta real
+    ficava com o valor velho ate a pessoa sair e entrar. Agora a lista e
+    relida quando o menu abre, depois de cada transacao e de minuto em minuto.
+  */
+  const atualizarContas = useCallback(async () => {
+    if (!session) return
+    try {
+      const lista = await fetchAccounts(session)
+      if (lista.length) setAccounts(lista)
+    } catch { /* sem resposta agora: a lista fica como esta e tenta de novo depois */ }
+  }, [session])
+  useEffect(() => {
+    if (!session) return
+    const relogio = window.setInterval(() => { void atualizarContas() }, 60_000)
+    return () => window.clearInterval(relogio)
+  }, [session, atualizarContas])
+  useEffect(() => {
+    if (!session || pulso === 0) return
+    const t = setTimeout(() => { void atualizarContas() }, 1_500)
+    return () => clearTimeout(t)
+  }, [pulso, session, atualizarContas])
+
   const login = useCallback(() => {
     setStatus('entrando')
     startLogin().catch((e: Error) => {
@@ -276,6 +300,6 @@ export function useAccount(acesso: { admin?: boolean | null; email?: string | nu
     balance: conexaoDaConta ? balance : null, contracts: conexaoDaConta ? [...contracts.values()] : [],
     socket: conexaoDaConta ? socketRef.current : null, connecting, aviso, setAviso, pulso, conexao,
     comprasRecentes: conexaoDaConta ? comprasRecentes : [],
-    login, logout, recarregarDemo,
+    login, logout, recarregarDemo, atualizarContas,
   }
 }
