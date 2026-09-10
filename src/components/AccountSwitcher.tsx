@@ -89,7 +89,7 @@ export function AccountSwitcher(props: Props) {
               >
                 <span className={`selo ${cara(demo)}`}>{rotulo(demo)}</span>
                 <span className="menu-conta-info">
-                  <b>{cara(demo) === 'demo' ? 'Dinheiro fictício' : 'Dinheiro real'}</b>
+                  <b>{cara(demo) === 'demo' ? 'Conta Demo' : 'Conta Real'}</b>
                 </span>
                 <span className="menu-conta-saldo">
                   {c.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
