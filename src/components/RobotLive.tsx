@@ -159,7 +159,7 @@ export function RobotLive({
           <div>
             <b><span className="tv-nome">{nomeEstrategia}</span><span className="tv-fase" title={fase.texto}>{fase.texto}</span></b>
             <span className="tv-onde">{titulo} · {ativo}</span>
-            {contaDaSessao && <span className={`tv-account-label ${contaDaSessao.demo ? 'demo' : 'real'}`}>{contaDaSessao.demo ? 'DEMO' : 'REAL'} · conta …{contaDaSessao.contaId.slice(-4)}</span>}
+            {contaDaSessao && <span className={`tv-account-label ${contaDaSessao.demo ? 'demo' : 'real'}`}>{contaDaSessao.demo ? 'DEMO' : 'REAL'}</span>}
           </div>
         </div>
         <div className="tv-resumo-fixo tv-resumo-sessao">

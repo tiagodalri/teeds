@@ -150,7 +150,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
       </div>
       <footer className="robot-launch-footer">
         <button type="button" className="robot-launch-back" disabled={ligando} onClick={passo === (escolherModelo ? -1 : 0) ? onCancelar : voltar}>{passo === (escolherModelo ? -1 : 0) ? 'Cancelar' : '← Voltar'}</button>
-        <span>{passo === -1 ? modelo.nome : revisao ? isDemo ? 'Dinheiro fictício' : 'Dinheiro real' : 'Nada será operado ainda'}</span>
+        <span>{passo === -1 ? modelo.nome : revisao ? '' : 'Nada será operado ainda'}</span>
         {revisao ? <button type="button" className="robot-launch-next" disabled={ligando || !todasValidas || (!isDemo && !confirmaReal)} onClick={iniciar}>{ligando ? 'Iniciando…' : '▶ Iniciar robô'}</button>
           : <button type="submit" className="robot-launch-next" disabled={!valido || ligando}>Continuar <span aria-hidden="true">→</span></button>}
       </footer>

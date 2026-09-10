@@ -127,7 +127,7 @@ export function ChatProposta({ proposta, sessao, onLigado }: Props) {
 
       <footer className="cp-pe">
         <span>
-          {proposta.contaId} · {proposta.demo ? 'demonstração' : 'conta real'}
+          {proposta.demo ? 'Conta de demonstração' : 'Conta real'}
           <br /><small>saldo {din(proposta.saldo, proposta.moeda)}</small>
         </span>
         <button className={`cp-ligar ${confirmando ? 'confirmando' : ''}`} onClick={ligar} disabled={ligando}>
