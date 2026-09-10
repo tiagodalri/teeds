@@ -657,14 +657,6 @@ export default function App() {
               onConectar={conta.login} />
           )}
 
-          {derivPronta && (
-            <div className={`trade-conta ${conta.isDemo ? 'demo' : 'real'}`} role="status">
-              <i />
-              <span>{conta.isDemo ? 'Conta demo · dinheiro fictício' : 'Conta real · dinheiro de verdade'}</span>
-              {conta.balance && <b>{moeda} {conta.balance.amount.toFixed(2)}</b>}
-            </div>
-          )}
-
           <div className="modo-troca">
             <button className={modo === 'direcao' ? 'on' : ''} onClick={() => setModo('direcao')}>
               Subir / Descer
