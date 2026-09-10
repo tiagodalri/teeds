@@ -1,15 +1,15 @@
 import type { TradingAccount } from './account'
 
 /**
- * Logins que operam SOMENTE em conta demo (aviso no seletor, contas reais
- * escondidas e 403 no servidor para operacao real).
+ * Logins que operam SOMENTE em conta demo: as contas reais somem do seletor
+ * e o servidor recusa (403) operacao real. Sem aviso na tela — em 10/09/2026
+ * o Tiago pediu a restricao para o teeds@gmail.com (segundo login dele),
+ * mas sem a frase "Este acesso opera somente em conta demo".
  *
- * Em 10/09/2026 o Tiago pediu para liberar o teeds@gmail.com — ele e o
- * proprio dono, no segundo login dele. A lista fica vazia, mas o mecanismo
- * continua: para restringir um acesso de demonstracao, basta por o e-mail
- * aqui e reimplantar o servidor (que importa este mesmo arquivo).
+ * Para restringir outro acesso, basta por o e-mail aqui e reimplantar o
+ * servidor (que importa este mesmo arquivo).
  */
-const EMAILS_SOMENTE_DEMO: readonly string[] = []
+const EMAILS_SOMENTE_DEMO: readonly string[] = ['teeds@gmail.com']
 
 export const emailDeDemonstracao = (email?: string | null) =>
   !!email && EMAILS_SOMENTE_DEMO.includes(email.trim().toLowerCase())

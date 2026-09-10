@@ -68,7 +68,6 @@ export function AccountSwitcher(props: Props) {
       {aberto && (
         <div className="menu" role="menu">
           <p className="menu-titulo">Suas contas na Deriv</p>
-          {props.somenteDemo && <p className="menu-restricao">Este acesso opera somente em conta demo.</p>}
 
           {contas.map((c) => {
             const demo = c.type === 'demo'
