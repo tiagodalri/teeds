@@ -26,6 +26,9 @@ interface Props {
   titulo: string
   expandido?: boolean
   onExpandir?: () => void
+  /** Botão "Dígitos" do cabeçalho: abre o painel flutuante do ativo. */
+  onDigitos?: () => void
+  digitosAberto?: boolean
   /** Avisa o pai que este bloco tem (ou deixou de ter) sessão, e qual. */
   onSessaoChange?: (ativa: boolean, sessaoId?: string | null) => void
   sessaoTeeds?: SessaoTeeds | null
@@ -58,7 +61,7 @@ const din = (v: number, m = 'USD') =>
 export function LocalRobotPanel({
   socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
   onRemover, titulo, expandido = false, onExpandir, onSessaoChange, sessaoTeeds, contaId,
-  adotar, solicitarPreparo = false, onFecharPreparo,
+  adotar, solicitarPreparo = false, onFecharPreparo, onDigitos, digitosAberto = false,
 }: Props) {
   // O cartao escolhido na vitrine dita a estrategia deste bloco…
   const daVitrine = ESTRATEGIAS_LOCAIS.find((e) => e.id === identidade.id) ?? ESTRATEGIAS_LOCAIS[0]
@@ -270,6 +273,8 @@ export function LocalRobotPanel({
         conexao={conexao}
         expandido={expandido}
         onExpandir={onExpandir}
+        onDigitos={onDigitos}
+        digitosAberto={digitosAberto}
         onDesligar={rodando ? desligar : undefined}
         onLigarDeNovo={!rodando ? () => { setErro(null); setPreparando(true) } : undefined}
         onRemover={onRemover ? () => {

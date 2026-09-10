@@ -20,6 +20,8 @@ import { SessoesServidor } from './SessoesServidor'
 import { acompanharVivas, type SessaoViva } from '../core/teeds/servidorRobos'
 import { MARCA } from '../marca'
 import { RobotOverview } from './RobotOverview'
+import { DigitosFlutuante } from './DigitosFlutuante'
+import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
 import './robot-workspace.css'
 
 interface Props {
@@ -84,6 +86,15 @@ export function RobotsPanel({
   const [adotadas, setAdotadas] = useState<Record<string, string | null>>({})
   const [blocoEmPreparo, setBlocoEmPreparo] = useState<string | null>(null)
   const [disposicao, setDisposicao] = useState<'grade' | 'lista'>('grade')
+  /*
+    Um painel de dígitos só, para a tela inteira: guarda de qual bloco ele
+    foi aberto (para o botão daquele bloco ficar aceso) e de qual robô é o
+    grupo a realçar. Clicar no botão de outro bloco só troca o realce.
+  */
+  const [digitosDe, setDigitosDe] = useState<{ chave: string; roboId: string } | null>(null)
+  const alternarDigitos = (chave: string, roboId: string) =>
+    setDigitosDe((atual) => (atual?.chave === chave ? null : { chave, roboId }))
+  const nomeAtivoDosRobos = symbols.find((s) => s.symbol === ATIVO_DOS_ROBOS)?.name
   const mesaRef = useRef<HTMLDivElement>(null)
   const proximoBloco = useRef(2)
   const contratosEnviados = useRef(new Set<number>())
@@ -295,7 +306,9 @@ export function RobotsPanel({
               sessaoTeeds={sessaoTeeds} contaId={v.contaId}
               adotar={{ id: v.id, config: v.config, origem: v.origem }}
               expandido={blocoExpandido === v.id}
-              onExpandir={() => setBlocoExpandido((atual) => atual === v.id ? null : v.id)} />
+              onExpandir={() => setBlocoExpandido((atual) => atual === v.id ? null : v.id)}
+              onDigitos={() => alternarDigitos(v.id, v.roboId)}
+              digitosAberto={digitosDe?.chave === v.id} />
             </div>
           ))}
         </div>
@@ -313,6 +326,8 @@ export function RobotsPanel({
               sessaoTeeds={sessaoTeeds} contaId={contaId}
               expandido={blocoExpandido === idBloco}
               onExpandir={() => setBlocoExpandido((atual) => atual === idBloco ? null : idBloco)}
+              onDigitos={() => alternarDigitos(idBloco, ident.id)}
+              digitosAberto={digitosDe?.chave === idBloco}
               solicitarPreparo={blocoEmPreparo === idBloco}
               onFecharPreparo={() => setBlocoEmPreparo(null)}
               onSessaoChange={(ativa, sessaoId) => {
@@ -599,6 +614,11 @@ export function RobotsPanel({
         </div>
       </section>
       </>}
+
+      {digitosDe && (
+        <DigitosFlutuante roboId={digitosDe.roboId} nomeAtivo={nomeAtivoDosRobos}
+          aoFechar={() => setDigitosDe(null)} />
+      )}
     </div>
   )
 }

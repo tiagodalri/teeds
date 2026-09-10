@@ -28,6 +28,9 @@ interface Props {
   onRemover?: () => void
   expandido?: boolean
   onExpandir?: () => void
+  /** Abre/fecha o painel flutuante de dígitos do ativo. */
+  onDigitos?: () => void
+  digitosAberto?: boolean
 }
 
 const num = (v: number) =>
@@ -89,7 +92,7 @@ function Cronometro({ desde }: { desde: number }) {
 export function RobotLive({
   estado, config, moeda, estrategiaId, nomeEstrategia, ativo, titulo, regra, ganhaCom,
   parametros = [], conexao = 'open', onDesligar, onLigarDeNovo, onRemover,
-  expandido = false, onExpandir, contaDaSessao,
+  expandido = false, onExpandir, contaDaSessao, onDigitos, digitosAberto = false,
 }: Props) {
   const [detalhes, setDetalhes] = useState(false)
   const [registroAberto, setRegistroAberto] = useState(false)
@@ -167,6 +170,10 @@ export function RobotLive({
         </div>
 
         <div className="tv-acoes">
+          {onDigitos && (
+            <button className={`tv-btn ${digitosAberto ? 'on' : ''}`} onClick={onDigitos}
+              title="Frequência dos últimos dígitos do ativo, ao vivo">Dígitos</button>
+          )}
           {onExpandir && (
             <button className={`tv-btn ${expandido ? 'on' : ''}`} onClick={onExpandir}>
               {expandido ? 'Ver todos' : 'Focar'}

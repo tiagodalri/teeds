@@ -504,6 +504,68 @@ button, input { font: inherit; color: inherit; }
 .dig-barra.sel b { color: var(--primary); }
 .dig-nota { margin: 6px 0 0; font-size: 10.5px; color: var(--muted); }
 
+/* ------------------------------------- dígitos ao vivo (painel flutuante dos robôs) */
+.df {
+  position: fixed; z-index: 60; width: 360px; max-width: calc(100vw - 24px);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 22px 48px -22px rgba(0,0,0,.6), 0 2px 8px -4px rgba(0,0,0,.2);
+  overflow: hidden; --robo: var(--primary);
+}
+.df-topo {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  cursor: grab; user-select: none; touch-action: none;
+}
+.df-topo:active { cursor: grabbing; }
+.df-grip { color: var(--muted); font-size: 14px; letter-spacing: -3px; line-height: 1; }
+.df-topo b { display: block; font-size: 13px; font-weight: 650; color: var(--text); }
+.df-topo small { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
+.df-topo small strong { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.df-fechar {
+  margin-left: auto; border: 0; background: none; color: var(--muted); cursor: pointer;
+  width: 28px; height: 28px; border-radius: 7px; font-size: 18px; line-height: 1;
+}
+.df-fechar:hover { background: var(--surface-alt); color: var(--text); }
+.df-corpo { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 10px; }
+.df-janela { display: flex; align-items: center; justify-content: space-between; }
+.df-janela .rot { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.df-barras { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; height: 124px; align-items: end; }
+.df-barra { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 3px; }
+.df-barra .col { width: 100%; background: var(--trilho); border-radius: 3px 3px 0 0; min-height: 2px; transition: height .3s; }
+.df-barra.alvo .col { background: var(--robo); }
+.df-barra em { font-style: normal; font-size: 9.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.df-barra.alvo em { color: var(--robo); font-weight: 600; }
+.df-barra b { font-size: 11.5px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; width: 100%; text-align: center; border-radius: 4px; padding: 1px 0; }
+.df-barra.alvo b { color: var(--robo); }
+.df-barra.ultimo b { background: var(--text); color: var(--bg); }
+.df-fita { display: flex; gap: 3px; flex-wrap: wrap; }
+.df-chip {
+  width: 19px; height: 19px; display: grid; place-items: center; border-radius: 4px;
+  font-size: 11px; font-weight: 600; background: var(--surface); color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.df-chip.alvo { background: color-mix(in srgb, var(--robo) 18%, var(--surface)); color: var(--robo); }
+.df-chip.ultimo { outline: 2px solid var(--text); outline-offset: -2px; color: var(--text); }
+.df-rodape {
+  padding: 9px 11px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border);
+  font-size: 12px; line-height: 1.5; color: var(--text); display: flex; flex-direction: column; gap: 4px;
+}
+.df-rodape b { color: var(--robo); font-weight: 650; }
+.df-esperado { color: var(--muted); }
+.df-gatilho { font-size: 11.5px; color: var(--muted); }
+.df-gatilho.ok { color: var(--up); font-weight: 600; }
+.df-gatilho.nao { color: var(--muted); }
+.df-nota { margin: -4px 0 0; font-size: 10.5px; color: var(--muted); }
+/* No celular vira uma gaveta presa ao rodapé — arrastar janela no dedo é ruim. */
+@media (max-width: 760px) {
+  .df.df-movel {
+    left: 0; right: 0; top: auto; bottom: 0; width: auto; max-width: none;
+    border-radius: 14px 14px 0 0; border-bottom: 0;
+    max-height: 78dvh; overflow-y: auto;
+  }
+  .df-movel .df-topo { cursor: default; position: sticky; top: 0; z-index: 1; }
+}
+
 .dig-tipos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
 .dig-tipos button { white-space: nowrap; }
 .dig-tipos button {
