@@ -245,7 +245,8 @@ export default function App() {
     trazia as entradas deles (uma por segundo, de 0,35) para o painel manual:
     "posicao que eu nem abri", contagem pulando, cartoes piscando. Agora a
     tela guarda os ids do que ela mesma comprou (por conta, na sessao do
-    navegador) e so lista esses; o resto vira uma linha de contagem.
+    navegador) e so lista esses. O resto NAO aparece aqui: a tela Operar e
+    so da operacao manual; os robos vivem na aba Robos.
   */
   const [manuais, setManuais] = useState<number[]>(() => lerManuais(conta.accountId))
   useEffect(() => { setManuais(lerManuais(conta.accountId)) }, [conta.accountId])
@@ -259,7 +260,6 @@ export default function App() {
     () => conta.contracts.filter((c) => idsManuais.has(c.contractId)),
     [conta.contracts, idsManuais],
   )
-  const deRobos = conta.contracts.filter((c) => !idsManuais.has(c.contractId) && c.status === 'open').length
 
   const doAtivo = useMemo(
     () => minhas.filter((c) => c.symbol === symbolCode),
@@ -731,12 +731,6 @@ export default function App() {
                 {minhas.length > 0 && (
                   <div className="pos-resumo">
                     <span>Investido <b>{moeda} {investido.toFixed(2)}</b></span>
-                  </div>
-                )}
-                {derivPronta && deRobos > 0 && (
-                  <div className="pos-robos">
-                    Robôs: <b>{deRobos}</b> {deRobos === 1 ? 'entrada aberta' : 'entradas abertas'} nesta conta agora ·
-                    acompanhe na aba Robôs.
                   </div>
                 )}
                 {!derivPronta && <div className="pos-vazio">Conecte sua Deriv para acompanhar posições.</div>}
