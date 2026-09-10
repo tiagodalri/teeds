@@ -5,7 +5,7 @@ import { DigitsPanel } from './components/DigitsPanel'
 import { AdminPanel } from './components/AdminPanel'
 import { ManagementPanel } from './components/ManagementPanel'
 import { RobotsPanel } from './components/RobotsPanel'
-import { OperationsPanel } from './components/OperationsPanel'
+import { WorkspaceNav, PAGE_NAMES, type WorkspacePage } from './components/WorkspaceNav'
 import { AulasPanel } from './components/AulasPanel'
 import { OperationalManagementPanel } from './components/OperationalManagementPanel'
 import { MarketplacePanel } from './components/MarketplacePanel'
@@ -13,7 +13,6 @@ import { AccountSwitcher } from './components/AccountSwitcher'
 import { UserMenu } from './components/UserMenu'
 import { ProfilePanel } from './components/ProfilePanel'
 import { DerivNome, IconeElo } from './components/DerivMarca'
-import { Brand } from './components/Brand'
 import { LoginScreen } from './components/LoginScreen'
 import { NovaSenha } from './components/NovaSenha'
 import { startLogin } from './core/deriv/auth'
@@ -83,7 +82,7 @@ export default function App() {
   const [confirmar, setConfirmar] = useState<'CALL' | 'PUT' | null>(null)
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
-  const [tela, setTela] = useState<'operar' | 'robos' | 'assistente' | 'operacoes' | 'gestao' | 'gerenciamento' | 'marketplace' | 'aulas'>('operar')
+  const [tela, setTela] = useState<WorkspacePage>('operar')
   const [admin, setAdmin] = useState<boolean | null>(null)
   const [pedirCodigoAssistente, setPedirCodigoAssistente] = useState(false)
   const [assistenteLiberado, setAssistenteLiberado] = useState(assistenteBetaJaLiberado)
@@ -306,28 +305,14 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app workspace-app">
+      <WorkspaceNav page={tela} admin={admin === true} onNavigate={next => {
+        setVerPerfil(false)
+        if (next === 'assistente') abrirAssistente()
+        else setTela(next)
+      }} />
       <header className="topbar">
-        <button className="marca-inicio" onClick={() => {
-          setTela('operar')
-          setVerPerfil(false)
-          window.scrollTo({ top: 0, behavior: 'smooth' })
-        }} aria-label="Voltar para a tela inicial" title="Ir para o início">
-          <Brand />
-        </button>
-
-        <nav className="telas">
-          <button className={tela === 'operar' ? 'on' : ''} onClick={() => setTela('operar')}>Operar</button>
-          <button className={tela === 'robos' ? 'on' : ''} onClick={() => setTela('robos')}>Robôs</button>
-          <button className={`nav-assistente ${tela === 'assistente' ? 'on' : ''}`} onClick={abrirAssistente}>Assistente <span>BETA</span></button>
-          <button className={tela === 'operacoes' ? 'on' : ''} onClick={() => setTela('operacoes')}>Operações</button>
-          {admin === true && (
-            <button className={tela === 'gestao' ? 'on' : ''} onClick={() => setTela('gestao')}>Administração</button>
-          )}
-          <button className={tela === 'gerenciamento' ? 'on' : ''} onClick={() => setTela('gerenciamento')}>Gerenciamento</button>
-          <button className={tela === 'marketplace' ? 'on' : ''} onClick={() => setTela('marketplace')}>Marketplace</button>
-          <button className={tela === 'aulas' ? 'on' : ''} onClick={() => setTela('aulas')}>Aulas</button>
-        </nav>
+        <div className="workspace-heading"><span>{MARCA.nome}</span><strong>{PAGE_NAMES[tela]}</strong></div>
 
         <div className="topbar-right">
           {!derivPronta && (
@@ -448,17 +433,7 @@ export default function App() {
           contaId={conta.accountId}
         />
       </div>
-      {tela === 'robos' || tela === 'assistente' ? null : tela === 'operacoes' ? (
-        <OperationsPanel
-          socket={conta.socket}
-          logado={conta.status === 'logado'}
-          moeda={conta.account?.currency ?? 'USD'}
-          symbols={symbols}
-          pulso={conta.pulso}
-          entrandoNaDeriv={conta.status === 'entrando'}
-          onConectarDeriv={conta.login}
-        />
-      ) : tela === 'aulas' ? (
+      {tela === 'robos' || tela === 'assistente' ? null : tela === 'aulas' ? (
         <AulasPanel nome={teeds.usuario?.nome} />
       ) : tela === 'marketplace' ? (
         <MarketplacePanel sessao={teeds.sessao} />

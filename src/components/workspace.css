@@ -1,0 +1,50 @@
+/* Shared shell: brand and theme colors come from the existing tokens. */
+.workspace-app { padding-left: 236px; transition: padding-left .18s ease; }
+.workspace-app:has(.workspace-sidebar.compact) { padding-left: 76px; }
+.workspace-sidebar { position: fixed; inset: 0 auto 0 0; width: 236px; z-index: 60; display: flex; flex-direction: column; background: var(--bg); border-right: 1px solid var(--border); padding: 0 14px 16px; }
+.workspace-brand { height: 80px; flex-shrink: 0; display: flex; align-items: center; padding: 0 12px; border: 0; background: none; cursor: pointer; }
+.workspace-sidebar nav { flex: 1; overflow-y: auto; }
+.workspace-sidebar nav > p { margin: 24px 12px 10px; font-size: 10px; letter-spacing: .13em; text-transform: uppercase; font-weight: 750; color: var(--muted); }
+.workspace-link { width: 100%; display: flex; gap: 12px; align-items: center; min-height: 46px; margin: 4px 0; padding: 10px 12px; border: 1px solid transparent; border-radius: 10px; background: transparent; text-align: left; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+.workspace-link svg { width: 20px; height: 20px; flex-shrink: 0; }
+.workspace-link:hover:not(:disabled) { background: var(--surface-alt); border-color: var(--border); }
+.workspace-link.selected { color: var(--primary); background: var(--primary-soft); border-color: color-mix(in srgb, var(--primary) 30%, transparent); box-shadow: inset 3px 0 var(--primary); }
+.workspace-link small { margin-left: auto; font-size: 8px; letter-spacing: .04em; white-space: nowrap; border: 1px solid var(--border); padding: 2px 4px; border-radius: 4px; }
+.workspace-link:disabled { color: var(--muted); cursor: not-allowed; }
+.workspace-admin { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
+.workspace-collapse { margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; font-size: 12px; }
+.workspace-sidebar.compact { width: 76px; padding-inline: 10px; }
+.workspace-sidebar.compact .workspace-label { display: none; }
+.workspace-sidebar.compact .workspace-brand { overflow: hidden; padding: 0; }
+.workspace-sidebar.compact .marca-nome { display: none; }
+.workspace-sidebar.compact .workspace-link { justify-content: center; padding-inline: 10px; }
+.workspace-sidebar.compact nav { padding-top: 20px; }
+.workspace-app .topbar { height: 76px; min-height: 76px; padding: 0 28px; flex-wrap: nowrap; gap: 16px; }
+.workspace-heading { display: flex; flex-direction: column; gap: 2px; }
+.workspace-heading > span { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; }
+.workspace-heading strong { font-size: 18px; letter-spacing: -.03em; }
+.workspace-app .topbar-right { margin-left: auto; font-variant-numeric: tabular-nums; }
+.workspace-app .ger.rob { width: 100%; max-width: 1480px; padding: 28px 32px; }
+.workspace-app .rv-galeria { grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }
+.workspace-mobile-toggle, .workspace-shade { display: none; }
+.workspace-sidebar button:focus-visible, .workspace-mobile-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+@media (max-width: 900px) {
+  .workspace-app, .workspace-app:has(.workspace-sidebar.compact) { padding-left: 0; }
+  .workspace-sidebar, .workspace-sidebar.compact { width: 236px; padding-inline: 14px; transform: translateX(-100%); }
+  .workspace-sidebar.mobile-open { transform: translateX(0); top: 64px; }
+  .workspace-sidebar.compact .workspace-label { display: initial; }
+  .workspace-sidebar.compact .marca-nome { display: initial; }
+  .workspace-sidebar.compact .workspace-link { justify-content: flex-start; }
+  .workspace-collapse { display: none; }
+  .workspace-mobile-toggle { display: block; position: fixed; top: 17px; left: 12px; z-index: 71; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  .workspace-shade { display: block; position: fixed; inset: 64px 0 0; z-index: 59; background: #0008; border: 0; }
+  .workspace-app .topbar { height: 64px; min-height: 64px; padding: 0 12px 0 100px; }
+  .workspace-heading { display: none; }
+  .workspace-app .ger.rob { padding: 20px 16px; }
+}
+@media (max-width: 540px) {
+  .workspace-app .topbar-right { gap: 6px; }
+  .workspace-app .topbar-right .status { display: none; }
+  .workspace-app .rv-galeria { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .workspace-app { transition: none; } }
