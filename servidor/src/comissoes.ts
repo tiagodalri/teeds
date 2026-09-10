@@ -103,8 +103,13 @@ async function lerDia(socket: TeedsSocket, dia: string, appId: string): Promise<
     const linhas = ((res.profit_table as any)?.transactions ?? []) as Array<Record<string, any>>
     for (const l of linhas) {
       const pagamento = Number(l.payout ?? 0)
-      // só o que passou pela app da marca gera markup
-      if (l.app_id == null || String(l.app_id) !== appId || !pagamento) continue
+      // Só o que passou pela app da marca gera markup. A API de trading nova
+      // nem sempre manda `app_id` na tabela de lucros (medido em 10/09/2026:
+      // a linha vem sem o campo) — quando ele falta, a conta é considerada
+      // da plataforma, porque é por ela que essas contas operam. É por isso
+      // que o número se chama "calculado": a Deriv confirma depois.
+      const daApp = l.app_id == null || String(l.app_id) === appId
+      if (!daApp || !pagamento) continue
       const entrada = Number(l.buy_price ?? 0)
       const saida = Number(l.sell_price ?? 0)
       soma.operacoes += 1

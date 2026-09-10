@@ -252,6 +252,16 @@ interface ContratoFechado {
   saida: number
 }
 
+/**
+ * Passou pela app desta marca?
+ *
+ * A API de trading nova nem sempre manda `app_id` na tabela de lucros
+ * (medido em 10/09/2026: a linha vem sem o campo). Quando ele falta, a
+ * compra e considerada da plataforma — e por ela que a conta opera aqui. E
+ * por isso que este numero se chama "calculado": a Deriv confirma depois.
+ */
+const daApp = (appId: unknown) => appId == null || String(appId) === MARCA.appId
+
 /** Todos os contratos fechados de um dia (UTC), paginando ate o fim. */
 async function contratosDoDia(
   socket: TeedsSocket,
@@ -344,7 +354,7 @@ export async function simularComissaoPorDia(
     let doDia = { comissao: 0, operacoes: 0, pagamentos: 0, entradas: 0, resultado: 0 }
     for (const c of contratos) {
       // so o que passou pela Teeds gera markup
-      if (c.appId !== MARCA.appId || !c.pagamento) continue
+      if (!daApp(c.appId) || !c.pagamento) continue
       doDia = {
         comissao: doDia.comissao + c.pagamento * taxa,
         operacoes: doDia.operacoes + 1,
@@ -457,7 +467,7 @@ export async function atualizarHoje(socket: TeedsSocket, estado: HojeAoVivo, tax
       estado.vistos.add(id)
       const pagamento = Number(l.payout ?? 0)
       // so o que passou pela Teeds gera markup
-      if (l.app_id != null && String(l.app_id) === MARCA.appId && pagamento) {
+      if (daApp(l.app_id) && pagamento) {
         estado.contratos.set(id, { entrada: Number(l.buy_price ?? 0), pagamento })
       }
     }
