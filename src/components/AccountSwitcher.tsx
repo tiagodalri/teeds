@@ -110,14 +110,15 @@ export function AccountSwitcher(props: Props) {
           <div className="menu-linha" />
 
 
-          {isDemo && (
+          {/* No acesso somente-demo (teeds@gmail.com) a conta demo se apresenta como real: sem recarga a vista. */}
+          {isDemo && !props.somenteDemo && (
             <button className="menu-acao" role="menuitem"
               onClick={() => { onRecarregar(); setAberto(false) }}>
               <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
                 fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M13.5 8a5.5 5.5 0 1 1-1.7-3.9" /><path d="M13.5 2v3h-3" />
               </svg>
-              Recarregar saldo demo
+              Recarregar simulador
             </button>
           )}
 
