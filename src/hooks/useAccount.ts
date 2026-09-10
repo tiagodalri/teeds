@@ -234,7 +234,7 @@ export function useAccount(acesso: { admin?: boolean | null; email?: string | nu
   }, [session])
   useEffect(() => {
     if (!session) return
-    const relogio = window.setInterval(() => { void atualizarContas() }, 60_000)
+    const relogio = window.setInterval(() => { void atualizarContas() }, 30_000)
     return () => window.clearInterval(relogio)
   }, [session, atualizarContas])
   useEffect(() => {
@@ -242,6 +242,45 @@ export function useAccount(acesso: { admin?: boolean | null; email?: string | nu
     const t = setTimeout(() => { void atualizarContas() }, 1_500)
     return () => clearTimeout(t)
   }, [pulso, session, atualizarContas])
+
+  /*
+    Saldo da conta REAL ao vivo mesmo quando ela nao e a escolhida.
+
+    Cada conta da Deriv tem a sua propria linha; a escolhida ja recebe o
+    saldo tick a tick. Para a real que ficou de fora (a pessoa esta na demo),
+    abre-se uma linha dedicada SO de saldo — nada de operacao passa por ela.
+    Se a real passa a ser a escolhida, a linha dedicada fecha (a principal
+    assume). No acesso somente-demo a real nem aparece; nao abre nada.
+  */
+  const chaveDasContas = accounts.map((a) => a.accountId + ':' + a.type).join(',')
+  useEffect(() => {
+    if (!session || somenteDemo) return
+    const alvo = accounts.filter((a) => a.type === 'real' && a.accountId !== accountId)
+    if (!alvo.length) return
+    let alive = true
+    const paradas: Array<() => void> = []
+    const linhas: TeedsSocket[] = []
+    for (const a of alvo) {
+      fetchTradingSocketUrl(session, a.accountId)
+        .then((url) => {
+          if (!alive) return
+          const linha = new TeedsSocket({ url, renovarUrl: () => fetchTradingSocketUrl(session, a.accountId) })
+          linhas.push(linha)
+          linha.connect()
+          paradas.push(subscribeBalance(linha, (b) => {
+            if (!alive) return
+            setAccounts((prev) => prev.map((x) => (x.accountId === a.accountId ? { ...x, balance: b.amount } : x)))
+          }))
+        })
+        .catch(() => { /* sem linha agora: a releitura periodica cobre */ })
+    }
+    return () => {
+      alive = false
+      paradas.forEach((p) => p())
+      linhas.forEach((l) => l.disconnect())
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, accountId, somenteDemo, chaveDasContas])
 
   const login = useCallback(() => {
     setStatus('entrando')
