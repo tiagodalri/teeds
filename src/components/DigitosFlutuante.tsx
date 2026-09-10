@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
 import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca } from '../core/deriv/strategies'
 import { identidade } from '../core/deriv/branding'
 import { useDigits } from '../hooks/useDigits'
-import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
+import { MARCA } from '../marca'
 
 /**
  * Painel flutuante "Dígitos ao vivo" da área dos robôs.
@@ -14,15 +15,15 @@ import { IconeFechar } from './IconeFechar'
  * que os robôs fazem por dentro, com os últimos 25 dígitos. Este painel
  * mostra a MESMA memória (o hook de dígitos compartilha a linha pública do
  * gráfico e dos robôs; não abre assinatura nova na Deriv), com os dígitos
- * do grupo do robô acesos na cor dele e, no rodapé, o gatilho ao vivo dos
- * robôs que esperam padrão (AG2 e The Palm).
+ * do grupo do robô acesos na cor dele e o gatilho ao vivo no rodapé.
  *
- * Arrastável pela faixa do topo no computador; no celular vira uma gaveta
- * presa ao rodapé (arrastar janela no dedo é ruim). Posição e janela ficam
- * guardadas no navegador.
+ * Desenha-se num portal, direto no <body>: dentro da central de robôs há
+ * uma regra que estica todo filho direto para 100% da largura, e o painel
+ * chegou a nascer com a tela inteira. Compacto de propósito — 300px, tudo
+ * à vista sem rolar. Arrastável pela faixa do topo; no celular vira gaveta.
  */
 const JANELAS = [25, 50, 100, 500, 1000] as const
-const LARGURA = 360
+const LARGURA = 300
 const CHAVE_POS = `${MARCA.id}.digitos.posicao`
 const CHAVE_JANELA = `${MARCA.id}.digitos.janela`
 
@@ -84,12 +85,9 @@ export function DigitosFlutuante({ roboId, nomeAtivo, aoFechar }: Props) {
     if (roboId === 'thepalm') {
       const nove = pctDe((d) => d === 9)
       const baixos = pctDe((d) => d <= 4)
-      return {
-        texto: `Modo 1: dígito 9 em ${nove}% (limite 12%) · Modo 2: 0 a 4 em ${baixos}% (libera em 48%)`,
-        ok: nove <= 12,
-      }
+      return { texto: `Modo 1: 9 em ${nove}% (limite 12%) · Modo 2: 0–4 em ${baixos}% (libera em 48%)`, ok: nove <= 12 }
     }
-    return { texto: 'entra sempre — não usa gatilho, uma entrada por tick', ok: null }
+    return { texto: 'entra sempre — uma entrada por tick, sem gatilho', ok: null }
   })()
 
   // ------------------------------------------------------------ arrastar
@@ -102,9 +100,6 @@ export function DigitosFlutuante({ roboId, nomeAtivo, aoFechar }: Props) {
   }, [])
   const caixa = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ x: number; y: number }>(() => {
-    // A posicao guardada pode ser de outro monitor (ou estar corrompida):
-    // valida e traz para dentro da tela ja na abertura, senao o painel
-    // nasce fora da vista e nao ha como puxa-lo de volta.
     const padrao = { x: Math.max(12, window.innerWidth - LARGURA - 24), y: 120 }
     const g = ler<Partial<{ x: number; y: number }>>(CHAVE_POS, padrao)
     const x = typeof g?.x === 'number' && Number.isFinite(g.x) ? g.x : padrao.x
@@ -115,9 +110,8 @@ export function DigitosFlutuante({ roboId, nomeAtivo, aoFechar }: Props) {
     }
   })
   const arrasto = useRef<{ dx: number; dy: number } | null>(null)
-
   const dentroDaTela = (p: { x: number; y: number }) => {
-    const h = caixa.current?.offsetHeight ?? 420
+    const h = caixa.current?.offsetHeight ?? 300
     return {
       x: Math.min(Math.max(0, p.x), Math.max(0, window.innerWidth - LARGURA)),
       y: Math.min(Math.max(0, p.y), Math.max(0, window.innerHeight - Math.min(h, 120))),
@@ -142,7 +136,6 @@ export function DigitosFlutuante({ roboId, nomeAtivo, aoFechar }: Props) {
     window.addEventListener('resize', ajustar)
     return () => window.removeEventListener('resize', ajustar)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') aoFechar() }
     window.addEventListener('keydown', tecla)
@@ -152,61 +145,59 @@ export function DigitosFlutuante({ roboId, nomeAtivo, aoFechar }: Props) {
   const trocarJanela = (j: number) => { setJanela(j); guardar(CHAVE_JANELA, j) }
   const maxPct = Math.max(...estat.pct, 1)
   const listaGrupo = [...grupo].sort((a, b) => a - b)
-  const grupoTexto = listaGrupo.length > 3
-    ? `${listaGrupo[0]} a ${listaGrupo[listaGrupo.length - 1]}`
-    : listaGrupo.join(', ')
+  const grupoTexto = listaGrupo.length > 3 ? `${listaGrupo[0]} a ${listaGrupo[listaGrupo.length - 1]}` : listaGrupo.join(', ')
+  const ativoCurto = (nomeAtivo ?? ATIVO_DOS_ROBOS).replace(/\s*Index$/i, '')
 
-  return (
-    <div ref={caixa} className={`df ${movel ? 'df-movel' : ''}`} role="dialog" aria-label="Dígitos ao vivo"
+  const painel = (
+    <div ref={caixa} className={`pd ${movel ? 'pd-movel' : ''}`} role="dialog" aria-label="Dígitos ao vivo"
       style={movel ? { ['--robo' as string]: ident.cor } : { left: pos.x, top: pos.y, ['--robo' as string]: ident.cor }}>
-      <div className="df-topo" onPointerDown={comecar} onPointerMove={mover} onPointerUp={soltar} onPointerCancel={soltar}>
-        {!movel && <span className="df-grip" aria-hidden="true">⋮⋮</span>}
-        <div>
-          <b>Dígitos ao vivo</b>
-          <small>{nomeAtivo ?? ATIVO_DOS_ROBOS} · último dígito <strong>{estat.ultimo ?? '—'}</strong></small>
-        </div>
-        <button className="df-fechar" onClick={aoFechar} aria-label="Fechar"><IconeFechar /></button>
+      <div className="pd-topo" onPointerDown={comecar} onPointerMove={mover} onPointerUp={soltar} onPointerCancel={soltar}>
+        {!movel && <span className="pd-grip" aria-hidden="true">⋮⋮</span>}
+        <b>Dígitos ao vivo</b>
+        <span className="pd-ativo">{ativoCurto}</span>
+        <span className="pd-ultimo" title="último dígito que chegou">{estat.ultimo ?? '—'}</span>
+        <button className="pd-fechar" onClick={aoFechar} aria-label="Fechar"><IconeFechar /></button>
       </div>
 
-      <div className="df-corpo">
-        <div className="df-janela">
-          <span className="rot">Janela</span>
-          <div className="segmented mini" role="group" aria-label="Quantos ticks contar">
-            {JANELAS.map((j) => (
-              <button key={j} type="button" className={janela === j ? 'on' : ''} onClick={() => trocarJanela(j)}
-                title={j === 25 ? 'o que o robô usa para decidir' : undefined}>{j}</button>
-            ))}
-          </div>
-        </div>
-
-        <div className="df-barras" aria-label="Frequência de cada dígito">
-          {estat.pct.map((p, d) => (
-            <div key={d} className={`df-barra ${grupo.has(d) ? 'alvo' : ''} ${estat.ultimo === d ? 'ultimo' : ''}`}
-              title={`${estat.conta[d]} vezes em ${estat.total}`}>
-              <em>{p.toFixed(0)}%</em>
-              <span className="col" style={{ height: `${(p / maxPct) * 100}%` }} />
-              <b>{d}</b>
-            </div>
+      <div className="pd-janela">
+        <span>últimos</span>
+        <div className="segmented mini" role="group" aria-label="Quantos ticks contar">
+          {JANELAS.map((j) => (
+            <button key={j} type="button" className={janela === j ? 'on' : ''} onClick={() => trocarJanela(j)}
+              title={j === 25 ? 'a memória do robô' : undefined}>{j}</button>
           ))}
         </div>
+        <span>ticks</span>
+      </div>
 
-        <div className="df-fita" aria-label="Últimos dígitos">
-          {estat.recentes.slice(-14).map((d, i, arr) => (
-            <span key={i} className={`df-chip ${grupo.has(d) ? 'alvo' : ''} ${i === arr.length - 1 ? 'ultimo' : ''}`}>{d}</span>
-          ))}
-        </div>
+      <div className="pd-barras" aria-label="Frequência de cada dígito">
+        {estat.pct.map((p, d) => (
+          <div key={d} className={`pd-barra ${grupo.has(d) ? 'alvo' : ''} ${estat.ultimo === d ? 'ultimo' : ''}`}
+            title={`${estat.conta[d]} vezes em ${estat.total}`}>
+            <em>{p.toFixed(0)}%</em>
+            <i style={{ height: `${Math.max(3, (p / maxPct) * 100)}%` }} />
+            <b>{d}</b>
+          </div>
+        ))}
+      </div>
 
-        <div className="df-rodape">
-          <div>
-            Grupo do <b>{nome}</b> ({grupoTexto}): <b>{pctGrupoNaJanela}%</b> nos últimos {estat.total || janela}
-            <span className="df-esperado"> · esperado {grupo.size * 10}%</span>
-          </div>
-          <div className={`df-gatilho ${gatilho.ok === true ? 'ok' : gatilho.ok === false ? 'nao' : ''}`}>
-            {gatilho.ok === true ? '● ' : gatilho.ok === false ? '○ ' : ''}{gatilho.texto}
-          </div>
+      <div className="pd-fita" aria-label="Últimos dígitos">
+        {estat.recentes.slice(-12).map((d, i, arr) => (
+          <span key={i} className={`${grupo.has(d) ? 'alvo' : ''} ${i === arr.length - 1 ? 'ultimo' : ''}`}>{d}</span>
+        ))}
+      </div>
+
+      <div className="pd-resumo">
+        <div className="pd-grupo">
+          <span>Grupo do <b>{nome}</b><small> · {grupoTexto}</small></span>
+          <strong>{pctGrupoNaJanela}%</strong>
+          <small>esperado {grupo.size * 10}%</small>
         </div>
-        {estat.carregando && <p className="df-nota">lendo o histórico…</p>}
+        <div className={`pd-gatilho ${gatilho.ok === true ? 'ok' : gatilho.ok === false ? 'nao' : ''}`}>
+          <i /> {gatilho.texto}
+        </div>
       </div>
     </div>
   )
+  return createPortal(painel, document.body)
 }

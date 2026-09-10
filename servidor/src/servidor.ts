@@ -280,6 +280,7 @@ const servidor = createServer(async (req, res) => {
       demo: s.demo,
       moeda: s.moeda,
       origem: s.parametros?.origem ?? 'chat',
+      marca: s.parametros?.marca ?? 'teeds',
       config: montarConfig(s.parametros),
       erro: s.erro ?? null,
       estado: enxuto(s.estado),
@@ -470,9 +471,15 @@ const servidor = createServer(async (req, res) => {
       // servidor; não faria sentido a Teeds mostrar dois mundos diferentes
       // dependendo de onde a pessoa apertou.
       if (url.pathname === '/api/sessoes' && req.method === 'GET') {
-        const minhas = await contasDoUsuario(dono.id)
+        /*
+          So as sessoes DA PLATAFORMA que pergunta. A mesma conta da Deriv
+          pode estar ligada a Teeds e OMNI; um robo ligado na Teeds nao pode
+          aparecer operando na OMNI. Sessao antiga sem marca conta como Teeds.
+        */
+        const marcaDaTela = marcaPorId(url.searchParams.get('marca') ?? 'teeds').id
+        const minhas = await contasDoUsuario(dono.id, marcaDaTela)
         const lista = todas()
-          .filter((s) => minhas.includes(s.contaId) && s.estado?.rodando)
+          .filter((s) => minhas.includes(s.contaId) && s.estado?.rodando && (s.parametros?.marca ?? 'teeds') === marcaDaTela)
           .map((s) => resumo(s))
         return json(200, { sessoes: lista })
       }

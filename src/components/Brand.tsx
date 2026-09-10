@@ -1,4 +1,7 @@
 import { MARCA } from '../marca'
+// O desenho da assinatura mora no CSS do workspace; a marca traz o proprio
+// estilo para nao depender de quem mais estiver na tela (login, modais).
+import './workspace.css'
 
 interface Props {
   tamanho?: number

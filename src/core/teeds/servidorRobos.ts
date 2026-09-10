@@ -161,6 +161,8 @@ export interface SessaoViva {
   demo: boolean
   moeda: string
   origem: 'navegador' | 'chat' | 'api' | string
+  /** De qual plataforma a sessao foi ligada. Servidores antigos nao mandam. */
+  marca?: string
   config: ConfigEstrategia
   erro: string | null
   estado: EstadoMotor
@@ -171,8 +173,14 @@ export async function sessoesVivas(sessao: SessaoTeeds): Promise<SessaoViva[]> {
   // O erro sobe de propósito: devolver lista vazia aqui fazia a tela
   // entender "não há robô operando" toda vez que o servidor demorava a
   // responder — e apagar o painel de um robô que estava vivo.
-  const r = await api<{ sessoes: SessaoViva[] }>(sessao, '/sessoes')
-  return r.sessoes ?? []
+  /*
+    So as sessoes DESTA plataforma. A conta da Deriv pode estar ligada a
+    Teeds e OMNI ao mesmo tempo; um robo ligado na Teeds nao pode aparecer
+    operando na OMNI. O servidor filtra pelo parametro; e, se ele ja mandar a
+    marca de cada sessao, a tela confere de novo por garantia.
+  */
+  const r = await api<{ sessoes: SessaoViva[] }>(sessao, `/sessoes?marca=${encodeURIComponent(MARCA.id)}`)
+  return (r.sessoes ?? []).filter((s) => !s.marca || s.marca === MARCA.id)
 }
 
 /**
