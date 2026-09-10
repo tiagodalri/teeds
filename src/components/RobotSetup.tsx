@@ -152,7 +152,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
       <footer className="robot-launch-footer">
         <button type="button" className="robot-launch-back" disabled={ligando} onClick={passo === (escolherModelo ? -1 : 0) ? onCancelar : voltar}>{passo === (escolherModelo ? -1 : 0) ? 'Cancelar' : '← Voltar'}</button>
         <span>{passo === -1 ? modelo.nome : revisao ? '' : 'Nada será operado ainda'}</span>
-        {revisao ? <button type="button" className="robot-launch-next" disabled={ligando || !todasValidas || (!isDemo && !confirmaReal)} onClick={iniciar}>{ligando ? 'Iniciando…' : '▶ Iniciar robô'}</button>
+        {revisao ? <button type="button" className="robot-launch-next" disabled={ligando || !todasValidas || (!isDemo && !confirmaReal)} onClick={iniciar}>{ligando ? 'Iniciando…' : <span className="robot-launch-go"><svg className="icone-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6L12.6 8z" fill="currentColor" /></svg>Iniciar robô</span>}</button>
           : <button type="submit" className="robot-launch-next" disabled={!valido || ligando}>Continuar <span aria-hidden="true">→</span></button>}
       </footer>
     </form>

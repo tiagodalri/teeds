@@ -31,8 +31,10 @@ console.log('             entrada máx USD 5 · stop máx 25% do saldo · 2 rob�
 
 caso('entrada de 1, stop de 50', 'passa', { ...real, entrada: 1, stopLoss: 50, takeProfit: 50 })
 caso('entrada de 5, no limite exato', 'passa', { ...real, entrada: 5, stopLoss: 100, takeProfit: 100 })
-caso('entrada de 500 (o cliente editou o campo)', 'recusa', { ...real, entrada: 500, stopLoss: 500, takeProfit: 500 })
-caso('stop de 1000 numa conta de 2000', 'recusa', { ...real, entrada: 2, stopLoss: 1000, takeProfit: 1000 })
+caso('entrada de 500 (sem teto por padrao: o valor e do cliente)', 'passa', { ...real, entrada: 500, stopLoss: 500, takeProfit: 500 })
+caso('stop de 1000 numa conta de 2000 (o stop e do cliente)', 'passa', { ...real, entrada: 2, stopLoss: 1000, takeProfit: 1000 })
+caso('stop de 100 numa conta de 4,79 (o stop e do cliente)', 'passa', { ...real, saldo: 4.79, entrada: 0.35, stopLoss: 100, takeProfit: 10 })
+caso('sem meta de ganho (0 = desligada)', 'passa', { ...real, entrada: 1, stopLoss: 50, takeProfit: 0 })
 caso('stop de 500, exatamente 25%', 'passa', { ...real, entrada: 2, stopLoss: 500, takeProfit: 500 })
 caso('entrada maior que o stop', 'recusa', { ...real, entrada: 4, stopLoss: 3, takeProfit: 50 })
 caso('sem stop', 'recusa', { ...real, entrada: 1, stopLoss: 0, takeProfit: 50 })

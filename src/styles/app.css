@@ -4585,3 +4585,7 @@ input, select, textarea, button { vertical-align: middle; }
   .pd.pd-movel { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-width: none; border-radius: 12px 12px 0 0; border-bottom: 0; max-height: 78dvh; overflow-y: auto; }
   .pd-movel .pd-topo { cursor: default; position: sticky; top: 0; z-index: 1; }
 }
+
+/* Botao "Iniciar robo": icone vetorial na linha do texto (o glifo ▶ ficava alto). */
+.robot-launch-go { display: inline-flex; align-items: center; gap: 9px; }
+.robot-launch-go .icone-play { width: .8em; height: .8em; display: block; }

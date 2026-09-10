@@ -36,8 +36,14 @@ export interface Limites {
  * não é.
  */
 export const PADRAO: Limites = {
-  entradaMaxima: 5,
-  fracaoDoSaldo: 0.25,
+  /*
+    Valor da entrada e tamanho do stop sao decisao do cliente — o risco e
+    dele (10/09/2026, a pedido do Tiago). Por padrao NAO ha teto: Infinity.
+    O mecanismo continua para um limite ajustado a mao para um cliente
+    especifico (limitesDoCliente), que ai vale.
+  */
+  entradaMaxima: Infinity,
+  fracaoDoSaldo: Infinity,
   robosSimultaneos: 2,
   mensagensPorDia: 30,
 }
@@ -77,8 +83,9 @@ export function conferir(p: Pedido, l: Limites = PADRAO): Veredito {
   if (!Number.isFinite(p.stopLoss) || p.stopLoss <= 0) {
     return { ok: false, motivo: 'Diga em quanto de perda o robô deve parar.' }
   }
-  if (!Number.isFinite(p.takeProfit) || p.takeProfit <= 0) {
-    return { ok: false, motivo: 'Diga em quanto de ganho o robô deve parar.' }
+  // Meta de ganho zero = sem meta (o motor entende 0 como desligado).
+  if (!Number.isFinite(p.takeProfit) || p.takeProfit < 0) {
+    return { ok: false, motivo: 'A meta de ganho não pode ser negativa.' }
   }
 
   if (p.robosAtivos >= l.robosSimultaneos) {
@@ -134,12 +141,15 @@ export function conferir(p: Pedido, l: Limites = PADRAO): Veredito {
  * uma recusa.
  */
 export function sugerir(saldo: number, demo: boolean, l: Limites = PADRAO) {
+  // A sugestao usa proporcoes prudentes mesmo sem teto: e so um ponto de partida.
+  const tetoEntrada = Number.isFinite(l.entradaMaxima) ? l.entradaMaxima : 5
+  const fracao = Number.isFinite(l.fracaoDoSaldo) ? l.fracaoDoSaldo : 0.25
   const entrada = demo
     ? 1
-    : Math.max(0.35, Math.min(l.entradaMaxima, arredondar(saldo * 0.005)))
+    : Math.max(0.35, Math.min(tetoEntrada, arredondar(saldo * 0.005)))
   const stop = demo
     ? Math.max(entrada * 20, 20)
-    : Math.max(entrada * 10, arredondar(saldo * (l.fracaoDoSaldo / 2)))
+    : Math.max(entrada * 10, arredondar(saldo * (fracao / 2)))
   return { entrada, stopLoss: stop, takeProfit: stop }
 }
 
