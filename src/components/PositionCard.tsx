@@ -39,6 +39,10 @@ interface Props {
  * Encerrado, com o valor final). O cartao so sai da lista depois de mostrar
  * o resultado — antes ele sumia no vencimento sem dizer o que aconteceu.
  *
+ * A estrutura (cabecalho, barra, resultado, botao) e SEMPRE a mesma: o
+ * painel flutuante desenha o cartao numa grade de altura fixa, e tirar uma
+ * linha em algum estado desalinha as outras.
+ *
  * "Encerrar" e vender o contrato de volta para a Deriv antes do fim. A
  * palavra "vender" saiu daqui de proposito: na mesma tela ela ja e o botao
  * de apostar na queda, e um leigo lia "Vender" achando que estava saindo.
@@ -57,6 +61,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
   const variacao =
     c.entrySpot !== null && c.currentSpot !== null ? c.currentSpot - c.entrySpot : null
   const selo = SELO[c.status] ?? null
+  const dinheiro = (v: number) => `${c.currency} ${v.toFixed(2)}`
 
   const carimbo = concluido
     ? selo
@@ -69,13 +74,21 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
     ? (c.status === 'won' ? 'ganhou' : c.status === 'lost' ? 'perdeu' : '')
     : (!ticks && !liquidando && restante <= 15 ? 'urgente' : '')
 
-  const legenda = liquidando
-    ? 'venceu · a Deriv está fechando as contas'
-    : ticks
-      ? `vence depois de ${ticks} ${ticks === '1' ? 'tick' : 'ticks'} · cada tick é uma cotação nova`
-      : restante > 0
-        ? `${Math.round(progresso)}% do contrato · faltam ${texto}`
-        : 'liquidando…'
+  const legenda = concluido
+    ? c.status === 'won'
+      ? `Ganhou · recebeu ${dinheiro(c.bidPrice)}`
+      : c.status === 'lost'
+        ? `Perdeu · ${dinheiro(c.buyPrice)} da entrada`
+        : c.status === 'sold'
+          ? `Encerrado antes do fim por ${dinheiro(c.bidPrice)}`
+          : 'Cancelado'
+    : liquidando
+      ? 'venceu · a Deriv está fechando as contas'
+      : ticks
+        ? `vence depois de ${ticks} ${ticks === '1' ? 'tick' : 'ticks'} · cada tick é uma cotação nova`
+        : restante > 0
+          ? `${Math.round(progresso)}% do contrato · faltam ${texto}`
+          : 'liquidando…'
 
   const rotuloBotao = concluido
     ? `Concluído · ${selo}`
@@ -84,7 +97,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
       : encerrando
         ? 'Encerrando…'
         : c.isValidToSell
-          ? `Encerrar agora · ${c.currency} ${c.bidPrice.toFixed(2)}`
+          ? `Encerrar agora · ${dinheiro(c.bidPrice)}`
           : 'Vai até o fim · não dá para encerrar antes'
 
   return (
@@ -102,13 +115,11 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
         <span className={`pos-tempo ${carimboClasse}`}>{carimbo}</span>
       </div>
 
-      {!concluido && (
-        <div className="pos-progresso">
-          <Progress valor={liquidando ? 100 : progresso} altura={5}
-            cor={ganhando ? 'var(--up)' : 'var(--down)'} vivo={!liquidando && restante > 0} />
-          <span className="pos-progresso-txt">{legenda}</span>
-        </div>
-      )}
+      <div className="pos-progresso">
+        <Progress valor={concluido || liquidando ? 100 : progresso} altura={5}
+          cor={ganhando ? 'var(--up)' : 'var(--down)'} vivo={!concluido && !liquidando && restante > 0} />
+        <span className="pos-progresso-txt">{legenda}</span>
+      </div>
 
       <div className="pos-resultado">
         <div>
@@ -120,17 +131,17 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
             {ganhando ? '+' : ''}{c.profitPercentage.toFixed(1)}%
           </span>
         </div>
-        {!concluido && (
-          <div className="pos-alvo">
-            <span className="rot">Se ganhar</span>
-            <strong>{c.currency} {c.payout.toFixed(2)}</strong>
-            <span className="sub">lucro {(c.payout - c.buyPrice).toFixed(2)}</span>
-          </div>
-        )}
+        <div className="pos-alvo">
+          <span className="rot">{concluido ? 'Pagou' : 'Se ganhar'}</span>
+          <strong>{dinheiro(concluido ? c.bidPrice : c.payout)}</strong>
+          <span className="sub">
+            {concluido ? `entrada ${dinheiro(c.buyPrice)}` : `lucro ${(c.payout - c.buyPrice).toFixed(2)}`}
+          </span>
+        </div>
       </div>
 
       <dl className="pos-dados">
-        <div><dt>Investido</dt><dd>{c.currency} {c.buyPrice.toFixed(2)}</dd></div>
+        <div><dt>Investido</dt><dd>{dinheiro(c.buyPrice)}</dd></div>
         <div><dt>Entrada</dt><dd>{fmt(c.entrySpot, c.pipSize)}</dd></div>
         {concluido ? (
           <div><dt>Saída</dt><dd>{fmt(c.exitSpot ?? c.currentSpot, c.pipSize)}</dd></div>
@@ -142,7 +153,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
             )}
           </dd></div>
         )}
-        <div><dt>{concluido ? 'Pagou' : 'Encerrar por'}</dt><dd>{c.currency} {c.bidPrice.toFixed(2)}</dd></div>
+        <div><dt>{concluido ? 'Pagou' : 'Encerrar por'}</dt><dd>{dinheiro(c.bidPrice)}</dd></div>
       </dl>
 
       <button

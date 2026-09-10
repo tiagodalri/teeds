@@ -51,6 +51,16 @@ const STATUS_LABEL: Record<string, string> = {
   reconnecting: 'Reconectando', closed: 'Desconectado',
 }
 
+/** Ids dos contratos comprados nesta tela, por conta — para separar do que os robos fazem. */
+const chaveManuais = (contaId: string) => `${MARCA.id}.posicoes-manuais.${contaId}`
+function lerManuais(contaId: string | null): number[] {
+  try {
+    if (!contaId) return []
+    const lista = JSON.parse(sessionStorage.getItem(chaveManuais(contaId)) || '[]')
+    return Array.isArray(lista) ? lista.filter((n) => Number.isFinite(n)) : []
+  } catch { return [] }
+}
+
 function assistenteBetaJaLiberado() {
   try { return sessionStorage.getItem(`assistente-beta:${MARCA.id}`) === 'liberado' }
   catch { return false }
@@ -227,9 +237,33 @@ export default function App() {
 
   const pipSize = activeSymbol?.pipSize ?? tick?.pipSize ?? 2
   const price = tick?.quote ?? (candles.length ? candles[candles.length - 1].close : null)
+
+  /*
+    A lista de posicoes e das entradas feitas AQUI.
+
+    A conta da Deriv e uma so, e os robos operam nela — o fluxo de contratos
+    trazia as entradas deles (uma por segundo, de 0,35) para o painel manual:
+    "posicao que eu nem abri", contagem pulando, cartoes piscando. Agora a
+    tela guarda os ids do que ela mesma comprou (por conta, na sessao do
+    navegador) e so lista esses; o resto vira uma linha de contagem.
+  */
+  const [manuais, setManuais] = useState<number[]>(() => lerManuais(conta.accountId))
+  useEffect(() => { setManuais(lerManuais(conta.accountId)) }, [conta.accountId])
+  const marcarManual = (id: number) => setManuais((lista) => {
+    const next = [...lista.filter((x) => x !== id), id].slice(-60)
+    try { if (conta.accountId) sessionStorage.setItem(chaveManuais(conta.accountId), JSON.stringify(next)) } catch { /* sem armazenamento: vale ate recarregar */ }
+    return next
+  })
+  const idsManuais = useMemo(() => new Set(manuais), [manuais])
+  const minhas = useMemo(
+    () => conta.contracts.filter((c) => idsManuais.has(c.contractId)),
+    [conta.contracts, idsManuais],
+  )
+  const deRobos = conta.contracts.filter((c) => !idsManuais.has(c.contractId) && c.status === 'open').length
+
   const doAtivo = useMemo(
-    () => conta.contracts.filter((c) => c.symbol === symbolCode),
-    [conta.contracts, symbolCode],
+    () => minhas.filter((c) => c.symbol === symbolCode),
+    [minhas, symbolCode],
   )
   // memorizado por assinatura: o grafico so redesenha quando algo muda de verdade
   const chaveMarcadores = doAtivo
@@ -244,8 +278,8 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [chaveMarcadores],
   )
-  const investido = conta.contracts.reduce((t, c) => t + c.buyPrice, 0)
-  const resultadoAberto = conta.contracts.reduce((t, c) => t + c.profit, 0)
+  const investido = minhas.reduce((t, c) => t + c.buyPrice, 0)
+  const resultadoAberto = minhas.reduce((t, c) => t + c.profit, 0)
 
   /*
     So opera com a linha da conta ABERTA agora. Com ela reconectando, o botao
@@ -287,6 +321,7 @@ export default function App() {
         symbol: symbolCode, contractType: tipo, amount: stake, currency: moeda, ...extra,
       })
       const r = await buyFromProposal(conta.socket, p.id, p.askPrice)
+      marcarManual(r.contractId)
       setAviso({
         tipo: 'ok',
         texto: `Entrada feita: ${moeda} ${r.buyPrice.toFixed(2)} · se ganhar, recebe ${moeda} ${r.payout.toFixed(2)}.`,
@@ -679,12 +714,12 @@ export default function App() {
             aria-label="Posições abertas">
             <button className="pos-flutuante-topo" onClick={() => setPosicoesAbertas((aberto) => !aberto)}
               aria-expanded={posicoesAbertas}>
-              <span><i className={conta.contracts.length ? 'vivo' : ''} />
-                {conta.contracts.length === 0
-                  ? 'Nenhuma posição'
-                  : `${conta.contracts.length} ${conta.contracts.length === 1 ? 'posição' : 'posições'}`}
+              <span><i className={minhas.length ? 'vivo' : ''} />
+                {minhas.length === 0
+                  ? 'Nenhuma posição sua'
+                  : `${minhas.length} ${minhas.length === 1 ? 'posição sua' : 'posições suas'}`}
               </span>
-              {conta.contracts.length > 0 && (
+              {minhas.length > 0 && (
                 <strong className={resultadoAberto >= 0 ? 'ganho' : 'perda'}>
                   {resultadoAberto >= 0 ? '+' : '−'}{Math.abs(resultadoAberto).toFixed(2)}
                 </strong>
@@ -693,16 +728,22 @@ export default function App() {
             </button>
             {posicoesAbertas && (
               <div className="pos-flutuante-corpo">
-                {conta.contracts.length > 0 && (
+                {minhas.length > 0 && (
                   <div className="pos-resumo">
-                    <span>Investido <b>{conta.account?.currency ?? 'USD'} {investido.toFixed(2)}</b></span>
+                    <span>Investido <b>{moeda} {investido.toFixed(2)}</b></span>
+                  </div>
+                )}
+                {derivPronta && deRobos > 0 && (
+                  <div className="pos-robos">
+                    Robôs: <b>{deRobos}</b> {deRobos === 1 ? 'entrada aberta' : 'entradas abertas'} nesta conta agora ·
+                    acompanhe na aba Robôs.
                   </div>
                 )}
                 {!derivPronta && <div className="pos-vazio">Conecte sua Deriv para acompanhar posições.</div>}
-                {derivPronta && conta.contracts.length === 0 && (
-                  <div className="pos-vazio">Suas operações aparecerão aqui.</div>
+                {derivPronta && minhas.length === 0 && (
+                  <div className="pos-vazio">As entradas que você fizer aqui aparecem nesta lista, com o resultado.</div>
                 )}
-                {conta.contracts.map((c) => (
+                {minhas.map((c) => (
                   <PositionCard key={c.contractId} contrato={c}
                     nomeAtivo={symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol}
                     onEncerrar={encerrar} encerrando={vendendo === c.contractId} />

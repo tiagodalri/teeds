@@ -386,9 +386,16 @@ button, input { font: inherit; color: inherit; }
 .btn-vender:disabled { background: var(--desativado); }
 
 /* ----------------------------------------------- posicao: fim do contrato */
-.pos-concluida { opacity: .96; }
+.pos-concluida .btn-vender { opacity: .85; }
 .pos-won { border-left-color: var(--up); }
 .pos-lost { border-left-color: var(--down); }
+/* Entradas dos robos na mesma conta: so uma linha, nunca cartoes. */
+.pos-robos {
+  margin: 0 4px 8px; padding: 7px 9px; border-radius: 8px;
+  font-size: 11px; line-height: 1.45; color: var(--muted);
+  background: var(--primary-soft); border: 1px dashed color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+.pos-robos b { color: var(--text); font-variant-numeric: tabular-nums; }
 .pos-sold, .pos-cancelled { border-left-color: var(--muted); }
 .pos-tempo.ganhou { background: var(--up-soft); color: var(--up); }
 .pos-tempo.perdeu { background: var(--down-soft); color: var(--down); }
@@ -3712,12 +3719,17 @@ button, input { font: inherit; color: inherit; }
   justify-content: center; white-space: nowrap; overflow: hidden;
   text-overflow: ellipsis; line-height: 1;
 }
-.pos-concluida { animation: posicao-concluida 1.8s ease both; }
-.pos-concluida .pos-tempo { color: var(--up); background: var(--up-soft); }
+/*
+  Ao concluir, o cartao da um leve "assentar" e FICA visivel. A animacao
+  antiga terminava em opacidade zero: o cartao sumia da vista mas seguia no
+  DOM por alguns segundos, contando no cabecalho — "7 posicoes" e lista vazia.
+*/
+.pos-concluida { animation: posicao-concluida .35s ease both; }
 @keyframes posicao-concluida {
-  0%, 72% { opacity: 1; }
-  100% { opacity: 0; }
+  0% { opacity: .55; transform: translateY(3px); }
+  100% { opacity: 1; transform: none; }
 }
+@media (prefers-reduced-motion: reduce) { .pos-concluida { animation: none; } }
 .pos-resultado strong, .pos-alvo strong, .pos-dados dd, .pos-tempo {
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
@@ -4061,6 +4073,8 @@ input, select, textarea, button { vertical-align: middle; }
 }
 .posicoes-flutuantes .pos-ganhando,
 .posicoes-flutuantes .pos-perdendo { border-left-color: var(--primary); }
+.posicoes-flutuantes .pos-won { border-left-color: var(--up); }
+.posicoes-flutuantes .pos-lost { border-left-color: var(--down); }
 .posicoes-flutuantes .prog { --prog-cor: var(--primary) !important; }
 .posicoes-flutuantes .prog-fill.vivo::after { display: none; }
 .posicoes-flutuantes .pos-dados { display: none; }
