@@ -3,7 +3,7 @@ import type { TradingAccount } from '../core/deriv/account'
 import { BalanceLive } from './BalanceLive'
 import { DerivNome } from './DerivMarca'
 import { MARCA } from '../marca'
-import { AccountDemonstration, podeDemonstrarSaldos } from './AccountDemonstration'
+import { AccountDemonstration } from './AccountDemonstration'
 
 interface Props {
   admin?: boolean | null
@@ -109,7 +109,6 @@ export function AccountSwitcher(props: Props) {
 
           <div className="menu-linha" />
 
-          {podeDemonstrarSaldos(props.admin, props.email) && <button className="menu-acao" role="menuitem" onClick={() => { setAberto(false); setDemonstrando(true) }}>Demonstração de saldos · simulados</button>}
 
           {isDemo && (
             <button className="menu-acao" role="menuitem"
