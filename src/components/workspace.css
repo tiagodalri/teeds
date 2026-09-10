@@ -32,6 +32,10 @@
 .brand-wordmark { display: flex; flex-direction: column; gap: 5px; font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 25px; font-weight: 750; line-height: 1; letter-spacing: .13em; }
 .brand-signature-omni .brand-wordmark { font-weight: 850; letter-spacing: .08em; }
 .brand-wordmark > span { font-size: 7px; font-weight: 600; letter-spacing: .2em; color: var(--muted); }
+.brand-signature-teeds { gap: 10px; }
+.brand-signature-teeds .brand-original { width: 46px; height: 46px; object-fit: contain; }
+.brand-signature-teeds .brand-wordmark { font-family: 'Cinzel', Georgia, serif; font-size: 24px; font-weight: 600; letter-spacing: .09em; }
+.brand-signature-teeds .brand-wordmark > span { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 7px; letter-spacing: .15em; }
 .workspace-sidebar.compact .brand-wordmark { display: none; }
 .workspace-sidebar.compact .workspace-brand { justify-content: center; }
 .workspace-app .topbar-right { margin-left: auto; font-variant-numeric: tabular-nums; }
