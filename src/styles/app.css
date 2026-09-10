@@ -1653,6 +1653,19 @@ button, input { font: inherit; color: inherit; }
 }
 .selo.demo { background: var(--account-demo-soft); color: var(--account-demo); }
 .selo.real { background: var(--up-soft); color: var(--up); }
+/*
+  No chip do topo, a etiqueta e o saldo se alinham pelo CENTRO OPTICO, nao
+  pela caixa: a etiqueta vira uma caixa de altura fixa com o texto centrado
+  e desce 1px, e o saldo perde a folga de linha — senao o "REAL" parecia
+  flutuar acima do "USD 714,94".
+*/
+.conta-chip .selo {
+  display: inline-flex; align-items: center; height: 20px; padding: 0 7px;
+  line-height: 1; position: relative; top: 1px;
+}
+.conta-chip .saldo-caixa { align-items: center; }
+.conta-chip .saldo { line-height: 1.15; padding: 2px 8px; display: inline-flex; align-items: baseline; gap: 4px; }
+.conta-chip .saldo em { line-height: 1; }
 
 .avatar-botao {
   display: flex; align-items: center; gap: 5px; height: 38px;
