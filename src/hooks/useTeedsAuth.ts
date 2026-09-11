@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  buscarUsuario, cadastrar as criarConta, capturarRetorno, entrar as fazerLogin,
+  buscarUsuario, cadastrar as criarConta, capturarRetorno, entrar as fazerLogin, lembrarSessao,
   recuperarSenha, renovar, sair as encerrar, sessaoGuardada, trocarSenha,
   type DadosCadastro, type SessaoTeeds, type Usuario,
 } from '../core/teeds/conta'
@@ -143,13 +143,23 @@ export function useTeedsAuth() {
     setStatus('deslogado')
   }, [sessao])
 
+  /**
+   * Entrou com senha provisória (conta criada pelo painel ou importada da
+   * base de leads): não passa da tela de senha nova até criar a própria.
+   */
+  const precisaTrocarSenha = Boolean(sessao?.usuario?.trocarSenha)
+
   const definirNovaSenha = useCallback(async (nova: string) => {
     if (!sessao) return false
     setOcupado(true); setErro(null)
     try {
-      await trocarSenha(sessao.token, nova)
+      const eraProvisoria = Boolean(sessao.usuario?.trocarSenha)
+      const usuario = await trocarSenha(sessao.token, nova)
+      const atualizada = { ...sessao, usuario: { ...sessao.usuario, ...usuario, trocarSenha: false } }
+      setSessao(atualizada)
+      lembrarSessao(atualizada)
       setRedefinindo(false)
-      setRecado('Senha trocada.')
+      setRecado(eraProvisoria ? `Senha criada. Bem-vindo à ${MARCA.prosa}.` : 'Senha trocada.')
       return true
     } catch (e) {
       setErro((e as Error).message)
@@ -168,6 +178,6 @@ export function useTeedsAuth() {
   return {
     atualizarUsuario,
     status, sessao, usuario: sessao?.usuario ?? null, erro, setErro, recado, setRecado,
-    ocupado, entrar, cadastrar, esqueci, sair, redefinindo, definirNovaSenha,
+    ocupado, entrar, cadastrar, esqueci, sair, redefinindo, precisaTrocarSenha, definirNovaSenha,
   }
 }

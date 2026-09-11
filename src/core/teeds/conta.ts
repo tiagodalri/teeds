@@ -21,6 +21,14 @@ export interface Usuario {
   /** Guardado só com dígitos. Exibido formatado. */
   cpf: string | null
   criadoEm: string
+  /**
+   * Entrou com uma senha provisória e ainda não criou a própria.
+   *
+   * Enquanto for verdade, a plataforma não abre: só a tela de senha nova.
+   * Vem de `user_metadata.trocar_senha`, que o painel e a importação de
+   * leads gravam ao criar a conta, e que a própria troca apaga.
+   */
+  trocarSenha: boolean
 }
 
 export interface DadosCadastro {
@@ -89,6 +97,12 @@ function traduzir(dados: any): string {
     return 'Já existe uma conta com este e-mail. Tente entrar.'
   }
   if (m.includes('password should be at least')) return 'A senha precisa de pelo menos 6 caracteres.'
+  if (dados?.error_code === 'same_password' || m.includes('should be different from the old')) {
+    return 'A senha nova precisa ser diferente da atual.'
+  }
+  if (dados?.error_code === 'reauthentication_needed' || m.includes('reauthentication')) {
+    return 'Por segurança, saia e entre de novo antes de trocar a senha.'
+  }
   if (m.includes('unable to validate email') || m.includes('invalid email')) return 'Esse e-mail não parece válido.'
   if (m.includes('rate limit') || m.includes('too many')) return 'Muitas tentativas. Espere um minuto e tente de novo.'
   return bruto || `Não consegui falar com o servidor da ${MARCA.prosa}.`
@@ -112,6 +126,7 @@ function montarUsuario(u: any): Usuario {
     telefone: u?.user_metadata?.telefone ?? null,
     cpf: u?.user_metadata?.cpf ?? null,
     criadoEm: u?.created_at ?? '',
+    trocarSenha: u?.user_metadata?.trocar_senha === true,
   }
 }
 
@@ -288,7 +303,7 @@ export function capturarRetorno(): Retorno {
     token,
     refresh: p.get('refresh_token') ?? '',
     expiraEm: Date.now() + Number(p.get('expires_in') ?? 3600) * 1000,
-    usuario: { id: '', email: '', nome: null, telefone: null, cpf: null, criadoEm: '' },
+    usuario: { id: '', email: '', nome: null, telefone: null, cpf: null, criadoEm: '', trocarSenha: false },
   }
   guardar(sessao)
   return { sessao, tipo: p.get('type'), erro: null }
@@ -320,7 +335,25 @@ export async function atualizarPerfil(
   return montarUsuario(u)
 }
 
-/** Troca a senha da conta logada. */
-export async function trocarSenha(token: string, nova: string): Promise<void> {
-  await chamar('/user', { corpo: { password: nova }, token, metodo: 'PUT' })
+/**
+ * Troca a senha da conta logada e devolve o usuário atualizado.
+ *
+ * Apaga a obrigação de trocar a senha no mesmo pedido: quem acabou de criar
+ * a própria senha já cumpriu o que a senha provisória pedia. O Supabase
+ * mescla `data` com o que já existe, então nome, telefone e marca ficam.
+ */
+export async function trocarSenha(token: string, nova: string): Promise<Usuario> {
+  const u = await chamar('/user', { corpo: { password: nova, data: { trocar_senha: false } }, token, metodo: 'PUT' })
+  return montarUsuario(u)
+}
+
+/**
+ * Regrava a sessão guardada no navegador.
+ *
+ * Sem isto, quem acabou de trocar a senha provisória recarregaria a página
+ * com os dados antigos na memória do navegador e cairia de novo na tela de
+ * senha nova.
+ */
+export function lembrarSessao(s: SessaoTeeds): void {
+  guardar(s)
 }

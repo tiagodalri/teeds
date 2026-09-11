@@ -2474,6 +2474,8 @@ button:has(> .icone-fechar) { display: inline-flex; align-items: center; justify
   background: var(--down-soft); color: #a3272c; font-size: 12.5px; line-height: 1.5;
   border: 1px solid color-mix(in srgb, var(--down) 22%, transparent);
 }
+.entrada-sair{display:block;margin:14px auto 0;padding:6px 10px;border:0;background:transparent;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer}
+.entrada-sair:disabled{opacity:.5;cursor:default}
 
 /* Faixa de confiança. */
 .entrada-seguranca {

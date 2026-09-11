@@ -398,9 +398,12 @@ export default function App() {
     return <div className="entrada"><div className="entrada-esperando">abrindo a {MARCA.prosa}…</div></div>
   }
 
-  if (teeds.redefinindo) {
+  // Quem entrou com senha provisória não chega na plataforma: primeiro cria
+  // a própria senha. É a mesma tela do link de "esqueci a senha".
+  if (teeds.redefinindo || (teeds.status === 'logado' && teeds.precisaTrocarSenha)) {
     return (
-      <NovaSenha ocupado={teeds.ocupado} erro={teeds.erro} onDefinir={teeds.definirNovaSenha} />
+      <NovaSenha ocupado={teeds.ocupado} erro={teeds.erro} onDefinir={teeds.definirNovaSenha}
+        obrigatoria={!teeds.redefinindo} onSair={() => void teeds.sair()} />
     )
   }
 
