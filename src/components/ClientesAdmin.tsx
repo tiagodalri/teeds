@@ -3,6 +3,8 @@ import { atualizarAcessoCliente, definirProdutoCliente, listarClientes, listarCo
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { IconeFechar } from './IconeFechar'
 
+/** Quantos clientes cabem numa página. */
+const POR_PAGINA = 50
 const dataCurta = (iso?: string | null) => iso ? new Date(iso).toLocaleDateString('pt-BR') : 'Sem vencimento'
 const dataInput = (iso?: string | null) => iso ? iso.slice(0, 10) : ''
 const venceu = (c: ClienteRegistro) => Boolean(c.acessoExpiraEm && new Date(c.acessoExpiraEm).getTime() < Date.now())
@@ -18,6 +20,7 @@ export function ClientesAdmin({ sessao, dias }: { sessao: SessaoTeeds | null; di
   const [liberacoes, setLiberacoes] = useState<ClienteProdutoRegistro[]>([])
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState('todos')
+  const [pagina, setPagina] = useState(0)
   const [editando, setEditando] = useState<ClienteRegistro | null>(null)
   const [form, setForm] = useState({ planoId: 'essencial', status: 'ativo', expira: '', observacoes: '' })
   const [extras, setExtras] = useState<Set<string>>(new Set())
@@ -54,6 +57,12 @@ export function ClientesAdmin({ sessao, dias }: { sessao: SessaoTeeds | null; di
     const termo = busca.trim().toLowerCase()
     return (!termo || `${c.nome} ${c.email} ${c.telefone} ${c.cpf}`.toLowerCase().includes(termo)) && (filtro === 'todos' || statusReal(c) === filtro)
   }), [clientes, busca, filtro])
+  // Busca ou filtro novo volta para a primeira página.
+  useEffect(() => { setPagina(0) }, [busca, filtro])
+  const totalPaginas = Math.max(1, Math.ceil(visiveis.length / POR_PAGINA))
+  const paginaAtual = Math.min(pagina, totalPaginas - 1)
+  const naPagina = visiveis.slice(paginaAtual * POR_PAGINA, (paginaAtual + 1) * POR_PAGINA)
+  const n = (x: number) => x.toLocaleString('pt-BR')
   const ativos = clientes.filter((c) => statusReal(c) === 'ativo').length
   const expirados = clientes.filter((c) => statusReal(c) === 'expirado').length
   const vencendo = clientes.filter((c) => c.acessoExpiraEm && !venceu(c) && new Date(c.acessoExpiraEm).getTime() - Date.now() < 7 * 86400000).length
@@ -79,12 +88,13 @@ export function ClientesAdmin({ sessao, dias }: { sessao: SessaoTeeds | null; di
   return <section className="adm-clientes">
     <header className="adm-cabecalho"><div><span className="rot">Central de clientes</span><h2>Acessos e assinaturas</h2><p>Controle planos, vencimentos e produtos liberados em um só lugar.</p></div><button onClick={() => void carregar()} disabled={carregando}>{carregando ? 'Atualizando…' : '↻ Atualizar'}</button></header>
     {erro && <div className="ger-erro">{erro}</div>}
-    <div className="adm-kpis"><article><span>Clientes cadastrados</span><strong>{clientes.length}</strong><small>base completa</small></article><article className="ok"><span>Acessos ativos</span><strong>{ativos}</strong><small>liberados agora</small></article><article className="alerta"><span>Vencem em 7 dias</span><strong>{vencendo}</strong><small>pedem atenção</small></article><article className="perigo"><span>Expirados</span><strong>{expirados}</strong><small>sem acesso operacional</small></article></div>
+    <div className="adm-kpis"><article><span>Clientes cadastrados</span><strong>{n(clientes.length)}</strong><small>base completa</small></article><article className="ok"><span>Acessos ativos</span><strong>{ativos}</strong><small>liberados agora</small></article><article className="alerta"><span>Vencem em 7 dias</span><strong>{vencendo}</strong><small>pedem atenção</small></article><article className="perigo"><span>Expirados</span><strong>{expirados}</strong><small>sem acesso operacional</small></article></div>
     <div className="adm-filtros"><label>⌕<input placeholder="Buscar nome, e-mail, telefone ou CPF" value={busca} onChange={(e) => setBusca(e.target.value)} /></label><select value={filtro} onChange={(e) => setFiltro(e.target.value)}><option value="todos">Todos os status</option><option value="ativo">Ativos</option><option value="suspenso">Suspensos</option><option value="expirado">Expirados</option><option value="cancelado">Cancelados</option></select></div>
     <div className="adm-tabela"><div className="adm-linha cab"><span>Cliente</span><span>Plano</span><span>Status</span><span>Validade</span><span>Extras</span><span>Operações</span><span /></div>
-      {visiveis.map((c) => { const info = porCliente.get(c.userId); const qtdExtras = liberacoes.filter((x) => x.userId === c.userId && x.ativo).length; const st = statusReal(c); return <button className="adm-linha" key={c.userId} onClick={() => abrir(c)}><span className="adm-pessoa"><i>{(c.nome || c.email || '?').slice(0, 1).toUpperCase()}</i><b>{c.nome || 'Sem nome'}<small>{c.email}</small></b></span><span>{planos.find((p) => p.id === c.planoId)?.nome ?? c.planoId}</span><span><em className={`adm-status ${st}`}>{st}</em></span><span>{dataCurta(c.acessoExpiraEm)}</span><span>{qtdExtras ? `${qtdExtras} liberado${qtdExtras > 1 ? 's' : ''}` : 'Nenhum'}</span><span>{info?.operacoes.toLocaleString('pt-BR') ?? 0}</span><span className="adm-seta">›</span></button> })}
+      {naPagina.map((c) => { const info = porCliente.get(c.userId); const qtdExtras = liberacoes.filter((x) => x.userId === c.userId && x.ativo).length; const st = statusReal(c); return <button className="adm-linha" key={c.userId} onClick={() => abrir(c)}><span className="adm-pessoa"><i>{(c.nome || c.email || '?').slice(0, 1).toUpperCase()}</i><b>{c.nome || 'Sem nome'}<small>{c.email}</small></b></span><span>{planos.find((p) => p.id === c.planoId)?.nome ?? c.planoId}</span><span><em className={`adm-status ${st}`}>{st}</em></span><span>{dataCurta(c.acessoExpiraEm)}</span><span>{qtdExtras ? `${qtdExtras} liberado${qtdExtras > 1 ? 's' : ''}` : 'Nenhum'}</span><span>{info?.operacoes.toLocaleString('pt-BR') ?? 0}</span><span className="adm-seta">›</span></button> })}
       {!carregando && visiveis.length === 0 && <div className="adm-vazio">Nenhum cliente encontrado.</div>}
     </div>
+    {visiveis.length > POR_PAGINA && <div className="adm-paginas"><span>{n(paginaAtual * POR_PAGINA + 1)}–{n(Math.min(visiveis.length, (paginaAtual + 1) * POR_PAGINA))} de {n(visiveis.length)} clientes</span><div><button onClick={() => setPagina(0)} disabled={paginaAtual === 0}>« Primeira</button><button onClick={() => setPagina(paginaAtual - 1)} disabled={paginaAtual === 0}>‹ Anterior</button><b>Página {n(paginaAtual + 1)} de {n(totalPaginas)}</b><button onClick={() => setPagina(paginaAtual + 1)} disabled={paginaAtual >= totalPaginas - 1}>Próxima ›</button><button onClick={() => setPagina(totalPaginas - 1)} disabled={paginaAtual >= totalPaginas - 1}>Última »</button></div></div>}
     {editando && <div className="adm-modal-fundo" onMouseDown={() => setEditando(null)}><section className="adm-modal" onMouseDown={(e) => e.stopPropagation()}><header><div className="adm-pessoa"><i>{(editando.nome || editando.email || '?').slice(0, 1).toUpperCase()}</i><b>{editando.nome || 'Sem nome'}<small>{editando.email}</small></b></div><button onClick={() => setEditando(null)}><IconeFechar /></button></header><div className="adm-form"><label><span>Plano</span><select value={form.planoId} onChange={(e) => setForm({ ...form, planoId: e.target.value })}>{planos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></label><label><span>Status do acesso</span><select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="ativo">Ativo</option><option value="suspenso">Suspenso</option><option value="expirado">Expirado</option><option value="cancelado">Cancelado</option></select></label><label><span>Expira em</span><input type="date" value={form.expira} onChange={(e) => setForm({ ...form, expira: e.target.value })} /></label></div><div className="adm-extras"><span className="rot">Produtos e extras liberados</span>{produtos.map((p) => <label key={p.id}><input type="checkbox" checked={extras.has(p.id)} onChange={() => setExtras((atual) => { const n = new Set(atual); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n })} /><span><b>{p.nome}</b><small>{p.categoria}</small></span></label>)}</div><label className="adm-notas"><span>Observações internas</span><textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} placeholder="Anotações visíveis somente para administradores" /></label><footer><span>Cadastrado em {dataCurta(editando.criadoEm)}</span><button onClick={() => void salvar()} disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar alterações'}</button></footer></section></div>}
   </section>
 }

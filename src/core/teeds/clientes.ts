@@ -244,9 +244,34 @@ const textoLegivel = (valor: string | null): string | null => {
   return mapa.reduce((texto,[ruim,bom]) => texto.split(ruim).join(bom), valor)
 }
 
+/**
+ * Todos os clientes desta marca, em lotes de mil.
+ *
+ * O banco devolve no máximo mil linhas por consulta. Com a base de leads
+ * importada em 11/09/2026 a Teeds passou de 11 mil fichas, e uma consulta só
+ * trazia as mil mais recentes: o resto existia, mas não aparecia no painel.
+ *
+ * O lote seguinte começa depois do último já lido (data de cadastro + id), e
+ * não num número de posição: se alguém se cadastrar no meio da leitura, nada
+ * pula nem se repete.
+ */
 export async function listarClientes(sessao: SessaoTeeds): Promise<ClienteRegistro[]> {
-  const linhas = await rest<any[]>(`/clientes?select=*&marca=eq.${MARCA.id}&order=criado_em.desc`, sessao.token)
-  return (linhas ?? []).map((l) => ({
+  const LOTE = 1000
+  const linhas: any[] = []
+  let depois: { criado: string; id: string } | null = null
+  for (let volta = 0; volta < 500; volta++) {
+    const corte: string = depois
+      ? `&or=(${encodeURIComponent(`criado_em.lt."${depois.criado}",and(criado_em.eq."${depois.criado}",user_id.lt.${depois.id})`)})`
+      : ''
+    const lote: any[] = (await rest<any[]>(
+      `/clientes?select=*&marca=eq.${MARCA.id}${corte}&order=criado_em.desc,user_id.desc&limit=${LOTE}`, sessao.token,
+    )) ?? []
+    linhas.push(...lote)
+    if (lote.length < LOTE) break
+    const ultimo: any = lote[lote.length - 1]
+    depois = { criado: ultimo.criado_em, id: ultimo.user_id }
+  }
+  return linhas.map((l) => ({
     userId: l.user_id, nome: textoLegivel(l.nome), email: l.email, telefone: l.telefone,
     cpf: l.cpf, criadoEm: l.criado_em, vistoEm: l.visto_em,
     planoId: l.plano_id ?? 'essencial', statusAcesso: l.status_acesso ?? 'ativo',
