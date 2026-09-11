@@ -60,9 +60,9 @@ export function RobotOverview({ sessoes }: { sessoes: readonly SessaoViva[] }) {
       <header className="rob-overview-heading">
         <div>
           <span className="rob-overview-eyebrow">Visão geral</span>
-          <h3>Suas sessões, por conta</h3>
+          <h3>Suas sessões em andamento</h3>
         </div>
-        <p>Resumo periódico do servidor. Contas e moedas separadas.</p>
+        <p>Resumo periódico do servidor.</p>
       </header>
 
       {contas.length === 0 ? (
@@ -71,16 +71,12 @@ export function RobotOverview({ sessoes }: { sessoes: readonly SessaoViva[] }) {
         <div className="rob-overview-grid">
           {contas.map((conta) => (
             <article className="rob-overview-card" key={conta.chave}>
-              <div className="rob-overview-account">
-                <span className={`rob-overview-badge ${conta.demo ? 'rob-overview-demo' : 'rob-overview-real'}`}>
-                  {conta.demo ? 'DEMO' : 'REAL'}
-                </span>
-                <span>Conta ••••{conta.contaId.slice(-4)}</span>
-                <small>{conta.moeda}</small>
-              </div>
               <dl className="rob-overview-metrics">
                 <div className="rob-overview-result">
-                  <dt>Resultado das sessões</dt>
+                  {/* Sem etiqueta nem número da conta. Só quando há mais de um
+                      cartão (demo e real ao mesmo tempo) o rótulo diz de qual
+                      é — senão seriam dois cartões iguais com números diferentes. */}
+                  <dt>{contas.length > 1 ? `Resultado · ${conta.demo ? 'conta demo' : 'conta real'}` : 'Resultado das sessões'}</dt>
                   <dd className={conta.resultado === null || conta.resultado === 0
                     ? 'rob-overview-neutral'
                     : conta.resultado > 0 ? 'rob-overview-positive' : 'rob-overview-negative'}>

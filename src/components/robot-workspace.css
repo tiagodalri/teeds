@@ -12,13 +12,10 @@
 .rob-overview-eyebrow { font-size: 9px; color: var(--primary); letter-spacing: .08em; text-transform: uppercase; font-weight: 750; }
 .rob-overview-heading p { margin: 0; color: var(--muted); font-size: 10px; }
 .rob-overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 12px; }
-.rob-overview-card { padding: 16px 20px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; }
-.rob-overview-account { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 10px; }
-.rob-overview-account > small { margin-left: auto; }
-.rob-overview-badge { color: var(--account-demo); background: var(--account-demo-soft); padding: 3px 6px; border-radius: 4px; font-size: 8px; font-weight: 800; letter-spacing: .06em; }
-.rob-overview-real { color: var(--up); background: var(--up-soft); }
-.rob-overview-metrics { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(2,minmax(0,1fr)); gap: 16px; margin: 14px 0 0; font-variant-numeric: tabular-nums; }
-.rob-overview-metrics dt { font-size: 10px; color: var(--muted); }
+.rob-overview-card { padding: 16px 22px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; }
+.rob-overview-metrics { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(2,minmax(0,1fr)); align-items: end; gap: 16px; margin: 0; font-variant-numeric: tabular-nums; }
+.rob-overview-metrics > div + div { padding-left: 16px; border-left: 1px solid var(--border); }
+.rob-overview-metrics dt { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rob-overview-metrics dd { margin: 3px 0 0; font-size: 21px; font-weight: 700; letter-spacing: -.035em; }
 .rob-overview-metrics dd small { margin-left: 5px; font-size: 10px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
 .rob-overview-positive { color: var(--up); }
