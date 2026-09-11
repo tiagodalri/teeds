@@ -6,6 +6,7 @@ import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { RobotLive } from './RobotLive'
 import { RobotSetup } from './RobotSetup'
+import { LimiteAtingido, limiteJaAvisado, marcarLimiteAvisado, tipoDeLimite, type TipoDeLimite } from './LimiteAtingido'
 import type { Identidade } from '../core/deriv/branding'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { acompanharNoServidor, ligarNoServidor, pararNoServidor } from '../core/teeds/servidorRobos'
@@ -99,6 +100,25 @@ export function LocalRobotPanel({
     onSessaoChangeRef.current?.(sessaoAtiva, sessaoAtiva ? sessaoIdRef.current : null)
   }, [sessaoAtiva, estado?.rodando, idDaSessao])
   useEffect(() => () => { onSessaoChangeRef.current?.(false, null) }, [])
+
+  /*
+   * Meta ou stop: o aviso no meio da tela. Vale quando a sessão para enquanto
+   * se assiste e também quando ela já chega parada por limite — o robô bateu
+   * a meta com a pessoa fora, e ela fica sabendo ao voltar. Uma vez por sessão.
+   */
+  const [limite, setLimite] = useState<TipoDeLimite | null>(null)
+  const antesDoLimite = useRef<{ id: string | null; rodando: boolean | null }>({ id: null, rodando: null })
+  useEffect(() => {
+    if (!estado || !idDaSessao) return
+    const antes = antesDoLimite.current
+    antesDoLimite.current = { id: idDaSessao, rodando: estado.rodando }
+    if (estado.rodando) return
+    const tipo = tipoDeLimite(estado.motivoParada)
+    if (!tipo || limiteJaAvisado(idDaSessao)) return
+    const parouAgora = antes.id === idDaSessao && antes.rodando === true
+    const chegouParada = antes.id !== idDaSessao
+    if (parouAgora || chegouParada) { marcarLimiteAvisado(idDaSessao); setLimite(tipo) }
+  }, [estado?.rodando, estado?.motivoParada, idDaSessao]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /*
    * Antes, trocar de conta desligava o robô: ele estava preso à conexão do
@@ -291,6 +311,12 @@ export function LocalRobotPanel({
 
       {preparo}
 
+      {limite && <LimiteAtingido
+        tipo={limite} estado={estado} config={cfg} nome={ident.nome} cor={ident.cor}
+        moeda={contaDaSessao?.moeda ?? moeda} demo={contaDaSessao?.demo ?? null}
+        onFechar={() => setLimite(null)}
+        onLigarDeNovo={() => { setLimite(null); setErro(null); setPreparando(true) }}
+      />}
     </div>
   )
 }

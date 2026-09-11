@@ -3486,6 +3486,46 @@ button:has(> .icone-fechar) { display: inline-flex; align-items: center; justify
 .go-tabela-corpo em { justify-self: start; padding: 5px 8px; border-radius: 99px; background: color-mix(in srgb, var(--go-green) 10%, transparent); color: var(--go-green); font-size: 8.5px; font-style: normal; font-weight: 750; white-space: nowrap; }
 .go-tabela-corpo em.fora { background: color-mix(in srgb, var(--go-red) 10%, transparent); color: var(--go-red); }
 .go-aviso { margin-top: 14px; color: var(--muted); font-size: 9.5px; line-height: 1.5; text-align: center; }
+/* Veredito, escada e sequência: a resposta em linguagem simples e o desenho de onde o robô para */
+.go-status.atencao i { background: var(--go-gold); box-shadow: 0 0 10px var(--go-gold); }
+.go-status.ok i { background: var(--go-green); box-shadow: 0 0 10px var(--go-green); }
+.go-campos label > small { display: block; margin: 6px 2px 0; color: var(--muted); font-size: 9.5px; line-height: 1.4; }
+.go-campos label > small b { color: var(--text); }
+.go-usar { width: 100%; min-height: 42px; margin-top: 16px; border: 1px solid color-mix(in srgb, var(--go-gold) 55%, var(--border)); border-radius: 11px; background: color-mix(in srgb, var(--go-gold) 13%, var(--surface)); color: var(--go-gold); font: inherit; font-size: 12px; font-weight: 750; cursor: pointer; }
+.go-usar:hover { background: color-mix(in srgb, var(--go-gold) 22%, var(--surface)); }
+.go-veredito { padding: 17px 20px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg); }
+.go-veredito b { display: block; font-size: 18px; letter-spacing: -.015em; }
+.go-veredito p { margin: 6px 0 0; color: var(--text); font-size: 12.5px; line-height: 1.55; }
+.go-veredito.ok { border-color: color-mix(in srgb, var(--go-green) 45%, var(--border)); background: color-mix(in srgb, var(--go-green) 8%, var(--bg)); }
+.go-veredito.ok b { color: var(--go-green); }
+.go-veredito.atencao { border-color: color-mix(in srgb, var(--go-gold) 50%, var(--border)); background: color-mix(in srgb, var(--go-gold) 8%, var(--bg)); }
+.go-veredito.atencao b { color: var(--go-gold); }
+.go-veredito.perigo { border-color: color-mix(in srgb, var(--go-red) 50%, var(--border)); background: color-mix(in srgb, var(--go-red) 8%, var(--bg)); }
+.go-veredito.perigo b { color: var(--go-red); }
+.go-cards.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.go-escada { padding: 19px 21px 16px; border: 1px solid var(--border); border-radius: 18px; background: var(--bg); }
+.go-barras { position: relative; display: flex; align-items: stretch; gap: 6px; height: 180px; margin-top: 18px; border-bottom: 1px solid var(--border); }
+.go-barras > div:not(.go-stop) { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.go-barras > div > span { margin-bottom: 4px; color: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.go-barras > div > i { display: block; width: 100%; max-width: 46px; border-radius: 6px 6px 0 0; background: color-mix(in srgb, var(--text) 16%, transparent); }
+.go-barras > div.rec > i { background: color-mix(in srgb, var(--go-robo) 80%, transparent); }
+.go-barras > div.fora > i { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--go-red) 70%, transparent) 0 5px, color-mix(in srgb, var(--go-red) 30%, transparent) 5px 10px); }
+.go-barras > div.fora > span { color: var(--go-red); font-weight: 700; }
+.go-barras > div.aparada > i { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--go-gold) 75%, transparent) 0 5px, color-mix(in srgb, var(--go-gold) 30%, transparent) 5px 10px); }
+.go-barras > div.aparada > span { color: var(--go-gold); font-weight: 700; }
+.go-stop { position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px dashed var(--go-red); pointer-events: none; }
+.go-stop em { position: absolute; right: 0; bottom: 3px; padding: 1px 6px; border-radius: 6px; background: var(--bg); color: var(--go-red); font-size: 9.5px; font-style: normal; font-weight: 750; }
+.go-eixo { display: flex; gap: 6px; margin-top: 6px; }
+.go-eixo span { flex: 1; min-width: 0; color: var(--muted); font-size: 8.5px; font-weight: 700; text-align: center; }
+.go-escada-rodape { margin: 12px 0 0; color: var(--muted); font-size: 10.5px; line-height: 1.55; }
+.go-escada-rodape b { color: var(--text); }
+details.go-planilha > summary { list-style: none; cursor: pointer; }
+details.go-planilha > summary::-webkit-details-marker { display: none; }
+details.go-planilha > summary .go-bloco-titulo::after { content: '▾'; margin-left: auto; color: var(--muted); font-size: 12px; }
+details.go-planilha[open] > summary .go-bloco-titulo::after { content: '▴'; }
+details.go-planilha:not([open]) { padding-bottom: 19px; }
+.go-tabela-cab, .go-tabela-corpo > div { grid-template-columns: 1.25fr .8fr .75fr 1fr 1fr; }
+.go-tabela-corpo b.verde { color: var(--go-green); }
 
 /* Player da sala de aula */
 .aula-palco { width: 100%; min-width: 0; margin-inline: auto; }

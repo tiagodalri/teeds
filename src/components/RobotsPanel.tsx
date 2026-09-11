@@ -39,6 +39,8 @@ interface Props {
   contaId?: string | null
   /** Dono da plataforma: enxerga o markup de cada operacao nas cabines. */
   admin?: boolean
+  /** Muda quando o Gerenciamento manda um plano: abre o preparo de um robô novo. */
+  novoRoboPedido?: number
 }
 
 /** Teto de robos simultaneos: cada um consome assinaturas da mesma conexao. */
@@ -49,7 +51,7 @@ const din = (v: number, m = 'USD') =>
 
 export function RobotsPanel({
   socket, logado, isDemo, moeda, symbols, symbolPadrao, conexao = 'open',
-  entrandoNaDeriv = false, onConectarDeriv, sessaoTeeds, contaId, admin = false,
+  entrandoNaDeriv = false, onConectarDeriv, sessaoTeeds, contaId, admin = false, novoRoboPedido = 0,
 }: Props) {
   const [symbol, setSymbol] = useState<string>(symbolPadrao ?? '1HZ100V')
   const [valorInicial, setValorInicial] = useState(1)
@@ -114,6 +116,8 @@ export function RobotsPanel({
     if (!vazio) setBlocos(b => [...b, id])
     setBlocoEmPreparo(id)
   }
+  // O Gerenciamento mandou um plano: abre o preparo, que já vem preenchido.
+  useEffect(() => { if (novoRoboPedido > 0) abrirBloco() }, [novoRoboPedido]) // eslint-disable-line react-hooks/exhaustive-deps
   const fecharBloco = (id: string) => {
     setBlocos((b) => b.filter((x) => x !== id))
     setBlocoExpandido((atual) => atual === id ? null : atual)

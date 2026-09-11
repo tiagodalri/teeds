@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ConfigEstrategia } from '../core/deriv/engine'
 import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
-import type { Identidade } from '../core/deriv/branding'
+import { IDENTIDADES, identidade as identidadeDoRobo, type Identidade } from '../core/deriv/branding'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { Emblema } from './RobotCard'
 import { recuperacaoDoRobo } from '../core/deriv/strategies'
@@ -27,11 +27,16 @@ interface Props {
 }
 const CHAVE = 'teeds.robo.preparo'
 const din = (v: number, m = 'USD') => `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-export function lerPreparo(): { cfg?: Partial<ConfigEstrategia>; symbol?: string } {
+export function lerPreparo(): { cfg?: Partial<ConfigEstrategia>; symbol?: string; modelo?: string } {
   try {
     const valor = JSON.parse(localStorage.getItem(CHAVE) || '{}')
     return valor && typeof valor === 'object' && !Array.isArray(valor) ? valor : {}
   } catch { return {} }
+}
+/** O Gerenciamento manda o plano para cá: o próximo preparo abre com o robô e os valores dele. */
+export function prepararPlano(modelo: string, cfg: Partial<ConfigEstrategia>) {
+  const atual = lerPreparo()
+  try { localStorage.setItem(CHAVE, JSON.stringify({ ...atual, cfg: { ...atual.cfg, ...cfg }, modelo })) } catch { /* optional browser preferences */ }
 }
 const FAIXAS: Record<keyof ConfigEstrategia, [number, number]> = {
   valorInicial: [0.35, 10_000],
@@ -80,7 +85,11 @@ export function configurarPreparo(inicial: ConfigEstrategia, valores: Record<str
 }
 
 export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, contaId, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
-  const [modelo, setModelo] = useState(identidade)
+  const [modelo, setModelo] = useState(() => {
+    // Plano vindo do Gerenciamento: o catálogo já abre com o robô escolhido lá.
+    const pedido = escolherModelo ? lerPreparo().modelo : undefined
+    return pedido && IDENTIDADES.some((i) => i.id === pedido) ? identidadeDoRobo(pedido) : identidade
+  })
   const inicial = useMemo(() => sanear({ ...configInicial, ...lerPreparo().cfg, valorMaximo: 0 }, configInicial), [])
   const [valores, setValores] = useState(() => Object.fromEntries(ETAPAS_PREPARO.map(e => [e.key, String(inicial[e.key])])))
   // -1 is the model picker; 0..3 contain exactly one input; 4 is review.

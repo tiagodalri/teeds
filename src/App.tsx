@@ -101,6 +101,8 @@ export default function App() {
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
   const [tela, setTela] = useState<WorkspacePage>('operar')
+  /** Sobe quando o Gerenciamento manda um plano para a Central de Robôs. */
+  const [pedidoNovoRobo, setPedidoNovoRobo] = useState(0)
   const [pedirCodigoAssistente, setPedirCodigoAssistente] = useState(false)
   const [assistenteLiberado, setAssistenteLiberado] = useState(assistenteBetaJaLiberado)
   const [payoutBase, setPayoutBase] = useState(19.55)
@@ -567,6 +569,7 @@ export default function App() {
           sessaoTeeds={teeds.sessao}
           contaId={conta.accountId}
           admin={admin === true}
+          novoRoboPedido={pedidoNovoRobo}
         />
       </div>
       {tela === 'robos' || tela === 'assistente' ? null : tela === 'aulas' ? (
@@ -574,7 +577,7 @@ export default function App() {
       ) : tela === 'marketplace' ? (
         <MarketplacePanel sessao={teeds.sessao} />
       ) : tela === 'gerenciamento' ? (
-        <OperationalManagementPanel moeda={conta.account?.currency ?? 'USD'} />
+        <OperationalManagementPanel moeda={conta.account?.currency ?? 'USD'} onUsarPlano={() => { setTela('robos'); setPedidoNovoRobo((n) => n + 1) }} />
       ) : tela === 'gestao' && admin === true ? (
         teeds.sessao ? <AdminPanel sessao={teeds.sessao} comissoes={<ManagementPanel
           session={conta.session} sessaoTeeds={teeds.sessao} contaId={conta.accountId}

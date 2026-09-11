@@ -1,164 +1,178 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import { identidade } from '../core/deriv/branding'
+import { avaliarPlano, chanceDaSequencia, chanceDeAcerto, lucroPorDolar, maiorEntradaPara } from '../core/deriv/escada'
+import { recuperacaoDoRobo } from '../core/deriv/strategies'
 import { MARCA } from '../marca'
+import { prepararPlano } from './RobotSetup'
 
 /*
-  O nome vem do catálogo, não daqui.
+  O nome e a cor vêm do catálogo, não daqui — com duas marcas, uma cópia
+  local mostraria "Teeds - AG7" na OMNI.
 
-  Esta era a TERCEIRA cópia dos nomes dos robôs no projeto — depois de
-  strategies.ts e branding.ts. Três cópias já divergiam entre si; com duas
-  marcas seriam seis, e a OMNI mostraria "Teeds - AG7" nesta tela.
+  E a escada vem do mesmo cálculo do motor (escada.ts), com o pagamento real
+  de cada contrato na plataforma. Esta tela chegou a usar prêmios próprios,
+  "conservadores", e prometia ao aluno uma escada que o robô não sobe.
 */
-const nomeDeRobo = (id: string) => identidade(id).nome
-
-type RoboId = 'superior5' | 'ag2' | 'smart03' | 'goreme' | 'firstblock' | 'secondblock' | 'thepalm'
-type PerfilRobo = { id: RoboId; nome: string; regra: string; chance: number; retornoLiquido: number; galeApos: number; margem?: number; cor: string }
-
-const TODOS_OS_ROBOS: PerfilRobo[] = [
-  { id: 'superior5', nome: nomeDeRobo('superior5'), regra: 'vence com os dígitos 7, 8 e 9', chance: 30, retornoLiquido: 1.92, galeApos: 3, cor: '#e8892b' },
-  { id: 'ag2', nome: nomeDeRobo('ag2'), regra: 'vence com os dígitos 0, 1 e 2', chance: 30, retornoLiquido: 1.92, galeApos: 3, cor: '#0ea5e9' },
-  { id: 'smart03', nome: nomeDeRobo('smart03'), regra: 'vence com os dígitos de 4 a 9', chance: 60, retornoLiquido: .38, galeApos: 3, cor: '#d0aa52' },
-  { id: 'goreme', nome: nomeDeRobo('goreme'), regra: 'vence com os dígitos de 0 a 8', chance: 90, retornoLiquido: .10, galeApos: 3, cor: '#b86f3c' },
-  { id: 'firstblock', nome: nomeDeRobo('firstblock'), regra: 'vence com os dígitos de 0 a 4', chance: 50, retornoLiquido: .92, galeApos: 3, cor: '#d0aa52' },
-  { id: 'secondblock', nome: nomeDeRobo('secondblock'), regra: 'vence com os dígitos de 5 a 9', chance: 50, retornoLiquido: .92, galeApos: 3, cor: '#b86f3c' },
-  { id: 'thepalm', nome: nomeDeRobo('thepalm'), regra: 'alterna Under 9 e Under 5 após análise de 25 dígitos', chance: 90, retornoLiquido: .9233, galeApos: 1, margem: .95, cor: '#16a36a' },
-]
-// So os robos que esta plataforma oferece — a OMNI nao mostra os que nao vende.
-const ROBOS: PerfilRobo[] = TODOS_OS_ROBOS.filter((r) => MARCA.robos.includes(r.id))
+const REGRAS: Record<string, string> = {
+  superior5: 'vence com os dígitos 7, 8 e 9',
+  ag2: 'vence com os dígitos 0, 1 e 2',
+  smart03: 'vence com os dígitos de 4 a 9',
+  goreme: 'vence com os dígitos de 0 a 8',
+  firstblock: 'vence com os dígitos de 0 a 4',
+  secondblock: 'vence com os dígitos de 5 a 9',
+  thepalm: 'entra em "0 a 8" e recupera em "0 a 4"',
+}
+// Só os robôs que esta plataforma oferece, na ordem da vitrine da marca.
+const ROBOS = MARCA.robos.filter((id) => REGRAS[id]).map((id) => ({ id, nome: identidade(id).nome, cor: identidade(id).cor, regra: REGRAS[id] }))
 
 const formatarMoeda = (v: number, codigo: string) => v.toLocaleString('pt-BR', { style: 'currency', currency: codigo })
+const numero = (v: number, casas = 2) => v.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })
 const n = (v: string, fallback: number) => {
   const valor = Number(v.replace(',', '.'))
   return Number.isFinite(valor) && valor >= 0 ? valor : fallback
 }
-const centavosAcima = (v: number) => Math.ceil(v * 100) / 100
+const plural = (q: number, um: string, varios: string) => `${q} ${q === 1 ? um : varios}`
 
-export function OperationalManagementPanel({ moeda = 'USD' }: { moeda?: string }) {
-  const [roboId, setRoboId] = useState<RoboId>('superior5')
+export function OperationalManagementPanel({ moeda = 'USD', onUsarPlano }: { moeda?: string; onUsarPlano?: () => void }) {
+  const [roboId, setRoboId] = useState(ROBOS[0]?.id ?? 'superior5')
   const [banca, setBanca] = useState('1000')
-  const [entrada, setEntrada] = useState('0.35')
+  const [entrada, setEntrada] = useState('0,35')
   const [stopPct, setStopPct] = useState('10')
   const [metaPct, setMetaPct] = useState('3')
-  const [recuperacoesDesejadas, setRecuperacoesDesejadas] = useState('3')
   const robo = ROBOS.find((item) => item.id === roboId) ?? ROBOS[0]
+  const { galeApos } = recuperacaoDoRobo(robo.id)
 
   const calc = useMemo(() => {
     const saldo = Math.max(.01, n(banca, 1000))
     const base = Math.max(.35, n(entrada, .35))
-    const stop = saldo * Math.min(100, n(stopPct, 10)) / 100
+    const stop = Math.min(saldo, saldo * Math.min(100, n(stopPct, 10)) / 100)
     const meta = saldo * Math.min(100, n(metaPct, 3)) / 100
-    const desejadas = Math.min(12, Math.max(0, Math.round(n(recuperacoesDesejadas, 3))))
-    const retornoSeguro = Math.max(.01, robo.retornoLiquido * .97)
-    const lucroMinimo = Math.max(.01, base * (robo.margem ?? .05))
-    const limite = Math.min(stop, saldo)
-    const linhas: Array<{ passo: number; rotulo: string; valor: number; acumulado: number; dentro: boolean; recuperacao: boolean }> = []
-    let acumulado = 0
-    let recuperacao = 0
+    const plano = avaliarPlano(robo.id, base, stop)
+    const sugerida = stop > 0 ? maiorEntradaPara(robo.id, 4, stop) : null
+    const chance = plano.errosSeguidos > 0 ? chanceDaSequencia(robo.id, plano.errosSeguidos) : 1
+    return { saldo, base, stop, meta, plano, sugerida, chance }
+  }, [banca, entrada, stopPct, metaPct, robo.id])
 
-    for (let passo = 0; passo < robo.galeApos + 13; passo++) {
-      const emRecuperacao = passo >= robo.galeApos
-      if (emRecuperacao) recuperacao += 1
-      const valor = emRecuperacao ? centavosAcima((acumulado + lucroMinimo) / retornoSeguro) : base
-      acumulado += valor
-      linhas.push({
-        passo,
-        rotulo: emRecuperacao ? `Recuperação ${recuperacao}` : `Entrada base ${passo + 1}`,
-        valor,
-        acumulado,
-        dentro: acumulado <= limite,
-        recuperacao: emRecuperacao,
-      })
-      if (acumulado > limite || recuperacao >= 12) break
-    }
+  const { plano } = calc
+  const nivel = calc.stop <= 0 || plano.recuperacoes < 2 ? 'perigo' : plano.recuperacoes < 4 ? 'atencao' : 'ok'
+  const titulo = calc.stop <= 0 ? 'Defina um limite de perda'
+    : nivel === 'ok' ? 'Plano com folga'
+      : nivel === 'atencao' ? 'Plano apertado'
+        : 'Entrada alta para esse stop'
+  const naBase = Math.min(plano.errosSeguidos, robo.id === 'thepalm' ? 1 : galeApos)
+  const frase = calc.stop <= 0
+    ? 'Sem limite de perda, uma sequência ruim não tem onde parar. Escolha quanto você aceita perder no dia.'
+    : plano.errosSeguidos === 0
+      ? `Nem a primeira entrada cabe num stop de ${formatarMoeda(calc.stop, moeda)}.`
+      : `O ${robo.nome} aguenta ${plural(plano.errosSeguidos, 'erro seguido', 'erros seguidos')} (${naBase} na entrada base + ${plural(plano.recuperacoes, 'recuperação', 'recuperações')}) antes de parar no stop de ${formatarMoeda(calc.stop, moeda)}.`
+  const vezes = calc.chance > 0 ? Math.round(1 / calc.chance) : Infinity
 
-    const dentro = linhas.filter((linha) => linha.dentro)
-    const recuperacoesSuportadas = dentro.filter((linha) => linha.recuperacao).length
-    const ultima = dentro[dentro.length - 1]
-    const exposicaoPara = (baseTeste: number) => {
-      let perda = 0
-      for (let passo = 0; passo < robo.galeApos + desejadas; passo++) {
-        const valor = passo < robo.galeApos
-          ? baseTeste
-          : centavosAcima((perda + Math.max(.01, baseTeste * .05)) / retornoSeguro)
-        perda += valor
-      }
-      return perda
-    }
-    let baixo = 0
-    let alto = limite
-    for (let i = 0; i < 50; i++) {
-      const meio = (baixo + alto) / 2
-      if (exposicaoPara(meio) <= limite) baixo = meio
-      else alto = meio
-    }
-    const entradaSegura = Math.floor(baixo * 100) / 100
-    const exposicaoPlanejada = exposicaoPara(base)
-    return { saldo, base, stop, meta, desejadas, linhas, recuperacoesSuportadas, ultimaEntrada: ultima?.valor ?? 0, entradaSegura, exposicaoPlanejada }
-  }, [banca, entrada, stopPct, metaPct, recuperacoesDesejadas, robo])
+  // A escada: os degraus completos e o último passo — a entrada aparada, que
+  // fecha a sessão no stop, ou o degrau que não cabe mais.
+  type Barra = { n: number; valor: number; perdido: number; recuperacao: boolean; tipo: '' | 'aparada' | 'fora' }
+  const ultimoPasso: Barra[] = plano.entradaAparada !== null && plano.proximo
+    ? [{ n: plano.proximo.n, valor: plano.entradaAparada, perdido: plano.custoMaximo, recuperacao: plano.proximo.recuperacao, tipo: 'aparada' }]
+    : plano.proximo ? [{ ...plano.proximo, tipo: 'fora' }] : []
+  const barras: Barra[] = [...plano.cabem.map((d) => ({ ...d, tipo: '' as const })), ...ultimoPasso].slice(-16)
+  const topo = Math.max(calc.stop, ...barras.map((d) => d.perdido)) || 1
+  const altura = (v: number) => `${Math.max(2, (v / topo) * 86)}%`
 
-  const saudavel = calc.exposicaoPlanejada <= calc.stop
-  const riscoPct = Math.min(100, (calc.exposicaoPlanejada / calc.saldo) * 100)
+  function usarPlano() {
+    prepararPlano(robo.id, {
+      valorAoVencer: calc.base, valorInicial: calc.base,
+      takeProfit: Math.round(calc.meta * 100) / 100, stopLoss: Math.round(calc.stop * 100) / 100,
+    })
+    onUsarPlano?.()
+  }
 
   return (
     <main className="go ger" style={{ '--go-robo': robo.cor } as CSSProperties}>
       <header className="go-hero">
-        <div><span className="go-selo">Planejamento {MARCA.prosa}</span><h2>Gerenciamento</h2><p>Calcule banca e stop com a progressão específica de cada robô.</p></div>
-        <div className={`go-status ${saudavel ? 'ok' : 'alerta'}`}><i />{saudavel ? 'Plano dentro do limite' : 'Risco acima do stop diário'}</div>
+        <div><span className="go-selo">Planejamento {MARCA.prosa}</span><h2>Gerenciamento</h2><p>Veja quantos erros seguidos o seu plano aguenta, com as entradas reais de cada robô.</p></div>
+        <div className={`go-status ${nivel}`}><i />{titulo}</div>
       </header>
 
       <section className="go-robo-seletor">
-        <div className="go-robo-intro"><span>01</span><div><small>Escolha o robô</small><strong>{robo.nome}</strong><p>{robo.regra}. O cálculo abaixo já aplica a recuperação própria deste modelo.</p></div></div>
+        <div className="go-robo-intro"><span>01</span><div><small>Escolha o robô</small><strong>{robo.nome}</strong><p>{robo.regra}. Com US$ 1, lucra {numero(lucroPorDolar(robo.id))} quando acerta.</p></div></div>
         <div className="go-robos" role="group" aria-label="Robô para o cálculo">
           {ROBOS.map((item) => <button key={item.id} className={item.id === robo.id ? 'on' : ''} onClick={() => setRoboId(item.id)} style={{ '--robo-cor': item.cor } as CSSProperties}>
-            <i /><span><b>{item.nome}</b><small>{item.chance}% de acerto teórico</small></span><em>✓</em>
+            <i /><span><b>{item.nome}</b><small>{Math.round(chanceDeAcerto(item.id) * 100)}% de acerto · +{numero(lucroPorDolar(item.id))} por US$ 1</small></span><em>✓</em>
           </button>)}
         </div>
       </section>
 
       <section className="go-grade">
         <aside className="go-config">
-          <div className="go-bloco-titulo"><span>02</span><div><h3>Monte seu plano</h3><p>Altere os valores e veja tudo recalculado na hora.</p></div></div>
+          <div className="go-bloco-titulo"><span>02</span><div><h3>Seu plano</h3><p>Altere os valores e veja tudo recalculado na hora.</p></div></div>
           <div className="go-campos">
-            <label><span>Banca disponível</span><div><em>{moeda}</em><input inputMode="decimal" value={banca} onChange={(e) => setBanca(e.target.value)} /></div></label>
-            <label><span>Entrada inicial</span><div><em>{moeda}</em><input type="number" inputMode="decimal" min="0.35" step="0.01" value={entrada} onFocus={(e) => e.currentTarget.select()} onChange={(e) => {
-              const valor = Number(e.target.value)
-              setEntrada(String(Number.isFinite(valor) ? Math.max(.35, valor) : .35))
-            }} /></div></label>
-            <label><span>Stop diário</span><div><input inputMode="decimal" value={stopPct} onChange={(e) => setStopPct(e.target.value)} /><em>%</em></div></label>
-            <label><span>Meta diária</span><div><input inputMode="decimal" value={metaPct} onChange={(e) => setMetaPct(e.target.value)} /><em>%</em></div></label>
-            <label><span>Recuperações que deseja suportar</span><div><input inputMode="numeric" value={recuperacoesDesejadas} onChange={(e) => setRecuperacoesDesejadas(e.target.value)} /><em>níveis</em></div></label>
+            <label><span>Banca</span><div><em>{moeda}</em><input inputMode="decimal" value={banca} onChange={(e) => setBanca(e.target.value)} /></div></label>
+            <label><span>Entrada</span><div><em>{moeda}</em><input inputMode="decimal" value={entrada} onFocus={(e) => e.currentTarget.select()} onChange={(e) => setEntrada(e.target.value)} /></div>
+              <small>{n(entrada, .35) < .35 ? 'A entrada mínima é US$ 0,35.'
+                : calc.sugerida === null ? 'Com esse stop, nem a entrada mínima aguenta 4 recuperações.'
+                  : <>Para aguentar 4 recuperações, use até <b>{formatarMoeda(calc.sugerida, moeda)}</b>.</>}</small></label>
+            <label><span>Stop do dia</span><div><input inputMode="decimal" value={stopPct} onChange={(e) => setStopPct(e.target.value)} /><em>%</em></div><small>{formatarMoeda(calc.stop, moeda)} — perdeu isso, o robô para.</small></label>
+            <label><span>Meta do dia</span><div><input inputMode="decimal" value={metaPct} onChange={(e) => setMetaPct(e.target.value)} /><em>%</em></div><small>{formatarMoeda(calc.meta, moeda)} — ganhou isso, o robô para.</small></label>
           </div>
-          <div className="go-regra"><b>Como o {robo.nome} calcula</b><p>Após {robo.galeApos} perda{robo.galeApos === 1 ? '' : 's'} no valor-base, cada nova entrada busca recuperar o acumulado e acrescentar a margem própria do modelo. O retorno usado é conservador e varia conforme o robô.</p></div>
+          <div className="go-regra"><b>Como o {robo.nome} recupera</b><p>{robo.id === 'thepalm'
+            ? 'Depois de um erro em "0 a 8", passa a entrar em "0 a 4", que paga mais. Cada entrada cobre tudo o que foi perdido e deixa 95% da entrada de lucro.'
+            : `Segura ${plural(galeApos, 'erro', 'erros')} no valor da entrada. A partir do ${galeApos + 1}º erro seguido, cada entrada cobre tudo o que foi perdido e ainda deixa 5% da entrada de lucro.`} Os valores são os mesmos que o robô usa: o pagamento real de cada contrato na plataforma.</p></div>
+          <button type="button" className="go-usar" onClick={usarPlano}>Usar este plano no robô →</button>
         </aside>
 
         <div className="go-resultados">
-          <div className="go-cards">
-            <article><span>Stop diário</span><strong>{formatarMoeda(calc.stop, moeda)}</strong><small>{stopPct || 0}% da banca</small></article>
-            <article><span>Até qual recuperação</span><strong>{calc.recuperacoesSuportadas > 0 ? `Nível ${calc.recuperacoesSuportadas}` : 'Nenhuma'}</strong><small>última entrada possível: {formatarMoeda(calc.ultimaEntrada, moeda)}</small></article>
-            <article><span>Entrada sugerida</span><strong>{formatarMoeda(calc.entradaSegura, moeda)}</strong><small>para suportar {calc.desejadas} recuperações</small></article>
-            <article className={saudavel ? '' : 'perigo'}><span>Stop necessário do ciclo</span><strong>{formatarMoeda(calc.exposicaoPlanejada, moeda)}</strong><small>{saudavel ? 'dentro do stop definido' : 'acima do stop definido'}</small></article>
+          <div className={`go-veredito ${nivel}`}><b>{titulo}</b><p>{frase}</p></div>
+
+          <div className="go-cards tres">
+            <article><span>Erros seguidos que aguenta</span><strong>{plano.errosSeguidos}</strong><small>{naBase} na base + {plural(plano.recuperacoes, 'recuperação', 'recuperações')}</small></article>
+            <article><span>Maior entrada</span><strong>{formatarMoeda(plano.maiorEntrada, moeda)}</strong><small>a última que cabe no stop</small></article>
+            <article className={nivel === 'perigo' ? 'perigo' : ''}><span>Pior sequência custa</span><strong>{formatarMoeda(plano.custoMaximo, moeda)}</strong><small>{numero((plano.custoMaximo / calc.saldo) * 100, 1)}% da banca · nunca passa do stop</small></article>
           </div>
 
-          <section className="go-exposicao">
-            <div className="go-bloco-titulo"><span>03</span><div><h3>Exposição do ciclo</h3><p>{robo.nome}: {robo.galeApos} entradas-base + {calc.desejadas} recuperações.</p></div><b>{riscoPct.toFixed(1).replace('.', ',')}%</b></div>
-            <div className="go-barra"><i style={{ width: `${riscoPct}%` }} className={saudavel ? '' : 'perigo'} /></div>
-            <div className="go-legenda"><span>Exposição: <b>{formatarMoeda(calc.exposicaoPlanejada, moeda)}</b></span><span>Stop: <b>{formatarMoeda(calc.stop, moeda)}</b></span><span>Meta: <b>{formatarMoeda(calc.meta, moeda)}</b></span></div>
+          <section className="go-escada">
+            <div className="go-bloco-titulo"><span>03</span><div><h3>A escada do {robo.nome}</h3><p>Cada barra é o total perdido até aquele erro. O número em cima é a entrada daquela vez.</p></div></div>
+            <div className="go-barras" role="img" aria-label={`Escada de ${plano.errosSeguidos} entradas até o stop`}>
+              {barras.map((d) => {
+                const dica = d.tipo === 'aparada' ? 'entrada reduzida ao que sobra até o stop'
+                  : d.tipo === 'fora' ? 'não entra: passaria do stop' : `perdido ${formatarMoeda(d.perdido, moeda)}`
+                return <div key={d.n} className={`${d.recuperacao ? 'rec' : ''} ${d.tipo}`} title={`${d.n}º erro: entrada ${formatarMoeda(d.valor, moeda)} · ${dica}`}>
+                  <span>{numero(d.valor)}</span><i style={{ height: altura(d.perdido) }} />
+                </div>
+              })}
+              {calc.stop > 0 && <div className="go-stop" style={{ bottom: altura(calc.stop) }}><em>stop {formatarMoeda(calc.stop, moeda)}</em></div>}
+            </div>
+            <div className="go-eixo">{barras.map((d) => <span key={d.n}>{d.recuperacao ? `R${d.n - naBaseDe(robo.id, galeApos)}` : `E${d.n}`}</span>)}</div>
+            <p className="go-escada-rodape">
+              {plano.proximo && calc.stop > 0 && (plano.entradaAparada !== null
+                ? <>Depois do {plano.errosSeguidos}º erro, a próxima entrada seria <b>{formatarMoeda(plano.proximo.valor, moeda)}</b>, mas só sobram <b>{formatarMoeda(plano.entradaAparada, moeda)}</b> até o stop: o robô entra com esse valor e, se errar, a sessão fecha no stop — sem passar dele. </>
+                : <>Depois do {plano.errosSeguidos}º erro, a próxima entrada seria <b>{formatarMoeda(plano.proximo.valor, moeda)}</b> e não cabe no que sobra: o robô para. </>)}
+              {plano.errosSeguidos > 0 && calc.stop > 0 && <>Uma sequência de {plano.errosSeguidos} erros seguidos acontece, em média, <b>1 vez a cada {Number.isFinite(vezes) ? vezes.toLocaleString('pt-BR') : 'muitos'} ciclos</b>.</>}
+            </p>
           </section>
 
-          <section className="go-planilha">
-            <div className="go-bloco-titulo"><span>04</span><div><h3>Sequência do {robo.nome}</h3><p>Veja exatamente onde a banca deixa de suportar uma nova entrada.</p></div></div>
-            <div className="go-tabela-cab"><span>Etapa</span><span>Entrada</span><span>Exposição acumulada</span><span>Situação</span></div>
+          <details className="go-planilha">
+            <summary><div className="go-bloco-titulo"><span>04</span><div><h3>Ver a sequência completa</h3><p>Entrada por entrada, até onde o robô para.</p></div></div></summary>
+            <div className="go-tabela-cab"><span>Etapa</span><span>Entrada</span><span>Se acertar</span><span>Perdido até aqui</span><span>Situação</span></div>
             <div className="go-tabela-corpo">
-              {calc.linhas.map((linha) => <div key={linha.passo}>
-                <span><i>{linha.recuperacao ? `R${linha.passo - robo.galeApos + 1}` : `E${linha.passo + 1}`}</i>{linha.rotulo}</span>
-                <b>{formatarMoeda(linha.valor, moeda)}</b><b>{formatarMoeda(linha.acumulado, moeda)}</b>
-                <em className={linha.dentro ? 'ok' : 'fora'}>{linha.dentro ? 'Banca suporta' : 'Ultrapassa o stop'}</em>
+              {plano.cabem.map((d) => <div key={d.n}>
+                <span><i>{d.recuperacao ? `R${d.n - naBaseDe(robo.id, galeApos)}` : `E${d.n}`}</i>{d.recuperacao ? `Recuperação ${d.n - naBaseDe(robo.id, galeApos)}` : `Entrada base ${d.n}`}</span>
+                <b>{formatarMoeda(d.valor, moeda)}</b><b className="verde">+{numero(d.lucro)}</b><b>{formatarMoeda(d.perdido, moeda)}</b>
+                <em className="ok">Cabe no stop</em>
               </div>)}
+              {plano.proximo && <div>
+                <span><i>{plano.entradaAparada !== null ? 'Ú' : '—'}</i>{plano.entradaAparada !== null ? 'Entrada reduzida' : `Seria ${formatarMoeda(plano.proximo.valor, moeda)}`}</span>
+                <b>{plano.entradaAparada !== null ? formatarMoeda(plano.entradaAparada, moeda) : '—'}</b><b>—</b><b>{formatarMoeda(plano.custoMaximo, moeda)}</b>
+                <em className="fora">{plano.entradaAparada !== null ? 'Última: fecha no stop' : 'Não entra: o robô para'}</em>
+              </div>}
             </div>
-          </section>
+          </details>
         </div>
       </section>
-      <p className="go-aviso">Estimativa educacional baseada no retorno líquido conservador de cada contrato. O pagamento real pode oscilar e martingale não garante recuperação ou lucro. Valide o plano em conta demo.</p>
+      <p className="go-aviso">Os valores seguem o pagamento real de cada contrato na plataforma, que pode variar alguns centavos ao longo do dia. Martingale não garante recuperação nem lucro. Valide o plano na conta demo.</p>
     </main>
   )
+}
+
+/** Quantas entradas base vêm antes da primeira recuperação. */
+function naBaseDe(id: string, galeApos: number) {
+  return id === 'thepalm' ? 1 : galeApos
 }

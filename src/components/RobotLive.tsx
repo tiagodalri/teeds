@@ -100,7 +100,6 @@ export function RobotLive({
 }: Props) {
   const [detalhes, setDetalhes] = useState(false)
   const [registroAberto, setRegistroAberto] = useState(false)
-  const [historicoCompleto, setHistoricoCompleto] = useState(false)
   const [analisesPalm, setAnalisesPalm] = useState<Array<{ id: number; hora: number; texto: string }>>([])
   const acerto = estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
   const positivo = estado.resultado >= 0
@@ -335,8 +334,9 @@ export function RobotLive({
       {/* ===================== operacoes ===================== */}
       <section className="tv-ops">
         <div className="tv-ops-topo">
-          <span className="tv-rot">{historicoCompleto || expandido ? 'Histórico disponível' : 'Últimas operações'}</span>
-          {estado.historico.length > 5 && !expandido && <button className="tv-history-toggle" aria-expanded={historicoCompleto} onClick={() => setHistoricoCompleto(v => !v)}>{historicoCompleto ? 'Mostrar só as últimas' : `Ver histórico (${estado.historico.length})`}</button>}
+          {/* A lista inteira fica na tabela, que rola: antes só as 5 últimas
+              apareciam e o resto dependia de um botão que pouca gente via. */}
+          <span className="tv-rot">Operações da sessão{estado.historico.length > 0 ? ` (${estado.historico.length})` : ''}</span>
         </div>
 
         {estado.historico.length === 0 ? (
@@ -354,7 +354,7 @@ export function RobotLive({
                 </tr>
               </thead>
               <tbody>
-                {(historicoCompleto || expandido ? estado.historico : estado.historico.slice(0, 5)).map((o, indice) => {
+                {estado.historico.map((o, indice) => {
                   const ac = acumulados.get(o.n) ?? 0
                   return (
                     <tr key={o.contractId} className={`${o.ganhou ? 'ganhou' : 'perdeu'} ${indice === 0 ? 'recente' : ''}`}>
