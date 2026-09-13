@@ -41,7 +41,7 @@ const FERRAMENTAS = [
   {
     name: 'listar_robos',
     description:
-      'Lista os robôs da Teeds disponíveis, com a regra de cada um (quais dígitos pagam). ' +
+      'Lista os robôs disponíveis na plataforma, com a regra de cada um (quais dígitos pagam). ' +
       'Use antes de iniciar uma sessão quando a pessoa não disser qual robô quer.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
@@ -55,7 +55,7 @@ const FERRAMENTAS = [
   {
     name: 'iniciar_sessao',
     description:
-      'Liga um robô da Teeds. Ele opera sozinho até bater o stop loss, o take profit ou o ' +
+      'Liga um robô da plataforma. Ele opera sozinho até bater o stop loss, o take profit ou o ' +
       'máximo de operações. Devolve na hora um identificador de sessão — NÃO espera o robô terminar. ' +
       'Stop loss e take profit são obrigatórios. ' +
       'ATENÇÃO: em conta real isto movimenta dinheiro de verdade; confirme com a pessoa antes de chamar.',
@@ -103,7 +103,7 @@ const FERRAMENTAS = [
 async function executar(nome: string, args: Record<string, any>): Promise<unknown> {
   switch (nome) {
     case 'listar_robos':
-      return { robos: listarRobos(), observacao: 'Todos operam no Volatility 75 (1s), definido pela Teeds.' }
+      return { robos: listarRobos(), observacao: 'Todos operam no Volatility 75 (1s), definido pela plataforma.' }
 
     case 'minhas_contas': {
       const lista = await contas(autorizacao())

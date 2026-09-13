@@ -311,6 +311,18 @@ const servidor = createServer(async (req, res) => {
       'http://localhost:5173', 'http://127.0.0.1:5173',
       'http://localhost:5180', 'http://127.0.0.1:5180',
     ]
+    /*
+      De qual plataforma veio o pedido, pelo endereço do site.
+
+      O servidor é um só para as duas marcas, então texto de erro com nome
+      fixo vaza: em 13/09/2026 o cliente da OMNI levava "Faça login na Teeds
+      de novo" na cara. O corpo do pedido só é lido mais abaixo (e GET nem
+      tem corpo), então quem responde por aqui é a origem.
+    */
+    const marcaDaOrigem = Object.values(MARCAS).find((m) => {
+      const u = new URL(m.redirectUri)
+      return origem === u.origin || origem === `${u.protocol}//www.${u.hostname}`
+    }) ?? marcaPorId(process.env.MARCA)
     const cabecalhos: Record<string, string> = {
       'content-type': 'application/json; charset=utf-8',
       vary: 'Origin',
@@ -330,7 +342,7 @@ const servidor = createServer(async (req, res) => {
 
     const cracha = (req.headers.authorization ?? '').replace(/^Bearer\s+/i, '').trim()
     const dono = cracha ? await usuarioDoToken(cracha) : null
-    if (!dono) return json(401, { erro: 'Faça login na Teeds de novo — sua sessão expirou.' })
+    if (!dono) return json(401, { erro: `Faça login na ${marcaDaOrigem.prosa} de novo — sua sessão expirou.` })
 
     let corpo: any = {}
     if (req.method === 'POST') {
@@ -387,7 +399,7 @@ const servidor = createServer(async (req, res) => {
         const conta = (await contas(auth)).find((c) => c.accountId === contaId)
         if (!conta) {
           return json(403, {
-            erro: 'A Teeds nao tem autorizacao para operar nesta conta. ' +
+            erro: `A ${marcaPorId(marcaDoPedido).prosa} nao tem autorizacao para operar nesta conta. ` +
               'Clique em Conectar Deriv na plataforma e autorize de novo.',
           })
         }

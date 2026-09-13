@@ -201,7 +201,7 @@ export async function autorizacaoParaOperar(
     } catch {
       return {
         ok: false,
-        motivo: 'Conecte sua conta Deriv na plataforma para a Teeds poder operar por você.',
+        motivo: 'Conecte sua conta Deriv na plataforma para ela poder operar por você.',
       }
     }
   }

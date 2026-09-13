@@ -6,6 +6,7 @@ import { autorizacaoParaOperar } from './cofre'
 import { contas, listarRobos, parar, resumir, todas, ver } from './sessoes'
 import { contasDoUsuario, limitesDoCliente, registrarGastoDoChat, usoDeHojeDoChat } from './supabase'
 import { PADRAO, conferir, sugerir, type Limites } from './limites'
+import { marcaPorId } from '../../src/marca/marcas'
 
 /**
  * O chat da Teeds.
@@ -51,7 +52,10 @@ const MAX_VOLTAS = 5
  */
 const MEMORIA = 6
 
-const INSTRUCOES = `Você é o assistente da Teeds, plataforma de operações na corretora Deriv.
+// O assistente se apresenta pelo nome da plataforma de onde o cliente fala:
+// o servidor é um só para as duas marcas, e o cliente da OMNI não pode ser
+// atendido pelo "assistente da Teeds".
+const instrucoes = (marca: string) => `Você é o assistente da ${marcaPorId(marca).prosa}, plataforma de operações na corretora Deriv.
 O cliente fala com você dentro da plataforma, em português do Brasil.
 
 Responda em duas ou três linhas, direto, sem jargão e sem empolgação de vendedor.
@@ -74,7 +78,7 @@ Ligar robô:
 const FERRAMENTAS: Anthropic.Tool[] = [
   {
     name: 'listar_robos',
-    description: 'Os robôs da Teeds e a regra de cada um.',
+    description: 'Os robôs da plataforma e a regra de cada um.',
     input_schema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
@@ -181,11 +185,11 @@ async function executar(
 ): Promise<unknown> {
   switch (nome) {
     case 'listar_robos':
-      return { robos: listarRobos(), observacao: 'Todos operam no Volatility 75 (1s), definido pela Teeds.' }
+      return { robos: listarRobos(), observacao: 'Todos operam no Volatility 75 (1s), definido pela plataforma.' }
 
     case 'minhas_contas': {
       const lista = await contasDele(dono)
-      if (!lista.length) return { contas: [], observacao: 'Nenhuma conta Deriv está ligada a este login da Teeds.' }
+      if (!lista.length) return { contas: [], observacao: 'Nenhuma conta Deriv está ligada a este login.' }
       return {
         contas: lista.map((c) => ({
           conta: c.accountId,
@@ -220,7 +224,7 @@ async function executar(
       if (!ficha) throw new Error(`Robô "${roboId}" não existe. Chame listar_robos para ver os que existem.`)
 
       const disponiveis = await contasDele(dono)
-      if (!disponiveis.length) throw new Error('Nenhuma conta Deriv está ligada a este login da Teeds.')
+      if (!disponiveis.length) throw new Error('Nenhuma conta Deriv está ligada a este login.')
       const conta = args.conta
         ? disponiveis.find((c) => c.accountId === String(args.conta))
         : (disponiveis.find((c) => c.type === 'demo') ?? disponiveis[0])
@@ -333,7 +337,7 @@ export async function conversar(
       resposta = await anthropic().messages.create({
         model: MODELO,
         max_tokens: 1024,
-        system: INSTRUCOES,
+        system: instrucoes(marca),
         tools: FERRAMENTAS,
         messages: mensagens,
       })

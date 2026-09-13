@@ -58,7 +58,7 @@ export async function usuarioDaConta(contaId: string) {
     `/contas_deriv?select=user_id,tipo,moeda&conta_id=eq.${encodeURIComponent(contaId)}&limit=1`,
   )
   const achado = linhas?.[0]
-  if (!achado) throw new Error(`Conta ${contaId} não está vinculada a nenhum login da Teeds.`)
+  if (!achado) throw new Error(`Conta ${contaId} não está vinculada a nenhum login da plataforma.`)
 
   cacheUsuario.set(contaId, achado)
   return achado
@@ -424,7 +424,7 @@ export async function usoDeHojeDoChat(userId: string, marca = 'teeds'): Promise<
 export async function guardarSegredoDeriv(
   userId: string, segredo: string, expiraEm: string | null, marca: string,
 ): Promise<void> {
-  if (!URL_BASE) throw new Error('O servidor nao esta ligado ao banco da Teeds.')
+  if (!URL_BASE) throw new Error('O servidor nao esta ligado ao banco da plataforma.')
   await rest('/deriv_autorizacoes?on_conflict=user_id', {
     method: 'POST',
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
