@@ -6,10 +6,14 @@ import type { TradingAccount } from './account'
  * o Tiago pediu a restricao para o teeds@gmail.com (segundo login dele),
  * mas sem a frase "Este acesso opera somente em conta demo".
  *
+ * Em 13/09/2026 entrou o omni@gmail.com: o mesmo tipo de acesso, do lado da
+ * OMNI. A lista e por e-mail e vale nas duas marcas — nao ha nada a dizer
+ * aqui sobre qual plataforma cada um usa.
+ *
  * Para restringir outro acesso, basta por o e-mail aqui e reimplantar o
  * servidor (que importa este mesmo arquivo).
  */
-const EMAILS_SOMENTE_DEMO: readonly string[] = ['teeds@gmail.com']
+const EMAILS_SOMENTE_DEMO: readonly string[] = ['teeds@gmail.com', 'omni@gmail.com']
 
 export const emailDeDemonstracao = (email?: string | null) =>
   !!email && EMAILS_SOMENTE_DEMO.includes(email.trim().toLowerCase())
