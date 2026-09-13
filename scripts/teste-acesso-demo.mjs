@@ -29,32 +29,26 @@ try {
   globalThis.fetch = async (url, init) => {
     consultas++
     assert.equal(init.headers.Authorization, 'Bearer test-token')
-    if (String(url).endsWith('/auth/v1/user')) return Response.json(dono)
-    assert.ok(String(url).includes('user_id=eq.admin-test'))
-    assert.ok(String(url).includes('marca=eq.teeds'))
-    return Response.json([{ user_id: dono.id }])
+    assert.ok(String(url).endsWith('/auth/v1/user'), 'A trava não consulta permissão no banco')
+    return Response.json(dono)
   }
   assert.deepEqual(await usuarioDoToken('test-token'), dono)
-  assert.equal(await somenteDemoDoUsuario('test-token', dono, 'teeds'), true)
-  assert.equal(await somenteDemoDoUsuario('test-token', { ...dono, email: 'cliente@example.com' }, 'teeds'), false)
-  assert.equal(consultas, 2, 'Other users do not need an extra permission query')
-  globalThis.fetch = async () => Response.json([])
-  assert.equal(await somenteDemoDoUsuario('test-token', dono, 'omni'), false, 'Admin permission stays brand scoped')
-  globalThis.fetch = async () => Response.json([{ user_id: 'another-admin' }])
-  assert.equal(await somenteDemoDoUsuario('test-token', dono, 'teeds'), false)
+  // A trava é do e-mail, vale em qualquer marca e não pergunta nada ao banco.
+  // Até 13/09/2026 ela dependia de ser administrador DAQUELA marca — e o
+  // mesmo login ficava preso à demo na Teeds e solto na OMNI.
+  assert.equal(somenteDemoDoUsuario(dono), true)
+  assert.equal(somenteDemoDoUsuario({ ...dono, email: ' TEEDS@gmail.com ' }), true)
+  assert.equal(somenteDemoDoUsuario({ ...dono, email: 'cliente@example.com' }), false)
+  assert.equal(consultas, 1, 'Só a identidade é consultada')
   globalThis.fetch = async () => new Response('', { status: 503 })
-  await assert.rejects(somenteDemoDoUsuario('test-token', dono, 'teeds'))
   assert.equal(await usuarioDoToken('test-token'), null)
-  globalThis.fetch = async () => Response.json({ unexpected: true })
-  await assert.rejects(somenteDemoDoUsuario('test-token', dono, 'teeds'))
-  globalThis.fetch = async () => { throw new Error('offline') }
-  await assert.rejects(somenteDemoDoUsuario('test-token', dono, 'teeds'))
+  assert.equal(somenteDemoDoUsuario(dono), true, 'Banco fora do ar não solta a trava')
   const servidor = await readFile('servidor/src/servidor.ts', 'utf8')
   const rota = servidor.slice(servidor.indexOf("url.pathname === '/api/sessao'"), servidor.indexOf('// ---- guardar a autorizacao'))
-  assert.ok(rota.indexOf('somenteDemoDoUsuario(cracha, dono, marcaDoPedido)') < rota.indexOf('await iniciar('))
+  assert.ok(rota.indexOf('somenteDemoDoUsuario(dono)') < rota.indexOf('await iniciar('))
   assert.ok(rota.includes("conta.type !== 'demo'"))
   assert.ok(servidor.includes('conversar({ id: dono.id, somenteDemo }'))
-  console.log('✓ Identidade verificada, ADM por marca, isolamento de clientes, falhas fechadas e proteção antes do início do robô')
+  console.log('✓ Identidade verificada, trava de demo por e-mail em qualquer marca, isolamento de clientes, falhas fechadas e proteção antes do início do robô')
 } finally {
   globalThis.fetch = fetchOriginal
   await rm(pasta, { recursive: true, force: true })

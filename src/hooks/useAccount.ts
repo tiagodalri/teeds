@@ -16,13 +16,13 @@ export type AuthStatus = 'deslogado' | 'entrando' | 'logado' | 'erro'
  * Cuida de todo o ciclo de conta: login, escolha da conta,
  * conexao autenticada, saldo e posicoes abertas.
  */
-export function useAccount(acesso: { admin?: boolean | null; email?: string | null } = {}) {
+export function useAccount(acesso: { email?: string | null } = {}) {
   const [status, setStatus] = useState<AuthStatus>('deslogado')
   const [error, setError] = useState<string | null>(null)
   const [session, setSession] = useState<AuthSession | null>(null)
   const [accounts, setAccounts] = useState<TradingAccount[]>([])
   const [chosenAccountId, setChosenAccountId] = useState<string | null>(null)
-  const somenteDemo = acessoSomenteDemo(acesso.admin, acesso.email)
+  const somenteDemo = acessoSomenteDemo(acesso.email)
   const permitidas = contasPermitidas(accounts, somenteDemo)
   const account = selecionarContaPermitida(permitidas, chosenAccountId)
   const accountId = account?.accountId ?? null

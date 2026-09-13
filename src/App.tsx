@@ -75,7 +75,7 @@ export default function App() {
   /** A conferencia de administrador falhou (rede, token) — diferente de "nao e admin". */
   const [adminFalhou, setAdminFalhou] = useState(false)
   const [adminUserId, setAdminUserId] = useState<string | null>(null)
-  const conta = useAccount({ admin: adminUserId === teeds.sessao?.usuario.id ? admin : null, email: teeds.sessao?.usuario.email })
+  const conta = useAccount({ email: teeds.sessao?.usuario.email })
   const [verPerfil, setVerPerfil] = useState(false)
   const [tema, setTema] = useState<Tema>(temaGuardado)
   const alternarTema = () => {

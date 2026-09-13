@@ -392,7 +392,7 @@ const servidor = createServer(async (req, res) => {
           })
         }
 
-        if (conta.type !== 'demo' && await somenteDemoDoUsuario(cracha, dono, marcaDoPedido)) {
+        if (conta.type !== 'demo' && somenteDemoDoUsuario(dono)) {
           return json(403, { erro: 'Este acesso está limitado à conta demo. Operações reais não estão disponíveis.' })
         }
 
@@ -453,7 +453,7 @@ const servidor = createServer(async (req, res) => {
         if (pergunta.length > 2000) return json(400, { erro: 'Mensagem longa demais.' })
         const historico = Array.isArray(corpo.historico) ? corpo.historico.slice(-12) : []
         const marcaDoChat = typeof corpo.marca === 'string' ? corpo.marca : 'teeds'
-        const somenteDemo = await somenteDemoDoUsuario(cracha, dono, marcaDoChat)
+        const somenteDemo = somenteDemoDoUsuario(dono)
         return json(200, await conversar({ id: dono.id, somenteDemo }, historico, pergunta, marcaDoChat))
       }
 

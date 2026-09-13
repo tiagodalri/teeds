@@ -14,9 +14,17 @@ const EMAILS_SOMENTE_DEMO: readonly string[] = ['teeds@gmail.com']
 export const emailDeDemonstracao = (email?: string | null) =>
   !!email && EMAILS_SOMENTE_DEMO.includes(email.trim().toLowerCase())
 
-/** Fail closed while the administrator permission is still being checked. */
-export const acessoSomenteDemo = (admin?: boolean | null, email?: string | null) =>
-  emailDeDemonstracao(email) && admin !== false
+/**
+ * A trava vale pelo e-mail, em qualquer marca.
+ *
+ * Ate 13/09/2026 ela tambem exigia "admin !== false" — um jeito de nao abrir
+ * brecha enquanto a permissao de administrador ainda estava sendo conferida.
+ * So que administrador e por marca: o teeds@gmail.com, admin da Teeds e
+ * cliente comum da OMNI, ficava preso a demo na Teeds e solto na OMNI, com a
+ * conta real a vista no seletor e operacao real liberada pelo servidor.
+ * Trava de protecao nao pode depender de cargo.
+ */
+export const acessoSomenteDemo = (email?: string | null) => emailDeDemonstracao(email)
 
 export function contasPermitidas(contas: TradingAccount[], somenteDemo: boolean) {
   return somenteDemo ? contas.filter(c => c.type === 'demo') : contas

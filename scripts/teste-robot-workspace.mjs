@@ -117,14 +117,16 @@ try {
     const { resumirSessoes, RobotOverview, RobotLive, RobotCatalog, RobotSetup, ETAPAS_PREPARO, valorDePreparo, configurarPreparo, IDENTIDADES, recuperacaoDoRobo, AccountDemonstration, podeDemonstrarSaldos, saldosDemonstrativos, WorkspaceNav, createElement, renderToStaticMarkup } = await import(pathToFileURL(saida).href)
     const verificar = (nome, executar) => teste(`${marca}: ${nome}`, executar)
     const { acessoSomenteDemo, contasPermitidas, selecionarContaPermitida } = await import(pathToFileURL(saida).href)
-    verificar('somente o ADM designado fica limitado à demo, inclusive ao restaurar seleção real', () => {
+    verificar('o login de demonstração fica limitado à demo em qualquer marca, inclusive ao restaurar seleção real', () => {
       const lista = [{ accountId: 'ROT123', type: 'real' }, { accountId: 'DOT456', type: 'demo' }]
-      assert.equal(acessoSomenteDemo(true, ' TEEDS@gmail.com '), true)
-      assert.equal(acessoSomenteDemo(null, 'teeds@gmail.com'), true)
-      assert.equal(acessoSomenteDemo(false, 'teeds@gmail.com'), false)
+      // A trava é do e-mail e não depende de cargo. Até 13/09/2026 ela exigia
+      // "admin !== false", e como administrador é por marca o mesmo login
+      // ficava preso à demo na Teeds e solto na OMNI.
+      assert.equal(acessoSomenteDemo(' TEEDS@gmail.com '), true)
+      assert.equal(acessoSomenteDemo('teeds@gmail.com'), true)
       for (const email of ['cliente@example.com', 'outro-adm@example.com', undefined]) {
-        assert.equal(acessoSomenteDemo(true, email), false)
-        assert.strictEqual(contasPermitidas(lista, acessoSomenteDemo(true, email)), lista)
+        assert.equal(acessoSomenteDemo(email), false)
+        assert.strictEqual(contasPermitidas(lista, acessoSomenteDemo(email)), lista)
       }
       const permitidas = contasPermitidas(lista, true)
       assert.deepEqual(permitidas, [lista[1]])
@@ -192,10 +194,12 @@ try {
       const html = render(RobotSetup, props)
       assert.match(html, /<dialog[^>]*class="robot-launch-dialog"/)
       assert.equal((html.match(/<input/g) ?? []).length, 1)
-      assert.match(html, /DEMO/)
+      // O tipo e o número da conta saíram das telas de operação no commit
+      // 7db02ca, a pedido do Tiago. Este teste continuou exigindo a etiqueta
+      // "DEMO" aqui — e falhava desde então. Agora ele guarda a decisão nova.
+      assert.doesNotMatch(html, /DEMO|Dinheiro fictício|DOT1234/)
       assert.doesNotMatch(html, /▶ Iniciar robô/)
       const catalogo = render(RobotSetup, { ...props, escolherModelo: true, isDemo: false })
-      assert.match(catalogo, /CONTA REAL/)
       assert.match(catalogo, /robot-picker/)
       assert.doesNotMatch(catalogo, /robot-launch-number/)
     })
@@ -263,24 +267,28 @@ try {
     })
 
     const compacto = render(RobotLive, props)
-    verificar('cartão mostra cinco operações e acesso ao histórico', () => {
-      assert.equal(linhas(compacto).length, 5)
-      assert.match(compacto, /Últimas operações/)
-      assert.match(compacto, /Ver histórico \(12\)/)
+    verificar('cartão mostra todas as operações da sessão, sem cortar em cinco', () => {
+      // Até 12/09/2026 o cartão mostrava só as cinco últimas, atrás de um
+      // botão "Ver histórico" — e o Tiago não conseguia rolar para ver o
+      // resto. Agora a tabela rola e mostra a sessão inteira.
+      assert.equal(linhas(compacto).length, 12)
+      assert.match(compacto, /Operações da sessão \(12\)/)
+      assert.doesNotMatch(compacto, /Ver histórico/)
       assert.match(compacto, />Focar<\/button>/)
     })
     verificar('modo foco mostra todo o histórico disponível', () => {
       const foco = render(RobotLive, { ...props, expandido: true })
       assert.equal(linhas(foco).length, 12)
-      assert.match(foco, /Histórico disponível/)
+      assert.match(foco, /Operações da sessão \(12\)/)
       assert.match(foco, />Ver todos<\/button>/)
     })
-    verificar('conta e resultado são identificados sem expor conta inteira', () => {
-      assert.match(compacto, /tv-account-label demo[^>]*>DEMO · conta …1234/)
+    verificar('resultado é identificado sem expor a conta', () => {
+      // A etiqueta com o tipo e o final da conta saiu das telas de operação no
+      // commit 7db02ca, a pedido do Tiago. O que continua valendo, e é o que
+      // este teste guarda: o número da conta nunca aparece inteiro.
       assert.doesNotMatch(compacto, /DOT90001234/)
       assert.match(compacto, /tv-resultado-resumo[\s\S]*?<b class="up">\+53,39 <small>USD/)
       const realNegativo = render(RobotLive, { ...props, estado: { ...estado, resultado: -19.65 }, contaDaSessao: { contaId: 'CR12345678', demo: false, moeda: 'USD' } })
-      assert.match(realNegativo, /tv-account-label real[^>]*>REAL · conta …5678/)
       assert.match(realNegativo, /tv-resultado-resumo[\s\S]*?<b class="down">−19,65/)
       assert.doesNotMatch(realNegativo, /CR12345678/)
     })

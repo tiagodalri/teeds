@@ -305,16 +305,18 @@ export async function usuarioDoToken(token: string): Promise<{ id: string; email
   }
 }
 
-/** Auth identity comes from Supabase, never from the request body. No cache of permissions. */
-export async function somenteDemoDoUsuario(token: string, dono: { id: string; email: string }, marca: string): Promise<boolean> {
-  if (!emailDeDemonstracao(dono.email)) return false
-  const res = await fetch(`${URL_BASE}/rest/v1/administradores?select=user_id&user_id=eq.${encodeURIComponent(dono.id)}&marca=eq.${encodeURIComponent(marca)}`, {
-    headers: { apikey: CHAVE, Authorization: `Bearer ${token}` },
-  })
-  if (!res.ok) throw new Error('Não foi possível conferir a permissão de operação. Tente novamente.')
-  const linhas = await res.json()
-  if (!Array.isArray(linhas)) throw new Error('Resposta inválida ao conferir a permissão de operação.')
-  return linhas.some(linha => linha.user_id === dono.id)
+/**
+ * Quem esta limitado a conta demo. A identidade vem do Supabase, nunca do
+ * corpo do pedido.
+ *
+ * Ate 13/09/2026 esta funcao perguntava ao banco se a pessoa era
+ * administradora DAQUELA marca, e so entao travava. Como administrador e por
+ * marca, o mesmo login ficava travado na Teeds (onde e admin) e solto na OMNI
+ * (onde e cliente comum) — com operacao real liberada. A trava agora e do
+ * e-mail, em qualquer marca: uma consulta a menos e nenhuma brecha por cargo.
+ */
+export function somenteDemoDoUsuario(dono: { email: string }): boolean {
+  return emailDeDemonstracao(dono.email)
 }
 
 /** As contas Deriv que este usuário Teeds registrou. */
