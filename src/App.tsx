@@ -4,6 +4,7 @@ import { PositionCard } from './components/PositionCard'
 import { DigitsPanel } from './components/DigitsPanel'
 import { AdminPanel } from './components/AdminPanel'
 import { InsightsPanel } from './components/InsightsPanel'
+import { MonitoramentoBoundary } from './components/MonitoramentoBoundary'
 // O monitoramento é só do admin e pesa: entra no pacote sob demanda, para o
 // pacote que todo cliente baixa continuar do mesmo tamanho.
 const MonitoramentoPanel = lazy(() => import('./components/MonitoramentoPanel').then((m) => ({ default: m.MonitoramentoPanel })))
@@ -583,7 +584,7 @@ export default function App() {
       ) : tela === 'gerenciamento' ? (
         <OperationalManagementPanel moeda={conta.account?.currency ?? 'USD'} onUsarPlano={() => { setTela('robos'); setPedidoNovoRobo((n) => n + 1) }} />
       ) : tela === 'monitoramento' && admin === true ? (
-        teeds.sessao ? <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel sessao={teeds.sessao} /></Suspense> : null
+          teeds.sessao ? <MonitoramentoBoundary><Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel sessao={teeds.sessao} /></Suspense></MonitoramentoBoundary> : null
       ) : tela === 'insights' && admin === true ? (
         teeds.sessao ? <InsightsPanel sessao={teeds.sessao} /> : null
       ) : tela === 'gestao' && admin === true ? (
