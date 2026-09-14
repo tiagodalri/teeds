@@ -97,6 +97,8 @@ async function provas() {
     conferir('troca de estratégia é evento', tipoDoEvento(resumirEstado(e3), resumirEstado(e5)), 'estrategia')
     const dto = resumirEstado({ ...e2, digitos: Array.from({ length: 200 }, (_, i) => i % 10) })
     conferir('DTO corta a fita em 30', dto.digitos.length, LIMITES.digitos)
+    conferir('markup da sessão usa 3% do payout sem esperar a Deriv', resumirEstado(e2).markupCalculado, .057)
+    conferir('markup calculado viaja no delta da liquidação', delta(resumirEstado(e1), resumirEstado(e2)).markupCalculado, .057)
     conferir('DTO não tem chaves além das previstas', Object.keys(dto).every((k) => !/token|segredo|senha|auth|socket|memoria/i.test(k)), true)
     conferir('delta vazio quando nada mudou', delta(resumirEstado(e2), resumirEstado(e2)), {})
   }

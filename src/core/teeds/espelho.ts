@@ -59,6 +59,8 @@ export interface EstadoEspelho {
   perdasSeguidas: number
   resultado: number
   movimentado: number
+  /** Markup acumulado da sessão, calculado localmente: 3% de cada payout. */
+  markupCalculado: number
   valorAtual: number
   aguardando: string
   condicao: EstadoMotor['condicao']
@@ -201,6 +203,10 @@ export function faseDoEstado(e: Pick<EstadoMotor, 'rodando' | 'emCurso' | 'emOpe
 
 const arred = (v: number, casas = 2) => Number((Number(v) || 0).toFixed(casas))
 
+/** Mesma regra usada pela escrituração e pelos relatórios da plataforma. */
+export const TAXA_MARKUP = 0.03
+export const calcularMarkup = (pagamento: number) => arred(Math.max(0, pagamento) * TAXA_MARKUP, 4)
+
 function compactarOperacao(o: OperacaoMotor): OperacaoEspelho {
   return {
     n: o.n, contractId: o.contractId, valor: arred(o.valor), entrada: o.entrada, saida: o.saida,
@@ -221,6 +227,7 @@ export function resumirEstado(e: EstadoMotor, conexao = 'open'): EstadoEspelho {
     perdasSeguidas: e.perdasSeguidas ?? 0,
     resultado: arred(e.resultado ?? 0),
     movimentado: arred(e.movimentado ?? 0),
+    markupCalculado: arred((e.historico ?? []).reduce((total, op) => total + calcularMarkup(op.payout), 0), 4),
     valorAtual: arred(e.valorAtual ?? 0),
     aguardando: e.aguardando ?? '',
     condicao: e.condicao ?? null,
@@ -288,7 +295,7 @@ export function tipoDoEvento(antes: EstadoEspelho | null, agora: EstadoEspelho):
 /** Chaves escalares comparadas por valor; as listas têm comparação própria. */
 const CHAVES = Object.freeze([
   'rodando', 'emOperacao', 'fase', 'operacoes', 'vitorias', 'derrotas', 'perdasSeguidas', 'resultado', 'movimentado',
-  'valorAtual', 'aguardando', 'motivoParada', 'ticksAnalisados', 'latenciaMedia', 'conexao',
+  'markupCalculado', 'valorAtual', 'aguardando', 'motivoParada', 'ticksAnalisados', 'latenciaMedia', 'conexao',
 ] as const)
 
 const rotuloDaCondicao = (c: EstadoMotor['condicao']) => c ? `${c.rotulo}|${c.itens.map((i) => `${i.valor}:${i.ok ? 1 : 0}`).join(',')}` : ''

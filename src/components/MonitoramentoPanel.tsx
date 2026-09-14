@@ -90,6 +90,9 @@ const Cartao = memo(function Cartao({ s, cliente, saude, visao, aoAbrir }: { s: 
   const ultimoDigito = e.digitos?.[e.digitos.length - 1]
   const margem = s.config.stopLoss > 0 ? Math.max(0, s.config.stopLoss + e.resultado) : 0
   const falta = s.config.takeProfit > 0 ? Math.max(0, s.config.takeProfit - e.resultado) : 0
+  // Fotos antigas não tinham este campo. A cauda do histórico mantém um
+  // fallback útil até o servidor publicar a próxima foto completa.
+  const markup = Number.isFinite(e.markupCalculado) ? e.markupCalculado : (e.historico ?? []).reduce((t, op) => t + Math.max(0, op.payout) * .03, 0)
   return (
     <button className={`mon-cartao ${cor} ${visao}`} onClick={() => aoAbrir(s.sessaoId)} style={{ ['--robo' as string]: corRobo }}
       aria-label={`Abrir a cabine espelho de ${nome}, ${s.roboNome}, ${ROTULO_SAUDE[saude]}. Somente visualização.`}>
@@ -98,20 +101,21 @@ const Cartao = memo(function Cartao({ s, cliente, saude, visao, aoAbrir }: { s: 
         <span className="mon-cartao-quem"><b>{nome}</b><small>{mascararEmail(cliente?.email)} · {mascararConta(s.contaId)} · <em className={s.demo ? 'demo' : 'real'}>{s.demo ? 'demo' : 'real'}</em></small></span>
         <span className={`mon-saude ${saude}`}><i aria-hidden />{ROTULO_SAUDE[saude]}</span>
       </header>
-      <div className="mon-cartao-robo"><b>{s.roboNome}</b><small>{NOME_DO_ATIVO[s.ativo] ?? s.ativo} · {ROTULO_FASE[e.fase] ?? e.fase}{e.estrategia ? ` · ${e.estrategia.detalhes?.estrategiaAtual ?? e.estrategia.fase}` : ''}</small></div>
+      <div className="mon-cartao-robo"><span><b>{s.roboNome}</b><small>{NOME_DO_ATIVO[s.ativo] ?? s.ativo}</small></span><em>{ROTULO_FASE[e.fase] ?? e.fase}{e.estrategia ? ` · ${e.estrategia.detalhes?.estrategiaAtual ?? e.estrategia.fase}` : ''}</em></div>
       <div className="mon-cartao-nums">
-        <span><i>Entrada</i><b>{din(e.emCurso?.valor ?? e.valorAtual, s.moeda)}</b></span>
-        <span><i>Próxima</i><b>{din(e.valorAtual, s.moeda)}</b></span>
-        <span><i>Operações</i><b>{e.operacoes} <small className="up">{e.vitorias}</small> <small className="down">{e.derrotas}</small></b></span>
-        <span><i>Resultado</i><b className={e.resultado >= 0 ? 'up' : 'down'}>{assinado(e.resultado)}</b></span>
+        <span className="principal"><i>Resultado da sessão</i><b className={e.resultado >= 0 ? 'up' : 'down'}>{assinado(e.resultado)} <small>{s.moeda}</small></b></span>
+        <span className="principal markup"><i>{s.demo ? 'Markup simulado' : 'Markup gerado'}</i><b>{din(markup, s.moeda)}</b></span>
+        <span><i>Operações</i><b>{e.operacoes} <small className="mon-placar up">{e.vitorias} G</small> <small className="mon-placar down">{e.derrotas} P</small></b></span>
+        <span><i>Entrada atual</i><b>{din(e.emCurso?.valor ?? e.valorAtual, s.moeda)}</b></span>
         {visao !== 'compacto' && <>
+          <span><i>Próxima entrada</i><b>{din(e.valorAtual, s.moeda)}</b></span>
           <span><i>Até o stop</i><b className="down">{din(margem, s.moeda)}</b></span>
           <span><i>Até a meta</i><b className="up">{din(falta, s.moeda)}</b></span>
           <span><i>Recuperação</i><b>{e.perdasSeguidas ? `nível ${e.perdasSeguidas}` : '—'}</b></span>
           <span><i>Último dígito</i><b>{ultimoDigito ?? '—'}</b></span>
         </>}
       </div>
-      <footer><span>{s.emitidoEm ? `servidor às ${hora(s.emitidoEm)}` : '—'}</span><span>{e.conexao !== 'open' ? 'Deriv: ' + e.conexao : e.falha ? 'recusa da Deriv' : ''}</span></footer>
+      <footer><span>{s.emitidoEm ? `Atualizado às ${hora(s.emitidoEm)}` : '—'}</span><span>{s.demo ? 'Projeção — não é receita real' : e.conexao !== 'open' ? 'Deriv: ' + e.conexao : e.falha ? 'recusa da Deriv' : 'Markup local · 3% do pagamento'}</span></footer>
     </button>
   )
 })

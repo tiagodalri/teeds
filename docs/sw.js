@@ -1,4 +1,4 @@
-const CACHE='teeds-03b9ee96d80d';
+const CACHE='teeds-09b5ff7ae407';
 const SHELL=["./","./index.html","./manifest.webmanifest","./pwa-teeds/icon-192.png","./pwa-teeds/icon-512.png","./assets/MonitoramentoPanel.js","./assets/teeds.css","./assets/teeds.js"];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)));self.skipWaiting()});
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
