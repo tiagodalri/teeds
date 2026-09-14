@@ -3100,6 +3100,10 @@ button:has(> .icone-fechar) { display: inline-flex; align-items: center; justify
   gap: 28px; padding-inline: clamp(24px, 5vw, 78px);
   background: #0b0c0f;
 }
+/* A sala é uma experiência de tela inteira. A regra genérica de `.ger`
+   limita painéis administrativos a 1240px; aqui ela criava uma coluna
+   estreita no centro e fazia o hero terminar no meio de monitores largos. */
+.ger.aulas > * { width: 100%; max-width: none; box-sizing: border-box; }
 .aulas-capa {
   min-height: clamp(390px, 56vh, 610px); margin-inline: calc(clamp(24px, 5vw, 78px) * -1);
   margin-top: -28px; border-radius: 0; padding: clamp(58px, 9vw, 118px) clamp(28px, 7vw, 110px);
@@ -3691,6 +3695,21 @@ details.go-planilha:not([open]) { padding-bottom: 19px; }
 .aulas-carrossel .aula-vista { left: 10px; right: auto; }
 .aulas-continue .aulas-carrossel { max-width: 360px; }
 .aulas-continue .aulas-seta { display: none; }
+
+@media (min-width: 1281px) {
+  .aulas { padding-inline: clamp(34px, 4vw, 76px); }
+  .aulas-capa {
+    margin-inline: calc(clamp(34px, 4vw, 76px) * -1);
+    padding-inline: clamp(68px, 6.2vw, 118px);
+    min-height: clamp(430px, 54vh, 620px);
+  }
+  .aulas-carrossel .aula-cartao {
+    flex-basis: calc((100% - 27px) / 4);
+    width: calc((100% - 27px) / 4);
+    max-width: 390px;
+  }
+  .aulas-continue .aulas-carrossel { max-width: min(390px, 100%); }
+}
 
 @media (max-width: 700px) {
   .aulas-carrossel .aula-cartao { flex-basis: 78vw; width: 78vw; }
