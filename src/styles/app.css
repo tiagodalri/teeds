@@ -5027,9 +5027,9 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .mon-selo.replay { color: #fff; background: #5b3fbf; border-color: #5b3fbf; }
 .mon-fechar { width: 36px; height: 36px; border: 0; border-radius: 10px; color: var(--muted); background: transparent; cursor: pointer; }
 .mon-foco.replay .cabine-caixa { outline: 2px dashed #5b3fbf; outline-offset: 4px; border-radius: 16px; }
-.mon-foco-extras { display: grid; grid-template-columns: 1fr 1.4fr; gap: 14px; }
+.mon-foco-extras { display: grid; grid-template-columns: minmax(280px, .72fr) minmax(520px, 1.28fr); gap: 14px; align-items: start; }
 .mon-estrategia dl { display: grid; gap: 8px; margin: 0; padding: 4px 20px 18px; } .mon-estrategia dl div { display: grid; grid-template-columns: 140px 1fr; gap: 10px; font-size: 12.5px; } .mon-estrategia dt { color: var(--muted); } .mon-estrategia dd { margin: 0; word-break: break-word; }
-.mon-eventos-lista { list-style: none; margin: 0; padding: 4px 0 8px; max-height: 420px; overflow-y: auto; }
+.mon-eventos-lista { list-style: none; margin: 0; padding: 4px 0 8px; max-height: 340px; overflow-y: auto; }
 .mon-ev { display: grid; grid-template-columns: 74px 170px 1fr; gap: 10px; padding: 8px 20px; border-top: 1px solid var(--border); font-size: 12px; }
 .mon-ev time { color: var(--muted); font-variant-numeric: tabular-nums; } .mon-ev b { font-size: 11.5px; } .mon-ev span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 .mon-ev.compra b { color: var(--primary); } .mon-ev.liquidacao b { color: var(--up); } .mon-ev.falha b, .mon-ev.parada b { color: var(--down); } .mon-ev.estrategia b { color: #5b3fbf; }
@@ -5116,6 +5116,36 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
   align-content: center;
 }
 
+/* No espelho administrativo a cabine acompanha o conteúdo. A cabine do
+   cliente continua com a geometria fixa necessária durante a operação. */
+.mon-foco .cabine-caixa {
+  height: auto;
+  min-height: 0;
+}
+.mon-foco .cabine-caixa .tv {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+.mon-foco .tv-corpo {
+  flex: none;
+  min-height: 0;
+  overflow: visible;
+}
+.mon-foco .tv-ops {
+  height: auto;
+  min-height: 0;
+  padding-bottom: 0;
+}
+.mon-foco .tv-rolo {
+  flex: none;
+  min-height: 0;
+  max-height: min(340px, 42dvh);
+  overflow-y: auto;
+}
+.mon-foco .mon-estrategia,
+.mon-foco .mon-eventos { width: 100%; }
+
 @media (max-width: 1500px) {
   .ins-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .mon-filtros { grid-template-columns: minmax(240px, 1fr) repeat(3, minmax(120px, auto)); }
@@ -5126,6 +5156,7 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
   .mon-filtros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mon-busca { grid-column: 1 / -1; }
   .mon-filtros select { width: 100%; max-width: none; }
+  .mon-foco-extras { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) {
   .ins-kpis, .mon-kpis { grid-template-columns: 1fr; }
