@@ -573,7 +573,7 @@ export default function App() {
         />
       </div>
       {tela === 'robos' || tela === 'assistente' ? null : tela === 'aulas' ? (
-        <AulasPanel nome={teeds.usuario?.nome} />
+        <AulasPanel nome={teeds.usuario?.nome} sessao={teeds.sessao} />
       ) : tela === 'marketplace' ? (
         <MarketplacePanel sessao={teeds.sessao} />
       ) : tela === 'gerenciamento' ? (

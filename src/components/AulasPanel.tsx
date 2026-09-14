@@ -1,9 +1,11 @@
 import { ResponsiveImage } from './ResponsiveImage'
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   aulasVistas, marcarVista, MODULOS, playerDoVideo, todasAsAulas, VIDEO_DEMONSTRACAO,
   type AulaNumerada,
 } from '../core/teeds/aulas'
+import { listarVideosDasAulas, type VideoDaAula } from '../core/teeds/aulasVideos'
+import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA } from '../marca'
 import { capaDaAula } from './capasAulas'
 import { IconeFechar } from './IconeFechar'
@@ -30,8 +32,16 @@ function Fileira({ children, rotulo }: { children: ReactNode; rotulo: string }) 
  * modulo, cartoes com capa e numero, player com a lista do modulo ao lado.
  * Aula sem video existe no catalogo mas se apresenta como "em breve".
  */
-export function AulasPanel({ nome }: { nome?: string | null }) {
-  const aulas = useMemo(() => todasAsAulas(), [])
+export function AulasPanel({ nome, sessao }: { nome?: string | null; sessao?: SessaoTeeds | null }) {
+  // Os vídeos que o painel gravou no banco. Enquanto não chegam (ou se o
+  // banco não responder), a sala abre com o catálogo do código.
+  const [videos, setVideos] = useState<Record<string, VideoDaAula>>({})
+  useEffect(() => {
+    let vivo = true
+    listarVideosDasAulas(sessao).then((v) => { if (vivo) setVideos(v) })
+    return () => { vivo = false }
+  }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const aulas = useMemo(() => todasAsAulas(videos), [videos])
   const [vistas, setVistas] = useState<Set<string>>(() => aulasVistas())
   const [abertaId, setAbertaId] = useState<string | null>(null)
   const [detalheId, setDetalheId] = useState<string | null>(null)

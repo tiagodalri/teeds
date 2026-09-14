@@ -160,17 +160,42 @@ export interface AulaNumerada extends Aula {
   modulo: Modulo
 }
 
-/** Todas as aulas, na ordem, com o número contínuo ("Aula 1", "Aula 2"…). */
-export function todasAsAulas(): AulaNumerada[] {
+/**
+ * O que o painel gravou por cima do catálogo, por id de aula.
+ *
+ * Vem de `aulasVideos.ts` (tabela `aulas_videos`, por marca). Só o que está
+ * preenchido sobrepõe: um vídeo sem título novo mantém o título do código.
+ */
+export interface SobreposicaoDaAula {
+  video: string
+  duracao?: string
+  titulo?: string | null
+  descricao?: string | null
+  publicado?: boolean
+}
+
+/**
+ * Todas as aulas, na ordem, com o número contínuo ("Aula 1", "Aula 2"…).
+ *
+ * `videos` é o que o painel gravou: uma aula com vídeo publicado ali deixa
+ * de ser demonstração e passa a abrir o vídeo de verdade.
+ */
+export function todasAsAulas(videos: Record<string, SobreposicaoDaAula> = {}): AulaNumerada[] {
   const lista: AulaNumerada[] = []
   let n = 1
   for (const m of MODULOS) {
-    for (const a of m.aulas) lista.push({
-      ...a,
-      video: a.video || VIDEO_DEMONSTRACAO,
-      duracao: a.duracao || 'Vídeo demonstrativo',
-      numero: n++, modulo: m,
-    })
+    for (const a of m.aulas) {
+      const gravado = videos[a.id]
+      const vivo = gravado && gravado.publicado !== false && gravado.video.trim() ? gravado : null
+      lista.push({
+        ...a,
+        titulo: vivo?.titulo || a.titulo,
+        descricao: vivo?.descricao || a.descricao,
+        video: vivo?.video || a.video || VIDEO_DEMONSTRACAO,
+        duracao: vivo?.duracao || a.duracao || 'Vídeo demonstrativo',
+        numero: n++, modulo: m,
+      })
+    }
   }
   return lista
 }
