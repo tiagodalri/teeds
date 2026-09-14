@@ -5069,9 +5069,9 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 /* Os painéis administrativos são grades; sem isto os filhos herdam a margem automática do .ger e encolhem para a largura mínima (aparecia no celular). */
 .monitoramento > *, .insights > * {
   width: 100%;
-  max-width: none;
-  margin-left: 0;
-  margin-right: 0;
+  max-width: 1480px;
+  margin-left: auto;
+  margin-right: auto;
   min-width: 0;
 }
 
@@ -5081,6 +5081,34 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .ins-kpis { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .mon-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .ins-grade > *, .mon-kpis > *, .ins-kpis > * { min-width: 0; }
+.insights, .monitoramento {
+  padding: clamp(20px, 2.2vw, 34px);
+  gap: clamp(14px, 1.25vw, 20px);
+}
+.insights .admin-card, .monitoramento .admin-card,
+.insights .adm-kpis article, .monitoramento .adm-kpis article {
+  border-radius: 14px;
+}
+.insights .adm-kpis article, .monitoramento .adm-kpis article {
+  min-height: 104px;
+  padding: 15px 16px;
+  align-content: center;
+}
+.insights .ins-card > header,
+.monitoramento .admin-card > header {
+  min-height: 68px;
+  padding: 15px 18px;
+}
+.insights .ins-tabela,
+.monitoramento .ins-tabela { min-width: 0; overflow-x: auto; }
+.insights .ins-grade { align-items: stretch; }
+.insights .ins-grade > .ins-card { height: 100%; }
+.mon-filtros {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) repeat(6, max-content) max-content;
+  width: 100%;
+}
+.mon-filtros select { min-width: 0; max-width: 190px; }
 .mon-mosaico > .mon-estado {
   grid-column: 1 / -1;
   width: 100%;
@@ -5090,16 +5118,27 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 
 @media (max-width: 1500px) {
   .ins-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .mon-filtros { grid-template-columns: minmax(240px, 1fr) repeat(3, minmax(120px, auto)); }
+  .mon-visao { justify-self: end; }
 }
 @media (max-width: 1100px) {
   .ins-kpis, .mon-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mon-filtros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mon-busca { grid-column: 1 / -1; }
+  .mon-filtros select { width: 100%; max-width: none; }
 }
 @media (max-width: 560px) {
   .ins-kpis, .mon-kpis { grid-template-columns: 1fr; }
+  .insights, .monitoramento { padding: 16px 12px 36px; gap: 12px; }
+  .insights .adm-kpis article, .monitoramento .adm-kpis article { min-height: 88px; }
   .ins-topo, .mon-topo { align-items: stretch; }
   .ins-periodo, .mon-topo-direita, .mon-abas { width: 100%; }
   .ins-periodo { overflow-x: auto; padding-bottom: 2px; }
   .mon-topo-direita { align-items: flex-start; }
   .mon-abas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .mon-abas button { padding-inline: 8px; }
+  .mon-filtros { grid-template-columns: 1fr; }
+  .mon-busca, .mon-visao { grid-column: auto; width: 100%; }
+  .mon-visao { justify-self: stretch; }
+  .mon-visao button { flex: 1; }
 }
