@@ -4743,7 +4743,9 @@ input, select, textarea, button { vertical-align: middle; }
 @media (max-width:720px){.admin-aulas-modulo>header>small{display:none}.admin-aula{grid-template-columns:38px 1fr 18px}.admin-aula>em{display:none}.admin-aula-duas{grid-template-columns:1fr}}
 
 /* ---------------------- sala de aula: modo cinema ---------------------- */
-.aulas.cine { gap: 16px; }
+.aulas.cine { gap: 16px; padding-inline: clamp(16px, 2.5vw, 40px); }
+/* o palco pode ser mais largo que o resto da plataforma: é cinema */
+.aulas.cine > .cine-topo, .aulas.cine > .cine-palco { max-width: 1520px; }
 .cine-topo { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
 .cine-migalha { color: var(--muted); font-size: 12px; letter-spacing: .02em; }
 .cine-palco { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; align-items: start; }
@@ -4838,8 +4840,8 @@ input, select, textarea, button { vertical-align: middle; }
 .cine-atalhos kbd { padding: 1px 6px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; background: var(--surface); font: inherit; font-size: 10px; }
 
 /* a plataforma escurece em volta enquanto a aula toca */
-body.aula-tocando .sidebar, body.aula-tocando .workspace-brand, body.aula-tocando .aulas .cine-topo { opacity: .38; transition: opacity .5s; }
-body.aula-tocando .sidebar:hover, body.aula-tocando .aulas .cine-topo:hover { opacity: 1; }
+body.aula-tocando .workspace-sidebar, body.aula-tocando .aulas .cine-topo { opacity: .38; transition: opacity .5s; }
+body.aula-tocando .workspace-sidebar:hover, body.aula-tocando .workspace-sidebar:focus-within, body.aula-tocando .aulas .cine-topo:hover { opacity: 1; }
 body.aula-tocando .cine-ficha, body.aula-tocando .cine-trilha { opacity: .82; transition: opacity .5s; }
 body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opacity: 1; }
 
