@@ -6,8 +6,10 @@ import './styles/app.css'
 import './styles/tema.css'
 import './styles/ux-refinements.css'
 import { aplicarTema, temaGuardado } from './core/tema'
+import { MARCA } from './marca'
 
 // o tema entra antes do primeiro quadro, para a tela nao piscar clara
+document.documentElement.dataset.marca = MARCA.id
 aplicarTema(temaGuardado())
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -54,3 +56,12 @@ async function conferirVersao() {
   }
 }
 window.setTimeout(() => { void conferirVersao() }, 1500)
+
+// O PWA usa a mesma aplicacao publicada. A troca do service worker acontece
+// em segundo plano e nunca recarrega uma operacao em andamento.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL })
+      .catch((erro) => console.warn('[pwa] service worker indisponivel:', erro))
+  }, { once: true })
+}

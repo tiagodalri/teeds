@@ -1,0 +1,38 @@
+{
+  "id": "/",
+  "name": "Teeds Trading Platform",
+  "short_name": "Teeds",
+  "description": "Teeds — operações manuais, robôs e acompanhamento em um só lugar.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#090a0d",
+  "theme_color": "#090a0d",
+  "categories": [
+    "finance",
+    "business",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "pwa-teeds/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "pwa-teeds/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

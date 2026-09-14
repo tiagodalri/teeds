@@ -48,15 +48,15 @@
 @media (max-width: 900px) {
   .workspace-app, .workspace-app:has(.workspace-sidebar.compact) { padding-left: 0; }
   .workspace-sidebar, .workspace-sidebar.compact { width: 236px; padding-inline: 14px; transform: translateX(-100%); }
-  .workspace-sidebar.mobile-open { transform: translateX(0); top: 64px; }
+  .workspace-sidebar.mobile-open { transform: translateX(0); top: calc(64px + env(safe-area-inset-top)); padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
   .workspace-sidebar.compact .workspace-label { display: initial; }
   .workspace-sidebar.compact .marca-nome { display: initial; }
   .workspace-sidebar.compact .brand-wordmark { display: flex; }
   .workspace-sidebar.compact .workspace-link { justify-content: flex-start; }
   .workspace-collapse { display: none; }
-  .workspace-mobile-toggle { display: block; position: fixed; top: 17px; left: 12px; z-index: 71; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
-  .workspace-shade { display: block; position: fixed; inset: 64px 0 0; z-index: 59; background: #0008; border: 0; }
-  .workspace-app .topbar { height: 64px; min-height: 64px; padding: 0 12px 0 100px; }
+  .workspace-mobile-toggle { display: block; position: fixed; top: calc(15px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); z-index: 71; min-width: 44px; min-height: 44px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; cursor: pointer; }
+  .workspace-shade { display: block; position: fixed; inset: calc(64px + env(safe-area-inset-top)) 0 0; z-index: 59; background: #0008; border: 0; }
+  .workspace-app .topbar { height: calc(64px + env(safe-area-inset-top)); min-height: calc(64px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(12px, env(safe-area-inset-right)) 0 100px; }
   .workspace-heading { display: none; }
   .workspace-app .ger.rob { padding: 20px 16px; }
 }
@@ -64,5 +64,9 @@
   .workspace-app .topbar-right { gap: 6px; }
   .workspace-app .topbar-right .status { display: none; }
   .workspace-app .rv-galeria { grid-template-columns: 1fr; }
+}
+@media (display-mode: standalone) and (max-width: 900px) {
+  .workspace-app { min-height: 100dvh; }
+  .workspace-sidebar { overscroll-behavior: contain; }
 }
 @media (prefers-reduced-motion: reduce) { .workspace-app { transition: none; } }

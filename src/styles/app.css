@@ -5173,3 +5173,29 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
   .mon-visao { justify-self: stretch; }
   .mon-visao button { flex: 1; }
 }
+
+/* Acabamento PWA/mobile compartilhado: areas seguras, alvos de toque e
+   campos que nao provocam zoom automatico no Safari do iPhone. */
+@media (max-width: 760px) {
+  html { background: var(--bg); overscroll-behavior-y: none; }
+  body { min-height: 100dvh; padding-bottom: env(safe-area-inset-bottom); }
+  button, [role='button'], select { touch-action: manipulation; }
+  input, select, textarea { font-size: 16px !important; }
+  .ger, .ger-vazio { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
+  .adm-modal-fundo, .aula-modal-fundo, .beta-fundo, .rv-compara-fundo {
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    padding-left: max(12px, env(safe-area-inset-left));
+  }
+  .aulas-fileira { scroll-snap-type: x mandatory; overscroll-behavior-x: contain; }
+  .aula-cartao { scroll-snap-stop: always; }
+  .aulas-seta { display: none; }
+}
+
+@media (display-mode: standalone) {
+  body { -webkit-user-select: none; user-select: none; }
+  input, textarea, [contenteditable='true'], .ins-tabela, .tv-tabela {
+    -webkit-user-select: text; user-select: text;
+  }
+}

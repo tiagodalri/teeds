@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { cpSync, existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { dirname, join, relative, resolve } from 'node:path'
 import { MARCAS, marcaPorId } from './src/marca/marcas'
 
@@ -94,6 +95,8 @@ export default defineConfig({
           html
             .replaceAll('%BASE%', MARCA.base)
             .replaceAll('%EMBLEMA%', MARCA.emblema)
+            .replaceAll('%MARCA%', MARCA.id)
+            .replaceAll('%THEME%', MARCA.id === 'omni' ? '#081525' : '#090a0d')
             .replaceAll('%NOME%', MARCA.nome === 'TEEDS' ? 'Teeds' : MARCA.nome),
       },
     },
@@ -123,6 +126,7 @@ export default defineConfig({
         for (const outra of Object.values(MARCAS)) {
           if (outra.id === MARCA.id) continue
           rmSync(join(SAIDA, outra.emblema), { force: true })
+          rmSync(join(SAIDA, `pwa-${outra.id}`), { recursive: true, force: true })
         }
         // O logotipo completo da Teeds so faz sentido no site da Teeds.
         if (MARCA.id !== 'teeds') {
@@ -135,6 +139,32 @@ export default defineConfig({
         // Sai da tabela de marcas, nao de um arquivo escrito a mao: dominio
         // trocado num lugar so.
         writeFileSync(join(SAIDA, 'CNAME'), new URL(MARCA.redirectUri).hostname + '\n')
+
+        const pwaDir = `pwa-${MARCA.id}`
+        const fundo = MARCA.id === 'omni' ? '#081525' : '#090a0d'
+        const nome = MARCA.nome === 'TEEDS' ? 'Teeds Trading Platform' : 'OMNI Trading Platform'
+        const curto = MARCA.nome === 'TEEDS' ? 'Teeds' : 'OMNI'
+        writeFileSync(join(SAIDA, 'manifest.webmanifest'), JSON.stringify({
+          id: '/', name: nome, short_name: curto,
+          description: `${MARCA.prosa} — operações manuais, robôs e acompanhamento em um só lugar.`,
+          lang: 'pt-BR', dir: 'ltr', start_url: '/', scope: '/', display: 'standalone',
+          display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
+          orientation: 'any', background_color: fundo, theme_color: fundo,
+          categories: ['finance', 'business', 'education'],
+          icons: [
+            { src: `${pwaDir}/icon-192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: `${pwaDir}/icon-512.png`, sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          ],
+        }, null, 2) + '\n')
+
+        const essenciais = readdirSync(join(SAIDA, 'assets'))
+          .filter((arquivo) => /\.(?:js|css)$/.test(arquivo))
+          .map((arquivo) => `./assets/${arquivo}`)
+        const assinatura = createHash('sha256')
+          .update(essenciais.map((f) => readFileSync(join(SAIDA, f.slice(2)))).join(''))
+          .digest('hex').slice(0, 12)
+        const preCache = ['./', './index.html', './manifest.webmanifest', `./${pwaDir}/icon-192.png`, `./${pwaDir}/icon-512.png`, ...essenciais]
+        writeFileSync(join(SAIDA, 'sw.js'), `const CACHE='${MARCA.id}-${assinatura}';\nconst SHELL=${JSON.stringify(preCache)};\nself.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)));self.skipWaiting()});\nself.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));\nself.addEventListener('fetch',event=>{const request=event.request;if(request.method!=='GET'||new URL(request.url).origin!==self.location.origin)return;if(request.mode==='navigate'){event.respondWith(fetch(request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put('./index.html',copy));return response}).catch(()=>caches.match('./index.html')));return}event.respondWith(caches.match(request,{ignoreSearch:true}).then(cached=>{const network=fetch(request).then(response=>{if(response.ok)caches.open(CACHE).then(cache=>cache.put(request,response.clone()));return response}).catch(()=>cached);return cached||network}))});\n`)
       },
     },
   ],
