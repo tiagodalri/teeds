@@ -1,5 +1,5 @@
 import { ResponsiveImage } from './ResponsiveImage'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   aulasVistas, marcarVista, MODULOS, playerDoVideo, todasAsAulas, VIDEO_DEMONSTRACAO,
   type AulaNumerada,
@@ -9,8 +9,31 @@ import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA } from '../marca'
 import { capaDaAula } from './capasAulas'
 import { IconeFechar } from './IconeFechar'
+import { PlayerAula } from './PlayerAula'
 
 const capa = capaDaAula
+
+/** Onde a pessoa parou em cada aula (segundos), neste navegador. */
+const CHAVE_POSICAO = `${MARCA.id}.aulas.posicao`
+function posicoesGuardadas(): Record<string, number> {
+  try { return JSON.parse(localStorage.getItem(CHAVE_POSICAO) || '{}') as Record<string, number> } catch { return {} }
+}
+function guardarPosicao(id: string, segundos: number) {
+  try { const p = posicoesGuardadas(); p[id] = Math.floor(segundos); localStorage.setItem(CHAVE_POSICAO, JSON.stringify(p)) } catch { /* sem armazenamento */ }
+}
+
+/** Anel de progresso do curso, na trilha. */
+function Anel({ fracao, cor }: { fracao: number; cor: string }) {
+  const r = 20, c = 2 * Math.PI * r
+  return (
+    <svg className="cine-anel" viewBox="0 0 48 48" width="48" height="48" aria-hidden>
+      <circle cx="24" cy="24" r={r} fill="none" stroke="currentColor" strokeOpacity=".15" strokeWidth="4" />
+      <circle cx="24" cy="24" r={r} fill="none" stroke={cor} strokeWidth="4" strokeLinecap="round"
+        strokeDasharray={c} strokeDashoffset={c * (1 - Math.min(1, Math.max(0, fracao)))} transform="rotate(-90 24 24)" />
+      <text x="24" y="28" textAnchor="middle" fontSize="11" fontWeight="700" fill="currentColor">{Math.round(fracao * 100)}%</text>
+    </svg>
+  )
+}
 
 function Fileira({ children, rotulo }: { children: ReactNode; rotulo: string }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -45,6 +68,15 @@ export function AulasPanel({ nome, sessao }: { nome?: string | null; sessao?: Se
   const [vistas, setVistas] = useState<Set<string>>(() => aulasVistas())
   const [abertaId, setAbertaId] = useState<string | null>(null)
   const [detalheId, setDetalheId] = useState<string | null>(null)
+  const [moduloAberto, setModuloAberto] = useState<string | null>(null)
+  const [tocando, setTocando] = useState(false)
+  const ultimaGravacao = useRef(0)
+
+  // Enquanto o vídeo toca, a plataforma escurece em volta (modo cinema).
+  useEffect(() => {
+    document.body.classList.toggle('aula-tocando', tocando && !!abertaId)
+    return () => document.body.classList.remove('aula-tocando')
+  }, [tocando, abertaId])
 
   const aberta = aulas.find((a) => a.id === abertaId) ?? null
   const comVideo = aulas.filter((a) => a.video)
@@ -59,69 +91,115 @@ export function AulasPanel({ nome, sessao }: { nome?: string | null; sessao?: Se
 
   const abrir = (a: AulaNumerada) => {
     if (!a.video) return
-    setAbertaId(a.id)
+    setAbertaId(a.id); setModuloAberto(a.modulo.id)
     window.scrollTo({ top: 0 })
   }
+  // Aos 90% a aula conta como assistida; a posição é guardada a cada ~5 s.
+  const aoAvancar = useCallback((fracao: number, segundos: number) => {
+    if (!abertaId) return
+    const agora = Date.now()
+    if (agora - ultimaGravacao.current > 5000) { ultimaGravacao.current = agora; guardarPosicao(abertaId, segundos) }
+    if (fracao >= 0.9 && !aulasVistas().has(abertaId)) setVistas(new Set(marcarVista(abertaId, true)))
+  }, [abertaId])
 
   /* ----------------------------------------------------------- player */
   if (aberta) {
     const player = playerDoVideo(aberta.video)
-    const doModulo = aulas.filter((a) => a.modulo.id === aberta.modulo.id)
     const idx = aulas.findIndex((a) => a.id === aberta.id)
     const seguinte = aulas.slice(idx + 1).find((a) => a.video) ?? null
+    const anterior = aulas.slice(0, idx).reverse().find((a) => a.video) ?? null
     const vista = vistas.has(aberta.id)
+    const posicao = posicoesGuardadas()[aberta.id] ?? 0
+    const numModulo = MODULOS.findIndex((m) => m.id === aberta.modulo.id) + 1
 
     return (
-      <div className="ger aulas" style={{ ['--aula' as any]: aberta.modulo.cor }}>
-        <button className="aulas-voltar" onClick={() => setAbertaId(null)}>← Todas as aulas</button>
-
-        <div className="aula-palco">
-          <div className="aula-video">
-            {player?.tipo === 'mp4' ? (
-              <video src={player.src} controls autoPlay playsInline
-                onEnded={() => !vista && alternarVista(aberta.id)} />
-            ) : player ? (
-              <iframe src={player.src} title={aberta.titulo} allowFullScreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
-            ) : (
-              <div className="aula-embreve-palco">
-                <ResponsiveImage src={capa(aberta.id)} alt="" />
-                <span>em breve</span>
-              </div>
-            )}
-          </div>
-
-          <aside className="aula-trilha">
-            <span className="rot">{aberta.modulo.titulo}</span>
-            {doModulo.map((a) => (
-              <button key={a.id}
-                className={`aula-item ${a.id === aberta.id ? 'on' : ''} ${a.video ? '' : 'sem'}`}
-                onClick={() => abrir(a)} disabled={!a.video}>
-                <i>{vistas.has(a.id) ? '✓' : a.numero}</i>
-                <span>{a.titulo}</span>
-                {!a.video && <em>em breve</em>}
-              </button>
-            ))}
-          </aside>
+      <div className={`ger aulas cine ${tocando ? 'tocando' : ''}`} style={{ ['--aula' as any]: aberta.modulo.cor }}>
+        <div className="cine-topo">
+          <button className="aulas-voltar" onClick={() => { setAbertaId(null); setTocando(false) }}>← Todas as aulas</button>
+          <span className="cine-migalha">Módulo {String(numModulo).padStart(2, '0')} · {aberta.modulo.titulo} · Aula {aberta.numero} de {aulas.length}</span>
         </div>
 
-        <div className="aula-ficha">
-          <div>
-            <span className="aula-num">Aula {aberta.numero}</span>
-            <h2>{aberta.titulo}</h2>
-            <p>{aberta.descricao}</p>
-            {aberta.video === VIDEO_DEMONSTRACAO && <span className="aula-demo">Demonstração temporária · o vídeo desta aula será substituído</span>}
+        <div className="cine-palco">
+          <div className="cine-principal">
+            <div className="cine-video">
+              {player?.tipo === 'mp4' ? (
+                <PlayerAula key={aberta.id} src={player.src} titulo={aberta.titulo} posicaoInicial={posicao}
+                  aoAvancar={aoAvancar} aoTocar={setTocando}
+                  proxima={seguinte ? { titulo: seguinte.titulo, abrir: () => abrir(seguinte) } : null} />
+              ) : player ? (
+                <iframe src={player.src} title={aberta.titulo} allowFullScreen
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
+              ) : (
+                <div className="aula-embreve-palco">
+                  <ResponsiveImage src={capa(aberta.id)} alt="" />
+                  <span>em breve</span>
+                </div>
+              )}
+            </div>
+
+            <div className="cine-ficha">
+              <div className="cine-ficha-texto">
+                <span className="aula-num">Aula {aberta.numero}</span>
+                <h2>{aberta.titulo}</h2>
+                <p>{aberta.descricao}</p>
+                <div className="cine-chips">
+                  <span>Iniciante</span>
+                  <span>{aberta.duracao}</span>
+                  {vista && <span className="ok">✓ Assistida</span>}
+                  {aberta.video === VIDEO_DEMONSTRACAO && <span className="demo">Demonstração temporária</span>}
+                </div>
+              </div>
+              <div className="cine-ficha-acoes">
+                <button className={`aula-check ${vista ? 'on' : ''}`} onClick={() => alternarVista(aberta.id)}>
+                  {vista ? '✓ Assistida' : 'Marcar como assistida'}
+                </button>
+                <div className="cine-navegar">
+                  <button disabled={!anterior} onClick={() => anterior && abrir(anterior)} title={anterior?.titulo}>← Anterior</button>
+                  <button className="aula-proxima" disabled={!seguinte} onClick={() => seguinte && abrir(seguinte)}>
+                    {seguinte ? `Próxima: ${seguinte.titulo} →` : 'Última aula do curso'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="aula-acoes">
-            <button className={`aula-check ${vista ? 'on' : ''}`} onClick={() => alternarVista(aberta.id)}>
-              {vista ? '✓ Assistida' : 'Marcar como assistida'}
-            </button>
-            {seguinte && (
-              <button className="aula-proxima" onClick={() => abrir(seguinte)}>
-                Próxima: {seguinte.titulo} →
-              </button>
-            )}
-          </div>
+
+          <aside className="cine-trilha">
+            <div className="cine-trilha-topo">
+              <Anel fracao={assistidas / aulas.length} cor={aberta.modulo.cor} />
+              <div>
+                <b>Seu progresso</b>
+                <small>{assistidas} de {aulas.length} aulas assistidas</small>
+              </div>
+            </div>
+            {MODULOS.map((m, mi) => {
+              const doModulo = aulas.filter((a) => a.modulo.id === m.id)
+              const feitas = doModulo.filter((a) => vistas.has(a.id)).length
+              const abertoAqui = (moduloAberto ?? aberta.modulo.id) === m.id
+              return (
+                <section key={m.id} className={`cine-modulo ${abertoAqui ? 'aberto' : ''} ${m.id === aberta.modulo.id ? 'atual' : ''}`} style={{ ['--aula' as any]: m.cor }}>
+                  <button className="cine-modulo-cab" onClick={() => setModuloAberto(abertoAqui ? '' : m.id)} aria-expanded={abertoAqui}>
+                    <i>{String(mi + 1).padStart(2, '0')}</i>
+                    <span><b>{m.titulo}</b><small>{feitas}/{doModulo.length} concluídas</small></span>
+                    <em aria-hidden>{abertoAqui ? '▾' : '▸'}</em>
+                  </button>
+                  {abertoAqui && (
+                    <div className="cine-modulo-aulas">
+                      {doModulo.map((a) => (
+                        <button key={a.id}
+                          className={`aula-item ${a.id === aberta.id ? 'on' : ''} ${a.video ? '' : 'sem'} ${vistas.has(a.id) ? 'vista' : ''}`}
+                          onClick={() => abrir(a)} disabled={!a.video}>
+                          <i>{a.id === aberta.id ? '▶' : vistas.has(a.id) ? '✓' : a.numero}</i>
+                          <span>{a.titulo}</span>
+                          <em>{a.video ? (a.duracao === 'Vídeo demonstrativo' ? 'demo' : a.duracao) : 'em breve'}</em>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )
+            })}
+            <p className="cine-atalhos">Atalhos: <kbd>espaço</kbd> tocar/pausar · <kbd>←</kbd> <kbd>→</kbd> 10 s · <kbd>F</kbd> tela cheia</p>
+          </aside>
         </div>
       </div>
     )
