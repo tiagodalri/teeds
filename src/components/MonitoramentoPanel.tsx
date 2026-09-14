@@ -42,7 +42,7 @@ type Ordem = 'atividade' | 'risco' | 'resultado' | 'nome' | 'operacoes' | 'inici
 type Periodo = '1' | '6' | '12' | '24' | '72'
 type EstadoDaTela = 'carregando' | 'pronto' | 'sem-permissao' | 'indisponivel' | 'erro'
 
-const NOME_DO_ATIVO: Record<string, string> = { '1HZ75V': 'Volatility 75 (1s) Index', '1HZ10V': 'Volatility 10 (1s) Index', '1HZ100V': 'Volatility 100 (1s) Index', '1HZ25V': 'Volatility 25 (1s) Index', '1HZ50V': 'Volatility 50 (1s) Index' }
+const NOME_DO_ATIVO: Record<string, string> = { 'R_75': 'Volatility 75 Index', '1HZ75V': 'Volatility 75 (1s) Index', '1HZ10V': 'Volatility 10 (1s) Index', '1HZ100V': 'Volatility 100 (1s) Index', '1HZ25V': 'Volatility 25 (1s) Index', '1HZ50V': 'Volatility 50 (1s) Index' }
 const din = (v: number, m = 'USD') => `${m} ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const assinado = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const hora = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })

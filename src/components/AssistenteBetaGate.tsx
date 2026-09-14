@@ -66,8 +66,8 @@ export function AssistenteBetaGate({ onFechar, onLiberar }: Props) {
     <section ref={modal} className="beta-modal" role="dialog" aria-modal="true" aria-labelledby="beta-titulo" onMouseDown={(e) => e.stopPropagation()}>
       <button className="beta-fechar" onClick={onFechar} aria-label="Fechar"><IconeFechar /></button>
       <div className="beta-marca"><Brand tamanho={38} /></div>
-      <span className="beta-selo">BETA · ACESSO RESTRITO</span>
-      <h2 id="beta-titulo">Assistente em fase de testes</h2>
+      <span className="beta-selo">🔒 ACESSO RESTRITO</span>
+      <h2 id="beta-titulo">Assistente com acesso controlado</h2>
       <p>Estamos liberando esta experiência para um grupo selecionado. Digite seu código para continuar.</p>
       <form onSubmit={entrar}>
         <label htmlFor="codigo-beta">Código de acesso</label>

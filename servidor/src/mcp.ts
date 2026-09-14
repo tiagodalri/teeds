@@ -103,7 +103,7 @@ const FERRAMENTAS = [
 async function executar(nome: string, args: Record<string, any>): Promise<unknown> {
   switch (nome) {
     case 'listar_robos':
-      return { robos: listarRobos(), observacao: 'Todos operam no Volatility 75 (1s), definido pela plataforma.' }
+      return { robos: listarRobos(), observacao: 'Todos operam no Volatility 75 padrão, definido pela plataforma.' }
 
     case 'minhas_contas': {
       const lista = await contas(autorizacao())

@@ -17,9 +17,10 @@ export function WorkspaceNav({ page, admin, onNavigate }: { page: WorkspacePage;
   const [compact, setCompact] = useState(false)
   const [open, setOpen] = useState(false)
   const navigate = (next: WorkspacePage) => { onNavigate(next); setOpen(false) }
-  const item = (id: WorkspacePage) => <button key={id} className={`workspace-link ${page === id ? 'selected' : ''}`} aria-current={page === id ? 'page' : undefined} title={PAGE_NAMES[id]} onClick={() => navigate(id)}>
+  const estaSelecionado = (id: WorkspacePage) => page === id || (id === 'gestao' && (page === 'monitoramento' || page === 'insights'))
+  const item = (id: WorkspacePage) => <button key={id} className={`workspace-link ${estaSelecionado(id) ? 'selected' : ''}`} aria-current={estaSelecionado(id) ? 'page' : undefined} title={PAGE_NAMES[id]} onClick={() => navigate(id)}>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[id]} /></svg>
-    <span className="workspace-label">{PAGE_NAMES[id]}</span>{id === 'assistente' && <small className="workspace-label">BETA</small>}
+    <span className="workspace-label">{PAGE_NAMES[id]}</span>{id === 'assistente' && <small className="workspace-lock workspace-label" aria-label="Acesso restrito" title="Acesso restrito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></small>}
   </button>
   return <>
     <button className="workspace-mobile-toggle" aria-expanded={open} aria-controls="workspace-navigation" onClick={() => setOpen(!open)}>{open ? '× Fechar' : '☰ Menu'}</button>
@@ -31,7 +32,7 @@ export function WorkspaceNav({ page, admin, onNavigate }: { page: WorkspacePage;
         {item('operar')}{item('robos')}
         <p className="workspace-label">Ferramentas</p>{item('gerenciamento')}{item('assistente')}
         <p className="workspace-label">Explore</p>{item('marketplace')}{item('aulas')}
-        {admin && <div className="workspace-admin">{item('monitoramento')}{item('insights')}{item('gestao')}</div>}
+        {admin && <div className="workspace-admin">{item('gestao')}</div>}
       </nav>
       <button className="workspace-collapse" onClick={() => setCompact(!compact)} aria-label={compact ? 'Expandir menu' : 'Recolher menu'} aria-expanded={!compact}>{compact ? '»' : '«'}<span className="workspace-label"> Recolher menu</span></button>
     </aside>

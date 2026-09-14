@@ -593,7 +593,7 @@ export default function App() {
           socket={conta.socket} isDemo={conta.isDemo} onReautorizar={() => startLogin()}
           payoutBase={payoutBase} moeda={conta.account?.currency ?? 'USD'} pulso={conta.pulso}
           entrandoNaDeriv={conta.status === 'entrando'} onConectarDeriv={conta.login}
-        />} /> : null
+        />} onNavigate={setTela} /> : null
       ) : (
       <div className="layout layout-operar">
         <main className="main">

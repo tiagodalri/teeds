@@ -124,7 +124,7 @@ export async function abrirSessao(dados: {
       moeda: moeda || 'USD',
       robo_id: dados.roboId,
       robo_nome: dados.roboNome,
-      ativo: dados.ativo ?? '1HZ75V',
+      ativo: dados.ativo ?? 'R_75',
       origem: dados.origem ?? 'chat',
       entrada_inicial: dados.entrada,
       entrada_atual: dados.entrada,

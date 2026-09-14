@@ -865,7 +865,7 @@ export function ManagementPanel({
             </label>
             <span className="ger-nota">
               {estrategiaSim.contractType === 'DIGITOVER' ? `dígito acima de ${estrategiaSim.barreira}` : `dígito abaixo de ${estrategiaSim.barreira}`}
-              {' · '}{estrategiaSim.ticks} tick{estrategiaSim.ticks === 1 ? '' : 's'} · Volatility 75 (1s)
+              {' · '}{estrategiaSim.ticks} tick{estrategiaSim.ticks === 1 ? '' : 's'} · Volatility 75
               {payoutRobo === null && ' · cotando na Deriv…'}
             </span>
           </div>

@@ -9,7 +9,9 @@
 .workspace-link svg { width: 20px; height: 20px; flex-shrink: 0; }
 .workspace-link:hover:not(:disabled) { background: var(--surface-alt); border-color: var(--border); }
 .workspace-link.selected { color: var(--primary); background: var(--primary-soft); border-color: color-mix(in srgb, var(--primary) 30%, transparent); box-shadow: inset 3px 0 var(--primary); }
-.workspace-link small { margin-left: auto; font-size: 8px; letter-spacing: .04em; white-space: nowrap; border: 1px solid var(--border); padding: 2px 4px; border-radius: 4px; }
+.workspace-link small { margin-left: auto; white-space: nowrap; }
+.workspace-lock { width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid color-mix(in srgb,var(--primary) 28%,var(--border)); border-radius: 8px; color: var(--primary); background: color-mix(in srgb,var(--primary) 8%,transparent); }
+.workspace-lock svg { width: 13px; height: 13px; }
 .workspace-link:disabled { color: var(--muted); cursor: not-allowed; }
 .workspace-admin { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
 .workspace-collapse { margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; font-size: 12px; }

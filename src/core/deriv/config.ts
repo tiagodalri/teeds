@@ -26,21 +26,22 @@ export const DERIV = {
 } as const
 
 /**
- * Ativos habilitados. Por enquanto so os indices de volatilidade
- * de 1 segundo — sao os que operam 24 horas e tem tick a cada segundo.
+ * Ativos disponíveis. `R_75` é o Volatility 75 padrão usado pelos robôs;
+ * os códigos `1HZ` permanecem disponíveis no terminal manual.
  */
 export const ATIVOS_PERMITIDOS = [
+  'R_75',
   '1HZ10V', '1HZ15V', '1HZ25V', '1HZ30V',
   '1HZ50V', '1HZ75V', '1HZ90V', '1HZ100V',
 ] as const
 
 /**
- * O ativo dos robos — fixo, decidido pela casa (02/09: Volatility 75 (1s)).
+ * O ativo dos robos — fixo, decidido pela casa (14/09: Volatility 75 padrão).
  * A pessoa NAO escolhe onde o robo opera: menos uma decisao para errar, e o
  * comportamento dos robos fica comparavel entre todos os clientes.
  * Para mudar a entrada da casa, e so trocar aqui.
  */
-export const ATIVO_DOS_ROBOS = '1HZ75V'
+export const ATIVO_DOS_ROBOS = 'R_75'
 
 /** Limites publicados pela Deriv, que a Teeds respeita por conta propria. */
 export const LIMITS = {
