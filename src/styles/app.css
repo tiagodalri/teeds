@@ -5067,4 +5067,39 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 @media (max-width: 720px) { .mon-mosaico.compacto, .mon-mosaico.confortavel { grid-template-columns: 1fr; } .mon-cartao-nums { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mon-foco-topo { grid-template-columns: 1fr auto; } .mon-foco-quem { grid-column: 1 / -1; } .mon-selo { grid-column: 1 / -1; white-space: normal; } .mon-ev { grid-template-columns: 64px 1fr; } .mon-ev span { grid-column: 1 / -1; } .mon-tabela .cab, .mon-tabela .ins-linha { grid-template-columns: 1.4fr 1fr 24px; } .mon-tabela .cab > :nth-child(n+3):not(:last-child), .mon-tabela .ins-linha > :nth-child(n+3):not(:last-child) { display: none; } .mon-replay-controles { bottom: 4px; } .mon-filtros select { flex: 1 1 45%; } }
 @media (prefers-reduced-motion: reduce) { .mon-farol::after, .mon-canal i, .mon-alertas button i, .mon-selo i { animation: none !important; } .mon-cartao { transition: none; } }
 /* Os painéis administrativos são grades; sem isto os filhos herdam a margem automática do .ger e encolhem para a largura mínima (aparecia no celular). */
-.monitoramento > *, .insights > * { width: 100%; max-width: 1600px; }
+.monitoramento > *, .insights > * {
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+  min-width: 0;
+}
+
+/* Os painéis administrativos usam uma única linha-guia. Antes, algumas seções
+   ficavam limitadas a 1240/1600 px e outras ocupavam toda a área, criando o
+   desalinhamento visível entre cabeçalho, indicadores, gráficos e filtros. */
+.ins-kpis { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.mon-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ins-grade > *, .mon-kpis > *, .ins-kpis > * { min-width: 0; }
+.mon-mosaico > .mon-estado {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 112px;
+  align-content: center;
+}
+
+@media (max-width: 1500px) {
+  .ins-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 1100px) {
+  .ins-kpis, .mon-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .ins-kpis, .mon-kpis { grid-template-columns: 1fr; }
+  .ins-topo, .mon-topo { align-items: stretch; }
+  .ins-periodo, .mon-topo-direita, .mon-abas { width: 100%; }
+  .ins-periodo { overflow-x: auto; padding-bottom: 2px; }
+  .mon-topo-direita { align-items: flex-start; }
+  .mon-abas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mon-abas button { padding-inline: 8px; }
+}
