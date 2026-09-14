@@ -636,3 +636,63 @@ export async function anotarColetaDeExtrato(d: {
     }),
   })
 }
+
+/* ------------------------------------------------------------------ *
+ * O espelho operacional ao vivo (ver src/core/teeds/espelho.ts).
+ * A foto atual de cada sessão e os eventos numerados — o que o painel de
+ * monitoramento reconstrói. Só o servidor escreve; falha vira log.
+ * ------------------------------------------------------------------ */
+export async function escreverFotoDoEspelho(
+  sessao: SessaoGravada,
+  foto: { seq: number; estado: unknown; config: unknown; emitidoEm: number },
+): Promise<void> {
+  await rest('/sessoes_robos_ao_vivo?on_conflict=sessao_id', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      sessao_id: sessao.id,
+      marca: sessao.marca,
+      user_id: sessao.user_id,
+      seq: foto.seq,
+      fase: (foto.estado as { fase?: string })?.fase ?? 'aguardando',
+      estado: foto.estado,
+      config: foto.config,
+      emitido_em: foto.emitidoEm,
+      atualizada_em: new Date().toISOString(),
+    }),
+  })
+}
+
+export async function escreverEventoDoEspelho(
+  sessao: SessaoGravada,
+  ev: { seq: number; tipo: string; delta: unknown; config?: unknown; emitidoEm: number },
+): Promise<void> {
+  await rest('/eventos_robos_ao_vivo', {
+    method: 'POST',
+    headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      sessao_id: sessao.id, marca: sessao.marca, seq: ev.seq, tipo: ev.tipo, delta: ev.delta,
+      config: ev.config ?? null, emitido_em: ev.emitidoEm,
+    }),
+  })
+}
+
+/** O pulso: pequeno, a cada tick (coalescido) e no batimento de presença. */
+export async function escreverPulsoDoEspelho(
+  sessao: SessaoGravada,
+  p: { seq: number; pulso: unknown; emitidoEm: number },
+): Promise<void> {
+  await rest('/pulsos_robos_ao_vivo?on_conflict=sessao_id', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      sessao_id: sessao.id, marca: sessao.marca, seq: p.seq, pulso: p.pulso, emitido_em: p.emitidoEm,
+      atualizada_em: new Date().toISOString(),
+    }),
+  })
+}
+
+/** Apaga eventos e fotos velhos, pela função do banco (só a chave de serviço chama). */
+export async function limparEspelhoAntigo(): Promise<unknown> {
+  return rest('/rpc/teeds_limpar_espelho', { method: 'POST', body: JSON.stringify({}) })
+}

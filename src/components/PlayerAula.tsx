@@ -203,7 +203,15 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
       )}
 
       <div className="cine-controles" onClick={(e) => e.stopPropagation()}>
-        <div ref={barra} className={`cine-barra ${arrastando ? 'arrastando' : ''}`} onPointerDown={iniciarArraste} role="slider" aria-label="Progresso" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)}>
+        <div ref={barra} className={`cine-barra ${arrastando ? 'arrastando' : ''}`} onPointerDown={iniciarArraste} role="slider" tabIndex={0} aria-label="Progresso" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} aria-valuetext={`${fmt(tempo)} de ${fmt(duracao)}`}
+          onKeyDown={e => {
+            const v = video.current
+            if (!v || !Number.isFinite(v.duration)) return
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return
+            e.preventDefault(); e.stopPropagation()
+            v.currentTime = e.key === 'Home' ? 0 : e.key === 'End' ? v.duration : Math.max(0, Math.min(v.duration, v.currentTime + (e.key === 'ArrowRight' ? 5 : -5)))
+            acordar()
+          }}>
           <i className="cine-barra-carregado" style={{ width: `${pctCarregado}%` }} />
           <i className="cine-barra-visto" style={{ width: `${pct}%` }} />
           <b style={{ left: `${pct}%` }} />

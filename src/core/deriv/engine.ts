@@ -34,6 +34,26 @@ export interface ContratoEstrategia {
   barreira?: number
 }
 
+/**
+ * O que uma estratégia deixa observar de si — sem decidir nada.
+ *
+ * Existe para o espelho operacional e para o replay: fase virtual, análise
+ * percentual, estratégia vigente e anterior, motivo da troca, barreira. É
+ * leitura da memória da estratégia, feita depois da decisão; não muda
+ * gatilho, cálculo, cadência nem escolha.
+ */
+export interface TelemetriaEstrategia {
+  fase: string
+  anterior: string | null
+  motivo: string | null
+  /** O contrato que a próxima entrada real usaria. */
+  contrato: string | null
+  barreira: number | null
+  /** A estratégia está só observando (sem entrada real)? */
+  virtual: boolean
+  detalhes: Record<string, string | number | boolean>
+}
+
 export interface Estrategia {
   id: string
   nome: string
@@ -44,6 +64,8 @@ export interface Estrategia {
   ticks: number
   /** Decide se entra agora. */
   entrar: (c: Contexto) => boolean
+  /** O que a estratégia expõe de si para o espelho operacional. Só leitura. */
+  telemetria?: (c: Contexto) => TelemetriaEstrategia
   /** Texto do que o robo esta esperando, para mostrar na tela. */
   aguardando: (c: Contexto) => string
   /**
@@ -171,6 +193,8 @@ export interface EstadoMotor {
    * simplesmente nao entra, sem dizer por que.
    */
   falha: { texto: string; quando: number } | null
+  /** O que a estratégia expõe de si (ver TelemetriaEstrategia). Só o espelho lê. */
+  estrategia?: TelemetriaEstrategia | null
 }
 
 /** Recusas seguidas ate o robo desistir e se desligar, dizendo o motivo. */
@@ -204,7 +228,7 @@ const VAZIO: EstadoMotor = {
   aguardando: '', motivoParada: null, registros: [], digitos: [],
   curva: [0], condicao: null, ultimoLucro: null,
   historico: [], emCurso: null, ticksAnalisados: 0, latenciaMedia: null,
-  falha: null,
+  falha: null, estrategia: null,
 }
 
 export class MotorTeeds {
@@ -258,6 +282,26 @@ export class MotorTeeds {
     fn(this.estado)
     return () => this.ouvintes.delete(fn)
   }
+
+  /**
+   * O que a estratégia expõe de si, para o espelho administrativo. É só
+   * observação: nunca pode derrubar o robô nem mudar decisão nenhuma. Se a
+   * telemetria lançar, o motor segue e o campo fica nulo — e o erro vai para
+   * o registro técnico, uma vez, para não passar em silêncio.
+   */
+  private telemetriaSegura(ctx: Contexto): TelemetriaEstrategia | null {
+    if (!this.estrategia.telemetria) return null
+    try {
+      return this.estrategia.telemetria(ctx) ?? null
+    } catch (e) {
+      if (!this.telemetriaFalhou) {
+        this.telemetriaFalhou = true
+        this.registrar(`Telemetria da estratégia falhou (${(e as Error).message}); o robô segue normalmente`, 'info')
+      }
+      return null
+    }
+  }
+  private telemetriaFalhou = false
 
   private emitir() {
     const copia = { ...this.estado, registros: [...this.estado.registros] }
@@ -313,10 +357,12 @@ export class MotorTeeds {
 
       const ctx = this.contexto
       if (this.estrategia.entrar(ctx)) {
+        this.estado.estrategia = this.telemetriaSegura(ctx)
         void this.comprar()
       } else {
         this.estado.aguardando = this.estrategia.aguardando(ctx)
         this.estado.condicao = this.estrategia.progresso?.(ctx) ?? null
+        this.estado.estrategia = this.telemetriaSegura(ctx)
         this.emitir()
       }
     }, this.socket)
@@ -360,6 +406,7 @@ export class MotorTeeds {
       const ctx = this.contexto
       this.estado.aguardando = this.estrategia.aguardando(ctx)
       this.estado.condicao = this.estrategia.progresso?.(ctx) ?? null
+      this.estado.estrategia = this.telemetriaSegura(ctx)
       this.emitir()
     } catch {
       // sem historico o robo so demora alguns ticks a mais para se orientar
@@ -640,6 +687,9 @@ export class MotorTeeds {
         contractType: contratoLiquidado,
         digitoSaida: saida !== null ? ultimoDigito(saida, casas) : null,
       })
+
+      // A estratégia acabou de reagir ao resultado: o que ela expõe de si muda aqui.
+      this.estado.estrategia = this.telemetriaSegura(this.contexto)
 
       this.estado.valorAtual = this.estrategia.proximoValor({
         valorAtual: valor,

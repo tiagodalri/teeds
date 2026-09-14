@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Brand } from './Brand'
 import './workspace.css'
 
-export type WorkspacePage = 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'gerenciamento' | 'marketplace' | 'aulas'
-export const PAGE_NAMES: Record<WorkspacePage, string> = { operar: 'Operar', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas' }
+export type WorkspacePage = 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas'
+export const PAGE_NAMES: Record<WorkspacePage, string> = { operar: 'Operar', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas' }
 const paths: Record<string, string> = {
   operar: 'M3 17l5-6 4 3 9-11M16 3h5v5', robos: 'M5 7h14v13H5zM12 3v4M8 12h1m6 0h1M9 16h6',
   assistente: 'M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z',
@@ -11,6 +11,7 @@ const paths: Record<string, string> = {
   marketplace: 'M4 8h16l-1 13H5zM8 8V6a4 4 0 018 0v2', aulas: 'M3 5h7l2 2 2-2h7v15h-7l-2 1-2-1H3zM12 7v14',
   gestao: 'M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6',
   insights: 'M4 19h16M6 16V10m4 6V6m4 10v-4m4 4V8',
+  monitoramento: 'M3 5h18v11H3zM8 20h8M12 16v4M6 13l3-3 2 2 4-5 3 3',
 }
 export function WorkspaceNav({ page, admin, onNavigate }: { page: WorkspacePage; admin: boolean; onNavigate: (page: WorkspacePage) => void }) {
   const [compact, setCompact] = useState(false)
@@ -30,7 +31,7 @@ export function WorkspaceNav({ page, admin, onNavigate }: { page: WorkspacePage;
         {item('operar')}{item('robos')}
         <p className="workspace-label">Ferramentas</p>{item('gerenciamento')}{item('assistente')}
         <p className="workspace-label">Explore</p>{item('marketplace')}{item('aulas')}
-        {admin && <div className="workspace-admin">{item('insights')}{item('gestao')}</div>}
+        {admin && <div className="workspace-admin">{item('monitoramento')}{item('insights')}{item('gestao')}</div>}
       </nav>
       <button className="workspace-collapse" onClick={() => setCompact(!compact)} aria-label={compact ? 'Expandir menu' : 'Recolher menu'} aria-expanded={!compact}>{compact ? '»' : '«'}<span className="workspace-label"> Recolher menu</span></button>
     </aside>

@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, lazy, Suspense } from 'react'
 import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
 import { PositionCard } from './components/PositionCard'
 import { DigitsPanel } from './components/DigitsPanel'
 import { AdminPanel } from './components/AdminPanel'
 import { InsightsPanel } from './components/InsightsPanel'
+// O monitoramento é só do admin e pesa: entra no pacote sob demanda, para o
+// pacote que todo cliente baixa continuar do mesmo tamanho.
+const MonitoramentoPanel = lazy(() => import('./components/MonitoramentoPanel').then((m) => ({ default: m.MonitoramentoPanel })))
 import { ManagementPanel } from './components/ManagementPanel'
 import { RobotsPanel } from './components/RobotsPanel'
 import { WorkspaceNav, PAGE_NAMES, type WorkspacePage } from './components/WorkspaceNav'
@@ -193,7 +196,7 @@ export default function App() {
   // Nunca mantém um cliente numa rota administrativa, nem após troca de conta
   // ou falha na conferência.
   useEffect(() => {
-    if ((admin === false || adminFalhou) && (tela === 'gestao' || tela === 'insights')) setTela('operar')
+    if ((admin === false || adminFalhou) && (tela === 'gestao' || tela === 'insights' || tela === 'monitoramento')) setTela('operar')
   }, [admin, adminFalhou, tela])
 
   useEffect(() => {
@@ -445,7 +448,7 @@ export default function App() {
         else setTela(next)
       }} />
       <header className="topbar">
-        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'operar' ? 'Seu terminal de negociação' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : 'Seu espaço de trabalho'}</span></div>
+        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'operar' ? 'Seu terminal de negociação' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : 'Seu espaço de trabalho'}</span></div>
 
         <div className="topbar-right">
           {!derivPronta && (
@@ -579,6 +582,8 @@ export default function App() {
         <MarketplacePanel sessao={teeds.sessao} />
       ) : tela === 'gerenciamento' ? (
         <OperationalManagementPanel moeda={conta.account?.currency ?? 'USD'} onUsarPlano={() => { setTela('robos'); setPedidoNovoRobo((n) => n + 1) }} />
+      ) : tela === 'monitoramento' && admin === true ? (
+        teeds.sessao ? <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel sessao={teeds.sessao} /></Suspense> : null
       ) : tela === 'insights' && admin === true ? (
         teeds.sessao ? <InsightsPanel sessao={teeds.sessao} /> : null
       ) : tela === 'gestao' && admin === true ? (

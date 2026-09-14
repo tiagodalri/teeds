@@ -16,6 +16,7 @@ import { ligarCarteiro, tratarGanchoDeEmail } from './gancho-email'
 import { somenteDemoDoUsuario } from './supabase'
 import { ligarColetorDeExtrato } from './extrato'
 import { ligarSincronizadorDeComissoes } from './comissoes'
+import { ligarFaxinaDoEspelho } from './espelho'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -288,6 +289,9 @@ const servidor = createServer(async (req, res) => {
     })
     const enxuto = (e: any) => !e ? e : ({
       ...e,
+      // A telemetria interna da estratégia é do espelho administrativo; a
+      // tela do cliente não a usa e continua recebendo o mesmo de sempre.
+      estrategia: undefined,
       historico: (e.historico ?? []).slice(0, 200),
       registros: (e.registros ?? []).slice(0, 60),
       curva: (e.curva ?? []).slice(-300),
@@ -575,6 +579,15 @@ if (supabaseConfigurado() && process.env.COMISSOES_DESLIGADO !== '1') {
   console.log(`Comissões: calculadas e saldos atualizados a cada ${minutos} min`)
 } else {
   console.log('Comissões: sincronia desligada')
+}
+
+// O espelho operacional guarda eventos por 30 dias e fotos/pulsos de sessões
+// encerradas por 30 (LIMITES em src/core/teeds/espelho.ts). A faxina roda uma vez por dia, com a chave do servidor.
+if (supabaseConfigurado() && process.env.ESPELHO_DESLIGADO !== '1') {
+  ligarFaxinaDoEspelho()
+  console.log('Espelho operacional: ligado (eventos 30 dias, fotos 30 dias, auditoria 365)')
+} else {
+  console.log('Espelho operacional: desligado')
 }
 
 servidor.listen(PORTA, () => {

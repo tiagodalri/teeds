@@ -39,6 +39,8 @@ ANTES_OMNI="$(git show "HEAD:$REF_OMNI" 2>/dev/null || true)"
 
 echo "→ provas da tabela de marcas…"; (cd servidor && npm run marcas --silent 2>&1 | tail -1)
 echo "→ provas do motor…"; (cd servidor && npm run motor --silent 2>&1 | tail -1)
+echo "→ provas do espelho…";           (cd servidor && npm run espelho --silent 2>&1 | tail -1)
+echo "→ provas do canal realtime…";   (cd servidor && npm run realtime --silent 2>&1 | tail -1)
 echo "→ montando a Teeds…";            npm run build --silent >/dev/null
 echo "→ montando a OMNI…";  MARCA=omni npm run build --silent >/dev/null
 

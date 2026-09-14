@@ -43,6 +43,8 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
+  const [mostrarSenha, setMostrarSenha] = useState(false)
+  const [capsLock, setCapsLock] = useState(false)
   const [telefone, setTelefone] = useState('')
   const [cpf, setCpf] = useState('')
   const [recado, setRecado] = useState<string | null>(null)
@@ -67,7 +69,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
         && telefoneValido(telefone) && cpfValido(cpf)
 
   function trocarModo(m: Modo) {
-    setModo(m); setRecado(null); setTocado({}); limparErro()
+    setModo(m); setRecado(null); setTocado({}); setMostrarSenha(false); setCapsLock(false); limparErro()
   }
 
   async function enviar(e: React.FormEvent) {
@@ -92,12 +94,21 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
     extra: { tipo?: string; auto?: string; dica?: string; modo?: string } = {},
   ) => (
     <label className={tocado[chave] && problemas[chave] ? 'ruim' : ''}>
-      <span className="rot">{rotulo}</span>
+      <span className="rot" id={`entrada-${chave}-rotulo`}>{rotulo}</span>
+      <span className={chave === 'senha' ? 'entrada-senha' : undefined}>
       <input
-        type={extra.tipo ?? 'text'} value={valor} autoComplete={extra.auto}
+        id={`entrada-${chave}`}
+        aria-labelledby={`entrada-${chave}-rotulo`}
+        type={chave === 'senha' && mostrarSenha ? 'text' : extra.tipo ?? 'text'} value={valor} autoComplete={extra.auto}
         inputMode={extra.modo as any} placeholder={extra.dica}
-        onBlur={marcar(chave)} onChange={(e) => aoMudar(e.target.value)} />
-      {tocado[chave] && problemas[chave] && <em>{problemas[chave]}</em>}
+        aria-invalid={Boolean(tocado[chave] && problemas[chave])}
+        aria-describedby={tocado[chave] && problemas[chave] ? `entrada-${chave}-erro` : undefined}
+        onKeyUp={chave === 'senha' ? e => setCapsLock(e.getModifierState('CapsLock')) : undefined}
+        onBlur={() => { marcar(chave)(); if (chave === 'senha') setCapsLock(false) }} onChange={(e) => aoMudar(e.target.value)} />
+      {chave === 'senha' && <button type="button" aria-controls="entrada-senha" aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={mostrarSenha} onClick={() => setMostrarSenha(v => !v)}>{mostrarSenha ? 'Ocultar' : 'Mostrar'}</button>}
+      </span>
+      {chave === 'senha' && capsLock && <span className="entrada-caps" role="status">Caps Lock ativado</span>}
+      {tocado[chave] && problemas[chave] && <em id={`entrada-${chave}-erro`}>{problemas[chave]}</em>}
     </label>
   )
 
@@ -120,7 +131,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
           <p className="entrada-linha">{t.linha}</p>
         </div>
 
-        <form className="entrada-form" onSubmit={enviar}>
+        <form className="entrada-form" onSubmit={enviar} aria-busy={ocupado}>
           {modo === 'criar' && campo('nome', 'Nome completo', nome, setNome,
             { auto: 'name', dica: 'Como está no documento' })}
 
@@ -153,8 +164,8 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
           )}
         </form>
 
-        {erro && <div className="entrada-erro">{erro}</div>}
-        {recado && <div className="entrada-recado">{recado}</div>}
+        {erro && <div className="entrada-erro" role="alert">{erro}</div>}
+        {recado && <div className="entrada-recado" role="status">{recado}</div>}
 
         <div className="entrada-troca">
           {modo === 'entrar' ? (

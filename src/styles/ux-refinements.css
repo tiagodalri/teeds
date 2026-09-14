@@ -1,0 +1,174 @@
+/* Shared presentation refinements. Keep separate from the operational UI
+   under development; no changes to trading, permissions, or account values. */
+:root {
+  --ux-radius: 12px;
+  --ux-control: 44px;
+  --ux-secondary: color-mix(in srgb, var(--text) 75%, var(--bg));
+}
+button, input, select, textarea { font-family: inherit; }
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--primary); outline-offset: 3px;
+}
+:where(input, textarea)::placeholder { opacity: 1; }
+.workspace-sidebar nav > p { font-size: 11px; letter-spacing: .08em; }
+.workspace-link { font-size: 14px; line-height: 1.4; }
+.workspace-link small { font-size: 10px; padding: 3px 5px; }
+.workspace-heading > span { font-size: 12px; color: var(--ux-secondary); }
+.workspace-collapse { min-height: var(--ux-control); }
+.workspace-sidebar nav { scrollbar-width: thin; scrollbar-gutter: stable; }
+.workspace-link.selected { box-shadow: inset 2px 0 var(--primary); }
+
+/* Operational numbers retain their meaning in both themes. */
+.robot-workspace .tv-resumo-sessao b.up,
+.robot-workspace .tv-meta-resumo b.up,
+.robot-workspace .tv-tabela td.up { color: var(--up); }
+.robot-workspace .tv-resumo-sessao b.down,
+.robot-workspace .tv-meta-resumo b.down,
+.robot-workspace .tv-tabela td.down { color: var(--down); }
+:root:not([data-tema='escuro']) .robot-workspace .tv {
+  --up: #08783c; --down: #bd2935;
+}
+.robot-workspace .tv-fase { font-size: 11px; letter-spacing: .025em; line-height: 1.5; }
+.robot-workspace .tv-account-label,
+.robot-workspace .rob-account-tag { font-size: 12px; }
+.robot-workspace .tv-resumo-sessao i,
+.robot-workspace .tv-meta-resumo i,
+.robot-workspace .tv-rot,
+.robot-workspace .rob-overview-metrics dt,
+.robot-workspace .tv-tabela th { font-size: 11px; letter-spacing: .025em; color: var(--ux-secondary); }
+.robot-workspace .tv-fluxo-etapa b { color: var(--text); font-size: 13px; }
+.robot-workspace .tv-fluxo-etapa small { color: var(--ux-secondary); font-size: 12px; }
+.robot-workspace .tv-fluxo-entrada em { font-size: 11px; }
+.robot-workspace .tv-atalhos button,
+.robot-workspace .tv-history-toggle { min-height: 36px; font-size: 12px; }
+.robot-workspace .tv-tabela { font-variant-numeric: tabular-nums; }
+.robot-workspace .tv-tabela th { background: var(--surface); }
+.robot-workspace .tv-tabela td { padding-block: 10px; }
+.robot-workspace .tv-hora { font-size: 12px; }
+.robot-workspace .rob-workspace-toolbar span,
+.robot-workspace .rob-overview-heading p { font-size: 12px; color: var(--ux-secondary); }
+.robot-workspace .rob-overview-eyebrow { font-size: 11px; }
+.robot-workspace .tv { box-shadow: 0 2px 12px #00000008; }
+
+/* Native dialog keeps a fixed footer and permits necessary scrolling for zoom. */
+.robot-launch-dialog { width: min(820px, calc(100vw - 32px)); }
+.robot-launch-close { width: 44px; height: 44px; font-size: 24px; }
+.robot-launch-top > .robot-launch-close { margin-left: auto; }
+.robot-launch-step { letter-spacing: .06em; }
+.robot-launch-question > p { font-size: 15px; }
+.robot-launch-number input { font-size: 30px; }
+.robot-picker-detail { border-radius: var(--ux-radius); }
+.robot-picker .robot-model.selected { box-shadow: none; }
+.robot-launch-review dd button { min-height: 36px; padding-inline: 6px; }
+.robot-launch-body { scrollbar-width: thin; }
+
+/* Login: make entering the primary action, keep the broker link secondary. */
+.entrada { padding: 24px 20px; }
+.entrada-caixa { padding: 26px 32px 22px; border-radius: 20px; }
+.entrada-topo { margin-bottom: 20px; }
+.entrada-form .rot { font-size: 13px; color: var(--text); }
+.entrada-form input { min-height: 46px; }
+.entrada-form label > span > input { width: 100%; }
+.entrada-form input::placeholder { color: var(--ux-secondary); opacity: 1; }
+.entrada-linha, .entrada-corretora p { color: var(--ux-secondary); }
+.entrada-corretora { padding: 14px 16px; margin-top: 18px; background: var(--surface); border-color: var(--border); border-radius: 12px; }
+.entrada-corretora .btn-deriv { background: transparent; color: var(--text); border: 1px solid var(--border); box-shadow: none; min-height: 44px; }
+.entrada-troca { margin-top: 12px; flex-wrap: wrap; }
+.entrada-troca button { min-height: 44px; padding: 8px; }
+.entrada-erro { color: var(--down); }
+.entrada-recado { color: var(--up); }
+.entrada-mini, .entrada-rodape, .entrada-seguranca { font-size: 12px; }
+.entrada-senha { display: flex; align-items: center; position: relative; }
+.entrada-senha input { width: 100%; padding-right: 84px; }
+.entrada-senha button { position: absolute; right: 4px; min-height: 40px; padding: 8px 10px; border: 0; background: transparent; color: var(--text); cursor: pointer; font-size: 12px; }
+.entrada-caps { font-size: 12px; color: var(--text); }
+
+/* Comfortable interactions throughout content and administrative panels. */
+.ux-session-reason { margin: 12px 16px; padding: 12px 14px; border-left: 3px solid var(--primary); background: var(--surface); font-size: 13px; }
+.ux-history-filter { margin-left: auto; min-height: 36px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 12px; }
+.tv.sem-sinal .tv-farol { background: var(--account-demo); }
+.tv.sem-sinal .tv-farol::after, .tv.parado .tv-atalhos > span > i { animation: none; }
+.tv.parado .tv-atalhos > span > i { background: var(--muted); box-shadow: none; }
+.tv.sem-sinal .tv-atalhos > span > i { background: var(--account-demo); box-shadow: none; }
+.tv.sem-sinal .tv-fase { color: var(--account-demo); background: var(--account-demo-soft); }
+.aulas-seta, .cine-linha button, .cine-navegar button, .aula-check,
+.market-cabecalho nav button, .market-card-corpo footer button { min-height: 44px; }
+.cine-linha button { min-width: 44px; }
+.cine-barra:focus-visible { outline: 2px solid white; outline-offset: 4px; }
+.market-cabecalho nav { flex-wrap: wrap; gap: 8px; }
+.market-card-corpo { gap: 12px; }
+.market-card-corpo h3 { text-wrap: balance; }
+.market-card-corpo p { line-height: 1.65; }
+.market-card-corpo footer { gap: 12px; flex-wrap: wrap; }
+.aulas-fileira { scroll-padding-inline: 16px; }
+.aula-cartao:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.cine-ficha-texto p { max-width: 70ch; line-height: 1.65; }
+.admin-refresh, .admin-primary, .adm-filtros input, .adm-filtros select,
+.robot-catalog-tools input { min-height: var(--ux-control); }
+.adm-filtros input, .adm-filtros select { font-size: 14px; }
+.admin-card, .adm-clientes { border-radius: var(--ux-radius); }
+.admin-top h1 { letter-spacing: -.035em; }
+.menu { max-width: calc(100vw - 24px); }
+.menu-conta, .menu-acao { min-height: var(--ux-control); }
+.menu-titulo { font-size: 11px; letter-spacing: .07em; }
+.menu-conta-info b { font-size: 14px; }
+.menu-conta-saldo { font-variant-numeric: tabular-nums; }
+
+@media (max-height: 760px) and (min-width: 601px) {
+  .robot-launch-dialog { height: calc(100dvh - 24px); max-height: 660px; }
+  .robot-launch-top { padding-block: 10px; }
+  .robot-launch-body { padding-block: 12px; }
+  .robot-launch-body h3 { margin-bottom: 12px; }
+  .robot-picker-next { margin-block: 10px; }
+  .robot-picker .robot-model { min-height: 44px; padding-block: 3px; }
+  .robot-picker-options { gap: 2px; }
+  .robot-picker-detail > small { padding-top: 10px; }
+}
+@media (max-width: 900px) {
+  .workspace-mobile-toggle { top: 10px; min-height: 44px; }
+}
+@media (max-width: 600px) {
+  .ux-history-filter { min-height: 44px; }
+  .market-cabecalho nav { display: flex; }
+  .market-cabecalho nav button { flex: 1 1 auto; }
+  .cine-linha { flex-wrap: wrap; }
+  .cine-tempo { font-size: 12px; }
+  .robot-launch-dialog { width: 100%; height: 100dvh; max-height: 100dvh; }
+  .robot-launch-presets button, .robot-launch-review dd button { min-height: 44px; }
+  .robot-launch-footer { padding-inline: 16px; gap: 8px; }
+  .robot-launch-next { min-width: 0; flex: 1; max-width: 220px; }
+  .robot-launch-body h3 { font-size: 24px; }
+  .robot-picker-detail p { font-size: 14px; }
+  .entrada { padding: 16px 12px; }
+  .entrada-caixa { padding: 22px 20px; }
+  .entrada-form input, .adm-filtros input, .adm-filtros select { font-size: 16px; }
+  .entrada-topo { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .entrada-seguranca { flex-wrap: wrap; gap: 8px; }
+  .robot-workspace .tv-btn, .robot-workspace .tv-atalhos button,
+  .robot-workspace .tv-history-toggle, .rob-view-options button { min-height: 44px; }
+  .robot-workspace .tv-resumo-sessao { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .robot-workspace .tv-fase { white-space: normal; }
+}
+.ux-client-results { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin-block: 8px; color: var(--ux-secondary); font-size: 13px; }
+.ux-client-results button { min-height: 44px; padding: 8px 12px; color: var(--text); border: 1px solid var(--border); border-radius: 8px; background: transparent; cursor: pointer; }
+@media (max-width: 900px) {
+  .adm-clientes .adm-tabela { border: 0; background: transparent; display: grid; gap: 12px; }
+  .adm-clientes .adm-linha.cab { display: none; }
+  .adm-clientes button.adm-linha { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; }
+  .adm-clientes button.adm-linha > span { display: block; min-width: 0; text-align: left; }
+  .adm-clientes button.adm-linha > .adm-pessoa { display: flex; grid-column: 1 / -1; }
+  .adm-clientes .adm-pessoa b, .adm-clientes .adm-pessoa small { min-width: 0; overflow-wrap: anywhere; }
+  .adm-clientes button.adm-linha > span:not(:first-child):not(:last-child)::before { display: block; font-size: 11px; color: var(--ux-secondary); margin-bottom: 5px; }
+  .adm-clientes button.adm-linha > span:nth-child(2)::before { content: 'Plano'; }
+  .adm-clientes button.adm-linha > span:nth-child(3)::before { content: 'Status'; }
+  .adm-clientes button.adm-linha > span:nth-child(4)::before { content: 'Validade'; }
+  .adm-clientes button.adm-linha > span:nth-child(5)::before { content: 'Extras'; }
+  .adm-clientes button.adm-linha > span:nth-child(6)::before { content: 'Operações'; }
+  .adm-clientes button.adm-linha > .adm-seta { align-self: end; text-align: right; }
+  .adm-clientes .adm-paginas, .adm-clientes .adm-paginas > div { flex-wrap: wrap; gap: 8px; }
+  .adm-clientes .adm-paginas button { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .entrada-btn { transition: none; }
+  .entrada-btn:hover:not(:disabled) { transform: none; }
+}

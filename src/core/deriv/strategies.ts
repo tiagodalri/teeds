@@ -190,6 +190,18 @@ const pctPalm = (digitos: number[], aceita: (d: number) => boolean) =>
   janelaPalm(digitos).filter(aceita).length * 4
 const fasePalm = (memoria: Record<string, unknown>): FasePalm =>
   (memoria.fasePalm as FasePalm | undefined) ?? 'aquecendo'
+/**
+ * Troca a fase e anota por quê. Só o `fasePalm` decide alguma coisa; os
+ * outros três campos são telemetria (anterior, motivo, quando) que o
+ * espelho operacional e o replay leem. Mesmo valor gravado, mesma decisão.
+ */
+const mudarFasePalm = (memoria: Record<string, unknown>, nova: FasePalm, motivo: string) => {
+  const atual = fasePalm(memoria)
+  if (atual !== nova) { memoria.fasePalmAnterior = atual; memoria.motivoPalm = motivo; memoria.trocaPalmEm = Date.now() }
+  memoria.fasePalm = nova
+}
+const PALM_LIMITE_NOVE = 12
+const PALM_LIMITE_BAIXOS = 48
 
 /**
  * The Palm, reconstruído quadro a quadro a partir do robô original.
@@ -221,14 +233,14 @@ export const THE_PALM: Estrategia = {
 
     if (fase === 'base-real' || fase === 'recuperacao-real') return true
     if (fase === 'aquecendo') {
-      if (pctPalm(janela, (d) => d === 9) <= 12 && ultimo === 9) {
-        memoria.fasePalm = 'base-real'
+      if (pctPalm(janela, (d) => d === 9) <= PALM_LIMITE_NOVE && ultimo === 9) {
+        mudarFasePalm(memoria, 'base-real', `dígito 9 apareceu com 9 em ${pctPalm(janela, (d) => d === 9)}% (limite ${PALM_LIMITE_NOVE}%): loss virtual, ciclo real Under 9`)
         return true
       }
       return false
     }
-    if (pctPalm(janela, (d) => d <= 4) >= 48 && ultimo >= 5) {
-      memoria.fasePalm = 'recuperacao-real'
+    if (pctPalm(janela, (d) => d <= 4) >= PALM_LIMITE_BAIXOS && ultimo >= 5) {
+      mudarFasePalm(memoria, 'recuperacao-real', `0–4 em ${pctPalm(janela, (d) => d <= 4)}% (mínimo ${PALM_LIMITE_BAIXOS}%) e dígito ${ultimo} (5–9): recuperação Under 5 liberada`)
       return true
     }
     return false
@@ -259,15 +271,36 @@ export const THE_PALM: Estrategia = {
   aposResultado: ({ ganhou, contractType, memoria, digitos }) => {
     const eraRecuperacao = contractType === 'DIGITUNDER' && fasePalm(memoria) === 'recuperacao-real'
     if (ganhou) {
-      memoria.fasePalm = eraRecuperacao ? 'aquecendo' : 'base-real'
+      mudarFasePalm(memoria, eraRecuperacao ? 'aquecendo' : 'base-real', eraRecuperacao ? 'recuperação ganhou: volta ao virtual Under 9' : 'ganho na base: segue o ciclo real Under 9')
       return
     }
     const baixos = pctPalm(digitos, (d) => d <= 4)
     const janela = janelaPalm(digitos)
     const ultimo = janela[janela.length - 1]
-    memoria.fasePalm = baixos >= 48 && ultimo !== undefined && ultimo >= 5
-      ? 'recuperacao-real'
-      : 'recuperacao-espera'
+    if (baixos >= 48 && ultimo !== undefined && ultimo >= 5) mudarFasePalm(memoria, 'recuperacao-real', `perda com 0–4 em ${baixos}% e dígito ${ultimo}: recuperação Under 5 imediata`)
+    else mudarFasePalm(memoria, 'recuperacao-espera', `perda com 0–4 em ${baixos}%: espera 0–4 chegar a 48% e um dígito 5–9`)
+  },
+  telemetria: ({ digitos, memoria }) => {
+    const janela = janelaPalm(digitos)
+    const fase = fasePalm(memoria)
+    const nove = janela.length === 25 ? pctPalm(janela, (d) => d === 9) : 0
+    const baixos = janela.length === 25 ? pctPalm(janela, (d) => d <= 4) : 0
+    const recuperando = fase === 'recuperacao-real'
+    return {
+      fase,
+      anterior: (memoria.fasePalmAnterior as string | undefined) ?? null,
+      motivo: (memoria.motivoPalm as string | undefined) ?? null,
+      contrato: 'DIGITUNDER',
+      barreira: recuperando ? 5 : 9,
+      virtual: fase === 'aquecendo' || fase === 'recuperacao-espera',
+      detalhes: {
+        janela: janela.length, nove, baixos, limiteNove: PALM_LIMITE_NOVE, limiteBaixos: PALM_LIMITE_BAIXOS,
+        estrategiaAtual: recuperando ? 'Under 5' : 'Under 9',
+        estrategiaAnterior: memoria.fasePalmAnterior === 'recuperacao-real' ? 'Under 5' : memoria.fasePalmAnterior ? 'Under 9' : '',
+        confirmacao: fase === 'aquecendo' ? 'dígito 9 com 9 ≤ 12% na janela' : fase === 'recuperacao-espera' ? '0–4 ≥ 48% e um dígito 5–9' : 'entrada liberada',
+        trocadaEm: (memoria.trocaPalmEm as number | undefined) ?? 0,
+      },
+    }
   },
   proximoValor: ({ ganhou, valorAoVencer, prejuizoDaSequencia, retornoLiquidoPorUnidade, contractType }) => {
     if (ganhou) return valorAoVencer

@@ -127,12 +127,13 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
           <div><span>Explore o ecossistema</span><h2>Produtos em destaque</h2></div>
           <nav aria-label="Categorias do marketplace">
             {CATEGORIAS.map((item) => (
-              <button key={item} className={categoria === item ? 'on' : ''} onClick={() => setCategoria(item)}>{item}</button>
+              <button key={item} aria-pressed={categoria === item} className={categoria === item ? 'on' : ''} onClick={() => setCategoria(item)}>{item}</button>
             ))}
           </nav>
         </header>
 
         <div className="market-grade">
+          {visiveis.length === 0 && <p role="status">Nenhum produto nesta categoria. <button onClick={() => setCategoria('Todos')}>Ver todos os produtos</button></p>}
           {visiveis.map((produto, indice) => (
             <article key={produto.id} className={`market-card ${produto.tom}`}>
               <button className="market-card-capa" onClick={() => setSelecionado(produto)} aria-label={`Conhecer ${produto.nome}`}>

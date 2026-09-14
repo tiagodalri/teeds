@@ -100,9 +100,11 @@ export function RobotLive({
 }: Props) {
   const [detalhes, setDetalhes] = useState(false)
   const [registroAberto, setRegistroAberto] = useState(false)
+  const [filtroHistorico, setFiltroHistorico] = useState('todas')
   const [analisesPalm, setAnalisesPalm] = useState<Array<{ id: number; hora: number; texto: string }>>([])
   const acerto = estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
   const positivo = estado.resultado >= 0
+  const historicoVisivel = estado.historico.filter(o => filtroHistorico === 'todas' || (filtroHistorico === 'ganhos' ? o.lucro > 0 : o.lucro < 0))
   const fita = estado.digitos.slice(-30)
   const emCurso = estado.emCurso
 
@@ -145,13 +147,15 @@ export function RobotLive({
 
   const fase = !estado.rodando
     ? { chave: 'parado', texto: 'Robô parado' }
+    : conexao !== 'open'
+      ? { chave: 'sem-sinal', texto: conexao === 'connecting' || conexao === 'reconnecting' ? 'Reconectando' : 'Sem conexão' }
     : emCurso
       ? { chave: 'operando', texto: 'Operação em andamento' }
       : estado.emOperacao
         ? { chave: 'operando', texto: 'Enviando ordem…' }
         : estado.perdasSeguidas >= 1
-          ? { chave: 'recuperando', texto: 'Recuperando' }
-          : { chave: 'cacando', texto: 'Procurando entrada' }
+          ? { chave: 'recuperando', texto: 'Aguardando entrada de recuperação' }
+          : { chave: 'cacando', texto: 'Analisando mercado' }
 
   return (
     <div className={`tv ${fase.chave} ${expandido ? 'tv-expandido' : ''}`}>
@@ -195,16 +199,17 @@ export function RobotLive({
       </header>
 
       <nav className="tv-abas tv-atalhos" aria-label={`Detalhes de ${titulo}`}>
-        <span><i /> Acompanhamento ao vivo</span>
-        <button className={detalhes ? 'on' : ''} onClick={() => setDetalhes((v) => !v)}>
+        <span><i /> {estado.rodando ? conexao === 'open' ? 'Acompanhamento ao vivo' : 'Aguardando conexão' : 'Sessão encerrada'}</span>
+        <button aria-expanded={detalhes} className={detalhes ? 'on' : ''} onClick={() => setDetalhes((v) => !v)}>
           <i aria-hidden>⌁</i> {detalhes ? 'Ocultar estratégia' : 'Detalhes da estratégia'}
         </button>
-        <button className={registroAberto ? 'on' : ''} onClick={() => setRegistroAberto((v) => !v)}>
+        <button aria-expanded={registroAberto} className={registroAberto ? 'on' : ''} onClick={() => setRegistroAberto((v) => !v)}>
           <i aria-hidden>▤</i> Registro
         </button>
       </nav>
 
       <div className="tv-corpo">
+      {!estado.rodando && estado.motivoParada && <p className="ux-session-reason"><strong>Motivo do encerramento:</strong> {estado.motivoParada}</p>}
       <div className="tv-assinatura" aria-hidden>
         <img src={`${import.meta.env.BASE_URL}${MARCA.emblema}`} alt="" />
         <span>{MARCA.nome} ENGINE</span>
@@ -337,6 +342,9 @@ export function RobotLive({
           {/* A lista inteira fica na tabela, que rola: antes só as 5 últimas
               apareciam e o resto dependia de um botão que pouca gente via. */}
           <span className="tv-rot">Operações da sessão{estado.historico.length > 0 ? ` (${estado.historico.length})` : ''}</span>
+          {estado.historico.length > 0 && <select className="ux-history-filter" aria-label={`Filtrar operações de ${titulo}`} value={filtroHistorico} onChange={e => setFiltroHistorico(e.target.value)}>
+            <option value="todas">Todas</option><option value="ganhos">Ganhos</option><option value="perdas">Perdas</option>
+          </select>}
         </div>
 
         {estado.historico.length === 0 ? (
@@ -354,10 +362,11 @@ export function RobotLive({
                 </tr>
               </thead>
               <tbody>
-                {estado.historico.map((o, indice) => {
+                {historicoVisivel.length === 0 && <tr><td colSpan={mostrarMarkup ? 8 : 7}>Nenhuma operação neste filtro.</td></tr>}
+                {historicoVisivel.map(o => {
                   const ac = acumulados.get(o.n) ?? 0
                   return (
-                    <tr key={o.contractId} className={`${o.ganhou ? 'ganhou' : 'perdeu'} ${indice === 0 ? 'recente' : ''}`}>
+                    <tr key={o.contractId} className={`${o.ganhou ? 'ganhou' : 'perdeu'} ${o.contractId === estado.historico[0]?.contractId ? 'recente' : ''}`}>
                       <td className="tv-n" data-label="Operação">{o.n}</td>
                       <td className="tv-hora" data-label="Hora">{relogio(o.quando)}</td>
                       <td data-label="Valor">{num(o.valor)}</td>

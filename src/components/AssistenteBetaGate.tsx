@@ -21,12 +21,27 @@ export function AssistenteBetaGate({ onFechar, onLiberar }: Props) {
   const [erro, setErro] = useState('')
   const [conferindo, setConferindo] = useState(false)
   const campo = useRef<HTMLInputElement>(null)
+  const modal = useRef<HTMLElement>(null)
 
   useEffect(() => {
+    const anterior = document.activeElement as HTMLElement | null
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     campo.current?.focus()
-    const fechar = (e: KeyboardEvent) => { if (e.key === 'Escape') onFechar() }
+    const fechar = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); onFechar(); return }
+      if (e.key !== 'Tab') return
+      const controles = Array.from(modal.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"]') ?? [])
+      const primeiro = controles[0], ultimo = controles[controles.length - 1]
+      if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo?.focus() }
+      else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro?.focus() }
+    }
     window.addEventListener('keydown', fechar)
-    return () => window.removeEventListener('keydown', fechar)
+    return () => {
+      window.removeEventListener('keydown', fechar)
+      document.body.style.overflow = overflow
+      if (anterior?.isConnected) anterior.focus()
+    }
   }, [onFechar])
 
   async function entrar(e: FormEvent) {
@@ -48,7 +63,7 @@ export function AssistenteBetaGate({ onFechar, onLiberar }: Props) {
   }
 
   return <div className="beta-fundo" role="presentation" onMouseDown={onFechar}>
-    <section className="beta-modal" role="dialog" aria-modal="true" aria-labelledby="beta-titulo" onMouseDown={(e) => e.stopPropagation()}>
+    <section ref={modal} className="beta-modal" role="dialog" aria-modal="true" aria-labelledby="beta-titulo" onMouseDown={(e) => e.stopPropagation()}>
       <button className="beta-fechar" onClick={onFechar} aria-label="Fechar"><IconeFechar /></button>
       <div className="beta-marca"><Brand tamanho={38} /></div>
       <span className="beta-selo">BETA · ACESSO RESTRITO</span>

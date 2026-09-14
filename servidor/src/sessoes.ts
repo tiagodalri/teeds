@@ -14,6 +14,7 @@ import {
   abrirSessao, encerrarSessao, registrarOperacao, supabaseConfigurado,
   type SessaoGravada,
 } from './supabase'
+import { PublicadorEspelho, espelhoHabilitado } from './espelho'
 
 /**
  * As sessões de robô que estão vivas no servidor.
@@ -253,10 +254,17 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
     }
   }
 
+  // O espelho operacional: cada estado que o motor emite vai para o
+  // publicador, que decide sozinho o que vira evento e o que vira batimento,
+  // e escreve no banco sem nunca fazer o motor esperar. Sem sessão gravada
+  // (Supabase desligado) não há espelho — e não há erro.
+  const espelho = sessao.gravada && espelhoHabilitado() ? new PublicadorEspelho(sessao.gravada, config, () => socket.status) : null
+
   let jaGravadas = 0
   motor.escutar((e) => {
     const anterior = sessao.estado
     sessao.estado = e
+    espelho?.aoEstado(e)
 
     // operação nova fechou: espelha no banco, uma vez só
     if (sessao.gravada && e.historico && e.historico.length > jaGravadas) {
@@ -305,6 +313,7 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
       try { socket.disconnect() } catch { /* já caiu */ }
       motores.delete(id)
       if (sessao.gravada) void encerrarSessao(sessao.gravada, { motivo: e.motivoParada })
+      void espelho?.encerrar()   // drenagem limitada (2 min); não segura a parada
       setTimeout(() => vivas.delete(id), GUARDAR_ENCERRADA_MS).unref?.()
       console.log(`[sessao ${id}] parou: ${e.motivoParada} · ${e.operacoes} operações · ${e.resultado.toFixed(2)}`)
     }
@@ -321,6 +330,7 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
     try { socket.disconnect() } catch { /* já caiu */ }
     motores.delete(id)
     if (sessao.gravada) void encerrarSessao(sessao.gravada, { motivo: 'falhou ao ligar', erro: sessao.erro })
+    void espelho?.encerrar()   // drenagem limitada (2 min); não segura a parada
     throw erro
   }
 

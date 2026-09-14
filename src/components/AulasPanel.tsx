@@ -39,7 +39,7 @@ function Anel({ fracao, cor }: { fracao: number; cor: string }) {
 function Fileira({ children, rotulo }: { children: ReactNode; rotulo: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const mover = (direcao: -1 | 1) => ref.current?.scrollBy({
-    left: direcao * Math.max(280, ref.current.clientWidth * .82), behavior: 'smooth',
+    left: direcao * Math.max(280, ref.current.clientWidth * .82), behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
   })
 
   return (
