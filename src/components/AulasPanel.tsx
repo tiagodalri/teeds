@@ -10,6 +10,7 @@ import { MARCA } from '../marca'
 import { capaDaAula } from './capasAulas'
 import { IconeFechar } from './IconeFechar'
 import { PlayerAula } from './PlayerAula'
+import { registrarAula } from '../core/teeds/insights'
 
 const capa = capaDaAula
 
@@ -89,18 +90,38 @@ export function AulasPanel({ nome, sessao }: { nome?: string | null; sessao?: Se
     setVistas(new Set(marcarVista(id, !vistas.has(id))))
   }
 
+  // Telemetria: segundos realmente assistidos (contados pela cadência do
+  // vídeo, não pelo relógio), enviados em lotes; nunca condição para assistir.
+  const assistido = useRef({ acumulado: 0, ultimoTempo: -1, concluidaEnviada: false })
+  const despachar = useCallback((aulaId: string, posicao: number, concluida = false) => {
+    const t = assistido.current
+    if (t.acumulado <= 0 && !concluida) return
+    const segundos = Math.round(t.acumulado); t.acumulado = 0
+    void registrarAula(sessao, aulaId, { segundos, posicao, concluida })
+  }, [sessao])
   const abrir = (a: AulaNumerada) => {
     if (!a.video) return
+    if (abertaId && abertaId !== a.id) despachar(abertaId, 0)
+    assistido.current = { acumulado: 0, ultimoTempo: -1, concluidaEnviada: false }
     setAbertaId(a.id); setModuloAberto(a.modulo.id)
+    void registrarAula(sessao, a.id, { abriu: true })
     window.scrollTo({ top: 0 })
   }
+  // Ao sair da aula (ou da tela), o que ficou acumulado vai para o banco.
+  useEffect(() => () => { if (abertaId) despachar(abertaId, 0) }, [abertaId, despachar])
   // Aos 90% a aula conta como assistida; a posição é guardada a cada ~5 s.
   const aoAvancar = useCallback((fracao: number, segundos: number) => {
     if (!abertaId) return
     const agora = Date.now()
+    const t = assistido.current
+    const delta = t.ultimoTempo >= 0 ? segundos - t.ultimoTempo : 0
+    if (delta > 0 && delta < 2.5) t.acumulado += delta   // pulo ou retrocesso não conta
+    t.ultimoTempo = segundos
     if (agora - ultimaGravacao.current > 5000) { ultimaGravacao.current = agora; guardarPosicao(abertaId, segundos) }
+    if (t.acumulado >= 20) despachar(abertaId, fracao)
+    if (fracao >= 0.9 && !t.concluidaEnviada) { t.concluidaEnviada = true; despachar(abertaId, fracao, true) }
     if (fracao >= 0.9 && !aulasVistas().has(abertaId)) setVistas(new Set(marcarVista(abertaId, true)))
-  }, [abertaId])
+  }, [abertaId, despachar])
 
   /* ----------------------------------------------------------- player */
   if (aberta) {

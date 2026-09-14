@@ -76,3 +76,26 @@ body { font-family: var(--fonte-corpo); letter-spacing: 0.004em; }
 .tv-fluxo-linha span { background: var(--primary); }
 .aula-progresso-card u { background: var(--primary); }
 .go { --go-gold: var(--primary); }
+
+/* ------------------------------ a cabine do robô, na cor da casa */
+/* O app.css faz da cabine uma ilha noturna e, dentro dela, força o dourado
+   da Teeds em --primary (o chip "procurando entrada", o farol, o trilho do
+   contrato, as abas). Na OMNI a ilha continua noturna — só a tinta muda:
+   azul-aço no escuro, marinho no claro. Mesma calma, outra família. */
+.tv { --primary: #6C93C6; --primary-soft: rgba(108, 147, 198, .16); }
+:root:not([data-tema='escuro']) .tv { --primary: #2b5a95; --primary-soft: rgba(43, 90, 149, .11); }
+.tv {
+  background:
+    radial-gradient(80% 28% at 50% 0%, rgba(108, 147, 198, .10), transparent 100%),
+    linear-gradient(180deg, #121a2a, #0a111d);
+  border-color: rgba(108, 147, 198, .22);
+}
+:root:not([data-tema='escuro']) .tv {
+  background:
+    radial-gradient(80% 28% at 50% 0%, rgba(43, 90, 149, .07), transparent 100%),
+    linear-gradient(180deg, #fff, #f6f8fc);
+  border-color: color-mix(in srgb, var(--robo, #2b5a95) 26%, #dfe5ef);
+}
+.tv-abas button.on { background: color-mix(in srgb, var(--primary) 12%, transparent); box-shadow: inset 0 -2px 0 var(--primary); }
+.tv-tabela th { background: #0d1525; }
+.tv-assinatura { opacity: .16; }

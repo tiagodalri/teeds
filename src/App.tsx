@@ -3,6 +3,7 @@ import { PriceChart, type ChartMode, type ContractMarker } from './components/Pr
 import { PositionCard } from './components/PositionCard'
 import { DigitsPanel } from './components/DigitsPanel'
 import { AdminPanel } from './components/AdminPanel'
+import { InsightsPanel } from './components/InsightsPanel'
 import { ManagementPanel } from './components/ManagementPanel'
 import { RobotsPanel } from './components/RobotsPanel'
 import { WorkspaceNav, PAGE_NAMES, type WorkspacePage } from './components/WorkspaceNav'
@@ -192,7 +193,7 @@ export default function App() {
   // Nunca mantém um cliente numa rota administrativa, nem após troca de conta
   // ou falha na conferência.
   useEffect(() => {
-    if ((admin === false || adminFalhou) && tela === 'gestao') setTela('operar')
+    if ((admin === false || adminFalhou) && (tela === 'gestao' || tela === 'insights')) setTela('operar')
   }, [admin, adminFalhou, tela])
 
   useEffect(() => {
@@ -444,7 +445,7 @@ export default function App() {
         else setTela(next)
       }} />
       <header className="topbar">
-        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'operar' ? 'Seu terminal de negociação' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : 'Seu espaço de trabalho'}</span></div>
+        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'operar' ? 'Seu terminal de negociação' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : 'Seu espaço de trabalho'}</span></div>
 
         <div className="topbar-right">
           {!derivPronta && (
@@ -578,6 +579,8 @@ export default function App() {
         <MarketplacePanel sessao={teeds.sessao} />
       ) : tela === 'gerenciamento' ? (
         <OperationalManagementPanel moeda={conta.account?.currency ?? 'USD'} onUsarPlano={() => { setTela('robos'); setPedidoNovoRobo((n) => n + 1) }} />
+      ) : tela === 'insights' && admin === true ? (
+        teeds.sessao ? <InsightsPanel sessao={teeds.sessao} /> : null
       ) : tela === 'gestao' && admin === true ? (
         teeds.sessao ? <AdminPanel sessao={teeds.sessao} comissoes={<ManagementPanel
           session={conta.session} sessaoTeeds={teeds.sessao} contaId={conta.accountId}

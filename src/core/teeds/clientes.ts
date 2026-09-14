@@ -16,6 +16,7 @@
 import { SUPABASE, autenticacaoConfigurada } from './config'
 import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
+import { dispositivoAtual } from './insights'
 
 function cabecalhos(token: string): Record<string, string> {
   return {
@@ -69,7 +70,7 @@ export async function registrarPresenca(sessao: SessaoTeeds, segundos = 0): Prom
         visto_em: new Date().toISOString(),
       }),
     })
-    await rest('/rpc/teeds_registrar_acesso', sessao.token, { method:'POST', body:JSON.stringify({ p_marca:MARCA.id, p_sessao:sessaoDeUso, p_segundos:Math.max(0,Math.round(segundos)), p_fuso:Intl.DateTimeFormat().resolvedOptions().timeZone||null, p_idioma:navigator.language||null }) })
+    await rest('/rpc/teeds_registrar_acesso', sessao.token, { method:'POST', body:JSON.stringify({ p_marca:MARCA.id, p_sessao:sessaoDeUso, p_segundos:Math.max(0,Math.round(segundos)), p_fuso:Intl.DateTimeFormat().resolvedOptions().timeZone||null, p_idioma:navigator.language||null, p_dispositivo:dispositivoAtual() }) })
   } catch (e) {
     console.warn('[teeds] nao consegui registrar a presenca:', (e as Error).message)
   }
