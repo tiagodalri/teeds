@@ -169,6 +169,7 @@ export function RobotLive({
           </div>
         </div>
         <div className="tv-resumo-fixo tv-resumo-sessao">
+          <span className="tv-ativo-resumo"><i>Ativo</i><b>{ativo}</b></span>
           <span><i>Operações realizadas</i><b>{estado.operacoes}</b></span>
           <span><i>Ganhadoras</i><b className="up">{estado.vitorias}</b></span>
           <span><i>Perdedoras</i><b className="down">{estado.derrotas}</b></span>
@@ -176,17 +177,13 @@ export function RobotLive({
         </div>
 
         <div className="tv-acoes">
-          {onDigitos && (
-            <button className={`tv-btn ${digitosAberto ? 'on' : ''}`} onClick={onDigitos}
-              title="Frequência dos últimos dígitos do ativo, ao vivo">Dígitos</button>
-          )}
           {/* O botão "Focar" (modo foco de um robô só) foi retirado a pedido do Tiago em 15/09/2026:
               atrapalhava mais do que ajudava. O modo continua no código, sem porta de entrada. */}
           {estado.rodando && onDesligar && (
             <button className="tv-btn parar" onClick={onDesligar}>Desligar</button>
           )}
           {!estado.rodando && onLigarDeNovo && (
-            <button className="tv-btn ligar" onClick={onLigarDeNovo}>Ligar de novo</button>
+            <button className="tv-btn ligar" onClick={onLigarDeNovo}><span aria-hidden>▶</span> Continuar</button>
           )}
           {onRemover && (
             <button className="tv-btn sair" onClick={onRemover}
@@ -203,6 +200,10 @@ export function RobotLive({
         <button aria-expanded={registroAberto} className={registroAberto ? 'on' : ''} onClick={() => setRegistroAberto((v) => !v)}>
           <i aria-hidden>▤</i> Registro
         </button>
+        {onDigitos && (
+          <button aria-expanded={digitosAberto} className={digitosAberto ? 'on' : ''} onClick={onDigitos}
+            title="Frequência dos últimos dígitos do ativo, ao vivo"><i aria-hidden>◌</i> Dígitos</button>
+        )}
       </nav>
 
       <div className="tv-corpo">
@@ -314,12 +315,17 @@ export function RobotLive({
 
       {/* ===================== sessao ===================== */}
       <section className="tv-sessao">
+        <h3 className="tv-resumo-titulo">Resumo da sessão</h3>
+        <div className="tv-resumo-cards">
+          <span><i aria-hidden>▥</i><em>Resultado atual</em><b className={positivo ? 'up' : 'down'}>{assinado(estado.resultado)} <small>{moeda}</small></b></span>
+          <span><i aria-hidden>♢</i><em>Margem até o stop</em><b className="down">{moeda} {num(Math.max(0, config.stopLoss + estado.resultado))}</b></span>
+          <span><i aria-hidden>⚑</i><em>Falta para a meta</em><b className="up">{moeda} {num(Math.max(0, config.takeProfit - estado.resultado))}</b></span>
+          <span><i aria-hidden>◔</i><em>Aproveitamento</em><b>{acerto.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</b></span>
+          <span><i aria-hidden>↗</i><em>Vitórias</em><b className="up">{estado.vitorias}</b></span>
+          <span><i aria-hidden>↘</i><em>Derrotas</em><b className="down">{estado.derrotas}</b></span>
+        </div>
         <div className="tv-curva-caixa">
-          <div className="tv-meta-resumo">
-            <span><i>Margem até o stop</i><b className="down">{moeda} {num(Math.max(0, config.stopLoss + estado.resultado))}</b></span>
-            <span className="atual"><i>Resultado atual</i><b className={positivo ? 'up' : 'down'}>{assinado(estado.resultado)} {moeda}</b></span>
-            <span><i>Falta para a meta</i><b className="up">{moeda} {num(Math.max(0, config.takeProfit - estado.resultado))}</b></span>
-          </div>
+          <div className="tv-curva-legenda"><span>Evolução da sessão</span><b className={positivo ? 'up' : 'down'}>{assinado(estado.resultado)} {moeda}</b></div>
           <Curva pontos={estado.curva} positivo={positivo} />
           <div className="tv-trilho">
             <span className="down">−{num(config.stopLoss)}</span>

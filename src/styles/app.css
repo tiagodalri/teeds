@@ -5351,3 +5351,115 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
     -webkit-user-select: text; user-select: text;
   }
 }
+
+/* ================= cabine operacional 2026-09 =================
+   Hierarquia compartilhada por TEEDS e OMNI. O histórico é a informação
+   principal; o resumo fica lateral no desktop e vira uma faixa compacta no
+   celular. Markup continua condicionado à permissão administrativa no JSX. */
+.tv {
+  display: grid;
+  grid-template-columns: minmax(0, 2.55fr) minmax(270px, .95fr);
+  grid-auto-flow: row dense;
+  align-items: start;
+}
+.tv-topo { order: 0; }
+.tv-alerta, .tv-params, .ux-session-reason, .tv-fita-bloco { order: 1; }
+.tv-fluxo { order: 2; }
+.tv-ops, .tv-sessao { order: 3; }
+.tv-palm-analise { order: 4; }
+.tv-topo, .tv-corpo, .tv-atalhos, .tv-registro-painel { grid-column: 1 / -1; }
+.tv-corpo, .tv-painel-principal { display: contents; }
+.tv-topo { grid-template-columns: minmax(230px,1fr) minmax(570px,auto) auto; }
+.tv-quem .tv-onde { display: none; }
+.tv-resumo-sessao { grid-template-columns: minmax(150px,1.3fr) repeat(3,minmax(76px,.7fr)) minmax(150px,1fr); }
+.tv-resumo-sessao .tv-ativo-resumo b {
+  max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text); font-size: 13px;
+}
+.tv-fluxo, .tv-alerta, .tv-params, .ux-session-reason, .tv-fita-bloco {
+  grid-column: 1 / -1;
+}
+.tv-fluxo { margin: 14px 16px 12px; border: 1px solid rgba(139,150,173,.12); border-radius: 12px; }
+.tv-ops {
+  grid-column: 1; grid-row: auto; min-width: 0; min-height: 288px;
+  margin: 0 8px 12px 16px; padding-top: 0; overflow: hidden;
+  border: 1px solid rgba(139,150,173,.14); border-radius: 12px;
+}
+.tv-ops-topo { min-height: 48px; padding: 10px 14px; border-bottom: 1px solid rgba(139,150,173,.12); }
+.tv-rolo { min-height: 238px; max-height: 330px; }
+.tv-sessao {
+  grid-column: 2; min-width: 0; margin: 0 16px 12px 8px; padding: 13px;
+  border: 1px solid rgba(139,150,173,.14); border-radius: 12px;
+  background: rgba(255,255,255,.008);
+}
+.tv-resumo-titulo { margin: 0 0 10px; color: var(--text); font-size: 12px; font-weight: 700; }
+.tv-resumo-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tv-resumo-cards > span {
+  position: relative; display: grid; grid-template-columns: 28px minmax(0,1fr);
+  grid-template-rows: auto auto; column-gap: 8px; min-width: 0; min-height: 54px;
+  padding: 8px; border: 1px solid rgba(139,150,173,.11); border-radius: 8px;
+  background: rgba(255,255,255,.012);
+}
+.tv-resumo-cards > span > i {
+  grid-row: 1 / 3; align-self: center; display: grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 7px; background: rgba(204,166,77,.08);
+  color: color-mix(in srgb, var(--accent) 72%, var(--muted)); font-style: normal; font-size: 13px;
+}
+.tv-resumo-cards em { overflow: hidden; color: var(--muted); font-size: 8px; line-height: 1.2; font-style: normal; white-space: nowrap; text-overflow: ellipsis; }
+.tv-resumo-cards b { overflow: hidden; color: color-mix(in srgb, var(--text) 88%, var(--muted)); font-size: 12px; line-height: 1.25; font-weight: 650; white-space: nowrap; text-overflow: ellipsis; }
+.tv-resumo-cards b.up { color: color-mix(in srgb, var(--up) 72%, var(--text)); }
+.tv-resumo-cards b.down { color: color-mix(in srgb, var(--down) 72%, var(--text)); }
+.tv-resumo-cards small { font-size: 8px; font-weight: 600; opacity: .72; }
+.tv-curva-caixa { margin-top: 10px; padding: 9px 0 0; border-top: 1px solid rgba(139,150,173,.10); }
+.tv-curva-legenda { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 5px; color: var(--muted); font-size: 8px; }
+.tv-curva-legenda b { font-size: 9px; font-weight: 650; }
+.tv-sessao .tv-curva { height: 42px; }
+.tv-sessao .tv-trilho { margin-top: 5px; }
+.tv-palm-analise {
+  grid-column: 1 / -1; height: auto; min-height: 0; margin: 0 16px 12px;
+  padding: 10px 14px; border: 1px solid rgba(139,150,173,.12); border-radius: 10px;
+}
+.tv-palm-feed { height: auto; min-height: 24px; max-height: 66px; }
+.tv-atalhos { order: 20; border-top: 1px solid rgba(139,150,173,.12); border-bottom: 0; }
+.tv-acoes .tv-btn.ligar, .tv-acoes .tv-btn.parar { min-width: 100px; }
+.tv-acoes .tv-btn.ligar span { margin-right: 5px; font-size: 10px; }
+
+@container (max-width: 980px) {
+  .tv { grid-template-columns: minmax(0, 1.8fr) minmax(245px, .9fr); }
+  .tv-topo { grid-template-columns: minmax(180px,1fr) auto; }
+  .tv-resumo-sessao { grid-column: 1 / -1; grid-template-columns: minmax(140px,1.2fr) repeat(4,minmax(74px,1fr)); }
+}
+
+@container (max-width: 720px) {
+  .tv { display: flex; flex-direction: column; }
+  .tv > *, .tv-corpo > *, .tv-painel-principal > * { width: auto; }
+  .tv-topo { display: grid; }
+  .tv-resumo-sessao { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .tv-resumo-sessao .tv-ativo-resumo { grid-column: 1 / -1; border-bottom: 1px solid rgba(139,150,173,.10); }
+  .tv-resumo-sessao .tv-resultado-resumo { grid-column: auto; grid-row: auto; margin: 0; padding-top: 7px; border-top: 0; border-left: 1px solid rgba(139,150,173,.12); }
+  .tv-fluxo { margin: 10px 12px; }
+  .tv-ops, .tv-sessao, .tv-palm-analise { margin: 0 12px 10px; }
+  .tv-ops { min-height: 0; }
+  .tv-rolo { min-height: 0; max-height: 420px; }
+  .tv-sessao { padding: 12px; }
+  .tv-resumo-cards > span { min-height: 52px; }
+  .tv-palm-feed { max-height: 84px; }
+  .tv-atalhos { padding-inline: 12px; }
+}
+
+@container (max-width: 430px) {
+  .tv-topo { padding: 12px; }
+  .tv-quem b { gap: 5px; }
+  .tv-fase { max-width: 118px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tv-acoes .tv-btn.ligar, .tv-acoes .tv-btn.parar { min-width: 88px; min-height: 40px; }
+  .tv-resumo-sessao { padding-top: 6px; }
+  .tv-resumo-sessao > span { padding: 6px 8px; }
+  .tv-resumo-sessao b { font-size: 14px; }
+  .tv-resumo-sessao .tv-resultado-resumo b { font-size: 15px; }
+  .tv-fluxo { height: 142px; min-height: 142px; }
+  .tv-ops-topo { min-height: 44px; }
+  .tv-resumo-cards { gap: 5px; }
+  .tv-resumo-cards > span { grid-template-columns: 24px minmax(0,1fr); column-gap: 7px; padding: 7px; }
+  .tv-resumo-cards > span > i { width: 23px; height: 23px; font-size: 11px; }
+  .tv-resumo-cards b { font-size: 11px; }
+}
