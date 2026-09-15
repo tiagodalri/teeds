@@ -28,7 +28,7 @@ const PRODUTOS: Produto[] = [
   {
     id: 'simulador-treino', categoria: 'Ferramentas', nome: 'Simulador de Treinamento',
     descricao: 'Ambiente seguro para praticar estratégias e decisões usando dinheiro fictício antes de operar.',
-    precoDe: 'R$ 721', preco: 'R$ 497', desconto: '31% OFF', imagem: 'simulador-treino.jpg', selo: 'Treino sem risco', simbolo: 'ST', tom: 'azul', destaque: true,
+    precoDe: 'R$ 1.200', preco: 'R$ 497', desconto: '59% OFF', imagem: 'simulador-treino.jpg', selo: 'Treino sem risco', simbolo: 'ST', tom: 'azul', destaque: true,
     itens: ['Saldo totalmente fictício', 'Cenários próximos do mercado', 'Relatório de evolução'],
   },
   {
@@ -100,7 +100,12 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
             tom: (['ouro','verde','rubi','azul','violeta'] as const)[indice % 5], itens: ['Acesso integrado à plataforma', 'Conteúdo e atualizações exclusivas'],
           }),
           id: p.id, nome: p.nome, categoria: categoriaBanco(p.categoria), preco: precoBR(valor),
-          precoDe: precoBR(Math.ceil(valor * 1.45 / 100) * 100), desconto: '31% OFF',
+          // O banco só guarda o preço de venda. Quando ele bate com o catálogo local, o
+          // "de" e o desconto vêm de lá (ex.: Simulador de R$ 1.200 por R$ 497); senão,
+          // estimam-se a partir do preço.
+          ...(base && base.preco === precoBR(valor)
+            ? { precoDe: base.precoDe, desconto: base.desconto }
+            : { precoDe: precoBR(Math.ceil(valor * 1.45 / 100) * 100), desconto: '31% OFF' }),
         } as Produto
       })
       if (ativos.length) setCatalogo(ordemDaVitrine(ativos))
