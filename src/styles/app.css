@@ -4685,12 +4685,13 @@ input, select, textarea, button { vertical-align: middle; }
   box-shadow: 0 1px 2px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.09);
 }
 
-/* --------------------------------- dígitos ao vivo (painel dos robôs, compacto) */
+/* --------------------------------- dígitos ao vivo (painel dos robôs, redimensionável) */
 .pd {
   position: fixed; z-index: 60; width: 300px; max-width: calc(100vw - 24px);
   background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
   box-shadow: 0 18px 40px -20px rgba(0,0,0,.6), 0 2px 6px -3px rgba(0,0,0,.25);
-  overflow: hidden; --robo: var(--primary); font-size: 11.5px;
+  overflow: hidden; --robo: var(--primary); --pd-escala: 1; font-size: calc(11.5px * var(--pd-escala));
+  --pd-verde: var(--up); --pd-verde-suave: var(--up-soft);
 }
 .pd-topo {
   display: flex; align-items: center; gap: 7px; padding: 7px 8px 7px 10px;
@@ -4698,43 +4699,55 @@ input, select, textarea, button { vertical-align: middle; }
   cursor: grab; user-select: none; touch-action: none;
 }
 .pd-topo:active { cursor: grabbing; }
-.pd-grip { color: var(--muted); font-size: 12px; letter-spacing: -3px; line-height: 1; }
-.pd-topo > b { font-size: 12px; font-weight: 650; color: var(--text); white-space: nowrap; }
-.pd-ativo { color: var(--muted); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.pd-grip { color: var(--muted); font-size: calc(12px * var(--pd-escala)); letter-spacing: -3px; line-height: 1; }
+.pd-topo > b { font-size: calc(12px * var(--pd-escala)); font-weight: 650; color: var(--text); white-space: nowrap; }
+.pd-ativo { color: var(--muted); font-size: calc(10.5px * var(--pd-escala)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
 .pd-ultimo {
-  min-width: 22px; height: 22px; padding: 0 6px; border-radius: 6px; display: inline-grid; place-items: center;
-  background: var(--text); color: var(--bg); font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums;
+  min-width: calc(22px * var(--pd-escala)); height: calc(22px * var(--pd-escala)); padding: 0 6px; border-radius: 6px; display: inline-grid; place-items: center;
+  background: var(--text); color: var(--bg); font-weight: 700; font-size: calc(12px * var(--pd-escala)); font-variant-numeric: tabular-nums;
 }
-.pd-fechar { border: 0; background: none; color: var(--muted); cursor: pointer; width: 24px; height: 24px; border-radius: 6px; font-size: 16px; }
+.pd-fechar { border: 0; background: none; color: var(--muted); cursor: pointer; width: calc(24px * var(--pd-escala)); height: calc(24px * var(--pd-escala)); border-radius: 6px; font-size: calc(16px * var(--pd-escala)); display: grid; place-items: center; }
+.pd-fechar svg { width: calc(14px * var(--pd-escala)); height: calc(14px * var(--pd-escala)); }
 .pd-fechar:hover { background: var(--surface-alt); color: var(--text); }
-.pd-janela { display: flex; align-items: center; gap: 6px; padding: 7px 10px 0; color: var(--muted); font-size: 10.5px; }
-.pd-janela .segmented.mini button { padding: 2px 6px; font-size: 10.5px; }
-.pd-barras { display: grid; grid-template-columns: repeat(10, 1fr); grid-auto-rows: 100%; gap: 3px; height: 92px; align-items: stretch; padding: 6px 10px 0; box-sizing: content-box; }
-.pd-barra { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 2px; min-width: 0; }
-.pd-barra em { font-style: normal; font-size: 9.5px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1; }
-.pd-barra i { width: 100%; background: var(--trilho); border-radius: 3px 3px 0 0; transition: height .3s; }
-.pd-barra b { font-size: 11px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; width: 100%; text-align: center; border-radius: 4px; line-height: 1.5; }
-.pd-barra.alvo i { background: var(--robo); }
-.pd-barra.alvo em, .pd-barra.alvo b { color: var(--robo); font-weight: 700; }
+.pd-janela { display: flex; align-items: center; gap: 6px; padding: 7px 10px 0; color: var(--muted); font-size: calc(10.5px * var(--pd-escala)); }
+.pd-janela .segmented.mini button { padding: 2px 6px; font-size: calc(10.5px * var(--pd-escala)); }
+.pd-barras { position: relative; display: grid; grid-template-columns: repeat(10, 1fr); grid-auto-rows: 100%; gap: calc(3px * var(--pd-escala)); height: calc(96px * var(--pd-escala)); align-items: stretch; padding: 6px 10px 0; box-sizing: content-box; }
+.pd-esperado { position: absolute; left: 10px; right: 10px; z-index: 0; border-top: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent); pointer-events: none; transform: translateY(calc(-1 * (15px * var(--pd-escala)))); }
+.pd-barra { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 2px; min-width: 0; }
+.pd-barra em { font-style: normal; font-size: calc(9.5px * var(--pd-escala)); color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1; }
+.pd-barra i { width: 100%; background: var(--trilho); border-radius: 3px 3px 0 0; transition: height .3s, background .2s; }
+.pd-barra b { font-size: calc(11px * var(--pd-escala)); font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; width: 100%; text-align: center; border-radius: 4px; line-height: 1.5; }
+/* Os dígitos com que o robô acerta: verde de ganho. O líder do grupo brilha mais. */
+.pd-barra.alvo i { background: linear-gradient(180deg, color-mix(in srgb, var(--pd-verde) 88%, #fff), var(--pd-verde) 70%); box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--pd-verde) 70%, #000); }
+.pd-barra.alvo em, .pd-barra.alvo b { color: var(--pd-verde); font-weight: 700; }
+.pd-barra.alvo.lider i { box-shadow: 0 0 0 1px color-mix(in srgb, var(--pd-verde) 60%, transparent), 0 0 14px color-mix(in srgb, var(--pd-verde) 45%, transparent); }
+.pd-barra.lider:not(.alvo) i { background: color-mix(in srgb, var(--muted) 55%, var(--trilho)); }
 .pd-barra.ultimo b { background: var(--text); color: var(--bg); }
-.pd-fita { display: flex; gap: 3px; padding: 7px 10px 0; }
+.pd-barra.alvo.ultimo b { background: var(--pd-verde); color: #fff; }
+.pd-fita { display: flex; gap: calc(3px * var(--pd-escala)); padding: 7px 10px 0; }
 .pd-fita span {
-  flex: 1; height: 18px; display: grid; place-items: center; border-radius: 4px;
-  font-size: 10.5px; font-weight: 600; background: var(--surface); color: var(--muted); font-variant-numeric: tabular-nums;
+  flex: 1; height: calc(18px * var(--pd-escala)); display: grid; place-items: center; border-radius: 4px;
+  font-size: calc(10.5px * var(--pd-escala)); font-weight: 600; background: var(--surface); color: var(--muted); font-variant-numeric: tabular-nums;
 }
-.pd-fita span.alvo { background: color-mix(in srgb, var(--robo) 18%, var(--surface)); color: var(--robo); }
+.pd-fita span.alvo { background: var(--pd-verde-suave); color: var(--pd-verde); }
 .pd-fita span.ultimo { outline: 2px solid var(--text); outline-offset: -2px; color: var(--text); }
+.pd-fita span.alvo.ultimo { outline-color: var(--pd-verde); }
 .pd-resumo { margin: 8px 10px 10px; padding: 8px 10px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
 .pd-grupo { display: grid; grid-template-columns: 1fr auto; align-items: baseline; column-gap: 8px; color: var(--text); }
 .pd-grupo > span { grid-column: 1; grid-row: 1 / span 2; line-height: 1.35; }
 .pd-grupo > span b { color: var(--robo); font-weight: 650; }
-.pd-grupo > span small { color: var(--muted); font-size: 10.5px; }
-.pd-grupo > strong { grid-column: 2; font-size: 20px; line-height: 1; color: var(--robo); font-variant-numeric: tabular-nums; }
-.pd-grupo > small { grid-column: 2; justify-self: end; color: var(--muted); font-size: 10px; }
-.pd-gatilho { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10.5px; line-height: 1.35; padding-top: 5px; border-top: 1px dashed var(--border); }
+.pd-grupo > span small { color: var(--muted); font-size: calc(10.5px * var(--pd-escala)); }
+.pd-grupo > strong { grid-column: 2; font-size: calc(20px * var(--pd-escala)); line-height: 1; color: var(--pd-verde); font-variant-numeric: tabular-nums; }
+.pd-grupo > small { grid-column: 2; justify-self: end; color: var(--muted); font-size: calc(10px * var(--pd-escala)); }
+.pd-gatilho { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: calc(10.5px * var(--pd-escala)); line-height: 1.35; padding-top: 5px; border-top: 1px dashed var(--border); }
 .pd-gatilho i { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
 .pd-gatilho.ok { color: var(--up); font-weight: 600; } .pd-gatilho.ok i { background: var(--up); box-shadow: 0 0 0 3px var(--up-soft); }
 .pd-gatilho.nao i { background: var(--muted); }
+/* A alça de redimensionar: canto inferior direito, só no desktop. */
+.pd-alca { position: absolute; right: 2px; bottom: 2px; width: 22px; height: 22px; display: grid; place-items: center; border: 0; border-radius: 6px; color: var(--muted); background: transparent; cursor: nwse-resize; touch-action: none; }
+.pd-alca svg { width: 12px; height: 12px; }
+.pd-alca:hover, .pd-alca:focus-visible { color: var(--text); background: var(--surface-alt); outline: none; }
+.pd-alca:focus-visible { box-shadow: 0 0 0 2px var(--primary); }
 @media (max-width: 760px) {
   .pd.pd-movel { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-width: none; border-radius: 12px 12px 0 0; border-bottom: 0; max-height: 78dvh; overflow-y: auto; }
   .pd-movel .pd-topo { cursor: default; position: sticky; top: 0; z-index: 1; }
