@@ -9,6 +9,7 @@ import { MARCA } from '../src/marca'
 import '../src/styles/app.css'
 import '../src/styles/tema.css'
 import '../src/styles/ux-refinements.css'
+import '../src/styles/mobile-polish.css'
 document.documentElement.dataset.marca = MARCA.id
 aplicarTema('escuro')
 const tela = new URLSearchParams(location.search).get('tela')

@@ -1,0 +1,58 @@
+/* Mobile-only finishing layer. No desktop or trading behavior changes. */
+@media (max-width: 900px) {
+  html { scroll-padding-top: calc(var(--topo-h, 64px) + 16px); }
+  input, select, textarea { scroll-margin-block: 100px; font-size: 16px !important; }
+  .workspace-app .workspace-mobile-toggle { width: 44px; height: 44px; min-width: 44px; }
+  .workspace-sidebar { padding-bottom: max(16px, var(--sab)); }
+  .workspace-sidebar nav { overflow-y: auto; overscroll-behavior-y: contain; min-height: 0; }
+  .marketplace, .ger.aulas:not(.cine), .go.ger.go-consultoria {
+    padding-bottom: calc(24px + var(--sab));
+  }
+  .marketplace .market-cabecalho nav { max-width: 100%; flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
+  .marketplace .market-cabecalho nav button,
+  .marketplace .market-hero-acoes button,
+  .market-paginacao button,
+  .marketplace .market-card-corpo footer button,
+  .ger.aulas:not(.cine) .aulas-hero-acoes button,
+  .aulas-voltar, .aula-check, .cine-navegar button { min-height: 44px; }
+  .marketplace .market-card:hover { transform: none; }
+  .marketplace .market-card-corpo footer { flex-wrap: wrap; row-gap: 8px; }
+  .marketplace .market-card-corpo footer button { padding-inline: 8px; }
+  .market-modal-fechar, .adm-modal-fechar, .aula-modal-fechar { min-width: 44px; min-height: 44px; }
+  .market-modal, .adm-modal, .aula-modal { overscroll-behavior-y: contain; }
+  .market-modal-corpo, .cine-ficha-texto { min-width: 0; overflow-wrap: anywhere; }
+  .go-consultoria .go-campos input, .go-consultoria .go-campos select { min-height: 44px; }
+  .go-consultoria .go-config, .go-consultoria .go-resultados { min-width: 0; }
+  .go-consultoria .go-cards { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .go-consultoria .go-cards strong { overflow-wrap: anywhere; }
+  .go-consulta-scroll { overscroll-behavior-x: contain; scrollbar-width: thin; }
+  .ger.aulas:not(.cine) .aulas-hero-acoes { flex-wrap: wrap; }
+  .ger.aulas:not(.cine) .aulas-capa h2 { max-width: 100%; overflow-wrap: anywhere; }
+  .ger.aulas:not(.cine) .aulas-carrossel .aula-cartao { scroll-snap-align: start; }
+  .ger.aulas:not(.cine) .aulas-carrossel .aula-dur { top: 8px; bottom: auto; right: 8px; left: 8px; width: fit-content; max-width: calc(100% - 16px); font-size: 10px; white-space: normal; }
+  .ger.aulas:not(.cine) .aulas-carrossel .aula-play { width: 44px; height: 44px; }
+  .ger.aulas:not(.cine) .aulas-carrossel .aula-cartao:hover { transform: none; }
+  .cine-trilha { position: static; max-height: none; }
+  .cine-ficha { flex-wrap: wrap; gap: 16px; }
+  .layout-operar .controls { max-width: 100%; flex-wrap: wrap; }
+  .layout-operar .controls .segmented { max-width: 100%; overflow-x: auto; }
+  .layout-operar .controls .segmented button { min-height: 40px; min-width: 40px; }
+  .ativo-menu .symbol { min-height: 44px; }
+  .ativo-menu .search { min-height: 44px; }
+}
+@media (max-width: 600px) {
+  .ger.aulas:not(.cine), .go.ger.go-consultoria {
+    padding-left: max(16px, var(--sal)); padding-right: max(16px, var(--sar));
+  }
+  .marketplace .market-hero, .marketplace .market-vitrine {
+    padding-left: max(16px, var(--sal)); padding-right: max(16px, var(--sar));
+  }
+  .market-paginacao { gap: 8px; justify-content: space-between; }
+  .market-paginacao button { padding-inline: 10px; }
+  .ger.aulas:not(.cine) .aulas-carrossel .aula-cartao-corpo > b { font-size: 13px; line-height: 1.4; }
+  .ger.aulas:not(.cine) .aulas-modulo-topo { gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marketplace .market-card, .aulas .aula-cartao, .workspace-sidebar { transition: none; }
+  .aulas-fileira { scroll-behavior: auto; }
+}

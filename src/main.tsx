@@ -5,6 +5,7 @@ import './styles/app.css'
 // o tema da marca vem por ultimo, para vencer o app.css (ver src/styles/tema.css)
 import './styles/tema.css'
 import './styles/ux-refinements.css'
+import './styles/mobile-polish.css'
 import { aplicarTema, temaGuardado } from './core/tema'
 import { MARCA } from './marca'
 
