@@ -3,6 +3,7 @@ import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { useClock } from '../hooks/useClock'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
+import './robot-cockpit.css'
 
 interface Props {
   estado: EstadoMotor
@@ -158,7 +159,7 @@ export function RobotLive({
           : { chave: 'cacando', texto: 'Analisando mercado' }
 
   return (
-    <div className={`tv ${fase.chave} ${expandido ? 'tv-expandido' : ''}`}>
+    <div className={`tv tv-cockpit ${fase.chave} ${expandido ? 'tv-expandido' : ''}`}>
       {/* ===================== faixa de estado ===================== */}
       <header className="tv-topo">
         <div className="tv-quem">
@@ -170,17 +171,18 @@ export function RobotLive({
         </div>
         <div className="tv-resumo-fixo tv-resumo-sessao">
           <span className="tv-ativo-resumo"><i>Ativo</i><b>{ativo}</b></span>
-          <span><i>Operações realizadas</i><b>{estado.operacoes}</b></span>
+          <span><i>Operações</i><b>{estado.operacoes}</b></span>
           <span><i>Ganhadoras</i><b className="up">{estado.vitorias}</b></span>
           <span><i>Perdedoras</i><b className="down">{estado.derrotas}</b></span>
           <span className="tv-resultado-resumo"><i>Resultado da sessão</i><b className={positivo ? 'up' : 'down'}>{assinado(estado.resultado)} <small>{moeda}</small></b></span>
         </div>
 
         <div className="tv-acoes">
+          {estado.rodando && onDesligar && <button className="tv-btn ligar" disabled title="O robô já está operando"><span aria-hidden>▶</span> Continuar</button>}
           {/* O botão "Focar" (modo foco de um robô só) foi retirado a pedido do Tiago em 15/09/2026:
               atrapalhava mais do que ajudava. O modo continua no código, sem porta de entrada. */}
           {estado.rodando && onDesligar && (
-            <button className="tv-btn parar" onClick={onDesligar}>Desligar</button>
+            <button className="tv-btn parar" onClick={onDesligar}><span aria-hidden>■</span> Desligar</button>
           )}
           {!estado.rodando && onLigarDeNovo && (
             <button className="tv-btn ligar" onClick={onLigarDeNovo}><span aria-hidden>▶</span> Continuar</button>
@@ -324,6 +326,8 @@ export function RobotLive({
           <span><i aria-hidden>↗</i><em>Vitórias</em><b className="up">{estado.vitorias}</b></span>
           <span><i aria-hidden>↘</i><em>Derrotas</em><b className="down">{estado.derrotas}</b></span>
         </div>
+      </section>
+      <section className="tv-curva-painel">
         <div className="tv-curva-caixa">
           <div className="tv-curva-legenda"><span>Evolução da sessão</span><b className={positivo ? 'up' : 'down'}>{assinado(estado.resultado)} {moeda}</b></div>
           <Curva pontos={estado.curva} positivo={positivo} />

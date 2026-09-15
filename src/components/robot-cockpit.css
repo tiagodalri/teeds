@@ -1,0 +1,64 @@
+/* Dedicated layout: scoped to the shared live component, after legacy styles. */
+.robot-workspace .cabine-caixa .tv.tv-cockpit,
+.tv.tv-cockpit {
+  display: flex; flex-direction: column; width: 100%; height: auto;
+  min-height: 0; container-type: inline-size;
+}
+.tv.tv-cockpit > .tv-topo {
+  display: flex; flex-wrap: wrap; width: 100%; gap: 16px; min-height: 72px;
+  padding: 14px 18px; flex: none;
+}
+.tv.tv-cockpit .tv-quem { flex: 1 1 240px; min-width: 0; }
+.tv.tv-cockpit .tv-quem b { flex-wrap: wrap; }
+.tv.tv-cockpit .tv-resumo-sessao {
+  display: grid; grid-template-columns: minmax(150px,1.3fr) repeat(3,minmax(85px,.7fr)) minmax(140px,1fr);
+  flex: 2 1 620px; min-width: 0; grid-row: auto; padding: 0; border: 0;
+}
+.tv.tv-cockpit .tv-resumo-sessao > span { padding: 3px 14px; grid-column: auto; margin: 0; border-top: 0; }
+.tv.tv-cockpit .tv-resumo-sessao i { font-size: 10px; letter-spacing: .02em; white-space: normal; }
+.tv.tv-cockpit .tv-resumo-sessao b { font-size: 15px; }
+.tv.tv-cockpit .tv-acoes { flex: 0 0 auto; width: auto; grid-row: auto; }
+.tv.tv-cockpit > .tv-corpo {
+  display: grid !important; grid-template-columns: minmax(0,2.1fr) minmax(300px,1fr);
+  grid-template-rows: auto; grid-auto-flow: row dense; align-content: start;
+  gap: 12px; padding: 12px; overflow: auto; flex: 1 1 auto; min-height: 0;
+}
+.tv.tv-cockpit .tv-painel-principal { display: contents !important; }
+.tv.tv-cockpit .tv-fluxo { order: 0; grid-column: 1 / -1 !important; grid-row: auto !important; margin: 0; width: auto; height: 76px; }
+.tv.tv-cockpit .tv-ops { order: 1; grid-column: 1 !important; grid-row: auto !important; margin: 0; padding: 0; width: auto; height: 300px; min-height: 0; display: flex; flex-direction: column; }
+.tv.tv-cockpit .tv-ops-topo { flex: none; padding: 10px 14px; min-height: 44px; margin: 0; }
+.tv.tv-cockpit .tv-ops-topo .tv-rot { font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--text); }
+.tv.tv-cockpit .tv-rolo { flex: 1; min-height: 0; max-height: none; overflow: auto; margin: 0; }
+.tv.tv-cockpit .tv-sessao { order: 1; grid-column: 2 !important; grid-row: auto !important; margin: 0; padding: 14px; width: auto; height: 300px; min-height: 0; overflow: visible; }
+.tv.tv-cockpit .tv-resumo-titulo { font-size: 13px; margin-bottom: 12px; }
+.tv.tv-cockpit .tv-resumo-cards { gap: 8px; }
+.tv.tv-cockpit .tv-resumo-cards > span { min-height: 70px; padding: 10px; }
+.tv.tv-cockpit .tv-resumo-cards em { font-size: 10px; white-space: normal; }
+.tv.tv-cockpit .tv-resumo-cards b { font-size: 14px; font-weight: 550; }
+.tv.tv-cockpit .tv-curva-painel { order: 2; grid-column: 1 / -1; padding: 0; border: 1px solid var(--border); border-radius: 10px; }
+.tv.tv-cockpit .tv-curva-caixa { padding: 12px 16px; margin: 0; border: 0; }
+.tv.tv-cockpit .tv-curva-legenda { font-size: 11px; margin-bottom: 10px; }
+.tv.tv-cockpit .tv-curva { height: 42px; }
+.tv.tv-cockpit .tv-palm-analise { order: 3; grid-column: 1 / -1; margin: 0; min-height: 0; height: auto; }
+.tv.tv-cockpit .tv-alerta, .tv.tv-cockpit .ux-session-reason { order: -1; grid-column: 1 / -1; }
+.tv.tv-cockpit .tv-params, .tv.tv-cockpit .tv-fita-bloco, .tv.tv-cockpit .tv-registro-painel { order: 4; grid-column: 1 / -1 !important; grid-row: auto !important; height: auto; }
+.tv.tv-cockpit > .tv-atalhos { flex: none; width: 100%; order: 5; }
+.robot-workspace.tem-acompanhamento .cabine-caixa .tv.tv-cockpit { flex: 0 1 auto; }
+.tv.tv-cockpit .tv-tabela { min-width: 0; width: 100%; table-layout: fixed; }
+.tv.tv-cockpit .tv-tabela th, .tv.tv-cockpit .tv-tabela td { padding-inline: 10px; }
+.tv.tv-cockpit .tv-tabela th:first-child { width: 45px; }
+.tv.tv-cockpit .tv-btn:disabled { opacity: .5; cursor: default; }
+.robot-workspace:has(.painel-unico) > .rob-overview,
+.robot-workspace:has(.painel-unico) > .rob-workspace-toolbar { display: none; }
+@container (max-width: 780px) {
+  .tv.tv-cockpit > .tv-corpo { grid-template-columns: minmax(0,1fr); }
+  .tv.tv-cockpit .tv-ops, .tv.tv-cockpit .tv-sessao { grid-column: 1 !important; }
+  .tv.tv-cockpit .tv-sessao { order: 2; height: auto; }
+  .tv.tv-cockpit .tv-curva-painel { order: 3; }
+  .tv.tv-cockpit .tv-palm-analise { order: 4; }
+  .tv.tv-cockpit .tv-resumo-sessao { flex-basis: 100%; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px 0; }
+  .tv.tv-cockpit .tv-resumo-sessao .tv-ativo-resumo { grid-column: 1 / -1; }
+  .tv.tv-cockpit .tv-resumo-sessao > span { padding: 4px 8px; }
+  .tv.tv-cockpit .tv-quem { flex-basis: 160px; }
+  .tv.tv-cockpit .tv-fluxo { height: auto; min-height: 110px; }
+}

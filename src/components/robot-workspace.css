@@ -150,8 +150,8 @@
   .robot-workspace.tem-acompanhamento .rob-workspace-board { flex: 1 1 auto; min-height: 0; overflow: auto; align-items: stretch; grid-auto-rows: minmax(0, 1fr); }
   .robot-workspace.tem-acompanhamento .rob-board-slot { min-height: 0; display: flex; flex-direction: column; }
   .robot-workspace.tem-acompanhamento .cabine-caixa { flex: 1 1 auto; height: auto !important; min-height: 0 !important; display: flex; flex-direction: column; }
-  .robot-workspace.tem-acompanhamento .cabine-caixa .tv { flex: 1 1 auto; min-height: 0; height: auto; display: flex; flex-direction: column; }
-  .robot-workspace.tem-acompanhamento .tv-corpo { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .robot-workspace.tem-acompanhamento .cabine-caixa .tv { flex: 1 1 auto; min-height: 0; height: auto; }
+  .robot-workspace.tem-acompanhamento .tv-corpo { flex: 1 1 auto; min-height: 0; overflow: hidden; }
   .robot-workspace.tem-acompanhamento .tv-alerta, .robot-workspace.tem-acompanhamento .tv-params, .robot-workspace.tem-acompanhamento .ux-session-reason { flex: none; }
   /* A tabela de operações é o que a pessoa estuda: tem prioridade de altura. Se faltar tela, o painel de cima é que rola. */
   .robot-workspace.tem-acompanhamento .tv-painel-principal { flex: 0 1 auto; min-height: 0; overflow: auto; }
