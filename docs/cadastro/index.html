@@ -224,7 +224,7 @@ input:focus{border-color:var(--cor);box-shadow:0 0 0 3px color-mix(in srgb,var(-
 
 /* rodapé + cta fixo */
 body > footer{padding:45px max(24px,calc((100vw - 1240px)/2)) calc(45px + var(--sab));border-top:1px solid var(--linha);display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;gap:35px;color:#666d77;font-size:11px}
-body > footer p{text-align:center;line-height:1.6;margin:0}body > footer small{text-align:right}
+body > footer p{text-align:center;line-height:1.6;margin:0}body > footer .aviso-legal{color:#4d545e;font-size:10.5px}body > footer small{text-align:right}
 .cta-fixo{position:fixed;left:16px;right:16px;bottom:calc(14px + var(--sab));z-index:30;display:none;justify-content:center;align-items:center;gap:14px;padding:16px;border-radius:14px;background:var(--cor);color:#111;font-weight:800;font-size:15px;text-decoration:none;box-shadow:0 18px 40px #000a;transform:translateY(120%);transition:transform .25s}
 .cta-fixo.visivel{transform:none}
 
@@ -429,7 +429,7 @@ body > footer p{text-align:center;line-height:1.6;margin:0}body > footer small{t
 
   <footer>
     <a class="marca" href="#inicio"><span class="simbolo"><img data-logo alt=""></span><span class="assinatura"><strong data-marca></strong><small data-assinatura></small></span></a>
-    <p>Conteúdo informativo. A plataforma opera com a sua própria conta na Deriv; o dinheiro nunca fica conosco. Operações financeiras envolvem risco de perda, resultados anteriores não garantem resultados futuros e as demonstrações desta página usam valores ilustrativos.</p>
+    <p class="aviso-legal">Operar envolve risco de perda. Demonstrações com valores ilustrativos.</p>
     <small>© 2026 <span data-marca></span>. Todos os direitos reservados.</small>
   </footer>
 
