@@ -139,3 +139,42 @@
   .robot-workspace .tv-fluxo-linha { height: 2px; width: 100%; margin: 4px 0; }
   .robot-workspace .tv-rolo { max-height: 360px; }
 }
+
+/* ------------------------------------------------------------------ cabe na tela
+   Com robô em acompanhamento, a tela de Robôs ocupa exatamente a altura do
+   monitor: cabeçalho, visão geral e cabine à vista, sem rolar a página.
+   Só a lista de operações rola, dentro da cabine. (Pedido do Tiago, 15/09/2026.) */
+@media (min-width: 901px) {
+  /* .ger nasce com flex:1 e min-height:auto; a base explícita é o que fixa a altura. */
+  .workspace-app .ger.rob.robot-workspace.tem-acompanhamento { flex: 0 0 calc(100dvh - 76px); height: calc(100dvh - 76px); min-height: 0; overflow: hidden; padding: 16px 28px 16px; gap: 12px; }
+  .robot-workspace.tem-acompanhamento .rob-workspace-board { flex: 1 1 auto; min-height: 0; overflow: auto; align-items: stretch; grid-auto-rows: minmax(0, 1fr); }
+  .robot-workspace.tem-acompanhamento .rob-board-slot { min-height: 0; display: flex; flex-direction: column; }
+  .robot-workspace.tem-acompanhamento .cabine-caixa { flex: 1 1 auto; height: auto !important; min-height: 0 !important; display: flex; flex-direction: column; }
+  .robot-workspace.tem-acompanhamento .cabine-caixa .tv { flex: 1 1 auto; min-height: 0; height: auto; display: flex; flex-direction: column; }
+  .robot-workspace.tem-acompanhamento .tv-corpo { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .robot-workspace.tem-acompanhamento .tv-alerta, .robot-workspace.tem-acompanhamento .tv-params, .robot-workspace.tem-acompanhamento .ux-session-reason { flex: none; }
+  /* A tabela de operações é o que a pessoa estuda: tem prioridade de altura. Se faltar tela, o painel de cima é que rola. */
+  .robot-workspace.tem-acompanhamento .tv-painel-principal { flex: 0 1 auto; min-height: 0; overflow: auto; }
+  /* .tv-painel-principal é display:contents — os filhos são itens diretos do corpo. */
+  .robot-workspace.tem-acompanhamento .tv-fluxo, .robot-workspace.tem-acompanhamento .tv-fita-bloco, .robot-workspace.tem-acompanhamento .tv-sessao { flex: none; }
+  .robot-workspace.tem-acompanhamento .tv-palm-analise { flex: 0 1 auto; min-height: 48px; overflow: hidden; }
+  .robot-workspace.tem-acompanhamento .tv-palm-analise header { padding-top: 6px; padding-bottom: 4px; }
+  .robot-workspace.tem-acompanhamento .tv-palm-feed { max-height: 44px; overflow: auto; }
+  .robot-workspace.tem-acompanhamento .tv-ops { flex: 1 1 0%; min-height: 200px; display: flex; flex-direction: column; overflow: hidden; }
+  .robot-workspace.tem-acompanhamento .tv-topo { padding: 9px 18px; }
+  .robot-workspace.tem-acompanhamento .tv-atalhos { padding: 3px 12px; }
+  .robot-workspace.tem-acompanhamento .tv-fluxo { margin-top: 8px; padding: 8px 12px; }
+  .robot-workspace.tem-acompanhamento .tv-curva-caixa { padding: 8px 16px 6px; }
+  .robot-workspace.tem-acompanhamento .tv-curva { height: 40px; }
+  .robot-workspace.tem-acompanhamento .ger-sub { display: none; }
+  .robot-workspace.tem-acompanhamento .rob-overview-heading p { display: none; }
+  .robot-workspace.tem-acompanhamento .tv-ops-topo { flex: none; }
+  .robot-workspace.tem-acompanhamento .tv-rolo { flex: 1 1 0%; min-height: 0; max-height: none; overflow: auto; }
+  .robot-workspace.tem-acompanhamento .tv-registro-painel { flex: none; max-height: 30%; overflow: auto; }
+  /* cabeçalho e visão geral mais enxutos, para sobrar tela para a cabine */
+  .robot-workspace.tem-acompanhamento .rob-workspace-header .ger-topo h2, .robot-workspace.tem-acompanhamento .ger-topo h2 { font-size: 21px; }
+  .robot-workspace.tem-acompanhamento .ger-sub { margin-top: 3px; }
+  .robot-workspace.tem-acompanhamento .rob-overview-heading { margin-bottom: 6px; }
+  .robot-workspace.tem-acompanhamento .rob-overview-card { padding: 9px 18px; }
+  .robot-workspace.tem-acompanhamento .rob-overview-metrics dd { margin-top: 1px; font-size: 17px; }
+}

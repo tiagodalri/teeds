@@ -108,6 +108,36 @@ export function RobotsPanel({
     return acompanharVivas(sessaoTeeds, setVivasNoServidor)
   }, [sessaoTeeds?.token]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  /*
+    Uma sessão que encerrou (meta, stop, desligada) NÃO some da tela.
+
+    O servidor só lista o que está rodando; antes, no ciclo seguinte à
+    parada, o painel sumia junto — e levava o aviso de meta/stop e a
+    tabela de operações que a pessoa queria estudar. Agora o que já
+    apareceu aqui fica retido até ser fechado no X do painel.
+  */
+  const [retidas, setRetidas] = useState<Map<string, SessaoViva>>(new Map())
+  const vistasNoServidor = useRef(new Map<string, SessaoViva>())
+  const fechadasPelaPessoa = useRef(new Set<string>())
+  useEffect(() => {
+    const atuais = new Set(vivasNoServidor.map((v) => v.id))
+    for (const v of vivasNoServidor) vistasNoServidor.current.set(v.id, v)
+    setRetidas((prev) => {
+      const proximas = new Map(prev)
+      for (const [id, v] of vistasNoServidor.current) {
+        if (atuais.has(id)) proximas.delete(id)
+        else if (!fechadasPelaPessoa.current.has(id)) proximas.set(id, v)
+      }
+      return proximas
+    })
+  }, [vivasNoServidor])
+  const fecharRetida = (id: string) => {
+    fechadasPelaPessoa.current.add(id)
+    vistasNoServidor.current.delete(id)
+    setRetidas((prev) => { const proximas = new Map(prev); proximas.delete(id); return proximas })
+    setBlocoExpandido((atual) => atual === id ? null : atual)
+  }
+
   const abrirBloco = () => {
     const vazio = blocos.find(id => !sessoesLocais.has(id))
     if (!vazio && blocos.length >= MAX_BLOCOS) return
@@ -231,7 +261,7 @@ export function RobotsPanel({
   const temSessaoLocal = sessoesLocais.size > 0
   // as que já estão dentro de um bloco não viram um segundo painel
   const jaNaTela = new Set(Object.values(adotadas).filter(Boolean) as string[])
-  const doChat = vivasNoServidor.filter((v) => !jaNaTela.has(v.id))
+  const doChat = [...vivasNoServidor, ...[...retidas.values()].filter((r) => !vivasNoServidor.some((v) => v.id === r.id))].filter((v) => !jaNaTela.has(v.id))
   // tudo que já tem painel ao vivo nesta tela, para o resumo não repetir
   const comPainel = [...jaNaTela, ...doChat.map((v) => v.id)]
   const temAcompanhamento = temSessaoLocal || doChat.length > 0
@@ -314,7 +344,8 @@ export function RobotsPanel({
               onExpandir={() => setBlocoExpandido((atual) => atual === v.id ? null : v.id)}
               onDigitos={() => alternarDigitos(v.id, v.roboId)}
               digitosAberto={digitosDe?.chave === v.id}
-              mostrarMarkup={admin} />
+              mostrarMarkup={admin}
+              onRemover={retidas.has(v.id) ? () => fecharRetida(v.id) : undefined} />
             </div>
           ))}
         </div>

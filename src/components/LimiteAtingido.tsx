@@ -123,12 +123,9 @@ export function LimiteAtingido({ tipo, estado, config, nome, cor, moeda, demo, o
   const fechar = useRef(onFechar)
   fechar.current = onFechar
 
-  useEffect(() => {
-    principal.current?.focus()
-    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') fechar.current() }
-    window.addEventListener('keydown', tecla)
-    return () => window.removeEventListener('keydown', tecla)
-  }, [])
+  // O aviso fica na tela até a pessoa fechar no X (ou nos botões). Nem
+  // clique fora nem Esc o derrubam: quem quer estudar a sessão, estuda.
+  useEffect(() => { principal.current?.focus() }, [])
 
   // Aba em segundo plano: o título avisa até a pessoa voltar.
   useEffect(() => {
@@ -156,7 +153,7 @@ export function LimiteAtingido({ tipo, estado, config, nome, cor, moeda, demo, o
   const ponto = Math.min(100, Math.max(0, ((estado.resultado + stop) / (stop + alvo)) * 100))
 
   const conteudo = (
-    <div className="limite-fundo" onMouseDown={(e) => { if (e.target === e.currentTarget) onFechar() }}>
+    <div className="limite-fundo">
       <section role="dialog" aria-modal="true" aria-labelledby="limite-titulo" aria-describedby="limite-frase"
         className={`limite ${tipo}`} style={{ '--robo': cor } as CSSProperties}>
         <div className="limite-brilho" aria-hidden />
