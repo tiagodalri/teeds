@@ -2,48 +2,159 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Conheça uma nova forma de organizar suas operações." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. O dinheiro fica na sua própria conta na corretora." />
+  <meta name="theme-color" content="#080b10" />
   <title>Conheça a plataforma</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./landing.css?v=202609091" />
-  <style>
-    .brilho{position:absolute;inset:0;z-index:-1;pointer-events:none}
-    .simbolo{overflow:hidden;padding:5px}.simbolo img{display:block;width:100%;height:100%;object-fit:contain}.assinatura{display:grid;gap:2px}.assinatura strong{font-size:15px;line-height:1;letter-spacing:.25em}.assinatura small{font-size:6px;font-weight:700;letter-spacing:.24em;color:#656d78}.painel-marca{position:absolute;right:-46px;bottom:-62px;width:245px;height:245px;object-fit:contain;opacity:.035;filter:grayscale(1);pointer-events:none}
-    [data-marca=teeds] .simbolo{padding:3px;background:#090b0f}[data-marca=teeds] .simbolo img{filter:drop-shadow(0 2px 5px #d2aa5155)}
-    [data-marca=omni] .marca strong{font-family:"DM Sans",sans-serif;font-weight:700;color:#dce6f2}[data-marca=omni] .simbolo{padding:7px;border-radius:50%;background:#edf4fb}[data-marca=omni] .simbolo img{filter:saturate(.82)}[data-marca=omni] body:before{background:radial-gradient(circle at 70% 5%,#315f9940,transparent 34%)}[data-marca=omni] .painel{background:linear-gradient(145deg,#121d2b,#080d14);border-color:#26384d}[data-marca=omni] .beneficios{background:#0a111b}[data-marca=omni] .cadastro{background:linear-gradient(135deg,#142337,#0a1019)}
-  </style>
 </head>
 <body>
-  <header class="topo"><a class="marca" href="#inicio" aria-label="Início"><span class="simbolo"><img data-logo alt=""></span><span class="assinatura"><strong data-marca></strong><small data-assinatura></small></span></a><a class="topo-acao" href="#cadastro">Quero conhecer</a></header>
+  <header class="topo">
+    <a class="marca" href="#inicio" aria-label="Início"><span class="simbolo"><img data-logo alt=""></span><span class="assinatura"><strong data-marca></strong><small data-assinatura></small></span></a>
+    <nav class="topo-nav" aria-label="Seções"><a href="#como-funciona">Como funciona</a><a href="#robos">Robôs</a><a href="#plataforma">Plataforma</a><a href="#depoimentos">Resultados</a><a href="#faq">Dúvidas</a></nav>
+    <a class="topo-acao" href="#cadastro">Quero conhecer</a>
+  </header>
+
   <main id="inicio">
+    <!-- ================================================================ HERO -->
     <section class="hero">
-      <div class="brilho"></div>
+      <div class="brilho" aria-hidden="true"></div>
       <div class="hero-texto">
-        <span class="sobretitulo">Lista antecipada · vagas limitadas</span>
-        <h1>Mais clareza para operar.<br><em>Mais controle para decidir.</em></h1>
+        <span class="sobretitulo"><i></i> Plataforma de operações com robôs · Vagas limitadas</span>
+        <h1>Robôs que operam por você.<br><em>Com regras claras e o dinheiro na sua própria conta.</em></h1>
         <p data-intro></p>
-        <div class="hero-acoes"><a class="botao" href="#cadastro">Quero receber os detalhes <span>→</span></a><small>Cadastro gratuito e sem compromisso.</small></div>
-        <div class="provas"><div><b>01</b><span>Ambiente<br>organizado</span></div><div><b>02</b><span>Gestão de<br>risco visual</span></div><div><b>03</b><span>Tecnologia<br>em um só lugar</span></div></div>
+        <div class="hero-acoes"><a class="botao" href="#cadastro">Quero conhecer a plataforma <span>→</span></a><small>Cadastro gratuito. A equipe apresenta tudo para você, sem compromisso.</small></div>
+        <ul class="provas" aria-label="Por que confiar">
+          <li><b>✓</b><span>Você define <strong>quanto quer ganhar</strong> e <strong>quanto aceita perder</strong>. O robô obedece.</span></li>
+          <li><b>✓</b><span>O saldo fica na <strong>sua conta na corretora</strong>. A plataforma nunca guarda o seu dinheiro.</span></li>
+          <li><b>✓</b><span><strong>Liga e desliga quando quiser</strong>, do computador ou do celular.</span></li>
+        </ul>
       </div>
-      <div class="painel" aria-hidden="true">
-        <img class="painel-marca" data-logo alt="">
-        <div class="painel-top"><i></i><i></i><i></i><span>Visão da sessão</span></div>
-        <div class="saldo"><span>Resultado da sessão</span><strong>+ 18,42</strong><small>Desempenho acompanhado em tempo real</small></div>
-        <div class="grafico"><svg viewBox="0 0 560 190" preserveAspectRatio="none"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--cor)" stop-opacity=".32"/><stop offset="1" stop-color="var(--cor)" stop-opacity="0"/></linearGradient></defs><path class="area" d="M0 160 C35 151,48 166,78 139 S128 151,160 116 S215 132,246 101 S301 117,336 78 S391 100,420 61 S488 88,560 26 L560 190 L0 190Z"/><path class="linha" d="M0 160 C35 151,48 166,78 139 S128 151,160 116 S215 132,246 101 S301 117,336 78 S391 100,420 61 S488 88,560 26"/></svg></div>
-        <div class="painel-cards"><div><span>Operações</span><b>128</b></div><div><span>Consistência</span><b>Ativa</b></div><div><span>Proteção</span><b>Configurada</b></div></div>
-        <div class="flutuante"><i>✓</i><span><b>Análise concluída</b><small>Condições verificadas</small></span></div>
+
+      <!-- A cabine animada: o que o cliente vê na plataforma, em miniatura. Dados ILUSTRATIVOS. -->
+      <div class="cabine" aria-label="Demonstração animada de um robô operando" data-demo>
+        <div class="cabine-topo">
+          <span class="cabine-farol" aria-hidden="true"></span>
+          <div><b data-demo-robo></b><small>Volatility 75 · contratos de 1 tick</small></div>
+          <span class="cabine-status">Operando</span>
+        </div>
+        <div class="cabine-resultado">
+          <span>Resultado da sessão</span>
+          <strong data-demo-resultado>+ US$ 0,00</strong>
+          <small><em data-demo-ops>0</em> operações · <em data-demo-acerto>0%</em> de acerto</small>
+        </div>
+        <div class="cabine-grafico"><svg viewBox="0 0 560 150" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--cor)" stop-opacity=".3"/><stop offset="1" stop-color="var(--cor)" stop-opacity="0"/></linearGradient></defs><path class="area" data-demo-area d=""/><path class="linha" data-demo-linha d=""/></svg></div>
+        <div class="cabine-fita" data-demo-fita aria-label="Últimos dígitos do ativo"></div>
+        <ol class="cabine-log" data-demo-log aria-live="off"></ol>
+        <div class="cabine-limites"><div><span>Meta</span><b>US$ 20,00</b></div><div><span>Stop</span><b>US$ 10,00</b></div><div><span>Entrada</span><b data-demo-entrada>US$ 1,00</b></div></div>
+        <p class="cabine-aviso">Demonstração animada com valores ilustrativos. Não é uma sessão real nem promessa de resultado.</p>
       </div>
     </section>
 
-    <section class="beneficios"><div><span>O que você encontra</span><h2>Uma experiência pensada nos detalhes</h2></div><div class="grade"><article><i>◎</i><h3>Visão completa</h3><p>Acompanhe suas informações em uma interface limpa, objetiva e fácil de entender.</p></article><article><i>⌁</i><h3>Gestão inteligente</h3><p>Defina seus limites antes de começar e visualize sua evolução com clareza.</p></article><article><i>◇</i><h3>Recursos exclusivos</h3><p>Ferramentas, automações e conteúdos reunidos em um único ambiente.</p></article></div></section>
+    <!-- ============================================================ FAIXA -->
+    <section class="faixa" aria-label="Fatos">
+      <div><b>Deriv</b><span>Corretora com mais de 20 anos de mercado, onde fica a sua conta</span></div>
+      <div><b>Conta demo</b><span>Comece com dinheiro fictício e passe para o real quando quiser</span></div>
+      <div><b>Ao vivo</b><span>Acompanhe cada operação em tempo real, no celular ou no computador</span></div>
+      <div><b>Você no comando</b><span>Metas, limites e desligamento sempre na sua mão</span></div>
+    </section>
 
-    <section class="convite"><span>Feito para quem leva suas decisões a sério</span><h2>Você no controle.<br>Do início ao resultado.</h2><p>Estamos preparando uma experiência completa para quem busca método, organização e tecnologia. Entre na lista para receber a apresentação em primeira mão.</p></section>
+    <!-- ===================================================== COMO FUNCIONA -->
+    <section class="bloco" id="como-funciona">
+      <div class="bloco-cab"><span class="sobretitulo">Como funciona</span><h2>Do cadastro à primeira operação em três passos</h2><p>Nada de instalar programa, configurar servidor ou entender código. A plataforma roda no navegador e o robô opera no nosso servidor, 24 horas, com a sua conta conectada.</p></div>
+      <ol class="passos">
+        <li><i>1</i><h3>Crie sua conta na plataforma</h3><p>Leva um minuto. Você entra num ambiente organizado, com aulas curtas mostrando cada tela.</p></li>
+        <li><i>2</i><h3>Conecte a sua conta na corretora</h3><p>A Deriv autoriza a plataforma a operar por você. O dinheiro nunca sai da sua conta; você deposita e saca direto lá.</p></li>
+        <li><i>3</i><h3>Escolha o robô e defina os limites</h3><p>Valor de entrada, meta de ganho e stop de perda. Ligou, o robô opera sozinho e para quando bater o que você definiu.</p></li>
+      </ol>
+      <div class="cta-linha"><a class="botao" href="#cadastro">Quero começar <span>→</span></a><small>A apresentação é feita pela equipe, ao vivo, sem custo.</small></div>
+    </section>
 
+    <!-- ============================================================ ROBÔS -->
+    <section class="bloco escuro" id="robos">
+      <div class="bloco-cab"><span class="sobretitulo">Os robôs</span><h2>Cada robô tem uma regra. Você sabe exatamente o que ele faz.</h2><p>Todos operam dígitos no índice Volatility 75, um ativo sintético que funciona 24 horas por dia, 7 dias por semana. A regra de entrada é aberta; a gestão de risco é sua.</p></div>
+      <div class="robos" data-robos></div>
+      <p class="nota">Cada robô mostra, ao vivo, os dígitos que está lendo, a entrada armada e o histórico de cada contrato. Nada acontece escondido.</p>
+    </section>
+
+    <!-- ========================================================= PLATAFORMA -->
+    <section class="bloco" id="plataforma">
+      <div class="bloco-cab"><span class="sobretitulo">A plataforma</span><h2>Tudo o que você precisa para operar com método, em um lugar só</h2></div>
+      <div class="grade">
+        <article><i>◎</i><h3>Cabine dos robôs ao vivo</h3><p>Dígitos chegando, contrato aberto, resultado por operação e a curva da sessão, em tempo real.</p></article>
+        <article><i>⌁</i><h3>Gestão de risco embutida</h3><p>Meta de ganho, stop de perda, teto de entrada e número máximo de operações. O robô para sozinho.</p></article>
+        <article><i>▤</i><h3>Gráfico e operação manual</h3><p>Velas, indicadores e contratos de Subir/Descer e Dígitos para quem também quer operar na mão.</p></article>
+        <article><i>◇</i><h3>Simulador de treinamento</h3><p>US$ 10.000 fictícios, com reabastecimento ilimitado, para treinar antes de arriscar um centavo.</p></article>
+        <article><i>▶</i><h3>Aulas dentro da plataforma</h3><p>Do primeiro acesso à leitura de dígitos, em vídeos curtos e diretos. Sem enrolação.</p></article>
+        <article><i>✦</i><h3>Assistente inteligente</h3><p>Pergunte sobre a plataforma, os robôs ou a sua sessão e receba resposta na hora.</p></article>
+        <article><i>▣</i><h3>Histórico completo</h3><p>Cada operação registrada: entrada, saída, dígito, resultado e acumulado. Você revisa o que quiser.</p></article>
+        <article><i>◔</i><h3>No celular, como um app</h3><p>Instale na tela inicial e acompanhe os robôs de onde estiver, com o mesmo acesso.</p></article>
+      </div>
+    </section>
+
+    <!-- ========================================================== GESTÃO -->
+    <section class="bloco escuro gestao">
+      <div class="gestao-texto">
+        <span class="sobretitulo">Gestão de risco</span>
+        <h2>Antes de ligar, você já decidiu onde parar.</h2>
+        <p>A maior causa de prejuízo não é a estratégia. É continuar operando depois da hora. Na plataforma, a meta e o stop são definidos antes da primeira entrada, e o robô respeita os dois sem discutir.</p>
+        <ul class="lista-check">
+          <li><i>✓</i> Meta de ganho: bateu, encerra e guarda o resultado.</li>
+          <li><i>✓</i> Stop de perda: chegou no limite, para na hora.</li>
+          <li><i>✓</i> Teto de entrada: a recuperação nunca passa do valor que você autorizou.</li>
+          <li><i>✓</i> Desligar a qualquer momento, de qualquer aparelho.</li>
+        </ul>
+      </div>
+      <div class="gestao-painel" aria-hidden="true">
+        <div class="gp-linha"><span>Entrada inicial</span><b>US$ 1,00</b></div>
+        <div class="gp-linha"><span>Meta de ganho</span><b class="verde">US$ 20,00</b></div>
+        <div class="gp-linha"><span>Stop de perda</span><b class="vermelho">US$ 10,00</b></div>
+        <div class="gp-linha"><span>Teto por entrada</span><b>US$ 8,00</b></div>
+        <div class="gp-barra"><i style="--p:62%"></i><span>Progresso até a meta</span><em>62%</em></div>
+        <div class="gp-botao">Ligar o robô</div>
+      </div>
+    </section>
+
+    <!-- ====================================================== DEPOIMENTOS -->
+    <section class="bloco" id="depoimentos">
+      <div class="bloco-cab"><span class="sobretitulo">Quem já usa</span><h2>O que os clientes dizem</h2></div>
+      <div class="depoimentos" data-depoimentos></div>
+      <p class="nota">Resultados variam de pessoa para pessoa e dependem de mercado, gestão e disciplina. Operar envolve risco de perda.</p>
+    </section>
+
+    <!-- ========================================================= PARA QUEM -->
+    <section class="bloco escuro paraquem">
+      <div>
+        <span class="sobretitulo">É para você se</span>
+        <ul class="lista-check">
+          <li><i>✓</i> Quer operar com regras definidas em vez de no impulso.</li>
+          <li><i>✓</i> Não tem tempo de ficar na frente do gráfico o dia inteiro.</li>
+          <li><i>✓</i> Prefere ver tudo acontecendo, ao vivo, com transparência.</li>
+          <li><i>✓</i> Aceita que resultado vem de método, gestão e constância.</li>
+        </ul>
+      </div>
+      <div>
+        <span class="sobretitulo cinza">Não é para você se</span>
+        <ul class="lista-x">
+          <li><i>✕</i> Procura promessa de ganho garantido. Não existe, e não vamos fingir que existe.</li>
+          <li><i>✕</i> Quer operar dinheiro que não pode perder.</li>
+          <li><i>✕</i> Não quer definir limites e prefere "deixar rodar".</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================================================== FAQ -->
+    <section class="bloco" id="faq">
+      <div class="bloco-cab"><span class="sobretitulo">Dúvidas frequentes</span><h2>Perguntas que todo mundo faz antes de começar</h2></div>
+      <div class="faq" data-faq></div>
+    </section>
+
+    <!-- ========================================================= CADASTRO -->
     <section class="cadastro" id="cadastro">
-      <div class="cadastro-texto"><span class="sobretitulo">Acesso antecipado</span><h2>Quer conhecer por dentro?</h2><p>Deixe seus dados. Nossa equipe entrará em contato para apresentar a plataforma e entender o que faz sentido para você.</p><ul><li><i>✓</i> Apresentação personalizada</li><li><i>✓</i> Prioridade nas novidades</li><li><i>✓</i> Sem compromisso</li></ul></div>
+      <div class="cadastro-texto"><span class="sobretitulo">Próximo passo</span><h2>Quer ver a plataforma por dentro?</h2><p>Deixe seus dados. A equipe entra em contato, apresenta os robôs operando e mostra como configurar a sua gestão. Você decide depois, sem pressão.</p><ul><li><i>✓</i> Apresentação ao vivo, personalizada</li><li><i>✓</i> Conta demo para testar antes</li><li><i>✓</i> Sem compromisso e sem cobrança</li></ul></div>
       <form id="form-lead" novalidate>
         <div class="form-top"><span>Leva menos de 1 minuto</span><b>Seus dados estão protegidos</b></div>
         <label>Nome completo<input name="nome" autocomplete="name" maxlength="120" placeholder="Como podemos chamar você?" required></label>
@@ -56,7 +167,14 @@
       </form>
     </section>
   </main>
-  <footer><a class="marca" href="#inicio"><span class="simbolo"><img data-logo alt=""></span><span class="assinatura"><strong data-marca></strong><small data-assinatura></small></span></a><p>Conteúdo informativo. Operações financeiras envolvem riscos e resultados anteriores não garantem resultados futuros.</p><small>© 2026 <span data-marca></span>. Todos os direitos reservados.</small></footer>
+
+  <footer>
+    <a class="marca" href="#inicio"><span class="simbolo"><img data-logo alt=""></span><span class="assinatura"><strong data-marca></strong><small data-assinatura></small></span></a>
+    <p>Conteúdo informativo. A plataforma opera com a sua própria conta na Deriv; o dinheiro nunca fica conosco. Operações financeiras envolvem risco de perda, resultados anteriores não garantem resultados futuros e as demonstrações desta página usam valores ilustrativos.</p>
+    <small>© 2026 <span data-marca></span>. Todos os direitos reservados.</small>
+  </footer>
+
+  <a class="cta-fixo" href="#cadastro" aria-label="Ir para o cadastro">Quero conhecer a plataforma <span>→</span></a>
   <script src="./landing.js?v=202609091"></script>
 </body>
 </html>
