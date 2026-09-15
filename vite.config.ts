@@ -127,6 +127,9 @@ export default defineConfig({
           if (outra.id === MARCA.id) continue
           rmSync(join(SAIDA, outra.emblema), { force: true })
           rmSync(join(SAIDA, `pwa-${outra.id}`), { recursive: true, force: true })
+          // As telas da landing sao capturadas por marca: as da outra nao entram neste site.
+          const telas = join(destinoCaptura, 'plataforma')
+          if (existsSync(telas)) for (const arquivo of readdirSync(telas)) if (arquivo.startsWith(`${outra.id}-`)) rmSync(join(telas, arquivo), { force: true })
         }
         // O logotipo completo da Teeds so faz sentido no site da Teeds.
         if (MARCA.id !== 'teeds') {
