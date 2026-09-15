@@ -250,27 +250,25 @@ export function RobotLive({
 
       {/* ===================== palco ===================== */}
       <div className="tv-painel-principal">
-      <section className={`tv-fluxo ${emCurso ? 'aberto' : estado.historico.length ? 'fechado' : 'aguardando'}`}>
-        <div className="tv-fluxo-etapa ativa">
-          <i>{emCurso ? '●' : estado.historico.length ? '✓' : '1'}</i>
-          <span><b>{emCurso ? 'Contrato aberto' : estado.historico.length ? 'Último contrato' : 'Aguardando entrada'}</b>
-            <small>{emCurso ? relogio(emCurso.comprouEm) : estado.historico[0] ? relogio(estado.historico[0].quando) : 'monitorando o mercado'}</small>
-            <span className="tv-fluxo-entrada">
-              <em>{emCurso ? 'Entrada atual' : 'Próxima entrada'}</em>
-              <strong>{num(emCurso?.valor ?? estado.valorAtual)} <i>{moeda}</i></strong>
-            </span>
-          </span>
+      <section className={`contrato-trajeto ${emCurso ? 'aberto' : estado.emOperacao ? 'enviando' : estado.historico.length ? 'fechado' : 'aguardando'}`} aria-label="Acompanhamento do contrato">
+        <div className="contrato-campo">
+          <span className="contrato-rotulo">{emCurso ? 'Entrada atual' : estado.emOperacao ? 'Entrada em envio' : estado.historico.length ? 'Última entrada' : 'Próxima entrada'}</span>
+          <strong>{moeda} {num(emCurso?.valor ?? (estado.emOperacao ? estado.valorAtual : estado.historico[0]?.valor ?? estado.valorAtual))}</strong>
+          <small>{emCurso ? `Comprado às ${relogio(emCurso.comprouEm)}` : estado.emOperacao ? 'Enviando ordem' : estado.historico[0] ? `Encerrado às ${relogio(estado.historico[0].quando)}` : 'Aguardando sinal da estratégia'}</small>
         </div>
-        <div className="tv-fluxo-linha"><span /></div>
-        <div className={`tv-fluxo-etapa ${!emCurso && estado.historico.length ? 'ativa concluida' : ''}`}>
-          <i>{!emCurso && estado.historico.length ? '✓' : '2'}</i>
-          <span><b>Contrato fechado</b>
-            <small>{emCurso
-              ? <>aguardando resultado · <Cronometro desde={emCurso.comprouEm} /></>
-              : estado.historico[0]
-                ? `${estado.historico[0].ganhou ? 'ganho' : 'perda'} ${assinado(estado.historico[0].lucro)} ${moeda}`
-                : 'próxima etapa'}</small>
-          </span>
+        <div className="contrato-percurso">
+          <ol aria-label="Etapas do contrato">
+            {['Entrada', 'Em andamento', 'Concluído'].map((etapa, i) => {
+              const passo = emCurso ? 1 : estado.emOperacao ? 0 : estado.historico.length ? 2 : -1
+              return <li key={etapa} className={i < passo ? 'feito' : i === passo ? 'atual' : ''} aria-current={i === passo ? 'step' : undefined}><i aria-hidden="true">{i < passo || (i === 2 && passo === 2) ? '✓' : ''}</i><span>{etapa}</span></li>
+            })}
+          </ol>
+          <small>{emCurso ? <>Tempo decorrido: <Cronometro desde={emCurso.comprouEm} /></> : estado.emOperacao ? 'Aguardando confirmação da compra' : estado.rodando ? `Próxima entrada: ${moeda} ${num(estado.valorAtual)}` : 'Sessão encerrada'}</small>
+        </div>
+        <div className="contrato-campo contrato-resultado">
+          <span className="contrato-rotulo">Resultado do contrato</span>
+          <strong className={!emCurso && !estado.emOperacao && estado.historico[0] ? (estado.historico[0].lucro >= 0 ? 'up' : 'down') : 'pendente'}>{emCurso || estado.emOperacao ? 'Aguardando resultado' : estado.historico[0] ? `${assinado(estado.historico[0].lucro)} ${moeda}` : '—'}</strong>
+          <small>{emCurso ? 'Contrato em andamento' : estado.emOperacao ? 'Compra em processamento' : estado.historico.length ? 'Contrato liquidado' : 'Disponível após a primeira operação'}</small>
         </div>
       </section>
 
