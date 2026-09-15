@@ -123,14 +123,33 @@ h1,h2,h3{margin:0}
 .passos li i{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;color:#111;background:var(--cor);font-style:normal;font-weight:800;font-size:15px}
 .passos h3{font-size:19px}.passos p{margin:0;color:#8e949e;line-height:1.7;font-size:14.5px}
 
-/* robôs */
-.robos{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-.robo{padding:24px;border:1px solid var(--linha);border-radius:16px;background:var(--cartao);display:grid;gap:12px;transition:border-color .2s,transform .2s}
+/* robôs (só nome e frase) */
+.robos{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.robo{position:relative;padding:22px 22px 20px;border:1px solid var(--linha);border-radius:16px;background:var(--cartao);display:grid;gap:8px;overflow:hidden;transition:border-color .2s,transform .2s}
+.robo:before{content:"";position:absolute;inset:auto -30px -40px auto;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--cor) 22%,transparent),transparent 70%)}
 .robo:hover{border-color:color-mix(in srgb,var(--cor) 45%,var(--linha));transform:translateY(-3px)}
-.robo header{display:flex;align-items:center;justify-content:space-between;gap:10px}.robo header b{font-size:16px}.robo header span{padding:5px 10px;border-radius:99px;background:color-mix(in srgb,var(--cor) 14%,transparent);color:var(--cor);font-size:11px;font-weight:800;letter-spacing:.04em;white-space:nowrap}
-.robo p{margin:0;color:#8e949e;font-size:13.5px;line-height:1.65;min-height:66px}
-.robo-digitos{display:flex;gap:4px}.robo-digitos i{flex:1;height:26px;display:grid;place-items:center;border-radius:6px;background:#161b23;color:#6b727d;font-style:normal;font-size:12px;font-weight:700}
-.robo-digitos i.on{background:#183a2b;color:var(--verde)}
+.robo i{font-style:normal;color:var(--cor);font-size:11px;font-weight:800;letter-spacing:.18em}
+.robo b{font-size:18px;letter-spacing:-.01em}.robo span{color:#8e949e;font-size:13px;line-height:1.5}
+
+/* galeria da plataforma */
+.galeria{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.galeria figure{margin:0;display:grid;gap:12px}
+.moldura{position:relative;overflow:hidden;border:1px solid #2a303a;border-radius:16px;background:#0b0e13;box-shadow:0 30px 70px -30px #000}
+.moldura:before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--cor) 14%,transparent);border-radius:16px}
+.moldura img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;object-position:top left;transition:transform .5s cubic-bezier(.2,.7,.2,1)}
+.galeria figure:hover .moldura img{transform:scale(1.02)}
+.galeria figcaption{display:grid;gap:3px;padding:0 4px}.galeria figcaption b{font-size:15px}.galeria figcaption span{color:#8e949e;font-size:13px;line-height:1.5}
+
+/* sessões na prática */
+.sessoes{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.sessao{padding:16px;border:1px solid var(--linha);border-radius:14px;background:var(--cartao);display:grid;gap:8px}
+.sessao header{display:flex;justify-content:space-between;align-items:center;gap:8px}.sessao header b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sessao .selo{flex-shrink:0;padding:3px 7px;border-radius:99px;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.sessao.meta .selo{color:var(--verde);background:#183a2b}.sessao.stop .selo{color:var(--vermelho);background:#3a1f22}
+.sessao .valor{font-size:22px;letter-spacing:-.03em;font-variant-numeric:tabular-nums}.sessao.meta .valor{color:var(--verde)}.sessao.stop .valor{color:var(--vermelho)}
+.sessao svg{width:100%;height:44px;display:block;overflow:visible}.sessao svg path{fill:none;stroke:var(--verde);stroke-width:2;stroke-linejoin:round}.sessao.stop svg path{stroke:var(--vermelho)}
+.sessao footer{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding-top:8px;border-top:1px solid var(--linha)}
+.sessao footer span{display:grid;gap:2px}.sessao footer i{font-style:normal;color:#727986;font-size:9px;text-transform:uppercase;letter-spacing:.06em}.sessao footer b{font-size:11.5px;font-variant-numeric:tabular-nums}
 
 /* o ativo */
 .bloco.ativo{display:grid;grid-template-columns:1.05fr .95fr;gap:60px;align-items:center;max-width:none}
@@ -206,15 +225,15 @@ footer p{text-align:center;line-height:1.6;margin:0}footer small{text-align:righ
 @media(prefers-reduced-motion:reduce){.cabine-farol{animation:none}}
 
 /* ------------------------------------------------------------ responsivo */
-@media(max-width:1100px){.grade{grid-template-columns:repeat(2,1fr)}.depoimentos{grid-template-columns:repeat(2,1fr)}.topo-nav{display:none}}
-@media(max-width:900px){.hero{grid-template-columns:1fr;padding-top:56px;gap:40px}.bloco.ativo{grid-template-columns:1fr;gap:30px}.tv{transform:none}.tv-topo{flex-direction:column;align-items:flex-start;gap:10px}.tv-resumo{width:100%;justify-content:space-between}.tv-resumo span{min-width:0}.faixa{grid-template-columns:repeat(2,1fr)}.passos{grid-template-columns:1fr}.gestao,.paraquem{grid-template-columns:1fr;gap:36px}.cadastro{grid-template-columns:1fr;margin-inline:16px;padding:40px;gap:35px}footer{grid-template-columns:1fr;text-align:center}footer p,footer small{text-align:center}.bloco{padding-block:72px}.cta-fixo{display:flex}}
-@media(max-width:520px){.hero h1{font-size:36px}.hero-acoes{align-items:flex-start;flex-direction:column}.botao{width:100%}.faixa{grid-template-columns:1fr}.grade,.depoimentos,.ativo-cards{grid-template-columns:1fr}.cadastro{padding:22px}.form-top{display:grid;gap:4px}.topo-acao{display:none}.tv-tabela .oculta{display:none}.tv-fluxo{grid-template-columns:1fr auto 1fr}.tv-linha{width:44px}.tv-resumo{flex-wrap:wrap;gap:10px 16px}.tv-resumo .tv-res{flex-basis:100%}.bloco-cab h2{font-size:29px}}
+@media(max-width:1100px){.grade{grid-template-columns:repeat(2,1fr)}.depoimentos{grid-template-columns:repeat(2,1fr)}.sessoes{grid-template-columns:repeat(3,1fr)}.topo-nav{display:none}}
+@media(max-width:900px){.hero{grid-template-columns:1fr;padding-top:56px;gap:40px}.bloco.ativo{grid-template-columns:1fr;gap:30px}.galeria{grid-template-columns:1fr}.sessoes{grid-template-columns:repeat(2,1fr)}.tv{transform:none}.tv-topo{flex-direction:column;align-items:flex-start;gap:10px}.tv-resumo{width:100%;justify-content:space-between}.tv-resumo span{min-width:0}.faixa{grid-template-columns:repeat(2,1fr)}.passos{grid-template-columns:1fr}.gestao,.paraquem{grid-template-columns:1fr;gap:36px}.cadastro{grid-template-columns:1fr;margin-inline:16px;padding:40px;gap:35px}footer{grid-template-columns:1fr;text-align:center}footer p,footer small{text-align:center}.bloco{padding-block:72px}.cta-fixo{display:flex}}
+@media(max-width:520px){.hero h1{font-size:36px}.hero-acoes{align-items:flex-start;flex-direction:column}.botao{width:100%}.faixa{grid-template-columns:1fr}.grade,.depoimentos,.ativo-cards{grid-template-columns:1fr}.robos{grid-template-columns:1fr 1fr}.robo{padding:16px}.robo b{font-size:15px}.sessoes{grid-template-columns:1fr 1fr;gap:8px}.sessao{padding:12px}.sessao .valor{font-size:18px}.cadastro{padding:22px}.form-top{display:grid;gap:4px}.topo-acao{display:none}.tv-tabela .oculta{display:none}.tv-fluxo{grid-template-columns:1fr auto 1fr}.tv-linha{width:44px}.tv-resumo{flex-wrap:wrap;gap:10px 16px}.tv-resumo .tv-res{flex-basis:100%}.bloco-cab h2{font-size:29px}}
 </style>
 </head>
 <body>
   <header class="topo">
     <a class="marca" href="#inicio" aria-label="Início"><span class="simbolo"><img data-logo alt=""></span><span class="assinatura"><strong data-marca></strong><small data-assinatura></small></span></a>
-    <nav class="topo-nav" aria-label="Seções"><a href="#como-funciona">Como funciona</a><a href="#robos">Robôs</a><a href="#ativo">O ativo</a><a href="#plataforma">Plataforma</a><a href="#depoimentos">Resultados</a><a href="#faq">Dúvidas</a></nav>
+    <nav class="topo-nav" aria-label="Seções"><a href="#como-funciona">Como funciona</a><a href="#robos">Robôs</a><a href="#ativo">O ativo</a><a href="#por-dentro">Por dentro</a><a href="#depoimentos">Resultados</a><a href="#faq">Dúvidas</a></nav>
     <a class="topo-acao" href="#cadastro">Quero conhecer</a>
   </header>
 
@@ -281,9 +300,15 @@ footer p{text-align:center;line-height:1.6;margin:0}footer small{text-align:righ
 
     <!-- ============================================================ ROBÔS -->
     <section class="bloco escuro" id="robos">
-      <div class="bloco-cab"><span class="sobretitulo">Os robôs</span><h2>Cada robô tem uma regra. Você sabe exatamente o que ele faz.</h2><p>Todos operam dígitos no índice Volatility 75, um ativo sintético que funciona 24 horas por dia, 7 dias por semana. A regra de entrada é aberta; a gestão de risco é sua.</p></div>
+      <div class="bloco-cab"><span class="sobretitulo">Os robôs</span><h2>Uma equipe de robôs. Cada um com o seu jeito de operar.</h2><p>Todos operam no mesmo índice, com a gestão de risco que você define. Como cada um decide a entrada, você descobre por dentro, quando se cadastrar e começar a operar.</p></div>
       <div class="robos" data-robos></div>
-      <p class="nota">Cada robô mostra, ao vivo, os dígitos que está lendo, a entrada armada e o histórico de cada contrato. Nada acontece escondido.</p>
+      <div class="cta-linha"><a class="botao" href="#cadastro">Quero conhecer os robôs <span>→</span></a><small>A apresentação mostra cada um operando ao vivo.</small></div>
+    </section>
+
+    <!-- ========================================================= POR DENTRO -->
+    <section class="bloco" id="por-dentro">
+      <div class="bloco-cab"><span class="sobretitulo">A plataforma por dentro</span><h2>Feita para você entender tudo de relance</h2><p>Telas reais da plataforma. Limpa, direta e igual no computador e no celular.</p></div>
+      <div class="galeria" data-galeria></div>
     </section>
 
     <!-- ============================================================ O ATIVO -->
@@ -338,6 +363,13 @@ footer p{text-align:center;line-height:1.6;margin:0}footer small{text-align:righ
         <div class="gp-barra"><i style="--p:62%"></i><span>Progresso até a meta</span><em>62%</em></div>
         <div class="gp-botao">Ligar o robô</div>
       </div>
+    </section>
+
+    <!-- ========================================================== SESSÕES -->
+    <section class="bloco escuro" id="sessoes">
+      <div class="bloco-cab"><span class="sobretitulo">Sessões na prática</span><h2>Como uma sessão termina quando a gestão é respeitada</h2><p>Vinte sessões de exemplo, no formato em que a plataforma resume cada uma: robô, duração, operações, acertos e resultado. Inclusive as que pararam no stop, porque isso também faz parte.</p></div>
+      <div class="sessoes" data-sessoes></div>
+      <p class="nota">Sessões ilustrativas com valores fictícios, montadas para mostrar o formato do resumo. Resultados reais variam e operar envolve risco de perda.</p>
     </section>
 
     <!-- ====================================================== DEPOIMENTOS -->
@@ -416,13 +448,15 @@ const ROBOS = {
 const config = marca === 'omni' ? {
   nome: 'OMNI', cor: '#6c93c6', escura: '#0e2a4e', emblema: '/omni-marca.png', assinatura: 'FINANCIAL INTELLIGENCE',
   intro: 'A OMNI reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
-  robos: [['ag2', 'OMNI Under'], ['superior5', 'OMNI Over'], ['firstblock', 'OMNI Bull'], ['secondblock', 'OMNI Bear']],
+  robos: [['ag2', 'OMNI Under', 'Entra quando o mercado confirma.'], ['superior5', 'OMNI Over', 'Ritmo constante, entrada após entrada.'], ['firstblock', 'OMNI Bull', 'A metade de baixo dos dígitos.'], ['secondblock', 'OMNI Bear', 'A metade de cima dos dígitos.']],
   demo: { id: 'firstblock', nome: 'OMNI Bull' },
+  fotos: [['omni-operar.webp', 'Operar', 'Gráfico ao vivo, indicadores e contratos manuais na mesma tela.'], ['omni-gerenciamento.webp', 'Gerenciamento', 'Metas, limites e o plano da sessão antes de ligar o robô.'], ['omni-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['omni-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
 } : {
   nome: 'TEEDS', cor: '#d2aa51', escura: '#8c6926', emblema: '/teeds-marca.png', assinatura: 'TRADING TECHNOLOGY',
   intro: 'A Teeds reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
-  robos: [['superior5', 'Teeds AG7'], ['ag2', 'Teeds AG2'], ['thepalm', 'The Palm'], ['smart03', 'Teeds Smart 03'], ['goreme', 'Teeds Göreme'], ['firstblock', 'First Block'], ['secondblock', 'Second Block']],
+  robos: [['thepalm', 'The Palm', 'Lê 25 dígitos antes de agir.'], ['superior5', 'Teeds AG7', 'O clássico da casa.'], ['ag2', 'Teeds AG2', 'Entra quando o mercado confirma.'], ['smart03', 'Teeds Smart 03', 'Contratos de 1 tick, ritmo alto.'], ['goreme', 'Teeds Göreme', 'Acerta muito, recupera rápido.'], ['firstblock', 'First Block', 'A metade de baixo dos dígitos.'], ['secondblock', 'Second Block', 'A metade de cima dos dígitos.']],
   demo: { id: 'thepalm', nome: 'The Palm' },
+  fotos: [['teeds-operar.webp', 'Operar', 'Gráfico ao vivo, indicadores e contratos manuais na mesma tela.'], ['teeds-gerenciamento.webp', 'Gerenciamento', 'Metas, limites e o plano da sessão antes de ligar o robô.'], ['teeds-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['teeds-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
 }
 document.documentElement.dataset.marca = marca
 document.documentElement.style.setProperty('--cor', config.cor)
@@ -434,19 +468,66 @@ document.querySelector('[data-intro]').textContent = config.intro
 document.title = `${config.nome} · Robôs de operação com gestão de risco`
 
 /* ------------------------------------------------------------- robôs */
+/* Só o nome e uma frase: como cada um decide, a pessoa descobre por dentro. */
 const robosEl = document.querySelector('[data-robos]')
-for (const [id, nome] of config.robos) {
-  const r = ROBOS[id]
+config.robos.forEach(([id, nome, frase], i) => {
   const art = document.createElement('article')
   art.className = 'robo'
-  art.innerHTML = `<header><b></b><span></span></header><p></p><div class="robo-digitos" aria-label="Dígitos que ganham"></div>`
+  art.innerHTML = `<i></i><b></b><span></span>`
+  art.querySelector('i').textContent = String(i + 1).padStart(2, '0')
   art.querySelector('b').textContent = nome
-  art.querySelector('header span').textContent = r.regra
-  art.querySelector('p').textContent = r.texto
-  const digitos = art.querySelector('.robo-digitos')
-  for (let d = 0; d <= 9; d++) { const s = document.createElement('i'); s.textContent = String(d); if (r.ganha.includes(d)) s.className = 'on'; digitos.appendChild(s) }
+  art.querySelector('span').textContent = frase
   robosEl.appendChild(art)
+})
+
+/* ------------------------------------------------------ galeria */
+const galeriaEl = document.querySelector('[data-galeria]')
+for (const [arquivo, titulo, legenda] of config.fotos) {
+  const fig = document.createElement('figure')
+  fig.innerHTML = `<div class="moldura"><img loading="lazy" decoding="async" alt=""></div><figcaption><b></b><span></span></figcaption>`
+  fig.querySelector('img').src = `./plataforma/${arquivo}`
+  fig.querySelector('img').alt = `Tela ${titulo} da plataforma ${config.nome}`
+  fig.querySelector('b').textContent = titulo
+  fig.querySelector('span').textContent = legenda
+  galeriaEl.appendChild(fig)
 }
+
+/* ------------------------------------------------ sessões na prática */
+/* Vinte sessões ILUSTRATIVAS, geradas com semente fixa: 18 positivas (meta ou
+   encerramento manual no lucro) e 2 negativas (stop). Está escrito na tela. */
+;(() => {
+  const el = document.querySelector('[data-sessoes]'); if (!el) return
+  let semente = 777
+  const sortear = () => { semente |= 0; semente = semente + 0x6D2B79F5 | 0; let t = Math.imul(semente ^ semente >>> 15, 1 | semente); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 }
+  const entre = (a, b) => a + sortear() * (b - a)
+  const num = v => Math.abs(v).toFixed(2).replace('.', ',')
+  const sessoes = []
+  for (let i = 0; i < 20; i++) {
+    const negativa = i === 6 || i === 15
+    const robo = config.robos[Math.floor(sortear() * config.robos.length)][1]
+    const meta = [20, 30, 50, 80, 100, 150, 200][Math.floor(sortear() * 7)]
+    const resultado = negativa ? -Math.round(entre(0.45, 0.8) * meta * 100) / 100 : Math.round(entre(0.92, 1.06) * meta * 100) / 100
+    const ops = Math.round(entre(9, 64)), ganhas = negativa ? Math.round(ops * entre(0.42, 0.55)) : Math.round(ops * entre(0.68, 0.92))
+    const minutos = Math.round(entre(6, 95))
+    // curva: ruído com deriva até o resultado
+    const pontos = [0]; let v = 0
+    for (let k = 1; k <= 24; k++) { const alvo = resultado * k / 24; v = alvo + (sortear() - 0.5) * meta * 0.25 * (1 - k / 24); pontos.push(k === 24 ? resultado : v) }
+    sessoes.push({ robo, meta, resultado, ops, ganhas, minutos, pontos, negativa })
+  }
+  for (const s of sessoes) {
+    const art = document.createElement('article')
+    art.className = `sessao ${s.negativa ? 'stop' : 'meta'}`
+    const min = Math.min(...s.pontos, 0), max = Math.max(...s.pontos, 1)
+    const x = i => (i / 24) * 200, y = p => 44 - ((p - min) / (max - min || 1)) * 40
+    const d = s.pontos.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p).toFixed(1)}`).join(' ')
+    art.innerHTML = `<header><b></b><span class="selo"></span></header><strong class="valor"></strong><svg viewBox="0 0 200 48" preserveAspectRatio="none" aria-hidden="true"><path d="${d}"/></svg><footer><span><i>Operações</i><b></b></span><span><i>Acertos</i><b></b></span><span><i>Duração</i><b></b></span></footer>`
+    art.querySelector('header b').textContent = s.robo
+    art.querySelector('.selo').textContent = s.negativa ? 'Parou no stop' : 'Meta batida'
+    art.querySelector('.valor').textContent = `${s.resultado < 0 ? '−' : '+'}${num(s.resultado)} USD`
+    const f = art.querySelectorAll('footer b'); f[0].textContent = String(s.ops); f[1].textContent = `${s.ganhas} de ${s.ops}`; f[2].textContent = `${s.minutos} min`
+    el.appendChild(art)
+  }
+})()
 
 /* ------------------------------------------------------- depoimentos */
 /* ATENÇÃO: depoimentos ILUSTRATIVOS, escritos para ocupar o lugar até os

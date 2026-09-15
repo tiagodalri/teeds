@@ -17,13 +17,15 @@ const ROBOS = {
 const config = marca === 'omni' ? {
   nome: 'OMNI', cor: '#6c93c6', escura: '#0e2a4e', emblema: '/omni-marca.png', assinatura: 'FINANCIAL INTELLIGENCE',
   intro: 'A OMNI reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
-  robos: [['ag2', 'OMNI Under'], ['superior5', 'OMNI Over'], ['firstblock', 'OMNI Bull'], ['secondblock', 'OMNI Bear']],
+  robos: [['ag2', 'OMNI Under', 'Entra quando o mercado confirma.'], ['superior5', 'OMNI Over', 'Ritmo constante, entrada após entrada.'], ['firstblock', 'OMNI Bull', 'A metade de baixo dos dígitos.'], ['secondblock', 'OMNI Bear', 'A metade de cima dos dígitos.']],
   demo: { id: 'firstblock', nome: 'OMNI Bull' },
+  fotos: [['omni-operar.webp', 'Operar', 'Gráfico ao vivo, indicadores e contratos manuais na mesma tela.'], ['omni-gerenciamento.webp', 'Gerenciamento', 'Metas, limites e o plano da sessão antes de ligar o robô.'], ['omni-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['omni-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
 } : {
   nome: 'TEEDS', cor: '#d2aa51', escura: '#8c6926', emblema: '/teeds-marca.png', assinatura: 'TRADING TECHNOLOGY',
   intro: 'A Teeds reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
-  robos: [['superior5', 'Teeds AG7'], ['ag2', 'Teeds AG2'], ['thepalm', 'The Palm'], ['smart03', 'Teeds Smart 03'], ['goreme', 'Teeds Göreme'], ['firstblock', 'First Block'], ['secondblock', 'Second Block']],
+  robos: [['thepalm', 'The Palm', 'Lê 25 dígitos antes de agir.'], ['superior5', 'Teeds AG7', 'O clássico da casa.'], ['ag2', 'Teeds AG2', 'Entra quando o mercado confirma.'], ['smart03', 'Teeds Smart 03', 'Contratos de 1 tick, ritmo alto.'], ['goreme', 'Teeds Göreme', 'Acerta muito, recupera rápido.'], ['firstblock', 'First Block', 'A metade de baixo dos dígitos.'], ['secondblock', 'Second Block', 'A metade de cima dos dígitos.']],
   demo: { id: 'thepalm', nome: 'The Palm' },
+  fotos: [['teeds-operar.webp', 'Operar', 'Gráfico ao vivo, indicadores e contratos manuais na mesma tela.'], ['teeds-gerenciamento.webp', 'Gerenciamento', 'Metas, limites e o plano da sessão antes de ligar o robô.'], ['teeds-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['teeds-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
 }
 document.documentElement.dataset.marca = marca
 document.documentElement.style.setProperty('--cor', config.cor)
@@ -35,19 +37,66 @@ document.querySelector('[data-intro]').textContent = config.intro
 document.title = `${config.nome} · Robôs de operação com gestão de risco`
 
 /* ------------------------------------------------------------- robôs */
+/* Só o nome e uma frase: como cada um decide, a pessoa descobre por dentro. */
 const robosEl = document.querySelector('[data-robos]')
-for (const [id, nome] of config.robos) {
-  const r = ROBOS[id]
+config.robos.forEach(([id, nome, frase], i) => {
   const art = document.createElement('article')
   art.className = 'robo'
-  art.innerHTML = `<header><b></b><span></span></header><p></p><div class="robo-digitos" aria-label="Dígitos que ganham"></div>`
+  art.innerHTML = `<i></i><b></b><span></span>`
+  art.querySelector('i').textContent = String(i + 1).padStart(2, '0')
   art.querySelector('b').textContent = nome
-  art.querySelector('header span').textContent = r.regra
-  art.querySelector('p').textContent = r.texto
-  const digitos = art.querySelector('.robo-digitos')
-  for (let d = 0; d <= 9; d++) { const s = document.createElement('i'); s.textContent = String(d); if (r.ganha.includes(d)) s.className = 'on'; digitos.appendChild(s) }
+  art.querySelector('span').textContent = frase
   robosEl.appendChild(art)
+})
+
+/* ------------------------------------------------------ galeria */
+const galeriaEl = document.querySelector('[data-galeria]')
+for (const [arquivo, titulo, legenda] of config.fotos) {
+  const fig = document.createElement('figure')
+  fig.innerHTML = `<div class="moldura"><img loading="lazy" decoding="async" alt=""></div><figcaption><b></b><span></span></figcaption>`
+  fig.querySelector('img').src = `./plataforma/${arquivo}`
+  fig.querySelector('img').alt = `Tela ${titulo} da plataforma ${config.nome}`
+  fig.querySelector('b').textContent = titulo
+  fig.querySelector('span').textContent = legenda
+  galeriaEl.appendChild(fig)
 }
+
+/* ------------------------------------------------ sessões na prática */
+/* Vinte sessões ILUSTRATIVAS, geradas com semente fixa: 18 positivas (meta ou
+   encerramento manual no lucro) e 2 negativas (stop). Está escrito na tela. */
+;(() => {
+  const el = document.querySelector('[data-sessoes]'); if (!el) return
+  let semente = 777
+  const sortear = () => { semente |= 0; semente = semente + 0x6D2B79F5 | 0; let t = Math.imul(semente ^ semente >>> 15, 1 | semente); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 }
+  const entre = (a, b) => a + sortear() * (b - a)
+  const num = v => Math.abs(v).toFixed(2).replace('.', ',')
+  const sessoes = []
+  for (let i = 0; i < 20; i++) {
+    const negativa = i === 6 || i === 15
+    const robo = config.robos[Math.floor(sortear() * config.robos.length)][1]
+    const meta = [20, 30, 50, 80, 100, 150, 200][Math.floor(sortear() * 7)]
+    const resultado = negativa ? -Math.round(entre(0.45, 0.8) * meta * 100) / 100 : Math.round(entre(0.92, 1.06) * meta * 100) / 100
+    const ops = Math.round(entre(9, 64)), ganhas = negativa ? Math.round(ops * entre(0.42, 0.55)) : Math.round(ops * entre(0.68, 0.92))
+    const minutos = Math.round(entre(6, 95))
+    // curva: ruído com deriva até o resultado
+    const pontos = [0]; let v = 0
+    for (let k = 1; k <= 24; k++) { const alvo = resultado * k / 24; v = alvo + (sortear() - 0.5) * meta * 0.25 * (1 - k / 24); pontos.push(k === 24 ? resultado : v) }
+    sessoes.push({ robo, meta, resultado, ops, ganhas, minutos, pontos, negativa })
+  }
+  for (const s of sessoes) {
+    const art = document.createElement('article')
+    art.className = `sessao ${s.negativa ? 'stop' : 'meta'}`
+    const min = Math.min(...s.pontos, 0), max = Math.max(...s.pontos, 1)
+    const x = i => (i / 24) * 200, y = p => 44 - ((p - min) / (max - min || 1)) * 40
+    const d = s.pontos.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p).toFixed(1)}`).join(' ')
+    art.innerHTML = `<header><b></b><span class="selo"></span></header><strong class="valor"></strong><svg viewBox="0 0 200 48" preserveAspectRatio="none" aria-hidden="true"><path d="${d}"/></svg><footer><span><i>Operações</i><b></b></span><span><i>Acertos</i><b></b></span><span><i>Duração</i><b></b></span></footer>`
+    art.querySelector('header b').textContent = s.robo
+    art.querySelector('.selo').textContent = s.negativa ? 'Parou no stop' : 'Meta batida'
+    art.querySelector('.valor').textContent = `${s.resultado < 0 ? '−' : '+'}${num(s.resultado)} USD`
+    const f = art.querySelectorAll('footer b'); f[0].textContent = String(s.ops); f[1].textContent = `${s.ganhas} de ${s.ops}`; f[2].textContent = `${s.minutos} min`
+    el.appendChild(art)
+  }
+})()
 
 /* ------------------------------------------------------- depoimentos */
 /* ATENÇÃO: depoimentos ILUSTRATIVOS, escritos para ocupar o lugar até os
