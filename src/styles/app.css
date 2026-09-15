@@ -5424,6 +5424,31 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .tv-acoes .tv-btn.ligar, .tv-acoes .tv-btn.parar { min-width: 100px; }
 .tv-acoes .tv-btn.ligar span { margin-right: 5px; font-size: 10px; }
 
+/* O painel único usa internamente a classe histórica `tv-expandido`. Estas
+   regras anulam somente a geometria antiga desse modo, que prendia operações
+   e resumo em linhas inteiras e impedia a composição aprovada em duas colunas. */
+.tv.tv-expandido .tv-topo,
+.tv.tv-expandido .tv-atalhos,
+.tv.tv-expandido .tv-registro-painel { grid-column: 1 / -1 !important; width: 100%; }
+.tv.tv-expandido .tv-corpo,
+.tv.tv-expandido .tv-painel-principal { display: contents !important; }
+.tv.tv-expandido .tv-fluxo,
+.tv.tv-expandido .tv-alerta,
+.tv.tv-expandido .tv-params,
+.tv.tv-expandido .ux-session-reason,
+.tv.tv-expandido .tv-fita-bloco,
+.tv.tv-expandido .tv-palm-analise { grid-column: 1 / -1 !important; grid-row: auto !important; }
+.tv.tv-expandido .tv-ops {
+  grid-column: 1 !important; grid-row: auto !important;
+  width: auto; height: auto; min-height: 288px; align-self: stretch;
+}
+.tv.tv-expandido .tv-sessao {
+  grid-column: 2 !important; grid-row: auto !important;
+  width: auto; height: auto; min-height: 0; overflow: hidden; align-self: stretch;
+  border-left: 1px solid rgba(139,150,173,.14);
+}
+.tv.tv-expandido .tv-curva { height: 42px; }
+
 @container (max-width: 980px) {
   .tv { grid-template-columns: minmax(0, 1.8fr) minmax(245px, .9fr); }
   .tv-topo { grid-template-columns: minmax(180px,1fr) auto; }
@@ -5445,6 +5470,11 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
   .tv-resumo-cards > span { min-height: 52px; }
   .tv-palm-feed { max-height: 84px; }
   .tv-atalhos { padding-inline: 12px; }
+  .tv.tv-expandido .tv-corpo,
+  .tv.tv-expandido .tv-painel-principal { display: contents !important; }
+  .tv.tv-expandido .tv-ops,
+  .tv.tv-expandido .tv-sessao,
+  .tv.tv-expandido .tv-palm-analise { width: auto; height: auto; margin: 0 12px 10px; }
 }
 
 @container (max-width: 430px) {
