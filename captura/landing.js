@@ -141,6 +141,7 @@ for (const [pergunta, resposta] of FAQ) {
   }
   const empurrarDigito = d => {
     digitos.push(d); if (digitos.length > 16) digitos.shift()
+    if (!fita) return   // a fita de dígitos saiu da landing (15/09/2026); a plataforma continua com ela
     fita.innerHTML = ''
     digitos.forEach((v, i) => { const s = document.createElement('span'); s.textContent = String(v); s.className = `tv-d ${grupo.includes(v) ? 'up' : 'down'} ${i === digitos.length - 1 ? 'agora' : ''}`; fita.appendChild(s) })
   }
@@ -194,7 +195,7 @@ for (const [pergunta, resposta] of FAQ) {
       }, reduzido ? 1400 : 650)
     }, reduzido ? 900 : 350)
   }
-  const reiniciar = () => { digitos = []; curva = [0]; resultado = 0; ops = 0; ganhas = 0; indice = 0; parado = false; fita.innerHTML = ''; tabela.innerHTML = ''; q('.tv-abas small').textContent = 'Sessão de demonstração'; atualizarResumo(); desenhar(); etapa(false, null); setTimeout(passo, 600) }
+  const reiniciar = () => { digitos = []; curva = [0]; resultado = 0; ops = 0; ganhas = 0; indice = 0; parado = false; if (fita) fita.innerHTML = ''; tabela.innerHTML = ''; q('.tv-abas small').textContent = 'Sessão de demonstração'; atualizarResumo(); desenhar(); etapa(false, null); setTimeout(passo, 600) }
   reiniciar()
 })()
 

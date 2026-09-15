@@ -44,7 +44,7 @@ h1,h2,h3{margin:0}
 .brilho{position:absolute;inset:0;z-index:-1;pointer-events:none}
 .hero h1{font:600 clamp(40px,4.6vw,66px)/1.05 "Playfair Display",serif;letter-spacing:-.04em}
 .hero h1 em{color:var(--cor);font-style:normal}
-[data-marca=omni] .hero h1,[data-marca=omni] h2{font-family:"DM Sans",sans-serif;font-weight:800;letter-spacing:-.045em}
+[data-marca=omni] .hero h1,[data-marca=omni] h2{font-family:"DM Sans",sans-serif!important;font-weight:800!important;letter-spacing:-.045em!important}
 .hero-texto>p{font-size:18px;line-height:1.7;color:#adb1b8;max-width:590px;margin:28px 0}
 .hero-acoes{display:flex;align-items:center;gap:20px}.hero-acoes small{color:#7a808b;font-size:12px;line-height:1.45;max-width:260px}
 .provas{list-style:none;margin:44px 0 0;padding:0;display:grid;gap:12px}
@@ -121,6 +121,14 @@ h1,h2,h3{margin:0}
 .robo-digitos{display:flex;gap:4px}.robo-digitos i{flex:1;height:26px;display:grid;place-items:center;border-radius:6px;background:#161b23;color:#6b727d;font-style:normal;font-size:12px;font-weight:700}
 .robo-digitos i.on{background:#183a2b;color:var(--verde)}
 
+/* o ativo */
+.bloco.ativo{display:grid;grid-template-columns:1.05fr .95fr;gap:60px;align-items:center;max-width:none}
+.ativo-texto h2{font:600 clamp(32px,3.6vw,50px)/1.1 "Playfair Display",serif;letter-spacing:-.03em}
+.ativo-texto p{color:#aab0b9;font-size:16px;line-height:1.75;margin:18px 0 0}.ativo-texto p b{color:var(--texto)}
+.ativo-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ativo-cards div{padding:22px;border:1px solid var(--linha);border-radius:16px;background:linear-gradient(145deg,#12171e,#0d1117);display:grid;gap:8px}
+.ativo-cards b{color:var(--cor);font-size:22px;letter-spacing:-.02em}.ativo-cards span{color:#8e949e;font-size:13.5px;line-height:1.6}
+
 /* plataforma */
 .grade{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 .grade article{padding:28px;border:1px solid var(--linha);border-radius:16px;background:linear-gradient(145deg,#12171e,#0d1117)}
@@ -188,14 +196,14 @@ footer p{text-align:center;line-height:1.6;margin:0}footer small{text-align:righ
 
 /* ------------------------------------------------------------ responsivo */
 @media(max-width:1100px){.grade{grid-template-columns:repeat(2,1fr)}.depoimentos{grid-template-columns:repeat(2,1fr)}.topo-nav{display:none}}
-@media(max-width:900px){.hero{grid-template-columns:1fr;padding-top:56px;gap:40px}.tv{transform:none}.tv-topo{flex-direction:column;align-items:flex-start;gap:10px}.tv-resumo{width:100%;justify-content:space-between}.tv-resumo span{min-width:0}.faixa{grid-template-columns:repeat(2,1fr)}.passos{grid-template-columns:1fr}.gestao,.paraquem{grid-template-columns:1fr;gap:36px}.cadastro{grid-template-columns:1fr;margin-inline:16px;padding:40px;gap:35px}footer{grid-template-columns:1fr;text-align:center}footer p,footer small{text-align:center}.bloco{padding-block:72px}.cta-fixo{display:flex}}
-@media(max-width:520px){.hero h1{font-size:36px}.hero-acoes{align-items:flex-start;flex-direction:column}.botao{width:100%}.faixa{grid-template-columns:1fr}.grade,.depoimentos{grid-template-columns:1fr}.cadastro{padding:22px}.form-top{display:grid;gap:4px}.topo-acao{display:none}.tv-tabela .oculta{display:none}.tv-fluxo{grid-template-columns:1fr}.tv-linha{display:none}.tv-etapa:last-child{display:none}.tv-resumo{flex-wrap:wrap;gap:10px 16px}.tv-resumo .tv-res{flex-basis:100%}.bloco-cab h2{font-size:29px}}
+@media(max-width:900px){.hero{grid-template-columns:1fr;padding-top:56px;gap:40px}.bloco.ativo{grid-template-columns:1fr;gap:30px}.tv{transform:none}.tv-topo{flex-direction:column;align-items:flex-start;gap:10px}.tv-resumo{width:100%;justify-content:space-between}.tv-resumo span{min-width:0}.faixa{grid-template-columns:repeat(2,1fr)}.passos{grid-template-columns:1fr}.gestao,.paraquem{grid-template-columns:1fr;gap:36px}.cadastro{grid-template-columns:1fr;margin-inline:16px;padding:40px;gap:35px}footer{grid-template-columns:1fr;text-align:center}footer p,footer small{text-align:center}.bloco{padding-block:72px}.cta-fixo{display:flex}}
+@media(max-width:520px){.hero h1{font-size:36px}.hero-acoes{align-items:flex-start;flex-direction:column}.botao{width:100%}.faixa{grid-template-columns:1fr}.grade,.depoimentos,.ativo-cards{grid-template-columns:1fr}.cadastro{padding:22px}.form-top{display:grid;gap:4px}.topo-acao{display:none}.tv-tabela .oculta{display:none}.tv-fluxo{grid-template-columns:1fr}.tv-linha{display:none}.tv-etapa:last-child{display:none}.tv-resumo{flex-wrap:wrap;gap:10px 16px}.tv-resumo .tv-res{flex-basis:100%}.bloco-cab h2{font-size:29px}}
 </style>
 </head>
 <body>
   <header class="topo">
     <a class="marca" href="#inicio" aria-label="Início"><span class="simbolo"><img data-logo alt=""></span><span class="assinatura"><strong data-marca></strong><small data-assinatura></small></span></a>
-    <nav class="topo-nav" aria-label="Seções"><a href="#como-funciona">Como funciona</a><a href="#robos">Robôs</a><a href="#plataforma">Plataforma</a><a href="#depoimentos">Resultados</a><a href="#faq">Dúvidas</a></nav>
+    <nav class="topo-nav" aria-label="Seções"><a href="#como-funciona">Como funciona</a><a href="#robos">Robôs</a><a href="#ativo">O ativo</a><a href="#plataforma">Plataforma</a><a href="#depoimentos">Resultados</a><a href="#faq">Dúvidas</a></nav>
     <a class="topo-acao" href="#cadastro">Quero conhecer</a>
   </header>
 
@@ -227,10 +235,6 @@ footer p{text-align:center;line-height:1.6;margin:0}footer small{text-align:righ
           <div class="tv-etapa ativa"><i data-demo-etapa1>1</i><span><b data-demo-etapa1-titulo>Aguardando entrada</b><small data-demo-etapa1-sub>monitorando o mercado</small><em>Próxima entrada <strong data-demo-entrada>3,00 <i>USD</i></strong></em></span></div>
           <div class="tv-linha"><span data-demo-linha-progresso></span></div>
           <div class="tv-etapa" data-demo-etapa2><i>2</i><span><b>Contrato fechado</b><small data-demo-etapa2-sub>próxima etapa</small></span></div>
-        </div>
-        <div class="tv-fita-bloco">
-          <span class="tv-rot">Dígitos do mercado — os verdes fazem o robô ganhar</span>
-          <div class="tv-fita" data-demo-fita></div>
         </div>
         <div class="tv-sessao">
           <div class="tv-meta"><span><i>Margem até o stop</i><b class="down" data-demo-stop>USD 100,00</b></span><span class="atual"><i>Resultado atual</i><b class="up" data-demo-atual>+0,00 USD</b></span><span><i>Falta para a meta</i><b class="up" data-demo-falta>USD 200,00</b></span></div>
@@ -269,6 +273,22 @@ footer p{text-align:center;line-height:1.6;margin:0}footer small{text-align:righ
       <div class="bloco-cab"><span class="sobretitulo">Os robôs</span><h2>Cada robô tem uma regra. Você sabe exatamente o que ele faz.</h2><p>Todos operam dígitos no índice Volatility 75, um ativo sintético que funciona 24 horas por dia, 7 dias por semana. A regra de entrada é aberta; a gestão de risco é sua.</p></div>
       <div class="robos" data-robos></div>
       <p class="nota">Cada robô mostra, ao vivo, os dígitos que está lendo, a entrada armada e o histórico de cada contrato. Nada acontece escondido.</p>
+    </section>
+
+    <!-- ============================================================ O ATIVO -->
+    <section class="bloco ativo" id="ativo">
+      <div class="ativo-texto">
+        <span class="sobretitulo">O ativo</span>
+        <h2>Um índice feito para estratégia, não para notícia.</h2>
+        <p>Os robôs operam o <b>Volatility 75 Index</b>, um índice que mede a volatilidade do mercado no espaço de 75 movimentações. Por isso ele é mais estável e tem um ritmo mais previsível do que moedas e ações: é o cenário ideal para a estratégia do robô ser aplicada com consistência, do jeito que foi desenhada.</p>
+        <p>Ele funciona 24 horas por dia, 7 dias por semana, sem abrir e fechar pregão, sem notícia derrubando o gráfico e sem gap de um dia para o outro. O robô lê o último dígito de cada movimento e entra só quando a regra dele é atendida.</p>
+      </div>
+      <div class="ativo-cards">
+        <div><b>24/7</b><span>Opera de madrugada, fim de semana e feriado. O mercado nunca para.</span></div>
+        <div><b>Sem notícia</b><span>Nenhum discurso de banco central ou balanço de empresa muda o ritmo do índice.</span></div>
+        <div><b>Sem gap</b><span>Não existe abertura de pregão: o preço anda tick a tick, sem saltos.</span></div>
+        <div><b>Dígitos</b><span>A regra do robô olha o último dígito de cada movimento. Simples de ler, simples de conferir.</span></div>
+      </div>
     </section>
 
     <!-- ========================================================= PLATAFORMA -->
@@ -509,6 +529,7 @@ for (const [pergunta, resposta] of FAQ) {
   }
   const empurrarDigito = d => {
     digitos.push(d); if (digitos.length > 16) digitos.shift()
+    if (!fita) return   // a fita de dígitos saiu da landing (15/09/2026); a plataforma continua com ela
     fita.innerHTML = ''
     digitos.forEach((v, i) => { const s = document.createElement('span'); s.textContent = String(v); s.className = `tv-d ${grupo.includes(v) ? 'up' : 'down'} ${i === digitos.length - 1 ? 'agora' : ''}`; fita.appendChild(s) })
   }
@@ -562,7 +583,7 @@ for (const [pergunta, resposta] of FAQ) {
       }, reduzido ? 1400 : 650)
     }, reduzido ? 900 : 350)
   }
-  const reiniciar = () => { digitos = []; curva = [0]; resultado = 0; ops = 0; ganhas = 0; indice = 0; parado = false; fita.innerHTML = ''; tabela.innerHTML = ''; q('.tv-abas small').textContent = 'Sessão de demonstração'; atualizarResumo(); desenhar(); etapa(false, null); setTimeout(passo, 600) }
+  const reiniciar = () => { digitos = []; curva = [0]; resultado = 0; ops = 0; ganhas = 0; indice = 0; parado = false; if (fita) fita.innerHTML = ''; tabela.innerHTML = ''; q('.tv-abas small').textContent = 'Sessão de demonstração'; atualizarResumo(); desenhar(); etapa(false, null); setTimeout(passo, 600) }
   reiniciar()
 })()
 
