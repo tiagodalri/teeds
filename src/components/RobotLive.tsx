@@ -151,12 +151,12 @@ export function RobotLive({
     : conexao !== 'open'
       ? { chave: 'sem-sinal', texto: conexao === 'connecting' || conexao === 'reconnecting' ? 'Reconectando' : 'Sem conexão' }
     : emCurso
-      ? { chave: 'operando', texto: 'Operação em andamento' }
+      ? { chave: 'operando', texto: 'Operando' }
       : estado.emOperacao
-        ? { chave: 'operando', texto: 'Enviando ordem…' }
+        ? { chave: 'operando', texto: 'Enviando ordem' }
         : estado.perdasSeguidas >= 1
-          ? { chave: 'recuperando', texto: 'Aguardando entrada de recuperação' }
-          : { chave: 'cacando', texto: 'Analisando mercado' }
+          ? { chave: 'recuperando', texto: 'Recuperando' }
+          : { chave: 'cacando', texto: 'Analisando' }
 
   return (
     <div className={`tv tv-cockpit ${fase.chave} ${expandido ? 'tv-expandido' : ''}`}>
