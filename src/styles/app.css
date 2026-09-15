@@ -26,10 +26,10 @@
    As mesmas variaveis, com a noite ligada. Quem usa var() nao precisa
    saber que o tema mudou. A cabine do robo ja era escura e continua igual. */
 :root[data-tema='escuro'] {
-  --bg: #0b0c0f;
-  --surface: #101216;
-  --surface-alt: #15171c;
-  --border: #292b31;
+  --bg: #10121a;
+  --surface: #151820;
+  --surface-alt: #1b1f28;
+  --border: #2f333c;
   --text: #f0eee8;
   --muted: #99978f;
   --primary: #d0aa52;
@@ -40,8 +40,8 @@
   --down-soft: rgba(240, 85, 90, 0.16);
   --account-demo: #ffad60;
   --account-demo-soft: rgba(255, 149, 58, .14);
-  --desativado: #383940;
-  --trilho: #2c2d32;
+  --desativado: #3d3f48;
+  --trilho: #32353d;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.35);
   color-scheme: dark;
 }
@@ -1464,7 +1464,7 @@ button, input { font: inherit; color: inherit; }
 .tv {
   background:
     radial-gradient(80% 28% at 50% 0%, rgba(208, 170, 82, .10), transparent 100%),
-    linear-gradient(180deg, #16171b, #0b0c0f);
+    linear-gradient(180deg, #1b1e27, #10121a);
   border-color: rgba(208, 170, 82, .22);
   transition: box-shadow .24s ease, border-color .24s ease, transform .24s ease;
 }
