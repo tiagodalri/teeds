@@ -35,6 +35,10 @@ document.querySelectorAll('[data-logo]').forEach(el => { el.src = config.emblema
 document.querySelectorAll('[data-assinatura]').forEach(el => { el.textContent = config.assinatura })
 document.querySelector('[data-intro]').textContent = config.intro
 document.title = `${config.nome} · Robôs de operação com gestão de risco`
+document.querySelector('[data-favicon-ico]').href = `/pwa-${marca}/favicon.ico`
+document.querySelectorAll('[data-favicon]').forEach(el => { el.href = `/pwa-${marca}/favicon-${el.dataset.favicon}.png` })
+document.querySelector('[data-apple-icon]').href = `/pwa-${marca}/icon-180.png`
+document.querySelector('meta[name="theme-color"]').content = marca === 'omni' ? '#081525' : '#090a0d'
 
 /* ------------------------------------------------------------- robôs */
 /* Só o nome e uma frase: como cada um decide, a pessoa descobre por dentro. */
@@ -237,7 +241,7 @@ for (const [pergunta, resposta] of FAQ) {
   let parado = false
   const passo = () => {
     if (parado) return
-    if (indice >= roteiro.length) { q('[data-demo-fase]').textContent = 'Meta atingida'; q('.tv-abas small').textContent = 'Meta batida · sessão encerrada'; q('[data-demo-etapa1-titulo]').textContent = 'Meta atingida'; q('[data-demo-etapa1-sub]').textContent = 'o robô encerrou sozinho'; parado = true; setTimeout(reiniciar, 9000); return }
+    if (indice >= roteiro.length) { q('[data-demo-fase]').textContent = 'Meta atingida'; q('[data-demo-etapa1-titulo]').textContent = 'Meta atingida'; q('[data-demo-etapa1-sub]').textContent = 'o robô encerrou sozinho'; parado = true; setTimeout(reiniciar, 9000); return }
     const op = roteiro[indice]
     // tick de espera (dígito qualquer), depois compra, depois resultado
     empurrarDigito(escolher([...grupo, ...fora]))
@@ -258,7 +262,7 @@ for (const [pergunta, resposta] of FAQ) {
       }, reduzido ? 1400 : 650)
     }, reduzido ? 900 : 350)
   }
-  const reiniciar = () => { digitos = []; curva = [0]; resultado = 0; ops = 0; ganhas = 0; indice = 0; parado = false; if (fita) fita.innerHTML = ''; tabela.innerHTML = ''; q('.tv-abas small').textContent = 'Sessão de demonstração'; atualizarResumo(); desenhar(); etapa(false, null); setTimeout(passo, 600) }
+  const reiniciar = () => { digitos = []; curva = [0]; resultado = 0; ops = 0; ganhas = 0; indice = 0; parado = false; if (fita) fita.innerHTML = ''; tabela.innerHTML = ''; atualizarResumo(); desenhar(); etapa(false, null); setTimeout(passo, 600) }
   reiniciar()
 })()
 
