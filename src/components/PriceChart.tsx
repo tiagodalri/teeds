@@ -35,7 +35,22 @@ interface Props {
   markers?: ContractMarker[]
   /** Indicadores técnicos selecionados no painel. */
   indicators?: string[]
+  /** Código do ativo, para guardar os desenhos por ativo. */
+  symbol?: string
 }
+
+/** Ferramentas de desenho do gráfico. */
+type Ferramenta = 'cursor' | 'horizontal' | 'vertical' | 'tendencia'
+type Desenho =
+  | { id: number; tipo: 'horizontal'; preco: number }
+  | { id: number; tipo: 'vertical'; epoch: number }
+  | { id: number; tipo: 'tendencia'; a: { epoch: number; preco: number }; b: { epoch: number; preco: number } }
+const FERRAMENTAS: Array<{ id: Ferramenta; rotulo: string; icone: string }> = [
+  { id: 'cursor', rotulo: 'Cursor (arrastar o gráfico)', icone: 'M5 3l14 8-6 2-3 6z' },
+  { id: 'horizontal', rotulo: 'Linha horizontal', icone: 'M3 12h18M6 12v-2M18 12v2' },
+  { id: 'vertical', rotulo: 'Linha vertical', icone: 'M12 3v18M12 6h2M12 18h-2' },
+  { id: 'tendencia', rotulo: 'Linha de tendência (dois cliques)', icone: 'M4 18L20 6M4 18l2-1M20 6l-2 1' },
+]
 
 interface Cursor {
   x: number
@@ -47,7 +62,7 @@ interface Cursor {
  * Grafico da Teeds - desenhado do zero em canvas.
  * Sem bibliotecas de terceiros: controle total sobre desenho e interacao.
  */
-export function PriceChart({ candles, mode, pipSize, symbolName, loading, markers = [], indicators = [] }: Props) {
+export function PriceChart({ candles, mode, pipSize, symbolName, loading, markers = [], indicators = [], symbol = '' }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -55,6 +70,28 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
   const [cursor, setCursor] = useState<Cursor | null>(null)
   const [agora, setAgora] = useState(() => Math.floor(Date.now() / 1000))
   const drag = useRef<{ x: number; offset: number } | null>(null)
+
+  // ---------------------------------------------- ferramentas de desenho
+  // Linhas horizontais, verticais e de tendência, guardadas por ativo no
+  // navegador. Nada disso vai ao servidor: é anotação de quem opera.
+  const chaveDesenhos = `${MARCA.id}.desenhos.${symbol || symbolName}`
+  const [ferramenta, setFerramenta] = useState<Ferramenta>('cursor')
+  const [desenhos, setDesenhos] = useState<Desenho[]>([])
+  const [pendente, setPendente] = useState<{ epoch: number; preco: number } | null>(null)
+  useEffect(() => {
+    try { const bruto = localStorage.getItem(chaveDesenhos); setDesenhos(bruto ? (JSON.parse(bruto) as Desenho[]) : []) } catch { setDesenhos([]) }
+    setPendente(null)
+  }, [chaveDesenhos])
+  const guardarDesenhos = (lista: Desenho[]) => { setDesenhos(lista); try { localStorage.setItem(chaveDesenhos, JSON.stringify(lista)) } catch { /* fica só na sessão */ } }
+  const desfazer = () => guardarDesenhos(desenhos.slice(0, -1))
+  const apagarTudo = () => { guardarDesenhos([]); setPendente(null) }
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => {
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement)?.tagName ?? '')) return
+      if (e.key === 'Escape') { setPendente(null); setFerramenta('cursor') }
+    }
+    window.addEventListener('keydown', tecla); return () => window.removeEventListener('keydown', tecla)
+  }, [])
 
   useEffect(() => {
     if (!markers.length) return
@@ -221,28 +258,34 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
         ctx.stroke()
       }
 
-      // --- indicadores técnicos. São calculados sobre a janela visível para
-      // manter o gráfico leve mesmo quando o mercado envia muitos ticks.
+      // --- indicadores técnicos. Calculados sobre a janela visível MAIS as
+      // velas anteriores a ela (o "aquecimento" do período), para a linha
+      // cobrir o gráfico inteiro em vez de nascer no 20º candle. Onde não há
+      // histórico anterior, a janela encurta em vez de deixar buraco.
+      const contextoIni = Math.max(0, view.start - 120)
+      const serie = candles.slice(contextoIni, view.start + items.length).map((c) => c.close)
+      const desloc = view.start - contextoIni
       const closes = items.map((c) => c.close)
       const desenharLinha = (valores: Array<number | null>, cor: string, largura = 1.5) => {
         ctx.save(); ctx.beginPath(); let iniciou = false
-        valores.forEach((valor, i) => {
-          if (valor == null) return
+        for (let i = 0; i < items.length; i++) {
+          const valor = valores[i + desloc]
+          if (valor == null) continue
           const x = toX(i); const y = toY(valor)
           if (!iniciou) { ctx.moveTo(x, y); iniciou = true } else ctx.lineTo(x, y)
-        })
+        }
         ctx.strokeStyle = cor; ctx.lineWidth = largura; ctx.lineJoin = 'round'; ctx.stroke(); ctx.restore()
       }
       if (indicators.includes('bollinger')) {
-        const bandas = bollinger(closes, 20)
+        const bandas = bollinger(serie, 20)
         ctx.save(); ctx.beginPath(); let comecou = false
-        bandas.superior.forEach((v, i) => { if (v == null) return; const x=toX(i), y=toY(v); if (!comecou) { ctx.moveTo(x,y); comecou=true } else ctx.lineTo(x,y) })
-        for (let i=bandas.inferior.length-1;i>=0;i--) { const v=bandas.inferior[i]; if (v!=null) ctx.lineTo(toX(i),toY(v)) }
+        for (let i = 0; i < items.length; i++) { const v = bandas.superior[i + desloc]; if (v == null) continue; const x=toX(i), y=toY(v); if (!comecou) { ctx.moveTo(x,y); comecou=true } else ctx.lineTo(x,y) }
+        for (let i = items.length - 1; i >= 0; i--) { const v = bandas.inferior[i + desloc]; if (v != null) ctx.lineTo(toX(i), toY(v)) }
         ctx.closePath(); ctx.fillStyle='rgba(124, 92, 255, .075)'; ctx.fill(); ctx.restore()
         desenharLinha(bandas.superior, '#8f79ff', 1); desenharLinha(bandas.inferior, '#8f79ff', 1)
       }
-      if (indicators.includes('sma')) desenharLinha(mediaSimples(closes, 20), '#e0b84f', 1.8)
-      if (indicators.includes('ema')) desenharLinha(mediaExponencial(closes, 50), '#35a9ff', 1.7)
+      if (indicators.includes('sma')) desenharLinha(mediaSimples(serie, 20), '#e0b84f', 1.8)
+      if (indicators.includes('ema')) desenharLinha(mediaExponencial(serie, 50), '#35a9ff', 1.7)
       if (indicators.includes('fibonacci')) {
         const maximo = Math.max(...items.map((c) => c.high))
         const minimo = Math.min(...items.map((c) => c.low))
@@ -444,6 +487,48 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
         }
       }
 
+      // --- desenhos de quem opera: linhas horizontais, verticais e de tendência
+      {
+        const passoT = items.length > 1 ? (items[1].epoch - items[0].epoch || 60) : 60
+        const inicioT = items[0].epoch
+        const xDe = (epoch: number) => plot.x + ((epoch - inicioT) / passoT) * stepX + stepX / 2
+        const dentroX = (x: number) => x >= plot.x && x <= plot.x + plot.w
+        ctx.save()
+        ctx.font = '600 10px ui-sans-serif, -apple-system, system-ui, sans-serif'
+        const etiqueta = (texto: string, x: number, y: number, cor: string) => {
+          const tw = ctx.measureText(texto).width
+          ctx.fillStyle = cor; roundRect(ctx, x, y, tw + 10, 16, 4); ctx.fill()
+          ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(texto, x + 5, y + 8)
+        }
+        const corDesenho = T.primary
+        const previa = pendente && cursor && ferramenta === 'tendencia'
+          ? { tipo: 'tendencia' as const, a: pendente, b: { epoch: inicioT + ((cursor.x - plot.x - stepX / 2) / stepX) * passoT, preco: range.max - ((cursor.y - plot.y) / plot.h) * (range.max - range.min) } }
+          : null
+        for (const d of [...desenhos, ...(previa ? [previa] : [])]) {
+          ctx.setLineDash(d === previa ? [4, 4] : [])
+          ctx.strokeStyle = corDesenho; ctx.lineWidth = 1.25; ctx.globalAlpha = d === previa ? .7 : .95
+          if (d.tipo === 'horizontal') {
+            const y = toY(d.preco); if (y < plot.y || y > plot.y + plot.h) continue
+            ctx.beginPath(); ctx.moveTo(plot.x, Math.round(y) + .5); ctx.lineTo(plot.x + plot.w, Math.round(y) + .5); ctx.stroke()
+            etiqueta(formatPrice(d.preco, pipSize), plot.x + plot.w + 4, y - 8, corDesenho)
+          } else if (d.tipo === 'vertical') {
+            const x = xDe(d.epoch); if (!dentroX(x)) continue
+            ctx.beginPath(); ctx.moveTo(Math.round(x) + .5, plot.y); ctx.lineTo(Math.round(x) + .5, plot.y + plot.h); ctx.stroke()
+            etiqueta(formatDateTime(d.epoch), Math.min(x - 30, plot.x + plot.w - 90), plot.y + plot.h - 20, corDesenho)
+          } else {
+            const x1 = xDe(d.a.epoch), y1 = toY(d.a.preco), x2 = xDe(d.b.epoch), y2 = toY(d.b.preco)
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke()
+            // prolonga para a direita, mais fraca: a tendência continua
+            if (x2 !== x1) {
+              const xFim = plot.x + plot.w, yFim = y2 + ((y2 - y1) / (x2 - x1)) * (xFim - x2)
+              ctx.globalAlpha = .3; ctx.setLineDash([3, 5]); ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(xFim, yFim); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = d === previa ? .7 : .95
+            }
+            for (const [px, py] of [[x1, y1], [x2, y2]]) { ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fillStyle = corDesenho; ctx.fill() }
+          }
+        }
+        ctx.restore()
+      }
+
       // --- crosshair
       if (cursor && cursor.index >= 0 && cursor.index < items.length) {
         const cx = toX(cursor.index)
@@ -475,7 +560,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
     cancelAnimationFrame(frameRef.current)
     frameRef.current = requestAnimationFrame(pintar)
     return () => cancelAnimationFrame(frameRef.current)
-  }, [size, view.items, range, plot, mode, pipSize, cursor, stepX, toX, toY, markers, indicators, agora])
+  }, [size, view.items, view.start, candles, range, plot, mode, pipSize, cursor, stepX, toX, toY, markers, indicators, agora, desenhos, pendente, ferramenta])
 
   // ------------------------------------------------------------ interacao
   const onWheel = useCallback((e: React.WheelEvent) => {
@@ -487,7 +572,29 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
     })
   }, [])
 
+  const pontoEm = (clientX: number, clientY: number) => {
+    const rect = canvasRef.current?.getBoundingClientRect()
+    const items = view.items
+    if (!rect || !items.length || stepX <= 0) return null
+    const x = clientX - rect.left, y = clientY - rect.top
+    if (x < plot.x || x > plot.x + plot.w || y < plot.y || y > plot.y + plot.h) return null
+    const passo = items.length > 1 ? (items[1].epoch - items[0].epoch || 60) : 60
+    return {
+      preco: range.max - ((y - plot.y) / plot.h) * (range.max - range.min),
+      epoch: items[0].epoch + ((x - plot.x - stepX / 2) / stepX) * passo,
+    }
+  }
   const onPointerDown = (e: React.PointerEvent) => {
+    if (ferramenta !== 'cursor') {
+      const p = pontoEm(e.clientX, e.clientY)
+      if (!p) return
+      const id = Date.now()
+      if (ferramenta === 'horizontal') guardarDesenhos([...desenhos, { id, tipo: 'horizontal', preco: p.preco }])
+      else if (ferramenta === 'vertical') guardarDesenhos([...desenhos, { id, tipo: 'vertical', epoch: Math.round(p.epoch) }])
+      else if (!pendente) setPendente(p)
+      else { guardarDesenhos([...desenhos, { id, tipo: 'tendencia', a: pendente, b: p }]); setPendente(null) }
+      return
+    }
     ;(e.target as Element).setPointerCapture(e.pointerId)
     drag.current = { x: e.clientX, offset: vp.offset }
   }
@@ -529,6 +636,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
       <canvas
         ref={canvasRef}
         style={{ width: '100%', height: '100%', display: 'block', cursor: drag.current ? 'grabbing' : 'crosshair' }}
+        aria-label={ferramenta === 'cursor' ? 'Gráfico' : `Gráfico: clique para colocar ${FERRAMENTAS.find((f) => f.id === ferramenta)?.rotulo.toLowerCase()}`}
         onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -539,6 +647,21 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
           setCursor(null)
         }}
       />
+
+      <div className="chart-ferramentas" role="toolbar" aria-label="Ferramentas de desenho">
+        {FERRAMENTAS.map((f) => (
+          <button key={f.id} type="button" className={ferramenta === f.id ? 'on' : ''} aria-pressed={ferramenta === f.id} title={f.rotulo} aria-label={f.rotulo}
+            onClick={() => { setFerramenta(f.id); setPendente(null) }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={f.icone} /></svg>
+          </button>
+        ))}
+        {desenhos.length > 0 && <>
+          <i className="sep" aria-hidden="true" />
+          <button type="button" title="Desfazer o último desenho" aria-label="Desfazer o último desenho" onClick={desfazer}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3" /></svg></button>
+          <button type="button" title="Apagar todos os desenhos" aria-label="Apagar todos os desenhos" onClick={apagarTudo}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" /></svg></button>
+        </>}
+        {ferramenta === 'tendencia' && <span className="dica">{pendente ? 'clique no segundo ponto' : 'clique no primeiro ponto'}</span>}
+      </div>
 
       {markers.length > 0 && <div className="chart-contratos" aria-live="polite">
         {markers.map((m) => {
@@ -584,14 +707,21 @@ function tempoRestante(segundos: number) {
     : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
+/* No começo da série (sem histórico anterior) a janela encurta, em vez de
+   devolver nulo: assim a linha cobre o gráfico do primeiro ao último candle. */
 function mediaSimples(valores: number[], periodo: number): Array<number | null> {
-  return valores.map((_, i) => i < periodo - 1 ? null : valores.slice(i - periodo + 1, i + 1).reduce((a, b) => a + b, 0) / periodo)
+  const saida: number[] = []; let soma = 0
+  for (let i = 0; i < valores.length; i++) {
+    soma += valores[i]; if (i >= periodo) soma -= valores[i - periodo]
+    saida.push(soma / Math.min(i + 1, periodo))
+  }
+  return saida
 }
 
 function mediaExponencial(valores: number[], periodo: number): Array<number | null> {
   if (!valores.length) return []
   const k = 2 / (periodo + 1); let atual = valores[0]
-  return valores.map((valor, i) => { atual = i ? valor * k + atual * (1 - k) : valor; return i < periodo - 1 ? null : atual })
+  return valores.map((valor, i) => { atual = i ? valor * k + atual * (1 - k) : valor; return atual })
 }
 
 function bollinger(valores: number[], periodo: number) {
@@ -599,8 +729,8 @@ function bollinger(valores: number[], periodo: number) {
   const superior: Array<number | null> = []; const inferior: Array<number | null> = []
   media.forEach((m, i) => {
     if (m == null) { superior.push(null); inferior.push(null); return }
-    const janela = valores.slice(i - periodo + 1, i + 1)
-    const desvio = Math.sqrt(janela.reduce((s, v) => s + Math.pow(v - m, 2), 0) / periodo)
+    const janela = valores.slice(Math.max(0, i - periodo + 1), i + 1)
+    const desvio = Math.sqrt(janela.reduce((s, v) => s + Math.pow(v - m, 2), 0) / janela.length)
     superior.push(m + 2 * desvio); inferior.push(m - 2 * desvio)
   })
   return { superior, inferior }

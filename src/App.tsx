@@ -662,7 +662,7 @@ export default function App() {
             </div>
           </div>
 
-          <PriceChart candles={candles} mode={mode} pipSize={pipSize}
+          <PriceChart candles={candles} mode={mode} pipSize={pipSize} symbol={symbolCode ?? undefined}
             symbolName={activeSymbol?.name ?? ''} loading={loadingCandles}
             markers={marcadores} indicators={indicadores} />
         </main>

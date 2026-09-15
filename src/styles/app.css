@@ -179,6 +179,13 @@ button, input { font: inherit; color: inherit; }
 .chart-contratos .abaixo span { color: var(--down); }
 .chart-contratos b { justify-self: end; font-size: 15px; font-variant-numeric: tabular-nums; letter-spacing: .03em; }
 .chart-contratos small { grid-column: 1 / -1; color: var(--muted); font-size: 8.5px; }
+.chart-ferramentas { position: absolute; z-index: 3; top: 10px; left: 10px; display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: color-mix(in srgb, var(--bg) 84%, transparent); backdrop-filter: blur(10px); }
+.chart-ferramentas button { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 8px; color: var(--muted); background: transparent; cursor: pointer; transition: background .12s, color .12s; }
+.chart-ferramentas button:hover { color: var(--text); background: var(--surface-alt); }
+.chart-ferramentas button.on { color: var(--primary); background: var(--primary-soft); }
+.chart-ferramentas button svg { width: 17px; height: 17px; }
+.chart-ferramentas .sep { width: 1px; height: 18px; margin: 0 3px; background: var(--border); }
+.chart-ferramentas .dica { padding: 0 8px 0 4px; color: var(--muted); font-size: 10.5px; white-space: nowrap; }
 .chart-loading {
   position: absolute; inset: 0; display: grid; place-items: center;
   color: var(--muted); font-size: 13px; pointer-events: none;
@@ -3776,7 +3783,8 @@ details.go-planilha:not([open]) { padding-bottom: 19px; }
   .indicadores { padding: 8px 12px; align-items: flex-start; flex-direction: column; gap: 6px; }
   .indicadores > div { width: 100%; }
   .chart-tip { display: none; }
-  .chart-contratos { top: 22px; right: 48px; max-width: 154px; }
+  .chart-contratos { top: 48px; right: 12px; max-width: 154px; }
+  .chart-ferramentas { top: 8px; left: 8px; } .chart-ferramentas button { width: 32px; height: 32px; } .chart-ferramentas .dica { display: none; }
   .chart-contratos > div { min-width: 142px; padding: 6px 8px; gap: 1px 8px; }
   .chart-contratos b { font-size: 13px; }
   .chart-marca { gap: 8px; }
