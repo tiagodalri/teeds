@@ -180,11 +180,8 @@ export function RobotLive({
             <button className={`tv-btn ${digitosAberto ? 'on' : ''}`} onClick={onDigitos}
               title="Frequência dos últimos dígitos do ativo, ao vivo">Dígitos</button>
           )}
-          {onExpandir && (
-            <button className={`tv-btn ${expandido ? 'on' : ''}`} onClick={onExpandir}>
-              {expandido ? 'Ver todos' : 'Focar'}
-            </button>
-          )}
+          {/* O botão "Focar" (modo foco de um robô só) foi retirado a pedido do Tiago em 15/09/2026:
+              atrapalhava mais do que ajudava. O modo continua no código, sem porta de entrada. */}
           {estado.rodando && onDesligar && (
             <button className="tv-btn parar" onClick={onDesligar}>Desligar</button>
           )}
