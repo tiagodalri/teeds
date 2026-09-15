@@ -28,6 +28,11 @@ interface Props {
 
 const VELOCIDADES = [1, 1.25, 1.5, 2]
 const CONTAGEM = 5
+type VideoSafari = HTMLVideoElement & {
+  webkitEnterFullscreen?: () => void
+  webkitExitFullscreen?: () => void
+  webkitDisplayingFullscreen?: boolean
+}
 
 const fmt = (s: number) => {
   if (!Number.isFinite(s) || s < 0) s = 0
@@ -48,6 +53,7 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
   const [velocidade, setVelocidade] = useState(1)
   const [menuVel, setMenuVel] = useState(false)
   const [cheia, setCheia] = useState(false)
+  const [erroCheia, setErroCheia] = useState('')
   const [visivel, setVisivel] = useState(true)
   const [esperando, setEsperando] = useState(false)
   const [acabou, setAcabou] = useState(false)
@@ -80,10 +86,24 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
     v.currentTime = Math.min(Math.max(0, fracao), 1) * v.duration
     setTempo(v.currentTime)
   }
-  const telaCheia = useCallback(() => {
-    const c = caixa.current; if (!c) return
-    if (document.fullscreenElement) void document.exitFullscreen()
-    else void c.requestFullscreen?.()
+  const telaCheia = useCallback(async () => {
+    const c = caixa.current, v = video.current as VideoSafari | null
+    if (!c || !v) return
+    setErroCheia('')
+    try {
+      if (v.webkitDisplayingFullscreen && v.webkitExitFullscreen) v.webkitExitFullscreen()
+      else if (document.fullscreenElement) await document.exitFullscreen()
+      else if (v.webkitEnterFullscreen && !document.fullscreenEnabled) v.webkitEnterFullscreen()
+      else if (c.requestFullscreen) {
+        try { await c.requestFullscreen() }
+        catch (erro) { if (v.webkitEnterFullscreen) v.webkitEnterFullscreen(); else throw erro }
+      } else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen()
+      else throw new Error('Fullscreen indisponível')
+    } catch {
+      v.controls = true
+      setErroCheia('Não foi possível abrir a tela cheia. Inicie o vídeo e tente novamente pelos controles do vídeo.')
+      setVisivel(true)
+    }
   }, [])
   const mudar = useCallback(() => { const v = video.current; if (v) { v.muted = !v.muted; setMudo(v.muted) } }, [])
   const trocarVelocidade = (x: number) => { const v = video.current; if (v) v.playbackRate = x; setVelocidade(x); setMenuVel(false) }
@@ -121,9 +141,19 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
   useEffect(() => { retomou.current = false; setAcabou(false); setContagem(null); setTempo(0); setCarregado(0); setEsperando(false) }, [src])
 
   useEffect(() => {
-    const f = () => setCheia(Boolean(document.fullscreenElement))
-    document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f)
-  }, [])
+    const v = video.current
+    const f = () => setCheia(document.fullscreenElement === caixa.current)
+    const entrar = () => setCheia(true)
+    const sair = () => { setCheia(false); acordar() }
+    document.addEventListener('fullscreenchange', f)
+    v?.addEventListener('webkitbeginfullscreen', entrar)
+    v?.addEventListener('webkitendfullscreen', sair)
+    return () => {
+      document.removeEventListener('fullscreenchange', f)
+      v?.removeEventListener('webkitbeginfullscreen', entrar)
+      v?.removeEventListener('webkitendfullscreen', sair)
+    }
+  }, [acordar])
 
   /* ------------------------------------------- próxima aula em 5, 4, 3… */
   useEffect(() => {
@@ -170,6 +200,7 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
     <div ref={caixa} className={`cine-player ${visivel || !tocando ? 'com-controles' : 'sem-controles'} ${cheia ? 'cheia' : ''}`}
       onMouseMove={acordar} onMouseLeave={() => { if (tocando) setVisivel(false) }} onClick={(e) => { if (e.target === e.currentTarget) alternar() }}>
       <video ref={video} src={src} playsInline preload="metadata" autoPlay onClick={alternar} onDoubleClick={telaCheia} />
+      {erroCheia && <p className="cine-erro-cheia" role="status">{erroCheia}</p>}
 
       {esperando && !acabou && <div className="cine-carregando" aria-hidden><i /></div>}
 
