@@ -40,7 +40,7 @@ h1,h2,h3{margin:0}
 .nota{max-width:760px;margin:34px auto 0;text-align:center;color:#7f858f;font-size:13px;line-height:1.6}
 
 /* -------------------------------------------------------------- hero */
-.hero{max-width:1240px;margin:auto;padding:84px 24px 70px;display:grid;grid-template-columns:1.05fr .95fr;align-items:center;gap:60px;position:relative}
+.hero{max-width:1240px;margin:auto;padding:84px 24px 70px;display:grid;grid-template-columns:.95fr 1.05fr;align-items:center;gap:50px;position:relative}
 .brilho{position:absolute;inset:0;z-index:-1;pointer-events:none}
 .hero h1{font:600 clamp(40px,4.6vw,66px)/1.05 "Playfair Display",serif;letter-spacing:-.04em}
 .hero h1 em{color:var(--cor);font-style:normal}
@@ -52,33 +52,45 @@ h1,h2,h3{margin:0}
 .provas li b{flex-shrink:0;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:#183a2b;color:var(--verde);font-size:12px}
 .provas strong{color:var(--texto)}
 
-/* --------------------------------------------------- cabine animada */
-.cabine{position:relative;border:1px solid #2a303a;border-radius:20px;background:linear-gradient(160deg,#141922,#0a0d12);box-shadow:0 45px 90px #000a,0 0 0 1px color-mix(in srgb,var(--cor) 18%,transparent);overflow:hidden;padding:18px 20px 16px;display:grid;gap:12px;transform:perspective(1200px) rotateY(-3deg)}
-[data-marca=omni] .cabine{background:linear-gradient(160deg,#121d2b,#080d14);border-color:#26384d}
-.cabine-topo{display:flex;align-items:center;gap:12px}
-.cabine-farol{width:9px;height:9px;border-radius:50%;background:var(--verde);box-shadow:0 0 0 4px #42cb8433;animation:pulsa 1.6s ease-in-out infinite}
+/* --------------------------------------- a cabine (layout da plataforma) */
+.tv{position:relative;border:1px solid #2a303a;border-radius:18px;background:#0d1117;box-shadow:0 45px 90px #000a,0 0 0 1px color-mix(in srgb,var(--cor) 16%,transparent);overflow:hidden;font-size:12px;transform:perspective(1400px) rotateY(-2.5deg)}
+[data-marca=omni] .tv{background:#0b1320;border-color:#26384d}
+.tv .up{color:var(--verde)}.tv .down{color:var(--vermelho)}
+.tv-topo{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border-bottom:1px solid var(--linha);background:#10151c}
+[data-marca=omni] .tv-topo{background:#0f1a29}
+.tv-quem{display:flex;align-items:center;gap:11px;min-width:0}
+.tv-farol{flex-shrink:0;width:10px;height:10px;border-radius:50%;background:var(--verde);box-shadow:0 0 0 4px #42cb8433;animation:pulsa 1.6s ease-in-out infinite}
 @keyframes pulsa{50%{box-shadow:0 0 0 7px #42cb8411}}
-.cabine-topo div{display:grid;gap:2px}.cabine-topo b{font-size:14px}.cabine-topo small{color:#7a808b;font-size:11px}
-.cabine-status{margin-left:auto;padding:5px 10px;border-radius:99px;border:1px solid #2a323d;color:var(--verde);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
-.cabine-resultado{display:grid;gap:2px}
-.cabine-resultado span{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:#727986}
-.cabine-resultado strong{font-size:36px;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--verde)}.cabine-resultado strong.negativo{color:var(--vermelho)}
-.cabine-resultado small{color:#8b929d;font-size:12px}.cabine-resultado em{font-style:normal;color:var(--texto);font-weight:700}
-.cabine-grafico{height:120px}.cabine-grafico svg{width:100%;height:100%;overflow:visible}
-.linha{fill:none;stroke:var(--cor);stroke-width:2.5;stroke-linejoin:round}.area{fill:url(#g)}
-.cabine-fita{display:flex;gap:4px}.cabine-fita i{flex:1;height:26px;display:grid;place-items:center;border-radius:6px;background:#161b23;color:#8b929d;font-style:normal;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
-.cabine-fita i.on{background:#183a2b;color:var(--verde)}.cabine-fita i.ultimo{outline:2px solid var(--texto);outline-offset:-2px;color:var(--texto)}
-.cabine-log{list-style:none;margin:0;padding:0;display:grid;gap:5px;min-height:92px}
-.cabine-log li{font-size:12px;color:#8b929d;padding-left:14px;position:relative;animation:entra .3s ease-out}
-.cabine-log li:before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%;background:#3a414c}
-.cabine-log li.ganho{color:var(--verde)}.cabine-log li.ganho:before{background:var(--verde)}
-.cabine-log li.perda{color:var(--vermelho)}.cabine-log li.perda:before{background:var(--vermelho)}
-.cabine-log li.compra:before{background:var(--cor)}.cabine-log li.meta{color:var(--cor);font-weight:700}.cabine-log li.meta:before{background:var(--cor)}
+.tv-quem b{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;font-size:14px}
+.tv-fase{padding:2px 8px;border-radius:99px;background:color-mix(in srgb,var(--cor) 16%,transparent);color:var(--cor);font-size:10px;font-weight:800;letter-spacing:.04em;white-space:nowrap}
+.tv-onde{display:block;margin-top:2px;color:#7a808b;font-size:11px}
+.tv-resumo{display:flex;gap:14px}.tv-resumo span{display:grid;gap:2px;min-width:58px}.tv-resumo i{font-style:normal;color:#727986;font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}.tv-resumo b{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.tv-resumo .tv-res b{font-size:16px}.tv-resumo b small{font-size:9px;color:#8b929d;margin-left:2px}
+.tv-abas{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 16px;border-bottom:1px solid var(--linha);color:#aab0b9;font-size:11px}
+.tv-abas span{display:flex;align-items:center;gap:7px}.tv-abas span i{width:7px;height:7px;border-radius:50%;background:var(--verde)}.tv-abas small{color:#7a808b;font-size:10.5px}
+.tv-fluxo{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--linha)}
+.tv-etapa{display:flex;gap:10px;align-items:flex-start;opacity:.55}.tv-etapa.ativa{opacity:1}
+.tv-etapa>i{flex-shrink:0;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;border:1px solid var(--linha);color:#aab0b9;font-style:normal;font-size:11px;font-weight:800}
+.tv-etapa.ativa>i{border-color:var(--cor);color:var(--cor)}.tv-etapa.concluida>i{background:#183a2b;border-color:transparent;color:var(--verde)}
+.tv-etapa span{display:grid;gap:2px}.tv-etapa b{font-size:12.5px}.tv-etapa small{color:#7a808b;font-size:10.5px}
+.tv-etapa em{margin-top:4px;font-style:normal;color:#7a808b;font-size:10px;text-transform:uppercase;letter-spacing:.06em;display:grid;gap:1px}.tv-etapa em strong{color:var(--texto);font-size:15px;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums}.tv-etapa em strong i{font-style:normal;font-size:9px;color:#8b929d}
+.tv-linha{width:54px;height:2px;border-radius:2px;background:#232a34;overflow:hidden}.tv-linha span{display:block;height:100%;width:0;background:var(--cor);transition:width .6s ease}
+.tv-fita-bloco{padding:10px 16px;border-bottom:1px solid var(--linha)}
+.tv-rot{display:block;margin-bottom:8px;color:#727986;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.tv-rot em{font-style:normal;color:#aab0b9;text-transform:none;letter-spacing:0}
+.tv-fita{display:flex;gap:4px;min-height:26px}.tv-d{flex:1;height:26px;display:grid;place-items:center;border-radius:6px;background:#161b23;color:#8b929d;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.tv-d.up{background:#183a2b;color:var(--verde)}.tv-d.down{background:#2a1b1f;color:#c98a8a}.tv-d.agora{outline:2px solid var(--texto);outline-offset:-2px;color:var(--texto)}
+.tv-sessao{padding:10px 16px 8px;border-bottom:1px solid var(--linha)}
+.tv-meta{display:flex;justify-content:space-between;gap:10px;margin-bottom:6px}.tv-meta span{display:grid;gap:2px}.tv-meta span.atual{text-align:center}.tv-meta span:last-child{text-align:right}.tv-meta i{font-style:normal;color:#727986;font-size:9.5px;text-transform:uppercase;letter-spacing:.06em}.tv-meta b{font-size:12.5px;font-variant-numeric:tabular-nums}.tv-meta .atual b{font-size:16px}
+.tv-curva{width:100%;height:56px;display:block;overflow:visible}.tv-curva .linha{fill:none;stroke:var(--verde);stroke-width:2;stroke-linejoin:round}.tv-curva .area{fill:url(#g)}
+.tv-trilho{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:10px;font-variant-numeric:tabular-nums}.tv-barra{position:relative;flex:1;height:6px;border-radius:3px;background:#1a2029}.tv-barra u{position:absolute;left:33%;top:-3px;width:1px;height:12px;background:#3a414c}.tv-barra i{position:absolute;top:-3px;width:12px;height:12px;border-radius:50%;background:var(--verde);transform:translateX(-50%);transition:left .5s ease;box-shadow:0 0 0 3px #42cb8433}.tv-barra i.down{background:var(--vermelho);box-shadow:0 0 0 3px #ff686833}
+.tv-ops{padding:10px 16px 12px}
+.tv-rolo{max-height:176px;overflow:hidden}
+.tv-tabela{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}.tv-tabela th{padding:4px 6px;text-align:left;color:#727986;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--linha)}.tv-tabela td{padding:6px;border-bottom:1px solid #161b23;color:#c3c8d0;white-space:nowrap}
+.tv-tabela tr:first-child td{animation:entra .35s ease-out}.tv-tabela .forte{font-weight:800}
+.tv-tabela .chip{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:4px;padding:0 4px;border-radius:5px;background:#1a2029;color:#aab0b9;font-size:10px;font-weight:800}.tv-tabela .chip.up{background:#183a2b;color:var(--verde)}.tv-tabela .chip.down{background:#2a1b1f;color:#e08a8a}
 @keyframes entra{from{opacity:0;transform:translateY(-4px)}}
-.cabine-limites{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.cabine-limites div{padding:10px 12px;border:1px solid var(--linha);border-radius:10px;display:grid;gap:4px}
-.cabine-limites span{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#727986}.cabine-limites b{font-size:13px;font-variant-numeric:tabular-nums}
-.cabine-aviso{margin:2px 0 0;color:#6b727d;font-size:10.5px;line-height:1.4}
+.cabine-aviso{margin:0;padding:8px 16px 12px;color:#6b727d;font-size:10.5px;line-height:1.4}
 
 /* -------------------------------------------------------------- faixa */
 .faixa{max-width:1240px;margin:0 auto;padding:0 24px 70px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
@@ -176,8 +188,8 @@ footer p{text-align:center;line-height:1.6;margin:0}footer small{text-align:righ
 
 /* ------------------------------------------------------------ responsivo */
 @media(max-width:1100px){.grade{grid-template-columns:repeat(2,1fr)}.depoimentos{grid-template-columns:repeat(2,1fr)}.topo-nav{display:none}}
-@media(max-width:900px){.hero{grid-template-columns:1fr;padding-top:56px;gap:40px}.cabine{transform:none}.faixa{grid-template-columns:repeat(2,1fr)}.passos{grid-template-columns:1fr}.gestao,.paraquem{grid-template-columns:1fr;gap:36px}.cadastro{grid-template-columns:1fr;margin-inline:16px;padding:40px;gap:35px}footer{grid-template-columns:1fr;text-align:center}footer p,footer small{text-align:center}.bloco{padding-block:72px}.cta-fixo{display:flex}}
-@media(max-width:520px){.hero h1{font-size:36px}.hero-acoes{align-items:flex-start;flex-direction:column}.botao{width:100%}.faixa{grid-template-columns:1fr}.grade,.depoimentos{grid-template-columns:1fr}.cadastro{padding:22px}.form-top{display:grid;gap:4px}.topo-acao{display:none}.cabine{padding:14px}.cabine-resultado strong{font-size:30px}.cabine-limites{grid-template-columns:1fr 1fr}.cabine-limites div:last-child{display:none}.bloco-cab h2{font-size:29px}}
+@media(max-width:900px){.hero{grid-template-columns:1fr;padding-top:56px;gap:40px}.tv{transform:none}.tv-topo{flex-direction:column;align-items:flex-start;gap:10px}.tv-resumo{width:100%;justify-content:space-between}.tv-resumo span{min-width:0}.faixa{grid-template-columns:repeat(2,1fr)}.passos{grid-template-columns:1fr}.gestao,.paraquem{grid-template-columns:1fr;gap:36px}.cadastro{grid-template-columns:1fr;margin-inline:16px;padding:40px;gap:35px}footer{grid-template-columns:1fr;text-align:center}footer p,footer small{text-align:center}.bloco{padding-block:72px}.cta-fixo{display:flex}}
+@media(max-width:520px){.hero h1{font-size:36px}.hero-acoes{align-items:flex-start;flex-direction:column}.botao{width:100%}.faixa{grid-template-columns:1fr}.grade,.depoimentos{grid-template-columns:1fr}.cadastro{padding:22px}.form-top{display:grid;gap:4px}.topo-acao{display:none}.tv-tabela .oculta{display:none}.tv-fluxo{grid-template-columns:1fr}.tv-linha{display:none}.tv-etapa:last-child{display:none}.tv-resumo{flex-wrap:wrap;gap:10px 16px}.tv-resumo .tv-res{flex-basis:100%}.bloco-cab h2{font-size:29px}}
 </style>
 </head>
 <body>
@@ -203,23 +215,33 @@ footer p{text-align:center;line-height:1.6;margin:0}footer small{text-align:righ
         </ul>
       </div>
 
-      <!-- A cabine animada: o que o cliente vê na plataforma, em miniatura. Dados ILUSTRATIVOS. -->
-      <div class="cabine" aria-label="Demonstração animada de um robô operando" data-demo>
-        <div class="cabine-topo">
-          <span class="cabine-farol" aria-hidden="true"></span>
-          <div><b data-demo-robo></b><small>Volatility 75 · contratos de 1 tick</small></div>
-          <span class="cabine-status">Operando</span>
+      <!-- A cabine, no layout da plataforma: cabeçalho, resumo, fluxo do contrato, sessão e operações.
+           Roda um CENÁRIO PRÉ-CALCULADO (sessão fictícia de +4 a +200), avisado na tela. -->
+      <div class="tv" aria-label="Demonstração de um robô operando, com dados ilustrativos" data-demo>
+        <header class="tv-topo">
+          <div class="tv-quem"><i class="tv-farol"></i><div><b><span data-demo-robo></span><span class="tv-fase" data-demo-fase>Aguardando entrada</span></b><span class="tv-onde">Conta real · Volatility 75 (1s)</span></div></div>
+          <div class="tv-resumo"><span><i>Operações</i><b data-demo-ops>0</b></span><span><i>Ganhadoras</i><b class="up" data-demo-ganhas>0</b></span><span><i>Perdedoras</i><b class="down" data-demo-perdas>0</b></span><span class="tv-res"><i>Resultado da sessão</i><b class="up" data-demo-resultado>+0,00 <small>USD</small></b></span></div>
+        </header>
+        <div class="tv-abas"><span><i></i> Acompanhamento ao vivo</span><small>Sessão de demonstração</small></div>
+        <div class="tv-fluxo">
+          <div class="tv-etapa ativa"><i data-demo-etapa1>1</i><span><b data-demo-etapa1-titulo>Aguardando entrada</b><small data-demo-etapa1-sub>monitorando o mercado</small><em>Próxima entrada <strong data-demo-entrada>3,00 <i>USD</i></strong></em></span></div>
+          <div class="tv-linha"><span data-demo-linha-progresso></span></div>
+          <div class="tv-etapa" data-demo-etapa2><i>2</i><span><b>Contrato fechado</b><small data-demo-etapa2-sub>próxima etapa</small></span></div>
         </div>
-        <div class="cabine-resultado">
-          <span>Resultado da sessão</span>
-          <strong data-demo-resultado>+ US$ 0,00</strong>
-          <small><em data-demo-ops>0</em> operações · <em data-demo-acerto>0%</em> de acerto</small>
+        <div class="tv-fita-bloco">
+          <span class="tv-rot">Dígitos do mercado — os verdes fazem o robô ganhar</span>
+          <div class="tv-fita" data-demo-fita></div>
         </div>
-        <div class="cabine-grafico"><svg viewBox="0 0 560 150" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--cor)" stop-opacity=".3"/><stop offset="1" stop-color="var(--cor)" stop-opacity="0"/></linearGradient></defs><path class="area" data-demo-area d=""/><path class="linha" data-demo-linha d=""/></svg></div>
-        <div class="cabine-fita" data-demo-fita aria-label="Últimos dígitos do ativo"></div>
-        <ol class="cabine-log" data-demo-log aria-live="off"></ol>
-        <div class="cabine-limites"><div><span>Meta</span><b>US$ 20,00</b></div><div><span>Stop</span><b>US$ 10,00</b></div><div><span>Entrada</span><b data-demo-entrada>US$ 1,00</b></div></div>
-        <p class="cabine-aviso">Demonstração animada com valores ilustrativos. Não é uma sessão real nem promessa de resultado.</p>
+        <div class="tv-sessao">
+          <div class="tv-meta"><span><i>Margem até o stop</i><b class="down" data-demo-stop>USD 100,00</b></span><span class="atual"><i>Resultado atual</i><b class="up" data-demo-atual>+0,00 USD</b></span><span><i>Falta para a meta</i><b class="up" data-demo-falta>USD 200,00</b></span></div>
+          <svg class="tv-curva" viewBox="0 0 560 60" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#42cb84" stop-opacity=".35"/><stop offset="1" stop-color="#42cb84" stop-opacity="0"/></linearGradient></defs><path class="area" data-demo-area d=""/><path class="linha" data-demo-linha d=""/></svg>
+          <div class="tv-trilho"><span class="down">−100,00</span><div class="tv-barra"><u></u><i data-demo-cursor style="left:33%"></i></div><span class="up">+200,00</span></div>
+        </div>
+        <div class="tv-ops">
+          <span class="tv-rot">Operações da sessão <em data-demo-ops2>(0)</em></span>
+          <div class="tv-rolo"><table class="tv-tabela"><thead><tr><th>#</th><th class="oculta">Hora</th><th>Valor</th><th class="oculta">Entrada</th><th>Saída</th><th>Resultado</th><th>Acumulado</th></tr></thead><tbody data-demo-tabela></tbody></table></div>
+        </div>
+        <p class="cabine-aviso">Demonstração com uma sessão fictícia, pré-calculada, para mostrar a plataforma funcionando. Não é resultado real nem promessa de ganho.</p>
       </div>
     </section>
 
@@ -437,56 +459,110 @@ for (const [pergunta, resposta] of FAQ) {
   faqEl.appendChild(det)
 }
 
-/* ----------------------------------------------- a cabine animada (demo) */
-/* Valores ILUSTRATIVOS. A regra é a do robô escolhido (dígitos que ganham);
-   a sequência de dígitos é sorteada com leve viés a favor para a demonstração
-   mostrar a gestão funcionando (progressão, meta). Está escrito na tela. */
+/* ------------------------------------------- a cabine (cenário pré-calculado) */
+/* Uma sessão FICTÍCIA, calculada uma vez com semente fixa: começa perto de
+   +US$ 4, sobe com altos e baixos e termina em +US$ 200 (meta). A regra dos
+   dígitos é a do robô da marca; os preços são inventados com o último dígito
+   coerente com o resultado. Está escrito na tela que é demonstração. */
 ;(() => {
   const raiz = document.querySelector('[data-demo]'); if (!raiz) return
   const robo = ROBOS[config.demo.id]
-  raiz.querySelector('[data-demo-robo]').textContent = config.demo.nome
-  const fita = raiz.querySelector('[data-demo-fita]'), log = raiz.querySelector('[data-demo-log]')
-  const resultadoEl = raiz.querySelector('[data-demo-resultado]'), opsEl = raiz.querySelector('[data-demo-ops]'), acertoEl = raiz.querySelector('[data-demo-acerto]'), entradaEl = raiz.querySelector('[data-demo-entrada]')
-  const linha = raiz.querySelector('[data-demo-linha]'), area = raiz.querySelector('[data-demo-area]')
+  const q = sel => raiz.querySelector(sel)
+  q('[data-demo-robo]').textContent = config.demo.nome
+  const META = 200, STOP = 100, BASE = 3
   const reduzido = matchMedia('(prefers-reduced-motion: reduce)').matches
-  const usd = v => `${v < 0 ? '− ' : '+ '}US$ ${Math.abs(v).toFixed(2).replace('.', ',')}`
-  let digitos = [], curva = [0], resultado = 0, ops = 0, ganhas = 0, entrada = 1, perdasSeguidas = 0, armado = false, tick = 0
+  const num = v => Math.abs(v).toFixed(2).replace('.', ',')
+  const assinado = v => `${v < 0 ? '−' : '+'}${num(v)}`
+  let semente = 20260915
+  const sortear = () => { semente |= 0; semente = semente + 0x6D2B79F5 | 0; let t = Math.imul(semente ^ semente >>> 15, 1 | semente); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 }
+  const escolher = lista => lista[Math.floor(sortear() * lista.length)]
+  const grupo = robo.ganha, fora = [0,1,2,3,4,5,6,7,8,9].filter(d => !grupo.includes(d))
+
+  // 1) o roteiro: ganhos e perdas com progressão, em unidades de entrada base
+  const roteiro = []
+  let valor = 1, seguidas = 0, acumulado = 0
+  for (let i = 0; i < 118; i++) {
+    // fases: começo tranquilo (+4), meio com quedas maiores, fim subindo até a meta
+    const chance = i < 6 ? 0.9 : i < 40 ? 0.66 : i < 75 ? 0.6 : 0.72
+    const ganhou = sortear() < chance
+    const lucro = ganhou ? +(valor * 0.95).toFixed(4) : -valor
+    acumulado += lucro
+    roteiro.push({ ganhou, valor, lucro })
+    if (ganhou) { valor = 1; seguidas = 0 } else { seguidas += 1; valor = Math.min(valor * 2.1, 9) }
+  }
+  // 2) escala para terminar exatamente na meta e nunca cruzar o stop
+  const escala = (META / BASE) / acumulado
+  let piso = 0, soma = 0
+  for (const op of roteiro) { op.valor = +(op.valor * BASE * escala).toFixed(2); op.lucro = +(op.lucro * BASE * escala).toFixed(2); soma += op.lucro; piso = Math.min(piso, soma) }
+  const ultimo = roteiro[roteiro.length - 1]; ultimo.lucro = +(ultimo.lucro + (META - soma)).toFixed(2)
+  if (piso < -STOP * 0.7) console.warn('[demo] o roteiro se aproxima do stop', piso)
+
+  // 3) a tela
+  const fita = q('[data-demo-fita]'), tabela = q('[data-demo-tabela]'), curvaLinha = q('[data-demo-linha]'), curvaArea = q('[data-demo-area]')
+  let digitos = [], curva = [0], resultado = 0, ops = 0, ganhas = 0, indice = 0, preco = 45631.12
   const desenhar = () => {
-    const n = curva.length, min = Math.min(...curva, 0), max = Math.max(...curva, 1)
-    const x = i => n > 1 ? (i / (n - 1)) * 560 : 0, y = v => 140 - ((v - min) / (max - min || 1)) * 120
-    const d = curva.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ')
-    linha.setAttribute('d', d); area.setAttribute('d', `${d} L560 150 L0 150Z`)
+    const pontos = curva.slice(-60), n = pontos.length, min = Math.min(...pontos, 0), max = Math.max(...pontos, 1)
+    const x = i => n > 1 ? (i / (n - 1)) * 560 : 0, y = v => 56 - ((v - min) / (max - min || 1)) * 50
+    const d = pontos.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ')
+    curvaLinha.setAttribute('d', d); curvaArea.setAttribute('d', `${d} L560 60 L0 60Z`)
+    curvaLinha.style.stroke = resultado >= 0 ? '#42cb84' : '#ff6868'
   }
-  const registrar = (texto, classe) => {
-    const li = document.createElement('li'); li.className = classe; li.textContent = texto
-    log.prepend(li); while (log.children.length > 4) log.lastChild.remove()
-  }
-  const passo = () => {
-    tick += 1
-    // sorteio com viés leve: 58% de chance de sair um dígito do grupo quando há contrato armado
-    const doGrupo = armado ? Math.random() < 0.58 : Math.random() < 0.5
-    const grupo = robo.ganha, fora = [0,1,2,3,4,5,6,7,8,9].filter(d => !grupo.includes(d))
-    const d = (doGrupo ? grupo : fora)[Math.floor(Math.random() * (doGrupo ? grupo.length : fora.length))]
-    digitos.push(d); if (digitos.length > 14) digitos.shift()
+  const empurrarDigito = d => {
+    digitos.push(d); if (digitos.length > 16) digitos.shift()
     fita.innerHTML = ''
-    digitos.forEach((v, i) => { const s = document.createElement('i'); s.textContent = String(v); s.className = `${grupo.includes(v) ? 'on' : ''} ${i === digitos.length - 1 ? 'ultimo' : ''}`; fita.appendChild(s) })
-    if (armado) {
-      armado = false; ops += 1
-      const ganhou = grupo.includes(d)
-      const lucro = ganhou ? +(entrada * 0.92).toFixed(2) : -entrada
-      resultado = +(resultado + lucro).toFixed(2); curva.push(resultado); if (curva.length > 40) curva.shift()
-      if (ganhou) { ganhas += 1; perdasSeguidas = 0; entrada = 1; registrar(`Ganhou ${usd(lucro)} · dígito ${d}`, 'ganho') }
-      else { perdasSeguidas += 1; entrada = Math.min(8, +(entrada * 2.1).toFixed(2)); registrar(`Perdeu ${usd(lucro)} · dígito ${d} · próxima entrada US$ ${entrada.toFixed(2)}`, 'perda') }
-      resultadoEl.textContent = usd(resultado); resultadoEl.className = resultado >= 0 ? 'positivo' : 'negativo'
-      opsEl.textContent = String(ops); acertoEl.textContent = `${ops ? Math.round(ganhas / ops * 100) : 0}%`; entradaEl.textContent = `US$ ${entrada.toFixed(2)}`
-      desenhar()
-      if (resultado >= 20) { registrar('Meta de US$ 20,00 atingida · robô encerrou a sessão', 'meta'); raiz.querySelector('.cabine-status').textContent = 'Meta batida'; setTimeout(reiniciar, 6000); return }
-    } else if (tick % 3 === 0) {
-      armado = true; registrar(`Comprou ${robo.regra} · US$ ${entrada.toFixed(2)}`, 'compra')
-    }
-    setTimeout(passo, reduzido ? 2400 : 900 + Math.random() * 400)
+    digitos.forEach((v, i) => { const s = document.createElement('span'); s.textContent = String(v); s.className = `tv-d ${grupo.includes(v) ? 'up' : 'down'} ${i === digitos.length - 1 ? 'agora' : ''}`; fita.appendChild(s) })
   }
-  const reiniciar = () => { digitos = []; curva = [0]; resultado = 0; ops = 0; ganhas = 0; entrada = 1; perdasSeguidas = 0; armado = false; tick = 0; log.innerHTML = ''; raiz.querySelector('.cabine-status').textContent = 'Operando'; resultadoEl.textContent = usd(0); resultadoEl.className = 'positivo'; opsEl.textContent = '0'; acertoEl.textContent = '0%'; desenhar(); setTimeout(passo, 800) }
+  const hora = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const precoCom = digito => { preco += (sortear() - 0.5) * 6; const base = Math.floor(preco * 100) / 100; return +(Math.floor(base * 10) / 10 + digito / 100).toFixed(2) }
+  const atualizarResumo = () => {
+    q('[data-demo-ops]').textContent = String(ops); q('[data-demo-ops2]').textContent = `(${ops})`
+    q('[data-demo-ganhas]').textContent = String(ganhas); q('[data-demo-perdas]').textContent = String(ops - ganhas)
+    const r = q('[data-demo-resultado]'); r.innerHTML = `${assinado(resultado)} <small>USD</small>`; r.className = resultado >= 0 ? 'up' : 'down'
+    const a = q('[data-demo-atual]'); a.textContent = `${assinado(resultado)} USD`; a.className = resultado >= 0 ? 'up' : 'down'
+    q('[data-demo-stop]').textContent = `USD ${num(Math.max(0, STOP + resultado))}`
+    q('[data-demo-falta]').textContent = `USD ${num(Math.max(0, META - resultado))}`
+    q('[data-demo-cursor]').style.left = `${Math.min(100, Math.max(0, (resultado + STOP) / (META + STOP) * 100))}%`
+    q('[data-demo-cursor]').className = resultado >= 0 ? 'up' : 'down'
+  }
+  const etapa = (aberto, op) => {
+    q('[data-demo-etapa1]').textContent = aberto ? '●' : ops ? '✓' : '1'
+    q('[data-demo-etapa1-titulo]').textContent = aberto ? 'Contrato aberto' : ops ? 'Último contrato' : 'Aguardando entrada'
+    q('[data-demo-etapa1-sub]').textContent = aberto ? hora() : ops ? hora() : 'monitorando o mercado'
+    q('[data-demo-fase]').textContent = aberto ? 'Contrato aberto' : (op && !op.ganhou) ? 'Recuperando' : 'Analisando mercado'
+    const e2 = q('[data-demo-etapa2]'); e2.className = `tv-etapa ${!aberto && ops ? 'ativa concluida' : ''}`
+    e2.querySelector('i').textContent = !aberto && ops ? '✓' : '2'
+    q('[data-demo-etapa2-sub]').textContent = aberto ? 'aguardando resultado…' : op ? `${op.ganhou ? 'ganho' : 'perda'} ${assinado(op.lucro)} USD` : 'próxima etapa'
+    q('[data-demo-linha-progresso]').style.width = aberto ? '100%' : '0%'
+  }
+  const registrar = (op, entrada, saida, dIn, dOut) => {
+    const tr = document.createElement('tr'); tr.className = op.ganhou ? 'ganhou' : 'perdeu'
+    tr.innerHTML = `<td>${ops}</td><td class="oculta">${hora()}</td><td>${num(op.valor)}</td><td class="oculta">${entrada.toFixed(2)} <b class="chip">${dIn}</b></td><td>${saida.toFixed(2)} <b class="chip ${op.ganhou ? 'up' : 'down'}">${dOut}</b></td><td class="${op.ganhou ? 'up' : 'down'} forte">${assinado(op.lucro)}</td><td class="${resultado >= 0 ? 'up' : 'down'}">${assinado(resultado)}</td>`
+    tabela.prepend(tr); while (tabela.children.length > 8) tabela.lastChild.remove()
+  }
+  let parado = false
+  const passo = () => {
+    if (parado) return
+    if (indice >= roteiro.length) { q('[data-demo-fase]').textContent = 'Meta atingida'; q('.tv-abas small').textContent = 'Meta batida · sessão encerrada'; q('[data-demo-etapa1-titulo]').textContent = 'Meta atingida'; q('[data-demo-etapa1-sub]').textContent = 'o robô encerrou sozinho'; parado = true; setTimeout(reiniciar, 9000); return }
+    const op = roteiro[indice]
+    // tick de espera (dígito qualquer), depois compra, depois resultado
+    empurrarDigito(escolher([...grupo, ...fora]))
+    q('[data-demo-entrada]').innerHTML = `${num(op.valor)} <i>USD</i>`
+    setTimeout(() => {
+      if (parado) return
+      const dIn = escolher([...grupo, ...fora]); const entrada = precoCom(dIn); empurrarDigito(dIn); etapa(true, null)
+      setTimeout(() => {
+        if (parado) return
+        const dOut = escolher(op.ganhou ? grupo : fora); const saida = precoCom(dOut); empurrarDigito(dOut)
+        ops += 1; if (op.ganhou) ganhas += 1
+        resultado = +(resultado + op.lucro).toFixed(2); curva.push(resultado)
+        indice += 1
+        registrar(op, entrada, saida, dIn, dOut); atualizarResumo(); desenhar(); etapa(false, op)
+        const prox = roteiro[indice]; if (prox) q('[data-demo-entrada]').innerHTML = `${num(prox.valor)} <i>USD</i>`
+        setTimeout(passo, reduzido ? 2600 : 700 + sortear() * 500)
+      }, reduzido ? 1400 : 650)
+    }, reduzido ? 900 : 350)
+  }
+  const reiniciar = () => { digitos = []; curva = [0]; resultado = 0; ops = 0; ganhas = 0; indice = 0; parado = false; fita.innerHTML = ''; tabela.innerHTML = ''; q('.tv-abas small').textContent = 'Sessão de demonstração'; atualizarResumo(); desenhar(); etapa(false, null); setTimeout(passo, 600) }
   reiniciar()
 })()
 

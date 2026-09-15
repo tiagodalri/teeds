@@ -91,56 +91,110 @@ for (const [pergunta, resposta] of FAQ) {
   faqEl.appendChild(det)
 }
 
-/* ----------------------------------------------- a cabine animada (demo) */
-/* Valores ILUSTRATIVOS. A regra é a do robô escolhido (dígitos que ganham);
-   a sequência de dígitos é sorteada com leve viés a favor para a demonstração
-   mostrar a gestão funcionando (progressão, meta). Está escrito na tela. */
+/* ------------------------------------------- a cabine (cenário pré-calculado) */
+/* Uma sessão FICTÍCIA, calculada uma vez com semente fixa: começa perto de
+   +US$ 4, sobe com altos e baixos e termina em +US$ 200 (meta). A regra dos
+   dígitos é a do robô da marca; os preços são inventados com o último dígito
+   coerente com o resultado. Está escrito na tela que é demonstração. */
 ;(() => {
   const raiz = document.querySelector('[data-demo]'); if (!raiz) return
   const robo = ROBOS[config.demo.id]
-  raiz.querySelector('[data-demo-robo]').textContent = config.demo.nome
-  const fita = raiz.querySelector('[data-demo-fita]'), log = raiz.querySelector('[data-demo-log]')
-  const resultadoEl = raiz.querySelector('[data-demo-resultado]'), opsEl = raiz.querySelector('[data-demo-ops]'), acertoEl = raiz.querySelector('[data-demo-acerto]'), entradaEl = raiz.querySelector('[data-demo-entrada]')
-  const linha = raiz.querySelector('[data-demo-linha]'), area = raiz.querySelector('[data-demo-area]')
+  const q = sel => raiz.querySelector(sel)
+  q('[data-demo-robo]').textContent = config.demo.nome
+  const META = 200, STOP = 100, BASE = 3
   const reduzido = matchMedia('(prefers-reduced-motion: reduce)').matches
-  const usd = v => `${v < 0 ? '− ' : '+ '}US$ ${Math.abs(v).toFixed(2).replace('.', ',')}`
-  let digitos = [], curva = [0], resultado = 0, ops = 0, ganhas = 0, entrada = 1, perdasSeguidas = 0, armado = false, tick = 0
+  const num = v => Math.abs(v).toFixed(2).replace('.', ',')
+  const assinado = v => `${v < 0 ? '−' : '+'}${num(v)}`
+  let semente = 20260915
+  const sortear = () => { semente |= 0; semente = semente + 0x6D2B79F5 | 0; let t = Math.imul(semente ^ semente >>> 15, 1 | semente); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 }
+  const escolher = lista => lista[Math.floor(sortear() * lista.length)]
+  const grupo = robo.ganha, fora = [0,1,2,3,4,5,6,7,8,9].filter(d => !grupo.includes(d))
+
+  // 1) o roteiro: ganhos e perdas com progressão, em unidades de entrada base
+  const roteiro = []
+  let valor = 1, seguidas = 0, acumulado = 0
+  for (let i = 0; i < 118; i++) {
+    // fases: começo tranquilo (+4), meio com quedas maiores, fim subindo até a meta
+    const chance = i < 6 ? 0.9 : i < 40 ? 0.66 : i < 75 ? 0.6 : 0.72
+    const ganhou = sortear() < chance
+    const lucro = ganhou ? +(valor * 0.95).toFixed(4) : -valor
+    acumulado += lucro
+    roteiro.push({ ganhou, valor, lucro })
+    if (ganhou) { valor = 1; seguidas = 0 } else { seguidas += 1; valor = Math.min(valor * 2.1, 9) }
+  }
+  // 2) escala para terminar exatamente na meta e nunca cruzar o stop
+  const escala = (META / BASE) / acumulado
+  let piso = 0, soma = 0
+  for (const op of roteiro) { op.valor = +(op.valor * BASE * escala).toFixed(2); op.lucro = +(op.lucro * BASE * escala).toFixed(2); soma += op.lucro; piso = Math.min(piso, soma) }
+  const ultimo = roteiro[roteiro.length - 1]; ultimo.lucro = +(ultimo.lucro + (META - soma)).toFixed(2)
+  if (piso < -STOP * 0.7) console.warn('[demo] o roteiro se aproxima do stop', piso)
+
+  // 3) a tela
+  const fita = q('[data-demo-fita]'), tabela = q('[data-demo-tabela]'), curvaLinha = q('[data-demo-linha]'), curvaArea = q('[data-demo-area]')
+  let digitos = [], curva = [0], resultado = 0, ops = 0, ganhas = 0, indice = 0, preco = 45631.12
   const desenhar = () => {
-    const n = curva.length, min = Math.min(...curva, 0), max = Math.max(...curva, 1)
-    const x = i => n > 1 ? (i / (n - 1)) * 560 : 0, y = v => 140 - ((v - min) / (max - min || 1)) * 120
-    const d = curva.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ')
-    linha.setAttribute('d', d); area.setAttribute('d', `${d} L560 150 L0 150Z`)
+    const pontos = curva.slice(-60), n = pontos.length, min = Math.min(...pontos, 0), max = Math.max(...pontos, 1)
+    const x = i => n > 1 ? (i / (n - 1)) * 560 : 0, y = v => 56 - ((v - min) / (max - min || 1)) * 50
+    const d = pontos.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ')
+    curvaLinha.setAttribute('d', d); curvaArea.setAttribute('d', `${d} L560 60 L0 60Z`)
+    curvaLinha.style.stroke = resultado >= 0 ? '#42cb84' : '#ff6868'
   }
-  const registrar = (texto, classe) => {
-    const li = document.createElement('li'); li.className = classe; li.textContent = texto
-    log.prepend(li); while (log.children.length > 4) log.lastChild.remove()
-  }
-  const passo = () => {
-    tick += 1
-    // sorteio com viés leve: 58% de chance de sair um dígito do grupo quando há contrato armado
-    const doGrupo = armado ? Math.random() < 0.58 : Math.random() < 0.5
-    const grupo = robo.ganha, fora = [0,1,2,3,4,5,6,7,8,9].filter(d => !grupo.includes(d))
-    const d = (doGrupo ? grupo : fora)[Math.floor(Math.random() * (doGrupo ? grupo.length : fora.length))]
-    digitos.push(d); if (digitos.length > 14) digitos.shift()
+  const empurrarDigito = d => {
+    digitos.push(d); if (digitos.length > 16) digitos.shift()
     fita.innerHTML = ''
-    digitos.forEach((v, i) => { const s = document.createElement('i'); s.textContent = String(v); s.className = `${grupo.includes(v) ? 'on' : ''} ${i === digitos.length - 1 ? 'ultimo' : ''}`; fita.appendChild(s) })
-    if (armado) {
-      armado = false; ops += 1
-      const ganhou = grupo.includes(d)
-      const lucro = ganhou ? +(entrada * 0.92).toFixed(2) : -entrada
-      resultado = +(resultado + lucro).toFixed(2); curva.push(resultado); if (curva.length > 40) curva.shift()
-      if (ganhou) { ganhas += 1; perdasSeguidas = 0; entrada = 1; registrar(`Ganhou ${usd(lucro)} · dígito ${d}`, 'ganho') }
-      else { perdasSeguidas += 1; entrada = Math.min(8, +(entrada * 2.1).toFixed(2)); registrar(`Perdeu ${usd(lucro)} · dígito ${d} · próxima entrada US$ ${entrada.toFixed(2)}`, 'perda') }
-      resultadoEl.textContent = usd(resultado); resultadoEl.className = resultado >= 0 ? 'positivo' : 'negativo'
-      opsEl.textContent = String(ops); acertoEl.textContent = `${ops ? Math.round(ganhas / ops * 100) : 0}%`; entradaEl.textContent = `US$ ${entrada.toFixed(2)}`
-      desenhar()
-      if (resultado >= 20) { registrar('Meta de US$ 20,00 atingida · robô encerrou a sessão', 'meta'); raiz.querySelector('.cabine-status').textContent = 'Meta batida'; setTimeout(reiniciar, 6000); return }
-    } else if (tick % 3 === 0) {
-      armado = true; registrar(`Comprou ${robo.regra} · US$ ${entrada.toFixed(2)}`, 'compra')
-    }
-    setTimeout(passo, reduzido ? 2400 : 900 + Math.random() * 400)
+    digitos.forEach((v, i) => { const s = document.createElement('span'); s.textContent = String(v); s.className = `tv-d ${grupo.includes(v) ? 'up' : 'down'} ${i === digitos.length - 1 ? 'agora' : ''}`; fita.appendChild(s) })
   }
-  const reiniciar = () => { digitos = []; curva = [0]; resultado = 0; ops = 0; ganhas = 0; entrada = 1; perdasSeguidas = 0; armado = false; tick = 0; log.innerHTML = ''; raiz.querySelector('.cabine-status').textContent = 'Operando'; resultadoEl.textContent = usd(0); resultadoEl.className = 'positivo'; opsEl.textContent = '0'; acertoEl.textContent = '0%'; desenhar(); setTimeout(passo, 800) }
+  const hora = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const precoCom = digito => { preco += (sortear() - 0.5) * 6; const base = Math.floor(preco * 100) / 100; return +(Math.floor(base * 10) / 10 + digito / 100).toFixed(2) }
+  const atualizarResumo = () => {
+    q('[data-demo-ops]').textContent = String(ops); q('[data-demo-ops2]').textContent = `(${ops})`
+    q('[data-demo-ganhas]').textContent = String(ganhas); q('[data-demo-perdas]').textContent = String(ops - ganhas)
+    const r = q('[data-demo-resultado]'); r.innerHTML = `${assinado(resultado)} <small>USD</small>`; r.className = resultado >= 0 ? 'up' : 'down'
+    const a = q('[data-demo-atual]'); a.textContent = `${assinado(resultado)} USD`; a.className = resultado >= 0 ? 'up' : 'down'
+    q('[data-demo-stop]').textContent = `USD ${num(Math.max(0, STOP + resultado))}`
+    q('[data-demo-falta]').textContent = `USD ${num(Math.max(0, META - resultado))}`
+    q('[data-demo-cursor]').style.left = `${Math.min(100, Math.max(0, (resultado + STOP) / (META + STOP) * 100))}%`
+    q('[data-demo-cursor]').className = resultado >= 0 ? 'up' : 'down'
+  }
+  const etapa = (aberto, op) => {
+    q('[data-demo-etapa1]').textContent = aberto ? '●' : ops ? '✓' : '1'
+    q('[data-demo-etapa1-titulo]').textContent = aberto ? 'Contrato aberto' : ops ? 'Último contrato' : 'Aguardando entrada'
+    q('[data-demo-etapa1-sub]').textContent = aberto ? hora() : ops ? hora() : 'monitorando o mercado'
+    q('[data-demo-fase]').textContent = aberto ? 'Contrato aberto' : (op && !op.ganhou) ? 'Recuperando' : 'Analisando mercado'
+    const e2 = q('[data-demo-etapa2]'); e2.className = `tv-etapa ${!aberto && ops ? 'ativa concluida' : ''}`
+    e2.querySelector('i').textContent = !aberto && ops ? '✓' : '2'
+    q('[data-demo-etapa2-sub]').textContent = aberto ? 'aguardando resultado…' : op ? `${op.ganhou ? 'ganho' : 'perda'} ${assinado(op.lucro)} USD` : 'próxima etapa'
+    q('[data-demo-linha-progresso]').style.width = aberto ? '100%' : '0%'
+  }
+  const registrar = (op, entrada, saida, dIn, dOut) => {
+    const tr = document.createElement('tr'); tr.className = op.ganhou ? 'ganhou' : 'perdeu'
+    tr.innerHTML = `<td>${ops}</td><td class="oculta">${hora()}</td><td>${num(op.valor)}</td><td class="oculta">${entrada.toFixed(2)} <b class="chip">${dIn}</b></td><td>${saida.toFixed(2)} <b class="chip ${op.ganhou ? 'up' : 'down'}">${dOut}</b></td><td class="${op.ganhou ? 'up' : 'down'} forte">${assinado(op.lucro)}</td><td class="${resultado >= 0 ? 'up' : 'down'}">${assinado(resultado)}</td>`
+    tabela.prepend(tr); while (tabela.children.length > 8) tabela.lastChild.remove()
+  }
+  let parado = false
+  const passo = () => {
+    if (parado) return
+    if (indice >= roteiro.length) { q('[data-demo-fase]').textContent = 'Meta atingida'; q('.tv-abas small').textContent = 'Meta batida · sessão encerrada'; q('[data-demo-etapa1-titulo]').textContent = 'Meta atingida'; q('[data-demo-etapa1-sub]').textContent = 'o robô encerrou sozinho'; parado = true; setTimeout(reiniciar, 9000); return }
+    const op = roteiro[indice]
+    // tick de espera (dígito qualquer), depois compra, depois resultado
+    empurrarDigito(escolher([...grupo, ...fora]))
+    q('[data-demo-entrada]').innerHTML = `${num(op.valor)} <i>USD</i>`
+    setTimeout(() => {
+      if (parado) return
+      const dIn = escolher([...grupo, ...fora]); const entrada = precoCom(dIn); empurrarDigito(dIn); etapa(true, null)
+      setTimeout(() => {
+        if (parado) return
+        const dOut = escolher(op.ganhou ? grupo : fora); const saida = precoCom(dOut); empurrarDigito(dOut)
+        ops += 1; if (op.ganhou) ganhas += 1
+        resultado = +(resultado + op.lucro).toFixed(2); curva.push(resultado)
+        indice += 1
+        registrar(op, entrada, saida, dIn, dOut); atualizarResumo(); desenhar(); etapa(false, op)
+        const prox = roteiro[indice]; if (prox) q('[data-demo-entrada]').innerHTML = `${num(prox.valor)} <i>USD</i>`
+        setTimeout(passo, reduzido ? 2600 : 700 + sortear() * 500)
+      }, reduzido ? 1400 : 650)
+    }, reduzido ? 900 : 350)
+  }
+  const reiniciar = () => { digitos = []; curva = [0]; resultado = 0; ops = 0; ganhas = 0; indice = 0; parado = false; fita.innerHTML = ''; tabela.innerHTML = ''; q('.tv-abas small').textContent = 'Sessão de demonstração'; atualizarResumo(); desenhar(); etapa(false, null); setTimeout(passo, 600) }
   reiniciar()
 })()
 

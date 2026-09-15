@@ -34,23 +34,33 @@
         </ul>
       </div>
 
-      <!-- A cabine animada: o que o cliente vê na plataforma, em miniatura. Dados ILUSTRATIVOS. -->
-      <div class="cabine" aria-label="Demonstração animada de um robô operando" data-demo>
-        <div class="cabine-topo">
-          <span class="cabine-farol" aria-hidden="true"></span>
-          <div><b data-demo-robo></b><small>Volatility 75 · contratos de 1 tick</small></div>
-          <span class="cabine-status">Operando</span>
+      <!-- A cabine, no layout da plataforma: cabeçalho, resumo, fluxo do contrato, sessão e operações.
+           Roda um CENÁRIO PRÉ-CALCULADO (sessão fictícia de +4 a +200), avisado na tela. -->
+      <div class="tv" aria-label="Demonstração de um robô operando, com dados ilustrativos" data-demo>
+        <header class="tv-topo">
+          <div class="tv-quem"><i class="tv-farol"></i><div><b><span data-demo-robo></span><span class="tv-fase" data-demo-fase>Aguardando entrada</span></b><span class="tv-onde">Conta real · Volatility 75 (1s)</span></div></div>
+          <div class="tv-resumo"><span><i>Operações</i><b data-demo-ops>0</b></span><span><i>Ganhadoras</i><b class="up" data-demo-ganhas>0</b></span><span><i>Perdedoras</i><b class="down" data-demo-perdas>0</b></span><span class="tv-res"><i>Resultado da sessão</i><b class="up" data-demo-resultado>+0,00 <small>USD</small></b></span></div>
+        </header>
+        <div class="tv-abas"><span><i></i> Acompanhamento ao vivo</span><small>Sessão de demonstração</small></div>
+        <div class="tv-fluxo">
+          <div class="tv-etapa ativa"><i data-demo-etapa1>1</i><span><b data-demo-etapa1-titulo>Aguardando entrada</b><small data-demo-etapa1-sub>monitorando o mercado</small><em>Próxima entrada <strong data-demo-entrada>3,00 <i>USD</i></strong></em></span></div>
+          <div class="tv-linha"><span data-demo-linha-progresso></span></div>
+          <div class="tv-etapa" data-demo-etapa2><i>2</i><span><b>Contrato fechado</b><small data-demo-etapa2-sub>próxima etapa</small></span></div>
         </div>
-        <div class="cabine-resultado">
-          <span>Resultado da sessão</span>
-          <strong data-demo-resultado>+ US$ 0,00</strong>
-          <small><em data-demo-ops>0</em> operações · <em data-demo-acerto>0%</em> de acerto</small>
+        <div class="tv-fita-bloco">
+          <span class="tv-rot">Dígitos do mercado — os verdes fazem o robô ganhar</span>
+          <div class="tv-fita" data-demo-fita></div>
         </div>
-        <div class="cabine-grafico"><svg viewBox="0 0 560 150" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--cor)" stop-opacity=".3"/><stop offset="1" stop-color="var(--cor)" stop-opacity="0"/></linearGradient></defs><path class="area" data-demo-area d=""/><path class="linha" data-demo-linha d=""/></svg></div>
-        <div class="cabine-fita" data-demo-fita aria-label="Últimos dígitos do ativo"></div>
-        <ol class="cabine-log" data-demo-log aria-live="off"></ol>
-        <div class="cabine-limites"><div><span>Meta</span><b>US$ 20,00</b></div><div><span>Stop</span><b>US$ 10,00</b></div><div><span>Entrada</span><b data-demo-entrada>US$ 1,00</b></div></div>
-        <p class="cabine-aviso">Demonstração animada com valores ilustrativos. Não é uma sessão real nem promessa de resultado.</p>
+        <div class="tv-sessao">
+          <div class="tv-meta"><span><i>Margem até o stop</i><b class="down" data-demo-stop>USD 100,00</b></span><span class="atual"><i>Resultado atual</i><b class="up" data-demo-atual>+0,00 USD</b></span><span><i>Falta para a meta</i><b class="up" data-demo-falta>USD 200,00</b></span></div>
+          <svg class="tv-curva" viewBox="0 0 560 60" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#42cb84" stop-opacity=".35"/><stop offset="1" stop-color="#42cb84" stop-opacity="0"/></linearGradient></defs><path class="area" data-demo-area d=""/><path class="linha" data-demo-linha d=""/></svg>
+          <div class="tv-trilho"><span class="down">−100,00</span><div class="tv-barra"><u></u><i data-demo-cursor style="left:33%"></i></div><span class="up">+200,00</span></div>
+        </div>
+        <div class="tv-ops">
+          <span class="tv-rot">Operações da sessão <em data-demo-ops2>(0)</em></span>
+          <div class="tv-rolo"><table class="tv-tabela"><thead><tr><th>#</th><th class="oculta">Hora</th><th>Valor</th><th class="oculta">Entrada</th><th>Saída</th><th>Resultado</th><th>Acumulado</th></tr></thead><tbody data-demo-tabela></tbody></table></div>
+        </div>
+        <p class="cabine-aviso">Demonstração com uma sessão fictícia, pré-calculada, para mostrar a plataforma funcionando. Não é resultado real nem promessa de ganho.</p>
       </div>
     </section>
 
