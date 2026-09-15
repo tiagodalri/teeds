@@ -169,3 +169,18 @@ button, input, select, textarea { font-family: inherit; }
   .entrada-btn { transition: none; }
   .entrada-btn:hover:not(:disabled) { transform: none; }
 }
+/* Mesmo fundo dos painéis, inclusive no encontro entre hero e conteúdo. */
+.ger.aulas { background: var(--surface); }
+.ger.aulas .aulas-capa { box-shadow: inset 0 -90px 90px var(--surface); }
+.ger.aulas .aulas-capa::after { background: linear-gradient(transparent, var(--surface)); }
+
+/* A arte aprovada já contém título e identidade: não sobrepor selos ao texto. */
+.market-card-capa.market-card-capa-simulador { aspect-ratio: 3 / 2; }
+.market-card-capa-simulador::before,
+.market-card-capa-simulador .market-card-identidade,
+.market-card-capa-simulador .market-card-num,
+.market-card-capa-simulador .market-card-tipo,
+.market-card-capa-simulador .market-card-selo,
+.market-card-capa-simulador .market-card-desconto { display: none; }
+.market-card-capa-simulador > .responsive-image > img { object-fit: contain; }
+.market-card:hover .market-card-capa-simulador > .responsive-image > img { transform: none; filter: none; }

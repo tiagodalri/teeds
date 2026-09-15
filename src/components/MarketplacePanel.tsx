@@ -123,7 +123,7 @@ const ordemDaVitrine = (lista: Produto[]) => [...lista].sort((a, b) => {
   if (da !== db) return da - db
   return PRODUTOS.findIndex((p) => p.id === a.id) - PRODUTOS.findIndex((p) => p.id === b.id)
 })
-const capaProduto = (arquivo: string) => `${import.meta.env.BASE_URL}marketplace/${arquivo}`
+const capaProduto = (arquivo: string) => `${import.meta.env.BASE_URL}marketplace/${MARCA.id === 'teeds' && arquivo === 'simulador-treino.jpg' ? 'simulador-treino-v2.jpeg' : arquivo}`
 
 const categoriaBanco = (valor: string): Produto['categoria'] => valor === 'robo' ? 'Robôs' : valor === 'mentoria' ? 'Mentorias' : 'Ferramentas'
 const precoBR = (centavos: number) => (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
@@ -201,7 +201,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
           {visiveis.length === 0 && <p role="status">Nenhum produto nesta categoria. <button onClick={() => setCategoria('Todos')}>Ver todos os produtos</button></p>}
           {visiveis.map((produto, indice) => { const aberto = disponivel(produto); return (
             <article key={produto.id} className={`market-card ${produto.tom} ${aberto ? 'disponivel' : 'esgotado'}`} aria-label={aberto ? undefined : `${produto.nome} — esgotado`}>
-              <button className="market-card-capa" onClick={() => abrir(produto)} disabled={!aberto} aria-disabled={!aberto}
+              <button className={`market-card-capa ${MARCA.id === 'teeds' && produto.imagem === 'simulador-treino.jpg' ? 'market-card-capa-simulador' : ''}`} onClick={() => abrir(produto)} disabled={!aberto} aria-disabled={!aberto}
                 aria-label={aberto ? `Conhecer ${produto.nome}` : `${produto.nome}: esgotado no momento`}>
                 <ResponsiveImage src={capaProduto(produto.imagem)} alt="" loading="lazy" />
                 {!aberto && <span className="market-card-tarja" aria-hidden="true">Esgotado</span>}
