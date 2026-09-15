@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
+import { MARCA } from '../marca'
+import { IconeFechar } from './IconeFechar'
 import { RITMO_ROBOS } from '../core/teeds/config'
 import {
   acompanharSessoes, operacoesDaSessao,
@@ -43,6 +45,11 @@ export function SessoesServidor({ sessao, escondidas = [] }: {
   const [sessoes, setSessoes] = useState<SessaoServidor[]>([])
   const [aberta, setAberta] = useState<string | null>(null)
   const [verEncerradas, setVerEncerradas] = useState(false)
+  // A linha das encerradas pode ser fechada no "x". Fica fechada até uma
+  // sessão NOVA encerrar: aí volta, porque aí tem informação nova.
+  const CHAVE_OCULTA = `${MARCA.id}.encerradas.oculta`
+  const [ocultaAte, setOcultaAte] = useState<string | null>(() => { try { return localStorage.getItem(CHAVE_OCULTA) } catch { return null } })
+  const ocultarEncerradas = (id: string) => { setOcultaAte(id); setVerEncerradas(false); try { localStorage.setItem(CHAVE_OCULTA, id) } catch { /* vale enquanto a aba viver */ } }
   const [extrato, setExtrato] = useState<OperacaoServidor[]>([])
 
   useEffect(() => acompanharSessoes(sessao, setSessoes), [sessao.token])
@@ -177,8 +184,9 @@ export function SessoesServidor({ sessao, escondidas = [] }: {
         </>
       )}
 
-      {encerradas.length > 0 && (
+      {encerradas.length > 0 && ultima && ocultaAte !== ultima.id && (
         <div className={`ss-encerradas ${verEncerradas ? 'aberta' : ''}`}>
+          <div className="ss-resumo-linha">
           <button type="button" className="ss-resumo" onClick={() => setVerEncerradas((v) => !v)}>
             <b className="ss-resumo-n">{encerradas.length}</b>
             <span className="ss-resumo-txt">
@@ -194,6 +202,8 @@ export function SessoesServidor({ sessao, escondidas = [] }: {
             </span>
             <span className="ss-resumo-acao">{verEncerradas ? 'ocultar' : 'ver'}</span>
           </button>
+          <button type="button" className="ss-fechar" onClick={() => ocultarEncerradas(ultima.id)} aria-label="Fechar esta linha" title="Fechar. Ela volta quando outra sessão encerrar."><IconeFechar /></button>
+          </div>
           {verEncerradas && <div className="ss-lista">{encerradas.map(cartao)}</div>}
         </div>
       )}
