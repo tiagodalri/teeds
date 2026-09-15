@@ -16,7 +16,6 @@ import { batizarRobo, nomeDoRobo, sugerirNome, todosOsNomes } from '../core/deri
 import { DerivDesconectada } from './DerivDesconectada'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { registrarOperacaoRobo } from '../core/teeds/clientes'
-import { SessoesServidor } from './SessoesServidor'
 import { acompanharVivas, type SessaoViva } from '../core/teeds/servidorRobos'
 import { MARCA } from '../marca'
 import { RobotOverview } from './RobotOverview'
@@ -398,11 +397,8 @@ export function RobotsPanel({
         </div>
       )}
 
-      {/* Os robos que rodam no servidor. Um ligado pelo chat opera sem
-          navegador nenhum aberto — sem isto aqui, a Teeds pareceria nao
-          saber da propria operacao. O bloco some sozinho quando nao ha
-          sessao alguma. */}
-      {sessaoTeeds && <SessoesServidor sessao={sessaoTeeds} escondidas={comPainel} />}
+      {/* A linha de "sessões encerradas" saiu da tela a pedido do Tiago
+          (15/09/2026). O histórico continua no banco e no Insights. */}
 
       {!temAcompanhamento && <section className="robot-workspace-empty">
         <span className="robot-empty-symbol" aria-hidden="true">▷</span>

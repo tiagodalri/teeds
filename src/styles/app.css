@@ -1010,10 +1010,10 @@ button, input { font: inherit; color: inherit; }
 .tv {
   /* A cabine e uma ilha noturna SEMPRE — dentro dela, as fichas do tema
      viram noite, seja qual for o tema da plataforma. */
-  --bg: #0b0c0f;
-  --surface: #141519;
-  --surface-alt: #101114;
-  --border: #2b2c31;
+  --bg: #10121a;
+  --surface: #181b24;
+  --surface-alt: #141720;
+  --border: #30343d;
   --text: #f1efe9;
   --muted: #96948d;
   --primary: #d0aa52;
