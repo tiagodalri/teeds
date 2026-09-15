@@ -205,14 +205,20 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
                 aria-label={aberto ? `Conhecer ${produto.nome}` : `${produto.nome}: esgotado no momento`}>
                 <ResponsiveImage src={capaProduto(produto.imagem)} alt="" loading="lazy" />
                 {!aberto && <span className="market-card-tarja" aria-hidden="true">Esgotado</span>}
-                <span className="market-card-selo">{aberto ? 'Disponível agora' : produto.selo}</span>
+                {!aberto && <span className="market-card-selo">{produto.selo}</span>}
                 {aberto && <span className="market-card-desconto">{produto.desconto}</span>}
                 <span className="market-card-num">0{indice + 1}</span>
                 <div className="market-card-identidade"><b>{produto.simbolo}</b><small>{MARCA.nome} ORIGINAL</small></div>
                 <span className="market-card-tipo">{produto.categoria}</span>
               </button>
               <div className="market-card-corpo">
-                <div><span>{produto.categoria}</span><h3>{produto.nome}</h3></div>
+                <div>
+                  <div className="market-card-meta">
+                    <span>{produto.categoria}</span>
+                    {aberto && <small className="market-disponibilidade">Disponível agora</small>}
+                  </div>
+                  <h3>{produto.nome}</h3>
+                </div>
                 <p>{produto.descricao}</p>
                 <footer>
                   <span className="market-preco"><del>{produto.precoDe}</del><strong>{produto.preco}<small>{produto.periodo}</small></strong></span>

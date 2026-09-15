@@ -33,11 +33,6 @@ export function lerPreparo(): { cfg?: Partial<ConfigEstrategia>; symbol?: string
     return valor && typeof valor === 'object' && !Array.isArray(valor) ? valor : {}
   } catch { return {} }
 }
-/** O Gerenciamento manda o plano para cá: o próximo preparo abre com o robô e os valores dele. */
-export function prepararPlano(modelo: string, cfg: Partial<ConfigEstrategia>) {
-  const atual = lerPreparo()
-  try { localStorage.setItem(CHAVE, JSON.stringify({ ...atual, cfg: { ...atual.cfg, ...cfg }, modelo })) } catch { /* optional browser preferences */ }
-}
 const FAIXAS: Record<keyof ConfigEstrategia, [number, number]> = {
   valorInicial: [0.35, 10_000],
   valorAoVencer: [0.35, 10_000],
@@ -86,7 +81,7 @@ export function configurarPreparo(inicial: ConfigEstrategia, valores: Record<str
 
 export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, contaId, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
   const [modelo, setModelo] = useState(() => {
-    // Plano vindo do Gerenciamento: o catálogo já abre com o robô escolhido lá.
+    // Preferência já salva no próprio preparo; a calculadora não escreve aqui.
     const pedido = escolherModelo ? lerPreparo().modelo : undefined
     return pedido && IDENTIDADES.some((i) => i.id === pedido) ? identidadeDoRobo(pedido) : identidade
   })
