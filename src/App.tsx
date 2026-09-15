@@ -599,7 +599,7 @@ export default function App() {
               <div className="ativo-seletor-wrap">
                 <button className="ativo-seletor" onClick={() => setSeletorAtivo((aberto) => !aberto)}
                   aria-expanded={seletorAtivo} aria-haspopup="dialog">
-                  <span>{activeSymbol?.name ?? 'Escolher ativo'}</span><i aria-hidden>⌄</i>
+                  <span className="manual-ativo-texto"><small>Ativo</small><strong>{activeSymbol?.name ?? 'Escolher ativo'}</strong></span><i aria-hidden>⌄</i>
                 </button>
                 {seletorAtivo && (
                   <div className="ativo-menu" role="dialog" aria-label="Escolher ativo">
@@ -629,7 +629,7 @@ export default function App() {
                   </div>
                 )}
               </div>
-              {price !== null && <span className={`price ${direction ?? ''}`}>{formatPrice(price, pipSize)}</span>}
+              <div className="manual-cotacao"><small>Cotação</small><span className={`price ${direction ?? ''}`}>{price !== null ? formatPrice(price, pipSize) : '—'}</span></div>
             </div>
             <div className="controls">
               <div className="segmented">

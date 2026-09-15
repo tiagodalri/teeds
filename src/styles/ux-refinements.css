@@ -224,3 +224,26 @@ button, input, select, textarea { font-family: inherit; }
   .go-consultoria .go-consulta-scroll { max-height: 320px; }
 }
 @media (max-width: 420px) { .go-consultoria .go-campos { grid-template-columns: 1fr; } }
+.layout-operar .chart-title { align-items: stretch; gap: 10px; min-width: 0; }
+.layout-operar .ativo-seletor, .layout-operar .manual-cotacao { box-sizing: border-box; min-height: 58px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 9px 13px; }
+.layout-operar .ativo-seletor { width: 100%; max-width: none; gap: 20px; text-align: left; }
+.layout-operar .manual-ativo-texto { display: grid; gap: 4px; min-width: 0; }
+.layout-operar .manual-ativo-texto small, .layout-operar .manual-cotacao > small { display: block; color: var(--muted); font-size: 10px; font-weight: 600; line-height: 1.2; letter-spacing: .06em; text-transform: uppercase; }
+.layout-operar .manual-ativo-texto strong { display: block; font-size: 14px; font-weight: 600; line-height: 1.3; white-space: normal; }
+.layout-operar .manual-cotacao { display: grid; align-content: center; gap: 4px; min-width: 150px; }
+.layout-operar .manual-cotacao .price { font-size: 17px; line-height: 1.2; letter-spacing: .01em; }
+.layout-operar .ativo-seletor:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+@media (max-width: 600px) {
+  .layout-operar .chart-title { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, .7fr); width: 100%; }
+  .layout-operar .manual-cotacao { min-width: 0; }
+  .layout-operar .ativo-seletor { gap: 8px; }
+  .layout-operar .manual-ativo-texto strong { font-size: 12px; }
+  .layout-operar .manual-cotacao .price { font-size: 15px; }
+}
+@media (min-width: 901px) {
+  .go-consultoria .go-grade { align-items: stretch; }
+  .go-consultoria .go-config { display: flex; flex-direction: column; }
+  .go-consultoria .go-config .go-banca-nota { margin-top: auto; padding-top: 14px; }
+  .go-consultoria .go-config .go-campos { margin-bottom: 14px; }
+  .go-consultoria .go-resultados { grid-template-rows: auto auto 1fr; }
+}
