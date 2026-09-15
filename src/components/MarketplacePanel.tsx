@@ -130,6 +130,7 @@ const precoBR = (centavos: number) => (centavos / 100).toLocaleString('pt-BR', {
 
 export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
   const [categoria, setCategoria] = useState<Categoria>('Todos')
+  const [pagina, setPagina] = useState(0)
   const [selecionado, setSelecionado] = useState<Produto | null>(null)
   const [interesse, setInteresse] = useState<string | null>(null)
   const [catalogo, setCatalogo] = useState<Produto[]>(() => ordemDaVitrine(PRODUTOS))
@@ -162,6 +163,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
   const visiveis = useMemo(() => categoria === 'Todos'
     ? catalogo
     : catalogo.filter((produto) => produto.categoria === categoria), [categoria, catalogo])
+  useEffect(() => { setPagina(p => Math.min(p, Math.max(0, Math.ceil(visiveis.length / 3) - 1))) }, [visiveis.length])
 
   const registrarInteresse = (produto: Produto) => {
     setInteresse(produto.id)
@@ -192,14 +194,14 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
           <div><span>Explore o ecossistema</span><h2>Produtos em destaque</h2></div>
           <nav aria-label="Categorias do marketplace">
             {CATEGORIAS.map((item) => (
-              <button key={item} aria-pressed={categoria === item} className={categoria === item ? 'on' : ''} onClick={() => setCategoria(item)}>{item}</button>
+              <button key={item} aria-pressed={categoria === item} className={categoria === item ? 'on' : ''} onClick={() => { setCategoria(item); setPagina(0) }}>{item}</button>
             ))}
           </nav>
         </header>
 
         <div className="market-grade">
           {visiveis.length === 0 && <p role="status">Nenhum produto nesta categoria. <button onClick={() => setCategoria('Todos')}>Ver todos os produtos</button></p>}
-          {visiveis.map((produto, indice) => { const aberto = disponivel(produto); return (
+          {visiveis.slice(pagina * 3, pagina * 3 + 3).map((produto, indice) => { const aberto = disponivel(produto); return (
             <article key={produto.id} className={`market-card ${produto.tom} ${aberto ? 'disponivel' : 'esgotado'}`} aria-label={aberto ? undefined : `${produto.nome} — esgotado`}>
               <button className={`market-card-capa ${MARCA.id === 'teeds' && produto.imagem === 'simulador-treino.jpg' ? 'market-card-capa-simulador' : ''}`} onClick={() => abrir(produto)} disabled={!aberto} aria-disabled={!aberto}
                 aria-label={aberto ? `Conhecer ${produto.nome}` : `${produto.nome}: esgotado no momento`}>
@@ -207,7 +209,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
                 {!aberto && <span className="market-card-tarja" aria-hidden="true">Esgotado</span>}
                 {!aberto && <span className="market-card-selo">{produto.selo}</span>}
                 {aberto && <span className="market-card-desconto">{produto.desconto}</span>}
-                <span className="market-card-num">0{indice + 1}</span>
+                <span className="market-card-num">{String(pagina * 3 + indice + 1).padStart(2, '0')}</span>
                 <div className="market-card-identidade"><b>{produto.simbolo}</b><small>{MARCA.nome} ORIGINAL</small></div>
                 <span className="market-card-tipo">{produto.categoria}</span>
               </button>
@@ -230,6 +232,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
             </article>
           ) })}
         </div>
+        {visiveis.length > 3 && <nav className="market-paginacao" aria-label="Páginas de produtos"><button disabled={pagina === 0} onClick={() => setPagina(p => p - 1)}>← Anterior</button><span>Página {pagina + 1} de {Math.ceil(visiveis.length / 3)}</span><button disabled={(pagina + 1) * 3 >= visiveis.length} onClick={() => setPagina(p => p + 1)}>Próxima →</button></nav>}
       </section>
 
       <section className="market-garantia">

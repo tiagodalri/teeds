@@ -225,20 +225,29 @@ button, input, select, textarea { font-family: inherit; }
 }
 @media (max-width: 420px) { .go-consultoria .go-campos { grid-template-columns: 1fr; } }
 .layout-operar .chart-title { align-items: stretch; gap: 10px; min-width: 0; }
-.layout-operar .ativo-seletor, .layout-operar .manual-cotacao { box-sizing: border-box; min-height: 58px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 9px 13px; }
-.layout-operar .ativo-seletor { width: 100%; max-width: none; gap: 20px; text-align: left; }
+.layout-operar .ativo-seletor, .layout-operar .manual-cotacao { box-sizing: border-box; min-height: 46px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); padding: 6px 12px; }
+.layout-operar .chart-head { padding: 8px 14px; gap: 10px; }
+.layout-operar .chart-title .ativo-seletor-wrap { min-width: 230px; }
+.layout-operar .ativo-seletor { width: 100%; max-width: none; margin: 0; gap: 20px; text-align: left; }
 .layout-operar .manual-ativo-texto { display: grid; gap: 4px; min-width: 0; }
 .layout-operar .manual-ativo-texto small, .layout-operar .manual-cotacao > small { display: block; color: var(--muted); font-size: 10px; font-weight: 600; line-height: 1.2; letter-spacing: .06em; text-transform: uppercase; }
-.layout-operar .manual-ativo-texto strong { display: block; font-size: 14px; font-weight: 600; line-height: 1.3; white-space: normal; }
+.layout-operar .manual-ativo-texto strong { display: block; font-size: 14px; font-weight: 600; line-height: 1.3; white-space: nowrap; }
 .layout-operar .manual-cotacao { display: grid; align-content: center; gap: 4px; min-width: 150px; }
 .layout-operar .manual-cotacao .price { font-size: 17px; line-height: 1.2; letter-spacing: .01em; }
 .layout-operar .ativo-seletor:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 @media (max-width: 600px) {
-  .layout-operar .chart-title { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, .7fr); width: 100%; }
+  .layout-operar .chart-title { display: grid; grid-template-columns: minmax(190px, 1fr) minmax(110px, .65fr); width: 100%; gap: 6px; }
+  .layout-operar .chart-title .ativo-seletor-wrap { min-width: 0; }
   .layout-operar .manual-cotacao { min-width: 0; }
   .layout-operar .ativo-seletor { gap: 8px; }
   .layout-operar .manual-ativo-texto strong { font-size: 12px; }
   .layout-operar .manual-cotacao .price { font-size: 15px; }
+}
+@media (max-width: 360px) {
+  .layout-operar .chart-head { padding-inline: 8px; }
+  .layout-operar .chart-title { grid-template-columns: minmax(176px, 1fr) minmax(100px, .6fr); }
+  .layout-operar .ativo-seletor, .layout-operar .manual-cotacao { padding-inline: 7px; }
+  .layout-operar .manual-cotacao .price { font-size: 13px; }
 }
 @media (min-width: 901px) {
   .go-consultoria .go-grade { align-items: stretch; }
@@ -246,4 +255,65 @@ button, input, select, textarea { font-family: inherit; }
   .go-consultoria .go-config .go-banca-nota { margin-top: auto; padding-top: 14px; }
   .go-consultoria .go-config .go-campos { margin-bottom: 14px; }
   .go-consultoria .go-resultados { grid-template-rows: auto auto 1fr; }
+}
+/* Vitrines compactas: conteúdo antes da decoração; sem alterar o player. */
+.marketplace .market-hero { min-height: 0; display: block; padding: 20px 28px; }
+.marketplace .market-hero-conteudo { max-width: 1420px; margin-inline: auto; }
+.marketplace .market-hero h1 { max-width: none; font-size: clamp(24px, 2.2vw, 32px); line-height: 1.15; margin: 8px 0; }
+.marketplace .market-hero-conteudo > p { font-size: 13px; margin: 0; max-width: none; }
+.marketplace .market-hero-produto, .marketplace .market-hero::after { display: none; }
+.marketplace .market-hero-acoes { margin-top: 12px; gap: 14px; }
+.marketplace .market-hero-acoes button { min-height: 36px; padding: 0 14px; font-size: 12px; }
+.marketplace .market-vitrine { padding: 16px 28px; }
+.marketplace .market-cabecalho { margin-bottom: 14px; gap: 14px; }
+.marketplace .market-cabecalho h2 { font-size: 20px; }
+.marketplace .market-grade { gap: 14px; }
+.marketplace .market-card-capa { height: clamp(140px, 23vh, 220px); aspect-ratio: auto; }
+.marketplace .market-card-capa-simulador { background: #101217; }
+.marketplace .market-card-corpo { min-height: 0; padding: 14px; }
+.marketplace .market-card-corpo h3 { font-size: 16px; line-height: 1.3; }
+.marketplace .market-card-corpo > p { min-height: 0; margin: 10px 0 14px; font-size: 12px; line-height: 1.5; }
+.marketplace .market-card { display: flex; flex-direction: column; }
+.marketplace .market-card-corpo { flex: 1; }
+.marketplace .market-garantia { padding: 12px 28px; margin: 0 auto; }
+.market-paginacao { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 14px; font-size: 12px; color: var(--muted); }
+.market-paginacao button { min-height: 36px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); cursor: pointer; }
+.market-paginacao button:disabled { opacity: .4; cursor: default; }
+.ger.aulas:not(.cine) { padding: 20px 28px; gap: 22px; }
+.ger.aulas:not(.cine) .aulas-capa { width: 100%; min-height: 0; margin: 0; padding: 26px 30px; border: 1px solid var(--border); border-radius: 14px; }
+.ger.aulas:not(.cine) .aulas-capa h2 { font-size: clamp(26px, 2.5vw, 38px); max-width: 24ch; line-height: 1.1; }
+.ger.aulas:not(.cine) .aulas-capa-texto > p { font-size: 13px; max-width: 55ch; margin-block: 10px; }
+.ger.aulas:not(.cine) .aulas-meta { margin-block: 10px; }
+.ger.aulas:not(.cine) .aulas-progresso { margin-block: 12px; }
+.ger.aulas:not(.cine) .aulas-hero-acoes { gap: 8px; }
+.ger.aulas:not(.cine) .aulas-hero-acoes button { padding: 9px 13px; font-size: 12px; }
+.ger.aulas:not(.cine) .aulas-trilha-num { font-size: 26px; }
+.ger.aulas:not(.cine) .aulas-modulo-topo h3 { font-size: 16px; }
+.ger.aulas:not(.cine) .aulas-modulo-topo p { font-size: 12px; }
+.ger.aulas:not(.cine) .aulas-carrossel .aula-cartao { flex: 0 0 190px; width: 190px; }
+.ger.aulas:not(.cine) .aulas-carrossel .aula-cartao-capa { aspect-ratio: 3 / 4; }
+.ger.aulas:not(.cine) .aulas-carrossel .aula-cartao-corpo { min-height: 64px; padding: 9px 10px; }
+.ger.aulas:not(.cine) .aulas-carrossel .aula-cartao-corpo > b { font-size: 12px; white-space: normal; }
+.ger.aulas:not(.cine) .aulas-continue .aulas-carrossel { max-width: 210px; }
+@media (max-width: 700px) {
+  .marketplace .market-hero, .marketplace .market-vitrine { padding: 16px; }
+  .marketplace .market-cabecalho { align-items: flex-start; flex-direction: column; }
+  .marketplace .market-grade { display: grid; grid-template-columns: 1fr; margin: 0; padding: 0; overflow: visible; }
+  .marketplace .market-card-capa { height: 210px; }
+  .ger.aulas:not(.cine) { padding: 14px; }
+  .ger.aulas:not(.cine) .aulas-capa { padding: 22px 18px; }
+  .ger.aulas:not(.cine) .aulas-carrossel .aula-cartao { flex-basis: 160px; width: 160px; }
+}
+.marketplace .market-garantia { min-height: 0; border-radius: 0; background: transparent; border-top: 1px solid var(--border); gap: 14px; }
+.marketplace .market-garantia > div { padding: 0; }
+.marketplace .market-garantia i { display: none; }
+@media (min-width: 901px) and (max-height: 850px) {
+  .marketplace .market-hero { padding-block: 12px; }
+  .marketplace .market-hero h1 { font-size: 25px; }
+  .marketplace .market-hero-acoes { margin-top: 8px; }
+  .marketplace .market-card-capa { height: 145px; }
+  .marketplace .market-card-corpo > p { margin-block: 8px 10px; }
+  .marketplace .market-vitrine { padding-block: 10px; }
+  .marketplace .market-cabecalho { margin-bottom: 10px; }
+  .marketplace .market-paginacao { margin-top: 10px; }
 }
