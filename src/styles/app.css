@@ -4366,6 +4366,58 @@ input, select, textarea, button { vertical-align: middle; }
 .market-modal-fundo { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.72); backdrop-filter: blur(14px); }.market-modal { position: relative; width: min(800px,100%); max-height: min(680px,calc(100dvh - 32px)); display: grid; grid-template-columns: .8fr 1.2fr; overflow: auto; border: 1px solid color-mix(in srgb,var(--card-accent) 38%,var(--border)); border-radius: 18px; background: var(--surface); box-shadow: 0 40px 100px rgba(0,0,0,.65); }.market-modal-fechar { position: absolute; z-index: 3; top: 12px; right: 12px; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 50%; color: var(--text); background: rgba(8,9,12,.76); cursor: pointer; font-size: 22px; }.market-modal-arte { min-height: 420px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--card-accent); background: radial-gradient(circle,var(--card-soft),transparent 42%),linear-gradient(145deg,#17191e,#07080b); }.market-modal-arte span { position: absolute; top: 22px; left: 22px; font-size: 8px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }.market-modal-arte b { font-size: 78px; letter-spacing: -.08em; }.market-modal-arte small { color: var(--muted); font-size: 7px; letter-spacing: .2em; }.market-modal-corpo { padding: 50px 42px 38px; }.market-modal-corpo h2 { margin: 10px 0 13px; color: var(--text); font-size: 31px; }.market-modal-corpo > p { color: var(--muted); font-size: 12px; line-height: 1.7; }.market-modal-corpo ul { display: grid; gap: 11px; margin: 25px 0; padding: 20px 0; border-block: 1px solid var(--border); list-style: none; }.market-modal-corpo li { display: flex; gap: 9px; color: var(--card-accent); font-size: 11px; }.market-modal-corpo li span { color: var(--text); }.market-modal-compra { display: flex; align-items: center; justify-content: space-between; gap: 18px; }.market-modal-compra strong { color: var(--text); font-size: 16px; }.market-modal-compra strong small { margin-left: 3px; color: var(--muted); font-size: 9px; }.market-modal-corpo .market-aviso { display: block; margin-top: 13px; color: var(--muted); font-size: 8px; line-height: 1.5; }
 .market-toast { position: fixed; z-index: 110; right: 22px; bottom: 22px; width: min(370px,calc(100vw - 32px)); display: grid; grid-template-columns: 34px 1fr 24px; align-items: center; gap: 11px; padding: 14px; border: 1px solid color-mix(in srgb,var(--up) 38%,var(--border)); border-radius: 12px; background: var(--surface); box-shadow: 0 20px 55px rgba(0,0,0,.45); }.market-toast > i { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; color: var(--up); background: var(--up-soft); font-style: normal; }.market-toast > span { display: grid; gap: 3px; }.market-toast b { color: var(--text); font-size: 11px; }.market-toast small { color: var(--muted); font-size: 9px; }.market-toast button { border: 0; color: var(--muted); background: transparent; cursor: pointer; font-size: 18px; }
 
+/* Página de vendas dentro do modal (produto à venda). A coluna da arte fica fixa; o texto rola. */
+.market-modal:has(.com-vendas) { max-height: min(860px, calc(100dvh - 32px)); grid-template-columns: .72fr 1.28fr; }
+.market-modal:has(.com-vendas) .market-modal-arte { position: sticky; top: 0; align-self: start; height: 100%; min-height: 0; }
+.market-modal-corpo.com-vendas { padding: 46px 40px 34px; }
+.market-modal-corpo.com-vendas h2 { margin: 10px 0 6px; font-size: 30px; letter-spacing: -.03em; }
+.market-vendas { display: grid; gap: 18px; }
+.market-vendas h3 { margin: 8px 0 0; color: var(--text); font-size: 13px; font-weight: 800; letter-spacing: .02em; }
+.market-vendas-gancho { margin: 0; color: var(--primary); font-size: 19px; font-weight: 750; letter-spacing: -.02em; line-height: 1.25; }
+.market-vendas-promessa { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.75; }
+.market-vendas-numeros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--border); }
+.market-vendas-numeros > div { display: grid; gap: 4px; padding: 14px 14px; background: var(--bg); }
+.market-vendas-numeros b { color: var(--text); font-size: 19px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.market-vendas-numeros span { color: var(--muted); font-size: 10.5px; line-height: 1.4; }
+.market-vendas-beneficios, .market-vendas-quem, .market-vendas-garantias, .market-vendas-passos { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.market-vendas-beneficios { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+.market-vendas-beneficios li { display: flex; gap: 10px; font-size: 12px; line-height: 1.55; color: var(--muted); }
+.market-vendas-beneficios li i { flex-shrink: 0; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: #09120d; background: var(--up); font-size: 11px; font-style: normal; font-weight: 800; }
+.market-vendas-beneficios li b { display: block; margin-bottom: 2px; color: var(--text); font-size: 12.5px; }
+.market-vendas-passos { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.market-vendas-passos li { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); font-size: 11.5px; line-height: 1.5; color: var(--muted); }
+.market-vendas-passos li i { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; color: var(--primary); background: var(--primary-soft); font-size: 11px; font-style: normal; font-weight: 800; }
+.market-vendas-passos li b { display: block; margin-bottom: 2px; color: var(--text); font-size: 12.5px; }
+.market-vendas-quem li { position: relative; padding-left: 18px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.market-vendas-quem li::before { content: '→'; position: absolute; left: 0; color: var(--primary); font-weight: 800; }
+.market-vendas-objecao { padding: 14px 16px; border-left: 3px solid var(--primary); border-radius: 0 10px 10px 0; background: var(--primary-soft); }
+.market-vendas-objecao b { display: block; margin-bottom: 6px; color: var(--text); font-size: 12.5px; }
+.market-vendas-objecao p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.market-vendas-oferta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; padding: 18px 20px; border: 1px solid color-mix(in srgb, var(--up) 45%, var(--border)); border-radius: 14px; background: linear-gradient(135deg, color-mix(in srgb, var(--up) 12%, var(--bg)), var(--bg) 70%); box-shadow: 0 20px 50px -30px color-mix(in srgb, var(--up) 70%, transparent); }
+.market-vendas-preco { display: grid; gap: 2px; }
+.market-vendas-preco > span { color: var(--muted); font-size: 11px; }
+.market-vendas-preco del { color: var(--muted); text-decoration-color: var(--down); font-weight: 600; }
+.market-vendas-preco strong { color: var(--text); font-size: 34px; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.market-vendas-preco strong small { margin-left: 5px; color: var(--muted); font-size: 10px; }
+.market-vendas-preco em { margin-top: 4px; color: var(--up); font-size: 10.5px; font-style: normal; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.market-vendas-cta { display: grid; gap: 8px; justify-items: end; max-width: 300px; }
+.market-vendas-cta button { min-height: 50px; padding: 0 26px; border: 0; border-radius: 12px; color: #09120d; background: linear-gradient(135deg, color-mix(in srgb, var(--up) 85%, #fff), var(--up)); cursor: pointer; font: inherit; font-size: 15px; font-weight: 800; box-shadow: 0 14px 30px -14px var(--up); transition: transform .15s, box-shadow .15s; }
+.market-vendas-cta button:hover { transform: translateY(-1px); box-shadow: 0 18px 34px -14px var(--up); }
+.market-vendas-cta button span { margin-left: 8px; }
+.market-vendas-cta small { color: var(--muted); font-size: 10.5px; text-align: right; line-height: 1.4; }
+.market-vendas-garantias { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.market-vendas-garantias li { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; }
+.market-vendas-garantias li i { color: var(--primary); font-style: normal; }
+.market-vendas .market-aviso { margin-top: 0; }
+@media (max-width: 720px) {
+  .market-modal:has(.com-vendas) { grid-template-columns: 1fr; max-height: calc(100dvh - 24px); }
+  .market-modal:has(.com-vendas) .market-modal-arte { position: static; min-height: 200px; }
+  .market-modal-corpo.com-vendas { padding: 24px 18px 28px; }
+  .market-modal-corpo.com-vendas h2 { font-size: 25px; }
+  .market-vendas-beneficios, .market-vendas-passos, .market-vendas-garantias, .market-vendas-numeros { grid-template-columns: 1fr; }
+  .market-vendas-oferta { flex-direction: column; align-items: stretch; }
+  .market-vendas-cta { max-width: none; justify-items: stretch; } .market-vendas-cta button { width: 100%; } .market-vendas-cta small { text-align: left; }
+}
 /* Capas autorais: a arte permanece limpa e a tipografia vive na interface. */
 .market-modal-arte { position: relative; justify-content: flex-end; padding-bottom: 34px; overflow: hidden; background: #07080b; }
 .market-modal-arte::after { content: ''; position: absolute; z-index: 1; inset: 0; background: linear-gradient(180deg,transparent 34%,rgba(5,6,8,.94) 100%); }

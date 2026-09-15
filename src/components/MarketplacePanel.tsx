@@ -22,14 +22,60 @@ type Produto = {
   tom: 'ouro' | 'verde' | 'rubi' | 'azul' | 'violeta'
   itens: string[]
   destaque?: boolean
+  /** Página de vendas no modal (só os produtos à venda precisam dela). */
+  vendas?: {
+    gancho: string
+    promessa: string
+    numeros: Array<{ valor: string; rotulo: string }>
+    beneficios: Array<{ titulo: string; texto: string }>
+    passos: Array<{ titulo: string; texto: string }>
+    paraQuem: string[]
+    objecao: { pergunta: string; resposta: string }
+    chamada: string
+    garantias: string[]
+  }
 }
 
 const PRODUTOS: Produto[] = [
   {
     id: 'simulador-treino', categoria: 'Ferramentas', nome: 'Simulador de Treinamento',
-    descricao: 'Ambiente seguro para praticar estratégias e decisões usando dinheiro fictício antes de operar.',
+    descricao: 'US$ 10.000 fictícios para treinar, errar, acertar e se aperfeiçoar na mesma plataforma em que você opera de verdade. Zerou? Reabastece, sem limite.',
     precoDe: 'R$ 1.200', preco: 'R$ 497', desconto: '59% OFF', imagem: 'simulador-treino.jpg', selo: 'Treino sem risco', simbolo: 'ST', tom: 'azul', destaque: true,
-    itens: ['Saldo totalmente fictício', 'Cenários próximos do mercado', 'Relatório de evolução'],
+    itens: ['US$ 10.000 fictícios, reabastecimento ilimitado', 'A mesma plataforma, os mesmos ativos, o mesmo gráfico', 'Histórico de cada operação para revisar o que fez'],
+    vendas: {
+      gancho: 'Erre quanto precisar. Acerte quando for de verdade.',
+      promessa: 'Quem opera sem treinar aprende com o próprio dinheiro. O Simulador coloca US$ 10.000 fictícios na sua mão, na mesma tela em que você opera de verdade, para você praticar a estratégia, sentir a pressão da decisão e corrigir o que precisa corrigir antes que custe algo.',
+      numeros: [
+        { valor: 'US$ 10.000', rotulo: 'de saldo fictício para começar' },
+        { valor: 'Ilimitado', rotulo: 'reabastecimento quando chegar a zero' },
+        { valor: 'Zero', rotulo: 'risco ao capital real' },
+      ],
+      beneficios: [
+        { titulo: 'Treine como se fosse real', texto: 'Mesmos ativos, mesmo gráfico, mesmos dígitos e mesmos botões. O que você aprende aqui vale lá.' },
+        { titulo: 'Erre sem pagar por isso', texto: 'Cada erro no simulador é uma lição de graça. Na conta real, a mesma lição tem preço.' },
+        { titulo: 'Repita até virar hábito', texto: 'Zerou o saldo? Reabastece e continua. Sem limite de tentativas, sem esperar, sem custo extra.' },
+        { titulo: 'Veja a própria evolução', texto: 'Cada operação fica registrada: entrada, saída, resultado. Você enxerga o padrão dos seus acertos e dos seus erros.' },
+        { titulo: 'Teste antes de subir a entrada', texto: 'Vai mudar de estratégia, de ativo ou de valor? Prove a ideia no simulador primeiro.' },
+        { titulo: 'Disciplina que dá resultado', texto: 'Quem pratica decide mais rápido e com menos emoção. É isso que separa quem cresce de quem só tenta.' },
+      ],
+      passos: [
+        { titulo: 'Ative', texto: 'O simulador aparece na sua plataforma, com o saldo fictício pronto.' },
+        { titulo: 'Treine', texto: 'Opere, erre, acerte, reabasteça, repita. O quanto quiser.' },
+        { titulo: 'Opere de verdade', texto: 'Quando estiver consistente, leva a mesma rotina para a conta real.' },
+      ],
+      paraQuem: [
+        'Está começando e quer sentir o mercado sem arriscar nada',
+        'Já opera e quer testar uma estratégia nova antes de usar dinheiro',
+        'Perde por ansiedade e precisa treinar a decisão até ela ficar fria',
+        'Quer aumentar o resultado com método, não com sorte',
+      ],
+      objecao: {
+        pergunta: 'Já tem conta demo na corretora. Por que o Simulador?',
+        resposta: 'A demo não tem ritmo de treino: sem reabastecimento controlado, sem o histórico organizado dentro da sua plataforma e sem a rotina de quem está treinando de propósito. O Simulador foi feito para você praticar com intenção, na mesma tela em que vai operar de verdade.',
+      },
+      chamada: 'Quero meu Simulador',
+      garantias: ['Sem cobrança automática por aqui', 'A equipe conclui a compra com você', 'Acesso dentro da sua plataforma'],
+    },
   },
   {
     id: 'mentoria-alavancagem', categoria: 'Mentorias', nome: 'Mentoria de Alavancagem',
@@ -194,16 +240,59 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
               <ResponsiveImage src={capaProduto(selecionado.imagem)} alt="" />
               <span>{selecionado.selo}</span><b>{selecionado.simbolo}</b><small>{MARCA.nome} ORIGINAL</small>
             </div>
-            <div className="market-modal-corpo">
-              <span className="market-eyebrow">{selecionado.categoria}</span>
+            <div className={`market-modal-corpo ${selecionado.vendas ? 'com-vendas' : ''}`}>
+              <span className="market-eyebrow">{selecionado.categoria}{selecionado.vendas ? ` · ${selecionado.selo}` : ''}</span>
               <h2 id="market-modal-titulo">{selecionado.nome}</h2>
-              <p>{selecionado.descricao}</p>
-              <ul>{selecionado.itens.map((item) => <li key={item}>✓ <span>{item}</span></li>)}</ul>
-              <div className="market-modal-compra">
-                <span className="market-preco"><del>{selecionado.precoDe}</del><strong>{selecionado.preco}<small>{selecionado.periodo}</small></strong><em>{selecionado.desconto}</em></span>
-                <button onClick={() => registrarInteresse(selecionado)}>Quero comprar</button>
-              </div>
-              <small className="market-aviso">Nenhuma cobrança é feita por aqui. Ao confirmar, a equipe {MARCA.prosa} recebe seu pedido e entra em contato para concluir a compra.</small>
+              {selecionado.vendas ? (
+                <div className="market-vendas">
+                  <p className="market-vendas-gancho">{selecionado.vendas.gancho}</p>
+                  <p className="market-vendas-promessa">{selecionado.vendas.promessa}</p>
+                  <div className="market-vendas-numeros">
+                    {selecionado.vendas.numeros.map((n) => <div key={n.rotulo}><b>{n.valor}</b><span>{n.rotulo}</span></div>)}
+                  </div>
+                  <h3>O que muda quando você treina</h3>
+                  <ul className="market-vendas-beneficios">
+                    {selecionado.vendas.beneficios.map((b) => <li key={b.titulo}><i aria-hidden="true">✓</i><span><b>{b.titulo}</b>{b.texto}</span></li>)}
+                  </ul>
+                  <h3>Como funciona</h3>
+                  <ol className="market-vendas-passos">
+                    {selecionado.vendas.passos.map((p, i) => <li key={p.titulo}><i>{i + 1}</i><span><b>{p.titulo}</b>{p.texto}</span></li>)}
+                  </ol>
+                  <h3>É para você se</h3>
+                  <ul className="market-vendas-quem">
+                    {selecionado.vendas.paraQuem.map((q) => <li key={q}>{q}</li>)}
+                  </ul>
+                  <div className="market-vendas-objecao">
+                    <b>{selecionado.vendas.objecao.pergunta}</b>
+                    <p>{selecionado.vendas.objecao.resposta}</p>
+                  </div>
+                  <div className="market-vendas-oferta">
+                    <div className="market-vendas-preco">
+                      <span>De <del>{selecionado.precoDe}</del> por</span>
+                      <strong>{selecionado.preco}<small>{selecionado.periodo}</small></strong>
+                      <em>{selecionado.desconto} · pagamento único</em>
+                    </div>
+                    <div className="market-vendas-cta">
+                      <button onClick={() => registrarInteresse(selecionado)}>{selecionado.vendas.chamada} <span>→</span></button>
+                      <small>Único produto disponível agora. A promoção vale enquanto estiver publicada.</small>
+                    </div>
+                  </div>
+                  <ul className="market-vendas-garantias">
+                    {selecionado.vendas.garantias.map((g) => <li key={g}><i aria-hidden="true">◇</i>{g}</li>)}
+                  </ul>
+                  <small className="market-aviso">Nenhuma cobrança é feita por aqui. Ao confirmar, a equipe {MARCA.prosa} recebe seu pedido e entra em contato para concluir a compra.</small>
+                </div>
+              ) : (
+                <>
+                  <p>{selecionado.descricao}</p>
+                  <ul>{selecionado.itens.map((item) => <li key={item}>✓ <span>{item}</span></li>)}</ul>
+                  <div className="market-modal-compra">
+                    <span className="market-preco"><del>{selecionado.precoDe}</del><strong>{selecionado.preco}<small>{selecionado.periodo}</small></strong><em>{selecionado.desconto}</em></span>
+                    <button onClick={() => registrarInteresse(selecionado)}>Quero comprar</button>
+                  </div>
+                  <small className="market-aviso">Nenhuma cobrança é feita por aqui. Ao confirmar, a equipe {MARCA.prosa} recebe seu pedido e entra em contato para concluir a compra.</small>
+                </>
+              )}
             </div>
           </section>
         </div>
