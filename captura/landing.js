@@ -165,7 +165,7 @@ for (const [pergunta, resposta] of FAQ) {
     const e2 = q('[data-demo-etapa2]'); e2.className = `tv-etapa ${!aberto && ops ? 'ativa concluida' : ''}`
     e2.querySelector('i').textContent = !aberto && ops ? '✓' : '2'
     q('[data-demo-etapa2-sub]').textContent = aberto ? 'aguardando resultado…' : op ? `${op.ganhou ? 'ganho' : 'perda'} ${assinado(op.lucro)} USD` : 'próxima etapa'
-    q('[data-demo-linha-progresso]').style.width = aberto ? '100%' : '0%'
+    q('.tv-fluxo').className = `tv-fluxo ${aberto ? 'aberto' : ops ? 'fechado' : ''}`
   }
   const registrar = (op, entrada, saida, dIn, dOut) => {
     const tr = document.createElement('tr'); tr.className = op.ganhou ? 'ganhou' : 'perdeu'
