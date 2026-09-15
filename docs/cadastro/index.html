@@ -411,7 +411,7 @@ const ROBOS = {
   goreme: { regra: 'Under 9', ganha: [0, 1, 2, 3, 4, 5, 6, 7, 8], texto: 'Ganha com qualquer dígito de 0 a 8. O retorno por acerto é pequeno, então a recuperação liga já na primeira perda.' },
   firstblock: { regra: 'Under 5', ganha: [0, 1, 2, 3, 4], texto: 'Ganha com 0, 1, 2, 3 ou 4. Entra em toda operação com o valor base e recupera só o necessário depois do gatilho.' },
   secondblock: { regra: 'Over 4', ganha: [5, 6, 7, 8, 9], texto: 'Ganha com 5, 6, 7, 8 ou 9. Entra em toda operação com o valor base e recupera só o necessário depois do gatilho.' },
-  thepalm: { regra: 'Under 9 → Under 5', ganha: [0, 1, 2, 3, 4, 5, 6, 7, 8], texto: 'Analisa 25 dígitos, arma entradas reais em Under 9 depois de uma perda virtual e troca para Under 5 na recuperação, com o payout real no cálculo.' },
+  thepalm: { regra: 'Under 9 → Under 5', ganha: [0, 1, 2, 3, 4, 5, 6, 7, 8], payout: 0.115, recuperacao: { ganha: [0, 1, 2, 3, 4], payout: 0.95, chance: 0.86 }, texto: 'Analisa 25 dígitos, arma entradas reais em Under 9 depois de uma perda virtual e troca para Under 5 na recuperação, com o payout real no cálculo.' },
 }
 const config = marca === 'omni' ? {
   nome: 'OMNI', cor: '#6c93c6', escura: '#0e2a4e', emblema: '/omni-marca.png', assinatura: 'FINANCIAL INTELLIGENCE',
@@ -422,7 +422,7 @@ const config = marca === 'omni' ? {
   nome: 'TEEDS', cor: '#d2aa51', escura: '#8c6926', emblema: '/teeds-marca.png', assinatura: 'TRADING TECHNOLOGY',
   intro: 'A Teeds reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
   robos: [['superior5', 'Teeds AG7'], ['ag2', 'Teeds AG2'], ['thepalm', 'The Palm'], ['smart03', 'Teeds Smart 03'], ['goreme', 'Teeds Göreme'], ['firstblock', 'First Block'], ['secondblock', 'Second Block']],
-  demo: { id: 'firstblock', nome: 'First Block' },
+  demo: { id: 'thepalm', nome: 'The Palm' },
 }
 document.documentElement.dataset.marca = marca
 document.documentElement.style.setProperty('--cor', config.cor)
@@ -500,7 +500,8 @@ for (const [pergunta, resposta] of FAQ) {
   const robo = ROBOS[config.demo.id]
   const q = sel => raiz.querySelector(sel)
   q('[data-demo-robo]').textContent = config.demo.nome
-  const META = 200, STOP = 100, BASE = 3
+  const META = 200, STOP = 100, BASE = robo.recuperacao ? 25 : 3
+  const PAYOUT = robo.payout ?? 0.95
   const reduzido = matchMedia('(prefers-reduced-motion: reduce)').matches
   const num = v => Math.abs(v).toFixed(2).replace('.', ',')
   const assinado = v => `${v < 0 ? '−' : '+'}${num(v)}`
@@ -511,15 +512,27 @@ for (const [pergunta, resposta] of FAQ) {
 
   // 1) o roteiro: ganhos e perdas com progressão, em unidades de entrada base
   const roteiro = []
-  let valor = 1, seguidas = 0, acumulado = 0
-  for (let i = 0; i < 118; i++) {
+  let valor = 1, seguidas = 0, acumulado = 0, perdaAberta = 0
+  for (let i = 0; i < (robo.recuperacao ? 96 : 118); i++) {
+    if (robo.recuperacao && perdaAberta > 0) {
+      // recuperação (Under 5): entrada dimensionada para cobrir a perda e ainda deixar o lucro base
+      const rec = robo.recuperacao
+      const v = +((perdaAberta + PAYOUT) / rec.payout).toFixed(4)
+      const ganhou = sortear() < rec.chance
+      const lucro = ganhou ? +(v * rec.payout).toFixed(4) : -v
+      acumulado += lucro
+      roteiro.push({ ganhou, valor: v, lucro, ganha: rec.ganha, recuperacao: true })
+      perdaAberta = ganhou ? 0 : perdaAberta + v
+      continue
+    }
     // fases: começo tranquilo (+4), meio com quedas maiores, fim subindo até a meta
-    const chance = i < 6 ? 0.9 : i < 40 ? 0.66 : i < 75 ? 0.6 : 0.72
+    const chance = robo.recuperacao ? (i < 8 ? 0.97 : i < 45 ? 0.86 : i < 70 ? 0.83 : 0.9) : (i < 6 ? 0.9 : i < 40 ? 0.66 : i < 75 ? 0.6 : 0.72)
     const ganhou = sortear() < chance
-    const lucro = ganhou ? +(valor * 0.95).toFixed(4) : -valor
+    const lucro = ganhou ? +(valor * PAYOUT).toFixed(4) : -valor
     acumulado += lucro
-    roteiro.push({ ganhou, valor, lucro })
-    if (ganhou) { valor = 1; seguidas = 0 } else { seguidas += 1; valor = Math.min(valor * 2.1, 9) }
+    roteiro.push({ ganhou, valor, lucro, ganha: robo.ganha })
+    if (robo.recuperacao) { if (!ganhou) perdaAberta = valor }
+    else if (ganhou) { valor = 1; seguidas = 0 } else { seguidas += 1; valor = Math.min(valor * 2.1, 9) }
   }
   // 2) escala para terminar exatamente na meta e nunca cruzar o stop
   const escala = (META / BASE) / acumulado
@@ -560,7 +573,7 @@ for (const [pergunta, resposta] of FAQ) {
     q('[data-demo-etapa1]').textContent = aberto ? '●' : ops ? '✓' : '1'
     q('[data-demo-etapa1-titulo]').textContent = aberto ? 'Contrato aberto' : ops ? 'Último contrato' : 'Aguardando entrada'
     q('[data-demo-etapa1-sub]').textContent = aberto ? hora() : ops ? hora() : 'monitorando o mercado'
-    q('[data-demo-fase]').textContent = aberto ? 'Contrato aberto' : (op && !op.ganhou) ? 'Recuperando' : 'Analisando mercado'
+    q('[data-demo-fase]').textContent = aberto ? (op && op.recuperacao ? 'Recuperando · Under 5' : 'Contrato aberto') : (op && !op.ganhou) ? 'Recuperando' : robo.recuperacao ? 'Analisando 25 dígitos' : 'Analisando mercado'
     const e2 = q('[data-demo-etapa2]'); e2.className = `tv-etapa ${!aberto && ops ? 'ativa concluida' : ''}`
     e2.querySelector('i').textContent = !aberto && ops ? '✓' : '2'
     q('[data-demo-etapa2-sub]').textContent = aberto ? 'aguardando resultado…' : op ? `${op.ganhou ? 'ganho' : 'perda'} ${assinado(op.lucro)} USD` : 'próxima etapa'
@@ -581,10 +594,11 @@ for (const [pergunta, resposta] of FAQ) {
     q('[data-demo-entrada]').innerHTML = `${num(op.valor)} <i>USD</i>`
     setTimeout(() => {
       if (parado) return
-      const dIn = escolher([...grupo, ...fora]); const entrada = precoCom(dIn); empurrarDigito(dIn); etapa(true, null)
+      const dIn = escolher([...grupo, ...fora]); const entrada = precoCom(dIn); empurrarDigito(dIn); etapa(true, op)
       setTimeout(() => {
         if (parado) return
-        const dOut = escolher(op.ganhou ? grupo : fora); const saida = precoCom(dOut); empurrarDigito(dOut)
+        const g = op.ganha ?? grupo, f = [0,1,2,3,4,5,6,7,8,9].filter(d => !g.includes(d))
+        const dOut = escolher(op.ganhou ? g : f); const saida = precoCom(dOut); empurrarDigito(dOut)
         ops += 1; if (op.ganhou) ganhas += 1
         resultado = +(resultado + op.lucro).toFixed(2); curva.push(resultado)
         indice += 1
