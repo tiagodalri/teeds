@@ -101,20 +101,24 @@ const Cartao = memo(function Cartao({ s, cliente, saude, visao, aoAbrir }: { s: 
         <span className="mon-cartao-quem"><b>{nome}</b><small>{mascararEmail(cliente?.email)} · {mascararConta(s.contaId)} · <em className={s.demo ? 'demo' : 'real'}>{s.demo ? 'demo' : 'real'}</em></small></span>
         <span className={`mon-saude ${saude}`}><i aria-hidden />{ROTULO_SAUDE[saude]}</span>
       </header>
-      <div className="mon-cartao-robo"><span><b>{s.roboNome}</b><small>{NOME_DO_ATIVO[s.ativo] ?? s.ativo}</small></span><em>{ROTULO_FASE[e.fase] ?? e.fase}{e.estrategia ? ` · ${e.estrategia.detalhes?.estrategiaAtual ?? e.estrategia.fase}` : ''}</em></div>
-      <div className="mon-cartao-nums">
-        <span className="principal"><i>Resultado da sessão</i><b className={e.resultado >= 0 ? 'up' : 'down'}>{assinado(e.resultado)} <small>{s.moeda}</small></b></span>
-        <span className="principal markup"><i>{s.demo ? 'Markup simulado' : 'Markup gerado'}</i><b>{din(markup, s.moeda)}</b></span>
-        <span><i>Operações</i><b>{e.operacoes} <small className="mon-placar up">{e.vitorias} G</small> <small className="mon-placar down">{e.derrotas} P</small></b></span>
-        <span><i>Entrada atual</i><b>{din(e.emCurso?.valor ?? e.valorAtual, s.moeda)}</b></span>
-        {visao !== 'compacto' && <>
-          <span><i>Próxima entrada</i><b>{din(e.valorAtual, s.moeda)}</b></span>
-          <span><i>Até o stop</i><b className="down">{din(margem, s.moeda)}</b></span>
-          <span><i>Até a meta</i><b className="up">{din(falta, s.moeda)}</b></span>
-          <span><i>Recuperação</i><b>{e.perdasSeguidas ? `nível ${e.perdasSeguidas}` : '—'}</b></span>
-          <span><i>Último dígito</i><b>{ultimoDigito ?? '—'}</b></span>
-        </>}
+      <div className="mon-cartao-robo">
+        <span><b>{s.roboNome}</b><small>{NOME_DO_ATIVO[s.ativo] ?? s.ativo}</small></span>
+        <em>{ROTULO_FASE[e.fase] ?? e.fase}{e.estrategia ? ` · ${e.estrategia.detalhes?.estrategiaAtual ?? e.estrategia.fase}` : ''}</em>
       </div>
+      <div className="mon-cartao-principais">
+        <span><i>Resultado</i><b className={e.resultado >= 0 ? 'up' : 'down'}>{assinado(e.resultado)} <small>{s.moeda}</small></b><small>nesta sessão</small></span>
+        <span className="markup"><i>Markup</i><b>{din(markup, s.moeda)}</b><small>{s.demo ? 'projeção simulada' : 'calculado em tempo real'}</small></span>
+        <span><i>Operações</i><b>{e.operacoes}</b><small><em className="up">{e.vitorias} ganhas</em><em className="down">{e.derrotas} perdidas</em></small></span>
+      </div>
+      <div className="mon-cartao-resumo">
+        <span><i>Entrada atual</i><b>{din(e.emCurso?.valor ?? e.valorAtual, s.moeda)}</b></span>
+        <span><i>Recuperação</i><b>{e.perdasSeguidas ? `Nível ${e.perdasSeguidas}` : 'Sem recuperação'}</b></span>
+        <span><i>Último dígito</i><b>{ultimoDigito ?? '—'}</b></span>
+      </div>
+      {visao !== 'compacto' && <div className="mon-cartao-limites">
+        <span><i className="down" /><small>Margem até o stop</small><b className="down">{din(margem, s.moeda)}</b></span>
+        <span><i className="up" /><small>Falta para a meta</small><b className="up">{din(falta, s.moeda)}</b></span>
+      </div>}
       <footer><span>{s.emitidoEm ? `Atualizado às ${hora(s.emitidoEm)}` : '—'}</span><span>{s.demo ? 'Projeção — não é receita real' : e.conexao !== 'open' ? 'Deriv: ' + e.conexao : e.falha ? 'recusa da Deriv' : 'Markup local · 3% do pagamento'}</span></footer>
     </button>
   )
