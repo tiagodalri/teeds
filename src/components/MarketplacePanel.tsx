@@ -26,9 +26,15 @@ type Produto = {
 
 const PRODUTOS: Produto[] = [
   {
+    id: 'simulador-treino', categoria: 'Ferramentas', nome: 'Simulador de Treinamento',
+    descricao: 'Ambiente seguro para praticar estratégias e decisões usando dinheiro fictício antes de operar.',
+    precoDe: 'R$ 721', preco: 'R$ 497', desconto: '31% OFF', imagem: 'simulador-treino.jpg', selo: 'Treino sem risco', simbolo: 'ST', tom: 'azul', destaque: true,
+    itens: ['Saldo totalmente fictício', 'Cenários próximos do mercado', 'Relatório de evolução'],
+  },
+  {
     id: 'mentoria-alavancagem', categoria: 'Mentorias', nome: 'Mentoria de Alavancagem',
     descricao: 'Acompanhamento premium para estruturar crescimento, proteger capital e executar um plano de evolução consistente.',
-    precoDe: 'R$ 1.497', preco: 'R$ 997', desconto: '33% OFF', imagem: 'mentoria-alavancagem.jpg', selo: 'Vagas limitadas', simbolo: 'MA', tom: 'ouro', destaque: true,
+    precoDe: 'R$ 1.497', preco: 'R$ 997', desconto: '33% OFF', imagem: 'mentoria-alavancagem.jpg', selo: 'Vagas limitadas', simbolo: 'MA', tom: 'ouro',
     itens: ['Encontros estratégicos ao vivo', 'Plano individual de evolução', 'Acompanhamento de performance'],
   },
   {
@@ -50,12 +56,6 @@ const PRODUTOS: Produto[] = [
     itens: ['Motor adaptativo exclusivo', 'Proteção inteligente de sessão', 'Atualizações premium incluídas'],
   },
   {
-    id: 'simulador-treino', categoria: 'Ferramentas', nome: 'Simulador de Treinamento',
-    descricao: 'Ambiente seguro para praticar estratégias e decisões usando dinheiro fictício antes de operar.',
-    precoDe: 'R$ 597', preco: 'R$ 397', desconto: '34% OFF', imagem: 'simulador-treino.jpg', selo: 'Treino sem risco', simbolo: 'ST', tom: 'azul',
-    itens: ['Saldo totalmente fictício', 'Cenários próximos do mercado', 'Relatório de evolução'],
-  },
-  {
     id: 'indicadores-manuais', categoria: 'Ferramentas', nome: 'Indicadores para Operações Manuais',
     descricao: 'Pacote visual de indicadores para apoiar leitura de tendência, força e zonas importantes no gráfico.',
     precoDe: 'R$ 797', preco: 'R$ 497', desconto: '38% OFF', imagem: 'indicadores-manuais.jpg', selo: 'Pack profissional', simbolo: 'IM', tom: 'rubi',
@@ -64,6 +64,19 @@ const PRODUTOS: Produto[] = [
 ]
 
 const CATEGORIAS: Categoria[] = ['Todos', 'Robôs', 'Mentorias', 'Ferramentas']
+
+/**
+ * Por enquanto (15/09/2026, a pedido do Tiago) só o Simulador de Treinamento
+ * está à venda. Os outros produtos aparecem com a tarja "Esgotado" e não
+ * abrem. O disponível vem sempre primeiro na vitrine e em evidência.
+ */
+const DISPONIVEIS = new Set<string>(['simulador-treino'])
+const disponivel = (produto: Pick<Produto, 'id'>) => DISPONIVEIS.has(produto.id)
+const ordemDaVitrine = (lista: Produto[]) => [...lista].sort((a, b) => {
+  const da = disponivel(a) ? 0 : 1, db = disponivel(b) ? 0 : 1
+  if (da !== db) return da - db
+  return PRODUTOS.findIndex((p) => p.id === a.id) - PRODUTOS.findIndex((p) => p.id === b.id)
+})
 const capaProduto = (arquivo: string) => `${import.meta.env.BASE_URL}marketplace/${arquivo}`
 
 const categoriaBanco = (valor: string): Produto['categoria'] => valor === 'robo' ? 'Robôs' : valor === 'mentoria' ? 'Mentorias' : 'Ferramentas'
@@ -73,7 +86,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
   const [categoria, setCategoria] = useState<Categoria>('Todos')
   const [selecionado, setSelecionado] = useState<Produto | null>(null)
   const [interesse, setInteresse] = useState<string | null>(null)
-  const [catalogo, setCatalogo] = useState<Produto[]>(PRODUTOS)
+  const [catalogo, setCatalogo] = useState<Produto[]>(() => ordemDaVitrine(PRODUTOS))
   useEffect(() => {
     if (!sessao) return
     listarProdutos(sessao).then((itens) => {
@@ -90,10 +103,11 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
           precoDe: precoBR(Math.ceil(valor * 1.45 / 100) * 100), desconto: '31% OFF',
         } as Produto
       })
-      if (ativos.length) setCatalogo(ativos)
+      if (ativos.length) setCatalogo(ordemDaVitrine(ativos))
     }).catch(() => {})
   }, [sessao?.usuario.id])
-  const destaque = catalogo.find((produto) => produto.destaque) ?? catalogo[0]
+  const destaque = catalogo.find((produto) => disponivel(produto)) ?? catalogo.find((produto) => produto.destaque) ?? catalogo[0]
+  const abrir = (produto: Produto) => { if (disponivel(produto)) setSelecionado(produto) }
   const visiveis = useMemo(() => categoria === 'Todos'
     ? catalogo
     : catalogo.filter((produto) => produto.categoria === categoria), [categoria, catalogo])
@@ -111,14 +125,14 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
           <h1>O próximo nível da sua <em>operação.</em></h1>
           <p>Robôs premium, acompanhamento especializado e ferramentas criadas para evoluir cada etapa da sua jornada.</p>
           <div className="market-hero-acoes">
-            <button onClick={() => destaque && setSelecionado(destaque)}>Conhecer lançamento</button>
-            <span><i /> Condições especiais de lançamento</span>
+            <button onClick={() => destaque && abrir(destaque)}>Conhecer o Simulador</button>
+            <span><i /> Único produto disponível agora</span>
           </div>
         </div>
         <div className="market-hero-produto" aria-hidden="true">
           <div className="market-orbita"><i /><i /><i /></div>
-          <div className="market-emblema"><small>{MARCA.nome}</small><b>MA</b><span>MENTORIA</span></div>
-          <span className="market-edicao">FOUNDERS EDITION · 01</span>
+          <div className="market-emblema"><small>{MARCA.nome}</small><b>ST</b><span>SIMULADOR</span></div>
+          <span className="market-edicao">DISPONÍVEL AGORA · 01</span>
         </div>
       </section>
 
@@ -134,12 +148,14 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
 
         <div className="market-grade">
           {visiveis.length === 0 && <p role="status">Nenhum produto nesta categoria. <button onClick={() => setCategoria('Todos')}>Ver todos os produtos</button></p>}
-          {visiveis.map((produto, indice) => (
-            <article key={produto.id} className={`market-card ${produto.tom}`}>
-              <button className="market-card-capa" onClick={() => setSelecionado(produto)} aria-label={`Conhecer ${produto.nome}`}>
+          {visiveis.map((produto, indice) => { const aberto = disponivel(produto); return (
+            <article key={produto.id} className={`market-card ${produto.tom} ${aberto ? 'disponivel' : 'esgotado'}`} aria-label={aberto ? undefined : `${produto.nome} — esgotado`}>
+              <button className="market-card-capa" onClick={() => abrir(produto)} disabled={!aberto} aria-disabled={!aberto}
+                aria-label={aberto ? `Conhecer ${produto.nome}` : `${produto.nome}: esgotado no momento`}>
                 <ResponsiveImage src={capaProduto(produto.imagem)} alt="" loading="lazy" />
-                <span className="market-card-selo">{produto.selo}</span>
-                <span className="market-card-desconto">{produto.desconto}</span>
+                {!aberto && <span className="market-card-tarja" aria-hidden="true">Esgotado</span>}
+                <span className="market-card-selo">{aberto ? 'Disponível agora' : produto.selo}</span>
+                {aberto && <span className="market-card-desconto">{produto.desconto}</span>}
                 <span className="market-card-num">0{indice + 1}</span>
                 <div className="market-card-identidade"><b>{produto.simbolo}</b><small>{MARCA.nome} ORIGINAL</small></div>
                 <span className="market-card-tipo">{produto.categoria}</span>
@@ -149,11 +165,13 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
                 <p>{produto.descricao}</p>
                 <footer>
                   <span className="market-preco"><del>{produto.precoDe}</del><strong>{produto.preco}<small>{produto.periodo}</small></strong></span>
-                  <button onClick={() => setSelecionado(produto)}>Ver detalhes <span>→</span></button>
+                  {aberto
+                    ? <button onClick={() => abrir(produto)}>Ver detalhes <span>→</span></button>
+                    : <span className="market-card-indisponivel" role="status">Esgotado no momento</span>}
                 </footer>
               </div>
             </article>
-          ))}
+          ) })}
         </div>
       </section>
 
@@ -178,16 +196,16 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
               <ul>{selecionado.itens.map((item) => <li key={item}>✓ <span>{item}</span></li>)}</ul>
               <div className="market-modal-compra">
                 <span className="market-preco"><del>{selecionado.precoDe}</del><strong>{selecionado.preco}<small>{selecionado.periodo}</small></strong><em>{selecionado.desconto}</em></span>
-                <button onClick={() => registrarInteresse(selecionado)}>Quero ser avisado</button>
+                <button onClick={() => registrarInteresse(selecionado)}>Quero comprar</button>
               </div>
-              <small className="market-aviso">Nenhuma cobrança será realizada. Avisaremos quando esta oferta estiver disponível.</small>
+              <small className="market-aviso">Nenhuma cobrança é feita por aqui. Ao confirmar, a equipe {MARCA.prosa} recebe seu pedido e entra em contato para concluir a compra.</small>
             </div>
           </section>
         </div>
       )}
 
       {interesse && (
-        <div className="market-toast" role="status"><i>✓</i><span><b>Interesse registrado</b><small>Você verá a novidade aqui quando ela for lançada.</small></span><button onClick={() => setInteresse(null)}><IconeFechar /></button></div>
+        <div className="market-toast" role="status"><i>✓</i><span><b>Pedido registrado</b><small>A equipe {MARCA.prosa} entra em contato para concluir a compra.</small></span><button onClick={() => setInteresse(null)}><IconeFechar /></button></div>
       )}
     </main>
   )
