@@ -46,18 +46,31 @@
 .workspace-mobile-toggle, .workspace-shade { display: none; }
 .workspace-sidebar button:focus-visible, .workspace-mobile-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 @media (max-width: 900px) {
-  .workspace-app, .workspace-app:has(.workspace-sidebar.compact) { padding-left: 0; }
-  .workspace-sidebar, .workspace-sidebar.compact { width: 236px; padding-inline: 14px; transform: translateX(-100%); }
-  .workspace-sidebar.mobile-open { transform: translateX(0); top: calc(64px + env(safe-area-inset-top)); padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  /* Área segura do iPhone (entalhe/Dynamic Island) entra pela variável, para o
+     cabeçalho, o botão do menu, a gaveta e o sombreado usarem a MESMA altura. */
+  .workspace-app { --topo-h: calc(56px + var(--sat)); padding-left: 0; }
+  .workspace-app:has(.workspace-sidebar.compact) { padding-left: 0; }
+  .workspace-sidebar, .workspace-sidebar.compact { width: min(300px, 84vw); padding-inline: 14px; transform: translateX(-100%); transition: transform .2s ease; }
+  .workspace-sidebar.mobile-open { transform: translateX(0); top: var(--topo-h); padding-bottom: calc(16px + var(--sab)); box-shadow: 18px 0 40px -24px rgba(0,0,0,.7); }
+  .workspace-sidebar .workspace-brand { display: none; }
+  .workspace-sidebar nav { padding-top: 6px; }
   .workspace-sidebar.compact .workspace-label { display: initial; }
   .workspace-sidebar.compact .marca-nome { display: initial; }
   .workspace-sidebar.compact .brand-wordmark { display: flex; }
   .workspace-sidebar.compact .workspace-link { justify-content: flex-start; }
   .workspace-collapse { display: none; }
-  .workspace-mobile-toggle { display: block; position: fixed; top: calc(15px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); z-index: 71; min-width: 44px; min-height: 44px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; cursor: pointer; }
-  .workspace-shade { display: block; position: fixed; inset: calc(64px + env(safe-area-inset-top)) 0 0; z-index: 59; background: #0008; border: 0; }
-  .workspace-app .topbar { height: calc(64px + env(safe-area-inset-top)); min-height: calc(64px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(12px, env(safe-area-inset-right)) 0 100px; }
-  .workspace-heading { display: none; }
+  .workspace-app .workspace-mobile-toggle { display: grid; place-items: center; position: fixed; top: calc(var(--sat) + 8px); left: max(12px, var(--sal)); z-index: 71; width: 40px; height: 40px; min-width: 40px; min-height: 40px; padding: 0; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
+  .workspace-app .workspace-mobile-toggle svg { width: 22px; height: 22px; }
+  .workspace-app .workspace-mobile-toggle[aria-expanded='true'] { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); background: var(--primary-soft); }
+  .workspace-shade { display: block; position: fixed; inset: var(--topo-h) 0 0; z-index: 59; background: #0008; border: 0; }
+  /* O cabeçalho pinta também a faixa atrás da barra de status; o conteúdo começa abaixo dela. */
+  .workspace-app .topbar { position: sticky; top: 0; z-index: 70; height: var(--topo-h); min-height: var(--topo-h); box-sizing: border-box; padding: var(--sat) max(12px, var(--sar)) 0 calc(max(12px, var(--sal)) + 50px); gap: 8px; background: var(--bg); border-bottom: 1px solid var(--border); }
+  .workspace-heading { display: flex; min-width: 0; padding-left: 0; border-left: 0; gap: 0; }
+  .workspace-heading > span { display: none; }
+  .workspace-heading strong { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Com o botão "Conectar Deriv" no cabeçalho não sobra largura para o título: ele cede a vez. */
+  .workspace-app .topbar:has(.btn-deriv) .workspace-heading { display: none; }
+  .workspace-app .topbar-right { flex-shrink: 0; }
   .workspace-app .ger.rob { padding: 20px 16px; }
 }
 @media (max-width: 540px) {
@@ -68,5 +81,7 @@
 @media (display-mode: standalone) and (max-width: 900px) {
   .workspace-app { min-height: 100dvh; }
   .workspace-sidebar { overscroll-behavior: contain; }
+  /* Instalado, o app não tem barra de endereço: a gaveta e o cabeçalho não podem "puxar" a página. */
+  .workspace-app .topbar, .workspace-mobile-toggle { -webkit-tap-highlight-color: transparent; }
 }
 @media (prefers-reduced-motion: reduce) { .workspace-app { transition: none; } }

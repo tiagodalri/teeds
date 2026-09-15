@@ -44,6 +44,9 @@ export function aplicarTema(tema: Tema): void {
   // cinematograficas (Aulas) sao sempre escuras e a usam no lugar do dourado
   // que estava escrito a mao — na OMNI vira azul-aco.
   document.documentElement.style.setProperty('--marca-noite', MARCA.cor.escuro)
+  // A barra do sistema (Android, Chrome instalado) acompanha o fundo do tema.
+  const fundo = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+  if (fundo) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', fundo)
   try {
     localStorage.setItem(CHAVE, tema)
   } catch {

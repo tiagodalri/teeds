@@ -148,7 +148,7 @@ export default defineConfig({
           id: '/', name: nome, short_name: curto,
           description: `${MARCA.prosa} — operações manuais, robôs e acompanhamento em um só lugar.`,
           lang: 'pt-BR', dir: 'ltr', start_url: '/', scope: '/', display: 'standalone',
-          display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
+          display_override: ['standalone', 'minimal-ui'],
           orientation: 'any', background_color: fundo, theme_color: fundo,
           categories: ['finance', 'business', 'education'],
           icons: [
@@ -164,7 +164,25 @@ export default defineConfig({
           .update(essenciais.map((f) => readFileSync(join(SAIDA, f.slice(2)))).join(''))
           .digest('hex').slice(0, 12)
         const preCache = ['./', './index.html', './manifest.webmanifest', `./${pwaDir}/icon-192.png`, `./${pwaDir}/icon-512.png`, ...essenciais]
-        writeFileSync(join(SAIDA, 'sw.js'), `const CACHE='${MARCA.id}-${assinatura}';\nconst SHELL=${JSON.stringify(preCache)};\nself.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)));self.skipWaiting()});\nself.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));\nself.addEventListener('fetch',event=>{const request=event.request;if(request.method!=='GET'||new URL(request.url).origin!==self.location.origin)return;if(request.mode==='navigate'){event.respondWith(fetch(request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put('./index.html',copy));return response}).catch(()=>caches.match('./index.html')));return}event.respondWith(caches.match(request,{ignoreSearch:true}).then(cached=>{const network=fetch(request).then(response=>{if(response.ok)caches.open(CACHE).then(cache=>cache.put(request,response.clone()));return response}).catch(()=>cached);return cached||network}))});\n`)
+        // O service worker. As referências a assets ganham "?v=" em scripts/versao.mjs,
+        // igual ao index.html: a chave do cache muda a cada publicação e o app instalado
+        // nunca fica preso a um JS velho. Regras (ver docs em scripts/versao.mjs):
+        //  - navegação e JSON: rede primeiro, cache só sem rede;
+        //  - assets versionados (?v=): cache primeiro (são imutáveis por versão);
+        //  - imagens e fontes do próprio site: cache, atualizando por trás;
+        //  - pedidos com cache 'no-store' (a checagem de versão) nunca passam pelo cache.
+        writeFileSync(join(SAIDA, 'sw.js'), [
+          `const CACHE='${MARCA.id}-${assinatura}';`,
+          `const SHELL=${JSON.stringify(preCache)};`,
+          `self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).catch(()=>{}));self.skipWaiting()});`,
+          `self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));`,
+          `self.addEventListener('fetch',e=>{const r=e.request;const u=new URL(r.url);if(r.method!=='GET'||u.origin!==self.location.origin||r.cache==='no-store'||u.searchParams.has('vivo'))return;`,
+          `if(r.mode==='navigate'){e.respondWith(fetch(r).then(x=>{if(x.ok)caches.open(CACHE).then(c=>c.put('./index.html',x.clone()));return x}).catch(()=>caches.match('./index.html')));return}`,
+          `if(/\\/assets\\/.+\\.(?:js|css)$/.test(u.pathname)&&u.searchParams.has('v')){e.respondWith(caches.match(r).then(h=>h||fetch(r).then(x=>{if(x.ok)caches.open(CACHE).then(c=>c.put(r,x.clone()));return x})));return}`,
+          `if(r.destination==='image'||r.destination==='font'){e.respondWith(caches.match(r).then(h=>{const n=fetch(r).then(x=>{if(x.ok)caches.open(CACHE).then(c=>c.put(r,x.clone()));return x}).catch(()=>h);return h||n}));return}`,
+          `e.respondWith(fetch(r).then(x=>{if(x.ok&&!/\\.json$/.test(u.pathname))caches.open(CACHE).then(c=>c.put(r,x.clone()));return x}).catch(()=>caches.match(r)))});`,
+          '',
+        ].join('\n'))
       },
     },
   ],

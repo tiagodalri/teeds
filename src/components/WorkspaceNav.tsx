@@ -23,7 +23,9 @@ export function WorkspaceNav({ page, admin, onNavigate }: { page: WorkspacePage;
     <span className="workspace-label">{PAGE_NAMES[id]}</span>{id === 'assistente' && <small className="workspace-lock workspace-label" aria-label="Acesso restrito" title="Acesso restrito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></small>}
   </button>
   return <>
-    <button className="workspace-mobile-toggle" aria-expanded={open} aria-controls="workspace-navigation" onClick={() => setOpen(!open)}>{open ? '× Fechar' : '☰ Menu'}</button>
+    <button className="workspace-mobile-toggle" aria-expanded={open} aria-controls="workspace-navigation" aria-label={open ? 'Fechar menu' : 'Abrir menu'} title={open ? 'Fechar menu' : 'Menu'} onClick={() => setOpen(!open)}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">{open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}</svg>
+    </button>
     {open && <button className="workspace-shade" aria-label="Fechar menu" onClick={() => setOpen(false)} />}
     <aside className={`workspace-sidebar ${compact ? 'compact' : ''} ${open ? 'mobile-open' : ''}`} onKeyDown={e => { if (e.key === 'Escape') setOpen(false) }}>
       <button className="workspace-brand" aria-label="Página inicial" onClick={() => navigate('operar')}><Brand assinatura /></button>

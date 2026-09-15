@@ -60,6 +60,10 @@ body {
 
 button, input { font: inherit; color: inherit; }
 
+/* Áreas seguras do aparelho (entalhe, Dynamic Island, barra de gestos). Uma variável por
+   lado: o CSS inteiro usa var(--sat) etc., e um teste pode simular o iPhone sem hardware. */
+:root { --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px); }
+
 .app { display: flex; flex-direction: column; height: 100%; }
 
 /* ---------------------------------------------------------------- topbar */
@@ -3777,12 +3781,12 @@ details.go-planilha:not([open]) { padding-bottom: 19px; }
   .chart-contratos b { font-size: 13px; }
   .chart-marca { gap: 8px; }
   .chart-marca span { font-size: 22px; }
-  .trade { display: block; order: 3; overflow: visible; padding: 16px 14px 30px; border: 0; }
+  .trade { display: block; order: 3; overflow: visible; padding: 16px 14px calc(30px + var(--sab)); border: 0; }
   .quotes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .quote { padding: 12px; min-width: 0; }
   .quote strong { font-size: 18px; }
   .quote .btn { min-height: 44px; padding: 9px 6px; font-size: 11px; }
-  .modo-troca { position: sticky; top: 99px; z-index: 5; background: var(--bg); }
+  .modo-troca { position: static; }
 
   .ger, .ger-vazio { flex: none; min-height: calc(100dvh - 100px); padding: 18px 12px 30px; overflow: visible; }
   .ger-topo { margin-bottom: 15px; }
@@ -4270,7 +4274,7 @@ input, select, textarea, button { vertical-align: middle; }
   .layout-operar .main { order: 1; height: 66dvh; min-height: 510px; }
   .layout-operar .trade { order: 2; }
   .ativo-seletor { max-width: 62vw; }
-  .ativo-menu { position: fixed; top: 108px; left: 12px; right: 12px; width: auto; max-height: 62dvh; }
+  .ativo-menu { position: fixed; top: calc(var(--topo-h, 56px) + 8px); left: max(12px, var(--sal)); right: max(12px, var(--sar)); width: auto; max-height: min(62dvh, calc(100dvh - var(--topo-h, 56px) - 24px)); }
   .posicoes-flutuantes { position: relative; z-index: 1; inset: auto; width: 100%; }
   .posicoes-flutuantes.aberto { max-height: min(62dvh, 480px); }
   .pos-flutuante-corpo { max-height: min(52dvh, 420px); }
@@ -5212,15 +5216,20 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
    campos que nao provocam zoom automatico no Safari do iPhone. */
 @media (max-width: 760px) {
   html { background: var(--bg); overscroll-behavior-y: none; }
-  body { min-height: 100dvh; padding-bottom: env(safe-area-inset-bottom); }
+  body { min-height: 100dvh; padding-bottom: var(--sab); }
+  /* Tela de entrada: o cartão de login não pode nascer atrás da barra de status. */
+  body .entrada { padding-top: max(24px, calc(var(--sat) + 16px)); padding-bottom: max(24px, calc(var(--sab) + 16px)); }
+  /* Toasts e menus flutuantes respeitam a barra de gestos. */
+  .market-toast { right: max(12px, var(--sar)); bottom: calc(12px + var(--sab)); }
+  .pd.pd-movel { padding-bottom: var(--sab); }
   button, [role='button'], select { touch-action: manipulation; }
   input, select, textarea { font-size: 16px !important; }
-  .ger, .ger-vazio { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
+  .ger, .ger-vazio { padding-bottom: calc(32px + var(--sab)); }
   .adm-modal-fundo, .aula-modal-fundo, .beta-fundo, .rv-compara-fundo {
-    padding-top: max(12px, env(safe-area-inset-top));
-    padding-right: max(12px, env(safe-area-inset-right));
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
-    padding-left: max(12px, env(safe-area-inset-left));
+    padding-top: max(12px, var(--sat));
+    padding-right: max(12px, var(--sar));
+    padding-bottom: max(12px, var(--sab));
+    padding-left: max(12px, var(--sal));
   }
   .aulas-fileira { scroll-snap-type: x mandatory; overscroll-behavior-x: contain; }
   .aula-cartao { scroll-snap-stop: always; }
