@@ -43,6 +43,23 @@
 .tv.tv-cockpit .tv-alerta, .tv.tv-cockpit .ux-session-reason { order: -1; grid-column: 1 / -1; }
 .tv.tv-cockpit .tv-params, .tv.tv-cockpit .tv-fita-bloco, .tv.tv-cockpit .tv-registro-painel { order: 4; grid-column: 1 / -1 !important; grid-row: auto !important; height: auto; }
 .tv.tv-cockpit > .tv-atalhos { flex: none; width: 100%; order: 5; }
+.robot-workspace.tem-acompanhamento .tv.tv-cockpit .tv-registro-painel,
+.tv.tv-cockpit .tv-registro-painel {
+  display: flex; flex-direction: column; align-self: start;
+  height: auto; min-height: 0; max-height: none; padding: 0;
+  overflow: hidden; border: 1px solid var(--border); border-radius: 10px;
+}
+.tv.tv-cockpit .tv-registro-painel .tv-ops-topo { min-height: 44px; }
+.tv.tv-cockpit .tv-registro-painel .tv-ops-topo small { color: var(--muted); font-size: 11px; }
+.robot-workspace.tem-acompanhamento .tv.tv-cockpit .tv-registro-painel .tv-rolo,
+.tv.tv-cockpit .tv-registro-painel .tv-rolo {
+  flex: none; height: auto; min-height: 0; max-height: 240px;
+  overflow-y: auto; overflow-x: hidden; margin: 0;
+}
+.tv.tv-cockpit .tv-registro { padding: 0 14px; }
+.tv.tv-cockpit .tv-registro li { display: grid; grid-template-columns: 68px minmax(0,1fr); gap: 12px; padding: 11px 0; line-height: 1.5; }
+.tv.tv-cockpit .tv-registro b { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.tv.tv-cockpit .tv-registro-vazio { margin: 0; padding: 16px 14px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .robot-workspace.tem-acompanhamento .cabine-caixa .tv.tv-cockpit { flex: 0 1 auto; }
 .tv.tv-cockpit .tv-tabela { min-width: 0; width: 100%; table-layout: fixed; }
 .tv.tv-cockpit .tv-tabela th, .tv.tv-cockpit .tv-tabela td { padding-inline: 10px; }

@@ -417,8 +417,9 @@ export function RobotLive({
       </section>
       {registroAberto && (
         <section className="tv-registro-painel">
-          <div className="tv-ops-topo"><span className="tv-rot">Registro técnico do robô</span></div>
+          <div className="tv-ops-topo"><span className="tv-rot">Registro da sessão</span><small>{estado.registros.length} eventos</small></div>
           <div className="tv-rolo">
+            {estado.registros.length === 0 && <p className="tv-registro-vazio">Os eventos da sessão aparecerão aqui conforme o robô operar.</p>}
             <ul className="tv-registro">
               {estado.registros.map((r, i) => (
                 <li key={i} className={r.tipo}><span>{relogio(r.hora * 1000)}</span><b>{r.texto}</b></li>
