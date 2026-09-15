@@ -4342,8 +4342,11 @@ input, select, textarea, button { vertical-align: middle; }
 .market-card.esgotado { box-shadow: none; }
 .market-card.esgotado:hover { transform: none; border-color: var(--border); box-shadow: none; }
 .market-card.esgotado .market-card-capa { cursor: default; }
-.market-card.esgotado .market-card-capa > img { filter: grayscale(.85) brightness(.55); }
-.market-card.esgotado:hover .market-card-capa > img { transform: none; filter: grayscale(.85) brightness(.55); }
+/* A capa vem dentro de <picture>: o seletor precisa alcançar a img descendente. */
+.market-card.esgotado .market-card-capa img { filter: grayscale(.7) brightness(.62) saturate(.6); opacity: .85; }
+.market-card.esgotado:hover .market-card-capa img { transform: none; filter: grayscale(.7) brightness(.62) saturate(.6); }
+.market-card.esgotado .market-card-capa::after { content: ''; position: absolute; z-index: 2; inset: 0; background: rgba(8,9,12,.34); pointer-events: none; }
+.market-card.esgotado .market-card-corpo { opacity: .82; }
 .market-card.esgotado .market-card-corpo h3, .market-card.esgotado .market-card-corpo > p { color: var(--muted); }
 .market-card.esgotado .market-preco strong { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
 .market-card.esgotado .market-preco del { display: none; }
