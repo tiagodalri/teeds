@@ -64,7 +64,7 @@ export interface Degrau {
  * Reproduz `proximoValor` do motor, degrau por degrau.
  */
 export function escadaDoRobo(id: string, base: number, passos = 30, modo: Modo = 'conservador'): Degrau[] {
-  const { galeApos, margem } = recuperacaoDoRobo(id, modo)
+  const { galeApos, margem, sobrePrejuizo } = recuperacaoDoRobo(id, modo)
   const contrato = contratoDo(id)
   const palm = id === 'thepalm'
   const degraus: Degrau[] = []
@@ -83,7 +83,7 @@ export function escadaDoRobo(id: string, base: number, passos = 30, modo: Modo =
       valor = base
       porDolar = contrato.entrada
     } else {
-      valor = Math.ceil(((perdido + Math.max(0.01, base * margem)) / Math.max(0.01, retorno * 0.97)) * 100) / 100
+      valor = Math.ceil(((perdido + Math.max(0.01, base * margem, perdido * sobrePrejuizo)) / Math.max(0.01, retorno * 0.97)) * 100) / 100
       porDolar = contrato.recuperacao
     }
     const pagamento = centavos(valor * porDolar)

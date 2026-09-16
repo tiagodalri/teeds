@@ -146,6 +146,7 @@ export function montarConfig(p: Parametros): ConfigEstrategia {
       valorInicial: c.valorInicial,
       valorAoVencer: c.valorAoVencer > 0 ? c.valorAoVencer : c.valorInicial,
       fatorGale: Math.max(0, c.fatorGale),
+      lucroSobrePrejuizo: Math.min(1, Math.max(0, Number(c.lucroSobrePrejuizo ?? 0))),
       galeApos: Math.max(0, Math.trunc(c.galeApos)),
       // Teto so se a pessoa definiu. Um teto inventado aqui parava o robo "do nada".
       valorMaximo: c.valorMaximo > 0 ? c.valorMaximo : 0,
@@ -158,11 +159,12 @@ export function montarConfig(p: Parametros): ConfigEstrategia {
   // A mesma regra da tela: gatilho e margem vem da tabela do robo. Antes o
   // servidor usava margem 1 (recuperar + uma entrada inteira) e a tela 0.05 —
   // o mesmo robo se comportava diferente conforme quem o ligava.
-  const { galeApos, margem } = recuperacaoDoRobo(p.roboId, p.modo === 'agressivo' ? 'agressivo' : 'conservador')
+  const { galeApos, margem, sobrePrejuizo } = recuperacaoDoRobo(p.roboId, p.modo === 'agressivo' ? 'agressivo' : 'conservador')
   return {
     valorInicial: p.valorInicial,
     valorAoVencer: p.valorInicial,
     fatorGale: margem,
+    lucroSobrePrejuizo: sobrePrejuizo,
     galeApos,
     valorMaximo: p.valorMaximo ?? 0,
     takeProfit: p.takeProfit,

@@ -109,6 +109,12 @@ export interface ConfigEstrategia {
   valorAoVencer: number
   fatorGale: number
   galeApos: number
+  /**
+   * Parte do prejuízo da sequência que a recuperação exige como lucro, além
+   * do piso `fatorGale × base`. É o que faz o modo agressivo "dar paulada":
+   * quanto mais fundo a sequência, maior o lucro ao fechar. Ausente ou 0 = só o piso.
+   */
+  lucroSobrePrejuizo?: number
   valorMaximo: number
   takeProfit: number
   stopLoss: number

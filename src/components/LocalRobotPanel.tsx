@@ -247,7 +247,7 @@ export function LocalRobotPanel({
       rot: 'Recuperação',
       valor: cfg.fatorGale === 0
         ? 'desligado'
-        : temModos(ident.id) ? `modo ${NOME_DO_MODO[modoDaConfig(ident.id, cfg.fatorGale)].toLowerCase()}` : `automática ${MARCA.prosa}`,
+        : temModos(ident.id) ? `modo ${NOME_DO_MODO[modoDaConfig(ident.id, cfg.fatorGale, cfg.lucroSobrePrejuizo)].toLowerCase()}` : `automática ${MARCA.prosa}`,
     },
     { rot: 'Teto', valor: cfg.valorMaximo > 0 ? din(cfg.valorMaximo, moedaDosParametros) : 'sem teto' },
     { rot: 'Para se ganhar', valor: din(cfg.takeProfit, moedaDosParametros) },

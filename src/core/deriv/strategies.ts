@@ -4,18 +4,20 @@ import type { Estrategia } from './engine'
  * Modo de operação: só muda o quanto a recuperação mira de lucro.
  *
  * Conservador é a escada de sempre: fecha a sequência praticamente no zero
- * a zero (5% da base). Agressivo mira recuperar tudo e ainda sobrar uma
- * entrada base inteira — entradas maiores, um degrau a menos de colchão no
- * mesmo stop. O gatilho (galeApos) é o mesmo nos dois.
+ * a zero (5% da base). Agressivo mira recuperar tudo e ainda sobrar 20% do
+ * que estava sendo recuperado (nunca menos que uma entrada base) — quanto
+ * mais fundo a sequência foi, maior o lucro ao fechar. Custa entradas
+ * maiores e um degrau a menos de colchão no mesmo stop. O gatilho
+ * (galeApos) é o mesmo nos dois.
  */
 export type Modo = 'conservador' | 'agressivo'
 export const MODOS: Modo[] = ['conservador', 'agressivo']
 export const NOME_DO_MODO: Record<Modo, string> = { conservador: 'Conservador', agressivo: 'Agressivo' }
 
 /** Recuperação oficial, interna e não editável de cada modelo. */
-export const RECUPERACAO_POR_ROBO: Record<string, { galeApos: number; margem: number; agressivo?: number }> = {
-  superior5: { galeApos: 3, margem: 0.05, agressivo: 1 },
-  ag2: { galeApos: 3, margem: 0.05, agressivo: 1 },
+export const RECUPERACAO_POR_ROBO: Record<string, { galeApos: number; margem: number; agressivo?: { margem: number; sobrePrejuizo: number } }> = {
+  superior5: { galeApos: 3, margem: 0.05, agressivo: { margem: 1, sobrePrejuizo: 0.2 } },
+  ag2: { galeApos: 3, margem: 0.05, agressivo: { margem: 1, sobrePrejuizo: 0.2 } },
   smart03: { galeApos: 3, margem: 0.05 },
   // Goreme paga 6%: recuperar 3 perdas exigiria 52x a base, e a segunda
   // recuperacao 930x. Ligando na primeira perda a escada comeca em 18x —
@@ -28,9 +30,10 @@ export const RECUPERACAO_POR_ROBO: Record<string, { galeApos: number; margem: nu
   superior5fixo: { galeApos: 3, margem: 0 },
 }
 
-export function recuperacaoDoRobo(id: string, modo: Modo = 'conservador'): { galeApos: number; margem: number } {
+export function recuperacaoDoRobo(id: string, modo: Modo = 'conservador'): { galeApos: number; margem: number; sobrePrejuizo: number } {
   const r = RECUPERACAO_POR_ROBO[id] ?? { galeApos: 3, margem: 0.05 }
-  return { galeApos: r.galeApos, margem: modo === 'agressivo' && r.agressivo !== undefined ? r.agressivo : r.margem }
+  if (modo === 'agressivo' && r.agressivo) return { galeApos: r.galeApos, margem: r.agressivo.margem, sobrePrejuizo: r.agressivo.sobrePrejuizo }
+  return { galeApos: r.galeApos, margem: r.margem, sobrePrejuizo: 0 }
 }
 
 /** Só AG7 e AG2 (e seus nomes na OMNI) têm os dois modos. */
@@ -39,9 +42,10 @@ export function temModos(id: string): boolean {
 }
 
 /** Lê o modo de volta da configuração que o motor recebeu. */
-export function modoDaConfig(id: string, fatorGale: number): Modo {
+export function modoDaConfig(id: string, fatorGale: number, lucroSobrePrejuizo = 0): Modo {
   const r = RECUPERACAO_POR_ROBO[id]
-  return r?.agressivo !== undefined && fatorGale >= r.agressivo - 1e-9 ? 'agressivo' : 'conservador'
+  if (!r?.agressivo) return 'conservador'
+  return lucroSobrePrejuizo > 0 || fatorGale >= r.agressivo.margem - 1e-9 ? 'agressivo' : 'conservador'
 }
 
 /**
@@ -104,7 +108,9 @@ export const SUPERIOR_5: Estrategia = {
     // Recuperação calibrada pelo payout realmente comprado. O desconto de 3%
     // absorve pequenas oscilações do retorno entre um contrato e o seguinte.
     const retornoSeguro = Math.max(0.01, retornoLiquidoPorUnidade * 0.97)
-    const lucroMinimo = Math.max(0.01, valorAoVencer * config.fatorGale)
+    // Piso: uma fração da base. No modo agressivo, o alvo cresce com o
+    // buraco: uma parte do prejuízo da sequência vira lucro exigido.
+    const lucroMinimo = Math.max(0.01, valorAoVencer * config.fatorGale, prejuizoDaSequencia * (config.lucroSobrePrejuizo ?? 0))
     return Math.ceil(((prejuizoDaSequencia + lucroMinimo) / retornoSeguro) * 100) / 100
   },
 }

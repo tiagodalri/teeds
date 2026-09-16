@@ -68,7 +68,7 @@ const FERRAMENTAS = [
         take_profit: { type: 'number', description: 'Ganho acumulado que encerra a sessão. Obrigatório.' },
         conta: { type: 'string', description: 'Conta Deriv a usar. Se omitida, usa a de demonstração.' },
         max_operacoes: { type: 'number', description: 'Teto de operações. 0 ou omitido = sem teto.' },
-        modo: { type: 'string', enum: ['conservador', 'agressivo'], description: 'Só para AG7 e AG2: conservador (padrão) recupera as perdas; agressivo recupera e ainda sobra uma entrada de lucro, com entradas maiores.' },
+        modo: { type: 'string', enum: ['conservador', 'agressivo'], description: 'Só para AG7 e AG2: conservador (padrão) recupera as perdas; agressivo recupera e ainda sobra 20% do prejuízo como lucro (quanto mais fundo, mais lucro), com entradas maiores.' },
       },
       required: ['robo', 'entrada', 'stop_loss', 'take_profit'],
       additionalProperties: false,

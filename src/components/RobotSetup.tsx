@@ -33,7 +33,8 @@ export function lerPreparo(): { cfg?: Partial<ConfigEstrategia>; symbol?: string
     return valor && typeof valor === 'object' && !Array.isArray(valor) ? valor : {}
   } catch { return {} }
 }
-const FAIXAS: Record<keyof ConfigEstrategia, [number, number]> = {
+type ChaveNumerica = Exclude<keyof ConfigEstrategia, 'lucroSobrePrejuizo'>
+const FAIXAS: Record<ChaveNumerica, [number, number]> = {
   valorInicial: [0.35, 10_000],
   valorAoVencer: [0.35, 10_000],
   fatorGale: [0, 3],
@@ -46,7 +47,7 @@ const FAIXAS: Record<keyof ConfigEstrategia, [number, number]> = {
 
 function sanear(cfg: ConfigEstrategia, padrao: ConfigEstrategia): ConfigEstrategia {
   const limpo = { ...cfg }
-  for (const chave of Object.keys(FAIXAS) as Array<keyof ConfigEstrategia>) {
+  for (const chave of Object.keys(FAIXAS) as ChaveNumerica[]) {
     const [min, max] = FAIXAS[chave]
     const v = Number(limpo[chave])
     if (!Number.isFinite(v) || v < min || v > max) limpo[chave] = padrao[chave]
@@ -74,14 +75,14 @@ export function valorDePreparo(texto: string, min: number, max: number, inteiro 
 /** Os dois botões do passo de modo. */
 export const OPCOES_DE_MODO: Array<{ id: Modo; nome: string; frase: string }> = [
   { id: 'conservador', nome: `Modo ${NOME_DO_MODO.conservador}`, frase: 'Recuperação de sempre: a sequência fecha recuperando as perdas.' },
-  { id: 'agressivo', nome: `Modo ${NOME_DO_MODO.agressivo}`, frase: 'Recuperação maior: a sequência fecha com as perdas e mais uma entrada de lucro.' },
+  { id: 'agressivo', nome: `Modo ${NOME_DO_MODO.agressivo}`, frase: 'Recuperação maior: quanto mais fundo a sequência for, mais lucro ela devolve ao fechar.' },
 ]
 
 export function configurarPreparo(inicial: ConfigEstrategia, valores: Record<string, string>, modeloId: string, modo: Modo = 'conservador'): ConfigEstrategia | null {
   if (!ETAPAS_PREPARO.every(e => valorDePreparo(valores[e.key] ?? '', e.min, e.max, e.key === 'maxOperacoes') !== null)) return null
   const rec = recuperacaoDoRobo(modeloId, temModos(modeloId) ? modo : 'conservador')
   const cfg = { ...inicial, ...Object.fromEntries(ETAPAS_PREPARO.map(e => [e.key, valorDePreparo(valores[e.key], e.min, e.max, e.key === 'maxOperacoes')!])) } as ConfigEstrategia
-  return { ...cfg, valorInicial: cfg.valorAoVencer, valorMaximo: 0, fatorGale: rec.margem, galeApos: rec.galeApos }
+  return { ...cfg, valorInicial: cfg.valorAoVencer, valorMaximo: 0, fatorGale: rec.margem, lucroSobrePrejuizo: rec.sobrePrejuizo, galeApos: rec.galeApos }
 }
 
 export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, contaId, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
