@@ -231,9 +231,9 @@ button, input, select, textarea { font-family: inherit; }
 .layout-operar .ativo-seletor { width: 100%; max-width: none; margin: 0; gap: 20px; text-align: left; }
 .layout-operar .manual-ativo-texto { display: grid; gap: 4px; min-width: 0; }
 .layout-operar .manual-ativo-texto small, .layout-operar .manual-cotacao > small { display: block; color: var(--muted); font-size: 10px; font-weight: 600; line-height: 1.2; letter-spacing: .06em; text-transform: uppercase; }
-.layout-operar .manual-ativo-texto strong { display: block; font-size: 14px; font-weight: 600; line-height: 1.3; white-space: nowrap; }
+.layout-operar .manual-ativo-texto strong { display: block; font-size: 12px; font-weight: 550; line-height: 1.3; white-space: nowrap; }
 .layout-operar .manual-cotacao { display: grid; align-content: center; gap: 4px; min-width: 150px; }
-.layout-operar .manual-cotacao .price { font-size: 17px; line-height: 1.2; letter-spacing: .01em; }
+.layout-operar .manual-cotacao .price { font-size: 14px; font-weight: 600; line-height: 1.2; letter-spacing: 0; }
 .layout-operar .ativo-seletor:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 @media (max-width: 600px) {
   .layout-operar .chart-title { display: grid; grid-template-columns: minmax(190px, 1fr) minmax(110px, .65fr); width: 100%; gap: 6px; }
@@ -241,7 +241,7 @@ button, input, select, textarea { font-family: inherit; }
   .layout-operar .manual-cotacao { min-width: 0; }
   .layout-operar .ativo-seletor { gap: 8px; }
   .layout-operar .manual-ativo-texto strong { font-size: 12px; }
-  .layout-operar .manual-cotacao .price { font-size: 15px; }
+  .layout-operar .manual-cotacao .price { font-size: 14px; }
 }
 @media (max-width: 360px) {
   .layout-operar .chart-head { padding-inline: 8px; }
@@ -316,4 +316,18 @@ button, input, select, textarea { font-family: inherit; }
   .marketplace .market-vitrine { padding-block: 10px; }
   .marketplace .market-cabecalho { margin-bottom: 10px; }
   .marketplace .market-paginacao { margin-top: 10px; }
+}
+/* Compact manual-order cards; retain mobile touch targets and full labels. */
+.layout-operar .trade .quotes { gap: 8px; margin-top: 14px; }
+.layout-operar .trade .quote { padding: 12px; gap: 6px; border-radius: 10px; }
+.layout-operar .trade .quote strong { font-size: 19px; font-weight: 600; line-height: 1.25; }
+.layout-operar .trade .quote-head { font-size: 11px; }
+.layout-operar .trade .quote-rot { font-size: 9px; }
+.layout-operar .trade .quote-sub { font-size: 11px; line-height: 1.4; }
+.layout-operar .trade .quote .btn { font-size: 12px; min-height: 38px; padding: 8px 10px; line-height: 1.35; white-space: normal; }
+.layout-operar .pos-flutuante-topo { font-size: 11px; }
+.layout-operar .pos-flutuante-corpo .pos-vazio { font-size: 12px; line-height: 1.5; min-height: 60px; padding-block: 10px; }
+@media (max-width: 900px) {
+  .layout-operar .trade .quote .btn { min-height: 44px; }
+  .layout-operar .trade .quote strong { font-size: 18px; }
 }

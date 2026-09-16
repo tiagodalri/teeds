@@ -1,5 +1,5 @@
-const CACHE='teeds-e334e04ece34';
-const SHELL=["./","./index.html","./manifest.webmanifest","./pwa-teeds/icon-192.png","./pwa-teeds/icon-512.png","./assets/MonitoramentoPanel.js?v=e334e04ece34","./assets/teeds.css?v=e334e04ece34","./assets/teeds.js?v=e334e04ece34"];
+const CACHE='teeds-89561a064e68';
+const SHELL=["./","./index.html","./manifest.webmanifest","./pwa-teeds/icon-192.png","./pwa-teeds/icon-512.png","./assets/MonitoramentoPanel.js?v=89561a064e68","./assets/teeds.css?v=89561a064e68","./assets/teeds.js?v=89561a064e68"];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).catch(()=>{}));self.skipWaiting()});
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{const r=e.request;const u=new URL(r.url);if(r.method!=='GET'||u.origin!==self.location.origin||r.cache==='no-store'||u.searchParams.has('vivo'))return;
