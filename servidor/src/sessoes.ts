@@ -312,7 +312,10 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
     }
     void anterior
 
-    if (!e.rodando && e.motivoParada && sessao.terminouEm === null) {
+    // Desligada com contrato aberto, a sessão ainda não acabou: o motor
+    // segue ouvindo só aquele contrato. Derrubar o socket aqui deixaria a
+    // última operação sem resultado. Encerra quando ele liquidar.
+    if (!e.rodando && !e.emOperacao && e.motivoParada && sessao.terminouEm === null) {
       sessao.terminouEm = Date.now()
       try { socket.disconnect() } catch { /* já caiu */ }
       motores.delete(id)

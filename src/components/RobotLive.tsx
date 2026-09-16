@@ -26,6 +26,8 @@ interface Props {
   /** Estado da conexao autenticada — se cair, o robo para de receber preco. */
   conexao?: string
   onDesligar?: () => void
+  /** O pedido de desligar já saiu e ainda não voltou. */
+  desligando?: boolean
   onLigarDeNovo?: () => void
   onRemover?: () => void
   expandido?: boolean
@@ -95,7 +97,7 @@ function Cronometro({ desde }: { desde: number }) {
 
 export function RobotLive({
   estado, config, moeda, estrategiaId, nomeEstrategia, ativo, titulo, regra, ganhaCom,
-  parametros = [], conexao = 'open', onDesligar, onLigarDeNovo, onRemover,
+  parametros = [], conexao = 'open', onDesligar, desligando = false, onLigarDeNovo, onRemover,
   expandido = false, onExpandir, contaDaSessao, onDigitos, digitosAberto = false,
   mostrarMarkup = false,
 }: Props) {
@@ -147,7 +149,7 @@ export function RobotLive({
     : 50 - Math.min(50, (Math.abs(estado.resultado) / piso) * 50)
 
   const fase = !estado.rodando
-    ? { chave: 'parado', texto: 'Robô parado' }
+    ? { chave: 'parado', texto: estado.emOperacao ? 'Concluindo o contrato' : 'Robô parado' }
     : conexao !== 'open'
       ? { chave: 'sem-sinal', texto: conexao === 'connecting' || conexao === 'reconnecting' ? 'Reconectando' : 'Sem conexão' }
     : emCurso
@@ -182,7 +184,7 @@ export function RobotLive({
           {/* O botão "Focar" (modo foco de um robô só) foi retirado a pedido do Tiago em 15/09/2026:
               atrapalhava mais do que ajudava. O modo continua no código, sem porta de entrada. */}
           {estado.rodando && onDesligar && (
-            <button className="tv-btn parar" onClick={onDesligar}><span aria-hidden>■</span> Desligar</button>
+            <button className="tv-btn parar" onClick={onDesligar} disabled={desligando} aria-busy={desligando}><span aria-hidden>■</span> {desligando ? 'Desligando…' : 'Desligar'}</button>
           )}
           {!estado.rodando && onLigarDeNovo && (
             <button className="tv-btn ligar" onClick={onLigarDeNovo}><span aria-hidden>▶</span> Continuar</button>
@@ -195,7 +197,7 @@ export function RobotLive({
       </header>
 
       <nav className="tv-abas tv-atalhos" aria-label={`Detalhes de ${titulo}`}>
-        <span><i /> {estado.rodando ? conexao === 'open' ? 'Acompanhamento ao vivo' : 'Aguardando conexão' : 'Sessão encerrada'}</span>
+        <span><i /> {estado.rodando ? conexao === 'open' ? 'Acompanhamento ao vivo' : 'Aguardando conexão' : estado.emOperacao ? 'Desligado — concluindo o contrato' : 'Sessão encerrada'}</span>
         <button aria-expanded={detalhes} className={detalhes ? 'on' : ''} onClick={() => setDetalhes((v) => !v)}>
           <i aria-hidden>⌁</i> {detalhes ? 'Ocultar estratégia' : 'Detalhes da estratégia'}
         </button>

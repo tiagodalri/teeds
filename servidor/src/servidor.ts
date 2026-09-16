@@ -103,6 +103,10 @@ const SEGREDO = segredoMcp()
 async function minhaSessao(userId: string, id: string) {
   const s = ver(id)
   if (!s) return null
+  // A sessão sabe quem a abriu: não precisa ir ao banco para responder a
+  // quem clicou em Desligar. O banco fica para sessões antigas sem dono
+  // registrado (ou abertas por outro login da mesma conta).
+  if (s.parametros.userId && s.parametros.userId === userId) return s
   const minhas = await contasDoUsuario(userId)
   return minhas.includes(s.contaId) ? s : null
 }

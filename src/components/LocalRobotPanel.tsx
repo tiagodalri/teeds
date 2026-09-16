@@ -232,11 +232,27 @@ export function LocalRobotPanel({
     }
   }
 
-  /** Desliga a sessão lá no servidor. */
+  /**
+   * Desliga a sessão lá no servidor.
+   *
+   * O botão vira "Desligando…" no clique, e o estado que o servidor devolve
+   * na própria resposta já é aplicado — sem esperar a próxima consulta do
+   * acompanhamento. Depois a consulta reinicia, para trazer o contrato que
+   * porventura estivesse aberto assim que ele liquidar.
+   */
+  const [desligando, setDesligando] = useState(false)
   function desligar() {
     const id = sessaoIdRef.current
-    if (!id || !sessaoTeeds) return
-    void pararNoServidor(sessaoTeeds, id).catch((e: Error) => setErro(e.message))
+    if (!id || !sessaoTeeds || desligando) return
+    setDesligando(true)
+    pararNoServidor(sessaoTeeds, id)
+      .then((s) => {
+        if (sessaoIdRef.current !== id) return
+        if (typeof s.estado?.rodando === 'boolean') setEstado(s.estado)
+        olhar(id)
+      })
+      .catch((e: Error) => setErro(e.message))
+      .finally(() => setDesligando(false))
   }
 
   const moedaDosParametros = contaDaSessao?.moeda ?? moeda
@@ -300,6 +316,7 @@ export function LocalRobotPanel({
         digitosAberto={digitosAberto}
         mostrarMarkup={mostrarMarkup}
         onDesligar={rodando ? desligar : undefined}
+        desligando={desligando}
         onLigarDeNovo={!rodando ? () => { setErro(null); setPreparando(true) } : undefined}
         onRemover={onRemover ? () => {
           if (rodando && !window.confirm('Este robô está operando no servidor. Deseja desligar e fechar o bloco?')) return

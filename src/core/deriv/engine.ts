@@ -227,6 +227,8 @@ const SILENCIO_MAXIMO_MS = 25_000
  * Um contrato de 1 tick liquida em ~1 s; passou de 4 s, algo se perdeu.
  */
 const CONTRATO_PRESO_MS = 4_000
+/** Desligado com contrato aberto: quanto tempo espera a liquidação antes de fechar de vez. */
+const ENCERRAMENTO_MAXIMO_MS = 60_000
 
 const VAZIO: EstadoMotor = {
   rodando: false, emOperacao: false, operacoes: 0, vitorias: 0, derrotas: 0,
@@ -265,6 +267,8 @@ export class MotorTeeds {
   private memoria: Record<string, unknown> = {}
   private liquidados = new Set<number>()
   private vigia: ReturnType<typeof setInterval> | null = null
+  /** Quando a pessoa desligou com um contrato ainda aberto: só espera ele liquidar. */
+  private encerrandoDesde = 0
 
   constructor(opts: {
     socket: TeedsSocket
@@ -385,7 +389,20 @@ export class MotorTeeds {
     // esperando um preco que nunca chega. Silencio longo = reconecta.
     this.ultimoTickEm = Date.now()
     this.vigia = setInterval(() => {
-      if (!this.estado.rodando) return
+      if (!this.estado.rodando) {
+        // Desligado com contrato aberto: só confere se ele liquidou. Se a
+        // Deriv não disser nada por muito tempo, fecha mesmo assim — a
+        // sessão não pode ficar "encerrando" para sempre.
+        const emCurso = this.estado.emCurso
+        if (emCurso && this.contratoDesde && Date.now() - this.contratoDesde > CONTRATO_PRESO_MS) void this.conferirContrato(emCurso.contractId, emCurso.valor)
+        if (this.encerrandoDesde && Date.now() - this.encerrandoDesde > ENCERRAMENTO_MAXIMO_MS) {
+          this.estado.emOperacao = false
+          this.estado.emCurso = null
+          this.registrar('A Deriv não confirmou o contrato em andamento a tempo; a sessão fecha sem ele. Confira o resultado no extrato da Deriv.', 'parada')
+          this.concluirParada()
+        }
+        return
+      }
       const silencio = Date.now() - this.ultimoTickEm
       // contrato de 1 tick nao passa de meio minuto aberto: algo se perdeu
       if (this.contratoDesde && Date.now() - this.contratoDesde > CONTRATO_PRESO_MS) {
@@ -429,14 +446,47 @@ export class MotorTeeds {
     return this.estado
   }
 
+  /**
+   * Desliga na hora.
+   *
+   * `rodando` cai imediatamente: nenhuma entrada nova sai daqui, esteja o
+   * robô na base ou no meio de uma recuperação. A única coisa que continua
+   * é o contrato já comprado — ele é da Deriv, não dá para desfazer; o motor
+   * fica ouvindo só até ele liquidar, contabiliza e então fecha tudo. Antes,
+   * desligar também cortava o stream de contratos, e a operação em andamento
+   * sumia da sessão sem resultado.
+   */
   desligar(motivo = 'você desligou') {
     if (!this.estado.rodando) return
     this.estado.rodando = false
     this.estado.motivoParada = motivo
+    this.pausaAte = 0
+    this.pararTicks?.(); this.pararTicks = null
+    if (this.estado.emOperacao) {
+      this.encerrandoDesde = Date.now()
+      this.estado.aguardando = 'concluindo o contrato em andamento…'
+      this.registrar(`Robô parado — ${motivo}. Concluindo o contrato em andamento.`, 'parada')
+      this.emitir()
+      return
+    }
+    this.fechar()
+    this.registrar(`Robô parado — ${motivo}`, 'parada')
+    this.emitir()
+  }
+
+  /** Solta o que ainda estava ligado à Deriv. Depois disto o motor não recebe mais nada. */
+  private fechar() {
+    this.encerrandoDesde = 0
     this.pararTicks?.(); this.pararTicks = null
     this.pararContratos?.(); this.pararContratos = null
     if (this.vigia) { clearInterval(this.vigia); this.vigia = null }
-    this.registrar(`Robô parado — ${motivo}`, 'parada')
+  }
+
+  /** O contrato que ficou aberto no desligar acabou de liquidar: agora fecha de verdade. */
+  private concluirParada() {
+    this.estado.aguardando = 'sessão encerrada'
+    this.fechar()
+    this.registrar('Contrato concluído — sessão encerrada.', 'parada')
     this.emitir()
   }
 
@@ -469,6 +519,7 @@ export class MotorTeeds {
   }
 
   private async comprar() {
+    if (!this.estado.rodando) return
     // Depois de uma recusa passageira, espera passar o intervalo antes de insistir.
     if (Date.now() < this.pausaAte) return
     const desejado = Math.min(
@@ -564,6 +615,9 @@ export class MotorTeeds {
       this.estado.emCurso = null
       this.registrar(`Compra recusada: ${texto}`, 'parada')
 
+      // A pessoa desligou enquanto a compra estava no ar e ela não saiu: nada a concluir.
+      if (!this.estado.rodando) { this.concluirParada(); return }
+
       // Recusa que nao vai mudar sozinha: desliga e diz o motivo exato.
       if (recusaDefinitiva(texto)) {
         this.desligar(`a Deriv recusou a compra — ${texto}`)
@@ -617,7 +671,8 @@ export class MotorTeeds {
    * que passa de meio minuto aberto nao esta correndo, esta perdido.
    */
   private async conferirContrato(contractId: number, valor: number) {
-    if (!this.estado.rodando || this.estado.emCurso?.contractId !== contractId) return
+    // Vale também com o robô já desligado: é o contrato que ficou aberto que se confere.
+    if (this.estado.emCurso?.contractId !== contractId) return
     try {
       const c = await buscarContrato(this.socket, contractId)
       if (this.estado.emCurso?.contractId !== contractId) return
@@ -710,6 +765,9 @@ export class MotorTeeds {
         memoria: this.memoria,
         contractType: contratoLiquidado,
       })
+
+      // A pessoa já tinha desligado: este era o contrato que faltava concluir.
+      if (!this.estado.rodando) { this.concluirParada(); return }
 
       // freios
       if (this.config.takeProfit > 0 && this.estado.resultado >= this.config.takeProfit) {

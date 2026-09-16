@@ -162,7 +162,8 @@ export async function rodar(
     const parar = motor.escutar((e) => {
       aoAndar?.(e)
       // o motor avisa que parou zerando `rodando` e preenchendo o motivo
-      if (!e.rodando && e.motivoParada) terminar(e)
+      // desligada com contrato aberto ainda não terminou: espera ele liquidar
+      if (!e.rodando && !e.emOperacao && e.motivoParada) terminar(e)
     })
 
     try {

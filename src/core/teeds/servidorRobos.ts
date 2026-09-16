@@ -125,7 +125,8 @@ export function acompanharNoServidor(
       if (!vivo) return
       falhasSeguidas = 0
       aoAtualizar(s)
-      if (!s.estado?.rodando) { vivo = false; return }
+      // Desligada com contrato aberto ainda conta: segue olhando até ele liquidar.
+      if (!s.estado?.rodando && !s.estado?.emOperacao) { vivo = false; return }
       timer = setTimeout(ciclo, 800)
     } catch (e) {
       if (!vivo) return
