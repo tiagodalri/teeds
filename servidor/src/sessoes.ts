@@ -5,7 +5,7 @@ import { TeedsSocket } from '../../src/core/deriv/client'
 import { MotorTeeds, type EstadoMotor } from '../../src/core/deriv/engine'
 import { fetchAccounts, fetchTradingSocketUrl, type TradingAccount } from '../../src/core/deriv/account'
 import { fetchActiveSymbols } from '../../src/core/deriv/market'
-import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca, recuperacaoDoRobo } from '../../src/core/deriv/strategies'
+import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca, recuperacaoDoRobo, type Modo } from '../../src/core/deriv/strategies'
 import { marcaPorId } from '../../src/marca/marcas'
 import { ATIVO_DOS_ROBOS } from '../../src/core/deriv/config'
 import type { AuthSession } from '../../src/core/deriv/auth'
@@ -36,6 +36,8 @@ export interface Parametros {
   takeProfit: number
   maxOperacoes?: number
   valorMaximo?: number
+  /** Conservador (padrão) ou agressivo — só muda nos robôs que têm os dois. */
+  modo?: Modo
   /**
    * A configuração inteira, quando quem pede já sabe o que quer.
    *
@@ -156,7 +158,7 @@ export function montarConfig(p: Parametros): ConfigEstrategia {
   // A mesma regra da tela: gatilho e margem vem da tabela do robo. Antes o
   // servidor usava margem 1 (recuperar + uma entrada inteira) e a tela 0.05 —
   // o mesmo robo se comportava diferente conforme quem o ligava.
-  const { galeApos, margem } = recuperacaoDoRobo(p.roboId)
+  const { galeApos, margem } = recuperacaoDoRobo(p.roboId, p.modo === 'agressivo' ? 'agressivo' : 'conservador')
   return {
     valorInicial: p.valorInicial,
     valorAoVencer: p.valorInicial,

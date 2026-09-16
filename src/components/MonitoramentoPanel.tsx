@@ -11,7 +11,7 @@ import {
   ErroDoMonitoramento, auditar, auditarNegado, carregarEventos, eventosDaSessao, lerEspelho, lerSessaoMae, listarAuditoria, listarEncerradas, listarEspelhos,
   paraEvento, paraSessaoEspelho, type RegistroAuditoria, type SessaoEncerrada,
 } from '../core/teeds/monitoramento'
-import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
+import { ESTRATEGIAS_LOCAIS, modoDaConfig, NOME_DO_MODO, temModos } from '../core/deriv/strategies'
 import { identidade } from '../core/deriv/branding'
 import { MARCA } from '../marca'
 import { RobotLive } from './RobotLive'
@@ -138,7 +138,7 @@ function CabineEspelho({ s, estado, cliente, modo, saude, idade, rtt, desvio, ev
   const parametros = [
     { rot: 'Ativo', valor: nomeAtivo.replace(' Index', '') },
     { rot: 'Entrada', valor: din(s.config.valorAoVencer || s.config.valorInicial, s.moeda) },
-    { rot: 'Recuperação', valor: s.config.fatorGale === 0 ? 'desligado' : `automática ${MARCA.prosa}` },
+    { rot: 'Recuperação', valor: s.config.fatorGale === 0 ? 'desligado' : temModos(s.roboId) ? `modo ${NOME_DO_MODO[modoDaConfig(s.roboId, s.config.fatorGale)].toLowerCase()}` : `automática ${MARCA.prosa}` },
     { rot: 'Teto', valor: s.config.valorMaximo > 0 ? din(s.config.valorMaximo, s.moeda) : 'sem teto' },
     { rot: 'Para se ganhar', valor: din(s.config.takeProfit, s.moeda) },
     { rot: 'Para se perder', valor: din(s.config.stopLoss, s.moeda) },

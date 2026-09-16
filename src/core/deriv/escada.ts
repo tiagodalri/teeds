@@ -12,7 +12,7 @@
  * centavo e o motor usa esse valor arredondado; a simulação arredonda
  * também — é isso que faz ela bater com a cabine centavo a centavo.
  */
-import { recuperacaoDoRobo } from './strategies'
+import { recuperacaoDoRobo, type Modo } from './strategies'
 
 /** Pagamento bruto (entrada + lucro) por US$ 1, conforme quantos dígitos ganham. */
 export const PAGAMENTO_POR_DOLAR = {
@@ -63,8 +63,8 @@ export interface Degrau {
  * A sequência de entradas se o robô errar `passos` vezes seguidas.
  * Reproduz `proximoValor` do motor, degrau por degrau.
  */
-export function escadaDoRobo(id: string, base: number, passos = 30): Degrau[] {
-  const { galeApos, margem } = recuperacaoDoRobo(id)
+export function escadaDoRobo(id: string, base: number, passos = 30, modo: Modo = 'conservador'): Degrau[] {
+  const { galeApos, margem } = recuperacaoDoRobo(id, modo)
   const contrato = contratoDo(id)
   const palm = id === 'thepalm'
   const degraus: Degrau[] = []
@@ -123,8 +123,8 @@ export interface PlanoAvaliado {
 export const ENTRADA_MINIMA = 0.35
 
 /** Quantos erros seguidos cabem num limite de perda, com a escada real do robô. */
-export function avaliarPlano(id: string, base: number, limite: number): PlanoAvaliado {
-  const escada = escadaDoRobo(id, base, 60)
+export function avaliarPlano(id: string, base: number, limite: number, modo: Modo = 'conservador'): PlanoAvaliado {
+  const escada = escadaDoRobo(id, base, 60, modo)
   const cabem = escada.filter((d) => d.perdido <= limite + 1e-9)
   const custo = cabem[cabem.length - 1]?.perdido ?? 0
   const proximo = escada[cabem.length] ?? null
@@ -144,13 +144,13 @@ export function avaliarPlano(id: string, base: number, limite: number): PlanoAva
 }
 
 /** A maior entrada base que ainda aguenta `recuperacoes` recuperações no limite. */
-export function maiorEntradaPara(id: string, recuperacoes: number, limite: number): number | null {
-  if (avaliarPlano(id, 0.35, limite).recuperacoes < recuperacoes) return null
+export function maiorEntradaPara(id: string, recuperacoes: number, limite: number, modo: Modo = 'conservador'): number | null {
+  if (avaliarPlano(id, 0.35, limite, modo).recuperacoes < recuperacoes) return null
   let baixo = 35
   let alto = Math.max(35, Math.floor(limite * 100))
   while (baixo < alto) {
     const meio = Math.ceil((baixo + alto) / 2)
-    if (avaliarPlano(id, meio / 100, limite).recuperacoes >= recuperacoes) baixo = meio
+    if (avaliarPlano(id, meio / 100, limite, modo).recuperacoes >= recuperacoes) baixo = meio
     else alto = meio - 1
   }
   return baixo / 100

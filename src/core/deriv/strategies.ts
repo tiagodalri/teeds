@@ -1,9 +1,21 @@
 import type { Estrategia } from './engine'
 
+/**
+ * Modo de operação: só muda o quanto a recuperação mira de lucro.
+ *
+ * Conservador é a escada de sempre: fecha a sequência praticamente no zero
+ * a zero (5% da base). Agressivo mira recuperar tudo e ainda sobrar uma
+ * entrada base inteira — entradas maiores, um degrau a menos de colchão no
+ * mesmo stop. O gatilho (galeApos) é o mesmo nos dois.
+ */
+export type Modo = 'conservador' | 'agressivo'
+export const MODOS: Modo[] = ['conservador', 'agressivo']
+export const NOME_DO_MODO: Record<Modo, string> = { conservador: 'Conservador', agressivo: 'Agressivo' }
+
 /** Recuperação oficial, interna e não editável de cada modelo. */
-export const RECUPERACAO_POR_ROBO: Record<string, { galeApos: number; margem: number }> = {
-  superior5: { galeApos: 3, margem: 0.05 },
-  ag2: { galeApos: 3, margem: 0.05 },
+export const RECUPERACAO_POR_ROBO: Record<string, { galeApos: number; margem: number; agressivo?: number }> = {
+  superior5: { galeApos: 3, margem: 0.05, agressivo: 1 },
+  ag2: { galeApos: 3, margem: 0.05, agressivo: 1 },
   smart03: { galeApos: 3, margem: 0.05 },
   // Goreme paga 6%: recuperar 3 perdas exigiria 52x a base, e a segunda
   // recuperacao 930x. Ligando na primeira perda a escada comeca em 18x —
@@ -16,8 +28,20 @@ export const RECUPERACAO_POR_ROBO: Record<string, { galeApos: number; margem: nu
   superior5fixo: { galeApos: 3, margem: 0 },
 }
 
-export function recuperacaoDoRobo(id: string) {
-  return RECUPERACAO_POR_ROBO[id] ?? { galeApos: 3, margem: 0.05 }
+export function recuperacaoDoRobo(id: string, modo: Modo = 'conservador'): { galeApos: number; margem: number } {
+  const r = RECUPERACAO_POR_ROBO[id] ?? { galeApos: 3, margem: 0.05 }
+  return { galeApos: r.galeApos, margem: modo === 'agressivo' && r.agressivo !== undefined ? r.agressivo : r.margem }
+}
+
+/** Só AG7 e AG2 (e seus nomes na OMNI) têm os dois modos. */
+export function temModos(id: string): boolean {
+  return RECUPERACAO_POR_ROBO[id]?.agressivo !== undefined
+}
+
+/** Lê o modo de volta da configuração que o motor recebeu. */
+export function modoDaConfig(id: string, fatorGale: number): Modo {
+  const r = RECUPERACAO_POR_ROBO[id]
+  return r?.agressivo !== undefined && fatorGale >= r.agressivo - 1e-9 ? 'agressivo' : 'conservador'
 }
 
 /**

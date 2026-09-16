@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TeedsSocket } from '../core/deriv/client'
 import { type ConfigEstrategia, type EstadoMotor, type Estrategia } from '../core/deriv/engine'
 import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
-import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
+import { ESTRATEGIAS_LOCAIS, modoDaConfig, NOME_DO_MODO, temModos } from '../core/deriv/strategies'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { RobotLive } from './RobotLive'
 import { RobotSetup } from './RobotSetup'
@@ -247,7 +247,7 @@ export function LocalRobotPanel({
       rot: 'Recuperação',
       valor: cfg.fatorGale === 0
         ? 'desligado'
-        : `automática ${MARCA.prosa}`,
+        : temModos(ident.id) ? `modo ${NOME_DO_MODO[modoDaConfig(ident.id, cfg.fatorGale)].toLowerCase()}` : `automática ${MARCA.prosa}`,
     },
     { rot: 'Teto', valor: cfg.valorMaximo > 0 ? din(cfg.valorMaximo, moedaDosParametros) : 'sem teto' },
     { rot: 'Para se ganhar', valor: din(cfg.takeProfit, moedaDosParametros) },

@@ -29,6 +29,16 @@
 .robot-launch-presets button { border: 1px solid var(--border); border-radius: 8px; padding: 9px 16px; background: var(--bg); color: var(--text); font-size: 14px; }
 .robot-launch-presets button[aria-pressed='true'] { color: var(--text); background: var(--primary-soft); border-color: var(--primary); }
 .robot-launch-question .robot-launch-hint { font-size: 13px; color: var(--muted); }
+.robot-launch-modos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.robot-launch-modo { display: grid; gap: 8px; align-content: start; min-height: 150px; padding: 20px 18px; text-align: left; border: 1.5px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); transition: border-color .12s, box-shadow .12s, transform .12s; }
+.robot-launch-modo:hover { border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); transform: translateY(-1px); }
+.robot-launch-modo strong { font-size: 18px; letter-spacing: -.02em; }
+.robot-launch-modo span { font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+.robot-launch-modo::before { content: ''; width: 34px; height: 5px; border-radius: 99px; background: var(--border); margin-bottom: 4px; }
+.robot-launch-modo.conservador::before { background: var(--up); }
+.robot-launch-modo.agressivo::before { background: var(--down); }
+.robot-launch-modo[aria-checked='true'] { border-color: var(--primary); background: var(--primary-soft); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent); }
+.robot-launch-modo[aria-checked='true'] span { color: color-mix(in srgb, var(--text) 78%, var(--muted)); }
 .robot-launch-error, .robot-launch-question .robot-launch-error { font-size: 14px; color: var(--down); margin: 16px 0 0; }
 .robot-launch-review dl { margin: 0; }
 .robot-launch-review dl > div { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
@@ -73,6 +83,8 @@
   .robot-launch-footer > span { display: none; }
   .robot-launch-next { margin-left: auto; min-width: 160px; }
   .robot-launch-question { margin-top: 16px; }
+  .robot-launch-modos { grid-template-columns: 1fr; gap: 10px; }
+  .robot-launch-modo { min-height: 0; padding: 16px; }
   .robot-picker { grid-template-columns: 1fr; gap: 12px; }
   .robot-picker-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
   .robot-picker .robot-model { min-height: 54px; padding: 7px; gap: 7px; }

@@ -4,7 +4,7 @@ import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
 import { IDENTIDADES, identidade as identidadeDoRobo, type Identidade } from '../core/deriv/branding'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { Emblema } from './RobotCard'
-import { recuperacaoDoRobo } from '../core/deriv/strategies'
+import { MODOS, NOME_DO_MODO, recuperacaoDoRobo, temModos, type Modo } from '../core/deriv/strategies'
 import { RobotCatalog } from './RobotCatalog'
 import { RobotDialog } from './RobotDialog'
 import './robot-launch.css'
@@ -27,7 +27,7 @@ interface Props {
 }
 const CHAVE = 'teeds.robo.preparo'
 const din = (v: number, m = 'USD') => `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-export function lerPreparo(): { cfg?: Partial<ConfigEstrategia>; symbol?: string; modelo?: string } {
+export function lerPreparo(): { cfg?: Partial<ConfigEstrategia>; symbol?: string; modelo?: string; modo?: Modo } {
   try {
     const valor = JSON.parse(localStorage.getItem(CHAVE) || '{}')
     return valor && typeof valor === 'object' && !Array.isArray(valor) ? valor : {}
@@ -52,9 +52,8 @@ function sanear(cfg: ConfigEstrategia, padrao: ConfigEstrategia): ConfigEstrateg
     if (!Number.isFinite(v) || v < min || v > max) limpo[chave] = padrao[chave]
   }
   if (limpo.valorMaximo > 0 && limpo.valorMaximo < limpo.valorAoVencer) limpo.valorMaximo = limpo.valorAoVencer
-  // Migra a configuração antiga (70%/100% do prejuízo) para a nova margem
-  // pequena sobre a entrada base, evitando manter uma progressão excessiva.
-  if (limpo.fatorGale > 0.25) limpo.fatorGale = 0.05
+  // O fator de recuperação nunca vem daqui: configurarPreparo o tira da
+  // tabela do robô, conforme o modo escolhido.
   return limpo
 }
 
@@ -72,9 +71,15 @@ export function valorDePreparo(texto: string, min: number, max: number, inteiro 
   return Number.isFinite(n) && n >= min && n <= max && (!inteiro || Number.isInteger(n)) ? n : null
 }
 
-export function configurarPreparo(inicial: ConfigEstrategia, valores: Record<string, string>, modeloId: string): ConfigEstrategia | null {
+/** Os dois botões do passo de modo. */
+export const OPCOES_DE_MODO: Array<{ id: Modo; nome: string; frase: string }> = [
+  { id: 'conservador', nome: `Modo ${NOME_DO_MODO.conservador}`, frase: 'Recuperação de sempre: a sequência fecha recuperando as perdas.' },
+  { id: 'agressivo', nome: `Modo ${NOME_DO_MODO.agressivo}`, frase: 'Recuperação maior: a sequência fecha com as perdas e mais uma entrada de lucro.' },
+]
+
+export function configurarPreparo(inicial: ConfigEstrategia, valores: Record<string, string>, modeloId: string, modo: Modo = 'conservador'): ConfigEstrategia | null {
   if (!ETAPAS_PREPARO.every(e => valorDePreparo(valores[e.key] ?? '', e.min, e.max, e.key === 'maxOperacoes') !== null)) return null
-  const rec = recuperacaoDoRobo(modeloId)
+  const rec = recuperacaoDoRobo(modeloId, temModos(modeloId) ? modo : 'conservador')
   const cfg = { ...inicial, ...Object.fromEntries(ETAPAS_PREPARO.map(e => [e.key, valorDePreparo(valores[e.key], e.min, e.max, e.key === 'maxOperacoes')!])) } as ConfigEstrategia
   return { ...cfg, valorInicial: cfg.valorAoVencer, valorMaximo: 0, fatorGale: rec.margem, galeApos: rec.galeApos }
 }
@@ -87,21 +92,26 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   })
   const inicial = useMemo(() => sanear({ ...configInicial, ...lerPreparo().cfg, valorMaximo: 0 }, configInicial), [])
   const [valores, setValores] = useState(() => Object.fromEntries(ETAPAS_PREPARO.map(e => [e.key, String(inicial[e.key])])))
-  // -1 is the model picker; 0..3 contain exactly one input; 4 is review.
+  const [modo, setModo] = useState<Modo>(() => lerPreparo().modo === 'agressivo' ? 'agressivo' : 'conservador')
+  // -1 is the model picker; when the model has modes, 0 is the mode choice;
+  // then one input per step; the last step is the review.
   const [passo, setPasso] = useState(escolherModelo ? -1 : 0)
   const [confirmaReal, setConfirmaReal] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const submitted = useRef(false)
-  const etapa = passo >= 0 && passo < ETAPAS_PREPARO.length ? ETAPAS_PREPARO[passo] : null
-  const revisao = passo === ETAPAS_PREPARO.length
+  const comModo = temModos(modelo.id)
+  const desloc = comModo ? 1 : 0
+  const passoModo = comModo && passo === 0
+  const etapa = passo - desloc >= 0 && passo - desloc < ETAPAS_PREPARO.length ? ETAPAS_PREPARO[passo - desloc] : null
+  const revisao = passo === ETAPAS_PREPARO.length + desloc
   const minimo = etapa?.key === 'stopLoss' && !isDemo ? Number(valores.valorAoVencer.replace(',', '.')) : etapa?.min ?? 0
   const valido = !etapa || valorDePreparo(valores[etapa.key], minimo, etapa.max, etapa.key === 'maxOperacoes') !== null
   const nomeAtivo = symbols.find(s => s.symbol === ATIVO_DOS_ROBOS)?.name ?? ATIVO_DOS_ROBOS
   const todasValidas = ETAPAS_PREPARO.every(e => valorDePreparo(valores[e.key], e.min, e.max, e.key === 'maxOperacoes') !== null)
     && (isDemo || Number(valores.stopLoss.replace(',', '.')) >= Number(valores.valorAoVencer.replace(',', '.')))
-  const quantidade = ETAPAS_PREPARO.length + 1 + (escolherModelo ? 1 : 0)
+  const quantidade = ETAPAS_PREPARO.length + 1 + desloc + (escolherModelo ? 1 : 0)
   const numero = passo + (escolherModelo ? 2 : 1)
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 })
@@ -112,9 +122,9 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   function iniciar() {
     if (submitted.current || ligando || !todasValidas || (!isDemo && !confirmaReal)) return
     submitted.current = true
-    const cfg = configurarPreparo(inicial, valores, modelo.id)
+    const cfg = configurarPreparo(inicial, valores, modelo.id, modo)
     if (!cfg) { submitted.current = false; return }
-    try { localStorage.setItem(CHAVE, JSON.stringify({ cfg, symbol: ATIVO_DOS_ROBOS })) } catch { /* optional browser preferences */ }
+    try { localStorage.setItem(CHAVE, JSON.stringify({ cfg, symbol: ATIVO_DOS_ROBOS, modo })) } catch { /* optional browser preferences */ }
     onLigar(cfg, ATIVO_DOS_ROBOS, modelo)
   }
   return <RobotDialog label="Configurar robô" busy={ligando} onCancel={onCancelar}>
@@ -129,9 +139,13 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
       </header>
       <div className="robot-launch-progress" aria-label={`Etapa ${numero} de ${quantidade}`}><span style={{ width: `${numero / quantidade * 100}%` }} /></div>
       <div className="robot-launch-body" ref={scrollRef}>
-        <span className="robot-launch-step">ETAPA {numero} DE {quantidade} · {passo === -1 ? 'MODELO' : revisao ? 'REVISÃO' : 'SEUS LIMITES'}</span>
-        <h3 ref={titleRef} tabIndex={-1}>{passo === -1 ? 'Escolha seu robô.' : revisao ? 'Revise. Depois, dê o play.' : etapa?.titulo}</h3>
-        {passo === -1 ? <RobotCatalog selected={modelo.id} onSelect={setModelo} /> : etapa ? <div className="robot-launch-question" key={etapa.key}>
+        <span className="robot-launch-step">ETAPA {numero} DE {quantidade} · {passo === -1 ? 'MODELO' : passoModo ? 'MODO' : revisao ? 'REVISÃO' : 'SEUS LIMITES'}</span>
+        <h3 ref={titleRef} tabIndex={-1}>{passo === -1 ? 'Escolha seu robô.' : passoModo ? 'Como o robô deve operar?' : revisao ? 'Revise. Depois, dê o play.' : etapa?.titulo}</h3>
+        {passo === -1 ? <RobotCatalog selected={modelo.id} onSelect={setModelo} /> : passoModo ? <div className="robot-launch-question robot-launch-modos" role="radiogroup" aria-label="Modo de operação">
+          {OPCOES_DE_MODO.map(o => <button type="button" key={o.id} role="radio" aria-checked={modo === o.id} className={`robot-launch-modo ${o.id}`} onClick={() => setModo(o.id)}>
+            <strong>{o.nome}</strong><span>{o.frase}</span>
+          </button>)}
+        </div> : etapa ? <div className="robot-launch-question" key={etapa.key}>
           <p id="robot-step-help">{etapa.key === 'stopLoss' && !isDemo ? 'Na conta real, o limite de perda é obrigatório e não pode ser menor que a entrada. O motor pode parar antes para impedir que a próxima entrada ultrapasse esse valor.' : etapa.ajuda}</p>
           <label className="robot-launch-number"><span className="sr-only">{etapa.titulo}</span>
             <input ref={inputRef} aria-describedby="robot-step-help" aria-invalid={!valido} autoComplete="off" inputMode={etapa.key === 'maxOperacoes' ? 'numeric' : 'decimal'}
@@ -146,7 +160,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
           </p>
         </div> : <div className="robot-launch-review">
           <p>{modelo.descricao}</p>
-          <dl><div><dt>Ativo</dt><dd>{nomeAtivo.replace(' Index', '')}</dd></div>{ETAPAS_PREPARO.map((e, i) => <div key={e.key}><dt>{['Entrada base', 'Meta de ganho', 'Limite de perda', 'Máximo de operações'][i]}</dt><dd>{Number(valores[e.key].replace(',', '.')) === 0 ? 'Sem limite' : e.key === 'maxOperacoes' ? valores[e.key] : din(Number(valores[e.key].replace(',', '.')), moeda)}<button type="button" onClick={() => { setConfirmaReal(false); setPasso(i) }} disabled={ligando} aria-label={`Editar ${e.titulo}`}>Editar</button></dd></div>)}</dl>
+          <dl><div><dt>Ativo</dt><dd>{nomeAtivo.replace(' Index', '')}</dd></div>{comModo && <div><dt>Modo</dt><dd>{NOME_DO_MODO[modo]}<button type="button" onClick={() => { setConfirmaReal(false); setPasso(0) }} disabled={ligando} aria-label="Editar modo de operação">Editar</button></dd></div>}{ETAPAS_PREPARO.map((e, i) => <div key={e.key}><dt>{['Entrada base', 'Meta de ganho', 'Limite de perda', 'Máximo de operações'][i]}</dt><dd>{Number(valores[e.key].replace(',', '.')) === 0 ? 'Sem limite' : e.key === 'maxOperacoes' ? valores[e.key] : din(Number(valores[e.key].replace(',', '.')), moeda)}<button type="button" onClick={() => { setConfirmaReal(false); setPasso(i + desloc) }} disabled={ligando} aria-label={`Editar ${e.titulo}`}>Editar</button></dd></div>)}</dl>
           <p className="robot-launch-risk">A recuperação pode aumentar o valor das entradas. Os robôs desta conta compartilham o saldo. Não há garantia de lucro.</p>
           {!isDemo && <label className="robot-launch-consent"><input type="checkbox" checked={confirmaReal} disabled={ligando} onChange={e => setConfirmaReal(e.target.checked)} /><span>Entendo que esta sessão usará <strong>dinheiro real</strong> e confirmo os valores acima.</span></label>}
         </div>}
