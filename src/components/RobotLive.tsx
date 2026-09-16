@@ -174,8 +174,8 @@ export function RobotLive({
         <div className="tv-resumo-fixo tv-resumo-sessao">
           <span className="tv-ativo-resumo"><i>Ativo</i><b>{ativo}</b></span>
           <span><i>Operações</i><b>{estado.operacoes}</b></span>
-          <span><i>Ganhadoras</i><b className="up">{estado.vitorias}</b></span>
-          <span><i>Perdedoras</i><b className="down">{estado.derrotas}</b></span>
+          <span><i>Positivas</i><b className="up">{estado.vitorias}</b></span>
+          <span><i>Negativas</i><b className="down">{estado.derrotas}</b></span>
           <span className="tv-resultado-resumo"><i>Resultado da sessão</i><b className={positivo ? 'up' : 'down'}>{assinado(estado.resultado)} <small>{moeda}</small></b></span>
         </div>
 
@@ -323,8 +323,8 @@ export function RobotLive({
           <span><i aria-hidden>♢</i><em>Margem até o stop</em><b className="down">{moeda} {num(Math.max(0, config.stopLoss + estado.resultado))}</b></span>
           <span><i aria-hidden>⚑</i><em>Falta para a meta</em><b className="up">{moeda} {num(Math.max(0, config.takeProfit - estado.resultado))}</b></span>
           <span><i aria-hidden>◔</i><em>Aproveitamento</em><b>{acerto.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</b></span>
-          <span><i aria-hidden>↗</i><em>Vitórias</em><b className="up">{estado.vitorias}</b></span>
-          <span><i aria-hidden>↘</i><em>Derrotas</em><b className="down">{estado.derrotas}</b></span>
+          <span><i aria-hidden>↗</i><em>Positivas</em><b className="up">{estado.vitorias}</b></span>
+          <span><i aria-hidden>↘</i><em>Negativas</em><b className="down">{estado.derrotas}</b></span>
         </div>
       </section>
       <section className="tv-curva-painel">

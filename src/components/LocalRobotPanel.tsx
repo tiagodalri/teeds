@@ -10,6 +10,7 @@ import { LimiteAtingido, limiteJaAvisado, marcarLimiteAvisado, tipoDeLimite, typ
 import type { Identidade } from '../core/deriv/branding'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { acompanharNoServidor, ligarNoServidor, pararNoServidor } from '../core/teeds/servidorRobos'
+import { RobotCartao, RobotLinha } from './RobotResumo'
 import { MARCA } from '../marca'
 
 interface Props {
@@ -45,6 +46,15 @@ interface Props {
   onFecharPreparo?: () => void
   /** Coluna de markup nas últimas operações (só para o dono da plataforma). */
   mostrarMarkup?: boolean
+  /**
+   * Como este bloco aparece na tela de Robôs:
+   * - 'aberta': a linha da lista com a cabine completa embaixo (só uma por vez);
+   * - 'linha': só a linha da lista;
+   * - 'cartao': o cartão do mosaico.
+   */
+  apresentacao?: 'aberta' | 'linha' | 'cartao'
+  /** Clique na linha (abre/fecha a cabine) ou em "Abrir na lista" no cartão. */
+  onAbrir?: () => void
 }
 
 const PADRAO: ConfigEstrategia = {
@@ -65,8 +75,11 @@ export function LocalRobotPanel({
   socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
   onRemover, titulo, expandido = false, onExpandir, onSessaoChange, sessaoTeeds, contaId,
   adotar, solicitarPreparo = false, onFecharPreparo, onDigitos, digitosAberto = false,
-  mostrarMarkup = false,
+  mostrarMarkup = false, apresentacao = 'aberta', onAbrir,
 }: Props) {
+  // Desde quando esta tela acompanha a sessão. Para uma sessão adotada do
+  // servidor é o momento em que ela apareceu aqui, não o da abertura lá.
+  const inicioRef = useRef<number | null>(null)
   // O cartao escolhido na vitrine dita a estrategia deste bloco…
   const daVitrine = ESTRATEGIAS_LOCAIS.find((e) => e.id === identidade.id) ?? ESTRATEGIAS_LOCAIS[0]
   // …mas uma sessao em andamento (ou parada na cabine) fica presa a
@@ -170,6 +183,7 @@ export function LocalRobotPanel({
   const olhar = useCallback((id: string) => {
     if (!sessaoTeeds) return
     pararDeOlharRef.current?.()
+    if (sessaoIdRef.current !== id) inicioRef.current = Date.now()
     sessaoIdRef.current = id
     setIdDaSessao(id)
     pararDeOlharRef.current = acompanharNoServidor(
@@ -293,9 +307,44 @@ export function LocalRobotPanel({
   </div>}{preparo}</>
 
   // ------------------------------------------------------------ com sessão
+  const modo = temModos(ident.id) ? NOME_DO_MODO[modoDaConfig(ident.id, cfg.fatorGale, cfg.lucroSobrePrejuizo)].toLowerCase() : null
+  const aoRemover = onRemover ? () => {
+    if (rodando && !window.confirm('Este robô está operando no servidor. Deseja desligar e fechar o bloco?')) return
+    desligar()
+    pararDeOlharRef.current?.()
+    onRemover()
+  } : undefined
+  const resumo = {
+    estado, config: cfg, moeda: contaDaSessao?.moeda ?? moeda, nome: ident.nome, cor: ident.cor, numero: titulo,
+    inicio: inicioRef.current, demo: contaDaSessao?.demo ?? null, modo, conexao,
+    onDesligar: rodando ? desligar : undefined, desligando,
+    onLigarDeNovo: !rodando ? () => { setErro(null); setPreparando(true) } : undefined,
+    onRemover: aoRemover,
+  }
+  // O aviso de meta ou stop aparece em qualquer apresentação — inclusive
+  // com a cabine de outro robô aberta. Fecha só no X. (Decisão de 16/09.)
+  const aviso = limite && <LimiteAtingido
+    tipo={limite} estado={estado} config={cfg} nome={`${titulo} · ${ident.nome}`} cor={ident.cor}
+    moeda={contaDaSessao?.moeda ?? moeda} demo={contaDaSessao?.demo ?? null}
+    onFechar={() => setLimite(null)}
+    onLigarDeNovo={() => { setLimite(null); setErro(null); setPreparando(true) }}
+  />
+  if (apresentacao === 'linha') return (
+    <div className={`cabine-caixa linha ${rodando ? 'rodando' : 'parado'}`} style={{ ['--robo' as any]: ident.cor, ['--robo-suave' as any]: ident.corSuave }}>
+      <RobotLinha {...resumo} aberta={false} onAbrir={() => onAbrir?.()} />
+      {preparo}{aviso}
+    </div>
+  )
+  if (apresentacao === 'cartao') return (
+    <div className={`cabine-caixa cartao ${rodando ? 'rodando' : 'parado'}`} style={{ ['--robo' as any]: ident.cor, ['--robo-suave' as any]: ident.corSuave }}>
+      <RobotCartao {...resumo} onAbrirNaLista={() => onAbrir?.()} />
+      {preparo}{aviso}
+    </div>
+  )
   return (
-    <div className={`cabine-caixa ${expandido ? 'expandido' : ''} ${rodando ? 'rodando' : 'parado'}`}
+    <div className={`cabine-caixa aberta ${expandido ? 'expandido' : ''} ${rodando ? 'rodando' : 'parado'}`}
       style={{ ['--robo' as any]: ident.cor, ['--robo-suave' as any]: ident.corSuave }}>
+      <RobotLinha {...resumo} aberta onAbrir={() => onAbrir?.()} />
       <RobotLive
         estado={estado}
         config={cfg}
@@ -318,22 +367,11 @@ export function LocalRobotPanel({
         onDesligar={rodando ? desligar : undefined}
         desligando={desligando}
         onLigarDeNovo={!rodando ? () => { setErro(null); setPreparando(true) } : undefined}
-        onRemover={onRemover ? () => {
-          if (rodando && !window.confirm('Este robô está operando no servidor. Deseja desligar e fechar o bloco?')) return
-          desligar()
-          pararDeOlharRef.current?.()
-          onRemover()
-        } : undefined}
+        onRemover={aoRemover}
       />
 
       {preparo}
-
-      {limite && <LimiteAtingido
-        tipo={limite} estado={estado} config={cfg} nome={ident.nome} cor={ident.cor}
-        moeda={contaDaSessao?.moeda ?? moeda} demo={contaDaSessao?.demo ?? null}
-        onFechar={() => setLimite(null)}
-        onLigarDeNovo={() => { setLimite(null); setErro(null); setPreparando(true) }}
-      />}
+      {aviso}
     </div>
   )
 }

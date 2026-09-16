@@ -72,7 +72,12 @@ export function RobotsPanel({
   const [ident] = useState<Identidade>(IDENTIDADES[0])
   // Cada bloco e uma sessao de robo independente, com sua propria cabine.
   const [blocos, setBlocos] = useState<string[]>([])
-  const [blocoExpandido, setBlocoExpandido] = useState<string | null>(null)
+  /*
+    Qual bloco está com a cabine aberta na vista em lista. undefined = ninguém
+    escolheu ainda (abre o primeiro vivo); null = a pessoa fechou a aberta.
+    Só o clique troca: nenhum robô rouba o foco (decisão de 16/09/2026).
+  */
+  const [aberta, setAberta] = useState<string | null | undefined>(undefined)
   const [sessoesLocais, setSessoesLocais] = useState<Set<string>>(new Set())
   /**
    * O que está operando no servidor agora.
@@ -86,7 +91,11 @@ export function RobotsPanel({
   /** Sessões que algum bloco desta tela já está mostrando — não duplicar. */
   const [adotadas, setAdotadas] = useState<Record<string, string | null>>({})
   const [blocoEmPreparo, setBlocoEmPreparo] = useState<string | null>(null)
-  const [disposicao, setDisposicao] = useState<'grade' | 'lista'>('grade')
+  // Duas vistas só: lista (padrão, uma cabine aberta) e mosaico (todos de uma vez).
+  const [disposicao, setDisposicao] = useState<'lista' | 'mosaico'>(() => {
+    try { return localStorage.getItem(`${MARCA.id}.robos.vista`) === 'mosaico' ? 'mosaico' : 'lista' } catch { return 'lista' }
+  })
+  const trocarVista = (v: 'lista' | 'mosaico') => { setDisposicao(v); try { localStorage.setItem(`${MARCA.id}.robos.vista`, v) } catch { /* preferência opcional */ } }
   /*
     Um painel de dígitos só, para a tela inteira: guarda de qual bloco ele
     foi aberto (para o botão daquele bloco ficar aceso) e de qual robô é o
@@ -132,20 +141,21 @@ export function RobotsPanel({
     fechadasPelaPessoa.current.add(id)
     vistasNoServidor.current.delete(id)
     setRetidas((prev) => { const proximas = new Map(prev); proximas.delete(id); return proximas })
-    setBlocoExpandido((atual) => atual === id ? null : atual)
+    setAberta((atual) => atual === id ? undefined : atual)
   }
 
   const abrirBloco = () => {
     const vazio = blocos.find(id => !sessoesLocais.has(id))
     if (!vazio && blocos.length >= MAX_BLOCOS) return
-    setBlocoExpandido(null)
     const id = vazio ?? `bloco-${proximoBloco.current++}`
+    // O robô novo nasce com a cabine aberta: é o que a pessoa acabou de ligar.
+    setAberta(id)
     if (!vazio) setBlocos(b => [...b, id])
     setBlocoEmPreparo(id)
   }
   const fecharBloco = (id: string) => {
     setBlocos((b) => b.filter((x) => x !== id))
-    setBlocoExpandido((atual) => atual === id ? null : atual)
+    setAberta((atual) => atual === id ? undefined : atual)
   }
   const modelo: ModeloRobo = MODELOS.find((m) => m.contractType === ident.contrato) ?? MODELOS[0]
 
@@ -262,10 +272,20 @@ export function RobotsPanel({
   const temAcompanhamento = temSessaoLocal || doChat.length > 0
   const temPreparoDisponivel = blocos.some(id => !sessoesLocais.has(id))
 
-  useEffect(() => {
-    // Um foco que desapareceu do servidor não pode deixar a grade vazia.
-    if (blocoExpandido && !blocos.includes(blocoExpandido) && !doChat.some(v => v.id === blocoExpandido)) setBlocoExpandido(null)
-  }, [blocoExpandido, blocos, doChat])
+  // A ordem dos blocos na tela, e qual deles está com a cabine aberta.
+  const blocosComSessao = blocos.filter((id) => sessoesLocais.has(id))
+  const chaves = [...doChat.map((v) => v.id), ...blocosComSessao]
+  const vivas = new Set([...vivasNoServidor.map((v) => v.id), ...blocosComSessao])
+  const abertaEfetiva = aberta === null ? null
+    : aberta !== undefined && chaves.includes(aberta) ? aberta
+    : (chaves.find((c) => vivas.has(c)) ?? chaves[0] ?? null)
+  const alternarAberta = (chave: string) => setAberta((atual) => {
+    const atualEfetiva = atual === undefined ? abertaEfetiva : atual
+    return atualEfetiva === chave ? null : chave
+  })
+  const abrirNaLista = (chave: string) => { setAberta(chave); trocarVista('lista') }
+  const apresentacaoDe = (chave: string): 'aberta' | 'linha' | 'cartao' =>
+    disposicao === 'mosaico' ? 'cartao' : abertaEfetiva === chave ? 'aberta' : 'linha'
 
   if (!logado) {
     return (
@@ -296,18 +316,16 @@ export function RobotsPanel({
 
       <RobotOverview sessoes={vivasNoServidor} />
       <div className="rob-workspace-toolbar" hidden={!temAcompanhamento}>
-        <div><b>{blocoExpandido ? 'Modo foco' : 'Área de acompanhamento'}</b><span>{blocoExpandido ? 'Os outros robôs continuam operando.' : 'Cada robô mantém sua estratégia e seus limites.'}</span></div>
-        <div className="rob-view-options" role="group" aria-label="Disposição dos robôs">
-          {blocoExpandido ? <button onClick={() => setBlocoExpandido(null)}>← Ver todos os robôs</button> : <>
-            <button aria-pressed={disposicao === 'grade'} onClick={() => setDisposicao('grade')}>▦ Lado a lado</button>
-            <button aria-pressed={disposicao === 'lista'} onClick={() => setDisposicao('lista')}>☰ Em lista</button>
-          </>}
+        <div><b>Área de acompanhamento</b><span>{disposicao === 'lista' ? 'Clique numa linha para abrir a cabine dela. Os outros robôs seguem operando na linha deles.' : 'Todos os robôs de uma vez. "Abrir na lista" mostra a cabine completa.'}</span></div>
+        <div className="rob-view-options" role="group" aria-label="Vista dos robôs">
+          <button aria-pressed={disposicao === 'lista'} onClick={() => trocarVista('lista')}>☰ Em lista</button>
+          <button aria-pressed={disposicao === 'mosaico'} onClick={() => trocarVista('mosaico')}>▦ Mosaico</button>
         </div>
       </div>
 
       {/* Uma única grade, com identidade estável. Foco e catálogo só ocultam
           visualmente: nunca desmontam a sessão ou mudam seus parâmetros. */}
-      <div ref={mesaRef} className={`rob-workspace-board modo-${disposicao} ${doChat.length + sessoesLocais.size <= 1 ? 'painel-unico' : ''} ${blocoExpandido ? 'em-foco' : ''}`}>
+      <div ref={mesaRef} className={`rob-workspace-board modo-${disposicao}`}>
 
       {/*
         O robô do chat vem primeiro, antes de tudo o mais.
@@ -326,17 +344,17 @@ export function RobotsPanel({
       {doChat.length > 0 && (
         <div className="rob-board-group">
           {doChat.map((v, i) => (
-            <div key={v.id} className="rob-board-slot" hidden={!!blocoExpandido && blocoExpandido !== v.id}>
+            <div key={v.id} className={`rob-board-slot ${apresentacaoDe(v.id) === 'aberta' ? 'aberta' : ''}`}>
             <LocalRobotPanel
-              titulo={`${v.origem === 'chat' ? 'Via assistente' : 'Sessão'} ${i + 1}`}
+              titulo={`#${i + 1}`}
               socket={socket} isDemo={v.demo} moeda={v.moeda}
               symbols={symbols} symbolPadrao={symbolPadrao}
               identidade={identidade(v.roboId)}
               conexao={conexao}
               sessaoTeeds={sessaoTeeds} contaId={v.contaId}
               adotar={{ id: v.id, config: v.config, origem: v.origem }}
-              expandido={blocoExpandido === v.id}
-              onExpandir={() => setBlocoExpandido((atual) => atual === v.id ? null : v.id)}
+              apresentacao={apresentacaoDe(v.id)}
+              onAbrir={() => disposicao === 'mosaico' ? abrirNaLista(v.id) : alternarAberta(v.id)}
               onDigitos={() => alternarDigitos(v.id, v.roboId)}
               digitosAberto={digitosDe?.chave === v.id}
               mostrarMarkup={admin}
@@ -347,17 +365,17 @@ export function RobotsPanel({
       )}
 
       {ident.onde === 'teeds' && <div className="rob-board-group">
-        {blocos.map((idBloco, i) => (
-          <div key={idBloco} className={`rob-board-slot ${sessoesLocais.has(idBloco) ? '' : 'em-preparo'}`}
-            hidden={!sessoesLocais.has(idBloco) || (!!blocoExpandido && blocoExpandido !== idBloco)}>
+        {blocos.map((idBloco) => (
+          <div key={idBloco} className={`rob-board-slot ${sessoesLocais.has(idBloco) ? '' : 'em-preparo'} ${apresentacaoDe(idBloco) === 'aberta' ? 'aberta' : ''}`}
+            hidden={!sessoesLocais.has(idBloco)}>
             <LocalRobotPanel
-              titulo={`Robô ${i + 1}`}
+              titulo={`#${doChat.length + Math.max(0, blocosComSessao.indexOf(idBloco)) + 1}`}
               socket={socket} isDemo={isDemo} moeda={moeda}
               symbols={symbols} symbolPadrao={symbolPadrao} identidade={ident}
               conexao={conexao}
               sessaoTeeds={sessaoTeeds} contaId={contaId}
-              expandido={blocoExpandido === idBloco}
-              onExpandir={() => setBlocoExpandido((atual) => atual === idBloco ? null : idBloco)}
+              apresentacao={apresentacaoDe(idBloco)}
+              onAbrir={() => disposicao === 'mosaico' ? abrirNaLista(idBloco) : alternarAberta(idBloco)}
               onDigitos={() => alternarDigitos(idBloco, ident.id)}
               digitosAberto={digitosDe?.chave === idBloco}
               mostrarMarkup={admin}
