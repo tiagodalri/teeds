@@ -82,7 +82,7 @@ function mensagemDoErro(e: unknown): { estado: EstadoDaTela; texto: string } {
 
 /* ============================================================ cartão */
 
-const Cartao = memo(function Cartao({ s, cliente, saude, visao, aoAbrir }: { s: SessaoEspelho; cliente?: ClienteRegistro; saude: Saude; visao: Visao; aoAbrir: (id: string) => void }) {
+export const Cartao = memo(function Cartao({ s, cliente, saude, visao, aoAbrir }: { s: SessaoEspelho; cliente?: ClienteRegistro; saude: Saude; visao: Visao; aoAbrir: (id: string) => void }) {
   const e = s.estado
   const cor = semaforo(s, saude === 'ao-vivo' ? s.recebidoEm : saude === 'atencao' ? s.recebidoEm + 3000 : s.recebidoEm + 10_000)
   const { cor: corRobo } = regrasDoRobo(s.roboId)

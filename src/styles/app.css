@@ -5149,15 +5149,18 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .mon-cartao-principais > span > small em { font-style: normal; }
 .mon-cartao-principais .markup b { color: var(--robo, var(--primary)); }
 .mon-cartao-principais .up, .mon-cartao-limites .up { color: var(--up); } .mon-cartao-principais .down, .mon-cartao-limites .down { color: var(--down); }
-.mon-cartao-resumo { display: grid; grid-template-columns: 1.15fr 1.35fr .7fr; gap: 8px; }
-.mon-cartao-resumo > span { display: grid; gap: 3px; min-width: 0; padding: 2px 1px; }
-.mon-cartao-resumo b { font-size: 11.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.mon-cartao-limites { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 9px; border-top: 1px solid var(--border); }
-.mon-cartao-limites > span { display: grid; grid-template-columns: 6px 1fr auto; align-items: center; gap: 6px; min-width: 0; }
-.mon-cartao-limites i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
-.mon-cartao-limites small { color: var(--muted); font-size: 9px; white-space: nowrap; }
-.mon-cartao-limites b { font-size: 10.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.mon-cartao > footer { display: flex; justify-content: space-between; color: var(--muted); font-size: 10.5px; }
+/* Três colunas iguais: cada rótulo numa linha só, cada valor com respiro. */
+.mon-cartao-resumo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.mon-cartao-resumo > span { display: grid; gap: 4px; min-width: 0; padding: 2px 0; }
+.mon-cartao-resumo i { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mon-cartao-resumo b { font-size: 13px; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Rótulo em cima, valor embaixo: um stop de cinco dígitos não invade a meta ao lado. */
+.mon-cartao-limites { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.mon-cartao-limites > span { display: grid; grid-template-columns: 6px minmax(0, 1fr); grid-template-areas: 'i r' 'i v'; column-gap: 8px; row-gap: 4px; align-items: center; min-width: 0; }
+.mon-cartao-limites i { grid-area: i; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.mon-cartao-limites small { grid-area: r; color: var(--muted); font-size: 8.5px; text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mon-cartao-limites b { grid-area: v; font-size: 13px; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mon-cartao > footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; color: var(--muted); font-size: 10.5px; }
 .mon-cartao.lista { grid-template-columns: 1.2fr .8fr 1.8fr 1.15fr .95fr; align-items: center; } .mon-cartao.lista > header { grid-column: 1; } .mon-cartao.lista .mon-cartao-robo { grid-column: 2; padding: 0; border: 0; } .mon-cartao.lista .mon-cartao-robo > em { display: none; } .mon-cartao.lista .mon-cartao-principais { grid-column: 3; } .mon-cartao.lista .mon-cartao-principais > span { min-height: 50px; padding: 7px 9px; } .mon-cartao.lista .mon-cartao-resumo { grid-column: 4; } .mon-cartao.lista .mon-cartao-limites { grid-column: 5; grid-template-columns: 1fr; padding: 0; border: 0; } .mon-cartao.lista > footer { grid-column: 1 / -1; }
 /* cabine espelho */
 .mon-foco { display: grid; gap: 14px; }
