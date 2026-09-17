@@ -79,7 +79,7 @@ function Quem({ p, fase }: { p: ResumoProps; fase: ReturnType<typeof faseDoEstad
         <small>
           {p.numero}
           {p.inicio ? ` · ${hora(p.inicio)}` : ''}
-          {p.demo !== null && p.demo !== undefined && <> · <em className={p.demo ? 'demo' : 'real'}>{p.demo ? 'DEMO' : 'REAL'}</em></>}
+          {p.demo === false && <> · <em className="real">REAL</em></>}
           {p.modo ? ` · ${p.modo}` : ''}
           <span className="rs-contadores"> · <em className="up">{p.estado.vitorias} positivas</em> · <em className="down">{p.estado.derrotas} negativas</em></span>
         </small>

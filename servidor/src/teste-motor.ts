@@ -9,7 +9,8 @@
  * definitiva e passageira, que e o que decide isso.
  */
 import { MotorTeeds, recusaDefinitiva, type Contexto } from '../../src/core/deriv/engine'
-import { SUPERIOR_5, THE_PALM } from '../../src/core/deriv/strategies'
+import { SUPERIOR_5, AG_2, SMART_03, THE_PALM } from '../../src/core/deriv/strategies'
+import { escadaDoRobo } from '../../src/core/deriv/escada'
 
 let certos = 0, errados = 0
 const conferir = (nome: string, deu: unknown, esperado: unknown) => {
@@ -31,6 +32,21 @@ const contexto = (digitos: number[]): Contexto => ({
   config: { valorInicial: 1, valorAoVencer: 1, fatorGale: .95, galeApos: 1, valorMaximo: 0, takeProfit: 10, stopLoss: 10, maxOperacoes: 0 },
 })
 const vinteQuatroSemNove = Array.from({ length: 24 }, (_, i) => i % 9)
+const terceira = {
+  valorAtual: .35, valorInicial: .35, valorAoVencer: .35, ganhou: false, lucro: -.35,
+  perdasSeguidas: 2, prejuizoDaSequencia: .70, retornoLiquidoPorUnidade: .67 / .35,
+  config: { ...contexto([]).config, galeApos: 3, fatorGale: .05 }, memoria: {},
+}
+for (const robo of [SUPERIOR_5, AG_2]) {
+  conferir(`${robo.id} terceira entrada ajustada`, robo.proximoValor(terceira), .41)
+  conferir(`${robo.id} segunda entrada preservada`, robo.proximoValor({ ...terceira, perdasSeguidas: 1 }), .35)
+  conferir(`${robo.id} vitória volta à base`, robo.proximoValor({ ...terceira, ganhou: true }), .35)
+  conferir(`${robo.id} quarta entrada mantém cálculo da recuperação`, robo.proximoValor({ ...terceira, perdasSeguidas: 3, prejuizoDaSequencia: 1.11 }), .61)
+  const escada = escadaDoRobo(robo.id, .35, 4)
+  conferir(`${robo.id} simulação acompanha terceira entrada`, escada[2].valor, .41)
+  conferir(`${robo.id} lucro simulado cobre perdas e alvo`, escada[2].lucro >= .75, true)
+}
+conferir('Smart não recebe ajuste exclusivo AG7/AG2', SMART_03.proximoValor(terceira), .35)
 conferir('Palm arma Under 9 depois do loss virtual', THE_PALM.entrar(contexto([...vinteQuatroSemNove, 9])), true)
 conferir('Palm entra na fase base real', memoria.fasePalm, 'base-real')
 conferir('Palm compra Under 9 na base', THE_PALM.contrato?.(contexto([...vinteQuatroSemNove, 9])).barreira, 9)

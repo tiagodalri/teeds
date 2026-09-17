@@ -58,7 +58,7 @@ export function modoDaConfig(id: string, fatorGale: number, lucroSobrePrejuizo =
  * baixos: DIGITUNDER 3, ganha so no 0, 1 e 2.
  */
 
-export const SUPERIOR_5: Estrategia = {
+const BASE_DIGITOS: Estrategia = {
   id: 'superior5',
   nome: '{marca} - AG7',
   origem: 'baseado no Deriv Bot SUPERIOR 5 VIP',
@@ -115,6 +115,19 @@ export const SUPERIOR_5: Estrategia = {
   },
 }
 
+/** Ajuste exclusivo da terceira entrada de AG7/AG2 e seus nomes na OMNI. */
+export function terceiraEntrada(base: number, prejuizo: number, retorno: number): number {
+  const alvo = prejuizo + Math.max(0.05, base * 0.05)
+  return Math.max(base, Math.ceil((alvo / Math.max(0.01, retorno * 0.97)) * 100) / 100)
+}
+
+export const SUPERIOR_5: Estrategia = {
+  ...BASE_DIGITOS,
+  proximoValor: (args) => !args.ganhou && args.perdasSeguidas === 2 && args.config.galeApos === 3
+    ? terceiraEntrada(args.valorAoVencer, args.prejuizoDaSequencia, args.retornoLiquidoPorUnidade)
+    : BASE_DIGITOS.proximoValor(args),
+}
+
 /**
  * Reconstrucao do Teeds Smart AG2 mostrado no video original.
  *
@@ -163,7 +176,7 @@ export const AG_2: Estrategia = {
 
 /** Smart 03 observável no vídeo: último dígito superior a 3, após 1 tick. */
 export const SMART_03: Estrategia = {
-  ...SUPERIOR_5,
+  ...BASE_DIGITOS,
   id: 'smart03',
   nome: '{marca} Smart 03',
   origem: 'reconstruído a partir do vídeo do robô original',
@@ -176,7 +189,7 @@ export const SMART_03: Estrategia = {
 
 /** Göreme observável no vídeo: último dígito estritamente inferior a 9. */
 export const GOREME: Estrategia = {
-  ...SUPERIOR_5,
+  ...BASE_DIGITOS,
   id: 'goreme',
   nome: '{marca} Göreme',
   origem: 'reconstruído a partir do vídeo do robô original',
@@ -189,7 +202,7 @@ export const GOREME: Estrategia = {
 
 /** Primeiro bloco da dezena: vence com qualquer último dígito entre 0 e 4. */
 export const FIRST_BLOCK: Estrategia = {
-  ...SUPERIOR_5,
+  ...BASE_DIGITOS,
   id: 'firstblock',
   nome: 'First Block',
   origem: 'primeiro bloco dos dígitos decimais',
@@ -202,7 +215,7 @@ export const FIRST_BLOCK: Estrategia = {
 
 /** Segundo bloco da dezena: vence com qualquer último dígito entre 5 e 9. */
 export const SECOND_BLOCK: Estrategia = {
-  ...SUPERIOR_5,
+  ...BASE_DIGITOS,
   id: 'secondblock',
   nome: 'Second Block',
   origem: 'segundo bloco dos dígitos decimais',

@@ -12,7 +12,7 @@
  * centavo e o motor usa esse valor arredondado; a simulação arredonda
  * também — é isso que faz ela bater com a cabine centavo a centavo.
  */
-import { recuperacaoDoRobo, type Modo } from './strategies'
+import { recuperacaoDoRobo, terceiraEntrada, type Modo } from './strategies'
 
 /** Pagamento bruto (entrada + lucro) por US$ 1, conforme quantos dígitos ganham. */
 export const PAGAMENTO_POR_DOLAR = {
@@ -79,6 +79,9 @@ export function escadaDoRobo(id: string, base: number, passos = 30, modo: Modo =
       const r = retorno > 0.5 ? retorno : 0.9233
       valor = Math.ceil(((perdido + Math.max(0.01, base * 0.95)) / Math.max(0.01, r * 0.99)) * 100) / 100
       porDolar = contrato.recuperacao
+    } else if ((id === 'superior5' || id === 'ag2') && i === 2 && galeApos === 3) {
+      valor = terceiraEntrada(base, perdido, retorno)
+      porDolar = contrato.entrada
     } else if (palm || i < galeApos) {
       valor = base
       porDolar = contrato.entrada
