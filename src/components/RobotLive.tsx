@@ -379,14 +379,14 @@ export function RobotLive({
                       <td data-label="Valor">{num(o.valor)}</td>
                       <td data-label="Entrada">
                         <span className="tv-par">
-                          {o.entrada !== null ? o.entrada.toFixed(2) : '—'}
-                          {o.digitoEntrada !== null && <b className="tv-chip">{o.digitoEntrada}</b>}
+                          {o.entrada !== null ? (o.pipSize !== undefined ? o.entrada.toFixed(o.pipSize) : String(o.entrada)) : '—'}
+                          {o.pipSize !== undefined && o.digitoEntrada !== null && <b className="tv-chip">{o.digitoEntrada}</b>}
                         </span>
                       </td>
                       <td data-label="Saída">
                         <span className="tv-par">
-                          {o.saida !== null ? o.saida.toFixed(2) : '—'}
-                          {o.digitoSaida !== null && (
+                          {o.saida !== null ? (o.pipSize !== undefined ? o.saida.toFixed(o.pipSize) : String(o.saida)) : '—'}
+                          {o.pipSize !== undefined && o.digitoSaida !== null && (
                             <b className={`tv-chip ${o.ganhou ? 'up' : 'down'}`}>{o.digitoSaida}</b>
                           )}
                         </span>

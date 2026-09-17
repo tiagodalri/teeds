@@ -228,7 +228,8 @@ export function LocalRobotPanel({
     setErro(null)
     setLigando(true)
     try {
-      const s = await ligarNoServidor(sessaoTeeds, { roboId: escolhida.id, contaId, config })
+      const continuarId = sessaoIdRef.current && sessaoRef.current?.estrategia.id === escolhida.id ? sessaoIdRef.current : undefined
+      const s = await ligarNoServidor(sessaoTeeds, { roboId: escolhida.id, contaId: continuarId ? (contaDaSessao?.contaId ?? contaId) : contaId, config, ...(continuarId ? { continuarId } : {}) })
       // Commit the new identity/config only after the server accepts it.
       sessaoRef.current = { estrategia: escolhida, ident: modelo }
       setCfg(config)
@@ -292,8 +293,8 @@ export function LocalRobotPanel({
     symbolInicial={symbol}
     configInicial={cfg}
     moeda={moeda}
-    isDemo={isDemo}
-    contaId={contaId}
+    isDemo={contaDaSessao?.demo ?? isDemo}
+    contaId={contaDaSessao?.contaId ?? contaId}
     escolherModelo={solicitarPreparo}
     ligando={ligando}
     erro={erro}

@@ -12,6 +12,15 @@ export function casasDecimais(valor: unknown): number {
   return Math.max(0, Math.round(-Math.log10(n)))
 }
 
+/** Ausência de precisão não pode virar silenciosamente duas casas. */
+export function precisaoInformada(valor: unknown): number | null {
+  if (valor === null || valor === undefined || valor === '') return null
+  const n = Number(valor)
+  if (!Number.isFinite(n) || n < 0) return null
+  const casas = n === 0 ? 0 : casasDecimais(n)
+  return casas <= 20 ? casas : null
+}
+
 export interface Tick {
   symbol: string
   quote: number

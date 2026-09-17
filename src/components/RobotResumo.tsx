@@ -170,7 +170,7 @@ export function RobotCartao(p: ResumoProps & { onAbrirNaLista: () => void }) {
         {ultimas.map((o) => (
           <div key={o.contractId} className="rc-op">
             <span className="muted">{o.n} · {horaSeg(o.quando)}</span>
-            <span>{num(o.valor)}{o.digitoSaida !== null && <em className={`rs-dig ${o.ganhou ? 'up' : 'down'}`}>{o.digitoSaida}</em>}</span>
+            <span>{num(o.valor)}{o.pipSize !== undefined && o.digitoSaida !== null && <em className={`rs-dig ${o.ganhou ? 'up' : 'down'}`}>{o.digitoSaida}</em>}</span>
             <b className={o.lucro >= 0 ? 'up' : 'down'}>{assinado(o.lucro)}</b>
           </div>
         ))}

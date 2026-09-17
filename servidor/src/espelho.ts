@@ -88,7 +88,9 @@ export class PublicadorEspelho {
     private readonly conexao: () => string,
     private readonly escritores: EscritoresDoEspelho = PADRAO,
     private readonly ligado: () => boolean = supabaseConfigurado,
+    sequenciaInicial = 0,
   ) {
+    this.seq = sequenciaInicial
     this.batimento = setInterval(() => this.bater(), LIMITES.pulsoMs)
     this.batimento.unref?.()
   }

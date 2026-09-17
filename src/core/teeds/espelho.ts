@@ -33,6 +33,7 @@ import type { ConfigEstrategia, EmCurso, EstadoMotor, OperacaoMotor, Registro, T
 export type FaseEspelho = 'aguardando' | 'enviando' | 'operando' | 'recuperando' | 'parado'
 
 export interface OperacaoEspelho {
+  pipSize?: number
   n: number
   contractId: number
   valor: number
@@ -209,7 +210,7 @@ export const calcularMarkup = (pagamento: number) => arred(Math.max(0, pagamento
 
 function compactarOperacao(o: OperacaoMotor): OperacaoEspelho {
   return {
-    n: o.n, contractId: o.contractId, valor: arred(o.valor), entrada: o.entrada, saida: o.saida,
+    n: o.n, contractId: o.contractId, pipSize: o.pipSize, valor: arred(o.valor), entrada: o.entrada, saida: o.saida,
     digitoEntrada: o.digitoEntrada, digitoSaida: o.digitoSaida, lucro: arred(o.lucro), payout: arred(o.payout),
     ganhou: o.ganhou, quando: o.quando, contractType: o.contractType, barreira: o.barreira,
   }

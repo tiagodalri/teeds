@@ -11,12 +11,19 @@
 import { MotorTeeds, recusaDefinitiva, type Contexto } from '../../src/core/deriv/engine'
 import { SUPERIOR_5, AG_2, SMART_03, THE_PALM } from '../../src/core/deriv/strategies'
 import { escadaDoRobo } from '../../src/core/deriv/escada'
+import { toOpenContract } from '../../src/core/deriv/trading'
+import { precisaoInformada } from '../../src/core/deriv/types'
 
 let certos = 0, errados = 0
 const conferir = (nome: string, deu: unknown, esperado: unknown) => {
   if (JSON.stringify(deu) === JSON.stringify(esperado)) certos++
   else { errados++; console.error(`✕ ${nome}: esperava ${esperado}, veio ${deu}`) }
 }
+conferir('precisão ausente não inventa duas casas', precisaoInformada(undefined), null)
+conferir('precisão zero é válida', precisaoInformada(0), 0)
+conferir('passo decimal é convertido', precisaoInformada(.0001), 4)
+conferir('contrato sem pip preserva ausência', toOpenContract({underlying_symbol:'R_75'}).pipSizeInformado, false)
+conferir('R75 sem pip tem quatro casas no cartão manual', toOpenContract({underlying_symbol:'R_75'}).pipSize, 4)
 conferir('saldo insuficiente desliga', recusaDefinitiva('[InsufficientBalance] Your account balance is insufficient to buy this contract.'), true)
 conferir('token invalido desliga', recusaDefinitiva('[InvalidToken] The token is invalid.'), true)
 conferir('mercado fechado desliga', recusaDefinitiva('[MarketIsClosed] This market is presently closed.'), true)
@@ -95,6 +102,21 @@ const respirar = () => new Promise((r) => setTimeout(r, 5))
 const config = { valorInicial: 1, valorAoVencer: 1, fatorGale: .05, galeApos: 3, valorMaximo: 0, takeProfit: 100, stopLoss: 100, maxOperacoes: 0 }
 
 async function provasDeParada() {
+  for (const exit of [45392.8479, 45405.1079, 45189.2330, null]) {
+    const { socket, canais } = socketFalso()
+    const motor = new MotorTeeds({ socket, estrategia: SUPERIOR_5, config: contexto([]).config, symbol: 'R_75', moeda: 'USD', pipSize: 4 })
+    motor.ligar(); await respirar()
+    canais.ticks({ tick: { symbol: 'R_75', quote: 45189.2337, epoch: 1, pip_size: 4 } })
+    await respirar(); await respirar()
+    motor.desligar('teste')
+    canais.contratos({ proposal_open_contract: { contract_id: 1, status: 'won', profit: 1.92, is_expired: 1, entry_spot: 45189.2337, exit_spot: exit, current_spot: 99999.9991, payout: 2.92, buy_price: 1, contract_type: 'DIGITOVER' } })
+    await respirar()
+    const op = motor.estadoAtual.historico[0]
+    conferir(`precisão real preservada ${exit}`, op?.pipSize, 4)
+    conferir(`saída oficial sem cotação corrente ${exit}`, op?.saida, exit)
+    conferir(`último dígito correto ${exit}`, op?.digitoSaida, exit === null ? null : Number(exit.toFixed(4).slice(-1)))
+    conferir(`resultado da Deriv preservado ${exit}`, op?.lucro, 1.92)
+  }
   {
     const { socket, canais, contagem } = socketFalso()
     const motor = new MotorTeeds({ socket, estrategia: SUPERIOR_5, config, symbol: '1HZ75V', moeda: 'USD', pipSize: 2 })
@@ -117,6 +139,16 @@ async function provasDeParada() {
     const e2 = motor.estadoAtual
     conferir('P4 o contrato aberto liquida e entra na sessão', [e2.operacoes, e2.vitorias, Number(e2.resultado.toFixed(2)), e2.historico.length, e2.historico[0]?.contractId], [1, 1, 1.92, 1, 1])
     conferir('P5 e só então a sessão fecha de vez', [e2.rodando, e2.emOperacao, e2.emCurso, e2.aguardando], [false, false, null, 'sessão encerrada'])
+    const novo = socketFalso()
+    const retomado = new MotorTeeds({socket: novo.socket, estrategia: SUPERIOR_5, config, symbol: '1HZ75V', moeda:'USD', pipSize:2})
+    retomado.ligar(e2)
+    conferir('Continuar preserva histórico e resultado', [retomado.estadoAtual.operacoes, retomado.estadoAtual.resultado, retomado.estadoAtual.historico.length], [1, 1.92, 1])
+    conferir('Continuar preserva curva', retomado.estadoAtual.curva, e2.curva)
+    retomado.desligar('teste')
+    const bloqueado = new MotorTeeds({socket: novo.socket, estrategia: SUPERIOR_5, config:{...config,takeProfit:1}, symbol:'1HZ75V',moeda:'USD',pipSize:2})
+    let recusou = false
+    try { bloqueado.ligar(e2) } catch { recusou = true }
+    conferir('Continuar não ignora meta acumulada', recusou, true)
     const digitosAntes = e2.digitos.length
     canais.ticks?.({ tick: { symbol: '1HZ75V', quote: 100.21, epoch: 3, pip_size: 2 } })
     await respirar()

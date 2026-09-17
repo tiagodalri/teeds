@@ -241,6 +241,13 @@ export async function registrarOperacao(
  * Fecha a sessão. Chamado em TODA saída — stop, meta, teto, parada
  * manual e também quando dá erro.
  * ------------------------------------------------------------------ */
+export async function reabrirSessao(sessao: SessaoGravada, config: { stopLoss: number; takeProfit: number; maxOperacoes: number; valorInicial: number }): Promise<void> {
+  await rest(`/sessoes_robos?id=eq.${encodeURIComponent(sessao.id)}`, {
+    method: 'PATCH', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({ situacao: 'rodando', encerrada_em: null, motivo_da_parada: null, erro: null, stop_loss: config.stopLoss, take_profit: config.takeProfit, max_operacoes: config.maxOperacoes, entrada_atual: config.valorInicial }),
+  })
+}
+
 export async function encerrarSessao(
   sessao: SessaoGravada,
   { motivo, erro = null }: { motivo: string; erro?: string | null },

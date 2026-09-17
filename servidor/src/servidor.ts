@@ -433,6 +433,7 @@ const servidor = createServer(async (req, res) => {
         // De qual marca veio o pedido — muda só o nome do robô no histórico.
         const marca = typeof corpo.marca === 'string' ? corpo.marca : undefined
         const s = await iniciar(auth, {
+          continuarId: typeof corpo.continuarId === 'string' ? corpo.continuarId : undefined,
           roboId: String(corpo.roboId ?? ''),
           contaId,
           valorInicial, stopLoss, takeProfit,

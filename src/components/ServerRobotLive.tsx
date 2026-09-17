@@ -4,6 +4,7 @@ import type { Robo } from '../core/deriv/robots'
 import type { Identidade } from '../core/deriv/branding'
 import { Emblema } from './RobotCard'
 import { Progress } from './Progress'
+import { toOpenContract } from '../core/deriv/trading'
 
 interface Props {
   robo: Robo
@@ -80,8 +81,9 @@ export function ServerRobotLive(props: Props) {
           const r = await socket.send({ proposal_open_contract: 1, contract_id: id })
           const p = r.proposal_open_contract as Record<string, any> | undefined
           if (!p || !vivo) continue
-          const pip = Number(p.pip_size ?? 2)
-          const saida = p.exit_spot != null ? Number(p.exit_spot) : null
+          const contrato = toOpenContract({ ...p, underlying_symbol: p.underlying_symbol ?? robo.contrato.underlying_symbol ?? robo.contrato.symbol })
+          const pip = contrato.pipSize
+          const saida = contrato.exitSpot
           const txt = saida !== null ? saida.toFixed(pip) : ''
           setDetalhes((d) => ({
             ...d,

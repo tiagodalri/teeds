@@ -123,6 +123,8 @@ export interface ConfigEstrategia {
 
 /** Uma operacao ja encerrada, do jeito que a tela precisa mostrar. */
 export interface OperacaoMotor {
+  /** Precisão do ativo usado neste contrato; ausente nos registros antigos. */
+  pipSize?: number
   n: number
   contractId: number
   valor: number
@@ -335,9 +337,11 @@ export class MotorTeeds {
     }
   }
 
-  ligar() {
+  ligar(anterior?: EstadoMotor) {
     if (this.estado.rodando) return
-    this.estado = { ...VAZIO, rodando: true, valorAtual: this.config.valorInicial, digitos: [], curva: [0] }
+    if (anterior?.emOperacao || anterior?.rodando) throw new Error('Aguarde a conclusão da sessão antes de continuar.')
+    if (anterior && ((this.config.takeProfit > 0 && anterior.resultado >= this.config.takeProfit) || (this.config.stopLoss > 0 && anterior.resultado <= -this.config.stopLoss) || (this.config.maxOperacoes > 0 && anterior.operacoes >= this.config.maxOperacoes))) throw new Error('O limite acumulado desta sessão já foi atingido. Revise os limites antes de continuar.')
+    this.estado = { ...VAZIO, ...(anterior ? { operacoes: anterior.operacoes, vitorias: anterior.vitorias, derrotas: anterior.derrotas, resultado: anterior.resultado, movimentado: anterior.movimentado, historico: [...anterior.historico], curva: [...anterior.curva], registros: [...anterior.registros] } : {}), rodando: true, valorAtual: this.config.valorInicial, digitos: [], ...(!anterior ? { curva: [0] } : {}) }
     this.ultimoEpoch = 0
     this.latencias = []
     this.esperaAtual = 0
@@ -646,7 +650,7 @@ export class MotorTeeds {
   private receber(c: OpenContract) {
     const emCurso = this.estado.emCurso
     if (!emCurso || c.contractId !== emCurso.contractId) return
-    const casas = c.pipSize || this.pipSize
+    const casas = c.pipSizeInformado === false ? this.pipSize : (c.pipSize ?? this.pipSize)
 
     if (c.status === 'open' && !c.isExpired) {
       this.estado.emCurso = {
@@ -692,7 +696,7 @@ export class MotorTeeds {
       this.liquidados = new Set([...this.liquidados].slice(-150))
     }
     this.contratoDesde = 0
-    const casas = c.pipSize || this.pipSize
+    const casas = c.pipSizeInformado === false ? this.pipSize : (c.pipSize ?? this.pipSize)
 
       const ganhou = c.status === 'won' || c.profit > 0
       this.estado.operacoes += 1
@@ -702,11 +706,13 @@ export class MotorTeeds {
       this.estado.curva = [...this.estado.curva, this.estado.resultado].slice(-200)
 
       const entrada = c.entrySpot ?? this.estado.emCurso?.entrada ?? null
-      const saida = c.exitSpot ?? c.currentSpot ?? null
+      // A cotação corrente não comprova o preço de liquidação do contrato.
+      const saida = c.exitSpot ?? null
       this.estado.historico = [
         {
           n: this.estado.operacoes,
           contractId,
+          pipSize: casas,
           valor,
           entrada,
           saida,

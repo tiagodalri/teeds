@@ -1,5 +1,5 @@
 import { TeedsSocket } from './client'
-import { casasDecimais } from './types'
+import { precisaoInformada } from './types'
 import type { Candle, DerivMessage } from './types'
 
 /** Resultado de uma compra. */
@@ -40,6 +40,7 @@ export interface OpenContract {
   startTime: number
   expiryTime: number
   pipSize: number
+  pipSizeInformado?: boolean
   /**
    * O markup que a Deriv registrou neste contrato (`app_markup_amount`).
    *
@@ -51,7 +52,7 @@ export interface OpenContract {
   appMarkup: number | null
 }
 
-function toOpenContract(p: Record<string, any>): OpenContract {
+export function toOpenContract(p: Record<string, any>): OpenContract {
   const num = (v: any) => (v === null || v === undefined || v === '' ? null : Number(v))
   return {
     contractId: Number(p.contract_id),
@@ -76,7 +77,8 @@ function toOpenContract(p: Record<string, any>): OpenContract {
     purchaseTime: Number(p.purchase_time ?? 0),
     startTime: Number(p.date_start ?? p.purchase_time ?? 0),
     expiryTime: Number(p.date_expiry ?? p.expiry_time ?? 0),
-    pipSize: casasDecimais(p.pip_size),
+    pipSize: precisaoInformada(p.pip_size) ?? (p.underlying_symbol === 'R_75' ? 4 : 2),
+    pipSizeInformado: precisaoInformada(p.pip_size) !== null,
   }
 }
 

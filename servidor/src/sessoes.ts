@@ -11,7 +11,7 @@ import { ATIVO_DOS_ROBOS } from '../../src/core/deriv/config'
 import type { AuthSession } from '../../src/core/deriv/auth'
 import type { ConfigEstrategia, Estrategia } from '../../src/core/deriv/engine'
 import {
-  abrirSessao, encerrarSessao, registrarOperacao, supabaseConfigurado,
+  abrirSessao, reabrirSessao, encerrarSessao, registrarOperacao, supabaseConfigurado,
   type SessaoGravada,
 } from './supabase'
 import { PublicadorEspelho, espelhoHabilitado } from './espelho'
@@ -29,6 +29,7 @@ import { PublicadorEspelho, espelhoHabilitado } from './espelho'
  */
 
 export interface Parametros {
+  continuarId?: string
   roboId: string
   contaId?: string
   valorInicial: number
@@ -85,6 +86,9 @@ export interface Sessao {
 
 const vivas = new Map<string, Sessao>()
 const motores = new Map<string, { motor: MotorTeeds; socket: TeedsSocket }>()
+const retomando = new Set<string>()
+const encerramentos = new Map<string, Promise<void>>()
+const sequencias = new Map<string, number>()
 
 /** Sessões encerradas somem depois disto — o chat não precisa de arquivo morto. */
 const GUARDAR_ENCERRADA_MS = 60 * 60_000
@@ -190,8 +194,20 @@ async function acharConta(sessao: AuthSession, contaId?: string): Promise<Tradin
 
 /** Liga um robô e devolve na hora. Ele segue operando até bater um freio. */
 export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao> {
+  if (p.continuarId && retomando.has(p.continuarId)) throw new Error('Esta sessão já está sendo retomada.')
+  if (p.continuarId) retomando.add(p.continuarId)
+  try { return await iniciarOuContinuar(auth, p) }
+  finally { if (p.continuarId) retomando.delete(p.continuarId) }
+}
+
+async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Sessao> {
+  const anterior = p.continuarId ? vivas.get(p.continuarId) : undefined
+  if (p.continuarId && (!anterior || !p.userId || anterior.parametros.userId !== p.userId || anterior.contaId !== p.contaId || anterior.roboId !== p.roboId || (anterior.parametros.marca ?? 'teeds') !== (p.marca ?? 'teeds'))) throw new Error('Sessão indisponível para continuar nesta conta e robô.')
+  if (anterior?.estado.rodando || anterior?.estado.emOperacao) throw new Error('A sessão está operando ou concluindo um contrato. Aguarde.')
   const estrategia = robo(p.roboId)
   const config = montarConfig(p)
+  if (anterior && ((config.takeProfit > 0 && anterior.estado.resultado >= config.takeProfit) || (config.stopLoss > 0 && anterior.estado.resultado <= -config.stopLoss) || (config.maxOperacoes > 0 && anterior.estado.operacoes >= config.maxOperacoes))) throw new Error('O limite acumulado foi atingido. Revise os limites para continuar.')
+  if (anterior) await encerramentos.get(anterior.id)
   const conta = await acharConta(auth, p.contaId)
 
   const url = await fetchTradingSocketUrl(auth, conta.accountId)
@@ -217,7 +233,7 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
     pipSize: alvo.pipSize,
   })
 
-  const id = randomBytes(6).toString('hex')
+  const id = anterior?.id ?? randomBytes(6).toString('hex')
   const sessao: Sessao = {
     id,
     roboId: estrategia.id,
@@ -226,17 +242,20 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
     demo: conta.type === 'demo',
     moeda: conta.currency,
     parametros: p,
-    comecouEm: Date.now(),
+    comecouEm: anterior?.comecouEm ?? Date.now(),
     terminouEm: null,
     estado: {} as EstadoMotor,
     erro: null,
-    gravada: null,
+    gravada: anterior?.gravada ?? null,
   }
 
   // A sessão aparece no banco ANTES da primeira entrada: assim a tela do
   // cliente mostra o robô ligado desde o primeiro instante, e não só depois
   // que a primeira operação liquida.
-  if (supabaseConfigurado()) {
+  if (anterior?.gravada) {
+    try { await reabrirSessao(anterior.gravada, config) }
+    catch (e) { socket.disconnect(); throw e }
+  } else if (supabaseConfigurado()) {
     try {
       sessao.gravada = await abrirSessao({
         sessaoRef: id,
@@ -262,9 +281,9 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
   // publicador, que decide sozinho o que vira evento e o que vira batimento,
   // e escreve no banco sem nunca fazer o motor esperar. Sem sessão gravada
   // (Supabase desligado) não há espelho — e não há erro.
-  const espelho = sessao.gravada && espelhoHabilitado() ? new PublicadorEspelho(sessao.gravada, config, () => socket.status) : null
+  const espelho = sessao.gravada && espelhoHabilitado() ? new PublicadorEspelho(sessao.gravada, config, () => socket.status, undefined, undefined, sequencias.get(id) ?? 0) : null
 
-  let jaGravadas = 0
+  let jaGravadas = anterior?.estado.historico.length ?? 0
   motor.escutar((e) => {
     const anterior = sessao.estado
     sessao.estado = e
@@ -319,9 +338,9 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
       sessao.terminouEm = Date.now()
       try { socket.disconnect() } catch { /* já caiu */ }
       motores.delete(id)
-      if (sessao.gravada) void encerrarSessao(sessao.gravada, { motivo: e.motivoParada })
-      void espelho?.encerrar()   // drenagem limitada (2 min); não segura a parada
-      setTimeout(() => vivas.delete(id), GUARDAR_ENCERRADA_MS).unref?.()
+      const fim = Promise.all([sessao.gravada ? encerrarSessao(sessao.gravada, { motivo: e.motivoParada }) : Promise.resolve(), espelho?.encerrar()]).then(() => { sequencias.set(id, espelho?.sequencia ?? 0) })
+      encerramentos.set(id, fim)
+      setTimeout(() => { if (vivas.get(id) === sessao && !sessao.estado.rodando) { vivas.delete(id); encerramentos.delete(id); sequencias.delete(id) } }, GUARDAR_ENCERRADA_MS).unref?.()
       console.log(`[sessao ${id}] parou: ${e.motivoParada} · ${e.operacoes} operações · ${e.resultado.toFixed(2)}`)
     }
   })
@@ -330,7 +349,7 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
   motores.set(id, { motor, socket })
 
   try {
-    motor.ligar()
+    motor.ligar(anterior?.estado)
   } catch (erro) {
     sessao.erro = (erro as Error).message
     sessao.terminouEm = Date.now()
