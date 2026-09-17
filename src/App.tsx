@@ -3,6 +3,7 @@ import { PriceChart, type ChartMode, type ContractMarker } from './components/Pr
 import { PositionCard } from './components/PositionCard'
 import { DigitsPanel } from './components/DigitsPanel'
 import { AdminPanel } from './components/AdminPanel'
+import { usePreferenciaColuna } from './core/teeds/preferenciaColuna'
 import { InsightsPanel } from './components/InsightsPanel'
 import { MonitoramentoBoundary } from './components/MonitoramentoBoundary'
 // O monitoramento é só do admin e pesa: entra no pacote sob demanda, para o
@@ -80,6 +81,8 @@ export default function App() {
   /** A conferencia de administrador falhou (rede, token) — diferente de "nao e admin". */
   const [adminFalhou, setAdminFalhou] = useState(false)
   const [adminUserId, setAdminUserId] = useState<string | null>(null)
+  const adminConfirmado = admin === true && !!teeds.sessao && adminUserId === teeds.sessao.usuario.id
+  const [mostrarColuna, alterarColuna] = usePreferenciaColuna(teeds.sessao?.usuario.id ?? null, adminConfirmado)
   const conta = useAccount({ email: teeds.sessao?.usuario.email })
   const [verPerfil, setVerPerfil] = useState(false)
   const [tema, setTema] = useState<Tema>(temaGuardado)
@@ -571,7 +574,8 @@ export default function App() {
           onConectarDeriv={conta.login}
           sessaoTeeds={teeds.sessao}
           contaId={conta.accountId}
-          admin={admin === true}
+          admin={adminConfirmado}
+          mostrarMarkup={mostrarColuna}
         />
       </div>
       {tela === 'robos' || tela === 'assistente' ? null : tela === 'aulas' ? (
@@ -585,7 +589,7 @@ export default function App() {
       ) : tela === 'insights' && admin === true ? (
         teeds.sessao ? <InsightsPanel sessao={teeds.sessao} /> : null
       ) : tela === 'gestao' && admin === true ? (
-        teeds.sessao ? <AdminPanel sessao={teeds.sessao} comissoes={<ManagementPanel
+        teeds.sessao && adminConfirmado ? <AdminPanel sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} comissoes={<ManagementPanel
           session={conta.session} sessaoTeeds={teeds.sessao} contaId={conta.accountId}
           socket={conta.socket} isDemo={conta.isDemo} onReautorizar={() => startLogin()}
           payoutBase={payoutBase} moeda={conta.account?.currency ?? 'USD'} pulso={conta.pulso}

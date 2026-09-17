@@ -38,6 +38,7 @@ interface Props {
   contaId?: string | null
   /** Dono da plataforma: enxerga o markup de cada operacao nas cabines. */
   admin?: boolean
+  mostrarMarkup?: boolean
 }
 
 /** Teto de robos simultaneos: cada um consome assinaturas da mesma conexao. */
@@ -48,7 +49,7 @@ const din = (v: number, m = 'USD') =>
 
 export function RobotsPanel({
   socket, logado, isDemo, moeda, symbols, symbolPadrao, conexao = 'open',
-  entrandoNaDeriv = false, onConectarDeriv, sessaoTeeds, contaId, admin = false,
+  entrandoNaDeriv = false, onConectarDeriv, sessaoTeeds, contaId, admin = false, mostrarMarkup = false,
 }: Props) {
   const [symbol, setSymbol] = useState<string>(symbolPadrao ?? '1HZ100V')
   const [valorInicial, setValorInicial] = useState(1)
@@ -357,7 +358,7 @@ export function RobotsPanel({
               onAbrir={() => disposicao === 'mosaico' ? abrirNaLista(v.id) : alternarAberta(v.id)}
               onDigitos={() => alternarDigitos(v.id, v.roboId)}
               digitosAberto={digitosDe?.chave === v.id}
-              mostrarMarkup={admin}
+              mostrarMarkup={admin && mostrarMarkup}
               onRemover={retidas.has(v.id) ? () => fecharRetida(v.id) : undefined} />
             </div>
           ))}
@@ -378,7 +379,7 @@ export function RobotsPanel({
               onAbrir={() => disposicao === 'mosaico' ? abrirNaLista(idBloco) : alternarAberta(idBloco)}
               onDigitos={() => alternarDigitos(idBloco, ident.id)}
               digitosAberto={digitosDe?.chave === idBloco}
-              mostrarMarkup={admin}
+              mostrarMarkup={admin && mostrarMarkup}
               solicitarPreparo={blocoEmPreparo === idBloco}
               onFecharPreparo={() => setBlocoEmPreparo(null)}
               onSessaoChange={(ativa, sessaoId) => {

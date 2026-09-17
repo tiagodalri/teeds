@@ -331,3 +331,7 @@ button, input, select, textarea { font-family: inherit; }
   .layout-operar .trade .quote .btn { min-height: 44px; }
   .layout-operar .trade .quote strong { font-size: 18px; }
 }
+.admin-column-setting { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.admin-column-setting small { display: block; margin-top: 5px; color: var(--muted); }
+.admin-column-setting label { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.admin-column-setting select { min-height: 44px; min-width: 84px; }

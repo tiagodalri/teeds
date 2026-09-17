@@ -91,7 +91,7 @@ function Quem({ p, fase }: { p: ResumoProps; fase: ReturnType<typeof faseDoEstad
 function Acoes({ p, extra }: { p: ResumoProps; extra?: React.ReactNode }) {
   const e = p.estado
   return (
-    <div className="rs-acoes" onClick={(ev) => ev.stopPropagation()}>
+    <div className="rs-acoes" onClick={(ev) => ev.stopPropagation()} onKeyDown={(ev) => ev.stopPropagation()}>
       {e.rodando && p.onDesligar && (
         <button type="button" className="tv-btn parar" onClick={p.onDesligar} disabled={p.desligando} aria-busy={p.desligando}>
           <span aria-hidden>■</span> {p.desligando ? 'Desligando…' : 'Desligar'}
@@ -128,7 +128,7 @@ export function RobotLinha(p: ResumoProps & { aberta: boolean; onAbrir: () => vo
       <span className="rs-kpi rs-resultado"><i>{e.rodando ? 'Resultado' : 'Resultado final'}</i><b className={positivo ? 'up' : 'down'}>{assinado(e.resultado)} <small>{p.moeda}</small></b></span>
       <Sparkline pontos={e.curva} positivo={positivo} />
       <Acoes p={p} extra={
-        <span className="tv-btn rs-abrir" aria-hidden>{p.aberta ? 'Fechar ▴' : 'Abrir ▾'}</span>
+        <button type="button" className="tv-btn rs-abrir" aria-expanded={p.aberta} onClick={p.onAbrir}>{p.aberta ? 'Fechar ▴' : 'Abrir ▾'}</button>
       } />
     </div>
   )
