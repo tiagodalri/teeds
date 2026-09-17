@@ -38,15 +38,30 @@ function Anel({ fracao, cor }: { fracao: number; cor: string }) {
 
 function Fileira({ children, rotulo }: { children: ReactNode; rotulo: string }) {
   const ref = useRef<HTMLDivElement>(null)
+  const [limites, setLimites] = useState({ anterior: false, proxima: false })
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const medir = () => setLimites({ anterior: el.scrollLeft > 2, proxima: el.scrollWidth - el.clientWidth - el.scrollLeft > 2 })
+    const observer = new ResizeObserver(medir)
+    observer.observe(el)
+    for (const child of el.children) observer.observe(child)
+    el.addEventListener('scroll', medir, { passive: true })
+    medir()
+    return () => { observer.disconnect(); el.removeEventListener('scroll', medir) }
+  }, [children])
   const mover = (direcao: -1 | 1) => ref.current?.scrollBy({
     left: direcao * Math.max(280, ref.current.clientWidth * .82), behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
   })
 
   return (
     <div className="aulas-carrossel">
-      <button className="aulas-seta anterior" onClick={() => mover(-1)} aria-label={`Voltar em ${rotulo}`}>‹</button>
       <div className="aulas-fileira" ref={ref}>{children}</div>
-      <button className="aulas-seta proxima" onClick={() => mover(1)} aria-label={`Avançar em ${rotulo}`}>›</button>
+      {(limites.anterior || limites.proxima) && <div className="aulas-fileira-controles">
+        <span>Mais aulas</span>
+        <button className="aulas-navegar" disabled={!limites.anterior} onClick={() => mover(-1)} aria-label={`Voltar em ${rotulo}`}>←</button>
+        <button className="aulas-navegar" disabled={!limites.proxima} onClick={() => mover(1)} aria-label={`Avançar em ${rotulo}`}>→</button>
+      </div>}
     </div>
   )
 }

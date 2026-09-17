@@ -280,7 +280,19 @@ button, input, select, textarea { font-family: inherit; }
 .market-paginacao button { min-height: 36px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); cursor: pointer; }
 .market-paginacao button:disabled { opacity: .4; cursor: default; }
 .ger.aulas:not(.cine) { padding: 20px 28px; gap: 22px; }
-.ger.aulas:not(.cine) .aulas-capa { width: 100%; min-height: 0; margin: 0; padding: 26px 30px; border: 1px solid var(--border); border-radius: 14px; }
+.ger.aulas:not(.cine) > * { flex-shrink: 0; }
+.ger.aulas:not(.cine) .aulas-capa { width: 100%; height: auto; min-height: 0; margin: 0; padding: 26px 30px; border: 1px solid var(--border); border-radius: 14px; }
+.ger.aulas:not(.cine) .aulas-capa-texto { min-width: 0; align-self: center; text-align: left; }
+.ger.aulas:not(.cine) .aulas-meta { flex-wrap: wrap; }
+.ger.aulas:not(.cine) .aulas-carrossel { margin-inline: 0; }
+.ger.aulas:not(.cine) .aulas-fileira { padding: 6px 0 10px; scroll-padding-inline: 0; }
+.aulas-fileira-controles { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+.aulas-fileira-controles > span { font-size: 12px; color: var(--muted); margin-right: 4px; }
+.aulas-navegar { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); cursor: pointer; font-size: 20px; }
+.aulas-navegar:disabled { opacity: .3; cursor: default; }
+.aulas-navegar:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.ger.aulas:not(.cine) .aulas-carrossel .aula-dur { top: 8px; bottom: auto; left: auto; right: 8px; max-width: calc(100% - 16px); font-size: 10px; white-space: normal; }
+.ger.aulas:not(.cine) .aulas-carrossel .aula-card-meta { flex-wrap: wrap; gap: 4px 8px; }
 .ger.aulas:not(.cine) .aulas-capa h2 { font-size: clamp(26px, 2.5vw, 38px); max-width: 24ch; line-height: 1.1; }
 .ger.aulas:not(.cine) .aulas-capa-texto > p { font-size: 13px; max-width: 55ch; margin-block: 10px; }
 .ger.aulas:not(.cine) .aulas-meta { margin-block: 10px; }
