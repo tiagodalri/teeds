@@ -1,4 +1,5 @@
 import './ambiente'
+import { catalogo } from './catalogo'
 
 import { randomBytes } from 'node:crypto'
 import { TeedsSocket } from '../../src/core/deriv/client'
@@ -12,7 +13,7 @@ import type { AuthSession } from '../../src/core/deriv/auth'
 import type { ConfigEstrategia, Estrategia } from '../../src/core/deriv/engine'
 import {
   abrirSessao, reabrirSessao, encerrarSessao, registrarOperacao, supabaseConfigurado,
-  type SessaoGravada,
+  type SessaoGravada, simuladorPermitido,
 } from './supabase'
 import { PublicadorEspelho, espelhoHabilitado } from './espelho'
 
@@ -87,6 +88,7 @@ export interface Sessao {
 const vivas = new Map<string, Sessao>()
 const motores = new Map<string, { motor: MotorTeeds; socket: TeedsSocket }>()
 const retomando = new Set<string>()
+const iniciosPendentes = new Map<string, number>()
 const encerramentos = new Map<string, Promise<void>>()
 const sequencias = new Map<string, number>()
 
@@ -194,10 +196,16 @@ async function acharConta(sessao: AuthSession, contaId?: string): Promise<Tradin
 
 /** Liga um robô e devolve na hora. Ele segue operando até bater um freio. */
 export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao> {
+  if (!catalogo(p.marca ?? 'teeds').some(r => r.id === p.roboId && r.ativo)) throw new Error('Este robô está indisponível para novos inícios.')
   if (p.continuarId && retomando.has(p.continuarId)) throw new Error('Esta sessão já está sendo retomada.')
+  const dono = p.userId ?? p.contaId ?? 'api'
+  const pendentes = iniciosPendentes.get(dono) ?? 0
+  const ativos = [...vivas.values()].filter(s => (p.userId ? s.parametros.userId === p.userId : s.contaId === p.contaId) && (s.estado.rodando || s.estado.emOperacao)).length
+  if (ativos + pendentes >= 6) throw new Error('Limite de 6 robôs simultâneos atingido.')
+  iniciosPendentes.set(dono, pendentes + 1)
   if (p.continuarId) retomando.add(p.continuarId)
   try { return await iniciarOuContinuar(auth, p) }
-  finally { if (p.continuarId) retomando.delete(p.continuarId) }
+  finally { iniciosPendentes.set(dono, Math.max(0, (iniciosPendentes.get(dono) ?? 1) - 1)); if (p.continuarId) retomando.delete(p.continuarId) }
 }
 
 async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Sessao> {
@@ -209,6 +217,7 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
   if (anterior && ((config.takeProfit > 0 && anterior.estado.resultado >= config.takeProfit) || (config.stopLoss > 0 && anterior.estado.resultado <= -config.stopLoss) || (config.maxOperacoes > 0 && anterior.estado.operacoes >= config.maxOperacoes))) throw new Error('O limite acumulado foi atingido. Revise os limites para continuar.')
   if (anterior) await encerramentos.get(anterior.id)
   const conta = await acharConta(auth, p.contaId)
+  if (conta.type === 'demo' && (!p.userId || !await simuladorPermitido(p.userId, p.marca ?? 'teeds'))) throw new Error('O seu plano não inclui acesso ao simulador.')
 
   const url = await fetchTradingSocketUrl(auth, conta.accountId)
   const socket = new TeedsSocket({

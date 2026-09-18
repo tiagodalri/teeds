@@ -6,6 +6,7 @@ import type { ActiveSymbol } from '../core/deriv/types'
 import { Emblema } from './RobotCard'
 import { MODOS, NOME_DO_MODO, recuperacaoDoRobo, temModos, type Modo } from '../core/deriv/strategies'
 import { RobotCatalog } from './RobotCatalog'
+import { useRobosDisponiveis } from '../core/teeds/catalogoRobos'
 import { RobotDialog } from './RobotDialog'
 import './robot-launch.css'
 import { IconeFechar } from './IconeFechar'
@@ -86,6 +87,7 @@ export function configurarPreparo(inicial: ConfigEstrategia, valores: Record<str
 }
 
 export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, contaId, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
+  const disponiveis = useRobosDisponiveis()
   const [modelo, setModelo] = useState(() => {
     // Preferência já salva no próprio preparo; a calculadora não escreve aqui.
     const pedido = escolherModelo ? lerPreparo().modelo : undefined
@@ -97,6 +99,11 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   // -1 is the model picker; when the model has modes, 0 is the mode choice;
   // then one input per step; the last step is the review.
   const [passo, setPasso] = useState(escolherModelo ? -1 : 0)
+  useEffect(() => {
+    if (escolherModelo && disponiveis?.length && !disponiveis.includes(modelo.id)) {
+      setModelo(identidadeDoRobo(disponiveis[0])); setPasso(-1)
+    }
+  }, [disponiveis, escolherModelo, modelo.id])
   const [confirmaReal, setConfirmaReal] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
@@ -110,7 +117,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   const minimo = etapa?.key === 'stopLoss' && !isDemo ? Number(valores.valorAoVencer.replace(',', '.')) : etapa?.min ?? 0
   const valido = !etapa || valorDePreparo(valores[etapa.key], minimo, etapa.max, etapa.key === 'maxOperacoes') !== null
   const nomeAtivo = symbols.find(s => s.symbol === ATIVO_DOS_ROBOS)?.name ?? ATIVO_DOS_ROBOS
-  const todasValidas = ETAPAS_PREPARO.every(e => valorDePreparo(valores[e.key], e.min, e.max, e.key === 'maxOperacoes') !== null)
+  const todasValidas = (disponiveis === null || disponiveis.includes(modelo.id)) && ETAPAS_PREPARO.every(e => valorDePreparo(valores[e.key], e.min, e.max, e.key === 'maxOperacoes') !== null)
     && (isDemo || Number(valores.stopLoss.replace(',', '.')) >= Number(valores.valorAoVencer.replace(',', '.')))
   const quantidade = ETAPAS_PREPARO.length + 1 + desloc + (escolherModelo ? 1 : 0)
   const numero = passo + (escolherModelo ? 2 : 1)

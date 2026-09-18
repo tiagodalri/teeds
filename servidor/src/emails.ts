@@ -102,8 +102,8 @@ function seguro(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string): EmailPronto {
-  const c = conteudo(tipo, marca.prosa)
+export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, personalizado?: Conteudo): EmailPronto {
+  const c = personalizado ?? conteudo(tipo, marca.prosa)
   const e = marca.email
   const endereco = seguro(url)
 

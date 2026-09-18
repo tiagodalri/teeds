@@ -67,8 +67,8 @@ export function AccountSwitcher(props: Props) {
         aria-expanded={aberto}
         aria-haspopup="menu"
       >
-        <span className={`selo ${cara(isDemo)}`}>{rotulo(isDemo)}</span>
-        <BalanceLive valor={saldo} moeda={moeda} conectando={conectando} />
+        {selecionada ? <><span className={`selo ${cara(isDemo)}`}>{rotulo(isDemo)}</span>
+        <BalanceLive valor={saldo} moeda={moeda} conectando={conectando} /></> : <span>Selecionar conta</span>}
         <svg className="conta-seta" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">
           <path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor"
             strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />

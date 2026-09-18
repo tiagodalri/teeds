@@ -44,7 +44,7 @@ export const PADRAO: Limites = {
   */
   entradaMaxima: Infinity,
   fracaoDoSaldo: Infinity,
-  robosSimultaneos: 2,
+  robosSimultaneos: 6,
   mensagensPorDia: 30,
 }
 

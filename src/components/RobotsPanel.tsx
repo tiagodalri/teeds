@@ -42,7 +42,7 @@ interface Props {
 }
 
 /** Teto de robos simultaneos: cada um consome assinaturas da mesma conexao. */
-const MAX_BLOCOS = 4
+const MAX_BLOCOS = 6
 
 const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`

@@ -23,6 +23,15 @@ const CHAVE = process.env.SUPABASE_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_K
 
 export const supabaseConfigurado = () => Boolean(URL_BASE && CHAVE)
 
+export async function simuladorPermitido(userId: string, marca: string): Promise<boolean> {
+  return (await rest<boolean>('/rpc/teeds_simulador_permitido', {method:'POST',body:JSON.stringify({p_user:userId,p_marca:marca})})) === true
+}
+
+export async function administradorDaMarca(userId: string, marca: string): Promise<boolean> {
+  const linhas = await rest<any[]>(`/administradores?user_id=eq.${encodeURIComponent(userId)}&marca=eq.${encodeURIComponent(marca)}&select=user_id&limit=1`)
+  return linhas.length === 1
+}
+
 async function rest<T>(caminho: string, init: RequestInit = {}): Promise<T> {
   if (!supabaseConfigurado()) throw new Error('Supabase não configurado: falta SUPABASE_URL ou SUPABASE_SECRET no .env.')
   const res = await fetch(`${URL_BASE}/rest/v1${caminho}`, {

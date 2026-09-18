@@ -1,4 +1,7 @@
 import './ambiente'
+import { decidirLead, listarPendentes, enviarAprovacoes } from './aprovacao-leads'
+import { catalogo, alterarRobo } from './catalogo'
+import { administradorDaMarca } from './supabase'
 
 import { createServer } from 'node:http'
 import { createHash, randomBytes } from 'node:crypto'
@@ -261,6 +264,8 @@ const servidor = createServer(async (req, res) => {
       const d = JSON.parse(Buffer.concat(partes).toString('utf8'))
       if (d.empresa) { res.writeHead(200, headers); return res.end(JSON.stringify({ ok: true })) }
       const marca = d.marca === 'omni' ? 'omni' : d.marca === 'teeds' ? 'teeds' : null
+      const marcaDaLanding = origem.includes('omnifinanc.com') ? 'omni' : origem.includes('teedscompany.com') ? 'teeds' : marca
+      if (marca !== marcaDaLanding) throw new Error('Marca incompatível com a página de cadastro.')
       const nome = String(d.nome ?? '').trim().replace(/\s+/g, ' ').slice(0, 120)
       const email = String(d.email ?? '').trim().toLowerCase().slice(0, 180)
       const telefone = String(d.telefone ?? '').trim().slice(0, 32)
@@ -364,7 +369,24 @@ const servidor = createServer(async (req, res) => {
     }
 
     try {
+      if (url.pathname === '/api/clientes-pendentes') {
+        const marca = marcaDaOrigem.id
+        if (!await administradorDaMarca(dono.id, marca)) return json(403, { erro: 'Somente administradores desta plataforma.' })
+        if (req.method === 'GET') return json(200, await listarPendentes(marca, url.searchParams.get('status') || 'pendente', Number(url.searchParams.get('pagina')) || 0))
+        if (req.method === 'POST') return json(200, await decidirLead(String(corpo.id || ''), marca, dono.id, String(corpo.acao || ''), String(corpo.plano || 'essencial')))
+        return json(405, { erro: 'Método não permitido.' })
+      }
       // ---- ligar
+      if (url.pathname === '/api/catalogo-robos') {
+        const marca = marcaDaOrigem.id
+        if (req.method === 'GET') return json(200, catalogo(marca))
+        if (req.method === 'POST') {
+          if (!await administradorDaMarca(dono.id, marca)) return json(403, { erro: 'Somente administradores desta plataforma.' })
+          if (typeof corpo.ativo !== 'boolean' || typeof corpo.id !== 'string') return json(400, { erro: 'Dados inválidos.' })
+          return json(200, alterarRobo(marca, corpo.id, corpo.ativo))
+        }
+        return json(405, { erro: 'Método não permitido.' })
+      }
       if (url.pathname === '/api/sessao' && req.method === 'POST') {
         const contaId = String(corpo.contaId ?? '').trim()
         if (!contaId) return json(400, { erro: 'Diga em qual conta o robô deve operar.' })
@@ -384,6 +406,7 @@ const servidor = createServer(async (req, res) => {
         // pessoa pode usar a mesma conta da Deriv nas duas, mas cada ficha é
         // separada — e é a ficha desta marca que autoriza aqui.
         const marcaDoPedido = typeof corpo.marca === 'string' ? corpo.marca : 'teeds'
+        if (marcaDoPedido !== marcaDaOrigem.id) return json(403, { erro: 'A plataforma do pedido não corresponde ao acesso atual.' })
         etapa = 'lendo as contas do login'
         const minhas = await contasDoUsuario(dono.id, marcaDoPedido)
         if (!minhas.includes(contaId)) {
@@ -585,6 +608,8 @@ void limparSessoesOrfas()
 // Resend o carteiro nem liga — e o Supabase segue mandando o padrao dele.
 if (process.env.RESEND_CHAVE && supabaseConfigurado()) {
   ligarCarteiro({ pendentes: emailsPendentes, entregue: emailEntregue, falhou: emailFalhou })
+  void enviarAprovacoes()
+  setInterval(() => void enviarAprovacoes(), 30_000).unref()
   console.log('E-mails: o servidor manda, um por marca (Resend)')
 } else {
   console.log('E-mails: sem RESEND_CHAVE — o Supabase continua mandando o padrao dele')

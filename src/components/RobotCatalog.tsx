@@ -1,15 +1,18 @@
 import { useState } from 'react'
 import { IDENTIDADES, type Identidade } from '../core/deriv/branding'
 import { Emblema } from './RobotCard'
+import { useRobosDisponiveis } from '../core/teeds/catalogoRobos'
 
 /** Browse and compare in place. Selection never sends an order. */
 export function RobotCatalog({ selected, onSelect, indisponivel = false }: {
   selected: string; onSelect: (modelo: Identidade) => void; indisponivel?: boolean
 }) {
   const [search, setSearch] = useState('')
+  const disponiveis = useRobosDisponiveis()
   const normalize = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-  const modelos = IDENTIDADES.filter(i => normalize(`${i.nome} ${i.chamada} ${i.descricao}`).includes(normalize(search.trim())))
-  const atual = IDENTIDADES.find(i => i.id === selected) ?? IDENTIDADES[0]
+  const permitidos = IDENTIDADES.filter(i => disponiveis === null || disponiveis.includes(i.id))
+  const modelos = permitidos.filter(i => normalize(`${i.nome} ${i.chamada} ${i.descricao}`).includes(normalize(search.trim())))
+  const atual = permitidos.find(i => i.id === selected) ?? permitidos[0]
   return <section className="robot-picker" aria-label="Escolher robô">
     <div className="robot-picker-list">
       <input type="search" aria-label="Buscar modelo de robô" placeholder="Buscar robô…" value={search} onChange={e => setSearch(e.target.value)} />
@@ -20,11 +23,11 @@ export function RobotCatalog({ selected, onSelect, indisponivel = false }: {
         {modelos.length === 0 && <p>Nenhum robô encontrado. <button type="button" onClick={() => setSearch('')}>Limpar busca</button></p>}
       </div>
     </div>
-    <article className="robot-picker-detail" style={{ ['--model-color' as string]: atual.cor }} aria-live="polite">
+    {atual && <article className="robot-picker-detail" style={{ ['--model-color' as string]: atual.cor }} aria-live="polite">
       <div className="robot-picker-emblem"><Emblema id={atual} tamanho={40} /></div>
       <span className="robot-picker-kicker">{atual.chamada}</span><h4>{atual.nome}</h4>
       <p>{atual.descricao}</p>
       <small>Nenhuma estratégia garante resultado. Os robôs da mesma conta compartilham o saldo.</small>
-    </article>
+    </article>}
   </section>
 }

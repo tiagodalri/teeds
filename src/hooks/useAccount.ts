@@ -3,7 +3,7 @@ import { completeLogin, loadSession, logout as clearSession, startLogin, type Au
 import { fetchAccounts, fetchTradingSocketUrl, resetDemoBalance, type TradingAccount } from '../core/deriv/account'
 import { TeedsSocket } from '../core/deriv/client'
 import type { ConnectionState } from '../core/deriv/types'
-import { acessoSomenteDemo, contasPermitidas, selecionarContaPermitida } from '../core/deriv/accountAccess'
+import { acessoSomenteDemo, contasPermitidas } from '../core/deriv/accountAccess'
 import { limparCacheOperacoes } from '../core/deriv/history'
 import {
   assinarContratos, fetchPortfolio, subscribeBalance, subscribeTransactions,
@@ -16,15 +16,16 @@ export type AuthStatus = 'deslogado' | 'entrando' | 'logado' | 'erro'
  * Cuida de todo o ciclo de conta: login, escolha da conta,
  * conexao autenticada, saldo e posicoes abertas.
  */
-export function useAccount(acesso: { email?: string | null } = {}) {
+export function useAccount(acesso: { email?: string | null; simulador?: boolean } = {}) {
   const [status, setStatus] = useState<AuthStatus>('deslogado')
   const [error, setError] = useState<string | null>(null)
   const [session, setSession] = useState<AuthSession | null>(null)
   const [accounts, setAccounts] = useState<TradingAccount[]>([])
   const [chosenAccountId, setChosenAccountId] = useState<string | null>(null)
   const somenteDemo = acessoSomenteDemo(acesso.email)
-  const permitidas = contasPermitidas(accounts, somenteDemo)
-  const account = selecionarContaPermitida(permitidas, chosenAccountId)
+  const permitidas = contasPermitidas(accounts, somenteDemo).filter(c => c.type !== 'demo' || acesso.simulador === true)
+  // Nunca migra automaticamente de dinheiro fictício para dinheiro real.
+  const account = permitidas.find(c => c.accountId === chosenAccountId) ?? null
   const accountId = account?.accountId ?? null
   const setAccountId = (id: string) => {
     if (permitidas.some(c => c.accountId === id)) setChosenAccountId(id)
@@ -306,7 +307,7 @@ export function useAccount(acesso: { email?: string | null } = {}) {
   const [aviso, setAviso] = useState<string | null>(null)
 
   const recarregarDemo = useCallback(async () => {
-    if (!session || !accountId) return
+    if (!session || !accountId || !acesso.simulador) return
     const conta = accounts.find((a) => a.accountId === accountId)
     if (conta?.type !== 'demo') {
       setAviso('Só a conta demo pode ser recarregada.')
@@ -322,7 +323,7 @@ export function useAccount(acesso: { email?: string | null } = {}) {
     } catch (e) {
       setAviso(`Não consegui recarregar: ${(e as Error).message}`)
     }
-  }, [session, accountId, accounts])
+  }, [session, accountId, accounts, acesso.simulador])
 
   useEffect(() => {
     if (!aviso) return
@@ -335,7 +336,7 @@ export function useAccount(acesso: { email?: string | null } = {}) {
 
   return {
     status, error, setError, session,
-    accounts: permitidas, demonstrationAccounts: accounts, account, accountId, setAccountId, isDemo, somenteDemo,
+    accounts: permitidas, demonstrationAccounts: permitidas, account, accountId, setAccountId, isDemo, somenteDemo,
     balance: conexaoDaConta ? balance : null, contracts: conexaoDaConta ? [...contracts.values()] : [],
     socket: conexaoDaConta ? socketRef.current : null, connecting, aviso, setAviso, pulso, conexao,
     comprasRecentes: conexaoDaConta ? comprasRecentes : [],

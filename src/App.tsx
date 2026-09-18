@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, lazy, Suspense } from 'react'
+import { useSimulador } from './hooks/useSimulador'
 import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
 import { PositionCard } from './components/PositionCard'
 import { DigitsPanel } from './components/DigitsPanel'
 import { AdminPanel } from './components/AdminPanel'
+import { CatalogoProvider } from './core/teeds/catalogoRobos'
 import { usePreferenciaColuna } from './core/teeds/preferenciaColuna'
 import { InsightsPanel } from './components/InsightsPanel'
 import { MonitoramentoBoundary } from './components/MonitoramentoBoundary'
@@ -83,7 +85,8 @@ export default function App() {
   const [adminUserId, setAdminUserId] = useState<string | null>(null)
   const adminConfirmado = admin === true && !!teeds.sessao && adminUserId === teeds.sessao.usuario.id
   const [mostrarColuna, alterarColuna] = usePreferenciaColuna(teeds.sessao?.usuario.id ?? null, adminConfirmado)
-  const conta = useAccount({ email: teeds.sessao?.usuario.email })
+  const simulador = useSimulador(teeds.sessao)
+  const conta = useAccount({ email: teeds.sessao?.usuario.email, simulador: adminConfirmado || simulador })
   const [verPerfil, setVerPerfil] = useState(false)
   const [tema, setTema] = useState<Tema>(temaGuardado)
   const alternarTema = () => {
@@ -562,6 +565,7 @@ export default function App() {
       )}
 
       <div className="tela-viva" hidden={tela !== 'robos'}>
+        <CatalogoProvider sessao={teeds.sessao}>
         <RobotsPanel
           socket={conta.socket}
           logado={conta.status === 'logado'}
@@ -577,6 +581,7 @@ export default function App() {
           admin={adminConfirmado}
           mostrarMarkup={mostrarColuna}
         />
+        </CatalogoProvider>
       </div>
       {tela === 'robos' || tela === 'assistente' ? null : tela === 'aulas' ? (
         <AulasPanel nome={teeds.usuario?.nome} sessao={teeds.sessao} />

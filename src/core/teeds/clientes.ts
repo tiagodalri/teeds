@@ -16,6 +16,7 @@
 import { SUPABASE, autenticacaoConfigurada } from './config'
 import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
+import { PLANOS_CLIENTE, planoClienteValido } from './planos'
 import { dispositivoAtual } from './insights'
 
 function cabecalhos(token: string): Record<string, string> {
@@ -332,7 +333,7 @@ export async function clientesPorId(sessao: SessaoTeeds, ids: string[]): Promise
 
 export async function listarPlanos(sessao: SessaoTeeds): Promise<PlanoRegistro[]> {
   const linhas = await rest<any[]>(`/planos?select=*&marcas=cs.{${MARCA.id}}&order=nome.asc`, sessao.token)
-  return (linhas ?? []).map((l) => ({ id: l.id, nome: textoLegivel(l.nome) ?? l.nome, duracaoDias: l.duracao_dias, ativo: Boolean(l.ativo) }))
+  return (linhas ?? []).filter(l => planoClienteValido(l.id)).map((l) => ({ id: l.id, nome: PLANOS_CLIENTE.find(p => p.id === l.id)!.nome, duracaoDias: l.duracao_dias, ativo: Boolean(l.ativo) }))
 }
 
 export async function listarProdutos(sessao: SessaoTeeds): Promise<ProdutoRegistro[]> {
@@ -348,6 +349,7 @@ export async function listarProdutosClientes(sessao: SessaoTeeds): Promise<Clien
 export async function atualizarAcessoCliente(sessao: SessaoTeeds, userId: string, dados: {
   planoId: string; statusAcesso: ClienteRegistro['statusAcesso']; acessoExpiraEm: string | null; observacoes: string | null
 }): Promise<void> {
+  if (!planoClienteValido(dados.planoId)) throw new Error('Escolha um dos dois planos de clientes.')
   await rest(`/clientes?user_id=eq.${encodeURIComponent(userId)}&marca=eq.${MARCA.id}`, sessao.token, {
     method: 'PATCH', headers: { Prefer: 'return=minimal' },
     body: JSON.stringify({ plano_id: dados.planoId, status_acesso: dados.statusAcesso, acesso_expira_em: dados.acessoExpiraEm, observacoes: dados.observacoes }),

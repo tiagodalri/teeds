@@ -43,6 +43,8 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
+  const [confirmacao, setConfirmacao] = useState('')
+  const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false)
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [capsLock, setCapsLock] = useState(false)
   const [telefone, setTelefone] = useState('')
@@ -57,6 +59,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
     nome: nome && !nomeCompleto(nome) ? 'Escreva o nome e o sobrenome.' : null,
     email: email && !email.includes('@') ? 'Esse e-mail não parece completo.' : null,
     senha: senha && senha.length < 6 ? 'Pelo menos 6 caracteres.' : null,
+    confirmacao: confirmacao !== senha ? 'As senhas não coincidem. Digite a mesma senha nos dois campos.' : null,
     telefone: telefone && !telefoneValido(telefone) ? 'DDD e número, 10 ou 11 dígitos.' : null,
     cpf: cpf && !cpfValido(cpf) ? 'Esse CPF não é válido.' : null,
   }
@@ -66,9 +69,10 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
     : modo === 'entrar'
       ? email.includes('@') && senha.length >= 6
       : nomeCompleto(nome) && email.includes('@') && senha.length >= 6
-        && telefoneValido(telefone) && cpfValido(cpf)
+        && confirmacao === senha && telefoneValido(telefone) && cpfValido(cpf)
 
   function trocarModo(m: Modo) {
+    setConfirmacao(''); setMostrarConfirmacao(false)
     setModo(m); setRecado(null); setTocado({}); setMostrarSenha(false); setCapsLock(false); limparErro()
   }
 
@@ -79,6 +83,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
     if (modo === 'entrar') { await onEntrar(email, senha); return }
     if (modo === 'criar') {
       const r = await onCadastrar({ nome, email, senha, telefone, cpf })
+      if (r.ok) { setConfirmacao(''); setMostrarConfirmacao(false) }
       if (r.ok && r.confirmar) {
         setRecado(`Conta criada. Confirme o e-mail que enviamos para ${email} e depois entre.`)
         setModo('entrar')
@@ -151,6 +156,22 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
           {modo !== 'esqueci' && campo('senha', 'Senha', senha, setSenha,
             { tipo: 'password', auto: modo === 'criar' ? 'new-password' : 'current-password',
               dica: modo === 'criar' ? 'pelo menos 6 caracteres' : '••••••••' })}
+
+          {modo === 'criar' && <label className={tocado.confirmacao && problemas.confirmacao ? 'ruim' : ''}>
+            <span className="rot" id="entrada-confirmacao-rotulo">Confirmar senha</span>
+            <span className="entrada-senha">
+              <input id="entrada-confirmacao" aria-labelledby="entrada-confirmacao-rotulo"
+                type={mostrarConfirmacao ? 'text' : 'password'} autoComplete="new-password"
+                required value={confirmacao} placeholder="Digite a senha novamente"
+                onChange={e => setConfirmacao(e.target.value)} onBlur={marcar('confirmacao')}
+                aria-invalid={Boolean(tocado.confirmacao && problemas.confirmacao)}
+                aria-describedby={tocado.confirmacao && problemas.confirmacao ? 'entrada-confirmacao-erro' : undefined} />
+              <button type="button" aria-controls="entrada-confirmacao" aria-pressed={mostrarConfirmacao}
+                aria-label={mostrarConfirmacao ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha'}
+                onClick={() => setMostrarConfirmacao(v => !v)}>{mostrarConfirmacao ? 'Ocultar' : 'Mostrar'}</button>
+            </span>
+            {tocado.confirmacao && problemas.confirmacao && <em id="entrada-confirmacao-erro" role="status">{problemas.confirmacao}</em>}
+          </label>}
 
           <button className="entrada-btn" type="submit" disabled={!valido || ocupado}>
             {ocupado ? 'um instante…' : t.acao}
