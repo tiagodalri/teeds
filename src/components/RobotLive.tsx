@@ -105,7 +105,6 @@ export function RobotLive({
   const [registroAberto, setRegistroAberto] = useState(false)
   const [filtroHistorico, setFiltroHistorico] = useState('todas')
   const [analisesPalm, setAnalisesPalm] = useState<Array<{ id: number; hora: number; texto: string }>>([])
-  const acerto = estado.operacoes ? (estado.vitorias / estado.operacoes) * 100 : 0
   const positivo = estado.resultado >= 0
   const historicoVisivel = estado.historico.filter(o => filtroHistorico === 'todas' || (filtroHistorico === 'ganhos' ? o.lucro > 0 : o.lucro < 0))
   const fita = estado.digitos.slice(-30)
@@ -131,16 +130,8 @@ export function RobotLive({
     })
   }, [estrategiaId, estado.ticksAnalisados, estado.rodando, estado.aguardando, estado.condicao, estado.digitos, emCurso])
 
-  // acumulado por operacao, para a coluna da direita da tabela
-  const acumulados = useMemo(() => {
-    const antigas = [...estado.historico].reverse()
-    // O servidor conserva apenas a cauda do histórico. O saldo anterior a
-    // ela precisa entrar no acumulado para coincidir com o placar da sessão.
-    let soma = estado.resultado - antigas.reduce((total, o) => total + o.lucro, 0)
-    const mapa = new Map<number, number>()
-    for (const o of antigas) { soma += o.lucro; mapa.set(o.n, soma) }
-    return mapa
-  }, [estado.historico, estado.resultado])
+  // A coluna "Acumulado" saiu da tabela a pedido do Tiago (18/09/2026): ela
+  // confundia mais do que ajudava. O total da sessão fica no cabeçalho.
 
   const teto = config.takeProfit || 1
   const piso = config.stopLoss || 1
@@ -320,9 +311,7 @@ export function RobotLive({
         <h3 className="tv-resumo-titulo">Resumo da sessão</h3>
         <div className="tv-resumo-cards">
           <span><i aria-hidden>▥</i><em>Resultado atual</em><b className={positivo ? 'up' : 'down'}>{assinado(estado.resultado)} <small>{moeda}</small></b></span>
-          <span><i aria-hidden>♢</i><em>Margem até o stop</em><b className="down">{moeda} {num(Math.max(0, config.stopLoss + estado.resultado))}</b></span>
           <span><i aria-hidden>⚑</i><em>Falta para a meta</em><b className="up">{moeda} {num(Math.max(0, config.takeProfit - estado.resultado))}</b></span>
-          <span><i aria-hidden>◔</i><em>Aproveitamento</em><b>{acerto.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</b></span>
           <span><i aria-hidden>↗</i><em>Positivas</em><b className="up">{estado.vitorias}</b></span>
           <span><i aria-hidden>↘</i><em>Negativas</em><b className="down">{estado.derrotas}</b></span>
         </div>
@@ -364,14 +353,13 @@ export function RobotLive({
               <thead>
                 <tr>
                   <th>#</th><th>Hora</th><th>Valor</th>
-                  <th>Entrada</th><th>Saída</th><th>Resultado</th><th>Acumulado</th>
+                  <th>Entrada</th><th>Saída</th><th>Resultado</th>
                   {mostrarMarkup && <th>Markup</th>}
                 </tr>
               </thead>
               <tbody>
-                {historicoVisivel.length === 0 && <tr><td colSpan={mostrarMarkup ? 8 : 7}>Nenhuma operação neste filtro.</td></tr>}
+                {historicoVisivel.length === 0 && <tr><td colSpan={mostrarMarkup ? 7 : 6}>Nenhuma operação neste filtro.</td></tr>}
                 {historicoVisivel.map(o => {
-                  const ac = acumulados.get(o.n) ?? 0
                   return (
                     <tr key={o.contractId} className={`${o.ganhou ? 'ganhou' : 'perdeu'} ${o.contractId === estado.historico[0]?.contractId ? 'recente' : ''}`}>
                       <td className="tv-n" data-label="Operação">{o.n}</td>
@@ -392,7 +380,6 @@ export function RobotLive({
                         </span>
                       </td>
                       <td data-label="Resultado" className={o.ganhou ? 'up forte' : 'down forte'}>{assinado(o.lucro)}</td>
-                      <td data-label="Acumulado" className={ac >= 0 ? 'up' : 'down'}>{assinado(ac)}</td>
                       {mostrarMarkup && (
                         <td
                           data-label="Markup"

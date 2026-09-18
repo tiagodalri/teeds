@@ -5413,6 +5413,15 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .tv-resumo-cards b.up { color: color-mix(in srgb, var(--up) 72%, var(--text)); }
 .tv-resumo-cards b.down { color: color-mix(in srgb, var(--down) 72%, var(--text)); }
 .tv-resumo-cards small { font-size: 8px; font-weight: 600; opacity: .72; }
+/* Quatro cartões (resultado, meta, positivas, negativas) em 2x2 que ocupam
+   a altura do resumo, com os números maiores. (Pedido de 18/09/2026.) */
+.tv-sessao { display: flex; flex-direction: column; }
+.tv-resumo-cards { flex: 1 1 auto; grid-template-rows: repeat(2, minmax(64px, 1fr)); gap: 8px; }
+.tv-resumo-cards > span { align-content: center; padding: 10px 12px; column-gap: 10px; grid-template-columns: 32px minmax(0,1fr); }
+.tv-resumo-cards > span > i { width: 30px; height: 30px; font-size: 14px; }
+.tv-resumo-cards em { font-size: 9.5px; }
+.tv-resumo-cards b { font-size: 17px; letter-spacing: -.01em; }
+.tv-resumo-cards small { font-size: 9px; }
 .tv-curva-caixa { margin-top: 10px; padding: 9px 0 0; border-top: 1px solid rgba(139,150,173,.10); }
 .tv-curva-legenda { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 5px; color: var(--muted); font-size: 8px; }
 .tv-curva-legenda b { font-size: 9px; font-weight: 650; }
