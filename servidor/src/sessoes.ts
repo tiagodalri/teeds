@@ -219,7 +219,15 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
   })
   socket.connect()
 
-  const simbolos = await fetchActiveSymbols(socket)
+  // Se a conexão de operação não abrir, o socket não pode ficar tentando
+  // reconectar para sempre por trás de um pedido que já desistiu.
+  let simbolos: Awaited<ReturnType<typeof fetchActiveSymbols>>
+  try {
+    simbolos = await fetchActiveSymbols(socket)
+  } catch {
+    socket.disconnect()
+    throw new Error('A Deriv não abriu a conexão de operação a tempo. Ela parece instável agora; tente de novo em instantes.')
+  }
   const alvo = simbolos.find((s) => s.symbol === ATIVO_DOS_ROBOS)
   if (!alvo) {
     socket.disconnect()

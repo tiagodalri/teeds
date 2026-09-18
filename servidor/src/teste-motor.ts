@@ -9,6 +9,7 @@
  * definitiva e passageira, que e o que decide isso.
  */
 import { MotorTeeds, recusaDefinitiva, type Contexto } from '../../src/core/deriv/engine'
+import { definirTempoDaDeriv, fetchAccounts, fetchTradingSocketUrl, createAccount } from '../../src/core/deriv/account'
 import { SUPERIOR_5, AG_2, SMART_03, THE_PALM } from '../../src/core/deriv/strategies'
 import { escadaDoRobo } from '../../src/core/deriv/escada'
 import { toOpenContract } from '../../src/core/deriv/trading'
@@ -182,7 +183,59 @@ async function provasDeParada() {
   }
 }
 
-provasDeParada().then(() => {
+/* ------------------------------------------------------------------ *
+ * A Deriv engasgando não pode deixar o "Iniciar robô" girando para sempre.
+ * Uma chamada que não responde é cortada; quem pode repetir repete uma vez;
+ * criar conta (que não pode ser feito em dobro) nunca repete.
+ * ------------------------------------------------------------------ */
+async function provasDaDeriv() {
+  const original = globalThis.fetch
+  const sessao: any = { accessToken: 't', appId: '1' }
+  const ok = (dados: unknown) => new Response(JSON.stringify({ data: dados }), { status: 200 })
+  const trava = (_: any, init?: RequestInit) => new Promise<Response>((_r, rejeitar) => {
+    init?.signal?.addEventListener('abort', () => rejeitar(new Error('abortado')))
+  })
+  let chamadas = 0
+  const falso = (respostas: Array<(u: any, i?: RequestInit) => Promise<Response>>) => {
+    chamadas = 0
+    globalThis.fetch = ((u: any, i?: RequestInit) => respostas[Math.min(chamadas++, respostas.length - 1)](u, i)) as typeof fetch
+  }
+  definirTempoDaDeriv(120)
+  try {
+    falso([trava, async () => ok([{ account_id: 'DOT1', balance: 10, account_type: 'demo' }])])
+    const t0 = Date.now(); const contas = await fetchAccounts(sessao)
+    conferir('D1 primeira chamada trava, a segunda responde: contas chegam', [contas[0]?.accountId, chamadas], ['DOT1', 2])
+    conferir('D2 e sem esperar minutos (corte + nova tentativa)', Date.now() - t0 < 2000, true)
+
+    falso([trava])
+    let erro = ''
+    try { await fetchAccounts(sessao) } catch (e) { erro = (e as Error).message }
+    conferir('D3 travou duas vezes: erro claro, sem ficar pendurado', [chamadas, /não respondeu a tempo/.test(erro)], [2, true])
+
+    falso([async () => new Response('{}', { status: 524 }), async () => ok([{ account_id: 'DOT2', account_type: 'demo' }])])
+    conferir('D4 erro 524 da Deriv: repete e segue', (await fetchAccounts(sessao))[0]?.accountId, 'DOT2')
+
+    falso([async () => new Response('{}', { status: 524 })])
+    erro = ''; try { await fetchAccounts(sessao) } catch (e) { erro = (e as Error).message }
+    conferir('D5 524 nas duas: avisa que a Deriv está instável', /instável/.test(erro) && /524/.test(erro), true)
+
+    falso([async () => new Response(JSON.stringify({ errors: [{ message: 'Token inválido' }] }), { status: 401 })])
+    erro = ''; try { await fetchAccounts(sessao) } catch (e) { erro = (e as Error).message }
+    conferir('D6 recusa de verdade (401) não repete e traz a mensagem da Deriv', [chamadas, erro], [1, 'Token inválido'])
+
+    falso([trava, async () => ok({ url: 'wss://x' })])
+    conferir('D7 endereço de operação (OTP) também repete', await fetchTradingSocketUrl(sessao, 'DOT1'), 'wss://x')
+
+    falso([trava, async () => ok({ account_id: 'NOVA' })])
+    erro = ''; try { await createAccount(sessao) } catch (e) { erro = (e as Error).message }
+    conferir('D8 criar conta nunca repete (não abre conta em dobro)', [chamadas, /não respondeu a tempo/.test(erro)], [1, true])
+  } finally {
+    globalThis.fetch = original
+    definirTempoDaDeriv(12_000)
+  }
+}
+
+provasDeParada().then(provasDaDeriv).then(() => {
   console.log(`\n${certos} certos, ${errados} errados`)
   process.exit(errados ? 1 : 0)
 }).catch((e) => { console.error(e); process.exit(1) })

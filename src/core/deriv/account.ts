@@ -20,14 +20,46 @@ function headers(session: AuthSession): HeadersInit {
   }
 }
 
-async function call<T>(path: string, session: AuthSession, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${DERIV.restBase}${path}`, { ...init, headers: headers(session) })
-  const body = await res.json().catch(() => ({}))
-  if (!res.ok) {
+/**
+ * Quanto uma chamada à API da Deriv pode demorar antes de desistirmos dela.
+ *
+ * Sem limite, uma Deriv engasgada segurava o pedido por minutos: em
+ * 18/09/2026 a API levou 57 s para responder a primeira chamada (e já tinha
+ * devolvido 524 depois de 3 min), e o botão "Iniciar robô" ficou girando sem
+ * explicação. O engasgo costuma ser de uma chamada só — a seguinte volta em
+ * 0,1 s —, então quem pode repetir repete uma vez antes de avisar.
+ */
+let TEMPO_MAXIMO_MS = 12_000
+/** Só para as provas: encurta o limite para não esperar 12 s de verdade. */
+export function definirTempoDaDeriv(ms: number) { TEMPO_MAXIMO_MS = ms }
+
+const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms))
+const AVISO_INSTAVEL = 'A Deriv não respondeu a tempo. Ela parece instável agora; tente de novo em instantes.'
+
+async function call<T>(path: string, session: AuthSession, init: RequestInit = {}, repetivel = (init.method ?? 'GET') === 'GET'): Promise<T> {
+  for (let tentativa = 1; ; tentativa++) {
+    const ultima = !repetivel || tentativa >= 2
+    const ctrl = new AbortController()
+    const relogio = setTimeout(() => ctrl.abort(), TEMPO_MAXIMO_MS)
+    let res: Response
+    let body: any
+    try {
+      res = await fetch(`${DERIV.restBase}${path}`, { ...init, headers: headers(session), signal: ctrl.signal })
+      body = await res.json().catch(() => ({}))
+    } catch {
+      // Estourou o tempo ou a rede caiu: nenhuma resposta da Deriv.
+      clearTimeout(relogio)
+      if (!ultima) { await pausa(400); continue }
+      throw new Error(AVISO_INSTAVEL)
+    }
+    clearTimeout(relogio)
+    if (res.ok) return body as T
+    const instavel = res.status >= 500 || res.status === 429
+    if (instavel && !ultima) { await pausa(800); continue }
     const first = body?.errors?.[0]
+    if (instavel && !first?.message) throw new Error(`${AVISO_INSTAVEL} (erro ${res.status})`)
     throw new Error(first?.message || body?.message || `Erro ${res.status} em ${path}`)
   }
-  return body as T
 }
 
 /** Contas de opcoes do usuario autenticado (demo e real). */
@@ -52,6 +84,7 @@ export async function fetchTradingSocketUrl(session: AuthSession, accountId: str
     `/trading/v1/options/accounts/${encodeURIComponent(accountId)}/otp`,
     session,
     { method: 'POST' },
+    true, // pedir outro endereço de uso único não tem efeito colateral: pode repetir
   )
   const url = body.data?.url
   if (!url) throw new Error('A Deriv nao devolveu o endereco de conexao')

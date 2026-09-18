@@ -27,12 +27,15 @@ export interface SessaoNoServidor {
 }
 
 async function api<T>(
-  sessao: SessaoTeeds, caminho: string, init: RequestInit = {},
+  sessao: SessaoTeeds, caminho: string, init: RequestInit = {}, limiteMs = 0,
 ): Promise<T> {
   let res: Response
+  const ctrl = new AbortController()
+  const relogio = limiteMs > 0 ? setTimeout(() => ctrl.abort(), limiteMs) : null
   try {
     res = await fetch(`${SERVIDOR.url}/api${caminho}`, {
       ...init,
+      signal: ctrl.signal,
       headers: {
         Authorization: `Bearer ${sessao.token}`,
         'Content-Type': 'application/json',
@@ -40,10 +43,15 @@ async function api<T>(
       },
     })
   } catch {
+    if (relogio) clearTimeout(relogio)
+    if (ctrl.signal.aborted) {
+      throw new Error('A resposta está demorando mais que o normal (a Deriv parece instável). Se o robô ligar, ele aparece na sua lista em instantes; se não, tente de novo.')
+    }
     // servidor fora do ar, wi-fi caiu, certificado recusado — para quem
     // está olhando é tudo a mesma coisa: não deu para falar com ele
     throw new Error(`Não consegui falar com o servidor da ${MARCA.prosa}. Tente de novo em instantes.`)
   }
+  if (relogio) clearTimeout(relogio)
   const corpo = await res.json().catch(() => ({} as any))
   if (!res.ok) throw new Error(corpo?.erro || `O servidor recusou o pedido (${res.status}).`)
   return corpo as T
@@ -81,10 +89,13 @@ export function ligarNoServidor(
   pedido: { roboId: string; contaId: string; config: ConfigEstrategia; origem?: 'navegador' | 'chat'; continuarId?: string },
 ): Promise<SessaoNoServidor> {
   // A marca vai junto para o robô se chamar pelo nome certo no histórico.
+  // O servidor desiste da Deriv em no máximo ~50 s (12 s por chamada, uma
+  // nova tentativa); 70 s aqui cobrem isso com folga e garantem que o botão
+  // "Iniciando…" nunca fica girando sem explicação.
   return api<SessaoNoServidor>(sessao, '/sessao', {
     method: 'POST',
     body: JSON.stringify({ ...pedido, marca: MARCA.id }),
-  })
+  }, 70_000)
 }
 
 /** Como está a sessão agora. */

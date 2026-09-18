@@ -100,6 +100,9 @@ const SEGREDO = segredoMcp()
  * que o botão da tela abriu. Sem esta regra, bastaria chutar o número de
  * uma sessão para desligar o robô de outra pessoa.
  */
+/** Pedidos de ligar robô em andamento, por login, conta e robô. */
+const ligandoAgora = new Set<string>()
+
 async function minhaSessao(userId: string, id: string) {
   const s = ver(id)
   if (!s) return null
@@ -365,11 +368,23 @@ const servidor = createServer(async (req, res) => {
       if (url.pathname === '/api/sessao' && req.method === 'POST') {
         const contaId = String(corpo.contaId ?? '').trim()
         if (!contaId) return json(400, { erro: 'Diga em qual conta o robô deve operar.' })
+        // Um pedido por robô e conta de cada vez. Se a Deriv demora e a pessoa
+        // clica de novo, o segundo clique não liga um robô em dobro.
+        const chaveDoPedido = `${dono.id}:${contaId}:${String(corpo.roboId ?? '')}`
+        if (ligandoAgora.has(chaveDoPedido)) {
+          return json(409, { erro: 'Este robô já está sendo ligado. Aguarde alguns segundos: se ele ligar, aparece na sua lista.' })
+        }
+        ligandoAgora.add(chaveDoPedido)
+        const inicio = Date.now()
+        let etapa = 'conferindo o login'
+        const quem = `${dono.id.slice(0, 8)}… ${String(corpo.roboId ?? '?')} ${contaId}`
+        try {
 
         // A conta precisa estar ligada a este login NESTA plataforma. A mesma
         // pessoa pode usar a mesma conta da Deriv nas duas, mas cada ficha é
         // separada — e é a ficha desta marca que autoriza aqui.
         const marcaDoPedido = typeof corpo.marca === 'string' ? corpo.marca : 'teeds'
+        etapa = 'lendo as contas do login'
         const minhas = await contasDoUsuario(dono.id, marcaDoPedido)
         if (!minhas.includes(contaId)) {
           // Recusa silenciosa custa horas de investigação: fica registrada.
@@ -401,9 +416,11 @@ const servidor = createServer(async (req, res) => {
         // A autorizacao e a do proprio cliente, guardada no cofre quando ele
         // clicou em "Conectar Deriv" na plataforma. A do servidor entra so
         // quando o cofre esta vazio — nunca para encobrir defeito.
+        etapa = 'lendo a autorização guardada'
         const cofre = await autorizacaoParaOperar(dono.id, autorizacao)
         if (!cofre.ok) return json(403, { erro: cofre.motivo })
         const auth = cofre.sessao
+        etapa = 'listando as contas na Deriv'
         const conta = (await contas(auth)).find((c) => c.accountId === contaId)
         if (!conta) {
           return json(403, {
@@ -416,6 +433,7 @@ const servidor = createServer(async (req, res) => {
           return json(403, { erro: 'Este acesso está limitado à conta demo. Operações reais não estão disponíveis.' })
         }
 
+        etapa = 'conferindo os limites'
         const limites = { ...PADRAO, ...(await limitesDoCliente(dono.id) ?? {}) }
         const veredito = conferir({
           entrada: valorInicial, stopLoss, takeProfit,
@@ -432,6 +450,7 @@ const servidor = createServer(async (req, res) => {
         const origem = corpo.origem === 'chat' ? 'chat' as const : 'navegador' as const
         // De qual marca veio o pedido — muda só o nome do robô no histórico.
         const marca = typeof corpo.marca === 'string' ? corpo.marca : undefined
+        etapa = 'ligando o motor na Deriv'
         const s = await iniciar(auth, {
           continuarId: typeof corpo.continuarId === 'string' ? corpo.continuarId : undefined,
           roboId: String(corpo.roboId ?? ''),
@@ -441,7 +460,14 @@ const servidor = createServer(async (req, res) => {
           origem, marca,
           userId: dono.id,
         })
+        console.log(`[ligar] ${quem} ligou em ${((Date.now() - inicio) / 1000).toFixed(1)}s → sessão ${s.id}`)
         return json(200, resumo(s))
+        } catch (e) {
+          console.warn(`[ligar] ${quem} falhou em ${((Date.now() - inicio) / 1000).toFixed(1)}s, ${etapa}: ${(e as Error).message}`)
+          throw e
+        } finally {
+          ligandoAgora.delete(chaveDoPedido)
+        }
       }
 
       // ---- guardar a autorizacao da Deriv
