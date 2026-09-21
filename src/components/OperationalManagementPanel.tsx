@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { identidade } from '../core/deriv/branding'
 import { escadaDoRobo } from '../core/deriv/escada'
 import { MODOS, NOME_DO_MODO, temModos, type Modo } from '../core/deriv/strategies'
+import { useRobosDisponiveis } from '../core/teeds/catalogoRobos'
 import { MARCA } from '../marca'
 
 const dinheiro = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' })
@@ -9,8 +10,14 @@ const ler = (s: string) => /^\d+(?:[.,]\d{0,2})?$/.test(s.trim()) ? Number(s.rep
 
 /** Exclusivamente consultiva: sem conta, armazenamento ou comandos. */
 export function OperationalManagementPanel() {
-  const [robo, setRobo] = useState(MARCA.robos[0])
-  const [fixa, setFixa] = useState(false)
+  // Só os robôs que estão ativos no catálogo da marca (Administração › Robôs).
+  // Um robô desativado lá some daqui também, como some da escolha de robô.
+  const disponiveis = useRobosDisponiveis()
+  const robosAtivos = MARCA.robos.filter((id) => disponiveis === null || disponiveis.includes(id))
+  const [roboEscolhido, setRobo] = useState(MARCA.robos[0])
+  const robo = robosAtivos.includes(roboEscolhido) ? roboEscolhido : (robosAtivos[0] ?? roboEscolhido)
+  const [fixaEscolhida, setFixa] = useState(false)
+  const fixa = fixaEscolhida || robosAtivos.length === 0
   const [modo, setModo] = useState<Modo>('conservador')
   const [banca, setBanca] = useState('1000')
   const [entrada, setEntrada] = useState('0,35')
@@ -34,7 +41,7 @@ export function OperationalManagementPanel() {
     <header className="go-hero"><div><span className="go-selo">Planejamento {MARCA.prosa}</span><h2>Gerenciamento</h2><p>Planilha interativa para calcular entradas, limites e objetivos.</p></div><div className="go-status">Somente simulação</div></header>
     <p className="go-consultivo">Esta área é exclusivamente consultiva. Não configura, inicia ou interrompe robôs. Nenhum valor é enviado às operações ou sincronizado com sua conta.</p>
     <section className="go-grade"><aside className="go-config"><h3>Seu cenário</h3><div className="go-campos">
-      <label><span>Modelo de referência</span><select value={fixa ? 'fixa' : robo} onChange={e => { setFixa(e.target.value === 'fixa'); if (e.target.value !== 'fixa') setRobo(e.target.value) }}><option value="fixa">Entrada fixa</option>{MARCA.robos.map(id => <option key={id} value={id}>{identidade(id).nome}</option>)}</select></label>
+      <label><span>Modelo de referência</span><select value={fixa ? 'fixa' : robo} onChange={e => { setFixa(e.target.value === 'fixa'); if (e.target.value !== 'fixa') setRobo(e.target.value) }}><option value="fixa">Entrada fixa</option>{robosAtivos.map(id => <option key={id} value={id}>{identidade(id).nome}</option>)}</select></label>
       {!fixa && temModos(robo) && <label><span>Modo de operação</span><select value={modo} onChange={e => setModo(e.target.value as Modo)}>{MODOS.map(m => <option key={m} value={m}>{NOME_DO_MODO[m]}</option>)}</select></label>}
       <label><span>Banca de referência (USD)</span><div><input inputMode="decimal" value={banca} onChange={e => setBanca(e.target.value)} /></div></label>
       <label><span>Entrada inicial (USD)</span><div><input inputMode="decimal" value={entrada} onChange={e => setEntrada(e.target.value)} /></div></label>

@@ -588,7 +588,7 @@ export default function App() {
       ) : tela === 'marketplace' ? (
         <MarketplacePanel sessao={teeds.sessao} />
       ) : tela === 'gerenciamento' ? (
-        <OperationalManagementPanel />
+        <CatalogoProvider sessao={teeds.sessao}><OperationalManagementPanel /></CatalogoProvider>
       ) : tela === 'monitoramento' && admin === true ? (
           teeds.sessao ? <MonitoramentoBoundary><Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel sessao={teeds.sessao} /></Suspense></MonitoramentoBoundary> : null
       ) : tela === 'insights' && admin === true ? (
