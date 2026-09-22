@@ -10,7 +10,7 @@
  */
 import { MotorTeeds, recusaDefinitiva, type Contexto } from '../../src/core/deriv/engine'
 import { definirTempoDaDeriv, fetchAccounts, fetchTradingSocketUrl, createAccount } from '../../src/core/deriv/account'
-import { SUPERIOR_5, AG_2, SMART_03, THE_PALM, OMNI_OVER, OMNI_BULL, OMNI_BEAR, temModos } from '../../src/core/deriv/strategies'
+import { SUPERIOR_5, AG_2, FIRST_BLOCK, SECOND_BLOCK, SMART_03, THE_PALM, OMNI_OVER, OMNI_BULL, OMNI_BEAR, temModos } from '../../src/core/deriv/strategies'
 import { escadaDoRobo } from '../../src/core/deriv/escada'
 import { toOpenContract } from '../../src/core/deriv/trading'
 import { precisaoInformada } from '../../src/core/deriv/types'
@@ -34,6 +34,8 @@ conferir('tempo esgotado NAO desliga', recusaDefinitiva('A Deriv não respondeu 
 conferir('erro generico NAO desliga', recusaDefinitiva('[ContractCreationFailure] Unable to create contract, please try again.'), false)
 
 const memoria: Record<string, unknown> = {}
+// Provas de parada precisam de um robô que entre a cada tick: o AG7 sem a análise.
+const AG7_DIRETO = { ...SUPERIOR_5, entradaContinua: true, entrar: () => true }
 const contexto = (digitos: number[]): Contexto => ({
   digitos, perdasSeguidas: 0, vitoriasSeguidas: 0, operacoes: 0,
   resultado: 0, prejuizoDaSequencia: 0, memoria,
@@ -105,7 +107,7 @@ const config = { valorInicial: 1, valorAoVencer: 1, fatorGale: .05, galeApos: 3,
 async function provasDeParada() {
   for (const exit of [45392.8479, 45405.1079, 45189.2330, null]) {
     const { socket, canais } = socketFalso()
-    const motor = new MotorTeeds({ socket, estrategia: SUPERIOR_5, config: contexto([]).config, symbol: 'R_75', moeda: 'USD', pipSize: 4 })
+    const motor = new MotorTeeds({ socket, estrategia: AG7_DIRETO, config: contexto([]).config, symbol: 'R_75', moeda: 'USD', pipSize: 4 })
     motor.ligar(); await respirar()
     canais.ticks({ tick: { symbol: 'R_75', quote: 45189.2337, epoch: 1, pip_size: 4 } })
     await respirar(); await respirar()
@@ -120,7 +122,7 @@ async function provasDeParada() {
   }
   {
     const { socket, canais, contagem } = socketFalso()
-    const motor = new MotorTeeds({ socket, estrategia: SUPERIOR_5, config, symbol: '1HZ75V', moeda: 'USD', pipSize: 2 })
+    const motor = new MotorTeeds({ socket, estrategia: AG7_DIRETO, config, symbol: '1HZ75V', moeda: 'USD', pipSize: 2 })
     motor.ligar()
     await respirar()
     canais.ticks({ tick: { symbol: '1HZ75V', quote: 100.12, epoch: 1, pip_size: 2 } })
@@ -141,12 +143,12 @@ async function provasDeParada() {
     conferir('P4 o contrato aberto liquida e entra na sessão', [e2.operacoes, e2.vitorias, Number(e2.resultado.toFixed(2)), e2.historico.length, e2.historico[0]?.contractId], [1, 1, 1.92, 1, 1])
     conferir('P5 e só então a sessão fecha de vez', [e2.rodando, e2.emOperacao, e2.emCurso, e2.aguardando], [false, false, null, 'sessão encerrada'])
     const novo = socketFalso()
-    const retomado = new MotorTeeds({socket: novo.socket, estrategia: SUPERIOR_5, config, symbol: '1HZ75V', moeda:'USD', pipSize:2})
+    const retomado = new MotorTeeds({socket: novo.socket, estrategia: AG7_DIRETO, config, symbol: '1HZ75V', moeda:'USD', pipSize:2})
     retomado.ligar(e2)
     conferir('Continuar preserva histórico e resultado', [retomado.estadoAtual.operacoes, retomado.estadoAtual.resultado, retomado.estadoAtual.historico.length], [1, 1.92, 1])
     conferir('Continuar preserva curva', retomado.estadoAtual.curva, e2.curva)
     retomado.desligar('teste')
-    const bloqueado = new MotorTeeds({socket: novo.socket, estrategia: SUPERIOR_5, config:{...config,takeProfit:1}, symbol:'1HZ75V',moeda:'USD',pipSize:2})
+    const bloqueado = new MotorTeeds({socket: novo.socket, estrategia: AG7_DIRETO, config:{...config,takeProfit:1}, symbol:'1HZ75V',moeda:'USD',pipSize:2})
     let recusou = false
     try { bloqueado.ligar(e2) } catch { recusou = true }
     conferir('Continuar não ignora meta acumulada', recusou, true)
@@ -157,7 +159,7 @@ async function provasDeParada() {
   }
   {
     const { socket, canais, contagem } = socketFalso()
-    const motor = new MotorTeeds({ socket, estrategia: SUPERIOR_5, config, symbol: '1HZ75V', moeda: 'USD', pipSize: 2 })
+    const motor = new MotorTeeds({ socket, estrategia: AG7_DIRETO, config, symbol: '1HZ75V', moeda: 'USD', pipSize: 2 })
     motor.ligar()
     await respirar()
     motor.desligar('você pediu para parar')
@@ -170,7 +172,7 @@ async function provasDeParada() {
   {
     // Desligou no meio de uma recuperação: a próxima entrada do martingale não sai.
     const { socket, canais, contagem } = socketFalso()
-    const motor = new MotorTeeds({ socket, estrategia: SUPERIOR_5, config: { ...config, galeApos: 1 }, symbol: '1HZ75V', moeda: 'USD', pipSize: 2 })
+    const motor = new MotorTeeds({ socket, estrategia: AG7_DIRETO, config: { ...config, galeApos: 1 }, symbol: '1HZ75V', moeda: 'USD', pipSize: 2 })
     motor.ligar()
     await respirar()
     canais.ticks({ tick: { symbol: '1HZ75V', quote: 100.12, epoch: 1, pip_size: 2 } })
@@ -251,7 +253,10 @@ async function provasDaDeriv() {
   conferir('B3 OMNI Bull: saiu dígito dele no meio, a contagem zera', OMNI_BULL.entrar(ctx([7, 1, 8])), false)
   conferir('B4 OMNI Bull: contrato abaixo de 5, sem modos', [OMNI_BULL.contractType, OMNI_BULL.barreira, temModos('omnibull')], ['DIGITUNDER', 5, false])
   conferir('B5 OMNI Bear: espelho, entra depois de 0 e 4 seguidos', [OMNI_BEAR.entrar(ctx([6, 0, 4])), OMNI_BEAR.entrar(ctx([6, 4])), OMNI_BEAR.contractType, OMNI_BEAR.barreira], [true, false, 'DIGITOVER', 4])
-  conferir('B6 AG7 da Teeds não mudou: continua entrando direto', [SUPERIOR_5.entradaContinua, SUPERIOR_5.entrar(ctx([]))], [true, true])
+  conferir('T1 AG7 da Teeds: mesma leitura do OMNI Over', [SUPERIOR_5.entradaContinua, SUPERIOR_5.entrar(ctx(vinteCinco(8))), SUPERIOR_5.entrar(ctx(vinteCinco(9)))], [false, false, true])
+  conferir('T2 First Block: loss virtual antes de entrar', [FIRST_BLOCK.entrar(ctx([2, 7])), FIRST_BLOCK.entrar(ctx([2, 7, 9])), FIRST_BLOCK.entradaContinua], [false, true, false])
+  conferir('T3 Second Block: loss virtual espelhado', [SECOND_BLOCK.entrar(ctx([6, 4])), SECOND_BLOCK.entrar(ctx([6, 0, 4]))], [false, true])
+  conferir('T4 AG7 continua com a terceira entrada e os modos', [SUPERIOR_5.proximoValor(terceira), temModos('superior5')], [.41, true])
 }
 
 provasDeParada().then(provasDaDeriv).then(() => {

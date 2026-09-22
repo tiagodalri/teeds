@@ -73,8 +73,8 @@ export const CATALOGO: Identidade[] = [
     chance: 50, contrato: 'DIGITODD',
   },
   {
-    id: 'superior5', nome: nomeDaEstrategia('superior5'), chamada: 'O insistente',
-    descricao: 'Ganha quando o último dígito é 7, 8 ou 9. Depois de três perdas seguidas, liga o martingale.',
+    id: 'superior5', nome: nomeDaEstrategia('superior5'), chamada: 'O analista dos altos',
+    descricao: 'Lê os últimos 25 dígitos e entra quando 7, 8 e 9 alcançam 36%.',
     cor: '#e8892b', corSuave: '#fdf0e2', onde: 'teeds',
     emblema: 'M20 8 a12 12 0 1 0 0.1 0 M20 14 a6 6 0 1 0 0.1 0 M20 19 v-3',
     chance: 30, contrato: 'DIGITOVER',
@@ -102,14 +102,14 @@ export const CATALOGO: Identidade[] = [
   },
   {
     id: 'firstblock', nome: nomeDaEstrategia('firstblock'), chamada: 'A primeira metade',
-    descricao: 'Ganha quando o último dígito é 0, 1, 2, 3 ou 4. Recuperação precisa após o gatilho.',
+    descricao: 'Ganha de 0 a 4. Entra depois de 2 losses virtuais seguidos.',
     cor: '#d0aa52', corSuave: '#f7f0df', onde: 'teeds',
     emblema: 'M9 11 h8 M9 11 v18 M9 29 h8 M31 11 h-8 M31 11 v18 M31 29 h-8',
     chance: 50, contrato: 'DIGITUNDER',
   },
   {
     id: 'secondblock', nome: nomeDaEstrategia('secondblock'), chamada: 'A segunda metade',
-    descricao: 'Ganha quando o último dígito é 5, 6, 7, 8 ou 9. Recuperação precisa após o gatilho.',
+    descricao: 'Ganha de 5 a 9. Entra depois de 2 losses virtuais seguidos.',
     cor: '#b86f3c', corSuave: '#f8ebe3', onde: 'teeds',
     emblema: 'M8 14 h10 v12 H8 M22 14 h10 v12 H22 M20 8 v24',
     chance: 50, contrato: 'DIGITOVER',
