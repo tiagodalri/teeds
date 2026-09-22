@@ -82,6 +82,11 @@
 .rs-chip.operando, .rs-chip.cacando { background: var(--up-soft); color: var(--up); }
 .rs-chip.recuperando { background: var(--account-demo-soft); color: var(--account-demo); }
 .rs-chip.sem-sinal { background: var(--down-soft); color: var(--down); }
+/* Selo do modo (AG7/AG2): preenchido = agressivo, contornado = conservador. */
+.rs-modo { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 19px; padding: 0 7px 0 5px; border-radius: 5px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.rs-modo svg { width: 11px; height: 11px; fill: currentColor; }
+.rs-modo.agressivo { background: var(--primary); color: var(--bg); }
+.rs-modo.conservador { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--border); }
 .rs-kpi { display: grid; gap: 2px; min-width: 0; }
 .rs-kpi i { color: var(--muted); font-size: 8.5px; font-style: normal; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rs-kpi b { font-size: 15px; font-weight: 650; letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

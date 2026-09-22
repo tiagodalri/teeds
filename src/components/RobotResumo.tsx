@@ -70,17 +70,37 @@ function Chip({ fase }: { fase: ReturnType<typeof faseDoEstado> }) {
   return <span className={`rs-chip ${fase.chave}`}>{fase.texto}</span>
 }
 
+/**
+ * O modo do AG7/AG2 na cara da sessão (22/09/2026, a pedido do Tiago).
+ *
+ * Antes era uma palavra cinza perdida no meio da linha de baixo. Agora é um
+ * selo com desenho: o agressivo vem preenchido, com um raio; o conservador
+ * vem só contornado, com um escudo. Dá para saber qual é sem ler.
+ */
+function SeloDoModo({ modo }: { modo: string }) {
+  const agressivo = modo.toLowerCase().startsWith('agress')
+  return (
+    <span className={`rs-modo ${agressivo ? 'agressivo' : 'conservador'}`} title={`Recuperação em modo ${agressivo ? 'agressivo' : 'conservador'}`}>
+      <svg viewBox="0 0 24 24" aria-hidden>
+        {agressivo
+          ? <path d="M13 2 4 14h5l-1 8 9-12h-5l1-8Z" />
+          : <path d="M12 2.5 20 5.5v6c0 4.9-3.4 8.4-8 10.5-4.6-2.1-8-5.6-8-10.5v-6l8-3Z" />}
+      </svg>
+      {agressivo ? 'Agressivo' : 'Conservador'}
+    </span>
+  )
+}
+
 function Quem({ p, fase }: { p: ResumoProps; fase: ReturnType<typeof faseDoEstado> }) {
   return (
     <div className="rs-quem">
       <i className={`rs-farol ${fase.chave}`} aria-hidden />
       <div>
-        <b><span className="rs-nome">{p.nome}</span><Chip fase={fase} /></b>
+        <b><span className="rs-nome">{p.nome}</span><Chip fase={fase} />{p.modo && <SeloDoModo modo={p.modo} />}</b>
         <small>
           {p.numero}
           {p.inicio ? ` · ${hora(p.inicio)}` : ''}
           {p.demo === false && <> · <em className="real">REAL</em></>}
-          {p.modo ? ` · ${p.modo}` : ''}
           <span className="rs-contadores"> · <em className="up">{p.estado.vitorias} positivas</em> · <em className="down">{p.estado.derrotas} negativas</em></span>
         </small>
       </div>
