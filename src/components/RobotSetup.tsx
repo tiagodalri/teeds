@@ -170,11 +170,19 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
           <p>{modelo.descricao}</p>
           <dl><div><dt>Ativo</dt><dd>{nomeAtivo.replace(' Index', '')}</dd></div>{comModo && <div><dt>Modo</dt><dd>{NOME_DO_MODO[modo]}<button type="button" onClick={() => { setConfirmaReal(false); setPasso(0) }} disabled={ligando} aria-label="Editar modo de operação">Editar</button></dd></div>}{ETAPAS_PREPARO.map((e, i) => <div key={e.key}><dt>{['Entrada base', 'Meta de ganho', 'Limite de perda', 'Máximo de operações'][i]}</dt><dd>{Number(valores[e.key].replace(',', '.')) === 0 ? 'Sem limite' : e.key === 'maxOperacoes' ? valores[e.key] : din(Number(valores[e.key].replace(',', '.')), moeda)}<button type="button" onClick={() => { setConfirmaReal(false); setPasso(i + desloc) }} disabled={ligando} aria-label={`Editar ${e.titulo}`}>Editar</button></dd></div>)}</dl>
           <p className="robot-launch-risk">A recuperação pode aumentar o valor das entradas. Os robôs desta conta compartilham o saldo. Não há garantia de lucro.</p>
-          {!isDemo && <label className="robot-launch-consent"><input type="checkbox" checked={confirmaReal} disabled={ligando} onChange={e => setConfirmaReal(e.target.checked)} /><span>Entendo que esta sessão usará <strong>dinheiro real</strong> e confirmo os valores acima.</span></label>}
         </div>}
         {erro && <p className="robot-launch-error" role="alert">{erro}</p>}
         {revisao && !todasValidas && <p className="robot-launch-error" role="alert">Revise os valores acima. Na conta real, o limite de perda precisa ser pelo menos igual à entrada base.</p>}
       </div>
+      {/* A confirmação de conta real vive FORA da área que rola (22/09/2026):
+          escondida embaixo do texto, ela fazia o botão "Iniciar robô" parecer
+          travado — ninguém adivinha que precisa rolar para achá-la. */}
+      {revisao && !isDemo && (
+        <label className="robot-launch-consent">
+          <input type="checkbox" checked={confirmaReal} disabled={ligando} onChange={e => setConfirmaReal(e.target.checked)} />
+          <span>Entendo que esta sessão usará <strong>dinheiro real</strong> e confirmo os valores acima.</span>
+        </label>
+      )}
       <footer className="robot-launch-footer">
         <button type="button" className="robot-launch-back" disabled={ligando} onClick={passo === (escolherModelo ? -1 : 0) ? onCancelar : voltar}>{passo === (escolherModelo ? -1 : 0) ? 'Cancelar' : '← Voltar'}</button>
         <span>{passo === -1 ? modelo.nome : revisao ? '' : 'Nada será operado ainda'}</span>

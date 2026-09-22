@@ -46,8 +46,9 @@
 .robot-launch-review dd { display: flex; align-items: center; gap: 14px; text-align: right; margin: 0; font-weight: 650; }
 .robot-launch-review dd button { font-size: 12px; padding: 2px; background: transparent; border: 0; color: var(--primary); }
 .robot-launch-review .robot-launch-risk { font-size: 13px; margin: 18px 0 0; }
-.robot-launch-consent { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; padding: 14px; margin-top: 14px; background: var(--down-soft); border-radius: 9px; }
-.robot-launch-consent input { flex: none; margin-top: 4px; width: 18px; height: 18px; accent-color: var(--down); }
+.robot-launch-consent { flex: none; display: flex; align-items: center; gap: 10px; margin: 0; padding: 12px 26px; font-size: 14px; line-height: 1.35; background: var(--down-soft); border-top: 1px solid var(--border); cursor: pointer; }
+.robot-launch-consent:has(input:not(:checked)) { box-shadow: inset 3px 0 0 var(--down); }
+.robot-launch-consent input { flex: none; margin: 0; width: 18px; height: 18px; accent-color: var(--down); cursor: pointer; }
 .robot-launch-footer { flex: none; display: flex; align-items: center; gap: 14px; padding: 12px 22px; border-top: 1px solid var(--border); background: var(--surface); }
 .robot-launch-footer > span { flex: 1; text-align: center; font-size: 12px; color: var(--muted); }
 .robot-launch-back { min-width: 80px; min-height: 46px; padding: 8px 0; border: 0; background: none; font-size: 14px; color: var(--text); text-align: left; }
@@ -102,7 +103,7 @@
   .robot-launch-review dd { gap: 8px; }
   .robot-launch-review dl > div { font-size: 13px; }
   .robot-launch-review .robot-launch-risk { margin-top: 12px; }
-  .robot-launch-consent { padding: 10px; font-size: 13px; }
+  .robot-launch-consent { padding: 10px 16px; font-size: 13px; }
   .robot-picker-detail { padding: 12px; }
   .robot-picker-emblem, .robot-picker-next, .robot-picker-detail > small { display: none; }
   .robot-picker-detail h4 { font-size: 16px; }
