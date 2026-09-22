@@ -412,7 +412,7 @@ export function RobotsPanel({
       {admin && mostrarMarkup && (
         <CentroDeEstudo
           dados={[...estudo.values()].sort((a, b) => a.numero.localeCompare(b.numero, 'pt-BR', { numeric: true }))}
-          moeda={moeda} />
+          moeda={moeda} sessao={sessaoTeeds ?? null} />
       )}
 
       {rodando.length > 0 && (

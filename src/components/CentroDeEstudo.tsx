@@ -14,6 +14,8 @@
  */
 import type { EstadoMotor } from '../core/deriv/engine'
 import { markupDaOperacao } from '../core/deriv/markup'
+import { CentroDeEstudoHistorico } from './CentroDeEstudoHistorico'
+import type { SessaoTeeds } from '../core/teeds/conta'
 
 export interface DadosEstudo {
   id: string
@@ -92,8 +94,8 @@ function Barra({ parte, total, cor }: { parte: number; total: number; cor: strin
   )
 }
 
-export function CentroDeEstudo({ dados, moeda }: { dados: DadosEstudo[]; moeda: string }) {
-  if (dados.length === 0) return null
+export function CentroDeEstudo({ dados, moeda, sessao }: { dados: DadosEstudo[]; moeda: string; sessao?: SessaoTeeds | null }) {
+  if (dados.length === 0 && !sessao) return null
   const ops = dados.reduce((t, d) => t + d.operacoes, 0)
   const markup = dados.reduce((t, d) => t + d.markup, 0)
   const medido = dados.reduce((t, d) => t + d.markupMedido, 0)
@@ -102,6 +104,7 @@ export function CentroDeEstudo({ dados, moeda }: { dados: DadosEstudo[]; moeda: 
   const exposicao = dados.reduce((t, d) => t + d.exposicao, 0)
   const vitorias = dados.reduce((t, d) => t + d.vitorias, 0)
   const maiorMarkup = Math.max(...dados.map((d) => d.markup), 0)
+  const semSessoes = dados.length === 0
   const maiorRisco = Math.max(...dados.map((d) => Math.max(d.maiorEntrada, d.drawdown)), 0)
   const demo = dados.some((d) => d.demo !== false)
   // Markup por mil dólares movimentados: compara robôs de tamanhos diferentes.
@@ -113,11 +116,13 @@ export function CentroDeEstudo({ dados, moeda }: { dados: DadosEstudo[]; moeda: 
         <div>
           <span className="ce-eyebrow">Modo CEO</span>
           <h3>Centro de estudo</h3>
-          <p>As sessões abertas nesta tela, do ponto de vista de quem é dono da plataforma. Só você vê isto.</p>
+          <p>A plataforma do ponto de vista de quem é dono dela: o que está rodando agora e o que já passou por aqui. Só você vê isto.</p>
         </div>
-        {demo && <span className="ce-aviso">Tem sessão em conta de demonstração: o markup dela não é faturamento.</span>}
+        {demo && !semSessoes && <span className="ce-aviso">Tem sessão em conta de demonstração: o markup dela não é faturamento.</span>}
       </header>
 
+      {!semSessoes && <>
+        <h4 className="ce-secao">Agora nesta tela</h4>
       <div className="ce-tiles">
         <div className="ce-tile destaque">
           <i>Markup gerado</i>
@@ -178,10 +183,12 @@ export function CentroDeEstudo({ dados, moeda }: { dados: DadosEstudo[]; moeda: 
           </tbody>
         </table>
       </div>
-      <p className="ce-nota">
+      </>}
+      {!semSessoes && <p className="ce-nota">
         Markup: o valor que a Deriv informou em cada contrato; quando ela não informa, a estimativa de 3% do pagamento.
         Fundo do poço: a maior queda do topo da curva até o ponto mais baixo depois dele, dentro da sessão.
-      </p>
+      </p>}
+      {sessao && <CentroDeEstudoHistorico sessao={sessao} moeda={moeda} />}
     </section>
   )
 }

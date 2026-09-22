@@ -57,7 +57,12 @@
 .robot-workspace .cabine-caixa.aberta .tv-topo { display: none; }
 
 /* ---- a linha (RobotLinha) */
-.rl { display: grid; grid-template-columns: minmax(300px, 2fr) repeat(5, minmax(0, 1fr)) 120px auto; align-items: center; gap: 14px; padding: 9px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); cursor: pointer; transition: border-color .12s, box-shadow .12s; }
+.rl { display: grid; grid-template-columns: minmax(260px, 2fr) repeat(5, minmax(0, 1fr)) 120px auto; align-items: center; gap: 14px; padding: 9px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); cursor: pointer; transition: border-color .12s, box-shadow .12s; }
+/* Modo CEO: entra a coluna de markup, então a linha ganha um degrau. */
+.rl.ceo { grid-template-columns: minmax(280px, 2fr) repeat(6, minmax(0, .92fr)) 92px auto; gap: 10px; }
+.rl.ceo .rs-curva { width: 92px; }
+.rc.ceo .rc-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 10px; }
+.rc.ceo .rc-op { grid-template-columns: 1fr auto auto auto; }
 .rl:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
 .rl:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .rl.aberta { position: relative; z-index: 1; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); border-radius: 12px 12px 0 0; cursor: default; }
@@ -215,7 +220,7 @@
   .rl.aberta .rs-acoes { grid-column: 1 / -1; justify-content: stretch; }
   .rl.aberta .rs-acoes .tv-btn { display: inline-flex; justify-content: center; min-height: 40px; }
   .rl.aberta .rs-acoes .tv-btn.parar, .rl.aberta .rs-acoes .tv-btn.ligar { flex: 1; }
-  .rc-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rc-kpis, .rc.ceo .rc-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .robot-workspace .tv-atalhos { flex-wrap: wrap; }
   .robot-workspace .tv-atalhos > span { width: 100%; }
   .robot-workspace .tv-fluxo { height: auto; min-height: 82px; grid-template-columns: 1fr; }
@@ -294,3 +299,23 @@
   .ce { padding: 16px; }
   .ce table { font-size: 11px; }
 }
+
+/* ---- Centro de estudo: histórico --------------------------------- */
+.ce-secao { margin: 2px 0 -4px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.ce-hist { display: flex; flex-direction: column; gap: 14px; padding-top: 16px; border-top: 1px solid var(--border); }
+.ce-hist-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.ce-hist-topo h4 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -.02em; }
+.ce-filtros { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ce-periodo { display: flex; gap: 3px; padding: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; }
+.ce-periodo button { padding: 6px 11px; border: 0; border-radius: 6px; background: none; color: var(--text); font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.ce-periodo button[aria-pressed='true'] { background: var(--primary-soft); color: var(--primary); }
+.ce-demo { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11.5px; }
+.ce-vazio { margin: 0; padding: 14px 16px; border: 1px dashed var(--border); border-radius: 10px; color: var(--muted); font-size: 12px; }
+.ce-graficos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 14px; }
+.ce-graficos section { padding: 14px 16px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.ce-graficos h5 { margin: 0 0 12px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.ce-barras { display: flex; align-items: flex-end; gap: 3px; height: 116px; }
+.ce-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; gap: 5px; }
+.ce-col i { display: block; width: 100%; max-width: 26px; border-radius: 3px 3px 0 0; transition: height .2s ease; }
+.ce-col em { font-style: normal; font-size: 8.5px; color: var(--muted); white-space: nowrap; }
+.ce-col:hover i { filter: brightness(1.15); }

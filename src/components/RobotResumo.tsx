@@ -142,7 +142,7 @@ export function RobotLinha(p: ResumoProps & { aberta: boolean; onAbrir: () => vo
   const positivo = e.resultado >= 0
   const entrada = e.emCurso?.valor ?? e.valorAtual
   return (
-    <div className={`rl ${p.aberta ? 'aberta' : ''} ${fase.chave} ${e.rodando ? 'viva' : 'encerrada'}`}
+    <div className={`rl ${p.aberta ? 'aberta' : ''} ${p.ceo ? 'ceo' : ''} ${fase.chave} ${e.rodando ? 'viva' : 'encerrada'}`}
       style={{ ['--robo' as string]: p.cor }}
       role="button" tabIndex={0} aria-expanded={p.aberta}
       onClick={p.onAbrir} onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); p.onAbrir() } }}>
@@ -176,7 +176,7 @@ export function RobotCartao(p: ResumoProps & { onAbrirNaLista: () => void }) {
     : emCurso ? `Contrato em andamento · ${p.moeda} ${num(emCurso.valor)}`
     : e.aguardando || 'Aguardando sinal da estratégia'
   return (
-    <div className={`rc ${fase.chave} ${e.rodando ? 'viva' : 'encerrada'}`} style={{ ['--robo' as string]: p.cor }}>
+    <div className={`rc ${p.ceo ? 'ceo' : ''} ${fase.chave} ${e.rodando ? 'viva' : 'encerrada'}`} style={{ ['--robo' as string]: p.cor }}>
       <header className="rc-topo">
         <Quem p={p} fase={fase} />
         <Acoes p={p} />
