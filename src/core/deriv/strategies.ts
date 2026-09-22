@@ -14,22 +14,31 @@ export type Modo = 'conservador' | 'agressivo'
 export const MODOS: Modo[] = ['conservador', 'agressivo']
 export const NOME_DO_MODO: Record<Modo, string> = { conservador: 'Conservador', agressivo: 'Agressivo' }
 
-/** Recuperação oficial, interna e não editável de cada modelo. */
+/**
+ * Recuperação oficial, interna e não editável de cada modelo.
+ *
+ * `galeApos` é quantas perdas seguidas o robô aceita no valor base antes de
+ * ligar a recuperação. Em 22/09/2026 o Tiago pediu 1 em todos: "sempre
+ * precisa recuperar". Antes eram 3, e uma vitória logo depois de uma perda
+ * não cobria o prejuízo — no First Block, perdia 0,35 e recuperava 0,30.
+ * O custo é conhecido: a escada cresce desde a primeira perda, então a
+ * conta precisa de mais saldo para aguentar a mesma sequência.
+ */
 export const RECUPERACAO_POR_ROBO: Record<string, { galeApos: number; margem: number; agressivo?: { margem: number; sobrePrejuizo: number } }> = {
-  superior5: { galeApos: 3, margem: 0.05, agressivo: { margem: 1, sobrePrejuizo: 0.2 } },
-  ag2: { galeApos: 3, margem: 0.05, agressivo: { margem: 1, sobrePrejuizo: 0.2 } },
-  smart03: { galeApos: 3, margem: 0.05 },
+  superior5: { galeApos: 1, margem: 0.05, agressivo: { margem: 1, sobrePrejuizo: 0.2 } },
+  ag2: { galeApos: 1, margem: 0.05, agressivo: { margem: 1, sobrePrejuizo: 0.2 } },
+  smart03: { galeApos: 1, margem: 0.05 },
   // Goreme paga 6%: recuperar 3 perdas exigiria 52x a base, e a segunda
   // recuperacao 930x. Ligando na primeira perda a escada comeca em 18x —
   // ainda alta, porque e o payout que dita o tamanho, mas o buraco a cobrir
   // e um terco. Perda rara, recuperacao cedo.
   goreme: { galeApos: 1, margem: 0.05 },
-  firstblock: { galeApos: 3, margem: 0.05 },
-  secondblock: { galeApos: 3, margem: 0.05 },
+  firstblock: { galeApos: 1, margem: 0.05 },
+  secondblock: { galeApos: 1, margem: 0.05 },
   // Versões OMNI (21/09/2026): mesma recuperação dos originais, com análise antes de entrar.
-  omniover: { galeApos: 3, margem: 0.05, agressivo: { margem: 1, sobrePrejuizo: 0.2 } },
-  omnibull: { galeApos: 3, margem: 0.05 },
-  omnibear: { galeApos: 3, margem: 0.05 },
+  omniover: { galeApos: 1, margem: 0.05, agressivo: { margem: 1, sobrePrejuizo: 0.2 } },
+  omnibull: { galeApos: 1, margem: 0.05 },
+  omnibear: { galeApos: 1, margem: 0.05 },
   thepalm: { galeApos: 1, margem: 0.95 },
   superior5fixo: { galeApos: 3, margem: 0 },
 }
@@ -60,7 +69,7 @@ export function modoDaConfig(id: string, fatorGale: number, lucroSobrePrejuizo =
  * (entra em toda operacao) e, em 01/09, a barreira subiu para 6 — o AG7
  * ganha so nos digitos 7, 8 e 9. O AG2 e o espelho dele nos digitos
  * baixos: DIGITUNDER 3, ganha so no 0, 1 e 2. Em 22/09 o AG7 ganhou de volta
- * uma analise: a mesma leitura de 25 digitos do AG2, nos digitos altos.
+ * uma analise; em 22/09 ela virou loss virtual de quatro (ver abaixo).
  */
 
 const BASE_DIGITOS: Estrategia = {
@@ -129,52 +138,52 @@ export function terceiraEntrada(base: number, prejuizo: number, retorno: number)
 /* ------------------------------------------------------------------ *
  * Análise antes de entrar (21/09 na OMNI, 22/09 na Teeds).
  *
- *  - Leitura dos altos (AG7 / OMNI Over): lê os últimos 25 dígitos e só
- *    entra quando 7, 8 e 9 somam 9 ou mais (36%). É a leitura do AG2,
- *    espelhada nos dígitos altos.
- *  - Loss virtual (First/Second Block, OMNI Bull/Bear): só entra depois que
- *    saem dois dígitos seguidos da outra metade — duas operações que teriam
- *    sido negativas, sem dinheiro nelas.
+ *  - AG7, AG2 e OMNI Over: quatro dígitos seguidos que teriam perdido
+ *    (loss virtual) liberam a entrada, e a sequência segue sem nova
+ *    análise até uma vitória fechá-la. Em 22/09/2026 esta regra substituiu
+ *    a leitura de percentual (7, 8 e 9 em 36% dos últimos 25).
+ *  - Loss virtual de dois (First/Second Block, OMNI Bull/Bear): entra
+ *    depois de dois dígitos seguidos da outra metade.
  * ------------------------------------------------------------------ */
-const JANELA = 25
-const MINIMO_NA_JANELA = 9 // 36% de 25
+/**
+ * Entrada por loss virtual, com a sequência inteira sem nova análise.
+ *
+ * Pedido do Tiago em 22/09/2026 para o AG7, o AG2 e o OMNI Over: sai a
+ * leitura de percentual e entra esta regra — o robô espera QUATRO dígitos
+ * seguidos que teriam perdido (loss virtual, sem dinheiro) e então entra.
+ * A partir daí ele segue operando a sequência sem analisar de novo, até
+ * uma vitória fechar a sequência; aí volta a contar os quatro.
+ *
+ * A memória é da execução (`memoria.emSequencia`): nunca é compartilhada
+ * entre clientes e some quando a sessão termina.
+ */
+const LOSSES_PARA_ENTRAR = 4
 
-function leituraDaJanela(digitos: number[], aceita: (d: number) => boolean) {
-  const janela = digitos.slice(-JANELA)
-  const favoraveis = janela.filter(aceita).length
-  return { janela, favoraveis, percentual: janela.length ? Math.round((favoraveis / janela.length) * 100) : 0 }
-}
-
-/** A leitura da janela como número, para a régua da cabine. Mesma conta do `entrar`. */
-function medidorDaJanela(digitos: number[], aceita: (d: number) => boolean, quais: string): Medidor {
-  const { janela, percentual } = leituraDaJanela(digitos, aceita)
+function porLossVirtual(ganha: (d: number) => boolean, quantos = LOSSES_PARA_ENTRAR):
+  Pick<Estrategia, 'entradaContinua' | 'entrar' | 'aguardando' | 'progresso' | 'medidor' | 'aposResultado'> {
+  const contar = (digitos: number[]) => Math.min(quantos, lossesVirtuais(digitos, ganha))
   return {
-    tipo: 'percentual', valor: percentual, alvo: Math.round((MINIMO_NA_JANELA / JANELA) * 100), maximo: 60,
-    rotulo: `de ${quais} nos últimos ${JANELA} dígitos`, amostra: janela.length, janela: JANELA,
+    // Dentro da sequência, emenda uma entrada na outra sem esperar o tick.
+    entradaContinua: true,
+    entrar: ({ digitos, memoria }) => memoria.emSequencia === true || contar(digitos) >= quantos,
+    aposResultado: ({ ganhou, memoria }) => { memoria.emSequencia = !ganhou },
+    aguardando: ({ digitos, memoria }) => memoria.emSequencia === true
+      ? 'sequência em andamento — entra na próxima'
+      : `esperando loss virtual — ${contar(digitos)}/${quantos}`,
+    progresso: ({ digitos, memoria }) => {
+      const n = contar(digitos)
+      return {
+        rotulo: memoria.emSequencia === true
+          ? 'Sequência em andamento'
+          : n >= quantos ? 'Loss virtual confirmado — entrada liberada' : `Loss virtual — ${n}/${quantos}`,
+        itens: Array.from({ length: quantos }, (_, i) => ({ valor: i < n ? '✕' : '·', ok: i >= n })),
+      }
+    },
+    medidor: ({ digitos }) => ({
+      tipo: 'contagem', valor: contar(digitos), alvo: quantos,
+      rotulo: `loss virtual — dígitos seguidos que teriam perdido`,
+    }),
   }
-}
-
-/** Entrada, espera e marcador da leitura de 7, 8 e 9. */
-const LEITURA_DOS_ALTOS: Pick<Estrategia, 'entradaContinua' | 'entrar' | 'aguardando' | 'progresso' | 'medidor'> = {
-  entradaContinua: false,
-  entrar: ({ digitos }) => {
-    const { janela, favoraveis } = leituraDaJanela(digitos, (d) => d >= 7)
-    return janela.length === JANELA && favoraveis >= MINIMO_NA_JANELA
-  },
-  aguardando: ({ digitos }) => {
-    const { janela, percentual } = leituraDaJanela(digitos, (d) => d >= 7)
-    return janela.length < JANELA
-      ? `lendo o mercado — ${janela.length}/${JANELA} dígitos`
-      : `concentração de 7, 8 e 9 em ${percentual}% — entrada a partir de 36%`
-  },
-  progresso: ({ digitos }) => {
-    const { janela, percentual } = leituraDaJanela(digitos, (d) => d >= 7)
-    return {
-      rotulo: janela.length < JANELA ? `Amostra do mercado — ${janela.length}/${JANELA}` : `7, 8 e 9 representam ${percentual}%`,
-      itens: [7, 8, 9].map((valor) => ({ valor: String(valor), ok: janela.includes(valor) })),
-    }
-  },
-  medidor: ({ digitos }) => medidorDaJanela(digitos, (d) => d >= 7, '7, 8 e 9'),
 }
 
 /** Quantos dígitos seguidos da outra metade saíram por último (o "loss virtual"). */
@@ -211,9 +220,10 @@ function comLossVirtual(ganha: (d: number) => boolean): Pick<Estrategia, 'entrad
 export const SUPERIOR_5: Estrategia = {
   ...BASE_DIGITOS,
   descricao:
-    'Analisa os 25 últimos dígitos e entra quando 7, 8 e 9 somam pelo menos 36%. ' +
-    'O contrato ganha se o próximo último dígito for 7, 8 ou 9.',
-  ...LEITURA_DOS_ALTOS,
+    'Espera quatro dígitos seguidos que teriam perdido (loss virtual) e então entra. ' +
+    'A partir daí segue a sequência sem analisar de novo, até uma vitória fechá-la. ' +
+    'O contrato ganha se o último dígito for 7, 8 ou 9.',
+  ...porLossVirtual((d) => d >= 7),
   proximoValor: (args) => !args.ganhou && args.perdasSeguidas === 2 && args.config.galeApos === 3
     ? terceiraEntrada(args.valorAoVencer, args.prejuizoDaSequencia, args.retornoLiquidoPorUnidade)
     : BASE_DIGITOS.proximoValor(args),
@@ -233,37 +243,12 @@ export const AG_2: Estrategia = {
   nome: '{marca} - AG2',
   origem: 'reconstruído a partir do robô Smart AG2 original',
   descricao:
-    'Analisa os 25 últimos dígitos e entra quando 0, 1 e 2 somam pelo menos 36%. ' +
-    'O contrato ganha se o próximo último dígito for 0, 1 ou 2.',
+    'Espera quatro dígitos seguidos que teriam perdido (loss virtual) e então entra. ' +
+    'A partir daí segue a sequência sem analisar de novo, até uma vitória fechá-la. ' +
+    'O contrato ganha se o último dígito for 0, 1 ou 2.',
   contractType: 'DIGITUNDER',
   barreira: 3,
-  entradaContinua: false,
-  entrar: ({ digitos }) => {
-    const janela = digitos.slice(-25)
-    return janela.length === 25 && janela.filter((d) => d <= 2).length >= 9
-  },
-  aguardando: ({ digitos }) => {
-    const janela = digitos.slice(-25)
-    const favoraveis = janela.filter((d) => d <= 2).length
-    const percentual = janela.length ? Math.round((favoraveis / janela.length) * 100) : 0
-    return janela.length < 25
-      ? `lendo o mercado — ${janela.length}/25 dígitos`
-      : `concentração de 0, 1 e 2 em ${percentual}% — entrada a partir de 36%`
-  },
-  progresso: ({ digitos }) => {
-    const janela = digitos.slice(-25)
-    const favoraveis = janela.filter((d) => d <= 2).length
-    return {
-      rotulo: janela.length < 25
-        ? `Amostra do mercado — ${janela.length}/25`
-        : `0, 1 e 2 representam ${Math.round((favoraveis / 25) * 100)}%`,
-      itens: [0, 1, 2].map((valor) => ({
-        valor: String(valor),
-        ok: janela.filter((d) => d === valor).length > 0,
-      })),
-    }
-  },
-  medidor: ({ digitos }) => medidorDaJanela(digitos, (d) => d <= 2, '0, 1 e 2'),
+  ...porLossVirtual((d) => d <= 2),
 }
 
 /** Smart 03 observável no vídeo: último dígito superior a 3, após 1 tick. */
@@ -326,7 +311,7 @@ export const OMNI_OVER: Estrategia = {
   ...SUPERIOR_5,
   id: 'omniover',
   nome: 'OMNI Over',
-  origem: 'AG7 com a leitura de mercado do AG2, espelhada nos dígitos altos',
+  origem: 'AG7 com entrada por loss virtual nos dígitos altos',
 }
 export const OMNI_BULL: Estrategia = { ...FIRST_BLOCK, id: 'omnibull', nome: 'OMNI Bull', origem: 'First Block com análise de loss virtual' }
 export const OMNI_BEAR: Estrategia = { ...SECOND_BLOCK, id: 'omnibear', nome: 'OMNI Bear', origem: 'Second Block com análise de loss virtual' }

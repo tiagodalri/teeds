@@ -74,14 +74,14 @@ export const CATALOGO: Identidade[] = [
   },
   {
     id: 'superior5', nome: nomeDaEstrategia('superior5'), chamada: 'O analista dos altos',
-    descricao: 'Lê os últimos 25 dígitos e entra quando 7, 8 e 9 alcançam 36%.',
+    descricao: 'Espera 4 dígitos seguidos que teriam perdido e entra; segue a sequência até fechá-la.',
     cor: '#e8892b', corSuave: '#fdf0e2', onde: 'teeds',
     emblema: 'M20 8 a12 12 0 1 0 0.1 0 M20 14 a6 6 0 1 0 0.1 0 M20 19 v-3',
     chance: 30, contrato: 'DIGITOVER',
   },
   {
     id: 'ag2', nome: nomeDaEstrategia('ag2'), chamada: 'O espelho',
-    descricao: 'Espera 0, 1 e 2 alcançarem 36% dos últimos 25 dígitos antes de entrar.',
+    descricao: 'Espera 4 dígitos seguidos que teriam perdido e entra; segue a sequência até fechá-la.',
     cor: '#0ea5e9', corSuave: '#e6f6fd', onde: 'teeds',
     emblema: 'M20 8 v16 M20 24 l-6 -6 M20 24 l6 -6 M11 30 h18',
     chance: 30, contrato: 'DIGITUNDER',
@@ -123,7 +123,7 @@ export const CATALOGO: Identidade[] = [
   },
   {
     id: 'omniover', nome: nomeDaEstrategia('omniover'), chamada: 'O analista dos altos',
-    descricao: 'Lê os últimos 25 dígitos e entra quando 7, 8 e 9 alcançam 36%.',
+    descricao: 'Espera 4 dígitos seguidos que teriam perdido e entra; segue a sequência até fechá-la.',
     cor: '#e8892b', corSuave: '#fdf0e2', onde: 'teeds',
     emblema: 'M20 8 a12 12 0 1 0 0.1 0 M20 14 a6 6 0 1 0 0.1 0 M20 19 v-3',
     chance: 30, contrato: 'DIGITOVER',

@@ -87,9 +87,18 @@ export function DigitosFlutuante({ roboId, nomeAtivo, aoFechar }: Props) {
     : 0
   const gatilho = (() => {
     if (memoria.length < 25) return { texto: `lendo o mercado — ${memoria.length}/25 dígitos`, ok: null as boolean | null }
-    if (roboId === 'ag2') {
-      const p = pctDe((d) => d <= 2)
-      return { texto: `0, 1 e 2 em ${p}% dos últimos 25 · entra a partir de 36%`, ok: p >= 36 }
+    // AG7, AG2 e OMNI Over entram por loss virtual (22/09/2026): quatro
+    // dígitos seguidos que teriam perdido liberam a entrada.
+    const porLoss: Record<string, (d: number) => boolean> = {
+      ag2: (d) => d <= 2, superior5: (d) => d >= 7, omniover: (d) => d >= 7,
+      firstblock: (d) => d <= 4, omnibull: (d) => d <= 4, secondblock: (d) => d >= 5, omnibear: (d) => d >= 5,
+    }
+    const ganha = porLoss[roboId]
+    if (ganha) {
+      const alvo = roboId === 'firstblock' || roboId === 'omnibull' || roboId === 'secondblock' || roboId === 'omnibear' ? 2 : 4
+      let n = 0
+      for (let i = memoria.length - 1; i >= 0 && !ganha(memoria[i]); i--) n++
+      return { texto: `loss virtual ${Math.min(n, alvo)}/${alvo} — entra depois de ${alvo} dígitos seguidos que teriam perdido`, ok: n >= alvo }
     }
     if (roboId === 'thepalm') {
       const nove = pctDe((d) => d === 9)

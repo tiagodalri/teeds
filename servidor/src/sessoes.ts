@@ -179,12 +179,44 @@ export function montarConfig(p: Parametros): ConfigEstrategia {
   }
 }
 
+/* ------------------------------------------------------------------ *
+ * A lista de contas fica lembrada por um minuto.
+ *
+ * Ligar um robô pedia a lista de contas à Deriv toda vez. Quando a REST
+ * dela fica lenta — e ficou em 22/09/2026 —, o cliente esperava 25 s no
+ * "Iniciando…" e ainda levava "a Deriv não respondeu a tempo". A lista
+ * muda muito pouco (conta nova, moeda), então guardar por um minuto tira
+ * uma ida à Deriv do caminho do play. Se a conta pedida não estiver na
+ * lista lembrada, busca de novo antes de recusar.
+ * ------------------------------------------------------------------ */
+const CONTAS_LEMBRADAS_MS = 60_000
+const contasLembradas = new Map<string, { quando: number; lista: TradingAccount[] }>()
+const ATIVO_LEMBRADO_MS = 10 * 60_000
+let ativoLembrado: { quando: number; alvo: { symbol: string; pipSize: number } } | null = null
+
+async function listarContas(sessao: AuthSession, aceitarLembrada = true): Promise<TradingAccount[]> {
+  const chave = `${sessao.appId ?? ''}:${sessao.accessToken.slice(-24)}`
+  const lembrada = contasLembradas.get(chave)
+  if (aceitarLembrada && lembrada && Date.now() - lembrada.quando < CONTAS_LEMBRADAS_MS) return lembrada.lista
+  try {
+    const lista = await fetchAccounts(sessao)
+    contasLembradas.set(chave, { quando: Date.now(), lista })
+    return lista
+  } catch (e) {
+    // A Deriv não respondeu agora: melhor a lista de um minuto atrás do que
+    // um erro na cara de quem só quer ligar o robô.
+    if (lembrada) return lembrada.lista
+    throw e
+  }
+}
+
 export async function contas(sessao: AuthSession): Promise<TradingAccount[]> {
-  return fetchAccounts(sessao)
+  return listarContas(sessao)
 }
 
 async function acharConta(sessao: AuthSession, contaId?: string): Promise<TradingAccount> {
-  const lista = await fetchAccounts(sessao)
+  let lista = await listarContas(sessao)
+  if (contaId && !lista.some((c) => c.accountId === contaId)) lista = await listarContas(sessao, false)
   if (!lista.length) throw new Error('Esta autorização não enxerga nenhuma conta na Deriv.')
   if (contaId) {
     const achada = lista.find((c) => c.accountId === contaId)
@@ -230,17 +262,26 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
 
   // Se a conexão de operação não abrir, o socket não pode ficar tentando
   // reconectar para sempre por trás de um pedido que já desistiu.
-  let simbolos: Awaited<ReturnType<typeof fetchActiveSymbols>>
-  try {
-    simbolos = await fetchActiveSymbols(socket)
-  } catch {
-    socket.disconnect()
-    throw new Error('A Deriv não abriu a conexão de operação a tempo. Ela parece instável agora; tente de novo em instantes.')
-  }
-  const alvo = simbolos.find((s) => s.symbol === ATIVO_DOS_ROBOS)
+  /*
+    O ativo dos robôs é o mesmo para todo mundo (R_75) e a casa decimal dele
+    não muda de conta para conta. Perguntar a lista de ativos em cada play
+    custava mais uma ida à Deriv; agora vale por 10 minutos.
+  */
+  let alvo = ativoLembrado && Date.now() - ativoLembrado.quando < ATIVO_LEMBRADO_MS ? ativoLembrado.alvo : null
   if (!alvo) {
-    socket.disconnect()
-    throw new Error(`A Deriv não ofereceu ${ATIVO_DOS_ROBOS} nesta conta.`)
+    let simbolos: Awaited<ReturnType<typeof fetchActiveSymbols>>
+    try {
+      simbolos = await fetchActiveSymbols(socket)
+    } catch {
+      socket.disconnect()
+      throw new Error('A Deriv não abriu a conexão de operação a tempo. Ela parece instável agora; tente de novo em instantes.')
+    }
+    alvo = simbolos.find((s) => s.symbol === ATIVO_DOS_ROBOS) ?? null
+    if (!alvo) {
+      socket.disconnect()
+      throw new Error(`A Deriv não ofereceu ${ATIVO_DOS_ROBOS} nesta conta.`)
+    }
+    ativoLembrado = { quando: Date.now(), alvo }
   }
 
   const motor = new MotorTeeds({
@@ -298,7 +339,7 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
   // publicador, que decide sozinho o que vira evento e o que vira batimento,
   // e escreve no banco sem nunca fazer o motor esperar. Sem sessão gravada
   // (Supabase desligado) não há espelho — e não há erro.
-  const espelho = sessao.gravada && espelhoHabilitado() ? new PublicadorEspelho(sessao.gravada, config, () => socket.status, undefined, undefined, sequencias.get(id) ?? 0) : null
+  const espelho = sessao.gravada && espelhoHabilitado() ? new PublicadorEspelho(sessao.gravada, config, () => socket.state, undefined, undefined, sequencias.get(id) ?? 0) : null
 
   let jaGravadas = anterior?.estado.historico.length ?? 0
   motor.escutar((e) => {

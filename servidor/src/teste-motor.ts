@@ -42,21 +42,29 @@ const contexto = (digitos: number[]): Contexto => ({
   config: { valorInicial: 1, valorAoVencer: 1, fatorGale: .95, galeApos: 1, valorMaximo: 0, takeProfit: 10, stopLoss: 10, maxOperacoes: 0 },
 })
 const vinteQuatroSemNove = Array.from({ length: 24 }, (_, i) => i % 9)
-const terceira = {
+/*
+  Recuperação desde a PRIMEIRA perda (22/09/2026, a pedido do Tiago).
+  Antes o robô repetia o valor base até a terceira perda, e uma vitória
+  logo depois de uma perda não cobria o prejuízo.
+*/
+const depoisDeUmaPerda = {
   valorAtual: .35, valorInicial: .35, valorAoVencer: .35, ganhou: false, lucro: -.35,
-  perdasSeguidas: 2, prejuizoDaSequencia: .70, retornoLiquidoPorUnidade: .67 / .35,
-  config: { ...contexto([]).config, galeApos: 3, fatorGale: .05 }, memoria: {},
+  perdasSeguidas: 1, prejuizoDaSequencia: .35, retornoLiquidoPorUnidade: .67 / .35,
+  config: { ...contexto([]).config, galeApos: 1, fatorGale: .05 }, memoria: {},
 }
-for (const robo of [SUPERIOR_5, AG_2]) {
-  conferir(`${robo.id} terceira entrada ajustada`, robo.proximoValor(terceira), .41)
-  conferir(`${robo.id} segunda entrada preservada`, robo.proximoValor({ ...terceira, perdasSeguidas: 1 }), .35)
-  conferir(`${robo.id} vitória volta à base`, robo.proximoValor({ ...terceira, ganhou: true }), .35)
-  conferir(`${robo.id} quarta entrada mantém cálculo da recuperação`, robo.proximoValor({ ...terceira, perdasSeguidas: 3, prejuizoDaSequencia: 1.11 }), .61)
+for (const robo of [SUPERIOR_5, AG_2, SMART_03, FIRST_BLOCK, SECOND_BLOCK]) {
+  // A entrada seguinte é a que RECUPERA: ganhando nela, o que volta cobre a
+  // perda anterior. Em robô de pagamento alto ela pode até ser menor que a
+  // base — o que importa é cobrir, não ser maior.
+  const recupera = robo.proximoValor(depoisDeUmaPerda)
+  conferir(`${robo.id} ganhar na entrada seguinte à 1ª perda cobre o prejuízo`, recupera * depoisDeUmaPerda.retornoLiquidoPorUnidade >= .35, true)
+  conferir(`${robo.id} vitória volta à base`, robo.proximoValor({ ...depoisDeUmaPerda, ganhou: true }), .35)
   const escada = escadaDoRobo(robo.id, .35, 4)
-  conferir(`${robo.id} simulação acompanha terceira entrada`, escada[2].valor, .41)
-  conferir(`${robo.id} lucro simulado cobre perdas e alvo`, escada[2].lucro >= .75, true)
+  conferir(`${robo.id} a 1ª entrada é a base`, escada[0].valor, .35)
+  conferir(`${robo.id} a 2ª entrada já é recuperação`, escada[1].recuperacao, true)
+  conferir(`${robo.id} ganhar na 2ª cobre a perda da 1ª e sobra`, escada[1].lucro > escada[0].perdido, true)
+  conferir(`${robo.id} ganhar na 4ª cobre as três perdas antes dela`, escada[3].lucro > escada[2].perdido, true)
 }
-conferir('Smart não recebe ajuste exclusivo AG7/AG2', SMART_03.proximoValor(terceira), .35)
 conferir('Palm arma Under 9 depois do loss virtual', THE_PALM.entrar(contexto([...vinteQuatroSemNove, 9])), true)
 conferir('Palm entra na fase base real', memoria.fasePalm, 'base-real')
 conferir('Palm compra Under 9 na base', THE_PALM.contrato?.(contexto([...vinteQuatroSemNove, 9])).barreira, 9)
@@ -242,21 +250,33 @@ async function provasDaDeriv() {
  * ------------------------------------------------------------------ */
 {
   const ctx = (digitos: number[]): Contexto => ({ digitos, perdasSeguidas: 0, vitoriasSeguidas: 0, operacoes: 0, resultado: 0, prejuizoDaSequencia: 0, memoria: {}, config: contexto([]).config })
-  const vinteCinco = (altos: number) => [...Array(altos).fill(8), ...Array(25 - altos).fill(3)]
-  conferir('O1 OMNI Over: com menos de 25 dígitos, só lê', OMNI_OVER.entrar(ctx(vinteCinco(9).slice(0, 24))), false)
-  conferir('O2 OMNI Over: 8 de 25 com 7, 8 ou 9 (32%) ainda espera', OMNI_OVER.entrar(ctx(vinteCinco(8))), false)
-  conferir('O3 OMNI Over: 9 de 25 (36%) entra', OMNI_OVER.entrar(ctx(vinteCinco(9))), true)
-  conferir('O4 OMNI Over: mesmo contrato do AG7 (acima de 6) e com modos', [OMNI_OVER.contractType, OMNI_OVER.barreira, temModos('omniover'), OMNI_OVER.entradaContinua], ['DIGITOVER', 6, true, false])
-  conferir('O5 OMNI Over: a terceira entrada do AG7 continua valendo', OMNI_OVER.proximoValor({ valorAtual: 1, valorInicial: 1, valorAoVencer: 1, ganhou: false, lucro: -1, perdasSeguidas: 2, prejuizoDaSequencia: 2, retornoLiquidoPorUnidade: 1.9225, config: { ...contexto([]).config, galeApos: 3, fatorGale: .05 }, memoria: {}, contractType: 'DIGITOVER' }), 1.1)
+  /*
+    Entrada por loss virtual de 4 (22/09/2026): sai a leitura de percentual.
+    Quatro dígitos seguidos que teriam perdido liberam a entrada; dentro da
+    sequência o robô entra de novo sem analisar, até uma vitória fechá-la.
+  */
+  const emSequencia = (digitos: number[]) => ({ ...ctx(digitos), memoria: { emSequencia: true } })
+  conferir('O1 OMNI Over: três dígitos que teriam perdido ainda esperam', OMNI_OVER.entrar(ctx([3, 3, 3])), false)
+  conferir('O2 OMNI Over: quatro seguidos liberam a entrada', OMNI_OVER.entrar(ctx([3, 3, 3, 3])), true)
+  conferir('O3 OMNI Over: um dígito dele no meio zera a contagem', OMNI_OVER.entrar(ctx([3, 3, 8, 3, 3, 3])), false)
+  conferir('O4 OMNI Over: mesmo contrato do AG7 (acima de 6), com modos e entrada contínua', [OMNI_OVER.contractType, OMNI_OVER.barreira, temModos('omniover'), OMNI_OVER.entradaContinua], ['DIGITOVER', 6, true, true])
+  conferir('O5 OMNI Over: na sequência entra sem analisar de novo', OMNI_OVER.entrar(emSequencia([8, 8, 8])), true)
+  {
+    const memoria: Record<string, unknown> = {}
+    OMNI_OVER.aposResultado?.({ ...ctx([3, 3, 3, 3]), memoria, ganhou: false, contractType: 'DIGITOVER', digitoSaida: 3 })
+    const abriu = memoria.emSequencia
+    OMNI_OVER.aposResultado?.({ ...ctx([3, 3, 3, 8]), memoria, ganhou: true, contractType: 'DIGITOVER', digitoSaida: 8 })
+    conferir('O6 OMNI Over: a perda mantém a sequência e a vitória fecha', [abriu, memoria.emSequencia], [true, false])
+  }
   conferir('B1 OMNI Bull: um dígito da outra metade ainda espera', OMNI_BULL.entrar(ctx([2, 7])), false)
   conferir('B2 OMNI Bull: dois seguidos da outra metade (loss virtual) entra', OMNI_BULL.entrar(ctx([2, 7, 9])), true)
   conferir('B3 OMNI Bull: saiu dígito dele no meio, a contagem zera', OMNI_BULL.entrar(ctx([7, 1, 8])), false)
   conferir('B4 OMNI Bull: contrato abaixo de 5, sem modos', [OMNI_BULL.contractType, OMNI_BULL.barreira, temModos('omnibull')], ['DIGITUNDER', 5, false])
   conferir('B5 OMNI Bear: espelho, entra depois de 0 e 4 seguidos', [OMNI_BEAR.entrar(ctx([6, 0, 4])), OMNI_BEAR.entrar(ctx([6, 4])), OMNI_BEAR.contractType, OMNI_BEAR.barreira], [true, false, 'DIGITOVER', 4])
-  conferir('T1 AG7 da Teeds: mesma leitura do OMNI Over', [SUPERIOR_5.entradaContinua, SUPERIOR_5.entrar(ctx(vinteCinco(8))), SUPERIOR_5.entrar(ctx(vinteCinco(9)))], [false, false, true])
+  conferir('T1 AG7 da Teeds: mesmo loss virtual do OMNI Over', [SUPERIOR_5.entrar(ctx([3, 3, 3])), SUPERIOR_5.entrar(ctx([3, 3, 3, 3])), AG_2.entrar(ctx([8, 8, 8, 8])), AG_2.entrar(ctx([8, 8, 8]))], [false, true, true, false])
   conferir('T2 First Block: loss virtual antes de entrar', [FIRST_BLOCK.entrar(ctx([2, 7])), FIRST_BLOCK.entrar(ctx([2, 7, 9])), FIRST_BLOCK.entradaContinua], [false, true, false])
   conferir('T3 Second Block: loss virtual espelhado', [SECOND_BLOCK.entrar(ctx([6, 4])), SECOND_BLOCK.entrar(ctx([6, 0, 4]))], [false, true])
-  conferir('T4 AG7 continua com a terceira entrada e os modos', [SUPERIOR_5.proximoValor(terceira), temModos('superior5')], [.41, true])
+  conferir('T4 AG7 recupera desde a primeira perda e mantém os modos', [SUPERIOR_5.proximoValor(depoisDeUmaPerda) * depoisDeUmaPerda.retornoLiquidoPorUnidade >= .35, temModos('superior5')], [true, true])
 }
 
 provasDeParada().then(provasDaDeriv).then(() => {
