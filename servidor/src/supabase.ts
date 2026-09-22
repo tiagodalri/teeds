@@ -1,4 +1,5 @@
 import './ambiente'
+import { createHash } from 'node:crypto'
 import { emailDeDemonstracao } from '../../src/core/deriv/accountAccess'
 
 /**
@@ -306,9 +307,45 @@ export async function limparSessoesOrfas(): Promise<void> {
  * A tela da Teeds manda o mesmo crachá que ela já usa para falar com o
  * banco (o token do login Supabase). Aqui ele é conferido com o próprio
  * Supabase — o servidor não acredita em quem o navegador diz ser.
+ *
+ * Crachá conferido fica lembrado por um minuto (22/09/2026). A tela de cada
+ * robô pergunta o estado a cada 2 s, e cada pergunta ia ao Supabase de novo
+ * pelo mesmo crachá: no teste de carga, isso sozinho tirava um terço da
+ * capacidade do servidor (100 → 150 robôs com a memória ligada). Só quem
+ * pede `lembrar` usa a memória — a leitura da tela. Ligar, desligar e o
+ * chat continuam conferindo a cada pedido. Crachá recusado nunca é lembrado,
+ * e a memória guarda a impressão digital do crachá, não o crachá.
  * ------------------------------------------------------------------ */
-export async function usuarioDoToken(token: string): Promise<{ id: string; email: string } | null> {
-  if (!URL_BASE || !token) return null
+const CRACHA_LEMBRADO_MS = 60_000
+const CRACHAS_NO_MAXIMO = 5_000
+const crachasConferidos = new Map<string, { dono: { id: string; email: string }; ate: number }>()
+
+export async function usuarioDoToken(
+  token: string,
+  opcoes: { lembrar?: boolean; agora?: () => number; conferir?: (token: string) => Promise<{ id: string; email: string } | null> } = {},
+): Promise<{ id: string; email: string } | null> {
+  if (!token) return null
+  const agora = (opcoes.agora ?? Date.now)()
+  const digital = createHash('sha256').update(token).digest('hex')
+  if (opcoes.lembrar) {
+    const lembrado = crachasConferidos.get(digital)
+    if (lembrado && lembrado.ate > agora) return lembrado.dono
+  }
+  const dono = await (opcoes.conferir ?? conferirNoSupabase)(token)
+  if (dono) {
+    if (crachasConferidos.size >= CRACHAS_NO_MAXIMO) {
+      for (const [k, v] of crachasConferidos) if (v.ate <= agora) crachasConferidos.delete(k)
+      if (crachasConferidos.size >= CRACHAS_NO_MAXIMO) crachasConferidos.clear()
+    }
+    crachasConferidos.set(digital, { dono, ate: agora + CRACHA_LEMBRADO_MS })
+  } else {
+    crachasConferidos.delete(digital)
+  }
+  return dono
+}
+
+async function conferirNoSupabase(token: string): Promise<{ id: string; email: string } | null> {
+  if (!URL_BASE) return null
   try {
     const res = await fetch(`${URL_BASE}/auth/v1/user`, {
       headers: { apikey: CHAVE, Authorization: `Bearer ${token}` },

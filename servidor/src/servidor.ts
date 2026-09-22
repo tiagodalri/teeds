@@ -357,7 +357,8 @@ const servidor = createServer(async (req, res) => {
     if (req.method === 'OPTIONS') { res.writeHead(204, cabecalhos); return res.end() }
 
     const cracha = (req.headers.authorization ?? '').replace(/^Bearer\s+/i, '').trim()
-    const dono = cracha ? await usuarioDoToken(cracha) : null
+    // Leitura (GET) aceita o crachá conferido no último minuto; o que muda algo confere sempre.
+    const dono = cracha ? await usuarioDoToken(cracha, { lembrar: req.method === 'GET' }) : null
     if (!dono) return json(401, { erro: `Faça login na ${marcaDaOrigem.prosa} de novo — sua sessão expirou.` })
 
     let corpo: any = {}
