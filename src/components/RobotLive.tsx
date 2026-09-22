@@ -106,6 +106,11 @@ export function RobotLive({
   const positivo = estado.resultado >= 0
   const historicoVisivel = estado.historico.filter(o => filtroHistorico === 'todas' || (filtroHistorico === 'ganhos' ? o.lucro > 0 : o.lucro < 0))
   const fita = estado.digitos.slice(-30)
+  /*
+    O markup de uma operação: o medido pela Deriv quando ele veio, senão os
+    3% do pagamento — a mesma conta que a célula mostra.
+  */
+  const markupDe = (o: { markupDeriv?: number | null; payout: number }) => o.markupDeriv ?? (o.payout ? o.payout * 0.03 : 0)
   const emCurso = estado.emCurso
 
   useEffect(() => {
@@ -392,9 +397,7 @@ export function RobotLive({
                             ? 'Markup medido pela Deriv neste contrato'
                             : `3% do pagamento de ${num(o.payout)}`}
                         >
-                          {o.markupDeriv != null
-                            ? num(o.markupDeriv)
-                            : o.payout ? num(o.payout * 0.03) : '—'}
+                          {o.markupDeriv != null || o.payout ? num(markupDe(o)) : '—'}
                           {o.markupDeriv != null && <small>DERIV</small>}
                         </td>
                       )}
@@ -405,6 +408,18 @@ export function RobotLive({
                   <tr className="tv-inicio"><td colSpan={mostrarMarkup ? 5 : 4}>Primeira operação da sessão · {relogio(estado.historico[estado.historico.length - 1].quando)}</td></tr>
                 )}
               </tbody>
+              {/* A soma do markup só existe quando a coluna está à vista
+                  (pedido do Tiago, 22/09/2026). Ela acompanha o filtro: com
+                  "Ganhos" ou "Perdas", soma o que está na tela. */}
+              {mostrarMarkup && historicoVisivel.length > 0 && (
+                <tfoot className="tv-soma">
+                  <tr>
+                    <th colSpan={3} scope="row">Markup {filtroHistorico === 'todas' ? 'da sessão' : filtroHistorico === 'ganhos' ? 'das positivas' : 'das negativas'}</th>
+                    <td>{historicoVisivel.length} {historicoVisivel.length === 1 ? 'operação' : 'operações'}</td>
+                    <td className="tv-markup" title="Soma dos valores exatos. Cada linha aparece arredondada em centavos, então somar o que está na tela pode dar alguns centavos a menos.">{num(historicoVisivel.reduce((t, o) => t + markupDe(o), 0))}</td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         )}

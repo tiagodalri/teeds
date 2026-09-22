@@ -67,7 +67,12 @@
   .tv-analise-fita { grid-template-columns: repeat(13, minmax(0,1fr)); }
   .tv-analise-fita span { height: 27px; font-size: 13px; }
   .tv-analise-legenda { flex-direction: column; gap: 4px; }
-  .tv.tv-cockpit .tv-inicio td { display: block; width: auto; }
+  .tv.tv-cockpit .tv-soma { position: sticky; bottom: 0; z-index: 2; }
+.tv.tv-cockpit .tv-soma th, .tv.tv-cockpit .tv-soma td { padding: 9px 10px; background: var(--surface); border-top: 1px solid var(--border); font-weight: 650; }
+.tv.tv-cockpit .tv-soma th { text-align: left; color: var(--muted); font-weight: 600; }
+.tv.tv-cockpit .tv-soma td { text-align: right; color: var(--text); }
+.tv.tv-cockpit .tv-soma td:first-of-type { color: var(--muted); font-weight: 500; }
+.tv.tv-cockpit .tv-inicio td { display: block; width: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   .tv-analise-fita span.agora, .tv-analise-regua i, .tv-analise-contrato li i { animation: none; transition: none; }
@@ -152,6 +157,11 @@
 .tv.tv-cockpit .tv-tabela-enxuta th { padding-block: 8px; }
 .tv.tv-cockpit .tv-tabela-enxuta td:nth-child(3), .tv.tv-cockpit .tv-tabela-enxuta th:nth-child(3) { text-align: center; }
 .tv.tv-cockpit .tv-tabela-enxuta .tv-chip { margin: 0; }
+.tv.tv-cockpit .tv-soma { position: sticky; bottom: 0; z-index: 2; }
+.tv.tv-cockpit .tv-soma th, .tv.tv-cockpit .tv-soma td { padding: 9px 10px; background: var(--surface); border-top: 1px solid var(--border); font-weight: 650; }
+.tv.tv-cockpit .tv-soma th { text-align: left; color: var(--muted); font-weight: 600; }
+.tv.tv-cockpit .tv-soma td { text-align: right; color: var(--text); }
+.tv.tv-cockpit .tv-soma td:first-of-type { color: var(--muted); font-weight: 500; }
 .tv.tv-cockpit .tv-inicio td { padding: 14px 10px !important; text-align: center !important; color: var(--muted); font-size: 11.5px; border: 0; background: none !important; }
 .tv.tv-cockpit .tv-novas { position: sticky; top: 36px; z-index: 3; display: block; margin: 0 auto -28px; padding: 4px 12px; border: 0; border-radius: 20px; background: var(--primary); color: #1a1405; font-size: 11.5px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,.4); }
 .tv.tv-cockpit .tv-btn:disabled { opacity: .5; cursor: default; }
