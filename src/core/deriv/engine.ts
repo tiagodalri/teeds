@@ -54,6 +54,18 @@ export interface TelemetriaEstrategia {
   detalhes: Record<string, string | number | boolean>
 }
 
+/**
+ * A condição de entrada em um número, para a cabine desenhar a régua.
+ *
+ * Existe só para a tela (22/09/2026): o motor nunca chama isto e nenhuma
+ * decisão passa por aqui. É a mesma conta do `entrar`, dita em voz alta.
+ *  - percentual: "7, 8 e 9 em 32% — entra a partir de 36%"
+ *  - contagem: "loss virtual 1 de 2"
+ */
+export type Medidor =
+  | { tipo: 'percentual'; valor: number; alvo: number; maximo: number; rotulo: string; amostra: number; janela: number }
+  | { tipo: 'contagem'; valor: number; alvo: number; rotulo: string }
+
 export interface Estrategia {
   id: string
   nome: string
@@ -73,6 +85,8 @@ export interface Estrategia {
    * Cada item e um requisito: o valor lido e se ele passou.
    */
   progresso?: (c: Contexto) => { rotulo: string; itens: Array<{ valor: string; ok: boolean }> }
+  /** A condição de entrada em um número, só para a tela. Ver `Medidor`. */
+  medidor?: (c: Pick<Contexto, 'digitos'>) => Medidor | null
   /**
    * Entra de novo assim que o contrato liquida, sem esperar o proximo tick.
    * Para estrategias sem filtro de entrada, que operam continuamente.

@@ -1,4 +1,4 @@
-import type { Estrategia } from './engine'
+import type { Estrategia, Medidor } from './engine'
 
 /**
  * Modo de operação: só muda o quanto a recuperação mira de lucro.
@@ -145,8 +145,17 @@ function leituraDaJanela(digitos: number[], aceita: (d: number) => boolean) {
   return { janela, favoraveis, percentual: janela.length ? Math.round((favoraveis / janela.length) * 100) : 0 }
 }
 
+/** A leitura da janela como número, para a régua da cabine. Mesma conta do `entrar`. */
+function medidorDaJanela(digitos: number[], aceita: (d: number) => boolean, quais: string): Medidor {
+  const { janela, percentual } = leituraDaJanela(digitos, aceita)
+  return {
+    tipo: 'percentual', valor: percentual, alvo: Math.round((MINIMO_NA_JANELA / JANELA) * 100), maximo: 60,
+    rotulo: `de ${quais} nos últimos ${JANELA} dígitos`, amostra: janela.length, janela: JANELA,
+  }
+}
+
 /** Entrada, espera e marcador da leitura de 7, 8 e 9. */
-const LEITURA_DOS_ALTOS: Pick<Estrategia, 'entradaContinua' | 'entrar' | 'aguardando' | 'progresso'> = {
+const LEITURA_DOS_ALTOS: Pick<Estrategia, 'entradaContinua' | 'entrar' | 'aguardando' | 'progresso' | 'medidor'> = {
   entradaContinua: false,
   entrar: ({ digitos }) => {
     const { janela, favoraveis } = leituraDaJanela(digitos, (d) => d >= 7)
@@ -165,6 +174,7 @@ const LEITURA_DOS_ALTOS: Pick<Estrategia, 'entradaContinua' | 'entrar' | 'aguard
       itens: [7, 8, 9].map((valor) => ({ valor: String(valor), ok: janela.includes(valor) })),
     }
   },
+  medidor: ({ digitos }) => medidorDaJanela(digitos, (d) => d >= 7, '7, 8 e 9'),
 }
 
 /** Quantos dígitos seguidos da outra metade saíram por último (o "loss virtual"). */
@@ -176,7 +186,7 @@ function lossesVirtuais(digitos: number[], ganha: (d: number) => boolean): numbe
 const LOSSES_VIRTUAIS = 2
 
 /** Entrada, espera e marcador do loss virtual para quem ganha em `ganha`. */
-function comLossVirtual(ganha: (d: number) => boolean): Pick<Estrategia, 'entradaContinua' | 'entrar' | 'aguardando' | 'progresso'> {
+function comLossVirtual(ganha: (d: number) => boolean): Pick<Estrategia, 'entradaContinua' | 'entrar' | 'aguardando' | 'progresso' | 'medidor'> {
   return {
     entradaContinua: false,
     entrar: ({ digitos }) => lossesVirtuais(digitos, ganha) >= LOSSES_VIRTUAIS,
@@ -191,6 +201,10 @@ function comLossVirtual(ganha: (d: number) => boolean): Pick<Estrategia, 'entrad
         itens: Array.from({ length: LOSSES_VIRTUAIS }, (_, i) => ({ valor: i < n ? '✕' : '·', ok: i >= n })),
       }
     },
+    medidor: ({ digitos }) => ({
+      tipo: 'contagem', valor: Math.min(LOSSES_VIRTUAIS, lossesVirtuais(digitos, ganha)), alvo: LOSSES_VIRTUAIS,
+      rotulo: 'loss virtual — dígitos seguidos da outra metade',
+    }),
   }
 }
 
@@ -249,6 +263,7 @@ export const AG_2: Estrategia = {
       })),
     }
   },
+  medidor: ({ digitos }) => medidorDaJanela(digitos, (d) => d <= 2, '0, 1 e 2'),
 }
 
 /** Smart 03 observável no vídeo: último dígito superior a 3, após 1 tick. */
@@ -458,6 +473,7 @@ export const SUPERIOR_5_FIXO: Estrategia = {
   entradaContinua: true,
   entrar: () => true,
   progresso: undefined,
+  medidor: undefined,
   aguardando: () => 'entrando na próxima',
   proximoValor: ({ valorAoVencer }) => valorAoVencer,
 }

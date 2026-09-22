@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
-import { useClock } from '../hooks/useClock'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
+import { AnaliseAoVivo } from './AnaliseAoVivo'
 import './robot-cockpit.css'
 
 interface Props {
@@ -86,13 +86,6 @@ function Curva({ pontos, positivo }: { pontos: number[]; positivo: boolean }) {
   )
 }
 
-/* --------------------------------------------------- contador de segundos */
-
-function Cronometro({ desde }: { desde: number }) {
-  const s = Math.max(0, (useClock() - desde) / 1000)
-  return <span className="tv-crono">{Math.floor(s)}s</span>
-}
-
 /* -------------------------------------------------------------- principal */
 
 export function RobotLive({
@@ -105,6 +98,11 @@ export function RobotLive({
   const [registroAberto, setRegistroAberto] = useState(false)
   const [filtroHistorico, setFiltroHistorico] = useState('todas')
   const [analisesPalm, setAnalisesPalm] = useState<Array<{ id: number; hora: number; texto: string }>>([])
+  const rolo = useRef<HTMLDivElement>(null)
+  const raiz = useRef<HTMLDivElement>(null)
+  const [novas, setNovas] = useState(0)
+  const quantasAntes = useRef(estado.historico.length)
+  const alturaAntes = useRef(0)
   const positivo = estado.resultado >= 0
   const historicoVisivel = estado.historico.filter(o => filtroHistorico === 'todas' || (filtroHistorico === 'ganhos' ? o.lucro > 0 : o.lucro < 0))
   const fita = estado.digitos.slice(-30)
@@ -133,6 +131,50 @@ export function RobotLive({
   // A coluna "Acumulado" saiu da tabela a pedido do Tiago (18/09/2026): ela
   // confundia mais do que ajudava. O total da sessão fica no cabeçalho.
 
+  /*
+    A lista de operações e a evolução ocupam o que sobra da cabine até o
+    rodapé (22/09/2026). Antes tinham 300px fixos e, numa tela de notebook,
+    o fim da cabine era cortado — "não consigo ver as infos lá de baixo".
+    Se nem o mínimo couber, a cabine rola em vez de cortar.
+  */
+  useLayoutEffect(() => {
+    const tv = raiz.current
+    const corpo = tv?.querySelector<HTMLElement>(':scope > .tv-corpo')
+    if (!tv || !corpo) return
+    const medir = () => {
+      const ops = corpo.querySelector<HTMLElement>('.tv-ops')
+      if (!ops) return
+      const fundo = corpo.getBoundingClientRect().bottom - parseFloat(getComputedStyle(corpo).paddingBottom || '0')
+      const livre = Math.floor(fundo - ops.getBoundingClientRect().top + corpo.scrollTop) - 1
+      tv.style.setProperty('--tv-altura-lista', `${Math.max(240, livre)}px`)
+    }
+    medir()
+    const obs = new ResizeObserver(medir)
+    obs.observe(corpo)
+    const analise = corpo.querySelector('.tv-analise')
+    if (analise) obs.observe(analise)
+    return () => obs.disconnect()
+  }, [])
+
+  /*
+    Quem rolou a lista para ler operações antigas não pode ser puxado para
+    cima a cada operação nova (22/09/2026). A lista segura a posição e
+    mostra "↑ novas"; um clique volta ao topo.
+  */
+  useLayoutEffect(() => {
+    const el = rolo.current
+    const antes = quantasAntes.current
+    quantasAntes.current = estado.historico.length
+    if (!el) return
+    const chegaram = estado.historico.length - antes
+    if (chegaram > 0 && el.scrollTop > 24) {
+      el.scrollTop += el.scrollHeight - alturaAntes.current
+      setNovas((n) => n + chegaram)
+    }
+    if (chegaram < 0) setNovas(0)
+    alturaAntes.current = el.scrollHeight
+  }, [estado.historico.length])
+
   const teto = config.takeProfit || 1
   const piso = config.stopLoss || 1
   const pos = positivo
@@ -152,7 +194,7 @@ export function RobotLive({
           : { chave: 'cacando', texto: 'Analisando' }
 
   return (
-    <div className={`tv tv-cockpit ${fase.chave} ${expandido ? 'tv-expandido' : ''}`}>
+    <div ref={raiz} className={`tv tv-cockpit ${fase.chave} ${expandido ? 'tv-expandido' : ''}`}>
       {/* ===================== faixa de estado ===================== */}
       <header className="tv-topo">
         <div className="tv-quem">
@@ -195,10 +237,6 @@ export function RobotLive({
         <button aria-expanded={registroAberto} className={registroAberto ? 'on' : ''} onClick={() => setRegistroAberto((v) => !v)}>
           <i aria-hidden>▤</i> Registro
         </button>
-        {onDigitos && (
-          <button aria-expanded={digitosAberto} className={digitosAberto ? 'on' : ''} onClick={onDigitos}
-            title="Frequência dos últimos dígitos do ativo, ao vivo"><i aria-hidden>◌</i> Dígitos</button>
-        )}
       </nav>
 
       <div className="tv-corpo">
@@ -243,27 +281,8 @@ export function RobotLive({
 
       {/* ===================== palco ===================== */}
       <div className="tv-painel-principal">
-      <section className={`contrato-trajeto ${emCurso ? 'aberto' : estado.emOperacao ? 'enviando' : estado.historico.length ? 'fechado' : 'aguardando'}`} aria-label="Acompanhamento do contrato">
-        <div className="contrato-campo">
-          <span className="contrato-rotulo">{emCurso ? 'Entrada atual' : estado.emOperacao ? 'Entrada em envio' : estado.historico.length ? 'Última entrada' : 'Próxima entrada'}</span>
-          <strong>{moeda} {num(emCurso?.valor ?? (estado.emOperacao ? estado.valorAtual : estado.historico[0]?.valor ?? estado.valorAtual))}</strong>
-          <small>{emCurso ? `Comprado às ${relogio(emCurso.comprouEm)}` : estado.emOperacao ? 'Enviando ordem' : estado.historico[0] ? `Encerrado às ${relogio(estado.historico[0].quando)}` : 'Aguardando sinal da estratégia'}</small>
-        </div>
-        <div className="contrato-percurso">
-          <ol aria-label="Etapas do contrato">
-            {['Entrada', 'Em andamento', 'Concluído'].map((etapa, i) => {
-              const passo = emCurso ? 1 : estado.emOperacao ? 0 : estado.historico.length ? 2 : -1
-              return <li key={etapa} className={i < passo ? 'feito' : i === passo ? 'atual' : ''} aria-current={i === passo ? 'step' : undefined}><i aria-hidden="true">{i < passo || (i === 2 && passo === 2) ? '✓' : ''}</i><span>{etapa}</span></li>
-            })}
-          </ol>
-          <small>{emCurso ? <>Tempo decorrido: <Cronometro desde={emCurso.comprouEm} /></> : estado.emOperacao ? 'Aguardando confirmação da compra' : estado.rodando ? `Próxima entrada: ${moeda} ${num(estado.valorAtual)}` : 'Sessão encerrada'}</small>
-        </div>
-        <div className="contrato-campo contrato-resultado">
-          <span className="contrato-rotulo">Resultado do contrato</span>
-          <strong className={!emCurso && !estado.emOperacao && estado.historico[0] ? (estado.historico[0].lucro >= 0 ? 'up' : 'down') : 'pendente'}>{emCurso || estado.emOperacao ? 'Aguardando resultado' : estado.historico[0] ? `${assinado(estado.historico[0].lucro)} ${moeda}` : '—'}</strong>
-          <small>{emCurso ? 'Contrato em andamento' : estado.emOperacao ? 'Compra em processamento' : estado.historico.length ? 'Contrato liquidado' : 'Disponível após a primeira operação'}</small>
-        </div>
-      </section>
+      <AnaliseAoVivo estado={estado} estrategiaId={estrategiaId} nomeEstrategia={nomeEstrategia}
+        moeda={moeda} ganhaCom={ganhaCom} onDigitos={onDigitos} digitosAberto={digitosAberto} />
 
       {estrategiaId === 'thepalm' && (
         <section className="tv-palm-analise" aria-label="Análises recentes do The Palm">
@@ -306,20 +325,11 @@ export function RobotLive({
         </div>
       </section>}
 
-      {/* ===================== sessao ===================== */}
-      <section className="tv-sessao">
-        <h3 className="tv-resumo-titulo">Resumo da sessão</h3>
-        <div className="tv-resumo-cards">
-          <span><i aria-hidden>▥</i><em>Resultado atual</em><b className={positivo ? 'up' : 'down'}>{assinado(estado.resultado)} <small>{moeda}</small></b></span>
-          <span><i aria-hidden>⚑</i><em>Falta para a meta</em><b className="up">{moeda} {num(Math.max(0, config.takeProfit - estado.resultado))}</b></span>
-          <span><i aria-hidden>↗</i><em>Positivas</em><b className="up">{estado.vitorias}</b></span>
-          <span><i aria-hidden>↘</i><em>Negativas</em><b className="down">{estado.derrotas}</b></span>
-        </div>
-      </section>
       <section className="tv-curva-painel">
         <div className="tv-curva-caixa">
           <div className="tv-curva-legenda"><span>Evolução da sessão</span><b className={positivo ? 'up' : 'down'}>{assinado(estado.resultado)} {moeda}</b></div>
           <Curva pontos={estado.curva} positivo={positivo} />
+          {config.takeProfit > 0 && <div className="tv-curva-meta"><span>Meta {moeda} {num(config.takeProfit)}</span><span>faltam <b>{num(Math.max(0, config.takeProfit - estado.resultado))}</b></span></div>}
           <div className="tv-trilho">
             <span className="down">−{num(config.stopLoss)}</span>
             <div className="tv-barra">
@@ -348,36 +358,30 @@ export function RobotLive({
             Nenhuma ainda. Cada entrada aparece aqui assim que for liquidada.
           </p>
         ) : (
-          <div className="tv-rolo">
-            <table className="tv-tabela">
+          <div className="tv-rolo" ref={rolo} onScroll={(ev) => { if (novas && ev.currentTarget.scrollTop < 20) setNovas(0) }}>
+            {novas > 0 && (
+              <button type="button" className="tv-novas" onClick={() => { rolo.current?.scrollTo({ top: 0, behavior: 'smooth' }); setNovas(0) }}>
+                ↑ {novas} {novas > 1 ? 'novas' : 'nova'}
+              </button>
+            )}
+            <table className="tv-tabela tv-tabela-enxuta">
               <thead>
                 <tr>
-                  <th>#</th><th>Hora</th><th>Valor</th>
-                  <th>Entrada</th><th>Saída</th><th>Resultado</th>
+                  <th>Hora</th><th>Valor</th><th>Dígito</th><th>Resultado</th>
                   {mostrarMarkup && <th>Markup</th>}
                 </tr>
               </thead>
               <tbody>
-                {historicoVisivel.length === 0 && <tr><td colSpan={mostrarMarkup ? 7 : 6}>Nenhuma operação neste filtro.</td></tr>}
+                {historicoVisivel.length === 0 && <tr><td colSpan={mostrarMarkup ? 5 : 4}>Nenhuma operação neste filtro.</td></tr>}
                 {historicoVisivel.map(o => {
+                  // O preço de entrada e o de saída continuam à mão: passando o mouse no dígito.
+                  const preco = (v: number | null) => v === null ? '—' : o.pipSize !== undefined ? v.toFixed(o.pipSize) : String(v)
                   return (
                     <tr key={o.contractId} className={`${o.ganhou ? 'ganhou' : 'perdeu'} ${o.contractId === estado.historico[0]?.contractId ? 'recente' : ''}`}>
-                      <td className="tv-n" data-label="Operação">{o.n}</td>
                       <td className="tv-hora" data-label="Hora">{relogio(o.quando)}</td>
                       <td data-label="Valor">{num(o.valor)}</td>
-                      <td data-label="Entrada">
-                        <span className="tv-par">
-                          {o.entrada !== null ? (o.pipSize !== undefined ? o.entrada.toFixed(o.pipSize) : String(o.entrada)) : '—'}
-                          {o.pipSize !== undefined && o.digitoEntrada !== null && <b className="tv-chip">{o.digitoEntrada}</b>}
-                        </span>
-                      </td>
-                      <td data-label="Saída">
-                        <span className="tv-par">
-                          {o.saida !== null ? (o.pipSize !== undefined ? o.saida.toFixed(o.pipSize) : String(o.saida)) : '—'}
-                          {o.pipSize !== undefined && o.digitoSaida !== null && (
-                            <b className={`tv-chip ${o.ganhou ? 'up' : 'down'}`}>{o.digitoSaida}</b>
-                          )}
-                        </span>
+                      <td data-label="Dígito" title={`Entrada ${preco(o.entrada)} · saída ${preco(o.saida)} · operação nº ${o.n}`}>
+                        {o.digitoSaida !== null ? <b className={`tv-chip ${o.ganhou ? 'up' : 'down'}`}>{o.digitoSaida}</b> : '—'}
                       </td>
                       <td data-label="Resultado" className={o.ganhou ? 'up forte' : 'down forte'}>{assinado(o.lucro)}</td>
                       {mostrarMarkup && (
@@ -397,6 +401,9 @@ export function RobotLive({
                     </tr>
                   )
                 })}
+                {filtroHistorico === 'todas' && estado.historico.length > 0 && (
+                  <tr className="tv-inicio"><td colSpan={mostrarMarkup ? 5 : 4}>Primeira operação da sessão · {relogio(estado.historico[estado.historico.length - 1].quando)}</td></tr>
+                )}
               </tbody>
             </table>
           </div>
