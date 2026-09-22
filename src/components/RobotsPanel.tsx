@@ -41,8 +41,9 @@ interface Props {
   mostrarMarkup?: boolean
 }
 
-/** Teto de robos simultaneos: cada um consome assinaturas da mesma conexao. */
-const MAX_BLOCOS = 6
+/** Teto de robos simultaneos: cada um consome assinaturas da mesma conexao.
+ *  10 desde 22/09/2026, a pedido do Tiago; o servidor recusa o 11o. */
+const MAX_BLOCOS = 10
 
 const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`

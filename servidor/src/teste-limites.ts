@@ -39,14 +39,14 @@ caso('stop de 500, exatamente 25%', 'passa', { ...real, entrada: 2, stopLoss: 50
 caso('entrada maior que o stop', 'recusa', { ...real, entrada: 4, stopLoss: 3, takeProfit: 50 })
 caso('sem stop', 'recusa', { ...real, entrada: 1, stopLoss: 0, takeProfit: 50 })
 caso('entrada negativa', 'recusa', { ...real, entrada: -5, stopLoss: 50, takeProfit: 50 })
-caso('sexto robô ao mesmo tempo', 'passa', { ...real, entrada: 1, stopLoss: 50, takeProfit: 50, robosAtivos: 5 })
-caso('sétimo robô ao mesmo tempo', 'recusa', { ...real, entrada: 1, stopLoss: 50, takeProfit: 50, robosAtivos: 6 })
+caso('décimo robô ao mesmo tempo', 'passa', { ...real, entrada: 1, stopLoss: 50, takeProfit: 50, robosAtivos: 9 })
+caso('décimo primeiro robô ao mesmo tempo', 'recusa', { ...real, entrada: 1, stopLoss: 50, takeProfit: 50, robosAtivos: 10 })
 
 console.log('\nCONTA DEMONSTRAÇÃO — dinheiro fictício, travas de valor não valem\n')
 caso('stop de 5000 numa conta de 2240', 'passa', { ...demo, entrada: 1, stopLoss: 5000, takeProfit: 5000 })
 caso('entrada de 500', 'passa', { ...demo, entrada: 500, stopLoss: 5000, takeProfit: 5000 })
-caso('sexto robô também na demo', 'passa', { ...demo, entrada: 1, stopLoss: 50, takeProfit: 50, robosAtivos: 5 })
-caso('sétimo robô bloqueado na demo', 'recusa', { ...demo, entrada: 1, stopLoss: 50, takeProfit: 50, robosAtivos: 6 })
+caso('décimo robô também na demo', 'passa', { ...demo, entrada: 1, stopLoss: 50, takeProfit: 50, robosAtivos: 9 })
+caso('décimo primeiro robô bloqueado na demo', 'recusa', { ...demo, entrada: 1, stopLoss: 50, takeProfit: 50, robosAtivos: 10 })
 
 console.log('\nSUGESTÕES — o que o cartão nasce preenchido\n')
 for (const [rotulo, saldo, ehDemo] of [['real 2.000', 2000, false], ['real 200', 200, false], ['demo 2.240', 2240, true]] as const) {
