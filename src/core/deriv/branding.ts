@@ -122,6 +122,27 @@ export const CATALOGO: Identidade[] = [
     chance: 90, contrato: 'DIGITUNDER',
   },
   {
+    id: 'omniover', nome: nomeDaEstrategia('omniover'), chamada: 'O analista dos altos',
+    descricao: 'Lê os últimos 25 dígitos e entra quando 7, 8 e 9 alcançam 36%.',
+    cor: '#e8892b', corSuave: '#fdf0e2', onde: 'teeds',
+    emblema: 'M20 8 a12 12 0 1 0 0.1 0 M20 14 a6 6 0 1 0 0.1 0 M20 19 v-3',
+    chance: 30, contrato: 'DIGITOVER',
+  },
+  {
+    id: 'omnibull', nome: nomeDaEstrategia('omnibull'), chamada: 'A primeira metade',
+    descricao: 'Ganha de 0 a 4. Entra depois de 2 losses virtuais seguidos.',
+    cor: '#d0aa52', corSuave: '#f7f0df', onde: 'teeds',
+    emblema: 'M9 11 h8 M9 11 v18 M9 29 h8 M31 11 h-8 M31 11 v18 M31 29 h-8',
+    chance: 50, contrato: 'DIGITUNDER',
+  },
+  {
+    id: 'omnibear', nome: nomeDaEstrategia('omnibear'), chamada: 'A segunda metade',
+    descricao: 'Ganha de 5 a 9. Entra depois de 2 losses virtuais seguidos.',
+    cor: '#b86f3c', corSuave: '#f8ebe3', onde: 'teeds',
+    emblema: 'M8 14 h10 v12 H8 M22 14 h10 v12 H22 M20 8 v24',
+    chance: 50, contrato: 'DIGITOVER',
+  },
+  {
     id: 'superior5fixo', nome: 'AG7 sem martingale', chamada: 'O disciplinado',
     descricao: 'Entra em todas as operações com o valor sempre igual, sem progressão.',
     cor: '#0d9488', corSuave: '#e3f5f3', onde: 'teeds',

@@ -10,7 +10,7 @@
  */
 import { MotorTeeds, recusaDefinitiva, type Contexto } from '../../src/core/deriv/engine'
 import { definirTempoDaDeriv, fetchAccounts, fetchTradingSocketUrl, createAccount } from '../../src/core/deriv/account'
-import { SUPERIOR_5, AG_2, SMART_03, THE_PALM } from '../../src/core/deriv/strategies'
+import { SUPERIOR_5, AG_2, SMART_03, THE_PALM, OMNI_OVER, OMNI_BULL, OMNI_BEAR, temModos } from '../../src/core/deriv/strategies'
 import { escadaDoRobo } from '../../src/core/deriv/escada'
 import { toOpenContract } from '../../src/core/deriv/trading'
 import { precisaoInformada } from '../../src/core/deriv/types'
@@ -233,6 +233,25 @@ async function provasDaDeriv() {
     globalThis.fetch = original
     definirTempoDaDeriv(12_000)
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * Robôs da OMNI com análise antes de entrar (21/09/2026).
+ * ------------------------------------------------------------------ */
+{
+  const ctx = (digitos: number[]): Contexto => ({ digitos, perdasSeguidas: 0, vitoriasSeguidas: 0, operacoes: 0, resultado: 0, prejuizoDaSequencia: 0, memoria: {}, config: contexto([]).config })
+  const vinteCinco = (altos: number) => [...Array(altos).fill(8), ...Array(25 - altos).fill(3)]
+  conferir('O1 OMNI Over: com menos de 25 dígitos, só lê', OMNI_OVER.entrar(ctx(vinteCinco(9).slice(0, 24))), false)
+  conferir('O2 OMNI Over: 8 de 25 com 7, 8 ou 9 (32%) ainda espera', OMNI_OVER.entrar(ctx(vinteCinco(8))), false)
+  conferir('O3 OMNI Over: 9 de 25 (36%) entra', OMNI_OVER.entrar(ctx(vinteCinco(9))), true)
+  conferir('O4 OMNI Over: mesmo contrato do AG7 (acima de 6) e com modos', [OMNI_OVER.contractType, OMNI_OVER.barreira, temModos('omniover'), OMNI_OVER.entradaContinua], ['DIGITOVER', 6, true, false])
+  conferir('O5 OMNI Over: a terceira entrada do AG7 continua valendo', OMNI_OVER.proximoValor({ valorAtual: 1, valorInicial: 1, valorAoVencer: 1, ganhou: false, lucro: -1, perdasSeguidas: 2, prejuizoDaSequencia: 2, retornoLiquidoPorUnidade: 1.9225, config: { ...contexto([]).config, galeApos: 3, fatorGale: .05 }, memoria: {}, contractType: 'DIGITOVER' }), 1.1)
+  conferir('B1 OMNI Bull: um dígito da outra metade ainda espera', OMNI_BULL.entrar(ctx([2, 7])), false)
+  conferir('B2 OMNI Bull: dois seguidos da outra metade (loss virtual) entra', OMNI_BULL.entrar(ctx([2, 7, 9])), true)
+  conferir('B3 OMNI Bull: saiu dígito dele no meio, a contagem zera', OMNI_BULL.entrar(ctx([7, 1, 8])), false)
+  conferir('B4 OMNI Bull: contrato abaixo de 5, sem modos', [OMNI_BULL.contractType, OMNI_BULL.barreira, temModos('omnibull')], ['DIGITUNDER', 5, false])
+  conferir('B5 OMNI Bear: espelho, entra depois de 0 e 4 seguidos', [OMNI_BEAR.entrar(ctx([6, 0, 4])), OMNI_BEAR.entrar(ctx([6, 4])), OMNI_BEAR.contractType, OMNI_BEAR.barreira], [true, false, 'DIGITOVER', 4])
+  conferir('B6 AG7 da Teeds não mudou: continua entrando direto', [SUPERIOR_5.entradaContinua, SUPERIOR_5.entrar(ctx([]))], [true, true])
 }
 
 provasDeParada().then(provasDaDeriv).then(() => {

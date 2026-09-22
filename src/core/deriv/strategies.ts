@@ -26,6 +26,10 @@ export const RECUPERACAO_POR_ROBO: Record<string, { galeApos: number; margem: nu
   goreme: { galeApos: 1, margem: 0.05 },
   firstblock: { galeApos: 3, margem: 0.05 },
   secondblock: { galeApos: 3, margem: 0.05 },
+  // Versões OMNI (21/09/2026): mesma recuperação dos originais, com análise antes de entrar.
+  omniover: { galeApos: 3, margem: 0.05, agressivo: { margem: 1, sobrePrejuizo: 0.2 } },
+  omnibull: { galeApos: 3, margem: 0.05 },
+  omnibear: { galeApos: 3, margem: 0.05 },
   thepalm: { galeApos: 1, margem: 0.95 },
   superior5fixo: { galeApos: 3, margem: 0 },
 }
@@ -226,6 +230,91 @@ export const SECOND_BLOCK: Estrategia = {
   barreira: 4,
 }
 
+/* ------------------------------------------------------------------ *
+ * Robôs da OMNI com análise antes de entrar (pedido de 21/09/2026).
+ *
+ * Os quatro robôs da OMNI passam a esperar uma confirmação do mercado:
+ *  - OMNI Over: a mesma leitura do OMNI Under, espelhada nos dígitos
+ *    altos. Lê os últimos 25 dígitos e só entra quando 7, 8 e 9 somam
+ *    9 ou mais (36%). Contrato, pagamento, recuperação e modos iguais
+ *    aos do AG7.
+ *  - OMNI Bull e OMNI Bear: análise básica de "loss virtual". O robô só
+ *    entra depois que saem dois dígitos seguidos da outra metade — duas
+ *    operações que teriam sido negativas, sem dinheiro nelas.
+ * O AG7, o First Block e o Second Block da Teeds não mudam.
+ * ------------------------------------------------------------------ */
+const JANELA = 25
+const MINIMO_NA_JANELA = 9 // 36% de 25
+
+function leituraDaJanela(digitos: number[], aceita: (d: number) => boolean) {
+  const janela = digitos.slice(-JANELA)
+  const favoraveis = janela.filter(aceita).length
+  return { janela, favoraveis, percentual: janela.length ? Math.round((favoraveis / janela.length) * 100) : 0 }
+}
+
+export const OMNI_OVER: Estrategia = {
+  ...SUPERIOR_5,
+  id: 'omniover',
+  nome: 'OMNI Over',
+  origem: 'AG7 com a leitura de mercado do AG2, espelhada nos dígitos altos',
+  descricao:
+    'Analisa os 25 últimos dígitos e entra quando 7, 8 e 9 somam pelo menos 36%. ' +
+    'O contrato ganha se o próximo último dígito for 7, 8 ou 9.',
+  entradaContinua: false,
+  entrar: ({ digitos }) => {
+    const { janela, favoraveis } = leituraDaJanela(digitos, (d) => d >= 7)
+    return janela.length === JANELA && favoraveis >= MINIMO_NA_JANELA
+  },
+  aguardando: ({ digitos }) => {
+    const { janela, percentual } = leituraDaJanela(digitos, (d) => d >= 7)
+    return janela.length < JANELA
+      ? `lendo o mercado — ${janela.length}/${JANELA} dígitos`
+      : `concentração de 7, 8 e 9 em ${percentual}% — entrada a partir de 36%`
+  },
+  progresso: ({ digitos }) => {
+    const { janela, percentual } = leituraDaJanela(digitos, (d) => d >= 7)
+    return {
+      rotulo: janela.length < JANELA ? `Amostra do mercado — ${janela.length}/${JANELA}` : `7, 8 e 9 representam ${percentual}%`,
+      itens: [7, 8, 9].map((valor) => ({ valor: String(valor), ok: janela.includes(valor) })),
+    }
+  },
+}
+
+/** Quantos dígitos seguidos da outra metade saíram por último (o "loss virtual"). */
+function lossesVirtuais(digitos: number[], ganha: (d: number) => boolean): number {
+  let n = 0
+  for (let i = digitos.length - 1; i >= 0 && !ganha(digitos[i]); i--) n++
+  return n
+}
+const LOSSES_VIRTUAIS = 2
+
+function comLossVirtual(base: Estrategia, id: string, nome: string, faixa: string, ganha: (d: number) => boolean): Estrategia {
+  return {
+    ...base,
+    id, nome,
+    origem: `${base.nome} com análise de loss virtual`,
+    descricao:
+      `Ganha quando o último dígito é ${faixa}. Antes de entrar, espera sair ${LOSSES_VIRTUAIS} dígitos seguidos ` +
+      'da outra metade (loss virtual) e só então abre a operação.',
+    entradaContinua: false,
+    entrar: ({ digitos }) => lossesVirtuais(digitos, ganha) >= LOSSES_VIRTUAIS,
+    aguardando: ({ digitos }) => {
+      const n = Math.min(LOSSES_VIRTUAIS, lossesVirtuais(digitos, ganha))
+      return `esperando loss virtual — ${n}/${LOSSES_VIRTUAIS}`
+    },
+    progresso: ({ digitos }) => {
+      const n = Math.min(LOSSES_VIRTUAIS, lossesVirtuais(digitos, ganha))
+      return {
+        rotulo: n >= LOSSES_VIRTUAIS ? 'Loss virtual confirmado — entrada liberada' : `Loss virtual — ${n}/${LOSSES_VIRTUAIS}`,
+        itens: Array.from({ length: LOSSES_VIRTUAIS }, (_, i) => ({ valor: i < n ? '✕' : '·', ok: i >= n })),
+      }
+    },
+  }
+}
+
+export const OMNI_BULL = comLossVirtual(FIRST_BLOCK, 'omnibull', 'OMNI Bull', '0, 1, 2, 3 ou 4', (d) => d <= 4)
+export const OMNI_BEAR = comLossVirtual(SECOND_BLOCK, 'omnibear', 'OMNI Bear', '5, 6, 7, 8 ou 9', (d) => d >= 5)
+
 type FasePalm = 'aquecendo' | 'base-real' | 'recuperacao-espera' | 'recuperacao-real'
 
 const janelaPalm = (digitos: number[]) => digitos.slice(-25)
@@ -395,4 +484,5 @@ export const nomeDoRoboNaMarca = (
 
 export const ESTRATEGIAS_LOCAIS: Estrategia[] = [
   SUPERIOR_5, AG_2, SMART_03, GOREME, FIRST_BLOCK, SECOND_BLOCK, THE_PALM, SUPERIOR_5_FIXO,
+  OMNI_OVER, OMNI_BULL, OMNI_BEAR,
 ]

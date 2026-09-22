@@ -164,9 +164,15 @@ export const MARCAS: Record<string, Marca> = {
     afiliado: 'https://t.deriv.link?t=2HFMXE246P62',
     // Quatro robôs, com nomes da casa. Under/Over pelos dígitos que ganham;
     // Bull/Bear pelas metades da dezena. O motor é o mesmo da Teeds.
-    robos: ['ag2', 'superior5', 'firstblock', 'secondblock'],
+    // Desde 21/09/2026 os três últimos são versões OMNI com análise antes de
+    // entrar (ver OMNI_OVER / OMNI_BULL / OMNI_BEAR em strategies.ts). Os ids
+    // antigos continuam com nome da casa para o histórico das sessões antigas.
+    robos: ['ag2', 'omniover', 'omnibull', 'omnibear'],
     nomesDosRobos: {
       ag2: 'OMNI Under',
+      omniover: 'OMNI Over',
+      omnibull: 'OMNI Bull',
+      omnibear: 'OMNI Bear',
       superior5: 'OMNI Over',
       firstblock: 'OMNI Bull',
       secondblock: 'OMNI Bear',

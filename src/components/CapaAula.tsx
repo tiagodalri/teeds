@@ -463,9 +463,9 @@ function Cena({ aula, u, cor }: { aula: string; u: string; cor: string }) {
 /** Qual cena veste cada robo da vitrine. */
 export function capaDoRobo(id: string): string {
   if (id === 'ag2') return 'robo-ag2'
-  if (id === 'firstblock') return 'robo-first-block'
-  if (id === 'secondblock') return 'robo-second-block'
-  if (id === 'superior5' || id === 'superior5fixo') return 'robo-ag7'
+  if (id === 'firstblock' || id === 'omnibull') return 'robo-first-block'
+  if (id === 'secondblock' || id === 'omnibear') return 'robo-second-block'
+  if (id === 'superior5' || id === 'superior5fixo' || id === 'omniover') return 'robo-ag7'
   return 'boas-vindas'
 }
 

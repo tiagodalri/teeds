@@ -31,6 +31,9 @@ const CONTRATOS: Record<string, { entrada: number; recuperacao: number; acerto: 
   firstblock: { entrada: P.cincoDigitos, recuperacao: P.cincoDigitos, acerto: .5, acertoRecuperacao: .5 },
   secondblock: { entrada: P.cincoDigitos, recuperacao: P.cincoDigitos, acerto: .5, acertoRecuperacao: .5 },
   thepalm: { entrada: P.noveDigitos, recuperacao: P.cincoDigitos, acerto: .9, acertoRecuperacao: .5 },
+  omniover: { entrada: P.tresDigitos, recuperacao: P.tresDigitos, acerto: .3, acertoRecuperacao: .3 },
+  omnibull: { entrada: P.cincoDigitos, recuperacao: P.cincoDigitos, acerto: .5, acertoRecuperacao: .5 },
+  omnibear: { entrada: P.cincoDigitos, recuperacao: P.cincoDigitos, acerto: .5, acertoRecuperacao: .5 },
 }
 const contratoDo = (id: string) => CONTRATOS[id] ?? CONTRATOS.superior5
 
