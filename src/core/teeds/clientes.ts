@@ -52,6 +52,24 @@ const MESCLAR = { Prefer: 'resolution=merge-duplicates,return=minimal' }
  */
 const sessaoDeUso = (() => { try { const k=`${MARCA.id}.sessao-uso`; const v=sessionStorage.getItem(k); if(v)return v; const n=crypto.randomUUID(); sessionStorage.setItem(k,n); return n } catch { return `${Date.now()}-${Math.random()}` } })()
 
+/**
+ * A marca que as telas de ADMINISTRAÇÃO estão olhando.
+ *
+ * A Teeds é a plataforma master: as outras (OMNI e as próximas) são
+ * whitelabels. Só o admin da Teeds troca o foco; nas outras marcas isto
+ * fica preso na própria. O banco confere de novo, em `teeds_sou_admin_da`
+ * — a tela escolher não é permissão, é só o filtro.
+ *
+ * Leituras seguem o foco. ESCRITAS continuam na marca do site: criar acesso,
+ * salvar plano e liberar produto acontecem sempre em casa.
+ */
+let marcaEmFoco = MARCA.id
+export const marcaAdmin = () => marcaEmFoco
+export const ehMaster = () => MARCA.id === 'teeds'
+export function definirMarcaAdmin(id: string): void {
+  marcaEmFoco = ehMaster() ? id : MARCA.id
+}
+
 export async function registrarPresenca(sessao: SessaoTeeds, segundos = 0): Promise<void> {
   if (!autenticacaoConfigurada()) return
   const u = sessao.usuario
@@ -283,6 +301,8 @@ export interface FiltroClientes {
   deslocamento?: number
   /** 'cadastro' = mais novos primeiro; 'acessos' = quem entrou por último. */
   ordem?: 'cadastro' | 'acessos'
+  /** Qual plataforma ler. Vazio = a que o admin master escolheu. */
+  marca?: string
 }
 
 /**
@@ -301,7 +321,7 @@ export async function listarClientesPagina(sessao: SessaoTeeds, filtro: FiltroCl
   const r = await rest<any>('/rpc/teeds_clientes_pagina', sessao.token, {
     method: 'POST',
     body: JSON.stringify({
-      p_marca: MARCA.id,
+      p_marca: filtro.marca ?? marcaAdmin(),
       p_busca: filtro.busca?.trim() || null,
       p_status: filtro.status ?? 'todos',
       p_limite: filtro.limite ?? 50,
@@ -326,23 +346,23 @@ export async function clientesPorId(sessao: SessaoTeeds, ids: string[]): Promise
   const lista = [...new Set(ids)].filter(Boolean)
   if (!lista.length) return []
   const linhas = await rest<any[]>(
-    `/clientes?select=*&marca=eq.${MARCA.id}&user_id=in.(${lista.join(',')})`, sessao.token,
+    `/clientes?select=*&marca=eq.${marcaAdmin()}&user_id=in.(${lista.join(',')})`, sessao.token,
   )
   return (linhas ?? []).map(paraCliente)
 }
 
 export async function listarPlanos(sessao: SessaoTeeds): Promise<PlanoRegistro[]> {
-  const linhas = await rest<any[]>(`/planos?select=*&marcas=cs.{${MARCA.id}}&order=nome.asc`, sessao.token)
+  const linhas = await rest<any[]>(`/planos?select=*&marcas=cs.{${marcaAdmin()}}&order=nome.asc`, sessao.token)
   return (linhas ?? []).filter(l => planoClienteValido(l.id)).map((l) => ({ id: l.id, nome: PLANOS_CLIENTE.find(p => p.id === l.id)!.nome, duracaoDias: l.duracao_dias, ativo: Boolean(l.ativo) }))
 }
 
 export async function listarProdutos(sessao: SessaoTeeds): Promise<ProdutoRegistro[]> {
-  const linhas = await rest<any[]>(`/produtos?select=*&marcas=cs.{${MARCA.id}}&order=nome.asc`, sessao.token)
+  const linhas = await rest<any[]>(`/produtos?select=*&marcas=cs.{${marcaAdmin()}}&order=nome.asc`, sessao.token)
   return (linhas ?? []).map((l) => ({ id: l.id, nome: textoLegivel(l.nome) ?? l.nome, categoria: textoLegivel(l.categoria) ?? l.categoria, precoCentavos: l.preco_centavos, ativo: Boolean(l.ativo) }))
 }
 
 export async function listarProdutosClientes(sessao: SessaoTeeds): Promise<ClienteProdutoRegistro[]> {
-  const linhas = await rest<any[]>(`/cliente_produtos?select=*&ativo=eq.true&marca=eq.${MARCA.id}`, sessao.token)
+  const linhas = await rest<any[]>(`/cliente_produtos?select=*&ativo=eq.true&marca=eq.${marcaAdmin()}`, sessao.token)
   return (linhas ?? []).map((l) => ({ userId: l.user_id, produtoId: l.produto_id, concedidoEm: l.concedido_em, expiraEm: l.expira_em, ativo: Boolean(l.ativo) }))
 }
 
@@ -414,7 +434,7 @@ export async function criarAcessoCliente(sessao: SessaoTeeds, dados: {
 }
 
 export async function listarContasDeriv(sessao: SessaoTeeds): Promise<ContaDerivRegistro[]> {
-  const linhas = await rest<any[]>(`/contas_deriv?select=*&marca=eq.${MARCA.id}&order=vista_em.desc`, sessao.token)
+  const linhas = await rest<any[]>(`/contas_deriv?select=*&marca=eq.${marcaAdmin()}&order=vista_em.desc`, sessao.token)
   return (linhas ?? []).map((l) => ({
     userId: l.user_id, contaId: l.conta_id, tipo: l.tipo,
     moeda: l.moeda, saldo: l.saldo === null ? null : Number(l.saldo), vistaEm: l.vista_em,
@@ -435,7 +455,7 @@ export async function listarComissoes(sessao: SessaoTeeds, dias: number): Promis
   de.setDate(de.getDate() - (dias - 1))
   const corte = de.toISOString().slice(0, 10)
   const linhas = await rest<any[]>(
-    `/comissoes_diarias?marca=eq.${MARCA.id}&select=*&dia=gte.${corte}&order=dia.desc`, sessao.token,
+    `/comissoes_diarias?marca=eq.${marcaAdmin()}&select=*&dia=gte.${corte}&order=dia.desc`, sessao.token,
   )
   return (linhas ?? []).map((l) => ({
     userId: l.user_id, contaId: l.conta_id, dia: l.dia,
@@ -459,7 +479,7 @@ export async function registrarOperacaoRobo(sessao: SessaoTeeds, op: Omit<Operac
 export async function listarOperacoesRobos(sessao: SessaoTeeds, dias = 90): Promise<OperacaoRoboRegistro[]> {
   const corte = new Date(Date.now() - (dias - 1) * 864e5).toISOString()
   try {
-    const linhas = await rest<any[]>(`/operacoes_robos?marca=eq.${MARCA.id}&select=*&executada_em=gte.${encodeURIComponent(corte)}&order=executada_em.desc`, sessao.token)
+    const linhas = await rest<any[]>(`/operacoes_robos?marca=eq.${marcaAdmin()}&select=*&executada_em=gte.${encodeURIComponent(corte)}&order=executada_em.desc`, sessao.token)
     return (linhas ?? []).map(l => ({ contractId:Number(l.contract_id),userId:l.user_id,contaId:l.conta_id,roboId:l.robo_id,roboNome:l.robo_nome,ativo:l.ativo,tipoContrato:l.tipo_contrato,moeda:l.moeda,demo:Boolean(l.demo),entrada:Number(l.entrada),pagamento:Number(l.pagamento),resultado:Number(l.resultado),markup:Number(l.markup),markupDeriv:l.markup_deriv===null||l.markup_deriv===undefined?null:Number(l.markup_deriv),ganhou:Boolean(l.ganhou),executadaEm:l.executada_em }))
   } catch { return [] }
 }
@@ -468,6 +488,8 @@ export async function listarOperacoesRobos(sessao: SessaoTeeds, dias = 90): Prom
 /* ------------------------------------------- análise com filtros finos */
 
 export interface FiltroAnalise {
+  /** Qual plataforma ler. Vazio = a que o admin master escolheu. */
+  marca?: string
   /** Início e fim, em ISO (instantes; o fim é exclusivo). */
   de: string
   ate: string
@@ -504,7 +526,7 @@ export async function analiseOperacoes(sessao: SessaoTeeds, f: FiltroAnalise): P
     const r = await rest<any>('/rpc/teeds_analise_operacoes', sessao.token, {
       method: 'POST',
       body: JSON.stringify({
-        p_marca: MARCA.id, p_de: f.de, p_ate: f.ate,
+        p_marca: f.marca ?? marcaAdmin(), p_de: f.de, p_ate: f.ate,
         p_hora_de: f.horaDe ?? 0, p_hora_ate: f.horaAte ?? 23,
         p_fuso: f.fuso ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'America/Sao_Paulo',
         p_robo: f.robo ?? null, p_demo: f.demo === undefined ? false : f.demo, p_conta: f.conta ?? null,
@@ -528,7 +550,7 @@ export async function analiseOperacoes(sessao: SessaoTeeds, f: FiltroAnalise): P
 export async function listarMetricasRobos(sessao: SessaoTeeds, dias = 90): Promise<MetricaRoboRegistro[]> {
   try {
     const linhas = await rest<any[]>('/rpc/teeds_metricas_robos', sessao.token, {
-      method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: MARCA.id }),
+      method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: marcaAdmin() }),
     })
     return (linhas ?? []).map((l) => ({
       roboId: l.robo_id, roboNome: l.robo_nome, operacoes: Number(l.operacoes),
@@ -590,7 +612,7 @@ export async function relatorioClientes(
 ): Promise<LinhaRelatorioCliente[]> {
   try {
     const linhas = await rest<any[]>('/rpc/teeds_relatorio_clientes', sessao.token, {
-      method: 'POST', body: JSON.stringify({ p_dias: dias, p_incluir_demo: incluirDemo, p_marca: MARCA.id }),
+      method: 'POST', body: JSON.stringify({ p_dias: dias, p_incluir_demo: incluirDemo, p_marca: marcaAdmin() }),
     })
     return (linhas ?? []).map((l) => ({
       userId: l.user_id, nome: textoLegivel(l.nome), email: l.email,
@@ -614,7 +636,7 @@ export async function operacoesDoCliente(
 ): Promise<OperacaoRoboRegistro[]> {
   try {
     const linhas = await rest<any[]>('/rpc/teeds_operacoes_cliente', sessao.token, {
-      method: 'POST', body: JSON.stringify({ p_user_id: userId, p_dias: dias, p_marca: MARCA.id }),
+      method: 'POST', body: JSON.stringify({ p_user_id: userId, p_dias: dias, p_marca: marcaAdmin() }),
     })
     return (linhas ?? []).map((l) => ({
       contractId: Number(l.contract_id), userId, contaId: l.conta_id,
@@ -639,7 +661,7 @@ export async function operacoesDoCliente(
 export async function comissaoDosRobos(sessao: SessaoTeeds, dias = 30): Promise<ComissaoDia[]> {
   try {
     const linhas = await rest<any[]>('/rpc/teeds_comissao_viva', sessao.token, {
-      method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: MARCA.id }),
+      method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: marcaAdmin() }),
     })
     return (linhas ?? []).map((l) => ({
       userId: l.user_id, contaId: l.conta_id, dia: l.dia,
@@ -678,7 +700,7 @@ export async function conferenciaComissao(sessao: SessaoTeeds, dias = 30): Promi
   try {
     const linhas = await rest<any[]>('/rpc/teeds_comissao_conferencia', sessao.token, {
       method: 'POST',
-      body: JSON.stringify({ p_dias: dias, p_marca: MARCA.id, p_app_id: MARCA.appId }),
+      body: JSON.stringify({ p_dias: dias, p_marca: marcaAdmin(), p_app_id: MARCA.appId }),
     })
     return (linhas ?? []).map((l) => ({
       dia: l.dia, calculada: Number(l.calculada), oficial: Number(l.oficial),
@@ -720,7 +742,7 @@ export interface ColetaExtrato {
 export async function movimentacoesDiarias(sessao: SessaoTeeds, dias = 30): Promise<DiaMovimentacao[]> {
   try {
     const linhas = await rest<any[]>('/rpc/teeds_movimentacoes_diarias', sessao.token, {
-      method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: MARCA.id }),
+      method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: marcaAdmin() }),
     })
     return (linhas ?? []).map((l) => ({
       dia: l.dia,
@@ -735,7 +757,7 @@ export async function movimentacoesDiarias(sessao: SessaoTeeds, dias = 30): Prom
 export async function movimentacoesRecentes(sessao: SessaoTeeds, dias = 30, limite = 500): Promise<MovimentacaoRegistro[]> {
   try {
     const linhas = await rest<any[]>('/rpc/teeds_movimentacoes_recentes', sessao.token, {
-      method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: MARCA.id, p_limite: limite }),
+      method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: marcaAdmin(), p_limite: limite }),
     })
     return (linhas ?? []).map((l) => ({
       userId: l.user_id, nome: textoLegivel(l.nome), email: l.email,
@@ -753,7 +775,7 @@ export async function movimentacoesRecentes(sessao: SessaoTeeds, dias = 30, limi
 export async function coletasDeExtrato(sessao: SessaoTeeds): Promise<ColetaExtrato[]> {
   try {
     const linhas = await rest<any[]>('/rpc/teeds_extrato_coletas', sessao.token, {
-      method: 'POST', body: JSON.stringify({ p_marca: MARCA.id }),
+      method: 'POST', body: JSON.stringify({ p_marca: marcaAdmin() }),
     })
     return (linhas ?? []).map((l) => ({
       contaId: l.conta_id, userId: l.user_id, nome: textoLegivel(l.nome), email: l.email,

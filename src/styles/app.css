@@ -5505,3 +5505,34 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
   .tv-resumo-cards > span > i { width: 23px; height: 23px; font-size: 11px; }
   .tv-resumo-cards b { font-size: 11px; }
 }
+
+/* ---- Painel master: seletor de plataforma e comparação --------------- */
+.admin-top-acoes { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.admin-marca { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px 6px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.admin-marca select { border: 0; background: none; color: var(--text); font-size: 13px; font-weight: 700; letter-spacing: 0; text-transform: none; cursor: pointer; }
+.pl-topo { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; padding: 16px 20px; margin-bottom: 18px; }
+.pl-topo b { display: block; font-size: 14px; }
+.pl-topo small { display: block; margin-top: 3px; max-width: 70ch; color: var(--muted); font-size: 12px; }
+.pl-filtros { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pl-tabela { overflow-x: auto; padding: 0 20px 6px; }
+.pl-tabela table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.pl-tabela th, .pl-tabela td { padding: 10px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
+.pl-tabela thead th { font-size: 9px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.pl-tabela tbody th { text-align: left; font-weight: 600; }
+.pl-tabela tbody th small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; font-weight: 500; }
+.pl-marca { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
+.pl-marca em { font-style: normal; padding: 2px 7px; border-radius: 5px; background: var(--primary-soft); color: var(--primary); font-size: 9.5px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.pl-tabela .up { color: var(--up); } .pl-tabela .down { color: var(--down); }
+.pl-tabela .ce-barra { display: block; margin-top: 4px; height: 3px; border-radius: 2px; background: var(--trilho); overflow: hidden; }
+.pl-tabela .ce-barra i { display: block; height: 100%; border-radius: 2px; }
+.pl-tabela .admin-refresh { padding: 5px 10px; font-size: 11px; }
+@media (max-width: 900px) { .pl-topo { align-items: flex-start; } }
+
+/* O seletor de período/demo também vive no admin, onde o CSS da mesa de
+   robôs pode não ter sido carregado ainda. */
+.pl-filtros .ce-periodo { display: flex; gap: 3px; padding: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; }
+.pl-filtros .ce-periodo button { padding: 6px 11px; border: 0; border-radius: 6px; background: none; color: var(--text); font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.pl-filtros .ce-periodo button[aria-pressed='true'] { background: var(--primary-soft); color: var(--primary); }
+.pl-filtros .ce-demo { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11.5px; }
+.admin-card .ce-nota { margin: 0; padding: 0 20px 16px; color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+.admin-vazio { margin: 0; padding: 16px 20px; color: var(--muted); font-size: 12.5px; }

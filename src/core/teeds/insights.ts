@@ -12,12 +12,13 @@
 import { SUPABASE } from './config'
 import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
+import { marcaAdmin } from './clientes'
 
 async function rpc<T>(nome: string, token: string, corpo: Record<string, unknown>): Promise<T> {
   const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/${nome}`, {
     method: 'POST',
     headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ p_marca: MARCA.id, ...corpo }),
+    body: JSON.stringify({ p_marca: marcaAdmin(), ...corpo }),
   })
   if (!res.ok) {
     const c = await res.json().catch(() => ({}))
