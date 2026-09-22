@@ -11,6 +11,7 @@ import type { Identidade } from '../core/deriv/branding'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { acompanharNoServidor, ligarNoServidor, pararNoServidor } from '../core/teeds/servidorRobos'
 import { RobotCartao, RobotLinha } from './RobotResumo'
+import { resumoDeEstudo, type DadosEstudo } from './CentroDeEstudo'
 import { MARCA } from '../marca'
 
 interface Props {
@@ -46,6 +47,10 @@ interface Props {
   onFecharPreparo?: () => void
   /** Coluna de markup nas últimas operações (só para o dono da plataforma). */
   mostrarMarkup?: boolean
+  /** Identifica este bloco no centro de estudo do Modo CEO. */
+  idEstudo?: string
+  /** Manda os números desta sessão para o centro de estudo (Modo CEO). */
+  onEstudo?: (id: string, dados: DadosEstudo | null) => void
   /**
    * Como este bloco aparece na tela de Robôs:
    * - 'aberta': a linha da lista com a cabine completa embaixo (só uma por vez);
@@ -75,7 +80,7 @@ export function LocalRobotPanel({
   socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
   onRemover, titulo, expandido = false, onExpandir, onSessaoChange, sessaoTeeds, contaId,
   adotar, solicitarPreparo = false, onFecharPreparo, onDigitos, digitosAberto = false,
-  mostrarMarkup = false, apresentacao = 'aberta', onAbrir,
+  mostrarMarkup = false, apresentacao = 'aberta', onAbrir, idEstudo, onEstudo,
 }: Props) {
   // Desde quando esta tela acompanha a sessão. Para uma sessão adotada do
   // servidor é o momento em que ela apareceu aqui, não o da abertura lá.
@@ -113,6 +118,27 @@ export function LocalRobotPanel({
     onSessaoChangeRef.current?.(sessaoAtiva, sessaoAtiva ? sessaoIdRef.current : null)
   }, [sessaoAtiva, estado?.rodando, idDaSessao])
   useEffect(() => () => { onSessaoChangeRef.current?.(false, null) }, [])
+
+  /*
+   * Modo CEO: o centro de estudo desta tela soma os números de todas as
+   * sessões abertas. Quem tem os números é cada bloco, então cada bloco os
+   * entrega ao pai a cada mudança de estado — e avisa quando sai de cena.
+   */
+  const onEstudoRef = useRef(onEstudo)
+  onEstudoRef.current = onEstudo
+  useEffect(() => {
+    if (!idEstudo) return
+    if (!estado) { onEstudoRef.current?.(idEstudo, null); return }
+    onEstudoRef.current?.(idEstudo, resumoDeEstudo(estado, {
+      id: idEstudo,
+      nome: ident.nome,
+      cor: ident.cor,
+      numero: titulo ?? '',
+      modo: temModos(ident.id) ? NOME_DO_MODO[modoDaConfig(ident.id, cfg.fatorGale, cfg.lucroSobrePrejuizo)] : null,
+      demo: contaDaSessao?.demo ?? null,
+    }))
+  }, [estado, idEstudo, ident.id, ident.nome, ident.cor, titulo, cfg.fatorGale, cfg.lucroSobrePrejuizo, contaDaSessao?.demo])
+  useEffect(() => () => { if (idEstudo) onEstudoRef.current?.(idEstudo, null) }, [idEstudo])
 
   /*
    * Meta ou stop: o aviso no meio da tela. Vale quando a sessão para enquanto
@@ -317,7 +343,7 @@ export function LocalRobotPanel({
   } : undefined
   const resumo = {
     estado, config: cfg, moeda: contaDaSessao?.moeda ?? moeda, nome: ident.nome, cor: ident.cor, numero: titulo,
-    inicio: inicioRef.current, demo: contaDaSessao?.demo ?? null, modo, conexao,
+    inicio: inicioRef.current, demo: contaDaSessao?.demo ?? null, modo, conexao, ceo: mostrarMarkup,
     onDesligar: rodando ? desligar : undefined, desligando,
     onLigarDeNovo: !rodando ? () => { setErro(null); setPreparando(true) } : undefined,
     onRemover: aoRemover,

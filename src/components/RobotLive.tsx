@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { markupDaOperacao } from '../core/deriv/markup'
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
@@ -110,7 +111,7 @@ export function RobotLive({
     O markup de uma operação: o medido pela Deriv quando ele veio, senão os
     3% do pagamento — a mesma conta que a célula mostra.
   */
-  const markupDe = (o: { markupDeriv?: number | null; payout: number }) => o.markupDeriv ?? (o.payout ? o.payout * 0.03 : 0)
+  const markupDe = markupDaOperacao
   const emCurso = estado.emCurso
 
   useEffect(() => {

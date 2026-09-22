@@ -165,6 +165,18 @@ export async function buscarSerieEntre(session: AuthSession, de: string, ate: st
 }
 
 /**
+ * O markup de UMA operacao, do jeito que a tela mostra.
+ *
+ * A Deriv informa `app_markup_amount` na maioria dos contratos; quando nao
+ * informa, fica a estimativa de 3% do pagamento — a taxa configurada na
+ * aplicacao. Uma funcao so para a cabine, o resumo e o centro de estudo
+ * nunca divergirem.
+ */
+export function markupDaOperacao(o: { markupDeriv?: number | null; payout: number }): number {
+  return o.markupDeriv ?? (o.payout ? o.payout * 0.03 : 0)
+}
+
+/**
  * Simulador de markup, calibrado com medicao real feita em 31/08/2026:
  * a 3%, o pagamento cai para 91,25% do valor sem markup, em qualquer entrada.
  * Interpolamos linearmente entre os dois pontos medidos (0% e 3%).

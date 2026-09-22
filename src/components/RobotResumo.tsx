@@ -12,6 +12,7 @@
  * como segunda vista, foco só troca no clique.)
  */
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
+import { markupDaOperacao } from '../core/deriv/markup'
 
 export interface ResumoProps {
   estado: EstadoMotor
@@ -28,6 +29,8 @@ export interface ResumoProps {
   /** "agressivo" / "conservador", só nos robôs que têm modo. */
   modo?: string | null
   conexao?: string
+  /** Modo CEO (só o dono): mostra o markup da sessão e de cada operação. */
+  ceo?: boolean
   onDesligar?: () => void
   desligando?: boolean
   onLigarDeNovo?: () => void
@@ -35,6 +38,9 @@ export interface ResumoProps {
 }
 
 const num = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const centavos = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+/** Markup somado da sessão — só o Modo CEO usa. */
+const markupDaSessao = (e: EstadoMotor) => e.historico.reduce((t, o) => t + markupDaOperacao(o), 0)
 const assinado = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${num(Math.abs(v))}`
 const hora = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 const horaSeg = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -145,6 +151,7 @@ export function RobotLinha(p: ResumoProps & { aberta: boolean; onAbrir: () => vo
       <span className="rs-kpi"><i>Operações</i><b>{e.operacoes}</b></span>
       <span className="rs-kpi"><i>Positivas</i><b className="up">{e.vitorias}</b></span>
       <span className="rs-kpi"><i>Negativas</i><b className="down">{e.derrotas}</b></span>
+      {p.ceo && <span className="rs-kpi rs-markup"><i>Markup</i><b>{centavos(markupDaSessao(e))}</b></span>}
       <span className="rs-kpi rs-resultado"><i>{e.rodando ? 'Resultado' : 'Resultado final'}</i><b className={positivo ? 'up' : 'down'}>{assinado(e.resultado)} <small>{p.moeda}</small></b></span>
       <Sparkline pontos={e.curva} positivo={positivo} />
       <Acoes p={p} extra={
@@ -180,6 +187,7 @@ export function RobotCartao(p: ResumoProps & { onAbrirNaLista: () => void }) {
         <span className="rs-kpi"><i>Operações</i><b>{e.operacoes}</b></span>
         <span className="rs-kpi"><i>Positivas</i><b className="up">{e.vitorias}</b></span>
         <span className="rs-kpi"><i>Negativas</i><b className="down">{e.derrotas}</b></span>
+        {p.ceo && <span className="rs-kpi rs-markup"><i>Markup</i><b>{centavos(markupDaSessao(e))}</b></span>}
       </div>
       <div className={`rc-contrato ${emCurso ? 'aberto' : ''}`}>
         <span>{contrato}</span>
@@ -192,6 +200,7 @@ export function RobotCartao(p: ResumoProps & { onAbrirNaLista: () => void }) {
             <span className="muted">{o.n} · {horaSeg(o.quando)}</span>
             <span>{num(o.valor)}{o.pipSize !== undefined && o.digitoSaida !== null && <em className={`rs-dig ${o.ganhou ? 'up' : 'down'}`}>{o.digitoSaida}</em>}</span>
             <b className={o.lucro >= 0 ? 'up' : 'down'}>{assinado(o.lucro)}</b>
+            {p.ceo && <em className="rc-markup" title={o.markupDeriv != null ? 'markup medido pela Deriv' : '3% do pagamento'}>{centavos(markupDaOperacao(o))}</em>}
           </div>
         ))}
       </div>

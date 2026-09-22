@@ -8,6 +8,7 @@ import {
 } from '../core/deriv/robots'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { LocalRobotPanel } from './LocalRobotPanel'
+import { CentroDeEstudo, type DadosEstudo } from './CentroDeEstudo'
 import { Emblema } from './RobotCard'
 import { ServerRobotLive } from './ServerRobotLive'
 import { RobotScope } from './RobotScope'
@@ -52,6 +53,14 @@ export function RobotsPanel({
   socket, logado, isDemo, moeda, symbols, symbolPadrao, conexao = 'open',
   entrandoNaDeriv = false, onConectarDeriv, sessaoTeeds, contaId, admin = false, mostrarMarkup = false,
 }: Props) {
+  // Modo CEO: cada bloco entrega aqui os números da sessão dele.
+  const [estudo, setEstudo] = useState<Map<string, DadosEstudo>>(new Map())
+  const receberEstudo = useCallback((id: string, dados: DadosEstudo | null) => {
+    setEstudo((atual) => {
+      if (!dados) { if (!atual.has(id)) return atual; const proxima = new Map(atual); proxima.delete(id); return proxima }
+      const proxima = new Map(atual); proxima.set(id, dados); return proxima
+    })
+  }, [])
   const [symbol, setSymbol] = useState<string>(symbolPadrao ?? '1HZ100V')
   const [valorInicial, setValorInicial] = useState(1)
   const [ticks, setTicks] = useState(1)
@@ -360,6 +369,7 @@ export function RobotsPanel({
               onDigitos={() => alternarDigitos(v.id, v.roboId)}
               digitosAberto={digitosDe?.chave === v.id}
               mostrarMarkup={admin && mostrarMarkup}
+              idEstudo={v.id} onEstudo={receberEstudo}
               onRemover={retidas.has(v.id) ? () => fecharRetida(v.id) : undefined} />
             </div>
           ))}
@@ -381,6 +391,7 @@ export function RobotsPanel({
               onDigitos={() => alternarDigitos(idBloco, ident.id)}
               digitosAberto={digitosDe?.chave === idBloco}
               mostrarMarkup={admin && mostrarMarkup}
+              idEstudo={idBloco} onEstudo={receberEstudo}
               solicitarPreparo={blocoEmPreparo === idBloco}
               onFecharPreparo={() => setBlocoEmPreparo(null)}
               onSessaoChange={(ativa, sessaoId) => {
@@ -397,6 +408,12 @@ export function RobotsPanel({
 
       </div>}
       </div>
+
+      {admin && mostrarMarkup && (
+        <CentroDeEstudo
+          dados={[...estudo.values()].sort((a, b) => a.numero.localeCompare(b.numero, 'pt-BR', { numeric: true }))}
+          moeda={moeda} />
+      )}
 
       {rodando.length > 0 && (
         <div className="resumo-robos">

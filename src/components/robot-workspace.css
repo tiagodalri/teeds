@@ -261,3 +261,36 @@
   .robot-workspace.tem-acompanhamento .rob-overview-card { padding: 9px 18px; }
   .robot-workspace.tem-acompanhamento .rob-overview-metrics dd { margin-top: 1px; font-size: 17px; }
 }
+
+/* ---- Centro de estudo (Modo CEO) ------------------------------------ */
+.ce { display: flex; flex-direction: column; gap: 14px; padding: 20px 22px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; }
+.ce-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.ce-eyebrow { display: block; margin-bottom: 4px; color: var(--primary); font-size: 9px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+.ce-topo h3 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -.02em; }
+.ce-topo p { margin: 4px 0 0; color: var(--muted); font-size: 11.5px; max-width: 62ch; }
+.ce-aviso { padding: 7px 11px; border-radius: 8px; background: var(--account-demo-soft); color: var(--account-demo); font-size: 11px; font-weight: 650; }
+.ce-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 10px; }
+.ce-tile { display: grid; gap: 3px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 11px; }
+.ce-tile.destaque { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); background: var(--primary-soft); }
+.ce-tile i { font-style: normal; font-size: 8.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.ce-tile b { font-size: 19px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.ce-tile small { color: var(--muted); font-size: 10.5px; }
+.ce-tabela { overflow-x: auto; }
+.ce table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.ce th, .ce td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
+.ce thead th { font-size: 8.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.ce tbody th { text-align: left; font-weight: 600; }
+.ce tbody th small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; font-weight: 500; }
+.ce-robo { display: inline-flex; align-items: center; gap: 7px; }
+.ce-robo i { width: 8px; height: 8px; border-radius: 3px; }
+.ce .up { color: var(--up); } .ce .down { color: var(--down); }
+.ce-markup b, .ce-markup { font-weight: 650; }
+.ce-barra { display: block; margin-top: 4px; height: 3px; border-radius: 2px; background: var(--trilho); overflow: hidden; }
+.ce-barra i { display: block; height: 100%; border-radius: 2px; }
+.ce-nota { margin: 0; color: var(--muted); font-size: 10.5px; line-height: 1.5; }
+.rs-kpi.rs-markup b { color: var(--primary); }
+.rc-markup { font-style: normal; margin-left: 8px; color: var(--primary); font-size: 10.5px; font-weight: 650; }
+@container robot-desk (max-width: 720px) {
+  .ce { padding: 16px; }
+  .ce table { font-size: 11px; }
+}
