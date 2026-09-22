@@ -1,5 +1,6 @@
 import './ambiente'
 import { catalogo } from './catalogo'
+import { PADRAO } from './limites'
 
 import { randomBytes } from 'node:crypto'
 import { TeedsSocket } from '../../src/core/deriv/client'
@@ -233,7 +234,10 @@ export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao>
   const dono = p.userId ?? p.contaId ?? 'api'
   const pendentes = iniciosPendentes.get(dono) ?? 0
   const ativos = [...vivas.values()].filter(s => (p.userId ? s.parametros.userId === p.userId : s.contaId === p.contaId) && (s.estado.rodando || s.estado.emOperacao)).length
-  if (ativos + pendentes >= 6) throw new Error('Limite de 6 robôs simultâneos atingido.')
+  // O teto mora em limites.ts (PADRAO.robosSimultaneos): aqui é a mesma trava,
+  // aplicada antes de abrir a conexão com a Deriv.
+  const teto = PADRAO.robosSimultaneos
+  if (ativos + pendentes >= teto) throw new Error(`Limite de ${teto} robôs simultâneos atingido.`)
   iniciosPendentes.set(dono, pendentes + 1)
   if (p.continuarId) retomando.add(p.continuarId)
   try { return await iniciarOuContinuar(auth, p) }

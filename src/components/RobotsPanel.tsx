@@ -197,7 +197,7 @@ export function RobotsPanel({
     const todos = [...robos.values()]
     const emCurso = todos.filter((r) => r.status !== 'stopped')
     const recente = todos.filter((r) => r.status === 'stopped').sort((a, b) => b.inicio - a.inicio)[0]
-    const ativos = (emCurso.length ? emCurso : recente ? [recente] : []).slice(0, 6)
+    const ativos = (emCurso.length ? emCurso : recente ? [recente] : []).slice(0, MAX_BLOCOS)
     const paradas = ativos.map((r) =>
       acompanharRobo(socket, r.runId, (novo) =>
         setRobos((prev) => new Map(prev).set(novo.runId, novo)),
