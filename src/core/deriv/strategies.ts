@@ -1,4 +1,12 @@
-import type { Estrategia, Medidor } from './engine'
+import type { Estrategia, Medidor, ConfigEstrategia } from './engine'
+import {
+  LOSSES_PARA_ENTRAR, LOSSES_VIRTUAIS, PALM_PADRAO, RECUPERACAO_POR_ROBO,
+  recuperacaoDe, temModoAgressivo, type ParametrosDoRobo,
+} from './parametros'
+import { proximaEntrada, proximaEntradaPalm } from './recuperacao'
+
+// A tabela de recuperação mudou de casa (parametros.ts), mas quem importava daqui continua funcionando.
+export { RECUPERACAO_POR_ROBO }
 
 /**
  * Modo de operação: só muda o quanto a recuperação mira de lucro.
@@ -15,50 +23,33 @@ export const MODOS: Modo[] = ['conservador', 'agressivo']
 export const NOME_DO_MODO: Record<Modo, string> = { conservador: 'Conservador', agressivo: 'Agressivo' }
 
 /**
- * Recuperação oficial, interna e não editável de cada modelo.
- *
- * `galeApos` é quantas perdas seguidas o robô aceita no valor base antes de
- * ligar a recuperação. Em 22/09/2026 o Tiago pediu 1 em todos: "sempre
- * precisa recuperar". Antes eram 3, e uma vitória logo depois de uma perda
- * não cobria o prejuízo — no First Block, perdia 0,35 e recuperava 0,30.
- * O custo é conhecido: a escada cresce desde a primeira perda, então a
- * conta precisa de mais saldo para aguentar a mesma sequência.
+ * O que a recuperação do robô exige, no modo pedido. Com `parametros` (o que
+ * o painel publicou) lê de lá; sem, o padrão do código — o mesmo resultado
+ * que sempre deu.
  */
-export const RECUPERACAO_POR_ROBO: Record<string, { galeApos: number; margem: number; agressivo?: { margem: number; sobrePrejuizo: number } }> = {
-  superior5: { galeApos: 1, margem: 0.05, agressivo: { margem: 1, sobrePrejuizo: 0.2 } },
-  ag2: { galeApos: 1, margem: 0.05, agressivo: { margem: 1, sobrePrejuizo: 0.2 } },
-  smart03: { galeApos: 1, margem: 0.05 },
-  // Goreme paga 6%: recuperar 3 perdas exigiria 52x a base, e a segunda
-  // recuperacao 930x. Ligando na primeira perda a escada comeca em 18x —
-  // ainda alta, porque e o payout que dita o tamanho, mas o buraco a cobrir
-  // e um terco. Perda rara, recuperacao cedo.
-  goreme: { galeApos: 1, margem: 0.05 },
-  firstblock: { galeApos: 1, margem: 0.05 },
-  secondblock: { galeApos: 1, margem: 0.05 },
-  // Versões OMNI (21/09/2026): mesma recuperação dos originais, com análise antes de entrar.
-  omniover: { galeApos: 1, margem: 0.05, agressivo: { margem: 1, sobrePrejuizo: 0.2 } },
-  omnibull: { galeApos: 1, margem: 0.05 },
-  omnibear: { galeApos: 1, margem: 0.05 },
-  thepalm: { galeApos: 1, margem: 0.95 },
-  superior5fixo: { galeApos: 3, margem: 0 },
-}
-
-export function recuperacaoDoRobo(id: string, modo: Modo = 'conservador'): { galeApos: number; margem: number; sobrePrejuizo: number } {
+export function recuperacaoDoRobo(id: string, modo: Modo = 'conservador', parametros?: ParametrosDoRobo): { galeApos: number; margem: number; sobrePrejuizo: number } {
+  if (parametros) return recuperacaoDe(parametros, modo)
   const r = RECUPERACAO_POR_ROBO[id] ?? { galeApos: 3, margem: 0.05 }
   if (modo === 'agressivo' && r.agressivo) return { galeApos: r.galeApos, margem: r.agressivo.margem, sobrePrejuizo: r.agressivo.sobrePrejuizo }
   return { galeApos: r.galeApos, margem: r.margem, sobrePrejuizo: 0 }
 }
 
-/** Só AG7 e AG2 (e seus nomes na OMNI) têm os dois modos. */
-export function temModos(id: string): boolean {
+/** O robô oferece os dois modos? Por padrão só AG7 e AG2 (e seus nomes na OMNI); o painel pode mudar. */
+export function temModos(id: string, parametros?: ParametrosDoRobo): boolean {
+  if (parametros) return temModoAgressivo(parametros)
   return RECUPERACAO_POR_ROBO[id]?.agressivo !== undefined
 }
 
-/** Lê o modo de volta da configuração que o motor recebeu. */
-export function modoDaConfig(id: string, fatorGale: number, lucroSobrePrejuizo = 0): Modo {
-  const r = RECUPERACAO_POR_ROBO[id]
-  if (!r?.agressivo) return 'conservador'
-  return lucroSobrePrejuizo > 0 || fatorGale >= r.agressivo.margem - 1e-9 ? 'agressivo' : 'conservador'
+/**
+ * Lê o modo de volta da configuração que o motor recebeu. Sessões novas
+ * trazem `config.modo` explícito; as antigas (e o espelho de antes) são
+ * inferidas pela margem, como sempre.
+ */
+export function modoDaConfig(id: string, fatorGale: number, lucroSobrePrejuizo = 0, config?: Pick<ConfigEstrategia, 'modo' | 'parametros'>): Modo {
+  if (config?.modo) return config.modo
+  const ag = config?.parametros ? config.parametros.recuperacao.modos.agressivo : RECUPERACAO_POR_ROBO[id]?.agressivo
+  if (!ag) return 'conservador'
+  return lucroSobrePrejuizo > 0 || fatorGale >= ag.margem - 1e-9 ? 'agressivo' : 'conservador'
 }
 
 /**
@@ -111,22 +102,8 @@ const BASE_DIGITOS: Estrategia = {
     }
   },
 
-  proximoValor: ({
-    ganhou, valorAoVencer, perdasSeguidas, prejuizoDaSequencia,
-    retornoLiquidoPorUnidade, config,
-  }) => {
-    // ganhou: a sequencia fecha e tudo volta ao valor base
-    if (ganhou) return valorAoVencer
-    // ainda dentro das entradas de valor fixo
-    if (perdasSeguidas < config.galeApos) return valorAoVencer
-    // Recuperação calibrada pelo payout realmente comprado. O desconto de 3%
-    // absorve pequenas oscilações do retorno entre um contrato e o seguinte.
-    const retornoSeguro = Math.max(0.01, retornoLiquidoPorUnidade * 0.97)
-    // Piso: uma fração da base. No modo agressivo, o alvo cresce com o
-    // buraco: uma parte do prejuízo da sequência vira lucro exigido.
-    const lucroMinimo = Math.max(0.01, valorAoVencer * config.fatorGale, prejuizoDaSequencia * (config.lucroSobrePrejuizo ?? 0))
-    return Math.ceil(((prejuizoDaSequencia + lucroMinimo) / retornoSeguro) * 100) / 100
-  },
+  // A conta da recuperação mora em recuperacao.ts (uma só para motor, escada e painel).
+  proximoValor: (args) => proximaEntrada(args),
 }
 
 /** Ajuste exclusivo da terceira entrada de AG7/AG2 e seus nomes na OMNI. */
@@ -157,65 +134,81 @@ export function terceiraEntrada(base: number, prejuizo: number, retorno: number)
  * A memória é da execução (`memoria.emSequencia`): nunca é compartilhada
  * entre clientes e some quando a sessão termina.
  */
-const LOSSES_PARA_ENTRAR = 4
-
-function porLossVirtual(ganha: (d: number) => boolean, quantos = LOSSES_PARA_ENTRAR):
-  Pick<Estrategia, 'entradaContinua' | 'entrar' | 'aguardando' | 'progresso' | 'medidor' | 'aposResultado'> {
-  const contar = (digitos: number[]) => Math.min(quantos, lossesVirtuais(digitos, ganha))
-  return {
-    // Dentro da sequência, emenda uma entrada na outra sem esperar o tick.
-    entradaContinua: true,
-    entrar: ({ digitos, memoria }) => memoria.emSequencia === true || contar(digitos) >= quantos,
-    aposResultado: ({ ganhou, memoria }) => { memoria.emSequencia = !ganhou },
-    aguardando: ({ digitos, memoria }) => memoria.emSequencia === true
-      ? 'sequência em andamento — entra na próxima'
-      : `esperando loss virtual — ${contar(digitos)}/${quantos}`,
-    progresso: ({ digitos, memoria }) => {
-      const n = contar(digitos)
-      return {
-        rotulo: memoria.emSequencia === true
-          ? 'Sequência em andamento'
-          : n >= quantos ? 'Loss virtual confirmado — entrada liberada' : `Loss virtual — ${n}/${quantos}`,
-        itens: Array.from({ length: quantos }, (_, i) => ({ valor: i < n ? '✕' : '·', ok: i >= n })),
-      }
-    },
-    medidor: ({ digitos }) => ({
-      tipo: 'contagem', valor: contar(digitos), alvo: quantos,
-      rotulo: `loss virtual — dígitos seguidos que teriam perdido`,
-    }),
-  }
-}
-
 /** Quantos dígitos seguidos da outra metade saíram por último (o "loss virtual"). */
 function lossesVirtuais(digitos: number[], ganha: (d: number) => boolean): number {
   let n = 0
   for (let i = digitos.length - 1; i >= 0 && !ganha(digitos[i]); i--) n++
   return n
 }
-const LOSSES_VIRTUAIS = 2
 
-/** Entrada, espera e marcador do loss virtual para quem ganha em `ganha`. */
-function comLossVirtual(ganha: (d: number) => boolean): Pick<Estrategia, 'entradaContinua' | 'entrar' | 'aguardando' | 'progresso' | 'medidor'> {
+/**
+ * A quantidade e o "segue a sequência" vêm dos PARÂMETROS DA SESSÃO
+ * (`config.parametros`, o que o painel publicou), lidos a cada chamada —
+ * nunca capturados no import. Sem parâmetros, o padrão de cada família.
+ */
+const regraDeEntrada = (config: ConfigEstrategia | undefined, padraoQuantos: number, padraoSegue: boolean) => ({
+  quantos: config?.parametros?.entrada.lossVirtual ?? padraoQuantos,
+  segue: config?.parametros?.entrada.sequenciaSemAnalise ?? padraoSegue,
+})
+
+/**
+ * Entrada por loss virtual. Uma fábrica para as duas famílias:
+ *  - AG7/AG2/OMNI Over: 4 dígitos que teriam perdido, e a sequência segue sem
+ *    nova análise até uma vitória (`memoria.emSequencia`); emenda uma
+ *    entrada na outra sem esperar o tick (entradaContinua).
+ *  - First/Second Block, OMNI Bull/Bear: 2 dígitos, analisa a cada entrada,
+ *    espera o tick seguinte.
+ *  - Smart 03 e Göreme entram com 0 (= sempre); se o painel subir o número,
+ *    ganham a mesma análise.
+ * Com `quantos === 0` o robô se comporta exatamente como antes deste painel:
+ * entra sempre, textos do valor base, sem medidor.
+ */
+function entradaPorLossVirtual(ganha: (d: number) => boolean, padraoQuantos: number, padraoSegue: boolean, continua: boolean):
+  Pick<Estrategia, 'entradaContinua' | 'entrar' | 'aguardando' | 'progresso' | 'medidor' | 'aposResultado'> {
+  const contar = (digitos: number[], quantos: number) => Math.min(quantos, lossesVirtuais(digitos, ganha))
   return {
-    entradaContinua: false,
-    entrar: ({ digitos }) => lossesVirtuais(digitos, ganha) >= LOSSES_VIRTUAIS,
-    aguardando: ({ digitos }) => {
-      const n = Math.min(LOSSES_VIRTUAIS, lossesVirtuais(digitos, ganha))
-      return `esperando loss virtual — ${n}/${LOSSES_VIRTUAIS}`
+    entradaContinua: continua,
+    entrar: ({ digitos, memoria, config }) => {
+      const { quantos, segue } = regraDeEntrada(config, padraoQuantos, padraoSegue)
+      if (quantos === 0) return true
+      return (segue && memoria.emSequencia === true) || contar(digitos, quantos) >= quantos
     },
-    progresso: ({ digitos }) => {
-      const n = Math.min(LOSSES_VIRTUAIS, lossesVirtuais(digitos, ganha))
+    aposResultado: ({ ganhou, memoria, config }) => {
+      const { segue } = regraDeEntrada(config, padraoQuantos, padraoSegue)
+      memoria.emSequencia = segue ? !ganhou : false
+    },
+    aguardando: (ctx) => {
+      const { quantos, segue } = regraDeEntrada(ctx.config, padraoQuantos, padraoSegue)
+      if (quantos === 0) return BASE_DIGITOS.aguardando(ctx)
+      return segue && ctx.memoria.emSequencia === true
+        ? 'sequência em andamento — entra na próxima'
+        : `esperando loss virtual — ${contar(ctx.digitos, quantos)}/${quantos}`
+    },
+    progresso: (ctx) => {
+      const { quantos, segue } = regraDeEntrada(ctx.config, padraoQuantos, padraoSegue)
+      if (quantos === 0) return BASE_DIGITOS.progresso!(ctx)
+      const n = contar(ctx.digitos, quantos)
       return {
-        rotulo: n >= LOSSES_VIRTUAIS ? 'Loss virtual confirmado — entrada liberada' : `Loss virtual — ${n}/${LOSSES_VIRTUAIS}`,
-        itens: Array.from({ length: LOSSES_VIRTUAIS }, (_, i) => ({ valor: i < n ? '✕' : '·', ok: i >= n })),
+        rotulo: segue && ctx.memoria.emSequencia === true
+          ? 'Sequência em andamento'
+          : n >= quantos ? 'Loss virtual confirmado — entrada liberada' : `Loss virtual — ${n}/${quantos}`,
+        itens: Array.from({ length: quantos }, (_, i) => ({ valor: i < n ? '✕' : '·', ok: i >= n })),
       }
     },
-    medidor: ({ digitos }) => ({
-      tipo: 'contagem', valor: Math.min(LOSSES_VIRTUAIS, lossesVirtuais(digitos, ganha)), alvo: LOSSES_VIRTUAIS,
-      rotulo: 'loss virtual — dígitos seguidos da outra metade',
-    }),
+    medidor: ({ digitos, config }) => {
+      const { quantos } = regraDeEntrada(config, padraoQuantos, padraoSegue)
+      if (quantos === 0) return null
+      return { tipo: 'contagem', valor: contar(digitos, quantos), alvo: quantos, rotulo: 'loss virtual — dígitos seguidos que teriam perdido' }
+    },
   }
 }
+
+/** A família do AG7: 4 dígitos, segue a sequência, emenda sem esperar o tick. */
+const porLossVirtual = (ganha: (d: number) => boolean, padraoQuantos = LOSSES_PARA_ENTRAR) =>
+  entradaPorLossVirtual(ganha, padraoQuantos, true, true)
+/** A família dos Blocks: 2 dígitos, analisa a cada entrada, espera o tick. */
+const comLossVirtual = (ganha: (d: number) => boolean, padraoQuantos = LOSSES_VIRTUAIS) =>
+  entradaPorLossVirtual(ganha, padraoQuantos, false, false)
 
 export const SUPERIOR_5: Estrategia = {
   ...BASE_DIGITOS,
@@ -224,7 +217,8 @@ export const SUPERIOR_5: Estrategia = {
     'A partir daí segue a sequência sem analisar de novo, até uma vitória fechá-la. ' +
     'O contrato ganha se o último dígito for 7, 8 ou 9.',
   ...porLossVirtual((d) => d >= 7),
-  proximoValor: (args) => !args.ganhou && args.perdasSeguidas === 2 && args.config.galeApos === 3
+  // O ajuste da terceira entrada só existe com gatilho 3 (o painel avisa se alguém voltar a ele).
+  proximoValor: (args) => !args.ganhou && args.perdasSeguidas === 2 && args.config.galeApos === 3 && args.config.parametros?.recuperacao.escada.tipo !== 'tabela'
     ? terceiraEntrada(args.valorAoVencer, args.prejuizoDaSequencia, args.retornoLiquidoPorUnidade)
     : BASE_DIGITOS.proximoValor(args),
 }
@@ -262,6 +256,7 @@ export const SMART_03: Estrategia = {
     'A progressão recupera a sequência usando o retorno real do contrato.',
   contractType: 'DIGITOVER',
   barreira: 3,
+  ...porLossVirtual((d) => d >= 4, 0),
 }
 
 /** Göreme observável no vídeo: último dígito estritamente inferior a 9. */
@@ -275,6 +270,7 @@ export const GOREME: Estrategia = {
     'O retorno por acerto é pequeno, por isso a recuperação liga já na primeira perda.',
   contractType: 'DIGITUNDER',
   barreira: 9,
+  ...porLossVirtual((d) => d <= 8, 0),
 }
 
 /** Primeiro bloco da dezena: vence com qualquer último dígito entre 0 e 4. */
@@ -333,8 +329,8 @@ const mudarFasePalm = (memoria: Record<string, unknown>, nova: FasePalm, motivo:
   if (atual !== nova) { memoria.fasePalmAnterior = atual; memoria.motivoPalm = motivo; memoria.trocaPalmEm = Date.now() }
   memoria.fasePalm = nova
 }
-const PALM_LIMITE_NOVE = 12
-const PALM_LIMITE_BAIXOS = 48
+/** Os limites do The Palm: os publicados pelo painel para esta sessão, ou os de sempre (12% / 48%). */
+const palmDe = (config: ConfigEstrategia | undefined) => config?.parametros?.palm ?? PALM_PADRAO
 
 /**
  * The Palm, reconstruído quadro a quadro a partir do robô original.
@@ -358,7 +354,8 @@ export const THE_PALM: Estrategia = {
   contrato: ({ memoria }) => fasePalm(memoria) === 'recuperacao-real'
     ? { contractType: 'DIGITUNDER', barreira: 5 }
     : { contractType: 'DIGITUNDER', barreira: 9 },
-  entrar: ({ digitos, memoria }) => {
+  entrar: ({ digitos, memoria, config }) => {
+    const palm = palmDe(config)
     const janela = janelaPalm(digitos)
     if (janela.length < 25) return false
     const ultimo = janela[janela.length - 1]
@@ -366,28 +363,30 @@ export const THE_PALM: Estrategia = {
 
     if (fase === 'base-real' || fase === 'recuperacao-real') return true
     if (fase === 'aquecendo') {
-      if (pctPalm(janela, (d) => d === 9) <= PALM_LIMITE_NOVE && ultimo === 9) {
-        mudarFasePalm(memoria, 'base-real', `dígito 9 apareceu com 9 em ${pctPalm(janela, (d) => d === 9)}% (limite ${PALM_LIMITE_NOVE}%): loss virtual, ciclo real Under 9`)
+      if (pctPalm(janela, (d) => d === 9) <= palm.limiteNove && ultimo === 9) {
+        mudarFasePalm(memoria, 'base-real', `dígito 9 apareceu com 9 em ${pctPalm(janela, (d) => d === 9)}% (limite ${palm.limiteNove}%): loss virtual, ciclo real Under 9`)
         return true
       }
       return false
     }
-    if (pctPalm(janela, (d) => d <= 4) >= PALM_LIMITE_BAIXOS && ultimo >= 5) {
-      mudarFasePalm(memoria, 'recuperacao-real', `0–4 em ${pctPalm(janela, (d) => d <= 4)}% (mínimo ${PALM_LIMITE_BAIXOS}%) e dígito ${ultimo} (5–9): recuperação Under 5 liberada`)
+    if (pctPalm(janela, (d) => d <= 4) >= palm.limiteBaixos && ultimo >= 5) {
+      mudarFasePalm(memoria, 'recuperacao-real', `0–4 em ${pctPalm(janela, (d) => d <= 4)}% (mínimo ${palm.limiteBaixos}%) e dígito ${ultimo} (5–9): recuperação Under 5 liberada`)
       return true
     }
     return false
   },
-  aguardando: ({ digitos, memoria }) => {
+  aguardando: ({ digitos, memoria, config }) => {
+    const palm = palmDe(config)
     const janela = janelaPalm(digitos)
     if (janela.length < 25) return `lendo o mercado — ${janela.length}/25 dígitos`
     const nove = pctPalm(janela, (d) => d === 9)
     const baixos = pctPalm(janela, (d) => d <= 4)
     return fasePalm(memoria) === 'recuperacao-espera'
-      ? `recuperação em análise — 0 a 4 em ${baixos}% (libera em 48% após loss virtual)`
-      : `análise virtual Under 9 — dígito 9 em ${nove}% (limite 12%)`
+      ? `recuperação em análise — 0 a 4 em ${baixos}% (libera em ${palm.limiteBaixos}% após loss virtual)`
+      : `análise virtual Under 9 — dígito 9 em ${nove}% (limite ${palm.limiteNove}%)`
   },
-  progresso: ({ digitos, memoria }) => {
+  progresso: ({ digitos, memoria, config }) => {
+    const palm = palmDe(config)
     const janela = janelaPalm(digitos)
     const nove = janela.length === 25 ? pctPalm(janela, (d) => d === 9) : 0
     const baixos = janela.length === 25 ? pctPalm(janela, (d) => d <= 4) : 0
@@ -397,11 +396,12 @@ export const THE_PALM: Estrategia = {
         ? `Under 5 virtual · 0–4 em ${baixos}%`
         : `Under 9 virtual · dígito 9 em ${nove}%`,
       itens: recuperando
-        ? [{ valor: `${baixos}%`, ok: janela.length === 25 && baixos >= 48 }, { valor: '5–9', ok: janela[janela.length - 1] >= 5 }]
-        : [{ valor: `${nove}%`, ok: janela.length === 25 && nove <= 12 }, { valor: '9', ok: janela[janela.length - 1] === 9 }],
+        ? [{ valor: `${baixos}%`, ok: janela.length === 25 && baixos >= palm.limiteBaixos }, { valor: '5–9', ok: janela[janela.length - 1] >= 5 }]
+        : [{ valor: `${nove}%`, ok: janela.length === 25 && nove <= palm.limiteNove }, { valor: '9', ok: janela[janela.length - 1] === 9 }],
     }
   },
-  aposResultado: ({ ganhou, contractType, memoria, digitos }) => {
+  aposResultado: ({ ganhou, contractType, memoria, digitos, config }) => {
+    const palm = palmDe(config)
     const eraRecuperacao = contractType === 'DIGITUNDER' && fasePalm(memoria) === 'recuperacao-real'
     if (ganhou) {
       mudarFasePalm(memoria, eraRecuperacao ? 'aquecendo' : 'base-real', eraRecuperacao ? 'recuperação ganhou: volta ao virtual Under 9' : 'ganho na base: segue o ciclo real Under 9')
@@ -410,10 +410,11 @@ export const THE_PALM: Estrategia = {
     const baixos = pctPalm(digitos, (d) => d <= 4)
     const janela = janelaPalm(digitos)
     const ultimo = janela[janela.length - 1]
-    if (baixos >= 48 && ultimo !== undefined && ultimo >= 5) mudarFasePalm(memoria, 'recuperacao-real', `perda com 0–4 em ${baixos}% e dígito ${ultimo}: recuperação Under 5 imediata`)
-    else mudarFasePalm(memoria, 'recuperacao-espera', `perda com 0–4 em ${baixos}%: espera 0–4 chegar a 48% e um dígito 5–9`)
+    if (baixos >= palm.limiteBaixos && ultimo !== undefined && ultimo >= 5) mudarFasePalm(memoria, 'recuperacao-real', `perda com 0–4 em ${baixos}% e dígito ${ultimo}: recuperação Under 5 imediata`)
+    else mudarFasePalm(memoria, 'recuperacao-espera', `perda com 0–4 em ${baixos}%: espera 0–4 chegar a ${palm.limiteBaixos}% e um dígito 5–9`)
   },
-  telemetria: ({ digitos, memoria }) => {
+  telemetria: ({ digitos, memoria, config }) => {
+    const palm = palmDe(config)
     const janela = janelaPalm(digitos)
     const fase = fasePalm(memoria)
     const nove = janela.length === 25 ? pctPalm(janela, (d) => d === 9) : 0
@@ -427,25 +428,16 @@ export const THE_PALM: Estrategia = {
       barreira: recuperando ? 5 : 9,
       virtual: fase === 'aquecendo' || fase === 'recuperacao-espera',
       detalhes: {
-        janela: janela.length, nove, baixos, limiteNove: PALM_LIMITE_NOVE, limiteBaixos: PALM_LIMITE_BAIXOS,
+        janela: janela.length, nove, baixos, limiteNove: palm.limiteNove, limiteBaixos: palm.limiteBaixos,
         estrategiaAtual: recuperando ? 'Under 5' : 'Under 9',
         estrategiaAnterior: memoria.fasePalmAnterior === 'recuperacao-real' ? 'Under 5' : memoria.fasePalmAnterior ? 'Under 9' : '',
-        confirmacao: fase === 'aquecendo' ? 'dígito 9 com 9 ≤ 12% na janela' : fase === 'recuperacao-espera' ? '0–4 ≥ 48% e um dígito 5–9' : 'entrada liberada',
+        confirmacao: fase === 'aquecendo' ? `dígito 9 com 9 ≤ ${palm.limiteNove}% na janela` : fase === 'recuperacao-espera' ? `0–4 ≥ ${palm.limiteBaixos}% e um dígito 5–9` : 'entrada liberada',
         trocadaEm: (memoria.trocaPalmEm as number | undefined) ?? 0,
       },
     }
   },
-  proximoValor: ({ ganhou, valorAoVencer, prejuizoDaSequencia, retornoLiquidoPorUnidade, contractType }) => {
-    if (ganhou) return valorAoVencer
-    // Antes da primeira compra Under 5, o último payout conhecido ainda é o
-    // pequeno retorno do Under 9. Depois usamos a cotação realmente comprada.
-    const retornoObservado = contractType === 'DIGITUNDER' && retornoLiquidoPorUnidade > 0.5
-      ? retornoLiquidoPorUnidade
-      : 0.9233
-    const retornoSeguro = Math.max(0.01, retornoObservado * 0.99)
-    const lucroAlvo = Math.max(0.01, valorAoVencer * 0.95)
-    return Math.ceil(((prejuizoDaSequencia + lucroAlvo) / retornoSeguro) * 100) / 100
-  },
+  // A conta da recuperação do Palm mora em recuperacao.ts (retorno presumido, segurança, lucro ao fechar).
+  proximoValor: (args) => proximaEntradaPalm(args),
 }
 
 /** Variacao conservadora: entra igual, mas a entrada nunca muda. */
@@ -457,6 +449,7 @@ export const SUPERIOR_5_FIXO: Estrategia = {
   descricao: 'Entra em todas as operações com o valor sempre igual, sem progressão.',
   entradaContinua: true,
   entrar: () => true,
+  aposResultado: undefined,
   progresso: undefined,
   medidor: undefined,
   aguardando: () => 'entrando na próxima',

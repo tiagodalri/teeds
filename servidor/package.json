@@ -8,7 +8,7 @@
   },
   "scripts": {
     "aprovacao": "esbuild src/teste-aprovacao-leads.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/teste-aprovacao-leads.mjs && node dist/teste-aprovacao-leads.mjs",
-    "build": "esbuild src/teste.ts src/servidor.ts src/teste-limites.ts src/previa-emails.ts src/teste-gancho.ts src/teste-email.ts src/teste-marcas.ts src/teste-motor.ts src/teste-espelho.ts src/teste-espelho-carga.ts src/teste-realtime.ts src/teste-extrato.ts src/teste-comissoes.ts src/teste-cracha.ts --bundle --platform=node --target=node22 --format=esm --outdir=dist --out-extension:.js=.mjs",
+    "build": "esbuild src/teste.ts src/servidor.ts src/teste-limites.ts src/previa-emails.ts src/teste-gancho.ts src/teste-email.ts src/teste-marcas.ts src/teste-motor.ts src/teste-espelho.ts src/teste-espelho-carga.ts src/teste-realtime.ts src/teste-extrato.ts src/teste-comissoes.ts src/teste-cracha.ts src/teste-parametros.ts src/teste-parametros-servidor.ts src/teste-simulacao.ts --bundle --platform=node --target=node22 --format=esm --outdir=dist --out-extension:.js=.mjs",
     "teste": "node dist/teste.mjs",
     "servidor": "node dist/servidor.mjs",
     "travas": "npm run build --silent && node dist/teste-limites.mjs",
@@ -21,7 +21,9 @@
     "realtime": "npm run build --silent && node dist/teste-realtime.mjs",
     "extrato": "npm run build --silent && node dist/teste-extrato.mjs",
     "comissoes": "npm run build --silent && node dist/teste-comissoes.mjs",
-    "cracha": "npm run build --silent && node dist/teste-cracha.mjs"
+    "cracha": "npm run build --silent && node dist/teste-cracha.mjs",
+    "parametros": "npm run build --silent && node dist/teste-parametros.mjs && node dist/teste-parametros-servidor.mjs",
+    "simulacao": "npm run build --silent && node dist/teste-simulacao.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",

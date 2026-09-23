@@ -134,10 +134,10 @@ export function LocalRobotPanel({
       nome: ident.nome,
       cor: ident.cor,
       numero: titulo ?? '',
-      modo: temModos(ident.id) ? NOME_DO_MODO[modoDaConfig(ident.id, cfg.fatorGale, cfg.lucroSobrePrejuizo)] : null,
+      modo: temModos(ident.id, cfg.parametros) ? NOME_DO_MODO[modoDaConfig(ident.id, cfg.fatorGale, cfg.lucroSobrePrejuizo, cfg)] : null,
       demo: contaDaSessao?.demo ?? null,
     }))
-  }, [estado, idEstudo, ident.id, ident.nome, ident.cor, titulo, cfg.fatorGale, cfg.lucroSobrePrejuizo, contaDaSessao?.demo])
+  }, [estado, idEstudo, ident.id, ident.nome, ident.cor, titulo, cfg.fatorGale, cfg.lucroSobrePrejuizo, cfg.modo, cfg.parametros, contaDaSessao?.demo])
   useEffect(() => () => { if (idEstudo) onEstudoRef.current?.(idEstudo, null) }, [idEstudo])
 
   /*
@@ -304,7 +304,7 @@ export function LocalRobotPanel({
       rot: 'Recuperação',
       valor: cfg.fatorGale === 0
         ? 'desligado'
-        : temModos(ident.id) ? `modo ${NOME_DO_MODO[modoDaConfig(ident.id, cfg.fatorGale, cfg.lucroSobrePrejuizo)].toLowerCase()}` : `automática ${MARCA.prosa}`,
+        : temModos(ident.id, cfg.parametros) ? `modo ${NOME_DO_MODO[modoDaConfig(ident.id, cfg.fatorGale, cfg.lucroSobrePrejuizo, cfg)].toLowerCase()}` : `automática ${MARCA.prosa}`,
     },
     { rot: 'Teto', valor: cfg.valorMaximo > 0 ? din(cfg.valorMaximo, moedaDosParametros) : 'sem teto' },
     { rot: 'Para se ganhar', valor: din(cfg.takeProfit, moedaDosParametros) },
@@ -334,7 +334,7 @@ export function LocalRobotPanel({
   </div>}{preparo}</>
 
   // ------------------------------------------------------------ com sessão
-  const modo = temModos(ident.id) ? NOME_DO_MODO[modoDaConfig(ident.id, cfg.fatorGale, cfg.lucroSobrePrejuizo)].toLowerCase() : null
+  const modo = temModos(ident.id, cfg.parametros) ? NOME_DO_MODO[modoDaConfig(ident.id, cfg.fatorGale, cfg.lucroSobrePrejuizo, cfg)].toLowerCase() : null
   const aoRemover = onRemover ? () => {
     if (rodando && !window.confirm('Este robô está operando no servidor. Deseja desligar e fechar o bloco?')) return
     desligar()

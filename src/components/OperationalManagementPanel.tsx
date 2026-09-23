@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react'
 import { identidade } from '../core/deriv/branding'
 import { escadaDoRobo } from '../core/deriv/escada'
 import { MODOS, NOME_DO_MODO, temModos, type Modo } from '../core/deriv/strategies'
-import { useRobosDisponiveis } from '../core/teeds/catalogoRobos'
+import { useParametrosDoRobo, useRobosDisponiveis } from '../core/teeds/catalogoRobos'
 import { MARCA } from '../marca'
 
 const dinheiro = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' })
 const ler = (s: string) => /^\d+(?:[.,]\d{0,2})?$/.test(s.trim()) ? Number(s.replace(',', '.')) : NaN
+/** Uma linha da planilha; `cobre` é null na entrada fixa (não há sequência a cobrir). */
+interface Linha { n: number; valor: number; perdido: number; cobre: boolean | null }
 
 /** Exclusivamente consultiva: sem conta, armazenamento ou comandos. */
 export function OperationalManagementPanel() {
@@ -19,6 +21,12 @@ export function OperationalManagementPanel() {
   const [fixaEscolhida, setFixa] = useState(false)
   const fixa = fixaEscolhida || robosAtivos.length === 0
   const [modo, setModo] = useState<Modo>('conservador')
+  // A escada segue a regra publicada pelo painel para este robô (a mesma da
+  // cabine); antes do catálogo carregar, o padrão do código.
+  const dados = useParametrosDoRobo(robo)
+  const parametros = dados?.parametros
+  const comModos = temModos(robo, parametros)
+  const modoEfetivo: Modo = comModos ? modo : 'conservador'
   const [banca, setBanca] = useState('1000')
   const [entrada, setEntrada] = useState('0,35')
   const [limite, setLimite] = useState('10')
@@ -30,10 +38,10 @@ export function OperationalManagementPanel() {
   const valido = [saldo, base, perda, ganho].every(Number.isFinite) && saldo > 0 && base >= .01 && perda >= 0 && ganho >= 0 && teto <= saldo
   const linhas = useMemo(() => {
     if (!valido) return []
-    const todas = fixa ? Array.from({ length: 60 }, (_, i) => ({ n: i + 1, valor: base, perdido: Math.round(base * (i + 1) * 100) / 100 })) : escadaDoRobo(robo, base, 60, modo)
+    const todas: Linha[] = fixa ? Array.from({ length: 60 }, (_, i) => ({ n: i + 1, valor: base, perdido: Math.round(base * (i + 1) * 100) / 100, cobre: null })) : escadaDoRobo(robo, base, 60, modoEfetivo, parametros)
     const fora = todas.findIndex(d => d.perdido > teto + 1e-9)
     return fora < 0 ? todas : todas.slice(0, fora + 1)
-  }, [valido, fixa, base, robo, teto, modo])
+  }, [valido, fixa, base, robo, teto, modoEfetivo, parametros])
   const cabem = linhas.filter(d => d.perdido <= teto + 1e-9)
   const proxima = linhas.find(d => d.perdido > teto + 1e-9)
   const acumulado = cabem[cabem.length - 1]?.perdido ?? 0
@@ -42,7 +50,7 @@ export function OperationalManagementPanel() {
     <p className="go-consultivo">Esta área é exclusivamente consultiva. Não configura, inicia ou interrompe robôs. Nenhum valor é enviado às operações ou sincronizado com sua conta.</p>
     <section className="go-grade"><aside className="go-config"><h3>Seu cenário</h3><div className="go-campos">
       <label><span>Modelo de referência</span><select value={fixa ? 'fixa' : robo} onChange={e => { setFixa(e.target.value === 'fixa'); if (e.target.value !== 'fixa') setRobo(e.target.value) }}><option value="fixa">Entrada fixa</option>{robosAtivos.map(id => <option key={id} value={id}>{identidade(id).nome}</option>)}</select></label>
-      {!fixa && temModos(robo) && <label><span>Modo de operação</span><select value={modo} onChange={e => setModo(e.target.value as Modo)}>{MODOS.map(m => <option key={m} value={m}>{NOME_DO_MODO[m]}</option>)}</select></label>}
+      {!fixa && comModos && <label><span>Modo de operação</span><select value={modo} onChange={e => setModo(e.target.value as Modo)}>{MODOS.map(m => <option key={m} value={m}>{NOME_DO_MODO[m]}</option>)}</select></label>}
       <label><span>Banca de referência (USD)</span><div><input inputMode="decimal" value={banca} onChange={e => setBanca(e.target.value)} /></div></label>
       <label><span>Entrada inicial (USD)</span><div><input inputMode="decimal" value={entrada} onChange={e => setEntrada(e.target.value)} /></div></label>
       <label><span>Unidade dos limites</span><select value={percentual ? 'pct' : 'usd'} onChange={e => { setPercentual(e.target.value === 'pct'); setLimite(''); setMeta('') }}><option value="pct">Percentual da banca (%)</option><option value="usd">Valor em USD</option></select></label>
@@ -52,7 +60,7 @@ export function OperationalManagementPanel() {
     <div className="go-resultados">{!valido ? <p role="alert">Preencha valores válidos: banca positiva, entrada a partir de 0,01, limites não negativos e perda planejada até o valor da banca.</p> : <>
       <div className="go-veredito"><b>Resumo do cenário</b><p>Entrada inicial: {(base / saldo * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}% da banca. Objetivo de ganho: {dinheiro(objetivo)}. Não é uma previsão de resultado.</p></div>
       <div className="go-cards tres"><article><span>Limite planejado</span><strong>{dinheiro(teto)}</strong><small>Sem parada automática</small></article><article><span>Perdas dentro do limite</span><strong>{cabem.length}{!proxima ? '+' : ''}</strong><small>Etapas completas simuladas</small></article><article><span>Perda acumulada</span><strong>{dinheiro(acumulado)}</strong><small>Antes de ultrapassar o limite</small></article></div>
-      <section className="go-planilha go-consulta-tabela"><h3>Sequência de perdas hipotéticas</h3><p>Sem reduzir automaticamente a próxima entrada. Até 60 etapas.</p><div className="go-consulta-scroll"><div className="go-tabela-cab"><span>Etapa</span><span>Entrada</span><span>Perda acumulada</span><span>Saldo restante</span><span>Situação</span></div><div className="go-tabela-corpo">{linhas.map(d => <div key={d.n}><span>Etapa {d.n}</span><b>{dinheiro(d.valor)}</b><b>{dinheiro(d.perdido)}</b><b>{dinheiro(saldo - d.perdido)}</b><em className={d.perdido > teto + 1e-9 ? 'fora' : ''}>{d.perdido > teto + 1e-9 ? 'Ultrapassa o limite' : 'Dentro do limite'}</em></div>)}</div></div></section>
+      <section className="go-planilha go-consulta-tabela"><h3>Sequência de perdas hipotéticas</h3><p>Sem reduzir automaticamente a próxima entrada. Até 60 etapas.</p><div className="go-consulta-scroll go-tabela-seis"><div className="go-tabela-cab"><span>Etapa</span><span>Entrada</span><span>Perda acumulada</span><span>Saldo restante</span><span>Cobre?</span><span>Situação</span></div><div className="go-tabela-corpo">{linhas.map(d => <div key={d.n}><span>Etapa {d.n}</span><b>{dinheiro(d.valor)}</b><b>{dinheiro(d.perdido)}</b><b>{dinheiro(saldo - d.perdido)}</b>{d.cobre === null ? <b>—</b> : <em className={d.cobre ? '' : 'fora'} title={d.cobre ? 'Ganhar nesta etapa cobre tudo o que foi perdido antes dela' : 'Ganhar nesta etapa não cobre o que foi perdido antes dela'}>{d.cobre ? '✓' : 'não cobre'}</em>}<em className={d.perdido > teto + 1e-9 ? 'fora' : ''}>{d.perdido > teto + 1e-9 ? 'Ultrapassa o limite' : 'Dentro do limite'}</em></div>)}</div></div></section>
     </>}</div></section>
   </main>
 }

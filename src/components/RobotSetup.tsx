@@ -6,7 +6,8 @@ import type { ActiveSymbol } from '../core/deriv/types'
 import { Emblema } from './RobotCard'
 import { MODOS, NOME_DO_MODO, recuperacaoDoRobo, temModos, type Modo } from '../core/deriv/strategies'
 import { RobotCatalog } from './RobotCatalog'
-import { useRobosDisponiveis } from '../core/teeds/catalogoRobos'
+import { useParametrosDoRobo, useRobosDisponiveis } from '../core/teeds/catalogoRobos'
+import { descrever, type ParametrosDoRobo } from '../core/deriv/parametros'
 import { RobotDialog } from './RobotDialog'
 import './robot-launch.css'
 import { IconeFechar } from './IconeFechar'
@@ -34,7 +35,7 @@ export function lerPreparo(): { cfg?: Partial<ConfigEstrategia>; symbol?: string
     return valor && typeof valor === 'object' && !Array.isArray(valor) ? valor : {}
   } catch { return {} }
 }
-type ChaveNumerica = Exclude<keyof ConfigEstrategia, 'lucroSobrePrejuizo'>
+type ChaveNumerica = Exclude<keyof ConfigEstrategia, 'lucroSobrePrejuizo' | 'parametros' | 'parametrosVersao' | 'parametrosTesteDemo' | 'modo'>
 const FAIXAS: Record<ChaveNumerica, [number, number]> = {
   valorInicial: [0.35, 10_000],
   valorAoVencer: [0.35, 10_000],
@@ -79,9 +80,14 @@ export const OPCOES_DE_MODO: Array<{ id: Modo; nome: string; frase: string }> = 
   { id: 'agressivo', nome: `Modo ${NOME_DO_MODO.agressivo}`, frase: 'Recuperação maior: quanto mais fundo a sequência for, mais lucro ela devolve ao fechar.' },
 ]
 
-export function configurarPreparo(inicial: ConfigEstrategia, valores: Record<string, string>, modeloId: string, modo: Modo = 'conservador'): ConfigEstrategia | null {
+/**
+ * `parametros` são os publicados pelo painel para este robô (quando o
+ * catálogo já carregou): a recuperação e o passo Modo saem deles. Não vão
+ * dentro da config — o servidor é quem grava os vigentes por cima.
+ */
+export function configurarPreparo(inicial: ConfigEstrategia, valores: Record<string, string>, modeloId: string, modo: Modo = 'conservador', parametros?: ParametrosDoRobo): ConfigEstrategia | null {
   if (!ETAPAS_PREPARO.every(e => valorDePreparo(valores[e.key] ?? '', e.min, e.max, e.key === 'maxOperacoes') !== null)) return null
-  const rec = recuperacaoDoRobo(modeloId, temModos(modeloId) ? modo : 'conservador')
+  const rec = recuperacaoDoRobo(modeloId, temModos(modeloId, parametros) ? modo : 'conservador', parametros)
   const cfg = { ...inicial, ...Object.fromEntries(ETAPAS_PREPARO.map(e => [e.key, valorDePreparo(valores[e.key], e.min, e.max, e.key === 'maxOperacoes')!])) } as ConfigEstrategia
   return { ...cfg, valorInicial: cfg.valorAoVencer, valorMaximo: 0, fatorGale: rec.margem, lucroSobrePrejuizo: rec.sobrePrejuizo, galeApos: rec.galeApos }
 }
@@ -109,7 +115,11 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   const titleRef = useRef<HTMLHeadingElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const submitted = useRef(false)
-  const comModo = temModos(modelo.id)
+  // O que este robô está rodando hoje na marca. Na conta demo vale a regra em
+  // teste, quando houver — é a que o servidor vai aplicar nesta sessão.
+  const dados = useParametrosDoRobo(modelo.id)
+  const parametros = dados ? (isDemo && dados.testeDemo ? dados.testeDemo : dados.parametros) : undefined
+  const comModo = temModos(modelo.id, parametros)
   const desloc = comModo ? 1 : 0
   const passoModo = comModo && passo === 0
   const etapa = passo - desloc >= 0 && passo - desloc < ETAPAS_PREPARO.length ? ETAPAS_PREPARO[passo - desloc] : null
@@ -130,7 +140,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   function iniciar() {
     if (submitted.current || ligando || !todasValidas || (!isDemo && !confirmaReal)) return
     submitted.current = true
-    const cfg = configurarPreparo(inicial, valores, modelo.id, modo)
+    const cfg = configurarPreparo(inicial, valores, modelo.id, modo, parametros)
     if (!cfg) { submitted.current = false; return }
     try { localStorage.setItem(CHAVE, JSON.stringify({ cfg, symbol: ATIVO_DOS_ROBOS, modo })) } catch { /* optional browser preferences */ }
     onLigar(cfg, ATIVO_DOS_ROBOS, modelo)
@@ -167,9 +177,10 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
             {valido ? etapa.key === 'valorAoVencer' ? `Mínimo: ${din(.35, moeda)} por entrada.` : Number(valores[etapa.key].replace(',', '.')) === 0 ? 'Este limite está desativado.' : 'Você pode voltar e ajustar antes de iniciar.' : `Informe ${etapa.key === 'maxOperacoes' ? 'um número inteiro' : 'um valor'} de ${minimo.toLocaleString('pt-BR')} a ${etapa.max.toLocaleString('pt-BR')}.`}
           </p>
         </div> : <div className="robot-launch-review">
-          <p>{modelo.descricao}</p>
+          <p>{parametros ? descrever(modelo.id, parametros) : modelo.descricao}</p>
           <dl><div><dt>Ativo</dt><dd>{nomeAtivo.replace(' Index', '')}</dd></div>{comModo && <div><dt>Modo</dt><dd>{NOME_DO_MODO[modo]}<button type="button" onClick={() => { setConfirmaReal(false); setPasso(0) }} disabled={ligando} aria-label="Editar modo de operação">Editar</button></dd></div>}{ETAPAS_PREPARO.map((e, i) => <div key={e.key}><dt>{['Entrada base', 'Meta de ganho', 'Limite de perda', 'Máximo de operações'][i]}</dt><dd>{Number(valores[e.key].replace(',', '.')) === 0 ? 'Sem limite' : e.key === 'maxOperacoes' ? valores[e.key] : din(Number(valores[e.key].replace(',', '.')), moeda)}<button type="button" onClick={() => { setConfirmaReal(false); setPasso(i + desloc) }} disabled={ligando} aria-label={`Editar ${e.titulo}`}>Editar</button></dd></div>)}</dl>
           <p className="robot-launch-risk">A recuperação pode aumentar o valor das entradas. Os robôs desta conta compartilham o saldo. Não há garantia de lucro.</p>
+          {isDemo && dados?.testeDemo && <p className="robot-launch-risk">Este robô roda uma regra em teste nas contas demo.</p>}
         </div>}
         {erro && <p className="robot-launch-error" role="alert">{erro}</p>}
         {revisao && !todasValidas && <p className="robot-launch-error" role="alert">Revise os valores acima. Na conta real, o limite de perda precisa ser pelo menos igual à entrada base.</p>}

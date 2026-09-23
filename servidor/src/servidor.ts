@@ -10,7 +10,14 @@ import { DERIV } from '../../src/core/deriv/config'
 import { MARCAS, marcaPorId } from '../../src/marca/marcas'
 import { atender, autorizacao } from './mcp'
 import { contasDoUsuario, emailEntregue, emailFalhou, emailsPendentes, limitesDoCliente, limparSessoesOrfas, salvarLeadCapturado, supabaseConfigurado, usuarioDoToken } from './supabase'
-import { contas, iniciar, montarConfig, parar, todas, ver } from './sessoes'
+import { aplicarNasSessoesVivas, contas, iniciar, montarConfig, parar, sessoesVivasPorVersao, todas, ver } from './sessoes'
+import {
+  ErroDeValidacao, carregarParametros, descartarTeste, emTesteNoDemo, historico as historicoDeParametros, ligarAtualizacaoDeParametros,
+  linhaDe, promoverDemo, publicar, restaurarPadrao, restaurarVersao, salvarRascunho, testarNoDemo, vigente,
+} from './parametros'
+import { nomeDoUsuario, sessoesGravadasPorVersao } from './supabase'
+import { parametrosPadrao } from '../../src/core/deriv/parametros'
+import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca } from '../../src/core/deriv/strategies'
 import { PADRAO, conferir } from './limites'
 import { conversar } from './chat'
 import { autorizacaoParaOperar, guardar } from './cofre'
@@ -295,7 +302,8 @@ const servidor = createServer(async (req, res) => {
       moeda: s.moeda,
       origem: s.parametros?.origem ?? 'chat',
       marca: s.parametros?.marca ?? 'teeds',
-      config: montarConfig(s.parametros),
+      // A config viva do motor (a mesma que o painel atualiza ao publicar), e não uma recalculada agora.
+      config: s.config ?? montarConfig(s.parametros),
       erro: s.erro ?? null,
       estado: enxuto(s.estado),
     })
@@ -380,7 +388,13 @@ const servidor = createServer(async (req, res) => {
       // ---- ligar
       if (url.pathname === '/api/catalogo-robos') {
         const marca = marcaDaOrigem.id
-        if (req.method === 'GET') return json(200, catalogo(marca))
+        // Junto com o ligado/desligado vão os parâmetros vigentes de cada robô:
+        // é o que a tela de preparo, o Gerenciamento e a cabine usam para
+        // descrever o robô do jeito que ele está hoje. Mesmo poll de sempre.
+        if (req.method === 'GET') return json(200, catalogo(marca).map((r) => {
+          const v = vigente(marca, r.id, false)
+          return { ...r, parametros: v.parametros, parametrosVersao: v.versao, testeDemo: emTesteNoDemo(marca, r.id) }
+        }))
         if (req.method === 'POST') {
           if (!await administradorDaMarca(dono.id, marca)) return json(403, { erro: 'Somente administradores desta plataforma.' })
           if (typeof corpo.ativo !== 'boolean' || typeof corpo.id !== 'string') return json(400, { erro: 'Dados inválidos.' })
@@ -388,6 +402,80 @@ const servidor = createServer(async (req, res) => {
         }
         return json(405, { erro: 'Método não permitido.' })
       }
+      // ---- o painel de controle dos robôs (admin)
+      const rotaParametros = url.pathname.match(/^\/api\/parametros-robos\/([a-z0-9]+)(?:\/(rascunho|publicar|testar-demo|promover-demo|descartar-teste|restaurar|historico))?$/)
+      if (rotaParametros) {
+        const [, roboId, acao] = rotaParametros
+        /*
+          A marca administrada: a do seletor do painel (?marca=), senão a da
+          origem. A Teeds é a plataforma master — o admin dela administra
+          qualquer marca; o admin de uma whitelabel, só a dele.
+        */
+        const marcaPedida = url.searchParams.get('marca')
+        const marca = marcaPedida ? marcaPorId(marcaPedida).id : marcaDaOrigem.id
+        if (!(await administradorDaMarca(dono.id, marca)) && !(await administradorDaMarca(dono.id, 'teeds'))) return json(403, { erro: 'Somente administradores desta plataforma.' })
+        const m = marcaPorId(marca)
+        const estrategia = ESTRATEGIAS_LOCAIS.find((e) => e.id === roboId)
+        if (!estrategia || !m.robos.includes(roboId)) return json(404, { erro: 'Este robô não pertence a esta plataforma.' })
+        const nomeNaMarca = nomeDoRoboNaMarca(estrategia, m)
+        const detalhe = async () => {
+          const linha = linhaDe(marca, roboId)
+          const publicado = vigente(marca, roboId, false)
+          return {
+            padrao: parametrosPadrao(roboId),
+            publicado: publicado.parametros,
+            testeDemo: emTesteNoDemo(marca, roboId),
+            rascunho: linha?.rascunho ?? null,
+            rascunhoEm: linha?.rascunhoEm ?? null,
+            versao: linha?.versao ?? null,
+            ultimaAcao: linha?.ultimaAcao ?? null,
+            observacao: linha?.observacao ?? null,
+            publicadoEm: linha?.publicadoEm ?? null,
+            atualizadoEm: linha?.atualizadoEm ?? null,
+            atualizadoPor: linha?.atualizadoPor ? { id: linha.atualizadoPor, nome: await nomeDoUsuario(linha.atualizadoPor).catch(() => null) } : null,
+            sessoesVivas: sessoesVivasPorVersao(marca, roboId),
+            nomeNaMarca,
+          }
+        }
+        try {
+          if (!acao && req.method === 'GET') return json(200, await detalhe())
+          if (acao === 'historico' && req.method === 'GET') {
+            const limite = Number(url.searchParams.get('limite')) || 50
+            const [itens, rodaram] = await Promise.all([historicoDeParametros(marca, roboId, limite), sessoesGravadasPorVersao(marca, roboId).catch(() => ({} as Record<string, number>))])
+            return json(200, { itens: itens.map((i) => ({ ...i, sessoesQueRodaram: rodaram[String(i.versao)] ?? 0 })), sessoesPorVersao: rodaram })
+          }
+          if (req.method !== 'POST' || !acao) return json(405, { erro: 'Método não permitido.' })
+          const observacao = String(corpo.observacao ?? '').trim()
+          const confirmacao = String(corpo.confirmacao ?? '').trim()
+          // Publicar para todos, promover e restaurar mexem em dinheiro real de
+          // todo cliente da marca: exigem o nome do robô digitado e o motivo.
+          const exigirConfirmacao = () => {
+            if (confirmacao !== nomeNaMarca) throw new ErroDeValidacao([`Digite "${nomeNaMarca}" para confirmar.`])
+          }
+          const exigirObservacao = () => { if (!observacao) throw new ErroDeValidacao(['Diga por que mudou: a observação é obrigatória.']) }
+          const comSessoes = (linha: unknown) => ({ ...(linha as object), sessoesAtualizadas: aplicarNasSessoesVivas(marca, roboId), sessoesVivas: sessoesVivasPorVersao(marca, roboId) })
+          switch (acao) {
+            case 'rascunho': { const linha = await salvarRascunho(marca, roboId, corpo.rascunho, dono.id); return json(200, { salvoEm: linha.rascunhoEm, versao: linha.versao }) }
+            case 'publicar': { exigirObservacao(); exigirConfirmacao(); const linha = await publicar(marca, roboId, corpo.parametros, observacao, corpo.simulacao ?? null, dono.id); return json(200, comSessoes(linha)) }
+            case 'testar-demo': { exigirObservacao(); const linha = await testarNoDemo(marca, roboId, corpo.parametros, observacao, dono.id); return json(200, comSessoes(linha)) }
+            case 'promover-demo': { exigirObservacao(); exigirConfirmacao(); const linha = await promoverDemo(marca, roboId, observacao, dono.id); return json(200, comSessoes(linha)) }
+            case 'descartar-teste': { const linha = await descartarTeste(marca, roboId, dono.id); return json(200, comSessoes(linha)) }
+            case 'restaurar': {
+              exigirConfirmacao()
+              if (corpo.versao === 'padrao') { await restaurarPadrao(marca, roboId, dono.id); return json(200, comSessoes({ versao: null, restauradoPadrao: true })) }
+              const versao = Number(corpo.versao)
+              if (!Number.isInteger(versao) || versao < 1) throw new ErroDeValidacao(['Informe a versão para restaurar (um número) ou "padrao".'])
+              const linha = await restaurarVersao(marca, roboId, versao, dono.id)
+              return json(200, comSessoes(linha))
+            }
+          }
+          return json(404, { erro: 'Ação desconhecida.' })
+        } catch (e) {
+          if (e instanceof ErroDeValidacao) return json(400, { erro: e.message, erros: e.erros })
+          throw e
+        }
+      }
+
       if (url.pathname === '/api/sessao' && req.method === 'POST') {
         const contaId = String(corpo.contaId ?? '').trim()
         if (!contaId) return json(400, { erro: 'Diga em qual conta o robô deve operar.' })
@@ -604,6 +692,9 @@ const servidor = createServer(async (req, res) => {
 // Sessao que ficou "rodando" depois de um reinicio e tela mentindo para o
 // cliente: o robo nao existe mais, mas a Teeds diz que sim.
 void limparSessoesOrfas()
+// Os parâmetros dos robôs (painel de controle): lidos no boot e a cada minuto.
+void carregarParametros().then(() => console.log('Parâmetros dos robôs: lidos do banco (o painel pode publicar sem reiniciar)'))
+ligarAtualizacaoDeParametros()
 
 // Os e-mails de acesso saem daqui, com a marca certa. Sem a chave do
 // Resend o carteiro nem liga — e o Supabase segue mandando o padrao dele.

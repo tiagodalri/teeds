@@ -1,0 +1,99 @@
+/*
+ * O simulador do painel de controle (SimuladorDoRobo.tsx).
+ *
+ * Só tokens do tema (var(--*)): claro e escuro saem de graça. O âmbar tem
+ * fallback porque --tv-ambar só existe no tema escuro e na casca da OMNI.
+ * No celular tudo empilha; a única rolagem horizontal é a da tabela por
+ * degrau, dentro do próprio quadro (8 colunas não cabem em 360px).
+ */
+.simr { --simr-ambar: var(--tv-ambar, #b97819); --simr-ambar-suave: var(--tv-ambar-suave, rgba(185, 120, 25, .11)); display: grid; gap: 16px; min-width: 0; color: var(--text); }
+
+/* Controles no topo */
+.simr-controles { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.simr-controle { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+.simr-controle > span { flex: 0 0 auto; min-width: 150px; color: var(--muted); font-size: 11.5px; font-weight: 600; }
+.simr-controle > span b { margin-left: 4px; padding: 1px 6px; border-radius: 99px; background: var(--primary-soft); color: var(--primary); font-size: 10px; font-weight: 700; }
+.simr-controle label { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11.5px; }
+.simr-controle input[type=text], .simr-controle input[type=number] { width: 78px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 12px; font-variant-numeric: tabular-nums; }
+.simr-controle input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+.simr-nota-demo { color: var(--account-demo); font-size: 11px; font-style: normal; font-weight: 600; }
+.simr-taxa input[type=range] { flex: 1 1 140px; min-width: 120px; accent-color: var(--primary); }
+.simr-taxa > b { min-width: 42px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.simr-taxa > small { flex-basis: 100%; color: var(--muted); font-size: 10.5px; }
+.simr-ese { margin: 0; padding: 10px 14px; border-radius: 10px; background: var(--primary-soft); color: var(--text); font-size: 12px; line-height: 1.5; }
+
+/* As colunas hoje × novo */
+.simr-colunas { display: grid; grid-template-columns: repeat(var(--colunas, 1), minmax(0, 1fr)); gap: 14px; min-width: 0; }
+.simr-coluna { display: grid; gap: 10px; min-width: 0; align-content: start; }
+.simr-coluna > h4 { margin: 0 0 2px; font-size: 12px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.simr-coluna.novo > h4 { color: var(--primary); }
+
+.simr-cartao { min-width: 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.simr-cartao > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 10px; }
+.simr-cartao > header b { font-size: 13.5px; }
+.simr-cartao > header small { color: var(--muted); font-size: 10.5px; }
+.simr-metricas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.simr-metricas > div { display: grid; gap: 3px; min-width: 0; padding: 10px; border-radius: 10px; background: var(--surface); }
+.simr-metricas span { color: var(--muted); font-size: 10.5px; line-height: 1.3; }
+.simr-metricas strong { font-size: 16px; line-height: 1.2; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.simr-metricas strong s { color: var(--muted); font-size: 12px; font-weight: 500; }
+.simr-metricas strong small { color: var(--muted); font-size: 10px; font-weight: 500; }
+.simr-metricas strong.up { color: var(--up); }
+.simr-metricas strong.down { color: var(--down); }
+.simr-metricas > div > small { color: var(--muted); font-size: 10px; line-height: 1.35; }
+
+/* Avisos: âmbar para atenção, vermelho para dinheiro que não volta */
+.simr-avisos { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.simr-avisos li { padding: 8px 10px; border-left: 3px solid var(--simr-ambar); border-radius: 8px; background: var(--simr-ambar-suave); color: var(--text); font-size: 11.5px; line-height: 1.45; }
+.simr-avisos li.vermelho { border-left-color: var(--down); background: var(--down-soft); }
+
+/* Tabela por degrau (8 colunas; rola dentro do quadro no celular) */
+.simr-rolagem { max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); -webkit-overflow-scrolling: touch; }
+.simr-tabela { min-width: 640px; }
+.simr-cab, .simr-linha { display: grid; grid-template-columns: .6fr .9fr .9fr .9fr 1fr .8fr .8fr 1.2fr; gap: 8px; align-items: center; padding: 8px 12px; }
+.simr-cab { color: var(--muted); font-size: 8.5px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.simr-linha { min-height: 38px; border-top: 1px solid var(--border); font-size: 11px; }
+.simr-linha > span { display: flex; align-items: center; gap: 6px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.simr-linha > span i { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 5px; background: var(--primary-soft); color: var(--primary); font-size: 8.5px; font-style: normal; font-weight: 800; }
+.simr-linha b { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.simr-linha b.cobre { color: var(--up); }
+.simr-linha b.nao-cobre { color: var(--down); font-weight: 700; white-space: normal; }
+.simr-linha em { justify-self: start; padding: 4px 8px; border-radius: 99px; background: var(--up-soft); color: var(--up); font-size: 9px; font-style: normal; font-weight: 750; white-space: nowrap; }
+.simr-linha.aparada em { background: var(--simr-ambar-suave); color: var(--simr-ambar); }
+.simr-linha.fora em, .simr-linha.parar em { background: var(--down-soft); color: var(--down); }
+.simr-linha.fora, .simr-linha.parar { color: var(--muted); }
+
+/* Sessões hipotéticas */
+.simr-mc { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.simr-mc > header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.simr-mc > header > div { display: grid; gap: 2px; min-width: 0; }
+.simr-mc > header b { font-size: 13.5px; }
+.simr-mc > header small { color: var(--muted); font-size: 10.5px; line-height: 1.4; }
+.simr-botao { padding: 9px 16px; border: 0; border-radius: 10px; background: var(--primary); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
+.simr-botao:hover { filter: brightness(1.05); }
+.simr-desatualizado { margin: 0; color: var(--simr-ambar); font-size: 11.5px; font-weight: 600; }
+.simr-resultado.velho { opacity: .55; }
+.simr-hist { display: flex; align-items: flex-end; gap: 3px; height: 72px; margin-top: 12px; padding: 0 2px; border-bottom: 1px solid var(--border); }
+.simr-hist i { flex: 1 1 0; min-width: 0; border-radius: 3px 3px 0 0; background: var(--muted); opacity: .8; }
+.simr-hist i.up { background: var(--up); }
+.simr-hist i.down { background: var(--down); }
+.simr-hist-eixo { display: flex; justify-content: space-between; margin-top: 4px; color: var(--muted); font-size: 9.5px; font-variant-numeric: tabular-nums; }
+
+/* Rodapé fixo: a verdade sobre o que isto é */
+.simr-rodape { display: grid; gap: 4px; margin: 0; padding: 0 2px; list-style: none; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
+
+/* Compacto: só controles, cadência, escada e avisos (cabe no Gerenciamento) */
+.simr.compacto .simr-controles { padding: 10px 12px; }
+.simr.compacto .simr-metricas strong { font-size: 14px; }
+
+@media (max-width: 720px) {
+  .simr-colunas { grid-template-columns: 1fr; }
+  .simr-controle > span { min-width: 0; flex-basis: 100%; }
+  .simr-metricas { grid-template-columns: 1fr 1fr; }
+  .simr-metricas strong { font-size: 14px; }
+  .simr-mc > header { flex-direction: column; align-items: stretch; }
+  .simr-botao { width: 100%; }
+}
+@media (max-width: 420px) {
+  .simr-metricas { grid-template-columns: 1fr; }
+}

@@ -4,6 +4,8 @@ import { assinarContratos, buscarContrato, comprarDireto } from './trading'
 import type { OpenContract } from './trading'
 import { marcarOrigem } from './robotNames'
 import { ultimoDigito } from './digits'
+import { recuperacaoDe, temModoAgressivo, type ParametrosDoRobo } from './parametros'
+import type { Modo } from './strategies'
 
 /**
  * Motor de estrategias da Teeds.
@@ -85,8 +87,12 @@ export interface Estrategia {
    * Cada item e um requisito: o valor lido e se ele passou.
    */
   progresso?: (c: Contexto) => { rotulo: string; itens: Array<{ valor: string; ok: boolean }> }
-  /** A condição de entrada em um número, só para a tela. Ver `Medidor`. */
-  medidor?: (c: Pick<Contexto, 'digitos'>) => Medidor | null
+  /**
+   * A condição de entrada em um número, só para a tela. Ver `Medidor`.
+   * Com `config` a leitura usa os parâmetros da sessão (loss virtual de 3
+   * em vez de 4, por exemplo); sem ela, o padrão do robô.
+   */
+  medidor?: (c: Pick<Contexto, 'digitos'> & { config?: ConfigEstrategia }) => Medidor | null
   /**
    * Entra de novo assim que o contrato liquida, sem esperar o proximo tick.
    * Para estrategias sem filtro de entrada, que operam continuamente.
@@ -133,6 +139,25 @@ export interface ConfigEstrategia {
   takeProfit: number
   stopLoss: number
   maxOperacoes: number
+  /*
+    Os parâmetros publicados pelo painel para este robô nesta marca
+    (22/09/2026). O motor lê daqui a cada decisão — loss virtual, escada,
+    teto da plataforma. Ausente = o padrão do robô, como sempre foi.
+  */
+  parametros?: ParametrosDoRobo
+  /** A versão publicada com que a sessão está rodando; null = padrão do código. */
+  parametrosVersao?: number | null
+  /** A sessão roda a versão em teste (só contas demo)? */
+  parametrosTesteDemo?: boolean
+  /** O modo que o cliente escolheu, explícito (antes era inferido pela margem). */
+  modo?: Modo
+}
+
+/** O que o servidor manda quando o painel publica: o objeto inteiro e a versão. */
+export interface ParametrosVigentes {
+  parametros: ParametrosDoRobo
+  versao: number | null
+  testeDemo: boolean
 }
 
 /** Uma operacao ja encerrada, do jeito que a tela precisa mostrar. */
@@ -459,6 +484,87 @@ export class MotorTeeds {
     return this.socket
   }
 
+  /** A configuração com que o motor está rodando (o mesmo objeto, atualizado no lugar). */
+  get configuracao(): ConfigEstrategia {
+    return this.config
+  }
+
+  /** Parâmetros publicados que esperam o contrato aberto liquidar. Só leitura. */
+  get parametrosAguardando(): ParametrosVigentes | null {
+    return this.parametrosPendentes
+  }
+
+  private parametrosPendentes: ParametrosVigentes | null = null
+
+  /**
+   * O painel publicou parâmetros novos para este robô (22/09/2026, "muda
+   * na hora mediante aprovação").
+   *
+   * Nunca no meio de um contrato: com compra em andamento, fica pendente e
+   * entra em `liquidar()`, antes da próxima entrada ser calculada. Sem
+   * contrato aberto, entra agora — e, se o robô está numa sequência de
+   * recuperação, a próxima entrada é recalculada pela regra nova a partir
+   * do prejuízo real que já existe. Stop, meta, teto e entrada base do
+   * cliente não são tocados.
+   */
+  atualizarParametros(vigente: ParametrosVigentes): void {
+    if (this.estado.emOperacao || this.estado.emCurso) {
+      this.parametrosPendentes = vigente
+      return
+    }
+    this.aplicarParametros(vigente, true)
+  }
+
+  private aplicarParametros(v: ParametrosVigentes, agora: boolean) {
+    // O modo é do cliente; se o robô deixou de oferecer o agressivo, cai para o conservador.
+    const modoAtual: Modo = this.config.modo ?? ((this.config.lucroSobrePrejuizo ?? 0) > 0 ? 'agressivo' : 'conservador')
+    const modo: Modo = modoAtual === 'agressivo' && temModoAgressivo(v.parametros) ? 'agressivo' : 'conservador'
+    const rec = recuperacaoDe(v.parametros, modo)
+    // No lugar, e não um objeto novo: o servidor e o espelho guardam a mesma referência.
+    Object.assign(this.config, {
+      parametros: v.parametros, parametrosVersao: v.versao, parametrosTesteDemo: v.testeDemo, modo,
+      galeApos: rec.galeApos, fatorGale: rec.margem, lucroSobrePrejuizo: rec.sobrePrejuizo,
+    })
+    if (agora && this.estado.rodando) {
+      if (this.estado.perdasSeguidas > 0) {
+        this.estado.valorAtual = this.estrategia.proximoValor({
+          valorAtual: this.estado.valorAtual,
+          valorInicial: this.config.valorInicial,
+          valorAoVencer: this.config.valorAoVencer,
+          ganhou: false,
+          lucro: 0,
+          perdasSeguidas: this.estado.perdasSeguidas,
+          prejuizoDaSequencia: this.prejuizoDaSequencia,
+          retornoLiquidoPorUnidade: this.retornoLiquidoPorUnidade,
+          config: this.config,
+          memoria: this.memoria,
+          contractType: this.estado.historico[0]?.contractType ?? this.estrategia.contractType,
+        })
+      } else {
+        this.estado.valorAtual = this.config.valorAoVencer
+      }
+    }
+    const rotulo = v.versao === null ? 'o padrão da plataforma' : `a versão ${v.versao}${v.testeDemo ? ' (teste no demo)' : ''}`
+    this.registrar(`Parâmetros do robô atualizados para ${rotulo}.`, 'info')
+    if (agora) {
+      const ctx = this.contexto
+      this.estado.estrategia = this.telemetriaSegura(ctx)
+      if (this.estado.rodando && !this.estado.emOperacao) {
+        this.estado.aguardando = this.estrategia.aguardando(ctx)
+        this.estado.condicao = this.estrategia.progresso?.(ctx) ?? null
+      }
+      this.emitir()
+    }
+  }
+
+  /** "Parar" no fim da tabela: a sessão fecha por decisão da plataforma, não do cliente. */
+  private tabelaEsgotada() {
+    this.estado.valorAtual = this.config.valorAoVencer
+    const n = this.config.parametros?.recuperacao.escada.tipo === 'tabela' ? this.config.parametros.recuperacao.escada.degraus.length : 0
+    this.registrar(`A tabela de recuperação chegou ao fim (${n} degraus sem vitória): o robô parou conforme a configuração da plataforma.`, 'parada')
+    this.desligar('tabela de recuperação esgotada')
+  }
+
   /** Leitura do estado atual, sem precisar assinar. */
   get estadoAtual(): EstadoMotor {
     return this.estado
@@ -540,10 +646,20 @@ export class MotorTeeds {
     if (!this.estado.rodando) return
     // Depois de uma recusa passageira, espera passar o intervalo antes de insistir.
     if (Date.now() < this.pausaAte) return
-    const desejado = Math.min(
+    // A tabela de recuperação acabou com "parar": não há próxima entrada.
+    if (!Number.isFinite(this.estado.valorAtual)) { this.tabelaEsgotada(); return }
+    let desejado = Math.min(
       Math.max(MotorTeeds.ENTRADA_MINIMA, Number(this.estado.valorAtual.toFixed(2))),
       this.config.valorMaximo || Infinity,
     )
+    // O teto da plataforma (painel) só APARA: a entrada desce até ele e o
+    // robô segue. O teto do cliente (valorMaximo) continua parando a sessão.
+    const tetoDaPlataforma = this.config.parametros?.limites.valorMaximoPorEntrada ?? 0
+    if (tetoDaPlataforma > 0 && desejado > tetoDaPlataforma) {
+      const aparado = Math.max(MotorTeeds.ENTRADA_MINIMA, Number(tetoDaPlataforma.toFixed(2)))
+      this.registrar(`Entrada reduzida de ${this.moeda} ${desejado.toFixed(2)} para ${this.moeda} ${aparado.toFixed(2)}: teto da plataforma para este robô.`, 'info')
+      desejado = aparado
+    }
 
     const { valor, cabe } = this.valorQueCabeNoStop(desejado)
     if (!cabe) {
@@ -772,6 +888,14 @@ export class MotorTeeds {
       // A estratégia acabou de reagir ao resultado: o que ela expõe de si muda aqui.
       this.estado.estrategia = this.telemetriaSegura(this.contexto)
 
+      // O painel publicou parâmetros novos enquanto este contrato corria:
+      // entram AGORA, antes de calcular a próxima entrada — nunca no meio.
+      if (this.parametrosPendentes) {
+        const v = this.parametrosPendentes
+        this.parametrosPendentes = null
+        this.aplicarParametros(v, false)
+      }
+
       this.estado.valorAtual = this.estrategia.proximoValor({
         valorAtual: valor,
         valorInicial: this.config.valorInicial,
@@ -806,6 +930,9 @@ export class MotorTeeds {
         this.desligar(`próxima entrada (${this.estado.valorAtual.toFixed(2)}) passaria do teto`)
         return
       }
+      // Tabela de recuperação com "parar": passou do último degrau sem vitória.
+      // Freio próprio e explícito — não depende de o cliente ter definido teto.
+      if (!Number.isFinite(this.estado.valorAtual)) { this.tabelaEsgotada(); return }
 
       this.emitir()
 

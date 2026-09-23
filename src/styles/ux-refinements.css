@@ -195,6 +195,9 @@ button, input, select, textarea { font-family: inherit; }
 .go-consulta-scroll .go-tabela-cab, .go-consulta-scroll .go-tabela-corpo { min-width: 660px; }
 .go-consulta-scroll .go-tabela-cab, .go-consulta-scroll .go-tabela-corpo > div { grid-template-columns: .7fr 1fr 1fr 1fr 1.2fr; }
 .go-consulta-scroll .go-tabela-cab > span, .go-consulta-scroll .go-tabela-corpo em { display: block; }
+/* A planilha do Gerenciamento ganhou a coluna "Cobre?" (22/09/2026): seis colunas só onde ela existe. */
+.go-consulta-scroll.go-tabela-seis .go-tabela-cab, .go-consulta-scroll.go-tabela-seis .go-tabela-corpo { min-width: 760px; }
+.go-consulta-scroll.go-tabela-seis .go-tabela-cab, .go-consulta-scroll.go-tabela-seis .go-tabela-corpo > div { grid-template-columns: .7fr 1fr 1fr 1fr .8fr 1.2fr; }
 .go.ger.go-consultoria { padding: 18px 24px; }
 .go-consultoria > * { max-width: 1480px; }
 .go-consultoria .go-hero { padding: 14px 18px; margin-bottom: 10px; }

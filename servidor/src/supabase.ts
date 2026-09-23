@@ -108,6 +108,8 @@ export async function abrirSessao(dados: {
   marca?: string
   /** O login que pediu. Sem ele (MCP do dono), cai em usuarioDaConta. */
   userId?: string
+  /** A versão dos parâmetros do robô com que a sessão nasce; null = padrão do código. */
+  parametrosVersao?: number | null
 }): Promise<SessaoGravada> {
   // A mesma conta da Deriv pode estar ligada a mais de um login. A sessão é
   // de quem pediu — procurar "o dono da conta" com limit 1 atribuiria a
@@ -141,6 +143,7 @@ export async function abrirSessao(dados: {
       stop_loss: dados.stopLoss,
       take_profit: dados.takeProfit,
       max_operacoes: dados.maxOperacoes ?? 0,
+      parametros_versao: dados.parametrosVersao ?? null,
       situacao: 'rodando',
     }),
   })
@@ -251,11 +254,88 @@ export async function registrarOperacao(
  * Fecha a sessão. Chamado em TODA saída — stop, meta, teto, parada
  * manual e também quando dá erro.
  * ------------------------------------------------------------------ */
-export async function reabrirSessao(sessao: SessaoGravada, config: { stopLoss: number; takeProfit: number; maxOperacoes: number; valorInicial: number }): Promise<void> {
+export async function reabrirSessao(sessao: SessaoGravada, config: { stopLoss: number; takeProfit: number; maxOperacoes: number; valorInicial: number; parametrosVersao?: number | null }): Promise<void> {
   await rest(`/sessoes_robos?id=eq.${encodeURIComponent(sessao.id)}`, {
     method: 'PATCH', headers: { Prefer: 'return=minimal' },
-    body: JSON.stringify({ situacao: 'rodando', encerrada_em: null, motivo_da_parada: null, erro: null, stop_loss: config.stopLoss, take_profit: config.takeProfit, max_operacoes: config.maxOperacoes, entrada_atual: config.valorInicial }),
+    body: JSON.stringify({ situacao: 'rodando', encerrada_em: null, motivo_da_parada: null, erro: null, stop_loss: config.stopLoss, take_profit: config.takeProfit, max_operacoes: config.maxOperacoes, entrada_atual: config.valorInicial, parametros_versao: config.parametrosVersao ?? null }),
   })
+}
+
+/** O painel publicou e a sessão viva recebeu a versão nova: o registro acompanha. */
+export async function atualizarVersaoDaSessao(sessao: SessaoGravada, versao: number | null): Promise<void> {
+  await rest(`/sessoes_robos?id=eq.${encodeURIComponent(sessao.id)}`, {
+    method: 'PATCH', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({ parametros_versao: versao }),
+  })
+}
+
+/* ------------------------------------------------------------------ *
+ * Parâmetros dos robôs (o painel de controle). Só o servidor escreve.
+ * ------------------------------------------------------------------ */
+
+export interface LinhaParametrosBanco {
+  marca: string; robo_id: string; versao: number; parametros: unknown; teste_demo?: unknown | null
+  rascunho?: unknown | null; rascunho_em?: string | null; rascunho_por?: string | null; ultima_acao?: string
+  observacao?: string | null; simulacao?: unknown | null; publicado_em?: string; atualizado_em?: string; atualizado_por?: string | null
+}
+
+export async function lerLinhasDeParametros(): Promise<LinhaParametrosBanco[]> {
+  return (await rest<LinhaParametrosBanco[]>('/robos_parametros?select=*')) ?? []
+}
+
+/**
+ * Cria (INSERT) ou altera (PATCH) a linha de um robô. Nunca um upsert cego:
+ * salvar um rascunho numa linha existente não pode reescrever o publicado.
+ */
+export async function gravarLinhaDeParametros(marca: string, roboId: string, existe: boolean, campos: Record<string, unknown>): Promise<LinhaParametrosBanco> {
+  const linhas = existe
+    ? await rest<LinhaParametrosBanco[]>(`/robos_parametros?marca=eq.${encodeURIComponent(marca)}&robo_id=eq.${encodeURIComponent(roboId)}`, {
+      method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(campos),
+    })
+    : await rest<LinhaParametrosBanco[]>('/robos_parametros', {
+      method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ marca, robo_id: roboId, ...campos }),
+    })
+  const linha = linhas?.[0]
+  if (!linha) throw new Error('O banco não devolveu a linha gravada dos parâmetros.')
+  return linha
+}
+
+export async function apagarLinhaDeParametros(marca: string, roboId: string): Promise<void> {
+  await rest(`/robos_parametros?marca=eq.${encodeURIComponent(marca)}&robo_id=eq.${encodeURIComponent(roboId)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } })
+}
+
+export interface HistoricoParametrosBanco {
+  versao: number; acao: string; parametros: unknown; parametros_anteriores?: unknown | null; teste_demo?: unknown | null
+  observacao?: string | null; simulacao?: unknown | null; alterado_por?: string | null; alterado_em?: string
+}
+
+export async function lerHistoricoDeParametros(marca: string, roboId: string, limite = 50): Promise<HistoricoParametrosBanco[]> {
+  return (await rest<HistoricoParametrosBanco[]>(
+    `/robos_parametros_versoes?select=versao,acao,parametros,parametros_anteriores,teste_demo,observacao,simulacao,alterado_por,alterado_em` +
+    `&marca=eq.${encodeURIComponent(marca)}&robo_id=eq.${encodeURIComponent(roboId)}&order=id.desc&limit=${Math.max(1, Math.min(200, limite))}`,
+  )) ?? []
+}
+
+export async function gravarAuditoriaAdmin(d: { marca: string; adminId: string; acao: string; detalhes: Record<string, unknown> }): Promise<void> {
+  await rest('/auditoria_admin', {
+    method: 'POST', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({ marca: d.marca, admin_id: d.adminId, acao: d.acao, detalhes: d.detalhes }),
+  })
+}
+
+/** O nome (ou e-mail) de um login, para o histórico dizer quem publicou. */
+export async function nomeDoUsuario(userId: string): Promise<string | null> {
+  const linhas = await rest<any[]>(`/clientes?select=nome,email&user_id=eq.${encodeURIComponent(userId)}&limit=1`)
+  const c = linhas?.[0]
+  return c ? String(c.nome || c.email || '') || null : null
+}
+
+/** Quantas sessões (gravadas) rodaram com cada versão dos parâmetros deste robô. */
+export async function sessoesGravadasPorVersao(marca: string, roboId: string): Promise<Record<string, number>> {
+  const linhas = await rest<any[]>(`/sessoes_robos?select=parametros_versao&marca=eq.${encodeURIComponent(marca)}&robo_id=eq.${encodeURIComponent(roboId)}&limit=5000`)
+  const saida: Record<string, number> = {}
+  for (const l of linhas ?? []) { const k = l.parametros_versao == null ? 'padrao' : String(l.parametros_versao); saida[k] = (saida[k] ?? 0) + 1 }
+  return saida
 }
 
 export async function encerrarSessao(

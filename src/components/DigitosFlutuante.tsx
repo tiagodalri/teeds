@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
 import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca } from '../core/deriv/strategies'
 import { identidade } from '../core/deriv/branding'
+import { configDeReferencia, PALM_PADRAO, parametrosPadrao } from '../core/deriv/parametros'
+import { useParametrosDoRobo } from '../core/teeds/catalogoRobos'
 import { useDigits } from '../hooks/useDigits'
 import { IconeFechar } from './IconeFechar'
 import { MARCA } from '../marca'
@@ -78,6 +80,11 @@ export function DigitosFlutuante({ roboId, nomeAtivo, aoFechar }: Props) {
   const estrategia = ESTRATEGIAS_LOCAIS.find((x) => x.id === roboId)
   const nome = estrategia ? nomeDoRoboNaMarca(estrategia, MARCA) : ident.nome
   const grupo = useMemo(() => grupoDoRobo(roboId), [roboId])
+  // A regra vigente do robô na marca (o que o painel publicou); antes de
+  // carregar, o padrão do código. O gatilho do rodapé é a mesma conta do
+  // `entrar` da estratégia, dita pelo medidor — nada é recalculado à mão aqui.
+  const dados = useParametrosDoRobo(roboId)
+  const p = dados?.parametros ?? parametrosPadrao(roboId)
 
   // ------------------------------------------------ o que o robo esta vendo
   const memoria = estat.digitos.slice(-25)
@@ -87,25 +94,20 @@ export function DigitosFlutuante({ roboId, nomeAtivo, aoFechar }: Props) {
     : 0
   const gatilho = (() => {
     if (memoria.length < 25) return { texto: `lendo o mercado — ${memoria.length}/25 dígitos`, ok: null as boolean | null }
-    // AG7, AG2 e OMNI Over entram por loss virtual (22/09/2026): quatro
-    // dígitos seguidos que teriam perdido liberam a entrada.
-    const porLoss: Record<string, (d: number) => boolean> = {
-      ag2: (d) => d <= 2, superior5: (d) => d >= 7, omniover: (d) => d >= 7,
-      firstblock: (d) => d <= 4, omnibull: (d) => d <= 4, secondblock: (d) => d >= 5, omnibear: (d) => d >= 5,
-    }
-    const ganha = porLoss[roboId]
-    if (ganha) {
-      const alvo = roboId === 'firstblock' || roboId === 'omnibull' || roboId === 'secondblock' || roboId === 'omnibear' ? 2 : 4
-      let n = 0
-      for (let i = memoria.length - 1; i >= 0 && !ganha(memoria[i]); i--) n++
-      return { texto: `loss virtual ${Math.min(n, alvo)}/${alvo} — entra depois de ${alvo} dígitos seguidos que teriam perdido`, ok: n >= alvo }
-    }
     if (roboId === 'thepalm') {
+      const palm = p.palm ?? PALM_PADRAO
       const nove = pctDe((d) => d === 9)
       const baixos = pctDe((d) => d <= 4)
-      return { texto: `Modo 1: 9 em ${nove}% (limite 12%) · Modo 2: 0–4 em ${baixos}% (libera em 48%)`, ok: nove <= 12 }
+      return { texto: `Modo 1: 9 em ${nove}% (limite ${palm.limiteNove}%) · Modo 2: 0–4 em ${baixos}% (libera em ${palm.limiteBaixos}%)`, ok: nove <= palm.limiteNove }
     }
-    return { texto: 'entra sempre — uma entrada por tick, sem gatilho', ok: null }
+    const medidor = estrategia?.medidor?.({ digitos: estat.digitos, config: configDeReferencia(p) }) ?? null
+    if (!medidor) return { texto: 'entra sempre — uma entrada por tick, sem gatilho', ok: null }
+    if (medidor.tipo === 'contagem') {
+      const alvo = medidor.alvo
+      const espera = alvo === 1 ? '1 dígito que teria perdido' : `${alvo} dígitos seguidos que teriam perdido`
+      return { texto: `loss virtual ${medidor.valor}/${alvo} — entra depois de ${espera}`, ok: medidor.valor >= alvo }
+    }
+    return { texto: `${medidor.rotulo}: ${medidor.valor}% (entra a partir de ${medidor.alvo}%)`, ok: medidor.valor >= medidor.alvo }
   })()
 
   // ------------------------------------------------------------ tamanho

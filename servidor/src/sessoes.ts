@@ -8,13 +8,16 @@ import { MotorTeeds, type EstadoMotor } from '../../src/core/deriv/engine'
 import { fetchAccounts, fetchTradingSocketUrl, type TradingAccount } from '../../src/core/deriv/account'
 import { fetchActiveSymbols } from '../../src/core/deriv/market'
 import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca, recuperacaoDoRobo, type Modo } from '../../src/core/deriv/strategies'
+import { descrever, recuperacaoDe, temModoAgressivo } from '../../src/core/deriv/parametros'
+import type { ParametrosVigentes } from '../../src/core/deriv/engine'
+import { vigente } from './parametros'
 import { marcaPorId } from '../../src/marca/marcas'
 import { ATIVO_DOS_ROBOS } from '../../src/core/deriv/config'
 import type { AuthSession } from '../../src/core/deriv/auth'
 import type { ConfigEstrategia, Estrategia } from '../../src/core/deriv/engine'
 import {
   abrirSessao, reabrirSessao, encerrarSessao, registrarOperacao, supabaseConfigurado,
-  type SessaoGravada, simuladorPermitido,
+  type SessaoGravada, simuladorPermitido, atualizarVersaoDaSessao,
 } from './supabase'
 import { PublicadorEspelho, espelhoHabilitado } from './espelho'
 
@@ -84,6 +87,10 @@ export interface Sessao {
   erro: string | null
   /** A linha desta sessão no Supabase, quando o banco está configurado. */
   gravada: SessaoGravada | null
+  /** A configuração com que o motor roda — o MESMO objeto do motor, atualizado no lugar quando o painel publica. */
+  config: ConfigEstrategia
+  /** A versão dos parâmetros do robô em vigor nesta sessão; null = padrão do código. */
+  parametrosVersao: number | null
 }
 
 const vivas = new Map<string, Sessao>()
@@ -112,6 +119,8 @@ export function listarRobos(marca?: string) {
     contrato: e.contractType,
     barreira: e.barreira,
     ganhaQuando: descreverRegra(e),
+    // A frase muda quando o painel muda o robô (loss virtual, sequência).
+    descricao: descrever(e.id, vigente(m.id, e.id, false).parametros),
     ativo: ATIVO_DOS_ROBOS,
   }))
 }
@@ -137,7 +146,35 @@ function descreverRegra(e: Estrategia): string {
  * Tiago combinou com a Deriv, e a única defesa contra alguém pedir "liga o
  * robô aí" no chat sem dizer onde parar.
  */
-export function montarConfig(p: Parametros): ConfigEstrategia {
+export function montarConfig(p: Parametros, v?: ParametrosVigentes): ConfigEstrategia {
+  const config = montarConfigDoCliente(p)
+  return v ? aplicarVigente(config, p, v) : config
+}
+
+/**
+ * O que a plataforma manda por cima do que a tela pediu (22/09/2026).
+ *
+ * A tela continua mandando a config inteira, mas recuperação, loss virtual
+ * e teto da plataforma são do painel de controle — o servidor sobrescreve.
+ * Do cliente ficam só entrada, stop, meta, teto e máximo de operações. Isso
+ * também fecha a porta de alguém mandar galeApos/fatorGale próprios pelo
+ * navegador, e corrige o cartão do chat, que ainda mandava gatilho 3.
+ */
+export function aplicarVigente(config: ConfigEstrategia, p: Pick<Parametros, 'modo' | 'config'>, v: ParametrosVigentes): ConfigEstrategia {
+  const pedido: Modo = p.modo ?? p.config?.modo ?? 'conservador'
+  const modo: Modo = pedido === 'agressivo' && temModoAgressivo(v.parametros) ? 'agressivo' : 'conservador'
+  const rec = recuperacaoDe(v.parametros, modo)
+  config.fatorGale = rec.margem
+  config.lucroSobrePrejuizo = rec.sobrePrejuizo
+  config.galeApos = rec.galeApos
+  config.parametros = v.parametros
+  config.parametrosVersao = v.versao
+  config.parametrosTesteDemo = v.testeDemo
+  config.modo = modo
+  return config
+}
+
+function montarConfigDoCliente(p: Parametros): ConfigEstrategia {
   if (!(p.valorInicial > 0)) throw new Error('A entrada precisa ser maior que zero.')
   if (!(p.stopLoss > 0)) throw new Error('Defina o stop loss: nenhuma sessão roda sem freio de perda.')
   if (!(p.takeProfit > 0)) throw new Error('Defina o take profit: nenhuma sessão roda sem meta de ganho.')
@@ -255,6 +292,12 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
   const conta = await acharConta(auth, p.contaId)
   if (conta.type === 'demo' && (!p.userId || !await simuladorPermitido(p.userId, p.marca ?? 'teeds'))) throw new Error('O seu plano não inclui acesso ao simulador.')
 
+  // Os parâmetros que o painel publicou para este robô nesta marca — a
+  // conta demo usa a versão em teste, se houver. Só agora dá para saber
+  // que conta é, por isso entram depois de acharConta.
+  const v = vigente(marcaPorId(p.marca).id, estrategia.id, conta.type === 'demo')
+  aplicarVigente(config, p, v)
+
   const url = await fetchTradingSocketUrl(auth, conta.accountId)
   const socket = new TeedsSocket({
     url,
@@ -309,13 +352,15 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
     estado: {} as EstadoMotor,
     erro: null,
     gravada: anterior?.gravada ?? null,
+    config,
+    parametrosVersao: v.versao,
   }
 
   // A sessão aparece no banco ANTES da primeira entrada: assim a tela do
   // cliente mostra o robô ligado desde o primeiro instante, e não só depois
   // que a primeira operação liquida.
   if (anterior?.gravada) {
-    try { await reabrirSessao(anterior.gravada, config) }
+    try { await reabrirSessao(anterior.gravada, { ...config, parametrosVersao: v.versao }) }
     catch (e) { socket.disconnect(); throw e }
   } else if (supabaseConfigurado()) {
     try {
@@ -332,6 +377,7 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
         origem: p.origem ?? 'chat',
         marca: marcaPorId(p.marca).id,
         userId: p.userId,
+        parametrosVersao: v.versao,
       })
     } catch (e) {
       // o robô não deixa de operar porque o espelho falhou
@@ -432,6 +478,42 @@ export function ver(id: string): Sessao | undefined {
 
 export function todas(): Sessao[] {
   return [...vivas.values()].sort((a, b) => b.comecouEm - a.comecouEm)
+}
+
+/** As sessões vivas (rodando ou concluindo um contrato) deste robô nesta marca. */
+function vivasDoRobo(marca: string, roboId: string): Sessao[] {
+  const m = marcaPorId(marca).id
+  return [...vivas.values()].filter((s) => s.roboId === roboId && marcaPorId(s.parametros.marca).id === m && (s.estado.rodando || s.estado.emOperacao))
+}
+
+/**
+ * O painel publicou: as sessões em andamento recebem a regra nova (na hora,
+ * ou na liquidação do contrato aberto — o motor decide). Devolve quantas.
+ */
+export function aplicarNasSessoesVivas(marca: string, roboId: string): number {
+  let n = 0
+  for (const s of vivasDoRobo(marca, roboId)) {
+    const vivo = motores.get(s.id)
+    if (!vivo) continue
+    const v = vigente(marca, roboId, s.demo)
+    // "Testar no demo" não muda nada na conta real: quem já roda exatamente o
+    // vigente (mesma versão, mesmo teste, mesmo objeto) não recebe aviso nem conta.
+    const cfg = s.config
+    if (cfg && cfg.parametrosVersao === v.versao && !!cfg.parametrosTesteDemo === v.testeDemo && JSON.stringify(cfg.parametros) === JSON.stringify(v.parametros)) continue
+    vivo.motor.atualizarParametros(v)
+    s.parametrosVersao = v.versao
+    if (s.gravada) atualizarVersaoDaSessao(s.gravada, v.versao).catch((e) => console.warn(`[sessao ${s.id}] não gravei a versão dos parâmetros: ${(e as Error).message}`))
+    n++
+  }
+  return n
+}
+
+/** Quantas sessões vivas há por versão dos parâmetros ('padrao' = null). */
+export function sessoesVivasPorVersao(marca: string, roboId: string): { total: number; porVersao: Record<string, number> } {
+  const porVersao: Record<string, number> = {}
+  const lista = vivasDoRobo(marca, roboId)
+  for (const s of lista) { const k = s.parametrosVersao == null ? 'padrao' : String(s.parametrosVersao); porVersao[k] = (porVersao[k] ?? 0) + 1 }
+  return { total: lista.length, porVersao }
 }
 
 export function parar(id: string): Sessao {

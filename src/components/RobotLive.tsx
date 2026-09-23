@@ -4,6 +4,7 @@ import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { AnaliseAoVivo } from './AnaliseAoVivo'
+import { modoDaConfig, NOME_DO_MODO, temModos } from '../core/deriv/strategies'
 import './robot-cockpit.css'
 
 interface Props {
@@ -89,6 +90,36 @@ function Curva({ pontos, positivo }: { pontos: number[]; positivo: boolean }) {
 
 /* -------------------------------------------------------------- principal */
 
+/**
+ * A regra com que esta sessão está rodando, lida da config congelada
+ * (22/09/2026): quando entra, como recupera e qual versão da plataforma.
+ * Só existe quando o servidor mandou `parametros`; sessões antigas não mudam.
+ */
+function regraDaSessao(config: ConfigEstrategia, estrategiaId?: string): Array<{ rot: string; valor: string }> {
+  const p = config.parametros
+  if (!p || !estrategiaId) return []
+  const n = p.entrada.lossVirtual
+  const quandoEntra = estrategiaId === 'thepalm'
+    ? 'após a análise de 25 dígitos'
+    : n === 0 ? 'em toda operação' : n === 1 ? 'após 1 dígito que teria perdido' : `após ${n} dígitos seguidos que teriam perdido`
+  const escada = p.recuperacao.escada
+  const recuperacao = escada.tipo === 'tabela' ? `tabela, ${escada.degraus.length} ${escada.degraus.length === 1 ? 'degrau' : 'degraus'}` : 'calculada pelo payout'
+  const modo = temModos(estrategiaId, p) ? ` · modo ${NOME_DO_MODO[modoDaConfig(estrategiaId, config.fatorGale, config.lucroSobrePrejuizo, config)].toLowerCase()}` : ''
+  const versao = config.parametrosVersao ? `v${config.parametrosVersao}` : ''
+  const regra = config.parametrosTesteDemo ? `${versao ? `${versao} · ` : ''}em teste no demo` : versao ? `${versao} da plataforma` : 'padrão da plataforma'
+  return [
+    { rot: 'Quando entra', valor: quandoEntra },
+    { rot: 'Recuperação', valor: recuperacao + modo },
+    { rot: 'Regra', valor: regra },
+  ]
+}
+
+/** Junta a lista do chamador com a da regra: rótulo repetido só troca o valor, no mesmo lugar. */
+function juntarDetalhes(base: Array<{ rot: string; valor: string }>, extra: Array<{ rot: string; valor: string }>): Array<{ rot: string; valor: string }> {
+  const lista = base.map((p) => extra.find((e) => e.rot === p.rot) ?? p)
+  return [...lista, ...extra.filter((e) => !base.some((p) => p.rot === e.rot))]
+}
+
 export function RobotLive({
   estado, config, moeda, estrategiaId, nomeEstrategia, ativo, titulo, regra, ganhaCom,
   parametros = [], conexao = 'open', onDesligar, desligando = false, onLigarDeNovo, onRemover,
@@ -96,6 +127,8 @@ export function RobotLive({
   mostrarMarkup = false,
 }: Props) {
   const [detalhes, setDetalhes] = useState(false)
+  // Os parâmetros do chamador mais a regra da sessão (quando entra, recuperação, versão).
+  const detalhesDaSessao = juntarDetalhes(parametros, regraDaSessao(config, estrategiaId))
   const [registroAberto, setRegistroAberto] = useState(false)
   const [filtroHistorico, setFiltroHistorico] = useState('todas')
   const [analisesPalm, setAnalisesPalm] = useState<Array<{ id: number; hora: number; texto: string }>>([])
@@ -279,7 +312,7 @@ export function RobotLive({
 
       {detalhes && (
         <div className="tv-params">
-          {parametros.length > 0 ? parametros.map((p) => (
+          {detalhesDaSessao.length > 0 ? detalhesDaSessao.map((p) => (
             <span key={p.rot}><i>{p.rot}</i>{p.valor}</span>
           )) : <span>Nenhum parâmetro disponível.</span>}
         </div>
@@ -287,7 +320,7 @@ export function RobotLive({
 
       {/* ===================== palco ===================== */}
       <div className="tv-painel-principal">
-      <AnaliseAoVivo estado={estado} estrategiaId={estrategiaId} nomeEstrategia={nomeEstrategia}
+      <AnaliseAoVivo estado={estado} estrategiaId={estrategiaId} nomeEstrategia={nomeEstrategia} config={config}
         moeda={moeda} ganhaCom={ganhaCom} onDigitos={onDigitos} digitosAberto={digitosAberto} />
 
       {estrategiaId === 'thepalm' && (

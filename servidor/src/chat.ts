@@ -181,11 +181,11 @@ async function robosAtivos(dono: Dono): Promise<number> {
 }
 
 async function executar(
-  dono: Dono, nome: string, args: any, guardar: (p: Proposta) => void,
+  dono: Dono, nome: string, args: any, guardar: (p: Proposta) => void, marca = 'teeds',
 ): Promise<unknown> {
   switch (nome) {
     case 'listar_robos':
-      return { robos: listarRobos(), observacao: 'Todos operam no Volatility 75 padrão, definido pela plataforma.' }
+      return { robos: listarRobos(marca), observacao: 'Todos operam no Volatility 75 padrão, definido pela plataforma.' }
 
     case 'minhas_contas': {
       const lista = await contasDele(dono)
@@ -220,7 +220,7 @@ async function executar(
 
     case 'propor_sessao': {
       const roboId = String(args.robo ?? '')
-      const ficha = listarRobos().find((r) => r.id === roboId)
+      const ficha = listarRobos(marca).find((r) => r.id === roboId)
       if (!ficha) throw new Error(`Robô "${roboId}" não existe. Chame listar_robos para ver os que existem.`)
 
       const disponiveis = await contasDele(dono)
@@ -380,7 +380,7 @@ export async function conversar(
     const resultados: Anthropic.ToolResultBlockParam[] = []
     for (const p of pedidos) {
       try {
-        const saida = await executar(dono, p.name, p.input ?? {}, (x) => { proposta = x })
+        const saida = await executar(dono, p.name, p.input ?? {}, (x) => { proposta = x }, marca)
         resultados.push({ type: 'tool_result', tool_use_id: p.id, content: JSON.stringify(saida) })
       } catch (e) {
         // O erro volta como conteúdo, não como falha: assim a IA lê o motivo

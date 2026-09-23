@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { EstadoMotor } from '../core/deriv/engine'
+import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 
 /**
@@ -30,6 +30,8 @@ interface Props {
   /** Abre o painel grande de dígitos (janelas de 25 a 1000). */
   onDigitos?: () => void
   digitosAberto?: boolean
+  /** A config da sessão (congelada): o medidor lê dela o loss virtual que o robô está usando. */
+  config?: ConfigEstrategia
 }
 
 const num = (v: number) =>
@@ -59,9 +61,9 @@ function posicaoDoDecisivo(estado: EstadoMotor, fita: number[]): number | null {
   return null
 }
 
-export function AnaliseAoVivo({ estado, estrategiaId, nomeEstrategia, moeda, ganhaCom, onDigitos, digitosAberto = false }: Props) {
+export function AnaliseAoVivo({ estado, estrategiaId, nomeEstrategia, moeda, ganhaCom, onDigitos, digitosAberto = false, config }: Props) {
   const estrategia = useMemo(() => ESTRATEGIAS_LOCAIS.find((e) => e.id === estrategiaId), [estrategiaId])
-  const medidor = estrategia?.medidor?.({ digitos: estado.digitos }) ?? null
+  const medidor = estrategia?.medidor?.({ digitos: estado.digitos, config }) ?? null
   const tamanho = medidor?.tipo === 'percentual' ? medidor.janela : JANELA_PADRAO
   const fita = estado.digitos.slice(-tamanho)
   const decisivo = posicaoDoDecisivo(estado, fita)
