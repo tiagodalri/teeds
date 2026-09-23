@@ -319,3 +319,15 @@
 .ce-col i { display: block; width: 100%; max-width: 26px; border-radius: 3px 3px 0 0; transition: height .2s ease; }
 .ce-col em { font-style: normal; font-size: 8.5px; color: var(--muted); white-space: nowrap; }
 .ce-col:hover i { filter: brightness(1.15); }
+
+/* ------------------------------------------------------------------ modo CEO
+   Com o Centro de estudo aberto, a regra "cabe na tela" espremia os robôs
+   numa faixa de 100 px (o bloco CEO ocupava o resto). Aqui a página volta
+   a rolar: robôs com a altura inteira em cima, o estudo embaixo.
+   (Pedido do Tiago, 23/09/2026.) */
+@media (min-width: 901px) {
+  .workspace-app .ger.rob.robot-workspace.tem-acompanhamento:has(> .ce) { flex: 1 0 auto; height: auto; overflow: visible; }
+  .robot-workspace.tem-acompanhamento:has(> .ce) .rob-workspace-board { flex: none; overflow: visible; }
+  .robot-workspace.tem-acompanhamento:has(> .ce) .cabine-caixa.aberta { height: calc(100dvh - 110px) !important; }
+  .robot-workspace:has(> .ce) > .ce { flex: none; margin-top: 8px; }
+}
