@@ -76,13 +76,13 @@ begin
   n := (p #>> '{recuperacao,lucroMinimo}')::numeric;
   if n is null or n < 0.01 or n > 1 then raise exception 'O lucro mínimo em dólares precisa ficar entre 0,01 e 1,00.'; end if;
   n := (p #>> '{recuperacao,modos,conservador,margem}')::numeric;
-  if n is null or n < 0 or n > 2 then raise exception 'O lucro ao fechar a sequência (conservador) precisa ficar entre 0% e 200% da entrada.'; end if;
+  if n is null or n < 0 or n > 2 then raise exception 'O lucro ao fechar a sequência (conservador) precisa ficar entre 0%% e 200%% da entrada.'; end if;
   n := (p #>> '{recuperacao,modos,conservador,sobrePrejuizo}')::numeric;
   if n is null or n < 0 or n > 1 then raise exception 'A parte do prejuízo que vira lucro precisa ficar entre 0 e 1.'; end if;
   ag := p #> '{recuperacao,modos,agressivo}';
   if ag is null then raise exception 'Informe o modo agressivo (um objeto ou null).'; end if;
   if jsonb_typeof(ag) <> 'null' then
-    n := (ag ->> 'margem')::numeric; if n is null or n < 0 or n > 2 then raise exception 'O lucro ao fechar a sequência (agressivo) precisa ficar entre 0% e 200% da entrada.'; end if;
+    n := (ag ->> 'margem')::numeric; if n is null or n < 0 or n > 2 then raise exception 'O lucro ao fechar a sequência (agressivo) precisa ficar entre 0%% e 200%% da entrada.'; end if;
     n := (ag ->> 'sobrePrejuizo')::numeric; if n is null or n < 0 or n > 1 then raise exception 'A parte do prejuízo que vira lucro (agressivo) precisa ficar entre 0 e 1.'; end if;
   end if;
   t := p #>> '{recuperacao,escada,tipo}';
@@ -104,11 +104,11 @@ begin
   palm := p -> 'palm';
   if palm is not null and jsonb_typeof(palm) <> 'null' then
     if (palm ->> 'janela')::numeric is distinct from 25 then raise exception 'A janela do The Palm é fixa em 25 dígitos nesta versão.'; end if;
-    n := (palm ->> 'limiteNove')::numeric; if n is null or n < 0 or n > 100 then raise exception 'O limite do dígito 9 precisa ficar entre 0% e 100%.'; end if;
-    n := (palm ->> 'limiteBaixos')::numeric; if n is null or n < 0 or n > 100 then raise exception 'O mínimo de 0 a 4 precisa ficar entre 0% e 100%.'; end if;
+    n := (palm ->> 'limiteNove')::numeric; if n is null or n < 0 or n > 100 then raise exception 'O limite do dígito 9 precisa ficar entre 0%% e 100%%.'; end if;
+    n := (palm ->> 'limiteBaixos')::numeric; if n is null or n < 0 or n > 100 then raise exception 'O mínimo de 0 a 4 precisa ficar entre 0%% e 100%%.'; end if;
     n := (palm ->> 'retornoInicial')::numeric; if n is null or n < 0.5 or n > 1.5 then raise exception 'O retorno presumido do Under 5 precisa ficar entre 0,50 e 1,50.'; end if;
     n := (palm ->> 'desconto')::numeric; if n is null or n < 0.8 or n > 1 then raise exception 'A segurança do payout do The Palm precisa ficar entre 0,80 e 1,00.'; end if;
-    n := (palm ->> 'margem')::numeric; if n is null or n < 0 or n > 2 then raise exception 'O lucro ao fechar do The Palm precisa ficar entre 0% e 200%.'; end if;
+    n := (palm ->> 'margem')::numeric; if n is null or n < 0 or n > 2 then raise exception 'O lucro ao fechar do The Palm precisa ficar entre 0%% e 200%%.'; end if;
   end if;
 end $$;
 

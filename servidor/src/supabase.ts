@@ -143,7 +143,9 @@ export async function abrirSessao(dados: {
       stop_loss: dados.stopLoss,
       take_profit: dados.takeProfit,
       max_operacoes: dados.maxOperacoes ?? 0,
-      parametros_versao: dados.parametrosVersao ?? null,
+      // Só manda a coluna quando há versão: assim o servidor novo grava sessões
+      // mesmo antes de a migração dos parâmetros existir no banco.
+      ...(dados.parametrosVersao != null ? { parametros_versao: dados.parametrosVersao } : {}),
       situacao: 'rodando',
     }),
   })
@@ -257,7 +259,7 @@ export async function registrarOperacao(
 export async function reabrirSessao(sessao: SessaoGravada, config: { stopLoss: number; takeProfit: number; maxOperacoes: number; valorInicial: number; parametrosVersao?: number | null }): Promise<void> {
   await rest(`/sessoes_robos?id=eq.${encodeURIComponent(sessao.id)}`, {
     method: 'PATCH', headers: { Prefer: 'return=minimal' },
-    body: JSON.stringify({ situacao: 'rodando', encerrada_em: null, motivo_da_parada: null, erro: null, stop_loss: config.stopLoss, take_profit: config.takeProfit, max_operacoes: config.maxOperacoes, entrada_atual: config.valorInicial, parametros_versao: config.parametrosVersao ?? null }),
+    body: JSON.stringify({ situacao: 'rodando', encerrada_em: null, motivo_da_parada: null, erro: null, stop_loss: config.stopLoss, take_profit: config.takeProfit, max_operacoes: config.maxOperacoes, entrada_atual: config.valorInicial, ...(config.parametrosVersao != null ? { parametros_versao: config.parametrosVersao } : {}) }),
   })
 }
 
