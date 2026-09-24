@@ -10,7 +10,7 @@ import { DERIV } from '../../src/core/deriv/config'
 import { MARCAS, marcaPorId } from '../../src/marca/marcas'
 import { atender, autorizacao } from './mcp'
 import { contasDoUsuario, emailEntregue, emailFalhou, emailsPendentes, limitesDoCliente, limparSessoesOrfas, salvarLeadCapturado, supabaseConfigurado, usuarioDoToken } from './supabase'
-import { aplicarNasSessoesVivas, contas, iniciar, montarConfig, parar, sessoesVivasPorVersao, todas, ver } from './sessoes'
+import { aplicarNasSessoesVivas, aquecerSala, contas, iniciar, montarConfig, parar, sessoesVivasPorVersao, todas, ver } from './sessoes'
 import {
   ErroDeValidacao, carregarParametros, descartarTeste, emTesteNoDemo, historico as historicoDeParametros, ligarAtualizacaoDeParametros,
   linhaDe, promoverDemo, publicar, restaurarPadrao, restaurarVersao, salvarRascunho, testarNoDemo, vigente,
@@ -617,6 +617,26 @@ const servidor = createServer(async (req, res) => {
       //
       // Nada volta na resposta. Uma rota que devolve a autorizacao que
       // acabou de receber e uma rota que vaza autorizacao.
+      /*
+        Aquecer a sala: a tela avisa que a pessoa abriu o preparo do robô e o
+        servidor já deixa a conexão de operação pronta para aquela conta.
+        Quando ela clicar no play, não haverá REST da Deriv no caminho.
+
+        Responde na hora: quem pediu não espera a Deriv, e falha aqui não é
+        erro para ninguém — o play sabe abrir a conexão sozinho.
+      */
+      if (url.pathname === '/api/aquecer' && req.method === 'POST') {
+        const contaId = String(corpo.contaId ?? '').trim()
+        if (!contaId) return json(400, { erro: 'Diga a conta.' })
+        const marcaDoPedido = marcaPorId(typeof corpo.marca === 'string' ? corpo.marca : undefined).id
+        const minhas = await contasDoUsuario(dono.id, marcaDoPedido)
+        if (!minhas.includes(contaId)) return json(200, { ok: false })
+        const cofre = await autorizacaoParaOperar(dono.id, autorizacao)
+        if (!cofre.ok) return json(200, { ok: false })
+        void aquecerSala(cofre.sessao, contaId)
+        return json(200, { ok: true })
+      }
+
       if (url.pathname === '/api/deriv' && req.method === 'POST') {
         const accessToken = String(corpo.accessToken ?? '').trim()
         if (!accessToken) return json(400, { erro: 'Autorizacao vazia.' })

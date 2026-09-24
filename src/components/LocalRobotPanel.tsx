@@ -9,7 +9,7 @@ import { RobotSetup } from './RobotSetup'
 import { LimiteAtingido, limiteJaAvisado, marcarLimiteAvisado, tipoDeLimite, type TipoDeLimite } from './LimiteAtingido'
 import type { Identidade } from '../core/deriv/branding'
 import type { SessaoTeeds } from '../core/teeds/conta'
-import { acompanharNoServidor, ligarNoServidor, pararNoServidor, procurarSessaoRecemLigada } from '../core/teeds/servidorRobos'
+import { acompanharNoServidor, aquecerNoServidor, ligarNoServidor, pararNoServidor, procurarSessaoRecemLigada } from '../core/teeds/servidorRobos'
 import { RobotCartao, RobotLinha } from './RobotResumo'
 import { resumoDeEstudo, type DadosEstudo } from '../core/teeds/estudoDoDono'
 import { MARCA } from '../marca'
@@ -139,6 +139,16 @@ export function LocalRobotPanel({
     }))
   }, [estado, idEstudo, ident.id, ident.nome, ident.cor, titulo, cfg.fatorGale, cfg.lucroSobrePrejuizo, cfg.modo, cfg.parametros, contaDaSessao?.demo])
   useEffect(() => () => { if (idEstudo) onEstudoRef.current?.(idEstudo, null) }, [idEstudo])
+
+  /*
+    Abriu o preparo do robô? O servidor já vai aquecendo a conexão de
+    operação desta conta, para o play não esperar a REST da Deriv.
+  */
+  const preparoAberto = preparando || solicitarPreparo
+  useEffect(() => {
+    if (!preparoAberto || !sessaoTeeds || !contaId) return
+    void aquecerNoServidor(sessaoTeeds, contaDaSessao?.contaId ?? contaId)
+  }, [preparoAberto, sessaoTeeds, contaId, contaDaSessao?.contaId])
 
   /*
    * Meta ou stop: o aviso no meio da tela. Vale quando a sessão para enquanto

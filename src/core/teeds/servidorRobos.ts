@@ -99,6 +99,19 @@ export function ligarNoServidor(
   }, 110_000)
 }
 
+/**
+ * Avisa o servidor que alguém vai ligar um robô nesta conta.
+ *
+ * Ele então já abre a conexão de operação, que é a parte lenta quando a
+ * Deriv engasga. Quando o play chegar, a conexão está pronta. Silencioso de
+ * propósito: se falhar, o play abre a conexão sozinho, como antes.
+ */
+export async function aquecerNoServidor(sessao: SessaoTeeds, contaId: string): Promise<void> {
+  try {
+    await api(sessao, '/aquecer', { method: 'POST', body: JSON.stringify({ contaId, marca: MARCA.id }) }, 15_000)
+  } catch { /* aquecer é cortesia, não obrigação */ }
+}
+
 /** Como está a sessão agora. */
 export function verNoServidor(sessao: SessaoTeeds, id: string): Promise<SessaoNoServidor> {
   return api<SessaoNoServidor>(sessao, `/sessao/${id}`)

@@ -264,6 +264,76 @@ async function acharConta(sessao: AuthSession, contaId?: string): Promise<Tradin
   return lista.find((c) => c.type === 'demo') ?? lista[0]
 }
 
+/* ------------------------------------------------------------------ *
+ * A sala quente: a conexão de operação pronta antes do play.
+ *
+ * Ligar um robô exigia, em toda vez: pedir à REST da Deriv um endereço de
+ * uso único (OTP) para a conta e só então abrir o WebSocket. Quando a REST
+ * dela engasga — e engasga —, esse é praticamente o tempo inteiro do play:
+ * em 24/09/2026 foram 49,6 s até desistir.
+ *
+ * Outras plataformas não sofrem disso porque mantêm uma conexão aberta por
+ * conta. Agora a gente também: quando a pessoa abre o preparo do robô, o
+ * servidor já abre a sala. No play, o robô pega a conexão que está pronta e
+ * o servidor abre outra para o próximo. Se não houver sala, o caminho antigo
+ * continua valendo.
+ * ------------------------------------------------------------------ */
+const SALA_MAXIMA_MS = 5 * 60_000
+const salas = new Map<string, { socket: TeedsSocket; quando: number }>()
+const aquecendo = new Map<string, Promise<void>>()
+const chaveDaSala = (auth: AuthSession, contaId: string) => `${auth.appId ?? ''}:${contaId}`
+
+async function abrirConexaoDeOperacao(auth: AuthSession, contaId: string): Promise<TeedsSocket> {
+  const url = await fetchTradingSocketUrl(auth, contaId)
+  const socket = new TeedsSocket({
+    url,
+    renovarUrl: () => fetchTradingSocketUrl(auth, contaId),
+    appId: auth.appId,
+  })
+  socket.connect()
+  return socket
+}
+
+/** Deixa uma conexão pronta para esta conta. Erro aqui não atrapalha ninguém. */
+export function aquecerSala(auth: AuthSession, contaId: string): Promise<void> {
+  const chave = chaveDaSala(auth, contaId)
+  const pronta = salas.get(chave)
+  if (pronta && Date.now() - pronta.quando < SALA_MAXIMA_MS && pronta.socket.state !== 'closed') return Promise.resolve()
+  const jaVem = aquecendo.get(chave)
+  if (jaVem) return jaVem
+  const tentativa = (async () => {
+    try {
+      const socket = await abrirConexaoDeOperacao(auth, contaId)
+      salas.set(chave, { socket, quando: Date.now() })
+    } catch (e) {
+      console.warn(`[sala] não consegui aquecer ${contaId}: ${(e as Error).message}`)
+    } finally {
+      aquecendo.delete(chave)
+    }
+  })()
+  aquecendo.set(chave, tentativa)
+  return tentativa
+}
+
+/** Pega a sala pronta desta conta, se houver uma válida. */
+function pegarSala(auth: AuthSession, contaId: string): TeedsSocket | null {
+  const chave = chaveDaSala(auth, contaId)
+  const guardada = salas.get(chave)
+  if (!guardada) return null
+  salas.delete(chave)
+  const velha = Date.now() - guardada.quando > SALA_MAXIMA_MS
+  if (velha || guardada.socket.state === 'closed') { guardada.socket.disconnect(); return null }
+  return guardada.socket
+}
+
+// Sala que ninguém usou vira conexão parada com a Deriv: some depois do tempo.
+setInterval(() => {
+  const agora = Date.now()
+  for (const [chave, s] of salas) {
+    if (agora - s.quando > SALA_MAXIMA_MS || s.socket.state === 'closed') { s.socket.disconnect(); salas.delete(chave) }
+  }
+}, 60_000).unref?.()
+
 /** Liga um robô e devolve na hora. Ele segue operando até bater um freio. */
 export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao> {
   if (!catalogo(p.marca ?? 'teeds').some(r => r.id === p.roboId && r.ativo)) throw new Error('Este robô está indisponível para novos inícios.')
@@ -298,14 +368,11 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
   const v = vigente(marcaPorId(p.marca).id, estrategia.id, conta.type === 'demo')
   aplicarVigente(config, p, v)
 
-  const url = await fetchTradingSocketUrl(auth, conta.accountId)
-  const socket = new TeedsSocket({
-    url,
-    renovarUrl: () => fetchTradingSocketUrl(auth, conta.accountId),
-    // É por aqui que o markup vai para a marca certa.
-    appId: auth.appId,
-  })
-  socket.connect()
+  // A conexão que já estava pronta, quando houver: é ela que tira a REST da
+  // Deriv do caminho do play. Sem sala, abre na hora, como antes.
+  const socket = pegarSala(auth, conta.accountId) ?? await abrirConexaoDeOperacao(auth, conta.accountId)
+  // E já deixa outra pronta para o próximo play desta conta.
+  void aquecerSala(auth, conta.accountId)
 
   // Se a conexão de operação não abrir, o socket não pode ficar tentando
   // reconectar para sempre por trás de um pedido que já desistiu.
