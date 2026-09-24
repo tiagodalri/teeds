@@ -89,13 +89,14 @@ export function ligarNoServidor(
   pedido: { roboId: string; contaId: string; config: ConfigEstrategia; origem?: 'navegador' | 'chat'; continuarId?: string },
 ): Promise<SessaoNoServidor> {
   // A marca vai junto para o robô se chamar pelo nome certo no histórico.
-  // O servidor desiste da Deriv em no máximo ~50 s (12 s por chamada, uma
-  // nova tentativa); 70 s aqui cobrem isso com folga e garantem que o botão
-  // "Iniciando…" nunca fica girando sem explicação.
+  // Desde 24/09/2026 o servidor repete sozinho uma vez quando a Deriv
+  // engasga, então o pior caso dobrou: duas voltas de ~50 s. O limite daqui
+  // cobre isso com folga — e o botão mostra os segundos correndo, para
+  // ninguém achar que travou.
   return api<SessaoNoServidor>(sessao, '/sessao', {
     method: 'POST',
     body: JSON.stringify({ ...pedido, marca: MARCA.id }),
-  }, 70_000)
+  }, 110_000)
 }
 
 /** Como está a sessão agora. */
@@ -193,6 +194,29 @@ export async function sessoesVivas(sessao: SessaoTeeds): Promise<SessaoViva[]> {
   */
   const r = await api<{ sessoes: SessaoViva[] }>(sessao, `/sessoes?marca=${encodeURIComponent(MARCA.id)}`)
   return (r.sessoes ?? []).filter((s) => !s.marca || s.marca === MARCA.id)
+}
+
+/**
+ * O robô ligou mesmo, apesar do erro?
+ *
+ * Quando o pedido de ligar estoura o tempo (ou a resposta se perde), a
+ * sessão pode já existir no servidor. Em vez de dizer que falhou e deixar a
+ * pessoa clicar de novo — criando um segundo robô —, a tela pergunta o que
+ * está vivo nesta conta com este robô e adota o que encontrar.
+ */
+export async function procurarSessaoRecemLigada(
+  sessao: SessaoTeeds,
+  roboId: string,
+  contaId: string,
+): Promise<SessaoViva | null> {
+  try {
+    const lista = await sessoesVivas(sessao)
+    const minha = lista.filter((s) => s.roboId === roboId && s.contaId === contaId && (s.estado?.rodando || s.estado?.emOperacao))
+    // A mais recente é a última da lista do servidor.
+    return minha.length ? minha[minha.length - 1] : null
+  } catch {
+    return null
+  }
 }
 
 /**

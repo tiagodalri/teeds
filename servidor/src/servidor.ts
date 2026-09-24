@@ -48,6 +48,32 @@ import { ligarFaxinaDoEspelho } from './espelho'
  *  - a troca do código por token acontece aqui no servidor, não no navegador
  */
 
+
+/**
+ * Um engasgo da Deriv não pode virar um play perdido.
+ *
+ * A API dela trava de vez em quando: em 24/09/2026 o play falhou em 49,6 s
+ * com "a Deriv não respondeu a tempo" e o clique seguinte ligou em 14,2 s.
+ * Quem estava na frente da tela só via "Iniciando…" e depois um erro. Então
+ * o servidor repete sozinho, uma vez, quando o motivo é tempo — e só nesse
+ * caso: saldo insuficiente, limite e conta errada continuam voltando na hora.
+ *
+ * Repetir é seguro porque todo engasgo acontece ANTES de a sessão existir:
+ * lista de contas, endereço de operação e lista de ativos. Nada foi criado
+ * quando o erro chega aqui.
+ */
+const ENGASGO_DA_DERIV = /não respondeu a tempo|não abriu a conexão|instável/i
+async function ligarInsistindo(quem: string, auth: Parameters<typeof iniciar>[0], p: Parameters<typeof iniciar>[1]) {
+  try {
+    return await iniciar(auth, p)
+  } catch (e) {
+    const motivo = (e as Error).message
+    if (!ENGASGO_DA_DERIV.test(motivo)) throw e
+    console.warn(`[ligar] ${quem} engasgou na Deriv (${motivo}) — repetindo uma vez`)
+    return await iniciar(auth, p)
+  }
+}
+
 const PORTA = Number(process.env.PORTA ?? 8080)
 /**
  * O caminho secreto do MCP.
@@ -563,7 +589,7 @@ const servidor = createServer(async (req, res) => {
         // De qual marca veio o pedido — muda só o nome do robô no histórico.
         const marca = typeof corpo.marca === 'string' ? corpo.marca : undefined
         etapa = 'ligando o motor na Deriv'
-        const s = await iniciar(auth, {
+        const s = await ligarInsistindo(quem, auth, {
           continuarId: typeof corpo.continuarId === 'string' ? corpo.continuarId : undefined,
           roboId: String(corpo.roboId ?? ''),
           contaId,

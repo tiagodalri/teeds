@@ -9,7 +9,7 @@ import { RobotSetup } from './RobotSetup'
 import { LimiteAtingido, limiteJaAvisado, marcarLimiteAvisado, tipoDeLimite, type TipoDeLimite } from './LimiteAtingido'
 import type { Identidade } from '../core/deriv/branding'
 import type { SessaoTeeds } from '../core/teeds/conta'
-import { acompanharNoServidor, ligarNoServidor, pararNoServidor } from '../core/teeds/servidorRobos'
+import { acompanharNoServidor, ligarNoServidor, pararNoServidor, procurarSessaoRecemLigada } from '../core/teeds/servidorRobos'
 import { RobotCartao, RobotLinha } from './RobotResumo'
 import { resumoDeEstudo, type DadosEstudo } from '../core/teeds/estudoDoDono'
 import { MARCA } from '../marca'
@@ -266,7 +266,25 @@ export function LocalRobotPanel({
       setPreparando(false)
       onFecharPreparo?.()
     } catch (e) {
-      setErro((e as Error).message)
+      /*
+        O pedido falhou — mas o robô pode ter ligado assim mesmo: a resposta
+        pode ter se perdido no caminho depois de o servidor criar a sessão.
+        Antes de mostrar erro, a tela pergunta ao servidor o que existe para
+        esta conta e este robô; se achar, adota em vez de acusar falha.
+      */
+      const adotada = await procurarSessaoRecemLigada(sessaoTeeds, escolhida.id, contaId)
+      if (adotada) {
+        sessaoRef.current = { estrategia: escolhida, ident: modelo }
+        setCfg(config)
+        setContaDaSessao({ contaId: adotada.contaId, demo: adotada.demo, moeda: adotada.moeda })
+        olhar(adotada.id)
+        onSessaoChangeRef.current?.(true, adotada.id)
+        setEstado(adotada.estado)
+        setPreparando(false)
+        onFecharPreparo?.()
+      } else {
+        setErro((e as Error).message)
+      }
     } finally {
       envioPendente.current = false
       setLigando(false)

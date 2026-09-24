@@ -136,6 +136,20 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
     if (inputRef.current) { inputRef.current.focus(); inputRef.current.select() } else titleRef.current?.focus()
   }, [passo])
   useEffect(() => { if (!ligando) submitted.current = false }, [ligando, erro])
+  /*
+    Os segundos correndo no botão.
+
+    Quando a Deriv engasga, ligar demora — e um "Iniciando…" parado parece
+    travado. O relógio mostra que a tela continua esperando, e depois de 12 s
+    ela diz por quê. (24/09/2026, a pedido do Tiago.)
+  */
+  const [segundos, setSegundos] = useState(0)
+  useEffect(() => {
+    if (!ligando) { setSegundos(0); return }
+    const inicio = Date.now()
+    const id = setInterval(() => setSegundos(Math.floor((Date.now() - inicio) / 1000)), 1000)
+    return () => clearInterval(id)
+  }, [ligando])
   const voltar = () => { if (ligando) return; setConfirmaReal(false); setPasso(p => p - 1) }
   function iniciar() {
     if (submitted.current || ligando || !todasValidas || (!isDemo && !confirmaReal)) return
@@ -196,8 +210,8 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
       )}
       <footer className="robot-launch-footer">
         <button type="button" className="robot-launch-back" disabled={ligando} onClick={passo === (escolherModelo ? -1 : 0) ? onCancelar : voltar}>{passo === (escolherModelo ? -1 : 0) ? 'Cancelar' : '← Voltar'}</button>
-        <span>{passo === -1 ? modelo.nome : revisao ? '' : 'Nada será operado ainda'}</span>
-        {revisao ? <button type="button" className="robot-launch-next" disabled={ligando || !todasValidas || (!isDemo && !confirmaReal)} onClick={iniciar}>{ligando ? 'Iniciando…' : <span className="robot-launch-go"><svg className="icone-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6L12.6 8z" fill="currentColor" /></svg>Iniciar robô</span>}</button>
+        <span>{ligando && segundos >= 12 ? 'A Deriv está lenta agora. Seguimos tentando — não clique de novo.' : passo === -1 ? modelo.nome : revisao ? '' : 'Nada será operado ainda'}</span>
+        {revisao ? <button type="button" className="robot-launch-next" disabled={ligando || !todasValidas || (!isDemo && !confirmaReal)} onClick={iniciar}>{ligando ? `Iniciando… ${segundos}s` : <span className="robot-launch-go"><svg className="icone-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6L12.6 8z" fill="currentColor" /></svg>Iniciar robô</span>}</button>
           : <button type="submit" className="robot-launch-next" disabled={!valido || ligando}>Continuar <span aria-hidden="true">→</span></button>}
       </footer>
     </form>
