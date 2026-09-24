@@ -11,7 +11,7 @@ import type { Identidade } from '../core/deriv/branding'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { acompanharNoServidor, ligarNoServidor, pararNoServidor } from '../core/teeds/servidorRobos'
 import { RobotCartao, RobotLinha } from './RobotResumo'
-import { resumoDeEstudo, type DadosEstudo } from './CentroDeEstudo'
+import { resumoDeEstudo, type DadosEstudo } from '../core/teeds/estudoDoDono'
 import { MARCA } from '../marca'
 
 interface Props {

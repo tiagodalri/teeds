@@ -266,68 +266,14 @@
   .robot-workspace.tem-acompanhamento .rob-overview-card { padding: 9px 18px; }
   .robot-workspace.tem-acompanhamento .rob-overview-metrics dd { margin-top: 1px; font-size: 17px; }
 }
-
-/* ---- Centro de estudo (Modo CEO) ------------------------------------ */
-.ce { display: flex; flex-direction: column; gap: 14px; padding: 20px 22px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; }
-.ce-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.ce-eyebrow { display: block; margin-bottom: 4px; color: var(--primary); font-size: 9px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
-.ce-topo h3 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -.02em; }
-.ce-topo p { margin: 4px 0 0; color: var(--muted); font-size: 11.5px; max-width: 62ch; }
-.ce-aviso { padding: 7px 11px; border-radius: 8px; background: var(--account-demo-soft); color: var(--account-demo); font-size: 11px; font-weight: 650; }
-.ce-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 10px; }
-.ce-tile { display: grid; gap: 3px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 11px; }
-.ce-tile.destaque { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); background: var(--primary-soft); }
-.ce-tile i { font-style: normal; font-size: 8.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.ce-tile b { font-size: 19px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-.ce-tile small { color: var(--muted); font-size: 10.5px; }
-.ce-tabela { overflow-x: auto; }
-.ce table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
-.ce th, .ce td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
-.ce thead th { font-size: 8.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
-.ce tbody th { text-align: left; font-weight: 600; }
-.ce tbody th small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; font-weight: 500; }
-.ce-robo { display: inline-flex; align-items: center; gap: 7px; }
-.ce-robo i { width: 8px; height: 8px; border-radius: 3px; }
-.ce .up { color: var(--up); } .ce .down { color: var(--down); }
-.ce-markup b, .ce-markup { font-weight: 650; }
-.ce-barra { display: block; margin-top: 4px; height: 3px; border-radius: 2px; background: var(--trilho); overflow: hidden; }
-.ce-barra i { display: block; height: 100%; border-radius: 2px; }
-.ce-nota { margin: 0; color: var(--muted); font-size: 10.5px; line-height: 1.5; }
+/* Modo CEO na mesa: markup nos resumos e a faixa do dono. */
 .rs-kpi.rs-markup b { color: var(--primary); }
 .rc-markup { font-style: normal; margin-left: 8px; color: var(--primary); font-size: 10.5px; font-weight: 650; }
-@container robot-desk (max-width: 720px) {
-  .ce { padding: 16px; }
-  .ce table { font-size: 11px; }
-}
-
-/* ---- Centro de estudo: histórico --------------------------------- */
-.ce-secao { margin: 2px 0 -4px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-.ce-hist { display: flex; flex-direction: column; gap: 14px; padding-top: 16px; border-top: 1px solid var(--border); }
-.ce-hist-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
-.ce-hist-topo h4 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -.02em; }
-.ce-filtros { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.ce-periodo { display: flex; gap: 3px; padding: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; }
-.ce-periodo button { padding: 6px 11px; border: 0; border-radius: 6px; background: none; color: var(--text); font-size: 11.5px; font-weight: 600; cursor: pointer; }
-.ce-periodo button[aria-pressed='true'] { background: var(--primary-soft); color: var(--primary); }
-.ce-demo { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11.5px; }
-.ce-vazio { margin: 0; padding: 14px 16px; border: 1px dashed var(--border); border-radius: 10px; color: var(--muted); font-size: 12px; }
-.ce-graficos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 14px; }
-.ce-graficos section { padding: 14px 16px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
-.ce-graficos h5 { margin: 0 0 12px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
-.ce-barras { display: flex; align-items: flex-end; gap: 3px; height: 116px; }
-.ce-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; gap: 5px; }
-.ce-col i { display: block; width: 100%; max-width: 26px; border-radius: 3px 3px 0 0; transition: height .2s ease; }
-.ce-col em { font-style: normal; font-size: 8.5px; color: var(--muted); white-space: nowrap; }
-.ce-col:hover i { filter: brightness(1.15); }
-
-/* ------------------------------------------------------------------ modo CEO
-   Com o Centro de estudo aberto, a regra "cabe na tela" espremia os robôs
-   numa faixa de 100 px (o bloco CEO ocupava o resto). Aqui a página volta
-   a rolar: robôs com a altura inteira em cima, o estudo embaixo.
-   (Pedido do Tiago, 23/09/2026.) */
-@media (min-width: 901px) {
-  .workspace-app .ger.rob.robot-workspace.tem-acompanhamento:has(> .ce) { flex: 1 0 auto; height: auto; overflow: visible; }
-  .robot-workspace.tem-acompanhamento:has(> .ce) .rob-workspace-board { flex: none; overflow: visible; }
-  .robot-workspace.tem-acompanhamento:has(> .ce) .cabine-caixa.aberta { height: calc(100dvh - 110px) !important; }
-  .robot-workspace:has(> .ce) > .ce { flex: none; margin-top: 8px; }
-}
+.fceo { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 11px 16px; border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border)); border-radius: 12px; background: var(--primary-soft); }
+.fceo-selo { font: 750 9.5px/1 Archivo, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--primary); }
+.fceo-item { display: grid; gap: 2px; }
+.fceo-item i { font-style: normal; font-size: 8.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.fceo-item b { font-size: 15px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.fceo-item.destaque b { color: var(--primary); }
+.fceo-nota { margin-left: auto; max-width: 46ch; color: var(--muted); font-size: 10.5px; line-height: 1.45; text-align: right; }
+@container robot-desk (max-width: 720px) { .fceo-nota { margin-left: 0; text-align: left; } }

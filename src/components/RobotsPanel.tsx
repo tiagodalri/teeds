@@ -8,7 +8,8 @@ import {
 } from '../core/deriv/robots'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { LocalRobotPanel } from './LocalRobotPanel'
-import { CentroDeEstudo, type DadosEstudo } from './CentroDeEstudo'
+import { type DadosEstudo } from '../core/teeds/estudoDoDono'
+import { FaixaCeo } from './FaixaCeo'
 import { Emblema } from './RobotCard'
 import { ServerRobotLive } from './ServerRobotLive'
 import { RobotScope } from './RobotScope'
@@ -336,6 +337,7 @@ export function RobotsPanel({
 
       {/* Uma única grade, com identidade estável. Foco e catálogo só ocultam
           visualmente: nunca desmontam a sessão ou mudam seus parâmetros. */}
+      {admin && mostrarMarkup && <FaixaCeo dados={[...estudo.values()]} moeda={moeda} />}
       <div ref={mesaRef} className={`rob-workspace-board modo-${disposicao}`}>
 
       {/*
@@ -409,11 +411,6 @@ export function RobotsPanel({
       </div>}
       </div>
 
-      {admin && mostrarMarkup && (
-        <CentroDeEstudo
-          dados={[...estudo.values()].sort((a, b) => a.numero.localeCompare(b.numero, 'pt-BR', { numeric: true }))}
-          moeda={moeda} sessao={sessaoTeeds ?? null} />
-      )}
 
       {rodando.length > 0 && (
         <div className="resumo-robos">

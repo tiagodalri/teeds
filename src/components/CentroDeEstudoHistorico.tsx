@@ -4,8 +4,8 @@
  * A parte de cima do centro de estudo olha as sessões abertas agora. Esta
  * olha para trás: o banco resume as operações de robô do período (é a mesma
  * consulta que a tela de Comissões usa, `teeds_analise_operacoes`) e aqui
- * viram três desenhos — markup por dia, por robô e por hora do dia — mais a
- * tabela de desempenho de cada robô.
+ * viram dois desenhos — markup por dia e por hora do dia — mais a tabela de
+ * desempenho de cada robô.
  *
  * Por padrão mostra só conta real, que é onde existe faturamento de verdade.
  * O botão "com demo" serve para estudar comportamento, e a tela avisa que
@@ -146,7 +146,7 @@ export function CentroDeEstudoHistorico({ sessao, moeda }: { sessao: SessaoTeeds
                 }))} />
             </section>
             <section>
-              <h5>Por hora do dia</h5>
+              <h5>Markup por hora do dia</h5>
               <Barras
                 cor="var(--up)"
                 rotulo="operação"
@@ -168,7 +168,7 @@ export function CentroDeEstudoHistorico({ sessao, moeda }: { sessao: SessaoTeeds
                   <th scope="col">Clientes</th>
                   <th scope="col">Movimentado</th>
                   <th scope="col">Markup</th>
-                  <th scope="col">Por mil</th>
+                  <th scope="col">Rende por mil</th>
                   <th scope="col">Resultado dos clientes</th>
                 </tr>
               </thead>
