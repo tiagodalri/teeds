@@ -234,12 +234,30 @@ for (const [pergunta, resposta] of FAQ) {
 const inicio = Date.now()
 let profundidade = 0
 const ctaFixo = document.querySelector('.cta-fixo')
-addEventListener('scroll', () => {
+function atualizarCta() {
   const total = document.documentElement.scrollHeight - innerHeight
   profundidade = Math.max(profundidade, total > 0 ? Math.round(scrollY / total * 100) : 100)
   const cadastro = document.querySelector('#cadastro').getBoundingClientRect()
-  ctaFixo.classList.toggle('visivel', scrollY > 600 && cadastro.top > innerHeight)
-}, { passive: true })
+  const heroCta = document.querySelector('.hero-acoes').getBoundingClientRect()
+  const visivel = innerWidth > 600 && heroCta.bottom < 0 && cadastro.top > innerHeight && !document.activeElement?.matches('input,textarea')
+  ctaFixo.classList.toggle('visivel', visivel)
+  ctaFixo.setAttribute('aria-hidden', String(!visivel))
+  ctaFixo.tabIndex = visivel ? 0 : -1
+}
+addEventListener('scroll', atualizarCta, { passive: true })
+addEventListener('resize', atualizarCta)
+addEventListener('focusin', atualizarCta)
+addEventListener('focusout', atualizarCta)
+window.visualViewport?.addEventListener('resize', atualizarCta)
+atualizarCta()
+const maisSessoes = document.querySelector('.sessoes-expandir')
+maisSessoes.addEventListener('click', () => {
+  const expandida = document.querySelector('[data-sessoes]').classList.toggle('expandida')
+  maisSessoes.setAttribute('aria-expanded', String(expandida))
+  maisSessoes.textContent = expandida ? 'Mostrar menos sessões' : 'Ver todas as sessões de exemplo'
+  if (!expandida) document.querySelector('#sessoes').scrollIntoView({ block: 'start' })
+  atualizarCta()
+})
 
 function armazenamentoLer(chave) { try { return localStorage.getItem(chave) } catch { return null } }
 const chaveVisitas = `visitas-captura-${marca}`
