@@ -1,6 +1,11 @@
 :root{--cor:#d2aa51;--cor-escura:#8c6926;--fundo:#0d1118;--fundo2:#11161e;--cartao:#161c25;--linha:#28303b;--texto:#f4f1ea;--muted:#9298a3;--verde:#42cb84;--vermelho:#ff6868;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);font-family:"DM Sans",sans-serif;color-scheme:dark;scroll-behavior:smooth}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
+section[id]{scroll-margin-top:90px}
+.hero>*{min-width:0}
+.sessao{min-width:0}
+.sessao header{flex-wrap:wrap;gap:6px}
+@media(max-width:520px){.sessoes{grid-template-columns:1fr!important}}
 body{margin:0;background:var(--fundo);color:var(--texto);overflow-x:hidden;line-height:1.5}
 body:before{content:"";position:fixed;inset:0;z-index:-1;background:radial-gradient(circle at 70% 5%,color-mix(in srgb,var(--cor) 10%,transparent),transparent 34%);pointer-events:none}
 img{max-width:100%}
@@ -113,7 +118,12 @@ h1,h2,h3{margin:0}
 .passos h3{font-size:19px}.passos p{margin:0;color:#8e949e;line-height:1.7;font-size:14.5px}
 
 /* robôs (só nome e frase) */
-.robos{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.experiencia{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.experiencia article{padding:30px;border:1px solid var(--linha);border-radius:16px;background:var(--cartao)}
+.experiencia-numero{color:var(--cor);font-size:11px;font-weight:700;letter-spacing:.14em}
+.experiencia h3{font-size:21px;line-height:1.3;margin:24px 0 12px;letter-spacing:-.02em}
+.experiencia p{color:#a0a6af;font-size:15px;line-height:1.7;margin:0}
+@media(max-width:760px){.experiencia{grid-template-columns:1fr;gap:12px}.experiencia article{padding:24px}.experiencia h3{margin-top:16px;font-size:20px}}
 .robo{position:relative;padding:22px 22px 20px;border:1px solid var(--linha);border-radius:16px;background:var(--cartao);display:grid;gap:8px;overflow:hidden;transition:border-color .2s,transform .2s}
 .robo:before{content:"";position:absolute;inset:auto -30px -40px auto;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--cor) 22%,transparent),transparent 70%)}
 .robo:hover{border-color:color-mix(in srgb,var(--cor) 45%,var(--linha));transform:translateY(-3px)}

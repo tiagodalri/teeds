@@ -17,14 +17,12 @@ const ROBOS = {
 const config = marca === 'omni' ? {
   nome: 'OMNI', cor: '#6c93c6', escura: '#0e2a4e', emblema: '/omni-marca.png', assinatura: 'FINANCIAL INTELLIGENCE',
   intro: 'A OMNI reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
-  robos: [['ag2', 'OMNI Under', 'Espera o mercado errar quatro vezes.'], ['superior5', 'OMNI Over', 'A mesma espera, nos dígitos altos.'], ['firstblock', 'OMNI Bull', 'Metade de baixo, com loss virtual.'], ['secondblock', 'OMNI Bear', 'Metade de cima, mesma regra do Bull.']],
-  demo: { id: 'firstblock', nome: 'OMNI Bull' },
+  demo: { id: 'firstblock', nome: 'Sessão demonstrativa' },
   fotos: [['omni-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['omni-gerenciamento.webp', 'Gerenciamento', 'A planilha que calcula entrada, limites e objetivo antes de ligar o robô.'], ['omni-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['omni-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
 } : {
   nome: 'TEEDS', cor: '#d2aa51', escura: '#8c6926', emblema: '/teeds-marca.png', assinatura: 'TRADING TECHNOLOGY',
   intro: 'A Teeds reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
-  robos: [['thepalm', 'The Palm', 'Lê 25 dígitos antes de agir.'], ['superior5', 'Teeds AG7', 'Espera quatro losses virtuais e entra.'], ['ag2', 'Teeds AG2', 'A mesma espera, nos dígitos baixos.'], ['smart03', 'Teeds Smart 03', 'Contratos de 1 tick, ritmo alto.'], ['goreme', 'Teeds Göreme', 'Acerta muito, recupera na primeira perda.'], ['firstblock', 'First Block', 'Metade de baixo, com loss virtual.'], ['secondblock', 'Second Block', 'Metade de cima, com loss virtual.']],
-  demo: { id: 'thepalm', nome: 'The Palm' },
+  demo: { id: 'thepalm', nome: 'Sessão demonstrativa' },
   fotos: [['teeds-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['teeds-gerenciamento.webp', 'Gerenciamento', 'A planilha que calcula entrada, limites e objetivo antes de ligar o robô.'], ['teeds-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['teeds-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
 }
 document.documentElement.dataset.marca = marca
@@ -39,19 +37,6 @@ document.querySelector('[data-favicon-ico]').href = `/pwa-${marca}/favicon.ico`
 document.querySelectorAll('[data-favicon]').forEach(el => { el.href = `/pwa-${marca}/favicon-${el.dataset.favicon}.png` })
 document.querySelector('[data-apple-icon]').href = `/pwa-${marca}/icon-180.png`
 document.querySelector('meta[name="theme-color"]').content = marca === 'omni' ? '#081525' : '#090a0d'
-
-/* ------------------------------------------------------------- robôs */
-/* Só o nome e uma frase: como cada um decide, a pessoa descobre por dentro. */
-const robosEl = document.querySelector('[data-robos]')
-config.robos.forEach(([id, nome, frase], i) => {
-  const art = document.createElement('article')
-  art.className = 'robo'
-  art.innerHTML = `<i></i><b></b><span></span>`
-  art.querySelector('i').textContent = String(i + 1).padStart(2, '0')
-  art.querySelector('b').textContent = nome
-  art.querySelector('span').textContent = frase
-  robosEl.appendChild(art)
-})
 
 /* ------------------------------------------------------ galeria */
 const galeriaEl = document.querySelector('[data-galeria]')
@@ -77,7 +62,7 @@ for (const [arquivo, titulo, legenda] of config.fotos) {
   const sessoes = []
   for (let i = 0; i < 20; i++) {
     const negativa = i === 6 || i === 15
-    const robo = config.robos[Math.floor(sortear() * config.robos.length)][1]
+    const robo = `Sessão de exemplo ${String(i + 1).padStart(2, '0')}`
     const meta = [20, 30, 50, 80, 100, 150, 200][Math.floor(sortear() * 7)]
     const resultado = negativa ? -Math.round(entre(0.45, 0.8) * meta * 100) / 100 : Math.round(entre(0.92, 1.06) * meta * 100) / 100
     const ops = Math.round(entre(9, 64)), ganhas = negativa ? Math.round(ops * entre(0.42, 0.55)) : Math.round(ops * entre(0.68, 0.92))
@@ -102,27 +87,6 @@ for (const [arquivo, titulo, legenda] of config.fotos) {
   }
 })()
 
-/* ------------------------------------------------------- depoimentos */
-/* ATENÇÃO: depoimentos ILUSTRATIVOS, escritos para ocupar o lugar até os
-   reais chegarem (pedido do Tiago em 15/09/2026). Trocar antes de anunciar. */
-const DEPOIMENTOS = [
-  { nome: 'Rafael M.', onde: 'Curitiba, PR', desde: 'cliente há 4 meses', texto: 'Eu operava no impulso e vivia devolvendo o que ganhava. Com a meta e o stop definidos antes, o robô para na hora certa. Foi o que me faltava: disciplina que eu não tinha sozinho.' },
-  { nome: 'Juliana T.', onde: 'Belo Horizonte, MG', desde: 'cliente há 7 meses', texto: 'O que me convenceu foi ver a cabine ao vivo: cada dígito, cada entrada, cada resultado. Não é caixa-preta. Hoje acompanho pelo celular enquanto trabalho.' },
-  { nome: 'Carlos E.', onde: 'Recife, PE', desde: 'cliente há 3 meses', texto: 'Comecei na conta demo, com medo. Depois de duas semanas entendendo a gestão, passei para a real com um valor pequeno e fui subindo. O suporte respondeu tudo, até pergunta boba.' },
-  { nome: 'Amanda R.', onde: 'Porto Alegre, RS', desde: 'cliente há 5 meses', texto: 'Não sei nada de programação e não precisei saber. Escolhi o robô, coloquei os limites e pronto. O que eu mais gosto é o histórico: dá para revisar o dia inteiro em dois minutos.' },
-]
-const depEl = document.querySelector('[data-depoimentos]')
-for (const d of DEPOIMENTOS) {
-  const art = document.createElement('article')
-  art.className = 'depoimento'; art.dataset.ilustrativo = 'sim'
-  art.innerHTML = `<div class="estrelas" aria-label="5 de 5">★★★★★</div><p></p><footer><i></i><span><b></b><small></small></span></footer>`
-  art.querySelector('p').textContent = `“${d.texto}”`
-  art.querySelector('i').textContent = d.nome[0]
-  art.querySelector('b').textContent = d.nome
-  art.querySelector('small').textContent = `${d.onde} · ${d.desde}`
-  depEl.appendChild(art)
-}
-
 /* ---------------------------------------------------------------- FAQ */
 const FAQ = [
   ['Preciso ter experiência para usar?', `Não. A plataforma foi feita para quem está começando: aulas curtas dentro dela, conta demo com dinheiro fictício e a equipe ${config.nome} acompanhando a configuração. Quem já opera encontra gráfico, indicadores e operação manual também.`],
@@ -133,7 +97,7 @@ const FAQ = [
   ['Consigo acompanhar o que o robô está fazendo?', 'Tudo, ao vivo: os dígitos que chegam, a entrada armada, o contrato aberto, o resultado de cada operação e a curva da sessão. Depois, o histórico completo fica guardado para você revisar.'],
   ['Funciona no celular?', 'Sim. A plataforma roda no navegador e pode ser instalada como app na tela inicial do iPhone ou do Android, com o mesmo acesso e as mesmas telas.'],
   ['E se eu quiser parar?', 'Um toque em "Desligar" e o robô para. Você também pode remover a autorização na corretora a qualquer momento. Sem fidelidade, sem burocracia.'],
-  ['Qual o custo?', 'O cadastro e a apresentação são gratuitos. Na apresentação a equipe mostra os planos e você decide se faz sentido para você. Sem cobrança automática por esta página.'],
+  ['Como funciona a fila de espera?', 'O cadastro é gratuito. Nesta primeira etapa, as vagas são limitadas e o acesso à plataforma é gratuito para os cadastros aprovados. A inscrição não libera o acesso automaticamente: após a aprovação, as instruções chegam por e-mail.'],
 ]
 const faqEl = document.querySelector('[data-faq]')
 for (const [pergunta, resposta] of FAQ) {
@@ -227,7 +191,7 @@ for (const [pergunta, resposta] of FAQ) {
     q('[data-demo-etapa1]').textContent = aberto ? '●' : ops ? '✓' : '1'
     q('[data-demo-etapa1-titulo]').textContent = aberto ? 'Contrato aberto' : ops ? 'Último contrato' : 'Aguardando entrada'
     q('[data-demo-etapa1-sub]').textContent = aberto ? hora() : ops ? hora() : 'monitorando o mercado'
-    q('[data-demo-fase]').textContent = aberto ? (op && op.recuperacao ? 'Recuperando · Under 5' : 'Contrato aberto') : (op && !op.ganhou) ? 'Recuperando' : robo.recuperacao ? 'Analisando 25 dígitos' : 'Analisando mercado'
+    q('[data-demo-fase]').textContent = aberto ? (op && op.recuperacao ? 'Recuperando' : 'Contrato aberto') : (op && !op.ganhou) ? 'Recuperando' : robo.recuperacao ? 'Analisando mercado' : 'Analisando mercado'
     const e2 = q('[data-demo-etapa2]'); e2.className = `tv-etapa ${!aberto && ops ? 'ativa concluida' : ''}`
     e2.querySelector('i').textContent = !aberto && ops ? '✓' : '2'
     q('[data-demo-etapa2-sub]').textContent = aberto ? 'aguardando resultado…' : op ? `${op.ganhou ? 'ganho' : 'perda'} ${assinado(op.lucro)} USD` : 'próxima etapa'
@@ -277,9 +241,10 @@ addEventListener('scroll', () => {
   ctaFixo.classList.toggle('visivel', scrollY > 600 && cadastro.top > innerHeight)
 }, { passive: true })
 
+function armazenamentoLer(chave) { try { return localStorage.getItem(chave) } catch { return null } }
 const chaveVisitas = `visitas-captura-${marca}`
-const visitas = Math.min(1000, Number(localStorage.getItem(chaveVisitas) || 0) + 1)
-localStorage.setItem(chaveVisitas, String(visitas))
+const visitas = Math.min(1000, Number(armazenamentoLer(chaveVisitas) || 0) + 1)
+try { localStorage.setItem(chaveVisitas, String(visitas)) } catch {}
 const form = document.querySelector('#form-lead')
 const telefone = form.elements.telefone
 telefone.addEventListener('input', () => {
