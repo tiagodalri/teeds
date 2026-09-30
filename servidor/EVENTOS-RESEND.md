@@ -11,6 +11,12 @@ O painel administrativo consulta a lista do Resend e complementa cada envio com 
 
 ## Segurança e precisão
 
+### Estado conferido em 30/09/2026
+
+Webhook criado e habilitado para as duas marcas; teste HTTP confirmou assinatura válida (200, remetente de fixture ignorado sem gravação) e ausência de assinatura (401). Consultas reais do painel retornaram registros sem conteúdo sensível e sem erro no histórico de eventos. As duas publicações responderam com o novo painel.
+
+**Ativação de rastreamento ainda não confirmada:** a API do Resend respondeu HTTP 200 às atualizações, mas as leituras seguintes continuaram devolvendo `open_tracking=false` e `click_tracking=false` em ambos os domínios. Não considerar ativado pelo simples sucesso do PATCH. Conferir em Resend → Domains → domínio → Configuration e ativar Open Tracking / Click Tracking. O painel consulta o estado novamente (cache de até cinco minutos). A interface de navegador automatizada estava indisponível durante esta conferência. Nenhum disparo de teste foi enviado a clientes.
+
 - Um evento é deduplicado pelo `svix-id`; reentregas não aumentam a contagem.
 - Persistência guarda apenas ID, marca, tipo e horários. Não guarda corpo, senha, token, IP, destinatário ou URL clicada.
 - Marcas são determinadas pelo remetente configurado, não por um parâmetro enviado pelo navegador.
