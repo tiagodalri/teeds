@@ -153,6 +153,9 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
           <button className="entrada-btn" type="submit" disabled={!valido || ocupado}>
             {ocupado ? 'um instante…' : t.acao}
           </button>
+          {modo === 'entrar' && <button className="entrada-btn" type="button" disabled={ocupado} onClick={() => trocarModo('criar')}>
+            Cadastre-se
+          </button>}
           {modo === 'criar' && <p className="entrada-mini">
             O cadastro não libera o acesso automaticamente. Aguarde a aprovação da equipe.
           </p>}
@@ -163,11 +166,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
 
         <div className="entrada-troca">
           {modo === 'entrar' ? (
-            <>
-              <button onClick={() => trocarModo('criar')}>Entrar na fila de espera</button>
-              <span>·</span>
-              <button onClick={() => trocarModo('esqueci')}>Esqueci a senha</button>
-            </>
+            <button onClick={() => trocarModo('esqueci')}>Esqueci a senha</button>
           ) : (
             <button onClick={() => trocarModo('entrar')}>Já tenho conta — entrar</button>
           )}
@@ -196,8 +195,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
         </div>
 
         <p className="entrada-rodape">
-          Negociar envolve risco de perda. Opere só o que você pode perder,
-          e comece pela conta demo.
+          Negociar envolve riscos e, assim como os ganhos são reais, as perdas também são. Opere com responsabilidade.
         </p>
       </div>
     </div>
