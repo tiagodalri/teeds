@@ -26,8 +26,14 @@ import type { Marca } from '../../src/marca/marcas'
  * O TEXTO É DO TIAGO, palavra por palavra. Ele escreveu e pediu assim. Duas
  * versões minhas foram recusadas antes: a primeira abria falando do tempo em
  * que a plataforma ficou parada, e ninguém volta empolgado para um lugar que
- * começa pedindo perdão. Quem for mexer aqui um dia: não "melhore" sozinho —
+ * começa pedindo perdão. Quem for mexer aqui um dia: não "melhore" sozinho,
  * pergunte.
+ *
+ * SEM PONTO DE EXCLAMAÇÃO, de propósito (Tiago, 30/09/2026). Fila de
+ * exclamações é um dos sinais que os filtros de spam mais pesam, junto com
+ * caixa alta: é o padrão do e-mail que promete demais. O texto diz a mesma
+ * coisa com ponto final e chega na caixa de entrada. Sem travessão também,
+ * que dá cara de texto escrito por máquina.
  *
  * Uma coisa que fica registrada: o texto afirma que os robôs foram "por muito
  * tempo os mais lucrativos do mercado" e estão "significativamente mais
@@ -38,13 +44,13 @@ import type { Marca } from '../../src/marca/marcas'
 export function emailDeVolta(marca: Marca, paraOEmail: string): EmailPronto {
   return montarEmail(marca, 'convite', new URL('/', marca.redirectUri).href, {
     assunto: `${marca.prosa} - Os melhores robôs voltaram`,
-    titulo: `A ${marca.prosa} está de volta - Maior, melhor e mais forte!`,
+    titulo: `A ${marca.prosa} está de volta - Maior, melhor e mais forte.`,
     espia: `Os robôs estão de volta, revisados e atualizados. E para quem já foi cliente da ${marca.prosa}, o acesso é gratuito.`,
     corpo:
-      `Estamos voltando para o mercado com novidades! Os mesmos robôs de ` +
+      `Estamos voltando para o mercado com novidades. Os mesmos robôs de ` +
       `operação, que por muito tempo foram os mais lucrativos do mercado, agora ` +
-      `estão de volta! Todos atualizados, revisados, melhorados e ` +
-      `significativamente mais assertivos!\n\n` +
+      `estão de volta. Todos atualizados, revisados, melhorados e ` +
+      `significativamente mais assertivos.\n\n` +
       `O que não muda é o que sempre foi seu: a conta na corretora. O dinheiro ` +
       `nunca passa por nós, nem por um segundo.\n\n` +
       `**E para quem já foi nosso cliente, o acesso é gratuito.** Sem prazo, sem ` +
@@ -52,7 +58,7 @@ export function emailDeVolta(marca: Marca, paraOEmail: string): EmailPronto {
       `era menor, e é justo que veja no que ela se tornou.\n\n` +
       `Entre agora no nosso canal oficial do Telegram para ter acesso às ` +
       `informações sobre a reativação do seu acesso. Todas as comunicações serão ` +
-      `feitas por lá e é importante que você não perca nenhum detalhe!`,
+      `feitas por lá e é importante que você não perca nenhum detalhe.`,
     telegram: { url: marca.telegram, texto: 'Entrar no canal oficial' },
     descadastrar: linkDeDescadastro(marca.id, paraOEmail),
     // Sem botão da plataforma e sem tarja de recado (Tiago, 30/09/2026).
