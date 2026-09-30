@@ -368,6 +368,9 @@ export function MonitoramentoPanel({ sessao }: { sessao: SessaoTeeds }) {
   const [ordem, setOrdem] = useState<Ordem>('atividade')
   const [visao, setVisao] = useState<Visao>('confortavel')
   const [limite, setLimite] = useState(60)
+  /* A lista de encerradas cresce de 40 em 40: 300 linhas de uma vez viravam
+     uma página sem fim, e era impossível achar uma sessão. (30/09/2026) */
+  const [limiteEncerradas, setLimiteEncerradas] = useState(40)
   const [encerradas, setEncerradas] = useState<SessaoEncerrada[]>([])
   const [replayDe, setReplayDe] = useState<SessaoEncerrada | null>(null)
   const [auditoria, setAuditoria] = useState<RegistroAuditoria[]>([])
@@ -503,6 +506,22 @@ export function MonitoramentoPanel({ sessao }: { sessao: SessaoTeeds }) {
     return () => clearTimeout(t)
   }, [busca, sessao])
 
+  /* Encerradas: os mesmos filtros de busca, conta e robô da aba ao vivo. */
+  const encerradasFiltradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
+    return encerradas.filter((s) => {
+      const c = clientes.get(s.userId)
+      if (filtroConta === 'demo' && !s.demo) return false
+      if (filtroConta === 'real' && s.demo) return false
+      if (filtroRobo !== 'todos' && s.roboId !== filtroRobo) return false
+      if (filtroResultado === 'positivo' && s.resultado < 0) return false
+      if (filtroResultado === 'negativo' && s.resultado >= 0) return false
+      if (termo && !`${c?.nome ?? ''} ${c?.email ?? ''} ${mascararConta(s.contaId)} ${s.contaId.slice(-4)} ${s.roboNome}`.toLowerCase().includes(termo)) return false
+      return true
+    })
+  }, [encerradas, clientes, busca, filtroConta, filtroRobo, filtroResultado])
+  useEffect(() => { setLimiteEncerradas(40) }, [busca, filtroConta, filtroRobo, filtroResultado])
+
   /* ------------------------------------------------- filtros e ordem */
   const saudes = useMemo(() => { const m = new Map<string, Saude>(); for (const s of sessoes.values()) m.set(s.sessaoId, saudeDoSinal(s, agora)); return m }, [sessoes, agora])
   const lista = useMemo(() => {
@@ -604,13 +623,19 @@ export function MonitoramentoPanel({ sessao }: { sessao: SessaoTeeds }) {
 
       {tela === 'pronto' && aba === 'replay' && !replayDe && (
         <section className="admin-card full mon-encerradas">
-          <header><div><span className="rot">Últimos 30 dias</span><h3>Sessões encerradas</h3></div><small>{encerradas.length} {encerradas.length === 1 ? 'sessão' : 'sessões'}</small></header>
+          <header><div><span className="rot">Últimos 30 dias</span><h3>Sessões encerradas</h3></div><small>{encerradasFiltradas.length === encerradas.length ? `${encerradas.length} ${encerradas.length === 1 ? 'sessão' : 'sessões'}` : `${encerradasFiltradas.length} de ${encerradas.length} sessões`}</small></header>
+          <div className="mon-filtros">
+            <label className="mon-busca">⌕<input placeholder="Buscar nome, e-mail, conta ou robô" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar nas sessões encerradas" /></label>
+            <select value={filtroConta} onChange={(e) => setFiltroConta(e.target.value as any)} aria-label="Tipo de conta"><option value="todas">Demo e real</option><option value="real">Só real</option><option value="demo">Só demo</option></select>
+            <select value={filtroRobo} onChange={(e) => setFiltroRobo(e.target.value)} aria-label="Robô"><option value="todos">Todos os robôs</option>{robos.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}</select>
+            <select value={filtroResultado} onChange={(e) => setFiltroResultado(e.target.value as any)} aria-label="Resultado"><option value="todos">Qualquer resultado</option><option value="positivo">Positivo</option><option value="negativo">Negativo</option></select>
+          </div>
           <div className="ins-tabela mon-tabela">
             <div className="cab"><span>Cliente</span><span>Robô</span><span>Conta</span><span>Operações</span><span>Resultado</span><span>Encerrada</span><span /></div>
-            {encerradas.map((s) => { const c = clientes.get(s.userId); return (
+            {encerradasFiltradas.slice(0, limiteEncerradas).map((s) => { const c = clientes.get(s.userId); return (
               <button key={s.id} className="ins-linha mon-linha" onClick={() => setReplayDe(s)}>
                 <span className="adm-pessoa"><i>{(c?.nome || c?.email || '?')[0].toUpperCase()}</i><b>{c?.nome || 'Sem nome'}<small>{mascararEmail(c?.email)}</small></b></span>
-                <span>{s.roboNome}</span><span>{mascararConta(s.contaId)} · {s.demo ? 'demo' : 'real'}</span>
+                <span>{s.roboNome}</span><span>{mascararConta(s.contaId)} <em className={`mon-tipo ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'demo' : 'real'}</em></span>
                 <span>{s.operacoes} <small className="up">{s.ganhas}</small> <small className="down">{s.perdidas}</small></span>
                 <span className={s.resultado >= 0 ? 'up' : 'down'}>{assinado(s.resultado)} {s.moeda}</span>
                 <span>{s.encerradaEm ? dataHora(s.encerradaEm) : '—'}<small>{s.motivoDaParada ?? s.situacao}</small></span>
@@ -618,7 +643,13 @@ export function MonitoramentoPanel({ sessao }: { sessao: SessaoTeeds }) {
               </button>
             ) })}
             {!encerradas.length && <div className="mon-estado"><b>Nenhuma sessão encerrada nos últimos 30 dias.</b></div>}
+            {!!encerradas.length && !encerradasFiltradas.length && <div className="mon-estado"><b>Nenhuma sessão passa pelos filtros.</b>Ajuste a busca ou o tipo de conta.</div>}
           </div>
+          {encerradasFiltradas.length > limiteEncerradas && (
+            <button className="mon-mais" onClick={() => setLimiteEncerradas((l) => l + 40)}>
+              Mostrar mais {Math.min(40, encerradasFiltradas.length - limiteEncerradas)} de {encerradasFiltradas.length - limiteEncerradas} restantes
+            </button>
+          )}
         </section>
       )}
       {tela === 'pronto' && aba === 'replay' && replayDe && <Replay key={replayDe.id} sessao={sessao} encerrada={replayDe} clientes={clientes} aoFechar={() => setReplayDe(null)} aoErro={falhar} />}

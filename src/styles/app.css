@@ -5622,3 +5622,9 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .modo-ceo-chave button[aria-pressed='true'] { background: var(--primary); color: var(--bg); }
 .modo-ceo-chave button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 @media (max-width: 720px) { .modo-ceo-chave { width: 100%; } .modo-ceo-chave button { flex: 1; } }
+/* Real ou demo na lista de sessões encerradas: cor, não só palavra. */
+.mon-tipo { font-style: normal; margin-left: 6px; padding: 2px 7px; border-radius: 999px; font-size: 9.5px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.mon-tipo.real { background: var(--up-soft); color: var(--up); }
+.mon-tipo.demo { background: var(--account-demo-soft); color: var(--account-demo); }
+.mon-encerradas .mon-filtros { padding: 0 20px 14px; }
+.mon-encerradas .mon-mais { margin: 12px 20px 18px; }
