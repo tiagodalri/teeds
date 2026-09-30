@@ -19,47 +19,39 @@ import type { Marca } from '../../src/marca/marcas'
  * Pedido do Tiago em 30/09/2026, para a base da Teeds. A mensagem tem duas
  * pernas: o acesso volta a ser gratuito para quem já foi cliente, e os
  * detalhes estão no canal do Telegram. O botão do canal vem primeiro de
- * propósito — é lá que a conversa continua, e o e-mail não tenta explicar
- * tudo sozinho.
+ * propósito — é lá que a conversa continua, e o último parágrafo manda a
+ * pessoa para lá.
  *
- * O TOM é de volta por cima, não de desculpa. A primeira versão abria falando
- * do tempo em que a plataforma ficou parada; o Tiago cortou, e com razão:
- * ninguém volta empolgado para um lugar que começa pedindo perdão. A notícia
- * aqui é boa, e o texto trata ela como boa.
+ * O TEXTO É DO TIAGO, palavra por palavra. Ele escreveu e pediu assim. Duas
+ * versões minhas foram recusadas antes: a primeira abria falando do tempo em
+ * que a plataforma ficou parada, e ninguém volta empolgado para um lugar que
+ * começa pedindo perdão. Quem for mexer aqui um dia: não "melhore" sozinho —
+ * pergunte.
  *
- * O que dá lastro à empolgação é a prova. Nenhum adjetivo que um fato possa
- * substituir: não "mais seguro", e sim o freio que para ANTES de furar o
- * limite; não "mais transparente", e sim o histórico que dá para rever
- * operação por operação. Cada frase é conferível dentro da plataforma, e quem
- * voltar vai conferir. Promessa de resultado, prazo inventado ou escassez
- * fabricada ganhariam o clique e perderiam a pessoa na primeira tela.
- *
- * O gratuito é reconhecimento, não desconto: desconto pede desconfiança
- * ("qual é a pegadinha?"), reconhecimento pede reciprocidade. E o convite
- * termina na conta de demonstração porque é o passo que não custa nada dar.
+ * Uma coisa que fica registrada: o texto afirma que os robôs foram "por muito
+ * tempo os mais lucrativos do mercado" e estão "significativamente mais
+ * assertivos". São afirmações de desempenho, e vão para uma lista grande. O
+ * aviso de risco no rodapé existe justamente para acompanhá-las. Decisão do
+ * Tiago, comunicada e reafirmada.
  */
 export function emailDeVolta(marca: Marca): EmailPronto {
   return montarEmail(marca, 'convite', new URL('/', marca.redirectUri).href, {
-    assunto: `A ${marca.prosa} está de volta — e o seu acesso é gratuito`,
-    titulo: `A ${marca.prosa} está de volta`,
-    espia: `Reconstruída por dentro. E, para quem já foi cliente da ${marca.prosa}, o acesso é gratuito.`,
+    assunto: `A ${marca.prosa} está de volta - Maior, melhor e mais forte!`,
+    titulo: `A ${marca.prosa} está de volta - Maior, melhor e mais forte!`,
+    espia: `Os robôs estão de volta, revisados e atualizados. E para quem já foi cliente da ${marca.prosa}, o acesso é gratuito.`,
     corpo:
-      `E voltou maior.\n\n` +
-      `Não é a mesma plataforma com cara nova: a ${marca.prosa} foi reconstruída ` +
-      `por dentro, do motor à tela.\n\n` +
-      `Cada robô foi refeito, regra por regra. O freio de perda agora respeita o ` +
-      `limite que você define — ele para ANTES de furar, e não depois. E você ` +
-      `vê cada operação nascer ao vivo, com o histórico inteiro para rever, ` +
-      `operação por operação, quando quiser.\n\n` +
+      `Estamos voltando para o mercado com novidades! Os mesmos robôs de ` +
+      `operação, que por muito tempo foram os mais lucrativos do mercado, agora ` +
+      `estão de volta! Todos atualizados, revisados, melhorados e ` +
+      `significativamente mais assertivos!\n\n` +
       `O que não muda é o que sempre foi seu: a conta na corretora. O dinheiro ` +
       `nunca passa por nós, nem por um segundo.\n\n` +
       `**E para quem já foi nosso cliente, o acesso é gratuito.** Sem prazo, sem ` +
       `teste de alguns dias, sem cartão. Você esteve aqui quando a ${marca.prosa} ` +
       `era menor — é justo que veja no que ela se tornou.\n\n` +
-      `Sua conta continua ativa, neste mesmo e-mail. Entre hoje, ligue um robô na ` +
-      `conta de demonstração e confira com os seus próprios olhos.\n\n` +
-      `E o que vem pela frente a gente conta primeiro no canal oficial no ` +
-      `Telegram. É de lá que sai cada aviso, antes de qualquer outro lugar.`,
+      `Entre agora no nosso canal oficial do Telegram para ter acesso às ` +
+      `informações sobre a reativação do seu acesso. Todas as comunicações serão ` +
+      `feitas por lá e é importante que você não perca nenhum detalhe!`,
     telegram: { url: marca.telegram, texto: 'Entrar no canal oficial' },
     botao: 'Entrar na minha conta',
     aviso:
