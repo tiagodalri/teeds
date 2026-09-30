@@ -77,7 +77,7 @@ export async function recalcularHistorico(diasParaTras: number, gravar: boolean)
         }
         console.log(`[recalculo] ${marca} · ${conta.accountId} · ${curto(userId)}: lendo ${dias.length} dia(s)…`)
         const lidos = await sincronizarConta(cofre.sessao, userId, marca, conta, {
-          gravar, dias, pausaEntreDiasMs: 250,
+          gravar, dias, pausaEntreDiasMs: 1_200,
         })
         r.contas += 1
         r.dias += lidos.length

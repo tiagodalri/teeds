@@ -94,6 +94,31 @@ function janelaDoDia(dia: string): { de: number; ate: number } {
   }
 }
 
+/**
+ * Um pedido à Deriv que espera quando ela pede calma.
+ *
+ * `profit_table` e `statement` têm cota por minuto. Numa releitura de 90
+ * dias a cota estoura na primeira conta — e, pior, deixa a passada normal
+ * do servidor sem cota também (visto em 30/09/2026). Então, quando a Deriv
+ * responde RateLimit, a gente espera e tenta de novo, em vez de desistir do
+ * dia inteiro.
+ */
+const ESPERAS_MS = [20_000, 45_000, 90_000]
+async function pedirComPaciencia(socket: TeedsSocket, corpo: Record<string, unknown>): Promise<any> {
+  for (let tentativa = 0; ; tentativa += 1) {
+    try {
+      return await socket.send(corpo as never)
+    } catch (e) {
+      const texto = (e as Error).message
+      const cota = /ratelimit|rate limit/i.test(texto)
+      if (!cota || tentativa >= ESPERAS_MS.length) throw e
+      const espera = ESPERAS_MS[tentativa]
+      console.log(`[comissoes] a Deriv pediu calma (${texto.slice(0, 60)}…) — esperando ${espera / 1000}s`)
+      await pausa(espera)
+    }
+  }
+}
+
 /** app da Deriv → marca nossa ('34gMUQ…' → 'teeds'). */
 const MARCA_DO_APP = new Map(Object.values(MARCAS).map((m) => [m.appId, m.id]))
 
@@ -112,7 +137,7 @@ async function appsDoDia(socket: TeedsSocket, dia: string): Promise<{ apps: Map<
   const horas = new Map<number, number>()
   let pular = 0
   for (let pagina = 0; pagina < MAX_PAGINAS; pagina += 1) {
-    const res = await socket.send({
+    const res = await pedirComPaciencia(socket, {
       statement: 1, description: 1, limit: POR_PAGINA, offset: pular,
       date_from: String(de), date_to: String(ate),
     })
@@ -140,7 +165,7 @@ async function contratosDoDia(socket: TeedsSocket, dia: string): Promise<{ contr
   let pular = 0
 
   for (let pagina = 0; pagina < MAX_PAGINAS; pagina += 1) {
-    const res = await socket.send({
+    const res = await pedirComPaciencia(socket, {
       profit_table: 1,
       description: 1,
       limit: POR_PAGINA,
@@ -190,14 +215,16 @@ export async function sincronizarConta(
   try {
     for (const dia of opcoes.dias ?? diasRecentes(DIAS)) {
       if (opcoes.pausaEntreDiasMs) await pausa(opcoes.pausaEntreDiasMs)
-      const [{ contratos, truncado }, extrato] = await Promise.all([
-        contratosDoDia(socket, dia),
-        appsDoDia(socket, dia).catch((e) => {
+      // Uma leitura de cada vez: em paralelo elas dobram o consumo da cota.
+      const { contratos, truncado } = await contratosDoDia(socket, dia)
+      const extrato = contratos.length
+        ? await appsDoDia(socket, dia).catch((e) => {
           // Sem o extrato ficam as outras duas pistas (registro e horário).
           console.warn(`[comissoes] extrato de ${conta.accountId} em ${dia} falhou — ${(e as Error).message}`)
           return { apps: new Map<number, string>(), horas: new Map<number, number>() }
-        }),
-      ])
+        })
+        // Dia sem contrato não precisa de extrato: economiza cota.
+        : { apps: new Map<number, string>(), horas: new Map<number, number>() }
       const [registrados, janelas] = await Promise.all([
         contratosRegistrados(conta.accountId, dia).catch(() => []),
         janelasDeSessao(conta.accountId, dia).catch(() => []),
