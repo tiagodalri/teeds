@@ -1,8 +1,39 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { MARCAS } from '../../src/marca/marcas'
+import { consultarEventos } from './eventos-resend'
 
-export interface EmailResumo { id: string; destinatarios: string[]; assunto: string; data: string; status: string }
+export interface EmailResumo { id: string; destinatarios: string[]; assunto: string; data: string; status: string; sinais?:ReturnType<typeof sinaisDoEmail> }
 const cache = new Map<string, { ate: number; valor: { emails: EmailResumo[]; proximo: string | null } }>()
+export function sinaisDoEmail(e:EmailResumo, r:any={}) {
+  // Ausência de evento nunca significa que a pessoa não abriu/leu.
+  return {
+    entregue:!!r.entregue_em||e.status==='delivered', entregueEm:r.entregue_em||null,
+    aberto:!!r.aberto_em||e.status==='opened', abertoEm:r.aberto_em||null,
+    ultimaAberturaEm:r.ultima_abertura_em||null, aberturas:Number(r.aberturas)||0,
+    clicado:!!r.clicado_em||e.status==='clicked', clicadoEm:r.clicado_em||null,
+    ultimoCliqueEm:r.ultimo_clique_em||null, cliques:Number(r.cliques)||0,
+  }
+}
+const configCache=new Map<string,{ate:number;valor:any}>()
+async function configuracaoRastreio(marca:string,chave:string) {
+  const atual=configCache.get(marca)
+  if(atual&&atual.ate>Date.now())return atual.valor
+  const id=process.env[`RESEND_DOMINIO_${marca.toUpperCase()}`]
+  const valor={aberturas:null as boolean|null,cliques:null as boolean|null,eventos:!!process.env.RESEND_EVENTOS_SEGREDO,desde:process.env.RESEND_EVENTOS_DESDE||null}
+  if(id)try {
+    const r=await fetch(`https://api.resend.com/domains/${encodeURIComponent(id)}`,{headers:{Authorization:`Bearer ${chave}`},signal:AbortSignal.timeout(8000)})
+    if(r.ok){const d=await r.json() as any;valor.aberturas=d.open_tracking===true;valor.cliques=d.click_tracking===true}
+  }catch{/* Não esconde a lista se a configuração estiver indisponível. */}
+  configCache.set(marca,{ate:Date.now()+(valor.aberturas===null?30000:300000),valor})
+  return valor
+}
+async function completar(marca:string,chave:string,valor:{emails:EmailResumo[];proximo:string|null}) {
+  let registros:any[]=[];let aviso:string|null=null
+  try { registros=await consultarEventos(marca,valor.emails.map(e=>e.id)) }
+  catch { aviso='Os horários dos eventos estão temporariamente indisponíveis. O último status do provedor continua visível.' }
+  const porId=new Map(registros.map(r=>[r.email_id,r]))
+  return {...valor,emails:valor.emails.map(e=>({...e,sinais:sinaisDoEmail(e,porId.get(e.id))})),aviso,rastreio:await configuracaoRastreio(marca,chave)}
+}
 const endereco = (s: string) => (s.match(/<([^<>]+)>/)?.[1] || s).trim().toLowerCase()
 // Nunca retorna HTML/texto: mensagens de acesso podem conter senhas ou tokens.
 export function resumirEmails(linhas: any[], remetente: string): EmailResumo[] {
@@ -28,7 +59,7 @@ export async function listarEmailsAdmin(marca: string, cursor = '') {
   const depois = abrirCursor(cursor, marca, chave)
   const k = `${marca}:${depois}`
   const hit = cache.get(k)
-  if (hit && hit.ate > Date.now()) return hit.valor
+  if (hit && hit.ate > Date.now()) return completar(marca,chave,hit.valor)
   const url = new URL('https://api.resend.com/emails')
   url.searchParams.set('limit', '100')
   if (depois) url.searchParams.set('after', depois)
@@ -43,5 +74,5 @@ export async function listarEmailsAdmin(marca: string, cursor = '') {
   const valor = { emails: resumirEmails(d.data, MARCAS[marca].email.remetente || ''), proximo: d.has_more && ultimo ? `${valorCursor}.${assinar(valorCursor, chave)}` : null }
   if (cache.size >= 50) cache.delete(cache.keys().next().value!)
   cache.set(k, {ate: Date.now() + 15000, valor})
-  return valor
+  return completar(marca,chave,valor)
 }

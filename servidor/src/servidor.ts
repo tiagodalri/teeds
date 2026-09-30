@@ -3,6 +3,7 @@ import { decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros } from 
 import { catalogo, alterarRobo } from './catalogo'
 import { administradorDaMarca } from './supabase'
 import { listarEmailsAdmin } from './admin-emails'
+import { receberEventoResend } from './eventos-resend'
 
 import { createServer } from 'node:http'
 import { createHash, randomBytes } from 'node:crypto'
@@ -259,6 +260,18 @@ const servidor = createServer(async (req, res) => {
   // Fica ANTES do bloco /api porque não tem como carregar crachá: quem bate
   // aqui é o Supabase, não uma pessoa logada. Quem prova quem é, aqui, é a
   // assinatura no cabeçalho — conferida lá dentro, antes de qualquer coisa.
+  if (url.pathname === '/gancho/resend-eventos') {
+    if (req.method !== 'POST') { res.writeHead(405); return res.end() }
+    const pedacos:Buffer[]=[]; let tamanho=0
+    for await (const parte of req) {
+      tamanho+=Buffer.byteLength(parte)
+      if(tamanho>65536){res.writeHead(413);return res.end()}
+      pedacos.push(Buffer.from(parte))
+    }
+    const {status,corpo}=await receberEventoResend(Buffer.concat(pedacos).toString('utf8'),req.headers)
+    res.writeHead(status,{'content-type':'application/json; charset=utf-8'})
+    return res.end(JSON.stringify(corpo))
+  }
   if (url.pathname === '/gancho/email') {
     if (req.method !== 'POST') { res.writeHead(405); return res.end() }
     const pedacos: Buffer[] = []
