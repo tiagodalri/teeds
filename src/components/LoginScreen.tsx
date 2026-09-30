@@ -80,8 +80,13 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
       const r = await onCadastrar({ nome, email, telefone, consentiu })
       if (r.ok) {
         setSenha(''); setConsentiu(false)
-        setRecado('Cadastro recebido! Você está na fila de espera. Após a aprovação, enviaremos as instruções de acesso por e-mail.')
-        setModo('entrar')
+        // Reuse the landing confirmation, on this brand's own domain.
+        // Only navigate after the server confirms receipt; no personal data in the URL.
+        const obrigado = new URL(`${import.meta.env.BASE_URL}cadastro/obrigado/`, location.origin)
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+          obrigado.searchParams.set('marca', MARCA.id)
+        }
+        location.assign(obrigado.href)
       }
       return
     }
