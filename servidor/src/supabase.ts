@@ -657,26 +657,36 @@ export async function clientesComAutorizacao(): Promise<Array<{ user_id: string;
   return (linhas ?? []).map((l) => ({ user_id: String(l.user_id), marca: String(l.marca ?? 'teeds') }))
 }
 
-/** Atualiza a fotografia da conta que o painel administrativo exibe. */
+/**
+ * A fotografia da conta que o painel administrativo exibe.
+ *
+ * Era um PATCH: só atualizava linha que já existisse, e a linha nascia no
+ * NAVEGADOR, quando o cliente conectava a Deriv. Quem autorizou e fechou a
+ * aba antes disso ficava sem conta na ficha — foi o que aconteceu com um
+ * cliente que operou 419 contratos e aparecia como "nenhuma conta conectada"
+ * (30/09/2026). Agora o servidor cria a linha quando enxerga a conta: quem
+ * tem autorização no cofre tem conta na ficha.
+ *
+ * Uma pessoa pode ter várias contas Deriv no mesmo acesso — cada uma é uma
+ * linha, e tudo o que se calcula é por conta.
+ */
 export async function atualizarContaDeriv(dados: {
   userId: string; marca: string; contaId: string; tipo: string
   moeda: string; saldo: number
 }): Promise<void> {
-  await rest(
-    `/contas_deriv?user_id=eq.${encodeURIComponent(dados.userId)}` +
-    `&conta_id=eq.${encodeURIComponent(dados.contaId)}` +
-    `&marca=eq.${encodeURIComponent(dados.marca)}`,
-    {
-      method: 'PATCH',
-      headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({
-        tipo: dados.tipo,
-        moeda: dados.moeda,
-        saldo: dados.saldo,
-        vista_em: new Date().toISOString(),
-      }),
-    },
-  )
+  await rest('/contas_deriv?on_conflict=user_id,conta_id,marca', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      user_id: dados.userId,
+      marca: dados.marca,
+      conta_id: dados.contaId,
+      tipo: dados.tipo,
+      moeda: dados.moeda,
+      saldo: dados.saldo,
+      vista_em: new Date().toISOString(),
+    }),
+  })
 }
 
 /** A movimentação mais recente já guardada desta conta, ou nada. É o cursor da coleta. */
@@ -834,6 +844,29 @@ export async function limparContratosPorOrigem(dia: string, contaId: string, mar
   await rest(
     `/contratos_por_origem?dia=eq.${dia}&conta_id=eq.${encodeURIComponent(contaId)}&marca=eq.${encodeURIComponent(marca)}`,
     { method: 'DELETE', headers: { Prefer: 'return=minimal' } })
+}
+
+/**
+ * Apaga as linhas de comissão da MESMA conta que pertencem a outro cadastro.
+ *
+ * A mesma conta Deriv pode estar ligada a dois cadastros da mesma marca (o
+ * cliente entrou duas vezes, por exemplo). Cada um gravava a sua linha por
+ * dia, com os mesmos números, e qualquer soma contava duas ou três vezes.
+ * Quem vale é o cadastro por onde a conta foi lida agora.
+ */
+export async function apagarComissoesDeOutrosDonos(
+  marca: string, contaId: string, donoUserId: string, de: string, ate: string,
+): Promise<number> {
+  const linhas = await rest<any[]>(
+    `/comissoes_diarias?select=user_id,dia&marca=eq.${encodeURIComponent(marca)}` +
+    `&conta_id=eq.${encodeURIComponent(contaId)}&user_id=neq.${encodeURIComponent(donoUserId)}` +
+    `&dia=gte.${de}&dia=lte.${ate}`)
+  if (!linhas?.length) return 0
+  await rest(
+    `/comissoes_diarias?marca=eq.${encodeURIComponent(marca)}&conta_id=eq.${encodeURIComponent(contaId)}` +
+    `&user_id=neq.${encodeURIComponent(donoUserId)}&dia=gte.${de}&dia=lte.${ate}`,
+    { method: 'DELETE', headers: { Prefer: 'return=minimal' } })
+  return linhas.length
 }
 
 /** Anota a tentativa desta conta. No sucesso limpa o erro; na falha preserva o último sucesso. */

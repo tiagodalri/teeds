@@ -2,6 +2,7 @@ import './ambiente'
 import { decidirLead, listarPendentes, enviarAprovacoes } from './aprovacao-leads'
 import { catalogo, alterarRobo } from './catalogo'
 import { administradorDaMarca } from './supabase'
+import { listarEmailsAdmin } from './admin-emails'
 
 import { createServer } from 'node:http'
 import { createHash, randomBytes } from 'node:crypto'
@@ -410,6 +411,14 @@ const servidor = createServer(async (req, res) => {
         if (req.method === 'GET') return json(200, await listarPendentes(marca, url.searchParams.get('status') || 'pendente', Number(url.searchParams.get('pagina')) || 0))
         if (req.method === 'POST') return json(200, await decidirLead(String(corpo.id || ''), marca, dono.id, String(corpo.acao || ''), String(corpo.plano || 'essencial')))
         return json(405, { erro: 'Método não permitido.' })
+      }
+      if (url.pathname === '/api/admin/emails') {
+        const marca = url.searchParams.get('marca') || marcaDaOrigem.id
+        if (marca !== 'teeds' && marca !== 'omni') return json(400, { erro: 'Plataforma inválida.' })
+        if (!await administradorDaMarca(dono.id, marca) && !await administradorDaMarca(dono.id, 'teeds')) return json(403, { erro: 'Somente administradores desta plataforma.' })
+        if (req.method !== 'GET') return json(405, { erro: 'Método não permitido.' })
+        res.setHeader('Cache-Control', 'no-store')
+        return json(200, await listarEmailsAdmin(marca, url.searchParams.get('cursor') || ''))
       }
       // ---- ligar
       if (url.pathname === '/api/catalogo-robos') {

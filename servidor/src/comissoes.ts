@@ -63,13 +63,20 @@ export interface ResultadoSincronia {
 export interface OpcoesSincronia {
   gravar: boolean
   aoLer?: (conta: TradingAccount, dias: DiaCalculado[]) => void
+  /**
+   * Quais dias ler (AAAA-MM-DD). Vazio = hoje e ontem, o ritmo de sempre.
+   * O recálculo do histórico manda a lista inteira por aqui.
+   */
+  dias?: string[]
+  /** Uma pausa entre os dias, para não bater na cota da Deriv num recálculo longo. */
+  pausaEntreDiasMs?: number
 }
 
 const curto = (id: string) => `${id.slice(0, 8)}…`
 const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /** Os últimos `n` dias em UTC (AAAA-MM-DD), do mais recente para o mais antigo. */
-function diasRecentes(n: number): string[] {
+export function diasRecentes(n: number): string[] {
   const hoje = new Date()
   const lista: string[] = []
   for (let i = 0; i < n; i += 1) {
@@ -181,7 +188,8 @@ export async function sincronizarConta(
   const porOrigem: ContratosPorOrigemGravavel[] = []
   const agora = new Date().toISOString()
   try {
-    for (const dia of diasRecentes(DIAS)) {
+    for (const dia of opcoes.dias ?? diasRecentes(DIAS)) {
+      if (opcoes.pausaEntreDiasMs) await pausa(opcoes.pausaEntreDiasMs)
       const [{ contratos, truncado }, extrato] = await Promise.all([
         contratosDoDia(socket, dia),
         appsDoDia(socket, dia).catch((e) => {
