@@ -15,6 +15,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { contratosPorOrigem, marcaAdmin, type OrigemDoContrato } from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
+import { SeletorDePeriodo, janelaEmDatas } from './SeletorDePeriodo'
 import { MARCAS } from '../marca/marcas'
 
 const DIAS = [7, 30, 90] as const
@@ -26,13 +27,14 @@ const inteiro = (v: number) => v.toLocaleString('pt-BR')
 const assinado = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${num(Math.abs(v))}`
 
 /** O nome de cada origem na tela, e o que ela significa em uma linha. */
-function rotuloDaOrigem(origem: string): { nome: string; conta: string; receita: boolean } {
+function rotuloDaOrigem(origem: string, naRede: boolean): { nome: string; conta: string; receita: boolean } {
   if (origem === 'externo') return { nome: 'Fora da casa', conta: 'apps que não são nossos — não é receita', receita: false }
   if (origem === 'sem-dono') return { nome: 'Sem dono', conta: 'sem app no extrato e fora das nossas sessões', receita: false }
   const marca = MARCAS[origem]
+  const nossa = naRede || origem === marcaAdmin()
   return {
     nome: marca?.prosa ?? origem,
-    conta: origem === marcaAdmin() ? 'receita desta plataforma' : 'da outra plataforma da casa',
+    conta: naRede ? 'receita da rede' : nossa ? 'receita desta plataforma' : 'da outra plataforma da casa',
     receita: true,
   }
 }
@@ -68,10 +70,11 @@ const somar = (linhas: OrigemDoContrato[]): Somado[] => {
   }
   // A marca em foco primeiro, depois a outra marca, depois o que não é nosso.
   const peso = (o: string) => o === marcaAdmin() ? 0 : MARCAS[o] ? 1 : o === 'externo' ? 2 : 3
+  // Na rede, todas as nossas marcas empatam na frente e o externo fica atrás.
   return [...mapa.values()].sort((a, b) => peso(a.origem) - peso(b.origem) || b.operacoes - a.operacoes)
 }
 
-export function OrigemDasOperacoes({ sessao }: { sessao: SessaoTeeds }) {
+export function OrigemDasOperacoes({ sessao, naRede = false }: { sessao: SessaoTeeds; naRede?: boolean }) {
   const [janela, setJanela] = useState<Janela>(30)
   const [comDemo, setComDemo] = useState(false)
   const [linhas, setLinhas] = useState<OrigemDoContrato[]>([])
@@ -86,7 +89,10 @@ export function OrigemDasOperacoes({ sessao }: { sessao: SessaoTeeds }) {
 
   const visiveis = useMemo(() => linhas.filter((l) => comDemo || !l.demo), [linhas, comDemo])
   const somados = useMemo(() => somar(visiveis), [visiveis])
-  const receita = somados.filter((s) => s.origem === marcaAdmin()).reduce((t, s) => t + s.markup, 0)
+  // Receita é o que passou por um app nosso: na rede, todas as marcas; numa
+  // plataforma, só ela — o que veio da outra aparece, mas não soma aqui.
+  const eNossa = (o: string) => naRede ? !!MARCAS[o] : o === marcaAdmin()
+  const receita = somados.filter((s) => eNossa(s.origem)).reduce((t, s) => t + s.markup, 0)
   const total = somados.reduce((t, s) => t + s.operacoes, 0)
 
   return (
@@ -97,9 +103,7 @@ export function OrigemDasOperacoes({ sessao }: { sessao: SessaoTeeds }) {
           <h3>De onde vêm as operações</h3>
         </div>
         <div className="pl-filtros">
-          <div className="ce-periodo" role="group" aria-label="Período">
-            {DIAS.map((d) => <button key={d} type="button" aria-pressed={janela === d} onClick={() => setJanela(d)}>{d} dias</button>)}
-          </div>
+          <SeletorDePeriodo dias={janela} opcoes={DIAS} onTrocar={setJanela} />
           <label className="ce-demo"><input type="checkbox" checked={comDemo} onChange={(e) => setComDemo(e.target.checked)} /> incluir demo</label>
         </div>
       </header>
@@ -116,16 +120,16 @@ export function OrigemDasOperacoes({ sessao }: { sessao: SessaoTeeds }) {
         {!!visiveis.length && (
           <>
             <p className="og-resumo">
-              <b>{inteiro(total)}</b> {total === 1 ? 'contrato' : 'contratos'} nas contas dos clientes neste período.
-              Receita desta plataforma: <b className="og-receita">US$ {cents(receita)}</b>.
+              <b>{inteiro(total)}</b> {total === 1 ? 'contrato' : 'contratos'} nas contas dos clientes
+              de {janelaEmDatas(janela)}. Receita {naRede ? 'da rede' : 'desta plataforma'}: <b className="og-receita">US$ {cents(receita)}</b>.
               O resto é movimento da conta deles — está aqui para conferência, não entra em receita.
             </p>
 
             <div className="og-cartoes">
               {somados.map((s) => {
-                const r = rotuloDaOrigem(s.origem)
+                const r = rotuloDaOrigem(s.origem, naRede)
                 return (
-                  <article key={s.origem} className={`og-cartao ${r.receita ? (s.origem === marcaAdmin() ? 'nossa' : 'irma') : 'fora'}`}>
+                  <article key={s.origem} className={`og-cartao ${r.receita ? (eNossa(s.origem) ? 'nossa' : 'irma') : 'fora'}`}>
                     <header><b>{r.nome}</b><small>{r.conta}</small></header>
                     <dl>
                       <div><dt>Operações</dt><dd>{inteiro(s.operacoes)}</dd></div>

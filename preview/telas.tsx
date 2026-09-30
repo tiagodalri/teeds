@@ -11,7 +11,11 @@
  *
  * Nada aqui vai para o site publicado: o Vite só monta index.html.
  */
+import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import { SeletorDePlataforma, opcoesDePlataforma } from '../src/components/SeletorDePlataforma'
+import { REDE } from '../src/core/teeds/clientes'
+import { MARCAS } from '../src/marca/marcas'
 import { WorkspaceNav } from '../src/components/WorkspaceNav'
 import { RobotLinha } from '../src/components/RobotResumo'
 import { RobotLive } from '../src/components/RobotLive'
@@ -157,8 +161,53 @@ function Robos() {
   )
 }
 
+/* O seletor de plataforma e o pedido de marca, sem precisar de login.
+   Foram desenhados em 30/09/2026 e é aqui que dá para olhar para eles. */
+function Plataformas() {
+  const [foco, setFoco] = useState(REDE)
+  const opcoes = opcoesDePlataforma(true, MARCA.id)
+  return (
+    <Casca titulo="Administração" sub="Painel de controle">
+      <div className="admin-shell" style={{ gridTemplateColumns: '1fr' }}>
+        <main className="admin-main">
+          <header className="admin-top">
+            <div>
+              <span className="rot">{foco === REDE ? `Rede ${MARCA.prosa}` : `${MARCAS[foco]?.prosa} Admin`}</span>
+              <h1>Visão geral</h1>
+              <p>{foco === REDE ? 'Todas as plataformas somadas, em um só lugar.' : `Tudo da ${MARCAS[foco]?.prosa} que precisa de atenção, em um só lugar.`}</p>
+            </div>
+            <div className="admin-top-acoes">
+              <SeletorDePlataforma valor={foco} opcoes={opcoes} onTrocar={setFoco} />
+              <button className="admin-refresh">↻ Atualizar</button>
+            </div>
+          </header>
+          <section className="admin-card adm-pede-marca">
+            <div>
+              <span className="rot">Escolha uma plataforma</span>
+              <h3>Isto acontece dentro de uma marca</h3>
+              <p>
+                Criar acesso, trocar o vídeo de uma aula, ligar um robô ou mexer no catálogo tem um dono:
+                o cliente entra por um endereço, recebe o e-mail de uma marca e opera pelos robôs dela.
+                A visão da rede soma o que já aconteceu; para <b>mexer</b>, escolha onde.
+              </p>
+            </div>
+            <div className="adm-pede-marca-botoes">
+              {opcoes.filter((o) => o.id !== REDE).map((o) => (
+                <button key={o.id} type="button" onClick={() => setFoco(o.id)}>
+                  <b>{o.nome}</b><small>{o.papel}</small>
+                </button>
+              ))}
+            </div>
+          </section>
+        </main>
+      </div>
+    </Casca>
+  )
+}
+
 const TELAS: Record<string, () => JSX.Element> = {
   robos: Robos,
+  plataformas: Plataformas,
   gerenciamento: () => <Casca titulo="Gerenciamento" sub="Seu espaço de trabalho"><OperationalManagementPanel /></Casca>,
   aulas: () => <Casca titulo="Aulas" sub="Seu espaço de trabalho"><AulasPanel nome="Tiago" /></Casca>,
   marketplace: () => <Casca titulo="Marketplace" sub="Seu espaço de trabalho"><MarketplacePanel /></Casca>,

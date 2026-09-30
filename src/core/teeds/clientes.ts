@@ -16,6 +16,7 @@
 import { SUPABASE, autenticacaoConfigurada } from './config'
 import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
+import { MARCAS } from '../../marca/marcas'
 import { PLANOS_CLIENTE, planoClienteValido } from './planos'
 import { dispositivoAtual } from './insights'
 
@@ -63,11 +64,28 @@ const sessaoDeUso = (() => { try { const k=`${MARCA.id}.sessao-uso`; const v=ses
  * Leituras seguem o foco. ESCRITAS continuam na marca do site: criar acesso,
  * salvar plano e liberar produto acontecem sempre em casa.
  */
+/**
+ * O foco pode ser uma marca ou a rede inteira.
+ *
+ * 'todas' é a visão da rede: a Teeds e as whitelabels somadas no mesmo
+ * número. Quem administra uma whitelabel pode pedir 'todas' à vontade — o
+ * banco devolve só a marca dele.
+ */
+export const REDE = 'todas'
 let marcaEmFoco = MARCA.id
 export const marcaAdmin = () => marcaEmFoco
 export const ehMaster = () => MARCA.id === 'teeds'
+export const vendoARede = () => marcaEmFoco === REDE
+/** As marcas que o foco atual abrange, para os filtros REST. */
+export const marcasEmFoco = (): string[] =>
+  marcaEmFoco === REDE ? Object.keys(MARCAS) : [marcaEmFoco]
+/** `marca=eq.teeds` ou `marca=in.(teeds,omni)`, conforme o foco. */
+const filtroMarca = (campo = 'marca'): string => {
+  const lista = marcasEmFoco()
+  return lista.length === 1 ? `${campo}=eq.${lista[0]}` : `${campo}=in.(${lista.join(',')})`
+}
 export function definirMarcaAdmin(id: string): void {
-  marcaEmFoco = ehMaster() ? id : MARCA.id
+  marcaEmFoco = ehMaster() || id === REDE ? id : MARCA.id
 }
 
 export async function registrarPresenca(sessao: SessaoTeeds, segundos = 0): Promise<void> {
@@ -231,6 +249,8 @@ export interface ContaDerivRegistro {
 export interface ComissaoDia {
   userId: string
   contaId: string
+  /** De qual plataforma é esta linha — a visão da rede precisa separar. */
+  marca: string
   dia: string
   operacoes: number
   pagamentos: number
@@ -346,23 +366,23 @@ export async function clientesPorId(sessao: SessaoTeeds, ids: string[]): Promise
   const lista = [...new Set(ids)].filter(Boolean)
   if (!lista.length) return []
   const linhas = await rest<any[]>(
-    `/clientes?select=*&marca=eq.${marcaAdmin()}&user_id=in.(${lista.join(',')})`, sessao.token,
+    `/clientes?select=*&${filtroMarca()}&user_id=in.(${lista.join(',')})`, sessao.token,
   )
   return (linhas ?? []).map(paraCliente)
 }
 
 export async function listarPlanos(sessao: SessaoTeeds): Promise<PlanoRegistro[]> {
-  const linhas = await rest<any[]>(`/planos?select=*&marcas=cs.{${marcaAdmin()}}&order=nome.asc`, sessao.token)
+  const linhas = await rest<any[]>(`/planos?select=*&marcas=ov.{${marcasEmFoco().join(',')}}&order=nome.asc`, sessao.token)
   return (linhas ?? []).filter(l => planoClienteValido(l.id)).map((l) => ({ id: l.id, nome: PLANOS_CLIENTE.find(p => p.id === l.id)!.nome, duracaoDias: l.duracao_dias, ativo: Boolean(l.ativo) }))
 }
 
 export async function listarProdutos(sessao: SessaoTeeds): Promise<ProdutoRegistro[]> {
-  const linhas = await rest<any[]>(`/produtos?select=*&marcas=cs.{${marcaAdmin()}}&order=nome.asc`, sessao.token)
+  const linhas = await rest<any[]>(`/produtos?select=*&marcas=ov.{${marcasEmFoco().join(',')}}&order=nome.asc`, sessao.token)
   return (linhas ?? []).map((l) => ({ id: l.id, nome: textoLegivel(l.nome) ?? l.nome, categoria: textoLegivel(l.categoria) ?? l.categoria, precoCentavos: l.preco_centavos, ativo: Boolean(l.ativo) }))
 }
 
 export async function listarProdutosClientes(sessao: SessaoTeeds): Promise<ClienteProdutoRegistro[]> {
-  const linhas = await rest<any[]>(`/cliente_produtos?select=*&ativo=eq.true&marca=eq.${marcaAdmin()}`, sessao.token)
+  const linhas = await rest<any[]>(`/cliente_produtos?select=*&ativo=eq.true&${filtroMarca()}`, sessao.token)
   return (linhas ?? []).map((l) => ({ userId: l.user_id, produtoId: l.produto_id, concedidoEm: l.concedido_em, expiraEm: l.expira_em, ativo: Boolean(l.ativo) }))
 }
 
@@ -434,7 +454,7 @@ export async function criarAcessoCliente(sessao: SessaoTeeds, dados: {
 }
 
 export async function listarContasDeriv(sessao: SessaoTeeds): Promise<ContaDerivRegistro[]> {
-  const linhas = await rest<any[]>(`/contas_deriv?select=*&marca=eq.${marcaAdmin()}&order=vista_em.desc`, sessao.token)
+  const linhas = await rest<any[]>(`/contas_deriv?select=*&${filtroMarca()}&order=vista_em.desc`, sessao.token)
   return (linhas ?? []).map((l) => ({
     userId: l.user_id, contaId: l.conta_id, tipo: l.tipo,
     moeda: l.moeda, saldo: l.saldo === null ? null : Number(l.saldo), vistaEm: l.vista_em,
@@ -455,10 +475,10 @@ export async function listarComissoes(sessao: SessaoTeeds, dias: number): Promis
   de.setDate(de.getDate() - (dias - 1))
   const corte = de.toISOString().slice(0, 10)
   const linhas = await rest<any[]>(
-    `/comissoes_diarias?marca=eq.${marcaAdmin()}&select=*&dia=gte.${corte}&order=dia.desc`, sessao.token,
+    `/comissoes_diarias?${filtroMarca()}&select=*&dia=gte.${corte}&order=dia.desc`, sessao.token,
   )
   return (linhas ?? []).map((l) => ({
-    userId: l.user_id, contaId: l.conta_id, dia: l.dia,
+    userId: l.user_id, contaId: l.conta_id, marca: String(l.marca ?? MARCA.id), dia: l.dia,
     operacoes: Number(l.operacoes), pagamentos: Number(l.pagamentos),
     comissao: Number(l.comissao),
     entradas: Number(l.entradas ?? 0), resultado: Number(l.resultado ?? 0),
@@ -479,7 +499,7 @@ export async function registrarOperacaoRobo(sessao: SessaoTeeds, op: Omit<Operac
 export async function listarOperacoesRobos(sessao: SessaoTeeds, dias = 90): Promise<OperacaoRoboRegistro[]> {
   const corte = new Date(Date.now() - (dias - 1) * 864e5).toISOString()
   try {
-    const linhas = await rest<any[]>(`/operacoes_robos?marca=eq.${marcaAdmin()}&select=*&executada_em=gte.${encodeURIComponent(corte)}&order=executada_em.desc`, sessao.token)
+    const linhas = await rest<any[]>(`/operacoes_robos?${filtroMarca()}&select=*&executada_em=gte.${encodeURIComponent(corte)}&order=executada_em.desc`, sessao.token)
     return (linhas ?? []).map(l => ({ contractId:Number(l.contract_id),userId:l.user_id,contaId:l.conta_id,roboId:l.robo_id,roboNome:l.robo_nome,ativo:l.ativo,tipoContrato:l.tipo_contrato,moeda:l.moeda,demo:Boolean(l.demo),entrada:Number(l.entrada),pagamento:Number(l.pagamento),resultado:Number(l.resultado),markup:Number(l.markup),markupDeriv:l.markup_deriv===null||l.markup_deriv===undefined?null:Number(l.markup_deriv),ganhou:Boolean(l.ganhou),executadaEm:l.executada_em }))
   } catch { return [] }
 }
@@ -576,11 +596,23 @@ export interface OrigemDoContrato {
 
 export async function contratosPorOrigem(sessao: SessaoTeeds, dias = 30): Promise<OrigemDoContrato[]> {
   if (!autenticacaoConfigurada()) return []
-  const corte = new Date(Date.now() - dias * 86400000).toISOString().slice(0, 10)
+  // Mesma janela das outras telas: N dias contando hoje, e não N dias atrás.
+  const corte = new Date(Date.now() - (dias - 1) * 86400000).toISOString().slice(0, 10)
   try {
     const linhas = await rest<any[]>(
-      `/contratos_por_origem?marca=eq.${marcaAdmin()}&select=*&dia=gte.${corte}&order=dia.desc`, sessao.token)
-    return (linhas ?? []).map((l) => ({
+      `/contratos_por_origem?${filtroMarca()}&select=*&dia=gte.${corte}&order=dia.desc`, sessao.token)
+    // A MESMA conta Deriv pode estar ligada a um cadastro da Teeds e a outro
+    // da OMNI: cada leitura grava a sua linha, com a marca de quem leu. Na
+    // visão da rede as duas chegam juntas e o mesmo contrato contaria duas
+    // vezes — por isso a chave aqui é dia + conta + origem, sem a marca.
+    const vistos = new Set<string>()
+    const unicas = (linhas ?? []).filter((l) => {
+      const chave = `${l.dia}|${l.conta_id}|${l.origem}|${Boolean(l.demo)}`
+      if (vistos.has(chave)) return false
+      vistos.add(chave)
+      return true
+    })
+    return unicas.map((l) => ({
       dia: String(l.dia), contaId: String(l.conta_id), userId: String(l.user_id),
       origem: String(l.origem), demo: Boolean(l.demo),
       operacoes: Number(l.operacoes ?? 0), entradas: Number(l.entradas ?? 0),
@@ -710,7 +742,7 @@ export async function comissaoDosRobos(sessao: SessaoTeeds, dias = 30): Promise<
       method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: marcaAdmin() }),
     })
     return (linhas ?? []).map((l) => ({
-      userId: l.user_id, contaId: l.conta_id, dia: l.dia,
+      userId: l.user_id, contaId: l.conta_id, marca: String(l.marca ?? marcaAdmin()), dia: l.dia,
       operacoes: Number(l.operacoes), pagamentos: Number(l.pagamentos),
       comissao: Number(l.comissao),
       entradas: Number(l.entradas ?? 0), resultado: Number(l.resultado ?? 0),
@@ -746,7 +778,8 @@ export async function conferenciaComissao(sessao: SessaoTeeds, dias = 30): Promi
   try {
     const linhas = await rest<any[]>('/rpc/teeds_comissao_conferencia', sessao.token, {
       method: 'POST',
-      body: JSON.stringify({ p_dias: dias, p_marca: marcaAdmin(), p_app_id: MARCA.appId }),
+      // Na visão da rede a conferência é de todos os nossos apps, não de um.
+      body: JSON.stringify({ p_dias: dias, p_marca: marcaAdmin(), p_app_id: vendoARede() ? null : MARCA.appId }),
     })
     return (linhas ?? []).map((l) => ({
       dia: l.dia, calculada: Number(l.calculada), oficial: Number(l.oficial),

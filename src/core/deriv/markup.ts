@@ -93,15 +93,15 @@ async function consultar(session: AuthSession, de: string, ate: string): Promise
  * somava a OMNI junto. Agora a gente lê o pedaço do app e, só quando a
  * Deriv não manda o `breakdown`, cai no total.
  */
-function doApp(d: any, appId: string): { comissao: number; volume: number; contratos: number; clientes: number } {
+function doApp(d: any, apps: string[]): { comissao: number; volume: number; contratos: number; clientes: number } {
   const lista = (d?.breakdown ?? []) as any[]
   if (lista.length) {
-    const b = lista.find((x) => String(x.app_id ?? x.application_id ?? '') === appId)
+    const nossos = lista.filter((x) => apps.includes(String(x.app_id ?? x.application_id ?? '')))
     return {
-      comissao: Number(b?.app_markup_usd ?? b?.total_app_markup_usd ?? 0),
-      volume: Number(b?.volume_usd ?? b?.total_volume_usd ?? 0),
-      contratos: Number(b?.contract_count ?? b?.total_contract_count ?? 0),
-      clientes: Number(b?.client_count ?? b?.total_client_count ?? 0),
+      comissao: nossos.reduce((t, b) => t + Number(b?.app_markup_usd ?? b?.total_app_markup_usd ?? 0), 0),
+      volume: nossos.reduce((t, b) => t + Number(b?.volume_usd ?? b?.total_volume_usd ?? 0), 0),
+      contratos: nossos.reduce((t, b) => t + Number(b?.contract_count ?? b?.total_contract_count ?? 0), 0),
+      clientes: nossos.reduce((t, b) => t + Number(b?.client_count ?? b?.total_client_count ?? 0), 0),
     }
   }
   return {
@@ -113,10 +113,12 @@ function doApp(d: any, appId: string): { comissao: number; volume: number; contr
 }
 
 /** Totais do periodo. */
-export async function buscarResumo(session: AuthSession, de: string, ate: string): Promise<MarkupResumo> {
+export async function buscarResumo(session: AuthSession, de: string, ate: string, apps?: string[]): Promise<MarkupResumo> {
   const d = await consultar(session, de, ate)
-  const app = session.appId ?? MARCA.appId
-  const meu = doApp(d, app)
+  // Na visão da rede a pergunta é outra: quanto renderam TODOS os nossos apps
+  // juntos. Fora dela, só o app desta marca.
+  const alvo = apps?.length ? apps : [session.appId ?? MARCA.appId]
+  const meu = doApp(d, alvo)
   return {
     // O número DESTA marca. O total da conta (todos os apps) vai separado.
     comissao: meu.comissao,
@@ -124,7 +126,7 @@ export async function buscarResumo(session: AuthSession, de: string, ate: string
     pagamentos: Number(d.total_payout_usd ?? 0),
     contratos: meu.contratos,
     clientes: meu.clientes || Number(d.total_client_count ?? 0),
-    appId: app,
+    appId: alvo.join(','),
     comissaoDaConta: Number(d.total_app_markup_usd ?? 0),
     contratosDaConta: Number(d.total_contract_count ?? 0),
     porApp: (d.breakdown ?? []).map((b: any) => ({
@@ -138,7 +140,8 @@ export async function buscarResumo(session: AuthSession, de: string, ate: string
 }
 
 /** Serie diaria, consultando dia a dia (a API so devolve totais por intervalo). */
-export async function buscarSerieDiaria(session: AuthSession, dias: number): Promise<DiaMarkup[]> {
+export async function buscarSerieDiaria(session: AuthSession, dias: number, apps?: string[]): Promise<DiaMarkup[]> {
+  const alvo = apps?.length ? apps : [session.appId ?? MARCA.appId]
   const datas: string[] = []
   for (let i = dias - 1; i >= 0; i--) {
     const d = new Date()
@@ -154,7 +157,7 @@ export async function buscarSerieDiaria(session: AuthSession, dias: number): Pro
       parte.map(async (data) => {
         try {
           const r = await consultar(session, data, data)
-          const meu = doApp(r, session.appId ?? MARCA.appId)
+          const meu = doApp(r, alvo)
           return { data, comissao: meu.comissao, volume: meu.volume, contratos: meu.contratos }
         } catch (e) {
           if (e instanceof SemPermissao) throw e
@@ -168,7 +171,8 @@ export async function buscarSerieDiaria(session: AuthSession, dias: number): Pro
 }
 
 /** Serie diaria entre duas datas (AAAA-MM-DD, inclusivas), ate 31 dias. */
-export async function buscarSerieEntre(session: AuthSession, de: string, ate: string): Promise<DiaMarkup[]> {
+export async function buscarSerieEntre(session: AuthSession, de: string, ate: string, apps?: string[]): Promise<DiaMarkup[]> {
+  const alvo = apps?.length ? apps : [session.appId ?? MARCA.appId]
   const datas: string[] = []
   const d = new Date(de + 'T00:00:00Z')
   const fim = new Date(ate + 'T00:00:00Z')
@@ -184,7 +188,7 @@ export async function buscarSerieEntre(session: AuthSession, de: string, ate: st
       parte.map(async (data) => {
         try {
           const r = await consultar(session, data, data)
-          const meu = doApp(r, session.appId ?? MARCA.appId)
+          const meu = doApp(r, alvo)
           return { data, comissao: meu.comissao, volume: meu.volume, contratos: meu.contratos }
         } catch (e) {
           if (e instanceof SemPermissao) throw e

@@ -13,6 +13,7 @@
  * (Pedido do Tiago, 22/09/2026: "modo CEO deve ser TOP".)
  */
 import { useEffect, useMemo, useState } from 'react'
+import { janelaEmDatas } from './SeletorDePeriodo'
 import { analiseOperacoes, type AnaliseOperacoes } from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
 
@@ -91,12 +92,15 @@ export function CentroDeEstudoHistorico({ sessao, moeda }: { sessao: SessaoTeeds
           <h4>O que já passou pela plataforma</h4>
         </div>
         <div className="ce-filtros">
-          <div className="ce-periodo" role="group" aria-label="Período">
-            {DIAS.map((d) => (
-              <button key={d} type="button" aria-pressed={janela === d} onClick={() => setJanela(d)}>
-                {d === 1 ? 'Hoje' : `${d} dias`}
-              </button>
-            ))}
+          <div className="ce-periodo-bloco">
+            <div className="ce-periodo" role="group" aria-label="Período">
+              {DIAS.map((d) => (
+                <button key={d} type="button" aria-pressed={janela === d} onClick={() => setJanela(d)}>
+                  {d === 1 ? 'Hoje' : `${d} dias`}
+                </button>
+              ))}
+            </div>
+            <small className="ce-periodo-datas">{janelaEmDatas(janela)}</small>
           </div>
           <label className="ce-demo">
             <input type="checkbox" checked={comDemo} onChange={(e) => setComDemo(e.target.checked)} />

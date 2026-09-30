@@ -11,13 +11,14 @@ import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 import { IDENTIDADES, nomeDaEstrategia } from '../core/deriv/branding'
 import {
-  analiseOperacoes, enviarComissoes, enviarMarkupOficial, listarComissoes,
+  analiseOperacoes, enviarComissoes, enviarMarkupOficial, listarComissoes, vendoARede,
   type AnaliseOperacoes, type ComissaoDia,
 } from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { ClientesAdmin } from './ClientesAdmin'
 import { DerivDesconectada } from './DerivDesconectada'
 import { MARCA } from '../marca'
+import { MARCAS } from '../marca/marcas'
 
 interface Props {
   session: AuthSession | null
@@ -100,6 +101,9 @@ export function ManagementPanel({
   const [erro, setErro] = useState<string | null>(null)
   const [markupSim, setMarkupSim] = useState(3)
   const [progresso, setProgresso] = useState<{ feitos: number; total: number } | null>(null)
+  /* Esta tela é remontada quando a plataforma em foco muda (key no AdminPanel),
+     então basta ler o foco na montagem. */
+  const naRede = vendoARede()
 
   useEffect(() => {
     if (!session) return
@@ -109,17 +113,22 @@ export function ManagementPanel({
     setSemPermissao(false)
     const { de, ate } = intervalo
 
-    buscarResumo(session, de, ate)
+    // Na visão da rede a comissão informada pela Deriv soma os apps de todas
+    // as marcas da casa; numa plataforma, só o app dela.
+    const apps = naRede ? Object.values(MARCAS).map((m) => m.appId) : undefined
+    buscarResumo(session, de, ate, apps)
       .then(async (r) => {
         if (!vivo) return
         setResumo(r)
         if (dias > 1 && dias <= 31) {
-          const s = await buscarSerieEntre(session, de, ate)
+          const s = await buscarSerieEntre(session, de, ate, apps)
           if (vivo) setSerie(s)
           // so quem tem application_read chega aqui: e o dono do app. O total
           // oficial vai para o banco e a conferencia por cliente passa a ter
           // com o que se comparar.
-          if (sessaoTeeds) void enviarMarkupOficial(sessaoTeeds, MARCA.appId, s)
+          // A série gravada é sempre a do app desta marca: na rede ela mistura
+          // duas apps e não serve de referência oficial para nenhuma.
+          if (sessaoTeeds && !naRede) void enviarMarkupOficial(sessaoTeeds, MARCA.appId, s)
         } else {
           setSerie([])
         }
@@ -549,9 +558,9 @@ export function ManagementPanel({
           <span className="rot">Sua comissão · informada pela Deriv</span>
           <strong>{carregando && !resumo ? '…' : dinheiro(resumo?.comissao ?? 0, 'USD')}</strong>
           <span className="kpi-nota">
-            {`app da ${MARCA.prosa} · ${dataCurta(intervalo.de)} a ${dataCurta(intervalo.ate)}`}
+            {`${naRede ? `apps da rede (${Object.values(MARCAS).map((m) => m.prosa).join(' + ')})` : `app da ${MARCA.prosa}`} · ${dataCurta(intervalo.de)} a ${dataCurta(intervalo.ate)}`}
             {resumo?.comissaoDaConta != null && Math.abs(resumo.comissaoDaConta - resumo.comissao) > 0.005
-              ? ` · a conta inteira na Deriv, somando os outros apps, deu ${dinheiro(resumo.comissaoDaConta)}`
+              ? ` · a conta inteira na Deriv, somando os apps de fora, deu ${dinheiro(resumo.comissaoDaConta)}`
               : ''}
           </span>
           <span className="kpi-nota">
