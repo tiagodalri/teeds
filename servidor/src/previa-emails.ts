@@ -39,7 +39,7 @@ for (const marca of Object.values(MARCAS)) {
     ['cadastro', emailDeCadastro(marca, exemplo)],
     ['aprovado', emailDeAprovacao(marca, exemplo, true)],
     ['aprovado-com-senha-propria', emailDeAprovacao(marca, exemplo, false)],
-    ['volta', emailDeVolta(marca)],
+    ['volta', emailDeVolta(marca, exemplo)],
   ] as const) {
     writeFileSync(join(PASTA, `${marca.id}-${nome}.html`), pronto.html)
     indice.push(`${marca.nome.padEnd(6)} ${nome.padEnd(14)} ${pronto.assunto}`)

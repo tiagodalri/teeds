@@ -79,12 +79,31 @@ export async function decidirLead(id: string, marca: string, admin: string, acao
 }
 
 /** Manda um e-mail pronto pela marca. Devolve false quando a marca não pode enviar. */
-async function despachar(marca: ReturnType<typeof marcaPorId>, para: string, email: {assunto:string;html:string;texto:string}, chaveUnica: string): Promise<void> {
+/**
+ * Manda um e-mail pronto pela marca.
+ *
+ * `descadastrar` só é passado em campanha, e liga os dois cabeçalhos que o
+ * Gmail e o Yahoo exigem de quem manda para muita gente: o `List-Unsubscribe`
+ * e o `List-Unsubscribe-Post`, que juntos desenham o "Cancelar inscrição" ao
+ * lado do remetente. Sem eles a mensagem de lista vai para o spam — e quem
+ * quer sair sem achar o botão marca como spam, que é o pior sinal possível.
+ */
+async function despachar(
+  marca: ReturnType<typeof marcaPorId>, para: string,
+  email: {assunto:string;html:string;texto:string}, chaveUnica: string,
+  descadastrar?: string,
+): Promise<void> {
   if (!process.env.RESEND_CHAVE || !marca.email.remetente) throw new Error('Envio indisponível')
   const r = await fetch('https://api.resend.com/emails', {
     method:'POST', signal:AbortSignal.timeout(20000),
     headers:{Authorization:`Bearer ${process.env.RESEND_CHAVE}`,'Content-Type':'application/json','Idempotency-Key':chaveUnica},
-    body:JSON.stringify({from:marca.email.remetente,to:[para],subject:email.assunto,html:email.html,text:email.texto}),
+    body:JSON.stringify({
+      from:marca.email.remetente,to:[para],subject:email.assunto,html:email.html,text:email.texto,
+      ...(descadastrar ? { headers: {
+        'List-Unsubscribe': `<${descadastrar}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      } } : {}),
+    }),
   })
   if (!r.ok) throw new Error('Envio indisponível')
 }

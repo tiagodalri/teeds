@@ -11,6 +11,7 @@
  * prévia está errado na caixa de entrada.
  */
 import { montarEmail, type EmailPronto } from './emails'
+import { linkDeDescadastro } from './descadastro'
 import type { Marca } from '../../src/marca/marcas'
 
 /**
@@ -34,7 +35,7 @@ import type { Marca } from '../../src/marca/marcas'
  * aviso de risco no rodapé existe justamente para acompanhá-las. Decisão do
  * Tiago, comunicada e reafirmada.
  */
-export function emailDeVolta(marca: Marca): EmailPronto {
+export function emailDeVolta(marca: Marca, paraOEmail: string): EmailPronto {
   return montarEmail(marca, 'convite', new URL('/', marca.redirectUri).href, {
     assunto: `${marca.prosa} - Os melhores robôs voltaram`,
     titulo: `A ${marca.prosa} está de volta - Maior, melhor e mais forte!`,
@@ -53,6 +54,7 @@ export function emailDeVolta(marca: Marca): EmailPronto {
       `informações sobre a reativação do seu acesso. Todas as comunicações serão ` +
       `feitas por lá e é importante que você não perca nenhum detalhe!`,
     telegram: { url: marca.telegram, texto: 'Entrar no canal oficial' },
+    descadastrar: linkDeDescadastro(marca.id, paraOEmail),
     // Sem botão da plataforma e sem tarja de recado (Tiago, 30/09/2026).
     // O convite tem um destino só, o canal: dois botões dividiriam a atenção
     // em vez de somar, e o convite para a plataforma vai ser feito por lá.

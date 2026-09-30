@@ -46,6 +46,15 @@ interface Conteudo {
    */
   aviso?: string
   /**
+   * O endereço de sair da lista, quando a mensagem é de campanha.
+   *
+   * Aparece de dois jeitos: no cabeçalho `List-Unsubscribe` (quem monta o
+   * envio cuida disso) e numa linha miúda no rodapé, para o cliente de e-mail
+   * que não desenha o botão do Gmail. Mensagem de fluxo — senha, aprovação —
+   * não leva: ninguém "cancela a inscrição" de um e-mail que ela mesma pediu.
+   */
+  descadastrar?: string
+  /**
    * Um segundo botão, na cor e com a marca do Telegram.
    *
    * Existe porque alguns e-mails têm dois destinos de verdade: a plataforma e
@@ -287,6 +296,9 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
         <td style="padding:26px 32px 30px;font-family:${SANS};">
           <div style="border-top:1px solid #e8ecf2;padding-top:20px;">
             <p style="margin:0;font-size:11px;line-height:1.6;color:#7a8699;">${seguro(e.rodape)}</p>
+            ${!c.descadastrar ? '' : `<p style="margin:7px 0 0;font-size:10.5px;line-height:1.5;color:#9aa4b2;">
+              <a href="${seguro(c.descadastrar)}" style="color:#9aa4b2;text-decoration:underline;">Cancelar inscrição</a>
+            </p>`}
           </div>
         </td>
       </tr>
@@ -314,6 +326,7 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
     ...(c.telegram ? [`${c.telegram.texto}: ${c.telegram.url}`, ''] : []),
     ...(c.botao ? [url, ''] : []),
     ...(c.aviso ? [c.aviso, ''] : []),
+    ...(c.descadastrar ? [`Para não receber mais: ${c.descadastrar}`, ''] : []),
     '—',
     e.rodape,
   ].join('\n')

@@ -1,5 +1,6 @@
 import './ambiente'
 import { decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros } from './aprovacao-leads'
+import { abrirBilhete, registrarDescadastro, paginaDeSaida } from './descadastro'
 import { catalogo, alterarRobo } from './catalogo'
 import { administradorDaMarca } from './supabase'
 import { listarEmailsAdmin } from './admin-emails'
@@ -286,6 +287,40 @@ const servidor = createServer(async (req, res) => {
 
   // Landing pages publicas. Fica fora do /api autenticado, mas aceita apenas
   // origens das duas marcas, limita repeticoes e possui campo-armadilha.
+  /*
+    Sair da lista. Duas portas para o mesmo lugar:
+
+      POST — o "Cancelar inscrição" que o Gmail desenha ao lado do remetente
+             (RFC 8058). A pessoa nem sai da caixa de entrada.
+      GET  — o link do rodapé, para o cliente que não desenha o botão.
+
+    Sem sessão, sem login: quem chega aqui veio de um link de e-mail. O que
+    autoriza é a assinatura dentro do bilhete.
+  */
+  if (url.pathname === '/publico/descadastrar') {
+    const tipo = { 'content-type': 'text/html; charset=utf-8' }
+    if (req.method !== 'POST' && req.method !== 'GET') { res.writeHead(405, tipo); return res.end() }
+    // O POST de um clique manda o bilhete no corpo OU na query, conforme o cliente.
+    let t = url.searchParams.get('t') ?? ''
+    if (req.method === 'POST' && !t) {
+      const partes: Buffer[] = []; let tamanho = 0
+      for await (const p of req) { tamanho += (p as Buffer).length; if (tamanho > 8_192) break; partes.push(p as Buffer) }
+      t = new URLSearchParams(Buffer.concat(partes).toString('utf8')).get('t') ?? ''
+    }
+    const aberto = abrirBilhete(t)
+    if (!aberto) {
+      // O Gmail só repete o POST se ele falhar; um bilhete inválido não melhora
+      // com repetição. Responde 200 e explica na página.
+      res.writeHead(200, tipo)
+      return res.end(paginaDeSaida('', '', false))
+    }
+    const ok = await registrarDescadastro(aberto.marca, aberto.email, req.method === 'POST' ? 'um-clique' : 'pagina')
+    console.log(`[descadastro] ${aberto.marca} · ${ok ? 'anotado' : 'FALHOU'} · ${req.method}`)
+    if (req.method === 'POST') { res.writeHead(ok ? 200 : 500, { 'content-type': 'text/plain' }); return res.end(ok ? 'ok' : 'erro') }
+    res.writeHead(200, tipo)
+    return res.end(paginaDeSaida(marcaPorId(aberto.marca).prosa, aberto.email, ok))
+  }
+
   if (url.pathname === '/publico/leads') {
     const origem = String(req.headers.origin ?? '')
     const permitidas = [
