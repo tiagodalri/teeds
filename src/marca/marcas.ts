@@ -121,6 +121,16 @@ export interface Marca {
      * eletrônico e queima a reputação do domínio junto.
      */
     remetente: string | null
+    /**
+     * O vão, em pixels, entre o emblema e o nome na faixa do e-mail.
+     *
+     * É por marca porque os dois emblemas não são iguais por dentro: o touro
+     * da Teeds tem 16% do PNG em ar embaixo do desenho, e esse ar entra no
+     * vão sem ninguém ver — com 14px o nome parecia solto do símbolo. O da
+     * OMNI fica sobre uma chapa clara, cuja borda é visível: ali o vão é o
+     * que se vê, e precisa ser maior.
+     */
+    vaoDoLetreiro: number
   }
   /**
    * O canal oficial no Telegram.
@@ -160,6 +170,7 @@ export const MARCAS: Record<string, Marca> = {
         'Negociar envolve risco de perda.',
       // Mesmo domínio do site. O e-mail sai de onde a plataforma mora.
       remetente: 'Teeds <nao-responda@teedscompany.com>',
+      vaoDoLetreiro: 4,
     },
     telegram: 'https://t.me/+gl3NHpZRSCwyYjgx',
   },
@@ -203,6 +214,7 @@ export const MARCAS: Record<string, Marca> = {
         'A OMNI é uma plataforma de operações que funciona com a sua própria conta na Deriv. ' +
         'Negociar envolve risco de perda.',
       remetente: 'OMNI <nao-responda@omnifinanc.com>',
+      vaoDoLetreiro: 10,
     },
     telegram: 'https://t.me/oarthurlessa',
   },

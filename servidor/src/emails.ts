@@ -35,8 +35,16 @@ interface Conteudo {
   /** O trecho que aparece na lista da caixa de entrada, antes de abrir. */
   espia: string
   corpo: string
-  botao: string
-  aviso: string
+  /**
+   * O botão da marca. Opcional: uma campanha pode ter um destino só — e aí
+   * dois botões dividiriam a atenção em vez de somar.
+   */
+  botao?: string
+  /**
+   * A tarja de recado no fim. Opcional: o rodapé já avisa do risco em toda
+   * mensagem, e numa campanha os dois juntos viram repetição.
+   */
+  aviso?: string
   /**
    * Um segundo botão, na cor e com a marca do Telegram.
    *
@@ -166,6 +174,12 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
   const c = personalizado ?? conteudo(tipo, marca.prosa)
   const e = marca.email
   const endereco = seguro(url)
+  /*
+    O endereço do link de reserva. Sem botão da marca, o único destino da
+    mensagem é o canal — e é ele que precisa estar escrito por extenso, para
+    quem abrir num cliente que não desenha botão nenhum.
+  */
+  const reserva = c.botao ? endereco : seguro(c.telegram?.url ?? url)
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -189,7 +203,7 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
 
       <!-- faixa da marca -->
       <tr>
-        <td align="center" bgcolor="${e.faixa}" style="background:${e.faixa};padding:30px 32px 26px;">
+        <td align="center" bgcolor="${e.faixa}" style="background:${e.faixa};padding:24px 32px 26px;">
           ${e.chapaDoEmblema ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>
             <td bgcolor="${e.chapaDoEmblema}" style="background:${e.chapaDoEmblema};border-radius:16px;padding:11px;">
               <img src="${emblemaDe(marca)}" width="46" height="46" alt="${seguro(marca.prosa)}"
@@ -197,7 +211,7 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
             </td></tr></table>` : `<img src="${emblemaDe(marca)}" width="54" height="54" alt="${seguro(marca.prosa)}"
                style="display:block;border:0;margin:0 auto;">`}
           <div style="font-family:${e.fonteDoLetreiro};font-size:17px;letter-spacing:.26em;
-                      color:${e.letreiro};margin-top:14px;padding-left:.26em;">${seguro(marca.nome)}</div>
+                      color:${e.letreiro};margin-top:${e.vaoDoLetreiro}px;padding-left:.26em;">${seguro(marca.nome)}</div>
         </td>
       </tr>
 
@@ -228,6 +242,7 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
         </td>
       </tr>`}
 
+      ${!c.botao ? '' : `
       <!-- botao -->
       <tr>
         <td style="padding:0 32px;">
@@ -241,18 +256,19 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
             </tr>
           </table>
         </td>
-      </tr>
+      </tr>`}
 
       <!-- link avulso, para quando o botao nao funciona -->
       <tr>
         <td style="padding:16px 32px 0;font-family:${SANS};">
           <p style="margin:0;font-size:11.5px;line-height:1.6;color:#7a8699;">
             Se o botão não funcionar, copie e cole este endereço no navegador:<br>
-            <span style="color:${e.faixa};word-break:break-all;">${endereco}</span>
+            <span style="color:${e.faixa};word-break:break-all;">${reserva}</span>
           </p>
         </td>
       </tr>
 
+      ${!c.aviso ? '' : `
       <!-- aviso -->
       <tr>
         <td style="padding:24px 32px 0;">
@@ -264,7 +280,7 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
             </tr>
           </table>
         </td>
-      </tr>
+      </tr>`}
 
       <!-- rodape -->
       <tr>
@@ -296,10 +312,8 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
     // A versão em texto puro vai para quem bloqueia HTML. O canal não pode
     // sumir ali: é o destino principal do e-mail em que ele aparece.
     ...(c.telegram ? [`${c.telegram.texto}: ${c.telegram.url}`, ''] : []),
-    url,
-    '',
-    c.aviso,
-    '',
+    ...(c.botao ? [url, ''] : []),
+    ...(c.aviso ? [c.aviso, ''] : []),
     '—',
     e.rodape,
   ].join('\n')

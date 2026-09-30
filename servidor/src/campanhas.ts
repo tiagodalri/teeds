@@ -18,9 +18,9 @@ import type { Marca } from '../../src/marca/marcas'
  *
  * Pedido do Tiago em 30/09/2026, para a base da Teeds. A mensagem tem duas
  * pernas: o acesso volta a ser gratuito para quem já foi cliente, e os
- * detalhes estão no canal do Telegram. O botão do canal vem primeiro de
- * propósito — é lá que a conversa continua, e o último parágrafo manda a
- * pessoa para lá.
+ * detalhes estão no canal do Telegram. O canal é o ÚNICO botão: o convite
+ * para voltar à plataforma vai ser feito por lá, com calma, e um segundo
+ * botão aqui só dividiria a atenção.
  *
  * O TEXTO É DO TIAGO, palavra por palavra. Ele escreveu e pediu assim. Duas
  * versões minhas foram recusadas antes: a primeira abria falando do tempo em
@@ -36,7 +36,7 @@ import type { Marca } from '../../src/marca/marcas'
  */
 export function emailDeVolta(marca: Marca): EmailPronto {
   return montarEmail(marca, 'convite', new URL('/', marca.redirectUri).href, {
-    assunto: `A ${marca.prosa} está de volta - Maior, melhor e mais forte!`,
+    assunto: `${marca.prosa} - Os melhores robôs voltaram`,
     titulo: `A ${marca.prosa} está de volta - Maior, melhor e mais forte!`,
     espia: `Os robôs estão de volta, revisados e atualizados. E para quem já foi cliente da ${marca.prosa}, o acesso é gratuito.`,
     corpo:
@@ -48,15 +48,14 @@ export function emailDeVolta(marca: Marca): EmailPronto {
       `nunca passa por nós, nem por um segundo.\n\n` +
       `**E para quem já foi nosso cliente, o acesso é gratuito.** Sem prazo, sem ` +
       `teste de alguns dias, sem cartão. Você esteve aqui quando a ${marca.prosa} ` +
-      `era menor — é justo que veja no que ela se tornou.\n\n` +
+      `era menor, e é justo que veja no que ela se tornou.\n\n` +
       `Entre agora no nosso canal oficial do Telegram para ter acesso às ` +
       `informações sobre a reativação do seu acesso. Todas as comunicações serão ` +
       `feitas por lá e é importante que você não perca nenhum detalhe!`,
     telegram: { url: marca.telegram, texto: 'Entrar no canal oficial' },
-    botao: 'Entrar na minha conta',
-    aviso:
-      `Negociar envolve risco de perda: os robôs operam com a sua própria conta na ` +
-      `corretora, e resultado passado não garante resultado futuro. Se você não ` +
-      `quiser mais receber estes e-mails, é só responder dizendo isso.`,
+    // Sem botão da plataforma e sem tarja de recado (Tiago, 30/09/2026).
+    // O convite tem um destino só, o canal: dois botões dividiriam a atenção
+    // em vez de somar, e o convite para a plataforma vai ser feito por lá.
+    // O risco já é avisado no rodapé de toda mensagem; repetir vira ruído.
   })
 }
