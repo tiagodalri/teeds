@@ -177,10 +177,10 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
             <DerivLogo altura={22} />
             <span className="corretora-selo">corretora oficial</span>
           </div>
-          <b>Ainda não tem conta na Deriv?</b>
+          <b>Abra sua conta gratuitamente.</b>
           <p>
-            A {MARCA.prosa} opera pela sua própria conta na corretora — é lá que o
-            dinheiro fica. Abrir é grátis e você começa na conta demo.
+            Seu dinheiro fica na corretora Deriv. Conecte sua conta à {MARCA.prosa}
+            {' '}para operar pela plataforma.
           </p>
           <a className="btn-deriv" href={MARCA.afiliado} target="_blank" rel="noopener noreferrer">
             <span>Abrir conta na Deriv</span>

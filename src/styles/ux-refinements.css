@@ -71,13 +71,20 @@ button, input, select, textarea { font-family: inherit; }
 .entrada-form label > span > input { width: 100%; }
 .entrada-form input::placeholder { color: var(--ux-secondary); opacity: 1; }
 .entrada-linha, .entrada-corretora p { color: var(--ux-secondary); }
-.entrada-corretora { padding: 14px 16px; margin-top: 18px; background: var(--surface); border-color: var(--border); border-radius: 12px; }
+.entrada-corretora { padding: 18px 16px; margin-top: 18px; background: var(--surface); border-color: var(--border); border-radius: 12px; text-align: center; }
+.entrada-corretora .corretora-topo { justify-content: center; flex-wrap: wrap; gap: 10px; }
+.entrada-corretora p { max-width: 34ch; margin: 8px auto 16px; font-size: 12px; line-height: 1.6; text-wrap: pretty; }
+.entrada-corretora .btn-deriv { font-size: 13px; }
 .entrada-corretora .btn-deriv { background: transparent; color: var(--text); border: 1px solid var(--border); box-shadow: none; min-height: 44px; }
 .entrada-troca { margin-top: 12px; flex-wrap: wrap; }
 .entrada-troca button { min-height: 44px; padding: 8px; }
 .entrada-erro { color: var(--down); }
 .entrada-recado { color: var(--up); }
-.entrada-mini, .entrada-rodape, .entrada-seguranca { font-size: 12px; }
+.entrada-mini, .entrada-seguranca { font-size: 12px; }
+.entrada-rodape { max-width: none; font-size: 7px; line-height: 1.5; letter-spacing: -.015em; white-space: nowrap; }
+@media (max-width: 520px) {
+  .entrada-rodape { font-size: 10px; letter-spacing: normal; white-space: normal; }
+}
 .entrada-senha { display: flex; align-items: center; position: relative; }
 .entrada-senha input { width: 100%; padding-right: 84px; }
 .entrada-senha button { position: absolute; right: 4px; min-height: 40px; padding: 8px 10px; border: 0; background: transparent; color: var(--text); cursor: pointer; font-size: 12px; }
