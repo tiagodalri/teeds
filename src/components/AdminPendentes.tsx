@@ -7,6 +7,7 @@ import { PLANOS_CLIENTE } from '../core/teeds/planos'
 interface Pendente {
   id: string; nome: string; email: string; telefone: string
   status: string; criado_em: string; email_enviado_em: string | null
+  recadastro?: boolean; ultima_inscricao_em?: string
 }
 export function AdminPendentes({ sessao, versao, onAprovado }: {sessao:SessaoTeeds; versao:number; onAprovado:()=>void}) {
   const [status,setStatus]=useState('pendente')
@@ -49,12 +50,18 @@ export function AdminPendentes({ sessao, versao, onAprovado }: {sessao:SessaoTee
     }catch(e){setErro((e as Error).message)}finally{setOcupado(null)}
   }
   return <section className="admin-card admin-pendentes">
-    <header><div><span className="rot">Cadastros pelo formulário</span><h3>Aprovação de clientes</h3><p>O lead permanece na captação. O acesso só é criado após sua aprovação.</p></div><button disabled={!!ocupado||carregando} onClick={()=>setRevisao(v=>v+1)}>Atualizar</button></header>
+    <header><div><span className="rot">Cadastros pelo formulário</span><h3>Aprovação de clientes</h3><p>Novos cadastros e recadastros aguardam sua aprovação. Contas existentes e seus históricos são preservados.</p></div><button disabled={!!ocupado||carregando} onClick={()=>setRevisao(v=>v+1)}>Atualizar</button></header>
     <nav aria-label="Status da aprovação">{[['pendente','Pendentes'],['processando','Em aprovação'],['aprovado','Aprovados'],['recusado','Recusados']].map(([id,nome])=><button key={id} aria-pressed={status===id} disabled={!!ocupado} onClick={()=>{setStatus(id);setPagina(0);setConfirmar(null);setAviso('')}}>{nome}</button>)}</nav>
     {erro&&<p role="alert">{erro}</p>}{aviso&&<p role="status">{aviso}</p>}
     {confirmar?.acao==='aprovar' && confirmar.p.status==='pendente' && <label>Plano do novo cliente <select value={plano} disabled={!!ocupado} onChange={e=>setPlano(e.target.value)}>{PLANOS_CLIENTE.map(p=><option key={p.id} value={p.id}>{p.nome}</option>)}</select></label>}
     {confirmar&&<div className="pendente-confirmar"><b>{confirmar.acao==='aprovar'?'Aprovar':'Recusar'} {confirmar.p.nome}?</b><p>{confirmar.acao==='aprovar'?'Novos clientes recebem o plano escolhido por 30 dias e e-mail com as instruções. Contas existentes mantêm senha e condições atuais.':'O lead continuará disponível, sem criação de acesso ou envio de e-mail.'}</p><div><button disabled={!!ocupado} onClick={()=>setConfirmar(null)}>Cancelar</button><button className="admin-primary" disabled={!!ocupado} onClick={()=>void decidir()}>{ocupado?'Processando…':'Confirmar'}</button></div></div>}
-    {carregando?<p>Carregando cadastros…</p>:lista.length===0&&!erro?<p>Nenhum cadastro nesta situação.</p>:lista.slice(0,50).map(p=><article key={p.id} className="pendente-linha"><div><b>{p.nome}</b><span>{p.email}</span><span>{p.telefone}</span></div><div><small>{new Date(p.criado_em).toLocaleString('pt-BR')}</small><span>{p.status==='aprovado'?(p.email_enviado_em?'E-mail enviado':'E-mail na fila de envio'):p.status==='processando'?'Aprovação iniciada; pode ser retomada após dois minutos.':p.status==='recusado'?'Recusado':'Pendente de aprovação'}</span></div>{['pendente','processando'].includes(p.status)&&<div className="pendente-acoes"><button disabled={!!ocupado} className="admin-primary" onClick={()=>setConfirmar({p,acao:'aprovar'})}>{p.status==='processando'?'Retomar aprovação':'Aprovar'}</button>{p.status==='pendente'&&<button disabled={!!ocupado} onClick={()=>setConfirmar({p,acao:'recusar'})}>Recusar</button>}</div>}</article>)}
+    {carregando?<p>Carregando cadastros…</p>:lista.length===0&&!erro?<p>Nenhum cadastro nesta situação.</p>:lista.slice(0,50).map(p=><article key={p.id} className="pendente-linha">
+      <div><b>{p.nome}</b><span>{p.email}</span><span>{p.telefone}</span>
+        {p.recadastro&&<strong className="pendente-recadastro">Já estava na base — recadastro{p.status==='pendente'?' aguardando aprovação':''}</strong>}
+      </div>
+      <div><small>Último cadastro: {new Date(p.ultima_inscricao_em||p.criado_em).toLocaleString('pt-BR')}</small><span>{p.status==='aprovado'?(p.email_enviado_em?'E-mail enviado':'E-mail na fila de envio'):p.status==='processando'?'Aprovação iniciada; pode ser retomada após dois minutos.':p.status==='recusado'?'Recusado':'Pendente de aprovação'}</span></div>
+      {['pendente','processando'].includes(p.status)&&<div className="pendente-acoes"><button disabled={!!ocupado} className="admin-primary" onClick={()=>setConfirmar({p,acao:'aprovar'})}>{p.status==='processando'?'Retomar aprovação':'Aprovar'}</button>{p.status==='pendente'&&<button disabled={!!ocupado} onClick={()=>setConfirmar({p,acao:'recusar'})}>Recusar</button>}</div>}
+    </article>)}
     <footer><button disabled={pagina===0||!!ocupado||carregando} onClick={()=>setPagina(p=>p-1)}>Anterior</button><span>Página {pagina+1}</span><button disabled={lista.length<=50||!!ocupado||carregando} onClick={()=>setPagina(p=>p+1)}>Próxima</button></footer>
   </section>
 }

@@ -13,6 +13,7 @@
  */
 import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import { CadastroEmAnalise } from '../src/components/CadastroEmAnalise'
 import { SeletorDePlataforma, opcoesDePlataforma } from '../src/components/SeletorDePlataforma'
 import { REDE } from '../src/core/teeds/clientes'
 import { MARCAS } from '../src/marca/marcas'
@@ -208,6 +209,14 @@ function Plataformas() {
 const TELAS: Record<string, () => JSX.Element> = {
   robos: Robos,
   plataformas: Plataformas,
+  espera: () => (
+    <CadastroEmAnalise
+      email="maria.souza@email.com"
+      nome="Maria Souza"
+      aoConferir={async () => false}
+      aoSair={() => {}}
+    />
+  ),
   gerenciamento: () => <Casca titulo="Gerenciamento" sub="Seu espaço de trabalho"><OperationalManagementPanel /></Casca>,
   aulas: () => <Casca titulo="Aulas" sub="Seu espaço de trabalho"><AulasPanel nome="Tiago" /></Casca>,
   marketplace: () => <Casca titulo="Marketplace" sub="Seu espaço de trabalho"><MarketplacePanel /></Casca>,

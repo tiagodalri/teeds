@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  atualizarPerfil, formatarCPF, formatarTelefone, telefoneValido, trocarSenha,
+  atualizarPerfil, formatarCPF, formatarTelefone, recuperarSenha, telefoneValido, trocarSenha,
   type SessaoTeeds, type Usuario,
 } from '../core/teeds/conta'
 import type { TradingAccount } from '../core/deriv/account'
@@ -60,6 +60,23 @@ export function ProfilePanel({ sessao, onAtualizar, onFechar, contas = [], deriv
     } finally {
       setSalvando(false)
     }
+  }
+
+  /*
+    A troca por link de e-mail, pedida pelo Tiago em 30/09/2026.
+
+    Trocar aqui mesmo continua valendo e é mais rápido. O link existe para
+    quem está num computador que não é o seu, para quem prefere confirmar
+    pelo e-mail, e para quem abriu esta tela sem lembrar a senha atual. Na
+    tela do link a senha é digitada duas vezes, igual aqui.
+  */
+  async function pedirLinkDeSenha() {
+    if (salvando) return
+    setSalvando(true); setErro(null); setRecado(null)
+    try {
+      await recuperarSenha(sessao.usuario.email)
+      setRecado(`Link enviado para ${sessao.usuario.email}. Ele vale por uma hora.`)
+    } catch (e) { setErro((e as Error).message) } finally { setSalvando(false) }
   }
 
   async function salvarSenha() {
@@ -166,6 +183,14 @@ export function ProfilePanel({ sessao, onAtualizar, onFechar, contas = [], deriv
             <button className="perfil-btn" disabled={!senhaValida || salvando} onClick={salvarSenha}>
               {salvando ? 'salvando…' : 'Trocar senha'}
             </button>
+            <p className="perfil-ou">ou</p>
+            <button className="perfil-btn secundario" disabled={salvando} onClick={pedirLinkDeSenha}>
+              Receber um link por e-mail
+            </button>
+            <p className="entrada-mini">
+              Mandamos um link para {sessao.usuario.email}. Ele vale por uma hora e abre a tela
+              de criar a nova senha, com a confirmação.
+            </p>
           </section>
 
           {erro && <div className="entrada-erro">{erro}</div>}

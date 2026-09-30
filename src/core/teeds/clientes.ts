@@ -88,6 +88,31 @@ export function definirMarcaAdmin(id: string): void {
   marcaEmFoco = ehMaster() || id === REDE ? id : MARCA.id
 }
 
+/**
+ * A situação da própria ficha: liberada ou ainda esperando aprovação.
+ *
+ * Desde 30/09/2026 a conta de acesso nasce no cadastro, para a senha
+ * provisória poder ir por e-mail na hora. Quem ainda não foi aprovado entra
+ * na plataforma e encontra a tela de espera — e quem decide isso é o banco,
+ * não a tela: a ficha nasce 'pendente' e só a aprovação a torna 'ativo'.
+ * Um gatilho impede que a própria pessoa mexa nesse campo.
+ *
+ * Erro de rede devolve 'ativo': uma consulta que falhou não pode trancar
+ * quem já é cliente do lado de fora da própria plataforma.
+ */
+export type SituacaoDaFicha = 'pendente' | 'ativo' | 'suspenso' | 'expirado' | 'cancelado'
+export async function minhaSituacao(sessao: SessaoTeeds): Promise<SituacaoDaFicha> {
+  if (!autenticacaoConfigurada()) return 'ativo'
+  try {
+    const linhas = await rest<any[]>(
+      `/clientes?select=status_acesso&marca=eq.${MARCA.id}&user_id=eq.${sessao.usuario.id}&limit=1`,
+      sessao.token,
+    )
+    const s = linhas?.[0]?.status_acesso
+    return s === 'pendente' ? 'pendente' : (s ?? 'ativo')
+  } catch { return 'ativo' }
+}
+
 export async function registrarPresenca(sessao: SessaoTeeds, segundos = 0): Promise<void> {
   if (!autenticacaoConfigurada()) return
   const u = sessao.usuario

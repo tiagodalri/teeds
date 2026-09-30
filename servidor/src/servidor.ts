@@ -1,5 +1,5 @@
 import './ambiente'
-import { decidirLead, listarPendentes, enviarAprovacoes } from './aprovacao-leads'
+import { decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros } from './aprovacao-leads'
 import { catalogo, alterarRobo } from './catalogo'
 import { administradorDaMarca } from './supabase'
 import { listarEmailsAdmin } from './admin-emails'
@@ -303,12 +303,12 @@ const servidor = createServer(async (req, res) => {
       const nome = String(d.nome ?? '').trim().replace(/\s+/g, ' ').slice(0, 120)
       const email = String(d.email ?? '').trim().toLowerCase().slice(0, 180)
       const telefone = String(d.telefone ?? '').trim().slice(0, 32)
-      if (!marca || nome.length < 3 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || telefone.replace(/\D/g,'').length < 10 || d.consentiu !== true) throw new Error('Revise nome, e-mail, celular e autorização de contato.')
+      if (!marca || nome.length < 3 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || telefone.replace(/\D/g,'').length < 10 || typeof d.consentiu !== 'boolean') throw new Error('Revise nome, e-mail e celular.')
       const tempo = Math.max(0, Math.min(86400, Number(d.tempo) || 0))
       const profundidade = Math.max(0, Math.min(100, Number(d.profundidade) || 0))
       const visitas = Math.max(1, Math.min(1000, Number(d.visitas) || 1))
       const pontuacao = Math.min(100, 45 + Math.min(20, Math.floor(tempo / 6)) + (profundidade >= 75 ? 20 : profundidade >= 40 ? 10 : 0) + Math.min(15, (visitas - 1) * 5))
-      await salvarLeadCapturado({ marca, nome, email, telefone, tempo, profundidade, visitas, pontuacao, temperatura: pontuacao >= 75 ? 'quente' : pontuacao >= 55 ? 'morno' : 'frio', campanha: String(d.campanha ?? '').slice(0,100), origem: String(d.origem ?? '').slice(0,100), meio: String(d.meio ?? '').slice(0,100), conteudo: String(d.conteudo ?? '').slice(0,100), termo: String(d.termo ?? '').slice(0,100), pagina: String(d.pagina ?? '').slice(0,300) })
+      await salvarLeadCapturado({ marca, nome, email, telefone, consentiu: d.consentiu, tempo, profundidade, visitas, pontuacao, temperatura: pontuacao >= 75 ? 'quente' : pontuacao >= 55 ? 'morno' : 'frio', campanha: String(d.campanha ?? '').slice(0,100), origem: String(d.origem ?? '').slice(0,100), meio: String(d.meio ?? '').slice(0,100), conteudo: String(d.conteudo ?? '').slice(0,100), termo: String(d.termo ?? '').slice(0,100), pagina: String(d.pagina ?? '').slice(0,300) })
       res.writeHead(201, headers); return res.end(JSON.stringify({ ok: true }))
     } catch (e) { console.error('[leads] cadastro recusado:', (e as Error).message); res.writeHead(400, headers); return res.end(JSON.stringify({ erro: 'Não foi possível enviar agora. Tente novamente em instantes.' })) }
   }
@@ -755,8 +755,9 @@ ligarAtualizacaoDeParametros()
 // Resend o carteiro nem liga — e o Supabase segue mandando o padrao dele.
 if (process.env.RESEND_CHAVE && supabaseConfigurado()) {
   ligarCarteiro({ pendentes: emailsPendentes, entregue: emailEntregue, falhou: emailFalhou })
+  void enviarCadastros()
   void enviarAprovacoes()
-  setInterval(() => void enviarAprovacoes(), 30_000).unref()
+  setInterval(() => { void enviarCadastros(); void enviarAprovacoes() }, 30_000).unref()
   console.log('E-mails: o servidor manda, um por marca (Resend)')
 } else {
   console.log('E-mails: sem RESEND_CHAVE — o Supabase continua mandando o padrao dele')

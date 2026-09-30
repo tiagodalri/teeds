@@ -615,6 +615,7 @@ export async function emailFalhou(id: number, tentativas: number, erro: string):
 
 /** Captura publica: o navegador fala com o motor; a chave do banco nunca sai daqui. */
 export async function salvarLeadCapturado(d: {
+  consentiu: boolean
   marca: 'teeds' | 'omni'; nome: string; email: string; telefone: string
   campanha?: string; origem?: string; meio?: string; conteudo?: string; termo?: string; pagina?: string
   tempo: number; profundidade: number; visitas: number; pontuacao: number; temperatura: 'frio' | 'morno' | 'quente'
@@ -625,8 +626,9 @@ export async function salvarLeadCapturado(d: {
     campanha: d.campanha || null, origem: d.origem || null, meio: d.meio || null,
     conteudo: d.conteudo || null, termo: d.termo || null, pagina: d.pagina || null,
     tempo_na_pagina: d.tempo, profundidade: d.profundidade, visitas: d.visitas,
-    pontuacao: d.pontuacao, temperatura: d.temperatura, consentiu_contato: true,
+    pontuacao: d.pontuacao, temperatura: d.temperatura, consentiu_contato: d.consentiu === true,
     atualizado_em: new Date().toISOString(),
+    inscricao_recebida_em: new Date().toISOString(),
   }
   try {
     await rest('/leads_capturados?on_conflict=marca,email_normalizado', {

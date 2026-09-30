@@ -7,8 +7,18 @@ import { planoClienteValido } from '../../src/core/teeds/planos'
 const base = () => (process.env.SUPABASE_URL ?? '').replace(/\/+$/, '')
 const segredo = () => process.env.SUPABASE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
-// Não grava senha em tabela, logs ou resposta HTTP. A mesma tentativa é
-// recuperável após uma queda sem redefinir a senha de uma conta existente.
+/**
+ * A senha provisória da casa — a mesma para todo mundo (Tiago, 30/09/2026).
+ *
+ * Ela só existe entre o cadastro e o primeiro acesso: quem entra com ela cai
+ * direto na tela de criar a própria senha e não consegue passar dali. É essa
+ * troca forçada (`trocar_senha: true`) que segura uma senha pública; sem ela,
+ * qualquer um que soubesse o e-mail de alguém entraria na conta.
+ */
+export const SENHA_PROVISORIA = '123mudar'
+
+// Mantida para contas criadas antes de 30/09/2026, que receberam uma senha
+// própria gerada aqui. Não é mais usada para cadastro novo.
 export function senhaDoPendente(id: string, chave: string): string {
   if (!chave) throw new Error('Servidor sem credencial de acesso.')
   return `Tp!9${createHmac('sha256', chave).update(`aprovacao-lead:v1:${id}`).digest('base64url').slice(0,24)}`
@@ -25,7 +35,7 @@ async function banco(path: string, method='GET', body?: unknown): Promise<any> {
 export async function listarPendentes(marca: string, status: string, pagina: number) {
   if (!['pendente','processando','aprovado','recusado'].includes(status)) throw new Error('Filtro inválido.')
   const offset=Math.max(0,Math.floor(pagina))*50
-  return banco(`/rest/v1/clientes_pendentes?marca=eq.${marca}&status=eq.${status}&select=id,nome,email,telefone,status,criado_em,decidido_em,email_enviado_em&order=criado_em.desc&limit=51&offset=${offset}`)
+  return banco(`/rest/v1/clientes_pendentes?marca=eq.${marca}&status=eq.${status}&select=id,nome,email,telefone,status,recadastro,ultima_inscricao_em,criado_em,decidido_em,email_enviado_em&order=ultima_inscricao_em.desc,id.desc&limit=51&offset=${offset}`)
 }
 export async function decidirLead(id: string, marca: string, admin: string, acao: string, plano='essencial') {
   if (!planoClienteValido(plano)) throw new Error('Plano inválido.')
@@ -38,7 +48,7 @@ export async function decidirLead(id: string, marca: string, admin: string, acao
     // Admin Auth não dispara confirmação. O e-mail só sai depois de finalizar.
     try {
       usuario=await banco('/auth/v1/admin/users','POST',{
-        email:ficha.email,password:senhaDoPendente(id,segredo()),email_confirm:true,
+        email:ficha.email,password:SENHA_PROVISORIA,email_confirm:true,
         user_metadata:{nome:ficha.nome,telefone:ficha.telefone,marca,trocar_senha:true},
         app_metadata:{aprovacao_lead:id},
       })
@@ -53,6 +63,67 @@ export async function decidirLead(id: string, marca: string, admin: string, acao
   return {status:'aprovado'}
 }
 
+/** Manda um e-mail pronto pela marca. Devolve false quando a marca não pode enviar. */
+async function despachar(marca: ReturnType<typeof marcaPorId>, para: string, email: {assunto:string;html:string;texto:string}, chaveUnica: string): Promise<void> {
+  if (!process.env.RESEND_CHAVE || !marca.email.remetente) throw new Error('Envio indisponível')
+  const r = await fetch('https://api.resend.com/emails', {
+    method:'POST', signal:AbortSignal.timeout(20000),
+    headers:{Authorization:`Bearer ${process.env.RESEND_CHAVE}`,'Content-Type':'application/json','Idempotency-Key':chaveUnica},
+    body:JSON.stringify({from:marca.email.remetente,to:[para],subject:email.assunto,html:email.html,text:email.texto}),
+  })
+  if (!r.ok) throw new Error('Envio indisponível')
+}
+
+let cadastrando=false
+/**
+ * O e-mail de boas-vindas, logo depois do cadastro.
+ *
+ * A conta de acesso nasce aqui, com a senha provisória da casa, e o e-mail
+ * leva os dados de entrada. A pessoa já consegue entrar — e vai encontrar a
+ * tela dizendo que o cadastro está em análise, porque a ficha dela nasce
+ * 'pendente' (veja o gatilho `teeds_novo_cliente`). Quem libera é a aprovação.
+ *
+ * Roda no carteiro, e não no endereço público do cadastro, por três motivos:
+ * o cadastro não fica esperando o Resend, uma falha é tentada de novo sozinha,
+ * e vale igual para quem veio da landing e para quem veio da tela de login.
+ */
+export async function enviarCadastros() {
+  if (cadastrando) return
+  cadastrando=true
+  try {
+    const lista=await banco('/rest/v1/clientes_pendentes?status=eq.pendente&email_cadastro_em=is.null&select=id,marca,email,nome,telefone,user_id&order=criado_em.asc&limit=20')
+    for (const p of lista ?? []) {
+      try {
+        const marca=marcaPorId(p.marca)
+        if (!marca.email.remetente) continue   // marca sem domínio verificado: não manda pela outra
+        // A conta pode já existir: cadastro repetido, ou uma passada anterior
+        // que criou a conta e caiu antes de marcar o envio.
+        let usuario=await banco(`/auth/v1/admin/users?filter=${encodeURIComponent(p.email)}`).then((d:any)=>(d?.users??[]).find((u:any)=>String(u.email).toLowerCase()===p.email)).catch(()=>undefined)
+        if (!usuario) {
+          usuario=await banco('/auth/v1/admin/users','POST',{
+            email:p.email,password:SENHA_PROVISORIA,email_confirm:true,
+            user_metadata:{nome:p.nome,telefone:p.telefone,marca:p.marca,trocar_senha:true},
+          })
+        }
+        if (!usuario?.id) throw new Error('Conta não criada')
+        if (!p.user_id) await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}`,'PATCH',{user_id:usuario.id})
+
+        const email=montarEmail(marca,'confirmar',new URL('/',marca.redirectUri).href,{
+          assunto:`Cadastro recebido · ${marca.prosa}`,
+          titulo:'Cadastro recebido',
+          espia:`Seu cadastro na ${marca.prosa} foi recebido e está em análise.`,
+          corpo:`Recebemos o seu cadastro na ${marca.prosa}. Ele está em análise pela nossa equipe — assim que for aprovado, você recebe um segundo e-mail avisando que o acesso está liberado.\n\nSeus dados de entrada:\nE-mail: ${p.email}\nSenha provisória: ${SENHA_PROVISORIA}\n\nVocê já pode entrar na plataforma com esses dados. No primeiro acesso, você cria a sua própria senha — a provisória deixa de valer nesse momento.`,
+          botao:'Entrar na plataforma',
+          aviso:'A senha provisória é temporária e serve só para o primeiro acesso. Se não foi você que se cadastrou, pode ignorar este e-mail.',
+        })
+        await despachar(marca,p.email,email,`cadastro-lead-${p.id}`)
+        await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}&status=eq.pendente`,'PATCH',{email_cadastro_em:new Date().toISOString()})
+      } catch { console.warn('[cadastro] E-mail de boas-vindas pendente; será tentado novamente.') }
+    }
+  } catch { /* Migração ainda não aplicada: não interfere no resto. */ }
+  finally { cadastrando=false }
+}
+
 let enviando=false
 export async function enviarAprovacoes() {
   if (enviando) return
@@ -63,23 +134,21 @@ export async function enviarAprovacoes() {
       try {
         const marca=marcaPorId(p.marca)
         const u=await banco(`/auth/v1/admin/users/${encodeURIComponent(p.user_id)}`)
-        // Não envia senha provisória se a pessoa já a trocou ou já tinha login.
-        const nova=u.app_metadata?.aprovacao_lead===p.id && u.user_metadata?.trocar_senha===true
-        const corpo=nova
-          ? `Seu cadastro foi aprovado. E-mail de acesso: ${p.email}. Senha provisória: ${senhaDoPendente(p.id,segredo())}. Entre na plataforma e escolha sua própria senha no primeiro acesso.`
-          : `Seu cadastro foi aprovado. Entre com o e-mail ${p.email} e sua senha atual. Se não lembrar da senha, use “Esqueci minha senha” na tela de acesso.`
+        // Ainda com a provisória: repete os dados de entrada, porque este pode
+        // ser o único e-mail que a pessoa achar depois. Quem já criou a própria
+        // senha não recebe senha nenhuma de volta.
+        const aindaProvisoria=u.user_metadata?.trocar_senha===true
+        const entrada=aindaProvisoria
+          ? `Seus dados de entrada continuam os mesmos do cadastro:\nE-mail: ${p.email}\nSenha provisória: ${SENHA_PROVISORIA}\n\nNo primeiro acesso você cria a sua própria senha — a provisória deixa de valer nesse momento. Depois, para trocar quando quiser, é pelo seu perfil, no canto da tela.`
+          : `Sua conta e seu histórico foram preservados. Entre com o e-mail ${p.email} e a sua senha atual. Se não lembrar, clique em “Esqueci a senha” na tela de acesso e você recebe um link para definir uma nova senha.`
+        const corpo=`Parabéns! Seu cadastro na ${marca.prosa} foi aprovado e o seu acesso está liberado. Você já pode entrar, conectar a sua conta da corretora e começar a operar.\n\n${entrada}`
         const email=montarEmail(marca,'convite',new URL('/',marca.redirectUri).href,{
-          assunto:`Seu acesso à ${marca.prosa} está pronto`,titulo:'Cadastro aprovado',
+          assunto:`Cadastro aprovado · seu acesso à ${marca.prosa} está liberado`,
+          titulo:'Cadastro aprovado',
           espia:`Seu acesso à ${marca.prosa} foi liberado.`,corpo,botao:'Acessar a plataforma',
-          aviso:'Guarde seus dados de acesso com segurança. Não compartilhe sua senha.',
+          aviso:'Guarde seus dados de acesso com segurança. Não compartilhe sua senha com ninguém.',
         })
-        if (!process.env.RESEND_CHAVE || !marca.email.remetente) throw new Error('Envio indisponível')
-        const r=await fetch('https://api.resend.com/emails',{
-          method:'POST',signal:AbortSignal.timeout(20000),
-          headers:{Authorization:`Bearer ${process.env.RESEND_CHAVE}`,'Content-Type':'application/json','Idempotency-Key':`aprovacao-lead-${p.id}`},
-          body:JSON.stringify({from:marca.email.remetente,to:[p.email],subject:email.assunto,html:email.html,text:email.texto}),
-        })
-        if (!r.ok) throw new Error('Envio indisponível')
+        await despachar(marca,p.email,email,`aprovacao-lead-${p.id}`)
         await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}&status=eq.aprovado`,'PATCH',{email_enviado_em:new Date().toISOString()})
       } catch { console.warn('[aprovação] E-mail pendente; será tentado novamente.') }
     }

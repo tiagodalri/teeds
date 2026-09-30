@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { decidirLead, listarPendentes, enviarAprovacoes, senhaDoPendente } from './aprovacao-leads'
+import { decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros, senhaDoPendente, SENHA_PROVISORIA } from './aprovacao-leads'
 
 process.env.SUPABASE_URL='https://banco.invalid'
 process.env.SUPABASE_SECRET='somente-teste-sem-credencial-real'
@@ -7,16 +7,17 @@ process.env.RESEND_CHAVE='somente-teste'
 const id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const uid='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 let passos:Array<{path:string;body?:(b:any)=>void;data?:unknown;status?:number}>=[]
+const falhas: unknown[]=[]
 globalThis.fetch=(async (url:any,init:any={})=>{
   const p=passos.shift()
   assert.ok(p,`Chamada inesperada: ${url}`)
   assert.ok(String(url).includes(p.path),`${url} != ${p.path}`)
-  p.body?.(init.body?JSON.parse(init.body):undefined)
+  try { p.body?.(init.body?JSON.parse(init.body):undefined) } catch(e) { falhas.push(e); throw e }
   return new Response(JSON.stringify(p.data===undefined?{}:p.data),{status:p.status??200,headers:{'Content-Type':'application/json'}})
 }) as typeof fetch
 const ficha={id,marca:'teeds',nome:'Teste',email:'teste@example.invalid',telefone:'11999999999',status:'processando'}
 let total=0
-async function teste(nome:string,fn:()=>Promise<void>){await fn();assert.equal(passos.length,0);total++;console.log(`✓ ${nome}`)}
+async function teste(nome:string,fn:()=>Promise<void>){await fn();if(falhas.length)throw falhas.shift();assert.equal(passos.length,0);total++;console.log(`✓ ${nome}`)}
 
 await teste('senha recuperável, forte e diferente por ficha',async()=>{
   const a=senhaDoPendente(id,'chave')
@@ -55,20 +56,20 @@ await teste('entrada inválida não consulta banco',async()=>{
   await assert.rejects(listarPendentes('teeds','todos',0))
 })
 await teste('consulta paginada é filtrada por marca',async()=>{
-  passos=[{path:'marca=eq.omni&status=eq.pendente',body:()=>{},data:[]}]
-  assert.deepEqual(await listarPendentes('omni','pendente',1),[])
+  passos=[{path:'marca=eq.omni&status=eq.pendente',data:[{id,recadastro:true,status:'pendente'}]}]
+  assert.deepEqual(await listarPendentes('omni','pendente',1),[{id,recadastro:true,status:'pendente'}])
 })
 await teste('e-mail aprovado usa senha provisória e marca correta',async()=>{
   passos=[{path:'status=eq.aprovado',data:[{id,marca:'omni',email:'teste@example.invalid',user_id:uid}]},
     {path:`/auth/v1/admin/users/${uid}`,data:{app_metadata:{aprovacao_lead:id},user_metadata:{trocar_senha:true}}},
-    {path:'api.resend.com/emails',body:b=>{assert.match(b.subject,/OMNI/i);assert.ok(b.text.includes(senhaDoPendente(id,process.env.SUPABASE_SECRET!)));assert.ok(!b.html.includes('teedscompany.com'))}},
+    {path:'api.resend.com/emails',body:b=>{assert.match(b.subject,/OMNI/i);assert.ok(b.text.includes(SENHA_PROVISORIA));assert.ok(!b.html.includes('teedscompany.com'))}},
     {path:`clientes_pendentes?id=eq.${id}`,body:b=>assert.ok(b.email_enviado_em)}]
   await enviarAprovacoes()
 })
 await teste('senha já trocada não é incluída no e-mail',async()=>{
   passos=[{path:'status=eq.aprovado',data:[{id,marca:'teeds',email:'teste@example.invalid',user_id:uid}]},
     {path:'/auth/v1/admin/users/',data:{app_metadata:{aprovacao_lead:id},user_metadata:{trocar_senha:false}}},
-    {path:'api.resend.com/emails',body:b=>{assert.ok(b.text.includes('senha atual'));assert.ok(!b.text.includes(senhaDoPendente(id,process.env.SUPABASE_SECRET!)))}},
+    {path:'api.resend.com/emails',body:b=>{assert.ok(b.text.includes('senha atual'));assert.ok(b.text.includes('link para definir uma nova senha'));assert.ok(!b.text.includes(SENHA_PROVISORIA))}},
     {path:'clientes_pendentes?id='}]
   await enviarAprovacoes()
 })
@@ -76,4 +77,33 @@ await teste('falha de envio permanece na fila',async()=>{
   passos=[{path:'status=eq.aprovado',data:[{id,marca:'teeds',email:'teste@example.invalid',user_id:uid}]},{path:'/auth/v1/admin/users/',data:{}},{path:'api.resend.com/emails',status:500}]
   await enviarAprovacoes()
 })
+await teste('e-mail do cadastro cria a conta com a senha da casa e avisa que está em análise',async()=>{
+  passos=[{path:'status=eq.pendente&email_cadastro_em=is.null',data:[{id,marca:'omni',email:'teste@example.invalid',nome:'Teste',telefone:'11999999999',user_id:null}]},
+    {path:'/auth/v1/admin/users?filter=',data:{users:[]}},
+    {path:'/auth/v1/admin/users',body:b=>{assert.equal(b.password,SENHA_PROVISORIA);assert.equal(b.user_metadata.trocar_senha,true);assert.equal(b.user_metadata.marca,'omni');assert.equal(b.email_confirm,true)},data:{id:uid}},
+    {path:`clientes_pendentes?id=eq.${id}`,body:b=>assert.equal(b.user_id,uid)},
+    {path:'api.resend.com/emails',body:b=>{
+      assert.match(b.subject,/Cadastro recebido/i)
+      assert.match(b.subject,/OMNI/i)
+      assert.ok(b.text.includes(SENHA_PROVISORIA))
+      assert.ok(/an\u00e1lise/i.test(b.text))
+      assert.ok(!b.html.includes('teedscompany.com'))
+    }},
+    {path:'clientes_pendentes?id=',body:b=>assert.ok(b.email_cadastro_em)}]
+  await enviarCadastros()
+})
+await teste('conta que já existe não é recriada, e o e-mail sai do mesmo jeito',async()=>{
+  passos=[{path:'status=eq.pendente&email_cadastro_em=is.null',data:[{id,marca:'teeds',email:'teste@example.invalid',nome:'Teste',telefone:'1',user_id:uid}]},
+    {path:'/auth/v1/admin/users?filter=',data:{users:[{id:uid,email:'teste@example.invalid'}]}},
+    {path:'api.resend.com/emails',body:b=>assert.ok(b.text.includes(SENHA_PROVISORIA))},
+    {path:'clientes_pendentes?id=',body:b=>assert.ok(b.email_cadastro_em)}]
+  await enviarCadastros()
+})
+await teste('falha no envio do cadastro não marca como enviado',async()=>{
+  passos=[{path:'status=eq.pendente&email_cadastro_em=is.null',data:[{id,marca:'teeds',email:'teste@example.invalid',nome:'Teste',telefone:'1',user_id:uid}]},
+    {path:'/auth/v1/admin/users?filter=',data:{users:[{id:uid,email:'teste@example.invalid'}]}},
+    {path:'api.resend.com/emails',status:500}]
+  await enviarCadastros()
+})
+
 console.log(`${total} testes de aprovação concluídos.`)

@@ -27,7 +27,7 @@ const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
   criar: {
     titulo: 'Cadastro Gratuito',
     linha: 'Deixe seus dados. Após a aprovação, você receberá por e-mail sua senha provisória e as instruções de acesso.',
-    acao: 'Entrar na fila de espera',
+    acao: 'Confirmar Cadastro',
   },
   esqueci: {
     titulo: 'Esqueceu a senha?',
@@ -46,7 +46,6 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [capsLock, setCapsLock] = useState(false)
   const [telefone, setTelefone] = useState('')
-  const [consentiu, setConsentiu] = useState(false)
   const [recado, setRecado] = useState<string | null>(null)
   const [tocado, setTocado] = useState<Record<string, boolean>>({})
 
@@ -64,10 +63,10 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
     ? email.includes('@')
     : modo === 'entrar'
       ? email.includes('@') && senha.length >= 6
-      : nomeCompleto(nome) && email.includes('@') && telefoneValido(telefone) && consentiu
+      : nomeCompleto(nome) && email.includes('@') && telefoneValido(telefone)
 
   function trocarModo(m: Modo) {
-    setSenha(''); setConsentiu(false)
+    setSenha('')
     setModo(m); setRecado(null); setTocado({}); setMostrarSenha(false); setCapsLock(false); limparErro()
   }
 
@@ -77,9 +76,9 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
     setRecado(null)
     if (modo === 'entrar') { await onEntrar(email, senha); return }
     if (modo === 'criar') {
-      const r = await onCadastrar({ nome, email, telefone, consentiu })
+      const r = await onCadastrar({ nome, email, telefone, consentiu: false })
       if (r.ok) {
-        setSenha(''); setConsentiu(false)
+        setSenha('')
         // Reuse the landing confirmation, on this brand's own domain.
         // Only navigate after the server confirms receipt; no personal data in the URL.
         const obrigado = new URL(`${import.meta.env.BASE_URL}cadastro/obrigado/`, location.origin)
@@ -150,20 +149,12 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
           {modo === 'entrar' && campo('senha', 'Senha', senha, setSenha,
             { tipo: 'password', auto: 'current-password', dica: '••••••••' })}
 
-          {modo === 'criar' && <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-            <input type="checkbox" checked={consentiu} onChange={e => setConsentiu(e.target.checked)}
-              required style={{ width: 18, height: 18, minHeight: 18, flexShrink: 0, marginTop: 3 }} />
-            <span>Autorizo o contato da {MARCA.prosa} sobre a fila de espera e o acesso à plataforma. Posso cancelar a qualquer momento.</span>
-          </label>}
           <button className="entrada-btn" type="submit" disabled={!valido || ocupado}>
             {ocupado ? 'um instante…' : t.acao}
           </button>
           {modo === 'entrar' && <button className="entrada-btn" type="button" disabled={ocupado} onClick={() => trocarModo('criar')}>
             Cadastre-se
           </button>}
-          {modo === 'criar' && <p className="entrada-mini">
-            O cadastro não libera o acesso automaticamente. Aguarde a aprovação da equipe.
-          </p>}
         </form>
 
         {erro && <div className="entrada-erro" role="alert">{erro}</div>}

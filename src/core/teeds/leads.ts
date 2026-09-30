@@ -6,7 +6,6 @@ export async function listarLeads(sessao:SessaoTeeds):Promise<LeadCapturado[]>{c
 
 export interface DadosFilaEspera { nome: string; email: string; telefone: string; consentiu: boolean }
 export async function inscreverFilaEspera(dados: DadosFilaEspera): Promise<void> {
-  if (!dados.consentiu) throw new Error('Autorize o contato para entrar na fila.')
   const pagina = new URL(location.href)
   pagina.searchParams.set('origem_cadastro', 'login')
   const utm = pagina.searchParams
@@ -14,7 +13,7 @@ export async function inscreverFilaEspera(dados: DadosFilaEspera): Promise<void>
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       nome: dados.nome.trim(), email: dados.email.trim().toLowerCase(), telefone: dados.telefone,
-      consentiu: true, marca: MARCA.id, pagina: pagina.href,
+      consentiu: dados.consentiu === true, marca: MARCA.id, pagina: pagina.href,
       origem: utm.get('utm_source'), campanha: utm.get('utm_campaign'), meio: utm.get('utm_medium'),
       conteudo: utm.get('utm_content'), termo: utm.get('utm_term'),
       tempo: 0, profundidade: 0, visitas: 1,

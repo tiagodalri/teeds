@@ -6,7 +6,18 @@
 2. Publicar o servidor e os dois frontends. Não reiniciar o motor enquanto houver sessões ativas sem autorização para interrompê-las.
 3. Conferir Administração → Clientes → Aprovação de clientes em cada marca.
 
-A migração não converte retroativamente a base antiga e não aprova ninguém. Novos envios entram automaticamente na fila, inclusive pelo armazenamento alternativo de auditoria. Um cadastro já existente na mesma marca não retorna à fila.
+A migração não converte retroativamente a base antiga e não aprova ninguém. Novos envios entram automaticamente na fila, inclusive pelo armazenamento alternativo de auditoria.
+
+## Recadastro (alteração preparada, requer implantação)
+
+Aplicar `servidor/sql/recadastro-aprovacao.sql` antes de publicar o servidor e os frontends. Conferir as definições atuais do banco antes de aplicar; registrar a migração no histórico do Supabase e exportar pelo processo habitual. Este arquivo é uma alteração nova, não uma migração histórica já aplicada.
+
+- Um e-mail já existente na marca também entra em aprovação, sinalizado como “Já estava na base — recadastro aguardando aprovação”.
+- Repetições enquanto pendente atualizam a mesma solicitação; uma ficha em processamento fica estável. Após aprovação ou recusa, um novo formulário abre outra solicitação com novo ID, preservando a decisão e o envio anteriores.
+- Não cria clientes duplicados, não redefine senhas, não reativa acessos suspensos/vencidos e não altera plano/validade existentes automaticamente. A aprovação envia orientações para entrar com a senha atual ou usar “Esqueci a senha” para definir outra.
+- A base antiga não entra em massa na fila nem recebe disparos por esta alteração. Apenas novos formulários produzem solicitações; edições administrativas nos leads não disparam recadastro.
+- `inscricao_recebida_em` é marcado pelo servidor no envio do formulário. A alteração é compartilhada por login e `/cadastro`, com isolamento entre Teeds e OMNI.
+- Teste isolado: `PGLITE_MODULE=/caminho/do/pglite/dist/index.js node servidor/teste-recadastro-banco.mjs`.
 
 ## Comportamento
 

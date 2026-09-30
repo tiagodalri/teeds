@@ -23,12 +23,13 @@ import { ProfilePanel } from './components/ProfilePanel'
 import { DerivLogo, IconeElo } from './components/DerivMarca'
 import { LoginScreen } from './components/LoginScreen'
 import { NovaSenha } from './components/NovaSenha'
+import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLimitesDuracao, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { traduzirErro } from './core/deriv/erros'
 import { useAccount } from './hooks/useAccount'
-import { registrarContaDeriv, registrarPresenca, souAdmin } from './core/teeds/clientes'
+import { minhaSituacao, registrarContaDeriv, registrarPresenca, souAdmin, type SituacaoDaFicha } from './core/teeds/clientes'
 import { entregarAutorizacao } from './core/teeds/servidorRobos'
 import { AssistentePanel } from './components/AssistentePanel'
 import { AssistenteBetaGate } from './components/AssistenteBetaGate'
@@ -79,6 +80,12 @@ export default function App() {
   const connection = useConnection()
   const { symbols, loading: loadingSymbols, error: symbolsError } = useSymbols()
   const teeds = useTeedsAuth()
+  /*
+    A ficha nasce 'pendente' quando veio da fila de cadastro (30/09/2026): a
+    conta existe para a senha provisória poder ir por e-mail na hora, mas a
+    plataforma só abre depois da aprovação. `null` = ainda lendo.
+  */
+  const [situacao, setSituacao] = useState<SituacaoDaFicha | null>(null)
   const [admin, setAdmin] = useState<boolean | null>(null)
   /** A conferencia de administrador falhou (rede, token) — diferente de "nao e admin". */
   const [adminFalhou, setAdminFalhou] = useState(false)
@@ -176,6 +183,15 @@ export default function App() {
   // a plataforma logado e cada conta Deriv que conectou. Falha em
   // silencio — o cadastro e util, nunca condicao para operar.
   // ------------------------------------------------------------------
+  // Lê a situação da ficha a cada sessão nova. Enquanto não voltar, o App
+  // segue mostrando "abrindo a plataforma…" — nunca a plataforma por engano.
+  useEffect(() => {
+    if (!teeds.sessao) { setSituacao(null); return }
+    let vivo = true
+    minhaSituacao(teeds.sessao).then((s) => { if (vivo) setSituacao(s) })
+    return () => { vivo = false }
+  }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const usuarioTeedsId = teeds.sessao?.usuario.id ?? null
   useEffect(() => {
     if (!teeds.sessao) { setAdmin(false); return }
@@ -415,6 +431,25 @@ export default function App() {
     return (
       <NovaSenha ocupado={teeds.ocupado} erro={teeds.erro} onDefinir={teeds.definirNovaSenha}
         obrigatoria={!teeds.redefinindo} onSair={() => void teeds.sair()} />
+    )
+  }
+
+  /*
+    Entrou, já tem a própria senha, mas o cadastro ainda não foi aprovado.
+    A conta existe desde o cadastro; a plataforma, só depois da liberação.
+  */
+  if (teeds.status === 'logado' && teeds.sessao && situacao === 'pendente') {
+    return (
+      <CadastroEmAnalise
+        email={teeds.sessao.usuario.email}
+        nome={teeds.sessao.usuario.nome}
+        aoConferir={async () => {
+          const agora = await minhaSituacao(teeds.sessao!)
+          setSituacao(agora)
+          return agora !== 'pendente'
+        }}
+        aoSair={() => void teeds.sair()}
+      />
     )
   }
 
