@@ -62,7 +62,7 @@ export function CadastroEmAnalise({ email, nome, aoConferir, aoSair }: {
         <ol className="espera-passos">
           <li className="feito"><i aria-hidden>✓</i><span><b>Cadastro recebido</b><small>Seus dados chegaram e a sua senha de acesso já foi enviada por e-mail.</small></span></li>
           <li className="agora"><i aria-hidden>●</i><span><b>Em análise</b><small>Nossa equipe confere os cadastros um a um. É a etapa em que você está.</small></span></li>
-          <li><i aria-hidden>○</i><span><b>Acesso liberado</b><small>Você recebe o e-mail de aprovação e a plataforma abre inteira, com os robôs.</small></span></li>
+          <li><i aria-hidden>○</i><span><b>Acesso liberado</b><small>Você recebe o e-mail de aprovação, cria a sua própria senha e a plataforma abre inteira, com os robôs.</small></span></li>
         </ol>
 
         {recado && <p className="entrada-mini" role="status">{recado}</p>}

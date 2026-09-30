@@ -421,22 +421,39 @@ export default function App() {
   // plataforma. Conectar a Deriv é o segundo, e só faz falta na hora de
   // operar de verdade.
   // ------------------------------------------------------------------
-  if (teeds.status === 'carregando') {
+  /*
+    `situacao === null` é "ainda lendo do banco". Sem esperar por ela, quem
+    está em análise e ainda tem a senha provisória veria a tela de criar
+    senha piscar antes da tela de espera — a ordem certa aparecendo errada
+    por uma fração de segundo. Quem veio de um link de e-mail não espera:
+    esse fluxo não depende da situação da ficha.
+  */
+  const lendoSituacao = teeds.status === 'logado' && situacao === null && !teeds.redefinindo
+  if (teeds.status === 'carregando' || lendoSituacao) {
     return <div className="entrada"><div className="entrada-esperando">abrindo a {MARCA.prosa}…</div></div>
   }
 
-  // Quem entrou com senha provisória não chega na plataforma: primeiro cria
-  // a própria senha. É a mesma tela do link de "esqueci a senha".
-  if (teeds.redefinindo || (teeds.status === 'logado' && teeds.precisaTrocarSenha)) {
+  /*
+    Veio de um link de e-mail para definir a senha. Vem antes de tudo, inclusive
+    de quem espera aprovação: quem clicou no link de "esqueci a senha" precisa
+    conseguir criar a senha, senão fica preso na tela de espera sem saída.
+  */
+  if (teeds.redefinindo) {
     return (
       <NovaSenha ocupado={teeds.ocupado} erro={teeds.erro} onDefinir={teeds.definirNovaSenha}
-        obrigatoria={!teeds.redefinindo} onSair={() => void teeds.sair()} />
+        obrigatoria={false} onSair={() => void teeds.sair()} />
     )
   }
 
   /*
-    Entrou, já tem a própria senha, mas o cadastro ainda não foi aprovado.
-    A conta existe desde o cadastro; a plataforma, só depois da liberação.
+    Entrou, mas o cadastro ainda não foi aprovado. A conta existe desde o
+    cadastro; a plataforma, só depois da liberação.
+
+    Esta tela vem ANTES da troca de senha obrigatória (decisão do Tiago em
+    30/09/2026): enquanto o cadastro está em análise não há o que fazer lá
+    dentro, e obrigar a criar uma senha para em seguida mostrar "aguarde" é
+    pedir trabalho sem entregar nada. A senha provisória só é trocada no
+    primeiro acesso DEPOIS da aprovação, que é quando a plataforma abre.
   */
   if (teeds.status === 'logado' && teeds.sessao && situacao === 'pendente') {
     return (
@@ -450,6 +467,14 @@ export default function App() {
         }}
         aoSair={() => void teeds.sair()}
       />
+    )
+  }
+
+  // Aprovado e ainda com a senha provisória: cria a própria antes de entrar.
+  if (teeds.status === 'logado' && teeds.precisaTrocarSenha) {
+    return (
+      <NovaSenha ocupado={teeds.ocupado} erro={teeds.erro} onDefinir={teeds.definirNovaSenha}
+        obrigatoria onSair={() => void teeds.sair()} />
     )
   }
 
