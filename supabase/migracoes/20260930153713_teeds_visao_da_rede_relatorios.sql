@@ -1,42 +1,4 @@
--- A visão da rede: todas as plataformas somadas, ou uma de cada vez.
---
--- Até aqui o painel da Teeds era a Teeds — e só. Para ver a OMNI era preciso
--- trocar a plataforma no topo, e não existia lugar nenhum que somasse as duas.
--- O seletor dizia "Teeds · master", o que fazia parecer que a Teeds já era o
--- total da casa; não era. (Confusão apontada pelo Tiago em 30/09/2026.)
---
--- Agora `p_marca` aceita 'todas' (ou nulo) e cada função responde pelas marcas
--- que o admin realmente administra. Uma função só decide isso:
--- `teeds_marcas_em_foco`. Quem é admin de uma whitelabel continua vendo só a
--- dele, mesmo pedindo 'todas' — a lista volta com a marca dele dentro.
---
--- Todas as funções abaixo são security invoker: o RLS continua sendo a
--- tranca. Aqui só muda quais marcas entram na conta.
-
-create or replace function public.teeds_marcas_em_foco(p_marca text)
-returns text[] language sql stable security definer set search_path to 'public' as $$
-  select case
-    when p_marca is null or p_marca = 'todas' then (
-      select coalesce(array_agg(distinct t.m), array[]::text[])
-      from (
-        -- a marca do próprio admin, sempre
-        select a.marca as m from public.administradores a where a.user_id = (select auth.uid())
-        union
-        -- e, se ele é o admin da master, todas as marcas que existem
-        select c.marca from public.clientes c where public.teeds_sou_master()
-      ) t
-      where t.m is not null
-    )
-    when public.teeds_sou_admin_da(p_marca) then array[p_marca]
-    else array[]::text[]
-  end;
-$$;
-
-revoke execute on function public.teeds_marcas_em_foco(text) from anon;
-grant execute on function public.teeds_marcas_em_foco(text) to authenticated;
-
--- ---------------------------------------------------------------- clientes
-
+-- Os relatórios passam a responder pelas marcas em foco (veja teeds_marcas_em_foco).
 create or replace function public.teeds_clientes_pagina(
   p_marca text default 'teeds', p_busca text default null, p_status text default 'todos',
   p_limite integer default 50, p_offset integer default 0, p_ordem text default 'cadastro')
@@ -100,8 +62,6 @@ select jsonb_build_object(
   'pagina', (select coalesce(jsonb_agg(to_jsonb(p)), '[]'::jsonb) from (select * from pagina) p)
 );
 $$;
-
--- --------------------------------------------------------------- operações
 
 create or replace function public.teeds_analise_operacoes(
   p_marca text default 'teeds',
@@ -231,8 +191,6 @@ language sql stable set search_path to 'public' as $$
   limit 5000;
 $$;
 
--- -------------------------------------------------- comissões e conferência
-
 create or replace function public.teeds_comissao_conferencia(p_dias integer default 30, p_marca text default 'teeds', p_app_id text default null)
 returns table(dia date, calculada numeric, oficial numeric, diferenca numeric, diferenca_pct numeric,
               operacoes bigint, contratos_deriv integer, clientes bigint, so_demo boolean)
@@ -259,7 +217,7 @@ language sql stable set search_path to 'public' as $$
     select m.dia, sum(m.comissao) as comissao, sum(m.contratos)::integer as contratos
     from public.markup_oficial_diario m, janela j, marcas mk
     where m.dia >= j.corte and (p_app_id is null or m.app_id = p_app_id)
-      and (m.marca is null or m.marca = any(mk.lista))
+      and m.marca = any(mk.lista)
     group by m.dia
   )
   select coalesce(n.dia, d.dia, h.dia) as dia,
@@ -326,8 +284,6 @@ language sql stable set search_path to 'public' as $$
   order by coalesce(d.comissao, 0) desc, coalesce(d.operacoes, 0) desc;
 $$;
 
--- ------------------------------------------------------ depósitos e saques
-
 create or replace function public.teeds_movimentacoes_diarias(p_dias integer default 30, p_marca text default 'teeds')
 returns table(dia date, depositos numeric, qtd_depositos bigint, saques numeric,
               qtd_saques bigint, clientes bigint)
@@ -367,82 +323,4 @@ language sql stable set search_path to 'public' as $$
   from public.extrato_coletas k left join public.clientes c on c.user_id = k.user_id and c.marca = k.marca
   where k.marca = any(public.teeds_marcas_em_foco(p_marca))
   order by k.ultima_tentativa_em desc;
-$$;
-
--- ---------------------------------------------------------------- insights
-
-create or replace function public.teeds_insights_resumo(p_marca text default 'teeds', p_dias integer default 30)
-returns json language sql stable set search_path to 'public' as $$
-  select case when coalesce(array_length(public.teeds_marcas_em_foco(p_marca), 1), 0) = 0 then null else json_build_object(
-    'clientes', (select count(*) from public.clientes where marca = any(public.teeds_marcas_em_foco(p_marca))),
-    'novos', (select count(*) from public.clientes where marca = any(public.teeds_marcas_em_foco(p_marca)) and criado_em >= now() - make_interval(days => p_dias)),
-    'ativos', (select count(distinct user_id) from public.acessos_diarios where marca = any(public.teeds_marcas_em_foco(p_marca)) and dia >= current_date - p_dias),
-    'ativos_hoje', (select count(distinct user_id) from public.acessos_diarios where marca = any(public.teeds_marcas_em_foco(p_marca)) and dia = current_date),
-    'acessos', (select coalesce(sum(acessos),0) from public.acessos_diarios where marca = any(public.teeds_marcas_em_foco(p_marca)) and dia >= current_date - p_dias),
-    'segundos', (select coalesce(sum(segundos),0) from public.acessos_diarios where marca = any(public.teeds_marcas_em_foco(p_marca)) and dia >= current_date - p_dias),
-    'aulas_pessoas', (select count(distinct user_id) from public.aulas_progresso where marca = any(public.teeds_marcas_em_foco(p_marca)) and ultima_vez >= now() - make_interval(days => p_dias)),
-    'aulas_segundos', (select coalesce(sum(segundos),0) from public.aulas_progresso where marca = any(public.teeds_marcas_em_foco(p_marca)) and ultima_vez >= now() - make_interval(days => p_dias)),
-    'aulas_concluidas', (select count(*) from public.aulas_progresso where marca = any(public.teeds_marcas_em_foco(p_marca)) and concluida and ultima_vez >= now() - make_interval(days => p_dias)),
-    'com_deriv', (select count(distinct user_id) from public.contas_deriv where marca = any(public.teeds_marcas_em_foco(p_marca)))
-  ) end;
-$$;
-
-create or replace function public.teeds_insights_acessos_dia(p_marca text default 'teeds', p_dias integer default 30)
-returns table(dia date, pessoas bigint, acessos bigint, segundos bigint)
-language sql stable set search_path to 'public' as $$
-  select d.dia, count(distinct a.user_id), coalesce(sum(a.acessos),0), coalesce(sum(a.segundos),0)
-  from generate_series(current_date - (p_dias - 1), current_date, '1 day') as d(dia)
-  left join public.acessos_diarios a on a.marca = any(public.teeds_marcas_em_foco(p_marca)) and a.dia = d.dia
-  group by d.dia order by d.dia;
-$$;
-
-create or replace function public.teeds_insights_alunos(p_marca text default 'teeds', p_limite integer default 30)
-returns table(user_id uuid, nome text, email text, aulas_vistas bigint, aulas_concluidas bigint,
-              segundos bigint, ultima_vez timestamptz)
-language sql stable set search_path to 'public' as $$
-  select p.user_id, c.nome, c.email, count(*), count(*) filter (where p.concluida), sum(p.segundos), max(p.ultima_vez)
-  from public.aulas_progresso p join public.clientes c on c.user_id = p.user_id and c.marca = p.marca
-  where p.marca = any(public.teeds_marcas_em_foco(p_marca))
-  group by p.user_id, c.nome, c.email order by sum(p.segundos) desc limit p_limite;
-$$;
-
-create or replace function public.teeds_insights_aulas(p_marca text default 'teeds', p_dias integer default 3650)
-returns table(aula_id text, pessoas bigint, aberturas bigint, segundos bigint,
-              concluiram bigint, posicao_media real, ultima_vez timestamptz)
-language sql stable set search_path to 'public' as $$
-  select aula_id, count(distinct user_id), sum(aberturas), sum(segundos),
-         count(*) filter (where concluida), avg(posicao_max)::real, max(ultima_vez)
-  from public.aulas_progresso
-  where marca = any(public.teeds_marcas_em_foco(p_marca))
-    and ultima_vez >= now() - make_interval(days => p_dias)
-  group by aula_id;
-$$;
-
-create or replace function public.teeds_insights_dispositivos(p_marca text default 'teeds', p_dias integer default 30)
-returns table(dispositivo text, pessoas bigint, acessos bigint)
-language sql stable set search_path to 'public' as $$
-  select coalesce(dispositivo, 'desconhecido'), count(distinct user_id), sum(acessos)
-  from public.acessos_diarios
-  where marca = any(public.teeds_marcas_em_foco(p_marca)) and dia >= current_date - p_dias
-  group by 1 order by 3 desc;
-$$;
-
-create or replace function public.teeds_insights_horas(p_marca text default 'teeds', p_dias integer default 30)
-returns table(hora smallint, acessos bigint)
-language sql stable set search_path to 'public' as $$
-  select h.hora::smallint, coalesce(sum(a.acessos),0)
-  from generate_series(0, 23) as h(hora)
-  left join public.acessos_horas a on a.marca = any(public.teeds_marcas_em_foco(p_marca))
-       and a.hora = h.hora and a.dia >= current_date - p_dias
-  group by h.hora order by h.hora;
-$$;
-
-create or replace function public.teeds_insights_localizacoes(p_marca text default 'teeds')
-returns table(fuso text, idioma text, pessoas bigint, ativos_30d bigint)
-language sql stable set search_path to 'public' as $$
-  select coalesce(c.fuso_horario, ''), coalesce(c.idioma, ''), count(*),
-         count(*) filter (where c.visto_em >= now() - interval '30 days')
-  from public.clientes c
-  where c.marca = any(public.teeds_marcas_em_foco(p_marca)) and c.total_acessos > 0
-  group by 1, 2 order by 3 desc;
 $$;

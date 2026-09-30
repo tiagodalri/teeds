@@ -1,18 +1,3 @@
--- Análise das operações dos robôs com filtros finos.
---
--- A tela de comissões só filtrava por "últimos N dias". O admin pediu mais:
--- período personalizado, faixa de horário, robô, conta. `operacoes_robos`
--- tem 40 mil linhas em 90 dias (martingale na demo) — filtrar isso no
--- navegador não dá (o PostgREST corta em mil linhas e ninguém percebe).
--- Então o banco filtra e devolve só os resumos: totais, por hora do dia,
--- por dia, por robô e por conta. Um JSON, uma chamada.
---
--- Horário é no fuso que a tela mandar (padrão São Paulo): "das 9 às 12" tem
--- que significar a manhã de quem opera, não UTC. Faixa que cruza a meia-noite
--- (22 às 2) também vale.
---
--- Só robô: operação manual não está nesta tabela — a tela diz isso.
-
 create or replace function public.teeds_analise_operacoes(
   p_marca text default 'teeds',
   p_de timestamptz default now() - interval '30 days',

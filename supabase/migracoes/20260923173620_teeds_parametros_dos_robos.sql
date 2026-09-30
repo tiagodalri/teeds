@@ -1,29 +1,16 @@
--- Parâmetros dos robôs ajustáveis pelo painel, por marca e por robô.
---
--- O padrão de cada robô continua no código (src/core/deriv/parametros.ts). Aqui
--- fica o que o painel publicou: uma linha por (marca, robô) com a versão
--- publicada para todos, a versão em teste (só contas demo) e o rascunho. O
--- histórico é append-only. O cliente não lê estas tabelas: recebe os parâmetros
--- vigentes pelo servidor (/api/catalogo-robos), que também é o único que escreve
--- (service_role) — a memória viva do servidor precisa saber de cada mudança na
--- hora, inclusive para aplicar nas sessões em andamento.
---
--- Aplicada em 22/09/2026 pelo MCP do Supabase (migração `teeds_parametros_dos_robos`).
-begin;
-
 create table if not exists public.robos_parametros (
   marca            text not null check (marca in ('teeds', 'omni')),
   robo_id          text not null check (robo_id ~ '^[a-z0-9]{2,40}$'),
   versao           integer not null default 1 check (versao >= 1),
-  parametros       jsonb not null,                      -- publicado para todos (objeto completo, formato v1)
-  teste_demo       jsonb,                               -- em teste: só contas demo usam; null = nada em teste
-  rascunho         jsonb,                               -- o que o admin está editando; nunca aplicado
+  parametros       jsonb not null,
+  teste_demo       jsonb,
+  rascunho         jsonb,
   rascunho_em      timestamptz,
   rascunho_por     uuid,
   ultima_acao      text not null default 'publicou'
                    check (ultima_acao in ('publicou', 'testou_demo', 'promoveu_demo', 'descartou_demo', 'restaurou_versao')),
-  observacao       text,                                -- "por que mudou", da última publicação
-  simulacao        jsonb,                               -- a foto que o admin viu ao publicar (perda máxima nas bases de referência)
+  observacao       text,
+  simulacao        jsonb,
   publicado_em     timestamptz not null default now(),
   atualizado_em    timestamptz not null default now(),
   atualizado_por   uuid references auth.users (id) on delete set null,
@@ -38,7 +25,7 @@ create table if not exists public.robos_parametros_versoes (
   robo_id               text not null,
   versao                integer not null,
   acao                  text not null check (acao in ('publicou', 'testou_demo', 'promoveu_demo', 'descartou_demo', 'restaurou_versao', 'restaurou_padrao')),
-  parametros            jsonb not null,                 -- '{}' em restaurou_padrao = "voltou ao padrão do código"
+  parametros            jsonb not null,
   parametros_anteriores jsonb,
   teste_demo            jsonb,
   observacao            text,
@@ -54,7 +41,6 @@ alter table public.sessoes_robos add column if not exists parametros_versao inte
 comment on column public.sessoes_robos.parametros_versao is
   'Versão dos parâmetros do robô com que a sessão está rodando; null = padrão do código. A config inteira fica no evento de abertura do espelho.';
 
--- ------------------------------------------------------------- validação (as mesmas faixas de validar() em parametros.ts)
 create or replace function public.teeds_robos_parametros_valida(p jsonb) returns void
 language plpgsql immutable set search_path = public as $$
 declare n numeric; t text; d jsonb; qtd integer; ag jsonb; palm jsonb;
@@ -112,7 +98,6 @@ begin
   end if;
 end $$;
 
--- ------------------------------------------------------------- versão, carimbo e autor
 create or replace function public.teeds_robos_parametros_antes() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare proxima integer;
@@ -121,7 +106,6 @@ begin
   if new.teste_demo is not null then perform public.teeds_robos_parametros_valida(new.teste_demo); end if;
   if new.rascunho is not null then perform public.teeds_robos_parametros_valida(new.rascunho); end if;
   if tg_op = 'INSERT' then
-    -- continua a numeração de onde o histórico parou (um "restaurar padrão" apaga a linha, não a contagem)
     select coalesce(max(versao), 0) + 1 into proxima from public.robos_parametros_versoes where marca = new.marca and robo_id = new.robo_id;
     new.versao := proxima; new.publicado_em := now();
   elsif new.parametros is distinct from old.parametros then
@@ -130,11 +114,10 @@ begin
     new.versao := old.versao; new.publicado_em := old.publicado_em;
   end if;
   new.atualizado_em := now();
-  new.atualizado_por := coalesce(new.atualizado_por, auth.uid());   -- sob service_role auth.uid() é null: o servidor manda explícito
+  new.atualizado_por := coalesce(new.atualizado_por, auth.uid());
   return new;
 end $$;
 
--- ------------------------------------------------------------- histórico append-only
 create or replace function public.teeds_robos_parametros_depois() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
@@ -148,7 +131,7 @@ begin
     values (new.marca, new.robo_id, new.versao, new.ultima_acao, new.parametros,
             case when tg_op = 'UPDATE' then old.parametros end, new.teste_demo, new.observacao, new.simulacao, new.atualizado_por);
   end if;
-  return new;   -- mudança só no rascunho não gera linha de histórico
+  return new;
 end $$;
 
 drop trigger if exists robos_parametros_antes on public.robos_parametros;
@@ -161,7 +144,6 @@ revoke all on function public.teeds_robos_parametros_antes() from public, anon, 
 revoke all on function public.teeds_robos_parametros_depois() from public, anon, authenticated;
 grant execute on function public.teeds_robos_parametros_valida(jsonb) to service_role;
 
--- ------------------------------------------------------------- RLS: admin da marca lê; só o servidor escreve
 alter table public.robos_parametros enable row level security;
 alter table public.robos_parametros_versoes enable row level security;
 drop policy if exists "admin da marca ve os parametros dos robos" on public.robos_parametros;
@@ -172,11 +154,3 @@ create policy "admin da marca ve o historico dos parametros" on public.robos_par
   for select to authenticated using (public.teeds_sou_admin_da(marca));
 revoke insert, update, delete, truncate on public.robos_parametros from anon, authenticated;
 revoke insert, update, delete, truncate on public.robos_parametros_versoes from anon, authenticated;
-commit;
-
--- Rollback (comentado):
--- drop trigger if exists robos_parametros_depois on public.robos_parametros;
--- drop trigger if exists robos_parametros_antes on public.robos_parametros;
--- drop function if exists public.teeds_robos_parametros_depois(), public.teeds_robos_parametros_antes(), public.teeds_robos_parametros_valida(jsonb);
--- drop table if exists public.robos_parametros_versoes; drop table if exists public.robos_parametros;
--- alter table public.sessoes_robos drop column if exists parametros_versao;

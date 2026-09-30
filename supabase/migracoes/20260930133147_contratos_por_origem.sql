@@ -10,8 +10,10 @@
 create table if not exists public.contratos_por_origem (
   dia date not null,
   conta_id text not null,
+  -- A marca do CADASTRO por onde a conta foi lida (de quem é o cliente aqui).
   marca text not null,
   user_id uuid not null,
+  -- 'teeds', 'omni', 'externo' ou 'sem-dono'.
   origem text not null,
   demo boolean not null default false,
   moeda text not null default 'USD',
@@ -19,11 +21,14 @@ create table if not exists public.contratos_por_origem (
   entradas numeric not null default 0,
   pagamentos numeric not null default 0,
   resultado numeric not null default 0,
+  -- 3% do pagamento. Só é receita quando a origem é uma marca nossa.
   markup_estimado numeric not null default 0,
+  -- Quantos contratos cada pista decidiu: prova, app da Deriv, horário.
   por_registro integer not null default 0,
   por_app integer not null default 0,
   por_horario integer not null default 0,
   sem_pista integer not null default 0,
+  -- Os apps que a Deriv informou nesta origem, quando informou.
   apps text[] not null default '{}',
   atualizado_em timestamptz not null default now(),
   primary key (dia, conta_id, marca, origem)
@@ -38,4 +43,5 @@ drop policy if exists "admin da marca le contratos por origem" on public.contrat
 create policy "admin da marca le contratos por origem" on public.contratos_por_origem
   for select to authenticated using (public.teeds_sou_admin_da(marca));
 
+-- Só o servidor escreve (service role ignora RLS). Ninguém no navegador.
 revoke insert, update, delete on public.contratos_por_origem from authenticated, anon;

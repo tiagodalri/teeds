@@ -1,22 +1,6 @@
--- A aba de clientes mostra 50 nomes por vez, mas baixava a base inteira para
--- isso: depois da importacao de leads de 11/09/2026 eram 11.482 fichas em doze
--- consultas seguidas, antes de a tela desenhar qualquer coisa.
---
--- Esta funcao faz a conta no banco e devolve numa resposta so: a pagina pedida
--- (ja buscada, filtrada e ordenada) e os numeros do topo, que precisam olhar a
--- base inteira — total, ativos, expirados, vencendo, ativos em 24h e a
--- distribuicao por plano.
---
--- `p_ordem` existe porque a aba "Acessos e permanencia" mostra a mesma base em
--- outra ordem: primeiro quem ja entrou, do acesso mais recente para o mais
--- antigo. Sem isso ela precisaria baixar tudo de novo so para ordenar.
---
--- Security invoker de proposito: quem le e o usuario, com as regras de RLS da
--- tabela `clientes` valendo. Admin de uma marca continua vendo so a dela.
-
-create index if not exists clientes_marca_criado_idx
-  on public.clientes (marca, criado_em desc, user_id desc);
-
+-- A aba "Acessos e permanência" mostra a mesma base em outra ordem: primeiro
+-- quem já entrou, do acesso mais recente para o mais antigo. Em vez de baixar
+-- tudo de novo do lado do navegador, a ordem vira um parâmetro.
 create index if not exists clientes_marca_visto_idx
   on public.clientes (marca, visto_em desc);
 
@@ -44,8 +28,6 @@ totais as (
     count(*) filter (where situacao = 'expirado') as expirados,
     count(*) filter (where acesso_expira_em is not null and acesso_expira_em >= now()
                        and acesso_expira_em <= now() + interval '7 days') as vencendo,
-    -- So quem entrou de verdade. A ficha nasce com "visto agora", e sem este
-    -- corte cada conta criada apareceria como ativa no dia do cadastro.
     count(*) filter (where coalesce(total_acessos, 0) > 0 and visto_em >= now() - interval '1 day') as ativos24h,
     count(*) filter (where coalesce(total_acessos, 0) > 0) as acessaram
   from base
@@ -87,7 +69,4 @@ select jsonb_build_object(
 $$;
 
 grant execute on function public.teeds_clientes_pagina(text, text, text, integer, integer, text) to authenticated;
-
--- A primeira versao nascia sem `p_ordem`; sai para nao ficar uma sobrecarga
--- antiga respondendo por engano.
 drop function if exists public.teeds_clientes_pagina(text, text, text, integer, integer);
