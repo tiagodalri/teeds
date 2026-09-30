@@ -8,9 +8,9 @@
 
 A migração não converte retroativamente a base antiga e não aprova ninguém. Novos envios entram automaticamente na fila, inclusive pelo armazenamento alternativo de auditoria.
 
-## Recadastro (alteração preparada, requer implantação)
+## Recadastro (aplicado em produção em 30/09/2026)
 
-Aplicar `servidor/sql/recadastro-aprovacao.sql` antes de publicar o servidor e os frontends. Conferir as definições atuais do banco antes de aplicar; registrar a migração no histórico do Supabase e exportar pelo processo habitual. Este arquivo é uma alteração nova, não uma migração histórica já aplicada.
+A migração `20260930170442_teeds_recadastro_preserva_historico` está aplicada no banco compartilhado por Teeds e OMNI e exportada em `supabase/migracoes/`. Não reaplicar `servidor/sql/recadastro-aprovacao.sql`. As consultas REST de aprovação das duas marcas responderam HTTP 200. Os testes de recadastro em transação desfeita confirmaram deduplicação, novo ciclo após recusa e preservação integral da conta existente, sem disparar e-mails reais.
 
 - Um e-mail já existente na marca também entra em aprovação, sinalizado como “Já estava na base — recadastro aguardando aprovação”.
 - Repetições enquanto pendente atualizam a mesma solicitação; uma ficha em processamento fica estável. Após aprovação ou recusa, um novo formulário abre outra solicitação com novo ID, preservando a decisão e o envio anteriores.
@@ -21,7 +21,7 @@ Aplicar `servidor/sql/recadastro-aprovacao.sql` antes de publicar o servidor e o
 
 ## Comportamento
 
-- O formulário cria ficha em `clientes_pendentes`, visível na seção Clientes, mas nenhum login. O registro original do lead permanece.
+- O formulário cria ficha em `clientes_pendentes`, visível na seção Clientes. O fluxo atual prepara a conta e envia o e-mail de cadastro antes da aprovação; contas novas continuam com acesso pendente. O registro original do lead permanece.
 - Somente servidor autenticado como administrador da marca pode aprovar ou recusar. A decisão é registrada com administrador e horário.
 - Aprovar cria um login confirmado, com troca obrigatória da senha provisória, e o plano escolhido (Sem simulador ou Com simulador) por 30 dias. A conta existente é preservada, sem redefinição de senha ou sobrescrita de plano/status.
 
@@ -34,7 +34,7 @@ A permissão da conta demo/simulador da Deriv é consultada no banco por marca; 
 Publicar banco antes dos frontends/servidor: a ausência das funções novas bloqueia o simulador por segurança. Sessões já em execução não são interrompidas por alteração de plano; a nova permissão vale na próxima conexão/início/retomada.
 - Uma aprovação interrompida pode ser retomada após dois minutos na aba Em aprovação. A trava vive no banco, não apenas na memória do processo.
 - E-mails de aprovação são enviados pelo Resend a cada 30 segundos; permanecem pendentes em caso de falha. Remetente, identidade e endereço da plataforma vêm da marca.
-- Senhas provisórias não são gravadas em tabelas, respostas de API nem logs. São derivadas da credencial secreta do servidor e do ID da aprovação; não rotacionar essa credencial com aprovações/e-mails em processamento sem planejar a recuperação desses acessos.
+- O e-mail de cadastro só informa senha provisória quando a conta foi comprovadamente criada por essa solicitação. Contas existentes recebem orientação para usar a senha atual ou a recuperação, sem redefinição automática. A aprovação não repete uma senha presumida de uma conta antiga.
 - Se a senha já foi trocada ou a conta já existia, o e-mail orienta usar a senha atual ou recuperação.
 - A chave de idempotência do provedor protege reenvios dentro da janela do Resend; falhas prolongadas de confirmação após envio exigem conferir o provedor antes de reenviar.
 
