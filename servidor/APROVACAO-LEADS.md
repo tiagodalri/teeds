@@ -14,7 +14,7 @@ A migração `20260930170442_teeds_recadastro_preserva_historico` está aplicada
 
 - Um e-mail já existente na marca também entra em aprovação, sinalizado como “Já estava na base — recadastro aguardando aprovação”.
 - Repetições enquanto pendente atualizam a mesma solicitação; uma ficha em processamento fica estável. Após aprovação ou recusa, um novo formulário abre outra solicitação com novo ID, preservando a decisão e o envio anteriores.
-- Não cria clientes duplicados, não redefine senhas, não reativa acessos suspensos/vencidos e não altera plano/validade existentes automaticamente. A aprovação envia orientações para entrar com a senha atual ou usar “Esqueci a senha” para definir outra.
+- Não cria clientes duplicados nem altera a senha pelo envio público. Ao aprovar um recadastro, o administrador renova a senha para a provisória configurada e exige troca no primeiro acesso após a liberação. Histórico, plano e validade existentes são preservados; não reativa automaticamente acessos suspensos/vencidos. Contas administrativas são excluídas dessa renovação.
 - A base antiga não entra em massa na fila nem recebe disparos por esta alteração. Apenas novos formulários produzem solicitações; edições administrativas nos leads não disparam recadastro.
 - `inscricao_recebida_em` é marcado pelo servidor no envio do formulário. A alteração é compartilhada por login e `/cadastro`, com isolamento entre Teeds e OMNI.
 - Teste isolado: `PGLITE_MODULE=/caminho/do/pglite/dist/index.js node servidor/teste-recadastro-banco.mjs`.
@@ -23,7 +23,7 @@ A migração `20260930170442_teeds_recadastro_preserva_historico` está aplicada
 
 - O formulário cria ficha em `clientes_pendentes`, visível na seção Clientes. O fluxo atual prepara a conta e envia o e-mail de cadastro antes da aprovação; contas novas continuam com acesso pendente. O registro original do lead permanece.
 - Somente servidor autenticado como administrador da marca pode aprovar ou recusar. A decisão é registrada com administrador e horário.
-- Aprovar cria um login confirmado, com troca obrigatória da senha provisória, e o plano escolhido (Sem simulador ou Com simulador) por 30 dias. A conta existente é preservada, sem redefinição de senha ou sobrescrita de plano/status.
+- Aprovar prepara o login com senha provisória e troca obrigatória; contas pendentes recebem o plano escolhido por 30 dias. No recadastro, a conta existente mantém histórico e recebe a senha provisória somente nessa aprovação. Retomar a mesma aprovação não redefine a senha pela segunda vez.
 
 ## Dois planos
 
@@ -34,8 +34,9 @@ A permissão da conta demo/simulador da Deriv é consultada no banco por marca; 
 Publicar banco antes dos frontends/servidor: a ausência das funções novas bloqueia o simulador por segurança. Sessões já em execução não são interrompidas por alteração de plano; a nova permissão vale na próxima conexão/início/retomada.
 - Uma aprovação interrompida pode ser retomada após dois minutos na aba Em aprovação. A trava vive no banco, não apenas na memória do processo.
 - E-mails de aprovação são enviados pelo Resend a cada 30 segundos; permanecem pendentes em caso de falha. Remetente, identidade e endereço da plataforma vêm da marca.
-- O e-mail de cadastro só informa senha provisória quando a conta foi comprovadamente criada por essa solicitação. Contas existentes recebem orientação para usar a senha atual ou a recuperação, sem redefinição automática. A aprovação não repete uma senha presumida de uma conta antiga.
-- Se a senha já foi trocada ou a conta já existia, o e-mail orienta usar a senha atual ou recuperação.
+- O e-mail de cadastro informa senha provisória apenas para conta criada nessa solicitação. Ela entra na tela de espera, antes da tela de troca de senha. Contas existentes recebem confirmação da análise e aguardam a aprovação para renovar a senha.
+- O e-mail de aprovação inclui a senha provisória somente quando o marcador administrativo comprova que foi preparada para essa solicitação. Se o titular já escolheu outra senha ou houve outro ciclo, orienta usar a senha atual ou recuperação, sem enviar credencial antiga.
+- Por solicitação explícita do responsável em 30/09/2026, a senha provisória é compartilhada (`123mudar`). A troca obrigatória no primeiro acesso não elimina o risco de uso por terceiros que conheçam o e-mail; senhas exclusivas continuam sendo a opção recomendada. Esta mudança não redefine em massa contas antigas nem reenvia aprovações concluídas.
 - A chave de idempotência do provedor protege reenvios dentro da janela do Resend; falhas prolongadas de confirmação após envio exigem conferir o provedor antes de reenviar.
 
 ## Validação sem dados reais

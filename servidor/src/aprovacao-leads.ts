@@ -10,12 +10,13 @@ const segredo = () => process.env.SUPABASE_SECRET || process.env.SUPABASE_SERVIC
 /**
  * A senha provisória da casa — a mesma para todo mundo (Tiago, 30/09/2026).
  *
- * Ela só existe entre o cadastro e o primeiro acesso: quem entra com ela cai
- * direto na tela de criar a própria senha e não consegue passar dali. É essa
- * troca forçada (`trocar_senha: true`) que segura uma senha pública; sem ela,
- * qualquer um que soubesse o e-mail de alguém entraria na conta.
+ * Antes da aprovação, o cliente vê a tela de espera. Depois, precisa criar
+ * a própria senha antes de usar a plataforma. A troca forçada
+ * (`trocar_senha: true`) faz parte do fluxo de entrada, mas
+ * NÃO elimina o risco de alguém conhecer a senha antes do titular.
  */
 export const SENHA_PROVISORIA = '123mudar'
+const VERSAO_SENHA = 'provisoria-v2'
 
 // Mantida para contas criadas antes de 30/09/2026, que receberam uma senha
 // própria gerada aqui. Não é mais usada para cadastro novo.
@@ -50,7 +51,7 @@ export async function decidirLead(id: string, marca: string, admin: string, acao
       usuario=await banco('/auth/v1/admin/users','POST',{
         email:ficha.email,password:SENHA_PROVISORIA,email_confirm:true,
         user_metadata:{nome:ficha.nome,telefone:ficha.telefone,marca,trocar_senha:true},
-        app_metadata:{aprovacao_lead:id},
+        app_metadata:{aprovacao_lead:id,senha_aprovacao_versao:VERSAO_SENHA},
       })
     } catch (e) {
       // Pode ter havido timeout depois da criação ou cadastro concorrente.
@@ -59,6 +60,20 @@ export async function decidirLead(id: string, marca: string, admin: string, acao
     }
   }
   if (!usuario?.id) throw new Error('Não foi possível confirmar a conta. Retome a aprovação em dois minutos.')
+  // A consulta protegida retorna apenas o ID. Só a aprovação autenticada
+  // renova uma senha existente; um formulário público jamais faz isso.
+  const atual=await banco(`/auth/v1/admin/users/${encodeURIComponent(usuario.id)}`)
+  if (atual.app_metadata?.aprovacao_lead!==id || atual.app_metadata?.senha_aprovacao_versao!==VERSAO_SENHA) {
+    const admins=await banco(`/rest/v1/administradores?user_id=eq.${encodeURIComponent(usuario.id)}&select=user_id&limit=1`)
+    if (!Array.isArray(admins) || admins.length) throw new Error('Contas administrativas não podem ter a senha renovada pelo cadastro público.')
+    // Senha e marcador juntos: se a resposta se perder, retomar não desfaz
+    // uma senha que o titular já tenha escolhido entre as tentativas.
+    await banco(`/auth/v1/admin/users/${encodeURIComponent(usuario.id)}`,'PUT',{
+      password:SENHA_PROVISORIA,
+      user_metadata:{...atual.user_metadata,trocar_senha:true},
+      app_metadata:{...atual.app_metadata,aprovacao_lead:id,senha_aprovacao_versao:VERSAO_SENHA},
+    })
+  }
   await banco('/rest/v1/rpc/teeds_finalizar_lead','POST',{p_id:id,p_trava:trava,p_user:usuario.id})
   return {status:'aprovado'}
 }
@@ -83,8 +98,8 @@ async function despachar(marca: ReturnType<typeof marcaPorId>, para: string, ema
  */
 export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: string) {
   const acesso=senhaProvisoria
-    ? `Seus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${senhaProvisoria}\n\nNo primeiro acesso, você cria a sua própria senha.`
-    : `Sua conta e seu histórico foram preservados. E-mail de acesso: ${email}. Sua senha não foi alterada. Se não lembrar dela, clique em “Esqueci a senha” na tela de acesso para receber um link e definir uma nova senha.`
+    ? `Seus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${senhaProvisoria}\n\nVocê já pode entrar para acompanhar a tela de espera. Após a aprovação, será necessário criar a sua própria senha antes de usar a plataforma.`
+    : `E-mail cadastrado: ${email}. Seu recadastro está em análise. Após a aprovação, você receberá a senha provisória e as instruções de acesso, sem precisar lembrar sua senha antiga. Seu histórico será preservado. Por enquanto, sua senha não foi alterada.`
   return montarEmail(marca,'confirmar',new URL('/',marca.redirectUri).href,{
     assunto:`Cadastro recebido · ${marca.prosa}`,
     titulo:'Cadastro recebido',
@@ -97,7 +112,7 @@ export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: s
 
 export function emailDeAprovacao(marca: Marca, email: string, aindaProvisoria: boolean) {
   const entrada=aindaProvisoria
-    ? `E-mail de acesso: ${email}. Use a senha recebida quando sua conta foi criada. Se não encontrar esse e-mail, clique em “Esqueci a senha” na tela de acesso para definir uma nova senha. No primeiro acesso você cria a sua própria senha.`
+    ? `Seus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${SENHA_PROVISORIA}\n\nNo primeiro acesso após a aprovação, você deverá criar sua própria senha antes de usar a plataforma. Se você já tinha conta, esta senha substitui a anterior. Seu histórico foi preservado.`
     : `Sua conta e seu histórico foram preservados. Entre com o e-mail ${email} e a sua senha atual. Se não lembrar, clique em “Esqueci a senha” na tela de acesso e você recebe um link para definir uma nova senha.`
   return montarEmail(marca,'convite',new URL('/',marca.redirectUri).href,{
     assunto:`Cadastro aprovado · seu acesso à ${marca.prosa} está liberado`,
@@ -172,6 +187,8 @@ export async function enviarAprovacoes() {
         // ser o único e-mail que a pessoa achar depois. Quem já criou a própria
         // senha não recebe senha nenhuma de volta.
         const aindaProvisoria=u.user_metadata?.trocar_senha===true
+          && u.app_metadata?.aprovacao_lead===p.id
+          && u.app_metadata?.senha_aprovacao_versao===VERSAO_SENHA
         const email=emailDeAprovacao(marca,p.email,aindaProvisoria)
         await despachar(marca,p.email,email,`aprovacao-lead-${p.id}`)
         await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}&status=eq.aprovado`,'PATCH',{email_enviado_em:new Date().toISOString()})

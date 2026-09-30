@@ -52,8 +52,8 @@ for (const marca of Object.values(MARCAS)) {
   mockup que não acompanha o código vira mentira. Agora sai daqui.
 */
 const FLUXO: Array<{ arquivo: string; nome: string; quando: string }> = [
-  { arquivo: 'cadastro', nome: '1 · Cadastro recebido', quando: 'Sai na hora em que a pessoa se cadastra, com a senha provisória.' },
-  { arquivo: 'aprovado', nome: '2 · Cadastro aprovado', quando: 'Sai quando o admin aprova. Esta é a versão de quem ainda não trocou a senha.' },
+  { arquivo: 'cadastro', nome: '1 · Cadastro recebido', quando: 'Confirma a análise. Contas novas recebem a senha provisória para ver a tela de espera; contas existentes só têm a senha renovada na aprovação.' },
+  { arquivo: 'aprovado', nome: '2 · Cadastro aprovado', quando: 'Sai após a aprovação com a senha provisória e troca no primeiro acesso, inclusive no recadastro.' },
   { arquivo: 'aprovado-com-senha-propria', nome: '2b · Aprovado, senha já trocada', quando: 'A mesma aprovação, para quem já tinha conta e senha própria. Nenhuma senha é repetida.' },
   { arquivo: 'senha', nome: '3 · Redefinir a senha', quando: 'O link pedido pelo perfil, ou pelo “esqueci a senha”.' },
   { arquivo: 'volta', nome: 'Campanha · Convite de volta', quando: 'Para quem já foi cliente: o acesso volta a ser gratuito, e os detalhes ficam no canal do Telegram. Não faz parte do fluxo automático — é disparo de lista.' },

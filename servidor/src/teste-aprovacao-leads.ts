@@ -16,6 +16,7 @@ globalThis.fetch=(async (url:any,init:any={})=>{
   return new Response(JSON.stringify(p.data===undefined?{}:p.data),{status:p.status??200,headers:{'Content-Type':'application/json'}})
 }) as typeof fetch
 const ficha={id,marca:'teeds',nome:'Teste',email:'teste@example.invalid',telefone:'11999999999',status:'processando'}
+const preparada={id:uid,app_metadata:{aprovacao_lead:id,senha_aprovacao_versao:'provisoria-v2'},user_metadata:{trocar_senha:true}}
 let total=0
 async function teste(nome:string,fn:()=>Promise<void>){await fn();if(falhas.length)throw falhas.shift();assert.equal(passos.length,0);total++;console.log(`✓ ${nome}`)}
 
@@ -29,12 +30,17 @@ await teste('aprovação cria usuário só após a trava e finaliza sem expor se
     {path:'teeds_decidir_lead',body:b=>{assert.equal(b.p_marca,'teeds');assert.equal(b.p_admin,uid);assert.equal(b.p_plano,'pro')},data:ficha},
     {path:'teeds_auth_do_pendente',data:null},
     {path:'/auth/v1/admin/users',body:b=>{assert.equal(b.email_confirm,true);assert.equal(b.user_metadata.trocar_senha,true);assert.equal(b.app_metadata.aprovacao_lead,id)},data:{id:uid}},
+    {path:`/auth/v1/admin/users/${uid}`,data:preparada},
     {path:'teeds_finalizar_lead',body:b=>assert.equal(b.p_user,uid)},
   ]
   assert.deepEqual(await decidirLead(id,'teeds',uid,'aprovar','pro'),{status:'aprovado'})
 })
-await teste('conta existente não recebe alteração de senha',async()=>{
-  passos=[{path:'teeds_decidir_lead',data:ficha},{path:'teeds_auth_do_pendente',data:{id:uid}},{path:'teeds_finalizar_lead'}]
+await teste('recadastro aprovado renova senha preservando os metadados',async()=>{
+  passos=[{path:'teeds_decidir_lead',data:ficha},{path:'teeds_auth_do_pendente',data:{id:uid}},
+    {path:`/auth/v1/admin/users/${uid}`,data:{id:uid,app_metadata:{outro:'preservado'},user_metadata:{nome:'Original'}}},
+    {path:'administradores?user_id=',data:[]},
+    {path:`/auth/v1/admin/users/${uid}`,body:b=>{assert.equal(b.password,SENHA_PROVISORIA);assert.equal(b.user_metadata.nome,'Original');assert.equal(b.user_metadata.trocar_senha,true);assert.equal(b.app_metadata.outro,'preservado');assert.equal(b.app_metadata.aprovacao_lead,id)}},
+    {path:'teeds_finalizar_lead'}]
   await decidirLead(id,'omni',uid,'aprovar')
 })
 await teste('aprovação repetida não cria usuário nem reenvia e-mail',async()=>{
@@ -46,7 +52,7 @@ await teste('recusa não toca em Auth nem envia e-mail',async()=>{
   assert.deepEqual(await decidirLead(id,'teeds',uid,'recusar'),{status:'recusado'})
 })
 await teste('timeout de criação consulta a conta antes de repetir',async()=>{
-  passos=[{path:'teeds_decidir_lead',data:ficha},{path:'teeds_auth_do_pendente',data:null},{path:'/auth/v1/admin/users',status:500},{path:'teeds_auth_do_pendente',data:{id:uid}},{path:'teeds_finalizar_lead'}]
+  passos=[{path:'teeds_decidir_lead',data:ficha},{path:'teeds_auth_do_pendente',data:null},{path:'/auth/v1/admin/users',status:500},{path:'teeds_auth_do_pendente',data:{id:uid}},{path:`/auth/v1/admin/users/${uid}`,data:preparada},{path:'teeds_finalizar_lead'}]
   await decidirLead(id,'teeds',uid,'aprovar')
 })
 await teste('entrada inválida não consulta banco',async()=>{
@@ -61,8 +67,8 @@ await teste('consulta paginada é filtrada por marca',async()=>{
 })
 await teste('e-mail aprovado usa senha provisória e marca correta',async()=>{
   passos=[{path:'status=eq.aprovado',data:[{id,marca:'omni',email:'teste@example.invalid',user_id:uid}]},
-    {path:`/auth/v1/admin/users/${uid}`,data:{app_metadata:{aprovacao_lead:id},user_metadata:{trocar_senha:true}}},
-    {path:'api.resend.com/emails',body:b=>{assert.match(b.subject,/OMNI/i);assert.ok(b.text.includes('senha recebida'));assert.ok(!b.text.includes(SENHA_PROVISORIA));assert.ok(!b.html.includes('teedscompany.com'))}},
+    {path:`/auth/v1/admin/users/${uid}`,data:preparada},
+    {path:'api.resend.com/emails',body:b=>{assert.match(b.subject,/OMNI/i);assert.ok(b.text.includes(SENHA_PROVISORIA));assert.ok(b.text.includes('deverá criar'));assert.ok(!b.html.includes('teedscompany.com'))}},
     {path:`clientes_pendentes?id=eq.${id}`,body:b=>assert.ok(b.email_enviado_em)}]
   await enviarAprovacoes()
 })
@@ -95,7 +101,7 @@ await teste('e-mail do cadastro cria a conta com a senha da casa e avisa que est
 await teste('conta que já existe não é recriada, e o e-mail sai do mesmo jeito',async()=>{
   passos=[{path:'status=eq.pendente&email_cadastro_em=is.null',data:[{id,marca:'teeds',email:'teste@example.invalid',nome:'Teste',telefone:'1',user_id:uid}]},
     {path:`/auth/v1/admin/users/${uid}`,data:{id:uid,email:'teste@example.invalid'}},
-    {path:'api.resend.com/emails',body:b=>{assert.ok(!b.text.includes(SENHA_PROVISORIA));assert.ok(b.text.includes('Sua senha não foi alterada'));assert.ok(b.text.includes('Esqueci a senha'))}},
+    {path:'api.resend.com/emails',body:b=>{assert.ok(!b.text.includes(SENHA_PROVISORIA));assert.ok(b.text.includes('sua senha não foi alterada'));assert.ok(b.text.includes('Após a aprovação'))}},
     {path:'clientes_pendentes?id=',body:b=>assert.ok(b.email_cadastro_em)}]
   await enviarCadastros()
 })
@@ -117,5 +123,27 @@ await teste('retentativa de conta criada nesta ficha mantém a senha enviada',as
     {path:'api.resend.com/emails',body:b=>assert.ok(b.text.includes(SENHA_PROVISORIA))},
     {path:'clientes_pendentes?id='}]
   await enviarCadastros()
+})
+await teste('retomar aprovação não desfaz senha própria escolhida após timeout',async()=>{
+  passos=[{path:'teeds_decidir_lead',data:ficha},{path:'teeds_auth_do_pendente',data:{id:uid}},
+    {path:`/auth/v1/admin/users/${uid}`,data:{...preparada,user_metadata:{trocar_senha:false}}},{path:'teeds_finalizar_lead'}]
+  await decidirLead(id,'teeds',uid,'aprovar')
+})
+await teste('falha ao renovar senha não libera a aprovação',async()=>{
+  passos=[{path:'teeds_decidir_lead',data:ficha},{path:'teeds_auth_do_pendente',data:{id:uid}},
+    {path:`/auth/v1/admin/users/${uid}`,data:{id:uid}}, {path:'administradores?user_id=',data:[]},
+    {path:`/auth/v1/admin/users/${uid}`,status:500}]
+  await assert.rejects(decidirLead(id,'teeds',uid,'aprovar'))
+})
+await teste('cadastro público não renova senha de administrador',async()=>{
+  passos=[{path:'teeds_decidir_lead',data:ficha},{path:'teeds_auth_do_pendente',data:{id:uid}},
+    {path:`/auth/v1/admin/users/${uid}`,data:{id:uid}}, {path:'administradores?user_id=',data:[{user_id:uid}]}]
+  await assert.rejects(decidirLead(id,'teeds',uid,'aprovar'),/administrativas/)
+})
+await teste('e-mail antigo não anuncia senha de outro ciclo',async()=>{
+  passos=[{path:'status=eq.aprovado',data:[{id,marca:'teeds',email:'teste@example.invalid',user_id:uid}]},
+    {path:`/auth/v1/admin/users/${uid}`,data:{...preparada,app_metadata:{aprovacao_lead:uid,senha_aprovacao_versao:'provisoria-v2'}}},
+    {path:'api.resend.com/emails',body:b=>assert.ok(!b.text.includes(SENHA_PROVISORIA))}, {path:'clientes_pendentes?id='}]
+  await enviarAprovacoes()
 })
 console.log(`${total} testes de aprovação concluídos.`)
