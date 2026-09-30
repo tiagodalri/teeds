@@ -37,7 +37,23 @@ interface Conteudo {
   corpo: string
   botao: string
   aviso: string
+  /**
+   * Um segundo botão, na cor e com a marca do Telegram.
+   *
+   * Existe porque alguns e-mails têm dois destinos de verdade: a plataforma e
+   * o canal. Quando presente, ele vem ANTES do botão da marca — nas campanhas
+   * em que aparece, é no canal que a conversa continua.
+   *
+   * O aviãozinho é PNG (`public/telegram-aviao.png`, veja
+   * `scripts/telegram-aviao.py`): cliente de e-mail não desenha SVG, o Gmail
+   * apaga. Branco sobre transparente, com o azul vindo do `bgcolor` da célula,
+   * que todo cliente entende.
+   */
+  telegram?: { url: string; texto: string }
 }
+
+/** O azul da marca do Telegram. */
+const AZUL_TELEGRAM = '#2AABEE'
 
 /** O que cada e-mail diz. Só texto — a aparência é a mesma para todos. */
 function conteudo(tipo: TipoDeEmail, prosa: string): Conteudo {
@@ -90,6 +106,11 @@ function conteudo(tipo: TipoDeEmail, prosa: string): Conteudo {
   }
 }
 
+/** O aviãozinho do Telegram, no endereço absoluto do site da marca. */
+function aviaoDoTelegram(marca: Marca): string {
+  return new URL('telegram-aviao.png', marca.redirectUri).toString()
+}
+
 /** O emblema precisa de endereço absoluto: e-mail não tem "pasta do site". */
 function emblemaDe(marca: Marca): string {
   return new URL(marca.emblema, marca.redirectUri).toString()
@@ -115,9 +136,22 @@ function seguro(s: string): string {
  * escritos — ganha o valor em negrito, para a pessoa achar de relance.
  */
 function emParagrafos(corpo: string): string {
+  const forte = (texto: string) =>
+    seguro(texto).replace(/\*\*(.+?)\*\*/g, '<b style="color:#1a2233;">$1</b>')
+
   const destacar = (linha: string) => {
+    /*
+      Só uma LINHA DE DADO vira rótulo e valor — "E-mail: maria@…", "Senha
+      provisória: 123mudar". Antes bastava ter dois-pontos, e uma frase comum
+      caía na regra: "E a parte que mais importa: para quem já foi nosso
+      cliente…" saiu com meio parágrafo em negrito, sem ninguém pedir.
+      Por isso os dois cortes: rótulo de no máximo três palavras, e a linha
+      inteira curta. Frase de texto corrido não passa por nenhum dos dois.
+    */
     const m = linha.match(/^([A-Za-zÀ-ÿ][^:]{2,28}):\s+(\S.*)$/)
-    return m ? `${seguro(m[1])}: <b style="color:#1a2233;">${seguro(m[2])}</b>` : seguro(linha)
+    const rotulo = m?.[1].trim().split(/\s+/).length ?? 0
+    if (!m || rotulo > 3 || linha.length > 72) return forte(linha)
+    return `${seguro(m[1])}: <b style="color:#1a2233;">${forte(m[2])}</b>`
   }
   return corpo
     .split(/\n{2,}/)
@@ -175,6 +209,24 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
           <div style="margin:0 0 22px;">${emParagrafos(c.corpo)}</div>
         </td>
       </tr>
+
+      ${!c.telegram ? '' : `
+      <!-- botao do canal no Telegram -->
+      <tr>
+        <td style="padding:0 32px 12px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td align="center" bgcolor="${AZUL_TELEGRAM}" style="background:${AZUL_TELEGRAM};border-radius:11px;">
+                <a href="${seguro(c.telegram.url)}"
+                   style="display:block;padding:14px 24px;font-family:${SANS};font-size:15px;
+                          font-weight:600;color:#ffffff;text-decoration:none;">
+                  <img src="${aviaoDoTelegram(marca)}" width="19" height="19" alt=""
+                       style="vertical-align:-4px;margin-right:9px;border:0;">${seguro(c.telegram.texto)}</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`}
 
       <!-- botao -->
       <tr>
@@ -241,6 +293,9 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
     '',
     c.corpo,
     '',
+    // A versão em texto puro vai para quem bloqueia HTML. O canal não pode
+    // sumir ali: é o destino principal do e-mail em que ele aparece.
+    ...(c.telegram ? [`${c.telegram.texto}: ${c.telegram.url}`, ''] : []),
     url,
     '',
     c.aviso,

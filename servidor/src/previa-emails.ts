@@ -12,6 +12,7 @@ import { join } from 'node:path'
 import { MARCAS } from '../../src/marca/marcas'
 import { montarEmail, type TipoDeEmail } from './emails'
 import { emailDeCadastro, emailDeAprovacao } from './aprovacao-leads'
+import { emailDeVolta } from './campanhas'
 
 const TIPOS: TipoDeEmail[] = ['confirmar', 'magico', 'senha', 'convite', 'trocar-email']
 const PASTA = join(process.cwd(), '..', 'previa-emails')
@@ -38,6 +39,7 @@ for (const marca of Object.values(MARCAS)) {
     ['cadastro', emailDeCadastro(marca, exemplo)],
     ['aprovado', emailDeAprovacao(marca, exemplo, true)],
     ['aprovado-com-senha-propria', emailDeAprovacao(marca, exemplo, false)],
+    ['volta', emailDeVolta(marca)],
   ] as const) {
     writeFileSync(join(PASTA, `${marca.id}-${nome}.html`), pronto.html)
     indice.push(`${marca.nome.padEnd(6)} ${nome.padEnd(14)} ${pronto.assunto}`)
@@ -54,6 +56,7 @@ const FLUXO: Array<{ arquivo: string; nome: string; quando: string }> = [
   { arquivo: 'aprovado', nome: '2 · Cadastro aprovado', quando: 'Sai quando o admin aprova. Esta é a versão de quem ainda não trocou a senha.' },
   { arquivo: 'aprovado-com-senha-propria', nome: '2b · Aprovado, senha já trocada', quando: 'A mesma aprovação, para quem já tinha conta e senha própria. Nenhuma senha é repetida.' },
   { arquivo: 'senha', nome: '3 · Redefinir a senha', quando: 'O link pedido pelo perfil, ou pelo “esqueci a senha”.' },
+  { arquivo: 'volta', nome: 'Campanha · Convite de volta', quando: 'Para quem já foi cliente: o acesso volta a ser gratuito, e os detalhes ficam no canal do Telegram. Não faz parte do fluxo automático — é disparo de lista.' },
 ]
 const marcas = Object.values(MARCAS)
 const painel = (f: typeof FLUXO[number]) => `

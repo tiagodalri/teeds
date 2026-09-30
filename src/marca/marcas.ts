@@ -122,6 +122,15 @@ export interface Marca {
      */
     remetente: string | null
   }
+  /**
+   * O canal oficial no Telegram.
+   *
+   * É onde a marca conversa com quem já é cliente — avisos, novidades, e as
+   * campanhas que não cabem num e-mail. Fica aqui, e não solto em cada
+   * arquivo, porque o link aparece na página de obrigado, no e-mail de
+   * convite e onde mais precisar: um endereço trocado em um lugar só.
+   */
+  telegram: string
 }
 
 export const MARCAS: Record<string, Marca> = {
@@ -152,6 +161,7 @@ export const MARCAS: Record<string, Marca> = {
       // Mesmo domínio do site. O e-mail sai de onde a plataforma mora.
       remetente: 'Teeds <nao-responda@teedscompany.com>',
     },
+    telegram: 'https://t.me/+gl3NHpZRSCwyYjgx',
   },
 
   omni: {
@@ -194,6 +204,7 @@ export const MARCAS: Record<string, Marca> = {
         'Negociar envolve risco de perda.',
       remetente: 'OMNI <nao-responda@omnifinanc.com>',
     },
+    telegram: 'https://t.me/oarthurlessa',
   },
 }
 
