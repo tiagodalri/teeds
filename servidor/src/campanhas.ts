@@ -22,48 +22,44 @@ import type { Marca } from '../../src/marca/marcas'
  * propósito — é lá que a conversa continua, e o e-mail não tenta explicar
  * tudo sozinho.
  *
- * A COPY parte de um fato incômodo: esta pessoa entrou um dia e a plataforma
- * ficou em silêncio. Ela não está neutra — está desconfiada. Por isso o texto
- * começa nomeando a ausência, em vez de fingir que ela não existiu. Entusiasmo
- * aqui faria o contrário do que se quer: confirmaria a suspeita.
+ * O TOM é de volta por cima, não de desculpa. A primeira versão abria falando
+ * do tempo em que a plataforma ficou parada; o Tiago cortou, e com razão:
+ * ninguém volta empolgado para um lugar que começa pedindo perdão. A notícia
+ * aqui é boa, e o texto trata ela como boa.
  *
- * Daí a regra do texto: nenhum adjetivo que uma prova possa substituir. Não
- * "mais seguro", e sim o freio que para ANTES de furar o limite. Não "mais
- * transparente", e sim o histórico que dá para rever operação por operação.
- * Cada frase aqui é conferível dentro da plataforma — e quem volta vai
- * conferir. Prometer resultado, inventar prazo ou fabricar escassez seria
- * ganhar o clique e perder a pessoa na primeira tela.
+ * O que dá lastro à empolgação é a prova. Nenhum adjetivo que um fato possa
+ * substituir: não "mais seguro", e sim o freio que para ANTES de furar o
+ * limite; não "mais transparente", e sim o histórico que dá para rever
+ * operação por operação. Cada frase é conferível dentro da plataforma, e quem
+ * voltar vai conferir. Promessa de resultado, prazo inventado ou escassez
+ * fabricada ganhariam o clique e perderiam a pessoa na primeira tela.
  *
- * O gratuito é apresentado como reconhecimento, não como desconto: desconto
- * pede desconfiança ("qual é a pegadinha?"), reconhecimento pede reciprocidade.
- * E o convite termina na conta de demonstração porque o maior obstáculo de
- * quem já se decepcionou não é o preço — é o risco de se decepcionar de novo.
+ * O gratuito é reconhecimento, não desconto: desconto pede desconfiança
+ * ("qual é a pegadinha?"), reconhecimento pede reciprocidade. E o convite
+ * termina na conta de demonstração porque é o passo que não custa nada dar.
  */
 export function emailDeVolta(marca: Marca): EmailPronto {
   return montarEmail(marca, 'convite', new URL('/', marca.redirectUri).href, {
-    assunto: `A ${marca.prosa} voltou — e a sua conta continua aqui`,
-    titulo: `A ${marca.prosa} voltou`,
-    espia: 'Reconstruída por dentro. E, para quem já foi cliente, o acesso é gratuito.',
+    assunto: `A ${marca.prosa} está de volta — e o seu acesso é gratuito`,
+    titulo: `A ${marca.prosa} está de volta`,
+    espia: `Reconstruída por dentro. E, para quem já foi cliente da ${marca.prosa}, o acesso é gratuito.`,
     corpo:
-      `Você entrou na ${marca.prosa} antes de ela ficar em silêncio. A gente não ` +
-      `esqueceu disso.\n\n` +
-      `Nesse tempo a plataforma foi reconstruída por dentro — não é a mesma com ` +
-      `cara nova. Cada robô foi revisto, regra por regra. O freio de perda agora ` +
-      `para ANTES de furar o limite que você definiu, e não depois. E você ` +
-      `acompanha cada entrada ao vivo, com o histórico inteiro para rever ` +
+      `E voltou maior.\n\n` +
+      `Não é a mesma plataforma com cara nova: a ${marca.prosa} foi reconstruída ` +
+      `por dentro, do motor à tela.\n\n` +
+      `Cada robô foi refeito, regra por regra. O freio de perda agora respeita o ` +
+      `limite que você define — ele para ANTES de furar, e não depois. E você ` +
+      `vê cada operação nascer ao vivo, com o histórico inteiro para rever, ` +
       `operação por operação, quando quiser.\n\n` +
-      `O que não mudou é o principal: a conta na corretora é sua. O dinheiro ` +
+      `O que não muda é o que sempre foi seu: a conta na corretora. O dinheiro ` +
       `nunca passa por nós, nem por um segundo.\n\n` +
-      `**Para quem já foi nosso cliente, o acesso é gratuito.** Não é promoção ` +
-      `com prazo, não é teste de alguns dias, e não pedimos cartão. Quem esteve ` +
-      `aqui quando a plataforma era menor não vai pagar para ver no que ela se ` +
-      `tornou.\n\n` +
-      `Sua conta continua no mesmo e-mail em que você está lendo isto. Você pode ` +
-      `entrar hoje, ligar um robô na conta de demonstração e conferir tudo o que ` +
-      `está escrito aqui — sem arriscar um centavo.\n\n` +
-      `O que mudou, o que vem pela frente e como voltar a operar: estamos ` +
-      `contando primeiro no nosso canal oficial no Telegram. É de lá que sai ` +
-      `cada aviso, antes de qualquer outro lugar.`,
+      `**E para quem já foi nosso cliente, o acesso é gratuito.** Sem prazo, sem ` +
+      `teste de alguns dias, sem cartão. Você esteve aqui quando a ${marca.prosa} ` +
+      `era menor — é justo que veja no que ela se tornou.\n\n` +
+      `Sua conta continua ativa, neste mesmo e-mail. Entre hoje, ligue um robô na ` +
+      `conta de demonstração e confira com os seus próprios olhos.\n\n` +
+      `E o que vem pela frente a gente conta primeiro no canal oficial no ` +
+      `Telegram. É de lá que sai cada aviso, antes de qualquer outro lugar.`,
     telegram: { url: marca.telegram, texto: 'Entrar no canal oficial' },
     botao: 'Entrar na minha conta',
     aviso:
