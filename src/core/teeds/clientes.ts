@@ -626,7 +626,7 @@ export async function enviarMarkupOficial(
     await rest('/markup_oficial_diario?on_conflict=dia,app_id', sessao.token, {
       method: 'POST', headers: MESCLAR,
       body: JSON.stringify(porDia.map((d) => ({
-        dia: d.data, app_id: appId, comissao: d.comissao,
+        dia: d.data, app_id: appId, marca: MARCA.id, comissao: d.comissao,
         volume: d.volume, contratos: d.contratos,
         atualizado_em: new Date().toISOString(),
       }))),

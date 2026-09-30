@@ -537,7 +537,7 @@ export function ManagementPanel({
           <span className="rot"><i className="ponto-vivo" aria-hidden />Sua comissão · calculada ao vivo</span>
           <strong>{topo.pronto ? dinheiro(topo.comissao, 'USD') : '…'}</strong>
           <span className="kpi-nota">
-            3% do pagamento · só contas reais · {topo.operacoes.toLocaleString('pt-BR')} operações
+            3% do pagamento · só contas reais · {topo.operacoes.toLocaleString('pt-BR')} operações · {dataCurta(intervalo.de)} a {dataCurta(intervalo.ate)}
             {negocio
               ? (negocio.aoVivoAqui ? ' · sobe a cada contrato desta conta' : ' · o servidor recalcula a cada 5 min')
               : isDemo
@@ -548,6 +548,12 @@ export function ManagementPanel({
         <div className="kpi kpi-grande kpi-deriv">
           <span className="rot">Sua comissão · informada pela Deriv</span>
           <strong>{carregando && !resumo ? '…' : dinheiro(resumo?.comissao ?? 0, 'USD')}</strong>
+          <span className="kpi-nota">
+            {`app da ${MARCA.prosa} · ${dataCurta(intervalo.de)} a ${dataCurta(intervalo.ate)}`}
+            {resumo?.comissaoDaConta != null && Math.abs(resumo.comissaoDaConta - resumo.comissao) > 0.005
+              ? ` · a conta inteira na Deriv, somando os outros apps, deu ${dinheiro(resumo.comissaoDaConta)}`
+              : ''}
+          </span>
           <span className="kpi-nota">
             {derivAtrasada > 0.005
               ? `pelo menos ${dinheiro(derivAtrasada)} ainda não entraram na conta da Deriv — ela fecha com atraso`

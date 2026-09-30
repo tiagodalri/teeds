@@ -10,11 +10,17 @@ import type { AuthSession } from './auth'
  */
 
 export interface MarkupResumo {
+  /** Markup DESTE app (desta marca) no período. */
   comissao: number
   volume: number
   pagamentos: number
   contratos: number
   clientes: number
+  /** Qual app foi lido. */
+  appId?: string
+  /** O total da conta na Deriv, somando todos os apps — para conferência. */
+  comissaoDaConta?: number
+  contratosDaConta?: number
   porApp: Array<{ appId: string; nome: string; comissao: number; volume: number; contratos: number }>
 }
 
@@ -77,15 +83,50 @@ async function consultar(session: AuthSession, de: string, ate: string): Promise
   return body?.data ?? {}
 }
 
+/**
+ * O pedaço deste app dentro da resposta da Deriv.
+ *
+ * `markup-statistics` responde com o TOTAL DA CONTA — a soma de todos os
+ * apps de quem consultou — e um `breakdown` por app. Até 30/09/2026 a
+ * plataforma guardava o total e chamava de "markup da Teeds": o painel da
+ * Deriv mostrava 5,21 no app da Teeds e a nossa tela dizia 7,48, porque
+ * somava a OMNI junto. Agora a gente lê o pedaço do app e, só quando a
+ * Deriv não manda o `breakdown`, cai no total.
+ */
+function doApp(d: any, appId: string): { comissao: number; volume: number; contratos: number; clientes: number } {
+  const lista = (d?.breakdown ?? []) as any[]
+  if (lista.length) {
+    const b = lista.find((x) => String(x.app_id ?? x.application_id ?? '') === appId)
+    return {
+      comissao: Number(b?.app_markup_usd ?? b?.total_app_markup_usd ?? 0),
+      volume: Number(b?.volume_usd ?? b?.total_volume_usd ?? 0),
+      contratos: Number(b?.contract_count ?? b?.total_contract_count ?? 0),
+      clientes: Number(b?.client_count ?? b?.total_client_count ?? 0),
+    }
+  }
+  return {
+    comissao: Number(d?.total_app_markup_usd ?? 0),
+    volume: Number(d?.total_volume_usd ?? 0),
+    contratos: Number(d?.total_contract_count ?? 0),
+    clientes: Number(d?.total_client_count ?? 0),
+  }
+}
+
 /** Totais do periodo. */
 export async function buscarResumo(session: AuthSession, de: string, ate: string): Promise<MarkupResumo> {
   const d = await consultar(session, de, ate)
+  const app = session.appId ?? MARCA.appId
+  const meu = doApp(d, app)
   return {
-    comissao: Number(d.total_app_markup_usd ?? 0),
-    volume: Number(d.total_volume_usd ?? 0),
+    // O número DESTA marca. O total da conta (todos os apps) vai separado.
+    comissao: meu.comissao,
+    volume: meu.volume,
     pagamentos: Number(d.total_payout_usd ?? 0),
-    contratos: Number(d.total_contract_count ?? 0),
-    clientes: Number(d.total_client_count ?? 0),
+    contratos: meu.contratos,
+    clientes: meu.clientes || Number(d.total_client_count ?? 0),
+    appId: app,
+    comissaoDaConta: Number(d.total_app_markup_usd ?? 0),
+    contratosDaConta: Number(d.total_contract_count ?? 0),
     porApp: (d.breakdown ?? []).map((b: any) => ({
       appId: String(b.app_id ?? b.application_id ?? ''),
       nome: b.app_name ?? b.name ?? '',
@@ -112,13 +153,9 @@ export async function buscarSerieDiaria(session: AuthSession, dias: number): Pro
     const res = await Promise.all(
       parte.map(async (data) => {
         try {
-          const d = await consultar(session, data, data)
-          return {
-            data,
-            comissao: Number(d.total_app_markup_usd ?? 0),
-            volume: Number(d.total_volume_usd ?? 0),
-            contratos: Number(d.total_contract_count ?? 0),
-          }
+          const r = await consultar(session, data, data)
+          const meu = doApp(r, session.appId ?? MARCA.appId)
+          return { data, comissao: meu.comissao, volume: meu.volume, contratos: meu.contratos }
         } catch (e) {
           if (e instanceof SemPermissao) throw e
           return { data, comissao: 0, volume: 0, contratos: 0 }
@@ -147,12 +184,8 @@ export async function buscarSerieEntre(session: AuthSession, de: string, ate: st
       parte.map(async (data) => {
         try {
           const r = await consultar(session, data, data)
-          return {
-            data,
-            comissao: Number(r.total_app_markup_usd ?? 0),
-            volume: Number(r.total_volume_usd ?? 0),
-            contratos: Number(r.total_contract_count ?? 0),
-          }
+          const meu = doApp(r, session.appId ?? MARCA.appId)
+          return { data, comissao: meu.comissao, volume: meu.volume, contratos: meu.contratos }
         } catch (e) {
           if (e instanceof SemPermissao) throw e
           return { data, comissao: 0, volume: 0, contratos: 0 }
@@ -309,6 +342,27 @@ interface ContratoFechado {
 const daApp = (appId: unknown) => appId == null || String(appId) === MARCA.appId
 
 /** Todos os contratos fechados de um dia (UTC), paginando ate o fim. */
+/**
+ * Um pedido que espera quando a Deriv pede calma.
+ *
+ * `profit_table` tem cota por minuto. Quando ela estourava, a tela de
+ * Comissões mostrava um erro vermelho no meio dos números e parava de
+ * somar (visto em 30/09/2026). Esperar e tentar de novo resolve, porque a
+ * cota volta em menos de um minuto.
+ */
+const ESPERAS_DA_COTA_MS = [15_000, 40_000]
+async function pedirComPaciencia(socket: TeedsSocket, corpo: Record<string, unknown>): Promise<any> {
+  for (let tentativa = 0; ; tentativa += 1) {
+    try {
+      return await socket.send(corpo as never)
+    } catch (e) {
+      const texto = (e as Error).message
+      if (!/ratelimit|rate limit/i.test(texto) || tentativa >= ESPERAS_DA_COTA_MS.length) throw e
+      await new Promise((r) => setTimeout(r, ESPERAS_DA_COTA_MS[tentativa]))
+    }
+  }
+}
+
 async function contratosDoDia(
   socket: TeedsSocket,
   dia: string,
@@ -319,7 +373,7 @@ async function contratosDoDia(
   let truncado = false
 
   for (let pagina = 0; pagina < MAX_PAGINAS_LUCROS; pagina += 1) {
-    const res = await socket.send({
+    const res = await pedirComPaciencia(socket, {
       profit_table: 1,
       description: 1,
       limit: POR_PAGINA_LUCROS,
@@ -495,7 +549,7 @@ export async function atualizarHoje(socket: TeedsSocket, estado: HojeAoVivo, tax
   let pular = 0
 
   for (let pagina = 0; pagina < MAX_PAGINAS_LUCROS; pagina += 1) {
-    const res = await socket.send({
+    const res = await pedirComPaciencia(socket, {
       profit_table: 1,
       description: 1,
       limit: POR_PAGINA_LUCROS,
