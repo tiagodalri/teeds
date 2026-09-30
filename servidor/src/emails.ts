@@ -102,6 +102,32 @@ function seguro(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
+/**
+ * O corpo em parágrafos, respeitando as quebras de linha do texto.
+ *
+ * Antes o corpo inteiro ia dentro de um `<p>` só, e `\n` em HTML é espaço:
+ * "Seus dados de entrada: E-mail: maria@… Senha provisória: 123mudar Você já
+ * pode entrar…" saía tudo numa linha. Justo o e-mail de cadastro, em que a
+ * senha é a coisa mais importante da mensagem.
+ *
+ * Linha em branco separa parágrafo; quebra simples vira quebra de linha. E a
+ * linha no formato "Rótulo: valor" — que é como os dados de acesso são
+ * escritos — ganha o valor em negrito, para a pessoa achar de relance.
+ */
+function emParagrafos(corpo: string): string {
+  const destacar = (linha: string) => {
+    const m = linha.match(/^([A-Za-zÀ-ÿ][^:]{2,28}):\s+(\S.*)$/)
+    return m ? `${seguro(m[1])}: <b style="color:#1a2233;">${seguro(m[2])}</b>` : seguro(linha)
+  }
+  return corpo
+    .split(/\n{2,}/)
+    .map((bloco) => {
+      const linhas = bloco.split('\n').map(destacar).join('<br>')
+      return `<p style="margin:0 0 16px;font-size:14.5px;line-height:1.65;color:#4a5568;">${linhas}</p>`
+    })
+    .join('')
+}
+
 export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, personalizado?: Conteudo): EmailPronto {
   const c = personalizado ?? conteudo(tipo, marca.prosa)
   const e = marca.email
@@ -146,7 +172,7 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
         <td style="padding:30px 32px 6px;font-family:${SANS};">
           <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;font-weight:650;
                      letter-spacing:-.02em;color:#1a2233;">${seguro(c.titulo)}</h1>
-          <p style="margin:0 0 22px;font-size:14.5px;line-height:1.65;color:#4a5568;">${seguro(c.corpo)}</p>
+          <div style="margin:0 0 22px;">${emParagrafos(c.corpo)}</div>
         </td>
       </tr>
 

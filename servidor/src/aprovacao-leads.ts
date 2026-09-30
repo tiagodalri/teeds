@@ -1,6 +1,6 @@
 import './ambiente'
 import { createHmac, randomUUID } from 'node:crypto'
-import { marcaPorId } from '../../src/marca/marcas'
+import { marcaPorId, type Marca } from '../../src/marca/marcas'
 import { montarEmail } from './emails'
 import { planoClienteValido } from '../../src/core/teeds/planos'
 
@@ -74,6 +74,38 @@ async function despachar(marca: ReturnType<typeof marcaPorId>, para: string, ema
   if (!r.ok) throw new Error('Envio indisponível')
 }
 
+/**
+ * Os dois e-mails do cadastro, em um lugar só.
+ *
+ * Ficam aqui, exportados, porque a prévia (`npm run emails`) monta os MESMOS
+ * textos. Se o corpo do e-mail morasse dentro do carteiro, a prévia seria uma
+ * segunda versão do texto — e uma versão que ninguém checa envelhece calada.
+ */
+export function emailDeCadastro(marca: Marca, email: string) {
+  return montarEmail(marca,'confirmar',new URL('/',marca.redirectUri).href,{
+    assunto:`Cadastro recebido · ${marca.prosa}`,
+    titulo:'Cadastro recebido',
+    espia:`Seu cadastro na ${marca.prosa} foi recebido e está em análise.`,
+    corpo:`Recebemos o seu cadastro na ${marca.prosa}. Ele está em análise pela nossa equipe — assim que for aprovado, você recebe um segundo e-mail avisando que o acesso está liberado.\n\nSeus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${SENHA_PROVISORIA}\n\nVocê já pode entrar na plataforma com esses dados. No primeiro acesso, você cria a sua própria senha — a provisória deixa de valer nesse momento.`,
+    botao:'Entrar na plataforma',
+    aviso:'A senha provisória é temporária e serve só para o primeiro acesso. Se não foi você que se cadastrou, pode ignorar este e-mail.',
+  })
+}
+
+export function emailDeAprovacao(marca: Marca, email: string, aindaProvisoria: boolean) {
+  const entrada=aindaProvisoria
+    ? `Seus dados de entrada continuam os mesmos do cadastro:\nE-mail: ${email}\nSenha provisória: ${SENHA_PROVISORIA}\n\nNo primeiro acesso você cria a sua própria senha — a provisória deixa de valer nesse momento. Depois, para trocar quando quiser, é pelo seu perfil, no canto da tela.`
+    : `Sua conta e seu histórico foram preservados. Entre com o e-mail ${email} e a sua senha atual. Se não lembrar, clique em “Esqueci a senha” na tela de acesso e você recebe um link para definir uma nova senha.`
+  return montarEmail(marca,'convite',new URL('/',marca.redirectUri).href,{
+    assunto:`Cadastro aprovado · seu acesso à ${marca.prosa} está liberado`,
+    titulo:'Cadastro aprovado',
+    espia:`Seu acesso à ${marca.prosa} foi liberado.`,
+    corpo:`Parabéns! Seu cadastro na ${marca.prosa} foi aprovado e o seu acesso está liberado. Você já pode entrar, conectar a sua conta da corretora e começar a operar.\n\n${entrada}`,
+    botao:'Acessar a plataforma',
+    aviso:'Guarde seus dados de acesso com segurança. Não compartilhe sua senha com ninguém.',
+  })
+}
+
 let cadastrando=false
 /**
  * O e-mail de boas-vindas, logo depois do cadastro.
@@ -108,14 +140,7 @@ export async function enviarCadastros() {
         if (!usuario?.id) throw new Error('Conta não criada')
         if (!p.user_id) await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}`,'PATCH',{user_id:usuario.id})
 
-        const email=montarEmail(marca,'confirmar',new URL('/',marca.redirectUri).href,{
-          assunto:`Cadastro recebido · ${marca.prosa}`,
-          titulo:'Cadastro recebido',
-          espia:`Seu cadastro na ${marca.prosa} foi recebido e está em análise.`,
-          corpo:`Recebemos o seu cadastro na ${marca.prosa}. Ele está em análise pela nossa equipe — assim que for aprovado, você recebe um segundo e-mail avisando que o acesso está liberado.\n\nSeus dados de entrada:\nE-mail: ${p.email}\nSenha provisória: ${SENHA_PROVISORIA}\n\nVocê já pode entrar na plataforma com esses dados. No primeiro acesso, você cria a sua própria senha — a provisória deixa de valer nesse momento.`,
-          botao:'Entrar na plataforma',
-          aviso:'A senha provisória é temporária e serve só para o primeiro acesso. Se não foi você que se cadastrou, pode ignorar este e-mail.',
-        })
+        const email=emailDeCadastro(marca,p.email)
         await despachar(marca,p.email,email,`cadastro-lead-${p.id}`)
         await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}&status=eq.pendente`,'PATCH',{email_cadastro_em:new Date().toISOString()})
       } catch { console.warn('[cadastro] E-mail de boas-vindas pendente; será tentado novamente.') }
@@ -138,16 +163,7 @@ export async function enviarAprovacoes() {
         // ser o único e-mail que a pessoa achar depois. Quem já criou a própria
         // senha não recebe senha nenhuma de volta.
         const aindaProvisoria=u.user_metadata?.trocar_senha===true
-        const entrada=aindaProvisoria
-          ? `Seus dados de entrada continuam os mesmos do cadastro:\nE-mail: ${p.email}\nSenha provisória: ${SENHA_PROVISORIA}\n\nNo primeiro acesso você cria a sua própria senha — a provisória deixa de valer nesse momento. Depois, para trocar quando quiser, é pelo seu perfil, no canto da tela.`
-          : `Sua conta e seu histórico foram preservados. Entre com o e-mail ${p.email} e a sua senha atual. Se não lembrar, clique em “Esqueci a senha” na tela de acesso e você recebe um link para definir uma nova senha.`
-        const corpo=`Parabéns! Seu cadastro na ${marca.prosa} foi aprovado e o seu acesso está liberado. Você já pode entrar, conectar a sua conta da corretora e começar a operar.\n\n${entrada}`
-        const email=montarEmail(marca,'convite',new URL('/',marca.redirectUri).href,{
-          assunto:`Cadastro aprovado · seu acesso à ${marca.prosa} está liberado`,
-          titulo:'Cadastro aprovado',
-          espia:`Seu acesso à ${marca.prosa} foi liberado.`,corpo,botao:'Acessar a plataforma',
-          aviso:'Guarde seus dados de acesso com segurança. Não compartilhe sua senha com ninguém.',
-        })
+        const email=emailDeAprovacao(marca,p.email,aindaProvisoria)
         await despachar(marca,p.email,email,`aprovacao-lead-${p.id}`)
         await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}&status=eq.aprovado`,'PATCH',{email_enviado_em:new Date().toISOString()})
       } catch { console.warn('[aprovação] E-mail pendente; será tentado novamente.') }
