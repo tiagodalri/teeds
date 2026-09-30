@@ -37,7 +37,9 @@ const CONTRATOS: Record<string, { entrada: number; recuperacao: number; acerto: 
   superior5: { entrada: P.tresDigitos, recuperacao: P.tresDigitos, acerto: .3, acertoRecuperacao: .3 },
   ag2: { entrada: P.tresDigitos, recuperacao: P.tresDigitos, acerto: .3, acertoRecuperacao: .3 },
   smart03: { entrada: P.seisDigitos, recuperacao: P.seisDigitos, acerto: .6, acertoRecuperacao: .6 },
-  goreme: { entrada: P.noveDigitos, recuperacao: P.noveDigitos, acerto: .9, acertoRecuperacao: .9 },
+  // Göreme recupera nos dígitos altos desde 30/09/2026: entra pagando 6% e
+  // recupera pagando ~192%, como o AG7.
+  goreme: { entrada: P.noveDigitos, recuperacao: P.tresDigitos, acerto: .9, acertoRecuperacao: .3 },
   firstblock: { entrada: P.cincoDigitos, recuperacao: P.cincoDigitos, acerto: .5, acertoRecuperacao: .5 },
   secondblock: { entrada: P.cincoDigitos, recuperacao: P.cincoDigitos, acerto: .5, acertoRecuperacao: .5 },
   thepalm: { entrada: P.noveDigitos, recuperacao: P.cincoDigitos, acerto: .9, acertoRecuperacao: .5 },
@@ -98,7 +100,10 @@ export function escadaDoRobo(id: string, base: number, passos = 30, modo: Modo =
   const estrategia = ESTRATEGIAS_LOCAIS.find((e) => e.id === id) ?? ESTRATEGIAS_LOCAIS[0]
   const config = configDeReferencia(parametros, base, modo)
   const contrato = contratoDo(id)
-  const palm = id === 'thepalm'
+  // Robôs que trocam de contrato na recuperação: a partir da 1ª perda a
+  // simulação usa o pagamento do contrato de recuperação, não o da entrada.
+  const trocaNaRecuperacao = id === 'thepalm' || id === 'goreme'
+  const palm = trocaNaRecuperacao
   const galeApos = config.galeApos
   const teto = tetoEfetivo(config)
   const memoria: Record<string, unknown> = {}
@@ -106,6 +111,9 @@ export function escadaDoRobo(id: string, base: number, passos = 30, modo: Modo =
   let perdido = 0
   // O motor começa com retorno 1 (engine.ts) e só o troca depois da primeira compra.
   let retorno = 1
+  // O tipo do contrato ANTERIOR: o Göreme calcula a primeira entrada da
+  // recuperação pelo pagamento do contrato novo, não pelo da entrada.
+  let tipoAnterior: 'DIGITOVER' | 'DIGITUNDER' = contrato.entrada > 2 ? 'DIGITOVER' : 'DIGITUNDER'
   for (let i = 0; i < passos; i++) {
     const perdidoAntes = perdido
     let valor = i === 0 ? base : estrategia.proximoValor({
@@ -119,7 +127,7 @@ export function escadaDoRobo(id: string, base: number, passos = 30, modo: Modo =
       retornoLiquidoPorUnidade: retorno,
       config,
       memoria,
-      contractType: 'DIGITUNDER',
+      contractType: tipoAnterior,
     })
     if (!Number.isFinite(valor)) {
       degraus.push({ n: i + 1, valor: 0, pagamento: 0, lucro: 0, recuperacao: true, perdido: centavos(perdido), cobre: false, markup: 0, esgotada: true })
@@ -132,6 +140,7 @@ export function escadaDoRobo(id: string, base: number, passos = 30, modo: Modo =
     const porDolar = palm ? (i > 0 ? contrato.recuperacao : contrato.entrada) : (recuperacao ? contrato.recuperacao : contrato.entrada)
     const pagamento = centavos(valor * porDolar)
     retorno = (pagamento - valor) / valor
+    tipoAnterior = porDolar > 2 ? 'DIGITOVER' : 'DIGITUNDER'
     perdido += valor
     const lucro = centavos(pagamento - valor)
     degraus.push({

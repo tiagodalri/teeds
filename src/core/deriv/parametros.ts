@@ -107,7 +107,9 @@ export const RECUPERACAO_POR_ROBO: Record<string, { galeApos: number; margem: nu
   // recuperacao 930x. Ligando na primeira perda a escada comeca em 18x —
   // ainda alta, porque e o payout que dita o tamanho, mas o buraco a cobrir
   // e um terco. Perda rara, recuperacao cedo.
-  goreme: { galeApos: 1, margem: 0.05 },
+  // Desde 30/09/2026 o Göreme recupera nos dígitos altos, com o pagamento do
+  // AG7 — então ele ganhou os mesmos dois modos, com os mesmos números.
+  goreme: { galeApos: 1, margem: 0.05, agressivo: { margem: 1, sobrePrejuizo: 0.2 } },
   firstblock: { galeApos: 1, margem: 0.05 },
   secondblock: { galeApos: 1, margem: 0.05 },
   // Versões OMNI (21/09/2026): mesma recuperação dos originais, com análise antes de entrar.
@@ -521,6 +523,9 @@ export function descrever(id: string, p: ParametrosDoRobo): string {
   const esperaDigitos = n === 1 ? 'Espera 1 dígito que teria perdido' : `Espera ${n} dígitos seguidos que teriam perdido`
   if (id === 'thepalm') return 'Analisa 25 dígitos e alterna entre Under 9 e Under 5 com proteção virtual.'
   if (id === 'superior5fixo') return 'Entra em todas as operações com o valor sempre igual, sem progressão.'
+  // O Göreme troca de contrato na recuperação (30/09/2026): a frase diz isso,
+  // senão a vitrine promete só a entrada e esconde metade do robô.
+  if (id === 'goreme') return `Ganha de ${digitos[0]} a ${digitos[digitos.length - 1]}. Perdeu uma, recupera nos dígitos altos (7, 8 ou 9) e volta.`
   if (FAMILIA_AG7.has(id)) {
     if (n === 0) return `Entra em toda operação. Ganha quando o último dígito é ${listaDeDigitos(digitos)}.`
     return `${esperaDigitos} e entra; ${segue ? 'segue a sequência até fechá-la' : 'analisa de novo a cada entrada'}.`

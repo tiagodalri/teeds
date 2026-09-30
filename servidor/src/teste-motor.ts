@@ -10,7 +10,7 @@
  */
 import { MotorTeeds, recusaDefinitiva, type Contexto } from '../../src/core/deriv/engine'
 import { definirTempoDaDeriv, fetchAccounts, fetchTradingSocketUrl, createAccount } from '../../src/core/deriv/account'
-import { SUPERIOR_5, AG_2, FIRST_BLOCK, SECOND_BLOCK, SMART_03, THE_PALM, OMNI_OVER, OMNI_BULL, OMNI_BEAR, temModos } from '../../src/core/deriv/strategies'
+import { SUPERIOR_5, AG_2, FIRST_BLOCK, SECOND_BLOCK, GOREME, SMART_03, THE_PALM, OMNI_OVER, OMNI_BULL, OMNI_BEAR, temModos } from '../../src/core/deriv/strategies'
 import { escadaDoRobo } from '../../src/core/deriv/escada'
 import { toOpenContract } from '../../src/core/deriv/trading'
 import { precisaoInformada } from '../../src/core/deriv/types'
@@ -277,6 +277,33 @@ async function provasDaDeriv() {
   conferir('T2 First Block: loss virtual antes de entrar', [FIRST_BLOCK.entrar(ctx([2, 7])), FIRST_BLOCK.entrar(ctx([2, 7, 9])), FIRST_BLOCK.entradaContinua], [false, true, false])
   conferir('T3 Second Block: loss virtual espelhado', [SECOND_BLOCK.entrar(ctx([6, 4])), SECOND_BLOCK.entrar(ctx([6, 0, 4]))], [false, true])
   conferir('T4 AG7 recupera desde a primeira perda e mantém os modos', [SUPERIOR_5.proximoValor(depoisDeUmaPerda) * depoisDeUmaPerda.retornoLiquidoPorUnidade >= .35, temModos('superior5')], [true, true])
+}
+
+/* ------------------------------------------------------------------ *
+ * Göreme: perde uma e recupera nos dígitos altos (30/09/2026).
+ * ------------------------------------------------------------------ */
+{
+  const mem: Record<string, unknown> = {}
+  const ctx = (digitos: number[]): Contexto => ({ digitos, perdasSeguidas: 0, vitoriasSeguidas: 0, operacoes: 0, resultado: 0, prejuizoDaSequencia: 0, memoria: mem, config: contexto([]).config })
+  const contratoAgora = () => GOREME.contrato!(ctx([]))
+  conferir('G1 Göreme entra ganhando de 0 a 8', [contratoAgora().contractType, contratoAgora().barreira], ['DIGITUNDER', 9])
+  GOREME.aposResultado!({ ganhou: false, contractType: 'DIGITUNDER', memoria: mem, digitos: [9], config: contexto([]).config } as never)
+  conferir('G2 perdeu: troca para os dígitos altos', [contratoAgora().contractType, contratoAgora().barreira], ['DIGITOVER', 6])
+  // A perda veio de um contrato que paga 6%; a recuperação compra um que paga ~192%.
+  // A escada tem de usar o pagamento da compra NOVA: 1 dólar perdido vira ~0,58, não ~18.
+  const passo = {
+    valorAtual: 1, valorInicial: 1, valorAoVencer: 1, ganhou: false, lucro: -1,
+    perdasSeguidas: 1, prejuizoDaSequencia: 1, retornoLiquidoPorUnidade: 0.0616,
+    config: { ...contexto([]).config, galeApos: 1, fatorGale: 1, lucroSobrePrejuizo: 0.2 }, memoria: mem,
+    contractType: 'DIGITUNDER',
+  }
+  const primeira = GOREME.proximoValor(passo as never)
+  conferir('G3 primeira entrada da recuperação usa o pagamento dos dígitos altos', primeira < 2 && primeira > 1, true)
+  const segunda = GOREME.proximoValor({ ...passo, contractType: 'DIGITOVER', retornoLiquidoPorUnidade: 1.9225, perdasSeguidas: 2, prejuizoDaSequencia: 1 + primeira } as never)
+  conferir('G4 da segunda em diante usa o pagamento real do contrato comprado', segunda > primeira, true)
+  GOREME.aposResultado!({ ganhou: true, contractType: 'DIGITOVER', memoria: mem, digitos: [8], config: contexto([]).config } as never)
+  conferir('G5 ganhou a recuperação: volta a ganhar de 0 a 8', [contratoAgora().contractType, contratoAgora().barreira], ['DIGITUNDER', 9])
+  conferir('G6 Göreme passa a ter os dois modos, como o AG7', temModos('goreme'), true)
 }
 
 provasDeParada().then(provasDaDeriv).then(() => {

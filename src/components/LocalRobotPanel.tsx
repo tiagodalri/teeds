@@ -186,8 +186,19 @@ export function LocalRobotPanel({
    * linha, e é assim que os números começam a divergir.
    */
 
-  // a regra do contrato dita em uma frase, para a tela nao falar em codigo
-  const b = estrategia.barreira ?? 5
+  /*
+    A regra do contrato dita em uma frase, para a tela nao falar em codigo.
+
+    Robôs que trocam de contrato na recuperação (The Palm, Göreme) fariam a
+    fita de dígitos mentir se ela olhasse só a estratégia: ela mostraria os
+    dígitos da entrada enquanto o robô compra os da recuperação. Então a
+    regra segue o contrato que está valendo agora — o aberto, ou o da última
+    operação — e só cai na estratégia quando ainda não houve nenhuma.
+  */
+  const emCurso = estado?.emCurso
+  const ultima = estado?.historico?.[0]
+  const tipoAgora = emCurso?.contractType ?? ultima?.contractType ?? estrategia.contractType
+  const b = emCurso?.barreira ?? ultima?.barreira ?? estrategia.barreira ?? 5
   const regra = {
     DIGITOVER: `maior que ${b}`,
     DIGITUNDER: `menor que ${b}`,
@@ -195,10 +206,10 @@ export function LocalRobotPanel({
     DIGITDIFF: `diferente de ${b}`,
     DIGITEVEN: 'par',
     DIGITODD: 'ímpar',
-  }[estrategia.contractType] ?? estrategia.contractType
+  }[tipoAgora] ?? tipoAgora
 
   const ganhaCom = (d: number) => {
-    switch (estrategia.contractType) {
+    switch (tipoAgora) {
       case 'DIGITOVER': return d > b
       case 'DIGITUNDER': return d < b
       case 'DIGITMATCH': return d === b

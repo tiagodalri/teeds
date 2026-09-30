@@ -94,8 +94,8 @@ export const CATALOGO: Identidade[] = [
     chance: 60, contrato: 'DIGITOVER',
   },
   {
-    id: 'goreme', nome: nomeDaEstrategia('goreme'), chamada: 'O seletivo',
-    descricao: 'Ganha quando o último dígito está entre 0 e 8.',
+    id: 'goreme', nome: nomeDaEstrategia('goreme'), chamada: 'O que troca de lado',
+    descricao: 'Ganha de 0 a 8. Perdeu uma, recupera nos dígitos altos (7, 8 ou 9) e volta.',
     cor: '#b86f3c', corSuave: '#f8ebe3', onde: 'teeds',
     emblema: 'M8 26 Q13 12 20 12 Q27 12 32 26 M12 26 h16 M20 8 v4',
     chance: 90, contrato: 'DIGITUNDER',

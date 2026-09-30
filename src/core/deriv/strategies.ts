@@ -260,17 +260,87 @@ export const SMART_03: Estrategia = {
 }
 
 /** Göreme observável no vídeo: último dígito estritamente inferior a 9. */
+/* ------------------------------------------------------------------ *
+ * Göreme: perde uma e troca de lado para recuperar (30/09/2026).
+ *
+ * Na entrada ele ganha com 0 a 8 — acerta quase sempre, mas paga só 6% por
+ * acerto. Recuperar uma perda nesse pagamento exigia 18x a entrada, e a
+ * escada seguinte explodia.
+ *
+ * Agora, depois da primeira perda, ele troca para os dígitos altos (7, 8 ou
+ * 9), o contrato do AG7, que paga quase o dobro da entrada. Recuperar ali
+ * custa uma fração do que custava. Ganhou a recuperação, volta para 0 a 8.
+ *
+ * O detalhe que faz a conta fechar: a escada se calcula pelo pagamento da
+ * PRÓXIMA compra, não da anterior. Como a perda veio de um contrato de 6% e
+ * a próxima compra é de ~192%, a primeira entrada da recuperação usa o
+ * pagamento presumido do Over 6; da segunda em diante o motor já tem o
+ * pagamento real do contrato que acabou de comprar.
+ * ------------------------------------------------------------------ */
+type FaseGoreme = 'base' | 'recuperacao'
+const faseGoreme = (memoria: Record<string, unknown>): FaseGoreme =>
+  (memoria.faseGoreme as FaseGoreme | undefined) ?? 'base'
+/** Pagamento presumido do Over 6 (2,92 por 1) na virada para a recuperação. */
+const RETORNO_OVER_6 = 1.9
+const GOREME_BASE = porLossVirtual((d) => d <= 8, 0)
+
 export const GOREME: Estrategia = {
   ...BASE_DIGITOS,
   id: 'goreme',
   nome: '{marca} Göreme',
   origem: 'reconstruído a partir do vídeo do robô original',
   descricao:
-    'Opera contratos de 1 tick e ganha quando o último dígito está entre 0 e 8. ' +
-    'O retorno por acerto é pequeno, por isso a recuperação liga já na primeira perda.',
+    'Ganha quando o último dígito está entre 0 e 8. Perdeu uma, troca para os dígitos ' +
+    'altos (7, 8 ou 9), onde o pagamento é quase o dobro da entrada, e recupera ali. ' +
+    'Ganhou a recuperação, volta a operar de 0 a 8.',
   contractType: 'DIGITUNDER',
   barreira: 9,
-  ...porLossVirtual((d) => d <= 8, 0),
+  ...GOREME_BASE,
+  contrato: ({ memoria }) => faseGoreme(memoria) === 'recuperacao'
+    ? { contractType: 'DIGITOVER', barreira: 6 }
+    : { contractType: 'DIGITUNDER', barreira: 9 },
+  aposResultado: (ctx) => {
+    GOREME_BASE.aposResultado?.(ctx)
+    const antes = faseGoreme(ctx.memoria)
+    const agora: FaseGoreme = ctx.ganhou ? 'base' : 'recuperacao'
+    if (antes !== agora) {
+      ctx.memoria.faseGoremeAnterior = antes
+      ctx.memoria.motivoGoreme = ctx.ganhou
+        ? 'recuperação fechada: volta a operar de 0 a 8'
+        : 'perdeu: recupera nos dígitos altos (7, 8 ou 9)'
+      ctx.memoria.trocaGoremeEm = Date.now()
+    }
+    ctx.memoria.faseGoreme = agora
+  },
+  aguardando: (ctx) => faseGoreme(ctx.memoria) === 'recuperacao'
+    ? 'recuperando nos dígitos altos — ganha com 7, 8 ou 9'
+    : GOREME_BASE.aguardando!(ctx),
+  progresso: (ctx) => faseGoreme(ctx.memoria) === 'recuperacao'
+    ? { rotulo: 'Recuperação nos dígitos altos', itens: [7, 8, 9].map((v) => ({ valor: String(v), ok: true })) }
+    : GOREME_BASE.progresso!(ctx),
+  proximoValor: (args) => {
+    if (args.ganhou || args.perdasSeguidas < args.config.galeApos) return BASE_DIGITOS.proximoValor(args)
+    // A compra que vem é Over 6. Se a anterior foi a entrada de 0 a 8, o
+    // pagamento dela não serve de régua: seria uma escada 30x maior.
+    const retorno = args.contractType === 'DIGITOVER' ? args.retornoLiquidoPorUnidade : RETORNO_OVER_6
+    return BASE_DIGITOS.proximoValor({ ...args, retornoLiquidoPorUnidade: retorno })
+  },
+  telemetria: ({ memoria }) => {
+    const fase = faseGoreme(memoria)
+    return {
+      fase,
+      anterior: (memoria.faseGoremeAnterior as string | undefined) ?? null,
+      motivo: (memoria.motivoGoreme as string | undefined) ?? null,
+      contrato: fase === 'recuperacao' ? 'DIGITOVER' : 'DIGITUNDER',
+      barreira: fase === 'recuperacao' ? 6 : 9,
+      virtual: false,
+      detalhes: {
+        estrategiaAtual: fase === 'recuperacao' ? 'Over 6 (7, 8 ou 9)' : 'Under 9 (0 a 8)',
+        estrategiaAnterior: memoria.faseGoremeAnterior === 'recuperacao' ? 'Over 6 (7, 8 ou 9)' : memoria.faseGoremeAnterior ? 'Under 9 (0 a 8)' : '',
+        confirmacao: fase === 'recuperacao' ? 'recuperando no pagamento alto' : 'entrada liberada',
+      },
+    }
+  },
 }
 
 /** Primeiro bloco da dezena: vence com qualquer último dígito entre 0 e 4. */
