@@ -90,6 +90,42 @@ button, input, select, textarea { font-family: inherit; }
 .entrada-senha button { position: absolute; right: 4px; min-height: 40px; padding: 8px 10px; border: 0; background: transparent; color: var(--text); cursor: pointer; font-size: 12px; }
 .entrada-caps { font-size: 12px; color: var(--text); }
 
+/* Compact login only: registration and recovery keep their own natural height.
+   Never clip content when the keyboard, text scaling or an error needs space. */
+@media (max-width: 600px) {
+  body .entrada[data-modo="entrar"] {
+    min-height: 100svh;
+    padding: max(8px, var(--sat, 0px)) max(10px, var(--sar, 0px)) max(8px, var(--sab, 0px)) max(10px, var(--sal, 0px));
+  }
+  .entrada[data-modo="entrar"] .entrada-caixa { padding: 10px 16px; border-radius: 18px; }
+  .entrada[data-modo="entrar"] .entrada-topo { margin-bottom: 6px; gap: 8px; flex-wrap: nowrap; }
+  .entrada[data-modo="entrar"] .marca { gap: 8px; }
+  .entrada[data-modo="entrar"] .marca-selo { width: 30px !important; height: 30px !important; }
+  .entrada[data-modo="entrar"] .marca-selo img { width: 30px; height: 30px; }
+  .entrada[data-modo="entrar"] .marca-nome { font-size: 17px; letter-spacing: .12em; }
+  .entrada[data-modo="entrar"] .entrada-opera { padding: 4px 6px; font-size: 8px; gap: 4px; }
+  .entrada[data-modo="entrar"] .entrada-opera svg { width: 42px; height: 16px; }
+  .entrada[data-modo="entrar"] .entrada-cabecalho { margin-bottom: 6px; }
+  .entrada[data-modo="entrar"] h1 { font-size: 23px; margin-bottom: 6px; }
+  .entrada[data-modo="entrar"] .entrada-linha { font-size: 12px; line-height: 1.4; }
+  .entrada[data-modo="entrar"] .entrada-form { gap: 4px; }
+  .entrada[data-modo="entrar"] .entrada-form label { gap: 4px; }
+  .entrada[data-modo="entrar"] .entrada-form .rot { font-size: 12px; }
+  .entrada[data-modo="entrar"] .entrada-form input { min-height: 44px; height: 44px; padding: 10px 12px; font-size: 16px; }
+  .entrada[data-modo="entrar"] .entrada-senha input { padding-right: 80px; }
+  .entrada[data-modo="entrar"] .entrada-btn { min-height: 44px; margin-top: 0; padding: 10px 16px; font-size: 14px; }
+  .entrada[data-modo="entrar"] .entrada-troca { margin-top: 2px; }
+  .entrada[data-modo="entrar"] .entrada-corretora { margin-top: 4px; padding: 8px 12px; }
+  .entrada[data-modo="entrar"] .corretora-topo { margin-bottom: 6px; gap: 8px; }
+  .entrada[data-modo="entrar"] .corretora-topo svg { height: 18px; width: auto; }
+  .entrada[data-modo="entrar"] .corretora-selo { font-size: 8px; }
+  .entrada[data-modo="entrar"] .entrada-corretora b { font-size: 12px; }
+  .entrada[data-modo="entrar"] .entrada-corretora p { max-width: none; margin: 4px auto; font-size: 11px; line-height: 1.4; }
+  .entrada[data-modo="entrar"] .btn-deriv { min-height: 44px; padding: 10px 12px; font-size: 12px; }
+  .entrada[data-modo="entrar"] .entrada-seguranca { margin-top: 8px; gap: 6px; font-size: 9px; }
+  .entrada[data-modo="entrar"] .entrada-rodape { margin-top: 6px; font-size: 9px; line-height: 1.4; white-space: normal; letter-spacing: normal; }
+}
+
 /* Comfortable interactions throughout content and administrative panels. */
 .ux-session-reason { margin: 12px 16px; padding: 12px 14px; border-left: 3px solid var(--primary); background: var(--surface); font-size: 13px; }
 .ux-history-filter { margin-left: auto; min-height: 36px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 12px; }

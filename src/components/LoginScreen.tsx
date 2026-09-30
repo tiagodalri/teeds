@@ -113,7 +113,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   )
 
   return (
-    <div className="entrada">
+    <div className="entrada" data-modo={modo}>
       <div className="entrada-aurora" aria-hidden="true" />
       <div className="entrada-grade" aria-hidden="true" />
 
