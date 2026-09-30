@@ -1,3 +1,10 @@
-8319c270e9bd616b0a69e6be7d6a6b69c6385f59407dd6bdcacab7d8b7bd34b6  ./MonitoramentoPanel.js
-1918b39246b1e7c63c2df445f1918278d7c0f589ba3689b0ecde699a0079d4f9  ./omni.css
-97617e272adc2d1c17fa419bd14b22830e753125756f8216dccc4b842b2fd0b7  ./omni.js
+perl: warning: Setting locale failed.
+perl: warning: Please check that your locale settings:
+	LC_ALL = "C.UTF-8",
+	LC_CTYPE = "C.UTF-8",
+	LANG = "C.UTF-8"
+    are supported and installed on your system.
+perl: warning: Falling back to the standard locale ("C").
+6f30e50b4f325a63094f7780fefb5370259c5440cbac02e5768ac0a3edcf7f59  ./MonitoramentoPanel.js
+5e93c76595ab2dc361bb5699403ff221a5a5f2a88fad445ff94956783049236a  ./omni.css
+7abbb4bf3ef18b0cc44a3708d52a9fa86939c9949cba5c9835ce232db5fecd39  ./omni.js
