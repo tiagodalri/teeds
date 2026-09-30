@@ -62,7 +62,7 @@ await teste('consulta paginada é filtrada por marca',async()=>{
 await teste('e-mail aprovado usa senha provisória e marca correta',async()=>{
   passos=[{path:'status=eq.aprovado',data:[{id,marca:'omni',email:'teste@example.invalid',user_id:uid}]},
     {path:`/auth/v1/admin/users/${uid}`,data:{app_metadata:{aprovacao_lead:id},user_metadata:{trocar_senha:true}}},
-    {path:'api.resend.com/emails',body:b=>{assert.match(b.subject,/OMNI/i);assert.ok(b.text.includes(SENHA_PROVISORIA));assert.ok(!b.html.includes('teedscompany.com'))}},
+    {path:'api.resend.com/emails',body:b=>{assert.match(b.subject,/OMNI/i);assert.ok(b.text.includes('senha recebida'));assert.ok(!b.text.includes(SENHA_PROVISORIA));assert.ok(!b.html.includes('teedscompany.com'))}},
     {path:`clientes_pendentes?id=eq.${id}`,body:b=>assert.ok(b.email_enviado_em)}]
   await enviarAprovacoes()
 })
@@ -94,16 +94,28 @@ await teste('e-mail do cadastro cria a conta com a senha da casa e avisa que est
 })
 await teste('conta que já existe não é recriada, e o e-mail sai do mesmo jeito',async()=>{
   passos=[{path:'status=eq.pendente&email_cadastro_em=is.null',data:[{id,marca:'teeds',email:'teste@example.invalid',nome:'Teste',telefone:'1',user_id:uid}]},
-    {path:'/auth/v1/admin/users?filter=',data:{users:[{id:uid,email:'teste@example.invalid'}]}},
-    {path:'api.resend.com/emails',body:b=>assert.ok(b.text.includes(SENHA_PROVISORIA))},
+    {path:`/auth/v1/admin/users/${uid}`,data:{id:uid,email:'teste@example.invalid'}},
+    {path:'api.resend.com/emails',body:b=>{assert.ok(!b.text.includes(SENHA_PROVISORIA));assert.ok(b.text.includes('Sua senha não foi alterada'));assert.ok(b.text.includes('Esqueci a senha'))}},
     {path:'clientes_pendentes?id=',body:b=>assert.ok(b.email_cadastro_em)}]
   await enviarCadastros()
 })
 await teste('falha no envio do cadastro não marca como enviado',async()=>{
   passos=[{path:'status=eq.pendente&email_cadastro_em=is.null',data:[{id,marca:'teeds',email:'teste@example.invalid',nome:'Teste',telefone:'1',user_id:uid}]},
-    {path:'/auth/v1/admin/users?filter=',data:{users:[{id:uid,email:'teste@example.invalid'}]}},
+    {path:`/auth/v1/admin/users/${uid}`,data:{id:uid,email:'teste@example.invalid'}},
     {path:'api.resend.com/emails',status:500}]
   await enviarCadastros()
 })
 
+await teste('consulta de conta indisponível não tenta criar outro usuário',async()=>{
+  passos=[{path:'status=eq.pendente',data:[{id,marca:'teeds',email:'teste@example.invalid',user_id:null}]},
+    {path:'/auth/v1/admin/users?filter=',status:500}]
+  await enviarCadastros()
+})
+await teste('retentativa de conta criada nesta ficha mantém a senha enviada',async()=>{
+  passos=[{path:'status=eq.pendente',data:[{id,marca:'omni',email:'teste@example.invalid',user_id:uid}]},
+    {path:`/auth/v1/admin/users/${uid}`,data:{id:uid,app_metadata:{cadastro_lead:id},user_metadata:{trocar_senha:true}}},
+    {path:'api.resend.com/emails',body:b=>assert.ok(b.text.includes(SENHA_PROVISORIA))},
+    {path:'clientes_pendentes?id='}]
+  await enviarCadastros()
+})
 console.log(`${total} testes de aprovação concluídos.`)

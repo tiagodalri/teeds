@@ -81,20 +81,23 @@ async function despachar(marca: ReturnType<typeof marcaPorId>, para: string, ema
  * textos. Se o corpo do e-mail morasse dentro do carteiro, a prévia seria uma
  * segunda versão do texto — e uma versão que ninguém checa envelhece calada.
  */
-export function emailDeCadastro(marca: Marca, email: string) {
+export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: string) {
+  const acesso=senhaProvisoria
+    ? `Seus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${senhaProvisoria}\n\nNo primeiro acesso, você cria a sua própria senha.`
+    : `Sua conta e seu histórico foram preservados. E-mail de acesso: ${email}. Sua senha não foi alterada. Se não lembrar dela, clique em “Esqueci a senha” na tela de acesso para receber um link e definir uma nova senha.`
   return montarEmail(marca,'confirmar',new URL('/',marca.redirectUri).href,{
     assunto:`Cadastro recebido · ${marca.prosa}`,
     titulo:'Cadastro recebido',
     espia:`Seu cadastro na ${marca.prosa} foi recebido e está em análise.`,
-    corpo:`Recebemos o seu cadastro na ${marca.prosa}. Ele está em análise pela nossa equipe — assim que for aprovado, você recebe um segundo e-mail avisando que o acesso está liberado.\n\nSeus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${SENHA_PROVISORIA}\n\nVocê já pode entrar na plataforma com esses dados. No primeiro acesso, você cria a sua própria senha — a provisória deixa de valer nesse momento.`,
+    corpo:`Recebemos o seu cadastro na ${marca.prosa}. Ele está em análise pela nossa equipe — assim que for aprovado, você recebe um segundo e-mail com as orientações de acesso.\n\n${acesso}`,
     botao:'Entrar na plataforma',
-    aviso:'A senha provisória é temporária e serve só para o primeiro acesso. Se não foi você que se cadastrou, pode ignorar este e-mail.',
+    aviso:'Se não foi você que se cadastrou, pode ignorar este e-mail. Não compartilhe seus dados de acesso.',
   })
 }
 
 export function emailDeAprovacao(marca: Marca, email: string, aindaProvisoria: boolean) {
   const entrada=aindaProvisoria
-    ? `Seus dados de entrada continuam os mesmos do cadastro:\nE-mail: ${email}\nSenha provisória: ${SENHA_PROVISORIA}\n\nNo primeiro acesso você cria a sua própria senha — a provisória deixa de valer nesse momento. Depois, para trocar quando quiser, é pelo seu perfil, no canto da tela.`
+    ? `E-mail de acesso: ${email}. Use a senha recebida quando sua conta foi criada. Se não encontrar esse e-mail, clique em “Esqueci a senha” na tela de acesso para definir uma nova senha. No primeiro acesso você cria a sua própria senha.`
     : `Sua conta e seu histórico foram preservados. Entre com o e-mail ${email} e a sua senha atual. Se não lembrar, clique em “Esqueci a senha” na tela de acesso e você recebe um link para definir uma nova senha.`
   return montarEmail(marca,'convite',new URL('/',marca.redirectUri).href,{
     assunto:`Cadastro aprovado · seu acesso à ${marca.prosa} está liberado`,
@@ -130,17 +133,23 @@ export async function enviarCadastros() {
         if (!marca.email.remetente) continue   // marca sem domínio verificado: não manda pela outra
         // A conta pode já existir: cadastro repetido, ou uma passada anterior
         // que criou a conta e caiu antes de marcar o envio.
-        let usuario=await banco(`/auth/v1/admin/users?filter=${encodeURIComponent(p.email)}`).then((d:any)=>(d?.users??[]).find((u:any)=>String(u.email).toLowerCase()===p.email)).catch(()=>undefined)
+        let usuario=p.user_id
+          ? await banco(`/auth/v1/admin/users/${encodeURIComponent(p.user_id)}`)
+          : await banco(`/auth/v1/admin/users?filter=${encodeURIComponent(p.email)}`).then((d:any)=>(d?.users??[]).find((u:any)=>String(u.email).toLowerCase()===p.email))
+        let criadaAgora=false
         if (!usuario) {
           usuario=await banco('/auth/v1/admin/users','POST',{
             email:p.email,password:SENHA_PROVISORIA,email_confirm:true,
             user_metadata:{nome:p.nome,telefone:p.telefone,marca:p.marca,trocar_senha:true},
+            app_metadata:{cadastro_lead:p.id},
           })
+          criadaAgora=true
         }
         if (!usuario?.id) throw new Error('Conta não criada')
         if (!p.user_id) await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}`,'PATCH',{user_id:usuario.id})
 
-        const email=emailDeCadastro(marca,p.email)
+        const senhaConhecida=criadaAgora || (usuario.app_metadata?.cadastro_lead===p.id && usuario.user_metadata?.trocar_senha===true)
+        const email=emailDeCadastro(marca,p.email,senhaConhecida?SENHA_PROVISORIA:undefined)
         await despachar(marca,p.email,email,`cadastro-lead-${p.id}`)
         await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}&status=eq.pendente`,'PATCH',{email_cadastro_em:new Date().toISOString()})
       } catch { console.warn('[cadastro] E-mail de boas-vindas pendente; será tentado novamente.') }
