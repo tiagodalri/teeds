@@ -25,7 +25,7 @@ const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
     acao: 'Entrar',
   },
   criar: {
-    titulo: `Entre na fila de espera ${MARCA.prosa}.`,
+    titulo: 'Cadastro Gratuito',
     linha: 'Deixe seus dados. Após a aprovação, você receberá por e-mail sua senha provisória e as instruções de acesso.',
     acao: 'Entrar na fila de espera',
   },

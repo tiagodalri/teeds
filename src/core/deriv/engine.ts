@@ -376,6 +376,21 @@ export class MotorTeeds {
     }
   }
 
+  /**
+   * Liga o robô. Com `anterior`, CONTINUA a sessão: placar, histórico e curva
+   * seguem; a escada de recuperação, não.
+   *
+   * Isso é decisão, não esquecimento (Tiago, 30/09/2026). Quando a sessão
+   * para no meio de uma recuperação — no stop, no limite de operações, numa
+   * recusa da corretora —, retomar a escada faria a primeira entrada depois
+   * do play voltar grande: na sessão do Matheus (24/09, AG2) seriam 2,73 em
+   * vez de 0,35, sem ninguém pedir. Apertar play tem de custar o mesmo
+   * sempre.
+   *
+   * O preço disso é explícito: o prejuízo que ficou para trás continua no
+   * placar da sessão e não será recuperado pela escada. Quem parou no meio
+   * de uma recuperação parou com ela.
+   */
   ligar(anterior?: EstadoMotor) {
     if (this.estado.rodando) return
     if (anterior?.emOperacao || anterior?.rodando) throw new Error('Aguarde a conclusão da sessão antes de continuar.')
@@ -388,7 +403,6 @@ export class MotorTeeds {
     this.memoria = {}
     this.liquidados = new Set()
     this.registrar(`Robô ligado — ${this.estrategia.nome}`, 'info')
-    if (anterior) this.retomarRecuperacao(anterior)
     this.estado.aguardando = 'lendo o histórico do ativo…'
     this.emitir()
 
@@ -613,71 +627,6 @@ export class MotorTeeds {
     this.fechar()
     this.registrar('Contrato concluído — sessão encerrada.', 'parada')
     this.emitir()
-  }
-
-  /**
-   * Continuar uma sessão retoma a escada de recuperação de onde ela parou.
-   *
-   * Um freio pode disparar no MEIO de uma recuperação: o limite de
-   * operações, o stop, uma recusa da corretora. O cliente então sobe o
-   * limite e manda continuar — e até 30/09/2026 a escada voltava para a
-   * entrada base com o prejuízo intacto no placar. Era uma perda que não
-   * tinha mais como ser recuperada, e o robô parecia não recuperar nada.
-   *
-   * Na conta do Matheus (24/09, AG2) aconteceu duas vezes na mesma sessão:
-   * parou devendo 7 perdas seguidas com a próxima entrada em 2,73 e voltou
-   * em 0,35; parou de novo com 4 perdas e 0,92 pela frente, e de novo
-   * voltou em 0,35.
-   *
-   * O prejuízo da sequência não viaja no estado — mas o histórico viaja, e
-   * as últimas perdas seguidas estão nele. O retorno por unidade sai do
-   * pagamento realmente contratado na última entrada; sem ele a conta usaria
-   * o retorno 1 do motor recém-criado e pediria quase o dobro.
-   *
-   * A próxima entrada é RECALCULADA (não copiada): entre a parada e o
-   * continuar o cliente pode ter mudado a entrada base ou o modo, e é a
-   * regra de agora que vale sobre o prejuízo que já existe.
-   */
-  private retomarRecuperacao(anterior: EstadoMotor) {
-    const perdas = Math.max(0, Math.round(anterior.perdasSeguidas ?? 0))
-    if (perdas <= 0) return
-
-    let prejuizo = 0
-    let contadas = 0
-    for (const op of anterior.historico) {
-      if (op.ganhou || contadas >= perdas) break
-      prejuizo += Math.abs(op.lucro)
-      contadas += 1
-    }
-    if (contadas === 0 || !(prejuizo > 0)) return
-
-    const ultima = anterior.historico[0]
-    if (ultima && ultima.valor > 0 && ultima.payout > ultima.valor) {
-      const retorno = (ultima.payout - ultima.valor) / ultima.valor
-      if (Number.isFinite(retorno) && retorno > 0) this.retornoLiquidoPorUnidade = retorno
-    }
-
-    this.estado.perdasSeguidas = contadas
-    this.prejuizoDaSequencia = prejuizo
-    this.estado.valorAtual = this.estrategia.proximoValor({
-      valorAtual: ultima?.valor ?? this.config.valorInicial,
-      valorInicial: this.config.valorInicial,
-      valorAoVencer: this.config.valorAoVencer,
-      ganhou: false,
-      lucro: 0,
-      perdasSeguidas: contadas,
-      prejuizoDaSequencia: prejuizo,
-      retornoLiquidoPorUnidade: this.retornoLiquidoPorUnidade,
-      config: this.config,
-      memoria: this.memoria,
-      contractType: ultima?.contractType ?? this.estrategia.contractType,
-    })
-    this.registrar(
-      `Continuando a recuperação: ${contadas} ${contadas === 1 ? 'perda seguida' : 'perdas seguidas'}, ` +
-      `${this.moeda} ${prejuizo.toFixed(2)} a recuperar. Próxima entrada ${this.moeda} ` +
-      `${Number.isFinite(this.estado.valorAtual) ? this.estado.valorAtual.toFixed(2) : '—'}.`,
-      'info',
-    )
   }
 
   /** A menor entrada que a Deriv aceita nos indices de volatilidade. */

@@ -307,17 +307,18 @@ async function provasDaDeriv() {
 }
 
 /**
- * O caso do Matheus (24/09/2026, AG2 na conta ROT91863761).
+ * Continuar NÃO retoma a escada de recuperação (Tiago, 30/09/2026).
  *
- * A sessão parou duas vezes no meio da recuperação — uma no stop, outra no
- * limite de 50 operações — e o cliente subiu o limite e mandou continuar.
- * As duas vezes a escada voltou para a entrada base com o prejuízo intacto
- * no placar, e os dois buracos ficaram sem como ser recuperados.
+ * A sessão do Matheus (24/09, AG2 na ROT91863761) parou duas vezes no meio de
+ * uma recuperação — no stop e no limite de 50 operações — e ele subiu o limite
+ * e mandou continuar. Retomar a escada faria a primeira entrada depois do play
+ * ser 2,73 e 0,92 em vez de 0,35, sem ninguém pedir. Apertar play custa o
+ * mesmo sempre; o prejuízo que ficou para trás fica no placar.
  */
-async function provasDeContinuarRecuperando() {
-  console.log('\nO CONTINUAR RETOMA A RECUPERAÇÃO\n')
-  // Os números são os do replay: 0,35 · 0,35 · 0,39 · 0,60 perdidos seguidos,
-  // pagamento de ~2,91x, e a próxima entrada que o motor tinha calculado: 0,92.
+async function provasDeContinuarNaBase() {
+  console.log('\nO CONTINUAR COMEÇA NA ENTRADA BASE\n')
+  // Os números do replay: 0,35 · 0,35 · 0,39 · 0,60 perdidos seguidos, e a
+  // próxima entrada que o motor tinha calculado quando o freio disparou: 0,92.
   const perdidas = [0.35, 0.35, 0.39, 0.60]
   const historico = perdidas.map((valor, i) => ({
     n: perdidas.length - i, contractId: 100 + i, valor, payout: Number((valor * 2.91).toFixed(2)),
@@ -327,7 +328,6 @@ async function provasDeContinuarRecuperando() {
   })).reverse()   // a mais recente primeiro, como o motor guarda
 
   const parada = {
-    ...contexto([]).config && {},
     rodando: false, emOperacao: false, operacoes: 50, vitorias: 21, derrotas: 29,
     perdasSeguidas: 4, resultado: -1.42, movimentado: 30, valorAtual: 0.92,
     aguardando: 'sessão encerrada', motivoParada: 'limite de 50 operações',
@@ -340,25 +340,14 @@ async function provasDeContinuarRecuperando() {
   const motor = new MotorTeeds({ socket, estrategia: AG_2, config: daSessao, symbol: '1HZ75V', moeda: 'USD', pipSize: 2 })
   motor.ligar(parada)
   const e = motor.estadoAtual
-  conferir('C1 continuar mantém as perdas seguidas', e.perdasSeguidas, 4)
-  conferir('C2 a escada volta de onde parou, não da base', e.valorAtual > 0.8 && e.valorAtual < 1.1, true)
-  conferir('C3 e não volta para a entrada base', e.valorAtual === 0.35, false)
-  conferir('C4 o placar da sessão continua o mesmo', [e.operacoes, Number(e.resultado.toFixed(2))], [50, -1.42])
-  conferir('C5 o registro diz o que está sendo recuperado', e.registros.some((r) => r.texto.includes('Continuando a recuperação')), true)
+  conferir('C1 continuar entra pela entrada base, não pelo degrau em que parou', e.valorAtual, 0.35)
+  conferir('C2 e não herda as perdas seguidas da sessão anterior', e.perdasSeguidas, 0)
+  conferir('C3 o placar da sessão, esse sim, continua o mesmo', [e.operacoes, Number(e.resultado.toFixed(2)), e.historico.length], [50, -1.42, 4])
+  conferir('C4 a curva também continua', e.curva, [0, -1.42])
   motor.desligar('teste')
-
-  // Depois de uma vitória não há o que retomar: continuar começa na base.
-  const ganha = { ...(parada as Record<string, unknown>), perdasSeguidas: 0,
-    historico: [{ ...historico[0], lucro: 0.67, ganhou: true }, ...historico] } as never
-  const { socket: s2 } = socketFalso()
-  const limpo = new MotorTeeds({ socket: s2, estrategia: AG_2, config: daSessao, symbol: '1HZ75V', moeda: 'USD', pipSize: 2 })
-  limpo.ligar(ganha)
-  conferir('C6 sem perda pendente, continuar começa na entrada base', limpo.estadoAtual.valorAtual, 0.35)
-  conferir('C7 e não inventa perdas seguidas', limpo.estadoAtual.perdasSeguidas, 0)
-  limpo.desligar('teste')
 }
 
-provasDeParada().then(provasDaDeriv).then(provasDeContinuarRecuperando).then(() => {
+provasDeParada().then(provasDaDeriv).then(provasDeContinuarNaBase).then(() => {
   console.log(`\n${certos} certos, ${errados} errados`)
   process.exit(errados ? 1 : 0)
 }).catch((e) => { console.error(e); process.exit(1) })
