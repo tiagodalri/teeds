@@ -6,8 +6,12 @@ import type { AuthSession } from '../../src/core/deriv/auth'
 import { marcaPorId } from '../../src/marca/marcas'
 import { autorizacaoDoCliente } from './cofre'
 import {
-  atualizarContaDeriv, clientesComAutorizacao, gravarComissoesDiarias, type ComissaoDiariaGravavel,
+  atualizarContaDeriv, clientesComAutorizacao, contratosRegistrados, gravarComissoesDiarias,
+  gravarContratosPorOrigem, janelasDeSessao, limparContratosPorOrigem,
+  type ComissaoDiariaGravavel, type ContratosPorOrigemGravavel,
 } from './supabase'
+import { separarPorOrigem, TAXA_MARKUP, type ContratoBruto, type Pistas } from './atribuicao'
+import { MARCAS } from '../../src/marca/marcas'
 
 /**
  * Comissão calculada pelo servidor, conta a conta.
@@ -29,7 +33,6 @@ import {
  * reais, erro de um cliente não para os outros.
  */
 
-const TAXA = 0.03
 const POR_PAGINA = 500
 /** 80 x 500 = 40 mil contratos num dia — o recorde até hoje foi 15.893. */
 const MAX_PAGINAS = 80
@@ -84,10 +87,49 @@ function janelaDoDia(dia: string): { de: number; ate: number } {
   }
 }
 
-/** Todos os contratos fechados de um dia que passaram pela app, somados. */
-async function lerDia(socket: TeedsSocket, dia: string, appId: string): Promise<DiaCalculado> {
+/** app da Deriv → marca nossa ('34gMUQ…' → 'teeds'). */
+const MARCA_DO_APP = new Map(Object.values(MARCAS).map((m) => [m.appId, m.id]))
+
+/**
+ * O extrato do dia: contrato → app que executou a compra.
+ *
+ * A tabela de lucros (`profit_table`) tem entrada, saída e pagamento na
+ * mesma linha, mas NÃO diz de qual app veio o contrato (medido em
+ * 10/09/2026 e de novo em 30/09/2026). O extrato (`statement`) diz. Então a
+ * coleta lê os dois e cruza pelo número do contrato: dinheiro de um lado,
+ * dono do outro.
+ */
+async function appsDoDia(socket: TeedsSocket, dia: string): Promise<{ apps: Map<number, string>; horas: Map<number, number> }> {
   const { de, ate } = janelaDoDia(dia)
-  const soma: DiaCalculado = { dia, operacoes: 0, pagamentos: 0, comissao: 0, entradas: 0, resultado: 0, truncado: false }
+  const apps = new Map<number, string>()
+  const horas = new Map<number, number>()
+  let pular = 0
+  for (let pagina = 0; pagina < MAX_PAGINAS; pagina += 1) {
+    const res = await socket.send({
+      statement: 1, description: 1, limit: POR_PAGINA, offset: pular,
+      date_from: String(de), date_to: String(ate),
+    })
+    const linhas = ((res.statement as any)?.transactions ?? []) as Array<Record<string, any>>
+    for (const l of linhas) {
+      const contrato = Number(l.contract_id ?? 0)
+      if (!contrato) continue
+      // Só a linha de COMPRA carrega o app; a de venda é o fechamento.
+      const compra = String(l.action_type ?? '') === 'buy' || l.buy_price != null || l.purchase_time != null
+      if (l.app_id != null && (compra || !apps.has(contrato))) apps.set(contrato, String(l.app_id))
+      const quando = Number(l.purchase_time ?? l.transaction_time ?? 0)
+      if (compra && quando) horas.set(contrato, quando)
+    }
+    if (linhas.length < POR_PAGINA) break
+    pular += POR_PAGINA
+  }
+  return { apps, horas }
+}
+
+/** Todos os contratos fechados de um dia, um a um (o dono se decide depois). */
+async function contratosDoDia(socket: TeedsSocket, dia: string): Promise<{ contratos: ContratoBruto[]; truncado: boolean }> {
+  const { de, ate } = janelaDoDia(dia)
+  const contratos: ContratoBruto[] = []
+  let truncado = false
   let pular = 0
 
   for (let pagina = 0; pagina < MAX_PAGINAS; pagina += 1) {
@@ -103,33 +145,26 @@ async function lerDia(socket: TeedsSocket, dia: string, appId: string): Promise<
     const linhas = ((res.profit_table as any)?.transactions ?? []) as Array<Record<string, any>>
     for (const l of linhas) {
       const pagamento = Number(l.payout ?? 0)
-      // Só o que passou pela app da marca gera markup. A API de trading nova
-      // nem sempre manda `app_id` na tabela de lucros (medido em 10/09/2026:
-      // a linha vem sem o campo) — quando ele falta, a conta é considerada
-      // da plataforma, porque é por ela que essas contas operam. É por isso
-      // que o número se chama "calculado": a Deriv confirma depois.
-      const daApp = l.app_id == null || String(l.app_id) === appId
-      if (!daApp || !pagamento) continue
-      const entrada = Number(l.buy_price ?? 0)
-      const saida = Number(l.sell_price ?? 0)
-      soma.operacoes += 1
-      soma.pagamentos += pagamento
-      soma.comissao += pagamento * TAXA
-      soma.entradas += entrada
-      soma.resultado += saida - entrada
+      if (!pagamento) continue
+      contratos.push({
+        contractId: Number(l.contract_id ?? 0),
+        entrada: Number(l.buy_price ?? 0),
+        pagamento,
+        saida: Number(l.sell_price ?? 0),
+        compradoEm: Number(l.purchase_time ?? 0) || null,
+      })
     }
     if (linhas.length < POR_PAGINA) break
     pular += POR_PAGINA
-    if (pagina === MAX_PAGINAS - 1) soma.truncado = true
+    if (pagina === MAX_PAGINAS - 1) truncado = true
   }
-  return soma
+  return { contratos, truncado }
 }
 
 /** Lê uma conta e devolve o que calculou; grava quando pedido. */
 export async function sincronizarConta(
   sessao: AuthSession, userId: string, marca: string, conta: TradingAccount, opcoes: OpcoesSincronia,
 ): Promise<DiaCalculado[]> {
-  const appId = String(sessao.appId ?? marcaPorId(marca).appId)
 
   // O OTP da URL é de uso único, como nos robôs: cada conexão pede o seu.
   const url = await fetchTradingSocketUrl(sessao, conta.accountId)
@@ -142,8 +177,59 @@ export async function sincronizarConta(
   socket.connect()
 
   const dias: DiaCalculado[] = []
+  /* O mapa do dia por origem, para gravar ao lado da receita. */
+  const porOrigem: ContratosPorOrigemGravavel[] = []
+  const agora = new Date().toISOString()
   try {
-    for (const dia of diasRecentes(DIAS)) dias.push(await lerDia(socket, dia, appId))
+    for (const dia of diasRecentes(DIAS)) {
+      const [{ contratos, truncado }, extrato] = await Promise.all([
+        contratosDoDia(socket, dia),
+        appsDoDia(socket, dia).catch((e) => {
+          // Sem o extrato ficam as outras duas pistas (registro e horário).
+          console.warn(`[comissoes] extrato de ${conta.accountId} em ${dia} falhou — ${(e as Error).message}`)
+          return { apps: new Map<number, string>(), horas: new Map<number, number>() }
+        }),
+      ])
+      const [registrados, janelas] = await Promise.all([
+        contratosRegistrados(conta.accountId, dia).catch(() => []),
+        janelasDeSessao(conta.accountId, dia).catch(() => []),
+      ])
+      const pistas: Pistas = {
+        appPorContrato: extrato.apps,
+        nossosContratos: new Map(registrados.map((r) => [r.contractId, { marca: r.marca, roboId: r.roboId }])),
+        janelas,
+        marcaDoApp: MARCA_DO_APP,
+      }
+      // O extrato também sabe a hora da compra quando a tabela de lucros não sabe.
+      const comHora = contratos.map((c) => ({ ...c, compradoEm: c.compradoEm ?? extrato.horas.get(c.contractId) ?? null }))
+      const { baldes } = separarPorOrigem(comHora, pistas)
+
+      // A RECEITA desta marca: só o que é dela. O resto fica no mapa.
+      const meu = baldes.get(marca)
+      dias.push({
+        dia,
+        operacoes: meu?.operacoes ?? 0,
+        pagamentos: meu?.pagamentos ?? 0,
+        comissao: meu?.markupEstimado ?? 0,
+        entradas: meu?.entradas ?? 0,
+        resultado: meu?.resultado ?? 0,
+        truncado,
+      })
+      for (const balde of baldes.values()) {
+        porOrigem.push({
+          dia, conta_id: conta.accountId, marca, user_id: userId, origem: String(balde.origem),
+          demo: conta.type === 'demo', moeda: conta.currency,
+          operacoes: balde.operacoes,
+          entradas: Number(balde.entradas.toFixed(2)),
+          pagamentos: Number(balde.pagamentos.toFixed(2)),
+          resultado: Number(balde.resultado.toFixed(2)),
+          markup_estimado: Number(balde.markupEstimado.toFixed(4)),
+          por_registro: balde.porPista.registro, por_app: balde.porPista.app,
+          por_horario: balde.porPista.horario, sem_pista: balde.porPista.nenhuma,
+          apps: balde.apps, atualizado_em: agora,
+        })
+      }
+    }
   } finally {
     try { socket.disconnect() } catch { /* já caiu */ }
   }
@@ -166,6 +252,11 @@ export async function sincronizarConta(
       atualizado_em: agora,
     }))
     await gravarComissoesDiarias(linhas)
+    // O mapa por origem é reescrito inteiro: origem que zerou tem de sumir.
+    for (const dia of new Set(porOrigem.map((l) => l.dia))) {
+      await limparContratosPorOrigem(dia, conta.accountId, marca).catch(() => {})
+    }
+    await gravarContratosPorOrigem(porOrigem)
   }
   return dias
 }

@@ -5628,3 +5628,23 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .mon-tipo.demo { background: var(--account-demo-soft); color: var(--account-demo); }
 .mon-encerradas .mon-filtros { padding: 0 20px 14px; }
 .mon-encerradas .mon-mais { margin: 12px 20px 18px; }
+/* ---- De onde vêm as operações (conferência do markup) --------------- */
+.og-resumo { margin: 0 0 16px; font-size: 13.5px; line-height: 1.6; color: var(--muted); max-width: 90ch; }
+.og-resumo b { color: var(--text); }
+.og-receita { color: var(--primary); font-weight: 700; }
+.og-cartoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.og-cartao { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.og-cartao.nossa { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); background: var(--primary-soft); }
+.og-cartao.irma { border-style: dashed; }
+.og-cartao.fora { opacity: .92; }
+.og-cartao > header b { display: block; font-size: 15px; }
+.og-cartao > header small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+.og-cartao dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 0; }
+.og-cartao dt { color: var(--muted); font-size: 9px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+.og-cartao dd { margin: 2px 0 0; font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.og-cartao dd.muted { color: var(--muted); font-weight: 500; }
+.og-cartao dd.up { color: var(--up); } .og-cartao dd.down { color: var(--down); }
+.og-cartao > footer { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; border-top: 1px solid var(--border); color: var(--muted); font-size: 10.5px; }
+.og-pistas { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.og-pistas em { font-style: normal; }
+.og-apps { font-family: ui-monospace, monospace; font-size: 10px; word-break: break-all; }

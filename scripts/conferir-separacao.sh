@@ -40,6 +40,7 @@ ANTES_OMNI="$(git show "HEAD:$REF_OMNI" 2>/dev/null || true)"
 echo "→ provas da tabela de marcas…"; (cd servidor && npm run marcas --silent 2>&1 | tail -1)
 echo "→ provas do motor…"; (cd servidor && npm run motor --silent 2>&1 | tail -1)
 echo "→ provas dos parâmetros…"; (cd servidor && npm run parametros --silent 2>&1 | tail -1)
+echo "→ provas da atribuição…";   (cd servidor && npm run atribuicao --silent 2>&1 | tail -1)
 echo "→ provas do espelho…";           (cd servidor && npm run espelho --silent 2>&1 | tail -1)
 echo "→ provas do canal realtime…";   (cd servidor && npm run realtime --silent 2>&1 | tail -1)
 echo "→ montando a Teeds…";            npm run build --silent >/dev/null

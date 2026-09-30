@@ -547,6 +547,52 @@ export async function analiseOperacoes(sessao: SessaoTeeds, f: FiltroAnalise): P
   } catch { return null }
 }
 
+/* ------------------------------------------------------------------ *
+ * De onde vêm as operações da conta do cliente.
+ *
+ * A conta Deriv é dele: pode operar pela Teeds, pela OMNI, pelo app da
+ * própria Deriv ou por outro robô. O servidor separa contrato por contrato
+ * (ver servidor/src/atribuicao.ts) e grava aqui. Receita é só o que tem a
+ * marca; o resto existe para conferência, nunca para somar.
+ * ------------------------------------------------------------------ */
+export interface OrigemDoContrato {
+  dia: string
+  contaId: string
+  userId: string
+  /** 'teeds', 'omni', 'externo' ou 'sem-dono'. */
+  origem: string
+  demo: boolean
+  operacoes: number
+  entradas: number
+  pagamentos: number
+  resultado: number
+  markupEstimado: number
+  porRegistro: number
+  porApp: number
+  porHorario: number
+  semPista: number
+  apps: string[]
+}
+
+export async function contratosPorOrigem(sessao: SessaoTeeds, dias = 30): Promise<OrigemDoContrato[]> {
+  if (!autenticacaoConfigurada()) return []
+  const corte = new Date(Date.now() - dias * 86400000).toISOString().slice(0, 10)
+  try {
+    const linhas = await rest<any[]>(
+      `/contratos_por_origem?marca=eq.${marcaAdmin()}&select=*&dia=gte.${corte}&order=dia.desc`, sessao.token)
+    return (linhas ?? []).map((l) => ({
+      dia: String(l.dia), contaId: String(l.conta_id), userId: String(l.user_id),
+      origem: String(l.origem), demo: Boolean(l.demo),
+      operacoes: Number(l.operacoes ?? 0), entradas: Number(l.entradas ?? 0),
+      pagamentos: Number(l.pagamentos ?? 0), resultado: Number(l.resultado ?? 0),
+      markupEstimado: Number(l.markup_estimado ?? 0),
+      porRegistro: Number(l.por_registro ?? 0), porApp: Number(l.por_app ?? 0),
+      porHorario: Number(l.por_horario ?? 0), semPista: Number(l.sem_pista ?? 0),
+      apps: Array.isArray(l.apps) ? l.apps.map(String) : [],
+    }))
+  } catch { return [] }
+}
+
 export async function listarMetricasRobos(sessao: SessaoTeeds, dias = 90): Promise<MetricaRoboRegistro[]> {
   try {
     const linhas = await rest<any[]>('/rpc/teeds_metricas_robos', sessao.token, {

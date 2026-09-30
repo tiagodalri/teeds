@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  buscarUsuario, cadastrar as criarConta, capturarRetorno, entrar as fazerLogin, lembrarSessao,
+  buscarUsuario, capturarRetorno, entrar as fazerLogin, lembrarSessao,
   recuperarSenha, renovar, sair as encerrar, sessaoGuardada, trocarSenha,
-  type DadosCadastro, type SessaoTeeds, type Usuario,
+  type SessaoTeeds, type Usuario,
 } from '../core/teeds/conta'
 import { autenticacaoConfigurada } from '../core/teeds/config'
+import { inscreverFilaEspera, type DadosFilaEspera } from '../core/teeds/leads'
 import { MARCA } from '../marca'
 
 export type StatusTeeds = 'carregando' | 'deslogado' | 'logado' | 'dispensado'
@@ -109,15 +110,14 @@ export function useTeedsAuth() {
     }
   }, [agendarRenovacao])
 
-  const cadastrar = useCallback(async (dados: DadosCadastro) => {
+  const cadastrar = useCallback(async (dados: DadosFilaEspera) => {
     setOcupado(true); setErro(null)
     try {
-      const { sessao: s, confirmar } = await criarConta(dados)
-      if (s) { setSessao(s); setStatus('logado'); agendarRenovacao(s) }
-      return { ok: true, confirmar }
+      await inscreverFilaEspera(dados)
+      return { ok: true }
     } catch (e) {
       setErro((e as Error).message)
-      return { ok: false, confirmar: false }
+      return { ok: false }
     } finally {
       setOcupado(false)
     }

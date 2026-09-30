@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import {
-  cpfValido, formatarCPF, formatarTelefone, telefoneValido,
-  type DadosCadastro,
+  formatarTelefone, telefoneValido,
 } from '../core/teeds/conta'
+import type { DadosFilaEspera } from '../core/teeds/leads'
 import { Brand } from './Brand'
 import { DerivLogo, IconeSaida } from './DerivMarca'
 import { MARCA } from '../marca'
@@ -14,7 +14,7 @@ interface Props {
   erro?: string | null
   limparErro: () => void
   onEntrar: (email: string, senha: string) => Promise<boolean>
-  onCadastrar: (dados: DadosCadastro) => Promise<{ ok: boolean; confirmar: boolean }>
+  onCadastrar: (dados: DadosFilaEspera) => Promise<{ ok: boolean }>
   onEsqueci: (email: string) => Promise<boolean>
 }
 
@@ -25,9 +25,9 @@ const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
     acao: 'Entrar',
   },
   criar: {
-    titulo: `Crie a sua conta ${MARCA.prosa}.`,
-    linha: 'É a conta da plataforma. A conta da Deriv, onde o dinheiro fica, é separada.',
-    acao: 'Criar conta',
+    titulo: `Entre na fila de espera ${MARCA.prosa}.`,
+    linha: 'Deixe seus dados. Após a aprovação, você receberá por e-mail sua senha provisória e as instruções de acesso.',
+    acao: 'Entrar na fila de espera',
   },
   esqueci: {
     titulo: 'Esqueceu a senha?',
@@ -43,12 +43,10 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
-  const [confirmacao, setConfirmacao] = useState('')
-  const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false)
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [capsLock, setCapsLock] = useState(false)
   const [telefone, setTelefone] = useState('')
-  const [cpf, setCpf] = useState('')
+  const [consentiu, setConsentiu] = useState(false)
   const [recado, setRecado] = useState<string | null>(null)
   const [tocado, setTocado] = useState<Record<string, boolean>>({})
 
@@ -59,20 +57,17 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
     nome: nome && !nomeCompleto(nome) ? 'Escreva o nome e o sobrenome.' : null,
     email: email && !email.includes('@') ? 'Esse e-mail não parece completo.' : null,
     senha: senha && senha.length < 6 ? 'Pelo menos 6 caracteres.' : null,
-    confirmacao: confirmacao !== senha ? 'As senhas não coincidem. Digite a mesma senha nos dois campos.' : null,
     telefone: telefone && !telefoneValido(telefone) ? 'DDD e número, 10 ou 11 dígitos.' : null,
-    cpf: cpf && !cpfValido(cpf) ? 'Esse CPF não é válido.' : null,
   }
 
   const valido = modo === 'esqueci'
     ? email.includes('@')
     : modo === 'entrar'
       ? email.includes('@') && senha.length >= 6
-      : nomeCompleto(nome) && email.includes('@') && senha.length >= 6
-        && confirmacao === senha && telefoneValido(telefone) && cpfValido(cpf)
+      : nomeCompleto(nome) && email.includes('@') && telefoneValido(telefone) && consentiu
 
   function trocarModo(m: Modo) {
-    setConfirmacao(''); setMostrarConfirmacao(false)
+    setSenha(''); setConsentiu(false)
     setModo(m); setRecado(null); setTocado({}); setMostrarSenha(false); setCapsLock(false); limparErro()
   }
 
@@ -82,10 +77,10 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
     setRecado(null)
     if (modo === 'entrar') { await onEntrar(email, senha); return }
     if (modo === 'criar') {
-      const r = await onCadastrar({ nome, email, senha, telefone, cpf })
-      if (r.ok) { setConfirmacao(''); setMostrarConfirmacao(false) }
-      if (r.ok && r.confirmar) {
-        setRecado(`Conta criada. Confirme o e-mail que enviamos para ${email} e depois entre.`)
+      const r = await onCadastrar({ nome, email, telefone, consentiu })
+      if (r.ok) {
+        setSenha(''); setConsentiu(false)
+        setRecado('Cadastro recebido! Você está na fila de espera. Após a aprovação, enviaremos as instruções de acesso por e-mail.')
         setModo('entrar')
       }
       return
@@ -143,46 +138,24 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
           {campo('email', 'E-mail', email, setEmail,
             { tipo: 'email', auto: 'email', dica: 'voce@email.com' })}
 
-          {modo === 'criar' && (
-            <div className="entrada-par">
-              {campo('telefone', 'Telefone com DDD', telefone,
-                (v) => setTelefone(formatarTelefone(v)),
-                { auto: 'tel', modo: 'numeric', dica: '(11) 91234-5678' })}
-              {campo('cpf', 'CPF', cpf, (v) => setCpf(formatarCPF(v)),
-                { modo: 'numeric', dica: '000.000.000-00' })}
-            </div>
-          )}
+          {modo === 'criar' && campo('telefone', 'Telefone com DDD', telefone,
+            (v) => setTelefone(formatarTelefone(v)),
+            { auto: 'tel', tipo: 'tel', dica: '(11) 91234-5678' })}
 
-          {modo !== 'esqueci' && campo('senha', 'Senha', senha, setSenha,
-            { tipo: 'password', auto: modo === 'criar' ? 'new-password' : 'current-password',
-              dica: modo === 'criar' ? 'pelo menos 6 caracteres' : '••••••••' })}
+          {modo === 'entrar' && campo('senha', 'Senha', senha, setSenha,
+            { tipo: 'password', auto: 'current-password', dica: '••••••••' })}
 
-          {modo === 'criar' && <label className={tocado.confirmacao && problemas.confirmacao ? 'ruim' : ''}>
-            <span className="rot" id="entrada-confirmacao-rotulo">Confirmar senha</span>
-            <span className="entrada-senha">
-              <input id="entrada-confirmacao" aria-labelledby="entrada-confirmacao-rotulo"
-                type={mostrarConfirmacao ? 'text' : 'password'} autoComplete="new-password"
-                required value={confirmacao} placeholder="Digite a senha novamente"
-                onChange={e => setConfirmacao(e.target.value)} onBlur={marcar('confirmacao')}
-                aria-invalid={Boolean(tocado.confirmacao && problemas.confirmacao)}
-                aria-describedby={tocado.confirmacao && problemas.confirmacao ? 'entrada-confirmacao-erro' : undefined} />
-              <button type="button" aria-controls="entrada-confirmacao" aria-pressed={mostrarConfirmacao}
-                aria-label={mostrarConfirmacao ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha'}
-                onClick={() => setMostrarConfirmacao(v => !v)}>{mostrarConfirmacao ? 'Ocultar' : 'Mostrar'}</button>
-            </span>
-            {tocado.confirmacao && problemas.confirmacao && <em id="entrada-confirmacao-erro" role="status">{problemas.confirmacao}</em>}
+          {modo === 'criar' && <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <input type="checkbox" checked={consentiu} onChange={e => setConsentiu(e.target.checked)}
+              required style={{ width: 18, height: 18, minHeight: 18, flexShrink: 0, marginTop: 3 }} />
+            <span>Autorizo o contato da {MARCA.prosa} sobre a fila de espera e o acesso à plataforma. Posso cancelar a qualquer momento.</span>
           </label>}
-
           <button className="entrada-btn" type="submit" disabled={!valido || ocupado}>
             {ocupado ? 'um instante…' : t.acao}
           </button>
-
-          {modo === 'criar' && (
-            <p className="entrada-mini">
-              Pedimos telefone e CPF para identificar você como cliente da {MARCA.prosa}.
-              Não repassamos esses dados a ninguém.
-            </p>
-          )}
+          {modo === 'criar' && <p className="entrada-mini">
+            O cadastro não libera o acesso automaticamente. Aguarde a aprovação da equipe.
+          </p>}
         </form>
 
         {erro && <div className="entrada-erro" role="alert">{erro}</div>}
@@ -191,7 +164,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
         <div className="entrada-troca">
           {modo === 'entrar' ? (
             <>
-              <button onClick={() => trocarModo('criar')}>Criar uma conta</button>
+              <button onClick={() => trocarModo('criar')}>Entrar na fila de espera</button>
               <span>·</span>
               <button onClick={() => trocarModo('esqueci')}>Esqueci a senha</button>
             </>

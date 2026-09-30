@@ -9,6 +9,7 @@
  * redesenho de 24/09/2026: análise e operação pedem cabeças diferentes.
  */
 import { CentroDeEstudoHistorico } from './CentroDeEstudoHistorico'
+import { OrigemDasOperacoes } from './OrigemDasOperacoes'
 import { AdminPlataformas } from './AdminPlataformas'
 import { ehMaster } from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
@@ -23,6 +24,7 @@ export function AdminCentroDeEstudo({ sessao, marcaFoco, onAbrirMarca }: {
   return (
     <>
       {ehMaster() && <AdminPlataformas sessao={sessao} onAbrirMarca={onAbrirMarca} />}
+      <OrigemDasOperacoes sessao={sessao} />
       <section className="admin-card ce-card">
         <header>
           <div>

@@ -755,6 +755,87 @@ export async function gravarComissoesDiarias(linhas: ComissaoDiariaGravavel[]): 
   })
 }
 
+/* ------------------------------------------------------------------ *
+ * As pistas para saber de quem é cada contrato (ver atribuicao.ts).
+ * ------------------------------------------------------------------ */
+
+/** Os contratos que a PLATAFORMA comprou nesta conta no dia: prova direta. */
+export async function contratosRegistrados(
+  contaId: string, dia: string,
+): Promise<Array<{ contractId: number; marca: string; roboId: string | null }>> {
+  const de = `${dia}T00:00:00Z`
+  const ate = `${dia}T23:59:59.999Z`
+  const linhas = await rest<any[]>(
+    `/operacoes_robos?select=contract_id,marca,robo_id&conta_id=eq.${encodeURIComponent(contaId)}` +
+    `&executada_em=gte.${encodeURIComponent(de)}&executada_em=lte.${encodeURIComponent(ate)}&limit=20000`)
+  return (linhas ?? []).map((l) => ({
+    contractId: Number(l.contract_id), marca: String(l.marca ?? 'teeds'),
+    roboId: l.robo_id ? String(l.robo_id) : null,
+  }))
+}
+
+/**
+ * As sessões que a plataforma abriu nesta conta perto do dia.
+ *
+ * Serve para a pista do horário: compra feita enquanto uma sessão nossa
+ * estava aberta é nossa, mesmo sem app no extrato. A janela pega o dia
+ * inteiro mais um dia de folga dos dois lados, porque sessão atravessa a
+ * virada do dia.
+ */
+export async function janelasDeSessao(
+  contaId: string, dia: string,
+): Promise<Array<{ marca: string; de: number; ate: number }>> {
+  const de = new Date(`${dia}T00:00:00Z`); de.setUTCDate(de.getUTCDate() - 1)
+  const ate = new Date(`${dia}T23:59:59Z`); ate.setUTCDate(ate.getUTCDate() + 1)
+  const linhas = await rest<any[]>(
+    `/sessoes_robos?select=marca,criada_em,encerrada_em,atualizada_em&conta_id=eq.${encodeURIComponent(contaId)}` +
+    `&criada_em=lte.${encodeURIComponent(ate.toISOString())}` +
+    `&or=(encerrada_em.is.null,encerrada_em.gte.${encodeURIComponent(de.toISOString())})&limit=2000`)
+  return (linhas ?? []).map((l) => ({
+    marca: String(l.marca ?? 'teeds'),
+    de: Math.floor(Date.parse(l.criada_em) / 1000),
+    ate: Math.floor(Date.parse(l.encerrada_em ?? l.atualizada_em ?? new Date().toISOString()) / 1000),
+  })).filter((j) => Number.isFinite(j.de) && Number.isFinite(j.ate))
+}
+
+export interface ContratosPorOrigemGravavel {
+  dia: string
+  conta_id: string
+  marca: string
+  user_id: string
+  origem: string
+  demo: boolean
+  moeda: string
+  operacoes: number
+  entradas: number
+  pagamentos: number
+  resultado: number
+  markup_estimado: number
+  por_registro: number
+  por_app: number
+  por_horario: number
+  sem_pista: number
+  apps: string[]
+  atualizado_em: string
+}
+
+/** Grava o mapa do dia: quanto foi Teeds, quanto OMNI, quanto de fora. */
+export async function gravarContratosPorOrigem(linhas: ContratosPorOrigemGravavel[]): Promise<void> {
+  if (!linhas.length) return
+  await rest('/contratos_por_origem?on_conflict=dia,conta_id,marca,origem', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(linhas),
+  })
+}
+
+/** Apaga as origens de um dia/conta antes de regravar (origem some quando zera). */
+export async function limparContratosPorOrigem(dia: string, contaId: string, marca: string): Promise<void> {
+  await rest(
+    `/contratos_por_origem?dia=eq.${dia}&conta_id=eq.${encodeURIComponent(contaId)}&marca=eq.${encodeURIComponent(marca)}`,
+    { method: 'DELETE', headers: { Prefer: 'return=minimal' } })
+}
+
 /** Anota a tentativa desta conta. No sucesso limpa o erro; na falha preserva o último sucesso. */
 export async function anotarColetaDeExtrato(d: {
   contaId: string; userId: string; marca: string; ok: boolean; erro?: string
