@@ -8,9 +8,11 @@
  *
  * O último argumento escolhe o grupo:
  *
- *   com-nome        quem tem nome cadastrado (o padrão)
- *   com-nome-gmail  com nome e no Gmail
- *   sem-nome-gmail  sem nome e no Gmail
+ *   com-nome             quem tem nome cadastrado (o padrão)
+ *   com-nome-gmail       com nome e no Gmail
+ *   sem-nome-gmail       sem nome e no Gmail
+ *   com-nome-microsoft   com nome e na Microsoft
+ *   sem-nome-microsoft   sem nome e na Microsoft
  *
  * O grupo existe porque provedor diferente responde diferente. Na primeira
  * leva o Gmail entregou na caixa de entrada (24 aberturas em 254) e a
@@ -63,20 +65,35 @@ async function banco<T>(caminho: string, method = 'GET', body?: unknown): Promis
 
 interface Pessoa { user_id: string; nome: string | null; email: string; total_acessos: number | null }
 
-export type Grupo = 'com-nome' | 'com-nome-gmail' | 'sem-nome-gmail'
+export type Grupo =
+  | 'com-nome' | 'com-nome-gmail' | 'sem-nome-gmail'
+  | 'com-nome-microsoft' | 'sem-nome-microsoft'
 
-/** O filtro de cada grupo, do jeito que o PostgREST entende. */
-const FILTRO: Record<Grupo, string> = {
-  // Quem tem nome: a fatia mais saudável da base, e a que foi medida primeiro.
-  'com-nome': '&nome=not.is.null',
-  // Com nome e no Gmail. Os dados do primeiro dia mostraram que o corte que
-  // importa é o provedor, não o nome: com nome e sem nome abriram igual
-  // (16,8% contra 16,7%) e morreram igual (1,05% contra 0,93%), enquanto
-  // Gmail e Microsoft se comportaram de maneiras opostas.
-  'com-nome-gmail': '&nome=not.is.null&email=ilike.*@gmail.com',
-  // Sem nome e no Gmail. O `or` cobre o nome nulo e o nome vazio, que na
-  // importação vieram os dois.
-  'sem-nome-gmail': '&or=(nome.is.null,nome.eq.)&email=ilike.*@gmail.com',
+/**
+ * O que define cada grupo: ter nome ou não, e de qual provedor.
+ *
+ * O corte por nome vai no banco, porque é barato lá. O corte por provedor
+ * fica aqui no código: a lista de domínios da Microsoft é longa e varia
+ * (hotmail, outlook, live, msn, e as versões .com.br), e montar isso num
+ * filtro aninhado do PostgREST é a receita de deixar passar um domínio sem
+ * ninguém perceber. Mandar para o grupo errado não tem como ser desfeito.
+ *
+ * O provedor virou o corte principal: os dados do primeiro dia mostraram que
+ * ter nome ou não quase não muda nada (16,8% contra 16,7% de abertura,
+ * 1,05% contra 0,93% de endereço morto), enquanto Gmail e Microsoft se
+ * comportaram de maneiras opostas — o Gmail entregou na caixa de entrada e a
+ * Microsoft mandou tudo para o spam.
+ */
+const eGmail = (email: string) => /@gmail\.com(\.br)?$/.test(email)
+const eMicrosoft = (email: string) => /@(hotmail|outlook|live|msn)\.[a-z.]+$/.test(email)
+
+const GRUPO: Record<Grupo, { filtroDeNome: string; querNome: boolean | null; provedor: ((e: string) => boolean) | null }> = {
+  'com-nome':           { filtroDeNome: '&nome=not.is.null', querNome: true,  provedor: null },
+  'com-nome-gmail':     { filtroDeNome: '&nome=not.is.null', querNome: true,  provedor: eGmail },
+  'com-nome-microsoft': { filtroDeNome: '&nome=not.is.null', querNome: true,  provedor: eMicrosoft },
+  // O `or` cobre o nome nulo e o nome vazio, que na importação vieram os dois.
+  'sem-nome-gmail':     { filtroDeNome: '&or=(nome.is.null,nome.eq.)', querNome: false, provedor: eGmail },
+  'sem-nome-microsoft': { filtroDeNome: '&or=(nome.is.null,nome.eq.)', querNome: false, provedor: eMicrosoft },
 }
 
 /** Quem ainda não recebeu esta campanha, na ordem em que deve receber. */
@@ -95,7 +112,7 @@ async function fila(marca: string, quantos: number, grupo: Grupo): Promise<Pesso
   for (let salto = 0; escolhidos.length < quantos; salto += 1000) {
     const pagina = await banco<Pessoa[]>(
       `/rest/v1/clientes?select=user_id,nome,email,total_acessos&marca=eq.${marca}` +
-      `${FILTRO[grupo]}&order=total_acessos.desc.nullslast,criado_em.asc` +
+      `${GRUPO[grupo].filtroDeNome}&order=total_acessos.desc.nullslast,criado_em.asc` +
       `&limit=1000&offset=${salto}`)
     if (!pagina.length) break
     for (const p of pagina) {
@@ -103,10 +120,10 @@ async function fila(marca: string, quantos: number, grupo: Grupo): Promise<Pesso
       if (!email) continue
       // O filtro do banco já separa o grupo; aqui é a segunda conferência,
       // porque mandar para o grupo errado não tem como ser desfeito.
+      const regra = GRUPO[grupo]
       const temNome = Boolean((p.nome ?? '').trim())
-      if (grupo === 'com-nome' && !temNome) continue
-      if (grupo === 'com-nome-gmail' && (!temNome || !email.endsWith('@gmail.com'))) continue
-      if (grupo === 'sem-nome-gmail' && (temNome || !email.endsWith('@gmail.com'))) continue
+      if (regra.querNome !== null && temNome !== regra.querNome) continue
+      if (regra.provedor && !regra.provedor(email)) continue
       if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)) continue
       if (fora.has(email) || enviados.has(email) || vistos.has(email)) continue
       vistos.add(email)
@@ -172,7 +189,7 @@ async function enviar(marca: string, quantos: number, gravar: boolean, grupo: Gr
 
 const [marca = 'teeds', quantosArg = '200', modo, grupoArg = 'com-nome'] = process.argv.slice(2)
 const quantos = Math.max(1, Math.min(5000, Number(quantosArg) || 200))
-const GRUPOS: Grupo[] = ['com-nome', 'com-nome-gmail', 'sem-nome-gmail']
+const GRUPOS = Object.keys(GRUPO) as Grupo[]
 if (!GRUPOS.includes(grupoArg as Grupo)) {
   console.error(`[campanha] grupo desconhecido: ${grupoArg}. Use: ${GRUPOS.join(', ')}`)
   process.exit(1)
