@@ -9,7 +9,8 @@
  * O último argumento escolhe o grupo:
  *
  *   com-nome        quem tem nome cadastrado (o padrão)
- *   sem-nome-gmail  quem não tem nome e usa Gmail
+ *   com-nome-gmail  com nome e no Gmail
+ *   sem-nome-gmail  sem nome e no Gmail
  *
  * O grupo existe porque provedor diferente responde diferente. Na primeira
  * leva o Gmail entregou na caixa de entrada (24 aberturas em 254) e a
@@ -62,12 +63,17 @@ async function banco<T>(caminho: string, method = 'GET', body?: unknown): Promis
 
 interface Pessoa { user_id: string; nome: string | null; email: string; total_acessos: number | null }
 
-export type Grupo = 'com-nome' | 'sem-nome-gmail'
+export type Grupo = 'com-nome' | 'com-nome-gmail' | 'sem-nome-gmail'
 
 /** O filtro de cada grupo, do jeito que o PostgREST entende. */
 const FILTRO: Record<Grupo, string> = {
   // Quem tem nome: a fatia mais saudável da base, e a que foi medida primeiro.
   'com-nome': '&nome=not.is.null',
+  // Com nome e no Gmail. Os dados do primeiro dia mostraram que o corte que
+  // importa é o provedor, não o nome: com nome e sem nome abriram igual
+  // (16,8% contra 16,7%) e morreram igual (1,05% contra 0,93%), enquanto
+  // Gmail e Microsoft se comportaram de maneiras opostas.
+  'com-nome-gmail': '&nome=not.is.null&email=ilike.*@gmail.com',
   // Sem nome e no Gmail. O `or` cobre o nome nulo e o nome vazio, que na
   // importação vieram os dois.
   'sem-nome-gmail': '&or=(nome.is.null,nome.eq.)&email=ilike.*@gmail.com',
@@ -99,6 +105,7 @@ async function fila(marca: string, quantos: number, grupo: Grupo): Promise<Pesso
       // porque mandar para o grupo errado não tem como ser desfeito.
       const temNome = Boolean((p.nome ?? '').trim())
       if (grupo === 'com-nome' && !temNome) continue
+      if (grupo === 'com-nome-gmail' && (!temNome || !email.endsWith('@gmail.com'))) continue
       if (grupo === 'sem-nome-gmail' && (temNome || !email.endsWith('@gmail.com'))) continue
       if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)) continue
       if (fora.has(email) || enviados.has(email) || vistos.has(email)) continue
@@ -165,11 +172,12 @@ async function enviar(marca: string, quantos: number, gravar: boolean, grupo: Gr
 
 const [marca = 'teeds', quantosArg = '200', modo, grupoArg = 'com-nome'] = process.argv.slice(2)
 const quantos = Math.max(1, Math.min(5000, Number(quantosArg) || 200))
-if (grupoArg !== 'com-nome' && grupoArg !== 'sem-nome-gmail') {
-  console.error(`[campanha] grupo desconhecido: ${grupoArg}`)
+const GRUPOS: Grupo[] = ['com-nome', 'com-nome-gmail', 'sem-nome-gmail']
+if (!GRUPOS.includes(grupoArg as Grupo)) {
+  console.error(`[campanha] grupo desconhecido: ${grupoArg}. Use: ${GRUPOS.join(', ')}`)
   process.exit(1)
 }
-enviar(marca, quantos, modo !== 'ensaio', grupoArg)
+enviar(marca, quantos, modo !== 'ensaio', grupoArg as Grupo)
   .then((r) => {
     console.log(`\n[campanha] enviados ${r.enviados} · falhas ${r.falhas} · de ${r.total}`)
     process.exit(r.falhas > r.total * 0.1 ? 1 : 0)
