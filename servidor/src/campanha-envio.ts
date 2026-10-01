@@ -86,6 +86,31 @@ export type Grupo =
  * comportaram de maneiras opostas — o Gmail entregou na caixa de entrada e a
  * Microsoft mandou tudo para o spam.
  */
+/**
+ * Domínios que não existem: erro de digitação e e-mail descartável.
+ *
+ * Varridos da base em 01/10/2026. São 24 endereços, e todos dariam bounce
+ * permanente — que é justamente o número que queima a reputação do domínio.
+ * Custa nada deixar de fora, e cada um que sai é um bounce a menos contra a
+ * entrega de todo mundo.
+ *
+ * A lista é explícita, e não uma regra esperta, de propósito: uma regra do
+ * tipo "começa com gmail" descartaria `gmailnator.com` mas também um domínio
+ * de empresa legítimo que por azar comece igual. Aqui o que sai, sai porque
+ * alguém olhou. Domínios internacionais de verdade — hotmail.co.uk,
+ * outlook.pt, yahoo.fr, live.com.pt — ficam, porque existem.
+ */
+const DOMINIOS_MORTOS = new Set([
+  'gmailnator.com',                                          // descartável
+  'gmaill.com', 'gmail.co', 'gmail.om', 'gmail.vom',         // gmail errado
+  'gmail.comm', 'gmail.come', 'gmail.comail.com',
+  '27gmail.com', '4290gmail.com', 'eunice.gmail.com',
+  'hotmaill.com', 'hotmaik.com', 'hotmail.con',              // hotmail errado
+  'hotmail.cm', 'hotmail.cim',
+  'outloo.com', 'yahoo.cm', 'icloud.co',                     // o resto
+])
+const dominioMorto = (email: string) => DOMINIOS_MORTOS.has(email.split('@')[1] ?? '')
+
 const eGmail = (email: string) => /@gmail\.com(\.br)?$/.test(email)
 const eMicrosoft = (email: string) => /@(hotmail|outlook|live|msn)\.[a-z.]+$/.test(email)
 
@@ -105,15 +130,28 @@ const GRUPO: Record<Grupo, { filtroDeNome: string; querNome: boolean | null; pro
 /** Quem ainda não recebeu esta campanha, na ordem em que deve receber. */
 async function fila(marca: string, quantos: number, grupo: Grupo): Promise<Pessoa[]> {
   const fora = await jaSairam(marca)   // lança se não conseguir ler: é de propósito
-  const enviados = new Set(
-    (await banco<Array<{ email: string }>>(
-      `/rest/v1/envios_campanha?select=email&marca=eq.${marca}&campanha=eq.${CAMPANHA}`))
-      .map((l) => l.email.toLowerCase()),
-  )
+  /*
+    Quem já recebeu, PÁGINA A PÁGINA.
+    
+    Sem isso a consulta vinha cortada: o PostgREST devolve no máximo mil linhas
+    e não avisa. Com 1.150 enviados, 150 pessoas ficavam invisíveis para a
+    trava e receberiam a campanha duas vezes — justamente o que ela existe para
+    impedir. O ensaio da leva de 736 mostrou "1000 já receberam" quando eram
+    1.150, e foi assim que apareceu.
+  */
+  const enviados = new Set<string>()
+  for (let salto = 0; ; salto += 1000) {
+    const parte = await banco<Array<{ email: string }>>(
+      `/rest/v1/envios_campanha?select=email&marca=eq.${marca}&campanha=eq.${CAMPANHA}` +
+      `&order=email.asc&limit=1000&offset=${salto}`)
+    for (const l of parte) enviados.add(l.email.toLowerCase())
+    if (parte.length < 1000) break
+  }
   console.log(`[campanha] ${fora.size} descadastrado(s) · ${enviados.size} já receberam`)
 
   const escolhidos: Pessoa[] = []
   const vistos = new Set<string>()
+  let mortos = 0
   // Página a página: a base tem 11 mil linhas e o PostgREST devolve mil por vez.
   for (let salto = 0; escolhidos.length < quantos; salto += 1000) {
     const pagina = await banco<Pessoa[]>(
@@ -131,12 +169,14 @@ async function fila(marca: string, quantos: number, grupo: Grupo): Promise<Pesso
       if (regra.querNome !== null && temNome !== regra.querNome) continue
       if (regra.provedor && !regra.provedor(email)) continue
       if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)) continue
+      if (dominioMorto(email)) { mortos += 1; continue }
       if (fora.has(email) || enviados.has(email) || vistos.has(email)) continue
       vistos.add(email)
       escolhidos.push({ ...p, email })
       if (escolhidos.length >= quantos) break
     }
   }
+  if (mortos) console.log(`[campanha] ${mortos} endereço(s) com domínio inexistente ficaram de fora`)
   return escolhidos
 }
 
