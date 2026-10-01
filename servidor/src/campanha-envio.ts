@@ -13,6 +13,8 @@
  *   sem-nome-gmail       sem nome e no Gmail
  *   com-nome-microsoft   com nome e na Microsoft
  *   sem-nome-microsoft   sem nome e na Microsoft
+ *   gmail                todo o Gmail, com e sem nome
+ *   microsoft            toda a Microsoft, com e sem nome
  *   fora-dos-grandes     nem Gmail nem Microsoft (Yahoo, Apple, BR, próprios)
  *
  * O grupo existe porque provedor diferente responde diferente. Na primeira
@@ -69,7 +71,7 @@ interface Pessoa { user_id: string; nome: string | null; email: string; total_ac
 export type Grupo =
   | 'com-nome' | 'com-nome-gmail' | 'sem-nome-gmail'
   | 'com-nome-microsoft' | 'sem-nome-microsoft'
-  | 'fora-dos-grandes'
+  | 'gmail' | 'microsoft' | 'fora-dos-grandes'
 
 /**
  * O que define cada grupo: ter nome ou não, e de qual provedor.
@@ -121,6 +123,10 @@ const GRUPO: Record<Grupo, { filtroDeNome: string; querNome: boolean | null; pro
   // O `or` cobre o nome nulo e o nome vazio, que na importação vieram os dois.
   'sem-nome-gmail':     { filtroDeNome: '&or=(nome.is.null,nome.eq.)', querNome: false, provedor: eGmail },
   'sem-nome-microsoft': { filtroDeNome: '&or=(nome.is.null,nome.eq.)', querNome: false, provedor: eMicrosoft },
+  // Um provedor inteiro, com e sem nome. Virou o corte principal depois dos
+  // primeiros dias: o provedor manda muito mais no resultado que o nome.
+  'gmail':              { filtroDeNome: '', querNome: null, provedor: eGmail },
+  'microsoft':          { filtroDeNome: '', querNome: null, provedor: eMicrosoft },
   // Todo o resto: Yahoo, Apple, os provedores brasileiros e os domínios
   // próprios. Com e sem nome, porque juntos dão menos de 800 pessoas e
   // separar por nome aqui deixaria amostras pequenas demais para medir.
