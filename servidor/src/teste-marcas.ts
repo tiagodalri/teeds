@@ -21,8 +21,12 @@ const vitrine = (id: string) => {
   return m.robos.map((r) => nomeDoRoboNaMarca(ESTRATEGIAS_LOCAIS.find((e) => e.id === r)!, m))
 }
 
-conferir('Teeds: sete robos, incluindo o exclusivo The Palm', vitrine('teeds'),
-  ['Teeds - AG7', 'Teeds - AG2', 'Teeds Smart 03', 'Teeds Göreme', 'First Block', 'Second Block', 'The Palm'])
+conferir('Teeds: seis robos, incluindo o exclusivo The Palm', vitrine('teeds'),
+  ['Teeds - AG7', 'Teeds - AG2', 'Teeds Göreme', 'First Block', 'Second Block', 'The Palm'])
+// Fora da vitrine, mas vivo no catalogo: sem isso uma sessao antiga de
+// Smart 03 perderia o nome do robo no historico do cliente.
+conferir('Smart 03 saiu da vitrine mas continua no catalogo',
+  [MARCAS.teeds.robos.includes('smart03'), ESTRATEGIAS_LOCAIS.some((e) => e.id === 'smart03')], [false, true])
 conferir('OMNI: quatro robos, nomes da casa', vitrine('omni'),
   ['OMNI Under', 'OMNI Over', 'OMNI Bull', 'OMNI Bear'])
 conferir('Teeds nao tem apelido nenhum', MARCAS.teeds.nomesDosRobos, undefined)

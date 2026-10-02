@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { MODULOS, todasAsAulas } from '../core/teeds/aulas'
 import {
-  horasLegiveis, idiomaLegivel, lerAcessosPorDia, lerAcessosPorHora, lerAlunos, lerAulas, lerDispositivos, lerLocalizacoes, lerResumo, lugarDoFuso,
-  type AcessoDia, type AcessoHora, type AlunoInsight, type AulaInsight, type Dispositivo, type Localizacao, type ResumoInsights,
+  horasLegiveis, idiomaLegivel, lerAcessosPorDia, lerAcessosPorHora, lerAlunos, lerAulas, lerDispositivos, lerLocalizacoes,
+  lerOrigens, lerResumo, lerVisitas, lerVisitasPorDia, lugarDoFuso, nomeDaOrigem,
+  type AcessoDia, type AcessoHora, type AlunoInsight, type AulaInsight, type Dispositivo, type Localizacao,
+  type OrigemVisita, type ResumoInsights, type ResumoVisitas, type VisitaDia,
 } from '../core/teeds/insights'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
@@ -31,6 +33,9 @@ export function InsightsPanel({ sessao }: { sessao: SessaoTeeds }) {
   const [lugares, setLugares] = useState<Localizacao[]>([])
   const [dispositivos, setDispositivos] = useState<Dispositivo[]>([])
   const [alunos, setAlunos] = useState<AlunoInsight[]>([])
+  const [visitas, setVisitas] = useState<ResumoVisitas | null>(null)
+  const [visitasDia, setVisitasDia] = useState<VisitaDia[]>([])
+  const [origens, setOrigens] = useState<OrigemVisita[]>([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [lidoEm, setLidoEm] = useState<Date | null>(null)
@@ -39,15 +44,22 @@ export function InsightsPanel({ sessao }: { sessao: SessaoTeeds }) {
   const carregar = async () => {
     setCarregando(true); setErro(null)
     try {
-      const [r, d, h, a, l, di, al] = await Promise.all([
+      const [r, d, h, a, l, di, al, v, vd, og] = await Promise.all([
         lerResumo(sessao, periodo), lerAcessosPorDia(sessao, periodo), lerAcessosPorHora(sessao, periodo),
         lerAulas(sessao, periodo), lerLocalizacoes(sessao), lerDispositivos(sessao, periodo), lerAlunos(sessao, 20),
+        lerVisitas(sessao, periodo), lerVisitasPorDia(sessao, periodo), lerOrigens(sessao, periodo),
       ])
-      setResumo(r); setDias(d); setHoras(h); setAulasDados(a); setLugares(l); setDispositivos(di); setAlunos(al); setLidoEm(new Date())
+      setResumo(r); setDias(d); setHoras(h); setAulasDados(a); setLugares(l); setDispositivos(di); setAlunos(al)
+      setVisitas(v); setVisitasDia(vd); setOrigens(og); setLidoEm(new Date())
     } catch (e) { setErro((e as Error).message) } finally { setCarregando(false) }
   }
   useEffect(() => { void carregar() }, [sessao.usuario.id, periodo]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const maxVisitasDia = Math.max(1, ...visitasDia.map((d) => d.visitas))
+  const totalOrigens = origens.reduce((t, o) => t + o.visitas, 0)
+  // O funil que o painel não tinha: de cada 100 que abrem o site, quantas
+  // deixam o cadastro. É a leitura que diz se o problema é alcance ou tela.
+  const conversao = visitas && visitas.visitantes && resumo ? pct(resumo.novos, visitas.visitantes) : 0
   const maxPessoasDia = Math.max(1, ...dias.map((d) => d.pessoas))
   const maxHora = Math.max(1, ...horas.map((h) => h.acessos))
   const picoHora = horas.reduce((m, h) => (h.acessos > m.acessos ? h : m), { hora: 0, acessos: 0 })
@@ -78,6 +90,9 @@ export function InsightsPanel({ sessao }: { sessao: SessaoTeeds }) {
       {erro && <div className="ger-erro">{erro}<button onClick={() => setErro(null)}><IconeFechar /></button></div>}
 
       <div className="adm-kpis ins-kpis">
+        <article className="ok"><span>Visitas ao site</span><strong>{visitas ? inteiro(visitas.visitas) : '—'}</strong><small>{visitas ? `${inteiro(visitas.visitantes)} pessoa${visitas.visitantes === 1 ? '' : 's'} diferente${visitas.visitantes === 1 ? '' : 's'}` : ''}</small></article>
+        <article><span>Visitas hoje</span><strong>{visitas ? inteiro(visitas.visitasHoje) : '—'}</strong><small>{visitas ? `${inteiro(visitas.visitantesHoje)} pessoa${visitas.visitantesHoje === 1 ? '' : 's'}` : ''}</small></article>
+        <article><span>Viraram cadastro</span><strong>{visitas ? `${conversao}%` : '—'}</strong><small>{resumo ? `${inteiro(resumo.novos)} cadastro${resumo.novos === 1 ? '' : 's'} no período` : ''}</small></article>
         <article className="ok"><span>Pessoas ativas · {periodo} dias</span><strong>{resumo ? inteiro(resumo.ativos) : '—'}</strong><small>{resumo ? `${inteiro(resumo.ativosHoje)} entraram hoje` : ''}</small></article>
         <article><span>Acessos</span><strong>{resumo ? inteiro(resumo.acessos) : '—'}</strong><small>{resumo ? `sessão média de ${horasLegiveis(tempoMedioSessao)}` : ''}</small></article>
         <article><span>Tempo na plataforma</span><strong>{resumo ? horasLegiveis(resumo.segundos) : '—'}</strong><small>somando todo mundo</small></article>
@@ -85,6 +100,46 @@ export function InsightsPanel({ sessao }: { sessao: SessaoTeeds }) {
         <article className="alerta"><span>Assistiram aulas</span><strong>{resumo ? inteiro(resumo.aulasPessoas) : '—'}</strong><small>{resumo ? `${horasLegiveis(resumo.aulasSegundos)} assistidos` : ''}</small></article>
         <article><span>Aulas concluídas</span><strong>{resumo ? inteiro(resumo.aulasConcluidas) : '—'}</strong><small>chegaram a 90% do vídeo</small></article>
         <article><span>Com a Deriv conectada</span><strong>{resumo ? inteiro(resumo.comDeriv) : '—'}</strong><small>{resumo ? `${pct(resumo.comDeriv, resumo.clientes)}% da base` : ''}</small></article>
+      </div>
+
+      <div className="ins-grade">
+        <section className="admin-card ins-card">
+          <header><div><span className="rot">Visitas</span><h3>Quem abriu o site, dia a dia</h3></div><small>{periodo} dias</small></header>
+          <div className="ins-barras" style={{ ['--n' as string]: visitasDia.length }}>
+            {visitasDia.map((d) => (
+              <div key={d.dia} className="ins-barra" title={`${diaCurto(d.dia)} (${semana(d.dia)}): ${d.visitas} visita${d.visitas === 1 ? '' : 's'} de ${d.visitantes} pessoa${d.visitantes === 1 ? '' : 's'}`}>
+                <i style={{ height: `${(d.visitas / maxVisitasDia) * 100}%` }} />
+                {(visitasDia.length <= 14 || new Date(`${d.dia}T12:00:00`).getDay() === 1) && <span>{diaCurto(d.dia)}</span>}
+              </div>
+            ))}
+          </div>
+          <p className="ins-nota">Conta todo mundo que abre {MARCA.prosa === 'Teeds' ? 'teedscompany.com' : 'omnifinanc.com'}, com login ou sem. Uma visita por aba aberta: recarregar a página não conta de novo.</p>
+        </section>
+
+        <section className="admin-card ins-card">
+          <header><div><span className="rot">Origem</span><h3>De onde essas pessoas vieram</h3></div><small>{periodo} dias</small></header>
+          {origens.length > 0 && (
+            <div className="ins-paises">
+              {origens.slice(0, 6).map((o, i) => (
+                <div key={i}><span>{nomeDaOrigem(o.origem)}<b>{pct(o.visitas, totalOrigens)}% · {inteiro(o.visitas)} visita{o.visitas === 1 ? '' : 's'}</b></span><i><em style={{ width: `${pct(o.visitas, totalOrigens)}%` }} /></i></div>
+              ))}
+            </div>
+          )}
+          <div className="ins-tabela ins-origens">
+            <div className="cab"><span>Origem</span><span>Campanha</span><span>Visitas</span><span>Pessoas</span><span>Última vez</span></div>
+            {origens.slice(0, 12).map((o, i) => (
+              <div key={i} className="ins-linha">
+                <span><b>{nomeDaOrigem(o.origem)}</b>{o.meio && <small>{o.meio}</small>}</span>
+                <span>{o.campanha || '—'}</span>
+                <span>{inteiro(o.visitas)}</span>
+                <span>{inteiro(o.visitantes)}</span>
+                <span>{quando(o.ultimaVez)}</span>
+              </div>
+            ))}
+            {!origens.length && <div className="adm-vazio">Nenhuma visita registrada ainda neste período.</div>}
+          </div>
+          <p className="ins-nota">Para separar uma divulgação das outras, mande o link com a marcação: <code>?utm_source=telegram&amp;utm_campaign=nome-da-acao</code>. Quem chega sem marcação aparece como acesso direto.</p>
+        </section>
       </div>
 
       <div className="ins-grade">

@@ -147,3 +147,34 @@ export function horasLegiveis(segundos: number): string {
   if (h) return `${h} h ${m} min`
   return `${m} min`
 }
+
+/* ------------------------------------------------ visitas ao site */
+
+export interface ResumoVisitas { visitas: number; visitantes: number; visitasHoje: number; visitantesHoje: number }
+export interface VisitaDia { dia: string; visitas: number; visitantes: number }
+export interface OrigemVisita { origem: string; meio: string; campanha: string; visitas: number; visitantes: number; ultimaVez: string | null }
+
+export async function lerVisitas(sessao: SessaoTeeds, dias: number): Promise<ResumoVisitas> {
+  const r = await rpc<any>('teeds_insights_visitas', sessao.token, { p_dias: dias })
+  if (!r) throw new Error('Só administradores desta marca veem os insights.')
+  return { visitas: +r.visitas, visitantes: +r.visitantes, visitasHoje: +r.visitas_hoje, visitantesHoje: +r.visitantes_hoje }
+}
+export async function lerVisitasPorDia(sessao: SessaoTeeds, dias: number): Promise<VisitaDia[]> {
+  const l = await rpc<any[]>('teeds_insights_visitas_dia', sessao.token, { p_dias: dias })
+  return (l ?? []).map((x) => ({ dia: x.dia, visitas: +x.visitas, visitantes: +x.visitantes }))
+}
+export async function lerOrigens(sessao: SessaoTeeds, dias: number): Promise<OrigemVisita[]> {
+  const l = await rpc<any[]>('teeds_insights_origens', sessao.token, { p_dias: dias })
+  return (l ?? []).map((x) => ({ origem: x.origem, meio: x.meio, campanha: x.campanha, visitas: +x.visitas, visitantes: +x.visitantes, ultimaVez: x.ultima_vez }))
+}
+
+/** "telegram" → "Telegram"; "direto" ganha nome de gente. */
+export function nomeDaOrigem(o: string): string {
+  const tabela: Record<string, string> = {
+    direto: 'Acesso direto', telegram: 'Telegram', email: 'E-mail', 'e-mail': 'E-mail',
+    instagram: 'Instagram', whatsapp: 'WhatsApp', youtube: 'YouTube', facebook: 'Facebook',
+    'google.com': 'Google', 't.me': 'Telegram', 'web.telegram.org': 'Telegram',
+    'l.instagram.com': 'Instagram', 'lm.facebook.com': 'Facebook',
+  }
+  return tabela[o] ?? (o.charAt(0).toUpperCase() + o.slice(1))
+}

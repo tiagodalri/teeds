@@ -5074,6 +5074,9 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .ins-aulas .cab, .ins-aulas .ins-linha { grid-template-columns: minmax(220px, 2fr) .7fr .7fr 1fr 1.3fr 1fr; }
 .ins-lugares .cab, .ins-lugares .ins-linha { grid-template-columns: 1.6fr 1fr .6fr .7fr; }
 .ins-alunos .cab, .ins-alunos .ins-linha { grid-template-columns: 1.8fr .5fr .7fr .8fr 1fr; }
+.ins-origens .cab, .ins-origens .ins-linha { grid-template-columns: 1.3fr 1.2fr .6fr .6fr 1fr; }
+/* A marcação do link, no rodapé do cartão de origem: é para o admin copiar. */
+.ins-nota code { padding: 1px 5px; border-radius: 4px; background: var(--surface-alt); border: 1px solid var(--border); font-size: 11px; word-break: break-all; }
 .ins-linha.vazia { color: var(--muted); }
 .ins-linha span > small { display: block; color: var(--muted); font-size: 10.5px; }
 .ins-grupo > em { display: block; padding: 12px 20px 4px; border-top: 1px solid var(--border); color: var(--aula, var(--primary)); font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
@@ -5092,6 +5095,9 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .ins-paises > div > i > em { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 55%, #fff)); }
 .ins-nota { margin: 0; padding: 12px 20px 16px; color: var(--muted); font-size: 10.5px; line-height: 1.5; border-top: 1px solid var(--border); }
 @media (max-width: 1100px) { .ins-grade { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .ins-origens .cab, .ins-origens .ins-linha { grid-template-columns: 1.4fr .6fr .8fr; }
+  .ins-origens .cab > :nth-child(2), .ins-origens .ins-linha > :nth-child(2),
+  .ins-origens .cab > :nth-child(4), .ins-origens .ins-linha > :nth-child(4) { display: none; } }
 @media (max-width: 760px) { .ins-aulas .cab, .ins-aulas .ins-linha { grid-template-columns: 1.6fr .6fr .8fr; } .ins-aulas .cab > :nth-child(3), .ins-aulas .ins-linha > :nth-child(3), .ins-aulas .cab > :nth-child(5), .ins-aulas .ins-linha > :nth-child(5), .ins-aulas .cab > :nth-child(6), .ins-aulas .ins-linha > :nth-child(6) { display: none; } .ins-barras { padding-inline: 12px; } }
 
 /* ---------------------- cabine: o caminho do contrato ganha vida ---------------------- */

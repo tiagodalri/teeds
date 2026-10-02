@@ -382,13 +382,13 @@ export const OMNI_OVER: Estrategia = {
 export const OMNI_BULL: Estrategia = { ...FIRST_BLOCK, id: 'omnibull', nome: 'OMNI Bull', origem: 'First Block com análise de loss virtual' }
 export const OMNI_BEAR: Estrategia = { ...SECOND_BLOCK, id: 'omnibear', nome: 'OMNI Bear', origem: 'Second Block com análise de loss virtual' }
 
-type FasePalm = 'aquecendo' | 'base-real' | 'recuperacao-espera' | 'recuperacao-real'
+type FasePalm = 'base-real' | 'recuperacao-espera' | 'recuperacao-real'
 
 const janelaPalm = (digitos: number[]) => digitos.slice(-25)
 const pctPalm = (digitos: number[], aceita: (d: number) => boolean) =>
   janelaPalm(digitos).filter(aceita).length * 4
 const fasePalm = (memoria: Record<string, unknown>): FasePalm =>
-  (memoria.fasePalm as FasePalm | undefined) ?? 'aquecendo'
+  (memoria.fasePalm as FasePalm | undefined) ?? 'base-real'
 /**
  * Troca a fase e anota por quê. Só o `fasePalm` decide alguma coisa; os
  * outros três campos são telemetria (anterior, motivo, quando) que o
@@ -405,18 +405,37 @@ const palmDe = (config: ConfigEstrategia | undefined) => config?.parametros?.pal
 /**
  * The Palm, reconstruído quadro a quadro a partir do robô original.
  *
- * A entrada-base é Under 9: primeiro observa em virtual até o 9 aparecer e
- * então abre um ciclo real. Uma perda troca a recuperação para Under 5. A
- * recuperação só é exposta quando 0–4 ocupam ao menos 48% dos 25 dígitos e
- * um resultado 5–9 (loss virtual ou real) acaba de ocorrer.
+ * Duas estratégias e um freio só, no lugar certo (Tiago, 02/10/2026):
+ *
+ *  - **Under 9, livre.** A entrada-base ganha em nove dígitos de dez. Entra
+ *    em todo tick, sem análise e sem esperar nada. Antes ela também exigia
+ *    um loss virtual (um 9 na janela, com 9 em no máximo 12%), e o freio não
+ *    pagava o que custava: segurar uma entrada que acerta 90% para esperar
+ *    confirmação só perde rodada. Quem acerta quase sempre não precisa de
+ *    permissão para entrar.
+ *
+ *  - **Under 5, com loss virtual.** A perda troca a estratégia, e aí sim o
+ *    freio vale: a recuperação acerta em cinco dígitos de dez, custa mais
+ *    caro e erra o dobro. Ela só é exposta quando 0–4 ocupam ao menos 48%
+ *    dos 25 dígitos e um resultado 5–9 (virtual ou real) acaba de ocorrer.
+ *
+ * A recuperação se comporta como a família do AG7: o loss virtual é o pedágio
+ * para ENTRAR nela, cobrado uma vez. Dali em diante a sequência segue sem
+ * nova análise até uma vitória fechá-la. Antes o robô reanalisava a cada
+ * perda e isso congelava a escada no meio — perdia o 2º degrau, a janela já
+ * não cumpria os 48% e ele voltava a esperar, deixando aberto exatamente o
+ * prejuízo que a recuperação existia para fechar.
+ *
+ * Recuperou, volta direto ao Under 9 livre — sem passar por análise nenhuma,
+ * porque o modo tradicional não tem análise para passar.
  */
 export const THE_PALM: Estrategia = {
   id: 'thepalm',
   nome: 'The Palm',
   origem: 'reconstruído a partir do The Palm 2.0 original',
   descricao:
-    'Analisa 25 dígitos, arma entradas reais em Under 9 após uma perda virtual e ' +
-    'troca para Under 5 na recuperação, sempre usando o payout real para calcular o valor.',
+    'Opera Under 9 livre, em todo tick. Uma perda troca para Under 5: a recuperação ' +
+    'analisa os 25 dígitos uma vez para entrar e segue a sequência até uma vitória fechá-la.',
   contractType: 'DIGITUNDER',
   barreira: 9,
   ticks: 1,
@@ -425,58 +444,64 @@ export const THE_PALM: Estrategia = {
     ? { contractType: 'DIGITUNDER', barreira: 5 }
     : { contractType: 'DIGITUNDER', barreira: 9 },
   entrar: ({ digitos, memoria, config }) => {
+    // O Under 9 entra sempre: é a estratégia que acerta em nove dígitos de
+    // dez, e não há o que confirmar antes.
+    const fase = fasePalm(memoria)
+    if (fase === 'base-real' || fase === 'recuperacao-real') return true
+
+    // Só a recuperação analisa. A janela de 25 é dela, e é por isso que o
+    // robô pode começar a operar no primeiro tick: a base não precisa dela.
     const palm = palmDe(config)
     const janela = janelaPalm(digitos)
     if (janela.length < 25) return false
     const ultimo = janela[janela.length - 1]
-    const fase = fasePalm(memoria)
-
-    if (fase === 'base-real' || fase === 'recuperacao-real') return true
-    if (fase === 'aquecendo') {
-      if (pctPalm(janela, (d) => d === 9) <= palm.limiteNove && ultimo === 9) {
-        mudarFasePalm(memoria, 'base-real', `dígito 9 apareceu com 9 em ${pctPalm(janela, (d) => d === 9)}% (limite ${palm.limiteNove}%): loss virtual, ciclo real Under 9`)
-        return true
-      }
-      return false
-    }
     if (pctPalm(janela, (d) => d <= 4) >= palm.limiteBaixos && ultimo >= 5) {
       mudarFasePalm(memoria, 'recuperacao-real', `0–4 em ${pctPalm(janela, (d) => d <= 4)}% (mínimo ${palm.limiteBaixos}%) e dígito ${ultimo} (5–9): recuperação Under 5 liberada`)
       return true
     }
     return false
   },
-  aguardando: ({ digitos, memoria, config }) => {
+  // Só fala quando o robô espera, e agora ele só espera na recuperação.
+  aguardando: ({ digitos, config }) => {
     const palm = palmDe(config)
     const janela = janelaPalm(digitos)
     if (janela.length < 25) return `lendo o mercado — ${janela.length}/25 dígitos`
-    const nove = pctPalm(janela, (d) => d === 9)
-    const baixos = pctPalm(janela, (d) => d <= 4)
-    return fasePalm(memoria) === 'recuperacao-espera'
-      ? `recuperação em análise — 0 a 4 em ${baixos}% (libera em ${palm.limiteBaixos}% após loss virtual)`
-      : `análise virtual Under 9 — dígito 9 em ${nove}% (limite ${palm.limiteNove}%)`
+    return `recuperação em análise — 0 a 4 em ${pctPalm(janela, (d) => d <= 4)}% (libera em ${palm.limiteBaixos}% após loss virtual)`
   },
   progresso: ({ digitos, memoria, config }) => {
     const palm = palmDe(config)
     const janela = janelaPalm(digitos)
-    const nove = janela.length === 25 ? pctPalm(janela, (d) => d === 9) : 0
     const baixos = janela.length === 25 ? pctPalm(janela, (d) => d <= 4) : 0
-    const recuperando = fasePalm(memoria).startsWith('recuperacao')
+    const fase = fasePalm(memoria)
     return {
-      rotulo: recuperando
-        ? `Under 5 virtual · 0–4 em ${baixos}%`
-        : `Under 9 virtual · dígito 9 em ${nove}%`,
-      itens: recuperando
+      rotulo: fase === 'recuperacao-espera' ? `Under 5 virtual · 0–4 em ${baixos}%`
+        : fase === 'recuperacao-real' ? 'Under 5 · sequência em andamento'
+        : 'Under 9 · entra em todo tick',
+      itens: fase === 'recuperacao-espera'
         ? [{ valor: `${baixos}%`, ok: janela.length === 25 && baixos >= palm.limiteBaixos }, { valor: '5–9', ok: janela[janela.length - 1] >= 5 }]
-        : [{ valor: `${nove}%`, ok: janela.length === 25 && nove <= palm.limiteNove }, { valor: '9', ok: janela[janela.length - 1] === 9 }],
+        : [],
     }
   },
   aposResultado: ({ ganhou, contractType, memoria, digitos, config }) => {
     const palm = palmDe(config)
     const eraRecuperacao = contractType === 'DIGITUNDER' && fasePalm(memoria) === 'recuperacao-real'
     if (ganhou) {
-      mudarFasePalm(memoria, eraRecuperacao ? 'aquecendo' : 'base-real', eraRecuperacao ? 'recuperação ganhou: volta ao virtual Under 9' : 'ganho na base: segue o ciclo real Under 9')
+      // Recuperou ou ganhou na base, o destino é o mesmo: Under 9 solto. A
+      // recuperação não devolve o robô para uma fila de análise.
+      mudarFasePalm(memoria, 'base-real', eraRecuperacao
+        ? 'recuperação ganhou: volta ao Under 9 livre, sem análise'
+        : 'ganho na base: segue o ciclo real Under 9')
       return
     }
+    // Perdeu DENTRO da recuperação: a sequência segue, sem nova análise, como
+    // no AG7. Reanalisar aqui era o que congelava a escada no meio: o robô
+    // perdia o 2º degrau, a janela já não cumpria os 48% e ele voltava a
+    // esperar — deixando o prejuízo aberto justamente quando a recuperação
+    // existia para fechá-lo. O loss virtual é o pedágio para ENTRAR na
+    // recuperação, uma vez; quem fecha a sequência é a vitória.
+    if (eraRecuperacao) return
+
+    // Primeira perda: aqui sim o loss virtual decide quando expor o Under 5.
     const baixos = pctPalm(digitos, (d) => d <= 4)
     const janela = janelaPalm(digitos)
     const ultimo = janela[janela.length - 1]
@@ -496,12 +521,14 @@ export const THE_PALM: Estrategia = {
       motivo: (memoria.motivoPalm as string | undefined) ?? null,
       contrato: 'DIGITUNDER',
       barreira: recuperando ? 5 : 9,
-      virtual: fase === 'aquecendo' || fase === 'recuperacao-espera',
+      virtual: fase === 'recuperacao-espera',
       detalhes: {
-        janela: janela.length, nove, baixos, limiteNove: palm.limiteNove, limiteBaixos: palm.limiteBaixos,
+        // `nove` fica: é leitura do mercado que o espelho mostra, mesmo sem
+        // mandar mais em decisão nenhuma.
+        janela: janela.length, nove, baixos, limiteBaixos: palm.limiteBaixos,
         estrategiaAtual: recuperando ? 'Under 5' : 'Under 9',
         estrategiaAnterior: memoria.fasePalmAnterior === 'recuperacao-real' ? 'Under 5' : memoria.fasePalmAnterior ? 'Under 9' : '',
-        confirmacao: fase === 'aquecendo' ? `dígito 9 com 9 ≤ ${palm.limiteNove}% na janela` : fase === 'recuperacao-espera' ? `0–4 ≥ ${palm.limiteBaixos}% e um dígito 5–9` : 'entrada liberada',
+        confirmacao: fase === 'recuperacao-espera' ? `0–4 ≥ ${palm.limiteBaixos}% e um dígito 5–9` : fase === 'recuperacao-real' ? 'sequência em andamento, sem nova análise' : 'entrada liberada',
         trocadaEm: (memoria.trocaPalmEm as number | undefined) ?? 0,
       },
     }

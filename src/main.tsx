@@ -8,10 +8,16 @@ import './styles/ux-refinements.css'
 import './styles/mobile-polish.css'
 import { aplicarTema, temaGuardado } from './core/tema'
 import { MARCA } from './marca'
+import { registrarVisita } from './core/teeds/visitas'
 
 // o tema entra antes do primeiro quadro, para a tela nao piscar clara
 document.documentElement.dataset.marca = MARCA.id
 aplicarTema(temaGuardado())
+
+// Quem abriu o site, e por qual caminho chegou. Fora do React de propósito:
+// vale para TODA visita, inclusive a de quem nunca faz login, e o StrictMode
+// monta os componentes duas vezes em desenvolvimento — aqui contaria dobrado.
+registrarVisita()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

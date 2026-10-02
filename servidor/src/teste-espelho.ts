@@ -382,10 +382,10 @@ async function provas() {
     }
     conferir('B12.1 Palm: decisões idênticas com e sem telemetria (determinismo)', rodar(true), rodar(false))
     const memoria: Record<string, unknown> = {}
-    conferir('B12.2 Palm: telemetria antes de tudo é virtual', THE_PALM.telemetria!(ctxDe(memoria, semNove)).virtual, true)
-    conferir('B12.3 Palm: decisão original intacta (arma na base real)', THE_PALM.entrar(ctxDe(memoria, [...semNove, 9])), true)
+    conferir('B12.2 Palm: telemetria antes de tudo já é real (a base não analisa)', THE_PALM.telemetria!(ctxDe(memoria, semNove)).virtual, false)
+    conferir('B12.3 Palm: decisão original intacta (entra na base real)', THE_PALM.entrar(ctxDe(memoria, [...semNove, 9])), true)
     const t1 = THE_PALM.telemetria!(ctxDe(memoria, [...semNove, 9]))
-    conferir('B12.4 Palm: fase base-real, vinda de aquecendo, com motivo', [t1.fase, t1.anterior, Boolean(t1.motivo), t1.barreira, t1.virtual], ['base-real', 'aquecendo', true, 9, false])
+    conferir('B12.4 Palm: fase base-real desde o começo, sem fase anterior', [t1.fase, t1.anterior, t1.barreira, t1.virtual], ['base-real', null, 9, false])
     THE_PALM.aposResultado?.({ ...ctxDe(memoria, metadeBaixa), ganhou: false, contractType: 'DIGITUNDER', digitoSaida: 8 })
     const t2 = THE_PALM.telemetria!(ctxDe(memoria, metadeBaixa))
     conferir('B12.5 Palm: troca para recuperação Under 5 com estratégia anterior e motivo', [t2.fase, t2.anterior, t2.barreira, t2.detalhes.estrategiaAtual, t2.detalhes.estrategiaAnterior, t2.detalhes.baixos], ['recuperacao-real', 'base-real', 5, 'Under 5', 'Under 9', 48])

@@ -45,8 +45,6 @@ export type EscadaConfigurada =
 export interface ParametrosPalm {
   /** Quantos dígitos o The Palm analisa. Fixa em 25 nesta versão. */
   janela: 25
-  /** Máximo de dígito 9 na janela (em %) para armar o ciclo real Under 9. */
-  limiteNove: number
   /** Mínimo de 0–4 na janela (em %) para liberar a recuperação Under 5. */
   limiteBaixos: number
   /** Payout presumido antes da primeira compra Under 5. */
@@ -131,7 +129,7 @@ export const DESCONTO_RETORNO = 0.97
 /** Lucro mínimo, em dólares, ao fechar uma sequência. */
 export const LUCRO_MINIMO = 0.01
 /** Os limites e a conta do The Palm, como sempre foram. */
-export const PALM_PADRAO: ParametrosPalm = { janela: 25, limiteNove: 12, limiteBaixos: 48, retornoInicial: 0.9233, desconto: 0.99, margem: 0.95 }
+export const PALM_PADRAO: ParametrosPalm = { janela: 25, limiteBaixos: 48, retornoInicial: 0.9233, desconto: 0.99, margem: 0.95 }
 
 /**
  * Como cada robô entra. A família do AG7 (loss virtual de 4, segue a
@@ -335,7 +333,6 @@ export function validar(p: unknown, _id?: string): string[] {
   if (p.palm !== undefined && p.palm !== null) {
     const palm = ehObjeto(p.palm) ? p.palm : {}
     if (numero(palm.janela) !== 25) erros.push('A janela do The Palm é fixa em 25 dígitos nesta versão.')
-    if (fora(numero(palm.limiteNove), 0, 100)) erros.push('O limite do dígito 9 precisa ficar entre 0% e 100%.')
     if (fora(numero(palm.limiteBaixos), 0, 100)) erros.push('O mínimo de 0 a 4 precisa ficar entre 0% e 100%.')
     if (fora(numero(palm.retornoInicial), 0.5, 1.5)) erros.push('O retorno presumido do Under 5 precisa ficar entre 0,50 e 1,50.')
     if (fora(numero(palm.desconto), 0.8, 1)) erros.push('A segurança do payout do The Palm precisa ficar entre 0,80 e 1,00.')
@@ -499,7 +496,6 @@ export function diferencas(p: ParametrosDoRobo, padrao: ParametrosDoRobo): Difer
   }
   compara('limites.valorMaximoPorEntrada', textoDoTeto(padrao.limites.valorMaximoPorEntrada), textoDoTeto(p.limites.valorMaximoPorEntrada))
   if (p.palm && padrao.palm) {
-    compara('palm.limiteNove', `dígito 9 até ${padrao.palm.limiteNove}%`, `dígito 9 até ${p.palm.limiteNove}%`)
     compara('palm.limiteBaixos', `0 a 4 no mínimo ${padrao.palm.limiteBaixos}%`, `0 a 4 no mínimo ${p.palm.limiteBaixos}%`)
     compara('palm.retornoInicial', `retorno presumido ${String(padrao.palm.retornoInicial).replace('.', ',')}`, `retorno presumido ${String(p.palm.retornoInicial).replace('.', ',')}`)
     compara('palm.desconto', `segurança do Palm ${pct(1 - padrao.palm.desconto)}`, `segurança do Palm ${pct(1 - p.palm.desconto)}`)

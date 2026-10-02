@@ -947,3 +947,33 @@ export async function escreverPulsoDoEspelho(
 export async function limparEspelhoAntigo(): Promise<unknown> {
   return rest('/rpc/teeds_limpar_espelho', { method: 'POST', body: JSON.stringify({}) })
 }
+
+/**
+ * Uma visita ao site, anotada pela porta pública.
+ *
+ * Escreve pela chave de serviço de propósito: a tabela `visitas` liga o RLS e
+ * não tem política nenhuma, então ninguém insere direto do navegador. Se
+ * tivesse, qualquer um inflaria o número de visitas da campanha de fora.
+ *
+ * Nunca lança. Uma visita perdida é um número levemente menor no painel; uma
+ * visita que derruba o carregamento do site é um cliente a menos.
+ */
+export async function salvarVisita(d: {
+  marca: 'teeds' | 'omni'; visitante: string
+  origem?: string; meio?: string; campanha?: string; referencia?: string
+  dispositivo?: string; idioma?: string; fuso?: string; caminho?: string
+}): Promise<void> {
+  try {
+    await rest('/visitas', {
+      method: 'POST', headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        marca: d.marca, visitante: d.visitante,
+        origem: d.origem || null, meio: d.meio || null, campanha: d.campanha || null,
+        referencia: d.referencia || null, dispositivo: d.dispositivo || null,
+        idioma: d.idioma || null, fuso: d.fuso || null, caminho: d.caminho || null,
+      }),
+    })
+  } catch (erro) {
+    console.warn('[visita] não anotada:', (erro as Error).message)
+  }
+}

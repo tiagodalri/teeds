@@ -65,8 +65,13 @@ for (const robo of [SUPERIOR_5, AG_2, SMART_03, FIRST_BLOCK, SECOND_BLOCK]) {
   conferir(`${robo.id} ganhar na 2ª cobre a perda da 1ª e sobra`, escada[1].lucro > escada[0].perdido, true)
   conferir(`${robo.id} ganhar na 4ª cobre as três perdas antes dela`, escada[3].lucro > escada[2].perdido, true)
 }
-conferir('Palm arma Under 9 depois do loss virtual', THE_PALM.entrar(contexto([...vinteQuatroSemNove, 9])), true)
-conferir('Palm entra na fase base real', memoria.fasePalm, 'base-real')
+// A base do Palm nao analisa nada: entra no primeiro tick, com a janela vazia.
+conferir('Palm entra na base sem analise, antes de 25 digitos', THE_PALM.entrar(contexto([])), true)
+conferir('Palm arma Under 9 em todo tick', THE_PALM.entrar(contexto([...vinteQuatroSemNove, 9])), true)
+// A memoria so guarda TROCA de fase. Comecar na base nao e troca: o campo
+// fica vazio e quem le a fase efetiva e a telemetria.
+conferir('Palm comeca na fase base real', THE_PALM.telemetria!(contexto([])).fase, 'base-real')
+conferir('Palm nao anota fase nenhuma antes da primeira troca', memoria.fasePalm, undefined)
 conferir('Palm compra Under 9 na base', THE_PALM.contrato?.(contexto([...vinteQuatroSemNove, 9])).barreira, 9)
 
 const metadeBaixa = [...Array(12).fill(0), ...Array(12).fill(7), 8]
@@ -78,8 +83,19 @@ conferir('Palm calcula primeira recuperacao pelo payout de 92,33%', THE_PALM.pro
   perdasSeguidas: 1, prejuizoDaSequencia: 1, retornoLiquidoPorUnidade: .09,
   config: contexto([]).config, memoria, contractType: 'DIGITUNDER',
 }), 2.14)
+// A escada nao pode congelar no meio: perdeu DENTRO da recuperacao, a
+// sequencia segue sem reanalisar, como no AG7. A janela abaixo nao cumpre os
+// 48% nem termina em 5-9 — antes isso jogava o robo de volta para a espera.
+const janelaRuim = [...Array(20).fill(7), ...Array(5).fill(3)]   // 0-4 em 20%, ultimo 3
+THE_PALM.aposResultado?.({ ...contexto(janelaRuim), ganhou: false, contractType: 'DIGITUNDER', digitoSaida: 3 })
+conferir('Palm perdendo na recuperacao segue a sequencia, sem reanalisar', memoria.fasePalm, 'recuperacao-real')
+conferir('Palm segue entrando na recuperacao com a janela contra', THE_PALM.entrar(contexto(janelaRuim)), true)
+conferir('Palm segue comprando Under 5 na sequencia', THE_PALM.contrato?.(contexto(janelaRuim)).barreira, 5)
+
 THE_PALM.aposResultado?.({ ...contexto(metadeBaixa), ganhou: true, contractType: 'DIGITUNDER', digitoSaida: 2 })
-conferir('Palm volta ao virtual depois de recuperar', memoria.fasePalm, 'aquecendo')
+conferir('Palm volta direto ao Under 9 livre depois de recuperar', memoria.fasePalm, 'base-real')
+conferir('Palm recuperado ja entra sem esperar analise', THE_PALM.entrar(contexto(metadeBaixa)), true)
+conferir('Palm recuperado compra Under 9 de novo', THE_PALM.contrato?.(contexto(metadeBaixa)).barreira, 9)
 
 /* ------------------------------------------------------------------ *
  * Desligar é imediato.

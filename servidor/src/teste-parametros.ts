@@ -53,7 +53,7 @@ for (const e of ESTRATEGIAS_LOCAIS) {
 }
 conferir('ROBOS_COM_PADRAO cobre as estratégias', ESTRATEGIAS_LOCAIS.every((e) => ROBOS_COM_PADRAO.includes(e.id)), true)
 conferir('lossVirtual padrão: 4 na família AG7, 2 nos Blocks, 0 no Smart/Göreme', ['superior5', 'omniover', 'firstblock', 'omnibear', 'smart03', 'goreme'].map((id) => parametrosPadrao(id).entrada.lossVirtual), [4, 4, 2, 2, 0, 0])
-conferir('The Palm tem palm no padrão; os outros não', [parametrosPadrao('thepalm').palm?.limiteNove, parametrosPadrao('ag2').palm], [12, undefined])
+conferir('The Palm tem palm no padrão; os outros não', [parametrosPadrao('thepalm').palm?.limiteBaixos, parametrosPadrao('ag2').palm], [48, undefined])
 
 /* ------------------------------------------------------------------ 2 */
 console.log('\n2 · A CONTA DA RECUPERAÇÃO É A FÓRMULA ANTIGA, CENTAVO A CENTAVO\n')

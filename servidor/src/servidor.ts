@@ -12,7 +12,7 @@ import { writeFileSync, chmodSync, existsSync, readFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
 import { MARCAS, marcaPorId } from '../../src/marca/marcas'
 import { atender, autorizacao } from './mcp'
-import { contasDoUsuario, emailEntregue, emailFalhou, emailsPendentes, limitesDoCliente, limparSessoesOrfas, salvarLeadCapturado, supabaseConfigurado, usuarioDoToken } from './supabase'
+import { contasDoUsuario, emailEntregue, emailFalhou, emailsPendentes, limitesDoCliente, limparSessoesOrfas, salvarLeadCapturado, salvarVisita, supabaseConfigurado, usuarioDoToken } from './supabase'
 import { aplicarNasSessoesVivas, aquecerSala, contas, iniciar, montarConfig, parar, sessoesVivasPorVersao, todas, ver } from './sessoes'
 import {
   ErroDeValidacao, carregarParametros, descartarTeste, emTesteNoDemo, historico as historicoDeParametros, ligarAtualizacaoDeParametros,
@@ -103,6 +103,9 @@ const base64url = (b: Buffer) => b.toString('base64').replace(/\+/g, '-').replac
 interface Tentativa { verifier: string; criadaEm: number }
 const tentativas = new Map<string, Tentativa>()
 const tentativasLead = new Map<string, { inicio: number; total: number }>()
+/* O mesmo freio, para as visitas. O IP entra só aqui e morre aqui: ele
+   nunca vai para o banco (ver o comentário da migração das visitas). */
+const tentativasVisita = new Map<string, { inicio: number; total: number }>()
 
 /** Descarta tentativas velhas: um `state` que sobra é superfície de ataque. */
 function limpar() {
@@ -319,6 +322,60 @@ const servidor = createServer(async (req, res) => {
     if (req.method === 'POST') { res.writeHead(ok ? 200 : 500, { 'content-type': 'text/plain' }); return res.end(ok ? 'ok' : 'erro') }
     res.writeHead(200, tipo)
     return res.end(paginaDeSaida(marcaPorId(aberto.marca).prosa, aberto.email, ok))
+  }
+
+  if (url.pathname === '/publico/visita') {
+    /*
+      Alguém abriu o site. Uma linha, sem login e sem dado pessoal.
+
+      Por que passa pelo motor em vez de ir direto ao banco: a tabela não tem
+      política de escrita, então a chave de serviço (que mora aqui) é a única
+      caneta. Do lado de fora, inflar as visitas da campanha seria um laço de
+      `fetch` num console aberto.
+    */
+    const origem = String(req.headers.origin ?? '')
+    const permitidas = ['https://teedscompany.com', 'https://omnifinanc.com', 'http://localhost:5173', 'http://localhost:4173']
+    const headers: Record<string, string> = { 'content-type': 'application/json; charset=utf-8', vary: 'Origin' }
+    if (permitidas.includes(origem)) headers['access-control-allow-origin'] = origem
+    headers['access-control-allow-headers'] = 'content-type'
+    headers['access-control-allow-methods'] = 'POST, OPTIONS'
+    if (req.method === 'OPTIONS') { res.writeHead(204, headers); return res.end() }
+    if (req.method !== 'POST' || !permitidas.includes(origem)) { res.writeHead(403, headers); return res.end(JSON.stringify({ erro: 'Origem não autorizada.' })) }
+
+    const ipVisita = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim()
+    const agoraVisita = Date.now(), faixaVisita = tentativasVisita.get(ipVisita)
+    const usoVisita = !faixaVisita || agoraVisita - faixaVisita.inicio > 3600_000
+      ? { inicio: agoraVisita, total: 1 }
+      : { ...faixaVisita, total: faixaVisita.total + 1 }
+    tentativasVisita.set(ipVisita, usoVisita)
+    // 60 por hora: quem recarrega a página o dia todo cabe; quem está contando
+    // visita no laço, não. Responde 200 para não virar sinal de que há freio.
+    if (usoVisita.total > 60) { res.writeHead(200, headers); return res.end(JSON.stringify({ ok: true })) }
+
+    const pedacos: Buffer[] = []; let bytes = 0
+    for await (const parte of req) { bytes += (parte as Buffer).length; if (bytes > 4_096) break; pedacos.push(parte as Buffer) }
+    try {
+      const d = JSON.parse(Buffer.concat(pedacos).toString('utf8'))
+      const marca = d.marca === 'omni' ? 'omni' : d.marca === 'teeds' ? 'teeds' : null
+      // A marca tem de bater com o domínio de onde veio: senão a Teeds
+      // conseguiria escrever visita na conta da OMNI e vice-versa.
+      const daOrigem = origem.includes('omnifinanc.com') ? 'omni' : origem.includes('teedscompany.com') ? 'teeds' : marca
+      if (!marca || marca !== daOrigem) throw new Error('Marca incompatível com a origem.')
+      const curto = (v: unknown, n: number) => String(v ?? '').trim().slice(0, n)
+      const visitante = curto(d.visitante, 40).replace(/[^a-zA-Z0-9_-]/g, '')
+      if (visitante.length < 8) throw new Error('Visitante inválido.')
+      await salvarVisita({
+        marca, visitante,
+        origem: curto(d.origem, 60).toLowerCase(), meio: curto(d.meio, 60).toLowerCase(),
+        campanha: curto(d.campanha, 80).toLowerCase(), referencia: curto(d.referencia, 100).toLowerCase(),
+        dispositivo: curto(d.dispositivo, 20), idioma: curto(d.idioma, 20), fuso: curto(d.fuso, 60),
+        caminho: curto(d.caminho, 120),
+      })
+      res.writeHead(201, headers); return res.end(JSON.stringify({ ok: true }))
+    } catch {
+      // Nunca conta o problema: é porta pública e o site não depende dela.
+      res.writeHead(200, headers); return res.end(JSON.stringify({ ok: true }))
+    }
   }
 
   if (url.pathname === '/publico/leads') {

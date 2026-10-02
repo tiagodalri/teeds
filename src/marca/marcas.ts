@@ -152,7 +152,11 @@ export const MARCAS: Record<string, Marca> = {
     appId: '34gMUQCaYNX1M93Q7aq5R',
     redirectUri: 'https://teedscompany.com/',
     afiliado: 'https://t.deriv.link?t=W7L5WVEEQGHY',
-    robos: ['superior5', 'ag2', 'smart03', 'goreme', 'firstblock', 'secondblock', 'thepalm'],
+    // O Smart 03 saiu da vitrine em 02/10/2026 (Tiago): ele perde nos dois
+    // lados — a escada mais rápida de todas e a menor comissão por dólar
+    // apostado. A estratégia continua no código de propósito: uma sessão
+    // antiga ainda precisa saber o nome dela, e voltar é recolocar o id aqui.
+    robos: ['superior5', 'ag2', 'goreme', 'firstblock', 'secondblock', 'thepalm'],
     base: '/',
     emblema: 'teeds-marca.png',
     heroAulas: { principal: 'aulas-hero.webp', reserva: 'aulas-hero.png', celular: 'aulas-hero-mobile.webp' },
