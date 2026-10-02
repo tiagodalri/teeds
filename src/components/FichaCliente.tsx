@@ -54,6 +54,23 @@ const EVENTO: Record<string, string> = {
   bounced: 'voltou', complained: 'marcou como spam', delivery_delayed: 'entrega atrasada',
   suppressed: 'bloqueado pelo provedor',
 }
+/**
+ * O nome de cada origem, em português, e os apps que a Deriv conhece.
+ *
+ * A conta Deriv é do cliente: ele pode operar pela Teeds, pela OMNI, pelo bot
+ * da própria Deriv ou por qualquer robô do mercado. Saber QUAL app comprou é
+ * o que separa receita de curiosidade.
+ */
+const ORIGEM: Record<string, string> = {
+  externo: 'Fora da plataforma', 'sem-dono': 'Sem dono identificado',
+  teeds: 'Teeds', omni: 'OMNI',
+}
+const APP: Record<string, string> = {
+  bot_deriv_com: 'bot da própria Deriv', deriv_com: 'site da Deriv', dtrader: 'DTrader da Deriv',
+}
+const nomeDaOrigem = (o: string) => ORIGEM[o] ?? o
+const nomeDoApp = (a: string) => APP[a] ?? a
+
 const TOM: Record<string, string> = {
   clicado: 'bom', aberto: 'bom', entregue: 'neutro', enviado: 'neutro',
   atrasado: 'atencao', voltou: 'ruim', reclamou: 'ruim', falhou: 'ruim', suprimido: 'ruim',
@@ -219,18 +236,31 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
           </section>
 
           <section className="fc-bloco">
-            <h4>Por origem <small>de onde veio a operação</small></h4>
-            {ficha.markup.porOrigem.length ? <div className="fc-tabela fc-mkorigem">
-              <div className="cab"><span>Origem</span><span>Operações</span><span>Markup</span><span>Resultado</span></div>
-              {ficha.markup.porOrigem.map((x, i) => (
-                <div className="linha" key={i}>
-                  <span><b>{x.origem}</b></span>
-                  <span>{n(x.operacoes)}</span>
-                  <span>{usd4(x.markup)}</span>
-                  <span className={x.resultado > 0 ? 'ok' : x.resultado < 0 ? 'ruim' : ''}>{usd(x.resultado)}</span>
-                </div>
-              ))}
-            </div> : <p className="fc-vazio">Sem separação por origem ainda.</p>}
+            <h4>Por origem <small>qual aplicativo comprou o contrato</small></h4>
+            {ficha.markup.porOrigem.length ? <>
+              <div className="fc-tabela fc-mkorigem">
+                <div className="cab"><span>Origem</span><span>Operações</span><span>Markup</span><span>Resultado</span></div>
+                {ficha.markup.porOrigem.map((x, i) => (
+                  <div className="linha" key={i}>
+                    <span><b>{nomeDaOrigem(x.origem)}</b>{x.apps.length > 0 && <small>{x.apps.map(nomeDoApp).join(' · ')}</small>}</span>
+                    <span>{n(x.operacoes)}</span>
+                    {/* A conta da casa só existe quando o contrato foi comprado
+                        PELO NOSSO app. Em app de terceiro a Deriv paga o dono
+                        daquele app; mostrar o valor aqui como se fosse nosso
+                        foi exatamente o erro que o Tiago pegou em 02/10/2026. */}
+                    <span className={x.nosso ? '' : 'fc-apagado'} title={x.nosso ? '' : 'Comprado por outro aplicativo: este markup não é nosso'}>
+                      {x.nosso ? usd4(x.markup) : `${usd4(x.markup)} (não é nosso)`}
+                    </span>
+                    <span className={x.resultado > 0 ? 'ok' : x.resultado < 0 ? 'ruim' : ''}>{usd(x.resultado)}</span>
+                  </div>
+                ))}
+              </div>
+              {ficha.markup.porOrigem.some((x) => !x.nosso) && <p className="fc-nota">
+                A casa só recebe markup de contrato comprado pelo <b>nosso</b> aplicativo. O que aparece
+                em cinza foi operado por outro app na conta da pessoa: a Deriv paga o dono daquele app,
+                não nós. O valor fica à vista para dar tamanho ao que está indo embora.
+              </p>}
+            </> : <p className="fc-vazio">Sem separação por origem ainda.</p>}
           </section>
         </div>
 

@@ -3,7 +3,7 @@ import { Brand } from './Brand'
 import './workspace.css'
 
 export type WorkspacePage = 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas'
-export const PAGE_NAMES: Record<WorkspacePage, string> = { operar: 'Operar', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas' }
+export const PAGE_NAMES: Record<WorkspacePage, string> = { operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas' }
 const paths: Record<string, string> = {
   operar: 'M3 17l5-6 4 3 9-11M16 3h5v5', robos: 'M5 7h14v13H5zM12 3v4M8 12h1m6 0h1M9 16h6',
   assistente: 'M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z',
@@ -30,8 +30,12 @@ export function WorkspaceNav({ page, admin, onNavigate }: { page: WorkspacePage;
     <aside className={`workspace-sidebar ${compact ? 'compact' : ''} ${open ? 'mobile-open' : ''}`} onKeyDown={e => { if (e.key === 'Escape') setOpen(false) }}>
       <button className="workspace-brand" aria-label="Página inicial" onClick={() => navigate('operar')}><Brand assinatura /></button>
       <nav id="workspace-navigation" aria-label="Navegação principal">
-        <p className="workspace-label">Seu workspace</p>
-        {item('operar')}{item('robos')}
+        {/* Robôs primeiro, e o terminal manual depois (Tiago, 02/10/2026):
+            quem entra na plataforma vem para ligar um robô; operar na mão é a
+            exceção. O id da tela continua 'operar' de propósito — trocar o id
+            quebraria o que já está gravado em sessões e links. */}
+        <p className="workspace-label">Operações</p>
+        {item('robos')}{item('operar')}
         <p className="workspace-label">Ferramentas</p>{item('gerenciamento')}{item('assistente')}
         <p className="workspace-label">Explore</p>{item('marketplace')}{item('aulas')}
         {admin && <div className="workspace-admin">{item('gestao')}</div>}

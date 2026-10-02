@@ -941,7 +941,7 @@ export interface FichaCliente {
     resumo: { comissao: number; comissaoReal: number; operacoes: number; entradas: number; pagamentos: number; resultado: number; primeiroDia: string | null; ultimoDia: string | null }
     porDia: Array<{ dia: string; operacoes: number; comissao: number; entradas: number; resultado: number; soDemo: boolean }>
     porConta: Array<{ contaId: string; demo: boolean; moeda: string | null; operacoes: number; comissao: number; resultado: number }>
-    porOrigem: Array<{ origem: string; operacoes: number; entradas: number; resultado: number; markup: number; demo: boolean }>
+    porOrigem: Array<{ origem: string; operacoes: number; entradas: number; resultado: number; markup: number; demo: boolean; nosso: boolean; apps: string[] }>
   }
   extrato: {
     resumo: { depositos: number; saques: number; lancamentos: number; primeiro: string | null; ultimo: string | null }
@@ -1026,7 +1026,7 @@ export async function lerFichaCliente(sessao: SessaoTeeds, userId: string): Prom
       },
       porDia: lista(r.markup?.por_dia).map((x) => ({ dia: x.dia, operacoes: n(x.operacoes), comissao: n(x.comissao), entradas: n(x.entradas), resultado: n(x.resultado), soDemo: Boolean(x.so_demo) })),
       porConta: lista(r.markup?.por_conta).map((x) => ({ contaId: x.conta_id, demo: Boolean(x.demo), moeda: x.moeda, operacoes: n(x.operacoes), comissao: n(x.comissao), resultado: n(x.resultado) })),
-      porOrigem: lista(r.markup?.por_origem).map((x) => ({ origem: x.origem, operacoes: n(x.operacoes), entradas: n(x.entradas), resultado: n(x.resultado), markup: n(x.markup), demo: Boolean(x.demo) })),
+      porOrigem: lista(r.markup?.por_origem).map((x) => ({ origem: x.origem, operacoes: n(x.operacoes), entradas: n(x.entradas), resultado: n(x.resultado), markup: n(x.markup), demo: Boolean(x.demo), nosso: Boolean(x.nosso), apps: Array.isArray(x.apps) ? x.apps : [] })),
     },
     extrato: {
       resumo: {

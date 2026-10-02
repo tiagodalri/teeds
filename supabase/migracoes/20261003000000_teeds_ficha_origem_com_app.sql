@@ -1,0 +1,24 @@
+-- A origem do contrato passa a dizer QUAL app comprou, e se o markup e nosso.
+--
+-- O Tiago abriu a ficha de um cliente e perguntou: "como voce calculou esse
+-- markup se ele nunca operou dentro da plataforma?". A pergunta estava certa
+-- e a tela estava errada.
+--
+-- `contratos_por_origem.markup_estimado` e 3% do pagamento de TODO contrato
+-- da conta, calculado para cada origem — inclusive `externo`. O proprio
+-- comentario de atribuicao.ts ja avisava: "so faz sentido quando a origem e
+-- uma marca nossa". A ficha mostrava o numero de qualquer jeito, e aquele
+-- cliente aparecia com US$ 47,28 de markup que a casa nunca viu: os 648
+-- contratos dele foram comprados pelo `bot_deriv_com`, o bot da propria
+-- Deriv. Quem recebe o markup daqueles contratos e o dono daquele app.
+--
+-- A funcao passa a devolver, por origem:
+--   `nosso` — a origem e uma das marcas que este admin enxerga;
+--   `apps`  — os ids de aplicativo que a Deriv informou no extrato.
+--
+-- A tela usa os dois para riscar o que nao e receita e dizer de onde veio.
+-- O valor continua a vista de proposito: saber QUANTO esta indo para outro
+-- app na conta de um cliente nosso e informacao de negocio, nao ruido.
+--
+-- O corpo foi aplicado direto no banco junto desta mudanca; este arquivo
+-- guarda o porque.

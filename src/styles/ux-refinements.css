@@ -620,3 +620,6 @@ button, input, select, textarea { font-family: inherit; }
 .fc-ativos .cab, .fc-ativos .linha { grid-template-columns: 1.2fr .8fr .7fr 1fr; }
 .fc-extrato .cab, .fc-extrato .linha { grid-template-columns: 1.1fr 1fr .9fr 1.6fr .9fr 1fr; }
 .fc-emails .cab, .fc-emails .fc-email > .linha { grid-template-columns: 1.1fr 1.3fr .9fr .7fr .6fr 1.1fr; }
+/* Markup que NÃO é nosso: visível, mas sem se passar por receita. */
+.fc-apagado { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.fc-nota b { color: var(--text); font-weight: 700; }

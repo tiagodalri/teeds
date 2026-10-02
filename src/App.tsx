@@ -513,7 +513,7 @@ export default function App() {
         else setTela(next)
       }} />
       <header className="topbar">
-        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'operar' ? 'Seu terminal de negociação' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : 'Seu espaço de trabalho'}</span></div>
+        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : 'Seu espaço de trabalho'}</span></div>
 
         <div className="topbar-right">
           {!derivPronta && (
