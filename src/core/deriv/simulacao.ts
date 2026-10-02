@@ -77,7 +77,11 @@ function fasesDo(c: Cenario): { base: Fase; recuperacao: Fase } {
   return { base, recuperacao: { ganha: (d) => d < 5, chance: chanceRecuperacao, porDolar: pagamentoPorChance(chanceRecuperacao) } }
 }
 
-/** O loss virtual não se aplica ao The Palm (ele tem a própria análise de 25 dígitos). */
+/**
+ * O loss virtual do painel não se aplica ao The Palm: a base dele entra em
+ * todo tick e a recuperação tem análise própria, dos 25 dígitos. Já era 0
+ * antes da mudança de 02/10/2026, e continua certo depois dela.
+ */
 const lossVirtualDe = (c: Cenario) => (c.id === 'thepalm' ? 0 : c.parametros.entrada.lossVirtual)
 
 /* ------------------------------------------------------------------ *

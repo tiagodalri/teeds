@@ -116,7 +116,7 @@ export const CATALOGO: Identidade[] = [
   },
   {
     id: 'thepalm', nome: nomeDaEstrategia('thepalm'), chamada: 'O adaptativo',
-    descricao: 'Analisa 25 dígitos e alterna entre Under 9 e Under 5 com proteção virtual.',
+    descricao: 'Entra em todo tick no Under 9. Uma perda troca para Under 5, que espera a análise dos 25 dígitos e segue até recuperar.',
     cor: '#16a36a', corSuave: '#e5f7ef', onde: 'teeds',
     emblema: 'M20 31 V16 M20 20 C13 20 9 16 9 10 C16 10 20 13 20 20 M20 23 C27 23 31 19 31 13 C24 13 20 16 20 23 M14 31 h12',
     chance: 90, contrato: 'DIGITUNDER',

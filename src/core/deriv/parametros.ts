@@ -517,7 +517,9 @@ export function descrever(id: string, p: ParametrosDoRobo): string {
   const segue = p.entrada.sequenciaSemAnalise
   const digitos = digitosQueGanham(p.contrato)
   const esperaDigitos = n === 1 ? 'Espera 1 dígito que teria perdido' : `Espera ${n} dígitos seguidos que teriam perdido`
-  if (id === 'thepalm') return 'Analisa 25 dígitos e alterna entre Under 9 e Under 5 com proteção virtual.'
+  // O Palm deixou de analisar na base em 02/10/2026: a frase antiga dizia
+  // "analisa 25 dígitos" como se fosse sempre, e virou meia-verdade.
+  if (id === 'thepalm') return 'Entra em todo tick no Under 9. Uma perda troca para Under 5, que espera a análise dos 25 dígitos e segue até recuperar.'
   if (id === 'superior5fixo') return 'Entra em todas as operações com o valor sempre igual, sem progressão.'
   // O Göreme troca de contrato na recuperação (30/09/2026): a frase diz isso,
   // senão a vitrine promete só a entrada e esconde metade do robô.

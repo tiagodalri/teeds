@@ -496,7 +496,7 @@ function AbaPalm({ p, atualizar }: { p: ParametrosDoRobo; atualizar: (patch: Pat
   if (!palm) return <p className="ac-vazio">Este robô não usa a análise do The Palm.</p>
   return (
     <>
-      <div><h3>The Palm</h3><p>Os limites da janela de 25 dígitos que armam o ciclo Under 9 e liberam a recuperação Under 5.</p></div>
+      <div><h3>The Palm</h3><p>Os limites da janela de 25 dígitos que liberam a recuperação Under 5. A entrada Under 9 não depende de análise: entra em todo tick.</p></div>
       <div className="ac-bloco">
         <div className="ac-campo"><label>0 a 4 no mínimo {palm.limiteBaixos}%</label><input type="range" className="ac-range" min={0} max={100} value={palm.limiteBaixos} aria-label="Mínimo de dígitos 0 a 4 na janela" onChange={(e) => atualizar({ palm: { limiteBaixos: Number(e.target.value) } })} /><p className="ac-nota">Abaixo disso a recuperação Under 5 não é liberada.</p></div>
         <p className="ac-nota">Janela: <b>25 dígitos (fixa)</b> nesta versão.</p>
