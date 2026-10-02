@@ -71,7 +71,7 @@ interface Pessoa { user_id: string; nome: string | null; email: string; total_ac
 export type Grupo =
   | 'com-nome' | 'com-nome-gmail' | 'sem-nome-gmail'
   | 'com-nome-microsoft' | 'sem-nome-microsoft'
-  | 'gmail' | 'microsoft' | 'fora-dos-grandes'
+  | 'gmail' | 'microsoft' | 'fora-dos-grandes' | 'todos'
 
 /**
  * O que define cada grupo: ter nome ou não, e de qual provedor.
@@ -131,6 +131,10 @@ const GRUPO: Record<Grupo, { filtroDeNome: string; querNome: boolean | null; pro
   // próprios. Com e sem nome, porque juntos dão menos de 800 pessoas e
   // separar por nome aqui deixaria amostras pequenas demais para medir.
   'fora-dos-grandes':   { filtroDeNome: '', querNome: null, provedor: (e) => !eGmail(e) && !eMicrosoft(e) },
+  // Todo mundo que ainda nao recebeu, sem corte nenhum. Existe para o
+  // disparo programado: a regra do Tiago e "50 por hora ate finalizar", e
+  // terminar significa a base inteira, nao um provedor.
+  'todos':              { filtroDeNome: '', querNome: null, provedor: null },
 }
 
 /** Quem ainda não recebeu esta campanha, na ordem em que deve receber. */
