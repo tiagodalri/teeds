@@ -1,0 +1,26 @@
+-- A ficha do cliente passa a trazer TUDO (Tiago, 02/10/2026).
+--
+-- A primeira versao mostrava acesso, aulas, robos e um resumo de operacoes.
+-- Faltava o resto do que a casa ja sabia e nunca tinha juntado num lugar so:
+--
+--  - markup de verdade, do jeito que a Deriv conta (`comissoes_diarias`),
+--    por dia, por conta e por origem — e nao o estimado do proprio robo;
+--  - o EXTRATO da corretora (`movimentacoes_deriv`): depositos, saques,
+--    descricao e o saldo que ficou depois de cada lancamento;
+--  - operacoes por ativo e por hora do dia, no fuso da propria pessoa;
+--  - produtos liberados, autorizacao da Deriv e quando o extrato foi lido;
+--  - uso do assistente;
+--  - e o historico de e-mail MENSAGEM A MENSAGEM, com a linha do tempo de
+--    cada uma: saiu, entregou, abriu, clicou, voltou, reclamou.
+--
+-- Sobre a `situacao` de cada e-mail: e o ponto MAIS LONGE que a mensagem
+-- chegou, nao o ultimo evento que apareceu. Eventos do Resend chegam fora de
+-- ordem, e um "entregue" atrasado nao desfaz uma leitura que ja aconteceu.
+--
+-- Continua `security definer` com guarda explicita no topo. As tabelas aqui
+-- tem politicas de RLS diferentes entre si, e uma sem politica de leitura
+-- devolveria vazio em silencio — foi o que aconteceu com as visitas hoje.
+-- Conferido nos dois sentidos: admin ve tudo, cliente comum recebe null.
+--
+-- O corpo desta funcao foi aplicado pela migracao
+-- `teeds_cliente_ficha_emails_detalhados`; este arquivo guarda o porque.

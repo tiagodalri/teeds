@@ -548,3 +548,75 @@ button, input, select, textarea { font-family: inherit; }
   .fc-tabela { overflow-x: auto; }
   .fc-tabela .cab, .fc-tabela .linha { min-width: 520px; }
 }
+
+/* A ficha do cliente precisa de mesa: 720px espremia seis colunas de tabela
+   em três e quebrava o "01/10/2026 13:13" em duas linhas. */
+.adm-modal-ficha { width: min(1180px, 100%) !important; }
+/* Os quatro números e o bloco de contas ANTIGOS da ficha viraram repetição do
+   que a visão geral diz melhor — e apareciam duas vezes na mesma tela. Ficam
+   no DOM para não mexer no formulário de edição, que é load-bearing. */
+.adm-modal-ficha .adm-detail-antigo,
+.adm-modal-ficha .adm-contas { display: none !important; }
+.adm-modal-ficha .fc { padding: 16px 22px 4px; }
+
+/* Duas colunas quando cabe; uma só no estreito. */
+.fc-duas { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+@media (max-width: 900px) { .fc-duas { grid-template-columns: 1fr; } }
+
+.fc-nota { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.fc-barras.baixa { height: 40px; }
+.fc-barras i.demo { opacity: .32; }
+
+.fc-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.fc-chips > span {
+  display: flex; flex-direction: column; gap: 1px; padding: 7px 11px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 12px; font-weight: 600;
+}
+.fc-chips > span.on { border-color: color-mix(in srgb, var(--up) 40%, var(--border)); background: var(--up-soft); color: var(--up); }
+.fc-chips small { font-size: 10px; font-weight: 400; color: var(--muted); }
+
+.fc-resumo-email { display: flex; flex-wrap: wrap; gap: 7px; }
+.fc-resumo-email > span {
+  padding: 5px 10px; border-radius: 99px; background: var(--surface-alt);
+  border: 1px solid var(--border); font-size: 11.5px; font-weight: 600; color: var(--muted);
+}
+.fc-resumo-email > span.bom { background: var(--up-soft); border-color: color-mix(in srgb, var(--up) 30%, transparent); color: var(--up); }
+.fc-resumo-email > span.ruim { background: var(--down-soft); border-color: color-mix(in srgb, var(--down) 30%, transparent); color: var(--down); }
+
+/* Cada e-mail abre a própria linha do tempo de entrega. */
+.fc-email { border-top: 1px solid var(--border); }
+.fc-email:first-child { border-top: 0; }
+.fc-emails .fc-email > .linha {
+  width: 100%; border: 0; background: none; cursor: pointer; text-align: left;
+  font: inherit; color: inherit; font-variant-numeric: tabular-nums;
+}
+.fc-emails .fc-email > .linha:hover { background: var(--surface-alt); }
+.fc-emails .fc-email > .linha.aberta { background: var(--primary-soft); }
+.fc-selo { font-style: normal; padding: 2px 8px; border-radius: 99px; font-size: 10.5px; font-weight: 700; background: var(--surface-alt); color: var(--muted); }
+.fc-selo.bom { background: var(--up-soft); color: var(--up); }
+.fc-selo.ruim { background: var(--down-soft); color: var(--down); }
+.fc-selo.atencao { background: var(--account-demo-soft); color: var(--account-demo); }
+.fc-linha-tempo { margin: 0; padding: 10px 14px 14px 30px; list-style: none; background: var(--surface-alt); }
+.fc-linha-tempo li {
+  position: relative; display: flex; justify-content: space-between; gap: 12px;
+  padding: 5px 0 5px 16px; font-size: 12px; border-left: 2px solid var(--border);
+}
+.fc-linha-tempo li::before {
+  content: ''; position: absolute; left: -5px; top: 11px; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--primary);
+}
+.fc-linha-tempo li:last-child { border-left-color: transparent; }
+.fc-linha-tempo li.ruim::before { background: var(--down); }
+.fc-linha-tempo b { font-weight: 650; }
+.fc-linha-tempo span { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.fc-contas .cab, .fc-contas .linha { grid-template-columns: 1.3fr .9fr 1fr .9fr .9fr .9fr; }
+.fc-robos .cab, .fc-robos .linha { grid-template-columns: 1.5fr .6fr .8fr .6fr 1fr 1fr .9fr; }
+.fc-sessoes .cab, .fc-sessoes .linha { grid-template-columns: 1.1fr 1.1fr .5fr .7fr .9fr .9fr 1.3fr; }
+.fc-ops .cab, .fc-ops .linha { grid-template-columns: 1.1fr 1.1fr 1.1fr .8fr .5fr .9fr .9fr; }
+.fc-aulas .cab, .fc-aulas .linha { grid-template-columns: 1.8fr .7fr .7fr 1fr .9fr .9fr; }
+.fc-mkconta .cab, .fc-mkconta .linha { grid-template-columns: 1.4fr .8fr 1fr 1fr; }
+.fc-mkorigem .cab, .fc-mkorigem .linha { grid-template-columns: 1.2fr .8fr 1fr 1fr; }
+.fc-ativos .cab, .fc-ativos .linha { grid-template-columns: 1.2fr .8fr .7fr 1fr; }
+.fc-extrato .cab, .fc-extrato .linha { grid-template-columns: 1.1fr 1fr .9fr 1.6fr .9fr 1fr; }
+.fc-emails .cab, .fc-emails .fc-email > .linha { grid-template-columns: 1.1fr 1.3fr .9fr .7fr .6fr 1.1fr; }

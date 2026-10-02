@@ -918,7 +918,9 @@ export interface FichaCliente {
     fusoHorario: string | null; idioma: string | null; observacoes: string | null
   }
   cadastro: { status: string; pedidoEm: string; decididoEm: string | null; recadastro: boolean; emailCadastroEm: string | null; emailAprovacaoEm: string | null } | null
-  contas: Array<{ contaId: string; tipo: string; moeda: string; saldo: number; conectadaEm: string | null; vistaEm: string | null }>
+  produtos: Array<{ produtoId: string; ativo: boolean; concedidoEm: string; expiraEm: string | null; origem: string | null }>
+  contas: Array<{ contaId: string; tipo: string; moeda: string; saldo: number; conectadaEm: string | null; vistaEm: string | null; extratoEm: string | null }>
+  autorizacao: { expiraEm: string | null; atualizadoEm: string | null } | null
   acessos: {
     dias: Array<{ dia: string; acessos: number; segundos: number; dispositivo: string | null; fuso: string | null }>
     primeiroDia: string | null; diasComAcesso: number
@@ -926,22 +928,43 @@ export interface FichaCliente {
   }
   aulas: Array<{ aulaId: string; aberturas: number; segundos: number; posicaoMax: number; concluida: boolean; primeiraVez: string | null; ultimaVez: string | null }>
   robos: {
-    porRobo: Array<{ roboId: string; roboNome: string | null; sessoes: number; operacoes: number; ganhas: number; perdidas: number; resultado: number; ultimaVez: string | null; sessoesDemo: number }>
-    ultimas: Array<{ roboNome: string | null; roboId: string; demo: boolean; moeda: string | null; situacao: string; operacoes: number; ganhas: number; perdidas: number; resultado: number; entradaInicial: number | null; motivoDaParada: string | null; criadaEm: string; encerradaEm: string | null }>
+    porRobo: Array<{ roboId: string; roboNome: string | null; sessoes: number; operacoes: number; ganhas: number; perdidas: number; resultado: number; ultimaVez: string | null; sessoesDemo: number; markupReal: number }>
+    ultimas: Array<{ roboNome: string | null; roboId: string; demo: boolean; moeda: string | null; situacao: string; operacoes: number; ganhas: number; perdidas: number; resultado: number; entradaInicial: number | null; stopLoss: number | null; takeProfit: number | null; motivoDaParada: string | null; criadaEm: string; encerradaEm: string | null; contaId: string | null }>
   }
   operacoes: {
-    resumo: { total: number; ganhas: number; entradas: number; resultado: number; markup: number; reais: number; resultadoReal: number; markupReal: number; primeira: string | null; ultima: string | null }
-    ultimas: Array<{ roboNome: string | null; ativo: string | null; demo: boolean; moeda: string | null; entrada: number; resultado: number; markup: number; ganhou: boolean; digitoSaida: number | null; executadaEm: string }>
+    resumo: { total: number; ganhas: number; entradas: number; resultado: number; markup: number; reais: number; entradasReais: number; resultadoReal: number; markupReal: number; primeira: string | null; ultima: string | null }
+    porAtivo: Array<{ ativo: string | null; operacoes: number; ganhas: number; resultado: number; markup: number }>
+    porHora: Array<{ hora: number; operacoes: number }>
+    ultimas: Array<{ roboNome: string | null; ativo: string | null; tipoContrato: string | null; demo: boolean; moeda: string | null; entrada: number; pagamento: number; resultado: number; markup: number; ganhou: boolean; digitoEntrada: number | null; digitoSaida: number | null; executadaEm: string; contaId: string | null }>
   }
-  emails: { enviados: number; abertos: number; ultimoEnvio: string | null; ultimaAbertura: string | null; descadastrado: boolean } | null
+  markup: {
+    resumo: { comissao: number; comissaoReal: number; operacoes: number; entradas: number; pagamentos: number; resultado: number; primeiroDia: string | null; ultimoDia: string | null }
+    porDia: Array<{ dia: string; operacoes: number; comissao: number; entradas: number; resultado: number; soDemo: boolean }>
+    porConta: Array<{ contaId: string; demo: boolean; moeda: string | null; operacoes: number; comissao: number; resultado: number }>
+    porOrigem: Array<{ origem: string; operacoes: number; entradas: number; resultado: number; markup: number; demo: boolean }>
+  }
+  extrato: {
+    resumo: { depositos: number; saques: number; lancamentos: number; primeiro: string | null; ultimo: string | null }
+    lancamentos: Array<{ contaId: string; tipo: string | null; valor: number; moeda: string | null; saldoDepois: number | null; descricao: string | null; ocorridaEm: string; demo: boolean }>
+  }
+  assistente: { mensagens: number; dias: number; ultimoDia: string | null } | null
+  emails: {
+    enviados: number; entregues: number; abertos: number; clicados: number; voltaram: number
+    ultimoEnvio: string | null; ultimaAbertura: string | null; descadastrado: boolean
+    mensagens: Array<{
+      campanha: string; enviadoEm: string; erro: string | null
+      situacao: string; aberturas: number; cliques: number; primeiraAbertura: string | null
+      eventos: Array<{ tipo: string; quando: string }>
+    }>
+  } | null
 }
 
 /**
  * Tudo o que a casa sabe sobre uma pessoa, numa consulta só.
  *
- * Vem inteiro de propósito: oito consultas separadas seriam oito estados de
- * carregamento e oito jeitos de a ficha ficar pela metade. Devolve null para
- * quem não é admin da marca dela — a função no banco é que decide.
+ * Vem inteiro de propósito: quinze consultas separadas seriam quinze estados
+ * de carregamento e quinze jeitos de a ficha ficar pela metade. Devolve null
+ * para quem não é admin da marca dela — a função no banco é que decide.
  */
 export async function lerFichaCliente(sessao: SessaoTeeds, userId: string): Promise<FichaCliente | null> {
   const r = await rest<any>('/rpc/teeds_cliente_ficha', sessao.token, {
@@ -951,6 +974,7 @@ export async function lerFichaCliente(sessao: SessaoTeeds, userId: string): Prom
   if (!r?.cliente) return null
   const n = (v: unknown) => Number(v ?? 0)
   const c = r.cliente
+  const lista = (v: unknown): any[] => Array.isArray(v) ? v : []
   return {
     cliente: {
       userId: c.user_id, nome: c.nome, email: c.email, telefone: c.telefone, cpf: c.cpf,
@@ -966,28 +990,63 @@ export async function lerFichaCliente(sessao: SessaoTeeds, userId: string): Prom
       recadastro: Boolean(r.cadastro.recadastro),
       emailCadastroEm: r.cadastro.email_cadastro_em, emailAprovacaoEm: r.cadastro.email_aprovacao_em,
     } : null,
-    contas: (r.contas ?? []).map((x: any) => ({ contaId: x.conta_id, tipo: x.tipo, moeda: x.moeda, saldo: n(x.saldo), conectadaEm: x.conectada_em, vistaEm: x.vista_em })),
+    produtos: lista(r.produtos).map((x) => ({ produtoId: x.produto_id, ativo: Boolean(x.ativo), concedidoEm: x.concedido_em, expiraEm: x.expira_em, origem: x.origem })),
+    contas: lista(r.contas).map((x) => ({ contaId: x.conta_id, tipo: x.tipo, moeda: x.moeda, saldo: n(x.saldo), conectadaEm: x.conectada_em, vistaEm: x.vista_em, extratoEm: x.extrato_em })),
+    autorizacao: r.autorizacao ? { expiraEm: r.autorizacao.expira_em, atualizadoEm: r.autorizacao.atualizado_em } : null,
     acessos: {
-      dias: (r.acessos?.dias ?? []).map((x: any) => ({ dia: x.dia, acessos: n(x.acessos), segundos: n(x.segundos), dispositivo: x.dispositivo, fuso: x.fuso })),
+      dias: lista(r.acessos?.dias).map((x) => ({ dia: x.dia, acessos: n(x.acessos), segundos: n(x.segundos), dispositivo: x.dispositivo, fuso: x.fuso })),
       primeiroDia: r.acessos?.primeiro_dia ?? null,
       diasComAcesso: n(r.acessos?.dias_com_acesso),
-      porDispositivo: (r.acessos?.por_dispositivo ?? []).map((x: any) => ({ dispositivo: x.dispositivo, acessos: n(x.acessos), segundos: n(x.segundos) })),
+      porDispositivo: lista(r.acessos?.por_dispositivo).map((x) => ({ dispositivo: x.dispositivo, acessos: n(x.acessos), segundos: n(x.segundos) })),
     },
-    aulas: (r.aulas ?? []).map((x: any) => ({ aulaId: x.aula_id, aberturas: n(x.aberturas), segundos: n(x.segundos), posicaoMax: n(x.posicao_max), concluida: Boolean(x.concluida), primeiraVez: x.primeira_vez, ultimaVez: x.ultima_vez })),
+    aulas: lista(r.aulas).map((x) => ({ aulaId: x.aula_id, aberturas: n(x.aberturas), segundos: n(x.segundos), posicaoMax: n(x.posicao_max), concluida: Boolean(x.concluida), primeiraVez: x.primeira_vez, ultimaVez: x.ultima_vez })),
     robos: {
-      porRobo: (r.robos?.por_robo ?? []).map((x: any) => ({ roboId: x.robo_id, roboNome: x.robo_nome, sessoes: n(x.sessoes), operacoes: n(x.operacoes), ganhas: n(x.ganhas), perdidas: n(x.perdidas), resultado: n(x.resultado), ultimaVez: x.ultima_vez, sessoesDemo: n(x.sessoes_demo) })),
-      ultimas: (r.robos?.ultimas ?? []).map((x: any) => ({ roboNome: x.robo_nome, roboId: x.robo_id, demo: Boolean(x.demo), moeda: x.moeda, situacao: x.situacao, operacoes: n(x.operacoes), ganhas: n(x.ganhas), perdidas: n(x.perdidas), resultado: n(x.resultado), entradaInicial: x.entrada_inicial === null ? null : n(x.entrada_inicial), motivoDaParada: x.motivo_da_parada, criadaEm: x.criada_em, encerradaEm: x.encerrada_em })),
+      porRobo: lista(r.robos?.por_robo).map((x) => ({ roboId: x.robo_id, roboNome: x.robo_nome, sessoes: n(x.sessoes), operacoes: n(x.operacoes), ganhas: n(x.ganhas), perdidas: n(x.perdidas), resultado: n(x.resultado), ultimaVez: x.ultima_vez, sessoesDemo: n(x.sessoes_demo), markupReal: n(x.markup_real) })),
+      ultimas: lista(r.robos?.ultimas).map((x) => ({ roboNome: x.robo_nome, roboId: x.robo_id, demo: Boolean(x.demo), moeda: x.moeda, situacao: x.situacao, operacoes: n(x.operacoes), ganhas: n(x.ganhas), perdidas: n(x.perdidas), resultado: n(x.resultado), entradaInicial: x.entrada_inicial === null ? null : n(x.entrada_inicial), stopLoss: x.stop_loss === null ? null : n(x.stop_loss), takeProfit: x.take_profit === null ? null : n(x.take_profit), motivoDaParada: x.motivo_da_parada, criadaEm: x.criada_em, encerradaEm: x.encerrada_em, contaId: x.conta_id })),
     },
     operacoes: {
       resumo: {
         total: n(r.operacoes?.resumo?.total), ganhas: n(r.operacoes?.resumo?.ganhas),
         entradas: n(r.operacoes?.resumo?.entradas), resultado: n(r.operacoes?.resumo?.resultado),
         markup: n(r.operacoes?.resumo?.markup), reais: n(r.operacoes?.resumo?.reais),
+        entradasReais: n(r.operacoes?.resumo?.entradas_reais),
         resultadoReal: n(r.operacoes?.resumo?.resultado_real), markupReal: n(r.operacoes?.resumo?.markup_real),
         primeira: r.operacoes?.resumo?.primeira ?? null, ultima: r.operacoes?.resumo?.ultima ?? null,
       },
-      ultimas: (r.operacoes?.ultimas ?? []).map((x: any) => ({ roboNome: x.robo_nome, ativo: x.ativo, demo: Boolean(x.demo), moeda: x.moeda, entrada: n(x.entrada), resultado: n(x.resultado), markup: n(x.markup), ganhou: Boolean(x.ganhou), digitoSaida: x.digito_saida === null ? null : n(x.digito_saida), executadaEm: x.executada_em })),
+      porAtivo: lista(r.operacoes?.por_ativo).map((x) => ({ ativo: x.ativo, operacoes: n(x.operacoes), ganhas: n(x.ganhas), resultado: n(x.resultado), markup: n(x.markup) })),
+      porHora: lista(r.operacoes?.por_hora).map((x) => ({ hora: n(x.hora), operacoes: n(x.operacoes) })),
+      ultimas: lista(r.operacoes?.ultimas).map((x) => ({ roboNome: x.robo_nome, ativo: x.ativo, tipoContrato: x.tipo_contrato, demo: Boolean(x.demo), moeda: x.moeda, entrada: n(x.entrada), pagamento: n(x.pagamento), resultado: n(x.resultado), markup: n(x.markup), ganhou: Boolean(x.ganhou), digitoEntrada: x.digito_entrada === null ? null : n(x.digito_entrada), digitoSaida: x.digito_saida === null ? null : n(x.digito_saida), executadaEm: x.executada_em, contaId: x.conta_id })),
     },
-    emails: r.emails ? { enviados: n(r.emails.enviados), abertos: n(r.emails.abertos), ultimoEnvio: r.emails.ultimo_envio, ultimaAbertura: r.emails.ultima_abertura, descadastrado: Boolean(r.emails.descadastrado) } : null,
+    markup: {
+      resumo: {
+        comissao: n(r.markup?.resumo?.comissao), comissaoReal: n(r.markup?.resumo?.comissao_real),
+        operacoes: n(r.markup?.resumo?.operacoes), entradas: n(r.markup?.resumo?.entradas),
+        pagamentos: n(r.markup?.resumo?.pagamentos), resultado: n(r.markup?.resumo?.resultado),
+        primeiroDia: r.markup?.resumo?.primeiro_dia ?? null, ultimoDia: r.markup?.resumo?.ultimo_dia ?? null,
+      },
+      porDia: lista(r.markup?.por_dia).map((x) => ({ dia: x.dia, operacoes: n(x.operacoes), comissao: n(x.comissao), entradas: n(x.entradas), resultado: n(x.resultado), soDemo: Boolean(x.so_demo) })),
+      porConta: lista(r.markup?.por_conta).map((x) => ({ contaId: x.conta_id, demo: Boolean(x.demo), moeda: x.moeda, operacoes: n(x.operacoes), comissao: n(x.comissao), resultado: n(x.resultado) })),
+      porOrigem: lista(r.markup?.por_origem).map((x) => ({ origem: x.origem, operacoes: n(x.operacoes), entradas: n(x.entradas), resultado: n(x.resultado), markup: n(x.markup), demo: Boolean(x.demo) })),
+    },
+    extrato: {
+      resumo: {
+        depositos: n(r.extrato?.resumo?.depositos), saques: n(r.extrato?.resumo?.saques),
+        lancamentos: n(r.extrato?.resumo?.lancamentos),
+        primeiro: r.extrato?.resumo?.primeiro ?? null, ultimo: r.extrato?.resumo?.ultimo ?? null,
+      },
+      lancamentos: lista(r.extrato?.lancamentos).map((x) => ({ contaId: x.conta_id, tipo: x.tipo, valor: n(x.valor), moeda: x.moeda, saldoDepois: x.saldo_depois === null ? null : n(x.saldo_depois), descricao: x.descricao, ocorridaEm: x.ocorrida_em, demo: Boolean(x.demo) })),
+    },
+    assistente: r.assistente ? { mensagens: n(r.assistente.mensagens), dias: n(r.assistente.dias), ultimoDia: r.assistente.ultimo_dia } : null,
+    emails: r.emails ? {
+      enviados: n(r.emails.enviados), entregues: n(r.emails.entregues), abertos: n(r.emails.abertos),
+      clicados: n(r.emails.clicados), voltaram: n(r.emails.voltaram),
+      ultimoEnvio: r.emails.ultimo_envio, ultimaAbertura: r.emails.ultima_abertura,
+      descadastrado: Boolean(r.emails.descadastrado),
+      mensagens: lista(r.emails.mensagens).map((x) => ({
+        campanha: x.campanha, enviadoEm: x.enviado_em, erro: x.erro, situacao: x.situacao,
+        aberturas: n(x.aberturas), cliques: n(x.cliques), primeiraAbertura: x.primeira_abertura,
+        eventos: lista(x.eventos).map((e) => ({ tipo: e.tipo, quando: e.quando })),
+      })),
+    } : null,
   }
 }
