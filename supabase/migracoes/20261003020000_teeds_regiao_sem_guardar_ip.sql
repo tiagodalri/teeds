@@ -1,0 +1,24 @@
+-- A regiao do cliente vem do IP, e o IP nao e guardado (Tiago, 02/10/2026).
+--
+-- A localizacao ate aqui vinha do fuso do navegador, que entrega
+-- "America/Sao_Paulo" para o pais inteiro. O Tiago pediu cidade e escolheu,
+-- entre duas opcoes, a que nao guarda identificador:
+--
+--   A) o motor le o IP, resolve cidade e estado, grava os dois e DESCARTA o
+--      endereco  <-- escolhida
+--   B) guardar o IP cru, com troca do texto de privacidade e politica nova
+--
+-- Entao a regra deste caminho, que nao pode ser quebrada depois: o endereco
+-- entra na requisicao, vira cidade dentro do processo, e nao vai para o
+-- banco, nao volta na resposta e nao entra em log. `servidor/src/regiao.ts`
+-- nem devolve o IP para quem chama, de proposito.
+--
+-- Fica em `clientes`, e nao numa tabela de historico, porque a pergunta e
+-- "de onde esta pessoa acessa", no singular. Guardar a cidade de cada acesso
+-- seria reconstruir deslocamento, bem mais invasivo do que a pergunta pede.
+--
+-- O texto do painel que diz "a plataforma nao guarda o IP de ninguem"
+-- continua verdadeiro. A segunda metade dele ("a localizacao vem do fuso
+-- horario") passa a valer so como reserva, para quem ainda nao teve a cidade
+-- resolvida. O Tiago pediu para NAO mexer na frase agora; fica registrado
+-- aqui para quando ele quiser.

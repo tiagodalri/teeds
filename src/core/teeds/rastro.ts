@@ -17,7 +17,7 @@
  *
  * Falha em silêncio sempre. Telemetria nunca pode segurar a tela.
  */
-import { SUPABASE } from './config'
+import { SERVIDOR, SUPABASE } from './config'
 import { MARCA } from '../../marca'
 import type { SessaoTeeds } from './conta'
 
@@ -103,4 +103,29 @@ export function ouvirCliques(sessao: SessaoTeeds | null | undefined): () => void
     document.removeEventListener('click', aoClicar, true)
     window.removeEventListener('pagehide', aoSair)
   }
+}
+
+/**
+ * Diz ao motor para resolver a cidade deste acesso.
+ *
+ * O navegador não manda localização nenhuma: quem lê o IP é o servidor, que
+ * grava só cidade e estado e descarta o endereço. Daqui sai apenas a marca e
+ * o crachá da sessão.
+ *
+ * Uma vez por sessão do navegador. A cidade de alguém não muda entre um
+ * clique e outro, e cada chamada é uma consulta externa do lado de lá.
+ */
+export function marcarRegiao(sessao: SessaoTeeds | null | undefined): void {
+  if (!sessao) return
+  try {
+    const chave = `${MARCA.id}.regiao.sessao`
+    if (sessionStorage.getItem(chave)) return
+    sessionStorage.setItem(chave, '1')
+  } catch { /* sem armazenamento: consulta de novo, sem prejuízo */ }
+  void fetch(`${SERVIDOR.url}/cliente/regiao`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${sessao.token}` },
+    body: JSON.stringify({ marca: MARCA.id }),
+    keepalive: true,
+  }).catch(() => { /* a ficha fica sem cidade; nada mais acontece */ })
 }

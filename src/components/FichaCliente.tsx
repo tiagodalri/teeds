@@ -163,7 +163,13 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
               <div><dt>Situação</dt><dd>{c.situacao}</dd></div>
               <div><dt>Cadastro</dt><dd>{soData(c.criadoEm)} <em>({haQuantoTempo(c.criadoEm)})</em></dd></div>
               <div><dt>Acesso expira</dt><dd>{soData(c.acessoExpiraEm)}</dd></div>
-              <div><dt>Região</dt><dd>{lugar ? `${lugar.lugar}${lugar.pais ? ` · ${lugar.pais}` : ''}` : '—'}</dd></div>
+              {/* A cidade vem do IP, resolvida no servidor, que não guarda o
+                  endereço. Enquanto ela não chega, vale o fuso do navegador,
+                  que acerta o país e erra a cidade. */}
+              <div><dt>Região</dt><dd>{rastro?.regiao.cidade
+                ? `${rastro.regiao.cidade}${rastro.regiao.estado ? ` · ${rastro.regiao.estado}` : ''}${rastro.regiao.pais ? ` · ${rastro.regiao.pais}` : ''}`
+                : lugar ? `${lugar.lugar}${lugar.pais ? ` · ${lugar.pais}` : ''}` : '—'}
+                {rastro?.regiao.cidade && <em> (pelo acesso)</em>}</dd></div>
               <div><dt>Idioma</dt><dd>{c.idioma ? idiomaLegivel(c.idioma) : '—'}</dd></div>
             </dl>
           </section>

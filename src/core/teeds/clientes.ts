@@ -1054,6 +1054,7 @@ export async function lerFichaCliente(sessao: SessaoTeeds, userId: string): Prom
 /* ------------------------------------------------- o rastro de navegação */
 
 export interface RastroCliente {
+  regiao: { cidade: string | null; estado: string | null; pais: string | null; lidaEm: string | null }
   paginas: Array<{ pagina: string; visitas: number; segundos: number; ultimaEm: string }>
   cliques: Array<{ alvo: string; pagina: string; vezes: number; ultimaEm: string }>
   porDia: Array<{ dia: string; segundos: number; visitas: number; cliques: number }>
@@ -1076,6 +1077,10 @@ export async function lerRastroCliente(sessao: SessaoTeeds, userId: string): Pro
   const n = (v: unknown) => Number(v ?? 0)
   const lista = (v: unknown): any[] => Array.isArray(v) ? v : []
   return {
+    regiao: {
+      cidade: r.regiao?.cidade ?? null, estado: r.regiao?.estado ?? null,
+      pais: r.regiao?.pais ?? null, lidaEm: r.regiao?.lida_em ?? null,
+    },
     paginas: lista(r.paginas).map((x) => ({ pagina: x.pagina, visitas: n(x.visitas), segundos: n(x.segundos), ultimaEm: x.ultima_em })),
     cliques: lista(r.cliques).map((x) => ({ alvo: x.alvo, pagina: x.pagina, vezes: n(x.vezes), ultimaEm: x.ultima_em })),
     porDia: lista(r.por_dia).map((x) => ({ dia: x.dia, segundos: n(x.segundos), visitas: n(x.visitas), cliques: n(x.cliques) })),

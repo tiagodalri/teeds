@@ -30,7 +30,7 @@ import { useCandleSeries, useConnection, useLimitesDuracao, useLiveTick, useProp
 import { traduzirErro } from './core/deriv/erros'
 import { useAccount } from './hooks/useAccount'
 import { minhaSituacao, registrarContaDeriv, registrarPresenca, souAdmin, type SituacaoDaFicha } from './core/teeds/clientes'
-import { marcarPagina, ouvirCliques } from './core/teeds/rastro'
+import { marcarPagina, marcarRegiao, ouvirCliques } from './core/teeds/rastro'
 import { entregarAutorizacao } from './core/teeds/servidorRobos'
 import { AssistentePanel } from './components/AssistentePanel'
 import { AssistenteBetaGate } from './components/AssistenteBetaGate'
@@ -238,6 +238,7 @@ export default function App() {
     de tela. Juntos num só, trocar de aba religaria o ouvinte a cada clique.
   */
   useEffect(() => ouvirCliques(teeds.sessao), [usuarioTeedsId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => marcarRegiao(teeds.sessao), [usuarioTeedsId]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!teeds.sessao) return
     marcarPagina(teeds.sessao, tela)

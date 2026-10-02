@@ -977,3 +977,26 @@ export async function salvarVisita(d: {
     console.warn('[visita] não anotada:', (erro as Error).message)
   }
 }
+
+/**
+ * A cidade de onde um cliente acessa, SEM guardar o IP.
+ *
+ * Quem chama ja resolveu cidade e estado a partir do endereço; aqui só entra
+ * o resultado. O IP não é parâmetro desta função de propósito: assim não há
+ * caminho pelo qual ele chegue ao banco, nem por engano futuro.
+ */
+export async function salvarRegiaoDoCliente(
+  userId: string, marca: string, lugar: { cidade: string; regiao: string; pais: string },
+): Promise<void> {
+  try {
+    await rest(`/clientes?user_id=eq.${encodeURIComponent(userId)}&marca=eq.${encodeURIComponent(marca)}`, {
+      method: 'PATCH', headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        cidade: lugar.cidade || null, regiao: lugar.regiao || null, pais: lugar.pais || null,
+        regiao_em: new Date().toISOString(),
+      }),
+    })
+  } catch (erro) {
+    console.warn('[regiao] não gravada:', (erro as Error).message)
+  }
+}

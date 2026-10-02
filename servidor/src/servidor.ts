@@ -5,6 +5,7 @@ import { catalogo, alterarRobo } from './catalogo'
 import { administradorDaMarca } from './supabase'
 import { listarEmailsAdmin } from './admin-emails'
 import { receberEventoResend } from './eventos-resend'
+import { lugarDoEndereco } from './regiao'
 
 import { createServer } from 'node:http'
 import { createHash, randomBytes } from 'node:crypto'
@@ -12,7 +13,7 @@ import { writeFileSync, chmodSync, existsSync, readFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
 import { MARCAS, marcaPorId } from '../../src/marca/marcas'
 import { atender, autorizacao } from './mcp'
-import { contasDoUsuario, emailEntregue, emailFalhou, emailsPendentes, limitesDoCliente, limparSessoesOrfas, salvarLeadCapturado, salvarVisita, supabaseConfigurado, usuarioDoToken } from './supabase'
+import { contasDoUsuario, emailEntregue, emailFalhou, emailsPendentes, limitesDoCliente, limparSessoesOrfas, salvarLeadCapturado, salvarRegiaoDoCliente, salvarVisita, supabaseConfigurado, usuarioDoToken } from './supabase'
 import { aplicarNasSessoesVivas, aquecerSala, contas, iniciar, montarConfig, parar, sessoesVivasPorVersao, todas, ver } from './sessoes'
 import {
   ErroDeValidacao, carregarParametros, descartarTeste, emTesteNoDemo, historico as historicoDeParametros, ligarAtualizacaoDeParametros,
@@ -322,6 +323,46 @@ const servidor = createServer(async (req, res) => {
     if (req.method === 'POST') { res.writeHead(ok ? 200 : 500, { 'content-type': 'text/plain' }); return res.end(ok ? 'ok' : 'erro') }
     res.writeHead(200, tipo)
     return res.end(paginaDeSaida(marcaPorId(aberto.marca).prosa, aberto.email, ok))
+  }
+
+  if (url.pathname === '/cliente/regiao') {
+    /*
+      De que cidade este cliente está acessando.
+
+      O IP só existe aqui dentro: o motor lê o endereço da requisição,
+      resolve cidade e estado, grava os dois e descarta o endereço. Ele não
+      vai para o banco, não volta na resposta e não entra em log. Foi a opção
+      escolhida pelo Tiago em 02/10/2026 entre guardar o IP ou não guardar.
+
+      Precisa de sessão: é dado de um cliente identificado, não de visita.
+    */
+    const origem = String(req.headers.origin ?? '')
+    const permitidas = ['https://teedscompany.com', 'https://omnifinanc.com', 'http://localhost:5173', 'http://localhost:4173']
+    const headers: Record<string, string> = { 'content-type': 'application/json; charset=utf-8', vary: 'Origin' }
+    if (permitidas.includes(origem)) headers['access-control-allow-origin'] = origem
+    headers['access-control-allow-headers'] = 'content-type, authorization'
+    headers['access-control-allow-methods'] = 'POST, OPTIONS'
+    if (req.method === 'OPTIONS') { res.writeHead(204, headers); return res.end() }
+    if (req.method !== 'POST' || !permitidas.includes(origem)) { res.writeHead(403, headers); return res.end(JSON.stringify({ erro: 'Origem não autorizada.' })) }
+
+    const cracha = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '')
+    const dono = await usuarioDoToken(cracha, { lembrar: true })
+    if (!dono) { res.writeHead(401, headers); return res.end(JSON.stringify({ erro: 'Sessão inválida.' })) }
+
+    const pedacos: Buffer[] = []; let bytes = 0
+    for await (const parte of req) { bytes += (parte as Buffer).length; if (bytes > 2_048) break; pedacos.push(parte as Buffer) }
+    let marcaPedida = ''
+    try { marcaPedida = String(JSON.parse(Buffer.concat(pedacos).toString('utf8'))?.marca ?? '') } catch { /* corpo vazio */ }
+    const marca = marcaPedida === 'omni' ? 'omni' : marcaPedida === 'teeds' ? 'teeds' : null
+    const daOrigem = origem.includes('omnifinanc.com') ? 'omni' : origem.includes('teedscompany.com') ? 'teeds' : marca
+    if (!marca || marca !== daOrigem) { res.writeHead(200, headers); return res.end(JSON.stringify({ ok: true })) }
+
+    const endereco = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim()
+    const lugar = await lugarDoEndereco(endereco)
+    if (lugar) await salvarRegiaoDoCliente(dono.id, marca, lugar)
+    // A resposta devolve o que foi guardado, nunca o endereço.
+    res.writeHead(200, headers)
+    return res.end(JSON.stringify({ ok: true, cidade: lugar?.cidade ?? null, regiao: lugar?.regiao ?? null }))
   }
 
   if (url.pathname === '/publico/visita') {
