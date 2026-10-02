@@ -435,3 +435,116 @@ button, input, select, textarea { font-family: inherit; }
 .adm-cab-ordem button.on { color: var(--primary); font-weight: 700; }
 .adm-cab-ordem button.on > i { opacity: 1; }
 .adm-cab-ordem button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+
+/* ===================== a ficha completa do cliente =====================
+   Abre dentro do modal que já existia. Densa de propósito: quem abre isto
+   está atendendo alguém e quer a resposta na tela, sem rolar atrás dela. */
+.fc { display: flex; flex-direction: column; gap: 18px; padding: 4px 0 2px; }
+.fc-carregando, .fc-aviso { padding: 26px 4px; color: var(--muted); font-size: 13px; }
+
+.fc-abas { display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
+.fc-abas button {
+  padding: 9px 15px; border: 0; border-bottom: 2px solid transparent; background: none;
+  color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.fc-abas button:hover { color: var(--text); }
+.fc-abas button.on { color: var(--primary); border-bottom-color: var(--primary); }
+.fc-abas button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; border-radius: 6px 6px 0 0; }
+
+.fc-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 10px; }
+.fc-kpis > div {
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+  display: flex; flex-direction: column; gap: 2px; min-width: 0;
+}
+.fc-kpis > div.ok { border-color: color-mix(in srgb, var(--up) 35%, var(--border)); background: var(--up-soft); }
+.fc-kpis > div.ruim { border-color: color-mix(in srgb, var(--down) 35%, var(--border)); background: var(--down-soft); }
+.fc-kpis span { font-size: 11px; color: var(--muted); }
+.fc-kpis b { font-size: 17px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.fc-kpis small { font-size: 10.5px; color: var(--muted); }
+.fc-kpis.compacto b { font-size: 15px; }
+
+.fc-agora {
+  margin: 0; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 600;
+  background: var(--up-soft); color: var(--up);
+}
+.fc-bloco { display: flex; flex-direction: column; gap: 9px; }
+.fc-bloco h4 {
+  margin: 0; font-size: 13px; font-weight: 700; color: var(--text);
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+}
+.fc-bloco h4 small { font-size: 11px; font-weight: 400; color: var(--muted); }
+.fc-vazio { margin: 0; color: var(--muted); font-size: 12.5px; }
+.fc-alerta {
+  margin: 0; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 600;
+  background: var(--down-soft); color: var(--down);
+}
+
+.fc-dados { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 9px 18px; margin: 0; }
+.fc-dados > div { min-width: 0; }
+.fc-dados dt { font-size: 11px; color: var(--muted); }
+.fc-dados dd { margin: 1px 0 0; font-size: 13px; color: var(--text); word-break: break-word; }
+.fc-dados dd em { font-style: normal; color: var(--muted); font-size: 11.5px; }
+
+.fc-contas { display: flex; flex-direction: column; gap: 7px; }
+.fc-contas > div {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 13px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface);
+}
+.fc-contas span { display: flex; flex-direction: column; min-width: 0; }
+.fc-contas b { font-size: 13px; }
+.fc-contas small { font-size: 10.5px; color: var(--muted); }
+.fc-contas strong { font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* O calendário de uso: uma barra por dia, altura = tempo daquele dia. */
+.fc-barras {
+  display: flex; align-items: flex-end; gap: 2px; height: 56px;
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface);
+}
+.fc-barras > div { flex: 1; height: 100%; display: flex; align-items: flex-end; min-width: 2px; }
+.fc-barras i { display: block; width: 100%; border-radius: 2px 2px 0 0; background: var(--primary); opacity: .75; }
+
+.fc-tabela { border: 1px solid var(--border); border-radius: 9px; overflow: hidden; background: var(--surface); }
+.fc-tabela .cab, .fc-tabela .linha {
+  display: grid; align-items: center; gap: 10px; padding: 8px 12px;
+  font-size: 12px; font-variant-numeric: tabular-nums;
+}
+.fc-tabela .cab {
+  background: var(--surface-alt); border-bottom: 1px solid var(--border);
+  font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em;
+}
+.fc-tabela .linha + .linha { border-top: 1px solid var(--border); }
+.fc-tabela .linha b { display: block; font-size: 12.5px; }
+.fc-tabela .linha small { display: block; font-size: 10px; color: var(--muted); }
+.fc-tabela .ok { color: var(--up); font-weight: 600; }
+.fc-tabela .ruim { color: var(--down); font-weight: 600; }
+.fc-tabela .linha > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.fc-dias .cab, .fc-dias .linha { grid-template-columns: 1fr .7fr .9fr 1fr; }
+.fc-robos .cab, .fc-robos .linha { grid-template-columns: 1.6fr .7fr .9fr .7fr 1fr 1fr; }
+.fc-sessoes .cab, .fc-sessoes .linha { grid-template-columns: 1.3fr 1.2fr .6fr 1fr 1fr 1.2fr; }
+/* O motivo da parada vem comprido e esticava a linha para cinco alturas.
+   Duas linhas e corta; o texto inteiro está no title, no hover. */
+.fc-sessoes .linha > span:last-child {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; line-height: 1.35;
+}
+.fc-ops .cab, .fc-ops .linha { grid-template-columns: 1.3fr 1.2fr .8fr .6fr .9fr .9fr; }
+.fc-aulas .cab, .fc-aulas .linha { grid-template-columns: 2fr .8fr .9fr 1.1fr 1fr; }
+
+.fc-prog { display: inline-block; width: 46px; height: 4px; margin-right: 7px; border-radius: 99px; background: var(--trilho); vertical-align: middle; overflow: hidden; }
+.fc-prog u { display: block; height: 100%; background: var(--primary); }
+
+/* Os quatro números antigos da ficha viraram repetição do que a visão geral
+   já diz melhor. Ficam no DOM para não mexer no formulário, mas somem. */
+.adm-detail-antigo { display: none !important; }
+
+/* Último acesso na lista: data e hora em cima, o resto embaixo. */
+.adm-acesso { display: flex; flex-direction: column; min-width: 0; }
+.adm-acesso b { font-size: 12.5px; font-weight: 600; }
+.adm-acesso small { font-size: 10.5px; color: var(--muted); }
+.adm-acesso .adm-nunca { font-style: normal; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .fc-tabela { overflow-x: auto; }
+  .fc-tabela .cab, .fc-tabela .linha { min-width: 520px; }
+}

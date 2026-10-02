@@ -904,3 +904,90 @@ export async function coletasDeExtrato(sessao: SessaoTeeds): Promise<ColetaExtra
     }))
   } catch { return [] }
 }
+
+/* ------------------------------------------------------- a ficha completa */
+
+export interface FichaCliente {
+  cliente: {
+    userId: string; nome: string | null; email: string | null; telefone: string | null; cpf: string | null
+    marca: string; planoId: string | null; situacao: string
+    criadoEm: string; vistoEm: string | null
+    acessoInicio: string | null; acessoExpiraEm: string | null
+    totalAcessos: number; tempoTotalSegundos: number
+    sessaoAtual: string | null; sessaoAtualSegundos: number
+    fusoHorario: string | null; idioma: string | null; observacoes: string | null
+  }
+  cadastro: { status: string; pedidoEm: string; decididoEm: string | null; recadastro: boolean; emailCadastroEm: string | null; emailAprovacaoEm: string | null } | null
+  contas: Array<{ contaId: string; tipo: string; moeda: string; saldo: number; conectadaEm: string | null; vistaEm: string | null }>
+  acessos: {
+    dias: Array<{ dia: string; acessos: number; segundos: number; dispositivo: string | null; fuso: string | null }>
+    primeiroDia: string | null; diasComAcesso: number
+    porDispositivo: Array<{ dispositivo: string; acessos: number; segundos: number }>
+  }
+  aulas: Array<{ aulaId: string; aberturas: number; segundos: number; posicaoMax: number; concluida: boolean; primeiraVez: string | null; ultimaVez: string | null }>
+  robos: {
+    porRobo: Array<{ roboId: string; roboNome: string | null; sessoes: number; operacoes: number; ganhas: number; perdidas: number; resultado: number; ultimaVez: string | null; sessoesDemo: number }>
+    ultimas: Array<{ roboNome: string | null; roboId: string; demo: boolean; moeda: string | null; situacao: string; operacoes: number; ganhas: number; perdidas: number; resultado: number; entradaInicial: number | null; motivoDaParada: string | null; criadaEm: string; encerradaEm: string | null }>
+  }
+  operacoes: {
+    resumo: { total: number; ganhas: number; entradas: number; resultado: number; markup: number; reais: number; resultadoReal: number; markupReal: number; primeira: string | null; ultima: string | null }
+    ultimas: Array<{ roboNome: string | null; ativo: string | null; demo: boolean; moeda: string | null; entrada: number; resultado: number; markup: number; ganhou: boolean; digitoSaida: number | null; executadaEm: string }>
+  }
+  emails: { enviados: number; abertos: number; ultimoEnvio: string | null; ultimaAbertura: string | null; descadastrado: boolean } | null
+}
+
+/**
+ * Tudo o que a casa sabe sobre uma pessoa, numa consulta só.
+ *
+ * Vem inteiro de propósito: oito consultas separadas seriam oito estados de
+ * carregamento e oito jeitos de a ficha ficar pela metade. Devolve null para
+ * quem não é admin da marca dela — a função no banco é que decide.
+ */
+export async function lerFichaCliente(sessao: SessaoTeeds, userId: string): Promise<FichaCliente | null> {
+  const r = await rest<any>('/rpc/teeds_cliente_ficha', sessao.token, {
+    method: 'POST',
+    body: JSON.stringify({ p_marca: marcaAdmin(), p_user_id: userId }),
+  })
+  if (!r?.cliente) return null
+  const n = (v: unknown) => Number(v ?? 0)
+  const c = r.cliente
+  return {
+    cliente: {
+      userId: c.user_id, nome: c.nome, email: c.email, telefone: c.telefone, cpf: c.cpf,
+      marca: c.marca, planoId: c.plano_id, situacao: c.situacao,
+      criadoEm: c.criado_em, vistoEm: c.visto_em,
+      acessoInicio: c.acesso_inicio, acessoExpiraEm: c.acesso_expira_em,
+      totalAcessos: n(c.total_acessos), tempoTotalSegundos: n(c.tempo_total_segundos),
+      sessaoAtual: c.sessao_atual, sessaoAtualSegundos: n(c.sessao_atual_segundos),
+      fusoHorario: c.fuso_horario, idioma: c.idioma, observacoes: c.observacoes,
+    },
+    cadastro: r.cadastro ? {
+      status: r.cadastro.status, pedidoEm: r.cadastro.pedido_em, decididoEm: r.cadastro.decidido_em,
+      recadastro: Boolean(r.cadastro.recadastro),
+      emailCadastroEm: r.cadastro.email_cadastro_em, emailAprovacaoEm: r.cadastro.email_aprovacao_em,
+    } : null,
+    contas: (r.contas ?? []).map((x: any) => ({ contaId: x.conta_id, tipo: x.tipo, moeda: x.moeda, saldo: n(x.saldo), conectadaEm: x.conectada_em, vistaEm: x.vista_em })),
+    acessos: {
+      dias: (r.acessos?.dias ?? []).map((x: any) => ({ dia: x.dia, acessos: n(x.acessos), segundos: n(x.segundos), dispositivo: x.dispositivo, fuso: x.fuso })),
+      primeiroDia: r.acessos?.primeiro_dia ?? null,
+      diasComAcesso: n(r.acessos?.dias_com_acesso),
+      porDispositivo: (r.acessos?.por_dispositivo ?? []).map((x: any) => ({ dispositivo: x.dispositivo, acessos: n(x.acessos), segundos: n(x.segundos) })),
+    },
+    aulas: (r.aulas ?? []).map((x: any) => ({ aulaId: x.aula_id, aberturas: n(x.aberturas), segundos: n(x.segundos), posicaoMax: n(x.posicao_max), concluida: Boolean(x.concluida), primeiraVez: x.primeira_vez, ultimaVez: x.ultima_vez })),
+    robos: {
+      porRobo: (r.robos?.por_robo ?? []).map((x: any) => ({ roboId: x.robo_id, roboNome: x.robo_nome, sessoes: n(x.sessoes), operacoes: n(x.operacoes), ganhas: n(x.ganhas), perdidas: n(x.perdidas), resultado: n(x.resultado), ultimaVez: x.ultima_vez, sessoesDemo: n(x.sessoes_demo) })),
+      ultimas: (r.robos?.ultimas ?? []).map((x: any) => ({ roboNome: x.robo_nome, roboId: x.robo_id, demo: Boolean(x.demo), moeda: x.moeda, situacao: x.situacao, operacoes: n(x.operacoes), ganhas: n(x.ganhas), perdidas: n(x.perdidas), resultado: n(x.resultado), entradaInicial: x.entrada_inicial === null ? null : n(x.entrada_inicial), motivoDaParada: x.motivo_da_parada, criadaEm: x.criada_em, encerradaEm: x.encerrada_em })),
+    },
+    operacoes: {
+      resumo: {
+        total: n(r.operacoes?.resumo?.total), ganhas: n(r.operacoes?.resumo?.ganhas),
+        entradas: n(r.operacoes?.resumo?.entradas), resultado: n(r.operacoes?.resumo?.resultado),
+        markup: n(r.operacoes?.resumo?.markup), reais: n(r.operacoes?.resumo?.reais),
+        resultadoReal: n(r.operacoes?.resumo?.resultado_real), markupReal: n(r.operacoes?.resumo?.markup_real),
+        primeira: r.operacoes?.resumo?.primeira ?? null, ultima: r.operacoes?.resumo?.ultima ?? null,
+      },
+      ultimas: (r.operacoes?.ultimas ?? []).map((x: any) => ({ roboNome: x.robo_nome, ativo: x.ativo, demo: Boolean(x.demo), moeda: x.moeda, entrada: n(x.entrada), resultado: n(x.resultado), markup: n(x.markup), ganhou: Boolean(x.ganhou), digitoSaida: x.digito_saida === null ? null : n(x.digito_saida), executadaEm: x.executada_em })),
+    },
+    emails: r.emails ? { enviados: n(r.emails.enviados), abertos: n(r.emails.abertos), ultimoEnvio: r.emails.ultimo_envio, ultimaAbertura: r.emails.ultima_abertura, descadastrado: Boolean(r.emails.descadastrado) } : null,
+  }
+}
