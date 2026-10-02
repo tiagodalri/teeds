@@ -110,12 +110,13 @@ export function RobotsPanel({
   const trocarVista = (v: 'lista' | 'mosaico') => { setDisposicao(v); try { localStorage.setItem(`${MARCA.id}.robos.vista`, v) } catch { /* preferência opcional */ } }
   /*
     Um painel de dígitos só, para a tela inteira: guarda de qual bloco ele
-    foi aberto (para o botão daquele bloco ficar aceso) e de qual robô é o
-    grupo a realçar. Clicar no botão de outro bloco só troca o realce.
+    foi aberto, para o botão daquele bloco ficar aceso. O conteúdo não
+    depende de robô nenhum — são os dígitos do índice, e com dois ou três
+    robôs rodando ao mesmo tempo não existe "o robô" do painel.
   */
-  const [digitosDe, setDigitosDe] = useState<{ chave: string; roboId: string } | null>(null)
-  const alternarDigitos = (chave: string, roboId: string) =>
-    setDigitosDe((atual) => (atual?.chave === chave ? null : { chave, roboId }))
+  const [digitosDe, setDigitosDe] = useState<string | null>(null)
+  const alternarDigitos = (chave: string) =>
+    setDigitosDe((atual) => (atual === chave ? null : chave))
   const nomeAtivoDosRobos = symbols.find((s) => s.symbol === ATIVO_DOS_ROBOS)?.name
   const mesaRef = useRef<HTMLDivElement>(null)
   const proximoBloco = useRef(2)
@@ -368,8 +369,8 @@ export function RobotsPanel({
               adotar={{ id: v.id, config: v.config, origem: v.origem }}
               apresentacao={apresentacaoDe(v.id)}
               onAbrir={() => disposicao === 'mosaico' ? abrirNaLista(v.id) : alternarAberta(v.id)}
-              onDigitos={() => alternarDigitos(v.id, v.roboId)}
-              digitosAberto={digitosDe?.chave === v.id}
+              onDigitos={() => alternarDigitos(v.id)}
+              digitosAberto={digitosDe === v.id}
               mostrarMarkup={admin && mostrarMarkup}
               idEstudo={v.id} onEstudo={receberEstudo}
               onRemover={retidas.has(v.id) ? () => fecharRetida(v.id) : undefined} />
@@ -390,8 +391,8 @@ export function RobotsPanel({
               sessaoTeeds={sessaoTeeds} contaId={contaId}
               apresentacao={apresentacaoDe(idBloco)}
               onAbrir={() => disposicao === 'mosaico' ? abrirNaLista(idBloco) : alternarAberta(idBloco)}
-              onDigitos={() => alternarDigitos(idBloco, ident.id)}
-              digitosAberto={digitosDe?.chave === idBloco}
+              onDigitos={() => alternarDigitos(idBloco)}
+              digitosAberto={digitosDe === idBloco}
               mostrarMarkup={admin && mostrarMarkup}
               idEstudo={idBloco} onEstudo={receberEstudo}
               solicitarPreparo={blocoEmPreparo === idBloco}
@@ -680,7 +681,7 @@ export function RobotsPanel({
       </>}
 
       {digitosDe && (
-        <DigitosFlutuante roboId={digitosDe.roboId} nomeAtivo={nomeAtivoDosRobos}
+        <DigitosFlutuante nomeAtivo={nomeAtivoDosRobos}
           aoFechar={() => setDigitosDe(null)} />
       )}
     </div>

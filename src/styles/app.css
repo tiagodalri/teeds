@@ -4826,32 +4826,70 @@ input, select, textarea, button { vertical-align: middle; }
 .pd-barra em { font-style: normal; font-size: calc(9.5px * var(--pd-escala)); color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1; }
 .pd-barra i { width: 100%; background: var(--trilho); border-radius: 3px 3px 0 0; transition: height .3s, background .2s; }
 .pd-barra b { font-size: calc(11px * var(--pd-escala)); font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; width: 100%; text-align: center; border-radius: 4px; line-height: 1.5; }
-/* Os dígitos com que o robô acerta: verde de ganho. O líder do grupo brilha mais. */
-.pd-barra.alvo i { background: linear-gradient(180deg, color-mix(in srgb, var(--pd-verde) 88%, #fff), var(--pd-verde) 70%); box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--pd-verde) 70%, #000); }
-.pd-barra.alvo em, .pd-barra.alvo b { color: var(--pd-verde); font-weight: 700; }
-.pd-barra.alvo.lider i { box-shadow: 0 0 0 1px color-mix(in srgb, var(--pd-verde) 60%, transparent), 0 0 14px color-mix(in srgb, var(--pd-verde) 45%, transparent); }
-.pd-barra.lider:not(.alvo) i { background: color-mix(in srgb, var(--muted) 55%, var(--trilho)); }
+/* --------------------------------------------- quem está fora da média
+   O painel acende quem aparece MAIS do que os 10% de todo dígito, e a cor
+   satura com o tamanho do desvio: `--brilho` chega do componente entre 0 e
+   1 (zero no limiar, um aos dois desvios-padrão). Os 45% de piso existem
+   para o primeiro dígito a acender já se distinguir do neutro; sem eles a
+   faixa de baixo brilho ficaria indistinguível de quem está na média. */
+.pd-barra.alta i {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--pd-verde) calc(45% + var(--brilho, 0) * 55%), color-mix(in srgb, var(--trilho) 70%, #fff)),
+    color-mix(in srgb, var(--pd-verde) calc(55% + var(--brilho, 0) * 45%), var(--trilho)) 78%);
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--pd-verde) calc(35% + var(--brilho, 0) * 45%), transparent);
+}
+.pd-barra.alta em, .pd-barra.alta b {
+  color: color-mix(in srgb, var(--pd-verde) calc(55% + var(--brilho, 0) * 45%), var(--muted));
+  font-weight: 700;
+}
+/* Quem está abaixo não é erro nem perda: só sai de cena, sem ganhar cor. */
+.pd-barra.baixa i { background: color-mix(in srgb, var(--trilho) 62%, var(--bg)); }
+.pd-barra.baixa em { opacity: .6; }
+/* O mais frequente da janela ganha o contorno, acendendo ou não. */
+.pd-barra.lider i { box-shadow: 0 0 0 1px color-mix(in srgb, var(--muted) 45%, transparent); }
+.pd-barra.alta.lider i {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pd-verde) 65%, transparent),
+              0 0 16px color-mix(in srgb, var(--pd-verde) calc(25% + var(--brilho, 0) * 35%), transparent);
+}
 .pd-barra.ultimo b { background: var(--text); color: var(--bg); }
-.pd-barra.alvo.ultimo b { background: var(--pd-verde); color: #fff; }
+.pd-barra.alta.ultimo b { background: var(--pd-verde); color: #fff; }
 .pd-fita { display: flex; gap: calc(3px * var(--pd-escala)); padding: 7px 10px 0; }
 .pd-fita span {
   flex: 1; height: calc(18px * var(--pd-escala)); display: grid; place-items: center; border-radius: 4px;
   font-size: calc(10.5px * var(--pd-escala)); font-weight: 600; background: var(--surface); color: var(--muted); font-variant-numeric: tabular-nums;
 }
-.pd-fita span.alvo { background: var(--pd-verde-suave); color: var(--pd-verde); }
+.pd-fita span.alta { background: var(--pd-verde-suave); color: var(--pd-verde); }
 .pd-fita span.ultimo { outline: 2px solid var(--text); outline-offset: -2px; color: var(--text); }
-.pd-fita span.alvo.ultimo { outline-color: var(--pd-verde); }
-.pd-resumo { margin: 8px 10px 10px; padding: 8px 10px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
-.pd-grupo { display: grid; grid-template-columns: 1fr auto; align-items: baseline; column-gap: 8px; color: var(--text); }
-.pd-grupo > span { grid-column: 1; grid-row: 1 / span 2; line-height: 1.35; }
-.pd-grupo > span b { color: var(--robo); font-weight: 650; }
-.pd-grupo > span small { color: var(--muted); font-size: calc(10.5px * var(--pd-escala)); }
-.pd-grupo > strong { grid-column: 2; font-size: calc(20px * var(--pd-escala)); line-height: 1; color: var(--pd-verde); font-variant-numeric: tabular-nums; }
-.pd-grupo > small { grid-column: 2; justify-self: end; color: var(--muted); font-size: calc(10px * var(--pd-escala)); }
-.pd-gatilho { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: calc(10.5px * var(--pd-escala)); line-height: 1.35; padding-top: 5px; border-top: 1px dashed var(--border); }
-.pd-gatilho i { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
-.pd-gatilho.ok { color: var(--up); font-weight: 600; } .pd-gatilho.ok i { background: var(--up); box-shadow: 0 0 0 3px var(--up-soft); }
-.pd-gatilho.nao i { background: var(--muted); }
+.pd-fita span.alta.ultimo { outline-color: var(--pd-verde); }
+
+/* ------------------------------------------------------ o resumo do índice */
+.pd-resumo { margin: 8px 10px 10px; padding: 9px 10px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); display: flex; flex-direction: column; gap: calc(7px * var(--pd-escala)); }
+.pd-alta { display: flex; align-items: center; gap: 8px; min-height: calc(20px * var(--pd-escala)); }
+.pd-alta > span { color: var(--muted); font-size: calc(10.5px * var(--pd-escala)); font-weight: 600; letter-spacing: .03em; text-transform: uppercase; flex-shrink: 0; }
+.pd-alta > small { color: var(--muted); font-size: calc(10.5px * var(--pd-escala)); opacity: .8; }
+.pd-chips { display: flex; gap: calc(4px * var(--pd-escala)); flex-wrap: wrap; }
+.pd-chips b {
+  display: grid; place-items: center; min-width: calc(20px * var(--pd-escala)); height: calc(20px * var(--pd-escala));
+  padding: 0 calc(5px * var(--pd-escala)); border-radius: 6px; font-size: calc(11.5px * var(--pd-escala));
+  font-weight: 700; font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--pd-verde) calc(14% + var(--brilho, 0) * 72%), transparent);
+  color: color-mix(in srgb, var(--pd-verde) calc(100% - var(--brilho, 0) * 100%), #fff);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pd-verde) calc(30% + var(--brilho, 0) * 50%), transparent);
+}
+/* Duas divisões que valem 50% num mercado sem viés; o traço do meio é o 50. */
+.pd-divisao { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: calc(7px * var(--pd-escala)); color: var(--muted); font-size: calc(10.5px * var(--pd-escala)); }
+.pd-divisao b { color: var(--text); font-weight: 650; font-variant-numeric: tabular-nums; }
+.pd-divisao > span:last-child { text-align: right; }
+.pd-divisao i {
+  position: relative; height: calc(5px * var(--pd-escala)); border-radius: 999px;
+  background: color-mix(in srgb, var(--trilho) 70%, var(--bg)); overflow: hidden;
+}
+.pd-divisao i::after {
+  content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px;
+  background: color-mix(in srgb, var(--muted) 50%, transparent); z-index: 1;
+}
+.pd-divisao u { display: block; height: 100%; border-radius: 999px; background: color-mix(in srgb, var(--muted) 62%, var(--trilho)); transition: width .3s; }
+
 /* A alça de redimensionar: canto inferior direito, só no desktop. */
 .pd-alca { position: absolute; right: 2px; bottom: 2px; width: 22px; height: 22px; display: grid; place-items: center; border: 0; border-radius: 6px; color: var(--muted); background: transparent; cursor: nwse-resize; touch-action: none; }
 .pd-alca svg { width: 12px; height: 12px; }
