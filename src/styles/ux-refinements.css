@@ -418,3 +418,20 @@ button, input, select, textarea { font-family: inherit; }
 .breve-cartao > p { margin: 14px auto 0; max-width: 46ch; color: var(--muted); font-size: 15px; line-height: 1.65; }
 .breve-cartao > p.breve-nota { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); font-size: 13px; }
 @media (max-width: 700px) { .ger.aulas-breve { padding: 16px; } }
+
+/* ------------- cabeçalho que ordena, na lista de clientes -------------
+   A ordem acontece no banco, antes do corte da página; aqui é só o botão.
+   A setinha fica apagada (↕) na coluna inativa para avisar que dá para
+   clicar, sem competir com a coluna que está ordenando de fato. */
+.adm-cab-ordem > span { display: flex; min-width: 0; }
+.adm-cab-ordem button {
+  display: inline-flex; align-items: center; gap: 5px; width: 100%; min-width: 0;
+  padding: 2px 0; border: 0; background: none; cursor: pointer;
+  font: inherit; color: inherit; text-align: left;
+}
+.adm-cab-ordem button > i { font-style: normal; font-size: 11px; opacity: .3; flex-shrink: 0; }
+.adm-cab-ordem button:hover { color: var(--text); }
+.adm-cab-ordem button:hover > i { opacity: .7; }
+.adm-cab-ordem button.on { color: var(--primary); font-weight: 700; }
+.adm-cab-ordem button.on > i { opacity: 1; }
+.adm-cab-ordem button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }

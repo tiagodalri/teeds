@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import {
   atualizarAcessoCliente, clientesPorId, criarAcessoCliente, definirProdutoCliente, listarClientesPagina, listarComissoes, listarContasDeriv, listarMetricasRobos,
+  type OrdemClientes,
   listarPlanos, listarProdutos, listarProdutosClientes, salvarPlano, salvarProduto,
   definirMarcaAdmin, ehMaster, marcaAdmin, REDE,
   type ClienteProdutoRegistro, type ClienteRegistro, type ComissaoDia, type ContaDerivRegistro, type MetricaRoboRegistro, type PaginaClientes, type PlanoRegistro, type ProdutoRegistro,
@@ -71,6 +72,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState('todos')
   const [pagina, setPagina] = useState(0)
+  const [ordem, setOrdem] = useState<OrdemClientes>('cadastro')
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState<string | null>(null)
@@ -100,13 +102,13 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
     let vivo = true
     const espera = setTimeout(() => {
       setBuscando(true)
-      listarClientesPagina(sessao, { busca, status: filtro, limite: POR_PAGINA, deslocamento: pagina * POR_PAGINA })
+      listarClientesPagina(sessao, { busca, status: filtro, ordem, limite: POR_PAGINA, deslocamento: pagina * POR_PAGINA })
         .then((r) => { if (vivo) setLista(r) })
         .catch((e) => { if (vivo) setErro((e as Error).message) })
         .finally(() => { if (vivo) setBuscando(false) })
     }, busca ? 300 : 0)
     return () => { vivo = false; clearTimeout(espera) }
-  }, [sessao.usuario.id, busca, filtro, pagina, versao]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sessao.usuario.id, busca, filtro, ordem, pagina, versao]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // O ranking soma o movimento dos 90 dias e pede ao banco só as fichas dos
   // sete primeiros — nome e e-mail de sete pessoas, não da base inteira.
@@ -159,7 +161,28 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
   const porRobo = metricasRobos.map((r) => ({ id:r.roboId, nome:r.roboNome, ...r }))
   // Busca ou filtro novo volta para a primeira página: ficar na 40 de um
   // resultado que agora tem 2 páginas mostraria uma tela vazia.
-  useEffect(() => { setPagina(0) }, [busca, filtro])
+  useEffect(() => { setPagina(0) }, [busca, filtro, ordem])
+
+  /*
+    Um clique no cabeçalho ordena por aquela coluna; o clique seguinte na
+    MESMA coluna inverte. Datas e saldo começam do maior, que é o que se
+    quer ver primeiro em "último acesso" e "maior saldo"; nome, status e
+    plano começam de A, que é como se lê uma lista de palavras.
+  */
+  const COMECA_DESC = new Set(['cadastro', 'acesso', 'saldo'])
+  const ordenarPor = (coluna: string) => {
+    const primeira = coluna as OrdemClientes
+    const invertida = `${coluna}${COMECA_DESC.has(coluna) ? '-asc' : '-desc'}` as OrdemClientes
+    setOrdem(ordem === primeira ? invertida : primeira)
+  }
+  /** A setinha do cabeçalho: cheia na coluna ativa, apagada nas outras. */
+  const seta = (coluna: string) => {
+    if (ordem === coluna) return COMECA_DESC.has(coluna) ? '↓' : '↑'
+    if (ordem === `${coluna}-asc`) return '↑'
+    if (ordem === `${coluna}-desc`) return '↓'
+    return ''
+  }
+  const colunaAtiva = (coluna: string) => ordem === coluna || ordem.startsWith(`${coluna}-`)
   const naPagina = lista.pagina
   const totalPaginas = Math.max(1, Math.ceil(lista.filtrados / POR_PAGINA))
   const inteiro = (n: number) => n.toLocaleString('pt-BR')
@@ -226,7 +249,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
   const gravarPlano = async () => { if (!planoForm?.nome.trim()) return; setSalvando(true); try { await salvarPlano(sessao, { ...planoForm, id: planoForm.id || slug(planoForm.nome) }); setPlanoForm(null); setSucesso('Plano salvo.'); await recarregar() } catch(e){setErro((e as Error).message)} finally{setSalvando(false)} }
   const gravarProduto = async () => { if (!produtoForm?.nome.trim()) return; setSalvando(true); try { await salvarProduto(sessao, { ...produtoForm, id: produtoForm.id || slug(produtoForm.nome) }); setProdutoForm(null); setSucesso('Produto salvo.'); await recarregar() } catch(e){setErro((e as Error).message)} finally{setSalvando(false)} }
 
-  const tabelaClientes = <><div className="adm-filtros"><label>⌕<input placeholder="Buscar nome, e-mail, telefone ou CPF" value={busca} onChange={(e) => setBusca(e.target.value)} /></label><select value={filtro} onChange={(e) => setFiltro(e.target.value)}><option value="todos">Todos os status</option><option value="ativo">Ativos</option><option value="suspenso">Suspensos</option><option value="expirado">Expirados</option><option value="cancelado">Cancelados</option></select></div><div className="adm-tabela"><div className="adm-linha cab"><span>Cliente</span><span>Plano</span><span>Status</span><span>Último acesso</span><span>Saldo real Deriv</span><span>Cadastro</span><span /></div>{naPagina.map((c) => { const info=clienteInfo(c.userId); const reais=info.contas.filter(x=>x.tipo!=='demo'); const saldo=reais.reduce((s,x)=>s+(x.saldo??0),0); const st = status(c); return <button className="adm-linha" key={c.userId} onClick={() => abrirCliente(c)}><span className="adm-pessoa"><i>{(c.nome || c.email || '?')[0].toUpperCase()}</i><b>{c.nome || 'Sem nome'}<small>{c.email}</small></b></span><span>{planos.find((p) => p.id === c.planoId)?.nome ?? c.planoId}</span><span><em className={`adm-status ${st}`}>{st}</em></span><span>{c.totalAcessos > 0 ? data(c.vistoEm) : 'Nunca acessou'}</span><span>{reais.length?`${reais[0]?.moeda||'USD'} ${saldo.toLocaleString('pt-BR',{minimumFractionDigits:2})}`:'Não conectada'}</span><span>{data(c.criadoEm)}</span><span className="adm-seta">›</span></button>})}{buscando && !naPagina.length && <div className="adm-vazio">Buscando…</div>}{!buscando && !naPagina.length && <div className="adm-vazio">Nenhum cliente encontrado.</div>}</div>{paginacao}</>
+  const tabelaClientes = <><div className="adm-filtros"><label>⌕<input placeholder="Buscar nome, e-mail, telefone ou CPF" value={busca} onChange={(e) => setBusca(e.target.value)} /></label><select value={filtro} onChange={(e) => setFiltro(e.target.value)}><option value="todos">Todos os status</option><option value="ativo">Ativos</option><option value="suspenso">Suspensos</option><option value="expirado">Expirados</option><option value="cancelado">Cancelados</option></select></div><div className="adm-tabela"><div className="adm-linha cab adm-cab-ordem">{([["nome","Cliente"],["plano","Plano"],["status","Status"],["acesso","Último acesso"],["saldo","Saldo real Deriv"],["cadastro","Cadastro"]] as [string,string][]).map(([col,rotulo]) => <span key={col}><button type="button" className={colunaAtiva(col) ? "on" : ""} onClick={() => ordenarPor(col)} title={`Ordenar por ${rotulo.toLowerCase()}`} aria-label={`Ordenar por ${rotulo.toLowerCase()}`}>{rotulo}<i aria-hidden>{seta(col) || "↕"}</i></button></span>)}<span /></div>{naPagina.map((c) => { const info=clienteInfo(c.userId); const reais=info.contas.filter(x=>x.tipo!=='demo'); const saldo=reais.reduce((s,x)=>s+(x.saldo??0),0); const st = status(c); return <button className="adm-linha" key={c.userId} onClick={() => abrirCliente(c)}><span className="adm-pessoa"><i>{(c.nome || c.email || '?')[0].toUpperCase()}</i><b>{c.nome || 'Sem nome'}<small>{c.email}</small></b></span><span>{planos.find((p) => p.id === c.planoId)?.nome ?? c.planoId}</span><span><em className={`adm-status ${st}`}>{st}</em></span><span>{c.totalAcessos > 0 ? data(c.vistoEm) : 'Nunca acessou'}</span><span>{reais.length?`${reais[0]?.moeda||'USD'} ${saldo.toLocaleString('pt-BR',{minimumFractionDigits:2})}`:'Não conectada'}</span><span>{data(c.criadoEm)}</span><span className="adm-seta">›</span></button>})}{buscando && !naPagina.length && <div className="adm-vazio">Buscando…</div>}{!buscando && !naPagina.length && <div className="adm-vazio">Nenhum cliente encontrado.</div>}</div>{paginacao}</>
 
   return <div className="admin-shell">
     <aside className="admin-sidebar"><div><span className="rot">Painel de controle</span><h2>Administração</h2><p>Gestão completa da {MARCA.prosa}</p></div><nav>{([['visao','Visão geral','⌂'],['estudo','Centro de estudo','◍'],['inteligencia','Inteligência','◫'],['leads','Leads','◉'],['emails','E-mails','✉'],['clientes','Clientes','◎'],['resultados','Resultados','±'],['movimentacoes','Depósitos e saques','⇅'],['acessos','Criar acesso','＋'],['aulas','Aulas','▶'],['robos','Robôs','◈'],['planos','Planos','▣'],['produtos','Produtos','◇'],['comissoes','Comissões','↗']] as [Aba,string,string][]).map(([id,nome,ico]) => <button key={id} className={aba === id ? 'on' : ''} onClick={() => setAba(id)}><i>{ico}</i><span>{nome}</span>{id === 'clientes' && <b>{totalClientes}</b>}</button>)}<div className="admin-submenus" aria-label="Ferramentas administrativas"><button onClick={() => onNavigate('monitoramento')}><i>▤</i><span>Monitoramento ao vivo</span></button><button onClick={() => onNavigate('insights')}><i>⌁</i><span>Insights</span></button></div></nav><small>Somente administradores podem visualizar e alterar estes dados.</small></aside>

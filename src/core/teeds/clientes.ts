@@ -338,6 +338,11 @@ export interface PaginaClientes {
   pagina: ClienteRegistro[]
 }
 
+export type OrdemClientes =
+  | 'cadastro' | 'cadastro-asc' | 'acesso' | 'acesso-asc' | 'saldo' | 'saldo-asc'
+  | 'nome' | 'nome-desc' | 'status' | 'status-desc' | 'plano' | 'plano-desc'
+  | 'acessos'
+
 export interface FiltroClientes {
   busca?: string
   /** 'todos' | 'ativo' | 'suspenso' | 'expirado' | 'cancelado'. */
@@ -345,7 +350,17 @@ export interface FiltroClientes {
   limite?: number
   deslocamento?: number
   /** 'cadastro' = mais novos primeiro; 'acessos' = quem entrou por último. */
-  ordem?: 'cadastro' | 'acessos'
+  /**
+   * A coluna que ordena a lista, com a direção dentro do próprio nome.
+   *
+   * Vai para o banco porque a tabela mostra 50 de 11 mil: ordenar no
+   * navegador ordenaria só a página aberta, e "o maior saldo" seria o maior
+   * daquelas 50 — errado de um jeito que parece certo.
+   *
+   * `acessos` é o antigo, de regra própria (quem já acessou primeiro), e a
+   * tela de Criar acesso depende dele.
+   */
+  ordem?: OrdemClientes
   /** Qual plataforma ler. Vazio = a que o admin master escolheu. */
   marca?: string
 }
