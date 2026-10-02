@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { lerFichaCliente, type FichaCliente as Ficha } from '../core/teeds/clientes'
+import { lerFichaCliente, lerRastroCliente, type FichaCliente as Ficha, type RastroCliente } from '../core/teeds/clientes'
 import { horasLegiveis, idiomaLegivel, lugarDoFuso } from '../core/teeds/insights'
 import { todasAsAulas } from '../core/teeds/aulas'
 import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca } from '../core/deriv/strategies'
@@ -71,6 +71,14 @@ const APP: Record<string, string> = {
 const nomeDaOrigem = (o: string) => ORIGEM[o] ?? o
 const nomeDoApp = (a: string) => APP[a] ?? a
 
+/** O id interno da tela vira o nome que a pessoa vê no menu. */
+const TELA: Record<string, string> = {
+  operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gerenciamento: 'Gerenciamento',
+  marketplace: 'Marketplace', aulas: 'Aulas', gestao: 'Administração',
+  insights: 'Insights', monitoramento: 'Monitoramento', desconhecida: 'Não identificada',
+}
+const nomeDaTela = (t: string) => TELA[t] ?? t
+
 const TOM: Record<string, string> = {
   clicado: 'bom', aberto: 'bom', entregue: 'neutro', enviado: 'neutro',
   atrasado: 'atencao', voltou: 'ruim', reclamou: 'ruim', falhou: 'ruim', suprimido: 'ruim',
@@ -88,11 +96,15 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
   const [carregando, setCarregando] = useState(true)
   const [aba, setAba] = useState<Aba>('geral')
   const [emailAberto, setEmailAberto] = useState<number | null>(null)
+  const [rastro, setRastro] = useState<RastroCliente | null>(null)
   const catalogo = useMemo(() => todasAsAulas(), [])
 
   useEffect(() => {
     let vivo = true
-    setCarregando(true); setErro(null); setFicha(null); setAba('geral')
+    setCarregando(true); setErro(null); setFicha(null); setAba('geral'); setRastro(null)
+    // O rastro vem à parte: só a aba de comportamento usa, e a ficha já é
+    // pesada. Falha dele não derruba a ficha.
+    lerRastroCliente(sessao, userId).then((r) => { if (vivo) setRastro(r) }).catch(() => {})
     lerFichaCliente(sessao, userId)
       .then((f) => { if (vivo) { if (f) setFicha(f); else setErro('Esta ficha não está disponível para o seu acesso.') } })
       .catch((e) => { if (vivo) setErro((e as Error).message) })
@@ -406,6 +418,37 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
               ))}
             </div>
           </> : <p className="fc-vazio">Nunca entrou na plataforma.</p>}
+        </section>
+
+        <section className="fc-bloco">
+          <h4>Por onde andou <small>telas abertas e tempo em cada uma</small></h4>
+          {rastro?.paginas.length ? <div className="fc-tabela fc-paginas">
+            <div className="cab"><span>Tela</span><span>Visitas</span><span>Tempo</span><span>Última vez</span></div>
+            {rastro.paginas.map((p, i) => (
+              <div className="linha" key={i}>
+                <span><b>{nomeDaTela(p.pagina)}</b></span>
+                <span>{n(p.visitas)}</span>
+                <span>{horasLegiveis(p.segundos)}</span>
+                <span>{haQuantoTempo(p.ultimaEm)}</span>
+              </div>
+            ))}
+          </div> : <p className="fc-vazio">Sem rastro ainda. A gravação começou em 02/10/2026; quem não entrou depois disso não tem histórico.</p>}
+        </section>
+
+        <section className="fc-bloco">
+          <h4>No que clicou <small>o rótulo que a pessoa leu no botão</small></h4>
+          {rastro?.cliques.length ? <div className="fc-tabela fc-cliques">
+            <div className="cab"><span>Botão</span><span>Na tela</span><span>Vezes</span><span>Última vez</span></div>
+            {rastro.cliques.map((c, i) => (
+              <div className="linha" key={i}>
+                <span><b>{c.alvo}</b></span>
+                <span>{nomeDaTela(c.pagina)}</span>
+                <span>{n(c.vezes)}</span>
+                <span>{haQuantoTempo(c.ultimaEm)}</span>
+              </div>
+            ))}
+          </div> : <p className="fc-vazio">Nenhum clique registrado ainda.</p>}
+          <p className="fc-nota">A plataforma guarda o rótulo do botão e a tela, somados por dia. Não guarda nada do que foi digitado, nem valores de campo, nem o IP.</p>
         </section>
 
         <section className="fc-bloco">

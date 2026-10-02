@@ -30,6 +30,7 @@ import { useCandleSeries, useConnection, useLimitesDuracao, useLiveTick, useProp
 import { traduzirErro } from './core/deriv/erros'
 import { useAccount } from './hooks/useAccount'
 import { minhaSituacao, registrarContaDeriv, registrarPresenca, souAdmin, type SituacaoDaFicha } from './core/teeds/clientes'
+import { marcarPagina, ouvirCliques } from './core/teeds/rastro'
 import { entregarAutorizacao } from './core/teeds/servidorRobos'
 import { AssistentePanel } from './components/AssistentePanel'
 import { AssistenteBetaGate } from './components/AssistenteBetaGate'
@@ -229,6 +230,21 @@ export default function App() {
     return () => { window.clearInterval(relogio); marcar() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioTeedsId])
+
+  /*
+    O rastro de navegação: em que tela a pessoa ficou, por quanto tempo, e em
+    que botões clicou. Dois efeitos separados de propósito — a escuta de
+    cliques vive enquanto durar a sessão, e a marcação de página reage à troca
+    de tela. Juntos num só, trocar de aba religaria o ouvinte a cada clique.
+  */
+  useEffect(() => ouvirCliques(teeds.sessao), [usuarioTeedsId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!teeds.sessao) return
+    marcarPagina(teeds.sessao, tela)
+    // Ao desmontar (logout ou troca de conta) fecha o tempo da última tela.
+    return () => marcarPagina(teeds.sessao, null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioTeedsId, tela])
 
   useEffect(() => {
     if (!teeds.sessao || !conta.account) return

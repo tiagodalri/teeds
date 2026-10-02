@@ -1,0 +1,24 @@
+-- Por onde o cliente andou dentro da plataforma (Tiago, 02/10/2026).
+--
+-- A casa sabia QUE a pessoa entrou (`acessos_diarios`: dia, acessos,
+-- segundos) e nada sobre o que ela fez la dentro. Faltava o caminho: em que
+-- tela ficou, quanto tempo, no que clicou.
+--
+-- `eventos_cliente` guarda isso SOMADO POR DIA, e nao uma linha por clique.
+-- Sao 11 mil clientes; linha por clique viraria dezenas de milhoes por mes
+-- para responder as mesmas perguntas que a soma responde. A chave
+-- (user_id, marca, dia, pagina, alvo) junta tudo: `alvo` vazio e uma visita
+-- a pagina, `alvo` preenchido e um clique naquele botao.
+--
+-- O que NAO entra, de proposito: nada do que foi digitado, nenhum valor de
+-- campo, e nenhum IP. O rotulo do botao e o que a pessoa escolheu fazer; o
+-- resto e conteudo dela. Sobre IP, ver a conversa de 02/10/2026: a
+-- plataforma afirma em tela que nao guarda, e mudar isso e decisao de
+-- produto com consequencia legal, nao um ajuste tecnico.
+--
+-- Quem escreve e a propria pessoa, por `teeds_registrar_passo`, que pega o
+-- user_id de `auth.uid()` e nao do corpo: nao da para escrever no nome de
+-- outro. A tabela liga RLS e nao tem politica; a leitura passa por
+-- `teeds_cliente_rastro`, que confere se quem pergunta e admin da marca.
+--
+-- Os corpos das duas funcoes foram aplicados junto desta mudanca.

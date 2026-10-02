@@ -623,3 +623,5 @@ button, input, select, textarea { font-family: inherit; }
 /* Markup que NÃO é nosso: visível, mas sem se passar por receita. */
 .fc-apagado { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
 .fc-nota b { color: var(--text); font-weight: 700; }
+.fc-paginas .cab, .fc-paginas .linha { grid-template-columns: 1.6fr .7fr .9fr 1fr; }
+.fc-cliques .cab, .fc-cliques .linha { grid-template-columns: 2fr 1fr .6fr 1fr; }
