@@ -66,12 +66,59 @@ function Fileira({ children, rotulo }: { children: ReactNode; rotulo: string }) 
   )
 }
 
+const AULAS_EM_BREVE = true
+
+/**
+ * A sala fechada, enquanto as aulas não foram gravadas.
+ *
+ * Pedido do Tiago em 02/10/2026: as aulas ainda não existem, e até existirem
+ * ninguém deve ver os cartões. Nem as capas, nem os módulos, nem a barra de
+ * progresso. Quem abre "Aulas" encontra um recado, e não um curso vazio, que
+ * é pior do que não ter curso nenhum.
+ *
+ * PARA REABRIR A SALA quando os vídeos estiverem prontos: troque
+ * AULAS_EM_BREVE para false, ali em cima. É a única linha. Nada da vitrine
+ * foi removido, de propósito, e o painel do admin segue aceitando os vídeos
+ * enquanto isso: quando o último entrar, é só virar a chave.
+ *
+ * Vale para as duas marcas. Este é o arquivo compartilhado e a OMNI não tem
+ * casca própria da sala de aula, então uma chave fecha as duas.
+ *
+ * O recado não diz o que está acontecendo nos bastidores (Tiago, 02/10/2026):
+ * promete a liberação, não a gravação. Prazo nenhum, por motivo óbvio.
+ *
+ * Classe própria (`aulas-breve`) em vez de reaproveitar a capa da vitrine:
+ * `.ger.aulas` carrega uma pilha de regras aqui e em ux-refinements.css, e
+ * não herdar nada é mais barato do que desfazer.
+ */
+function SalaEmBreve() {
+  return (
+    <div className="ger aulas-breve">
+      <section className="breve-cartao">
+        <span className="breve-selo">Treinamento original {MARCA.prosa}</span>
+        <h2>Disponível em breve</h2>
+        <p>
+          As aulas serão disponibilizadas em breve. Assim que forem liberadas, elas
+          aparecem aqui para você, sem precisar fazer nada.
+        </p>
+        <p className="breve-nota">Enquanto isso, os robôs seguem disponíveis na plataforma.</p>
+      </section>
+    </div>
+  )
+}
+
+/** A porta da sala: o recado enquanto não há vídeo, a vitrine quando houver. */
+export function AulasPanel(props: { nome?: string | null; sessao?: SessaoTeeds | null }) {
+  if (AULAS_EM_BREVE) return <SalaEmBreve />
+  return <SalaDeAulas {...props} />
+}
+
 /**
  * A sala de aula da Teeds, no estilo de vitrine de filmes: trilhas por
  * modulo, cartoes com capa e numero, player com a lista do modulo ao lado.
  * Aula sem video existe no catalogo mas se apresenta como "em breve".
  */
-export function AulasPanel({ nome, sessao }: { nome?: string | null; sessao?: SessaoTeeds | null }) {
+function SalaDeAulas({ nome, sessao }: { nome?: string | null; sessao?: SessaoTeeds | null }) {
   // Os vídeos que o painel gravou no banco. Enquanto não chegam (ou se o
   // banco não responder), a sala abre com o catálogo do código.
   const [videos, setVideos] = useState<Record<string, VideoDaAula>>({})

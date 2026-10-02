@@ -393,3 +393,28 @@ button, input, select, textarea { font-family: inherit; }
 .admin-column-setting small { display: block; margin-top: 5px; color: var(--muted); }
 .admin-column-setting label { display: flex; align-items: center; gap: 10px; font-size: 12px; }
 .admin-column-setting select { min-height: 44px; min-width: 84px; }
+
+/* ------------- a sala de aula fechada, enquanto não há vídeo -------------
+   Ligada pela chave AULAS_EM_BREVE em AulasPanel.tsx. Vive nos tokens do
+   tema (--surface, --border, --text, --primary), então acompanha claro e
+   escuro e as duas marcas sem uma linha a mais. */
+.ger.aulas-breve { display: grid; place-items: center; min-height: min(62vh, 520px); padding: 28px; }
+.breve-cartao {
+  box-sizing: border-box; width: 100%; max-width: 56ch; text-align: center;
+  padding: clamp(32px, 6vw, 60px) clamp(22px, 5vw, 48px);
+  border: 1px solid var(--border); border-radius: 18px;
+  background: var(--surface); box-shadow: var(--shadow);
+}
+.breve-selo {
+  display: inline-flex; align-items: center; gap: 9px; margin-bottom: 20px;
+  padding: 7px 14px; border-radius: 999px; background: var(--primary-soft);
+  color: var(--primary); font-size: 11.5px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.breve-cartao h2 {
+  margin: 0; color: var(--text); font-size: clamp(27px, 4vw, 40px);
+  line-height: 1.1; letter-spacing: -.02em; text-wrap: balance;
+}
+.breve-cartao > p { margin: 14px auto 0; max-width: 46ch; color: var(--muted); font-size: 15px; line-height: 1.65; }
+.breve-cartao > p.breve-nota { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); font-size: 13px; }
+@media (max-width: 700px) { .ger.aulas-breve { padding: 16px; } }
