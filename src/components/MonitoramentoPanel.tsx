@@ -38,7 +38,14 @@ import { IconeFechar } from './IconeFechar'
 
 type Aba = 'ao-vivo' | 'replay' | 'auditoria'
 type Visao = 'compacto' | 'confortavel' | 'lista'
-type Ordem = 'atividade' | 'risco' | 'resultado' | 'nome' | 'operacoes' | 'inicio'
+/*
+  'fixa' é o padrão e existe por um motivo de uso, não de gosto: ordenar por
+  atualização mais recente fazia os cartões trocarem de lugar a cada telemetria
+  (umas poucas por segundo), e acompanhar um cliente específico virava caçada.
+  Agora a posição é a ordem em que a sessão COMEÇOU: quem ligou primeiro fica
+  em cima para sempre, e quem liga depois entra no fim. Nada se mexe sozinho.
+*/
+type Ordem = 'fixa' | 'atividade' | 'risco' | 'resultado' | 'nome' | 'operacoes' | 'inicio'
 type Periodo = '1' | '6' | '12' | '24' | '72'
 type EstadoDaTela = 'carregando' | 'pronto' | 'sem-permissao' | 'indisponivel' | 'erro'
 
@@ -93,14 +100,23 @@ export const Cartao = memo(function Cartao({ s, cliente, saude, visao, aoAbrir }
   // Fotos antigas não tinham este campo. A cauda do histórico mantém um
   // fallback útil até o servidor publicar a próxima foto completa.
   const markup = Number.isFinite(e.markupCalculado) ? e.markupCalculado : (e.historico ?? []).reduce((t, op) => t + Math.max(0, op.payout) * .03, 0)
+  // Conta e modo viram selo: antes o "demo/real" era uma palavra miúda no meio
+  // do e-mail, e o modo não aparecia em lugar nenhum — e é ele que diz o
+  // tamanho da escada que aquele robô vai subir.
+  const comModos = temModos(s.roboId, s.config.parametros)
+  const modo = comModos ? modoDaConfig(s.roboId, s.config.fatorGale, s.config.lucroSobrePrejuizo, s.config) : null
   return (
     <button className={`mon-cartao ${cor} ${visao}`} onClick={() => aoAbrir(s.sessaoId)} style={{ ['--robo' as string]: corRobo }}
       aria-label={`Abrir a cabine espelho de ${nome}, ${s.roboNome}, ${ROTULO_SAUDE[saude]}. Somente visualização.`}>
       <header>
         <i className="mon-farol" aria-hidden />
-        <span className="mon-cartao-quem"><b>{nome}</b><small>{mascararEmail(cliente?.email)} · {mascararConta(s.contaId)} · <em className={s.demo ? 'demo' : 'real'}>{s.demo ? 'demo' : 'real'}</em></small></span>
+        <span className="mon-cartao-quem"><b>{nome}</b><small>{mascararEmail(cliente?.email)} · {mascararConta(s.contaId)}</small></span>
         <span className={`mon-saude ${saude}`}><i aria-hidden />{ROTULO_SAUDE[saude]}</span>
       </header>
+      <div className="mon-selos">
+        <em className={`mon-selo conta ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'Conta demo' : 'Conta real'}</em>
+        {modo && <em className={`mon-selo modo ${modo}`}>{NOME_DO_MODO[modo]}</em>}
+      </div>
       <div className="mon-cartao-robo">
         <span><b>{s.roboNome}</b><small>{NOME_DO_ATIVO[s.ativo] ?? s.ativo}</small></span>
         <em>{ROTULO_FASE[e.fase] ?? e.fase}{e.estrategia ? ` · ${e.estrategia.detalhes?.estrategiaAtual ?? e.estrategia.fase}` : ''}</em>
@@ -365,7 +381,7 @@ export function MonitoramentoPanel({ sessao }: { sessao: SessaoTeeds }) {
   const [filtroRobo, setFiltroRobo] = useState('todos')
   const [filtroResultado, setFiltroResultado] = useState<'todos' | 'positivo' | 'negativo'>('todos')
   const [periodo, setPeriodo] = useState<Periodo>('12')
-  const [ordem, setOrdem] = useState<Ordem>('atividade')
+  const [ordem, setOrdem] = useState<Ordem>('fixa')
   const [visao, setVisao] = useState<Visao>('confortavel')
   const [limite, setLimite] = useState(60)
   /* A lista de encerradas cresce de 40 em 40: 300 linhas de uma vez viravam
@@ -541,6 +557,13 @@ export function MonitoramentoPanel({ sessao }: { sessao: SessaoTeeds }) {
     })
     const peso = (s: SessaoEspelho) => ({ verde: 3, marca: 2, amarelo: 1, vermelho: 0, cinza: 4 })[semaforo(s, agora)]
     arr.sort((a, b) => {
+      // A ordem fixa: início mais antigo primeiro. O desempate pelo id da
+      // sessão garante que duas que começaram no mesmo instante também não
+      // troquem de lugar entre um quadro e outro.
+      if (ordem === 'fixa') {
+        const d = (a.criadaEm || '').localeCompare(b.criadaEm || '')
+        return d !== 0 ? d : a.sessaoId.localeCompare(b.sessaoId)
+      }
       if (ordem === 'risco') return peso(a) - peso(b)
       if (ordem === 'resultado') return a.estado.resultado - b.estado.resultado
       if (ordem === 'operacoes') return b.estado.operacoes - a.estado.operacoes
@@ -603,7 +626,7 @@ export function MonitoramentoPanel({ sessao }: { sessao: SessaoTeeds }) {
             <select value={filtroConta} onChange={(e) => setFiltroConta(e.target.value as any)} aria-label="Tipo de conta"><option value="todas">Demo e real</option><option value="real">Só real</option><option value="demo">Só demo</option></select>
             <select value={filtroRobo} onChange={(e) => setFiltroRobo(e.target.value)} aria-label="Robô"><option value="todos">Todos os robôs</option>{robos.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}</select>
             <select value={filtroResultado} onChange={(e) => setFiltroResultado(e.target.value as any)} aria-label="Resultado"><option value="todos">Qualquer resultado</option><option value="positivo">Positivo</option><option value="negativo">Negativo</option></select>
-            <select value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)} aria-label="Ordenar"><option value="atividade">Atualização mais recente</option><option value="risco">Maior risco</option><option value="resultado">Pior resultado</option><option value="operacoes">Mais operações</option><option value="inicio">Início mais recente</option><option value="nome">Nome</option></select>
+            <select value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)} aria-label="Ordenar"><option value="fixa">Ordem de início (fixa)</option><option value="atividade">Atualização mais recente</option><option value="risco">Maior risco</option><option value="resultado">Pior resultado</option><option value="operacoes">Mais operações</option><option value="inicio">Início mais recente</option><option value="nome">Nome</option></select>
             <div className="mon-visao" role="group" aria-label="Disposição">{(['compacto', 'confortavel', 'lista'] as Visao[]).map((v) => <button key={v} className={visao === v ? 'on' : ''} aria-pressed={visao === v} aria-label={v} onClick={() => setVisao(v)}>{v === 'compacto' ? '▦' : v === 'confortavel' ? '▣' : '☰'}</button>)}</div>
           </div>
           <div className={`mon-mosaico ${visao}`}>
