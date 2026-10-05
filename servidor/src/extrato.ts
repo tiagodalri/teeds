@@ -9,6 +9,7 @@ import {
   anotarColetaDeExtrato, atualizarContaDeriv, clientesComAutorizacao, gravarMovimentacoes,
   ultimaMovimentacaoDaConta, type MovimentacaoGravavel,
 } from './supabase'
+import { contadorDeFalhas, deMolho, faltamSegundos } from './deriv-instavel'
 
 /**
  * Depósitos e saques dos clientes, lidos do extrato da Deriv.
@@ -53,6 +54,8 @@ export interface ResultadoColeta {
   erros: number
   /** Clientes pulados por autorização quebrada ou vencida. */
   ignorados: number
+  /** A varredura parou no meio porque a Deriv não estava respondendo. */
+  abortada?: boolean
 }
 
 export interface OpcoesColeta {
@@ -165,6 +168,10 @@ export async function coletarTudo(opcoes: OpcoesColeta = { gravar: true }): Prom
   const r: ResultadoColeta = { contas: 0, novas: 0, erros: 0, ignorados: 0 }
   const clientes = await clientesComAutorizacao()
 
+  // Mesma regra da sincronia de comissões: três engasgos de tempo seguidos e
+  // a varredura para, para não disputar a Deriv com quem está operando.
+  const falhas = contadorDeFalhas('extrato')
+
   for (const { user_id: userId, marca } of clientes) {
     const cofre = await autorizacaoDoCliente(userId)
     if (cofre.tipo !== 'ok') {
@@ -179,8 +186,10 @@ export async function coletarTudo(opcoes: OpcoesColeta = { gravar: true }): Prom
     } catch (e) {
       r.erros++
       console.error(`[extrato] cliente ${curto(userId)}: não consegui listar as contas — ${(e as Error).message}`)
+      if (falhas.falhou(e)) { r.abortada = true; return r }
       continue
     }
+    falhas.acertou()
 
     for (const conta of contas.filter((c) => c.type !== 'demo')) {
       r.contas++
@@ -204,6 +213,7 @@ export async function coletarTudo(opcoes: OpcoesColeta = { gravar: true }): Prom
         if (opcoes.gravar) {
           await anotarColetaDeExtrato({ contaId: conta.accountId, userId, marca, ok: false, erro }).catch(() => {})
         }
+        if (falhas.falhou(e)) { r.abortada = true; return r }
       }
       await pausa(PAUSA_ENTRE_CONTAS_MS)
     }
@@ -222,6 +232,7 @@ export function ligarColetorDeExtrato(intervaloMs: number): () => void {
   let ocupado = false
   const passo = async () => {
     if (ocupado) return
+    if (deMolho()) { console.log(`[extrato] de molho — a Deriv volta a ser consultada em ${faltamSegundos()}s`); return }
     ocupado = true
     const comecou = Date.now()
     try {
@@ -230,7 +241,8 @@ export function ligarColetorDeExtrato(intervaloMs: number): () => void {
       console.log(
         `[extrato] passada em ${seg}s · ${r.contas} conta(s) · ${r.novas} nova(s)` +
         (r.erros ? ` · ${r.erros} erro(s)` : '') +
-        (r.ignorados ? ` · ${r.ignorados} cliente(s) sem autorização válida` : ''),
+        (r.ignorados ? ` · ${r.ignorados} cliente(s) sem autorização válida` : '') +
+        (r.abortada ? ' · ABORTADA: a Deriv não estava respondendo' : ''),
       )
     } catch (e) {
       // Banco fora do ar por um instante: a próxima passada tenta de novo.

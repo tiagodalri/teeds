@@ -12,6 +12,7 @@ import {
 } from './supabase'
 import { separarPorOrigem, TAXA_MARKUP, type ContratoBruto, type Pistas } from './atribuicao'
 import { MARCAS } from '../../src/marca/marcas'
+import { contadorDeFalhas, deMolho, faltamSegundos } from './deriv-instavel'
 
 /**
  * Comissão calculada pelo servidor, conta a conta.
@@ -58,6 +59,8 @@ export interface ResultadoSincronia {
   ignorados: number
   /** Contas que apareceram em mais de um cadastro e foram lidas uma vez só. */
   repetidas: number
+  /** A varredura parou no meio porque a Deriv não estava respondendo. */
+  abortada?: boolean
 }
 
 export interface OpcoesSincronia {
@@ -304,6 +307,10 @@ export async function sincronizarTudo(opcoes: OpcoesSincronia = { gravar: true }
   // Lida duas vezes, a comissão dela contaria em dobro — então uma vez só.
   const feitas = new Set<string>()
 
+  // Desiste cedo quando a Deriv para de responder, em vez de varrer a lista
+  // inteira esperando o tempo de cada um estourar (ver deriv-instavel.ts).
+  const falhas = contadorDeFalhas('comissoes')
+
   for (const { user_id: userId, marca } of clientes) {
     const cofre = await autorizacaoDoCliente(userId)
     if (cofre.tipo !== 'ok') {
@@ -317,8 +324,10 @@ export async function sincronizarTudo(opcoes: OpcoesSincronia = { gravar: true }
     } catch (e) {
       r.erros++
       console.error(`[comissoes] cliente ${curto(userId)}: não consegui listar as contas — ${(e as Error).message}`)
+      if (falhas.falhou(e)) { r.abortada = true; return r }
       continue
     }
+    falhas.acertou()
 
     for (const conta of contas.filter((c) => c.type !== 'demo')) {
       try {
@@ -341,6 +350,7 @@ export async function sincronizarTudo(opcoes: OpcoesSincronia = { gravar: true }
       } catch (e) {
         r.erros++
         console.error(`[comissoes] ${conta.accountId} (cliente ${curto(userId)}): ${(e as Error).message}`)
+        if (falhas.falhou(e)) { r.abortada = true; return r }
       }
       await pausa(PAUSA_ENTRE_CONTAS_MS)
     }
@@ -356,6 +366,7 @@ export function ligarSincronizadorDeComissoes(intervaloMs: number): () => void {
   let ocupado = false
   const passo = async () => {
     if (ocupado) return
+    if (deMolho()) { console.log(`[comissoes] de molho — a Deriv voltou a ser consultada em ${faltamSegundos()}s`); return }
     ocupado = true
     const comecou = Date.now()
     try {
@@ -365,7 +376,8 @@ export function ligarSincronizadorDeComissoes(intervaloMs: number): () => void {
         `[comissoes] passada em ${seg}s · ${r.contas} conta(s)` +
         (r.repetidas ? ` · ${r.repetidas} repetida(s)` : '') +
         (r.erros ? ` · ${r.erros} erro(s)` : '') +
-        (r.ignorados ? ` · ${r.ignorados} cliente(s) sem autorização válida` : ''),
+        (r.ignorados ? ` · ${r.ignorados} cliente(s) sem autorização válida` : '') +
+        (r.abortada ? ' · ABORTADA: a Deriv não estava respondendo' : ''),
       )
     } catch (e) {
       console.warn('[comissoes] a passada não completou:', (e as Error).message)
