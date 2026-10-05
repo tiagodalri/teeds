@@ -43,6 +43,7 @@ echo "→ provas dos parâmetros…"; (cd servidor && npm run parametros --silen
 echo "→ provas da atribuição…";   (cd servidor && npm run atribuicao --silent 2>&1 | tail -1)
 echo "→ provas do espelho…";           (cd servidor && npm run espelho --silent 2>&1 | tail -1)
 echo "→ provas do canal realtime…";   (cd servidor && npm run realtime --silent 2>&1 | tail -1)
+echo "→ provas do checkout…";           (cd servidor && npm run checkout --silent 2>&1 | tail -1)
 echo "→ montando a Teeds…";            npm run build --silent >/dev/null
 echo "→ provas da rolagem das telas…"; (cd servidor && npm run rolagem --silent 2>&1 | tail -1)
 echo "→ montando a OMNI…";  MARCA=omni npm run build --silent >/dev/null

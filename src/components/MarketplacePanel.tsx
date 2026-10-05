@@ -1,6 +1,7 @@
 import { ResponsiveImage } from './ResponsiveImage'
 import { useEffect, useMemo, useState } from 'react'
 import { listarProdutos } from '../core/teeds/clientes'
+import { linkDoCheckout } from '../core/teeds/checkout'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
@@ -125,6 +126,16 @@ const ordemDaVitrine = (lista: Produto[]) => [...lista].sort((a, b) => {
 })
 const capaProduto = (arquivo: string) => `${import.meta.env.BASE_URL}marketplace/${MARCA.id === 'teeds' && arquivo === 'simulador-treino.jpg' ? 'simulador-treino-v2.jpeg' : arquivo}`
 
+/* Quando o produto tem checkout proprio, o pagamento acontece na Kiwify e as
+   garantias escritas para o fluxo "a equipe entra em contato" deixam de ser
+   verdade. Trocar o texto nao e' enfeite: prometer que "nenhuma cobranca e'
+   feita por aqui" numa tela que leva direto ao cartao e' mentira. */
+const GARANTIAS_DO_CHECKOUT = [
+  'Pagamento seguro pela Kiwify',
+  'Cartao, Pix ou boleto',
+  'Acesso liberado sozinho na sua conta',
+]
+
 const categoriaBanco = (valor: string): Produto['categoria'] => valor === 'robo' ? 'Robôs' : valor === 'mentoria' ? 'Mentorias' : 'Ferramentas'
 const precoBR = (centavos: number) => (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 
@@ -165,10 +176,18 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
     : catalogo.filter((produto) => produto.categoria === categoria), [categoria, catalogo])
   useEffect(() => { setPagina(p => Math.min(p, Math.max(0, Math.ceil(visiveis.length / 3) - 1))) }, [visiveis.length])
 
-  const registrarInteresse = (produto: Produto) => {
+  /* Produto com checkout proprio vai para a Kiwify, com o e-mail da sessao
+     ja preenchido — e' o que faz a liberacao automatica achar o cliente certo.
+     Os outros continuam registrando interesse para a equipe concluir. */
+  const comprar = (produto: Produto) => {
+    const link = linkDoCheckout(produto.id, sessao?.usuario)
+    if (link) { window.open(link, '_blank', 'noopener,noreferrer'); return }
     setInteresse(produto.id)
     setSelecionado(null)
   }
+  /* O mesmo produto aberto no modal: serve para o texto nao prometer uma coisa
+     e o botao fazer outra. */
+  const checkoutAberto = selecionado ? linkDoCheckout(selecionado.id, sessao?.usuario) : null
 
   return (
     <main className="marketplace">
@@ -282,14 +301,16 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
                       <em>{selecionado.desconto} · pagamento único</em>
                     </div>
                     <div className="market-vendas-cta">
-                      <button onClick={() => registrarInteresse(selecionado)}>{selecionado.vendas.chamada} <span>→</span></button>
-                      <small>Único produto disponível agora. A promoção vale enquanto estiver publicada.</small>
+                      <button onClick={() => comprar(selecionado)}>{selecionado.vendas.chamada} <span>→</span></button>
+                      <small>{checkoutAberto ? 'Você vai para a página de pagamento. A promoção vale enquanto estiver publicada.' : 'Único produto disponível agora. A promoção vale enquanto estiver publicada.'}</small>
                     </div>
                   </div>
                   <ul className="market-vendas-garantias">
-                    {selecionado.vendas.garantias.map((g) => <li key={g}><i aria-hidden="true">◇</i>{g}</li>)}
+                    {(checkoutAberto ? GARANTIAS_DO_CHECKOUT : selecionado.vendas.garantias).map((g) => <li key={g}><i aria-hidden="true">◇</i>{g}</li>)}
                   </ul>
-                  <small className="market-aviso">Nenhuma cobrança é feita por aqui. Ao confirmar, a equipe {MARCA.prosa} recebe seu pedido e entra em contato para concluir a compra.</small>
+                  <small className="market-aviso">{checkoutAberto
+                    ? <>O pagamento é concluído na Kiwify, com cartão, Pix ou boleto. Use o e-mail <b>{sessao?.usuario.email}</b> na compra: é por ele que o acesso é liberado sozinho na sua conta.</>
+                    : <>Nenhuma cobrança é feita por aqui. Ao confirmar, a equipe {MARCA.prosa} recebe seu pedido e entra em contato para concluir a compra.</>}</small>
                 </div>
               ) : (
                 <>
@@ -297,9 +318,11 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
                   <ul>{selecionado.itens.map((item) => <li key={item}>✓ <span>{item}</span></li>)}</ul>
                   <div className="market-modal-compra">
                     <span className="market-preco"><del>{selecionado.precoDe}</del><strong>{selecionado.preco}<small>{selecionado.periodo}</small></strong><em>{selecionado.desconto}</em></span>
-                    <button onClick={() => registrarInteresse(selecionado)}>Quero comprar</button>
+                    <button onClick={() => comprar(selecionado)}>Quero comprar</button>
                   </div>
-                  <small className="market-aviso">Nenhuma cobrança é feita por aqui. Ao confirmar, a equipe {MARCA.prosa} recebe seu pedido e entra em contato para concluir a compra.</small>
+                  <small className="market-aviso">{checkoutAberto
+                    ? <>O pagamento é concluído na Kiwify, com cartão, Pix ou boleto. Use o e-mail <b>{sessao?.usuario.email}</b> na compra: é por ele que o acesso é liberado sozinho na sua conta.</>
+                    : <>Nenhuma cobrança é feita por aqui. Ao confirmar, a equipe {MARCA.prosa} recebe seu pedido e entra em contato para concluir a compra.</>}</small>
                 </>
               )}
             </div>
