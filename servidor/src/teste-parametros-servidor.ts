@@ -3,8 +3,10 @@ import { montarConfig, aplicarVigente, listarRobos } from './sessoes'
 import { vigente, emTesteNoDemo, conferirRoboDaMarca, ErroDeValidacao, linhaDe } from './parametros'
 import { parametrosPadrao } from '../../src/core/deriv/parametros'
 import type { ConfigEstrategia } from '../../src/core/deriv/engine'
-// A mesma função que a tela do cliente chama no play — é o caminho que se quer testar.
-import { configurarPreparo } from '../../src/components/RobotSetup'
+// A mesma função que a tela do cliente chama no play — é o caminho que se quer
+// testar. Vem de core/deriv/preparo, e não do .tsx: importar o componente
+// arrastava o React para o pacote do servidor, que não o tem instalado.
+import { configurarPreparo } from '../../src/core/deriv/preparo'
 
 /**
  * O lado do servidor dos parâmetros, sem banco (a memória começa vazia =
