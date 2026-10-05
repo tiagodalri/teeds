@@ -663,8 +663,13 @@ export class MotorTeeds {
     if (Date.now() < this.pausaAte) return
     // A tabela de recuperação acabou com "parar": não há próxima entrada.
     if (!Number.isFinite(this.estado.valorAtual)) { this.tabelaEsgotada(); return }
+    // O piso é a entrada escolhida pelo cliente, e não o mínimo da corretora:
+    // quem entra com 0,50 não recupera com 0,35 (ver escada.ts, 05/10/2026).
+    // Os aparos logo abaixo — teto da plataforma e stop — continuam podendo
+    // descer, porque a função deles é exatamente encolher a entrada.
+    const pisoDoCliente = Math.max(MotorTeeds.ENTRADA_MINIMA, this.config.valorAoVencer || 0)
     let desejado = Math.min(
-      Math.max(MotorTeeds.ENTRADA_MINIMA, Number(this.estado.valorAtual.toFixed(2))),
+      Math.max(pisoDoCliente, Number(this.estado.valorAtual.toFixed(2))),
       this.config.valorMaximo || Infinity,
     )
     // O teto da plataforma (painel) só APARA: a entrada desce até ele e o

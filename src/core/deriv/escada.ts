@@ -134,7 +134,32 @@ export function escadaDoRobo(id: string, base: number, passos = 30, modo: Modo =
       break
     }
     // Os mesmos aparos do motor (comprar()): piso da Deriv e teto da plataforma.
-    valor = Math.max(ENTRADA_MINIMA, Number(valor.toFixed(2)))
+  /*
+    O PISO DA ESCADA É A ENTRADA DO CLIENTE, não os US$ 0,35 da corretora.
+
+    Pedido do Tiago em 05/10/2026, depois de ver uma sessão com entrada de
+    0,50 recuperar com 0,35. A conta estava certa — a recuperação paga ~192%,
+    então 0,28 bastaria para trazer 0,50 de volta, e 0,28 virava 0,35 por ser
+    o mínimo da Deriv. Mas, olhando a tela, ninguém entende: a pessoa escolheu
+    0,50 e vê o robô entrar com menos depois de perder.
+
+    Então a régua passa a ser a dela: quem entra com 0,50 nunca recupera com
+    menos de 0,50.
+
+    ISSO MEXE EM TODA ENTRADA, não só nas pequenas. A primeira recuperação
+    pedia ~57% da base em qualquer tamanho — é a conta de recuperar num
+    contrato que paga ~192%. Agora ela sobe para 100% da base, e os degraus
+    seguintes sobem junto, porque cada um parte de um prejuízo maior. Com
+    base 1,00, seis perdas seguidas custavam 9,00 e passam a custar 11,43:
+    cerca de 27% a mais de exposição. É o preço de a escada nunca encolher,
+    e foi uma escolha consciente.
+
+    Os APAROS DE PROTEÇÃO continuam podendo descer abaixo disso, e é de
+    propósito: o teto da plataforma e o aparo no stop existem justamente para
+    encolher a entrada — foi o que fez uma sessão parar em cima do limite de
+    perda em vez de furá-lo.
+  */
+    valor = Math.max(ENTRADA_MINIMA, base, Number(valor.toFixed(2)))
     if (teto > 0 && valor > teto) valor = Math.max(ENTRADA_MINIMA, Number(teto.toFixed(2)))
     const recuperacao = palm ? i > 0 : i >= galeApos
     const porDolar = palm ? (i > 0 ? contrato.recuperacao : contrato.entrada) : (recuperacao ? contrato.recuperacao : contrato.entrada)

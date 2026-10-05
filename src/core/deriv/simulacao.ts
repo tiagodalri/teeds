@@ -206,7 +206,8 @@ function simularSessao(c: Cenario, rnd: () => number): SessaoSimulada {
   // Os mesmos aparos do motor: piso da Deriv, teto da plataforma e o aparo
   // no stop (entra com o que sobra se der o mínimo; senão para).
   const comprar = (): { valor: number; fase: Fase; pagamento: number } | null => {
-    let valor = Math.max(ENTRADA_MINIMA, Number(valorAtual.toFixed(2)))
+    // O piso é a entrada do cliente (ver escada.ts); os aparos abaixo podem descer.
+    let valor = Math.max(ENTRADA_MINIMA, c.base, Number(valorAtual.toFixed(2)))
     if (teto > 0 && valor > teto) valor = Math.max(ENTRADA_MINIMA, Number(teto.toFixed(2)))
     const sobra = centavos(c.stopLoss + resultado)
     if (valor > sobra + 1e-9) {
