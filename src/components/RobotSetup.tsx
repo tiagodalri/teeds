@@ -87,9 +87,23 @@ export const OPCOES_DE_MODO: Array<{ id: Modo; nome: string; frase: string }> = 
  */
 export function configurarPreparo(inicial: ConfigEstrategia, valores: Record<string, string>, modeloId: string, modo: Modo = 'conservador', parametros?: ParametrosDoRobo): ConfigEstrategia | null {
   if (!ETAPAS_PREPARO.every(e => valorDePreparo(valores[e.key] ?? '', e.min, e.max, e.key === 'maxOperacoes') !== null)) return null
-  const rec = recuperacaoDoRobo(modeloId, temModos(modeloId, parametros) ? modo : 'conservador', parametros)
+  // O modo já aparado: robô que não oferece o agressivo cai para o conservador
+  // aqui, antes de virar número.
+  const escolhido: Modo = temModos(modeloId, parametros) ? modo : 'conservador'
+  const rec = recuperacaoDoRobo(modeloId, escolhido, parametros)
   const cfg = { ...inicial, ...Object.fromEntries(ETAPAS_PREPARO.map(e => [e.key, valorDePreparo(valores[e.key], e.min, e.max, e.key === 'maxOperacoes')!])) } as ConfigEstrategia
-  return { ...cfg, valorInicial: cfg.valorAoVencer, valorMaximo: 0, fatorGale: rec.margem, lucroSobrePrejuizo: rec.sobrePrejuizo, galeApos: rec.galeApos }
+  /*
+    `modo` vai junto, e não é enfeite: é a única coisa daqui que sobrevive ao
+    servidor. Por segurança, `aplicarVigente` descarta a recuperação que o
+    navegador mandou e recalcula tudo pelo painel — e, para saber em qual modo
+    recalcular, lê `p.modo ?? p.config?.modo ?? 'conservador'`. A tela não
+    mandava nenhum dos dois, então toda sessão ligada por aqui caía no
+    conservador: a pessoa escolhia Agressivo, a tela mostrava Agressivo (ela lê
+    a config local, que está certa) e o motor subia a escada conservadora.
+    Flagrado em 05/10/2026 com dois Göreme lado a lado — escadas idênticas,
+    0,57 e 0,87 nos dois, quando a agressiva seria 1,09 e 1,66.
+  */
+  return { ...cfg, valorInicial: cfg.valorAoVencer, valorMaximo: 0, fatorGale: rec.margem, lucroSobrePrejuizo: rec.sobrePrejuizo, galeApos: rec.galeApos, modo: escolhido }
 }
 
 export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, contaId, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
