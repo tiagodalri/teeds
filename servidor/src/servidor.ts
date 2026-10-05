@@ -31,6 +31,7 @@ import { somenteDemoDoUsuario } from './supabase'
 import { ligarColetorDeExtrato } from './extrato'
 import { ligarSincronizadorDeComissoes } from './comissoes'
 import { ligarFaxinaDoEspelho } from './espelho'
+import { aplicarNoBanco, assinaturaConfere, ehOSimulador, lerAviso, tokenDoGancho } from './kiwify'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -301,6 +302,66 @@ const servidor = createServer(async (req, res) => {
     Sem sessão, sem login: quem chega aqui veio de um link de e-mail. O que
     autoriza é a assinatura dentro do bilhete.
   */
+  /*
+    A Kiwify avisa que alguém comprou o Simulador.
+
+    Porta pública, então a autorização é a assinatura: HMAC-SHA1 do corpo CRU
+    com o token do gancho. O corpo precisa ser o texto exato que chegou —
+    reserializar o JSON muda um byte e a conta não fecha.
+
+    Responde 200 em quase tudo de propósito. Um 500 faz a Kiwify repetir o
+    aviso por horas, e o que ela repetiria é justamente o que já falhou. O que
+    deu errado fica no log e na tabela `compras_kiwify`, que é onde dá para
+    olhar depois sem depender de ninguém estar vendo o terminal.
+  */
+  if (url.pathname === '/kiwify/compra') {
+    const tipo = { 'content-type': 'application/json; charset=utf-8' }
+    if (req.method !== 'POST') { res.writeHead(405, tipo); return res.end(JSON.stringify({ erro: 'use POST' })) }
+    if (!tokenDoGancho()) {
+      console.error('[kiwify] chegou aviso e o servidor não tem KIWIFY_TOKEN — nada foi aplicado')
+      res.writeHead(503, tipo); return res.end(JSON.stringify({ erro: 'gancho não configurado' }))
+    }
+
+    const pedacos: Buffer[] = []; let bytes = 0
+    for await (const parte of req) {
+      bytes += (parte as Buffer).length
+      if (bytes > 256_000) { res.writeHead(413, tipo); return res.end(JSON.stringify({ erro: 'corpo grande demais' })) }
+      pedacos.push(parte as Buffer)
+    }
+    const cru = Buffer.concat(pedacos).toString('utf8')
+    const assinatura = url.searchParams.get('signature') ?? String(req.headers['x-kiwify-signature'] ?? '')
+
+    if (!assinaturaConfere(cru, assinatura)) {
+      console.warn('[kiwify] assinatura não confere — aviso descartado')
+      res.writeHead(401, tipo); return res.end(JSON.stringify({ erro: 'assinatura inválida' }))
+    }
+
+    let aviso = null
+    try { aviso = lerAviso(JSON.parse(cru)) } catch { /* corpo que não é JSON cai no mesmo lugar */ }
+    if (!aviso) {
+      console.warn('[kiwify] aviso sem pedido, evento ou e-mail — ignorado')
+      res.writeHead(200, tipo); return res.end(JSON.stringify({ ok: true, acao: 'ignorado' }))
+    }
+    if (!ehOSimulador(aviso)) {
+      console.log(`[kiwify] ${aviso.pedido} é de outro produto (${aviso.produtoNome ?? 'sem nome'}) — ignorado`)
+      res.writeHead(200, tipo); return res.end(JSON.stringify({ ok: true, acao: 'outro-produto' }))
+    }
+
+    try {
+      const r = await aplicarNoBanco(aviso)
+      const quem = aviso.email.replace(/(.{2}).*(@.*)/, '$1***$2')
+      if (r.repetido) console.log(`[kiwify] ${aviso.pedido}/${aviso.evento} já tinha sido aplicado — nada a fazer`)
+      else if (r.achou === false) console.warn(`[kiwify] ${aviso.pedido}: ${quem} pagou e NÃO tem cadastro na Teeds — liberar à mão`)
+      else console.log(`[kiwify] ${aviso.pedido}/${aviso.evento}: ${r.acao} para ${quem}`)
+      res.writeHead(200, tipo); return res.end(JSON.stringify({ ok: true, ...r }))
+    } catch (e) {
+      // Aqui sim vale pedir para repetir: o banco pode ter engasgado por um
+      // instante, e a compra não pode se perder por causa disso.
+      console.error(`[kiwify] ${aviso.pedido}: não consegui aplicar — ${(e as Error).message}`)
+      res.writeHead(500, tipo); return res.end(JSON.stringify({ erro: 'tente de novo' }))
+    }
+  }
+
   if (url.pathname === '/publico/descadastrar') {
     const tipo = { 'content-type': 'text/html; charset=utf-8' }
     if (req.method !== 'POST' && req.method !== 'GET') { res.writeHead(405, tipo); return res.end() }
