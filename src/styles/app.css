@@ -588,6 +588,26 @@ button, input { font: inherit; color: inherit; }
 @media(prefers-reduced-motion:reduce){.beta-fundo{animation:none}}
 
 .ger, .ger-vazio { padding: 28px; overflow-y: auto; background: var(--surface); flex: 1; }
+
+/* A ARMADILHA QUE TRAVAVA A TELA (05/10/2026). Vale para todo painel `.ger`.
+
+   `.ger` e' um item flex com `flex: 1` dentro de `.app` (altura 100%), ou seja
+   a altura dele e' DEFINIDA — 697px numa tela de 860. Quando o painel tambem
+   e' grid (`.monitoramento`, `.insights`), as linhas `auto` do grid so podem
+   crescer ate a SOBRA dessa altura definida, nao ate o conteudo. E como os
+   cartoes (`.admin-card`) tem `overflow: hidden` para respeitar o raio da
+   borda, a altura minima automatica deles e' zero: a linha nao empurra de
+   volta, o cartao e' comprimido e o que nao cabe e' simplesmente recortado.
+   O pior vem depois: o proprio `.ger` passa a ver `scrollHeight` igual ao
+   `clientHeight` e NAO cria barra de rolagem. A tela trava com a informacao
+   cortada e sem jeito de chegar nela.
+   Foi exatamente isso nas "Sessoes encerradas": o cartao de 2579px virou
+   522px e as ultimas linhas ficaram inalcancaveis.
+   `max-content` nas linhas implicitas tira o teto: elas passam a seguir o
+   conteudo, o conteudo transborda o `.ger` e a rolagem volta a existir.
+   Nada estica (`align-content: start` ja cuidava disso), so para de encolher.
+   A prova vive em `servidor/src/teste-rolagem.ts` (npm run rolagem). */
+.ger { grid-auto-rows: max-content; }
 .ger-vazio { display: grid; place-content: center; text-align: center; color: var(--muted); }
 .ger > * { max-width: 1240px; margin-left: auto; margin-right: auto; }
 .ger h2 { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -0.01em; }
