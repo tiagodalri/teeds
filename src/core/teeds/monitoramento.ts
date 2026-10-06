@@ -56,6 +56,18 @@ export function paraSessaoEspelho(l: Record<string, any>, mae?: Record<string, a
   }
 }
 
+/*
+  Uma marca ou várias. A visão de Rede soma as plataformas, então o filtro
+  precisa aceitar lista: `marca=eq.teeds` vira `marca=in.(teeds,omni)`.
+  A RLS continua decidindo o que a pessoa pode ver; isto só diz o que pedir.
+*/
+export type Marcas = string | string[]
+const comoLista = (m: Marcas): string[] => Array.isArray(m) ? m : [m]
+const filtroDeMarca = (m: Marcas): string => {
+  const l = comoLista(m)
+  return l.length === 1 ? `marca=eq.${l[0]}` : `marca=in.(${l.join(',')})`
+}
+
 const SELECAO = 'sessao_id,marca,user_id,seq,fase,estado,config,emitido_em,atualizada_em,sessoes_robos!inner(sessao_ref,conta_id,demo,moeda,robo_id,robo_nome,ativo,situacao,criada_em,encerrada_em,motivo_da_parada)'
 
 /** As fotos das sessões desta marca: as vivas e as encerradas nas últimas horas. */
@@ -72,11 +84,11 @@ const SELECAO = 'sessao_id,marca,user_id,seq,fase,estado,config,emitido_em,atual
   a tela mostra a marca do próprio site — errado para o seletor, mas nunca
   dados de outra plataforma por acidente.
 */
-export async function listarEspelhos(sessao: SessaoTeeds, horas = 12, signal?: AbortSignal, marca: string = MARCA.id): Promise<SessaoEspelho[]> {
+export async function listarEspelhos(sessao: SessaoTeeds, horas = 12, signal?: AbortSignal, marca: Marcas = MARCA.id): Promise<SessaoEspelho[]> {
   if (!autenticacaoConfigurada()) return []
   const corte = new Date(Date.now() - horas * 3600_000).toISOString()
   const linhas = await rest<any[]>(
-    `/sessoes_robos_ao_vivo?select=${encodeURIComponent(SELECAO)}&marca=eq.${marca}&atualizada_em=gte.${encodeURIComponent(corte)}&order=atualizada_em.desc&limit=300`,
+    `/sessoes_robos_ao_vivo?select=${encodeURIComponent(SELECAO)}&${filtroDeMarca(marca)}&atualizada_em=gte.${encodeURIComponent(corte)}&order=atualizada_em.desc&limit=300`,
     sessao.token, { signal },
   )
   const recebido = Date.now()
@@ -84,17 +96,17 @@ export async function listarEspelhos(sessao: SessaoTeeds, horas = 12, signal?: A
 }
 
 /** A foto de uma sessão só (snapshot ao entrar no foco ou ao reconectar). */
-export async function lerEspelho(sessao: SessaoTeeds, sessaoId: string, signal?: AbortSignal, marca: string = MARCA.id): Promise<SessaoEspelho | null> {
+export async function lerEspelho(sessao: SessaoTeeds, sessaoId: string, signal?: AbortSignal, marca: Marcas = MARCA.id): Promise<SessaoEspelho | null> {
   const linhas = await rest<any[]>(
-    `/sessoes_robos_ao_vivo?select=${encodeURIComponent(SELECAO)}&marca=eq.${marca}&sessao_id=eq.${encodeURIComponent(sessaoId)}&limit=1`,
+    `/sessoes_robos_ao_vivo?select=${encodeURIComponent(SELECAO)}&${filtroDeMarca(marca)}&sessao_id=eq.${encodeURIComponent(sessaoId)}&limit=1`,
     sessao.token, { signal },
   )
   return linhas?.[0] ? paraSessaoEspelho(linhas[0]) : null
 }
 
 /** A mãe de uma sessão em sessoes_robos — para sessões antigas cuja foto já foi limpa. */
-export async function lerSessaoMae(sessao: SessaoTeeds, sessaoId: string, signal?: AbortSignal, marca: string = MARCA.id): Promise<Record<string, any> | null> {
-  const linhas = await rest<any[]>(`/sessoes_robos?select=*&marca=eq.${marca}&id=eq.${encodeURIComponent(sessaoId)}&limit=1`, sessao.token, { signal })
+export async function lerSessaoMae(sessao: SessaoTeeds, sessaoId: string, signal?: AbortSignal, marca: Marcas = MARCA.id): Promise<Record<string, any> | null> {
+  const linhas = await rest<any[]>(`/sessoes_robos?select=*&${filtroDeMarca(marca)}&id=eq.${encodeURIComponent(sessaoId)}&limit=1`, sessao.token, { signal })
   return linhas?.[0] ?? null
 }
 
@@ -103,9 +115,9 @@ export function paraEvento(l: Record<string, any>): EventoEspelho {
 }
 
 /** Uma página de eventos de uma sessão, em ordem, a partir de uma seq. */
-export async function eventosDaSessao(sessao: SessaoTeeds, sessaoId: string, aPartirDeSeq = 0, limite = 500, signal?: AbortSignal, marca: string = MARCA.id): Promise<EventoEspelho[]> {
+export async function eventosDaSessao(sessao: SessaoTeeds, sessaoId: string, aPartirDeSeq = 0, limite = 500, signal?: AbortSignal, marca: Marcas = MARCA.id): Promise<EventoEspelho[]> {
   const linhas = await rest<any[]>(
-    `/eventos_robos_ao_vivo?select=id,sessao_id,marca,seq,tipo,delta,config,emitido_em,criado_em&marca=eq.${marca}&sessao_id=eq.${encodeURIComponent(sessaoId)}&seq=gt.${aPartirDeSeq}&order=seq.asc&limit=${limite}`,
+    `/eventos_robos_ao_vivo?select=id,sessao_id,marca,seq,tipo,delta,config,emitido_em,criado_em&${filtroDeMarca(marca)}&sessao_id=eq.${encodeURIComponent(sessaoId)}&seq=gt.${aPartirDeSeq}&order=seq.asc&limit=${limite}`,
     sessao.token, { signal },
   )
   return (linhas ?? []).map(paraEvento)
@@ -116,7 +128,7 @@ export async function eventosDaSessao(sessao: SessaoTeeds, sessaoId: string, aPa
  * `aoProgresso` a cada página para a tela mostrar que está carregando.
  * Um AbortError sai como exceção — quem chama trata a troca de sessão.
  */
-export async function carregarEventos(sessao: SessaoTeeds, sessaoId: string, signal: AbortSignal, aoProgresso?: (carregados: number) => void, tamanho = 500, marca: string = MARCA.id): Promise<EventoEspelho[]> {
+export async function carregarEventos(sessao: SessaoTeeds, sessaoId: string, signal: AbortSignal, aoProgresso?: (carregados: number) => void, tamanho = 500, marca: Marcas = MARCA.id): Promise<EventoEspelho[]> {
   const todos: EventoEspelho[] = []
   let desde = 0
   for (let pagina = 0; pagina < 200; pagina++) {
@@ -131,20 +143,20 @@ export async function carregarEventos(sessao: SessaoTeeds, sessaoId: string, sig
 }
 
 export interface SessaoEncerrada {
-  id: string; sessaoRef: string; userId: string; contaId: string; demo: boolean; moeda: string
+  id: string; sessaoRef: string; marca: string; userId: string; contaId: string; demo: boolean; moeda: string
   roboId: string; roboNome: string; ativo: string; situacao: string; operacoes: number; ganhas: number; perdidas: number
   resultado: number; motivoDaParada: string | null; criadaEm: string; encerradaEm: string | null
 }
 
 /** Sessões encerradas desta marca, para o replay. O padrão cobre a retenção inteira dos eventos. */
-export async function listarEncerradas(sessao: SessaoTeeds, dias: number = LIMITES.retencaoEventosDias, limite = 300, signal?: AbortSignal, marca: string = MARCA.id): Promise<SessaoEncerrada[]> {
+export async function listarEncerradas(sessao: SessaoTeeds, dias: number = LIMITES.retencaoEventosDias, limite = 300, signal?: AbortSignal, marca: Marcas = MARCA.id): Promise<SessaoEncerrada[]> {
   const corte = new Date(Date.now() - dias * 86400_000).toISOString()
   const linhas = await rest<any[]>(
-    `/sessoes_robos?select=id,sessao_ref,user_id,conta_id,demo,moeda,robo_id,robo_nome,ativo,situacao,operacoes,ganhas,perdidas,resultado,motivo_da_parada,criada_em,encerrada_em&marca=eq.${marca}&situacao=neq.rodando&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc&limit=${limite}`,
+    `/sessoes_robos?select=id,sessao_ref,marca,user_id,conta_id,demo,moeda,robo_id,robo_nome,ativo,situacao,operacoes,ganhas,perdidas,resultado,motivo_da_parada,criada_em,encerrada_em&${filtroDeMarca(marca)}&situacao=neq.rodando&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc&limit=${limite}`,
     sessao.token, { signal },
   )
   return (linhas ?? []).map((l) => ({
-    id: l.id, sessaoRef: l.sessao_ref ?? '', userId: l.user_id, contaId: l.conta_id, demo: Boolean(l.demo), moeda: l.moeda,
+    id: l.id, sessaoRef: l.sessao_ref ?? '', marca: l.marca ?? '', userId: l.user_id, contaId: l.conta_id, demo: Boolean(l.demo), moeda: l.moeda,
     roboId: l.robo_id, roboNome: l.robo_nome, ativo: l.ativo, situacao: l.situacao, operacoes: l.operacoes ?? 0, ganhas: l.ganhas ?? 0,
     perdidas: l.perdidas ?? 0, resultado: Number(l.resultado ?? 0), motivoDaParada: l.motivo_da_parada, criadaEm: l.criada_em, encerradaEm: l.encerrada_em,
   }))
@@ -166,18 +178,22 @@ export async function listarEncerradas(sessao: SessaoTeeds, dias: number = LIMIT
 export interface MarkupDaSessao { operacoes: number; markup: number; markupDeriv: number | null }
 
 export async function markupDasSessoes(
-  sessao: SessaoTeeds, ids: string[], signal?: AbortSignal, marca: string = MARCA.id,
+  sessao: SessaoTeeds, ids: string[], signal?: AbortSignal, marca: Marcas = MARCA.id,
 ): Promise<Map<string, MarkupDaSessao>> {
   const mapa = new Map<string, MarkupDaSessao>()
   if (!ids.length) return mapa
   // O banco recusa mais de 500 de uma vez; a tela pede 300, mas o lote mantém
   // a promessa de cá também.
+  // O RPC soma por marca. Na Rede são duas chamadas (uma por plataforma) e os
+  // resultados se juntam: ids de uma marca não aparecem na outra, então não há
+  // como uma sobrescrever a outra.
+  for (const umaMarca of comoLista(marca))
   for (let i = 0; i < ids.length; i += 300) {
     const lote = ids.slice(i, i + 300)
     try {
       const linhas = await rest<any[]>('/rpc/teeds_markup_das_sessoes', sessao.token, {
         method: 'POST', signal,
-        body: JSON.stringify({ p_marca: marca, p_ids: lote }),
+        body: JSON.stringify({ p_marca: umaMarca, p_ids: lote }),
       })
       for (const l of linhas ?? []) {
         mapa.set(String(l.sessao_id), {
@@ -222,7 +238,7 @@ export async function auditarNegado(sessao: SessaoTeeds, marca: string = MARCA.i
 
 export interface RegistroAuditoria { id: number; adminId: string; clienteId: string | null; sessaoId: string | null; tipo: string; acao: string; criadoEm: string }
 
-export async function listarAuditoria(sessao: SessaoTeeds, limite = 300, signal?: AbortSignal, marca: string = MARCA.id): Promise<RegistroAuditoria[]> {
-  const linhas = await rest<any[]>(`/auditoria_monitoramento_admin?select=*&marca=eq.${marca}&order=criado_em.desc&limit=${limite}`, sessao.token, { signal })
+export async function listarAuditoria(sessao: SessaoTeeds, limite = 300, signal?: AbortSignal, marca: Marcas = MARCA.id): Promise<RegistroAuditoria[]> {
+  const linhas = await rest<any[]>(`/auditoria_monitoramento_admin?select=*&${filtroDeMarca(marca)}&order=criado_em.desc&limit=${limite}`, sessao.token, { signal })
   return (linhas ?? []).map((l) => ({ id: l.id, adminId: l.admin_id, clienteId: l.cliente_id, sessaoId: l.sessao_id, tipo: l.tipo, acao: l.acao, criadoEm: l.criado_em }))
 }

@@ -5309,6 +5309,17 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
    componente ter de passar classe. */
 .mon-tabela:has(.mon-markup) .cab,
 .mon-tabela:has(.mon-markup) .ins-linha { grid-template-columns: 1.5fr .95fr .95fr .7fr .95fr .95fr 1.1fr 24px; }
+/* A tag da plataforma, no mosaico e na lista, quando a tela está na Rede.
+   Cada marca com a própria cor: ler "de onde veio" não pode depender de
+   decorar a ordem das coisas. */
+.mon-selo.plataforma { font-weight: 800; letter-spacing: .04em; }
+.mon-selo.plataforma.teeds { color: #8a6d1f; border-color: color-mix(in srgb, #d0aa52 55%, var(--border)); background: color-mix(in srgb, #d0aa52 16%, transparent); }
+.mon-selo.plataforma.omni { color: #3b4ea8; border-color: color-mix(in srgb, #4c6fff 50%, var(--border)); background: color-mix(in srgb, #4c6fff 14%, transparent); }
+/* Na Rede a lista de encerradas ganha a coluna da plataforma. */
+.mon-tabela:has(.mon-selo.plataforma) .cab,
+.mon-tabela:has(.mon-selo.plataforma) .ins-linha { grid-template-columns: 1.5fr .75fr .9fr .9fr .7fr .95fr 1.1fr 24px; }
+.mon-tabela:has(.mon-selo.plataforma):has(.mon-markup) .cab,
+.mon-tabela:has(.mon-selo.plataforma):has(.mon-markup) .ins-linha { grid-template-columns: 1.35fr .7fr .8fr .8fr .62fr .85fr .85fr 1fr 24px; }
 .mon-markup { font-variant-numeric: tabular-nums; color: var(--primary); font-weight: 700; }
 .mon-markup small { display: block; font-size: 9.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .mon-markup.simulado { color: var(--muted); font-weight: 600; }

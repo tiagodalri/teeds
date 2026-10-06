@@ -59,25 +59,40 @@ const monitorCore = leia('src/core/teeds/monitoramento.ts')
 // O par que precisa combinar: sessões e nomes na MESMA marca. Hoje os dois
 // saem da variável `marca` do painel — o seletor. Antes as sessões vinham de
 // `MARCA.id` e os nomes do seletor, e era isso que apagava os nomes.
-conferir('o monitoramento busca os nomes na marca escolhida',
-  /clientesPorId\(sessao, novos, marca\)/.test(monitorPainel), true)
+conferir('o monitoramento busca os nomes no mesmo escopo das sessões',
+  /clientesPorId\(sessao, novos, naRede \? undefined : marcaFoco\)/.test(monitorPainel), true)
 conferir('e as sessões encerradas na mesma variável',
   /listarEncerradas\(sessao, undefined, undefined, aborto\.signal, marca\)/.test(monitorPainel), true)
 conferir('e as cabines ao vivo também',
   /listarEspelhos\(sessao, horas, undefined, marca\)/.test(monitorPainel), true)
 
-// O canal em tempo real filtra por uma marca só: tem de ser a mesma.
-conferir('o tempo real escuta a marca escolhida',
-  (monitorPainel.match(/filtro: `marca=eq\.\$\{marca\}`/g) ?? []).length, 3)
+// O filtro do realtime é de igualdade, então a Rede vira uma assinatura por
+// marca em cada tabela. Escutar menos marcas do que a tela mostra faria os
+// cartões de uma plataforma congelarem sem ninguém perceber.
+conferir('o tempo real abre uma assinatura por marca',
+  /tabelas: marcas\.flatMap\(\(m\) => \[/.test(monitorPainel), true)
+conferir('e as três tabelas escutam a marca do laço',
+  (monitorPainel.match(/filtro: `marca=eq\.\$\{m\}`/g) ?? []).length, 3)
 
-// Na Rede o canal não tem como filtrar duas marcas: a tela precisa recusar.
-conferir('na Rede o monitoramento não abre canal', /if \(naRede\) return/.test(monitorPainel), true)
-conferir('e pede para escolher uma plataforma',
-  /naRede && <section className="admin-card adm-pede-marca"/.test(monitorPainel), true)
+// Na Rede as consultas pedem as duas marcas, e cada cartão diz de onde veio.
+conferir('a Rede consulta a lista de marcas',
+  /const marca: string\[\] \| string = naRede \? marcas : marcaFoco/.test(monitorPainel), true)
+conferir('o cartão mostra a plataforma quando está na Rede',
+  /mostrarMarca=\{naRede\}/.test(monitorPainel), true)
+conferir('e a tag sai com a marca da própria sessão',
+  /mon-selo plataforma \$\{s\.marca\}/.test(monitorPainel), true)
+// O registro de auditoria é de UMA marca: na Rede não pode virar lista.
+conferir('a auditoria grava uma marca só',
+  /const marcaDoRegistro = naRede \? MARCA\.id : marcaFoco/.test(monitorPainel), true)
 
 // O núcleo não pode voltar a fixar a marca: ela é parâmetro.
 conferir('as consultas do núcleo usam a marca recebida',
   /marca=eq\.\$\{MARCA\.id\}/.test(monitorCore), false)
+conferir('e aceitam uma marca ou várias',
+  /marca=in\.\(\$\{l\.join\(','\)\}\)/.test(monitorCore), true)
+// A sessão encerrada precisa dizer de qual marca é, senão a tag não tem fonte.
+conferir('a sessão encerrada carrega a marca',
+  /sessoes_robos\?select=id,sessao_ref,marca,user_id/.test(monitorCore), true)
 conferir('e o núcleo não chama nada que siga o seletor sozinho',
   /filtroMarca|marcasEmFoco|marcaAdmin\(\)|vendoARede/.test(monitorCore), false)
 

@@ -95,7 +95,7 @@ function mensagemDoErro(e: unknown): { estado: EstadoDaTela; texto: string } {
 
 /* ============================================================ cartão */
 
-export const Cartao = memo(function Cartao({ s, cliente, saude, visao, aoAbrir }: { s: SessaoEspelho; cliente?: ClienteRegistro; saude: Saude; visao: Visao; aoAbrir: (id: string) => void }) {
+export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMarca = false, aoAbrir }: { s: SessaoEspelho; cliente?: ClienteRegistro; saude: Saude; visao: Visao; mostrarMarca?: boolean; aoAbrir: (id: string) => void }) {
   const e = s.estado
   const cor = semaforo(s, saude === 'ao-vivo' ? s.recebidoEm : saude === 'atencao' ? s.recebidoEm + 3000 : s.recebidoEm + 10_000)
   const { cor: corRobo } = regrasDoRobo(s.roboId)
@@ -120,6 +120,9 @@ export const Cartao = memo(function Cartao({ s, cliente, saude, visao, aoAbrir }
         <span className={`mon-saude ${saude}`}><i aria-hidden />{ROTULO_SAUDE[saude]}</span>
       </header>
       <div className="mon-selos">
+        {/* Só na Rede: com uma plataforma só, repetir a marca em todo cartão
+            seria ruído. Na Rede é a informação que falta para ler o mosaico. */}
+        {mostrarMarca && <em className={`mon-selo plataforma ${s.marca}`}>{NOME_DA_MARCA[s.marca] ?? s.marca}</em>}
         <em className={`mon-selo conta ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'Conta demo' : 'Conta real'}</em>
         {modo && <em className={`mon-selo modo ${modo}`}>{NOME_DO_MODO[modo]}</em>}
       </div>
@@ -376,10 +379,16 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
      e nos Insights, e vice-versa. Antes esta tela era presa à marca do site. */
   const [marcaFoco, trocarMarca] = useMarcaEmFoco()
   const naRede = marcaFoco === REDE
-  /* Na Rede o monitoramento não tem o que mostrar: a assinatura em tempo real
-     filtra por UMA marca (`marca=eq.…`), e somar cabines de plataformas
-     diferentes numa tela só não ajuda ninguém a acompanhar. */
-  const marca = naRede ? MARCA.id : marcaFoco
+  /* A Rede soma as plataformas. As consultas aceitam lista (`marca=in.(…)`) e
+     o canal ao vivo ganha uma assinatura por marca, porque o filtro dele é de
+     igualdade. Cada cartão carrega a tag da plataforma a que pertence. */
+  const marcas = useMemo(() => naRede ? Object.keys(MARCAS) : [marcaFoco], [naRede, marcaFoco])
+  const marca: string[] | string = naRede ? marcas : marcaFoco
+  /* A auditoria grava UMA marca por registro, e o banco confere se você é
+     admin dela. Na Rede o painel não é de nenhuma em particular, então o
+     registro de abrir/fechar a tela fica na master; as ações sobre uma sessão
+     gravam a marca daquela sessão, que é o que importa rastrear. */
+  const marcaDoRegistro = naRede ? MARCA.id : marcaFoco
   const [aba, setAba] = useState<Aba>('ao-vivo')
   const [sessoes, setSessoes] = useState<Map<string, SessaoEspelho>>(new Map())
   const [clientes, setClientes] = useState<Map<string, ClienteRegistro>>(new Map())
@@ -418,7 +427,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
     if ((e as Error)?.name === 'AbortError') return
     const m = mensagemDoErro(e)
     setErro(m.texto)
-    if (m.estado === 'sem-permissao') { setTela('sem-permissao'); void auditarNegado(sessao, marca) }
+    if (m.estado === 'sem-permissao') { setTela('sem-permissao'); void auditarNegado(sessao, marcaDoRegistro) }
     else if (m.estado === 'indisponivel') setTela((t) => (t === 'carregando' ? 'indisponivel' : t))
   }, [sessao])
 
@@ -429,7 +438,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
     novos.forEach((id) => clientesPedidos.current.add(id))
     try {
       // Segue a plataforma escolhida no seletor, igual às sessões.
-      const fichas = await clientesPorId(sessao, novos, marca)
+      const fichas = await clientesPorId(sessao, novos, naRede ? undefined : marcaFoco)
       setClientes((m) => { const n = new Map(m); fichas.forEach((f) => n.set(f.userId, f)); return n })
     } catch { novos.forEach((id) => clientesPedidos.current.delete(id)) }
   }, [sessao])
@@ -464,19 +473,20 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
   // Reconciliação leve, a cada 20 s — o Realtime é o transporte; isto só confere.
   useEffect(() => { const id = setInterval(() => { if (document.visibilityState === 'visible') void carregarTudo() }, 20_000); return () => clearInterval(id) }, [carregarTudo])
   useEffect(() => { const id = setInterval(() => setAgora(Date.now()), 1000); return () => clearInterval(id) }, [])
-  useEffect(() => { auditar(sessao, { tipo: 'painel', acao: 'abriu', marca }).catch(falhar); return () => { auditar(sessao, { tipo: 'painel', acao: 'fechou', marca }).catch(() => { /* a tela já fechou */ }) } }, [sessao, marca, falhar])
+  useEffect(() => { auditar(sessao, { tipo: 'painel', acao: 'abriu', marca: marcaDoRegistro }).catch(falhar); return () => { auditar(sessao, { tipo: 'painel', acao: 'fechou', marca: marcaDoRegistro }).catch(() => { /* a tela já fechou */ }) } }, [sessao, marcaDoRegistro, falhar])
 
   /* -------------------------------------------------- tempo real */
   useEffect(() => {
-    if (naRede) return
-    const canalId = `monitor-${marca}-${Math.random().toString(36).slice(2, 8)}`
+    const canalId = `monitor-${marcas.join('-')}-${Math.random().toString(36).slice(2, 8)}`
     const assinatura = assinarMudancas({
       token: sessao.token, canal: canalId,
-      tabelas: [
-        { tabela: 'sessoes_robos_ao_vivo', filtro: `marca=eq.${marca}` },
-        { tabela: 'pulsos_robos_ao_vivo', filtro: `marca=eq.${marca}` },
-        { tabela: 'eventos_robos_ao_vivo', filtro: `marca=eq.${marca}`, evento: 'INSERT' },
-      ],
+      // O filtro do realtime é de igualdade, então a Rede vira uma assinatura
+      // por marca em cada tabela. Com duas marcas são seis, no mesmo canal.
+      tabelas: marcas.flatMap((m) => [
+        { tabela: 'sessoes_robos_ao_vivo', filtro: `marca=eq.${m}` },
+        { tabela: 'pulsos_robos_ao_vivo', filtro: `marca=eq.${m}` },
+        { tabela: 'eventos_robos_ao_vivo', filtro: `marca=eq.${m}`, evento: 'INSERT' as const },
+      ]),
       // Ao (re)entrar no canal, a foto completa vem ANTES de a tela dizer "ao vivo".
       aoEstado: (e) => { if (e === 'ao-vivo') { void carregarTudo().then(() => setCanal('ao-vivo')) } else setCanal(e) },
       aoRtt: (ms) => setRttMs(rtt.current.registrar(ms)),
@@ -512,14 +522,14 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
     focoAnterior.current = document.activeElement as HTMLElement
     const s = sessoes.get(id)
     setFocoAutorizado('pendente'); setFoco(id)
-    try { await auditar(sessao, { tipo: 'ao-vivo', acao: 'abriu', sessaoId: id, clienteId: s?.userId, marca }) }
+    try { await auditar(sessao, { tipo: 'ao-vivo', acao: 'abriu', sessaoId: id, clienteId: s?.userId, marca: s?.marca ?? marcaDoRegistro }) }
     catch (e) { setFocoAutorizado('nao'); falhar(e); return }
     setFocoAutorizado('sim')
     try { const evs = await eventosDaSessao(sessao, id, 0, 500); setEventos((m) => { const n = new Map(m); n.set(id, ordenarEventos([...(n.get(id) ?? []), ...evs])); return n }) }
     catch (e) { falhar(e) }
   }, [sessao, sessoes, falhar])
   const fecharFoco = useCallback(() => {
-    if (foco && focoAutorizado === 'sim') { const s = sessoes.get(foco); auditar(sessao, { tipo: 'ao-vivo', acao: 'fechou', sessaoId: foco, clienteId: s?.userId, marca }).catch((e) => console.error('[monitoramento] auditoria de fechamento falhou:', (e as Error).message)) }
+    if (foco && focoAutorizado === 'sim') { const s = sessoes.get(foco); auditar(sessao, { tipo: 'ao-vivo', acao: 'fechou', sessaoId: foco, clienteId: s?.userId, marca: s?.marca ?? marcaDoRegistro }).catch((e) => console.error('[monitoramento] auditoria de fechamento falhou:', (e as Error).message)) }
     setFoco(null)
     setTimeout(() => focoAnterior.current?.focus?.(), 0)
   }, [foco, focoAutorizado, sessao, sessoes])
@@ -542,7 +552,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
   useEffect(() => {
     const termo = busca.trim()
     if (termo.length < 3 || termo === buscaRegistrada.current) return
-    const t = setTimeout(() => { buscaRegistrada.current = termo; auditar(sessao, { tipo: 'busca', acao: 'buscou', marca }).catch(() => { /* a busca é local; a auditoria dela é informativa */ }) }, 1500)
+    const t = setTimeout(() => { buscaRegistrada.current = termo; auditar(sessao, { tipo: 'busca', acao: 'buscou', marca: marcaDoRegistro }).catch(() => { /* a busca é local; a auditoria dela é informativa */ }) }, 1500)
     return () => clearTimeout(t)
   }, [busca, sessao])
 
@@ -624,8 +634,6 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
         </div>
       </header>
 
-      {naRede && <section className="admin-card adm-pede-marca"><div><span className="rot">Monitoramento ao vivo</span><h3>Escolha uma plataforma</h3><p>A cabine é de uma plataforma por vez: o canal ao vivo acompanha uma marca só, e juntar as cabines de duas num mosaico só atrapalharia o acompanhamento. Escolha {NOME_DA_MARCA.teeds} ou {NOME_DA_MARCA.omni} no seletor acima.</p></div></section>}
-      {!naRede && <>
       {erro && tela !== 'sem-permissao' && <div className={`mon-aviso ${tela === 'erro' ? 'erro' : ''}`} role="alert"><span>{erro}</span><button className="mon-fechar" onClick={() => setErro(null)} aria-label="Fechar aviso"><IconeFechar /></button></div>}
       {canalRuim && tela === 'pronto' && <div className="mon-aviso" role="status">{canal === 'token-expirado' ? 'A sessão do administrador expirou: o canal ao vivo foi fechado. Entre de novo para continuar.' : 'Reconectando ao canal ao vivo… Os dados na tela podem estar desatualizados; a idade de cada atualização aparece nos cartões.'}</div>}
 
@@ -657,7 +665,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
             <div className="mon-visao" role="group" aria-label="Disposição">{(['compacto', 'confortavel', 'lista'] as Visao[]).map((v) => <button key={v} className={visao === v ? 'on' : ''} aria-pressed={visao === v} aria-label={v} onClick={() => setVisao(v)}>{v === 'compacto' ? '▦' : v === 'confortavel' ? '▣' : '☰'}</button>)}</div>
           </div>
           <div className={`mon-mosaico ${visao}`}>
-            {lista.slice(0, limite).map((s) => <Cartao key={s.sessaoId} s={s} cliente={clientes.get(s.userId)} saude={saudes.get(s.sessaoId) ?? 'desatualizado'} visao={visao} aoAbrir={abrirFoco} />)}
+            {lista.slice(0, limite).map((s) => <Cartao key={s.sessaoId} s={s} cliente={clientes.get(s.userId)} saude={saudes.get(s.sessaoId) ?? 'desatualizado'} visao={visao} mostrarMarca={naRede} aoAbrir={abrirFoco} />)}
             {!lista.length && <div className="mon-estado">{sessoes.size ? <><b>Nenhuma sessão passa pelos filtros.</b>Ajuste o período ou os filtros acima.</> : <><b>Nenhum robô operando nesta marca agora.</b>Quando um cliente ligar um robô, a cabine aparece aqui sozinha.</>}</div>}
           </div>
           {lista.length > limite && <button className="mon-mais" onClick={() => setLimite((l) => l + 60)}>Mostrar mais {Math.min(60, lista.length - limite)} de {lista.length - limite} restantes</button>}
@@ -681,10 +689,11 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
             <select value={filtroResultado} onChange={(e) => setFiltroResultado(e.target.value as any)} aria-label="Resultado"><option value="todos">Qualquer resultado</option><option value="positivo">Positivo</option><option value="negativo">Negativo</option></select>
           </div>
           <div className="ins-tabela mon-tabela">
-            <div className="cab"><span>Cliente</span><span>Robô</span><span>Conta</span><span>Operações</span><span>Resultado</span>{mostrarMarkup && <span>Markup</span>}<span>Encerrada</span><span /></div>
+            <div className="cab"><span>Cliente</span>{naRede && <span>Plataforma</span>}<span>Robô</span><span>Conta</span><span>Operações</span><span>Resultado</span>{mostrarMarkup && <span>Markup</span>}<span>Encerrada</span><span /></div>
             {encerradasFiltradas.slice(0, limiteEncerradas).map((s) => { const c = clientes.get(s.userId); return (
               <button key={s.id} className="ins-linha mon-linha" onClick={() => setReplayDe(s)}>
                 <span className="adm-pessoa"><i>{(c?.nome || c?.email || '?')[0].toUpperCase()}</i><b>{c?.nome || 'Sem nome'}<small>{mascararEmail(c?.email)}</small></b></span>
+                {naRede && <span><em className={`mon-selo plataforma ${s.marca}`}>{NOME_DA_MARCA[s.marca] ?? s.marca}</em></span>}
                 <span>{s.roboNome}</span><span>{mascararConta(s.contaId)} <em className={`mon-tipo ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'demo' : 'real'}</em></span>
                 <span>{s.operacoes} <small className="up">{s.ganhas}</small> <small className="down">{s.perdidas}</small></span>
                 <span className={s.resultado >= 0 ? 'up' : 'down'}>{assinado(s.resultado)} {s.moeda}</span>
@@ -708,7 +717,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
           )}
         </section>
       )}
-      {tela === 'pronto' && aba === 'replay' && replayDe && <Replay key={`${marca}-${replayDe.id}`} sessao={sessao} encerrada={replayDe} clientes={clientes} marca={marca} aoFechar={() => setReplayDe(null)} aoErro={falhar} />}
+      {tela === 'pronto' && aba === 'replay' && replayDe && <Replay key={`${marca}-${replayDe.id}`} sessao={sessao} encerrada={replayDe} clientes={clientes} marca={replayDe.marca || marcaDoRegistro} aoFechar={() => setReplayDe(null)} aoErro={falhar} />}
 
       {tela === 'pronto' && aba === 'auditoria' && (
         <section className="admin-card full">
@@ -722,7 +731,6 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
           </div>
         </section>
       )}
-      </>}
     </div>
   )
 }
