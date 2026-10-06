@@ -59,11 +59,24 @@ export function paraSessaoEspelho(l: Record<string, any>, mae?: Record<string, a
 const SELECAO = 'sessao_id,marca,user_id,seq,fase,estado,config,emitido_em,atualizada_em,sessoes_robos!inner(sessao_ref,conta_id,demo,moeda,robo_id,robo_nome,ativo,situacao,criada_em,encerrada_em,motivo_da_parada)'
 
 /** As fotos das sessões desta marca: as vivas e as encerradas nas últimas horas. */
-export async function listarEspelhos(sessao: SessaoTeeds, horas = 12, signal?: AbortSignal): Promise<SessaoEspelho[]> {
+/*
+  A MARCA É PARÂMETRO, não constante.
+
+  Até 06/10/2026 todas as consultas daqui fixavam `MARCA.id` — a marca do site
+  montado. Funcionava porque o monitoramento era a cabine daquela plataforma e
+  mais nada. Com o seletor de plataforma também nesta tela, quem decide é quem
+  chama; o padrão continua sendo a marca do site, então nada quebra para quem
+  não passar.
+
+  O padrão é deliberado e não é preguiça: se um dia alguém esquecer de passar,
+  a tela mostra a marca do próprio site — errado para o seletor, mas nunca
+  dados de outra plataforma por acidente.
+*/
+export async function listarEspelhos(sessao: SessaoTeeds, horas = 12, signal?: AbortSignal, marca: string = MARCA.id): Promise<SessaoEspelho[]> {
   if (!autenticacaoConfigurada()) return []
   const corte = new Date(Date.now() - horas * 3600_000).toISOString()
   const linhas = await rest<any[]>(
-    `/sessoes_robos_ao_vivo?select=${encodeURIComponent(SELECAO)}&marca=eq.${MARCA.id}&atualizada_em=gte.${encodeURIComponent(corte)}&order=atualizada_em.desc&limit=300`,
+    `/sessoes_robos_ao_vivo?select=${encodeURIComponent(SELECAO)}&marca=eq.${marca}&atualizada_em=gte.${encodeURIComponent(corte)}&order=atualizada_em.desc&limit=300`,
     sessao.token, { signal },
   )
   const recebido = Date.now()
@@ -71,17 +84,17 @@ export async function listarEspelhos(sessao: SessaoTeeds, horas = 12, signal?: A
 }
 
 /** A foto de uma sessão só (snapshot ao entrar no foco ou ao reconectar). */
-export async function lerEspelho(sessao: SessaoTeeds, sessaoId: string, signal?: AbortSignal): Promise<SessaoEspelho | null> {
+export async function lerEspelho(sessao: SessaoTeeds, sessaoId: string, signal?: AbortSignal, marca: string = MARCA.id): Promise<SessaoEspelho | null> {
   const linhas = await rest<any[]>(
-    `/sessoes_robos_ao_vivo?select=${encodeURIComponent(SELECAO)}&marca=eq.${MARCA.id}&sessao_id=eq.${encodeURIComponent(sessaoId)}&limit=1`,
+    `/sessoes_robos_ao_vivo?select=${encodeURIComponent(SELECAO)}&marca=eq.${marca}&sessao_id=eq.${encodeURIComponent(sessaoId)}&limit=1`,
     sessao.token, { signal },
   )
   return linhas?.[0] ? paraSessaoEspelho(linhas[0]) : null
 }
 
 /** A mãe de uma sessão em sessoes_robos — para sessões antigas cuja foto já foi limpa. */
-export async function lerSessaoMae(sessao: SessaoTeeds, sessaoId: string, signal?: AbortSignal): Promise<Record<string, any> | null> {
-  const linhas = await rest<any[]>(`/sessoes_robos?select=*&marca=eq.${MARCA.id}&id=eq.${encodeURIComponent(sessaoId)}&limit=1`, sessao.token, { signal })
+export async function lerSessaoMae(sessao: SessaoTeeds, sessaoId: string, signal?: AbortSignal, marca: string = MARCA.id): Promise<Record<string, any> | null> {
+  const linhas = await rest<any[]>(`/sessoes_robos?select=*&marca=eq.${marca}&id=eq.${encodeURIComponent(sessaoId)}&limit=1`, sessao.token, { signal })
   return linhas?.[0] ?? null
 }
 
@@ -90,9 +103,9 @@ export function paraEvento(l: Record<string, any>): EventoEspelho {
 }
 
 /** Uma página de eventos de uma sessão, em ordem, a partir de uma seq. */
-export async function eventosDaSessao(sessao: SessaoTeeds, sessaoId: string, aPartirDeSeq = 0, limite = 500, signal?: AbortSignal): Promise<EventoEspelho[]> {
+export async function eventosDaSessao(sessao: SessaoTeeds, sessaoId: string, aPartirDeSeq = 0, limite = 500, signal?: AbortSignal, marca: string = MARCA.id): Promise<EventoEspelho[]> {
   const linhas = await rest<any[]>(
-    `/eventos_robos_ao_vivo?select=id,sessao_id,marca,seq,tipo,delta,config,emitido_em,criado_em&marca=eq.${MARCA.id}&sessao_id=eq.${encodeURIComponent(sessaoId)}&seq=gt.${aPartirDeSeq}&order=seq.asc&limit=${limite}`,
+    `/eventos_robos_ao_vivo?select=id,sessao_id,marca,seq,tipo,delta,config,emitido_em,criado_em&marca=eq.${marca}&sessao_id=eq.${encodeURIComponent(sessaoId)}&seq=gt.${aPartirDeSeq}&order=seq.asc&limit=${limite}`,
     sessao.token, { signal },
   )
   return (linhas ?? []).map(paraEvento)
@@ -103,12 +116,12 @@ export async function eventosDaSessao(sessao: SessaoTeeds, sessaoId: string, aPa
  * `aoProgresso` a cada página para a tela mostrar que está carregando.
  * Um AbortError sai como exceção — quem chama trata a troca de sessão.
  */
-export async function carregarEventos(sessao: SessaoTeeds, sessaoId: string, signal: AbortSignal, aoProgresso?: (carregados: number) => void, tamanho = 500): Promise<EventoEspelho[]> {
+export async function carregarEventos(sessao: SessaoTeeds, sessaoId: string, signal: AbortSignal, aoProgresso?: (carregados: number) => void, tamanho = 500, marca: string = MARCA.id): Promise<EventoEspelho[]> {
   const todos: EventoEspelho[] = []
   let desde = 0
   for (let pagina = 0; pagina < 200; pagina++) {
     if (signal.aborted) throw new DOMException('cancelado', 'AbortError')
-    const lote = await eventosDaSessao(sessao, sessaoId, desde, tamanho, signal)
+    const lote = await eventosDaSessao(sessao, sessaoId, desde, tamanho, signal, marca)
     todos.push(...lote)
     aoProgresso?.(todos.length)
     if (lote.length < tamanho) break
@@ -124,10 +137,10 @@ export interface SessaoEncerrada {
 }
 
 /** Sessões encerradas desta marca, para o replay. O padrão cobre a retenção inteira dos eventos. */
-export async function listarEncerradas(sessao: SessaoTeeds, dias: number = LIMITES.retencaoEventosDias, limite = 300, signal?: AbortSignal): Promise<SessaoEncerrada[]> {
+export async function listarEncerradas(sessao: SessaoTeeds, dias: number = LIMITES.retencaoEventosDias, limite = 300, signal?: AbortSignal, marca: string = MARCA.id): Promise<SessaoEncerrada[]> {
   const corte = new Date(Date.now() - dias * 86400_000).toISOString()
   const linhas = await rest<any[]>(
-    `/sessoes_robos?select=id,sessao_ref,user_id,conta_id,demo,moeda,robo_id,robo_nome,ativo,situacao,operacoes,ganhas,perdidas,resultado,motivo_da_parada,criada_em,encerrada_em&marca=eq.${MARCA.id}&situacao=neq.rodando&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc&limit=${limite}`,
+    `/sessoes_robos?select=id,sessao_ref,user_id,conta_id,demo,moeda,robo_id,robo_nome,ativo,situacao,operacoes,ganhas,perdidas,resultado,motivo_da_parada,criada_em,encerrada_em&marca=eq.${marca}&situacao=neq.rodando&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc&limit=${limite}`,
     sessao.token, { signal },
   )
   return (linhas ?? []).map((l) => ({
@@ -153,7 +166,7 @@ export async function listarEncerradas(sessao: SessaoTeeds, dias: number = LIMIT
 export interface MarkupDaSessao { operacoes: number; markup: number; markupDeriv: number | null }
 
 export async function markupDasSessoes(
-  sessao: SessaoTeeds, ids: string[], signal?: AbortSignal,
+  sessao: SessaoTeeds, ids: string[], signal?: AbortSignal, marca: string = MARCA.id,
 ): Promise<Map<string, MarkupDaSessao>> {
   const mapa = new Map<string, MarkupDaSessao>()
   if (!ids.length) return mapa
@@ -164,7 +177,7 @@ export async function markupDasSessoes(
     try {
       const linhas = await rest<any[]>('/rpc/teeds_markup_das_sessoes', sessao.token, {
         method: 'POST', signal,
-        body: JSON.stringify({ p_marca: MARCA.id, p_ids: lote }),
+        body: JSON.stringify({ p_marca: marca, p_ids: lote }),
       })
       for (const l of linhas ?? []) {
         mapa.set(String(l.sessao_id), {
@@ -191,25 +204,25 @@ export type AcaoAuditoria = 'abriu' | 'fechou' | 'buscou' | 'exportou' | 'negado
  * O banco confere de novo: admin da marca, sessão e cliente da marca, e
  * que combinam entre si.
  */
-export async function auditar(sessao: SessaoTeeds, dados: { tipo: TipoAuditoria; acao: AcaoAuditoria; sessaoId?: string | null; clienteId?: string | null }): Promise<number> {
+export async function auditar(sessao: SessaoTeeds, dados: { tipo: TipoAuditoria; acao: AcaoAuditoria; sessaoId?: string | null; clienteId?: string | null; marca?: string }): Promise<number> {
   const id = await rest<number>('/rpc/teeds_auditar_monitoramento', sessao.token, {
     method: 'POST',
-    body: JSON.stringify({ p_marca: MARCA.id, p_tipo: dados.tipo, p_acao: dados.acao, p_sessao_id: dados.sessaoId ?? null, p_cliente_id: dados.clienteId ?? null }),
+    body: JSON.stringify({ p_marca: dados.marca ?? MARCA.id, p_tipo: dados.tipo, p_acao: dados.acao, p_sessao_id: dados.sessaoId ?? null, p_cliente_id: dados.clienteId ?? null }),
   })
   return Number(id)
 }
 
 /** Alguém sem permissão chegou à tela: fica registrado que tentou (sem detalhes). Nunca lança. */
-export async function auditarNegado(sessao: SessaoTeeds): Promise<boolean> {
+export async function auditarNegado(sessao: SessaoTeeds, marca: string = MARCA.id): Promise<boolean> {
   try {
-    await rest('/rpc/teeds_auditar_negado', sessao.token, { method: 'POST', body: JSON.stringify({ p_marca: MARCA.id }) })
+    await rest('/rpc/teeds_auditar_negado', sessao.token, { method: 'POST', body: JSON.stringify({ p_marca: marca }) })
     return true
   } catch { return false }
 }
 
 export interface RegistroAuditoria { id: number; adminId: string; clienteId: string | null; sessaoId: string | null; tipo: string; acao: string; criadoEm: string }
 
-export async function listarAuditoria(sessao: SessaoTeeds, limite = 300, signal?: AbortSignal): Promise<RegistroAuditoria[]> {
-  const linhas = await rest<any[]>(`/auditoria_monitoramento_admin?select=*&marca=eq.${MARCA.id}&order=criado_em.desc&limit=${limite}`, sessao.token, { signal })
+export async function listarAuditoria(sessao: SessaoTeeds, limite = 300, signal?: AbortSignal, marca: string = MARCA.id): Promise<RegistroAuditoria[]> {
+  const linhas = await rest<any[]>(`/auditoria_monitoramento_admin?select=*&marca=eq.${marca}&order=criado_em.desc&limit=${limite}`, sessao.token, { signal })
   return (linhas ?? []).map((l) => ({ id: l.id, adminId: l.admin_id, clienteId: l.cliente_id, sessaoId: l.sessao_id, tipo: l.tipo, acao: l.acao, criadoEm: l.criado_em }))
 }

@@ -7,7 +7,13 @@ import {
   type AcessoDia, type AcessoHora, type AlunoInsight, type AulaInsight, type Dispositivo, type Localizacao,
   type OrigemVisita, type ResumoInsights, type ResumoVisitas, type VisitaDia,
 } from '../core/teeds/insights'
+import { useMarcaEmFoco, REDE } from '../core/teeds/marcaEmFoco'
+import { ehMaster } from '../core/teeds/clientes'
+import { SeletorDePlataforma, opcoesDePlataforma } from './SeletorDePlataforma'
+import { MARCAS } from '../marca/marcas'
 import { MARCA } from '../marca'
+
+const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MARCAS).map(m=>[m.id,m.prosa]))
 import { IconeFechar } from './IconeFechar'
 
 /**
@@ -25,6 +31,12 @@ const semana = (iso: string) => ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb
 const quando = (iso: string | null) => iso ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'
 
 export function InsightsPanel({ sessao }: { sessao: SessaoTeeds }) {
+  /* Os números JÁ seguiam o seletor da Administração — `insights.ts` usa
+     `marcaAdmin()` —, só que sem nada na tela dizendo isso, e com o cabeçalho
+     escrito na marca do site. Trazer o seletor para cá não muda o dado: torna
+     visível de quem ele é. A "Rede" funciona, porque as funções do banco
+     aceitam `todas` e somam as plataformas. */
+  const [marcaFoco, trocarMarca] = useMarcaEmFoco()
   const [periodo, setPeriodo] = useState<Periodo>(30)
   const [resumo, setResumo] = useState<ResumoInsights | null>(null)
   const [dias, setDias] = useState<AcessoDia[]>([])
@@ -53,7 +65,7 @@ export function InsightsPanel({ sessao }: { sessao: SessaoTeeds }) {
       setVisitas(v); setVisitasDia(vd); setOrigens(og); setLidoEm(new Date())
     } catch (e) { setErro((e as Error).message) } finally { setCarregando(false) }
   }
-  useEffect(() => { void carregar() }, [sessao.usuario.id, periodo]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void carregar() }, [sessao.usuario.id, periodo, marcaFoco]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const maxVisitasDia = Math.max(1, ...visitasDia.map((d) => d.visitas))
   const totalOrigens = origens.reduce((t, o) => t + o.visitas, 0)
@@ -77,13 +89,16 @@ export function InsightsPanel({ sessao }: { sessao: SessaoTeeds }) {
     <div className="ger insights">
       <header className="ins-topo">
         <div>
-          <span className="rot">{MARCA.prosa} · Inteligência</span>
+          <span className="rot">{marcaFoco === REDE ? `Rede ${MARCA.prosa}` : (NOME_DA_MARCA[marcaFoco] ?? marcaFoco)} · Inteligência</span>
           <h2>Insights</h2>
           <p>Quem entra, quando, de onde, por quanto tempo — e o que assiste. {lidoEm && <small>Lido às {lidoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.</small>}</p>
         </div>
+        <div className="ins-topo-acoes">
+          <SeletorDePlataforma valor={marcaFoco} opcoes={opcoesDePlataforma(ehMaster(), MARCA.id)} onTrocar={trocarMarca} />
         <div className="ins-periodo" role="tablist" aria-label="Período">
           {([7, 30, 90] as Periodo[]).map((p) => <button key={p} role="tab" aria-selected={periodo === p} className={periodo === p ? 'on' : ''} onClick={() => setPeriodo(p)}>{p} dias</button>)}
           <button className="ins-atualizar" onClick={() => void carregar()} disabled={carregando}>↻ {carregando ? 'Lendo…' : 'Atualizar'}</button>
+        </div>
         </div>
       </header>
 
@@ -113,7 +128,7 @@ export function InsightsPanel({ sessao }: { sessao: SessaoTeeds }) {
               </div>
             ))}
           </div>
-          <p className="ins-nota">Conta todo mundo que abre {MARCA.prosa === 'Teeds' ? 'teedscompany.com' : 'omnifinanc.com'}, com login ou sem. Uma visita por aba aberta: recarregar a página não conta de novo.</p>
+          <p className="ins-nota">Conta todo mundo que abre {marcaFoco === REDE ? 'os sites da rede' : marcaFoco === 'teeds' ? 'teedscompany.com' : 'omnifinanc.com'}, com login ou sem. Uma visita por aba aberta: recarregar a página não conta de novo.</p>
         </section>
 
         <section className="admin-card ins-card">

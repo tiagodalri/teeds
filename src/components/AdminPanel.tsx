@@ -18,6 +18,7 @@ import { AdminAulas } from './AdminAulas'
 import { AdminRobos } from './AdminRobos'
 import { AdminCentroDeEstudo } from './AdminCentroDeEstudo'
 import { SeletorDePlataforma, opcoesDePlataforma } from './SeletorDePlataforma'
+import { useMarcaEmFoco } from '../core/teeds/marcaEmFoco'
 import { MARCAS } from '../marca/marcas'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
@@ -64,7 +65,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
     assim que os depósitos da OMNI apareceram no painel da Teeds
     (30/09/2026). Com `key={marcaFoco}` cada uma renasce e busca de novo.
   */
-  const [marcaFoco, setMarcaFoco] = useState(marcaAdmin())
+  const [marcaFoco, trocarMarcaFoco] = useMarcaEmFoco()
   const [lista, setLista] = useState<PaginaClientes>(PAGINA_VAZIA)
   const [recentes, setRecentes] = useState<ClienteRegistro[]>([])
   const [topo, setTopo] = useState<Array<{ cliente: ClienteRegistro; comissao: number; operacoes: number }>>([])
@@ -200,8 +201,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
   const nomeDoFoco = naRede ? 'Rede' : (MARCAS[marcaFoco]?.prosa ?? marcaFoco)
   const opcoes = opcoesDePlataforma(ehMaster(), MARCA.id)
   const trocarPlataforma = (id: string) => {
-    definirMarcaAdmin(id)
-    setMarcaFoco(id)
+    trocarMarcaFoco(id)
     setPagina(0)
     // Nas abas que só existem dentro de uma plataforma, a rede não tem o que
     // mostrar: volta para a visão geral em vez de deixar a tela pedindo.
@@ -263,7 +263,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
     <main className="admin-main"><header className="admin-top"><div><span className="rot">{naRede ? `Rede ${MARCA.prosa}` : `${nomeDoFoco} Admin`}</span><h1>{aba === 'emails' ? 'Central de e-mails' : aba === 'estudo' ? 'Centro de estudo' : aba === 'robos' ? 'Robôs da plataforma' : aba === 'visao' ? 'Visão geral' : aba === 'inteligencia' ? 'Inteligência do negócio' : aba === 'clientes' ? 'Gestão de clientes' : aba === 'resultados' ? 'Resultados por cliente' : aba === 'movimentacoes' ? 'Depósitos e saques' : aba === 'acessos' ? 'Criar novo acesso' : aba === 'aulas' ? 'Aulas e vídeos' : aba === 'planos' ? 'Planos e assinaturas' : aba === 'produtos' ? 'Catálogo de produtos' : 'Comissões e resultados'}</h1><p>{aba === 'emails' ? 'Consulte os disparos e acompanhe os status de envio.' : aba === 'estudo' ? (naRede ? 'A rede somada: as plataformas lado a lado e o histórico de todas juntas.' : `Markup, volume e desempenho dos robôs da ${nomeDoFoco} no período.`) : aba === 'robos' ? 'Ligue, desligue e ajuste as regras de cada robô desta plataforma.' : aba === 'visao' ? (naRede ? 'Todas as plataformas somadas, em um só lugar.' : `Tudo da ${nomeDoFoco} que precisa de atenção, em um só lugar.`) : aba === 'inteligencia' ? 'Comportamento, carteira, atividade e receita organizados para decidir melhor.' : aba === 'clientes' ? 'Consulte, filtre e edite acessos existentes.' : aba === 'resultados' ? 'Quanto cada cliente operou, ganhou ou perdeu, e gerou de comissão — e o nosso número contra o da Deriv.' : aba === 'movimentacoes' ? 'Quanto entrou e quanto saiu das contas reais dos clientes na Deriv, dia a dia.' : aba === 'acessos' ? 'Cadastre uma pessoa e defina sua liberação inicial.' : aba === 'aulas' ? 'Envie ou troque o vídeo de cada aula. Entra no ar na hora, sem republicar o site.' : aba === 'planos' ? 'Configure as opções comerciais da plataforma.' : aba === 'produtos' ? 'Gerencie os itens e extras do Marketplace.' : 'Acompanhe volume, operações e comissões da sua conta.'}</p></div><div className="admin-top-acoes"><SeletorDePlataforma valor={marcaFoco} opcoes={opcoes} onTrocar={trocarPlataforma} /><button className="admin-refresh" onClick={() => void recarregar()} disabled={carregando}>↻ {carregando ? 'Atualizando…' : 'Atualizar'}</button></div></header>
       {naRede && PRECISA_DE_UMA.includes(aba) && pedirPlataforma}
       {aba === 'emails' && !naRede && <AdminEmails key={marcaFoco} sessao={sessao} marca={marcaFoco} />}
-      {aba === 'estudo' && <AdminCentroDeEstudo key={marcaFoco} sessao={sessao} marcaFoco={marcaFoco} onAbrirMarca={(id) => { definirMarcaAdmin(id); setMarcaFoco(id); setPagina(0); void recarregar() }} />}
+      {aba === 'estudo' && <AdminCentroDeEstudo key={marcaFoco} sessao={sessao} marcaFoco={marcaFoco} onAbrirMarca={(id) => { trocarMarcaFoco(id); setPagina(0); void recarregar() }} />}
       {aba === 'robos' && !naRede && <AdminRobos key={marcaFoco} sessao={sessao} marca={marcaFoco} />}
       {onMostrarMarkup && <section className={`admin-card modo-ceo ${mostrarMarkup ? 'on' : ''}`}>
         <div className="modo-ceo-quem">

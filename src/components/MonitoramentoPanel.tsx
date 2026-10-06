@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
-import { clientesPorId, type ClienteRegistro } from '../core/teeds/clientes'
+import { clientesPorId, ehMaster, type ClienteRegistro } from '../core/teeds/clientes'
 import {
   EstimadorDeDesvio, MedidorDeRtt, ROTULO_EVENTO, ROTULO_FASE, aplicarMensagem, descreverEvento, idadeDaAtualizacao, integridadeDoHistorico,
   marcadorDoEvento, mascararConta, mascararEmail, ordenarEventos, paraEstadoMotor, reconstruir, saudeDoSinal, semaforo,
@@ -14,7 +14,12 @@ import {
 } from '../core/teeds/monitoramento'
 import { ESTRATEGIAS_LOCAIS, modoDaConfig, NOME_DO_MODO, temModos } from '../core/deriv/strategies'
 import { identidade } from '../core/deriv/branding'
+import { useMarcaEmFoco, REDE } from '../core/teeds/marcaEmFoco'
+import { SeletorDePlataforma, opcoesDePlataforma } from './SeletorDePlataforma'
 import { MARCA } from '../marca'
+import { MARCAS } from '../marca/marcas'
+
+const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MARCAS).map(m=>[m.id,m.prosa]))
 import { RobotLive } from './RobotLive'
 import { IconeFechar } from './IconeFechar'
 
@@ -240,7 +245,7 @@ const VELOCIDADES = [0.25, 0.5, 1, 2, 4]
 /** Um intervalo maior que isto entre eventos é inatividade: o replay salta e avisa. */
 const INATIVIDADE_MS = 8000
 
-function Replay({ sessao, encerrada, clientes, aoFechar, aoErro }: { sessao: SessaoTeeds; encerrada: SessaoEncerrada; clientes: Map<string, ClienteRegistro>; aoFechar: () => void; aoErro: (e: unknown) => void }) {
+function Replay({ sessao, encerrada, clientes, marca, aoFechar, aoErro }: { sessao: SessaoTeeds; encerrada: SessaoEncerrada; clientes: Map<string, ClienteRegistro>; marca: string; aoFechar: () => void; aoErro: (e: unknown) => void }) {
   const [passos, setPassos] = useState<PassoReplay[]>([])
   const [eventos, setEventos] = useState<EventoEspelho[]>([])
   const [cabecalho, setCabecalho] = useState<SessaoEspelho | null>(null)
@@ -258,28 +263,28 @@ function Replay({ sessao, encerrada, clientes, aoFechar, aoErro }: { sessao: Ses
     setPassos([]); setEventos([]); setCabecalho(null); setIndice(0); setTocando(false); setCarregando(true); setCarregados(0); setAutorizado(null); setSaltou(null)
     ;(async () => {
       // 1) auditoria ANTES de ler qualquer coisa. Sem registro, sem replay.
-      try { await auditar(sessao, { tipo: 'replay', acao: 'abriu', sessaoId: encerrada.id, clienteId: encerrada.userId }) }
+      try { await auditar(sessao, { tipo: 'replay', acao: 'abriu', sessaoId: encerrada.id, clienteId: encerrada.userId, marca }) }
       catch (e) { if (!aborto.signal.aborted) { setAutorizado(false); setCarregando(false); aoErro(e) }; return }
       if (aborto.signal.aborted) return
       setAutorizado(true)
       try {
-        const todos = await carregarEventos(sessao, encerrada.id, aborto.signal, setCarregados)
-        const mae = await lerSessaoMae(sessao, encerrada.id, aborto.signal)
+        const todos = await carregarEventos(sessao, encerrada.id, aborto.signal, setCarregados, undefined, marca)
+        const mae = await lerSessaoMae(sessao, encerrada.id, aborto.signal, marca)
         if (aborto.signal.aborted) return
         const abertura = todos.find((e) => e.tipo === 'abertura')
         const config = abertura?.config ?? { valorInicial: Number(mae?.entrada_inicial ?? 0), valorAoVencer: Number(mae?.entrada_inicial ?? 0), fatorGale: 0, galeApos: 0, valorMaximo: 0, takeProfit: Number(mae?.take_profit ?? 0), stopLoss: Number(mae?.stop_loss ?? 0), maxOperacoes: Number(mae?.max_operacoes ?? 0) }
         const ps = reconstruir(todos)
         setEventos(todos); setPassos(ps); setIndice(0)
-        setCabecalho(paraSessaoEspelho({ sessao_id: encerrada.id, marca: MARCA.id, user_id: encerrada.userId, seq: 0, estado: ps[0]?.estado ?? {}, config, emitido_em: 0, atualizada_em: '' }, mae ?? { sessao_ref: encerrada.sessaoRef, conta_id: encerrada.contaId, demo: encerrada.demo, moeda: encerrada.moeda, robo_id: encerrada.roboId, robo_nome: encerrada.roboNome, ativo: encerrada.ativo, situacao: encerrada.situacao, criada_em: encerrada.criadaEm }))
+        setCabecalho(paraSessaoEspelho({ sessao_id: encerrada.id, marca, user_id: encerrada.userId, seq: 0, estado: ps[0]?.estado ?? {}, config, emitido_em: 0, atualizada_em: '' }, mae ?? { sessao_ref: encerrada.sessaoRef, conta_id: encerrada.contaId, demo: encerrada.demo, moeda: encerrada.moeda, robo_id: encerrada.roboId, robo_nome: encerrada.roboNome, ativo: encerrada.ativo, situacao: encerrada.situacao, criada_em: encerrada.criadaEm }))
       } catch (e) { if ((e as Error).name !== 'AbortError' && !aborto.signal.aborted) aoErro(e) }
       finally { if (!aborto.signal.aborted) setCarregando(false) }
     })()
     return () => {
       aborto.abort()
       // O fechamento é registrado; se falhar, fica no console — o replay já foi visto, não há o que "fechar" de novo.
-      auditar(sessao, { tipo: 'replay', acao: 'fechou', sessaoId: encerrada.id, clienteId: encerrada.userId }).catch((e) => console.error('[monitoramento] auditoria de fechamento falhou:', (e as Error).message))
+      auditar(sessao, { tipo: 'replay', acao: 'fechou', sessaoId: encerrada.id, clienteId: encerrada.userId, marca }).catch((e) => console.error('[monitoramento] auditoria de fechamento falhou:', (e as Error).message))
     }
-  }, [sessao, encerrada, aoErro])
+  }, [sessao, encerrada, marca, aoErro])
 
   // Toca no ritmo original dividido pela velocidade; inatividade longa é saltada e avisada.
   useEffect(() => {
@@ -367,6 +372,14 @@ function Replay({ sessao, encerrada, clientes, aoFechar, aoErro }: { sessao: Ses
 /* ============================================================ painel */
 
 export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: SessaoTeeds; mostrarMarkup?: boolean }) {
+  /* A plataforma vem do foco compartilhado: trocar aqui troca na Administração
+     e nos Insights, e vice-versa. Antes esta tela era presa à marca do site. */
+  const [marcaFoco, trocarMarca] = useMarcaEmFoco()
+  const naRede = marcaFoco === REDE
+  /* Na Rede o monitoramento não tem o que mostrar: a assinatura em tempo real
+     filtra por UMA marca (`marca=eq.…`), e somar cabines de plataformas
+     diferentes numa tela só não ajuda ninguém a acompanhar. */
+  const marca = naRede ? MARCA.id : marcaFoco
   const [aba, setAba] = useState<Aba>('ao-vivo')
   const [sessoes, setSessoes] = useState<Map<string, SessaoEspelho>>(new Map())
   const [clientes, setClientes] = useState<Map<string, ClienteRegistro>>(new Map())
@@ -405,7 +418,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
     if ((e as Error)?.name === 'AbortError') return
     const m = mensagemDoErro(e)
     setErro(m.texto)
-    if (m.estado === 'sem-permissao') { setTela('sem-permissao'); void auditarNegado(sessao) }
+    if (m.estado === 'sem-permissao') { setTela('sem-permissao'); void auditarNegado(sessao, marca) }
     else if (m.estado === 'indisponivel') setTela((t) => (t === 'carregando' ? 'indisponivel' : t))
   }, [sessao])
 
@@ -415,8 +428,8 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
     if (!novos.length) return
     novos.forEach((id) => clientesPedidos.current.add(id))
     try {
-      // Presa em MARCA.id: esta tela é de uma marca só, a do site.
-      const fichas = await clientesPorId(sessao, novos, MARCA.id)
+      // Segue a plataforma escolhida no seletor, igual às sessões.
+      const fichas = await clientesPorId(sessao, novos, marca)
       setClientes((m) => { const n = new Map(m); fichas.forEach((f) => n.set(f.userId, f)); return n })
     } catch { novos.forEach((id) => clientesPedidos.current.delete(id)) }
   }, [sessao])
@@ -428,7 +441,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
       for (const id of r.pedirFoto) {
         if (fotosPedidas.current.has(id)) continue
         fotosPedidas.current.add(id)
-        lerEspelho(sessao, id).then((nova) => {
+        lerEspelho(sessao, id, undefined, marca).then((nova) => {
           fotosPedidas.current.delete(id)
           if (nova) { receber({ origem: 'foto', sessao: nova }); void garantirClientes([nova.userId]) }
         }).catch(() => fotosPedidas.current.delete(id))
@@ -440,7 +453,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
   /* -------------------------------------------- snapshot completo */
   const carregarTudo = useCallback(async (horas = Number(periodo)) => {
     try {
-      const lista = await listarEspelhos(sessao, horas)
+      const lista = await listarEspelhos(sessao, horas, undefined, marca)
       for (const s of lista) receber({ origem: 'lista', sessao: s })
       void garantirClientes(lista.map((s) => s.userId))
       setErro(null); setTela('pronto')
@@ -451,17 +464,18 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
   // Reconciliação leve, a cada 20 s — o Realtime é o transporte; isto só confere.
   useEffect(() => { const id = setInterval(() => { if (document.visibilityState === 'visible') void carregarTudo() }, 20_000); return () => clearInterval(id) }, [carregarTudo])
   useEffect(() => { const id = setInterval(() => setAgora(Date.now()), 1000); return () => clearInterval(id) }, [])
-  useEffect(() => { auditar(sessao, { tipo: 'painel', acao: 'abriu' }).catch(falhar); return () => { auditar(sessao, { tipo: 'painel', acao: 'fechou' }).catch(() => { /* a tela já fechou */ }) } }, [sessao, falhar])
+  useEffect(() => { auditar(sessao, { tipo: 'painel', acao: 'abriu', marca }).catch(falhar); return () => { auditar(sessao, { tipo: 'painel', acao: 'fechou', marca }).catch(() => { /* a tela já fechou */ }) } }, [sessao, marca, falhar])
 
   /* -------------------------------------------------- tempo real */
   useEffect(() => {
-    const canalId = `monitor-${MARCA.id}-${Math.random().toString(36).slice(2, 8)}`
+    if (naRede) return
+    const canalId = `monitor-${marca}-${Math.random().toString(36).slice(2, 8)}`
     const assinatura = assinarMudancas({
       token: sessao.token, canal: canalId,
       tabelas: [
-        { tabela: 'sessoes_robos_ao_vivo', filtro: `marca=eq.${MARCA.id}` },
-        { tabela: 'pulsos_robos_ao_vivo', filtro: `marca=eq.${MARCA.id}` },
-        { tabela: 'eventos_robos_ao_vivo', filtro: `marca=eq.${MARCA.id}`, evento: 'INSERT' },
+        { tabela: 'sessoes_robos_ao_vivo', filtro: `marca=eq.${marca}` },
+        { tabela: 'pulsos_robos_ao_vivo', filtro: `marca=eq.${marca}` },
+        { tabela: 'eventos_robos_ao_vivo', filtro: `marca=eq.${marca}`, evento: 'INSERT' },
       ],
       // Ao (re)entrar no canal, a foto completa vem ANTES de a tela dizer "ao vivo".
       aoEstado: (e) => { if (e === 'ao-vivo') { void carregarTudo().then(() => setCanal('ao-vivo')) } else setCanal(e) },
@@ -498,14 +512,14 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
     focoAnterior.current = document.activeElement as HTMLElement
     const s = sessoes.get(id)
     setFocoAutorizado('pendente'); setFoco(id)
-    try { await auditar(sessao, { tipo: 'ao-vivo', acao: 'abriu', sessaoId: id, clienteId: s?.userId }) }
+    try { await auditar(sessao, { tipo: 'ao-vivo', acao: 'abriu', sessaoId: id, clienteId: s?.userId, marca }) }
     catch (e) { setFocoAutorizado('nao'); falhar(e); return }
     setFocoAutorizado('sim')
     try { const evs = await eventosDaSessao(sessao, id, 0, 500); setEventos((m) => { const n = new Map(m); n.set(id, ordenarEventos([...(n.get(id) ?? []), ...evs])); return n }) }
     catch (e) { falhar(e) }
   }, [sessao, sessoes, falhar])
   const fecharFoco = useCallback(() => {
-    if (foco && focoAutorizado === 'sim') { const s = sessoes.get(foco); auditar(sessao, { tipo: 'ao-vivo', acao: 'fechou', sessaoId: foco, clienteId: s?.userId }).catch((e) => console.error('[monitoramento] auditoria de fechamento falhou:', (e as Error).message)) }
+    if (foco && focoAutorizado === 'sim') { const s = sessoes.get(foco); auditar(sessao, { tipo: 'ao-vivo', acao: 'fechou', sessaoId: foco, clienteId: s?.userId, marca }).catch((e) => console.error('[monitoramento] auditoria de fechamento falhou:', (e as Error).message)) }
     setFoco(null)
     setTimeout(() => focoAnterior.current?.focus?.(), 0)
   }, [foco, focoAutorizado, sessao, sessoes])
@@ -514,21 +528,21 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
   /* ------------------------------------------------ replay e auditoria */
   useEffect(() => {
     const aborto = new AbortController()
-    if (aba === 'replay') listarEncerradas(sessao, undefined, undefined, aborto.signal).then((l) => {
+    if (aba === 'replay') listarEncerradas(sessao, undefined, undefined, aborto.signal, marca).then((l) => {
       setEncerradas(l)
       void garantirClientes(l.map((x) => x.userId))
       // O markup vem depois e sem travar a lista: se falhar, as sessões
       // aparecem do mesmo jeito e só a coluna fica sem número.
-      void markupDasSessoes(sessao, l.map((x) => x.id), aborto.signal).then(setMarkups)
+      void markupDasSessoes(sessao, l.map((x) => x.id), aborto.signal, marca).then(setMarkups)
     }).catch(falhar)
-    if (aba === 'auditoria') listarAuditoria(sessao, undefined, aborto.signal).then((l) => { setAuditoria(l); void garantirClientes(l.flatMap((x) => [x.clienteId, x.adminId].filter(Boolean) as string[])) }).catch(falhar)
+    if (aba === 'auditoria') listarAuditoria(sessao, undefined, aborto.signal, marca).then((l) => { setAuditoria(l); void garantirClientes(l.flatMap((x) => [x.clienteId, x.adminId].filter(Boolean) as string[])) }).catch(falhar)
     return () => aborto.abort()
   }, [aba, sessao, garantirClientes, falhar])
   const buscaRegistrada = useRef('')
   useEffect(() => {
     const termo = busca.trim()
     if (termo.length < 3 || termo === buscaRegistrada.current) return
-    const t = setTimeout(() => { buscaRegistrada.current = termo; auditar(sessao, { tipo: 'busca', acao: 'buscou' }).catch(() => { /* a busca é local; a auditoria dela é informativa */ }) }, 1500)
+    const t = setTimeout(() => { buscaRegistrada.current = termo; auditar(sessao, { tipo: 'busca', acao: 'buscou', marca }).catch(() => { /* a busca é local; a auditoria dela é informativa */ }) }, 1500)
     return () => clearTimeout(t)
   }, [busca, sessao])
 
@@ -597,11 +611,12 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
     <div className="ger monitoramento">
       <header className="mon-topo">
         <div>
-          <span className="rot">{MARCA.prosa} · Administração</span>
+          <span className="rot">{naRede ? `Rede ${MARCA.prosa}` : `${NOME_DA_MARCA[marcaFoco] ?? marcaFoco}`} · Administração</span>
           <h2>Monitoramento ao vivo</h2>
           <p>A cabine de cada cliente, reconstruída da telemetria do servidor. Somente visualização — nenhuma ação sobre o robô é possível daqui.</p>
         </div>
         <div className="mon-topo-direita">
+          <SeletorDePlataforma valor={marcaFoco} opcoes={opcoesDePlataforma(ehMaster(), MARCA.id)} onTrocar={(id) => { trocarMarca(id); setFoco(null); setReplayDe(null); setSessoes(new Map()); setMarkups(new Map()) }} />
           <span className={`mon-canal ${canal}`} role="status"><i aria-hidden />{ROTULO_CANAL[canal]}{rttMs != null && canal === 'ao-vivo' ? ` · ida e volta ~${rttMs} ms` : ''}</span>
           <nav className="mon-abas" role="tablist">
             {(['ao-vivo', 'replay', 'auditoria'] as Aba[]).map((a) => <button key={a} role="tab" aria-selected={aba === a} className={aba === a ? 'on' : ''} onClick={() => { setAba(a); setFoco(null); setReplayDe(null) }}>{a === 'ao-vivo' ? 'Ao vivo' : a === 'replay' ? 'Sessões encerradas' : 'Auditoria'}</button>)}
@@ -609,6 +624,8 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
         </div>
       </header>
 
+      {naRede && <section className="admin-card adm-pede-marca"><div><span className="rot">Monitoramento ao vivo</span><h3>Escolha uma plataforma</h3><p>A cabine é de uma plataforma por vez: o canal ao vivo acompanha uma marca só, e juntar as cabines de duas num mosaico só atrapalharia o acompanhamento. Escolha {NOME_DA_MARCA.teeds} ou {NOME_DA_MARCA.omni} no seletor acima.</p></div></section>}
+      {!naRede && <>
       {erro && tela !== 'sem-permissao' && <div className={`mon-aviso ${tela === 'erro' ? 'erro' : ''}`} role="alert"><span>{erro}</span><button className="mon-fechar" onClick={() => setErro(null)} aria-label="Fechar aviso"><IconeFechar /></button></div>}
       {canalRuim && tela === 'pronto' && <div className="mon-aviso" role="status">{canal === 'token-expirado' ? 'A sessão do administrador expirou: o canal ao vivo foi fechado. Entre de novo para continuar.' : 'Reconectando ao canal ao vivo… Os dados na tela podem estar desatualizados; a idade de cada atualização aparece nos cartões.'}</div>}
 
@@ -691,7 +708,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
           )}
         </section>
       )}
-      {tela === 'pronto' && aba === 'replay' && replayDe && <Replay key={replayDe.id} sessao={sessao} encerrada={replayDe} clientes={clientes} aoFechar={() => setReplayDe(null)} aoErro={falhar} />}
+      {tela === 'pronto' && aba === 'replay' && replayDe && <Replay key={`${marca}-${replayDe.id}`} sessao={sessao} encerrada={replayDe} clientes={clientes} marca={marca} aoFechar={() => setReplayDe(null)} aoErro={falhar} />}
 
       {tela === 'pronto' && aba === 'auditoria' && (
         <section className="admin-card full">
@@ -705,6 +722,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
           </div>
         </section>
       )}
+      </>}
     </div>
   )
 }

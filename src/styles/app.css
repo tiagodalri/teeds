@@ -5067,6 +5067,10 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .ins-topo h2 { margin: 4px 0 6px; font-size: 26px; letter-spacing: -.02em; }
 .ins-topo p { margin: 0; color: var(--muted); font-size: 13px; max-width: 62ch; }
 .ins-topo p small { color: var(--muted); opacity: .8; }
+/* O seletor de plataforma fica FORA do .ins-periodo: a regra abaixo estiliza
+   todo `button` descendente e daria aos botões do seletor a cara dos botões
+   de período. */
+.ins-topo-acoes { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .ins-periodo { display: flex; gap: 6px; align-items: center; }
 .ins-periodo button { min-height: 36px; padding: 0 14px; border: 1px solid var(--border); border-radius: 10px; color: var(--muted); background: var(--bg); cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
 .ins-periodo button.on { color: var(--text); border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); background: color-mix(in srgb, var(--primary) 12%, transparent); }
