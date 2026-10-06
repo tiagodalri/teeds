@@ -6,6 +6,7 @@ import { DigitsPanel } from './components/DigitsPanel'
 import { AdminPanel } from './components/AdminPanel'
 import { CatalogoProvider } from './core/teeds/catalogoRobos'
 import { usePreferenciaColuna } from './core/teeds/preferenciaColuna'
+import { useMarcaEmFoco } from './core/teeds/marcaEmFoco'
 import { InsightsPanel } from './components/InsightsPanel'
 import { MonitoramentoBoundary } from './components/MonitoramentoBoundary'
 // O monitoramento é só do admin e pesa: entra no pacote sob demanda, para o
@@ -92,6 +93,16 @@ export default function App() {
   const [adminFalhou, setAdminFalhou] = useState(false)
   const [adminUserId, setAdminUserId] = useState<string | null>(null)
   const adminConfirmado = admin === true && !!teeds.sessao && adminUserId === teeds.sessao.usuario.id
+  /* A tela RENASCE quando a plataforma muda.
+
+     Trocar de marca trocava o filtro das consultas novas, mas o que já estava
+     carregado da outra continuava na tela — e os caches em `ref` (clientes já
+     pedidos, fotos já pedidas) sobreviviam. Resultado: com o seletor em OMNI
+     apareciam sessões da Teeds (Tiago, 06/10/2026). É exatamente a lição que
+     o painel de Administração já tinha registrado em 30/09, quando os
+     depósitos da OMNI apareceram na Teeds: `key` resolve de uma vez, porque
+     não sobra estado nenhum da marca anterior. */
+  const [marcaEmFoco] = useMarcaEmFoco()
   const [mostrarColuna, alterarColuna] = usePreferenciaColuna(teeds.sessao?.usuario.id ?? null, adminConfirmado)
   const simulador = useSimulador(teeds.sessao)
   const conta = useAccount({ email: teeds.sessao?.usuario.email, simulador: adminConfirmado || simulador })
@@ -667,9 +678,9 @@ export default function App() {
       ) : tela === 'gerenciamento' ? (
         <CatalogoProvider sessao={teeds.sessao}><OperationalManagementPanel /></CatalogoProvider>
       ) : tela === 'monitoramento' && admin === true ? (
-          teeds.sessao ? <MonitoramentoBoundary><Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel sessao={teeds.sessao} mostrarMarkup={mostrarColuna} /></Suspense></MonitoramentoBoundary> : null
+          teeds.sessao ? <MonitoramentoBoundary><Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel key={marcaEmFoco} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} /></Suspense></MonitoramentoBoundary> : null
       ) : tela === 'insights' && admin === true ? (
-        teeds.sessao ? <InsightsPanel sessao={teeds.sessao} /> : null
+        teeds.sessao ? <InsightsPanel key={marcaEmFoco} sessao={teeds.sessao} /> : null
       ) : tela === 'gestao' && admin === true ? (
         teeds.sessao && adminConfirmado ? <AdminPanel sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} comissoes={<ManagementPanel
           session={conta.session} sessaoTeeds={teeds.sessao} contaId={conta.accountId}

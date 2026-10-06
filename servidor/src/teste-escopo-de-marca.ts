@@ -96,6 +96,40 @@ conferir('a sessão encerrada carrega a marca',
 conferir('e o núcleo não chama nada que siga o seletor sozinho',
   /filtroMarca|marcasEmFoco|marcaAdmin\(\)|vendoARede/.test(monitorCore), false)
 
+/* ---------------------------- trocar de marca não pode deixar sobra na tela */
+
+/*
+  TERCEIRO DEFEITO DA MESMA FAMÍLIA, 06/10/2026.
+
+  Com o seletor em OMNI, o monitoramento mostrava sessões da TEEDS. A marca
+  estava sendo usada dentro de `garantirClientes`, `receber`, `carregarTudo` e
+  do efeito de replay, mas não aparecia em NENHUMA lista de dependências: as
+  funções continuavam com a marca antiga presa na closure, e os caches em `ref`
+  (clientes já pedidos, fotos já pedidas) sobreviviam à troca.
+
+  O painel de Administração já tinha aprendido isso em 30/09, quando os
+  depósitos da OMNI apareceram na Teeds, e resolveu com `key`: a tela renasce e
+  não sobra estado nenhum. Aqui vale a mesma receita, e as duas travas juntas —
+  `key` para não sobrar estado, dependências certas para a consulta nova sair
+  com a marca certa.
+*/
+const app = leia('src/App.tsx')
+conferir('o monitoramento renasce quando a marca muda',
+  /<MonitoramentoPanel key=\{marcaEmFoco\}/.test(app), true)
+conferir('os Insights também',
+  /<InsightsPanel key=\{marcaEmFoco\}/.test(app), true)
+
+// A marca TEM de estar nas dependências de tudo que a usa, senão a função
+// continua com a marca antiga mesmo depois da troca.
+for (const [nome, re_] of [
+  ['busca de clientes', /\}, \[sessao, naRede, marcaFoco\]\)/],
+  ['recebimento de mensagens', /\}, \[sessao, marca, garantirClientes\]\)/],
+  ['carga completa', /\}, \[sessao, marca, periodo, receber, garantirClientes, falhar\]\)/],
+  ['replay e auditoria', /\}, \[aba, sessao, marca, garantirClientes, falhar\]\)/],
+] as Array<[string, RegExp]>) {
+  conferir(`a marca está nas dependências: ${nome}`, re_.test(monitorPainel), true)
+}
+
 /* ------------------------------------------- o foco é um só, nas três telas */
 
 const foco = leia('src/core/teeds/marcaEmFoco.ts')

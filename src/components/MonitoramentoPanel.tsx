@@ -441,7 +441,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
       const fichas = await clientesPorId(sessao, novos, naRede ? undefined : marcaFoco)
       setClientes((m) => { const n = new Map(m); fichas.forEach((f) => n.set(f.userId, f)); return n })
     } catch { novos.forEach((id) => clientesPedidos.current.delete(id)) }
-  }, [sessao])
+  }, [sessao, naRede, marcaFoco])
 
   /* ------------------------------------------------ a única porta de entrada */
   const receber = useCallback((m: MensagemEspelho) => {
@@ -457,7 +457,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
       }
       return r.sessoes
     })
-  }, [sessao, garantirClientes])
+  }, [sessao, marca, garantirClientes])
 
   /* -------------------------------------------- snapshot completo */
   const carregarTudo = useCallback(async (horas = Number(periodo)) => {
@@ -467,7 +467,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
       void garantirClientes(lista.map((s) => s.userId))
       setErro(null); setTela('pronto')
     } catch (e) { falhar(e) }
-  }, [sessao, periodo, receber, garantirClientes, falhar])
+  }, [sessao, marca, periodo, receber, garantirClientes, falhar])
 
   useEffect(() => { setTela('carregando'); void carregarTudo() }, [carregarTudo])
   // Reconciliação leve, a cada 20 s — o Realtime é o transporte; isto só confere.
@@ -547,7 +547,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
     }).catch(falhar)
     if (aba === 'auditoria') listarAuditoria(sessao, undefined, aborto.signal, marca).then((l) => { setAuditoria(l); void garantirClientes(l.flatMap((x) => [x.clienteId, x.adminId].filter(Boolean) as string[])) }).catch(falhar)
     return () => aborto.abort()
-  }, [aba, sessao, garantirClientes, falhar])
+  }, [aba, sessao, marca, garantirClientes, falhar])
   const buscaRegistrada = useRef('')
   useEffect(() => {
     const termo = busca.trim()
