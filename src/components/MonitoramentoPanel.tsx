@@ -415,7 +415,8 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
     if (!novos.length) return
     novos.forEach((id) => clientesPedidos.current.add(id))
     try {
-      const fichas = await clientesPorId(sessao, novos)
+      // Presa em MARCA.id: esta tela é de uma marca só, a do site.
+      const fichas = await clientesPorId(sessao, novos, MARCA.id)
       setClientes((m) => { const n = new Map(m); fichas.forEach((f) => n.set(f.userId, f)); return n })
     } catch { novos.forEach((id) => clientesPedidos.current.delete(id)) }
   }, [sessao])

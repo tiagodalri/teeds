@@ -402,11 +402,26 @@ export async function listarClientesPagina(sessao: SessaoTeeds, filtro: FiltroCl
  * As fichas destes clientes, pelo id. Serve para o ranking: o banco diz quem
  * são os sete que mais geraram markup, e só esses sete precisam de nome.
  */
-export async function clientesPorId(sessao: SessaoTeeds, ids: string[]): Promise<ClienteRegistro[]> {
+/**
+ * Fichas de clientes por `user_id`.
+ *
+ * Sem `marca`, segue o seletor da Administração — é o certo para as telas do
+ * painel, que mudam de plataforma junto com ele.
+ *
+ * COM `marca`, fica presa naquela. Quem lê dados de UMA marca precisa disso: o
+ * monitoramento busca as sessões sempre em `MARCA.id` (a marca do site), mas
+ * buscava os nomes pelo seletor. Bastava deixar o seletor em OMNI na
+ * Administração e abrir o monitoramento: os `user_id` da Teeds eram procurados
+ * entre os clientes da OMNI, não achavam ninguém, e a tela inteira virava
+ * "Sem nome" (Tiago, 06/10/2026). O dado estava lá; a pergunta é que ia para a
+ * marca errada.
+ */
+export async function clientesPorId(sessao: SessaoTeeds, ids: string[], marca?: string): Promise<ClienteRegistro[]> {
   const lista = [...new Set(ids)].filter(Boolean)
   if (!lista.length) return []
+  const filtro = marca ? `marca=eq.${marca}` : filtroMarca()
   const linhas = await rest<any[]>(
-    `/clientes?select=*&${filtroMarca()}&user_id=in.(${lista.join(',')})`, sessao.token,
+    `/clientes?select=*&${filtro}&user_id=in.(${lista.join(',')})`, sessao.token,
   )
   return (linhas ?? []).map(paraCliente)
 }
