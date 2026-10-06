@@ -4498,7 +4498,8 @@ input, select, textarea, button { vertical-align: middle; }
 .rc-conta button.on{color:var(--text);background:var(--bg);box-shadow:0 1px 2px #0002}
 /* "Demonstração" ganha cor própria: quem está vendo dinheiro de mentira
    precisa perceber sem ler o rótulo. */
-.rc-conta button.on:nth-child(2){color:#9a6b00;background:color-mix(in srgb,#d0aa52 22%,var(--bg))}
+.rc-conta button.on:nth-child(2){color:#7a5400;background:color-mix(in srgb,#d0aa52 22%,var(--bg))}
+:root[data-tema='escuro'] .rc-conta button.on:nth-child(2){color:#e8c877}
 /* O valor de demonstração, dentro das células do "Lado a lado". */
 .rc-demo-val{display:block;margin-top:3px;font-size:10.5px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
 .rc-demo-val::before{content:'demo ';opacity:.75;letter-spacing:.04em}
@@ -5194,7 +5195,7 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .mon-topo h2 { margin: 4px 0 6px; font-size: 26px; letter-spacing: -.02em; }
 .mon-topo p { margin: 0; color: var(--muted); font-size: 13px; }
 .mon-topo-direita { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.mon-canal { display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border: 1px solid var(--border); border-radius: 99px; color: var(--muted); font-size: 11.5px; font-weight: 700; }
+.mon-canal { min-height: 36px; display: inline-flex; align-items: center; gap: 7px; padding: 0 14px; border: 1px solid var(--border); border-radius: 99px; color: var(--muted); font-size: 11.5px; font-weight: 700; }
 .mon-canal i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .mon-canal.ao-vivo { color: var(--up); border-color: color-mix(in srgb, var(--up) 40%, var(--border)); } .mon-canal.ao-vivo i { background: var(--up); box-shadow: 0 0 0 3px var(--up-soft); }
 .mon-canal.reconectando, .mon-canal.conectando { color: #e0a13a; } .mon-canal.reconectando i, .mon-canal.conectando i { background: #e0a13a; animation: mon-pisca 1s ease-in-out infinite; }
@@ -5313,8 +5314,11 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
    Cada marca com a própria cor: ler "de onde veio" não pode depender de
    decorar a ordem das coisas. */
 .mon-selo.plataforma { font-weight: 800; letter-spacing: .04em; }
-.mon-selo.plataforma.teeds { color: #8a6d1f; border-color: color-mix(in srgb, #d0aa52 55%, var(--border)); background: color-mix(in srgb, #d0aa52 16%, transparent); }
-.mon-selo.plataforma.omni { color: #3b4ea8; border-color: color-mix(in srgb, #4c6fff 50%, var(--border)); background: color-mix(in srgb, #4c6fff 14%, transparent); }
+.mon-selo.plataforma.teeds { color: #6b5210; border-color: color-mix(in srgb, #d0aa52 55%, var(--border)); background: color-mix(in srgb, #d0aa52 16%, transparent); }
+.mon-selo.plataforma.omni { color: #26358a; border-color: color-mix(in srgb, #4c6fff 50%, var(--border)); background: color-mix(in srgb, #4c6fff 14%, transparent); }
+/* No escuro a mesma cor fica ilegível: o tom tem de clarear, não só o fundo. */
+:root[data-tema='escuro'] .mon-selo.plataforma.teeds { color: #e2c278; }
+:root[data-tema='escuro'] .mon-selo.plataforma.omni { color: #9fb2ff; }
 /* Na Rede a lista de encerradas ganha a coluna da plataforma. */
 .mon-tabela:has(.mon-selo.plataforma) .cab,
 .mon-tabela:has(.mon-selo.plataforma) .ins-linha { grid-template-columns: 1.5fr .75fr .9fr .9fr .7fr .95fr 1.1fr 24px; }
@@ -5623,8 +5627,12 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .admin-top-acoes { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .sel-plat { display: inline-flex; align-items: center; gap: 10px; }
 .sel-plat-rot { font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.sel-plat-opcoes { display: inline-flex; align-items: stretch; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
-.sel-plat-opcoes button { display: flex; align-items: center; gap: 7px; padding: 7px 13px; border: 0; border-radius: 9px; background: none; color: var(--muted); cursor: pointer; transition: background .14s ease, color .14s ease; }
+/* 36px e' a altura dos controles de cabecalho da casa (abas do monitoramento,
+   botoes de periodo dos Insights). O seletor vinha com 43 e o indicador de
+   canal com 31: tres controles lado a lado em tres alturas diferentes, que e'
+   o que faz uma barra parecer montada no olho. */
+.sel-plat-opcoes { height: 36px; display: inline-flex; align-items: stretch; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.sel-plat-opcoes button { display: flex; align-items: center; gap: 7px; padding: 0 13px; border: 0; border-radius: 9px; background: none; color: var(--muted); cursor: pointer; transition: background .14s ease, color .14s ease; }
 .sel-plat-opcoes button:hover { background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); }
 .sel-plat-opcoes button b { font-size: 13px; font-weight: 700; line-height: 1.1; }
 /* O papel de cada plataforma cabe no título: no botão ele só ocuparia espaço. */
