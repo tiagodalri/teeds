@@ -667,7 +667,7 @@ export default function App() {
       ) : tela === 'gerenciamento' ? (
         <CatalogoProvider sessao={teeds.sessao}><OperationalManagementPanel /></CatalogoProvider>
       ) : tela === 'monitoramento' && admin === true ? (
-          teeds.sessao ? <MonitoramentoBoundary><Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel sessao={teeds.sessao} /></Suspense></MonitoramentoBoundary> : null
+          teeds.sessao ? <MonitoramentoBoundary><Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel sessao={teeds.sessao} mostrarMarkup={mostrarColuna} /></Suspense></MonitoramentoBoundary> : null
       ) : tela === 'insights' && admin === true ? (
         teeds.sessao ? <InsightsPanel sessao={teeds.sessao} /> : null
       ) : tela === 'gestao' && admin === true ? (

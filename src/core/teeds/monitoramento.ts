@@ -137,6 +137,49 @@ export async function listarEncerradas(sessao: SessaoTeeds, dias: number = LIMIT
   }))
 }
 
+/**
+ * Markup somado de cada sessão, para a coluna da lista de encerradas.
+ *
+ * Por que não vem junto com `listarEncerradas`: `sessoes_robos` não guarda
+ * markup. Ele vive operação a operação em `operacoes_robos`, e somar no
+ * navegador significaria baixar as operações de 300 sessões — uma delas tem
+ * 337 — para mostrar uma coluna. O banco soma de uma vez, com a mesma guarda
+ * de admin do resto do monitoramento.
+ *
+ * Nunca lança: markup é informação de apoio, e derrubar a lista inteira de
+ * sessões porque a soma falhou seria trocar o problema por um pior. Quem não
+ * veio fica sem o número, e a célula diz isso em vez de mostrar zero.
+ */
+export interface MarkupDaSessao { operacoes: number; markup: number; markupDeriv: number | null }
+
+export async function markupDasSessoes(
+  sessao: SessaoTeeds, ids: string[], signal?: AbortSignal,
+): Promise<Map<string, MarkupDaSessao>> {
+  const mapa = new Map<string, MarkupDaSessao>()
+  if (!ids.length) return mapa
+  // O banco recusa mais de 500 de uma vez; a tela pede 300, mas o lote mantém
+  // a promessa de cá também.
+  for (let i = 0; i < ids.length; i += 300) {
+    const lote = ids.slice(i, i + 300)
+    try {
+      const linhas = await rest<any[]>('/rpc/teeds_markup_das_sessoes', sessao.token, {
+        method: 'POST', signal,
+        body: JSON.stringify({ p_marca: MARCA.id, p_ids: lote }),
+      })
+      for (const l of linhas ?? []) {
+        mapa.set(String(l.sessao_id), {
+          operacoes: Number(l.operacoes ?? 0),
+          markup: Number(l.markup ?? 0),
+          markupDeriv: l.markup_deriv === null || l.markup_deriv === undefined ? null : Number(l.markup_deriv),
+        })
+      }
+    } catch (e) {
+      console.error('[monitoramento] markup das sessões falhou:', (e as Error).message)
+    }
+  }
+  return mapa
+}
+
 /* ------------------------------------------------------------ auditoria */
 
 export type TipoAuditoria = 'painel' | 'ao-vivo' | 'replay' | 'busca'

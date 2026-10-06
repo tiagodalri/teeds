@@ -10,6 +10,7 @@ import { assinarMudancas, type EstadoDoCanal } from '../core/teeds/realtime'
 import {
   ErroDoMonitoramento, auditar, auditarNegado, carregarEventos, eventosDaSessao, lerEspelho, lerSessaoMae, listarAuditoria, listarEncerradas, listarEspelhos,
   paraEvento, paraSessaoEspelho, type RegistroAuditoria, type SessaoEncerrada,
+  markupDasSessoes, type MarkupDaSessao,
 } from '../core/teeds/monitoramento'
 import { ESTRATEGIAS_LOCAIS, modoDaConfig, NOME_DO_MODO, temModos } from '../core/deriv/strategies'
 import { identidade } from '../core/deriv/branding'
@@ -365,7 +366,7 @@ function Replay({ sessao, encerrada, clientes, aoFechar, aoErro }: { sessao: Ses
 
 /* ============================================================ painel */
 
-export function MonitoramentoPanel({ sessao }: { sessao: SessaoTeeds }) {
+export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: SessaoTeeds; mostrarMarkup?: boolean }) {
   const [aba, setAba] = useState<Aba>('ao-vivo')
   const [sessoes, setSessoes] = useState<Map<string, SessaoEspelho>>(new Map())
   const [clientes, setClientes] = useState<Map<string, ClienteRegistro>>(new Map())
@@ -389,6 +390,8 @@ export function MonitoramentoPanel({ sessao }: { sessao: SessaoTeeds }) {
   const [limiteEncerradas, setLimiteEncerradas] = useState(40)
   const [encerradas, setEncerradas] = useState<SessaoEncerrada[]>([])
   const [replayDe, setReplayDe] = useState<SessaoEncerrada | null>(null)
+  /* Markup por sessão, buscado à parte: `sessoes_robos` não guarda markup. */
+  const [markups, setMarkups] = useState<Map<string, MarkupDaSessao>>(new Map())
   const [auditoria, setAuditoria] = useState<RegistroAuditoria[]>([])
   const rtt = useRef(new MedidorDeRtt())
   const desvio = useRef(new EstimadorDeDesvio())
@@ -510,7 +513,13 @@ export function MonitoramentoPanel({ sessao }: { sessao: SessaoTeeds }) {
   /* ------------------------------------------------ replay e auditoria */
   useEffect(() => {
     const aborto = new AbortController()
-    if (aba === 'replay') listarEncerradas(sessao, undefined, undefined, aborto.signal).then((l) => { setEncerradas(l); void garantirClientes(l.map((x) => x.userId)) }).catch(falhar)
+    if (aba === 'replay') listarEncerradas(sessao, undefined, undefined, aborto.signal).then((l) => {
+      setEncerradas(l)
+      void garantirClientes(l.map((x) => x.userId))
+      // O markup vem depois e sem travar a lista: se falhar, as sessões
+      // aparecem do mesmo jeito e só a coluna fica sem número.
+      void markupDasSessoes(sessao, l.map((x) => x.id), aborto.signal).then(setMarkups)
+    }).catch(falhar)
     if (aba === 'auditoria') listarAuditoria(sessao, undefined, aborto.signal).then((l) => { setAuditoria(l); void garantirClientes(l.flatMap((x) => [x.clienteId, x.adminId].filter(Boolean) as string[])) }).catch(falhar)
     return () => aborto.abort()
   }, [aba, sessao, garantirClientes, falhar])
@@ -654,13 +663,19 @@ export function MonitoramentoPanel({ sessao }: { sessao: SessaoTeeds }) {
             <select value={filtroResultado} onChange={(e) => setFiltroResultado(e.target.value as any)} aria-label="Resultado"><option value="todos">Qualquer resultado</option><option value="positivo">Positivo</option><option value="negativo">Negativo</option></select>
           </div>
           <div className="ins-tabela mon-tabela">
-            <div className="cab"><span>Cliente</span><span>Robô</span><span>Conta</span><span>Operações</span><span>Resultado</span><span>Encerrada</span><span /></div>
+            <div className="cab"><span>Cliente</span><span>Robô</span><span>Conta</span><span>Operações</span><span>Resultado</span>{mostrarMarkup && <span>Markup</span>}<span>Encerrada</span><span /></div>
             {encerradasFiltradas.slice(0, limiteEncerradas).map((s) => { const c = clientes.get(s.userId); return (
               <button key={s.id} className="ins-linha mon-linha" onClick={() => setReplayDe(s)}>
                 <span className="adm-pessoa"><i>{(c?.nome || c?.email || '?')[0].toUpperCase()}</i><b>{c?.nome || 'Sem nome'}<small>{mascararEmail(c?.email)}</small></b></span>
                 <span>{s.roboNome}</span><span>{mascararConta(s.contaId)} <em className={`mon-tipo ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'demo' : 'real'}</em></span>
                 <span>{s.operacoes} <small className="up">{s.ganhas}</small> <small className="down">{s.perdidas}</small></span>
                 <span className={s.resultado >= 0 ? 'up' : 'down'}>{assinado(s.resultado)} {s.moeda}</span>
+                {mostrarMarkup && <span className={`mon-markup ${s.demo ? 'simulado' : ''}`}>{(() => {
+                  const m = markups.get(s.id)
+                  // Sem número é diferente de zero: a soma pode não ter vindo.
+                  if (!m) return <em className="mon-markup-sem">—</em>
+                  return <>{m.markup.toFixed(2)} {s.moeda}{s.demo && <small>simulado</small>}</>
+                })()}</span>}
                 <span>{s.encerradaEm ? dataHora(s.encerradaEm) : '—'}<small>{s.motivoDaParada ?? s.situacao}</small></span>
                 <span className="adm-seta">▶</span>
               </button>
