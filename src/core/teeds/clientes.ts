@@ -739,6 +739,57 @@ export interface LinhaRelatorioCliente {
   ultimoDia: string | null; vistoEm: string | null
 }
 
+/**
+ * Uma linha por cliente, com conta real e demonstração SEPARADAS.
+ *
+ * Não existe campo "total" de propósito. Somar dinheiro de demonstração com
+ * dinheiro de verdade não é um filtro ruim, é uma conta errada: foi assim que
+ * a tela anunciou US$ 23.547,45 de comissão quando só US$ 25,38 existiam
+ * (Tiago, 06/10/2026). Sem o campo somado, o erro não tem como voltar por
+ * descuido — só por decisão explícita de quem for escrever a soma à mão.
+ */
+export interface LinhaClientePorConta {
+  userId: string; nome: string | null; email: string | null
+  real: MedidasDaConta; demo: MedidasDaConta
+  /** Dias com operação no período, e quantos a varredura antiga gravou sem resultado. */
+  diasComDados: number; diasSemResultado: number
+  vistoEm: string | null
+}
+export interface MedidasDaConta {
+  contas: number; operacoes: number; entradas: number; pagamentos: number
+  resultado: number; comissao: number
+  operacoesRobos: number; resultadoRobos: number; markupRobos: number
+  ultimoDia: string | null
+}
+
+export async function relatorioClientesPorConta(
+  sessao: SessaoTeeds, dias = 30,
+): Promise<LinhaClientePorConta[]> {
+  try {
+    const linhas = await rest<any[]>('/rpc/teeds_relatorio_clientes_por_conta', sessao.token, {
+      method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: marcaAdmin() }),
+    })
+    const n = (v: unknown) => Number(v ?? 0)
+    return (linhas ?? []).map((l) => ({
+      userId: l.user_id, nome: textoLegivel(l.nome), email: l.email,
+      real: {
+        contas: n(l.contas_reais), operacoes: n(l.operacoes_real), entradas: n(l.entradas_real),
+        pagamentos: n(l.pagamentos_real), resultado: n(l.resultado_real), comissao: n(l.comissao_real),
+        operacoesRobos: n(l.operacoes_robos_real), resultadoRobos: n(l.resultado_robos_real),
+        markupRobos: n(l.markup_robos_real), ultimoDia: l.ultimo_dia_real ?? null,
+      },
+      demo: {
+        contas: n(l.contas_demo), operacoes: n(l.operacoes_demo), entradas: n(l.entradas_demo),
+        pagamentos: n(l.pagamentos_demo), resultado: n(l.resultado_demo), comissao: n(l.comissao_demo),
+        operacoesRobos: n(l.operacoes_robos_demo), resultadoRobos: n(l.resultado_robos_demo),
+        markupRobos: n(l.markup_robos_demo), ultimoDia: l.ultimo_dia_demo ?? null,
+      },
+      diasComDados: n(l.dias_com_dados), diasSemResultado: n(l.dias_sem_resultado),
+      vistoEm: l.visto_em ?? null,
+    }))
+  } catch { return [] }
+}
+
 /** Uma linha por cliente: quanto operou, quanto ganhou ou perdeu, quanto rendeu. */
 export async function relatorioClientes(
   sessao: SessaoTeeds, dias = 30, incluirDemo = true,

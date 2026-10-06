@@ -4490,7 +4490,20 @@ input, select, textarea, button { vertical-align: middle; }
 .rc-periodo{display:inline-flex;padding:3px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
 .rc-periodo button{padding:7px 12px;border:0;border-radius:8px;color:var(--muted);background:transparent;font-size:11px;font-weight:700;cursor:pointer}
 .rc-periodo button.on{color:var(--text);background:var(--bg);box-shadow:0 1px 2px #0002}
-.rc-demo{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:11px;cursor:pointer}
+/* Seletor de conta: mesma forma do seletor de período, ao lado dele, para a
+   escolha ser óbvia. Substituiu a caixinha "Incluir contas de demonstração",
+   que vinha marcada e somava dinheiro de mentira ao de verdade. */
+.rc-conta{display:inline-flex;padding:3px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.rc-conta button{padding:7px 12px;border:0;border-radius:8px;color:var(--muted);background:transparent;font-size:11px;font-weight:700;cursor:pointer}
+.rc-conta button.on{color:var(--text);background:var(--bg);box-shadow:0 1px 2px #0002}
+/* "Demonstração" ganha cor própria: quem está vendo dinheiro de mentira
+   precisa perceber sem ler o rótulo. */
+.rc-conta button.on:nth-child(2){color:#9a6b00;background:color-mix(in srgb,#d0aa52 22%,var(--bg))}
+/* O valor de demonstração, dentro das células do "Lado a lado". */
+.rc-demo-val{display:block;margin-top:3px;font-size:10.5px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.rc-demo-val::before{content:'demo ';opacity:.75;letter-spacing:.04em}
+.rc-tabela.lado-a-lado .cab,.rc-tabela.lado-a-lado>button{align-items:start}
+.rc-tabela.lado-a-lado>button{padding-top:12px;padding-bottom:12px}
 .rc-carregando{color:var(--muted);font-size:10px}
 .rc-aviso{margin-bottom:14px;padding:12px 16px;border:1px solid var(--primary);border-radius:12px;color:var(--text);background:var(--primary-soft);font-size:11px;line-height:1.5}
 .rc-aviso.neutro{border-color:var(--border);background:var(--surface);color:var(--muted)}

@@ -46,6 +46,7 @@ echo "→ provas do canal realtime…";   (cd servidor && npm run realtime --sil
 echo "→ provas do checkout…";           (cd servidor && npm run checkout --silent 2>&1 | tail -1)
 echo "→ provas da aprovação…";          (cd servidor && npm run aprovacao --silent 2>&1 | tail -1)
 echo "→ provas do escopo de marca…";   (cd servidor && npm run escopo --silent 2>&1 | tail -1)
+echo "→ provas de real vs demo…";      (cd servidor && npm run realdemo --silent 2>&1 | tail -1)
 echo "→ montando a Teeds…";            npm run build --silent >/dev/null
 echo "→ provas da rolagem das telas…"; (cd servidor && npm run rolagem --silent 2>&1 | tail -1)
 echo "→ montando a OMNI…";  MARCA=omni npm run build --silent >/dev/null

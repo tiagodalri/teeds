@@ -1,3 +1,3 @@
-a8bbbc0436c1f2bfbf8c96b7e86b9a30469d310c613e0c5edd823af3646f51ca  ./MonitoramentoPanel.js
-ddfcd9907e0ef160d491d5da8605f6facd290b51bdd0402b8ed5dbec2ddc4088  ./omni.css
-00c6cc6d66653d76810502de9a9ef8d5e7705a4e44fd3e3a517ab3d4c0adc654  ./omni.js
+cf8baccaab1b8760f755038aa8f6cb5c8cb82275cf4b58274e401314fe8b044e  ./MonitoramentoPanel.js
+811eb6bfb715998b4dc4228515fa6723c2d8ea01df05b5dcd99c0d213595fe58  ./omni.css
+fd3d8b9c56bb75d416b4c9d186ef2b460da85546ac0a06f9d966f39f67bf904d  ./omni.js
