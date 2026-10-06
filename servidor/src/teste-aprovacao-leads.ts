@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros, senhaDoPendente, SENHA_PROVISORIA } from './aprovacao-leads'
+import { decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros, senhaDoPendente, SENHA_PROVISORIA, marcaAdministrada } from './aprovacao-leads'
 
 process.env.SUPABASE_URL='https://banco.invalid'
 process.env.SUPABASE_SECRET='somente-teste-sem-credencial-real'
@@ -146,4 +146,38 @@ await teste('e-mail antigo não anuncia senha de outro ciclo',async()=>{
     {path:'api.resend.com/emails',body:b=>assert.ok(!b.text.includes(SENHA_PROVISORIA))}, {path:'clientes_pendentes?id='}]
   await enviarAprovacoes()
 })
+
+/*
+  O SELETOR DE PLATAFORMA MANDA NA APROVAÇÃO.
+
+  A rota usava a marca da ORIGEM e ignorava o seletor do painel: com o painel
+  aberto na Teeds e o seletor em OMNI, a lista de aprovações mostrava os
+  cadastros da Teeds sob o título "OMNI Admin" (Tiago, 06/10/2026). Ler errado
+  confunde; aprovar errado cria a conta na marca errada, dispara o e-mail
+  errado, e desfazer é trabalho manual.
+*/
+await teste('o seletor manda: pediu omni, administra omni',()=>{
+  assert.equal(marcaAdministrada('omni','teeds'),'omni')
+  assert.equal(marcaAdministrada('teeds','omni'),'teeds')
+})
+await teste('sem seletor, cai na marca do site',()=>{
+  assert.equal(marcaAdministrada(null,'omni'),'omni')
+  assert.equal(marcaAdministrada(undefined,'teeds'),'teeds')
+  assert.equal(marcaAdministrada('','omni'),'omni')
+})
+// Marca desconhecida não pode virar a padrão em silêncio: aprovaria alguém
+// na Teeds sem ninguém perceber.
+await teste('marca desconhecida dá erro, não vira a padrão',()=>{
+  assert.throws(()=>marcaAdministrada('tееds','omni'),/inválida/)   // cirílico, parece 'teeds'
+  assert.throws(()=>marcaAdministrada('TEEDS','omni'),/inválida/)
+  assert.throws(()=>marcaAdministrada('nao-existe','omni'),/inválida/)
+  assert.throws(()=>marcaAdministrada(' teeds','omni'),/inválida/)
+  assert.throws(()=>marcaAdministrada(123,'omni'),/inválida/)
+  assert.throws(()=>marcaAdministrada({},'omni'),/inválida/)
+})
+await teste('a listagem filtra pela marca pedida',async()=>{
+  passos=[{path:'clientes_pendentes?marca=eq.omni',data:[]}]
+  await listarPendentes('omni','aprovado',0)
+})
+
 console.log(`${total} testes de aprovação concluídos.`)

@@ -3,13 +3,27 @@ import type { SessaoTeeds } from '../core/teeds/conta'
 import { SERVIDOR } from '../core/teeds/config'
 import './admin-pendentes.css'
 import { PLANOS_CLIENTE } from '../core/teeds/planos'
+import { MARCAS } from '../marca'
+
+const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MARCAS).map(m=>[m.id,m.prosa]))
 
 interface Pendente {
   id: string; nome: string; email: string; telefone: string
   status: string; criado_em: string; email_enviado_em: string | null
   recadastro?: boolean; ultima_inscricao_em?: string
 }
-export function AdminPendentes({ sessao, versao, onAprovado }: {sessao:SessaoTeeds; versao:number; onAprovado:()=>void}) {
+/*
+  A MARCA VEM DE FORA, e não da origem do site.
+
+  Esta tela fala com `/api/clientes-pendentes`, e a rota usava a marca da
+  origem: com o painel aberto na Teeds e o seletor em OMNI, apareciam os
+  cadastros da Teeds sob o título "OMNI Admin" (Tiago, 06/10/2026). Ler errado
+  era confuso; aprovar errado criaria a conta na marca errada.
+
+  Por isso a marca é prop obrigatória: quem renderiza decide, e a tela carrega
+  o nome dela no cabeçalho para a dúvida nunca mais existir.
+*/
+export function AdminPendentes({ sessao, marca, versao, onAprovado }: {sessao:SessaoTeeds; marca:string; versao:number; onAprovado:()=>void}) {
   const [status,setStatus]=useState('pendente')
   const [plano,setPlano]=useState('essencial')
   const [pagina,setPagina]=useState(0)
@@ -21,10 +35,13 @@ export function AdminPendentes({ sessao, versao, onAprovado }: {sessao:SessaoTee
   const [revisao,setRevisao]=useState(0)
   const [confirmar,setConfirmar]=useState<{p:Pendente;acao:'aprovar'|'recusar'}|null>(null)
   async function consultar(path: string, body?: unknown, signal?: AbortSignal) {
-    const r=await fetch(`${SERVIDOR.url}/api/clientes-pendentes${path}`,{
+    // A marca vai nos dois sentidos: na busca e na decisão. Aprovar é o que
+    // cria conta e dispara e-mail — não pode depender de qual site está aberto.
+    const junta=path.includes('?')?'&':'?'
+    const r=await fetch(`${SERVIDOR.url}/api/clientes-pendentes${path}${junta}marca=${encodeURIComponent(marca)}`,{
       method:body?'POST':'GET',signal,
       headers:{Authorization:`Bearer ${sessao.token}`,'Content-Type':'application/json'},
-      ...(body?{body:JSON.stringify(body)}:{}),
+      ...(body?{body:JSON.stringify({...(body as object),marca})}:{}),
     })
     const d=await r.json()
     if(!r.ok)throw new Error(d.erro||'Não foi possível consultar as aprovações.')
@@ -37,7 +54,7 @@ export function AdminPendentes({ sessao, versao, onAprovado }: {sessao:SessaoTee
       .then(setLista).catch(e=>{if(!c.signal.aborted)setErro(e.message)})
       .finally(()=>{if(!c.signal.aborted)setCarregando(false)})
     return()=>c.abort()
-  },[sessao.token,status,pagina,versao,revisao])
+  },[sessao.token,marca,status,pagina,versao,revisao])
   async function decidir() {
     if(!confirmar||ocupado)return
     const {p,acao}=confirmar
@@ -50,7 +67,7 @@ export function AdminPendentes({ sessao, versao, onAprovado }: {sessao:SessaoTee
     }catch(e){setErro((e as Error).message)}finally{setOcupado(null)}
   }
   return <section className="admin-card admin-pendentes">
-    <header><div><span className="rot">Cadastros pelo formulário</span><h3>Aprovação de clientes</h3><p>Novos cadastros e recadastros aguardam sua aprovação. Contas existentes e seus históricos são preservados.</p></div><button disabled={!!ocupado||carregando} onClick={()=>setRevisao(v=>v+1)}>Atualizar</button></header>
+    <header><div><span className="rot">Cadastros pelo formulário</span><h3>Aprovação de clientes <em className="pendente-marca">{NOME_DA_MARCA[marca] ?? marca}</em></h3><p>Novos cadastros e recadastros aguardam sua aprovação. Contas existentes e seus históricos são preservados.</p></div><button disabled={!!ocupado||carregando} onClick={()=>setRevisao(v=>v+1)}>Atualizar</button></header>
     <nav aria-label="Status da aprovação">{[['pendente','Pendentes'],['processando','Em aprovação'],['aprovado','Aprovados'],['recusado','Recusados']].map(([id,nome])=><button key={id} aria-pressed={status===id} disabled={!!ocupado} onClick={()=>{setStatus(id);setPagina(0);setConfirmar(null);setAviso('')}}>{nome}</button>)}</nav>
     {erro&&<p role="alert">{erro}</p>}{aviso&&<p role="status">{aviso}</p>}
     {confirmar?.acao==='aprovar' && confirmar.p.status==='pendente' && <label>Plano do novo cliente <select value={plano} disabled={!!ocupado} onChange={e=>setPlano(e.target.value)}>{PLANOS_CLIENTE.map(p=><option key={p.id} value={p.id}>{p.nome}</option>)}</select></label>}

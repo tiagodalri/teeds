@@ -1,5 +1,5 @@
 import './ambiente'
-import { decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros } from './aprovacao-leads'
+import { decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros, marcaAdministrada } from './aprovacao-leads'
 import { abrirBilhete, registrarDescadastro, paginaDeSaida } from './descadastro'
 import { catalogo, alterarRobo } from './catalogo'
 import { administradorDaMarca } from './supabase'
@@ -613,8 +613,31 @@ const servidor = createServer(async (req, res) => {
 
     try {
       if (url.pathname === '/api/clientes-pendentes') {
-        const marca = marcaDaOrigem.id
-        if (!await administradorDaMarca(dono.id, marca)) return json(403, { erro: 'Somente administradores desta plataforma.' })
+        /*
+          A marca vem do SELETOR do painel (?marca= no GET, corpo.marca no
+          POST), e só cai na marca da origem quando ninguém pediu.
+
+          Antes era sempre a marca da origem, e o seletor do topo não chegava
+          aqui: com o painel aberto na Teeds e o seletor em OMNI, a lista de
+          aprovações mostrava os cadastros da Teeds sob o título "OMNI Admin"
+          (Tiago, 06/10/2026). Ler era só confuso; aprovar seria pior — a conta
+          nasceria na marca errada, com o e-mail errado, e desfazer isso é
+          trabalho manual.
+
+          A marca é conferida contra a tabela de marcas em vez de passar por
+          `marcaPorId`, que normaliza desconhecido para a marca padrão: numa
+          rota que cria conta e dispara e-mail, um id errado tem de dar erro,
+          não virar Teeds em silêncio.
+
+          Permissão: admin daquela marca, ou admin da Teeds, que é a master e
+          administra as whitelabels — a mesma regra de `/api/admin/emails`.
+        */
+        let marca: string
+        try { marca = marcaAdministrada(url.searchParams.get('marca') ?? (req.method === 'POST' ? corpo.marca : null), marcaDaOrigem.id) }
+        catch { return json(400, { erro: 'Plataforma inválida.' }) }
+        if (!await administradorDaMarca(dono.id, marca) && !await administradorDaMarca(dono.id, 'teeds')) {
+          return json(403, { erro: 'Somente administradores desta plataforma.' })
+        }
         if (req.method === 'GET') return json(200, await listarPendentes(marca, url.searchParams.get('status') || 'pendente', Number(url.searchParams.get('pagina')) || 0))
         if (req.method === 'POST') return json(200, await decidirLead(String(corpo.id || ''), marca, dono.id, String(corpo.acao || ''), String(corpo.plano || 'essencial')))
         return json(405, { erro: 'Método não permitido.' })

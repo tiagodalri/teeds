@@ -15,6 +15,27 @@ const segredo = () => process.env.SUPABASE_SECRET || process.env.SUPABASE_SERVIC
  * (`trocar_senha: true`) faz parte do fluxo de entrada, mas
  * NÃO elimina o risco de alguém conhecer a senha antes do titular.
  */
+/**
+ * Qual marca este pedido de aprovação administra.
+ *
+ * O painel da master tem um seletor de plataforma no topo. Esta rota ignorava
+ * esse seletor e usava a marca da ORIGEM (o site aberto): com o painel na
+ * Teeds e o seletor em OMNI, as aprovações mostravam os cadastros da Teeds
+ * sob o título "OMNI Admin" (Tiago, 06/10/2026). Ler errado confunde; aprovar
+ * errado cria a conta na marca errada, manda o e-mail errado, e desfazer é
+ * trabalho manual.
+ *
+ * Marca desconhecida DÁ ERRO em vez de virar a padrão. `marcaPorId` normaliza
+ * silenciosamente, o que é aceitável para escolher uma cor; aqui, não: um id
+ * digitado errado aprovaria alguém na Teeds sem ninguém perceber.
+ */
+export function marcaAdministrada(pedida: unknown, origem: string): string {
+  if (pedida === null || pedida === undefined || pedida === '') return origem
+  if (typeof pedida !== 'string') throw new Error('Plataforma inválida.')
+  if (marcaPorId(pedida).id !== pedida) throw new Error('Plataforma inválida.')
+  return pedida
+}
+
 export const SENHA_PROVISORIA = '123mudar'
 const VERSAO_SENHA = 'provisoria-v2'
 
