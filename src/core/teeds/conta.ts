@@ -103,6 +103,18 @@ function traduzir(dados: any): string {
   if (dados?.error_code === 'reauthentication_needed' || m.includes('reauthentication')) {
     return 'Por segurança, saia e entre de novo antes de trocar a senha.'
   }
+  /*
+    A sessão do navegador aponta para uma sessão que não existe mais no
+    servidor. Acontece quando a senha é regravada pelo painel enquanto a
+    pessoa já está logada — foi o que pegou um cliente da OMNI em 06/10/2026,
+    aprovado enquanto estava na tela de criar a senha. A causa foi corrigida
+    no servidor; a mensagem fica porque a sessão também morre por expiração,
+    por logout em outro aparelho e por troca de senha legítima. O recado tem
+    de dizer o que FAZER, não repetir o jargão do Supabase em inglês.
+  */
+  if (dados?.error_code === 'session_not_found' || m.includes('session_id claim') || m.includes('session from session')) {
+    return 'Sua sessão expirou. Entre de novo com a senha que você recebeu por e-mail e refaça este passo.'
+  }
   if (m.includes('unable to validate email') || m.includes('invalid email')) return 'Esse e-mail não parece válido.'
   if (m.includes('rate limit') || m.includes('too many')) return 'Muitas tentativas. Espere um minuto e tente de novo.'
   return bruto || `Não consegui falar com o servidor da ${MARCA.prosa}.`

@@ -87,10 +87,30 @@ export async function decidirLead(id: string, marca: string, admin: string, acao
   if (atual.app_metadata?.aprovacao_lead!==id || atual.app_metadata?.senha_aprovacao_versao!==VERSAO_SENHA) {
     const admins=await banco(`/rest/v1/administradores?user_id=eq.${encodeURIComponent(usuario.id)}&select=user_id&limit=1`)
     if (!Array.isArray(admins) || admins.length) throw new Error('Contas administrativas não podem ter a senha renovada pelo cadastro público.')
+    /*
+      TROCAR A SENHA DERRUBA QUEM JA ESTA DENTRO.
+      
+      Regravar a senha pela API de admin faz o Supabase apagar as sessoes do
+      usuario. Desde 30/09/2026 a pessoa entra ANTES da aprovacao (ela ve a
+      tela "cadastro em analise"), entao ela pode muito bem estar logada
+      quando o aprovador clica. Foi o que aconteceu com um cliente da OMNI em
+      06/10/2026: entrou as 21:35, foi aprovado as 21:37, e ao salvar a senha
+      nova recebeu "Session from session_id claim in JWT does not exist" — o
+      token dele apontava para uma sessao que a propria aprovacao apagara.
+
+      A senha so precisa ser regravada quando NAO se sabe qual e'. Se a conta
+      nasceu deste mesmo cadastro e o titular ainda nao escolheu a dele
+      (`trocar_senha` continua true), a provisoria ja e' a que o e-mail
+      anuncia: basta carimbar os marcadores, sem tocar na senha e sem
+      derrubar ninguem. E' a mesma leitura que `enviarCadastros` ja fazia
+      para decidir se podia anunciar a senha no e-mail.
+    */
+    const senhaJaConhecida =
+      atual.app_metadata?.cadastro_lead===id && atual.user_metadata?.trocar_senha===true
     // Senha e marcador juntos: se a resposta se perder, retomar não desfaz
     // uma senha que o titular já tenha escolhido entre as tentativas.
     await banco(`/auth/v1/admin/users/${encodeURIComponent(usuario.id)}`,'PUT',{
-      password:SENHA_PROVISORIA,
+      ...(senhaJaConhecida ? {} : {password:SENHA_PROVISORIA}),
       user_metadata:{...atual.user_metadata,trocar_senha:true},
       app_metadata:{...atual.app_metadata,aprovacao_lead:id,senha_aprovacao_versao:VERSAO_SENHA},
     })

@@ -129,6 +129,51 @@ await teste('retomar aprovação não desfaz senha própria escolhida após time
     {path:`/auth/v1/admin/users/${uid}`,data:{...preparada,user_metadata:{trocar_senha:false}}},{path:'teeds_finalizar_lead'}]
   await decidirLead(id,'teeds',uid,'aprovar')
 })
+/*
+  APROVAR NAO PODE DERRUBAR QUEM JA ESTA DENTRO.
+
+  Regravar a senha pela API de admin apaga as sessoes do usuario. Desde
+  30/09/2026 a pessoa entra ANTES da aprovacao (ve a tela "cadastro em
+  analise"), entao ela pode estar logada na hora do clique. Um cliente da OMNI
+  entrou as 21:35, foi aprovado as 21:37, e ao salvar a senha nova recebeu
+  "Session from session_id claim in JWT does not exist" (06/10/2026).
+
+  Quando a conta nasceu deste mesmo cadastro e o titular ainda nao escolheu a
+  senha dele, a provisoria JA e' a que o e-mail anuncia: carimbar os marcadores
+  basta, e ninguem cai.
+*/
+await teste('aprovar nao regrava a senha que ja e conhecida (nao derruba a sessao)',async()=>{
+  passos=[{path:'teeds_decidir_lead',data:ficha},{path:'teeds_auth_do_pendente',data:{id:uid}},
+    {path:`/auth/v1/admin/users/${uid}`,data:{id:uid,app_metadata:{cadastro_lead:id},user_metadata:{trocar_senha:true}}},
+    {path:'administradores?user_id=',data:[]},
+    {path:`/auth/v1/admin/users/${uid}`,body:b=>{
+      assert.ok(!('password' in b),'a aprovacao nao pode mandar senha quando ela ja e conhecida')
+      assert.equal(b.user_metadata.trocar_senha,true)
+      assert.equal(b.app_metadata.aprovacao_lead,id)
+    }},
+    {path:'teeds_finalizar_lead'}]
+  await decidirLead(id,'teeds',uid,'aprovar')
+})
+// O outro lado: conta de origem desconhecida (nao nasceu deste cadastro) TEM de
+// ter a senha regravada, senao o e-mail anunciaria uma senha que nao funciona.
+await teste('aprovar regrava a senha quando ela nao e conhecida',async()=>{
+  passos=[{path:'teeds_decidir_lead',data:ficha},{path:'teeds_auth_do_pendente',data:{id:uid}},
+    {path:`/auth/v1/admin/users/${uid}`,data:{id:uid,app_metadata:{},user_metadata:{}}},
+    {path:'administradores?user_id=',data:[]},
+    {path:`/auth/v1/admin/users/${uid}`,body:b=>assert.equal(b.password,SENHA_PROVISORIA)},
+    {path:'teeds_finalizar_lead'}]
+  await decidirLead(id,'teeds',uid,'aprovar')
+})
+// E quem ja escolheu a propria senha continua intocado (trocar_senha=false).
+await teste('aprovar regrava a senha de quem veio de outro cadastro',async()=>{
+  passos=[{path:'teeds_decidir_lead',data:ficha},{path:'teeds_auth_do_pendente',data:{id:uid}},
+    {path:`/auth/v1/admin/users/${uid}`,data:{id:uid,app_metadata:{cadastro_lead:'outro-id'},user_metadata:{trocar_senha:true}}},
+    {path:'administradores?user_id=',data:[]},
+    {path:`/auth/v1/admin/users/${uid}`,body:b=>assert.equal(b.password,SENHA_PROVISORIA)},
+    {path:'teeds_finalizar_lead'}]
+  await decidirLead(id,'teeds',uid,'aprovar')
+})
+
 await teste('falha ao renovar senha não libera a aprovação',async()=>{
   passos=[{path:'teeds_decidir_lead',data:ficha},{path:'teeds_auth_do_pendente',data:{id:uid}},
     {path:`/auth/v1/admin/users/${uid}`,data:{id:uid}}, {path:'administradores?user_id=',data:[]},
