@@ -424,6 +424,18 @@ button, input, select, textarea { font-family: inherit; }
    A setinha fica apagada (↕) na coluna inativa para avisar que dá para
    clicar, sem competir com a coluna que está ordenando de fato. */
 .adm-cab-ordem > span { display: flex; min-width: 0; }
+
+/* ORDENAR PRECISA PARECER QUE ESTÁ ACONTECENDO.
+   A ordenação é feita no banco (11 mil fichas, 50 por vez), então o clique
+   leva de alguns décimos a mais de um segundo. Sem sinal nenhum a tabela
+   ficava parada mostrando as linhas antigas, e o clique parecia ignorado —
+   "não ordena direito". Agora as linhas desbotam e a coluna clicada pisca. */
+.adm-tabela.carregando .adm-linha:not(.cab) { opacity: .45; transition: opacity .12s; pointer-events: none; }
+.adm-tabela .adm-linha:not(.cab) { transition: opacity .18s; }
+.adm-cab-ordem button.ordenando { color: var(--primary); }
+.adm-cab-ordem button.ordenando > i { opacity: 1; animation: adm-ordenando .7s ease-in-out infinite; }
+@keyframes adm-ordenando { 50% { opacity: .15; } }
+@media (prefers-reduced-motion: reduce) { .adm-cab-ordem button.ordenando > i { animation: none; } }
 .adm-cab-ordem button {
   display: inline-flex; align-items: center; gap: 5px; width: 100%; min-width: 0;
   padding: 2px 0; border: 0; background: none; cursor: pointer;
