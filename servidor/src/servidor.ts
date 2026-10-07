@@ -24,7 +24,8 @@ import { parametrosPadrao } from '../../src/core/deriv/parametros'
 import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca } from '../../src/core/deriv/strategies'
 import { PADRAO, conferir } from './limites'
 import { conversar } from './chat'
-import { autorizacaoParaOperar, guardar } from './cofre'
+import { autorizacaoDoCliente, autorizacaoParaOperar, guardar } from './cofre'
+import { concluirLoginDoCliente, iniciarLoginDoCliente, type PedidoDoCliente } from './login-cliente'
 import type { ConfigEstrategia } from '../../src/core/deriv/engine'
 import { ligarCarteiro, tratarGanchoDeEmail } from './gancho-email'
 import { somenteDemoDoUsuario } from './supabase'
@@ -101,9 +102,17 @@ const DESTINO = new URL('../.env', import.meta.url)
 
 const base64url = (b: Buffer) => b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
-/** Uma tentativa de login em andamento. Vive poucos minutos, na memória. */
+/**
+ * Uma tentativa de login em andamento. Vive poucos minutos, na memória.
+ *
+ * Duas portas usam o mesmo mapa: o login da CASA (sem `userId`, grava o
+ * DERIV_TOKEN do servidor) e o login de um CLIENTE pelo app instalado (com
+ * `userId`, grava no cofre da pessoa — ver `login-cliente.ts`). O `state`
+ * diz qual é; sem `state` conhecido, nada é trocado.
+ */
 interface Tentativa { verifier: string; criadaEm: number }
-const tentativas = new Map<string, Tentativa>()
+const tentativas = new Map<string, Tentativa | PedidoDoCliente>()
+const deCliente = (t: Tentativa | PedidoDoCliente): t is PedidoDoCliente => 'userId' in t
 const tentativasLead = new Map<string, { inicio: number; total: number }>()
 /* O mesmo freio, para as visitas. O IP entra só aqui e morre aqui: ele
    nunca vai para o banco (ver o comentário da migração das visitas). */
@@ -210,6 +219,28 @@ const servidor = createServer(async (req, res) => {
         <a class="botao" href="/">Começar de novo</a>`, '#f87171'))
     }
     tentativas.delete(state!)
+
+    // ---- a volta de um CLIENTE (app instalado): guarda no cofre dele
+    if (deCliente(tentativa)) {
+      const m = marcaPorId(tentativa.marca)
+      try {
+        await concluirLoginDoCliente(tentativa, code, RETORNO,
+          (u, corpo) => fetch(u, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: corpo.toString() }),
+          guardar)
+        console.log(`[login] cliente ${tentativa.userId.slice(0, 8)}… conectou a Deriv pelo servidor (${m.id})`)
+        return responder(200, pagina('Conectado', `
+          <div class="ok">✓</div><h1>Deriv conectada</h1>
+          <p>Pode fechar esta página e <b>voltar para o app da ${m.prosa}</b>.<br>
+          Ele já vai encontrar a sua conta.</p>
+          <a class="botao" href="${m.redirectUri}">Abrir a ${m.prosa}</a>`, '#4ade80'))
+      } catch (e) {
+        console.error(`[login] cliente ${tentativa.userId.slice(0, 8)}… falhou: ${(e as Error).message}`)
+        return responder(500, pagina('Falhou', `
+          <div class="erro">✕</div><h1>Não consegui concluir</h1>
+          <p><code>${(e as Error).message}</code><br>Volte para o app e toque em Conectar de novo.</p>
+          <a class="botao" href="${m.redirectUri}">Abrir a ${m.prosa}</a>`, '#f87171'))
+      }
+    }
 
     try {
       const corpo = new URLSearchParams({
@@ -874,6 +905,25 @@ const servidor = createServer(async (req, res) => {
         if (!cofre.ok) return json(200, { ok: false })
         void aquecerSala(cofre.sessao, contaId)
         return json(200, { ok: true })
+      }
+
+      // ---- login na Deriv pelo servidor (app instalado no iPhone)
+      //
+      // O app começa aqui, vai para a Deriv, e a Deriv devolve o código ao
+      // /callback deste servidor. Quando o app volta à frente, pergunta em
+      // /api/deriv/sessao se o token já chegou. Ver `login-cliente.ts`.
+      if (url.pathname === '/api/deriv/iniciar' && req.method === 'POST') {
+        limpar()
+        const marcaPedida = typeof corpo.marca === 'string' ? corpo.marca : marcaDaOrigem.id
+        const { state, url: ida, pedido } = iniciarLoginDoCliente(dono.id, marcaPedida, RETORNO)
+        tentativas.set(state, pedido)
+        return json(200, { url: ida })
+      }
+      if (url.pathname === '/api/deriv/sessao' && req.method === 'GET') {
+        const cofre = await autorizacaoDoCliente(dono.id)
+        if (cofre.tipo !== 'ok') return json(200, { sessao: null, motivo: cofre.tipo })
+        const { accessToken, refreshToken, expiresAt } = cofre.sessao
+        return json(200, { sessao: { accessToken, refreshToken, expiresAt } })
       }
 
       if (url.pathname === '/api/deriv' && req.method === 'POST') {

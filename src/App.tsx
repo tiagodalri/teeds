@@ -105,7 +105,7 @@ export default function App() {
   const [marcaEmFoco] = useMarcaEmFoco()
   const [mostrarColuna, alterarColuna] = usePreferenciaColuna(teeds.sessao?.usuario.id ?? null, adminConfirmado)
   const simulador = useSimulador(teeds.sessao)
-  const conta = useAccount({ email: teeds.sessao?.usuario.email, simulador: adminConfirmado || simulador })
+  const conta = useAccount({ email: teeds.sessao?.usuario.email, simulador: adminConfirmado || simulador, tokenTeeds: teeds.sessao?.token })
   const [verPerfil, setVerPerfil] = useState(false)
   const [tema, setTema] = useState<Tema>(temaGuardado)
   const alternarTema = () => {

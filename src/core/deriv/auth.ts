@@ -1,5 +1,6 @@
 import { DERIV } from './config'
 import { MARCA } from '../../marca'
+import { SERVIDOR } from '../teeds/config'
 
 /**
  * Login da Teeds - OAuth 2.0 com PKCE, inteiramente no navegador.
@@ -244,6 +245,68 @@ export async function completeLogin(): Promise<AuthSession | null> {
   }
   saveSession(session)
   return session
+}
+
+/*
+  O APP INSTALADO NO IPHONE (07/10/2026).
+
+  Tudo acima resolve a volta em outra aba do MESMO navegador. O app instalado
+  na tela inicial do iPhone é outro caso: ele e o Safari têm armazenamentos
+  separados. O app começa o login, o iOS abre a Deriv no Safari, o código
+  volta para o Safari — e o app nunca fica sabendo.
+
+  Então, quando o site roda instalado, a troca muda de lugar: o servidor gera
+  o verificador, recebe o código no `/callback` dele e guarda o token no
+  cofre da pessoa (ver `servidor/src/login-cliente.ts`). O app, ao voltar à
+  frente, pergunta ao servidor com o próprio crachá da Teeds — que está no
+  armazenamento do app, porque foi lá que a pessoa entrou.
+*/
+
+/** O site está rodando como app instalado (tela inicial), e não numa aba? */
+export function emAppInstalado(): boolean {
+  try {
+    if (typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches) return true
+    return (navigator as unknown as { standalone?: boolean }).standalone === true
+  } catch {
+    return false
+  }
+}
+
+/** A ida pelo servidor: ele guarda o verificador, nós guardamos só o `state`. */
+export async function startLoginPeloServidor(tokenTeeds: string): Promise<void> {
+  const res = await fetch(`${SERVIDOR.url}/api/deriv/iniciar`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${tokenTeeds}` },
+    body: JSON.stringify({ marca: MARCA.id }),
+  })
+  const dados = await res.json().catch(() => ({}))
+  if (!res.ok || !dados?.url) throw new Error(dados?.erro || `Não consegui começar o login (${res.status})`)
+  const state = new URL(dados.url).searchParams.get('state') ?? ''
+  // O pedido fica marcado como "do servidor": a tela sabe que há um login
+  // pendente, e `completeLogin` nunca tenta trocar nada com ele.
+  guardarPedido({ verifier: 'servidor', state, criadoEm: Date.now() })
+  window.location.assign(dados.url)
+}
+
+/**
+ * O token já chegou ao cofre? Chamado quando o app volta à frente com um
+ * login pendente. Se chegou, vira a sessão desta visita e o pedido se encerra.
+ */
+export async function buscarSessaoDoServidor(tokenTeeds: string): Promise<AuthSession | null> {
+  const res = await fetch(`${SERVIDOR.url}/api/deriv/sessao`, {
+    headers: { authorization: `Bearer ${tokenTeeds}` },
+  })
+  const dados = await res.json().catch(() => ({}))
+  const s = dados?.sessao
+  if (!res.ok || !s?.accessToken) return null
+  const sessao: AuthSession = {
+    accessToken: String(s.accessToken),
+    refreshToken: s.refreshToken ? String(s.refreshToken) : undefined,
+    expiresAt: s.expiresAt ? Number(s.expiresAt) : undefined,
+  }
+  saveSession(sessao)
+  esquecerPedido()
+  return sessao
 }
 
 function cleanUrl() {

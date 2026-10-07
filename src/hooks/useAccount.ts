@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { completeLogin, loadSession, logout as clearSession, startLogin, type AuthSession } from '../core/deriv/auth'
+import {
+  buscarSessaoDoServidor, completeLogin, emAppInstalado, loadSession, loginPendente,
+  logout as clearSession, startLogin, startLoginPeloServidor, type AuthSession,
+} from '../core/deriv/auth'
 import { fetchAccounts, fetchTradingSocketUrl, resetDemoBalance, type TradingAccount } from '../core/deriv/account'
 import { TeedsSocket } from '../core/deriv/client'
 import type { ConnectionState } from '../core/deriv/types'
@@ -16,7 +19,7 @@ export type AuthStatus = 'deslogado' | 'entrando' | 'logado' | 'erro'
  * Cuida de todo o ciclo de conta: login, escolha da conta,
  * conexao autenticada, saldo e posicoes abertas.
  */
-export function useAccount(acesso: { email?: string | null; simulador?: boolean } = {}) {
+export function useAccount(acesso: { email?: string | null; simulador?: boolean; tokenTeeds?: string | null } = {}) {
   const [status, setStatus] = useState<AuthStatus>('deslogado')
   const [error, setError] = useState<string | null>(null)
   const [session, setSession] = useState<AuthSession | null>(null)
@@ -50,13 +53,23 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean 
   const socketAccountRef = useRef<string | null>(null)
   const [, setTick] = useState(0)
 
+  // O crachá da Teeds, para o caminho pelo servidor. Em ref: os efeitos de
+  // montagem e de visibilidade não devem renascer a cada renovação do crachá.
+  const tokenTeedsRef = useRef<string | null>(acesso.tokenTeeds ?? null)
+  tokenTeedsRef.current = acesso.tokenTeeds ?? null
+
   // --- retorno da Deriv + sessao guardada
   useEffect(() => {
     let alive = true
     ;(async () => {
       try {
         const fresh = await completeLogin()
-        const s = fresh ?? loadSession()
+        let s = fresh ?? loadSession()
+        // App instalado: o login pode ter terminado no Safari e o token
+        // estar esperando no cofre do servidor (ver auth.ts).
+        if (!s && loginPendente() && tokenTeedsRef.current) {
+          s = await buscarSessaoDoServidor(tokenTeedsRef.current).catch(() => null)
+        }
         if (!alive) return
         if (s) {
           setSession(s)
@@ -70,6 +83,24 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean 
     })()
     return () => { alive = false }
   }, [])
+
+  // --- o app voltou à frente com um login pendente: o token já chegou?
+  useEffect(() => {
+    if (session) return
+    const aoVoltar = () => {
+      if (document.visibilityState !== 'visible') return
+      if (!loginPendente() || !tokenTeedsRef.current) return
+      void buscarSessaoDoServidor(tokenTeedsRef.current).then((s) => {
+        if (s) { setSession(s); setStatus('logado'); setError(null) }
+      }).catch(() => { /* sem rede agora: a próxima volta tenta de novo */ })
+    }
+    document.addEventListener('visibilitychange', aoVoltar)
+    window.addEventListener('focus', aoVoltar)
+    return () => {
+      document.removeEventListener('visibilitychange', aoVoltar)
+      window.removeEventListener('focus', aoVoltar)
+    }
+  }, [session])
 
   // --- lista de contas
   useEffect(() => {
@@ -285,7 +316,18 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean 
 
   const login = useCallback(() => {
     setStatus('entrando')
-    startLogin().catch((e: Error) => {
+    const token = tokenTeedsRef.current
+    const ida = (async () => {
+      if (!(emAppInstalado() && token)) return startLogin()
+      // App instalado: antes de ir à Deriv de novo, o token pode já estar no
+      // cofre — o login anterior terminou no Safari e o app não soube.
+      if (loginPendente()) {
+        const s = await buscarSessaoDoServidor(token).catch(() => null)
+        if (s) { setSession(s); setStatus('logado'); return }
+      }
+      return startLoginPeloServidor(token)
+    })()
+    ida.catch((e: Error) => {
       setError(e.message)
       setStatus('erro')
     })

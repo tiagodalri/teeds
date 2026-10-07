@@ -30,7 +30,9 @@
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { completeLogin, loginPendente, logout, startLogin } from '../../src/core/deriv/auth'
+import {
+  buscarSessaoDoServidor, completeLogin, emAppInstalado, loginPendente, logout, startLogin, startLoginPeloServidor,
+} from '../../src/core/deriv/auth'
 import { MARCA } from '../../src/marca'
 
 let passou = 0, falhou = 0
@@ -205,6 +207,54 @@ voltarPara(privada)
 conferir('com o armazenamento bloqueado, a mesma aba ainda conclui',
   await concluir(), 'token-de-prova')
 navegador.local.bloqueada = false
+
+/* ------------------------- o app instalado: o login passa pelo servidor */
+
+/*
+  No iPhone, o app da tela inicial e o Safari não compartilham armazenamento:
+  a volta da Deriv cai no Safari e o app nunca sabe. Então, instalado, o
+  app pede ao servidor para fazer a troca e depois pergunta se o token
+  chegou. Aqui o servidor é de mentira e registra o que recebeu.
+*/
+zerar()
+conferir('fora de um app instalado, o caminho normal continua valendo', emAppInstalado(), false)
+
+const chamadas: Array<{ url: string; auth: string; metodo: string }> = []
+g.fetch = async (u: string, opcoes: { method?: string; headers?: Record<string, string>; body?: string } = {}) => {
+  chamadas.push({ url: u, auth: opcoes.headers?.authorization ?? '', metodo: opcoes.method ?? 'GET' })
+  if (u.endsWith('/api/deriv/iniciar')) {
+    return { ok: true, json: async () => ({ url: 'https://auth.deriv.com/oauth2/auth?state=state-do-servidor&client_id=x' }) }
+  }
+  if (u.endsWith('/api/deriv/sessao')) {
+    return { ok: true, json: async () => ({ sessao: { accessToken: 'tok-do-cofre', refreshToken: 'r', expiresAt: 123 } }) }
+  }
+  return { ok: false, status: 404, json: async () => ({}) }
+}
+await startLoginPeloServidor('cracha-teeds')
+conferir('a ida pede ao servidor, com o crachá da Teeds',
+  chamadas.map((c) => `${c.metodo} ${c.url.split("/").slice(-3).join("/")} ${c.auth}`), ["POST api/deriv/iniciar Bearer cracha-teeds"])
+conferir('e manda o navegador para a URL que o servidor montou', idaPara.startsWith('https://auth.deriv.com/oauth2/auth?state=state-do-servidor'), true)
+conferir('fica um pedido pendente para a tela avisar', loginPendente(), true)
+conferir('mas marcado como do servidor: o navegador não tenta trocar nada', pedidoGuardado()?.verifier, 'servidor')
+
+// O app reabre sem `?code=` na URL (a volta foi para o Safari): nada quebra.
+paginaAtual = 'https://teedscompany.com/'
+conferir('reabrir o app sem código não dá erro', await concluir(), 'sem sessão')
+
+// E ao perguntar ao servidor, o token já está lá.
+const doCofre = await buscarSessaoDoServidor('cracha-teeds')
+conferir('o app pergunta ao servidor com o crachá',
+  chamadas.at(-1)?.url.endsWith('/api/deriv/sessao') && chamadas.at(-1)?.auth === 'Bearer cracha-teeds', true)
+conferir('e recebe a sessão que o servidor guardou', doCofre?.accessToken, 'tok-do-cofre')
+conferir('a sessão passa a valer nesta visita', navegador.local.getItem(`${MARCA.id}.auth`)?.includes('tok-do-cofre'), true)
+conferir('e o pedido pendente se encerra', loginPendente(), false)
+
+// Sem token no cofre ainda: devolve nulo e mantém o pedido para a próxima volta.
+zerar()
+await startLoginPeloServidor('cracha-teeds')
+g.fetch = async () => ({ ok: true, json: async () => ({ sessao: null, motivo: 'sem-cofre' }) })
+conferir('se o token ainda não chegou, devolve nulo', await buscarSessaoDoServidor('cracha-teeds'), null)
+conferir('e o pedido continua pendente para tentar de novo', loginPendente(), true)
 
 /* ------------------------------------------------- a tela diz o que houve */
 
