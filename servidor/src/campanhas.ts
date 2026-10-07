@@ -67,3 +67,47 @@ export function emailDeVolta(marca: Marca, paraOEmail: string): EmailPronto {
     // O risco já é avisado no rodapé de toda mensagem; repetir vira ruído.
   })
 }
+
+/**
+ * Repescagem do cadastro (07/10/2026): para quem recebeu o convite, entrou no
+ * canal, e ainda não se cadastrou na plataforma.
+ *
+ * Diferente do convite, este tem UM destino: o site. O link já vai direto
+ * para a tela de entrada, e o texto ensina a fazer o cadastro ali mesmo,
+ * passo a passo, porque a dúvida que mais chega no canal é "onde eu clico".
+ * Sem botão do Telegram de propósito: quem está lendo isto já está no canal.
+ *
+ * Mesma regra do convite: sem exclamação, sem caixa alta, sem travessão.
+ */
+export function emailDeRepescagem(marca: Marca, paraOEmail: string): EmailPronto {
+  const destino = new URL('/', marca.redirectUri)
+  destino.searchParams.set('utm_source', 'email')
+  destino.searchParams.set('utm_campaign', 'repescagem')
+  return montarEmail(marca, 'convite', destino.href, {
+    assunto: `${marca.prosa} - Falta um minuto para o seu acesso`,
+    titulo: `O seu acesso à nova ${marca.prosa} ainda está esperando por você.`,
+    espia: `O cadastro é gratuito e leva menos de um minuto. Quem já foi cliente precisa recadastrar para reativar o acesso.`,
+    corpo:
+      `A nova plataforma da ${marca.prosa} está no ar e os robôs já estão operando ` +
+      `para quem entrou. Vimos que o seu cadastro ainda não chegou, e este e-mail ` +
+      `é só para facilitar: o link abaixo leva direto para a tela de entrada.\n\n` +
+      `**O cadastro é gratuito e leva menos de um minuto.** Se você já foi cliente ` +
+      `da ${marca.prosa}, mesmo assim é preciso recadastrar para reativar o seu ` +
+      `acesso. Se nunca foi, o caminho é o mesmo.\n\n` +
+      `**Como fazer**\n\n` +
+      `1. Toque no botão abaixo para abrir a tela de entrada.\n` +
+      `2. Toque no botão dourado "Cadastre-se", logo abaixo de "Entrar".\n` +
+      `3. Preencha o nome completo como está no documento, o e-mail que você abre todo dia e o telefone com DDD.\n` +
+      `4. Toque em "Confirmar Cadastro".\n\n` +
+      `Pronto. O cadastro entra na fila de aprovação, que normalmente é rápida.\n\n` +
+      `**O que chega por e-mail**\n\n` +
+      `Em menos de um minuto você recebe "Cadastro recebido", com o seu e-mail e ` +
+      `uma senha provisória. Com ela você já consegue entrar, e vai ver um aviso ` +
+      `de cadastro em análise. É normal, é só aguardar. Quando a equipe liberar, ` +
+      `chega "Cadastro aprovado", e no primeiro acesso você cria a sua própria senha.\n\n` +
+      `Se não encontrar as mensagens, olhe o spam e o lixo eletrônico. Encontrou ` +
+      `por lá, marque como "não é spam" para as próximas chegarem direto.`,
+    botao: 'Fazer meu cadastro',
+    descadastrar: linkDeDescadastro(marca.id, paraOEmail),
+  })
+}

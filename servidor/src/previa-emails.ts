@@ -12,7 +12,7 @@ import { join } from 'node:path'
 import { MARCAS } from '../../src/marca/marcas'
 import { montarEmail, type TipoDeEmail } from './emails'
 import { emailDeCadastro, emailDeAprovacao } from './aprovacao-leads'
-import { emailDeVolta } from './campanhas'
+import { emailDeRepescagem, emailDeVolta } from './campanhas'
 
 const TIPOS: TipoDeEmail[] = ['confirmar', 'magico', 'senha', 'convite', 'trocar-email']
 const PASTA = join(process.cwd(), '..', 'previa-emails')
@@ -40,6 +40,7 @@ for (const marca of Object.values(MARCAS)) {
     ['aprovado', emailDeAprovacao(marca, exemplo, true)],
     ['aprovado-com-senha-propria', emailDeAprovacao(marca, exemplo, false)],
     ['volta', emailDeVolta(marca, exemplo)],
+    ['repescagem', emailDeRepescagem(marca, exemplo)],
   ] as const) {
     writeFileSync(join(PASTA, `${marca.id}-${nome}.html`), pronto.html)
     indice.push(`${marca.nome.padEnd(6)} ${nome.padEnd(14)} ${pronto.assunto}`)
