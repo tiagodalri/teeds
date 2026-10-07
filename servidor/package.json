@@ -9,7 +9,7 @@
   "scripts": {
     "descadastro": "npm run build --silent && node dist/teste-descadastro.mjs",
     "aprovacao": "esbuild src/teste-aprovacao-leads.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/teste-aprovacao-leads.mjs && node dist/teste-aprovacao-leads.mjs",
-    "build": "esbuild src/teste.ts src/servidor.ts src/teste-limites.ts src/previa-emails.ts src/teste-gancho.ts src/teste-email.ts src/teste-marcas.ts src/teste-motor.ts src/teste-espelho.ts src/teste-espelho-carga.ts src/teste-realtime.ts src/teste-extrato.ts src/teste-comissoes.ts src/teste-cracha.ts src/teste-parametros.ts src/teste-parametros-servidor.ts src/teste-simulacao.ts src/teste-atribuicao.ts src/teste-descadastro.ts src/campanha-envio.ts src/campanha-reenvio.ts src/campanha-lista.ts src/teste-deriv-instavel.ts src/teste-kiwify.ts src/teste-piso-da-entrada.ts src/teste-rolagem.ts src/teste-checkout.ts src/teste-escopo-de-marca.ts src/teste-real-vs-demo.ts src/teste-login-deriv.ts src/teste-celular.ts src/teste-login-cliente.ts src/recalculo.ts --bundle --platform=node --target=node22 --format=esm --outdir=dist --out-extension:.js=.mjs",
+    "build": "esbuild src/teste.ts src/servidor.ts src/teste-limites.ts src/previa-emails.ts src/teste-gancho.ts src/teste-email.ts src/teste-marcas.ts src/teste-motor.ts src/teste-espelho.ts src/teste-espelho-carga.ts src/teste-realtime.ts src/teste-extrato.ts src/teste-comissoes.ts src/teste-cracha.ts src/teste-parametros.ts src/teste-parametros-servidor.ts src/teste-simulacao.ts src/teste-atribuicao.ts src/teste-descadastro.ts src/campanha-envio.ts src/campanha-reenvio.ts src/campanha-lista.ts src/teste-deriv-instavel.ts src/teste-kiwify.ts src/teste-piso-da-entrada.ts src/teste-rolagem.ts src/teste-checkout.ts src/teste-escopo-de-marca.ts src/teste-real-vs-demo.ts src/teste-login-deriv.ts src/teste-celular.ts src/teste-login-cliente.ts src/teste-origem-cadastro.ts src/recalculo.ts --bundle --platform=node --target=node22 --format=esm --outdir=dist --out-extension:.js=.mjs",
     "teste": "node dist/teste.mjs",
     "servidor": "node dist/servidor.mjs",
     "travas": "npm run build --silent && node dist/teste-limites.mjs",
@@ -35,7 +35,8 @@
     "realdemo": "npm run build --silent && node dist/teste-real-vs-demo.mjs",
     "logindiv": "npm run build --silent && node dist/teste-login-deriv.mjs",
     "celular": "npm run build --silent && node dist/teste-celular.mjs",
-    "logincli": "npm run build --silent && node dist/teste-login-cliente.mjs"
+    "logincli": "npm run build --silent && node dist/teste-login-cliente.mjs",
+    "origem": "npm run build --silent && node dist/teste-origem-cadastro.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",

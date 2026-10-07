@@ -28,9 +28,9 @@ const CHAVE_VISITANTE = `${MARCA.id}.visitante`
 const CHAVE_ORIGEM = `${MARCA.id}.origem`
 const CHAVE_SESSAO = `${MARCA.id}.visita.sessao`
 
-interface Origem { origem: string; meio: string; campanha: string; referencia: string }
+export interface Origem { origem: string; meio: string; campanha: string; conteudo?: string; termo?: string; referencia: string }
 
-const vazio = (): Origem => ({ origem: '', meio: '', campanha: '', referencia: '' })
+const vazio = (): Origem => ({ origem: '', meio: '', campanha: '', conteudo: '', termo: '', referencia: '' })
 
 function ler<T>(dep: Storage, chave: string): T | null {
   try { const v = dep.getItem(chave); return v ? (JSON.parse(v) as T) : null } catch { return null }
@@ -40,7 +40,7 @@ function guardar(dep: Storage, chave: string, valor: unknown) {
 }
 
 /** O id deste navegador. Aleatório, local, sem relação com a pessoa. */
-function visitante(): string {
+export function visitante(): string {
   const guardado = ler<string>(localStorage, CHAVE_VISITANTE)
   if (guardado && guardado.length >= 8) return guardado
   const novo = (crypto.randomUUID?.() ?? `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`)
@@ -68,6 +68,8 @@ function daURL(): Origem | null {
     origem,
     meio: (q.get('utm_medium') ?? '').trim(),
     campanha: (q.get('utm_campaign') ?? '').trim(),
+    conteudo: (q.get('utm_content') ?? '').trim(),
+    termo: (q.get('utm_term') ?? '').trim(),
     referencia: dominioReferenciador(),
   }
 }
