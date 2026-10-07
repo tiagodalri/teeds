@@ -19,6 +19,118 @@ import { MARCA } from '../../marca'
 const KEY_VERIFIER = `${MARCA.id}.pkce.verifier`
 const KEY_STATE = `${MARCA.id}.pkce.state`
 const KEY_TOKEN = `${MARCA.id}.auth`
+/* O pedido de login em curso, em `localStorage`. Ver `guardarPedido`. */
+const KEY_PEDIDO = `${MARCA.id}.pkce`
+
+/*
+  O LOGIN NÃO PODE DEPENDER DA ABA (07/10/2026).
+
+  No celular o login na Deriv não voltava para a plataforma: a pessoa entrava
+  na corretora, ficava lá, e ao abrir a plataforma de novo era convidada a
+  entrar outra vez — em círculo.
+
+  A ida é um `location.assign` para `auth.deriv.com`, que redireciona para
+  `home.deriv.com/dashboard/login?flow=…`. E a Deriv guarda o endereço de
+  volta no `sessionStorage` DAQUELA ABA (medido em 07/10/2026):
+
+      kratos_oauth2_request_url_return_to  → a nossa URL de autorização
+      oauth2_login_challenge_carryover     → o desafio do login
+
+  `sessionStorage` é por aba. Se o login termina em outra aba — e no celular
+  isso é rotina: o app instalado abre a corretora no navegador do sistema, a
+  folha de navegação interna é outro contexto, o sistema descarta a aba de
+  fundo, um "entrar com o Google" desvia por mais um contexto — a Deriv não
+  tem para onde voltar e deixa a pessoa no painel dela. Isso é da Deriv e não
+  está na nossa mão.
+
+  O QUE ESTÁ: a nossa metade tinha o mesmo defeito. Verificador e `state`
+  moravam em `sessionStorage`, então mesmo quando a volta chegava certa, numa
+  aba nova, `completeLogin` morria em "Sessão de login perdida" — e o círculo
+  se fechava por nossa causa, não pela da Deriv.
+
+  Em `localStorage` o pedido atravessa qualquer aba do mesmo navegador e
+  sobrevive ao navegador ser fechado. Não enfraquece o PKCE: o verificador é
+  de uso único, vale 15 minutos, é apagado assim que serve, e o `redirect_uri`
+  continua preso à app registrada na Deriv.
+*/
+const VALIDADE_DO_PEDIDO = 15 * 60_000
+
+interface PedidoDeLogin {
+  verifier: string
+  state: string
+  criadoEm: number
+}
+
+function guardarPedido(p: PedidoDeLogin): void {
+  try {
+    localStorage.setItem(KEY_PEDIDO, JSON.stringify(p))
+  } catch {
+    /* Navegação privada pode recusar a escrita. O `sessionStorage` abaixo
+       ainda cobre o caso mais comum, que é voltar na mesma aba. */
+  }
+  try {
+    // Espelho na aba: um login começado aqui continua funcionando mesmo se o
+    // `localStorage` estiver bloqueado.
+    sessionStorage.setItem(KEY_VERIFIER, p.verifier)
+    sessionStorage.setItem(KEY_STATE, p.state)
+  } catch { /* sem os dois, `completeLogin` recusa com a mensagem certa */ }
+}
+
+/**
+ * O pedido que corresponde a ESTE retorno.
+ *
+ * O `state` é o que identifica o pedido, não a ordem de gravação: duas abas
+ * pedindo login deixam só a última no `localStorage`, e a volta da primeira
+ * encontraria o pedido da outra. Por isso procuramos pelo `state` que a Deriv
+ * devolveu, e o espelho da aba é a segunda chance.
+ */
+function lerPedido(state: string | null): PedidoDeLogin | null {
+  const candidatos: PedidoDeLogin[] = []
+  try {
+    const bruto = localStorage.getItem(KEY_PEDIDO)
+    if (bruto) {
+      const p = JSON.parse(bruto) as PedidoDeLogin
+      if (p?.verifier && p?.state && Date.now() - p.criadoEm < VALIDADE_DO_PEDIDO) candidatos.push(p)
+      // Vencido é pior que ausente: apaga para não tentar com ele de novo.
+      else localStorage.removeItem(KEY_PEDIDO)
+    }
+  } catch { /* ilegível: cai no espelho da aba */ }
+  try {
+    // Espelho da aba — e a ponte para quem começou o login no build anterior,
+    // que só escrevia aqui.
+    const verifier = sessionStorage.getItem(KEY_VERIFIER)
+    const daAba = sessionStorage.getItem(KEY_STATE)
+    if (verifier && daAba) candidatos.push({ verifier, state: daAba, criadoEm: Date.now() })
+  } catch { /* nem a aba: não há pedido */ }
+
+  return candidatos.find((p) => p.state === state) ?? null
+}
+
+function esquecerPedido(): void {
+  try { localStorage.removeItem(KEY_PEDIDO) } catch { /* nada a fazer */ }
+  try {
+    sessionStorage.removeItem(KEY_VERIFIER)
+    sessionStorage.removeItem(KEY_STATE)
+  } catch { /* idem */ }
+}
+
+/**
+ * Existe um login na Deriv começado e não concluído?
+ *
+ * A tela usa isto para dizer o que aconteceu em vez de oferecer "Conectar"
+ * outra vez, como se nada tivesse acontecido — era o que fazia a pessoa
+ * repetir o mesmo passo sem entender por quê.
+ */
+export function loginPendente(): boolean {
+  try {
+    const bruto = localStorage.getItem(KEY_PEDIDO)
+    if (!bruto) return false
+    const p = JSON.parse(bruto) as PedidoDeLogin
+    return !!p?.verifier && Date.now() - p.criadoEm < VALIDADE_DO_PEDIDO
+  } catch {
+    return false
+  }
+}
 
 export interface AuthSession {
   accessToken: string
@@ -58,8 +170,7 @@ async function challengeFor(verifier: string): Promise<string> {
 export async function startLogin(): Promise<void> {
   const verifier = randomString(64)
   const state = randomString(32)
-  sessionStorage.setItem(KEY_VERIFIER, verifier)
-  sessionStorage.setItem(KEY_STATE, state)
+  guardarPedido({ verifier, state, criadoEm: Date.now() })
 
   const params = new URLSearchParams({
     response_type: 'code',
@@ -89,12 +200,23 @@ export async function completeLogin(): Promise<AuthSession | null> {
   }
   if (!code) return null
 
-  const expected = sessionStorage.getItem(KEY_STATE)
-  const verifier = sessionStorage.getItem(KEY_VERIFIER)
+  const pedido = lerPedido(state)
   cleanUrl()
 
-  if (!expected || state !== expected) throw new Error('Autorizacao nao confere (state invalido)')
-  if (!verifier) throw new Error('Sessao de login perdida. Tente entrar novamente.')
+  /*
+    Sem pedido que case com este `state`, as duas leituras possíveis são
+    "perdemos o pedido" e "este retorno não é nosso", e não há como separá-las
+    daqui. A mensagem trata da primeira, que é a que acontece de verdade, e
+    diz o passo seguinte — o PKCE continua protegendo contra a segunda, porque
+    sem o verificador a troca pelo token não acontece.
+  */
+  if (!pedido) {
+    throw new Error(
+      'Sessão de login perdida no caminho de volta. Toque em Conectar para concluir — '
+      + 'a Deriv já reconhece você e não vai pedir a senha de novo.',
+    )
+  }
+  const verifier = pedido.verifier
 
   const res = await fetch(DERIV.oauth.token, {
     method: 'POST',
@@ -113,8 +235,7 @@ export async function completeLogin(): Promise<AuthSession | null> {
     throw new Error(data.error_description || data.error || `Falha ao concluir login (${res.status})`)
   }
 
-  sessionStorage.removeItem(KEY_VERIFIER)
-  sessionStorage.removeItem(KEY_STATE)
+  esquecerPedido()
 
   const session: AuthSession = {
     accessToken: data.access_token,
@@ -131,8 +252,21 @@ function cleanUrl() {
 
 // ---------------------------------------------------------------- sessao
 
+/**
+ * Guarda a autorização para a próxima visita.
+ *
+ * Se o armazenamento recusar a escrita — navegação privada, site com dados
+ * bloqueados — a sessão continua valendo nesta visita: ela é devolvida a quem
+ * chamou e vive na memória da tela. Deixar o erro subir aqui era pior do que
+ * não guardar: o token já tinha sido emitido pela Deriv, e o login terminava
+ * em tela de erro com a conta de fato autorizada.
+ */
 export function saveSession(s: AuthSession): void {
-  localStorage.setItem(KEY_TOKEN, JSON.stringify(s))
+  try {
+    localStorage.setItem(KEY_TOKEN, JSON.stringify(s))
+  } catch {
+    /* Esta visita funciona; a próxima vai pedir para conectar outra vez. */
+  }
 }
 
 export function loadSession(): AuthSession | null {
@@ -152,7 +286,6 @@ export function loadSession(): AuthSession | null {
 }
 
 export function logout(): void {
-  localStorage.removeItem(KEY_TOKEN)
-  sessionStorage.removeItem(KEY_VERIFIER)
-  sessionStorage.removeItem(KEY_STATE)
+  try { localStorage.removeItem(KEY_TOKEN) } catch { /* nada guardado, nada a apagar */ }
+  esquecerPedido()
 }

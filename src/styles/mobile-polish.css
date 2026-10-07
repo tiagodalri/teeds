@@ -249,4 +249,16 @@
   .ativo-seletor,
   .cine-navegar button,
   .aulas-navegar button { min-height: 44px; }
+
+  /*
+    Ligar a corretora é o passo que mais cliente erra no celular (07/10/2026).
+    Medido a 320/375/414px: no cartão compacto este botão tinha 35px de altura
+    — o mesmo botão que, quando o login não volta da Deriv, é o único caminho
+    de volta. Os 44px valem aqui mais do que em qualquer outro lugar.
+  */
+  .sem-deriv .btn-deriv,
+  .sem-deriv-acoes button,
+  .sem-deriv-acoes a,
+  .entrada-corretora .btn-deriv { min-height: 44px; }
+  .sem-deriv-acoes a { display: inline-flex; align-items: center; }
 }
