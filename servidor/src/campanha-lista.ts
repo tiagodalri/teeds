@@ -76,17 +76,20 @@ async function conferir(marca: string, pedidos: string[]): Promise<Pessoa[]> {
   const emLista = [...new Set(pedidos.map((e) => e.trim().toLowerCase()).filter(Boolean))]
   if (!emLista.length) throw new Error('Nenhum endereço na lista.')
 
+  // Em lotes de 100: uma lista de centenas de endereços numa só URL passa do
+  // tamanho que o servidor aceita, e a consulta morre em "fetch failed".
   const naBase = new Map<string, Pessoa>()
-  const lote = emLista.map((e) => `"${e}"`).join(',')
-  for (const p of await banco<Pessoa[]>(
-    `/rest/v1/clientes?select=user_id,nome,email&marca=eq.${marca}&email=in.(${encodeURIComponent(lote)})`)) {
-    naBase.set(p.email.trim().toLowerCase(), { ...p, email: p.email.trim().toLowerCase() })
-  }
-
-  const jaRecebeu = new Set(
-    (await banco<Array<{ email: string }>>(
+  const jaRecebeu = new Set<string>()
+  for (let i = 0; i < emLista.length; i += 100) {
+    const lote = emLista.slice(i, i + 100).map((e) => `"${e}"`).join(',')
+    for (const p of await banco<Pessoa[]>(
+      `/rest/v1/clientes?select=user_id,nome,email&marca=eq.${marca}&email=in.(${encodeURIComponent(lote)})`)) {
+      naBase.set(p.email.trim().toLowerCase(), { ...p, email: p.email.trim().toLowerCase() })
+    }
+    for (const l of await banco<Array<{ email: string }>>(
       `/rest/v1/envios_campanha?select=email&marca=eq.${marca}&campanha=eq.${CAMPANHA()}` +
-      `&email=in.(${encodeURIComponent(lote)})`)).map((l) => l.email.toLowerCase()))
+      `&email=in.(${encodeURIComponent(lote)})`)) jaRecebeu.add(l.email.toLowerCase())
+  }
 
   const escolhidos: Pessoa[] = []
   for (const email of emLista) {
