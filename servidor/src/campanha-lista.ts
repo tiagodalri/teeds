@@ -68,7 +68,7 @@ async function banco<T>(caminho: string, method = 'GET', body?: unknown): Promis
   return (r.status === 204 ? undefined : await r.json().catch(() => undefined)) as T
 }
 
-interface Pessoa { user_id: string; nome: string | null; email: string }
+interface Pessoa { user_id: string; nome: string | null; email: string; total_acessos?: number | null; criado_em?: string }
 
 /** Confere a lista pedida contra a base e diz, linha por linha, o que fica de fora. */
 async function conferir(marca: string, pedidos: string[]): Promise<Pessoa[]> {
@@ -80,15 +80,25 @@ async function conferir(marca: string, pedidos: string[]): Promise<Pessoa[]> {
   // tamanho que o servidor aceita, e a consulta morre em "fetch failed".
   const naBase = new Map<string, Pessoa>()
   const jaRecebeu = new Set<string>()
+  /*
+    Quem já se cadastrou na plataforma nunca recebe campanha de cadastro
+    (Tiago, 07/10/2026). Conferido NA HORA do envio, e não na hora em que a
+    lista foi montada: um disparo programado roda por um dia inteiro, e nesse
+    tempo gente da lista se cadastra pelos outros e-mails.
+  */
+  const jaCadastrou = new Set<string>()
   for (let i = 0; i < emLista.length; i += 100) {
     const lote = emLista.slice(i, i + 100).map((e) => `"${e}"`).join(',')
     for (const p of await banco<Pessoa[]>(
-      `/rest/v1/clientes?select=user_id,nome,email&marca=eq.${marca}&email=in.(${encodeURIComponent(lote)})`)) {
+      `/rest/v1/clientes?select=user_id,nome,email,total_acessos,criado_em&marca=eq.${marca}&email=in.(${encodeURIComponent(lote)})`)) {
       naBase.set(p.email.trim().toLowerCase(), { ...p, email: p.email.trim().toLowerCase() })
     }
     for (const l of await banco<Array<{ email: string }>>(
       `/rest/v1/envios_campanha?select=email&marca=eq.${marca}&campanha=eq.${CAMPANHA()}` +
       `&email=in.(${encodeURIComponent(lote)})`)) jaRecebeu.add(l.email.toLowerCase())
+    for (const l of await banco<Array<{ email_normalizado: string | null; email: string | null }>>(
+      `/rest/v1/leads_capturados?select=email,email_normalizado&marca=eq.${marca}` +
+      `&email_normalizado=in.(${encodeURIComponent(lote)})`)) jaCadastrou.add(String(l.email_normalizado ?? l.email ?? '').toLowerCase())
   }
 
   const escolhidos: Pessoa[] = []
@@ -97,6 +107,9 @@ async function conferir(marca: string, pedidos: string[]): Promise<Pessoa[]> {
     if (!p) { console.log(`   ✕ ${email}: não é cliente de ${marca}`); continue }
     if (fora.has(email)) { console.log(`   ✕ ${email}: pediu para sair`); continue }
     if (jaRecebeu.has(email)) { console.log(`   ✕ ${email}: já recebeu esta campanha`); continue }
+    if (jaCadastrou.has(email) || (p.total_acessos ?? 0) > 0 || (p.criado_em && p.criado_em > '2026-09-12')) {
+      console.log(`   ✕ ${email}: já se cadastrou na plataforma`); continue
+    }
     escolhidos.push(p)
   }
   return escolhidos
