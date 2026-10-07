@@ -308,6 +308,16 @@
   .fita-d { font-size: 11px; }
   .btn-dig { min-height: 44px; }
 
+  /* cabine ao vivo (medida no laboratório, com sessão de mentira) */
+  .tv-analise-legenda button { min-height: 44px; }
+  .tv-abas span, .tv-analise-rot { font-size: 11px; }
+
+  /* preparo e catálogo dos robôs */
+  .robot-launch .robot-launch-top .robot-launch-close { width: 44px; height: 44px; }
+  .robot-launch dd button { min-width: 44px; min-height: 44px; }
+  .robot-picker-list input { min-height: 44px; }
+  .robot-launch-number input { min-height: 44px; }
+
   /* assistente: acesso restrito */
   .beta-fechar { width: 44px; height: 44px; }
   .beta-selo { font-size: 11px; letter-spacing: .1em; }
