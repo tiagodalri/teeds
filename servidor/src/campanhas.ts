@@ -82,7 +82,7 @@ export function emailDeVolta(marca: Marca, paraOEmail: string): EmailPronto {
 export function emailDeRepescagem(marca: Marca, paraOEmail: string): EmailPronto {
   const destino = new URL('/', marca.redirectUri)
   destino.searchParams.set('utm_source', 'email')
-  destino.searchParams.set('utm_campaign', 'repescagem')
+  destino.searchParams.set('utm_campaign', 'cadastro')
   return montarEmail(marca, 'convite', destino.href, {
     assunto: `${marca.prosa} - Falta um minuto para o seu acesso`,
     titulo: `O seu acesso à nova ${marca.prosa} ainda está esperando por você.`,
