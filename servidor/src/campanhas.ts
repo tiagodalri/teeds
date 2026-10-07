@@ -84,9 +84,11 @@ export function emailDeRepescagem(marca: Marca, paraOEmail: string): EmailPronto
   destino.searchParams.set('utm_source', 'email')
   destino.searchParams.set('utm_campaign', 'cadastro')
   return montarEmail(marca, 'convite', destino.href, {
-    assunto: `${marca.prosa} - Falta um minuto para o seu acesso`,
+    // Assunto escolhido pelo Tiago (07/10/2026): nome de pessoa abre mais que
+    // nome de empresa, e para quem abriu ou clicou e não terminou é verdade.
+    assunto: `Tiago Dal Ri aqui, da ${marca.prosa}.`,
     titulo: `O seu acesso à nova ${marca.prosa} ainda está esperando por você.`,
-    espia: `O cadastro é gratuito e leva menos de um minuto. Quem já foi cliente precisa recadastrar para reativar o acesso.`,
+    espia: `Vi que você não terminou o cadastro. Te explico onde clicar, passo a passo.`,
     corpo:
       `A nova plataforma da ${marca.prosa} está no ar e os robôs já estão operando ` +
       `para quem entrou. Vimos que o seu cadastro ainda não chegou, e este e-mail ` +

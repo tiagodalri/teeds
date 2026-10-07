@@ -31,11 +31,25 @@
  * mandar campanha para quem não é da base não tem como ser desfeito.
  */
 import './ambiente'
+import { readFileSync } from 'node:fs'
 import { marcaPorId } from '../../src/marca/marcas'
-import { emailDeVolta } from './campanhas'
+import { emailDeRepescagem, emailDeVolta } from './campanhas'
 import { jaSairam, linkDeDescadastro } from './descadastro'
 
-const CAMPANHA = 'volta-2026-09'
+/*
+  Dois modelos, duas campanhas (07/10/2026). A repescagem vai para quem JÁ
+  recebeu o convite, então ela tem um nome de campanha próprio: a trava de
+  "já recebeu esta campanha" olha o nome, e com o mesmo nome ninguém da
+  repescagem passaria.
+*/
+const MODELOS = {
+  volta:      { campanha: 'volta-2026-09',      montar: emailDeVolta },
+  repescagem: { campanha: 'repescagem-2026-10', montar: emailDeRepescagem },
+} as const
+type Modelo = keyof typeof MODELOS
+let modelo: Modelo = 'volta'
+const CAMPANHA = () => MODELOS[modelo].campanha
+const montar = (m: Parameters<typeof emailDeVolta>[0], email: string) => MODELOS[modelo].montar(m, email)
 
 const base = () => (process.env.SUPABASE_URL ?? '').replace(/\/+$/, '')
 const segredo = () => process.env.SUPABASE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -71,7 +85,7 @@ async function conferir(marca: string, pedidos: string[]): Promise<Pessoa[]> {
 
   const jaRecebeu = new Set(
     (await banco<Array<{ email: string }>>(
-      `/rest/v1/envios_campanha?select=email&marca=eq.${marca}&campanha=eq.${CAMPANHA}` +
+      `/rest/v1/envios_campanha?select=email&marca=eq.${marca}&campanha=eq.${CAMPANHA()}` +
       `&email=in.(${encodeURIComponent(lote)})`)).map((l) => l.email.toLowerCase()))
 
   const escolhidos: Pessoa[] = []
@@ -92,19 +106,19 @@ async function enviar(marca: string, pedidos: string[], gravar: boolean) {
 
   const lista = await conferir(marca, pedidos)
   console.log(`[lista] ${lista.length} de ${pedidos.length} pedido(s) vão receber · ${gravar ? 'ENVIANDO' : 'ensaio, sem enviar'}`)
-  console.log(`[lista] campanha "${CAMPANHA}" · assunto: ${emailDeVolta(m, 'exemplo@exemplo.com').assunto}`)
+  console.log(`[lista] campanha "${CAMPANHA()}" · modelo ${modelo} · assunto: ${montar(m, 'exemplo@exemplo.com').assunto}`)
   for (const p of lista) console.log(`   ${(p.nome ?? '(sem nome)').slice(0, 28).padEnd(28)} ${p.email}`)
   if (!gravar) return { enviados: 0, falhas: 0, total: lista.length }
 
   let enviados = 0, falhas = 0
   for (const p of lista) {
-    const pronto = emailDeVolta(m, p.email)
+    const pronto = montar(m, p.email)
     try {
       const r = await fetch('https://api.resend.com/emails', {
         method: 'POST', signal: AbortSignal.timeout(20_000),
         headers: {
           Authorization: `Bearer ${process.env.RESEND_CHAVE}`, 'Content-Type': 'application/json',
-          'Idempotency-Key': `campanha:${CAMPANHA}:${p.email}`,
+          'Idempotency-Key': `campanha:${CAMPANHA()}:${p.email}`,
         },
         body: JSON.stringify({
           from: m.email.remetente, to: [p.email],
@@ -118,22 +132,36 @@ async function enviar(marca: string, pedidos: string[], gravar: boolean) {
       const corpo = await r.json().catch(() => ({})) as { id?: string; message?: string }
       if (!r.ok) throw new Error(corpo.message ?? `recusado (${r.status})`)
       await banco('/rest/v1/envios_campanha', 'POST',
-        { marca, campanha: CAMPANHA, email: p.email, user_id: p.user_id, id_envio: corpo.id ?? null })
+        { marca, campanha: CAMPANHA(), email: p.email, user_id: p.user_id, id_envio: corpo.id ?? null })
       enviados += 1
     } catch (e) {
       falhas += 1
       const erro = (e as Error).message.slice(0, 200)
       console.error(`   ✕ ${p.email}: ${erro}`)
       await banco('/rest/v1/envios_campanha', 'POST',
-        { marca, campanha: CAMPANHA, email: p.email, user_id: p.user_id, erro }).catch(() => {})
+        { marca, campanha: CAMPANHA(), email: p.email, user_id: p.user_id, erro }).catch(() => {})
     }
     await pausa(125)   // o limite da conta é 10/s; 8 deixa folga para o resto
   }
   return { enviados, falhas, total: lista.length }
 }
 
-const [marca = 'teeds', modo, ...resto] = process.argv.slice(2)
-const pedidos = resto.join(',').split(/[,\s]+/).filter(Boolean)
+/*
+  Uso:
+    node dist/campanha-lista.mjs teeds ensaio  a@b.com,c@d.com
+    node dist/campanha-lista.mjs teeds enviar  @/tmp/lista.txt --modelo=repescagem
+
+  `@arquivo` lê um endereço por linha: 455 endereços não cabem bem numa linha
+  de comando. `--modelo=` escolhe o e-mail e, com ele, o nome da campanha.
+*/
+const argumentos = process.argv.slice(2)
+const opcaoModelo = argumentos.find((a) => a.startsWith('--modelo='))?.slice('--modelo='.length)
+if (opcaoModelo !== undefined) {
+  if (!(opcaoModelo in MODELOS)) { console.error(`[lista] modelo desconhecido: ${opcaoModelo}. Use: ${Object.keys(MODELOS).join(', ')}`); process.exit(1) }
+  modelo = opcaoModelo as Modelo
+}
+const [marca = 'teeds', modo, ...resto] = argumentos.filter((a) => !a.startsWith('--'))
+const pedidos = resto.flatMap((r) => r.startsWith('@') ? readFileSync(r.slice(1), 'utf8').split(/\r?\n/) : r.split(/[,\s]+/)).filter(Boolean)
 enviar(marca, pedidos, modo === 'enviar')
   .then((r) => console.log(`\n[lista] enviados ${r.enviados} · falhas ${r.falhas} · de ${r.total}`))
   .catch((e) => { console.error('[lista] parou:', (e as Error).message); process.exitCode = 1 })
