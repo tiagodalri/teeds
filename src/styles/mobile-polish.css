@@ -262,3 +262,59 @@
   .entrada-corretora .btn-deriv { min-height: 44px; }
   .sem-deriv-acoes a { display: inline-flex; align-items: center; }
 }
+
+/*
+  ONDA 2 (07/10/2026) — medido tela a tela no navegador, a 375×812, com a
+  sessão de cliente teeds@gmail.com (só demo). O auditor percorre o DOM e
+  acusa alvo de toque abaixo de 44px, texto abaixo de 11px, texto cortado e
+  elemento saindo da tela. O que foi encontrado, e onde:
+
+    cabeçalho (todas as telas)   Conectar 38px · tema 32px · avatar 38px
+    terminal manual              timeframes 40px · indicadores 29px e 10px ·
+                                 ferramentas do gráfico 32px · Subir/Descer 33px ·
+                                 valores rápidos 29px · ticks/seg/min 22px e 10,5px ·
+                                 "Indicadores" 9px
+    terminal · modo Dígitos      tipos 33px · teclado 0–9 e ticks 31×32px ·
+                                 fita de dígitos 10,5px
+    assistente (acesso restrito) fechar 34px · selo 8px · rótulo 9px · nota 8px
+    minha conta                  fechar 23×15px · botões 40px
+
+  Menu lateral, Robôs (sem Deriv), Gerenciamento, Marketplace, Aulas e o menu
+  do avatar passaram limpos — a onda 1 já tinha cuidado deles.
+
+  Tudo aqui dentro de max-width: o desktop não muda um pixel.
+*/
+@media (max-width: 760px) {
+  /* cabeçalho: os três controles que estão em TODAS as telas */
+  .topbar .btn-deriv { height: 44px; }
+  .topbar .tema-btn { width: 44px; height: 44px; }
+  .topbar .avatar-botao { height: 44px; }
+
+  /* terminal manual */
+  .layout-operar .controls .segmented button { min-height: 44px; min-width: 44px; }
+  .indicadores > span { font-size: 11px; }
+  .indicadores button { min-height: 44px; font-size: 12px; padding-inline: 12px; }
+  .chart-ferramentas button { width: 44px; height: 44px; }
+  .modo-troca button { min-height: 44px; }
+  .trade .input-wrap input { min-height: 44px; }
+  .trade-atalhos button { min-height: 44px; }
+  .pos-flutuante-topo { min-height: 44px; }
+  .segmented.mini button { min-height: 44px; min-width: 44px; font-size: 12px; }
+
+  /* modo Dígitos: o teclado em duas fileiras de cinco, para caber 44px */
+  .dig-tipos button { min-height: 44px; }
+  .dig-escolha, .dig-ticks { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .dig-escolha button, .dig-ticks button { min-height: 44px; }
+  .fita-d { font-size: 11px; }
+  .btn-dig { min-height: 44px; }
+
+  /* assistente: acesso restrito */
+  .beta-fechar { width: 44px; height: 44px; }
+  .beta-selo { font-size: 11px; letter-spacing: .1em; }
+  .beta-modal label { font-size: 11px; }
+  .beta-nota { font-size: 11px; }
+
+  /* minha conta */
+  .qz-fechar { min-width: 44px; min-height: 44px; display: inline-grid; place-items: center; padding: 0; }
+  .perfil-btn { min-height: 44px; }
+}
