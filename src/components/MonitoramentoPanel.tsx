@@ -16,6 +16,7 @@ import { ESTRATEGIAS_LOCAIS, modoDaConfig, NOME_DO_MODO, temModos } from '../cor
 import { identidade } from '../core/deriv/branding'
 import { useMarcaEmFoco, REDE } from '../core/teeds/marcaEmFoco'
 import { SeletorDePlataforma, opcoesDePlataforma } from './SeletorDePlataforma'
+import { ChaveModoCeo } from './ChaveModoCeo'
 import { MARCA } from '../marca'
 import { MARCAS } from '../marca/marcas'
 
@@ -154,7 +155,8 @@ export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMa
 
 /* ===================================================== cabine espelho */
 
-function CabineEspelho({ s, estado, cliente, modo, saude, idade, rtt, desvio, eventos, aoFechar, passo, integridade }: {
+function CabineEspelho({ s, estado, cliente, modo, saude, idade, rtt, desvio, eventos, aoFechar, passo, integridade, mostrarMarkup = false }: {
+  mostrarMarkup?: boolean
   s: SessaoEspelho; estado: EstadoEspelho; cliente?: ClienteRegistro; modo: 'ao-vivo' | 'replay'; saude: Saude; idade: number | null; rtt: number | null; desvio: number | null
   eventos: EventoEspelho[]; aoFechar: () => void; passo?: { indice: number; total: number; horaOriginal: number; lacuna: number }; integridade?: Integridade
 }) {
@@ -210,6 +212,7 @@ function CabineEspelho({ s, estado, cliente, modo, saude, idade, rtt, desvio, ev
           parametros={parametros}
           conexao={estado.conexao}
           expandido
+          mostrarMarkup={mostrarMarkup}
         />
       </div>
 
@@ -248,7 +251,7 @@ const VELOCIDADES = [0.25, 0.5, 1, 2, 4]
 /** Um intervalo maior que isto entre eventos é inatividade: o replay salta e avisa. */
 const INATIVIDADE_MS = 8000
 
-function Replay({ sessao, encerrada, clientes, marca, aoFechar, aoErro }: { sessao: SessaoTeeds; encerrada: SessaoEncerrada; clientes: Map<string, ClienteRegistro>; marca: string; aoFechar: () => void; aoErro: (e: unknown) => void }) {
+function Replay({ sessao, encerrada, clientes, marca, aoFechar, aoErro, mostrarMarkup = false }: { sessao: SessaoTeeds; encerrada: SessaoEncerrada; clientes: Map<string, ClienteRegistro>; marca: string; aoFechar: () => void; aoErro: (e: unknown) => void; mostrarMarkup?: boolean }) {
   const [passos, setPassos] = useState<PassoReplay[]>([])
   const [eventos, setEventos] = useState<EventoEspelho[]>([])
   const [cabecalho, setCabecalho] = useState<SessaoEspelho | null>(null)
@@ -341,7 +344,7 @@ function Replay({ sessao, encerrada, clientes, marca, aoFechar, aoErro }: { sess
       {cabecalho && passo && (
         <CabineEspelho s={cabecalho} estado={passo.estado} cliente={clientes.get(encerrada.userId)} modo="replay" saude="encerrada" idade={null} rtt={null} desvio={null}
           eventos={passos.slice(0, indice + 1).map((p) => p.evento)} aoFechar={aoFechar} integridade={integridade}
-          passo={{ indice, total: passos.length, horaOriginal: passo.evento.emitidoEm, lacuna: passo.lacuna }} />
+          passo={{ indice, total: passos.length, horaOriginal: passo.evento.emitidoEm, lacuna: passo.lacuna }} mostrarMarkup={mostrarMarkup} />
       )}
       {passos.length > 0 && (
         <div className="mon-replay-controles" role="group" aria-label="Controles do replay">
@@ -374,7 +377,7 @@ function Replay({ sessao, encerrada, clientes, marca, aoFechar, aoErro }: { sess
 
 /* ============================================================ painel */
 
-export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: SessaoTeeds; mostrarMarkup?: boolean }) {
+export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMarkup }: { sessao: SessaoTeeds; mostrarMarkup?: boolean; onMostrarMarkup?: (ligado: boolean) => void }) {
   /* A plataforma vem do foco compartilhado: trocar aqui troca na Administração
      e nos Insights, e vice-versa. Antes esta tela era presa à marca do site. */
   const [marcaFoco, trocarMarca] = useMarcaEmFoco()
@@ -634,6 +637,9 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
         </div>
       </header>
 
+      {onMostrarMarkup && <ChaveModoCeo ligado={mostrarMarkup} onTrocar={onMostrarMarkup}
+        texto="Markup de cada operação na cabine, ao vivo e no replay, com a soma da sessão, e a coluna de markup nas sessões encerradas. Só no seu acesso." />}
+
       {erro && tela !== 'sem-permissao' && <div className={`mon-aviso ${tela === 'erro' ? 'erro' : ''}`} role="alert"><span>{erro}</span><button className="mon-fechar" onClick={() => setErro(null)} aria-label="Fechar aviso"><IconeFechar /></button></div>}
       {canalRuim && tela === 'pronto' && <div className="mon-aviso" role="status">{canal === 'token-expirado' ? 'A sessão do administrador expirou: o canal ao vivo foi fechado. Entre de novo para continuar.' : 'Reconectando ao canal ao vivo… Os dados na tela podem estar desatualizados; a idade de cada atualização aparece nos cartões.'}</div>}
 
@@ -676,7 +682,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
       {tela === 'pronto' && aba === 'ao-vivo' && emFoco && focoAutorizado === 'nao' && <div className="mon-estado erro" role="alert"><b>Cabine não aberta</b>Não foi possível registrar a auditoria deste acesso. Sem registro, a cabine não é exibida.<button onClick={() => setFoco(null)}>Voltar ao mosaico</button></div>}
       {tela === 'pronto' && aba === 'ao-vivo' && emFoco && focoAutorizado === 'sim' && (
         <CabineEspelho s={emFoco} estado={emFoco.estado} cliente={clientes.get(emFoco.userId)} modo="ao-vivo"
-          saude={saudeDoSinal(emFoco, agora)} idade={idadeDaAtualizacao(emFoco, agora)} rtt={rttMs} desvio={desvioS} eventos={eventos.get(emFoco.sessaoId) ?? []} aoFechar={fecharFoco} />
+          saude={saudeDoSinal(emFoco, agora)} idade={idadeDaAtualizacao(emFoco, agora)} rtt={rttMs} desvio={desvioS} eventos={eventos.get(emFoco.sessaoId) ?? []} aoFechar={fecharFoco} mostrarMarkup={mostrarMarkup} />
       )}
 
       {tela === 'pronto' && aba === 'replay' && !replayDe && (
@@ -717,7 +723,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false }: { sessao: 
           )}
         </section>
       )}
-      {tela === 'pronto' && aba === 'replay' && replayDe && <Replay key={`${marca}-${replayDe.id}`} sessao={sessao} encerrada={replayDe} clientes={clientes} marca={replayDe.marca || marcaDoRegistro} aoFechar={() => setReplayDe(null)} aoErro={falhar} />}
+      {tela === 'pronto' && aba === 'replay' && replayDe && <Replay key={`${marca}-${replayDe.id}`} sessao={sessao} encerrada={replayDe} clientes={clientes} marca={replayDe.marca || marcaDoRegistro} aoFechar={() => setReplayDe(null)} aoErro={falhar} mostrarMarkup={mostrarMarkup} />}
 
       {tela === 'pronto' && aba === 'auditoria' && (
         <section className="admin-card full">

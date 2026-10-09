@@ -93,5 +93,23 @@ const css = leia('src/styles/app.css')
 conferir('e a tarja escreve "demo" por CSS',
   /\.rc-demo-val::before\{content:'demo '/.test(css), true)
 
+/* ------------------- Modo CEO no Monitoramento e nos Insights (09/10/2026) */
+
+const insights = leia('src/components/InsightsPanel.tsx')
+const monitor = leia('src/components/MonitoramentoPanel.tsx')
+const app = leia('src/App.tsx')
+// A receita dos Insights soma só conta real, como o resto da plataforma.
+conferir('a receita dos Insights conta só conta real', /\.filter\(\(l\) => !l\.demo\)/.test(insights), true)
+conferir('e nenhuma soma da receita usa a lista com demo',
+  /\(receita \?\? \[\]\)\.reduce/.test(insights), false)
+// Numa tela de dinheiro, erro que vira lista vazia aparece como US$ 0,00.
+const ler = clientes.slice(clientes.indexOf('export async function lerComissaoDosRobos'))
+conferir('a leitura da receita acusa o erro em vez de devolver zero',
+  /catch \{ return \[\] \}/.test(ler.slice(0, ler.indexOf('\n}\n'))), false)
+conferir('o Monitoramento leva o Modo CEO até a cabine (ao vivo e replay)',
+  (monitor.match(/mostrarMarkup=\{mostrarMarkup\}/g) ?? []).length >= 3, true)
+conferir('as duas telas recebem a chave do Modo CEO',
+  /<MonitoramentoPanel[^>]*onMostrarMarkup=\{alterarColuna\}/.test(app) && /<InsightsPanel[^>]*onMostrarMarkup=\{alterarColuna\}/.test(app), true)
+
 console.log(`\n${passou} certos, ${falhou} errados`)
 process.exit(falhou ? 1 : 0)

@@ -678,9 +678,9 @@ export default function App() {
       ) : tela === 'gerenciamento' ? (
         <CatalogoProvider sessao={teeds.sessao}><OperationalManagementPanel /></CatalogoProvider>
       ) : tela === 'monitoramento' && admin === true ? (
-          teeds.sessao ? <MonitoramentoBoundary><Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel key={marcaEmFoco} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} /></Suspense></MonitoramentoBoundary> : null
+          teeds.sessao ? <MonitoramentoBoundary><Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel key={marcaEmFoco} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} /></Suspense></MonitoramentoBoundary> : null
       ) : tela === 'insights' && admin === true ? (
-        teeds.sessao ? <InsightsPanel key={marcaEmFoco} sessao={teeds.sessao} /> : null
+        teeds.sessao ? <InsightsPanel key={marcaEmFoco} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} /> : null
       ) : tela === 'gestao' && admin === true ? (
         teeds.sessao && adminConfirmado ? <AdminPanel sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} comissoes={<ManagementPanel
           session={conta.session} sessaoTeeds={teeds.sessao} contaId={conta.accountId}

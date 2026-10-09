@@ -843,7 +843,16 @@ export async function operacoesDoCliente(
  * `listarComissoes`.
  */
 export async function comissaoDosRobos(sessao: SessaoTeeds, dias = 30): Promise<ComissaoDia[]> {
-  try {
+  try { return await lerComissaoDosRobos(sessao, dias) } catch { return [] }
+}
+
+/**
+ * O mesmo, mas que ACUSA o erro. Para a receita dos Insights: numa tela de
+ * dinheiro, um erro que vira lista vazia aparece como "US$ 0,00" e parece
+ * verdade. Quem chama esta decide o que mostrar quando falha.
+ */
+export async function lerComissaoDosRobos(sessao: SessaoTeeds, dias = 30): Promise<ComissaoDia[]> {
+  {
     const linhas = await rest<any[]>('/rpc/teeds_comissao_viva', sessao.token, {
       method: 'POST', body: JSON.stringify({ p_dias: dias, p_marca: marcaAdmin() }),
     })
@@ -855,7 +864,7 @@ export async function comissaoDosRobos(sessao: SessaoTeeds, dias = 30): Promise<
       moeda: l.moeda, demo: Boolean(l.demo),
       atualizadoEm: l.atualizado_em ?? null,
     }))
-  } catch { return [] }
+  }
 }
 
 export interface DiaConferencia {

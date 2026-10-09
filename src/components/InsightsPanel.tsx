@@ -8,7 +8,8 @@ import {
   type OrigemVisita, type ResumoInsights, type ResumoVisitas, type VisitaDia,
 } from '../core/teeds/insights'
 import { useMarcaEmFoco, REDE } from '../core/teeds/marcaEmFoco'
-import { ehMaster } from '../core/teeds/clientes'
+import { ehMaster, lerComissaoDosRobos, type ComissaoDia } from '../core/teeds/clientes'
+import { ChaveModoCeo } from './ChaveModoCeo'
 import { SeletorDePlataforma, opcoesDePlataforma } from './SeletorDePlataforma'
 import { MARCAS } from '../marca/marcas'
 import { MARCA } from '../marca'
@@ -30,7 +31,7 @@ const diaCurto = (iso: string) => { const d = new Date(`${iso}T12:00:00`); retur
 const semana = (iso: string) => ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][new Date(`${iso}T12:00:00`).getDay()]
 const quando = (iso: string | null) => iso ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'
 
-export function InsightsPanel({ sessao }: { sessao: SessaoTeeds }) {
+export function InsightsPanel({ sessao, mostrarMarkup = false, onMostrarMarkup }: { sessao: SessaoTeeds; mostrarMarkup?: boolean; onMostrarMarkup?: (ligado: boolean) => void }) {
   /* Os números JÁ seguiam o seletor da Administração — `insights.ts` usa
      `marcaAdmin()` —, só que sem nada na tela dizendo isso, e com o cabeçalho
      escrito na marca do site. Trazer o seletor para cá não muda o dado: torna
@@ -53,8 +54,45 @@ export function InsightsPanel({ sessao }: { sessao: SessaoTeeds }) {
   const [lidoEm, setLidoEm] = useState<Date | null>(null)
   const catalogo = useMemo(() => todasAsAulas(), [])
 
+  /*
+    RECEITA DO PERÍODO, SÓ NO MODO CEO (09/10/2026). Os Insights falavam de
+    gente (quem entra, de onde, quanto tempo) e nada de dinheiro. Com o modo
+    ligado, aparece o markup dos robôs no mesmo período e na mesma plataforma
+    do resto da tela. Só conta REAL: demonstração não gera markup e nunca
+    entra na soma (a regra de real vs demo, 06/10/2026). Erro aparece como
+    erro, nunca como "US$ 0,00".
+  */
+  const [receita, setReceita] = useState<ComissaoDia[] | null>(null)
+  const [erroReceita, setErroReceita] = useState<string | null>(null)
+  const [versaoReceita, setVersaoReceita] = useState(0)
+  useEffect(() => {
+    if (!mostrarMarkup) return
+    let vivo = true
+    setReceita(null); setErroReceita(null)
+    // Uma segunda tentativa: a primeira leitura às vezes cai bem na hora em
+    // que o crachá está sendo renovado (visto em 09/10/2026), e uma falha
+    // passageira não pode virar aviso de erro na tela.
+    const ler = () => lerComissaoDosRobos(sessao, periodo)
+    ler().catch(() => new Promise<ComissaoDia[]>((ok, falha) => setTimeout(() => ler().then(ok, falha), 1500)))
+      .then((l) => { if (vivo) setReceita(l) })
+      .catch(() => { if (vivo) setErroReceita('Não consegui ler a receita agora. Tente "Atualizar".') })
+    return () => { vivo = false }
+  }, [mostrarMarkup, periodo, marcaFoco, sessao.token, versaoReceita])
+  const real = useMemo(() => (receita ?? []).filter((l) => !l.demo), [receita])
+  const receitaTotal = real.reduce((t, l) => t + l.comissao, 0)
+  const operacoesReais = real.reduce((t, l) => t + l.operacoes, 0)
+  const clientesComReceita = new Set(real.filter((l) => l.comissao > 0).map((l) => l.userId)).size
+  const receitaPorDia = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const l of real) m.set(l.dia, (m.get(l.dia) ?? 0) + l.comissao)
+    return [...m.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([dia, valor]) => ({ dia, valor }))
+  }, [real])
+  const maxReceitaDia = Math.max(0.01, ...receitaPorDia.map((d) => d.valor))
+  const dolar = (n: number) => `US$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
   const carregar = async () => {
     setCarregando(true); setErro(null)
+    setVersaoReceita((v) => v + 1)
     try {
       const [r, d, h, a, l, di, al, v, vd, og] = await Promise.all([
         lerResumo(sessao, periodo), lerAcessosPorDia(sessao, periodo), lerAcessosPorHora(sessao, periodo),
@@ -103,6 +141,35 @@ export function InsightsPanel({ sessao }: { sessao: SessaoTeeds }) {
       </header>
 
       {erro && <div className="ger-erro">{erro}<button onClick={() => setErro(null)}><IconeFechar /></button></div>}
+
+      {onMostrarMarkup && <ChaveModoCeo ligado={mostrarMarkup} onTrocar={onMostrarMarkup}
+        texto="A receita do período: markup real dos robôs, dia a dia, na plataforma e no período desta tela. Só no seu acesso." />}
+
+      {mostrarMarkup && (
+        <section className="admin-card ins-card ins-receita">
+          <header><div><span className="rot">Modo CEO · receita</span><h3>Markup real dos robôs</h3></div><small>{periodo} dias</small></header>
+          {erroReceita ? <p className="ins-nota">{erroReceita}</p> : !receita ? <p className="ins-nota">Lendo a receita…</p> : (
+            <>
+              <div className="adm-kpis ins-kpis">
+                <article className="ok"><span>Markup real</span><strong>{dolar(receitaTotal)}</strong><small>{periodo} dias</small></article>
+                <article><span>Operações reais</span><strong>{inteiro(operacoesReais)}</strong><small>{operacoesReais ? `${dolar(receitaTotal / operacoesReais)} por operação` : 'nenhuma no período'}</small></article>
+                <article><span>Clientes que geraram markup</span><strong>{inteiro(clientesComReceita)}</strong><small>{clientesComReceita ? `${dolar(receitaTotal / clientesComReceita)} por cliente` : 'em conta real'}</small></article>
+              </div>
+              {receitaPorDia.length > 0 && (
+                <div className="ins-barras" style={{ ['--n' as string]: receitaPorDia.length }}>
+                  {receitaPorDia.map((d) => (
+                    <div key={d.dia} className="ins-barra" title={`${diaCurto(d.dia)} (${semana(d.dia)}): ${dolar(d.valor)}`}>
+                      <i style={{ height: `${(d.valor / maxReceitaDia) * 100}%` }} />
+                      {(receitaPorDia.length <= 14 || new Date(`${d.dia}T12:00:00`).getDay() === 1) && <span>{diaCurto(d.dia)}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="ins-nota">Markup informado pela Deriv em cada operação, ou 3% do pagamento quando ela não informa. Conta só os robôs, em conta real: demonstração não gera markup e fica fora desta soma.</p>
+            </>
+          )}
+        </section>
+      )}
 
       <div className="adm-kpis ins-kpis">
         <article className="ok"><span>Visitas ao site</span><strong>{visitas ? inteiro(visitas.visitas) : '—'}</strong><small>{visitas ? `${inteiro(visitas.visitantes)} pessoa${visitas.visitantes === 1 ? '' : 's'} diferente${visitas.visitantes === 1 ? '' : 's'}` : ''}</small></article>
