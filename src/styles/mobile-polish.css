@@ -328,3 +328,182 @@
   .qz-fechar { min-width: 44px; min-height: 44px; display: inline-grid; place-items: center; padding: 0; }
   .perfil-btn { min-height: 44px; }
 }
+
+/*
+  ONDA 4 · ADMINISTRAÇÃO NO CELULAR (09/10/2026). Medida a 375×812 com o app
+  rodando dentro de um quadro de largura real, em todas as 14 abas da
+  Administração, no Monitoramento e nos Insights.
+
+  O PRIMEIRO PROBLEMA era de outra ordem: a Administração inteira rolava de
+  lado, 2.338px numa tela de 375. Isso foi corrigido na origem, em app.css
+  (a coluna `1fr` virou `minmax(0, 1fr)`). O que está aqui é o resto:
+
+  - ALVOS DE TOQUE. A barra de abas tinha 42px; o seletor de plataforma, 28;
+    as chaves de período, 29 a 31; o "Ver todos", 19. Dentro das telas de
+    admin, todo botão, campo e seletor passa a pedir 44px.
+  - PISO DE TEXTO. A Administração foi desenhada para o computador e nunca
+    teve piso: rótulos de 8,5 a 10,5px. Os 93 seletores abaixo foram
+    EXTRAÍDOS do próprio CSS (toda regra de tela de admin com fonte abaixo de
+    11px, usando só classes que não aparecem em nenhuma tela de cliente), não
+    escolhidos a dedo.
+
+  Tudo dentro de max-width: o desktop não muda.
+*/
+@media (max-width: 760px) {
+  :is(.admin-shell, .ger.monitoramento, .ger.insights) :is(button, select, input:not([type=checkbox]):not([type=radio]):not([type=range])) { min-height: 44px; }
+  :is(.admin-shell, .ger.monitoramento, .ger.insights) :is(input[type=checkbox], input[type=radio]) { width: 20px; height: 20px; }
+  .admin-card > header > button { display: inline-flex; align-items: center; }
+  .sel-plat-opcoes { height: auto; }
+  .admin-sidebar nav { scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+  .admin-sidebar nav button { scroll-snap-align: start; }
+
+  /* A barra de abas fica presa logo abaixo do cabeçalho enquanto a tela rola:
+     trocar de aba não exige voltar lá em cima. */
+  .admin-sidebar { position: sticky; top: var(--topo-h, 56px); z-index: 20; padding: 8px 12px; background: var(--bg); }
+  .admin-sidebar nav { padding-bottom: 2px; scrollbar-width: none; }
+  .admin-sidebar nav::-webkit-scrollbar { display: none; }
+
+  /* Cabeçalho enxuto: no celular a primeira tela inteira era título, seletor,
+     "Atualizar" e o cartão do Modo CEO, e o conteúdo da aba vinha depois. */
+  .admin-top { gap: 12px; }
+  .admin-top h1 { font-size: 22px; }
+  .admin-top p { font-size: 12.5px; }
+  .admin-top-acoes { display: flex; align-items: stretch; gap: 8px; }
+  .admin-top-acoes > :first-child { flex: 1; min-width: 0; }
+  .admin-top-acoes .admin-refresh { flex: none; align-self: stretch; }
+  .admin-top-acoes .sel-plat-rot { display: none; }
+  .admin-top-acoes .sel-plat-opcoes button { padding-inline: 10px; }
+  .modo-ceo-quem { min-width: 0; }
+  .modo-ceo-quem b { white-space: nowrap; }
+  /* A chave Normal/CEO já mostra o estado; o selo repetia e ficava por baixo dela. */
+  .modo-ceo-quem b em { display: none; }
+
+  /* AS TABELAS VIRAM CARTÕES. Seis tabelas da Administração tinham de 680 a
+     980px de largura mínima numa tela de 339: cada linha exigia arrastar para
+     o lado. Aqui cada linha vira um cartão, com a primeira coluna (cliente,
+     dia, robô) em destaque e as outras em duas colunas, cada uma com o nome
+     da coluna escrito em cima (o `data-rotulo` vem de core/rotulosDeTabela.ts).
+     O `.admin-main` na frente é só para vencer as regras de variante
+     (`.rc-tabela.acessos > div`), que são mais específicas. */
+  .admin-main :is(.rc-tabela, .leads-tabela, .admin-robo-table) { overflow: visible; }
+  .admin-main :is(.rc-tabela, .leads-tabela, .admin-robo-table) > .cab { display: none; }
+  .admin-main :is(.rc-tabela, .leads-tabela, .admin-robo-table) > :not(.cab) {
+    min-width: 0; grid-template-columns: 1fr 1fr; gap: 12px 16px; padding: 14px 14px 16px; font-size: 13px;
+  }
+  .admin-main :is(.rc-tabela, .leads-tabela, .admin-robo-table) > :not(.cab) > :first-child { grid-column: 1 / -1; font-size: 14px; }
+  .admin-main :is(.rc-tabela, .leads-tabela, .admin-robo-table) > :not(.cab) > [data-rotulo]:not(:first-child)::before {
+    content: attr(data-rotulo); display: block; margin-bottom: 2px;
+    color: var(--muted); font-size: 11px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase;
+  }
+  .leads-kpis { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .leads-kpis article { padding: 14px; }
+  .leads-kpis b { font-size: 24px; }
+  .modo-ceo { flex-wrap: nowrap; gap: 12px; padding: 10px 12px; margin-bottom: 14px; }
+  .modo-ceo-quem { align-items: center; gap: 10px; }
+  .modo-ceo-quem > i { width: 32px; height: 32px; }
+  .modo-ceo-quem small { display: none; }
+  .modo-ceo-chave { width: auto; }
+  .modo-ceo-chave button { flex: none; padding: 0 14px; }
+  /* Os rótulos de seção (.rot) são compartilhados com telas de cliente; aqui
+     só dentro das telas de admin. E os tamanhos relativos (em) que o extrator
+     de px não alcança, medidos um a um. */
+  :is(.admin-shell, .ger.monitoramento, .ger.insights) .rot,
+  .rc-coletas small,
+  .ce-periodo-datas,
+  :is(.admin-shell, .ger.monitoramento, .ger.insights) p > small { font-size: 11px; }
+
+  .ac-campo > label,
+  .ac-campo > span.rot,
+  .ac-cartoes article > span,
+  .ac-chips span,
+  .ac-escadinha > div.cab,
+  .ac-estado,
+  .ac-faixa > span small,
+  .ac-grafico-eixo,
+  .ac-grafico-stop small,
+  .ac-kpi > span,
+  .adm-acesso small,
+  .adm-contas p,
+  .adm-contas small,
+  .adm-detail-kpis span,
+  .adm-extras b,
+  .adm-extras small,
+  .adm-form label,
+  .adm-kpis article small,
+  .adm-kpis article span,
+  .adm-linha.cab,
+  .adm-modal>footer,
+  .adm-notas,
+  .adm-pessoa small,
+  .adm-so-demo small,
+  .adm-status,
+  .admin-card>header>small,
+  .admin-data-grid small,
+  .admin-editor-form label,
+  .admin-form-grid label,
+  .admin-kpis-click button small,
+  .admin-kpis-click button span,
+  .admin-last,
+  .admin-last b,
+  .admin-quick small,
+  .admin-ranking button>i,
+  .admin-ranking small,
+  .admin-robo-table small,
+  .admin-robo-table>div.cab,
+  .admin-robot-metrics>header>small,
+  .admin-sidebar nav b,
+  .admin-sidebar>small,
+  .ce-col em,
+  .ce-eyebrow,
+  .ce-nota,
+  .ce-tile i,
+  .ce-tile small,
+  .fc-chips small,
+  .fc-contas small,
+  .fc-kpis small,
+  .fc-selo,
+  .fc-tabela .cab,
+  .ins-aula-nome i,
+  .ins-aula-nome small,
+  .ins-barra span,
+  .ins-card > header > small,
+  .ins-grupo > em,
+  .ins-kpis article small,
+  .ins-kpis article span,
+  .ins-linha span > small,
+  .ins-nota,
+  .ins-tabela .cab,
+  .leads-tabela .cab,
+  .leads-tabela em,
+  .leads-tabela small,
+  .modo-ceo-quem b em,
+  .mon-cartao > footer,
+  .mon-cartao-limites small,
+  .mon-cartao-principais > span > small,
+  .mon-cartao-principais b > small,
+  .mon-cartao-principais i,
+  .mon-cartao-quem small,
+  .mon-cartao-resumo i,
+  .mon-cartao-robo > em,
+  .mon-cartao-robo small,
+  .mon-markup small,
+  .mon-replay-info .mon-selo,
+  .mon-saude,
+  .mon-selo,
+  .mon-tipo,
+  .og-apps,
+  .og-cartao > footer,
+  .og-cartao dt,
+  .pl-fatia,
+  .pl-marca em,
+  .pl-tabela thead th,
+  .rc-carregando,
+  .rc-demo-val,
+  .rc-tabela small,
+  .rc-tabela.acessos small,
+  .rc-tabela.movs>*,
+  .rc-tabela>.cab,
+  .rc-totais,
+  .sel-plat-rot
+  { font-size: 11px; }
+}
