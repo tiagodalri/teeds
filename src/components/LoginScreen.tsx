@@ -6,6 +6,7 @@ import type { DadosFilaEspera } from '../core/teeds/leads'
 import { Brand } from './Brand'
 import { DerivLogo, IconeSaida } from './DerivMarca'
 import { MARCA } from '../marca'
+import { abrirNoCadastro } from '../core/teeds/entradaInicial'
 
 type Modo = 'entrar' | 'criar' | 'esqueci'
 
@@ -39,7 +40,8 @@ const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
 const nomeCompleto = (v: string) => v.trim().split(/\s+/).filter((p) => p.length >= 2).length >= 2
 
 export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, onEsqueci }: Props) {
-  const [modo, setModo] = useState<Modo>('entrar')
+  // Link de campanha de cadastro ou /cadastre-se: abre direto no formulário.
+  const [modo, setModo] = useState<Modo>(abrirNoCadastro ? 'criar' : 'entrar')
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')

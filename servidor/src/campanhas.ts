@@ -80,7 +80,7 @@ export function emailDeVolta(marca: Marca, paraOEmail: string): EmailPronto {
  * Mesma regra do convite: sem exclamação, sem caixa alta, sem travessão.
  */
 export function emailDeRepescagem(marca: Marca, paraOEmail: string): EmailPronto {
-  const destino = new URL('/', marca.redirectUri)
+  const destino = new URL('/cadastre-se', marca.redirectUri)
   destino.searchParams.set('utm_source', 'email')
   destino.searchParams.set('utm_campaign', 'cadastro')
   return montarEmail(marca, 'convite', destino.href, {
@@ -128,7 +128,7 @@ export function emailDeRepescagem(marca: Marca, paraOEmail: string): EmailPronto
  * esse grupo é o mais frio da base.
  */
 export function emailDeAcessoGratuito(marca: Marca, paraOEmail: string): EmailPronto {
-  const destino = new URL('/', marca.redirectUri)
+  const destino = new URL('/cadastre-se', marca.redirectUri)
   destino.searchParams.set('utm_source', 'email')
   destino.searchParams.set('utm_campaign', 'acesso-gratuito')
   return montarEmail(marca, 'convite', destino.href, {

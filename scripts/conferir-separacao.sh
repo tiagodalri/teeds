@@ -51,6 +51,7 @@ echo "→ provas do login na Deriv…";    (cd servidor && npm run logindiv --si
 echo "→ provas do celular…";           (cd servidor && npm run celular --silent 2>&1 | tail -1)
 echo "→ provas do login pelo servidor…"; (cd servidor && npm run logincli --silent 2>&1 | tail -1)
 echo "→ provas da origem do cadastro…"; (cd servidor && npm run origem --silent 2>&1 | tail -1)
+echo "→ provas do /cadastre-se…";        (cd servidor && npm run cadastrese --silent 2>&1 | tail -1)
 echo "→ montando a Teeds…";            npm run build --silent >/dev/null
 echo "→ provas da rolagem das telas…"; (cd servidor && npm run rolagem --silent 2>&1 | tail -1)
 echo "→ montando a OMNI…";  MARCA=omni npm run build --silent >/dev/null
