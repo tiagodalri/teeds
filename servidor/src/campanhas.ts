@@ -113,3 +113,42 @@ export function emailDeRepescagem(marca: Marca, paraOEmail: string): EmailPronto
     descadastrar: linkDeDescadastro(marca.id, paraOEmail),
   })
 }
+
+/**
+ * Acesso gratuito (09/10/2026, rascunho para o Tiago aprovar): para os que
+ * receberam dois ou três e-mails e não abriram nenhum.
+ *
+ * Diferente da repescagem: curto, um argumento só (o acesso é gratuito
+ * porque a pessoa já foi cliente) e um passo só. Quem ignorou e-mails longos
+ * não vai ler mais um longo. O passo a passo do cadastro sai daqui: a própria
+ * tela de entrada já guia, e o e-mail só precisa levar a pessoa até ela.
+ *
+ * "Reservado", e não "liberado": a pessoa ainda precisa se cadastrar. Quem
+ * abre achando que já pode entrar e descobre que não, marca como spam, e
+ * esse grupo é o mais frio da base.
+ */
+export function emailDeAcessoGratuito(marca: Marca, paraOEmail: string): EmailPronto {
+  const destino = new URL('/', marca.redirectUri)
+  destino.searchParams.set('utm_source', 'email')
+  destino.searchParams.set('utm_campaign', 'acesso-gratuito')
+  return montarEmail(marca, 'convite', destino.href, {
+    assunto: `Parabéns - Seu acesso gratuito foi reservado`,
+    titulo: `Seu acesso gratuito à ${marca.prosa} foi reservado.`,
+    espia: `Você já foi cliente, então o seu acesso à nova ${marca.prosa} é gratuito. Falta um minuto para ativar.`,
+    corpo:
+      `Você já foi cliente da ${marca.prosa}, e por isso o seu acesso à nova ` +
+      `plataforma é gratuito. **Sem prazo, sem cartão, sem pegadinha.**\n\n` +
+      // Números de 03 a 09/10/2026, todas as sessões encerradas da Teeds
+      // (demo e real): 103 sessões, 15.695 operações, 74,9% positivas; o
+      // segundo mais usado teve 3.978. Conferir antes de reaproveitar.
+      `E você chega numa boa semana. O **Teeds Göreme** virou o grande destaque ` +
+      `da plataforma: foi o robô mais usado dos últimos 7 dias, com mais de 15 mil ` +
+      `operações, e 3 em cada 4 delas positivas.\n\n` +
+      `Os robôs já estão operando para quem entrou. Para ativar o seu, falta só ` +
+      `um passo: fazer o cadastro, que leva menos de um minuto.\n\n` +
+      `Depois do cadastro você recebe por e-mail a sua senha provisória e já ` +
+      `consegue entrar.`,
+    botao: 'Ativar meu acesso gratuito',
+    descadastrar: linkDeDescadastro(marca.id, paraOEmail),
+  })
+}
