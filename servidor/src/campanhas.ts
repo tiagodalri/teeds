@@ -144,11 +144,16 @@ export function emailDeAcessoGratuito(marca: Marca, paraOEmail: string): EmailPr
       `E você chega numa boa semana. O **Teeds Göreme** virou o grande destaque ` +
       `da plataforma: foi o robô mais usado dos últimos 7 dias, com mais de 15 mil ` +
       `operações, e 3 em cada 4 delas positivas.\n\n` +
-      `Os robôs já estão operando para quem entrou. Para ativar o seu, falta só ` +
-      `um passo: fazer o cadastro, que leva menos de um minuto.\n\n` +
-      `Depois do cadastro você recebe por e-mail a sua senha provisória e já ` +
-      `consegue entrar.`,
-    botao: 'Ativar meu acesso gratuito',
+      `Os robôs já estão operando para quem entrou. Para ativar o seu acesso, ` +
+      `é só fazer o cadastro. Leva menos de um minuto:\n\n` +
+      // Desde o /cadastre-se (09/10/2026) o botão abre DIRETO no formulário,
+      // e o texto pode dizer isso sem rodeio: era onde as pessoas se perdiam.
+      `1. Toque no botão abaixo. Ele já abre a página de cadastro.\n` +
+      `2. Preencha seu nome completo, seu e-mail e seu telefone com DDD.\n` +
+      `3. Toque em "Confirmar Cadastro".\n\n` +
+      `Pronto. Em menos de um minuto chega no seu e-mail a sua senha provisória, ` +
+      `e você já consegue entrar na plataforma.`,
+    botao: 'Fazer meu cadastro gratuito',
     descadastrar: linkDeDescadastro(marca.id, paraOEmail),
   })
 }
