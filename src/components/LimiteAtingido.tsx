@@ -42,7 +42,6 @@ interface Props {
   nome: string
   cor: string
   moeda: string
-  demo?: boolean | null
   onFechar: () => void
   onLigarDeNovo?: () => void
 }
@@ -116,7 +115,7 @@ const CONFETES = Array.from({ length: 26 }, (_, i) => {
   }
 })
 
-export function LimiteAtingido({ tipo, estado, config, nome, cor, moeda, demo, onFechar, onLigarDeNovo }: Props) {
+export function LimiteAtingido({ tipo, estado, config, nome, cor, moeda, onFechar, onLigarDeNovo }: Props) {
   const meta = tipo === 'meta'
   const valor = useContagem(estado.resultado)
   const principal = useRef<HTMLButtonElement>(null)
@@ -186,7 +185,7 @@ export function LimiteAtingido({ tipo, estado, config, nome, cor, moeda, demo, o
         <div className="limite-resultado">
           <small>Resultado da sessão</small>
           <strong className={estado.resultado >= 0 ? 'up' : 'down'}>{valor >= 0 ? '+' : '−'}{num(Math.abs(valor))}<em>{moeda}</em></strong>
-          {demo != null && <span className={`limite-conta ${demo ? 'demo' : 'real'}`}>{demo ? 'Conta demo' : 'Conta real'}</span>}
+          {/* Sem selo de conta demo/real no card (Tiago, 11/10/2026): o card é para comemorar e mostrar. */}
         </div>
 
         <Curva pontos={estado.curva} />

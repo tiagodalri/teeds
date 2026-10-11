@@ -391,7 +391,7 @@ export function LocalRobotPanel({
   // com a cabine de outro robô aberta. Fecha só no X. (Decisão de 16/09.)
   const aviso = limite && <LimiteAtingido
     tipo={limite} estado={estado} config={cfg} nome={`${titulo} · ${ident.nome}`} cor={ident.cor}
-    moeda={contaDaSessao?.moeda ?? moeda} demo={contaDaSessao?.demo ?? null}
+    moeda={contaDaSessao?.moeda ?? moeda}
     onFechar={() => setLimite(null)}
     onLigarDeNovo={() => { setLimite(null); setErro(null); setPreparando(true) }}
   />
