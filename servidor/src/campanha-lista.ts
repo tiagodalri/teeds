@@ -41,10 +41,14 @@ import { jaSairam, linkDeDescadastro } from './descadastro'
   recebeu o convite, então ela tem um nome de campanha próprio: a trava de
   "já recebeu esta campanha" olha o nome, e com o mesmo nome ninguém da
   repescagem passaria.
+
+  O reenvio da repescagem (11/10/2026) segue a mesma regra: é o mesmo e-mail,
+  para quem já o recebeu e nunca abriu, então precisa de um nome próprio.
 */
 const MODELOS = {
   volta:      { campanha: 'volta-2026-09',      montar: emailDeVolta },
   repescagem: { campanha: 'repescagem-2026-10', montar: emailDeRepescagem },
+  'repescagem-reenvio': { campanha: 'repescagem-reenvio-2026-10', montar: emailDeRepescagem },
   'acesso-gratuito': { campanha: 'acesso-gratuito-2026-10', montar: emailDeAcessoGratuito },
 } as const
 type Modelo = keyof typeof MODELOS
