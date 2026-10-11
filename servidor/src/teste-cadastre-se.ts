@@ -46,6 +46,9 @@ conferir('o app guardado para uso sem rede é só a raiz', /if\(x\.ok&&raiz\)cac
 
 const emails = leia('servidor/src/campanhas.ts')
 conferir('os e-mails de cadastro apontam para /cadastre-se', (emails.match(/new URL\('\/cadastre-se', marca\.redirectUri\)/g) ?? []).length, 2)
+// O link já abre no cadastro, onde não existe botão "Cadastre-se" (11/10/2026).
+conferir('nenhum passo a passo manda procurar o botão "Cadastre-se"', /botão dourado "Cadastre-se"/.test(emails), false)
+conferir('o passo a passo diz que o botão abre direto no cadastro', /Ele abre direto a tela "Cadastro Gratuito"/.test(emails), true)
 
 console.log(`\n${passou} certos, ${falhou} errados`)
 process.exit(falhou ? 1 : 0)

@@ -92,15 +92,16 @@ export function emailDeRepescagem(marca: Marca, paraOEmail: string): EmailPronto
     corpo:
       `A nova plataforma da ${marca.prosa} está no ar e os robôs já estão operando ` +
       `para quem entrou. Vimos que o seu cadastro ainda não chegou, e este e-mail ` +
-      `é só para facilitar: o link abaixo leva direto para a tela de entrada.\n\n` +
+      `é só para facilitar: o link abaixo leva direto para a tela de cadastro.\n\n` +
       `**O cadastro é gratuito e leva menos de um minuto.** Se você já foi cliente ` +
       `da ${marca.prosa}, mesmo assim é preciso recadastrar para reativar o seu ` +
       `acesso. Se nunca foi, o caminho é o mesmo.\n\n` +
       `**Como fazer**\n\n` +
-      `1. Toque no botão abaixo para abrir a tela de entrada.\n` +
-      `2. Toque no botão dourado "Cadastre-se", logo abaixo de "Entrar".\n` +
-      `3. Preencha o nome completo como está no documento, o e-mail que você abre todo dia e o telefone com DDD.\n` +
-      `4. Toque em "Confirmar Cadastro".\n\n` +
+      // O link /cadastre-se já abre em "Cadastro Gratuito" (11/10/2026): não
+      // há botão "Cadastre-se" para procurar nessa tela.
+      `1. Toque no botão abaixo. Ele abre direto a tela "Cadastro Gratuito".\n` +
+      `2. Preencha o nome completo como está no documento, o e-mail que você abre todo dia e o telefone com DDD.\n` +
+      `3. Toque em "Confirmar Cadastro".\n\n` +
       `Pronto. O cadastro entra na fila de aprovação, que normalmente é rápida.\n\n` +
       `**O que chega por e-mail**\n\n` +
       `Em menos de um minuto você recebe "Cadastro recebido", com o seu e-mail e ` +
