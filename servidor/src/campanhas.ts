@@ -158,3 +158,44 @@ export function emailDeAcessoGratuito(marca: Marca, paraOEmail: string): EmailPr
     descadastrar: linkDeDescadastro(marca.id, paraOEmail),
   })
 }
+
+/**
+ * O dia do AG2 (11/10/2026, rascunho para o Tiago aprovar): a mensagem que
+ * ele mandou no Telegram, virada e-mail para quem ainda não se cadastrou.
+ *
+ * Dois destinos de verdade, então dois botões: o canal, onde a turma mostra
+ * os resultados do dia, e o cadastro. No Telegram o texto falava com quem já
+ * tem acesso ("faça os testes"); aqui só chega quem ainda não tem, então o
+ * convite é para entrar e operar.
+ *
+ * O texto diz "hoje": é para sair no mesmo dia. Mandar em outro dia pede
+ * texto novo. Mesma regra das outras: sem exclamação, sem caixa alta, sem
+ * travessão, e nada de prometer resultado.
+ */
+export function emailDoDiaDoAg2(marca: Marca, paraOEmail: string): EmailPronto {
+  const destino = new URL('/cadastre-se', marca.redirectUri)
+  destino.searchParams.set('utm_source', 'email')
+  destino.searchParams.set('utm_campaign', 'ag2')
+  return montarEmail(marca, 'convite', destino.href, {
+    assunto: `Hoje o dia foi do AG2`,
+    titulo: `Hoje o dia foi do AG2.`,
+    espia: `Sessões de 10 minutos, pausas de 30 e um dia muito bom para quem operou. Venha ver de perto.`,
+    corpo:
+      `Desde as 11 da manhã, o **AG2** está entregando resultados incríveis para ` +
+      `quem está operando com ele na ${marca.prosa}.\n\n` +
+      `O segredo de hoje está no ritmo: **sessões espaçadas, 10 minutos operando ` +
+      `e 30 minutos de pausa.** O robô entra, faz o trabalho dele, para, e volta ` +
+      `na próxima sessão. Disciplina do começo ao fim.\n\n` +
+      `No nosso canal do Telegram a turma está mandando os resultados do dia. ` +
+      `Entre para acompanhar de perto e ver como cada um está operando.\n\n` +
+      `**Ainda não tem o seu acesso?** O cadastro é gratuito e leva menos de um minuto:\n\n` +
+      `1. Toque em "Fazer meu cadastro". Ele abre direto a tela "Cadastro Gratuito".\n` +
+      `2. Preencha seu nome completo, seu e-mail e seu telefone com DDD.\n` +
+      `3. Toque em "Confirmar Cadastro".\n\n` +
+      `Pronto. Em menos de um minuto chega no seu e-mail a sua senha provisória, ` +
+      `e você já consegue entrar na plataforma.`,
+    telegram: { url: marca.telegram, texto: 'Entrar no canal do Telegram' },
+    botao: 'Fazer meu cadastro',
+    descadastrar: linkDeDescadastro(marca.id, paraOEmail),
+  })
+}

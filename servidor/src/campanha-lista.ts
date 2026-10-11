@@ -33,7 +33,7 @@
 import './ambiente'
 import { readFileSync } from 'node:fs'
 import { marcaPorId } from '../../src/marca/marcas'
-import { emailDeAcessoGratuito, emailDeRepescagem, emailDeVolta } from './campanhas'
+import { emailDeAcessoGratuito, emailDeRepescagem, emailDeVolta, emailDoDiaDoAg2 } from './campanhas'
 import { jaSairam, linkDeDescadastro } from './descadastro'
 
 /*
@@ -50,6 +50,7 @@ const MODELOS = {
   repescagem: { campanha: 'repescagem-2026-10', montar: emailDeRepescagem },
   'repescagem-reenvio': { campanha: 'repescagem-reenvio-2026-10', montar: emailDeRepescagem },
   'acesso-gratuito': { campanha: 'acesso-gratuito-2026-10', montar: emailDeAcessoGratuito },
+  'dia-do-ag2': { campanha: 'dia-do-ag2-2026-10', montar: emailDoDiaDoAg2 },
 } as const
 type Modelo = keyof typeof MODELOS
 let modelo: Modelo = 'volta'
