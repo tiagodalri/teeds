@@ -171,6 +171,9 @@ export function emailDeAcessoGratuito(marca: Marca, paraOEmail: string): EmailPr
  * O texto diz "hoje": é para sair no mesmo dia. Mandar em outro dia pede
  * texto novo. Mesma regra das outras: sem exclamação, sem caixa alta, sem
  * travessão, e nada de prometer resultado.
+ *
+ * 13/10/2026: o horário passou de "11 da manhã" (sábado, 11/10) para
+ * "7:30 da manhã", a pedido do Tiago, para o lote que sai neste dia.
  */
 export function emailDoDiaDoAg2(marca: Marca, paraOEmail: string): EmailPronto {
   const destino = new URL('/cadastre-se', marca.redirectUri)
@@ -181,7 +184,7 @@ export function emailDoDiaDoAg2(marca: Marca, paraOEmail: string): EmailPronto {
     titulo: `Hoje o dia foi do AG2.`,
     espia: `Sessões de 10 minutos, pausas de 30 e um dia muito bom para quem operou. Venha ver de perto.`,
     corpo:
-      `Desde as 11 da manhã, o **AG2** está entregando resultados incríveis para ` +
+      `Desde as 7:30 da manhã, o **AG2** está entregando resultados incríveis para ` +
       `quem está operando com ele na ${marca.prosa}.\n\n` +
       `O segredo de hoje está no ritmo: **sessões espaçadas, 10 minutos operando ` +
       `e 30 minutos de pausa.** O robô entra, faz o trabalho dele, para, e volta ` +
