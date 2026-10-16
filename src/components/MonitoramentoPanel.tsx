@@ -270,7 +270,8 @@ function Replay({ sessao, encerrada, clientes, marca, aoFechar, aoErro, mostrarM
     ;(async () => {
       // 1) auditoria ANTES de ler qualquer coisa. Sem registro, sem replay.
       try { await auditar(sessao, { tipo: 'replay', acao: 'abriu', sessaoId: encerrada.id, clienteId: encerrada.userId, marca }) }
-      catch (e) { if (!aborto.signal.aborted) { setAutorizado(false); setCarregando(false); aoErro(e) }; return }
+      // Recusa só deste replay: ele mesmo mostra "Replay não aberto".
+      catch (e) { if (!aborto.signal.aborted) { setAutorizado(false); setCarregando(false); console.error('[monitoramento] auditoria do replay recusada:', (e as Error)?.message) }; return }
       if (aborto.signal.aborted) return
       setAutorizado(true)
       try {
@@ -526,7 +527,10 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
     const s = sessoes.get(id)
     setFocoAutorizado('pendente'); setFoco(id)
     try { await auditar(sessao, { tipo: 'ao-vivo', acao: 'abriu', sessaoId: id, clienteId: s?.userId, marca: s?.marca ?? marcaDoRegistro }) }
-    catch (e) { setFocoAutorizado('nao'); falhar(e); return }
+    // A recusa vale só para ESTA cabine, que já mostra "Cabine não aberta".
+    // Passar por `falhar` trocava o painel inteiro por "Sem permissão" para um
+    // admin de verdade (16/10/2026).
+    catch (e) { setFocoAutorizado('nao'); console.error('[monitoramento] auditoria da cabine recusada:', (e as Error)?.message); return }
     setFocoAutorizado('sim')
     try { const evs = await eventosDaSessao(sessao, id, 0, 500); setEventos((m) => { const n = new Map(m); n.set(id, ordenarEventos([...(n.get(id) ?? []), ...evs])); return n }) }
     catch (e) { falhar(e) }
