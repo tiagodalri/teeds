@@ -22,7 +22,7 @@ import { acompanharVivas, type SessaoViva } from '../core/teeds/servidorRobos'
 import { MARCA } from '../marca'
 import { RobotOverview } from './RobotOverview'
 import { DigitosFlutuante } from './DigitosFlutuante'
-import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
+import { ATIVO_DOS_ROBOS, ehSintetico } from '../core/deriv/config'
 import './robot-workspace.css'
 
 interface Props {
@@ -497,7 +497,7 @@ export function RobotsPanel({
           <div className="rob-linha">
             <label><span className="rot">Ativo</span>
               <select value={symbol} onChange={(e) => setSymbol(e.target.value)}>
-                {symbols.filter((s) => s.isOpen).map((s) => (
+                {symbols.filter((s) => s.isOpen && ehSintetico(s)).map((s) => (
                   <option key={s.symbol} value={s.symbol}>{s.name}</option>
                 ))}
               </select>

@@ -29,6 +29,7 @@ import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLimitesDuracao, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { traduzirErro } from './core/deriv/erros'
+import { ehSintetico } from './core/deriv/config'
 import { useAccount } from './hooks/useAccount'
 import { minhaSituacao, registrarContaDeriv, registrarPresenca, souAdmin, type SituacaoDaFicha } from './core/teeds/clientes'
 import { marcarPagina, marcarRegiao, ouvirCliques } from './core/teeds/rastro'
@@ -52,6 +53,9 @@ const INDICADORES = [
   { id: 'macd', label: 'MACD', titulo: 'Convergência e divergência de médias móveis' },
   { id: 'fibonacci', label: 'Fibonacci', titulo: 'Retração de Fibonacci entre a mínima e a máxima visíveis' },
 ] as const
+
+/** Títulos dos grupos no seletor de ativos do Manual. */
+const NOME_DO_MERCADO: Record<string, string> = { synthetic_index: 'Sintéticos', forex: 'Forex', commodities: 'Metais' }
 
 const TIMEFRAMES: { label: string; value: Granularity }[] = [
   { label: '1m', value: 60 }, { label: '5m', value: 300 }, { label: '15m', value: 900 },
@@ -155,6 +159,20 @@ export default function App() {
     setUnidade(u)
     setDuration(u === 't' ? 5 : u === 's' ? 60 : 5)
   }
+  // Forex e metais não têm ticks nem segundos: ao trocar para um deles, a
+  // unidade pula sozinha para minutos (e a faixa leva ao mínimo de 15 ou 5).
+  useEffect(() => {
+    const atual = unidade === 't' ? limites.ticks : unidade === 's' ? limites.segundos : limites.minutos
+    if (atual) return
+    const outra = limites.minutos ? 'm' : limites.segundos ? 's' : limites.ticks ? 't' : null
+    if (outra) trocarUnidade(outra)
+  }, [limites]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Dígitos só existem nos índices sintéticos. Em forex/metais o modo some.
+  const sintetico = ehSintetico(activeSymbol)
+  useEffect(() => { if (!sintetico && modo === 'digitos') setModo('direcao') }, [sintetico, modo])
+  // Forex fecha à noite e no fim de semana; a Deriv diz se está aberto.
+  const mercadoAberto = !activeSymbol || (activeSymbol.isOpen && !activeSymbol.isSuspended)
 
   /*
     A confirmacao em conta real desarma sozinha: ao mudar valor, duracao,
@@ -377,11 +395,12 @@ export default function App() {
     ficava ativo e o pedido entrava numa fila para disparar sozinho depois.
   */
   const linhaAberta = conta.conexao === 'open'
-  const podeOperar = conta.status === 'logado' && !!conta.socket && !conta.connecting && linhaAberta && !!symbolCode
+  const podeOperar = conta.status === 'logado' && !!conta.socket && !conta.connecting && linhaAberta && !!symbolCode && mercadoAberto
   // Por que o botao esta travado — para o cliente nao ficar adivinhando.
   const motivoBloqueio = podeOperar ? null
     : conta.status !== 'logado' ? 'Conecte a Deriv para operar'
     : !symbolCode ? 'Escolha um ativo'
+    : !mercadoAberto ? 'Mercado fechado agora'
     : conta.connecting ? 'Conectando à sua conta…'
     : !linhaAberta ? 'Reconectando à Deriv…'
     : 'Indisponível agora'
@@ -711,7 +730,7 @@ export default function App() {
                       {symbolsError && <p className="hint error">{symbolsError}</p>}
                       {groups.map(([market, list]) => (
                         <section key={market}>
-                          <h4>{market.replace(/_/g, ' ')}</h4>
+                          <h4>{NOME_DO_MERCADO[market] ?? market.replace(/_/g, ' ')}</h4>
                           {list.map((s) => (
                             <button key={s.symbol}
                               className={`symbol ${s.symbol === symbolCode ? 'is-active' : ''}`}
@@ -773,9 +792,9 @@ export default function App() {
             <button className={modo === 'direcao' ? 'on' : ''} onClick={() => setModo('direcao')}>
               Subir / Descer
             </button>
-            <button className={modo === 'digitos' ? 'on' : ''} onClick={() => setModo('digitos')}>
+            {sintetico && <button className={modo === 'digitos' ? 'on' : ''} onClick={() => setModo('digitos')}>
               Dígitos
-            </button>
+            </button>}
           </div>
 
           <label className="field"><span>Valor da entrada</span>

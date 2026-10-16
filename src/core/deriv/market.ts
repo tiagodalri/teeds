@@ -3,6 +3,9 @@ import { ATIVOS_PERMITIDOS } from './config'
 import { casasDecimais } from './types'
 import type { ActiveSymbol, Candle, Granularity, Tick } from './types'
 
+/** Nomes que a Deriv manda em inglês e o cliente lê em português. */
+const NOME_EM_PORTUGUES: Record<string, string> = { frxXAUUSD: 'Ouro/USD', frxXAGUSD: 'Prata/USD' }
+
 /** Lista os ativos negociaveis, ja normalizados para o dominio da Teeds. */
 export async function fetchActiveSymbols(
   socket: TeedsSocket = publicSocket,
@@ -16,7 +19,7 @@ export async function fetchActiveSymbols(
       (ordem.get(a.underlying_symbol) ?? 99) - (ordem.get(b.underlying_symbol) ?? 99))
     .map((s) => ({
     symbol: s.underlying_symbol ?? s.symbol,
-    name: s.underlying_symbol_name ?? s.display_name ?? s.underlying_symbol,
+    name: NOME_EM_PORTUGUES[s.underlying_symbol] ?? s.underlying_symbol_name ?? s.display_name ?? s.underlying_symbol,
     market: s.market ?? '',
     submarket: s.submarket ?? '',
     isOpen: s.exchange_is_open === 1,
@@ -256,7 +259,9 @@ export async function fetchLimitesSubirDescer(
       const mi = emSegundos(a.min_contract_duration)
       const ma = emSegundos(a.max_contract_duration)
       if (mi !== null && ma !== null && ma >= mi) {
-        limites.segundos = [mi, ma]
+        // Mínimo de 1 min ou mais (forex: 15 min; ouro: 5 min) não vira
+        // "de 900 s a 24 h" na unidade segundos: a unidade some, e fica minutos.
+        limites.segundos = mi < 60 ? [mi, ma] : null
         limites.minutos = [Math.max(1, Math.ceil(mi / 60)), Math.max(1, Math.floor(ma / 60))]
       }
     }

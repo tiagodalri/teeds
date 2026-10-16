@@ -33,7 +33,16 @@ export const ATIVOS_PERMITIDOS = [
   'R_75',
   '1HZ10V', '1HZ15V', '1HZ25V', '1HZ30V',
   '1HZ50V', '1HZ75V', '1HZ90V', '1HZ100V',
+  // Forex e metais (16/10/2026): SÓ no Manual, só Subir/Descer. Os sete
+  // pares do dólar mais ouro e prata, escolha do Tiago para começar. A Deriv
+  // pede no mínimo 15 min nos pares e 5 min nos metais, não tem dígitos, e o
+  // mercado fecha no fim de semana. Para pôr mais pares, é só somar aqui.
+  'frxEURUSD', 'frxGBPUSD', 'frxUSDJPY', 'frxAUDUSD', 'frxUSDCAD', 'frxUSDCHF', 'frxNZDUSD',
+  'frxXAUUSD', 'frxXAGUSD',
 ] as const
+
+/** Índice sintético (os únicos com dígitos e com robôs). Forex e metais não são. */
+export const ehSintetico = (s: { market?: string } | null | undefined) => s?.market === 'synthetic_index'
 
 /**
  * O ativo dos robos — fixo, decidido pela casa (14/09: Volatility 75 padrão).
