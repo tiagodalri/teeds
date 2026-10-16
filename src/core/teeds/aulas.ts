@@ -1,5 +1,3 @@
-import { MARCA } from '../../marca'
-import { nomeDaEstrategia } from '../deriv/branding'
 /**
  * O catalogo de aulas da Teeds — a "sala de aula" da plataforma.
  *
@@ -34,124 +32,13 @@ export interface Modulo {
 /** Placeholder oficial usado somente enquanto os vídeos Teeds não chegaram. */
 export const VIDEO_DEMONSTRACAO = 'https://www.youtube.com/watch?v=M7lc1UVf-VE'
 
-export const MODULOS: Modulo[] = [
-  {
-    id: 'comeco',
-    titulo: 'Comece por aqui',
-    chamada: 'Do zero até a plataforma aberta na sua frente.',
-    cor: '#4c6fff',
-    aulas: [
-      {
-        id: 'boas-vindas',
-        titulo: `Bem-vindo à ${MARCA.prosa}`,
-        descricao: 'O que é a plataforma, o que dá para fazer nela e o caminho das primeiras aulas.',
-        video: '', duracao: '',
-      },
-      {
-        id: 'conta-corretora',
-        titulo: 'Criando sua conta na corretora',
-        descricao: 'Passo a passo do cadastro na Deriv, a corretora onde o seu dinheiro fica.',
-        video: '', duracao: '',
-      },
-      {
-        id: 'conectar-corretora',
-        titulo: `Conectando a corretora à ${MARCA.prosa}`,
-        descricao: `O botão "Conectar minha Deriv": autorizando a ${MARCA.prosa} a operar na sua conta.`,
-        video: '', duracao: '',
-      },
-      {
-        id: 'conhecendo-plataforma',
-        titulo: 'Conhecendo a plataforma',
-        descricao: 'Um passeio pelas telas: mercado, gráfico, posições, operações e o seu perfil.',
-        video: '', duracao: '',
-      },
-    ],
-  },
-  {
-    id: 'dinheiro',
-    titulo: 'Depósito e saque',
-    chamada: 'Como o dinheiro entra, como o dinheiro sai.',
-    cor: '#0d9488',
-    aulas: [
-      {
-        id: 'demo-vs-real',
-        titulo: 'Conta demo e conta real',
-        descricao: 'A diferença entre o dinheiro fictício de treino e o dinheiro de verdade.',
-        video: '', duracao: '',
-      },
-      {
-        id: 'deposito',
-        titulo: 'Fazendo um depósito',
-        descricao: 'Como colocar dinheiro na sua conta da corretora, com as opções disponíveis no Brasil.',
-        video: '', duracao: '',
-      },
-      {
-        id: 'saque',
-        titulo: 'Fazendo um saque',
-        descricao: 'Como tirar o seu dinheiro: prazos, limites e o caminho na corretora.',
-        video: '', duracao: '',
-      },
-    ],
-  },
-  {
-    id: 'operando',
-    titulo: `Operando na ${MARCA.prosa}`,
-    chamada: 'A mesa de operação, na prática.',
-    cor: '#e8892b',
-    aulas: [
-      {
-        id: 'subir-descer',
-        titulo: 'Operando Subir e Descer',
-        descricao: 'A operação mais simples: escolher direção, valor e duração — e o que é o pagamento.',
-        video: '', duracao: '',
-      },
-      {
-        id: 'digitos',
-        titulo: 'Operando Dígitos',
-        descricao: 'Os contratos de último dígito: como funcionam, o painel de frequência e a fita.',
-        video: '', duracao: '',
-      },
-      {
-        id: 'posicoes-operacoes',
-        titulo: 'Posições abertas e histórico',
-        descricao: 'Acompanhando cada contrato ao vivo e lendo o seu histórico de operações.',
-        video: '', duracao: '',
-      },
-    ],
-  },
-  {
-    id: 'robos',
-    titulo: 'Os robôs',
-    chamada: 'O que cada robô faz — e os freios que protegem você.',
-    cor: '#8b5cf6',
-    aulas: [
-      {
-        id: 'robos-como-funcionam',
-        titulo: 'Como os robôs funcionam',
-        descricao: `O motor da ${MARCA.prosa}, o que o robô compra e por que a aba precisa ficar aberta.`,
-        video: '', duracao: '',
-      },
-      {
-        id: 'robo-ag7',
-        titulo: nomeDaEstrategia('superior5'),
-        descricao: 'O robô dos dígitos altos: ganha no 7, 8 e 9. Configuração passo a passo.',
-        video: '', duracao: '',
-      },
-      {
-        id: 'robo-ag2',
-        titulo: nomeDaEstrategia('ag2'),
-        descricao: `O espelho do ${nomeDaEstrategia('superior5')} nos dígitos baixos: ganha no 0, 1 e 2.`,
-        video: '', duracao: '',
-      },
-      {
-        id: 'freios',
-        titulo: 'Os freios: stop, take e martingale',
-        descricao: 'Quando o robô para sozinho, o que é o martingale e como operar com responsabilidade.',
-        video: '', duracao: '',
-      },
-    ],
-  },
-]
+/*
+  O catálogo mora em `modulosAulas.ts` para que cada marca possa ter o seu
+  (a casca da marca troca o arquivo inteiro). A numeração, o player e o
+  progresso continuam aqui, iguais para todas.
+*/
+export { MODULOS, SALA_EM_BREVE } from './modulosAulas'
+import { DEMONSTRACAO_EM_AULA_SEM_VIDEO, MODULOS } from './modulosAulas'
 
 /* ------------------------------------------------------------ numeração */
 
@@ -191,8 +78,8 @@ export function todasAsAulas(videos: Record<string, SobreposicaoDaAula> = {}): A
         ...a,
         titulo: vivo?.titulo || a.titulo,
         descricao: vivo?.descricao || a.descricao,
-        video: vivo?.video || a.video || VIDEO_DEMONSTRACAO,
-        duracao: vivo?.duracao || a.duracao || 'Vídeo demonstrativo',
+        video: vivo?.video || a.video || (DEMONSTRACAO_EM_AULA_SEM_VIDEO ? VIDEO_DEMONSTRACAO : ''),
+        duracao: vivo?.duracao || a.duracao || (DEMONSTRACAO_EM_AULA_SEM_VIDEO ? 'Vídeo demonstrativo' : ''),
         numero: n++, modulo: m,
       })
     }

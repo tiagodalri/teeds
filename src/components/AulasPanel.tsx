@@ -1,7 +1,7 @@
 import { ResponsiveImage } from './ResponsiveImage'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  aulasVistas, marcarVista, MODULOS, playerDoVideo, todasAsAulas, VIDEO_DEMONSTRACAO,
+  aulasVistas, marcarVista, MODULOS, playerDoVideo, SALA_EM_BREVE, todasAsAulas, VIDEO_DEMONSTRACAO,
   type AulaNumerada,
 } from '../core/teeds/aulas'
 import { listarVideosDasAulas, type VideoDaAula } from '../core/teeds/aulasVideos'
@@ -66,7 +66,8 @@ function Fileira({ children, rotulo }: { children: ReactNode; rotulo: string }) 
   )
 }
 
-const AULAS_EM_BREVE = true
+/** Por marca, em `core/teeds/modulosAulas.ts` (a GlobalFly abre a vitrine já). */
+const AULAS_EM_BREVE = SALA_EM_BREVE
 
 /**
  * A sala fechada, enquanto as aulas não foram gravadas.
@@ -77,7 +78,7 @@ const AULAS_EM_BREVE = true
  * é pior do que não ter curso nenhum.
  *
  * PARA REABRIR A SALA quando os vídeos estiverem prontos: troque
- * AULAS_EM_BREVE para false, ali em cima. É a única linha. Nada da vitrine
+ * SALA_EM_BREVE para false em core/teeds/modulosAulas.ts. É a única linha. Nada da vitrine
  * foi removido, de propósito, e o painel do admin segue aceitando os vídeos
  * enquanto isso: quando o último entrar, é só virar a chave.
  *

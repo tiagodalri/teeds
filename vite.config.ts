@@ -157,6 +157,8 @@ export default defineConfig({
           // monograma claro da GlobalFly...) fica so no site dela.
           for (const arquivo of readdirSync(SAIDA)) if (arquivo.startsWith(`${outra.id}-`) && /\.(png|svg|webp|jpg)$/.test(arquivo)) rmSync(join(SAIDA, arquivo), { force: true })
           rmSync(join(SAIDA, `pwa-${outra.id}`), { recursive: true, force: true })
+          // Capas de aula exclusivas de uma marca (aulas-globalfly/...).
+          if (outra.id !== 'teeds') rmSync(join(SAIDA, `aulas-${outra.id}`), { recursive: true, force: true })
           // As telas da landing sao capturadas por marca: as da outra nao entram neste site.
           const telas = join(destinoCaptura, 'plataforma')
           if (existsSync(telas)) for (const arquivo of readdirSync(telas)) if (arquivo.startsWith(`${outra.id}-`)) rmSync(join(telas, arquivo), { force: true })
@@ -168,6 +170,8 @@ export default defineConfig({
           // A OMNI conserva as capas anteriores e nem recebe estes arquivos.
           rmSync(join(SAIDA, 'aulas-teeds'), { recursive: true, force: true })
         }
+        // A GlobalFly tem as proprias capas (aulas-globalfly/): as da OMNI nao vao.
+        if (MARCA.id === 'globalfly') rmSync(join(SAIDA, 'aulas-especialista'), { recursive: true, force: true })
         // O CNAME e o que diz ao GitHub Pages qual dominio serve esta pasta.
         // Sai da tabela de marcas, nao de um arquivo escrito a mao: dominio
         // trocado num lugar so.

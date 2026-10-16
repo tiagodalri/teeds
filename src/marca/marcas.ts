@@ -257,14 +257,15 @@ export const MARCAS: Record<string, Marca> = {
     // PENDENTE: a conta de afiliado da GlobalFly ainda não existe (não pode
     // ser no nome do Victor). Até lá, o cadastro vai para a Deriv sem token.
     afiliado: 'https://deriv.com/signup/',
-    robos: ['goreme', 'superior5', 'ag2', 'firstblock', 'secondblock', 'thepalm'],
+    // 16/10/2026: quatro robôs para começar, com nomes de jatos (escolha
+    // do Tiago). Qual estratégia fica com cada nome ainda pode trocar; o
+    // id é o que amarra motor, histórico e aula.
+    robos: ['goreme', 'superior5', 'ag2', 'firstblock'],
     nomesDosRobos: {
-      goreme: 'GlobalFly Piloto',
-      superior5: 'GlobalFly Turbina',
-      ag2: 'GlobalFly Cruzeiro',
-      firstblock: 'GlobalFly Decolagem',
-      secondblock: 'GlobalFly Altitude',
-      thepalm: 'GlobalFly Radar',
+      goreme: 'GlobalFly Bombardier',
+      superior5: 'GlobalFly Gulfstream',
+      ag2: 'GlobalFly Phenom',
+      firstblock: 'GlobalFly Cirrus',
     },
     // Manual, pág. 24: "Azul organiza superfícies… Verde e coral são
     // exclusivamente funcionais." Os robôs ficam todos no aço da casa
@@ -284,7 +285,7 @@ export const MARCAS: Record<string, Marca> = {
     emblema: 'globalfly-marca.png',
     monogramaClaro: 'globalfly-monograma-claro.png',
     assinatura: { escura: 'globalfly-assinatura.png', clara: 'globalfly-assinatura-clara.png' },
-    heroAulas: { principal: 'aulas-especialista/boas-vindas.webp', reserva: 'aulas-especialista/boas-vindas.jpg', celular: 'aulas-especialista/boas-vindas-mobile.webp', posicao: 'right 18%' },
+    heroAulas: { principal: 'aulas-globalfly/boas-vindas.webp', reserva: 'aulas-globalfly/boas-vindas.jpg', celular: 'aulas-globalfly/boas-vindas-mobile.webp', posicao: 'center 40%' },
     // Azul GF organiza, ouro indica seleção (manual, pág. 24). No claro a cor
     // de ação é o azul (ouro sobre marfim não passa no contraste: 2,7:1).
     cor: { claro: '#051528', escuro: '#B78D39' },
