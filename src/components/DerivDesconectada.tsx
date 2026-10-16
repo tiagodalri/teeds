@@ -65,9 +65,9 @@ export function DerivDesconectada({ acao, entrando, onConectar, compacto = false
       {/* Só no computador a Deriv abre em janela à parte (ver startLogin). */}
       {entrando && !emToque() && (
         <p className="sem-deriv-janela" role="status">
-          A Deriv abriu em outra janela. Entre por lá: ao terminar, ela fecha
-          sozinha e a {MARCA.prosa} conecta. Se a janela ficar parada no painel
-          da Deriv, é só fechá-la e voltar aqui.
+          A Deriv abriu em outra janela. Entre por lá. Se depois do login ela
+          mostrar o painel da Deriv, é só voltar para esta aba: a {MARCA.prosa}
+          termina a conexão sozinha.
         </p>
       )}
       {presa ? (

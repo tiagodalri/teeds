@@ -95,9 +95,12 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
   }, [session])
 
   // --- a pessoa voltou para a plataforma com a janela da Deriv ainda sem
-  // concluir (a Deriv a prendeu no painel dela, ou ela fechou a janela):
-  // sai do "Abrindo…" e mostra o cartão de concluir a ligação. Se a conexão
-  // chegar logo depois, o efeito acima entra por cima.
+  // concluir: a Deriv a largou no painel dela (16/10/2026, máquina do teste
+  // do Victor Ripardo). Nesse ponto ela JÁ está logada na Deriv, e um pedido
+  // novo é aceito na origem, sem tela (conferido no Chrome do Tiago). Então a
+  // plataforma não espera clique: refaz a ligação pela própria aba, que vai e
+  // volta conectada. `startLogin` sabe que é a segunda vez e não abre janela.
+  // Se a conexão chegar pela janela nesse meio-tempo, ninguém sai daqui.
   const [loginNaJanela, setLoginNaJanela] = useState(false)
   useEffect(() => {
     if (!loginNaJanela || session) return
@@ -106,8 +109,11 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
       setTimeout(() => {
         if (loadSession()) return
         setLoginNaJanela(false)
-        setStatus((st) => (st === 'entrando' ? 'deslogado' : st))
-      }, 600)
+        startLogin().catch((e: Error) => {
+          setError(e.message)
+          setStatus('erro')
+        })
+      }, 700)
     }
     window.addEventListener('focus', aoVoltar)
     return () => window.removeEventListener('focus', aoVoltar)
