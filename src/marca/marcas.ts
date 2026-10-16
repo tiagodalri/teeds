@@ -85,6 +85,12 @@ export interface Marca {
    */
   desenhoDosRobos?: Record<string, { cor?: string; corSuave?: string; emblema?: string }>
   /**
+   * App instalável com cara de nativo: atalhos no ícone, botão "Instalar o
+   * app", voltar do Android entre as telas, aviso de sem conexão e
+   * acabamento de tela cheia. Ligado só onde a marca pediu (GlobalFly).
+   */
+  appNativo?: boolean
+  /**
    * A cor da marca, uma por tema.
    *
    * Duas porque uma só não serve: um azul-marinho profundo desaparece sobre
@@ -271,6 +277,7 @@ export const MARCAS: Record<string, Marca> = {
     // exclusivamente funcionais." Os robôs ficam todos no aço da casa
     // (texto branco passa por cima, e aparece sobre o Azul GF); quem os
     // distingue é o emblema. Sem setas literais (pág. 18 e 20).
+    appNativo: true,
     desenhoDosRobos: {
       goreme: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
       superior5: { cor: '#5B7C9D', corSuave: '#E6ECF2' },

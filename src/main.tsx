@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './styles/app.css'
@@ -9,6 +9,11 @@ import './styles/mobile-polish.css'
 import { aplicarTema, temaGuardado } from './core/tema'
 import { MARCA } from './marca'
 import { registrarVisita } from './core/teeds/visitas'
+// Guarda o pedido de instalação do Chrome assim que ele chega (ver o arquivo).
+import './core/appNativo'
+
+// Convite para instalar e aviso de sem conexão: só nas marcas com app nativo.
+const RecursosDeApp = MARCA.appNativo ? lazy(() => import('./components/RecursosDeApp')) : null
 
 // o tema entra antes do primeiro quadro, para a tela nao piscar clara
 document.documentElement.dataset.marca = MARCA.id
@@ -22,6 +27,7 @@ registrarVisita()
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
+    {RecursosDeApp && <Suspense fallback={null}><RecursosDeApp /></Suspense>}
   </React.StrictMode>,
 )
 

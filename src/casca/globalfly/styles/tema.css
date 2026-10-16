@@ -269,3 +269,22 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 
 .aulas-modulo-topo h3 { font-weight: 700; letter-spacing: -.01em; }
 .aulas-trilha-num { font-family: var(--fonte-dados); font-weight: 400; }
+
+/* ------------------------------ app instalado (tela inicial) */
+/* Sem o "puxa e estica" de página da web, sem o clarão cinza ao tocar e
+   sem o menu de copiar imagem ao segurar o dedo num ícone. */
+@media (display-mode: standalone) {
+  html, body { overscroll-behavior: none; }
+  * { -webkit-tap-highlight-color: transparent; }
+  img, svg { -webkit-touch-callout: none; }
+  button, a, [role='button'] { touch-action: manipulation; }
+}
+/* O iPhone pinta a hora e a bateria em branco por cima do app (status bar
+   translúcida). No tema claro isso sumiria no marfim: a faixa do topo fica
+   em Azul GF, como o cabeçalho de um app de banco. */
+@media (display-mode: standalone) {
+  :root:not([data-tema='escuro']) body::before {
+    content: ''; position: fixed; z-index: 200; inset: 0 0 auto; height: var(--sat);
+    background: var(--gf-azul); pointer-events: none;
+  }
+}

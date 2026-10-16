@@ -101,6 +101,20 @@ const PALETAS: Record<string, Paleta> = {
     superficies: [[0.071, 0.78], [0.131, 0.49], [0.151, 0.43], [0.222, 0.31], [0.422, 0.18]],
   },
 }
+/* Telas de abertura do iPhone/iPad: só a marca que gerou a pasta
+   (scripts/pwa-globalfly.mjs) recebe os <link>. Sem elas o iOS abre o app
+   instalado numa tela branca. */
+function telasDeAbertura(): string {
+  const lista = join(__dirname, 'public', `pwa-${MARCA.id}`, 'splash', 'telas.json')
+  if (!existsSync(lista)) return ''
+  const telas = JSON.parse(readFileSync(lista, 'utf8')) as [number, number, number][]
+  return telas.map(([w, h, e]) =>
+    `    <link rel="apple-touch-startup-image" media="screen and (device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${e}) and (orientation: portrait)" href="${MARCA.base}pwa-${MARCA.id}/splash/${w * e}x${h * e}.png" />\n`,
+  ).join('') + '  '
+}
+/* Legenda das telas que o Android mostra antes de instalar (pwa-<marca>/telas/).
+   Só telas sem resultado de operação: nada de sessão de exemplo com ganho. */
+const ROTULO_DA_TELA: Record<string, string> = { entrar: 'Entrar na plataforma', 'sala-de-aula': 'Sala de aula com o treinamento completo' }
 const NOME_CURTO: Record<string, string> = { teeds: 'Teeds', omni: 'OMNI', globalfly: 'GlobalFly' }
 
 export default defineConfig({
@@ -124,7 +138,8 @@ export default defineConfig({
             .replaceAll('%EMBLEMA%', MARCA.emblema)
             .replaceAll('%MARCA%', MARCA.id)
             .replaceAll('%THEME%', FUNDO_DA_MARCA[MARCA.id] ?? '#090a0d')
-            .replaceAll('%NOME%', NOME_CURTO[MARCA.id] ?? MARCA.nome),
+            .replaceAll('%NOME%', NOME_CURTO[MARCA.id] ?? MARCA.nome)
+            .replace('</head>', `${telasDeAbertura()}</head>`),
       },
     },
     {
@@ -181,7 +196,7 @@ export default defineConfig({
         const fundo = FUNDO_DA_MARCA[MARCA.id] ?? '#090a0d'
         const curto = NOME_CURTO[MARCA.id] ?? MARCA.prosa
         const nome = MARCA.id === 'globalfly' ? 'GlobalFly Trade' : `${curto} Trading Platform`
-        writeFileSync(join(SAIDA, 'manifest.webmanifest'), JSON.stringify({
+        const base = {
           id: '/', name: nome, short_name: curto,
           description: `${MARCA.prosa} — operações manuais, robôs e acompanhamento em um só lugar.`,
           lang: 'pt-BR', dir: 'ltr', start_url: '/', scope: '/', display: 'standalone',
@@ -192,7 +207,36 @@ export default defineConfig({
             { src: `${pwaDir}/icon-192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
             { src: `${pwaDir}/icon-512.png`, sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
           ],
-        }, null, 2) + '\n')
+        }
+        // App com cara de nativo (GlobalFly, `appNativo`): ícone mascarável
+        // próprio, monocromático, atalhos no ícone e as telas que a loja do
+        // Android mostra antes de instalar.
+        const pasta = join(__dirname, 'public', pwaDir)
+        const telas = existsSync(join(pasta, 'telas')) ? readdirSync(join(pasta, 'telas')).filter((f) => f.endsWith('.png')).sort() : []
+        const manifesto = !MARCA.appNativo ? base : {
+          ...base,
+          description: `${MARCA.prosa}: robôs de operação, gestão de risco e acompanhamento ao vivo, na sua própria conta da corretora.`,
+          start_url: '/?origem=app',
+          launch_handler: { client_mode: ['navigate-existing', 'auto'] },
+          prefer_related_applications: false,
+          icons: [
+            { src: `${pwaDir}/icon-192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: `${pwaDir}/icon-512.png`, sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: `${pwaDir}/icon-maskable-192.png`, sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+            { src: `${pwaDir}/icon-maskable-512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+            { src: `${pwaDir}/icon-monocromatico-512.png`, sizes: '512x512', type: 'image/png', purpose: 'monochrome' },
+          ],
+          shortcuts: [
+            { name: 'Robôs', short_name: 'Robôs', description: 'Ligar e acompanhar os robôs', url: '/?tela=robos', icons: [{ src: `${pwaDir}/icon-192.png`, sizes: '192x192' }] },
+            { name: 'Operar', short_name: 'Operar', description: 'Operação manual', url: '/?tela=operar', icons: [{ src: `${pwaDir}/icon-192.png`, sizes: '192x192' }] },
+            { name: 'Aulas', short_name: 'Aulas', description: 'O treinamento da plataforma', url: '/?tela=aulas', icons: [{ src: `${pwaDir}/icon-192.png`, sizes: '192x192' }] },
+          ],
+          screenshots: telas.map((f) => {
+            const [, w, h] = f.match(/(\d+)x(\d+)/) ?? []
+            return { src: `${pwaDir}/telas/${f}`, sizes: `${w}x${h}`, type: 'image/png', form_factor: Number(w) > Number(h) ? 'wide' : 'narrow', label: ROTULO_DA_TELA[f.replace(/-\d+x\d+\.png$/, '').replace(/^\d+-/, '')] ?? MARCA.prosa }
+          }),
+        }
+        writeFileSync(join(SAIDA, 'manifest.webmanifest'), JSON.stringify(manifesto, null, 2) + '\n')
 
         const essenciais = readdirSync(join(SAIDA, 'assets'))
           .filter((arquivo) => /\.(?:js|css)$/.test(arquivo))

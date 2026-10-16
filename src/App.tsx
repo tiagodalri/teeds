@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, lazy, Suspense } from 'react'
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 import { useSimulador } from './hooks/useSimulador'
 import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
 import { PositionCard } from './components/PositionCard'
@@ -249,6 +249,38 @@ export default function App() {
   useEffect(() => {
     if ((admin === false || adminFalhou) && (tela === 'gestao' || tela === 'insights' || tela === 'monitoramento')) setTela('operar')
   }, [admin, adminFalhou, tela])
+
+  // App com cara de nativo (marcas com `appNativo`): o atalho do ícone abre a
+  // tela pedida (?tela=robos) e o voltar do Android/gesto do iPhone volta à
+  // tela anterior, em vez de fechar o app. Cada troca de tela vira um passo
+  // no histórico; o endereço não muda.
+  const telaVeioDoVoltar = useRef(false)
+  useEffect(() => {
+    if (!MARCA.appNativo) return
+    const u = new URL(location.href)
+    const pedida = u.searchParams.get('tela')
+    const PUBLICAS: WorkspacePage[] = ['operar', 'robos', 'aulas', 'gerenciamento', 'marketplace']
+    if (pedida && (PUBLICAS as string[]).includes(pedida)) setTela(pedida as WorkspacePage)
+    if (u.searchParams.has('tela') || u.searchParams.get('origem') === 'app') {
+      u.searchParams.delete('tela'); u.searchParams.delete('origem')
+      history.replaceState(history.state, '', u.pathname + u.search + u.hash)
+    }
+    const voltar = (e: PopStateEvent) => {
+      const t = (e.state as { tela?: WorkspacePage } | null)?.tela ?? 'operar'
+      telaVeioDoVoltar.current = true
+      setTela(t)
+    }
+    window.addEventListener('popstate', voltar)
+    return () => window.removeEventListener('popstate', voltar)
+  }, [])
+  useEffect(() => {
+    if (!MARCA.appNativo) return
+    if (telaVeioDoVoltar.current) { telaVeioDoVoltar.current = false; return }
+    const atual = (history.state as { tela?: WorkspacePage } | null)?.tela
+    if (atual === tela) return
+    if (atual === undefined) history.replaceState({ ...(history.state ?? {}), tela }, '')
+    else history.pushState({ ...(history.state ?? {}), tela }, '')
+  }, [tela])
 
   useEffect(() => {
     if (!teeds.sessao) return
