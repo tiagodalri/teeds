@@ -47,6 +47,20 @@ interface Props {
  * palavra "vender" saiu daqui de proposito: na mesma tela ela ja e o botao
  * de apostar na queda, e um leigo lia "Vender" achando que estava saindo.
  */
+/**
+ * O motivo da Deriv para não deixar encerrar, em poucas palavras (o botão é
+ * estreito; o texto inteiro dela fica no `title`). Antes era sempre "Vai até
+ * o fim · não dá para encerrar antes", que cortava no celular e não dizia
+ * por quê. (16/10/2026, primeiro teste com forex.)
+ */
+export function porQueNaoEncerra(motivo: string | null): string {
+  const m = (motivo ?? '').toLowerCase()
+  if (/market.*(clos|open)|trading.*(clos|suspend)/.test(m)) return 'Mercado fechado agora'
+  if (/not offered|not available|resale|sell back|sellback/.test(m)) return 'A Deriv não deixa encerrar antes'
+  if (/wait|try again|moved|too old|stale|quote|price/.test(m)) return 'Aguarde um instante'
+  return 'Só no vencimento'
+}
+
 export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }: Props) {
   const { restante, texto } = useCountdown(c.expiryTime)
   const concluido = FINAIS.has(c.status)
@@ -98,7 +112,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
         ? 'Encerrando…'
         : c.isValidToSell
           ? `Encerrar agora · ${dinheiro(c.bidPrice)}`
-          : 'Vai até o fim · não dá para encerrar antes'
+          : porQueNaoEncerra(c.motivoSemVenda)
 
   return (
     <div className={[
@@ -160,6 +174,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
         className="btn btn-vender"
         disabled={concluido || liquidando || !c.isValidToSell || encerrando}
         onClick={() => onEncerrar(c.contractId)}
+        title={!concluido && c.motivoSemVenda ? `Deriv: ${c.motivoSemVenda}` : undefined}
       >
         {rotuloBotao}
       </button>

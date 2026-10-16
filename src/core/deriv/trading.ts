@@ -28,6 +28,8 @@ export interface OpenContract {
   profitPercentage: number
   status: string
   isValidToSell: boolean
+  /** Por que a Deriv não deixa encerrar agora (texto dela, em inglês). */
+  motivoSemVenda: string | null
   isExpired: boolean
   entrySpot: number | null
   currentSpot: number | null
@@ -66,6 +68,7 @@ export function toOpenContract(p: Record<string, any>): OpenContract {
     profitPercentage: Number(p.profit_percentage ?? 0),
     status: p.status ?? 'open',
     isValidToSell: p.is_valid_to_sell === 1,
+    motivoSemVenda: p.is_valid_to_sell === 1 ? null : (p.validation_error ? String(p.validation_error) : null),
     isExpired: p.is_expired === 1,
     entrySpot: num(p.entry_spot),
     currentSpot: num(p.current_spot),
