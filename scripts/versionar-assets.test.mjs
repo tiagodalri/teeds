@@ -4,7 +4,7 @@ import { versionarReferencias } from './versionar-assets.mjs'
 
 test('entrada, import estático, lazy e preload usam a mesma versão', () => {
   const v = 'regressao'
-  for (const marca of ['teeds', 'omni']) {
+  for (const marca of ['teeds', 'omni', 'globalfly']) {
     const html = versionarReferencias(`<script src="/assets/${marca}.js"></script>`, v)
     const chunk = versionarReferencias(`import {r} from "./${marca}.js";import('./MonitoramentoPanel.js');const preload=["assets/${marca}.js","assets/${marca}.css"]`, v)
     assert.ok(html.includes(`${marca}.js?v=${v}`))

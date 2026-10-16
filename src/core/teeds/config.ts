@@ -9,6 +9,8 @@
  * Enquanto estiverem vazios, a Teeds abre direto na plataforma, sem exigir
  * conta — util para desenvolver sem derrubar quem ja usa.
  */
+import { MARCA } from '../../marca'
+
 export const SUPABASE = {
   url: 'https://wonxykovfvfnuhzpqsle.supabase.co',
   anonKey:
@@ -31,7 +33,9 @@ export function autenticacaoConfigurada(): boolean {
 export const SERVIDOR = {
   // Um nome, nao o IP: esconde o endereco real do servidor e deixa trocar
   // de maquina no futuro sem republicar o app (basta reapontar o DNS).
-  url: 'https://motor.teedscompany.com',
+  // A GlobalFly fala com o mesmo servidor por um nome dela (16/10/2026): o
+  // site de uma marca separada nao pode mostrar o endereco da Teeds.
+  url: MARCA.id === 'globalfly' ? 'https://motor.globalflytrade.com' : 'https://motor.teedscompany.com',
 } as const
 
 /**

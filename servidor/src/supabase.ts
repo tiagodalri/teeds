@@ -616,7 +616,8 @@ export async function emailFalhou(id: number, tentativas: number, erro: string):
 /** Captura publica: o navegador fala com o motor; a chave do banco nunca sai daqui. */
 export async function salvarLeadCapturado(d: {
   consentiu: boolean
-  marca: 'teeds' | 'omni'; nome: string; email: string; telefone: string
+  /** Um id de MARCAS, já conferido contra o domínio de origem. */
+  marca: string; nome: string; email: string; telefone: string
   campanha?: string; origem?: string; meio?: string; conteudo?: string; termo?: string; pagina?: string
   tempo: number; profundidade: number; visitas: number; pontuacao: number; temperatura: 'frio' | 'morno' | 'quente'
 }): Promise<void> {
@@ -959,7 +960,7 @@ export async function limparEspelhoAntigo(): Promise<unknown> {
  * visita que derruba o carregamento do site é um cliente a menos.
  */
 export async function salvarVisita(d: {
-  marca: 'teeds' | 'omni'; visitante: string
+  marca: string; visitante: string
   origem?: string; meio?: string; campanha?: string; referencia?: string
   dispositivo?: string; idioma?: string; fuso?: string; caminho?: string
 }): Promise<void> {

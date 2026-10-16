@@ -1,17 +1,27 @@
 # Captação de leads
 
-Uma única landing page atende as duas marcas sem misturar seus dados:
+Uma única landing page atende as três marcas sem misturar seus dados. A marca
+sai do domínio (`/cadastro/` dentro do site de cada uma):
 
-- `cadastro.teedscompany.com` identifica e grava `marca = teeds`;
-- `cadastro.omnifinanc.com` identifica e grava `marca = omni`.
+- domínio com `globalfly` (globalflytrade.com) grava `marca = globalfly`;
+- domínio com `omni` (omnifinanc.com) grava `marca = omni`;
+- qualquer outro (teedscompany.com) fica com a padrão, `marca = teeds`.
 
-Em desenvolvimento, use `?marca=teeds` ou `?marca=omni`. O formulário envia
+Em desenvolvimento (localhost ou 127.0.0.1), use `?marca=teeds`, `?marca=omni`
+ou `?marca=globalfly`. O formulário envia
 somente para `https://motor.teedscompany.com/publico/leads`. A chave do Supabase
 nunca é entregue ao navegador.
 
 Antes de publicar, é obrigatório: aplicar a migração
-`20260909143000_captacao_publica_de_leads.sql`, atualizar o motor, apontar os dois
-subdomínios para a hospedagem desta pasta e revisar o texto de privacidade/LGPD.
+`20260909143000_captacao_publica_de_leads.sql`, atualizar o motor, apontar os
+domínios para a hospedagem desta pasta e revisar o texto de privacidade/LGPD.
+
+GlobalFly, pendências conhecidas: o canal do Telegram ainda não existe, então a
+página de obrigado mostra o cartão "Seu acesso chega por e-mail" no lugar do
+botão (basta preencher `telegram` na configuração de `obrigado/index.html`).
+As telas `plataforma/globalfly-*.webp` ainda não foram capturadas; enquanto
+não existirem, a galeria esconde a figura que falhar e, sem nenhuma, a seção
+"Por dentro" e o atalho dela no topo.
 
 ## As telas da plataforma (`plataforma/*.webp`)
 
@@ -25,8 +35,9 @@ Para refazer (Chrome instalado, na raiz do projeto):
 ```
 npx vite --port 5194 &                     # Teeds
 MARCA=omni npx vite --port 5195 &          # OMNI
+MARCA=globalfly npx vite --port 5196 &     # GlobalFly
 CH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-for m in teeds:5194 omni:5195; do marca=${m%%:*}; porta=${m##*:}
+for m in teeds:5194 omni:5195 globalfly:5196; do marca=${m%%:*}; porta=${m##*:}
   for t in robos gerenciamento aulas marketplace; do
     "$CH" --headless=new --hide-scrollbars --force-device-scale-factor=2 \
       --window-size=1500,1120 --virtual-time-budget=9000 \

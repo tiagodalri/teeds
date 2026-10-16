@@ -7,7 +7,9 @@ import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { versionarReferencias } from './versionar-assets.mjs'
 
-const marca = process.env.MARCA === 'omni' ? 'omni' : 'teeds'
+// Qualquer marca que exista em src/marca/marcas.ts (16/10/2026, GlobalFly):
+// o ternario antigo de duas marcas mandava uma terceira para a pasta da Teeds.
+const marca = ['omni', 'globalfly'].includes(process.env.MARCA ?? '') ? process.env.MARCA : 'teeds'
 const pasta = marca === 'teeds' ? 'docs' : `docs-${marca}`
 const arquivo = `${pasta}/index.html`
 

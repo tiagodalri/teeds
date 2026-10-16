@@ -36,6 +36,7 @@ const PAGES = 'tiagodalri.github.io'
 const SITES = [
   { marca: 'Teeds', dominio: 'teedscompany.com' },
   { marca: 'OMNI', dominio: 'omnifinanc.com' },
+  { marca: 'GlobalFly', dominio: 'globalflytrade.com' },
 ]
 
 const resolvedor = new Resolver()

@@ -77,6 +77,12 @@ function cascaPorMarca() {
 // entao usamos nomes fixos (sobrescreve em vez de recriar) e desligamos a
 // limpeza da pasta de saida. O cache do navegador e resolvido por uma
 // versao anexada no index.html a cada build (ver scripts/versao.mjs).
+/* Cor de fundo do app instalado e nome curto na tela inicial, por marca.
+   Antes eram ternarios de duas marcas: a GlobalFly sairia instalada como
+   "OMNI" (16/10/2026). */
+const FUNDO_DA_MARCA: Record<string, string> = { teeds: '#090a0d', omni: '#081525', globalfly: '#0B1626' }
+const NOME_CURTO: Record<string, string> = { teeds: 'Teeds', omni: 'OMNI', globalfly: 'GlobalFly' }
+
 export default defineConfig({
   base: MARCA.base,
   plugins: [
@@ -96,8 +102,8 @@ export default defineConfig({
             .replaceAll('%BASE%', MARCA.base)
             .replaceAll('%EMBLEMA%', MARCA.emblema)
             .replaceAll('%MARCA%', MARCA.id)
-            .replaceAll('%THEME%', MARCA.id === 'omni' ? '#081525' : '#090a0d')
-            .replaceAll('%NOME%', MARCA.nome === 'TEEDS' ? 'Teeds' : MARCA.nome),
+            .replaceAll('%THEME%', FUNDO_DA_MARCA[MARCA.id] ?? '#090a0d')
+            .replaceAll('%NOME%', NOME_CURTO[MARCA.id] ?? MARCA.nome),
       },
     },
     {
@@ -144,9 +150,9 @@ export default defineConfig({
         writeFileSync(join(SAIDA, 'CNAME'), new URL(MARCA.redirectUri).hostname + '\n')
 
         const pwaDir = `pwa-${MARCA.id}`
-        const fundo = MARCA.id === 'omni' ? '#081525' : '#090a0d'
-        const nome = MARCA.nome === 'TEEDS' ? 'Teeds Trading Platform' : 'OMNI Trading Platform'
-        const curto = MARCA.nome === 'TEEDS' ? 'Teeds' : 'OMNI'
+        const fundo = FUNDO_DA_MARCA[MARCA.id] ?? '#090a0d'
+        const curto = NOME_CURTO[MARCA.id] ?? MARCA.prosa
+        const nome = MARCA.id === 'globalfly' ? 'GlobalFly Trade' : `${curto} Trading Platform`
         writeFileSync(join(SAIDA, 'manifest.webmanifest'), JSON.stringify({
           id: '/', name: nome, short_name: curto,
           description: `${MARCA.prosa} — operações manuais, robôs e acompanhamento em um só lugar.`,

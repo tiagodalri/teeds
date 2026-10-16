@@ -5337,9 +5337,11 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .mon-selo.plataforma { font-weight: 800; letter-spacing: .04em; }
 .mon-selo.plataforma.teeds { color: #6b5210; border-color: color-mix(in srgb, #d0aa52 55%, var(--border)); background: color-mix(in srgb, #d0aa52 16%, transparent); }
 .mon-selo.plataforma.omni { color: #26358a; border-color: color-mix(in srgb, #4c6fff 50%, var(--border)); background: color-mix(in srgb, #4c6fff 14%, transparent); }
+.mon-selo.plataforma.globalfly { color: #0e4a8f; border-color: color-mix(in srgb, #1f6fd1 50%, var(--border)); background: color-mix(in srgb, #1f6fd1 14%, transparent); }
 /* No escuro a mesma cor fica ilegível: o tom tem de clarear, não só o fundo. */
 :root[data-tema='escuro'] .mon-selo.plataforma.teeds { color: #e2c278; }
 :root[data-tema='escuro'] .mon-selo.plataforma.omni { color: #9fb2ff; }
+:root[data-tema='escuro'] .mon-selo.plataforma.globalfly { color: #8fc0f5; }
 /* Na Rede a lista de encerradas ganha a coluna da plataforma. */
 .mon-tabela:has(.mon-selo.plataforma) .cab,
 .mon-tabela:has(.mon-selo.plataforma) .ins-linha { grid-template-columns: 1.5fr .75fr .9fr .9fr .7fr .95fr 1.1fr 24px; }

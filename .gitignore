@@ -10,6 +10,8 @@ vite.config.ts.timestamp-*
 .claude/settings.local.json
 docs-omni/
 .omni-publicacao/
+docs-globalfly/
+.globalfly-publicacao/
 
 # gerado por 'npm run emails' — previa dos e-mails, nao e fonte
 previa-emails/

@@ -27,7 +27,8 @@
     "rootDirs": [
       "src",
       "src/casca/teeds",
-      "src/casca/omni"
+      "src/casca/omni",
+      "src/casca/globalfly"
     ]
   },
   "include": [

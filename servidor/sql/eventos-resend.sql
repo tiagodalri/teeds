@@ -4,7 +4,7 @@ set local lock_timeout = '5s';
 create table public.email_eventos_resend (
   evento_id text primary key check (length(evento_id) between 1 and 200),
   email_id uuid not null,
-  marca text not null check (marca in ('teeds','omni')),
+  marca text not null check (marca in ('teeds','omni','globalfly')),
   tipo text not null check (tipo in ('sent','delivered','opened','clicked','bounced','complained','failed','delivery_delayed','suppressed','scheduled')),
   ocorrido_em timestamptz not null,
   recebido_em timestamptz not null default now()

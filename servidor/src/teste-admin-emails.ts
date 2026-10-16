@@ -21,6 +21,11 @@ await assert.rejects(()=>listarEmailsAdmin('outra'),/Plataforma inválida/)
 const segunda=await listarEmailsAdmin('teeds',primeira.proximo!)
 assert.equal(segunda.emails.length,1);assert.equal(segunda.proximo,null)
 await listarEmailsAdmin('teeds',primeira.proximo!);assert.equal(chamadas,2)
+// Marca nova entra pela tabela: a GlobalFly vê só os e-mails dela.
+const globalfly={...teeds,id:'email-3',from:'GlobalFly <nao-responda@globalflytrade.com>'}
+globalThis.fetch=async()=>new Response(JSON.stringify({data:[teeds,omni,globalfly],has_more:false}),{status:200})
+assert.deepEqual((await listarEmailsAdmin('globalfly')).emails.map(e=>e.id),['email-3'])
+await assert.rejects(()=>listarEmailsAdmin('toString'),/Plataforma inválida/)
 globalThis.fetch=async()=>new Response('{}',{status:403})
 await assert.rejects(()=>listarEmailsAdmin('omni'),/credencial/)
 globalThis.fetch=async()=>new Response('{}',{status:429})

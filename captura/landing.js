@@ -1,8 +1,12 @@
-/* A landing de captação. Uma página, duas marcas: o domínio decide qual. */
+/* A landing de captação. Uma página, três marcas: o domínio decide qual.
+   Sem pista nenhuma no domínio, fica a Teeds (a marca padrão). */
 const host = location.hostname.toLowerCase()
 const params = new URLSearchParams(location.search)
 const local = host === 'localhost' || host === '127.0.0.1'
-const marca = host.includes('omni') || (local && params.get('marca') === 'omni') ? 'omni' : 'teeds'
+const pedida = local ? params.get('marca') : null
+const marca = host.includes('globalfly') || pedida === 'globalfly' ? 'globalfly'
+  : host.includes('omni') || pedida === 'omni' ? 'omni'
+  : 'teeds'
 
 /* Os robôs de cada marca, com a regra em uma linha. Os ids são os do motor. */
 const ROBOS = {
@@ -14,17 +18,30 @@ const ROBOS = {
   secondblock: { regra: 'Over 4', ganha: [5, 6, 7, 8, 9], texto: 'Mesma regra do First Block, na metade de cima: espera dois dígitos seguidos da outra metade e entra. Ganha com 5, 6, 7, 8 ou 9.' },
   thepalm: { regra: 'Under 9 → Under 5', ganha: [0, 1, 2, 3, 4, 5, 6, 7, 8], payout: 0.115, recuperacao: { ganha: [0, 1, 2, 3, 4], payout: 0.95, chance: 0.86 }, texto: 'Analisa 25 dígitos, arma entradas reais em Under 9 depois de uma perda virtual e troca para Under 5 na recuperação, com o payout real no cálculo.' },
 }
-const config = marca === 'omni' ? {
-  nome: 'OMNI', cor: '#6c93c6', escura: '#0e2a4e', emblema: '/omni-marca.png', assinatura: 'FINANCIAL INTELLIGENCE',
-  intro: 'A OMNI reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
-  demo: { id: 'firstblock', nome: 'Sessão demonstrativa' },
-  fotos: [['omni-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['omni-gerenciamento.webp', 'Gerenciamento', 'A planilha que calcula entrada, limites e objetivo antes de ligar o robô.'], ['omni-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['omni-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
-} : {
-  nome: 'TEEDS', cor: '#d2aa51', escura: '#8c6926', emblema: '/teeds-marca.png', assinatura: 'TRADING TECHNOLOGY',
-  intro: 'A Teeds reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
-  demo: { id: 'thepalm', nome: 'Sessão demonstrativa' },
-  fotos: [['teeds-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['teeds-gerenciamento.webp', 'Gerenciamento', 'A planilha que calcula entrada, limites e objetivo antes de ligar o robô.'], ['teeds-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['teeds-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
+/* O que muda de uma marca para outra. `tema` é a cor da barra do navegador. */
+const MARCAS = {
+  teeds: {
+    nome: 'TEEDS', cor: '#d2aa51', escura: '#8c6926', emblema: '/teeds-marca.png', assinatura: 'TRADING TECHNOLOGY', tema: '#090a0d',
+    intro: 'A Teeds reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
+    demo: { id: 'thepalm', nome: 'Sessão demonstrativa' },
+    fotos: [['teeds-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['teeds-gerenciamento.webp', 'Gerenciamento', 'A planilha que calcula entrada, limites e objetivo antes de ligar o robô.'], ['teeds-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['teeds-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
+  },
+  omni: {
+    nome: 'OMNI', cor: '#6c93c6', escura: '#0e2a4e', emblema: '/omni-marca.png', assinatura: 'FINANCIAL INTELLIGENCE', tema: '#081525',
+    intro: 'A OMNI reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
+    demo: { id: 'firstblock', nome: 'Sessão demonstrativa' },
+    fotos: [['omni-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['omni-gerenciamento.webp', 'Gerenciamento', 'A planilha que calcula entrada, limites e objetivo antes de ligar o robô.'], ['omni-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['omni-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
+  },
+  globalfly: {
+    nome: 'GLOBALFLY', prosa: 'GlobalFly', cor: '#C99A2E', escura: '#8a6a1f', emblema: '/globalfly-marca.png', assinatura: 'GLOBAL TRADING', tema: '#0B1626',
+    intro: 'A GlobalFly reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Antes de decolar, você traça o plano de voo: quanto quer ganhar e quanto aceita perder. O robô assume o comando da execução, 24 horas, na sua conta da corretora.',
+    demo: { id: 'goreme', nome: 'Sessão demonstrativa' },
+    // As telas da GlobalFly ainda serão capturadas. Enquanto o arquivo não
+    // existir, a galeria esconde a figura (e a seção, se ficar vazia).
+    fotos: [['globalfly-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['globalfly-gerenciamento.webp', 'Gerenciamento', 'O plano de voo antes de decolar: a planilha calcula entrada, limites e objetivo antes de ligar o robô.'], ['globalfly-aulas.webp', 'Aulas', 'O treinamento a bordo, do primeiro acesso à leitura de dígitos.'], ['globalfly-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da plataforma, reunidos num só lugar.']],
+  },
 }
+const config = MARCAS[marca]
 document.documentElement.dataset.marca = marca
 document.documentElement.style.setProperty('--cor', config.cor)
 document.documentElement.style.setProperty('--cor-escura', config.escura)
@@ -36,7 +53,7 @@ document.title = `${config.nome} · Robôs de operação com gestão de risco`
 document.querySelector('[data-favicon-ico]').href = `/pwa-${marca}/favicon.ico`
 document.querySelectorAll('[data-favicon]').forEach(el => { el.href = `/pwa-${marca}/favicon-${el.dataset.favicon}.png` })
 document.querySelector('[data-apple-icon]').href = `/pwa-${marca}/icon-180.png`
-document.querySelector('meta[name="theme-color"]').content = marca === 'omni' ? '#081525' : '#090a0d'
+document.querySelector('meta[name="theme-color"]').content = config.tema
 
 /* ------------------------------------------------------ galeria */
 const galeriaEl = document.querySelector('[data-galeria]')
@@ -47,6 +64,14 @@ for (const [arquivo, titulo, legenda] of config.fotos) {
   fig.querySelector('img').alt = `Tela ${titulo} da plataforma ${config.nome}`
   fig.querySelector('b').textContent = titulo
   fig.querySelector('span').textContent = legenda
+  // Tela que ainda não existe (ou não carregou) some sem deixar moldura vazia;
+  // sem nenhuma tela, a seção inteira e o atalho dela no topo saem junto.
+  fig.querySelector('img').addEventListener('error', () => {
+    fig.remove()
+    if (galeriaEl.children.length) return
+    const secao = galeriaEl.closest('section'); if (secao) secao.hidden = true
+    if (secao?.id) document.querySelectorAll(`a[href="#${secao.id}"]`).forEach(a => { a.hidden = true })
+  })
   galeriaEl.appendChild(fig)
 }
 
@@ -88,9 +113,10 @@ for (const [arquivo, titulo, legenda] of config.fotos) {
 })()
 
 /* ---------------------------------------------------------------- FAQ */
+const nomeNoTexto = config.prosa ?? config.nome
 const FAQ = [
-  ['Preciso ter experiência para usar?', `Não. A plataforma foi feita para quem está começando: aulas curtas dentro dela, conta demo com dinheiro fictício e a equipe ${config.nome} acompanhando a configuração. Quem já opera encontra gráfico, indicadores e operação manual também.`],
-  ['Onde fica o meu dinheiro?', `Na sua própria conta na Deriv, corretora internacional com mais de 20 anos de mercado. A ${config.nome} recebe apenas uma autorização para operar; depósitos e saques são feitos por você, direto na corretora. A plataforma nunca guarda saldo.`],
+  ['Preciso ter experiência para usar?', `Não. A plataforma foi feita para quem está começando: aulas curtas dentro dela, conta demo com dinheiro fictício e a equipe ${nomeNoTexto} acompanhando a configuração. Quem já opera encontra gráfico, indicadores e operação manual também.`],
+  ['Onde fica o meu dinheiro?', `Na sua própria conta na Deriv, corretora internacional com mais de 20 anos de mercado. A ${nomeNoTexto} recebe apenas uma autorização para operar; depósitos e saques são feitos por você, direto na corretora. A plataforma nunca guarda saldo.`],
   ['Posso perder dinheiro?', 'Pode. Toda operação financeira envolve risco, e ninguém sério promete ganho garantido. O que a plataforma faz é colocar o risco sob controle: você define o stop de perda antes de ligar e o robô para ali. O quanto arriscar é sempre decisão sua.'],
   ['Quanto preciso para começar?', 'Você pode começar na conta demo, sem dinheiro nenhum, e conhecer tudo com calma. Na conta real, a entrada mínima por operação é pequena (a partir de US$ 0,35) e o valor total é você quem define.'],
   ['O robô opera sozinho? Preciso deixar o computador ligado?', 'Ele opera no nosso servidor, 24 horas, com a sua conta conectada. Pode fechar o notebook ou trancar o celular: o robô continua e para sozinho quando bater a meta ou o stop.'],
@@ -277,7 +303,7 @@ form.addEventListener('submit', async event => {
   const dados = Object.fromEntries(new FormData(form))
   const utm = new URLSearchParams(location.search)
   try {
-    const resposta = await fetch('https://motor.teedscompany.com/publico/leads', {
+    const resposta = await fetch(`https://${marca === 'globalfly' ? 'motor.globalflytrade.com' : 'motor.teedscompany.com'}/publico/leads`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ ...dados, marca, consentiu: form.elements.consentiu.checked,
         tempo: Math.round((Date.now() - inicio) / 1000), profundidade, visitas, pagina: location.href,

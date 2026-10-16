@@ -1,0 +1,132 @@
+/*
+ * O tema da GlobalFly — aviação executiva: céu noturno, azul de rota e o
+ * dourado das luzes de pista.
+ *
+ * A Teeds fala em serifa dourada sobre quase-preto; a OMNI é banco, marinho
+ * e azul-aço. A GlobalFly fica entre o céu e o jato: fundos azul-noite (não
+ * pretos), destaque azul-céu no claro e dourado no escuro, e a palavra da
+ * marca larga e espaçada como letreiro de hangar (Sora), com o texto corrido
+ * em Plus Jakarta Sans, firme em número e em tela pequena.
+ *
+ * Este arquivo VENCE o app.css (entra depois dele) e só existe no build da
+ * GlobalFly. O --primary vem da tabela de marcas (src/core/tema.ts).
+ */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap');
+
+:root {
+  --fonte-corpo: 'Plus Jakarta Sans', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --fonte-marca: 'Sora', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+
+  --text: #0f1b2d;
+  --muted: #5d6c82;
+  --surface: #f3f6fa;
+  --surface-alt: #fafcfe;
+  --border: #d9e1ea;
+  --trilho: #d6dfeb;
+  --desativado: #c6d1df;
+}
+
+:root[data-tema='escuro'] {
+  /* céu às onze da noite: azul profundo, nunca preto */
+  --bg: #0b1626;
+  --surface: #10203a;
+  --surface-alt: #152a48;
+  --border: #233b5e;
+  --text: #e9eff7;
+  --muted: #8ea2bd;
+  --trilho: #243c5f;
+  --desativado: #2a4063;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(2, 8, 20, 0.55);
+}
+
+body { font-family: var(--fonte-corpo); letter-spacing: 0.003em; }
+
+/* ------------------------------------------------ a palavra da marca */
+.marca-nome {
+  font-family: var(--fonte-marca);
+  font-weight: 600; font-size: 14px; letter-spacing: 0.28em;
+  background: none; -webkit-background-clip: initial; background-clip: initial;
+  color: var(--primary); -webkit-text-fill-color: var(--primary);
+}
+.marca-selo {
+  background: radial-gradient(circle at 30% 25%, #1a3a66, #0b1626 72%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .25), inset 0 1px 0 rgba(255, 255, 255, .10);
+}
+
+/* ------------------------- o dourado escrito à mão vira cor da marca */
+.tv-abas button.on {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+.tv-abas button.on > i { color: var(--primary); }
+.tv-tabela tbody tr.recente {
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
+  box-shadow: inset 0 0 18px color-mix(in srgb, var(--primary) 6%, transparent);
+}
+.tv-assinatura { color: var(--primary); font-family: var(--fonte-marca); font-weight: 600; }
+.tv-fluxo-etapa.ativa > i {
+  border-color: var(--primary);
+  color: color-mix(in srgb, var(--primary) 70%, #ffffff);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.tv-fluxo-linha span { background: var(--primary); }
+.aula-progresso-card u { background: var(--primary); }
+.go { --go-gold: var(--primary); }
+
+/* Sala de aula: céu noturno com luz de pista. Uma camada azul-noite substitui
+   a atmosfera dourada da Teeds; o dourado fica só nos detalhes. */
+.aulas { background: #081221; }
+.aulas-capa { box-shadow: inset 0 -110px 100px #081221; }
+.aulas-capa::before {
+  content: ''; position: absolute; z-index: 1; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(6,14,28,.90) 0%, rgba(11,30,58,.48) 48%, rgba(31,111,209,.14) 100%),
+    linear-gradient(180deg, rgba(201,154,46,.08), transparent 48%);
+  mix-blend-mode: color;
+}
+.aulas-capa::after { background: linear-gradient(transparent, #081221); }
+.aulas-selo, .aulas-meta b { color: #e2c27a; }
+.aulas-selo { border-color: rgba(226,194,122,.34); background: rgba(201,154,46,.12); }
+.aulas-barra i { background: linear-gradient(90deg, #1f6fd1, #e2c27a); }
+.aulas-hero-marca { color: rgba(226,194,122,.58); }
+.aulas-trilha-num { color: rgba(126,170,228,.22); }
+.aulas-modulo-topo h3 { color: #e9eff7; }
+.aulas-modulo-topo p, .aula-card-meta { color: #7487a4; }
+.aula-cartao-capa { background-color: #0b1a30; }
+.aula-cartao-capa::after,
+.aula-modal-capa::before,
+.aula-embreve-palco::after {
+  content: ''; position: absolute; z-index: 1; inset: 0; pointer-events: none;
+  background: linear-gradient(145deg, rgba(31,111,209,.22), rgba(4,12,26,.08) 52%, rgba(201,154,46,.14));
+  mix-blend-mode: color;
+}
+.aula-cartao-capa > img, .aula-modal-capa > img, .aula-embreve-palco > img {
+  filter: saturate(.8) contrast(1.06) brightness(.94);
+}
+.aula-play { z-index: 2; background: #e2c27a; color: #0b1626; }
+.aula-cartao-capa > em, .aula-vista, .aula-hover-info { z-index: 2; }
+.aula-num, .aula-modal-breve { color: #e2c27a; }
+.aula-progresso-card u { background: linear-gradient(90deg, #1f6fd1, #e2c27a); }
+.aula-modal { background: #0c182b; }
+.aula-modal-capa::after { z-index: 2; background: linear-gradient(transparent, #0c182b); }
+
+/* ------------------------------ a cabine do robô, na cor da casa */
+/* A cabine continua uma ilha noturna; no escuro a tinta é o dourado de pista
+   sobre azul-noite, no claro o azul-céu. */
+.tv { --primary: #D2A63C; --primary-soft: rgba(210, 166, 60, .15); }
+:root:not([data-tema='escuro']) .tv { --primary: #1f6fd1; --primary-soft: rgba(31, 111, 209, .11); }
+.tv {
+  background:
+    radial-gradient(80% 28% at 50% 0%, rgba(31, 111, 209, .12), transparent 100%),
+    linear-gradient(180deg, #132644, #0b1626);
+  border-color: rgba(62, 134, 220, .24);
+}
+:root:not([data-tema='escuro']) .tv {
+  background:
+    radial-gradient(80% 28% at 50% 0%, rgba(31, 111, 209, .07), transparent 100%),
+    linear-gradient(180deg, #fff, #f5f8fc);
+  border-color: color-mix(in srgb, var(--robo, #1f6fd1) 26%, #dbe3ee);
+}
+.tv-abas button.on { background: color-mix(in srgb, var(--primary) 12%, transparent); box-shadow: inset 0 -2px 0 var(--primary); }
+.tv-tabela th { background: #0e1d33; }
+.tv-assinatura { opacity: .16; }

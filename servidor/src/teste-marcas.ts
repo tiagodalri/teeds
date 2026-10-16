@@ -30,7 +30,12 @@ conferir('Smart 03 saiu da vitrine mas continua no catalogo',
 conferir('OMNI: quatro robos, nomes da casa', vitrine('omni'),
   ['OMNI Under', 'OMNI Over', 'OMNI Bull', 'OMNI Bear'])
 conferir('Teeds nao tem apelido nenhum', MARCAS.teeds.nomesDosRobos, undefined)
-conferir('The Palm existe somente na Teeds', MARCAS.teeds.robos.includes('thepalm') && !MARCAS.omni.robos.includes('thepalm'), true)
+conferir('The Palm esta na Teeds e fora da OMNI', MARCAS.teeds.robos.includes('thepalm') && !MARCAS.omni.robos.includes('thepalm'), true)
+conferir('GlobalFly: seis robos, nomes de aviacao', vitrine('globalfly'),
+  ['GlobalFly Piloto', 'GlobalFly Turbina', 'GlobalFly Cruzeiro', 'GlobalFly Decolagem', 'GlobalFly Altitude', 'GlobalFly Radar'])
+// Marca separada da Teeds de proposito: nenhum robo dela pode levar outro nome.
+conferir('GlobalFly: nenhum robo com nome de Teeds ou OMNI', vitrine('globalfly').some((n) => /teeds|omni/i.test(n)), false)
+conferir('GlobalFly: app e afiliado proprios', [MARCAS.globalfly.appId !== MARCAS.teeds.appId && MARCAS.globalfly.appId !== MARCAS.omni.appId, MARCAS.globalfly.afiliado.includes('W7L5WVEEQGHY')], [true, false])
 for (const m of Object.values(MARCAS)) {
   for (const r of m.robos) conferir(`${m.prosa}: robo "${r}" existe no motor`, ESTRATEGIAS_LOCAIS.some((e) => e.id === r), true)
   conferir(`${m.prosa}: nenhum nome de outra marca`, vitrine(m.id).some((n) => Object.values(MARCAS).some((o) => o.id !== m.id && n.startsWith(o.nome))), false)

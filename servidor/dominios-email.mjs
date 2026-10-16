@@ -30,6 +30,7 @@ const REGIAO = 'sa-east-1'
 const DOMINIOS = [
   { marca: 'Teeds', dominio: 'teedscompany.com' },
   { marca: 'OMNI', dominio: 'omnifinanc.com' },
+  { marca: 'GlobalFly', dominio: 'globalflytrade.com' },
 ]
 
 const env = {}

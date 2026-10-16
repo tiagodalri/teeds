@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# A trava da casca: uma mudanca so na OMNI nao pode mudar a Teeds (nem o contrario).
+# A trava da casca: uma mudanca so na casca de UMA marca nao pode mudar o site
+# das outras (Teeds, OMNI e, desde 16/10/2026, GlobalFly).
 #
 #   npm run separacao
 #
@@ -22,6 +23,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 REF_OMNI="scripts/digital-omni.txt"
+REF_GLOBALFLY="scripts/digital-globalfly.txt"
 
 digital_disco() {  # impressao digital dos gerados de uma pasta, no disco
   local pasta="$1"
@@ -36,6 +38,7 @@ digital_commit_teeds() {  # a mesma impressao, lida do ultimo commit
 
 ANTES_TEEDS="$(digital_commit_teeds)"
 ANTES_OMNI="$(git show "HEAD:$REF_OMNI" 2>/dev/null || true)"
+ANTES_GLOBALFLY="$(git show "HEAD:$REF_GLOBALFLY" 2>/dev/null || true)"
 
 echo "→ provas da tabela de marcas…"; (cd servidor && npm run marcas --silent 2>&1 | tail -1)
 echo "→ provas do motor…"; (cd servidor && npm run motor --silent 2>&1 | tail -1)
@@ -55,25 +58,31 @@ echo "→ provas do /cadastre-se…";        (cd servidor && npm run cadastrese 
 echo "→ montando a Teeds…";            npm run build --silent >/dev/null
 echo "→ provas da rolagem das telas…"; (cd servidor && npm run rolagem --silent 2>&1 | tail -1)
 echo "→ montando a OMNI…";  MARCA=omni npm run build --silent >/dev/null
+echo "→ montando a GlobalFly…";  MARCA=globalfly npm run build --silent >/dev/null
 
 DEPOIS_TEEDS="$(digital_disco docs)"
 DEPOIS_OMNI="$(digital_disco docs-omni)"
+DEPOIS_GLOBALFLY="$(digital_disco docs-globalfly)"
 
 teeds_mudou=0; [ "$ANTES_TEEDS" != "$DEPOIS_TEEDS" ] && teeds_mudou=1
 omni_mudou=0;  omni_sem_ref=0
 if [ -z "$ANTES_OMNI" ]; then omni_sem_ref=1; else [ "$ANTES_OMNI" != "$DEPOIS_OMNI" ] && omni_mudou=1; fi
+globalfly_mudou=0;  globalfly_sem_ref=0
+if [ -z "$ANTES_GLOBALFLY" ]; then globalfly_sem_ref=1; else [ "$ANTES_GLOBALFLY" != "$DEPOIS_GLOBALFLY" ] && globalfly_mudou=1; fi
 
 # O que mudou nas fontes desde o ultimo commit (alterado, novo ou apagado), um a um.
 MUDADOS="$(git status --porcelain -uall -- src public index.html vite.config.ts tsconfig.json package.json 2>/dev/null | sed -E 's/^.{3}//; s/^.* -> //')"
 
-so_omni=1; so_teeds=1; nada=1
+# so_X=1 enquanto tudo o que mudou estiver dentro da casca da marca X.
+so_omni=1; so_teeds=1; so_globalfly=1; nada=1
 while IFS= read -r f; do
   [ -z "$f" ] && continue
   nada=0
   case "$f" in
-    src/casca/omni/*)  so_teeds=0 ;;
-    src/casca/teeds/*) so_omni=0 ;;
-    *) so_omni=0; so_teeds=0 ;;
+    src/casca/omni/*)      so_teeds=0; so_globalfly=0 ;;
+    src/casca/teeds/*)     so_omni=0;  so_globalfly=0 ;;
+    src/casca/globalfly/*) so_teeds=0; so_omni=0 ;;
+    *) so_omni=0; so_teeds=0; so_globalfly=0 ;;
   esac
 done <<< "$MUDADOS"
 
@@ -82,13 +91,21 @@ echo
 printf '  %-20s %s\n' "fontes alteradas:" "$( [ "$nada" = 1 ] && echo 'nenhuma' || echo "$MUDADOS" | wc -l | tr -d ' ')"
 printf '  %-20s %s\n' "site da Teeds:" "$(rotulo $teeds_mudou)"
 printf '  %-20s %s\n' "site da OMNI:"  "$( [ "$omni_sem_ref" = 1 ] && echo 'sem referencia ainda (gravando agora)' || rotulo $omni_mudou)"
+printf '  %-20s %s\n' "site da GlobalFly:"  "$( [ "$globalfly_sem_ref" = 1 ] && echo 'sem referencia ainda (gravando agora)' || rotulo $globalfly_mudou)"
 
 falhou=0
-if [ "$nada" = 0 ] && [ "$so_omni" = 1 ] && [ "$teeds_mudou" = 1 ]; then
-  echo; echo "✕ A mudanca era so na casca da OMNI, mas o site da Teeds saiu diferente."; falhou=1
+vazou() { echo; echo "✕ A mudanca era so na casca da $1, mas o site da $2 saiu diferente."; falhou=1; }
+if [ "$nada" = 0 ] && [ "$so_omni" = 1 ]; then
+  [ "$teeds_mudou" = 1 ] && vazou OMNI Teeds
+  [ "$globalfly_mudou" = 1 ] && vazou OMNI GlobalFly
 fi
-if [ "$nada" = 0 ] && [ "$so_teeds" = 1 ] && [ "$omni_mudou" = 1 ]; then
-  echo; echo "✕ A mudanca era so na casca da Teeds, mas o site da OMNI saiu diferente."; falhou=1
+if [ "$nada" = 0 ] && [ "$so_teeds" = 1 ]; then
+  [ "$omni_mudou" = 1 ] && vazou Teeds OMNI
+  [ "$globalfly_mudou" = 1 ] && vazou Teeds GlobalFly
+fi
+if [ "$nada" = 0 ] && [ "$so_globalfly" = 1 ]; then
+  [ "$teeds_mudou" = 1 ] && vazou GlobalFly Teeds
+  [ "$omni_mudou" = 1 ] && vazou GlobalFly OMNI
 fi
 # A referencia da OMNI so e regravada quando a conferencia passa. Se alguem
 # montou e guardou fonte sem rodar a trava, a referencia envelhece e a trava
@@ -98,10 +115,14 @@ if [ "$nada" = 1 ] && [ "$omni_mudou" = 1 ] && [ "${ACEITAR_OMNI:-0}" = 1 ]; the
   echo; echo "• Aceitando a montagem atual da OMNI como nova referencia (ACEITAR_OMNI=1)."
   omni_mudou=0
 fi
-if [ "$nada" = 1 ] && { [ "$teeds_mudou" = 1 ] || [ "$omni_mudou" = 1 ]; }; then
+if [ "$nada" = 1 ] && [ "$globalfly_mudou" = 1 ] && [ "${ACEITAR_GLOBALFLY:-0}" = 1 ]; then
+  echo; echo "• Aceitando a montagem atual da GlobalFly como nova referencia (ACEITAR_GLOBALFLY=1)."
+  globalfly_mudou=0
+fi
+if [ "$nada" = 1 ] && { [ "$teeds_mudou" = 1 ] || [ "$omni_mudou" = 1 ] || [ "$globalfly_mudou" = 1 ]; }; then
   echo; echo "✕ Nenhuma fonte mudou, mas o site nao bate com o do commit: alguem guardou fonte sem montar,"
-  echo "  ou o build deixou de ser deterministico. Monte e faca commit de docs/ e de $REF_OMNI."
-  echo "  Se a montagem atual da OMNI e a boa: ACEITAR_OMNI=1 npm run separacao"; falhou=1
+  echo "  ou o build deixou de ser deterministico. Monte e faca commit de docs/, $REF_OMNI e $REF_GLOBALFLY."
+  echo "  Se a montagem atual e a boa: ACEITAR_OMNI=1 e/ou ACEITAR_GLOBALFLY=1 npm run separacao"; falhou=1
 fi
 
 if [ "$falhou" = 1 ]; then
@@ -113,6 +134,7 @@ if [ "$falhou" = 1 ]; then
   exit 1
 fi
 
-# Referencia da OMNI para a proxima conferencia — entra no commit junto.
+# Referencias da OMNI e da GlobalFly para a proxima conferencia — entram no commit junto.
 printf '%s\n' "$DEPOIS_OMNI" > "$REF_OMNI"
+printf '%s\n' "$DEPOIS_GLOBALFLY" > "$REF_GLOBALFLY"
 echo; echo "✓ Separacao conferida."

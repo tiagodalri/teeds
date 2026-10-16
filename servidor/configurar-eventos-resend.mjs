@@ -13,7 +13,7 @@ async function api(path,method='GET',body){
 const endpoint='https://motor.teedscompany.com/gancho/resend-eventos'
 const eventos=['email.sent','email.delivered','email.opened','email.clicked','email.bounced','email.complained','email.failed','email.delivery_delayed','email.suppressed','email.scheduled']
 const domains=await api('/domains')
-const marcas={teeds:'teedscompany.com',omni:'omnifinanc.com'}
+const marcas={teeds:'teedscompany.com',omni:'omnifinanc.com',globalfly:'globalflytrade.com'}
 const config={}
 for(const [marca,nome] of Object.entries(marcas)){
  const domain=domains.data.find(d=>d.name===nome&&d.status==='verified')

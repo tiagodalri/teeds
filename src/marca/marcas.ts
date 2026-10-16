@@ -222,6 +222,53 @@ export const MARCAS: Record<string, Marca> = {
     },
     telegram: 'https://t.me/oarthurlessa',
   },
+
+  /*
+    GlobalFly Trade (16/10/2026): a volta da Starkbot, com o Victor Cordeiro.
+    Marca SEPARADA da Teeds de propósito: nada aqui pode levar o nome Teeds
+    nem o do Victor (ver a memória do projeto). Os robôs são os da Teeds com
+    nomes de aviação; a escolha final dos sócios ainda pode trocar.
+  */
+  globalfly: {
+    id: 'globalfly',
+    nome: 'GLOBALFLY',
+    prosa: 'GlobalFly',
+    prefixoRobo: 'GlobalFly',
+    appId: '34H1Zr9Gp5fdho00X5BZT',
+    redirectUri: 'https://globalflytrade.com/',
+    // PENDENTE: a conta de afiliado da GlobalFly ainda não existe (não pode
+    // ser no nome do Victor). Até lá, o cadastro vai para a Deriv sem token.
+    afiliado: 'https://deriv.com/signup/',
+    robos: ['goreme', 'superior5', 'ag2', 'firstblock', 'secondblock', 'thepalm'],
+    nomesDosRobos: {
+      goreme: 'GlobalFly Piloto',
+      superior5: 'GlobalFly Turbina',
+      ag2: 'GlobalFly Cruzeiro',
+      firstblock: 'GlobalFly Decolagem',
+      secondblock: 'GlobalFly Altitude',
+      thepalm: 'GlobalFly Radar',
+    },
+    base: '/',
+    emblema: 'globalfly-marca.png',
+    heroAulas: { principal: 'aulas-especialista/boas-vindas.webp', reserva: 'aulas-especialista/boas-vindas.jpg', celular: 'aulas-especialista/boas-vindas-mobile.webp', posicao: 'right 18%' },
+    cor: { claro: '#1F6FD1', escuro: '#C99A2E' },
+    email: {
+      faixa: '#0B1626',
+      letreiro: '#D9B465',
+      botao: '#1F6FD1',
+      tintaDoBotao: '#ffffff',
+      fonteDoLetreiro: "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif",
+      chapaDoEmblema: null,
+      fundo: '#f3f6fa',
+      rodape:
+        'A GlobalFly é uma plataforma de operações que funciona com a sua própria conta na Deriv. ' +
+        'Negociar envolve risco de perda.',
+      remetente: 'GlobalFly <nao-responda@globalflytrade.com>',
+      vaoDoLetreiro: 8,
+    },
+    // PENDENTE: link do canal do Victor (Telegram da antiga Stark).
+    telegram: '',
+  },
 }
 
 /** A marca padrão, quando ninguém disser qual. */

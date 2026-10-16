@@ -118,6 +118,23 @@ const tentativasLead = new Map<string, { inicio: number; total: number }>()
    nunca vai para o banco (ver o comentário da migração das visitas). */
 const tentativasVisita = new Map<string, { inicio: number; total: number }>()
 
+/*
+  Os sites das marcas, para as portas públicas (/cliente/regiao,
+  /publico/visita, /publico/leads). Saem de MARCAS, como as `liberadas` da
+  /api/: marca nova entra sozinha, em vez de ficar de fora sem erro nenhum.
+*/
+const dominioDaMarca = (m: { redirectUri: string }) => new URL(m.redirectUri).hostname
+const SITES_DAS_MARCAS = Object.values(MARCAS).map((m) => new URL(m.redirectUri).origin)
+const CADASTROS_DAS_MARCAS = Object.values(MARCAS).map((m) => `https://cadastro.${dominioDaMarca(m)}`)
+/** A marca dona do site de onde veio o pedido (o domínio ou um subdomínio dele); null fora deles. */
+function marcaDoSite(origem: string): string | null {
+  let host = ''
+  try { host = new URL(origem).hostname } catch { return null }
+  return Object.values(MARCAS).find((m) => host === dominioDaMarca(m) || host.endsWith(`.${dominioDaMarca(m)}`))?.id ?? null
+}
+/** Só um id que existe em MARCAS. `in` não serve: 'toString' in MARCAS é true. */
+const marcaConhecida = (v: unknown): string | null => typeof v === 'string' && marcaPorId(v).id === v ? v : null
+
 /** Descarta tentativas velhas: um `state` que sobra é superfície de ataque. */
 function limpar() {
   const agora = Date.now()
@@ -429,7 +446,7 @@ const servidor = createServer(async (req, res) => {
       Precisa de sessão: é dado de um cliente identificado, não de visita.
     */
     const origem = String(req.headers.origin ?? '')
-    const permitidas = ['https://teedscompany.com', 'https://omnifinanc.com', 'http://localhost:5173', 'http://localhost:4173']
+    const permitidas = [...SITES_DAS_MARCAS, 'http://localhost:5173', 'http://localhost:4173']
     const headers: Record<string, string> = { 'content-type': 'application/json; charset=utf-8', vary: 'Origin' }
     if (permitidas.includes(origem)) headers['access-control-allow-origin'] = origem
     headers['access-control-allow-headers'] = 'content-type, authorization'
@@ -445,8 +462,8 @@ const servidor = createServer(async (req, res) => {
     for await (const parte of req) { bytes += (parte as Buffer).length; if (bytes > 2_048) break; pedacos.push(parte as Buffer) }
     let marcaPedida = ''
     try { marcaPedida = String(JSON.parse(Buffer.concat(pedacos).toString('utf8'))?.marca ?? '') } catch { /* corpo vazio */ }
-    const marca = marcaPedida === 'omni' ? 'omni' : marcaPedida === 'teeds' ? 'teeds' : null
-    const daOrigem = origem.includes('omnifinanc.com') ? 'omni' : origem.includes('teedscompany.com') ? 'teeds' : marca
+    const marca = marcaConhecida(marcaPedida)
+    const daOrigem = marcaDoSite(origem) ?? marca
     if (!marca || marca !== daOrigem) { res.writeHead(200, headers); return res.end(JSON.stringify({ ok: true })) }
 
     const endereco = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim()
@@ -467,7 +484,7 @@ const servidor = createServer(async (req, res) => {
       `fetch` num console aberto.
     */
     const origem = String(req.headers.origin ?? '')
-    const permitidas = ['https://teedscompany.com', 'https://omnifinanc.com', 'http://localhost:5173', 'http://localhost:4173']
+    const permitidas = [...SITES_DAS_MARCAS, 'http://localhost:5173', 'http://localhost:4173']
     const headers: Record<string, string> = { 'content-type': 'application/json; charset=utf-8', vary: 'Origin' }
     if (permitidas.includes(origem)) headers['access-control-allow-origin'] = origem
     headers['access-control-allow-headers'] = 'content-type'
@@ -489,10 +506,10 @@ const servidor = createServer(async (req, res) => {
     for await (const parte of req) { bytes += (parte as Buffer).length; if (bytes > 4_096) break; pedacos.push(parte as Buffer) }
     try {
       const d = JSON.parse(Buffer.concat(pedacos).toString('utf8'))
-      const marca = d.marca === 'omni' ? 'omni' : d.marca === 'teeds' ? 'teeds' : null
+      const marca = marcaConhecida(d.marca)
       // A marca tem de bater com o domínio de onde veio: senão a Teeds
       // conseguiria escrever visita na conta da OMNI e vice-versa.
-      const daOrigem = origem.includes('omnifinanc.com') ? 'omni' : origem.includes('teedscompany.com') ? 'teeds' : marca
+      const daOrigem = marcaDoSite(origem) ?? marca
       if (!marca || marca !== daOrigem) throw new Error('Marca incompatível com a origem.')
       const curto = (v: unknown, n: number) => String(v ?? '').trim().slice(0, n)
       const visitante = curto(d.visitante, 40).replace(/[^a-zA-Z0-9_-]/g, '')
@@ -513,11 +530,7 @@ const servidor = createServer(async (req, res) => {
 
   if (url.pathname === '/publico/leads') {
     const origem = String(req.headers.origin ?? '')
-    const permitidas = [
-      'https://cadastro.teedscompany.com', 'https://teedscompany.com',
-      'https://cadastro.omnifinanc.com', 'https://omnifinanc.com',
-      'http://localhost:4174',
-    ]
+    const permitidas = [...CADASTROS_DAS_MARCAS, ...SITES_DAS_MARCAS, 'http://localhost:4174']
     const headers: Record<string,string> = { 'content-type': 'application/json; charset=utf-8', vary: 'Origin' }
     if (permitidas.includes(origem)) headers['access-control-allow-origin'] = origem
     headers['access-control-allow-headers'] = 'content-type'
@@ -535,8 +548,8 @@ const servidor = createServer(async (req, res) => {
     try {
       const d = JSON.parse(Buffer.concat(partes).toString('utf8'))
       if (d.empresa) { res.writeHead(200, headers); return res.end(JSON.stringify({ ok: true })) }
-      const marca = d.marca === 'omni' ? 'omni' : d.marca === 'teeds' ? 'teeds' : null
-      const marcaDaLanding = origem.includes('omnifinanc.com') ? 'omni' : origem.includes('teedscompany.com') ? 'teeds' : marca
+      const marca = marcaConhecida(d.marca)
+      const marcaDaLanding = marcaDoSite(origem) ?? marca
       if (marca !== marcaDaLanding) throw new Error('Marca incompatível com a página de cadastro.')
       const nome = String(d.nome ?? '').trim().replace(/\s+/g, ' ').slice(0, 120)
       const email = String(d.email ?? '').trim().toLowerCase().slice(0, 180)
@@ -675,7 +688,7 @@ const servidor = createServer(async (req, res) => {
       }
       if (url.pathname === '/api/admin/emails') {
         const marca = url.searchParams.get('marca') || marcaDaOrigem.id
-        if (marca !== 'teeds' && marca !== 'omni') return json(400, { erro: 'Plataforma inválida.' })
+        if (!marcaConhecida(marca)) return json(400, { erro: 'Plataforma inválida.' })
         if (!await administradorDaMarca(dono.id, marca) && !await administradorDaMarca(dono.id, 'teeds')) return json(403, { erro: 'Somente administradores desta plataforma.' })
         if (req.method !== 'GET') return json(405, { erro: 'Método não permitido.' })
         res.setHeader('Cache-Control', 'no-store')

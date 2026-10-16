@@ -15,6 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <style>:root{--cor:#d2aa51;--cor-escura:#8c6926;--fundo:#0d1118;--fundo2:#11161e;--cartao:#161c25;--linha:#28303b;--texto:#f4f1ea;--muted:#9298a3;--verde:#42cb84;--vermelho:#ff6868;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);font-family:"DM Sans",sans-serif;color-scheme:dark;scroll-behavior:smooth}
+[data-marca=globalfly]{--fundo:#0B1626;--fundo2:#0e1c30;--cartao:#11213a;--linha:#22364f;--muted:#94a2b6}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 section[id]{scroll-margin-top:90px}
@@ -37,6 +38,8 @@ h1,h2,h3{margin:0}
 [data-marca=teeds] .simbolo{padding:3px;background:#090b0f}[data-marca=teeds] .simbolo img{filter:drop-shadow(0 2px 5px #d2aa5155)}
 [data-marca=omni] .marca strong{font-family:"DM Sans",sans-serif;font-weight:700;color:#dce6f2}[data-marca=omni] .simbolo{padding:7px;border-radius:50%;background:#edf4fb}[data-marca=omni] .simbolo img{filter:saturate(.82)}
 [data-marca=omni] body:before{background:radial-gradient(circle at 70% 5%,#315f9940,transparent 34%)}
+[data-marca=globalfly] .marca strong{font-family:"DM Sans",sans-serif;font-weight:700;color:#e3ebf6}[data-marca=globalfly] .simbolo{padding:3px;background:#08111e;border-color:#1F6FD180}
+[data-marca=globalfly] body:before{background:radial-gradient(circle at 70% 5%,#1F6FD138,transparent 36%)}
 .topo-nav{display:flex;gap:26px;margin-left:auto;margin-right:26px}.topo-nav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600}.topo-nav a:hover{color:var(--texto)}
 .topo-acao{color:#111;text-decoration:none;background:var(--cor);padding:11px 18px;border-radius:10px;font-size:13px;font-weight:700;white-space:nowrap}
 
@@ -54,6 +57,7 @@ h1,h2,h3{margin:0}
 .hero h1{font:600 clamp(40px,4.6vw,66px)/1.05 "Playfair Display",serif;letter-spacing:-.04em}
 .hero h1 em{color:var(--cor);font-style:normal}
 [data-marca=omni] .hero h1,[data-marca=omni] h2{font-family:"DM Sans",sans-serif!important;font-weight:800!important;letter-spacing:-.045em!important}
+[data-marca=globalfly] .hero h1,[data-marca=globalfly] h2{font-family:"DM Sans",sans-serif!important;font-weight:800!important;letter-spacing:-.045em!important}
 .hero-texto>p{font-size:18px;line-height:1.7;color:#adb1b8;max-width:590px;margin:28px 0}
 .hero-acoes{display:flex;align-items:center;gap:20px}.hero-acoes small{color:#7a808b;font-size:12px;line-height:1.45;max-width:260px}
 .provas{list-style:none;margin:44px 0 0;padding:0;display:grid;gap:12px}
@@ -64,9 +68,11 @@ h1,h2,h3{margin:0}
 /* --------------------------------------- a cabine (layout da plataforma) */
 .tv{position:relative;border:1px solid #2e3541;border-radius:18px;background:#10151d;box-shadow:0 45px 90px #000a,0 0 0 1px color-mix(in srgb,var(--cor) 16%,transparent);overflow:hidden;font-size:12px;transform:perspective(1400px) rotateY(-2.5deg)}
 [data-marca=omni] .tv{background:#0b1320;border-color:#26384d}
+[data-marca=globalfly] .tv{background:#0c1829;border-color:#21385a;box-shadow:0 45px 90px #000a,0 0 0 1px #1F6FD12e}
 .tv .up{color:var(--verde)}.tv .down{color:var(--vermelho)}
 .tv-topo{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border-bottom:1px solid var(--linha);background:#141a23}
 [data-marca=omni] .tv-topo{background:#0f1a29}
+[data-marca=globalfly] .tv-topo{background:#10203a}
 .tv-quem{display:flex;align-items:center;gap:11px;min-width:0}
 .tv-farol{flex-shrink:0;width:10px;height:10px;border-radius:50%;background:var(--verde);box-shadow:0 0 0 4px #42cb8433;animation:pulsa 1.6s ease-in-out infinite}
 @keyframes pulsa{50%{box-shadow:0 0 0 7px #42cb8411}}
@@ -121,6 +127,7 @@ h1,h2,h3{margin:0}
 .bloco{padding:100px max(24px,calc((100vw - 1240px)/2))}
 .bloco.escuro{background:var(--fundo2);border-block:1px solid var(--linha)}
 [data-marca=omni] .bloco.escuro{background:#0e1622}
+[data-marca=globalfly] .bloco.escuro{background:#0e1c30}
 .bloco-cab{max-width:820px;margin:0 auto 54px;text-align:center}
 .bloco-cab h2,.gestao h2,.cadastro h2{font:600 clamp(32px,3.6vw,50px)/1.1 "Playfair Display",serif;letter-spacing:-.03em}
 .bloco-cab p{color:#8e949e;font-size:16px;line-height:1.7;margin:18px auto 0;max-width:680px}
@@ -219,6 +226,7 @@ h1,h2,h3{margin:0}
 /* cadastro */
 .cadastro{max-width:1120px;margin:20px auto 80px;border:1px solid color-mix(in srgb,var(--cor) 32%,var(--linha));border-radius:24px;background:linear-gradient(135deg,color-mix(in srgb,var(--cor) 8%,#10141b),#0c1016);padding:65px;display:grid;grid-template-columns:.9fr 1.1fr;gap:80px}
 [data-marca=omni] .cadastro{background:linear-gradient(135deg,#142337,#0a1019)}
+[data-marca=globalfly] .cadastro{background:linear-gradient(135deg,#12264a,#0a1424)}[data-marca=globalfly] form{background:#0d1a2d}[data-marca=globalfly] input{background:#11213a;border-color:#263c5a}
 .cadastro-texto>p{color:#8e949e;line-height:1.7;margin:18px 0 12px}
 .cadastro-texto ul{list-style:none;padding:12px 0;margin:0;display:grid;gap:16px}.cadastro-texto li{font-size:14px;color:#bbc0c8}.cadastro-texto li i{font-style:normal;color:var(--cor);margin-right:10px}
 form{background:#0f141b;border:1px solid var(--linha);border-radius:16px;padding:30px;display:grid;gap:18px}
@@ -522,11 +530,15 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 
 
   <a class="cta-fixo" href="#cadastro" aria-label="Ir para o cadastro">Entrar na fila de espera <span>→</span></a>
-  <script>/* A landing de captação. Uma página, duas marcas: o domínio decide qual. */
+  <script>/* A landing de captação. Uma página, três marcas: o domínio decide qual.
+   Sem pista nenhuma no domínio, fica a Teeds (a marca padrão). */
 const host = location.hostname.toLowerCase()
 const params = new URLSearchParams(location.search)
 const local = host === 'localhost' || host === '127.0.0.1'
-const marca = host.includes('omni') || (local && params.get('marca') === 'omni') ? 'omni' : 'teeds'
+const pedida = local ? params.get('marca') : null
+const marca = host.includes('globalfly') || pedida === 'globalfly' ? 'globalfly'
+  : host.includes('omni') || pedida === 'omni' ? 'omni'
+  : 'teeds'
 
 /* Os robôs de cada marca, com a regra em uma linha. Os ids são os do motor. */
 const ROBOS = {
@@ -538,17 +550,30 @@ const ROBOS = {
   secondblock: { regra: 'Over 4', ganha: [5, 6, 7, 8, 9], texto: 'Mesma regra do First Block, na metade de cima: espera dois dígitos seguidos da outra metade e entra. Ganha com 5, 6, 7, 8 ou 9.' },
   thepalm: { regra: 'Under 9 → Under 5', ganha: [0, 1, 2, 3, 4, 5, 6, 7, 8], payout: 0.115, recuperacao: { ganha: [0, 1, 2, 3, 4], payout: 0.95, chance: 0.86 }, texto: 'Analisa 25 dígitos, arma entradas reais em Under 9 depois de uma perda virtual e troca para Under 5 na recuperação, com o payout real no cálculo.' },
 }
-const config = marca === 'omni' ? {
-  nome: 'OMNI', cor: '#6c93c6', escura: '#0e2a4e', emblema: '/omni-marca.png', assinatura: 'FINANCIAL INTELLIGENCE',
-  intro: 'A OMNI reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
-  demo: { id: 'firstblock', nome: 'Sessão demonstrativa' },
-  fotos: [['omni-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['omni-gerenciamento.webp', 'Gerenciamento', 'A planilha que calcula entrada, limites e objetivo antes de ligar o robô.'], ['omni-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['omni-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
-} : {
-  nome: 'TEEDS', cor: '#d2aa51', escura: '#8c6926', emblema: '/teeds-marca.png', assinatura: 'TRADING TECHNOLOGY',
-  intro: 'A Teeds reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
-  demo: { id: 'thepalm', nome: 'Sessão demonstrativa' },
-  fotos: [['teeds-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['teeds-gerenciamento.webp', 'Gerenciamento', 'A planilha que calcula entrada, limites e objetivo antes de ligar o robô.'], ['teeds-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['teeds-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
+/* O que muda de uma marca para outra. `tema` é a cor da barra do navegador. */
+const MARCAS = {
+  teeds: {
+    nome: 'TEEDS', cor: '#d2aa51', escura: '#8c6926', emblema: '/teeds-marca.png', assinatura: 'TRADING TECHNOLOGY', tema: '#090a0d',
+    intro: 'A Teeds reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
+    demo: { id: 'thepalm', nome: 'Sessão demonstrativa' },
+    fotos: [['teeds-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['teeds-gerenciamento.webp', 'Gerenciamento', 'A planilha que calcula entrada, limites e objetivo antes de ligar o robô.'], ['teeds-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['teeds-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
+  },
+  omni: {
+    nome: 'OMNI', cor: '#6c93c6', escura: '#0e2a4e', emblema: '/omni-marca.png', assinatura: 'FINANCIAL INTELLIGENCE', tema: '#081525',
+    intro: 'A OMNI reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
+    demo: { id: 'firstblock', nome: 'Sessão demonstrativa' },
+    fotos: [['omni-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['omni-gerenciamento.webp', 'Gerenciamento', 'A planilha que calcula entrada, limites e objetivo antes de ligar o robô.'], ['omni-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['omni-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
+  },
+  globalfly: {
+    nome: 'GLOBALFLY', prosa: 'GlobalFly', cor: '#C99A2E', escura: '#8a6a1f', emblema: '/globalfly-marca.png', assinatura: 'GLOBAL TRADING', tema: '#0B1626',
+    intro: 'A GlobalFly reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Antes de decolar, você traça o plano de voo: quanto quer ganhar e quanto aceita perder. O robô assume o comando da execução, 24 horas, na sua conta da corretora.',
+    demo: { id: 'goreme', nome: 'Sessão demonstrativa' },
+    // As telas da GlobalFly ainda serão capturadas. Enquanto o arquivo não
+    // existir, a galeria esconde a figura (e a seção, se ficar vazia).
+    fotos: [['globalfly-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['globalfly-gerenciamento.webp', 'Gerenciamento', 'O plano de voo antes de decolar: a planilha calcula entrada, limites e objetivo antes de ligar o robô.'], ['globalfly-aulas.webp', 'Aulas', 'O treinamento a bordo, do primeiro acesso à leitura de dígitos.'], ['globalfly-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da plataforma, reunidos num só lugar.']],
+  },
 }
+const config = MARCAS[marca]
 document.documentElement.dataset.marca = marca
 document.documentElement.style.setProperty('--cor', config.cor)
 document.documentElement.style.setProperty('--cor-escura', config.escura)
@@ -560,7 +585,7 @@ document.title = `${config.nome} · Robôs de operação com gestão de risco`
 document.querySelector('[data-favicon-ico]').href = `/pwa-${marca}/favicon.ico`
 document.querySelectorAll('[data-favicon]').forEach(el => { el.href = `/pwa-${marca}/favicon-${el.dataset.favicon}.png` })
 document.querySelector('[data-apple-icon]').href = `/pwa-${marca}/icon-180.png`
-document.querySelector('meta[name="theme-color"]').content = marca === 'omni' ? '#081525' : '#090a0d'
+document.querySelector('meta[name="theme-color"]').content = config.tema
 
 /* ------------------------------------------------------ galeria */
 const galeriaEl = document.querySelector('[data-galeria]')
@@ -571,6 +596,14 @@ for (const [arquivo, titulo, legenda] of config.fotos) {
   fig.querySelector('img').alt = `Tela ${titulo} da plataforma ${config.nome}`
   fig.querySelector('b').textContent = titulo
   fig.querySelector('span').textContent = legenda
+  // Tela que ainda não existe (ou não carregou) some sem deixar moldura vazia;
+  // sem nenhuma tela, a seção inteira e o atalho dela no topo saem junto.
+  fig.querySelector('img').addEventListener('error', () => {
+    fig.remove()
+    if (galeriaEl.children.length) return
+    const secao = galeriaEl.closest('section'); if (secao) secao.hidden = true
+    if (secao?.id) document.querySelectorAll(`a[href="#${secao.id}"]`).forEach(a => { a.hidden = true })
+  })
   galeriaEl.appendChild(fig)
 }
 
@@ -612,9 +645,10 @@ for (const [arquivo, titulo, legenda] of config.fotos) {
 })()
 
 /* ---------------------------------------------------------------- FAQ */
+const nomeNoTexto = config.prosa ?? config.nome
 const FAQ = [
-  ['Preciso ter experiência para usar?', `Não. A plataforma foi feita para quem está começando: aulas curtas dentro dela, conta demo com dinheiro fictício e a equipe ${config.nome} acompanhando a configuração. Quem já opera encontra gráfico, indicadores e operação manual também.`],
-  ['Onde fica o meu dinheiro?', `Na sua própria conta na Deriv, corretora internacional com mais de 20 anos de mercado. A ${config.nome} recebe apenas uma autorização para operar; depósitos e saques são feitos por você, direto na corretora. A plataforma nunca guarda saldo.`],
+  ['Preciso ter experiência para usar?', `Não. A plataforma foi feita para quem está começando: aulas curtas dentro dela, conta demo com dinheiro fictício e a equipe ${nomeNoTexto} acompanhando a configuração. Quem já opera encontra gráfico, indicadores e operação manual também.`],
+  ['Onde fica o meu dinheiro?', `Na sua própria conta na Deriv, corretora internacional com mais de 20 anos de mercado. A ${nomeNoTexto} recebe apenas uma autorização para operar; depósitos e saques são feitos por você, direto na corretora. A plataforma nunca guarda saldo.`],
   ['Posso perder dinheiro?', 'Pode. Toda operação financeira envolve risco, e ninguém sério promete ganho garantido. O que a plataforma faz é colocar o risco sob controle: você define o stop de perda antes de ligar e o robô para ali. O quanto arriscar é sempre decisão sua.'],
   ['Quanto preciso para começar?', 'Você pode começar na conta demo, sem dinheiro nenhum, e conhecer tudo com calma. Na conta real, a entrada mínima por operação é pequena (a partir de US$ 0,35) e o valor total é você quem define.'],
   ['O robô opera sozinho? Preciso deixar o computador ligado?', 'Ele opera no nosso servidor, 24 horas, com a sua conta conectada. Pode fechar o notebook ou trancar o celular: o robô continua e para sozinho quando bater a meta ou o stop.'],
@@ -801,7 +835,7 @@ form.addEventListener('submit', async event => {
   const dados = Object.fromEntries(new FormData(form))
   const utm = new URLSearchParams(location.search)
   try {
-    const resposta = await fetch('https://motor.teedscompany.com/publico/leads', {
+    const resposta = await fetch(`https://${marca === 'globalfly' ? 'motor.globalflytrade.com' : 'motor.teedscompany.com'}/publico/leads`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ ...dados, marca, consentiu: form.elements.consentiu.checked,
         tempo: Math.round((Date.now() - inicio) / 1000), profundidade, visitas, pagina: location.href,

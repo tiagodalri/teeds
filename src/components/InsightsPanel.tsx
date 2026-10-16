@@ -195,7 +195,7 @@ export function InsightsPanel({ sessao, mostrarMarkup = false, onMostrarMarkup }
               </div>
             ))}
           </div>
-          <p className="ins-nota">Conta todo mundo que abre {marcaFoco === REDE ? 'os sites da rede' : marcaFoco === 'teeds' ? 'teedscompany.com' : 'omnifinanc.com'}, com login ou sem. Uma visita por aba aberta: recarregar a página não conta de novo.</p>
+          <p className="ins-nota">Conta todo mundo que abre {marcaFoco === REDE ? 'os sites da rede' : new URL(MARCAS[marcaFoco]?.redirectUri ?? MARCAS.teeds.redirectUri).hostname}, com login ou sem. Uma visita por aba aberta: recarregar a página não conta de novo.</p>
         </section>
 
         <section className="admin-card ins-card">

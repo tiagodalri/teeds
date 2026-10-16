@@ -86,7 +86,7 @@ const sessao = (id, alteracoes = {}) => ({
 try {
   // Todo o React fica no mesmo bundle: nenhum hook duplicado por resolução
   // de dependência. A marca é definida no build, como no aplicativo real.
-  for (const marca of ['teeds', 'omni']) {
+  for (const marca of ['teeds', 'omni', 'globalfly']) {
     const saida = join(temporario, `${marca}.mjs`)
     await build({
       stdin: {

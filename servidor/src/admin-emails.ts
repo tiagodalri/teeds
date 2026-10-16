@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
-import { MARCAS } from '../../src/marca/marcas'
+import { MARCAS, marcaPorId } from '../../src/marca/marcas'
 import { consultarEventos } from './eventos-resend'
 
 export interface EmailResumo { id: string; destinatarios: string[]; assunto: string; data: string; status: string; sinais?:ReturnType<typeof sinaisDoEmail> }
@@ -53,7 +53,7 @@ function abrirCursor(cursor: string, marca: string, chave: string): string {
   return d.id
 }
 export async function listarEmailsAdmin(marca: string, cursor = '') {
-  if (marca !== 'teeds' && marca !== 'omni') throw new Error('Plataforma inválida.')
+  if (marcaPorId(marca).id !== marca) throw new Error('Plataforma inválida.')
   const chave = process.env.RESEND_LEITURA_CHAVE || process.env.RESEND_CHAVE
   if (!chave) throw new Error('Consulta de e-mails não configurada no servidor.')
   const depois = abrirCursor(cursor, marca, chave)
