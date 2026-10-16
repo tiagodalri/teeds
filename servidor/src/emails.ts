@@ -213,14 +213,15 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
       <!-- faixa da marca -->
       <tr>
         <td align="center" bgcolor="${e.faixa}" style="background:${e.faixa};padding:24px 32px 26px;">
-          ${e.chapaDoEmblema ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>
+          ${e.assinatura ? `<img src="${new URL(e.assinatura, marca.redirectUri).toString()}" width="220" alt="${seguro(marca.prosa)}"
+               style="display:block;border:0;margin:6px auto;width:220px;max-width:70%;height:auto;">` : `${e.chapaDoEmblema ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>
             <td bgcolor="${e.chapaDoEmblema}" style="background:${e.chapaDoEmblema};border-radius:16px;padding:11px;">
               <img src="${emblemaDe(marca)}" width="46" height="46" alt="${seguro(marca.prosa)}"
                    style="display:block;border:0;">
             </td></tr></table>` : `<img src="${emblemaDe(marca)}" width="54" height="54" alt="${seguro(marca.prosa)}"
                style="display:block;border:0;margin:0 auto;">`}
           <div style="font-family:${e.fonteDoLetreiro};font-size:17px;letter-spacing:.26em;
-                      color:${e.letreiro};margin-top:${e.vaoDoLetreiro}px;padding-left:.26em;">${seguro(marca.nome)}</div>
+                      color:${e.letreiro};margin-top:${e.vaoDoLetreiro}px;padding-left:.26em;">${seguro(marca.nome)}</div>`}
         </td>
       </tr>
 

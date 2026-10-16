@@ -15,7 +15,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <style>:root{--cor:#d2aa51;--cor-escura:#8c6926;--fundo:#0d1118;--fundo2:#11161e;--cartao:#161c25;--linha:#28303b;--texto:#f4f1ea;--muted:#9298a3;--verde:#42cb84;--vermelho:#ff6868;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);font-family:"DM Sans",sans-serif;color-scheme:dark;scroll-behavior:smooth}
-[data-marca=globalfly]{--fundo:#0B1626;--fundo2:#0e1c30;--cartao:#11213a;--linha:#22364f;--muted:#94a2b6}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 section[id]{scroll-margin-top:90px}
@@ -38,8 +37,6 @@ h1,h2,h3{margin:0}
 [data-marca=teeds] .simbolo{padding:3px;background:#090b0f}[data-marca=teeds] .simbolo img{filter:drop-shadow(0 2px 5px #d2aa5155)}
 [data-marca=omni] .marca strong{font-family:"DM Sans",sans-serif;font-weight:700;color:#dce6f2}[data-marca=omni] .simbolo{padding:7px;border-radius:50%;background:#edf4fb}[data-marca=omni] .simbolo img{filter:saturate(.82)}
 [data-marca=omni] body:before{background:radial-gradient(circle at 70% 5%,#315f9940,transparent 34%)}
-[data-marca=globalfly] .marca strong{font-family:"DM Sans",sans-serif;font-weight:700;color:#e3ebf6}[data-marca=globalfly] .simbolo{padding:3px;background:#08111e;border-color:#1F6FD180}
-[data-marca=globalfly] body:before{background:radial-gradient(circle at 70% 5%,#1F6FD138,transparent 36%)}
 .topo-nav{display:flex;gap:26px;margin-left:auto;margin-right:26px}.topo-nav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600}.topo-nav a:hover{color:var(--texto)}
 .topo-acao{color:#111;text-decoration:none;background:var(--cor);padding:11px 18px;border-radius:10px;font-size:13px;font-weight:700;white-space:nowrap}
 
@@ -57,7 +54,6 @@ h1,h2,h3{margin:0}
 .hero h1{font:600 clamp(40px,4.6vw,66px)/1.05 "Playfair Display",serif;letter-spacing:-.04em}
 .hero h1 em{color:var(--cor);font-style:normal}
 [data-marca=omni] .hero h1,[data-marca=omni] h2{font-family:"DM Sans",sans-serif!important;font-weight:800!important;letter-spacing:-.045em!important}
-[data-marca=globalfly] .hero h1,[data-marca=globalfly] h2{font-family:"DM Sans",sans-serif!important;font-weight:800!important;letter-spacing:-.045em!important}
 .hero-texto>p{font-size:18px;line-height:1.7;color:#adb1b8;max-width:590px;margin:28px 0}
 .hero-acoes{display:flex;align-items:center;gap:20px}.hero-acoes small{color:#7a808b;font-size:12px;line-height:1.45;max-width:260px}
 .provas{list-style:none;margin:44px 0 0;padding:0;display:grid;gap:12px}
@@ -68,11 +64,9 @@ h1,h2,h3{margin:0}
 /* --------------------------------------- a cabine (layout da plataforma) */
 .tv{position:relative;border:1px solid #2e3541;border-radius:18px;background:#10151d;box-shadow:0 45px 90px #000a,0 0 0 1px color-mix(in srgb,var(--cor) 16%,transparent);overflow:hidden;font-size:12px;transform:perspective(1400px) rotateY(-2.5deg)}
 [data-marca=omni] .tv{background:#0b1320;border-color:#26384d}
-[data-marca=globalfly] .tv{background:#0c1829;border-color:#21385a;box-shadow:0 45px 90px #000a,0 0 0 1px #1F6FD12e}
 .tv .up{color:var(--verde)}.tv .down{color:var(--vermelho)}
 .tv-topo{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border-bottom:1px solid var(--linha);background:#141a23}
 [data-marca=omni] .tv-topo{background:#0f1a29}
-[data-marca=globalfly] .tv-topo{background:#10203a}
 .tv-quem{display:flex;align-items:center;gap:11px;min-width:0}
 .tv-farol{flex-shrink:0;width:10px;height:10px;border-radius:50%;background:var(--verde);box-shadow:0 0 0 4px #42cb8433;animation:pulsa 1.6s ease-in-out infinite}
 @keyframes pulsa{50%{box-shadow:0 0 0 7px #42cb8411}}
@@ -127,7 +121,6 @@ h1,h2,h3{margin:0}
 .bloco{padding:100px max(24px,calc((100vw - 1240px)/2))}
 .bloco.escuro{background:var(--fundo2);border-block:1px solid var(--linha)}
 [data-marca=omni] .bloco.escuro{background:#0e1622}
-[data-marca=globalfly] .bloco.escuro{background:#0e1c30}
 .bloco-cab{max-width:820px;margin:0 auto 54px;text-align:center}
 .bloco-cab h2,.gestao h2,.cadastro h2{font:600 clamp(32px,3.6vw,50px)/1.1 "Playfair Display",serif;letter-spacing:-.03em}
 .bloco-cab p{color:#8e949e;font-size:16px;line-height:1.7;margin:18px auto 0;max-width:680px}
@@ -226,7 +219,6 @@ h1,h2,h3{margin:0}
 /* cadastro */
 .cadastro{max-width:1120px;margin:20px auto 80px;border:1px solid color-mix(in srgb,var(--cor) 32%,var(--linha));border-radius:24px;background:linear-gradient(135deg,color-mix(in srgb,var(--cor) 8%,#10141b),#0c1016);padding:65px;display:grid;grid-template-columns:.9fr 1.1fr;gap:80px}
 [data-marca=omni] .cadastro{background:linear-gradient(135deg,#142337,#0a1019)}
-[data-marca=globalfly] .cadastro{background:linear-gradient(135deg,#12264a,#0a1424)}[data-marca=globalfly] form{background:#0d1a2d}[data-marca=globalfly] input{background:#11213a;border-color:#263c5a}
 .cadastro-texto>p{color:#8e949e;line-height:1.7;margin:18px 0 12px}
 .cadastro-texto ul{list-style:none;padding:12px 0;margin:0;display:grid;gap:16px}.cadastro-texto li{font-size:14px;color:#bbc0c8}.cadastro-texto li i{font-style:normal;color:var(--cor);margin-right:10px}
 form{background:#0f141b;border:1px solid var(--linha);border-radius:16px;padding:30px;display:grid;gap:18px}
@@ -335,6 +327,105 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
   .sessoes-expandir{display:block;width:100%;min-height:48px;margin-top:16px;padding:12px;border:1px solid var(--linha);border-radius:12px;background:var(--cartao);color:var(--texto);font:600 14px "DM Sans",sans-serif;cursor:pointer}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* ================================================================ GLOBALFLY
+   Brandbook oficial GlobalFly Trade ("Precisão em movimento."). Tudo aqui é
+   prefixado por [data-marca=globalfly]: Teeds e OMNI não mudam em nada.
+   Azul GF nas superfícies, Marfim para leitura, Aço para apoio e linhas,
+   Ardósia de suporte, Ouro só como acento (botões, cortes diagonais, seleção).
+   Positivo e Alerta só para resultado. Sem brilho, sem gradiente decorativo.
+   Tipografia: Arimo (métrica da Liberation Sans); números em monoespaçada. */
+[data-marca=globalfly]{
+  --fundo:#051528;--fundo2:#041120;--cartao:#162537;--linha:#27374a;--texto:#F3F0E9;--muted:#9CB1C7;--verde:#2F8F72;--vermelho:#C95F5F;
+  --gf-leitura:color-mix(in srgb,#F3F0E9 86%,#051528);--gf-apoio:#9CB1C7;--gf-ardosia:#29445F;--gf-painel:#041120;--gf-lateral:#030d1a;--gf-grafico:#112032;--gf-inativo:#586a7f;
+  --gf-fonte:Arimo,Arial,Helvetica,sans-serif;--gf-mono:"DejaVu Sans Mono",Menlo,Consolas,monospace;
+  font-family:var(--gf-fonte)
+}
+/* fundo: grade discreta no lugar do brilho radial */
+[data-marca=globalfly] body:before{background:linear-gradient(90deg,#27374a 1px,transparent 1px) 0 0/72px 72px,linear-gradient(#27374a 1px,transparent 1px) 0 0/72px 72px;opacity:.32;-webkit-mask-image:radial-gradient(ellipse 75% 60% at 75% 0,#000,transparent 72%);mask-image:radial-gradient(ellipse 75% 60% at 75% 0,#000,transparent 72%)}
+/* tipografia */
+[data-marca=globalfly] :is(.hero h1,h2,.botao,input,.sessoes-expandir){font-family:var(--gf-fonte)!important}
+[data-marca=globalfly] :is(.hero h1,h2){font-weight:700!important;letter-spacing:-.02em!important;text-wrap:pretty}
+[data-marca=globalfly] h2{text-wrap:balance}
+[data-marca=globalfly] h3{font-weight:700;letter-spacing:-.01em}
+[data-marca=globalfly] .hero h1{font-size:clamp(34px,3.5vw,52px);line-height:1.1}
+[data-marca=globalfly] .hero h1 em{color:var(--gf-apoio)}
+@media(max-width:600px){[data-marca=globalfly] .hero h1{font-size:clamp(28px,7.6vw,36px);line-height:1.15}}
+[data-marca=globalfly] :is(.tv-resumo b,.tv-meta b,.tv-etapa em strong,.tv-tabela,.tv-trilho,.sessao .valor,.sessao footer b,.gp-linha b,.gp-barra em,.passos li i,.experiencia-numero){font-family:var(--gf-mono);font-variant-numeric:tabular-nums;letter-spacing:0}
+/* topo: assinatura oficial em imagem (versão reversa), com área de respiro */
+[data-marca=globalfly] .topo{background:color-mix(in srgb,var(--gf-lateral) 90%,transparent);backdrop-filter:blur(12px)}
+[data-marca=globalfly] .marca{letter-spacing:0;padding-block:4px}
+[data-marca=globalfly] .assinatura-oficial{display:block;width:204px;max-width:none;height:auto;margin-left:-13px}
+@media(max-width:600px){[data-marca=globalfly] .assinatura-oficial{width:196px}}
+@media(max-width:359px){[data-marca=globalfly] .assinatura-oficial{width:52px;margin-left:-11px}}
+/* ação: ouro com texto Azul GF (6:1); a seta vira um traço fino de direção */
+[data-marca=globalfly] :is(.topo-acao,.botao,.cta-fixo,.gp-botao){color:#051528}
+[data-marca=globalfly] .botao,[data-marca=globalfly] .botao:hover{box-shadow:none}
+[data-marca=globalfly] .botao:hover{filter:brightness(1.06)}
+[data-marca=globalfly] .cta-fixo{box-shadow:0 10px 24px #0006}
+[data-marca=globalfly] :is(.botao,.cta-fixo)>span{font-size:0;width:18px;height:1.5px;background:currentColor;flex-shrink:0}
+/* rótulos: Aço, com o corte diagonal em ouro no ângulo do monograma */
+[data-marca=globalfly] .sobretitulo{color:var(--gf-apoio);letter-spacing:.16em}
+[data-marca=globalfly] .sobretitulo>i{display:none}
+[data-marca=globalfly] .sobretitulo:before{content:"";flex-shrink:0;width:1.5px;height:14px;background:var(--cor);transform:rotate(37deg)}
+/* hero */
+[data-marca=globalfly] .hero-texto>p{color:var(--gf-leitura)}
+[data-marca=globalfly] :is(.hero-acoes small,.cta-linha small){color:var(--gf-apoio)}
+[data-marca=globalfly] .provas li{color:var(--gf-leitura)}
+[data-marca=globalfly] :is(.provas li b,.lista-check i,.cadastro-texto li i){background:none;border:1px solid var(--gf-ardosia);color:var(--gf-apoio)}
+[data-marca=globalfly] .cadastro-texto li i{border:0}
+[data-marca=globalfly] .lista-x i{background:none;border:1px solid color-mix(in srgb,var(--vermelho) 50%,transparent);color:var(--vermelho)}
+/* a cabine, nas superfícies de interface do brandbook */
+[data-marca=globalfly] .tv{background:var(--gf-painel);border-color:var(--linha);box-shadow:0 24px 48px #0007}
+[data-marca=globalfly] .tv-topo{background:var(--gf-lateral)}
+[data-marca=globalfly] .tv-farol{background:var(--verde);box-shadow:none;animation:gf-vivo 1.6s ease-in-out infinite}
+@keyframes gf-vivo{50%{opacity:.4}}
+[data-marca=globalfly] :is(.tv-onde,.tv-resumo i,.tv-resumo b small,.tv-abas small,.tv-etapa small,.tv-etapa em,.tv-etapa em strong i,.tv-rot,.tv-meta i,.tv-tabela th,.cabine-aviso,.sessao footer i){color:var(--gf-apoio)}
+[data-marca=globalfly] .tv-abas{color:var(--gf-leitura)}
+[data-marca=globalfly] .tv-etapa>i{color:var(--gf-apoio)}
+[data-marca=globalfly] .tv-etapa.concluida>i{background:color-mix(in srgb,var(--verde) 22%,transparent)}
+[data-marca=globalfly] .tv-linha i{background:var(--linha)}
+[data-marca=globalfly] .tv-fluxo .tv-linha span{box-shadow:none!important}
+[data-marca=globalfly] .tv-curva stop{stop-color:#2F8F72}
+[data-marca=globalfly] .tv-barra{background:var(--linha)}[data-marca=globalfly] .tv-barra u{background:var(--gf-inativo)}[data-marca=globalfly] .tv-barra i{box-shadow:none}
+[data-marca=globalfly] .tv-tabela td{border-bottom-color:var(--gf-grafico);color:var(--gf-leitura)}
+[data-marca=globalfly] .tv-tabela .chip{background:var(--cartao);color:var(--gf-apoio)}
+[data-marca=globalfly] .tv-tabela .chip.up{background:color-mix(in srgb,var(--verde) 22%,transparent);color:var(--verde)}
+[data-marca=globalfly] .tv-tabela .chip.down{background:color-mix(in srgb,var(--vermelho) 20%,transparent);color:var(--vermelho)}
+/* blocos: títulos à esquerda, linha de leitura entre 60 e 75 caracteres */
+[data-marca=globalfly] .bloco-cab{margin-left:0;margin-right:auto;text-align:left}
+[data-marca=globalfly] .bloco-cab p{margin-left:0;max-width:68ch;color:var(--gf-leitura)}
+[data-marca=globalfly] .cta-linha{justify-content:flex-start}
+[data-marca=globalfly] .faq{margin-left:0}
+[data-marca=globalfly] .faixa div{background:var(--cartao)}
+[data-marca=globalfly] .faixa b{color:var(--texto)}
+[data-marca=globalfly] .faixa span{color:var(--gf-apoio)}
+[data-marca=globalfly] :is(.passos li,.grade article,.ativo-cards div){background:var(--cartao)}
+[data-marca=globalfly] .passos li i{background:none;border:1px solid var(--gf-ardosia);color:var(--cor)}
+[data-marca=globalfly] :is(.passos p,.experiencia p,.ativo-texto p,.gestao-texto p,.lista-check li,.lista-x li,.faq details p,.cadastro-texto>p,.cadastro-texto li){color:var(--gf-leitura)}
+[data-marca=globalfly] :is(.grade p,.galeria figcaption span,.ativo-cards span){color:var(--gf-apoio)}
+[data-marca=globalfly] .grade i{color:var(--gf-apoio)}
+[data-marca=globalfly] .ativo-cards b{color:var(--texto)}
+[data-marca=globalfly] .moldura{background:var(--gf-painel);border-color:var(--linha)}
+[data-marca=globalfly] .moldura:before{box-shadow:inset 0 0 0 1px var(--linha)}
+/* sessões e gestão: verde e vermelho só no resultado */
+[data-marca=globalfly] .sessao.meta .selo{background:color-mix(in srgb,var(--verde) 20%,transparent)}
+[data-marca=globalfly] .sessao.stop .selo{background:color-mix(in srgb,var(--vermelho) 20%,transparent)}
+[data-marca=globalfly] .gestao-painel{background:var(--cartao);border-color:var(--linha);box-shadow:none}
+[data-marca=globalfly] .gp-linha{color:var(--gf-leitura)}
+[data-marca=globalfly] .gp-barra{background:var(--gf-grafico);color:var(--gf-leitura)}
+[data-marca=globalfly] .gp-barra i{background:color-mix(in srgb,var(--verde) 30%,transparent)}
+/* cadastro: superfície funda, um único corte diagonal em ouro */
+[data-marca=globalfly] .cadastro{position:relative;overflow:hidden;background:var(--gf-painel);border-color:var(--linha)}
+[data-marca=globalfly] .cadastro:before{content:"";position:absolute;bottom:-24px;left:72px;width:1.5px;height:140px;background:var(--cor);transform:rotate(37deg);transform-origin:bottom;pointer-events:none}
+[data-marca=globalfly] form{background:var(--cartao);border-color:var(--linha)}
+[data-marca=globalfly] .form-top{color:var(--gf-apoio)}[data-marca=globalfly] .form-top b{color:var(--texto)}
+[data-marca=globalfly] label{color:var(--gf-leitura)}
+[data-marca=globalfly] input{background:var(--gf-grafico);border-color:var(--linha)}
+[data-marca=globalfly] input::placeholder{color:var(--gf-apoio);opacity:.7}
+[data-marca=globalfly] input:focus{border-color:var(--cor);box-shadow:0 0 0 3px color-mix(in srgb,var(--cor) 18%,transparent)}
+[data-marca=globalfly] :is(.consentimento,.aviso-legal){color:var(--gf-apoio)}
+@media(max-width:900px){[data-marca=globalfly] .cadastro:before{display:none}}
 </style>
 </head>
 <body>
@@ -564,22 +655,64 @@ const MARCAS = {
     demo: { id: 'firstblock', nome: 'Sessão demonstrativa' },
     fotos: [['omni-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['omni-gerenciamento.webp', 'Gerenciamento', 'A planilha que calcula entrada, limites e objetivo antes de ligar o robô.'], ['omni-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['omni-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
   },
+  /* GlobalFly Trade segue o brandbook oficial ("Precisão em movimento."):
+     Azul GF nas superfícies, Marfim para leitura, Aço para apoio e Ouro só
+     como acento. A assinatura NUNCA é digitada: o topo usa a imagem oficial
+     (`assinaturaImagem`, versão para fundo escuro). Voz clara, serena e
+     responsável, sem metáfora de aviação e sem promessa de ganho. */
   globalfly: {
-    nome: 'GLOBALFLY', prosa: 'GlobalFly', cor: '#C99A2E', escura: '#8a6a1f', emblema: '/globalfly-marca.png', assinatura: 'GLOBAL TRADING', tema: '#0B1626',
-    intro: 'A GlobalFly reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Antes de decolar, você traça o plano de voo: quanto quer ganhar e quanto aceita perder. O robô assume o comando da execução, 24 horas, na sua conta da corretora.',
+    nome: 'GlobalFly Trade', prosa: 'GlobalFly', cor: '#B78D39', escura: '#29445F', emblema: '/globalfly-marca.png', assinatura: '', tema: '#051528',
+    assinaturaImagem: '/globalfly-assinatura.png',
+    // Arimo é a substituta métrica da Liberation Sans do brandbook. Só esta marca baixa a fonte.
+    fonte: 'https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&display=swap',
+    positivo: '#2F8F72', alerta: '#C95F5F',
+    intro: 'A GlobalFly Trade reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Antes de ligar, você define a meta de ganho e o limite de perda. O robô executa a estratégia com método, 24 horas, na sua própria conta da corretora, e encerra a sessão quando chega a um dos dois.',
+    // Trechos fixos do HTML que mudam só nesta marca: [seletor, texto] ou [seletor, [linha, destaque]].
+    textos: [
+      ['.hero .sobretitulo', 'Tecnologia, método e visão global'],
+      ['.hero h1', ['Decisões melhores começam com contexto.', 'Robôs com regras claras, na sua própria conta.']],
+    ],
     demo: { id: 'goreme', nome: 'Sessão demonstrativa' },
     // As telas da GlobalFly ainda serão capturadas. Enquanto o arquivo não
     // existir, a galeria esconde a figura (e a seção, se ficar vazia).
-    fotos: [['globalfly-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['globalfly-gerenciamento.webp', 'Gerenciamento', 'O plano de voo antes de decolar: a planilha calcula entrada, limites e objetivo antes de ligar o robô.'], ['globalfly-aulas.webp', 'Aulas', 'O treinamento a bordo, do primeiro acesso à leitura de dígitos.'], ['globalfly-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da plataforma, reunidos num só lugar.']],
+    fotos: [['globalfly-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['globalfly-gerenciamento.webp', 'Gerenciamento', 'Contexto antes da decisão: a planilha calcula entrada, limites e objetivo antes de ligar o robô.'], ['globalfly-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['globalfly-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da plataforma, reunidos num só lugar.']],
   },
 }
 const config = MARCAS[marca]
 document.documentElement.dataset.marca = marca
 document.documentElement.style.setProperty('--cor', config.cor)
 document.documentElement.style.setProperty('--cor-escura', config.escura)
+if (config.fonte) {
+  const fonte = document.createElement('link'); fonte.rel = 'stylesheet'; fonte.href = config.fonte
+  document.head.appendChild(fonte)
+}
 document.querySelectorAll('body [data-marca]').forEach(el => { el.textContent = config.nome })
 document.querySelectorAll('[data-logo]').forEach(el => { el.src = config.emblema })
 document.querySelectorAll('[data-assinatura]').forEach(el => { el.textContent = config.assinatura })
+// Marca com assinatura oficial em imagem: o topo mostra o arquivo, nunca o nome
+// digitado. Abaixo de 360px de tela a assinatura ficaria menor que o mínimo do
+// brandbook (~180px), então entra o monograma.
+if (config.assinaturaImagem) {
+  const quadro = document.createElement('picture')
+  const monograma = document.createElement('source')
+  monograma.media = '(max-width: 359px)'; monograma.srcset = config.emblema
+  const img = document.createElement('img')
+  img.className = 'assinatura-oficial'; img.src = config.assinaturaImagem; img.alt = config.nome
+  img.width = 900; img.height = 283; img.decoding = 'async'
+  quadro.append(monograma, img)
+  document.querySelector('.topo .marca').replaceChildren(quadro)
+}
+for (const [seletor, texto] of config.textos ?? []) {
+  const el = document.querySelector(seletor); if (!el) continue
+  if (Array.isArray(texto)) {
+    const destaque = document.createElement('em'); destaque.textContent = texto[1]
+    el.replaceChildren(document.createTextNode(texto[0]), document.createElement('br'), destaque)
+  } else {
+    // preserva o marcador (<i>) do sobretítulo e troca só o texto
+    const marcador = el.querySelector(':scope > i')
+    el.replaceChildren(...(marcador ? [marcador, document.createTextNode(' ')] : []), document.createTextNode(texto))
+  }
+}
 document.querySelector('[data-intro]').textContent = config.intro
 document.title = `${config.nome} · Robôs de operação com gestão de risco`
 document.querySelector('[data-favicon-ico]').href = `/pwa-${marca}/favicon.ico`
@@ -725,7 +858,7 @@ for (const [pergunta, resposta] of FAQ) {
     const x = i => n > 1 ? (i / (n - 1)) * 560 : 0, y = v => 56 - ((v - min) / (max - min || 1)) * 50
     const d = pontos.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ')
     curvaLinha.setAttribute('d', d); curvaArea.setAttribute('d', `${d} L560 60 L0 60Z`)
-    curvaLinha.style.stroke = resultado >= 0 ? '#42cb84' : '#ff6868'
+    curvaLinha.style.stroke = resultado >= 0 ? (config.positivo ?? '#42cb84') : (config.alerta ?? '#ff6868')
   }
   const empurrarDigito = d => {
     digitos.push(d); if (digitos.length > 16) digitos.shift()

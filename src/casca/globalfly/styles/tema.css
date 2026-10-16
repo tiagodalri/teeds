@@ -1,132 +1,216 @@
 /*
- * O tema da GlobalFly — aviação executiva: céu noturno, azul de rota e o
- * dourado das luzes de pista.
+ * O tema da GlobalFly Trade, pelo manual da marca (Brand Book v1.0, out/2026).
  *
- * A Teeds fala em serifa dourada sobre quase-preto; a OMNI é banco, marinho
- * e azul-aço. A GlobalFly fica entre o céu e o jato: fundos azul-noite (não
- * pretos), destaque azul-céu no claro e dourado no escuro, e a palavra da
- * marca larga e espaçada como letreiro de hangar (Sora), com o texto corrido
- * em Plus Jakarta Sans, firme em número e em tela pequena.
+ * "Azul organiza superfícies. Marfim prioriza leitura. Ouro indica seleção.
+ *  Verde e coral são exclusivamente funcionais." (manual, pág. 24)
  *
- * Este arquivo VENCE o app.css (entra depois dele) e só existe no build da
- * GlobalFly. O --primary vem da tabela de marcas (src/core/tema.ts).
+ * Paleta oficial: Azul GF #051528, Ouro GF #B78D39, Aço GF #9CB1C7,
+ * Marfim #F3F0E9, Ardósia #29445F, Positivo #2F8F72, Alerta #C95F5F.
+ * Superfícies da interface medidas na página do produto digital: painel
+ * #041120, card #162537, área de gráfico #112032, grade #27374A.
+ * Proporção de uso: 50% azul, 30% marfim, 10% ardósia, 7% aço, 3% ouro.
+ *
+ * Contraste (pág. 15): marfim/azul 16,1:1, aço/azul 8,3:1, ouro/azul 6:1.
+ * Ouro ou aço sobre marfim NÃO passam (2,7 e 1,9): no tema claro o ouro só
+ * marca seleção (barras, bordas), nunca texto.
+ *
+ * Tipografia (pág. 16): Liberation Sans em títulos, textos e interface; aqui
+ * pela Arimo, a mesma família na web, com Arial/Helvetica de reserva.
+ * Cotações, preços e códigos em DejaVu Sans Mono, numerais tabulares.
+ *
+ * Sem brilho e sem gradiente decorativo: "não usar glow" (pág. 25).
+ * Este arquivo VENCE o app.css e só existe no build da GlobalFly.
  */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&display=swap');
 
 :root {
-  --fonte-corpo: 'Plus Jakarta Sans', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --fonte-marca: 'Sora', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --gf-azul: #051528;
+  --gf-ouro: #B78D39;
+  --gf-aco: #9CB1C7;
+  --gf-marfim: #F3F0E9;
+  --gf-ardosia: #29445F;
+  --gf-positivo: #2F8F72;
+  --gf-alerta: #C95F5F;
 
-  --text: #0f1b2d;
-  --muted: #5d6c82;
-  --surface: #f3f6fa;
-  --surface-alt: #fafcfe;
-  --border: #d9e1ea;
-  --trilho: #d6dfeb;
-  --desativado: #c6d1df;
+  --fonte-corpo: 'Arimo', 'Liberation Sans', Arial, Helvetica, sans-serif;
+  --fonte-marca: 'Arimo', 'Liberation Sans', Arial, Helvetica, sans-serif;
+  --fonte-dados: 'DejaVu Sans Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* claro: leitura em marfim, tinta azul */
+  --bg: #F3F0E9;
+  --surface: #ffffff;
+  --surface-alt: #faf8f3;
+  --border: #e0dbd0;
+  --text: #051528;
+  --muted: #29445F;
+  --trilho: #e0dbd0;
+  --desativado: #c9c4b8;
+  --up: #2F8F72;
+  --up-soft: rgba(47, 143, 114, 0.12);
+  --down: #C95F5F;
+  --down-soft: rgba(201, 95, 95, 0.12);
+  --shadow: 0 1px 2px rgba(5, 21, 40, 0.06);
 }
 
 :root[data-tema='escuro'] {
-  /* céu às onze da noite: azul profundo, nunca preto */
-  --bg: #0b1626;
-  --surface: #10203a;
-  --surface-alt: #152a48;
-  --border: #233b5e;
-  --text: #e9eff7;
-  --muted: #8ea2bd;
-  --trilho: #243c5f;
-  --desativado: #2a4063;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(2, 8, 20, 0.55);
+  /* azul organiza superfícies */
+  --bg: #051528;
+  --surface: #112032;
+  --surface-alt: #162537;
+  --border: #27374a;
+  --text: #F3F0E9;
+  --muted: #9CB1C7;
+  --trilho: #27374a;
+  --desativado: #586a7f;
+  --up: #2F8F72;
+  --up-soft: rgba(47, 143, 114, 0.16);
+  --down: #C95F5F;
+  --down-soft: rgba(201, 95, 95, 0.16);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-body { font-family: var(--fonte-corpo); letter-spacing: 0.003em; }
+body { font-family: var(--fonte-corpo); letter-spacing: 0; font-variant-numeric: tabular-nums lining-nums; }
+h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 
-/* ------------------------------------------------ a palavra da marca */
-.marca-nome {
-  font-family: var(--fonte-marca);
-  font-weight: 600; font-size: 14px; letter-spacing: 0.28em;
-  background: none; -webkit-background-clip: initial; background-clip: initial;
-  color: var(--primary); -webkit-text-fill-color: var(--primary);
+/* ------------------------------ dados: cotações, preços e códigos */
+.price, .quote strong, .saldo, .pos-resumo b, .trade-conta b, .dig-numeros strong,
+.chart-contratos b, .rob-nums b, .ops-tabela td.num, .op-valor, .op-res, .op-hora,
+.esc-val, .esc-cotacao b, .tv-crono, .tv-resumo-fixo b, .tv-tabela td, .teatro-nums b,
+.go-cards strong, .go-tabela-corpo b, .sim-valor strong, .cli-num, .resumo-robos b {
+  font-family: var(--fonte-dados);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: 0;
 }
+
+/* --------------------------------------- a marca é imagem, nunca fonte */
+.marca-assinatura { display: block; height: auto; max-width: 100%; }
+.marca-assinatura.clara { display: none; }
+:root:not([data-tema='escuro']) .marca-assinatura.escura { display: none; }
+:root:not([data-tema='escuro']) .marca-assinatura.clara { display: block; }
 .marca-selo {
-  background: radial-gradient(circle at 30% 25%, #1a3a66, #0b1626 72%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .25), inset 0 1px 0 rgba(255, 255, 255, .10);
+  background: var(--gf-azul);
+  box-shadow: none;
 }
 
-/* ------------------------- o dourado escrito à mão vira cor da marca */
+/* ------------------------------------- ouro só onde há seleção */
 .tv-abas button.on {
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
-  box-shadow: inset 0 -2px 0 var(--primary);
+  background: color-mix(in srgb, var(--gf-ouro) 10%, transparent);
+  box-shadow: inset 0 -2px 0 var(--gf-ouro);
 }
-.tv-abas button.on > i { color: var(--primary); }
+.tv-abas button.on > i { color: var(--gf-ouro); }
 .tv-tabela tbody tr.recente {
-  background: color-mix(in srgb, var(--primary) 9%, transparent);
-  box-shadow: inset 0 0 18px color-mix(in srgb, var(--primary) 6%, transparent);
+  background: color-mix(in srgb, var(--gf-ouro) 8%, transparent);
+  box-shadow: none;
 }
-.tv-assinatura { color: var(--primary); font-family: var(--fonte-marca); font-weight: 600; }
+.tv-assinatura { color: var(--primary); font-family: var(--fonte-marca); font-weight: 700; }
 .tv-fluxo-etapa.ativa > i {
-  border-color: var(--primary);
-  color: color-mix(in srgb, var(--primary) 70%, #ffffff);
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-color: var(--gf-ouro);
+  color: var(--gf-ouro);
+  background: color-mix(in srgb, var(--gf-ouro) 10%, transparent);
 }
-.tv-fluxo-linha span { background: var(--primary); }
-.aula-progresso-card u { background: var(--primary); }
-.go { --go-gold: var(--primary); }
+.tv-fluxo-linha span { background: var(--gf-ouro); }
+.go { --go-gold: var(--gf-ouro); }
 
-/* Sala de aula: céu noturno com luz de pista. Uma camada azul-noite substitui
-   a atmosfera dourada da Teeds; o dourado fica só nos detalhes. */
-.aulas { background: #081221; }
-.aulas-capa { box-shadow: inset 0 -110px 100px #081221; }
+/* ------------------------------------------- sala de aula */
+.aulas { background: #041120; }
+.aulas-capa { box-shadow: inset 0 -110px 100px #041120; }
 .aulas-capa::before {
   content: ''; position: absolute; z-index: 1; inset: 0; pointer-events: none;
-  background:
-    linear-gradient(90deg, rgba(6,14,28,.90) 0%, rgba(11,30,58,.48) 48%, rgba(31,111,209,.14) 100%),
-    linear-gradient(180deg, rgba(201,154,46,.08), transparent 48%);
+  background: linear-gradient(90deg, rgba(5,21,40,.92) 0%, rgba(5,21,40,.55) 48%, rgba(41,68,95,.12) 100%);
   mix-blend-mode: color;
 }
-.aulas-capa::after { background: linear-gradient(transparent, #081221); }
-.aulas-selo, .aulas-meta b { color: #e2c27a; }
-.aulas-selo { border-color: rgba(226,194,122,.34); background: rgba(201,154,46,.12); }
-.aulas-barra i { background: linear-gradient(90deg, #1f6fd1, #e2c27a); }
-.aulas-hero-marca { color: rgba(226,194,122,.58); }
-.aulas-trilha-num { color: rgba(126,170,228,.22); }
-.aulas-modulo-topo h3 { color: #e9eff7; }
-.aulas-modulo-topo p, .aula-card-meta { color: #7487a4; }
-.aula-cartao-capa { background-color: #0b1a30; }
+.aulas-capa::after { background: linear-gradient(transparent, #041120); }
+.aulas-selo, .aulas-meta b { color: var(--gf-marfim); }
+.aulas-selo { border-color: rgba(183,141,57,.45); background: rgba(183,141,57,.10); }
+.aulas-barra i { background: var(--gf-ouro); }
+.aulas-hero-marca { color: rgba(156,177,199,.55); letter-spacing: .18em; }
+.aulas-trilha-num { color: rgba(156,177,199,.22); }
+.aulas-modulo-topo h3 { color: var(--gf-marfim); }
+.aulas-modulo-topo p, .aula-card-meta { color: var(--gf-aco); }
+.aula-cartao-capa { background-color: #112032; }
 .aula-cartao-capa::after,
 .aula-modal-capa::before,
 .aula-embreve-palco::after {
   content: ''; position: absolute; z-index: 1; inset: 0; pointer-events: none;
-  background: linear-gradient(145deg, rgba(31,111,209,.22), rgba(4,12,26,.08) 52%, rgba(201,154,46,.14));
+  background: linear-gradient(145deg, rgba(5,21,40,.30), rgba(5,21,40,.06) 52%, rgba(41,68,95,.18));
   mix-blend-mode: color;
 }
 .aula-cartao-capa > img, .aula-modal-capa > img, .aula-embreve-palco > img {
-  filter: saturate(.8) contrast(1.06) brightness(.94);
+  filter: saturate(.75) contrast(1.05) brightness(.95);
 }
-.aula-play { z-index: 2; background: #e2c27a; color: #0b1626; }
+.aula-play { z-index: 2; background: var(--gf-ouro); color: var(--gf-azul); }
 .aula-cartao-capa > em, .aula-vista, .aula-hover-info { z-index: 2; }
-.aula-num, .aula-modal-breve { color: #e2c27a; }
-.aula-progresso-card u { background: linear-gradient(90deg, #1f6fd1, #e2c27a); }
-.aula-modal { background: #0c182b; }
-.aula-modal-capa::after { z-index: 2; background: linear-gradient(transparent, #0c182b); }
+.aula-num, .aula-modal-breve { color: var(--gf-aco); }
+.aula-progresso-card u { background: var(--gf-ouro); }
+.aula-modal { background: #041120; }
+.aula-modal-capa::after { z-index: 2; background: linear-gradient(transparent, #041120); }
 
 /* ------------------------------ a cabine do robô, na cor da casa */
-/* A cabine continua uma ilha noturna; no escuro a tinta é o dourado de pista
-   sobre azul-noite, no claro o azul-céu. */
-.tv { --primary: #D2A63C; --primary-soft: rgba(210, 166, 60, .15); }
-:root:not([data-tema='escuro']) .tv { --primary: #1f6fd1; --primary-soft: rgba(31, 111, 209, .11); }
+/* Ilha noturna em azul GF; no escuro a tinta de seleção é o ouro, no claro
+   o azul (ouro sobre branco não lê). */
+.tv { --primary: var(--gf-ouro); --primary-soft: rgba(183, 141, 57, .14); }
+:root:not([data-tema='escuro']) .tv { --primary: var(--gf-azul); --primary-soft: rgba(5, 21, 40, .08); }
 .tv {
-  background:
-    radial-gradient(80% 28% at 50% 0%, rgba(31, 111, 209, .12), transparent 100%),
-    linear-gradient(180deg, #132644, #0b1626);
-  border-color: rgba(62, 134, 220, .24);
+  background: #041120;
+  border-color: #27374a;
 }
 :root:not([data-tema='escuro']) .tv {
-  background:
-    radial-gradient(80% 28% at 50% 0%, rgba(31, 111, 209, .07), transparent 100%),
-    linear-gradient(180deg, #fff, #f5f8fc);
-  border-color: color-mix(in srgb, var(--robo, #1f6fd1) 26%, #dbe3ee);
+  background: #ffffff;
+  border-color: color-mix(in srgb, var(--robo, #29445F) 22%, #e0dbd0);
 }
-.tv-abas button.on { background: color-mix(in srgb, var(--primary) 12%, transparent); box-shadow: inset 0 -2px 0 var(--primary); }
-.tv-tabela th { background: #0e1d33; }
+.tv-tabela th { background: #030d1a; }
+:root:not([data-tema='escuro']) .tv-tabela th { background: #faf8f3; }
 .tv-assinatura { opacity: .16; }
+
+/* ------------------------------ assinatura no menu e nas telas de entrada */
+/* Menu aberto: só a assinatura completa (ela já contém o monograma).
+   Menu recolhido: só o monograma. */
+.brand-signature-globalfly { gap: 0; }
+.brand-signature-globalfly .brand-symbol { display: none; width: 36px; height: 36px; object-fit: contain; }
+.brand-signature-globalfly .brand-wordmark { display: block; }
+.workspace-sidebar.compact .brand-signature-globalfly .brand-symbol { display: block; }
+.marca-gf { justify-content: center; }
+.marca-gf .marca-assinatura-par { max-width: 100%; }
+
+/* Marca d'água do gráfico: só o monograma, 3% a 6% de opacidade (manual,
+   pág. 8). O nome em fonte sai: o manual proíbe recompor o wordmark. */
+.chart-marca span { display: none; }
+.chart-marca { opacity: .05; }
+.chart-marca img { filter: none; }
+
+/* ------------------------------ tela de entrada: sem glow (manual, pág. 25) */
+/* Fundo liso na cor do tema (azul no escuro, marfim no claro); a aurora
+   colorida sai. A grade fina fica: é a mesma grade da área de gráfico. */
+.entrada { background: var(--bg); }
+.entrada-aurora { display: none; }
+
+/* ------------------------------ botões: chapados, sem brilho */
+.entrada-btn,
+.entrada-btn:hover:not(:disabled) {
+  background: var(--primary);
+  box-shadow: none;
+  filter: none;
+  transform: none;
+}
+.entrada-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--primary) 88%, var(--text)); }
+
+/* No escuro o primário é o ouro: texto em Azul GF, nunca branco sobre ouro
+   (branco/ouro fica em 2,9:1; azul/ouro passa de 6:1). No claro o primário
+   é o azul e o texto marfim continua. */
+:root[data-tema='escuro'] :is(
+  .btn-login, .beta-entrar, .entrada-btn, .convite-botoes button, .sem-deriv-acoes button,
+  .btn-conectar, .perfil-btn, .aula-proxima, .blocos-vazio button,
+  .market-hero-acoes button, .market-modal-compra button, .as-eu > div, .as-escrever button,
+  .dig-escolha button.on, .dig-ticks button.on, .simr-botao, .robot-launch-next
+) { color: var(--gf-azul); }
+.beta-entrar, .market-hero-acoes button, .market-modal-compra button {
+  background: var(--primary); border-color: var(--primary); box-shadow: none;
+}
+:root:not([data-tema='escuro']) :is(.beta-entrar, .market-hero-acoes button, .market-modal-compra button, .robot-launch-next) {
+  color: var(--gf-marfim);
+}
+
+/* ------------------------------ demais brilhos */
+.indicadores button.on i { box-shadow: none; }
+.tv-placar strong.up, .tv-placar strong.down { text-shadow: none; }
+.tv-fluxo.aberto .tv-fluxo-linha::after { animation: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent); }

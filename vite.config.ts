@@ -80,7 +80,7 @@ function cascaPorMarca() {
 /* Cor de fundo do app instalado e nome curto na tela inicial, por marca.
    Antes eram ternarios de duas marcas: a GlobalFly sairia instalada como
    "OMNI" (16/10/2026). */
-const FUNDO_DA_MARCA: Record<string, string> = { teeds: '#090a0d', omni: '#081525', globalfly: '#0B1626' }
+const FUNDO_DA_MARCA: Record<string, string> = { teeds: '#090a0d', omni: '#081525', globalfly: '#051528' }
 const NOME_CURTO: Record<string, string> = { teeds: 'Teeds', omni: 'OMNI', globalfly: 'GlobalFly' }
 
 export default defineConfig({
@@ -132,6 +132,9 @@ export default defineConfig({
         for (const outra of Object.values(MARCAS)) {
           if (outra.id === MARCA.id) continue
           rmSync(join(SAIDA, outra.emblema), { force: true })
+          // Toda peca de marca na raiz com o prefixo da outra (assinatura,
+          // monograma claro da GlobalFly...) fica so no site dela.
+          for (const arquivo of readdirSync(SAIDA)) if (arquivo.startsWith(`${outra.id}-`) && /\.(png|svg|webp|jpg)$/.test(arquivo)) rmSync(join(SAIDA, arquivo), { force: true })
           rmSync(join(SAIDA, `pwa-${outra.id}`), { recursive: true, force: true })
           // As telas da landing sao capturadas por marca: as da outra nao entram neste site.
           const telas = join(destinoCaptura, 'plataforma')

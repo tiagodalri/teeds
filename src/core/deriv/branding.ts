@@ -43,7 +43,7 @@ export function nomeDaEstrategia(id: string): string {
   return nomeDoRoboNaMarca(e ?? { id, nome: id }, MARCA)
 }
 
-export const CATALOGO: Identidade[] = [
+const CATALOGO_BASE: Identidade[] = [
   {
     id: 'acima', nome: 'Acima de 5', chamada: 'O otimista',
     descricao: 'Ganha quando o último dígito é 6, 7, 8 ou 9.',
@@ -150,6 +150,9 @@ export const CATALOGO: Identidade[] = [
     chance: 30, contrato: 'DIGITOVER',
   },
 ]
+
+/** O catálogo com o desenho próprio da marca, quando ela tem (`desenhoDosRobos`). */
+export const CATALOGO: Identidade[] = CATALOGO_BASE.map((i) => ({ ...i, ...MARCA.desenhoDosRobos?.[i.id] }))
 
 /**
  * A vitrine desta marca.

@@ -32,22 +32,64 @@ const MARCAS = {
     demo: { id: 'firstblock', nome: 'Sessão demonstrativa' },
     fotos: [['omni-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['omni-gerenciamento.webp', 'Gerenciamento', 'A planilha que calcula entrada, limites e objetivo antes de ligar o robô.'], ['omni-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['omni-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
   },
+  /* GlobalFly Trade segue o brandbook oficial ("Precisão em movimento."):
+     Azul GF nas superfícies, Marfim para leitura, Aço para apoio e Ouro só
+     como acento. A assinatura NUNCA é digitada: o topo usa a imagem oficial
+     (`assinaturaImagem`, versão para fundo escuro). Voz clara, serena e
+     responsável, sem metáfora de aviação e sem promessa de ganho. */
   globalfly: {
-    nome: 'GLOBALFLY', prosa: 'GlobalFly', cor: '#C99A2E', escura: '#8a6a1f', emblema: '/globalfly-marca.png', assinatura: 'GLOBAL TRADING', tema: '#0B1626',
-    intro: 'A GlobalFly reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Antes de decolar, você traça o plano de voo: quanto quer ganhar e quanto aceita perder. O robô assume o comando da execução, 24 horas, na sua conta da corretora.',
+    nome: 'GlobalFly Trade', prosa: 'GlobalFly', cor: '#B78D39', escura: '#29445F', emblema: '/globalfly-marca.png', assinatura: '', tema: '#051528',
+    assinaturaImagem: '/globalfly-assinatura.png',
+    // Arimo é a substituta métrica da Liberation Sans do brandbook. Só esta marca baixa a fonte.
+    fonte: 'https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&display=swap',
+    positivo: '#2F8F72', alerta: '#C95F5F',
+    intro: 'A GlobalFly Trade reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Antes de ligar, você define a meta de ganho e o limite de perda. O robô executa a estratégia com método, 24 horas, na sua própria conta da corretora, e encerra a sessão quando chega a um dos dois.',
+    // Trechos fixos do HTML que mudam só nesta marca: [seletor, texto] ou [seletor, [linha, destaque]].
+    textos: [
+      ['.hero .sobretitulo', 'Tecnologia, método e visão global'],
+      ['.hero h1', ['Decisões melhores começam com contexto.', 'Robôs com regras claras, na sua própria conta.']],
+    ],
     demo: { id: 'goreme', nome: 'Sessão demonstrativa' },
     // As telas da GlobalFly ainda serão capturadas. Enquanto o arquivo não
     // existir, a galeria esconde a figura (e a seção, se ficar vazia).
-    fotos: [['globalfly-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['globalfly-gerenciamento.webp', 'Gerenciamento', 'O plano de voo antes de decolar: a planilha calcula entrada, limites e objetivo antes de ligar o robô.'], ['globalfly-aulas.webp', 'Aulas', 'O treinamento a bordo, do primeiro acesso à leitura de dígitos.'], ['globalfly-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da plataforma, reunidos num só lugar.']],
+    fotos: [['globalfly-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['globalfly-gerenciamento.webp', 'Gerenciamento', 'Contexto antes da decisão: a planilha calcula entrada, limites e objetivo antes de ligar o robô.'], ['globalfly-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['globalfly-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da plataforma, reunidos num só lugar.']],
   },
 }
 const config = MARCAS[marca]
 document.documentElement.dataset.marca = marca
 document.documentElement.style.setProperty('--cor', config.cor)
 document.documentElement.style.setProperty('--cor-escura', config.escura)
+if (config.fonte) {
+  const fonte = document.createElement('link'); fonte.rel = 'stylesheet'; fonte.href = config.fonte
+  document.head.appendChild(fonte)
+}
 document.querySelectorAll('body [data-marca]').forEach(el => { el.textContent = config.nome })
 document.querySelectorAll('[data-logo]').forEach(el => { el.src = config.emblema })
 document.querySelectorAll('[data-assinatura]').forEach(el => { el.textContent = config.assinatura })
+// Marca com assinatura oficial em imagem: o topo mostra o arquivo, nunca o nome
+// digitado. Abaixo de 360px de tela a assinatura ficaria menor que o mínimo do
+// brandbook (~180px), então entra o monograma.
+if (config.assinaturaImagem) {
+  const quadro = document.createElement('picture')
+  const monograma = document.createElement('source')
+  monograma.media = '(max-width: 359px)'; monograma.srcset = config.emblema
+  const img = document.createElement('img')
+  img.className = 'assinatura-oficial'; img.src = config.assinaturaImagem; img.alt = config.nome
+  img.width = 900; img.height = 283; img.decoding = 'async'
+  quadro.append(monograma, img)
+  document.querySelector('.topo .marca').replaceChildren(quadro)
+}
+for (const [seletor, texto] of config.textos ?? []) {
+  const el = document.querySelector(seletor); if (!el) continue
+  if (Array.isArray(texto)) {
+    const destaque = document.createElement('em'); destaque.textContent = texto[1]
+    el.replaceChildren(document.createTextNode(texto[0]), document.createElement('br'), destaque)
+  } else {
+    // preserva o marcador (<i>) do sobretítulo e troca só o texto
+    const marcador = el.querySelector(':scope > i')
+    el.replaceChildren(...(marcador ? [marcador, document.createTextNode(' ')] : []), document.createTextNode(texto))
+  }
+}
 document.querySelector('[data-intro]').textContent = config.intro
 document.title = `${config.nome} · Robôs de operação com gestão de risco`
 document.querySelector('[data-favicon-ico]').href = `/pwa-${marca}/favicon.ico`
@@ -193,7 +235,7 @@ for (const [pergunta, resposta] of FAQ) {
     const x = i => n > 1 ? (i / (n - 1)) * 560 : 0, y = v => 56 - ((v - min) / (max - min || 1)) * 50
     const d = pontos.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ')
     curvaLinha.setAttribute('d', d); curvaArea.setAttribute('d', `${d} L560 60 L0 60Z`)
-    curvaLinha.style.stroke = resultado >= 0 ? '#42cb84' : '#ff6868'
+    curvaLinha.style.stroke = resultado >= 0 ? (config.positivo ?? '#42cb84') : (config.alerta ?? '#ff6868')
   }
   const empurrarDigito = d => {
     digitos.push(d); if (digitos.length > 16) digitos.shift()

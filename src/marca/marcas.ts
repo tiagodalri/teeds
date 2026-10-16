@@ -45,6 +45,15 @@ export interface Marca {
   /** Arquivo do emblema, dentro de `public/`. */
   emblema: string
   /**
+   * A assinatura completa como IMAGEM oficial, quando o manual da marca
+   * proíbe recompor o nome com fonte (GlobalFly, 16/10/2026). `escura` é a
+   * versão para fundo escuro (reversa); `clara`, para fundo claro. Sem isto,
+   * a marca segue com emblema + nome em texto, como a Teeds e a OMNI.
+   */
+  assinatura?: { escura: string; clara: string }
+  /** Monograma para fundo claro, quando o emblema é a versão reversa. */
+  monogramaClaro?: string
+  /**
    * A imagem do herói da tela de Aulas, dentro de `public/`.
    * Era um arquivo só, o touro dourado — e a OMNI abria as aulas com a cara
    * da Teeds. Cada marca aponta a sua: principal (webp), reserva e a do celular.
@@ -68,6 +77,13 @@ export interface Marca {
    * histórico e os produtos comprados continuam amarrados ao mesmo robô.
    */
   nomesDosRobos?: Record<string, string>
+  /**
+   * Desenho próprio desta marca para robôs específicos, por id: cor, fundo
+   * do ícone e emblema. Sem isto vale o desenho do catálogo. Serve a uma
+   * marca com manual que restringe a paleta (a GlobalFly não usa verde nem
+   * coral fora de ganho e perda, nem setas literais).
+   */
+  desenhoDosRobos?: Record<string, { cor?: string; corSuave?: string; emblema?: string }>
   /**
    * A cor da marca, uma por tema.
    *
@@ -131,6 +147,8 @@ export interface Marca {
      * que se vê, e precisa ser maior.
      */
     vaoDoLetreiro: number
+    /** Imagem da assinatura completa no topo do e-mail, no lugar de emblema + nome. */
+    assinatura?: string
   }
   /**
    * O canal oficial no Telegram.
@@ -232,7 +250,7 @@ export const MARCAS: Record<string, Marca> = {
   globalfly: {
     id: 'globalfly',
     nome: 'GLOBALFLY',
-    prosa: 'GlobalFly',
+    prosa: 'GlobalFly Trade',
     prefixoRobo: 'GlobalFly',
     appId: '34H1Zr9Gp5fdho00X5BZT',
     redirectUri: 'https://globalflytrade.com/',
@@ -248,23 +266,42 @@ export const MARCAS: Record<string, Marca> = {
       secondblock: 'GlobalFly Altitude',
       thepalm: 'GlobalFly Radar',
     },
+    // Manual, pág. 24: "Azul organiza superfícies… Verde e coral são
+    // exclusivamente funcionais." Os robôs ficam todos no aço da casa
+    // (texto branco passa por cima, e aparece sobre o Azul GF); quem os
+    // distingue é o emblema. Sem setas literais (pág. 18 e 20).
+    desenhoDosRobos: {
+      goreme: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
+      superior5: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
+      ag2: { cor: '#5B7C9D', corSuave: '#E6ECF2', emblema: 'M8 20 h24 M12 14 h16 M12 26 h16 M17 32 h6 M17 8 h6' },
+      firstblock: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
+      secondblock: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
+      thepalm: { cor: '#5B7C9D', corSuave: '#E6ECF2', emblema: 'M8 30 a12 12 0 0 1 24 0 M14 30 a6 6 0 0 1 12 0 M20 30 L28 18 M6 30 h28' },
+    },
     base: '/',
+    // Manual da marca (16/10/2026): monograma e assinatura OFICIAIS, em
+    // imagem. O nome nunca é redigitado com fonte.
     emblema: 'globalfly-marca.png',
+    monogramaClaro: 'globalfly-monograma-claro.png',
+    assinatura: { escura: 'globalfly-assinatura.png', clara: 'globalfly-assinatura-clara.png' },
     heroAulas: { principal: 'aulas-especialista/boas-vindas.webp', reserva: 'aulas-especialista/boas-vindas.jpg', celular: 'aulas-especialista/boas-vindas-mobile.webp', posicao: 'right 18%' },
-    cor: { claro: '#1F6FD1', escuro: '#C99A2E' },
+    // Azul GF organiza, ouro indica seleção (manual, pág. 24). No claro a cor
+    // de ação é o azul (ouro sobre marfim não passa no contraste: 2,7:1).
+    cor: { claro: '#051528', escuro: '#B78D39' },
     email: {
-      faixa: '#0B1626',
-      letreiro: '#D9B465',
-      botao: '#1F6FD1',
-      tintaDoBotao: '#ffffff',
-      fonteDoLetreiro: "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif",
+      faixa: '#051528',
+      letreiro: '#F3F0E9',
+      botao: '#B78D39',
+      tintaDoBotao: '#051528',
+      fonteDoLetreiro: "Arimo,'Liberation Sans',Arial,Helvetica,sans-serif",
       chapaDoEmblema: null,
-      fundo: '#f3f6fa',
+      fundo: '#F3F0E9',
       rodape:
         'A GlobalFly é uma plataforma de operações que funciona com a sua própria conta na Deriv. ' +
         'Negociar envolve risco de perda.',
       remetente: 'GlobalFly <nao-responda@globalflytrade.com>',
       vaoDoLetreiro: 8,
+      assinatura: 'globalfly-assinatura.png',
     },
     // PENDENTE: link do canal do Victor (Telegram da antiga Stark).
     telegram: '',

@@ -16,6 +16,17 @@ Antes de publicar, é obrigatório: aplicar a migração
 `20260909143000_captacao_publica_de_leads.sql`, atualizar o motor, apontar os
 domínios para a hospedagem desta pasta e revisar o texto de privacidade/LGPD.
 
+GlobalFly segue o brandbook oficial (GlobalFly Trade, "Precisão em movimento."),
+aplicado só nas regras `[data-marca=globalfly]` e na configuração `globalfly`
+de `landing.js` e `obrigado/index.html`: Azul GF `#051528` nas superfícies,
+Marfim `#F3F0E9` para leitura, Aço `#9CB1C7` para apoio, Ouro `#B78D39` só como
+acento (botões com texto Azul GF, cortes diagonais no ângulo do monograma).
+Fonte Arimo (carregada só nesta marca) e números em monoespaçada. O nome da
+marca NUNCA é digitado no topo: entra a assinatura oficial
+`/globalfly-assinatura.png` (versão para fundo escuro, mínimo ~180px de largura;
+abaixo de 360px de tela, o monograma `/globalfly-marca.png`). Textos sem
+metáfora de aviação e sem promessa de ganho.
+
 GlobalFly, pendências conhecidas: o canal do Telegram ainda não existe, então a
 página de obrigado mostra o cartão "Seu acesso chega por e-mail" no lugar do
 botão (basta preencher `telegram` na configuração de `obrigado/index.html`).

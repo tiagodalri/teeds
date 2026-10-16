@@ -1,12 +1,12 @@
 /**
- * Capas ilustradas das aulas — versão da GlobalFly.
+ * Capas ilustradas das aulas — versão da GlobalFly Trade.
  *
- * Cópia da capa compartilhada (src/components/CapaAula.tsx) com três trocas:
- * o touro da Teeds dá lugar ao globo com a rota dourada da GlobalFly, a
- * assinatura e o "vs" passam para a Sora (a letra da marca), e o dourado
- * metálico fica, porque é o detalhe de pista da GlobalFly. Cenas, materiais
- * e composição são o mesmo desenho: se a capa compartilhada mudar de cena,
- * esta cópia precisa acompanhar.
+ * Cópia da capa compartilhada (src/components/CapaAula.tsx) com as trocas do
+ * manual da marca: o touro da Teeds dá lugar ao monograma oficial em imagem,
+ * a assinatura do pé é a assinatura completa em imagem (nunca o nome em
+ * fonte), o metal é o Ouro GF e o "vs" usa a Liberation Sans (Arimo). Cenas,
+ * materiais e composição são o mesmo desenho: se a capa compartilhada mudar
+ * de cena, esta cópia precisa acompanhar.
  *
  * Ver src/casca/LEIA-ME.md.
  */
@@ -19,9 +19,10 @@ interface Props {
 
 /* ------------------------------------------------------------ paleta */
 
-const OURO_CLARO = '#f7e388'
-const OURO = '#d2a337'
-const OURO_ESCURO = '#8a5c15'
+// Ouro GF do manual (#B78D39), com luz e sombra próprias para o relevo.
+const OURO_CLARO = '#d6b56f'
+const OURO = '#B78D39'
+const OURO_ESCURO = '#6b4f1b'
 
 function hex(c: string): [number, number, number] {
   const h = c.replace('#', '')
@@ -81,29 +82,24 @@ function Chao({ cx, cy, rx }: { cx: number; cy: number; rx: number }) {
   return <ellipse cx={cx} cy={cy} rx={rx} ry={rx * 0.18} fill="#000000" opacity="0.4" />
 }
 
-/** O emblema da GlobalFly: o globo com a rota dourada. */
-function Touro({ u, x, y, s, opacity = 1 }: { u: string; x: number; y: number; s: number; opacity?: number }) {
+/**
+ * O monograma OFICIAL da GlobalFly, como imagem (manual, pág. 8): o desenho
+ * não é refeito à mão. A caixa de 100 x 80 é a mesma que o touro da Teeds
+ * ocupa, para as cenas não mudarem de lugar.
+ */
+function Touro({ x, y, s, opacity = 1 }: { u: string; x: number; y: number; s: number; opacity?: number }) {
   return (
-    <g transform={`translate(${x} ${y}) scale(${s})`} opacity={opacity}>
-      {/* o globo: contorno, meridiano e equador */}
-      <circle cx="44" cy="46" r="27" fill="none" stroke={`url(#ouro-${u})`} strokeWidth="5" />
-      <ellipse cx="44" cy="46" rx="10.5" ry="27" fill="none" stroke={`url(#ouro-${u})`} strokeWidth="3.4" opacity="0.75" />
-      <path d="M17 46h54" fill="none" stroke={`url(#ouro-${u})`} strokeWidth="3.4" opacity="0.75" />
-      {/* a rota que sobe e o avião na ponta */}
-      <path d="M8 68C24 75 52 70 72 32" fill="none" stroke={`url(#ouro-${u})`} strokeWidth="5" strokeLinecap="round" />
-      <path d="M92 6 64 20l11 5 3 12 6-9 10 1z" fill={`url(#ouro-${u})`} />
-    </g>
+    <image href={`${import.meta.env.BASE_URL}${MARCA.emblema}`} x={x} y={y} width={100 * s} height={80 * s}
+      opacity={opacity} preserveAspectRatio="xMidYMid meet" />
   )
 }
 
-/** Assinatura da casa no pé da capa. */
+/** Assinatura da casa no pé da capa: a assinatura completa, em imagem. */
 function Assinatura({ u }: { u: string }) {
+  void u
   return (
-    <g opacity="0.85">
-      <Touro u={u} x={14} y={196} s={0.22} />
-      <text x="42" y="212" fontFamily="'Sora', 'Plus Jakarta Sans', system-ui, sans-serif" fontSize="10.5" fontWeight="600"
-        letterSpacing="4.5" fill={`url(#ouro-${u})`}>{MARCA.nome}</text>
-    </g>
+    <image href={`${import.meta.env.BASE_URL}${MARCA.assinatura?.escura ?? MARCA.emblema}`} x={14} y={196} width={104} height={33}
+      opacity="0.85" preserveAspectRatio="xMinYMid meet" />
   )
 }
 
@@ -331,7 +327,7 @@ function Cena({ aula, u, cor }: { aula: string; u: string; cor: string }) {
           <Moeda u={u} cx={132} cy={122} r={42} fantasma />
           <Moeda u={u} cx={272} cy={120} r={44} />
           <g filter={`url(#brilho-${u})`}>
-            <text x="201" y="130" textAnchor="middle" fontFamily="'Sora', system-ui, sans-serif"
+            <text x="201" y="130" textAnchor="middle" fontFamily="Arimo, 'Liberation Sans', Arial, sans-serif"
               fontSize="20" fontWeight="700" fill={cor}>vs</text>
           </g>
           <text x="132" y="185" textAnchor="middle" fontSize="10.5" letterSpacing="2.5" fill="#8fa3c8">TREINO</text>
