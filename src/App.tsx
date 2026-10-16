@@ -44,6 +44,7 @@ import { formatPrice } from './core/chart/scales'
 import { buyFromProposal, requestProposal, sellContract } from './core/deriv/trading'
 import { MARCA } from './marca'
 import { IconeFechar } from './components/IconeFechar'
+import { usePeriodos } from './core/chart/periodos'
 
 const INDICADORES = [
   { id: 'sma', label: 'Média 20', titulo: 'Média móvel simples de 20 períodos' },
@@ -122,6 +123,8 @@ export default function App() {
   const [granularity, setGranularity] = useState<Granularity>(60)
   const [mode, setMode] = useState<ChartMode>('candles')
   const [indicadores, setIndicadores] = useState<string[]>(['sma'])
+  // O período das médias é escolhido no gráfico (clicando na linha); o botão acompanha.
+  const periodos = usePeriodos()
   const [search, setSearch] = useState('')
   const [seletorAtivo, setSeletorAtivo] = useState(false)
   const [posicoesAbertas, setPosicoesAbertas] = useState(true)
@@ -798,10 +801,13 @@ export default function App() {
             <div>
               {INDICADORES.map((item) => {
                 const ativo = indicadores.includes(item.id)
-                return <button key={item.id} className={ativo ? 'on' : ''} title={item.titulo}
+                const titulo = item.id === 'sma' ? `Média móvel simples de ${periodos.sma} períodos (clique na linha para mudar)`
+                  : item.id === 'ema' ? `Média móvel exponencial de ${periodos.ema} períodos (clique na linha para mudar)` : item.titulo
+                const rotulo = item.id === 'sma' ? `Média ${periodos.sma}` : item.id === 'ema' ? `EMA ${periodos.ema}` : item.label
+                return <button key={item.id} className={ativo ? 'on' : ''} title={titulo}
                   aria-pressed={ativo} onClick={() => setIndicadores((atuais) =>
                     ativo ? atuais.filter((id) => id !== item.id) : [...atuais, item.id])}>
-                  <i />{item.label}
+                  <i />{rotulo}
                 </button>
               })}
             </div>

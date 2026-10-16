@@ -5856,3 +5856,46 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 /* No escuro o âmbar fechado some no fundo; clareia só ele. */
 @media (prefers-color-scheme: dark) { .mon-selo.conta.demo { color: #e0a13a; } }
 :root[data-tema="escuro"] .mon-selo.conta.demo { color: #e0a13a; }
+
+/* ---------------- médias móveis: legenda clicável e editor de período
+   Como no Profit: clicar na linha (ou aqui na legenda) abre o período. */
+.chart-medias { position: absolute; z-index: 3; top: 52px; left: 12px; display: flex; flex-wrap: wrap; gap: 5px; pointer-events: none; }
+.chart-medias button {
+  pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--cor-media) 38%, var(--border)); border-radius: 7px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(8px);
+  color: var(--text); font-family: inherit; font-weight: 600; font-size: 11px; line-height: 1; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.chart-medias button i { width: 12px; height: 2px; border-radius: 2px; background: var(--cor-media); }
+.chart-medias button:hover, .chart-medias button.on { border-color: var(--cor-media); }
+.chart-media-editor {
+  position: absolute; z-index: 6; width: 228px; display: grid; gap: 8px; padding: 12px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text);
+  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, .55);
+}
+.chart-media-editor header { display: flex; align-items: center; gap: 8px; }
+.chart-media-editor header i { width: 14px; height: 3px; border-radius: 2px; }
+.chart-media-editor header b { font-size: 12.5px; }
+.chart-media-editor label { color: var(--muted); font-size: 11px; }
+.chart-media-campo { display: flex; align-items: center; gap: 8px; }
+.chart-media-campo input {
+  width: 100%; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface-alt); color: var(--text); font-family: inherit; font-weight: 600; font-size: 15px; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.chart-media-campo input:focus { outline: 2px solid var(--primary); outline-offset: 0; border-color: transparent; }
+.chart-media-campo span { color: var(--muted); font-size: 11.5px; }
+.chart-media-atalhos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.chart-media-atalhos button {
+  height: 28px; border: 1px solid var(--border); border-radius: 7px; background: transparent;
+  color: var(--text); font-family: inherit; font-weight: 600; font-size: 12px; line-height: 1; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.chart-media-atalhos button:hover { background: var(--surface-alt); }
+.chart-media-atalhos button.on { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+.chart-media-editor footer { display: flex; justify-content: flex-end; gap: 6px; margin-top: 2px; }
+.chart-media-editor footer button {
+  height: 32px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; background: transparent;
+  color: var(--text); font-family: inherit; font-weight: 600; font-size: 12px; line-height: 1; cursor: pointer;
+}
+.chart-media-editor footer button[type='submit'] { border-color: var(--primary); background: var(--primary); color: #fff; }
+:root[data-tema='escuro'] .chart-media-editor footer button[type='submit'] { color: var(--bg); }
+.chart-media-editor footer button:disabled { opacity: .45; cursor: not-allowed; }

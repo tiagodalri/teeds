@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { definirPeriodo, nomeDaMedia, PERIODO_MAXIMO, PERIODO_MINIMO, PERIODOS_COMUNS, usePeriodos, type MediaId } from '../core/chart/periodos'
 import type { Candle } from '../core/deriv/types'
 import { CHART, T } from '../core/chart/theme'
 import {
@@ -70,6 +71,35 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
   const [cursor, setCursor] = useState<Cursor | null>(null)
   const [agora, setAgora] = useState(() => Math.floor(Date.now() / 1000))
   const drag = useRef<{ x: number; offset: number } | null>(null)
+
+  // ---------------------------------------------- médias móveis editáveis
+  // Como no Profit: clicar na linha da média (ou na legenda) abre o período.
+  // Os pontos de cada linha desenhada ficam guardados para saber se o clique
+  // caiu em cima dela.
+  const periodos = usePeriodos()
+  const linhas = useRef<Partial<Record<MediaId, Array<[number, number]>>>>({})
+  const [linhaSob, setLinhaSob] = useState<MediaId | null>(null)
+  const [editando, setEditando] = useState<{ id: MediaId; x: number; y: number } | null>(null)
+  const [rascunho, setRascunho] = useState('')
+  const abrirEditor = (id: MediaId, x: number, y: number) => { setEditando({ id, x, y }); setRascunho(String(periodos[id])) }
+  const aplicarPeriodo = (valor = Number(rascunho)) => {
+    if (!editando) return
+    const n = Math.round(valor)
+    if (n >= PERIODO_MINIMO && n <= PERIODO_MAXIMO) { definirPeriodo(editando.id, n); setEditando(null) }
+  }
+  /** A média cuja linha passa a até `raio` px do ponto (x, y), se houver. */
+  const linhaPerto = (x: number, y: number, raio: number): MediaId | null => {
+    let melhor: MediaId | null = null; let menor = raio
+    for (const id of ['sma', 'ema'] as MediaId[]) {
+      const pts = linhas.current[id]
+      if (!pts || !indicators.includes(id)) continue
+      for (let i = 1; i < pts.length; i++) {
+        const d = distanciaAoSegmento(x, y, pts[i - 1], pts[i])
+        if (d < menor) { menor = d; melhor = id }
+      }
+    }
+    return melhor
+  }
 
   // ---------------------------------------------- ferramentas de desenho
   // Linhas horizontais, verticais e de tendência, guardadas por ativo no
@@ -262,18 +292,21 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
       // velas anteriores a ela (o "aquecimento" do período), para a linha
       // cobrir o gráfico inteiro em vez de nascer no 20º candle. Onde não há
       // histórico anterior, a janela encurta em vez de deixar buraco.
-      const contextoIni = Math.max(0, view.start - 120)
+      const contextoIni = Math.max(0, view.start - Math.max(120, periodos.sma, periodos.ema * 3))
       const serie = candles.slice(contextoIni, view.start + items.length).map((c) => c.close)
       const desloc = view.start - contextoIni
       const closes = items.map((c) => c.close)
-      const desenharLinha = (valores: Array<number | null>, cor: string, largura = 1.5) => {
+      const desenharLinha = (valores: Array<number | null>, cor: string, largura = 1.5, media?: MediaId) => {
         ctx.save(); ctx.beginPath(); let iniciou = false
+        const pontos: Array<[number, number]> = []
         for (let i = 0; i < items.length; i++) {
           const valor = valores[i + desloc]
           if (valor == null) continue
           const x = toX(i); const y = toY(valor)
+          pontos.push([x, y])
           if (!iniciou) { ctx.moveTo(x, y); iniciou = true } else ctx.lineTo(x, y)
         }
+        if (media) { linhas.current[media] = pontos; if (linhaSob === media) largura += 1.4 }
         ctx.strokeStyle = cor; ctx.lineWidth = largura; ctx.lineJoin = 'round'; ctx.stroke(); ctx.restore()
       }
       if (indicators.includes('bollinger')) {
@@ -284,8 +317,9 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
         ctx.closePath(); ctx.fillStyle='rgba(124, 92, 255, .075)'; ctx.fill(); ctx.restore()
         desenharLinha(bandas.superior, '#8f79ff', 1); desenharLinha(bandas.inferior, '#8f79ff', 1)
       }
-      if (indicators.includes('sma')) desenharLinha(mediaSimples(serie, 20), '#e0b84f', 1.8)
-      if (indicators.includes('ema')) desenharLinha(mediaExponencial(serie, 50), '#35a9ff', 1.7)
+      linhas.current = {}
+      if (indicators.includes('sma')) desenharLinha(mediaSimples(serie, periodos.sma), COR_DA_MEDIA.sma, 1.8, 'sma')
+      if (indicators.includes('ema')) desenharLinha(mediaExponencial(serie, periodos.ema), COR_DA_MEDIA.ema, 1.7, 'ema')
       if (indicators.includes('fibonacci')) {
         const maximo = Math.max(...items.map((c) => c.high))
         const minimo = Math.min(...items.map((c) => c.low))
@@ -560,7 +594,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
     cancelAnimationFrame(frameRef.current)
     frameRef.current = requestAnimationFrame(pintar)
     return () => cancelAnimationFrame(frameRef.current)
-  }, [size, view.items, view.start, candles, range, plot, mode, pipSize, cursor, stepX, toX, toY, markers, indicators, agora, desenhos, pendente, ferramenta])
+  }, [size, view.items, view.start, candles, range, plot, mode, pipSize, cursor, stepX, toX, toY, markers, indicators, agora, desenhos, pendente, ferramenta, periodos, linhaSob])
 
   // ------------------------------------------------------------ interacao
   const onWheel = useCallback((e: React.WheelEvent) => {
@@ -595,6 +629,13 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
       else { guardarDesenhos([...desenhos, { id, tipo: 'tendencia', a: pendente, b: p }]); setPendente(null) }
       return
     }
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (rect) {
+      const x = e.clientX - rect.left, y = e.clientY - rect.top
+      const media = linhaPerto(x, y, e.pointerType === 'touch' ? 14 : 7)
+      if (media) { abrirEditor(media, x, y); return }
+    }
+    setEditando(null)
     ;(e.target as Element).setPointerCapture(e.pointerId)
     drag.current = { x: e.clientX, offset: vp.offset }
   }
@@ -619,6 +660,10 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
     }
     const index = stepX > 0 ? Math.floor((x - plot.x) / stepX) : -1
     setCursor({ x, y, index })
+    if (ferramenta === 'cursor' && e.pointerType !== 'touch') {
+      const sob = linhaPerto(x, y, 7)
+      if (sob !== linhaSob) setLinhaSob(sob)
+    }
   }
 
   const endDrag = () => {
@@ -635,7 +680,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
       </div>
       <canvas
         ref={canvasRef}
-        style={{ width: '100%', height: '100%', display: 'block', cursor: drag.current ? 'grabbing' : 'crosshair' }}
+        style={{ width: '100%', height: '100%', display: 'block', cursor: drag.current ? 'grabbing' : linhaSob ? 'pointer' : 'crosshair' }}
         aria-label={ferramenta === 'cursor' ? 'Gráfico' : `Gráfico: clique para colocar ${FERRAMENTAS.find((f) => f.id === ferramenta)?.rotulo.toLowerCase()}`}
         onWheel={onWheel}
         onPointerDown={onPointerDown}
@@ -645,6 +690,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
         onPointerLeave={() => {
           endDrag()
           setCursor(null)
+          setLinhaSob(null)
         }}
       />
 
@@ -663,6 +709,49 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
         {ferramenta === 'tendencia' && <span className="dica">{pendente ? 'clique no segundo ponto' : 'clique no primeiro ponto'}</span>}
       </div>
 
+      {(indicators.includes('sma') || indicators.includes('ema')) && (
+        <div className="chart-medias" aria-label="Médias móveis no gráfico">
+          {(['sma', 'ema'] as MediaId[]).filter((id) => indicators.includes(id)).map((id) => (
+            <button key={id} type="button" style={{ ['--cor-media' as string]: COR_DA_MEDIA[id] }}
+              className={linhaSob === id || editando?.id === id ? 'on' : ''}
+              title={`Mudar o período da ${id === 'sma' ? 'média móvel simples' : 'média móvel exponencial'}`}
+              onClick={(e) => {
+                const r = wrapRef.current?.getBoundingClientRect(); const b = e.currentTarget.getBoundingClientRect()
+                if (r) abrirEditor(id, b.left - r.left, b.bottom - r.top + 4)
+              }}>
+              <i aria-hidden="true" />{nomeDaMedia(id, periodos[id])}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {editando && (
+        <form className="chart-media-editor" role="dialog" aria-label="Período da média móvel"
+          style={{ left: Math.max(8, Math.min(editando.x, size.w - 236)), top: Math.max(8, Math.min(editando.y + 10, size.h - 190)) }}
+          onSubmit={(e) => { e.preventDefault(); aplicarPeriodo() }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setEditando(null) }}>
+          <header>
+            <i aria-hidden="true" style={{ background: COR_DA_MEDIA[editando.id] }} />
+            <b>{editando.id === 'sma' ? 'Média móvel simples' : 'Média móvel exponencial'}</b>
+          </header>
+          <label htmlFor="chart-media-periodo">Período</label>
+          <div className="chart-media-campo">
+            <input id="chart-media-periodo" type="number" inputMode="numeric" min={PERIODO_MINIMO} max={PERIODO_MAXIMO} step={1}
+              value={rascunho} autoFocus onChange={(e) => setRascunho(e.target.value)} onFocus={(e) => e.currentTarget.select()} />
+            <span>velas</span>
+          </div>
+          <div className="chart-media-atalhos">
+            {PERIODOS_COMUNS.map((n) => (
+              <button key={n} type="button" className={Number(rascunho) === n ? 'on' : ''} onClick={() => aplicarPeriodo(n)}>{n}</button>
+            ))}
+          </div>
+          <footer>
+            <button type="button" onClick={() => setEditando(null)}>Cancelar</button>
+            <button type="submit" disabled={!(Number(rascunho) >= PERIODO_MINIMO && Number(rascunho) <= PERIODO_MAXIMO && Number.isInteger(Number(rascunho)))}>Aplicar</button>
+          </footer>
+        </form>
+      )}
+
       {markers.length > 0 && <div className="chart-contratos" aria-live="polite">
         {markers.map((m) => {
           const acima = m.type === 'CALL' || m.type === 'MULTUP' || m.type === 'HIGHER'
@@ -674,7 +763,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
         })}
       </div>}
 
-      {hovered && (
+      {hovered && !editando && (
         <div className="chart-tip" style={{ left: Math.min(cursor!.x + 14, size.w - 190) }}>
           <strong>{symbolName}</strong>
           <span>{formatDateTime(hovered.epoch)}</span>
@@ -718,10 +807,26 @@ function mediaSimples(valores: number[], periodo: number): Array<number | null> 
   return saida
 }
 
+/* A exponencial começa pela média simples dos primeiros N fechamentos (a
+   semente usual, a mesma do Profit e da Deriv) e daí segue a fórmula
+   EMA = preço x k + EMA anterior x (1 - k), com k = 2 / (N + 1). Antes de
+   completar N velas, sem histórico, vale a média simples encurtada. */
 function mediaExponencial(valores: number[], periodo: number): Array<number | null> {
   if (!valores.length) return []
-  const k = 2 / (periodo + 1); let atual = valores[0]
-  return valores.map((valor, i) => { atual = i ? valor * k + atual * (1 - k) : valor; return atual })
+  const k = 2 / (periodo + 1); let atual = 0; let soma = 0
+  return valores.map((valor, i) => {
+    if (i < periodo) { soma += valor; atual = soma / (i + 1); return atual }
+    atual = valor * k + atual * (1 - k)
+    return atual
+  })
+}
+
+const COR_DA_MEDIA: Record<MediaId, string> = { sma: '#e0b84f', ema: '#35a9ff' }
+
+function distanciaAoSegmento(px: number, py: number, [ax, ay]: [number, number], [bx, by]: [number, number]): number {
+  const dx = bx - ax, dy = by - ay
+  const t = dx || dy ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy))) : 0
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy))
 }
 
 function bollinger(valores: number[], periodo: number) {

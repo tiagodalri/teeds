@@ -185,7 +185,9 @@ export function subscribeCandles(
   granularity: Granularity,
   onHistory: (candles: Candle[]) => void,
   onUpdate: (candle: Candle) => void,
-  count = 200,
+  // 1000 velas: uma média de 200 precisa de 200 velas ANTES da primeira que
+  // aparece na tela para já nascer certa (com 200 ela começava encurtada).
+  count = 1000,
   socket: TeedsSocket = publicSocket,
 ): () => void {
   return socket.subscribe(

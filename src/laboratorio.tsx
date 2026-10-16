@@ -29,6 +29,18 @@ import { RobotLive } from './components/RobotLive'
 import { RobotSetup } from './components/RobotSetup'
 import { RobotCatalog } from './components/RobotCatalog'
 import { AulasPanel } from './components/AulasPanel'
+import { PriceChart } from './components/PriceChart'
+
+/** Velas de mentira para o laboratório: passeio aleatório com semente fixa. */
+const VELAS = (() => {
+  let p = 1000, sem = 7
+  const r = () => { sem = (sem * 16807) % 2147483647; return sem / 2147483647 - 0.5 }
+  return Array.from({ length: 1000 }, (_, i) => {
+    const open = p; const close = open + r() * 6 + Math.sin(i / 40) * 0.8
+    p = close
+    return { epoch: 1760000000 + i * 60, open, close, high: Math.max(open, close) + Math.abs(r()) * 3, low: Math.min(open, close) - Math.abs(r()) * 3 }
+  })
+})()
 import { DerivDesconectada } from './components/DerivDesconectada'
 
 document.documentElement.dataset.marca = MARCA.id
@@ -157,6 +169,8 @@ function Laboratorio() {
         {qual === 'sem-deriv' && <SemDeriv />}
         {/* ?tela=aulas: a sala de aula com o catálogo e as capas da marca. */}
         {qual === 'aulas' && <AulasPanel nome="Tiago" />}
+        {/* ?tela=grafico: o gráfico com velas de mentira, médias ligadas (clique na linha). */}
+        {qual === 'grafico' && <div style={{ height: 520, display: 'flex' }}><PriceChart candles={VELAS} mode="candles" pipSize={3} symbolName="Volatility 75 (1s)" symbol="lab" indicators={['sma', 'ema']} /></div>}
       </main>
     </div>
   )
