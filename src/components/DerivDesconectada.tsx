@@ -62,6 +62,14 @@ export function DerivDesconectada({ acao, entrando, onConectar, compacto = false
           ? <>Falta um passo para ligar a <span className="deriv-inline"><DerivLogo altura={17} /></span></>
           : <>Conecte a sua conta da <span className="deriv-inline"><DerivLogo altura={17} /></span></>}
       </b>
+      {/* Só no computador a Deriv abre em janela à parte (ver startLogin). */}
+      {entrando && !emToque() && (
+        <p className="sem-deriv-janela" role="status">
+          A Deriv abriu em outra janela. Entre por lá: ao terminar, ela fecha
+          sozinha e a {MARCA.prosa} conecta. Se a janela ficar parada no painel
+          da Deriv, é só fechá-la e voltar aqui.
+        </p>
+      )}
       {presa ? (
         <div className="sem-deriv-presa">
           <p>

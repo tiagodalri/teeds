@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   buscarSessaoDoServidor, completeLogin, emAppInstalado, loadSession, loginPendente,
-  logout as clearSession, startLogin, startLoginPeloServidor, type AuthSession,
+  logout as clearSession, ouvirLoginDeOutraJanela, startLogin, startLoginPeloServidor, type AuthSession,
 } from '../core/deriv/auth'
 import { fetchAccounts, fetchTradingSocketUrl, resetDemoBalance, type TradingAccount } from '../core/deriv/account'
 import { TeedsSocket } from '../core/deriv/client'
@@ -83,6 +83,35 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
     })()
     return () => { alive = false }
   }, [])
+
+  // --- a Deriv abriu numa janela à parte (computador): quando a janela
+  // conclui, ela avisa por aqui e esta página entra conectada sem recarregar.
+  useEffect(() => {
+    if (session) return
+    return ouvirLoginDeOutraJanela(() => {
+      const s = loadSession()
+      if (s) { setSession(s); setStatus('logado'); setError(null) }
+    })
+  }, [session])
+
+  // --- a pessoa voltou para a plataforma com a janela da Deriv ainda sem
+  // concluir (a Deriv a prendeu no painel dela, ou ela fechou a janela):
+  // sai do "Abrindo…" e mostra o cartão de concluir a ligação. Se a conexão
+  // chegar logo depois, o efeito acima entra por cima.
+  const [loginNaJanela, setLoginNaJanela] = useState(false)
+  useEffect(() => {
+    if (!loginNaJanela || session) return
+    const aoVoltar = () => {
+      if (document.visibilityState !== 'visible') return
+      setTimeout(() => {
+        if (loadSession()) return
+        setLoginNaJanela(false)
+        setStatus((st) => (st === 'entrando' ? 'deslogado' : st))
+      }, 600)
+    }
+    window.addEventListener('focus', aoVoltar)
+    return () => window.removeEventListener('focus', aoVoltar)
+  }, [loginNaJanela, session])
 
   // --- o app voltou à frente com um login pendente: o token já chegou?
   useEffect(() => {
@@ -318,7 +347,10 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
     setStatus('entrando')
     const token = tokenTeedsRef.current
     const ida = (async () => {
-      if (!(emAppInstalado() && token)) return startLogin()
+      if (!(emAppInstalado() && token)) {
+        if (await startLogin() === 'janela') setLoginNaJanela(true)
+        return
+      }
       // App instalado: antes de ir à Deriv de novo, o token pode já estar no
       // cofre — o login anterior terminou no Safari e o app não soube.
       if (loginPendente()) {

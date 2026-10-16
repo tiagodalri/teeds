@@ -2596,6 +2596,7 @@ button:has(> .icone-fechar) { display: inline-flex; align-items: center; justify
 .sem-deriv-acoes button:disabled { opacity: .55; cursor: not-allowed; }
 .sem-deriv-acoes a { border: 1px solid var(--border); background: var(--bg); color: var(--text); }
 .sem-deriv-acoes a:hover { border-color: var(--primary); color: var(--primary); }
+.sem-deriv .sem-deriv-janela { color: var(--text); background: var(--primary-soft); border-radius: 10px; padding: 10px 12px; }
 .sem-deriv-acoes .sem-deriv-copiar { border: 1px solid var(--border); background: var(--bg); color: var(--text); }
 
 /* A volta da Deriv se perdeu duas vezes: o cartão vira um passo a passo. */

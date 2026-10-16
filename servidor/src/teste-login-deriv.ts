@@ -31,7 +31,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  buscarSessaoDoServidor, completeLogin, emAppInstalado, loginPendente, logout, startLogin, startLoginPeloServidor, voltasPerdidas,
+  buscarSessaoDoServidor, completeLogin, emAppInstalado, loginPendente, logout, ouvirLoginDeOutraJanela, startLogin, startLoginPeloServidor, voltasPerdidas,
 } from '../../src/core/deriv/auth'
 import { MARCA } from '../../src/marca'
 
@@ -272,6 +272,45 @@ await irParaADeriv()
 conferir('e o próximo login começa do um', voltasPerdidas(), 1)
 logout()
 conferir('sair também zera a contagem', voltasPerdidas(), 0)
+
+/* ------------------- a Deriv numa janela à parte (computador, 16/10/2026) */
+
+// O navegador abre a janela: a plataforma fica, e o pedido sabe que é janela.
+let janelaAberta = ''
+let fechou = false
+const w = g.window as Record<string, unknown>
+w.open = (u: string) => { janelaAberta = u; return {} }
+w.close = () => { fechou = true }
+w.addEventListener = () => {}
+// A prova do servidor, acima, trocou o fetch: aqui volta a ser a Deriv entregando o token.
+g.fetch = async () => ({ ok: true, json: async () => ({ access_token: 'token-de-prova', refresh_token: 'r', expires_in: 3600 }) })
+w.removeEventListener = () => {}
+const ouviu: string[] = []
+const pararDeOuvir = ouvirLoginDeOutraJanela(() => ouviu.push('conectada'))
+zerar(); idaPara = ''
+const modo = await startLogin()
+conferir('no computador, a Deriv abre numa janela à parte', modo, 'janela')
+conferir('e esta aba não sai da plataforma', idaPara, '')
+conferir('a janela vai para a autorização da Deriv', new URL(janelaAberta).origin + new URL(janelaAberta).pathname, 'https://auth.deriv.com/oauth2/auth')
+conferir('o pedido sabe que é de janela', (pedidoGuardado() as { janela?: boolean } | null)?.janela ?? false, true)
+conferir('e conta uma tentativa só', voltasPerdidas(), 1)
+// A janela volta da Deriv e conclui: avisa a plataforma e tenta fechar.
+voltarPara({ code: 'codigo-de-prova', state: new URL(janelaAberta).searchParams.get('state')! })
+conferir('a janela conclui o login', await concluir(), 'token-de-prova')
+await new Promise((r) => setTimeout(r, 250))
+conferir('e avisa a plataforma por outro canal (a Deriv corta o window.opener)', ouviu, ['conectada'])
+conferir('e tenta fechar a janela', fechou, true)
+pararDeOuvir()
+
+// Bloqueador de janela: cai na ida pela mesma aba, como sempre foi.
+w.open = () => null
+zerar(); idaPara = ''
+const modo2 = await startLogin()
+conferir('janela bloqueada: vai pela mesma aba', modo2, 'aba')
+conferir('e a aba vai para a Deriv', !!idaPara, true)
+conferir('o pedido da aba não fica marcado como janela', (pedidoGuardado() as { janela?: boolean } | null)?.janela ?? false, false)
+conferir('e conta uma tentativa só, não duas', voltasPerdidas(), 1)
+delete w.open
 
 /* ------------------------------------------------- a tela diz o que houve */
 

@@ -60,6 +60,8 @@ interface PedidoDeLogin {
   verifier: string
   state: string
   criadoEm: number
+  /** A Deriv foi aberta numa janela à parte (ver `startLogin`). */
+  janela?: boolean
 }
 
 /*
@@ -90,8 +92,8 @@ export function voltasPerdidas(): number {
   } catch { return 1 }
 }
 
-function guardarPedido(p: PedidoDeLogin): void {
-  contarTentativa()
+function guardarPedido(p: PedidoDeLogin, conta = true): void {
+  if (conta) contarTentativa()
   try {
     localStorage.setItem(KEY_PEDIDO, JSON.stringify(p))
   } catch {
@@ -196,11 +198,77 @@ async function challengeFor(verifier: string): Promise<string> {
 
 // ---------------------------------------------------------------- entrada
 
-/** Leva o usuario para a pagina oficial da Deriv para autorizar a Teeds. */
-export async function startLogin(): Promise<void> {
+/*
+  A DERIV NUMA JANELA À PARTE (16/10/2026).
+
+  No primeiro login de uma conta, a Deriv passa por etapas obrigatórias dela
+  (troca de senha forçada, termos novos, avisos de verificação) e, ao fim,
+  manda a pessoa para o painel DELA, esquecendo a volta para a plataforma.
+  Não há o que mudar do nosso lado nisso. O que muda: no computador, a Deriv
+  abre numa janela própria e a plataforma fica aberta atrás. Deu certo, a
+  janela avisa e fecha; a Deriv prendeu a pessoa, ela fecha a janela e a
+  plataforma está ali, com "Concluir a ligação", que na segunda vez passa
+  direto (a Deriv já reconhece a pessoa).
+
+  O aviso vai por BroadcastChannel e pelo evento de storage, NÃO por
+  window.opener: as páginas da Deriv mandam o cabeçalho
+  Cross-Origin-Opener-Policy, que corta a ligação entre as duas janelas (e
+  apaga o window.name). Por isso o pedido guarda `janela: true` — é assim
+  que a janela de volta sabe que deve avisar e fechar.
+
+  Celular e app instalado continuam na mesma aba: janela à parte no celular
+  vira outra aba, e a pessoa se perde do mesmo jeito.
+*/
+const CANAL_LOGIN = `${MARCA.id}.deriv-login`
+
+function abrirJanelaDeLogin(url: string): Window | null {
+  try {
+    if (emAppInstalado()) return null
+    if (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) return null
+    const w = 520, h = 760
+    const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - w) / 2))
+    const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - h) / 2))
+    return window.open(url, `${MARCA.id}-deriv-login`, `popup=yes,width=${w},height=${h},left=${left},top=${top}`)
+  } catch {
+    return null
+  }
+}
+
+/** Na janela da Deriv, quando a volta deu certo: avisa a plataforma e tenta fechar. */
+function avisarQueConectou(): void {
+  try {
+    const canal = new BroadcastChannel(CANAL_LOGIN)
+    canal.postMessage({ tipo: 'conectada' })
+    canal.close()
+  } catch { /* o evento de storage do token também avisa */ }
+  // Só fecha se o navegador deixar; se não deixar, esta janela mostra a
+  // plataforma já conectada, o que também serve.
+  setTimeout(() => { try { window.close() } catch { /* fica aberta */ } }, 150)
+}
+
+/**
+ * A plataforma ouve a janela da Deriv. Chama `aoConectar` quando outra janela
+ * deste site concluiu o login (o token já está no localStorage).
+ */
+export function ouvirLoginDeOutraJanela(aoConectar: () => void): () => void {
+  let canal: BroadcastChannel | null = null
+  try {
+    canal = new BroadcastChannel(CANAL_LOGIN)
+    canal.onmessage = (e) => { if (e.data?.tipo === 'conectada') aoConectar() }
+  } catch { canal = null }
+  const aoMudar = (e: StorageEvent) => { if (e.key === KEY_TOKEN && e.newValue) aoConectar() }
+  window.addEventListener('storage', aoMudar)
+  return () => { canal?.close(); window.removeEventListener('storage', aoMudar) }
+}
+
+/**
+ * Leva o usuario para a pagina oficial da Deriv para autorizar a Teeds.
+ * Devolve 'janela' quando a Deriv abriu numa janela à parte e esta página
+ * continua aqui; 'aba' quando esta própria aba foi para a Deriv.
+ */
+export async function startLogin(): Promise<'janela' | 'aba'> {
   const verifier = randomString(64)
   const state = randomString(32)
-  guardarPedido({ verifier, state, criadoEm: Date.now() })
 
   const params = new URLSearchParams({
     response_type: 'code',
@@ -211,7 +279,13 @@ export async function startLogin(): Promise<void> {
     code_challenge: await challengeFor(verifier),
     code_challenge_method: 'S256',
   })
-  window.location.assign(`${DERIV.oauth.authorize}?${params.toString()}`)
+  const url = `${DERIV.oauth.authorize}?${params.toString()}`
+  // O pedido é guardado ANTES de abrir: a janela pode voltar muito rápido.
+  guardarPedido({ verifier, state, criadoEm: Date.now(), janela: true })
+  if (abrirJanelaDeLogin(url)) return 'janela'
+  guardarPedido({ verifier, state, criadoEm: Date.now() }, false)
+  window.location.assign(url)
+  return 'aba'
 }
 
 /**
@@ -273,6 +347,7 @@ export async function completeLogin(): Promise<AuthSession | null> {
     expiresAt: data.expires_in ? Date.now() + Number(data.expires_in) * 1000 : undefined,
   }
   saveSession(session)
+  if (pedido.janela) avisarQueConectou()
   return session
 }
 
