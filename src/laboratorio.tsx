@@ -28,6 +28,7 @@ import type { ActiveSymbol } from './core/deriv/types'
 import { RobotLive } from './components/RobotLive'
 import { RobotSetup } from './components/RobotSetup'
 import { RobotCatalog } from './components/RobotCatalog'
+import { DerivDesconectada } from './components/DerivDesconectada'
 
 document.documentElement.dataset.marca = MARCA.id
 aplicarTema(temaGuardado())
@@ -116,6 +117,24 @@ function Cabine({ estado, expandido, titulo }: { estado: EstadoMotor; expandido:
   )
 }
 
+function SemDeriv() {
+  const voltas = Number(new URLSearchParams(location.search).get('voltas') ?? '0')
+  try {
+    if (voltas > 0) {
+      localStorage.setItem(`${MARCA.id}.pkce`, JSON.stringify({ verifier: 'lab', state: 'lab', criadoEm: Date.now() }))
+      localStorage.setItem(`${MARCA.id}.tentativas-deriv`, JSON.stringify({ n: voltas, em: Date.now() }))
+    } else {
+      localStorage.removeItem(`${MARCA.id}.pkce`); localStorage.removeItem(`${MARCA.id}.tentativas-deriv`)
+    }
+  } catch { /* sem storage, mostra o estado inicial */ }
+  return (
+    <div style={{ display: 'grid', gap: 24, padding: 16, maxWidth: 420 }}>
+      <DerivDesconectada acao="Para operar, falta a corretora." entrando={false} onConectar={nada} />
+      <DerivDesconectada compacto acao="O gráfico e os dígitos são públicos, mas comprar exige a sua conta." entrando={false} onConectar={nada} />
+    </div>
+  )
+}
+
 function Laboratorio() {
   const qual = new URLSearchParams(location.search).get('tela') ?? 'cabine'
   return (
@@ -132,6 +151,9 @@ function Laboratorio() {
           </div></div>
         )}
         {qual === 'catalogo' && <RobotCatalog selected={ident.id} onSelect={nada} />}
+        {/* ?tela=sem-deriv&voltas=0|1|2: o cartão de corretora desconectada em
+            cada estado (nenhum login, uma volta perdida, duas seguidas). */}
+        {qual === 'sem-deriv' && <SemDeriv />}
       </main>
     </div>
   )

@@ -2582,7 +2582,7 @@ button:has(> .icone-fechar) { display: inline-flex; align-items: center; justify
   width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center;
   background: var(--primary-soft); color: var(--primary); margin-bottom: 4px;
 }
-.sem-deriv b { font-size: 17px; font-weight: 650; letter-spacing: -.015em; }
+.sem-deriv > b { font-size: 17px; font-weight: 650; letter-spacing: -.015em; }
 .sem-deriv p {
   margin: 0; max-width: 44ch; font-size: 13px; line-height: 1.6; color: var(--muted);
 }
@@ -2596,13 +2596,26 @@ button:has(> .icone-fechar) { display: inline-flex; align-items: center; justify
 .sem-deriv-acoes button:disabled { opacity: .55; cursor: not-allowed; }
 .sem-deriv-acoes a { border: 1px solid var(--border); background: var(--bg); color: var(--text); }
 .sem-deriv-acoes a:hover { border-color: var(--primary); color: var(--primary); }
+.sem-deriv-acoes .sem-deriv-copiar { border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+
+/* A volta da Deriv se perdeu duas vezes: o cartão vira um passo a passo. */
+.sem-deriv-presa { display: grid; gap: 8px; text-align: left; max-width: 46ch; }
+.sem-deriv-presa p { max-width: none; }
+.sem-deriv-presa p b { color: var(--text); }
+.sem-deriv-presa ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 13px; line-height: 1.55; color: var(--text); }
+.sem-deriv-presa kbd {
+  font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; padding: 2px 5px;
+  border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; background: var(--bg);
+}
+.sem-deriv-presa .sem-deriv-nota { font-size: 12px; }
+.sem-deriv.compacto .sem-deriv-presa ol { font-size: 12px; }
 
 .sem-deriv.compacto {
   padding: 20px 16px; gap: 7px; margin-bottom: 14px;
   border-color: var(--primary); background: var(--primary-soft); box-shadow: none;
 }
 .sem-deriv.compacto .sem-deriv-icone { display: none; }
-.sem-deriv.compacto b { font-size: 14px; }
+.sem-deriv.compacto > b { font-size: 14px; }
 .sem-deriv.compacto p { font-size: 12px; color: var(--text); }
 .sem-deriv.compacto .sem-deriv-acoes button,
 .sem-deriv.compacto .sem-deriv-acoes a { padding: 8px 14px; font-size: 12.5px; }

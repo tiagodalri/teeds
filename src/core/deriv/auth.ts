@@ -62,7 +62,36 @@ interface PedidoDeLogin {
   criadoEm: number
 }
 
+/*
+  TENTATIVAS SEM VOLTA (16/10/2026). Uma cliente da OMNI, no Chrome normal,
+  entrava na Deriv e caía no painel dela, duas vezes seguidas; na janela
+  anônima funcionou. A Deriv guarda a volta no fluxo de login dela, e quando
+  a página de login demora (extensão, dados antigos da Deriv no navegador)
+  ela recomeça um login sem a volta. Isso não se conserta daqui. O que se
+  conserta: contar as tentativas, e na segunda que não volta, parar de mandar
+  a pessoa para o mesmo círculo e dizer o caminho que funciona.
+*/
+const KEY_TENTATIVAS = `${MARCA.id}.tentativas-deriv`
+
+function contarTentativa(): void {
+  try {
+    const t = JSON.parse(localStorage.getItem(KEY_TENTATIVAS) ?? 'null') as { n: number; em: number } | null
+    const n = t && Date.now() - t.em < 30 * 60_000 ? t.n + 1 : 1
+    localStorage.setItem(KEY_TENTATIVAS, JSON.stringify({ n, em: Date.now() }))
+  } catch { /* sem contagem, o cartão fica no texto da primeira volta */ }
+}
+
+/** Quantas vezes seguidas a pessoa foi à Deriv e não voltou (0 = nenhum login pendente). */
+export function voltasPerdidas(): number {
+  if (!loginPendente()) return 0
+  try {
+    const t = JSON.parse(localStorage.getItem(KEY_TENTATIVAS) ?? 'null') as { n: number; em: number } | null
+    return t && Date.now() - t.em < 30 * 60_000 ? t.n : 1
+  } catch { return 1 }
+}
+
 function guardarPedido(p: PedidoDeLogin): void {
+  contarTentativa()
   try {
     localStorage.setItem(KEY_PEDIDO, JSON.stringify(p))
   } catch {
@@ -108,7 +137,7 @@ function lerPedido(state: string | null): PedidoDeLogin | null {
 }
 
 function esquecerPedido(): void {
-  try { localStorage.removeItem(KEY_PEDIDO) } catch { /* nada a fazer */ }
+  try { localStorage.removeItem(KEY_PEDIDO); localStorage.removeItem(KEY_TENTATIVAS) } catch { /* nada a fazer */ }
   try {
     sessionStorage.removeItem(KEY_VERIFIER)
     sessionStorage.removeItem(KEY_STATE)

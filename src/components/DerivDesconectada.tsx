@@ -1,6 +1,7 @@
 import { DerivLogo, IconeElo } from './DerivMarca'
 import { MARCA } from '../marca'
-import { loginPendente } from '../core/deriv/auth'
+import { useState } from 'react'
+import { voltasPerdidas } from '../core/deriv/auth'
 
 interface Props {
   /** O que a pessoa estava tentando fazer, para o texto falar disso. */
@@ -32,8 +33,20 @@ interface Props {
   notícia é concreta: a Deriv já reconhece a pessoa, então tocar de novo volta
   direto, sem pedir senha outra vez.
 */
+/** Celular ou tablet: lá não existe Ctrl+Shift+N, a aba anônima é pelo menu. */
+const emToque = () => typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches
+
 export function DerivDesconectada({ acao, entrando, onConectar, compacto = false }: Props) {
-  const voltaPerdida = loginPendente()
+  const voltas = voltasPerdidas()
+  const voltaPerdida = voltas > 0
+  // Na segunda volta perdida seguida, repetir o mesmo botão é o círculo de
+  // novo (16/10/2026, cliente da OMNI). Aí o cartão ensina o que funciona.
+  const presa = voltas >= 2
+  const [copiado, setCopiado] = useState(false)
+  const endereco = MARCA.redirectUri
+  const copiar = () => {
+    navigator.clipboard?.writeText(endereco).then(() => setCopiado(true), () => setCopiado(false))
+  }
   return (
     <div className={`sem-deriv ${compacto ? 'compacto' : ''}`}>
       <div className="sem-deriv-icone" aria-hidden="true">
@@ -49,23 +62,55 @@ export function DerivDesconectada({ acao, entrando, onConectar, compacto = false
           ? <>Falta um passo para ligar a <span className="deriv-inline"><DerivLogo altura={17} /></span></>
           : <>Conecte a sua conta da <span className="deriv-inline"><DerivLogo altura={17} /></span></>}
       </b>
-      <p>
-        {voltaPerdida
-          ? <>Você entrou na corretora, mas a página não voltou para a {MARCA.prosa}.
-              Toque abaixo para concluir: a Deriv já reconhece você e não vai
-              pedir a senha de novo.</>
-          : <>{acao} Você está na {MARCA.prosa}, mas o dinheiro fica na corretora — e é
-              preciso ligar as duas.</>}
-      </p>
+      {presa ? (
+        <div className="sem-deriv-presa">
+          <p>
+            A Deriv não devolveu você para a {MARCA.prosa} de novo. Neste navegador a
+            página de login dela está se perdendo, o que costuma vir de uma extensão
+            (como bloqueador de anúncios) ou de dados antigos da Deriv guardados aqui.
+          </p>
+          <p><b>O jeito que resolve agora:</b></p>
+          <ol>
+            <li>
+              {emToque()
+                ? <>Abra uma <b>aba anônima</b> pelo menu do navegador.</>
+                : <>Abra uma <b>janela anônima</b>: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> no Windows, ou <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> no Mac.</>}
+            </li>
+            <li>Entre em <b>{endereco.replace(/^https?:\/\//, '').replace(/\/$/, '')}</b> por ela, com o seu e-mail e senha da {MARCA.prosa}.</li>
+            <li>Toque em Conectar e entre na Deriv. Lá ela volta certinho.</li>
+          </ol>
+          <p className="sem-deriv-nota">
+            Para usar nesta janela de sempre: apague os dados do site deriv.com
+            (cadeado ao lado do endereço › Cookies e dados do site) ou desligue as
+            extensões, e tente de novo.
+          </p>
+        </div>
+      ) : (
+        <p>
+          {voltaPerdida
+            ? <>Você entrou na corretora, mas a página não voltou para a {MARCA.prosa}.
+                Toque abaixo para concluir. Se a Deriv pedir a senha de novo, é só
+                entrar: em seguida você volta para cá.</>
+            : <>{acao} Você está na {MARCA.prosa}, mas o dinheiro fica na corretora — e é
+                preciso ligar as duas.</>}
+        </p>
+      )}
       <div className="sem-deriv-acoes">
         <button className="btn-deriv" onClick={onConectar} disabled={entrando}>
           <IconeElo />
           {entrando
             ? 'Abrindo…'
-            : voltaPerdida
+            : presa
+              ? <>Tentar de novo aqui</>
+              : voltaPerdida
               ? <>Concluir a ligação com a <DerivLogo altura={13} cor="#fff" /></>
               : <>Conectar minha <DerivLogo altura={13} cor="#fff" /></>}
         </button>
+        {presa && (
+          <button type="button" className="sem-deriv-copiar" onClick={copiar}>
+            {copiado ? 'Endereço copiado' : 'Copiar o endereço'}
+          </button>
+        )}
         {!voltaPerdida && (
           <a href={MARCA.afiliado} target="_blank" rel="noopener noreferrer">Ainda não tenho conta</a>
         )}
