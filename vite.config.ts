@@ -4,6 +4,7 @@ import { cpSync, existsSync, readFileSync, readdirSync, rmSync, statSync, writeF
 import { createHash } from 'node:crypto'
 import { dirname, join, relative, resolve } from 'node:path'
 import { MARCAS, marcaPorId } from './src/marca/marcas'
+import { paletaDaMarca, type Paleta } from './scripts/paleta-da-marca'
 
 /**
  * Qual marca este build monta.
@@ -81,12 +82,32 @@ function cascaPorMarca() {
    Antes eram ternarios de duas marcas: a GlobalFly sairia instalada como
    "OMNI" (16/10/2026). */
 const FUNDO_DA_MARCA: Record<string, string> = { teeds: '#090a0d', omni: '#081525', globalfly: '#051528' }
+/* Paleta do manual da GlobalFly (Brand Book v1.0): toda cor herdada da base
+   vira a família equivalente — vermelho → Alerta, quentes → Ouro GF,
+   verdes → Positivo, frios → Aço/Ardósia. Ver scripts/paleta-da-marca.ts. */
+const PALETAS: Record<string, Paleta> = {
+  globalfly: {
+    manter: ['#051528', '#B78D39', '#9CB1C7', '#F3F0E9', '#29445F', '#2F8F72', '#C95F5F',
+      '#030d1a', '#041120', '#162537', '#112032', '#27374a', '#586a7f',
+      // a Deriv é marca de terceiro: o vermelho dela não se mexe
+      '#ff444f', '#ff5a63'],
+    vermelho: { h: 0, s: 0.5, exata: [201 / 255, 95 / 255, 95 / 255] }, // Alerta #C95F5F
+    quente: { h: 40, s: 0.53, exata: [183 / 255, 141 / 255, 57 / 255] }, // Ouro GF #B78D39
+    verde: { h: 162, s: 0.5, exata: [47 / 255, 143 / 255, 114 / 255] }, // Positivo #2F8F72
+    frio: { h: 211, s: 0.4 },
+    neutroEscuro: 212,
+    neutroClaro: 43,
+    // #041120, #112032, #162537, #27374A, #586A7F
+    superficies: [[0.071, 0.78], [0.131, 0.49], [0.151, 0.43], [0.222, 0.31], [0.422, 0.18]],
+  },
+}
 const NOME_CURTO: Record<string, string> = { teeds: 'Teeds', omni: 'OMNI', globalfly: 'GlobalFly' }
 
 export default defineConfig({
   base: MARCA.base,
   plugins: [
     cascaPorMarca(),
+    paletaDaMarca(PALETAS[MARCA.id]),
     react(),
     {
       // O nome e o emblema entram no index.html na hora do build. O titulo da
