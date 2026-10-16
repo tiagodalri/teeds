@@ -31,7 +31,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  buscarSessaoDoServidor, completeLogin, emAppInstalado, loginPendente, logout, startLogin, startLoginPeloServidor,
+  buscarSessaoDoServidor, completeLogin, emAppInstalado, loginPendente, logout, startLogin, startLoginPeloServidor, voltasPerdidas,
 } from '../../src/core/deriv/auth'
 import { MARCA } from '../../src/marca'
 
@@ -256,15 +256,36 @@ g.fetch = async () => ({ ok: true, json: async () => ({ sessao: null, motivo: 's
 conferir('se o token ainda não chegou, devolve nulo', await buscarSessaoDoServidor('cracha-teeds'), null)
 conferir('e o pedido continua pendente para tentar de novo', loginPendente(), true)
 
+/* ------------------------- tentativas seguidas sem volta (16/10/2026) */
+
+zerar()
+conferir('sem login começado, nenhuma volta perdida', voltasPerdidas(), 0)
+await irParaADeriv()
+conferir('foi à Deriv e não voltou: uma volta perdida', voltasPerdidas(), 1)
+await irParaADeriv()
+conferir('foi de novo e não voltou: duas seguidas', voltasPerdidas(), 2)
+const dessaVez = await irParaADeriv()
+voltarPara(dessaVez)
+await concluir()
+conferir('quando enfim volta, a contagem zera', voltasPerdidas(), 0)
+await irParaADeriv()
+conferir('e o próximo login começa do um', voltasPerdidas(), 1)
+logout()
+conferir('sair também zera a contagem', voltasPerdidas(), 0)
+
 /* ------------------------------------------------- a tela diz o que houve */
 
 const RAIZ = join(import.meta.dirname, '../..')
 const tela = readFileSync(join(RAIZ, 'src/components/DerivDesconectada.tsx'), 'utf8')
-conferir('a tela pergunta se há um login pendente', /loginPendente\(\)/.test(tela), true)
+conferir('a tela pergunta quantas voltas se perderam', /voltasPerdidas\(\)/.test(tela), true)
 conferir('e explica que a página não voltou',
   /não voltou para a \{MARCA\.prosa\}/.test(tela), true)
-conferir('e promete concluir sem pedir a senha de novo',
-  /não vai\s*\n?\s*pedir a senha de novo/.test(tela), true)
+// A promessa caiu em 16/10/2026: no navegador da cliente a Deriv pediu a
+// senha de novo e caiu no painel dela outra vez.
+conferir('e não promete mais que a Deriv não pede a senha de novo',
+  /não vai\s*\n?\s*pedir a senha de novo/.test(tela), false)
+conferir('na segunda volta perdida, o cartão troca de conversa', /const presa = voltas >= 2/.test(tela), true)
+conferir('e ensina a janela anônima, que funciona', /janela anônima/.test(tela) && /aba anônima/.test(tela), true)
 // "Ainda não tenho conta" não cabe para quem acabou de entrar na corretora.
 conferir('e esconde "ainda não tenho conta" nesse caso',
   /\{!voltaPerdida && \(/.test(tela), true)
