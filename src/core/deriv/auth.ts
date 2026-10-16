@@ -267,6 +267,14 @@ export function ouvirLoginDeOutraJanela(aoConectar: () => void): () => void {
  * continua aqui; 'aba' quando esta própria aba foi para a Deriv.
  */
 export async function startLogin(): Promise<'janela' | 'aba'> {
+  /*
+    A SEGUNDA VEZ VAI PELA MESMA ABA (16/10/2026, teste com a conta do
+    Tiago). Quando a Deriv prende a pessoa no painel dela, ela já passou
+    pelas etapas obrigatórias e ficou logada: o pedido seguinte volta na hora,
+    sem mostrar tela nenhuma (conferido no Chrome dele). Abrir outra janela
+    nesse momento só confunde; a própria aba vai e volta conectada.
+  */
+  const mesmaAba = voltasPerdidas() >= 1
   const verifier = randomString(64)
   const state = randomString(32)
 
@@ -282,7 +290,7 @@ export async function startLogin(): Promise<'janela' | 'aba'> {
   const url = `${DERIV.oauth.authorize}?${params.toString()}`
   // O pedido é guardado ANTES de abrir: a janela pode voltar muito rápido.
   guardarPedido({ verifier, state, criadoEm: Date.now(), janela: true })
-  if (abrirJanelaDeLogin(url)) return 'janela'
+  if (!mesmaAba && abrirJanelaDeLogin(url)) return 'janela'
   guardarPedido({ verifier, state, criadoEm: Date.now() }, false)
   window.location.assign(url)
   return 'aba'

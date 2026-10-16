@@ -310,6 +310,13 @@ conferir('janela bloqueada: vai pela mesma aba', modo2, 'aba')
 conferir('e a aba vai para a Deriv', !!idaPara, true)
 conferir('o pedido da aba não fica marcado como janela', (pedidoGuardado() as { janela?: boolean } | null)?.janela ?? false, false)
 conferir('e conta uma tentativa só, não duas', voltasPerdidas(), 1)
+// A segunda vez: a Deriv já reconhece a pessoa, então vai pela própria aba.
+w.open = (u: string) => { janelaAberta = u; return {} }
+zerar(); idaPara = ''; janelaAberta = ''
+await startLogin()                 // 1ª: janela, que a Deriv prende no painel
+const segunda = await startLogin() // 2ª: pela aba, volta na hora
+conferir('depois de uma volta perdida, a próxima vai pela mesma aba', segunda, 'aba')
+conferir('e esta aba vai para a Deriv', !!idaPara, true)
 delete w.open
 
 /* ------------------------------------------------- a tela diz o que houve */
@@ -317,13 +324,13 @@ delete w.open
 const RAIZ = join(import.meta.dirname, '../..')
 const tela = readFileSync(join(RAIZ, 'src/components/DerivDesconectada.tsx'), 'utf8')
 conferir('a tela pergunta quantas voltas se perderam', /voltasPerdidas\(\)/.test(tela), true)
-conferir('e explica que a página não voltou',
-  /não voltou para a \{MARCA\.prosa\}/.test(tela), true)
+conferir('e diz que a Deriv já confirmou e falta um toque',
+  /A Deriv já confirmou a sua conta/.test(tela), true)
 // A promessa caiu em 16/10/2026: no navegador da cliente a Deriv pediu a
 // senha de novo e caiu no painel dela outra vez.
 conferir('e não promete mais que a Deriv não pede a senha de novo',
   /não vai\s*\n?\s*pedir a senha de novo/.test(tela), false)
-conferir('na segunda volta perdida, o cartão troca de conversa', /const presa = voltas >= 2/.test(tela), true)
+conferir('depois de algumas voltas perdidas, o cartão troca de conversa', /const presa = voltas >= 3/.test(tela), true)
 conferir('e ensina a janela anônima, que funciona', /janela anônima/.test(tela) && /aba anônima/.test(tela), true)
 // "Ainda não tenho conta" não cabe para quem acabou de entrar na corretora.
 conferir('e esconde "ainda não tenho conta" nesse caso',

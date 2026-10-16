@@ -41,7 +41,7 @@ export function DerivDesconectada({ acao, entrando, onConectar, compacto = false
   const voltaPerdida = voltas > 0
   // Na segunda volta perdida seguida, repetir o mesmo botão é o círculo de
   // novo (16/10/2026, cliente da OMNI). Aí o cartão ensina o que funciona.
-  const presa = voltas >= 2
+  const presa = voltas >= 3
   const [copiado, setCopiado] = useState(false)
   const endereco = MARCA.redirectUri
   const copiar = () => {
@@ -96,9 +96,8 @@ export function DerivDesconectada({ acao, entrando, onConectar, compacto = false
       ) : (
         <p>
           {voltaPerdida
-            ? <>Você entrou na corretora, mas a página não voltou para a {MARCA.prosa}.
-                Toque abaixo para concluir. Se a Deriv pedir a senha de novo, é só
-                entrar: em seguida você volta para cá.</>
+            ? <>A Deriv já confirmou a sua conta. Toque abaixo para terminar:
+                a conexão acontece aqui mesmo, em segundos.</>
             : <>{acao} Você está na {MARCA.prosa}, mas o dinheiro fica na corretora — e é
                 preciso ligar as duas.</>}
         </p>
