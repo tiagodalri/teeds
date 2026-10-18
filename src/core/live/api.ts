@@ -21,7 +21,13 @@ export interface Live {
   iniciadaEm: string | null
   encerradaEm: string | null
   intervaloChat: number
+  /** Fechado: só o moderador escreve (os alunos leem). */
+  chatAberto: boolean
+  /** Canto da tela em que o rosto do apresentador aparece. */
+  cameraCanto: CantoDaCamera
 }
+
+export type CantoDaCamera = 'sup-esq' | 'sup-dir' | 'inf-esq' | 'inf-dir'
 
 export interface MensagemDoChat {
   id: string
@@ -61,11 +67,12 @@ async function rest<T>(caminho: string, sessao: SessaoTeeds, init: RequestInit =
   return (await r.json().catch(() => undefined)) as T
 }
 
-const CAMPOS_LIVE = 'id,titulo,descricao,status,inicio_previsto,iniciada_em,encerrada_em,intervalo_chat'
+const CAMPOS_LIVE = 'id,titulo,descricao,status,inicio_previsto,iniciada_em,encerrada_em,intervalo_chat,chat_aberto,camera_canto'
 const paraLive = (l: any): Live => ({
   id: l.id, titulo: l.titulo, descricao: l.descricao, status: l.status,
   inicioPrevisto: l.inicio_previsto, iniciadaEm: l.iniciada_em, encerradaEm: l.encerrada_em,
   intervaloChat: l.intervalo_chat ?? 0,
+  chatAberto: l.chat_aberto ?? true, cameraCanto: l.camera_canto ?? 'inf-dir',
 })
 const paraMensagem = (m: any): MensagemDoChat => ({
   id: m.id, userId: m.user_id, nome: m.nome, texto: m.texto, doModerador: m.do_moderador,
@@ -86,14 +93,14 @@ export async function liveNoAr(sessao: SessaoTeeds): Promise<Live | null> {
 }
 
 export async function criarLive(sessao: SessaoTeeds, titulo: string, inicioPrevisto: string | null, descricao = ''): Promise<Live> {
-  const [l] = await rest<any[]>('/lives', sessao, {
+  const [l] = await rest<any[]>(`/lives?select=${CAMPOS_LIVE}`, sessao, {
     method: 'POST', headers: { Prefer: 'return=representation' },
     body: JSON.stringify({ marca: MARCA.id, titulo, descricao: descricao || null, inicio_previsto: inicioPrevisto }),
   })
   return paraLive(l)
 }
 
-export async function mudarLive(sessao: SessaoTeeds, id: string, campos: Partial<{ status: StatusDaLive; titulo: string; intervalo_chat: number; iniciada_em: string; encerrada_em: string }>): Promise<void> {
+export async function mudarLive(sessao: SessaoTeeds, id: string, campos: Partial<{ status: StatusDaLive; titulo: string; intervalo_chat: number; iniciada_em: string; encerrada_em: string; chat_aberto: boolean; camera_canto: CantoDaCamera }>): Promise<void> {
   await rest(`/lives?id=eq.${id}`, sessao, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(campos) })
 }
 

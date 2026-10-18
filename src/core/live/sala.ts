@@ -18,8 +18,8 @@ import { useSyncExternalStore } from 'react'
 import type { SessaoTeeds } from '../teeds/conta'
 import { MARCA } from '../../marca'
 import {
-  gravarMensagem, historicoDoChat, moderarMensagem, pedirIngresso, silenciar as silenciarNoBanco,
-  type Live, type MensagemDoChat,
+  gravarMensagem, historicoDoChat, moderarMensagem, mudarLive, pedirIngresso, silenciar as silenciarNoBanco,
+  type CantoDaCamera, type Live, type MensagemDoChat,
 } from './api'
 import { marcarPlayerAtivo } from './presenca'
 
@@ -46,6 +46,10 @@ export interface EstadoDaSala {
   somBloqueado: boolean
   /** Do apresentador: o que está sendo transmitido agora. */
   transmitindo: { tela: boolean; camera: boolean; microfone: boolean }
+  /** Do apresentador: a faixa do próprio microfone (para o medidor de volume). */
+  microfoneLocal: Track | null
+  /** Do apresentador: qual microfone e qual câmera estão em uso. */
+  dispositivos: { microfone: string; camera: string }
 }
 
 const CHAVE_PREF = `${MARCA.id}.aovivo.preferencias`
@@ -58,6 +62,7 @@ let estado: EstadoDaSala = {
   modo: 'palco', tamanho: pref.tamanho ?? 'M', canto: pref.canto ?? 'inf-dir',
   tela: null, camera: null, audios: [], espectadores: 0, mensagens: [], naoLidas: 0, somBloqueado: false,
   transmitindo: { tela: false, camera: false, microfone: false },
+  microfoneLocal: null, dispositivos: { microfone: '', camera: '' },
 }
 /** Como a pessoa prefere assistir quando sai da página "Ao vivo". */
 let modoFora: ModoDoPlayer = pref.modoFora ?? 'flutuante'
@@ -87,6 +92,8 @@ type Pacote =
   | { t: 'apagar'; id: string }
   | { t: 'fixar'; id: string | null }
   | { t: 'fim' }
+  | { t: 'chat'; aberto: boolean }
+  | { t: 'camera'; canto: CantoDaCamera }
 
 const ehModerador = (p?: Participant) => {
   try { return Boolean(p?.metadata && JSON.parse(p.metadata).moderador) } catch { return false }
@@ -112,6 +119,11 @@ function faixas() {
     tela, camera, audios,
     transmitindo: {
       tela: lp.isScreenShareEnabled, camera: lp.isCameraEnabled, microfone: lp.isMicrophoneEnabled,
+    },
+    microfoneLocal: lp.getTrackPublication(Track.Source.Microphone)?.track ?? null,
+    dispositivos: {
+      microfone: sala.getActiveDevice('audioinput') ?? '',
+      camera: sala.getActiveDevice('videoinput') ?? '',
     },
   })
 }
@@ -166,6 +178,8 @@ export async function entrar(sessao: SessaoTeeds, live: Live): Promise<void> {
           if (pacote.t === 'apagar') mudar({ mensagens: estado.mensagens.filter((m) => m.id !== pacote.id) })
           else if (pacote.t === 'fixar') mudar({ mensagens: estado.mensagens.map((m) => ({ ...m, fixada: m.id === pacote.id })) })
           else if (pacote.t === 'fim') { void sair(); mudar({ erro: 'A transmissão terminou. Obrigado por assistir.' }) }
+          else if (pacote.t === 'chat') atualizarLive({ chatAberto: Boolean(pacote.aberto) })
+          else if (pacote.t === 'camera') atualizarLive({ cameraCanto: pacote.canto })
         }
       })
     await r.connect(ingresso.url, ingresso.token, { autoSubscribe: true })
@@ -224,6 +238,7 @@ export async function mandarMensagem(texto: string): Promise<void> {
   const limpo = texto.trim().slice(0, 500)
   if (!limpo || !sala || !estado.live || !sessaoAtual) return
   if (estado.silenciado) throw new Error('O moderador pausou suas mensagens nesta transmissão.')
+  if (!estado.live.chatAberto && !estado.moderador) throw new Error('O chat está fechado agora. Ele abre quando o moderador liberar.')
   const id = crypto.randomUUID()
   const ts = new Date().toISOString()
   // Grava primeiro só quando há modo lento: aí o banco é quem diz se pode.
@@ -253,6 +268,34 @@ export async function fixarMensagem(id: string | null): Promise<void> {
 export async function silenciarPessoa(userId: string, calar = true): Promise<void> {
   if (!estado.moderador || !sessaoAtual || !estado.live) return
   await silenciarNoBanco(sessaoAtual, estado.live.id, userId, calar)
+}
+
+/** Abre ou fecha o chat para os alunos (o moderador continua escrevendo). */
+export async function abrirChat(aberto: boolean): Promise<void> {
+  if (!estado.moderador || !sessaoAtual || !estado.live) return
+  atualizarLive({ chatAberto: aberto })
+  await enviar({ t: 'chat', aberto })
+  await mudarLive(sessaoAtual, estado.live.id, { chat_aberto: aberto })
+}
+
+/** Em que canto da imagem o rosto do apresentador aparece, para todos. */
+export async function posicionarCamera(canto: CantoDaCamera): Promise<void> {
+  if (!estado.moderador || !sessaoAtual || !estado.live) return
+  atualizarLive({ cameraCanto: canto })
+  await enviar({ t: 'camera', canto })
+  await mudarLive(sessaoAtual, estado.live.id, { camera_canto: canto })
+}
+
+/** Os microfones ou câmeras deste computador (os nomes só vêm depois da permissão). */
+export async function listarDispositivos(tipo: 'audioinput' | 'videoinput'): Promise<MediaDeviceInfo[]> {
+  try { return await Room.getLocalDevices(tipo, false) } catch { return [] }
+}
+
+/** Troca o microfone ou a câmera no meio da live, sem cair. */
+export async function trocarDispositivo(tipo: 'audioinput' | 'videoinput', id: string): Promise<void> {
+  if (!sala) return
+  await sala.switchActiveDevice(tipo, id)
+  faixas()
 }
 
 /** O apresentador avisa a sala que acabou (quem está assistindo vê o recado). */

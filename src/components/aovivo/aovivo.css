@@ -24,6 +24,10 @@
   border-radius: 50%; border: 2px solid rgba(255, 255, 255, .85); background: #000;
 }
 .av-palco.compacto .av-camera { border-width: 1.5px; }
+/* o apresentador escolhe o canto do rosto; todos veem no mesmo lugar */
+.av-camera.canto-inf-esq { right: auto; left: 3%; }
+.av-camera.canto-sup-dir { bottom: auto; top: 4%; }
+.av-camera.canto-sup-esq { bottom: auto; top: calc(4% + 30px); right: auto; left: 3%; } /* abaixo do selo "Ao vivo" */
 .av-espera { position: absolute; inset: 0; display: grid; place-items: center; gap: 10px; padding: 16px; color: #c9d3de; font-size: 13px; text-align: center; grid-auto-flow: row; align-content: center; }
 .av-girando { width: 22px; height: 22px; margin: 0 auto; border: 2px solid rgba(255,255,255,.25); border-top-color: #fff; border-radius: 50%; animation: av-gira .8s linear infinite; }
 @keyframes av-gira { to { transform: rotate(360deg); } }
@@ -140,8 +144,18 @@
 .av-fonte.on { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
 .av-fonte.on small { color: var(--primary); font-weight: 700; }
 .av-fonte:disabled { opacity: .6; cursor: wait; }
-.av-mesa-acao { display: grid; gap: 4px; justify-items: end; }
-.av-mesa-dica { color: var(--muted); font-size: 11px; }
+.av-mesa-acao { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 10px; }
+.av-chave-chat {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface-alt); color: var(--muted);
+  font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+.av-chave-chat i { width: 28px; height: 16px; border-radius: 8px; background: var(--border); position: relative; transition: background .15s; }
+.av-chave-chat i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); transition: transform .15s; }
+.av-chave-chat.on { color: var(--text); }
+.av-chave-chat.on i { background: var(--up); }
+.av-chave-chat.on i::after { transform: translateX(12px); }
+.av-mesa-dica { flex-basis: 100%; text-align: right; color: var(--muted); font-size: 11px; }
 .av-botao-iniciar { min-height: 48px; border: 0; background: var(--down); color: #fff; font-size: 14.5px; }
 .av-botao-iniciar i { width: 9px; height: 9px; border-radius: 50%; background: #fff; }
 .av-botao-iniciar:hover:not(:disabled) { background: color-mix(in srgb, var(--down) 88%, #000); }
@@ -153,9 +167,24 @@
   .av-mesa-fontes { justify-content: flex-start; }
   .av-mesa-acao { justify-items: stretch; }
 }
-.av-ajustes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; color: var(--muted); font-size: 12.5px; }
-.av-ajustes select { height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text); font: inherit; font-size: 12.5px; }
-.av-ajustes .av-link { margin-left: auto; }
+.av-ajustes {
+  display: flex; flex-wrap: wrap; align-items: end; gap: 14px 22px; padding: 14px 16px;
+  border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--muted); font-size: 12px;
+}
+.av-ajuste { display: grid; gap: 6px; min-width: 0; }
+.av-ajuste label, .av-ajuste-rotulo { font-weight: 600; }
+.av-ajustes select { max-width: 260px; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-alt); color: var(--text); font: inherit; font-size: 12.5px; }
+.av-ajustes select:disabled { opacity: .6; }
+.av-ajustes .av-link { margin-left: auto; align-self: center; }
+.av-medidor { display: block; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.av-medidor i { display: block; height: 100%; background: var(--up); transition: width .08s linear; }
+.av-cantos { display: grid; grid-template-columns: 28px 28px; grid-auto-rows: 20px; gap: 4px; }
+.av-cantos button { position: relative; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-alt); cursor: pointer; }
+.av-cantos button i { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.av-cantos .c-sup-esq i { top: 3px; left: 3px; } .av-cantos .c-sup-dir i { top: 3px; right: 3px; }
+.av-cantos .c-inf-esq i { bottom: 3px; left: 3px; } .av-cantos .c-inf-dir i { bottom: 3px; right: 3px; }
+.av-cantos button.on { border-color: var(--primary); }
+.av-cantos button.on i { background: var(--primary); }
 
 /* ---------------------------------------------------------- chat */
 .av-chat { display: flex; flex-direction: column; min-height: 0; height: 100%; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; }
@@ -183,6 +212,9 @@
 :root[data-tema='escuro'] .av-escrever button { color: var(--bg); }
 .av-escrever button:disabled { opacity: .45; cursor: not-allowed; }
 .av-chat > .av-erro { padding: 0 12px 10px; }
+.av-chat-fechado { margin: 0; padding: 8px 12px; border-top: 1px solid var(--border); background: var(--surface-alt); color: var(--muted); font-size: 12px; text-align: center; }
+.av-rodape-aluno { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+@media (hover: none) { .av-por-cima { flex: 1 1 100%; min-height: 48px; font-size: 14px; } }
 
 /* ---------------------------------------------------------- player global */
 .av-controles {
