@@ -44,6 +44,7 @@ const VELAS = (() => {
 })()
 import { lazy, Suspense } from 'react'
 const SalaDeTreino = lazy(() => import('./components/aovivo/SalaDeTreino').then((m) => ({ default: m.SalaDeTreino })))
+const LabRecorte = lazy(() => import('./components/aovivo/LabRecorte'))
 const TesteAtraso = lazy(() => import('./components/aovivo/TesteAtraso'))
 const LabAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.LabAoVivo })))
 import { DerivDesconectada } from './components/DerivDesconectada'
@@ -196,6 +197,8 @@ function Laboratorio() {
             </aside>
           </div>
         )}
+        {/* ?tela=recorte: a mesma câmera no recorte antigo e no novo, lado a lado. */}
+        {qual === 'recorte' && <Suspense fallback={null}><LabRecorte /></Suspense>}
         {qual === 'aovivo-atraso' && <Suspense fallback={null}><TesteAtraso /></Suspense>}
         {qual === 'grafico' && <div style={{ height: 520, display: 'flex' }}><PriceChart candles={VELAS} mode="candles" pipSize={3} symbolName="Volatility 75 (1s)" symbol="lab" indicators={['sma', 'ema']} /></div>}
       </main>

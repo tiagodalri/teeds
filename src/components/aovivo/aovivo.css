@@ -402,3 +402,26 @@ body.aovivo-lado .workspace-app { padding-right: 380px; }
 .av-fundo-aviso { margin: 0; color: var(--muted); font-size: 12px; }
 .tr-fundo { grid-column: 1 / -1; }
 .tr-fundo .av-fundos-grade { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+
+/* ---------------------------------------------------------- link de convite da live */
+.av-link-live {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px;
+  padding: 12px 14px; border: 1px dashed color-mix(in srgb, var(--primary) 55%, var(--border)); border-radius: 12px; background: var(--surface);
+}
+.av-link-live-texto { display: grid; gap: 3px; min-width: 0; }
+.av-link-live-texto small { color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.av-link-live-texto code {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text);
+  font-family: var(--fonte-dados, ui-monospace, monospace); font-size: 13.5px; user-select: all;
+}
+.av-link-live-acoes { display: flex; gap: 8px; }
+.av-botao-mini.ok { background: var(--up); }
+.av-botao-whats {
+  display: inline-flex; align-items: center; height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 9px;
+  color: var(--text); font-size: 12px; font-weight: 700; text-decoration: none;
+}
+.av-botao-whats:hover { border-color: var(--primary); }
+.av-link-live.compacto { padding: 10px; border-style: solid; background: var(--surface-alt); }
+.av-link-live.compacto .av-link-live-texto code { font-size: 12px; }
+.av-agendada-acoes .av-link-live.compacto { flex-basis: 100%; }
+.av-destaque.convite, .av-agendada.convite { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }

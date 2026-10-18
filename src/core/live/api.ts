@@ -161,3 +161,11 @@ export async function podeTreinar(sessao: SessaoTeeds): Promise<boolean> {
     return (await rest<boolean>('/rpc/teeds_minha_sala_de_treino', sessao, { method: 'POST', body: JSON.stringify({ p_marca: MARCA.id }) })) === true
   } catch { return false }
 }
+
+/** O link curto de convite da live (abre direto no "Ao vivo", mesmo depois do login). */
+export const linkDaLive = (id: string) => `${location.origin}${import.meta.env.BASE_URL}?aovivo=${id.slice(0, 8)}`
+
+/** O código do convite com que a pessoa chegou (se veio por link), para destacar a live certa. */
+export function conviteRecebido(): string | null {
+  try { return sessionStorage.getItem(`${MARCA.id}.aovivo.convite`) } catch { return null }
+}

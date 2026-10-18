@@ -295,13 +295,16 @@ export default function App() {
 
   const telaVeioDoVoltar = useRef(false)
   useEffect(() => {
-    if (!MARCA.appNativo) return
+    if (!MARCA.appNativo && !MARCA.aoVivo) return
     const u = new URL(location.href)
-    const pedida = u.searchParams.get('tela')
+    // Link de convite da live (?aovivo=<código>): abre o "Ao vivo", mesmo depois do login.
+    const convite = MARCA.aoVivo ? u.searchParams.get('aovivo') : null
+    if (convite) { try { sessionStorage.setItem(`${MARCA.id}.aovivo.convite`, convite.slice(0, 12)) } catch { /* sem armazenamento */ } }
+    const pedida = convite ? 'aovivo' : u.searchParams.get('tela')
     const PUBLICAS: WorkspacePage[] = ['operar', 'robos', 'aulas', 'gerenciamento', 'marketplace', ...(MARCA.aoVivo ? ['aovivo' as const] : [])]
     if (pedida && (PUBLICAS as string[]).includes(pedida)) setTela(pedida as WorkspacePage)
-    if (u.searchParams.has('tela') || u.searchParams.get('origem') === 'app') {
-      u.searchParams.delete('tela'); u.searchParams.delete('origem')
+    if (u.searchParams.has('tela') || u.searchParams.has('aovivo') || u.searchParams.get('origem') === 'app') {
+      u.searchParams.delete('tela'); u.searchParams.delete('origem'); u.searchParams.delete('aovivo')
       history.replaceState(history.state, '', u.pathname + u.search + u.hash)
     }
     const voltar = (e: PopStateEvent) => {

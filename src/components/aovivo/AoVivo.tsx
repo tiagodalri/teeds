@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerE
 import { createPortal } from 'react-dom'
 import { LocalVideoTrack, type Track } from 'livekit-client'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { apagarLive, criarLive, listarLives, mudarLive, podeTreinar, type CantoDaCamera, type Live } from '../../core/live/api'
+import { apagarLive, conviteRecebido, criarLive, linkDaLive, listarLives, mudarLive, podeTreinar, type CantoDaCamera, type Live } from '../../core/live/api'
 import { SalaDeTreino } from './SalaDeTreino'
 import { SeletorDeFundo } from './SeletorDeFundo'
+import { MARCA } from '../../marca'
+
+const MARCA_PROSA = MARCA.prosa
 import { FUNDOS } from '../../core/live/fundos'
 import {
   abrirChat, aoTrocarDeTela, apagarMensagem, atualizarLive, definirFundo, definirModoLento, listarDispositivos, mostrarFaixa, posicionarCamera, renomearLive, trocarDispositivo, avisarFim, definirCanto, definirModo, definirTamanho, entrar, fixarMensagem,
@@ -301,6 +304,37 @@ function Contagem({ alvo }: { alvo: string | null }) {
   return <span className="av-contagem">{d > 0 ? `${d}d ` : ''}{dois(h)}:{dois(m)}:{dois(seg)}</span>
 }
 
+/**
+ * O link de convite da live: aparece sempre que uma live é aberta, pronto
+ * para copiar ou mandar no WhatsApp. Quem clica cai direto no "Ao vivo"
+ * (mesmo se ainda precisar entrar na conta).
+ */
+function LinkDaLive({ live, compacto = false }: { live: Live; compacto?: boolean }) {
+  const [copiado, setCopiado] = useState(false)
+  const link = linkDaLive(live.id)
+  const texto = live.status === 'ao_vivo'
+    ? `Estamos ao vivo na ${MARCA_PROSA}: ${live.titulo}. Entre por aqui: ${link}`
+    : `Live na ${MARCA_PROSA}: ${live.titulo}${live.inicioPrevisto ? `, ${quando(live.inicioPrevisto)}` : ''}. Guarde o link: ${link}`
+  const copiar = async () => {
+    try { await navigator.clipboard.writeText(link) } catch {
+      const t = document.createElement('textarea'); t.value = link; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove()
+    }
+    setCopiado(true); window.setTimeout(() => setCopiado(false), 1800)
+  }
+  return (
+    <div className={`av-link-live ${compacto ? 'compacto' : ''}`}>
+      <div className="av-link-live-texto">
+        <small>Link para compartilhar</small>
+        <code title={link}>{link.replace(/^https?:\/\//, '')}</code>
+      </div>
+      <div className="av-link-live-acoes">
+        <button className={`av-botao-mini ${copiado ? 'ok' : ''}`} onClick={() => void copiar()}>{copiado ? 'Copiado' : 'Copiar'}</button>
+        <a className="av-botao-whats" href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+      </div>
+    </div>
+  )
+}
+
 /** Cronômetro desde que a live entrou no ar (00:12:34). */
 function Cronometro({ desde }: { desde: string | null }) {
   const [agora, setAgora] = useState(Date.now())
@@ -466,7 +500,6 @@ function PainelDeControle({ s }: { s: EstadoDaSala }) {
   const [titulo, setTitulo] = useState(live.titulo)
   const [faixa, setFaixa] = useState(live.faixa ?? '')
   const [enviado, setEnviado] = useState<string | null>(null)
-  const [copiado, setCopiado] = useState(false)
   const [aplicandoFundo, setAplicandoFundo] = useState(false)
   const [mics, setMics] = useState<MediaDeviceInfo[]>([])
   const [cams, setCams] = useState<MediaDeviceInfo[]>([])
@@ -480,9 +513,6 @@ function PainelDeControle({ s }: { s: EstadoDaSala }) {
 
   const mandarPronta = async (id: string, textos: string[]) => {
     try { await mandarMensagem(textos[Math.floor(Math.random() * textos.length)]); setEnviado(id); window.setTimeout(() => setEnviado(null), 1600) } catch { /* o chat mostra o erro */ }
-  }
-  const copiarLink = async () => {
-    try { await navigator.clipboard.writeText(`${location.origin}${import.meta.env.BASE_URL}?tela=aovivo`); setCopiado(true); window.setTimeout(() => setCopiado(false), 1600) } catch { /* sem área de transferência */ }
   }
 
   return (
@@ -499,7 +529,7 @@ function PainelDeControle({ s }: { s: EstadoDaSala }) {
           <input id="av-p-titulo" value={titulo} maxLength={120} onChange={(e) => setTitulo(e.target.value)} />
           <button type="submit" className="av-botao-mini" disabled={!titulo.trim() || titulo.trim() === live.titulo}>Salvar</button>
         </form>
-        <button className="av-link" onClick={() => void copiarLink()}>{copiado ? 'Link copiado' : 'Copiar o link da live para os alunos'}</button>
+        <LinkDaLive live={live} compacto />
       </section>
 
       <section className="av-painel-sec">
@@ -686,13 +716,16 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
 
   const noAr = lives?.find((l) => l.status === 'ao_vivo') ?? null
   const proximas = (lives ?? []).filter((l) => l.status === 'agendada')
+  const convite = conviteRecebido()
+  const convidadoPara = (l: Live) => !!convite && l.id.startsWith(convite)
   return (
     <div className="ger av-pagina">
       {erro && <p className="av-erro" role="alert">{erro}</p>}
       {s.erro && <p className={s.fase === 'erro' ? 'av-erro' : 'av-recado'} role="status">{s.erro}</p>}
 
       {noAr && (
-        <section className="av-destaque">
+        <section className={`av-destaque ${convidadoPara(noAr) ? 'convite' : ''}`}>
+          {convidadoPara(noAr) && !admin && <span className="av-sobretitulo">Você foi convidado para esta live</span>}
           <span className="av-chip-vivo"><i aria-hidden />Ao vivo agora <Cronometro desde={noAr.iniciadaEm} /></span>
           <h2>{noAr.titulo}</h2>
           {noAr.descricao && <p>{noAr.descricao}</p>}
@@ -725,12 +758,13 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
         <section className="av-agenda" aria-labelledby="av-agenda-titulo">
           <h3 id="av-agenda-titulo">Próximas transmissões</h3>
           {proximas.map((l) => (
-            <article key={l.id} className="av-agendada">
-              <div className="av-agendada-texto"><b>{l.titulo}</b><span>{quando(l.inicioPrevisto)}</span></div>
+            <article key={l.id} className={`av-agendada ${convidadoPara(l) ? 'convite' : ''}`}>
+              <div className="av-agendada-texto">{convidadoPara(l) && !admin && <small className="av-sobretitulo">Seu convite</small>}<b>{l.titulo}</b><span>{quando(l.inicioPrevisto)}</span></div>
               <Contagem alvo={l.inicioPrevisto} />
               {admin && (
                 <div className="av-agendada-acoes">
                   <button className="av-botao-secundario" onClick={() => void entrar(sessao, l)}>Abrir estúdio</button>
+                  <LinkDaLive live={l} compacto />
                   <button className="av-link perigo" onClick={async () => { if (window.confirm(`Apagar "${l.titulo}"?`)) { await apagarLive(sessao, l.id).catch(() => undefined); void carregar() } }}>Apagar</button>
                 </div>
               )}
@@ -747,7 +781,9 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
 function SalaConectada({ s, sessao, aoMudar }: { s: EstadoDaSala; sessao: SessaoTeeds; aoMudar: () => void }) {
   return (
     <div className="ger av-pagina av-com-palco">
-      {s.moderador ? <MesaDoApresentador s={s} sessao={sessao} aoMudar={aoMudar} /> : (
+      {s.moderador && <MesaDoApresentador s={s} sessao={sessao} aoMudar={aoMudar} />}
+      {s.moderador && <LinkDaLive live={s.live!} />}
+      {s.moderador ? null : (
         <div className="av-cabeca">
           <div>
             <h2>{s.live!.titulo}</h2>

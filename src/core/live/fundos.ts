@@ -1,16 +1,17 @@
 /**
  * Fundo da câmera do apresentador, trocado no próprio navegador.
  *
- * A IA (MediaPipe, pela biblioteca oficial do LiveKit) recorta a pessoa e
- * põe atrás um dos fundos da casa, ou só desfoca o fundo real. Qualidade de
- * videochamada; para o realismo máximo, o guia do OBS (pasta "Fundos para
- * live") continua sendo o caminho.
+ * O recorte é o da casa (`recorte/ProcessadorDeFundo.ts`, 18/10/2026): IA do
+ * MediaPipe com contorno guiado pela imagem, estabilidade no tempo, luz do
+ * ambiente na borda e ajuste de cor. Substituiu o da biblioteca, que deixava
+ * halo branco e cara de recortado. Para o realismo máximo, o guia do OBS
+ * (pasta "Fundos para live") continua valendo.
  *
  * Os fundos são os mesmos da pasta da Área de Trabalho, em Full HD e já com
  * o leve desfoque de câmera que faz parecer real.
  */
-import { BackgroundProcessor, supportsBackgroundProcessors, type BackgroundProcessorWrapper } from '@livekit/track-processors'
 import type { LocalVideoTrack } from 'livekit-client'
+import { ProcessadorDeFundo, type ModoDoFundo } from './recorte/ProcessadorDeFundo'
 import { MARCA } from '../../marca'
 
 export interface Fundo {
@@ -42,7 +43,10 @@ export const imagemDoFundo = (id: string) => `${base()}${id}.jpg`
 export const miniaturaDoFundo = (id: string) => `${base()}${id}-mini.jpg`
 
 export const fundosDisponiveis = (): boolean => {
-  try { return supportsBackgroundProcessors() } catch { return false }
+  try {
+    return typeof HTMLCanvasElement !== 'undefined' && 'captureStream' in HTMLCanvasElement.prototype &&
+      !!document.createElement('canvas').getContext('webgl2')
+  } catch { return false }
 }
 
 const CHAVE = `${MARCA.id}.aovivo.fundo`
@@ -51,7 +55,7 @@ export function fundoGuardado(): EscolhaDeFundo {
 }
 function guardar(e: EscolhaDeFundo) { try { localStorage.setItem(CHAVE, e) } catch { /* vale só agora */ } }
 
-const processadores = new WeakMap<LocalVideoTrack, BackgroundProcessorWrapper>()
+const processadores = new WeakMap<LocalVideoTrack, ProcessadorDeFundo>()
 
 /** Aplica (ou tira) o fundo numa câmera. Troca na hora, sem piscar. */
 export async function aplicarFundo(faixa: LocalVideoTrack, escolha: EscolhaDeFundo): Promise<void> {
@@ -61,11 +65,9 @@ export async function aplicarFundo(faixa: LocalVideoTrack, escolha: EscolhaDeFun
     if (atual) { await faixa.stopProcessor(); processadores.delete(faixa) }
     return
   }
-  const opcoes = escolha === 'desfoque'
-    ? { mode: 'background-blur' as const, blurRadius: 14 }
-    : { mode: 'virtual-background' as const, imagePath: imagemDoFundo(escolha) }
-  if (atual) { await atual.switchTo(opcoes); return }
-  const p = BackgroundProcessor(opcoes)
+  const opcoes: ModoDoFundo = escolha === 'desfoque' ? { modo: 'desfoque' } : { modo: 'imagem', url: imagemDoFundo(escolha) }
+  if (atual) { await atual.mudar(opcoes); return }
+  const p = new ProcessadorDeFundo(opcoes)
   await faixa.setProcessor(p)
   processadores.set(faixa, p)
 }
