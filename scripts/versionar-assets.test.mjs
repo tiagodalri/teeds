@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { versionarReferencias } from './versionar-assets.mjs'
+import { cssDosChunksComVersao, versionarReferencias } from './versionar-assets.mjs'
 
 test('entrada, import estático, lazy e preload usam a mesma versão', () => {
   const v = 'regressao'
@@ -20,4 +20,11 @@ test('reexecução troca a versão sem duplicar parâmetros; não altera terceir
   const esperado = 'import "./main.js?v=nova";const url="https://other.test/a.js",img="/assets/logo.png"'
   assert.equal(versionarReferencias(s, 'nova'), esperado)
   assert.equal(versionarReferencias(esperado, 'nova'), esperado)
+})
+test('CSS de chunk sob demanda continua sendo reconhecido como estilo com "?v="', () => {
+  const ajudante = 'const u=c.endsWith(".css"),x=u?\'[rel="stylesheet"]\':""'
+  const novo = cssDosChunksComVersao(ajudante)
+  assert.ok(novo.includes('.includes(".css")'))
+  const dep = 'assets/globalfly3.css?v=abc'
+  assert.equal(dep.includes('.css'), true)
 })

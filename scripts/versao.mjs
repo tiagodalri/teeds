@@ -5,7 +5,7 @@
 // carimbaria a versao no index.html da Teeds.
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
 import { createHash } from 'node:crypto'
-import { versionarReferencias } from './versionar-assets.mjs'
+import { cssDosChunksComVersao, versionarReferencias } from './versionar-assets.mjs'
 
 // Qualquer marca que exista em src/marca/marcas.ts (16/10/2026, GlobalFly):
 // o ternario antigo de duas marcas mandava uma terceira para a pasta da Teeds.
@@ -22,7 +22,7 @@ for (const nome of assets) hash.update(readFileSync(`${pasta}/assets/${nome}`))
 const v = hash.digest('hex').slice(0, 12)
 for (const nome of assets.filter((nome) => nome.endsWith('.js'))) {
   const caminho = `${pasta}/assets/${nome}`
-  writeFileSync(caminho, versionarReferencias(readFileSync(caminho, 'utf8'), v))
+  writeFileSync(caminho, cssDosChunksComVersao(versionarReferencias(readFileSync(caminho, 'utf8'), v)))
 }
 writeFileSync(arquivo, versionarReferencias(readFileSync(arquivo, 'utf8'), v))
 // O service worker pré-carrega os mesmos assets: precisa do mesmo "?v=", senão o

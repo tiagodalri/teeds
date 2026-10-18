@@ -277,85 +277,167 @@ function Contagem({ alvo }: { alvo: string | null }) {
   return <span className="av-contagem">{d > 0 ? `${d}d ` : ''}{dois(h)}:{dois(m)}:{dois(seg)}</span>
 }
 
-/** A barra do apresentador: o que vai ao ar e o botão de começar/encerrar. */
-function Estudio({ s, sessao, aoMudar }: { s: EstadoDaSala; sessao: SessaoTeeds; aoMudar: () => void }) {
+/** Cronômetro desde que a live entrou no ar (00:12:34). */
+function Cronometro({ desde }: { desde: string | null }) {
+  const [agora, setAgora] = useState(Date.now())
+  useEffect(() => { const t = window.setInterval(() => setAgora(Date.now()), 1000); return () => window.clearInterval(t) }, [])
+  if (!desde) return null
+  const seg = Math.max(0, Math.floor((agora - new Date(desde).getTime()) / 1000))
+  const dois = (n: number) => String(n).padStart(2, '0')
+  return <span className="av-cronometro">{dois(Math.floor(seg / 3600))}:{dois(Math.floor(seg / 60) % 60)}:{dois(seg % 60)}</span>
+}
+
+const ICONE_FONTE: Record<string, string> = {
+  tela: 'M3 5h18v12H3zM8 21h8M12 17v4',
+  camera: 'M3 7h12v10H3zM15 11l6-3v8l-6-3',
+  microfone: 'M12 3a3 3 0 013 3v6a3 3 0 01-6 0V6a3 3 0 013-3zM5 11a7 7 0 0014 0M12 18v3',
+  desligado: 'M4 4l16 16',
+}
+function IconeFonte({ nome, ligado }: { nome: 'tela' | 'camera' | 'microfone'; ligado: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={ICONE_FONTE[nome]} />{!ligado && <path d={ICONE_FONTE.desligado} />}
+    </svg>
+  )
+}
+
+/**
+ * A mesa do apresentador, em cima do palco: o que está indo ao ar (tela,
+ * câmera, microfone), o estado (ensaio ou ao vivo, com cronômetro) e o
+ * botão grande de começar/encerrar. Embaixo do palco ficam os ajustes.
+ */
+function MesaDoApresentador({ s, sessao, aoMudar }: { s: EstadoDaSala; sessao: SessaoTeeds; aoMudar: () => void }) {
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const live = s.live!
+  const noAr = live.status === 'ao_vivo'
   const fazer = async (nome: string, f: () => Promise<unknown>) => {
     setOcupado(nome); setErro(null)
-    try { await f() } catch (e) { setErro(e instanceof Error ? e.message : 'Não deu certo. Tente de novo.') }
+    try { await f() } catch (e) {
+      const m = e instanceof Error ? e.message : ''
+      setErro(/Permission|NotAllowed|denied/i.test(m) ? 'O navegador não liberou o acesso. Permita a câmera, o microfone ou a tela no cadeado da barra de endereço.' : m || 'Não deu certo. Tente de novo.')
+    }
     setOcupado(null)
   }
   const nada = !s.transmitindo.tela && !s.transmitindo.camera
+  const fonte = (nome: 'tela' | 'camera' | 'microfone', rotulo: string, ligar: (v: boolean) => Promise<void>) => {
+    const ligado = s.transmitindo[nome]
+    return (
+      <button className={`av-fonte ${ligado ? 'on' : ''}`} aria-pressed={ligado} disabled={!!ocupado}
+        onClick={() => void fazer(nome, () => ligar(!ligado))}>
+        <IconeFonte nome={nome} ligado={ligado} />
+        <span><b>{rotulo}</b><small>{ocupado === nome ? 'abrindo…' : ligado ? 'no ar' : 'desligado'}</small></span>
+      </button>
+    )
+  }
   return (
-    <div className="av-estudio" role="toolbar" aria-label="Controles da transmissão">
-      <div className="av-estudio-fontes">
-        <button className={s.transmitindo.tela ? 'on' : ''} disabled={!!ocupado} onClick={() => void fazer('tela', () => transmitirTela(!s.transmitindo.tela))}>
-          {s.transmitindo.tela ? 'Parar de compartilhar' : 'Compartilhar tela'}
-        </button>
-        <button className={s.transmitindo.camera ? 'on' : ''} disabled={!!ocupado} onClick={() => void fazer('camera', () => transmitirCamera(!s.transmitindo.camera))}>
-          {s.transmitindo.camera ? 'Desligar câmera' : 'Ligar câmera'}
-        </button>
-        <button className={s.transmitindo.microfone ? 'on' : ''} disabled={!!ocupado} onClick={() => void fazer('mic', () => transmitirMicrofone(!s.transmitindo.microfone))}>
-          {s.transmitindo.microfone ? 'Silenciar microfone' : 'Ligar microfone'}
-        </button>
+    <section className={`av-mesa ${noAr ? 'no-ar' : ''}`} aria-label="Mesa do apresentador">
+      <div className="av-mesa-estado">
+        {noAr
+          ? <span className="av-chip-vivo"><i aria-hidden />Ao vivo <Cronometro desde={live.iniciadaEm} /></span>
+          : <span className="av-chip-ensaio">Ensaio · só você vê</span>}
+        <span className="av-mesa-publico"><b>{s.espectadores}</b> {s.espectadores === 1 ? 'aluno assistindo' : 'alunos assistindo'}</span>
       </div>
-      <label className="av-estudio-lento">
-        Modo lento do chat
-        <select value={live.intervaloChat} onChange={(e) => void fazer('lento', async () => {
-          const n = Number(e.target.value)
-          await mudarLive(sessao, live.id, { intervalo_chat: n })
-          atualizarLive({ intervaloChat: n })
-          aoMudar()
-        })}>
-          <option value={0}>Desligado</option><option value={5}>5 segundos</option>
-          <option value={10}>10 segundos</option><option value={30}>30 segundos</option>
-        </select>
-      </label>
-      <span className="av-estudio-publico">{s.espectadores} assistindo</span>
-      {live.status === 'ao_vivo' ? (
-        <button className="av-encerrar" disabled={!!ocupado} onClick={() => {
-          if (!window.confirm('Encerrar a transmissão para todos?')) return
-          void fazer('fim', async () => {
-            await avisarFim()
-            await mudarLive(sessao, live.id, { status: 'encerrada', encerrada_em: new Date().toISOString() })
-            await sair(); aoMudar()
-          })
-        }}>Encerrar transmissão</button>
-      ) : (
-        <button className="av-iniciar" disabled={!!ocupado || nada} title={nada ? 'Ligue a tela ou a câmera antes' : undefined} onClick={() => void fazer('inicio', async () => {
-          await mudarLive(sessao, live.id, { status: 'ao_vivo', iniciada_em: new Date().toISOString() })
-          atualizarLive({ status: 'ao_vivo', iniciadaEm: new Date().toISOString() }); aoMudar()
-        })}>Iniciar transmissão</button>
-      )}
+      <div className="av-mesa-fontes" role="group" aria-label="O que vai ao ar">
+        {fonte('tela', 'Tela', transmitirTela)}
+        {fonte('camera', 'Câmera', transmitirCamera)}
+        {fonte('microfone', 'Microfone', transmitirMicrofone)}
+      </div>
+      <div className="av-mesa-acao">
+        {noAr ? (
+          <button className="av-botao-encerrar" disabled={!!ocupado} onClick={() => {
+            if (!window.confirm('Encerrar a transmissão para todos os alunos?')) return
+            void fazer('fim', async () => {
+              await avisarFim()
+              await mudarLive(sessao, live.id, { status: 'encerrada', encerrada_em: new Date().toISOString() })
+              await sair(); aoMudar()
+            })
+          }}>Encerrar transmissão</button>
+        ) : (
+          <button className="av-botao-iniciar" disabled={!!ocupado || nada} onClick={() => void fazer('inicio', async () => {
+            const agora = new Date().toISOString()
+            await mudarLive(sessao, live.id, { status: 'ao_vivo', iniciada_em: agora })
+            atualizarLive({ status: 'ao_vivo', iniciadaEm: agora }); aoMudar()
+          })}><i aria-hidden />Iniciar transmissão</button>
+        )}
+        {!noAr && nada && <small className="av-mesa-dica">Ligue a tela ou a câmera para liberar</small>}
+      </div>
       {erro && <p className="av-erro" role="alert">{erro}</p>}
+    </section>
+  )
+}
+
+/** Os ajustes do chat, embaixo do palco (o que não se mexe a toda hora). */
+function AjustesDaLive({ s, sessao }: { s: EstadoDaSala; sessao: SessaoTeeds }) {
+  const live = s.live!
+  return (
+    <div className="av-ajustes">
+      <label htmlFor="av-lento">Modo lento do chat</label>
+      <select id="av-lento" value={live.intervaloChat} onChange={async (e) => {
+        const n = Number(e.target.value)
+        await mudarLive(sessao, live.id, { intervalo_chat: n }).catch(() => undefined)
+        atualizarLive({ intervaloChat: n })
+      }}>
+        <option value={0}>Desligado</option><option value={5}>Uma mensagem a cada 5 s</option>
+        <option value={10}>Uma mensagem a cada 10 s</option><option value={30}>Uma mensagem a cada 30 s</option>
+      </select>
+      {live.status !== 'ao_vivo' && <button className="av-link" onClick={() => void sair()}>Sair do estúdio</button>}
     </div>
   )
 }
 
-function NovaLive({ sessao, aoCriar }: { sessao: SessaoTeeds; aoCriar: () => void }) {
-  const [titulo, setTitulo] = useState('')
+const tituloDeHoje = () => `Live de ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`
+
+/** A porta do estúdio, para o admin: abrir agora, ou agendar. */
+function PortaDoEstudio({ sessao, aoMudar }: { sessao: SessaoTeeds; aoMudar: () => void }) {
+  const [titulo, setTitulo] = useState(tituloDeHoje)
+  const [agendar, setAgendar] = useState(false)
   const [data, setData] = useState('')
   const [erro, setErro] = useState<string | null>(null)
-  const [salvando, setSalvando] = useState(false)
+  const [ocupado, setOcupado] = useState(false)
+  const abrirAgora = async () => {
+    if (!titulo.trim()) { setErro('Dê um título para a live.'); return }
+    setOcupado(true); setErro(null)
+    try { const l = await criarLive(sessao, titulo.trim(), null); aoMudar(); await entrar(sessao, l) }
+    catch (e) { setErro(e instanceof Error ? e.message : 'Não consegui abrir o estúdio.') }
+    setOcupado(false)
+  }
+  const salvarAgenda = async () => {
+    if (!titulo.trim()) { setErro('Dê um título para a live.'); return }
+    if (!data) { setErro('Escolha o dia e a hora.'); return }
+    setOcupado(true); setErro(null)
+    try { await criarLive(sessao, titulo.trim(), new Date(data).toISOString()); setAgendar(false); setData(''); setTitulo(tituloDeHoje()); aoMudar() }
+    catch (e) { setErro(e instanceof Error ? e.message : 'Não consegui agendar.') }
+    setOcupado(false)
+  }
   return (
-    <form className="av-nova" onSubmit={async (e) => {
-      e.preventDefault()
-      if (!titulo.trim()) { setErro('Dê um título para a live.'); return }
-      setSalvando(true); setErro(null)
-      try { await criarLive(sessao, titulo.trim(), data ? new Date(data).toISOString() : null); setTitulo(''); setData(''); aoCriar() }
-      catch (er) { setErro(er instanceof Error ? er.message : 'Não consegui criar a live.') }
-      setSalvando(false)
-    }}>
-      <h3>Agendar uma live</h3>
-      <label htmlFor="av-titulo">Título</label>
-      <input id="av-titulo" value={titulo} maxLength={120} placeholder="Sessão de abertura da semana" onChange={(e) => { setTitulo(e.target.value); setErro(null) }} />
-      <label htmlFor="av-data">Quando (opcional)</label>
-      <input id="av-data" type="datetime-local" value={data} onChange={(e) => setData(e.target.value)} />
-      {erro && <p className="av-erro" role="alert">{erro}</p>}
-      <button type="submit" disabled={salvando}>{salvando ? 'Criando…' : 'Criar live'}</button>
-    </form>
+    <section className="av-porta" aria-labelledby="av-porta-titulo">
+      <div className="av-porta-texto">
+        <span className="av-sobretitulo">Estúdio</span>
+        <h2 id="av-porta-titulo">Transmita para os alunos, ao vivo</h2>
+        <p>Você entra primeiro num ensaio, que só você vê. Quando a imagem estiver certa, um clique coloca todo mundo dentro.</p>
+        <ol className="av-passos">
+          <li><i>1</i><span><b>Abra o estúdio</b>Ensaio privado, sem ninguém assistindo.</span></li>
+          <li><i>2</i><span><b>Ligue tela, câmera e microfone</b>Você vê exatamente o que os alunos vão ver.</span></li>
+          <li><i>3</i><span><b>Inicie a transmissão</b>O menu "Ao vivo" acende para todos.</span></li>
+        </ol>
+      </div>
+      <form className="av-porta-form" onSubmit={(e) => { e.preventDefault(); void (agendar ? salvarAgenda() : abrirAgora()) }}>
+        <label htmlFor="av-titulo">Título da live</label>
+        <input id="av-titulo" value={titulo} maxLength={120} onChange={(e) => { setTitulo(e.target.value); setErro(null) }} />
+        {agendar && <>
+          <label htmlFor="av-data">Dia e hora</label>
+          <input id="av-data" type="datetime-local" value={data} onChange={(e) => { setData(e.target.value); setErro(null) }} />
+        </>}
+        {erro && <p className="av-erro" role="alert">{erro}</p>}
+        <button type="submit" className="av-botao-principal" disabled={ocupado}>
+          {ocupado ? 'Abrindo…' : agendar ? 'Agendar live' : 'Abrir estúdio agora'}
+        </button>
+        <button type="button" className="av-link" onClick={() => { setAgendar(!agendar); setErro(null) }}>
+          {agendar ? 'Voltar: abrir agora' : 'Agendar para outro horário'}
+        </button>
+      </form>
+    </section>
   )
 }
 
@@ -364,7 +446,6 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
   const s = useSala()
   const [lives, setLives] = useState<Live[] | null>(null)
   const [erro, setErro] = useState<string | null>(null)
-  const [, forcar] = useState(0)
   const carregar = useMemo(() => async () => {
     if (!sessao) return
     try { setLives(await listarLives(sessao)); setErro(null) } catch (e) { setErro(e instanceof Error ? e.message : 'Não consegui carregar as lives.') }
@@ -372,80 +453,79 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
   useEffect(() => { void carregar(); const t = window.setInterval(() => void carregar(), 20000); return () => window.clearInterval(t) }, [carregar])
 
   if (!sessao) return <div className="ger av-pagina"><p className="av-vazio">Entre na sua conta para ver as transmissões.</p></div>
+  if (s.fase !== 'fora' && s.live) return <SalaConectada s={s} sessao={sessao} aoMudar={() => void carregar()} />
 
-  const conectada = s.fase !== 'fora' && s.live
   const noAr = lives?.find((l) => l.status === 'ao_vivo') ?? null
   const proximas = (lives ?? []).filter((l) => l.status === 'agendada')
-
-  if (conectada) return <SalaConectada s={s} sessao={sessao} aoMudar={() => { forcar((n) => n + 1); void carregar() }} />
-
   return (
     <div className="ger av-pagina">
       {erro && <p className="av-erro" role="alert">{erro}</p>}
-      {salaAgora().erro && salaAgora().fase !== 'erro' && <p className="av-recado">{salaAgora().erro}</p>}
-      {s.fase === 'erro' && <p className="av-erro" role="alert">{s.erro}</p>}
-      {noAr ? (
+      {s.erro && <p className={s.fase === 'erro' ? 'av-erro' : 'av-recado'} role="status">{s.erro}</p>}
+
+      {noAr && (
         <section className="av-destaque">
-          <span className="av-selo"><i aria-hidden />Ao vivo agora</span>
+          <span className="av-chip-vivo"><i aria-hidden />Ao vivo agora <Cronometro desde={noAr.iniciadaEm} /></span>
           <h2>{noAr.titulo}</h2>
           {noAr.descricao && <p>{noAr.descricao}</p>}
-          <button className="av-assistir" onClick={() => void entrar(sessao, noAr)}>{admin ? 'Voltar ao estúdio' : 'Assistir agora'}</button>
+          <button className="av-botao-principal" onClick={() => void entrar(sessao, noAr)}>{admin ? 'Voltar ao estúdio' : 'Assistir agora'}</button>
         </section>
-      ) : lives && proximas.length === 0 && !admin ? (
+      )}
+
+      {admin && !noAr && <PortaDoEstudio sessao={sessao} aoMudar={() => void carregar()} />}
+
+      {!admin && !noAr && lives && proximas.length === 0 && (
         <section className="av-destaque calmo">
-          <h2>Nenhuma transmissão no ar</h2>
-          <p>Quando a próxima live for marcada, ela aparece aqui com a contagem regressiva, e o menu "Ao vivo" ganha um ponto vermelho quando começar.</p>
+          <span className="av-sobretitulo">Ao vivo</span>
+          <h2>Nenhuma transmissão no ar agora</h2>
+          <p>Quando a próxima live for marcada, ela aparece aqui com a contagem regressiva. Na hora, o menu "Ao vivo" ganha um ponto vermelho.</p>
         </section>
-      ) : null}
+      )}
 
       {proximas.length > 0 && (
-        <section className="av-agenda">
-          <h3>Próximas transmissões</h3>
+        <section className="av-agenda" aria-labelledby="av-agenda-titulo">
+          <h3 id="av-agenda-titulo">Próximas transmissões</h3>
           {proximas.map((l) => (
             <article key={l.id} className="av-agendada">
-              <div>
-                <b>{l.titulo}</b>
-                <span>{quando(l.inicioPrevisto)}</span>
-              </div>
+              <div className="av-agendada-texto"><b>{l.titulo}</b><span>{quando(l.inicioPrevisto)}</span></div>
               <Contagem alvo={l.inicioPrevisto} />
               {admin && (
                 <div className="av-agendada-acoes">
-                  <button className="av-assistir" onClick={() => void entrar(sessao, l)}>Abrir estúdio</button>
-                  <button onClick={async () => { if (window.confirm(`Apagar "${l.titulo}"?`)) { await apagarLive(sessao, l.id).catch(() => undefined); void carregar() } }}>Apagar</button>
+                  <button className="av-botao-secundario" onClick={() => void entrar(sessao, l)}>Abrir estúdio</button>
+                  <button className="av-link perigo" onClick={async () => { if (window.confirm(`Apagar "${l.titulo}"?`)) { await apagarLive(sessao, l.id).catch(() => undefined); void carregar() } }}>Apagar</button>
                 </div>
               )}
             </article>
           ))}
         </section>
       )}
-
-      {admin && <NovaLive sessao={sessao} aoCriar={() => void carregar()} />}
       {!lives && !erro && <p className="av-vazio">Carregando…</p>}
     </div>
   )
 }
 
-/** A live aberta na página: palco grande, chat ao lado e, para o admin, o estúdio. */
+/** A live aberta na página: mesa do apresentador (admin), palco grande e chat ao lado. */
 function SalaConectada({ s, sessao, aoMudar }: { s: EstadoDaSala; sessao: SessaoTeeds; aoMudar: () => void }) {
   return (
     <div className="ger av-pagina av-com-palco">
-      <div className="av-cabeca">
-        <div><h2>{s.live!.titulo}</h2><p>{s.live!.status === 'ao_vivo' ? `${s.espectadores} assistindo agora` : 'Ensaio: só você vê. Os alunos entram quando você iniciar.'}</p></div>
-        {!s.moderador && (
-          <div className="av-modos" role="group" aria-label="Como assistir enquanto opera">
-            <span>Ao sair desta tela:</span>
-            <button onClick={() => definirModo('lado', false)}>Lado a lado</button>
-            <button onClick={() => definirModo('flutuante', false)}>Flutuante</button>
+      {s.moderador ? <MesaDoApresentador s={s} sessao={sessao} aoMudar={aoMudar} /> : (
+        <div className="av-cabeca">
+          <div>
+            <h2>{s.live!.titulo}</h2>
+            <p>{s.espectadores} assistindo agora</p>
+          </div>
+          <div className="av-modos" role="group" aria-label="Como continuar assistindo ao sair desta tela">
+            <span>Ao sair desta tela, continuar:</span>
+            <button className={salaAgora().modo === 'lado' ? 'on' : ''} onClick={() => definirModo('lado', false)}>Ao lado do gráfico</button>
+            <button onClick={() => definirModo('flutuante', false)}>Em janela flutuante</button>
             <button onClick={() => definirModo('pilula', false)}>Só o áudio</button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
       <div className="av-palco-e-chat">
         <Palco s={s} />
         <Chat s={s} />
       </div>
-      {s.moderador && <Estudio s={s} sessao={sessao} aoMudar={aoMudar} />}
-      {!s.moderador && <button className="av-sair" onClick={() => void sair()}>Sair da transmissão</button>}
+      {s.moderador ? <AjustesDaLive s={s} sessao={sessao} /> : <button className="av-link" onClick={() => void sair()}>Sair da transmissão</button>}
     </div>
   )
 }
@@ -464,8 +544,10 @@ function faixaDeExemplo(largura: number, altura: number, desenhar: (c: CanvasRen
 }
 
 /** ?tela=aovivo no laboratório: a sala cheia, com vídeo e chat de exemplo. */
-export function LabAoVivo({ modo, moderador }: { modo: ModoDoPlayer | 'pagina'; moderador: boolean }) {
+export function LabAoVivo({ modo, moderador }: { modo: ModoDoPlayer | 'pagina' | 'porta' | 'ensaio'; moderador: boolean }) {
   const s = useSala()
+  const sessaoFalsa = { token: '', refresh: '', expiraEm: 0, usuario: { id: 'lab', email: '', nome: 'Tiago' } } as unknown as SessaoTeeds
+  if (modo === 'porta') return <div className="ger av-pagina"><PortaDoEstudio sessao={sessaoFalsa} aoMudar={() => undefined} /></div>
   useEffect(() => {
     const tela = faixaDeExemplo(1280, 720, (c, t) => {
       c.fillStyle = '#0b1726'; c.fillRect(0, 0, 1280, 720)
@@ -489,9 +571,9 @@ export function LabAoVivo({ modo, moderador }: { modo: ModoDoPlayer | 'pagina'; 
     })
     simularSala({
       fase: 'conectada', erro: null, moderador, meuNome: 'Tiago', espectadores: 214, somBloqueado: false,
-      live: { id: 'lab', titulo: 'Abertura da semana: leitura de mercado', descricao: null, status: 'ao_vivo', inicioPrevisto: null, iniciadaEm: new Date(agora - 18 * 60000).toISOString(), encerradaEm: null, intervaloChat: 5 },
+      live: { id: 'lab', titulo: 'Abertura da semana: leitura de mercado', descricao: null, status: modo === 'ensaio' ? 'agendada' : 'ao_vivo', inicioPrevisto: null, iniciadaEm: new Date(agora - 18 * 60000).toISOString(), encerradaEm: null, intervaloChat: 5 },
       tela, camera, audios: [], transmitindo: { tela: moderador, camera: moderador, microfone: moderador },
-      modo: modo === 'pagina' ? 'palco' : modo,
+      modo: modo === 'pagina' || modo === 'ensaio' ? 'palco' : modo,
       mensagens: [
         msg(9, 'Tiago', 'Meta da sessão de hoje: 5%. Limite de perda: 3%. Não passem disso.', true, true),
         msg(7, 'Ana', 'Boa noite, pessoal'), msg(6, 'Rui', 'Qual robô vocês vão usar hoje?'),
@@ -500,13 +582,10 @@ export function LabAoVivo({ modo, moderador }: { modo: ModoDoPlayer | 'pagina'; 
       ],
     })
     // o player, ao montar fora da página, volta ao modo preferido; no laboratório vale o pedido
-    const t = window.setTimeout(() => { if (modo !== 'pagina') definirModo(modo, false) }, 50)
+    const t = window.setTimeout(() => { if (modo !== 'pagina' && modo !== 'ensaio') definirModo(modo, false) }, 50)
     return () => window.clearTimeout(t)
   }, [modo, moderador])
   if (!s.live) return null
-  if (modo === 'pagina') {
-    const sessao = { token: '', refresh: '', expiraEm: 0, usuario: { id: 'lab', email: '', nome: 'Tiago' } } as unknown as SessaoTeeds
-    return <SalaConectada s={s} sessao={sessao} aoMudar={() => undefined} />
-  }
+  if (modo === 'pagina' || modo === 'ensaio') return <SalaConectada s={s} sessao={sessaoFalsa} aoMudar={() => undefined} />
   return <PlayerGlobal naPagina={false} abrirPagina={() => undefined} />
 }
