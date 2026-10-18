@@ -13,7 +13,8 @@ import { FUNDOS } from '../../core/live/fundos'
 import {
   abrirChat, aoTrocarDeTela, apagarMensagem, atualizarLive, definirFundo, definirModoLento, listarDispositivos, mostrarFaixa, posicionarCamera, renomearLive, trocarDispositivo, avisarFim, definirCanto, definirModo, definirTamanho, entrar, fixarMensagem,
   liberarSom, mandarMensagem, marcarChatAberto, reagir, sair, salaAgora, silenciarPessoa, transmitirCamera,
-  simularSala, transmitirMicrofone, transmitirTela, useSala, REACOES, type EstadoDaSala, type ModoDoPlayer, type Reacao,
+  simularSala, transmitirMicrofone, transmitirTela, useSala, REACOES, criarEnquete, encerrarEnquete, votar,
+  type EstadoDaSala, type ModoDoPlayer, type Reacao,
 } from '../../core/live/sala'
 import './aovivo.css'
 
@@ -105,6 +106,47 @@ function BarraDeReacoes({ s, compacta = false }: { s: EstadoDaSala; compacta?: b
   )
 }
 
+/**
+ * A enquete na tela de quem assiste: vota com um toque; depois vê as barras
+ * subindo ao vivo. Para o apresentador, só as barras (ele vota pelo painel).
+ */
+export function CartaoEnquete({ s, compacto = false }: { s: EstadoDaSala; compacto?: boolean }) {
+  const e = s.enquete
+  const [recolhida, setRecolhida] = useState(false)
+  // enquete nova chega aberta (mesmo que a anterior tenha sido recolhida)
+  useEffect(() => { setRecolhida(false) }, [e?.id])
+  if (!e) return null
+  const total = e.votos.reduce((a, b) => a + b, 0)
+  const podeVotar = e.aberta && e.meuVoto === null && !s.moderador && s.fase === 'conectada'
+  const vencedora = !e.aberta && total > 0 ? e.votos.indexOf(Math.max(...e.votos)) : -1
+  return (
+    <section className={`av-enquete ${compacto ? 'compacta' : ''} ${e.aberta ? 'aberta' : 'fechada'} ${recolhida ? 'recolhida' : ''}`} aria-live="polite" aria-label="Enquete">
+      <header>
+        <span className="av-sobretitulo">{e.aberta ? 'Enquete ao vivo' : 'Resultado da enquete'}</span>
+        <small>{total} {total === 1 ? 'voto' : 'votos'}</small>
+        <button type="button" className="av-enquete-recolher" aria-expanded={!recolhida} aria-label={recolhida ? 'Mostrar a enquete' : 'Recolher a enquete'} onClick={() => setRecolhida(!recolhida)}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={recolhida ? 'M6 9l6 6 6-6' : 'M18 15l-6-6-6 6'} /></svg>
+        </button>
+      </header>
+      <p className="av-enquete-pergunta">{e.pergunta}</p>
+      {!recolhida && <div className="av-enquete-opcoes" role={podeVotar ? 'group' : undefined}>
+        {e.opcoes.map((o, i) => {
+          const pct = total ? Math.round((e.votos[i] ?? 0) / total * 100) : 0
+          return podeVotar ? (
+            <button key={i} className="av-enquete-opcao votar" onClick={() => void votar(i)}>{o}</button>
+          ) : (
+            <div key={i} className={`av-enquete-opcao barra ${e.meuVoto === i ? 'minha' : ''} ${vencedora === i ? 'vencedora' : ''}`}>
+              <i style={{ width: `${pct}%` }} aria-hidden />
+              <span>{o}{e.meuVoto === i && <em>seu voto</em>}</span>
+              <b>{pct}%</b>
+            </div>
+          )
+        })}
+      </div>}
+    </section>
+  )
+}
+
 /** Aviso discreto quando a conexão de quem assiste está ruim. */
 function Qualidade({ s }: { s: EstadoDaSala }) {
   if (s.qualidade === 'boa' || s.qualidade === 'media' || s.fase !== 'conectada') return null
@@ -116,8 +158,10 @@ function Palco({ s, compacto = false, filhos }: { s: EstadoDaSala; compacto?: bo
   const telaRef = useRef<HTMLDivElement>(null)
   const souEu = s.moderador && (s.transmitindo.tela || s.transmitindo.camera)
   const vazio = !s.tela && !s.camera
+  // toque duplo na imagem manda um coração (quem assiste; o apresentador só vê)
+  const coracao = () => { if (!s.moderador && !compacto) void reagir('coracao') }
   return (
-    <div className={`av-palco ${compacto ? 'compacto' : ''}`} ref={telaRef}>
+    <div className={`av-palco ${compacto ? 'compacto' : ''}`} ref={telaRef} onDoubleClick={coracao}>
       {s.tela ? <Video faixa={s.tela} className="av-tela" /> : s.camera ? <Video faixa={s.camera} className="av-tela av-so-camera" espelhar={souEu} /> : null}
       {s.tela && s.camera && <Video faixa={s.camera} className={`av-camera canto-${s.live?.cameraCanto ?? 'inf-dir'} tam-${s.live?.cameraTamanho ?? 'm'}`} espelhar={souEu} />}
       {s.live?.faixa && (
@@ -295,6 +339,7 @@ function PlayerConteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPag
         <Som faixas={s.audios} />
         <div className="av-lado-video"><Palco s={s} compacto />{controles}</div>
         <div className="av-lado-info"><b>{s.live?.titulo}</b><span>{s.espectadores} assistindo</span></div>
+        <CartaoEnquete s={s} compacto />
         <Chat s={s} />
       </aside>
     )
@@ -367,6 +412,7 @@ function PlayerConteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPag
           <div className="av-folha" role="dialog" aria-label="Chat da transmissão" onClick={(e) => e.stopPropagation()}>
             <button className="av-folha-alca" aria-label="Fechar o chat" onClick={() => setChat(false)}><i aria-hidden /></button>
             <div className="av-folha-cabeca"><b>{s.live?.titulo}</b><span>{s.espectadores} assistindo</span></div>
+            <CartaoEnquete s={s} compacto />
             <Chat s={s} aberto />
             <BarraDeReacoes s={s} compacta />
           </div>
@@ -684,6 +730,11 @@ function PainelDeControle({ s, sessao }: { s: EstadoDaSala; sessao: SessaoTeeds 
       </section>
 
       <section className="av-painel-sec">
+        <h4>Enquete</h4>
+        <PainelDeEnquete s={s} />
+      </section>
+
+      <section className="av-painel-sec">
         <h4>Faixa na tela</h4>
         <form className="av-painel-linha" onSubmit={(e) => { e.preventDefault(); void mostrarFaixa(faixa) }}>
           <label htmlFor="av-p-faixa" className="av-oculto">Texto da faixa</label>
@@ -738,6 +789,58 @@ function PainelDeControle({ s, sessao }: { s: EstadoDaSala; sessao: SessaoTeeds 
   )
 }
 
+const SUGESTOES_DE_ENQUETE: Array<{ rotulo: string; pergunta: string; opcoes: () => string[] }> = [
+  { rotulo: 'Sim ou não', pergunta: 'Entenderam até aqui?', opcoes: () => ['Sim', 'Ainda não'] },
+  { rotulo: 'Qual robô', pergunta: 'Qual robô vocês querem ver operando agora?', opcoes: () => MARCA.robos.slice(0, 4).map((id) => (MARCA.nomesDosRobos?.[id] ?? id).replace(new RegExp(`^${MARCA.prosa.split(' ')[0]}\\s+`, 'i'), '')) },
+  { rotulo: 'Meta', pergunta: 'Qual meta diária vocês usam?', opcoes: () => ['Até 3%', '3% a 5%', 'Acima de 5%', 'Ainda não defini'] },
+  { rotulo: 'Horário', pergunta: 'Em que horário vocês mais operam?', opcoes: () => ['Manhã', 'Tarde', 'Noite', 'Madrugada'] },
+]
+
+/** O apresentador abre, acompanha e encerra a enquete. */
+function PainelDeEnquete({ s }: { s: EstadoDaSala }) {
+  const [pergunta, setPergunta] = useState('')
+  const [opcoes, setOpcoes] = useState(['', ''])
+  const [erro, setErro] = useState<string | null>(null)
+  const e = s.enquete
+  const abrir = async () => {
+    setErro(null)
+    try { await criarEnquete(pergunta, opcoes); setPergunta(''); setOpcoes(['', '']) } catch (x) { setErro(x instanceof Error ? x.message : 'Não deu certo.') }
+  }
+  if (e) {
+    return (
+      <div className="av-painel-enquete">
+        <CartaoEnquete s={s} compacto />
+        <div className="av-painel-linha">
+          {e.aberta
+            ? <button className="av-botao-mini" onClick={() => void encerrarEnquete(false)}>Encerrar votação</button>
+            : <button className="av-botao-mini" onClick={() => void encerrarEnquete(true)}>Tirar da tela</button>}
+          {e.aberta && <button className="av-link" onClick={() => void encerrarEnquete(true)}>Cancelar</button>}
+        </div>
+      </div>
+    )
+  }
+  return (
+    <form className="av-painel-enquete" onSubmit={(ev) => { ev.preventDefault(); void abrir() }}>
+      <div className="av-sugestoes">
+        {SUGESTOES_DE_ENQUETE.map((su) => <button key={su.rotulo} type="button" onClick={() => { setPergunta(su.pergunta); setOpcoes(su.opcoes()); setErro(null) }}>{su.rotulo}</button>)}
+      </div>
+      <label htmlFor="av-enq-pergunta" className="av-oculto">Pergunta</label>
+      <input id="av-enq-pergunta" value={pergunta} maxLength={160} placeholder="Pergunta para a sala" onChange={(ev) => setPergunta(ev.target.value)} />
+      {opcoes.map((o, i) => (
+        <div key={i} className="av-painel-linha">
+          <input value={o} maxLength={60} placeholder={`Opção ${i + 1}`} aria-label={`Opção ${i + 1}`} onChange={(ev) => setOpcoes(opcoes.map((x, j) => (j === i ? ev.target.value : x)))} />
+          {opcoes.length > 2 && <button type="button" className="av-link" aria-label="Tirar esta opção" onClick={() => setOpcoes(opcoes.filter((_, j) => j !== i))}>tirar</button>}
+        </div>
+      ))}
+      <div className="av-painel-linha entre">
+        {opcoes.length < 4 ? <button type="button" className="av-link" onClick={() => setOpcoes([...opcoes, ''])}>Mais uma opção</button> : <span />}
+        <button type="submit" className="av-botao-mini" disabled={s.live?.status !== 'ao_vivo' || !pergunta.trim() || opcoes.filter((o) => o.trim()).length < 2}>Abrir enquete</button>
+      </div>
+      {erro && <p className="av-erro" role="alert">{erro}</p>}
+    </form>
+  )
+}
+
 /** A coluna do apresentador: o chat e o painel de controle, em abas. */
 function ColunaDoApresentador({ s, sessao }: { s: EstadoDaSala; sessao: SessaoTeeds | null }) {
   const [aba, setAba] = useState<'chat' | 'controles'>('chat')
@@ -749,7 +852,7 @@ function ColunaDoApresentador({ s, sessao }: { s: EstadoDaSala; sessao: SessaoTe
         </button>
         <button role="tab" aria-selected={aba === 'controles'} className={aba === 'controles' ? 'on' : ''} onClick={() => setAba('controles')}>Controles</button>
       </div>
-      {aba === 'chat' ? <Chat s={s} aberto /> : <PainelDeControle s={s} sessao={sessao} />}
+      {aba === 'chat' ? <><CartaoEnquete s={s} compacto /><Chat s={s} aberto /></> : <PainelDeControle s={s} sessao={sessao} />}
     </div>
   )
 }
@@ -976,6 +1079,7 @@ export function SalaConectada({ s, sessao, aoMudar, convidado = false }: { s: Es
         <Palco s={s} filhos={souAluno ? <BotoesDoPalco s={s} cheia={cheia} alternar={alternarCheia} chat={chatNoTeatro} setChat={setChatNoTeatro} /> : undefined} />
         {s.moderador ? <ColunaDoApresentador s={s} sessao={sessao} /> : (
           <div className="av-lado-aluno">
+            <CartaoEnquete s={s} compacto={cheia} />
             <Chat s={s} aberto={!cheia || chatNoTeatro} />
             <BarraDeReacoes s={s} compacta={cheia} />
           </div>
@@ -1039,6 +1143,9 @@ export function LabAoVivo({ modo, moderador }: { modo: ModoDoPlayer | 'pagina' |
       fase: 'conectada', erro: null, moderador, meuNome: 'Tiago', espectadores: 214, somBloqueado: false,
       live: { id: 'lab', titulo: 'Abertura da semana: leitura de mercado', descricao: null, status: modo === 'ensaio' ? 'agendada' : 'ao_vivo', inicioPrevisto: null, iniciadaEm: new Date(agora - 18 * 60000).toISOString(), encerradaEm: null, intervaloChat: 5, chatAberto: true, cameraCanto: 'inf-dir', cameraTamanho: 'm', faixa: null },
       tela, camera, audios: [], transmitindo: { tela: moderador, camera: moderador, microfone: moderador },
+      enquete: new URLSearchParams(location.search).has('enquete')
+        ? { id: 'lab', pergunta: 'Qual robô vocês querem ver operando agora?', opcoes: ['Bombardier', 'Gulfstream', 'Phenom', 'Cirrus'], aberta: true, votos: [48, 31, 12, 9], meuVoto: null }
+        : null,
       modo: modo === 'pagina' || modo === 'ensaio' ? 'palco' : modo,
       mensagens: [
         msg(9, 'Tiago', 'Meta da sessão de hoje: 5%. Limite de perda: 3%. Não passem disso.', true, true),

@@ -590,3 +590,39 @@ body.av-teatro-aberto { overflow: hidden; }
   .av-pilula button { width: 34px; height: 34px; }
 }
 .av-pilula > span { cursor: pointer; }
+
+/* ---------------------------------------------------------- enquete ao vivo */
+.av-enquete { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border)); border-radius: 14px; background: var(--surface); }
+.av-enquete header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.av-enquete header small { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.av-enquete.aberta header .av-sobretitulo { color: var(--primary); }
+.av-enquete-pergunta { margin: 0; font-size: 14px; font-weight: 700; line-height: 1.35; text-wrap: balance; }
+.av-enquete-opcoes { display: grid; gap: 6px; }
+.av-enquete-opcao { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; padding: 0 12px; border-radius: 10px; font: inherit; font-size: 13px; overflow: hidden; }
+.av-enquete-opcao.votar { border: 1px solid var(--border); background: var(--surface-alt); color: var(--text); font-weight: 600; cursor: pointer; transition: border-color .12s, transform .12s; }
+.av-enquete-opcao.votar:hover { border-color: var(--primary); transform: translateY(-1px); }
+.av-enquete-opcao.votar:active { transform: scale(.985); }
+.av-enquete-opcao.barra { border: 1px solid var(--border); background: var(--surface-alt); }
+.av-enquete-opcao.barra i { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--primary) 22%, transparent); transition: width .5s cubic-bezier(.2,.8,.2,1); }
+.av-enquete-opcao.barra.vencedora i { background: color-mix(in srgb, var(--primary) 40%, transparent); }
+.av-enquete-opcao.barra span, .av-enquete-opcao.barra b { position: relative; }
+.av-enquete-opcao.barra b { font-variant-numeric: tabular-nums; }
+.av-enquete-opcao.barra em { margin-left: 8px; color: var(--primary); font-size: 10.5px; font-style: normal; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.av-enquete.compacta { padding: 10px 12px; gap: 6px; border-radius: 12px; }
+.av-enquete.compacta .av-enquete-pergunta { font-size: 13px; }
+.av-enquete.compacta .av-enquete-opcao { min-height: 34px; font-size: 12.5px; }
+.av-lado-aluno > .av-enquete { margin-bottom: 8px; flex: none; }
+.av-lado > .av-enquete { flex: none; }
+.av-teatro .av-enquete { background: rgba(10, 18, 30, .7); border-color: rgba(255,255,255,.14); color: #e8eef5; }
+.av-teatro .av-enquete-opcao.barra, .av-teatro .av-enquete-opcao.votar { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.12); color: #e8eef5; }
+.av-painel-enquete { display: grid; gap: 8px; }
+.av-painel-enquete input { min-width: 0; flex: 1; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; }
+.av-palco { touch-action: manipulation; } /* toque duplo manda coração, não dá zoom */
+
+.av-enquete header { align-items: center; }
+.av-enquete header small { margin-left: auto; }
+.av-enquete-recolher { display: grid; place-items: center; width: 28px; height: 28px; margin: -4px -6px -4px 0; border: 0; border-radius: 7px; background: none; color: var(--muted); cursor: pointer; }
+.av-enquete-recolher:hover { background: var(--surface-alt); color: var(--text); }
+.av-enquete.recolhida .av-enquete-pergunta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+/* com enquete, o chat do celular não pode ficar espremido: a coluna cresce e a página rola (o vídeo fica preso no topo) */
+@media (max-width: 1000px) { .av-aluno .av-lado-aluno .av-chat { min-height: 260px; } }

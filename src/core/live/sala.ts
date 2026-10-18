@@ -35,6 +35,17 @@ export const REACOES = ['coracao', 'fogo', 'palmas', 'foguete', 'cem'] as const
 export type Reacao = typeof REACOES[number]
 export interface ReacaoNaTela { id: number; tipo: Reacao; x: number; minha: boolean }
 
+/** Uma enquete da equipe: pergunta, opções e a contagem (o apresentador é quem conta). */
+export interface Enquete {
+  id: string
+  pergunta: string
+  opcoes: string[]
+  aberta: boolean
+  votos: number[]
+  /** O que esta pessoa votou (null = ainda não). */
+  meuVoto: number | null
+}
+
 export interface EstadoDaSala {
   fase: 'fora' | 'conectando' | 'conectada' | 'reconectando' | 'erro'
   erro: string | null
@@ -71,6 +82,8 @@ export interface EstadoDaSala {
   reacoes: ReacaoNaTela[]
   /** Quantas reações a sala mandou nesta sessão (o apresentador vê o calor da sala). */
   totalReacoes: number
+  /** A enquete na tela agora (null = nenhuma). */
+  enquete: Enquete | null
 }
 
 const CHAVE_PREF = `${MARCA.id}.aovivo.preferencias`
@@ -85,7 +98,7 @@ let estado: EstadoDaSala = {
   transmitindo: { tela: false, camera: false, microfone: false },
   microfoneLocal: null, dispositivos: { microfone: '', camera: '' },
   fundo: typeof window === 'undefined' ? 'nenhum' : fundoGuardado(),
-  convidado: false, qualidade: 'boa', reacoes: [], totalReacoes: 0,
+  convidado: false, qualidade: 'boa', reacoes: [], totalReacoes: 0, enquete: null,
 }
 /** Como a pessoa prefere assistir quando sai da página "Ao vivo". */
 let modoFora: ModoDoPlayer = pref.modoFora ?? 'flutuante'
@@ -124,6 +137,8 @@ type Pacote =
   | { t: 'chat'; aberto: boolean }
   | { t: 'camera'; canto: CantoDaCamera; tamanho?: 'p' | 'm' | 'g' }
   | { t: 'faixa'; texto: string | null }
+  | { t: 'enquete'; id: string | null; pergunta?: string; opcoes?: string[]; aberta?: boolean; votos?: number[] }
+  | { t: 'voto'; id: string; opcao: number }
 
 const ehModerador = (p?: Participant) => {
   try { return Boolean(p?.metadata && JSON.parse(p.metadata).moderador) } catch { return false }
@@ -247,6 +262,8 @@ async function conectar(live: Live, pedir: () => Promise<Ingresso>, historicoDe:
         try { pacote = JSON.parse(new TextDecoder().decode(dados)) } catch { return }
         if (pacote.t === 'msg') {
           receber({ id: pacote.id, userId: p.identity, nome: p.name || 'Aluno', texto: String(pacote.texto).slice(0, 500), doModerador: ehModerador(p), fixada: false, apagada: false, criadaEm: pacote.ts })
+        } else if (pacote.t === 'voto') {
+          if (estado.moderador) registrarVoto(p.identity, pacote.id, pacote.opcao)
         } else if (ehModerador(p)) {
           if (pacote.t === 'apagar') mudar({ mensagens: estado.mensagens.filter((m) => m.id !== pacote.id) })
           else if (pacote.t === 'fixar') mudar({ mensagens: estado.mensagens.map((m) => ({ ...m, fixada: m.id === pacote.id })) })
@@ -254,6 +271,7 @@ async function conectar(live: Live, pedir: () => Promise<Ingresso>, historicoDe:
           else if (pacote.t === 'chat') atualizarLive({ chatAberto: Boolean(pacote.aberto) })
           else if (pacote.t === 'camera') atualizarLive({ cameraCanto: pacote.canto, ...(pacote.tamanho ? { cameraTamanho: pacote.tamanho } : {}) })
           else if (pacote.t === 'faixa') atualizarLive({ faixa: pacote.texto ? String(pacote.texto).slice(0, 120) : null })
+          else if (pacote.t === 'enquete') receberEnquete(pacote)
         }
       })
     await r.connect(ingresso.url, ingresso.token, { autoSubscribe: true })
@@ -299,7 +317,8 @@ export async function sair(): Promise<void> {
   const r = sala
   sala = null
   if (r) await r.disconnect().catch(() => undefined)
-  mudar({ fase: 'fora', tela: null, camera: null, audios: [], espectadores: 0, reacoes: [], transmitindo: { tela: false, camera: false, microfone: false } })
+  window.clearInterval(timerEnquete)
+  mudar({ fase: 'fora', tela: null, camera: null, audios: [], espectadores: 0, reacoes: [], enquete: null, transmitindo: { tela: false, camera: false, microfone: false } })
   void manterTelaAcesa(false)
   marcarPlayerAtivo(false)
 }
@@ -397,6 +416,73 @@ export async function reagir(tipo: Reacao): Promise<void> {
   receberReacao(tipo, true)
   try { navigator.vibrate?.(8) } catch { /* sem vibração */ }
   await sala?.localParticipant.publishData(new TextEncoder().encode(tipo), { reliable: false, topic: TOPICO_REACAO }).catch(() => undefined)
+}
+
+/* --------------------------------------------------------------- enquetes */
+
+// Quem contou foi o apresentador: um voto por pessoa (o último vale).
+const urnas = new Map<string, Map<string, number>>()
+let timerEnquete: number | undefined
+
+function contagem(id: string, total: number): number[] {
+  const votos = new Array<number>(total).fill(0)
+  for (const o of urnas.get(id)?.values() ?? []) if (o >= 0 && o < total) votos[o]++
+  return votos
+}
+
+function registrarVoto(identidade: string, id: string, opcao: number) {
+  const e = estado.enquete
+  if (!e || e.id !== id || !e.aberta) return
+  if (!urnas.has(id)) urnas.set(id, new Map())
+  urnas.get(id)!.set(identidade, Math.floor(opcao))
+  mudar({ enquete: { ...e, votos: contagem(id, e.opcoes.length) } })
+}
+
+/** Do apresentador para a sala, de tempos em tempos: quem entra no meio também vê a enquete. */
+function transmitirEnquete() {
+  const e = estado.enquete
+  if (!e) { void enviar({ t: 'enquete', id: null }); return }
+  void enviar({ t: 'enquete', id: e.id, pergunta: e.pergunta, opcoes: e.opcoes, aberta: e.aberta, votos: e.votos })
+}
+
+function receberEnquete(p: Extract<Pacote, { t: 'enquete' }>) {
+  if (!p.id) { mudar({ enquete: null }); return }
+  const atual = estado.enquete
+  const meuVoto = atual?.id === p.id ? atual.meuVoto : null
+  mudar({ enquete: { id: p.id, pergunta: String(p.pergunta ?? '').slice(0, 160), opcoes: (p.opcoes ?? []).slice(0, 4).map((o) => String(o).slice(0, 60)), aberta: !!p.aberta, votos: p.votos ?? [], meuVoto } })
+}
+
+/** O apresentador abre uma enquete (2 a 4 opções). Fica na tela de todos até ele tirar. */
+export async function criarEnquete(pergunta: string, opcoes: string[]): Promise<void> {
+  if (!estado.moderador) return
+  const limpas = opcoes.map((o) => o.trim().slice(0, 60)).filter(Boolean).slice(0, 4)
+  const p = pergunta.trim().slice(0, 160)
+  if (!p || limpas.length < 2) throw new Error('Escreva a pergunta e pelo menos duas opções.')
+  const id = crypto.randomUUID()
+  urnas.set(id, new Map())
+  mudar({ enquete: { id, pergunta: p, opcoes: limpas, aberta: true, votos: limpas.map(() => 0), meuVoto: null } })
+  transmitirEnquete()
+  window.clearInterval(timerEnquete)
+  timerEnquete = window.setInterval(transmitirEnquete, 4000)
+}
+
+/** Fecha a votação (o resultado continua na tela) ou tira a enquete da tela. */
+export async function encerrarEnquete(tirar = false): Promise<void> {
+  if (!estado.moderador) return
+  window.clearInterval(timerEnquete)
+  if (tirar || !estado.enquete) { mudar({ enquete: null }); transmitirEnquete(); return }
+  mudar({ enquete: { ...estado.enquete, aberta: false } })
+  transmitirEnquete()
+}
+
+/** O voto de quem assiste (vai só para o apresentador contar). */
+export async function votar(opcao: number): Promise<void> {
+  const e = estado.enquete
+  if (!e || !e.aberta || estado.fase !== 'conectada') return
+  mudar({ enquete: { ...e, meuVoto: opcao } })
+  try { navigator.vibrate?.(8) } catch { /* sem vibração */ }
+  if (estado.moderador) { registrarVoto(sala?.localParticipant.identity ?? 'eu', e.id, opcao); return }
+  await enviar({ t: 'voto', id: e.id, opcao }).catch(() => undefined)
 }
 
 /** Abre ou fecha o chat para os alunos (o moderador continua escrevendo). */
