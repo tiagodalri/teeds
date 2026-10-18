@@ -5,6 +5,9 @@ import {
   type Momento, type Oscilacao, type Ritmo,
 } from '../../core/live/simulacao'
 import './aovivo.css'
+import { LocalVideoTrack } from 'livekit-client'
+import { aplicarFundo, fundoGuardado, type EscolhaDeFundo } from '../../core/live/fundos'
+import { SeletorDeFundo } from './SeletorDeFundo'
 
 /**
  * Sala de treino (plano "treino"): o influenciador ensaia a live com a tela,
@@ -63,6 +66,18 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
   const sim = useSimulacao()
   const [tela, setTela] = useState<MediaStream | null>(null)
   const [camera, setCamera] = useState<MediaStream | null>(null)
+  // a câmera passa pelo mesmo recorte de fundo da live de verdade
+  const cameraFaixa = useRef<LocalVideoTrack | null>(null)
+  const [fundo, setFundo] = useState<EscolhaDeFundo>(fundoGuardado)
+  const [aplicandoFundo, setAplicandoFundo] = useState(false)
+  const exibirCamera = (lt: LocalVideoTrack) => setCamera(new MediaStream([lt.mediaStreamTrack]))
+  const trocarFundo = async (e: EscolhaDeFundo) => {
+    setFundo(e)
+    const lt = cameraFaixa.current
+    if (!lt) { try { localStorage.setItem('globalfly.aovivo.fundo', e) } catch { /* só agora */ } return }
+    setAplicandoFundo(true)
+    try { await aplicarFundo(lt, e); exibirCamera(lt) } finally { setAplicandoFundo(false) }
+  }
   const [mic, setMic] = useState<MediaStream | null>(null)
   const [canto, setCanto] = useState<CantoDaCamera>('inf-dir')
   const [erro, setErro] = useState<string | null>(null)
@@ -82,15 +97,24 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
     setErro(null)
     const atual = qual === 'tela' ? tela : qual === 'camera' ? camera : mic
     const definir = qual === 'tela' ? setTela : qual === 'camera' ? setCamera : setMic
-    if (atual) { atual.getTracks().forEach((t) => t.stop()); definir(null); return }
+    if (atual) {
+      atual.getTracks().forEach((t) => t.stop()); definir(null)
+      if (qual === 'camera' && cameraFaixa.current) { cameraFaixa.current.stop(); cameraFaixa.current = null }
+      return
+    }
     try {
       const f = qual === 'tela'
         ? await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false })
-        : await navigator.mediaDevices.getUserMedia(qual === 'camera' ? { video: { width: 640, height: 640 } } : { audio: { echoCancellation: true, noiseSuppression: true } })
+        : await navigator.mediaDevices.getUserMedia(qual === 'camera' ? { video: { width: 1280, height: 720 } } : { audio: { echoCancellation: true, noiseSuppression: true } })
       fluxos.current.push(f)
       // parou pela barra do navegador: o botão acompanha
       f.getTracks().forEach((t) => t.addEventListener('ended', () => definir(null)))
-      definir(f)
+      if (qual === 'camera') {
+        const lt = new LocalVideoTrack(f.getVideoTracks()[0], undefined, true)
+        cameraFaixa.current = lt
+        if (fundo !== 'nenhum') { setAplicandoFundo(true); try { await aplicarFundo(lt, fundo) } catch { /* segue sem fundo */ } setAplicandoFundo(false) }
+        exibirCamera(lt)
+      } else definir(f)
     } catch {
       setErro('O navegador não liberou o acesso. Permita a câmera, o microfone ou a tela no cadeado da barra de endereço.')
     }
@@ -187,6 +211,10 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
               </button>
             ))}
           </div>
+        </div>
+        <div className="tr-bloco tr-fundo">
+          <span className="tr-rotulo">Fundo da câmera</span>
+          <SeletorDeFundo valor={fundo} cameraLigada={!!camera} aplicando={aplicandoFundo} onEscolher={(e) => void trocarFundo(e)} />
         </div>
         <div className="tr-bloco">
           <span className="tr-rotulo" id="tr-canto">Seu rosto aparece</span>

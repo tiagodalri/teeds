@@ -22,6 +22,8 @@ import {
   type CantoDaCamera, type Live, type MensagemDoChat,
 } from './api'
 import { marcarPlayerAtivo } from './presenca'
+import { aplicarFundo, fundoGuardado, type EscolhaDeFundo } from './fundos'
+import type { LocalVideoTrack } from 'livekit-client'
 
 export type ModoDoPlayer = 'palco' | 'lado' | 'flutuante' | 'pilula'
 export type TamanhoFlutuante = 'P' | 'M' | 'G'
@@ -52,6 +54,8 @@ export interface EstadoDaSala {
   microfoneLocal: Track | null
   /** Do apresentador: qual microfone e qual câmera estão em uso. */
   dispositivos: { microfone: string; camera: string }
+  /** Do apresentador: o fundo da câmera escolhido (vale também para a próxima live). */
+  fundo: EscolhaDeFundo
 }
 
 const CHAVE_PREF = `${MARCA.id}.aovivo.preferencias`
@@ -65,6 +69,7 @@ let estado: EstadoDaSala = {
   tela: null, camera: null, audios: [], espectadores: 0, pico: 0, mensagens: [], naoLidas: 0, somBloqueado: false,
   transmitindo: { tela: false, camera: false, microfone: false },
   microfoneLocal: null, dispositivos: { microfone: '', camera: '' },
+  fundo: typeof window === 'undefined' ? 'nenhum' : fundoGuardado(),
 }
 /** Como a pessoa prefere assistir quando sai da página "Ao vivo". */
 let modoFora: ModoDoPlayer = pref.modoFora ?? 'flutuante'
@@ -343,7 +348,19 @@ export async function transmitirTela(ligar: boolean): Promise<void> {
 }
 export async function transmitirCamera(ligar: boolean): Promise<void> {
   if (!sala) return
-  await sala.localParticipant.setCameraEnabled(ligar, { resolution: { width: 640, height: 640, frameRate: 24 } })
+  await sala.localParticipant.setCameraEnabled(ligar, { resolution: { width: 1280, height: 720, frameRate: 24 } })
+  // a câmera volta com o fundo que estava escolhido
+  if (ligar && estado.fundo !== 'nenhum') await definirFundo(estado.fundo).catch(() => undefined)
+  faixas()
+}
+
+const cameraLocal = () => sala?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined
+
+/** Troca o fundo da câmera do apresentador (todos veem o resultado). */
+export async function definirFundo(escolha: EscolhaDeFundo): Promise<void> {
+  mudar({ fundo: escolha })
+  const faixa = cameraLocal()
+  if (faixa) await aplicarFundo(faixa, escolha)
   faixas()
 }
 export async function transmitirMicrofone(ligar: boolean): Promise<void> {

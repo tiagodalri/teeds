@@ -286,7 +286,7 @@ body.aovivo-lado .workspace-app { padding-right: 380px; }
 .tr-entrada { margin: 0; color: var(--muted); font-size: 11.5px; font-style: italic; }
 
 .tr-painel {
-  display: grid; grid-template-columns: minmax(220px, 1.1fr) minmax(200px, .9fr) minmax(280px, 1.4fr) minmax(200px, .9fr); gap: 18px 22px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px 22px;
   padding: 16px 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface);
 }
 .tr-bloco { display: grid; gap: 8px; align-content: start; min-width: 0; }
@@ -310,8 +310,6 @@ body.aovivo-lado .workspace-app { padding-right: 380px; }
 .tr-momentos-grade button:disabled { opacity: .5; cursor: not-allowed; }
 .tr-acoes { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; }
 .tr-acoes .av-link:disabled { opacity: .5; cursor: not-allowed; }
-@media (max-width: 1200px) { .tr-painel { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 700px) { .tr-painel { grid-template-columns: 1fr; } }
 
 .tr-entrada-card {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px;
@@ -385,3 +383,22 @@ body.aovivo-lado .workspace-app { padding-right: 380px; }
 .av-painel .tr-seg { flex: 0 1 220px; }
 .av-painel-sair { justify-self: start; margin: 12px 14px; }
 @media (prefers-reduced-motion: reduce) { .av-faixa { animation: none; } }
+
+/* ---------------------------------------------------------- fundo da câmera */
+.av-fundos { display: grid; gap: 8px; }
+.av-fundos-grade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.av-fundo {
+  position: relative; display: grid; gap: 4px; padding: 3px 3px 5px; border: 1px solid var(--border); border-radius: 9px;
+  background: var(--surface-alt); color: var(--muted); font: inherit; cursor: pointer; text-align: center; transition: border-color .15s, transform .15s;
+}
+.av-fundo img { display: block; width: 100%; aspect-ratio: 16 / 9; height: auto; object-fit: cover; border-radius: 6px; background: #0b1726; }
+.av-fundo small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; font-weight: 600; }
+.av-fundo:hover { border-color: color-mix(in srgb, var(--primary) 60%, var(--border)); transform: translateY(-1px); }
+.av-fundo.on { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); color: var(--text); }
+.av-fundo.especial .av-fundo-icone { display: grid; place-items: center; aspect-ratio: 16 / 9; border-radius: 6px; background: var(--surface); color: var(--muted); }
+.av-fundo-icone.desfoque { background: radial-gradient(circle at 50% 42%, var(--aco, #9CB1C7) 0 16%, transparent 17%), linear-gradient(135deg, #29445F, #051528) !important; filter: blur(.4px); }
+.av-fundo-nota { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.av-fundo-nota span { font-size: 10px; opacity: .85; }
+.av-fundo-aviso { margin: 0; color: var(--muted); font-size: 12px; }
+.tr-fundo { grid-column: 1 / -1; }
+.tr-fundo .av-fundos-grade { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }

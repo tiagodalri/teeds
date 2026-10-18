@@ -4,8 +4,10 @@ import { LocalVideoTrack, type Track } from 'livekit-client'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { apagarLive, criarLive, listarLives, mudarLive, podeTreinar, type CantoDaCamera, type Live } from '../../core/live/api'
 import { SalaDeTreino } from './SalaDeTreino'
+import { SeletorDeFundo } from './SeletorDeFundo'
+import { FUNDOS } from '../../core/live/fundos'
 import {
-  abrirChat, aoTrocarDeTela, apagarMensagem, atualizarLive, definirModoLento, listarDispositivos, mostrarFaixa, posicionarCamera, renomearLive, trocarDispositivo, avisarFim, definirCanto, definirModo, definirTamanho, entrar, fixarMensagem,
+  abrirChat, aoTrocarDeTela, apagarMensagem, atualizarLive, definirFundo, definirModoLento, listarDispositivos, mostrarFaixa, posicionarCamera, renomearLive, trocarDispositivo, avisarFim, definirCanto, definirModo, definirTamanho, entrar, fixarMensagem,
   liberarSom, mandarMensagem, marcarChatAberto, sair, salaAgora, silenciarPessoa, transmitirCamera,
   simularSala, transmitirMicrofone, transmitirTela, useSala, type EstadoDaSala, type ModoDoPlayer,
 } from '../../core/live/sala'
@@ -348,7 +350,7 @@ function MesaDoApresentador({ s, sessao, aoMudar }: { s: EstadoDaSala; sessao: S
       <button className={`av-fonte ${ligado ? 'on' : ''}`} aria-pressed={ligado} disabled={!!ocupado}
         onClick={() => void fazer(nome, () => ligar(!ligado))}>
         <IconeFonte nome={nome} ligado={ligado} />
-        <span><b>{rotulo}</b><small>{ocupado === nome ? 'abrindo…' : ligado ? 'no ar' : 'desligado'}</small></span>
+        <span><b>{rotulo}</b><small>{ocupado === nome ? 'abrindo…' : !ligado ? 'desligado' : nome === 'camera' && s.fundo !== 'nenhum' ? `no ar · ${s.fundo === 'desfoque' ? 'fundo desfocado' : FUNDOS.find((f) => f.id === s.fundo)?.nome ?? 'com fundo'}` : 'no ar'}</small></span>
       </button>
     )
   }
@@ -465,6 +467,7 @@ function PainelDeControle({ s }: { s: EstadoDaSala }) {
   const [faixa, setFaixa] = useState(live.faixa ?? '')
   const [enviado, setEnviado] = useState<string | null>(null)
   const [copiado, setCopiado] = useState(false)
+  const [aplicandoFundo, setAplicandoFundo] = useState(false)
   const [mics, setMics] = useState<MediaDeviceInfo[]>([])
   const [cams, setCams] = useState<MediaDeviceInfo[]>([])
   const nivel = useNivel(s.transmitindo.microfone ? s.microfoneLocal : null)
@@ -497,6 +500,12 @@ function PainelDeControle({ s }: { s: EstadoDaSala }) {
           <button type="submit" className="av-botao-mini" disabled={!titulo.trim() || titulo.trim() === live.titulo}>Salvar</button>
         </form>
         <button className="av-link" onClick={() => void copiarLink()}>{copiado ? 'Link copiado' : 'Copiar o link da live para os alunos'}</button>
+      </section>
+
+      <section className="av-painel-sec">
+        <h4>Fundo da câmera</h4>
+        <SeletorDeFundo valor={s.fundo} cameraLigada={s.transmitindo.camera} aplicando={aplicandoFundo}
+          onEscolher={async (e) => { setAplicandoFundo(true); try { await definirFundo(e) } finally { setAplicandoFundo(false) } }} />
       </section>
 
       <section className="av-painel-sec">

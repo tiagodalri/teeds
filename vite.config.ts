@@ -174,6 +174,8 @@ export default defineConfig({
           rmSync(join(SAIDA, `pwa-${outra.id}`), { recursive: true, force: true })
           // Capas de aula exclusivas de uma marca (aulas-globalfly/...).
           if (outra.id !== 'teeds') rmSync(join(SAIDA, `aulas-${outra.id}`), { recursive: true, force: true })
+          // Fundos de câmera da live (fundos-globalfly/...): só no site da marca.
+          rmSync(join(SAIDA, `fundos-${outra.id}`), { recursive: true, force: true })
           // As telas da landing sao capturadas por marca: as da outra nao entram neste site.
           const telas = join(destinoCaptura, 'plataforma')
           if (existsSync(telas)) for (const arquivo of readdirSync(telas)) if (arquivo.startsWith(`${outra.id}-`)) rmSync(join(telas, arquivo), { force: true })
