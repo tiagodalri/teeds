@@ -444,7 +444,7 @@ export async function listarProdutosClientes(sessao: SessaoTeeds): Promise<Clien
 export async function atualizarAcessoCliente(sessao: SessaoTeeds, userId: string, dados: {
   planoId: string; statusAcesso: ClienteRegistro['statusAcesso']; acessoExpiraEm: string | null; observacoes: string | null
 }): Promise<void> {
-  if (!planoClienteValido(dados.planoId)) throw new Error('Escolha um dos dois planos de clientes.')
+  if (!planoClienteValido(dados.planoId)) throw new Error('Escolha um dos planos da lista.')
   await rest(`/clientes?user_id=eq.${encodeURIComponent(userId)}&marca=eq.${MARCA.id}`, sessao.token, {
     method: 'PATCH', headers: { Prefer: 'return=minimal' },
     body: JSON.stringify({ plano_id: dados.planoId, status_acesso: dados.statusAcesso, acesso_expira_em: dados.acessoExpiraEm, observacoes: dados.observacoes }),

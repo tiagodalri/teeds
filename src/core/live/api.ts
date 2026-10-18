@@ -149,3 +149,10 @@ export async function silenciar(sessao: SessaoTeeds, liveId: string, userId: str
   }
   await funcao(sessao, { liveId, acao: calar ? 'silenciar' : 'liberar', identidade: userId }).catch(() => undefined)
 }
+
+/** A sala de treino (simulada) está liberada para esta conta? Admin ou plano "treino". */
+export async function podeTreinar(sessao: SessaoTeeds): Promise<boolean> {
+  try {
+    return (await rest<boolean>('/rpc/teeds_minha_sala_de_treino', sessao, { method: 'POST', body: JSON.stringify({ p_marca: MARCA.id }) })) === true
+  } catch { return false }
+}

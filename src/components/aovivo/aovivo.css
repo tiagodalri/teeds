@@ -263,3 +263,60 @@ body.aovivo-lado .workspace-app { padding-right: 380px; }
   .av-flutuante-chat { height: 260px; }
 }
 @media (prefers-reduced-motion: reduce) { .workspace-aovivo, .av-selo i, .av-ponto, .av-girando { animation: none; } .av-flutuante { transition: none; } }
+
+/* ---------------------------------------------------------- sala de treino (simulação) */
+/* O selo único, combinado com o Tiago: discreto, em ouro, sempre na imagem. */
+.tr-selo {
+  position: absolute; z-index: 2; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 7px;
+  height: 26px; padding: 0 10px; border: 1px solid color-mix(in srgb, var(--gf-ouro, #B78D39) 80%, transparent); border-radius: 7px;
+  background: rgba(4, 17, 32, .72); color: #F3F0E9; backdrop-filter: blur(6px);
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-variant-numeric: tabular-nums;
+}
+.tr-selo i { width: 6px; height: 6px; border-radius: 50%; background: var(--gf-ouro, #B78D39); }
+.tr-sala .av-camera.canto-sup-esq { top: calc(4% + 32px); }
+.tr-chip { display: inline-flex; align-items: center; height: 28px; padding: 0 11px; border: 1px solid color-mix(in srgb, var(--primary) 55%, var(--border)); border-radius: 8px; color: var(--primary); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.av-mesa.tr-ativa { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+.tr-botao-iniciar {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 20px; border: 0; border-radius: 11px;
+  background: var(--primary); color: var(--surface); font: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer;
+}
+:root[data-tema='escuro'] .tr-botao-iniciar { color: var(--bg); }
+.tr-botao-iniciar i { width: 0; height: 0; border-style: solid; border-width: 6px 0 6px 10px; border-color: transparent transparent transparent currentColor; }
+.tr-momento { padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--primary-soft); color: var(--primary); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.tr-entrada { margin: 0; color: var(--muted); font-size: 11.5px; font-style: italic; }
+
+.tr-painel {
+  display: grid; grid-template-columns: minmax(220px, 1.1fr) minmax(200px, .9fr) minmax(280px, 1.4fr) minmax(200px, .9fr); gap: 18px 22px;
+  padding: 16px 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface);
+}
+.tr-bloco { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.tr-bloco > label, .tr-rotulo { color: var(--muted); font-size: 12px; font-weight: 600; }
+.tr-alvo { display: grid; grid-template-columns: 1fr 88px; gap: 10px; align-items: center; }
+.tr-alvo input[type='range'] { width: 100%; accent-color: var(--primary); }
+.tr-alvo input[type='number'] { height: 36px; padding: 0 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-alt); color: var(--text); font-family: var(--fonte-dados, ui-monospace, monospace); font-size: 14px; text-align: right; }
+.tr-legenda { color: var(--muted); font-size: 11.5px; line-height: 1.45; }
+.tr-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-alt); }
+.tr-seg button { height: 30px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.tr-seg button.on { background: var(--surface); color: var(--text); box-shadow: inset 0 0 0 1px var(--primary); }
+.tr-momentos-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 8px; }
+.tr-momentos-grade button {
+  display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-alt);
+  color: var(--text); font: inherit; text-align: left; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.tr-momentos-grade button b { font-size: 13px; }
+.tr-momentos-grade button small { color: var(--muted); font-size: 11px; }
+.tr-momentos-grade button:hover:not(:disabled) { border-color: var(--primary); }
+.tr-momentos-grade button.on { border-color: var(--primary); background: var(--primary-soft); }
+.tr-momentos-grade button:disabled { opacity: .5; cursor: not-allowed; }
+.tr-acoes { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; }
+.tr-acoes .av-link:disabled { opacity: .5; cursor: not-allowed; }
+@media (max-width: 1200px) { .tr-painel { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 700px) { .tr-painel { grid-template-columns: 1fr; } }
+
+.tr-entrada-card {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px;
+  padding: 22px 24px; border: 1px dashed color-mix(in srgb, var(--primary) 45%, var(--border)); border-radius: 16px; background: var(--surface);
+}
+.tr-entrada-card > div { display: grid; gap: 6px; max-width: 68ch; }
+.tr-entrada-card h3 { margin: 0; font-size: 17px; }
+.tr-entrada-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }

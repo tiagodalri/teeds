@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerE
 import { createPortal } from 'react-dom'
 import { LocalVideoTrack, type Track } from 'livekit-client'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { apagarLive, criarLive, listarLives, mudarLive, type CantoDaCamera, type Live } from '../../core/live/api'
+import { apagarLive, criarLive, listarLives, mudarLive, podeTreinar, type CantoDaCamera, type Live } from '../../core/live/api'
+import { SalaDeTreino } from './SalaDeTreino'
 import {
   abrirChat, aoTrocarDeTela, apagarMensagem, atualizarLive, listarDispositivos, posicionarCamera, trocarDispositivo, avisarFim, definirCanto, definirModo, definirTamanho, entrar, fixarMensagem,
   liberarSom, mandarMensagem, marcarChatAberto, sair, salaAgora, silenciarPessoa, transmitirCamera,
@@ -539,8 +540,12 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
     try { setLives(await listarLives(sessao)); setErro(null) } catch (e) { setErro(e instanceof Error ? e.message : 'Não consegui carregar as lives.') }
   }, [sessao])
   useEffect(() => { void carregar(); const t = window.setInterval(() => void carregar(), 20000); return () => window.clearInterval(t) }, [carregar])
+  const [treino, setTreino] = useState(false)
+  const [treinando, setTreinando] = useState(false)
+  useEffect(() => { if (sessao) void podeTreinar(sessao).then(setTreino) }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!sessao) return <div className="ger av-pagina"><p className="av-vazio">Entre na sua conta para ver as transmissões.</p></div>
+  if (treinando) return <SalaDeTreino apresentador={(sessao.usuario.nome || '').trim().split(/\s+/)[0] || 'professor'} aoSair={() => setTreinando(false)} />
   if (s.fase !== 'fora' && s.live) return <SalaConectada s={s} sessao={sessao} aoMudar={() => void carregar()} />
 
   const noAr = lives?.find((l) => l.status === 'ao_vivo') ?? null
@@ -560,6 +565,17 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
       )}
 
       {admin && !noAr && <PortaDoEstudio sessao={sessao} aoMudar={() => void carregar()} />}
+
+      {treino && (
+        <section className="tr-entrada-card" aria-labelledby="tr-titulo">
+          <div>
+            <span className="av-sobretitulo">Sala de treino</span>
+            <h3 id="tr-titulo">Ensaie uma live com público e chat simulados</h3>
+            <p>Só você vê. Use sua tela, câmera e microfone de verdade, controle o tamanho da sala e dispare momentos como meta batida, stop ou rodada de perguntas. A imagem leva o selo "Simulação".</p>
+          </div>
+          <button className="av-botao-secundario" onClick={() => setTreinando(true)}>Abrir sala de treino</button>
+        </section>
+      )}
 
       {!admin && !noAr && lives && proximas.length === 0 && (
         <section className="av-destaque calmo">

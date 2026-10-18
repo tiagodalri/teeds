@@ -42,6 +42,7 @@ const VELAS = (() => {
   })
 })()
 import { lazy, Suspense } from 'react'
+const SalaDeTreino = lazy(() => import('./components/aovivo/SalaDeTreino').then((m) => ({ default: m.SalaDeTreino })))
 const TesteAtraso = lazy(() => import('./components/aovivo/TesteAtraso'))
 const LabAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.LabAoVivo })))
 import { DerivDesconectada } from './components/DerivDesconectada'
@@ -175,6 +176,8 @@ function Laboratorio() {
         {/* ?tela=grafico: o gráfico com velas de mentira, médias ligadas (clique na linha). */}
         {/* ?tela=aovivo&modo=pagina|lado|flutuante|pilula&mod=1: a live com vídeo e chat de exemplo. */}
         {qual === 'aovivo' && <Suspense fallback={null}><LabAoVivo modo={(new URLSearchParams(location.search).get('modo') ?? 'pagina') as never} moderador={new URLSearchParams(location.search).has('mod')} /></Suspense>}
+        {/* ?tela=treino: a sala de treino (público e chat simulados). */}
+        {qual === 'treino' && <Suspense fallback={null}><SalaDeTreino apresentador="Tiago" aoSair={() => undefined} /></Suspense>}
         {qual === 'aovivo-atraso' && <Suspense fallback={null}><TesteAtraso /></Suspense>}
         {qual === 'grafico' && <div style={{ height: 520, display: 'flex' }}><PriceChart candles={VELAS} mode="candles" pipSize={3} symbolName="Volatility 75 (1s)" symbol="lab" indicators={['sma', 'ema']} /></div>}
       </main>
