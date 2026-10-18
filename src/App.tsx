@@ -45,7 +45,7 @@ import { buyFromProposal, requestProposal, sellContract } from './core/deriv/tra
 import { MARCA } from './marca'
 import { IconeFechar } from './components/IconeFechar'
 import { usePeriodos } from './core/chart/periodos'
-import { liveNoAr } from './core/live/api'
+import { liveNoAr, type Live } from './core/live/api'
 import { usePlayerAtivo } from './core/live/presenca'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
@@ -71,7 +71,8 @@ const TIMEFRAMES: { label: string; value: Granularity }[] = [
 ]
 
 const STATUS_LABEL: Record<string, string> = {
-  idle: 'Iniciando', connecting: 'Conectando', open: 'Ao vivo',
+  // Na marca com transmissão, "Ao vivo" é a live: a conexão vira "Conectado".
+  idle: 'Iniciando', connecting: 'Conectando', open: MARCA.aoVivo ? 'Conectado' : 'Ao vivo',
   reconnecting: 'Reconectando', closed: 'Desconectado',
 }
 
@@ -265,13 +266,28 @@ export default function App() {
   // tela anterior, em vez de fechar o app. Cada troca de tela vira um passo
   // no histórico; o endereço não muda.
   // "Tem live no ar?" a cada 30 s: acende o ponto vermelho do menu.
-  const [aoVivoAgora, setAoVivoAgora] = useState(false)
+  const [liveAgora, setLiveAgora] = useState<Live | null>(null)
+  const aoVivoAgora = Boolean(liveAgora)
+  const [avisoLive, setAvisoLive] = useState<Live | null>(null)
+  useEffect(() => { if (!avisoLive) return; const t = window.setTimeout(() => setAvisoLive(null), 20000); return () => window.clearTimeout(t) }, [avisoLive])
   const playerAoVivo = usePlayerAtivo()
   useEffect(() => {
-    if (!MARCA.aoVivo || !teeds.sessao) { setAoVivoAgora(false); return }
+    if (!MARCA.aoVivo || !teeds.sessao) { setLiveAgora(null); return }
     const sessao = teeds.sessao
     let vivo = true
-    const ver = () => { liveNoAr(sessao).then((l) => { if (vivo) setAoVivoAgora(Boolean(l)) }).catch(() => undefined) }
+    const ver = () => {
+      liveNoAr(sessao).then((l) => {
+        if (!vivo) return
+        setLiveAgora((antes) => (antes?.id === l?.id && antes?.titulo === l?.titulo ? antes : l))
+        // "Começou agora": uma vez por live, para quem ainda não está nela.
+        if (l) {
+          const chave = `${MARCA.id}.aovivo.avisado`
+          let visto: string | null = null
+          try { visto = localStorage.getItem(chave) } catch { /* sem armazenamento */ }
+          if (visto !== l.id) { setAvisoLive(l); try { localStorage.setItem(chave, l.id) } catch { /* idem */ } }
+        }
+      }).catch(() => undefined)
+    }
     ver()
     const t = window.setInterval(ver, 30000)
     return () => { vivo = false; window.clearInterval(t) }
@@ -645,6 +661,13 @@ export default function App() {
             />
           )}
 
+          {MARCA.aoVivo && liveAgora && !playerAoVivo && tela !== 'aovivo' && (
+            <button className="selo-tv" onClick={() => setTela('aovivo')} title={`Ao vivo agora: ${liveAgora.titulo}`}
+              aria-label={`Transmissão ao vivo agora: ${liveAgora.titulo}. Assistir`}>
+              <i aria-hidden="true" />Ao vivo
+            </button>
+          )}
+
           <button className="tema-btn" onClick={alternarTema}
             title={tema === 'claro' ? 'Mudar para o modo escuro' : 'Mudar para o modo claro'}
             aria-label="alternar tema">
@@ -745,6 +768,14 @@ export default function App() {
         />
         </CatalogoProvider>
       </div>
+      {MARCA.aoVivo && avisoLive && !playerAoVivo && tela !== 'aovivo' && (
+        <div className="aviso-tv" role="status">
+          <span className="aviso-tv-selo"><i aria-hidden="true" />Ao vivo agora</span>
+          <b>{avisoLive.titulo}</b>
+          <button className="aviso-tv-assistir" onClick={() => { setAvisoLive(null); setTela('aovivo') }}>Assistir</button>
+          <button className="aviso-tv-fechar" onClick={() => setAvisoLive(null)} aria-label="Fechar aviso"><IconeFechar /></button>
+        </div>
+      )}
       {MARCA.aoVivo && playerAoVivo && <Suspense fallback={null}><PlayerAoVivo naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
       {tela === 'robos' || tela === 'assistente' ? null : tela === 'aovivo' && MARCA.aoVivo ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo a transmissão…</div></div>}><AoVivoPage sessao={teeds.sessao} admin={admin === true} /></Suspense>

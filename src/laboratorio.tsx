@@ -19,6 +19,7 @@ import './styles/tema.css'
 import './styles/ux-refinements.css'
 import './styles/mobile-polish.css'
 import './components/robot-workspace.css'
+import './components/workspace.css'
 import { aplicarTema, temaGuardado } from './core/tema'
 import { MARCA } from './marca'
 import { IDENTIDADES } from './core/deriv/branding'
@@ -178,6 +179,23 @@ function Laboratorio() {
         {qual === 'aovivo' && <Suspense fallback={null}><LabAoVivo modo={(new URLSearchParams(location.search).get('modo') ?? 'pagina') as never} moderador={new URLSearchParams(location.search).has('mod')} /></Suspense>}
         {/* ?tela=treino: a sala de treino (público e chat simulados). */}
         {qual === 'treino' && <Suspense fallback={null}><SalaDeTreino apresentador="Tiago" aoSair={() => undefined} /></Suspense>}
+        {/* ?tela=selo-tv: o selo vermelho do topo, o aviso "começou agora" e a tag do menu. */}
+        {qual === 'selo-tv' && (
+          <div className="workspace-app" style={{ padding: 24, display: 'grid', gap: 24 }}>
+            <div className="topbar" style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'flex-end', border: '1px solid var(--border)', borderRadius: 12, padding: '0 16px' }}>
+              <button className="selo-tv"><i aria-hidden="true" />Ao vivo</button>
+              <div className="status status-open"><i /> Conectado</div>
+            </div>
+            <div className="aviso-tv" role="status" style={{ position: 'static', transform: 'none' }}>
+              <span className="aviso-tv-selo"><i aria-hidden="true" />Ao vivo agora</span>
+              <b>Abertura da semana: leitura de mercado</b>
+              <button className="aviso-tv-assistir">Assistir</button>
+            </div>
+            <aside className="workspace-sidebar" style={{ position: 'static', width: 236, height: 'auto' }}>
+              <nav><button className="workspace-link"><span className="workspace-label">Ao vivo</span><i className="workspace-aovivo"><b className="workspace-label">ao vivo</b></i></button></nav>
+            </aside>
+          </div>
+        )}
         {qual === 'aovivo-atraso' && <Suspense fallback={null}><TesteAtraso /></Suspense>}
         {qual === 'grafico' && <div style={{ height: 520, display: 'flex' }}><PriceChart candles={VELAS} mode="candles" pipSize={3} symbolName="Volatility 75 (1s)" symbol="lab" indicators={['sma', 'ema']} /></div>}
       </main>
