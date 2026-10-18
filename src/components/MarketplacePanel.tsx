@@ -5,6 +5,7 @@ import { linkDoCheckout } from '../core/teeds/checkout'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
+import { Icone } from './Icone'
 
 type Categoria = 'Todos' | 'Robôs' | 'Mentorias' | 'Ferramentas'
 
@@ -306,7 +307,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
                     </div>
                   </div>
                   <ul className="market-vendas-garantias">
-                    {(checkoutAberto ? GARANTIAS_DO_CHECKOUT : selecionado.vendas.garantias).map((g) => <li key={g}><i aria-hidden="true">◇</i>{g}</li>)}
+                    {(checkoutAberto ? GARANTIAS_DO_CHECKOUT : selecionado.vendas.garantias).map((g) => <li key={g}><Icone nome="certo" />{g}</li>)}
                   </ul>
                   <small className="market-aviso">{checkoutAberto
                     ? <>O pagamento é concluído na Kiwify, com cartão, Pix ou boleto. Use o e-mail <b>{sessao?.usuario.email}</b> na compra: é por ele que o acesso é liberado sozinho na sua conta.</>

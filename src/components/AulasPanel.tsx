@@ -9,6 +9,7 @@ import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA } from '../marca'
 import { capaDaAula } from './capasAulas'
 import { IconeFechar } from './IconeFechar'
+import { Icone } from './Icone'
 import { PlayerAula } from './PlayerAula'
 import { registrarAula } from '../core/teeds/insights'
 
@@ -315,15 +316,15 @@ function SalaDeAulas({ nome, sessao }: { nome?: string | null; sessao?: SessaoTe
           <div className="aulas-hero-acoes">
           {destaque?.video ? (
             <button className="aulas-continuar" onClick={() => abrir(destaque)}>
-              <i>▶</i> {assistidas > 0 ? 'Continuar assistindo' : 'Começar agora'}
+              <Icone nome="play" /> {assistidas > 0 ? 'Continuar assistindo' : 'Começar agora'}
             </button>
           ) : (
             <button className="aulas-continuar indisponivel" onClick={() => destaque && setDetalheId(destaque.id)}>
-              <i>▶</i> Ver apresentação
+              <Icone nome="play" /> Ver apresentação
             </button>
           )}
           {destaque && (
-            <button className="aulas-detalhes" onClick={() => setDetalheId(destaque.id)}>ⓘ Mais informações</button>
+            <button className="aulas-detalhes" onClick={() => setDetalheId(destaque.id)}><Icone nome="info" />Mais informações</button>
           )}
           </div>
         </div>
@@ -393,7 +394,7 @@ function SalaDeAulas({ nome, sessao }: { nome?: string | null; sessao?: SessaoTe
               <p>{detalhe.descricao}</p>
               <div className="aulas-meta"><b>Iniciante</b><span>{detalhe.duracao || 'Duração a definir'}</span></div>
               {detalhe.video ? (
-                <button className="aulas-continuar" onClick={() => { setDetalheId(null); abrir(detalhe) }}><i>▶</i> Assistir agora</button>
+                <button className="aulas-continuar" onClick={() => { setDetalheId(null); abrir(detalhe) }}><Icone nome="play" /> Assistir agora</button>
               ) : <span className="aula-modal-breve">Esta aula será liberada em breve.</span>}
             </div>
           </section>

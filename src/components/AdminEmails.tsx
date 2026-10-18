@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { SERVIDOR } from '../core/teeds/config'
+import { Icone } from './Icone'
 import './admin-emails.css'
 
 interface Sinais { entregue:boolean;entregueEm:string|null;aberto:boolean;abertoEm:string|null;ultimaAberturaEm:string|null;aberturas:number;clicado:boolean;clicadoEm:string|null;ultimoCliqueEm:string|null;cliques:number }
@@ -45,7 +46,7 @@ export function AdminEmails({sessao,marca}:{sessao:SessaoTeeds;marca:string}) {
   const contagem=(campo:'entregue'|'aberto'|'clicado')=>emails.filter(e=>sinais(e)[campo]).length
   const config=(v:boolean|null|undefined)=>v===true?'Ativo':v===false?'Desativado':'Não confirmado'
   return <section className="admin-card admin-emails">
-    <header><div><h3>Acompanhamento de e-mails</h3><p>Entrega, aberturas e cliques da plataforma selecionada.</p></div><button disabled={ocupado} onClick={()=>void carregar()}>↻ Atualizar e-mails</button></header>
+    <header><div><h3>Acompanhamento de e-mails</h3><p>Entrega, aberturas e cliques da plataforma selecionada.</p></div><button disabled={ocupado} onClick={()=>void carregar()}><Icone nome="atualizar" />Atualizar e-mails</button></header>
     <div className="email-resumo" aria-label="Resumo dos registros carregados">
       {[['E-mails carregados',emails.length],['Entrega confirmada',contagem('entregue')],['Com abertura registrada',contagem('aberto')],['Com clique registrado',contagem('clicado')]].map(([nome,n])=><div key={nome}><span>{nome}</span><b>{n}</b></div>)}
     </div>

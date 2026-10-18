@@ -28,6 +28,8 @@ import { NOME_DO_MODO, type Modo } from '../core/deriv/strategies'
 import { cartoesDePerdaMaxima, type CartaoDePerdaMaxima } from '../core/deriv/simulacao'
 import { MARCAS } from '../marca'
 import type { SessaoTeeds } from '../core/teeds/conta'
+import { Icone, type NomeIcone } from './Icone'
+import { IconeFechar } from './IconeFechar'
 import {
   descartarTeste, ErroDeParametros, lerHistorico, lerParametros, promoverDemo, publicarParametros, restaurarVersao, salvarRascunho, testarNoDemo,
   type DetalheDoRobo, type ItemHistorico, type RespostaAcao,
@@ -206,7 +208,7 @@ export function ConfirmacaoDeAcao({ acao, onFechar, onConcluido }: { acao: AcaoC
       <section className="ac-confirm" onMouseDown={(e) => e.stopPropagation()}>
         <header>
           <div><h3>{acao.titulo}</h3><p>{acao.descricao}</p></div>
-          <button type="button" className="ac-fechar" onClick={onFechar} aria-label="Fechar">✕</button>
+          <button type="button" className="ac-fechar" onClick={onFechar} aria-label="Fechar"><IconeFechar /></button>
         </header>
         <div className="ac-confirm-corpo">
           <section>
@@ -800,13 +802,13 @@ export function AdminControleRobo({ sessao, roboId, marca, detalhe: detalheInici
     try { await concluir(await descartarTeste(sessao, roboId), 'Teste no demo descartado') } catch (e) { setErroAcao((e as Error).message) }
   }
 
-  const abas: Array<[Aba, string, string]> = [
-    ...(ehPalm ? [] : [['entrada', 'Entrada', '◔'] as [Aba, string, string]]),
-    ['recuperacao', 'Recuperação', '↻'],
-    ['escada', 'Escada', '▤'],
-    ...(ehPalm ? [['palm', 'The Palm', '✦'] as [Aba, string, string]] : []),
-    ['simulacao', 'Simulação', '≈'],
-    ['historico', 'Histórico', '◷'],
+  const abas: Array<[Aba, string, NomeIcone]> = [
+    ...(ehPalm ? [] : [['entrada', 'Entrada', 'entrada'] as [Aba, string, NomeIcone]]),
+    ['recuperacao', 'Recuperação', 'atualizar'],
+    ['escada', 'Escada', 'escada'],
+    ...(ehPalm ? [['palm', 'The Palm', 'estrela'] as [Aba, string, NomeIcone]] : []),
+    ['simulacao', 'Simulação', 'simulacao'],
+    ['historico', 'Histórico', 'relogio'],
   ]
   const versaoTexto = detalhe.versao === null
     ? 'Padrão da plataforma'
@@ -824,7 +826,7 @@ export function AdminControleRobo({ sessao, roboId, marca, detalhe: detalheInici
               <h2>{detalhe.nomeNaMarca}</h2>
               <p>{linhaDoContrato(roboId, rascunho)}</p>
             </div>
-            <button type="button" className="ac-fechar" onClick={onFechar} aria-label="Fechar o painel">✕</button>
+            <button type="button" className="ac-fechar" onClick={onFechar} aria-label="Fechar o painel"><IconeFechar /></button>
           </div>
           <div className="ac-cab-versao">
             <span className={`ac-estado ${detalhe.versao === null ? '' : 'verde'}`}>{versaoTexto}</span>
@@ -870,7 +872,7 @@ export function AdminControleRobo({ sessao, roboId, marca, detalhe: detalheInici
           <nav className="segmented ac-abas" aria-label="Seções do painel">
             {abas.map(([id, nome, icone]) => (
               <button type="button" key={id} className={aba === id ? 'on' : ''} onClick={() => setAba(id)} aria-current={aba === id ? 'page' : undefined}>
-                <i>{icone}</i><span>{nome}</span>{abasComMudanca.has(id) && <em title="tem alteração não publicada" />}
+                <i><Icone nome={icone} /></i><span>{nome}</span>{abasComMudanca.has(id) && <em title="tem alteração não publicada" />}
               </button>
             ))}
           </nav>

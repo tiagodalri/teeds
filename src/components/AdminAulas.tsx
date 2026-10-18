@@ -7,6 +7,7 @@ import {
 } from '../core/teeds/aulasVideos'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
+import { Icone } from './Icone'
 
 /**
  * A aba "Aulas" do painel: cada aula do catálogo com o vídeo que a marca
@@ -117,7 +118,7 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
   return (
     <div className="admin-aulas">
       {erro && !aberta && <div className="ger-erro">{erro}<button onClick={() => setErro(null)}><IconeFechar /></button></div>}
-      {sucesso && !aberta && <div className="admin-sucesso">✓ {sucesso}<button onClick={() => setSucesso(null)}><IconeFechar /></button></div>}
+      {sucesso && !aberta && <div className="admin-sucesso"><span><Icone nome="certo" />{sucesso}</span><button onClick={() => setSucesso(null)}><IconeFechar /></button></div>}
 
       <div className="adm-kpis">
         <article><span>Aulas no catálogo</span><strong>{catalogo.length}</strong><small>{MODULOS.length} módulos</small></article>
@@ -157,7 +158,7 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
             </header>
 
             {erro && <div className="ger-erro">{erro}<button onClick={() => setErro(null)}><IconeFechar /></button></div>}
-            {sucesso && <div className="admin-sucesso">✓ {sucesso}<button onClick={() => setSucesso(null)}><IconeFechar /></button></div>}
+            {sucesso && <div className="admin-sucesso"><span><Icone nome="certo" />{sucesso}</span><button onClick={() => setSucesso(null)}><IconeFechar /></button></div>}
 
             <div className="admin-editor-form">
               <div className="admin-aula-envio">

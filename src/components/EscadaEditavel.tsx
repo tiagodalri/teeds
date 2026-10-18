@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { escadaDoRobo, type Degrau } from '../core/deriv/escada'
 import type { DegrauTabela, DepoisDoUltimo, EscadaConfigurada, ParametrosDoRobo } from '../core/deriv/parametros'
 import type { Modo } from '../core/deriv/strategies'
+import { IconeFechar } from './IconeFechar'
 
 export const LIMITES_DA_TABELA = {
   degraus: { min: 1, max: 30 },
@@ -224,7 +225,7 @@ export function EscadaEditavel({ id, parametros, base, modo, onChange }: PropsEs
                 <b className="pouco">{ref ? usd(ref.perdido) : '—'}</b>
                 {ref ? <em className={cobre ? 'sim' : 'nao'} title={cobre ? 'Ganhar aqui cobre tudo o que foi perdido antes' : 'Ganhar aqui não cobre o prejuízo acumulado'}>{cobre ? '✓ cobre' : '✕ não cobre'}</em> : <span />}
                 <b className="pouco">{ref ? usd4(ref.markup) : '—'}</b>
-                <button type="button" className="ac-planilha-remover" aria-label={`Remover o degrau ${i + 1}`} onClick={() => remover(i)} disabled={degraus.length <= LIMITES_DA_TABELA.degraus.min}>✕</button>
+                <button type="button" className="ac-planilha-remover" aria-label={`Remover o degrau ${i + 1}`} onClick={() => remover(i)} disabled={degraus.length <= LIMITES_DA_TABELA.degraus.min}><IconeFechar /></button>
               </div>
             )
           })}

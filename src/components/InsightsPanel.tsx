@@ -16,6 +16,7 @@ import { MARCA } from '../marca'
 
 const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MARCAS).map(m=>[m.id,m.prosa]))
 import { IconeFechar } from './IconeFechar'
+import { Icone } from './Icone'
 
 /**
  * Insights — o painel de inteligência da plataforma.
@@ -135,7 +136,7 @@ export function InsightsPanel({ sessao, mostrarMarkup = false, onMostrarMarkup }
           <SeletorDePlataforma valor={marcaFoco} opcoes={opcoesDePlataforma(ehMaster(), MARCA.id)} onTrocar={trocarMarca} />
         <div className="ins-periodo" role="tablist" aria-label="Período">
           {([7, 30, 90] as Periodo[]).map((p) => <button key={p} role="tab" aria-selected={periodo === p} className={periodo === p ? 'on' : ''} onClick={() => setPeriodo(p)}>{p} dias</button>)}
-          <button className="ins-atualizar" onClick={() => void carregar()} disabled={carregando}>↻ {carregando ? 'Lendo…' : 'Atualizar'}</button>
+          <button className="ins-atualizar" onClick={() => void carregar()} disabled={carregando}><Icone nome="atualizar" />{carregando ? 'Lendo…' : 'Atualizar'}</button>
         </div>
         </div>
       </header>

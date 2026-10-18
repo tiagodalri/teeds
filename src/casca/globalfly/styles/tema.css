@@ -288,3 +288,29 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
     background: var(--gf-azul); pointer-events: none;
   }
 }
+
+/* ==========================================================================
+   SEM GRADIENTE NEM BRILHO (revisão visual, 18/10/2026)
+   O app.css pinta botões e barras da Administração com o degradê dourado
+   da Teeds (#edc968 → #bc842b), o cartão do Modo CEO com um degradê que
+   some no fundo e o player das aulas com o dourado Teeds (#d0aa52) e
+   glow. O manual proíbe gradiente decorativo e glow (pág. 25): aqui tudo
+   vira superfície chapada na cor da casa. O seletor com
+   data-marca vence também as folhas que os componentes carregam depois
+   (admin-controle.css), sem depender da ordem de importação.
+   ========================================================================== */
+:root[data-marca='globalfly'] .modo-ceo.on { background: var(--bg); }
+:root[data-marca='globalfly'] :is(.admin-primary, .adm-modal > footer button:not(.adm-cancelar), .ac-btn.primario) {
+  background: var(--primary);
+  color: var(--bg);
+  box-shadow: none;
+}
+:root[data-marca='globalfly'] :is(.admin-bars > div > i > em, .admin-aula-progresso u, .ins-paises > div > i > em) { background: var(--primary); }
+:root[data-marca='globalfly'] .adm-clientes { background: var(--surface); border-color: var(--border); }
+/* Player da aula: o "Próxima aula" e a aula aberta na lista, em ouro GF
+   chapado (azul sobre ouro passa de 6:1), sem degradê e sem sombra dourada. */
+:root[data-marca='globalfly'] .aulas { --aula: var(--gf-ouro) !important; }
+:root[data-marca='globalfly'] .aulas .aula-proxima { background: var(--gf-ouro); color: var(--gf-azul); box-shadow: none; }
+:root[data-marca='globalfly'] .aulas .aula-item.on { background: rgba(183, 141, 57, .12); box-shadow: inset 2px 0 0 var(--gf-ouro); }
+:root[data-marca='globalfly'] .aulas .aula-item.on i { background: var(--gf-ouro); border-color: var(--gf-ouro); color: var(--gf-azul); box-shadow: none; }
+/* ============================ fim do bloco sem gradiente nem brilho */
