@@ -25,6 +25,10 @@ export interface Live {
   chatAberto: boolean
   /** Canto da tela em que o rosto do apresentador aparece. */
   cameraCanto: CantoDaCamera
+  /** Tamanho do rosto do apresentador: pequeno, médio, grande. */
+  cameraTamanho: 'p' | 'm' | 'g'
+  /** Letreiro sobre o vídeo, como na TV (vazio = sem faixa). */
+  faixa: string | null
 }
 
 export type CantoDaCamera = 'sup-esq' | 'sup-dir' | 'inf-esq' | 'inf-dir'
@@ -67,12 +71,13 @@ async function rest<T>(caminho: string, sessao: SessaoTeeds, init: RequestInit =
   return (await r.json().catch(() => undefined)) as T
 }
 
-const CAMPOS_LIVE = 'id,titulo,descricao,status,inicio_previsto,iniciada_em,encerrada_em,intervalo_chat,chat_aberto,camera_canto'
+const CAMPOS_LIVE = 'id,titulo,descricao,status,inicio_previsto,iniciada_em,encerrada_em,intervalo_chat,chat_aberto,camera_canto,camera_tamanho,faixa'
 const paraLive = (l: any): Live => ({
   id: l.id, titulo: l.titulo, descricao: l.descricao, status: l.status,
   inicioPrevisto: l.inicio_previsto, iniciadaEm: l.iniciada_em, encerradaEm: l.encerrada_em,
   intervaloChat: l.intervalo_chat ?? 0,
   chatAberto: l.chat_aberto ?? true, cameraCanto: l.camera_canto ?? 'inf-dir',
+  cameraTamanho: l.camera_tamanho ?? 'm', faixa: l.faixa ?? null,
 })
 const paraMensagem = (m: any): MensagemDoChat => ({
   id: m.id, userId: m.user_id, nome: m.nome, texto: m.texto, doModerador: m.do_moderador,
@@ -100,7 +105,7 @@ export async function criarLive(sessao: SessaoTeeds, titulo: string, inicioPrevi
   return paraLive(l)
 }
 
-export async function mudarLive(sessao: SessaoTeeds, id: string, campos: Partial<{ status: StatusDaLive; titulo: string; intervalo_chat: number; iniciada_em: string; encerrada_em: string; chat_aberto: boolean; camera_canto: CantoDaCamera }>): Promise<void> {
+export async function mudarLive(sessao: SessaoTeeds, id: string, campos: Partial<{ status: StatusDaLive; titulo: string; intervalo_chat: number; iniciada_em: string; encerrada_em: string; chat_aberto: boolean; camera_canto: CantoDaCamera; camera_tamanho: 'p' | 'm' | 'g'; faixa: string | null }>): Promise<void> {
   await rest(`/lives?id=eq.${id}`, sessao, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(campos) })
 }
 

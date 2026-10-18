@@ -41,6 +41,8 @@ export interface EstadoDaSala {
   camera: Track | null
   audios: Track[]
   espectadores: number
+  /** O maior número de pessoas assistindo ao mesmo tempo nesta sessão. */
+  pico: number
   mensagens: MensagemDoChat[]
   naoLidas: number
   somBloqueado: boolean
@@ -60,7 +62,7 @@ const pref = (() => {
 let estado: EstadoDaSala = {
   fase: 'fora', erro: null, live: null, moderador: false, silenciado: false, meuNome: '',
   modo: 'palco', tamanho: pref.tamanho ?? 'M', canto: pref.canto ?? 'inf-dir',
-  tela: null, camera: null, audios: [], espectadores: 0, mensagens: [], naoLidas: 0, somBloqueado: false,
+  tela: null, camera: null, audios: [], espectadores: 0, pico: 0, mensagens: [], naoLidas: 0, somBloqueado: false,
   transmitindo: { tela: false, camera: false, microfone: false },
   microfoneLocal: null, dispositivos: { microfone: '', camera: '' },
 }
@@ -70,6 +72,7 @@ let modoFora: ModoDoPlayer = pref.modoFora ?? 'flutuante'
 const ouvintes = new Set<() => void>()
 function mudar(parcial: Partial<EstadoDaSala>) {
   estado = { ...estado, ...parcial }
+  if (estado.espectadores > estado.pico) estado = { ...estado, pico: estado.espectadores }
   ouvintes.forEach((f) => f())
 }
 function guardarPreferencias() {
@@ -93,7 +96,8 @@ type Pacote =
   | { t: 'fixar'; id: string | null }
   | { t: 'fim' }
   | { t: 'chat'; aberto: boolean }
-  | { t: 'camera'; canto: CantoDaCamera }
+  | { t: 'camera'; canto: CantoDaCamera; tamanho?: 'p' | 'm' | 'g' }
+  | { t: 'faixa'; texto: string | null }
 
 const ehModerador = (p?: Participant) => {
   try { return Boolean(p?.metadata && JSON.parse(p.metadata).moderador) } catch { return false }
@@ -179,7 +183,8 @@ export async function entrar(sessao: SessaoTeeds, live: Live): Promise<void> {
           else if (pacote.t === 'fixar') mudar({ mensagens: estado.mensagens.map((m) => ({ ...m, fixada: m.id === pacote.id })) })
           else if (pacote.t === 'fim') { void sair(); mudar({ erro: 'A transmissão terminou. Obrigado por assistir.' }) }
           else if (pacote.t === 'chat') atualizarLive({ chatAberto: Boolean(pacote.aberto) })
-          else if (pacote.t === 'camera') atualizarLive({ cameraCanto: pacote.canto })
+          else if (pacote.t === 'camera') atualizarLive({ cameraCanto: pacote.canto, ...(pacote.tamanho ? { cameraTamanho: pacote.tamanho } : {}) })
+          else if (pacote.t === 'faixa') atualizarLive({ faixa: pacote.texto ? String(pacote.texto).slice(0, 120) : null })
         }
       })
     await r.connect(ingresso.url, ingresso.token, { autoSubscribe: true })
@@ -278,12 +283,35 @@ export async function abrirChat(aberto: boolean): Promise<void> {
   await mudarLive(sessaoAtual, estado.live.id, { chat_aberto: aberto })
 }
 
-/** Em que canto da imagem o rosto do apresentador aparece, para todos. */
-export async function posicionarCamera(canto: CantoDaCamera): Promise<void> {
+/** Em que canto (e de que tamanho) o rosto do apresentador aparece, para todos. */
+export async function posicionarCamera(canto: CantoDaCamera, tamanho: 'p' | 'm' | 'g' = estado.live?.cameraTamanho ?? 'm'): Promise<void> {
   if (!estado.moderador || !sessaoAtual || !estado.live) return
-  atualizarLive({ cameraCanto: canto })
-  await enviar({ t: 'camera', canto })
-  await mudarLive(sessaoAtual, estado.live.id, { camera_canto: canto })
+  atualizarLive({ cameraCanto: canto, cameraTamanho: tamanho })
+  await enviar({ t: 'camera', canto, tamanho })
+  await mudarLive(sessaoAtual, estado.live.id, { camera_canto: canto, camera_tamanho: tamanho })
+}
+
+/** O letreiro sobre o vídeo, como na TV. `null` tira a faixa. */
+export async function mostrarFaixa(texto: string | null): Promise<void> {
+  if (!estado.moderador || !sessaoAtual || !estado.live) return
+  const limpo = texto?.trim().slice(0, 120) || null
+  atualizarLive({ faixa: limpo })
+  await enviar({ t: 'faixa', texto: limpo })
+  await mudarLive(sessaoAtual, estado.live.id, { faixa: limpo })
+}
+
+/** Modo lento do chat: segundos entre duas mensagens do mesmo aluno (0 = livre). */
+export async function definirModoLento(segundos: number): Promise<void> {
+  if (!estado.moderador || !sessaoAtual || !estado.live) return
+  atualizarLive({ intervaloChat: segundos })
+  await mudarLive(sessaoAtual, estado.live.id, { intervalo_chat: segundos })
+}
+
+/** Muda o título da live (aparece para quem está na página "Ao vivo"). */
+export async function renomearLive(titulo: string): Promise<void> {
+  if (!estado.moderador || !sessaoAtual || !estado.live || !titulo.trim()) return
+  atualizarLive({ titulo: titulo.trim().slice(0, 120) })
+  await mudarLive(sessaoAtual, estado.live.id, { titulo: titulo.trim().slice(0, 120) })
 }
 
 /** Os microfones ou câmeras deste computador (os nomes só vêm depois da permissão). */

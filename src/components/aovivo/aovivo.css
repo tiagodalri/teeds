@@ -320,3 +320,68 @@ body.aovivo-lado .workspace-app { padding-right: 380px; }
 .tr-entrada-card > div { display: grid; gap: 6px; max-width: 68ch; }
 .tr-entrada-card h3 { margin: 0; font-size: 17px; }
 .tr-entrada-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+
+/* ---------------------------------------------------------- painel de controle da live */
+.av-camera.tam-p { width: 15%; max-width: 150px; }
+.av-camera.tam-g { width: 29%; max-width: 300px; }
+
+/* Faixa na tela, como na TV: letreiro em Azul GF com o traço de ouro. */
+.av-faixa {
+  position: absolute; z-index: 2; left: 3%; bottom: 5%; display: flex; align-items: center; gap: 10px;
+  max-width: 62%; padding: 10px 16px 10px 12px; border-radius: 10px;
+  background: rgba(4, 17, 32, .86); color: #F3F0E9; backdrop-filter: blur(6px);
+  font-size: clamp(12px, 1.35vw, 17px); font-weight: 700; line-height: 1.25;
+  animation: av-faixa-entra .4s cubic-bezier(.2, .8, .2, 1) both;
+}
+.av-faixa i { flex: none; width: 4px; align-self: stretch; border-radius: 2px; background: var(--gf-ouro, #B78D39); }
+.av-faixa span { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.av-faixa.desvia-inf-esq { left: auto; right: 3%; }
+.av-palco.compacto .av-faixa { padding: 6px 10px 6px 8px; font-size: 11px; max-width: 80%; }
+@keyframes av-faixa-entra { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.av-coluna { display: flex; flex-direction: column; min-height: 0; height: 100%; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; }
+.av-coluna > .av-chat { flex: 1; border: 0; border-radius: 0; }
+.av-abas { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 6px; border-bottom: 1px solid var(--border); }
+.av-abas button {
+  position: relative; height: 34px; border: 0; border-radius: 9px; background: transparent; color: var(--muted);
+  font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+.av-abas button.on { background: var(--surface-alt); color: var(--text); box-shadow: inset 0 -2px 0 var(--primary); }
+.av-badge-aba { margin-left: 6px; padding: 1px 6px; border-radius: 9px; background: var(--down); color: #fff; font-size: 10px; }
+
+.av-painel { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: grid; align-content: start; gap: 0; }
+.av-painel-sec { display: grid; gap: 9px; padding: 14px; border-bottom: 1px solid var(--border); }
+.av-painel-sec h4 { margin: 0; color: var(--muted); font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.av-painel-numeros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.av-painel-numeros div { display: grid; gap: 2px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-alt); }
+.av-painel-numeros small { color: var(--muted); font-size: 10.5px; }
+.av-painel-numeros b { font-family: var(--fonte-dados, ui-monospace, monospace); font-size: 15px; font-variant-numeric: tabular-nums; }
+.av-painel-linha { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.av-painel-linha.entre { justify-content: space-between; font-size: 12.5px; }
+.av-painel-linha input, .av-painel select {
+  flex: 1; min-width: 0; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px;
+  background: var(--surface-alt); color: var(--text); font: inherit; font-size: 12.5px;
+}
+.av-painel-linha.entre select { flex: 0 1 160px; }
+.av-painel-rotulo { color: var(--muted); font-size: 11.5px; font-weight: 600; }
+.av-botao-mini { flex: none; height: 36px; padding: 0 12px; border: 0; border-radius: 9px; background: var(--primary); color: var(--surface); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+:root[data-tema='escuro'] .av-botao-mini { color: var(--bg); }
+.av-botao-mini:disabled { opacity: .4; cursor: not-allowed; }
+.av-painel-fixada { display: grid; gap: 3px; padding: 9px 10px; border-radius: 10px; background: var(--primary-soft); }
+.av-painel-fixada small { color: var(--primary); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.av-painel-fixada p { margin: 0; font-size: 12.5px; line-height: 1.4; }
+.av-painel-fixada .av-link { padding: 0; }
+.av-prontas { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.av-prontas button {
+  min-height: 36px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-alt);
+  color: var(--text); font: inherit; font-size: 12px; font-weight: 600; text-align: left; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.av-prontas button:hover:not(:disabled) { border-color: var(--primary); }
+.av-prontas button.enviado { border-color: var(--up); background: color-mix(in srgb, var(--up) 12%, transparent); color: var(--up); }
+.av-prontas button:disabled { opacity: .5; cursor: not-allowed; }
+.av-sugestoes { display: flex; flex-wrap: wrap; gap: 6px; }
+.av-sugestoes button { padding: 5px 9px; border: 1px dashed var(--border); border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; }
+.av-sugestoes button:hover { border-color: var(--primary); color: var(--text); }
+.av-painel .tr-seg { flex: 0 1 220px; }
+.av-painel-sair { justify-self: start; margin: 12px 14px; }
+@media (prefers-reduced-motion: reduce) { .av-faixa { animation: none; } }

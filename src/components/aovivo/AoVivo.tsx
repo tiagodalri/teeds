@@ -5,7 +5,7 @@ import type { SessaoTeeds } from '../../core/teeds/conta'
 import { apagarLive, criarLive, listarLives, mudarLive, podeTreinar, type CantoDaCamera, type Live } from '../../core/live/api'
 import { SalaDeTreino } from './SalaDeTreino'
 import {
-  abrirChat, aoTrocarDeTela, apagarMensagem, atualizarLive, listarDispositivos, posicionarCamera, trocarDispositivo, avisarFim, definirCanto, definirModo, definirTamanho, entrar, fixarMensagem,
+  abrirChat, aoTrocarDeTela, apagarMensagem, atualizarLive, definirModoLento, listarDispositivos, mostrarFaixa, posicionarCamera, renomearLive, trocarDispositivo, avisarFim, definirCanto, definirModo, definirTamanho, entrar, fixarMensagem,
   liberarSom, mandarMensagem, marcarChatAberto, sair, salaAgora, silenciarPessoa, transmitirCamera,
   simularSala, transmitirMicrofone, transmitirTela, useSala, type EstadoDaSala, type ModoDoPlayer,
 } from '../../core/live/sala'
@@ -66,7 +66,12 @@ function Palco({ s, compacto = false }: { s: EstadoDaSala; compacto?: boolean })
   return (
     <div className={`av-palco ${compacto ? 'compacto' : ''}`} ref={telaRef}>
       {s.tela ? <Video faixa={s.tela} className="av-tela" /> : s.camera ? <Video faixa={s.camera} className="av-tela av-so-camera" espelhar={souEu} /> : null}
-      {s.tela && s.camera && <Video faixa={s.camera} className={`av-camera canto-${s.live?.cameraCanto ?? 'inf-dir'}`} espelhar={souEu} />}
+      {s.tela && s.camera && <Video faixa={s.camera} className={`av-camera canto-${s.live?.cameraCanto ?? 'inf-dir'} tam-${s.live?.cameraTamanho ?? 'm'}`} espelhar={souEu} />}
+      {s.live?.faixa && (
+        <div className={`av-faixa ${(s.live.cameraCanto ?? 'inf-dir').startsWith('inf') && s.camera && s.tela ? `desvia-${s.live.cameraCanto}` : ''}`} role="status">
+          <i aria-hidden /><span>{s.live.faixa}</span>
+        </div>
+      )}
       {vazio && (
         <div className="av-espera">
           {s.fase === 'conectando' ? <><i className="av-girando" aria-hidden />Entrando na transmissão…</>
@@ -418,59 +423,181 @@ const CANTOS: Array<{ id: CantoDaCamera; rotulo: string }> = [
   { id: 'inf-esq', rotulo: 'Embaixo, à esquerda' }, { id: 'inf-dir', rotulo: 'Embaixo, à direita' },
 ]
 
-/** Os ajustes do apresentador, embaixo do palco (o que não se mexe a toda hora). */
-function AjustesDaLive({ s, sessao }: { s: EstadoDaSala; sessao: SessaoTeeds }) {
+/** Mensagens prontas da equipe: um clique, com variação para não repetir igual. */
+const MENSAGENS_DA_EQUIPE: Array<{ id: string; rotulo: string; textos: string[] }> = [
+  { id: 'boas-vindas', rotulo: 'Boas-vindas', textos: [
+    'Sejam bem-vindos! Contem no chat de onde estão assistindo hoje.',
+    'Bem-vindos à live! Fiquem à vontade para mandar dúvidas por aqui.',
+    'Que bom ter vocês aqui. Já vamos começar, deixem um oi no chat.',
+  ] },
+  { id: 'gestao', rotulo: 'Lembrete de gestão', textos: [
+    'Lembrete: defina meta e limite de perda antes de ligar o robô. Bateu, para.',
+    'Gestão primeiro: meta e limite definidos antes de qualquer entrada.',
+    'Quem respeita o limite fica no jogo. Configurem meta e stop antes de começar.',
+  ] },
+  { id: 'meta', rotulo: 'Meta batida', textos: [
+    'Meta batida, robô desligado. É assim que se protege o resultado.',
+    'Bateu a meta, encerramos a sessão. Disciplina acima de tudo.',
+  ] },
+  { id: 'stop', rotulo: 'Stop atingido', textos: [
+    'Stop atingido: faz parte. O limite existe para proteger a banca.',
+    'Limite de perda respeitado. Amanhã tem mais, com cabeça fria.',
+  ] },
+  { id: 'lateral', rotulo: 'Mercado lento', textos: [
+    'Mercado lateral agora. Paciência: às vezes a melhor entrada é não entrar.',
+    'Mercado sem direção clara. Vamos aguardar o momento certo.',
+  ] },
+  { id: 'pausa', rotulo: 'Pausa rápida', textos: [
+    'Pausa rápida de 5 minutos. Já voltamos!',
+    'Vamos fazer um intervalo curto. Não saiam daí.',
+  ] },
+]
+
+const SUGESTOES_DE_FAIXA = ['Meta do dia: 5% · Limite: 3%', 'Ao vivo: leitura de mercado', 'Dúvidas? Mande no chat']
+
+/**
+ * O painel de controle da live: tudo que se mexe durante a transmissão, num
+ * lugar só, na coluna ao lado do vídeo (aba "Controles").
+ */
+function PainelDeControle({ s }: { s: EstadoDaSala }) {
   const live = s.live!
+  const [titulo, setTitulo] = useState(live.titulo)
+  const [faixa, setFaixa] = useState(live.faixa ?? '')
+  const [enviado, setEnviado] = useState<string | null>(null)
+  const [copiado, setCopiado] = useState(false)
   const [mics, setMics] = useState<MediaDeviceInfo[]>([])
   const [cams, setCams] = useState<MediaDeviceInfo[]>([])
   const nivel = useNivel(s.transmitindo.microfone ? s.microfoneLocal : null)
-  // os nomes dos aparelhos só aparecem depois que o navegador libera o acesso
+  const fixada = s.mensagens.find((m) => m.fixada)
   useEffect(() => {
     void listarDispositivos('audioinput').then(setMics)
     void listarDispositivos('videoinput').then(setCams)
   }, [s.transmitindo.microfone, s.transmitindo.camera])
+  useEffect(() => { setFaixa(live.faixa ?? '') }, [live.faixa])
+
+  const mandarPronta = async (id: string, textos: string[]) => {
+    try { await mandarMensagem(textos[Math.floor(Math.random() * textos.length)]); setEnviado(id); window.setTimeout(() => setEnviado(null), 1600) } catch { /* o chat mostra o erro */ }
+  }
+  const copiarLink = async () => {
+    try { await navigator.clipboard.writeText(`${location.origin}${import.meta.env.BASE_URL}?tela=aovivo`); setCopiado(true); window.setTimeout(() => setCopiado(false), 1600) } catch { /* sem área de transferência */ }
+  }
+
   return (
-    <div className="av-ajustes">
-      <div className="av-ajuste">
-        <label htmlFor="av-mic">Microfone</label>
-        <select id="av-mic" value={s.dispositivos.microfone} disabled={mics.length === 0}
-          onChange={(e) => void trocarDispositivo('audioinput', e.target.value)}>
+    <div className="av-painel">
+      <section className="av-painel-sec">
+        <h4>Transmissão</h4>
+        <div className="av-painel-numeros">
+          <div><small>Agora</small><b>{s.espectadores}</b></div>
+          <div><small>Pico</small><b>{s.pico}</b></div>
+          <div><small>No ar há</small><b>{live.status === 'ao_vivo' ? <Cronometro desde={live.iniciadaEm} /> : '00:00:00'}</b></div>
+        </div>
+        <form className="av-painel-linha" onSubmit={(e) => { e.preventDefault(); void renomearLive(titulo) }}>
+          <label htmlFor="av-p-titulo" className="av-oculto">Título da live</label>
+          <input id="av-p-titulo" value={titulo} maxLength={120} onChange={(e) => setTitulo(e.target.value)} />
+          <button type="submit" className="av-botao-mini" disabled={!titulo.trim() || titulo.trim() === live.titulo}>Salvar</button>
+        </form>
+        <button className="av-link" onClick={() => void copiarLink()}>{copiado ? 'Link copiado' : 'Copiar o link da live para os alunos'}</button>
+      </section>
+
+      <section className="av-painel-sec">
+        <h4>Chat</h4>
+        <div className="av-painel-linha entre">
+          <span>{live.chatAberto ? 'Alunos podem escrever' : 'Só a equipe escreve'}</span>
+          <button className={`av-chave-chat ${live.chatAberto ? 'on' : ''}`} aria-pressed={live.chatAberto} onClick={() => void abrirChat(!live.chatAberto)}>
+            <i aria-hidden />{live.chatAberto ? 'Aberto' : 'Fechado'}
+          </button>
+        </div>
+        <div className="av-painel-linha entre">
+          <label htmlFor="av-lento">Modo lento</label>
+          <select id="av-lento" value={live.intervaloChat} onChange={(e) => void definirModoLento(Number(e.target.value))}>
+            <option value={0}>Desligado</option><option value={5}>5 segundos</option>
+            <option value={10}>10 segundos</option><option value={30}>30 segundos</option>
+          </select>
+        </div>
+        {fixada && (
+          <div className="av-painel-fixada">
+            <small>Fixada</small><p>{fixada.texto}</p>
+            <button className="av-link" onClick={() => void fixarMensagem(null)}>Desafixar</button>
+          </div>
+        )}
+        <span className="av-painel-rotulo">Mensagens da equipe</span>
+        <div className="av-prontas">
+          {MENSAGENS_DA_EQUIPE.map((m) => (
+            <button key={m.id} className={enviado === m.id ? 'enviado' : ''} disabled={s.live?.status !== 'ao_vivo'}
+              title={s.live?.status !== 'ao_vivo' ? 'Disponível com a live no ar' : m.textos[0]} onClick={() => void mandarPronta(m.id, m.textos)}>
+              {enviado === m.id ? 'Enviada' : m.rotulo}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="av-painel-sec">
+        <h4>Faixa na tela</h4>
+        <form className="av-painel-linha" onSubmit={(e) => { e.preventDefault(); void mostrarFaixa(faixa) }}>
+          <label htmlFor="av-p-faixa" className="av-oculto">Texto da faixa</label>
+          <input id="av-p-faixa" value={faixa} maxLength={120} placeholder="Meta do dia: 5% · Limite: 3%" onChange={(e) => setFaixa(e.target.value)} />
+          <button type="submit" className="av-botao-mini" disabled={!faixa.trim()}>Mostrar</button>
+        </form>
+        <div className="av-sugestoes">
+          {SUGESTOES_DE_FAIXA.map((t) => <button key={t} onClick={() => { setFaixa(t); void mostrarFaixa(t) }}>{t}</button>)}
+        </div>
+        {live.faixa && <button className="av-link" onClick={() => void mostrarFaixa(null)}>Tirar a faixa da tela</button>}
+      </section>
+
+      <section className="av-painel-sec">
+        <h4>Câmera na tela</h4>
+        <div className="av-painel-linha entre">
+          <span id="av-canto-rotulo">Canto</span>
+          <div className="av-cantos" role="radiogroup" aria-labelledby="av-canto-rotulo">
+            {CANTOS.map((c) => (
+              <button key={c.id} role="radio" aria-checked={live.cameraCanto === c.id} aria-label={c.rotulo} title={c.rotulo}
+                className={`c-${c.id} ${live.cameraCanto === c.id ? 'on' : ''}`} onClick={() => void posicionarCamera(c.id)}><i aria-hidden /></button>
+            ))}
+          </div>
+        </div>
+        <div className="av-painel-linha entre">
+          <span>Tamanho</span>
+          <div className="tr-seg" role="radiogroup" aria-label="Tamanho do rosto">
+            {(['p', 'm', 'g'] as const).map((t) => (
+              <button key={t} role="radio" aria-checked={live.cameraTamanho === t} className={live.cameraTamanho === t ? 'on' : ''}
+                onClick={() => void posicionarCamera(live.cameraCanto, t)}>{t === 'p' ? 'Pequeno' : t === 'm' ? 'Médio' : 'Grande'}</button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="av-painel-sec">
+        <h4>Aparelhos</h4>
+        <label htmlFor="av-mic" className="av-painel-rotulo">Microfone</label>
+        <select id="av-mic" value={s.dispositivos.microfone} disabled={mics.length === 0} onChange={(e) => void trocarDispositivo('audioinput', e.target.value)}>
           {mics.length === 0 && <option value="">Ligue o microfone para escolher</option>}
           {mics.map((d, i) => <option key={d.deviceId} value={d.deviceId}>{d.label || `Microfone ${i + 1}`}</option>)}
         </select>
-        <span className="av-medidor" role="meter" aria-label="Volume do microfone" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(nivel * 100)}>
-          <i style={{ width: `${Math.round(nivel * 100)}%` }} />
-        </span>
-      </div>
-      <div className="av-ajuste">
-        <label htmlFor="av-cam">Câmera</label>
-        <select id="av-cam" value={s.dispositivos.camera} disabled={cams.length === 0}
-          onChange={(e) => void trocarDispositivo('videoinput', e.target.value)}>
+        <span className="av-medidor" role="meter" aria-label="Volume do microfone" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(nivel * 100)}><i style={{ width: `${Math.round(nivel * 100)}%` }} /></span>
+        <label htmlFor="av-cam" className="av-painel-rotulo">Câmera</label>
+        <select id="av-cam" value={s.dispositivos.camera} disabled={cams.length === 0} onChange={(e) => void trocarDispositivo('videoinput', e.target.value)}>
           {cams.length === 0 && <option value="">Ligue a câmera para escolher</option>}
           {cams.map((d, i) => <option key={d.deviceId} value={d.deviceId}>{d.label || `Câmera ${i + 1}`}</option>)}
         </select>
+      </section>
+
+      {live.status !== 'ao_vivo' && <button className="av-link av-painel-sair" onClick={() => void sair()}>Sair do estúdio</button>}
+    </div>
+  )
+}
+
+/** A coluna do apresentador: o chat e o painel de controle, em abas. */
+function ColunaDoApresentador({ s }: { s: EstadoDaSala }) {
+  const [aba, setAba] = useState<'chat' | 'controles'>('chat')
+  return (
+    <div className="av-coluna">
+      <div className="av-abas" role="tablist" aria-label="Chat e controles">
+        <button role="tab" aria-selected={aba === 'chat'} className={aba === 'chat' ? 'on' : ''} onClick={() => setAba('chat')}>
+          Chat{aba !== 'chat' && s.naoLidas > 0 && <span className="av-badge-aba">{s.naoLidas > 99 ? '99+' : s.naoLidas}</span>}
+        </button>
+        <button role="tab" aria-selected={aba === 'controles'} className={aba === 'controles' ? 'on' : ''} onClick={() => setAba('controles')}>Controles</button>
       </div>
-      <div className="av-ajuste">
-        <span className="av-ajuste-rotulo" id="av-canto-rotulo">Seu rosto aparece</span>
-        <div className="av-cantos" role="radiogroup" aria-labelledby="av-canto-rotulo">
-          {CANTOS.map((c) => (
-            <button key={c.id} role="radio" aria-checked={live.cameraCanto === c.id} aria-label={c.rotulo} title={c.rotulo}
-              className={`c-${c.id} ${live.cameraCanto === c.id ? 'on' : ''}`} onClick={() => void posicionarCamera(c.id)}><i aria-hidden /></button>
-          ))}
-        </div>
-      </div>
-      <div className="av-ajuste">
-      <label htmlFor="av-lento">Modo lento do chat</label>
-      <select id="av-lento" value={live.intervaloChat} onChange={async (e) => {
-        const n = Number(e.target.value)
-        await mudarLive(sessao, live.id, { intervalo_chat: n }).catch(() => undefined)
-        atualizarLive({ intervaloChat: n })
-      }}>
-        <option value={0}>Desligado</option><option value={5}>Uma mensagem a cada 5 s</option>
-        <option value={10}>Uma mensagem a cada 10 s</option><option value={30}>Uma mensagem a cada 30 s</option>
-      </select>
-      </div>
-      {live.status !== 'ao_vivo' && <button className="av-link" onClick={() => void sair()}>Sair do estúdio</button>}
+      {aba === 'chat' ? <Chat s={s} aberto /> : <PainelDeControle s={s} />}
     </div>
   )
 }
@@ -627,9 +754,9 @@ function SalaConectada({ s, sessao, aoMudar }: { s: EstadoDaSala; sessao: Sessao
       )}
       <div className="av-palco-e-chat">
         <Palco s={s} />
-        <Chat s={s} />
+        {s.moderador ? <ColunaDoApresentador s={s} /> : <Chat s={s} />}
       </div>
-      {s.moderador ? <AjustesDaLive s={s} sessao={sessao} /> : (
+      {s.moderador ? null : (
         <div className="av-rodape-aluno">
           {podeAbrirPorCima() && (s.tela || s.camera) && (
             <button className="av-botao-secundario av-por-cima" onClick={() => void abrirPorCima(document.querySelector('.av-palco-e-chat'))}>
@@ -684,7 +811,7 @@ export function LabAoVivo({ modo, moderador }: { modo: ModoDoPlayer | 'pagina' |
     })
     simularSala({
       fase: 'conectada', erro: null, moderador, meuNome: 'Tiago', espectadores: 214, somBloqueado: false,
-      live: { id: 'lab', titulo: 'Abertura da semana: leitura de mercado', descricao: null, status: modo === 'ensaio' ? 'agendada' : 'ao_vivo', inicioPrevisto: null, iniciadaEm: new Date(agora - 18 * 60000).toISOString(), encerradaEm: null, intervaloChat: 5, chatAberto: true, cameraCanto: 'inf-dir' },
+      live: { id: 'lab', titulo: 'Abertura da semana: leitura de mercado', descricao: null, status: modo === 'ensaio' ? 'agendada' : 'ao_vivo', inicioPrevisto: null, iniciadaEm: new Date(agora - 18 * 60000).toISOString(), encerradaEm: null, intervaloChat: 5, chatAberto: true, cameraCanto: 'inf-dir', cameraTamanho: 'm', faixa: null },
       tela, camera, audios: [], transmitindo: { tela: moderador, camera: moderador, microfone: moderador },
       modo: modo === 'pagina' || modo === 'ensaio' ? 'palco' : modo,
       mensagens: [
