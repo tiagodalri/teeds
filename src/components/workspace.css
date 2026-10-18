@@ -89,3 +89,9 @@
   .workspace-app .topbar, .workspace-mobile-toggle { -webkit-tap-highlight-color: transparent; }
 }
 @media (prefers-reduced-motion: reduce) { .workspace-app { transition: none; } }
+
+/* "Ao vivo" no menu: ponto vermelho enquanto há transmissão no ar. */
+.workspace-aovivo { width: 8px; height: 8px; margin-left: auto; border-radius: 50%; background: var(--down); animation: workspace-aovivo 1.6s ease-in-out infinite; }
+.workspace-sidebar.compact .workspace-aovivo { position: absolute; margin: -16px 0 0 18px; }
+@keyframes workspace-aovivo { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .workspace-aovivo { animation: none; } }

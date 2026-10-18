@@ -91,6 +91,11 @@ export interface Marca {
    */
   appNativo?: boolean
   /**
+   * Transmissão ao vivo dentro da plataforma (menu "Ao vivo", estúdio do
+   * admin, player flutuante e chat). Ligado só onde a marca pediu.
+   */
+  aoVivo?: boolean
+  /**
    * A cor da marca, uma por tema.
    *
    * Duas porque uma só não serve: um azul-marinho profundo desaparece sobre
@@ -278,6 +283,7 @@ export const MARCAS: Record<string, Marca> = {
     // (texto branco passa por cima, e aparece sobre o Azul GF); quem os
     // distingue é o emblema. Sem setas literais (pág. 18 e 20).
     appNativo: true,
+    aoVivo: true,
     desenhoDosRobos: {
       goreme: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
       superior5: { cor: '#5B7C9D', corSuave: '#E6ECF2' },

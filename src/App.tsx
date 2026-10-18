@@ -45,6 +45,13 @@ import { buyFromProposal, requestProposal, sellContract } from './core/deriv/tra
 import { MARCA } from './marca'
 import { IconeFechar } from './components/IconeFechar'
 import { usePeriodos } from './core/chart/periodos'
+import { liveNoAr } from './core/live/api'
+import { usePlayerAtivo } from './core/live/presenca'
+
+// Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
+// quando a pessoa abre a página ou entra numa live.
+const AoVivoPage = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.AoVivoPage })))
+const PlayerAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.PlayerGlobal })))
 
 const INDICADORES = [
   { id: 'sma', label: 'Média 20', titulo: 'Média móvel simples de 20 períodos' },
@@ -257,12 +264,25 @@ export default function App() {
   // tela pedida (?tela=robos) e o voltar do Android/gesto do iPhone volta à
   // tela anterior, em vez de fechar o app. Cada troca de tela vira um passo
   // no histórico; o endereço não muda.
+  // "Tem live no ar?" a cada 30 s: acende o ponto vermelho do menu.
+  const [aoVivoAgora, setAoVivoAgora] = useState(false)
+  const playerAoVivo = usePlayerAtivo()
+  useEffect(() => {
+    if (!MARCA.aoVivo || !teeds.sessao) { setAoVivoAgora(false); return }
+    const sessao = teeds.sessao
+    let vivo = true
+    const ver = () => { liveNoAr(sessao).then((l) => { if (vivo) setAoVivoAgora(Boolean(l)) }).catch(() => undefined) }
+    ver()
+    const t = window.setInterval(ver, 30000)
+    return () => { vivo = false; window.clearInterval(t) }
+  }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const telaVeioDoVoltar = useRef(false)
   useEffect(() => {
     if (!MARCA.appNativo) return
     const u = new URL(location.href)
     const pedida = u.searchParams.get('tela')
-    const PUBLICAS: WorkspacePage[] = ['operar', 'robos', 'aulas', 'gerenciamento', 'marketplace']
+    const PUBLICAS: WorkspacePage[] = ['operar', 'robos', 'aulas', 'gerenciamento', 'marketplace', ...(MARCA.aoVivo ? ['aovivo' as const] : [])]
     if (pedida && (PUBLICAS as string[]).includes(pedida)) setTela(pedida as WorkspacePage)
     if (u.searchParams.has('tela') || u.searchParams.get('origem') === 'app') {
       u.searchParams.delete('tela'); u.searchParams.delete('origem')
@@ -589,13 +609,13 @@ export default function App() {
 
   return (
     <div className="app workspace-app">
-      <WorkspaceNav page={tela} admin={admin === true} onNavigate={next => {
+      <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} onNavigate={next => {
         setVerPerfil(false)
         if (next === 'assistente') abrirAssistente()
         else setTela(next)
       }} />
       <header className="topbar">
-        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : 'Seu espaço de trabalho'}</span></div>
+        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? 'Transmissões com a equipe, em tempo real' : 'Seu espaço de trabalho'}</span></div>
 
         <div className="topbar-right">
           {!derivPronta && (
@@ -725,7 +745,10 @@ export default function App() {
         />
         </CatalogoProvider>
       </div>
-      {tela === 'robos' || tela === 'assistente' ? null : tela === 'aulas' ? (
+      {MARCA.aoVivo && playerAoVivo && <Suspense fallback={null}><PlayerAoVivo naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
+      {tela === 'robos' || tela === 'assistente' ? null : tela === 'aovivo' && MARCA.aoVivo ? (
+        <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo a transmissão…</div></div>}><AoVivoPage sessao={teeds.sessao} admin={admin === true} /></Suspense>
+      ) : tela === 'aulas' ? (
         <AulasPanel nome={teeds.usuario?.nome} sessao={teeds.sessao} />
       ) : tela === 'marketplace' ? (
         <MarketplacePanel sessao={teeds.sessao} />

@@ -41,6 +41,8 @@ const VELAS = (() => {
     return { epoch: 1760000000 + i * 60, open, close, high: Math.max(open, close) + Math.abs(r()) * 3, low: Math.min(open, close) - Math.abs(r()) * 3 }
   })
 })()
+import { lazy, Suspense } from 'react'
+const LabAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.LabAoVivo })))
 import { DerivDesconectada } from './components/DerivDesconectada'
 
 document.documentElement.dataset.marca = MARCA.id
@@ -170,6 +172,8 @@ function Laboratorio() {
         {/* ?tela=aulas: a sala de aula com o catálogo e as capas da marca. */}
         {qual === 'aulas' && <AulasPanel nome="Tiago" />}
         {/* ?tela=grafico: o gráfico com velas de mentira, médias ligadas (clique na linha). */}
+        {/* ?tela=aovivo&modo=pagina|lado|flutuante|pilula&mod=1: a live com vídeo e chat de exemplo. */}
+        {qual === 'aovivo' && <Suspense fallback={null}><LabAoVivo modo={(new URLSearchParams(location.search).get('modo') ?? 'pagina') as never} moderador={new URLSearchParams(location.search).has('mod')} /></Suspense>}
         {qual === 'grafico' && <div style={{ height: 520, display: 'flex' }}><PriceChart candles={VELAS} mode="candles" pipSize={3} symbolName="Volatility 75 (1s)" symbol="lab" indicators={['sma', 'ema']} /></div>}
       </main>
     </div>
