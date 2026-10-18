@@ -730,6 +730,13 @@ function PainelDeControle({ s, sessao }: { s: EstadoDaSala; sessao: SessaoTeeds 
       </section>
 
       <section className="av-painel-sec">
+        <h4>Na sala</h4>
+        {s.nomes.length === 0
+          ? <p className="av-painel-calor">Ninguém assistindo ainda.</p>
+          : <div className="av-nomes">{s.nomes.slice(0, 40).map((n, i) => <span key={i}>{n}</span>)}{s.nomes.length > 40 && <span className="mais">e mais {s.nomes.length - 40}</span>}</div>}
+      </section>
+
+      <section className="av-painel-sec">
         <h4>Enquete</h4>
         <PainelDeEnquete s={s} />
       </section>
@@ -1054,8 +1061,13 @@ export function SalaConectada({ s, sessao, aoMudar, convidado = false }: { s: Es
   const [chatNoTeatro, setChatNoTeatro] = useState(true)
   const publico = useLinkPublico()
   const live = s.live!
-  const podeConvidar = !s.moderador && publico === true && typeof navigator !== 'undefined' && typeof navigator.share === 'function'
-  const convidar = () => void navigator.share({ text: `Estamos ao vivo na ${MARCA_PROSA}: ${live.titulo}. Entre por aqui: ${linkDaLive(live.id)}` }).catch(() => undefined)
+  const [convidado2, setConvidado2] = useState(false)
+  const podeConvidar = !s.moderador && publico === true
+  const convidar = async () => {
+    const texto = `Estamos ao vivo na ${MARCA_PROSA}: ${live.titulo}. Entre por aqui: ${linkDaLive(live.id)}`
+    if (typeof navigator.share === 'function') { await navigator.share({ text: texto }).catch(() => undefined); return }
+    try { await navigator.clipboard.writeText(linkDaLive(live.id)); setConvidado2(true); window.setTimeout(() => setConvidado2(false), 1800) } catch { /* sem área de transferência */ }
+  }
   const souAluno = !s.moderador
   return (
     <div className={`ger av-pagina av-com-palco ${souAluno ? 'av-aluno' : ''}`}>
@@ -1092,7 +1104,7 @@ export function SalaConectada({ s, sessao, aoMudar, convidado = false }: { s: Es
               Assistir por cima de outros apps
             </button>
           )}
-          {podeConvidar && <button className="av-botao-secundario" onClick={convidar}>Convidar alguém</button>}
+          {podeConvidar && <button className="av-botao-secundario" onClick={() => void convidar()}>{convidado2 ? 'Link copiado' : 'Convidar alguém'}</button>}
           <button className="av-link" onClick={() => void sair()}>Sair da transmissão</button>
         </div>
       )}
@@ -1143,6 +1155,7 @@ export function LabAoVivo({ modo, moderador }: { modo: ModoDoPlayer | 'pagina' |
       fase: 'conectada', erro: null, moderador, meuNome: 'Tiago', espectadores: 214, somBloqueado: false,
       live: { id: 'lab', titulo: 'Abertura da semana: leitura de mercado', descricao: null, status: modo === 'ensaio' ? 'agendada' : 'ao_vivo', inicioPrevisto: null, iniciadaEm: new Date(agora - 18 * 60000).toISOString(), encerradaEm: null, intervaloChat: 5, chatAberto: true, cameraCanto: 'inf-dir', cameraTamanho: 'm', faixa: null },
       tela, camera, audios: [], transmitindo: { tela: moderador, camera: moderador, microfone: moderador },
+      nomes: ['Ana', 'Rui', 'Carla', 'Marcos', 'Bia', 'Edu', 'Convidado', 'Lívia', 'Pedro', 'Tati'],
       enquete: new URLSearchParams(location.search).has('enquete')
         ? { id: 'lab', pergunta: 'Qual robô vocês querem ver operando agora?', opcoes: ['Bombardier', 'Gulfstream', 'Phenom', 'Cirrus'], aberta: true, votos: [48, 31, 12, 9], meuVoto: null }
         : null,

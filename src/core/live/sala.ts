@@ -84,6 +84,8 @@ export interface EstadoDaSala {
   totalReacoes: number
   /** A enquete na tela agora (null = nenhuma). */
   enquete: Enquete | null
+  /** Quem está na sala (primeiros nomes, sem o apresentador), para o painel. */
+  nomes: string[]
 }
 
 const CHAVE_PREF = `${MARCA.id}.aovivo.preferencias`
@@ -98,7 +100,7 @@ let estado: EstadoDaSala = {
   transmitindo: { tela: false, camera: false, microfone: false },
   microfoneLocal: null, dispositivos: { microfone: '', camera: '' },
   fundo: typeof window === 'undefined' ? 'nenhum' : fundoGuardado(),
-  convidado: false, qualidade: 'boa', reacoes: [], totalReacoes: 0, enquete: null,
+  convidado: false, qualidade: 'boa', reacoes: [], totalReacoes: 0, enquete: null, nomes: [],
 }
 /** Como a pessoa prefere assistir quando sai da página "Ao vivo". */
 let modoFora: ModoDoPlayer = pref.modoFora ?? 'flutuante'
@@ -173,6 +175,13 @@ function faixas() {
   })
 }
 
+/** Quem está assistindo agora (sem a equipe), para o painel do apresentador. */
+function pessoas() {
+  if (!sala) return
+  const nomes = [...sala.remoteParticipants.values()].filter((p) => !ehModerador(p)).map((p) => p.name || 'Aluno').slice(0, 120)
+  mudar({ espectadores: Math.max(0, sala.numParticipants - 1), nomes })
+}
+
 function receber(mensagem: MensagemDoChat) {
   if (estado.mensagens.some((m) => m.id === mensagem.id)) return
   const mensagens = [...estado.mensagens, mensagem].slice(-300)
@@ -230,8 +239,8 @@ async function conectar(live: Live, pedir: () => Promise<Ingresso>, historicoDe:
       .on(RoomEvent.TrackUnmuted, () => faixas())
       .on(RoomEvent.LocalTrackPublished, (_p: LocalTrackPublication, _lp: LocalParticipant) => faixas())
       .on(RoomEvent.LocalTrackUnpublished, () => faixas())
-      .on(RoomEvent.ParticipantConnected, () => mudar({ espectadores: Math.max(0, r.numParticipants - 1) }))
-      .on(RoomEvent.ParticipantDisconnected, () => { mudar({ espectadores: Math.max(0, r.numParticipants - 1) }); faixas() })
+      .on(RoomEvent.ParticipantConnected, () => pessoas())
+      .on(RoomEvent.ParticipantDisconnected, () => { pessoas(); faixas() })
       .on(RoomEvent.Reconnecting, () => mudar({ fase: 'reconectando' }))
       .on(RoomEvent.Reconnected, () => mudar({ fase: 'conectada' }))
       .on(RoomEvent.AudioPlaybackStatusChanged, () => mudar({ somBloqueado: !r.canPlaybackAudio }))
@@ -284,9 +293,10 @@ async function conectar(live: Live, pedir: () => Promise<Ingresso>, historicoDe:
       somBloqueado: !r.canPlaybackAudio,
     })
     faixas()
+    pessoas()
     void manterTelaAcesa(true)
     window.clearInterval(contador)
-    contador = window.setInterval(() => mudar({ espectadores: Math.max(0, r.numParticipants - 1) }), 5000)
+    contador = window.setInterval(pessoas, 5000)
   } catch (e) {
     sala = null
     mudar({ fase: 'erro', erro: e instanceof Error ? e.message : 'Não consegui entrar na transmissão.' })
@@ -318,7 +328,7 @@ export async function sair(): Promise<void> {
   sala = null
   if (r) await r.disconnect().catch(() => undefined)
   window.clearInterval(timerEnquete)
-  mudar({ fase: 'fora', tela: null, camera: null, audios: [], espectadores: 0, reacoes: [], enquete: null, transmitindo: { tela: false, camera: false, microfone: false } })
+  mudar({ fase: 'fora', tela: null, camera: null, audios: [], espectadores: 0, nomes: [], reacoes: [], enquete: null, transmitindo: { tela: false, camera: false, microfone: false } })
   void manterTelaAcesa(false)
   marcarPlayerAtivo(false)
 }

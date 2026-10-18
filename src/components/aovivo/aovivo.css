@@ -626,3 +626,8 @@ body.av-teatro-aberto { overflow: hidden; }
 .av-enquete.recolhida .av-enquete-pergunta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 /* com enquete, o chat do celular não pode ficar espremido: a coluna cresce e a página rola (o vídeo fica preso no topo) */
 @media (max-width: 1000px) { .av-aluno .av-lado-aluno .av-chat { min-height: 260px; } }
+
+/* quem está na sala (painel do apresentador) */
+.av-nomes { display: flex; flex-wrap: wrap; gap: 4px; }
+.av-nomes span { padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-alt); font-size: 11.5px; }
+.av-nomes span.mais { border-style: dashed; color: var(--muted); }
