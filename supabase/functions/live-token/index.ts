@@ -6,16 +6,32 @@
 // live; admin da marca entra como apresentador. A chave do LiveKit nunca
 // sai daqui.
 //
-// Segredos da função (Supabase > Edge Functions > Secrets):
-//   LIVEKIT_URL         wss://<projeto>.livekit.cloud
-//   LIVEKIT_API_KEY     a chave da API
+// O LiveKit roda no nosso servidor (código aberto, sem conta em serviço de
+// fora). Endereço e chaves ficam na tabela `config_servicos`, que só a chave
+// de serviço lê; um segredo da função com o mesmo nome, se existir, vence.
+//   LIVEKIT_URL         wss://motor.globalflytrade.com
+//   LIVEKIT_API_KEY     a chave da API (a mesma do /etc/livekit.yaml)
 //   LIVEKIT_API_SECRET  o segredo da API
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const ANON = Deno.env.get('SUPABASE_ANON_KEY')!
-const LK_URL = Deno.env.get('LIVEKIT_URL') ?? ''
-const LK_KEY = Deno.env.get('LIVEKIT_API_KEY') ?? ''
-const LK_SECRET = Deno.env.get('LIVEKIT_API_SECRET') ?? ''
+const SERVICO = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+let LK_URL = Deno.env.get('LIVEKIT_URL') ?? ''
+let LK_KEY = Deno.env.get('LIVEKIT_API_KEY') ?? ''
+let LK_SECRET = Deno.env.get('LIVEKIT_API_SECRET') ?? ''
+
+/** Lê endereço e chaves da tabela, uma vez por instância da função. */
+async function carregarConfig(): Promise<void> {
+  if (LK_URL && LK_KEY && LK_SECRET) return
+  if (!SERVICO) return
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/config_servicos?select=chave,valor&chave=like.LIVEKIT_*`, {
+    headers: { apikey: SERVICO, Authorization: `Bearer ${SERVICO}` },
+  })
+  if (!r.ok) return
+  const linhas = await r.json() as Array<{ chave: string; valor: string }>
+  const v = (k: string) => linhas.find((l) => l.chave === k)?.valor ?? ''
+  LK_URL ||= v('LIVEKIT_URL'); LK_KEY ||= v('LIVEKIT_API_KEY'); LK_SECRET ||= v('LIVEKIT_API_SECRET')
+}
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -53,6 +69,7 @@ async function banco<T>(caminho: string, token: string, init: RequestInit = {}):
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return resposta(405, { erro: 'Use POST.' })
+  await carregarConfig().catch(() => undefined)
   if (!LK_URL || !LK_KEY || !LK_SECRET) return resposta(503, { erro: 'A transmissão ainda não foi configurada.' })
 
   const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
