@@ -45,13 +45,15 @@ import { buyFromProposal, requestProposal, sellContract } from './core/deriv/tra
 import { MARCA } from './marca'
 import { IconeFechar } from './components/IconeFechar'
 import { usePeriodos } from './core/chart/periodos'
-import { liveNoAr, type Live } from './core/live/api'
+import { conviteRecebido, liveNoAr, type Live } from './core/live/api'
 import { usePlayerAtivo } from './core/live/presenca'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
 // quando a pessoa abre a página ou entra numa live.
 const AoVivoPage = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.AoVivoPage })))
 const PlayerAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.PlayerGlobal })))
+// Quem chega pelo link da live sem conta (fase de testes, com o link público ligado).
+const Convidado = lazy(() => import('./components/aovivo/Convidado').then((m) => ({ default: m.Convidado })))
 
 const INDICADORES = [
   { id: 'sma', label: 'Média 20', titulo: 'Média móvel simples de 20 períodos' },
@@ -269,6 +271,8 @@ export default function App() {
   const [liveAgora, setLiveAgora] = useState<Live | null>(null)
   const aoVivoAgora = Boolean(liveAgora)
   const [avisoLive, setAvisoLive] = useState<Live | null>(null)
+  // Convidado que prefere entrar na conta: a tela de login no lugar da porta do convite.
+  const [querLogin, setQuerLogin] = useState(false)
   useEffect(() => { if (!avisoLive) return; const t = window.setTimeout(() => setAvisoLive(null), 20000); return () => window.clearTimeout(t) }, [avisoLive])
   const playerAoVivo = usePlayerAtivo()
   useEffect(() => {
@@ -600,6 +604,10 @@ export default function App() {
   }
 
   if (teeds.status === 'deslogado') {
+    const convite = MARCA.aoVivo && !querLogin ? conviteRecebido() : null
+    if (convite) {
+      return <Suspense fallback={null}><Convidado codigo={convite} aoEntrarNaConta={() => setQuerLogin(true)} /></Suspense>
+    }
     return (
       <LoginScreen
         ocupado={teeds.ocupado}

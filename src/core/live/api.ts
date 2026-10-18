@@ -50,6 +50,12 @@ export interface Ingresso {
   nome: string
   moderador: boolean
   silenciado: boolean
+  /** Entrou pelo link público, sem conta (fase de testes): nada dele fica gravado. */
+  convidado?: boolean
+  /** Para o convidado, a live vem junto (ele não consegue ler a tabela). */
+  live?: Live
+  /** Para o convidado, as últimas mensagens do chat. */
+  historico?: MensagemDoChat[]
 }
 
 async function rest<T>(caminho: string, sessao: SessaoTeeds, init: RequestInit = {}): Promise<T> {
@@ -131,10 +137,10 @@ export async function moderarMensagem(sessao: SessaoTeeds, id: string, campos: {
   await rest(`/live_mensagens?id=eq.${id}`, sessao, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(campos) })
 }
 
-async function funcao<T>(sessao: SessaoTeeds, corpo: Record<string, unknown>): Promise<T> {
+async function funcao<T>(token: string, corpo: Record<string, unknown>): Promise<T> {
   const r = await fetch(`${SUPABASE.url}/functions/v1/live-token`, {
     method: 'POST',
-    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
+    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(corpo),
   })
   const dados = await r.json().catch(() => ({}))
@@ -143,16 +149,52 @@ async function funcao<T>(sessao: SessaoTeeds, corpo: Record<string, unknown>): P
 }
 
 /** O ingresso da sala de vídeo (emitido pela função `live-token`). */
-export const pedirIngresso = (sessao: SessaoTeeds, liveId: string) => funcao<Ingresso>(sessao, { liveId })
+export const pedirIngresso = (sessao: SessaoTeeds, liveId: string) => funcao<Ingresso>(sessao.token, { liveId })
+
+/* ------------------------------------------------- link público (fase de testes) */
+
+/**
+ * Quem chegou pelo link e não tem conta: o que é a live e se o link está
+ * público. A função resolve pelo código do convite (8 primeiros caracteres).
+ */
+export async function infoDoConvite(codigo: string): Promise<{ live: Live; publico: boolean }> {
+  const r = await funcao<{ live: any; publico: boolean }>(SUPABASE.anonKey, { convite: codigo, acao: 'info' })
+  return { live: paraLive(r.live), publico: r.publico }
+}
+
+/** O ingresso de convidado (só com o link público ligado e a live no ar). */
+export async function pedirIngressoConvidado(codigo: string, nome: string): Promise<Ingresso> {
+  const r = await funcao<any>(SUPABASE.anonKey, { convite: codigo, nome })
+  return { ...r, live: r.live ? paraLive(r.live) : undefined, historico: ((r.historico ?? []) as any[]).map(paraMensagem) }
+}
+
+/** O link desta marca está público? Lê sem conta (a tabela é aberta para leitura). */
+export async function linkPublicoAtivo(): Promise<boolean> {
+  const r = await fetch(`${SUPABASE.url}/rest/v1/aovivo_config?select=link_publico&marca=eq.${MARCA.id}`, {
+    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${SUPABASE.anonKey}` },
+  })
+  const [c] = (await r.json().catch(() => [])) as Array<{ link_publico: boolean }>
+  return !!c?.link_publico
+}
+
+/** O admin liga (testes) ou desliga (produção) o link público da marca. */
+export async function definirLinkPublico(sessao: SessaoTeeds, publico: boolean): Promise<void> {
+  await rest('/aovivo_config', sessao, {
+    method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ marca: MARCA.id, link_publico: publico, atualizado_em: new Date().toISOString() }),
+  })
+}
 
 /** Silencia (ou libera) alguém no chat: grava no banco e tira a permissão na sala. */
 export async function silenciar(sessao: SessaoTeeds, liveId: string, userId: string, calar: boolean): Promise<void> {
+  // convidado não tem conta: só a permissão na sala (vale enquanto ele estiver nela)
+  if (userId.startsWith('convidado-')) { await funcao(sessao.token, { liveId, acao: calar ? 'silenciar' : 'liberar', identidade: userId }); return }
   if (calar) {
     await rest('/live_silenciados', sessao, { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify({ live_id: liveId, user_id: userId }) })
   } else {
     await rest(`/live_silenciados?live_id=eq.${liveId}&user_id=eq.${userId}`, sessao, { method: 'DELETE' })
   }
-  await funcao(sessao, { liveId, acao: calar ? 'silenciar' : 'liberar', identidade: userId }).catch(() => undefined)
+  await funcao(sessao.token, { liveId, acao: calar ? 'silenciar' : 'liberar', identidade: userId }).catch(() => undefined)
 }
 
 /** A sala de treino (simulada) está liberada para esta conta? Admin ou plano "treino". */
@@ -167,5 +209,7 @@ export const linkDaLive = (id: string) => `${location.origin}${import.meta.env.B
 
 /** O código do convite com que a pessoa chegou (se veio por link), para destacar a live certa. */
 export function conviteRecebido(): string | null {
+  const naUrl = new URLSearchParams(location.search).get('aovivo')
+  if (naUrl && /^[0-9a-f]{8}$/i.test(naUrl)) return naUrl.toLowerCase()
   try { return sessionStorage.getItem(`${MARCA.id}.aovivo.convite`) } catch { return null }
 }

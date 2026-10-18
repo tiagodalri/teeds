@@ -258,10 +258,13 @@ body.aovivo-lado .workspace-app { padding-right: 380px; }
 .av-pilula .av-ponto { color: var(--down); }
 .av-pilula button { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 50%; background: rgba(255,255,255,.1); color: inherit; cursor: pointer; }
 
-@media (max-width: 700px) {
-  .av-flutuante { width: calc(100vw - 24px) !important; left: 12px !important; right: 12px !important; }
-  .av-flutuante-chat { height: 260px; }
-}
+/* a barra da miniatura (celular): chat, tamanho, tela grande, só áudio, sair; fora da imagem, para ela ficar limpa */
+.av-mini-barra { display: flex; justify-content: flex-end; gap: 4px; width: max-content; max-width: calc(100vw - 20px); justify-self: end; }
+.av-flutuante.mini.lado-esq .av-mini-barra { justify-self: start; flex-direction: row-reverse; }
+.av-flutuante.mini.lado-esq .av-mini-barra .av-chat-botao { margin-right: 0; margin-left: auto; }
+.av-mini-barra button { display: grid; place-items: center; min-width: 34px; height: 34px; padding: 0 8px; border: 1px solid var(--border); border-radius: 17px; background: var(--surface); color: var(--text); font: 700 12px/1 system-ui, sans-serif; cursor: pointer; box-shadow: 0 10px 24px -14px rgba(0,0,0,.6); }
+.av-mini-barra .av-chat-botao { min-height: 34px; margin-right: auto; }
+.av-flutuante.mini.embaixo .av-mini-barra { order: -1; }
 @media (prefers-reduced-motion: reduce) { .workspace-aovivo, .av-selo i, .av-ponto, .av-girando { animation: none; } .av-flutuante { transition: none; } }
 
 /* ---------------------------------------------------------- sala de treino (simulação) */
@@ -425,3 +428,165 @@ body.aovivo-lado .workspace-app { padding-right: 380px; }
 .av-link-live.compacto .av-link-live-texto code { font-size: 12px; }
 .av-agendada-acoes .av-link-live.compacto { flex-basis: 100%; }
 .av-destaque.convite, .av-agendada.convite { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+
+/* ---------------------------------------------------------- reações (sobem pela imagem) */
+.av-reacoes { position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+.av-reacao {
+  position: absolute; bottom: 8%; font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 6px rgba(0,0,0,.45));
+  animation: av-sobe 2.5s cubic-bezier(.2,.6,.3,1) forwards;
+}
+.av-reacao.minha { font-size: 32px; }
+.av-palco.compacto .av-reacao { font-size: 18px; }
+@keyframes av-sobe {
+  0% { transform: translate(0, 0) scale(.6); opacity: 0; }
+  12% { transform: translate(0, -8%) scale(1.1); opacity: 1; }
+  50% { transform: translate(12px, -45%) scale(1); opacity: .95; }
+  100% { transform: translate(-10px, -92%) scale(.9); opacity: 0; }
+}
+.av-reagir { display: flex; justify-content: center; gap: 8px; padding: 6px 0 0; }
+.av-reagir button {
+  width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); font-size: 20px; line-height: 1; cursor: pointer;
+  transition: transform .12s ease, border-color .12s;
+}
+.av-reagir button:hover:not(:disabled), .av-reagir button:focus-visible { transform: translateY(-2px) scale(1.06); border-color: var(--primary); }
+.av-reagir button:active:not(:disabled) { transform: scale(.92); }
+.av-reagir button:disabled { opacity: .45; cursor: default; }
+.av-reagir.compacta { padding: 0; gap: 6px; }
+.av-reagir.compacta button { width: 40px; height: 40px; font-size: 18px; background: rgba(4, 8, 15, .62); border-color: rgba(255,255,255,.18); backdrop-filter: blur(6px); }
+.av-painel-calor { margin: 0; color: var(--muted); font-size: 12px; }
+.av-painel-calor b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* a conexão de quem assiste: só aparece quando está ruim */
+.av-qualidade { position: absolute; z-index: 2; top: 12px; right: 12px; padding: 4px 9px; border-radius: 6px; background: rgba(214, 120, 24, .92); color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.av-palco.compacto .av-qualidade { top: auto; bottom: 8px; left: 8px; right: auto; }
+
+/* a coluna de quem assiste: chat em cima, reações embaixo */
+.av-lado-aluno { display: flex; flex-direction: column; min-height: 0; gap: 0; }
+.av-lado-aluno .av-chat { flex: 1; min-height: 0; }
+
+/* os botões sobre a imagem (tela cheia, chat na tela cheia) */
+.av-botoes-palco { position: absolute; z-index: 3; right: 10px; bottom: 10px; display: flex; gap: 6px; opacity: 0; transition: opacity .15s; }
+.av-botoes-palco.pos-sup-dir { bottom: auto; top: 10px; }
+.av-botoes-palco.pos-sup-dir ~ .av-qualidade, .av-palco:has(.av-botoes-palco.pos-sup-dir) .av-qualidade { right: auto; left: 12px; top: 42px; }
+.av-palco:hover .av-botoes-palco, .av-botoes-palco:focus-within, .av-teatro .av-botoes-palco { opacity: 1; }
+@media (hover: none) { .av-botoes-palco { opacity: 1; } }
+.av-botoes-palco button { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 10px; background: rgba(4, 8, 15, .66); color: #e8eef5; cursor: pointer; backdrop-filter: blur(6px); }
+.av-botoes-palco button:hover, .av-botoes-palco button[aria-pressed='true'] { background: rgba(255,255,255,.22); }
+
+/* ---------------------------------------------------------- tela cheia "de teatro" */
+/* (as regras levam `.av-pagina` na frente para vencerem as da página no celular) */
+body.av-teatro-aberto { overflow: hidden; }
+.av-pagina .av-palco-e-chat.av-teatro {
+  position: fixed; inset: 0; z-index: 300; height: auto; min-height: 0; gap: 0; background: #000;
+  grid-template-columns: minmax(0, 1fr) 320px; grid-template-rows: minmax(0, 1fr);
+  padding: var(--sat, 0px) var(--sar, 0px) var(--sab, 0px) var(--sal, 0px); box-sizing: border-box;
+}
+.av-pagina .av-palco-e-chat.av-teatro > .av-palco { position: relative; height: 100%; aspect-ratio: auto; border-radius: 0; box-shadow: none; }
+.av-pagina .av-palco-e-chat.av-teatro > .av-lado-aluno { height: auto; min-height: 0; padding: 8px; gap: 8px; background: rgba(8, 14, 24, .88); backdrop-filter: blur(10px); }
+.av-teatro .av-chat { border-radius: 12px; border-color: rgba(255,255,255,.1); background: rgba(10, 18, 30, .6); color: #e8eef5; }
+.av-teatro .av-mensagens { color: #e8eef5; }
+.av-teatro .av-msg time { color: rgba(232, 238, 245, .55); }
+.av-teatro .av-escrever input { background: rgba(255,255,255,.08); color: #fff; border-color: rgba(255,255,255,.14); }
+.av-teatro .av-reagir.compacta { justify-content: flex-start; padding: 0 2px; }
+.av-pagina .av-palco-e-chat.av-teatro.sem-chat { grid-template-columns: 1fr; }
+.av-pagina .av-palco-e-chat.av-teatro.sem-chat > .av-lado-aluno { display: none; }
+/* em pé (celular): imagem em cima, chat preenche o resto */
+@media (orientation: portrait) {
+  .av-pagina .av-palco-e-chat.av-teatro { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  .av-pagina .av-palco-e-chat.av-teatro > .av-palco { height: auto; aspect-ratio: 16 / 9; }
+  .av-teatro .av-reagir.compacta { justify-content: center; }
+}
+
+/* ---------------------------------------------------------- celular: a página da live */
+@media (max-width: 1000px) {
+  /* a imagem fica presa logo abaixo do cabeçalho enquanto a pessoa lê o chat; o chat ocupa o resto da tela */
+  .av-aluno .av-palco-e-chat > .av-palco { position: sticky; top: calc(var(--topo-h, 56px) + 8px); z-index: 5; box-shadow: 0 18px 40px -22px rgba(0,0,0,.7); }
+  .av-aluno .av-palco-e-chat > .av-lado-aluno { height: calc(100dvh - var(--topo-h, 56px) - 56.25vw - 150px); min-height: 300px; }
+  .av-palco-e-chat > .av-chat { height: 440px; }
+  .av-cabeca h2 { font-size: 17px; }
+  .av-modos span { flex-basis: 100%; }
+}
+@media (max-width: 700px) {
+  .av-pagina { padding: 12px 12px 24px; gap: 12px; }
+  .av-cabeca .av-modos { display: none; } /* no celular, o jeito de continuar é a miniatura: menos decisão, menos ruído */
+  .av-palco-e-chat > .av-palco { border-radius: 10px; }
+  .av-rodape-aluno { gap: 10px; }
+  .av-rodape-aluno .av-botao-secundario { flex: 1 1 100%; min-height: 46px; font-size: 14px; }
+}
+/* toques: alvos maiores e controles sempre visíveis */
+@media (hover: none) {
+  .av-controles { gap: 4px; padding: 4px; }
+  .av-controles button { min-width: 36px; height: 36px; }
+  .av-chat-botao { min-height: 38px; padding: 0 14px; font-size: 13px; }
+  .av-msg-mais { opacity: 1; }
+  .av-escrever input { min-height: 44px; font-size: 15px; } /* 16px evita o zoom do iPhone ao focar */
+  .av-escrever button { min-height: 44px; }
+}
+.av-escrever input { font-size: max(13px, 1em); }
+@media (hover: none) and (max-width: 700px) { .av-escrever input { font-size: 16px; } }
+
+/* ---------------------------------------------------------- celular: miniatura flutuante e folha do chat */
+.av-flutuante.mini { gap: 4px; z-index: 150; grid-template-columns: minmax(0, 100%); }
+.av-flutuante.mini .av-flutuante-video { border-radius: 10px; box-shadow: 0 16px 36px -14px rgba(0,0,0,.8); }
+.av-flutuante.mini .av-chat-botao { min-height: 32px; padding: 0 12px; font-size: 12px; border-radius: 16px; }
+.av-flutuante.mini .av-controles { top: 4px; right: 4px; gap: 2px; padding: 2px; }
+.av-flutuante.mini .av-controles button { min-width: 30px; height: 30px; }
+.av-flutuante.mini .av-palco.compacto .av-selo { padding: 2px 6px; font-size: 9px; }
+.av-folha-fundo { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.45); animation: av-aparece .18s ease; }
+.av-folha {
+  position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 8px; height: min(68dvh, 620px);
+  padding: 6px 10px calc(10px + var(--sab, 0px)); border-radius: 18px 18px 0 0; background: var(--bg); box-shadow: 0 -20px 50px -20px rgba(0,0,0,.8);
+  animation: av-sobe-folha .22s cubic-bezier(.2,.8,.2,1);
+}
+.av-folha-alca { display: grid; place-items: center; height: 22px; border: 0; background: none; cursor: pointer; }
+.av-folha-alca i { width: 42px; height: 5px; border-radius: 3px; background: var(--border); }
+.av-folha-cabeca { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 0 4px; font-size: 13px; }
+.av-folha-cabeca b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.av-folha-cabeca span { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.av-folha .av-chat { flex: 1; min-height: 0; }
+@keyframes av-aparece { from { opacity: 0; } }
+@keyframes av-sobe-folha { from { transform: translateY(40px); opacity: .6; } }
+@media (prefers-reduced-motion: reduce) { .av-folha, .av-folha-fundo, .av-reacao { animation: none; } .av-reacao { opacity: 0; } }
+
+/* ---------------------------------------------------------- link público (fase de testes) */
+.av-link-publico { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-top: 10px; border-top: 1px dashed var(--border); color: var(--muted); font-size: 12px; }
+.av-link-publico .av-chave-chat { flex-shrink: 0; }
+.av-link-live.compacto .av-link-publico { padding-top: 8px; font-size: 11.5px; }
+
+/* ---------------------------------------------------------- a porta do convidado (sem conta) */
+.cv-pagina { position: relative; min-height: 100dvh; display: grid; grid-template-rows: auto 1fr; background: var(--bg); color: var(--text); isolation: isolate; }
+.cv-pagina.cv-sala { display: block; padding-top: var(--sat, 0px); }
+.cv-aurora { position: absolute; inset: 0; z-index: -1; pointer-events: none; background:
+  radial-gradient(60% 40% at 20% 0%, color-mix(in srgb, var(--primary) 22%, transparent), transparent 70%),
+  radial-gradient(50% 35% at 90% 10%, color-mix(in srgb, var(--gf-ouro, var(--primary)) 14%, transparent), transparent 70%); }
+.cv-topo { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: calc(16px + var(--sat, 0px)) max(20px, var(--sal, 0px)) 8px max(20px, var(--sal, 0px)); }
+.cv-topo-rotulo { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.cv-caixa { width: 100%; max-width: 720px; margin: 0 auto; padding: 12px 20px calc(32px + var(--sab, 0px)); display: grid; gap: 16px; align-content: start; box-sizing: border-box; }
+.cv-cartao { display: grid; gap: 12px; justify-items: start; padding: 26px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); }
+.cv-cartao.no-ar { border-color: color-mix(in srgb, var(--down) 45%, var(--border)); }
+.cv-cartao h1 { margin: 0; font-size: clamp(22px, 5vw, 30px); line-height: 1.15; letter-spacing: -.02em; text-wrap: balance; }
+.cv-cartao p { margin: 0; max-width: 60ch; color: var(--muted); line-height: 1.55; }
+.cv-quando { font-variant-numeric: tabular-nums; }
+.cv-form { display: grid; gap: 8px; width: 100%; max-width: 420px; margin-top: 4px; }
+.cv-form label { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.cv-form input { height: 46px; padding: 0 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text); font: inherit; font-size: 16px; }
+.cv-form input:focus { outline: 2px solid var(--primary); outline-offset: 0; border-color: transparent; }
+.cv-form .av-botao-principal { width: 100%; min-height: 48px; margin-top: 4px; font-size: 15px; }
+.cv-nota { color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+.cv-treino { border-radius: 20px; }
+.cv-rodape { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 10px; padding-top: 8px; color: var(--muted); font-size: 13px; }
+.cv-rodape .av-link { font-size: 13px; color: var(--text); }
+@media (max-width: 700px) { .cv-cartao { padding: 20px; border-radius: 16px; } .cv-caixa { padding-inline: 14px; } }
+/* celular deitado: imagem à esquerda, chat à direita, tudo dentro da altura da tela (nada de vídeo preso cobrindo o chat) */
+@media (max-width: 1000px) and (orientation: landscape) and (max-height: 520px) {
+  .av-aluno .av-palco-e-chat { grid-template-columns: minmax(0, 1fr) 280px; height: calc(100dvh - var(--topo-h, 56px) - 28px); min-height: 240px; }
+  .av-aluno .av-palco-e-chat > .av-palco { position: relative; height: 100%; aspect-ratio: auto; box-shadow: none; }
+  .av-aluno .av-palco-e-chat > .av-lado-aluno { height: auto; min-height: 0; }
+  .av-cabeca { align-items: center; }
+}
+/* a pílula no celular: alvos maiores; tocar no texto traz o vídeo de volta */
+@media (hover: none) {
+  .av-pilula { height: 44px; border-radius: 22px; padding-left: 16px; gap: 10px; }
+  .av-pilula button { width: 34px; height: 34px; }
+}
+.av-pilula > span { cursor: pointer; }

@@ -11,15 +11,15 @@
  * com a imagem; o banco grava em paralelo, para o histórico e a moderação.
  */
 import {
-  ConnectionState, DataPacket_Kind, LocalParticipant, Participant, RemoteParticipant, Room, RoomEvent, Track,
-  type LocalTrackPublication, type RemoteTrack, type RemoteTrackPublication,
+  ConnectionQuality, ConnectionState, DataPacket_Kind, DisconnectReason, LocalParticipant, Participant, RemoteParticipant, Room, RoomEvent,
+  ScreenSharePresets, Track, type LocalTrackPublication, type RemoteTrack, type RemoteTrackPublication,
 } from 'livekit-client'
 import { useSyncExternalStore } from 'react'
 import type { SessaoTeeds } from '../teeds/conta'
 import { MARCA } from '../../marca'
 import {
-  gravarMensagem, historicoDoChat, moderarMensagem, mudarLive, pedirIngresso, silenciar as silenciarNoBanco,
-  type CantoDaCamera, type Live, type MensagemDoChat,
+  gravarMensagem, historicoDoChat, infoDoConvite, moderarMensagem, mudarLive, pedirIngresso, pedirIngressoConvidado,
+  silenciar as silenciarNoBanco, type CantoDaCamera, type Ingresso, type Live, type MensagemDoChat,
 } from './api'
 import { marcarPlayerAtivo } from './presenca'
 import { aplicarFundo, fundoGuardado, type EscolhaDeFundo } from './fundos'
@@ -27,6 +27,13 @@ import type { LocalVideoTrack } from 'livekit-client'
 
 export type ModoDoPlayer = 'palco' | 'lado' | 'flutuante' | 'pilula'
 export type TamanhoFlutuante = 'P' | 'M' | 'G'
+/** Como está a conexão de quem assiste (ou transmite), para o aviso discreto. */
+export type Qualidade = 'boa' | 'media' | 'fraca' | 'perdida'
+
+/** As reações que sobem pela imagem (coração, fogo, palmas...). Os ids são os mesmos para todos. */
+export const REACOES = ['coracao', 'fogo', 'palmas', 'foguete', 'cem'] as const
+export type Reacao = typeof REACOES[number]
+export interface ReacaoNaTela { id: number; tipo: Reacao; x: number; minha: boolean }
 
 export interface EstadoDaSala {
   fase: 'fora' | 'conectando' | 'conectada' | 'reconectando' | 'erro'
@@ -56,6 +63,14 @@ export interface EstadoDaSala {
   dispositivos: { microfone: string; camera: string }
   /** Do apresentador: o fundo da câmera escolhido (vale também para a próxima live). */
   fundo: EscolhaDeFundo
+  /** Entrou pelo link público, sem conta (fase de testes). */
+  convidado: boolean
+  /** A conexão desta pessoa com a sala. */
+  qualidade: Qualidade
+  /** Reações subindo pela imagem agora (as velhas somem sozinhas). */
+  reacoes: ReacaoNaTela[]
+  /** Quantas reações a sala mandou nesta sessão (o apresentador vê o calor da sala). */
+  totalReacoes: number
 }
 
 const CHAVE_PREF = `${MARCA.id}.aovivo.preferencias`
@@ -70,6 +85,7 @@ let estado: EstadoDaSala = {
   transmitindo: { tela: false, camera: false, microfone: false },
   microfoneLocal: null, dispositivos: { microfone: '', camera: '' },
   fundo: typeof window === 'undefined' ? 'nenhum' : fundoGuardado(),
+  convidado: false, qualidade: 'boa', reacoes: [], totalReacoes: 0,
 }
 /** Como a pessoa prefere assistir quando sai da página "Ao vivo". */
 let modoFora: ModoDoPlayer = pref.modoFora ?? 'flutuante'
@@ -91,10 +107,15 @@ export const salaAgora = () => estado
 
 let sala: Room | null = null
 let sessaoAtual: SessaoTeeds | null = null
+/** Como voltar para a sala se a conexão cair (o ingresso vence; pede-se outro). */
+let reentrada: (() => Promise<Ingresso>) | null = null
+let tentativas = 0
+let saindo = false
 let contador: number | undefined
 let chatAberto = true
 
 const TOPICO = 'chat'
+const TOPICO_REACAO = 'reacao'
 type Pacote =
   | { t: 'msg'; id: string; texto: string; ts: string }
   | { t: 'apagar'; id: string }
@@ -148,19 +169,43 @@ export async function entrar(sessao: SessaoTeeds, live: Live): Promise<void> {
   if (sala && estado.live?.id === live.id && estado.fase !== 'erro') return
   await sair()
   sessaoAtual = sessao
-  marcarPlayerAtivo(true)
-  mudar({ fase: 'conectando', erro: null, live, mensagens: [], naoLidas: 0 })
+  reentrada = () => pedirIngresso(sessao, live.id)
+  await conectar(live, reentrada, () => historicoDoChat(sessao, live.id).catch(() => [] as MensagemDoChat[]))
+}
+
+/**
+ * Entra pelo link público, sem conta (fase de testes): só assiste e conversa;
+ * nada que escrever fica gravado. O nome é o que a pessoa digitou.
+ */
+export async function entrarComoConvidado(codigo: string, nome: string): Promise<void> {
+  await sair()
+  sessaoAtual = null
+  mudar({ fase: 'conectando', erro: null, live: null, mensagens: [], naoLidas: 0, convidado: true })
+  let ingresso: Ingresso
   try {
-    const [ingresso, historico] = await Promise.all([
-      pedirIngresso(sessao, live.id),
-      historicoDoChat(sessao, live.id).catch(() => [] as MensagemDoChat[]),
-    ])
+    ingresso = await pedirIngressoConvidado(codigo, nome)
+  } catch (e) {
+    mudar({ fase: 'erro', erro: e instanceof Error ? e.message : 'Não consegui entrar na transmissão.' })
+    return
+  }
+  reentrada = () => pedirIngressoConvidado(codigo, nome)
+  await conectar(ingresso.live!, async () => ingresso, async () => ingresso.historico ?? [])
+}
+
+async function conectar(live: Live, pedir: () => Promise<Ingresso>, historicoDe: () => Promise<MensagemDoChat[]>): Promise<void> {
+  saindo = false
+  marcarPlayerAtivo(true)
+  mudar({ fase: 'conectando', erro: null, live, mensagens: [], naoLidas: 0, reacoes: [], totalReacoes: 0, qualidade: 'boa' })
+  try {
+    const [ingresso, historico] = await Promise.all([pedir(), historicoDe()])
     const r = new Room({
       adaptiveStream: true, // cada um recebe a resolução do tamanho em que está vendo
       dynacast: true, // o apresentador não manda camada que ninguém pede
       publishDefaults: {
         // tela de gráfico: nitidez antes de fluidez; 15 quadros bastam
         screenShareEncoding: { maxBitrate: 2_500_000, maxFramerate: 15 },
+        // camadas menores para quem vê no celular ou no flutuante (o servidor escolhe)
+        screenShareSimulcastLayers: [ScreenSharePresets.h360fps15, ScreenSharePresets.h720fps15],
       },
     })
     sala = r
@@ -176,9 +221,28 @@ export async function entrar(sessao: SessaoTeeds, live: Live): Promise<void> {
       .on(RoomEvent.Reconnected, () => mudar({ fase: 'conectada' }))
       .on(RoomEvent.AudioPlaybackStatusChanged, () => mudar({ somBloqueado: !r.canPlaybackAudio }))
       .on(RoomEvent.ParticipantPermissionsChanged, () => mudar({ silenciado: !r.localParticipant.permissions?.canPublishData }))
-      .on(RoomEvent.Disconnected, () => { if (sala === r) { sala = null; mudar({ fase: 'fora', tela: null, camera: null, audios: [] }) } })
+      .on(RoomEvent.ConnectionQualityChanged, (q: ConnectionQuality, p: Participant) => {
+        if (p !== r.localParticipant) return
+        mudar({ qualidade: q === ConnectionQuality.Excellent ? 'boa' : q === ConnectionQuality.Good ? 'media' : q === ConnectionQuality.Poor ? 'fraca' : q === ConnectionQuality.Lost ? 'perdida' : estado.qualidade })
+      })
+      .on(RoomEvent.Disconnected, (motivo?: DisconnectReason) => {
+        if (sala !== r) return
+        sala = null
+        mudar({ fase: 'fora', tela: null, camera: null, audios: [] })
+        // caiu sem a pessoa pedir (ingresso vencido, rede): volta sozinho, com um ingresso novo
+        if (motivo === DisconnectReason.DUPLICATE_IDENTITY) { mudar({ erro: 'Você abriu esta live em outra aba ou aparelho. A transmissão continua lá.' }); marcarPlayerAtivo(false); return }
+        const culpaNossa = saindo || motivo === DisconnectReason.CLIENT_INITIATED || motivo === DisconnectReason.ROOM_DELETED || motivo === DisconnectReason.PARTICIPANT_REMOVED
+        if (!culpaNossa && estado.live && reentrada && tentativas < 3) {
+          tentativas++
+          const l = estado.live, pedirDeNovo = reentrada
+          mudar({ fase: 'reconectando' })
+          window.setTimeout(() => { if (!sala && !saindo) void conectar(l, pedirDeNovo, async () => estado.mensagens) }, 1500 * tentativas)
+        }
+      })
       .on(RoomEvent.DataReceived, (dados: Uint8Array, p?: RemoteParticipant, _k?: DataPacket_Kind, topico?: string) => {
-        if (topico !== TOPICO || !p) return
+        if (!p) return
+        if (topico === TOPICO_REACAO) { receberReacao(new TextDecoder().decode(dados), false); return }
+        if (topico !== TOPICO) return
         let pacote: Pacote
         try { pacote = JSON.parse(new TextDecoder().decode(dados)) } catch { return }
         if (pacote.t === 'msg') {
@@ -194,12 +258,15 @@ export async function entrar(sessao: SessaoTeeds, live: Live): Promise<void> {
       })
     await r.connect(ingresso.url, ingresso.token, { autoSubscribe: true })
     await r.startAudio().catch(() => undefined)
+    tentativas = 0
     mudar({
       fase: 'conectada', moderador: ingresso.moderador, silenciado: ingresso.silenciado, meuNome: ingresso.nome,
+      convidado: !!ingresso.convidado, live: ingresso.live ?? live,
       mensagens: historico.filter((m) => !m.apagada), espectadores: Math.max(0, r.numParticipants - 1),
       somBloqueado: !r.canPlaybackAudio,
     })
     faixas()
+    void manterTelaAcesa(true)
     window.clearInterval(contador)
     contador = window.setInterval(() => mudar({ espectadores: Math.max(0, r.numParticipants - 1) }), 5000)
   } catch (e) {
@@ -208,12 +275,32 @@ export async function entrar(sessao: SessaoTeeds, live: Live): Promise<void> {
   }
 }
 
+/* ------------------------------------------------------- tela acesa (celular) */
+
+let tranca: { release: () => Promise<void> } | null = null
+/** Enquanto assiste, a tela do celular não apaga. Solta ao sair. */
+async function manterTelaAcesa(ligar: boolean): Promise<void> {
+  try {
+    if (!ligar) { await tranca?.release(); tranca = null; return }
+    if (tranca || document.visibilityState !== 'visible') return
+    tranca = await (navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> } }).wakeLock?.request('screen') ?? null
+    tranca && (tranca as unknown as EventTarget).addEventListener?.('release', () => { tranca = null })
+  } catch { tranca = null /* sem suporte ou sem permissão: segue normal */ }
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && sala) void manterTelaAcesa(true) })
+}
+
 export async function sair(): Promise<void> {
+  saindo = true
+  reentrada = null
+  tentativas = 0
   window.clearInterval(contador)
   const r = sala
   sala = null
   if (r) await r.disconnect().catch(() => undefined)
-  mudar({ fase: 'fora', tela: null, camera: null, audios: [], espectadores: 0, transmitindo: { tela: false, camera: false, microfone: false } })
+  mudar({ fase: 'fora', tela: null, camera: null, audios: [], espectadores: 0, reacoes: [], transmitindo: { tela: false, camera: false, microfone: false } })
+  void manterTelaAcesa(false)
   marcarPlayerAtivo(false)
 }
 
@@ -246,15 +333,24 @@ const enviar = async (pacote: Pacote) => {
 /** Manda no chat: chega aos outros na hora, e o banco grava em paralelo. */
 export async function mandarMensagem(texto: string): Promise<void> {
   const limpo = texto.trim().slice(0, 500)
-  if (!limpo || !sala || !estado.live || !sessaoAtual) return
+  if (!limpo || !sala || !estado.live) return
   if (estado.silenciado) throw new Error('O moderador pausou suas mensagens nesta transmissão.')
   if (!estado.live.chatAberto && !estado.moderador) throw new Error('O chat está fechado agora. Ele abre quando o moderador liberar.')
   const id = crypto.randomUUID()
   const ts = new Date().toISOString()
-  // Grava primeiro só quando há modo lento: aí o banco é quem diz se pode.
-  const gravar = gravarMensagem(sessaoAtual, { id, liveId: estado.live.id, nome: estado.meuNome, texto: limpo, doModerador: estado.moderador })
-  if (estado.live.intervaloChat > 0 && !estado.moderador) await gravar
-  else gravar.catch(() => undefined)
+  if (sessaoAtual) {
+    // Grava primeiro só quando há modo lento: aí o banco é quem diz se pode.
+    const gravar = gravarMensagem(sessaoAtual, { id, liveId: estado.live.id, nome: estado.meuNome, texto: limpo, doModerador: estado.moderador })
+    if (estado.live.intervaloChat > 0 && !estado.moderador) await gravar
+    else gravar.catch(() => undefined)
+  } else if (estado.live.intervaloChat > 0) {
+    // convidado no modo lento: a conta é feita aqui mesmo
+    const eu = sala.localParticipant.identity
+    const minhas = estado.mensagens.filter((m) => m.userId === eu)
+    const ultima = minhas[minhas.length - 1]
+    const falta = ultima ? estado.live.intervaloChat * 1000 - (Date.now() - new Date(ultima.criadaEm).getTime()) : 0
+    if (falta > 0) throw new Error(`Modo lento: espere ${Math.ceil(falta / 1000)} s para mandar outra mensagem.`)
+  }
   await enviar({ t: 'msg', id, texto: limpo, ts })
   receber({ id, userId: sala.localParticipant.identity, nome: estado.meuNome, texto: limpo, doModerador: estado.moderador, fixada: false, apagada: false, criadaEm: ts })
 }
@@ -278,6 +374,29 @@ export async function fixarMensagem(id: string | null): Promise<void> {
 export async function silenciarPessoa(userId: string, calar = true): Promise<void> {
   if (!estado.moderador || !sessaoAtual || !estado.live) return
   await silenciarNoBanco(sessaoAtual, estado.live.id, userId, calar)
+}
+
+/* ---------------------------------------------------------------- reações */
+
+let contadorReacao = 0
+let ultimaReacao = 0
+function receberReacao(bruto: string, minha: boolean) {
+  const tipo = bruto as Reacao
+  if (!REACOES.includes(tipo)) return
+  const nova: ReacaoNaTela = { id: ++contadorReacao, tipo, x: 8 + Math.random() * 84, minha }
+  mudar({ reacoes: [...estado.reacoes, nova].slice(-40), totalReacoes: estado.totalReacoes + 1 })
+  window.setTimeout(() => mudar({ reacoes: estado.reacoes.filter((r) => r.id !== nova.id) }), 2600)
+}
+
+/** Manda uma reação para a sala inteira (sobe pela imagem de todo mundo). */
+export async function reagir(tipo: Reacao): Promise<void> {
+  if (estado.fase !== 'conectada') return
+  const agora = Date.now()
+  if (agora - ultimaReacao < 150) return // dedo rápido não vira enxurrada
+  ultimaReacao = agora
+  receberReacao(tipo, true)
+  try { navigator.vibrate?.(8) } catch { /* sem vibração */ }
+  await sala?.localParticipant.publishData(new TextEncoder().encode(tipo), { reliable: false, topic: TOPICO_REACAO }).catch(() => undefined)
 }
 
 /** Abre ou fecha o chat para os alunos (o moderador continua escrevendo). */

@@ -6,6 +6,10 @@
 // live; admin da marca entra como apresentador. A chave do LiveKit nunca
 // sai daqui.
 //
+// Fase de testes (18/10/2026): com `aovivo_config.link_publico` ligado, quem
+// abre o link da live sem conta entra como convidado (só assiste e conversa).
+// Desligar a chave no estúdio fecha de novo.
+//
 // O LiveKit roda no nosso servidor (código aberto, sem conta em serviço de
 // fora). Endereço e chaves ficam na tabela `config_servicos`, que só a chave
 // de serviço lê; um segredo da função com o mesmo nome, se existir, vence.
@@ -57,6 +61,32 @@ async function assinar(payload: Record<string, unknown>): Promise<string> {
   return `${cab}.${corpo}.${b64url(sig)}`
 }
 
+/** Consulta com a chave de serviço (só o que a função precisa ler por conta própria). */
+async function servico<T>(caminho: string): Promise<T> {
+  const r = await fetch(`${SUPABASE_URL}${caminho}`, { headers: { apikey: SERVICO, Authorization: `Bearer ${SERVICO}` } })
+  if (!r.ok) throw new Error(`servico ${r.status}`)
+  return (await r.json()) as T
+}
+
+type LiveRow = { id: string; marca: string; sala: string; status: string; titulo: string; inicio_previsto: string | null }
+// O que quem chega pelo link precisa para montar a tela (sem conta não dá para ler a tabela).
+const CAMPOS = 'id,marca,sala,titulo,descricao,status,inicio_previsto,iniciada_em,encerrada_em,intervalo_chat,chat_aberto,camera_canto,camera_tamanho,faixa'
+const semSala = ({ sala: _sala, ...resto }: LiveRow) => resto
+
+/** A live pelo código do convite (os 8 primeiros caracteres do id). */
+async function livePorConvite(codigo: string): Promise<LiveRow | null> {
+  if (!/^[0-9a-f]{8}$/i.test(codigo)) return null
+  const c = codigo.toLowerCase()
+  const linhas = await servico<LiveRow[]>(`/rest/v1/lives?select=${CAMPOS}&id=gte.${c}-0000-0000-0000-000000000000&id=lte.${c}-ffff-ffff-ffff-ffffffffffff&order=criada_em.desc&limit=1`)
+  return linhas[0] ?? null
+}
+
+/** Fase de testes: a marca deixou o link público (qualquer pessoa assiste sem conta)? */
+async function linkPublico(marca: string): Promise<boolean> {
+  const [c] = await servico<Array<{ link_publico: boolean }>>(`/rest/v1/aovivo_config?select=link_publico&marca=eq.${marca}`)
+  return !!c?.link_publico
+}
+
 async function banco<T>(caminho: string, token: string, init: RequestInit = {}): Promise<T> {
   const r = await fetch(`${SUPABASE_URL}${caminho}`, {
     ...init,
@@ -72,17 +102,55 @@ Deno.serve(async (req) => {
   await carregarConfig().catch(() => undefined)
   if (!LK_URL || !LK_KEY || !LK_SECRET) return resposta(503, { erro: 'A transmissão ainda não foi configurada.' })
 
+  // Sem conta, o navegador manda a chave pública no lugar do token da pessoa.
   const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
   if (!token) return resposta(401, { erro: 'Entre na sua conta para assistir.' })
-  const { liveId, acao, identidade } = await req.json().catch(() => ({})) as { liveId?: string; acao?: string; identidade?: string }
+  const corpo = await req.json().catch(() => ({})) as { liveId?: string; convite?: string; acao?: string; identidade?: string; nome?: string }
+  let { liveId } = corpo
+  const { acao, identidade } = corpo
+
+  // Quem chegou pelo link: informações públicas da live (se o link estiver aberto).
+  if (corpo.convite && !liveId) {
+    const l = await livePorConvite(corpo.convite).catch(() => null)
+    if (!l) return resposta(404, { erro: 'Este link de live não existe ou expirou.' })
+    const publico = await linkPublico(l.marca).catch(() => false)
+    if (acao === 'info') return resposta(200, { live: semSala(l), publico })
+    liveId = l.id
+  }
   if (!liveId || !/^[0-9a-f-]{36}$/i.test(liveId)) return resposta(400, { erro: 'Live inválida.' })
 
+  /**
+   * Convidado: só com o link público ligado e a live no ar. Vale para quem
+   * não tem conta e para quem tem conta mas não tem acesso a esta live.
+   */
+  const comoConvidado = async (nomeDado: string, identidadeDada?: string) => {
+    const [l] = await servico<LiveRow[]>(`/rest/v1/lives?select=${CAMPOS}&id=eq.${liveId}`).catch(() => [])
+    if (!l || !(await linkPublico(l.marca).catch(() => false))) return null
+    if (l.status !== 'ao_vivo') return resposta(409, { erro: 'A transmissão ainda não começou.' })
+    const agora = Math.floor(Date.now() / 1000)
+    const nome = nomeDado.replace(/\s+/g, ' ').trim().slice(0, 30) || 'Convidado'
+    const ingresso = await assinar({
+      iss: LK_KEY, sub: identidadeDada ?? `convidado-${crypto.randomUUID().slice(0, 12)}`, name: nome, nbf: agora, exp: agora + 4 * 3600,
+      metadata: JSON.stringify({ moderador: false, convidado: true }),
+      video: { room: l.sala, roomJoin: true, canSubscribe: true, canPublish: false, canPublishData: true },
+    })
+    // as últimas mensagens, para quem entra no meio (o convidado não lê a tabela)
+    const historico = await servico<unknown[]>(`/rest/v1/live_mensagens?select=id,user_id,nome,texto,do_moderador,fixada,apagada,criada_em&live_id=eq.${l.id}&apagada=is.false&order=criada_em.desc&limit=60`).catch(() => [])
+    return resposta(200, { url: LK_URL, token: ingresso, nome, moderador: false, silenciado: false, convidado: true, live: semSala(l), historico: historico.reverse() })
+  }
+
+  const usuarioOuNada = await banco<{ id: string; email?: string; user_metadata?: Record<string, string> }>('/auth/v1/user', token).catch(() => null)
+  if (!usuarioOuNada) return (await comoConvidado(corpo.nome ?? '')) ?? resposta(401, { erro: 'Entre na sua conta para assistir.' })
+
   try {
-    const usuario = await banco<{ id: string; email?: string; user_metadata?: Record<string, string> }>('/auth/v1/user', token)
+    const usuario = usuarioOuNada
     // A RLS só devolve a live para quem pode assistir.
     const [live] = await banco<Array<{ id: string; marca: string; sala: string; status: string }>>(
       `/rest/v1/lives?id=eq.${liveId}&select=id,marca,sala,status`, token)
-    if (!live) return resposta(403, { erro: 'Esta transmissão não está liberada para a sua conta.' })
+    if (!live) {
+      const primeiro = String(usuario.user_metadata?.nome || usuario.user_metadata?.full_name || '').trim().split(/\s+/)[0]
+      return (await comoConvidado(corpo.nome || primeiro, usuario.id)) ?? resposta(403, { erro: 'Esta transmissão não está liberada para a sua conta.' })
+    }
     const admin = await banco<boolean>('/rest/v1/rpc/teeds_sou_admin_da', token, { method: 'POST', body: JSON.stringify({ p_marca: live.marca }) })
     const agora = Math.floor(Date.now() / 1000)
 
