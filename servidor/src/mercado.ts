@@ -111,6 +111,8 @@ function imagemDo(item: string): string | null {
  * do portal, não a foto da notícia: fica de fora.
  */
 const fotoDaMateria = new Map<string, string | null>()
+/** As fotos que vieram da página da matéria (e não do feed): só elas passam pelo filtro de "foto repetida = logo". */
+const veioDaMateria = new Set<string>()
 async function buscarFoto(link: string): Promise<string | null> {
   if (fotoDaMateria.has(link)) return fotoDaMateria.get(link) ?? null
   try {
@@ -128,11 +130,13 @@ async function buscarFoto(link: string): Promise<string | null> {
 async function completarFotos(lista: Noticia[]): Promise<void> {
   const faltam = lista.filter((n) => !n.imagem).slice(0, 30)
   for (let i = 0; i < faltam.length; i += 6) {
-    await Promise.all(faltam.slice(i, i + 6).map(async (n) => { n.imagem = await buscarFoto(n.link) }))
+    await Promise.all(faltam.slice(i, i + 6).map(async (n) => { n.imagem = await buscarFoto(n.link); if (n.imagem) veioDaMateria.add(n.imagem) }))
   }
   const vezes = new Map<string, number>()
   for (const n of lista) if (n.imagem) vezes.set(n.imagem, (vezes.get(n.imagem) ?? 0) + 1)
-  for (const n of lista) if (n.imagem && (vezes.get(n.imagem) ?? 0) > 1) n.imagem = null
+  // O Investing repete fotos de pregão de propósito (são fotos de verdade); o
+  // logo genérico só aparece nas fotos buscadas na página da matéria.
+  for (const n of lista) if (n.imagem && veioDaMateria.has(n.imagem) && (vezes.get(n.imagem) ?? 0) > 1) n.imagem = null
 }
 
 const REGRAS: Array<[Categoria, RegExp]> = [
@@ -159,7 +163,8 @@ function lerFeed(fonte: string, xml: string): Noticia[] {
     const data = Date.parse(/^\d{4}-\d\d-\d\d \d\d:\d\d(:\d\d)?$/.test(bruta) ? `${bruta.replace(' ', 'T')}Z` : bruta)
     if (!titulo || !/^https?:\/\//.test(link) || !Number.isFinite(data)) return []
     if (FORA_DO_ASSUNTO.test(titulo)) return []
-    let resumo = texto(campo(item, 'description'))
+    // O WordPress emenda "The post X appeared first on Y." no fim do resumo.
+    let resumo = texto(campo(item, 'description')).replace(/\s*The post .*$/i, '').replace(/\s*O post .* apareceu primeiro em .*$/i, '')
     if (resumo.length > 230) resumo = resumo.slice(0, 220).replace(/\s+\S*$/, '') + '…'
     if (resumo.toLowerCase().startsWith(titulo.toLowerCase().slice(0, 40))) resumo = ''
     return [{ id: `${fonte}:${link}`, titulo, resumo, link, imagem: imagemDo(item), fonte, quando: new Date(data).toISOString(), categoria: categoriaDe(`${titulo} ${resumo}`) }]
