@@ -1,5 +1,5 @@
-const CACHE='teeds-bcd26e0b19db';
-const SHELL=["./","./index.html","./manifest.webmanifest","./pwa-teeds/icon-192.png","./pwa-teeds/icon-512.png","./assets/AoVivo.js?v=bcd26e0b19db","./assets/Convidado.js?v=bcd26e0b19db","./assets/GraficoPro.js?v=bcd26e0b19db","./assets/MonitoramentoPanel.js?v=bcd26e0b19db","./assets/RecursosDeApp.js?v=bcd26e0b19db","./assets/teeds.css?v=bcd26e0b19db","./assets/teeds.js?v=bcd26e0b19db","./assets/teeds2.css?v=bcd26e0b19db","./assets/teeds3.css?v=bcd26e0b19db","./assets/teeds4.css?v=bcd26e0b19db"];
+const CACHE='teeds-fa33b4f7e08a';
+const SHELL=["./","./index.html","./manifest.webmanifest","./pwa-teeds/icon-192.png","./pwa-teeds/icon-512.png","./assets/AoVivo.js?v=fa33b4f7e08a","./assets/Convidado.js?v=fa33b4f7e08a","./assets/GraficoPro.js?v=fa33b4f7e08a","./assets/MonitoramentoPanel.js?v=fa33b4f7e08a","./assets/RecursosDeApp.js?v=fa33b4f7e08a","./assets/teeds.css?v=fa33b4f7e08a","./assets/teeds.js?v=fa33b4f7e08a","./assets/teeds2.css?v=fa33b4f7e08a","./assets/teeds3.css?v=fa33b4f7e08a","./assets/teeds4.css?v=fa33b4f7e08a"];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).catch(()=>{}));self.skipWaiting()});
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{const r=e.request;const u=new URL(r.url);if(r.method!=='GET'||u.origin!==self.location.origin||r.cache==='no-store'||u.searchParams.has('vivo'))return;

@@ -105,7 +105,6 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
           )
         })}
       </div>
-      <p className="vr-nota">Nenhuma estratégia garante resultado. Os robôs da mesma conta compartilham o saldo.</p>
     </section>
   )
 }
