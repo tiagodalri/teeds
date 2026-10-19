@@ -3,8 +3,8 @@ import { Brand } from './Brand'
 import { MARCA } from '../marca'
 import './workspace.css'
 
-export type WorkspacePage = 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo'
-export const PAGE_NAMES: Record<WorkspacePage, string> = { operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', ...(MARCA.menu?.nomes ?? {}) }
+export type WorkspacePage = 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo' | 'noticias'
+export const PAGE_NAMES: Record<WorkspacePage, string> = { operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', ...(MARCA.menu?.nomes ?? {}) }
 const paths: Record<string, string> = {
   operar: 'M3 17l5-6 4 3 9-11M16 3h5v5', robos: 'M5 7h14v13H5zM12 3v4M8 12h1m6 0h1M9 16h6',
   assistente: 'M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z',
@@ -14,6 +14,8 @@ const paths: Record<string, string> = {
   insights: 'M4 19h16M6 16V10m4 6V6m4 10v-4m4 4V8',
   monitoramento: 'M3 5h18v11H3zM8 20h8M12 16v4M6 13l3-3 2 2 4-5 3 3',
   aovivo: 'M12 12h.01M8.5 15.5a5 5 0 010-7M15.5 8.5a5 5 0 010 7M5.6 18.4a9 9 0 010-12.8M18.4 5.6a9 9 0 010 12.8',
+  // jornal dobrado com a linha do gráfico
+  noticias: 'M4 5h13v14a1 1 0 001 1H6a2 2 0 01-2-2zM17 9h3v9a2 2 0 01-2 2M7 9h7M7 12.5h7M7 16h4',
   // a marca pode trocar o desenho de um item (ver `menu` em marcas.ts)
   ...(MARCA.menu?.icones ?? {}),
 }
@@ -41,7 +43,7 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false }: {
         <p className="workspace-label">Operações</p>
         {item('robos')}{item('operar')}
         <p className="workspace-label">Ferramentas</p>{item('gerenciamento')}{item('assistente')}
-        <p className="workspace-label">Explore</p>{MARCA.aoVivo && item('aovivo')}{item('marketplace')}{item('aulas')}
+        <p className="workspace-label">Explore</p>{MARCA.aoVivo && item('aovivo')}{MARCA.noticias && item('noticias')}{item('marketplace')}{item('aulas')}
         {admin && <div className="workspace-admin">{item('gestao')}</div>}
       </nav>
       <button className="workspace-collapse" onClick={() => setCompact(!compact)} aria-label={compact ? 'Expandir menu' : 'Recolher menu'} aria-expanded={!compact}>{compact ? '»' : '«'}<span className="workspace-label"> Recolher menu</span></button>

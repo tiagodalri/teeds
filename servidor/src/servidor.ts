@@ -1,3 +1,4 @@
+import { mercado } from './mercado'
 import './ambiente'
 import { decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros, marcaAdministrada } from './aprovacao-leads'
 import { abrirBilhete, registrarDescadastro, paginaDeSaida } from './descadastro'
@@ -432,6 +433,29 @@ const servidor = createServer(async (req, res) => {
     if (req.method === 'POST') { res.writeHead(ok ? 200 : 500, { 'content-type': 'text/plain' }); return res.end(ok ? 'ok' : 'erro') }
     res.writeHead(200, tipo)
     return res.end(paginaDeSaida(marcaPorId(aberto.marca).prosa, aberto.email, ok))
+  }
+
+  if (url.pathname === '/publico/mercado') {
+    /*
+      A aba Mercado (19/10/2026): notícias e cotações de fontes grátis, já
+      organizadas (mercado.ts). Público e só leitura; responde só aos sites
+      das marcas. Nada roda em segundo plano: a busca acontece quando alguém
+      abre a aba, e a resposta fica guardada alguns minutos.
+    */
+    const origem = String(req.headers.origin ?? '')
+    const permitidas = [...SITES_DAS_MARCAS, 'http://localhost:5173', 'http://localhost:5180', 'http://localhost:5181', 'http://localhost:5182', 'http://localhost:5195']
+    const headers: Record<string, string> = { 'content-type': 'application/json; charset=utf-8', vary: 'Origin', 'cache-control': 'public, max-age=30' }
+    if (permitidas.includes(origem)) headers['access-control-allow-origin'] = origem
+    if (req.method === 'OPTIONS') { headers['access-control-allow-methods'] = 'GET, OPTIONS'; res.writeHead(204, headers); return res.end() }
+    if (req.method !== 'GET') { res.writeHead(405, headers); return res.end('{}') }
+    try {
+      res.writeHead(200, headers)
+      return res.end(JSON.stringify(await mercado()))
+    } catch (e) {
+      console.error('[mercado]', (e as Error).message)
+      res.writeHead(502, headers)
+      return res.end(JSON.stringify({ erro: 'As fontes de mercado não responderam agora.' }))
+    }
   }
 
   if (url.pathname === '/cliente/regiao') {

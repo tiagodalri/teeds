@@ -105,6 +105,8 @@ export interface Marca {
   iconesDeAtivos?: boolean
   /** Manual com todos os índices de volatilidade (10, 25, 50, 75, 100), além dos de 1 s. */
   indicesCompletos?: boolean
+  /** Aba Notícias em Explore: cotações e notícias de fontes grátis (MercadoPanel.tsx, servidor/src/mercado.ts). */
+  noticias?: boolean
   /** Mostra o monograma da marca no lugar do prefixo "GF" dos nomes dos robôs (NomeDoRobo.tsx). */
   monogramaNosRobos?: boolean
   /**
@@ -338,6 +340,7 @@ export const MARCAS: Record<string, Marca> = {
       firstblock: 'GF H160',
     },
     monogramaNosRobos: true,
+    noticias: true,
     // Manual, pág. 24: "Azul organiza superfícies… Verde e coral são
     // exclusivamente funcionais." Os robôs ficam todos no aço da casa
     // (texto branco passa por cima, e aparece sobre o Azul GF); quem os
