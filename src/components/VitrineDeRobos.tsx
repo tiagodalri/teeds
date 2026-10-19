@@ -39,7 +39,8 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
     const item = catalogo?.find((c) => c.id === i.id)
     return item ? descrever(i.id, item.parametros ?? parametrosPadrao(i.id)) : i.descricao
   }
-  const nomeCurto = (i: Identidade) => i.nome.replace(new RegExp(`^${MARCA.prosa.split(' ')[0]}\\s+`, 'i'), '')
+  // Sem o prefixo da marca: "GF Raptor" (ou "GlobalFly Raptor", antes de 19/10) vira "Raptor".
+  const nomeCurto = (i: Identidade) => i.nome.replace(new RegExp(`^(GF|${MARCA.prosa.split(' ')[0]})\\s+`, 'i'), '')
   const iniciar = (i: Identidade) => { pedirModeloDaVitrine(i.id); onConfigurar() }
   const base = `${import.meta.env.BASE_URL}robos-${MARCA.id}/`
 

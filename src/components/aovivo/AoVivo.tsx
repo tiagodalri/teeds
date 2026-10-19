@@ -787,7 +787,7 @@ function PainelDeControle({ s, sessao }: { s: EstadoDaSala; sessao: SessaoTeeds 
 
 const SUGESTOES_DE_ENQUETE: Array<{ rotulo: string; pergunta: string; opcoes: () => string[] }> = [
   { rotulo: 'Sim ou não', pergunta: 'Entenderam até aqui?', opcoes: () => ['Sim', 'Ainda não'] },
-  { rotulo: 'Qual robô', pergunta: 'Qual robô vocês querem ver operando agora?', opcoes: () => MARCA.robos.slice(0, 4).map((id) => (MARCA.nomesDosRobos?.[id] ?? id).replace(new RegExp(`^${MARCA.prosa.split(' ')[0]}\\s+`, 'i'), '')) },
+  { rotulo: 'Qual robô', pergunta: 'Qual robô vocês querem ver operando agora?', opcoes: () => MARCA.robos.slice(0, 4).map((id) => (MARCA.nomesDosRobos?.[id] ?? id).replace(new RegExp(`^(GF|${MARCA.prosa.split(' ')[0]})\\s+`, 'i'), '')) },
   { rotulo: 'Meta', pergunta: 'Qual meta diária vocês usam?', opcoes: () => ['Até 3%', '3% a 5%', 'Acima de 5%', 'Ainda não defini'] },
   { rotulo: 'Horário', pergunta: 'Em que horário vocês mais operam?', opcoes: () => ['Manhã', 'Tarde', 'Noite', 'Madrugada'] },
 ]

@@ -63,7 +63,7 @@ const NOMES = [
   'Sérgio', 'Talita', 'Valter', 'Zé', 'Luana', 'Marcos', 'Patrícia', 'Rodrigo', 'Sueli', 'Cláudio', 'Denise',
 ]
 
-const robos = () => MARCA.robos.map((id) => (MARCA.nomesDosRobos?.[id] ?? id).replace(/^GlobalFly\s+/i, ''))
+const robos = () => MARCA.robos.map((id) => (MARCA.nomesDosRobos?.[id] ?? id).replace(/^(GF|GlobalFly)\s+/i, ''))
 const sorteio = <T,>(lista: readonly T[]) => lista[Math.floor(Math.random() * lista.length)]
 const periodo = () => { const h = new Date().getHours(); return h < 12 ? 'bom dia' : h < 18 ? 'boa tarde' : 'boa noite' }
 

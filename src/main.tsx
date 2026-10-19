@@ -31,6 +31,22 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>,
 )
 
+// A abertura do app instalado (index.html, `%ABERTURA%`) se dissolve assim que
+// o primeiro quadro da plataforma está na tela: dois quadros depois do render,
+// para a troca nunca mostrar um vazio no meio.
+// Se a aba nascer em segundo plano o navegador não desenha quadros: a saída
+// por tempo garante que a abertura nunca fica presa na tela.
+const abertura = document.getElementById('app-abertura')
+if (abertura) {
+  const sair = () => {
+    if (abertura.classList.contains('saindo')) return
+    abertura.classList.add('saindo')
+    window.setTimeout(() => abertura.remove(), 650)
+  }
+  requestAnimationFrame(() => requestAnimationFrame(sair))
+  window.setTimeout(sair, 600)
+}
+
 /**
  * O app confere sozinho se existe versão mais nova.
  *

@@ -109,13 +109,41 @@ function telasDeAbertura(): string {
   const lista = join(__dirname, 'public', `pwa-${MARCA.id}`, 'splash', 'telas.json')
   if (!existsSync(lista)) return ''
   const telas = JSON.parse(readFileSync(lista, 'utf8')) as [number, number, number][]
-  return telas.map(([w, h, e]) =>
+  // iPad (167 e 152) usa o ícone do tamanho dele: ampliar o de 180 borra.
+  const extras = [167, 152].filter((t) => existsSync(join(__dirname, 'public', `pwa-${MARCA.id}`, `icon-${t}.png`)))
+    .map((t) => `    <link rel="apple-touch-icon" sizes="${t}x${t}" href="${MARCA.base}pwa-${MARCA.id}/icon-${t}.png" />\n`).join('')
+  return extras + telas.map(([w, h, e]) =>
     `    <link rel="apple-touch-startup-image" media="screen and (device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${e}) and (orientation: portrait)" href="${MARCA.base}pwa-${MARCA.id}/splash/${w * e}x${h * e}.png" />\n`,
   ).join('') + '  '
 }
+/* A abertura do app instalado (marcas com `appNativo`), 19/10/2026.
+   O iPhone mostra a tela de abertura (a imagem acima) só até a página
+   nascer; depois vinha um vazio azul até o React montar. Agora a página
+   nasce com a MESMA imagem, no mesmo lugar, e ela se dissolve quando o app
+   está pronto (main.tsx). Só no app instalado: no navegador não aparece.
+   A barrinha dourada só surge se o carregamento passar de 0,7 s. */
+function aberturaDoApp(): string {
+  const img = join(__dirname, 'public', `pwa-${MARCA.id}`, 'abertura.png')
+  if (!MARCA.appNativo || !existsSync(img)) return ''
+  const fundo = FUNDO_DA_MARCA[MARCA.id] ?? '#090a0d'
+  return `<div id="app-abertura" aria-hidden="true"><img src="${MARCA.base}pwa-${MARCA.id}/abertura.png" alt="" /><i></i></div>
+    <style>
+      #app-abertura{position:fixed;inset:0;z-index:2147483000;display:none;place-items:center;background:${fundo};transition:opacity .5s cubic-bezier(.4,0,.2,1),visibility .5s}
+      @media (display-mode: standalone){#app-abertura{display:grid}html{background:${fundo}}}
+      #app-abertura img{width:58vw;height:auto;transition:transform .5s cubic-bezier(.4,0,.2,1)}
+      @media (min-width:700px){#app-abertura img{width:36vw}}
+      #app-abertura i{position:absolute;left:50%;bottom:calc(72px + env(safe-area-inset-bottom));width:48px;height:2px;margin-left:-24px;border-radius:2px;background:rgba(183,141,57,.22);overflow:hidden;opacity:0;animation:abre-surge .3s .7s forwards}
+      #app-abertura i::after{content:'';position:absolute;top:0;bottom:0;width:40%;background:#B78D39;animation:abre-corre 1.1s ease-in-out infinite}
+      #app-abertura.saindo{opacity:0;visibility:hidden}
+      #app-abertura.saindo img{transform:scale(1.04)}
+      @keyframes abre-surge{to{opacity:1}}
+      @keyframes abre-corre{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+      @media (prefers-reduced-motion:reduce){#app-abertura,#app-abertura img{transition:none}#app-abertura i::after{animation:none}}
+    </style>`
+}
 /* Legenda das telas que o Android mostra antes de instalar (pwa-<marca>/telas/).
    Só telas sem resultado de operação: nada de sessão de exemplo com ganho. */
-const ROTULO_DA_TELA: Record<string, string> = { entrar: 'Entrar na plataforma', 'sala-de-aula': 'Sala de aula com o treinamento completo' }
+const ROTULO_DA_TELA: Record<string, string> = { entrar: 'Entrar na plataforma', robos: 'Escolha o seu robô e inicie as operações', 'sala-de-aula': 'Sala de aula com o treinamento completo' }
 const NOME_CURTO: Record<string, string> = { teeds: 'Teeds', omni: 'OMNI', globalfly: 'GlobalFly' }
 
 export default defineConfig({
@@ -140,6 +168,7 @@ export default defineConfig({
             .replaceAll('%MARCA%', MARCA.id)
             .replaceAll('%THEME%', FUNDO_DA_MARCA[MARCA.id] ?? '#090a0d')
             .replaceAll('%NOME%', NOME_CURTO[MARCA.id] ?? MARCA.nome)
+            .replace('%ABERTURA%', aberturaDoApp())
             .replace('</head>', `${telasDeAbertura()}</head>`),
       },
     },
@@ -232,9 +261,9 @@ export default defineConfig({
             { src: `${pwaDir}/icon-monocromatico-512.png`, sizes: '512x512', type: 'image/png', purpose: 'monochrome' },
           ],
           shortcuts: [
-            { name: 'Robôs', short_name: 'Robôs', description: 'Ligar e acompanhar os robôs', url: '/?tela=robos', icons: [{ src: `${pwaDir}/icon-192.png`, sizes: '192x192' }] },
-            { name: 'Operar', short_name: 'Operar', description: 'Operação manual', url: '/?tela=operar', icons: [{ src: `${pwaDir}/icon-192.png`, sizes: '192x192' }] },
-            { name: 'Aulas', short_name: 'Aulas', description: 'O treinamento da plataforma', url: '/?tela=aulas', icons: [{ src: `${pwaDir}/icon-192.png`, sizes: '192x192' }] },
+            { name: 'Robôs', short_name: 'Robôs', description: 'Ligar e acompanhar os robôs', url: '/?tela=robos', icons: [{ src: `${pwaDir}/atalhos/robos.png`, sizes: '192x192', type: 'image/png' }] },
+            { name: 'Operar', short_name: 'Operar', description: 'Operação manual', url: '/?tela=operar', icons: [{ src: `${pwaDir}/atalhos/operar.png`, sizes: '192x192', type: 'image/png' }] },
+            { name: 'Aulas', short_name: 'Aulas', description: 'O treinamento da plataforma', url: '/?tela=aulas', icons: [{ src: `${pwaDir}/atalhos/aulas.png`, sizes: '192x192', type: 'image/png' }] },
           ],
           screenshots: telas.map((f) => {
             const [, w, h] = f.match(/(\d+)x(\d+)/) ?? []
