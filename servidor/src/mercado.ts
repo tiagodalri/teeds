@@ -167,7 +167,18 @@ async function cambio(): Promise<Cotacao[]> {
   })
 }
 
-async function bolsa(b: (typeof BOLSAS)[number]): Promise<Cotacao> {
+/**
+ * Reserva do câmbio: a AwesomeAPI limita por endereço e devolveu 429 ao
+ * servidor em 19/10/2026; o Yahoo tem os mesmos pares em reais.
+ */
+const CAMBIO_RESERVA = [
+  { simbolo: 'BRL=X', id: 'dolar', nome: 'Dólar', moeda: 'R$' },
+  { simbolo: 'EURBRL=X', id: 'euro', nome: 'Euro', moeda: 'R$' },
+  { simbolo: 'GBPBRL=X', id: 'libra', nome: 'Libra', moeda: 'R$' },
+  { simbolo: 'BTC-BRL', id: 'bitcoin', nome: 'Bitcoin', moeda: 'R$' },
+]
+
+async function bolsa(b: { simbolo: string; id: string; nome: string; moeda: string }): Promise<Cotacao> {
   const d = JSON.parse(await buscar(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(b.simbolo)}?range=1d&interval=15m`)) as {
     chart: { result: Array<{ meta: { regularMarketPrice: number; chartPreviousClose?: number; previousClose?: number; regularMarketTime: number }; indicators: { quote: Array<{ close: Array<number | null> }> } }> }
   }
@@ -184,13 +195,19 @@ async function bolsa(b: (typeof BOLSAS)[number]): Promise<Cotacao> {
 async function atualizarCotacoes(): Promise<void> {
   const partes = await Promise.allSettled([cambio(), ...BOLSAS.map((b) => bolsa(b).then((c) => [c]))])
   const novas = partes.flatMap((p) => (p.status === 'fulfilled' ? p.value : []))
+  if (partes[0].status === 'rejected') {
+    const reserva = await Promise.allSettled(CAMBIO_RESERVA.map((b) => bolsa(b)))
+    for (const r of reserva) if (r.status === 'fulfilled') novas.push(r.value)
+  }
   if (!novas.length) return
   // Quem falhou agora fica com o último valor bom.
   const antigas = new Map(cotacoes.lista.map((c) => [c.id, c]))
   for (const n of novas) antigas.set(n.id, n)
   // A série do dólar vem do Yahoo; o preço, da AwesomeAPI (mais fresca).
   const dia = antigas.get('dolar-dia'), dolar = antigas.get('dolar')
-  if (dia && dolar) { dolar.serie = dia.serie; antigas.delete('dolar-dia') }
+  if (dia && dolar && !dolar.serie) dolar.serie = dia.serie
+  if (dia && !dolar) antigas.set('dolar', { ...dia, id: 'dolar', nome: 'Dólar' })
+  antigas.delete('dolar-dia')
   const ordem = ['dolar', 'ibovespa', 'euro', 'sp500', 'bitcoin', 'nasdaq', 'ouro', 'dow', 'brent', 'libra']
   cotacoes = { em: Date.now(), lista: [...antigas.values()].sort((a, b) => ordem.indexOf(a.id) - ordem.indexOf(b.id)) }
 }
