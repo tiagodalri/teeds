@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  buscarSessaoDoServidor, completeLogin, emAppInstalado, loadSession, loginPendente,
+  buscarSessaoDoServidor, completeLogin, emAppInstalado, idadeDoPedido, loadSession, loginPendente, voltasPerdidas,
   logout as clearSession, ouvirLoginDeOutraJanela, startLogin, startLoginPeloServidor, type AuthSession,
 } from '../core/deriv/auth'
 import { fetchAccounts, fetchTradingSocketUrl, resetDemoBalance, type TradingAccount } from '../core/deriv/account'
@@ -58,6 +58,30 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
   const tokenTeedsRef = useRef<string | null>(acesso.tokenTeeds ?? null)
   tokenTeedsRef.current = acesso.tokenTeeds ?? null
 
+  /*
+    A DERIV LARGOU A PESSOA NO PAINEL DELA, NO CELULAR (19/10/2026, Victor no
+    app instalado do iPhone): ele entrou na Deriv, ela ficou no painel dela e
+    ele teve de fechar e reabrir. No computador a plataforma já refazia a
+    ligação sozinha (abaixo); no celular e no app instalado, não.
+
+    Agora vale para todos: voltou sem conexão, com UM login começado há mais
+    de 15 s (tempo de ter entrado de verdade; quem desiste antes disso não é
+    mandado de volta) e só na primeira volta perdida, a plataforma refaz a
+    ligação sozinha. A Deriv já reconhece a pessoa e devolve na hora, sem
+    pedir senha. Na segunda volta perdida, para: o cartão ensina o caminho.
+  */
+  const loginRef = useRef<() => void>(() => {})
+  const retomouRef = useRef(false)
+  const retomarSePrecisar = () => {
+    if (retomouRef.current || loadSession()) return false
+    const idade = idadeDoPedido()
+    if (!loginPendente() || voltasPerdidas() !== 1 || idade === null || idade < 15_000) return false
+    retomouRef.current = true
+    setStatus('entrando')
+    setTimeout(() => loginRef.current(), 450)
+    return true
+  }
+
   // --- retorno da Deriv + sessao guardada
   useEffect(() => {
     let alive = true
@@ -74,7 +98,7 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
         if (s) {
           setSession(s)
           setStatus('logado')
-        }
+        } else retomarSePrecisar()
       } catch (e) {
         if (!alive) return
         setError((e as Error).message)
@@ -127,6 +151,7 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
       if (!loginPendente() || !tokenTeedsRef.current) return
       void buscarSessaoDoServidor(tokenTeedsRef.current).then((s) => {
         if (s) { setSession(s); setStatus('logado'); setError(null) }
+        else retomarSePrecisar()
       }).catch(() => { /* sem rede agora: a próxima volta tenta de novo */ })
     }
     document.addEventListener('visibilitychange', aoVoltar)
@@ -370,6 +395,7 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
       setStatus('erro')
     })
   }, [])
+  loginRef.current = login
 
   const logout = useCallback(() => {
     socketRef.current?.disconnect()

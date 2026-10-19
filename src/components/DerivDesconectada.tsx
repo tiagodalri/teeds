@@ -62,8 +62,15 @@ export function DerivDesconectada({ acao, entrando, onConectar, compacto = false
           ? <>Falta um passo para ligar a <span className="deriv-inline"><DerivLogo altura={17} /></span></>
           : <>Conecte a sua conta da <span className="deriv-inline"><DerivLogo altura={17} /></span></>}
       </b>
+      {/* A plataforma está refazendo a ligação sozinha (ver retomarSePrecisar em useAccount). */}
+      {entrando && voltaPerdida && (
+        <p className="sem-deriv-janela" role="status">
+          Concluindo a ligação com a Deriv… Ela já reconhece você, então a volta
+          acontece em segundos, sem pedir a senha de novo.
+        </p>
+      )}
       {/* Só no computador a Deriv abre em janela à parte (ver startLogin). */}
-      {entrando && !emToque() && (
+      {entrando && !voltaPerdida && !emToque() && (
         <p className="sem-deriv-janela" role="status">
           A Deriv abriu em outra janela. Entre por lá. Se depois do login ela
           mostrar o painel da Deriv, é só voltar para esta aba: a {MARCA.prosa}

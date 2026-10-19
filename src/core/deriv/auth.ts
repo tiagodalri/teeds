@@ -146,6 +146,16 @@ function esquecerPedido(): void {
   } catch { /* idem */ }
 }
 
+/** Há quanto tempo (ms) começou o login pendente; null se não há pedido. */
+export function idadeDoPedido(): number | null {
+  try {
+    const bruto = localStorage.getItem(KEY_PEDIDO)
+    if (!bruto) return null
+    const p = JSON.parse(bruto) as PedidoDeLogin
+    return typeof p?.criadoEm === 'number' ? Date.now() - p.criadoEm : null
+  } catch { return null }
+}
+
 /**
  * Existe um login na Deriv começado e não concluído?
  *

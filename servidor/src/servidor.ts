@@ -163,6 +163,40 @@ code{padding:2px 6px;border-radius:5px;background:#1a2330;color:#7dd3fc;font-siz
 </style></head><body><div class="cartao">${corpo}</div></body></html>`
 }
 
+/**
+ * A página da volta da Deriv para um CLIENTE, com a marca dele (19/10/2026).
+ * Antes era a página da casa ("· Teeds" no título) até para quem vinha da
+ * GlobalFly. No app instalado do iPhone ela aparece na janela por cima do
+ * app, e a única saída é o ✕ no alto: a página diz isso com todas as letras.
+ */
+function paginaDaMarca(m: ReturnType<typeof marcaPorId>, titulo: string, corpo: string, tom: 'ok' | 'erro' = 'ok'): string {
+  const site = new URL(m.redirectUri).origin
+  const logo = `${site}/${m.assinatura?.escura ?? m.emblema}`
+  const fundo = m.email.faixa
+  const acao = m.email.botao.toLowerCase() === fundo.toLowerCase() ? '#ffffff' : m.email.botao
+  const tinta = acao === '#ffffff' ? fundo : (m.email.tintaDoBotao ?? '#000')
+  const sinal = tom === 'ok' ? '#3fbf8f' : '#e0605e'
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="${fundo}">
+<title>${titulo} · ${m.prosa}</title><style>
+:root{color-scheme:dark}*{box-sizing:border-box}
+body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:max(24px,env(safe-area-inset-top)) 20px max(24px,env(safe-area-inset-bottom));
+background:radial-gradient(120% 80% at 50% 0%,color-mix(in srgb,${acao} 14%,transparent),transparent 60%),${fundo};color:#f3f0e9;font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;text-align:center}
+.cartao{width:min(420px,100%);padding:32px 26px;border:1px solid rgba(255,255,255,.08);border-radius:22px;background:rgba(255,255,255,.03);backdrop-filter:blur(8px)}
+.logo{height:34px;width:auto;margin:0 auto 26px;display:block}
+.selo{width:64px;height:64px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,${sinal} 18%,transparent);border:1.5px solid ${sinal};color:${sinal};font-size:30px;font-weight:700;animation:surge .5s cubic-bezier(.2,.9,.3,1.3)}
+@keyframes surge{from{transform:scale(.6);opacity:0}}
+h1{margin:0 0 8px;font-size:23px;letter-spacing:-.01em}
+p{margin:0 0 20px;color:rgba(243,240,233,.72);font-size:14.5px}
+.volta{display:flex;align-items:center;gap:12px;margin:0 0 18px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.06);text-align:left;font-size:14px}
+.volta b{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;background:#fff;color:${fundo};font-size:16px}
+a.botao{display:block;padding:15px;border-radius:13px;background:${acao};color:${tinta};font-weight:800;text-decoration:none;font-size:15px}
+code{padding:2px 6px;border-radius:5px;background:rgba(255,255,255,.08);font-size:12.5px}
+@media (prefers-reduced-motion:reduce){.selo{animation:none}}
+</style></head><body><div class="cartao"><img class="logo" src="${logo}" alt="${m.prosa}">${corpo}</div></body></html>`
+}
+
 const SEGREDO = segredoMcp()
 
 /**
@@ -259,17 +293,18 @@ const servidor = createServer(async (req, res) => {
           (u, corpo) => fetch(u, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: corpo.toString() }),
           guardar)
         console.log(`[login] cliente ${tentativa.userId.slice(0, 8)}… conectou a Deriv pelo servidor (${m.id})`)
-        return responder(200, pagina('Conectado', `
-          <div class="ok">✓</div><h1>Deriv conectada</h1>
-          <p>Pode fechar esta página e <b>voltar para o app da ${m.prosa}</b>.<br>
-          Ele já vai encontrar a sua conta.</p>
-          <a class="botao" href="${m.redirectUri}">Abrir a ${m.prosa}</a>`, '#4ade80'))
+        return responder(200, paginaDaMarca(m, 'Deriv conectada', `
+          <div class="selo">✓</div><h1>Deriv conectada</h1>
+          <p>Sua conta está ligada à ${m.prosa}. Agora é só voltar para o app: ele já encontra a sua conta.</p>
+          <div class="volta"><b>✕</b><span>Toque no <strong>✕</strong>, no alto da tela, para fechar esta janela e voltar ao app.</span></div>
+          <a class="botao" href="${m.redirectUri}">Abrir no navegador</a>`))
       } catch (e) {
         console.error(`[login] cliente ${tentativa.userId.slice(0, 8)}… falhou: ${(e as Error).message}`)
-        return responder(500, pagina('Falhou', `
-          <div class="erro">✕</div><h1>Não consegui concluir</h1>
-          <p><code>${(e as Error).message}</code><br>Volte para o app e toque em Conectar de novo.</p>
-          <a class="botao" href="${m.redirectUri}">Abrir a ${m.prosa}</a>`, '#f87171'))
+        return responder(500, paginaDaMarca(m, 'Não concluiu', `
+          <div class="selo">!</div><h1>Não deu para concluir</h1>
+          <p>A Deriv respondeu, mas a ligação não fechou: <code>${(e as Error).message}</code></p>
+          <div class="volta"><b>✕</b><span>Feche esta janela no <strong>✕</strong> do alto e toque em <strong>Conectar</strong> de novo no app.</span></div>
+          <a class="botao" href="${m.redirectUri}">Abrir a ${m.prosa}</a>`, 'erro'))
       }
     }
 
