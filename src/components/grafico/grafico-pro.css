@@ -109,6 +109,26 @@
 .gp-restaurar { justify-self: start; align-self: end; padding: 6px 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 @keyframes gp-aparece { from { opacity: 0; } }
 
+/* miniaturas dos indicadores e ícones das categorias */
+.gp-cat { display: inline-flex; align-items: center; gap: 10px; }
+.gp-icone-cat { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
+.gp-modal-menu button.on .gp-icone-cat { color: var(--primary); opacity: 1; }
+.gp-icone-ind {
+  display: grid; place-items: center; width: 52px; height: 42px; flex: none; margin-left: 4px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg, var(--surface-alt));
+}
+.gp-icone-ind svg { width: 40px; height: 32px; overflow: visible; fill: none; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.gp-icone-ind .a { stroke: var(--primary); stroke-width: 1.7; }
+.gp-icone-ind .b { stroke: #4FA3FF; }
+:root[data-tema='claro'] .gp-icone-ind .b { stroke: #2F72C4; }
+.gp-icone-ind .c { stroke: var(--down); }
+.gp-icone-ind .g { stroke: var(--muted); stroke-width: .9; stroke-dasharray: 1.6 1.8; opacity: .7; }
+.gp-icone-ind .f { fill: color-mix(in srgb, #4FA3FF 20%, transparent); stroke: none; }
+.gp-icone-ind .up { stroke: var(--up); fill: var(--up); stroke-width: 1; }
+.gp-icone-ind .dn { stroke: var(--down); fill: var(--down); stroke-width: 1; }
+.gp-icone-ind .p { stroke: var(--primary); stroke-width: 2.6; }
+.gp-item-add:hover .gp-icone-ind, .gp-lista li.aberto .gp-icone-ind { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+
 /* ---------------------------------------------------- celular */
 @media (max-width: 700px) {
   .gp-ferramentas { flex-direction: row; position: absolute; z-index: 5; left: 6px; right: 6px; bottom: 6px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow-x: auto; }

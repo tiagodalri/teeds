@@ -14,6 +14,7 @@ import type { SessaoTeeds } from '../../core/teeds/conta'
 import { CATALOGO, CATEGORIAS, definicao, registrarIndicadores, type Categoria } from '../../core/grafico/indicadores'
 import { carregarDesenhos, carregarIndicadores, salvarDesenhos, salvarIndicadores, type DesenhoSalvo, type IndicadorSalvo } from '../../core/grafico/layout'
 import type { ChartMode, ContractMarker } from '../PriceChart'
+import { IconeCategoria, IconeIndicador } from './IconeIndicador'
 import './grafico-pro.css'
 
 interface Props {
@@ -452,11 +453,11 @@ function PainelDeIndicadores({ ativos, aoMudar, aoFechar }: { ativos: IndicadorS
       <div className="gp-modal" role="dialog" aria-label="Indicadores" onClick={(e) => e.stopPropagation()}>
         <aside className="gp-modal-menu">
           <h3>Indicadores</h3>
-          <button type="button" className={aba === 'ativos' && !busca ? 'on' : ''} onClick={() => { setAba('ativos'); setBusca('') }}>No gráfico ({ativos.length})</button>
+          <button type="button" className={aba === 'ativos' && !busca ? 'on' : ''} onClick={() => { setAba('ativos'); setBusca('') }}><span className="gp-cat"><IconeCategoria id="ativos" />No gráfico</span><small>{ativos.length}</small></button>
           <span className="gp-modal-sep" />
           {CATEGORIAS.map((c) => (
             <button key={c.id} type="button" className={aba === c.id && !busca ? 'on' : ''} onClick={() => { setAba(c.id); setBusca(''); setEditando(null) }}>
-              {c.nome}<small>{CATALOGO.filter((d) => d.categoria === c.id).length}</small>
+              <span className="gp-cat"><IconeCategoria id={c.id} />{c.nome}</span><small>{CATALOGO.filter((d) => d.categoria === c.id).length}</small>
             </button>
           ))}
         </aside>
@@ -475,6 +476,7 @@ function PainelDeIndicadores({ ativos, aoMudar, aoFechar }: { ativos: IndicadorS
                   return (
                     <li key={`${a.id}-${i}`} className={editando === i ? 'aberto' : ''}>
                       <div className="gp-item">
+                        <IconeIndicador id={a.id} />
                         <button type="button" className="gp-item-nome" onClick={() => setEditando(editando === i ? null : i)}>
                           <b>{def.nome}</b><small>{def.sigla} {a.params.join(', ')} · {def.painel === 'principal' ? 'sobre as velas' : 'painel próprio'}</small>
                         </button>
@@ -494,6 +496,7 @@ function PainelDeIndicadores({ ativos, aoMudar, aoFechar }: { ativos: IndicadorS
                 return (
                   <li key={d.id}>
                     <button type="button" className="gp-item gp-item-add" onClick={() => adicionar(d.id)}>
+                      <IconeIndicador id={d.id} />
                       <span className="gp-item-nome"><b>{d.nome}</b><small>{d.descricao}</small></span>
                       <span className="gp-item-mais">{quantos ? `✓ ${quantos > 1 ? quantos : ''} + outro` : '+ Adicionar'}</span>
                     </button>
