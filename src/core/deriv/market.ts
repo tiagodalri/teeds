@@ -7,9 +7,12 @@ import { MARCA } from '../../marca'
 /** Nomes que a Deriv manda em inglês e o cliente lê em português. */
 const NOME_EM_PORTUGUES: Record<string, string> = { frxXAUUSD: 'Ouro/USD', frxXAGUSD: 'Prata/USD' }
 
-/** O nome do ativo como a marca mostra (a GlobalFly tira o "Volatility" da frente). */
+/**
+ * O nome do ativo como a marca mostra: a GlobalFly tira o "Volatility" da
+ * frente e o "/USD" dos metais ("Ouro", "Prata"), pedidos de 19/10/2026.
+ */
 export const nomeDoAtivo = (nome: string): string =>
-  MARCA.ativosSemVolatility ? nome.replace(/^Volatility\s+/i, '') : nome
+  MARCA.ativosSemVolatility ? nome.replace(/^Volatility\s+/i, '').replace(/^(Ouro|Prata)\/USD$/, '$1') : nome
 
 /** Lista os ativos negociaveis, ja normalizados para o dominio da Teeds. */
 export async function fetchActiveSymbols(

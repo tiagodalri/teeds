@@ -46,6 +46,7 @@ import { MARCA } from './marca'
 import { IconeFechar } from './components/IconeFechar'
 import { usePeriodos } from './core/chart/periodos'
 import { conviteRecebido, liveNoAr, treinoPedido, type Live } from './core/live/api'
+import { IconeAtivo } from './components/IconeAtivo'
 import { usePlayerAtivo } from './core/live/presenca'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
@@ -819,6 +820,7 @@ export default function App() {
               <div className="ativo-seletor-wrap">
                 <button className="ativo-seletor" onClick={() => setSeletorAtivo((aberto) => !aberto)}
                   aria-expanded={seletorAtivo} aria-haspopup="dialog">
+                  {MARCA.iconesDeAtivos && activeSymbol && <IconeAtivo simbolo={activeSymbol.symbol} tamanho={34} />}
                   <span className="manual-ativo-texto"><small>Ativo</small><strong>{activeSymbol?.name ?? 'Escolher ativo'}</strong></span><i aria-hidden>⌄</i>
                 </button>
                 {seletorAtivo && (
@@ -839,6 +841,7 @@ export default function App() {
                             <button key={s.symbol}
                               className={`symbol ${s.symbol === symbolCode ? 'is-active' : ''}`}
                               onClick={() => { setSelected(s.symbol); setSeletorAtivo(false); setSearch('') }}>
+                              {MARCA.iconesDeAtivos && <IconeAtivo simbolo={s.symbol} />}
                               <span className="sym-name">{s.name}</span>
                               <span className={`dot ${s.isOpen && !s.isSuspended ? 'on' : 'off'}`} />
                             </button>

@@ -101,6 +101,8 @@ export interface Marca {
    * o nome da Deriv como sempre.
    */
   ativosSemVolatility?: boolean
+  /** Ícone redondo em cada ativo (moedas, metais, índices), como nas corretoras. */
+  iconesDeAtivos?: boolean
   /**
    * Nome e ícone de itens do menu lateral, por marca (19/10/2026: na
    * GlobalFly, "Robôs" virou "I.A." com o símbolo de brilhos, e o Assistente
@@ -318,6 +320,7 @@ export const MARCAS: Record<string, Marca> = {
     appNativo: true,
     aoVivo: true,
     ativosSemVolatility: true,
+    iconesDeAtivos: true,
     menu: {
       nomes: { robos: 'I.A.' },
       icones: {

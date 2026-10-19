@@ -317,3 +317,10 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 :root[data-marca='globalfly'] .aulas .aula-item.on { background: rgba(183, 141, 57, .12); box-shadow: inset 2px 0 0 var(--gf-ouro); }
 :root[data-marca='globalfly'] .aulas .aula-item.on i { background: var(--gf-ouro); border-color: var(--gf-ouro); color: var(--gf-azul); box-shadow: none; }
 /* ============================ fim do bloco sem gradiente nem brilho */
+
+/* Ícones dos ativos (19/10/2026): ao lado do nome, no seletor e na lista */
+.ativo-seletor { display: inline-flex; align-items: center; gap: 10px; }
+.ativo-seletor .icone-ativo { flex: none; filter: drop-shadow(0 2px 6px rgba(2, 11, 29, .28)); }
+.ativo-menu .symbol { display: flex; align-items: center; gap: 12px; }
+.ativo-menu .symbol .icone-ativo { flex: none; }
+.ativo-menu .symbol .sym-name { flex: 1; min-width: 0; text-align: left; }

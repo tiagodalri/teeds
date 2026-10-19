@@ -20,7 +20,9 @@ echo "== 1/4 montando os dois e conferindo a separacao =="
 # Monta a OMNI e a Teeds e confere que uma mudanca de casca nao vazou para a
 # outra marca. Se vazou, para aqui — melhor nao publicar do que publicar
 # uma Teeds alterada sem querer.
-bash scripts/conferir-separacao.sh
+# JA_CONFERIDO=1: a separação acabou de ser conferida (e os sites montados)
+# na mesma publicação; não monta as três marcas de novo.
+[ "${JA_CONFERIDO:-0}" = "1" ] || bash scripts/conferir-separacao.sh
 
 echo "== 2/4 preparando a casa =="
 if [ ! -d "$CLONE/.git" ]; then

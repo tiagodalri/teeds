@@ -30,6 +30,7 @@ import { RobotLive } from './components/RobotLive'
 import { RobotSetup } from './components/RobotSetup'
 import { VitrineDeRobos } from './components/VitrineDeRobos'
 import { WorkspaceNav } from './components/WorkspaceNav'
+import { IconeAtivo } from './components/IconeAtivo'
 import { RobotCatalog } from './components/RobotCatalog'
 import { AulasPanel } from './components/AulasPanel'
 import { PriceChart } from './components/PriceChart'
@@ -186,6 +187,8 @@ function Laboratorio() {
         {qual === 'catalogo' && <RobotCatalog selected={ident.id} onSelect={nada} />}
         {/* ?tela=vitrine: a vitrine de robôs (GlobalFly); "Configurar" abre o preparo já no robô. */}
         {qual === 'vitrine' && <LabVitrine />}
+        {/* ?tela=icones: os ícones dos ativos, como aparecem na lista "Trocar ativo". */}
+        {qual === 'icones' && <div className="ativo-menu" style={{ position: 'static', width: 340 }}><div className="symbol-list">{['R_75', '1HZ10V', '1HZ100V', 'frxEURUSD', 'frxGBPUSD', 'frxUSDJPY', 'frxAUDUSD', 'frxUSDCAD', 'frxXAUUSD', 'frxXAGUSD'].map((c) => <button key={c} className="symbol"><IconeAtivo simbolo={c} /><span className="sym-name">{c === 'frxXAUUSD' ? 'Ouro' : c === 'frxXAGUSD' ? 'Prata' : c}</span><span className="dot on" /></button>)}</div></div>}
         {/* ?tela=menu: o menu lateral com a tela de Robôs (I.A. na GlobalFly) aberta. */}
         {qual === 'menu' && <div className="workspace-app" style={{ minHeight: '100vh' }}><WorkspaceNav page="robos" admin onNavigate={nada} /><LabVitrine /></div>}
         {/* ?tela=sem-deriv&voltas=0|1|2: o cartão de corretora desconectada em
