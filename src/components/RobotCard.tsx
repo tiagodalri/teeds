@@ -1,5 +1,6 @@
 import type { Identidade } from '../core/deriv/branding'
 import { MARCA } from '../marca'
+import { NomeDoRobo } from './NomeDoRobo'
 
 interface Props {
   id: Identidade
@@ -37,7 +38,7 @@ export function RobotCard({ id, selecionado, onSelecionar, operando = 0 }: Props
       </div>
 
       <div className="rcard-nome">
-        <b>{id.nome}</b>
+        <b><NomeDoRobo nome={id.nome} /></b>
         <span style={{ color: id.cor }}>{id.chamada}</span>
       </div>
 

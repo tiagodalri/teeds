@@ -6,6 +6,7 @@ import { nomeDoRobo, todasAsOrigens } from '../core/deriv/robotNames'
 import { StatementPanel } from './StatementPanel'
 import { DerivDesconectada } from './DerivDesconectada'
 import { MARCA } from '../marca'
+import { NomeDoRobo } from './NomeDoRobo'
 
 interface Props {
   socket: TeedsSocket | null
@@ -239,7 +240,7 @@ export function OperationsPanel({
                     {(() => {
                       const g = origem(o)
                       return g.robo
-                        ? <span className="tag-robo">{g.nome}</span>
+                        ? <span className="tag-robo"><NomeDoRobo nome={g.nome} /></span>
                         : <span className="tag-manual">manual</span>
                     })()}
                   </td>

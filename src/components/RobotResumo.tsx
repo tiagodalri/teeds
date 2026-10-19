@@ -13,6 +13,7 @@
  */
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { markupDaOperacao } from '../core/deriv/markup'
+import { NomeDoRobo } from './NomeDoRobo'
 
 export interface ResumoProps {
   estado: EstadoMotor
@@ -102,7 +103,7 @@ function Quem({ p, fase }: { p: ResumoProps; fase: ReturnType<typeof faseDoEstad
     <div className="rs-quem">
       <i className={`rs-farol ${fase.chave}`} aria-hidden />
       <div>
-        <b><span className="rs-nome">{p.nome}</span><Chip fase={fase} />{p.modo && <SeloDoModo modo={p.modo} />}</b>
+        <b><span className="rs-nome"><NomeDoRobo nome={p.nome} /></span><Chip fase={fase} />{p.modo && <SeloDoModo modo={p.modo} />}</b>
         <small>
           {p.numero}
           {p.inicio ? ` · ${hora(p.inicio)}` : ''}

@@ -105,6 +105,8 @@ export interface Marca {
   iconesDeAtivos?: boolean
   /** Manual com todos os índices de volatilidade (10, 25, 50, 75, 100), além dos de 1 s. */
   indicesCompletos?: boolean
+  /** Mostra o monograma da marca no lugar do prefixo "GF" dos nomes dos robôs (NomeDoRobo.tsx). */
+  monogramaNosRobos?: boolean
   /**
    * Gráfico profissional no Manual (KLineChart: 30+ indicadores e ferramentas
    * de desenho). 'admin' = só administradores veem, para testar (19/10/2026);
@@ -318,16 +320,20 @@ export const MARCAS: Record<string, Marca> = {
     // e o Legacy de 4 a 9. The Palm e First Block saem só da vitrine daqui
     // (seguem no catálogo, para o histórico de quem já operou com eles).
     robos: ['goreme', 'superior5', 'falcon', 'ag2', 'legacy'],
+    // 19/10/2026: "GlobalFly" abreviado para GF (pedido do Victor: o nome
+    // ficava grande na tela de operações). Onde dá, a tela troca o "GF"
+    // escrito pelo monograma oficial (`monogramaNosRobos`, NomeDoRobo.tsx).
     nomesDosRobos: {
-      goreme: 'GlobalFly Raptor',
-      superior5: 'GlobalFly Gulf',
-      falcon: 'GlobalFly Falcon',
-      ag2: 'GlobalFly Phenom',
-      legacy: 'GlobalFly Legacy',
+      goreme: 'GF Raptor',
+      superior5: 'GF Gulf',
+      falcon: 'GF Falcon',
+      ag2: 'GF Phenom',
+      legacy: 'GF Legacy',
       // nomes antigos, para o histórico
-      thepalm: 'GlobalFly Falcon (anterior)',
-      firstblock: 'GlobalFly H160',
+      thepalm: 'GF Falcon (anterior)',
+      firstblock: 'GF H160',
     },
+    monogramaNosRobos: true,
     // Manual, pág. 24: "Azul organiza superfícies… Verde e coral são
     // exclusivamente funcionais." Os robôs ficam todos no aço da casa
     // (texto branco passa por cima, e aparece sobre o Azul GF); quem os

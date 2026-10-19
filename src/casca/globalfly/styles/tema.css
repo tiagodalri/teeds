@@ -324,3 +324,13 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 .ativo-menu .symbol { display: flex; align-items: center; gap: 12px; }
 .ativo-menu .symbol .icone-ativo { flex: none; }
 .ativo-menu .symbol .sym-name { flex: 1; min-width: 0; text-align: left; }
+
+/* Nome dos robôs com o monograma no lugar do "GF" (NomeDoRobo.tsx, 19/10/2026).
+   A altura acompanha a do texto; o monograma senta na linha de base das letras. */
+.nome-robo { display: inline-flex; align-items: center; gap: .3em; max-width: 100%; vertical-align: -.12em; }
+.nome-robo-gf {
+  flex: none; height: .82em; aspect-ratio: 166 / 96;
+  background: url(/globalfly-gf-claro.png) center / contain no-repeat;
+}
+:root[data-tema='escuro'] .nome-robo-gf { background-image: url(/globalfly-gf-escuro.png); }
+.nome-robo-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

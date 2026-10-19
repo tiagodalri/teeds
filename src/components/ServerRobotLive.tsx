@@ -5,6 +5,7 @@ import type { Identidade } from '../core/deriv/branding'
 import { Emblema } from './RobotCard'
 import { Progress } from './Progress'
 import { toOpenContract } from '../core/deriv/trading'
+import { NomeDoRobo } from './NomeDoRobo'
 
 interface Props {
   robo: Robo
@@ -175,7 +176,7 @@ export function ServerRobotLive(props: Props) {
             <strong>{din(emAndamento.valor, moeda)}</strong>
           </div>
           <div className="foco-linha">
-            <span>{ident.nome}</span>
+            <span><NomeDoRobo nome={ident.nome} /></span>
             <em>·</em>
             <span>{robo.contrato.duration ?? 1} {(robo.contrato.duration ?? 1) === 1 ? 'tick' : 'ticks'}</span>
             <em>·</em>

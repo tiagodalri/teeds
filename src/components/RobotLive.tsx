@@ -6,6 +6,7 @@ import { IconeFechar } from './IconeFechar'
 import { AnaliseAoVivo } from './AnaliseAoVivo'
 import { modoDaConfig, NOME_DO_MODO, temModos } from '../core/deriv/strategies'
 import './robot-cockpit.css'
+import { NomeDoRobo } from './NomeDoRobo'
 
 interface Props {
   estado: EstadoMotor
@@ -239,7 +240,7 @@ export function RobotLive({
         <div className="tv-quem">
           <i className="tv-farol" />
           <div>
-            <b><span className="tv-nome">{nomeEstrategia}</span><span className="tv-fase" title={fase.texto}>{fase.texto}</span></b>
+            <b><span className="tv-nome"><NomeDoRobo nome={nomeEstrategia} /></span><span className="tv-fase" title={fase.texto}>{fase.texto}</span></b>
             <span className="tv-onde">{titulo} · {ativo}</span>
           </div>
         </div>

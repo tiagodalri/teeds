@@ -3,6 +3,7 @@ import { IDENTIDADES, type Identidade } from '../core/deriv/branding'
 import { Emblema } from './RobotCard'
 import { useCatalogoCompleto, useRobosDisponiveis } from '../core/teeds/catalogoRobos'
 import { descrever, parametrosPadrao } from '../core/deriv/parametros'
+import { NomeDoRobo } from './NomeDoRobo'
 
 /** Browse and compare in place. Selection never sends an order. */
 export function RobotCatalog({ selected, onSelect, indisponivel = false }: {
@@ -26,14 +27,14 @@ export function RobotCatalog({ selected, onSelect, indisponivel = false }: {
       <input type="search" aria-label="Buscar modelo de robô" placeholder="Buscar robô…" value={search} onChange={e => setSearch(e.target.value)} />
       <div className="robot-picker-options" role="group" aria-label="Modelos disponíveis">{modelos.map(i =>
         <button type="button" key={i.id} className={`robot-model ${selected === i.id ? 'selected' : ''}`} aria-pressed={selected === i.id} disabled={indisponivel} onClick={() => onSelect(i)}>
-          <Emblema id={i} tamanho={32} /><span><strong>{i.nome}</strong><small>{i.chamada}</small></span><span className="robot-model-check" aria-hidden="true">{selected === i.id ? '✓' : '›'}</span>
+          <Emblema id={i} tamanho={32} /><span><strong><NomeDoRobo nome={i.nome} /></strong><small>{i.chamada}</small></span><span className="robot-model-check" aria-hidden="true">{selected === i.id ? '✓' : '›'}</span>
         </button>)}
         {modelos.length === 0 && <p>Nenhum robô encontrado. <button type="button" onClick={() => setSearch('')}>Limpar busca</button></p>}
       </div>
     </div>
     {atual && <article className="robot-picker-detail" style={{ ['--model-color' as string]: atual.cor }} aria-live="polite">
       <div className="robot-picker-emblem"><Emblema id={atual} tamanho={40} /></div>
-      <span className="robot-picker-kicker">{atual.chamada}</span><h4>{atual.nome}</h4>
+      <span className="robot-picker-kicker">{atual.chamada}</span><h4><NomeDoRobo nome={atual.nome} /></h4>
       <p>{descricaoDe(atual)}</p>
       <small>Nenhuma estratégia garante resultado. Os robôs da mesma conta compartilham o saldo.</small>
     </article>}
