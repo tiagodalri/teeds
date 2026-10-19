@@ -67,11 +67,22 @@ function sanear(cfg: ConfigEstrategia, padrao: ConfigEstrategia): ConfigEstrateg
 // Reexportado aqui para quem já importava deste arquivo.
 export { ETAPAS_PREPARO, valorDePreparo, OPCOES_DE_MODO, configurarPreparo } from '../core/deriv/preparo'
 
+/** O cartão da vitrine pede um robô; o próximo preparo que abrir já começa nele. */
+let modeloDaVitrine: string | null = null
+export const pedirModeloDaVitrine = (id: string) => { modeloDaVitrine = id }
+
 export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, contaId, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
   const disponiveis = useRobosDisponiveis()
+  // Escolhido no cartão da vitrine: o preparo já abre nele (o catálogo continua a um "Voltar").
+  // (lê sem apagar: o React de desenvolvimento chama esta função duas vezes; apaga depois de montar)
+  const [daVitrine] = useState(() => {
+    const v = modeloDaVitrine
+    return escolherModelo && v && IDENTIDADES.some((i) => i.id === v) ? v : null
+  })
+  useEffect(() => { modeloDaVitrine = null }, [])
   const [modelo, setModelo] = useState(() => {
     // Preferência já salva no próprio preparo; a calculadora não escreve aqui.
-    const pedido = escolherModelo ? lerPreparo().modelo : undefined
+    const pedido = daVitrine ?? (escolherModelo ? lerPreparo().modelo : undefined)
     return pedido && IDENTIDADES.some((i) => i.id === pedido) ? identidadeDoRobo(pedido) : identidade
   })
   const inicial = useMemo(() => sanear({ ...configInicial, ...lerPreparo().cfg, valorMaximo: 0 }, configInicial), [])
@@ -79,7 +90,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   const [modo, setModo] = useState<Modo>(() => lerPreparo().modo === 'agressivo' ? 'agressivo' : 'conservador')
   // -1 is the model picker; when the model has modes, 0 is the mode choice;
   // then one input per step; the last step is the review.
-  const [passo, setPasso] = useState(escolherModelo ? -1 : 0)
+  const [passo, setPasso] = useState(escolherModelo && !daVitrine ? -1 : 0)
   useEffect(() => {
     if (escolherModelo && disponiveis?.length && !disponiveis.includes(modelo.id)) {
       setModelo(identidadeDoRobo(disponiveis[0])); setPasso(-1)

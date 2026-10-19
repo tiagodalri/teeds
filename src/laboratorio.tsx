@@ -28,6 +28,7 @@ import type { ConfigEstrategia, EstadoMotor, OperacaoMotor, Registro } from './c
 import type { ActiveSymbol } from './core/deriv/types'
 import { RobotLive } from './components/RobotLive'
 import { RobotSetup } from './components/RobotSetup'
+import { VitrineDeRobos } from './components/VitrineDeRobos'
 import { RobotCatalog } from './components/RobotCatalog'
 import { AulasPanel } from './components/AulasPanel'
 import { PriceChart } from './components/PriceChart'
@@ -42,7 +43,7 @@ const VELAS = (() => {
     return { epoch: 1760000000 + i * 60, open, close, high: Math.max(open, close) + Math.abs(r()) * 3, low: Math.min(open, close) - Math.abs(r()) * 3 }
   })
 })()
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 const SalaDeTreino = lazy(() => import('./components/aovivo/SalaDeTreino').then((m) => ({ default: m.SalaDeTreino })))
 const LabRecorte = lazy(() => import('./components/aovivo/LabRecorte'))
 const TesteAtraso = lazy(() => import('./components/aovivo/TesteAtraso'))
@@ -117,6 +118,17 @@ const parametros = [
   { rot: 'Entrada', valor: 'US$ 0,35' }, { rot: 'Recuperação', valor: 'a partir da 1ª perda' },
   { rot: 'Meta', valor: 'US$ 5,00' }, { rot: 'Limite', valor: 'US$ 10,00' },
 ]
+function LabVitrine() {
+  const [preparo, setPreparo] = useState(false)
+  return (
+    <div className="ger rob robot-workspace">
+      <div className="ger-topo rob-workspace-header"><div><span className="rob-eyebrow">CENTRAL DE ROBÔS</span><h2>Vamos preparar seu primeiro robô?</h2><p className="ger-sub">Escolha um modelo, defina seus limites e acompanhe a sessão.</p></div></div>
+      <VitrineDeRobos onConfigurar={() => setPreparo(true)} />
+      {preparo && <RobotSetup identidade={ident} nomeEstrategia={ident.nome} symbols={symbols} symbolInicial="R_75" configInicial={config} moeda="USD" isDemo contaId="VRTC1234567" escolherModelo onCancelar={() => setPreparo(false)} onLigar={nada} ligando={false} erro={null} />}
+    </div>
+  )
+}
+
 const nada = () => {}
 
 function Cabine({ estado, expandido, titulo }: { estado: EstadoMotor; expandido: boolean; titulo: string }) {
@@ -171,6 +183,8 @@ function Laboratorio() {
           </div></div>
         )}
         {qual === 'catalogo' && <RobotCatalog selected={ident.id} onSelect={nada} />}
+        {/* ?tela=vitrine: a vitrine de robôs (GlobalFly); "Configurar" abre o preparo já no robô. */}
+        {qual === 'vitrine' && <LabVitrine />}
         {/* ?tela=sem-deriv&voltas=0|1|2: o cartão de corretora desconectada em
             cada estado (nenhum login, uma volta perdida, duas seguidas). */}
         {qual === 'sem-deriv' && <SemDeriv />}

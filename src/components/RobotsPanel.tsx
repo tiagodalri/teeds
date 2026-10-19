@@ -21,6 +21,7 @@ import { registrarOperacaoRobo } from '../core/teeds/clientes'
 import { acompanharVivas, type SessaoViva } from '../core/teeds/servidorRobos'
 import { MARCA } from '../marca'
 import { RobotOverview } from './RobotOverview'
+import { VitrineDeRobos } from './VitrineDeRobos'
 import { DigitosFlutuante } from './DigitosFlutuante'
 import { ATIVO_DOS_ROBOS, ehSintetico } from '../core/deriv/config'
 import './robot-workspace.css'
@@ -431,7 +432,10 @@ export function RobotsPanel({
       {/* A linha de "sessões encerradas" saiu da tela a pedido do Tiago
           (15/09/2026). O histórico continua no banco e no Insights. */}
 
-      {!temAcompanhamento && <section className="robot-workspace-empty">
+      {/* GlobalFly: os robôs à mostra no lugar do quadro vazio (19/10/2026). */}
+      {!temAcompanhamento && MARCA.vitrineDosRobos && <VitrineDeRobos onConfigurar={abrirBloco} />}
+
+      {!temAcompanhamento && !MARCA.vitrineDosRobos && <section className="robot-workspace-empty">
         <span className="robot-empty-symbol" aria-hidden="true">▷</span>
         <h3>Um robô. Seus limites. Tudo aqui.</h3>
         <p>Escolha entre {IDENTIDADES.length} modelos e configure a sessão, uma etapa por vez.</p>

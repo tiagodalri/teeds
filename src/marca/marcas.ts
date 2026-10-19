@@ -102,6 +102,12 @@ export interface Marca {
    */
   ativosSemVolatility?: boolean
   /**
+   * Vitrine dos robôs na tela Robôs (19/10/2026, GlobalFly): no lugar do
+   * quadro vazio, um cartão por robô com a foto (public/robos-<marca>/<id>.webp)
+   * e a aeronave que inspirou o nome. Sem isto, a tela fica como sempre.
+   */
+  vitrineDosRobos?: Record<string, { aeronave: string }>
+  /**
    * A cor da marca, uma por tema.
    *
    * Duas porque uma só não serve: um azul-marinho profundo desaparece sobre
@@ -295,6 +301,13 @@ export const MARCAS: Record<string, Marca> = {
     appNativo: true,
     aoVivo: true,
     ativosSemVolatility: true,
+    vitrineDosRobos: {
+      goreme: { aeronave: 'Caça F-22 Raptor' },
+      superior5: { aeronave: 'Inspirado no Gulfstream' },
+      thepalm: { aeronave: 'Caça F-16 Fighting Falcon' },
+      ag2: { aeronave: 'Embraer Phenom 300' },
+      firstblock: { aeronave: 'Helicóptero Airbus H160' },
+    },
     desenhoDosRobos: {
       goreme: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
       superior5: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
