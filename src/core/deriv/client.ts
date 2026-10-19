@@ -16,6 +16,8 @@ interface ActiveStream {
   handler: Handler
   reqId: number
   subscriptionId?: string
+  /** Reassinaturas seguidas depois que a Deriv fechou o stream (zera ao chegar dado). */
+  tentativas?: number
 }
 
 export interface TeedsSocketOptions {
@@ -329,6 +331,22 @@ export class TeedsSocket {
     }
   }
 
+  /** Reassina um stream que a Deriv fechou; devolve false quando é hora de desistir. */
+  private reassinar(reqId: number, stream: ActiveStream, erro: { code?: string; message?: string }): boolean {
+    const fechadaPeloServidor = /closed by server|subscription.*closed|InternalServerError|RateLimit/i.test(`${erro.code ?? ''} ${erro.message ?? ''}`)
+    if (!fechadaPeloServidor || this.closedByUser) return false
+    stream.tentativas = (stream.tentativas ?? 0) + 1
+    if (stream.tentativas > 5) return false
+    stream.subscriptionId = undefined
+    const espera = Math.min(15_000, 800 * 2 ** (stream.tentativas - 1))
+    setTimeout(() => {
+      // ainda querida (ninguém cancelou) e com a conexão de pé: pede de novo
+      if (this.streams.get(reqId) !== stream || this.closedByUser) return
+      if (this.ws?.readyState === WebSocket.OPEN) this.raw({ ...stream.request, subscribe: 1, req_id: reqId })
+    }, espera)
+    return true
+  }
+
   private restoreStreams() {
     for (const stream of this.streams.values()) {
       stream.subscriptionId = undefined
@@ -349,12 +367,18 @@ export class TeedsSocket {
         if (msg.error) {
           // `AlreadySubscribed` significa que o stream existe e esta vivo —
           // derrubar o registro por causa dela deixaria a tela cega.
-          if (msg.error.code !== 'AlreadySubscribed') {
-            this.streams.delete(reqId)
-            stream.handler(msg)
-          }
+          if (msg.error.code === 'AlreadySubscribed') return
+          // A Deriv fecha assinaturas do lado dela de vez em quando
+          // ("subscription closed by server": manutenção, troca de servidor).
+          // Não é recusa: pede de novo, em silêncio, com espera crescente.
+          // Só depois de várias falhas seguidas o erro chega à tela (19/10/2026:
+          // antes, a primeira já virava aviso vermelho e as posições congelavam).
+          if (this.reassinar(reqId, stream, msg.error)) return
+          this.streams.delete(reqId)
+          stream.handler(msg)
           return
         }
+        if (stream.tentativas) stream.tentativas = 0
         stream.handler(msg)
         return
       }
