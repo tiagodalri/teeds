@@ -105,8 +105,10 @@ export interface Marca {
    * Vitrine dos robôs na tela Robôs (19/10/2026, GlobalFly): no lugar do
    * quadro vazio, um cartão por robô com a foto (public/robos-<marca>/<id>.webp)
    * e a aeronave que inspirou o nome. Sem isto, a tela fica como sempre.
+   * Fotos do Wikimedia Commons (19/10/2026): as da Força Aérea dos EUA são de
+   * domínio público; as CC BY-SA pedem o crédito, que aparece na vitrine.
    */
-  vitrineDosRobos?: Record<string, { aeronave: string }>
+  vitrineDosRobos?: Record<string, { aeronave: string; credito?: string; fonte?: string }>
   /**
    * A cor da marca, uma por tema.
    *
@@ -302,11 +304,11 @@ export const MARCAS: Record<string, Marca> = {
     aoVivo: true,
     ativosSemVolatility: true,
     vitrineDosRobos: {
-      goreme: { aeronave: 'Caça F-22 Raptor' },
-      superior5: { aeronave: 'Inspirado no Gulfstream' },
-      thepalm: { aeronave: 'Caça F-16 Fighting Falcon' },
-      ag2: { aeronave: 'Embraer Phenom 300' },
-      firstblock: { aeronave: 'Helicóptero Airbus H160' },
+      goreme: { aeronave: 'Caça F-22 Raptor', credito: 'Força Aérea dos EUA, domínio público', fonte: 'https://commons.wikimedia.org/wiki/File:A_U.S._Air_Force_F-22_Raptor_from_the_1st_Fighter_Wing_flies_over_Western_Virginia%2C_June_12%2C_2018.jpg' },
+      superior5: { aeronave: 'Inspirado no Gulfstream', credito: 'Bene Riobó, CC BY-SA 4.0', fonte: 'https://commons.wikimedia.org/wiki/File:EC-MLR_Gulfstream_G650_SCQ_03.jpg' },
+      thepalm: { aeronave: 'Caça F-16 Fighting Falcon', credito: 'Força Aérea dos EUA, domínio público', fonte: 'https://commons.wikimedia.org/wiki/File:F-16_over_South_Korea_in_front_of_the_sunset.jpg' },
+      ag2: { aeronave: 'Embraer Phenom 300', credito: 'Thornfield Hall, CC BY-SA 4.0', fonte: 'https://commons.wikimedia.org/wiki/File:Embraer_Phenom_300.jpg' },
+      firstblock: { aeronave: 'Helicóptero Airbus H160', credito: 'Berg2, CC BY-SA 3.0', fonte: 'https://commons.wikimedia.org/wiki/File:Airbus_Helicopters_H160.jpg' },
     },
     desenhoDosRobos: {
       goreme: { cor: '#5B7C9D', corSuave: '#E6ECF2' },

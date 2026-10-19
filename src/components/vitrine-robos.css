@@ -53,3 +53,7 @@
   .vr-configurar { min-height: 46px; font-size: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .vr-cartao, .vr-foto img, .vr-configurar span { transition: none; } }
+
+.vr-creditos { margin: -8px 0 0; color: var(--muted); font-size: 10.5px; line-height: 1.5; opacity: .8; }
+.vr-creditos a { color: inherit; text-decoration: none; }
+.vr-creditos a:hover { text-decoration: underline; }

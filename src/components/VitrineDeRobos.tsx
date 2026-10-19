@@ -39,8 +39,8 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
         {robos.map((i) => (
           <article key={i.id} className="vr-cartao" role="listitem">
             <button type="button" className="vr-foto" onClick={() => configurar(i)} aria-label={`Configurar o ${nomeCurto(i)}`} tabIndex={-1}>
-              <img src={`${base}${i.id}-pequena.webp`} srcSet={`${base}${i.id}-pequena.webp 384w, ${base}${i.id}.webp 768w`}
-                sizes="(max-width: 700px) 92vw, 320px" alt="" loading="lazy" width="384" height="252" />
+              <img src={`${base}${i.id}.webp`} srcSet={`${base}${i.id}-pequena.webp 640w, ${base}${i.id}.webp 1200w`}
+                sizes="(max-width: 700px) 82vw, (max-width: 1279px) 30vw, 20vw" alt="" loading="lazy" decoding="async" width="1200" height="750" />
               <span className="vr-foto-nome"><b>{nomeCurto(i)}</b></span>
             </button>
             <div className="vr-corpo">
@@ -54,6 +54,14 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
         ))}
       </div>
       <p className="vr-nota">Nenhuma estratégia garante resultado. Os robôs da mesma conta compartilham o saldo.</p>
+      {robos.some((i) => vitrine[i.id]?.credito) && (
+        <p className="vr-creditos">
+          Fotos (Wikimedia Commons):{' '}
+          {robos.filter((i) => vitrine[i.id]?.credito).map((i, k) => (
+            <span key={i.id}>{k > 0 && ' · '}<a href={vitrine[i.id]!.fonte} target="_blank" rel="noopener noreferrer">{nomeCurto(i)}: {vitrine[i.id]!.credito}</a></span>
+          ))}
+        </p>
+      )}
     </section>
   )
 }
