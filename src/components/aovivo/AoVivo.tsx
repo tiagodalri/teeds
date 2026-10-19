@@ -932,8 +932,9 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
   useEffect(() => { void carregar(); const t = window.setInterval(() => void carregar(), 20000); return () => window.clearInterval(t) }, [carregar])
   const [planoTreino, setPlanoTreino] = useState(false)
   // a aba Sala de treino: o admin abre e transmite; o membro do plano "treino" assiste
-  // (o link público da fase de testes NÃO abre a sala de treino: ali o público é simulado)
-  const treino = admin || planoTreino
+  // (na fase de testes, com o link público ligado, qualquer pessoa assiste)
+  const publico = useLinkPublico()
+  const treino = admin || planoTreino || publico === true
   const [treinando, setTreinando] = useState(false)
   useEffect(() => { if (sessao) void podeTreinar(sessao).then(setPlanoTreino) }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // chegou pelo link da sala de treino: abre a aba (o membro já cai assistindo)

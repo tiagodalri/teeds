@@ -12,9 +12,10 @@
 //
 // Sala de treino transmitida (19/10/2026): `acao: 'treino'` dá o ingresso da
 // sala `treino-<marca>`. Só admin da marca transmite (é quem inicia); membro
-// do plano "treino" entra para assistir. Ninguém mais entra, nem com o link
-// público ligado: o público e o chat ali são simulados, e só quem é da
-// equipe pode ver.
+// do plano "treino" entra para assistir. Na fase de testes (link público
+// ligado, pedido do Tiago em 19/10/2026), qualquer pessoa com o link assiste
+// e escreve no chat, mesmo sem conta; desligar a chave fecha de novo. Quem
+// assiste vê sempre que o público e o chat são simulados.
 //
 // O LiveKit roda no nosso servidor (código aberto, sem conta em serviço de
 // fora). Endereço e chaves ficam na tabela `config_servicos`, que só a chave
@@ -115,20 +116,34 @@ Deno.serve(async (req) => {
   let { liveId } = corpo
   const { acao, identidade } = corpo
 
-  // Sala de treino: só com conta; admin transmite, membro do plano assiste.
+  // Sala de treino: admin transmite, membro do plano assiste; com o link público, qualquer pessoa assiste.
   if (acao === 'treino') {
     const marca = String(corpo.marca ?? '')
     if (!['teeds', 'omni', 'globalfly'].includes(marca)) return resposta(400, { erro: 'Marca inválida.' })
+    const sala = `treino-${marca}`
+    const agora = Math.floor(Date.now() / 1000)
+    // espectador da fase de testes (sem conta, ou com conta mas sem o plano)
+    const comoEspectador = async (nomeDado: string, identidadeDada?: string) => {
+      if (!(await linkPublico(marca).catch(() => false))) return null
+      const nome = nomeDado.replace(/\s+/g, ' ').trim().slice(0, 30) || 'Convidado'
+      const ingresso = await assinar({
+        iss: LK_KEY, sub: identidadeDada ?? `convidado-${crypto.randomUUID().slice(0, 12)}`, name: nome, nbf: agora, exp: agora + 4 * 3600,
+        metadata: JSON.stringify({ moderador: false, treino: true, convidado: true }),
+        video: { room: sala, roomJoin: true, canSubscribe: true, canPublish: false, canPublishData: true },
+      })
+      return resposta(200, { url: LK_URL, token: ingresso, nome, moderador: false, silenciado: false, convidado: true })
+    }
     const u = await banco<{ id: string; user_metadata?: Record<string, string> }>('/auth/v1/user', token).catch(() => null)
-    if (!u) return resposta(401, { erro: 'Entre na sua conta para abrir a sala de treino.' })
+    if (!u) return (await comoEspectador(corpo.nome ?? '')) ?? resposta(401, { erro: 'Entre na sua conta para abrir a sala de treino.' })
     const rpc = (f: string) => banco<boolean>(`/rest/v1/rpc/${f}`, token, { method: 'POST', body: JSON.stringify({ p_marca: marca }) }).catch(() => false)
     const [admin, membro] = await Promise.all([rpc('teeds_sou_admin_da'), rpc('teeds_minha_sala_de_treino')])
-    if (!admin && !membro) return resposta(403, { erro: 'A sala de treino é para os membros do plano de treino.' })
+    if (!admin && !membro) {
+      const primeiro = String(u.user_metadata?.nome || u.user_metadata?.full_name || '').trim().split(/\s+/)[0]
+      return (await comoEspectador(corpo.nome || primeiro, u.id)) ?? resposta(403, { erro: 'A sala de treino é para os membros do plano de treino.' })
+    }
     const [ficha] = await banco<Array<{ nome: string | null }>>(`/rest/v1/clientes?select=nome&user_id=eq.${u.id}&marca=eq.${marca}&limit=1`, token).catch(() => [])
     const completo = String(ficha?.nome || u.user_metadata?.nome || u.user_metadata?.full_name || '').trim()
     const nome = (admin ? completo : completo.split(/\s+/)[0]) || (admin ? 'Apresentador' : 'Membro')
-    const agora = Math.floor(Date.now() / 1000)
-    const sala = `treino-${marca}`
     const ingresso = await assinar({
       iss: LK_KEY, sub: u.id, name: nome, nbf: agora, exp: agora + 6 * 3600,
       metadata: JSON.stringify({ moderador: admin, treino: true }),

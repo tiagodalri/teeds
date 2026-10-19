@@ -5,8 +5,8 @@
  *
  * Vai por uma sala própria do LiveKit (`treino-<marca>`), separada das lives
  * de verdade. O ingresso vem da função `live-token` (acao 'treino'), que só
- * aceita admin da marca e membro do plano; sem conta, ninguém entra, nem com
- * o link público ligado.
+ * aceita admin da marca e membro do plano; na fase de testes (link público
+ * ligado), qualquer pessoa com o link assiste e escreve, mesmo sem conta.
  *
  * O motor da simulação roda no navegador do admin (`simulacao.ts`); este
  * módulo repassa à sala o que ele produz (mensagens, público, momento) e
@@ -73,11 +73,11 @@ const ehApresentador = (p?: Participant) => {
   try { return Boolean(p?.metadata && JSON.parse(p.metadata).moderador) } catch { return false }
 }
 
-async function pedirIngresso(sessao: SessaoTeeds): Promise<{ url: string; token: string; nome: string; moderador: boolean }> {
+async function pedirIngresso(sessao: SessaoTeeds | null, nome: string): Promise<{ url: string; token: string; nome: string; moderador: boolean }> {
   const r = await fetch(`${SUPABASE.url}/functions/v1/live-token`, {
     method: 'POST',
-    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ acao: 'treino', marca: MARCA.id }),
+    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao?.token ?? SUPABASE.anonKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ acao: 'treino', marca: MARCA.id, nome }),
   })
   const dados = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(dados?.erro || `Não consegui abrir a sala de treino (${r.status}).`)
@@ -137,13 +137,16 @@ function comecarARepassar() {
 
 /* --------------------------------------------------------------- entrar */
 
-/** Entra na sala de treino: o admin para transmitir, o membro para assistir. */
-export async function entrarNoTreino(sessao: SessaoTeeds): Promise<void> {
+/**
+ * Entra na sala de treino: o admin para transmitir, o membro para assistir.
+ * Sem conta (fase de testes), vai o nome que a pessoa digitou.
+ */
+export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Promise<void> {
   if (sala && estado.fase !== 'erro') return
   await sairDoTreino()
   mudar({ ...INICIAL, fase: 'conectando' })
   try {
-    const ingresso = await pedirIngresso(sessao)
+    const ingresso = await pedirIngresso(sessao, nome)
     const r = new Room({ adaptiveStream: true, dynacast: true })
     sala = r
     r.on(RoomEvent.TrackSubscribed, atualizarSala)

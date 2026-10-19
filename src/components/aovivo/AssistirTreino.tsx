@@ -32,16 +32,16 @@ const fmt = (n: number) => n.toLocaleString('pt-BR')
 const hora = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 const MOMENTO: Record<string, string> = { abertura: 'Abertura', meta: 'Bateu a meta', stop: 'Tomou stop', lateral: 'Mercado lento', perguntas: 'Rodada de perguntas' }
 
-export function AssistirTreino({ sessao, conectar = true }: { sessao: SessaoTeeds | null; conectar?: boolean }) {
+export function AssistirTreino({ sessao, conectar = true, nomeConvidado = '' }: { sessao: SessaoTeeds | null; conectar?: boolean; nomeConvidado?: string }) {
   const t = useTreino()
   const [texto, setTexto] = useState('')
   const lista = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!sessao || !conectar) return
-    void entrarNoTreino(sessao)
+    if (!conectar || (!sessao && !nomeConvidado)) return
+    void entrarNoTreino(sessao, nomeConvidado)
     return () => { void sairDoTreino() }
-  }, [sessao?.usuario.id, conectar]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sessao?.usuario.id, conectar, nomeConvidado]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const l = lista.current
     if (l && l.scrollHeight - l.scrollTop - l.clientHeight < 140) l.scrollTop = l.scrollHeight
