@@ -1,5 +1,5 @@
-const CACHE='teeds-d29e870a07ac';
-const SHELL=["./","./index.html","./manifest.webmanifest","./pwa-teeds/icon-192.png","./pwa-teeds/icon-512.png","./assets/AoVivo.js?v=d29e870a07ac","./assets/Convidado.js?v=d29e870a07ac","./assets/MonitoramentoPanel.js?v=d29e870a07ac","./assets/RecursosDeApp.js?v=d29e870a07ac","./assets/teeds.css?v=d29e870a07ac","./assets/teeds.js?v=d29e870a07ac","./assets/teeds2.css?v=d29e870a07ac","./assets/teeds3.css?v=d29e870a07ac"];
+const CACHE='teeds-ead4ba8f9a94';
+const SHELL=["./","./index.html","./manifest.webmanifest","./pwa-teeds/icon-192.png","./pwa-teeds/icon-512.png","./assets/AoVivo.js?v=ead4ba8f9a94","./assets/Convidado.js?v=ead4ba8f9a94","./assets/MonitoramentoPanel.js?v=ead4ba8f9a94","./assets/RecursosDeApp.js?v=ead4ba8f9a94","./assets/teeds.css?v=ead4ba8f9a94","./assets/teeds.js?v=ead4ba8f9a94","./assets/teeds2.css?v=ead4ba8f9a94","./assets/teeds3.css?v=ead4ba8f9a94"];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).catch(()=>{}));self.skipWaiting()});
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{const r=e.request;const u=new URL(r.url);if(r.method!=='GET'||u.origin!==self.location.origin||r.cache==='no-store'||u.searchParams.has('vivo'))return;

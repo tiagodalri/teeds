@@ -8,7 +8,7 @@
 
 .vr-grade { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
 .vr-cartao {
-  display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  position: relative; display: flex; flex-direction: column; min-width: 0; overflow: hidden;
   border: 1px solid var(--border); border-radius: 16px; background: var(--surface);
   transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
@@ -17,43 +17,96 @@
   box-shadow: 0 22px 40px -28px rgba(0, 0, 0, .55);
 }
 
-.vr-foto { position: relative; display: block; width: 100%; aspect-ratio: 16 / 10; padding: 0; border: 0; overflow: hidden; background: #050a14; cursor: pointer; }
-.vr-foto img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
+/* ------------------------------------------------------------ foto */
+.vr-foto { position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; background: #050a14; }
+.vr-foto img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .6s cubic-bezier(.2, .7, .2, 1); }
 .vr-cartao:hover .vr-foto img { transform: scale(1.045); }
-.vr-foto::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5, 10, 20, 0) 52%, rgba(5, 10, 20, .55) 74%, rgba(5, 10, 20, .92) 100%); pointer-events: none; }
-.vr-foto-nome { position: absolute; z-index: 1; left: 14px; right: 14px; bottom: 12px; display: grid; gap: 2px; text-align: left; color: #f3f0e9; }
-.vr-foto-nome small { font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; opacity: .82; }
-.vr-foto-nome b { text-shadow: 0 2px 12px rgba(0,0,0,.5); font-size: 22px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; line-height: 1.1; }
+.vr-foto::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5, 10, 20, .35) 0%, rgba(5, 10, 20, 0) 26%, rgba(5, 10, 20, 0) 52%, rgba(5, 10, 20, .55) 74%, rgba(5, 10, 20, .92) 100%); pointer-events: none; }
+.vr-foto-nome { position: absolute; z-index: 1; left: 14px; right: 14px; bottom: 12px; color: #f3f0e9; }
+.vr-foto-nome b { display: block; text-shadow: 0 2px 12px rgba(0,0,0,.5); font-size: 22px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; line-height: 1.1; }
 
-.vr-corpo { display: flex; flex-direction: column; gap: 8px; flex: 1; padding: 14px 14px 14px; }
-.vr-chamada { color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
-.vr-corpo p { margin: 0; flex: 1; color: var(--text); font-size: 12.5px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-.vr-configurar {
-  align-self: stretch; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; margin-top: 4px;
-  border: 1px solid var(--border); border-radius: 10px; background: var(--surface-alt); color: var(--text);
-  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s, color .15s, border-color .15s;
+/* "Por que Raptor?": selo de vidro no alto da foto */
+.vr-porque {
+  position: absolute; z-index: 2; top: 10px; left: 10px; display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 11px 0 9px; border: 1px solid rgba(243, 240, 233, .28); border-radius: 14px;
+  background: rgba(5, 10, 20, .5); color: #f3f0e9; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  font: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; transition: background .15s, border-color .15s, transform .15s;
 }
-.vr-configurar span { transition: transform .15s; }
-.vr-cartao:hover .vr-configurar, .vr-configurar:focus-visible { border-color: var(--primary); background: var(--primary); color: var(--surface); }
-:root[data-tema='escuro'] .vr-cartao:hover .vr-configurar, :root[data-tema='escuro'] .vr-configurar:focus-visible { color: var(--bg); }
-.vr-cartao:hover .vr-configurar span { transform: translateX(3px); }
-.vr-configurar:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.vr-porque span { color: var(--gf-ouro, #B78D39); font-size: 11px; }
+.vr-porque:hover { background: rgba(5, 10, 20, .72); border-color: color-mix(in srgb, var(--gf-ouro, #B78D39) 70%, transparent); transform: translateY(-1px); }
+.vr-porque:focus-visible { outline: 2px solid var(--gf-ouro, #B78D39); outline-offset: 2px; }
+
+/* ------------------------------------------------------------ corpo */
+.vr-corpo { display: flex; flex-direction: column; gap: 7px; flex: 1; padding: 14px; }
+.vr-chamada { color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.vr-gancho { margin: 0; color: var(--text); font-size: 14px; font-weight: 700; line-height: 1.35; letter-spacing: -.005em; text-wrap: balance; }
+.vr-regra { margin: 0; flex: 1; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.vr-regra b, .vr-historia-regra b { display: block; margin-bottom: 1px; color: var(--text); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+
+/* Iniciar operações: o play é a peça de ação (ouro), o texto em cima da superfície */
+.vr-iniciar {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; margin-top: 6px; padding: 0 16px 0 8px;
+  border: 0; border-radius: 12px; background: var(--primary); color: var(--surface);
+  font: inherit; font-size: 13.5px; font-weight: 800; letter-spacing: .01em; cursor: pointer; overflow: hidden;
+  transition: transform .15s ease, box-shadow .2s ease, filter .15s;
+}
+:root[data-tema='escuro'] .vr-iniciar { color: var(--bg); }
+.vr-play { flex: none; transition: transform .25s cubic-bezier(.2, .8, .2, 1); }
+.vr-play circle { fill: color-mix(in srgb, currentColor 16%, transparent); stroke: currentColor; stroke-width: 1.4; opacity: .95; }
+.vr-play path { fill: currentColor; }
+/* brilho que atravessa o botão no hover */
+.vr-iniciar::after {
+  content: ''; position: absolute; inset: 0 auto 0 -60%; width: 50%; transform: skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .28), transparent); pointer-events: none;
+}
+.vr-cartao:hover .vr-iniciar { box-shadow: 0 10px 22px -12px color-mix(in srgb, var(--primary) 80%, transparent); }
+.vr-cartao:hover .vr-iniciar::after { animation: vr-brilho .9s ease; }
+.vr-iniciar:hover .vr-play { transform: scale(1.12); }
+.vr-iniciar:active { transform: scale(.98); }
+.vr-iniciar:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+@keyframes vr-brilho { to { left: 130%; } }
+
+/* ------------------------------------------------------------ a história */
+.vr-historia {
+  position: absolute; z-index: 3; inset: 0 0 66px 0; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px 16px;
+  color: #e9edf3; overflow-y: auto; overscroll-behavior: contain;
+  background: linear-gradient(180deg, rgba(5, 12, 24, .9), rgba(5, 12, 24, .97)), var(--foto) center / cover;
+  border-bottom: 1px solid rgba(243, 240, 233, .1);
+  transform: translateY(-104%); opacity: 0; visibility: hidden;
+  transition: transform .42s cubic-bezier(.2, .8, .2, 1), opacity .25s ease, visibility 0s linear .42s;
+}
+.vr-cartao.com-historia .vr-historia { transform: none; opacity: 1; visibility: visible; transition: transform .42s cubic-bezier(.2, .8, .2, 1), opacity .25s ease, visibility 0s; }
+.vr-historia-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.vr-historia .vr-chamada { color: var(--gf-ouro, #B78D39); }
+.vr-historia h4 { margin: 0; color: #fff; font-size: 17px; line-height: 1.2; }
+.vr-historia p { margin: 0; color: #d3dbe5; font-size: 12.5px; line-height: 1.58; }
+.vr-historia .vr-historia-regra { margin-top: auto; padding-top: 10px; border-top: 1px solid rgba(243, 240, 233, .12); color: #aebccb; font-size: 11.5px; }
+.vr-historia .vr-historia-regra b { color: #f3f0e9; }
+.vr-fechar { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid rgba(243, 240, 233, .2); border-radius: 50%; background: transparent; color: #f3f0e9; font-size: 18px; line-height: 1; cursor: pointer; }
+.vr-fechar:hover { background: rgba(243, 240, 233, .1); }
+/* com a história aberta, o cartão não pula (a pessoa está lendo) */
+.vr-cartao.com-historia, .vr-cartao.com-historia:hover { transform: none; }
+.vr-cartao.com-historia .vr-foto img { transform: scale(1.08); filter: blur(1px); }
+
 .vr-nota { margin: 0; color: var(--muted); font-size: 11.5px; }
+.vr-creditos { margin: -8px 0 0; color: var(--muted); font-size: 10.5px; line-height: 1.5; opacity: .8; }
+.vr-creditos a { color: inherit; text-decoration: none; }
+.vr-creditos a:hover { text-decoration: underline; }
 
 /* telas médias: uma fileira que desliza de lado (cinco cartões não dividem bem em duas ou três colunas) */
 @media (max-width: 1279px) {
-  .vr-grade { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(250px, 30%); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px; scrollbar-width: thin; }
+  .vr-grade { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(270px, 31%); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px; scrollbar-width: thin; }
   .vr-cartao { scroll-snap-align: start; }
   .vr-cartao:hover, .vr-cartao:focus-within { transform: none; }
 }
 /* celular: um cartão inteiro por vez, com o próximo aparecendo na borda */
 @media (max-width: 700px) {
-  .vr-grade { grid-auto-columns: 82%; gap: 12px; }
+  .vr-grade { grid-auto-columns: 84%; gap: 12px; }
   .vr-foto-nome b { font-size: 20px; }
-  .vr-configurar { min-height: 46px; font-size: 14px; }
+  .vr-iniciar { min-height: 50px; font-size: 15px; }
+  .vr-porque { height: 32px; font-size: 12.5px; }
 }
-@media (prefers-reduced-motion: reduce) { .vr-cartao, .vr-foto img, .vr-configurar span { transition: none; } }
-
-.vr-creditos { margin: -8px 0 0; color: var(--muted); font-size: 10.5px; line-height: 1.5; opacity: .8; }
-.vr-creditos a { color: inherit; text-decoration: none; }
-.vr-creditos a:hover { text-decoration: underline; }
+@media (prefers-reduced-motion: reduce) {
+  .vr-cartao, .vr-foto img, .vr-play, .vr-historia { transition: none; }
+  .vr-cartao:hover .vr-iniciar::after { animation: none; }
+}

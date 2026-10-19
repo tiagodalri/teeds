@@ -108,7 +108,15 @@ export interface Marca {
    * Fotos do Wikimedia Commons (19/10/2026): as da Força Aérea dos EUA são de
    * domínio público; as CC BY-SA pedem o crédito, que aparece na vitrine.
    */
-  vitrineDosRobos?: Record<string, { aeronave: string; credito?: string; fonte?: string }>
+  vitrineDosRobos?: Record<string, {
+    aeronave: string
+    /** Uma linha: o jeito da aeronave que o robô imita. */
+    gancho?: string
+    /** O "por que esse nome": a aeronave e o robô lado a lado, sem números (os números vêm da regra viva). */
+    historia?: string
+    credito?: string
+    fonte?: string
+  }>
   /**
    * A cor da marca, uma por tema.
    *
@@ -304,11 +312,21 @@ export const MARCAS: Record<string, Marca> = {
     aoVivo: true,
     ativosSemVolatility: true,
     vitrineDosRobos: {
-      goreme: { aeronave: 'Caça F-22 Raptor', credito: 'Força Aérea dos EUA, domínio público', fonte: 'https://commons.wikimedia.org/wiki/File:A_U.S._Air_Force_F-22_Raptor_from_the_1st_Fighter_Wing_flies_over_Western_Virginia%2C_June_12%2C_2018.jpg' },
-      superior5: { aeronave: 'Inspirado no Gulfstream', credito: 'Bene Riobó, CC BY-SA 4.0', fonte: 'https://commons.wikimedia.org/wiki/File:EC-MLR_Gulfstream_G650_SCQ_03.jpg' },
-      thepalm: { aeronave: 'Caça F-16 Fighting Falcon', credito: 'Força Aérea dos EUA, domínio público', fonte: 'https://commons.wikimedia.org/wiki/File:F-16_over_South_Korea_in_front_of_the_sunset.jpg' },
-      ag2: { aeronave: 'Embraer Phenom 300', credito: 'Thornfield Hall, CC BY-SA 4.0', fonte: 'https://commons.wikimedia.org/wiki/File:Embraer_Phenom_300.jpg' },
-      firstblock: { aeronave: 'Helicóptero Airbus H160', credito: 'Berg2, CC BY-SA 3.0', fonte: 'https://commons.wikimedia.org/wiki/File:Airbus_Helicopters_H160.jpg' },
+      goreme: { aeronave: 'Caça F-22 Raptor', credito: 'Força Aérea dos EUA, domínio público', fonte: 'https://commons.wikimedia.org/wiki/File:A_U.S._Air_Force_F-22_Raptor_from_the_1st_Fighter_Wing_flies_over_Western_Virginia%2C_June_12%2C_2018.jpg',
+        gancho: 'Domina o espaço aéreo e muda de direção no ar.',
+        historia: 'O F-22 é o caça de superioridade aérea: ocupa quase todo o céu e, com o vetoramento de empuxo, vira o nariz para o lado oposto em pleno voo. O Raptor faz o mesmo no painel de dígitos: cobre quase todos os resultados e, quando uma operação perde, troca de lado para recuperar nos dígitos altos, voltando à rota logo em seguida.' },
+      superior5: { aeronave: 'Inspirado no Gulfstream', credito: 'Bene Riobó, CC BY-SA 4.0', fonte: 'https://commons.wikimedia.org/wiki/File:EC-MLR_Gulfstream_G650_SCQ_03.jpg',
+        gancho: 'Longo alcance: só decola com a janela certa.',
+        historia: 'Um Gulfstream não sai do hangar com o tempo fechado: espera a janela, decola e cruza o oceano sem desviar da rota. O Gulf observa o mercado até ver uma sequência de dígitos que teriam perdido, entra mirando os dígitos altos e segue a viagem até fechar a sequência.' },
+      thepalm: { aeronave: 'Caça F-16 Fighting Falcon', credito: 'Força Aérea dos EUA, domínio público', fonte: 'https://commons.wikimedia.org/wiki/File:F-16_over_South_Korea_in_front_of_the_sunset.jpg',
+        gancho: 'Multimissão: troca de perfil no meio do voo.',
+        historia: 'O F-16 nasceu ágil e multimissão: patrulha, intercepta e muda de perfil sem precisar pousar. O Falcon patrulha em todo tick com cobertura ampla; se toma uma perda, passa para o modo de precisão, lê os últimos dígitos antes de mirar e só volta à patrulha depois de recuperar.' },
+      ag2: { aeronave: 'Embraer Phenom 300', credito: 'Thornfield Hall, CC BY-SA 4.0', fonte: 'https://commons.wikimedia.org/wiki/File:Embraer_Phenom_300.jpg',
+        gancho: 'Jato leve, pouso preciso em pista curta.',
+        historia: 'O Phenom 300 é o jato leve que pousa onde os grandes não cabem, com precisão e economia. O Phenom trabalha no extremo baixo do painel, nos menores dígitos: espera a sequência que teria perdido, entra e segue até fechá-la. É o espelho do Gulf, do outro lado do céu.' },
+      firstblock: { aeronave: 'Helicóptero Airbus H160', credito: 'Berg2, CC BY-SA 3.0', fonte: 'https://commons.wikimedia.org/wiki/File:Airbus_Helicopters_H160.jpg',
+        gancho: 'Paira, observa e pousa no ponto exato.',
+        historia: 'Helicóptero não precisa de pista: paira sobre o alvo, observa e desce na vertical, no ponto exato. O H160 sobrevoa a primeira metade do painel, espera dois sinais seguidos que teriam perdido e só então pousa a entrada, voltando a pairar e observar a cada nova operação.' },
     },
     desenhoDosRobos: {
       goreme: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
