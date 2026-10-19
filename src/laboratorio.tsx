@@ -126,7 +126,7 @@ function LabVitrine() {
   const [preparo, setPreparo] = useState(false)
   return (
     <div className="ger rob robot-workspace">
-      <div className="ger-topo rob-workspace-header"><div><span className="rob-eyebrow">CENTRAL DE ROBÔS</span><h2>Vamos preparar seu primeiro robô?</h2><p className="ger-sub">Escolha um modelo, defina seus limites e acompanhe a sessão.</p></div></div>
+      <div className="ger-topo rob-workspace-header"><div><span className="rob-eyebrow">CENTRAL DE ROBÔS</span><h2>Vamos iniciar sua jornada?</h2><p className="ger-sub">Escolha um modelo, defina seus limites e acompanhe a sessão.</p></div></div>
       <VitrineDeRobos onConfigurar={() => setPreparo(true)} />
       {preparo && <RobotSetup identidade={ident} nomeEstrategia={ident.nome} symbols={symbols} symbolInicial="R_75" configInicial={config} moeda="USD" isDemo contaId="VRTC1234567" escolherModelo onCancelar={() => setPreparo(false)} onLigar={nada} ligando={false} erro={null} />}
     </div>

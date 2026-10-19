@@ -318,7 +318,7 @@ export function RobotsPanel({
       <div className="ger-topo rob-workspace-header">
         <div>
           <span className="rob-eyebrow">CENTRAL DE ROBÔS</span>
-          <h2>{temAcompanhamento ? 'Suas sessões' : 'Vamos preparar seu primeiro robô?'}</h2>
+          <h2>{temAcompanhamento ? 'Suas sessões' : MARCA.vitrineDosRobos ? 'Vamos iniciar sua jornada?' : 'Vamos preparar seu primeiro robô?'}</h2>
           <p className="ger-sub">
             {temAcompanhamento ? 'Acompanhe cada sessão. Abra os detalhes quando precisar.' : 'Escolha um modelo, defina seus limites e acompanhe a sessão.'}
           </p>

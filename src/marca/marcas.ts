@@ -308,9 +308,8 @@ export const MARCAS: Record<string, Marca> = {
     prefixoRobo: 'GlobalFly',
     appId: '34H1Zr9Gp5fdho00X5BZT',
     redirectUri: 'https://globalflytrade.com/',
-    // PENDENTE: a conta de afiliado da GlobalFly ainda não existe (não pode
-    // ser no nome do Victor). Até lá, o cadastro vai para a Deriv sem token.
-    afiliado: 'https://deriv.com/signup/',
+    // Link de abertura de conta da GlobalFly na Deriv (19/10/2026, enviado pelo Tiago).
+    afiliado: 'https://t.deriv.link?t=AYTXZHG2MTKA',
     // 19/10/2026: os cinco robôs da lista final do Tiago, nesta ordem.
     // Raptor é o mesmo robô do Göreme da Teeds (pedido dele); os outros
     // ficaram com AG7 (superior5), The Palm, AG2 e First Block. Gulf e
