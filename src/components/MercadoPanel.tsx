@@ -16,7 +16,7 @@ import './mercado.css'
 type Categoria = 'bolsa' | 'cambio' | 'juros' | 'internacional' | 'cripto' | 'commodities' | 'economia'
 interface Noticia { id: string; titulo: string; resumo: string; link: string; imagem: string | null; fonte: string; quando: string; categoria: Categoria }
 interface Cotacao { id: string; nome: string; preco: number; variacao: number; moeda: string; hora: string; atrasada: boolean; serie?: number[] }
-interface Dados { cotacoes: Cotacao[]; noticias: Noticia[]; atualizadoEm: string }
+interface Dados { cotacoes: Cotacao[]; noticias: Noticia[]; portais?: Record<string, string>; atualizadoEm: string }
 
 const CATEGORIAS: Array<{ id: Categoria | 'tudo'; nome: string }> = [
   { id: 'tudo', nome: 'Tudo' }, { id: 'bolsa', nome: 'Bolsa' }, { id: 'cambio', nome: 'Câmbio' }, { id: 'juros', nome: 'Juros' },
@@ -110,14 +110,35 @@ function Indicador({ c }: { c?: Cotacao }) {
       <header><span>{c.nome}</span><em className={sobe ? 'sobe' : 'cai'}>{sobe ? '▲' : '▼'} {variacao(c.variacao)}</em></header>
       <b>{preco(c)}</b>
       {c.serie && c.serie.length > 2 ? <Grafico serie={c.serie} sobe={sobe} /> : <div className="mc-grafico vazio" />}
-      <small>{c.atrasada ? <>Às {horaDe(c.hora)} <i>· B3 com ~15 min de atraso</i></> : <>Às {horaDe(c.hora)}</>}</small>
+      <small>Às {horaDe(c.hora)}</small>
     </article>
   )
 }
 
+/** "Investing.com" → IN, "Money Times" → MT. */
+const sigla = (fonte: string) => {
+  const partes = fonte.replace(/\.com$/i, '').split(/[\s-]+/).filter(Boolean)
+  return (partes.length > 1 ? partes.map((p) => p[0]).join('') : partes[0]?.slice(0, 2) ?? '').slice(0, 2).toUpperCase()
+}
+
+/** O ícone oficial de cada portal, para a capa de notícia sem foto nenhuma. */
+let ICONES: Record<string, string> = {}
+
 function Capa({ n, className }: { n: Noticia; className?: string }) {
   const [falhou, setFalhou] = useState(false)
-  if (!n.imagem || falhou) return <span className={`mc-capa vazia ${className ?? ''}`} aria-hidden="true"><b>{n.fonte}</b></span>
+  const [iconeFalhou, setIconeFalhou] = useState(false)
+  if (!n.imagem || falhou) {
+    const icone = !iconeFalhou ? ICONES[n.fonte] : undefined
+    return (
+      <span className={`mc-capa vazia ${className ?? ''}`} aria-hidden="true">
+        {icone
+          ? <img src={icone} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setIconeFalhou(true)} />
+          : <i className="mc-sigla">{sigla(n.fonte)}</i>}
+        <b>{n.fonte}</b>
+        <small>{NOME_DA_CATEGORIA[n.categoria]}</small>
+      </span>
+    )
+  }
   return <img className={`mc-capa ${className ?? ''}`} src={n.imagem} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFalhou(true)} />
 }
 
@@ -181,6 +202,7 @@ export function MercadoPanel() {
     return () => { vivo = false; window.clearTimeout(segunda); window.clearInterval(t); window.clearInterval(relogio); document.removeEventListener('visibilitychange', voltou) }
   }, [])
 
+  ICONES = dados?.portais ?? ICONES
   const todas = dados?.noticias ?? []
   const noticias = useMemo(() => todas.filter((n) => filtro === 'tudo' || n.categoria === filtro), [todas, filtro])
   const presentes = useMemo(() => new Set(todas.map((n) => n.categoria)), [todas])

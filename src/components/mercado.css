@@ -108,8 +108,24 @@
 .mc-meta b { color: var(--mc-ouro); font-weight: 700; }
 .mc-tag { display: inline-block; padding: 3px 8px; border-radius: 6px; background: color-mix(in srgb, var(--bg, #000) 72%, transparent); color: #F3F0E9; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; backdrop-filter: blur(6px); }
 .mc-capa { display: block; width: 100%; height: 100%; object-fit: cover; background: var(--surface-alt); }
-.mc-capa.vazia { display: grid; place-items: center; background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 26%, var(--surface-alt)), var(--surface-alt)); }
-.mc-capa.vazia b { color: var(--text); font-size: 13px; font-weight: 800; letter-spacing: .04em; opacity: .7; }
+.mc-capa.vazia {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--mc-ouro) 16%, transparent), transparent 60%),
+    repeating-linear-gradient(135deg, color-mix(in srgb, var(--text) 4%, transparent) 0 1px, transparent 1px 14px),
+    linear-gradient(160deg, color-mix(in srgb, var(--primary) 30%, var(--surface-alt)), var(--surface-alt));
+}
+.mc-capa.vazia img { width: 52px; height: 52px; border-radius: 14px; object-fit: cover; box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .55); background: #fff; }
+.mc-capa.vazia b { color: var(--text); font-size: 14px; font-weight: 800; letter-spacing: .02em; }
+.mc-sigla {
+  display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; font-style: normal;
+  background: linear-gradient(145deg, #D9B25C, #9C7428); color: #0B1530; font-size: 18px; font-weight: 800; letter-spacing: .02em;
+  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .55);
+}
+.mc-destaque .mc-sigla { width: 76px; height: 76px; border-radius: 20px; font-size: 26px; }
+.mc-capa.vazia small { color: var(--mc-ouro); font-size: 9.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.mc-destaque .mc-capa.vazia img { width: 76px; height: 76px; border-radius: 20px; }
+.mc-destaque .mc-capa.vazia { justify-content: flex-start; padding-top: 70px; }
 
 .mc-principal { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(300px, 1fr); gap: 16px; }
 /* destaque: a manchete sobre a foto, como capa de revista */
@@ -166,7 +182,6 @@
   .mc-ind > b { font-size: 19px; }
   .mc-ind header { flex-wrap: wrap; gap: 2px 6px; }
   .mc-grafico, .mc-grafico.vazio { height: 36px; }
-  .mc-ind small i { display: block; }
   .mc-centros { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .mc-centros li { grid-template-columns: 28px minmax(0, 1fr); grid-template-rows: auto auto; gap: 2px 8px; padding: 9px 10px; }
   .mc-relogio { width: 28px; height: 28px; grid-row: 1 / 3; }
@@ -183,5 +198,7 @@
   .mc-cartao { grid-template-columns: 116px minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: 12px; row-gap: 4px; }
   .mc-cartao-capa { grid-row: 1 / 3; aspect-ratio: 1; border-radius: 12px; }
   .mc-cartao-capa .mc-tag { display: none; }
+  .mc-cartao-capa .mc-capa.vazia b, .mc-cartao-capa .mc-capa.vazia small { display: none; }
+  .mc-cartao-capa .mc-capa.vazia img, .mc-cartao-capa .mc-sigla { width: 44px; height: 44px; border-radius: 12px; font-size: 15px; }
   .mc-cartao strong { font-size: 14px; }
 }

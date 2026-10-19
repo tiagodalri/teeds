@@ -346,10 +346,15 @@ export function capturarRetorno(): Retorno {
  * no próprio app da marca. O app valida o código na Supabase (verify com
  * token_hash), sem depender da lista de endereços de volta dela.
  */
+let confirmacao: Promise<Retorno> | null = null
 export function temConfirmacaoNoEndereco(): boolean {
-  return new URLSearchParams(window.location.search).has('confirmar')
+  return confirmacao !== null || new URLSearchParams(window.location.search).has('confirmar')
 }
-export async function confirmarPeloLink(): Promise<Retorno> {
+/** Uma vez só por carregamento (o código vale uma vez; o React pode pedir duas). */
+export function confirmarPeloLink(): Promise<Retorno> {
+  return (confirmacao ??= validarCodigoDoEndereco())
+}
+async function validarCodigoDoEndereco(): Promise<Retorno> {
   const u = new URL(window.location.href)
   const codigo = u.searchParams.get('confirmar') ?? ''
   const tipo = u.searchParams.get('tipo') ?? 'email'
