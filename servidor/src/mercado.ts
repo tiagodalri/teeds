@@ -175,7 +175,7 @@ const CAMBIO_RESERVA = [
   { simbolo: 'BRL=X', id: 'dolar', nome: 'Dólar', moeda: 'R$' },
   { simbolo: 'EURBRL=X', id: 'euro', nome: 'Euro', moeda: 'R$' },
   { simbolo: 'GBPBRL=X', id: 'libra', nome: 'Libra', moeda: 'R$' },
-  { simbolo: 'BTC-BRL', id: 'bitcoin', nome: 'Bitcoin', moeda: 'R$' },
+  { simbolo: 'BTC-USD', id: 'bitcoin', nome: 'Bitcoin', moeda: 'US$' }, // o Yahoo não tem BTC em reais
 ]
 
 async function bolsa(b: { simbolo: string; id: string; nome: string; moeda: string }): Promise<Cotacao> {

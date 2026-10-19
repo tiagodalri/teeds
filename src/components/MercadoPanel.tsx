@@ -43,7 +43,7 @@ function relogioDe(fuso: string, agora: Date) {
 const num = (v: number, casas = 2) => v.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })
 function preco(c: Cotacao) {
   if (c.moeda === 'pts') return num(c.preco, 0)
-  if (c.id === 'bitcoin') return `R$ ${num(c.preco, 0)}`
+  if (c.id === 'bitcoin') return `${c.moeda} ${num(c.preco, 0)}`
   return `${c.moeda} ${num(c.preco, c.moeda === 'R$' ? 3 : 2)}`
 }
 const variacao = (v: number) => `${v >= 0 ? '+' : ''}${num(v)}%`
