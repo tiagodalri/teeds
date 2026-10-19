@@ -28,7 +28,7 @@ import { ESTRATEGIAS_LOCAIS, type Modo } from './strategies'
 export const PAGAMENTO_POR_DOLAR = {
   tresDigitos: 2.9225,   // AG7 (7 a 9) e AG2 (0 a 2)
   cincoDigitos: 1.8450,  // First e Second Block; The Palm na recuperação (0 a 4)
-  seisDigitos: 1.5576,   // Smart 03 (4 a 9)
+  seisDigitos: 1.5576,   // Smart 03 e Legacy (4 a 9), Falcon (0 a 5)
   noveDigitos: 1.0616,   // Göreme (0 a 8); The Palm na entrada
 } as const
 
@@ -47,6 +47,8 @@ const CONTRATOS: Record<string, { entrada: number; recuperacao: number; acerto: 
   omnibull: { entrada: P.cincoDigitos, recuperacao: P.cincoDigitos, acerto: .5, acertoRecuperacao: .5 },
   omnibear: { entrada: P.cincoDigitos, recuperacao: P.cincoDigitos, acerto: .5, acertoRecuperacao: .5 },
   superior5fixo: { entrada: P.tresDigitos, recuperacao: P.tresDigitos, acerto: .3, acertoRecuperacao: .3 },
+  falcon: { entrada: P.seisDigitos, recuperacao: P.seisDigitos, acerto: .6, acertoRecuperacao: .6 },
+  legacy: { entrada: P.seisDigitos, recuperacao: P.seisDigitos, acerto: .6, acertoRecuperacao: .6 },
 }
 const contratoDo = (id: string) => CONTRATOS[id] ?? CONTRATOS.superior5
 

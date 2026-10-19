@@ -116,6 +116,9 @@ export const RECUPERACAO_POR_ROBO: Record<string, { galeApos: number; margem: nu
   omnibear: { galeApos: 1, margem: 0.05 },
   thepalm: { galeApos: 1, margem: 0.95 },
   superior5fixo: { galeApos: 3, margem: 0 },
+  // GlobalFly (19/10/2026): "recuperar a entrada anterior e sobrar uns 10% de lucro".
+  falcon: { galeApos: 1, margem: 0.10 },
+  legacy: { galeApos: 1, margem: 0.10 },
 }
 /** Robô fora da tabela (não deveria acontecer): recupera após 3, como o motor sempre fez. */
 const RECUPERACAO_DESCONHECIDA = { galeApos: 3, margem: 0.05 }
@@ -149,6 +152,8 @@ const ENTRADA_PADRAO: Record<string, { lossVirtual: number; sequenciaSemAnalise:
   omnibear: { lossVirtual: LOSSES_VIRTUAIS, sequenciaSemAnalise: false },
   thepalm: { lossVirtual: 0, sequenciaSemAnalise: false },
   superior5fixo: { lossVirtual: 0, sequenciaSemAnalise: false },
+  falcon: { lossVirtual: 0, sequenciaSemAnalise: true },
+  legacy: { lossVirtual: 0, sequenciaSemAnalise: true },
 }
 
 /**
@@ -168,6 +173,8 @@ const CONTRATO_PADRAO: Record<string, ParametrosDoRobo['contrato']> = {
   omnibear: { contractType: 'DIGITOVER', barreira: 4 },
   thepalm: { contractType: 'DIGITUNDER', barreira: 9 },
   superior5fixo: { contractType: 'DIGITOVER', barreira: 6 },
+  falcon: { contractType: 'DIGITUNDER', barreira: 6 },
+  legacy: { contractType: 'DIGITOVER', barreira: 3 },
 }
 
 /** Os robôs que têm padrão próprio (os mesmos de ESTRATEGIAS_LOCAIS). */

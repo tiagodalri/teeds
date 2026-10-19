@@ -382,6 +382,37 @@ export const OMNI_OVER: Estrategia = {
 export const OMNI_BULL: Estrategia = { ...FIRST_BLOCK, id: 'omnibull', nome: 'OMNI Bull', origem: 'First Block com análise de loss virtual' }
 export const OMNI_BEAR: Estrategia = { ...SECOND_BLOCK, id: 'omnibear', nome: 'OMNI Bear', origem: 'Second Block com análise de loss virtual' }
 
+/*
+ * Robôs só da GlobalFly (19/10/2026, pedido do Tiago): dois robôs de seis
+ * dígitos, cada um numa ponta do painel. Ganham em 6 e perdem em 4, entram
+ * direto (sem loss virtual) e recuperam a entrada anterior com cerca de 10%
+ * de lucro. Ids próprios: The Palm e First Block da Teeds não mudam.
+ */
+export const FALCON: Estrategia = {
+  ...BASE_DIGITOS,
+  id: 'falcon',
+  nome: 'Falcon',
+  origem: 'seis dígitos baixos, entrada direta',
+  descricao:
+    'Opera contratos de 1 tick e ganha quando o último dígito é 0, 1, 2, 3, 4 ou 5. ' +
+    'A progressão recupera a entrada anterior com cerca de 10% de lucro.',
+  contractType: 'DIGITUNDER',
+  barreira: 6,
+  ...porLossVirtual((d) => d <= 5, 0),
+}
+export const LEGACY: Estrategia = {
+  ...BASE_DIGITOS,
+  id: 'legacy',
+  nome: 'Legacy',
+  origem: 'seis dígitos altos, entrada direta',
+  descricao:
+    'Opera contratos de 1 tick e ganha quando o último dígito é 4, 5, 6, 7, 8 ou 9. ' +
+    'A progressão recupera a entrada anterior com cerca de 10% de lucro.',
+  contractType: 'DIGITOVER',
+  barreira: 3,
+  ...porLossVirtual((d) => d >= 4, 0),
+}
+
 type FasePalm = 'base-real' | 'recuperacao-espera' | 'recuperacao-real'
 
 const janelaPalm = (digitos: number[]) => digitos.slice(-25)
@@ -579,4 +610,5 @@ export const nomeDoRoboNaMarca = (
 export const ESTRATEGIAS_LOCAIS: Estrategia[] = [
   SUPERIOR_5, AG_2, SMART_03, GOREME, FIRST_BLOCK, SECOND_BLOCK, THE_PALM, SUPERIOR_5_FIXO,
   OMNI_OVER, OMNI_BULL, OMNI_BEAR,
+  FALCON, LEGACY,
 ]

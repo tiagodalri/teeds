@@ -26,6 +26,8 @@ const DESCRICAO_DO_ROBO: Record<string, string> = {
   firstblock: 'A lógica da primeira metade dos dígitos, a configuração e os pontos de atenção.',
   secondblock: 'A lógica da segunda metade dos dígitos, a configuração e os pontos de atenção.',
   thepalm: 'Como ele se adapta ao mercado, a configuração e o que observar durante a sessão.',
+  falcon: 'Os dígitos de 0 a 5, a entrada direta, a recuperação e como configurar antes de ligar.',
+  legacy: 'Os dígitos de 4 a 9, a entrada direta, a recuperação e como configurar antes de ligar.',
 }
 
 export const MODULOS: Modulo[] = [

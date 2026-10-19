@@ -313,12 +313,19 @@ export const MARCAS: Record<string, Marca> = {
     // Phenom continuam nas estratégias de antes (eram Gulfstream e Phenom),
     // e o H160 herda o First Block (era Cirrus): o histórico não se perde.
     // O id é o que amarra motor, histórico e aula.
-    robos: ['goreme', 'superior5', 'thepalm', 'ag2', 'firstblock'],
+    // 19/10/2026 (tarde): Falcon e Legacy (antes H160) viraram robôs próprios
+    // da GlobalFly, de seis dígitos e entrada direta: o Falcon ganha de 0 a 5
+    // e o Legacy de 4 a 9. The Palm e First Block saem só da vitrine daqui
+    // (seguem no catálogo, para o histórico de quem já operou com eles).
+    robos: ['goreme', 'superior5', 'falcon', 'ag2', 'legacy'],
     nomesDosRobos: {
       goreme: 'GlobalFly Raptor',
       superior5: 'GlobalFly Gulf',
-      thepalm: 'GlobalFly Falcon',
+      falcon: 'GlobalFly Falcon',
       ag2: 'GlobalFly Phenom',
+      legacy: 'GlobalFly Legacy',
+      // nomes antigos, para o histórico
+      thepalm: 'GlobalFly Falcon (anterior)',
       firstblock: 'GlobalFly H160',
     },
     // Manual, pág. 24: "Azul organiza superfícies… Verde e coral são
@@ -347,15 +354,15 @@ export const MARCAS: Record<string, Marca> = {
       superior5: { aeronave: 'Inspirado no Gulfstream', credito: 'Bene Riobó, CC BY-SA 4.0', fonte: 'https://commons.wikimedia.org/wiki/File:EC-MLR_Gulfstream_G650_SCQ_03.jpg',
         gancho: 'Longo alcance: só decola com a janela certa.',
         historia: 'Um Gulfstream não sai do hangar com o tempo fechado: espera a janela, decola e cruza o oceano sem desviar da rota. O Gulf observa o mercado até ver uma sequência de dígitos que teriam perdido, entra mirando os dígitos altos e segue a viagem até fechar a sequência.' },
-      thepalm: { aeronave: 'Caça F-16 Fighting Falcon', credito: 'Força Aérea dos EUA, domínio público', fonte: 'https://commons.wikimedia.org/wiki/File:F-16_over_South_Korea_in_front_of_the_sunset.jpg',
-        gancho: 'Multimissão: troca de perfil no meio do voo.',
-        historia: 'O F-16 nasceu ágil e multimissão: patrulha, intercepta e muda de perfil sem precisar pousar. O Falcon patrulha em todo tick com cobertura ampla; se toma uma perda, passa para o modo de precisão, lê os últimos dígitos antes de mirar e só volta à patrulha depois de recuperar.' },
+      falcon: { aeronave: 'Caça F-16 Fighting Falcon', credito: 'Força Aérea dos EUA, domínio público', fonte: 'https://commons.wikimedia.org/wiki/File:F-16_over_South_Korea_in_front_of_the_sunset.jpg',
+        gancho: 'Ágil e direto: decola e entra em ação.',
+        historia: 'O F-16 nasceu para não perder tempo: decola rápido, cumpre a missão e volta pronto para a próxima. O Falcon voa na parte baixa do painel, nos dígitos de 0 a 5, e entra direto em cada operação. Se uma entrada não vem, a seguinte já sai calculada para recuperar a anterior e fechar no lucro.' },
       ag2: { aeronave: 'Embraer Phenom 300', credito: 'Thornfield Hall, CC BY-SA 4.0', fonte: 'https://commons.wikimedia.org/wiki/File:Embraer_Phenom_300.jpg',
         gancho: 'Jato leve, pouso preciso em pista curta.',
         historia: 'O Phenom 300 é o jato leve que pousa onde os grandes não cabem, com precisão e economia. O Phenom trabalha no extremo baixo do painel, nos menores dígitos: espera a sequência que teria perdido, entra e segue até fechá-la. É o espelho do Gulf, do outro lado do céu.' },
-      firstblock: { aeronave: 'Helicóptero Airbus H160', credito: 'Berg2, CC BY-SA 3.0', fonte: 'https://commons.wikimedia.org/wiki/File:Airbus_Helicopters_H160.jpg',
-        gancho: 'Paira, observa e pousa no ponto exato.',
-        historia: 'Helicóptero não precisa de pista: paira sobre o alvo, observa e desce na vertical, no ponto exato. O H160 sobrevoa a primeira metade do painel, espera dois sinais seguidos que teriam perdido e só então pousa a entrada, voltando a pairar e observar a cada nova operação.' },
+      legacy: { aeronave: 'Embraer Legacy 600', credito: 'Duncan Kirk, CC BY 4.0', fonte: 'https://commons.wikimedia.org/wiki/File:XA-RWS_Legacy_600,_Toluca_03-05-26_(55168117487).jpg',
+        gancho: 'Cabine ampla, alcance longo, rota firme.',
+        historia: 'O Legacy é o jato executivo da Embraer feito para ir longe com conforto e constância. O Legacy voa na parte alta do painel, nos dígitos de 4 a 9, e entra direto em cada operação. Se uma entrada não vem, a seguinte já sai calculada para recuperar a anterior e fechar no lucro. É o espelho do Falcon, do outro lado do painel.' },
     },
     desenhoDosRobos: {
       goreme: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
@@ -364,6 +371,8 @@ export const MARCAS: Record<string, Marca> = {
       firstblock: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
       secondblock: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
       thepalm: { cor: '#5B7C9D', corSuave: '#E6ECF2', emblema: 'M8 30 a12 12 0 0 1 24 0 M14 30 a6 6 0 0 1 12 0 M20 30 L28 18 M6 30 h28' },
+      falcon: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
+      legacy: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
     },
     base: '/',
     // Manual da marca (16/10/2026): monograma e assinatura OFICIAIS, em

@@ -149,6 +149,21 @@ const CATALOGO_BASE: Identidade[] = [
     emblema: 'M8 20 h6 M17 20 h6 M26 20 h6 M20 10 v20',
     chance: 30, contrato: 'DIGITOVER',
   },
+  // Só da GlobalFly (19/10/2026): seis dígitos em cada ponta, entrada direta.
+  {
+    id: 'falcon', nome: nomeDaEstrategia('falcon'), chamada: 'A ponta baixa',
+    descricao: 'Ganha quando o último dígito é 0, 1, 2, 3, 4 ou 5.',
+    cor: '#5B7C9D', corSuave: '#E6ECF2', onde: 'teeds',
+    emblema: 'M8 30 a12 12 0 0 1 24 0 M14 30 a6 6 0 0 1 12 0 M20 30 L28 18 M6 30 h28',
+    chance: 60, contrato: 'DIGITUNDER',
+  },
+  {
+    id: 'legacy', nome: nomeDaEstrategia('legacy'), chamada: 'A ponta alta',
+    descricao: 'Ganha quando o último dígito é 4, 5, 6, 7, 8 ou 9.',
+    cor: '#5B7C9D', corSuave: '#E6ECF2', onde: 'teeds',
+    emblema: 'M6 22 L34 22 M20 22 L14 12 M20 22 L14 32 M30 22 L33 16 M10 22 L8 18',
+    chance: 60, contrato: 'DIGITOVER',
+  },
 ]
 
 /** O catálogo com o desenho próprio da marca, quando ela tem (`desenhoDosRobos`). */

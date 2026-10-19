@@ -184,7 +184,7 @@ console.log('\n8 · THE PALM LÊ OS LIMITES; O TETO DA PLATAFORMA APARA\n')
 
 /* ------------------------------------------------------------------ 9 */
 console.log('\n9 · DESCREVER GERA A FRASE DA VITRINE\n')
-for (const id of ['superior5', 'ag2', 'firstblock', 'secondblock', 'omniover', 'omnibull', 'omnibear', 'smart03', 'goreme', 'thepalm']) {
+for (const id of ['superior5', 'ag2', 'firstblock', 'secondblock', 'omniover', 'omnibull', 'omnibear', 'smart03', 'goreme', 'thepalm', 'falcon', 'legacy']) {
   const vitrine = identidade(id).descricao
   conferir(`${id}: descrever(padrão) == vitrine`, descrever(id, parametrosPadrao(id)), vitrine)
 }

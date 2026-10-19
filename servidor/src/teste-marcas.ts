@@ -32,7 +32,10 @@ conferir('OMNI: quatro robos, nomes da casa', vitrine('omni'),
 conferir('Teeds nao tem apelido nenhum', MARCAS.teeds.nomesDosRobos, undefined)
 conferir('The Palm esta na Teeds e fora da OMNI', MARCAS.teeds.robos.includes('thepalm') && !MARCAS.omni.robos.includes('thepalm'), true)
 conferir('GlobalFly: cinco robos, nomes de aeronaves (lista de 19/10/2026)', vitrine('globalfly'),
-  ['GlobalFly Raptor', 'GlobalFly Gulf', 'GlobalFly Falcon', 'GlobalFly Phenom', 'GlobalFly H160'])
+  ['GlobalFly Raptor', 'GlobalFly Gulf', 'GlobalFly Falcon', 'GlobalFly Phenom', 'GlobalFly Legacy'])
+conferir('GlobalFly: Falcon e Legacy sao robos proprios (The Palm e First Block da Teeds intactos)',
+  [MARCAS.globalfly.robos.includes('falcon'), MARCAS.globalfly.robos.includes('legacy'), MARCAS.teeds.robos.includes('falcon') || MARCAS.teeds.robos.includes('legacy'), MARCAS.teeds.robos.includes('thepalm'), MARCAS.teeds.robos.includes('firstblock')],
+  [true, true, false, true, true])
 conferir('GlobalFly: o Raptor e o mesmo robo do Goreme da Teeds', MARCAS.globalfly.robos[0], 'goreme')
 // Marca separada da Teeds de proposito: nenhum robo dela pode levar outro nome.
 conferir('GlobalFly: nenhum robo com nome de Teeds ou OMNI', vitrine('globalfly').some((n) => /teeds|omni/i.test(n)), false)
