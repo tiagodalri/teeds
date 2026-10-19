@@ -121,14 +121,17 @@ const paraK = (c: Candle): KLineData => ({ timestamp: c.epoch * 1000, open: c.op
 /* ------------------------------------------------------- ferramentas */
 
 interface Ferramenta { id: string; nome: string; icone: string; descricao: string }
+/* Ícones no padrão das plataformas profissionais: bolinha = ponto que você
+   marca no gráfico; seta = a linha continua sem fim; traço cortado ao meio =
+   atravessa o gráfico inteiro. É o que separa tendência, raio e estendida. */
 const FERRAMENTAS: Ferramenta[] = [
-  { id: 'segment', nome: 'Linha de tendência', icone: 'M4 19L20 5M4 19h0M20 5h0', descricao: 'Liga dois pontos. Use para unir topos ou fundos e enxergar a direção do preço.' },
-  { id: 'rayLine', nome: 'Raio', icone: 'M4 18L21 6M4 18l2-1', descricao: 'Começa num ponto e segue sem fim na direção do segundo. Bom para projetar uma tendência para frente.' },
-  { id: 'straightLine', nome: 'Linha estendida', icone: 'M2 20L22 4', descricao: 'Passa por dois pontos e atravessa o gráfico inteiro, para os dois lados.' },
-  { id: 'horizontalStraightLine', nome: 'Linha horizontal', icone: 'M3 12h18', descricao: 'Marca um preço de ponta a ponta. A mais usada para suporte e resistência.' },
-  { id: 'horizontalRayLine', nome: 'Raio horizontal', icone: 'M6 12h15M6 10v4', descricao: 'Linha horizontal que nasce num ponto e segue para a direita. Marca um nível a partir de um momento.' },
-  { id: 'verticalStraightLine', nome: 'Linha vertical', icone: 'M12 3v18', descricao: 'Marca um instante no tempo, como o começo de um movimento forte.' },
-  { id: 'priceLine', nome: 'Linha de preço', icone: 'M4 12h11M15 9l4 3-4 3', descricao: 'Parte de um ponto e mostra o valor exato do preço escrito na linha.' },
+  { id: 'segment', nome: 'Linha de tendência', icone: 'M3 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M17 5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M6.4 17.6L17.6 6.4', descricao: 'Liga dois pontos. Use para unir topos ou fundos e enxergar a direção do preço.' },
+  { id: 'rayLine', nome: 'Raio', icone: 'M3 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M6.4 17.6L21 3M21 3l-5.5 1M21 3l-1 5.5', descricao: 'Começa num ponto e segue sem fim na direção do segundo. Bom para projetar uma tendência para frente.' },
+  { id: 'straightLine', nome: 'Linha estendida', icone: 'M2 22L7.6 16.4M10.4 13.6L13.6 10.4M16.4 7.6L22 2M7 15a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M13 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0', descricao: 'Passa por dois pontos e atravessa o gráfico inteiro, para os dois lados.' },
+  { id: 'horizontalStraightLine', nome: 'Linha horizontal', icone: 'M2 12h8M14 12h8M10 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0', descricao: 'Marca um preço de ponta a ponta. A mais usada para suporte e resistência.' },
+  { id: 'horizontalRayLine', nome: 'Raio horizontal', icone: 'M3 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M7 12h14M21 12l-3.5-3M21 12l-3.5 3', descricao: 'Linha horizontal que nasce num ponto e segue para a direita. Marca um nível a partir de um momento.' },
+  { id: 'verticalStraightLine', nome: 'Linha vertical', icone: 'M12 2v8M12 14v8M10 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0', descricao: 'Marca um instante no tempo, como o começo de um movimento forte.' },
+  { id: 'priceLine', nome: 'Linha de preço', icone: 'M2 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M6 12h7M13 8.5h8v7h-8zM15.5 12h3', descricao: 'Parte de um ponto e mostra o valor exato do preço escrito na linha.' },
   { id: 'parallelStraightLine', nome: 'Linhas paralelas', icone: 'M3 15L17 5M7 19L21 9', descricao: 'Duas linhas com a mesma inclinação. Desenha um canal para acompanhar a tendência.' },
   { id: 'priceChannelLine', nome: 'Canal de preço', icone: 'M3 16L19 6M3 20L19 10M3 16v4M19 6v4', descricao: 'Uma linha de tendência com outra paralela na distância que você escolher. Mostra até onde o preço costuma oscilar.' },
   { id: 'fibonacciLine', nome: 'Fibonacci', icone: 'M3 5h18M3 9h18M3 13h18M3 19h18M6 5v14', descricao: 'Marque o início e o fim de um movimento: aparecem os níveis de retração (23,6%, 38,2%, 50%, 61,8%...).' },
