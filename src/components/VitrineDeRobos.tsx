@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { IDENTIDADES, type Identidade } from '../core/deriv/branding'
 import { descrever, digitosQueGanham, parametrosPadrao, type ParametrosDoRobo } from '../core/deriv/parametros'
 import { useCatalogoCompleto, useRobosDisponiveis } from '../core/teeds/catalogoRobos'
@@ -41,32 +41,69 @@ const lista = (ds: number[]) => ds.length > 1 ? `${ds.slice(0, -1).join(', ')} e
  * Tudo sai da regra viva: se o painel mudar a barreira ou o loss virtual,
  * o cartão muda junto. A frase completa continua para o leitor de tela.
  */
+type Etapa = { titulo: string; texto: ReactNode }
+
+const faixa = (ds: number[]) => (ds.length > 3 ? `${ds[0]} a ${ds[ds.length - 1]}` : lista(ds))
+const pct = (v: number) => `${Math.round(v * 100)}%`
+
 /**
- * O que o motor faz por trás, em selos (19/10/2026, pedido do Tiago: "se não
- * citar as análises, podem achar que são robôs comuns"). Só o que o robô
- * FAZ de verdade, decidido pela regra viva: quem tem loss virtual conta a
- * sequência antes de entrar; o Raptor troca de lado na perda; todos leem
- * cada tick, calculam a recuperação pelo pagamento real e param na meta e
- * no limite. Robô de entrada direta não ganha uma análise de entrada que
- * não faz. Três selos no máximo, para o cartão não virar bula.
+ * O plano de voo da I.A. (19/10/2026, pedido do Victor e do Tiago: os selos
+ * eram iguais para todos; cada robô precisa contar o próprio jeito de operar).
+ * Três etapas por robô, todas verdadeiras e tiradas da regra viva: faixa de
+ * dígitos, loss virtual, se segue a sequência, troca de lado (Raptor) e a
+ * margem da recuperação. "A I.A." é o nome do produto no menu; nada aqui diz
+ * que ela aprende, prevê ou acerta, porque não é o que o motor faz.
  */
-function selosDoRobo(id: string, p: ParametrosDoRobo): Array<{ texto: string; explica: string }> {
-  const tick = { texto: 'Lê cada tick ao vivo', explica: 'Acompanha o mercado preço a preço e decide no exato momento de cada novo dígito.' }
-  const sequencia = { texto: 'Analisa a sequência', explica: `Antes de entrar, confere se saíram ${p.entrada.lossVirtual} dígitos seguidos fora da faixa. Só então abre a operação.` }
-  const lado = { texto: 'Troca de lado na perda', explica: 'Depois de uma perda, muda para os dígitos altos para recuperar e volta à rota em seguida.' }
-  const recuperacao = p.recuperacao.escada.tipo === 'tabela'
-    ? { texto: 'Recuperação em degraus', explica: 'A próxima entrada segue uma escada definida, degrau a degrau, até fechar a sequência.' }
-    : { texto: 'Calcula a recuperação', explica: 'A entrada seguinte sai do pagamento real do contrato, para cobrir a perda e fechar no lucro.' }
-  const freio = { texto: 'Para na meta e no limite', explica: 'Encerra sozinho quando bate a sua meta ou o seu limite de perda.' }
-  if (RECUPERA_EM[id]) return [tick, lado, recuperacao]
-  if (p.entrada.lossVirtual > 0) return [sequencia, tick, recuperacao]
-  return [tick, recuperacao, freio]
+function planoDeVoo(id: string, p: ParametrosDoRobo): Etapa[] {
+  const ganham = digitosQueGanham(p.contrato)
+  const fora = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter((d) => !ganham.includes(d))
+  const n = p.entrada.lossVirtual
+  const margem = p.recuperacao.modos.conservador.margem
+  const tabela = p.recuperacao.escada.tipo === 'tabela'
+  const recalcula: Etapa = tabela
+    ? { titulo: 'Recupera em degraus', texto: <>Se uma entrada não vem, a próxima segue a <b>escada definida</b>, degrau a degrau, até fechar a sequência.</> }
+    : { titulo: 'Recalcula na hora', texto: <>Se uma entrada não vem, a I.A. calcula a próxima pelo <b>pagamento real do contrato</b>, para cobrir a anterior{margem >= 0.08 ? <> e fechar com cerca de <b>{pct(margem)} sobre a entrada</b></> : ' e fechar no lucro'}.</> }
+
+  if (RECUPERA_EM[id]) {
+    const alvo = RECUPERA_EM[id]
+    return [
+      { titulo: 'Cobre quase o painel', texto: <>Entra em todo tick, com <b>só o {lista(fora)} contra</b>.</> },
+      { titulo: 'Troca de lado na perda', texto: <>Se o {lista(fora)} aparece, a I.A. muda de contrato e mira o <b>{lista(alvo)}</b>, que pagam bem mais.</> },
+      { titulo: 'Volta à rota', texto: <>Recuperou, retorna para a cobertura ampla e segue operando.</> },
+    ]
+  }
+  if (n > 0) {
+    return [
+      { titulo: 'Observa antes de entrar', texto: <>A I.A. lê cada dígito e conta quantos saem <b>fora da faixa</b>, de {faixa(fora)}.</> },
+      { titulo: `Espera ${n === 1 ? '1 sinal' : `${n} sinais seguidos`}`, texto: <>Só abre a operação depois de <b>{n === 1 ? '1 dígito' : `${n} dígitos seguidos`}</b> fora da faixa, mirando o <b>{lista(ganham)}</b>.</> },
+      p.entrada.sequenciaSemAnalise
+        ? { titulo: 'Segue até fechar', texto: <>Entrou, acompanha a sequência até o fim, sem esperar de novo a cada entrada.</> }
+        : { titulo: 'Confere a cada entrada', texto: <>Depois de cada operação, volta a esperar o sinal antes de entrar outra vez.</> },
+    ]
+  }
+  const ponta = ganham[0] === 0 ? 'a parte baixa' : ganham[ganham.length - 1] === 9 ? 'a parte alta' : 'o meio'
+  return [
+    { titulo: 'Decola na hora', texto: <>Sem esperar sinal: entra direto e ocupa <b>{ponta} do painel</b>, de {faixa(ganham)}.</> },
+    { titulo: 'Decide em 1 tick', texto: <>Cada operação se resolve <b>no dígito seguinte</b>; {fora.length === 1 ? `só o ${fora[0]} fica contra` : `os dígitos de ${faixa(fora)} ficam contra`}.</> },
+    recalcula,
+  ]
+}
+
+function PlanoDeVoo({ id, parametros }: { id: string; parametros: ParametrosDoRobo }) {
+  return (
+    <div className="vr-plano">
+      <span className="vr-pratica-rot"><i className="vr-ao-vivo" aria-hidden="true" />Plano de voo da I.A.</span>
+      <ol>
+        {planoDeVoo(id, parametros).map((e, k) => (
+          <li key={k}><b>{e.titulo}</b><span>{e.texto}</span></li>
+        ))}
+      </ol>
+    </div>
+  )
 }
 
 function NaPratica({ id, parametros, frase }: { id: string; parametros: ParametrosDoRobo; frase: string }) {
   const ganham = digitosQueGanham(parametros.contrato)
-  const espera = parametros.entrada.lossVirtual
-  const recupera = RECUPERA_EM[id]
   return (
     <div className="vr-pratica" role="group" aria-label={`Na prática: ${frase}`}>
       <b className="vr-pratica-rot" aria-hidden="true">Na prática</b>
@@ -75,19 +112,8 @@ function NaPratica({ id, parametros, frase }: { id: string; parametros: Parametr
       </div>
       <ul className="vr-fatos" aria-hidden="true">
         <li><i className="ganha" /><span>Ganha com <b>{ganham.length === 10 ? 'qualquer dígito' : ganham.length > 3 ? `${ganham[0]} a ${ganham[ganham.length - 1]}` : lista(ganham)}</b></span><em>{ganham.length} de 10</em></li>
-        <li><i className="entra" /><span>{espera === 0 ? <><b>Entra direto</b>, sem esperar</> : <>Espera <b>{espera === 1 ? '1 dígito' : `${espera} dígitos seguidos`}</b> fora da faixa e entra</>}</span></li>
-        {recupera && <li><i className="recupera" /><span>Se perder, <b>recupera no {lista(recupera)}</b></span></li>}
       </ul>
-      <div className="vr-selos" aria-label="Em tempo real">
-        <span className="vr-pratica-rot">Em tempo real</span>
-        <ul>
-          {selosDoRobo(id, parametros).map((x) => (
-            <li key={x.texto} tabIndex={0} title={x.explica} aria-label={`${x.texto}: ${x.explica}`}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h3l2.5-6 5 12 2.5-6h3" /></svg>{x.texto}
-            </li>
-          ))}
-        </ul>
-      </div>
+      <PlanoDeVoo id={id} parametros={parametros} />
     </div>
   )
 }
