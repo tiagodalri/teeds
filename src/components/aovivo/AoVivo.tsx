@@ -1193,13 +1193,13 @@ export function LabAoVivo({ modo, moderador }: { modo: ModoDoPlayer | 'pagina' |
       tela, camera, audios: [], transmitindo: { tela: moderador, camera: moderador, microfone: moderador },
       nomes: ['Ana', 'Rui', 'Carla', 'Marcos', 'Bia', 'Edu', 'Convidado', 'Lívia', 'Pedro', 'Tati'],
       enquete: new URLSearchParams(location.search).has('enquete')
-        ? { id: 'lab', pergunta: 'Qual robô vocês querem ver operando agora?', opcoes: ['Bombardier', 'Gulfstream', 'Phenom', 'Cirrus'], aberta: true, votos: [48, 31, 12, 9], meuVoto: null }
+        ? { id: 'lab', pergunta: 'Qual robô vocês querem ver operando agora?', opcoes: ['Raptor', 'Gulf', 'Falcon', 'Phenom'], aberta: true, votos: [48, 31, 12, 9], meuVoto: null }
         : null,
       modo: modo === 'pagina' || modo === 'ensaio' ? 'palco' : modo,
       mensagens: [
         msg(9, 'Tiago', 'Meta da sessão de hoje: 5%. Limite de perda: 3%. Não passem disso.', true, true),
         msg(7, 'Ana', 'Boa noite, pessoal'), msg(6, 'Rui', 'Qual robô vocês vão usar hoje?'),
-        msg(5, 'Tiago', 'Vamos acompanhar o Bombardier no Volatility 75.', true),
+        msg(5, 'Tiago', 'Vamos acompanhar o Raptor no 75 Index.', true),
         msg(3, 'Carla', 'Entrei agora, perdi o começo'), msg(1, 'Marcos', 'Dá para ver o gráfico certinho aqui'),
       ],
     })

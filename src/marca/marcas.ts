@@ -274,15 +274,19 @@ export const MARCAS: Record<string, Marca> = {
     // PENDENTE: a conta de afiliado da GlobalFly ainda não existe (não pode
     // ser no nome do Victor). Até lá, o cadastro vai para a Deriv sem token.
     afiliado: 'https://deriv.com/signup/',
-    // 16/10/2026: quatro robôs para começar, com nomes de jatos (escolha
-    // do Tiago). Qual estratégia fica com cada nome ainda pode trocar; o
-    // id é o que amarra motor, histórico e aula.
-    robos: ['goreme', 'superior5', 'ag2', 'firstblock'],
+    // 19/10/2026: os cinco robôs da lista final do Tiago, nesta ordem.
+    // Raptor é o mesmo robô do Göreme da Teeds (pedido dele); os outros
+    // ficaram com AG7 (superior5), The Palm, AG2 e First Block. Gulf e
+    // Phenom continuam nas estratégias de antes (eram Gulfstream e Phenom),
+    // e o H160 herda o First Block (era Cirrus): o histórico não se perde.
+    // O id é o que amarra motor, histórico e aula.
+    robos: ['goreme', 'superior5', 'thepalm', 'ag2', 'firstblock'],
     nomesDosRobos: {
-      goreme: 'GlobalFly Bombardier',
-      superior5: 'GlobalFly Gulfstream',
+      goreme: 'GlobalFly Raptor',
+      superior5: 'GlobalFly Gulf',
+      thepalm: 'GlobalFly Falcon',
       ag2: 'GlobalFly Phenom',
-      firstblock: 'GlobalFly Cirrus',
+      firstblock: 'GlobalFly H160',
     },
     // Manual, pág. 24: "Azul organiza superfícies… Verde e coral são
     // exclusivamente funcionais." Os robôs ficam todos no aço da casa
