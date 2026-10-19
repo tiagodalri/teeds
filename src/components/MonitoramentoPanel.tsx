@@ -18,6 +18,7 @@ import { useMarcaEmFoco, REDE } from '../core/teeds/marcaEmFoco'
 import { SeletorDePlataforma, opcoesDePlataforma } from './SeletorDePlataforma'
 import { ChaveModoCeo } from './ChaveModoCeo'
 import { MARCA } from '../marca'
+import { nomeDoAtivo } from '../core/deriv/market'
 import { MARCAS } from '../marca/marcas'
 
 const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MARCAS).map(m=>[m.id,m.prosa]))
@@ -161,7 +162,7 @@ function CabineEspelho({ s, estado, cliente, modo, saude, idade, rtt, desvio, ev
   eventos: EventoEspelho[]; aoFechar: () => void; passo?: { indice: number; total: number; horaOriginal: number; lacuna: number }; integridade?: Integridade
 }) {
   const { regra, ganhaCom, cor, corSuave } = regrasDoRobo(s.roboId)
-  const nomeAtivo = NOME_DO_ATIVO[s.ativo] ?? s.ativo
+  const nomeAtivo = nomeDoAtivo(NOME_DO_ATIVO[s.ativo] ?? s.ativo)
   const parametros = [
     { rot: 'Ativo', valor: nomeAtivo.replace(' Index', '') },
     { rot: 'Entrada', valor: din(s.config.valorAoVencer || s.config.valorInicial, s.moeda) },

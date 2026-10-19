@@ -2,9 +2,14 @@ import { publicSocket, TeedsSocket } from './client'
 import { ATIVOS_PERMITIDOS } from './config'
 import { casasDecimais } from './types'
 import type { ActiveSymbol, Candle, Granularity, Tick } from './types'
+import { MARCA } from '../../marca'
 
 /** Nomes que a Deriv manda em inglês e o cliente lê em português. */
 const NOME_EM_PORTUGUES: Record<string, string> = { frxXAUUSD: 'Ouro/USD', frxXAGUSD: 'Prata/USD' }
+
+/** O nome do ativo como a marca mostra (a GlobalFly tira o "Volatility" da frente). */
+export const nomeDoAtivo = (nome: string): string =>
+  MARCA.ativosSemVolatility ? nome.replace(/^Volatility\s+/i, '') : nome
 
 /** Lista os ativos negociaveis, ja normalizados para o dominio da Teeds. */
 export async function fetchActiveSymbols(
@@ -19,7 +24,7 @@ export async function fetchActiveSymbols(
       (ordem.get(a.underlying_symbol) ?? 99) - (ordem.get(b.underlying_symbol) ?? 99))
     .map((s) => ({
     symbol: s.underlying_symbol ?? s.symbol,
-    name: NOME_EM_PORTUGUES[s.underlying_symbol] ?? s.underlying_symbol_name ?? s.display_name ?? s.underlying_symbol,
+    name: nomeDoAtivo(NOME_EM_PORTUGUES[s.underlying_symbol] ?? s.underlying_symbol_name ?? s.display_name ?? s.underlying_symbol),
     market: s.market ?? '',
     submarket: s.submarket ?? '',
     isOpen: s.exchange_is_open === 1,

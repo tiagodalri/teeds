@@ -96,6 +96,12 @@ export interface Marca {
    */
   aoVivo?: boolean
   /**
+   * Nome dos ativos sem a palavra "Volatility" ("75 Index", "10 (1s) Index").
+   * Pedido do Tiago em 19/10/2026 para a GlobalFly; as outras marcas mostram
+   * o nome da Deriv como sempre.
+   */
+  ativosSemVolatility?: boolean
+  /**
    * A cor da marca, uma por tema.
    *
    * Duas porque uma só não serve: um azul-marinho profundo desaparece sobre
@@ -284,6 +290,7 @@ export const MARCAS: Record<string, Marca> = {
     // distingue é o emblema. Sem setas literais (pág. 18 e 20).
     appNativo: true,
     aoVivo: true,
+    ativosSemVolatility: true,
     desenhoDosRobos: {
       goreme: { cor: '#5B7C9D', corSuave: '#E6ECF2' },
       superior5: { cor: '#5B7C9D', corSuave: '#E6ECF2' },

@@ -1,5 +1,5 @@
-const CACHE='teeds-5daa50266c65';
-const SHELL=["./","./index.html","./manifest.webmanifest","./pwa-teeds/icon-192.png","./pwa-teeds/icon-512.png","./assets/AoVivo.js?v=5daa50266c65","./assets/Convidado.js?v=5daa50266c65","./assets/MonitoramentoPanel.js?v=5daa50266c65","./assets/RecursosDeApp.js?v=5daa50266c65","./assets/teeds.css?v=5daa50266c65","./assets/teeds.js?v=5daa50266c65","./assets/teeds2.css?v=5daa50266c65","./assets/teeds3.css?v=5daa50266c65"];
+const CACHE='teeds-0b87886a88bd';
+const SHELL=["./","./index.html","./manifest.webmanifest","./pwa-teeds/icon-192.png","./pwa-teeds/icon-512.png","./assets/AoVivo.js?v=0b87886a88bd","./assets/Convidado.js?v=0b87886a88bd","./assets/MonitoramentoPanel.js?v=0b87886a88bd","./assets/RecursosDeApp.js?v=0b87886a88bd","./assets/teeds.css?v=0b87886a88bd","./assets/teeds.js?v=0b87886a88bd","./assets/teeds2.css?v=0b87886a88bd","./assets/teeds3.css?v=0b87886a88bd"];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).catch(()=>{}));self.skipWaiting()});
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{const r=e.request;const u=new URL(r.url);if(r.method!=='GET'||u.origin!==self.location.origin||r.cache==='no-store'||u.searchParams.has('vivo'))return;

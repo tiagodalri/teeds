@@ -18,6 +18,7 @@ import type { SessaoTeeds } from '../core/teeds/conta'
 import { ClientesAdmin } from './ClientesAdmin'
 import { DerivDesconectada } from './DerivDesconectada'
 import { MARCA } from '../marca'
+import { nomeDoAtivo } from '../core/deriv/market'
 import { MARCAS } from '../marca/marcas'
 
 interface Props {
@@ -880,7 +881,7 @@ export function ManagementPanel({
             </label>
             <span className="ger-nota">
               {estrategiaSim.contractType === 'DIGITOVER' ? `dígito acima de ${estrategiaSim.barreira}` : `dígito abaixo de ${estrategiaSim.barreira}`}
-              {' · '}{estrategiaSim.ticks} tick{estrategiaSim.ticks === 1 ? '' : 's'} · Volatility 75
+              {' · '}{estrategiaSim.ticks} tick{estrategiaSim.ticks === 1 ? '' : 's'} · {nomeDoAtivo('Volatility 75')}
               {payoutRobo === null && ' · cotando na Deriv…'}
             </span>
           </div>
