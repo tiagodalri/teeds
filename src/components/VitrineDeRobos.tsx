@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { IDENTIDADES, type Identidade } from '../core/deriv/branding'
-import { descrever, parametrosPadrao } from '../core/deriv/parametros'
+import { descrever, digitosQueGanham, parametrosPadrao, type ParametrosDoRobo } from '../core/deriv/parametros'
 import { useCatalogoCompleto, useRobosDisponiveis } from '../core/teeds/catalogoRobos'
 import { MARCA } from '../marca'
 import { pedirModeloDaVitrine } from './RobotSetup'
@@ -29,12 +29,44 @@ function IconePlay() {
   )
 }
 
+/** O Göreme/Raptor troca de lado depois de uma perda: recupera nos dígitos altos (strategies.ts). */
+const RECUPERA_EM: Record<string, number[]> = { goreme: [7, 8, 9] }
+
+const lista = (ds: number[]) => ds.length > 1 ? `${ds.slice(0, -1).join(', ')} e ${ds[ds.length - 1]}` : String(ds[0] ?? '')
+
+/**
+ * "Na prática" em uma olhada (19/10/2026, pedido do Tiago: a frase era
+ * longa e não dizia de cara com que dígito o robô ganha). Os dez dígitos,
+ * com os que ganham acesos, e duas linhas: em quantos ganha e quando entra.
+ * Tudo sai da regra viva: se o painel mudar a barreira ou o loss virtual,
+ * o cartão muda junto. A frase completa continua para o leitor de tela.
+ */
+function NaPratica({ id, parametros, frase }: { id: string; parametros: ParametrosDoRobo; frase: string }) {
+  const ganham = digitosQueGanham(parametros.contrato)
+  const espera = parametros.entrada.lossVirtual
+  const recupera = RECUPERA_EM[id]
+  return (
+    <div className="vr-pratica" role="group" aria-label={`Na prática: ${frase}`}>
+      <b className="vr-pratica-rot" aria-hidden="true">Na prática</b>
+      <div className="vr-digitos" aria-hidden="true">
+        {Array.from({ length: 10 }, (_, d) => <span key={d} className={ganham.includes(d) ? 'ganha' : ''}>{d}</span>)}
+      </div>
+      <ul className="vr-fatos" aria-hidden="true">
+        <li><i className="ganha" /><span>Ganha com <b>{ganham.length === 10 ? 'qualquer dígito' : ganham.length > 3 ? `${ganham[0]} a ${ganham[ganham.length - 1]}` : lista(ganham)}</b></span><em>{ganham.length} de 10</em></li>
+        <li><i className="entra" /><span>{espera === 0 ? <><b>Entra direto</b>, sem esperar</> : <>Espera <b>{espera === 1 ? '1 dígito' : `${espera} dígitos seguidos`}</b> fora da faixa e entra</>}</span></li>
+        {recupera && <li><i className="recupera" /><span>Se perder, <b>recupera no {lista(recupera)}</b></span></li>}
+      </ul>
+    </div>
+  )
+}
+
 export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
   const disponiveis = useRobosDisponiveis()
   const catalogo = useCatalogoCompleto()
   const vitrine = MARCA.vitrineDosRobos ?? {}
   const [historia, setHistoria] = useState<string | null>(null)
   const robos = IDENTIDADES.filter((i) => disponiveis === null || disponiveis.includes(i.id))
+  const parametrosDe = (i: Identidade) => catalogo?.find((c) => c.id === i.id)?.parametros ?? parametrosPadrao(i.id)
   const regra = (i: Identidade) => {
     const item = catalogo?.find((c) => c.id === i.id)
     return item ? descrever(i.id, item.parametros ?? parametrosPadrao(i.id)) : i.descricao
@@ -83,7 +115,7 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
               <div className="vr-corpo">
                 <span className="vr-chamada">{v?.aeronave ?? i.chamada}</span>
                 {v?.gancho && <p className="vr-gancho">{v.gancho}</p>}
-                <p className="vr-regra"><b>Na prática</b>{regra(i)}</p>
+                <NaPratica id={i.id} parametros={parametrosDe(i)} frase={regra(i)} />
                 <button type="button" className="vr-iniciar" onClick={() => iniciar(i)}>
                   <IconePlay /><span>Iniciar operações</span>
                 </button>
