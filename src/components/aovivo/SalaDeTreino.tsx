@@ -8,12 +8,19 @@ import './aovivo.css'
 import { LocalVideoTrack } from 'livekit-client'
 import { aplicarFundo, fundoGuardado, type EscolhaDeFundo } from '../../core/live/fundos'
 import { SeletorDeFundo } from './SeletorDeFundo'
+import { MARCA } from '../../marca'
 
 /**
  * Sala de treino (plano "treino"): o influenciador ensaia a live com a tela,
  * a câmera e o microfone de verdade, diante de um público e de um chat
  * simulados. Nada sai deste navegador. A imagem leva um selo só,
  * "Simulação", com o tamanho da sala.
+ *
+ * Organizada como o estúdio de verdade (19/10/2026, o Tiago não achava onde
+ * começar nem onde ajustar): a mesa em cima com as fontes e o botão de
+ * começar; o vídeo à esquerda; à direita as abas Chat e Simulação, com
+ * todos os ajustes à vista. Os momentos ficam também logo abaixo do vídeo,
+ * que é onde a mão está durante o ensaio.
  */
 
 function VideoLocal({ fluxo, className, espelhar = false }: { fluxo: MediaStream | null; className: string; espelhar?: boolean }) {
@@ -61,6 +68,39 @@ const CANTOS: Array<{ id: CantoDaCamera; rotulo: string }> = [
   { id: 'sup-esq', rotulo: 'Em cima, à esquerda' }, { id: 'sup-dir', rotulo: 'Em cima, à direita' },
   { id: 'inf-esq', rotulo: 'Embaixo, à esquerda' }, { id: 'inf-dir', rotulo: 'Embaixo, à direita' },
 ]
+const TAMANHOS_PRONTOS = [100, 500, 1000, 5000]
+
+/** O link que abre a sala de treino direto (cada pessoa ensaia na própria). */
+export const linkDoTreino = () => `${location.origin}${import.meta.env.BASE_URL}?treino=1`
+
+/** Cartão para mandar o link da sala de treino para a equipe. */
+export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
+  const [copiado, setCopiado] = useState(false)
+  const link = linkDoTreino()
+  const texto = `Sala de treino da ${MARCA.prosa}: ensaie sua live com público simulado (só você vê). Entre por aqui: ${link}`
+  const copiar = async () => {
+    try { await navigator.clipboard.writeText(link) } catch {
+      const t = document.createElement('textarea'); t.value = link; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove()
+    }
+    setCopiado(true); window.setTimeout(() => setCopiado(false), 1800)
+  }
+  const nativo = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+  return (
+    <div className={`av-link-live ${compacto ? 'compacto' : ''}`}>
+      <div className="av-link-live-texto">
+        <small>Link da sala de treino</small>
+        <code title={link}>{link.replace(/^https?:\/\//, '')}</code>
+      </div>
+      <div className="av-link-live-acoes">
+        <button className={`av-botao-mini ${copiado ? 'ok' : ''}`} onClick={() => void copiar()}>{copiado ? 'Copiado' : 'Copiar'}</button>
+        {nativo
+          ? <button className="av-botao-whats" onClick={() => void navigator.share({ text: texto }).catch(() => undefined)}>Compartilhar</button>
+          : <a className="av-botao-whats" href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
+      </div>
+      <p className="tr-link-nota">Quem abrir entra na própria sala de treino e ensaia sozinho. O público simulado aparece só para quem está ensaiando, nunca para outras pessoas.</p>
+    </div>
+  )
+}
 
 export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; aoSair: () => void }) {
   const sim = useSimulacao()
@@ -74,7 +114,7 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
   const trocarFundo = async (e: EscolhaDeFundo) => {
     setFundo(e)
     const lt = cameraFaixa.current
-    if (!lt) { try { localStorage.setItem('globalfly.aovivo.fundo', e) } catch { /* só agora */ } return }
+    if (!lt) { try { localStorage.setItem(`${MARCA.id}.aovivo.fundo`, e) } catch { /* só agora */ } return }
     setAplicandoFundo(true)
     try { await aplicarFundo(lt, e); exibirCamera(lt) } finally { setAplicandoFundo(false) }
   }
@@ -82,6 +122,11 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
   const [canto, setCanto] = useState<CantoDaCamera>('inf-dir')
   const [erro, setErro] = useState<string | null>(null)
   const [texto, setTexto] = useState('')
+  // antes de começar, a aba aberta é a dos ajustes; ao começar, vai para o chat
+  const [aba, setAba] = useState<'chat' | 'simulacao'>(sim.ativa ? 'chat' : 'simulacao')
+  const [vistas, setVistas] = useState(0)
+  // o passo "ajuste a sala" só fica feito depois que a pessoa mexe em algum ajuste
+  const [ajustou, setAjustou] = useState(false)
   const nivel = useNivelLocal(mic)
   const lista = useRef<HTMLDivElement>(null)
 
@@ -91,7 +136,13 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
   useEffect(() => {
     const l = lista.current
     if (l && l.scrollHeight - l.scrollTop - l.clientHeight < 140) l.scrollTop = l.scrollHeight
-  }, [sim.mensagens.length])
+  }, [sim.mensagens.length, aba])
+  // mensagens novas enquanto a pessoa está na aba Simulação: contador na aba Chat
+  const ultimas = useRef(sim.mensagens.length)
+  useEffect(() => {
+    if (aba === 'chat') { setVistas(0); ultimas.current = sim.mensagens.length; return }
+    setVistas(Math.max(0, sim.mensagens.length - ultimas.current))
+  }, [sim.mensagens.length, aba])
 
   const ligar = async (qual: 'tela' | 'camera' | 'mic') => {
     setErro(null)
@@ -120,14 +171,19 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
     }
   }
 
-  const fonte = (qual: 'tela' | 'camera' | 'mic', rotulo: string, ligado: boolean) => (
-    <button className={`av-fonte ${ligado ? 'on' : ''}`} aria-pressed={ligado} onClick={() => void ligar(qual)}>
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d={ICONE[qual === 'mic' ? 'microfone' : qual]} />{!ligado && <path d="M4 4l16 16" />}
-      </svg>
-      <span><b>{rotulo}</b><small>{ligado ? 'ligada no ensaio' : 'desligada'}</small></span>
-    </button>
-  )
+  const podeTela = typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.getDisplayMedia === 'function'
+  const fonte = (qual: 'tela' | 'camera' | 'mic', rotulo: string, ligado: boolean) => {
+    const semSuporte = qual === 'tela' && !podeTela
+    return (
+      <button className={`av-fonte ${ligado ? 'on' : ''}`} aria-pressed={ligado} disabled={semSuporte} onClick={() => void ligar(qual)}
+        title={semSuporte ? 'Compartilhar a tela só no computador' : undefined}>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d={ICONE[qual === 'mic' ? 'microfone' : qual]} />{!ligado && <path d="M4 4l16 16" />}
+        </svg>
+        <span><b>{rotulo}</b><small>{semSuporte ? 'só no computador' : ligado ? 'ligada no ensaio' : 'desligada'}</small></span>
+      </button>
+    )
+  }
 
   const segmentado = <T extends string>(valor: T, opcoes: Array<[T, string]>, mudarPara: (v: T) => void, rotulo: string) => (
     <div className="tr-seg" role="radiogroup" aria-label={rotulo}>
@@ -135,12 +191,29 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
     </div>
   )
 
+  const comecar = () => { iniciarSimulacao(apresentador); setAba('chat') }
+  const temImagem = !!tela || !!camera
+  const passos = [
+    { feito: temImagem, titulo: 'Ligue a câmera ou a tela', dica: 'Nos botões aqui em cima. O microfone é opcional.' },
+    { feito: ajustou || sim.ativa, titulo: 'Ajuste a sala', dica: 'Na aba Simulação: tamanho do público, ritmo do chat, fundo.' },
+    { feito: sim.ativa, titulo: 'Comece a simulação', dica: 'O público chega e o chat ganha vida.' },
+  ]
+
+  const momentosRapidos = (
+    <div className="tr-momentos-rapidos" role="group" aria-label="Disparar um momento">
+      <span>Momentos</span>
+      {MOMENTOS.map((m) => (
+        <button key={m.id} className={sim.momento === m.id ? 'on' : ''} disabled={!sim.ativa} title={m.dica} onClick={() => dispararMomento(m.id)}>{m.rotulo}</button>
+      ))}
+    </div>
+  )
+
   return (
     <div className="ger av-pagina av-com-palco tr-sala">
       <section className={`av-mesa ${sim.ativa ? 'tr-ativa' : ''}`} aria-label="Mesa da sala de treino">
         <div className="av-mesa-estado">
-          <span className="tr-chip">Sala de treino</span>
-          <span className="av-mesa-publico">{sim.ativa ? <><b>{fmt(sim.publicoAgora)}</b> na sala simulada</> : 'Público simulado parado'}</span>
+          <span className="tr-chip">Sala de treino · só você vê</span>
+          <span className="av-mesa-publico">{sim.ativa ? <><b>{fmt(sim.publicoAgora)}</b> na sala simulada{sim.pausada && ' · chat pausado'}</> : 'Simulação parada'}</span>
         </div>
         <div className="av-mesa-fontes" role="group" aria-label="O que entra no ensaio">
           {fonte('tela', 'Tela', !!tela)}
@@ -150,86 +223,139 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
         <div className="av-mesa-acao">
           {sim.ativa
             ? <button className="av-botao-encerrar" onClick={() => pararSimulacao()}>Encerrar simulação</button>
-            : <button className="tr-botao-iniciar" onClick={() => iniciarSimulacao(apresentador)}><i aria-hidden />Começar simulação</button>}
+            : <button className="tr-botao-iniciar" onClick={comecar}><i aria-hidden />Começar simulação</button>}
+          <button className="av-link" onClick={aoSair}>Sair da sala de treino</button>
         </div>
         {erro && <p className="av-erro" role="alert">{erro}</p>}
       </section>
 
+      {!sim.ativa && (
+        <ol className="tr-passos" aria-label="Como ensaiar">
+          {passos.map((p, i) => (
+            <li key={p.titulo} className={p.feito ? 'feito' : ''}>
+              <i aria-hidden>{p.feito ? '✓' : i + 1}</i>
+              <span><b>{p.titulo}</b>{p.dica}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+
       <div className="av-palco-e-chat">
-        <div className="av-palco">
-          {tela ? <VideoLocal fluxo={tela} className="av-tela" /> : camera ? <VideoLocal fluxo={camera} className="av-tela av-so-camera" espelhar /> : null}
-          {tela && camera && <VideoLocal fluxo={camera} className={`av-camera canto-${canto}`} espelhar />}
-          {!tela && !camera && <div className="av-espera">Ligue a tela ou a câmera para ensaiar com imagem.</div>}
-          {/* o selo único, combinado: sempre na imagem */}
-          <span className="tr-selo"><i aria-hidden />Simulação{sim.ativa && <> · {fmt(sim.publicoAgora)} na sala</>}</span>
-        </div>
-
-        <section className="av-chat" aria-label="Chat simulado">
-          {sim.momento && <div className="tr-momento">Momento: {MOMENTOS.find((m) => m.id === sim.momento)?.rotulo}</div>}
-          <div className="av-mensagens" ref={lista} role="log" aria-live="off">
-            {sim.mensagens.length === 0 && <p className="av-chat-vazio">{sim.ativa ? 'O público está chegando…' : 'Comece a simulação para o chat ganhar vida.'}</p>}
-            {sim.mensagens.map((m) => m.entrada ? (
-              <p key={m.id} className="tr-entrada">{m.nome} entrou</p>
-            ) : (
-              <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''}`}>
-                <p><b>{m.nome}{m.apresentador && <em>você</em>}</b> {m.texto}</p>
-                <time>{hora(m.hora)}</time>
+        <div className="tr-palco-coluna">
+          <div className="av-palco">
+            {tela ? <VideoLocal fluxo={tela} className="av-tela" /> : camera ? <VideoLocal fluxo={camera} className="av-tela av-so-camera" espelhar /> : null}
+            {tela && camera && <VideoLocal fluxo={camera} className={`av-camera canto-${canto}`} espelhar />}
+            {!temImagem && (
+              <div className="av-espera tr-espera">
+                <b>Sua imagem aparece aqui</b>
+                <span>Ligue a câmera ou a tela na barra de cima.</span>
               </div>
-            ))}
+            )}
+            {/* o selo único, combinado: sempre na imagem */}
+            <span className="tr-selo"><i aria-hidden />Simulação{sim.ativa && <> · {fmt(sim.publicoAgora)} na sala</>}</span>
           </div>
-          <form className="av-escrever" onSubmit={(e) => { e.preventDefault(); falarComoApresentador(texto); setTexto('') }}>
-            <label htmlFor="tr-campo" className="av-oculto">Responder no chat</label>
-            <input id="tr-campo" value={texto} maxLength={500} autoComplete="off" placeholder="Responda como apresentador" onChange={(e) => setTexto(e.target.value)} />
-            <button type="submit" disabled={!texto.trim()}>Enviar</button>
-          </form>
-        </section>
-      </div>
+          {momentosRapidos}
+        </div>
 
-      <section className="tr-painel" aria-label="Controles da simulação">
-        <div className="tr-bloco tr-publico">
-          <label htmlFor="tr-alvo">Tamanho da sala</label>
-          <div className="tr-alvo">
-            <input id="tr-alvo" type="range" min={50} max={10000} step={50} value={sim.publicoAlvo}
-              onChange={(e) => ajustar({ publicoAlvo: Number(e.target.value) })} />
-            <input type="number" min={1} max={50000} value={sim.publicoAlvo} aria-label="Pessoas na sala"
-              onChange={(e) => { const n = Math.round(Number(e.target.value)); if (n > 0) ajustar({ publicoAlvo: Math.min(50000, n) }) }} />
+        <div className="av-coluna">
+          <div className="av-abas" role="tablist" aria-label="Chat e ajustes da simulação">
+            <button role="tab" aria-selected={aba === 'chat'} className={aba === 'chat' ? 'on' : ''} onClick={() => setAba('chat')}>
+              Chat{aba !== 'chat' && vistas > 0 && <span className="av-badge-aba">{vistas > 99 ? '99+' : vistas}</span>}
+            </button>
+            <button role="tab" aria-selected={aba === 'simulacao'} className={aba === 'simulacao' ? 'on' : ''} onClick={() => setAba('simulacao')}>Simulação</button>
           </div>
-          <span className="tr-legenda">O número sobe e desce em volta deste valor, como gente entrando e saindo.</span>
+
+          {aba === 'chat' ? (
+            <section className="av-chat" aria-label="Chat simulado">
+              {sim.momento && <div className="tr-momento">Momento: {MOMENTOS.find((m) => m.id === sim.momento)?.rotulo}</div>}
+              <div className="av-mensagens" ref={lista} role="log" aria-live="off">
+                {sim.mensagens.length === 0 && (
+                  <div className="av-chat-vazio tr-chat-vazio">
+                    {sim.ativa ? 'O público está chegando…' : <>O chat ganha vida quando você começar a simulação.<button className="av-link" onClick={() => setAba('simulacao')}>Ajustar a sala antes</button></>}
+                  </div>
+                )}
+                {sim.mensagens.map((m) => m.entrada ? (
+                  <p key={m.id} className="tr-entrada">{m.nome} entrou</p>
+                ) : (
+                  <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''}`}>
+                    <p><b>{m.nome}{m.apresentador && <em>você</em>}</b> {m.texto}</p>
+                    <time>{hora(m.hora)}</time>
+                  </div>
+                ))}
+              </div>
+              <form className="av-escrever" onSubmit={(e) => { e.preventDefault(); falarComoApresentador(texto); setTexto('') }}>
+                <label htmlFor="tr-campo" className="av-oculto">Responder no chat</label>
+                <input id="tr-campo" value={texto} maxLength={500} autoComplete="off" placeholder="Responda como apresentador" onChange={(e) => setTexto(e.target.value)} />
+                <button type="submit" disabled={!texto.trim()}>Enviar</button>
+              </form>
+            </section>
+          ) : (
+            <div className="av-painel tr-painel-lateral" onPointerDown={() => setAjustou(true)} onKeyDown={() => setAjustou(true)}>
+              <section className="av-painel-sec">
+                <h4>Público</h4>
+                <label htmlFor="tr-alvo" className="tr-rotulo">Tamanho da sala</label>
+                <div className="tr-alvo">
+                  <input id="tr-alvo" type="range" min={50} max={10000} step={50} value={Math.min(10000, sim.publicoAlvo)}
+                    onChange={(e) => ajustar({ publicoAlvo: Number(e.target.value) })} />
+                  <input type="number" min={1} max={50000} value={sim.publicoAlvo} aria-label="Pessoas na sala"
+                    onChange={(e) => { const n = Math.round(Number(e.target.value)); if (n > 0) ajustar({ publicoAlvo: Math.min(50000, n) }) }} />
+                </div>
+                <div className="tr-prontos" role="group" aria-label="Tamanhos prontos">
+                  {TAMANHOS_PRONTOS.map((n) => <button key={n} className={sim.publicoAlvo === n ? 'on' : ''} onClick={() => ajustar({ publicoAlvo: n })}>{fmt(n)}</button>)}
+                </div>
+                <span className="tr-rotulo">Oscilação</span>
+                {segmentado<Oscilacao>(sim.oscilacao, [['baixa', 'Baixa'], ['media', 'Média'], ['alta', 'Alta']], (v) => ajustar({ oscilacao: v }), 'Oscilação do público')}
+                <span className="tr-legenda">O número sobe e desce em volta do tamanho escolhido, como gente entrando e saindo.</span>
+              </section>
+
+              <section className="av-painel-sec">
+                <h4>Chat simulado</h4>
+                <span className="tr-rotulo">Ritmo</span>
+                {segmentado<Ritmo>(sim.ritmo, [['calmo', 'Calmo'], ['normal', 'Normal'], ['agitado', 'Agitado']], (v) => ajustar({ ritmo: v }), 'Ritmo do chat')}
+                <div className="tr-acoes">
+                  <button className="av-link" onClick={() => ajustar({ pausada: !sim.pausada })} disabled={!sim.ativa}>{sim.pausada ? 'Retomar o chat' : 'Pausar o chat'}</button>
+                  <button className="av-link" onClick={limparChat}>Limpar o chat</button>
+                </div>
+              </section>
+
+              <section className="av-painel-sec">
+                <h4>Momentos da live</h4>
+                <div className="tr-momentos-grade">
+                  {MOMENTOS.map((m) => (
+                    <button key={m.id} className={sim.momento === m.id ? 'on' : ''} disabled={!sim.ativa} onClick={() => dispararMomento(m.id)}>
+                      <b>{m.rotulo}</b><small>{m.dica}</small>
+                    </button>
+                  ))}
+                </div>
+                {!sim.ativa && <span className="tr-legenda">Liberados quando a simulação começar. Também ficam embaixo do vídeo.</span>}
+              </section>
+
+              <section className="av-painel-sec">
+                <h4>Fundo da câmera</h4>
+                <SeletorDeFundo valor={fundo} cameraLigada={!!camera} aplicando={aplicandoFundo} onEscolher={(e) => void trocarFundo(e)} />
+              </section>
+
+              <section className="av-painel-sec">
+                <h4>Câmera e microfone</h4>
+                <div className="av-painel-linha entre">
+                  <span id="tr-canto">Seu rosto sobre a tela</span>
+                  <div className="av-cantos" role="radiogroup" aria-labelledby="tr-canto">
+                    {CANTOS.map((c) => <button key={c.id} role="radio" aria-checked={canto === c.id} aria-label={c.rotulo} title={c.rotulo} className={`c-${c.id} ${canto === c.id ? 'on' : ''}`} onClick={() => setCanto(c.id)}><i aria-hidden /></button>)}
+                  </div>
+                </div>
+                <span className="tr-rotulo">Volume do microfone</span>
+                <span className="av-medidor" role="meter" aria-label="Volume do microfone" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(nivel * 100)}><i style={{ width: `${Math.round(nivel * 100)}%` }} /></span>
+                {!mic && <span className="tr-legenda">Ligue o microfone na barra de cima para ver o volume.</span>}
+              </section>
+
+              <section className="av-painel-sec">
+                <h4>Chamar a equipe para ensaiar</h4>
+                <LinkDoTreino compacto />
+              </section>
+            </div>
+          )}
         </div>
-        <div className="tr-bloco">
-          <span className="tr-rotulo">Oscilação</span>
-          {segmentado<Oscilacao>(sim.oscilacao, [['baixa', 'Baixa'], ['media', 'Média'], ['alta', 'Alta']], (v) => ajustar({ oscilacao: v }), 'Oscilação do público')}
-          <span className="tr-rotulo">Ritmo do chat</span>
-          {segmentado<Ritmo>(sim.ritmo, [['calmo', 'Calmo'], ['normal', 'Normal'], ['agitado', 'Agitado']], (v) => ajustar({ ritmo: v }), 'Ritmo do chat')}
-        </div>
-        <div className="tr-bloco tr-momentos">
-          <span className="tr-rotulo">Momentos da live</span>
-          <div className="tr-momentos-grade">
-            {MOMENTOS.map((m) => (
-              <button key={m.id} className={sim.momento === m.id ? 'on' : ''} disabled={!sim.ativa} onClick={() => dispararMomento(m.id)}>
-                <b>{m.rotulo}</b><small>{m.dica}</small>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="tr-bloco tr-fundo">
-          <span className="tr-rotulo">Fundo da câmera</span>
-          <SeletorDeFundo valor={fundo} cameraLigada={!!camera} aplicando={aplicandoFundo} onEscolher={(e) => void trocarFundo(e)} />
-        </div>
-        <div className="tr-bloco">
-          <span className="tr-rotulo" id="tr-canto">Seu rosto aparece</span>
-          <div className="av-cantos" role="radiogroup" aria-labelledby="tr-canto">
-            {CANTOS.map((c) => <button key={c.id} role="radio" aria-checked={canto === c.id} aria-label={c.rotulo} title={c.rotulo} className={`c-${c.id} ${canto === c.id ? 'on' : ''}`} onClick={() => setCanto(c.id)}><i aria-hidden /></button>)}
-          </div>
-          <span className="tr-rotulo">Microfone</span>
-          <span className="av-medidor" role="meter" aria-label="Volume do microfone" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(nivel * 100)}><i style={{ width: `${Math.round(nivel * 100)}%` }} /></span>
-          <div className="tr-acoes">
-            <button className="av-link" onClick={() => ajustar({ pausada: !sim.pausada })} disabled={!sim.ativa}>{sim.pausada ? 'Retomar o chat' : 'Pausar o chat'}</button>
-            <button className="av-link" onClick={limparChat}>Limpar o chat</button>
-            <button className="av-link" onClick={aoSair}>Sair da sala de treino</button>
-          </div>
-        </div>
-      </section>
+      </div>
     </div>
   )
 }

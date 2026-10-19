@@ -631,3 +631,76 @@ body.av-teatro-aberto { overflow: hidden; }
 .av-nomes { display: flex; flex-wrap: wrap; gap: 4px; }
 .av-nomes span { padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-alt); font-size: 11.5px; }
 .av-nomes span.mais { border-style: dashed; color: var(--muted); }
+
+/* ---------------------------------------------------------- Ao vivo: as duas portas (19/10/2026) */
+.av-hub-abas { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 6px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.av-hub-abas button {
+  display: grid; gap: 3px; justify-items: start; padding: 12px 16px; border: 0; border-radius: 11px; background: transparent;
+  color: var(--muted); font: inherit; text-align: left; cursor: pointer; transition: background .15s, color .15s;
+}
+.av-hub-abas button b { display: inline-flex; align-items: center; gap: 8px; color: var(--text); font-size: 15px; }
+.av-hub-abas button small { font-size: 12px; }
+.av-hub-abas button:hover { background: var(--surface-alt); }
+.av-hub-abas button.on { background: var(--surface-alt); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 55%, var(--border)); }
+.av-hub-abas button.on b { color: var(--primary); }
+.av-hub-abas button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.av-hub-vivo { width: 8px; height: 8px; border-radius: 50%; background: var(--down); animation: av-pulsa 1.6s ease-in-out infinite; }
+
+.tr-porta { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 28px; align-items: start; padding: 28px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); }
+.tr-porta-texto { display: grid; gap: 10px; }
+.tr-porta h2 { margin: 0; font-size: 24px; line-height: 1.2; text-wrap: balance; }
+.tr-porta-texto > p { margin: 0; max-width: 58ch; color: var(--muted); line-height: 1.55; }
+.tr-porta-acoes { display: grid; gap: 14px; padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-alt); }
+.tr-porta-acoes .av-botao-principal { width: 100%; min-height: 48px; font-size: 15px; }
+.tr-link-nota { flex-basis: 100%; margin: 0; color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+@media (max-width: 900px) { .tr-porta { grid-template-columns: 1fr; padding: 20px; } }
+@media (max-width: 560px) { .av-hub-abas button { padding: 10px 12px; } .av-hub-abas button b { font-size: 14px; } .av-hub-abas button small { font-size: 11px; } }
+
+/* ---------------------------------------------------------- sala de treino, organizada como o estúdio */
+.tr-passos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.tr-passos li { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.tr-passos li i { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-style: normal; font-weight: 700; }
+.tr-passos li span { display: grid; gap: 2px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.tr-passos li b { color: var(--text); font-size: 13px; }
+.tr-passos li.feito { border-color: color-mix(in srgb, var(--up) 45%, var(--border)); }
+.tr-passos li.feito i { border-color: var(--up); background: var(--up); color: #fff; }
+@media (max-width: 900px) {
+  /* no celular os passos viram uma régua curta: só os títulos */
+  .tr-passos { gap: 6px; }
+  .tr-passos li { flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px; }
+  .tr-passos li span { font-size: 0; gap: 0; }
+  .tr-passos li b { font-size: 12px; line-height: 1.3; }
+}
+@media (max-width: 1000px) {
+  .tr-sala .tr-momentos-rapidos { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .tr-sala .tr-momentos-rapidos::-webkit-scrollbar { display: none; }
+  .tr-sala .tr-momentos-rapidos button { flex: none; min-height: 38px; }
+}
+
+.tr-palco-coluna { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 8px; min-height: 0; }
+.tr-palco-coluna > .av-palco { height: 100%; min-height: 0; }
+.tr-espera { gap: 4px; }
+.tr-espera b { color: #fff; font-size: 15px; }
+.tr-momentos-rapidos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tr-momentos-rapidos > span { margin-right: 4px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.tr-momentos-rapidos button { min-height: 32px; padding: 0 12px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.tr-momentos-rapidos button:hover:not(:disabled) { border-color: var(--primary); }
+.tr-momentos-rapidos button.on { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+.tr-momentos-rapidos button:disabled { opacity: .45; cursor: not-allowed; }
+.tr-painel-lateral .tr-alvo { grid-template-columns: 1fr 80px; }
+.tr-painel-lateral .tr-seg { width: 100%; }
+.tr-painel-lateral .tr-momentos-grade { grid-template-columns: 1fr 1fr; }
+.tr-painel-lateral .av-fundos-grade { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tr-prontos { display: flex; flex-wrap: wrap; gap: 6px; }
+.tr-prontos button { min-height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface-alt); color: var(--text); font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.tr-prontos button.on { border-color: var(--primary); color: var(--primary); }
+.tr-chat-vazio { display: grid; gap: 8px; justify-items: center; }
+.tr-chat-vazio .av-link { justify-self: center; }
+.tr-sala .av-mesa-acao { align-items: center; }
+@media (max-width: 1000px) {
+  .tr-sala .av-palco-e-chat { height: auto; }
+  .tr-palco-coluna > .av-palco { height: auto; aspect-ratio: 16 / 9; }
+  .tr-sala .av-palco-e-chat > .av-coluna { height: 560px; }
+}
+/* a sala de treino tem a faixa de passos e a barra de momentos: o vídeo cede um pouco de altura para tudo caber na tela */
+@media (min-width: 1001px) { .tr-sala .av-palco-e-chat { height: clamp(420px, calc(100vh - 340px), 820px); } }

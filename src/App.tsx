@@ -45,7 +45,7 @@ import { buyFromProposal, requestProposal, sellContract } from './core/deriv/tra
 import { MARCA } from './marca'
 import { IconeFechar } from './components/IconeFechar'
 import { usePeriodos } from './core/chart/periodos'
-import { conviteRecebido, liveNoAr, type Live } from './core/live/api'
+import { conviteRecebido, liveNoAr, treinoPedido, type Live } from './core/live/api'
 import { usePlayerAtivo } from './core/live/presenca'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
@@ -304,11 +304,14 @@ export default function App() {
     // Link de convite da live (?aovivo=<código>): abre o "Ao vivo", mesmo depois do login.
     const convite = MARCA.aoVivo ? u.searchParams.get('aovivo') : null
     if (convite) { try { sessionStorage.setItem(`${MARCA.id}.aovivo.convite`, convite.slice(0, 12)) } catch { /* sem armazenamento */ } }
-    const pedida = convite ? 'aovivo' : u.searchParams.get('tela')
+    // Link da sala de treino (?treino=1): abre o "Ao vivo" já dentro da sala de treino.
+    const treino = MARCA.aoVivo && u.searchParams.has('treino')
+    if (treino) { try { sessionStorage.setItem(`${MARCA.id}.aovivo.treino`, '1') } catch { /* sem armazenamento */ } }
+    const pedida = convite || treino ? 'aovivo' : u.searchParams.get('tela')
     const PUBLICAS: WorkspacePage[] = ['operar', 'robos', 'aulas', 'gerenciamento', 'marketplace', ...(MARCA.aoVivo ? ['aovivo' as const] : [])]
     if (pedida && (PUBLICAS as string[]).includes(pedida)) setTela(pedida as WorkspacePage)
-    if (u.searchParams.has('tela') || u.searchParams.has('aovivo') || u.searchParams.get('origem') === 'app') {
-      u.searchParams.delete('tela'); u.searchParams.delete('origem'); u.searchParams.delete('aovivo')
+    if (u.searchParams.has('tela') || u.searchParams.has('aovivo') || u.searchParams.has('treino') || u.searchParams.get('origem') === 'app') {
+      u.searchParams.delete('tela'); u.searchParams.delete('origem'); u.searchParams.delete('aovivo'); u.searchParams.delete('treino')
       history.replaceState(history.state, '', u.pathname + u.search + u.hash)
     }
     const voltar = (e: PopStateEvent) => {
@@ -605,8 +608,9 @@ export default function App() {
 
   if (teeds.status === 'deslogado') {
     const convite = MARCA.aoVivo && !querLogin ? conviteRecebido() : null
-    if (convite) {
-      return <Suspense fallback={null}><Convidado codigo={convite} aoEntrarNaConta={() => setQuerLogin(true)} /></Suspense>
+    const treinoSemConta = MARCA.aoVivo && !querLogin && treinoPedido()
+    if (convite || treinoSemConta) {
+      return <Suspense fallback={null}><Convidado codigo={convite} treino={treinoSemConta} aoEntrarNaConta={() => setQuerLogin(true)} /></Suspense>
     }
     return (
       <LoginScreen

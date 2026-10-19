@@ -207,6 +207,15 @@ export async function podeTreinar(sessao: SessaoTeeds): Promise<boolean> {
 /** O link curto de convite da live (abre direto no "Ao vivo", mesmo depois do login). */
 export const linkDaLive = (id: string) => `${location.origin}${import.meta.env.BASE_URL}?aovivo=${id.slice(0, 8)}`
 
+/** Chegou pelo link da sala de treino (?treino=1)? Vale até a pessoa entrar nela. */
+export function treinoPedido(): boolean {
+  if (new URLSearchParams(location.search).has('treino')) return true
+  try { return sessionStorage.getItem(`${MARCA.id}.aovivo.treino`) === '1' } catch { return false }
+}
+export function esquecerTreinoPedido(): void {
+  try { sessionStorage.removeItem(`${MARCA.id}.aovivo.treino`) } catch { /* nada guardado */ }
+}
+
 /** O código do convite com que a pessoa chegou (se veio por link), para destacar a live certa. */
 export function conviteRecebido(): string | null {
   const naUrl = new URLSearchParams(location.search).get('aovivo')

@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useRef, useState, type CSSProperties, type P
 import { createPortal } from 'react-dom'
 import { LocalVideoTrack, type Track } from 'livekit-client'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { apagarLive, conviteRecebido, criarLive, linkDaLive, listarLives, mudarLive, podeTreinar, type CantoDaCamera, type Live } from '../../core/live/api'
+import { apagarLive, conviteRecebido, criarLive, esquecerTreinoPedido, linkDaLive, listarLives, mudarLive, podeTreinar, treinoPedido, type CantoDaCamera, type Live } from '../../core/live/api'
 import { mudarLinkPublico, useLinkPublico } from '../../core/live/config'
-import { SalaDeTreino } from './SalaDeTreino'
+import { LinkDoTreino, SalaDeTreino } from './SalaDeTreino'
 import { SeletorDeFundo } from './SeletorDeFundo'
 import { MARCA } from '../../marca'
 
@@ -929,9 +929,17 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
     try { setLives(await listarLives(sessao)); setErro(null) } catch (e) { setErro(e instanceof Error ? e.message : 'Não consegui carregar as lives.') }
   }, [sessao])
   useEffect(() => { void carregar(); const t = window.setInterval(() => void carregar(), 20000); return () => window.clearInterval(t) }, [carregar])
-  const [treino, setTreino] = useState(false)
+  const [planoTreino, setPlanoTreino] = useState(false)
+  const publico = useLinkPublico()
+  // pode treinar: admin ou plano "treino"; na fase de testes (link público), qualquer pessoa
+  const treino = planoTreino || publico === true
   const [treinando, setTreinando] = useState(false)
-  useEffect(() => { if (sessao) void podeTreinar(sessao).then(setTreino) }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (sessao) void podeTreinar(sessao).then(setPlanoTreino) }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // chegou pelo link da sala de treino: entra direto, assim que se sabe que pode
+  useEffect(() => { if (treino && treinoPedido()) { esquecerTreinoPedido(); setTreinando(true) } }, [treino])
+  const CHAVE_ABA = `${MARCA.id}.aovivo.aba`
+  const [aba, setAbaEstado] = useState<'transmissao' | 'treino'>(() => { try { return localStorage.getItem(CHAVE_ABA) === 'treino' ? 'treino' : 'transmissao' } catch { return 'transmissao' } })
+  const setAba = (a: 'transmissao' | 'treino') => { setAbaEstado(a); try { localStorage.setItem(CHAVE_ABA, a) } catch { /* só agora */ } }
 
   if (!sessao) return <div className="ger av-pagina"><p className="av-vazio">Entre na sua conta para ver as transmissões.</p></div>
   if (treinando) return <SalaDeTreino apresentador={(sessao.usuario.nome || '').trim().split(/\s+/)[0] || 'professor'} aoSair={() => setTreinando(false)} />
@@ -941,12 +949,45 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
   const proximas = (lives ?? []).filter((l) => l.status === 'agendada')
   const convite = conviteRecebido()
   const convidadoPara = (l: Live) => !!convite && l.id.startsWith(convite)
+  const abaAtual = treino ? aba : 'transmissao'
   return (
     <div className="ger av-pagina">
       {erro && <p className="av-erro" role="alert">{erro}</p>}
       {s.erro && <p className={s.fase === 'erro' ? 'av-erro' : 'av-recado'} role="status">{s.erro}</p>}
 
-      {noAr && (
+      {treino && (
+        <div className="av-hub-abas" role="tablist" aria-label="O que fazer">
+          <button role="tab" aria-selected={abaAtual === 'transmissao'} className={abaAtual === 'transmissao' ? 'on' : ''} onClick={() => setAba('transmissao')}>
+            <b>Transmissão ao vivo{noAr && <i className="av-hub-vivo" aria-label="no ar agora" />}</b>
+            <small>{admin ? 'Para os alunos, de verdade' : 'Assistir as lives da equipe'}</small>
+          </button>
+          <button role="tab" aria-selected={abaAtual === 'treino'} className={abaAtual === 'treino' ? 'on' : ''} onClick={() => setAba('treino')}>
+            <b>Sala de treino</b>
+            <small>Ensaio com público simulado, só você vê</small>
+          </button>
+        </div>
+      )}
+
+      {abaAtual === 'treino' && (
+        <section className="tr-porta" aria-labelledby="tr-porta-titulo">
+          <div className="tr-porta-texto">
+            <span className="av-sobretitulo">Sala de treino</span>
+            <h2 id="tr-porta-titulo">Ensaie a live antes de ir ao ar</h2>
+            <p>Use sua tela, câmera e microfone de verdade diante de um público e de um chat simulados. Nada sai do seu navegador: ninguém mais vê o ensaio, e a imagem leva o selo "Simulação".</p>
+            <ol className="av-passos">
+              <li><i>1</i><span><b>Entre na sala de treino</b>Ela abre já com os ajustes à mostra.</span></li>
+              <li><i>2</i><span><b>Ligue a câmera ou a tela e ajuste a sala</b>Tamanho do público, ritmo do chat, fundo da câmera.</span></li>
+              <li><i>3</i><span><b>Clique em Começar simulação</b>O público chega; dispare momentos como meta batida ou rodada de perguntas.</span></li>
+            </ol>
+          </div>
+          <div className="tr-porta-acoes">
+            <button className="av-botao-principal" onClick={() => setTreinando(true)}>Entrar na sala de treino</button>
+            <LinkDoTreino />
+          </div>
+        </section>
+      )}
+
+      {abaAtual === 'transmissao' && noAr && (
         <section className={`av-destaque ${convidadoPara(noAr) ? 'convite' : ''}`}>
           {convidadoPara(noAr) && !admin && <span className="av-sobretitulo">Você foi convidado para esta live</span>}
           <span className="av-chip-vivo"><i aria-hidden />Ao vivo agora <Cronometro desde={noAr.iniciadaEm} /></span>
@@ -956,20 +997,9 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
         </section>
       )}
 
-      {admin && !noAr && <PortaDoEstudio sessao={sessao} aoMudar={() => void carregar()} />}
+      {abaAtual === 'transmissao' && admin && !noAr && <PortaDoEstudio sessao={sessao} aoMudar={() => void carregar()} />}
 
-      {treino && (
-        <section className="tr-entrada-card" aria-labelledby="tr-titulo">
-          <div>
-            <span className="av-sobretitulo">Sala de treino</span>
-            <h3 id="tr-titulo">Ensaie uma live com público e chat simulados</h3>
-            <p>Só você vê. Use sua tela, câmera e microfone de verdade, controle o tamanho da sala e dispare momentos como meta batida, stop ou rodada de perguntas. A imagem leva o selo "Simulação".</p>
-          </div>
-          <button className="av-botao-secundario" onClick={() => setTreinando(true)}>Abrir sala de treino</button>
-        </section>
-      )}
-
-      {!admin && !noAr && lives && proximas.length === 0 && (
+      {abaAtual === 'transmissao' && !admin && !noAr && lives && proximas.length === 0 && (
         <section className="av-destaque calmo">
           <span className="av-sobretitulo">Ao vivo</span>
           <h2>Nenhuma transmissão no ar agora</h2>
@@ -977,7 +1007,7 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
         </section>
       )}
 
-      {proximas.length > 0 && (
+      {abaAtual === 'transmissao' && proximas.length > 0 && (
         <section className="av-agenda" aria-labelledby="av-agenda-titulo">
           <h3 id="av-agenda-titulo">Próximas transmissões</h3>
           {proximas.map((l) => (
@@ -995,7 +1025,7 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
           ))}
         </section>
       )}
-      {!lives && !erro && <p className="av-vazio">Carregando…</p>}
+      {abaAtual === 'transmissao' && !lives && !erro && <p className="av-vazio">Carregando…</p>}
     </div>
   )
 }
@@ -1126,10 +1156,12 @@ function faixaDeExemplo(largura: number, altura: number, desenhar: (c: CanvasRen
 }
 
 /** ?tela=aovivo no laboratório: a sala cheia, com vídeo e chat de exemplo. */
-export function LabAoVivo({ modo, moderador }: { modo: ModoDoPlayer | 'pagina' | 'porta' | 'ensaio'; moderador: boolean }) {
+export function LabAoVivo({ modo, moderador }: { modo: ModoDoPlayer | 'pagina' | 'porta' | 'ensaio' | 'inicio'; moderador: boolean }) {
   const s = useSala()
   const sessaoFalsa = { token: '', refresh: '', expiraEm: 0, usuario: { id: 'lab', email: '', nome: 'Tiago' } } as unknown as SessaoTeeds
   if (modo === 'porta') return <div className="ger av-pagina"><PortaDoEstudio sessao={sessaoFalsa} aoMudar={() => undefined} /></div>
+  // a página de entrada do Ao vivo (abas Transmissão / Sala de treino); a lista de lives falha sem conta, é esperado
+  if (modo === 'inicio') return <AoVivoPage sessao={sessaoFalsa} admin={moderador} />
   useEffect(() => {
     const tela = faixaDeExemplo(1280, 720, (c, t) => {
       c.fillStyle = '#0b1726'; c.fillRect(0, 0, 1280, 720)
