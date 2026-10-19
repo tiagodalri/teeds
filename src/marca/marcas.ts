@@ -102,6 +102,13 @@ export interface Marca {
    */
   ativosSemVolatility?: boolean
   /**
+   * Nome e ícone de itens do menu lateral, por marca (19/10/2026: na
+   * GlobalFly, "Robôs" virou "I.A." com o símbolo de brilhos, e o Assistente
+   * ganhou um balão de conversa para não confundir os dois).
+   * Ícone = caminho SVG em 24x24, traço.
+   */
+  menu?: { nomes?: Record<string, string>; icones?: Record<string, string> }
+  /**
    * Vitrine dos robôs na tela Robôs (19/10/2026, GlobalFly): no lugar do
    * quadro vazio, um cartão por robô com a foto (public/robos-<marca>/<id>.webp)
    * e a aeronave que inspirou o nome. Sem isto, a tela fica como sempre.
@@ -311,6 +318,15 @@ export const MARCAS: Record<string, Marca> = {
     appNativo: true,
     aoVivo: true,
     ativosSemVolatility: true,
+    menu: {
+      nomes: { robos: 'I.A.' },
+      icones: {
+        // brilhos: uma estrela grande e duas pequenas (o símbolo usual de IA)
+        robos: 'M10 4l1.8 4.9L16.7 10.7l-4.9 1.8L10 17.4l-1.8-4.9L3.3 10.7l4.9-1.8z M18 3v4 M16 5h4 M18.5 15.5v4 M16.5 17.5h4',
+        // assistente: balão de conversa com reticências
+        assistente: 'M4 5h16v11H10l-4.5 3.5V16H4z M8.5 10.5h.01 M12 10.5h.01 M15.5 10.5h.01',
+      },
+    },
     vitrineDosRobos: {
       goreme: { aeronave: 'Caça F-22 Raptor', credito: 'Força Aérea dos EUA, domínio público', fonte: 'https://commons.wikimedia.org/wiki/File:A_U.S._Air_Force_F-22_Raptor_from_the_1st_Fighter_Wing_flies_over_Western_Virginia%2C_June_12%2C_2018.jpg',
         gancho: 'Domina o espaço aéreo e muda de direção no ar.',

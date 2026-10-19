@@ -73,7 +73,7 @@ const nomeDoApp = (a: string) => APP[a] ?? a
 
 /** O id interno da tela vira o nome que a pessoa vê no menu. */
 const TELA: Record<string, string> = {
-  operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gerenciamento: 'Gerenciamento',
+  operar: 'Manual', robos: MARCA.menu?.nomes?.robos ?? 'Robôs', assistente: 'Assistente', gerenciamento: 'Gerenciamento',
   marketplace: 'Marketplace', aulas: 'Aulas', gestao: 'Administração',
   insights: 'Insights', monitoramento: 'Monitoramento', desconhecida: 'Não identificada',
 }

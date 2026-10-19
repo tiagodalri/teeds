@@ -97,6 +97,8 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
                   </div>
                   <h4>{v.aeronave.replace(/^Inspirado no /, '')}</h4>
                   <p>{v.historia}</p>
+                  {/* a licença CC BY-SA pede o nome de quem fez a foto; domínio público não */}
+                  {v.credito?.includes('CC') && <small className="vr-credito">Foto: {v.credito.replace(', ', ' · ')}</small>}
                 </div>
               )}
             </article>
@@ -104,14 +106,6 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
         })}
       </div>
       <p className="vr-nota">Nenhuma estratégia garante resultado. Os robôs da mesma conta compartilham o saldo.</p>
-      {robos.some((i) => vitrine[i.id]?.credito) && (
-        <p className="vr-creditos">
-          Fotos (Wikimedia Commons):{' '}
-          {robos.filter((i) => vitrine[i.id]?.credito).map((i, k) => (
-            <span key={i.id}>{k > 0 && ' · '}<a href={vitrine[i.id]!.fonte} target="_blank" rel="noopener noreferrer">{nomeCurto(i)}: {vitrine[i.id]!.credito}</a></span>
-          ))}
-        </p>
-      )}
     </section>
   )
 }

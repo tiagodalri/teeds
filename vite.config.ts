@@ -88,17 +88,18 @@ const FUNDO_DA_MARCA: Record<string, string> = { teeds: '#090a0d', omni: '#08152
 const PALETAS: Record<string, Paleta> = {
   globalfly: {
     manter: ['#051528', '#B78D39', '#9CB1C7', '#F3F0E9', '#29445F', '#2F8F72', '#C95F5F',
-      '#030d1a', '#041120', '#162537', '#112032', '#27374a', '#586a7f',
+      // marinho vivo das superfícies (19/10/2026)
+      '#020B1D', '#020E24', '#041029', '#0A1C40', '#0F234D', '#203765', '#576B94', '#96AFD4', '#1E3D6E',
       // a Deriv é marca de terceiro: o vermelho dela não se mexe
       '#ff444f', '#ff5a63'],
     vermelho: { h: 0, s: 0.5, exata: [201 / 255, 95 / 255, 95 / 255] }, // Alerta #C95F5F
     quente: { h: 40, s: 0.53, exata: [183 / 255, 141 / 255, 57 / 255] }, // Ouro GF #B78D39
     verde: { h: 162, s: 0.5, exata: [47 / 255, 143 / 255, 114 / 255] }, // Positivo #2F8F72
-    frio: { h: 211, s: 0.4 },
-    neutroEscuro: 212,
+    frio: { h: 218, s: 0.55 },
+    neutroEscuro: 220,
     neutroClaro: 43,
-    // #041120, #112032, #162537, #27374A, #586A7F
-    superficies: [[0.071, 0.78], [0.131, 0.49], [0.151, 0.43], [0.222, 0.31], [0.422, 0.18]],
+    // marinho vivo (19/10/2026): #020E24, #0A1C40, #0F234D, #203765, #576B94
+    superficies: [[0.075, 0.88], [0.145, 0.72], [0.18, 0.68], [0.26, 0.52], [0.46, 0.26]],
   },
 }
 /* Telas de abertura do iPhone/iPad: só a marca que gerou a pasta

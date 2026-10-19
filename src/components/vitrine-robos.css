@@ -89,9 +89,7 @@
 .vr-cartao.com-historia .vr-foto img { transform: scale(1.08); filter: blur(1px); }
 
 .vr-nota { margin: 0; color: var(--muted); font-size: 11.5px; }
-.vr-creditos { margin: -8px 0 0; color: var(--muted); font-size: 10.5px; line-height: 1.5; opacity: .8; }
-.vr-creditos a { color: inherit; text-decoration: none; }
-.vr-creditos a:hover { text-decoration: underline; }
+.vr-credito { margin-top: auto; color: rgba(211, 219, 229, .55); font-size: 10px; letter-spacing: .02em; }
 
 /* telas médias: uma fileira que desliza de lado (cinco cartões não dividem bem em duas ou três colunas) */
 @media (max-width: 1279px) {

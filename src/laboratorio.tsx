@@ -29,6 +29,7 @@ import type { ActiveSymbol } from './core/deriv/types'
 import { RobotLive } from './components/RobotLive'
 import { RobotSetup } from './components/RobotSetup'
 import { VitrineDeRobos } from './components/VitrineDeRobos'
+import { WorkspaceNav } from './components/WorkspaceNav'
 import { RobotCatalog } from './components/RobotCatalog'
 import { AulasPanel } from './components/AulasPanel'
 import { PriceChart } from './components/PriceChart'
@@ -185,6 +186,8 @@ function Laboratorio() {
         {qual === 'catalogo' && <RobotCatalog selected={ident.id} onSelect={nada} />}
         {/* ?tela=vitrine: a vitrine de robôs (GlobalFly); "Configurar" abre o preparo já no robô. */}
         {qual === 'vitrine' && <LabVitrine />}
+        {/* ?tela=menu: o menu lateral com a tela de Robôs (I.A. na GlobalFly) aberta. */}
+        {qual === 'menu' && <div className="workspace-app" style={{ minHeight: '100vh' }}><WorkspaceNav page="robos" admin onNavigate={nada} /><LabVitrine /></div>}
         {/* ?tela=sem-deriv&voltas=0|1|2: o cartão de corretora desconectada em
             cada estado (nenhum login, uma volta perdida, duas seguidas). */}
         {qual === 'sem-deriv' && <SemDeriv />}
