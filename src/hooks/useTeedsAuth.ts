@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  buscarUsuario, capturarRetorno, entrar as fazerLogin, lembrarSessao,
-  recuperarSenha, renovar, sair as encerrar, sessaoGuardada, trocarSenha,
-  type SessaoTeeds, type Usuario,
+  buscarUsuario, capturarRetorno, confirmarPeloLink, entrar as fazerLogin, lembrarSessao,
+  recuperarSenha, renovar, sair as encerrar, sessaoGuardada, temConfirmacaoNoEndereco, trocarSenha,
+  type Retorno, type SessaoTeeds, type Usuario,
 } from '../core/teeds/conta'
 import { autenticacaoConfigurada } from '../core/teeds/config'
 import { inscreverFilaEspera, type DadosFilaEspera } from '../core/teeds/leads'
@@ -50,10 +50,9 @@ export function useTeedsAuth() {
     if (!autenticacaoConfigurada()) return
     let vivo = true
 
-    // O link do e-mail volta com o token no endereco; isso vem primeiro.
-    const retorno = capturarRetorno()
-    if (retorno.erro) setErro(retorno.erro)
-    if (retorno.sessao) {
+    const aplicar = (retorno: Retorno): boolean => {
+      if (retorno.erro) setErro(retorno.erro)
+      if (!retorno.sessao) return false
       const s = retorno.sessao
       if (retorno.tipo === 'recovery') setRedefinindo(true)
       else setRecado(`E-mail confirmado. Bem-vindo à ${MARCA.prosa}.`)
@@ -67,14 +66,13 @@ export function useTeedsAuth() {
           if (vivo) { setSessao(s); setStatus('logado') }
         }
       })()
-      return () => { vivo = false }
+      return true
     }
 
-    const guardada = sessaoGuardada()
-    if (!guardada) { setStatus('deslogado'); return }
-
-    // token perto de vencer ja entra renovando
-    const renovarSeVelho = async () => {
+    // Sem link (ou link que não valeu): a sessão guardada, renovando se perto de vencer.
+    const seguirComGuardada = async () => {
+      const guardada = sessaoGuardada()
+      if (!guardada) { setStatus('deslogado'); return }
       try {
         const s = guardada.expiraEm - Date.now() < 120_000
           ? await renovar(guardada.refresh)
@@ -89,7 +87,14 @@ export function useTeedsAuth() {
         setStatus('deslogado')
       }
     }
-    void renovarSeVelho()
+
+    // Link novo do e-mail (?confirmar=...): o app valida o código na Supabase.
+    if (temConfirmacaoNoEndereco()) {
+      void confirmarPeloLink().then((r) => { if (vivo && !aplicar(r)) void seguirComGuardada() })
+    } else if (!aplicar(capturarRetorno())) {
+      // O link antigo volta com o token no endereco (#access_token=...).
+      void seguirComGuardada()
+    }
     return () => {
       vivo = false
       if (relogio.current) clearTimeout(relogio.current)

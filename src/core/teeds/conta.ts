@@ -10,7 +10,7 @@
  * definição: ela só permite o que as regras do projeto permitirem.
  */
 
-import { SUPABASE, autenticacaoConfigurada } from './config'
+import { SERVIDOR, SUPABASE, autenticacaoConfigurada } from './config'
 import { MARCA } from '../../marca'
 
 export interface Usuario {
@@ -216,8 +216,28 @@ export async function sair(token?: string): Promise<void> {
   guardar(null)
 }
 
-/** Manda o e-mail de redefinição de senha. */
+/**
+ * Manda o e-mail de redefinição de senha.
+ *
+ * Pelo nosso servidor (19/10/2026): ele anota de qual site veio o pedido e o
+ * e-mail sai com a marca certa, mesmo para quem tem conta nas duas
+ * plataformas (o Victor pediu na GlobalFly e recebeu e-mail da Teeds). Se o
+ * servidor não responder, vai direto à Supabase, como antes.
+ */
 export async function recuperarSenha(email: string): Promise<void> {
+  try {
+    const r = await fetch(`${SERVIDOR.url}/publico/recuperar-senha`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: email.trim(), marca: MARCA.id }),
+    })
+    if (r.ok) return
+    if (r.status === 400 || r.status === 429) {
+      const d = await r.json().catch(() => ({}))
+      throw new Error((d as { erro?: string }).erro ?? 'Não deu certo. Tente de novo em instantes.')
+    }
+  } catch (e) {
+    if (e instanceof Error && !/fetch|network|Load failed/i.test(e.message)) throw e
+  }
   await chamar(`/recover?redirect_to=${encodeURIComponent(enderecoDeRetorno())}`, {
     corpo: { email: email.trim() },
   })
@@ -319,6 +339,31 @@ export function capturarRetorno(): Retorno {
   }
   guardar(sessao)
   return { sessao, tipo: p.get('type'), erro: null }
+}
+
+/**
+ * O link do e-mail no formato novo (19/10/2026): `?confirmar=<código>&tipo=<tipo>`
+ * no próprio app da marca. O app valida o código na Supabase (verify com
+ * token_hash), sem depender da lista de endereços de volta dela.
+ */
+export function temConfirmacaoNoEndereco(): boolean {
+  return new URLSearchParams(window.location.search).has('confirmar')
+}
+export async function confirmarPeloLink(): Promise<Retorno> {
+  const u = new URL(window.location.href)
+  const codigo = u.searchParams.get('confirmar') ?? ''
+  const tipo = u.searchParams.get('tipo') ?? 'email'
+  u.searchParams.delete('confirmar'); u.searchParams.delete('tipo')
+  try { window.history.replaceState(null, '', u.pathname + u.search + u.hash) } catch { /* sem history */ }
+  try {
+    const d = await chamar('/verify', { corpo: { type: tipo, token_hash: codigo } })
+    const sessao = montarSessao(d)
+    guardar(sessao)
+    return { sessao, tipo, erro: null }
+  } catch (e) {
+    const m = (e as Error).message.toLowerCase()
+    return { sessao: null, tipo, erro: m.includes('expir') || m.includes('invalid') || m.includes('inválid') ? 'Esse link já expirou ou já foi usado. Peça um novo.' : (e as Error).message }
+  }
 }
 
 function limparEndereco() {

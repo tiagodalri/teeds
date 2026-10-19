@@ -28,7 +28,7 @@ import { conversar } from './chat'
 import { autorizacaoDoCliente, autorizacaoParaOperar, guardar } from './cofre'
 import { concluirLoginDoCliente, iniciarLoginDoCliente, type PedidoDoCliente } from './login-cliente'
 import type { ConfigEstrategia } from '../../src/core/deriv/engine'
-import { ligarCarteiro, tratarGanchoDeEmail } from './gancho-email'
+import { anotarMarcaPedida, ligarCarteiro, tratarGanchoDeEmail } from './gancho-email'
 import { somenteDemoDoUsuario } from './supabase'
 import { ligarColetorDeExtrato } from './extrato'
 import { ligarSincronizadorDeComissoes } from './comissoes'
@@ -183,6 +183,19 @@ async function minhaSessao(userId: string, id: string) {
   if (s.parametros.userId && s.parametros.userId === userId) return s
   const minhas = await contasDoUsuario(userId)
   return minhas.includes(s.contaId) ? s : null
+}
+
+/** Freio do pedido de nova senha: 1 por e-mail por minuto, 8 por endereço em 10 minutos. */
+const pedidosDeSenha = new Map<string, number[]>()
+function permitirPedidoDeSenha(email: string, ip: string): boolean {
+  const agora = Date.now()
+  const conta = (chave: string, janela: number, maximo: number) => {
+    const lista = (pedidosDeSenha.get(chave) ?? []).filter((t) => agora - t < janela)
+    if (lista.length >= maximo) { pedidosDeSenha.set(chave, lista); return false }
+    lista.push(agora); pedidosDeSenha.set(chave, lista); return true
+  }
+  if (pedidosDeSenha.size > 5000) pedidosDeSenha.clear()
+  return conta(`e:${email}`, 60e3, 1) && conta(`i:${ip}`, 10 * 60e3, 8)
 }
 
 const servidor = createServer(async (req, res) => {
@@ -433,6 +446,43 @@ const servidor = createServer(async (req, res) => {
     if (req.method === 'POST') { res.writeHead(ok ? 200 : 500, { 'content-type': 'text/plain' }); return res.end(ok ? 'ok' : 'erro') }
     res.writeHead(200, tipo)
     return res.end(paginaDeSaida(marcaPorId(aberto.marca).prosa, aberto.email, ok))
+  }
+
+  if (url.pathname === '/publico/recuperar-senha') {
+    /*
+      Pedido de nova senha (19/10/2026). Passa por aqui e não direto na
+      Supabase para o e-mail sair com a marca do site de onde a pessoa pediu
+      (ver anotarMarcaPedida em gancho-email.ts). Responde "ok" sempre, exista
+      ou não a conta: ninguém descobre por aqui quem tem cadastro.
+    */
+    const origem = String(req.headers.origin ?? '')
+    const deDesenvolvimento = /^http:\/\/localhost:\d+$/.test(origem)
+    const headers: Record<string, string> = { 'content-type': 'application/json; charset=utf-8', vary: 'Origin' }
+    if (marcaDoSite(origem) || deDesenvolvimento) headers['access-control-allow-origin'] = origem
+    if (req.method === 'OPTIONS') { headers['access-control-allow-methods'] = 'POST, OPTIONS'; headers['access-control-allow-headers'] = 'content-type'; res.writeHead(204, headers); return res.end() }
+    if (req.method !== 'POST') { res.writeHead(405, headers); return res.end('{}') }
+    const pedacos: Buffer[] = []; let bytes = 0
+    for await (const parte of req) { bytes += (parte as Buffer).length; if (bytes > 2_048) break; pedacos.push(parte as Buffer) }
+    let corpo: { email?: unknown; marca?: unknown } = {}
+    try { corpo = JSON.parse(Buffer.concat(pedacos).toString('utf8')) } catch { /* corpo torto */ }
+    const email = String(corpo.email ?? '').trim().toLowerCase()
+    const marcaId = marcaDoSite(origem) ?? (deDesenvolvimento ? marcaConhecida(String(corpo.marca ?? '')) : null)
+    if (!marcaId || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) { res.writeHead(400, headers); return res.end(JSON.stringify({ erro: 'Confira o e-mail.' })) }
+    const ip = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim()
+    if (!permitirPedidoDeSenha(email, ip)) { res.writeHead(429, headers); return res.end(JSON.stringify({ erro: 'Muitos pedidos seguidos. Espere um minuto e tente de novo.' })) }
+    const marca = marcaPorId(marcaId)
+    anotarMarcaPedida(email, marca.id)
+    try {
+      const base = (process.env.SUPABASE_URL ?? '').replace(/\/+$/, '')
+      const chave = process.env.SUPABASE_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+      const r = await fetch(`${base}/auth/v1/recover?redirect_to=${encodeURIComponent(marca.redirectUri)}`, {
+        method: 'POST', headers: { apikey: chave, 'content-type': 'application/json' }, body: JSON.stringify({ email }), signal: AbortSignal.timeout(10_000),
+      })
+      if (r.status === 429) { res.writeHead(429, headers); return res.end(JSON.stringify({ erro: 'Muitos pedidos seguidos. Espere um minuto e tente de novo.' })) }
+      if (!r.ok) console.warn(`[senha] a Supabase respondeu ${r.status} ao pedido da ${marca.prosa}`)
+    } catch (e) { console.warn('[senha] pedido não chegou à Supabase:', (e as Error).message) }
+    res.writeHead(200, headers)
+    return res.end(JSON.stringify({ ok: true }))
   }
 
   if (url.pathname === '/publico/mercado') {

@@ -10,7 +10,7 @@
  * até o dia em que já custaram alguma coisa. Por isso teste.
  */
 import { createHmac } from 'node:crypto'
-import { assinaturaConfere, marcaDoAviso, tipoDoAviso, linkDoAviso, tratarGanchoDeEmail } from './gancho-email'
+import { anotarMarcaPedida, assinaturaConfere, marcaDoAviso, tipoDoAviso, linkDoAviso, tratarGanchoDeEmail } from './gancho-email'
 import { MARCAS, marcaPorId } from '../../src/marca/marcas'
 
 let certos = 0
@@ -105,7 +105,8 @@ conferir('o link leva de volta para a marca certa',
     'https://projeto.supabase.co/',
     marcaPorId('omni'),
   ),
-  'https://projeto.supabase.co/auth/v1/verify?token=abc123&type=signup&redirect_to=https%3A%2F%2Fomnifinanc.com%2F')
+  // desde 19/10/2026 o link vai direto ao app da marca com o código (o app valida na Supabase)
+  'https://omnifinanc.com/?confirmar=abc123&tipo=signup')
 
 conferir('sem volta, usa o site da propria marca',
   linkDoAviso(
@@ -113,7 +114,26 @@ conferir('sem volta, usa o site da propria marca',
     'https://projeto.supabase.co',
     marcaPorId('omni'),
   ),
-  'https://projeto.supabase.co/auth/v1/verify?token=x&type=invite&redirect_to=https%3A%2F%2Fomnifinanc.com%2F')
+  'https://omnifinanc.com/?confirmar=x&tipo=invite')
+
+conferir('volta para outra página (landing de cadastro): segue pelo verify da Supabase',
+  linkDoAviso(
+    { email_data: { token_hash: 'y', email_action_type: 'signup', redirect_to: 'https://omnifinanc.com/cadastro' } },
+    'https://projeto.supabase.co',
+    marcaPorId('omni'),
+  ),
+  'https://projeto.supabase.co/auth/v1/verify?token=y&type=signup&redirect_to=https%3A%2F%2Fomnifinanc.com%2Fcadastro')
+
+/* --------------------- o caso do Victor (19/10/2026): pediu na GlobalFly, a
+   Supabase trocou a volta pela da Teeds (domínio fora da lista dela). */
+anotarMarcaPedida('Victor@Exemplo.com', 'globalfly')
+const avisoDoVictor = { user: { email: 'victor@exemplo.com', user_metadata: { marca: 'teeds' } }, email_data: { token_hash: 'h', email_action_type: 'recovery', redirect_to: 'https://teedscompany.com/' } }
+conferir('pedido anotado vence a volta trocada pela Supabase', marcaDoAviso(avisoDoVictor).id, 'globalfly')
+conferir('e o link leva ao app da GlobalFly, nunca à Teeds',
+  linkDoAviso(avisoDoVictor, 'https://projeto.supabase.co', marcaDoAviso(avisoDoVictor)),
+  'https://globalflytrade.com/?confirmar=h&tipo=recovery')
+conferir('sem anotação, segue a regra de sempre (volta da Teeds = Teeds)',
+  marcaDoAviso({ user: { email: 'outra@exemplo.com' }, email_data: { redirect_to: 'https://teedscompany.com/' } }).id, 'teeds')
 
 /* ------------------------------------------------------- a porta inteira */
 // Nada aqui toca a internet: os dois casos param antes do envio.

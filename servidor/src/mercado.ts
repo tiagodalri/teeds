@@ -39,15 +39,15 @@ export interface Cotacao {
   serie?: number[]
 }
 
-const FEEDS: Array<{ fonte: string; url: string }> = [
-  { fonte: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/' },
-  { fonte: 'Money Times', url: 'https://www.moneytimes.com.br/feed/' },
-  { fonte: 'Exame', url: 'https://exame.com/feed/' },
-  { fonte: 'Valor Investe', url: 'https://valorinveste.globo.com/rss/valorinveste/' },
-  { fonte: 'G1 Economia', url: 'https://g1.globo.com/rss/g1/economia/' },
-  { fonte: 'Investing.com', url: 'https://br.investing.com/rss/news.rss' },
-  { fonte: 'Seu Dinheiro', url: 'https://www.seudinheiro.com/feed/' },
-  { fonte: 'E-Investidor', url: 'https://einvestidor.estadao.com.br/feed/' },
+const FEEDS: Array<{ fonte: string; url: string; site: string }> = [
+  { fonte: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/', site: 'https://www.infomoney.com.br/' },
+  { fonte: 'Money Times', url: 'https://www.moneytimes.com.br/feed/', site: 'https://www.moneytimes.com.br/' },
+  { fonte: 'Exame', url: 'https://exame.com/feed/', site: 'https://exame.com/' },
+  { fonte: 'Valor Investe', url: 'https://valorinveste.globo.com/rss/valorinveste/', site: 'https://valorinveste.globo.com/' },
+  { fonte: 'G1 Economia', url: 'https://g1.globo.com/rss/g1/economia/', site: 'https://g1.globo.com/economia/' },
+  { fonte: 'Investing.com', url: 'https://br.investing.com/rss/news.rss', site: 'https://br.investing.com/' },
+  { fonte: 'Seu Dinheiro', url: 'https://www.seudinheiro.com/feed/', site: 'https://www.seudinheiro.com/' },
+  { fonte: 'E-Investidor', url: 'https://einvestidor.estadao.com.br/feed/', site: 'https://einvestidor.estadao.com.br/' },
 ]
 
 const NAVEGADOR = 'Mozilla/5.0 (compatible; GlobalFlyMercado/1.0)'
@@ -113,18 +113,51 @@ function imagemDo(item: string): string | null {
 const fotoDaMateria = new Map<string, string | null>()
 /** As fotos que vieram da página da matéria (e não do feed): só elas passam pelo filtro de "foto repetida = logo". */
 const veioDaMateria = new Set<string>()
+const NAO_E_FOTO = /logo|avatar|icone|icon|favicon|autor|author|perfil|selo|banner-?app|placeholder|sprite|\.svg|\.gif/i
 async function buscarFoto(link: string): Promise<string | null> {
   if (fotoDaMateria.has(link)) return fotoDaMateria.get(link) ?? null
   try {
     const r = await fetch(link, { headers: { 'user-agent': NAVEGADOR, accept: 'text/html' }, signal: AbortSignal.timeout(6000) })
-    const html = (await r.text()).slice(0, 200_000)
+    const html = (await r.text()).slice(0, 400_000)
     const og = html.match(/<meta[^>]+(?:property|name)=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i)?.[1]
       ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']og:image["']/i)?.[1]
-    const foto = og && /^https:\/\//.test(og) ? emTamanhoBom(og.replace(/&amp;/g, '&')) : null
+    // Se a foto de compartilhamento for genérica (o logo do portal), a primeira
+    // foto de verdade do corpo da matéria (enviada no ano, não um ícone).
+    const corpo = html.slice(html.search(/<article|<main|class=["'][^"']*(?:content|materia|post)/i) >>> 0)
+    const doCorpo = [...corpo.matchAll(/<img[^>]+(?:data-src|src)=["'](https:\/\/[^"']+\.(?:jpe?g|png|webp)(?:\?[^"']*)?)["']/gi)]
+      .map((m) => m[1].replace(/&amp;/g, '&')).filter((u) => !NAO_E_FOTO.test(u))
+    const candidatas = [og, ...doCorpo].filter((u): u is string => !!u && /^https:\/\//.test(u) && !NAO_E_FOTO.test(u)).map(emTamanhoBom)
+    const ano = new Date().getFullYear()
+    // Antiga demais no caminho (/uploads/2019/...) costuma ser a imagem padrão do portal.
+    const recente = candidatas.find((u) => { const a = u.match(/\/(20\d\d)\//)?.[1]; return !a || Number(a) >= ano - 1 })
+    const foto = recente ?? null
     fotoDaMateria.set(link, foto)
     if (fotoDaMateria.size > 800) fotoDaMateria.delete(fotoDaMateria.keys().next().value!)
     return foto
   } catch { fotoDaMateria.set(link, null); return null }
+}
+
+/* ------------------------------------------------------------ o ícone de cada portal */
+
+/**
+ * Para a capa de notícia sem foto nenhuma: o ícone oficial do portal (o
+ * apple-touch-icon da página inicial, em 180 px), lido uma vez por dia.
+ */
+let icones: { em: number; mapa: Record<string, string> } = { em: 0, mapa: {} }
+async function atualizarIcones(): Promise<void> {
+  const pares = await Promise.allSettled(FEEDS.map(async (f) => {
+    const html = (await buscar(f.site, 8000)).slice(0, 300_000)
+    const links = [...html.matchAll(/<link[^>]+rel=["'][^"']*(?:apple-touch-icon|icon)[^"']*["'][^>]*>/gi)].map((m) => m[0])
+    const melhor = links
+      .map((l) => ({ href: l.match(/href=["']([^"']+)["']/i)?.[1] ?? '', tam: Number(l.match(/sizes=["'](\d+)/i)?.[1] ?? (/apple-touch/i.test(l) ? 180 : 32)) }))
+      .filter((x) => x.href && !/\.svg|\.ico/i.test(x.href))
+      .sort((a, b) => b.tam - a.tam)[0]
+    if (!melhor || melhor.tam < 100) return null
+    return [f.fonte, new URL(melhor.href.replace(/&#038;|&amp;/g, '&'), f.site).toString()] as const
+  }))
+  const mapa: Record<string, string> = {}
+  for (const p of pares) if (p.status === 'fulfilled' && p.value) mapa[p.value[0]] = p.value[1]
+  if (Object.keys(mapa).length) icones = { em: Date.now(), mapa }
 }
 
 async function completarFotos(lista: Noticia[]): Promise<void> {
@@ -274,12 +307,13 @@ async function atualizarCotacoes(): Promise<void> {
 }
 
 /** O que a aba precisa, guardado; só busca de novo quando venceu. */
-export async function mercado(): Promise<{ cotacoes: Cotacao[]; noticias: Noticia[]; atualizadoEm: string }> {
+export async function mercado(): Promise<{ cotacoes: Cotacao[]; noticias: Noticia[]; portais: Record<string, string>; atualizadoEm: string }> {
   const agora = Date.now()
+  if (agora - icones.em > 864e5) void atualizarIcones().catch(() => undefined)
   const vencidas: Promise<void>[] = []
   if (agora - noticias.em > 5 * 60e3) vencidas.push(buscandoNoticias ??= atualizarNoticias().catch(() => undefined).finally(() => { buscandoNoticias = null }))
   if (agora - cotacoes.em > 45e3) vencidas.push(buscandoCotacoes ??= atualizarCotacoes().catch(() => undefined).finally(() => { buscandoCotacoes = null }))
   // Primeira vez: espera. Depois: responde na hora com o guardado e atualiza por trás.
   if (!noticias.lista.length || !cotacoes.lista.length) await Promise.all(vencidas)
-  return { cotacoes: cotacoes.lista, noticias: noticias.lista, atualizadoEm: new Date(Math.max(noticias.em, cotacoes.em) || agora).toISOString() }
+  return { cotacoes: cotacoes.lista, noticias: noticias.lista, portais: icones.mapa, atualizadoEm: new Date(Math.max(noticias.em, cotacoes.em) || agora).toISOString() }
 }

@@ -102,7 +102,30 @@ interface AvisoDoSupabase {
  * painel, por exemplo. E, no fim, a Teeds, que é o que todo cadastro antigo
  * já era.
  */
+/*
+ * A marca que a pessoa pediu, anotada pelo nosso servidor no momento do
+ * pedido (/publico/recuperar-senha), 19/10/2026.
+ *
+ * Por que existe: o Victor pediu nova senha na GlobalFly e recebeu e-mail da
+ * Teeds. A Supabase só respeita o endereço de volta se o domínio estiver na
+ * lista dela; fora da lista, troca pelo endereço padrão (o da Teeds) ANTES de
+ * nos avisar. O pedido passa pelo nosso servidor, que sabe de qual site veio,
+ * e essa anotação vence qualquer endereço de volta. Vale 30 minutos.
+ */
+const marcaPedida = new Map<string, { marca: string; em: number }>()
+export function anotarMarcaPedida(email: string, marcaId: string): void {
+  marcaPedida.set(email.trim().toLowerCase(), { marca: marcaId, em: Date.now() })
+  if (marcaPedida.size > 2000) marcaPedida.delete(marcaPedida.keys().next().value!)
+}
+function marcaAnotada(email: string | undefined): Marca | null {
+  if (!email) return null
+  const a = marcaPedida.get(email.trim().toLowerCase())
+  return a && Date.now() - a.em < 30 * 60e3 ? marcaPorId(a.marca) : null
+}
+
 export function marcaDoAviso(aviso: AvisoDoSupabase): Marca {
+  const anotada = marcaAnotada(aviso.user?.email)
+  if (anotada) return anotada
   const volta = aviso.email_data?.redirect_to || aviso.email_data?.site_url || ''
   if (volta) {
     for (const m of Object.values(MARCAS)) {
@@ -139,6 +162,19 @@ export function tipoDoAviso(acao: string | undefined): TipoDeEmail | null {
  */
 export function linkDoAviso(aviso: AvisoDoSupabase, supabaseUrl: string, marca: Marca): string {
   const d = aviso.email_data ?? {}
+  /*
+   * Link direto para o app da marca, com o código (19/10/2026). O app valida
+   * o código na Supabase (verifyOtp com token_hash), que não depende da lista
+   * de endereços permitidos: a pessoa nunca cai no site de outra marca.
+   * Vale quando a volta é a raiz do app da marca (onde o app lê o código);
+   * outra página (a landing de cadastro, por exemplo) segue o caminho antigo.
+   */
+  let raizDoApp = true
+  try { const v = new URL(d.redirect_to || marca.redirectUri); raizDoApp = v.origin !== new URL(marca.redirectUri).origin || v.pathname === '/' } catch { /* endereço torto: raiz */ }
+  if (d.token_hash && d.email_action_type && raizDoApp) {
+    const q = new URLSearchParams({ confirmar: d.token_hash, tipo: d.email_action_type })
+    return `${new URL(marca.redirectUri).origin}/?${q.toString()}`
+  }
   const volta = d.redirect_to || marca.redirectUri
   const p = new URLSearchParams({
     token: d.token_hash ?? '',
