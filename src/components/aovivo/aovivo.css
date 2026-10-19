@@ -704,3 +704,14 @@ body.av-teatro-aberto { overflow: hidden; }
 }
 /* a sala de treino tem a faixa de passos e a barra de momentos: o vídeo cede um pouco de altura para tudo caber na tela */
 @media (min-width: 1001px) { .tr-sala .av-palco-e-chat { height: clamp(420px, calc(100vh - 340px), 820px); } }
+
+/* ---------------------------------------------------------- sala de treino transmitida (19/10/2026) */
+.tr-membros { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.tr-membros i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.tr-membros.on i { background: var(--up); }
+.tr-membros b { color: var(--text); }
+.tr-tag-membro { margin-left: 6px; padding: 1px 6px; border-radius: 5px; background: color-mix(in srgb, var(--up) 18%, transparent); color: var(--up); font-size: 9.5px; font-style: normal; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; vertical-align: 1px; }
+.tr-assistir { display: grid; gap: 14px; }
+.tr-assistir-aviso { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--gf-ouro, var(--primary)) 45%, var(--border)); border-radius: 12px; background: var(--surface); }
+.tr-assistir-aviso p { margin: 0; flex: 1 1 320px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.tr-assistir-aviso b { color: var(--text); }

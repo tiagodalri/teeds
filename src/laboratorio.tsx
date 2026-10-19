@@ -47,6 +47,7 @@ const SalaDeTreino = lazy(() => import('./components/aovivo/SalaDeTreino').then(
 const LabRecorte = lazy(() => import('./components/aovivo/LabRecorte'))
 const TesteAtraso = lazy(() => import('./components/aovivo/TesteAtraso'))
 const LabAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.LabAoVivo })))
+const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
 import { DerivDesconectada } from './components/DerivDesconectada'
 
 document.documentElement.dataset.marca = MARCA.id
@@ -180,6 +181,8 @@ function Laboratorio() {
         {qual === 'aovivo' && <Suspense fallback={null}><LabAoVivo modo={(new URLSearchParams(location.search).get('modo') ?? 'pagina') as never} moderador={new URLSearchParams(location.search).has('mod')} /></Suspense>}
         {/* ?tela=treino: a sala de treino (público e chat simulados). */}
         {qual === 'treino' && <Suspense fallback={null}><SalaDeTreino apresentador="Tiago" aoSair={() => undefined} /></Suspense>}
+        {/* ?tela=treino-membro: o membro do plano assistindo o ensaio do admin. */}
+        {qual === 'treino-membro' && <Suspense fallback={null}><LabAssistirTreino /></Suspense>}
         {/* ?tela=selo-tv: o selo vermelho do topo, o aviso "começou agora" e a tag do menu. */}
         {qual === 'selo-tv' && (
           <div className="workspace-app" style={{ padding: 24, display: 'grid', gap: 24 }}>

@@ -10,6 +10,12 @@
 // abre o link da live sem conta entra como convidado (só assiste e conversa).
 // Desligar a chave no estúdio fecha de novo.
 //
+// Sala de treino transmitida (19/10/2026): `acao: 'treino'` dá o ingresso da
+// sala `treino-<marca>`. Só admin da marca transmite (é quem inicia); membro
+// do plano "treino" entra para assistir. Ninguém mais entra, nem com o link
+// público ligado: o público e o chat ali são simulados, e só quem é da
+// equipe pode ver.
+//
 // O LiveKit roda no nosso servidor (código aberto, sem conta em serviço de
 // fora). Endereço e chaves ficam na tabela `config_servicos`, que só a chave
 // de serviço lê; um segredo da função com o mesmo nome, se existir, vence.
@@ -105,9 +111,35 @@ Deno.serve(async (req) => {
   // Sem conta, o navegador manda a chave pública no lugar do token da pessoa.
   const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
   if (!token) return resposta(401, { erro: 'Entre na sua conta para assistir.' })
-  const corpo = await req.json().catch(() => ({})) as { liveId?: string; convite?: string; acao?: string; identidade?: string; nome?: string }
+  const corpo = await req.json().catch(() => ({})) as { liveId?: string; convite?: string; acao?: string; identidade?: string; nome?: string; marca?: string }
   let { liveId } = corpo
   const { acao, identidade } = corpo
+
+  // Sala de treino: só com conta; admin transmite, membro do plano assiste.
+  if (acao === 'treino') {
+    const marca = String(corpo.marca ?? '')
+    if (!['teeds', 'omni', 'globalfly'].includes(marca)) return resposta(400, { erro: 'Marca inválida.' })
+    const u = await banco<{ id: string; user_metadata?: Record<string, string> }>('/auth/v1/user', token).catch(() => null)
+    if (!u) return resposta(401, { erro: 'Entre na sua conta para abrir a sala de treino.' })
+    const rpc = (f: string) => banco<boolean>(`/rest/v1/rpc/${f}`, token, { method: 'POST', body: JSON.stringify({ p_marca: marca }) }).catch(() => false)
+    const [admin, membro] = await Promise.all([rpc('teeds_sou_admin_da'), rpc('teeds_minha_sala_de_treino')])
+    if (!admin && !membro) return resposta(403, { erro: 'A sala de treino é para os membros do plano de treino.' })
+    const [ficha] = await banco<Array<{ nome: string | null }>>(`/rest/v1/clientes?select=nome&user_id=eq.${u.id}&marca=eq.${marca}&limit=1`, token).catch(() => [])
+    const completo = String(ficha?.nome || u.user_metadata?.nome || u.user_metadata?.full_name || '').trim()
+    const nome = (admin ? completo : completo.split(/\s+/)[0]) || (admin ? 'Apresentador' : 'Membro')
+    const agora = Math.floor(Date.now() / 1000)
+    const sala = `treino-${marca}`
+    const ingresso = await assinar({
+      iss: LK_KEY, sub: u.id, name: nome, nbf: agora, exp: agora + 6 * 3600,
+      metadata: JSON.stringify({ moderador: admin, treino: true }),
+      video: {
+        room: sala, roomJoin: true, canSubscribe: true, canPublishData: true,
+        canPublish: admin, roomAdmin: admin,
+        ...(admin ? { canPublishSources: ['camera', 'microphone', 'screen_share', 'screen_share_audio'] } : {}),
+      },
+    })
+    return resposta(200, { url: LK_URL, token: ingresso, nome, moderador: admin, silenciado: false })
+  }
 
   // Quem chegou pelo link: informações públicas da live (se o link estiver aberto).
   if (corpo.convite && !liveId) {

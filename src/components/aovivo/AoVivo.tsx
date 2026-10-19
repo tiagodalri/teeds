@@ -5,6 +5,7 @@ import type { SessaoTeeds } from '../../core/teeds/conta'
 import { apagarLive, conviteRecebido, criarLive, esquecerTreinoPedido, linkDaLive, listarLives, mudarLive, podeTreinar, treinoPedido, type CantoDaCamera, type Live } from '../../core/live/api'
 import { mudarLinkPublico, useLinkPublico } from '../../core/live/config'
 import { LinkDoTreino, SalaDeTreino } from './SalaDeTreino'
+import { AssistirTreino } from './AssistirTreino'
 import { SeletorDeFundo } from './SeletorDeFundo'
 import { MARCA } from '../../marca'
 
@@ -930,19 +931,19 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
   }, [sessao])
   useEffect(() => { void carregar(); const t = window.setInterval(() => void carregar(), 20000); return () => window.clearInterval(t) }, [carregar])
   const [planoTreino, setPlanoTreino] = useState(false)
-  const publico = useLinkPublico()
-  // pode treinar: admin ou plano "treino"; na fase de testes (link público), qualquer pessoa
-  const treino = planoTreino || publico === true
+  // a aba Sala de treino: o admin abre e transmite; o membro do plano "treino" assiste
+  // (o link público da fase de testes NÃO abre a sala de treino: ali o público é simulado)
+  const treino = admin || planoTreino
   const [treinando, setTreinando] = useState(false)
   useEffect(() => { if (sessao) void podeTreinar(sessao).then(setPlanoTreino) }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
-  // chegou pelo link da sala de treino: entra direto, assim que se sabe que pode
-  useEffect(() => { if (treino && treinoPedido()) { esquecerTreinoPedido(); setTreinando(true) } }, [treino])
+  // chegou pelo link da sala de treino: abre a aba (o membro já cai assistindo)
+  useEffect(() => { if (treino && treinoPedido()) { esquecerTreinoPedido(); setAbaEstado('treino') } }, [treino])
   const CHAVE_ABA = `${MARCA.id}.aovivo.aba`
   const [aba, setAbaEstado] = useState<'transmissao' | 'treino'>(() => { try { return localStorage.getItem(CHAVE_ABA) === 'treino' ? 'treino' : 'transmissao' } catch { return 'transmissao' } })
   const setAba = (a: 'transmissao' | 'treino') => { setAbaEstado(a); try { localStorage.setItem(CHAVE_ABA, a) } catch { /* só agora */ } }
 
   if (!sessao) return <div className="ger av-pagina"><p className="av-vazio">Entre na sua conta para ver as transmissões.</p></div>
-  if (treinando) return <SalaDeTreino apresentador={(sessao.usuario.nome || '').trim().split(/\s+/)[0] || 'professor'} aoSair={() => setTreinando(false)} />
+  if (treinando && admin) return <SalaDeTreino sessao={sessao} apresentador={(sessao.usuario.nome || '').trim().split(/\s+/)[0] || 'professor'} aoSair={() => setTreinando(false)} />
   if (s.fase !== 'fora' && s.live) return <SalaConectada s={s} sessao={sessao} aoMudar={() => void carregar()} />
 
   const noAr = lives?.find((l) => l.status === 'ao_vivo') ?? null
@@ -963,29 +964,31 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
           </button>
           <button role="tab" aria-selected={abaAtual === 'treino'} className={abaAtual === 'treino' ? 'on' : ''} onClick={() => setAba('treino')}>
             <b>Sala de treino</b>
-            <small>Ensaio com público simulado, só você vê</small>
+            <small>{admin ? 'Ensaio com público simulado; os membros assistem' : 'Assista o ensaio como aluno'}</small>
           </button>
         </div>
       )}
 
-      {abaAtual === 'treino' && (
+      {abaAtual === 'treino' && admin && (
         <section className="tr-porta" aria-labelledby="tr-porta-titulo">
           <div className="tr-porta-texto">
             <span className="av-sobretitulo">Sala de treino</span>
-            <h2 id="tr-porta-titulo">Ensaie a live antes de ir ao ar</h2>
-            <p>Use sua tela, câmera e microfone de verdade diante de um público e de um chat simulados. Nada sai do seu navegador: ninguém mais vê o ensaio, e a imagem leva o selo "Simulação".</p>
+            <h2 id="tr-porta-titulo">Ensaie a live com os membros assistindo</h2>
+            <p>Você usa sua tela, câmera e microfone de verdade diante de um público e de um chat simulados. Os membros do plano de treino entram pelo link e assistem como se fossem alunos. A imagem leva sempre o selo "Simulação".</p>
             <ol className="av-passos">
-              <li><i>1</i><span><b>Entre na sala de treino</b>Ela abre já com os ajustes à mostra.</span></li>
-              <li><i>2</i><span><b>Ligue a câmera ou a tela e ajuste a sala</b>Tamanho do público, ritmo do chat, fundo da câmera.</span></li>
-              <li><i>3</i><span><b>Clique em Começar simulação</b>O público chega; dispare momentos como meta batida ou rodada de perguntas.</span></li>
+              <li><i>1</i><span><b>Abra a sala de treino</b>Só administradores abrem; ela já vem com os ajustes à mostra.</span></li>
+              <li><i>2</i><span><b>Mande o link aos membros</b>Eles entram com a conta deles e esperam o ensaio começar.</span></li>
+              <li><i>3</i><span><b>Ligue a câmera ou a tela e clique em Começar simulação</b>O público chega; dispare momentos como meta batida ou rodada de perguntas.</span></li>
             </ol>
           </div>
           <div className="tr-porta-acoes">
-            <button className="av-botao-principal" onClick={() => setTreinando(true)}>Entrar na sala de treino</button>
+            <button className="av-botao-principal" onClick={() => setTreinando(true)}>Abrir sala de treino</button>
             <LinkDoTreino />
           </div>
         </section>
       )}
+
+      {abaAtual === 'treino' && !admin && <AssistirTreino sessao={sessao} />}
 
       {abaAtual === 'transmissao' && noAr && (
         <section className={`av-destaque ${convidadoPara(noAr) ? 'convite' : ''}`}>

@@ -9,12 +9,17 @@ import { LocalVideoTrack } from 'livekit-client'
 import { aplicarFundo, fundoGuardado, type EscolhaDeFundo } from '../../core/live/fundos'
 import { SeletorDeFundo } from './SeletorDeFundo'
 import { MARCA } from '../../marca'
+import type { SessaoTeeds } from '../../core/teeds/conta'
+import { cantoNoTreino, entrarNoTreino, publicarNoTreino, sairDoTreino, useTreino } from '../../core/live/treino'
 
 /**
  * Sala de treino (plano "treino"): o influenciador ensaia a live com a tela,
  * a câmera e o microfone de verdade, diante de um público e de um chat
  * simulados. Nada sai deste navegador. A imagem leva um selo só,
  * "Simulação", com o tamanho da sala.
+ *
+ * Transmitida (19/10/2026): só o admin abre esta sala; os membros do plano
+ * "treino" assistem pelo link, como se fossem alunos (`AssistirTreino.tsx`).
  *
  * Organizada como o estúdio de verdade (19/10/2026, o Tiago não achava onde
  * começar nem onde ajustar): a mesa em cima com as fontes e o botão de
@@ -77,7 +82,7 @@ export const linkDoTreino = () => `${location.origin}${import.meta.env.BASE_URL}
 export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
   const [copiado, setCopiado] = useState(false)
   const link = linkDoTreino()
-  const texto = `Sala de treino da ${MARCA.prosa}: ensaie sua live com público simulado (só você vê). Entre por aqui: ${link}`
+  const texto = `Sala de treino da ${MARCA.prosa}: acompanhe o ensaio da live como se fosse um aluno. Entre com a sua conta por aqui: ${link}`
   const copiar = async () => {
     try { await navigator.clipboard.writeText(link) } catch {
       const t = document.createElement('textarea'); t.value = link; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove()
@@ -88,7 +93,7 @@ export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
   return (
     <div className={`av-link-live ${compacto ? 'compacto' : ''}`}>
       <div className="av-link-live-texto">
-        <small>Link da sala de treino</small>
+        <small>Link para os membros assistirem</small>
         <code title={link}>{link.replace(/^https?:\/\//, '')}</code>
       </div>
       <div className="av-link-live-acoes">
@@ -97,13 +102,20 @@ export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
           ? <button className="av-botao-whats" onClick={() => void navigator.share({ text: texto }).catch(() => undefined)}>Compartilhar</button>
           : <a className="av-botao-whats" href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
       </div>
-      <p className="tr-link-nota">Quem abrir entra na própria sala de treino e ensaia sozinho. O público simulado aparece só para quem está ensaiando, nunca para outras pessoas.</p>
+      <p className="tr-link-nota">Só membros do plano de treino (e administradores) entram, com a conta deles. Eles assistem o seu ensaio como alunos, com o selo "Simulação" sempre na imagem.</p>
     </div>
   )
 }
 
-export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; aoSair: () => void }) {
+export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresentador: string; aoSair: () => void; sessao?: SessaoTeeds | null }) {
   const sim = useSimulacao()
+  const tr = useTreino()
+  // abre a sala para os membros assistirem (no laboratório, sem conta, fica só local)
+  useEffect(() => {
+    if (!sessao) return
+    void entrarNoTreino(sessao)
+    return () => { void sairDoTreino() }
+  }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const [tela, setTela] = useState<MediaStream | null>(null)
   const [camera, setCamera] = useState<MediaStream | null>(null)
   // a câmera passa pelo mesmo recorte de fundo da live de verdade
@@ -117,6 +129,7 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
     if (!lt) { try { localStorage.setItem(`${MARCA.id}.aovivo.fundo`, e) } catch { /* só agora */ } return }
     setAplicandoFundo(true)
     try { await aplicarFundo(lt, e); exibirCamera(lt) } finally { setAplicandoFundo(false) }
+    // o processador troca a imagem da faixa publicada: os membros já veem o fundo novo
   }
   const [mic, setMic] = useState<MediaStream | null>(null)
   const [canto, setCanto] = useState<CantoDaCamera>('inf-dir')
@@ -149,6 +162,7 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
     const atual = qual === 'tela' ? tela : qual === 'camera' ? camera : mic
     const definir = qual === 'tela' ? setTela : qual === 'camera' ? setCamera : setMic
     if (atual) {
+      void publicarNoTreino(qual, null)
       atual.getTracks().forEach((t) => t.stop()); definir(null)
       if (qual === 'camera' && cameraFaixa.current) { cameraFaixa.current.stop(); cameraFaixa.current = null }
       return
@@ -159,13 +173,17 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
         : await navigator.mediaDevices.getUserMedia(qual === 'camera' ? { video: { width: 1280, height: 720 } } : { audio: { echoCancellation: true, noiseSuppression: true } })
       fluxos.current.push(f)
       // parou pela barra do navegador: o botão acompanha
-      f.getTracks().forEach((t) => t.addEventListener('ended', () => definir(null)))
+      f.getTracks().forEach((t) => t.addEventListener('ended', () => { definir(null); void publicarNoTreino(qual, null) }))
       if (qual === 'camera') {
         const lt = new LocalVideoTrack(f.getVideoTracks()[0], undefined, true)
         cameraFaixa.current = lt
         if (fundo !== 'nenhum') { setAplicandoFundo(true); try { await aplicarFundo(lt, fundo) } catch { /* segue sem fundo */ } setAplicandoFundo(false) }
         exibirCamera(lt)
-      } else definir(f)
+        void publicarNoTreino('camera', lt)
+      } else {
+        definir(f)
+        void publicarNoTreino(qual, qual === 'tela' ? f.getVideoTracks()[0] : f.getAudioTracks()[0])
+      }
     } catch {
       setErro('O navegador não liberou o acesso. Permita a câmera, o microfone ou a tela no cadeado da barra de endereço.')
     }
@@ -196,7 +214,7 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
   const passos = [
     { feito: temImagem, titulo: 'Ligue a câmera ou a tela', dica: 'Nos botões aqui em cima. O microfone é opcional.' },
     { feito: ajustou || sim.ativa, titulo: 'Ajuste a sala', dica: 'Na aba Simulação: tamanho do público, ritmo do chat, fundo.' },
-    { feito: sim.ativa, titulo: 'Comece a simulação', dica: 'O público chega e o chat ganha vida.' },
+    { feito: sim.ativa, titulo: 'Comece a simulação', dica: 'O público chega e o chat ganha vida; os membros com o link assistem.' },
   ]
 
   const momentosRapidos = (
@@ -212,8 +230,14 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
     <div className="ger av-pagina av-com-palco tr-sala">
       <section className={`av-mesa ${sim.ativa ? 'tr-ativa' : ''}`} aria-label="Mesa da sala de treino">
         <div className="av-mesa-estado">
-          <span className="tr-chip">Sala de treino · só você vê</span>
+          <span className="tr-chip">Sala de treino · ensaio</span>
           <span className="av-mesa-publico">{sim.ativa ? <><b>{fmt(sim.publicoAgora)}</b> na sala simulada{sim.pausada && ' · chat pausado'}</> : 'Simulação parada'}</span>
+          {sessao && (
+            <span className={`tr-membros ${tr.fase === 'conectada' ? 'on' : ''}`}>
+              {tr.fase === 'conectada' ? <><i aria-hidden /><b>{tr.membros}</b> {tr.membros === 1 ? 'membro assistindo' : 'membros assistindo'}</>
+                : tr.fase === 'erro' ? (tr.erro ?? 'Sem conexão com os membros') : 'Abrindo a sala para os membros…'}
+            </span>
+          )}
         </div>
         <div className="av-mesa-fontes" role="group" aria-label="O que entra no ensaio">
           {fonte('tela', 'Tela', !!tela)}
@@ -278,7 +302,7 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
                   <p key={m.id} className="tr-entrada">{m.nome} entrou</p>
                 ) : (
                   <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''}`}>
-                    <p><b>{m.nome}{m.apresentador && <em>você</em>}</b> {m.texto}</p>
+                    <p><b>{m.nome}{m.apresentador && <em>você</em>}{m.membro && <em className="tr-tag-membro">membro</em>}</b> {m.texto}</p>
                     <time>{hora(m.hora)}</time>
                   </div>
                 ))}
@@ -340,7 +364,7 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
                 <div className="av-painel-linha entre">
                   <span id="tr-canto">Seu rosto sobre a tela</span>
                   <div className="av-cantos" role="radiogroup" aria-labelledby="tr-canto">
-                    {CANTOS.map((c) => <button key={c.id} role="radio" aria-checked={canto === c.id} aria-label={c.rotulo} title={c.rotulo} className={`c-${c.id} ${canto === c.id ? 'on' : ''}`} onClick={() => setCanto(c.id)}><i aria-hidden /></button>)}
+                    {CANTOS.map((c) => <button key={c.id} role="radio" aria-checked={canto === c.id} aria-label={c.rotulo} title={c.rotulo} className={`c-${c.id} ${canto === c.id ? 'on' : ''}`} onClick={() => { setCanto(c.id); cantoNoTreino(c.id) }}><i aria-hidden /></button>)}
                   </div>
                 </div>
                 <span className="tr-rotulo">Volume do microfone</span>
@@ -349,7 +373,10 @@ export function SalaDeTreino({ apresentador, aoSair }: { apresentador: string; a
               </section>
 
               <section className="av-painel-sec">
-                <h4>Chamar a equipe para ensaiar</h4>
+                <h4>Membros assistindo</h4>
+                {tr.nomes.length > 0
+                  ? <div className="av-nomes">{tr.nomes.map((n, i) => <span key={i}>{n}</span>)}</div>
+                  : <span className="tr-legenda">Ninguém ainda. Mande o link abaixo para os membros do plano de treino.</span>}
                 <LinkDoTreino compacto />
               </section>
             </div>

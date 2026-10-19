@@ -1,17 +1,16 @@
 import { useEffect, useState } from 'react'
 import { infoDoConvite, type Live } from '../../core/live/api'
-import { useLinkPublico } from '../../core/live/config'
 import { entrarComoConvidado, useSala } from '../../core/live/sala'
 import { Brand } from '../Brand'
 import { Contagem, Cronometro, SalaConectada, Som, quando } from './AoVivo'
-import { SalaDeTreino } from './SalaDeTreino'
 import { MARCA } from '../../marca'
 import './aovivo.css'
 
 /**
  * A porta de quem chegou pelo link e não tem conta (fase de testes,
  * 18/10/2026): vê o que é a live, diz como quer ser chamado e entra. Com o
- * link público ligado, também abre a sala de treino. Nada dele fica gravado.
+ * link público ligado. Nada dele fica gravado. A sala de treino não abre
+ * por aqui: só membros do plano, com conta (19/10/2026).
  *
  * Quando a chave "link público" é desligada no estúdio, esta tela só mostra
  * o caminho para entrar na conta.
@@ -20,14 +19,12 @@ import './aovivo.css'
 const CHAVE_NOME = `${MARCA.id}.aovivo.convidado.nome`
 const nomeGuardado = () => { try { return localStorage.getItem(CHAVE_NOME) ?? '' } catch { return '' } }
 
-export function Convidado({ codigo, treino = false, aoEntrarNaConta }: { codigo: string | null; treino?: boolean; aoEntrarNaConta: () => void }) {
+export function Convidado({ codigo, aoEntrarNaConta }: { codigo: string | null; treino?: boolean; aoEntrarNaConta: () => void }) {
   const s = useSala()
   const [info, setInfo] = useState<{ live: Live; publico: boolean } | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [nome, setNome] = useState(nomeGuardado)
-  const [treinando, setTreinando] = useState(false)
   const [entrando, setEntrando] = useState(false)
-  const linkPublico = useLinkPublico()
 
   // A live pode começar enquanto a pessoa espera: confere de novo a cada 15 s.
   useEffect(() => {
@@ -48,22 +45,7 @@ export function Convidado({ codigo, treino = false, aoEntrarNaConta }: { codigo:
     setEntrando(false)
   }
 
-  const abrirTreino = () => {
-    const limpo = nome.replace(/\s+/g, ' ').trim()
-    if (limpo) { try { localStorage.setItem(CHAVE_NOME, limpo) } catch { /* só agora */ } }
-    // a marca "veio pelo link de treino" fica: é ela que mantém esta porta aberta (sem conta)
-    setTreinando(true)
-  }
-
-  if (treinando) {
-    return (
-      <div className="cv-pagina cv-sala">
-        <SalaDeTreino apresentador={nome.trim().split(/\s+/)[0] || 'você'} aoSair={() => setTreinando(false)} />
-      </div>
-    )
-  }
-
-  // Só o link da sala de treino (sem live): a porta é o próprio ensaio.
+  // Só o link da sala de treino (sem live): é para membros, com conta.
   if (!codigo) {
     return (
       <div className="cv-pagina">
@@ -73,27 +55,12 @@ export function Convidado({ codigo, treino = false, aoEntrarNaConta }: { codigo:
           <span className="cv-topo-rotulo">Sala de treino</span>
         </header>
         <main className="cv-caixa">
-          {linkPublico === null && <p className="av-vazio">Abrindo…</p>}
-          {linkPublico === false && (
-            <section className="cv-cartao">
-              <span className="av-sobretitulo">Sala de treino da {MARCA.prosa}</span>
-              <h1>Entre na sua conta para ensaiar</h1>
-              <p>A sala de treino é para a equipe e os parceiros. Entre com a sua conta para abrir.</p>
-              <button className="av-botao-principal" onClick={aoEntrarNaConta}>Entrar na conta</button>
-            </section>
-          )}
-          {linkPublico === true && (
-            <section className="cv-cartao">
-              <span className="av-sobretitulo">Você foi convidado para ensaiar</span>
-              <h1>Sala de treino</h1>
-              <p>Ensaie uma live com sua tela, câmera e microfone diante de um público e de um chat simulados. Só você vê o ensaio; a imagem leva o selo "Simulação".</p>
-              <form className="cv-form" onSubmit={(e) => { e.preventDefault(); abrirTreino() }}>
-                <label htmlFor="cv-nome-treino">Como o público simulado vai chamar você?</label>
-                <input id="cv-nome-treino" value={nome} maxLength={30} autoComplete="given-name" placeholder="Seu primeiro nome" onChange={(e) => setNome(e.target.value)} />
-                <button type="submit" className="av-botao-principal">Entrar na sala de treino</button>
-              </form>
-            </section>
-          )}
+          <section className="cv-cartao">
+            <span className="av-sobretitulo">Sala de treino da {MARCA.prosa}</span>
+            <h1>Entre na sua conta para assistir o ensaio</h1>
+            <p>A sala de treino é para os membros do plano de treino. Entre com a sua conta e você cai direto no ensaio.</p>
+            <button className="av-botao-principal" onClick={aoEntrarNaConta}>Entrar na conta</button>
+          </section>
           <footer className="cv-rodape">
             <span>Já tem conta na {MARCA.prosa}?</span>
             <button className="av-link" onClick={aoEntrarNaConta}>Entrar na minha conta</button>
@@ -166,14 +133,6 @@ export function Convidado({ codigo, treino = false, aoEntrarNaConta }: { codigo:
               )}
             </section>
 
-            <section className="tr-entrada-card cv-treino" aria-labelledby="cv-treino-titulo">
-              <div>
-                <span className="av-sobretitulo">Sala de treino</span>
-                <h3 id="cv-treino-titulo">Ensaie uma live com público e chat simulados</h3>
-                <p>Só você vê. Use sua tela, câmera e microfone, escolha um fundo e dispare momentos como meta batida ou rodada de perguntas. A imagem leva o selo "Simulação".</p>
-              </div>
-              <button className="av-botao-secundario" onClick={abrirTreino}>Abrir sala de treino</button>
-            </section>
           </>
         )}
 

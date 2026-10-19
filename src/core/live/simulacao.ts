@@ -25,6 +25,8 @@ export interface MensagemSimulada {
   apresentador: boolean
   entrada: boolean
   hora: number
+  /** Escrita de verdade por um membro do plano que está assistindo o ensaio. */
+  membro?: boolean
 }
 
 export interface EstadoDaSimulacao {
@@ -46,6 +48,9 @@ let estado: EstadoDaSimulacao = {
 const ouvintes = new Set<() => void>()
 const mudar = (p: Partial<EstadoDaSimulacao>) => { estado = { ...estado, ...p }; ouvintes.forEach((f) => f()) }
 export const useSimulacao = () => useSyncExternalStore((f) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }, () => estado, () => estado)
+/** Fora do React: quem transmite o ensaio para os membros escuta as mudanças por aqui. */
+export const ouvirSimulacao = (f: () => void) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }
+export const simulacaoAgora = () => estado
 
 /* ------------------------------------------------------------- vocabulário */
 
@@ -203,3 +208,9 @@ export function falarComoApresentador(texto: string): void {
 }
 
 export const limparChat = () => mudar({ mensagens: [] })
+
+/** Mensagem de verdade de um membro que assiste o ensaio: entra no chat junto com as simuladas. */
+export function mensagemDeMembro(nome: string, texto: string): void {
+  const t = texto.trim().slice(0, 500)
+  if (t) adicionar({ nome: nome.slice(0, 30) || 'Membro', texto: t, apresentador: false, entrada: false, membro: true })
+}
