@@ -41,6 +41,28 @@ const lista = (ds: number[]) => ds.length > 1 ? `${ds.slice(0, -1).join(', ')} e
  * Tudo sai da regra viva: se o painel mudar a barreira ou o loss virtual,
  * o cartão muda junto. A frase completa continua para o leitor de tela.
  */
+/**
+ * O que o motor faz por trás, em selos (19/10/2026, pedido do Tiago: "se não
+ * citar as análises, podem achar que são robôs comuns"). Só o que o robô
+ * FAZ de verdade, decidido pela regra viva: quem tem loss virtual conta a
+ * sequência antes de entrar; o Raptor troca de lado na perda; todos leem
+ * cada tick, calculam a recuperação pelo pagamento real e param na meta e
+ * no limite. Robô de entrada direta não ganha uma análise de entrada que
+ * não faz. Três selos no máximo, para o cartão não virar bula.
+ */
+function selosDoRobo(id: string, p: ParametrosDoRobo): Array<{ texto: string; explica: string }> {
+  const tick = { texto: 'Lê cada tick ao vivo', explica: 'Acompanha o mercado preço a preço e decide no exato momento de cada novo dígito.' }
+  const sequencia = { texto: 'Analisa a sequência', explica: `Antes de entrar, confere se saíram ${p.entrada.lossVirtual} dígitos seguidos fora da faixa. Só então abre a operação.` }
+  const lado = { texto: 'Troca de lado na perda', explica: 'Depois de uma perda, muda para os dígitos altos para recuperar e volta à rota em seguida.' }
+  const recuperacao = p.recuperacao.escada.tipo === 'tabela'
+    ? { texto: 'Recuperação em degraus', explica: 'A próxima entrada segue uma escada definida, degrau a degrau, até fechar a sequência.' }
+    : { texto: 'Calcula a recuperação', explica: 'A entrada seguinte sai do pagamento real do contrato, para cobrir a perda e fechar no lucro.' }
+  const freio = { texto: 'Para na meta e no limite', explica: 'Encerra sozinho quando bate a sua meta ou o seu limite de perda.' }
+  if (RECUPERA_EM[id]) return [tick, lado, recuperacao]
+  if (p.entrada.lossVirtual > 0) return [sequencia, tick, recuperacao]
+  return [tick, recuperacao, freio]
+}
+
 function NaPratica({ id, parametros, frase }: { id: string; parametros: ParametrosDoRobo; frase: string }) {
   const ganham = digitosQueGanham(parametros.contrato)
   const espera = parametros.entrada.lossVirtual
@@ -56,6 +78,16 @@ function NaPratica({ id, parametros, frase }: { id: string; parametros: Parametr
         <li><i className="entra" /><span>{espera === 0 ? <><b>Entra direto</b>, sem esperar</> : <>Espera <b>{espera === 1 ? '1 dígito' : `${espera} dígitos seguidos`}</b> fora da faixa e entra</>}</span></li>
         {recupera && <li><i className="recupera" /><span>Se perder, <b>recupera no {lista(recupera)}</b></span></li>}
       </ul>
+      <div className="vr-selos" aria-label="Em tempo real">
+        <span className="vr-pratica-rot">Em tempo real</span>
+        <ul>
+          {selosDoRobo(id, parametros).map((x) => (
+            <li key={x.texto} tabIndex={0} title={x.explica} aria-label={`${x.texto}: ${x.explica}`}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h3l2.5-6 5 12 2.5-6h3" /></svg>{x.texto}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   )
 }
