@@ -33,6 +33,20 @@
 .gp-carregando { top: 40%; }
 .gp-dica { bottom: 34px; }
 
+/* ---------------------------------------------------- caixinha de ajuda das ferramentas */
+.gp-ajuda {
+  position: fixed; z-index: 450; display: grid; gap: 3px; width: max-content; max-width: 240px; padding: 9px 12px; transform: translateY(-50%);
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); box-shadow: 0 14px 30px -14px rgba(0,0,0,.55);
+  pointer-events: none; animation: gp-ajuda-entra .12s ease;
+}
+.gp-ajuda::before { content: ''; position: absolute; left: -6px; top: 50%; width: 10px; height: 10px; transform: translateY(-50%) rotate(45deg); background: var(--surface); border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.gp-ajuda.acima { transform: translate(-50%, -100%); }
+.gp-ajuda.acima::before { left: 50%; top: auto; bottom: -6px; transform: translateX(-50%) rotate(-45deg); }
+.gp-ajuda b { font-size: 12.5px; }
+.gp-ajuda span { color: var(--muted); font-size: 12px; line-height: 1.45; }
+@keyframes gp-ajuda-entra { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .gp-ajuda { animation: none; } }
+
 /* ---------------------------------------------------- barrinha de edição */
 .gp-edicao {
   position: absolute; z-index: 6; top: 10px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px;

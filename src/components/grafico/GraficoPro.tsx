@@ -120,22 +120,24 @@ const paraK = (c: Candle): KLineData => ({ timestamp: c.epoch * 1000, open: c.op
 
 /* ------------------------------------------------------- ferramentas */
 
-interface Ferramenta { id: string; nome: string; icone: string }
+interface Ferramenta { id: string; nome: string; icone: string; descricao: string }
 const FERRAMENTAS: Ferramenta[] = [
-  { id: 'segment', nome: 'Linha de tendência', icone: 'M4 19L20 5M4 19h0M20 5h0' },
-  { id: 'rayLine', nome: 'Raio', icone: 'M4 18L21 6M4 18l2-1' },
-  { id: 'straightLine', nome: 'Linha estendida', icone: 'M2 20L22 4' },
-  { id: 'horizontalStraightLine', nome: 'Linha horizontal', icone: 'M3 12h18' },
-  { id: 'horizontalRayLine', nome: 'Raio horizontal', icone: 'M6 12h15M6 10v4' },
-  { id: 'verticalStraightLine', nome: 'Linha vertical', icone: 'M12 3v18' },
-  { id: 'priceLine', nome: 'Linha de preço', icone: 'M4 12h11M15 9l4 3-4 3' },
-  { id: 'parallelStraightLine', nome: 'Linhas paralelas', icone: 'M3 15L17 5M7 19L21 9' },
-  { id: 'priceChannelLine', nome: 'Canal de preço', icone: 'M3 16L19 6M3 20L19 10M3 16v4M19 6v4' },
-  { id: 'fibonacciLine', nome: 'Fibonacci', icone: 'M3 5h18M3 9h18M3 13h18M3 19h18M6 5v14' },
-  { id: 'brush', nome: 'Pincel', icone: 'M4 20c3 0 4-2 5-4s3-6 6-8 4-3 5-4M4 20l2-1' },
-  { id: 'simpleAnnotation', nome: 'Anotação', icone: 'M5 5h14v10H11l-4 4v-4H5z' },
-  { id: 'simpleTag', nome: 'Etiqueta de preço', icone: 'M4 12l5-6h11v12H9z' },
+  { id: 'segment', nome: 'Linha de tendência', icone: 'M4 19L20 5M4 19h0M20 5h0', descricao: 'Liga dois pontos. Use para unir topos ou fundos e enxergar a direção do preço.' },
+  { id: 'rayLine', nome: 'Raio', icone: 'M4 18L21 6M4 18l2-1', descricao: 'Começa num ponto e segue sem fim na direção do segundo. Bom para projetar uma tendência para frente.' },
+  { id: 'straightLine', nome: 'Linha estendida', icone: 'M2 20L22 4', descricao: 'Passa por dois pontos e atravessa o gráfico inteiro, para os dois lados.' },
+  { id: 'horizontalStraightLine', nome: 'Linha horizontal', icone: 'M3 12h18', descricao: 'Marca um preço de ponta a ponta. A mais usada para suporte e resistência.' },
+  { id: 'horizontalRayLine', nome: 'Raio horizontal', icone: 'M6 12h15M6 10v4', descricao: 'Linha horizontal que nasce num ponto e segue para a direita. Marca um nível a partir de um momento.' },
+  { id: 'verticalStraightLine', nome: 'Linha vertical', icone: 'M12 3v18', descricao: 'Marca um instante no tempo, como o começo de um movimento forte.' },
+  { id: 'priceLine', nome: 'Linha de preço', icone: 'M4 12h11M15 9l4 3-4 3', descricao: 'Parte de um ponto e mostra o valor exato do preço escrito na linha.' },
+  { id: 'parallelStraightLine', nome: 'Linhas paralelas', icone: 'M3 15L17 5M7 19L21 9', descricao: 'Duas linhas com a mesma inclinação. Desenha um canal para acompanhar a tendência.' },
+  { id: 'priceChannelLine', nome: 'Canal de preço', icone: 'M3 16L19 6M3 20L19 10M3 16v4M19 6v4', descricao: 'Uma linha de tendência com outra paralela na distância que você escolher. Mostra até onde o preço costuma oscilar.' },
+  { id: 'fibonacciLine', nome: 'Fibonacci', icone: 'M3 5h18M3 9h18M3 13h18M3 19h18M6 5v14', descricao: 'Marque o início e o fim de um movimento: aparecem os níveis de retração (23,6%, 38,2%, 50%, 61,8%...).' },
+  { id: 'brush', nome: 'Pincel', icone: 'M4 20c3 0 4-2 5-4s3-6 6-8 4-3 5-4M4 20l2-1', descricao: 'Traço livre por pontos, para destacar uma região ou fazer uma marcação à mão.' },
+  { id: 'simpleAnnotation', nome: 'Anotação', icone: 'M5 5h14v10H11l-4 4v-4H5z', descricao: 'Um balão de texto preso a uma vela. Bom para lembrar por que você marcou aquele ponto.' },
+  { id: 'simpleTag', nome: 'Etiqueta de preço', icone: 'M4 12l5-6h11v12H9z', descricao: 'Destaca um preço com uma etiqueta com texto, presa ao eixo dos preços.' },
 ]
+const CURSOR = { nome: 'Cursor', descricao: 'Seleciona e move os desenhos. Clique num desenho para mudar cor, espessura ou apagar.' }
+const LIMPAR = { nome: 'Apagar tudo', descricao: 'Apaga todos os desenhos deste ativo. Os de outros ativos continuam.' }
 const CORES = ['#4FA3FF', '#B78D39', '#F3F0E9', '#2FBF8F', '#E0605E', '#C38BFF', '#FF9F43', '#9CB1C7']
 const GRUPO = 'gf-desenho'
 const comTexto = (nome: string) => nome === 'simpleAnnotation' || nome === 'simpleTag'
@@ -164,6 +166,19 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
   const [indicadores, setIndicadores] = useState<IndicadorSalvo[]>(() => carregarIndicadores(sessao, (l) => setIndicadores(l)))
   const [painel, setPainel] = useState(false)
   const [ferramenta, setFerramenta] = useState<string | null>(null)
+  const [dica, setDica] = useState<{ nome: string; descricao: string; x: number; y: number; acima: boolean } | null>(null)
+  /** A caixinha de ajuda das ferramentas: fixa na tela, porque a barra rola e cortaria um balão preso nela. */
+  const mostrarDica = (e: { currentTarget: HTMLElement }, f: { nome: string; descricao: string }) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    const acima = window.matchMedia('(max-width: 700px)').matches
+    setDica({ ...f, acima, x: acima ? Math.min(Math.max(r.left + r.width / 2, 130), window.innerWidth - 130) : r.right + 10, y: acima ? r.top - 10 : r.top + r.height / 2 })
+  }
+  const ajudaDe = (f: { nome: string; descricao: string }) => ({
+    onMouseEnter: (e: React.MouseEvent<HTMLElement>) => mostrarDica(e, f),
+    onFocus: (e: React.FocusEvent<HTMLElement>) => mostrarDica(e, f),
+    onMouseLeave: () => setDica(null),
+    onBlur: () => setDica(null),
+  })
   const [selecionado, setSelecionado] = useState<{ id: string; nome: string; d: DesenhoSalvo } | null>(null)
   const [estilo, setEstilo] = useState({ cor: CORES[0], espessura: 2, tracejado: false })
   const desenhando = useRef<string | null>(null)
@@ -359,19 +374,24 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
 
       <div className="gp-area">
         <nav className="gp-ferramentas" aria-label="Ferramentas de desenho">
-          <button type="button" className={ferramenta === null ? 'on' : ''} onClick={() => escolherFerramenta(null)} title="Cursor" aria-label="Cursor">
+          <button type="button" className={ferramenta === null ? 'on' : ''} onClick={() => escolherFerramenta(null)} aria-label="Cursor" {...ajudaDe(CURSOR)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 8-6 2-3 6z" /></svg>
           </button>
           {FERRAMENTAS.map((f) => (
-            <button key={f.id} type="button" className={ferramenta === f.id ? 'on' : ''} onClick={() => escolherFerramenta(ferramenta === f.id ? null : f.id)} title={f.nome} aria-label={f.nome}>
+            <button key={f.id} type="button" className={ferramenta === f.id ? 'on' : ''} onClick={() => { setDica(null); escolherFerramenta(ferramenta === f.id ? null : f.id) }} aria-label={f.nome} {...ajudaDe(f)}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d={f.icone} /></svg>
             </button>
           ))}
           <span className="gp-sep" />
-          <button type="button" onClick={apagarTudo} title="Apagar todos os desenhos deste ativo" aria-label="Apagar todos os desenhos">
+          <button type="button" onClick={apagarTudo} aria-label="Apagar todos os desenhos" {...ajudaDe(LIMPAR)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 11v6M14 11v6M7 7l1 13h8l1-13M9 7V4h6v3" /></svg>
           </button>
         </nav>
+        {dica && (
+          <div className={`gp-ajuda${dica.acima ? ' acima' : ''}`} role="tooltip" style={{ left: dica.x, top: dica.y }}>
+            <b>{dica.nome}</b><span>{dica.descricao}</span>
+          </div>
+        )}
 
         <div className="gp-grafico" ref={caixa} aria-label={`Gráfico de ${symbolName}`}>
           {loading && <span className="gp-carregando">Carregando velas…</span>}
