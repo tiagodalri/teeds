@@ -6,6 +6,7 @@ import { apagarLive, conviteRecebido, criarLive, esquecerTreinoPedido, linkDaLiv
 import { mudarLinkPublico, useLinkPublico } from '../../core/live/config'
 import { LinkDoTreino, SalaDeTreino } from './SalaDeTreino'
 import { AssistirTreino } from './AssistirTreino'
+import { MedidorDeVolume } from './MedidorDeVolume'
 import { SeletorDeFundo } from './SeletorDeFundo'
 import { MARCA } from '../../marca'
 
@@ -159,11 +160,24 @@ function Palco({ s, compacto = false, filhos }: { s: EstadoDaSala; compacto?: bo
   const telaRef = useRef<HTMLDivElement>(null)
   const souEu = s.moderador && (s.transmitindo.tela || s.transmitindo.camera)
   const vazio = !s.tela && !s.camera
+  // Quem transmite a TELA INTEIRA não vê a própria tela aqui dentro: a prévia
+  // apareceria dentro da tela compartilhada, num espelho infinito que muda a
+  // imagem o tempo todo e pesa na codificação (19/10/2026). Os alunos veem normal.
+  const [verPrevia, setVerPrevia] = useState(false)
+  const telaInteira = s.moderador && s.transmitindo.tela && !compacto &&
+    (s.tela?.mediaStreamTrack?.getSettings() as MediaTrackSettings & { displaySurface?: string } | undefined)?.displaySurface === 'monitor'
+  const ocultarTela = telaInteira && !verPrevia
   // toque duplo na imagem manda um coração (quem assiste; o apresentador só vê)
   const coracao = () => { if (!s.moderador && !compacto) void reagir('coracao') }
   return (
     <div className={`av-palco ${compacto ? 'compacto' : ''}`} ref={telaRef} onDoubleClick={coracao}>
-      {s.tela ? <Video faixa={s.tela} className="av-tela" /> : s.camera ? <Video faixa={s.camera} className="av-tela av-so-camera" espelhar={souEu} /> : null}
+      {s.tela && ocultarTela ? (
+        <div className="av-previa-oculta">
+          <b>Sua tela inteira está no ar</b>
+          <span>A prévia fica oculta aqui para não criar o efeito espelho e deixar o computador leve. Os alunos veem normalmente.</span>
+          <button type="button" onClick={() => setVerPrevia(true)}>Mostrar prévia</button>
+        </div>
+      ) : s.tela ? <Video faixa={s.tela} className="av-tela" /> : s.camera ? <Video faixa={s.camera} className="av-tela av-so-camera" espelhar={souEu} /> : null}
       {s.tela && s.camera && <Video faixa={s.camera} className={`av-camera canto-${s.live?.cameraCanto ?? 'inf-dir'} tam-${s.live?.cameraTamanho ?? 'm'}`} espelhar={souEu} />}
       {s.live?.faixa && (
         <div className={`av-faixa ${(s.live.cameraCanto ?? 'inf-dir').startsWith('inf') && s.camera && s.tela ? `desvia-${s.live.cameraCanto}` : ''}`} role="status">
@@ -588,31 +602,6 @@ function MesaDoApresentador({ s, sessao, aoMudar }: { s: EstadoDaSala; sessao: S
   )
 }
 
-/** Volume do microfone em tempo real (0 a 1), para o apresentador ver que está captando. */
-function useNivel(faixa: Track | null): number {
-  const [nivel, setNivel] = useState(0)
-  useEffect(() => {
-    const mst = faixa?.mediaStreamTrack
-    if (!mst) { setNivel(0); return }
-    const ctx = new AudioContext()
-    const fonte = ctx.createMediaStreamSource(new MediaStream([mst]))
-    const an = ctx.createAnalyser(); an.fftSize = 512
-    fonte.connect(an)
-    const dados = new Uint8Array(an.fftSize)
-    let quadro = 0
-    const medir = () => {
-      an.getByteTimeDomainData(dados)
-      let soma = 0
-      for (const d of dados) { const x = (d - 128) / 128; soma += x * x }
-      setNivel(Math.min(1, Math.sqrt(soma / dados.length) * 4))
-      quadro = requestAnimationFrame(medir)
-    }
-    medir()
-    return () => { cancelAnimationFrame(quadro); fonte.disconnect(); void ctx.close() }
-  }, [faixa])
-  return nivel
-}
-
 const CANTOS: Array<{ id: CantoDaCamera; rotulo: string }> = [
   { id: 'sup-esq', rotulo: 'Em cima, à esquerda' }, { id: 'sup-dir', rotulo: 'Em cima, à direita' },
   { id: 'inf-esq', rotulo: 'Embaixo, à esquerda' }, { id: 'inf-dir', rotulo: 'Embaixo, à direita' },
@@ -662,7 +651,6 @@ function PainelDeControle({ s, sessao }: { s: EstadoDaSala; sessao: SessaoTeeds 
   const [aplicandoFundo, setAplicandoFundo] = useState(false)
   const [mics, setMics] = useState<MediaDeviceInfo[]>([])
   const [cams, setCams] = useState<MediaDeviceInfo[]>([])
-  const nivel = useNivel(s.transmitindo.microfone ? s.microfoneLocal : null)
   const fixada = s.mensagens.find((m) => m.fixada)
   useEffect(() => {
     void listarDispositivos('audioinput').then(setMics)
@@ -784,7 +772,7 @@ function PainelDeControle({ s, sessao }: { s: EstadoDaSala; sessao: SessaoTeeds 
           {mics.length === 0 && <option value="">Ligue o microfone para escolher</option>}
           {mics.map((d, i) => <option key={d.deviceId} value={d.deviceId}>{d.label || `Microfone ${i + 1}`}</option>)}
         </select>
-        <span className="av-medidor" role="meter" aria-label="Volume do microfone" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(nivel * 100)}><i style={{ width: `${Math.round(nivel * 100)}%` }} /></span>
+        <MedidorDeVolume faixa={s.transmitindo.microfone ? s.microfoneLocal?.mediaStreamTrack : null} />
         <label htmlFor="av-cam" className="av-painel-rotulo">Câmera</label>
         <select id="av-cam" value={s.dispositivos.camera} disabled={cams.length === 0} onChange={(e) => void trocarDispositivo('videoinput', e.target.value)}>
           {cams.length === 0 && <option value="">Ligue a câmera para escolher</option>}

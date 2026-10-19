@@ -715,3 +715,10 @@ body.av-teatro-aberto { overflow: hidden; }
 .tr-assistir-aviso { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--gf-ouro, var(--primary)) 45%, var(--border)); border-radius: 12px; background: var(--surface); }
 .tr-assistir-aviso p { margin: 0; flex: 1 1 320px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
 .tr-assistir-aviso b { color: var(--text); }
+
+/* prévia oculta da tela inteira (evita o espelho infinito; 19/10/2026) */
+.av-previa-oculta { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 8px; padding: 20px; text-align: center; color: #c9d3de; background: radial-gradient(60% 60% at 50% 45%, rgba(23, 50, 99, .55), transparent 70%), #04080f; }
+.av-previa-oculta b { color: #fff; font-size: 15px; }
+.av-previa-oculta span { max-width: 46ch; font-size: 12.5px; line-height: 1.5; }
+.av-previa-oculta button { margin-top: 4px; min-height: 34px; padding: 0 14px; border: 1px solid rgba(255,255,255,.25); border-radius: 9px; background: rgba(255,255,255,.06); color: #fff; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.av-previa-oculta button:hover { background: rgba(255,255,255,.12); }

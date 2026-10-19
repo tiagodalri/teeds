@@ -103,6 +103,8 @@ export interface Marca {
   ativosSemVolatility?: boolean
   /** Ícone redondo em cada ativo (moedas, metais, índices), como nas corretoras. */
   iconesDeAtivos?: boolean
+  /** Manual com todos os índices de volatilidade (10, 25, 50, 75, 100), além dos de 1 s. */
+  indicesCompletos?: boolean
   /**
    * Nome e ícone de itens do menu lateral, por marca (19/10/2026: na
    * GlobalFly, "Robôs" virou "I.A." com o símbolo de brilhos, e o Assistente
@@ -321,6 +323,7 @@ export const MARCAS: Record<string, Marca> = {
     aoVivo: true,
     ativosSemVolatility: true,
     iconesDeAtivos: true,
+    indicesCompletos: true,
     menu: {
       nomes: { robos: 'I.A.' },
       icones: {

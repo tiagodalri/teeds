@@ -92,6 +92,19 @@ export class ProcessadorDeFundo implements TrackProcessor<Track.Kind.Video, Vide
   private mascaraTam = { w: 0, h: 0 }
   private ultimoTempo = 0
   private ia?: ImageSegmenter
+  /**
+   * Desempenho (19/10/2026, o Tiago sentiu o Mac inteiro lento na live):
+   * a IA recebe o quadro reduzido (o modelo trabalha em 256 px por dentro,
+   * então mandar 1280x720 só gerava uma máscara de quase 1 milhão de valores
+   * para ler da placa e subir de novo, travando a página a cada quadro). E
+   * ela roda no máximo ~15 vezes por segundo; nos quadros do meio, a máscara
+   * anterior continua valendo (o filtro temporal já suaviza). A composição
+   * segue na resolução cheia, na placa.
+   */
+  private miniatura?: HTMLCanvasElement
+  private miniCtx?: CanvasRenderingContext2D
+  private ultimaIa = 0
+  private temMascara = false
   /** Diagnóstico (laboratório): quadros desenhados e o último erro. */
   diagnostico = { quadros: 0, semMascara: 0, erro: '' }
 
@@ -117,7 +130,11 @@ export class ProcessadorDeFundo implements TrackProcessor<Track.Kind.Video, Vide
     await this.carregarFundo()
     this.ia = await segmentador()
 
-    this.processedTrack = canvas.captureStream(30).getVideoTracks()[0]
+    const mini = document.createElement('canvas')
+    this.miniatura = mini
+    this.miniCtx = mini.getContext('2d', { alpha: false, desynchronized: true, willReadFrequently: false }) ?? undefined
+
+    this.processedTrack = canvas.captureStream(24).getVideoTracks()[0]
     this.parado = false; this.primeiro = true
     this.proximoQuadro()
   }
@@ -244,11 +261,23 @@ export class ProcessadorDeFundo implements TrackProcessor<Track.Kind.Video, Vide
     if (!gl || !v || !c || !p || v.readyState < 2 || !v.videoWidth) return
     if (c.width !== v.videoWidth || c.height !== v.videoHeight) { c.width = v.videoWidth; c.height = v.videoHeight; this.criarBorrao() }
 
-    // 1) a IA: confiança de "fundo" (máscara 0); pessoa = 1 - fundo
+    // 1) a IA: confiança de "fundo" (máscara 0); pessoa = 1 - fundo.
+    //    No quadro reduzido e no máximo a cada ~66 ms (15 por segundo).
     if (!this.ia) return
     let ok = false
     const agora = Math.max(performance.now(), this.ultimoTempo + 1); this.ultimoTempo = agora
-    this.ia.segmentForVideo(v, agora, (r) => {
+    const vezDaIa = !this.temMascara || agora - this.ultimaIa >= 64
+    const mini = this.miniatura, ctx2d = this.miniCtx
+    if (vezDaIa && mini && ctx2d) {
+      const lado = 256
+      const mw = v.videoWidth >= v.videoHeight ? lado : Math.round(lado * v.videoWidth / v.videoHeight)
+      const mh = v.videoWidth >= v.videoHeight ? Math.round(lado * v.videoHeight / v.videoWidth) : lado
+      if (mini.width !== mw || mini.height !== mh) { mini.width = mw; mini.height = mh }
+      ctx2d.drawImage(v, 0, 0, mw, mh)
+      this.ultimaIa = agora
+    }
+    if (!vezDaIa) ok = true
+    else this.ia.segmentForVideo(mini ?? v, agora, (r) => {
       // a máscara vem no tamanho do quadro; sobe direto como meia-precisão (filtrável)
       const m = r.confidenceMasks?.[0]
       if (!m) return
@@ -260,6 +289,7 @@ export class ProcessadorDeFundo implements TrackProcessor<Track.Kind.Video, Vide
         this.mascaraTam = { w: m.width, h: m.height }
       } else gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, m.width, m.height, gl.RED, gl.FLOAT, f)
       ok = true
+      this.temMascara = true
     })
     if (!ok) { this.diagnostico.semMascara++; return }
     this.diagnostico.quadros++

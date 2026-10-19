@@ -29,7 +29,7 @@ import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLimitesDuracao, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { traduzirErro } from './core/deriv/erros'
-import { ehSintetico } from './core/deriv/config'
+import { ATIVO_DOS_ROBOS, ehSintetico } from './core/deriv/config'
 import { useAccount } from './hooks/useAccount'
 import { minhaSituacao, registrarContaDeriv, registrarPresenca, souAdmin, type SituacaoDaFicha } from './core/teeds/clientes'
 import { marcarPagina, marcarRegiao, ouvirCliques } from './core/teeds/rastro'
@@ -155,7 +155,9 @@ export default function App() {
 
   const activeSymbol = useMemo(() => {
     if (selected) return symbols.find((s) => s.symbol === selected) ?? null
-    return symbols.find((s) => s.isOpen && !s.isSuspended) ?? symbols[0] ?? null
+    // abre no índice da casa (75); se ele estiver fechado, no primeiro aberto da lista
+    return symbols.find((s) => s.symbol === ATIVO_DOS_ROBOS && s.isOpen && !s.isSuspended)
+      ?? symbols.find((s) => s.isOpen && !s.isSuspended) ?? symbols[0] ?? null
   }, [symbols, selected])
 
   const symbolCode = activeSymbol?.symbol ?? null

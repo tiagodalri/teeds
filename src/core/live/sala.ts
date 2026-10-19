@@ -12,7 +12,7 @@
  */
 import {
   ConnectionQuality, ConnectionState, DataPacket_Kind, DisconnectReason, LocalParticipant, Participant, RemoteParticipant, Room, RoomEvent,
-  ScreenSharePresets, Track, type LocalTrackPublication, type RemoteTrack, type RemoteTrackPublication,
+  ScreenSharePresets, Track, VideoPresets, type LocalTrackPublication, type RemoteTrack, type RemoteTrackPublication,
 } from 'livekit-client'
 import { useSyncExternalStore } from 'react'
 import type { SessaoTeeds } from '../teeds/conta'
@@ -226,10 +226,17 @@ async function conectar(live: Live, pedir: () => Promise<Ingresso>, historicoDe:
       adaptiveStream: true, // cada um recebe a resolução do tamanho em que está vendo
       dynacast: true, // o apresentador não manda camada que ninguém pede
       publishDefaults: {
+        // H.264: o navegador codifica no chip de vídeo (Mac, Windows, celular),
+        // não no processador. Com o VP8 padrão, a tela em 1080p e as camadas
+        // extras saíam todas do processador e o computador inteiro ficava
+        // lento durante a live (19/10/2026).
+        videoCodec: 'h264',
         // tela de gráfico: nitidez antes de fluidez; 15 quadros bastam
         screenShareEncoding: { maxBitrate: 2_500_000, maxFramerate: 15 },
-        // camadas menores para quem vê no celular ou no flutuante (o servidor escolhe)
-        screenShareSimulcastLayers: [ScreenSharePresets.h360fps15, ScreenSharePresets.h720fps15],
+        // uma camada menor só, para quem vê no celular ou no flutuante
+        screenShareSimulcastLayers: [ScreenSharePresets.h360fps15],
+        videoSimulcastLayers: [VideoPresets.h360],
+        degradationPreference: 'maintain-resolution',
       },
     })
     sala = r

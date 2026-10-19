@@ -1,5 +1,5 @@
 import { publicSocket, TeedsSocket } from './client'
-import { ATIVOS_PERMITIDOS } from './config'
+import { ATIVOS_PERMITIDOS, INDICES_DE_VOLATILIDADE } from './config'
 import { casasDecimais } from './types'
 import type { ActiveSymbol, Candle, Granularity, Tick } from './types'
 import { MARCA } from '../../marca'
@@ -20,7 +20,11 @@ export async function fetchActiveSymbols(
 ): Promise<ActiveSymbol[]> {
   const res = await socket.send({ active_symbols: 'brief' })
   const list = (res.active_symbols ?? []) as Array<Record<string, any>>
-  const ordem = new Map(ATIVOS_PERMITIDOS.map((c, i) => [c as string, i]))
+  // GlobalFly: todos os índices de volatilidade no Manual (10, 25, 50, 75, 100 e os de 1 s)
+  const lista: string[] = MARCA.indicesCompletos
+    ? [...INDICES_DE_VOLATILIDADE, ...ATIVOS_PERMITIDOS.filter((c) => !(INDICES_DE_VOLATILIDADE as readonly string[]).includes(c))]
+    : [...ATIVOS_PERMITIDOS]
+  const ordem = new Map(lista.map((c, i) => [c, i]))
   return list
     .filter((s) => ordem.has(s.underlying_symbol ?? s.symbol))
     .sort((a, b) =>

@@ -14,7 +14,7 @@
  * "Simulação" e o número marcado como simulado.
  */
 import {
-  LocalAudioTrack, LocalVideoTrack, Participant, RemoteParticipant, Room, RoomEvent, Track,
+  LocalAudioTrack, LocalVideoTrack, Participant, RemoteParticipant, Room, RoomEvent, ScreenSharePresets, Track, VideoPresets,
   type LocalTrackPublication,
 } from 'livekit-client'
 import { useSyncExternalStore } from 'react'
@@ -147,7 +147,17 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Pro
   mudar({ ...INICIAL, fase: 'conectando' })
   try {
     const ingresso = await pedirIngresso(sessao, nome)
-    const r = new Room({ adaptiveStream: true, dynacast: true })
+    // mesmas escolhas da live: H.264 no chip de vídeo, uma camada menor só
+    const r = new Room({
+      adaptiveStream: true, dynacast: true,
+      publishDefaults: {
+        videoCodec: 'h264',
+        screenShareEncoding: { maxBitrate: 2_500_000, maxFramerate: 15 },
+        screenShareSimulcastLayers: [ScreenSharePresets.h360fps15],
+        videoSimulcastLayers: [VideoPresets.h360],
+        degradationPreference: 'maintain-resolution',
+      },
+    })
     sala = r
     r.on(RoomEvent.TrackSubscribed, atualizarSala)
       .on(RoomEvent.TrackUnsubscribed, atualizarSala)
@@ -229,7 +239,7 @@ export async function publicarNoTreino(qual: 'tela' | 'camera' | 'mic', faixa: L
   const local = faixa instanceof LocalVideoTrack ? faixa
     : qual === 'mic' ? new LocalAudioTrack(faixa, undefined, true) : new LocalVideoTrack(faixa, undefined, true)
   const source = qual === 'tela' ? Track.Source.ScreenShare : qual === 'camera' ? Track.Source.Camera : Track.Source.Microphone
-  await sala.localParticipant.publishTrack(local, { source, ...(qual === 'tela' ? { videoEncoding: { maxBitrate: 2_500_000, maxFramerate: 15 } } : {}) })
+  await sala.localParticipant.publishTrack(local, { source })
   publicadas[qual] = local
   atualizarSala()
 }

@@ -8,6 +8,7 @@ import './aovivo.css'
 import { LocalVideoTrack } from 'livekit-client'
 import { aplicarFundo, fundoGuardado, type EscolhaDeFundo } from '../../core/live/fundos'
 import { SeletorDeFundo } from './SeletorDeFundo'
+import { MedidorDeVolume } from './MedidorDeVolume'
 import { MARCA } from '../../marca'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { cantoNoTreino, entrarNoTreino, publicarNoTreino, sairDoTreino, useTreino } from '../../core/live/treino'
@@ -33,25 +34,6 @@ function VideoLocal({ fluxo, className, espelhar = false }: { fluxo: MediaStream
   useEffect(() => { if (ref.current) ref.current.srcObject = fluxo }, [fluxo])
   if (!fluxo) return null
   return <video ref={ref} className={className} autoPlay playsInline muted style={espelhar ? { transform: 'scaleX(-1)' } : undefined} />
-}
-
-function useNivelLocal(fluxo: MediaStream | null): number {
-  const [nivel, setNivel] = useState(0)
-  useEffect(() => {
-    if (!fluxo) { setNivel(0); return }
-    const ctx = new AudioContext()
-    const fonte = ctx.createMediaStreamSource(fluxo)
-    const an = ctx.createAnalyser(); an.fftSize = 512; fonte.connect(an)
-    const dados = new Uint8Array(an.fftSize); let q = 0
-    const medir = () => {
-      an.getByteTimeDomainData(dados)
-      let soma = 0; for (const d of dados) { const x = (d - 128) / 128; soma += x * x }
-      setNivel(Math.min(1, Math.sqrt(soma / dados.length) * 4)); q = requestAnimationFrame(medir)
-    }
-    medir()
-    return () => { cancelAnimationFrame(q); fonte.disconnect(); void ctx.close() }
-  }, [fluxo])
-  return nivel
 }
 
 const ICONE: Record<string, string> = {
@@ -140,7 +122,6 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   const [vistas, setVistas] = useState(0)
   // o passo "ajuste a sala" só fica feito depois que a pessoa mexe em algum ajuste
   const [ajustou, setAjustou] = useState(false)
-  const nivel = useNivelLocal(mic)
   const lista = useRef<HTMLDivElement>(null)
 
   // desliga tudo ao sair da sala
@@ -169,8 +150,8 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     }
     try {
       const f = qual === 'tela'
-        ? await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false })
-        : await navigator.mediaDevices.getUserMedia(qual === 'camera' ? { video: { width: 1280, height: 720 } } : { audio: { echoCancellation: true, noiseSuppression: true } })
+        ? await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 15, max: 15 } }, audio: false, selfBrowserSurface: 'exclude', surfaceSwitching: 'include' } as DisplayMediaStreamOptions)
+        : await navigator.mediaDevices.getUserMedia(qual === 'camera' ? { video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24, max: 30 } } } : { audio: { echoCancellation: true, noiseSuppression: true } })
       fluxos.current.push(f)
       // parou pela barra do navegador: o botão acompanha
       f.getTracks().forEach((t) => t.addEventListener('ended', () => { definir(null); void publicarNoTreino(qual, null) }))
@@ -211,6 +192,10 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
 
   const comecar = () => { iniciarSimulacao(apresentador); setAba('chat') }
   const temImagem = !!tela || !!camera
+  // tela inteira: sem prévia aqui por padrão (evita o espelho infinito e poupa o computador)
+  const [verPrevia, setVerPrevia] = useState(false)
+  const ocultarTela = !!tela && !verPrevia &&
+    (tela.getVideoTracks()[0]?.getSettings() as MediaTrackSettings & { displaySurface?: string } | undefined)?.displaySurface === 'monitor'
   const passos = [
     { feito: temImagem, titulo: 'Ligue a câmera ou a tela', dica: 'Nos botões aqui em cima. O microfone é opcional.' },
     { feito: ajustou || sim.ativa, titulo: 'Ajuste a sala', dica: 'Na aba Simulação: tamanho do público, ritmo do chat, fundo.' },
@@ -267,7 +252,13 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
       <div className="av-palco-e-chat">
         <div className="tr-palco-coluna">
           <div className="av-palco">
-            {tela ? <VideoLocal fluxo={tela} className="av-tela" /> : camera ? <VideoLocal fluxo={camera} className="av-tela av-so-camera" espelhar /> : null}
+            {tela && ocultarTela ? (
+              <div className="av-previa-oculta">
+                <b>Sua tela inteira está no ensaio</b>
+                <span>A prévia fica oculta aqui para não criar o efeito espelho e deixar o computador leve. Os membros veem normalmente.</span>
+                <button type="button" onClick={() => setVerPrevia(true)}>Mostrar prévia</button>
+              </div>
+            ) : tela ? <VideoLocal fluxo={tela} className="av-tela" /> : camera ? <VideoLocal fluxo={camera} className="av-tela av-so-camera" espelhar /> : null}
             {tela && camera && <VideoLocal fluxo={camera} className={`av-camera canto-${canto}`} espelhar />}
             {!temImagem && (
               <div className="av-espera tr-espera">
@@ -368,7 +359,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
                   </div>
                 </div>
                 <span className="tr-rotulo">Volume do microfone</span>
-                <span className="av-medidor" role="meter" aria-label="Volume do microfone" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(nivel * 100)}><i style={{ width: `${Math.round(nivel * 100)}%` }} /></span>
+                <MedidorDeVolume faixa={mic?.getAudioTracks()[0]} />
                 {!mic && <span className="tr-legenda">Ligue o microfone na barra de cima para ver o volume.</span>}
               </section>
 

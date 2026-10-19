@@ -41,6 +41,13 @@ export const ATIVOS_PERMITIDOS = [
   'frxXAUUSD', 'frxXAGUSD',
 ] as const
 
+/**
+ * Os índices de volatilidade "normais" (um tick a cada 2 s), na ordem do
+ * menor para o maior. Só entram no Manual das marcas com `indicesCompletos`
+ * (GlobalFly, 19/10/2026); os robôs seguem no ATIVO_DOS_ROBOS.
+ */
+export const INDICES_DE_VOLATILIDADE = ['R_10', 'R_25', 'R_50', 'R_75', 'R_100'] as const
+
 /** Índice sintético (os únicos com dígitos e com robôs). Forex e metais não são. */
 export const ehSintetico = (s: { market?: string } | null | undefined) => s?.market === 'synthetic_index'
 
