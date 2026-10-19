@@ -53,6 +53,8 @@ import { usePlayerAtivo } from './core/live/presenca'
 // quando a pessoa abre a página ou entra numa live.
 const AoVivoPage = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.AoVivoPage })))
 const PlayerAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.PlayerGlobal })))
+// Gráfico profissional (KLineChart): só baixa para quem vê (hoje, admin da GlobalFly).
+const GraficoPro = lazy(() => import('./components/grafico/GraficoPro').then((m) => ({ default: m.GraficoPro })))
 // Quem chega pelo link da live sem conta (fase de testes, com o link público ligado).
 const Convidado = lazy(() => import('./components/aovivo/Convidado').then((m) => ({ default: m.Convidado })))
 
@@ -628,6 +630,8 @@ export default function App() {
   }
 
   const derivPronta = conta.status === 'logado'
+  // gráfico profissional: na GlobalFly, por enquanto só para administradores
+  const usarGraficoPro = MARCA.graficoPro === 'todos' || (MARCA.graficoPro === 'admin' && admin === true)
 
   function abrirAssistente() {
     if (assistenteLiberado) { setTela('assistente'); return }
@@ -870,7 +874,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="indicadores" aria-label="Indicadores do gráfico">
+          {!usarGraficoPro && <div className="indicadores" aria-label="Indicadores do gráfico">
             <span>Indicadores</span>
             <div>
               {INDICADORES.map((item) => {
@@ -885,11 +889,20 @@ export default function App() {
                 </button>
               })}
             </div>
-          </div>
+          </div>}
 
-          <PriceChart candles={candles} mode={mode} pipSize={pipSize} symbol={symbolCode ?? undefined}
-            symbolName={activeSymbol?.name ?? ''} loading={loadingCandles}
-            markers={marcadores} indicators={indicadores} />
+          {usarGraficoPro ? (
+            <div className="chart">
+              <Suspense fallback={<div className="gp-carregando-pagina">Abrindo o gráfico…</div>}>
+                <GraficoPro candles={candles} mode={mode} pipSize={pipSize} symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''}
+                  granularity={granularity} loading={loadingCandles} markers={marcadores} sessao={teeds.sessao} />
+              </Suspense>
+            </div>
+          ) : (
+            <PriceChart candles={candles} mode={mode} pipSize={pipSize} symbol={symbolCode ?? undefined}
+              symbolName={activeSymbol?.name ?? ''} loading={loadingCandles}
+              markers={marcadores} indicators={indicadores} />
+          )}
         </main>
 
         <aside className="trade">

@@ -49,6 +49,7 @@ import { lazy, Suspense, useState } from 'react'
 const SalaDeTreino = lazy(() => import('./components/aovivo/SalaDeTreino').then((m) => ({ default: m.SalaDeTreino })))
 const LabRecorte = lazy(() => import('./components/aovivo/LabRecorte'))
 const TesteAtraso = lazy(() => import('./components/aovivo/TesteAtraso'))
+const LabGraficoPro = lazy(() => import('./components/grafico/LabGraficoPro'))
 const LabAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.LabAoVivo })))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
 import { DerivDesconectada } from './components/DerivDesconectada'
@@ -187,6 +188,8 @@ function Laboratorio() {
         {qual === 'catalogo' && <RobotCatalog selected={ident.id} onSelect={nada} />}
         {/* ?tela=vitrine: a vitrine de robôs (GlobalFly); "Configurar" abre o preparo já no robô. */}
         {qual === 'vitrine' && <LabVitrine />}
+        {/* ?tela=grafico-pro: o gráfico profissional (indicadores e desenhos) com velas de exemplo. */}
+        {qual === 'grafico-pro' && <Suspense fallback={null}><LabGraficoPro /></Suspense>}
         {/* ?tela=icones: os ícones dos ativos, como aparecem na lista "Trocar ativo". */}
         {qual === 'icones' && <div className="ativo-menu" style={{ position: 'static', width: 340 }}><div className="symbol-list">{['R_75', '1HZ10V', '1HZ100V', 'frxEURUSD', 'frxGBPUSD', 'frxUSDJPY', 'frxAUDUSD', 'frxUSDCAD', 'frxXAUUSD', 'frxXAGUSD'].map((c) => <button key={c} className="symbol"><IconeAtivo simbolo={c} /><span className="sym-name">{c === 'frxXAUUSD' ? 'Ouro' : c === 'frxXAGUSD' ? 'Prata' : c}</span><span className="dot on" /></button>)}</div></div>}
         {/* ?tela=menu: o menu lateral com a tela de Robôs (I.A. na GlobalFly) aberta. */}

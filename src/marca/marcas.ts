@@ -106,6 +106,12 @@ export interface Marca {
   /** Manual com todos os índices de volatilidade (10, 25, 50, 75, 100), além dos de 1 s. */
   indicesCompletos?: boolean
   /**
+   * Gráfico profissional no Manual (KLineChart: 30+ indicadores e ferramentas
+   * de desenho). 'admin' = só administradores veem, para testar (19/10/2026);
+   * 'todos' = libera para os clientes.
+   */
+  graficoPro?: 'admin' | 'todos'
+  /**
    * Nome e ícone de itens do menu lateral, por marca (19/10/2026: na
    * GlobalFly, "Robôs" virou "I.A." com o símbolo de brilhos, e o Assistente
    * ganhou um balão de conversa para não confundir os dois).
@@ -324,6 +330,7 @@ export const MARCAS: Record<string, Marca> = {
     ativosSemVolatility: true,
     iconesDeAtivos: true,
     indicesCompletos: true,
+    graficoPro: 'admin',
     menu: {
       nomes: { robos: 'I.A.' },
       icones: {
