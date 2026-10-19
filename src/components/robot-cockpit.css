@@ -55,7 +55,17 @@
 .tv-analise-fita span.decidiu.down { box-shadow: inset 0 0 0 2px var(--down); }
 @keyframes tv-digito-entra { from { transform: translateY(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
 .tv-analise-legenda { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: 7px; color: var(--muted); font-size: 11.5px; }
-.tv-analise-legenda button { flex: none; padding: 0; border: 0; background: none; color: var(--primary); font: inherit; font-size: 11.5px; cursor: pointer; }
+.tv-analise-legenda { align-items: center; }
+/* 19/10/2026: era um link de 11 px que ninguém achava (pedido do Victor). Agora é botão. */
+.tv-analise-legenda .tv-ampliar {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: none; height: 36px; padding: 0 14px;
+  border: 1px solid var(--primary); border-radius: 10px;
+  background: var(--primary); color: var(--surface); box-shadow: 0 6px 16px -10px color-mix(in srgb, var(--primary) 80%, transparent);
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s;
+}
+.tv-analise-legenda .tv-ampliar:hover { filter: brightness(1.12); }
+.tv-analise-legenda .tv-ampliar[aria-expanded='true'] { background: transparent; color: var(--primary); box-shadow: none; }
+.tv-analise-legenda .tv-ampliar svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .tv-analise.parada { opacity: .85; }
 @container (max-width: 680px) {
   .tv.tv-cockpit .tv-analise { padding: 14px; }
@@ -66,7 +76,8 @@
   .tv-analise-frase { white-space: normal; }
   .tv-analise-fita { grid-template-columns: repeat(13, minmax(0,1fr)); }
   .tv-analise-fita span { height: 27px; font-size: 13px; }
-  .tv-analise-legenda { flex-direction: column; gap: 4px; }
+  .tv-analise-legenda { flex-direction: column; align-items: stretch; gap: 8px; }
+  .tv-analise-legenda .tv-ampliar { width: 100%; height: 44px; font-size: 14px; }
   .tv.tv-cockpit .tv-soma { position: sticky; bottom: 0; z-index: 2; }
 .tv.tv-cockpit .tv-soma th, .tv.tv-cockpit .tv-soma td { padding: 9px 10px; background: var(--surface); border-top: 1px solid var(--border); font-weight: 650; }
 .tv.tv-cockpit .tv-soma th { text-align: left; color: var(--muted); font-weight: 600; }

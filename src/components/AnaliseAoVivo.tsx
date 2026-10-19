@@ -177,7 +177,12 @@ export function AnaliseAoVivo({ estado, estrategiaId, nomeEstrategia, moeda, gan
       </div>
       <div className="tv-analise-legenda">
         <span>Os {tamanho} últimos dígitos do mercado — em verde, os que o {nomeEstrategia} opera</span>
-        {onDigitos && <button type="button" aria-expanded={digitosAberto} onClick={onDigitos}>{digitosAberto ? 'Fechar dígitos' : 'Ampliar dígitos'}</button>}
+        {onDigitos && (
+          <button type="button" className="tv-ampliar" aria-expanded={digitosAberto} onClick={onDigitos}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">{digitosAberto ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zM15.5 15.5L20 20M10.5 7.5v6M7.5 10.5h6" />}</svg>
+            {digitosAberto ? 'Fechar dígitos' : 'Ampliar dígitos'}
+          </button>
+        )}
       </div>
     </section>
   )
