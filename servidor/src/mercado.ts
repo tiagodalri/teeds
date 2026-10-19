@@ -73,6 +73,24 @@ function texto(bruto: string): string {
 }
 const campo = (item: string, tag: string) => item.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i'))?.[1] ?? ''
 
+/**
+ * A foto em tamanho de vitrine (19/10/2026: o Tiago viu a capa borrada).
+ * O InfoMoney manda a foto já reduzida para 300x200 (`?fit=300,200`, o
+ * redimensionador do WordPress); pedindo `fit=1280,720` o mesmo endereço
+ * devolve a original (até 1000 px). Miniaturas do WordPress com -300x200 no
+ * nome também voltam para a original.
+ */
+function emTamanhoBom(url: string): string {
+  try {
+    const u = new URL(url)
+    if (u.searchParams.has('fit')) { u.searchParams.set('fit', '1280,720'); u.searchParams.set('quality', '85') }
+    for (const k of ['w', 'width']) if (u.searchParams.has(k)) u.searchParams.set(k, '1280')
+    for (const k of ['h', 'height', 'resize']) u.searchParams.delete(k)
+    u.pathname = u.pathname.replace(/-\d{2,4}x\d{2,4}(?=\.(?:jpe?g|png|webp)$)/i, '')
+    return u.toString()
+  } catch { return url }
+}
+
 function imagemDo(item: string): string | null {
   const achado = item.match(/<media:content[^>]+url="([^"]+)"/i)?.[1]
     ?? item.match(/<media:thumbnail[^>]+url="([^"]+)"/i)?.[1]
@@ -80,7 +98,41 @@ function imagemDo(item: string): string | null {
     ?? item.match(/<enclosure[^>]+type="image[^"]*"[^>]+url="([^"]+)"/i)?.[1]
     ?? item.match(/<img[^>]+src="([^"]+)"/i)?.[1]
     ?? item.match(/&lt;img[^&]+src=&quot;([^&]+)&quot;/i)?.[1]
-  return achado && /^https:\/\//.test(achado) ? achado.replace(/&amp;/g, '&') : null
+  return achado && /^https:\/\//.test(achado) ? emTamanhoBom(achado.replace(/&amp;/g, '&')) : null
+}
+
+/* ------------------------------------------------------------ foto da matéria */
+
+/**
+ * Notícia sem foto no feed (Money Times, Exame, E-Investidor): a foto oficial
+ * da matéria, a mesma do link compartilhado (og:image). Uma busca por
+ * matéria, guardada para sempre (a foto de uma matéria não muda), e por trás:
+ * a aba já responde sem esperar. Foto repetida em várias matérias é o logo
+ * do portal, não a foto da notícia: fica de fora.
+ */
+const fotoDaMateria = new Map<string, string | null>()
+async function buscarFoto(link: string): Promise<string | null> {
+  if (fotoDaMateria.has(link)) return fotoDaMateria.get(link) ?? null
+  try {
+    const r = await fetch(link, { headers: { 'user-agent': NAVEGADOR, accept: 'text/html' }, signal: AbortSignal.timeout(6000) })
+    const html = (await r.text()).slice(0, 200_000)
+    const og = html.match(/<meta[^>]+(?:property|name)=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i)?.[1]
+      ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']og:image["']/i)?.[1]
+    const foto = og && /^https:\/\//.test(og) ? emTamanhoBom(og.replace(/&amp;/g, '&')) : null
+    fotoDaMateria.set(link, foto)
+    if (fotoDaMateria.size > 800) fotoDaMateria.delete(fotoDaMateria.keys().next().value!)
+    return foto
+  } catch { fotoDaMateria.set(link, null); return null }
+}
+
+async function completarFotos(lista: Noticia[]): Promise<void> {
+  const faltam = lista.filter((n) => !n.imagem).slice(0, 30)
+  for (let i = 0; i < faltam.length; i += 6) {
+    await Promise.all(faltam.slice(i, i + 6).map(async (n) => { n.imagem = await buscarFoto(n.link) }))
+  }
+  const vezes = new Map<string, number>()
+  for (const n of lista) if (n.imagem) vezes.set(n.imagem, (vezes.get(n.imagem) ?? 0) + 1)
+  for (const n of lista) if (n.imagem && (vezes.get(n.imagem) ?? 0) > 1) n.imagem = null
 }
 
 const REGRAS: Array<[Categoria, RegExp]> = [
@@ -135,6 +187,7 @@ async function atualizarNoticias(): Promise<void> {
     em: Date.now(),
     lista: lista.filter((n) => { const c = (porFonte.get(n.fonte) ?? 0) + 1; porFonte.set(n.fonte, c); return c <= 12 }).slice(0, 72),
   }
+  void completarFotos(noticias.lista)
 }
 
 /* ------------------------------------------------------------ cotações */
