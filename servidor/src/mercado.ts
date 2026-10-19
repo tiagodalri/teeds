@@ -183,8 +183,11 @@ async function bolsa(b: { simbolo: string; id: string; nome: string; moeda: stri
     chart: { result: Array<{ meta: { regularMarketPrice: number; chartPreviousClose?: number; previousClose?: number; regularMarketTime: number }; indicators: { quote: Array<{ close: Array<number | null> }> } }> }
   }
   const r = d.chart.result[0]
-  const anterior = r.meta.chartPreviousClose ?? r.meta.previousClose ?? r.meta.regularMarketPrice
-  const serie = (r.indicators.quote[0]?.close ?? []).filter((x): x is number => typeof x === 'number')
+  const serieBruta = (r.indicators.quote[0]?.close ?? []).filter((x): x is number => typeof x === 'number')
+  // Cripto não tem "fechamento anterior" (negocia 24 h): a referência é o primeiro preço do dia.
+  const fechamento = r.meta.chartPreviousClose ?? r.meta.previousClose
+  const anterior = fechamento && fechamento !== r.meta.regularMarketPrice ? fechamento : (serieBruta[0] ?? r.meta.regularMarketPrice)
+  const serie = serieBruta
   return {
     id: b.id, nome: b.nome, preco: r.meta.regularMarketPrice, variacao: anterior ? ((r.meta.regularMarketPrice - anterior) / anterior) * 100 : 0,
     moeda: b.moeda, hora: new Date(r.meta.regularMarketTime * 1000).toISOString(), atrasada: b.id === 'ibovespa',

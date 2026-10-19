@@ -33,6 +33,7 @@ import { WorkspaceNav } from './components/WorkspaceNav'
 import { IconeAtivo } from './components/IconeAtivo'
 import { RobotCatalog } from './components/RobotCatalog'
 import { AulasPanel } from './components/AulasPanel'
+import { MercadoPanel } from './components/MercadoPanel'
 import { PriceChart } from './components/PriceChart'
 
 /** Velas de mentira para o laboratório: passeio aleatório com semente fixa. */
@@ -199,6 +200,8 @@ function Laboratorio() {
         {qual === 'sem-deriv' && <SemDeriv />}
         {/* ?tela=aulas: a sala de aula com o catálogo e as capas da marca. */}
         {qual === 'aulas' && <AulasPanel nome="Tiago" />}
+        {/* ?tela=noticias: a aba Notícias, com as fontes de verdade (servidor em produção). */}
+        {qual === 'noticias' && <div className="workspace-app" style={{ minHeight: '100vh' }}><MercadoPanel /></div>}
         {/* ?tela=grafico: o gráfico com velas de mentira, médias ligadas (clique na linha). */}
         {/* ?tela=aovivo&modo=pagina|lado|flutuante|pilula&mod=1: a live com vídeo e chat de exemplo. */}
         {qual === 'aovivo' && <Suspense fallback={null}><LabAoVivo modo={(new URLSearchParams(location.search).get('modo') ?? 'pagina') as never} moderador={new URLSearchParams(location.search).has('mod')} /></Suspense>}
