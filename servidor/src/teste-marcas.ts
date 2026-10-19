@@ -31,8 +31,8 @@ conferir('OMNI: quatro robos, nomes da casa', vitrine('omni'),
   ['OMNI Under', 'OMNI Over', 'OMNI Bull', 'OMNI Bear'])
 conferir('Teeds nao tem apelido nenhum', MARCAS.teeds.nomesDosRobos, undefined)
 conferir('The Palm esta na Teeds e fora da OMNI', MARCAS.teeds.robos.includes('thepalm') && !MARCAS.omni.robos.includes('thepalm'), true)
-conferir('GlobalFly: cinco robos, nomes de aeronaves (lista de 19/10/2026)', vitrine('globalfly'),
-  ['GF Raptor', 'GF Gulf', 'GF Falcon', 'GF Phenom', 'GF Legacy'])
+conferir('GlobalFly: cinco robos, nomes de aeronaves, ordem final de 19/10/2026', vitrine('globalfly'),
+  ['GF Raptor', 'GF Falcon', 'GF Legacy', 'GF Gulf', 'GF Phenom'])
 conferir('GlobalFly: Falcon e Legacy sao robos proprios (The Palm e First Block da Teeds intactos)',
   [MARCAS.globalfly.robos.includes('falcon'), MARCAS.globalfly.robos.includes('legacy'), MARCAS.teeds.robos.includes('falcon') || MARCAS.teeds.robos.includes('legacy'), MARCAS.teeds.robos.includes('thepalm'), MARCAS.teeds.robos.includes('firstblock')],
   [true, true, false, true, true])

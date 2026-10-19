@@ -319,7 +319,11 @@ export const MARCAS: Record<string, Marca> = {
     // da GlobalFly, de seis dígitos e entrada direta: o Falcon ganha de 0 a 5
     // e o Legacy de 4 a 9. The Palm e First Block saem só da vitrine daqui
     // (seguem no catálogo, para o histórico de quem já operou com eles).
-    robos: ['goreme', 'superior5', 'falcon', 'ag2', 'legacy'],
+    // 19/10/2026 (noite): ordem final do Tiago: Raptor, Falcon, Legacy, Gulf, Phenom.
+    // Gulf e Phenom entram após 5 loss virtuais SÓ na GlobalFly: isso está
+    // publicado no banco (robos_parametros, marca globalfly), não no padrão
+    // do código, que é o do AG7/AG2 da Teeds (4).
+    robos: ['goreme', 'falcon', 'legacy', 'superior5', 'ag2'],
     // 19/10/2026: "GlobalFly" abreviado para GF (pedido do Victor: o nome
     // ficava grande na tela de operações). Onde dá, a tela troca o "GF"
     // escrito pelo monograma oficial (`monogramaNosRobos`, NomeDoRobo.tsx).
