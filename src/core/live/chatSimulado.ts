@@ -71,7 +71,7 @@ const NOMES_COMPOSTOS = ['João Pedro', 'João Vitor', 'Maria Eduarda', 'Ana Cla
 
 /** Um nome do jeito que aparece num chat de live (e se é ela). */
 function umNome(): [string, boolean] {
-  const ele = chance(0.5)
+  const ele = chance(0.8) // público: 80% homens, 20% mulheres (pedido do Tiago, 20/10/2026)
   return [nomeDe(ele), !ele]
 }
 function nomeDe(ele: boolean): string {
@@ -102,8 +102,10 @@ function umEstilo(): Estilo {
 }
 
 export function novaPessoa(usados: Set<string>): Pessoa {
-  let [nome, ela] = umNome()
-  for (let i = 0; i < 8 && usados.has(nome); i++) [nome, ela] = umNome()
+  // o gênero é sorteado uma vez (80% homens); repetir o nome não muda a conta
+  const [primeiro, ela] = umNome()
+  let nome = primeiro
+  for (let i = 0; i < 8 && usados.has(nome); i++) nome = nomeDe(!ela)
   if (usados.has(nome)) nome = `${nome} ${Math.floor(Math.random() * 90) + 10}`
   usados.add(nome)
   const estilo = umEstilo()
