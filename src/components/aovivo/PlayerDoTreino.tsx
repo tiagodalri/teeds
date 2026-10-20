@@ -86,8 +86,8 @@ export function PalcoDoTreino({ compacto = false, filhos }: { compacto?: boolean
                   : <><b>A transmissão ainda não começou</b>{!compacto && <span>Deixe esta tela aberta: a imagem aparece aqui sozinha.</span>}</>}
         </div>
       )}
-      {/* o selo da sala (20/10/2026: "GF Streaming", antes "Simulação"); o número segue marcado como simulado */}
-      <span className="tr-selo"><i aria-hidden />GF Streaming{ativa && <> · {fmt(publico)}{compacto ? '' : ' na sala (simulado)'}</>}</span>
+      {/* o selo da sala (20/10/2026: "GF Streaming", antes "Simulação"; sem o "(simulado)": quem assiste é GF Member, na sala de treino) */}
+      <span className="tr-selo"><i aria-hidden />GF Streaming{ativa && <> · {fmt(publico)}{compacto ? '' : ' na sala'}</>}</span>
       {!eu && t.somBloqueado && <button className="av-som" onClick={() => void liberarSomDoTreino()}>Toque para ativar o som</button>}
       {filhos}
     </div>
