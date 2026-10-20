@@ -3,6 +3,7 @@ import { WorkspaceNav } from '../WorkspaceNav'
 import { AccountSwitcher } from '../AccountSwitcher'
 import { UserMenu } from '../UserMenu'
 import { InicioPanel, type DadosDoInicio } from './InicioPanel'
+import { InicioPagina } from './InicioPagina'
 
 /**
  * ?tela=inicio&perfil=experiente|novo&tema=escuro|claro — a home dentro da
@@ -65,14 +66,17 @@ export default function LabInicio() {
         <div className="workspace-heading"><strong>Início</strong><span>Sua mesa de operações</span></div>
         <div className="topbar-right">
           {d.conta.conectada && (
-            <AccountSwitcher contas={[{ accountId: 'DOT90001234', balance: d.conta.saldo, currency: 'USD', group: 'row', status: 'active', type: 'demo' }]}
+            <AccountSwitcher contas={[{ accountId: 'DOT90001234', balance: d.conta.saldo ?? 0, currency: 'USD', group: 'row', status: 'active', type: 'demo' }]}
               selecionada="DOT90001234" isDemo saldo={d.conta.saldo} moeda="USD" conectando={false} onTrocar={nada} onRecarregar={nada} onSair={nada} />
           )}
           <div className="status status-open"><i /> Conectado</div>
           <UserMenu usuario={{ id: 'lab', email: 'exemplo@globalflytrade.com', nome: d.nome, telefone: null, cpf: null, criadoEm: '', trocarSenha: false }} onSair={nada} onPerfil={nada} />
         </div>
       </header>
-      <InicioPanel d={d} aoIr={nada} />
+      {/* &real=1: o componente de verdade (mercado ao vivo, aula seguinte, jornada), sem conta */}
+      {q.has('real')
+        ? <InicioPagina sessao={null} nome="Tiago Dal Ri" conta={{ conectada: false, demo: true, saldo: null, moeda: 'USD' }} treino={null} aoIr={nada} />
+        : <InicioPanel d={d} aoIr={nada} />}
     </div>
   )
 }

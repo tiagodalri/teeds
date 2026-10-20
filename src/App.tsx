@@ -54,6 +54,7 @@ import { assinarMudancas, type AssinaturaRealtime } from './core/teeds/realtime'
 // quando a pessoa abre a página ou entra numa live.
 const AoVivoPage = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.AoVivoPage })))
 const MercadoPanel = lazy(() => import('./components/MercadoPanel').then((m) => ({ default: m.MercadoPanel })))
+const InicioPagina = lazy(() => import('./components/inicio/InicioPagina').then((m) => ({ default: m.InicioPagina })))
 const PlayerDoTreino = lazy(() => import('./components/aovivo/PlayerDoTreino'))
 const PlayerAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.PlayerGlobal })))
 // Gráfico profissional (KLineChart): só baixa para quem vê (hoje, admin da GlobalFly).
@@ -153,7 +154,8 @@ export default function App() {
   const [confirmar, setConfirmar] = useState<string | null>(null)
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
-  const [tela, setTela] = useState<WorkspacePage>('operar')
+  // GlobalFly abre na home (20/10/2026); as outras marcas, no terminal manual
+  const [tela, setTela] = useState<WorkspacePage>(MARCA.inicio ? 'inicio' : 'operar')
   const [pedirCodigoAssistente, setPedirCodigoAssistente] = useState(false)
   const [assistenteLiberado, setAssistenteLiberado] = useState(assistenteBetaJaLiberado)
   const [payoutBase, setPayoutBase] = useState(19.55)
@@ -383,14 +385,14 @@ export default function App() {
     const treino = MARCA.aoVivo && u.searchParams.has('treino')
     if (treino) { try { sessionStorage.setItem(`${MARCA.id}.aovivo.treino`, '1') } catch { /* sem armazenamento */ } }
     const pedida = convite || treino ? 'aovivo' : u.searchParams.get('tela')
-    const PUBLICAS: WorkspacePage[] = ['operar', 'robos', 'aulas', 'gerenciamento', 'marketplace', ...(MARCA.aoVivo ? ['aovivo' as const] : []), ...(MARCA.noticias ? ['noticias' as const] : [])]
+    const PUBLICAS: WorkspacePage[] = [...(MARCA.inicio ? ['inicio' as const] : []), 'operar', 'robos', 'aulas', 'gerenciamento', 'marketplace', ...(MARCA.aoVivo ? ['aovivo' as const] : []), ...(MARCA.noticias ? ['noticias' as const] : [])]
     if (pedida && (PUBLICAS as string[]).includes(pedida)) setTela(pedida as WorkspacePage)
     if (u.searchParams.has('tela') || u.searchParams.has('aovivo') || u.searchParams.has('treino') || u.searchParams.get('origem') === 'app') {
       u.searchParams.delete('tela'); u.searchParams.delete('origem'); u.searchParams.delete('aovivo'); u.searchParams.delete('treino')
       history.replaceState(history.state, '', u.pathname + u.search + u.hash)
     }
     const voltar = (e: PopStateEvent) => {
-      const t = (e.state as { tela?: WorkspacePage } | null)?.tela ?? 'operar'
+      const t = (e.state as { tela?: WorkspacePage } | null)?.tela ?? (MARCA.inicio ? 'inicio' : 'operar')
       telaVeioDoVoltar.current = true
       setTela(t)
     }
@@ -717,13 +719,13 @@ export default function App() {
 
   return (
     <div className="app workspace-app">
-      <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} onNavigate={next => {
+      <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} mostrarInicio={!!MARCA.inicio} onNavigate={next => {
         setVerPerfil(false)
         if (next === 'assistente') abrirAssistente()
         else setTela(next)
       }} />
       <header className="topbar">
-        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : 'Seu espaço de trabalho'}</span></div>
+        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : 'Seu espaço de trabalho'}</span></div>
 
         <div className="topbar-right">
           {!derivPronta && (
@@ -886,7 +888,14 @@ export default function App() {
       )}
       {MARCA.aoVivo && treinoAtivo && <Suspense fallback={null}><PlayerDoTreino naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
       {MARCA.aoVivo && playerAoVivo && <Suspense fallback={null}><PlayerAoVivo naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
-      {tela === 'robos' || tela === 'assistente' ? null : tela === 'aovivo' && MARCA.aoVivo ? (
+      {tela === 'robos' || tela === 'assistente' ? null : tela === 'inicio' && MARCA.inicio ? (
+        <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o início…</div></div>}>
+          <InicioPagina sessao={teeds.sessao} nome={teeds.usuario?.nome || ''}
+            conta={{ conectada: conta.status === 'logado', demo: conta.isDemo, saldo: conta.balance ? conta.balance.amount : null, moeda: conta.account?.currency ?? 'USD' }}
+            treino={membroTreino === true && admin !== true ? { noAr: !!treinoAgora, apresentador: treinoAgora?.apresentador ?? undefined } : null}
+            aoIr={setTela} aoConectar={conta.login} />
+        </Suspense>
+      ) : tela === 'aovivo' && MARCA.aoVivo ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo a transmissão…</div></div>}><AoVivoPage sessao={teeds.sessao} admin={admin === true} /></Suspense>
       ) : tela === 'noticias' && MARCA.noticias ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo as notícias…</div></div>}><MercadoPanel /></Suspense>

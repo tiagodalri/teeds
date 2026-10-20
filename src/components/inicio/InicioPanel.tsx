@@ -20,12 +20,12 @@ import './inicio.css'
 
 export interface DadosDoInicio {
   nome: string
-  conta: { conectada: boolean; demo: boolean; saldo: number; moeda: string }
+  conta: { conectada: boolean; demo: boolean; saldo: number | null; moeda: string }
   /** null = ainda sem operação hoje */
   hoje: { resultado: number; operacoes: number; vitorias: number; derrotas: number; meta: number; limite: number } | null
   robos: Array<{ id: string; nome: string; situacao: 'operando' | 'aguardando'; resultado: number; operacoes: number; curva: number[] }>
   cotacoes: Array<{ id: string; nome: string; valor: string; variacao: number; serie: number[] }>
-  manchetes: Array<{ titulo: string; fonte: string; quando: string }>
+  manchetes: Array<{ titulo: string; fonte: string; quando: string; link?: string }>
   aula: { modulo: string; titulo: string; capa: string; feitas: number; total: number } | null
   treino: { noAr: boolean; apresentador?: string } | null
   jornada: { deriv: boolean; demo: boolean; gestao: boolean; primeiraIa: boolean }
@@ -59,7 +59,9 @@ const ICONE = {
 }
 const Icone = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden="true"><path d={d} /></svg>
 
-export function InicioPanel({ d, aoIr }: { d: DadosDoInicio; aoIr: (tela: WorkspacePage) => void }) {
+export function InicioPanel({ d, aoIr, aoConectar }: { d: DadosDoInicio; aoIr: (tela: WorkspacePage) => void; aoConectar?: () => void }) {
+  // conectar abre o login da Deriv direto (o mesmo do botão do topo)
+  const conectar = () => (aoConectar ? aoConectar() : aoIr('operar'))
   const passos = [
     { feito: d.jornada.deriv, titulo: 'Conecte sua Deriv', dica: 'A conta da corretora, ligada à plataforma.', ir: 'operar' as WorkspacePage },
     { feito: d.jornada.demo, titulo: 'Treine na conta demo', dica: 'Dinheiro fictício para pegar o jeito.', ir: 'operar' as WorkspacePage },
@@ -92,7 +94,7 @@ export function InicioPanel({ d, aoIr }: { d: DadosDoInicio; aoIr: (tela: Worksp
                 <span className="in-conexao"><i aria-hidden="true" />Conectada à Deriv</span>
               </div>
               <span className="in-saldo-rotulo">Saldo disponível</span>
-              <b className="in-saldo-valor">{dinheiro(d.conta.saldo, moeda)}</b>
+              <b className="in-saldo-valor">{d.conta.saldo === null ? `${moeda} …` : dinheiro(d.conta.saldo, moeda)}</b>
               <div className="in-saldo-acoes">
                 <button type="button" className="in-btn ouro" onClick={() => aoIr('robos')}><Icone d={ICONE.ia} />Ligar uma I.A.</button>
                 <button type="button" className="in-btn" onClick={() => aoIr('operar')}><Icone d={ICONE.manual} />Operar manual</button>
@@ -104,7 +106,7 @@ export function InicioPanel({ d, aoIr }: { d: DadosDoInicio; aoIr: (tela: Worksp
               <b className="in-saldo-chamada">Conecte sua conta da corretora</b>
               <p>O saldo e as operações ficam na sua conta Deriv. A {MARCA.prosa} só se conecta a ela.</p>
               <div className="in-saldo-acoes">
-                <button type="button" className="in-btn deriv" onClick={() => aoIr('operar')}>Conectar minha Deriv</button>
+                <button type="button" className="in-btn deriv" onClick={conectar}>Conectar minha Deriv</button>
                 {MARCA.afiliado && <a className="in-btn" href={MARCA.afiliado} target="_blank" rel="noopener noreferrer">Ainda não tenho conta</a>}
               </div>
             </>
@@ -125,7 +127,7 @@ export function InicioPanel({ d, aoIr }: { d: DadosDoInicio; aoIr: (tela: Worksp
           <ol>
             {passos.map((p, i) => (
               <li key={p.titulo} className={p.feito ? 'feito' : p === proximo ? 'agora' : ''}>
-                <button type="button" onClick={() => aoIr(p.ir)} disabled={p.feito}>
+                <button type="button" onClick={() => (i === 0 ? conectar() : aoIr(p.ir))} disabled={p.feito}>
                   <i aria-hidden="true">{p.feito ? <Icone d={ICONE.check} /> : i + 1}</i>
                   <span><b>{p.titulo}</b><small>{p.feito ? 'Feito' : p.dica}</small></span>
                   {p === proximo && <em>Começar</em>}
@@ -146,11 +148,16 @@ export function InicioPanel({ d, aoIr }: { d: DadosDoInicio; aoIr: (tela: Worksp
           {h ? (
             <>
               <div className="in-numeros">
-                <div><span>Resultado do dia</span><b className={h.resultado >= 0 ? 'sobe' : 'cai'}>{dinheiro(h.resultado, moeda, true)}</b></div>
+                <div><span>Resultado das I.A.s</span><b className={h.resultado >= 0 ? 'sobe' : 'cai'}>{dinheiro(h.resultado, moeda, true)}</b></div>
                 <div><span>Operações</span><b>{h.operacoes}</b></div>
                 <div><span>Vitórias · derrotas</span><b>{h.vitorias} <small>·</small> {h.derrotas}</b></div>
               </div>
-              <div className="in-metas">
+              {h.meta <= 0 && h.limite <= 0 ? (
+                <div className="in-vazio">
+                  <p>Defina no Gerenciamento quanto quer buscar no dia e quanto aceita perder: a meta e o limite aparecem aqui.</p>
+                  <button type="button" className="in-btn" onClick={() => aoIr('gerenciamento')}><Icone d={ICONE.gestao} />Definir meta e limite</button>
+                </div>
+              ) : <div className="in-metas">
                 <div className="in-meta">
                   <div><span>Meta do dia</span><b>{dinheiro(h.meta, moeda)}</b></div>
                   <div className="in-trilho sobe"><i style={{ width: `${pctMeta}%` }} /></div>
@@ -161,12 +168,12 @@ export function InicioPanel({ d, aoIr }: { d: DadosDoInicio; aoIr: (tela: Worksp
                   <div className="in-trilho cai"><i style={{ width: `${pctLimite}%` }} /></div>
                   <small>{pctLimite === 0 ? 'Nada usado do limite' : `${Math.round(pctLimite)}% do limite usado`}</small>
                 </div>
-              </div>
+              </div>}
             </>
           ) : (
             <>
               <div className="in-numeros vazio">
-                <div><span>Resultado do dia</span><b>—</b></div>
+                <div><span>Resultado das I.A.s</span><b>—</b></div>
                 <div><span>Operações</span><b>0</b></div>
                 <div><span>Vitórias · derrotas</span><b>0 <small>·</small> 0</b></div>
               </div>
@@ -202,7 +209,7 @@ export function InicioPanel({ d, aoIr }: { d: DadosDoInicio; aoIr: (tela: Worksp
           <div className="in-ias-trilho">
             {d.robos.map((r) => (
               <button key={r.id + r.nome} type="button" className="in-ia" onClick={() => aoIr('robos')}>
-                <img src={`${import.meta.env.BASE_URL}robos-globalfly/${r.id}-pequena.webp`} alt="" loading="lazy" />
+                <img src={`${import.meta.env.BASE_URL}robos-globalfly/${r.id}-pequena.webp`} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
                 <div className="in-ia-corpo">
                   <div className="in-ia-topo">
                     <b><NomeDoRobo nome={r.nome} /></b>
@@ -225,7 +232,7 @@ export function InicioPanel({ d, aoIr }: { d: DadosDoInicio; aoIr: (tela: Worksp
         </section>
 
         {/* ------------------------------------------------ mercado */}
-        <section className="in-cartao in-mercado" aria-labelledby="in-mercado-titulo">
+        {MARCA.noticias && <section className="in-cartao in-mercado" aria-labelledby="in-mercado-titulo">
           <header className="in-cabeca">
             <h2 id="in-mercado-titulo"><i className="in-pulso" aria-hidden="true" />Mercado agora</h2>
             <button type="button" className="in-link" onClick={() => aoIr('noticias')}>Notícias <Icone d={ICONE.seta} /></button>
@@ -240,12 +247,15 @@ export function InicioPanel({ d, aoIr }: { d: DadosDoInicio; aoIr: (tela: Worksp
               </div>
             ))}
           </div>
+          {!d.cotacoes.length && <p className="in-carregando">Carregando as cotações…</p>}
           <ol className="in-manchetes">
             {d.manchetes.map((m) => (
-              <li key={m.titulo}><span><b>{m.fonte}</b> · {m.quando}</span><strong>{m.titulo}</strong></li>
+              <li key={m.titulo}>{m.link
+                ? <a href={m.link} target="_blank" rel="noopener noreferrer"><span><b>{m.fonte}</b> · {m.quando}</span><strong>{m.titulo}</strong></a>
+                : <><span><b>{m.fonte}</b> · {m.quando}</span><strong>{m.titulo}</strong></>}</li>
             ))}
           </ol>
-        </section>
+        </section>}
 
         {/* ------------------------------------------------ aula e sala de treino */}
         <div className="in-coluna">

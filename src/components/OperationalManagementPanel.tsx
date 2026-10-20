@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { identidade } from '../core/deriv/branding'
 import { escadaDoRobo } from '../core/deriv/escada'
 import { MODOS, NOME_DO_MODO, temModos, type Modo } from '../core/deriv/strategies'
 import { useParametrosDoRobo, useRobosDisponiveis } from '../core/teeds/catalogoRobos'
 import { MARCA } from '../marca'
+import { guardarPlanoDoDia, planoDoDia } from '../core/teeds/planoDoDia'
 
 const dinheiro = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' })
 const ler = (s: string) => /^\d+(?:[.,]\d{0,2})?$/.test(s.trim()) ? Number(s.replace(',', '.')) : NaN
@@ -27,15 +28,23 @@ export function OperationalManagementPanel() {
   const parametros = dados?.parametros
   const comModos = temModos(robo, parametros)
   const modoEfetivo: Modo = comModos ? modo : 'conservador'
-  const [banca, setBanca] = useState('1000')
-  const [entrada, setEntrada] = useState('0,35')
-  const [limite, setLimite] = useState('10')
-  const [meta, setMeta] = useState('3')
-  const [percentual, setPercentual] = useState(true)
+  // o último cenário desta pessoa volta preenchido (e a home mostra a meta e o limite)
+  const guardado = useRef(planoDoDia()).current
+  const [banca, setBanca] = useState(guardado?.banca ?? '1000')
+  const [entrada, setEntrada] = useState(guardado?.entrada ?? '0,35')
+  const [limite, setLimite] = useState(guardado?.limite ?? '10')
+  const [meta, setMeta] = useState(guardado?.meta ?? '3')
+  const [percentual, setPercentual] = useState(guardado?.percentual ?? true)
   const saldo = ler(banca), base = ler(entrada), perda = ler(limite), ganho = ler(meta)
   const teto = percentual ? saldo * perda / 100 : perda
   const objetivo = percentual ? saldo * ganho / 100 : ganho
   const valido = [saldo, base, perda, ganho].every(Number.isFinite) && saldo > 0 && base >= .01 && perda >= 0 && ganho >= 0 && teto <= saldo
+  // Guarda só depois que a pessoa mexe (abrir a tela não conta como "definiu a meta").
+  const mexeu = useRef(false)
+  useEffect(() => {
+    if (!mexeu.current) { mexeu.current = true; if (!guardado) return }
+    if (valido) guardarPlanoDoDia({ banca, entrada, limite, meta, percentual, metaUsd: objetivo, limiteUsd: teto })
+  }, [banca, entrada, limite, meta, percentual]) // eslint-disable-line react-hooks/exhaustive-deps
   const linhas = useMemo(() => {
     if (!valido) return []
     const todas: Linha[] = fixa ? Array.from({ length: 60 }, (_, i) => ({ n: i + 1, valor: base, perdido: Math.round(base * (i + 1) * 100) / 100, cobre: null })) : escadaDoRobo(robo, base, 60, modoEfetivo, parametros)
@@ -47,7 +56,7 @@ export function OperationalManagementPanel() {
   const acumulado = cabem[cabem.length - 1]?.perdido ?? 0
   return <main className="go ger go-consultoria">
     <header className="go-hero"><div><span className="go-selo">Planejamento {MARCA.prosa}</span><h2>Gerenciamento</h2><p>Planilha interativa para calcular entradas, limites e objetivos.</p></div><div className="go-status">Somente simulação</div></header>
-    <p className="go-consultivo">Esta área é exclusivamente consultiva. Não configura, inicia ou interrompe robôs. Nenhum valor é enviado às operações ou sincronizado com sua conta.</p>
+    <p className="go-consultivo">Esta área é exclusivamente consultiva. Não configura, inicia ou interrompe robôs. Nenhum valor é enviado às operações ou sincronizado com sua conta.{MARCA.inicio && ' A meta e o limite ficam guardados neste aparelho e aparecem na tela Início.'}</p>
     <section className="go-grade"><aside className="go-config"><h3>Seu cenário</h3><div className="go-campos">
       <label><span>Modelo de referência</span><select value={fixa ? 'fixa' : robo} onChange={e => { setFixa(e.target.value === 'fixa'); if (e.target.value !== 'fixa') setRobo(e.target.value) }}><option value="fixa">Entrada fixa</option>{robosAtivos.map(id => <option key={id} value={id}>{identidade(id).nome}</option>)}</select></label>
       {!fixa && comModos && <label><span>Modo de operação</span><select value={modo} onChange={e => setModo(e.target.value as Modo)}>{MODOS.map(m => <option key={m} value={m}>{NOME_DO_MODO[m]}</option>)}</select></label>}

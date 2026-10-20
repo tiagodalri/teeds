@@ -35,7 +35,7 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mos
     </button>
     {open && <button className="workspace-shade" aria-label="Fechar menu" onClick={() => setOpen(false)} />}
     <aside className={`workspace-sidebar ${compact ? 'compact' : ''} ${open ? 'mobile-open' : ''}`} onKeyDown={e => { if (e.key === 'Escape') setOpen(false) }}>
-      <button className="workspace-brand" aria-label="Página inicial" onClick={() => navigate('operar')}><Brand assinatura /></button>
+      <button className="workspace-brand" aria-label="Página inicial" onClick={() => navigate(MARCA.inicio ? 'inicio' : 'operar')}><Brand assinatura /></button>
       <nav id="workspace-navigation" aria-label="Navegação principal">
         {/* Robôs primeiro, e o terminal manual depois (Tiago, 02/10/2026):
             quem entra na plataforma vem para ligar um robô; operar na mão é a

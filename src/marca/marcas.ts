@@ -103,6 +103,11 @@ export interface Marca {
    */
   livesAoVivo?: boolean
   /**
+   * A home ("Início", 20/10/2026): primeira tela de quem entra, com saldo,
+   * jornada, o dia em números, as I.A.s ligadas, atalhos, mercado e aulas.
+   */
+  inicio?: boolean
+  /**
    * Nome dos ativos sem a palavra "Volatility" ("75 Index", "10 (1s) Index").
    * Pedido do Tiago em 19/10/2026 para a GlobalFly; as outras marcas mostram
    * o nome da Deriv como sempre.
@@ -354,6 +359,7 @@ export const MARCAS: Record<string, Marca> = {
     appNativo: true,
     aoVivo: true,
     livesAoVivo: false,
+    inicio: true,
     ativosSemVolatility: true,
     iconesDeAtivos: true,
     indicesCompletos: true,

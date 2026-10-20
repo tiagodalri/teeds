@@ -165,7 +165,10 @@
 .in-cotacao b { color: var(--text); font-family: var(--in-dados); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .in-cotacao em { font-size: 11.5px; font-style: normal; font-weight: 800; font-variant-numeric: tabular-nums; }
 .in-manchetes { display: grid; margin: 14px 0 0; padding: 0; list-style: none; }
-.in-manchetes li { display: grid; gap: 3px; padding: 11px 2px; border-top: 1px solid var(--in-linha); }
+.in-manchetes li { padding: 11px 2px; border-top: 1px solid var(--in-linha); }
+.in-manchetes li, .in-manchetes a { display: grid; gap: 3px; color: inherit; text-decoration: none; }
+.in-manchetes a:hover strong { color: var(--in-ouro); }
+.in-carregando { margin: 0; padding: 18px 4px; color: var(--muted); font-size: 13px; }
 .in-manchetes span { color: var(--muted); font-size: 11.5px; }
 .in-manchetes span b { color: var(--in-ouro); }
 .in-manchetes strong { color: var(--text); font-size: 13.5px; font-weight: 600; line-height: 1.4; }
@@ -204,6 +207,9 @@
   .in-ola { padding: 2px; }
   .in-saldo { padding: 16px; }
   .in-btn { min-height: 46px; }
+  /* sem Deriv conectada: os dois botões um embaixo do outro, na largura toda */
+  .in-saldo-acoes:has(.in-btn.deriv) .in-btn { flex-basis: 100%; }
+  .in-btn { white-space: nowrap; }
   /* no celular os atalhos vêm logo depois do saldo, onde o dedo alcança */
   .in-grade { gap: 14px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "atalhos" "hoje" "ias" "mercado" "coluna"; }
   .in-cartao { padding: 16px; border-radius: 16px; }
