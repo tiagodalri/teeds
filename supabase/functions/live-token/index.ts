@@ -15,6 +15,7 @@
 // Member (plano "treino") entra para assistir. v7 (20/10/2026): sem o atalho
 // do link público na sala de treino (o link público segue valendo só para as
 // lives). Quem assiste vê sempre que o público e o chat são simulados.
+// v8 (20/10/2026): o GF Member não entra em live nenhuma, nem como convidado.
 //
 // O LiveKit roda no nosso servidor (código aberto, sem conta em serviço de
 // fora). Endereço e chaves ficam na tabela `config_servicos`, que só a chave
@@ -181,6 +182,10 @@ Deno.serve(async (req) => {
     const [live] = await banco<Array<{ id: string; marca: string; sala: string; status: string }>>(
       `/rest/v1/lives?id=eq.${liveId}&select=id,marca,sala,status`, token)
     if (!live) {
+      // GF Member só tem a sala de treino: nem pelo link público ele entra numa live (v8, 20/10/2026)
+      const [l] = await servico<LiveRow[]>(`/rest/v1/lives?select=marca&id=eq.${liveId}`).catch(() => [])
+      const soTreino = l && await banco<boolean>('/rest/v1/rpc/teeds_minha_sala_de_treino', token, { method: 'POST', body: JSON.stringify({ p_marca: l.marca }) }).catch(() => false)
+      if (soTreino) return resposta(403, { erro: 'Sua conta GF Member dá acesso às salas de treino. As transmissões ao vivo não fazem parte do seu plano.' })
       const primeiro = String(usuario.user_metadata?.nome || usuario.user_metadata?.full_name || '').trim().split(/\s+/)[0]
       return (await comoConvidado(corpo.nome || primeiro, usuario.id)) ?? resposta(403, { erro: 'Esta transmissão não está liberada para a sua conta.' })
     }

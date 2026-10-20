@@ -918,11 +918,15 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
     try { setLives(await listarLives(sessao)); setErro(null) } catch (e) { setErro(e instanceof Error ? e.message : 'Não consegui carregar as lives.') }
   }, [sessao])
   useEffect(() => { void carregar(); const t = window.setInterval(() => void carregar(), 20000); return () => window.clearInterval(t) }, [carregar])
-  const [planoTreino, setPlanoTreino] = useState(false)
+  // null = ainda conferindo (evita piscar as abas para o GF Member)
+  const [planoTreino, setPlanoTreino] = useState<boolean | null>(null)
   // a aba Sala de treino: o admin abre e transmite; o GF Member (plano "treino") assiste
   // (na fase de testes, com o link público ligado, qualquer pessoa assiste)
   const publico = useLinkPublico()
-  const treino = admin || planoTreino || publico === true
+  const treino = admin || planoTreino === true || publico === true
+  // GF Member (20/10/2026): só a sala de treino, nenhuma transmissão ao vivo
+  // (o banco também esconde as lives dele: teeds_pode_assistir).
+  const soTreino = !admin && planoTreino === true
   const [treinando, setTreinando] = useState(false)
   useEffect(() => { if (sessao) void podeTreinar(sessao).then(setPlanoTreino) }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // chegou pelo link da sala de treino: abre a aba (o membro já cai assistindo)
@@ -932,6 +936,8 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
   const setAba = (a: 'transmissao' | 'treino') => { setAbaEstado(a); try { localStorage.setItem(CHAVE_ABA, a) } catch { /* só agora */ } }
 
   if (!sessao) return <div className="ger av-pagina"><p className="av-vazio">Entre na sua conta para ver as transmissões.</p></div>
+  if (soTreino) return <div className="ger av-pagina"><AssistirTreino sessao={sessao} /></div>
+  if (!admin && planoTreino === null) return <div className="ger av-pagina"><p className="av-vazio">Carregando…</p></div>
   if (treinando && admin) return <SalaDeTreino sessao={sessao} apresentador={(sessao.usuario.nome || '').trim().split(/\s+/)[0] || 'professor'} aoSair={() => setTreinando(false)} />
   if (s.fase !== 'fora' && s.live) return <SalaConectada s={s} sessao={sessao} aoMudar={() => void carregar()} />
 
