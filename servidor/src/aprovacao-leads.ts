@@ -60,7 +60,9 @@ export async function listarPendentes(marca: string, status: string, pagina: num
   return banco(`/rest/v1/clientes_pendentes?marca=eq.${marca}&status=eq.${status}&select=id,nome,email,telefone,status,recadastro,ultima_inscricao_em,criado_em,decidido_em,email_enviado_em&order=ultima_inscricao_em.desc,id.desc&limit=51&offset=${offset}`)
 }
 export async function decidirLead(id: string, marca: string, admin: string, acao: string, plano='essencial') {
-  if (!planoClienteValido(plano)) throw new Error('Plano inválido.')
+  // A marca do cadastro decide os planos (o GF Member só existe na GlobalFly);
+  // até 20/10/2026 valia a marca padrão do servidor e o GF Member era recusado.
+  if (!planoClienteValido(plano, marcaPorId(marca))) throw new Error('Plano inválido.')
   if (!/^[0-9a-f-]{36}$/i.test(id) || !['aprovar','recusar'].includes(acao)) throw new Error('Pedido inválido.')
   const trava=randomUUID()
   const ficha=await banco('/rest/v1/rpc/teeds_decidir_lead','POST',{p_id:id,p_marca:marca,p_admin:admin,p_acao:acao,p_trava:trava,p_plano:plano})

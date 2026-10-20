@@ -59,6 +59,7 @@ await teste('entrada inválida não consulta banco',async()=>{
   await assert.rejects(decidirLead('errado','teeds',uid,'aprovar'))
   await assert.rejects(decidirLead(id,'teeds',uid,'apagar'))
   await assert.rejects(decidirLead(id,'teeds',uid,'aprovar','vitalicio'))
+  await assert.rejects(decidirLead(id,'teeds',uid,'aprovar','treino')) // GF Member só na GlobalFly
   await assert.rejects(listarPendentes('teeds','todos',0))
 })
 await teste('consulta paginada é filtrada por marca',async()=>{

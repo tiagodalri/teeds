@@ -9,6 +9,9 @@ const BASE = [{ id: 'essencial', nome: 'Sem simulador' }, { id: 'pro', nome: 'Co
   não vê as mensagens dos outros membros no chat (core/live/treino.ts).
 */
 const TREINO = { id: 'treino', nome: 'GF Member' }
-export const PLANOS_CLIENTE: ReadonlyArray<{ id: string; nome: string }> =
-  MARCA.aoVivo ? [...BASE, TREINO] : BASE
-export const planoClienteValido = (id: string) => PLANOS_CLIENTE.some((p) => p.id === id)
+/** Os planos que uma marca oferece (o servidor atende as três marcas e passa a do cadastro). */
+export const planosDaMarca = (m: { aoVivo?: boolean }): ReadonlyArray<{ id: string; nome: string }> =>
+  m.aoVivo ? [...BASE, TREINO] : BASE
+export const PLANOS_CLIENTE = planosDaMarca(MARCA)
+/** Sem marca, vale a deste site; o servidor sempre passa a marca do cadastro. */
+export const planoClienteValido = (id: string, m: { aoVivo?: boolean } = MARCA) => planosDaMarca(m).some((p) => p.id === id)
