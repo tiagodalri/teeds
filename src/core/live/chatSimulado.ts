@@ -38,28 +38,28 @@ const semAcento = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
 
 // [nome, apelidos possíveis]
 const ELES: Array<[string, string[]]> = [
-  ['João', ['Joãozinho', 'Jão']], ['Pedro', ['Pedrinho', 'Pedrão']], ['Lucas', ['Luquinhas']], ['Gabriel', ['Biel', 'Gabi']],
-  ['Matheus', ['Theus', 'Math']], ['Rafael', ['Rafa', 'Rafinha']], ['Guilherme', ['Gui']], ['Leonardo', ['Léo']],
-  ['Gustavo', ['Guto', 'Gus']], ['Felipe', ['Lipe', 'Felipinho']], ['Eduardo', ['Dudu', 'Edu']], ['Vitor', ['Vitinho']],
-  ['Thiago', ['Thiaguinho']], ['Rodrigo', ['Digão', 'Rodriguinho']], ['Marcos', ['Marcão', 'Marquinhos']], ['Paulo', ['Paulinho', 'Paulão']],
-  ['José', ['Zé', 'Zezinho']], ['Antônio', ['Toninho', 'Tonho']], ['Francisco', ['Chico', 'Chicão']], ['Ricardo', ['Ricardinho', 'Rick']],
-  ['Daniel', ['Dani', 'Danielzinho']], ['Henrique', ['Rique']], ['Caio', []], ['Diego', ['Dieguinho']], ['Bruno', ['Bruninho']],
-  ['André', ['Dedé']], ['Fábio', ['Fabinho']], ['Carlos', ['Carlão', 'Carlinhos']], ['Luiz', ['Luizinho']], ['Wellington', ['Well']],
-  ['Wesley', ['Wes']], ['Anderson', ['Dinho']], ['Renan', []], ['Igor', []], ['Murilo', ['Muca']], ['Samuel', ['Samu']],
-  ['Kaique', ['Kaká']], ['Otávio', ['Tavinho']], ['Sérgio', ['Serginho']], ['Roberto', ['Beto', 'Robertão']], ['Júnior', ['Juninho']],
-  ['Leandro', ['Lê']], ['Danilo', ['Dan']], ['Vinícius', ['Vini']], ['Arthur', ['Tuca']], ['Nathan', []], ['Emerson', []],
-  ['Cleiton', []], ['Jefferson', ['Jeff']], ['Alexandre', ['Alê', 'Xandão']], ['Marcelo', ['Celo', 'Marcelinho']], ['Valter', []],
+  ['João', ['Joãozinho']], ['Pedro', ['Pedrinho']], ['Lucas', []], ['Gabriel', ['Biel']],
+  ['Matheus', ['Theus']], ['Rafael', ['Rafa']], ['Guilherme', ['Gui']], ['Leonardo', ['Léo']],
+  ['Gustavo', ['Guto']], ['Felipe', ['Lipe']], ['Eduardo', ['Dudu', 'Edu']], ['Vitor', ['Vitinho']],
+  ['Thiago', []], ['Rodrigo', []], ['Marcos', ['Marquinhos']], ['Paulo', ['Paulinho']],
+  ['José', ['Zé']], ['Antônio', []], ['Francisco', []], ['Ricardo', ['Rick']],
+  ['Daniel', ['Dani']], ['Henrique', []], ['Caio', []], ['Diego', []], ['Bruno', []],
+  ['André', []], ['Fábio', []], ['Carlos', []], ['Luiz', []], ['Wellington', ['Well']],
+  ['Wesley', []], ['Anderson', []], ['Renan', []], ['Igor', []], ['Murilo', []], ['Samuel', []],
+  ['Kaique', []], ['Otávio', []], ['Sérgio', []], ['Roberto', []], ['Júnior', ['Juninho']],
+  ['Leandro', []], ['Danilo', []], ['Vinícius', ['Vini']], ['Arthur', []], ['Nathan', []], ['Emerson', []],
+  ['Cleiton', []], ['Jefferson', ['Jeff']], ['Alexandre', []], ['Marcelo', []], ['Valter', []],
   ['Rogério', []], ['Fernando', ['Nando']], ['Ítalo', []], ['Hugo', []], ['Davi', []], ['Enzo', []], ['Cauã', []],
 ]
 const ELAS: Array<[string, string[]]> = [
-  ['Ana', ['Aninha']], ['Maria', ['Mari']], ['Juliana', ['Ju', 'Juh']], ['Fernanda', ['Fê', 'Nanda']], ['Beatriz', ['Bia']],
-  ['Mariana', ['Mari', 'Mah']], ['Larissa', ['Lari']], ['Carolina', ['Carol']], ['Camila', ['Cami', 'Mila']], ['Amanda', ['Mandinha']],
-  ['Isabela', ['Isa', 'Bela']], ['Natália', ['Nati']], ['Patrícia', ['Pati', 'Pat']], ['Gabriela', ['Gabi']], ['Letícia', ['Lelê', 'Lety']],
-  ['Bruna', ['Bru']], ['Aline', ['Li']], ['Jéssica', ['Jé']], ['Tatiane', ['Tati']], ['Priscila', ['Pri']], ['Vanessa', ['Van', 'Nessa']],
-  ['Sabrina', ['Sabri']], ['Débora', ['Debinha']], ['Kelly', []], ['Simone', ['Si']], ['Rosângela', ['Rô']], ['Cida', []],
-  ['Sueli', []], ['Talita', ['Tali']], ['Yasmin', ['Yas']], ['Luana', ['Lu']], ['Raquel', ['Quel']], ['Daniela', ['Dani']],
-  ['Eduarda', ['Duda']], ['Heloísa', ['Helô']], ['Giovana', ['Gi']], ['Thaís', ['Tha']], ['Bianca', ['Bia']], ['Michele', ['Mi']],
-  ['Adriana', ['Dri']], ['Cristina', ['Cris']], ['Sandra', []], ['Elaine', ['Lane']], ['Kátia', []], ['Mônica', []], ['Paula', ['Paulinha']],
+  ['Ana', []], ['Maria', []], ['Juliana', ['Ju']], ['Fernanda', ['Fê', 'Nanda']], ['Beatriz', ['Bia']],
+  ['Mariana', ['Mari']], ['Larissa', ['Lari']], ['Carolina', ['Carol']], ['Camila', ['Cami']], ['Amanda', []],
+  ['Isabela', ['Isa']], ['Natália', ['Nati']], ['Patrícia', ['Pati']], ['Gabriela', ['Gabi']], ['Letícia', []],
+  ['Bruna', []], ['Aline', []], ['Jéssica', []], ['Tatiane', ['Tati']], ['Priscila', ['Pri']], ['Vanessa', ['Van']],
+  ['Sabrina', []], ['Débora', []], ['Kelly', []], ['Simone', []], ['Rosângela', []], ['Cida', []],
+  ['Sueli', []], ['Talita', []], ['Yasmin', ['Yas']], ['Luana', ['Lu']], ['Raquel', []], ['Daniela', ['Dani']],
+  ['Eduarda', ['Duda']], ['Heloísa', []], ['Giovana', ['Gi']], ['Thaís', []], ['Bianca', []], ['Michele', []],
+  ['Adriana', []], ['Cristina', ['Cris']], ['Sandra', []], ['Elaine', []], ['Kátia', []], ['Mônica', []], ['Paula', []],
 ]
 const SOBRENOMES = [
   'Silva', 'Santos', 'Oliveira', 'Souza', 'Lima', 'Pereira', 'Ferreira', 'Costa', 'Rodrigues', 'Almeida', 'Nascimento', 'Carvalho',
@@ -75,25 +75,23 @@ function umNome(): [string, boolean] {
   return [nomeDe(ele), !ele]
 }
 function nomeDe(ele: boolean): string {
+  // Padrão (pedido do Tiago, 20/10/2026): a maioria com o nome certo, alguns
+  // com sobrenome, outros com o sobrenome abreviado ("Paulo S."), e uma parte
+  // com apelido comum ou nome de usuário. Nada de "Tio", "Dona", nome em
+  // maiúsculas ou com emoji.
   const [nome, apelidos] = sorteio(ele ? ELES : ELAS)
   const sobrenome = sorteio(SOBRENOMES)
   const r = Math.random()
-  if (r < 0.2) return nome
-  if (r < 0.37) return `${nome} ${sobrenome}`
-  if (r < 0.47) return `${nome} ${sobrenome[0]}${chance(0.6) ? '.' : ''}`
-  if (r < 0.65 && apelidos.length) return sorteio(apelidos)
-  if (r < 0.71) return sorteio(NOMES_COMPOSTOS.filter((n) => /^(Maria|Ana)/.test(n) !== ele))
-  if (r < 0.86) {
-    // @ de usuário: minúsculo, sem acento, às vezes com número ou "trader"
-    const base = semAcento((chance(0.5) && apelidos.length ? sorteio(apelidos) : nome).toLowerCase())
-    const sep = sorteio(['', '.', '_'])
-    const fim = sorteio([semAcento(sobrenome.toLowerCase()), String(Math.floor(Math.random() * 99) + 1), `${Math.floor(Math.random() * 30) + 80}`, 'trader', 'oficial', semAcento(sobrenome.toLowerCase()).slice(0, 4)])
-    return `${base}${sep}${fim}`
-  }
-  if (r < 0.9) return ele ? `${nome} ${sorteio(['Jr', 'Júnior', 'Neto', 'Filho'])}` : `${nome} ${sobrenome}`
-  if (r < 0.93) return `${ele ? 'Tio' : 'Dona'} ${nome}`
-  if (r < 0.96) return `${nome} ${sobrenome}`.toUpperCase()
-  return `${nome} ${sorteio(['🇧🇷', '🚀', '💰', '✌️', '🙏'])}`
+  if (r < 0.36) return nome
+  if (r < 0.56) return `${nome} ${sobrenome}`
+  if (r < 0.72) return `${nome} ${sobrenome[0]}.`
+  if (r < 0.77) return sorteio(NOMES_COMPOSTOS.filter((n) => /^(Maria|Ana)/.test(n) !== ele))
+  if (r < 0.87 && apelidos.length) return sorteio(apelidos)
+  if (r < 0.87) return nome
+  // @ de usuário: minúsculo, sem acento, com sobrenome ou número
+  const base = semAcento((apelidos.length && chance(0.3) ? sorteio(apelidos) : nome).toLowerCase())
+  const fim = sorteio([semAcento(sobrenome.toLowerCase()), semAcento(sobrenome.toLowerCase()), String(Math.floor(Math.random() * 98) + 2), 'trader'])
+  return `${base}${sorteio(['.', '_', ''])}${fim}`
 }
 
 const ESTILOS: Array<[Estilo, number]> = [['caprichado', 0.22], ['normal', 0.32], ['rapido', 0.2], ['empolgado', 0.16], ['enrolado', 0.1]]
@@ -193,6 +191,8 @@ const MODELOS: Record<Categoria, Modelo[]> = {
     (c) => `${chamar(c.ap)} sempre falando: bateu, para`, () => 'bom demais ver assim', () => 'aeeee meta batida', () => 'bati a minha também!!',
     () => 'meta do dia ok aqui', () => 'gestão funcionando', () => 'parabéns, consistência é isso', () => 'que sessão limpa',
     () => 'meta no bolso e cabeça tranquila', () => 'aí sim porraaa', () => 'vamoooo',
+    () => 'meta batida ✅', () => '✅ meta do dia', () => 'bati aqui também ✅✅', () => 'meta ✅ desliguei e fui',
+    () => '✅ gestão em dia', () => 'meta concluída ✅', () => 'mais um dia de meta ✅', (c) => `✅ valeu ${chamar(c.ap)}`,
   ],
   stop: [
     () => 'faz parte, amanhã tem mais', () => 'stop é proteção', () => 'respeitou o limite, isso que importa', () => 'gestão salvando de novo',
@@ -305,7 +305,12 @@ export function mensagemDe(categoria: Categoria, p: Pessoa, ctx: Ctx, evitar: st
   for (let i = 0; i < 8; i++) { base = sorteio(MODELOS[cat])(ctx); if (!evitar.includes(base)) break }
   evitar.push(base); if (evitar.length > 24) evitar.shift()
   // ninguém ri de stop nem de pergunta séria
-  return escrever(base, p, cat !== 'stop' && cat !== 'pergunta')
+  if (cat !== 'meta' || base.includes('✅')) return escrever(base, p, cat !== 'stop' && cat !== 'pergunta')
+  // meta batida: o ✅ verde em parte das mensagens, cada uma de um jeito
+  if (!chance(0.42)) return escrever(base, p)
+  const texto = escrever(base, { ...p, emoji: 0 })
+  const check = sorteio(['✅', '✅', '✅✅', '✅✅✅', '✅🔥', '✅💰', '✔️'])
+  return chance(0.3) ? `${check} ${texto}` : `${texto} ${check}`
 }
 
 /** Resposta a alguém do chat. */
@@ -315,5 +320,7 @@ export function respostaA(nome: string, categoriaDela: Categoria, p: Pessoa, ela
   return `@${nome} ${escrever(frase, { ...p, emoji: p.emoji / 2 })}`
 }
 
-/** Só emoji, quando a sala comemora junto. */
-export const soEmoji = () => sorteio(['🔥🔥🔥', '👏👏👏', '🚀🚀', '🙌🙌', '💰💰', '👏👏', '🔥🔥', '💯', '🔥', '👊'])
+/** Só emoji, quando a sala comemora junto (na meta, o ✅ entra na roda). */
+export const soEmoji = (meta = false) => sorteio(meta
+  ? ['✅', '✅✅', '✅✅✅', '✅🔥', '🔥🔥🔥', '👏👏👏', '✅👏', '💰💰', '✅', '🙌']
+  : ['🔥🔥🔥', '👏👏👏', '🚀🚀', '🙌🙌', '💰💰', '👏👏', '🔥🔥', '💯', '🔥', '👊'])

@@ -158,7 +158,7 @@ function proximaMensagem() {
   // a sala comemora junto: uns emojis seguidos de gente diferente
   if ((categoria === 'meta' || (categoria === 'giria' && noMomento)) && Math.random() < 0.3) {
     const n = 1 + Math.floor(Math.random() * 3)
-    for (let i = 1; i <= n; i++) window.setTimeout(() => { if (estado.ativa) falar(quemFala(), soEmoji(), 'reacao') }, 350 * i + Math.random() * 500)
+    for (let i = 1; i <= n; i++) window.setTimeout(() => { if (estado.ativa) falar(quemFala(), soEmoji(categoria === 'meta'), 'reacao') }, 350 * i + Math.random() * 500)
   }
 }
 
