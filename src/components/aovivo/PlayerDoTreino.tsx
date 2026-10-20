@@ -123,7 +123,7 @@ export function ChatDoTreino({ titulo = true }: { titulo?: boolean }) {
       <div className="av-mensagens" ref={lista} role="log" aria-live="off">
         {mensagens.length === 0 && <p className="av-chat-vazio">{(eu ? true : t.sim.ativa) ? 'O chat está começando…' : 'As mensagens aparecem aqui quando a transmissão começar.'}</p>}
         {mensagens.map((m) => m.entrada ? (
-          <p key={m.id} className="tr-entrada">{m.nome} entrou</p>
+          <p key={m.id} className="tr-entrada">{m.nome} {m.saida ? 'saiu' : 'entrou'}</p>
         ) : (
           <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''} ${m.minha ? 'tr-minha' : ''}`}>
             <p><b>{m.nome}{m.apresentador && <em>{eu ? 'você' : 'apresentador'}</em>}{m.minha && <em className="tr-tag-membro">você</em>}{eu && m.membro && <em className="tr-tag-membro">membro</em>}</b> {m.texto}</p>

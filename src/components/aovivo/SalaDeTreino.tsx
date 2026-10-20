@@ -247,7 +247,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
                   </div>
                 )}
                 {sim.mensagens.map((m) => m.entrada ? (
-                  <p key={m.id} className="tr-entrada">{m.nome} entrou</p>
+                  <p key={m.id} className="tr-entrada">{m.nome} {m.saida ? 'saiu' : 'entrou'}</p>
                 ) : (
                   <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''}`}>
                     <p><b>{m.nome}{m.apresentador && <em>você</em>}{m.membro && <em className="tr-tag-membro">membro</em>}</b> {m.texto}</p>

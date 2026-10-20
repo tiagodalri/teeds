@@ -7,12 +7,18 @@
  * Tiago: um selo só, discreto, mas sempre lá).
  *
  * O chat é montado de modelos com variação (horário do dia, nome do
- * apresentador, robôs da casa, jeito de escrever de cada um), para não
- * soar robótico. Os "momentos" mudam o assunto por alguns segundos: meta
- * batida, stop, mercado lento, rodada de perguntas, abertura.
+ * apresentador, robôs da casa), para não soar robótico. Os "momentos" mudam
+ * o assunto por alguns segundos: meta batida, stop, mercado lento, rodada de
+ * perguntas, abertura.
+ *
+ * 20/10/2026: o público virou gente (chatSimulado.ts). Cada pessoa tem nome
+ * de chat de verdade e um jeito de escrever que mantém; uns respondem os
+ * outros com @; a sala comemora junto. E "fulano entrou" / "fulano saiu"
+ * acompanham o número de pessoas na sala, que sobe e desce.
  */
 import { useSyncExternalStore } from 'react'
 import { MARCA } from '../../marca'
+import { mensagemDe, novaPessoa, respostaA, soEmoji, type Categoria, type Pessoa } from './chatSimulado'
 
 export type Oscilacao = 'baixa' | 'media' | 'alta'
 export type Ritmo = 'calmo' | 'normal' | 'agitado'
@@ -25,6 +31,8 @@ export interface MensagemSimulada {
   apresentador: boolean
   entrada: boolean
   hora: number
+  /** Linha de "fulano saiu" (com `entrada`, é "fulano entrou"). */
+  saida?: boolean
   /** Escrita de verdade por um membro do plano que está assistindo o ensaio. */
   membro?: boolean
   /** Na tela de quem assiste: a mensagem que esta própria pessoa escreveu. */
@@ -56,70 +64,53 @@ export const simulacaoAgora = () => estado
 
 /* ------------------------------------------------------------- vocabulário */
 
-const NOMES = [
-  'Ana', 'Bruno', 'Carla', 'Diego', 'Elaine', 'Felipe', 'Gabi', 'Henrique', 'Isabela', 'João', 'Karina', 'Lucas',
-  'Mariana', 'Nathan', 'Olívia', 'Paulo', 'Rafa', 'Sabrina', 'Thiago', 'Vanessa', 'Wesley', 'Yasmin', 'André',
-  'Bia', 'Caio', 'Débora', 'Edu', 'Fernanda', 'Gustavo', 'Helena', 'Igor', 'Juliana', 'Kaique', 'Larissa',
-  'Matheus', 'Nicole', 'Otávio', 'Priscila', 'Renan', 'Simone', 'Tati', 'Vinícius', 'Aline', 'Beto', 'Camila',
-  'Danilo', 'Érica', 'Fábio', 'Giovana', 'Hugo', 'Ingrid', 'Jéssica', 'Leandro', 'Mônica', 'Pedro', 'Rose',
-  'Sérgio', 'Talita', 'Valter', 'Zé', 'Luana', 'Marcos', 'Patrícia', 'Rodrigo', 'Sueli', 'Cláudio', 'Denise',
-]
-
 const robos = () => MARCA.robos.map((id) => (MARCA.nomesDosRobos?.[id] ?? id).replace(/^(GF|GlobalFly)\s+/i, ''))
 const sorteio = <T,>(lista: readonly T[]) => lista[Math.floor(Math.random() * lista.length)]
 const periodo = () => { const h = new Date().getHours(); return h < 12 ? 'bom dia' : h < 18 ? 'boa tarde' : 'boa noite' }
 
-type Modelo = (ap: string) => string
-const MODELOS: Record<'saudacao' | 'reacao' | 'pergunta' | 'mercado' | Exclude<Momento, 'abertura' | 'perguntas'>, Modelo[]> = {
-  saudacao: [
-    (ap) => `${periodo()} ${ap}!`, (ap) => `${periodo()} pessoal`, () => `${periodo()} galera, cheguei`,
-    (ap) => `fala ${ap}, ${periodo()}`, () => `${periodo()} a todos`, () => 'boa, começou! bora pra mais um dia',
-    (ap) => `${periodo()} ${ap}, vamos com tudo hoje`, () => 'presente!', () => 'cheguei agora, o que perdi?',
-    () => `${periodo()} família`, (ap) => `opa ${ap}, ${periodo()} pra você também`,
-  ],
-  reacao: [
-    () => 'que aula', () => 'muito bom', () => 'show demais', () => 'tô anotando tudo aqui',
-    () => 'faz sentido', () => 'agora entendi', () => 'top', () => 'essa explicação foi ótima',
-    () => 'gestão é tudo mesmo', () => 'disciplina acima de tudo', () => 'bora!', () => 'excelente',
-  ],
-  pergunta: [
-    () => `qual robô vocês recomendam pra começar, o ${sorteio(robos())} ou o ${sorteio(robos())}?`,
-    () => 'como faço pra definir o limite de perda?', () => 'quanto vocês colocam de entrada?',
-    () => 'dá pra deixar o robô ligado e sair do computador?', () => 'o saque cai em quanto tempo?',
-    () => 'qual o melhor horário pra operar?', () => 'posso usar conta demo primeiro?',
-    () => 'como funciona o martingale no robô?', () => 'é melhor meta diária ou por sessão?',
-    () => 'o que vocês fazem quando o mercado tá lateral?', () => 'tem aula sobre gerenciamento?',
-  ],
-  mercado: [
-    () => 'mercado tá mais calmo hoje né', () => 'esse ativo tá andando bem', () => 'olha esse movimento',
-    () => 'deu uma acelerada agora', () => 'tá respeitando bem', () => 'paciência agora',
-  ],
-  meta: [
-    (ap) => `parabéns ${ap}! meta batida`, () => 'bateu a meta e parou, isso é gestão', () => 'bora!!! meta no bolso',
-    () => 'disciplina demais', () => 'é isso, meta batida, desliga e vai viver', () => 'que sessão',
-    () => 'parabéns pela gestão', (ap) => `${ap} sempre falando: bateu, para`, () => 'bom demais ver assim',
-  ],
-  stop: [
-    () => 'faz parte, amanhã tem mais', () => 'stop é proteção', () => 'respeitou o limite, isso que importa',
-    () => 'gestão salvando de novo', () => 'tranquilo, cabeça fria', () => 'quem respeita o stop fica no jogo',
-    (ap) => `valeu por mostrar o stop também ${ap}`, () => 'o importante é não sair do plano',
-  ],
-  lateral: [
-    () => 'mercado de lado hoje', () => 'paciência é parte da estratégia', () => 'melhor esperar mesmo',
-    () => 'sem pressa', () => 'aguardando a entrada certa', () => 'esses dias de lado testam a disciplina',
-  ],
-}
+/* ----------------------------------------------------------- quem está na sala */
 
-/** O jeito de escrever de cada um: sem acento, minúsculas, risada, letra repetida. */
-function humanizar(t: string): string {
-  let s = t
-  if (Math.random() < 0.25) s = s.normalize('NFD').replace(/[̀-ͯ]/g, '')
-  if (Math.random() < 0.5) s = s.charAt(0).toLowerCase() + s.slice(1)
-  else s = s.charAt(0).toUpperCase() + s.slice(1)
-  if (Math.random() < 0.12) s += ' kkk'
-  if (Math.random() < 0.1) s = s.replace(/([aeo])(!?)$/, '$1$1$1$2')
-  if (Math.random() < 0.15 && !/[!?]$/.test(s)) s += '!'
-  return s
+const usados = new Set<string>()
+let naSala: Pessoa[] = []
+let foraDaSala: Pessoa[] = []
+/** Quem falou por último (não sai da sala logo depois de falar, e pode ser respondido). */
+const falouEm = new Map<string, number>()
+let ultimas: Array<{ nome: string; categoria: Categoria; em: number }> = []
+
+function montarPublico() {
+  usados.clear(); falouEm.clear(); ultimas = []
+  // quem já está quando a live começa, e quem vai chegando depois
+  naSala = Array.from({ length: 40 }, () => novaPessoa(usados))
+  foraDaSala = Array.from({ length: 160 }, () => novaPessoa(usados))
+}
+function alguemDeFora(): Pessoa {
+  if (!foraDaSala.length) foraDaSala.push(...Array.from({ length: 40 }, () => novaPessoa(usados)))
+  return foraDaSala.splice(Math.floor(Math.random() * foraDaSala.length), 1)[0]
+}
+/** Quem fala: alguém da sala, com mais chance para os que falam muito. */
+function quemFala(exceto?: string): Pessoa {
+  if (naSala.length < 3) naSala.push(alguemDeFora())
+  const lista = naSala.filter((p) => p.nome !== exceto)
+  const total = lista.reduce((t, p) => t + p.peso, 0)
+  let r = Math.random() * total
+  for (const p of lista) { if ((r -= p.peso) <= 0) return p }
+  return lista[lista.length - 1]
+}
+/** Uma pessoa entra (ou sai) e aparece no chat. */
+function entra() {
+  const p = alguemDeFora()
+  naSala.push(p)
+  adicionar({ nome: p.nome, texto: 'entrou', apresentador: false, entrada: true })
+}
+function sai() {
+  // quem acabou de falar não vai embora no segundo seguinte
+  const agora = Date.now()
+  const podem = naSala.filter((p) => agora - (falouEm.get(p.nome) ?? 0) > 40_000)
+  if (naSala.length <= 12 || !podem.length) return
+  const p = sorteio(podem)
+  naSala = naSala.filter((x) => x !== p)
+  foraDaSala.push(p) // pode voltar mais tarde, como na vida real
+  adicionar({ nome: p.nome, texto: 'saiu', apresentador: false, entrada: true, saida: true })
 }
 
 /* ---------------------------------------------------------------- motor */
@@ -138,22 +129,43 @@ function adicionar(m: Omit<MensagemSimulada, 'id' | 'hora'>) {
   mudar({ mensagens: [...estado.mensagens, { ...m, id: `s${++contador}`, hora: Date.now() }].slice(-200) })
 }
 
+const evitar: string[] = []
+
 function proximaMensagem() {
   const ap = estado.apresentador || 'professor'
   const agora = Date.now()
   const noMomento = estado.momento && agora < fimMomento
   if (estado.momento && !noMomento) mudar({ momento: null })
-  let categoria: keyof typeof MODELOS
+  let categoria: Categoria
   const r = Math.random()
-  if (noMomento && estado.momento && estado.momento !== 'abertura' && estado.momento !== 'perguntas' && r < 0.75) categoria = estado.momento
-  else if ((noMomento && estado.momento === 'perguntas' && r < 0.75)) categoria = 'pergunta'
-  else if ((noMomento && estado.momento === 'abertura' && r < 0.8) || agora - inicio < 90000 && r < 0.55) categoria = 'saudacao'
-  else categoria = r < 0.45 ? 'reacao' : r < 0.7 ? 'pergunta' : r < 0.85 ? 'mercado' : 'saudacao'
-  // não repete a mesma frase nas últimas 12
-  let texto = ''
-  for (let i = 0; i < 6; i++) { texto = sorteio(MODELOS[categoria])(ap); if (!recentes.includes(texto)) break }
-  recentes.push(texto); if (recentes.length > 12) recentes.shift()
-  adicionar({ nome: sorteio(NOMES), texto: humanizar(texto), apresentador: false, entrada: false })
+  if (noMomento && estado.momento && estado.momento !== 'abertura' && estado.momento !== 'perguntas' && r < 0.72) categoria = estado.momento
+  else if (noMomento && estado.momento === 'perguntas' && r < 0.75) categoria = 'pergunta'
+  else if ((noMomento && estado.momento === 'abertura' && r < 0.8) || (agora - inicio < 90000 && r < 0.55)) categoria = 'saudacao'
+  else categoria = r < 0.34 ? 'reacao' : r < 0.5 ? 'giria' : r < 0.7 ? 'pergunta' : r < 0.85 ? 'mercado' : 'saudacao'
+
+  // de vez em quando alguém responde outra pessoa do chat ("@fulano ...")
+  const recente = ultimas.filter((u) => agora - u.em < 30_000)
+  if (recente.length && Math.random() < 0.1) {
+    const alvo = sorteio(recente)
+    const p = quemFala(alvo.nome)
+    const quemEra = naSala.find((x) => x.nome === alvo.nome) ?? foraDaSala.find((x) => x.nome === alvo.nome)
+    falar(p, respostaA(alvo.nome, alvo.categoria, p, quemEra?.ela), 'reacao')
+    return
+  }
+  const p = quemFala()
+  falar(p, mensagemDe(categoria, p, { ap, robos: robos(), periodo: periodo() }, evitar), categoria)
+
+  // a sala comemora junto: uns emojis seguidos de gente diferente
+  if ((categoria === 'meta' || (categoria === 'giria' && noMomento)) && Math.random() < 0.3) {
+    const n = 1 + Math.floor(Math.random() * 3)
+    for (let i = 1; i <= n; i++) window.setTimeout(() => { if (estado.ativa) falar(quemFala(), soEmoji(), 'reacao') }, 350 * i + Math.random() * 500)
+  }
+}
+
+function falar(p: Pessoa, texto: string, categoria: Categoria) {
+  falouEm.set(p.nome, Date.now())
+  ultimas.push({ nome: p.nome, categoria, em: Date.now() }); if (ultimas.length > 12) ultimas.shift()
+  adicionar({ nome: p.nome, texto, apresentador: false, entrada: false })
 }
 
 function agendarChat() {
@@ -164,12 +176,14 @@ function agendarChat() {
   const espera = -Math.log(1 - Math.random()) * (60000 / porMinuto) // chegada aleatória, como gente de verdade
   timerChat = window.setTimeout(() => {
     if (!estado.pausada) {
-      if (Math.random() < 0.12) adicionar({ nome: sorteio(NOMES), texto: 'entrou', apresentador: false, entrada: true })
-      else proximaMensagem()
+      proximaMensagem()
     }
     agendarChat()
   }, Math.min(8000, Math.max(250, espera)))
 }
+
+/** Chance de uma entrada ou saída virar linha no chat a cada passo (o número sempre muda; o chat não pode virar só isso). */
+const CHANCE_DE_AVISO: Record<Ritmo, number> = { calmo: 0.3, normal: 0.42, agitado: 0.55 }
 
 function passoDoPublico() {
   const alvo = estado.publicoAlvo
@@ -177,10 +191,19 @@ function passoDoPublico() {
   const ruido = (Math.random() - 0.5) * 2 * AMPLITUDE[estado.oscilacao] * alvo
   const proximo = Math.max(1, Math.round(atual + (alvo - atual) * 0.18 + ruido))
   mudar({ publicoAgora: proximo })
+  // "fulano entrou" / "fulano saiu" acompanham o número: subiu, alguém entra; caiu, alguém sai
+  const delta = proximo - atual
+  if (!delta || estado.pausada || Math.random() > CHANCE_DE_AVISO[estado.ritmo]) return
+  // nunca uma fila de "entrou/saiu": com as três últimas linhas sendo isso, quase sempre espera
+  const ultimas3 = estado.mensagens.slice(-3)
+  if (ultimas3.length === 3 && ultimas3.every((m) => m.entrada) && Math.random() < 0.85) return
+  const muitos = Math.abs(delta) > alvo * 0.03 && Math.random() < 0.3 ? 2 : 1
+  for (let i = 0; i < muitos; i++) window.setTimeout(() => { if (estado.ativa) (delta > 0 ? entra : sai)() }, i * (500 + Math.random() * 900))
 }
 
 export function iniciarSimulacao(apresentador: string): void {
   pararSimulacao()
+  montarPublico()
   inicio = Date.now()
   mudar({ ativa: true, pausada: false, apresentador, mensagens: [], momento: null, publicoAgora: Math.round(estado.publicoAlvo * 0.35) })
   timerPublico = window.setInterval(passoDoPublico, 2200)
