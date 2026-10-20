@@ -111,7 +111,8 @@ export function ChatDoTreino({ titulo = true }: { titulo?: boolean }) {
   }, [mensagens.length])
   useEffect(() => { const l = lista.current; if (l) l.scrollTop = l.scrollHeight }, [])
   const eu = t.apresentador
-  const pode = eu || (t.fase === 'conectada' && t.presente)
+  const fechado = !eu && !t.sim.chatAberto
+  const pode = eu || (t.fase === 'conectada' && t.presente && !fechado)
   const enviar = async () => {
     if (!texto.trim()) return
     if (eu) falarComoApresentador(texto); else await mandarNoTreino(texto)
@@ -122,7 +123,9 @@ export function ChatDoTreino({ titulo = true }: { titulo?: boolean }) {
       {titulo && <div className="tr-chat-topo"><h2>Chat ao vivo</h2></div>}
       <div className="av-mensagens" ref={lista} role="log" aria-live="off">
         {mensagens.length === 0 && <p className="av-chat-vazio">{(eu ? true : t.sim.ativa) ? 'O chat está começando…' : 'As mensagens aparecem aqui quando a transmissão começar.'}</p>}
-        {mensagens.map((m) => m.entrada ? (
+        {mensagens.map((m) => m.sistema ? (
+          <p key={m.id} className="tr-sistema" role="status">{m.texto}</p>
+        ) : m.entrada ? (
           <p key={m.id} className="tr-entrada">{m.nome} {m.saida ? 'saiu' : 'entrou'}</p>
         ) : (
           <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''} ${m.minha ? 'tr-minha' : ''}`}>
@@ -134,7 +137,7 @@ export function ChatDoTreino({ titulo = true }: { titulo?: boolean }) {
       <form className="av-escrever" onSubmit={(e) => { e.preventDefault(); void enviar() }}>
         <label htmlFor={`tr-chat-campo-${titulo ? 'p' : 'm'}`} className="av-oculto">Mensagem</label>
         <input id={`tr-chat-campo-${titulo ? 'p' : 'm'}`} value={texto} maxLength={500} autoComplete="off" enterKeyHint="send"
-          placeholder={eu ? 'Responda como apresentador' : pode ? 'Escreva para o apresentador' : 'O chat abre quando a transmissão começar'}
+          placeholder={eu ? 'Responda como apresentador' : fechado ? 'O chat está fechado agora' : pode ? 'Escreva para o apresentador' : 'O chat abre quando a transmissão começar'}
           disabled={!pode} onChange={(e) => setTexto(e.target.value)} />
         <button type="submit" disabled={!pode || !texto.trim()}>Enviar</button>
       </form>

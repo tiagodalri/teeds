@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CantoDaCamera } from '../../core/live/api'
 import {
-  ajustar, dispararMomento, falarComoApresentador, iniciarSimulacao, limparChat, pararSimulacao, useSimulacao,
+  abrirChatDoTreino, ajustar, dispararMomento, falarComoApresentador, iniciarSimulacao, limparChat, pararSimulacao, useSimulacao,
   type Momento, type Oscilacao, type Ritmo,
 } from '../../core/live/simulacao'
 import './aovivo.css'
@@ -187,6 +187,12 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
           {fonte('mic', 'Microfone', !!mic)}
         </div>
         <div className="av-mesa-acao">
+          {/* abre e fecha o chat para todos (público simulado e membros); o apresentador sempre escreve */}
+          <button className={`av-chave-chat ${sim.chatAberto ? 'on' : ''}`} aria-pressed={sim.chatAberto}
+            title={sim.chatAberto ? 'Fechar o chat: ninguém escreve, só você' : 'Abrir o chat para todos escreverem'}
+            onClick={() => abrirChatDoTreino(!sim.chatAberto)}>
+            <i aria-hidden />{sim.chatAberto ? 'Chat aberto' : 'Chat fechado'}
+          </button>
           {sim.ativa
             ? <button className="av-botao-encerrar" onClick={() => pararSimulacao()}>Encerrar simulação</button>
             : <button className="tr-botao-iniciar" onClick={comecar}><i aria-hidden />Começar simulação</button>}
@@ -246,7 +252,9 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
                     {sim.ativa ? 'O público está chegando…' : <>O chat ganha vida quando você começar a simulação.<button className="av-link" onClick={() => setAba('simulacao')}>Ajustar a sala antes</button></>}
                   </div>
                 )}
-                {sim.mensagens.map((m) => m.entrada ? (
+                {sim.mensagens.map((m) => m.sistema ? (
+                  <p key={m.id} className="tr-sistema" role="status">{m.texto}</p>
+                ) : m.entrada ? (
                   <p key={m.id} className="tr-entrada">{m.nome} {m.saida ? 'saiu' : 'entrou'}</p>
                 ) : (
                   <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''}`}>

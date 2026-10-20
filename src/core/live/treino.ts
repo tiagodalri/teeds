@@ -58,7 +58,7 @@ export interface EstadoDoTreino {
   camera: Track | null
   audios: Track[]
   canto: CantoDaCamera
-  sim: { ativa: boolean; publico: number; momento: Momento | null; pausada: boolean }
+  sim: { ativa: boolean; publico: number; momento: Momento | null; pausada: boolean; chatAberto: boolean }
   mensagens: MensagemSimulada[]
   somBloqueado: boolean
   /* o player fora da página */
@@ -85,7 +85,7 @@ function guardarPrefs() {
 const INICIAL: EstadoDoTreino = {
   fase: 'fora', erro: null, apresentador: false, meuNome: '', membros: 0, nomes: [],
   presente: false, quemApresenta: '', tela: null, camera: null, audios: [], canto: 'inf-dir',
-  sim: { ativa: false, publico: 0, momento: null, pausada: false }, mensagens: [], somBloqueado: false,
+  sim: { ativa: false, publico: 0, momento: null, pausada: false, chatAberto: true }, mensagens: [], somBloqueado: false,
   modo: 'palco', tamanho: 'M', cantoPlayer: 'inf-dir',
   local: { tela: null, camera: null, mic: null }, fundo: 'nenhum', aplicandoFundo: false,
 }
@@ -102,7 +102,7 @@ export const useTreino = () => useSyncExternalStore((f) => { ouvintes.add(f); re
 
 const TOPICO = 'treino'
 type Pacote =
-  | { t: 'estado'; ativa: boolean; publico: number; momento: Momento | null; pausada: boolean; canto: CantoDaCamera }
+  | { t: 'estado'; ativa: boolean; publico: number; momento: Momento | null; pausada: boolean; canto: CantoDaCamera; chatAberto?: boolean }
   | { t: 'msgs'; lista: MensagemSimulada[] }
   | { t: 'historico'; lista: MensagemSimulada[] }
   | { t: 'limpar' }
@@ -158,7 +158,7 @@ function atualizarSala() {
 
 function pacoteDeEstado(): Pacote {
   const s = simulacaoAgora()
-  return { t: 'estado', ativa: s.ativa, publico: s.publicoAgora, momento: s.momento, pausada: s.pausada, canto }
+  return { t: 'estado', ativa: s.ativa, publico: s.publicoAgora, momento: s.momento, pausada: s.pausada, canto, chatAberto: s.chatAberto }
 }
 
 /** Repassa à sala o que a simulação produziu (só as mensagens novas). */
@@ -279,7 +279,7 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Pro
         if (!ehApresentador(p)) return
         if (pacote.t === 'estado') {
           canto = pacote.canto
-          mudar({ canto: pacote.canto, sim: { ativa: pacote.ativa, publico: pacote.publico, momento: pacote.momento, pausada: pacote.pausada } })
+          mudar({ canto: pacote.canto, sim: { ativa: pacote.ativa, publico: pacote.publico, momento: pacote.momento, pausada: pacote.pausada, chatAberto: pacote.chatAberto !== false } })
         } else if (pacote.t === 'msgs') {
           const ja = new Set(estado.mensagens.map((m) => m.id))
           mudar({ mensagens: [...estado.mensagens, ...pacote.lista.filter((m) => !m.membro && !ja.has(m.id))].slice(-200) })
@@ -460,7 +460,7 @@ export function cantoNoTreino(c: CantoDaCamera): void {
 
 export async function mandarNoTreino(texto: string): Promise<void> {
   const t = texto.trim().slice(0, 500)
-  if (!t || !sala || estado.apresentador) return
+  if (!t || !sala || estado.apresentador || !estado.sim.chatAberto) return
   // aparece na minha tela na hora; vai só para quem transmite
   const minha: MensagemSimulada = { id: `eu-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, nome: estado.meuNome || 'Você', texto: t, apresentador: false, entrada: false, hora: Date.now(), membro: true, minha: true }
   mudar({ mensagens: [...estado.mensagens, minha].slice(-200) })

@@ -290,6 +290,8 @@ body.aovivo-lado .workspace-app { padding-right: 380px; }
 .tr-botao-iniciar i { width: 0; height: 0; border-style: solid; border-width: 6px 0 6px 10px; border-color: transparent transparent transparent currentColor; }
 .tr-momento { padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--primary-soft); color: var(--primary); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .tr-entrada { margin: 0; color: var(--muted); font-size: 11.5px; font-style: italic; }
+/* "O apresentador fechou o chat": aviso da sala, centrado */
+.tr-sistema { justify-self: center; margin: 4px 0; padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-alt); color: var(--muted); font-size: 11.5px; font-weight: 600; text-align: center; }
 
 .tr-painel {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px 22px;

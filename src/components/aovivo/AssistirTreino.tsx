@@ -120,7 +120,7 @@ export function LabAssistirTreino({ fora }: { fora?: ModoDoTreino } = {}) {
       simularTreino({
         fase: 'conectada', presente: true, quemApresenta: 'Tiago Dalri', apresentador: false, canto: 'inf-dir',
         tela: new LocalVideoTrack(canvas.captureStream(15).getVideoTracks()[0]),
-        sim: { ativa: true, publico: 712, momento: 'meta', pausada: false },
+        sim: { ativa: true, publico: 712, momento: 'meta', pausada: false, chatAberto: true },
         mensagens: [m(6, 'Ana', 'boa noite pessoal'), m(5, 'Tiago', 'Meta da sessão: 5%. Limite de perda: 3%.', { apresentador: true }),
           m(4, 'Bruno', 'bora!!! meta no bolso'), m(3, 'Carla', 'Como faço para definir o limite de perda?', { membro: true, minha: true }),
           m(2, 'Diego', 'disciplina demais'), m(1, 'Elaine', 'parabéns pela gestão')],

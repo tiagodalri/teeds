@@ -31,6 +31,8 @@ export interface MensagemSimulada {
   apresentador: boolean
   entrada: boolean
   hora: number
+  /** Aviso da sala ("O apresentador fechou o chat"), no meio do chat. */
+  sistema?: boolean
   /** Linha de "fulano saiu" (com `entrada`, é "fulano entrou"). */
   saida?: boolean
   /** Escrita de verdade por um membro do plano que está assistindo o ensaio. */
@@ -49,11 +51,13 @@ export interface EstadoDaSimulacao {
   apresentador: string
   momento: Momento | null
   mensagens: MensagemSimulada[]
+  /** O apresentador pode fechar o chat (20/10/2026): ninguém escreve, só ele. */
+  chatAberto: boolean
 }
 
 let estado: EstadoDaSimulacao = {
   ativa: false, pausada: false, publicoAlvo: 700, publicoAgora: 0, oscilacao: 'media', ritmo: 'normal',
-  apresentador: '', momento: null, mensagens: [],
+  apresentador: '', momento: null, mensagens: [], chatAberto: true,
 }
 const ouvintes = new Set<() => void>()
 const mudar = (p: Partial<EstadoDaSimulacao>) => { estado = { ...estado, ...p }; ouvintes.forEach((f) => f()) }
@@ -158,7 +162,7 @@ function proximaMensagem() {
   // a sala comemora junto: uns emojis seguidos de gente diferente
   if ((categoria === 'meta' || (categoria === 'giria' && noMomento)) && Math.random() < 0.3) {
     const n = 1 + Math.floor(Math.random() * 3)
-    for (let i = 1; i <= n; i++) window.setTimeout(() => { if (estado.ativa) falar(quemFala(), soEmoji(categoria === 'meta'), 'reacao') }, 350 * i + Math.random() * 500)
+    for (let i = 1; i <= n; i++) window.setTimeout(() => { if (estado.ativa && estado.chatAberto) falar(quemFala(), soEmoji(categoria === 'meta'), 'reacao') }, 350 * i + Math.random() * 500)
   }
 }
 
@@ -175,7 +179,8 @@ function agendarChat() {
   const porMinuto = TAXA[estado.ritmo] * (emMomento ? 2.5 : 1) * Math.min(1.6, Math.max(0.4, estado.publicoAgora / 700))
   const espera = -Math.log(1 - Math.random()) * (60000 / porMinuto) // chegada aleatória, como gente de verdade
   timerChat = window.setTimeout(() => {
-    if (!estado.pausada) {
+    // chat fechado: o público não escreve (as entradas e saídas continuam)
+    if (!estado.pausada && estado.chatAberto) {
       proximaMensagem()
     }
     agendarChat()
@@ -234,8 +239,16 @@ export function falarComoApresentador(texto: string): void {
 
 export const limparChat = () => mudar({ mensagens: [] })
 
+/** Abre ou fecha o chat da sala de treino; a sala vê o aviso, como numa live de verdade. */
+export function abrirChatDoTreino(aberto: boolean): void {
+  if (estado.chatAberto === aberto) return
+  mudar({ chatAberto: aberto })
+  adicionar({ nome: '', texto: aberto ? 'O apresentador abriu o chat' : 'O apresentador fechou o chat', apresentador: false, entrada: false, sistema: true })
+}
+
 /** Mensagem de verdade de um membro que assiste o ensaio: entra no chat junto com as simuladas. */
 export function mensagemDeMembro(nome: string, texto: string): void {
+  if (!estado.chatAberto) return // chat fechado: nem a mensagem de membro entra
   const t = texto.trim().slice(0, 500)
   if (t) adicionar({ nome: nome.slice(0, 30) || 'Membro', texto: t, apresentador: false, entrada: false, membro: true })
 }
