@@ -52,6 +52,7 @@ const LabRecorte = lazy(() => import('./components/aovivo/LabRecorte'))
 const TesteAtraso = lazy(() => import('./components/aovivo/TesteAtraso'))
 const LabGraficoPro = lazy(() => import('./components/grafico/LabGraficoPro'))
 const LabAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.LabAoVivo })))
+const LabInicio = lazy(() => import('./components/inicio/LabInicio'))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
 import { DerivDesconectada } from './components/DerivDesconectada'
 
@@ -173,6 +174,8 @@ function SemDeriv() {
 
 function Laboratorio() {
   const qual = new URLSearchParams(location.search).get('tela') ?? 'cabine'
+  // a home vem com a casca inteira da plataforma: fora da moldura do laboratório
+  if (qual === 'inicio') return <Suspense fallback={null}><LabInicio /></Suspense>
   return (
     <div className="app workspace-app" data-laboratorio={qual}>
       <main className="ger rob robot-workspace tem-acompanhamento">
@@ -208,6 +211,7 @@ function Laboratorio() {
         {/* ?tela=treino: a sala de treino (público e chat simulados). */}
         {qual === 'treino' && <Suspense fallback={null}><SalaDeTreino apresentador="Tiago" aoSair={() => undefined} /></Suspense>}
         {/* ?tela=treino-membro: o membro do plano assistindo o ensaio do admin. */}
+        {/* ?tela=inicio&perfil=experiente|novo&tema=escuro|claro: a home, dentro da casca da plataforma */}
         {qual === 'treino-membro' && <Suspense fallback={null}><LabAssistirTreino /></Suspense>}
         {qual === 'treino-player' && <Suspense fallback={null}><LabAssistirTreino fora={(new URLSearchParams(location.search).get('modo') ?? 'flutuante') as never} /></Suspense>}
         {/* ?tela=selo-tv: o selo vermelho do topo, o aviso "começou agora" e a tag do menu. */}

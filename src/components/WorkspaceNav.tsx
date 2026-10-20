@@ -3,9 +3,10 @@ import { Brand } from './Brand'
 import { MARCA } from '../marca'
 import './workspace.css'
 
-export type WorkspacePage = 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo' | 'noticias'
-export const PAGE_NAMES: Record<WorkspacePage, string> = { operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', ...(MARCA.menu?.nomes ?? {}) }
+export type WorkspacePage = 'inicio' | 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo' | 'noticias'
+export const PAGE_NAMES: Record<WorkspacePage, string> = { inicio: 'Início', operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', ...(MARCA.menu?.nomes ?? {}) }
 const paths: Record<string, string> = {
+  inicio: 'M3 11l9-7 9 7M5 9.5V20h5v-6h4v6h5V9.5',
   operar: 'M3 17l5-6 4 3 9-11M16 3h5v5', robos: 'M5 7h14v13H5zM12 3v4M8 12h1m6 0h1M9 16h6',
   assistente: 'M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z',
   gerenciamento: 'M4 20V10m8 10V4m8 16v-7',
@@ -19,7 +20,7 @@ const paths: Record<string, string> = {
   // a marca pode trocar o desenho de um item (ver `menu` em marcas.ts)
   ...(MARCA.menu?.icones ?? {}),
 }
-export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mostrarAoVivo = true }: { page: WorkspacePage; admin: boolean; onNavigate: (page: WorkspacePage) => void; aoVivoAgora?: boolean; mostrarAoVivo?: boolean }) {
+export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mostrarAoVivo = true, mostrarInicio = false }: { page: WorkspacePage; admin: boolean; onNavigate: (page: WorkspacePage) => void; aoVivoAgora?: boolean; mostrarAoVivo?: boolean; mostrarInicio?: boolean }) {
   const [compact, setCompact] = useState(false)
   const [open, setOpen] = useState(false)
   const navigate = (next: WorkspacePage) => { onNavigate(next); setOpen(false) }
@@ -40,6 +41,8 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mos
             quem entra na plataforma vem para ligar um robô; operar na mão é a
             exceção. O id da tela continua 'operar' de propósito — trocar o id
             quebraria o que já está gravado em sessões e links. */}
+        {/* a home (20/10/2026): primeiro item, quando a marca liga */}
+        {mostrarInicio && item('inicio')}
         <p className="workspace-label">Operações</p>
         {item('robos')}{item('operar')}
         <p className="workspace-label">Ferramentas</p>{item('gerenciamento')}{item('assistente')}
