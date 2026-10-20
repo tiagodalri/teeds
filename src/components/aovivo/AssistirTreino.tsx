@@ -110,10 +110,6 @@ export function AssistirTreino({ sessao, conectar = true, nomeConvidado = '' }: 
               disabled={!conectada || !t.presente} onChange={(e) => setTexto(e.target.value)} />
             <button type="submit" disabled={!conectada || !t.presente || !texto.trim()}>Enviar</button>
           </form>
-          <p className="tr-privado">
-            <svg viewBox="0 0 16 16" aria-hidden><rect x="3" y="7" width="10" height="7" rx="1.6" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg>
-            Só o apresentador vê o que você escreve.
-          </p>
         </section>
       </div>
     </div>
