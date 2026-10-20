@@ -57,6 +57,11 @@ const ICONE = {
   check: 'M5 12.5l4.2 4.2L19 7',
   seta: 'M9 6l6 6-6 6',
 }
+/** "Raptor, Falcon, Legacy, Gulf e Phenom": os robôs da marca, sem o prefixo. */
+const nomesDosRobos = () => {
+  const nomes = MARCA.robos.map((id) => (MARCA.nomesDosRobos?.[id] ?? id).replace(/^(GF|GlobalFly|OMNI)\s+/i, ''))
+  return nomes.length > 1 ? `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}` : nomes.join('')
+}
 const Icone = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden="true"><path d={d} /></svg>
 
 export function InicioPanel({ d, aoIr, aoConectar }: { d: DadosDoInicio; aoIr: (tela: WorkspacePage) => void; aoConectar?: () => void }) {
@@ -226,7 +231,7 @@ export function InicioPanel({ d, aoIr, aoConectar }: { d: DadosDoInicio; aoIr: (
             <button type="button" className="in-ia nova" onClick={() => aoIr('robos')}>
               <span className="in-ia-mais" aria-hidden="true">+</span>
               <b>{d.robos.length ? 'Ligar outra I.A.' : 'Escolha a sua I.A.'}</b>
-              <small>Raptor, Falcon, Legacy, Gulf e Phenom</small>
+              <small>{nomesDosRobos()}</small>
             </button>
           </div>
         </section>
