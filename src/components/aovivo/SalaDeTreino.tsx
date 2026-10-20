@@ -84,7 +84,7 @@ export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
           ? <button className="av-botao-whats" onClick={() => void navigator.share({ text: texto }).catch(() => undefined)}>Compartilhar</button>
           : <a className="av-botao-whats" href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
       </div>
-      <p className="tr-link-nota">Só membros do plano de treino (e administradores) entram, com a conta deles. Eles assistem o seu ensaio como alunos, com o selo "Simulação" sempre na imagem.</p>
+      <p className="tr-link-nota">Só membros GF Member (e administradores) entram, com a conta deles. Eles assistem o seu ensaio como alunos, com o selo "Simulação" sempre na imagem.</p>
     </div>
   )
 }
@@ -367,7 +367,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
                 <h4>Membros assistindo</h4>
                 {tr.nomes.length > 0
                   ? <div className="av-nomes">{tr.nomes.map((n, i) => <span key={i}>{n}</span>)}</div>
-                  : <span className="tr-legenda">Ninguém ainda. Mande o link abaixo para os membros do plano de treino.</span>}
+                  : <span className="tr-legenda">Ninguém ainda. Mande o link abaixo para os membros GF Member.</span>}
                 <LinkDoTreino compacto />
               </section>
             </div>

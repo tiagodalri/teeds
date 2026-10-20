@@ -1,12 +1,18 @@
 /**
  * Sala de treino transmitida (19/10/2026): o admin ensaia a live com público
- * e chat simulados, e os membros do plano "treino" assistem como se fossem
+ * e chat simulados, e os membros do plano GF Member assistem como se fossem
  * alunos. Pedido do Tiago: só admin inicia; o link é para os membros verem.
+ *
+ * Chat (20/10/2026, pedido do Tiago): um GF Member NÃO vê o que os outros
+ * membros escrevem. Vê o público simulado, o apresentador e as próprias
+ * mensagens. A mensagem do membro vai só para quem transmite (destino
+ * explícito no LiveKit) e o repasse da simulação deixa de fora as mensagens
+ * de membros; quem assiste ainda descarta qualquer mensagem marcada como de
+ * membro que chegue (defesa dupla, caso um navegador antigo repasse).
  *
  * Vai por uma sala própria do LiveKit (`treino-<marca>`), separada das lives
  * de verdade. O ingresso vem da função `live-token` (acao 'treino'), que só
- * aceita admin da marca e membro do plano; na fase de testes (link público
- * ligado), qualquer pessoa com o link assiste e escreve, mesmo sem conta.
+ * aceita admin da marca e GF Member (o link público não vale aqui).
  *
  * O motor da simulação roda no navegador do admin (`simulacao.ts`); este
  * módulo repassa à sala o que ele produz (mensagens, público, momento) e
@@ -120,7 +126,10 @@ function repassar() {
   const s = simulacaoAgora()
   if (s.mensagens.length === 0 && enviadas.size > 0) { enviadas = new Set(); void enviar({ t: 'limpar' }) }
   const novas = s.mensagens.filter((m) => !enviadas.has(m.id))
-  if (novas.length) { novas.forEach((m) => enviadas.add(m.id)); void enviar({ t: 'msgs', lista: novas }) }
+  novas.forEach((m) => enviadas.add(m.id))
+  // mensagem de membro fica só com o apresentador: os outros membros não a recebem
+  const publicas = novas.filter((m) => !m.membro)
+  if (publicas.length) void enviar({ t: 'msgs', lista: publicas })
 }
 
 function comecarARepassar() {
@@ -169,7 +178,7 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Pro
         atualizarSala()
         // quem chega no meio recebe as últimas mensagens e o estado
         if (estado.apresentador) {
-          void enviar({ t: 'historico', lista: simulacaoAgora().mensagens.slice(-60) }, [p.identity])
+          void enviar({ t: 'historico', lista: simulacaoAgora().mensagens.filter((m) => !m.membro).slice(-60) }, [p.identity])
           void enviar(pacoteDeEstado(), [p.identity])
         }
       })
@@ -192,9 +201,11 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Pro
           mudar({ canto: pacote.canto, sim: { ativa: pacote.ativa, publico: pacote.publico, momento: pacote.momento, pausada: pacote.pausada } })
         } else if (pacote.t === 'msgs') {
           const ja = new Set(estado.mensagens.map((m) => m.id))
-          mudar({ mensagens: [...estado.mensagens, ...pacote.lista.filter((m) => !ja.has(m.id))].slice(-200) })
+          mudar({ mensagens: [...estado.mensagens, ...pacote.lista.filter((m) => !m.membro && !ja.has(m.id))].slice(-200) })
         } else if (pacote.t === 'historico') {
-          mudar({ mensagens: pacote.lista.slice(-200) })
+          // o histórico chega sem as mensagens de membros; as minhas, já na tela, ficam
+          const minhas = estado.mensagens.filter((m) => m.minha)
+          mudar({ mensagens: [...pacote.lista.filter((m) => !m.membro), ...minhas].sort((a, b) => a.hora - b.hora).slice(-200) })
         } else if (pacote.t === 'limpar') {
           mudar({ mensagens: [] })
         }
@@ -255,7 +266,11 @@ export function cantoNoTreino(c: CantoDaCamera): void {
 export async function mandarNoTreino(texto: string): Promise<void> {
   const t = texto.trim().slice(0, 500)
   if (!t || !sala || estado.apresentador) return
-  await enviar({ t: 'membro', texto: t })
+  // aparece na minha tela na hora; vai só para quem transmite
+  const minha: MensagemSimulada = { id: `eu-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, nome: estado.meuNome || 'Você', texto: t, apresentador: false, entrada: false, hora: Date.now(), membro: true, minha: true }
+  mudar({ mensagens: [...estado.mensagens, minha].slice(-200) })
+  const apresentadores = [...sala.remoteParticipants.values()].filter(ehApresentador).map((p) => p.identity)
+  if (apresentadores.length) await enviar({ t: 'membro', texto: t }, apresentadores)
 }
 
 /** Só para o laboratório: a visão de quem assiste, sem conectar. */

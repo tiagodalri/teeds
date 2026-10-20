@@ -27,6 +27,8 @@ export interface MensagemSimulada {
   hora: number
   /** Escrita de verdade por um membro do plano que está assistindo o ensaio. */
   membro?: boolean
+  /** Na tela de quem assiste: a mensagem que esta própria pessoa escreveu. */
+  minha?: boolean
 }
 
 export interface EstadoDaSimulacao {

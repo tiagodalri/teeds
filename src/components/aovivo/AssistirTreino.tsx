@@ -54,7 +54,7 @@ export function AssistirTreino({ sessao, conectar = true, nomeConvidado = '' }: 
     <div className="tr-assistir">
       <div className="tr-assistir-aviso" role="note">
         <span className="tr-chip">Sala de treino</span>
-        <p>Você está assistindo um <b>ensaio</b>, como se fosse aluno. O público e o chat desta sala são simulados; as mensagens marcadas "membro" são de pessoas de verdade.</p>
+        <p>Você está assistindo um <b>ensaio</b>, como se fosse aluno. O público e o chat desta sala são simulados. O que você escreve vai direto para o apresentador; as mensagens dos outros membros não aparecem aqui.</p>
       </div>
 
       {t.fase === 'erro' && <p className="av-erro" role="alert">{t.erro}</p>}
@@ -84,7 +84,7 @@ export function AssistirTreino({ sessao, conectar = true, nomeConvidado = '' }: 
               <p key={m.id} className="tr-entrada">{m.nome} entrou</p>
             ) : (
               <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''}`}>
-                <p><b>{m.nome}{m.apresentador && <em>apresentador</em>}{m.membro && <em className="tr-tag-membro">membro</em>}</b> {m.texto}</p>
+                <p><b>{m.nome}{m.apresentador && <em>apresentador</em>}{m.minha ? <em className="tr-tag-membro">você</em> : m.membro && <em className="tr-tag-membro">membro</em>}</b> {m.texto}</p>
                 <time>{hora(m.hora)}</time>
               </div>
             ))}
@@ -116,14 +116,14 @@ export function LabAssistirTreino() {
     desenhar(); const t = window.setInterval(desenhar, 66)
     void import('livekit-client').then(({ LocalVideoTrack }) => {
       const agora = Date.now()
-      const m = (min: number, nome: string, texto: string, extra: Partial<{ apresentador: boolean; membro: boolean }> = {}) =>
+      const m = (min: number, nome: string, texto: string, extra: Partial<{ apresentador: boolean; membro: boolean; minha: boolean }> = {}) =>
         ({ id: `${nome}${min}`, nome, texto, apresentador: false, entrada: false, hora: agora - min * 60000, ...extra })
       simularTreino({
         fase: 'conectada', presente: true, apresentador: false, canto: 'inf-dir',
         tela: new LocalVideoTrack(canvas.captureStream(15).getVideoTracks()[0]),
         sim: { ativa: true, publico: 712, momento: 'meta', pausada: false },
         mensagens: [m(6, 'Ana', 'boa noite pessoal'), m(5, 'Tiago', 'Meta da sessão: 5%. Limite de perda: 3%.', { apresentador: true }),
-          m(4, 'Bruno', 'bora!!! meta no bolso'), m(3, 'Carla', 'Como faço para definir o limite de perda?', { membro: true }),
+          m(4, 'Bruno', 'bora!!! meta no bolso'), m(3, 'Carla', 'Como faço para definir o limite de perda?', { membro: true, minha: true }),
           m(2, 'Diego', 'disciplina demais'), m(1, 'Elaine', 'parabéns pela gestão')],
       })
     })
