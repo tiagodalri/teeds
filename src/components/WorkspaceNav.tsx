@@ -19,7 +19,7 @@ const paths: Record<string, string> = {
   // a marca pode trocar o desenho de um item (ver `menu` em marcas.ts)
   ...(MARCA.menu?.icones ?? {}),
 }
-export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false }: { page: WorkspacePage; admin: boolean; onNavigate: (page: WorkspacePage) => void; aoVivoAgora?: boolean }) {
+export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mostrarAoVivo = true }: { page: WorkspacePage; admin: boolean; onNavigate: (page: WorkspacePage) => void; aoVivoAgora?: boolean; mostrarAoVivo?: boolean }) {
   const [compact, setCompact] = useState(false)
   const [open, setOpen] = useState(false)
   const navigate = (next: WorkspacePage) => { onNavigate(next); setOpen(false) }
@@ -43,7 +43,7 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false }: {
         <p className="workspace-label">Operações</p>
         {item('robos')}{item('operar')}
         <p className="workspace-label">Ferramentas</p>{item('gerenciamento')}{item('assistente')}
-        <p className="workspace-label">Explore</p>{MARCA.aoVivo && item('aovivo')}{MARCA.noticias && item('noticias')}{item('marketplace')}{item('aulas')}
+        <p className="workspace-label">Explore</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{MARCA.noticias && item('noticias')}{item('marketplace')}{item('aulas')}
         {admin && <div className="workspace-admin">{item('gestao')}</div>}
       </nav>
       <button className="workspace-collapse" onClick={() => setCompact(!compact)} aria-label={compact ? 'Expandir menu' : 'Recolher menu'} aria-expanded={!compact}>{compact ? '»' : '«'}<span className="workspace-label"> Recolher menu</span></button>

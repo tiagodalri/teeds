@@ -20,3 +20,5 @@ const escolhida =
     : undefined
 
 export const MARCA: Marca = marcaPorId(escolhida)
+/** As lives de verdade estão ligadas nesta marca? (a sala de treino depende só de `aoVivo`) */
+export const LIVES_AO_VIVO = !!MARCA.aoVivo && MARCA.livesAoVivo !== false

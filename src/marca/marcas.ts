@@ -96,6 +96,13 @@ export interface Marca {
    */
   aoVivo?: boolean
   /**
+   * As lives de verdade (aba "Transmissão ao vivo", estúdio, convite, player).
+   * Com `false`, a área "Ao vivo" é só a sala de treino (simulação) e o menu
+   * aparece só para admin e GF Member. Desligadas na GlobalFly em 20/10/2026,
+   * a pedido do Tiago, para focar na sala de simulação; religar = tirar a linha.
+   */
+  livesAoVivo?: boolean
+  /**
    * Nome dos ativos sem a palavra "Volatility" ("75 Index", "10 (1s) Index").
    * Pedido do Tiago em 19/10/2026 para a GlobalFly; as outras marcas mostram
    * o nome da Deriv como sempre.
@@ -346,6 +353,7 @@ export const MARCAS: Record<string, Marca> = {
     // distingue é o emblema. Sem setas literais (pág. 18 e 20).
     appNativo: true,
     aoVivo: true,
+    livesAoVivo: false,
     ativosSemVolatility: true,
     iconesDeAtivos: true,
     indicesCompletos: true,

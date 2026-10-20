@@ -42,7 +42,7 @@ import { DerivDesconectada } from './components/DerivDesconectada'
 import type { Granularity } from './core/deriv/types'
 import { formatPrice } from './core/chart/scales'
 import { buyFromProposal, requestProposal, sellContract } from './core/deriv/trading'
-import { MARCA } from './marca'
+import { LIVES_AO_VIVO, MARCA } from './marca'
 import { IconeFechar } from './components/IconeFechar'
 import { usePeriodos } from './core/chart/periodos'
 import { conviteRecebido, liveNoAr, podeTreinar, treinoNoAr, treinoPedido, type Live, type TreinoNoAr } from './core/live/api'
@@ -289,7 +289,7 @@ export default function App() {
   const playerAoVivo = usePlayerAtivo()
   const treinoAtivo = useTreinoAtivo()
   useEffect(() => {
-    if (!MARCA.aoVivo || !teeds.sessao) { setLiveAgora(null); return }
+    if (!LIVES_AO_VIVO || !teeds.sessao) { setLiveAgora(null); return }
     const sessao = teeds.sessao
     let vivo = true
     const ver = () => {
@@ -359,13 +359,25 @@ export default function App() {
     }
   }, [teeds.sessao?.usuario.id, admin]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (tela === 'aovivo') setAvisoTreino(false) }, [tela])
+  // Com as lives desligadas, o "Ao vivo" é só a sala de treino: aparece para admin e GF Member
+  const [membroTreino, setMembroTreino] = useState<boolean | null>(null)
+  useEffect(() => {
+    if (!MARCA.aoVivo || LIVES_AO_VIVO || !teeds.sessao) { setMembroTreino(null); return }
+    let vivo = true
+    void podeTreinar(teeds.sessao).then((m) => { if (vivo) setMembroTreino(m) })
+    return () => { vivo = false }
+  }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const mostrarAoVivo = LIVES_AO_VIVO || admin === true || membroTreino === true
+  useEffect(() => {
+    if (!LIVES_AO_VIVO && tela === 'aovivo' && admin === false && membroTreino === false) setTela('operar')
+  }, [tela, admin, membroTreino])
 
   const telaVeioDoVoltar = useRef(false)
   useEffect(() => {
     if (!MARCA.appNativo && !MARCA.aoVivo) return
     const u = new URL(location.href)
     // Link de convite da live (?aovivo=<código>): abre o "Ao vivo", mesmo depois do login.
-    const convite = MARCA.aoVivo ? u.searchParams.get('aovivo') : null
+    const convite = LIVES_AO_VIVO ? u.searchParams.get('aovivo') : null
     if (convite) { try { sessionStorage.setItem(`${MARCA.id}.aovivo.convite`, convite.slice(0, 12)) } catch { /* sem armazenamento */ } }
     // Link da sala de treino (?treino=1): abre o "Ao vivo" já dentro da sala de treino.
     const treino = MARCA.aoVivo && u.searchParams.has('treino')
@@ -670,7 +682,7 @@ export default function App() {
   }
 
   if (teeds.status === 'deslogado') {
-    const convite = MARCA.aoVivo && !querLogin ? conviteRecebido() : null
+    const convite = LIVES_AO_VIVO && !querLogin ? conviteRecebido() : null
     const treinoSemConta = MARCA.aoVivo && !querLogin && treinoPedido()
     if (convite || treinoSemConta) {
       return <Suspense fallback={null}><Convidado codigo={convite} treino={treinoSemConta} aoEntrarNaConta={() => setQuerLogin(true)} /></Suspense>
@@ -705,13 +717,13 @@ export default function App() {
 
   return (
     <div className="app workspace-app">
-      <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} onNavigate={next => {
+      <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} onNavigate={next => {
         setVerPerfil(false)
         if (next === 'assistente') abrirAssistente()
         else setTela(next)
       }} />
       <header className="topbar">
-        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? 'Transmissões com a equipe, em tempo real' : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : 'Seu espaço de trabalho'}</span></div>
+        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : 'Seu espaço de trabalho'}</span></div>
 
         <div className="topbar-right">
           {!derivPronta && (
