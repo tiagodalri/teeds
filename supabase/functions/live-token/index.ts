@@ -16,6 +16,9 @@
 // do link público na sala de treino (o link público segue valendo só para as
 // lives). Quem assiste vê sempre que o público e o chat são simulados.
 // v8 (20/10/2026): o GF Member não entra em live nenhuma, nem como convidado.
+// v9 (20/10/2026): só quem transmite (admin) publica câmera, microfone e tela;
+// o resto só manda mensagem. Ninguém muda o próprio "crachá" (metadata), que
+// é o que diz quem é o apresentador.
 //
 // O LiveKit roda no nosso servidor (código aberto, sem conta em serviço de
 // fora). Endereço e chaves ficam na tabela `config_servicos`, que só a chave
@@ -136,7 +139,7 @@ Deno.serve(async (req) => {
       metadata: JSON.stringify({ moderador: admin, treino: true }),
       video: {
         room: sala, roomJoin: true, canSubscribe: true, canPublishData: true,
-        canPublish: admin, roomAdmin: admin,
+        canPublish: admin, roomAdmin: admin, canUpdateOwnMetadata: false,
         ...(admin ? { canPublishSources: ['camera', 'microphone', 'screen_share', 'screen_share_audio'] } : {}),
       },
     })
@@ -166,7 +169,7 @@ Deno.serve(async (req) => {
     const ingresso = await assinar({
       iss: LK_KEY, sub: identidadeDada ?? `convidado-${crypto.randomUUID().slice(0, 12)}`, name: nome, nbf: agora, exp: agora + 4 * 3600,
       metadata: JSON.stringify({ moderador: false, convidado: true }),
-      video: { room: l.sala, roomJoin: true, canSubscribe: true, canPublish: false, canPublishData: true },
+      video: { room: l.sala, roomJoin: true, canSubscribe: true, canPublish: false, canPublishData: true, canUpdateOwnMetadata: false },
     })
     // as últimas mensagens, para quem entra no meio (o convidado não lê a tabela)
     const historico = await servico<unknown[]>(`/rest/v1/live_mensagens?select=id,user_id,nome,texto,do_moderador,fixada,apagada,criada_em&live_id=eq.${l.id}&apagada=is.false&order=criada_em.desc&limit=60`).catch(() => [])
@@ -218,7 +221,7 @@ Deno.serve(async (req) => {
       metadata: JSON.stringify({ moderador: admin }),
       video: {
         room: live.sala, roomJoin: true, canSubscribe: true,
-        canPublish: admin, canPublishData: !silenciado, roomAdmin: admin,
+        canPublish: admin, canPublishData: !silenciado, roomAdmin: admin, canUpdateOwnMetadata: false,
         ...(admin ? { canPublishSources: ['camera', 'microphone', 'screen_share', 'screen_share_audio'] } : {}),
       },
     })

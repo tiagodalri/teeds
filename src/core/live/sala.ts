@@ -277,6 +277,8 @@ async function conectar(live: Live, pedir: () => Promise<Ingresso>, historicoDe:
         let pacote: Pacote
         try { pacote = JSON.parse(new TextDecoder().decode(dados)) } catch { return }
         if (pacote.t === 'msg') {
+          // chat fechado pelo moderador: mensagem de participante não entra (nem forçada por fora)
+          if (estado.live?.chatAberto === false && !ehModerador(p)) return
           receber({ id: pacote.id, userId: p.identity, nome: p.name || 'Aluno', texto: String(pacote.texto).slice(0, 500), doModerador: ehModerador(p), fixada: false, apagada: false, criadaEm: pacote.ts })
         } else if (pacote.t === 'voto') {
           if (estado.moderador) registrarVoto(p.identity, pacote.id, pacote.opcao)
