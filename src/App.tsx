@@ -47,12 +47,13 @@ import { IconeFechar } from './components/IconeFechar'
 import { usePeriodos } from './core/chart/periodos'
 import { conviteRecebido, liveNoAr, podeTreinar, treinoNoAr, treinoPedido, type Live, type TreinoNoAr } from './core/live/api'
 import { IconeAtivo } from './components/IconeAtivo'
-import { usePlayerAtivo } from './core/live/presenca'
+import { usePlayerAtivo, useTreinoAtivo } from './core/live/presenca'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
 // quando a pessoa abre a página ou entra numa live.
 const AoVivoPage = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.AoVivoPage })))
 const MercadoPanel = lazy(() => import('./components/MercadoPanel').then((m) => ({ default: m.MercadoPanel })))
+const PlayerDoTreino = lazy(() => import('./components/aovivo/PlayerDoTreino'))
 const PlayerAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.PlayerGlobal })))
 // Gráfico profissional (KLineChart): só baixa para quem vê (hoje, admin da GlobalFly).
 const GraficoPro = lazy(() => import('./components/grafico/GraficoPro').then((m) => ({ default: m.GraficoPro })))
@@ -285,6 +286,7 @@ export default function App() {
   const [querLogin, setQuerLogin] = useState(false)
   useEffect(() => { if (!avisoLive) return; const t = window.setTimeout(() => setAvisoLive(null), 20000); return () => window.clearTimeout(t) }, [avisoLive])
   const playerAoVivo = usePlayerAtivo()
+  const treinoAtivo = useTreinoAtivo()
   useEffect(() => {
     if (!MARCA.aoVivo || !teeds.sessao) { setLiveAgora(null); return }
     const sessao = teeds.sessao
@@ -327,6 +329,8 @@ export default function App() {
     }
     void podeTreinar(sessao).then((membro) => {
       if (!vivo || !membro) return
+      // a sala de treino já fica baixada: clicar em "Entrar" abre na hora
+      void import('./components/aovivo/AoVivo').catch(() => undefined)
       ver()
       t = window.setInterval(ver, 15000)
     })
@@ -721,7 +725,7 @@ export default function App() {
               <i aria-hidden="true" />Ao vivo
             </button>
           )}
-          {MARCA.aoVivo && !liveAgora && treinoAgora && tela !== 'aovivo' && (
+          {MARCA.aoVivo && !liveAgora && treinoAgora && !treinoAtivo && tela !== 'aovivo' && (
             <button className="selo-tv" onClick={() => setTela('aovivo')} title="Sala de treino ao vivo agora"
               aria-label="Sala de treino ao vivo agora. Entrar na sala">
               <i aria-hidden="true" />Ao vivo
@@ -836,7 +840,7 @@ export default function App() {
           <button className="aviso-tv-fechar" onClick={() => setAvisoLive(null)} aria-label="Fechar aviso"><IconeFechar /></button>
         </div>
       )}
-      {MARCA.aoVivo && treinoAgora && avisoTreino && tela !== 'aovivo' && (
+      {MARCA.aoVivo && treinoAgora && avisoTreino && !treinoAtivo && tela !== 'aovivo' && (
         <div className="aviso-tv aviso-treino" role="status">
           <span className="aviso-tv-selo"><i aria-hidden="true" />Ao vivo</span>
           <button className="aviso-treino-texto" onClick={() => { setAvisoTreino(false); setTela('aovivo') }}>
@@ -846,6 +850,7 @@ export default function App() {
           <button className="aviso-tv-fechar" onClick={() => setAvisoTreino(false)} aria-label="Fechar aviso"><IconeFechar /></button>
         </div>
       )}
+      {MARCA.aoVivo && treinoAtivo && <Suspense fallback={null}><PlayerDoTreino naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
       {MARCA.aoVivo && playerAoVivo && <Suspense fallback={null}><PlayerAoVivo naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
       {tela === 'robos' || tela === 'assistente' ? null : tela === 'aovivo' && MARCA.aoVivo ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo a transmissão…</div></div>}><AoVivoPage sessao={teeds.sessao} admin={admin === true} /></Suspense>

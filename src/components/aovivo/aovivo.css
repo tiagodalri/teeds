@@ -34,7 +34,7 @@
 .av-aviso-topo { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); padding: 5px 10px; border-radius: 8px; background: rgba(0,0,0,.7); color: #fff; font-size: 12px; }
 .av-selo {
   position: absolute; z-index: 2; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 6px;
-  padding: 4px 9px; border-radius: 6px; background: var(--down); color: #fff;
+  padding: 4px 9px; border-radius: 6px; background: var(--ao-vivo, #E5383B); color: #fff;
   font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
 }
 .av-selo i, .av-ponto { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: av-pulsa 1.6s ease-in-out infinite; }
@@ -118,7 +118,7 @@
   display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px; border-radius: 8px;
   font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap;
 }
-.av-chip-vivo { background: var(--down); color: #fff; }
+.av-chip-vivo { background: var(--ao-vivo, #E5383B); color: #fff; }
 .av-chip-vivo i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: av-pulsa 1.6s ease-in-out infinite; }
 .av-chip-ensaio { border: 1px dashed var(--border); color: var(--muted); }
 .av-cronometro { font-family: var(--fonte-dados, ui-monospace, monospace); font-variant-numeric: tabular-nums; letter-spacing: 0; }
@@ -255,7 +255,7 @@ body.aovivo-lado .workspace-app { padding-right: 380px; }
   height: 38px; padding: 0 6px 0 14px; border-radius: 19px; background: #04080f; color: #e8eef5; font-size: 12.5px;
   box-shadow: 0 14px 30px -14px rgba(0, 0, 0, .8);
 }
-.av-pilula .av-ponto { color: var(--down); }
+.av-pilula .av-ponto { color: var(--ao-vivo, #E5383B); }
 .av-pilula button { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 50%; background: rgba(255,255,255,.1); color: inherit; cursor: pointer; }
 
 /* a barra da miniatura (celular): chat, tamanho, tela grande, só áudio, sair; fora da imagem, para ela ficar limpa */
@@ -276,6 +276,9 @@ body.aovivo-lado .workspace-app { padding-right: 380px; }
   font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-variant-numeric: tabular-nums;
 }
 .tr-selo i { width: 6px; height: 6px; border-radius: 50%; background: var(--gf-ouro, #B78D39); }
+/* no player pequeno (flutuante, miniatura, ao lado) o selo encolhe junto */
+.av-palco.compacto .tr-selo { top: 6px; left: 6px; height: 20px; padding: 0 7px; gap: 5px; border-radius: 6px; font-size: 9px; }
+.av-palco.compacto .tr-selo i { width: 5px; height: 5px; }
 .tr-sala .av-camera.canto-sup-esq { top: calc(4% + 32px); }
 .tr-chip { display: inline-flex; align-items: center; height: 28px; padding: 0 11px; border: 1px solid color-mix(in srgb, var(--primary) 55%, var(--border)); border-radius: 8px; color: var(--primary); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .av-mesa.tr-ativa { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
@@ -644,7 +647,7 @@ body.av-teatro-aberto { overflow: hidden; }
 .av-hub-abas button.on { background: var(--surface-alt); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 55%, var(--border)); }
 .av-hub-abas button.on b { color: var(--primary); }
 .av-hub-abas button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-.av-hub-vivo { width: 8px; height: 8px; border-radius: 50%; background: var(--down); animation: av-pulsa 1.6s ease-in-out infinite; }
+.av-hub-vivo { width: 8px; height: 8px; border-radius: 50%; background: var(--ao-vivo, #E5383B); animation: av-pulsa 1.6s ease-in-out infinite; }
 
 .tr-porta { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 28px; align-items: start; padding: 28px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); }
 .tr-porta-texto { display: grid; gap: 10px; }
@@ -740,7 +743,7 @@ body.av-teatro-aberto { overflow: hidden; }
 .tr-status-curto { display: none; }
 @media (max-width: 640px) { .tr-status-curto { display: inline; } }
 .tr-status i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.tr-status.vivo { border-color: transparent; background: #D64545; color: #fff; }
+.tr-status.vivo { border-color: transparent; background: var(--ao-vivo, #E5383B); color: #fff; }
 .tr-status.vivo i, .tr-status.conectando i { animation: av-pulsa 1.6s ease-in-out infinite; }
 .tr-status.sala { border-color: rgba(183, 141, 57, .6); color: #D9B76C; }
 @media (prefers-reduced-motion: reduce) { .tr-status i { animation: none !important; } }
@@ -752,7 +755,9 @@ body.av-teatro-aberto { overflow: hidden; }
 .tr-chat .av-escrever { border-top: 1px solid var(--border); }
 
 @media (min-width: 1001px) { .tr-assistir .av-palco-e-chat { height: clamp(400px, calc(100vh - 330px), 820px); } }
-@media (max-width: 1000px) { .tr-assistir .av-palco-e-chat > .av-chat { height: min(470px, 64svh); } }
+/* "ao sair desta tela": no celular o jeito de continuar é a miniatura (menos decisão) */
+.tr-modos { justify-content: flex-end; }
+@media (max-width: 700px) { .tr-modos { display: none; } }
 @media (max-width: 640px) {
   .tr-cabeca { grid-template-columns: auto minmax(0, 1fr); gap: 12px 14px; padding: 16px; }
   .tr-cabeca::after { width: 170px; height: 170px; right: -40px; }

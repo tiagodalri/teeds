@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { LocalVideoTrack, type Track } from 'livekit-client'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { apagarLive, conviteRecebido, criarLive, esquecerTreinoPedido, linkDaLive, listarLives, mudarLive, podeTreinar, treinoPedido, type CantoDaCamera, type Live } from '../../core/live/api'
+import { useTreino } from '../../core/live/treino'
 import { mudarLinkPublico, useLinkPublico } from '../../core/live/config'
 import { LinkDoTreino, SalaDeTreino } from './SalaDeTreino'
 import { AssistirTreino } from './AssistirTreino'
@@ -79,7 +80,7 @@ function useMedia(consulta: string): boolean {
   return vale
 }
 /** Tela larga: cabe o player encaixado ao lado do gráfico. */
-const useLargo = () => useMedia('(min-width: 1100px)')
+export const useLargo = () => useMedia('(min-width: 1100px)')
 /** Celular: o player flutuante vira uma miniatura e o chat abre numa folha. */
 export const useCelular = () => useMedia('(max-width: 700px)')
 
@@ -283,7 +284,7 @@ const ICONE: Record<string, string> = {
   fechar: 'M6 6l12 12M18 6L6 18',
   video: 'M3 6h13v12H3zM16 10l5-3v10l-5-3',
 }
-function Icone({ nome }: { nome: string }) {
+export function Icone({ nome }: { nome: string }) {
   return <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONE[nome]} /></svg>
 }
 
@@ -928,6 +929,9 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
   // (o banco também esconde as lives dele: teeds_pode_assistir).
   const soTreino = !admin && planoTreino === true
   const [treinando, setTreinando] = useState(false)
+  // o admin saiu da página com o ensaio no ar: ao voltar, cai direto nele
+  const tr = useTreino()
+  const ensaioNoAr = admin && tr.apresentador && tr.fase !== 'fora'
   useEffect(() => { if (sessao) void podeTreinar(sessao).then(setPlanoTreino) }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // chegou pelo link da sala de treino: abre a aba (o membro já cai assistindo)
   useEffect(() => { if (treino && treinoPedido()) { esquecerTreinoPedido(); setAbaEstado('treino') } }, [treino])
@@ -938,7 +942,7 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
   if (!sessao) return <div className="ger av-pagina"><p className="av-vazio">Entre na sua conta para ver as transmissões.</p></div>
   if (soTreino) return <div className="ger av-pagina"><AssistirTreino sessao={sessao} /></div>
   if (!admin && planoTreino === null) return <div className="ger av-pagina"><p className="av-vazio">Carregando…</p></div>
-  if (treinando && admin) return <SalaDeTreino sessao={sessao} apresentador={(sessao.usuario.nome || '').trim().split(/\s+/)[0] || 'professor'} aoSair={() => setTreinando(false)} />
+  if (admin && (treinando || ensaioNoAr)) return <SalaDeTreino sessao={sessao} apresentador={(sessao.usuario.nome || '').trim().split(/\s+/)[0] || 'professor'} aoSair={() => setTreinando(false)} />
   if (s.fase !== 'fora' && s.live) return <SalaConectada s={s} sessao={sessao} aoMudar={() => void carregar()} />
 
   const noAr = lives?.find((l) => l.status === 'ao_vivo') ?? null
@@ -1034,7 +1038,7 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
  * Funciona também no iPhone, que não tem tela cheia de elemento: é um
  * overlay fixo; onde dá, pede a tela cheia de verdade para sumir a barra.
  */
-function useTeatro(): [boolean, (v: boolean) => void] {
+export function useTeatro(): [boolean, (v: boolean) => void] {
   const [cheia, setCheia] = useState(false)
   const alternar = (v: boolean) => {
     setCheia(v)
@@ -1056,7 +1060,7 @@ function useTeatro(): [boolean, (v: boolean) => void] {
   return [cheia, alternar]
 }
 
-const ICONE_PALCO: Record<string, string> = {
+export const ICONE_PALCO: Record<string, string> = {
   cheia: 'M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5',
   sairCheia: 'M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5',
   chat: 'M4 5h16v11H9l-5 4z',

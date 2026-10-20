@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import type { Track } from 'livekit-client'
+import { useEffect, useState, type CSSProperties } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { entrarNoTreino, liberarSomDoTreino, mandarNoTreino, sairDoTreino, simularTreino, useTreino } from '../../core/live/treino'
+import { definirModoDoTreino, entrarNoTreino, modoForaDoTreino, sairDoTreino, simularTreino, useTreino, type ModoDoTreino } from '../../core/live/treino'
 import { MARCA } from '../../marca'
+import { ICONE_PALCO, abrirPorCima, podeAbrirPorCima, useLargo, useTeatro } from './AoVivo'
+import PlayerDoTreino, { ChatDoTreino, PalcoDoTreino } from './PlayerDoTreino'
 import './aovivo.css'
 
 /**
@@ -12,55 +13,35 @@ import './aovivo.css'
  * está vendo. 20/10/2026: o aviso de simulação sai do cabeçalho (fica só no
  * selo da imagem); o cabeçalho é "Transmissão exclusiva para GF Members" e
  * o membro vê só o público simulado, o apresentador e as próprias mensagens.
+ * Também 20/10/2026: tela cheia, e ao sair da página o ensaio continua no
+ * player (flutuante, miniatura, ao lado do gráfico ou só o áudio), igual à
+ * live (PlayerDoTreino.tsx).
  */
 
-function Video({ faixa, className }: { faixa: Track | null; className?: string }) {
-  const ref = useRef<HTMLVideoElement>(null)
-  useEffect(() => {
-    const el = ref.current
-    if (!faixa || !el) return
-    faixa.attach(el)
-    return () => { faixa.detach(el) }
-  }, [faixa])
-  if (!faixa) return null
-  return <video ref={ref} className={className} autoPlay playsInline muted />
-}
-function Som({ faixa }: { faixa: Track }) {
-  const ref = useRef<HTMLAudioElement>(null)
-  useEffect(() => { const el = ref.current; if (!el) return; faixa.attach(el); return () => { faixa.detach(el) } }, [faixa])
-  return <audio ref={ref} autoPlay />
-}
-
-const fmt = (n: number) => n.toLocaleString('pt-BR')
-const hora = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-
-export function AssistirTreino({ sessao, conectar = true, nomeConvidado = '' }: { sessao: SessaoTeeds | null; conectar?: boolean; nomeConvidado?: string }) {
+export function AssistirTreino({ sessao, conectar = true }: { sessao: SessaoTeeds | null; conectar?: boolean }) {
   const t = useTreino()
-  const [texto, setTexto] = useState('')
-  const lista = useRef<HTMLDivElement>(null)
+  const largo = useLargo()
+  const [cheia, alternarCheia] = useTeatro()
+  const [chatNoTeatro, setChatNoTeatro] = useState(true)
 
+  // Entra ao abrir a página. Sair dela NÃO derruba (20/10/2026): o ensaio
+  // segue no player flutuante, na miniatura ou só no áudio.
   useEffect(() => {
-    if (!conectar || (!sessao && !nomeConvidado)) return
-    void entrarNoTreino(sessao, nomeConvidado)
-    return () => { void sairDoTreino() }
-  }, [sessao?.usuario.id, conectar, nomeConvidado]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    const l = lista.current
-    if (l && l.scrollHeight - l.scrollTop - l.clientHeight < 140) l.scrollTop = l.scrollHeight
-  }, [t.mensagens.length])
+    if (!conectar || !sessao) return
+    if (t.fase === 'fora' || t.fase === 'erro') void entrarNoTreino(sessao)
+  }, [sessao?.usuario.id, conectar]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const temImagem = !!t.tela || !!t.camera
-  const conectada = t.fase === 'conectada'
-  const enviar = async () => { if (!texto.trim()) return; await mandarNoTreino(texto); setTexto('') }
   const status = t.fase === 'conectando' || t.fase === 'reconectando' ? { cls: 'conectando', txt: t.fase === 'conectando' ? 'Conectando' : 'Reconectando' }
-    : t.fase === 'erro' ? { cls: 'fora', txt: 'Fora do ar' }
+    : t.fase === 'erro' || (t.fase === 'fora' && conectar) ? { cls: 'fora', txt: 'Fora do ar' }
       : temImagem ? { cls: 'vivo', txt: 'Ao vivo' }
         : t.presente ? { cls: 'sala', txt: 'Apresentador na sala', curto: 'Na sala' }
           : { cls: 'fora', txt: 'Aguardando início', curto: 'Em breve' }
   const primeiro = (t.quemApresenta || '').trim().split(/\s+/)[0]
+  const modoFora = modoForaDoTreino()
 
   return (
-    <div className="tr-assistir">
+    <div className="tr-assistir av-aluno">
       <header className="tr-cabeca" style={MARCA.id === 'globalfly' ? { '--tr-marca': `url(${import.meta.env.BASE_URL}globalfly-gf-escuro.png)` } as CSSProperties : undefined}>
         {MARCA.id === 'globalfly' && <img className="tr-cabeca-selo" src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
         <div className="tr-cabeca-texto">
@@ -73,51 +54,55 @@ export function AssistirTreino({ sessao, conectar = true, nomeConvidado = '' }: 
 
       {t.fase === 'erro' && <p className="av-erro" role="alert">{t.erro}</p>}
 
-      <div className="av-palco-e-chat">
-        <div className="av-palco">
-          {t.audios.map((a) => <Som key={a.sid ?? a.mediaStreamTrack.id} faixa={a} />)}
-          {t.tela ? <Video faixa={t.tela} className="av-tela" /> : t.camera ? <Video faixa={t.camera} className="av-tela av-so-camera" /> : null}
-          {t.tela && t.camera && <Video faixa={t.camera} className={`av-camera canto-${t.canto}`} />}
-          {!temImagem && (
-            <div className="av-espera tr-espera">
-              {t.fase === 'conectando' ? <><i className="av-girando" aria-hidden />Entrando na transmissão…</>
-                : t.fase === 'reconectando' ? <><i className="av-girando" aria-hidden />Reconectando…</>
-                  : t.presente ? <><b>O apresentador está na sala</b><span>A imagem aparece quando ele ligar a câmera ou a tela.</span></>
-                    : <><b>A transmissão ainda não começou</b><span>Deixe esta tela aberta: a imagem aparece aqui sozinha.</span></>}
-            </div>
-          )}
-          <span className="tr-selo"><i aria-hidden />Simulação{t.sim.ativa && <> · {fmt(t.sim.publico)} na sala (simulado)</>}</span>
-          {t.somBloqueado && <button className="av-som" onClick={() => void liberarSomDoTreino()}>Toque para ativar o som</button>}
+      {t.fase !== 'fora' && (
+        <div className="av-modos tr-modos" role="group" aria-label="Como continuar assistindo ao sair desta tela">
+          <span>Ao sair desta tela, continuar:</span>
+          {largo && <button className={modoFora === 'lado' ? 'on' : ''} onClick={() => definirModoDoTreino('lado', true)}>Ao lado do gráfico</button>}
+          <button className={modoFora === 'flutuante' ? 'on' : ''} onClick={() => definirModoDoTreino('flutuante', true)}>{largo ? 'Em janela flutuante' : 'Em miniatura'}</button>
+          <button className={modoFora === 'pilula' ? 'on' : ''} onClick={() => definirModoDoTreino('pilula', true)}>Só o áudio</button>
         </div>
+      )}
 
-        <section className="av-chat tr-chat" aria-labelledby="tr-chat-titulo">
-          <div className="tr-chat-topo"><h2 id="tr-chat-titulo">Chat ao vivo</h2></div>
-          <div className="av-mensagens" ref={lista} role="log" aria-live="off">
-            {t.mensagens.length === 0 && <p className="av-chat-vazio">{t.sim.ativa ? 'O chat está começando…' : 'As mensagens aparecem aqui quando a transmissão começar.'}</p>}
-            {t.mensagens.map((m) => m.entrada ? (
-              <p key={m.id} className="tr-entrada">{m.nome} entrou</p>
-            ) : (
-              <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''} ${m.minha ? 'tr-minha' : ''}`}>
-                <p><b>{m.nome}{m.apresentador && <em>apresentador</em>}{m.minha && <em className="tr-tag-membro">você</em>}</b> {m.texto}</p>
-                <time>{hora(m.hora)}</time>
-              </div>
-            ))}
-          </div>
-          <form className="av-escrever" onSubmit={(e) => { e.preventDefault(); void enviar() }}>
-            <label htmlFor="tr-assistir-campo" className="av-oculto">Mensagem</label>
-            <input id="tr-assistir-campo" value={texto} maxLength={500} autoComplete="off" enterKeyHint="send"
-              placeholder={conectada && t.presente ? 'Escreva para o apresentador' : 'O chat abre quando a transmissão começar'}
-              disabled={!conectada || !t.presente} onChange={(e) => setTexto(e.target.value)} />
-            <button type="submit" disabled={!conectada || !t.presente || !texto.trim()}>Enviar</button>
-          </form>
-        </section>
+      <div className={`av-palco-e-chat ${cheia ? 'av-teatro' : ''} ${cheia && !chatNoTeatro ? 'sem-chat' : ''}`}>
+        <PalcoDoTreino filhos={<BotoesDoTreino cheia={cheia} alternar={alternarCheia} chat={chatNoTeatro} setChat={setChatNoTeatro} />} />
+        <div className="av-lado-aluno"><ChatDoTreino /></div>
+      </div>
+
+      <div className="av-rodape-aluno">
+        {podeAbrirPorCima() && temImagem && (
+          <button className="av-botao-secundario av-por-cima" onClick={() => void abrirPorCima(document.querySelector('.tr-assistir .av-palco-e-chat'))}>
+            Assistir por cima de outros apps
+          </button>
+        )}
+        {t.fase === 'fora' && conectar && sessao
+          ? <button className="av-botao-secundario" onClick={() => void entrarNoTreino(sessao)}>Entrar de novo na transmissão</button>
+          : <button className="av-link" onClick={() => void sairDoTreino()}>Sair da transmissão</button>}
       </div>
     </div>
   )
 }
 
+/** Sobre a imagem: tela cheia e, nela, mostrar ou esconder o chat. */
+function BotoesDoTreino({ cheia, alternar, chat, setChat }: { cheia: boolean; alternar: (v: boolean) => void; chat: boolean; setChat: (v: boolean) => void }) {
+  const t = useTreino()
+  // no canto oposto ao rosto do apresentador, para nunca cobrir ninguém
+  const canto = t.tela && t.camera ? t.canto : 'inf-esq'
+  return (
+    <div className={`av-botoes-palco ${canto === 'inf-dir' ? 'pos-sup-dir' : 'pos-inf-dir'}`}>
+      {cheia && (
+        <button onClick={() => setChat(!chat)} aria-pressed={chat} aria-label={chat ? 'Esconder o chat' : 'Mostrar o chat'} title={chat ? 'Esconder o chat' : 'Mostrar o chat'}>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true"><path d={ICONE_PALCO.chat} /></svg>
+        </button>
+      )}
+      <button onClick={() => alternar(!cheia)} aria-label={cheia ? 'Sair da tela cheia' : 'Tela cheia'} title={cheia ? 'Sair da tela cheia' : 'Tela cheia'}>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={cheia ? ICONE_PALCO.sairCheia : ICONE_PALCO.cheia} /></svg>
+      </button>
+    </div>
+  )
+}
+
 /** ?tela=treino-membro no laboratório: a visão do membro com imagem e chat de exemplo. */
-export function LabAssistirTreino() {
+export function LabAssistirTreino({ fora }: { fora?: ModoDoTreino } = {}) {
   useEffect(() => {
     const canvas = document.createElement('canvas'); canvas.width = 1280; canvas.height = 720
     const c = canvas.getContext('2d')!
@@ -143,5 +128,18 @@ export function LabAssistirTreino() {
     })
     return () => window.clearInterval(t)
   }, [])
+  // ?tela=treino-player&modo=flutuante|lado|pilula: o player fora da página, sobre uma tela qualquer
+  if (fora) {
+    return (
+      <div className="workspace-app" style={{ minHeight: '100vh', padding: 24 }}>
+        <p style={{ color: 'var(--muted)' }}>Uma tela qualquer da plataforma (o gráfico, as aulas…). O ensaio segue no player.</p>
+        <LabPlayer modo={fora} />
+      </div>
+    )
+  }
   return <div className="ger av-pagina"><AssistirTreino sessao={null} conectar={false} /></div>
+}
+function LabPlayer({ modo }: { modo: ModoDoTreino }) {
+  useEffect(() => { const id = window.setTimeout(() => definirModoDoTreino(modo, false), 400); return () => window.clearTimeout(id) }, [modo])
+  return <PlayerDoTreino naPagina={false} abrirPagina={() => undefined} />
 }

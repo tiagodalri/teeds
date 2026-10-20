@@ -28,7 +28,18 @@ import { SUPABASE } from '../teeds/config'
 import { sessaoGuardada, type SessaoTeeds } from '../teeds/conta'
 import { MARCA } from '../../marca'
 import type { CantoDaCamera } from './api'
-import { mensagemDeMembro, ouvirSimulacao, simulacaoAgora, type MensagemSimulada, type Momento } from './simulacao'
+import { mensagemDeMembro, ouvirSimulacao, pararSimulacao, simulacaoAgora, type MensagemSimulada, type Momento } from './simulacao'
+import { marcarTreinoAtivo } from './presenca'
+import { aplicarFundo, fundoGuardado, guardarFundo, prepararFundo, type EscolhaDeFundo } from './fundos'
+
+/**
+ * Como a sala segue quando a pessoa sai da página "Ao vivo" (20/10/2026,
+ * igual à live de verdade): ao lado do gráfico, janela flutuante (miniatura
+ * no celular) ou só o áudio. Na página, é o palco grande.
+ */
+export type ModoDoTreino = 'palco' | 'lado' | 'flutuante' | 'pilula'
+export type TamanhoDoTreino = 'P' | 'M' | 'G'
+type Fonte = 'tela' | 'camera' | 'mic'
 
 export interface EstadoDoTreino {
   fase: 'fora' | 'conectando' | 'conectada' | 'reconectando' | 'erro'
@@ -50,14 +61,41 @@ export interface EstadoDoTreino {
   sim: { ativa: boolean; publico: number; momento: Momento | null; pausada: boolean }
   mensagens: MensagemSimulada[]
   somBloqueado: boolean
+  /* o player fora da página */
+  modo: ModoDoTreino
+  tamanho: TamanhoDoTreino
+  cantoPlayer: CantoDaCamera
+  /* o que o admin transmite (fica aqui, não na tela: navegar não derruba o ensaio) */
+  local: Record<Fonte, MediaStream | null>
+  fundo: EscolhaDeFundo
+  aplicandoFundo: boolean
+}
+
+const CHAVE_PLAYER = `${MARCA.id}.treino.player`
+function prefsDoPlayer(): Pick<EstadoDoTreino, 'tamanho' | 'cantoPlayer'> & { modoFora: ModoDoTreino } {
+  let p: Partial<{ tamanho: TamanhoDoTreino; cantoPlayer: CantoDaCamera; modoFora: ModoDoTreino }> = {}
+  try { p = JSON.parse(localStorage.getItem(CHAVE_PLAYER) || '{}') } catch { /* sem armazenamento */ }
+  return { tamanho: p.tamanho ?? 'M', cantoPlayer: p.cantoPlayer ?? 'inf-dir', modoFora: p.modoFora ?? 'flutuante' }
+}
+let modoFora: ModoDoTreino = prefsDoPlayer().modoFora
+function guardarPrefs() {
+  try { localStorage.setItem(CHAVE_PLAYER, JSON.stringify({ tamanho: estado.tamanho, cantoPlayer: estado.cantoPlayer, modoFora })) } catch { /* idem */ }
 }
 
 const INICIAL: EstadoDoTreino = {
   fase: 'fora', erro: null, apresentador: false, meuNome: '', membros: 0, nomes: [],
   presente: false, quemApresenta: '', tela: null, camera: null, audios: [], canto: 'inf-dir',
   sim: { ativa: false, publico: 0, momento: null, pausada: false }, mensagens: [], somBloqueado: false,
+  modo: 'palco', tamanho: 'M', cantoPlayer: 'inf-dir',
+  local: { tela: null, camera: null, mic: null }, fundo: 'nenhum', aplicandoFundo: false,
+}
+/** O estado do zero, mas com as preferências da pessoa e o que o admin já tem ligado. */
+const zerado = (): EstadoDoTreino => {
+  const { tamanho, cantoPlayer } = prefsDoPlayer()
+  return { ...INICIAL, tamanho, cantoPlayer, local: estado?.local ?? INICIAL.local, fundo: fundoGuardado() }
 }
 let estado: EstadoDoTreino = INICIAL
+estado = zerado()
 const ouvintes = new Set<() => void>()
 const mudar = (p: Partial<EstadoDoTreino>) => { estado = { ...estado, ...p }; ouvintes.forEach((f) => f()) }
 export const useTreino = () => useSyncExternalStore((f) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }, () => estado, () => estado)
@@ -195,8 +233,8 @@ function pararDeAnunciar() {
  */
 export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Promise<void> {
   if (sala && estado.fase !== 'erro') return
-  await sairDoTreino()
-  mudar({ ...INICIAL, fase: 'conectando' })
+  await desconectar()
+  mudar({ ...zerado(), fase: 'conectando' })
   try {
     const ingresso = await pedirIngresso(sessao, nome)
     // mesmas escolhas da live: H.264 no chip de vídeo, uma camada menor só
@@ -228,7 +266,7 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Pro
       .on(RoomEvent.Reconnecting, () => mudar({ fase: 'reconectando' }))
       .on(RoomEvent.Reconnected, () => mudar({ fase: 'conectada' }))
       .on(RoomEvent.AudioPlaybackStatusChanged, () => mudar({ somBloqueado: !r.canPlaybackAudio }))
-      .on(RoomEvent.Disconnected, () => { if (sala === r) { sala = null; mudar({ fase: 'fora', tela: null, camera: null, audios: [], presente: false }) } })
+      .on(RoomEvent.Disconnected, () => { if (sala === r) { sala = null; marcarTreinoAtivo(false); mudar({ fase: 'fora', tela: null, camera: null, audios: [], presente: false }) } })
       .on(RoomEvent.DataReceived, (dados: Uint8Array, p?: RemoteParticipant, _k?: unknown, topico?: string) => {
         if (topico !== TOPICO || !p) return
         let pacote: Pacote
@@ -257,6 +295,9 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Pro
     await r.startAudio().catch(() => undefined)
     mudar({ fase: 'conectada', apresentador: ingresso.moderador, meuNome: ingresso.nome, somBloqueado: !r.canPlaybackAudio })
     if (ingresso.moderador) { comecarARepassar(); comecarAAnunciar() }
+    marcarTreinoAtivo(true)
+    // o que o admin já tinha ligado antes de a sala abrir entra agora
+    if (ingresso.moderador) await republicarFontes()
     atualizarSala()
   } catch (e) {
     sala = null
@@ -264,7 +305,8 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Pro
   }
 }
 
-export async function sairDoTreino(): Promise<void> {
+/** Sai da sala do LiveKit (sem mexer no que o admin tem ligado). */
+async function desconectar(): Promise<void> {
   if (estado.apresentador) pararDeAnunciar()
   desligarEscuta?.(); desligarEscuta = null
   window.clearInterval(timerEstado)
@@ -272,7 +314,112 @@ export async function sairDoTreino(): Promise<void> {
   const r = sala
   sala = null
   if (r) await r.disconnect().catch(() => undefined)
-  mudar({ ...INICIAL })
+  marcarTreinoAtivo(false)
+}
+
+/**
+ * Sai de vez: desliga a sala, a simulação (admin) e câmera, tela e microfone.
+ * É o "Sair" do player e da página; trocar de tela NÃO chama isto.
+ */
+export async function sairDoTreino(): Promise<void> {
+  const eraApresentador = estado.apresentador
+  await desconectar()
+  if (eraApresentador) pararSimulacao()
+  desligarFontesLocais()
+  mudar({ ...zerado(), local: { tela: null, camera: null, mic: null } })
+}
+
+/* ------------------------------------------------- o player fora da página */
+
+/** Na página, só guarda a preferência de fora; fora dela, muda o player na hora. */
+export function definirModoDoTreino(modo: ModoDoTreino, naPagina: boolean): void {
+  if (modo !== 'palco') { modoFora = modo; guardarPrefs() }
+  if (!naPagina) mudar({ modo }); else ouvintes.forEach((f) => f())
+}
+/** Ao sair da página "Ao vivo", o player vai para o jeito preferido de fora. */
+export function treinoTrocouDeTela(naPagina: boolean): void {
+  if (estado.fase === 'fora') return
+  mudar({ modo: naPagina ? 'palco' : modoFora })
+}
+export const modoForaDoTreino = () => modoFora
+export function definirTamanhoDoTreino(tamanho: TamanhoDoTreino): void { mudar({ tamanho }); guardarPrefs() }
+export function definirCantoDoPlayer(c: CantoDaCamera): void { mudar({ cantoPlayer: c }); guardarPrefs() }
+
+/* ------------------------------------- câmera, tela e microfone do admin */
+
+let cameraFaixa: LocalVideoTrack | null = null
+let cameraBruta: MediaStreamTrack | null = null
+
+function desligarFontesLocais() {
+  for (const f of Object.values(estado.local)) f?.getTracks().forEach((t) => t.stop())
+  cameraFaixa?.stop(); cameraFaixa = null; cameraBruta = null
+}
+
+/** Republica o que já estava ligado (a sala abriu ou reconectou do zero). */
+async function republicarFontes() {
+  const { tela, mic } = estado.local
+  if (cameraFaixa) await publicarNoTreino('camera', cameraFaixa)
+  if (tela) await publicarNoTreino('tela', tela.getVideoTracks()[0] ?? null)
+  if (mic) await publicarNoTreino('mic', mic.getAudioTracks()[0] ?? null)
+}
+
+const mostrarCamera = (lt: LocalVideoTrack) => new MediaStream([lt.mediaStreamTrack])
+
+/**
+ * Liga ou desliga uma fonte do ensaio. Rápido de propósito (20/10/2026): a
+ * câmera aparece na hora, sem esperar o fundo; o fundo entra logo depois,
+ * quando a IA termina de carregar (e ela já começa a carregar ao abrir a sala).
+ */
+export async function alternarFonte(qual: Fonte): Promise<string | null> {
+  const atual = estado.local[qual]
+  if (atual) {
+    void publicarNoTreino(qual, null)
+    atual.getTracks().forEach((t) => t.stop())
+    if (qual === 'camera') { cameraFaixa?.stop(); cameraFaixa = null; cameraBruta = null }
+    mudar({ local: { ...estado.local, [qual]: null } })
+    return null
+  }
+  try {
+    const f = qual === 'tela'
+      ? await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 15, max: 15 } }, audio: false, selfBrowserSurface: 'exclude', surfaceSwitching: 'include' } as DisplayMediaStreamOptions)
+      : await navigator.mediaDevices.getUserMedia(qual === 'camera' ? { video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24, max: 30 } } } : { audio: { echoCancellation: true, noiseSuppression: true } })
+    // parou pela barra do navegador: o botão acompanha
+    const bruta = f.getTracks()[0]
+    bruta?.addEventListener('ended', () => {
+      const ainda = qual === 'camera' ? cameraBruta === bruta : estado.local[qual] === f
+      if (!ainda) return
+      if (qual === 'camera') { cameraFaixa?.stop(); cameraFaixa = null; cameraBruta = null }
+      mudar({ local: { ...estado.local, [qual]: null } })
+      void publicarNoTreino(qual, null)
+    })
+    if (qual === 'camera') {
+      const lt = new LocalVideoTrack(f.getVideoTracks()[0], undefined, true)
+      cameraFaixa = lt; cameraBruta = bruta
+      mudar({ local: { ...estado.local, camera: mostrarCamera(lt) } })
+      void publicarNoTreino('camera', lt)
+      if (estado.fundo !== 'nenhum') void trocarFundoDoTreino(estado.fundo)
+    } else {
+      mudar({ local: { ...estado.local, [qual]: f } })
+      void publicarNoTreino(qual, qual === 'tela' ? f.getVideoTracks()[0] : f.getAudioTracks()[0])
+    }
+    return null
+  } catch {
+    return 'O navegador não liberou o acesso. Permita a câmera, o microfone ou a tela no cadeado da barra de endereço.'
+  }
+}
+
+/** Troca o fundo da câmera; os membros veem o fundo novo na mesma hora. */
+export async function trocarFundoDoTreino(e: EscolhaDeFundo): Promise<void> {
+  mudar({ fundo: e })
+  const lt = cameraFaixa
+  if (!lt) { guardarFundo(e); return }
+  mudar({ aplicandoFundo: true })
+  try { await aplicarFundo(lt, e); if (cameraFaixa === lt) mudar({ local: { ...estado.local, camera: mostrarCamera(lt) } }) } catch { /* segue sem fundo */ } finally { mudar({ aplicandoFundo: false }) }
+}
+
+/** Ao abrir a sala, a IA do fundo já começa a carregar (se houver fundo escolhido). */
+export function prepararSalaDoAdmin(): void {
+  if (fundoGuardado() !== 'nenhum') prepararFundo()
 }
 
 export async function liberarSomDoTreino(): Promise<void> {
@@ -299,6 +446,9 @@ export async function publicarNoTreino(qual: 'tela' | 'camera' | 'mic', faixa: L
   atualizarSala()
   conferirAnuncio()
 }
+
+/** O canto escolhido pelo admin (vale entre as telas). */
+export const cantoDoTreino = (): CantoDaCamera => canto
 
 /** Em que canto o rosto aparece para quem assiste. */
 export function cantoNoTreino(c: CantoDaCamera): void {

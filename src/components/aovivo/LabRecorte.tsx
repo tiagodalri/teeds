@@ -26,7 +26,7 @@ export default function LabRecorte() {
   const [erro, setErro] = useState('')
   useEffect(() => {
     const q = new URLSearchParams(location.search)
-    const fundo = q.get('fundo') ?? 'restaurante-azul'
+    const fundo = q.get('fundo') ?? 'monograma-gf'
     const desfoque = q.get('modo') === 'desfoque'
     const url = imagemDoFundo(fundo)
     let vivo = true

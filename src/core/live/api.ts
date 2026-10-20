@@ -197,11 +197,21 @@ export async function silenciar(sessao: SessaoTeeds, liveId: string, userId: str
   await funcao(sessao.token, { liveId, acao: calar ? 'silenciar' : 'liberar', identidade: userId }).catch(() => undefined)
 }
 
-/** A sala de treino (simulada) está liberada para esta conta? Admin ou plano "treino". */
-export async function podeTreinar(sessao: SessaoTeeds): Promise<boolean> {
-  try {
-    return (await rest<boolean>('/rpc/teeds_minha_sala_de_treino', sessao, { method: 'POST', body: JSON.stringify({ p_marca: MARCA.id }) })) === true
-  } catch { return false }
+/**
+ * A sala de treino (simulada) está liberada para esta conta? Admin ou plano
+ * "treino". A resposta vale 5 min (20/10/2026): o App e a página "Ao vivo"
+ * perguntam a mesma coisa, e a segunda vez não espera o banco.
+ */
+const jaRespondido = new Map<string, { em: number; r: Promise<boolean> }>()
+export function podeTreinar(sessao: SessaoTeeds): Promise<boolean> {
+  const chave = sessao.usuario.id
+  const guardado = jaRespondido.get(chave)
+  if (guardado && Date.now() - guardado.em < 5 * 60_000) return guardado.r
+  const r = rest<boolean>('/rpc/teeds_minha_sala_de_treino', sessao, { method: 'POST', body: JSON.stringify({ p_marca: MARCA.id }) })
+    .then((v) => v === true)
+    .catch(() => { jaRespondido.delete(chave); return false })
+  jaRespondido.set(chave, { em: Date.now(), r })
+  return r
 }
 
 /** A sala de treino está no ar agora? Só responde a GF Member e admin (teeds_treino_agora). */

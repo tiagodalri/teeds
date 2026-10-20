@@ -19,3 +19,18 @@ export function marcarPlayerAtivo(sim: boolean): void {
 export function usePlayerAtivo(): boolean {
   return useSyncExternalStore((f) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }, () => ativo, () => ativo)
 }
+
+/*
+  A sala de treino também acompanha a pessoa pelas telas (20/10/2026): o App
+  monta o player do treino só quando há sala aberta, sem carregar o LiveKit.
+*/
+let treinoAtivo = false
+const ouvintesTreino = new Set<() => void>()
+export function marcarTreinoAtivo(sim: boolean): void {
+  if (treinoAtivo === sim) return
+  treinoAtivo = sim
+  ouvintesTreino.forEach((f) => f())
+}
+export function useTreinoAtivo(): boolean {
+  return useSyncExternalStore((f) => { ouvintesTreino.add(f); return () => { ouvintesTreino.delete(f) } }, () => treinoAtivo, () => treinoAtivo)
+}

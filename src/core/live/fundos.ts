@@ -7,32 +7,24 @@
  * halo branco e cara de recortado. Para o realismo máximo, o guia do OBS
  * (pasta "Fundos para live") continua valendo.
  *
- * Os fundos são os mesmos da pasta da Área de Trabalho, em Full HD e já com
- * o leve desfoque de câmera que faz parecer real.
+ * A arte do monograma é gerada por scripts/fundo-monograma-gf.mjs.
  */
 import type { LocalVideoTrack } from 'livekit-client'
-import { ProcessadorDeFundo, type ModoDoFundo } from './recorte/ProcessadorDeFundo'
+import type { ModoDoFundo, ProcessadorDeFundo } from './recorte/ProcessadorDeFundo'
 import { MARCA } from '../../marca'
 
 export interface Fundo {
   id: string
   nome: string
-  /** Quem fez a foto e a licença, quando a licença pede crédito. */
-  credito?: string
 }
 
+/*
+  20/10/2026 (pedido do Tiago, mais objetivo): só duas opções além de "sem
+  fundo": desfocar o fundo real, ou a arte com o monograma GF. Os fundos de
+  Dubai, estúdios e restaurantes saíram.
+*/
 export const FUNDOS: Fundo[] = [
-  { id: 'estudio-noite', nome: 'Estúdio noite' },
-  { id: 'mesa-operacoes', nome: 'Mesa de operações' },
-  { id: 'estudio-dia', nome: 'Estúdio dia' },
-  { id: 'dubai-noite', nome: 'Dubai à noite' },
-  { id: 'dubai-downtown', nome: 'Dubai do alto' },
-  { id: 'dubai-marina', nome: 'Dubai Marina', credito: 'Foto: Norlando Pobre, CC BY 2.0' },
-  { id: 'dubai-por-do-sol', nome: 'Dubai, pôr do sol', credito: 'Foto: Sergei Gussev, CC BY 2.0' },
-  { id: 'restaurante-clifford', nome: 'Restaurante Clifford', credito: 'Foto: Basile Morin, CC BY-SA 4.0' },
-  { id: 'restaurante-azul', nome: 'Restaurante azul' },
-  { id: 'restaurante-amantaka', nome: 'Restaurante Amantaka', credito: 'Foto: Basile Morin, CC BY-SA 4.0' },
-  { id: 'lobby-lustre', nome: 'Lobby com lustre', credito: 'Foto: Basile Morin, CC BY-SA 4.0' },
+  { id: 'monograma-gf', nome: 'Monograma GF' },
 ]
 
 /** 'nenhum' = câmera como está; 'desfoque' = fundo real desfocado; ou o id de um fundo. */
@@ -50,16 +42,31 @@ export const fundosDisponiveis = (): boolean => {
 }
 
 const CHAVE = `${MARCA.id}.aovivo.fundo`
+/** A escolha guardada; um fundo que não existe mais (Dubai, estúdios) vira "sem fundo". */
 export function fundoGuardado(): EscolhaDeFundo {
-  try { return localStorage.getItem(CHAVE) || 'nenhum' } catch { return 'nenhum' }
+  let e: string | null = null
+  try { e = localStorage.getItem(CHAVE) } catch { /* sem armazenamento */ }
+  return e === 'desfoque' || FUNDOS.some((f) => f.id === e) ? e! : 'nenhum'
 }
-function guardar(e: EscolhaDeFundo) { try { localStorage.setItem(CHAVE, e) } catch { /* vale só agora */ } }
+export function guardarFundo(e: EscolhaDeFundo) { try { localStorage.setItem(CHAVE, e) } catch { /* vale só agora */ } }
+
+/*
+  Rapidez (20/10/2026): o recorte (MediaPipe, ~1 MB de código e o modelo de
+  IA) só é baixado por quem liga um fundo. Antes vinha junto com o "Ao vivo"
+  de todo mundo, inclusive de quem só assiste.
+*/
+let modulo: Promise<typeof import('./recorte/ProcessadorDeFundo')> | null = null
+const carregarRecorte = () => (modulo ??= import('./recorte/ProcessadorDeFundo'))
+/** Começa a baixar o recorte e a IA antes de a câmera ligar (a sala abriu). */
+export function prepararFundo(): void {
+  void carregarRecorte().then((m) => m.prepararIA()).catch(() => undefined)
+}
 
 const processadores = new WeakMap<LocalVideoTrack, ProcessadorDeFundo>()
 
 /** Aplica (ou tira) o fundo numa câmera. Troca na hora, sem piscar. */
 export async function aplicarFundo(faixa: LocalVideoTrack, escolha: EscolhaDeFundo): Promise<void> {
-  guardar(escolha)
+  guardarFundo(escolha)
   const atual = processadores.get(faixa)
   if (escolha === 'nenhum') {
     if (atual) { await faixa.stopProcessor(); processadores.delete(faixa) }
@@ -67,7 +74,8 @@ export async function aplicarFundo(faixa: LocalVideoTrack, escolha: EscolhaDeFun
   }
   const opcoes: ModoDoFundo = escolha === 'desfoque' ? { modo: 'desfoque' } : { modo: 'imagem', url: imagemDoFundo(escolha) }
   if (atual) { await atual.mudar(opcoes); return }
-  const p = new ProcessadorDeFundo(opcoes)
+  const { ProcessadorDeFundo: Processador } = await carregarRecorte()
+  const p = new Processador(opcoes)
   await faixa.setProcessor(p)
   processadores.set(faixa, p)
 }

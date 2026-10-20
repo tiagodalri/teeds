@@ -90,10 +90,14 @@
 }
 @media (prefers-reduced-motion: reduce) { .workspace-app { transition: none; } }
 
+/* O vermelho do "ao vivo" (20/10/2026, pedido do Tiago: mais vivo que o
+   vermelho de alerta da marca). Fica de fora da troca de paleta da
+   GlobalFly (vite.config.ts, `manter`). */
+:root { --ao-vivo: #E5383B; }
 /* "Ao vivo" no menu: ponto vermelho enquanto há transmissão no ar. */
 .workspace-aovivo {
   display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 3px 7px 3px 6px; border-radius: 6px;
-  background: var(--down); color: #fff; font-style: normal;
+  background: var(--ao-vivo); color: #fff; font-style: normal;
 }
 .workspace-aovivo::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: workspace-aovivo 1.4s ease-in-out infinite; }
 .workspace-aovivo b { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
@@ -101,11 +105,11 @@
 @keyframes workspace-aovivo { 50% { opacity: .35; } }
 /* 20/10/2026: no ar, o próprio ícone do "Ao vivo" fica vermelho e pulsa; no
    celular, o botão do menu ganha um ponto vermelho (o menu fica escondido). */
-.workspace-link.no-ar > svg { color: var(--down); animation: workspace-aovivo-icone 1.4s ease-in-out infinite; }
+.workspace-link.no-ar > svg { color: var(--ao-vivo); animation: workspace-aovivo-icone 1.4s ease-in-out infinite; }
 @keyframes workspace-aovivo-icone { 50% { opacity: .4; transform: scale(.9); } }
 .workspace-mobile-toggle.no-ar::after {
   content: ''; position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%;
-  background: var(--down); box-shadow: 0 0 0 2px var(--surface); animation: workspace-aovivo 1.4s ease-in-out infinite;
+  background: var(--ao-vivo); box-shadow: 0 0 0 2px var(--surface); animation: workspace-aovivo 1.4s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) { .workspace-aovivo::before, .workspace-link.no-ar > svg, .workspace-mobile-toggle.no-ar::after { animation: none; } }
 
@@ -114,11 +118,11 @@
    no ar (marcas com `aoVivo`) e leva direto para ela. */
 .selo-tv {
   position: relative; display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px 0 11px;
-  border: 0; border-radius: 8px; background: var(--down); color: #fff; cursor: pointer;
+  border: 0; border-radius: 8px; background: var(--ao-vivo); color: #fff; cursor: pointer;
   font: inherit; font-size: 11.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap;
   transition: transform .15s, background .15s;
 }
-.selo-tv:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--down) 88%, #000); }
+.selo-tv:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--ao-vivo) 88%, #000); }
 .selo-tv:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .selo-tv i { position: relative; width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: selo-tv-ponto 1.4s ease-in-out infinite; }
 .selo-tv i::after {
@@ -132,14 +136,14 @@
 .aviso-tv {
   position: fixed; z-index: 160; top: calc(12px + var(--sat, 0px)); left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 24px); padding: 8px 8px 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--down) 45%, var(--border)); border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--ao-vivo) 45%, var(--border)); border-radius: 14px;
   background: var(--surface); color: var(--text); box-shadow: 0 18px 40px -18px rgba(0, 0, 0, .6);
   animation: aviso-tv-desce .35s cubic-bezier(.2, .8, .2, 1) both;
 }
 .aviso-tv b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
 .aviso-tv-selo {
   display: inline-flex; align-items: center; gap: 7px; flex: none; height: 26px; padding: 0 9px; border-radius: 7px;
-  background: var(--down); color: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  background: var(--ao-vivo); color: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
 }
 .aviso-tv-selo i { width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: selo-tv-ponto 1.4s ease-in-out infinite; }
 .aviso-tv-assistir { flex: none; height: 34px; padding: 0 14px; border: 0; border-radius: 9px; background: var(--primary); color: var(--surface); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }

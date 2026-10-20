@@ -209,6 +209,7 @@ function Laboratorio() {
         {qual === 'treino' && <Suspense fallback={null}><SalaDeTreino apresentador="Tiago" aoSair={() => undefined} /></Suspense>}
         {/* ?tela=treino-membro: o membro do plano assistindo o ensaio do admin. */}
         {qual === 'treino-membro' && <Suspense fallback={null}><LabAssistirTreino /></Suspense>}
+        {qual === 'treino-player' && <Suspense fallback={null}><LabAssistirTreino fora={(new URLSearchParams(location.search).get('modo') ?? 'flutuante') as never} /></Suspense>}
         {/* ?tela=selo-tv: o selo vermelho do topo, o aviso "começou agora" e a tag do menu. */}
         {qual === 'selo-tv' && (
           <div className="workspace-app" style={{ padding: 24, display: 'grid', gap: 24 }}>

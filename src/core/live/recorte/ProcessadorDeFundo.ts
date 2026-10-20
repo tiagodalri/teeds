@@ -67,6 +67,9 @@ function segmentador(): Promise<ImageSegmenter> {
   return segmentadorCompartilhado
 }
 
+/** Baixa e liga a IA antes da hora (a sala abriu e um fundo está escolhido). */
+export const prepararIA = (): Promise<unknown> => segmentador().catch(() => undefined)
+
 type Programa = { prog: WebGLProgram; u: (nome: string) => WebGLUniformLocation | null }
 type Alvo = { tex: WebGLTexture; fbo: WebGLFramebuffer; w: number; h: number }
 

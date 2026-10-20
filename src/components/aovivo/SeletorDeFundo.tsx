@@ -2,13 +2,12 @@ import { FUNDOS, fundosDisponiveis, miniaturaDoFundo, type EscolhaDeFundo } from
 
 /**
  * A escolha do fundo da câmera, em miniaturas: sem fundo, desfocar o fundo
- * real, ou um dos fundos da casa (estúdios GlobalFly, Dubai, restaurantes).
+ * real, ou a arte do monograma GF (20/10/2026: só essas, mais objetivo).
  */
 export function SeletorDeFundo({ valor, onEscolher, cameraLigada, aplicando }: {
   valor: EscolhaDeFundo; onEscolher: (e: EscolhaDeFundo) => void; cameraLigada: boolean; aplicando: boolean
 }) {
   if (!fundosDisponiveis()) return <p className="av-fundo-aviso">Este navegador não troca o fundo. Use o Chrome atualizado, ou o OBS (guia na pasta "Fundos para live").</p>
-  const escolhido = FUNDOS.find((f) => f.id === valor)
   return (
     <div className="av-fundos">
       <div className="av-fundos-grade" role="radiogroup" aria-label="Fundo da câmera">
@@ -31,7 +30,6 @@ export function SeletorDeFundo({ valor, onEscolher, cameraLigada, aplicando }: {
       </div>
       <p className="av-fundo-nota">
         {aplicando ? 'Aplicando o fundo…' : !cameraLigada ? 'O fundo entra assim que você ligar a câmera.' : 'A IA recorta você no navegador. Luz de frente deixa o recorte mais limpo.'}
-        {escolhido?.credito && <><br /><span>{escolhido.credito}, Wikimedia Commons</span></>}
       </p>
     </div>
   )

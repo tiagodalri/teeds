@@ -91,7 +91,9 @@ const PALETAS: Record<string, Paleta> = {
       // marinho vivo das superfícies (19/10/2026)
       '#020B1D', '#020E24', '#041029', '#0A1C40', '#0F234D', '#203765', '#576B94', '#96AFD4', '#1E3D6E',
       // a Deriv é marca de terceiro: o vermelho dela não se mexe
-      '#ff444f', '#ff5a63'],
+      '#ff444f', '#ff5a63',
+      // o vermelho do "ao vivo" (20/10/2026, pedido do Tiago: mais vivo que o Alerta)
+      '#E5383B'],
     vermelho: { h: 0, s: 0.5, exata: [201 / 255, 95 / 255, 95 / 255] }, // Alerta #C95F5F
     quente: { h: 40, s: 0.53, exata: [183 / 255, 141 / 255, 57 / 255] }, // Ouro GF #B78D39
     verde: { h: 162, s: 0.5, exata: [47 / 255, 143 / 255, 114 / 255] }, // Positivo #2F8F72

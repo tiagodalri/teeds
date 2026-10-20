@@ -5,13 +5,13 @@ import {
   type Momento, type Oscilacao, type Ritmo,
 } from '../../core/live/simulacao'
 import './aovivo.css'
-import { LocalVideoTrack } from 'livekit-client'
-import { aplicarFundo, fundoGuardado, type EscolhaDeFundo } from '../../core/live/fundos'
 import { SeletorDeFundo } from './SeletorDeFundo'
 import { MedidorDeVolume } from './MedidorDeVolume'
 import { MARCA } from '../../marca'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { cantoNoTreino, entrarNoTreino, publicarNoTreino, sairDoTreino, useTreino } from '../../core/live/treino'
+import {
+  alternarFonte, cantoDoTreino, cantoNoTreino, entrarNoTreino, prepararSalaDoAdmin, sairDoTreino, trocarFundoDoTreino, useTreino,
+} from '../../core/live/treino'
 
 /**
  * Sala de treino (plano "treino"): o influenciador ensaia a live com a tela,
@@ -92,29 +92,18 @@ export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
 export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresentador: string; aoSair: () => void; sessao?: SessaoTeeds | null }) {
   const sim = useSimulacao()
   const tr = useTreino()
-  // abre a sala para os membros assistirem (no laboratório, sem conta, fica só local)
+  // Abre a sala para os membros assistirem (no laboratório, sem conta, fica só
+  // local). Desde 20/10/2026 sair desta tela NÃO fecha a sala: o ensaio segue
+  // no player flutuante; fecha só no "Sair da sala de treino".
   useEffect(() => {
+    prepararSalaDoAdmin()
     if (!sessao) return
+    if (tr.apresentador && (tr.fase === 'conectada' || tr.fase === 'conectando' || tr.fase === 'reconectando')) return
     void entrarNoTreino(sessao)
-    return () => { void sairDoTreino() }
   }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
-  const [tela, setTela] = useState<MediaStream | null>(null)
-  const [camera, setCamera] = useState<MediaStream | null>(null)
-  // a câmera passa pelo mesmo recorte de fundo da live de verdade
-  const cameraFaixa = useRef<LocalVideoTrack | null>(null)
-  const [fundo, setFundo] = useState<EscolhaDeFundo>(fundoGuardado)
-  const [aplicandoFundo, setAplicandoFundo] = useState(false)
-  const exibirCamera = (lt: LocalVideoTrack) => setCamera(new MediaStream([lt.mediaStreamTrack]))
-  const trocarFundo = async (e: EscolhaDeFundo) => {
-    setFundo(e)
-    const lt = cameraFaixa.current
-    if (!lt) { try { localStorage.setItem(`${MARCA.id}.aovivo.fundo`, e) } catch { /* só agora */ } return }
-    setAplicandoFundo(true)
-    try { await aplicarFundo(lt, e); exibirCamera(lt) } finally { setAplicandoFundo(false) }
-    // o processador troca a imagem da faixa publicada: os membros já veem o fundo novo
-  }
-  const [mic, setMic] = useState<MediaStream | null>(null)
-  const [canto, setCanto] = useState<CantoDaCamera>('inf-dir')
+  const { tela, camera, mic } = tr.local
+  const fundo = tr.fundo
+  const [canto, setCanto] = useState<CantoDaCamera>(cantoDoTreino)
   const [erro, setErro] = useState<string | null>(null)
   const [texto, setTexto] = useState('')
   // antes de começar, a aba aberta é a dos ajustes; ao começar, vai para o chat
@@ -124,9 +113,6 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   const [ajustou, setAjustou] = useState(false)
   const lista = useRef<HTMLDivElement>(null)
 
-  // desliga tudo ao sair da sala
-  const fluxos = useRef<MediaStream[]>([])
-  useEffect(() => () => { pararSimulacao(); fluxos.current.forEach((f) => f.getTracks().forEach((t) => t.stop())) }, [])
   useEffect(() => {
     const l = lista.current
     if (l && l.scrollHeight - l.scrollTop - l.clientHeight < 140) l.scrollTop = l.scrollHeight
@@ -138,37 +124,8 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     setVistas(Math.max(0, sim.mensagens.length - ultimas.current))
   }, [sim.mensagens.length, aba])
 
-  const ligar = async (qual: 'tela' | 'camera' | 'mic') => {
-    setErro(null)
-    const atual = qual === 'tela' ? tela : qual === 'camera' ? camera : mic
-    const definir = qual === 'tela' ? setTela : qual === 'camera' ? setCamera : setMic
-    if (atual) {
-      void publicarNoTreino(qual, null)
-      atual.getTracks().forEach((t) => t.stop()); definir(null)
-      if (qual === 'camera' && cameraFaixa.current) { cameraFaixa.current.stop(); cameraFaixa.current = null }
-      return
-    }
-    try {
-      const f = qual === 'tela'
-        ? await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 15, max: 15 } }, audio: false, selfBrowserSurface: 'exclude', surfaceSwitching: 'include' } as DisplayMediaStreamOptions)
-        : await navigator.mediaDevices.getUserMedia(qual === 'camera' ? { video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24, max: 30 } } } : { audio: { echoCancellation: true, noiseSuppression: true } })
-      fluxos.current.push(f)
-      // parou pela barra do navegador: o botão acompanha
-      f.getTracks().forEach((t) => t.addEventListener('ended', () => { definir(null); void publicarNoTreino(qual, null) }))
-      if (qual === 'camera') {
-        const lt = new LocalVideoTrack(f.getVideoTracks()[0], undefined, true)
-        cameraFaixa.current = lt
-        if (fundo !== 'nenhum') { setAplicandoFundo(true); try { await aplicarFundo(lt, fundo) } catch { /* segue sem fundo */ } setAplicandoFundo(false) }
-        exibirCamera(lt)
-        void publicarNoTreino('camera', lt)
-      } else {
-        definir(f)
-        void publicarNoTreino(qual, qual === 'tela' ? f.getVideoTracks()[0] : f.getAudioTracks()[0])
-      }
-    } catch {
-      setErro('O navegador não liberou o acesso. Permita a câmera, o microfone ou a tela no cadeado da barra de endereço.')
-    }
-  }
+  const ligar = async (qual: 'tela' | 'camera' | 'mic') => { setErro(null); setErro(await alternarFonte(qual)) }
+  const sairDaSala = () => { void sairDoTreino(); aoSair() }
 
   const podeTela = typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.getDisplayMedia === 'function'
   const fonte = (qual: 'tela' | 'camera' | 'mic', rotulo: string, ligado: boolean) => {
@@ -233,7 +190,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
           {sim.ativa
             ? <button className="av-botao-encerrar" onClick={() => pararSimulacao()}>Encerrar simulação</button>
             : <button className="tr-botao-iniciar" onClick={comecar}><i aria-hidden />Começar simulação</button>}
-          <button className="av-link" onClick={aoSair}>Sair da sala de treino</button>
+          <button className="av-link" onClick={sairDaSala}>Sair da sala de treino</button>
         </div>
         {erro && <p className="av-erro" role="alert">{erro}</p>}
       </section>
@@ -347,7 +304,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
 
               <section className="av-painel-sec">
                 <h4>Fundo da câmera</h4>
-                <SeletorDeFundo valor={fundo} cameraLigada={!!camera} aplicando={aplicandoFundo} onEscolher={(e) => void trocarFundo(e)} />
+                <SeletorDeFundo valor={fundo} cameraLigada={!!camera} aplicando={tr.aplicandoFundo} onEscolher={(e) => void trocarFundoDoTreino(e)} />
               </section>
 
               <section className="av-painel-sec">
@@ -361,6 +318,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
                 <span className="tr-rotulo">Volume do microfone</span>
                 <MedidorDeVolume faixa={mic?.getAudioTracks()[0]} />
                 {!mic && <span className="tr-legenda">Ligue o microfone na barra de cima para ver o volume.</span>}
+                <span className="tr-legenda">Aqui você se vê espelhado, como num espelho. Os membros veem a imagem real, do jeito que a câmera filma.</span>
               </section>
 
               <section className="av-painel-sec">
