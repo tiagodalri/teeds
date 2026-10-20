@@ -1,6 +1,7 @@
 import './ambiente'
 import { createHash } from 'node:crypto'
 import { emailDeDemonstracao } from '../../src/core/deriv/accountAccess'
+import { emailReal } from '../../src/core/teeds/emailDaConta'
 
 /**
  * Espelha no Supabase tudo que o robô faz.
@@ -434,7 +435,7 @@ async function conferirNoSupabase(token: string): Promise<{ id: string; email: s
     })
     if (!res.ok) return null
     const u = (await res.json()) as any
-    return u?.id ? { id: String(u.id), email: String(u.email ?? '') } : null
+    return u?.id ? { id: String(u.id), email: emailReal(u.email) } : null
   } catch {
     return null
   }

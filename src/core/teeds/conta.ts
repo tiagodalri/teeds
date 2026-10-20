@@ -12,6 +12,7 @@
 
 import { SERVIDOR, SUPABASE, autenticacaoConfigurada } from './config'
 import { MARCA } from '../../marca'
+import { emailDaConta, emailReal, marcaDaConta } from './emailDaConta'
 
 export interface Usuario {
   id: string
@@ -133,12 +134,23 @@ function montarSessao(d: any): SessaoTeeds {
 function montarUsuario(u: any): Usuario {
   return {
     id: u?.id ?? '',
-    email: u?.email ?? '',
+    // a pessoa vê sempre o e-mail de verdade, nunca a etiqueta da marca
+    email: emailReal(u?.email),
     nome: u?.user_metadata?.nome ?? null,
     telefone: u?.user_metadata?.telefone ?? null,
     cpf: u?.user_metadata?.cpf ?? null,
     criadoEm: u?.created_at ?? '',
     trocarSenha: u?.user_metadata?.trocar_senha === true,
+  }
+}
+
+/** O token é de uma conta desta marca? (a marca vem na etiqueta do e-mail do login) */
+function daMarcaDesteSite(token: string): boolean {
+  try {
+    const corpo = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as { email?: string }
+    return !corpo.email || marcaDaConta(corpo.email) === MARCA.id
+  } catch {
+    return true // token ilegível: a própria Supabase recusa adiante
   }
 }
 
@@ -159,7 +171,11 @@ export function sessaoGuardada(): SessaoTeeds | null {
     const bruto = localStorage.getItem(CHAVE)
     if (!bruto) return null
     const s = JSON.parse(bruto) as SessaoTeeds
-    return s?.token && s?.usuario ? s : null
+    if (!s?.token || !s?.usuario) return null
+    // Sessão de outra marca (de antes de cada marca ter a sua conta, 20/10/2026)
+    // não vale aqui: a pessoa entra de novo com a conta desta marca.
+    if (!daMarcaDesteSite(s.token)) { guardar(null); return null }
+    return s
   } catch {
     return null
   }
@@ -171,7 +187,8 @@ export async function cadastrar(
 ): Promise<{ sessao: SessaoTeeds | null; confirmar: boolean }> {
   const d = await chamar(`/signup?redirect_to=${encodeURIComponent(enderecoDeRetorno())}`, {
     corpo: {
-      email: dados.email.trim(),
+      // a conta desta marca (emailDaConta.ts): quem já tem conta em outra marca ganha uma nova aqui
+      email: emailDaConta(dados.email, MARCA.id),
       password: dados.senha,
       data: {
         nome: dados.nome.trim(),
@@ -192,7 +209,7 @@ export async function cadastrar(
 
 export async function entrar(email: string, senha: string): Promise<SessaoTeeds> {
   const d = await chamar('/token?grant_type=password', {
-    corpo: { email: email.trim(), password: senha },
+    corpo: { email: emailDaConta(email, MARCA.id), password: senha },
   })
   const s = montarSessao(d)
   guardar(s)
@@ -239,7 +256,7 @@ export async function recuperarSenha(email: string): Promise<void> {
     if (e instanceof Error && !/fetch|network|Load failed/i.test(e.message)) throw e
   }
   await chamar(`/recover?redirect_to=${encodeURIComponent(enderecoDeRetorno())}`, {
-    corpo: { email: email.trim() },
+    corpo: { email: emailDaConta(email, MARCA.id) },
   })
 }
 

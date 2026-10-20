@@ -32,6 +32,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { MARCAS, marcaPorId, type Marca } from '../../src/marca/marcas'
 import { montarEmail, type TipoDeEmail } from './emails'
+import { emailReal, marcaDaConta } from '../../src/core/teeds/emailDaConta'
 
 /* ------------------------------------------------------------ assinatura */
 
@@ -124,7 +125,11 @@ function marcaAnotada(email: string | undefined): Marca | null {
 }
 
 export function marcaDoAviso(aviso: AvisoDoSupabase): Marca {
-  const anotada = marcaAnotada(aviso.user?.email)
+  // Desde 20/10/2026 cada marca tem a sua conta, com a marca na etiqueta do
+  // e-mail (emailDaConta.ts): é a resposta mais segura e vem primeiro.
+  const daConta = marcaDaConta(aviso.user?.email)
+  if (daConta !== 'teeds' && MARCAS[daConta]) return MARCAS[daConta]
+  const anotada = marcaAnotada(emailReal(aviso.user?.email))
   if (anotada) return anotada
   const volta = aviso.email_data?.redirect_to || aviso.email_data?.site_url || ''
   if (volta) {
@@ -215,7 +220,8 @@ export async function entregarAviso(aviso: AvisoDoSupabase): Promise<{ marca: st
   const supabaseUrl = process.env.SUPABASE_URL ?? ''
   if (!chaveResend || !supabaseUrl) throw new Error('servidor sem RESEND_CHAVE ou SUPABASE_URL')
 
-  const para = aviso.user?.email
+  // a etiqueta da marca só existe no login: o e-mail vai para o endereço de verdade
+  const para = emailReal(aviso.user?.email)
   const tipo = tipoDoAviso(aviso.email_data?.email_action_type)
   if (!para || !tipo) throw new Error(`aviso incompleto (${aviso.email_data?.email_action_type ?? 'sem tipo'})`)
 

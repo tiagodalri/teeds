@@ -18,6 +18,7 @@ import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
 import { MARCAS } from '../../marca/marcas'
 import { PLANOS_CLIENTE, planoClienteValido } from './planos'
+import { emailDaConta } from './emailDaConta'
 import { dispositivoAtual } from './insights'
 
 function cabecalhos(token: string): Record<string, string> {
@@ -488,7 +489,7 @@ export async function criarAcessoCliente(sessao: SessaoTeeds, dados: {
     method: 'POST',
     headers: { apikey: SUPABASE.anonKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: dados.email.trim().toLowerCase(), senha: undefined, password: dados.senha,
+      email: emailDaConta(dados.email, MARCA.id), senha: undefined, password: dados.senha,
       data: { nome: dados.nome.trim(), telefone: dados.telefone?.trim() || null, cpf: dados.cpf?.trim() || null, marca: MARCA.id, trocar_senha: true },
     }),
   })

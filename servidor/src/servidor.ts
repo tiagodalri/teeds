@@ -13,6 +13,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import { writeFileSync, chmodSync, existsSync, readFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
 import { MARCAS, marcaPorId } from '../../src/marca/marcas'
+import { emailDaConta } from '../../src/core/teeds/emailDaConta'
 import { atender, autorizacao } from './mcp'
 import { contasDoUsuario, emailEntregue, emailFalhou, emailsPendentes, limitesDoCliente, limparSessoesOrfas, salvarLeadCapturado, salvarRegiaoDoCliente, salvarVisita, supabaseConfigurado, usuarioDoToken } from './supabase'
 import { aplicarNasSessoesVivas, aquecerSala, contas, iniciar, montarConfig, parar, sessoesVivasPorVersao, todas, ver } from './sessoes'
@@ -511,7 +512,8 @@ const servidor = createServer(async (req, res) => {
       const base = (process.env.SUPABASE_URL ?? '').replace(/\/+$/, '')
       const chave = process.env.SUPABASE_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
       const r = await fetch(`${base}/auth/v1/recover?redirect_to=${encodeURIComponent(marca.redirectUri)}`, {
-        method: 'POST', headers: { apikey: chave, 'content-type': 'application/json' }, body: JSON.stringify({ email }), signal: AbortSignal.timeout(10_000),
+        // a conta DESTA marca (emailDaConta.ts): pedir na GlobalFly nunca mexe na senha da Teeds
+        method: 'POST', headers: { apikey: chave, 'content-type': 'application/json' }, body: JSON.stringify({ email: emailDaConta(email, marca.id) }), signal: AbortSignal.timeout(10_000),
       })
       if (r.status === 429) { res.writeHead(429, headers); return res.end(JSON.stringify({ erro: 'Muitos pedidos seguidos. Espere um minuto e tente de novo.' })) }
       if (!r.ok) console.warn(`[senha] a Supabase respondeu ${r.status} ao pedido da ${marca.prosa}`)

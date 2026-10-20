@@ -3,6 +3,7 @@ import { createHmac, randomUUID } from 'node:crypto'
 import { marcaPorId, type Marca } from '../../src/marca/marcas'
 import { montarEmail } from './emails'
 import { planoClienteValido } from '../../src/core/teeds/planos'
+import { emailDaConta } from '../../src/core/teeds/emailDaConta'
 
 const base = () => (process.env.SUPABASE_URL ?? '').replace(/\/+$/, '')
 const segredo = () => process.env.SUPABASE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -72,7 +73,7 @@ export async function decidirLead(id: string, marca: string, admin: string, acao
     // Admin Auth não dispara confirmação. O e-mail só sai depois de finalizar.
     try {
       usuario=await banco('/auth/v1/admin/users','POST',{
-        email:ficha.email,password:SENHA_PROVISORIA,email_confirm:true,
+        email:emailDaConta(ficha.email,marca),password:SENHA_PROVISORIA,email_confirm:true,
         user_metadata:{nome:ficha.nome,telefone:ficha.telefone,marca,trocar_senha:true},
         app_metadata:{aprovacao_lead:id,senha_aprovacao_versao:VERSAO_SENHA},
       })
@@ -212,11 +213,11 @@ export async function enviarCadastros() {
         // que criou a conta e caiu antes de marcar o envio.
         let usuario=p.user_id
           ? await banco(`/auth/v1/admin/users/${encodeURIComponent(p.user_id)}`)
-          : await banco(`/auth/v1/admin/users?filter=${encodeURIComponent(p.email)}`).then((d:any)=>(d?.users??[]).find((u:any)=>String(u.email).toLowerCase()===p.email))
+          : await banco(`/auth/v1/admin/users?filter=${encodeURIComponent(emailDaConta(p.email,p.marca))}`).then((d:any)=>(d?.users??[]).find((u:any)=>String(u.email).toLowerCase()===emailDaConta(p.email,p.marca)))
         let criadaAgora=false
         if (!usuario) {
           usuario=await banco('/auth/v1/admin/users','POST',{
-            email:p.email,password:SENHA_PROVISORIA,email_confirm:true,
+            email:emailDaConta(p.email,p.marca),password:SENHA_PROVISORIA,email_confirm:true,
             user_metadata:{nome:p.nome,telefone:p.telefone,marca:p.marca,trocar_senha:true},
             app_metadata:{cadastro_lead:p.id},
           })
