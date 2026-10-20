@@ -19,7 +19,7 @@
  */
 import type { Marca } from '../../src/marca/marcas'
 
-export type TipoDeEmail = 'confirmar' | 'magico' | 'senha' | 'convite' | 'trocar-email'
+export type TipoDeEmail = 'confirmar' | 'magico' | 'senha' | 'convite' | 'trocar-email' | 'trocar-email-atual'
 
 export interface EmailPronto {
   assunto: string
@@ -119,6 +119,16 @@ function conteudo(tipo: TipoDeEmail, prosa: string): Conteudo {
         corpo: `Você pediu para trocar o e-mail da sua conta na ${prosa}. Confirme este endereço para a troca valer.`,
         botao: 'Confirmar novo e-mail',
         aviso: 'Se não foi você, ignore este e-mail — o endereço antigo continua valendo.',
+      }
+    // 20/10/2026: na troca de e-mail, o endereço ATUAL também confirma (troca segura)
+    case 'trocar-email-atual':
+      return {
+        assunto: `Confirme a troca do seu e-mail · ${prosa}`,
+        titulo: 'Confirme a troca de e-mail',
+        espia: 'Um pedido de troca de e-mail chegou para a sua conta.',
+        corpo: `Pediram para trocar o e-mail da sua conta na ${prosa} por outro endereço. Se foi você, confirme por aqui; mandamos também um link para o endereço novo, e a troca vale quando os dois forem confirmados.`,
+        botao: 'Confirmar a troca',
+        aviso: 'Se não foi você, ignore este e-mail e troque a sua senha: o seu e-mail continua o mesmo.',
       }
   }
 }

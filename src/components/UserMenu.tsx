@@ -6,6 +6,8 @@ interface Props {
   usuario: Usuario
   onSair: () => void
   onPerfil: () => void
+  /** Foto do "Meu perfil" (GlobalFly); sem ela, as iniciais. */
+  foto?: string | null
 }
 
 /** Iniciais do nome — duas no máximo, que é o que cabe num círculo pequeno. */
@@ -17,7 +19,7 @@ function iniciais(nome: string, email: string): string {
 }
 
 /** A conta da Teeds — a da plataforma, não a da corretora. */
-export function UserMenu({ usuario, onSair, onPerfil }: Props) {
+export function UserMenu({ usuario, onSair, onPerfil, foto }: Props) {
   const [aberto, setAberto] = useState(false)
   const caixa = useRef<HTMLDivElement>(null)
 
@@ -38,12 +40,12 @@ export function UserMenu({ usuario, onSair, onPerfil }: Props) {
   const primeiro = (usuario.nome || usuario.email).split(' ')[0]
 
   return (
-    <div className="conta" ref={caixa}>
+    <div className="conta" ref={caixa} data-tour="usuario">
       <button className={`avatar-botao ${aberto ? 'aberto' : ''}`}
         onClick={() => setAberto((a) => !a)}
         aria-expanded={aberto} aria-haspopup="menu"
         title={usuario.email}>
-        <span className="avatar">{iniciais(usuario.nome ?? '', usuario.email)}</span>
+        <span className="avatar">{foto ? <img src={foto} alt="" /> : iniciais(usuario.nome ?? '', usuario.email)}</span>
         <svg className="conta-seta" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">
           <path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor"
             strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -54,7 +56,7 @@ export function UserMenu({ usuario, onSair, onPerfil }: Props) {
         <div className="menu menu-curto" role="menu">
           <button className="menu-eu" role="menuitem"
             onClick={() => { setAberto(false); onPerfil() }}>
-            <span className="avatar grande">{iniciais(usuario.nome ?? '', usuario.email)}</span>
+            <span className="avatar grande">{foto ? <img src={foto} alt="" /> : iniciais(usuario.nome ?? '', usuario.email)}</span>
             <div>
               <b>{usuario.nome || primeiro}</b>
               <em>{usuario.email}</em>
@@ -73,7 +75,7 @@ export function UserMenu({ usuario, onSair, onPerfil }: Props) {
               fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="8" cy="5.5" r="2.5" /><path d="M2.8 13.5a5.2 5.2 0 0 1 10.4 0" />
             </svg>
-            Minha conta
+            {MARCA.inicio ? 'Meu perfil' : 'Minha conta'}
           </button>
 
           <button className="menu-acao perigo" role="menuitem" onClick={onSair}>

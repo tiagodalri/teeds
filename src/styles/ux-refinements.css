@@ -643,3 +643,22 @@ button, input, select, textarea { font-family: inherit; }
 .fc-nota b { color: var(--text); font-weight: 700; }
 .fc-paginas .cab, .fc-paginas .linha { grid-template-columns: 1.6fr .7fr .9fr 1fr; }
 .fc-cliques .cab, .fc-cliques .linha { grid-template-columns: 2fr 1fr .6fr 1fr; }
+
+/* Aulas: o cartão "Rever o tour" (20/10/2026) */
+.aulas-tour {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; margin: 16px 0 4px; padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--gf-ouro, var(--primary)) 40%, var(--border)); border-radius: 14px; background: var(--surface);
+}
+.aulas-tour-icone { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: color-mix(in srgb, var(--gf-ouro, var(--primary)) 16%, transparent); color: var(--gf-ouro, var(--primary)); }
+.aulas-tour-icone svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.aulas-tour b { color: var(--text); font-size: 15px; }
+.aulas-tour p { margin: 2px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.aulas-tour button {
+  min-height: 42px; padding: 0 18px; border: 0; border-radius: 11px; background: var(--gf-ouro, var(--primary)); color: #051528;
+  font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.aulas-tour button:focus-visible { outline: 2px solid var(--gf-ouro, var(--primary)); outline-offset: 2px; }
+@media (max-width: 640px) {
+  .aulas-tour { grid-template-columns: auto minmax(0, 1fr); }
+  .aulas-tour button { grid-column: 1 / -1; min-height: 48px; }
+}

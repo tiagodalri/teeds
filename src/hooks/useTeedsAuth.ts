@@ -52,9 +52,11 @@ export function useTeedsAuth() {
 
     const aplicar = (retorno: Retorno): boolean => {
       if (retorno.erro) setErro(retorno.erro)
+      if (retorno.recado) setRecado(retorno.recado)
       if (!retorno.sessao) return false
       const s = retorno.sessao
       if (retorno.tipo === 'recovery') setRedefinindo(true)
+      else if (retorno.tipo === 'email_change') setRecado('E-mail trocado. A partir de agora, entre com o endereço novo.')
       else setRecado(`E-mail confirmado. Bem-vindo à ${MARCA.prosa}.`)
       void (async () => {
         try {

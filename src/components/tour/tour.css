@@ -1,0 +1,85 @@
+/* Tour guiado (20/10/2026). O resto da tela escurece, a parte de que o
+   passo fala fica acesa com um contorno ouro, e o cartão explica. No
+   celular o cartão é uma folha presa embaixo (ou em cima, se o alvo estiver
+   lá embaixo), com a área segura do iPhone. */
+.tg {
+  --tg-ouro: var(--gf-ouro, var(--primary));
+  --tg-sombra: rgba(2, 8, 22, .74);
+  position: fixed; inset: 0; z-index: 1400;
+}
+.tg-bloqueio { position: absolute; inset: 0; }
+.tg-foco {
+  position: fixed; border-radius: 16px; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--tg-ouro), 0 0 0 6px color-mix(in srgb, var(--tg-ouro) 22%, transparent), 0 0 0 200vmax var(--tg-sombra);
+  transition: top .35s cubic-bezier(.2, .8, .2, 1), left .35s cubic-bezier(.2, .8, .2, 1), width .35s cubic-bezier(.2, .8, .2, 1), height .35s cubic-bezier(.2, .8, .2, 1);
+}
+.tg.sem-alvo .tg-foco { box-shadow: 0 0 0 200vmax var(--tg-sombra); }
+.tg.com-alvo .tg-foco::after {
+  content: ''; position: absolute; inset: -2px; border-radius: inherit; border: 2px solid var(--tg-ouro);
+  animation: tg-pulso 1.8s ease-out infinite;
+}
+@keyframes tg-pulso { from { opacity: .9; transform: scale(1); } to { opacity: 0; transform: scale(1.04); } }
+
+.tg-cartao {
+  position: fixed; box-sizing: border-box; display: grid; gap: 12px; padding: 18px 20px 16px; outline: none;
+  border: 1px solid color-mix(in srgb, var(--tg-ouro) 45%, var(--border)); border-radius: 20px;
+  background: var(--surface); color: var(--text); box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+  animation: tg-entra .28s cubic-bezier(.2, .8, .2, 1);
+}
+.tg-cartao.centro { top: 50%; left: 50%; width: min(420px, calc(100vw - 32px)); transform: translate(-50%, -50%); animation-name: tg-entra-centro; }
+@keyframes tg-entra { from { opacity: 0; transform: translateY(8px); } }
+@keyframes tg-entra-centro { from { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); } }
+.tg-cartao svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.tg-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 22px; }
+.tg-contagem { color: var(--tg-ouro); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.tg-fechar { display: grid; place-items: center; width: 32px; height: 32px; margin: -6px -8px -6px 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.tg-fechar:hover { background: var(--surface-alt); color: var(--text); }
+.tg-cabeca { display: flex; align-items: center; gap: 12px; }
+.tg-icone { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; flex: none; background: color-mix(in srgb, var(--tg-ouro) 16%, transparent); color: var(--tg-ouro); }
+.tg-icone.ok { background: var(--up-soft); color: var(--up); }
+.tg-icone svg { width: 21px; height: 21px; }
+.tg-cabeca h2 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; text-wrap: balance; }
+.tg-texto { margin: 0; color: var(--text); opacity: .88; font-size: 14.5px; line-height: 1.55; }
+.tg-dicas { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.tg-dicas li { position: relative; padding-left: 20px; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+.tg-dicas li::before { content: ''; position: absolute; left: 4px; top: .55em; width: 7px; height: 7px; border-radius: 50%; background: var(--tg-ouro); }
+.tg-abrindo { margin: 0; color: var(--muted); font-size: 12.5px; }
+
+.tg-trilho { height: 4px; border-radius: 2px; background: var(--trilho); overflow: hidden; margin-top: 2px; }
+.tg-trilho i { display: block; height: 100%; border-radius: 2px; background: var(--tg-ouro); transition: width .35s ease; }
+
+.tg-acoes { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tg-acoes.final { flex-wrap: wrap; justify-content: flex-end; }
+.tg-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; padding: 0 16px;
+  border: 1px solid var(--border); border-radius: 11px; background: var(--surface-alt); color: var(--text);
+  font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: border-color .15s, transform .15s;
+}
+.tg-btn:hover { border-color: var(--tg-ouro); }
+.tg-btn.ouro { border-color: transparent; background: var(--tg-ouro); color: #051528; }
+.tg-btn.ouro:hover { transform: translateY(-1px); }
+.tg-btn svg { width: 16px; height: 16px; stroke-width: 2.4; }
+.tg-btn:focus-visible, .tg-fechar:focus-visible { outline: 2px solid var(--tg-ouro); outline-offset: 2px; }
+.tg-teclas { margin: -2px 0 0; color: var(--muted); font-size: 11.5px; text-align: right; }
+.tg-teclas kbd { padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; font: inherit; font-size: 11px; }
+
+/* celular e app: folha presa embaixo (ou em cima) */
+@media (max-width: 640px) {
+  .tg-cartao.folha, .tg-cartao.folha-topo, .tg-cartao.centro { left: 10px; right: 10px; width: auto; transform: none; padding: 16px 16px 14px; border-radius: 22px; }
+  .tg-cartao.folha { bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .tg-cartao.folha-topo { top: calc(10px + env(safe-area-inset-top, 0px)); }
+  .tg-cartao.centro { top: auto; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); animation-name: tg-entra; }
+  .tg-cabeca h2 { font-size: 18px; }
+  .tg-texto { font-size: 14.5px; }
+  .tg-btn { min-height: 48px; flex: 1 1 0; }
+  .tg-acoes > span:empty { display: none; }
+  .tg-acoes.final .tg-btn { flex: 1 1 100%; }
+  .tg-acoes.final .tg-btn.ouro { order: -1; }
+  .tg-acoes.final .tg-btn:first-child { order: 2; border-color: transparent; background: transparent; min-height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tg-foco, .tg-trilho i, .tg-btn { transition: none; }
+  .tg-cartao { animation: none; }
+  .tg.com-alvo .tg-foco::after { animation: none; }
+}

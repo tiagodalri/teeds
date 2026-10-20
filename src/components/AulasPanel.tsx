@@ -93,9 +93,26 @@ const AULAS_EM_BREVE = SALA_EM_BREVE
  * `.ger.aulas` carrega uma pilha de regras aqui e em ux-refinements.css, e
  * não herdar nada é mais barato do que desfazer.
  */
-function SalaEmBreve() {
+/** O tour guiado fica aqui para rever quando quiser (GlobalFly, 20/10/2026). */
+function CartaoDoTour({ aoAbrir }: { aoAbrir: () => void }) {
+  return (
+    <section className="aulas-tour" data-tour="rever-tour">
+      <span className="aulas-tour-icone" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z" /><circle cx="12" cy="10" r="2.6" /></svg>
+      </span>
+      <div>
+        <b>Tour guiado pela plataforma</b>
+        <p>Em 2 minutos, onde fica cada coisa e por onde começar. Reveja quando quiser.</p>
+      </div>
+      <button type="button" onClick={aoAbrir}>Rever o tour</button>
+    </section>
+  )
+}
+
+function SalaEmBreve({ aoReverTour }: { aoReverTour?: () => void }) {
   return (
     <div className="ger aulas-breve">
+      {aoReverTour && <CartaoDoTour aoAbrir={aoReverTour} />}
       <section className="breve-cartao">
         <span className="breve-selo">Treinamento original {MARCA.prosa}</span>
         <h2>Disponível em breve</h2>
@@ -110,8 +127,8 @@ function SalaEmBreve() {
 }
 
 /** A porta da sala: o recado enquanto não há vídeo, a vitrine quando houver. */
-export function AulasPanel(props: { nome?: string | null; sessao?: SessaoTeeds | null }) {
-  if (AULAS_EM_BREVE) return <SalaEmBreve />
+export function AulasPanel(props: { nome?: string | null; sessao?: SessaoTeeds | null; aoReverTour?: () => void }) {
+  if (AULAS_EM_BREVE) return <SalaEmBreve aoReverTour={props.aoReverTour} />
   return <SalaDeAulas {...props} />
 }
 
@@ -120,7 +137,7 @@ export function AulasPanel(props: { nome?: string | null; sessao?: SessaoTeeds |
  * modulo, cartoes com capa e numero, player com a lista do modulo ao lado.
  * Aula sem video existe no catalogo mas se apresenta como "em breve".
  */
-function SalaDeAulas({ nome, sessao }: { nome?: string | null; sessao?: SessaoTeeds | null }) {
+function SalaDeAulas({ nome, sessao, aoReverTour }: { nome?: string | null; sessao?: SessaoTeeds | null; aoReverTour?: () => void }) {
   // Os vídeos que o painel gravou no banco. Enquanto não chegam (ou se o
   // banco não responder), a sala abre com o catálogo do código.
   const [videos, setVideos] = useState<Record<string, VideoDaAula>>({})
@@ -330,6 +347,8 @@ function SalaDeAulas({ nome, sessao }: { nome?: string | null; sessao?: SessaoTe
         </div>
         <div className="aulas-hero-marca" aria-hidden>{MARCA.nome} ORIGINAL</div>
       </div>
+
+      {aoReverTour && <CartaoDoTour aoAbrir={aoReverTour} />}
 
       {assistidas > 0 && proxima && (
         <section className="aulas-modulo aulas-continue">

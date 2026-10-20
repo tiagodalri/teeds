@@ -1754,6 +1754,8 @@ button:has(> .icone-fechar) { display: inline-flex; align-items: center; justify
   font-size: 11px; font-weight: 650; letter-spacing: .02em;
 }
 .avatar.grande { width: 38px; height: 38px; font-size: 14px; }
+.avatar { overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .menu {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;

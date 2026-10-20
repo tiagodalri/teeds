@@ -14,7 +14,7 @@ import { montarEmail, type TipoDeEmail } from './emails'
 import { emailDeCadastro, emailDeAprovacao } from './aprovacao-leads'
 import { emailDeAcessoGratuito, emailDeRepescagem, emailDeVolta, emailDoDiaDoAg2 } from './campanhas'
 
-const TIPOS: TipoDeEmail[] = ['confirmar', 'magico', 'senha', 'convite', 'trocar-email']
+const TIPOS: TipoDeEmail[] = ['confirmar', 'magico', 'senha', 'convite', 'trocar-email', 'trocar-email-atual']
 const PASTA = join(process.cwd(), '..', 'previa-emails')
 
 mkdirSync(PASTA, { recursive: true })

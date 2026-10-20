@@ -49,11 +49,14 @@ import { conviteRecebido, liveNoAr, podeTreinar, treinoNoAr, treinoPedido, type 
 import { IconeAtivo } from './components/IconeAtivo'
 import { usePlayerAtivo, useTreinoAtivo } from './core/live/presenca'
 import { assinarMudancas, type AssinaturaRealtime } from './core/teeds/realtime'
+import { lerPerfil, marcarTourVisto } from './core/teeds/perfil'
+import { TourGuiado, passosDoTour } from './components/tour/TourGuiado'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
 // quando a pessoa abre a página ou entra numa live.
 const AoVivoPage = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.AoVivoPage })))
 const MercadoPanel = lazy(() => import('./components/MercadoPanel').then((m) => ({ default: m.MercadoPanel })))
+const MeuPerfil = lazy(() => import('./components/perfil/MeuPerfil').then((m) => ({ default: m.MeuPerfil })))
 const InicioPagina = lazy(() => import('./components/inicio/InicioPagina').then((m) => ({ default: m.InicioPagina })))
 const PlayerDoTreino = lazy(() => import('./components/aovivo/PlayerDoTreino'))
 const PlayerAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.PlayerGlobal })))
@@ -129,6 +132,8 @@ export default function App() {
   const simulador = useSimulador(teeds.sessao)
   const conta = useAccount({ email: teeds.sessao?.usuario.email, simulador: adminConfirmado || simulador, tokenTeeds: teeds.sessao?.token })
   const [verPerfil, setVerPerfil] = useState(false)
+  // "Meu perfil" (GlobalFly, 20/10/2026): a foto vai para o menu do usuário
+  const [fotoPerfil, setFotoPerfil] = useState<string | null>(null)
   const [tema, setTema] = useState<Tema>(temaGuardado)
   const alternarTema = () => {
     const novo = tema === 'claro' ? 'escuro' : 'claro'
@@ -363,6 +368,31 @@ export default function App() {
   useEffect(() => { if (tela === 'aovivo') setAvisoTreino(false) }, [tela])
   // Com as lives desligadas, o "Ao vivo" é só a sala de treino: aparece para admin e GF Member
   const [membroTreino, setMembroTreino] = useState<boolean | null>(null)
+
+  // "Meu perfil" e tour guiado (GlobalFly, 20/10/2026): a foto vai para o menu
+  // do usuário, e quem nunca fez o tour faz agora (obrigatório na 1ª vez).
+  // O "visto" fica na ficha (vale em qualquer aparelho) e neste aparelho.
+  const [tour, setTour] = useState<null | 'obrigatorio' | 'rever'>(null)
+  const chaveTour = teeds.sessao ? `${MARCA.id}.tour.visto.${teeds.sessao.usuario.id}` : ''
+  useEffect(() => {
+    const sessao = teeds.sessao
+    if (!MARCA.inicio || !sessao) { setFotoPerfil(null); return }
+    let vivo = true
+    lerPerfil(sessao).then((p) => {
+      if (!vivo) return
+      setFotoPerfil(p.fotoUrl)
+      let visto = !!p.tourVistoEm
+      try { visto = visto || !!localStorage.getItem(chaveTour) } catch { /* só a ficha */ }
+      if (!visto) setTour((t) => t ?? 'obrigatorio')
+    }).catch(() => undefined)
+    return () => { vivo = false }
+  }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const fimDoTour = (destino?: WorkspacePage) => {
+    if (teeds.sessao) void marcarTourVisto(teeds.sessao).catch(() => undefined)
+    try { localStorage.setItem(chaveTour, new Date().toISOString()) } catch { /* só a ficha */ }
+    setTour(null)
+    if (destino) setTela(destino)
+  }
   useEffect(() => {
     if (!MARCA.aoVivo || LIVES_AO_VIVO || !teeds.sessao) { setMembroTreino(null); return }
     let vivo = true
@@ -725,7 +755,7 @@ export default function App() {
         else setTela(next)
       }} />
       <header className="topbar">
-        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : 'Seu espaço de trabalho'}</span></div>
+        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : 'Seu espaço de trabalho'}</span></div>
 
         <div className="topbar-right">
           {!derivPronta && (
@@ -788,11 +818,17 @@ export default function App() {
           })()}
 
           {teeds.usuario && (
-            <UserMenu usuario={teeds.usuario} onSair={() => void teeds.sair()}
-              onPerfil={() => setVerPerfil(true)} />
+            <UserMenu usuario={teeds.usuario} onSair={() => void teeds.sair()} foto={fotoPerfil}
+              onPerfil={() => (MARCA.inicio ? setTela('perfil') : setVerPerfil(true))} />
           )}
         </div>
       </header>
+
+      {tour && teeds.sessao && (
+        <TourGuiado passos={passosDoTour({ nome: teeds.usuario?.nome || '', treino: !!MARCA.aoVivo && (membroTreino === true || admin === true) })}
+          obrigatorio={tour === 'obrigatorio'} telaAtual={tela} irPara={setTela}
+          aoTerminar={(destino) => fimDoTour(destino)} aoFechar={() => (tour === 'obrigatorio' ? fimDoTour() : setTour(null))} />
+      )}
 
       {verPerfil && teeds.sessao && (
         <ProfilePanel
@@ -895,12 +931,17 @@ export default function App() {
             treino={membroTreino === true && admin !== true ? { noAr: !!treinoAgora, apresentador: treinoAgora?.apresentador ?? undefined } : null}
             aoIr={setTela} aoConectar={conta.login} />
         </Suspense>
+      ) : tela === 'perfil' && MARCA.inicio && teeds.sessao ? (
+        <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo seu perfil…</div></div>}>
+          <MeuPerfil sessao={teeds.sessao} contas={conta.accounts} derivConectada={conta.status === 'logado'} onConectarDeriv={conta.login}
+            onMudou={({ nome, fotoUrl }) => { setFotoPerfil(fotoUrl); if (teeds.usuario) teeds.atualizarUsuario({ ...teeds.usuario, nome }) }} />
+        </Suspense>
       ) : tela === 'aovivo' && MARCA.aoVivo ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo a transmissão…</div></div>}><AoVivoPage sessao={teeds.sessao} admin={admin === true} /></Suspense>
       ) : tela === 'noticias' && MARCA.noticias ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo as notícias…</div></div>}><MercadoPanel /></Suspense>
       ) : tela === 'aulas' ? (
-        <AulasPanel nome={teeds.usuario?.nome} sessao={teeds.sessao} />
+        <AulasPanel nome={teeds.usuario?.nome} sessao={teeds.sessao} aoReverTour={MARCA.inicio ? () => setTour('rever') : undefined} />
       ) : tela === 'marketplace' ? (
         <MarketplacePanel sessao={teeds.sessao} />
       ) : tela === 'gerenciamento' ? (

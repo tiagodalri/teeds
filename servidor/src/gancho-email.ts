@@ -85,9 +85,11 @@ export function assinaturaConfere(
 /* --------------------------------------------------------------- leitura */
 
 interface AvisoDoSupabase {
-  user?: { email?: string; user_metadata?: Record<string, unknown> }
+  user?: { email?: string; new_email?: string; user_metadata?: Record<string, unknown> }
   email_data?: {
     token_hash?: string
+    /** Na troca de e-mail: o código do endereço ATUAL (o nome é invertido, ver a documentação). */
+    token_hash_new?: string
     redirect_to?: string
     email_action_type?: string
     site_url?: string
@@ -165,8 +167,8 @@ export function tipoDoAviso(acao: string | undefined): TipoDeEmail | null {
  * mesmo endereço que ele montaria, apontando para o `verify` dele, que
  * valida o código e devolve a pessoa ao site de origem.
  */
-export function linkDoAviso(aviso: AvisoDoSupabase, supabaseUrl: string, marca: Marca): string {
-  const d = aviso.email_data ?? {}
+export function linkDoAviso(aviso: AvisoDoSupabase, supabaseUrl: string, marca: Marca, codigo?: string): string {
+  const d = { ...(aviso.email_data ?? {}), ...(codigo ? { token_hash: codigo } : {}) }
   /*
    * Link direto para o app da marca, com o código (19/10/2026). O app valida
    * o código na Supabase (verifyOtp com token_hash), que não depende da lista
@@ -230,6 +232,24 @@ export async function entregarAviso(aviso: AvisoDoSupabase): Promise<{ marca: st
     // Recusar e melhor que mandar com o remetente de outra marca: isso
     // queima a reputacao do dominio e o estrago dura meses.
     throw new Error(`a ${marca.prosa} nao tem remetente verificado`)
+  }
+
+  /*
+    Troca de e-mail (20/10/2026). Os nomes dos códigos são invertidos na
+    Supabase: `token_hash` é do endereço NOVO (user.new_email) e
+    `token_hash_new` é do endereço ATUAL. Com a troca segura ligada vêm os
+    dois, e cada endereço recebe o seu link; sem ela, só o novo.
+  */
+  if (tipo === 'trocar-email' && aviso.user?.new_email) {
+    const d = aviso.email_data ?? {}
+    const novo = emailReal(aviso.user.new_email)
+    const envios: Array<[string, TipoDeEmail, string | undefined]> = [[novo, 'trocar-email', d.token_hash]]
+    if (d.token_hash_new) envios.push([para, 'trocar-email-atual', d.token_hash_new])
+    for (const [destino, qual, codigo] of envios) {
+      const e = montarEmail(marca, qual, linkDoAviso(aviso, supabaseUrl, marca, codigo))
+      await entregarPeloResend(chaveResend, marca.email.remetente, destino, e.assunto, e.html, e.texto)
+    }
+    return { marca: marca.prosa, tipo }
   }
 
   const { assunto, html, texto } = montarEmail(marca, tipo, linkDoAviso(aviso, supabaseUrl, marca))

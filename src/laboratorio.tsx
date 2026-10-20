@@ -53,6 +53,7 @@ const TesteAtraso = lazy(() => import('./components/aovivo/TesteAtraso'))
 const LabGraficoPro = lazy(() => import('./components/grafico/LabGraficoPro'))
 const LabAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.LabAoVivo })))
 const LabInicio = lazy(() => import('./components/inicio/LabInicio'))
+const LabPerfil = lazy(() => import('./components/perfil/LabPerfil'))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
 import { DerivDesconectada } from './components/DerivDesconectada'
 
@@ -176,6 +177,7 @@ function Laboratorio() {
   const qual = new URLSearchParams(location.search).get('tela') ?? 'cabine'
   // a home vem com a casca inteira da plataforma: fora da moldura do laboratório
   if (qual === 'inicio') return <Suspense fallback={null}><LabInicio /></Suspense>
+  if (qual === 'perfil') return <Suspense fallback={null}><LabPerfil /></Suspense>
   return (
     <div className="app workspace-app" data-laboratorio={qual}>
       <main className="ger rob robot-workspace tem-acompanhamento">

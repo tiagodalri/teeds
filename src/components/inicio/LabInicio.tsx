@@ -4,6 +4,7 @@ import { AccountSwitcher } from '../AccountSwitcher'
 import { UserMenu } from '../UserMenu'
 import { InicioPanel, type DadosDoInicio } from './InicioPanel'
 import { InicioPagina } from './InicioPagina'
+import { TourGuiado, passosDoTour } from '../tour/TourGuiado'
 
 /**
  * ?tela=inicio&perfil=experiente|novo&tema=escuro|claro — a home dentro da
@@ -77,6 +78,9 @@ export default function LabInicio() {
       {q.has('real')
         ? <InicioPagina sessao={null} nome="Tiago Dal Ri" conta={{ conectada: false, demo: true, saldo: null, moeda: 'USD' }} treino={null} aoIr={nada} />
         : <InicioPanel d={d} aoIr={nada} />}
+      {/* &tour=1[&passo=N]: o tour guiado por cima da home (os passos de outras telas ficam no centro) */}
+      {q.has('tour') && <TourGuiado passos={passosDoTour({ nome: d.nome, treino: true })} obrigatorio={q.get('tour') !== 'rever'}
+        telaAtual="inicio" irPara={nada} aoTerminar={nada} aoFechar={nada} />}
     </div>
   )
 }

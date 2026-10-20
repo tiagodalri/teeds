@@ -322,6 +322,8 @@ export interface Retorno {
   /** 'signup' = confirmou o e-mail · 'recovery' = veio redefinir a senha. */
   tipo: string | null
   erro: string | null
+  /** Recado sem sessão (ex.: troca de e-mail: falta confirmar no outro endereço). */
+  recado?: string
 }
 
 /**
@@ -385,6 +387,12 @@ async function validarCodigoDoEndereco(): Promise<Retorno> {
   try { window.history.replaceState(null, '', u.pathname + u.search + u.hash) } catch { /* sem history */ }
   try {
     const d = await chamar('/verify', { corpo: { type: tipo, token_hash: codigo } })
+    // troca de e-mail segura: o primeiro link confirmado não devolve sessão
+    if (!d?.access_token) {
+      return { sessao: null, tipo, erro: null, recado: tipo === 'email_change'
+        ? 'Confirmado. Para concluir a troca, abra também o link que mandamos para o outro e-mail.'
+        : 'Confirmado.' }
+    }
     const sessao = montarSessao(d)
     guardar(sessao)
     return { sessao, tipo, erro: null }

@@ -3,8 +3,8 @@ import { Brand } from './Brand'
 import { MARCA } from '../marca'
 import './workspace.css'
 
-export type WorkspacePage = 'inicio' | 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo' | 'noticias'
-export const PAGE_NAMES: Record<WorkspacePage, string> = { inicio: 'Início', operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', ...(MARCA.menu?.nomes ?? {}) }
+export type WorkspacePage = 'inicio' | 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo' | 'noticias' | 'perfil'
+export const PAGE_NAMES: Record<WorkspacePage, string> = { inicio: 'Início', operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', perfil: 'Meu perfil', ...(MARCA.menu?.nomes ?? {}) }
 const paths: Record<string, string> = {
   inicio: 'M3 11l9-7 9 7M5 9.5V20h5v-6h4v6h5V9.5',
   operar: 'M3 17l5-6 4 3 9-11M16 3h5v5', robos: 'M5 7h14v13H5zM12 3v4M8 12h1m6 0h1M9 16h6',
@@ -25,7 +25,7 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mos
   const [open, setOpen] = useState(false)
   const navigate = (next: WorkspacePage) => { onNavigate(next); setOpen(false) }
   const estaSelecionado = (id: WorkspacePage) => page === id || (id === 'gestao' && (page === 'monitoramento' || page === 'insights'))
-  const item = (id: WorkspacePage) => <button key={id} className={`workspace-link ${estaSelecionado(id) ? 'selected' : ''} ${id === 'aovivo' && aoVivoAgora ? 'no-ar' : ''}`} aria-current={estaSelecionado(id) ? 'page' : undefined} title={PAGE_NAMES[id]} onClick={() => navigate(id)}>
+  const item = (id: WorkspacePage) => <button key={id} data-tour={`nav-${id}`} className={`workspace-link ${estaSelecionado(id) ? 'selected' : ''} ${id === 'aovivo' && aoVivoAgora ? 'no-ar' : ''}`} aria-current={estaSelecionado(id) ? 'page' : undefined} title={PAGE_NAMES[id]} onClick={() => navigate(id)}>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[id]} /></svg>
     <span className="workspace-label">{PAGE_NAMES[id]}</span>{id === 'aovivo' && aoVivoAgora && <i className="workspace-aovivo" aria-label="Transmissão no ar agora" title="Transmissão no ar agora"><b className="workspace-label">ao vivo</b></i>}{id === 'assistente' && <small className="workspace-lock workspace-label" aria-label="Acesso restrito" title="Acesso restrito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></small>}
   </button>
