@@ -185,7 +185,7 @@ button, input, select, textarea { font-family: inherit; }
   .entrada-topo { flex-direction: row; flex-wrap: wrap; align-items: center; }
   .entrada-seguranca { flex-wrap: wrap; gap: 8px; }
   .robot-workspace .tv-btn, .robot-workspace .tv-atalhos button,
-  .robot-workspace .tv-history-toggle, .rob-view-options button { min-height: 44px; }
+  .robot-workspace .tv-history-toggle, .rob-view-options button, .rob-ampliar-digitos { min-height: 44px; }
   .robot-workspace .tv-resumo-sessao { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .robot-workspace .tv-fase { white-space: normal; }
 }
