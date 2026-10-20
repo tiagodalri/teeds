@@ -41,6 +41,8 @@ export interface EstadoDoTreino {
   nomes: string[]
   /* o que quem assiste recebe */
   presente: boolean
+  /** Nome de quem transmite (o admin), para o cabeçalho de quem assiste. */
+  quemApresenta: string
   tela: Track | null
   camera: Track | null
   audios: Track[]
@@ -52,7 +54,7 @@ export interface EstadoDoTreino {
 
 const INICIAL: EstadoDoTreino = {
   fase: 'fora', erro: null, apresentador: false, meuNome: '', membros: 0, nomes: [],
-  presente: false, tela: null, camera: null, audios: [], canto: 'inf-dir',
+  presente: false, quemApresenta: '', tela: null, camera: null, audios: [], canto: 'inf-dir',
   sim: { ativa: false, publico: 0, momento: null, pausada: false }, mensagens: [], somBloqueado: false,
 }
 let estado: EstadoDoTreino = INICIAL
@@ -110,7 +112,7 @@ function atualizarSala() {
   }
   mudar({
     membros: membros.length, nomes: membros.map((p) => p.name || 'Membro').slice(0, 80),
-    presente: estado.apresentador || !!quemTransmite, tela, camera, audios,
+    presente: estado.apresentador || !!quemTransmite, quemApresenta: quemTransmite?.name || '', tela, camera, audios,
   })
 }
 

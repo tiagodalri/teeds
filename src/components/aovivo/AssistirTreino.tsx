@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { Track } from 'livekit-client'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { entrarNoTreino, liberarSomDoTreino, mandarNoTreino, sairDoTreino, simularTreino, useTreino } from '../../core/live/treino'
+import { MARCA } from '../../marca'
 import './aovivo.css'
 
 /**
- * O membro do plano "treino" assiste o ensaio do admin como se fosse aluno
- * (19/10/2026): a imagem, o chat (simulado, com as mensagens dos outros
- * membros no meio) e o tamanho da sala. O selo "Simulação" fica sempre na
- * imagem e o número leva "simulado": quem assiste sabe o que está vendo.
+ * O GF Member assiste a transmissão da sala de treino como se fosse aluno
+ * (19/10/2026): a imagem, o chat e o tamanho da sala. O selo "Simulação"
+ * fica sempre na imagem e o número leva "simulado": quem assiste sabe o que
+ * está vendo. 20/10/2026: o aviso de simulação sai do cabeçalho (fica só no
+ * selo da imagem); o cabeçalho é "Transmissão exclusiva para GF Members" e
+ * o membro vê só o público simulado, o apresentador e as próprias mensagens.
  */
 
 function Video({ faixa, className }: { faixa: Track | null; className?: string }) {
@@ -30,7 +33,6 @@ function Som({ faixa }: { faixa: Track }) {
 
 const fmt = (n: number) => n.toLocaleString('pt-BR')
 const hora = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-const MOMENTO: Record<string, string> = { abertura: 'Abertura', meta: 'Bateu a meta', stop: 'Tomou stop', lateral: 'Mercado lento', perguntas: 'Rodada de perguntas' }
 
 export function AssistirTreino({ sessao, conectar = true, nomeConvidado = '' }: { sessao: SessaoTeeds | null; conectar?: boolean; nomeConvidado?: string }) {
   const t = useTreino()
@@ -48,14 +50,26 @@ export function AssistirTreino({ sessao, conectar = true, nomeConvidado = '' }: 
   }, [t.mensagens.length])
 
   const temImagem = !!t.tela || !!t.camera
+  const conectada = t.fase === 'conectada'
   const enviar = async () => { if (!texto.trim()) return; await mandarNoTreino(texto); setTexto('') }
+  const status = t.fase === 'conectando' || t.fase === 'reconectando' ? { cls: 'conectando', txt: t.fase === 'conectando' ? 'Conectando' : 'Reconectando' }
+    : t.fase === 'erro' ? { cls: 'fora', txt: 'Fora do ar' }
+      : temImagem ? { cls: 'vivo', txt: 'Ao vivo' }
+        : t.presente ? { cls: 'sala', txt: 'Apresentador na sala', curto: 'Na sala' }
+          : { cls: 'fora', txt: 'Aguardando início', curto: 'Em breve' }
+  const primeiro = (t.quemApresenta || '').trim().split(/\s+/)[0]
 
   return (
     <div className="tr-assistir">
-      <div className="tr-assistir-aviso" role="note">
-        <span className="tr-chip">Sala de treino</span>
-        <p>Você está assistindo um <b>ensaio</b>, como se fosse aluno. O público e o chat desta sala são simulados. O que você escreve vai direto para o apresentador; as mensagens dos outros membros não aparecem aqui.</p>
-      </div>
+      <header className="tr-cabeca" style={MARCA.id === 'globalfly' ? { '--tr-marca': `url(${import.meta.env.BASE_URL}globalfly-gf-escuro.png)` } as CSSProperties : undefined}>
+        {MARCA.id === 'globalfly' && <img className="tr-cabeca-selo" src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
+        <div className="tr-cabeca-texto">
+          <span className="tr-cabeca-sobre">Sala de treino</span>
+          <h1>Transmissão exclusiva para <em>GF Members</em></h1>
+          <p>{t.presente && primeiro ? <>Com <b>{primeiro}</b>. Você está entre os membros convidados.</> : 'Fique nesta tela: a transmissão começa assim que o apresentador entrar.'}</p>
+        </div>
+        <span className={`tr-status ${status.cls}`} role="status"><i aria-hidden /><span className="tr-status-longo">{status.txt}</span>{'curto' in status && <span className="tr-status-curto" aria-hidden>{status.curto}</span>}</span>
+      </header>
 
       {t.fase === 'erro' && <p className="av-erro" role="alert">{t.erro}</p>}
 
@@ -66,36 +80,40 @@ export function AssistirTreino({ sessao, conectar = true, nomeConvidado = '' }: 
           {t.tela && t.camera && <Video faixa={t.camera} className={`av-camera canto-${t.canto}`} />}
           {!temImagem && (
             <div className="av-espera tr-espera">
-              {t.fase === 'conectando' ? <><i className="av-girando" aria-hidden />Entrando na sala de treino…</>
+              {t.fase === 'conectando' ? <><i className="av-girando" aria-hidden />Entrando na transmissão…</>
                 : t.fase === 'reconectando' ? <><i className="av-girando" aria-hidden />Reconectando…</>
                   : t.presente ? <><b>O apresentador está na sala</b><span>A imagem aparece quando ele ligar a câmera ou a tela.</span></>
-                    : <><b>O ensaio ainda não começou</b><span>Fique nesta tela: quando o administrador abrir a sala de treino, a imagem aparece aqui.</span></>}
+                    : <><b>A transmissão ainda não começou</b><span>Deixe esta tela aberta: a imagem aparece aqui sozinha.</span></>}
             </div>
           )}
           <span className="tr-selo"><i aria-hidden />Simulação{t.sim.ativa && <> · {fmt(t.sim.publico)} na sala (simulado)</>}</span>
           {t.somBloqueado && <button className="av-som" onClick={() => void liberarSomDoTreino()}>Toque para ativar o som</button>}
         </div>
 
-        <section className="av-chat" aria-label="Chat da sala de treino">
-          {t.sim.momento && <div className="tr-momento">Momento: {MOMENTO[t.sim.momento] ?? t.sim.momento}</div>}
+        <section className="av-chat tr-chat" aria-labelledby="tr-chat-titulo">
+          <div className="tr-chat-topo"><h2 id="tr-chat-titulo">Chat ao vivo</h2></div>
           <div className="av-mensagens" ref={lista} role="log" aria-live="off">
-            {t.mensagens.length === 0 && <p className="av-chat-vazio">{t.sim.ativa ? 'O chat está começando…' : 'O chat aparece quando o apresentador começar a simulação.'}</p>}
+            {t.mensagens.length === 0 && <p className="av-chat-vazio">{t.sim.ativa ? 'O chat está começando…' : 'As mensagens aparecem aqui quando a transmissão começar.'}</p>}
             {t.mensagens.map((m) => m.entrada ? (
               <p key={m.id} className="tr-entrada">{m.nome} entrou</p>
             ) : (
-              <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''}`}>
-                <p><b>{m.nome}{m.apresentador && <em>apresentador</em>}{m.minha ? <em className="tr-tag-membro">você</em> : m.membro && <em className="tr-tag-membro">membro</em>}</b> {m.texto}</p>
+              <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''} ${m.minha ? 'tr-minha' : ''}`}>
+                <p><b>{m.nome}{m.apresentador && <em>apresentador</em>}{m.minha && <em className="tr-tag-membro">você</em>}</b> {m.texto}</p>
                 <time>{hora(m.hora)}</time>
               </div>
             ))}
           </div>
           <form className="av-escrever" onSubmit={(e) => { e.preventDefault(); void enviar() }}>
             <label htmlFor="tr-assistir-campo" className="av-oculto">Mensagem</label>
-            <input id="tr-assistir-campo" value={texto} maxLength={500} autoComplete="off"
-              placeholder={t.fase === 'conectada' && t.presente ? 'Escreva no chat do ensaio' : 'O chat abre quando o ensaio começar'}
-              disabled={t.fase !== 'conectada' || !t.presente} onChange={(e) => setTexto(e.target.value)} />
-            <button type="submit" disabled={t.fase !== 'conectada' || !t.presente || !texto.trim()}>Enviar</button>
+            <input id="tr-assistir-campo" value={texto} maxLength={500} autoComplete="off" enterKeyHint="send"
+              placeholder={conectada && t.presente ? 'Escreva para o apresentador' : 'O chat abre quando a transmissão começar'}
+              disabled={!conectada || !t.presente} onChange={(e) => setTexto(e.target.value)} />
+            <button type="submit" disabled={!conectada || !t.presente || !texto.trim()}>Enviar</button>
           </form>
+          <p className="tr-privado">
+            <svg viewBox="0 0 16 16" aria-hidden><rect x="3" y="7" width="10" height="7" rx="1.6" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg>
+            Só o apresentador vê o que você escreve.
+          </p>
         </section>
       </div>
     </div>
@@ -119,7 +137,7 @@ export function LabAssistirTreino() {
       const m = (min: number, nome: string, texto: string, extra: Partial<{ apresentador: boolean; membro: boolean; minha: boolean }> = {}) =>
         ({ id: `${nome}${min}`, nome, texto, apresentador: false, entrada: false, hora: agora - min * 60000, ...extra })
       simularTreino({
-        fase: 'conectada', presente: true, apresentador: false, canto: 'inf-dir',
+        fase: 'conectada', presente: true, quemApresenta: 'Tiago Dalri', apresentador: false, canto: 'inf-dir',
         tela: new LocalVideoTrack(canvas.captureStream(15).getVideoTracks()[0]),
         sim: { ativa: true, publico: 712, momento: 'meta', pausada: false },
         mensagens: [m(6, 'Ana', 'boa noite pessoal'), m(5, 'Tiago', 'Meta da sessão: 5%. Limite de perda: 3%.', { apresentador: true }),

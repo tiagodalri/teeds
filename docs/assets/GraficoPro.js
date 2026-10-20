@@ -1,4 +1,4 @@
-import{M as Qt,S as Ft,j as P,r as ne}from"./teeds.js?v=c336bf6450e5";/**
+import{M as Qt,S as Ft,j as P,r as ne}from"./teeds.js?v=36d7646ab04f";/**
      * @license
      * KLineChart v10.0.3
      * Copyright (c) 2019 lihu.

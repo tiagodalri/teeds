@@ -712,9 +712,59 @@ body.av-teatro-aberto { overflow: hidden; }
 .tr-membros b { color: var(--text); }
 .tr-tag-membro { margin-left: 6px; padding: 1px 6px; border-radius: 5px; background: color-mix(in srgb, var(--up) 18%, transparent); color: var(--up); font-size: 9.5px; font-style: normal; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; vertical-align: 1px; }
 .tr-assistir { display: grid; gap: 14px; }
-.tr-assistir-aviso { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--gf-ouro, var(--primary)) 45%, var(--border)); border-radius: 12px; background: var(--surface); }
-.tr-assistir-aviso p { margin: 0; flex: 1 1 320px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
-.tr-assistir-aviso b { color: var(--text); }
+
+/* Cabeçalho de quem assiste (20/10/2026): faixa em Azul GF nos dois temas,
+   filete em ouro e o monograma grande quase apagado à direita. O aviso de
+   simulação NÃO fica aqui: só no selo da imagem. */
+.tr-cabeca {
+  position: relative; isolation: isolate; overflow: hidden;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px;
+  padding: 18px 22px; border: 1px solid rgba(183, 141, 57, .42); border-radius: 16px;
+  background: #051528; color: #F3F0E9;
+}
+.tr-cabeca::after {
+  content: ''; position: absolute; z-index: -1; right: -26px; top: 50%; width: 230px; height: 230px; transform: translateY(-50%);
+  background: var(--tr-marca, none) center / contain no-repeat; opacity: .05; pointer-events: none;
+}
+.tr-cabeca-selo { width: 54px; height: 54px; padding: 12px; box-sizing: border-box; border: 1px solid rgba(183, 141, 57, .55); border-radius: 14px; object-fit: contain; background: rgba(243, 240, 233, .03); }
+.tr-cabeca-texto { min-width: 0; }
+.tr-cabeca-sobre { display: block; color: #C9A253; font-size: 10.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+.tr-cabeca h1 { margin: 4px 0 0; color: #F3F0E9; font-size: clamp(19px, 2vw, 25px); font-weight: 700; line-height: 1.18; letter-spacing: -.01em; text-wrap: balance; }
+.tr-cabeca h1 em { color: #D9B76C; font-style: normal; white-space: nowrap; }
+.tr-cabeca p { margin: 5px 0 0; color: rgba(243, 240, 233, .64); font-size: 13px; line-height: 1.45; }
+.tr-cabeca p b { color: #F3F0E9; font-weight: 600; }
+.tr-status {
+  display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border: 1px solid rgba(243, 240, 233, .2); border-radius: 999px;
+  color: rgba(243, 240, 233, .78); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap;
+}
+.tr-status-curto { display: none; }
+@media (max-width: 640px) { .tr-status-curto { display: inline; } }
+.tr-status i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.tr-status.vivo { border-color: transparent; background: #D64545; color: #fff; }
+.tr-status.vivo i, .tr-status.conectando i { animation: av-pulsa 1.6s ease-in-out infinite; }
+.tr-status.sala { border-color: rgba(183, 141, 57, .6); color: #D9B76C; }
+@media (prefers-reduced-motion: reduce) { .tr-status i { animation: none !important; } }
+
+/* chat de quem assiste */
+.tr-chat-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.tr-chat-topo h2 { margin: 0; color: var(--text); font-size: 11.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.av-msg.tr-minha { margin-inline: -6px; padding: 6px 26px 6px 6px; border-radius: 9px; background: var(--primary-soft); }
+.tr-chat .av-escrever { border-top: 1px solid var(--border); }
+.tr-privado { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0 12px 11px; color: var(--muted); font-size: 11.5px; }
+.tr-privado svg { width: 12px; height: 12px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+
+@media (min-width: 1001px) { .tr-assistir .av-palco-e-chat { height: clamp(400px, calc(100vh - 330px), 820px); } }
+@media (max-width: 1000px) { .tr-assistir .av-palco-e-chat > .av-chat { height: min(470px, 64svh); } }
+@media (max-width: 640px) {
+  .tr-cabeca { grid-template-columns: auto minmax(0, 1fr); gap: 12px 14px; padding: 16px; }
+  .tr-cabeca::after { width: 170px; height: 170px; right: -40px; }
+  .tr-cabeca-selo { width: 44px; height: 44px; padding: 10px; border-radius: 12px; align-self: start; }
+  .tr-cabeca h1 { font-size: 19px; }
+  .tr-cabeca p { font-size: 12.5px; }
+  .tr-status:has(.tr-status-curto) .tr-status-longo { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tr-status { position: absolute; top: 14px; right: 14px; height: 24px; padding: 0 9px; gap: 6px; font-size: 9.5px; }
+  .tr-status i { width: 6px; height: 6px; }
+}
 
 /* prévia oculta da tela inteira (evita o espelho infinito; 19/10/2026) */
 .av-previa-oculta { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 8px; padding: 20px; text-align: center; color: #c9d3de; background: radial-gradient(60% 60% at 50% 45%, rgba(23, 50, 99, .55), transparent 70%), #04080f; }
