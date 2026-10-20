@@ -45,7 +45,7 @@ import { buyFromProposal, requestProposal, sellContract } from './core/deriv/tra
 import { MARCA } from './marca'
 import { IconeFechar } from './components/IconeFechar'
 import { usePeriodos } from './core/chart/periodos'
-import { conviteRecebido, liveNoAr, treinoPedido, type Live } from './core/live/api'
+import { conviteRecebido, liveNoAr, podeTreinar, treinoNoAr, treinoPedido, type Live, type TreinoNoAr } from './core/live/api'
 import { IconeAtivo } from './components/IconeAtivo'
 import { usePlayerAtivo } from './core/live/presenca'
 
@@ -275,8 +275,12 @@ export default function App() {
   // no histórico; o endereço não muda.
   // "Tem live no ar?" a cada 30 s: acende o ponto vermelho do menu.
   const [liveAgora, setLiveAgora] = useState<Live | null>(null)
-  const aoVivoAgora = Boolean(liveAgora)
   const [avisoLive, setAvisoLive] = useState<Live | null>(null)
+  // Sala de treino no ar (20/10/2026): o GF Member vê o selo do topo, o ponto
+  // do menu e o aviso "Live iniciada" (fica até ele entrar ou fechar).
+  const [treinoAgora, setTreinoAgora] = useState<TreinoNoAr | null>(null)
+  const [avisoTreino, setAvisoTreino] = useState(false)
+  const aoVivoAgora = Boolean(liveAgora) || Boolean(treinoAgora)
   // Convidado que prefere entrar na conta: a tela de login no lugar da porta do convite.
   const [querLogin, setQuerLogin] = useState(false)
   useEffect(() => { if (!avisoLive) return; const t = window.setTimeout(() => setAvisoLive(null), 20000); return () => window.clearTimeout(t) }, [avisoLive])
@@ -302,6 +306,33 @@ export default function App() {
     const t = window.setInterval(ver, 30000)
     return () => { vivo = false; window.clearInterval(t) }
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    // só para quem assiste: o admin é quem abre a sala
+    if (!MARCA.aoVivo || !teeds.sessao || admin !== false) { setTreinoAgora(null); return }
+    const sessao = teeds.sessao
+    let vivo = true
+    let t: number | undefined
+    const ver = () => {
+      treinoNoAr(sessao).then((agora) => {
+        if (!vivo) return
+        setTreinoAgora((antes) => (antes?.iniciadaEm === agora?.iniciadaEm ? antes : agora))
+        if (!agora) { setAvisoTreino(false); return }
+        // uma vez por sessão de treino
+        const chave = `${MARCA.id}.treino.avisado`
+        let visto: string | null = null
+        try { visto = localStorage.getItem(chave) } catch { /* sem armazenamento */ }
+        if (visto !== agora.iniciadaEm) { setAvisoTreino(true); try { localStorage.setItem(chave, agora.iniciadaEm) } catch { /* idem */ } }
+      }).catch(() => undefined)
+    }
+    void podeTreinar(sessao).then((membro) => {
+      if (!vivo || !membro) return
+      ver()
+      t = window.setInterval(ver, 15000)
+    })
+    return () => { vivo = false; window.clearInterval(t) }
+  }, [teeds.sessao?.usuario.id, admin]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (tela === 'aovivo') setAvisoTreino(false) }, [tela])
 
   const telaVeioDoVoltar = useRef(false)
   useEffect(() => {
@@ -690,6 +721,12 @@ export default function App() {
               <i aria-hidden="true" />Ao vivo
             </button>
           )}
+          {MARCA.aoVivo && !liveAgora && treinoAgora && tela !== 'aovivo' && (
+            <button className="selo-tv" onClick={() => setTela('aovivo')} title="Sala de treino ao vivo agora"
+              aria-label="Sala de treino ao vivo agora. Entrar na sala">
+              <i aria-hidden="true" />Ao vivo
+            </button>
+          )}
 
           <button className="tema-btn" onClick={alternarTema}
             title={tema === 'claro' ? 'Mudar para o modo escuro' : 'Mudar para o modo claro'}
@@ -797,6 +834,16 @@ export default function App() {
           <b>{avisoLive.titulo}</b>
           <button className="aviso-tv-assistir" onClick={() => { setAvisoLive(null); setTela('aovivo') }}>Assistir</button>
           <button className="aviso-tv-fechar" onClick={() => setAvisoLive(null)} aria-label="Fechar aviso"><IconeFechar /></button>
+        </div>
+      )}
+      {MARCA.aoVivo && treinoAgora && avisoTreino && tela !== 'aovivo' && (
+        <div className="aviso-tv aviso-treino" role="status">
+          <span className="aviso-tv-selo"><i aria-hidden="true" />Ao vivo</span>
+          <button className="aviso-treino-texto" onClick={() => { setAvisoTreino(false); setTela('aovivo') }}>
+            <b>Live iniciada.</b> Clique para entrar na sala.
+          </button>
+          <button className="aviso-tv-assistir" onClick={() => { setAvisoTreino(false); setTela('aovivo') }}>Entrar</button>
+          <button className="aviso-tv-fechar" onClick={() => setAvisoTreino(false)} aria-label="Fechar aviso"><IconeFechar /></button>
         </div>
       )}
       {MARCA.aoVivo && playerAoVivo && <Suspense fallback={null}><PlayerAoVivo naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}

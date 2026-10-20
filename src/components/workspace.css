@@ -99,7 +99,15 @@
 .workspace-aovivo b { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .workspace-sidebar.compact .workspace-aovivo { position: absolute; margin: -18px 0 0 16px; padding: 3px; border-radius: 50%; }
 @keyframes workspace-aovivo { 50% { opacity: .35; } }
-@media (prefers-reduced-motion: reduce) { .workspace-aovivo::before { animation: none; } }
+/* 20/10/2026: no ar, o próprio ícone do "Ao vivo" fica vermelho e pulsa; no
+   celular, o botão do menu ganha um ponto vermelho (o menu fica escondido). */
+.workspace-link.no-ar > svg { color: var(--down); animation: workspace-aovivo-icone 1.4s ease-in-out infinite; }
+@keyframes workspace-aovivo-icone { 50% { opacity: .4; transform: scale(.9); } }
+.workspace-mobile-toggle.no-ar::after {
+  content: ''; position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--down); box-shadow: 0 0 0 2px var(--surface); animation: workspace-aovivo 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .workspace-aovivo::before, .workspace-link.no-ar > svg, .workspace-mobile-toggle.no-ar::after { animation: none; } }
 
 /* Selo "Ao vivo" do topo, como o da TV: vermelho, ponto pulsando, um anel
    que se expande devagar. Aparece em qualquer tela enquanto há transmissão
@@ -144,4 +152,8 @@
   .aviso-tv { left: 12px; right: 12px; transform: none; animation: none; }
   .aviso-tv b { display: none; }
 }
+/* Aviso da sala de treino: o texto inteiro também abre a sala, e no celular ele aparece (quebra em duas linhas). */
+.aviso-treino-texto { min-width: 0; padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
+.aviso-treino-texto b { font-weight: 800; }
+@media (max-width: 540px) { .aviso-treino .aviso-treino-texto { font-size: 12.5px; line-height: 1.3; } .aviso-treino .aviso-treino-texto b { display: inline; } }
 @media (prefers-reduced-motion: reduce) { .selo-tv i, .selo-tv i::after, .aviso-tv-selo i { animation: none; } .aviso-tv { animation: none; } }

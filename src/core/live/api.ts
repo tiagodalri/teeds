@@ -204,6 +204,13 @@ export async function podeTreinar(sessao: SessaoTeeds): Promise<boolean> {
   } catch { return false }
 }
 
+/** A sala de treino está no ar agora? Só responde a GF Member e admin (teeds_treino_agora). */
+export interface TreinoNoAr { iniciadaEm: string; apresentador: string | null }
+export async function treinoNoAr(sessao: SessaoTeeds): Promise<TreinoNoAr | null> {
+  const r = await rest<TreinoNoAr | null>('/rpc/teeds_treino_agora', sessao, { method: 'POST', body: JSON.stringify({ p_marca: MARCA.id }) })
+  return r && r.iniciadaEm ? r : null
+}
+
 /** O link curto de convite da live (abre direto no "Ao vivo", mesmo depois do login). */
 export const linkDaLive = (id: string) => `${location.origin}${import.meta.env.BASE_URL}?aovivo=${id.slice(0, 8)}`
 

@@ -25,7 +25,7 @@ import {
 } from 'livekit-client'
 import { useSyncExternalStore } from 'react'
 import { SUPABASE } from '../teeds/config'
-import type { SessaoTeeds } from '../teeds/conta'
+import { sessaoGuardada, type SessaoTeeds } from '../teeds/conta'
 import { MARCA } from '../../marca'
 import type { CantoDaCamera } from './api'
 import { mensagemDeMembro, ouvirSimulacao, simulacaoAgora, type MensagemSimulada, type Momento } from './simulacao'
@@ -139,11 +139,52 @@ function comecarARepassar() {
   let ultimo = ''
   desligarEscuta = ouvirSimulacao(() => {
     repassar()
+    conferirAnuncio()
     const e = JSON.stringify(pacoteDeEstado())
     if (e !== ultimo) { ultimo = e; void enviar(JSON.parse(e)) }
   })
   // de tempos em tempos, o estado completo (quem perdeu um pacote se acerta)
   timerEstado = window.setInterval(() => void enviar(pacoteDeEstado()), 3000)
+}
+
+/* ------------------------------------ avisar os GF Members que está no ar */
+
+/*
+  20/10/2026: com o admin transmitindo (câmera, tela, microfone ou simulação
+  ligada), a plataforma de cada GF Member acende o selo vermelho do topo, o
+  ponto do menu "Ao vivo" e o aviso "Live iniciada". O navegador do admin
+  manda um pulso a cada 15 s (teeds_treino_pulso); se ele fechar sem avisar,
+  o banco para de contar a sala como no ar 75 s depois.
+*/
+let timerAnuncio: number | undefined
+let anunciado = false
+const estaNoAr = () => Object.values(publicadas).some(Boolean) || simulacaoAgora().ativa
+
+function anunciar(noAr: boolean, aoFechar = false) {
+  // o token mais novo (a sessão é renovada pelo app; o ensaio pode passar de 1 h)
+  const s = sessaoGuardada()
+  if (!s || (!noAr && !anunciado)) return
+  anunciado = noAr
+  void fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_treino_pulso`, {
+    method: 'POST', keepalive: aoFechar,
+    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${s.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_marca: MARCA.id, p_no_ar: noAr, p_apresentador: estado.meuNome }),
+  }).catch(() => undefined)
+}
+/** Só quando muda (ligou ou desligou tudo); o pulso de 15 s mantém o resto. */
+const conferirAnuncio = () => { if (estado.apresentador && estaNoAr() !== anunciado) anunciar(estaNoAr()) }
+const aoFecharAba = () => anunciar(false, true)
+
+function comecarAAnunciar() {
+  window.clearInterval(timerAnuncio)
+  timerAnuncio = window.setInterval(() => { if (anunciado || estaNoAr()) anunciar(estaNoAr()) }, 15_000)
+  window.addEventListener('pagehide', aoFecharAba)
+  conferirAnuncio()
+}
+function pararDeAnunciar() {
+  window.clearInterval(timerAnuncio); timerAnuncio = undefined
+  window.removeEventListener('pagehide', aoFecharAba)
+  anunciar(false)
 }
 
 /* --------------------------------------------------------------- entrar */
@@ -215,7 +256,7 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Pro
     await r.connect(ingresso.url, ingresso.token, { autoSubscribe: true })
     await r.startAudio().catch(() => undefined)
     mudar({ fase: 'conectada', apresentador: ingresso.moderador, meuNome: ingresso.nome, somBloqueado: !r.canPlaybackAudio })
-    if (ingresso.moderador) comecarARepassar()
+    if (ingresso.moderador) { comecarARepassar(); comecarAAnunciar() }
     atualizarSala()
   } catch (e) {
     sala = null
@@ -224,6 +265,7 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Pro
 }
 
 export async function sairDoTreino(): Promise<void> {
+  if (estado.apresentador) pararDeAnunciar()
   desligarEscuta?.(); desligarEscuta = null
   window.clearInterval(timerEstado)
   for (const k of Object.keys(publicadas) as Array<keyof typeof publicadas>) delete publicadas[k]
@@ -248,13 +290,14 @@ export async function publicarNoTreino(qual: 'tela' | 'camera' | 'mic', faixa: L
   if (!sala || !estado.apresentador) return
   const antiga = publicadas[qual]
   if (antiga) { await sala.localParticipant.unpublishTrack(antiga, false).catch(() => undefined); delete publicadas[qual] }
-  if (!faixa) { atualizarSala(); return }
+  if (!faixa) { atualizarSala(); conferirAnuncio(); return }
   const local = faixa instanceof LocalVideoTrack ? faixa
     : qual === 'mic' ? new LocalAudioTrack(faixa, undefined, true) : new LocalVideoTrack(faixa, undefined, true)
   const source = qual === 'tela' ? Track.Source.ScreenShare : qual === 'camera' ? Track.Source.Camera : Track.Source.Microphone
   await sala.localParticipant.publishTrack(local, { source })
   publicadas[qual] = local
   atualizarSala()
+  conferirAnuncio()
 }
 
 /** Em que canto o rosto aparece para quem assiste. */

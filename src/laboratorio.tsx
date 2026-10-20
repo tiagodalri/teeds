@@ -226,6 +226,24 @@ function Laboratorio() {
             </aside>
           </div>
         )}
+        {/* ?tela=treino-no-ar: o que o GF Member vê quando o admin abre a sala de treino. */}
+        {qual === 'treino-no-ar' && (
+          <div className="workspace-app" style={{ minHeight: '100vh' }}>
+            <WorkspaceNav page="operar" admin={false} onNavigate={nada} aoVivoAgora />
+            <div style={{ flex: 1, padding: 16 }}>
+              <div className="topbar" style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'flex-end', minHeight: 64 }}>
+                <button className="selo-tv"><i aria-hidden="true" />Ao vivo</button>
+                <div className="status status-open"><i /> Conectado</div>
+              </div>
+            </div>
+            <div className="aviso-tv aviso-treino" role="status">
+              <span className="aviso-tv-selo"><i aria-hidden="true" />Ao vivo</span>
+              <button className="aviso-treino-texto"><b>Live iniciada.</b> Clique para entrar na sala.</button>
+              <button className="aviso-tv-assistir">Entrar</button>
+              <button className="aviso-tv-fechar" aria-label="Fechar aviso">✕</button>
+            </div>
+          </div>
+        )}
         {/* ?tela=recorte: a mesma câmera no recorte antigo e no novo, lado a lado. */}
         {qual === 'recorte' && <Suspense fallback={null}><LabRecorte /></Suspense>}
         {qual === 'aovivo-atraso' && <Suspense fallback={null}><TesteAtraso /></Suspense>}
