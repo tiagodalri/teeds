@@ -975,7 +975,7 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
           <div className="tr-porta-texto">
             <span className="av-sobretitulo">Sala de treino</span>
             <h2 id="tr-porta-titulo">Ensaie a live com os membros assistindo</h2>
-            <p>Você usa sua tela, câmera e microfone de verdade diante de um público e de um chat simulados. Os membros GF Member entram pelo link e assistem como se fossem alunos; um membro não vê as mensagens dos outros. A imagem leva sempre o selo "Simulação".</p>
+            <p>Você usa sua tela, câmera e microfone de verdade diante de um público e de um chat simulados. Os membros GF Member entram pelo link e assistem como se fossem alunos; um membro não vê as mensagens dos outros. A imagem leva sempre o selo "GF Streaming".</p>
             <ol className="av-passos">
               <li><i>1</i><span><b>Abra a sala de treino</b>Só administradores abrem; ela já vem com os ajustes à mostra.</span></li>
               <li><i>2</i><span><b>Mande o link aos membros</b>Eles entram com a conta deles e esperam o ensaio começar.</span></li>
