@@ -81,7 +81,8 @@ export function PalcoDoTreino({ compacto = false, filhos }: { compacto?: boolean
           {t.fase === 'conectando' ? <><i className="av-girando" aria-hidden />Entrando na transmissão…</>
             : t.fase === 'reconectando' ? <><i className="av-girando" aria-hidden />Reconectando…</>
               : eu ? <><b>Sua imagem aparece aqui</b>{!compacto && <span>Ligue a câmera ou a tela na sala de treino.</span>}</>
-                : t.presente ? <><b>O apresentador está na sala</b>{!compacto && <span>A imagem aparece quando ele ligar a câmera ou a tela.</span>}</>
+                : t.encerrada ? <><b>A transmissão terminou</b>{!compacto && <span>Obrigado por assistir. Quando a próxima começar, você recebe o aviso.</span>}</>
+                  : t.presente ? <><b>A transmissão começa em instantes</b>{!compacto && <span>O apresentador está na sala se preparando.</span>}</>
                   : <><b>A transmissão ainda não começou</b>{!compacto && <span>Deixe esta tela aberta: a imagem aparece aqui sozinha.</span>}</>}
         </div>
       )}
@@ -179,6 +180,8 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
     document.body.classList.toggle('aovivo-lado', !naPagina && modo === 'lado' && t.fase !== 'fora')
     return () => document.body.classList.remove('aovivo-lado')
   }, [naPagina, modo, t.fase])
+  // fora da página, a transmissão encerrada fecha o player na hora
+  useEffect(() => { if (!naPagina && !eu && t.encerrada) void sairDoTreino() }, [naPagina, eu, t.encerrada])
   // o membro saiu da página e o apresentador foi embora: fecha sozinho em 20 s
   useEffect(() => {
     if (naPagina || eu || t.presente || t.fase === 'conectando') return

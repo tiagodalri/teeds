@@ -34,7 +34,8 @@ export function AssistirTreino({ sessao, conectar = true }: { sessao: SessaoTeed
   const temImagem = !!t.tela || !!t.camera
   const status = t.fase === 'conectando' || t.fase === 'reconectando' ? { cls: 'conectando', txt: t.fase === 'conectando' ? 'Conectando' : 'Reconectando' }
     : t.fase === 'erro' || (t.fase === 'fora' && conectar) ? { cls: 'fora', txt: 'Fora do ar' }
-      : temImagem ? { cls: 'vivo', txt: 'Ao vivo' }
+      : t.sim.ativa ? { cls: 'vivo', txt: 'Ao vivo' }
+        : t.encerrada ? { cls: 'fora', txt: 'Encerrada' }
         : t.presente ? { cls: 'sala', txt: 'Apresentador na sala', curto: 'Na sala' }
           : { cls: 'fora', txt: 'Aguardando início', curto: 'Em breve' }
   const primeiro = (t.quemApresenta || '').trim().split(/\s+/)[0]

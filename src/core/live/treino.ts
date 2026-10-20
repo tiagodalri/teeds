@@ -61,6 +61,8 @@ export interface EstadoDoTreino {
   sim: { ativa: boolean; publico: number; momento: Momento | null; pausada: boolean; chatAberto: boolean }
   mensagens: MensagemSimulada[]
   somBloqueado: boolean
+  /** Quem assiste: o apresentador encerrou a transmissão (até ele começar outra). */
+  encerrada: boolean
   /* o player fora da página */
   modo: ModoDoTreino
   tamanho: TamanhoDoTreino
@@ -85,7 +87,7 @@ function guardarPrefs() {
 const INICIAL: EstadoDoTreino = {
   fase: 'fora', erro: null, apresentador: false, meuNome: '', membros: 0, nomes: [],
   presente: false, quemApresenta: '', tela: null, camera: null, audios: [], canto: 'inf-dir',
-  sim: { ativa: false, publico: 0, momento: null, pausada: false, chatAberto: true }, mensagens: [], somBloqueado: false,
+  sim: { ativa: false, publico: 0, momento: null, pausada: false, chatAberto: true }, mensagens: [], somBloqueado: false, encerrada: false,
   modo: 'palco', tamanho: 'M', cantoPlayer: 'inf-dir',
   local: { tela: null, camera: null, mic: null }, fundo: 'nenhum', aplicandoFundo: false,
 }
@@ -107,6 +109,7 @@ type Pacote =
   | { t: 'historico'; lista: MensagemSimulada[] }
   | { t: 'limpar' }
   | { t: 'membro'; texto: string }
+  | { t: 'fim' }
 
 let sala: Room | null = null
 let desligarEscuta: (() => void) | null = null
@@ -175,8 +178,12 @@ function repassar() {
 function comecarARepassar() {
   enviadas = new Set(simulacaoAgora().mensagens.map((m) => m.id))
   let ultimo = ''
+  let eraAtiva = simulacaoAgora().ativa
   desligarEscuta = ouvirSimulacao(() => {
     repassar()
+    // Começar simulação = a transmissão começa; Encerrar = acaba, na hora (20/10/2026)
+    const ativa = simulacaoAgora().ativa
+    if (ativa !== eraAtiva) { eraAtiva = ativa; void (ativa ? republicarFontes() : encerrarTransmissao()) }
     conferirAnuncio()
     const e = JSON.stringify(pacoteDeEstado())
     if (e !== ultimo) { ultimo = e; void enviar(JSON.parse(e)) }
@@ -196,7 +203,11 @@ function comecarARepassar() {
 */
 let timerAnuncio: number | undefined
 let anunciado = false
-const estaNoAr = () => Object.values(publicadas).some(Boolean) || simulacaoAgora().ativa
+/**
+ * No ar = a simulação rodando. Antes de "Começar simulação", câmera e tela são
+ * só a prévia do admin; ao "Encerrar", tudo sai do ar para os membros na hora.
+ */
+const estaNoAr = () => simulacaoAgora().ativa
 
 function anunciar(noAr: boolean, aoFechar = false) {
   // o token mais novo (a sessão é renovada pelo app; o ensaio pode passar de 1 h)
@@ -279,6 +290,7 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Pro
         if (!ehApresentador(p)) return
         if (pacote.t === 'estado') {
           canto = pacote.canto
+          if (pacote.ativa && estado.encerrada) mudar({ encerrada: false })
           mudar({ canto: pacote.canto, sim: { ativa: pacote.ativa, publico: pacote.publico, momento: pacote.momento, pausada: pacote.pausada, chatAberto: pacote.chatAberto !== false } })
         } else if (pacote.t === 'msgs') {
           const ja = new Set(estado.mensagens.map((m) => m.id))
@@ -287,6 +299,8 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Pro
           // o histórico chega sem as mensagens de membros; as minhas, já na tela, ficam
           const minhas = estado.mensagens.filter((m) => m.minha)
           mudar({ mensagens: [...pacote.lista.filter((m) => !m.membro), ...minhas].sort((a, b) => a.hora - b.hora).slice(-200) })
+        } else if (pacote.t === 'fim') {
+          mudar({ encerrada: true, sim: { ...estado.sim, ativa: false } })
         } else if (pacote.t === 'limpar') {
           mudar({ mensagens: [] })
         }
@@ -355,7 +369,14 @@ function desligarFontesLocais() {
   cameraFaixa?.stop(); cameraFaixa = null; cameraBruta = null
 }
 
-/** Republica o que já estava ligado (a sala abriu ou reconectou do zero). */
+/** Encerrou: câmera, tela e microfone saem do ar e quem assiste fica sabendo na hora. */
+async function encerrarTransmissao() {
+  await Promise.all((['tela', 'camera', 'mic'] as const).map((q) => publicarNoTreino(q, null)))
+  void enviar({ t: 'fim' })
+  conferirAnuncio()
+}
+
+/** Republica o que está ligado (começou a simulação, ou a sala abriu do zero). */
 async function republicarFontes() {
   const { tela, mic } = estado.local
   if (cameraFaixa) await publicarNoTreino('camera', cameraFaixa)
@@ -433,8 +454,16 @@ export async function liberarSomDoTreino(): Promise<void> {
  * Coloca (ou tira) na sala uma das fontes do ensaio. A sala de treino é dona
  * das próprias câmeras e telas; aqui só se publica o que ela já abriu.
  */
-export async function publicarNoTreino(qual: 'tela' | 'camera' | 'mic', faixa: LocalVideoTrack | MediaStreamTrack | null): Promise<void> {
+let filaDePublicacao: Promise<unknown> = Promise.resolve()
+export function publicarNoTreino(qual: 'tela' | 'camera' | 'mic', faixa: LocalVideoTrack | MediaStreamTrack | null): Promise<void> {
+  const vez = filaDePublicacao.then(() => publicarAgora(qual, faixa)).catch(() => undefined)
+  filaDePublicacao = vez
+  return vez
+}
+async function publicarAgora(qual: 'tela' | 'camera' | 'mic', faixa: LocalVideoTrack | MediaStreamTrack | null): Promise<void> {
   if (!sala || !estado.apresentador) return
+  // fora do ar, nada chega aos membros (fica só a prévia do admin)
+  if (!estaNoAr()) faixa = null
   const antiga = publicadas[qual]
   if (antiga) { await sala.localParticipant.unpublishTrack(antiga, false).catch(() => undefined); delete publicadas[qual] }
   if (!faixa) { atualizarSala(); conferirAnuncio(); return }

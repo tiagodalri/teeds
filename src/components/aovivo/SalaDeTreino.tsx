@@ -156,7 +156,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   const passos = [
     { feito: temImagem, titulo: 'Ligue a câmera ou a tela', dica: 'Nos botões aqui em cima. O microfone é opcional.' },
     { feito: ajustou || sim.ativa, titulo: 'Ajuste a sala', dica: 'Na aba Simulação: tamanho do público, ritmo do chat, fundo.' },
-    { feito: sim.ativa, titulo: 'Comece a simulação', dica: 'O público chega e o chat ganha vida; os membros com o link assistem.' },
+    { feito: sim.ativa, titulo: 'Comece a simulação', dica: 'É aqui que a transmissão começa: os membros passam a ver e recebem o aviso de ao vivo.' },
   ]
 
   const momentosRapidos = (
@@ -176,7 +176,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
           <span className="av-mesa-publico">{sim.ativa ? <><b>{fmt(sim.publicoAgora)}</b> na sala simulada{sim.pausada && ' · chat pausado'}</> : 'Simulação parada'}</span>
           {sessao && (
             <span className={`tr-membros ${tr.fase === 'conectada' ? 'on' : ''}`}>
-              {tr.fase === 'conectada' ? <><i aria-hidden /><b>{tr.membros}</b> {tr.membros === 1 ? 'membro assistindo' : 'membros assistindo'}</>
+              {tr.fase === 'conectada' ? <><i aria-hidden /><b>{tr.membros}</b> {tr.membros === 1 ? 'membro na sala' : 'membros na sala'}{!sim.ativa && ' · veem você quando começar'}</>
                 : tr.fase === 'erro' ? (tr.erro ?? 'Sem conexão com os membros') : 'Abrindo a sala para os membros…'}
             </span>
           )}

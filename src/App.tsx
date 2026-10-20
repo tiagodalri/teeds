@@ -48,6 +48,7 @@ import { usePeriodos } from './core/chart/periodos'
 import { conviteRecebido, liveNoAr, podeTreinar, treinoNoAr, treinoPedido, type Live, type TreinoNoAr } from './core/live/api'
 import { IconeAtivo } from './components/IconeAtivo'
 import { usePlayerAtivo, useTreinoAtivo } from './core/live/presenca'
+import { assinarMudancas, type AssinaturaRealtime } from './core/teeds/realtime'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
 // quando a pessoa abre a página ou entra numa live.
@@ -309,15 +310,23 @@ export default function App() {
     return () => { vivo = false; window.clearInterval(t) }
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // o token mais novo (a sessão renova sozinha; o aviso da sala não pode morrer com o token velho)
+  const sessaoAtual = useRef(teeds.sessao)
+  sessaoAtual.current = teeds.sessao
+  const canalDoTreino = useRef<AssinaturaRealtime | null>(null)
+  useEffect(() => { if (teeds.sessao?.token) canalDoTreino.current?.atualizarToken(teeds.sessao.token) }, [teeds.sessao?.token])
   useEffect(() => {
     // só para quem assiste: o admin é quem abre a sala
     if (!MARCA.aoVivo || !teeds.sessao || admin !== false) { setTreinoAgora(null); return }
-    const sessao = teeds.sessao
     let vivo = true
     let t: number | undefined
+    let pedido = 0
     const ver = () => {
-      treinoNoAr(sessao).then((agora) => {
-        if (!vivo) return
+      const s = sessaoAtual.current
+      if (!s) return
+      const este = ++pedido
+      treinoNoAr(s).then((agora) => {
+        if (!vivo || este !== pedido) return // vale só a resposta mais nova
         setTreinoAgora((antes) => (antes?.iniciadaEm === agora?.iniciadaEm ? antes : agora))
         if (!agora) { setAvisoTreino(false); return }
         // uma vez por sessão de treino
@@ -327,14 +336,27 @@ export default function App() {
         if (visto !== agora.iniciadaEm) { setAvisoTreino(true); try { localStorage.setItem(chave, agora.iniciadaEm) } catch { /* idem */ } }
       }).catch(() => undefined)
     }
-    void podeTreinar(sessao).then((membro) => {
+    const aoVoltar = () => { if (document.visibilityState === 'visible') ver() }
+    void podeTreinar(teeds.sessao).then((membro) => {
       if (!vivo || !membro) return
       // a sala de treino já fica baixada: clicar em "Entrar" abre na hora
       void import('./components/aovivo/AoVivo').catch(() => undefined)
       ver()
+      // Na hora (20/10/2026): o banco avisa quando o admin começa ou encerra, e a
+      // plataforma pergunta de novo. A conferência de 15 s fica só de reserva.
+      canalDoTreino.current = assinarMudancas({
+        token: sessaoAtual.current?.token ?? '', canal: `treino-no-ar-${MARCA.id}`,
+        tabelas: [{ tabela: 'treino_no_ar', filtro: `marca=eq.${MARCA.id}` }],
+        aoMudar: () => ver(),
+      })
       t = window.setInterval(ver, 15000)
+      document.addEventListener('visibilitychange', aoVoltar)
     })
-    return () => { vivo = false; window.clearInterval(t) }
+    return () => {
+      vivo = false; window.clearInterval(t)
+      document.removeEventListener('visibilitychange', aoVoltar)
+      canalDoTreino.current?.fechar(); canalDoTreino.current = null
+    }
   }, [teeds.sessao?.usuario.id, admin]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (tela === 'aovivo') setAvisoTreino(false) }, [tela])
 
