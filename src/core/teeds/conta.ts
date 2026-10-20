@@ -122,6 +122,12 @@ function traduzir(dados: any): string {
 }
 
 function montarSessao(d: any): SessaoTeeds {
+  // Uma aba aberta antes da separação das contas renova a sessão da conta
+  // de outra marca: encerra aqui, e a pessoa entra com a conta desta marca.
+  if (d.access_token && !daMarcaDesteSite(d.access_token)) {
+    guardar(null)
+    throw new Error('Sua sessão era de outra plataforma. Entre de novo com o seu e-mail e senha.')
+  }
   const u = d.user ?? {}
   return {
     token: d.access_token,
