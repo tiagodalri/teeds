@@ -1,0 +1,244 @@
+/* O "Plano de voo" (21/10/2026): o preparo do robô na identidade da GlobalFly.
+   Topo em Azul GF nos dois temas (o monograma, os 3 passos com o fio de ouro);
+   corpo nos tokens do tema; ouro marca a ação e a seleção (nunca cinza);
+   verde e coral só para meta e limite. Texto sobre foto sempre em cima de um
+   véu que escurece a imagem (nunca texto solto sobre céu claro). */
+.plv {
+  --plv-azul: var(--gf-azul, #051528);
+  --plv-ouro: var(--gf-ouro, #B78D39);
+  --plv-ouro-claro: #D2AE5E;
+  --plv-ouro-suave: color-mix(in srgb, var(--plv-ouro) 14%, var(--surface));
+  --plv-marfim: var(--gf-marfim, #F3F0E9);
+  --plv-aco: var(--gf-aco, #9CB1C7);
+  --plv-verde: var(--up);
+  --plv-coral: var(--down);
+  --plv-dados: var(--fonte-dados, ui-monospace, Menlo, monospace);
+  --plv-linha: color-mix(in srgb, var(--border) 85%, transparent);
+  background: var(--bg);
+}
+.robot-launch-dialog:has(.plv) { width: min(1060px, calc(100vw - 32px)); height: min(780px, calc(100dvh - 32px)); max-height: none; border: 0; border-radius: 24px; background: var(--bg); }
+.plv button { font: inherit; }
+.plv :focus-visible { outline: 2px solid var(--plv-ouro); outline-offset: 2px; }
+
+/* ------------------------------------------------ o topo azul */
+.plv-topo { position: relative; overflow: hidden; isolation: isolate; flex: none; padding: 18px 24px 0; background: var(--plv-azul); color: var(--plv-marfim); }
+:root[data-tema='escuro'] .plv-topo { background: #061733; border-bottom: 1px solid #1B3260; }
+.plv-eixo { position: absolute; z-index: -1; left: 64%; top: -80%; width: 1.5px; height: 300%; background: var(--plv-ouro); opacity: .5; transform: rotate(32deg); }
+.plv-topo-linha { display: flex; align-items: center; gap: 14px; }
+.plv-topo .monograma .monograma-claro { display: none !important; }
+.plv-topo .monograma .monograma-escuro { display: block !important; }
+.plv-titulo { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.plv-titulo small { color: var(--plv-aco); font-size: 10.5px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+.plv-titulo b { color: var(--plv-marfim); font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plv-titulo .nome-robo-gf { background-color: var(--plv-marfim) !important; }
+.plv-fechar { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 50%; border: 1px solid rgba(156, 177, 199, .3); background: transparent; color: var(--plv-marfim); cursor: pointer; }
+.plv-fechar:hover { background: rgba(255, 255, 255, .08); }
+.plv-fechar svg { width: 16px; height: 16px; }
+.plv-passos { display: flex; margin: 16px 0 0; padding: 0; list-style: none; }
+.plv-passos li { flex: 1; display: flex; align-items: center; gap: 9px; padding: 11px 0 13px; color: var(--plv-aco); font-size: 12.5px; font-weight: 600; border-bottom: 2px solid rgba(156, 177, 199, .18); }
+.plv-passos li i { display: grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: 50%; border: 1.5px solid rgba(156, 177, 199, .45); font: 700 11px var(--plv-dados); font-style: normal; }
+.plv-passos li.feito { border-color: color-mix(in srgb, var(--plv-ouro) 55%, transparent); }
+.plv-passos li.feito i { background: var(--plv-ouro); border-color: var(--plv-ouro); color: var(--plv-azul); }
+.plv-passos li.agora { color: var(--plv-marfim); border-color: var(--plv-ouro); }
+.plv-passos li.agora i { border-color: var(--plv-ouro); color: var(--plv-ouro-claro); }
+
+/* ------------------------------------------------ o corpo */
+.plv-corpo { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 22px 24px; scrollbar-width: thin; }
+.plv-rot { color: var(--muted); font-size: 10.5px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+.plv-dica { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.plv-dica b { color: var(--text); }
+.plv-erro-geral { margin: 14px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--down-soft); color: var(--plv-coral); font-size: 13.5px; }
+
+/* 1. a frota */
+.plv-frota { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+.plv-jato {
+  position: relative; overflow: hidden; isolation: isolate; height: 230px; padding: 0; border: 0; border-radius: 20px; cursor: pointer;
+  background: var(--plv-azul); color: var(--plv-marfim); text-align: left; transition: transform .2s ease, box-shadow .2s ease;
+}
+.plv-jato:hover { transform: translateY(-3px); box-shadow: 0 18px 32px -18px rgba(5, 21, 40, .55); }
+.plv-jato img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; transition: transform .6s ease; }
+.plv-jato:hover img { transform: scale(1.05); }
+/* o véu: a metade de baixo bem escura, para o texto ler em qualquer foto */
+.plv-jato::after, .plv-capa::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(5, 21, 40, .05) 25%, rgba(5, 21, 40, .78) 62%, rgba(5, 21, 40, .96) 100%); }
+.plv-jato.on { box-shadow: 0 0 0 3px var(--plv-ouro), 0 18px 32px -18px rgba(5, 21, 40, .55); }
+.plv-jato-marca { position: absolute; right: 12px; top: 12px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--plv-ouro); color: var(--plv-azul); font-weight: 800; }
+.plv-jato-texto { position: absolute; left: 16px; right: 16px; bottom: 14px; display: grid; gap: 2px; }
+.plv-jato-texto small, .plv-capa-texto small { color: var(--plv-ouro-claro); font-size: 10px; font-weight: 800; letter-spacing: .18em; }
+.plv-jato-texto b { font-size: 19px; }
+.plv-jato-texto span { color: #C7D3E0; font-size: 12.5px; line-height: 1.3; }
+
+/* a ficha da I.A. selecionada, embaixo da frota */
+.plv-ficha { display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: 10px 24px; margin-top: 18px; padding: 18px 20px; border-radius: 18px; background: var(--surface); border: 1px solid var(--plv-linha); }
+.plv-ficha-titulo { display: grid; gap: 3px; align-content: start; }
+.plv-ficha-titulo b { color: var(--text); font-size: 20px; }
+.plv-ficha-titulo > span:last-child { color: var(--muted); font-size: 13px; }
+.plv-ficha p { margin: 0; color: var(--text); font-size: 14px; line-height: 1.6; align-self: center; }
+.plv-ficha-fatos { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 6px 0 0; padding-top: 14px; border-top: 1px solid var(--plv-linha); }
+.plv-ficha-fatos div { display: grid; gap: 3px; }
+.plv-ficha-fatos dt { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.plv-ficha-fatos dd { margin: 0; color: var(--text); font-size: 14px; font-weight: 700; }
+
+/* 2. o plano */
+.plv-plano { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 22px; align-items: start; }
+.plv-lado { display: grid; gap: 18px; }
+.plv-capa { position: relative; overflow: hidden; isolation: isolate; height: 236px; border-radius: 20px; background: var(--plv-azul); color: var(--plv-marfim); }
+.plv-capa img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; }
+.plv-capa-ativo { position: absolute; right: 12px; top: 12px; padding: 5px 10px; border-radius: 99px; background: rgba(5, 21, 40, .78); color: var(--plv-ouro-claro); font-size: 11px; font-weight: 700; }
+.plv-capa-texto { position: absolute; left: 18px; right: 18px; bottom: 16px; display: grid; gap: 2px; }
+.plv-capa-texto b { font-size: 24px; letter-spacing: -.01em; }
+.plv-capa-texto span { color: #C7D3E0; font-size: 12.5px; }
+.plv-capa.sem-foto { display: grid; place-content: center; justify-items: center; gap: 8px; height: 190px; text-align: center; }
+.plv-capa.sem-foto::after { display: none; }
+.plv-capa.sem-foto b { font-size: 19px; }
+.plv-capa.sem-foto span { color: var(--plv-aco); font-size: 12.5px; }
+.plv-grupo { display: grid; gap: 9px; }
+.plv-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: var(--surface); border: 1px solid var(--plv-linha); }
+.plv-seg button { height: 42px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-weight: 700; font-size: 13.5px; cursor: pointer; transition: background .15s, color .15s; }
+.plv-seg button.on { background: var(--plv-azul); color: var(--plv-marfim); box-shadow: inset 0 -2px 0 var(--plv-ouro); }
+:root[data-tema='escuro'] .plv-seg button.on { background: var(--plv-ouro); color: var(--plv-azul); box-shadow: none; }
+.plv-lv { display: flex; flex-wrap: wrap; gap: 6px; }
+.plv-lv button { min-width: 40px; height: 40px; padding: 0 10px; border-radius: 11px; border: 1px solid var(--plv-linha); background: var(--surface); color: var(--muted); font: 700 13.5px var(--plv-dados); cursor: pointer; }
+.plv-lv button.on { border-color: var(--plv-ouro); background: var(--plv-ouro-suave); color: var(--text); box-shadow: 0 0 0 2px color-mix(in srgb, var(--plv-ouro) 28%, transparent); }
+
+.plv-campos { display: grid; gap: 12px; min-width: 0; }
+.plv-campo {
+  display: grid; grid-template-columns: minmax(130px, 170px) minmax(0, 1fr) auto; grid-template-areas: "nome valor atalhos" "erro erro erro";
+  align-items: center; gap: 4px 14px; padding: 14px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--plv-linha);
+  transition: border-color .15s, box-shadow .15s;
+}
+.plv-campo:focus-within { border-color: var(--plv-ouro); box-shadow: 0 0 0 3px color-mix(in srgb, var(--plv-ouro) 20%, transparent); }
+.plv-campo.com-erro { border-color: color-mix(in srgb, var(--plv-coral) 70%, transparent); }
+.plv-campo-nome { grid-area: nome; display: grid; gap: 2px; cursor: text; }
+.plv-campo-nome b { display: flex; align-items: center; gap: 7px; color: var(--text); font-size: 14.5px; }
+.plv-campo-nome b i { width: 8px; height: 8px; border-radius: 50%; }
+.plv-campo-nome b i.verde { background: var(--plv-verde); }
+.plv-campo-nome b i.coral { background: var(--plv-coral); }
+.plv-campo-nome small { color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.plv-campo-valor { grid-area: valor; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.plv-mm { display: grid; place-items: center; width: 42px; height: 42px; flex: none; border-radius: 12px; border: 1px solid var(--plv-linha); background: var(--bg); color: var(--text); font-size: 21px; line-height: 1; cursor: pointer; transition: border-color .15s, background .15s; }
+.plv-mm:hover { border-color: var(--plv-ouro); }
+.plv-mm:active { transform: scale(.94); }
+.plv-num { flex: 1; min-width: 0; display: flex; align-items: baseline; justify-content: center; gap: 7px; }
+.plv-num span { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.plv-num input {
+  width: 100%; max-width: 7.5ch; min-width: 0; padding: 0; border: 0; outline: none !important; background: none; color: var(--text); text-align: center;
+  font: 700 27px var(--plv-dados); letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.plv-atalhos { grid-area: atalhos; display: flex; gap: 5px; }
+.plv-atalhos button { min-width: 38px; height: 32px; padding: 0 10px; border-radius: 99px; border: 1px solid var(--plv-linha); background: var(--bg); color: var(--muted); font: 600 12px var(--plv-dados); cursor: pointer; }
+.plv-atalhos button.on { border-color: var(--plv-ouro); background: var(--plv-ouro-suave); color: var(--text); }
+.plv-erro { grid-area: erro; margin: 6px 0 0; color: var(--plv-coral); font-size: 12.5px; }
+
+.plv-voo {
+  position: relative; overflow: hidden; display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 18px; align-items: center;
+  padding: 16px 20px; border-radius: 18px; background: var(--plv-azul); color: var(--plv-marfim);
+}
+:root[data-tema='escuro'] .plv-voo { background: #061733; border: 1px solid #1B3260; }
+.plv svg.plv-arco { display: block; width: 100%; height: auto; overflow: visible; }
+.plv-arco .marca { stroke: var(--plv-ouro); stroke-width: 1.4; opacity: .55; }
+.plv-arco .faixa { fill: none; stroke-width: 13; stroke-linecap: round; }
+.plv-arco .faixa.perda { stroke: #FF5A64; }
+.plv-arco .faixa.ganho { stroke: #1FD17F; }
+.plv-arco .faixa.sem { stroke: rgba(156, 177, 199, .3); stroke-dasharray: 3 8; stroke-width: 4; }
+.plv-arco .selo { fill: var(--plv-azul); stroke: var(--plv-ouro); stroke-width: 1.6; }
+.plv-arco .aviao { fill: var(--plv-ouro-claro); }
+.plv-voo-texto { display: grid; gap: 10px; }
+.plv-voo-texto p { margin: 0; color: #C7D3E0; font-size: 14px; line-height: 1.55; }
+.plv-voo-texto b { color: var(--plv-marfim); }
+.plv-voo-texto b.ganho { color: #1FD17F; }
+.plv-voo-texto b.perda { color: #FF5A64; }
+.plv-voo-texto .plv-folego { padding: 9px 12px; border-radius: 11px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(156, 177, 199, .18); font-size: 13px; }
+.plv-voo-texto .plv-folego.curto { background: rgba(183, 141, 57, .16); border-color: rgba(183, 141, 57, .45); color: var(--plv-ouro-claro); }
+.plv-voo-texto .plv-folego.curto b { color: var(--plv-marfim); }
+
+/* 3. decolar */
+.plv-embarque { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; align-items: start; }
+.plv-passe { position: relative; overflow: hidden; border-radius: 22px; background: var(--plv-azul); color: var(--plv-marfim); }
+:root[data-tema='escuro'] .plv-passe { background: #061733; border: 1px solid #1B3260; }
+.plv-passe-topo { position: relative; isolation: isolate; height: 170px; }
+.plv-passe-topo img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; }
+.plv-passe-topo::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(5, 21, 40, .1) 20%, rgba(5, 21, 40, .9) 78%, var(--plv-azul) 100%); }
+:root[data-tema='escuro'] .plv-passe-topo::after { background: linear-gradient(180deg, rgba(6, 23, 51, .1) 20%, rgba(6, 23, 51, .9) 78%, #061733 100%); }
+.plv-passe-topo.sem-foto { height: 110px; }
+.plv-passe-nome { position: absolute; left: 22px; right: 22px; bottom: 14px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.plv-passe-nome small { display: block; color: var(--plv-ouro-claro); font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+.plv-passe-nome b { font-size: 28px; letter-spacing: -.01em; }
+.plv-passe-nome span { flex: none; padding: 5px 12px; border-radius: 99px; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; background: rgba(5, 21, 40, .75); }
+.plv-passe-nome span.demo { border: 1px solid rgba(183, 141, 57, .7); color: var(--plv-ouro-claro); }
+.plv-passe-nome span.real { border: 1px solid #1FD17F; color: #1FD17F; }
+.plv-picote { position: relative; display: block; height: 0; margin: 4px 22px 0; border-top: 1.5px dashed rgba(156, 177, 199, .35); }
+.plv-picote::before, .plv-picote::after { content: ''; position: absolute; top: -12px; width: 24px; height: 24px; border-radius: 50%; background: var(--bg); }
+.plv-picote::before { left: -34px; }
+.plv-picote::after { right: -34px; }
+.plv-passe-grade { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 14px; margin: 0; padding: 20px 22px 10px; }
+.plv-passe-grade div { display: grid; gap: 4px; min-width: 0; }
+.plv-passe-grade dt { color: var(--plv-aco); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.plv-passe-grade dd { margin: 0; color: var(--plv-marfim); font: 700 17px var(--plv-dados); font-variant-numeric: tabular-nums; }
+.plv-passe-grade dd.ganho { color: #1FD17F; }
+.plv-passe-grade dd.perda { color: #FF5A64; }
+.plv-editar { margin: 4px 22px 18px; padding: 0; border: 0; background: none; color: var(--plv-ouro-claro); font-size: 13px; font-weight: 700; cursor: pointer; }
+.plv-editar:hover { text-decoration: underline; }
+.plv-notas { display: grid; gap: 12px; }
+.plv-nota { margin: 0; padding: 14px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--plv-linha); color: var(--muted); font-size: 13px; line-height: 1.55; }
+.plv-nota b { color: var(--text); }
+/* fundo SÓLIDO (o tom de alerta por cima de uma base opaca): fixa no celular, nada pode aparecer por trás */
+.plv-real { display: flex; gap: 11px; align-items: flex-start; padding: 14px 16px; border-radius: 16px; border: 1.5px solid var(--plv-coral); background: linear-gradient(var(--down-soft), var(--down-soft)), var(--surface); color: var(--text); font-size: 13.5px; line-height: 1.45; cursor: pointer; }
+.plv-real.ok { border-color: var(--plv-verde); background: linear-gradient(var(--up-soft), var(--up-soft)), var(--surface); }
+.plv-real input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--plv-coral); cursor: pointer; }
+.plv-real.ok input { accent-color: var(--plv-verde); }
+
+/* ------------------------------------------------ o rodapé */
+.plv-rodape { flex: none; display: flex; align-items: center; gap: 14px; padding: 14px 24px; background: var(--surface); border-top: 1px solid var(--plv-linha); }
+.plv-voltar { min-height: 46px; padding: 0 4px; border: 0; background: none; color: var(--muted); font-size: 14px !important; font-weight: 700; cursor: pointer; }
+.plv-voltar:hover { color: var(--text); }
+.plv-rodape-dica { flex: 1; text-align: center; color: var(--muted); font-size: 12.5px; }
+.plv-principal {
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-width: 210px; height: 52px; padding: 0 24px; border: 0; border-radius: 14px;
+  background: var(--plv-ouro); color: var(--plv-azul) !important; font-size: 15px !important; font-weight: 800; cursor: pointer; transition: background .15s, transform .15s;
+}
+.plv-principal:hover:not(:disabled) { background: var(--plv-ouro-claro); transform: translateY(-1px); }
+.plv-principal:disabled { opacity: .45; cursor: not-allowed; }
+.plv-principal svg { width: 14px; height: 14px; }
+
+/* ------------------------------------------------ telas médias */
+@media (max-width: 960px) {
+  .plv-plano, .plv-embarque { grid-template-columns: minmax(0, 1fr); }
+  .plv-lado { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .plv-capa { grid-row: span 2; }
+}
+
+/* ------------------------------------------------ celular e app */
+@media (max-width: 640px) {
+  .robot-launch-dialog:has(.plv) { width: 100%; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .plv-topo { padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 0; }
+  .plv-eixo { left: 86%; }
+  .plv-titulo b { font-size: 15.5px; }
+  .plv-passos li { gap: 6px; font-size: 11.5px; }
+  .plv-passos li span { display: none; }
+  .plv-passos li.agora span { display: inline; }
+  .plv-corpo { padding: 16px; }
+  .plv-frota { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .plv-jato { height: 190px; }
+  .plv-ficha { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .plv-ficha-fatos { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .plv-jato-texto b { font-size: 17px; }
+  .plv-lado { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .plv-capa { height: 132px; grid-row: auto; }
+  .plv-capa-texto b { font-size: 20px; }
+  .plv-campo { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "nome atalhos" "valor valor" "erro erro"; gap: 10px; padding: 12px 14px; }
+  .plv-atalhos button { min-width: 34px; height: 30px; padding: 0 8px; }
+  .plv-mm { width: 48px; height: 48px; }
+  .plv-num input { font-size: 28px; }
+  .plv-voo { grid-template-columns: 116px minmax(0, 1fr); gap: 12px; padding: 14px; }
+  .plv-voo-texto p { font-size: 13px; }
+  .plv-passe-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .plv-passe-nome b { font-size: 24px; }
+  .plv-rodape { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .plv-rodape-dica { display: none; }
+  .plv-principal { flex: 1; min-width: 0; height: 54px; }
+  /* conta real: a confirmação fica grudada logo acima do botão (fora da tela, o botão travado parecia quebrado) */
+  .plv-real { position: sticky; bottom: 0; z-index: 2; box-shadow: 0 -12px 18px -6px var(--bg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plv-jato, .plv-jato img, .plv-principal, .plv-seg button { transition: none; }
+}

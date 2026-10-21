@@ -298,8 +298,8 @@ function Laboratorio() {
           <CatalogoDeExemplo itens={CATALOGO_LAB.map((i) => ({ id: i.id, ativo: true, parametros: parametrosPadrao(i.id), lossVirtualAjustavel: true }))}>
           <div className="rob-workspace-board modo-lista"><div className="cabine-caixa cartao parado">
             <RobotSetup identidade={ident} nomeEstrategia={ident.nome} symbols={symbols} symbolInicial="R_75"
-              configInicial={config} moeda="USD" isDemo contaId="VRTC1234567" escolherModelo
-              onCancelar={nada} onLigar={nada} ligando={false} erro={null} />
+              configInicial={config} moeda="USD" isDemo={!new URLSearchParams(location.search).has('real')} contaId="VRTC1234567" escolherModelo
+              onCancelar={nada} onLigar={(cfg) => { (window as unknown as { __cfgLigado?: unknown }).__cfgLigado = cfg }} ligando={false} erro={null} />
           </div></div>
           </CatalogoDeExemplo>
         )}
