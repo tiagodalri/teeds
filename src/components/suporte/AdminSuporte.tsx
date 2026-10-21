@@ -8,6 +8,8 @@ import {
 import { formatarCPF, formatarTelefone } from '../../core/teeds/conta'
 import { PLANOS_CLIENTE } from '../../core/teeds/planos'
 import { assinarMudancas } from '../../core/teeds/realtime'
+import { PERGUNTAS } from '../../core/teeds/faq'
+import type { ResumoDaTriagem } from '../../core/teeds/triagem'
 import { Monograma } from '../marca/Monograma'
 import './admin-suporte.css'
 
@@ -410,6 +412,20 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
               </div>
 
               <div className="sx-mensagens" ref={lista}>
+                {(() => {
+                  // a triagem: o que a pessoa escolheu antes de escrever (o atendente não precisa perguntar o básico)
+                  const t = (atual.contexto as { triagem?: ResumoDaTriagem }).triagem
+                  if (!t) return null
+                  const vistas = t.faqVistas.map((id) => PERGUNTAS.find((p) => p.id === id)?.pergunta).filter(Boolean)
+                  return (
+                    <div className="sx-triagem">
+                      <span className="sx-rot">Triagem do cliente</span>
+                      <b>{t.rotulo}{t.alta && <i className="sx-prio alta">prioridade alta</i>}</b>
+                      {t.respostas.length > 0 && <dl>{t.respostas.map((r, n) => <div key={n}><dt>{r.pergunta}</dt><dd>{r.resposta}</dd></div>)}</dl>}
+                      {vistas.length > 0 && <small>Leu na Ajuda e não resolveu: {vistas.join(' · ')}</small>}
+                    </div>
+                  )
+                })()}
                 {mensagens.map((m) => {
                   const dia = diaDaMensagem(m.criadaEm)
                   const sep = dia !== diaAnterior ? <div className="sx-dia" key={`d-${m.id}`}><span>{dia}</span></div> : null

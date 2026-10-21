@@ -246,3 +246,12 @@
 .sx-trocar-email > div { display: flex; gap: 6px; justify-content: flex-end; }
 .sx-trocar-email small { color: var(--muted); font-size: 11.5px; line-height: 1.4; }
 .sx-ficha-bloco > .sx-btn { justify-self: start; }
+
+/* a triagem do cliente no topo da conversa */
+.sx-triagem { display: grid; gap: 6px; align-self: stretch; margin-bottom: 4px; padding: 12px 14px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--sx-ouro) 40%, var(--border)); background: color-mix(in srgb, var(--sx-ouro) 6%, var(--surface)); }
+.sx-triagem > b { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.sx-triagem dl { display: grid; gap: 4px; margin: 0; }
+.sx-triagem dl div { display: grid; grid-template-columns: minmax(120px, 40%) minmax(0, 1fr); gap: 10px; font-size: 13px; }
+.sx-triagem dt { color: var(--muted); }
+.sx-triagem dd { margin: 0; font-weight: 700; }
+.sx-triagem small { color: var(--muted); font-size: 12px; line-height: 1.45; }

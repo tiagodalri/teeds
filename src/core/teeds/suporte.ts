@@ -10,6 +10,7 @@
 import { SERVIDOR, SUPABASE } from './config'
 import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
+import type { ResumoDaTriagem } from './triagem'
 
 export type StatusDaConversa = 'aberta' | 'respondida' | 'resolvida'
 export type Prioridade = 'baixa' | 'normal' | 'alta' | 'urgente'
@@ -113,10 +114,16 @@ function contextoDoAparelho(tela: string) {
   return { tela, aparelho, app, largura: window.innerWidth, navegador: /CriOS|Chrome/.test(ua) ? 'Chrome' : /Safari/.test(ua) ? 'Safari' : /Firefox/.test(ua) ? 'Firefox' : 'Outro' }
 }
 
-export async function abrirConversa(sessao: SessaoTeeds, tela: string): Promise<Conversa> {
+/** Abre um atendimento. A triagem (assunto e respostas) vai junto: o banco tira dela a etiqueta e a prioridade. */
+export async function abrirConversa(sessao: SessaoTeeds, tela: string, triagem?: ResumoDaTriagem | null): Promise<Conversa> {
+  const ultima = triagem?.respostas[triagem.respostas.length - 1]?.resposta
   const [l] = await rest<any[]>(sessao, '/suporte_conversas', {
     method: 'POST', headers: { Prefer: 'return=representation' },
-    body: JSON.stringify({ user_id: sessao.usuario.id, marca: MARCA.id, origem: tela, contexto: contextoDoAparelho(tela) }),
+    body: JSON.stringify({
+      user_id: sessao.usuario.id, marca: MARCA.id, origem: tela,
+      assunto: triagem && triagem.tema !== 'outro' ? `${triagem.rotulo}${ultima ? ` · ${ultima}` : ''}` : null,
+      contexto: { ...contextoDoAparelho(tela), ...(triagem ? { triagem } : {}) },
+    }),
   })
   return paraConversa(l)
 }
@@ -249,7 +256,15 @@ export async function baterPonto(sessao: SessaoTeeds, marca: string): Promise<vo
 
 // ------------------------------------------------------------------ abrir o chat de qualquer lugar
 
-export interface PedidoDeSuporte { mensagem?: string }
+export interface PedidoDeSuporte {
+  mensagem?: string
+  /** Um atalho da triagem (ex.: 'trocar-email', 'renovar'): o chat já cai na etapa de escrever. */
+  atalho?: string
+  /** Vindo da Ajuda: o tema da triagem, a pergunta que a pessoa leu e não resolveu. */
+  tema?: string
+  resposta?: string
+  faq?: string
+}
 const EVENTO = 'suporte:abrir'
 /** Ex.: o perfil pede a troca de e-mail; o FAQ, "não achei minha resposta". */
 export function abrirSuporte(p: PedidoDeSuporte = {}) { window.dispatchEvent(new CustomEvent<PedidoDeSuporte>(EVENTO, { detail: p })) }

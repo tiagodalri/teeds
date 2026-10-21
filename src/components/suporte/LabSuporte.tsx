@@ -21,7 +21,8 @@ const conversa = (id: string, user: string, o: Record<string, unknown>) => ({
   aguardando_desde: iso(3), primeira_resposta_em: null, resolvida_em: null, nao_lidas_cliente: 0, nao_lidas_equipe: 1, avaliacao: null, avaliacao_comentario: null, ...o,
 })
 const CONVERSAS = [
-  conversa('c1', U.lucas, { assunto: 'Fiz o saque na Deriv e ainda não caiu', ultima_mensagem: 'Fiz o saque na Deriv ontem e ainda não caiu na minha conta', prioridade: 'urgente', etiquetas: ['conta-deriv', 'saque'], aguardando_desde: iso(42), nao_lidas_equipe: 2 }),
+  conversa('c1', U.lucas, { assunto: 'Fiz o saque na Deriv e ainda não caiu', ultima_mensagem: 'Fiz o saque na Deriv ontem e ainda não caiu na minha conta', prioridade: 'urgente', etiquetas: ['conta-deriv', 'saque'], aguardando_desde: iso(42), nao_lidas_equipe: 2,
+    contexto: { tela: 'inicio', aparelho: 'iPhone/iPad', navegador: 'Safari', app: true, triagem: { tema: 'saque', rotulo: 'Saque', etiqueta: 'saque', alta: true, respostas: [{ pergunta: 'Qual é a situação?', resposta: 'Pedi o saque e não caiu' }, { pergunta: 'Há quanto tempo você pediu?', resposta: 'De 1 a 3 dias' }], faqVistas: ['deposito-nao-caiu'] } } }),
   conversa('c2', U.ana, { assunto: 'Como ligo o Falcon na demo?', ultima_mensagem: 'Como ligo o Falcon na conta demo?', etiquetas: ['conta-deriv', 'ia'], aguardando_desde: iso(6), contexto: { tela: 'robos', aparelho: 'Windows', navegador: 'Chrome', app: false } }),
   conversa('c3', U.joao, { assunto: 'Não consigo entrar', ultima_mensagem: 'Pronto, já consegui entrar. Valeu!', status: 'respondida', prioridade: 'alta', etiquetas: ['acesso'], ultima_de: 'cliente', aguardando_desde: null, primeira_resposta_em: iso(110), criada_em: iso(130), nao_lidas_equipe: 0, responsavel: 'lab', responsavel_nome: 'Tiago Dal Ri' }),
   conversa('c4', U.bia, { assunto: 'Quero renovar o meu plano', ultima_mensagem: 'Obrigada pela ajuda!', status: 'resolvida', etiquetas: ['plano'], ultima_de: 'cliente', aguardando_desde: null, primeira_resposta_em: iso(1400), criada_em: iso(1430), resolvida_em: iso(60), nao_lidas_equipe: 0, avaliacao: 5, avaliacao_comentario: 'Atendimento rápido e muito educado.' }),
@@ -63,7 +64,7 @@ function instalarRespostas(modo: string) {
     if (u.includes('/suporte_conversas')) {
       if (metodo === 'HEAD') return new Response(null, { status: 200, headers: { 'content-range': '0-1/2' } })
       if (metodo === 'PATCH') return new Response(null, { status: 204 })
-      if (metodo === 'POST') return responder([conversa(`n${Date.now()}`, 'lab', { status: 'aberta', aguardando_desde: null, nao_lidas_equipe: 0 })])
+      if (metodo === 'POST') { const b = JSON.parse(String(init?.body ?? '{}')); return responder([conversa(`n${Date.now()}`, 'lab', { status: 'aberta', aguardando_desde: null, nao_lidas_equipe: 0, assunto: b.assunto, contexto: b.contexto })]) }
       if (u.includes('nao_lidas_cliente=gt.0')) return responder([])
       if (modo === 'novo') return responder([])
       if (u.includes('user_id=eq.lab')) return responder([{ ...CONVERSAS[0], user_id: 'lab', status: 'respondida', aguardando_desde: null, nao_lidas_cliente: 1 }, CONVERSAS[3]])

@@ -208,7 +208,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
               <div className="mp-trilho"><i style={{ width: `${usado}%` }} /></div>
               <p>{faltam > 1 ? `Faltam ${faltam} dias de acesso.` : faltam === 1 ? 'Seu acesso termina amanhã.' : faltam === 0 ? 'Seu acesso termina hoje.' : 'Seu acesso terminou.'}
                 {faltam <= 5 && ' Para renovar, fale com o suporte.'}</p>
-              {faltam <= 5 && MARCA.suporte && <button type="button" className="mp-btn ouro" onClick={() => abrirSuporte({ mensagem: 'Quero renovar o meu acesso.' })}>Renovar com o suporte</button>}
+              {faltam <= 5 && MARCA.suporte && <button type="button" className="mp-btn ouro" onClick={() => abrirSuporte({ atalho: 'renovar' })}>Renovar com o suporte</button>}
             </div>
           )}
         </section>
@@ -264,7 +264,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
           <h2><Ic d={I.carta} />E-mail de acesso</h2>
           <div className="mp-atual"><span>E-mail atual</span><b id="mp-email" tabIndex={-1}>{perfil.email}</b></div>
           <p className="mp-nota">Por segurança, a troca do e-mail de acesso é feita pela equipe de suporte. Peça pelo chat: é rápido.</p>
-          {MARCA.suporte && <button type="button" className="mp-btn" onClick={() => abrirSuporte({ mensagem: 'Quero trocar o e-mail de acesso da minha conta. O e-mail novo é: ' })}>Pedir a troca ao suporte</button>}
+          {MARCA.suporte && <button type="button" className="mp-btn" onClick={() => abrirSuporte({ atalho: 'trocar-email' })}>Pedir a troca ao suporte</button>}
         </section>
 
         {/* ------------------------------------------------ corretora */}

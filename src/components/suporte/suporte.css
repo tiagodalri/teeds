@@ -88,7 +88,7 @@ body:has(.av-pilula) .sp-painel { bottom: calc(140px + var(--sab, 0px)); }
 .sp-icone-vazio { width: 36px; }
 .sp-offline { margin: 0; padding: 8px 14px; background: var(--down-soft); color: var(--down); font-size: 12.5px; text-align: center; }
 
-.sp-corpo { position: relative; flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 16px 14px 10px; display: flex; flex-direction: column; gap: 8px; }
+.sp-corpo { position: relative; flex: 1; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: 16px 14px 10px; display: flex; flex-direction: column; gap: 8px; }
 .sp-carregando { display: flex; gap: 6px; margin: auto; }
 .sp-carregando i, .sp-digitando i { width: 7px; height: 7px; border-radius: 50%; background: var(--sp-ouro); animation: sp-pula 1.2s infinite ease-in-out; }
 .sp-carregando i:nth-child(2), .sp-digitando i:nth-child(2) { animation-delay: .15s; }
@@ -100,12 +100,6 @@ body:has(.av-pilula) .sp-painel { bottom: calc(140px + var(--sab, 0px)); }
 .sp-ola-marca { position: absolute; right: -36px; top: -24px; opacity: .06; }
 .sp-ola h3 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
 .sp-ola > p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; max-width: 30ch; }
-.sp-assuntos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-.sp-assuntos button {
-  padding: 8px 13px; border-radius: 999px; border: 1px solid var(--sp-linha); background: var(--surface); color: var(--text);
-  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .15s, background .15s;
-}
-.sp-assuntos button:hover { border-color: var(--sp-ouro); background: color-mix(in srgb, var(--sp-ouro) 8%, var(--surface)); }
 .sp-central {
   display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 13px 14px; border-radius: 14px; text-align: left; cursor: pointer;
   border: 1px solid var(--sp-linha); background: var(--surface); color: var(--text); font: inherit;
@@ -230,3 +224,56 @@ body:has(.av-pilula) .sp-painel { bottom: calc(140px + var(--sab, 0px)); }
 @media (max-width: 640px) {
   body:has(.sp-lancador) :is(.in, .mp, .aj) { padding-bottom: calc(92px + var(--sab, 0px)); }
 }
+
+/* ------------------------------------------------ triagem (assunto → perguntas → Ajuda → escrever) */
+.sp-triagem { display: grid; gap: 12px; }
+.sp-temas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 2px; }
+.sp-temas button {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 11px 12px; border-radius: 14px; text-align: left;
+  border: 1px solid var(--sp-linha); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; transition: border-color .15s, background .15s, transform .15s;
+}
+.sp-temas button:hover { border-color: var(--sp-ouro); background: color-mix(in srgb, var(--sp-ouro) 7%, var(--surface)); transform: translateY(-1px); }
+.sp-temas button.outro { border-style: dashed; }
+.sp-temas b { display: block; font-size: 13.5px; line-height: 1.25; }
+.sp-temas small { display: block; margin-top: 2px; color: var(--muted); font-size: 11.5px; line-height: 1.3; }
+.sp-tema-icone { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: color-mix(in srgb, var(--sp-ouro) 14%, transparent); color: var(--sp-ouro); }
+.sp-tema-icone svg { width: 17px; height: 17px; }
+
+.sp-trilha { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 2px 0 4px; }
+.sp-trilha-voltar { display: grid; place-items: center; width: 32px; height: 32px; margin-right: 2px; border: 1px solid var(--sp-linha); border-radius: 10px; background: var(--surface); color: var(--text); cursor: pointer; }
+.sp-trilha-voltar:hover { border-color: var(--sp-ouro); }
+.sp-trilha-tema { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: color-mix(in srgb, var(--sp-ouro) 15%, transparent); color: var(--sp-ouro); font-size: 12.5px; font-weight: 800; }
+.sp-trilha-tema svg { width: 14px; height: 14px; }
+.sp-trilha-item { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.sp-trilha-item svg { width: 12px; height: 12px; opacity: .6; }
+
+.sp-pergunta { display: grid; gap: 10px; animation: sp-sobe .22s cubic-bezier(.2, .8, .2, 1); }
+.sp-pergunta h4 { display: flex; align-items: center; gap: 8px; margin: 2px 0 0; font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.sp-pergunta h4 svg { color: var(--sp-ouro); }
+.sp-opcoes { display: grid; gap: 7px; }
+.sp-opcoes button {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: 13px; text-align: left;
+  border: 1px solid var(--sp-linha); background: var(--surface); color: var(--text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.sp-opcoes button svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+.sp-opcoes button:hover { border-color: var(--sp-ouro); background: color-mix(in srgb, var(--sp-ouro) 7%, var(--surface)); }
+.sp-opcoes button:hover svg { color: var(--sp-ouro); }
+
+.sp-faq { display: grid; gap: 6px; padding: 13px 14px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--sp-ouro) 30%, var(--border)); background: var(--surface); }
+.sp-faq b { font-size: 14px; }
+.sp-faq p { margin: 0; font-size: 13.5px; line-height: 1.5; opacity: .9; }
+.sp-faq p.item { position: relative; padding-left: 16px; }
+.sp-faq p.item::before { content: ''; position: absolute; left: 3px; top: .6em; width: 6px; height: 6px; border-radius: 50%; background: var(--sp-ouro); }
+.sp-faq-ir { justify-self: start; display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; padding: 0; border: 0; background: none; color: var(--sp-ouro); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.sp-faq-ir svg { width: 14px; height: 14px; }
+.sp-faq-acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sp-faq-acoes .sp-btn { min-height: 44px; }
+.sp-dica { margin: 0; color: var(--text); opacity: .85; font-size: 14px; line-height: 1.5; }
+.sp-dica.fraca { display: flex; align-items: center; gap: 6px; color: var(--muted); opacity: 1; font-size: 12.5px; }
+.sp-dica.fraca svg { width: 14px; height: 14px; }
+
+/* o assunto escolhido, no topo da conversa */
+.sp-resumo { display: grid; gap: 2px; align-self: center; max-width: 92%; padding: 8px 12px; border-radius: 12px; border: 1px dashed color-mix(in srgb, var(--sp-ouro) 45%, var(--border)); text-align: center; }
+.sp-resumo span { color: var(--sp-ouro); font-size: 10.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.sp-resumo b { font-size: 12.5px; font-weight: 600; line-height: 1.4; }
+@media (prefers-reduced-motion: reduce) { .sp-pergunta { animation: none; } .sp-temas button { transition: none; } }

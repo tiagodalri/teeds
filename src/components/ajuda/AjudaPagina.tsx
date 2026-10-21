@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { buscarPerguntas, CATEGORIAS, PERGUNTAS, type Pergunta } from '../../core/teeds/faq'
 import { abrirSuporte } from '../../core/teeds/suporte'
+import { TEMA_DA_CATEGORIA } from '../../core/teeds/triagem'
 import { Monograma } from '../marca/Monograma'
 import { MARCA } from '../../marca'
 import './ajuda.css'
@@ -24,7 +25,7 @@ function Resposta({ p, aoIr, suporte }: { p: Pergunta; aoIr: (t: string) => void
   const votar = (v: 'sim' | 'nao') => {
     setVoto(v)
     try { localStorage.setItem(CHAVE_VOTOS, JSON.stringify({ ...votosGuardados(), [p.id]: v })) } catch { /* só agora */ }
-    if (v === 'nao' && suporte) abrirSuporte({ mensagem: `Sobre "${p.pergunta}": ` })
+    if (v === 'nao' && suporte) abrirSuporte({ tema: TEMA_DA_CATEGORIA[p.categoria] ?? 'outro', resposta: p.pergunta, faq: p.id })
   }
   const blocos: Array<string | string[]> = []
   for (const r of p.resposta) {
