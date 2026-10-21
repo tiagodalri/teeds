@@ -296,9 +296,6 @@ export default defineConfig({
 
         const essenciais = readdirSync(join(SAIDA, 'assets'))
           .filter((arquivo) => /\.(?:js|css)$/.test(arquivo))
-          // o conversor de foto do iPhone (1,3 MB) só baixa quando alguém sobe uma foto HEIC:
-          // fora da pré-carga, cada publicação deixa de puxar esse peso em todo app instalado
-          .filter((arquivo) => !/^heic2any\./.test(arquivo))
           .map((arquivo) => `./assets/${arquivo}`)
         const assinatura = createHash('sha256')
           .update(essenciais.map((f) => readFileSync(join(SAIDA, f.slice(2)))).join(''))

@@ -21,8 +21,13 @@ import './core/appNativo'
 */
 const pagina = window as unknown as { __appNoAr?: boolean }
 if (pagina.__appNoAr) {
-  location.reload()
-  throw new Error('Versão nova publicada: recarregando a página.')
+  // uma vez a cada 30 s, com marca nova no endereço (fura o cache do CDN, que
+  // ainda pode entregar a página velha): nunca vira laço de recarga
+  const chave = 'app.recarregou-por-copia'
+  let pode = false
+  try { pode = Date.now() - Number(sessionStorage.getItem(chave) ?? 0) > 30_000; if (pode) sessionStorage.setItem(chave, String(Date.now())) } catch { /* sem armazenamento: não recarrega */ }
+  if (pode) { const u = new URL(location.href); u.searchParams.set('v', Date.now().toString(36)); location.replace(u.toString()) }
+  throw new Error('Versão nova publicada: a página recarrega na versão nova.')
 }
 pagina.__appNoAr = true
 // Falha ao baixar uma tela separada (publicação no meio, rede caiu e voltou): recarrega uma vez.

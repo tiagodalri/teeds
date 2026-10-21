@@ -72,8 +72,9 @@ const ManagementPanel = lazy(() => import('./components/ManagementPanel').then((
 const AulasPanel = lazy(() => import('./components/AulasPanel').then((m) => ({ default: m.AulasPanel })))
 const MarketplacePanel = lazy(() => import('./components/MarketplacePanel').then((m) => ({ default: m.MarketplacePanel })))
 const OperationalManagementPanel = lazy(() => import('./components/OperationalManagementPanel').then((m) => ({ default: m.OperationalManagementPanel })))
-/** "1.234,56", "1234.56" ou "12,5" viram número; vírgula é sempre o decimal. */
-const lerValor = (t: string) => Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t)
+/** "1.234,56", "2.000", "1234.56" ou "12,5" viram número: vírgula é o decimal; ponto com
+    trios depois ("2.000") é milhar, senão é decimal ("12.5"). */
+const lerValor = (t: string) => Number(t.includes(',') || /^[1-9]\d{0,2}(\.\d{3})+$/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t)
 const telaAbrindo = (texto: string) => <div className="ger"><div className="adm-vazio">{texto}</div></div>
 const PlayerDoTreino = lazy(() => import('./components/aovivo/PlayerDoTreino'))
 const PlayerAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.PlayerGlobal })))
@@ -1031,12 +1032,12 @@ export default function App() {
       ) : tela === 'insights' && admin === true ? (
         teeds.sessao ? <Suspense fallback={telaAbrindo('Abrindo os insights…')}><InsightsPanel key={marcaEmFoco} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} /></Suspense> : null
       ) : tela === 'gestao' && admin === true ? (
-        teeds.sessao && adminConfirmado ? <Suspense fallback={telaAbrindo('Abrindo a administração…')}><AdminPanel abrirSuporte={pedidoCaixa} nomeDaEquipe={teeds.usuario?.nome || ''} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} comissoes={<ManagementPanel
+        teeds.sessao && adminConfirmado ? <Suspense fallback={telaAbrindo('Abrindo a administração…')}><AdminPanel abrirSuporte={pedidoCaixa} nomeDaEquipe={teeds.usuario?.nome || ''} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} comissoes={<Suspense fallback={telaAbrindo('Abrindo as comissões…')}><ManagementPanel
           session={conta.session} sessaoTeeds={teeds.sessao} contaId={conta.accountId}
           socket={conta.socket} isDemo={conta.isDemo} onReautorizar={() => startLogin()}
           payoutBase={payoutBase} moeda={conta.account?.currency ?? 'USD'} pulso={conta.pulso}
           entrandoNaDeriv={conta.status === 'entrando'} onConectarDeriv={conta.login}
-        />} onNavigate={setTela} /></Suspense> : null
+        /></Suspense>} onNavigate={setTela} /></Suspense> : null
       ) : (
       <div className="layout layout-operar">
         <main className="main">
@@ -1145,7 +1146,7 @@ export default function App() {
             <div className={`input-wrap ${acimaDoSaldo ? 'alerta' : ''}`}><em>{simboloMoeda(moeda)}</em>
               {/* texto enquanto digita: dá para apagar e escrever (antes o 0,35 voltava na hora);
                   aceita vírgula ou ponto, e o mínimo da Deriv vale ao sair do campo */}
-              <input type="text" inputMode="decimal" autoComplete="off" value={stakeTexto ?? stake.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
+              <input type="text" inputMode="decimal" autoComplete="off" value={stakeTexto ?? stake.toLocaleString('pt-BR', { maximumFractionDigits: 2, useGrouping: false })}
                 onFocus={(e) => e.currentTarget.select()}
                 onChange={(e) => {
                   const t = e.target.value.replace(/[^\d.,]/g, '')
