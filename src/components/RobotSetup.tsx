@@ -104,63 +104,91 @@ const degrau = (v: number, entrada: boolean) => entrada ? (v < 2 ? 0.05 : v < 10
 const bonito = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const nomeCurto = (nome: string) => nome.replace(/^(GF|GlobalFly|OMNI)\s+/i, '')
 
-/** Um valor do plano: o número grande no meio, − e + nas pontas, atalhos e o aviso logo abaixo. */
-function CampoDoPlano({ id, rotulo, ajuda, cor, valor, mudar, atalhos, min, max, entrada = false, moeda, erro, aoEnter }: {
-  id: string; rotulo: string; ajuda: string; cor?: 'verde' | 'coral'; valor: string; mudar: (v: string) => void
-  atalhos: readonly number[]; min: number; max: number; entrada?: boolean; moeda: string; erro: string | null; aoEnter: () => void
+/* ------------------------------------------------------------------
+   Os mostradores do plano (21/10/2026, refeitos a pedido do Tiago: "texto
+   sem formato, números estranhos, experiência antiga"). Cada valor é um
+   instrumento: rótulo em versalete na cor do papel (ouro a entrada, verde a
+   meta, coral o limite), o número grande na fonte da marca e editável ali
+   mesmo, e uma régua deslizante com os atalhos marcados nela. A régua é
+   logarítmica nos valores em dinheiro: precisão nos pequenos, alcance nos
+   grandes. O teclado continua valendo para qualquer número.
+   ------------------------------------------------------------------ */
+const simbolo = (m: string) => (m === 'USD' ? 'US$' : m)
+const curto = (v: number) => (v < 1 ? n2(v) : Number.isInteger(v) ? String(v) : n2(v))
+
+type Tom = 'ouro' | 'verde' | 'coral' | 'aco'
+function Mostrador({ id, rotulo, etiqueta, ajuda, tom, valor, mudar, marcas, faixa, passoMin, moeda, erro, aoEnter }: {
+  id: string; rotulo: string; etiqueta?: string; ajuda: React.ReactNode; tom: Tom; valor: string; mudar: (v: string) => void
+  marcas: readonly number[]; faixa: [number, number]; passoMin: number; moeda: string; erro: string | null; aoEnter: () => void
 }) {
+  const [a, b] = faixa
   const atual = ler(valor)
+  // régua logarítmica: posição 0–1000 ⇄ valor de a até b
+  const paraPos = (v: number) => (v <= a ? 0 : v >= b ? 1000 : Math.round((Math.log(v / a) / Math.log(b / a)) * 1000))
+  const paraValor = (p: number) => { const v = a * Math.pow(b / a, p / 1000); const q = v < 2 ? passoMin : v < 20 ? Math.max(passoMin, 0.5) : v < 100 ? 1 : 5; return Math.round(v / q) * q }
+  const pos = Number.isFinite(atual) ? paraPos(atual) : 0
   const passo = (sinal: 1 | -1) => {
-    const base = Number.isFinite(atual) ? atual : min
-    const d = degrau(base, entrada)
-    const novo = Math.min(max, Math.max(min, Math.round((base + sinal * d) / d) * d))
-    mudar(n2(novo))
+    const base = Number.isFinite(atual) ? atual : a
+    const d = degrau(base, passoMin < 0.5)
+    mudar(n2(Math.min(10_000, Math.max(0, Math.round((base + sinal * d) / d) * d))))
   }
   return (
-    <div className={`plv-campo ${erro ? 'com-erro' : ''}`}>
-      <label className="plv-campo-nome" htmlFor={id}>
-        <b>{cor && <i className={cor} aria-hidden="true" />}{rotulo}</b>
-        <small>{ajuda}</small>
-      </label>
-      <div className="plv-campo-valor">
-        <button type="button" className="plv-mm" onClick={() => passo(-1)} aria-label={`Diminuir ${rotulo.toLowerCase()}`}>−</button>
-        <div className="plv-num">
-          <span aria-hidden="true">{moeda}</span>
-          <input id={id} inputMode="decimal" autoComplete="off" value={valor} aria-invalid={!!erro} aria-describedby={erro ? `${id}-erro` : undefined}
+    <div className={`plv-m tom-${tom} ${erro ? 'com-erro' : ''}`}>
+      <div className="plv-m-topo">
+        <label htmlFor={id}>{rotulo}</label>
+        {etiqueta && <span className="plv-m-etiqueta">{etiqueta}</span>}
+      </div>
+      <div className="plv-m-valor">
+        <button type="button" className="plv-m-passo" onClick={() => passo(-1)} aria-label={`Diminuir ${rotulo.toLowerCase()}`}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9" /></svg></button>
+        <div className="plv-m-num">
+          <span aria-hidden="true">{simbolo(moeda)}</span>
+          <input id={id} inputMode="decimal" autoComplete="off" value={valor} aria-invalid={!!erro} aria-describedby={`${id}-ajuda`}
+            size={Math.max(4, valor.length)}
             onFocus={(e) => e.currentTarget.select()}
             onChange={(e) => mudar(e.target.value.replace(/[^\d.,]/g, ''))}
-            onBlur={() => { if (Number.isFinite(atual)) mudar(n2(Math.min(max, Math.max(0, atual)))) }}
+            onBlur={() => { if (Number.isFinite(atual)) mudar(n2(Math.min(10_000, Math.max(0, atual)))) }}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); aoEnter() } }} />
         </div>
-        <button type="button" className="plv-mm" onClick={() => passo(1)} aria-label={`Aumentar ${rotulo.toLowerCase()}`}>+</button>
+        <button type="button" className="plv-m-passo" onClick={() => passo(1)} aria-label={`Aumentar ${rotulo.toLowerCase()}`}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9M8 3.5v9" /></svg></button>
       </div>
-      <div className="plv-atalhos" role="group" aria-label={`Atalhos de ${rotulo.toLowerCase()}`}>
-        {atalhos.map((a) => <button type="button" key={a} className={Math.abs(atual - a) < 0.001 ? 'on' : ''} aria-pressed={Math.abs(atual - a) < 0.001} onClick={() => mudar(n2(a))}>{a < 1 ? n2(a) : a}</button>)}
+      <div className="plv-m-regua">
+        <input type="range" min={0} max={1000} step={1} value={pos} aria-label={`${rotulo}: arraste para ajustar`} style={{ ['--p' as string]: `${pos / 10}%` }}
+          onChange={(e) => mudar(n2(paraValor(Number(e.target.value))))} />
+        <div className="plv-m-marcas">
+          {marcas.map((m) => (
+            <button type="button" key={m} className={Math.abs(atual - m) < 0.001 ? 'on' : ''} style={{ left: `${paraPos(m) / 10}%` }}
+              onClick={() => mudar(n2(m))} aria-label={`${rotulo}: ${curto(m)}`}>{curto(m)}</button>
+          ))}
+        </div>
       </div>
-      {erro && <p className="plv-erro" id={`${id}-erro`} role="status">{erro}</p>}
+      <p className={erro ? 'plv-m-erro' : 'plv-m-ajuda'} id={`${id}-ajuda`} role={erro ? 'status' : undefined}>{erro ?? ajuda}</p>
     </div>
   )
 }
 
-/** O loss virtual no mesmo desenho dos valores: − e + nas pontas, o número no meio, atalhos ao lado. */
-function CampoDeDigitos({ valor, mudar, max, padrao }: { valor: number; mudar: (n: number) => void; max: number; padrao: number }) {
-  const atalhos = [0, 2, 3, 4, 5].includes(padrao) ? [0, 2, 3, 4, 5] : [0, 2, 3, padrao, 5].sort((a, b) => a - b)
+/** O loss virtual como mostrador: o número de dígitos e uma régua de casas (Sem, 1, 2, …), as mesmas casas do radar da cabine. */
+function MostradorDeDigitos({ valor, mudar, max, padrao }: { valor: number; mudar: (n: number) => void; max: number; padrao: number }) {
+  const ate = Math.max(8, valor, padrao)
   return (
-    <div className="plv-campo">
-      <div className="plv-campo-nome" id="plv-lv-nome">
-        <b>Loss virtual</b>
-        <small>{valor === 0 ? 'entra em toda operação' : `espera ${valor} ${valor === 1 ? 'dígito' : 'dígitos'} que teriam perdido`}{valor === padrao ? ' · padrão' : ''}</small>
+    <div className="plv-m tom-aco">
+      <div className="plv-m-topo">
+        <span id="plv-lv-rot">Loss virtual</span>
+        {valor === padrao && <span className="plv-m-etiqueta">padrão da plataforma</span>}
       </div>
-      <div className="plv-campo-valor" role="group" aria-labelledby="plv-lv-nome">
-        <button type="button" className="plv-mm" onClick={() => mudar(Math.max(0, valor - 1))} disabled={valor <= 0} aria-label="Esperar um dígito a menos">−</button>
-        <div className="plv-num" aria-live="polite">
-          {valor === 0 ? <output className="plv-num-texto">Sem</output> : <><output className="plv-num-texto">{valor}</output><span>{valor === 1 ? 'dígito' : 'dígitos'}</span></>}
+      <div className="plv-m-valor">
+        <button type="button" className="plv-m-passo" onClick={() => mudar(Math.max(0, valor - 1))} disabled={valor <= 0} aria-label="Esperar um dígito a menos"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9" /></svg></button>
+        <div className="plv-m-num" aria-live="polite">
+          {valor === 0 ? <output className="plv-m-texto">Sem</output> : <><output className="plv-m-texto">{valor}</output><span>{valor === 1 ? 'dígito' : 'dígitos'}</span></>}
         </div>
-        <button type="button" className="plv-mm" onClick={() => mudar(Math.min(max, valor + 1))} disabled={valor >= max} aria-label="Esperar um dígito a mais">+</button>
+        <button type="button" className="plv-m-passo" onClick={() => mudar(Math.min(max, valor + 1))} disabled={valor >= max} aria-label="Esperar um dígito a mais"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9M8 3.5v9" /></svg></button>
       </div>
-      <div className="plv-atalhos" role="group" aria-label="Atalhos de loss virtual">
-        {atalhos.map((a) => <button type="button" key={a} className={valor === a ? 'on' : ''} aria-pressed={valor === a} onClick={() => mudar(a)}>{a === 0 ? 'Sem' : a}</button>)}
+      <div className="plv-m-casas" role="radiogroup" aria-labelledby="plv-lv-rot">
+        {Array.from({ length: ate + 1 }, (_, n) => (
+          <button type="button" key={n} role="radio" aria-checked={valor === n} className={`${n === 0 ? 'sem' : ''} ${n > 0 && n <= valor ? 'cheia' : ''} ${valor === n ? 'on' : ''}`}
+            onClick={() => mudar(n)} aria-label={n === 0 ? 'Sem loss virtual' : `${n} ${n === 1 ? 'dígito' : 'dígitos'}`}>{n === 0 ? 'Sem' : n}</button>
+        ))}
       </div>
+      <p className="plv-m-ajuda">{valor === 0 ? 'Entra em toda operação, sem esperar a sequência.' : valor === 1 ? 'Espera 1 dígito que teria perdido e então entra.' : `Espera ${valor} dígitos seguidos que teriam perdido e então entra.`}</p>
     </div>
   )
 }
@@ -396,14 +424,13 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
             </aside>
 
             <section className="plv-campos" aria-label="Valores da sessão">
-              {comLV && <CampoDeDigitos valor={lv} mudar={escolherLv} max={LOSS_VIRTUAL_MAXIMO} padrao={lvDoPainel} />}
-              <CampoDoPlano id="plv-entrada" rotulo="Entrada" ajuda="o valor de cada operação" valor={valores.valorAoVencer} mudar={mudar('valorAoVencer')}
-                atalhos={[0.35, 1, 2, 5]} min={0.35} max={10_000} entrada moeda={moeda} erro={erroEntrada} aoEnter={avancar} />
-              <CampoDoPlano id="plv-meta" rotulo="Meta de ganho" ajuda={plano ? 'para ao ganhar · do seu plano do dia' : 'o robô para ao ganhar'} cor="verde" valor={valores.takeProfit} mudar={mudar('takeProfit')}
-                atalhos={[10, 25, 50, 100]} min={0} max={10_000} moeda={moeda} erro={erroMeta} aoEnter={avancar} />
-              <CampoDoPlano id="plv-limite" rotulo="Limite de perda" ajuda={plano ? 'para ao perder · do seu plano do dia' : 'o robô para ao perder'} cor="coral" valor={valores.stopLoss} mudar={mudar('stopLoss')}
-                atalhos={[5, 15, 25, 50]} min={0} max={10_000} moeda={moeda} erro={erroLimite} aoEnter={avancar} />
-
+              {comLV && <MostradorDeDigitos valor={lv} mudar={escolherLv} max={LOSS_VIRTUAL_MAXIMO} padrao={lvDoPainel} />}
+              <Mostrador id="plv-entrada" rotulo="Entrada" tom="ouro" ajuda="O valor de cada operação." valor={valores.valorAoVencer} mudar={mudar('valorAoVencer')}
+                marcas={[0.35, 1, 5, 25]} faixa={[0.35, 50]} passoMin={0.05} moeda={moeda} erro={erroEntrada} aoEnter={avancar} />
+              <Mostrador id="plv-meta" rotulo="Meta de ganho" tom="verde" etiqueta={plano ? 'do plano do dia' : undefined} ajuda="O robô para ao alcançar este ganho." valor={valores.takeProfit} mudar={mudar('takeProfit')}
+                marcas={[10, 25, 100, 500]} faixa={[5, 1000]} passoMin={1} moeda={moeda} erro={erroMeta} aoEnter={avancar} />
+              <Mostrador id="plv-limite" rotulo="Limite de perda" tom="coral" etiqueta={plano ? 'do plano do dia' : undefined} ajuda="O robô para antes de passar desta perda." valor={valores.stopLoss} mudar={mudar('stopLoss')}
+                marcas={[5, 15, 50, 250]} faixa={[2, 1000]} passoMin={1} moeda={moeda} erro={erroLimite} aoEnter={avancar} />
               <div className="plv-voo" aria-live="polite">
                 <ArcoDoPlano meta={meta ?? 0} limite={limite ?? 0} />
                 <div className="plv-voo-texto">

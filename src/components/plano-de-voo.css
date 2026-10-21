@@ -100,36 +100,78 @@
 .plv-lv button { min-width: 40px; height: 40px; padding: 0 10px; border-radius: 11px; border: 1px solid var(--plv-linha); background: var(--surface); color: var(--muted); font: 700 13.5px var(--plv-dados); cursor: pointer; }
 .plv-lv button.on { border-color: var(--plv-ouro); background: var(--plv-ouro-suave); color: var(--text); box-shadow: 0 0 0 2px color-mix(in srgb, var(--plv-ouro) 28%, transparent); }
 
-.plv-campos { display: grid; gap: 12px; min-width: 0; }
-.plv-campo {
-  display: grid; grid-template-columns: minmax(130px, 170px) minmax(0, 1fr) 214px; grid-template-areas: "nome valor atalhos" "erro erro erro";
-  align-items: center; gap: 4px 14px; padding: 14px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--plv-linha);
-  transition: border-color .15s, box-shadow .15s;
+/* os mostradores: grade 2×2 (sem loss virtual, a entrada ocupa a linha inteira) */
+.plv-campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-width: 0; align-content: start; }
+.plv-campos:not(:has(.plv-m.tom-aco)) .plv-m.tom-ouro { grid-column: 1 / -1; }
+.plv-campos .plv-voo { grid-column: 1 / -1; }
+.plv-m {
+  --tom: var(--plv-ouro);
+  position: relative; display: grid; gap: 10px; padding: 16px 18px 14px; min-width: 0; border-radius: 20px;
+  background: var(--surface); border: 1px solid var(--plv-linha); transition: border-color .2s, box-shadow .2s;
 }
-.plv-campo:focus-within { border-color: var(--plv-ouro); box-shadow: 0 0 0 3px color-mix(in srgb, var(--plv-ouro) 20%, transparent); }
-.plv-campo.com-erro { border-color: color-mix(in srgb, var(--plv-coral) 70%, transparent); }
-.plv-campo-nome { grid-area: nome; display: grid; gap: 2px; cursor: text; }
-.plv-campo-nome b { display: flex; align-items: center; gap: 7px; color: var(--text); font-size: 14.5px; }
-.plv-campo-nome b i { width: 8px; height: 8px; border-radius: 50%; }
-.plv-campo-nome b i.verde { background: var(--plv-verde); }
-.plv-campo-nome b i.coral { background: var(--plv-coral); }
-.plv-campo-nome small { color: var(--muted); font-size: 11.5px; line-height: 1.35; }
-.plv-campo-valor { grid-area: valor; display: flex; align-items: center; gap: 8px; min-width: 0; }
-.plv-mm { display: grid; place-items: center; width: 42px; height: 42px; flex: none; border-radius: 12px; border: 1px solid var(--plv-linha); background: var(--bg); color: var(--text); font-size: 21px; line-height: 1; cursor: pointer; transition: border-color .15s, background .15s; }
-.plv-mm:hover { border-color: var(--plv-ouro); }
-.plv-mm:active { transform: scale(.94); }
-.plv-num { flex: 1; min-width: 0; display: flex; align-items: baseline; justify-content: center; gap: 7px; }
-.plv-num span { color: var(--muted); font-size: 12.5px; font-weight: 600; }
-.plv-num input {
-  width: 100%; max-width: 7.5ch; min-width: 0; padding: 0; border: 0; outline: none !important; background: none; color: var(--text); text-align: center;
-  font: 700 27px var(--plv-dados); letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+.plv-m.tom-verde { --tom: var(--plv-verde); }
+.plv-m.tom-coral { --tom: var(--plv-coral); }
+.plv-m.tom-aco { --tom: var(--plv-ouro); }
+/* o fio do papel: uma linha curta na cor do valor, no alto do cartão */
+.plv-m::before { content: ''; position: absolute; left: 18px; top: 0; width: 34px; height: 3px; border-radius: 0 0 3px 3px; background: var(--tom); }
+.plv-m:focus-within { border-color: color-mix(in srgb, var(--tom) 60%, var(--plv-linha)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tom) 16%, transparent); }
+.plv-m.com-erro { border-color: color-mix(in srgb, var(--plv-coral) 70%, transparent); }
+.plv-m-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 20px; }
+.plv-m-topo > label, .plv-m-topo > span:first-child { color: var(--text); font-size: 11.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; cursor: text; }
+.plv-m-etiqueta { padding: 3px 8px; border-radius: 99px; background: color-mix(in srgb, var(--tom) 14%, transparent); color: color-mix(in srgb, var(--tom) 85%, var(--text)); font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.plv-m-valor { display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; align-items: center; gap: 6px; }
+.plv-m-passo { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--plv-linha); background: transparent; color: var(--muted); cursor: pointer; transition: border-color .15s, color .15s, background .15s; }
+.plv-m-passo:hover:not(:disabled) { border-color: var(--tom); color: var(--text); background: color-mix(in srgb, var(--tom) 10%, transparent); }
+.plv-m-passo:active:not(:disabled) { transform: scale(.94); }
+.plv-m-passo:disabled { opacity: .3; cursor: not-allowed; }
+.plv-m-passo svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.plv-m-num { display: flex; align-items: baseline; justify-content: center; gap: 6px; min-width: 0; }
+.plv-m-num > span { color: var(--muted); font-size: 15px; font-weight: 700; }
+.plv-m-num input, .plv-m-texto {
+  min-width: 0; max-width: 100%; padding: 0; border: 0; outline: none !important; background: none; color: var(--text); text-align: center;
+  font-family: var(--fonte-corpo, Arimo, Arial, sans-serif); font-size: 34px; font-weight: 700; letter-spacing: -.025em; line-height: 1.1;
+  font-variant-numeric: tabular-nums lining-nums;
 }
-.plv-num-texto { color: var(--text); font: 700 27px var(--plv-dados); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.plv-mm:disabled { opacity: .35; cursor: not-allowed; }
-.plv-atalhos { grid-area: atalhos; display: flex; justify-content: flex-end; gap: 5px; }
-.plv-atalhos button { min-width: 38px; height: 32px; padding: 0 10px; border-radius: 99px; border: 1px solid var(--plv-linha); background: var(--bg); color: var(--muted); font: 600 12px var(--plv-dados); cursor: pointer; }
-.plv-atalhos button.on { border-color: var(--plv-ouro); background: var(--plv-ouro-suave); color: var(--text); }
-.plv-erro { grid-area: erro; margin: 6px 0 0; color: var(--plv-coral); font-size: 12.5px; }
+.plv-m-num input { width: auto; field-sizing: content; }
+.plv-m.tom-verde .plv-m-num input { color: var(--plv-verde); }
+.plv-m.tom-coral .plv-m-num input { color: var(--plv-coral); }
+
+/* a régua: trilho fino, preenchido na cor do valor até o ponteiro */
+.plv-m-regua { position: relative; padding-bottom: 22px; }
+.plv-m-regua input[type='range'] { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 26px; margin: 0; background: transparent; cursor: pointer; }
+.plv-m-regua input[type='range']::-webkit-slider-runnable-track { height: 5px; border-radius: 99px; background: linear-gradient(to right, var(--tom) var(--p), var(--trilho) var(--p)); }
+.plv-m-regua input[type='range']::-moz-range-track { height: 5px; border-radius: 99px; background: var(--trilho); }
+.plv-m-regua input[type='range']::-moz-range-progress { height: 5px; border-radius: 99px; background: var(--tom); }
+.plv-m-regua input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -8.5px; border-radius: 50%; background: var(--surface); border: 3px solid var(--tom); box-shadow: 0 2px 8px rgba(5, 21, 40, .3); transition: transform .15s; }
+.plv-m-regua input[type='range']::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--surface); border: 3px solid var(--tom); box-shadow: 0 2px 8px rgba(5, 21, 40, .3); }
+.plv-m-regua input[type='range']:active::-webkit-slider-thumb { transform: scale(1.15); }
+.plv-m-regua input[type='range']:focus-visible { outline: none; }
+.plv-m-regua input[type='range']:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px color-mix(in srgb, var(--tom) 30%, transparent); }
+.plv-m-marcas { position: absolute; left: 11px; right: 11px; bottom: 0; height: 20px; }
+.plv-m-marcas button {
+  position: absolute; top: 0; transform: translateX(-50%); padding: 2px 5px; border: 0; border-radius: 6px; background: none;
+  color: var(--muted); font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; white-space: nowrap;
+}
+.plv-m-marcas button::before { content: ''; position: absolute; left: 50%; top: -9px; width: 1px; height: 5px; background: color-mix(in srgb, var(--muted) 55%, transparent); }
+.plv-m-marcas button:hover { color: var(--text); }
+.plv-m-marcas button.on { color: var(--text); background: color-mix(in srgb, var(--tom) 16%, transparent); }
+.plv-m-ajuda, .plv-m-erro { margin: 0; font-size: 12.5px; line-height: 1.45; }
+.plv-m-ajuda { color: var(--muted); }
+.plv-m-erro { color: var(--plv-coral); font-weight: 600; }
+
+/* loss virtual: as casas, as mesmas do radar da cabine */
+.plv-m-texto { font-size: 34px; }
+.plv-m-casas { display: flex; gap: 5px; }
+.plv-m-casas button { flex: 1 1 0; }
+.plv-m-casas button.sem { flex: 0 0 auto; padding: 0 10px; }
+.plv-m-casas button {
+  height: 34px; min-width: 0; border-radius: 9px; border: 1.5px dashed color-mix(in srgb, var(--tom) 45%, var(--plv-linha)); background: transparent;
+  color: var(--muted); font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; transition: background .15s, border-color .15s;
+}
+.plv-m-casas button.sem { border-style: solid; border-color: var(--plv-linha); }
+.plv-m-casas button.cheia { border-style: solid; border-color: var(--tom); background: color-mix(in srgb, var(--tom) 18%, transparent); color: var(--text); }
+.plv-m-casas button.on { box-shadow: 0 0 0 2px color-mix(in srgb, var(--tom) 45%, transparent); color: var(--text); }
+.plv-m-casas button.sem.on { border-color: var(--tom); background: color-mix(in srgb, var(--tom) 18%, transparent); }
 
 .plv-voo {
   position: relative; overflow: hidden; display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 18px; align-items: center;
@@ -227,10 +269,11 @@
   .plv-lado { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .plv-capa { height: 132px; grid-row: auto; }
   .plv-capa-texto b { font-size: 20px; }
-  .plv-campo { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "nome atalhos" "valor valor" "erro erro"; gap: 10px; padding: 12px 14px; }
-  .plv-atalhos button { min-width: 34px; height: 30px; padding: 0 8px; }
-  .plv-mm { width: 48px; height: 48px; }
-  .plv-num input { font-size: 28px; }
+  .plv-campos { grid-template-columns: minmax(0, 1fr); }
+  .plv-m { padding: 14px 14px 12px; }
+  .plv-m-num input, .plv-m-texto { font-size: 32px; }
+  .plv-m-passo { width: 44px; height: 44px; }
+  .plv-m-valor { grid-template-columns: 44px minmax(0, 1fr) 44px; }
   .plv-voo { grid-template-columns: 116px minmax(0, 1fr); gap: 12px; padding: 14px; }
   .plv-voo-texto p { font-size: 13px; }
   .plv-passe-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
