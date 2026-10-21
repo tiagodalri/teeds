@@ -123,15 +123,22 @@ const paraOperacao = (l: any): OperacaoServidor => ({
  * As regras de acesso do banco já limitam ao dono; o filtro por data é só
  * para a tela não carregar semanas de histórico que ninguém vai olhar.
  */
-export async function listarSessoes(sessao: SessaoTeeds, horas = 12): Promise<SessaoServidor[]> {
+export async function listarSessoes(sessao: SessaoTeeds, horas = 12, limite = 40): Promise<SessaoServidor[]> {
   if (!autenticacaoConfigurada()) return []
   const corte = new Date(Date.now() - horas * 3600_000).toISOString()
+  /*
+    Só as sessões DE QUEM ESTÁ LOGADO (21/10/2026). O banco deixa o
+    administrador da marca ver as sessões de todos os clientes (é o que o
+    monitoramento usa), e sem este filtro a home do admin somava o dia de
+    todo mundo como se fosse dele: "Hoje −8.165,63" com sessões de três
+    outros clientes. Para o cliente comum nada muda (ele já só via as dele).
+  */
   // O erro sobe de propósito. Antes ele virava lista vazia aqui dentro, e
   // quem chamava não tinha como distinguir "não há sessão nenhuma" de "não
   // consegui perguntar agora" — então a tela apagava um robô que estava
   // vivo e operando. Quem acompanha é que decide o que fazer com a falha.
   const linhas = await rest<any[]>(
-    `/sessoes_robos?select=*&marca=eq.${MARCA.id}&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc&limit=40`,
+    `/sessoes_robos?select=*&marca=eq.${MARCA.id}&user_id=eq.${encodeURIComponent(sessao.usuario.id)}&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc&limit=${limite}`,
     sessao.token,
   )
   return (linhas ?? []).map(paraSessao)

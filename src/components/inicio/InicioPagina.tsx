@@ -93,7 +93,8 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, vi
   useEffect(() => {
     if (!sessao) return
     let vivo = true
-    const ler = () => listarSessoes(sessao, 24)
+    // desde a meia-noite (com folga de 1 h), e espaço para um dia cheio de sessões
+    const ler = () => listarSessoes(sessao, (Date.now() - inicioDoDia()) / 3600_000 + 1, 300)
       .then((l) => { if (vivo) setSessoesHoje(l.filter((s) => Date.parse(s.criadaEm) >= inicioDoDia())) })
       .catch(() => undefined)
     ler()
