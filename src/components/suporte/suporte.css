@@ -222,7 +222,7 @@ body:has(.av-pilula) .sp-painel { bottom: calc(140px + var(--sab, 0px)); }
 
 /* no celular, o fim das páginas não fica escondido atrás do botão do suporte */
 @media (max-width: 640px) {
-  body:has(.sp-lancador) :is(.in, .mp, .aj) { padding-bottom: calc(92px + var(--sab, 0px)); }
+  body:has(.sp-lancador) .workspace-app :is(.in, .mp, .aj, .ger) { padding-bottom: calc(92px + var(--sab, 0px)); }
 }
 
 /* ------------------------------------------------ triagem (assunto → perguntas → Ajuda → escrever) */

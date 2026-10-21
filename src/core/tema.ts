@@ -45,7 +45,9 @@ export function aplicarTema(tema: Tema): void {
   // que estava escrito a mao — na OMNI vira azul-aco.
   document.documentElement.style.setProperty('--marca-noite', MARCA.cor.escuro)
   // A barra do sistema (Android, Chrome instalado) acompanha o fundo do tema.
-  const fundo = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+  // No app instalado da GlobalFly o cabeçalho do claro é Azul GF (tema da marca): a barra acompanha.
+  const cabecalhoAzul = tema === 'claro' && MARCA.id === 'globalfly' && document.documentElement.classList.contains('app-instalado')
+  const fundo = cabecalhoAzul ? '#051528' : getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
   if (fundo) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', fundo)
   try {
     localStorage.setItem(CHAVE, tema)

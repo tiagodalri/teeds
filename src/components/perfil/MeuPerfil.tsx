@@ -172,7 +172,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
           <h1>{perfil.nome || 'Complete seu nome'}</h1>
           <p>{perfil.email}</p>
           <div className="mp-selos">
-            <span className="mp-selo plano"><Monograma tamanho={14} />{perfil.planoNome}</span>
+            <span className="mp-selo plano"><Monograma tamanho={18} />{perfil.planoNome}</span>
             <span className={`mp-selo ${st.cls}`}><i aria-hidden="true" />{st.rotulo}</span>
           </div>
           {foto && <button type="button" className="mp-link" onClick={() => void tirarFoto()} disabled={enviandoFoto}>Remover foto</button>}

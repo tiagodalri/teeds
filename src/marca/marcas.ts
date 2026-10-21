@@ -53,6 +53,8 @@ export interface Marca {
   assinatura?: { escura: string; clara: string }
   /** Monograma para fundo claro, quando o emblema é a versão reversa. */
   monogramaClaro?: string
+  /** O monograma recortado (só o desenho, sem margem): nítido em tamanho pequeno, nos títulos e selos. */
+  monogramaRecorte?: { escuro: string; claro: string }
   /**
    * A imagem do herói da tela de Aulas, dentro de `public/`.
    * Era um arquivo só, o touro dourado — e a OMNI abria as aulas com a cara
@@ -411,6 +413,7 @@ export const MARCAS: Record<string, Marca> = {
     // imagem. O nome nunca é redigitado com fonte.
     emblema: 'globalfly-marca.png',
     monogramaClaro: 'globalfly-monograma-claro.png',
+    monogramaRecorte: { escuro: 'globalfly-gf-escuro.png', claro: 'globalfly-gf-claro.png' },
     assinatura: { escura: 'globalfly-assinatura.png', clara: 'globalfly-assinatura-clara.png' },
     heroAulas: { principal: 'aulas-globalfly/boas-vindas.webp', reserva: 'aulas-globalfly/boas-vindas.jpg', celular: 'aulas-globalfly/boas-vindas-mobile.webp', posicao: 'center 40%' },
     // Azul GF organiza, ouro indica seleção (manual, pág. 24). No claro a cor

@@ -83,7 +83,7 @@ export function AjudaPagina({ aoIr, suporte = !!MARCA.suporte }: Props) {
     <div className="aj">
       <header className="aj-topo">
         <Monograma variante="marca-dagua" tamanho={300} className="aj-topo-marca" />
-        <span className="aj-sobre"><Monograma tamanho={16} />Central de ajuda</span>
+        <span className="aj-sobre"><Monograma tamanho={20} />Central de ajuda</span>
         <h1>Como podemos ajudar?</h1>
         <p>As respostas para as dúvidas mais comuns sobre a {MARCA.prosa}.</p>
         <label className="aj-busca">

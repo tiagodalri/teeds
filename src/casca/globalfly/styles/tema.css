@@ -334,3 +334,70 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 }
 :root[data-tema='escuro'] .nome-robo-gf { background-image: url(/globalfly-gf-escuro.png); }
 .nome-robo-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ==========================================================================
+   APP INSTALADO, TEMA CLARO: UM CABEÇALHO SÓ (20/10/2026)
+   O iPhone escreve hora e bateria em branco (barra translúcida). Antes, uma
+   faixa azul da altura exata da barra ficava em cima do cabeçalho marfim:
+   duas faixas, e a hora parecia espremida numa tira (print do Tiago). Agora
+   o cabeçalho inteiro é Azul GF e começa por trás da barra de status, como
+   num app de banco; o conteúdo segue em marfim. Os tokens do escuro valem
+   só dentro do cabeçalho, então o saldo, o seletor de conta e o menu do
+   usuário se ajustam sozinhos. O main.tsx marca o <html> com .app-instalado.
+   ========================================================================== */
+@media (max-width: 900px) {
+  :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) :is(.workspace-app .topbar, .workspace-app .workspace-mobile-toggle) {
+    --bg: var(--gf-azul); --surface: #0A1C40; --surface-alt: #0F234D; --border: #203765;
+    --text: #F3F0E9; --muted: #96AFD4; --trilho: #203765; --desativado: #576B94;
+    --primary: #B78D39; --primary-soft: rgba(183, 141, 57, .16); --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    color-scheme: dark; color: var(--text);
+  }
+  :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) .workspace-app .topbar {
+    background: var(--gf-azul); border-bottom-color: transparent; box-shadow: 0 10px 24px -18px rgba(5, 21, 40, .55);
+  }
+  :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) .workspace-app .workspace-mobile-toggle { background: #0A1C40; border-color: #203765; }
+}
+/* o chat do suporte em tela cheia: o mesmo cabeçalho azul por trás da hora */
+@media (max-width: 640px) {
+  :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) .sp-painel { background: linear-gradient(var(--gf-azul) 0 calc(var(--sat) + 64px), var(--bg) 0); }
+  :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) .sp-cabeca {
+    --surface: #0A1C40; --surface-alt: #0F234D; --border: #203765; --text: #F3F0E9; --muted: #96AFD4;
+    color: var(--text); background: var(--gf-azul); border-bottom-color: transparent;
+  }
+  :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) .sp-cabeca .monograma-claro { display: none; }
+  :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) .sp-cabeca .monograma-escuro { display: block; }
+}
+
+/* ==========================================================================
+   O MONOGRAMA NOS TÍTULOS (20/10/2026, Tiago: "colaborar com o branding")
+   O sobretítulo de cada página (Central de robôs, Admin, Início, Perfil,
+   Gerenciamento, Aulas, Marketplace, Notícias, Sala ao vivo) abre com o
+   "GF" recortado, na altura da letra. Uma assinatura discreta e repetida,
+   como a de um banco privado: sempre o mesmo tamanho, sempre no mesmo lugar.
+   ========================================================================== */
+:root[data-marca='globalfly'] :is(.admin-top .rot, .ins-topo .rot, .rob-eyebrow, .in-ola .in-sobre, .mp-quem .mp-sobre, .go-selo, .aulas-selo, .market-eyebrow, .mc-sobre, .av-sobretitulo)::before {
+  content: ''; display: inline-block; flex: none; height: 1.08em; aspect-ratio: 166 / 96; margin-right: .6em; vertical-align: -.2em;
+  background: url(/globalfly-gf-claro.png) center / contain no-repeat;
+}
+:root[data-marca='globalfly'][data-tema='escuro'] :is(.admin-top .rot, .ins-topo .rot, .rob-eyebrow, .in-ola .in-sobre, .mp-quem .mp-sobre, .go-selo, .aulas-selo, .market-eyebrow, .mc-sobre, .av-sobretitulo)::before,
+:root[data-marca='globalfly'] :is(.aulas-selo, .av-sobretitulo)::before {
+  /* as Aulas e a sala são sempre escuras (cinema) */
+  background-image: url(/globalfly-gf-escuro.png);
+}
+/* o título do topo, no computador: o monograma antes do nome da página */
+@media (min-width: 901px) {
+  :root[data-marca='globalfly'] .workspace-heading strong { display: inline-flex; align-items: center; gap: 10px; }
+  :root[data-marca='globalfly'] .workspace-heading strong::before {
+    content: ''; flex: none; height: 15px; aspect-ratio: 166 / 96;
+    background: url(/globalfly-gf-claro.png) center / contain no-repeat;
+  }
+  :root[data-marca='globalfly'][data-tema='escuro'] .workspace-heading strong::before { background-image: url(/globalfly-gf-escuro.png); }
+}
+
+/* "+ Novo robô": a ação principal da Central de robôs, chapada na cor da casa
+   (no claro saía um cinza: azul a 10% sobre marfim). */
+:root[data-marca='globalfly'] .robot-workspace .rob-new-button {
+  border-color: transparent; background: var(--gf-azul); color: var(--gf-marfim); font-weight: 700; letter-spacing: .01em;
+}
+:root[data-marca='globalfly'][data-tema='escuro'] .robot-workspace .rob-new-button { background: var(--gf-ouro); color: var(--gf-azul); }
+:root[data-marca='globalfly'] .robot-workspace .rob-new-button:hover:not(:disabled) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--gf-ouro) 30%, transparent); }

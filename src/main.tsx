@@ -17,6 +17,11 @@ const RecursosDeApp = MARCA.appNativo ? lazy(() => import('./components/Recursos
 
 // o tema entra antes do primeiro quadro, para a tela nao piscar clara
 document.documentElement.dataset.marca = MARCA.id
+// App instalado na tela inicial (PWA): o CSS desenha o topo por trás da hora
+// e da bateria do iPhone (ver "app instalado" no tema da marca).
+if (matchMedia('(display-mode: standalone)').matches || (navigator as unknown as { standalone?: boolean }).standalone === true) {
+  document.documentElement.classList.add('app-instalado')
+}
 aplicarTema(temaGuardado())
 
 // Quem abriu o site, e por qual caminho chegou. Fora do React de propósito:

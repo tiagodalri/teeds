@@ -60,6 +60,12 @@ import { DerivDesconectada } from './components/DerivDesconectada'
 
 document.documentElement.dataset.marca = MARCA.id
 aplicarTema(temaGuardado())
+// &app=1: simula o app instalado num iPhone (barra de status de 47 px)
+if (new URLSearchParams(location.search).has('app')) {
+  document.documentElement.classList.add('app-instalado')
+  document.documentElement.style.setProperty('--sat', '47px')
+  document.documentElement.style.setProperty('--sab', '34px')
+}
 
 const ident = IDENTIDADES[0]
 const AGORA = Date.now()

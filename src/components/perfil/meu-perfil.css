@@ -42,7 +42,7 @@
 .mp-selos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .mp-selo { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
 .mp-selo svg { width: 13px; height: 13px; }
-.mp-selo .monograma { width: 14px; height: 14px; }
+.mp-selo .monograma { width: 18px; height: 18px; }
 .mp-selo.plano { background: color-mix(in srgb, var(--mp-ouro) 16%, transparent); color: var(--mp-ouro); }
 .mp-selo i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .mp-selo.ok { background: var(--up-soft); color: var(--up); }
