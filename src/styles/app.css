@@ -157,6 +157,15 @@ button, input { font: inherit; color: inherit; }
 
 .chart { position: relative; flex: 1; min-height: 0; }
 .chart canvas { position: relative; z-index: 2; }
+/* a barra de preços arrastável (escala vertical), por cima do eixo do canvas */
+.chart-eixo { position: absolute; right: 0; z-index: 3; cursor: ns-resize; touch-action: none; user-select: none; -webkit-user-select: none; }
+.chart-eixo:hover { background: color-mix(in srgb, var(--text) 3%, transparent); }
+.chart-eixo-auto {
+  position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%);
+  padding: 3px 8px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--text); font-size: 11px; font-weight: 650; cursor: pointer;
+}
+.chart-eixo-auto:hover { border-color: var(--primary); }
 .chart-marca {
   position: absolute; z-index: 1; inset: 50% auto auto 50%; transform: translate(-50%, -50%);
   display: flex; align-items: center; gap: 14px; pointer-events: none; user-select: none;

@@ -143,7 +143,21 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
   }, [])
 
   const view = useMemo(() => slice(candles, vp), [candles, vp])
-  const range = useMemo(() => priceRange(view.items), [view.items])
+  /*
+    A escala dos preços (21/10/2026, relato do Victor): arrastar a barra de
+    preços para cima aproxima as velas, para baixo afasta, como no gráfico
+    profissional. `escalaY` multiplica a faixa automática em torno do meio,
+    então o preço atual continua sempre à vista; 1 = automático.
+  */
+  const [escalaY, setEscalaY] = useState(1)
+  const eixo = useRef<{ y: number; escala: number } | null>(null)
+  const range = useMemo(() => {
+    const base = priceRange(view.items)
+    const ultimo = view.items[view.items.length - 1]?.close
+    if (escalaY === 1 || ultimo === undefined) return base
+    // a escala gira em torno do preço atual: ele fica no mesmo lugar da tela
+    return { min: ultimo - (ultimo - base.min) * escalaY, max: ultimo + (base.max - ultimo) * escalaY }
+  }, [view.items, escalaY])
 
   // a faixa da direita cresce conforme o tamanho do numero, para nunca cortar
   const padRight = useMemo(() => {
@@ -238,7 +252,9 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
         ctx.fillText(formatClock(items[i].epoch), x, plot.y + plot.h + 7)
       }
 
-      // --- serie
+      // --- serie (recortada na área do gráfico: com a escala dos preços
+      // aproximada, vela e média não invadem o eixo nem o topo)
+      ctx.save(); ctx.beginPath(); ctx.rect(plot.x, plot.y, plot.w, plot.h); ctx.clip()
       if (mode === 'candles') {
         // O corpo acompanha o passo: com zoom, velas largas e vao pequeno —
         // um teto fixo aqui deixava o grafico cheio de palitos espacados.
@@ -359,6 +375,8 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
         ctx.fillStyle='rgba(255,255,255,.12)'; roundRect(ctx,x+9,y+21,w-18,3,2);ctx.fill()
         ctx.fillStyle=painel.cor; roundRect(ctx,x+9,y+21,(w-18)*pct,3,2);ctx.fill()
       })
+
+      ctx.restore()
 
       // --- linha do preco atual
       const last = items[items.length - 1]
@@ -670,6 +688,20 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
     drag.current = null
   }
 
+  // a barra de preços: uma faixa própria por cima do eixo, com touch-action
+  // none (no celular o arraste vertical não vira rolagem da página)
+  const eixoDown = (e: React.PointerEvent) => {
+    e.preventDefault()
+    eixo.current = { y: e.clientY, escala: escalaY }
+    try { (e.currentTarget as Element).setPointerCapture(e.pointerId) } catch { /* sem captura, o arraste segue enquanto o dedo estiver na faixa */ }
+  }
+  const eixoMove = (e: React.PointerEvent) => {
+    if (!eixo.current) return
+    const nova = eixo.current.escala * Math.exp((e.clientY - eixo.current.y) / 160)
+    setEscalaY(Math.min(8, Math.max(0.12, nova)))
+  }
+  const eixoUp = () => { eixo.current = null }
+
   const hovered = cursor && view.items[cursor.index]
 
   return (
@@ -693,6 +725,18 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
           setLinhaSob(null)
         }}
       />
+
+      {plot.h > 0 && (
+        <div className="chart-eixo" style={{ top: plot.y, height: plot.h, width: padRight }}
+          title="Arraste para cima ou para baixo para ajustar a escala · duplo clique volta ao automático"
+          onPointerDown={eixoDown} onPointerMove={eixoMove} onPointerUp={eixoUp} onPointerCancel={eixoUp}
+          onDoubleClick={() => setEscalaY(1)} onWheel={(e) => e.stopPropagation()}>
+          {escalaY !== 1 && (
+            <button type="button" className="chart-eixo-auto" onPointerDown={(e) => e.stopPropagation()} onClick={() => setEscalaY(1)}
+              aria-label="Voltar a escala dos preços ao automático">Auto</button>
+          )}
+        </div>
+      )}
 
       <div className="chart-ferramentas" role="toolbar" aria-label="Ferramentas de desenho">
         {FERRAMENTAS.map((f) => (
