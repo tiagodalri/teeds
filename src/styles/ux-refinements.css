@@ -662,3 +662,14 @@ button, input, select, textarea { font-family: inherit; }
   .aulas-tour { grid-template-columns: auto minmax(0, 1fr); }
   .aulas-tour button { grid-column: 1 / -1; min-height: 48px; }
 }
+
+/* O monograma da marca (Monograma.tsx, 20/10/2026): a versão certa para o tema */
+.monograma { position: relative; display: inline-grid; flex: none; vertical-align: middle; }
+.monograma img { grid-area: 1 / 1; width: 100%; height: 100%; object-fit: contain; }
+.monograma .monograma-claro { display: none; }
+:root:not([data-tema='escuro']) .monograma .monograma-claro { display: block; }
+:root:not([data-tema='escuro']) .monograma .monograma-escuro { display: none; }
+.monograma-dagua {
+  display: block; flex: none; pointer-events: none; background: var(--gf-ouro, var(--primary));
+  -webkit-mask: var(--mono) center / contain no-repeat; mask: var(--mono) center / contain no-repeat;
+}

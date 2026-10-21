@@ -8,7 +8,6 @@
  */
 import { SUPABASE } from './config'
 import type { SessaoTeeds } from './conta'
-import { emailDaConta } from './emailDaConta'
 import { PLANOS_CLIENTE } from './planos'
 import { MARCA } from '../../marca'
 
@@ -82,25 +81,6 @@ export async function salvarPerfil(sessao: SessaoTeeds, d: { nome: string; cpf: 
     method: 'PUT', headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ data: { nome: d.nome.trim(), telefone: so(d.telefone), ...(d.cpf ? { cpf: so(d.cpf) } : {}) } }),
   }).catch(() => undefined)
-}
-
-/**
- * Troca o e-mail: a Supabase manda um link para o endereço novo e outro para
- * o atual (troca segura); vale quando os dois forem confirmados. O login
- * desta marca usa o e-mail com a etiqueta (emailDaConta.ts).
- */
-export async function pedirTrocaDeEmail(sessao: SessaoTeeds, novo: string): Promise<void> {
-  const r = await fetch(`${SUPABASE.url}/auth/v1/user`, {
-    method: 'PUT', headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: emailDaConta(novo, MARCA.id) }),
-  })
-  if (!r.ok) {
-    const c = await r.json().catch(() => ({}))
-    const m = String(c?.msg || c?.message || c?.error_description || '').toLowerCase()
-    if (m.includes('already') || m.includes('registered')) throw new Error('Esse e-mail já é usado por outra conta.')
-    if (m.includes('rate') || r.status === 429) throw new Error('Muitos pedidos seguidos. Espere um minuto e tente de novo.')
-    throw new Error('Não consegui pedir a troca agora. Confira o e-mail e tente de novo.')
-  }
 }
 
 /** Reduz a foto no aparelho (quadrada, 320 px, webp) antes de subir: rápida no 4G e leve no banco. */

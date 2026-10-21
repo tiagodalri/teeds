@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom'
 import type { WorkspacePage } from '../WorkspaceNav'
 import { MARCA } from '../../marca'
+import { Monograma, TEM_MONOGRAMA } from '../marca/Monograma'
 import './tour.css'
 
 /**
@@ -41,6 +42,7 @@ const ICONE = {
   aulas: 'M3 5h7l2 2 2-2h7v15h-7l-2 1-2-1H3zM12 7v14',
   perfil: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 20a8 8 0 0116 0',
   pronto: 'M5 12.5l4.2 4.2L19 7',
+  suporte: 'M4 5h16v11H9l-5 4zM8 9.5h8M8 12.5h5',
 }
 
 export function passosDoTour({ nome, treino }: { nome: string; treino: boolean }): PassoDoTour[] {
@@ -106,12 +108,18 @@ export function passosDoTour({ nome, treino }: { nome: string; treino: boolean }
     {
       id: 'perfil', tela: 'inicio', alvos: ['[data-tour="usuario"]'], icone: ICONE.perfil,
       titulo: 'Meu perfil',
-      texto: 'Toque na sua foto para abrir o perfil: lá você completa seus dados (nome, CPF, telefone, e-mail e endereço), coloca uma foto e vê seu plano e até quando vai o seu acesso.',
+      texto: 'Toque na sua foto para abrir o perfil: lá você completa seus dados (nome, CPF, telefone e endereço), coloca uma foto e vê seu plano e até quando vai o seu acesso.',
     },
+    ...(MARCA.suporte ? [{
+      id: 'suporte', alvos: ['[data-tour="suporte"]'], icone: ICONE.suporte,
+      titulo: 'Ajuda e suporte',
+      texto: 'Ficou com alguma dúvida? Toque aqui e fale com a nossa equipe pelo chat: a resposta chega aqui mesmo, na plataforma. Dá para mandar print da tela.',
+      dicas: ['No menu, em Ajuda, ficam as respostas das dúvidas mais comuns.'],
+    }] : []),
     {
       id: 'pronto', icone: ICONE.pronto,
       titulo: 'Tudo pronto!',
-      texto: 'Próximos passos: complete o seu perfil, conecte a sua Deriv e assista à primeira aula. Bons treinos!',
+      texto: `Próximos passos: complete o seu perfil, conecte a sua Deriv e assista à primeira aula. Bem-vindo a bordo da ${MARCA.prosa}!`,
     },
   ]
 }
@@ -289,19 +297,25 @@ export function TourGuiado({ passos, obrigatorio, telaAtual, irPara, aoTerminar,
       <div className="tg-bloqueio" />
       <div className="tg-foco" style={foco ?? { top: h / 2, left: w / 2, width: 0, height: 0 }} aria-hidden="true" />
 
-      <div ref={cartao} className={`tg-cartao ${lado}`} style={estiloCartao} tabIndex={-1} onKeyDown={teclas} key={passo.id}>
+      <div ref={cartao} className={`tg-cartao ${lado} ${passo.id === 'ola' && TEM_MONOGRAMA ? 'capa' : ''}`} style={estiloCartao} tabIndex={-1} onKeyDown={teclas} key={passo.id}>
+        {TEM_MONOGRAMA && <Monograma variante="marca-dagua" tamanho={170} className="tg-marca-dagua" />}
         <div className="tg-topo">
-          <span className="tg-contagem">{i === 0 ? 'Tour guiado' : `Passo ${i} de ${passos.length - 1}`}</span>
+          <span className="tg-contagem">{TEM_MONOGRAMA && <Monograma tamanho={15} />}{i === 0 ? 'Tour guiado' : `Passo ${i} de ${passos.length - 1}`}</span>
           {!obrigatorio && (
             <button type="button" className="tg-fechar" onClick={aoFechar} aria-label="Fechar o tour">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
             </button>
           )}
         </div>
-        <div className="tg-cabeca">
-          <span className={`tg-icone ${passo.id === 'pronto' ? 'ok' : ''}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d={passo.icone} /></svg></span>
-          <h2 id="tg-titulo">{passo.titulo}</h2>
-        </div>
+        {passo.id === 'ola' && TEM_MONOGRAMA ? (
+          // a abertura: o monograma grande, como a capa de um embarque
+          <div className="tg-capa"><span className="tg-capa-selo"><Monograma tamanho={54} /></span><h2 id="tg-titulo">{passo.titulo}</h2></div>
+        ) : (
+          <div className="tg-cabeca">
+            <span className={`tg-icone ${passo.id === 'pronto' ? 'ok' : ''}`}>{passo.id === 'suporte' && TEM_MONOGRAMA ? <Monograma tamanho={24} /> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d={passo.icone} /></svg>}</span>
+            <h2 id="tg-titulo">{passo.titulo}</h2>
+          </div>
+        )}
         <p id="tg-texto" className="tg-texto">{texto}</p>
         {passo.dicas && <ul className="tg-dicas">{passo.dicas.map((d) => <li key={d}>{d}</li>)}</ul>}
         {procurando && <p className="tg-abrindo" aria-live="polite">Abrindo a tela…</p>}

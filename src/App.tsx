@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 import { useSimulador } from './hooks/useSimulador'
 import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
 import { PositionCard } from './components/PositionCard'
@@ -56,6 +56,8 @@ import { TourGuiado, passosDoTour } from './components/tour/TourGuiado'
 // quando a pessoa abre a página ou entra numa live.
 const AoVivoPage = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.AoVivoPage })))
 const MercadoPanel = lazy(() => import('./components/MercadoPanel').then((m) => ({ default: m.MercadoPanel })))
+const AjudaPagina = lazy(() => import('./components/ajuda/AjudaPagina').then((m) => ({ default: m.AjudaPagina })))
+const SuporteWidget = lazy(() => import('./components/suporte/SuporteWidget').then((m) => ({ default: m.SuporteWidget })))
 const MeuPerfil = lazy(() => import('./components/perfil/MeuPerfil').then((m) => ({ default: m.MeuPerfil })))
 const InicioPagina = lazy(() => import('./components/inicio/InicioPagina').then((m) => ({ default: m.InicioPagina })))
 const PlayerDoTreino = lazy(() => import('./components/aovivo/PlayerDoTreino'))
@@ -134,6 +136,8 @@ export default function App() {
   const [verPerfil, setVerPerfil] = useState(false)
   // "Meu perfil" (GlobalFly, 20/10/2026): a foto vai para o menu do usuário
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null)
+  // suporte (20/10/2026): o botão flutuante do admin abre a caixa de entrada
+  const [pedidoCaixa, setPedidoCaixa] = useState(0)
   const [tema, setTema] = useState<Tema>(temaGuardado)
   const alternarTema = () => {
     const novo = tema === 'claro' ? 'escuro' : 'claro'
@@ -387,6 +391,7 @@ export default function App() {
     }).catch(() => undefined)
     return () => { vivo = false }
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const abrirCaixaDoSuporte = useCallback(() => { setTela('gestao'); setPedidoCaixa((n) => n + 1) }, [])
   const fimDoTour = (destino?: WorkspacePage) => {
     if (teeds.sessao) void marcarTourVisto(teeds.sessao).catch(() => undefined)
     try { localStorage.setItem(chaveTour, new Date().toISOString()) } catch { /* só a ficha */ }
@@ -755,7 +760,7 @@ export default function App() {
         else setTela(next)
       }} />
       <header className="topbar">
-        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : 'Seu espaço de trabalho'}</span></div>
+        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : 'Seu espaço de trabalho'}</span></div>
 
         <div className="topbar-right">
           {!derivPronta && (
@@ -823,6 +828,14 @@ export default function App() {
           )}
         </div>
       </header>
+
+      {MARCA.suporte && teeds.sessao && (
+        <Suspense fallback={null}>
+          <SuporteWidget sessao={teeds.sessao} nome={teeds.usuario?.nome || ''} telaAtual={tela} admin={adminConfirmado}
+            escondido={tela === 'aovivo' || (adminConfirmado && tela === 'gestao')}
+            irPara={(t) => setTela(t as WorkspacePage)} onAbrirCaixa={abrirCaixaDoSuporte} />
+        </Suspense>
+      )}
 
       {tour && teeds.sessao && (
         <TourGuiado passos={passosDoTour({ nome: teeds.usuario?.nome || '', treino: !!MARCA.aoVivo && (membroTreino === true || admin === true) })}
@@ -936,6 +949,10 @@ export default function App() {
           <MeuPerfil sessao={teeds.sessao} contas={conta.accounts} derivConectada={conta.status === 'logado'} onConectarDeriv={conta.login}
             onMudou={({ nome, fotoUrl }) => { setFotoPerfil(fotoUrl); if (teeds.usuario) teeds.atualizarUsuario({ ...teeds.usuario, nome }) }} />
         </Suspense>
+      ) : tela === 'ajuda' && MARCA.suporte ? (
+        <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo a ajuda…</div></div>}>
+          <AjudaPagina aoIr={(t) => setTela(t as WorkspacePage)} />
+        </Suspense>
       ) : tela === 'aovivo' && MARCA.aoVivo ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo a transmissão…</div></div>}><AoVivoPage sessao={teeds.sessao} admin={admin === true} /></Suspense>
       ) : tela === 'noticias' && MARCA.noticias ? (
@@ -951,7 +968,7 @@ export default function App() {
       ) : tela === 'insights' && admin === true ? (
         teeds.sessao ? <InsightsPanel key={marcaEmFoco} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} /> : null
       ) : tela === 'gestao' && admin === true ? (
-        teeds.sessao && adminConfirmado ? <AdminPanel sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} comissoes={<ManagementPanel
+        teeds.sessao && adminConfirmado ? <AdminPanel abrirSuporte={pedidoCaixa} nomeDaEquipe={teeds.usuario?.nome || ''} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} comissoes={<ManagementPanel
           session={conta.session} sessaoTeeds={teeds.sessao} contaId={conta.accountId}
           socket={conta.socket} isDemo={conta.isDemo} onReautorizar={() => startLogin()}
           payoutBase={payoutBase} moeda={conta.account?.currency ?? 'USD'} pulso={conta.pulso}

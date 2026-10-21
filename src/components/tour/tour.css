@@ -32,9 +32,21 @@
 .tg-cartao svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
 .tg-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 22px; }
-.tg-contagem { color: var(--tg-ouro); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.tg-cartao { overflow: hidden; }
+.tg-cartao > * { position: relative; }
+.tg-cartao > .tg-marca-dagua { position: absolute; right: -34px; bottom: -42px; opacity: .05; }
+.tg-contagem { display: inline-flex; align-items: center; gap: 7px; color: var(--tg-ouro); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .tg-fechar { display: grid; place-items: center; width: 32px; height: 32px; margin: -6px -8px -6px 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
 .tg-fechar:hover { background: var(--surface-alt); color: var(--text); }
+.tg-capa { display: grid; justify-items: center; gap: 12px; padding: 6px 0 2px; text-align: center; }
+.tg-capa-selo {
+  display: grid; place-items: center; width: 84px; height: 84px; border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--surface-alt) 75%, #fff 6%), var(--surface) 75%);
+  border: 1.5px solid color-mix(in srgb, var(--tg-ouro) 70%, transparent); box-shadow: 0 0 0 7px color-mix(in srgb, var(--tg-ouro) 9%, transparent);
+}
+.tg-capa h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+.tg-cartao.capa .tg-texto { text-align: center; }
+.tg-cartao.capa .tg-dicas { justify-self: center; }
 .tg-cabeca { display: flex; align-items: center; gap: 12px; }
 .tg-icone { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; flex: none; background: color-mix(in srgb, var(--tg-ouro) 16%, transparent); color: var(--tg-ouro); }
 .tg-icone.ok { background: var(--up-soft); color: var(--up); }

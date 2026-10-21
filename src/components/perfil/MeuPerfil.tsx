@@ -3,8 +3,10 @@ import type { SessaoTeeds } from '../../core/teeds/conta'
 import { cpfValido, formatarCPF, formatarTelefone, recuperarSenha, telefoneValido, trocarSenha } from '../../core/teeds/conta'
 import type { TradingAccount } from '../../core/deriv/account'
 import {
-  buscarCep, enviarFoto, formatarCep, lerPerfil, pedirTrocaDeEmail, removerFoto, salvarPerfil, type Endereco, type Perfil,
+  buscarCep, enviarFoto, formatarCep, lerPerfil, removerFoto, salvarPerfil, type Endereco, type Perfil,
 } from '../../core/teeds/perfil'
+import { abrirSuporte } from '../../core/teeds/suporte'
+import { Monograma } from '../marca/Monograma'
 import { MARCA } from '../../marca'
 import './meu-perfil.css'
 
@@ -61,9 +63,6 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
   const [recado, setRecado] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
   const [foto, setFoto] = useState<string | null>(null)
   const [enviandoFoto, setEnviandoFoto] = useState(false)
-  const [novoEmail, setNovoEmail] = useState('')
-  const [trocandoEmail, setTrocandoEmail] = useState(false)
-  const [emailRecado, setEmailRecado] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
   const [senha, setSenha] = useState('')
   const [repetir, setRepetir] = useState('')
   const [senhaRecado, setSenhaRecado] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
@@ -135,17 +134,6 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
     try { await removerFoto(sessao); setFoto(null); onMudou?.({ nome: perfil?.nome ?? nome, fotoUrl: null }) } catch { /* fica como estava */ } finally { setEnviandoFoto(false) }
   }
 
-  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(novoEmail.trim()) && novoEmail.trim().toLowerCase() !== (perfil?.email ?? '').toLowerCase()
-  async function trocarEmail() {
-    if (!emailOk || trocandoEmail) return
-    setTrocandoEmail(true); setEmailRecado(null)
-    try {
-      await pedirTrocaDeEmail(sessao, novoEmail.trim())
-      setEmailRecado({ tipo: 'ok', texto: `Mandamos um link para ${novoEmail.trim()} e outro para ${perfil?.email}. A troca vale quando os dois forem confirmados.` })
-      setNovoEmail('')
-    } catch (e) { setEmailRecado({ tipo: 'erro', texto: (e as Error).message }) } finally { setTrocandoEmail(false) }
-  }
-
   const senhaOk = senha.length >= 6 && senha === repetir
   async function salvarSenha() {
     if (!senhaOk) return
@@ -171,6 +159,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
     <div className="mp">
       {/* ------------------------------------------------ quem é */}
       <section className="mp-topo">
+        <Monograma variante="marca-dagua" tamanho={260} className="mp-topo-marca" />
         <div className="mp-avatar" id="mp-foto" tabIndex={-1}>
           {foto ? <img src={foto} alt={`Foto de ${perfil.nome || 'perfil'}`} /> : <span>{iniciais(perfil.nome, perfil.email)}</span>}
           <button type="button" className="mp-avatar-btn" onClick={() => arquivo.current?.click()} disabled={enviandoFoto} aria-label={foto ? 'Trocar a foto' : 'Adicionar uma foto'}>
@@ -183,7 +172,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
           <h1>{perfil.nome || 'Complete seu nome'}</h1>
           <p>{perfil.email}</p>
           <div className="mp-selos">
-            <span className="mp-selo plano"><Ic d={I.plano} />{perfil.planoNome}</span>
+            <span className="mp-selo plano"><Monograma tamanho={14} />{perfil.planoNome}</span>
             <span className={`mp-selo ${st.cls}`}><i aria-hidden="true" />{st.rotulo}</span>
           </div>
           {foto && <button type="button" className="mp-link" onClick={() => void tirarFoto()} disabled={enviandoFoto}>Remover foto</button>}
@@ -205,8 +194,9 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
       <div className="mp-grade">
         {/* ------------------------------------------------ plano */}
         <section className="mp-cartao mp-plano">
+          <Monograma variante="marca-dagua" tamanho={150} className="mp-plano-marca" />
           <h2><Ic d={I.plano} />Seu plano</h2>
-          <div className="mp-plano-nome">{perfil.planoNome}</div>
+          <div className="mp-plano-nome"><Monograma tamanho={30} />{perfil.planoNome}</div>
           <dl className="mp-fichas">
             <div><dt>Situação</dt><dd className={st.cls}>{st.rotulo}</dd></div>
             <div><dt>Acesso desde</dt><dd>{data(perfil.acessoInicio)}</dd></div>
@@ -218,6 +208,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
               <div className="mp-trilho"><i style={{ width: `${usado}%` }} /></div>
               <p>{faltam > 1 ? `Faltam ${faltam} dias de acesso.` : faltam === 1 ? 'Seu acesso termina amanhã.' : faltam === 0 ? 'Seu acesso termina hoje.' : 'Seu acesso terminou.'}
                 {faltam <= 5 && ' Para renovar, fale com o suporte.'}</p>
+              {faltam <= 5 && MARCA.suporte && <button type="button" className="mp-btn ouro" onClick={() => abrirSuporte({ mensagem: 'Quero renovar o meu acesso.' })}>Renovar com o suporte</button>}
             </div>
           )}
         </section>
@@ -268,17 +259,12 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
           </div>
         </section>
 
-        {/* ------------------------------------------------ e-mail */}
+        {/* ------------------------------------------------ e-mail (troca só pelo suporte, 20/10/2026) */}
         <section className="mp-cartao">
-          <h2><Ic d={I.carta} />E-mail</h2>
+          <h2><Ic d={I.carta} />E-mail de acesso</h2>
           <div className="mp-atual"><span>E-mail atual</span><b id="mp-email" tabIndex={-1}>{perfil.email}</b></div>
-          <label className="mp-campo">
-            <span>Novo e-mail</span>
-            <input type="email" inputMode="email" value={novoEmail} autoComplete="email" autoCapitalize="none" placeholder="nome@exemplo.com" onChange={(e) => setNovoEmail(e.target.value)} />
-            <small>Você recebe um link no e-mail novo e outro no atual. A troca vale quando confirmar os dois.</small>
-          </label>
-          <button type="button" className="mp-btn" disabled={!emailOk || trocandoEmail} onClick={() => void trocarEmail()}>{trocandoEmail ? 'Enviando…' : 'Trocar e-mail'}</button>
-          {emailRecado && <p className={`mp-recado ${emailRecado.tipo}`} role="status">{emailRecado.texto}</p>}
+          <p className="mp-nota">Por segurança, a troca do e-mail de acesso é feita pela equipe de suporte. Peça pelo chat: é rápido.</p>
+          {MARCA.suporte && <button type="button" className="mp-btn" onClick={() => abrirSuporte({ mensagem: 'Quero trocar o e-mail de acesso da minha conta. O e-mail novo é: ' })}>Pedir a troca ao suporte</button>}
         </section>
 
         {/* ------------------------------------------------ corretora */}

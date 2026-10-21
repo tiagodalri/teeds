@@ -108,6 +108,11 @@ export interface Marca {
    */
   inicio?: boolean
   /**
+   * Suporte dentro da plataforma (20/10/2026): o chat flutuante do cliente,
+   * a página de Ajuda (FAQ) e a caixa de entrada no painel admin.
+   */
+  suporte?: boolean
+  /**
    * Nome dos ativos sem a palavra "Volatility" ("75 Index", "10 (1s) Index").
    * Pedido do Tiago em 19/10/2026 para a GlobalFly; as outras marcas mostram
    * o nome da Deriv como sempre.
@@ -360,6 +365,7 @@ export const MARCAS: Record<string, Marca> = {
     aoVivo: true,
     livesAoVivo: false,
     inicio: true,
+    suporte: true,
     ativosSemVolatility: true,
     iconesDeAtivos: true,
     indicesCompletos: true,

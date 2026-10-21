@@ -3,8 +3,8 @@ import { Brand } from './Brand'
 import { MARCA } from '../marca'
 import './workspace.css'
 
-export type WorkspacePage = 'inicio' | 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo' | 'noticias' | 'perfil'
-export const PAGE_NAMES: Record<WorkspacePage, string> = { inicio: 'Início', operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', perfil: 'Meu perfil', ...(MARCA.menu?.nomes ?? {}) }
+export type WorkspacePage = 'inicio' | 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo' | 'noticias' | 'perfil' | 'ajuda'
+export const PAGE_NAMES: Record<WorkspacePage, string> = { inicio: 'Início', operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', perfil: 'Meu perfil', ajuda: 'Ajuda', ...(MARCA.menu?.nomes ?? {}) }
 const paths: Record<string, string> = {
   inicio: 'M3 11l9-7 9 7M5 9.5V20h5v-6h4v6h5V9.5',
   operar: 'M3 17l5-6 4 3 9-11M16 3h5v5', robos: 'M5 7h14v13H5zM12 3v4M8 12h1m6 0h1M9 16h6',
@@ -17,6 +17,8 @@ const paths: Record<string, string> = {
   aovivo: 'M12 12h.01M8.5 15.5a5 5 0 010-7M15.5 8.5a5 5 0 010 7M5.6 18.4a9 9 0 010-12.8M18.4 5.6a9 9 0 010 12.8',
   // jornal dobrado com a linha do gráfico
   noticias: 'M4 5h13v14a1 1 0 001 1H6a2 2 0 01-2-2zM17 9h3v9a2 2 0 01-2 2M7 9h7M7 12.5h7M7 16h4',
+  // a Central de ajuda (20/10/2026): o balão com o ponto de interrogação
+  ajuda: 'M12 21a9 9 0 100-18 9 9 0 000 18zM9.6 9.3a2.5 2.5 0 014.8.9c0 1.7-2.4 2.2-2.4 3.6M12 17h.01',
   // a marca pode trocar o desenho de um item (ver `menu` em marcas.ts)
   ...(MARCA.menu?.icones ?? {}),
 }
@@ -46,7 +48,7 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mos
         <p className="workspace-label">Operações</p>
         {item('robos')}{item('operar')}
         <p className="workspace-label">Ferramentas</p>{item('gerenciamento')}{item('assistente')}
-        <p className="workspace-label">Explore</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{MARCA.noticias && item('noticias')}{item('marketplace')}{item('aulas')}
+        <p className="workspace-label">Explore</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{MARCA.noticias && item('noticias')}{item('marketplace')}{item('aulas')}{MARCA.suporte && item('ajuda')}
         {admin && <div className="workspace-admin">{item('gestao')}</div>}
       </nav>
       <button className="workspace-collapse" onClick={() => setCompact(!compact)} aria-label={compact ? 'Expandir menu' : 'Recolher menu'} aria-expanded={!compact}>{compact ? '»' : '«'}<span className="workspace-label"> Recolher menu</span></button>

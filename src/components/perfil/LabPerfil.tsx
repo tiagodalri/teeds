@@ -19,18 +19,18 @@ const EXEMPLO_NOVO = {
   acesso_expira_em: '2026-10-24T12:00:00Z',
 }
 
+let instalado = false
 export default function LabPerfil() {
   const q = new URLSearchParams(location.search)
   const ficha = q.get('caso') === 'completo' ? EXEMPLO_COMPLETO : EXEMPLO_NOVO
   useEffect(() => { const t = q.get('tema'); if (t) document.documentElement.dataset.tema = t }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  // responde as chamadas do perfil com a ficha de exemplo
-  const original = window.fetch
-  window.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+  // responde as chamadas do perfil com a ficha de exemplo (uma vez só)
+  if (!instalado) { instalado = true; const original = window.fetch.bind(window); window.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
     const u = String(url)
     if (u.includes('/rest/v1/clientes')) return new Response((init?.method ?? 'GET') === 'GET' ? JSON.stringify([ficha]) : null, { status: (init?.method ?? 'GET') === 'GET' ? 200 : 204 })
     if (u.includes('/auth/v1/user') || u.includes('/storage/v1/')) return new Response('{}', { status: 200 })
     return original(url, init)
-  }) as typeof fetch
+  }) as typeof fetch }
   const sessao: SessaoTeeds = { token: 'lab', refresh: 'lab', expiraEm: Date.now() + 3_600_000, usuario: { id: 'lab', email: ficha.email, nome: ficha.nome, telefone: ficha.telefone, cpf: ficha.cpf, criadoEm: ficha.criado_em, trocarSenha: false } }
   const nada = () => undefined
   return (

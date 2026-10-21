@@ -1,6 +1,7 @@
 import { mercado } from './mercado'
 import './ambiente'
 import { decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros, marcaAdministrada } from './aprovacao-leads'
+import { trocarEmailDoCliente } from './trocar-email'
 import { abrirBilhete, registrarDescadastro, paginaDeSaida } from './descadastro'
 import { catalogo, alterarRobo } from './catalogo'
 import { administradorDaMarca } from './supabase'
@@ -796,6 +797,15 @@ const servidor = createServer(async (req, res) => {
         if (req.method === 'GET') return json(200, await listarPendentes(marca, url.searchParams.get('status') || 'pendente', Number(url.searchParams.get('pagina')) || 0))
         if (req.method === 'POST') return json(200, await decidirLead(String(corpo.id || ''), marca, dono.id, String(corpo.acao || ''), String(corpo.plano || 'essencial')))
         return json(405, { erro: 'Método não permitido.' })
+      }
+      if (url.pathname === '/api/admin/trocar-email') {
+        // A troca de e-mail é do suporte (20/10/2026): admin da marca, ou da Teeds (master).
+        if (req.method !== 'POST') return json(405, { erro: 'Método não permitido.' })
+        let marca: string
+        try { marca = marcaAdministrada(corpo.marca, marcaDaOrigem.id) } catch { return json(400, { erro: 'Plataforma inválida.' }) }
+        if (!await administradorDaMarca(dono.id, marca) && !await administradorDaMarca(dono.id, 'teeds')) return json(403, { erro: 'Somente administradores desta plataforma.' })
+        try { return json(200, await trocarEmailDoCliente(String(corpo.user_id || ''), marca, String(corpo.email || ''))) }
+        catch (e) { return json(400, { erro: (e as Error).message }) }
       }
       if (url.pathname === '/api/admin/emails') {
         const marca = url.searchParams.get('marca') || marcaDaOrigem.id
