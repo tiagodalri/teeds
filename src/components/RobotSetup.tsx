@@ -12,7 +12,6 @@ import { descrever, type ParametrosDoRobo } from '../core/deriv/parametros'
 import { RobotDialog } from './RobotDialog'
 import './robot-launch.css'
 import './plano-de-voo.css'
-import { escadaDoRobo } from '../core/deriv/escada'
 import { nomeDoAtivo } from '../core/deriv/market'
 import { planoDoDia } from '../core/teeds/planoDoDia'
 import { MARCA } from '../marca'
@@ -271,14 +270,6 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   const disponivel = disponiveis === null || disponiveis.includes(modelo.id)
   const planoValido = disponivel && entrada !== null && meta !== null && limite !== null
 
-  // o que o limite aguenta, pela escada do próprio robô (no modo escolhido)
-  const folego = useMemo(() => {
-    if (entrada === null || limite === null || limite <= 0) return null
-    const escada = escadaDoRobo(modelo.id, entrada, 40, comModo ? modo : 'conservador', parametros)
-    const cabem = escada.filter((d) => d.perdido <= limite + 1e-9)
-    return { perdas: cabem.length, maior: cabem.length ? Math.max(...cabem.map((d) => d.valor)) : entrada }
-  }, [entrada, limite, modelo.id, modo, comModo, parametros])
-
   useEffect(() => { corpo.current?.scrollTo({ top: 0 }) }, [passo])
   useEffect(() => { if (!ligando) submitted.current = false }, [ligando, erro])
   /*
@@ -344,7 +335,6 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
             <b>{passo === 'escolha' ? 'Escolha a sua I.A.' : TEM_MONOGRAMA ? nomeCurto(modelo.nome) : modelo.nome}</b>
             {passo !== 'escolha' && <span className="plv-titulo-sub">{modelo.chamada} · {nomeAtivo}</span>}
           </div>
-          <span className={`plv-conta ${isDemo ? 'demo' : 'real'}`}>{isDemo ? 'Demo' : 'Real'}</span>
           <button type="button" className="plv-fechar" onClick={onCancelar} disabled={ligando} aria-label="Fechar o preparo"><IconeFechar /></button>
         </div>
         {/* computador: os 3 passos com nome */}
@@ -436,25 +426,40 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
               <div className={`plv-passe-topo ${TEM_FOTOS ? '' : 'sem-foto'}`}>
                 {TEM_FOTOS && <img src={`${FOTOS}${modelo.id}.webp`} alt="" />}
                 <div className="plv-passe-nome">
-                  <div><small>{TEM_FOTOS ? 'GF · ' : ''}{nomeAtivo}</small><b>{TEM_FOTOS ? nomeCurto(modelo.nome) : <NomeDoRobo nome={modelo.nome} />}</b></div>
-                  <span className={isDemo ? 'demo' : 'real'}>Conta {isDemo ? 'demo' : 'real'}</span>
+                  <small>{TEM_FOTOS ? 'GF · ' : ''}{nomeAtivo}</small>
+                  <b>{TEM_FOTOS ? nomeCurto(modelo.nome) : <NomeDoRobo nome={modelo.nome} />}</b>
                 </div>
               </div>
               <i className="plv-picote" aria-hidden="true" />
-              <dl className="plv-passe-grade">
-                {comModo && <div><dt>Modo</dt><dd>{NOME_DO_MODO[modo]}</dd></div>}
-                {comLV && <div><dt>Loss virtual</dt><dd>{lv === 0 ? 'Sem' : `${lv} ${lv === 1 ? 'dígito' : 'dígitos'}`}</dd></div>}
-                <div><dt>Entrada</dt><dd>{din(entrada ?? 0, moeda)}</dd></div>
-                <div><dt>Meta</dt><dd className="ganho">{meta ? `+${bonito(meta)}` : 'Sem meta'}</dd></div>
-                <div><dt>Limite</dt><dd className="perda">{limite ? `−${bonito(limite)}` : 'Sem limite'}</dd></div>
-                {folego && folego.perdas > 0 && <div><dt>Aguenta</dt><dd>{folego.perdas} {folego.perdas === 1 ? 'perda' : 'perdas'}</dd></div>}
+              {/* os três números do voo, em destaque */}
+              <dl className="plv-passe-valores">
+                <div><dt>Entrada</dt><dd><small>{moeda === 'USD' ? 'US$' : moeda}</small>{bonito(entrada ?? 0)}</dd></div>
+                <div><dt>Meta</dt><dd className={meta ? 'ganho' : 'sem'}>{meta ? <><small>{moeda === 'USD' ? 'US$' : moeda}</small>+{bonito(meta)}</> : 'Sem meta'}</dd></div>
+                <div><dt>Limite</dt><dd className={limite ? 'perda' : 'sem'}>{limite ? <><small>{moeda === 'USD' ? 'US$' : moeda}</small>−{bonito(limite)}</> : 'Sem limite'}</dd></div>
               </dl>
-              <button type="button" className="plv-editar" onClick={() => setPasso('plano')} disabled={ligando}>Editar o plano</button>
+              {/* as regras do voo, como selos, e o atalho para editar */}
+              <div className="plv-passe-rodape">
+                <div className="plv-passe-regras">
+                  {comModo && <span><small>Modo</small>{NOME_DO_MODO[modo]}</span>}
+                  {comLV && <span><small>Loss virtual</small>{lv === 0 ? 'Sem' : `${lv} ${lv === 1 ? 'dígito' : 'dígitos'}`}</span>}
+                </div>
+                <button type="button" className="plv-editar" onClick={() => setPasso('plano')} disabled={ligando}>
+                  <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5l3 3L6 13H3v-3z" /></svg>Editar plano
+                </button>
+              </div>
             </section>
             <aside className="plv-notas">
-              <p className="plv-nota"><b>Como opera.</b> {regra ? descrever(modelo.id, regra) : modelo.descricao}</p>
-              <p className="plv-nota">A recuperação pode aumentar o valor das entradas. Os robôs desta conta compartilham o saldo. Não há garantia de lucro.</p>
-              {isDemo && dados?.testeDemo && <p className="plv-nota">Este robô roda uma regra em teste nas contas demo.</p>}
+              <div className="plv-info">
+                <section>
+                  <span className="plv-info-rot"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" /><path d="M8 4.5V8l2.5 1.5" /></svg>Como opera</span>
+                  <p>{regra ? descrever(modelo.id, regra) : modelo.descricao}</p>
+                </section>
+                <section>
+                  <span className="plv-info-rot"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 11H2z" /><path d="M8 6.5v3M8 11.5v.01" /></svg>Antes de decolar</span>
+                  <p>A recuperação pode aumentar o valor das entradas. Os robôs desta conta compartilham o saldo. Não há garantia de lucro.</p>
+                </section>
+                {isDemo && dados?.testeDemo && <section><p>Este robô roda uma regra em teste nas contas demo.</p></section>}
+              </div>
               {!isDemo && (
                 <label className={`plv-real ${confirmaReal ? 'ok' : ''}`}>
                   <input type="checkbox" checked={confirmaReal} disabled={ligando} onChange={(e) => setConfirmaReal(e.target.checked)} />

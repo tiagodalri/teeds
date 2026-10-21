@@ -3,6 +3,7 @@ import { Monograma } from '../marca/Monograma'
 import { abrirSuporte } from '../../core/teeds/suporte'
 import { alternarValores, MASCARA, useValoresOcultos } from '../../core/privacidade'
 import { MARCA } from '../../marca'
+import { DERIV } from '../../core/deriv/config'
 import { InstrumentoDoDia } from './InstrumentoDoDia'
 import './inicio.css'
 import { dataCurta } from '../../core/datas'
@@ -51,8 +52,8 @@ interface Props {
 const numero = (n: number) => Math.abs(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const saudacao = () => { const h = new Date().getHours(); return h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite' }
 const hojeExtenso = () => dataCurta(new Date())
-/** Cashier da Deriv: depósito e saque são sempre na conta da pessoa, na corretora. */
-const CAIXA_DERIV = 'https://app.deriv.com/cashier/deposit'
+/** Depósito na Deriv: sempre na conta da pessoa, na corretora. */
+const CAIXA_DERIV = DERIV.deposito
 const FOTOS = `${import.meta.env.BASE_URL}robos-globalfly/`
 
 /** Linha pequena de uma série (cotação). */

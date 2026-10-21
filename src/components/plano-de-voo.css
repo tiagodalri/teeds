@@ -35,10 +35,6 @@
 .plv-titulo b { color: var(--plv-marfim); font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .plv-titulo .nome-robo-gf { background-color: var(--plv-marfim) !important; }
 .plv-titulo-sub { color: var(--plv-aco); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* a conta: selo discreto ao lado do fechar */
-.plv-conta { flex: none; padding: 5px 11px; border-radius: 99px; font-size: 10.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; background: rgba(5, 21, 40, .6); }
-.plv-conta.demo { border: 1px solid rgba(183, 141, 57, .65); color: var(--plv-ouro-claro); }
-.plv-conta.real { border: 1px solid var(--plv-verde); color: var(--plv-verde); }
 /* a foto no topo e a barra de passos compacta: só no celular */
 .plv-topo-foto, .plv-progresso { display: none; }
 .plv-fechar { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 50%; border: 1px solid rgba(156, 177, 199, .3); background: transparent; color: var(--plv-marfim); cursor: pointer; }
@@ -191,27 +187,37 @@
 .plv-passe-topo::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(5, 21, 40, .1) 20%, rgba(5, 21, 40, .9) 78%, var(--plv-azul) 100%); }
 :root[data-tema='escuro'] .plv-passe-topo::after { background: linear-gradient(180deg, rgba(5, 21, 40, .1) 20%, rgba(5, 21, 40, .9) 78%, #051528 100%); }
 .plv-passe-topo.sem-foto { height: 110px; }
-.plv-passe-nome { position: absolute; left: 22px; right: 22px; bottom: 14px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
-.plv-passe-nome small { display: block; color: var(--plv-ouro-claro); font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+.plv-passe-nome { position: absolute; left: 22px; right: 22px; bottom: 14px; display: grid; gap: 2px; }
+.plv-passe-nome small { color: var(--plv-ouro-claro); font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
 .plv-passe-nome b { font-size: 28px; letter-spacing: -.01em; }
-.plv-passe-nome span { flex: none; padding: 5px 12px; border-radius: 99px; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; background: rgba(5, 21, 40, .75); }
-.plv-passe-nome span.demo { border: 1px solid rgba(183, 141, 57, .7); color: var(--plv-ouro-claro); }
-.plv-passe-nome span.real { border: 1px solid #22D66A; color: #22D66A; }
 .plv-picote { position: relative; display: block; height: 0; margin: 4px 22px 0; border-top: 1.5px dashed rgba(156, 177, 199, .35); }
 .plv-picote::before, .plv-picote::after { content: ''; position: absolute; top: -12px; width: 24px; height: 24px; border-radius: 50%; background: var(--bg); }
 .plv-picote::before { left: -34px; }
 .plv-picote::after { right: -34px; }
-.plv-passe-grade { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 14px; margin: 0; padding: 20px 22px 10px; }
-.plv-passe-grade div { display: grid; gap: 4px; min-width: 0; }
-.plv-passe-grade dt { color: var(--plv-aco); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
-.plv-passe-grade dd { margin: 0; color: var(--plv-marfim); font: 700 17px var(--plv-dados); font-variant-numeric: tabular-nums; }
-.plv-passe-grade dd.ganho { color: #22D66A; }
-.plv-passe-grade dd.perda { color: #FF3B47; }
-.plv-editar { margin: 4px 22px 18px; padding: 0; border: 0; background: none; color: var(--plv-ouro-claro); font-size: 13px; font-weight: 700; cursor: pointer; }
-.plv-editar:hover { text-decoration: underline; }
+.plv-passe-valores { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 20px 22px 16px; }
+.plv-passe-valores div { display: grid; gap: 5px; min-width: 0; padding: 0 16px; border-left: 1px solid rgba(156, 177, 199, .16); }
+.plv-passe-valores div:first-child { padding-left: 0; border-left: 0; }
+.plv-passe-valores dt { color: var(--plv-aco); font-size: 10px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+.plv-passe-valores dd { margin: 0; color: var(--plv-marfim); font-family: var(--fonte-corpo, Arimo, Arial, sans-serif); font-size: 22px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
+.plv-passe-valores dd small { margin-right: 4px; color: var(--plv-aco); font-size: .52em; font-weight: 700; letter-spacing: .04em; vertical-align: .32em; }
+.plv-passe-valores dd.sem { color: var(--plv-aco); font-size: 15px; font-weight: 600; line-height: 1.75; }
+/* o cartão é sempre azul-marinho: os tons vivos valem nos dois temas */
+.plv-passe-valores dd.ganho { color: #22D66A; }
+.plv-passe-valores dd.perda { color: #FF3B47; }
+.plv-passe-rodape { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px 22px 18px; border-top: 1px solid rgba(156, 177, 199, .12); }
+.plv-passe-regras { display: flex; flex-wrap: wrap; gap: 8px; }
+.plv-passe-regras span { display: inline-flex; align-items: baseline; gap: 7px; padding: 7px 12px; border-radius: 99px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(156, 177, 199, .18); color: var(--plv-marfim); font-size: 13px; font-weight: 700; }
+.plv-passe-regras small { color: var(--plv-aco); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.plv-editar { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 99px; border: 1px solid rgba(183, 141, 57, .55); background: transparent; color: var(--plv-ouro-claro); font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s, border-color .15s; }
+.plv-editar:hover { background: rgba(183, 141, 57, .12); border-color: var(--plv-ouro); }
+.plv-editar svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 .plv-notas { display: grid; gap: 12px; }
-.plv-nota { margin: 0; padding: 14px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--plv-linha); color: var(--muted); font-size: 13px; line-height: 1.55; }
-.plv-nota b { color: var(--text); }
+.plv-info { display: grid; border-radius: 20px; background: var(--surface); border: 1px solid var(--plv-linha); }
+.plv-info section { display: grid; gap: 6px; padding: 16px 18px; }
+.plv-info section + section { border-top: 1px solid var(--plv-linha); }
+.plv-info-rot { display: inline-flex; align-items: center; gap: 8px; color: var(--plv-ouro); font-size: 10.5px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+.plv-info-rot svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.plv-info p { margin: 0; color: var(--text); font-size: 13.5px; line-height: 1.55; }
 /* fundo SÓLIDO (o tom de alerta por cima de uma base opaca): fixa no celular, nada pode aparecer por trás */
 .plv-real { display: flex; gap: 11px; align-items: flex-start; padding: 14px 16px; border-radius: 16px; border: 1.5px solid var(--plv-coral); background: linear-gradient(var(--down-soft), var(--down-soft)), var(--surface); color: var(--text); font-size: 13.5px; line-height: 1.45; cursor: pointer; }
 .plv-real.ok { border-color: var(--plv-verde); background: linear-gradient(var(--up-soft), var(--up-soft)), var(--surface); }
@@ -258,7 +264,6 @@
   .plv-progresso i { height: 3px; border-radius: 3px; background: rgba(156, 177, 199, .25); }
   .plv-progresso i.feito, .plv-progresso i.agora { background: var(--plv-ouro); }
   .plv-progresso i.agora { box-shadow: 0 0 0 1px rgba(210, 174, 94, .4); }
-  .plv-conta { padding: 4px 9px; font-size: 10px; }
   /* com a foto no topo, o cartão de foto do plano sai (os valores sobem) */
   .plv-no-plano .plv-capa { display: none; }
   .plv-eixo { left: 86%; }
@@ -280,13 +285,18 @@
   .plv-m-num input, .plv-m-texto { font-size: 32px; }
   .plv-m-passo { width: 44px; height: 44px; }
   .plv-m-valor { grid-template-columns: 44px minmax(0, 1fr) 44px; }
-  .plv-passe-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .plv-passe-valores { padding: 16px 16px 14px; }
+  .plv-passe-valores div { padding: 0 10px; }
+  .plv-passe-valores dd { font-size: 17px; }
+  .plv-passe-rodape { padding: 12px 16px 16px; }
+  .plv-passe-nome { left: 16px; right: 16px; }
   .plv-passe-nome b { font-size: 24px; }
   .plv-rodape { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
   .plv-rodape-dica { display: none; }
   .plv-principal { flex: 1; min-width: 0; height: 54px; }
   /* conta real: a confirmação fica grudada logo acima do botão (fora da tela, o botão travado parecia quebrado) */
-  .plv-real { position: sticky; bottom: 0; z-index: 2; box-shadow: 0 -12px 18px -6px var(--bg); }
+  /* a segunda sombra é uma faixa sólida que cobre o respiro abaixo do aviso: nada rola visível por baixo */
+  .plv-real { position: sticky; bottom: 0; z-index: 2; box-shadow: 0 -12px 18px -6px var(--bg), 0 18px 0 2px var(--bg); }
 }
 @media (prefers-reduced-motion: reduce) {
   .plv-jato, .plv-jato img, .plv-principal, .plv-seg button { transition: none; }

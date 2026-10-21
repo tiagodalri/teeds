@@ -21,6 +21,8 @@ export const DERIV = {
     authorize: 'https://auth.deriv.com/oauth2/auth',
     token: 'https://auth.deriv.com/oauth2/token',
   },
+  /** Todo botão de depósito, em todas as marcas, abre este endereço (pedido do Tiago, 21/10/2026). */
+  deposito: 'https://home.deriv.com/dashboard/deposit?from=home&depositSheet=1&returnTo=%2Fhome&currency=USD',
   /** Escopos concedidos ao app. */
   scopes: ['trade', 'account_manage', 'application_read'],
 } as const

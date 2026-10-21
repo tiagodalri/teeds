@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { DerivLogo } from '../DerivMarca'
 import { Monograma } from '../marca/Monograma'
 import { MARCA } from '../../marca'
+import { DERIV } from '../../core/deriv/config'
 import './destaques.css'
 
 /**
@@ -30,7 +31,7 @@ export interface Banner {
   aoVivo?: boolean
 }
 
-const CAIXA_DERIV = 'https://app.deriv.com/cashier/deposit'
+const CAIXA_DERIV = DERIV.deposito
 const BASE = import.meta.env.BASE_URL
 
 export function bannersDaMarca({ treino, noAr }: { treino: boolean; noAr: boolean }): Banner[] {
