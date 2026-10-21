@@ -116,6 +116,10 @@ export interface Marca {
   suporte?: boolean
   /** Tela de entrada com a cena (foto escurecida + frase + mercado). Ver CenaDoLogin.tsx. */
   cenaLogin?: 'nuvens' | 'rastro'
+  /** Link do grupo (comunidade) no WhatsApp: vira banner em Aulas. */
+  comunidade?: string
+  /** Link da apostila (PDF): quando existir, vira banner em Aulas. */
+  apostila?: string
   /**
    * Nome dos ativos sem a palavra "Volatility" ("75 Index", "10 (1s) Index").
    * Pedido do Tiago em 19/10/2026 para a GlobalFly; as outras marcas mostram
@@ -371,6 +375,8 @@ export const MARCAS: Record<string, Marca> = {
     inicio: true,
     suporte: true,
     cenaLogin: 'nuvens',
+    // 21/10/2026: a comunidade oficial (enviado pelo Tiago)
+    comunidade: 'https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq',
     ativosSemVolatility: true,
     iconesDeAtivos: true,
     indicesCompletos: true,

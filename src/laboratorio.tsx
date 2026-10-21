@@ -56,6 +56,17 @@ const LabAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({
 const LabInicio = lazy(() => import('./components/inicio/LabInicio'))
 const LabPerfil = lazy(() => import('./components/perfil/LabPerfil'))
 const LabSuporte = lazy(() => import('./components/suporte/LabSuporte'))
+function LabAulas() {
+  const q = new URLSearchParams(location.search)
+  const t = q.get('tema'); if (t) document.documentElement.dataset.tema = t
+  return (
+    <div className="app workspace-app">
+      <WorkspaceNav page="aulas" admin={false} mostrarInicio onNavigate={() => undefined} />
+      <header className="topbar"><div className="workspace-heading"><strong>Aulas</strong><span>Seu espaço de trabalho</span></div></header>
+      <AulasPanel nome="Tiago Dal Ri" sessao={null} aoReverTour={() => undefined} aoIr={() => undefined} treino={{ noAr: q.has('aovivo') }} />
+    </div>
+  )
+}
 function LabLogin() {
   const q = new URLSearchParams(location.search)
   const t = q.get('tema'); if (t) document.documentElement.dataset.tema = t
@@ -196,6 +207,7 @@ function Laboratorio() {
   if (qual === 'perfil') return <Suspense fallback={null}><LabPerfil /></Suspense>
   if (qual === 'suporte') return <Suspense fallback={null}><LabSuporte /></Suspense>
   if (qual === 'login') return <LabLogin />
+  if (qual === 'aulas') return <LabAulas />
   if (qual === 'minicabine') return <Suspense fallback={null}><LabMiniCabine /></Suspense>
   return (
     <div className="app workspace-app" data-laboratorio={qual}>

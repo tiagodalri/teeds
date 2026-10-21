@@ -970,7 +970,8 @@ export default function App() {
       ) : tela === 'noticias' && MARCA.noticias ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo as notícias…</div></div>}><MercadoPanel /></Suspense>
       ) : tela === 'aulas' ? (
-        <AulasPanel nome={teeds.usuario?.nome} sessao={teeds.sessao} aoReverTour={MARCA.inicio ? () => setTour('rever') : undefined} />
+        <AulasPanel nome={teeds.usuario?.nome} sessao={teeds.sessao} aoReverTour={MARCA.inicio ? () => setTour('rever') : undefined}
+          aoIr={(t) => setTela(t as WorkspacePage)} treino={MARCA.aoVivo && (membroTreino === true || admin === true) ? { noAr: !!treinoAgora } : null} />
       ) : tela === 'marketplace' ? (
         <MarketplacePanel sessao={teeds.sessao} />
       ) : tela === 'gerenciamento' ? (

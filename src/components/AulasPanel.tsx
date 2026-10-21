@@ -7,6 +7,7 @@ import {
 import { listarVideosDasAulas, type VideoDaAula } from '../core/teeds/aulasVideos'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA } from '../marca'
+import { Destaques, bannersDaMarca } from './aulas/Destaques'
 import { capaDaAula } from './capasAulas'
 import { IconeFechar } from './IconeFechar'
 import { Icone } from './Icone'
@@ -127,7 +128,7 @@ function SalaEmBreve({ aoReverTour }: { aoReverTour?: () => void }) {
 }
 
 /** A porta da sala: o recado enquanto não há vídeo, a vitrine quando houver. */
-export function AulasPanel(props: { nome?: string | null; sessao?: SessaoTeeds | null; aoReverTour?: () => void }) {
+export function AulasPanel(props: { nome?: string | null; sessao?: SessaoTeeds | null; aoReverTour?: () => void; aoIr?: (tela: string) => void; treino?: { noAr: boolean } | null }) {
   if (AULAS_EM_BREVE) return <SalaEmBreve aoReverTour={props.aoReverTour} />
   return <SalaDeAulas {...props} />
 }
@@ -137,7 +138,7 @@ export function AulasPanel(props: { nome?: string | null; sessao?: SessaoTeeds |
  * modulo, cartoes com capa e numero, player com a lista do modulo ao lado.
  * Aula sem video existe no catalogo mas se apresenta como "em breve".
  */
-function SalaDeAulas({ nome, sessao, aoReverTour }: { nome?: string | null; sessao?: SessaoTeeds | null; aoReverTour?: () => void }) {
+function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: string | null; sessao?: SessaoTeeds | null; aoReverTour?: () => void; aoIr?: (tela: string) => void; treino?: { noAr: boolean } | null }) {
   // Os vídeos que o painel gravou no banco. Enquanto não chegam (ou se o
   // banco não responder), a sala abre com o catálogo do código.
   const [videos, setVideos] = useState<Record<string, VideoDaAula>>({})
@@ -348,6 +349,8 @@ function SalaDeAulas({ nome, sessao, aoReverTour }: { nome?: string | null; sess
         <div className="aulas-hero-marca" aria-hidden>{MARCA.nome} ORIGINAL</div>
       </div>
 
+      {/* os banners de destaque: comunidade, Deriv, sala ao vivo, apostila (21/10/2026) */}
+      {MARCA.inicio && <Destaques banners={bannersDaMarca({ treino: !!treino, noAr: !!treino?.noAr })} aoIr={aoIr} />}
       {aoReverTour && <CartaoDoTour aoAbrir={aoReverTour} />}
 
       {assistidas > 0 && proxima && (
