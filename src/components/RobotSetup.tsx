@@ -13,6 +13,7 @@ import { RobotDialog } from './RobotDialog'
 import './robot-launch.css'
 import './plano-de-voo.css'
 import { escadaDoRobo } from '../core/deriv/escada'
+import { nomeDoAtivo } from '../core/deriv/market'
 import { planoDoDia } from '../core/teeds/planoDoDia'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
@@ -292,7 +293,8 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
     return () => clearInterval(id)
   }, [ligando])
 
-  const nomeAtivo = (symbols.find(s => s.symbol === ATIVO_DOS_ROBOS)?.name ?? ATIVO_DOS_ROBOS).replace(/\s*Index$/i, '')
+  // o nome como a marca mostra (GlobalFly: "75 Index", sem o "Volatility")
+  const nomeAtivo = nomeDoAtivo(symbols.find(s => s.symbol === ATIVO_DOS_ROBOS)?.name ?? `Volatility ${ATIVO_DOS_ROBOS.replace(/^R_/, '')} Index`)
   const primeiroPasso: Passo = escolherModelo ? 'escolha' : 'plano'
   const voltar = () => {
     if (ligando) return
@@ -331,16 +333,21 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
     <form className={`robot-launch plv plv-no-${passo}`} onSubmit={(e) => { e.preventDefault(); if (passo !== 'decolar') avancar() }}
       onKeyDown={(e) => { if (e.key === 'Enter' && (e.repeat || e.nativeEvent.isComposing)) e.preventDefault() }}>
       {/* ------------------------------------------------ o topo azul */}
-      <header className="plv-topo">
+      <header className={`plv-topo ${TEM_FOTOS && passo === 'plano' ? 'com-foto' : ''}`}>
+        {/* celular, no plano: a foto do jato vira o fundo do topo (o cartão de foto some) */}
+        {TEM_FOTOS && passo === 'plano' && <img className="plv-topo-foto" src={`${FOTOS}${modelo.id}.webp`} alt="" />}
         <i className="plv-eixo" aria-hidden="true" />
         <div className="plv-topo-linha">
           {TEM_MONOGRAMA ? <Monograma tamanho={40} className="plv-mono" /> : <Emblema id={modelo} tamanho={34} />}
           <div className="plv-titulo">
             <small>Plano de voo</small>
-            <b>{passo === 'escolha' ? 'Escolha a sua I.A.' : `${TEM_MONOGRAMA ? nomeCurto(modelo.nome) : modelo.nome} · conta ${isDemo ? 'demo' : 'real'}`}</b>
+            <b>{passo === 'escolha' ? 'Escolha a sua I.A.' : TEM_MONOGRAMA ? nomeCurto(modelo.nome) : modelo.nome}</b>
+            {passo !== 'escolha' && <span className="plv-titulo-sub">{modelo.chamada} · {nomeAtivo}</span>}
           </div>
+          <span className={`plv-conta ${isDemo ? 'demo' : 'real'}`}>{isDemo ? 'Demo' : 'Real'}</span>
           <button type="button" className="plv-fechar" onClick={onCancelar} disabled={ligando} aria-label="Fechar o preparo"><IconeFechar /></button>
         </div>
+        {/* computador: os 3 passos com nome */}
         <ol className="plv-passos" aria-label={`Passo ${ordem + 1} de 3`}>
           {PASSOS.map((p, i) => (
             <li key={p.id} className={i < ordem ? 'feito' : i === ordem ? 'agora' : ''} aria-current={i === ordem ? 'step' : undefined}>
@@ -348,6 +355,11 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
             </li>
           ))}
         </ol>
+        {/* celular: a barra de 3 segmentos e o passo por extenso */}
+        <div className="plv-progresso" aria-hidden="true">
+          <span>Passo {ordem + 1} de 3 · <b>{PASSOS[ordem].nome}</b></span>
+          <div>{PASSOS.map((p, i) => <i key={p.id} className={i < ordem ? 'feito' : i === ordem ? 'agora' : ''} />)}</div>
+        </div>
       </header>
 
       <div className="plv-corpo" ref={corpo}>

@@ -34,6 +34,13 @@
 .plv-titulo small { color: var(--plv-aco); font-size: 10.5px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
 .plv-titulo b { color: var(--plv-marfim); font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .plv-titulo .nome-robo-gf { background-color: var(--plv-marfim) !important; }
+.plv-titulo-sub { color: var(--plv-aco); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* a conta: selo discreto ao lado do fechar */
+.plv-conta { flex: none; padding: 5px 11px; border-radius: 99px; font-size: 10.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; background: rgba(5, 21, 40, .6); }
+.plv-conta.demo { border: 1px solid rgba(183, 141, 57, .65); color: var(--plv-ouro-claro); }
+.plv-conta.real { border: 1px solid var(--plv-verde); color: var(--plv-verde); }
+/* a foto no topo e a barra de passos compacta: só no celular */
+.plv-topo-foto, .plv-progresso { display: none; }
 .plv-fechar { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 50%; border: 1px solid rgba(156, 177, 199, .3); background: transparent; color: var(--plv-marfim); cursor: pointer; }
 .plv-fechar:hover { background: rgba(255, 255, 255, .08); }
 .plv-fechar svg { width: 16px; height: 16px; }
@@ -235,6 +242,25 @@
 @media (max-width: 640px) {
   .robot-launch-dialog:has(.plv) { width: 100%; height: 100dvh; max-height: 100dvh; border-radius: 0; }
   .plv-topo { padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 0; }
+  /* o topo de embarque: a foto do jato ao fundo, escurecida do lado do texto */
+  .plv-topo.com-foto { padding-bottom: 2px; }
+  .plv-topo.com-foto .plv-topo-foto { display: block; position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: 70% 50%; }
+  .plv-topo.com-foto::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background: linear-gradient(90deg, var(--plv-azul) 0%, rgba(5, 21, 40, .86) 46%, rgba(5, 21, 40, .4) 100%), linear-gradient(180deg, rgba(5, 21, 40, 0) 55%, rgba(5, 21, 40, .9) 100%); }
+  .plv-topo.com-foto .plv-topo-linha { min-height: 92px; align-items: flex-start; }
+  .plv-topo.com-foto .plv-titulo b { font-size: 26px; letter-spacing: -.01em; }
+  .plv-eixo { display: none; }
+  .plv-passos { display: none; }
+  .plv-progresso { display: grid; gap: 8px; padding: 12px 0 14px; }
+  .plv-progresso > span { color: var(--plv-aco); font-size: 12px; }
+  .plv-progresso > span b { color: var(--plv-marfim); font-weight: 700; }
+  .plv-progresso > div { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .plv-progresso i { height: 3px; border-radius: 3px; background: rgba(156, 177, 199, .25); }
+  .plv-progresso i.feito, .plv-progresso i.agora { background: var(--plv-ouro); }
+  .plv-progresso i.agora { box-shadow: 0 0 0 1px rgba(210, 174, 94, .4); }
+  .plv-conta { padding: 4px 9px; font-size: 10px; }
+  /* com a foto no topo, o cartão de foto do plano sai (os valores sobem) */
+  .plv-no-plano .plv-capa { display: none; }
   .plv-eixo { left: 86%; }
   .plv-titulo b { font-size: 15.5px; }
   .plv-passos li { gap: 6px; font-size: 11.5px; }
