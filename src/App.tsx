@@ -25,6 +25,7 @@ import { DerivLogo, IconeElo } from './components/DerivMarca'
 import { LoginScreen } from './components/LoginScreen'
 import { Carregando } from './components/entrada/Carregando'
 import { decolar, liberarPouso } from './core/decolagem'
+import { definirDonoDoPlano } from './core/teeds/planoDoDia'
 import { NovaSenha } from './components/NovaSenha'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 import { startLogin } from './core/deriv/auth'
@@ -114,6 +115,8 @@ export default function App() {
   const connection = useConnection()
   const { symbols, loading: loadingSymbols, error: symbolsError } = useSymbols()
   const teeds = useTeedsAuth()
+  // o plano do dia é de quem está logado (antes de qualquer tela ler)
+  definirDonoDoPlano(teeds.sessao?.usuario.id)
   /*
     A ficha nasce 'pendente' quando veio da fila de cadastro (30/09/2026): a
     conta existe para a senha provisória poder ir por e-mail na hora, mas a
@@ -847,7 +850,7 @@ export default function App() {
       </header>
 
       {MARCA.inicio && teeds.sessao && tela !== 'robos' && (
-        <MiniCabine sessoes={vivasRobos} sessao={teeds.sessao} aoAbrirCabine={() => setTela('robos')}
+        <MiniCabine sessoes={vivasRobos} sessao={teeds.sessao} demo={conta.status === 'logado' ? conta.isDemo : undefined} aoAbrirCabine={() => setTela('robos')}
           aoParar={async (id) => { if (teeds.sessao) await pararNoServidor(teeds.sessao, id) }} />
       )}
       {MARCA.inicio && teeds.sessao && <BarraInferior tela={tela} aoVivoAgora={aoVivoAgora} irPara={(t) => { setVerPerfil(false); setTela(t) }} />}

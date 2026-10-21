@@ -88,6 +88,13 @@ function Anexo({ sessao, caminho, aoAmpliar }: { sessao: SessaoTeeds; caminho: s
   return <button type="button" className="sp-anexo" onClick={() => aoAmpliar(url)} aria-label="Ampliar imagem"><img src={url} alt="Imagem enviada no chat" /></button>
 }
 
+/** O que veio do banco, mais o que só existe nesta tela (enviando), sem repetir a mensagem que já chegou. */
+function mesclar(atuais: Mensagem[], doBanco: Mensagem[], conversaId: string): Mensagem[] {
+  const lidos = new Set(doBanco.map((x) => x.id))
+  const extras = atuais.filter((x) => x.conversaId === conversaId && !lidos.has(x.id) && !(x.enviando && doBanco.some((y) => y.autor === x.autor && y.texto === x.texto)))
+  return [...doBanco, ...extras].sort((a, b) => Date.parse(a.criadaEm) - Date.parse(b.criadaEm))
+}
+
 export function SuporteWidget({ sessao, nome, telaAtual, admin, escondido = false, irPara, onAbrirCaixa }: Props) {
   const uid = sessao.usuario.id
   const [aberto, setAberto] = useState(false)
@@ -169,7 +176,7 @@ export function SuporteWidget({ sessao, nome, telaAtual, admin, escondido = fals
     let vivo = true
     let anterior = -1
     const ver = () => {
-      if (document.hidden || !ler(chaveUsou(uid))) return
+      if (document.hidden) return
       naoLidasDoCliente(sessao).then((n) => {
         if (!vivo) return
         if (anterior >= 0 && n > anterior) setAviso('A equipe respondeu a sua mensagem.')
@@ -214,11 +221,7 @@ export function SuporteWidget({ sessao, nome, telaAtual, admin, escondido = fals
     setNota(atual.avaliacao ?? 0); setAvaliou(!!atual.avaliacao); setComentario('')
     // mescla: a 1ª mensagem pode ter saído antes desta leitura voltar
     const id = atual.id
-    lerMensagens(sessao, id).then((m) => vivo && setMensagens((atuais) => {
-      const lidos = new Set(m.map((x) => x.id))
-      const extras = atuais.filter((x) => x.conversaId === id && !lidos.has(x.id) && !(x.enviando && m.some((y) => y.autor === x.autor && y.texto === x.texto)))
-      return [...m, ...extras].sort((a, b) => Date.parse(a.criadaEm) - Date.parse(b.criadaEm))
-    })).catch(() => undefined)
+    lerMensagens(sessao, id).then((m) => vivo && setMensagens((atuais) => mesclar(atuais, m, id))).catch(() => undefined)
     const canal = assinarMudancas({
       token: sessao.token, canal: `suporte-cliente-${atual.id}`,
       tabelas: [{ tabela: 'suporte_mensagens', filtro: `conversa_id=eq.${atual.id}`, evento: 'INSERT' }, { tabela: 'suporte_conversas', filtro: `id=eq.${atual.id}`, evento: 'UPDATE' }],
@@ -241,7 +244,7 @@ export function SuporteWidget({ sessao, nome, telaAtual, admin, escondido = fals
   useEffect(() => {
     if (!aberto || !atual || vista !== 'conversa' || atual.naoLidasCliente === 0) return
     void atualizarConversa(sessao, atual.id, { nao_lidas_cliente: 0 }).catch(() => undefined)
-    setNaoLidas(0)
+    setNaoLidas((n) => Math.max(0, n - atual.naoLidasCliente))
   }, [aberto, vista, atual?.id, atual?.naoLidasCliente]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // sempre no fim da conversa
@@ -309,6 +312,7 @@ export function SuporteWidget({ sessao, nome, telaAtual, admin, escondido = fals
       let conversa = conversaPronta ?? atual
       // resolvida há mais de 48 h: assunto novo, conversa nova
       if (conversa && conversa.status === 'resolvida' && conversa.resolvidaEm && Date.now() - Date.parse(conversa.resolvidaEm) > REABRE_EM_H * 3_600_000) conversa = null
+      const nova = !conversa
       if (!conversa) {
         conversa = await abrirConversa(sessao, telaAtual, resumoDaTriagem())
         setConversas((l) => [conversa!, ...(l ?? [])])
@@ -321,6 +325,7 @@ export function SuporteWidget({ sessao, nome, telaAtual, admin, escondido = fals
       const salva = await mandarMensagem(sessao, conversa.id, { texto: limpo, anexo, autor: 'cliente' })
       setMensagens((l) => (l.some((x) => x.id === salva.id) ? l.filter((x) => x.id !== temp.id) : l.map((x) => (x.id === temp.id ? salva : x))))
       if (conversa.status === 'resolvida') setAtual({ ...conversa, status: 'aberta', resolvidaEm: null })
+      if (nova) { const id = conversa.id; window.setTimeout(() => { void lerMensagens(sessao, id).then((m) => setMensagens((atuais) => mesclar(atuais, m, id))).catch(() => undefined) }, 1200) }
     } catch (e) {
       setMensagens((l) => l.map((x) => (x.id === temp.id ? { ...x, enviando: false, falhou: true } : x)))
       setErro((e as Error).message)

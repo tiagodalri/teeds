@@ -76,9 +76,11 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
   // CEP completo: o endereço se preenche sozinho
   const cepDigitos = end.cep.replace(/\D/g, '')
   useEffect(() => {
+    // apagar um dígito no meio da busca não pode deixar "Buscando…" preso nem o aviso de antes
+    setBuscandoCep(false); setCepNaoAchado(false)
     if (cepDigitos.length !== 8 || cepDigitos === perfil?.endereco.cep.replace(/\D/g, '')) return
     let vivo = true
-    setBuscandoCep(true); setCepNaoAchado(false)
+    setBuscandoCep(true)
     void buscarCep(cepDigitos).then((a) => {
       if (!vivo) return
       setBuscandoCep(false)

@@ -163,7 +163,14 @@
   .mp-acoes .mp-btn { flex: 1 1 100%; }
   .mp-fichas { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .mp-salvar { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); flex-wrap: wrap; padding: 12px; }
+  /* no celular a barra de salvar flutua FIXA acima da barra de baixo do app
+     (Início, I.A., Manual...): grudada na área que rola, ela ficava escondida atrás dela */
+  .mp-salvar { position: fixed; left: 12px; right: 12px; bottom: calc(10px + var(--sab, env(safe-area-inset-bottom, 0px))); z-index: 160; }
   .mp-salvar span { flex: 1 1 100%; text-align: center; font-size: 13px; }
   .mp-salvar .mp-btn { flex: 1 1 100%; }
+}
+/* até 900 px a barra de baixo do app aparece (tablet também): salvar flutua acima dela */
+@media (max-width: 900px) {
+  body:has(.barra-inferior) .mp-salvar { position: fixed; left: 12px; right: 12px; z-index: 160; bottom: calc(74px + var(--sab, env(safe-area-inset-bottom, 0px))); }
 }
 @media (prefers-reduced-motion: reduce) { .mp-salvar, .mp-trilho i, .mp-btn, .mp-avatar-btn { transition: none; } .mp-girando { animation-duration: 2s; } }

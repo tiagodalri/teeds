@@ -67,7 +67,9 @@ function tocarSom() {
 
 function Anexo({ sessao, caminho }: { sessao: SessaoTeeds; caminho: string }) {
   const [url, setUrl] = useState<string | null>(null)
-  useEffect(() => { let v = true; abrirAnexo(sessao, caminho).then((u) => v && setUrl(u)).catch(() => undefined); return () => { v = false } }, [caminho]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [falhou, setFalhou] = useState(false)
+  useEffect(() => { let v = true; setFalhou(false); abrirAnexo(sessao, caminho).then((u) => v && setUrl(u)).catch(() => v && setFalhou(true)); return () => { v = false } }, [caminho]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (falhou) return <span className="sx-anexo falhou">Não consegui abrir o print</span>
   return url ? <a className="sx-anexo" href={url} target="_blank" rel="noreferrer"><img src={url} alt="Print enviado" /></a> : <span className="sx-anexo carregando" />
 }
 
@@ -400,7 +402,7 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
                   </select>
                   {atual.responsavel !== eu && <button type="button" className="sx-btn" onClick={() => void mudar({ responsavel: eu, responsavel_nome: nomeDaEquipe })}>Assumir</button>}
                   {atual.status === 'resolvida'
-                    ? <button type="button" className="sx-btn" onClick={() => void mudar({ status: 'aberta' })}>Reabrir</button>
+                    ? <button type="button" className="sx-btn" onClick={() => void mudar({ status: 'aberta', aguardando_desde: new Date().toISOString() })}>Reabrir</button>
                     : <button type="button" className="sx-btn ok" onClick={() => void mudar({ status: 'resolvida' })}><Ic d={I.certo} />Encerrar</button>}
                   <button type="button" className={`sx-icone sx-ficha-btn ${verFicha ? 'on' : ''}`} onClick={() => setVerFicha((v) => !v)} aria-label="Ficha do cliente" aria-pressed={verFicha}><Ic d={I.ficha} /></button>
                 </div>
@@ -519,7 +521,10 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
             <div className="sx-ficha-bloco">
               <span className="sx-rot">Outras conversas ({historico.length})</span>
               {historico.length ? historico.slice(0, 6).map((h) => (
-                <button type="button" key={h.id} className="sx-hist" onClick={() => setSelecionada(h.id)}>
+                <button type="button" key={h.id} className="sx-hist" onClick={() => {
+                  // conversa antiga (fora da lista dos últimos 30 dias): entra na lista para abrir
+                  setConversas((l) => (l?.some((c) => c.id === h.id) ? l : [...(l ?? []), h])); setSelecionada(h.id)
+                }}>
                   <b>{h.assunto || 'Conversa'}</b><small>{new Date(h.criadaEm).toLocaleDateString('pt-BR')} · {STATUS[h.status]}{h.avaliacao ? ` · ${h.avaliacao}★` : ''}</small>
                 </button>
               )) : <p>Primeira conversa desta pessoa.</p>}

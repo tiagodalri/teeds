@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { WorkspaceNav } from '../WorkspaceNav'
 import { UserMenu } from '../UserMenu'
 import { MeuPerfil } from './MeuPerfil'
+import { BarraInferior } from '../barra/BarraInferior'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 
 /**
@@ -27,7 +28,8 @@ export default function LabPerfil() {
   // responde as chamadas do perfil com a ficha de exemplo (uma vez só)
   if (!instalado) { instalado = true; const original = window.fetch.bind(window); window.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
     const u = String(url)
-    if (u.includes('/rest/v1/clientes')) return new Response((init?.method ?? 'GET') === 'GET' ? JSON.stringify([ficha]) : null, { status: (init?.method ?? 'GET') === 'GET' ? 200 : 204 })
+    // como o banco: a leitura e a gravação (return=representation) devolvem a ficha; &semficha=1 simula quem não tem ficha
+    if (u.includes('/rest/v1/clientes')) return new Response(JSON.stringify(q.has('semficha') && (init?.method ?? 'GET') !== 'GET' ? [] : [ficha]), { status: 200 })
     if (u.includes('/auth/v1/user') || u.includes('/storage/v1/')) return new Response('{}', { status: 200 })
     return original(url, init)
   }) as typeof fetch }
@@ -45,6 +47,7 @@ export default function LabPerfil() {
       </header>
       <MeuPerfil sessao={sessao} contas={q.get('caso') === 'completo' ? [{ accountId: 'VRTC9001234', balance: 9241.79, currency: 'USD', group: 'row', status: 'active', type: 'demo' }, { accountId: 'CR5512345', balance: 312.4, currency: 'USD', group: 'row', status: 'active', type: 'real' }] : []}
         derivConectada={q.get('caso') === 'completo'} onConectarDeriv={nada} />
+      <BarraInferior tela="perfil" irPara={nada} />
     </div>
   )
 }

@@ -29,6 +29,8 @@ interface Props {
   sessao?: SessaoTeeds | null
   aoAbrirCabine: () => void
   aoParar?: (id: string) => Promise<void> | void
+  /** A conta escolhida no topo: o total soma só ela (demo e real nunca se misturam). */
+  demo?: boolean
 }
 
 type Aviso = { id: string; nome: string; tipo: 'meta' | 'limite' | 'fim'; texto: string; valor: string }
@@ -88,7 +90,7 @@ function Anel({ pct }: { pct: number }) {
   )
 }
 
-export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar }: Props) {
+export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo }: Props) {
   const ocultos = useValoresOcultos()
   const [aberta, setAberta] = useState(lerAberta)
   const [pos, setPos] = useState<Posicao | null>(lerPos)
@@ -154,7 +156,8 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar }: Props) {
     })
   }
   const soltar = () => {
-    if (arrasto.current?.moveu) ignorarClique.current = true
+    // só a pílula vira clique depois de um arrasto; arrastar o cartão aberto não pode engolir o próximo toque
+    if (arrasto.current?.moveu && !aberta) ignorarClique.current = true
     arrasto.current = null
     setArrastando(false)
   }
@@ -190,16 +193,21 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar }: Props) {
 
   const vivas = sessoes.filter((s) => s.estado.rodando || s.estado.emOperacao)
   if (!vivas.length && !avisos.length) return null
-  const moeda = vivas[0]?.moeda ?? sessoes[0]?.moeda ?? 'USD'
-  const total = vivas.reduce((t, s) => t + s.estado.resultado, 0)
-  const metaTotal = vivas.reduce((t, s) => t + (s.config.takeProfit || 0), 0)
+  // o total é de UMA conta: a escolhida no topo; sem robô nela, a que tiver robô no ar
+  const daConta = demo === undefined ? vivas : vivas.filter((s) => s.demo === demo)
+  const somadas = daConta.length ? daConta : vivas.filter((s) => s.demo === vivas[0]?.demo)
+  const moeda = somadas[0]?.moeda ?? sessoes[0]?.moeda ?? 'USD'
+  const total = somadas.reduce((t, s) => t + s.estado.resultado, 0)
+  const metaTotal = somadas.reduce((t, s) => t + (s.config.takeProfit || 0), 0)
   const pctMeta = metaTotal > 0 ? Math.max(0, total) / metaTotal : 0
   const v = (n: number) => (ocultos ? `${moeda} ${MASCARA}` : comSinal(n, moeda))
 
   async function parar(id: string) {
     if (!aoParar) return
     setParando(id)
-    try { await aoParar(id) } finally { setParando(null); setConfirmar(null) }
+    try { await aoParar(id) }
+    catch { setAvisos((l) => [...l, { id: `erro-${id}-${Date.now()}`, nome: 'Não consegui parar agora', tipo: 'fim', texto: 'Tente de novo ou pare pela tela de I.A.', valor: '' }]) }
+    finally { setParando(null); setConfirmar(null) }
   }
 
   return (

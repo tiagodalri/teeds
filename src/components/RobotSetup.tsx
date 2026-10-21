@@ -84,6 +84,18 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
     return escolherModelo && v && IDENTIDADES.some((i) => i.id === v) ? v : null
   })
   useEffect(() => { modeloDaVitrine = null }, [])
+  // a home pediu outro robô com este preparo já aberto (bloco reaproveitado): troca aqui
+  useEffect(() => {
+    if (!escolherModelo) return
+    const trocar = () => {
+      const v = modeloDaVitrine
+      if (!v || !IDENTIDADES.some((i) => i.id === v)) return
+      modeloDaVitrine = null
+      setModelo(identidadeDoRobo(v)); setPasso(0); setConfirmaReal(false)
+    }
+    window.addEventListener('robos:preparar', trocar)
+    return () => window.removeEventListener('robos:preparar', trocar)
+  }, [escolherModelo])
   const [modelo, setModelo] = useState(() => {
     // Preferência já salva no próprio preparo; a calculadora não escreve aqui.
     const pedido = daVitrine ?? (escolherModelo ? lerPreparo().modelo : undefined)
@@ -118,7 +130,11 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   */
   const lvDoPainel = parametros?.entrada.lossVirtual ?? 0
   const comLV = !!dados?.lossVirtualAjustavel && lvDoPainel > 0
-  const [lvEscolhido, setLvEscolhido] = useState<Record<string, number>>(() => lerPreparo().lossVirtual ?? {})
+  // o que esta pessoa escolheu por robô; continuando uma sessão, vale o que ela está rodando
+  const [lvEscolhido, setLvEscolhido] = useState<Record<string, number>>(() => ({
+    ...(lerPreparo().lossVirtual ?? {}),
+    ...(configInicial.lossVirtualCliente !== undefined ? { [identidade.id]: configInicial.lossVirtualCliente } : {}),
+  }))
   const lv = Math.min(LOSS_VIRTUAL_MAXIMO, Math.max(0, Math.trunc(lvEscolhido[modelo.id] ?? lvDoPainel)))
   const escolherLv = (n: number) => setLvEscolhido((m) => ({ ...m, [modelo.id]: Math.min(LOSS_VIRTUAL_MAXIMO, Math.max(0, n)) }))
   // a regra que a revisão descreve já com a escolha da pessoa
@@ -127,6 +143,13 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   const desloc = (comModo ? 1 : 0) + (comLV ? 1 : 0)
   const passoModo = comModo && passo === 0
   const passoLV = comLV && passo === posLV
+  const lvAntes = useRef(comLV)
+  useEffect(() => {
+    if (lvAntes.current === comLV) return
+    lvAntes.current = comLV
+    // a etapa entrou ou saiu antes da atual: a pessoa continua onde estava
+    setPasso((p) => (p > posLV ? p + (comLV ? 1 : -1) : p))
+  }, [comLV]) // eslint-disable-line react-hooks/exhaustive-deps
   const etapa = passo - desloc >= 0 && passo - desloc < ETAPAS_PREPARO.length ? ETAPAS_PREPARO[passo - desloc] : null
   const revisao = passo === ETAPAS_PREPARO.length + desloc
   const minimo = etapa?.key === 'stopLoss' && !isDemo ? Number(valores.valorAoVencer.replace(',', '.')) : etapa?.min ?? 0
@@ -161,7 +184,10 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
     submitted.current = true
     const preparada = configurarPreparo(inicial, valores, modelo.id, modo, parametros)
     if (!preparada) { submitted.current = false; return }
-    const cfg: ConfigEstrategia = comLV ? { ...preparada, lossVirtualCliente: lv } : preparada
+    // sem a etapa (robô sem loss virtual, painel em 0 ou servidor antigo), nada de escolha antiga indo junto
+    const { lossVirtualCliente: _antigo, ...semEscolha } = preparada
+    void _antigo
+    const cfg: ConfigEstrategia = comLV ? { ...semEscolha, lossVirtualCliente: lv } : semEscolha
     const { lossVirtualCliente: _lv, ...paraGuardar } = cfg
     void _lv
     try { localStorage.setItem(CHAVE, JSON.stringify({ cfg: paraGuardar, symbol: ATIVO_DOS_ROBOS, modo, lossVirtual: lvEscolhido })) } catch { /* optional browser preferences */ }

@@ -26,7 +26,28 @@ export interface PlanoDoDia {
   em: string
 }
 
-const CHAVE = `${MARCA.id}.plano-do-dia`
+/*
+  Um plano por pessoa NESTE aparelho (revisão de 21/10/2026): com a chave só
+  da marca, quem entrasse depois no mesmo celular via o plano de quem saiu, e
+  a sincronização ainda o subia para a conta errada. O App diz quem está
+  logado (definirDonoDoPlano) antes de qualquer tela ler o plano.
+*/
+const LEGADO = `${MARCA.id}.plano-do-dia`
+let dono: string | null = null
+const chave = () => (dono ? `${LEGADO}.${dono}` : null)
+export function definirDonoDoPlano(id: string | null | undefined): void {
+  const novo = id || null
+  if (novo === dono) return
+  dono = novo
+  const k = chave()
+  if (!k) return
+  // o plano de antes desta mudança (sem dono) passa a ser de quem entrar primeiro, uma vez
+  try {
+    const antigo = localStorage.getItem(LEGADO)
+    if (antigo && !localStorage.getItem(k)) localStorage.setItem(k, antigo)
+    if (antigo) localStorage.removeItem(LEGADO)
+  } catch { /* sem armazenamento */ }
+}
 const CAMPO_NA_CONTA = `plano_do_dia_${MARCA.id}`
 const valido = (p: unknown): p is PlanoDoDia => {
   const x = p as PlanoDoDia | null
@@ -34,14 +55,18 @@ const valido = (p: unknown): p is PlanoDoDia => {
 }
 
 export function planoDoDia(): PlanoDoDia | null {
+  const k = chave()
+  if (!k) return null
   try {
-    const p = JSON.parse(localStorage.getItem(CHAVE) || 'null')
+    const p = JSON.parse(localStorage.getItem(k) || 'null')
     return valido(p) ? p : null
   } catch { return null }
 }
 
 function guardarAqui(p: PlanoDoDia) {
-  try { localStorage.setItem(CHAVE, JSON.stringify(p)) } catch { /* sem armazenamento: vale só agora */ }
+  const k = chave()
+  if (!k) return
+  try { localStorage.setItem(k, JSON.stringify(p)) } catch { /* sem armazenamento: vale só agora */ }
 }
 
 export function guardarPlanoDoDia(p: Omit<PlanoDoDia, 'em'>, sessao?: SessaoTeeds | null): PlanoDoDia {
@@ -71,6 +96,7 @@ export function planoSimples(metaUsd: number, limiteUsd: number, sessao?: Sessao
 
 /** Traz o plano da conta; se for mais novo que o deste aparelho, ele passa a valer aqui também. */
 export async function sincronizarPlanoDoDia(sessao: SessaoTeeds): Promise<PlanoDoDia | null> {
+  definirDonoDoPlano(sessao.usuario.id)
   try {
     const r = await fetch(`${SUPABASE.url}/auth/v1/user`, { headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}` } })
     if (!r.ok) return planoDoDia()

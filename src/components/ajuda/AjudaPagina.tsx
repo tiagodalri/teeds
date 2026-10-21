@@ -38,7 +38,10 @@ function Resposta({ p, aoIr, suporte }: { p: Pergunta; aoIr: (t: string) => void
       <div className="aj-resposta-fim">
         {p.ir && <button type="button" className="aj-ir" onClick={() => aoIr(p.ir!.tela)}>{p.ir.rotulo}<Ic d="M9 6l6 6-6 6" /></button>}
         <div className="aj-voto" role="group" aria-label="Esta resposta ajudou?">
-          {voto ? <span className={voto}>{voto === 'sim' ? 'Que bom! Obrigado.' : suporte ? 'Abrimos o chat para você.' : 'Obrigado pelo aviso.'}</span> : (
+          {voto === 'nao' && suporte
+            // o "Não" fica lembrado, mas o caminho para a equipe continua aberto (antes sumia para sempre)
+            ? <button type="button" className="nao" onClick={() => abrirSuporte({ tema: TEMA_DA_CATEGORIA[p.categoria] ?? 'outro', resposta: p.pergunta, faq: p.id })}>Falar com a equipe</button>
+            : voto ? <span className={voto}>{voto === 'sim' ? 'Que bom! Obrigado.' : 'Obrigado pelo aviso.'}</span> : (
             <><span>Ajudou?</span><button type="button" onClick={() => votar('sim')}>Sim</button><button type="button" onClick={() => votar('nao')}>Não</button></>
           )}
         </div>

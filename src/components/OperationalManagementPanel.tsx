@@ -42,7 +42,7 @@ export function OperationalManagementPanel() {
   // Guarda só depois que a pessoa mexe (abrir a tela não conta como "definiu a meta").
   const mexeu = useRef(false)
   useEffect(() => {
-    if (!mexeu.current) { mexeu.current = true; if (!guardado) return }
+    if (!mexeu.current) { mexeu.current = true; return }
     if (valido) guardarPlanoDoDia({ banca, entrada, limite, meta, percentual, metaUsd: objetivo, limiteUsd: teto })
   }, [banca, entrada, limite, meta, percentual]) // eslint-disable-line react-hooks/exhaustive-deps
   const linhas = useMemo(() => {

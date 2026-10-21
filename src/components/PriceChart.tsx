@@ -150,6 +150,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
     então o preço atual continua sempre à vista; 1 = automático.
   */
   const [escalaY, setEscalaY] = useState(1)
+  useEffect(() => { setEscalaY(1) }, [symbol, symbolName])
   const eixo = useRef<{ y: number; escala: number } | null>(null)
   const range = useMemo(() => {
     const base = priceRange(view.items)

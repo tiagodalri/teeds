@@ -58,7 +58,7 @@ function contexto(): AudioContext | null {
 function destravar() {
   const c = contexto()
   if (!c) return
-  if (c.state === 'suspended') void c.resume().catch(() => undefined)
+  if (c.state !== 'running') void c.resume().catch(() => undefined)
   try {
     const b = c.createBuffer(1, 1, 22050)
     const s = c.createBufferSource()
@@ -86,7 +86,7 @@ export function tocarSom(som: Som, forcar = false): void {
   ultimaVez[grupo] = agora
   const c = contexto()
   if (!c) return
-  if (c.state === 'suspended') void c.resume().catch(() => undefined)
+  if (c.state !== 'running') void c.resume().catch(() => undefined)
   SINTESE[som](c, c.destination, c.currentTime + 0.01)
 }
 
@@ -200,9 +200,13 @@ export function operacaoTerminou(id: number | string, lucro: number, opcoes: { v
   if (tocados.has(id)) return
   const viu = opcoes.vistoAberto ?? abertosVistos.has(id)
   const recente = opcoes.quando === undefined || opcoes.quando >= inicio - 2000
+  // quem não viu a operação aberta não decide por ninguém: o outro caminho (o
+  // histórico do robô, que viu) ainda pode tocar. Só fica marcada quando tocou
+  // ou quando é do passado.
+  if (!recente || !lucro) { tocados.add(id); return }
+  if (!viu) return
   tocados.add(id)
   abertosVistos.delete(id)
   if (tocados.size > 2000) tocados.clear()
-  if (!viu || !recente || !lucro) return
   tocarSom(lucro > 0 ? 'ganho' : 'perda')
 }

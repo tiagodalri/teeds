@@ -166,7 +166,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
           </div>
         </div>
 
-        <InstrumentoDoDia plano={d.plano} resultado={h ? h.resultado : null} moeda={moeda} ocultos={ocultos}
+        <InstrumentoDoDia key={d.plano ? `${d.plano.meta}|${d.plano.limite}` : 'sem-plano'} plano={d.plano} resultado={h ? h.resultado : null} moeda={moeda} ocultos={ocultos}
           ultimoPasso={soFaltaOPlano} aoSalvar={aoSalvarPlano} aoVerIas={() => aoIr('robos')} />
       </section>
 

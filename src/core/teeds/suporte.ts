@@ -8,6 +8,7 @@
  * prioridade, os contadores e a 1ª resposta automática saem de um gatilho.
  */
 import { SERVIDOR, SUPABASE } from './config'
+import { ehImagem, reduzirImagem } from '../imagem'
 import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
 import type { ResumoDaTriagem } from './triagem'
@@ -154,23 +155,15 @@ export async function statusDoSuporte(sessao: SessaoTeeds): Promise<{ online: bo
 
 // ------------------------------------------------------------------ anexos (prints)
 
-/** Reduz o print no aparelho (até 1600 px, webp) e sobe para a pasta da conversa. */
+/** Reduz o print no aparelho (até 1600 px; WEBP ou JPEG, conforme o navegador) e sobe para a pasta da conversa. */
 export async function enviarAnexo(sessao: SessaoTeeds, conversa: Conversa, arquivo: File): Promise<string> {
-  if (!arquivo.type.startsWith('image/')) throw new Error('Mande uma imagem (print da tela, JPG ou PNG).')
-  const url = URL.createObjectURL(arquivo)
-  let blob: Blob
-  try {
-    const img = await new Promise<HTMLImageElement>((ok, falhou) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => falhou(new Error('Não consegui abrir essa imagem.')); i.src = url })
-    const escala = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight))
-    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * escala); c.height = Math.round(img.naturalHeight * escala)
-    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height)
-    blob = await new Promise<Blob>((ok, falhou) => c.toBlob((b) => (b ? ok(b) : falhou(new Error('Não consegui preparar a imagem.'))), 'image/webp', 0.85))
-  } finally { URL.revokeObjectURL(url) }
-  const caminho = `${conversa.marca}/${conversa.id}/${crypto.randomUUID()}.webp`
+  if (!ehImagem(arquivo)) throw new Error('Mande uma imagem (print da tela, JPG ou PNG).')
+  const { blob, tipo, ext } = await reduzirImagem(arquivo, 1600, false, 0.85)
+  const caminho = `${conversa.marca}/${conversa.id}/${crypto.randomUUID()}.${ext}`
   const r = await fetch(`${SUPABASE.url}/storage/v1/object/suporte/${caminho}`, {
-    method: 'POST', headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'image/webp' }, body: blob,
+    method: 'POST', headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': tipo }, body: blob,
   })
-  if (!r.ok) throw new Error('Não consegui enviar a imagem agora. Tente de novo.')
+  if (!r.ok) throw new Error(r.status === 413 ? 'A imagem ficou grande demais. Mande um print da tela.' : 'Não consegui enviar a imagem agora. Tente de novo.')
   return caminho
 }
 

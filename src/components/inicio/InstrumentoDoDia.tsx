@@ -23,7 +23,12 @@ const arco = (de: number, ate: number) => {
   return `M${a.x.toFixed(2)} ${a.y.toFixed(2)} A${R} ${R} 0 0 1 ${b.x.toFixed(2)} ${b.y.toFixed(2)}`
 }
 const n2 = (n: number) => Math.abs(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const ler = (s: string) => Number(s.replace(/\./g, '').replace(',', '.'))
+/** "25,50", "1.000,50" e também "10.5" (teclado com ponto): ponto só é milhar quando há vírgula ou 3 dígitos depois. */
+const ler = (s: string) => {
+  const t = s.trim().replace(/\s/g, '')
+  if (t.includes(',')) return Number(t.replace(/\./g, '').replace(',', '.'))
+  return /^\d{1,3}(\.\d{3})+$/.test(t) ? Number(t.replace(/\./g, '')) : Number(t)
+}
 const ATALHOS_META = [10, 25, 50, 100]
 const ATALHOS_LIMITE = [5, 15, 25, 50]
 

@@ -277,3 +277,5 @@ body:has(.av-pilula) .sp-painel { bottom: calc(140px + var(--sab, 0px)); }
 .sp-resumo span { color: var(--sp-ouro); font-size: 10.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .sp-resumo b { font-size: 12.5px; font-weight: 600; line-height: 1.4; }
 @media (prefers-reduced-motion: reduce) { .sp-pergunta { animation: none; } .sp-temas button { transition: none; } }
+/* revisão 21/10/2026: no celular, campo com menos de 16 px faz o iPhone dar zoom ao tocar */
+@media (max-width: 700px) { .sp-fim textarea { font-size: 16px; } }

@@ -165,7 +165,7 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, vi
   const IDS = ['dolar', 'ibovespa', 'sp500', 'bitcoin']
   const d: DadosDoInicio = {
     nome,
-    conta: { conectada: conta.conectada, demo: conta.demo, saldo: conta.saldo ?? 0, moeda: conta.moeda || 'USD' },
+    conta: { conectada: conta.conectada, demo: conta.demo, saldo: conta.saldo, moeda: conta.moeda || 'USD' },
     hoje,
     plano: planoValido,
     frota,
