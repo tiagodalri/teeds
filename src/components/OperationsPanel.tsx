@@ -7,6 +7,9 @@ import { StatementPanel } from './StatementPanel'
 import { DerivDesconectada } from './DerivDesconectada'
 import { MARCA } from '../marca'
 import { NomeDoRobo } from './NomeDoRobo'
+import { traduzirErro } from '../core/deriv/erros'
+import { dataCurta } from '../core/datas'
+import { dinheiro } from '../core/dinheiro'
 
 interface Props {
   socket: TeedsSocket | null
@@ -25,14 +28,14 @@ const NOMES: Record<string, string> = {
   CALL: 'Subir', PUT: 'Descer', ONETOUCH: 'Toca', NOTOUCH: 'Não toca',
 }
 
-const din = (v: number, m = 'USD') =>
-  `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const din = (v: number, m = 'USD') => dinheiro(v, m)
+/** Só o número (a coluna já diz que é dinheiro): 1.234,56. */
+const num = (v: number) => dinheiro(v, '').trim()
 
 const hora = (e: number) =>
   new Date(e * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
-const dia = (e: number) =>
-  new Date(e * 1000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+const dia = (e: number) => dataCurta(new Date(e * 1000))
 
 export function OperationsPanel({
   socket, logado, moeda, symbols = [], pulso = 0,
@@ -60,7 +63,7 @@ export function OperationsPanel({
       })
       setOps(lista)
     } catch (e) {
-      setErro((e as Error).message)
+      setErro(traduzirErro((e as Error).message))
     } finally {
       setCarregando(false)
       setProgresso(null)
@@ -117,13 +120,18 @@ export function OperationsPanel({
   const r = useMemo(() => resumir(filtradas), [filtradas])
 
   function baixarCSV() {
-    const blob = new Blob(['﻿' + paraCSV(filtradas)], { type: 'text/csv;charset=utf-8' })
+    const blob = new Blob(['﻿' + paraCSV(filtradas, {
+      ativo: nomeAtivo,
+      robo: (o) => origem(o).nome,
+      tipo: (t) => NOMES[t] ?? t,
+    })], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = `${MARCA.id}-operacoes-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
-    URL.revokeObjectURL(url)
+    // o Safari ainda está lendo o arquivo quando o click volta: libera depois
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   if (!logado) {
@@ -145,7 +153,7 @@ export function OperationsPanel({
           <h2>Operações</h2>
           <p className="ger-sub">
             {aba === 'contratos'
-              ? 'Cada contrato negociado — pelos robôs e por você'
+              ? 'Cada contrato negociado, pelos robôs e por você'
               : 'Todo o dinheiro que entrou e saiu da conta'}
           </p>
           <div className="segmented sub-abas">
@@ -249,7 +257,7 @@ export function OperationsPanel({
                     {o.ticks > 0 && <em> · {o.ticks}t</em>}
                   </td>
                   <td className="ops-ativo">{nomeAtivo(o.ativo)}</td>
-                  <td className="num">{o.valor.toFixed(2)}</td>
+                  <td className="num">{num(o.valor)}</td>
                   <td className="num ops-spot">
                     {o.entrada?.toFixed(o.pipSize) ?? '—'}
                     {ehDigito && o.digitoEntrada !== null && <b className="dig-chip">{o.digitoEntrada}</b>}
@@ -266,7 +274,7 @@ export function OperationsPanel({
                     </span>
                   </td>
                   <td className={`num ${o.lucro >= 0 ? 'ganho' : 'perda'}`}>
-                    {o.lucro >= 0 ? '+' : '−'}{Math.abs(o.lucro).toFixed(2)}
+                    {o.lucro >= 0 ? '+' : '−'}{num(Math.abs(o.lucro))}
                   </td>
                 </tr>
               )

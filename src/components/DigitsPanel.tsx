@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { publicSocket, type TeedsSocket } from '../core/deriv/client'
 import { chanceTeorica, TIPOS_DIGITO, type DigitContract } from '../core/deriv/digits'
 import { traduzirErro } from '../core/deriv/erros'
+import { dinheiro, dinheiroComSinal } from '../core/dinheiro'
 import { useDigits } from '../hooks/useDigits'
 
 interface Props {
@@ -179,7 +180,7 @@ export function DigitsPanel(props: Props) {
             <button key={t} className={ticks === t ? 'on' : ''} onClick={() => setTicks(t)}>{t}</button>
           ))}
         </div>
-        <p className="dig-nota">em ticks — cada tick é uma nova cotação</p>
+        <p className="dig-nota">em ticks: cada tick é uma nova cotação</p>
       </div>
 
       {/* ---------- resumo e compra ---------- */}
@@ -194,13 +195,13 @@ export function DigitsPanel(props: Props) {
           </div>
           <div>
             <span className="rot">Se ganhar</span>
-            <strong>{payout !== null ? `${moeda} ${payout.toFixed(2)}` : erroCotacao ? '—' : '…'}</strong>
+            <strong>{payout !== null ? dinheiro(payout, moeda) : erroCotacao ? '—' : '…'}</strong>
           </div>
           <div>
             <span className="rot">Lucro</span>
             <strong className={lucro !== null && lucro > 0 ? 'ganho' : ''}>
               {lucro !== null
-                ? `+${lucro.toFixed(2)}${stake > 0 ? ` · ${((lucro / stake) * 100).toFixed(0)}%` : ''}`
+                ? `${dinheiroComSinal(lucro, moeda)}${stake > 0 ? ` · ${((lucro / stake) * 100).toFixed(0)}%` : ''}`
                 : '—'}
             </strong>
           </div>
@@ -219,7 +220,7 @@ export function DigitsPanel(props: Props) {
                 ? motivoBloqueio
                 : confirmando === tipoSel
                   ? 'Confirmar (dinheiro real)'
-                  : `Comprar por ${moeda} ${stake.toFixed(2)}`}
+                  : `Comprar por ${dinheiro(stake, moeda)}`}
         </button>
       </div>
     </div>

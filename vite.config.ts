@@ -151,6 +151,16 @@ function aberturaDoApp(): string {
    Só telas sem resultado de operação: nada de sessão de exemplo com ganho. */
 const ROTULO_DA_TELA: Record<string, string> = { entrar: 'Entrar na plataforma', robos: 'Escolha o seu robô e inicie as operações', 'sala-de-aula': 'Sala de aula com o treinamento completo' }
 const NOME_CURTO: Record<string, string> = { teeds: 'Teeds', omni: 'OMNI', globalfly: 'GlobalFly' }
+// As fontes de cada marca entram direto no <head>, junto com o HTML: antes a
+// da GlobalFly e a da OMNI vinham por @import de dentro do CSS principal, e o
+// navegador só as descobria depois de baixar os 580 KB de estilo. A Cinzel
+// (assinatura da Teeds) não vai para a GlobalFly, que não a usa.
+const fonte = (familias: string) => `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${familias}&display=swap" />`
+const FONTES_DA_MARCA: Record<string, string> = {
+  teeds: fonte('family=Cinzel:wght@500;600'),
+  omni: fonte('family=Cinzel:wght@500;600&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700'),
+  globalfly: fonte('family=Arimo:wght@400;500;600;700'),
+}
 
 export default defineConfig({
   base: MARCA.base,
@@ -174,6 +184,7 @@ export default defineConfig({
             .replaceAll('%MARCA%', MARCA.id)
             .replaceAll('%THEME%', FUNDO_DA_MARCA[MARCA.id] ?? '#090a0d')
             .replaceAll('%NOME%', NOME_CURTO[MARCA.id] ?? MARCA.nome)
+            .replace('%FONTES%', FONTES_DA_MARCA[MARCA.id] ?? FONTES_DA_MARCA.teeds)
             .replace('%ABERTURA%', aberturaDoApp())
             .replace('</head>', `${telasDeAbertura()}</head>`),
       },
@@ -214,6 +225,8 @@ export default defineConfig({
           rmSync(join(SAIDA, `fundos-${outra.id}`), { recursive: true, force: true })
           // Fotos da vitrine de robôs (robos-globalfly/...): só no site da marca.
           rmSync(join(SAIDA, `robos-${outra.id}`), { recursive: true, force: true })
+          // Cenas do login (login-globalfly/...): só no site da marca.
+          rmSync(join(SAIDA, `login-${outra.id}`), { recursive: true, force: true })
           // As telas da landing sao capturadas por marca: as da outra nao entram neste site.
           const telas = join(destinoCaptura, 'plataforma')
           if (existsSync(telas)) for (const arquivo of readdirSync(telas)) if (arquivo.startsWith(`${outra.id}-`)) rmSync(join(telas, arquivo), { force: true })
@@ -231,6 +244,9 @@ export default defineConfig({
         // Sai da tabela de marcas, nao de um arquivo escrito a mao: dominio
         // trocado num lugar so.
         writeFileSync(join(SAIDA, 'CNAME'), new URL(MARCA.redirectUri).hostname + '\n')
+        // Endereço que não existe (/robos, /aulas...) cai no app em vez do 404 cru do GitHub:
+        // a primeira parte do caminho vira a tela pedida (?tela=), o app ignora o que não conhece.
+        writeFileSync(join(SAIDA, '404.html'), `<!doctype html><meta charset="utf-8"><title>${NOME_CURTO[MARCA.id] ?? MARCA.nome}</title><script>(function(){var p=location.pathname.split('/').filter(Boolean)[0]||'';var q=location.search?location.search.slice(1):'';var t=/^[a-z]+$/.test(p)?'tela='+p:'';location.replace('/'+((t||q)?'?'+[t,q].filter(Boolean).join('&'):'')+location.hash)})()</script>`)
 
         const pwaDir = `pwa-${MARCA.id}`
         const fundo = FUNDO_DA_MARCA[MARCA.id] ?? '#090a0d'
@@ -280,6 +296,9 @@ export default defineConfig({
 
         const essenciais = readdirSync(join(SAIDA, 'assets'))
           .filter((arquivo) => /\.(?:js|css)$/.test(arquivo))
+          // o conversor de foto do iPhone (1,3 MB) só baixa quando alguém sobe uma foto HEIC:
+          // fora da pré-carga, cada publicação deixa de puxar esse peso em todo app instalado
+          .filter((arquivo) => !/^heic2any\./.test(arquivo))
           .map((arquivo) => `./assets/${arquivo}`)
         const assinatura = createHash('sha256')
           .update(essenciais.map((f) => readFileSync(join(SAIDA, f.slice(2)))).join(''))

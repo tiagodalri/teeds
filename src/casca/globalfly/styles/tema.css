@@ -21,7 +21,7 @@
  * Sem brilho e sem gradiente decorativo: "não usar glow" (pág. 25).
  * Este arquivo VENCE o app.css e só existe no build da GlobalFly.
  */
-@import url('https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&display=swap');
+/* a fonte da marca vem no <head> (vite.config.ts, FONTES_DA_MARCA) */
 
 :root {
   --gf-azul: #051528;

@@ -249,8 +249,12 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
         ctx.moveTo(Math.round(x) + 0.5, plot.y)
         ctx.lineTo(Math.round(x) + 0.5, plot.y + plot.h)
         ctx.stroke()
+        // a hora que não cabe inteira na borda (ex.: "1:03" cortado) fica de fora; a linha continua
+        const hora = formatClock(items[i].epoch)
+        const meia = ctx.measureText(hora).width / 2
+        if (x - meia < plot.x - 2 || x + meia > plot.x + plot.w + 2) continue
         ctx.fillStyle = T.muted
-        ctx.fillText(formatClock(items[i].epoch), x, plot.y + plot.h + 7)
+        ctx.fillText(hora, x, plot.y + plot.h + 7)
       }
 
       // --- serie (recortada na área do gráfico: com a escala dos preços

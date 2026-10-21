@@ -131,7 +131,7 @@ export class TeedsSocket {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
     this.pending.forEach((p) => {
       clearTimeout(p.timer)
-      p.reject(new Error('Conexao encerrada'))
+      p.reject(new Error('Conexão encerrada'))
     })
     this.pending.clear()
     this.streams.clear()
@@ -260,7 +260,7 @@ export class TeedsSocket {
   ): Promise<DerivMessage> {
     if (opts.imediato && this.ws?.readyState !== WebSocket.OPEN) {
       return Promise.reject(new Error(
-        '[LinhaFechada] A linha com a Deriv não está aberta agora — nada foi enviado. Aguarde reconectar e tente de novo.',
+        '[LinhaFechada] A linha com a Deriv não está aberta agora. Nada foi enviado. Aguarde reconectar e tente de novo.',
       ))
     }
 
@@ -286,7 +286,7 @@ export class TeedsSocket {
    */
   subscribe(request: Record<string, unknown>, handler: Handler): () => void {
     if (this.streams.size >= LIMITS.maxSubscriptions) {
-      throw new Error(`Limite de ${LIMITS.maxSubscriptions} assinaturas por conexao atingido`)
+      throw new Error(`Limite de ${LIMITS.maxSubscriptions} assinaturas por conexão atingido`)
     }
 
     const req_id = this.nextId()

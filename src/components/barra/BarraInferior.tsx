@@ -12,7 +12,7 @@ const ITENS: Array<{ id: WorkspacePage | 'mais'; rotulo: string; d: string }> = 
   { id: 'robos', rotulo: 'I.A.', d: 'M5 7h14v13H5zM12 3v4M8 12h1m6 0h1M9 16h6' },
   { id: 'operar', rotulo: 'Manual', d: 'M3 17l5-6 4 3 9-11M16 3h5v5' },
   { id: 'aulas', rotulo: 'Aulas', d: 'M3 5h7l2 2 2-2h7v15h-7l-2 1-2-1H3zM12 7v14' },
-  { id: 'mais', rotulo: 'Mais', d: 'M5 12h.01M12 12h.01M19 12h.01' },
+  { id: 'mais', rotulo: 'Mais', d: 'M5.5 4h3A1.5 1.5 0 0 1 10 5.5v3A1.5 1.5 0 0 1 8.5 10h-3A1.5 1.5 0 0 1 4 8.5v-3A1.5 1.5 0 0 1 5.5 4zM15.5 4h3A1.5 1.5 0 0 1 20 5.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 14 8.5v-3A1.5 1.5 0 0 1 15.5 4zM5.5 14h3a1.5 1.5 0 0 1 1.5 1.5v3A1.5 1.5 0 0 1 8.5 20h-3A1.5 1.5 0 0 1 4 18.5v-3A1.5 1.5 0 0 1 5.5 14zM15.5 14h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3a1.5 1.5 0 0 1-1.5-1.5v-3a1.5 1.5 0 0 1 1.5-1.5z' },
 ]
 const DO_MENU: WorkspacePage[] = ['inicio', 'robos', 'operar', 'aulas']
 

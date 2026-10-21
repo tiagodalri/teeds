@@ -69,7 +69,7 @@ const PRODUTOS: Produto[] = [
         'Está começando e quer sentir o mercado sem arriscar nada',
         'Já opera e quer testar uma estratégia nova antes de usar dinheiro',
         'Perde por ansiedade e precisa treinar a decisão até ela ficar fria',
-        'Quer aumentar o resultado com método, não com sorte',
+        'Quer aumentar o resultado com método, não no improviso',
       ],
       objecao: {
         pergunta: 'Já tem conta demo na corretora. Por que o Simulador?',
@@ -222,7 +222,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
         <div className="market-grade">
           {visiveis.length === 0 && <p role="status">Nenhum produto nesta categoria. <button onClick={() => setCategoria('Todos')}>Ver todos os produtos</button></p>}
           {visiveis.slice(pagina * 3, pagina * 3 + 3).map((produto, indice) => { const aberto = disponivel(produto); return (
-            <article key={produto.id} className={`market-card ${produto.tom} ${aberto ? 'disponivel' : 'esgotado'}`} aria-label={aberto ? undefined : `${produto.nome} — esgotado`}>
+            <article key={produto.id} className={`market-card ${produto.tom} ${aberto ? 'disponivel' : 'esgotado'}`} aria-label={aberto ? undefined : `${produto.nome}, esgotado`}>
               <button className={`market-card-capa ${MARCA.id === 'teeds' && produto.imagem === 'simulador-treino.jpg' ? 'market-card-capa-simulador' : ''}`} onClick={() => abrir(produto)} disabled={!aberto} aria-disabled={!aberto}
                 aria-label={aberto ? `Conhecer ${produto.nome}` : `${produto.nome}: esgotado no momento`}>
                 <ResponsiveImage src={capaProduto(produto.imagem)} alt="" loading="lazy" />

@@ -1,6 +1,7 @@
 import { DERIV } from './config'
 import { MARCA } from '../../marca'
 import { SERVIDOR } from '../teeds/config'
+import { duranteTroca } from '../trocaEmAndamento'
 
 /**
  * Login da Teeds - OAuth 2.0 com PKCE, inteiramente no navegador.
@@ -310,7 +311,10 @@ export async function startLogin(): Promise<'janela' | 'aba'> {
  * Trata o retorno da Deriv. Deve rodar uma vez, ao abrir a pagina.
  * Devolve a sessao quando o login acabou de acontecer, ou null.
  */
-export async function completeLogin(): Promise<AuthSession | null> {
+export function completeLogin(): Promise<AuthSession | null> {
+  return duranteTroca(trocarCodigoDaDeriv)
+}
+async function trocarCodigoDaDeriv(): Promise<AuthSession | null> {
   const url = new URL(window.location.href)
   const code = url.searchParams.get('code')
   const state = url.searchParams.get('state')
@@ -432,7 +436,7 @@ export async function buscarSessaoDoServidor(tokenTeeds: string): Promise<AuthSe
 }
 
 function cleanUrl() {
-  window.history.replaceState({}, '', window.location.pathname)
+  window.history.replaceState(window.history.state, '', window.location.pathname)
 }
 
 // ---------------------------------------------------------------- sessao

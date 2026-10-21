@@ -188,7 +188,7 @@ export function RobotCartao(p: ResumoProps & { onAbrirNaLista: () => void }) {
   const emCurso = e.emCurso
   // O que a linha do contrato diz, em uma frase.
   const contrato = !e.rodando
-    ? (e.emOperacao ? 'Concluindo o contrato em andamento' : e.motivoParada ? `Encerrada — ${e.motivoParada}` : 'Sessão encerrada')
+    ? (e.emOperacao ? 'Concluindo o contrato em andamento' : e.motivoParada ? `Encerrada: ${e.motivoParada}` : 'Sessão encerrada')
     : emCurso ? `Contrato em andamento · ${p.moeda} ${num(emCurso.valor)}`
     : e.aguardando || 'Aguardando sinal da estratégia'
   return (

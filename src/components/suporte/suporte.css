@@ -97,7 +97,7 @@ body:has(.av-pilula) .sp-painel { bottom: calc(140px + var(--sab, 0px)); }
 
 /* boas-vindas */
 .sp-ola { position: relative; display: grid; gap: 12px; padding: 18px 4px 6px; }
-.sp-ola-marca { position: absolute; right: -36px; top: -24px; opacity: .06; }
+.sp-ola-marca { position: absolute; right: -36px; top: -24px; opacity: .05; }
 .sp-ola h3 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
 .sp-ola > p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; max-width: 30ch; }
 .sp-central {

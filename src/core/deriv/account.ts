@@ -87,7 +87,7 @@ export async function fetchTradingSocketUrl(session: AuthSession, accountId: str
     true, // pedir outro endereço de uso único não tem efeito colateral: pode repetir
   )
   const url = body.data?.url
-  if (!url) throw new Error('A Deriv nao devolveu o endereco de conexao')
+  if (!url) throw new Error('A Deriv não devolveu o endereço de conexão')
   return url
 }
 

@@ -55,7 +55,8 @@ export function useTeedsAuth() {
       if (retorno.recado) setRecado(retorno.recado)
       if (!retorno.sessao) return false
       const s = retorno.sessao
-      if (retorno.tipo === 'recovery') setRedefinindo(true)
+      // convite também cai na tela de criar senha: ninguém entra sem ter a própria senha
+      if (retorno.tipo === 'recovery' || retorno.tipo === 'invite') setRedefinindo(true)
       else if (retorno.tipo === 'email_change') setRecado('E-mail trocado. A partir de agora, entre com o endereço novo.')
       else setRecado(`E-mail confirmado. Bem-vindo à ${MARCA.prosa}.`)
       void (async () => {

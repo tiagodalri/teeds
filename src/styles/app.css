@@ -261,7 +261,7 @@ button, input { font: inherit; color: inherit; }
   cursor: pointer;
   transition: transform 0.12s, filter 0.12s, background 0.12s;
 }
-.btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.06); }
+@media (hover: hover) { .btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.06); } }
 .btn:active:not(:disabled) { transform: translateY(0); }
 .btn:disabled { background: var(--desativado); color: var(--muted); cursor: not-allowed; transform: none; }
 
@@ -1833,7 +1833,7 @@ button:has(> .icone-fechar) { display: inline-flex; align-items: center; justify
   transition: transform 0.16s, box-shadow 0.16s, border-color 0.16s;
   box-shadow: var(--shadow);
 }
-.rcard:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(26,34,51,.05), 0 14px 30px -12px rgba(26,34,51,.22); }
+@media (hover: hover) { .rcard:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(26,34,51,.05), 0 14px 30px -12px rgba(26,34,51,.22); } }
 .rcard.on { border-width: 2px; padding: 14px; }
 @media (prefers-reduced-motion: reduce) { .rcard:hover { transform: none; } }
 
@@ -5522,13 +5522,16 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 @media (max-width: 760px) {
   html { background: var(--bg); overscroll-behavior-y: none; }
   body { min-height: 100dvh; padding-bottom: var(--sab); }
+  /* Com a barra inferior, ela já desconta a barra de gestos: sem somar duas vezes. */
+  body:has(.barra-inferior) { padding-bottom: 0; }
   /* Tela de entrada: o cartão de login não pode nascer atrás da barra de status. */
   body .entrada { padding-top: max(24px, calc(var(--sat) + 16px)); padding-bottom: max(24px, calc(var(--sab) + 16px)); }
   /* Toasts e menus flutuantes respeitam a barra de gestos. */
   .market-toast { right: max(12px, var(--sar)); bottom: calc(12px + var(--sab)); }
   .pd.pd-movel { padding-bottom: var(--sab); }
   button, [role='button'], select { touch-action: manipulation; }
-  input, select, textarea { font-size: 16px !important; }
+  /* Fonte mínima de 16px dos campos: fica só no mobile-polish.css (até 900px),
+     que já cobre esta faixa e guarda as exceções dos números grandes. */
   .ger, .ger-vazio { padding-bottom: calc(32px + var(--sab)); }
   .adm-modal-fundo, .aula-modal-fundo, .beta-fundo, .rv-compara-fundo {
     padding-top: max(12px, var(--sat));

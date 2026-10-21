@@ -176,7 +176,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
           {modo === 'entrar' ? (
             <button onClick={() => trocarModo('esqueci')}>Esqueci a senha</button>
           ) : (
-            <button onClick={() => trocarModo('entrar')}>Já tenho conta — entrar</button>
+            <button onClick={() => trocarModo('entrar')}>Já tenho conta: entrar</button>
           )}
         </div>
 

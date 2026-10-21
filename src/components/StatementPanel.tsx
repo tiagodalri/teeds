@@ -7,6 +7,9 @@ import {
 } from '../core/deriv/statement'
 import type { ActiveSymbol } from '../core/deriv/types'
 import { MARCA } from '../marca'
+import { traduzirErro } from '../core/deriv/erros'
+import { dataCurta } from '../core/datas'
+import { dinheiro } from '../core/dinheiro'
 
 interface Props {
   socket: TeedsSocket | null
@@ -22,14 +25,15 @@ const FILTROS: Array<{ id: TipoMovimento | 'todos'; nome: string }> = [
   { id: 'withdrawal', nome: 'Saques' },
 ]
 
-const din = (v: number, m = 'USD') =>
-  `${m} ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const din = (v: number, m = 'USD') => dinheiro(Math.abs(v), m)
+/** Número para o Excel brasileiro: vírgula decimal, sem milhar. */
+const numeroCSV = (v: number) => v.toFixed(2).replace('.', ',')
 
 const quando = (e: number) => {
   const d = new Date(e * 1000)
   return {
     hora: d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-    dia: d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
+    dia: dataCurta(d),
   }
 }
 
@@ -50,7 +54,7 @@ export function StatementPanel({ socket, moeda, symbols = [] }: Props) {
       const { movimentos } = await buscarExtrato(socket, { limite, tipo })
       setMovs(movimentos)
     } catch (e) {
-      setErro((e as Error).message)
+      setErro(traduzirErro((e as Error).message))
     } finally {
       setCarregando(false)
     }
@@ -60,15 +64,24 @@ export function StatementPanel({ socket, moeda, symbols = [] }: Props) {
 
   const r = useMemo(() => resumirExtrato(movs), [movs])
 
+  /** A descrição legível do movimento (a mesma da tabela), nunca o texto cru da Deriv em inglês. */
+  const descricao = (m: Movimento) =>
+    descreverContrato(m.shortcode, nomeAtivo)
+      || (m.tipo === 'deposit' ? 'Depósito na conta'
+        : m.tipo === 'withdrawal' ? 'Saque da conta'
+        : m.descricao || '—')
+  const origem = (m: Movimento) =>
+    m.appId === MARCA.appId ? MARCA.nome : m.appId === '2' ? 'Deriv' : m.appId ? 'Outro app' : ''
+
   function baixarCSV() {
-    const cab = ['data', 'hora', 'tipo', 'descricao', 'valor', 'saldo_depois', 'origem']
+    const cab = ['Data', 'Hora', 'Tipo', 'Descrição', 'Valor', 'Saldo depois', 'Origem']
     const linhas = movs.map((m) => {
       const q = quando(m.quando)
       return [
         q.dia, q.hora, rotuloTipo(m.tipo),
-        `"${m.descricao.replace(/"/g, "'")}"`,
-        m.valor.toFixed(2), m.saldoDepois.toFixed(2),
-        m.appId === MARCA.appId ? MARCA.nome : (m.appId ?? ''),
+        `"${descricao(m).replace(/"/g, "'")}"`,
+        numeroCSV(m.valor), numeroCSV(m.saldoDepois),
+        origem(m),
       ].join(';')
     })
     const blob = new Blob(['﻿' + [cab.join(';'), ...linhas].join('\n')], { type: 'text/csv;charset=utf-8' })
@@ -77,7 +90,8 @@ export function StatementPanel({ socket, moeda, symbols = [] }: Props) {
     a.href = url
     a.download = `${MARCA.id}-extrato-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
-    URL.revokeObjectURL(url)
+    // o Safari ainda está lendo o arquivo quando o click volta: libera depois
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   return (
@@ -145,16 +159,11 @@ export function StatementPanel({ socket, moeda, symbols = [] }: Props) {
                 <tr key={m.id} className={entrada ? 'venceu' : 'perdeu'}>
                   <td className="ops-quando"><b>{q.hora}</b><span>{q.dia}</span></td>
                   <td><span className={`mov mov-${m.tipo}`}>{rotuloTipo(m.tipo)}</span></td>
-                  <td className="ext-desc" title={m.descricao}>
-                    {descreverContrato(m.shortcode, nomeAtivo)
-                      || (m.tipo === 'deposit' ? 'Depósito na conta'
-                        : m.tipo === 'withdrawal' ? 'Saque da conta'
-                        : m.descricao || '—')}
-                  </td>
+                  <td className="ext-desc">{descricao(m)}</td>
                   <td>
                     {m.appId === MARCA.appId
                       ? <span className="tag-robo">{MARCA.prosa}</span>
-                      : <span className="tag-manual">{m.appId === '2' ? 'Deriv' : (m.appId ?? '—')}</span>}
+                      : <span className="tag-manual">{origem(m) || '—'}</span>}
                   </td>
                   <td className={`num ${m.valor > 0 ? 'ganho' : m.valor < 0 ? 'perda' : ''}`}>
                     {m.valor === 0 ? '—' : `${entrada ? '+' : '−'}${din(m.valor, '').trim()}`}

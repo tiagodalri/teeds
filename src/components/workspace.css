@@ -72,6 +72,9 @@
   .workspace-heading { display: flex; min-width: 0; padding-left: 0; border-left: 0; gap: 0; }
   .workspace-heading > span { display: none; }
   .workspace-heading strong { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* sem largura para o nome (o saldo ocupa o topo), o título some em vez de virar "I…": a barra de baixo já diz a página */
+  .workspace-heading { flex: 1 1 0; container-type: inline-size; }
+  @container (max-width: 56px) { .workspace-heading strong { visibility: hidden; } }
   /* Com o botão "Conectar Deriv" no cabeçalho não sobra largura para o título: ele cede a vez. */
   .workspace-app .topbar:has(.btn-deriv) .workspace-heading { display: none; }
   .workspace-app .topbar-right { flex-shrink: 0; }

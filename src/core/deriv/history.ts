@@ -1,5 +1,6 @@
 import { precisaoInformada } from './types'
 import type { TeedsSocket } from './client'
+import { dataCurta } from '../datas'
 
 /**
  * Historico detalhado de operacoes.
@@ -165,28 +166,40 @@ export function resumir(ops: Operacao[]) {
   }
 }
 
+/** Nomes legíveis para o CSV; sem eles, sai o código técnico. */
+export interface RotulosCSV {
+  ativo?: (codigo: string) => string
+  robo?: (o: Operacao) => string
+  tipo?: (contractType: string) => string
+}
+
+/** Número para o Excel brasileiro: vírgula decimal, sem milhar. */
+const virgula = (v: number, casas = 2) => v.toFixed(casas).replace('.', ',')
+/** Texto com aspas, para nome com ponto e vírgula não quebrar a coluna. */
+const texto = (v: string) => `"${v.replace(/"/g, "'")}"`
+
 /** Exporta para CSV, para abrir no Excel. */
-export function paraCSV(ops: Operacao[]): string {
+export function paraCSV(ops: Operacao[], rotulos: RotulosCSV = {}): string {
   const cab = [
-    'data', 'hora', 'robo', 'contrato', 'barreira', 'ativo', 'valor',
-    'entrada', 'digito_entrada', 'saida', 'digito_saida', 'resultado', 'lucro',
+    'Data', 'Hora', 'Robô', 'Contrato', 'Barreira', 'Ativo', 'Valor',
+    'Entrada', 'Dígito da entrada', 'Saída', 'Dígito da saída', 'Resultado', 'Lucro',
   ]
   const linhas = ops.map((o) => {
     const d = new Date(o.compra * 1000)
     return [
-      d.toLocaleDateString('pt-BR'),
+      dataCurta(d),
       d.toLocaleTimeString('pt-BR'),
-      o.runId ?? 'manual',
-      o.tipo,
+      texto(rotulos.robo ? rotulos.robo(o) : (o.runId ?? 'Manual')),
+      texto(rotulos.tipo ? rotulos.tipo(o.tipo) : o.tipo),
       o.barreira ?? '',
-      o.ativo,
-      o.valor.toFixed(2),
-      o.entrada?.toFixed(o.pipSize) ?? '',
+      texto(rotulos.ativo ? rotulos.ativo(o.ativo) : o.ativo),
+      virgula(o.valor),
+      o.entrada !== null ? virgula(o.entrada, o.pipSize) : '',
       o.digitoEntrada ?? '',
-      o.saida?.toFixed(o.pipSize) ?? '',
+      o.saida !== null ? virgula(o.saida, o.pipSize) : '',
       o.digitoSaida ?? '',
       o.ganhou ? 'ganhou' : 'perdeu',
-      o.lucro.toFixed(2),
+      virgula(o.lucro),
     ].join(';')
   })
   return [cab.join(';'), ...linhas].join('\n')

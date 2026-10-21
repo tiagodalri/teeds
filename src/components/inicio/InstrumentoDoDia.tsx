@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MASCARA } from '../../core/privacidade'
+import { simboloMoeda } from '../../core/dinheiro'
 
 /**
  * O instrumento do dia (21/10/2026, "painel de bordo" da home): um arco de
@@ -79,12 +80,12 @@ export function InstrumentoDoDia({ plano, resultado, moeda, ocultos, ultimoPasso
         <div className="in-instr-campos">
           <label>
             <span>Meta do dia</span>
-            <div className="in-instr-campo"><em>{moeda}</em><input inputMode="decimal" value={meta} onChange={(e) => { setMeta(e.target.value); setErro(null) }} aria-label={`Meta do dia em ${moeda}`} /></div>
+            <div className="in-instr-campo"><em>{simboloMoeda(moeda)}</em><input inputMode="decimal" value={meta} onChange={(e) => { setMeta(e.target.value); setErro(null) }} aria-label={`Meta do dia em ${moeda}`} /></div>
             <div className="in-instr-atalhos">{ATALHOS_META.map((v) => <button type="button" key={v} className={ler(meta) === v ? 'on' : ''} onClick={() => setMeta(n2(v))}>{v}</button>)}</div>
           </label>
           <label>
             <span>Limite de perda</span>
-            <div className="in-instr-campo"><em>{moeda}</em><input inputMode="decimal" value={limite} onChange={(e) => { setLimite(e.target.value); setErro(null) }} aria-label={`Limite de perda em ${moeda}`} /></div>
+            <div className="in-instr-campo"><em>{simboloMoeda(moeda)}</em><input inputMode="decimal" value={limite} onChange={(e) => { setLimite(e.target.value); setErro(null) }} aria-label={`Limite de perda em ${moeda}`} /></div>
             <div className="in-instr-atalhos">{ATALHOS_LIMITE.map((v) => <button type="button" key={v} className={ler(limite) === v ? 'on' : ''} onClick={() => setLimite(n2(v))}>{v}</button>)}</div>
           </label>
         </div>

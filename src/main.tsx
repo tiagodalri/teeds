@@ -9,8 +9,32 @@ import './styles/mobile-polish.css'
 import { aplicarTema, temaGuardado } from './core/tema'
 import { MARCA } from './marca'
 import { registrarVisita } from './core/teeds/visitas'
+import { haTrocaEmAndamento } from './core/trocaEmAndamento'
 // Guarda o pedido de instalação do Chrome assim que ele chega (ver o arquivo).
 import './core/appNativo'
+
+/*
+  Os arquivos publicados têm nome fixo. Se uma aba antiga abre uma tela
+  separada (lazy) depois de uma publicação, chega o arquivo novo, que traz o
+  app novo junto: seriam duas cópias do React na mesma página. A segunda cópia
+  não sobe: a página recarrega já na versão nova (revisão de 21/10/2026).
+*/
+const pagina = window as unknown as { __appNoAr?: boolean }
+if (pagina.__appNoAr) {
+  location.reload()
+  throw new Error('Versão nova publicada: recarregando a página.')
+}
+pagina.__appNoAr = true
+// Falha ao baixar uma tela separada (publicação no meio, rede caiu e voltou): recarrega uma vez.
+window.addEventListener('vite:preloadError', (e) => {
+  const chave = 'app.recarregou-por-tela'
+  try {
+    if (Date.now() - Number(sessionStorage.getItem(chave) ?? 0) < 30_000) return
+    sessionStorage.setItem(chave, String(Date.now()))
+  } catch { return }
+  e.preventDefault()
+  location.reload()
+})
 
 // Convite para instalar e aviso de sem conexão: só nas marcas com app nativo.
 const RecursosDeApp = MARCA.appNativo ? lazy(() => import('./components/RecursosDeApp')) : null
@@ -74,7 +98,9 @@ if (abertura) {
 async function conferirVersao() {
   try {
     // no meio de um login (Deriv devolve `code`, Supabase devolve no #) não se mexe
-    if (/[?&](code|access_token)=/.test(location.search) || /(access_token|error)=/.test(location.hash)) return
+    if (/[?&](code|access_token|confirmar)=/.test(location.search) || /(access_token|error)=/.test(location.hash)) return
+    // a URL já foi limpa, mas a troca do código (vale uma vez) ainda está no ar
+    if (haTrocaEmAndamento()) return
     const propria = (document.querySelector('script[src*="assets/"]') as HTMLScriptElement | null)
       ?.src.match(/[?&]v=([a-z0-9]+)/)?.[1]
     if (!propria) return

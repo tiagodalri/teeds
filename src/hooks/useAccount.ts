@@ -380,8 +380,12 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
 
   const login = useCallback(() => {
     setStatus('entrando')
-    const token = tokenTeedsRef.current
     const ida = (async () => {
+      // App instalado abrindo a frio: a sessão da plataforma ainda pode estar
+      // renovando. Sem esperar por ela, o login ia pelo caminho do navegador e,
+      // no iPhone, o código voltava para o Safari e se perdia.
+      for (let i = 0; i < 25 && emAppInstalado() && !tokenTeedsRef.current; i++) await new Promise((ok) => setTimeout(ok, 200))
+      const token = tokenTeedsRef.current
       if (!(emAppInstalado() && token)) {
         if (await startLogin() === 'janela') setLoginNaJanela(true)
         return

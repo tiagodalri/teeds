@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { RadarDaEstrategia } from './RadarDaEstrategia'
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
+import { simboloMoeda } from '../core/dinheiro'
 
 /**
  * O quadro de cima da cabine: a leitura do mercado, o contrato e a fita.
@@ -77,15 +78,15 @@ export function AnaliseAoVivo({ estado, estrategiaId, nomeEstrategia, moeda, gan
 
   // ------------------------------------------------ a leitura, em uma frase
   const frase: { texto: string; tom?: 'forte' | 'fraco' } = !estado.rodando
-    ? { texto: estado.emOperacao ? 'Desligado — concluindo o contrato em andamento.' : 'Sessão encerrada.' }
+    ? { texto: estado.emOperacao ? 'Desligado. Concluindo o contrato em andamento.' : 'Sessão encerrada.' }
     : emCurso
-      ? { texto: 'Contrato aberto — o próximo dígito decide.' }
+      ? { texto: 'Contrato aberto: o próximo dígito decide.' }
       : estado.emOperacao
         ? { texto: 'Enviando a entrada para a Deriv…' }
         : ultima && estado.ticksAnalisados === 0
           ? ultima.ganhou
             ? { texto: `Positiva no dígito ${ultima.digitoSaida ?? '—'}. Voltando a ler o mercado.`, tom: 'forte' }
-            : { texto: `Negativa no dígito ${ultima.digitoSaida ?? '—'}. Próxima entrada: ${moeda} ${num(estado.valorAtual)}.`, tom: 'fraco' }
+            : { texto: `Negativa no dígito ${ultima.digitoSaida ?? '—'}. Próxima entrada: ${simboloMoeda(moeda)} ${num(estado.valorAtual)}.`, tom: 'fraco' }
           : ultimoDigito === undefined
             ? { texto: 'Lendo o histórico recente do mercado…' }
             : { texto: `Saiu ${ultimoDigito}. ${ganhaCom(ultimoDigito) ? 'Dígito em que o robô opera.' : 'O robô continua lendo.'}` }
@@ -100,21 +101,21 @@ export function AnaliseAoVivo({ estado, estrategiaId, nomeEstrategia, moeda, gan
       : !medidor
         ? null
         : amostrando
-          ? { texto: `Montando a amostra — ${(medidor as { amostra: number }).amostra} de ${tamanho}`, classe: '' }
+          ? { texto: `Montando a amostra: ${(medidor as { amostra: number }).amostra} de ${tamanho}`, classe: '' }
           : liberada
             ? { texto: 'Condição atingida', classe: 'ok' }
             : medidor.valor >= medidor.alvo - (medidor.tipo === 'percentual' ? 8 : 1)
               ? { texto: 'Perto da condição', classe: 'perto' }
-              : { texto: medidor.tipo === 'percentual' ? `Abaixo de ${medidor.alvo}% — aguardando` : 'Aguardando a condição', classe: '' }
+              : { texto: medidor.tipo === 'percentual' ? `Abaixo de ${medidor.alvo}%, aguardando` : 'Aguardando a condição', classe: '' }
 
   // ------------------------------------------------ o contrato
   // -1 nada ainda · 0 enviando · 1 em andamento · 2 concluído (o último)
   const passo = emCurso ? 1 : estado.emOperacao ? 0 : ultima ? 2 : -1
   const concluido = passo === 2 ? (ultima!.ganhou ? 'ganhou' : 'perdeu') : ''
   const linhaContrato = emCurso
-    ? { esq: `Comprado às ${relogio(emCurso.comprouEm)}`, dir: `${moeda} ${num(emCurso.valor)}`, classe: '' }
+    ? { esq: `Comprado às ${relogio(emCurso.comprouEm)}`, dir: `${simboloMoeda(moeda)} ${num(emCurso.valor)}`, classe: '' }
     : estado.emOperacao
-      ? { esq: 'Enviando a ordem', dir: `${moeda} ${num(estado.valorAtual)}`, classe: '' }
+      ? { esq: 'Enviando a ordem', dir: `${simboloMoeda(moeda)} ${num(estado.valorAtual)}`, classe: '' }
       : ultima
         ? { esq: `Última · saiu o ${ultima.digitoSaida ?? '—'}`, dir: assinado(ultima.lucro), classe: ultima.ganhou ? 'up' : 'down' }
         : { esq: estado.rodando ? 'Aguardando a condição' : 'Nenhuma operação', dir: '—', classe: '' }
@@ -185,7 +186,7 @@ export function AnaliseAoVivo({ estado, estrategiaId, nomeEstrategia, moeda, gan
         })}
       </div>
       <div className="tv-analise-legenda">
-        <span>Os {tamanho} últimos dígitos do mercado — em verde, os que o {nomeEstrategia} opera</span>
+        <span>Os {tamanho} últimos dígitos do mercado. Em verde, os que o {nomeEstrategia} opera</span>
         {onDigitos && (
           <button type="button" className="tv-ampliar" aria-expanded={digitosAberto} onClick={onDigitos}>
             <svg viewBox="0 0 24 24" aria-hidden="true">{digitosAberto ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zM15.5 15.5L20 20M10.5 7.5v6M7.5 10.5h6" />}</svg>

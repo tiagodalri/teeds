@@ -64,10 +64,12 @@ export function CatalogoProvider({ sessao, children }: {sessao: SessaoTeeds | nu
     setItens(null)
     // Sem sessão não há catálogo: a lista fica vazia (ids) e sem parâmetros (null).
     // Erro de rede segue o comportamento antigo: nenhum robô disponível.
-    const carregar = () => { if (sessao) void consultarCatalogo(sessao).then(r=>{if(vivo)setItens(r)}).catch(()=>{if(vivo)setItens([])}) }
+    // com o app em segundo plano a consulta de 10 s pausa (bateria e dados do celular); volta ao reabrir
+    const carregar = () => { if (sessao && document.visibilityState !== 'hidden') void consultarCatalogo(sessao).then(r=>{if(vivo)setItens(r)}).catch(()=>{if(vivo)setItens([])}) }
     carregar(); const t=setInterval(carregar,10000)
     window.addEventListener('catalogo-alterado',carregar)
-    return ()=>{vivo=false;clearInterval(t);window.removeEventListener('catalogo-alterado',carregar)}
+    document.addEventListener('visibilitychange',carregar)
+    return ()=>{vivo=false;clearInterval(t);window.removeEventListener('catalogo-alterado',carregar);document.removeEventListener('visibilitychange',carregar)}
   },[sessao?.token])
   // A lista de ids só muda quando o catálogo muda: evita efeitos rodando à toa em quem depende dela.
   const valor = useMemo<Catalogo>(() => ({ ids: (itens ?? []).filter(i=>i.ativo).map(i=>i.id), itens }), [itens])

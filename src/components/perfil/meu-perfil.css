@@ -18,9 +18,9 @@
   position: relative; overflow: hidden; display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(260px, 360px); gap: 22px; align-items: center;
   padding: 22px 24px; border: 1px solid var(--mp-linha); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow);
 }
-.mp-topo-marca { position: absolute; right: 26%; top: -70px; opacity: .045; }
+.mp-topo-marca { position: absolute; right: 26%; top: -70px; opacity: .04; }
 .mp-plano { position: relative; overflow: hidden; }
-.mp-plano-marca { position: absolute; right: -30px; bottom: -40px; opacity: .06; }
+.mp-plano-marca { position: absolute; right: -30px; bottom: -40px; opacity: .05; }
 .mp-topo::before { content: ''; position: absolute; inset: 0 0 auto; height: 3px; background: var(--mp-ouro); }
 .mp-avatar { position: relative; width: 104px; height: 104px; outline: none; }
 .mp-avatar > img, .mp-avatar > span {

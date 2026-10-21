@@ -63,7 +63,8 @@ function dominioReferenciador(): string {
 function daURL(): Origem | null {
   const q = new URLSearchParams(location.search)
   const origem = (q.get('utm_source') ?? q.get('origem') ?? '').trim()
-  if (!origem) return null
+  // ?origem=app é a abertura do app instalado (start_url), não uma fonte de tráfego
+  if (!origem || origem === 'app') return null
   return {
     origem,
     meio: (q.get('utm_medium') ?? '').trim(),
@@ -87,7 +88,7 @@ function limparURL() {
     const sujas = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'origem']
     if (!sujas.some((s) => u.searchParams.has(s))) return
     for (const s of sujas) u.searchParams.delete(s)
-    history.replaceState(null, '', u.pathname + (u.search || '') + u.hash)
+    history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash)
   } catch { /* sem history: a URL fica como está, o que não quebra nada */ }
 }
 

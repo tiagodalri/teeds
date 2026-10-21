@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
+import { nomeDoAtivo } from '../core/deriv/market'
 import { useDigits } from '../hooks/useDigits'
 import { IconeFechar } from './IconeFechar'
 import { MARCA } from '../marca'
@@ -199,7 +200,9 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
 
   const trocarJanela = (j: number) => { setJanela(j); guardar(CHAVE_JANELA, j) }
   const maxPct = Math.max(...estat.pct, 1)
-  const ativoCurto = (nomeAtivo ?? ATIVO_DOS_ROBOS).replace(/\s*Index$/i, '')
+  // nunca o código da corretora (R_75): enquanto a lista de ativos não chega, o nome sai do código
+  const nomeCompleto = nomeDoAtivo(nomeAtivo ?? `Volatility ${ATIVO_DOS_ROBOS.replace(/^R_/, '')} Index`)
+  const ativoCurto = MARCA.ativosSemVolatility ? nomeCompleto : nomeCompleto.replace(/\s*Index$/i, '')
 
   const painel = (
     <div ref={caixa} className={`pd ${movel ? 'pd-movel' : ''}`} role="dialog" aria-label="Dígitos ao vivo"

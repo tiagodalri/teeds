@@ -1,6 +1,7 @@
 import type { OpenContract } from '../core/deriv/trading'
 import { Progress } from './Progress'
 import { useClock } from '../hooks/useClock'
+import { dinheiro as emDinheiro, dinheiroComSinal } from '../core/dinheiro'
 
 /** Contagem regressiva ate a expiracao, atualizada a cada segundo. */
 function useCountdown(expiryEpoch: number) {
@@ -75,7 +76,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
   const variacao =
     c.entrySpot !== null && c.currentSpot !== null ? c.currentSpot - c.entrySpot : null
   const selo = SELO[c.status] ?? null
-  const dinheiro = (v: number) => `${c.currency} ${v.toFixed(2)}`
+  const dinheiro = (v: number) => emDinheiro(v, c.currency)
 
   const carimbo = concluido
     ? selo
@@ -139,7 +140,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
         <div>
           <span className="rot">{concluido ? 'Resultado final' : 'Resultado agora'}</span>
           <strong className={ganhando ? 'ganho' : 'perda'}>
-            {ganhando ? '+' : '−'}{c.currency} {Math.abs(c.profit).toFixed(2)}
+            {dinheiroComSinal(c.profit, c.currency)}
           </strong>
           <span className={`pct ${ganhando ? 'ganho' : 'perda'}`}>
             {ganhando ? '+' : '−'}{Math.abs(c.profitPercentage).toFixed(1)}%
@@ -149,7 +150,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
           <span className="rot">{concluido ? 'Pagou' : 'Se ganhar'}</span>
           <strong>{dinheiro(concluido ? c.bidPrice : c.payout)}</strong>
           <span className="sub">
-            {concluido ? `entrada ${dinheiro(c.buyPrice)}` : `lucro ${(c.payout - c.buyPrice).toFixed(2)}`}
+            {concluido ? `entrada ${dinheiro(c.buyPrice)}` : `lucro ${dinheiro(c.payout - c.buyPrice)}`}
           </span>
         </div>
       </div>

@@ -3,21 +3,15 @@ import { useSimulador } from './hooks/useSimulador'
 import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
 import { PositionCard } from './components/PositionCard'
 import { DigitsPanel } from './components/DigitsPanel'
-import { AdminPanel } from './components/AdminPanel'
 import { CatalogoProvider } from './core/teeds/catalogoRobos'
 import { usePreferenciaColuna } from './core/teeds/preferenciaColuna'
 import { useMarcaEmFoco } from './core/teeds/marcaEmFoco'
-import { InsightsPanel } from './components/InsightsPanel'
 import { MonitoramentoBoundary } from './components/MonitoramentoBoundary'
 // O monitoramento é só do admin e pesa: entra no pacote sob demanda, para o
 // pacote que todo cliente baixa continuar do mesmo tamanho.
 const MonitoramentoPanel = lazy(() => import('./components/MonitoramentoPanel').then((m) => ({ default: m.MonitoramentoPanel })))
-import { ManagementPanel } from './components/ManagementPanel'
 import { RobotsPanel } from './components/RobotsPanel'
 import { WorkspaceNav, PAGE_NAMES, type WorkspacePage } from './components/WorkspaceNav'
-import { AulasPanel } from './components/AulasPanel'
-import { OperationalManagementPanel } from './components/OperationalManagementPanel'
-import { MarketplacePanel } from './components/MarketplacePanel'
 import { AccountSwitcher } from './components/AccountSwitcher'
 import { UserMenu } from './components/UserMenu'
 import { ProfilePanel } from './components/ProfilePanel'
@@ -47,6 +41,7 @@ import { formatPrice } from './core/chart/scales'
 import { buyFromProposal, requestProposal, sellContract } from './core/deriv/trading'
 import { LIVES_AO_VIVO, MARCA } from './marca'
 import { IconeFechar } from './components/IconeFechar'
+import { dinheiro, simboloMoeda } from './core/dinheiro'
 import { usePeriodos } from './core/chart/periodos'
 import { conviteRecebido, liveNoAr, podeTreinar, treinoNoAr, treinoPedido, type Live, type TreinoNoAr } from './core/live/api'
 import { IconeAtivo } from './components/IconeAtivo'
@@ -65,7 +60,21 @@ const MercadoPanel = lazy(() => import('./components/MercadoPanel').then((m) => 
 const AjudaPagina = lazy(() => import('./components/ajuda/AjudaPagina').then((m) => ({ default: m.AjudaPagina })))
 const SuporteWidget = lazy(() => import('./components/suporte/SuporteWidget').then((m) => ({ default: m.SuporteWidget })))
 const MeuPerfil = lazy(() => import('./components/perfil/MeuPerfil').then((m) => ({ default: m.MeuPerfil })))
-const InicioPagina = lazy(() => import('./components/inicio/InicioPagina').then((m) => ({ default: m.InicioPagina })))
+// o Início é a primeira tela da GlobalFly: o download começa junto com o app, não depois do primeiro render
+const carregarInicio = () => import('./components/inicio/InicioPagina')
+if (MARCA.inicio) void carregarInicio().catch(() => undefined)
+const InicioPagina = lazy(() => carregarInicio().then((m) => ({ default: m.InicioPagina })))
+// Telas que ninguém vê ao entrar (administração, aulas, loja, gerenciamento) baixam só quando abertas:
+// o app principal fica ~30% menor no celular
+const AdminPanel = lazy(() => import('./components/AdminPanel').then((m) => ({ default: m.AdminPanel })))
+const InsightsPanel = lazy(() => import('./components/InsightsPanel').then((m) => ({ default: m.InsightsPanel })))
+const ManagementPanel = lazy(() => import('./components/ManagementPanel').then((m) => ({ default: m.ManagementPanel })))
+const AulasPanel = lazy(() => import('./components/AulasPanel').then((m) => ({ default: m.AulasPanel })))
+const MarketplacePanel = lazy(() => import('./components/MarketplacePanel').then((m) => ({ default: m.MarketplacePanel })))
+const OperationalManagementPanel = lazy(() => import('./components/OperationalManagementPanel').then((m) => ({ default: m.OperationalManagementPanel })))
+/** "1.234,56", "1234.56" ou "12,5" viram número; vírgula é sempre o decimal. */
+const lerValor = (t: string) => Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t)
+const telaAbrindo = (texto: string) => <div className="ger"><div className="adm-vazio">{texto}</div></div>
 const PlayerDoTreino = lazy(() => import('./components/aovivo/PlayerDoTreino'))
 const PlayerAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.PlayerGlobal })))
 // Gráfico profissional (KLineChart): só baixa para quem vê (hoje, admin da GlobalFly).
@@ -141,6 +150,12 @@ export default function App() {
   const [mostrarColuna, alterarColuna] = usePreferenciaColuna(teeds.sessao?.usuario.id ?? null, adminConfirmado)
   const simulador = useSimulador(teeds.sessao)
   const conta = useAccount({ email: teeds.sessao?.usuario.email, simulador: adminConfirmado || simulador, tokenTeeds: teeds.sessao?.token })
+  // sair é sair de tudo: a autorização da Deriv deste aparelho sai junto com a conta
+  const sairDeTudo = () => {
+    conta.logout()
+    try { localStorage.removeItem(`${MARCA.id}.deriv.dono`) } catch { /* sem armazenamento */ }
+    void teeds.sair()
+  }
   const [verPerfil, setVerPerfil] = useState(false)
   // "Meu perfil" (GlobalFly, 20/10/2026): a foto vai para o menu do usuário
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null)
@@ -165,6 +180,7 @@ export default function App() {
   const [seletorAtivo, setSeletorAtivo] = useState(false)
   const [posicoesAbertas, setPosicoesAbertas] = useState(true)
   const [stake, setStake] = useState(10)
+  const [stakeTexto, setStakeTexto] = useState<string | null>(null)
   const [duration, setDuration] = useState(5)
   const [unidade, setUnidade] = useState<'t' | 's' | 'm'>('m')
   const [comprando, setComprando] = useState<string | null>(null)
@@ -174,7 +190,15 @@ export default function App() {
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
   // GlobalFly abre na home (20/10/2026); as outras marcas, no terminal manual
-  const [tela, setTela] = useState<WorkspacePage>(MARCA.inicio ? 'inicio' : 'operar')
+  // F5 / app voltando do segundo plano: continua na tela em que a pessoa estava (só as telas de cliente)
+  const [tela, setTela] = useState<WorkspacePage>(() => {
+    const padrao: WorkspacePage = MARCA.inicio ? 'inicio' : 'operar'
+    const antes = (history.state as { tela?: WorkspacePage } | null)?.tela
+    const QUE_VOLTAM: WorkspacePage[] = ['inicio', 'operar', 'robos', 'aulas', 'gerenciamento', 'marketplace', 'noticias', 'perfil', 'ajuda']
+    return antes && QUE_VOLTAM.includes(antes) && (antes !== 'inicio' || MARCA.inicio) && (antes !== 'noticias' || MARCA.noticias) ? antes : padrao
+  })
+  const telaAgora = useRef(tela)
+  telaAgora.current = tela
   const [pedirCodigoAssistente, setPedirCodigoAssistente] = useState(false)
   const [assistenteLiberado, setAssistenteLiberado] = useState(assistenteBetaJaLiberado)
   const [payoutBase, setPayoutBase] = useState(19.55)
@@ -360,8 +384,11 @@ export default function App() {
     const aoVoltar = () => { if (document.visibilityState === 'visible') ver() }
     void podeTreinar(teeds.sessao).then((membro) => {
       if (!vivo || !membro) return
-      // a sala de treino já fica baixada: clicar em "Entrar" abre na hora
-      void import('./components/aovivo/AoVivo').catch(() => undefined)
+      // a sala de treino já fica baixada (clicar em "Entrar" abre na hora), mas
+      // depois que a tela de entrada assentou: os 680 KB não disputam a rede com ela
+      const baixarSala = () => void import('./components/aovivo/AoVivo').catch(() => undefined)
+      const ocioso = (window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number }).requestIdleCallback
+      if (ocioso) ocioso(baixarSala, { timeout: 6000 }); else window.setTimeout(baixarSala, 4000)
       ver()
       // Na hora (20/10/2026): o banco avisa quando o admin começa ou encerra, e a
       // plataforma pergunta de novo. A conferência de 15 s fica só de reserva.
@@ -420,8 +447,8 @@ export default function App() {
   }, [tela, admin, membroTreino])
 
   const telaVeioDoVoltar = useRef(false)
+  // voltar, F5 e link direto (?tela=) valem nas três marcas, no navegador e no app instalado
   useEffect(() => {
-    if (!MARCA.appNativo && !MARCA.aoVivo) return
     const u = new URL(location.href)
     // Link de convite da live (?aovivo=<código>): abre o "Ao vivo", mesmo depois do login.
     const convite = LIVES_AO_VIVO ? u.searchParams.get('aovivo') : null
@@ -438,6 +465,8 @@ export default function App() {
     }
     const voltar = (e: PopStateEvent) => {
       const t = (e.state as { tela?: WorkspacePage } | null)?.tela ?? (MARCA.inicio ? 'inicio' : 'operar')
+      // a marca só fica se a tela muda de fato; senão travaria e o próximo passo não entraria no histórico
+      if (t === telaAgora.current) return
       telaVeioDoVoltar.current = true
       setTela(t)
     }
@@ -445,7 +474,6 @@ export default function App() {
     return () => window.removeEventListener('popstate', voltar)
   }, [])
   useEffect(() => {
-    if (!MARCA.appNativo) return
     if (telaVeioDoVoltar.current) { telaVeioDoVoltar.current = false; return }
     const atual = (history.state as { tela?: WorkspacePage } | null)?.tela
     if (atual === tela) return
@@ -504,6 +532,13 @@ export default function App() {
   */
   useEffect(() => {
     if (!teeds.sessao || !conta.session?.accessToken) return
+    // a autorização guardada neste aparelho tem dono: se quem entrou agora é
+    // outra pessoa, ela é descartada e nunca sobe para o cofre de quem entrou
+    const chaveDono = `${MARCA.id}.deriv.dono`
+    let dono: string | null = null
+    try { dono = localStorage.getItem(chaveDono) } catch { /* sem armazenamento */ }
+    if (dono && dono !== teeds.sessao.usuario.id) { conta.logout(); try { localStorage.removeItem(chaveDono) } catch { /* idem */ } return }
+    try { localStorage.setItem(chaveDono, teeds.sessao.usuario.id) } catch { /* idem */ }
     void entregarAutorizacao(teeds.sessao, {
       accessToken: conta.session.accessToken,
       refreshToken: conta.session.refreshToken,
@@ -563,7 +598,7 @@ export default function App() {
     if (achada) {
       marcarManual(achada.contractId)
       setCompraPendente(null)
-      setAviso({ tipo: 'ok', texto: `A entrada de ${moeda} ${achada.valor.toFixed(2)} foi confirmada e está em Posições.` })
+      setAviso({ tipo: 'ok', texto: `A entrada de ${dinheiro(achada.valor, moeda)} foi confirmada e está em Posições.` })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conta.comprasRecentes, compraPendente, manuais])
@@ -642,7 +677,7 @@ export default function App() {
       marcarManual(r.contractId)
       setAviso({
         tipo: 'ok',
-        texto: `Entrada feita: ${moeda} ${r.buyPrice.toFixed(2)} · se ganhar, recebe ${moeda} ${r.payout.toFixed(2)}.`,
+        texto: `Entrada feita: ${dinheiro(r.buyPrice, moeda)} · se ganhar, recebe ${dinheiro(r.payout, moeda)}.`,
       })
     } catch (e) {
       setAviso({ tipo: 'erro', texto: traduzirErro((e as Error).message) })
@@ -658,7 +693,7 @@ export default function App() {
     setAviso(null)
     try {
       const r = await sellContract(conta.socket, contractId, 0)
-      setAviso({ tipo: 'ok', texto: `Posição encerrada por ${moeda} ${r.soldFor.toFixed(2)}.` })
+      setAviso({ tipo: 'ok', texto: `Posição encerrada por ${dinheiro(r.soldFor, moeda)}.` })
     } catch (e) {
       setAviso({ tipo: 'erro', texto: traduzirErro((e as Error).message) })
     } finally {
@@ -701,7 +736,7 @@ export default function App() {
   if (teeds.redefinindo) {
     return (
       <NovaSenha ocupado={teeds.ocupado} erro={teeds.erro} onDefinir={teeds.definirNovaSenha}
-        obrigatoria={false} onSair={() => void teeds.sair()} />
+        obrigatoria={false} onSair={sairDeTudo} />
     )
   }
 
@@ -725,7 +760,7 @@ export default function App() {
           setSituacao(agora)
           return agora !== 'pendente'
         }}
-        aoSair={() => void teeds.sair()}
+        aoSair={sairDeTudo}
       />
     )
   }
@@ -734,7 +769,7 @@ export default function App() {
   if (teeds.status === 'logado' && teeds.precisaTrocarSenha) {
     return (
       <NovaSenha ocupado={teeds.ocupado} erro={teeds.erro} onDefinir={teeds.definirNovaSenha}
-        obrigatoria onSair={() => void teeds.sair()} />
+        obrigatoria onSair={sairDeTudo} />
     )
   }
 
@@ -843,7 +878,7 @@ export default function App() {
           })()}
 
           {teeds.usuario && (
-            <UserMenu usuario={teeds.usuario} onSair={() => void teeds.sair()} foto={fotoPerfil}
+            <UserMenu usuario={teeds.usuario} onSair={sairDeTudo} foto={fotoPerfil}
               onPerfil={() => (MARCA.inicio ? setTela('perfil') : setVerPerfil(true))} />
           )}
         </div>
@@ -985,23 +1020,23 @@ export default function App() {
       ) : tela === 'noticias' && MARCA.noticias ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo as notícias…</div></div>}><MercadoPanel /></Suspense>
       ) : tela === 'aulas' ? (
-        <AulasPanel nome={teeds.usuario?.nome} sessao={teeds.sessao} aoReverTour={MARCA.inicio ? () => setTour('rever') : undefined}
-          aoIr={(t) => setTela(t as WorkspacePage)} treino={MARCA.aoVivo && (membroTreino === true || admin === true) ? { noAr: !!treinoAgora } : null} />
+        <Suspense fallback={telaAbrindo('Abrindo as aulas…')}><AulasPanel nome={teeds.usuario?.nome} sessao={teeds.sessao} aoReverTour={MARCA.inicio ? () => setTour('rever') : undefined}
+          aoIr={(t) => setTela(t as WorkspacePage)} treino={MARCA.aoVivo && (membroTreino === true || admin === true) ? { noAr: !!treinoAgora } : null} /></Suspense>
       ) : tela === 'marketplace' ? (
-        <MarketplacePanel sessao={teeds.sessao} />
+        <Suspense fallback={telaAbrindo('Abrindo o marketplace…')}><MarketplacePanel sessao={teeds.sessao} /></Suspense>
       ) : tela === 'gerenciamento' ? (
-        <CatalogoProvider sessao={teeds.sessao}><OperationalManagementPanel /></CatalogoProvider>
+        <CatalogoProvider sessao={teeds.sessao}><Suspense fallback={telaAbrindo('Abrindo o gerenciamento…')}><OperationalManagementPanel /></Suspense></CatalogoProvider>
       ) : tela === 'monitoramento' && admin === true ? (
           teeds.sessao ? <MonitoramentoBoundary><Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel key={marcaEmFoco} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} /></Suspense></MonitoramentoBoundary> : null
       ) : tela === 'insights' && admin === true ? (
-        teeds.sessao ? <InsightsPanel key={marcaEmFoco} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} /> : null
+        teeds.sessao ? <Suspense fallback={telaAbrindo('Abrindo os insights…')}><InsightsPanel key={marcaEmFoco} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} /></Suspense> : null
       ) : tela === 'gestao' && admin === true ? (
-        teeds.sessao && adminConfirmado ? <AdminPanel abrirSuporte={pedidoCaixa} nomeDaEquipe={teeds.usuario?.nome || ''} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} comissoes={<ManagementPanel
+        teeds.sessao && adminConfirmado ? <Suspense fallback={telaAbrindo('Abrindo a administração…')}><AdminPanel abrirSuporte={pedidoCaixa} nomeDaEquipe={teeds.usuario?.nome || ''} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} comissoes={<ManagementPanel
           session={conta.session} sessaoTeeds={teeds.sessao} contaId={conta.accountId}
           socket={conta.socket} isDemo={conta.isDemo} onReautorizar={() => startLogin()}
           payoutBase={payoutBase} moeda={conta.account?.currency ?? 'USD'} pulso={conta.pulso}
           entrandoNaDeriv={conta.status === 'entrando'} onConectarDeriv={conta.login}
-        />} onNavigate={setTela} /> : null
+        />} onNavigate={setTela} /></Suspense> : null
       ) : (
       <div className="layout layout-operar">
         <main className="main">
@@ -1107,19 +1142,27 @@ export default function App() {
           </div>
 
           <label className="field"><span>Valor da entrada</span>
-            <div className={`input-wrap ${acimaDoSaldo ? 'alerta' : ''}`}><em>{moeda}</em>
-              <input type="number" min={0.35} step={0.01} value={stake}
+            <div className={`input-wrap ${acimaDoSaldo ? 'alerta' : ''}`}><em>{simboloMoeda(moeda)}</em>
+              {/* texto enquanto digita: dá para apagar e escrever (antes o 0,35 voltava na hora);
+                  aceita vírgula ou ponto, e o mínimo da Deriv vale ao sair do campo */}
+              <input type="text" inputMode="decimal" autoComplete="off" value={stakeTexto ?? stake.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
                 onFocus={(e) => e.currentTarget.select()}
-                onChange={(e) => setStake(Math.max(0.35, Number(e.target.value) || 0.35))} />
+                onChange={(e) => {
+                  const t = e.target.value.replace(/[^\d.,]/g, '')
+                  setStakeTexto(t)
+                  const n = lerValor(t)
+                  if (n >= 0.35) setStake(n)
+                }}
+                onBlur={() => { const n = lerValor(stakeTexto ?? ''); if (stakeTexto !== null) setStake(Math.max(0.35, Number.isFinite(n) ? Math.round(n * 100) / 100 : 0.35)); setStakeTexto(null) }} />
             </div>
           </label>
           <div className="trade-atalhos" role="group" aria-label="Valores rápidos">
             {[0.35, 1, 5, 10, 50].map((v) => (
-              <button key={v} type="button" className={stake === v ? 'on' : ''} onClick={() => setStake(v)}>{v}</button>
+              <button key={v} type="button" className={stake === v ? 'on' : ''} onClick={() => { setStake(v); setStakeTexto(null) }}>{v.toLocaleString('pt-BR')}</button>
             ))}
           </div>
           {acimaDoSaldo && conta.balance && (
-            <p className="field-alerta">Acima do seu saldo ({moeda} {conta.balance.amount.toFixed(2)}). A Deriv vai recusar.</p>
+            <p className="field-alerta">Acima do seu saldo ({dinheiro(conta.balance.amount, moeda)}). A Deriv vai recusar.</p>
           )}
 
           {modo === 'direcao' ? (
@@ -1197,7 +1240,7 @@ export default function App() {
               </span>
               {minhas.length > 0 && (
                 <strong className={resultadoAberto >= 0 ? 'ganho' : 'perda'}>
-                  {resultadoAberto >= 0 ? '+' : '−'}{Math.abs(resultadoAberto).toFixed(2)}
+                  {resultadoAberto >= 0 ? '+' : '−'}{Math.abs(resultadoAberto).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </strong>
               )}
               <em>{posicoesAbertas ? '−' : '+'}</em>
@@ -1206,7 +1249,7 @@ export default function App() {
               <div className="pos-flutuante-corpo">
                 {minhas.length > 0 && (
                   <div className="pos-resumo">
-                    <span>Investido <b>{moeda} {investido.toFixed(2)}</b></span>
+                    <span>Investido <b>{dinheiro(investido, moeda)}</b></span>
                   </div>
                 )}
                 {!derivPronta && <div className="pos-vazio">Conecte sua Deriv para acompanhar posições.</div>}
@@ -1276,8 +1319,8 @@ function QuoteCard(props: {
         : loading && payout === null ? <p className="quote-loading">…</p>
         : payout !== null ? (
           <>
-            <strong>{moeda} {payout.toFixed(2)}</strong>
-            <span className="quote-sub">lucro {moeda} {lucro?.toFixed(2)}{pct !== null && ` · ${pct.toFixed(0)}%`}</span>
+            <strong>{dinheiro(payout, moeda)}</strong>
+            <span className="quote-sub">lucro {lucro !== null && lucro !== undefined ? dinheiro(lucro, moeda) : '—'}{pct !== null && ` · ${pct.toFixed(0)}%`}</span>
           </>
         ) : <p className="quote-loading">—</p>}
       <button className={`btn ${confirmando ? 'btn-confirmar' : ''}`}

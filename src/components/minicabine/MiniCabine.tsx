@@ -5,6 +5,7 @@ import { MASCARA, useValoresOcultos } from '../../core/privacidade'
 import { NomeDoRobo } from '../NomeDoRobo'
 import { contagemDoEstado } from '../RobotResumo'
 import { MARCA } from '../../marca'
+import { simboloMoeda } from '../../core/dinheiro'
 import './mini-cabine.css'
 
 /**
@@ -51,7 +52,7 @@ function area(w: number, h: number) {
 }
 const lerAberta = () => { try { return localStorage.getItem(CHAVE) === '1' } catch { return false } }
 const numero = (n: number) => Math.abs(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const comSinal = (n: number, moeda: string) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${moeda ? `${moeda} ` : ''}${numero(n)}`
+const comSinal = (n: number, moeda: string) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${moeda ? `${simboloMoeda(moeda)} ` : ''}${numero(n)}`
 
 const I = {
   abrir: 'M6 15l6-6 6 6',
@@ -200,7 +201,7 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo }: Pr
   const total = somadas.reduce((t, s) => t + s.estado.resultado, 0)
   const metaTotal = somadas.reduce((t, s) => t + (s.config.takeProfit || 0), 0)
   const pctMeta = metaTotal > 0 ? Math.max(0, total) / metaTotal : 0
-  const v = (n: number) => (ocultos ? `${moeda} ${MASCARA}` : comSinal(n, moeda))
+  const v = (n: number) => (ocultos ? `${simboloMoeda(moeda)} ${MASCARA}` : comSinal(n, moeda))
 
   async function parar(id: string) {
     if (!aoParar) return
@@ -216,7 +217,7 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo }: Pr
       {avisos.slice(0, 2).map((a) => (
         <div key={a.id} className={`mcb-aviso ${a.tipo}`} role="status">
           <span className="mcb-aviso-icone"><Ic d={a.tipo === 'meta' ? I.meta : a.tipo === 'limite' ? I.limite : I.parar} /></span>
-          <span><b><NomeDoRobo nome={a.nome} /> {a.texto}</b><small>Resultado da sessão: {ocultos ? `${moeda} ${MASCARA}` : a.valor}</small></span>
+          <span><b><NomeDoRobo nome={a.nome} /> {a.texto}</b><small>Resultado da sessão: {ocultos ? `${simboloMoeda(moeda)} ${MASCARA}` : a.valor}</small></span>
           <button type="button" onClick={() => setAvisos((l) => l.filter((x) => x.id !== a.id))} aria-label="Fechar aviso"><Ic d={I.x} /></button>
         </div>
       ))}
@@ -240,7 +241,7 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo }: Pr
               return (
                 <article key={s.id} className="mcb-robo">
                   <div className="mcb-robo-topo">
-                    <img src={`${import.meta.env.BASE_URL}robos-globalfly/${s.roboId}-pequena.webp`} alt="" onError={(ev) => { ev.currentTarget.style.visibility = 'hidden' }} />
+                    <img src={`${import.meta.env.BASE_URL}robos-globalfly/${s.roboId}-pequena.webp`} alt="" decoding="async" onError={(ev) => { ev.currentTarget.style.visibility = 'hidden' }} />
                     <span className="mcb-robo-nome">
                       <b><NomeDoRobo nome={s.roboNome} /></b>
                       <small className={e.emOperacao ? 'operando' : 'analisando'}><i aria-hidden="true" />{e.emOperacao ? 'Em operação' : (() => { const k = contagemDoEstado(e); return k && !k.sequencia ? `Analisando ${k.n}/${k.alvo}` : 'Analisando o mercado' })()} · {s.demo ? 'Demo' : 'Real'}</small>
@@ -259,8 +260,8 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo }: Pr
                   </div>
                   {(s.config.takeProfit > 0 || s.config.stopLoss > 0) && (
                     <div className="mcb-limites">
-                      <div><span>Meta {ocultos ? '' : `${moeda} ${numero(s.config.takeProfit)}`}</span><i className="sobe"><u style={{ width: `${pct * 100}%` }} /></i></div>
-                      <div><span>Limite {ocultos ? '' : `${moeda} ${numero(s.config.stopLoss)}`}</span><i className="cai"><u style={{ width: `${pctLim * 100}%` }} /></i></div>
+                      <div><span>Meta {ocultos ? '' : `${simboloMoeda(moeda)} ${numero(s.config.takeProfit)}`}</span><i className="sobe"><u style={{ width: `${pct * 100}%` }} /></i></div>
+                      <div><span>Limite {ocultos ? '' : `${simboloMoeda(moeda)} ${numero(s.config.stopLoss)}`}</span><i className="cai"><u style={{ width: `${pctLim * 100}%` }} /></i></div>
                     </div>
                   )}
                   {confirmar === s.id ? (

@@ -136,7 +136,7 @@ export function ServerRobotLive(props: Props) {
   const rodando = robo.status === 'running'
   const pausado = robo.status === 'paused'
   const situacao = !rodando && !pausado ? 'parado' : emAndamento ? 'operando' : pausado ? 'pausado' : 'cacando'
-  const rotulo = { operando: 'Comprou — aguardando resultado', cacando: 'Procurando entrada',
+  const rotulo = { operando: 'Comprou, aguardando resultado', cacando: 'Procurando entrada',
     pausado: 'Pausado', parado: 'Parado' }[situacao]
 
   // progresso entre os freios

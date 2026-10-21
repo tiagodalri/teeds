@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { MASCARA, useValoresOcultos } from '../core/privacidade'
+import { dinheiroComSinal, simboloMoeda } from '../core/dinheiro'
 
 interface Props {
   valor: number | null
@@ -36,17 +37,17 @@ export function BalanceLive({ valor, moeda, conectando }: Props) {
   }
 
   // o olhinho fechado: nem o valor, nem a variação
-  if (ocultos) return <span className="saldo-caixa"><strong className="saldo oculto"><em>{moeda}</em> {MASCARA}</strong></span>
+  if (ocultos) return <span className="saldo-caixa"><strong className="saldo oculto"><em>{simboloMoeda(moeda)}</em> {MASCARA}</strong></span>
 
   return (
     <span className="saldo-caixa">
       <strong className={`saldo ${direcao ?? ''}`}>
-        <em>{moeda}</em>{' '}
+        <em>{simboloMoeda(moeda)}</em>{' '}
         {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </strong>
       {delta !== null && (
         <span className={`saldo-delta ${delta > 0 ? 'sobe' : 'cai'}`}>
-          {delta > 0 ? '+' : '−'}{Math.abs(delta).toFixed(2)}
+          {dinheiroComSinal(delta, moeda)}
         </span>
       )}
     </span>

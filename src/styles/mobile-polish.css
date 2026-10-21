@@ -2,6 +2,14 @@
 @media (max-width: 900px) {
   html { scroll-padding-top: calc(var(--topo-h, 64px) + 16px); }
   input, select, textarea { scroll-margin-block: 100px; font-size: 16px !important; }
+  /* Exceções: campos de número grande já passam de 16px (não dão zoom no
+     iPhone) e perderiam o desenho se caíssem para 16px. */
+  .plv-m-num input { font-size: 34px !important; }
+  .robot-launch-number input { font-size: 30px !important; }
+  .in-instr-campo input { font-size: 18px !important; }
+  .qz-campo input { font-size: 25px !important; }
+  .qz-dupla .qz-campo input { font-size: 17px !important; }
+  @media (max-width: 700px) { .in-instr-campo input { font-size: 17px !important; } }
   .workspace-app .workspace-mobile-toggle { width: 44px; height: 44px; min-width: 44px; }
   .workspace-sidebar { padding-bottom: max(16px, var(--sab)); }
   .workspace-sidebar nav { overflow-y: auto; overscroll-behavior-y: contain; min-height: 0; }

@@ -13,6 +13,7 @@
 import { SERVIDOR, SUPABASE, autenticacaoConfigurada } from './config'
 import { MARCA } from '../../marca'
 import { emailDaConta, emailReal, marcaDaConta } from './emailDaConta'
+import { duranteTroca } from '../trocaEmAndamento'
 
 export interface Usuario {
   id: string
@@ -377,14 +378,14 @@ export function temConfirmacaoNoEndereco(): boolean {
 }
 /** Uma vez só por carregamento (o código vale uma vez; o React pode pedir duas). */
 export function confirmarPeloLink(): Promise<Retorno> {
-  return (confirmacao ??= validarCodigoDoEndereco())
+  return (confirmacao ??= duranteTroca(validarCodigoDoEndereco))
 }
 async function validarCodigoDoEndereco(): Promise<Retorno> {
   const u = new URL(window.location.href)
   const codigo = u.searchParams.get('confirmar') ?? ''
   const tipo = u.searchParams.get('tipo') ?? 'email'
   u.searchParams.delete('confirmar'); u.searchParams.delete('tipo')
-  try { window.history.replaceState(null, '', u.pathname + u.search + u.hash) } catch { /* sem history */ }
+  try { window.history.replaceState(window.history.state, '', u.pathname + u.search + u.hash) } catch { /* sem history */ }
   try {
     const d = await chamar('/verify', { corpo: { type: tipo, token_hash: codigo } })
     // troca de e-mail segura: o primeiro link confirmado não devolve sessão
@@ -404,7 +405,7 @@ async function validarCodigoDoEndereco(): Promise<Retorno> {
 
 function limparEndereco() {
   try {
-    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
   } catch {
     /* navegador sem history: o token some no proximo carregamento */
   }

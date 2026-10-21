@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { publicSocket, type TeedsSocket } from '../core/deriv/client'
 import { useDigits } from '../hooks/useDigits'
+import { dinheiro, dinheiroComSinal } from '../core/dinheiro'
 import type { Identidade } from '../core/deriv/branding'
 
 interface Props {
@@ -105,18 +106,18 @@ export function RobotScope(props: Props) {
       <div className="esc-cotacao">
         <div>
           <span className="rot">Entrada</span>
-          <b>{moeda} {valor.toFixed(2)}</b>
+          <b>{dinheiro(valor, moeda)}</b>
         </div>
         <div>
           <span className="rot">Paga</span>
           <b style={{ color: ident.cor }}>
-            {pagamento !== null ? `${moeda} ${pagamento.toFixed(2)}` : '…'}
+            {pagamento !== null ? dinheiro(pagamento, moeda) : '…'}
           </b>
         </div>
         <div>
           <span className="rot">Lucro</span>
           <b className={lucro !== null && lucro > 0 ? 'ganho' : ''}>
-            {lucro !== null ? `+${lucro.toFixed(2)}` : '—'}
+            {lucro !== null ? dinheiroComSinal(lucro, moeda) : '—'}
           </b>
         </div>
       </div>

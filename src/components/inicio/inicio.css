@@ -53,8 +53,8 @@
 :root[data-tema='escuro'] .in-painel { background: #051528; border: 1px solid #172C47; box-shadow: none; }
 /* o eixo (manual, pág. 18): o fio de ouro no ângulo do traço do monograma */
 .in-eixo { position: absolute; z-index: -1; left: 50%; top: -45%; width: 1.5px; height: 190%; background: var(--in-ouro); opacity: .55; transform: rotate(32deg); pointer-events: none; }
-.in-painel-marca { position: absolute; z-index: -1; right: -50px; bottom: -90px; opacity: .04; }
-.in-painel-marca.monograma-dagua { background: var(--in-marfim); }
+/* marca d'água em ouro, tom sobre tom como nas outras telas (o marfim destoava do azul) */
+.in-painel-marca { position: absolute; z-index: -1; right: -50px; bottom: -90px; opacity: .05; }
 /* o fundo é azul nos dois temas: sempre a versão reversa do monograma */
 .in-painel .monograma .monograma-claro { display: none !important; }
 .in-painel .monograma .monograma-escuro { display: block !important; }
@@ -100,6 +100,8 @@
 .in-instr {
   position: relative; display: grid; gap: 6px; padding: 20px 20px 18px; border-radius: 22px;
   background: rgba(255, 255, 255, .035); border: 1px solid rgba(156, 177, 199, .15);
+  /* a marca d'água passa por trás do instrumento difusa, sem recorte duro na borda */
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
 }
 .in-instr-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 22px; }
 .in-instr-cab > span { color: var(--in-aco); font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }

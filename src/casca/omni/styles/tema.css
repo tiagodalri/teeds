@@ -14,7 +14,7 @@
  * alcanca: a fonte, a tinta do texto, os fundos, e o dourado que o app.css
  * escreveu a mao em alguns cantos e que aqui vira a cor da marca.
  */
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap');
+/* a fonte da marca vem no <head> (vite.config.ts, FONTES_DA_MARCA) */
 
 :root {
   --fonte-corpo: 'Manrope', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;

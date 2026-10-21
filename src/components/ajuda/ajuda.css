@@ -13,7 +13,7 @@
   position: relative; overflow: hidden; display: grid; gap: 10px; padding: 30px 30px 24px; border-radius: 22px;
   border: 1px solid var(--aj-linha); background: linear-gradient(150deg, color-mix(in srgb, var(--aj-ouro) 9%, var(--surface)), var(--surface) 55%);
 }
-.aj-topo-marca { position: absolute; right: -40px; top: -50px; opacity: .06; }
+.aj-topo-marca { position: absolute; right: -40px; top: -50px; opacity: .05; }
 .aj-sobre { display: inline-flex; align-items: center; gap: 7px; color: var(--aj-ouro); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .aj-topo h1 { position: relative; margin: 0; font-size: clamp(26px, 3.4vw, 36px); font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
 .aj-topo > p { position: relative; margin: 0; color: var(--muted); font-size: 15px; }
@@ -78,7 +78,7 @@
   position: relative; overflow: hidden; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 20px 22px;
   border-radius: 20px; border: 1px solid color-mix(in srgb, var(--aj-ouro) 45%, var(--border)); background: var(--surface);
 }
-.aj-falar-marca { position: absolute; right: 120px; bottom: -60px; opacity: .05; }
+.aj-falar-marca { position: absolute; right: 120px; bottom: -60px; opacity: .045; }
 .aj-falar-avatar { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; background: var(--surface-alt); border: 1px solid color-mix(in srgb, var(--aj-ouro) 50%, transparent); }
 .aj-falar b { font-size: 16px; }
 .aj-falar p { margin: 3px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.5; }

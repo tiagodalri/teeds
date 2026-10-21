@@ -7,6 +7,8 @@ import { DERIV } from '../../core/deriv/config'
 import { InstrumentoDoDia } from './InstrumentoDoDia'
 import './inicio.css'
 import { dataCurta } from '../../core/datas'
+import { simboloMoeda } from '../../core/dinheiro'
+import { ResponsiveImage } from '../ResponsiveImage'
 
 /**
  * A home, "painel de bordo" (21/10/2026, aprovada pelo Tiago em mockup):
@@ -135,7 +137,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
               <div className="in-saldo">
                 <span className="in-saldo-rot">Saldo disponível <i className={d.conta.demo ? 'demo' : 'real'}>{d.conta.demo ? 'Conta demo' : 'Conta real'}</i></span>
                 <b className={`in-saldo-valor ${ocultos ? 'oculto' : ''}`} aria-live="polite">
-                  <small>{moeda}</small>{d.conta.saldo === null ? <span className="in-esqueleto" aria-label="carregando" /> : ocultos ? MASCARA : numero(d.conta.saldo)}
+                  <small>{simboloMoeda(moeda)}</small>{d.conta.saldo === null ? <span className="in-esqueleto" aria-label="carregando" /> : ocultos ? MASCARA : numero(d.conta.saldo)}
                 </b>
               </div>
               <dl className="in-trio">
@@ -213,7 +215,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                   <button key={r.id} type="button" className={`in-jato ${r.noAr ? 'no-ar' : ''}`}
                     onClick={() => (r.noAr ? aoIr('robos') : aoPrepararRobo(r.id))}
                     aria-label={r.noAr ? `${r.nome}: no ar, ${ocultos ? 'resultado oculto' : `resultado ${sinal(r.resultado)}${numero(r.resultado)}`}. Abrir a cabine.` : `${r.nome}, ${r.chamada}. Configurar e ligar.`}>
-                    <img src={`${FOTOS}${r.id}.webp`} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
+                    <img src={`${FOTOS}${r.id}.webp`} srcSet={`${FOTOS}${r.id}-pequena.webp 640w, ${FOTOS}${r.id}.webp 1200w`} sizes="(max-width: 700px) 45vw, 20vw" alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
                     {r.noAr
                       ? <span className={`in-jato-selo ${r.operando ? 'operando' : ''}`}><i aria-hidden="true" />{r.operando ? 'Operando' : 'No ar'}</span>
                       : <span className="in-jato-play" aria-hidden="true"><Icone d={ICONE.play} /></span>}
@@ -236,7 +238,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
             <div className="in-pv">
               {d.aula && (
                 <button type="button" className="in-aula" onClick={() => aoIr('aulas')}>
-                  <img src={d.aula.capa} alt="" loading="lazy" />
+                  <ResponsiveImage src={d.aula.capa} alt="" loading="lazy" />
                   <span className="in-aula-texto">
                     <span className="in-sobre">Continue de onde parou</span>
                     <b>{d.aula.titulo}</b>

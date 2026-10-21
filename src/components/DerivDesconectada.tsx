@@ -1,7 +1,7 @@
 import { DerivLogo, IconeElo } from './DerivMarca'
 import { MARCA } from '../marca'
 import { useState } from 'react'
-import { voltasPerdidas } from '../core/deriv/auth'
+import { emAppInstalado, voltasPerdidas } from '../core/deriv/auth'
 
 interface Props {
   /** O que a pessoa estava tentando fazer, para o texto falar disso. */
@@ -39,7 +39,7 @@ const emToque = () => typeof window !== 'undefined' && window.matchMedia?.('(poi
 export function DerivDesconectada({ acao, entrando, onConectar, compacto = false }: Props) {
   const voltas = voltasPerdidas()
   const voltaPerdida = voltas > 0
-  // Na segunda volta perdida seguida, repetir o mesmo botão é o círculo de
+  // Na terceira volta perdida seguida, repetir o mesmo botão é o círculo de
   // novo (16/10/2026, cliente da OMNI). Aí o cartão ensina o que funciona.
   const presa = voltas >= 3
   const [copiado, setCopiado] = useState(false)
@@ -87,7 +87,10 @@ export function DerivDesconectada({ acao, entrando, onConectar, compacto = false
           <p><b>O jeito que resolve agora:</b></p>
           <ol>
             <li>
-              {emToque()
+              {emAppInstalado()
+                // no app instalado não existe aba anônima: o caminho é o navegador do aparelho
+                ? <>Abra o <b>navegador do celular</b> (Safari ou Chrome) em uma <b>aba anônima</b>.</>
+                : emToque()
                 ? <>Abra uma <b>aba anônima</b> pelo menu do navegador.</>
                 : <>Abra uma <b>janela anônima</b>: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> no Windows, ou <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> no Mac.</>}
             </li>

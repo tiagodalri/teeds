@@ -326,7 +326,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
       {/* ------------------------------------------------ o topo azul */}
       <header className={`plv-topo ${TEM_FOTOS && passo === 'plano' ? 'com-foto' : ''}`}>
         {/* celular, no plano: a foto do jato vira o fundo do topo (o cartão de foto some) */}
-        {TEM_FOTOS && passo === 'plano' && <img className="plv-topo-foto" src={`${FOTOS}${modelo.id}.webp`} alt="" />}
+        {TEM_FOTOS && passo === 'plano' && <img className="plv-topo-foto" src={`${FOTOS}${modelo.id}.webp`} alt="" decoding="async" />}
         <i className="plv-eixo" aria-hidden="true" />
         <div className="plv-topo-linha">
           {TEM_MONOGRAMA ? <Monograma tamanho={40} className="plv-mono" /> : <Emblema id={modelo} tamanho={34} />}
@@ -359,7 +359,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
             {frota.map((r) => (
               <button type="button" key={r.id} role="radio" aria-checked={r.id === modelo.id} className={`plv-jato ${r.id === modelo.id ? 'on' : ''}`}
                 onClick={() => setModelo(r)} onDoubleClick={() => { setModelo(r); setPasso('plano') }}>
-                <img src={`${FOTOS}${r.id}.webp`} alt="" loading="lazy" />
+                <img src={`${FOTOS}${r.id}.webp`} alt="" loading="lazy" decoding="async" />
                 {r.id === modelo.id && <span className="plv-jato-marca" aria-hidden="true">✓</span>}
                 <span className="plv-jato-texto"><small>GF</small><b>{nomeCurto(r.nome)}</b><span>{r.chamada}</span></span>
               </button>
@@ -389,7 +389,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
             <aside className="plv-lado">
               {TEM_FOTOS ? (
                 <div className="plv-capa">
-                  <img src={`${FOTOS}${modelo.id}.webp`} alt="" />
+                  <img src={`${FOTOS}${modelo.id}.webp`} alt="" decoding="async" />
                   <span className="plv-capa-ativo">{nomeAtivo}</span>
                   <div className="plv-capa-texto"><small>GF</small><b>{nomeCurto(modelo.nome)}</b><span>{modelo.chamada}</span></div>
                 </div>
@@ -424,7 +424,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
           <div className="plv-embarque">
             <section className="plv-passe" aria-label="Resumo da sessão">
               <div className={`plv-passe-topo ${TEM_FOTOS ? '' : 'sem-foto'}`}>
-                {TEM_FOTOS && <img src={`${FOTOS}${modelo.id}.webp`} alt="" />}
+                {TEM_FOTOS && <img src={`${FOTOS}${modelo.id}.webp`} alt="" decoding="async" />}
                 <div className="plv-passe-nome">
                   <small>{TEM_FOTOS ? 'GF · ' : ''}{nomeAtivo}</small>
                   <b>{TEM_FOTOS ? nomeCurto(modelo.nome) : <NomeDoRobo nome={modelo.nome} />}</b>
@@ -477,7 +477,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
       {/* ------------------------------------------------ o rodapé */}
       <footer className="plv-rodape">
         <button type="button" className="plv-voltar" disabled={ligando} onClick={voltar}>{passo === primeiroPasso ? 'Cancelar' : '← Voltar'}</button>
-        <span className="plv-rodape-dica">{ligando && segundos >= 12 ? 'A Deriv está lenta agora. Seguimos tentando — não clique de novo.' : passo === 'decolar' ? 'Você acompanha a sessão de qualquer tela' : 'Nada será operado ainda'}</span>
+        <span className="plv-rodape-dica">{ligando && segundos >= 12 ? 'A Deriv está lenta agora. Seguimos tentando. Não clique de novo.' : passo === 'decolar' ? 'Você acompanha a sessão de qualquer tela' : 'Nada será operado ainda'}</span>
         {passo === 'decolar'
           ? <button type="button" className="plv-principal" disabled={ligando || !planoValido || (!isDemo && !confirmaReal)} onClick={iniciar}>
               {ligando ? `Iniciando… ${segundos}s` : <><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6L12.6 8z" fill="currentColor" /></svg>Iniciar robô</>}
