@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { contratoAberto, operacaoTerminou } from '../core/som'
 import {
   buscarSessaoDoServidor, completeLogin, emAppInstalado, idadeDoPedido, loadSession, loginPendente, voltasPerdidas,
   logout as clearSession, ouvirLoginDeOutraJanela, startLogin, startLoginPeloServidor, type AuthSession,
@@ -239,6 +240,9 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
     const guardar = (c: OpenContract) => {
       if (!alive) return
       const finalizado = FINAIS.has(c.status)
+      // o som de ganho (som.ts): só o que esta tela viu aberto e terminou ganhando
+      if (finalizado) operacaoTerminou(c.contractId, c.profit)
+      else contratoAberto(c.contractId)
       setContracts((prev) => {
         // ja saiu da lista (ou nunca esteve): nao volta
         if (finalizado && !prev.has(c.contractId)) return prev

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { operacaoTerminou } from '../core/som'
 import type { TeedsSocket } from '../core/deriv/client'
 import { type ConfigEstrategia, type EstadoMotor, type Estrategia } from '../core/deriv/engine'
 import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
@@ -244,6 +245,23 @@ export function LocalRobotPanel({
       (msg) => setErro(msg),
     )
   }, [sessaoTeeds?.token]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // o som de ganho (som.ts): cada operação nova desta sessão que terminou ganhando toca a moeda.
+  // Na primeira leitura, o que já estava no histórico só é anotado (não toca o passado).
+  const vistasNoHistorico = useRef<Set<number> | null>(null)
+  // outra sessão neste bloco: o histórico dela também só é anotado na primeira leitura
+  useEffect(() => { vistasNoHistorico.current = null }, [idDaSessao])
+  useEffect(() => {
+    const h = estado?.historico
+    if (!h) return
+    const primeira = vistasNoHistorico.current === null
+    if (primeira) vistasNoHistorico.current = new Set()
+    for (const o of h) {
+      if (vistasNoHistorico.current!.has(o.contractId)) continue
+      vistasNoHistorico.current!.add(o.contractId)
+      operacaoTerminou(o.contractId, o.lucro, { vistoAberto: !primeira })
+    }
+  }, [estado?.historico])
 
   // sessão que já estava no ar quando esta tela abriu (a do chat, em geral)
   useEffect(() => {

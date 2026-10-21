@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Usuario } from '../core/teeds/conta'
 import { MARCA } from '../marca'
+import { alternarSom, useSomLigado } from '../core/som'
 
 interface Props {
   usuario: Usuario
@@ -38,6 +39,7 @@ export function UserMenu({ usuario, onSair, onPerfil, foto }: Props) {
   }, [aberto])
 
   const primeiro = (usuario.nome || usuario.email).split(' ')[0]
+  const som = useSomLigado()
 
   return (
     <div className="conta" ref={caixa} data-tour="usuario">
@@ -76,6 +78,16 @@ export function UserMenu({ usuario, onSair, onPerfil, foto }: Props) {
               <circle cx="8" cy="5.5" r="2.5" /><path d="M2.8 13.5a5.2 5.2 0 0 1 10.4 0" />
             </svg>
             {MARCA.inicio ? 'Meu perfil' : 'Minha conta'}
+          </button>
+
+          {/* o som de ganho (moeda) das operações: liga e desliga neste aparelho */}
+          <button className="menu-acao" role="menuitemcheckbox" aria-checked={som} onClick={alternarSom}>
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
+              fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2.5 6h2.2L8 3.3v9.4L4.7 10H2.5z" />
+              {som ? <path d="M10.6 5.6a3.4 3.4 0 010 4.8M12.4 3.9a5.8 5.8 0 010 8.2" /> : <path d="M10.5 6l3.5 4M14 6l-3.5 4" />}
+            </svg>
+            Som de ganho: {som ? 'ligado' : 'desligado'}
           </button>
 
           <button className="menu-acao perigo" role="menuitem" onClick={onSair}>
