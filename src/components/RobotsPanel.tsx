@@ -25,6 +25,7 @@ import { VitrineDeRobos } from './VitrineDeRobos'
 import { DigitosFlutuante } from './DigitosFlutuante'
 import { ATIVO_DOS_ROBOS, ehSintetico } from '../core/deriv/config'
 import './robot-workspace.css'
+import { roboLigou } from '../core/som'
 
 interface Props {
   socket: TeedsSocket | null
@@ -249,6 +250,7 @@ export function RobotsPanel({
       setNomes((prev) => ({ ...prev, [r.runId]: apelido }))
       setNome(sugerirNome(modelo.nome))
       setRobos((prev) => new Map(prev).set(r.runId, r))
+      roboLigou()
     } catch (e) { setErro((e as Error).message) }
     finally { setLigando(false) }
   }
@@ -259,6 +261,7 @@ export function RobotsPanel({
       const fn = tipo === 'parar' ? pararRobo : tipo === 'pausar' ? pausarRobo : retomarRobo
       const r = await fn(socket, runId)
       setRobos((prev) => new Map(prev).set(r.runId, r))
+      if (tipo === 'retomar') roboLigou()
     } catch (e) { setErro((e as Error).message) }
   }
 

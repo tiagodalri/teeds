@@ -93,15 +93,12 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
     .filter((x) => x.z >= ACENDE)
     .sort((a, b) => b.z - a.z)
 
-  // Duas divisões que dizem algo que as barras não mostram de cara. Ambas
-  // valem 50% num mercado sem viés, e é contra esse 50 que a barrinha lê.
-  const fatia = (aceita: (d: number) => boolean) => (estat.total
-    ? (estat.conta.reduce((t, c, d) => t + (aceita(d) ? c : 0), 0) / estat.total) * 100
-    : 50)
-  const divisoes = [
-    { a: 'Pares', b: 'Ímpares', pct: fatia((d) => d % 2 === 0) },
-    { a: '0 a 4', b: '5 a 9', pct: fatia((d) => d <= 4) },
-  ]
+  // Uma divisão que diz algo que as barras não mostram de cara: a metade de
+  // baixo contra a de cima. Vale 50% num mercado sem viés, e é contra esse
+  // 50 que a barrinha lê. (Pares e ímpares saíram a pedido do Tiago, 21/10/2026.)
+  const metadeDeBaixo = estat.total
+    ? (estat.conta.reduce((t, c, d) => t + (d <= 4 ? c : 0), 0) / estat.total) * 100
+    : 50
   const lendo = estat.total < 10
   // O contorno de "mais frequente" só faz sentido quando há UM mais
   // frequente: num empate (e começa tudo empatado em zero) marcar os dez é
@@ -226,22 +223,33 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
         <span>ticks</span>
       </div>
 
-      <div className="pd-barras" aria-label="Frequência de cada dígito">
-        {/* a linha tracejada é o esperado de um dígito ao acaso: 10% */}
-        <span className="pd-esperado" style={{ bottom: `${Math.min(96, (ESPERADO / maxPct) * 100)}%` }} aria-hidden="true" />
-        {estat.pct.map((pct, d) => {
-          const z = desvios[d]
-          const estado = z >= ACENDE ? 'alta' : z <= -ACENDE ? 'baixa' : ''
-          return (
-            <div key={d} className={`pd-barra ${estado} ${estat.ultimo === d ? 'ultimo' : ''} ${d === lider ? 'lider' : ''}`}
-              style={{ ['--brilho' as string]: brilho(z).toFixed(2) }}
-              title={`${estat.conta[d]} vezes em ${estat.total} · esperado ${ESPERADO}%`}>
-              <em>{pct.toFixed(0)}%</em>
-              <i style={{ height: `${Math.max(3, (pct / maxPct) * 100)}%` }} />
-              <b>{d}</b>
-            </div>
-          )
-        })}
+      <div className="pd-grafico" aria-label="Frequência de cada dígito">
+        {/* A área das barras é a régua: barras e o tracejado dos 10% usam a
+            mesma altura, então a linha cai exatamente no 10% das barras. */}
+        <div className="pd-area">
+          {estat.total > 0 && (
+            <span className="pd-esperado" style={{ bottom: `${Math.min(100, (ESPERADO / maxPct) * 100)}%` }}
+              title={`esperado: ${ESPERADO}% para cada dígito`} aria-hidden="true" />
+          )}
+          {estat.pct.map((pct, d) => {
+            const z = desvios[d]
+            const estado = z >= ACENDE ? 'alta' : z <= -ACENDE ? 'baixa' : ''
+            return (
+              <div key={d} className={`pd-barra ${estado} ${d === lider ? 'lider' : ''}`}
+                style={{ ['--brilho' as string]: brilho(z).toFixed(2), ['--h' as string]: `${Math.max(2, (pct / maxPct) * 100)}%` }}
+                title={`${estat.conta[d]} vezes em ${estat.total} · esperado ${ESPERADO}%`}>
+                <em>{pct.toFixed(0)}%</em>
+                <i />
+              </div>
+            )
+          })}
+        </div>
+        <div className="pd-eixo" aria-hidden="true">
+          {estat.pct.map((_, d) => (
+            <b key={d} className={`${desvios[d] >= ACENDE ? 'alta' : ''} ${estat.ultimo === d ? 'ultimo' : ''}`}
+              style={{ ['--brilho' as string]: brilho(desvios[d]).toFixed(2) }}>{d}</b>
+          ))}
+        </div>
       </div>
 
       <div className="pd-fita" aria-label="Últimos dígitos">
@@ -262,13 +270,11 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
                 ))}
               </div>}
         </div>
-        {divisoes.map((x) => (
-          <div className="pd-divisao" key={x.a}>
-            <span>{x.a} <b>{x.pct.toFixed(0)}%</b></span>
-            <i aria-hidden="true"><u style={{ width: `${x.pct}%` }} /></i>
-            <span><b>{(100 - x.pct).toFixed(0)}%</b> {x.b}</span>
-          </div>
-        ))}
+        <div className="pd-divisao">
+          <span>0 a 4 <b>{metadeDeBaixo.toFixed(0)}%</b></span>
+          <i aria-hidden="true"><u style={{ width: `${metadeDeBaixo}%` }} /></i>
+          <span><b>{(100 - metadeDeBaixo).toFixed(0)}%</b> 5 a 9</span>
+        </div>
       </div>
 
       {!movel && (

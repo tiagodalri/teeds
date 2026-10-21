@@ -78,6 +78,7 @@ function LabLogin() {
 const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine'))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
 import { DerivDesconectada } from './components/DerivDesconectada'
+import { DigitosFlutuante } from './components/DigitosFlutuante'
 
 document.documentElement.dataset.marca = MARCA.id
 aplicarTema(temaGuardado())
@@ -279,6 +280,8 @@ function Laboratorio() {
               onCancelar={nada} onLigar={nada} ligando={false} erro={null} />
           </div></div>
         )}
+        {/* ?tela=digitos: o painel Dígitos ao vivo (ticks de verdade da Deriv, linha pública). */}
+        {qual === 'digitos' && <DigitosFlutuante aoFechar={nada} />}
         {qual === 'catalogo' && <RobotCatalog selected={ident.id} onSelect={nada} />}
         {/* ?tela=vitrine: a vitrine de robôs (GlobalFly); "Configurar" abre o preparo já no robô. */}
         {qual === 'vitrine' && <LabVitrine />}

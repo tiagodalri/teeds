@@ -2,12 +2,21 @@ import { useSyncExternalStore } from 'react'
 import { MARCA } from '../marca'
 
 /**
- * O som de "win" (21/10/2026, pedido do Tiago): toda operação que termina
- * com ganho toca uma moeda, no computador, no celular e no app instalado.
+ * Os sons das operações (21/10/2026, pedido do Tiago), no computador, no
+ * celular e no app instalado:
+ *  - ganho: o "cha-ching" da caixa registradora;
+ *  - loss: duas notas graves descendo, curtas e abafadas. Avisa sem
+ *    assustar: quem opera com vários robôs ouve isso muitas vezes ao dia;
+ *  - play: o robô ligou. Um sopro subindo e duas notas claras para cima,
+ *    a decolagem; diferente dos dois de resultado para não confundir.
  *
- * Sem arquivo de áudio: a moeda é sintetizada na hora (Web Audio), então não
- * pesa nada e não depende de rede. Duas notas rápidas (si e mi, a "moeda"
- * clássica) com um brilho agudo que some em meio segundo.
+ * Sem arquivo de áudio: o som é sintetizado na hora (Web Audio), então não
+ * pesa nada e não depende de rede. É o "cha-ching" da caixa registradora,
+ * o mesmo espírito do aviso de venda aprovada (Kiwify e afins): o "cha" é
+ * o estalo da gaveta (um chiado curto e um baque grave) e o "ching" são
+ * duas batidas de sino metálico, com parciais fora da série harmônica (é
+ * isso que soa metal, não apito) e um leve batimento entre pares
+ * desafinados, que dá o brilho de moeda. Some em pouco mais de um segundo.
  *
  * Regras:
  *  - uma vez por contrato: o Manual (aviso da corretora) e os robôs
@@ -15,7 +24,7 @@ import { MARCA } from '../marca'
  *    contrato não deixa tocar duas vezes;
  *  - só toca o que terminou DEPOIS de a tela abrir (abrir a plataforma não
  *    dispara um monte de moedas do que já tinha acontecido);
- *  - várias vitórias no mesmo instante (vários robôs) viram uma moeda só;
+ *  - vários resultados no mesmo instante (vários robôs) viram um som só;
  *  - celular: o navegador só libera áudio depois do primeiro toque na tela;
  *    o iPhone respeita a chave do silencioso;
  *  - dá para desligar (menu do usuário); a escolha fica no aparelho.
@@ -30,7 +39,7 @@ export function alternarSom(): void {
   ligado = !ligado
   try { localStorage.setItem(CHAVE, ligado ? '1' : '0') } catch { /* só nesta aba */ }
   ouvintes.forEach((f) => f())
-  if (ligado) tocarMoeda(true)
+  if (ligado) tocarSom('ganho', true)
 }
 export function useSomLigado(): boolean {
   return useSyncExternalStore((f) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }, () => ligado, () => true)
@@ -62,41 +71,151 @@ if (typeof window !== 'undefined') {
   for (const ev of ['pointerdown', 'touchend', 'keydown']) window.addEventListener(ev, uma, { passive: true })
 }
 
-let ultimaVez = 0
-/** A moeda. `forcar` toca mesmo com a regra de intervalo (o teste ao ligar o som). */
-export function tocarMoeda(forcar = false): void {
+export type Som = 'ganho' | 'perda' | 'play'
+const SINTESE: Record<Som, (c: BaseAudioContext, destino: AudioNode, t: number) => void> = {
+  ganho: (c, d, t) => chaChing(c, d, t),
+  perda: (c, d, t) => somDePerda(c, d, t),
+  play: (c, d, t) => somDePlay(c, d, t),
+}
+const ultimaVez: Record<string, number> = {}
+/** Toca um som. `forcar` ignora o intervalo mínimo (o teste ao ligar o som). */
+export function tocarSom(som: Som, forcar = false): void {
   if (!ligado || document.visibilityState === 'hidden') return
+  // ganho e perda dividem o intervalo: resultados juntos viram um som só
+  const grupo = som === 'play' ? 'play' : 'resultado'
   const agora = performance.now()
-  if (!forcar && agora - ultimaVez < 350) return
-  ultimaVez = agora
+  if (!forcar && agora - (ultimaVez[grupo] ?? -1e9) < 350) return
+  ultimaVez[grupo] = agora
   const c = contexto()
   if (!c) return
   if (c.state === 'suspended') void c.resume().catch(() => undefined)
-  const t = c.currentTime + 0.01
-  const saida = c.createGain()
-  saida.gain.value = 0.22
-  // um compressor leve: alto o bastante no celular, sem estourar no fone
-  const comp = c.createDynamicsCompressor()
-  comp.threshold.value = -18; comp.ratio.value = 3
-  saida.connect(comp); comp.connect(c.destination)
+  SINTESE[som](c, c.destination, c.currentTime + 0.01)
+}
+/** O robô ligou (o servidor aceitou o play). */
+export function roboLigou(): void { tocarSom('play') }
 
-  const nota = (freq: number, inicio: number, dur: number, tipo: OscillatorType, vol: number) => {
-    const o = c.createOscillator(); const g = c.createGain()
-    o.type = tipo; o.frequency.setValueAtTime(freq, t + inicio)
-    g.gain.setValueAtTime(0.0001, t + inicio)
-    g.gain.exponentialRampToValueAtTime(vol, t + inicio + 0.008)
-    g.gain.exponentialRampToValueAtTime(0.0001, t + inicio + dur)
-    o.connect(g); g.connect(saida)
-    o.start(t + inicio); o.stop(t + inicio + dur + 0.02)
+/**
+ * A saída de cada som: um ganho só. Sem compressor: o do navegador (joelho
+ * largo e ganho de compensação automático) achatava a primeira nota de
+ * cada som e inflava a segunda. Os volumes abaixo foram medidos para o pico
+ * ficar perto de 0,7, alto no celular sem estourar no fone.
+ */
+function saidaDoSom(c: BaseAudioContext, destino: AudioNode, volume: number): GainNode {
+  const saida = c.createGain()
+  saida.gain.value = volume
+  saida.connect(destino)
+  return saida
+}
+function envelope(g: GainNode, inicio: number, pico: number, ataque: number, queda: number) {
+  g.gain.setValueAtTime(0.0001, inicio)
+  g.gain.exponentialRampToValueAtTime(pico, inicio + ataque)
+  g.gain.exponentialRampToValueAtTime(0.0001, inicio + ataque + queda)
+}
+
+let ruido: AudioBuffer | null = null
+/** Um segundo de chiado branco, criado uma vez por contexto. */
+function chiado(c: BaseAudioContext): AudioBuffer {
+  if (ruido && ruido.sampleRate === c.sampleRate) return ruido
+  const b = c.createBuffer(1, c.sampleRate, c.sampleRate)
+  const d = b.getChannelData(0)
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1
+  ruido = b
+  return b
+}
+
+/** O cha-ching em si; separado para dar para gravar num OfflineAudioContext. */
+export function chaChing(c: BaseAudioContext, destino: AudioNode, t: number): void {
+  const saida = saidaDoSom(c, destino, 0.95)
+  const chiar = (inicio: number, freq: number, q: number, pico: number, queda: number) => {
+    const s = c.createBufferSource(); s.buffer = chiado(c)
+    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q
+    const g = c.createGain(); envelope(g, inicio, pico, 0.003, queda)
+    s.connect(f); f.connect(g); g.connect(saida)
+    s.start(inicio, Math.random() * 0.5); s.stop(inicio + queda + 0.05)
   }
-  // si5 curto, mi6 longo: a moeda
-  nota(987.77, 0, 0.09, 'square', 0.18)
-  nota(987.77, 0, 0.09, 'triangle', 0.5)
-  nota(1318.51, 0.075, 0.48, 'square', 0.14)
-  nota(1318.51, 0.075, 0.5, 'triangle', 0.55)
-  // o brilho do metal
-  nota(2637.02, 0.08, 0.32, 'sine', 0.12)
-  nota(3951.07, 0.09, 0.22, 'sine', 0.06)
+  /** Uma batida de sino: parciais de metal (razões fora da série harmônica), cada uma em par levemente desafinado. */
+  const sino = (inicio: number, base: number, vol: number, sustento: number) => {
+    const parciais: [number, number, number][] = [
+      // razão, volume, quanto dura (fração do sustento): as agudas morrem antes
+      [1, 1, 1], [2.32, 0.55, 0.7], [3.17, 0.42, 0.55], [4.53, 0.26, 0.4], [6.04, 0.14, 0.3],
+    ]
+    for (const [razao, v, dura] of parciais) {
+      for (const desafino of [1, 1.0035]) {
+        const o = c.createOscillator(); const g = c.createGain()
+        o.type = 'sine'; o.frequency.value = base * razao * desafino
+        envelope(g, inicio, vol * v * 0.5, 0.002, sustento * dura)
+        o.connect(g); g.connect(saida)
+        o.start(inicio); o.stop(inicio + sustento * dura + 0.05)
+      }
+    }
+  }
+
+  // "cha": a gaveta abrindo (baque grave + chiado metálico curto)
+  const baque = c.createOscillator(); const gb = c.createGain()
+  baque.type = 'sine'; baque.frequency.setValueAtTime(190, t); baque.frequency.exponentialRampToValueAtTime(70, t + 0.06)
+  envelope(gb, t, 0.3, 0.002, 0.07)
+  baque.connect(gb); gb.connect(saida); baque.start(t); baque.stop(t + 0.1)
+  chiar(t, 3600, 0.7, 0.75, 0.11)
+  chiar(t + 0.01, 7200, 1, 0.4, 0.08)
+
+  // "ching": duas batidas de sino, a segunda mais aguda, e o chiado do metal vibrando
+  sino(t + 0.085, 1975, 0.32, 1.1)
+  sino(t + 0.155, 2637, 0.26, 0.95)
+  chiar(t + 0.085, 9500, 2, 0.35, 0.4)
+}
+
+/**
+ * O loss: duas notas descendo (sol, depois mi bemol, uma terça maior abaixo
+ * com a segunda caindo um pouco no fim), em triângulo abafado por um filtro.
+ * Mais baixo e mais curto que o ganho: informa, não pune.
+ */
+export function somDePerda(c: BaseAudioContext, destino: AudioNode, t: number): void {
+  const saida = saidaDoSom(c, destino, 0.9)
+  const abafar = c.createBiquadFilter(); abafar.type = 'lowpass'; abafar.frequency.value = 1400; abafar.Q.value = 0.5
+  abafar.connect(saida)
+  const nota = (inicio: number, freq: number, cai: number, vol: number, dura: number) => {
+    for (const [tipo, v] of [['triangle', 1], ['sine', 0.6]] as const) {
+      const o = c.createOscillator(); const g = c.createGain()
+      o.type = tipo; o.frequency.setValueAtTime(freq, inicio)
+      o.frequency.exponentialRampToValueAtTime(freq * cai, inicio + dura)
+      envelope(g, inicio, vol * v, 0.012, dura)
+      o.connect(g); g.connect(abafar)
+      o.start(inicio); o.stop(inicio + dura + 0.05)
+    }
+  }
+  nota(t, 392, 0.99, 0.4, 0.34)
+  nota(t + 0.17, 311.13, 0.94, 0.4, 0.6)
+}
+
+/**
+ * O play: a decolagem. Um sopro de ar que sobe (chiado com o filtro subindo)
+ * e duas notas claras para cima (mi e si), com ataque macio para não
+ * parecer o sino do ganho.
+ */
+export function somDePlay(c: BaseAudioContext, destino: AudioNode, t: number): void {
+  const saida = saidaDoSom(c, destino, 1.2)
+  // o sopro subindo
+  const s = c.createBufferSource(); s.buffer = chiado(c)
+  const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2
+  f.frequency.setValueAtTime(700, t); f.frequency.exponentialRampToValueAtTime(4200, t + 0.32)
+  const gs = c.createGain()
+  gs.gain.setValueAtTime(0.0001, t)
+  gs.gain.exponentialRampToValueAtTime(0.5, t + 0.18)
+  gs.gain.exponentialRampToValueAtTime(0.0001, t + 0.38)
+  s.connect(f); f.connect(gs); gs.connect(saida)
+  s.start(t, Math.random() * 0.5); s.stop(t + 0.42)
+  // as duas notas para cima
+  const nota = (inicio: number, freq: number, vol: number, dura: number) => {
+    for (const [mult, v] of [[1, 1], [2, 0.18]] as const) {
+      const o = c.createOscillator(); const g = c.createGain()
+      o.type = 'sine'; o.frequency.value = freq * mult
+      envelope(g, inicio, vol * v, 0.025, dura)
+      o.connect(g); g.connect(saida)
+      o.start(inicio); o.stop(inicio + dura + 0.05)
+    }
+  }
+  nota(t + 0.12, 659.25, 0.4, 0.3)
+  nota(t + 0.22, 987.77, 0.45, 0.6)
 }
 
 // ------------------------------------------------------------------ quem avisa que terminou
@@ -108,7 +227,8 @@ const inicio = Date.now()
 export function contratoAberto(id: number | string): void { abertosVistos.add(id) }
 
 /**
- * Uma operação terminou. `vistoAberto` diz se esta tela viu a operação
+ * Uma operação terminou: ganho toca o cha-ching, loss toca o som de perda,
+ * empate fica em silêncio. `vistoAberto` diz se esta tela viu a operação
  * acontecer (para não tocar o passado ao abrir a plataforma).
  */
 export function operacaoTerminou(id: number | string, lucro: number, opcoes: { vistoAberto?: boolean; quando?: number } = {}): void {
@@ -118,5 +238,6 @@ export function operacaoTerminou(id: number | string, lucro: number, opcoes: { v
   tocados.add(id)
   abertosVistos.delete(id)
   if (tocados.size > 2000) tocados.clear()
-  if (lucro > 0 && viu && recente) tocarMoeda()
+  if (!viu || !recente || !lucro) return
+  tocarSom(lucro > 0 ? 'ganho' : 'perda')
 }

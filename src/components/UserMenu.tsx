@@ -80,14 +80,14 @@ export function UserMenu({ usuario, onSair, onPerfil, foto }: Props) {
             {MARCA.inicio ? 'Meu perfil' : 'Minha conta'}
           </button>
 
-          {/* o som de ganho (moeda) das operações: liga e desliga neste aparelho */}
+          {/* os sons das operações (play, ganho e loss): liga e desliga neste aparelho */}
           <button className="menu-acao" role="menuitemcheckbox" aria-checked={som} onClick={alternarSom}>
             <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
               fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2.5 6h2.2L8 3.3v9.4L4.7 10H2.5z" />
               {som ? <path d="M10.6 5.6a3.4 3.4 0 010 4.8M12.4 3.9a5.8 5.8 0 010 8.2" /> : <path d="M10.5 6l3.5 4M14 6l-3.5 4" />}
             </svg>
-            Som de ganho: {som ? 'ligado' : 'desligado'}
+            Sons das operações: {som ? 'ligados' : 'desligados'}
           </button>
 
           <button className="menu-acao perigo" role="menuitem" onClick={onSair}>

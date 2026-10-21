@@ -4906,14 +4906,25 @@ input, select, textarea, button { vertical-align: middle; }
 .pd-fechar { border: 0; background: none; color: var(--muted); cursor: pointer; width: calc(24px * var(--pd-escala)); height: calc(24px * var(--pd-escala)); border-radius: 6px; font-size: calc(16px * var(--pd-escala)); display: grid; place-items: center; }
 .pd-fechar svg { width: calc(14px * var(--pd-escala)); height: calc(14px * var(--pd-escala)); }
 .pd-fechar:hover { background: var(--surface-alt); color: var(--text); }
-.pd-janela { display: flex; align-items: center; gap: 6px; padding: 7px 10px 0; color: var(--muted); font-size: calc(10.5px * var(--pd-escala)); }
-.pd-janela .segmented.mini button { padding: 2px 6px; font-size: calc(10.5px * var(--pd-escala)); }
-.pd-barras { position: relative; display: grid; grid-template-columns: repeat(10, 1fr); grid-auto-rows: 100%; gap: calc(3px * var(--pd-escala)); height: calc(96px * var(--pd-escala)); align-items: stretch; padding: 6px 10px 0; box-sizing: content-box; }
-.pd-esperado { position: absolute; left: 10px; right: 10px; z-index: 0; border-top: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent); pointer-events: none; transform: translateY(calc(-1 * (15px * var(--pd-escala)))); }
-.pd-barra { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 2px; min-width: 0; }
-.pd-barra em { font-style: normal; font-size: calc(9.5px * var(--pd-escala)); color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1; }
-.pd-barra i { width: 100%; background: var(--trilho); border-radius: 3px 3px 0 0; transition: height .3s, background .2s; }
-.pd-barra b { font-size: calc(11px * var(--pd-escala)); font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; width: 100%; text-align: center; border-radius: 4px; line-height: 1.5; }
+.pd-janela { display: flex; align-items: center; gap: 8px; padding: calc(9px * var(--pd-escala)) 12px 0; color: var(--muted); font-size: calc(10.5px * var(--pd-escala)); }
+.pd-janela .segmented.mini { flex: 1; display: flex; min-width: 0; }
+.pd-janela .segmented.mini button { flex: 1; min-width: 0; padding: calc(3px * var(--pd-escala)) 0; font-size: calc(10.5px * var(--pd-escala)); font-variant-numeric: tabular-nums; }
+/* O gráfico: a área das barras é a régua. Barras e o tracejado dos 10%
+   medem a mesma altura (a da área), então a linha cai no 10% de verdade;
+   o percentual flutua acima de cada barra e os dígitos ficam no eixo. */
+.pd-grafico { padding: calc(10px * var(--pd-escala)) 12px 0; }
+.pd-area {
+  position: relative; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: calc(4px * var(--pd-escala));
+  height: calc(88px * var(--pd-escala)); margin-top: calc(14px * var(--pd-escala));
+  border-bottom: 1px solid var(--border);
+}
+.pd-esperado { position: absolute; left: 0; right: 0; z-index: 2; height: 0; border-top: 1px dashed color-mix(in srgb, var(--muted) 70%, transparent); pointer-events: none; transform: translateY(.5px); transition: bottom .3s; }
+.pd-barra { position: relative; height: 100%; min-width: 0; }
+.pd-barra i { position: absolute; left: 0; right: 0; bottom: 0; height: var(--h); background: var(--trilho); border-radius: 3px 3px 0 0; transition: height .3s, background .2s; }
+/* o percentual recorta o tracejado quando cai em cima dele (fundo do painel) */
+.pd-barra em { position: absolute; z-index: 3; left: 50%; transform: translateX(-50%); padding: 0 2px; border-radius: 3px; background: var(--bg); bottom: calc(var(--h) + 3px); font-style: normal; font-size: calc(9.5px * var(--pd-escala)); color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1; transition: bottom .3s; white-space: nowrap; }
+.pd-eixo { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: calc(4px * var(--pd-escala)); padding-top: calc(5px * var(--pd-escala)); }
+.pd-eixo b { display: grid; place-items: center; height: calc(18px * var(--pd-escala)); border-radius: 5px; font-size: calc(11px * var(--pd-escala)); font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
 /* --------------------------------------------- quem está fora da média
    O painel acende quem aparece MAIS do que os 10% de todo dígito, e a cor
    satura com o tamanho do desvio: `--brilho` chega do componente entre 0 e
@@ -4926,24 +4937,24 @@ input, select, textarea, button { vertical-align: middle; }
     color-mix(in srgb, var(--pd-verde) calc(55% + var(--brilho, 0) * 45%), var(--trilho)) 78%);
   box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--pd-verde) calc(35% + var(--brilho, 0) * 45%), transparent);
 }
-.pd-barra.alta em, .pd-barra.alta b {
+.pd-barra.alta em, .pd-eixo b.alta {
   color: color-mix(in srgb, var(--pd-verde) calc(55% + var(--brilho, 0) * 45%), var(--muted));
   font-weight: 700;
 }
 /* Quem está abaixo não é erro nem perda: só sai de cena, sem ganhar cor. */
 .pd-barra.baixa i { background: color-mix(in srgb, var(--trilho) 62%, var(--bg)); }
-.pd-barra.baixa em { opacity: .6; }
+.pd-barra.baixa em { color: color-mix(in srgb, var(--muted) 60%, var(--bg)); }
 /* O mais frequente da janela ganha o contorno, acendendo ou não. */
 .pd-barra.lider i { box-shadow: 0 0 0 1px color-mix(in srgb, var(--muted) 45%, transparent); }
 .pd-barra.alta.lider i {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--pd-verde) 65%, transparent),
               0 0 16px color-mix(in srgb, var(--pd-verde) calc(25% + var(--brilho, 0) * 35%), transparent);
 }
-.pd-barra.ultimo b { background: var(--text); color: var(--bg); }
-.pd-barra.alta.ultimo b { background: var(--pd-verde); color: #fff; }
-.pd-fita { display: flex; gap: calc(3px * var(--pd-escala)); padding: 7px 10px 0; }
+.pd-eixo b.ultimo { background: var(--text); color: var(--bg); }
+.pd-eixo b.alta.ultimo { background: var(--pd-verde); color: #fff; }
+.pd-fita { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: calc(3px * var(--pd-escala)); padding: calc(10px * var(--pd-escala)) 12px 0; }
 .pd-fita span {
-  flex: 1; height: calc(18px * var(--pd-escala)); display: grid; place-items: center; border-radius: 4px;
+  height: calc(18px * var(--pd-escala)); display: grid; place-items: center; border-radius: 4px;
   font-size: calc(10.5px * var(--pd-escala)); font-weight: 600; background: var(--surface); color: var(--muted); font-variant-numeric: tabular-nums;
 }
 .pd-fita span.alta { background: var(--pd-verde-suave); color: var(--pd-verde); }
@@ -4951,7 +4962,7 @@ input, select, textarea, button { vertical-align: middle; }
 .pd-fita span.alta.ultimo { outline-color: var(--pd-verde); }
 
 /* ------------------------------------------------------ o resumo do índice */
-.pd-resumo { margin: 8px 10px 10px; padding: 9px 10px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); display: flex; flex-direction: column; gap: calc(7px * var(--pd-escala)); }
+.pd-resumo { margin: calc(10px * var(--pd-escala)) 12px 12px; padding: 10px 11px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); display: flex; flex-direction: column; gap: calc(7px * var(--pd-escala)); }
 .pd-alta { display: flex; align-items: center; gap: 8px; min-height: calc(20px * var(--pd-escala)); }
 .pd-alta > span { color: var(--muted); font-size: calc(10.5px * var(--pd-escala)); font-weight: 600; letter-spacing: .03em; text-transform: uppercase; flex-shrink: 0; }
 .pd-alta > small { color: var(--muted); font-size: calc(10.5px * var(--pd-escala)); opacity: .8; }
@@ -4964,7 +4975,7 @@ input, select, textarea, button { vertical-align: middle; }
   color: color-mix(in srgb, var(--pd-verde) calc(100% - var(--brilho, 0) * 100%), #fff);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pd-verde) calc(30% + var(--brilho, 0) * 50%), transparent);
 }
-/* Duas divisões que valem 50% num mercado sem viés; o traço do meio é o 50. */
+/* A divisão 0 a 4 / 5 a 9 vale 50% num mercado sem viés; o traço do meio é o 50. */
 .pd-divisao { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: calc(7px * var(--pd-escala)); color: var(--muted); font-size: calc(10.5px * var(--pd-escala)); }
 .pd-divisao b { color: var(--text); font-weight: 650; font-variant-numeric: tabular-nums; }
 .pd-divisao > span:last-child { text-align: right; }

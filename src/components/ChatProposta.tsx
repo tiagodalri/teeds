@@ -3,6 +3,7 @@ import { identidade } from '../core/deriv/branding'
 import type { ConfigEstrategia } from '../core/deriv/engine'
 import { Emblema } from './RobotCard'
 import { ligarNoServidor } from '../core/teeds/servidorRobos'
+import { roboLigou } from '../core/som'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import type { Proposta } from '../core/teeds/chat'
 
@@ -73,6 +74,7 @@ export function ChatProposta({ proposta, sessao, onLigado }: Props) {
         origem: 'chat',
       })
       setLigado(true)
+      roboLigou()
       onLigado(s.id, config, proposta.roboId, proposta.contaId, proposta.demo, proposta.moeda)
     } catch (e) {
       // A recusa das travas chega aqui já escrita em português pelo servidor.
