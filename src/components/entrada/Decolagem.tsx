@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { liberarPouso, terminarVoo, useVoo, type Voo } from '../../core/decolagem'
-import { tocarSom } from '../../core/som'
 import { Monograma } from '../marca/Monograma'
 import { Aviao } from './Aviao'
 import { RotaCarregando } from './Carregando'
@@ -54,7 +53,6 @@ function EmVoo({ voo }: { voo: Voo }) {
   const primeiroNome = voo.nome?.trim().split(/\s+/)[0] ?? ''
 
   useLayoutEffect(() => {
-    tocarSom('decolagem')
     if (reduzido.current) {
       ceu.current?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 250, fill: 'forwards' })
       const t = window.setTimeout(() => setFase('cruzeiro'), 250)

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { operacaoTerminou, roboLigou } from '../core/som'
+import { operacaoTerminou } from '../core/som'
 import type { TeedsSocket } from '../core/deriv/client'
 import { type ConfigEstrategia, type EstadoMotor, type Estrategia } from '../core/deriv/engine'
 import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
@@ -300,7 +300,6 @@ export function LocalRobotPanel({
       setCfg(config)
       setContaDaSessao({ contaId: s.contaId, demo: s.demo, moeda: s.moeda })
       olhar(s.id)
-      roboLigou()
       onSessaoChangeRef.current?.(true, s.id)
       if (typeof s.estado?.rodando === 'boolean') setEstado(s.estado)
       setPreparando(false)
@@ -318,7 +317,6 @@ export function LocalRobotPanel({
         setCfg(config)
         setContaDaSessao({ contaId: adotada.contaId, demo: adotada.demo, moeda: adotada.moeda })
         olhar(adotada.id)
-        roboLigou()
         onSessaoChangeRef.current?.(true, adotada.id)
         setEstado(adotada.estado)
         setPreparando(false)

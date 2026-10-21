@@ -83,35 +83,91 @@ export async function salvarPerfil(sessao: SessaoTeeds, d: { nome: string; cpf: 
   }).catch(() => undefined)
 }
 
-/** Reduz a foto no aparelho (quadrada, 320 px, webp) antes de subir: rápida no 4G e leve no banco. */
-async function reduzir(arquivo: File): Promise<Blob> {
-  const url = URL.createObjectURL(arquivo)
+/*
+  Abrir a foto que a pessoa escolheu (revisto em 21/10/2026: o Victor não
+  conseguia subir foto nenhuma no Mac). Três caminhos, do mais moderno ao
+  mais antigo, e a conversão de HEIC (a foto do iPhone, que o Chrome e o
+  Android não sabem abrir) carregada só quando precisa.
+*/
+const ehHeic = (f: File) => /image\/hei[cf]/i.test(f.type) || /\.hei[cf]$/i.test(f.name)
+
+type Desenhavel = { fonte: CanvasImageSource; w: number; h: number; soltar: () => void }
+
+async function abrirImagem(dado: Blob): Promise<Desenhavel | null> {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const b = await createImageBitmap(dado)
+      return { fonte: b, w: b.width, h: b.height, soltar: () => b.close() }
+    } catch { /* tenta pelo <img> */ }
+  }
+  const url = URL.createObjectURL(dado)
   try {
-    const img = await new Promise<HTMLImageElement>((ok, falhou) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => falhou(new Error('Não consegui abrir essa imagem. Tente outra (JPG ou PNG).')); i.src = url })
-    const lado = Math.min(img.naturalWidth, img.naturalHeight)
+    const img = await new Promise<HTMLImageElement | null>((ok) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = url })
+    if (img && img.naturalWidth > 0) {
+      // segura a URL até o desenho terminar (o soltar libera)
+      return { fonte: img, w: img.naturalWidth, h: img.naturalHeight, soltar: () => URL.revokeObjectURL(url) }
+    }
+  } catch { /* segue */ }
+  URL.revokeObjectURL(url)
+  return null
+}
+
+/** Reduz a foto no aparelho (quadrada, 320 px) antes de subir: rápida no 4G e leve no banco. */
+async function reduzir(arquivo: File): Promise<{ blob: Blob; tipo: string }> {
+  let aberta = await abrirImagem(arquivo)
+  if (!aberta && ehHeic(arquivo)) {
+    // HEIC: converte para JPEG aqui mesmo, no aparelho (a biblioteca só baixa neste caso)
+    try {
+      const { default: heic2any } = await import('heic2any')
+      const jpg = await heic2any({ blob: arquivo, toType: 'image/jpeg', quality: 0.9 })
+      aberta = await abrirImagem(Array.isArray(jpg) ? jpg[0] : jpg)
+    } catch { /* cai na mensagem abaixo */ }
+  }
+  if (!aberta) {
+    throw new Error(ehHeic(arquivo)
+      ? 'Não consegui converter essa foto do iPhone (HEIC). Tire um print dela ou exporte como JPG e tente de novo.'
+      : 'Não consegui abrir essa imagem. Escolha uma foto em JPG, PNG ou WEBP.')
+  }
+  try {
+    const lado = Math.min(aberta.w, aberta.h)
     const c = document.createElement('canvas'); c.width = c.height = 320
-    c.getContext('2d')!.drawImage(img, (img.naturalWidth - lado) / 2, (img.naturalHeight - lado) / 2, lado, lado, 0, 0, 320, 320)
-    return await new Promise<Blob>((ok, falhou) => c.toBlob((b) => (b ? ok(b) : falhou(new Error('Não consegui preparar a foto.'))), 'image/webp', 0.86))
-  } finally { URL.revokeObjectURL(url) }
+    const ctx = c.getContext('2d')
+    if (!ctx) throw new Error('Não consegui preparar a foto neste navegador.')
+    ctx.drawImage(aberta.fonte, (aberta.w - lado) / 2, (aberta.h - lado) / 2, lado, lado, 0, 0, 320, 320)
+    // WEBP onde o navegador gera (Chrome, Firefox); o Safari antigo devolve PNG para webp, então JPEG nele
+    const tentar = (tipo: string) => new Promise<Blob | null>((ok) => c.toBlob((b) => ok(b && b.type === tipo ? b : null), tipo, 0.86))
+    const webp = await tentar('image/webp')
+    if (webp) return { blob: webp, tipo: 'image/webp' }
+    const jpeg = await tentar('image/jpeg')
+    if (jpeg) return { blob: jpeg, tipo: 'image/jpeg' }
+    throw new Error('Não consegui preparar a foto neste navegador.')
+  } finally { aberta.soltar() }
 }
 
 export async function enviarFoto(sessao: SessaoTeeds, arquivo: File): Promise<string> {
-  if (!arquivo.type.startsWith('image/')) throw new Error('Escolha uma imagem (JPG, PNG ou WEBP).')
-  const blob = await reduzir(arquivo)
-  const caminho = `${sessao.usuario.id}/perfil-${MARCA.id}.webp`
+  // alguns navegadores entregam HEIC sem tipo: vale a extensão
+  if (!arquivo.type.startsWith('image/') && !ehHeic(arquivo)) throw new Error('Escolha uma imagem (JPG, PNG, WEBP ou a foto do iPhone).')
+  const { blob, tipo } = await reduzir(arquivo)
+  const caminho = `${sessao.usuario.id}/perfil-${MARCA.id}.${tipo === 'image/webp' ? 'webp' : 'jpg'}`
   const r = await fetch(`${SUPABASE.url}/storage/v1/object/avatares/${caminho}`, {
-    method: 'POST', headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'image/webp', 'x-upsert': 'true', 'Cache-Control': 'max-age=3600' },
+    method: 'POST', headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': tipo, 'x-upsert': 'true', 'Cache-Control': 'max-age=3600' },
     body: blob,
   })
-  if (!r.ok) throw new Error('Não consegui enviar a foto agora. Tente de novo.')
+  if (!r.ok) {
+    const motivo = await r.text().catch(() => '')
+    console.warn('[foto do perfil] o armazenamento recusou:', r.status, motivo)
+    throw new Error(r.status === 413 ? 'A foto ficou grande demais. Tente outra.' : 'Não consegui enviar a foto agora. Tente de novo em instantes.')
+  }
   const publica = `${SUPABASE.url}/storage/v1/object/public/avatares/${caminho}?v=${Date.now()}`
   await rest(minhaFicha(sessao), sessao, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ foto_url: publica }) })
   return publica
 }
 
 export async function removerFoto(sessao: SessaoTeeds): Promise<void> {
-  await fetch(`${SUPABASE.url}/storage/v1/object/avatares/${sessao.usuario.id}/perfil-${MARCA.id}.webp`, {
-    method: 'DELETE', headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}` },
+  // a foto pode ter ido como webp ou jpg (conforme o navegador): apaga as duas
+  await fetch(`${SUPABASE.url}/storage/v1/object/avatares`, {
+    method: 'DELETE', headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prefixes: ['webp', 'jpg'].map((e) => `${sessao.usuario.id}/perfil-${MARCA.id}.${e}`) }),
   }).catch(() => undefined)
   await rest(minhaFicha(sessao), sessao, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ foto_url: null }) })
 }

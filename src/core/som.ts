@@ -3,12 +3,11 @@ import { MARCA } from '../marca'
 
 /**
  * Os sons das operações (21/10/2026, pedido do Tiago), no computador, no
- * celular e no app instalado:
+ * celular e no app instalado. SÓ quando a operação fecha (nunca na entrada,
+ * nem ao ligar o robô; o som do play e o da decolagem saíram no mesmo dia):
  *  - ganho: o "cha-ching" da caixa registradora;
  *  - loss: duas notas graves descendo, curtas e abafadas. Avisa sem
- *    assustar: quem opera com vários robôs ouve isso muitas vezes ao dia;
- *  - play: o robô ligou. Um sopro subindo e duas notas claras para cima,
- *    a decolagem; diferente dos dois de resultado para não confundir.
+ *    assustar: quem opera com vários robôs ouve isso muitas vezes ao dia.
  *
  * Sem arquivo de áudio: o som é sintetizado na hora (Web Audio), então não
  * pesa nada e não depende de rede. É o "cha-ching" da caixa registradora,
@@ -71,19 +70,17 @@ if (typeof window !== 'undefined') {
   for (const ev of ['pointerdown', 'touchend', 'keydown']) window.addEventListener(ev, uma, { passive: true })
 }
 
-export type Som = 'ganho' | 'perda' | 'play' | 'decolagem'
+export type Som = 'ganho' | 'perda'
 const SINTESE: Record<Som, (c: BaseAudioContext, destino: AudioNode, t: number) => void> = {
   ganho: (c, d, t) => chaChing(c, d, t),
   perda: (c, d, t) => somDePerda(c, d, t),
-  play: (c, d, t) => somDePlay(c, d, t),
-  decolagem: (c, d, t) => somDeDecolagem(c, d, t),
 }
 const ultimaVez: Record<string, number> = {}
 /** Toca um som. `forcar` ignora o intervalo mínimo (o teste ao ligar o som). */
 export function tocarSom(som: Som, forcar = false): void {
   if (!ligado || document.visibilityState === 'hidden') return
   // ganho e perda dividem o intervalo: resultados juntos viram um som só
-  const grupo = som === 'ganho' || som === 'perda' ? 'resultado' : som
+  const grupo = 'resultado'
   const agora = performance.now()
   if (!forcar && agora - (ultimaVez[grupo] ?? -1e9) < 350) return
   ultimaVez[grupo] = agora
@@ -92,8 +89,6 @@ export function tocarSom(som: Som, forcar = false): void {
   if (c.state === 'suspended') void c.resume().catch(() => undefined)
   SINTESE[som](c, c.destination, c.currentTime + 0.01)
 }
-/** O robô ligou (o servidor aceitou o play). */
-export function roboLigou(): void { tocarSom('play') }
 
 /**
  * A saída de cada som: um ganho só. Sem compressor: o do navegador (joelho
@@ -186,54 +181,6 @@ export function somDePerda(c: BaseAudioContext, destino: AudioNode, t: number): 
   }
   nota(t, 392, 0.99, 0.4, 0.34)
   nota(t + 0.17, 311.13, 0.94, 0.4, 0.6)
-}
-
-/**
- * O play: a decolagem. Um sopro de ar que sobe (chiado com o filtro subindo)
- * e duas notas claras para cima (mi e si), com ataque macio para não
- * parecer o sino do ganho.
- */
-export function somDePlay(c: BaseAudioContext, destino: AudioNode, t: number): void {
-  const saida = saidaDoSom(c, destino, 1.2)
-  // o sopro subindo
-  const s = c.createBufferSource(); s.buffer = chiado(c)
-  const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2
-  f.frequency.setValueAtTime(700, t); f.frequency.exponentialRampToValueAtTime(4200, t + 0.32)
-  const gs = c.createGain()
-  gs.gain.setValueAtTime(0.0001, t)
-  gs.gain.exponentialRampToValueAtTime(0.5, t + 0.18)
-  gs.gain.exponentialRampToValueAtTime(0.0001, t + 0.38)
-  s.connect(f); f.connect(gs); gs.connect(saida)
-  s.start(t, Math.random() * 0.5); s.stop(t + 0.42)
-  // as duas notas para cima
-  const nota = (inicio: number, freq: number, vol: number, dura: number) => {
-    for (const [mult, v] of [[1, 1], [2, 0.18]] as const) {
-      const o = c.createOscillator(); const g = c.createGain()
-      o.type = 'sine'; o.frequency.value = freq * mult
-      envelope(g, inicio, vol * v, 0.025, dura)
-      o.connect(g); g.connect(saida)
-      o.start(inicio); o.stop(inicio + dura + 0.05)
-    }
-  }
-  nota(t + 0.12, 659.25, 0.4, 0.3)
-  nota(t + 0.22, 987.77, 0.45, 0.6)
-}
-
-/**
- * A decolagem do login: o ar passando, sem melodia. Um chiado que sobe de
- * grave para agudo junto com o avião e some quando ele sai da tela.
- */
-export function somDeDecolagem(c: BaseAudioContext, destino: AudioNode, t: number): void {
-  const saida = saidaDoSom(c, destino, 1)
-  const s = c.createBufferSource(); s.buffer = chiado(c); s.loop = true
-  const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 0.9
-  f.frequency.setValueAtTime(260, t); f.frequency.exponentialRampToValueAtTime(2600, t + 1.25)
-  const g = c.createGain()
-  g.gain.setValueAtTime(0.0001, t)
-  g.gain.exponentialRampToValueAtTime(0.55, t + 0.85)
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 1.45)
-  s.connect(f); f.connect(g); g.connect(saida)
-  s.start(t); s.stop(t + 1.5)
 }
 
 // ------------------------------------------------------------------ quem avisa que terminou

@@ -165,7 +165,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
           <button type="button" className="mp-avatar-btn" onClick={() => arquivo.current?.click()} disabled={enviandoFoto} aria-label={foto ? 'Trocar a foto' : 'Adicionar uma foto'}>
             {enviandoFoto ? <i className="mp-girando" aria-hidden="true" /> : <Ic d={I.camera} />}
           </button>
-          <input ref={arquivo} type="file" accept="image/*" hidden onChange={(e) => void trocarFoto(e.target.files?.[0])} />
+          <input ref={arquivo} type="file" accept="image/*,.heic,.heif" hidden onChange={(e) => void trocarFoto(e.target.files?.[0])} />
         </div>
         <div className="mp-quem">
           <span className="mp-sobre">Meu perfil</span>
