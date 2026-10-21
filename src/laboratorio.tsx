@@ -23,6 +23,7 @@ import './components/workspace.css'
 import { aplicarTema, temaGuardado } from './core/tema'
 import { MARCA } from './marca'
 import { LoginScreen } from './components/LoginScreen'
+import { RobotCartao } from './components/RobotResumo'
 import { IDENTIDADES } from './core/deriv/branding'
 import { parametrosPadrao } from './core/deriv/parametros'
 import type { ConfigEstrategia, EstadoMotor, OperacaoMotor, Registro } from './core/deriv/engine'
@@ -47,7 +48,7 @@ const VELAS = (() => {
     return { epoch: 1760000000 + i * 60, open, close, high: Math.max(open, close) + Math.abs(r()) * 3, low: Math.min(open, close) - Math.abs(r()) * 3 }
   })
 })()
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 const SalaDeTreino = lazy(() => import('./components/aovivo/SalaDeTreino').then((m) => ({ default: m.SalaDeTreino })))
 const LabRecorte = lazy(() => import('./components/aovivo/LabRecorte'))
 const TesteAtraso = lazy(() => import('./components/aovivo/TesteAtraso'))
@@ -88,6 +89,7 @@ if (new URLSearchParams(location.search).has('app')) {
 }
 
 const ident = IDENTIDADES[0]
+const CATALOGO_LAB = IDENTIDADES
 const AGORA = Date.now()
 
 const config: ConfigEstrategia = {
@@ -182,6 +184,59 @@ function Cabine({ estado, expandido, titulo }: { estado: EstadoMotor; expandido:
   )
 }
 
+/** ?tela=espera — um robô de loss virtual (AG7/Gulf) ligado, ESPERANDO os 4 dígitos que teriam perdido. */
+function CabineEspera({ mosaico = false }: { mosaico?: boolean }) {
+  const gulf = CATALOGO_LAB.find((i) => i.id === 'superior5') ?? ident
+  // os últimos dígitos: 2 seguidos abaixo de 7 (teriam perdido), de 4 que o robô espera
+  const [digitos, setDigitos] = useState<number[]>([3, 7, 1, 9, 4, 0, 2, 8, 5, 6, 3, 8, 9, 1, 4, 7, 2, 0, 8, 5, 1, 6, 3, 9, 2, 4, 7, 9, 5, 3])
+  const congelado = new URLSearchParams(location.search).has('liberada')
+  const [operando, setOperando] = useState(congelado)
+  const [lidos, setLidos] = useState(37)
+  // o mercado de mentira: um dígito por segundo; com 5 seguidos entre 0 e 6 o robô "entra" por 2 s
+  useEffect(() => {
+    let parado = congelado
+    if (congelado) setDigitos((d) => [...d.slice(-25), 4, 1, 6, 0, 3])
+    const passo = () => {
+      if (parado) return
+      setDigitos((d) => {
+        let seguidos = 0
+        for (let i = d.length - 1; i >= 0 && d[i] < 7; i--) seguidos++
+        if (seguidos >= 5) {
+          setOperando(true); setLidos(0)
+          window.setTimeout(() => { setOperando(false); setDigitos((x) => [...x.slice(-29), 7 + Math.floor(Math.random() * 3)]) }, 2200)
+          return d
+        }
+        setLidos((n) => n + 1)
+        // um pouco mais de dígitos baixos que o normal, para a demonstração não demorar
+        return [...d.slice(-29), Math.random() < 0.8 ? Math.floor(Math.random() * 7) : 7 + Math.floor(Math.random() * 3)]
+      })
+      window.setTimeout(passo, 1100)
+    }
+    const t = window.setTimeout(passo, 800)
+    return () => { parado = true; window.clearTimeout(t) }
+  }, [])
+  let seguidos = 0
+  for (let i = digitos.length - 1; i >= 0 && digitos[i] < 7; i--) seguidos++
+  const n = Math.min(5, seguidos)
+  const condicao = { rotulo: n >= 5 ? 'Loss virtual confirmado — entrada liberada' : `Loss virtual — ${n}/5`, itens: Array.from({ length: 5 }, (_, i) => ({ valor: i < n ? '✕' : '·', ok: i >= n })) }
+  const estado: EstadoMotor = { ...estadoRodando, emOperacao: operando, emCurso: operando ? estadoRodando.emCurso : null, digitos, aguardando: `esperando loss virtual — ${n}/5`, condicao, ticksAnalisados: lidos, perdasSeguidas: 0 }
+  // os parâmetros publicados do GF Gulf (robos_parametros, globalfly, v1): loss virtual de 5
+  const cfgGulf = { ...config, parametros: { v: 1, entrada: { lossVirtual: 5, sequenciaSemAnalise: true }, limites: { valorMaximoPorEntrada: 0 }, contrato: { barreira: 6, contractType: 'DIGITOVER' }, recuperacao: { modos: { agressivo: { margem: 1, sobrePrejuizo: 0.2 }, conservador: { margem: 0.05, sobrePrejuizo: 0 } }, escada: { tipo: 'formula' }, galeApos: 1, lucroMinimo: 0.01, descontoRetorno: 0.97 } } } as unknown as typeof config
+  if (mosaico) return (
+    <RobotCartao estado={estado} config={cfgGulf} moeda="USD" nome="GF Gulf" cor={gulf.cor} numero="#1" inicio={Date.now() - 600_000} demo modo="conservador" onDesligar={nada} onRemover={nada} onAbrirNaLista={nada} />
+  )
+  return (
+    <div className="cabine-caixa aberta rodando" style={{ ['--robo' as string]: gulf.cor, ['--robo-suave' as string]: gulf.corSuave } as React.CSSProperties}>
+      <RobotLive
+        estado={estado} config={cfgGulf} moeda="USD" contaDaSessao={{ contaId: 'VRTC1234567', demo: true, moeda: 'USD' }}
+        estrategiaId="superior5" nomeEstrategia={gulf.nome} ativo="Volatility 100 (1s) Index" titulo="GF Gulf" regra="maior que 6" cor={gulf.cor} ganhaCom={(d) => d >= 7}
+        parametros={parametros} conexao="open" expandido={false} onExpandir={nada} onDigitos={nada} digitosAberto={false} mostrarMarkup={false}
+        onDesligar={nada} desligando={false} onRemover={nada}
+      />
+    </div>
+  )
+}
+
 function SemDeriv() {
   const voltas = Number(new URLSearchParams(location.search).get('voltas') ?? '0')
   try {
@@ -214,6 +269,8 @@ function Laboratorio() {
       <main className="ger rob robot-workspace tem-acompanhamento">
         {qual === 'cabine' && <div className="rob-workspace-board modo-lista"><Cabine estado={estadoRodando} expandido={false} titulo="Robô 1" /></div>}
         {qual === 'cockpit' && <div className="rob-workspace-board modo-lista"><Cabine estado={estadoRodando} expandido titulo="Robô 1" /></div>}
+        {qual === 'espera' && <div className="rob-workspace-board modo-lista"><CabineEspera /></div>}
+        {qual === 'espera-mosaico' && <div className="rob-workspace-board modo-mosaico"><CabineEspera mosaico /></div>}
         {qual === 'parado' && <div className="rob-workspace-board modo-lista"><Cabine estado={estadoParado} expandido={false} titulo="Robô 1" /></div>}
         {qual === 'preparo' && (
           <div className="rob-workspace-board modo-lista"><div className="cabine-caixa cartao parado">

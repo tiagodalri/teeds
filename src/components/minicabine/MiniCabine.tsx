@@ -3,6 +3,7 @@ import { verNoServidor, type SessaoViva } from '../../core/teeds/servidorRobos'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { MASCARA, useValoresOcultos } from '../../core/privacidade'
 import { NomeDoRobo } from '../NomeDoRobo'
+import { contagemDoEstado } from '../RobotResumo'
 import { MARCA } from '../../marca'
 import './mini-cabine.css'
 
@@ -234,7 +235,7 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar }: Props) {
                     <img src={`${import.meta.env.BASE_URL}robos-globalfly/${s.roboId}-pequena.webp`} alt="" onError={(ev) => { ev.currentTarget.style.visibility = 'hidden' }} />
                     <span className="mcb-robo-nome">
                       <b><NomeDoRobo nome={s.roboNome} /></b>
-                      <small className={e.emOperacao ? 'operando' : ''}><i aria-hidden="true" />{e.emOperacao ? 'Em operação' : 'Lendo o mercado'} · {s.demo ? 'Demo' : 'Real'}</small>
+                      <small className={e.emOperacao ? 'operando' : 'analisando'}><i aria-hidden="true" />{e.emOperacao ? 'Em operação' : (() => { const k = contagemDoEstado(e); return k && !k.sequencia ? `Analisando ${k.n}/${k.alvo}` : 'Analisando o mercado' })()} · {s.demo ? 'Demo' : 'Real'}</small>
                     </span>
                     <span className="mcb-robo-res">
                       <b className={ocultos ? '' : e.resultado >= 0 ? 'sobe' : 'cai'}>{v(e.resultado)}</b>

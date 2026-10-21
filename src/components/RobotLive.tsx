@@ -4,7 +4,7 @@ import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { AnaliseAoVivo } from './AnaliseAoVivo'
-import { modoDaConfig, NOME_DO_MODO, temModos } from '../core/deriv/strategies'
+import { ESTRATEGIAS_LOCAIS, modoDaConfig, NOME_DO_MODO, temModos } from '../core/deriv/strategies'
 import './robot-cockpit.css'
 import { NomeDoRobo } from './NomeDoRobo'
 
@@ -221,6 +221,12 @@ export function RobotLive({
     ? 50 + Math.min(50, (estado.resultado / teto) * 50)
     : 50 - Math.min(50, (Math.abs(estado.resultado) / piso) * 50)
 
+  // robô de loss virtual: o cabeçalho diz em que ponto da espera ele está
+  const contagem = useMemo(() => {
+    const m = ESTRATEGIAS_LOCAIS.find((e) => e.id === estrategiaId)?.medidor?.({ digitos: estado.digitos, config })
+    return m && m.tipo === 'contagem' ? m : null
+  }, [estrategiaId, estado.digitos, config])
+
   const fase = !estado.rodando
     ? { chave: 'parado', texto: estado.emOperacao ? 'Concluindo o contrato' : 'Robô parado' }
     : conexao !== 'open'
@@ -231,7 +237,7 @@ export function RobotLive({
         ? { chave: 'operando', texto: 'Enviando ordem' }
         : estado.perdasSeguidas >= 1
           ? { chave: 'recuperando', texto: 'Recuperando' }
-          : { chave: 'cacando', texto: 'Analisando' }
+          : { chave: 'cacando', texto: contagem ? `Analisando ${Math.min(contagem.valor, contagem.alvo)}/${contagem.alvo}` : 'Analisando' }
 
   return (
     <div ref={raiz} className={`tv tv-cockpit ${fase.chave} ${expandido ? 'tv-expandido' : ''}`}>

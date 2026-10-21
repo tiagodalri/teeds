@@ -1,0 +1,88 @@
+/* O radar da estratégia (21/10/2026). Ouro = analisando (a casa trabalhando),
+   verde = sinal confirmado; sem brilho: a varredura é um leque fraco girando
+   devagar, como um radar de aeroporto. Funciona nos dois temas (tokens). */
+.radar {
+  --rd-ouro: var(--gf-ouro, #B78D39);
+  --rd-cor: var(--rd-ouro);
+  --rd-suave: color-mix(in srgb, var(--rd-cor) 16%, transparent);
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: center; min-width: 0;
+}
+.radar.quase { --rd-cor: #D9A441; }
+.radar.liberada { --rd-cor: var(--up, #2F8F72); }
+.radar.zerou { --rd-cor: var(--muted, #96AFD4); }
+.radar.sequencia { --rd-cor: var(--up, #2F8F72); }
+
+/* o disco: anéis, a varredura e a contagem */
+.radar-disco { position: relative; display: grid; place-items: center; width: 92px; height: 92px; border-radius: 50%; flex: none; background: radial-gradient(circle, color-mix(in srgb, var(--rd-cor) 8%, transparent) 0 58%, transparent 59%); }
+.radar-disco::before, .radar-disco::after { content: ''; position: absolute; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--rd-cor) 28%, transparent); }
+.radar-disco::before { inset: 0; }
+.radar-disco::after { inset: 18px; }
+.radar-varredura {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0deg, color-mix(in srgb, var(--rd-cor) 36%, transparent) 50deg, transparent 52deg 360deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 9px, #000 10px); mask: radial-gradient(circle, transparent 0 9px, #000 10px);
+  animation: radar-gira 2.6s linear infinite;
+}
+.radar.quase .radar-varredura { animation-duration: 1.4s; }
+.radar.liberada .radar-varredura, .radar.sequencia .radar-varredura { animation: none; opacity: 0; }
+@keyframes radar-gira { to { transform: rotate(360deg); } }
+.radar-anel { position: absolute; inset: -4px; border-radius: 50%; border: 2px solid transparent; }
+.radar.liberada .radar-anel { border-color: var(--rd-cor); animation: radar-confirma .9s ease-out; }
+@keyframes radar-confirma { from { transform: scale(.85); opacity: 0; } 60% { opacity: 1; } }
+.radar-conta {
+  position: relative; z-index: 1; display: flex; align-items: baseline; justify-content: center; gap: 1px; width: 54px; height: 54px; padding-top: 16px; box-sizing: border-box; border-radius: 50%; white-space: nowrap;
+  background: var(--surface, #0A1C40); border: 1px solid color-mix(in srgb, var(--rd-cor) 55%, transparent);
+  color: var(--text); font-family: var(--fonte-dados, ui-monospace, monospace); font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1;
+}
+.radar-conta small { font-size: 12px; color: var(--muted); font-weight: 600; }
+.radar.liberada .radar-conta { align-items: center; padding-top: 0; }
+.radar-conta svg { width: 26px; height: 26px; fill: none; stroke: var(--rd-cor); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.radar.liberada .radar-conta { background: var(--rd-cor); border-color: transparent; }
+.radar.liberada .radar-conta svg { stroke: #fff; }
+
+/* o texto: estado, frase, casas, sinal de vida */
+.radar-texto { display: grid; gap: 8px; min-width: 0; }
+.radar-estado { display: inline-flex; align-items: center; gap: 8px; color: var(--rd-cor); font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.radar-estado i { width: 8px; height: 8px; border-radius: 50%; background: var(--rd-cor); animation: radar-pulsa 1.6s ease-out infinite; }
+@keyframes radar-pulsa { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--rd-cor) 60%, transparent); } 100% { box-shadow: 0 0 0 9px transparent; } }
+.radar-texto p { margin: 0; color: var(--text); font-size: 14.5px; line-height: 1.45; }
+.radar-texto p b { font-weight: 700; color: var(--text); }
+.radar-casas { display: grid; grid-template-columns: repeat(var(--casas), minmax(0, 46px)); gap: 8px; margin-top: 2px; }
+.radar-casa {
+  display: grid; place-items: center; height: 46px; border-radius: 12px; border: 1.5px dashed color-mix(in srgb, var(--rd-cor) 38%, var(--border));
+  color: var(--text); font-family: var(--fonte-dados, ui-monospace, monospace); font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums;
+  transition: background .25s, border-color .25s;
+}
+.radar-casa.cheia { border-style: solid; border-color: var(--rd-cor); background: var(--rd-suave); }
+.radar-casa.nova { animation: radar-cai .45s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes radar-cai { from { transform: translateY(-10px) scale(.8); opacity: 0; } }
+.radar.zerou .radar-casa { animation: radar-esvazia .5s ease; }
+@keyframes radar-esvazia { 0% { transform: translateX(0); } 25% { transform: translateX(-3px); } 50% { transform: translateX(3px); } 100% { transform: none; } }
+.radar.liberada .radar-casa.cheia { border-color: var(--rd-cor); background: color-mix(in srgb, var(--rd-cor) 20%, transparent); }
+.radar-vida { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.radar-vida i { width: 6px; height: 6px; border-radius: 50%; background: var(--rd-cor); animation: radar-pulsa 1.6s ease-out infinite; }
+
+/* a fita: os dígitos que estão nas casas ganham o contorno dourado */
+.tv-analise-fita span.na-sequencia { box-shadow: inset 0 0 0 1.5px var(--gf-ouro, #B78D39); border-radius: 6px; }
+
+@media (max-width: 640px) {
+  .radar { grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: start; }
+  .radar-disco { width: 72px; height: 72px; }
+  .radar-disco::after { inset: 14px; }
+  .radar-conta { width: 44px; height: 44px; padding-top: 13px; font-size: 17px; }
+  .radar-texto p { font-size: 13.5px; }
+  .radar-casas { gap: 6px; grid-template-columns: repeat(var(--casas), minmax(0, 1fr)); }
+  .radar-casa { height: 42px; font-size: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .radar-varredura, .radar-estado i, .radar-vida i, .radar-casa.nova, .radar.zerou .radar-casa, .radar.liberada .radar-anel { animation: none; }
+}
+
+/* o cartão do mosaico, esperando os loss virtuais: frase curta + mini-régua de casas */
+.rc-contrato.rc-espera { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; color: var(--gf-ouro, #B78D39); font-weight: 700; }
+.rc-contrato.rc-espera.quase { color: #D9A441; }
+.rc-contrato.rc-espera > span:first-child { display: inline-flex; align-items: center; gap: 7px; }
+.rc-espera-ponto { display: inline-block !important; width: 7px !important; height: 7px !important; border-radius: 50% !important; background: currentColor !important; animation: radar-pulsa 1.6s ease-out infinite; --rd-cor: var(--gf-ouro, #B78D39); }
+.rc-casas { display: inline-flex; gap: 4px; }
+.rc-casas i { display: block !important; width: 14px !important; height: 14px !important; border-radius: 4px !important; border: 1.5px dashed color-mix(in srgb, currentColor 45%, transparent); background: transparent !important; }
+.rc-casas i.on { border-style: solid; border-color: currentColor; background: color-mix(in srgb, currentColor 30%, transparent) !important; }

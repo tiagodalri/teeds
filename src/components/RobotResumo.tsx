@@ -46,6 +46,20 @@ const assinado = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${num(Math.a
 const hora = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 const horaSeg = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
+/**
+ * Em que ponto da espera pelos loss virtuais o robô está (21/10/2026). Lê o
+ * `condicao` que o próprio motor manda (uma casa por loss virtual, "✕" nas
+ * que já caíram): vale na cabine, no mosaico e na mini-cabine, sem consultar
+ * a estratégia. null = este robô não espera loss virtual.
+ */
+export function contagemDoEstado(e: EstadoMotor): { n: number; alvo: number; sequencia: boolean } | null {
+  const c = e.condicao
+  if (!c || !e.rodando) return null
+  if (c.rotulo === 'Sequência em andamento') return { n: 0, alvo: 0, sequencia: true }
+  if (!/loss virtual/i.test(c.rotulo) || !c.itens.length) return null
+  return { n: c.itens.filter((i) => i.valor === '✕').length, alvo: c.itens.length, sequencia: false }
+}
+
 /** A fase da sessão em uma palavra, com a mesma régua da cabine completa. */
 export function faseDoEstado(e: EstadoMotor, conexao = 'open'): { chave: 'parado' | 'sem-sinal' | 'recuperando' | 'operando' | 'cacando'; texto: string } {
   if (!e.rodando) return { chave: 'parado', texto: e.emOperacao ? 'Concluindo o contrato' : 'Encerrada' }
@@ -53,7 +67,8 @@ export function faseDoEstado(e: EstadoMotor, conexao = 'open'): { chave: 'parado
   if (e.perdasSeguidas >= 1) return { chave: 'recuperando', texto: `Recuperando · nível ${e.perdasSeguidas}` }
   if (e.emCurso) return { chave: 'operando', texto: 'Operando' }
   if (e.emOperacao) return { chave: 'operando', texto: 'Enviando ordem' }
-  return { chave: 'cacando', texto: 'Analisando' }
+  const k = contagemDoEstado(e)
+  return { chave: 'cacando', texto: k && !k.sequencia ? `Analisando ${k.n}/${k.alvo}` : 'Analisando' }
 }
 
 /** A curva da sessão em miniatura. Sem eixo, sem número: só a forma. */
@@ -190,10 +205,22 @@ export function RobotCartao(p: ResumoProps & { onAbrirNaLista: () => void }) {
         <span className="rs-kpi"><i>Negativas</i><b className="down">{e.derrotas}</b></span>
         {p.ceo && <span className="rs-kpi rs-markup"><i>Markup</i><b>{centavos(markupDaSessao(e))}</b></span>}
       </div>
-      <div className={`rc-contrato ${emCurso ? 'aberto' : ''}`}>
-        <span>{contrato}</span>
-        <i aria-hidden><b /></i>
-      </div>
+      {(() => {
+        // esperando os loss virtuais: a mini-régua de casas no lugar da linha do contrato
+        const k = !emCurso && !e.emOperacao ? contagemDoEstado(e) : null
+        if (k && !k.sequencia) return (
+          <div className={`rc-contrato rc-espera ${k.alvo - k.n === 1 ? 'quase' : ''}`}>
+            <span><i className="rc-espera-ponto" aria-hidden />{k.alvo - k.n === 1 ? 'Quase lá' : 'Analisando o mercado'} · {k.n} de {k.alvo}</span>
+            <span className="rc-casas" aria-hidden>{Array.from({ length: k.alvo }, (_, i) => <i key={i} className={i < k.n ? 'on' : ''} />)}</span>
+          </div>
+        )
+        return (
+          <div className={`rc-contrato ${emCurso ? 'aberto' : ''}`}>
+            <span>{contrato}</span>
+            <i aria-hidden><b /></i>
+          </div>
+        )
+      })()}
       <div className="rc-ops">
         {ultimas.length === 0 && <span className="rc-vazio">{e.rodando ? 'Nenhuma operação ainda' : 'Sem operações nesta sessão'}</span>}
         {ultimas.map((o) => (

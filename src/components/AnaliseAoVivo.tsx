@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { RadarDaEstrategia } from './RadarDaEstrategia'
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 
@@ -71,6 +72,9 @@ export function AnaliseAoVivo({ estado, estrategiaId, nomeEstrategia, moeda, gan
   const ultima = estado.historico[0]
   const ultimoDigito = estado.digitos[estado.digitos.length - 1]
 
+  // os dígitos que o radar está contando, contornados na fita
+  const sequenciaNaFita = medidor?.tipo === 'contagem' && estado.rodando && !estado.emOperacao ? Math.min(medidor.valor, medidor.alvo) : 0
+
   // ------------------------------------------------ a leitura, em uma frase
   const frase: { texto: string; tom?: 'forte' | 'fraco' } = !estado.rodando
     ? { texto: estado.emOperacao ? 'Desligado — concluindo o contrato em andamento.' : 'Sessão encerrada.' }
@@ -119,7 +123,11 @@ export function AnaliseAoVivo({ estado, estrategiaId, nomeEstrategia, moeda, gan
     <section className={`tv-analise ${estado.rodando ? '' : 'parada'}`} aria-label="Análise ao vivo">
       <div className="tv-analise-cima">
         <div className="tv-analise-leitura">
-          {medidor ? (
+          {/* robô de loss virtual: o radar mostra a espera, com as casas enchendo (21/10/2026) */}
+          {medidor?.tipo === 'contagem' && estado.rodando ? (
+            <RadarDaEstrategia nome={nomeEstrategia} valor={medidor.valor} alvo={medidor.alvo} digitos={estado.digitos} ganhaCom={ganhaCom}
+              ticksAnalisados={estado.ticksAnalisados} operando={!!emCurso || estado.emOperacao} emSequencia={estado.condicao?.rotulo === 'Sequência em andamento'} />
+          ) : medidor ? (
             <>
               <div className="tv-analise-numero">
                 <b className="num">
@@ -151,7 +159,7 @@ export function AnaliseAoVivo({ estado, estrategiaId, nomeEstrategia, moeda, gan
               {status && <em className={`tv-analise-status ${status.classe}`}>{status.texto}</em>}
             </div>
           )}
-          <p className={`tv-analise-frase ${frase.tom ?? ''}`}>{frase.texto}</p>
+          {!(medidor?.tipo === 'contagem' && estado.rodando) && <p className={`tv-analise-frase ${frase.tom ?? ''}`}>{frase.texto}</p>}
         </div>
 
         <div className={`tv-analise-contrato ${concluido}`}>
@@ -172,7 +180,8 @@ export function AnaliseAoVivo({ estado, estrategiaId, nomeEstrategia, moeda, gan
           if (d === undefined) return <span key={`v${i}`} className="vazio" />
           const marca = decisivo === i - (tamanho - fita.length) ? (ultima!.ganhou ? ' decidiu up' : ' decidiu down') : ''
           // Só a última casa troca de chave a cada preço: é ela que entra animada.
-          return <span key={i === tamanho - 1 ? `agora-${fita.join('')}` : `c${i}`} className={`${ganhaCom(d) ? 'paga' : ''}${marca}${i === tamanho - 1 ? ' agora' : ''}`}>{d}</span>
+          const naSequencia = sequenciaNaFita > 0 && i >= tamanho - sequenciaNaFita ? ' na-sequencia' : ''
+          return <span key={i === tamanho - 1 ? `agora-${fita.join('')}` : `c${i}`} className={`${ganhaCom(d) ? 'paga' : ''}${marca}${naSequencia}${i === tamanho - 1 ? ' agora' : ''}`}>{d}</span>
         })}
       </div>
       <div className="tv-analise-legenda">

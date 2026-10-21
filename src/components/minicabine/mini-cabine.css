@@ -172,3 +172,6 @@
 @media (max-width: 900px) {
   .mcb.solta.aberta { left: max(12px, var(--sal, 0px)); right: max(12px, var(--sar, 0px)); justify-items: stretch; }
 }
+.mcb-robo-nome small.analisando { color: #D7B26A; }
+.mcb-robo-nome small.analisando i { background: #D7B26A; animation: mcb-pulsa-ouro 1.6s ease-out infinite; }
+@keyframes mcb-pulsa-ouro { 0% { box-shadow: 0 0 0 0 rgba(215, 178, 106, .55); } 100% { box-shadow: 0 0 0 7px rgba(215, 178, 106, 0); } }
