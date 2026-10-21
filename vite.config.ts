@@ -89,7 +89,7 @@ const PALETAS: Record<string, Paleta> = {
   globalfly: {
     manter: ['#051528', '#B78D39', '#9CB1C7', '#F3F0E9', '#29445F',
       // verde e vermelho vivos (21/10/2026, pedido do Tiago): escuro/painel azul, claro e velas
-      '#16E38A', '#FF4D5E', '#00A86B', '#E5243B', '#16C784', '#EA3943',
+      '#22D66A', '#FF3B47', '#0B9E4A', '#DC1F2E', '#16C784', '#EA3943',
       // marinho profundo (21/10/2026, estilo banco privado): página, painel GF, cartões, bordas
       '#030A16', '#040D1A', '#051528', '#08172B', '#0C1D33', '#1A2D45', '#172C47', '#4F6179', '#93A6BD', '#1E3D6E',
       // a Deriv é marca de terceiro: o vermelho dela não se mexe
@@ -100,7 +100,7 @@ const PALETAS: Record<string, Paleta> = {
     // que apagavam até o gráfico); cada cor herdada mantém a luz e ganha a saturação
     vermelho: { h: 356, s: 0.82 },
     quente: { h: 40, s: 0.53, exata: [183 / 255, 141 / 255, 57 / 255] }, // Ouro GF #B78D39
-    verde: { h: 151, s: 0.74 },
+    verde: { h: 143, s: 0.74 },
     frio: { h: 218, s: 0.55 },
     neutroEscuro: 220,
     neutroClaro: 43,

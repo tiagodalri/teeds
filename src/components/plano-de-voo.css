@@ -181,19 +181,22 @@
 .plv svg.plv-arco { display: block; width: 100%; height: auto; overflow: visible; }
 .plv-arco .marca { stroke: var(--plv-ouro); stroke-width: 1.4; opacity: .55; }
 .plv-arco .faixa { fill: none; stroke-width: 13; stroke-linecap: round; }
-.plv-arco .faixa.perda { stroke: #FF4D5E; }
-.plv-arco .faixa.ganho { stroke: #16E38A; }
+.plv-arco .faixa.perda { stroke: #FF3B47; }
+.plv-arco .faixa.ganho { stroke: #22D66A; }
 .plv-arco .faixa.sem { stroke: rgba(156, 177, 199, .3); stroke-dasharray: 3 8; stroke-width: 4; }
 .plv-arco .selo { fill: var(--plv-azul); stroke: var(--plv-ouro); stroke-width: 1.6; }
 .plv-arco .aviao { fill: var(--plv-ouro-claro); }
 .plv-voo-texto { display: grid; gap: 10px; }
 .plv-voo-texto p { margin: 0; color: #C7D3E0; font-size: 14px; line-height: 1.55; }
 .plv-voo-texto b { color: var(--plv-marfim); }
-.plv-voo-texto b.ganho { color: #16E38A; }
-.plv-voo-texto b.perda { color: #FF4D5E; }
+.plv-voo-texto b.ganho { color: #22D66A; }
+.plv-voo-texto b.perda { color: #FF3B47; }
 .plv-voo-texto .plv-folego { padding: 9px 12px; border-radius: 11px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(156, 177, 199, .18); font-size: 13px; }
 .plv-voo-texto .plv-folego.curto { background: rgba(183, 141, 57, .16); border-color: rgba(183, 141, 57, .45); color: var(--plv-ouro-claro); }
 .plv-voo-texto .plv-folego.curto b { color: var(--plv-marfim); }
+.plv-sugestao { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(183, 141, 57, .35); color: #C7D3E0; }
+.plv-sugestao button { padding: 6px 12px; border-radius: 99px; border: 1px solid var(--plv-ouro); background: var(--plv-ouro); color: var(--plv-azul); font-size: 12.5px; font-weight: 800; cursor: pointer; }
+.plv-sugestao button:hover { background: var(--plv-ouro-claro); }
 
 /* 3. decolar */
 .plv-embarque { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; align-items: start; }
@@ -209,7 +212,7 @@
 .plv-passe-nome b { font-size: 28px; letter-spacing: -.01em; }
 .plv-passe-nome span { flex: none; padding: 5px 12px; border-radius: 99px; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; background: rgba(5, 21, 40, .75); }
 .plv-passe-nome span.demo { border: 1px solid rgba(183, 141, 57, .7); color: var(--plv-ouro-claro); }
-.plv-passe-nome span.real { border: 1px solid #16E38A; color: #16E38A; }
+.plv-passe-nome span.real { border: 1px solid #22D66A; color: #22D66A; }
 .plv-picote { position: relative; display: block; height: 0; margin: 4px 22px 0; border-top: 1.5px dashed rgba(156, 177, 199, .35); }
 .plv-picote::before, .plv-picote::after { content: ''; position: absolute; top: -12px; width: 24px; height: 24px; border-radius: 50%; background: var(--bg); }
 .plv-picote::before { left: -34px; }
@@ -218,8 +221,8 @@
 .plv-passe-grade div { display: grid; gap: 4px; min-width: 0; }
 .plv-passe-grade dt { color: var(--plv-aco); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .plv-passe-grade dd { margin: 0; color: var(--plv-marfim); font: 700 17px var(--plv-dados); font-variant-numeric: tabular-nums; }
-.plv-passe-grade dd.ganho { color: #16E38A; }
-.plv-passe-grade dd.perda { color: #FF4D5E; }
+.plv-passe-grade dd.ganho { color: #22D66A; }
+.plv-passe-grade dd.perda { color: #FF3B47; }
 .plv-editar { margin: 4px 22px 18px; padding: 0; border: 0; background: none; color: var(--plv-ouro-claro); font-size: 13px; font-weight: 700; cursor: pointer; }
 .plv-editar:hover { text-decoration: underline; }
 .plv-notas { display: grid; gap: 12px; }

@@ -47,10 +47,10 @@
   --desativado: #c9c4b8;
   /* 21/10/2026: verde e vermelho vivos (pedido do Tiago, "um verde mais
      verde"); no claro um tom abaixo, para o número ler sobre o branco */
-  --up: #00A86B;
-  --up-soft: rgba(0, 168, 107, 0.13);
-  --down: #E5243B;
-  --down-soft: rgba(229, 36, 59, 0.12);
+  --up: #0B9E4A;
+  --up-soft: rgba(11, 158, 74, 0.13);
+  --down: #DC1F2E;
+  --down-soft: rgba(220, 31, 46, 0.12);
   --shadow: 0 1px 2px rgba(5, 21, 40, 0.06);
 }
 
@@ -67,10 +67,10 @@
   --muted: #93A6BD;
   --trilho: #1A2D45;
   --desativado: #4F6179;
-  --up: #16E38A;
-  --up-soft: rgba(22, 227, 138, 0.16);
-  --down: #FF4D5E;
-  --down-soft: rgba(255, 77, 94, 0.17);
+  --up: #22D66A;
+  --up-soft: rgba(34, 214, 106, 0.16);
+  --down: #FF3B47;
+  --down-soft: rgba(255, 59, 71, 0.17);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 /* a página no tom mais profundo; os cartões (surface) sobem um degrau sobre ela */

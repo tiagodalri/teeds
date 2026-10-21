@@ -35,7 +35,8 @@ interface Props {
   erro?: string | null
 }
 const CHAVE = 'teeds.robo.preparo'
-const din = (v: number, m = 'USD') => `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+// US$ em toda a tela (o mesmo símbolo dos mostradores)
+const din = (v: number, m = 'USD') => `${m === 'USD' ? 'US$' : m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 export function lerPreparo(): { cfg?: Partial<ConfigEstrategia>; symbol?: string; modelo?: string; modo?: Modo; lossVirtual?: Record<string, number> } {
   try {
     const valor = JSON.parse(localStorage.getItem(CHAVE) || '{}')
@@ -93,6 +94,8 @@ export const pedirModeloDaVitrine = (id: string) => { modeloDaVitrine = id }
    quando o servidor aceita, preparo aberto no robô pedido pela home.
    ------------------------------------------------------------------ */
 type Passo = 'escolha' | 'plano' | 'decolar'
+/** Com fôlego menor que isto, o plano sugere um limite que aguente esta quantidade de perdas seguidas. */
+const PERDAS_SUGERIDAS = 4
 const FOTOS = `${import.meta.env.BASE_URL}robos-globalfly/`
 const TEM_FOTOS = MARCA.id === 'globalfly'
 /** Nos campos, sem ponto de milhar ("1500,00"): é o formato que a validação do preparo aceita. */
@@ -292,7 +295,10 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
     if (entrada === null || limite === null || limite <= 0) return null
     const escada = escadaDoRobo(modelo.id, entrada, 40, comModo ? modo : 'conservador', parametros)
     const cabem = escada.filter((d) => d.perdido <= limite + 1e-9)
-    return { perdas: cabem.length, maior: cabem.length ? Math.max(...cabem.map((d) => d.valor)) : entrada }
+    // fôlego curto: o limite que aguentaria 4 perdas seguidas, arredondado para cima
+    const alvo = escada[PERDAS_SUGERIDAS - 1]?.perdido
+    const sugestao = cabem.length < PERDAS_SUGERIDAS && alvo !== undefined && alvo <= 10_000 ? Math.ceil(alvo) : null
+    return { perdas: cabem.length, maior: cabem.length ? Math.max(...cabem.map((d) => d.valor)) : entrada, sugestao }
   }, [entrada, limite, modelo.id, modo, comModo, parametros])
 
   useEffect(() => { corpo.current?.scrollTo({ top: 0 }) }, [passo])
@@ -390,7 +396,8 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
               <b><NomeDoRobo nome={modelo.nome} /></b>
               <span>{modelo.chamada}</span>
             </div>
-            <p>{regra ? descrever(modelo.id, regra) : modelo.descricao}</p>
+            {/* na escolha, a regra da plataforma (a escolha da pessoa vale no plano de voo) */}
+            <p>{parametros ? descrever(modelo.id, parametros) : modelo.descricao}</p>
             <dl className="plv-ficha-fatos">
               <div><dt>Ativo</dt><dd>{nomeAtivo}</dd></div>
               <div><dt>Entrada</dt><dd>{lvDoPainel > 0 ? `após ${lvDoPainel} loss virtuais` : 'em toda operação'}</dd></div>
@@ -440,6 +447,12 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
                     <p className={`plv-folego ${folego.perdas <= 2 ? 'curto' : ''}`}>
                       {folego.perdas === 0 ? 'O limite é menor que a primeira entrada: o robô não chega a entrar.'
                         : <>Este limite aguenta <b>{folego.perdas} {folego.perdas === 1 ? 'perda seguida' : 'perdas seguidas'}</b>; a maior entrada seria <b>{din(folego.maior, moeda)}</b>.</>}
+                      {folego.sugestao !== null && (
+                        <span className="plv-sugestao">
+                          Para aguentar {PERDAS_SUGERIDAS} perdas seguidas, o limite precisa ser <b>{din(folego.sugestao, moeda)}</b>.
+                          <button type="button" onClick={() => mudar('stopLoss')(n2(folego.sugestao!))}>Usar {din(folego.sugestao, moeda)}</button>
+                        </span>
+                      )}
                     </p>
                   )}
                   {limite === 0 && <p className="plv-folego curto">Sem limite de perda, o robô só para pela meta ou por você.</p>}
