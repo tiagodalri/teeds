@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { verNoServidor, type SessaoViva } from '../../core/teeds/servidorRobos'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { MASCARA, useValoresOcultos } from '../../core/privacidade'
@@ -32,6 +32,20 @@ interface Props {
 
 type Aviso = { id: string; nome: string; tipo: 'meta' | 'limite' | 'fim'; texto: string; valor: string }
 const CHAVE = `${MARCA.id}.miniCabine.aberta`
+const CHAVE_POS = `${MARCA.id}.miniCabine.posicao`
+/** Onde a pessoa deixou (fração do espaço livre, 0 a 1): vale em qualquer tamanho de tela. */
+type Posicao = { x: number; y: number }
+const lerPos = (): Posicao | null => { try { const p = JSON.parse(localStorage.getItem(CHAVE_POS) || 'null'); return p && Number.isFinite(p.x) && Number.isFinite(p.y) ? p : null } catch { return null } }
+const prende = (v: number) => Math.max(0, Math.min(1, v))
+/** O espaço livre: abaixo do topo e acima da barra de baixo (celular), com folga. */
+function area(w: number, h: number) {
+  const topo = document.querySelector('.workspace-app .topbar')?.getBoundingClientRect().bottom ?? 0
+  const barra = document.querySelector('.barra-inferior')
+  const base = barra && barra.getBoundingClientRect().height > 0 ? barra.getBoundingClientRect().top : window.innerHeight
+  const minX = 8, maxX = Math.max(minX, window.innerWidth - w - 8)
+  const minY = Math.max(8, topo + 8), maxY = Math.max(minY, base - h - 8)
+  return { minX, maxX, minY, maxY }
+}
 const lerAberta = () => { try { return localStorage.getItem(CHAVE) === '1' } catch { return false } }
 const numero = (n: number) => Math.abs(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const comSinal = (n: number, moeda: string) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${moeda ? `${moeda} ` : ''}${numero(n)}`
@@ -44,6 +58,7 @@ const I = {
   meta: 'M5 12.5l4.2 4.2L19 7',
   limite: 'M12 8v5M12 16.5h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z',
   x: 'M6 6l12 12M18 6L6 18',
+  lugar: 'M4 14v6h6M20 10V4h-6M4 20l7-7M20 4l-7 7',
 }
 const Ic = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden="true"><path d={d} /></svg>
 
@@ -75,6 +90,12 @@ function Anel({ pct }: { pct: number }) {
 export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar }: Props) {
   const ocultos = useValoresOcultos()
   const [aberta, setAberta] = useState(lerAberta)
+  const [pos, setPos] = useState<Posicao | null>(lerPos)
+  const [arrastando, setArrastando] = useState(false)
+  const raiz = useRef<HTMLDivElement>(null)
+  const arrasto = useRef<{ x0: number; y0: number; dx: number; dy: number; moveu: boolean } | null>(null)
+  const ignorarClique = useRef(false)
+  const [, redesenhar] = useState(0)
   const [pulso, setPulso] = useState<{ chave: number; lucro: number; moeda: string } | null>(null)
   const [avisos, setAvisos] = useState<Aviso[]>([])
   const [confirmar, setConfirmar] = useState<string | null>(null)
@@ -97,6 +118,46 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar }: Props) {
   }
 
   useEffect(() => { try { localStorage.setItem(CHAVE, aberta ? '1' : '0') } catch { /* só agora */ } }, [aberta])
+  useEffect(() => { try { if (pos) localStorage.setItem(CHAVE_POS, JSON.stringify(pos)); else localStorage.removeItem(CHAVE_POS) } catch { /* só agora */ } }, [pos])
+  useEffect(() => { const r = () => redesenhar((n) => n + 1); window.addEventListener('resize', r); return () => window.removeEventListener('resize', r) }, [])
+
+  // posiciona onde a pessoa deixou (depois de medir: a pílula e o cartão têm tamanhos diferentes)
+  useLayoutEffect(() => {
+    const el = raiz.current
+    if (!el) return
+    if (!pos) { el.style.left = ''; el.style.top = ''; return }
+    const celularAberto = aberta && window.innerWidth <= 900
+    const a = area(el.offsetWidth, el.offsetHeight)
+    el.style.left = celularAberto ? '' : `${a.minX + pos.x * (a.maxX - a.minX)}px`
+    el.style.top = `${a.minY + pos.y * (a.maxY - a.minY)}px`
+  })
+
+  // arrastar: a pílula inteira, ou o cabeçalho do cartão. Um toque sem mover continua abrindo.
+  const pegar = (e: React.PointerEvent) => {
+    if (e.button !== 0 || (e.target as HTMLElement).closest('.mcb-nao-arrasta')) return
+    const r = raiz.current!.getBoundingClientRect()
+    arrasto.current = { x0: e.clientX, y0: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top, moveu: false }
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+  const mover = (e: React.PointerEvent) => {
+    const a0 = arrasto.current
+    const el = raiz.current
+    if (!a0 || !el) return
+    if (!a0.moveu && Math.hypot(e.clientX - a0.x0, e.clientY - a0.y0) < 6) return
+    a0.moveu = true
+    setArrastando(true)
+    const a = area(el.offsetWidth, el.offsetHeight)
+    setPos({
+      x: a.maxX > a.minX ? prende((e.clientX - a0.dx - a.minX) / (a.maxX - a.minX)) : 0,
+      y: a.maxY > a.minY ? prende((e.clientY - a0.dy - a.minY) / (a.maxY - a.minY)) : 1,
+    })
+  }
+  const soltar = () => {
+    if (arrasto.current?.moveu) ignorarClique.current = true
+    arrasto.current = null
+    setArrastando(false)
+  }
+  const alca = { onPointerDown: pegar, onPointerMove: mover, onPointerUp: soltar, onPointerCancel: soltar }
 
   // cada entrada nova faz a pílula respirar; meta, limite e fim viram aviso
   useEffect(() => {
@@ -141,7 +202,7 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar }: Props) {
   }
 
   return (
-    <div className={`mcb ${aberta ? 'aberta' : ''}`}>
+    <div ref={raiz} className={`mcb ${aberta ? 'aberta' : ''} ${pos ? 'solta' : ''} ${arrastando ? 'arrastando' : ''} ${pos && pos.y < 0.5 ? 'no-alto' : ''} ${pos && pos.x > 0.5 ? 'a-direita' : ''}`}>
       {/* avisos: meta, limite, fim */}
       {avisos.slice(0, 2).map((a) => (
         <div key={a.id} className={`mcb-aviso ${a.tipo}`} role="status">
@@ -154,10 +215,12 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar }: Props) {
       {vivas.length > 0 && (aberta ? (
         // ------------------------------------------------ aberta
         <section className="mcb-cartao" aria-label="I.A.s operando">
-          <header className="mcb-topo">
+          <header className="mcb-topo" {...alca} title="Arraste para mudar de lugar">
+            <span className="mcb-pega" aria-hidden="true" />
             <span className="mcb-vivo"><i aria-hidden="true" />{vivas.length === 1 ? '1 I.A. operando' : `${vivas.length} I.A.s operando`}</span>
             <b className={ocultos ? '' : total >= 0 ? 'sobe' : 'cai'}>{v(total)}</b>
-            <button type="button" className="mcb-icone" onClick={() => setAberta(false)} aria-label="Recolher"><Ic d={I.fechar} /></button>
+            {pos && <button type="button" className="mcb-icone mcb-nao-arrasta" onClick={() => setPos(null)} aria-label="Voltar ao lugar padrão" title="Voltar ao lugar padrão"><Ic d={I.lugar} /></button>}
+            <button type="button" className="mcb-icone mcb-nao-arrasta" onClick={() => setAberta(false)} aria-label="Recolher"><Ic d={I.fechar} /></button>
           </header>
           <div className="mcb-lista">
             {vivas.map((s) => {
@@ -210,12 +273,15 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar }: Props) {
         </section>
       ) : (
         // ------------------------------------------------ fechada: a pílula
-        <button type="button" className={`mcb-pilula ${pulso ? (pulso.lucro >= 0 ? 'ganho' : 'perda') : ''}`} key={pulso?.chave ?? 'p'}
-          onClick={() => setAberta(true)} aria-label={`${vivas.length} I.A.s operando, resultado ${ocultos ? 'oculto' : comSinal(total, moeda)}. Abrir.`}>
+        <button type="button" className="mcb-pilula"
+          {...alca} onClick={() => { if (ignorarClique.current) { ignorarClique.current = false; return } setAberta(true) }} title="Toque para abrir · arraste para mudar de lugar" aria-label={`${vivas.length} I.A.s operando, resultado ${ocultos ? 'oculto' : comSinal(total, moeda)}. Abrir.`}>
+          <span className="mcb-pega" aria-hidden="true" />
           <span className="mcb-vivo"><i aria-hidden="true" /><span>{vivas.length === 1 ? '1 I.A.' : `${vivas.length} I.A.s`}</span></span>
           <span className="mcb-sep" aria-hidden="true" />
           <b className={ocultos ? '' : total >= 0 ? 'sobe' : 'cai'}>{v(total)}</b>
-          {pulso && !ocultos && <em className={pulso.lucro >= 0 ? 'sobe' : 'cai'}>{comSinal(pulso.lucro, '')}</em>}
+          {/* o "respiro" de cada entrada: um anel que acende e some (a pílula não é recriada, para não soltar o arrasto) */}
+          {pulso && <i key={pulso.chave} className={`mcb-onda ${pulso.lucro >= 0 ? 'ganho' : 'perda'}`} aria-hidden="true" />}
+          {pulso && !ocultos && <em key={`v${pulso.chave}`} className={pulso.lucro >= 0 ? 'sobe' : 'cai'}>{comSinal(pulso.lucro, '')}</em>}
           {metaTotal > 0 && <span className="mcb-meta" title={`${Math.round(pctMeta * 100)}% da meta`}><Anel pct={pctMeta} /></span>}
           <span className="mcb-abrir"><Ic d={I.abrir} /></span>
         </button>

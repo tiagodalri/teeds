@@ -1,0 +1,91 @@
+/* A cena da entrada (21/10/2026). Imagem escurecida no Azul GF, uma luz só
+   (o fio de ouro do horizonte), movimento lento; o formulário em marfim
+   sólido continua sendo o protagonista. Sem brilho nem degradê decorativo:
+   o véu é escurecimento da foto, não ornamento. */
+.entrada.com-cena {
+  --cena-azul: var(--gf-azul, #051528);
+  --cena-ouro: var(--gf-ouro, #B78D39);
+  --cena-marfim: var(--gf-marfim, #F3F0E9);
+  --cena-aco: var(--gf-aco, #9CB1C7);
+}
+.entrada.com-cena .entrada-aurora, .entrada.com-cena .entrada-grade { display: none; }
+
+.entrada-cena { position: relative; isolation: isolate; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 28px; background: var(--cena-azul); color: var(--cena-marfim); }
+.entrada-cena-foto { position: absolute; inset: 0; z-index: -3; }
+.entrada-cena-foto img {
+  position: absolute; inset: -4%; width: 108%; height: 108%; object-fit: cover;
+  animation: cena-voo 90s ease-in-out infinite alternate; will-change: transform;
+}
+.entrada-cena.rastro .entrada-cena-foto img { object-position: 38% 50%; }
+@keyframes cena-voo { from { transform: scale(1.06) translate3d(-1.6%, .6%, 0); } to { transform: scale(1) translate3d(1.6%, -.6%, 0); } }
+.entrada-cena-veu {
+  position: absolute; inset: 0; z-index: -2;
+  background:
+    linear-gradient(180deg, rgba(5, 21, 40, .62) 0%, rgba(5, 21, 40, .28) 38%, rgba(5, 21, 40, .9) 100%),
+    linear-gradient(90deg, rgba(5, 21, 40, .55) 0%, rgba(5, 21, 40, 0) 65%);
+}
+.entrada-cena.rastro .entrada-cena-veu {
+  background:
+    linear-gradient(180deg, rgba(5, 21, 40, .72) 0%, rgba(5, 21, 40, .45) 42%, rgba(5, 21, 40, .92) 100%),
+    linear-gradient(90deg, rgba(5, 21, 40, .6) 0%, rgba(5, 21, 40, .1) 70%);
+}
+/* o eixo: um fio de ouro na diagonal do monograma, quase um rastro */
+.entrada-cena-eixo {
+  position: absolute; z-index: -1; top: -30%; left: 68%; width: 1.5px; height: 160%;
+  background: linear-gradient(180deg, transparent 0%, rgba(183, 141, 57, .7) 45%, rgba(183, 141, 57, .25) 75%, transparent 100%);
+  transform: rotate(32deg); transform-origin: 50% 50%;
+}
+
+.entrada-cena-texto { display: grid; gap: 14px; max-width: 30rem; }
+.entrada-cena .monograma { margin-bottom: 8px; }
+.entrada.com-cena .entrada-cena .monograma .monograma-claro { display: none; }
+.entrada.com-cena .entrada-cena .monograma .monograma-escuro { display: block; }
+.entrada-cena h2 { margin: 0; color: var(--cena-marfim); font-size: clamp(30px, 3.2vw, 44px); font-weight: 700; letter-spacing: -.02em; line-height: 1.1; text-wrap: balance; }
+.entrada-cena-texto p { margin: 0; color: var(--cena-aco); font-size: 16px; }
+
+.entrada-cena-mercado { display: flex; flex-wrap: wrap; gap: 0; margin: 0; padding: 14px 0 0; list-style: none; border-top: 1px solid rgba(156, 177, 199, .2); }
+.entrada-cena-mercado li { display: grid; gap: 2px; padding: 0 22px; border-left: 1px solid rgba(156, 177, 199, .18); }
+.entrada-cena-mercado li:first-child { padding-left: 0; border-left: 0; }
+.entrada-cena-mercado span { color: var(--cena-aco); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.entrada-cena-mercado b { color: var(--cena-marfim); font-family: var(--fonte-dados, ui-monospace, monospace); font-size: 14px; font-variant-numeric: tabular-nums; }
+.entrada-cena-mercado em { font-family: var(--fonte-dados, ui-monospace, monospace); font-size: 12px; font-style: normal; }
+.entrada-cena-mercado em.sobe { color: #5CC3A1; }
+.entrada-cena-mercado em.cai { color: #E38989; }
+.entrada-cena-credito { position: absolute; right: 18px; bottom: 12px; color: rgba(243, 240, 233, .42); font-size: 10.5px; letter-spacing: .02em; }
+
+/* ------------------------------------------------ computador: cena à esquerda, formulário à direita */
+@media (min-width: 1000px) {
+  body .entrada.com-cena {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(460px, 42%); place-items: stretch;
+    min-height: 100dvh; padding: 0; background: var(--bg);
+  }
+  /* a cena fica parada na altura da tela; só o formulário rola */
+  .entrada.com-cena .entrada-cena { grid-column: 1; grid-row: 1; position: sticky; top: 0; align-self: start; height: 100dvh; padding: 56px 64px 44px; box-sizing: border-box; }
+  body .entrada.com-cena .entrada-caixa {
+    grid-column: 2; grid-row: 1; align-self: center; justify-self: center; width: min(440px, calc(100% - 64px)); margin: 40px 0;
+    background: var(--bg); border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; padding: 8px 0;
+  }
+}
+
+/* ------------------------------------------------ celular e app: a cena no topo, o formulário sobe como uma folha */
+@media (max-width: 999px) {
+  body .entrada.com-cena, body .entrada.com-cena[data-modo="entrar"] {
+    display: block; min-height: 100dvh; padding: 0; background: var(--bg);
+  }
+  .entrada.com-cena .entrada-cena {
+    height: clamp(250px, 38svh, 380px); padding: calc(var(--sat, 0px) + 20px) 24px 46px; box-sizing: border-box; gap: 0;
+  }
+  .entrada-cena h2 { font-size: clamp(22px, 6vw, 28px); max-width: 15em; }
+  .entrada-cena-texto { gap: 8px; }
+  .entrada-cena-texto p { font-size: 14px; }
+  .entrada-cena .monograma { width: 46px !important; height: 27px !important; margin-bottom: 4px; }
+  .entrada-cena-mercado { display: none; }
+  .entrada-cena-credito { right: 14px; bottom: 30px; font-size: 9.5px; }
+  .entrada-cena-eixo { left: 74%; }
+  body .entrada.com-cena .entrada-caixa, body .entrada.com-cena[data-modo="entrar"] .entrada-caixa {
+    position: relative; z-index: 2; max-width: none; margin: -22px 0 0; padding: 22px 20px calc(24px + var(--sab, 0px));
+    border: 0; border-radius: 24px 24px 0 0; background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none;
+    box-shadow: 0 -14px 32px -20px rgba(5, 21, 40, .55);
+  }
+}
+@media (prefers-reduced-motion: reduce) { .entrada-cena-foto img { animation: none; transform: none; } }

@@ -7,6 +7,7 @@ import { Brand } from './Brand'
 import { DerivLogo, IconeSaida } from './DerivMarca'
 import { MARCA } from '../marca'
 import { abrirNoCadastro } from '../core/teeds/entradaInicial'
+import { CenaDoLogin, type VarianteDaCena } from './entrada/CenaDoLogin'
 
 type Modo = 'entrar' | 'criar' | 'esqueci'
 
@@ -17,6 +18,8 @@ interface Props {
   onEntrar: (email: string, senha: string) => Promise<boolean>
   onCadastrar: (dados: DadosFilaEspera) => Promise<{ ok: boolean }>
   onEsqueci: (email: string) => Promise<boolean>
+  /** Só no laboratório: força a versão da cena (nuvens ou rastro). */
+  cena?: VarianteDaCena
 }
 
 const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
@@ -39,7 +42,7 @@ const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
 
 const nomeCompleto = (v: string) => v.trim().split(/\s+/).filter((p) => p.length >= 2).length >= 2
 
-export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, onEsqueci }: Props) {
+export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, onEsqueci, cena = MARCA.cenaLogin }: Props) {
   // Link de campanha de cadastro ou /cadastre-se: abre direto no formulário.
   const [modo, setModo] = useState<Modo>(abrirNoCadastro ? 'criar' : 'entrar')
   const [nome, setNome] = useState('')
@@ -119,7 +122,8 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   )
 
   return (
-    <div className="entrada" data-modo={modo}>
+    <div className={`entrada ${cena ? 'com-cena' : ''}`} data-modo={modo}>
+      {cena && <CenaDoLogin variante={cena} />}
       <div className="entrada-aurora" aria-hidden="true" />
       <div className="entrada-grade" aria-hidden="true" />
 

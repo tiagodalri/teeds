@@ -22,6 +22,7 @@ import './components/robot-workspace.css'
 import './components/workspace.css'
 import { aplicarTema, temaGuardado } from './core/tema'
 import { MARCA } from './marca'
+import { LoginScreen } from './components/LoginScreen'
 import { IDENTIDADES } from './core/deriv/branding'
 import { parametrosPadrao } from './core/deriv/parametros'
 import type { ConfigEstrategia, EstadoMotor, OperacaoMotor, Registro } from './core/deriv/engine'
@@ -55,6 +56,13 @@ const LabAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({
 const LabInicio = lazy(() => import('./components/inicio/LabInicio'))
 const LabPerfil = lazy(() => import('./components/perfil/LabPerfil'))
 const LabSuporte = lazy(() => import('./components/suporte/LabSuporte'))
+function LabLogin() {
+  const q = new URLSearchParams(location.search)
+  const t = q.get('tema'); if (t) document.documentElement.dataset.tema = t
+  const cena = q.get('cena') === 'rastro' ? 'rastro' : 'nuvens'
+  const nada = async () => false
+  return <LoginScreen ocupado={false} limparErro={() => undefined} onEntrar={nada} onCadastrar={async () => ({ ok: false })} onEsqueci={nada} cena={cena} />
+}
 const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine'))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
 import { DerivDesconectada } from './components/DerivDesconectada'
@@ -187,6 +195,7 @@ function Laboratorio() {
   if (qual === 'inicio') return <Suspense fallback={null}><LabInicio /></Suspense>
   if (qual === 'perfil') return <Suspense fallback={null}><LabPerfil /></Suspense>
   if (qual === 'suporte') return <Suspense fallback={null}><LabSuporte /></Suspense>
+  if (qual === 'login') return <LabLogin />
   if (qual === 'minicabine') return <Suspense fallback={null}><LabMiniCabine /></Suspense>
   return (
     <div className="app workspace-app" data-laboratorio={qual}>

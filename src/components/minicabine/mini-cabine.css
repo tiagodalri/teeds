@@ -30,10 +30,10 @@
 }
 :root[data-tema='escuro'] .mcb-pilula { background: #13295A; border-color: rgba(183, 141, 57, .75); box-shadow: 0 18px 40px -12px rgba(0, 0, 0, .9), 0 0 0 4px rgba(2, 8, 20, .55); }
 @keyframes mcb-entra { from { opacity: 0; transform: translateY(10px) scale(.96); } }
-.mcb-pilula.ganho { animation: mcb-respira-g .9s ease; }
-.mcb-pilula.perda { animation: mcb-respira-p .9s ease; }
-@keyframes mcb-respira-g { 30% { transform: scale(1.04); border-color: var(--mcb-verde); box-shadow: 0 0 0 6px rgba(92, 195, 161, .18), 0 16px 36px -14px rgba(5, 21, 40, .7); } }
-@keyframes mcb-respira-p { 30% { transform: scale(1.04); border-color: var(--mcb-coral); box-shadow: 0 0 0 6px rgba(227, 137, 137, .18), 0 16px 36px -14px rgba(5, 21, 40, .7); } }
+.mcb-onda { position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; border: 1.5px solid transparent; animation: mcb-respira 1s ease forwards; }
+.mcb-onda.ganho { --onda: var(--mcb-verde); --onda-suave: rgba(92, 195, 161, .2); }
+.mcb-onda.perda { --onda: var(--mcb-coral); --onda-suave: rgba(227, 137, 137, .2); }
+@keyframes mcb-respira { 0% { opacity: 0; } 25% { opacity: 1; border-color: var(--onda); box-shadow: 0 0 0 6px var(--onda-suave); } 100% { opacity: 0; border-color: var(--onda); box-shadow: 0 0 0 14px transparent; } }
 .mcb-vivo { display: inline-flex; align-items: center; gap: 8px; color: var(--mcb-suave); font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 .mcb-vivo > i { width: 8px; height: 8px; border-radius: 50%; background: var(--mcb-verde); animation: mcb-pulsa 1.6s ease-out infinite; }
 @keyframes mcb-pulsa { 0% { box-shadow: 0 0 0 0 rgba(92, 195, 161, .55); } 100% { box-shadow: 0 0 0 8px rgba(92, 195, 161, 0); } }
@@ -149,6 +149,26 @@
   body:has(.mcb.aberta) .sp-lancador-area { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .mcb-pilula, .mcb-pilula.ganho, .mcb-pilula.perda, .mcb-cartao, .mcb-aviso, .mcb-vivo > i, .mcb-robo-nome small.operando i, .mcb-entradas i.agora { animation: none; }
+  .mcb-pilula, .mcb-onda, .mcb-cartao, .mcb-aviso, .mcb-vivo > i, .mcb-robo-nome small.operando i, .mcb-entradas i.agora { animation: none; }
   .mcb-pilula > em { animation-duration: .01s; }
+}
+
+/* ------------------------------------------------ arrastar para qualquer canto (21/10/2026) */
+.mcb-pilula, .mcb-topo { touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+.mcb.arrastando .mcb-pilula, .mcb.arrastando .mcb-topo { cursor: grabbing; }
+.mcb.arrastando .mcb-pilula, .mcb.arrastando .mcb-cartao { box-shadow: 0 28px 60px -18px rgba(5, 21, 40, .85), 0 0 0 1px rgba(183, 141, 57, .7); }
+.mcb.arrastando { transition: none; }
+/* a pega: seis pontinhos, discretos, à esquerda */
+.mcb-pega { width: 6px; height: 14px; flex: none; opacity: .45; background: radial-gradient(circle, var(--mcb-marfim) 1px, transparent 1.4px) 0 0 / 3px 4.6px; }
+.mcb-pilula .mcb-pega { margin-left: -4px; margin-right: -2px; }
+.mcb-topo .mcb-pega { margin-right: 2px; }
+.mcb-topo { cursor: grab; }
+/* solta: a posição vem do arrasto (em px), não mais do canto padrão */
+.workspace-app .mcb.solta, .mcb.solta { right: auto; bottom: auto; transform: none; justify-items: start; }
+/* na metade de cima, os avisos e o "+0,33" aparecem embaixo da pílula: ela não sai do lugar */
+.mcb.solta.no-alto .mcb-aviso { order: 2; }
+.mcb.solta.a-direita { justify-items: end; }
+.mcb.no-alto .mcb-pilula > em { bottom: auto; top: calc(100% + 6px); }
+@media (max-width: 900px) {
+  .mcb.solta.aberta { left: max(12px, var(--sal, 0px)); right: max(12px, var(--sar, 0px)); justify-items: stretch; }
 }

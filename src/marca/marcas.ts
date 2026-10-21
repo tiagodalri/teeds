@@ -114,6 +114,8 @@ export interface Marca {
    * a página de Ajuda (FAQ) e a caixa de entrada no painel admin.
    */
   suporte?: boolean
+  /** Tela de entrada com a cena (foto escurecida + frase + mercado). Ver CenaDoLogin.tsx. */
+  cenaLogin?: 'nuvens' | 'rastro'
   /**
    * Nome dos ativos sem a palavra "Volatility" ("75 Index", "10 (1s) Index").
    * Pedido do Tiago em 19/10/2026 para a GlobalFly; as outras marcas mostram
@@ -368,6 +370,7 @@ export const MARCAS: Record<string, Marca> = {
     livesAoVivo: false,
     inicio: true,
     suporte: true,
+    cenaLogin: 'nuvens',
     ativosSemVolatility: true,
     iconesDeAtivos: true,
     indicesCompletos: true,
