@@ -94,8 +94,6 @@ export const pedirModeloDaVitrine = (id: string) => { modeloDaVitrine = id }
    quando o servidor aceita, preparo aberto no robô pedido pela home.
    ------------------------------------------------------------------ */
 type Passo = 'escolha' | 'plano' | 'decolar'
-/** Com fôlego menor que isto, o plano sugere um limite que aguente esta quantidade de perdas seguidas. */
-const PERDAS_SUGERIDAS = 4
 const FOTOS = `${import.meta.env.BASE_URL}robos-globalfly/`
 const TEM_FOTOS = MARCA.id === 'globalfly'
 /** Nos campos, sem ponto de milhar ("1500,00"): é o formato que a validação do preparo aceita. */
@@ -196,24 +194,6 @@ function MostradorDeDigitos({ valor, mudar, max, padrao }: { valor: number; muda
   )
 }
 
-const CAMINHO_AVIAO = 'M62 20C61.6 18.4 58.5 17.6 54 17.6H38L25 3.5h-4l8 14.3-16 .4-5.5-6.2H5l2 6.6-3 .6v1.6l3 .6-2 6.6h2.5l5.5-6.2 16 .4-8 14.3h4l13-14.1h16c4.5 0 7.6-.8 8-2.4Z'
-/** O arco do plano (limite à esquerda, meta à direita, o avião no zero, prestes a decolar). */
-function ArcoDoPlano({ meta, limite }: { meta: number; limite: number }) {
-  const ponto = (p: number) => { const a = Math.PI * (1 - p); return { x: 150 + 120 * Math.cos(a), y: 150 - 120 * Math.sin(a) } }
-  const arco = (de: number, ate: number) => { const a = ponto(de), b = ponto(ate); return `M${a.x.toFixed(1)} ${a.y.toFixed(1)} A120 120 0 0 1 ${b.x.toFixed(1)} ${b.y.toFixed(1)}` }
-  const temMeta = meta > 0, temLimite = limite > 0
-  const zero = temMeta && temLimite ? limite / (limite + meta) : temLimite ? 0.75 : temMeta ? 0.25 : 0.5
-  const z = ponto(zero)
-  return (
-    <svg className="plv-arco" viewBox="0 0 300 160" aria-hidden="true">
-      {[0, 0.25, 0.5, 0.75, 1].map((p) => { const a = ponto(p), b = { x: 150 + 134 * Math.cos(Math.PI * (1 - p)), y: 150 - 134 * Math.sin(Math.PI * (1 - p)) }; return <line key={p} x1={a.x + (b.x - a.x) * 1.1} y1={a.y + (b.y - a.y) * 1.1} x2={b.x} y2={b.y} className="marca" /> })}
-      <path d={arco(0, zero)} className={`faixa perda ${temLimite ? '' : 'sem'}`} />
-      <path d={arco(zero, 1)} className={`faixa ganho ${temMeta ? '' : 'sem'}`} />
-      <g transform={`translate(${z.x.toFixed(1)} ${z.y.toFixed(1)})`}><circle r="16" className="selo" /><g transform="rotate(-32) translate(-11 -7) scale(.34)"><path className="aviao" d={CAMINHO_AVIAO} /></g></g>
-    </svg>
-  )
-}
-
 export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
   const disponiveis = useRobosDisponiveis()
   // Escolhido no cartão da vitrine/home: o preparo já abre nele (a escolha continua a um "Voltar").
@@ -295,10 +275,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
     if (entrada === null || limite === null || limite <= 0) return null
     const escada = escadaDoRobo(modelo.id, entrada, 40, comModo ? modo : 'conservador', parametros)
     const cabem = escada.filter((d) => d.perdido <= limite + 1e-9)
-    // fôlego curto: o limite que aguentaria 4 perdas seguidas, arredondado para cima
-    const alvo = escada[PERDAS_SUGERIDAS - 1]?.perdido
-    const sugestao = cabem.length < PERDAS_SUGERIDAS && alvo !== undefined && alvo <= 10_000 ? Math.ceil(alvo) : null
-    return { perdas: cabem.length, maior: cabem.length ? Math.max(...cabem.map((d) => d.valor)) : entrada, sugestao }
+    return { perdas: cabem.length, maior: cabem.length ? Math.max(...cabem.map((d) => d.valor)) : entrada }
   }, [entrada, limite, modelo.id, modo, comModo, parametros])
 
   useEffect(() => { corpo.current?.scrollTo({ top: 0 }) }, [passo])
@@ -349,8 +326,6 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   const PASSOS: Array<{ id: Passo; nome: string }> = [{ id: 'escolha', nome: 'Escolha a I.A.' }, { id: 'plano', nome: 'Plano de voo' }, { id: 'decolar', nome: 'Decolar' }]
   const ordem = PASSOS.findIndex((p) => p.id === passo)
   const opcaoModo = OPCOES_DE_MODO.find((o) => o.id === modo)
-  const metaTexto = meta && meta > 0 ? <b className="ganho">ganhar {din(meta, moeda)}</b> : <b>sem meta de ganho</b>
-  const limiteTexto = limite && limite > 0 ? <b className="perda">perder {din(limite, moeda)}</b> : <b>sem limite de perda</b>
 
   return <RobotDialog label="Configurar robô" busy={ligando} onCancel={onCancelar}>
     <form className={`robot-launch plv plv-no-${passo}`} onSubmit={(e) => { e.preventDefault(); if (passo !== 'decolar') avancar() }}
@@ -438,26 +413,6 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
                 marcas={[10, 25, 100, 500]} faixa={[5, 1000]} passoMin={1} moeda={moeda} erro={erroMeta} aoEnter={avancar} />
               <Mostrador id="plv-limite" rotulo="Limite de perda" tom="coral" etiqueta={plano ? 'do plano do dia' : undefined} ajuda="O robô para antes de passar desta perda." valor={valores.stopLoss} mudar={mudar('stopLoss')}
                 marcas={[5, 15, 50, 250]} faixa={[2, 1000]} passoMin={1} moeda={moeda} erro={erroLimite} aoEnter={avancar} />
-              <div className="plv-voo" aria-live="polite">
-                <ArcoDoPlano meta={meta ?? 0} limite={limite ?? 0} />
-                <div className="plv-voo-texto">
-                  {entrada === null ? <p>Ajuste a entrada para ver o plano.</p>
-                    : <p>Entra com <b>{din(entrada, moeda)}</b>. Para ao {metaTexto} ou ao {limiteTexto}{meta && limite ? ', o que vier primeiro' : ''}.</p>}
-                  {folego && (
-                    <p className={`plv-folego ${folego.perdas <= 2 ? 'curto' : ''}`}>
-                      {folego.perdas === 0 ? 'O limite é menor que a primeira entrada: o robô não chega a entrar.'
-                        : <>Este limite aguenta <b>{folego.perdas} {folego.perdas === 1 ? 'perda seguida' : 'perdas seguidas'}</b>; a maior entrada seria <b>{din(folego.maior, moeda)}</b>.</>}
-                      {folego.sugestao !== null && (
-                        <span className="plv-sugestao">
-                          Para aguentar {PERDAS_SUGERIDAS} perdas seguidas, o limite precisa ser <b>{din(folego.sugestao, moeda)}</b>.
-                          <button type="button" onClick={() => mudar('stopLoss')(n2(folego.sugestao!))}>Usar {din(folego.sugestao, moeda)}</button>
-                        </span>
-                      )}
-                    </p>
-                  )}
-                  {limite === 0 && <p className="plv-folego curto">Sem limite de perda, o robô só para pela meta ou por você.</p>}
-                </div>
-              </div>
             </section>
           </div>
         )}
