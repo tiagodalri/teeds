@@ -9,7 +9,7 @@
 }
 .radar.quase { --rd-cor: #D9A441; }
 .radar.liberada { --rd-cor: var(--up, #2F8F72); }
-.radar.zerou { --rd-cor: var(--muted, #96AFD4); }
+.radar.zerou { --rd-cor: var(--muted, #93A6BD); }
 .radar.sequencia { --rd-cor: var(--up, #2F8F72); }
 
 /* o disco: anéis, a varredura e a contagem */
@@ -31,7 +31,7 @@
 @keyframes radar-confirma { from { transform: scale(.85); opacity: 0; } 60% { opacity: 1; } }
 .radar-conta {
   position: relative; z-index: 1; display: flex; align-items: baseline; justify-content: center; gap: 1px; width: 54px; height: 54px; padding-top: 16px; box-sizing: border-box; border-radius: 50%; white-space: nowrap;
-  background: var(--surface, #0A1C40); border: 1px solid color-mix(in srgb, var(--rd-cor) 55%, transparent);
+  background: var(--surface, #08172B); border: 1px solid color-mix(in srgb, var(--rd-cor) 55%, transparent);
   color: var(--text); font-family: var(--fonte-dados, ui-monospace, monospace); font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1;
 }
 .radar-conta small { font-size: 12px; color: var(--muted); font-weight: 600; }

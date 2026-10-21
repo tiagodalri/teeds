@@ -65,8 +65,8 @@ const css = (nome: string, padrao: string) => (getComputedStyle(document.documen
 const CORES_DAS_LINHAS = ['#E0B84F', '#4FA3FF', '#C38BFF', '#2FBF8F', '#FF7A59', '#9CB1C7']
 
 function estilos(modo: ChartMode): DeepPartial<Styles> {
-  const texto = css('--text', '#e8eef5'), apoio = css('--muted', '#96afd4'), borda = css('--border', '#203765')
-  const alta = css('--up', '#16C784'), baixa = css('--down', '#EA3943'), fundo = css('--surface', '#0a1c40')
+  const texto = css('--text', '#e8eef5'), apoio = css('--muted', '#93A6BD'), borda = css('--border', '#1A2D45')
+  const alta = css('--up', '#16C784'), baixa = css('--down', '#EA3943'), fundo = css('--surface', '#08172B')
   const fonte = getComputedStyle(document.body).fontFamily
   return {
     grid: { horizontal: { color: borda, style: 'dashed', dashedValue: [2, 4] }, vertical: { color: borda, style: 'dashed', dashedValue: [2, 4] } },

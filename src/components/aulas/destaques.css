@@ -1,7 +1,7 @@
 /* Destaques (Aulas, 21/10/2026). A sala de aulas é sempre escura (cinema):
    cores fixas da casa, sem depender do tema. */
 .dq {
-  --dq-azul: #0A1C40; --dq-fundo: #051528; --dq-ouro: var(--gf-ouro, #B78D39); --dq-marfim: var(--gf-marfim, #F3F0E9); --dq-aco: #96AFD4;
+  --dq-azul: #08172B; --dq-fundo: #051528; --dq-ouro: var(--gf-ouro, #B78D39); --dq-marfim: var(--gf-marfim, #F3F0E9); --dq-aco: #93A6BD;
   display: grid; gap: 14px; margin: 22px 0 6px; min-width: 0;
 }
 .dq svg { flex: none; }

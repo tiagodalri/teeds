@@ -142,6 +142,29 @@ function CampoDoPlano({ id, rotulo, ajuda, cor, valor, mudar, atalhos, min, max,
   )
 }
 
+/** O loss virtual no mesmo desenho dos valores: − e + nas pontas, o número no meio, atalhos ao lado. */
+function CampoDeDigitos({ valor, mudar, max, padrao }: { valor: number; mudar: (n: number) => void; max: number; padrao: number }) {
+  const atalhos = [0, 2, 3, 4, 5].includes(padrao) ? [0, 2, 3, 4, 5] : [0, 2, 3, padrao, 5].sort((a, b) => a - b)
+  return (
+    <div className="plv-campo">
+      <div className="plv-campo-nome" id="plv-lv-nome">
+        <b>Loss virtual</b>
+        <small>{valor === 0 ? 'entra em toda operação' : `espera ${valor} ${valor === 1 ? 'dígito' : 'dígitos'} que teriam perdido`}{valor === padrao ? ' · padrão' : ''}</small>
+      </div>
+      <div className="plv-campo-valor" role="group" aria-labelledby="plv-lv-nome">
+        <button type="button" className="plv-mm" onClick={() => mudar(Math.max(0, valor - 1))} disabled={valor <= 0} aria-label="Esperar um dígito a menos">−</button>
+        <div className="plv-num" aria-live="polite">
+          {valor === 0 ? <output className="plv-num-texto">Sem</output> : <><output className="plv-num-texto">{valor}</output><span>{valor === 1 ? 'dígito' : 'dígitos'}</span></>}
+        </div>
+        <button type="button" className="plv-mm" onClick={() => mudar(Math.min(max, valor + 1))} disabled={valor >= max} aria-label="Esperar um dígito a mais">+</button>
+      </div>
+      <div className="plv-atalhos" role="group" aria-label="Atalhos de loss virtual">
+        {atalhos.map((a) => <button type="button" key={a} className={valor === a ? 'on' : ''} aria-pressed={valor === a} onClick={() => mudar(a)}>{a === 0 ? 'Sem' : a}</button>)}
+      </div>
+    </div>
+  )
+}
+
 const CAMINHO_AVIAO = 'M62 20C61.6 18.4 58.5 17.6 54 17.6H38L25 3.5h-4l8 14.3-16 .4-5.5-6.2H5l2 6.6-3 .6v1.6l3 .6-2 6.6h2.5l5.5-6.2 16 .4-8 14.3h4l13-14.1h16c4.5 0 7.6-.8 8-2.4Z'
 /** O arco do plano (limite à esquerda, meta à direita, o avião no zero, prestes a decolar). */
 function ArcoDoPlano({ meta, limite }: { meta: number; limite: number }) {
@@ -370,20 +393,10 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
                 </div>
               )}
 
-              {comLV && (
-                <div className="plv-grupo">
-                  <span className="plv-rot" id="plv-lv">Loss virtual</span>
-                  <div className="plv-lv" role="radiogroup" aria-labelledby="plv-lv">
-                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, ...(lv > 8 ? [lv] : [])].map((n) => (
-                      <button type="button" key={n} role="radio" aria-checked={lv === n} className={lv === n ? 'on' : ''} onClick={() => escolherLv(n)}>{n === 0 ? 'Sem' : n}</button>
-                    ))}
-                  </div>
-                  <p className="plv-dica">{lv === 0 ? <>Entra em <b>toda operação</b>, sem esperar a sequência.</> : <>Espera <b>{lv} {lv === 1 ? 'dígito' : 'dígitos'}</b> seguidos que teriam perdido antes de entrar.{lv === lvDoPainel ? ' É o padrão da plataforma.' : ` O padrão é ${lvDoPainel}.`}</>}</p>
-                </div>
-              )}
             </aside>
 
             <section className="plv-campos" aria-label="Valores da sessão">
+              {comLV && <CampoDeDigitos valor={lv} mudar={escolherLv} max={LOSS_VIRTUAL_MAXIMO} padrao={lvDoPainel} />}
               <CampoDoPlano id="plv-entrada" rotulo="Entrada" ajuda="o valor de cada operação" valor={valores.valorAoVencer} mudar={mudar('valorAoVencer')}
                 atalhos={[0.35, 1, 2, 5]} min={0.35} max={10_000} entrada moeda={moeda} erro={erroEntrada} aoEnter={avancar} />
               <CampoDoPlano id="plv-meta" rotulo="Meta de ganho" ajuda={plano ? 'para ao ganhar · do seu plano do dia' : 'o robô para ao ganhar'} cor="verde" valor={valores.takeProfit} mudar={mudar('takeProfit')}

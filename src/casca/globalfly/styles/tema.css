@@ -47,32 +47,34 @@
   --desativado: #c9c4b8;
   /* 21/10/2026: verde e vermelho vivos (pedido do Tiago, "um verde mais
      verde"); no claro um tom abaixo, para o número ler sobre o branco */
-  --up: #0A9F5F;
-  --up-soft: rgba(10, 159, 95, 0.12);
-  --down: #E5303C;
-  --down-soft: rgba(229, 48, 60, 0.11);
+  --up: #00A86B;
+  --up-soft: rgba(0, 168, 107, 0.13);
+  --down: #E5243B;
+  --down-soft: rgba(229, 36, 59, 0.12);
   --shadow: 0 1px 2px rgba(5, 21, 40, 0.06);
 }
 
 :root[data-tema='escuro'] {
-  /* azul organiza superfícies. 19/10/2026: o Tiago achou os azuis "mortos"
-     (quase cinza, saturação 0,3 a 0,5); agora é um marinho vivo e profundo,
-     na linha dos bancos privados: mesmo matiz em todas as camadas, saturação
-     alta no fundo e caindo devagar até a borda. */
-  --bg: #041029;
-  --surface: #0A1C40;
-  --surface-alt: #0F234D;
-  --border: #203765;
+  /* 21/10/2026 (Tiago): o marinho "vivo" de 19/10 ficou claro demais e cheio
+     de tons desencontrados. Agora é UMA escala de azul-marinho profundo, a
+     partir do Azul GF (#051528), no estilo dos bancos privados, que combina
+     com o ouro: página #040D1A, painéis em Azul GF, cartões #08172B. */
+  --bg: #040D1A;
+  --surface: #08172B;
+  --surface-alt: #0C1D33;
+  --border: #1A2D45;
   --text: #F3F0E9;
-  --muted: #96AFD4;
-  --trilho: #203765;
-  --desativado: #576B94;
-  --up: #1FD17F;
-  --up-soft: rgba(31, 209, 127, 0.16);
-  --down: #FF5A64;
-  --down-soft: rgba(255, 90, 100, 0.16);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --muted: #93A6BD;
+  --trilho: #1A2D45;
+  --desativado: #4F6179;
+  --up: #16E38A;
+  --up-soft: rgba(22, 227, 138, 0.16);
+  --down: #FF4D5E;
+  --down-soft: rgba(255, 77, 94, 0.17);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
+/* a página no tom mais profundo; os cartões (surface) sobem um degrau sobre ela */
+:root[data-tema='escuro'] body { background: var(--bg); }
 
 body { font-family: var(--fonte-corpo); letter-spacing: 0; font-variant-numeric: tabular-nums lining-nums; }
 h1, h2, h3, h4 { font-family: var(--fonte-marca); }
@@ -117,14 +119,14 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 .go { --go-gold: var(--gf-ouro); }
 
 /* ------------------------------------------- sala de aula */
-.aulas { background: #020E24; }
-.aulas-capa { box-shadow: inset 0 -110px 100px #020E24; }
+.aulas { background: #040D1A; }
+.aulas-capa { box-shadow: inset 0 -110px 100px #040D1A; }
 /* Só um véu azul à esquerda, para o texto; a foto mantém as cores. */
 .aulas-capa::before {
   content: ''; position: absolute; z-index: 1; inset: 0; pointer-events: none;
   background: linear-gradient(90deg, rgba(5,21,40,.55) 0%, rgba(5,21,40,.18) 46%, transparent 70%);
 }
-.aulas-capa::after { background: linear-gradient(transparent, #020E24); }
+.aulas-capa::after { background: linear-gradient(transparent, #040D1A); }
 .aulas-selo, .aulas-meta b { color: var(--gf-marfim); }
 .aulas-selo { border-color: rgba(183,141,57,.45); background: rgba(183,141,57,.10); }
 .aulas-barra i { background: var(--gf-ouro); }
@@ -132,7 +134,7 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 .aulas-trilha-num { color: rgba(156,177,199,.22); }
 .aulas-modulo-topo h3 { color: var(--gf-marfim); }
 .aulas-modulo-topo p, .aula-card-meta { color: var(--gf-aco); }
-.aula-cartao-capa { background-color: #0A1C40; }
+.aula-cartao-capa { background-color: #08172B; }
 .aula-cartao-capa::after,
 .aula-modal-capa::before,
 .aula-embreve-palco::after {
@@ -147,8 +149,8 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 .aula-cartao-capa > em, .aula-vista, .aula-hover-info { z-index: 2; }
 .aula-num, .aula-modal-breve { color: var(--gf-aco); }
 .aula-progresso-card u { background: var(--gf-ouro); }
-.aula-modal { background: #020E24; }
-.aula-modal-capa::after { z-index: 2; background: linear-gradient(transparent, #020E24); }
+.aula-modal { background: #040D1A; }
+.aula-modal-capa::after { z-index: 2; background: linear-gradient(transparent, #040D1A); }
 
 /* ------------------------------ a cabine do robô, na cor da casa */
 /* Ilha noturna em azul GF; no escuro a tinta de seleção é o ouro, no claro
@@ -156,14 +158,14 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 .tv { --primary: var(--gf-ouro); --primary-soft: rgba(183, 141, 57, .14); }
 :root:not([data-tema='escuro']) .tv { --primary: var(--gf-azul); --primary-soft: rgba(5, 21, 40, .08); }
 .tv {
-  background: #020E24;
-  border-color: #203765;
+  background: #040D1A;
+  border-color: #1A2D45;
 }
 :root:not([data-tema='escuro']) .tv {
   background: #ffffff;
   border-color: color-mix(in srgb, var(--robo, #29445F) 22%, #e0dbd0);
 }
-.tv-tabela th { background: #020B1D; }
+.tv-tabela th { background: #030A16; }
 :root:not([data-tema='escuro']) .tv-tabela th { background: #faf8f3; }
 .tv-assinatura { opacity: .16; }
 
@@ -242,7 +244,7 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 .aula-cartao:not(.continuar) .aula-cartao-corpo {
   position: absolute; z-index: 3; inset: auto 0 0; gap: 4px;
   padding: 56px 13px 13px; border-radius: 0 0 10px 10px; text-align: left;
-  background: linear-gradient(180deg, transparent 0%, rgba(2, 14, 36, .82) 42%, #020E24 100%);
+  background: linear-gradient(180deg, transparent 0%, rgba(2, 14, 36, .82) 42%, #040D1A 100%);
 }
 .aula-cartao:not(.continuar) .aula-cartao-corpo::before {
   content: ''; width: 22px; height: 2px; margin-bottom: 5px; background: var(--gf-ouro);
@@ -263,14 +265,14 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 .aula-cartao.continuar {
   flex-basis: clamp(290px, 27vw, 370px); width: clamp(290px, 27vw, 370px);
   display: grid; grid-template-columns: 72px 1fr; align-items: center; gap: 14px;
-  padding: 10px 14px 10px 10px; border: 1px solid #203765; border-radius: 12px; background: #0F234D;
+  padding: 10px 14px 10px 10px; border: 1px solid #1A2D45; border-radius: 12px; background: #0C1D33;
 }
 .aula-cartao.continuar .aula-cartao-capa { width: 72px; border-radius: 7px; }
 .aula-cartao.continuar .aula-play { display: none; }
 .aula-cartao.continuar .aula-cartao-corpo { padding: 0; gap: 4px; text-align: left; }
 .aula-cartao.continuar .aula-num { color: var(--gf-ouro); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
 .aula-cartao.continuar .aula-cartao-corpo > b { color: var(--gf-marfim); font-size: 13.5px; line-height: 1.25; }
-.aula-cartao.continuar .aula-progresso-card { background: #203765; }
+.aula-cartao.continuar .aula-progresso-card { background: #1A2D45; }
 
 .aulas-modulo-topo h3 { font-weight: 700; letter-spacing: -.01em; }
 .aulas-trilha-num { font-family: var(--fonte-dados); font-weight: 400; }
@@ -349,21 +351,21 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
    ========================================================================== */
 @media (max-width: 900px) {
   :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) :is(.workspace-app .topbar, .workspace-app .workspace-mobile-toggle) {
-    --bg: var(--gf-azul); --surface: #0A1C40; --surface-alt: #0F234D; --border: #203765;
-    --text: #F3F0E9; --muted: #96AFD4; --trilho: #203765; --desativado: #576B94;
+    --bg: var(--gf-azul); --surface: #08172B; --surface-alt: #0C1D33; --border: #1A2D45;
+    --text: #F3F0E9; --muted: #93A6BD; --trilho: #1A2D45; --desativado: #4F6179;
     --primary: #B78D39; --primary-soft: rgba(183, 141, 57, .16); --shadow: 0 1px 2px rgba(0, 0, 0, .3);
     color-scheme: dark; color: var(--text);
   }
   :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) .workspace-app .topbar {
     background: var(--gf-azul); border-bottom-color: transparent; box-shadow: 0 10px 24px -18px rgba(5, 21, 40, .55);
   }
-  :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) .workspace-app .workspace-mobile-toggle { background: #0A1C40; border-color: #203765; }
+  :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) .workspace-app .workspace-mobile-toggle { background: #08172B; border-color: #1A2D45; }
 }
 /* o chat do suporte em tela cheia: o mesmo cabeçalho azul por trás da hora */
 @media (max-width: 640px) {
   :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) .sp-painel { background: linear-gradient(var(--gf-azul) 0 calc(var(--sat) + 64px), var(--bg) 0); }
   :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) .sp-cabeca {
-    --surface: #0A1C40; --surface-alt: #0F234D; --border: #203765; --text: #F3F0E9; --muted: #96AFD4;
+    --surface: #08172B; --surface-alt: #0C1D33; --border: #1A2D45; --text: #F3F0E9; --muted: #93A6BD;
     color: var(--text); background: var(--gf-azul); border-bottom-color: transparent;
   }
   :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) .sp-cabeca .monograma-claro { display: none; }

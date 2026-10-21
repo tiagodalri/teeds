@@ -89,9 +89,9 @@ const PALETAS: Record<string, Paleta> = {
   globalfly: {
     manter: ['#051528', '#B78D39', '#9CB1C7', '#F3F0E9', '#29445F',
       // verde e vermelho vivos (21/10/2026, pedido do Tiago): escuro/painel azul, claro e velas
-      '#1FD17F', '#FF5A64', '#0A9F5F', '#E5303C', '#16C784', '#EA3943',
-      // marinho vivo das superfícies (19/10/2026)
-      '#020B1D', '#020E24', '#041029', '#0A1C40', '#0F234D', '#203765', '#576B94', '#96AFD4', '#1E3D6E',
+      '#16E38A', '#FF4D5E', '#00A86B', '#E5243B', '#16C784', '#EA3943',
+      // marinho profundo (21/10/2026, estilo banco privado): página, painel GF, cartões, bordas
+      '#030A16', '#040D1A', '#051528', '#08172B', '#0C1D33', '#1A2D45', '#172C47', '#4F6179', '#93A6BD', '#1E3D6E',
       // a Deriv é marca de terceiro: o vermelho dela não se mexe
       '#ff444f', '#ff5a63',
       // o vermelho do "ao vivo" (20/10/2026, pedido do Tiago: mais vivo que o Alerta)

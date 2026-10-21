@@ -22,7 +22,7 @@
 
 /* ------------------------------------------------ o topo azul */
 .plv-topo { position: relative; overflow: hidden; isolation: isolate; flex: none; padding: 18px 24px 0; background: var(--plv-azul); color: var(--plv-marfim); }
-:root[data-tema='escuro'] .plv-topo { background: #061733; border-bottom: 1px solid #1B3260; }
+:root[data-tema='escuro'] .plv-topo { background: #051528; border-bottom: 1px solid #172C47; }
 .plv-eixo { position: absolute; z-index: -1; left: 64%; top: -80%; width: 1.5px; height: 300%; background: var(--plv-ouro); opacity: .5; transform: rotate(32deg); }
 .plv-topo-linha { display: flex; align-items: center; gap: 14px; }
 .plv-topo .monograma .monograma-claro { display: none !important; }
@@ -102,7 +102,7 @@
 
 .plv-campos { display: grid; gap: 12px; min-width: 0; }
 .plv-campo {
-  display: grid; grid-template-columns: minmax(130px, 170px) minmax(0, 1fr) auto; grid-template-areas: "nome valor atalhos" "erro erro erro";
+  display: grid; grid-template-columns: minmax(130px, 170px) minmax(0, 1fr) 214px; grid-template-areas: "nome valor atalhos" "erro erro erro";
   align-items: center; gap: 4px 14px; padding: 14px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--plv-linha);
   transition: border-color .15s, box-shadow .15s;
 }
@@ -124,7 +124,9 @@
   width: 100%; max-width: 7.5ch; min-width: 0; padding: 0; border: 0; outline: none !important; background: none; color: var(--text); text-align: center;
   font: 700 27px var(--plv-dados); letter-spacing: -.02em; font-variant-numeric: tabular-nums;
 }
-.plv-atalhos { grid-area: atalhos; display: flex; gap: 5px; }
+.plv-num-texto { color: var(--text); font: 700 27px var(--plv-dados); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.plv-mm:disabled { opacity: .35; cursor: not-allowed; }
+.plv-atalhos { grid-area: atalhos; display: flex; justify-content: flex-end; gap: 5px; }
 .plv-atalhos button { min-width: 38px; height: 32px; padding: 0 10px; border-radius: 99px; border: 1px solid var(--plv-linha); background: var(--bg); color: var(--muted); font: 600 12px var(--plv-dados); cursor: pointer; }
 .plv-atalhos button.on { border-color: var(--plv-ouro); background: var(--plv-ouro-suave); color: var(--text); }
 .plv-erro { grid-area: erro; margin: 6px 0 0; color: var(--plv-coral); font-size: 12.5px; }
@@ -133,20 +135,20 @@
   position: relative; overflow: hidden; display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 18px; align-items: center;
   padding: 16px 20px; border-radius: 18px; background: var(--plv-azul); color: var(--plv-marfim);
 }
-:root[data-tema='escuro'] .plv-voo { background: #061733; border: 1px solid #1B3260; }
+:root[data-tema='escuro'] .plv-voo { background: #051528; border: 1px solid #172C47; }
 .plv svg.plv-arco { display: block; width: 100%; height: auto; overflow: visible; }
 .plv-arco .marca { stroke: var(--plv-ouro); stroke-width: 1.4; opacity: .55; }
 .plv-arco .faixa { fill: none; stroke-width: 13; stroke-linecap: round; }
-.plv-arco .faixa.perda { stroke: #FF5A64; }
-.plv-arco .faixa.ganho { stroke: #1FD17F; }
+.plv-arco .faixa.perda { stroke: #FF4D5E; }
+.plv-arco .faixa.ganho { stroke: #16E38A; }
 .plv-arco .faixa.sem { stroke: rgba(156, 177, 199, .3); stroke-dasharray: 3 8; stroke-width: 4; }
 .plv-arco .selo { fill: var(--plv-azul); stroke: var(--plv-ouro); stroke-width: 1.6; }
 .plv-arco .aviao { fill: var(--plv-ouro-claro); }
 .plv-voo-texto { display: grid; gap: 10px; }
 .plv-voo-texto p { margin: 0; color: #C7D3E0; font-size: 14px; line-height: 1.55; }
 .plv-voo-texto b { color: var(--plv-marfim); }
-.plv-voo-texto b.ganho { color: #1FD17F; }
-.plv-voo-texto b.perda { color: #FF5A64; }
+.plv-voo-texto b.ganho { color: #16E38A; }
+.plv-voo-texto b.perda { color: #FF4D5E; }
 .plv-voo-texto .plv-folego { padding: 9px 12px; border-radius: 11px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(156, 177, 199, .18); font-size: 13px; }
 .plv-voo-texto .plv-folego.curto { background: rgba(183, 141, 57, .16); border-color: rgba(183, 141, 57, .45); color: var(--plv-ouro-claro); }
 .plv-voo-texto .plv-folego.curto b { color: var(--plv-marfim); }
@@ -154,18 +156,18 @@
 /* 3. decolar */
 .plv-embarque { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; align-items: start; }
 .plv-passe { position: relative; overflow: hidden; border-radius: 22px; background: var(--plv-azul); color: var(--plv-marfim); }
-:root[data-tema='escuro'] .plv-passe { background: #061733; border: 1px solid #1B3260; }
+:root[data-tema='escuro'] .plv-passe { background: #051528; border: 1px solid #172C47; }
 .plv-passe-topo { position: relative; isolation: isolate; height: 170px; }
 .plv-passe-topo img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; }
 .plv-passe-topo::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(5, 21, 40, .1) 20%, rgba(5, 21, 40, .9) 78%, var(--plv-azul) 100%); }
-:root[data-tema='escuro'] .plv-passe-topo::after { background: linear-gradient(180deg, rgba(6, 23, 51, .1) 20%, rgba(6, 23, 51, .9) 78%, #061733 100%); }
+:root[data-tema='escuro'] .plv-passe-topo::after { background: linear-gradient(180deg, rgba(5, 21, 40, .1) 20%, rgba(5, 21, 40, .9) 78%, #051528 100%); }
 .plv-passe-topo.sem-foto { height: 110px; }
 .plv-passe-nome { position: absolute; left: 22px; right: 22px; bottom: 14px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .plv-passe-nome small { display: block; color: var(--plv-ouro-claro); font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
 .plv-passe-nome b { font-size: 28px; letter-spacing: -.01em; }
 .plv-passe-nome span { flex: none; padding: 5px 12px; border-radius: 99px; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; background: rgba(5, 21, 40, .75); }
 .plv-passe-nome span.demo { border: 1px solid rgba(183, 141, 57, .7); color: var(--plv-ouro-claro); }
-.plv-passe-nome span.real { border: 1px solid #1FD17F; color: #1FD17F; }
+.plv-passe-nome span.real { border: 1px solid #16E38A; color: #16E38A; }
 .plv-picote { position: relative; display: block; height: 0; margin: 4px 22px 0; border-top: 1.5px dashed rgba(156, 177, 199, .35); }
 .plv-picote::before, .plv-picote::after { content: ''; position: absolute; top: -12px; width: 24px; height: 24px; border-radius: 50%; background: var(--bg); }
 .plv-picote::before { left: -34px; }
@@ -174,8 +176,8 @@
 .plv-passe-grade div { display: grid; gap: 4px; min-width: 0; }
 .plv-passe-grade dt { color: var(--plv-aco); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .plv-passe-grade dd { margin: 0; color: var(--plv-marfim); font: 700 17px var(--plv-dados); font-variant-numeric: tabular-nums; }
-.plv-passe-grade dd.ganho { color: #1FD17F; }
-.plv-passe-grade dd.perda { color: #FF5A64; }
+.plv-passe-grade dd.ganho { color: #16E38A; }
+.plv-passe-grade dd.perda { color: #FF4D5E; }
 .plv-editar { margin: 4px 22px 18px; padding: 0; border: 0; background: none; color: var(--plv-ouro-claro); font-size: 13px; font-weight: 700; cursor: pointer; }
 .plv-editar:hover { text-decoration: underline; }
 .plv-notas { display: grid; gap: 12px; }
