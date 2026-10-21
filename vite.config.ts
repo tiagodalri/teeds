@@ -87,16 +87,20 @@ const FUNDO_DA_MARCA: Record<string, string> = { teeds: '#090a0d', omni: '#08152
    verdes → Positivo, frios → Aço/Ardósia. Ver scripts/paleta-da-marca.ts. */
 const PALETAS: Record<string, Paleta> = {
   globalfly: {
-    manter: ['#051528', '#B78D39', '#9CB1C7', '#F3F0E9', '#29445F', '#2F8F72', '#C95F5F',
+    manter: ['#051528', '#B78D39', '#9CB1C7', '#F3F0E9', '#29445F',
+      // verde e vermelho vivos (21/10/2026, pedido do Tiago): escuro/painel azul, claro e velas
+      '#1FD17F', '#FF5A64', '#0A9F5F', '#E5303C', '#16C784', '#EA3943',
       // marinho vivo das superfícies (19/10/2026)
       '#020B1D', '#020E24', '#041029', '#0A1C40', '#0F234D', '#203765', '#576B94', '#96AFD4', '#1E3D6E',
       // a Deriv é marca de terceiro: o vermelho dela não se mexe
       '#ff444f', '#ff5a63',
       // o vermelho do "ao vivo" (20/10/2026, pedido do Tiago: mais vivo que o Alerta)
       '#E5383B'],
-    vermelho: { h: 0, s: 0.5, exata: [201 / 255, 95 / 255, 95 / 255] }, // Alerta #C95F5F
+    // 21/10/2026: vermelho e verde vivos, sem o tom exato (antes #C95F5F e #2F8F72,
+    // que apagavam até o gráfico); cada cor herdada mantém a luz e ganha a saturação
+    vermelho: { h: 356, s: 0.82 },
     quente: { h: 40, s: 0.53, exata: [183 / 255, 141 / 255, 57 / 255] }, // Ouro GF #B78D39
-    verde: { h: 162, s: 0.5, exata: [47 / 255, 143 / 255, 114 / 255] }, // Positivo #2F8F72
+    verde: { h: 151, s: 0.74 },
     frio: { h: 218, s: 0.55 },
     neutroEscuro: 220,
     neutroClaro: 43,

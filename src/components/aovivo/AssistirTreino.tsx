@@ -110,7 +110,7 @@ export function LabAssistirTreino({ fora }: { fora?: ModoDoTreino } = {}) {
     let q = 0
     const desenhar = () => {
       c.fillStyle = '#0b1726'; c.fillRect(0, 0, 1280, 720)
-      for (let i = 0; i < 40; i++) { const b = 360 + Math.sin((i + q / 6) / 4) * 120; c.fillStyle = Math.sin(i * 7.3 + q / 9) > 0 ? '#2f8f72' : '#c95f5f'; c.fillRect(60 + i * 29, b - 40, 16, 80) }
+      for (let i = 0; i < 40; i++) { const b = 360 + Math.sin((i + q / 6) / 4) * 120; c.fillStyle = Math.sin(i * 7.3 + q / 9) > 0 ? '#16C784' : '#EA3943'; c.fillRect(60 + i * 29, b - 40, 16, 80) }
       q++
     }
     desenhar(); const t = window.setInterval(desenhar, 66)

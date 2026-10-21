@@ -66,7 +66,7 @@ const CORES_DAS_LINHAS = ['#E0B84F', '#4FA3FF', '#C38BFF', '#2FBF8F', '#FF7A59',
 
 function estilos(modo: ChartMode): DeepPartial<Styles> {
   const texto = css('--text', '#e8eef5'), apoio = css('--muted', '#96afd4'), borda = css('--border', '#203765')
-  const alta = css('--up', '#2F8F72'), baixa = css('--down', '#C95F5F'), fundo = css('--surface', '#0a1c40')
+  const alta = css('--up', '#16C784'), baixa = css('--down', '#EA3943'), fundo = css('--surface', '#0a1c40')
   const fonte = getComputedStyle(document.body).fontFamily
   return {
     grid: { horizontal: { color: borda, style: 'dashed', dashedValue: [2, 4] }, vertical: { color: borda, style: 'dashed', dashedValue: [2, 4] } },
@@ -84,7 +84,7 @@ function estilos(modo: ChartMode): DeepPartial<Styles> {
     },
     indicator: {
       lines: CORES_DAS_LINHAS.map((color) => ({ color, size: 1.6 })),
-      bars: [{ upColor: 'rgba(47, 143, 114, .65)', downColor: 'rgba(201, 95, 95, .65)', noChangeColor: apoio }],
+      bars: [{ upColor: 'rgba(22, 199, 132, .65)', downColor: 'rgba(234, 57, 67, .65)', noChangeColor: apoio }],
       tooltip: { title: { color: texto, size: 11, family: fonte }, legend: { color: apoio, size: 11, family: fonte } },
       lastValueMark: { show: false },
     },
@@ -345,7 +345,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
     for (const m of markers) {
       if (m.entryPrice == null) continue
       const subir = /CALL|RISE|UP/i.test(m.type)
-      const cor = subir ? css('--up', '#2F8F72') : css('--down', '#C95F5F')
+      const cor = subir ? css('--up', '#16C784') : css('--down', '#EA3943')
       const lucro = `${m.profit >= 0 ? '+' : '−'}${Math.abs(m.profit).toFixed(2)}`
       chart.createOverlay({
         name: 'gfPosicao', groupId: 'gf-posicao', lock: true,

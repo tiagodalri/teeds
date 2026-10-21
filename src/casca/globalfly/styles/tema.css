@@ -45,10 +45,12 @@
   --muted: #1E3D6E;
   --trilho: #e0dbd0;
   --desativado: #c9c4b8;
-  --up: #2F8F72;
-  --up-soft: rgba(47, 143, 114, 0.12);
-  --down: #C95F5F;
-  --down-soft: rgba(201, 95, 95, 0.12);
+  /* 21/10/2026: verde e vermelho vivos (pedido do Tiago, "um verde mais
+     verde"); no claro um tom abaixo, para o número ler sobre o branco */
+  --up: #0A9F5F;
+  --up-soft: rgba(10, 159, 95, 0.12);
+  --down: #E5303C;
+  --down-soft: rgba(229, 48, 60, 0.11);
   --shadow: 0 1px 2px rgba(5, 21, 40, 0.06);
 }
 
@@ -65,10 +67,10 @@
   --muted: #96AFD4;
   --trilho: #203765;
   --desativado: #576B94;
-  --up: #2F8F72;
-  --up-soft: rgba(47, 143, 114, 0.16);
-  --down: #C95F5F;
-  --down-soft: rgba(201, 95, 95, 0.16);
+  --up: #1FD17F;
+  --up-soft: rgba(31, 209, 127, 0.16);
+  --down: #FF5A64;
+  --down-soft: rgba(255, 90, 100, 0.16);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 

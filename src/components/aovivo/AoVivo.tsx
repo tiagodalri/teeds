@@ -1172,7 +1172,7 @@ export function LabAoVivo({ modo, moderador }: { modo: ModoDoPlayer | 'pagina' |
       c.strokeStyle = '#1d2c3f'; for (let x = 0; x < 1280; x += 80) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, 720); c.stroke() }
       for (let i = 0; i < 40; i++) {
         const base = 360 + Math.sin((i + t / 6) / 4) * 120, alta = Math.sin(i * 7.3 + t / 9) > 0
-        c.fillStyle = alta ? '#2f8f72' : '#c95f5f'
+        c.fillStyle = alta ? '#16C784' : '#EA3943'
         c.fillRect(60 + i * 29, base - 40, 16, 80)
       }
       c.fillStyle = '#9cb1c7'; c.font = '600 22px sans-serif'; c.fillText('Volatility 75 (1s) · tela do professor', 40, 50)

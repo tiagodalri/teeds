@@ -203,7 +203,7 @@ const PERSONALIZADOS: IndicatorTemplate[] = [
         }
       })
     },
-    draw: faixa('spanA', 'spanB', (r) => (r.spanA ?? 0) >= (r.spanB ?? 0) ? 'rgba(47, 143, 114, .14)' : 'rgba(201, 95, 95, .14)'),
+    draw: faixa('spanA', 'spanB', (r) => (r.spanA ?? 0) >= (r.spanB ?? 0) ? 'rgba(22, 199, 132, .14)' : 'rgba(234, 57, 67, .14)'),
   },
   {
     name: 'GF_AROON', shortName: 'Aroon', calcParams: [25], precision: 2, minValue: 0, maxValue: 100,
