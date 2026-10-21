@@ -88,7 +88,7 @@ export default function LabMiniCabine() {
           <UserMenu usuario={{ id: 'lab', email: 'exemplo@globalflytrade.com', nome: 'Tiago Dal Ri', telefone: null, cpf: null, criadoEm: '', trocarSenha: false }} onSair={nada} onPerfil={nada} />
         </div>
       </header>
-      <InicioPanel d={{ ...EXPERIENTE, robos: [] }} aoIr={nada} />
+      <InicioPanel d={EXPERIENTE} aoIr={nada} aoSalvarPlano={nada} aoPrepararRobo={nada} />
       <BarraInferior tela="inicio" irPara={nada} />
       <MiniCabine sessoes={sessoes} aoAbrirCabine={nada} aoParar={(id) => setSessoes((l) => l.map((s) => (s.id === id ? { ...s, estado: { ...s.estado, rodando: false, emOperacao: false, motivoParada: 'Parada por você' } } : s)))} />
     </div>

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { WorkspaceNav } from '../WorkspaceNav'
 import { AccountSwitcher } from '../AccountSwitcher'
 import { UserMenu } from '../UserMenu'
@@ -21,11 +21,14 @@ const serie = (n: number, tendencia: number, ruido: number) => {
 export const EXPERIENTE: DadosDoInicio = {
   nome: 'Tiago Dal Ri',
   conta: { conectada: true, demo: true, saldo: 9241.79, moeda: 'USD' },
-  hoje: { resultado: 16.7, operacoes: 68, vitorias: 57, derrotas: 11, meta: 25, limite: 15 },
-  robos: [
-    { id: 'goreme', nome: 'GF Raptor', situacao: 'operando', resultado: 12.4, operacoes: 38, curva: serie(30, 0.45, 0.9) },
-    { id: 'falcon', nome: 'GF Falcon', situacao: 'operando', resultado: 6.1, operacoes: 21, curva: serie(30, 0.22, 0.7) },
-    { id: 'legacy', nome: 'GF Legacy', situacao: 'aguardando', resultado: -1.8, operacoes: 9, curva: serie(30, -0.07, 0.5) },
+  hoje: { resultado: 16.7, operacoes: 68, vitorias: 57, derrotas: 11 },
+  plano: { meta: 25, limite: 15 },
+  frota: [
+    { id: 'goreme', nome: 'GF Raptor', chamada: 'O que troca de lado', noAr: true, operando: true, resultado: 4.3, analise: null },
+    { id: 'falcon', nome: 'GF Falcon', chamada: 'A porta baixa', noAr: false, operando: false, resultado: 0, analise: null },
+    { id: 'legacy', nome: 'GF Legacy', chamada: 'A porta alta', noAr: false, operando: false, resultado: 0, analise: null },
+    { id: 'superior5', nome: 'GF Gulf', chamada: 'O analista dos altos', noAr: true, operando: false, resultado: 12.4, analise: { n: 3, alvo: 5 } },
+    { id: 'ag2', nome: 'GF Phenom', chamada: 'O espelho', noAr: false, operando: false, resultado: 0, analise: null },
   ],
   cotacoes: [
     { id: 'dolar', nome: 'Dólar', valor: 'R$ 5,4210', variacao: 0.31, serie: serie(24, 0.2, 0.6) },
@@ -49,7 +52,8 @@ const NOVO: DadosDoInicio = {
   nome: 'Lucas Andrade',
   conta: { conectada: false, demo: true, saldo: 0, moeda: 'USD' },
   hoje: null,
-  robos: [],
+  plano: null,
+  frota: EXPERIENTE.frota.map((r) => ({ ...r, noAr: false, operando: false, resultado: 0, analise: null })),
   aula: { modulo: 'Módulo 1 · Comece aqui', titulo: 'Introdução à GlobalFly Trade', capa: `${BASE}aulas-globalfly/introducao.webp`, feitas: 0, total: 8 },
   treino: null,
   jornada: { deriv: false, demo: false, gestao: false, primeiraIa: false },
@@ -58,7 +62,12 @@ const NOVO: DadosDoInicio = {
 export default function LabInicio() {
   const q = new URLSearchParams(location.search)
   const novo = q.get('perfil') === 'novo'
-  const d = novo ? NOVO : EXPERIENTE
+  // &plano=0: sem plano (o instrumento vira o formulário); &resultado=N: o resultado de hoje
+  const base = novo ? NOVO : EXPERIENTE
+  const [plano, setPlano] = useState(q.get('plano') === '0' ? null : base.plano)
+  const resultado = q.get('resultado')
+  const d: DadosDoInicio = { ...base, plano, ...(resultado !== null && base.hoje ? { hoje: { ...base.hoje, resultado: Number(resultado) } } : {}),
+    ...(q.get('ia') === '0' ? { frota: NOVO.frota } : {}) }
   useEffect(() => { const t = q.get('tema'); if (t) document.documentElement.dataset.tema = t }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const nada = () => undefined
   return (
@@ -78,7 +87,7 @@ export default function LabInicio() {
       {/* &real=1: o componente de verdade (mercado ao vivo, aula seguinte, jornada), sem conta */}
       {q.has('real')
         ? <InicioPagina sessao={null} nome="Tiago Dal Ri" conta={{ conectada: false, demo: true, saldo: null, moeda: 'USD' }} treino={null} aoIr={nada} />
-        : <InicioPanel d={d} aoIr={nada} />}
+        : <InicioPanel d={d} aoIr={nada} aoSalvarPlano={(meta, limite) => setPlano({ meta, limite })} aoPrepararRobo={nada} />}
       <BarraInferior tela="inicio" irPara={nada} />
       {/* &tour=1[&passo=N]: o tour guiado por cima da home (os passos de outras telas ficam no centro) */}
       {q.has('tour') && <TourGuiado passos={passosDoTour({ nome: d.nome, treino: true })} obrigatorio={q.get('tour') !== 'rever'}

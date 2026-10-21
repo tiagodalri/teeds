@@ -104,7 +104,7 @@ export default function LabSuporte() {
       {tela === 'ajuda' ? <AjudaPagina aoIr={(t) => setTela(t as WorkspacePage)} /> : tela === 'gestao' ? (
         <div className="ger" style={{ padding: 20 }}><AdminSuporte sessao={sessao} marca="globalfly" nomeDaEquipe="Tiago Dal Ri" /></div>
       ) : (
-        <InicioPanel d={{ nome: 'Lucas Andrade', conta: { conectada: false, demo: true, saldo: 0, moeda: 'USD' }, hoje: null, robos: [], cotacoes: [], manchetes: [], aula: null, treino: null, jornada: { deriv: false, demo: false, gestao: false, primeiraIa: false } }} aoIr={(t) => setTela(t)} />
+        <InicioPanel d={{ nome: 'Lucas Andrade', conta: { conectada: false, demo: true, saldo: 0, moeda: 'USD' }, hoje: null, plano: null, frota: [], cotacoes: [], manchetes: [], aula: null, treino: null, jornada: { deriv: false, demo: false, gestao: false, primeiraIa: false } }} aoIr={(t) => setTela(t)} aoSalvarPlano={() => undefined} aoPrepararRobo={() => undefined} />
       )}
       {modo !== 'admin' && <SuporteWidget sessao={sessao} nome="Lucas Andrade" telaAtual={tela} admin={false} irPara={(t) => setTela(t as WorkspacePage)} />}
     </div>

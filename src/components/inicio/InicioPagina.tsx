@@ -3,7 +3,12 @@ import type { WorkspacePage } from '../WorkspaceNav'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { acompanharVivas, type SessaoViva } from '../../core/teeds/servidorRobos'
 import { listarSessoes, type SessaoServidor } from '../../core/teeds/sessoesServidor'
-import { planoDoDia } from '../../core/teeds/planoDoDia'
+import { planoDoDia, planoSimples, sincronizarPlanoDoDia } from '../../core/teeds/planoDoDia'
+import { identidade } from '../../core/deriv/branding'
+import { useRobosDisponiveis } from '../../core/teeds/catalogoRobos'
+import { contagemDoEstado } from '../RobotResumo'
+import { pedirModeloDaVitrine } from '../RobotSetup'
+import { pedirPreparo } from '../RobotsPanel'
 import { aulasVistas, MODULOS } from '../../core/teeds/aulas'
 import { SERVIDOR } from '../../core/teeds/config'
 import { capaDaAula } from '../capasAulas'
@@ -14,7 +19,8 @@ import { InicioPanel, type DadosDoInicio } from './InicioPanel'
  * A home com os dados de verdade (20/10/2026):
  *  - I.A.s ligadas: o mesmo acompanhamento da tela de robôs;
  *  - o dia: as sessões das I.A.s de hoje, na conta escolhida (demo ou real);
- *  - meta e limite: o plano que a pessoa montou no Gerenciamento;
+ *  - meta e limite: o plano do dia (instrumento da home ou Gerenciamento),
+ *    guardado também na conta para valer em todos os aparelhos;
  *  - mercado: a mesma fonte da aba Notícias;
  *  - aula: a primeira que ainda não foi assistida;
  *  - jornada: o que esta pessoa já fez (e fica marcado neste aparelho).
@@ -65,7 +71,16 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, vi
   const [sessoesHoje, setSessoesHoje] = useState<SessaoServidor[] | null>(null)
   const [mercado, setMercado] = useState<{ cotacoes: Cotacao[]; noticias: Noticia[] } | null>(null)
   const [jornada, setJornada] = useState(jornadaGuardada)
-  const plano = useMemo(() => planoDoDia(), [])
+  const [plano, setPlano] = useState(planoDoDia)
+  const disponiveis = useRobosDisponiveis()
+
+  // o plano que está na conta (feito em outro aparelho) passa a valer aqui
+  useEffect(() => {
+    if (!sessao) return
+    let vivo = true
+    void sincronizarPlanoDoDia(sessao).then((p) => { if (vivo) setPlano(p) })
+    return () => { vivo = false }
+  }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // I.A.s ligadas agora (o mesmo compasso da tela de robôs)
   useEffect(() => {
@@ -109,15 +124,29 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, vi
 
   const ligadas = vivas.filter((v) => v.estado?.rodando || v.estado?.emOperacao)
   const daConta = (sessoesHoje ?? []).filter((s) => s.demo === conta.demo)
-  const hoje: DadosDoInicio['hoje'] = sessoesHoje === null && !plano ? null : {
+  const hoje: DadosDoInicio['hoje'] = !daConta.length ? null : {
     resultado: daConta.reduce((t, s) => t + s.resultado, 0),
     operacoes: daConta.reduce((t, s) => t + s.operacoes, 0),
     vitorias: daConta.reduce((t, s) => t + s.ganhas, 0),
     derrotas: daConta.reduce((t, s) => t + s.perdidas, 0),
-    meta: plano?.metaUsd ?? 0,
-    limite: plano?.limiteUsd ?? 0,
   }
-  const semNada = !daConta.length && !plano
+  const planoValido = plano && plano.metaUsd > 0 && plano.limiteUsd > 0 ? { meta: plano.metaUsd, limite: plano.limiteUsd } : null
+
+  // a frota: as I.A.s da casa que estão no catálogo; as que estão no ar somam as sessões delas
+  const frota: DadosDoInicio['frota'] = MARCA.robos
+    .filter((id) => !disponiveis || disponiveis.includes(id) || ligadas.some((v) => v.roboId === id))
+    .map((id) => {
+      const ident = identidade(id)
+      const delas = ligadas.filter((v) => v.roboId === id)
+      const primeira = delas[0]?.estado
+      const c = primeira ? contagemDoEstado(primeira) : null
+      return {
+        id, nome: ident.nome, chamada: ident.chamada, noAr: delas.length > 0,
+        operando: delas.some((v) => v.estado.emOperacao),
+        resultado: delas.reduce((t, v) => t + (v.estado.resultado ?? 0), 0),
+        analise: c && !c.sequencia && c.alvo > 0 ? { n: c.n, alvo: c.alvo } : null,
+      }
+    })
 
   // a próxima aula: a primeira que ainda não foi assistida
   const aula = useMemo(() => {
@@ -136,18 +165,20 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, vi
   const d: DadosDoInicio = {
     nome,
     conta: { conectada: conta.conectada, demo: conta.demo, saldo: conta.saldo ?? 0, moeda: conta.moeda || 'USD' },
-    hoje: semNada ? null : hoje,
-    robos: ligadas.map((v) => ({
-      id: v.roboId, nome: v.roboNome, situacao: v.estado.emOperacao ? 'operando' : 'aguardando',
-      resultado: v.estado.resultado ?? 0, operacoes: v.estado.operacoes ?? 0, curva: v.estado.curva ?? [],
-    })),
+    hoje,
+    plano: planoValido,
+    frota,
     cotacoes: IDS.map((id) => mercado?.cotacoes.find((c) => c.id === id)).filter((c): c is Cotacao => !!c)
       .map((c) => ({ id: c.id, nome: c.nome, valor: preco(c), variacao: c.variacao, serie: c.serie ?? [] })),
     manchetes: [...(mercado?.noticias ?? [])].sort((a, b) => Date.parse(b.quando) - Date.parse(a.quando)).slice(0, 3)
       .map((n) => ({ titulo: n.titulo, fonte: n.fonte, quando: haQuanto(n.quando), link: n.link })),
     aula,
     treino,
-    jornada: { deriv: conta.conectada, demo: !!jornada.demo, gestao: !!plano, primeiraIa: !!jornada.primeiraIa },
+    jornada: { deriv: conta.conectada, demo: !!jornada.demo, gestao: !!planoValido, primeiraIa: !!jornada.primeiraIa },
   }
-  return <InicioPanel d={d} aoIr={aoIr} aoConectar={aoConectar} />
+  return (
+    <InicioPanel d={d} aoIr={aoIr} aoConectar={aoConectar}
+      aoSalvarPlano={(meta, limite) => setPlano(planoSimples(meta, limite, sessao))}
+      aoPrepararRobo={(id) => { pedirModeloDaVitrine(id); pedirPreparo(); aoIr('robos') }} />
+  )
 }

@@ -54,6 +54,10 @@ const MAX_BLOCOS = 10
 const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
+/** A home pede o preparo de um robô (junto com pedirModeloDaVitrine): a tela de robôs abre o preparo ao montar, ou na hora se já estiver montada. */
+let preparoPedido = false
+export function pedirPreparo(): void { preparoPedido = true; window.dispatchEvent(new Event('robos:preparar')) }
+
 export function RobotsPanel({
   socket, logado, isDemo, moeda, symbols, symbolPadrao, conexao = 'open',
   entrandoNaDeriv = false, onConectarDeriv, sessaoTeeds, contaId, admin = false, mostrarMarkup = false, onSessoesVivas,
@@ -171,6 +175,15 @@ export function RobotsPanel({
     if (!vazio) setBlocos(b => [...b, id])
     setBlocoEmPreparo(id)
   }
+  // a home pediu um preparo (o jato da frota): abre assim que esta tela estiver de pé
+  const abrirBlocoRef = useRef(abrirBloco)
+  abrirBlocoRef.current = abrirBloco
+  useEffect(() => {
+    const abrir = () => { if (!preparoPedido) return; preparoPedido = false; abrirBlocoRef.current() }
+    abrir()
+    window.addEventListener('robos:preparar', abrir)
+    return () => window.removeEventListener('robos:preparar', abrir)
+  }, [])
   const fecharBloco = (id: string) => {
     setBlocos((b) => b.filter((x) => x !== id))
     setAberta((atual) => atual === id ? undefined : atual)

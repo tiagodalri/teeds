@@ -56,7 +56,7 @@ export function OperationalManagementPanel() {
   const acumulado = cabem[cabem.length - 1]?.perdido ?? 0
   return <main className="go ger go-consultoria">
     <header className="go-hero"><div><span className="go-selo">Planejamento {MARCA.prosa}</span><h2>Gerenciamento</h2><p>Planilha interativa para calcular entradas, limites e objetivos.</p></div><div className="go-status">Somente simulação</div></header>
-    <p className="go-consultivo">Esta área é exclusivamente consultiva. Não configura, inicia ou interrompe robôs. Nenhum valor é enviado às operações ou sincronizado com sua conta.{MARCA.inicio && ' A meta e o limite ficam guardados neste aparelho e aparecem na tela Início.'}</p>
+    <p className="go-consultivo">Esta área é exclusivamente consultiva. Não configura, inicia ou interrompe robôs. Nenhum valor é enviado às operações ou sincronizado com sua conta.{MARCA.inicio && ' A meta e o limite viram o plano do dia da tela Início.'}</p>
     <section className="go-grade"><aside className="go-config"><h3>Seu cenário</h3><div className="go-campos">
       <label><span>Modelo de referência</span><select value={fixa ? 'fixa' : robo} onChange={e => { setFixa(e.target.value === 'fixa'); if (e.target.value !== 'fixa') setRobo(e.target.value) }}><option value="fixa">Entrada fixa</option>{robosAtivos.map(id => <option key={id} value={id}>{identidade(id).nome}</option>)}</select></label>
       {!fixa && comModos && <label><span>Modo de operação</span><select value={modo} onChange={e => setModo(e.target.value as Modo)}>{MODOS.map(m => <option key={m} value={m}>{NOME_DO_MODO[m]}</option>)}</select></label>}
