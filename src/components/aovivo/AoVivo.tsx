@@ -20,6 +20,7 @@ import {
   type EstadoDaSala, type ModoDoPlayer, type Reacao,
 } from '../../core/live/sala'
 import './aovivo.css'
+import { dataComHora } from '../../core/datas'
 
 /* ===================================================================== peças */
 
@@ -441,7 +442,7 @@ function PlayerConteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPag
 /* ============================================================== página */
 
 export const quando = (iso: string | null) => iso
-  ? new Date(iso).toLocaleString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })
+  ? dataComHora(iso)
   : 'Data a definir'
 
 export function Contagem({ alvo }: { alvo: string | null }) {

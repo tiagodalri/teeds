@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { SERVIDOR } from '../core/teeds/config'
 import './mercado.css'
+import { dataCurta } from '../core/datas'
 
 /**
  * Notícias (19/10/2026): o radar do mercado, de fontes grátis e sem cadastro
@@ -213,7 +214,7 @@ export function MercadoPanel() {
   const cot = dados?.cotacoes ?? []
   const achar = (id: string) => cot.find((c) => c.id === id)
   const relogio = new Date(agora)
-  const hoje = relogio.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const hoje = dataCurta(relogio)
 
   return (
     <div className="mc">

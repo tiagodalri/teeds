@@ -12,6 +12,7 @@ import { ehImagem, reduzirImagem } from '../imagem'
 import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
 import type { ResumoDaTriagem } from './triagem'
+import { dataCurta } from '../datas'
 
 export type StatusDaConversa = 'aberta' | 'respondida' | 'resolvida'
 export type Prioridade = 'baixa' | 'normal' | 'alta' | 'urgente'
@@ -284,7 +285,7 @@ export function diaDaMensagem(iso: string): string {
   const d = new Date(iso); const hoje = new Date(); const ontem = new Date(Date.now() - 86_400_000)
   if (d.toDateString() === hoje.toDateString()) return 'Hoje'
   if (d.toDateString() === ontem.toDateString()) return 'Ontem'
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })
+  return dataCurta(d)
 }
 /** As respostas prontas trazem {nome}: vira o primeiro nome do cliente. */
 export function preencherResposta(texto: string, nome: string): string {

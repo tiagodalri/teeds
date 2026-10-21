@@ -9,6 +9,7 @@ import { abrirSuporte } from '../../core/teeds/suporte'
 import { Monograma } from '../marca/Monograma'
 import { MARCA } from '../../marca'
 import './meu-perfil.css'
+import { dataCurta } from '../../core/datas'
 
 /**
  * "Meu Perfil" (20/10/2026, pedido do Tiago: "capricha"): a pessoa vê e
@@ -32,7 +33,7 @@ const iniciais = (nome: string, email: string) => {
   const p = nome.trim().split(/\s+/).filter(Boolean)
   return (p.length >= 2 ? p[0][0] + p[p.length - 1][0] : p[0]?.slice(0, 2) ?? email[0] ?? '?').toUpperCase()
 }
-const data = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—')
+const data = (iso: string | null) => dataCurta(iso)
 const STATUS: Record<string, { rotulo: string; cls: string }> = {
   ativo: { rotulo: 'Ativo', cls: 'ok' }, pendente: { rotulo: 'Em análise', cls: 'aviso' }, suspenso: { rotulo: 'Suspenso', cls: 'ruim' },
   expirado: { rotulo: 'Expirado', cls: 'ruim' }, cancelado: { rotulo: 'Cancelado', cls: 'ruim' },

@@ -6,6 +6,7 @@ import {
 import type { TradingAccount } from '../core/deriv/account'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
+import { dataCurta } from '../core/datas'
 
 interface Props {
   sessao: SessaoTeeds
@@ -29,7 +30,7 @@ const desde = (iso: string) => {
   const d = new Date(iso)
   return Number.isNaN(d.getTime())
     ? null
-    : d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    : dataCurta(d)
 }
 
 /** A conta da Teeds, por dentro. O que dá para mudar, muda aqui. */

@@ -5,6 +5,7 @@ import { alternarValores, MASCARA, useValoresOcultos } from '../../core/privacid
 import { MARCA } from '../../marca'
 import { InstrumentoDoDia } from './InstrumentoDoDia'
 import './inicio.css'
+import { dataCurta } from '../../core/datas'
 
 /**
  * A home, "painel de bordo" (21/10/2026, aprovada pelo Tiago em mockup):
@@ -49,7 +50,7 @@ interface Props {
 
 const numero = (n: number) => Math.abs(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const saudacao = () => { const h = new Date().getHours(); return h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite' }
-const hojeExtenso = () => new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+const hojeExtenso = () => dataCurta(new Date())
 /** Cashier da Deriv: depósito e saque são sempre na conta da pessoa, na corretora. */
 const CAIXA_DERIV = 'https://app.deriv.com/cashier/deposit'
 const FOTOS = `${import.meta.env.BASE_URL}robos-globalfly/`

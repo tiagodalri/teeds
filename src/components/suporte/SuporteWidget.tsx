@@ -11,6 +11,7 @@ import { assinarMudancas } from '../../core/teeds/realtime'
 import { Monograma } from '../marca/Monograma'
 import { MARCA } from '../../marca'
 import './suporte.css'
+import { dataCurta } from '../../core/datas'
 
 /**
  * O chat de suporte (20/10/2026): a caixinha flutuante no canto da tela.
@@ -429,7 +430,7 @@ export function SuporteWidget({ sessao, nome, telaAtual, admin, escondido = fals
               <button type="button" key={c.id} className={`sp-hist ${c.id === atual?.id ? 'atual' : ''}`} onClick={() => { setAtual(c); setVista('conversa') }}>
                 <span className={`sp-hist-status ${c.status}`}>{c.status === 'resolvida' ? 'Resolvida' : c.status === 'respondida' ? 'Respondida' : 'Em andamento'}</span>
                 <b>{c.assunto || 'Conversa com o suporte'}</b>
-                <small>{new Date(c.criadaEm).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}{c.ultimaMensagem && ` · ${c.ultimaMensagem}`}</small>
+                <small>{dataCurta(c.criadaEm)}{c.ultimaMensagem && ` · ${c.ultimaMensagem}`}</small>
                 {c.naoLidasCliente > 0 && <i className="sp-hist-selo">{c.naoLidasCliente}</i>}
               </button>
             ))}
