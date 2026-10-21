@@ -91,6 +91,23 @@ async function conferirVersao() {
 }
 window.setTimeout(() => { void conferirVersao() }, 1500)
 
+/*
+ * O app instalado quase nunca "abre de novo": o iPhone e o Android só o tiram
+ * do segundo plano, e a página antiga continua ali. Então a conferência roda
+ * também quando o app volta para a tela depois de um tempo fora (20/10/2026,
+ * Tiago: "atualizar sozinho quando abrir da próxima vez, sem reinstalar").
+ * O service worker também é conferido, para baixar a versão nova junto.
+ */
+let foraDesde = 0
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') { foraDesde = Date.now(); return }
+  if (!foraDesde || Date.now() - foraDesde < 20_000) return
+  foraDesde = 0
+  void navigator.serviceWorker?.getRegistration().then((r) => r?.update()).catch(() => undefined)
+  void conferirVersao()
+})
+window.addEventListener('pageshow', (e) => { if (e.persisted) void conferirVersao() })
+
 // O PWA usa a mesma aplicacao publicada. A troca do service worker acontece
 // em segundo plano e nunca recarrega uma operacao em andamento.
 if ('serviceWorker' in navigator && import.meta.env.PROD) {

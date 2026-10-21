@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { MASCARA, useValoresOcultos } from '../core/privacidade'
 
 interface Props {
   valor: number | null
@@ -14,6 +15,7 @@ export function BalanceLive({ valor, moeda, conectando }: Props) {
   const anterior = useRef<number | null>(null)
   const [direcao, setDirecao] = useState<'sobe' | 'cai' | null>(null)
   const [delta, setDelta] = useState<number | null>(null)
+  const ocultos = useValoresOcultos()
 
   useEffect(() => {
     if (valor === null) return
@@ -32,6 +34,9 @@ export function BalanceLive({ valor, moeda, conectando }: Props) {
   if (valor === null) {
     return <strong className="saldo saldo-vazio">{conectando ? 'conectando…' : '—'}</strong>
   }
+
+  // o olhinho fechado: nem o valor, nem a variação
+  if (ocultos) return <span className="saldo-caixa"><strong className="saldo oculto"><em>{moeda}</em> {MASCARA}</strong></span>
 
   return (
     <span className="saldo-caixa">

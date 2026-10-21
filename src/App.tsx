@@ -51,6 +51,7 @@ import { usePlayerAtivo, useTreinoAtivo } from './core/live/presenca'
 import { assinarMudancas, type AssinaturaRealtime } from './core/teeds/realtime'
 import { lerPerfil, marcarTourVisto } from './core/teeds/perfil'
 import { TourGuiado, passosDoTour } from './components/tour/TourGuiado'
+import { BarraInferior } from './components/barra/BarraInferior'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
 // quando a pessoa abre a página ou entra numa live.
@@ -828,6 +829,8 @@ export default function App() {
           )}
         </div>
       </header>
+
+      {MARCA.inicio && teeds.sessao && <BarraInferior tela={tela} aoVivoAgora={aoVivoAgora} irPara={(t) => { setVerPerfil(false); setTela(t) }} />}
 
       {MARCA.suporte && teeds.sessao && (
         <Suspense fallback={null}>

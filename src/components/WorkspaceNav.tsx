@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Brand } from './Brand'
 import { MARCA } from '../marca'
 import './workspace.css'
@@ -25,6 +25,8 @@ const paths: Record<string, string> = {
 export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mostrarAoVivo = true, mostrarInicio = false }: { page: WorkspacePage; admin: boolean; onNavigate: (page: WorkspacePage) => void; aoVivoAgora?: boolean; mostrarAoVivo?: boolean; mostrarInicio?: boolean }) {
   const [compact, setCompact] = useState(false)
   const [open, setOpen] = useState(false)
+  // o "Mais" da barra inferior (celular) abre este mesmo menu
+  useEffect(() => { const abrir = () => setOpen(true); window.addEventListener('menu:abrir', abrir); return () => window.removeEventListener('menu:abrir', abrir) }, [])
   const navigate = (next: WorkspacePage) => { onNavigate(next); setOpen(false) }
   const estaSelecionado = (id: WorkspacePage) => page === id || (id === 'gestao' && (page === 'monitoramento' || page === 'insights'))
   const item = (id: WorkspacePage) => <button key={id} data-tour={`nav-${id}`} className={`workspace-link ${estaSelecionado(id) ? 'selected' : ''} ${id === 'aovivo' && aoVivoAgora ? 'no-ar' : ''}`} aria-current={estaSelecionado(id) ? 'page' : undefined} title={PAGE_NAMES[id]} onClick={() => navigate(id)}>

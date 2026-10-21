@@ -4,6 +4,7 @@ import { BalanceLive } from './BalanceLive'
 import { DerivLogo } from './DerivMarca'
 import { MARCA } from '../marca'
 import { AccountDemonstration } from './AccountDemonstration'
+import { MASCARA, useValoresOcultos } from '../core/privacidade'
 
 interface Props {
   admin?: boolean | null
@@ -33,6 +34,7 @@ interface Props {
  */
 export function AccountSwitcher(props: Props) {
   const { contas, selecionada, isDemo, saldo, moeda, conectando, onTrocar, onRecarregar, onSair } = props
+  const ocultos = useValoresOcultos()
   /*
     Como a etiqueta aparece. No acesso somente-demo (o de demonstracao da
     casa), a conta demo veste a etiqueta da real — verde, "Real" — a pedido
@@ -94,7 +96,7 @@ export function AccountSwitcher(props: Props) {
                   <b>{cara(demo) === 'demo' ? 'Conta Demo' : 'Conta Real'}</b>
                 </span>
                 <span className="menu-conta-saldo">
-                  {(ativa && saldo !== null && c.currency === moeda ? saldo : c.balance).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {ocultos ? MASCARA : (ativa && saldo !== null && c.currency === moeda ? saldo : c.balance).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   <i>{c.currency}</i>
                 </span>
                 <span className="menu-conta-marca" aria-hidden="true">
