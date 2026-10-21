@@ -71,18 +71,19 @@ if (typeof window !== 'undefined') {
   for (const ev of ['pointerdown', 'touchend', 'keydown']) window.addEventListener(ev, uma, { passive: true })
 }
 
-export type Som = 'ganho' | 'perda' | 'play'
+export type Som = 'ganho' | 'perda' | 'play' | 'decolagem'
 const SINTESE: Record<Som, (c: BaseAudioContext, destino: AudioNode, t: number) => void> = {
   ganho: (c, d, t) => chaChing(c, d, t),
   perda: (c, d, t) => somDePerda(c, d, t),
   play: (c, d, t) => somDePlay(c, d, t),
+  decolagem: (c, d, t) => somDeDecolagem(c, d, t),
 }
 const ultimaVez: Record<string, number> = {}
 /** Toca um som. `forcar` ignora o intervalo mínimo (o teste ao ligar o som). */
 export function tocarSom(som: Som, forcar = false): void {
   if (!ligado || document.visibilityState === 'hidden') return
   // ganho e perda dividem o intervalo: resultados juntos viram um som só
-  const grupo = som === 'play' ? 'play' : 'resultado'
+  const grupo = som === 'ganho' || som === 'perda' ? 'resultado' : som
   const agora = performance.now()
   if (!forcar && agora - (ultimaVez[grupo] ?? -1e9) < 350) return
   ultimaVez[grupo] = agora
@@ -216,6 +217,23 @@ export function somDePlay(c: BaseAudioContext, destino: AudioNode, t: number): v
   }
   nota(t + 0.12, 659.25, 0.4, 0.3)
   nota(t + 0.22, 987.77, 0.45, 0.6)
+}
+
+/**
+ * A decolagem do login: o ar passando, sem melodia. Um chiado que sobe de
+ * grave para agudo junto com o avião e some quando ele sai da tela.
+ */
+export function somDeDecolagem(c: BaseAudioContext, destino: AudioNode, t: number): void {
+  const saida = saidaDoSom(c, destino, 1)
+  const s = c.createBufferSource(); s.buffer = chiado(c); s.loop = true
+  const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 0.9
+  f.frequency.setValueAtTime(260, t); f.frequency.exponentialRampToValueAtTime(2600, t + 1.25)
+  const g = c.createGain()
+  g.gain.setValueAtTime(0.0001, t)
+  g.gain.exponentialRampToValueAtTime(0.55, t + 0.85)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 1.45)
+  s.connect(f); f.connect(g); g.connect(saida)
+  s.start(t); s.stop(t + 1.5)
 }
 
 // ------------------------------------------------------------------ quem avisa que terminou

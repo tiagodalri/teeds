@@ -13,6 +13,7 @@ import { RobotDialog } from './RobotDialog'
 import './robot-launch.css'
 import { IconeFechar } from './IconeFechar'
 import { NomeDoRobo } from './NomeDoRobo'
+import { Monograma, TEM_MONOGRAMA } from './marca/Monograma'
 
 interface Props {
   identidade: Identidade
@@ -31,13 +32,15 @@ interface Props {
 }
 const CHAVE = 'teeds.robo.preparo'
 const din = (v: number, m = 'USD') => `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-export function lerPreparo(): { cfg?: Partial<ConfigEstrategia>; symbol?: string; modelo?: string; modo?: Modo } {
+export function lerPreparo(): { cfg?: Partial<ConfigEstrategia>; symbol?: string; modelo?: string; modo?: Modo; lossVirtual?: Record<string, number> } {
   try {
     const valor = JSON.parse(localStorage.getItem(CHAVE) || '{}')
     return valor && typeof valor === 'object' && !Array.isArray(valor) ? valor : {}
   } catch { return {} }
 }
-type ChaveNumerica = Exclude<keyof ConfigEstrategia, 'lucroSobrePrejuizo' | 'parametros' | 'parametrosVersao' | 'parametrosTesteDemo' | 'modo'>
+type ChaveNumerica = Exclude<keyof ConfigEstrategia, 'lucroSobrePrejuizo' | 'parametros' | 'parametrosVersao' | 'parametrosTesteDemo' | 'modo' | 'lossVirtualCliente'>
+/** O loss virtual que o cliente pode escolher: 0 (sem) até este teto (o mesmo do painel). */
+const LOSS_VIRTUAL_MAXIMO = 12
 const FAIXAS: Record<ChaveNumerica, [number, number]> = {
   valorInicial: [0.35, 10_000],
   valorAoVencer: [0.35, 10_000],
@@ -107,8 +110,23 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   const dados = useParametrosDoRobo(modelo.id)
   const parametros = dados ? (isDemo && dados.testeDemo ? dados.testeDemo : dados.parametros) : undefined
   const comModo = temModos(modelo.id, parametros)
-  const desloc = comModo ? 1 : 0
+  /*
+    Loss virtual à escolha do cliente (21/10/2026, pedido do Tiago): nos robôs
+    que entram por loss virtual, a pessoa escolhe sem ou com, e quantos (de 1
+    para cima). Só aparece quando o servidor avisa que aceita a escolha
+    (`lossVirtualAjustavel` no catálogo): servidor antigo ignoraria o número.
+  */
+  const lvDoPainel = parametros?.entrada.lossVirtual ?? 0
+  const comLV = !!dados?.lossVirtualAjustavel && lvDoPainel > 0
+  const [lvEscolhido, setLvEscolhido] = useState<Record<string, number>>(() => lerPreparo().lossVirtual ?? {})
+  const lv = Math.min(LOSS_VIRTUAL_MAXIMO, Math.max(0, Math.trunc(lvEscolhido[modelo.id] ?? lvDoPainel)))
+  const escolherLv = (n: number) => setLvEscolhido((m) => ({ ...m, [modelo.id]: Math.min(LOSS_VIRTUAL_MAXIMO, Math.max(0, n)) }))
+  // a regra que a revisão descreve já com a escolha da pessoa
+  const regra = parametros && comLV ? { ...parametros, entrada: { ...parametros.entrada, lossVirtual: lv } } : parametros
+  const posLV = comModo ? 1 : 0
+  const desloc = (comModo ? 1 : 0) + (comLV ? 1 : 0)
   const passoModo = comModo && passo === 0
+  const passoLV = comLV && passo === posLV
   const etapa = passo - desloc >= 0 && passo - desloc < ETAPAS_PREPARO.length ? ETAPAS_PREPARO[passo - desloc] : null
   const revisao = passo === ETAPAS_PREPARO.length + desloc
   const minimo = etapa?.key === 'stopLoss' && !isDemo ? Number(valores.valorAoVencer.replace(',', '.')) : etapa?.min ?? 0
@@ -141,9 +159,12 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   function iniciar() {
     if (submitted.current || ligando || !todasValidas || (!isDemo && !confirmaReal)) return
     submitted.current = true
-    const cfg = configurarPreparo(inicial, valores, modelo.id, modo, parametros)
-    if (!cfg) { submitted.current = false; return }
-    try { localStorage.setItem(CHAVE, JSON.stringify({ cfg, symbol: ATIVO_DOS_ROBOS, modo })) } catch { /* optional browser preferences */ }
+    const preparada = configurarPreparo(inicial, valores, modelo.id, modo, parametros)
+    if (!preparada) { submitted.current = false; return }
+    const cfg: ConfigEstrategia = comLV ? { ...preparada, lossVirtualCliente: lv } : preparada
+    const { lossVirtualCliente: _lv, ...paraGuardar } = cfg
+    void _lv
+    try { localStorage.setItem(CHAVE, JSON.stringify({ cfg: paraGuardar, symbol: ATIVO_DOS_ROBOS, modo, lossVirtual: lvEscolhido })) } catch { /* optional browser preferences */ }
     onLigar(cfg, ATIVO_DOS_ROBOS, modelo)
   }
   return <RobotDialog label="Configurar robô" busy={ligando} onCancel={onCancelar}>
@@ -153,17 +174,42 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
       if (!revisao && valido && !ligando) setPasso(p => p + 1)
     }} onKeyDown={e => { if (e.key === 'Enter' && (e.repeat || e.nativeEvent.isComposing)) e.preventDefault() }}>
       <header className="robot-launch-top">
-        <div className="robot-launch-title"><Emblema id={modelo} tamanho={32} /><div><b>{passo === -1 ? 'Novo robô' : <NomeDoRobo nome={modelo.nome} />}</b><span>Preparar sessão</span></div></div>
+        <div className="robot-launch-title"><Emblema id={modelo} tamanho={32} /><div><b>{passo === -1 ? 'Novo robô' : <NomeDoRobo nome={modelo.nome} />}</b><span className="robot-launch-sub">Preparar sessão</span></div></div>
         <button type="button" className="robot-launch-close" onClick={onCancelar} disabled={ligando} aria-label="Cancelar configuração"><IconeFechar /></button>
       </header>
-      <div className="robot-launch-progress" aria-label={`Etapa ${numero} de ${quantidade}`}><span style={{ width: `${numero / quantidade * 100}%` }} /></div>
+      <div className="robot-launch-progress" role="progressbar" aria-label={`Etapa ${numero} de ${quantidade}`} aria-valuemin={1} aria-valuemax={quantidade} aria-valuenow={numero}>
+        {Array.from({ length: quantidade }, (_, i) => <i key={i} className={i < numero ? 'feito' : ''} />)}
+      </div>
+      {TEM_MONOGRAMA && <Monograma variante="marca-dagua" tamanho={240} className="robot-launch-dagua" />}
       <div className="robot-launch-body" ref={scrollRef}>
-        <span className="robot-launch-step">ETAPA {numero} DE {quantidade} · {passo === -1 ? 'MODELO' : passoModo ? 'MODO' : revisao ? 'REVISÃO' : 'SEUS LIMITES'}</span>
-        <h3 ref={titleRef} tabIndex={-1}>{passo === -1 ? 'Escolha seu robô.' : passoModo ? 'Como o robô deve operar?' : revisao ? 'Revise. Depois, dê o play.' : etapa?.titulo}</h3>
+        <span className="robot-launch-step">ETAPA {numero} DE {quantidade} · {passo === -1 ? 'MODELO' : passoModo ? 'MODO' : passoLV ? 'LOSS VIRTUAL' : revisao ? 'REVISÃO' : 'SEUS LIMITES'}</span>
+        <h3 ref={titleRef} tabIndex={-1}>{passo === -1 ? 'Escolha seu robô.' : passoModo ? 'Como o robô deve operar?' : passoLV ? 'Quando o robô deve entrar?' : revisao ? 'Revise. Depois, dê o play.' : etapa?.titulo}</h3>
         {passo === -1 ? <RobotCatalog selected={modelo.id} onSelect={setModelo} /> : passoModo ? <div className="robot-launch-question robot-launch-modos" role="radiogroup" aria-label="Modo de operação">
           {OPCOES_DE_MODO.map(o => <button type="button" key={o.id} role="radio" aria-checked={modo === o.id} className={`robot-launch-modo ${o.id}`} onClick={() => setModo(o.id)}>
             <strong>{o.nome}</strong><span>{o.frase}</span>
           </button>)}
+        </div> : passoLV ? <div className="robot-launch-question robot-launch-lv">
+          <p id="robot-step-help">O loss virtual é a análise antes da entrada: o robô observa o mercado e só entra depois de uma sequência de dígitos que teriam perdido, sem operar dinheiro nenhum nessa espera.</p>
+          <div className="robot-launch-modos" role="radiogroup" aria-label="Loss virtual">
+            <button type="button" role="radio" aria-checked={lv === 0} className="robot-launch-modo sem-lv" onClick={() => escolherLv(0)}>
+              <strong>Sem loss virtual</strong><span>Entra em toda operação, sem esperar a sequência.</span>
+            </button>
+            <button type="button" role="radio" aria-checked={lv > 0} className="robot-launch-modo com-lv" onClick={() => escolherLv(lv > 0 ? lv : lvDoPainel || 1)}>
+              <strong>Com loss virtual</strong><span>Analisa e só entra depois dos dígitos seguidos que você escolher.</span>
+            </button>
+          </div>
+          {lv > 0 && <div className="robot-launch-lv-qtd">
+            <div className="robot-launch-lv-linha">
+              <span id="robot-lv-rotulo">Quantos dígitos seguidos esperar</span>
+              <div className="robot-launch-stepper" role="group" aria-labelledby="robot-lv-rotulo">
+                <button type="button" onClick={() => escolherLv(lv - 1)} disabled={lv <= 1} aria-label="Esperar um dígito a menos">−</button>
+                <output aria-live="polite">{lv}</output>
+                <button type="button" onClick={() => escolherLv(lv + 1)} disabled={lv >= LOSS_VIRTUAL_MAXIMO} aria-label="Esperar um dígito a mais">+</button>
+              </div>
+            </div>
+            <div className="robot-launch-casas" aria-hidden="true">{Array.from({ length: lv }, (_, i) => <i key={i} />)}</div>
+            <p className="robot-launch-hint">{lv === lvDoPainel ? `${lv} é o padrão da plataforma para este robô.` : `O padrão da plataforma para este robô é ${lvDoPainel}.`} Quanto mais dígitos, mais o robô espera e menos vezes ele entra.</p>
+          </div>}
         </div> : etapa ? <div className="robot-launch-question" key={etapa.key}>
           <p id="robot-step-help">{etapa.key === 'stopLoss' && !isDemo ? 'Na conta real, o limite de perda é obrigatório e não pode ser menor que a entrada. O motor pode parar antes para impedir que a próxima entrada ultrapasse esse valor.' : etapa.ajuda}</p>
           <label className="robot-launch-number"><span className="sr-only">{etapa.titulo}</span>
@@ -178,8 +224,16 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
             {valido ? etapa.key === 'valorAoVencer' ? `Mínimo: ${din(.35, moeda)} por entrada.` : Number(valores[etapa.key].replace(',', '.')) === 0 ? 'Este limite está desativado.' : 'Você pode voltar e ajustar antes de iniciar.' : `Informe ${etapa.key === 'maxOperacoes' ? 'um número inteiro' : 'um valor'} de ${minimo.toLocaleString('pt-BR')} a ${etapa.max.toLocaleString('pt-BR')}.`}
           </p>
         </div> : <div className="robot-launch-review">
-          <p>{parametros ? descrever(modelo.id, parametros) : modelo.descricao}</p>
-          <dl><div><dt>Ativo</dt><dd>{nomeAtivo.replace(' Index', '')}</dd></div>{comModo && <div><dt>Modo</dt><dd>{NOME_DO_MODO[modo]}<button type="button" onClick={() => { setConfirmaReal(false); setPasso(0) }} disabled={ligando} aria-label="Editar modo de operação">Editar</button></dd></div>}{ETAPAS_PREPARO.map((e, i) => <div key={e.key}><dt>{['Entrada base', 'Meta de ganho', 'Limite de perda', 'Máximo de operações'][i]}</dt><dd>{Number(valores[e.key].replace(',', '.')) === 0 ? 'Sem limite' : e.key === 'maxOperacoes' ? valores[e.key] : din(Number(valores[e.key].replace(',', '.')), moeda)}<button type="button" onClick={() => { setConfirmaReal(false); setPasso(i + desloc) }} disabled={ligando} aria-label={`Editar ${e.titulo}`}>Editar</button></dd></div>)}</dl>
+          <p>{regra ? descrever(modelo.id, regra) : modelo.descricao}</p>
+          <div className="robot-launch-bilhete">
+          <div className="robot-launch-bilhete-topo">
+            {TEM_MONOGRAMA ? <Monograma tamanho={30} /> : <Emblema id={modelo} tamanho={26} />}
+            <span><small>Sessão</small><b>{TEM_MONOGRAMA ? modelo.nome.replace(/^(GF|GlobalFly)\s+/i, '') : <NomeDoRobo nome={modelo.nome} />}</b></span>
+            <span className="robot-launch-bilhete-conta"><small>Conta</small><b>{isDemo ? 'Demo' : 'Real'}</b></span>
+          </div>
+          <i className="robot-launch-picote" aria-hidden="true" />
+          <dl><div><dt>Ativo</dt><dd>{nomeAtivo.replace(' Index', '')}</dd></div>{comModo && <div><dt>Modo</dt><dd>{NOME_DO_MODO[modo]}<button type="button" onClick={() => { setConfirmaReal(false); setPasso(0) }} disabled={ligando} aria-label="Editar modo de operação">Editar</button></dd></div>}{comLV && <div><dt>Loss virtual</dt><dd>{lv === 0 ? 'Sem' : `${lv} ${lv === 1 ? 'dígito' : 'dígitos'}`}<button type="button" onClick={() => { setConfirmaReal(false); setPasso(posLV) }} disabled={ligando} aria-label="Editar loss virtual">Editar</button></dd></div>}{ETAPAS_PREPARO.map((e, i) => <div key={e.key}><dt>{['Entrada base', 'Meta de ganho', 'Limite de perda', 'Máximo de operações'][i]}</dt><dd>{Number(valores[e.key].replace(',', '.')) === 0 ? 'Sem limite' : e.key === 'maxOperacoes' ? valores[e.key] : din(Number(valores[e.key].replace(',', '.')), moeda)}<button type="button" onClick={() => { setConfirmaReal(false); setPasso(i + desloc) }} disabled={ligando} aria-label={`Editar ${e.titulo}`}>Editar</button></dd></div>)}</dl>
+          </div>
           <p className="robot-launch-risk">A recuperação pode aumentar o valor das entradas. Os robôs desta conta compartilham o saldo. Não há garantia de lucro.</p>
           {isDemo && dados?.testeDemo && <p className="robot-launch-risk">Este robô roda uma regra em teste nas contas demo.</p>}
         </div>}

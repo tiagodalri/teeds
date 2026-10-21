@@ -18,6 +18,8 @@ export interface ItemCatalogo {
   parametrosVersao?: number | null
   /** A regra em teste só nas contas demo, quando houver. */
   testeDemo?: ParametrosDoRobo | null
+  /** O servidor aceita o cliente escolher o loss virtual deste robô (servidor antigo não manda). */
+  lossVirtualAjustavel?: boolean
 }
 export async function consultarCatalogo(sessao: SessaoTeeds, alteracao?: Pick<ItemCatalogo, 'id' | 'ativo'>): Promise<ItemCatalogo[]> {
   const r = await fetch(`${SERVIDOR.url}/api/catalogo-robos`, { method: alteracao ? 'POST' : 'GET', headers: { Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' }, ...(alteracao ? { body: JSON.stringify(alteracao) } : {}) })
@@ -31,6 +33,7 @@ export interface ParametrosDoCatalogo {
   parametros: ParametrosDoRobo
   versao: number | null
   testeDemo: ParametrosDoRobo | null
+  lossVirtualAjustavel: boolean
 }
 interface Catalogo {
   /** Ids dos robôs ligados — o contrato de sempre de useRobosDisponiveis. */
@@ -51,7 +54,7 @@ export const useCatalogoCompleto = (): ItemCatalogo[] | null => useContext(Conte
 export function useParametrosDoRobo(id: string): ParametrosDoCatalogo | null {
   const item = useContext(Contexto)?.itens?.find((i) => i.id === id)
   return useMemo(() => item
-    ? { parametros: item.parametros ?? parametrosPadrao(id), versao: item.parametrosVersao ?? null, testeDemo: item.testeDemo ?? null }
+    ? { parametros: item.parametros ?? parametrosPadrao(id), versao: item.parametrosVersao ?? null, testeDemo: item.testeDemo ?? null, lossVirtualAjustavel: item.lossVirtualAjustavel === true }
     : null, [item, id])
 }
 export function CatalogoProvider({ sessao, children }: {sessao: SessaoTeeds | null; children: ReactNode}) {
@@ -68,5 +71,11 @@ export function CatalogoProvider({ sessao, children }: {sessao: SessaoTeeds | nu
   },[sessao?.token])
   // A lista de ids só muda quando o catálogo muda: evita efeitos rodando à toa em quem depende dela.
   const valor = useMemo<Catalogo>(() => ({ ids: (itens ?? []).filter(i=>i.ativo).map(i=>i.id), itens }), [itens])
+  return <Contexto.Provider value={valor}>{children}</Contexto.Provider>
+}
+
+/** Laboratório: um catálogo fixo, sem servidor (as telas de preparo com dados de exemplo). */
+export function CatalogoDeExemplo({ itens, children }: { itens: ItemCatalogo[]; children: ReactNode }) {
+  const valor = useMemo<Catalogo>(() => ({ ids: itens.filter((i) => i.ativo).map((i) => i.id), itens }), [itens])
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>
 }

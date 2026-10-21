@@ -4,7 +4,7 @@ import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { AnaliseAoVivo } from './AnaliseAoVivo'
-import { ESTRATEGIAS_LOCAIS, modoDaConfig, NOME_DO_MODO, temModos } from '../core/deriv/strategies'
+import { ESTRATEGIAS_LOCAIS, lossVirtualDaSessao, modoDaConfig, NOME_DO_MODO, temModos } from '../core/deriv/strategies'
 import './robot-cockpit.css'
 import { NomeDoRobo } from './NomeDoRobo'
 
@@ -99,7 +99,7 @@ function Curva({ pontos, positivo }: { pontos: number[]; positivo: boolean }) {
 function regraDaSessao(config: ConfigEstrategia, estrategiaId?: string): Array<{ rot: string; valor: string }> {
   const p = config.parametros
   if (!p || !estrategiaId) return []
-  const n = p.entrada.lossVirtual
+  const n = lossVirtualDaSessao(config) ?? p.entrada.lossVirtual
   const quandoEntra = estrategiaId === 'thepalm'
     ? 'após a análise de 25 dígitos'
     : n === 0 ? 'em toda operação' : n === 1 ? 'após 1 dígito que teria perdido' : `após ${n} dígitos seguidos que teriam perdido`

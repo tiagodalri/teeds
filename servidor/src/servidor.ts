@@ -823,7 +823,9 @@ const servidor = createServer(async (req, res) => {
         // descrever o robô do jeito que ele está hoje. Mesmo poll de sempre.
         if (req.method === 'GET') return json(200, catalogo(marca).map((r) => {
           const v = vigente(marca, r.id, false)
-          return { ...r, parametros: v.parametros, parametrosVersao: v.versao, testeDemo: emTesteNoDemo(marca, r.id) }
+          // lossVirtualAjustavel: este servidor aceita a escolha do cliente (a tela só oferece quando vê o campo)
+          const lossVirtualAjustavel = !!ESTRATEGIAS_LOCAIS.find((e) => e.id === r.id)?.lossVirtualAjustavel
+          return { ...r, parametros: v.parametros, parametrosVersao: v.versao, testeDemo: emTesteNoDemo(marca, r.id), lossVirtualAjustavel }
         }))
         if (req.method === 'POST') {
           if (!await administradorDaMarca(dono.id, marca)) return json(403, { erro: 'Somente administradores desta plataforma.' })

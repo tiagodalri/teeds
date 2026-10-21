@@ -14,6 +14,8 @@ import './core/appNativo'
 
 // Convite para instalar e aviso de sem conexão: só nas marcas com app nativo.
 const RecursosDeApp = MARCA.appNativo ? lazy(() => import('./components/RecursosDeApp')) : null
+// O voo do login até o início: atravessa a troca de telas, então mora na raiz.
+const Decolagem = MARCA.decolagem ? lazy(() => import('./components/entrada/Decolagem').then((m) => ({ default: m.Decolagem }))) : null
 
 // o tema entra antes do primeiro quadro, para a tela nao piscar clara
 document.documentElement.dataset.marca = MARCA.id
@@ -33,6 +35,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
     {RecursosDeApp && <Suspense fallback={null}><RecursosDeApp /></Suspense>}
+    {Decolagem && <Suspense fallback={null}><Decolagem /></Suspense>}
   </React.StrictMode>,
 )
 

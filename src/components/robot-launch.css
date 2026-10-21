@@ -1,24 +1,25 @@
 /* A single, viewport-centred launch flow. Independent of grid containers. */
 .robot-launch-dialog { position: fixed; inset: 0; margin: auto; padding: 0; width: min(760px, calc(100vw - 24px)); height: min(660px, calc(100dvh - 24px)); max-width: none; max-height: none; border: 1px solid var(--border); border-radius: 18px; background: var(--bg); color: var(--text); box-shadow: 0 32px 100px #0006; overflow: hidden; }
 .robot-launch-dialog::backdrop { background: #05080dc9; backdrop-filter: blur(6px); }
-.robot-launch { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.robot-launch { position: relative; isolation: isolate; height: 100%; display: flex; flex-direction: column; min-height: 0; }
 .robot-launch button { cursor: pointer; }
 .robot-launch button:disabled { cursor: not-allowed; opacity: .48; }
 .robot-launch button:focus-visible, .robot-launch input:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .robot-launch-top { display: flex; align-items: center; gap: 16px; flex: none; padding: 14px 22px; }
 .robot-launch-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .robot-launch-title b { display: block; font-size: 16px; }
-.robot-launch-title span { display: block; color: var(--muted); font-size: 12px; }
+.robot-launch-title .robot-launch-sub { display: block; color: var(--muted); font-size: 12px; letter-spacing: .02em; }
 .robot-launch-account { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--account-demo); background: var(--account-demo-soft); padding: 6px 9px; border-radius: 6px; white-space: nowrap; }
 .robot-launch-account.real { color: var(--up); background: var(--up-soft); }
 .robot-launch-close { flex: none; width: 34px; height: 34px; padding: 0; font-size: 26px; border: 0; border-radius: 8px; background: var(--surface); color: var(--muted); }
-.robot-launch-progress { flex: none; height: 3px; background: var(--border); }
-.robot-launch-progress span { display: block; height: 100%; background: var(--primary); transition: width .15s ease-out; }
+.robot-launch-progress { flex: none; display: flex; gap: 4px; height: 3px; padding: 0 22px; }
+.robot-launch-progress i { flex: 1; border-radius: 3px; background: var(--border); transition: background .2s ease-out; }
+.robot-launch-progress i.feito { background: var(--primary); }
 .robot-launch-body { flex: 1; min-height: 0; padding: 20px 26px; overflow: auto; overscroll-behavior: contain; }
 .robot-launch-step { color: var(--muted); font-weight: 650; letter-spacing: .1em; font-size: 12px; }
 .robot-launch-body h3 { margin: 8px 0 18px; color: var(--text); font-size: clamp(22px, 2.5vw, 26px); letter-spacing: -.04em; line-height: 1.2; }
 .robot-launch-body h3:focus { outline: none; }
-.robot-launch-question { max-width: 580px; margin: 18px auto 0; }
+.robot-launch-question { max-width: 620px; margin: 18px 0 0; }
 .robot-launch-question > p, .robot-launch-review > p { color: color-mix(in srgb, var(--text) 72%, var(--muted)); font-size: 16px; line-height: 1.6; margin: 0 0 18px; }
 .robot-launch-number { display: flex; align-items: center; gap: 16px; padding: 14px 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .robot-launch-number:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
@@ -97,7 +98,7 @@
   .robot-picker-kicker { display: none; }
   .robot-picker-detail h4 { margin: 0 0 6px; }
   .robot-picker-list > input { font-size: 16px; }
-  .robot-launch-title span { display: none; }
+  .robot-launch-title .robot-launch-sub { display: none; }
   .robot-launch-top { padding-top: max(12px, env(safe-area-inset-top)); }
   .robot-launch-account { white-space: normal; max-width: 132px; text-align: right; }
   .robot-launch-review dd { gap: 8px; }
@@ -108,4 +109,60 @@
   .robot-picker-emblem, .robot-picker-next, .robot-picker-detail > small { display: none; }
   .robot-picker-detail h4 { font-size: 16px; }
 }
-@media (prefers-reduced-motion: reduce) { .robot-launch-progress span { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .robot-launch-progress i { transition: none; } }
+
+/* ------------------------------------------------------------------
+   21/10/2026: a marca d'água do monograma (4%, manual da GlobalFly), o
+   loss virtual à escolha do cliente e a revisão em forma de cartão de
+   embarque. Tudo por tokens: vale nos dois temas e nas três casas.
+   ------------------------------------------------------------------ */
+.robot-launch-dagua { position: absolute; right: 0; bottom: 64px; z-index: -1; opacity: .04; }
+.robot-launch-step { color: color-mix(in srgb, var(--primary) 70%, var(--muted)); }
+.robot-launch-body h3 { text-wrap: balance; }
+
+/* loss virtual: sem/com, o seletor de quantos e as casas (as mesmas do radar da cabine) */
+.robot-launch-lv .robot-launch-modo { min-height: 118px; }
+.robot-launch-modo.sem-lv::before { background: var(--muted); }
+.robot-launch-modo.com-lv::before { background: var(--primary); }
+.robot-launch-lv-qtd { display: grid; gap: 14px; margin-top: 16px; padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.robot-launch-lv-linha { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.robot-launch-lv-linha > span { font-size: 14px; font-weight: 650; color: var(--text); }
+.robot-launch-stepper { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); overflow: hidden; }
+.robot-launch-stepper button { width: 46px; height: 46px; border: 0; background: none; color: var(--text); font-size: 22px; line-height: 1; }
+.robot-launch-stepper button:hover:not(:disabled) { background: var(--primary-soft); }
+.robot-launch-stepper output { min-width: 52px; text-align: center; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; border-inline: 1px solid var(--border); line-height: 46px; }
+.robot-launch-casas { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; }
+.robot-launch-casas i { aspect-ratio: 1; max-height: 34px; border-radius: 8px; border: 1.5px dashed color-mix(in srgb, var(--primary) 55%, var(--border)); animation: rl-casa .3s ease both; }
+@keyframes rl-casa { from { transform: scale(.7); opacity: 0; } }
+.robot-launch-lv-qtd .robot-launch-hint { margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+
+/* a revisão: o cartão de embarque da sessão */
+.robot-launch-bilhete { position: relative; overflow: hidden; margin-top: 4px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.robot-launch-bilhete-topo { display: flex; align-items: center; gap: 12px; padding: 14px 18px; }
+.robot-launch-bilhete-topo > span { display: grid; gap: 1px; min-width: 0; }
+.robot-launch-bilhete-topo small { color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.robot-launch-bilhete-topo b { font-size: 16px; }
+.robot-launch-bilhete-conta { margin-left: auto; text-align: right; }
+/* o picote: a linha tracejada com os dois recortes nas bordas */
+.robot-launch-picote { position: relative; display: block; height: 0; margin: 0 16px; border-top: 1.5px dashed var(--border); }
+/* os recortes: meia-lua do fundo da janela, presa por dentro do cartão (nada vaza para os lados) */
+.robot-launch-picote::before, .robot-launch-picote::after { content: ''; position: absolute; top: -10px; width: 18px; height: 18px; border-radius: 50%; background: var(--bg); border: 1px solid var(--border); }
+.robot-launch-picote::before { left: -26px; }
+.robot-launch-picote::after { right: -26px; }
+.robot-launch-bilhete dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; padding: 12px 18px 8px; }
+.robot-launch-bilhete dl > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 8px; padding: 10px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.robot-launch-bilhete dl > div:nth-last-child(-n + 2):nth-child(odd), .robot-launch-bilhete dl > div:last-child { border-bottom: 0; }
+.robot-launch-bilhete dt { grid-column: 1 / -1; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.robot-launch-bilhete dd { display: contents; font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; text-align: left; }
+.robot-launch-bilhete dd button { justify-self: end; }
+@media (max-width: 600px) {
+  .robot-launch-progress { padding: 0 16px; }
+  .robot-launch-dagua { width: 170px !important; height: 170px !important; bottom: 80px; }
+  .robot-launch-lv .robot-launch-modo { min-height: 0; }
+  .robot-launch-lv-qtd { padding: 14px; }
+  .robot-launch-casas { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .robot-launch-bilhete dl { gap: 0 12px; padding: 8px 14px 6px; }
+  .robot-launch-bilhete dd { font-size: 14.5px; }
+  .robot-launch-bilhete-topo { padding: 12px 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .robot-launch-casas i { animation: none; } }

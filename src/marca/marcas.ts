@@ -116,6 +116,8 @@ export interface Marca {
   suporte?: boolean
   /** Tela de entrada com a cena (foto escurecida + frase + mercado). Ver CenaDoLogin.tsx. */
   cenaLogin?: 'nuvens' | 'rastro'
+  /** Ao entrar, o avião decola do botão e leva até o início; o carregando vira a rota. Ver Decolagem.tsx. */
+  decolagem?: boolean
   /** Link do grupo (comunidade) no WhatsApp: vira banner em Aulas. */
   comunidade?: string
   /** Link da apostila (PDF): quando existir, vira banner em Aulas. */
@@ -375,6 +377,7 @@ export const MARCAS: Record<string, Marca> = {
     inicio: true,
     suporte: true,
     cenaLogin: 'nuvens',
+    decolagem: true,
     // 21/10/2026: a comunidade oficial (enviado pelo Tiago)
     comunidade: 'https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq',
     ativosSemVolatility: true,

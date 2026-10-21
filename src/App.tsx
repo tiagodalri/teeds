@@ -23,6 +23,8 @@ import { UserMenu } from './components/UserMenu'
 import { ProfilePanel } from './components/ProfilePanel'
 import { DerivLogo, IconeElo } from './components/DerivMarca'
 import { LoginScreen } from './components/LoginScreen'
+import { Carregando } from './components/entrada/Carregando'
+import { decolar, liberarPouso } from './core/decolagem'
 import { NovaSenha } from './components/NovaSenha'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 import { startLogin } from './core/deriv/auth'
@@ -674,7 +676,17 @@ export default function App() {
     esse fluxo não depende da situação da ficha.
   */
   const lendoSituacao = teeds.status === 'logado' && situacao === null && !teeds.redefinindo
-  if (teeds.status === 'carregando' || lendoSituacao) {
+  const abrindo = teeds.status === 'carregando' || lendoSituacao
+  // A decolagem: só quem acabou de entrar pelo login (deslogado → logado).
+  // Quem reabre o app já logado vê só o carregando, sem voo.
+  const statusAnterior = useRef(teeds.status)
+  useEffect(() => {
+    if (MARCA.decolagem && statusAnterior.current === 'deslogado' && teeds.status === 'logado') decolar(teeds.sessao?.usuario.nome ?? null)
+    statusAnterior.current = teeds.status
+  }, [teeds.status]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!abrindo) liberarPouso() }, [abrindo])
+  if (abrindo) {
+    if (MARCA.decolagem) return <Carregando />
     return <div className="entrada"><div className="entrada-esperando">abrindo a {MARCA.prosa}…</div></div>
   }
 

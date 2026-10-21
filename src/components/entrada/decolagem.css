@@ -1,0 +1,90 @@
+/* A decolagem e o carregando da GlobalFly (21/10/2026). Azul GF de fundo,
+   ouro só no que se move (o avião e o rastro: a ação), marfim no texto,
+   aço na legenda. Sem brilho: a única luz é o traço de ouro. */
+.dg, .dg-tela {
+  --dg-azul: var(--gf-azul, #051528);
+  --dg-ouro: var(--gf-ouro, #B78D39);
+  --dg-marfim: var(--gf-marfim, #F3F0E9);
+  --dg-aco: var(--gf-aco, #9CB1C7);
+}
+
+/* ------------------------------------------------------------ a decolagem */
+.dg { position: fixed; inset: 0; z-index: 2147482000; overflow: hidden; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
+.dg-eixo { position: absolute; width: 0; height: 0; }
+/* o céu: um painel enorme cuja borda direita é a frente do azul, perpendicular ao voo */
+.dg-ceu {
+  position: absolute; left: -320vmax; top: -160vmax; width: 320vmax; height: 320vmax;
+  background: var(--dg-azul); transform: translateX(-160vmax); will-change: transform;
+}
+.dg-rastro { position: absolute; left: 0; top: 0; width: 200vmax; height: 0; transform-origin: 0 50%; transform: scaleX(0); will-change: transform, opacity; }
+.dg-rastro i {
+  position: absolute; left: 0; right: 0; height: 1.5px; border-radius: 2px;
+  /* o rastro se desfaz para trás: some perto do chão, firme junto do avião */
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--dg-ouro) 55%, transparent) 55%, var(--dg-ouro) 100%);
+}
+.dg-rastro i:first-child { top: -7px; }
+.dg-rastro i:last-child { top: 5.5px; }
+.dg-aviao {
+  position: absolute; left: 0; top: 0; display: block; translate: -50% -50%; opacity: 0;
+  color: var(--dg-ouro); line-height: 0; will-change: transform, opacity;
+  filter: drop-shadow(0 3px 3px rgba(5, 21, 40, .28));
+}
+.dg-aviao svg { display: block; overflow: visible; }
+/* contorno azul por baixo do ouro: o avião não some quando sai de cima do botão dourado */
+.dg-aviao path { stroke: var(--dg-azul); stroke-width: 2.2; stroke-linejoin: round; paint-order: stroke; }
+
+/* a chegada: o mesmo quadro do carregando, sobre o azul */
+.dg-chegada {
+  position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 14px;
+  padding: calc(var(--sat, 0px) + 24px) 24px calc(var(--sab, 0px) + 24px); text-align: center;
+  opacity: 0; transform: translateY(8px); transition: opacity .45s ease, transform .6s cubic-bezier(.2, .8, .2, 1);
+  pointer-events: none;
+}
+.dg-cruzeiro .dg-chegada { opacity: 1; transform: none; }
+.dg-pousando .dg-chegada { opacity: 0; transform: translateY(-10px); transition-duration: .22s, .3s; }
+.dg-chegada b { color: var(--dg-marfim); font-size: clamp(19px, 2.2vw, 24px); font-weight: 650; letter-spacing: -.01em; text-wrap: balance; }
+
+/* ------------------------------------------------------------ o carregando */
+.dg-tela {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
+  padding: calc(var(--sat, 0px) + 24px) 24px calc(var(--sab, 0px) + 24px);
+  background: var(--dg-azul);
+}
+.dg-quadro { display: grid; justify-items: center; gap: 16px; animation: dg-surge .5s ease both; }
+@keyframes dg-surge { from { opacity: 0; transform: translateY(6px); } }
+/* sempre a versão reversa do monograma: o fundo é azul nos dois temas */
+.dg .monograma .monograma-claro, .dg-tela .monograma .monograma-claro { display: none !important; }
+.dg .monograma .monograma-escuro, .dg-tela .monograma .monograma-escuro { display: block !important; }
+.dg-monograma { margin-bottom: 4px; }
+.dg-legenda { color: var(--dg-aco); font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+
+/* a rota: o trilho apagado, o traço de ouro que o avião vai deixando, o avião cruzando */
+.dg-rota { position: relative; display: block; width: 148px; height: 14px; }
+.dg-rota-trilho, .dg-rota-traco { position: absolute; left: 0; right: 0; top: 50%; height: 1px; margin-top: -.5px; }
+.dg-rota-trilho { background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--dg-aco) 40%, transparent) 0 4px, transparent 4px 8px); }
+.dg-rota-traco { background: var(--dg-ouro); transform-origin: 0 50%; animation: dg-traco 2.2s cubic-bezier(.45, 0, .25, 1) infinite; }
+.dg-rota-aviao { position: absolute; left: 0; top: 50%; margin: -5.6px 0 0 -9px; color: var(--dg-ouro); animation: dg-cruza 2.2s cubic-bezier(.45, 0, .25, 1) infinite; }
+@keyframes dg-traco {
+  0% { transform: scaleX(0); opacity: 1; }
+  78% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+@keyframes dg-cruza {
+  0% { transform: translateX(0); opacity: 0; }
+  10% { opacity: 1; }
+  78% { transform: translateX(148px); opacity: 1; }
+  88%, 100% { transform: translateX(160px); opacity: 0; }
+}
+
+@media (max-width: 640px) {
+  .dg-aviao svg { width: 38px; height: 24px; }
+  .dg-chegada .monograma { width: 68px !important; height: 39px !important; }
+  .dg-chegada .monograma img { width: 68px; height: 39px; }
+  .dg-chegada b { font-size: 19px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dg-quadro { animation: none; }
+  .dg-rota-traco { animation: none; transform: none; }
+  .dg-rota-aviao { animation: none; transform: translateX(65px); }
+  .dg-chegada { transition: opacity .3s ease; transform: none; }
+}

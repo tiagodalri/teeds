@@ -8,6 +8,7 @@ import { DerivLogo, IconeSaida } from './DerivMarca'
 import { MARCA } from '../marca'
 import { abrirNoCadastro } from '../core/teeds/entradaInicial'
 import { CenaDoLogin, type VarianteDaCena } from './entrada/CenaDoLogin'
+import { marcarEmbarque } from '../core/decolagem'
 
 type Modo = 'entrar' | 'criar' | 'esqueci'
 
@@ -79,7 +80,12 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
     e.preventDefault()
     if (!valido || ocupado) return
     setRecado(null)
-    if (modo === 'entrar') { await onEntrar(email, senha); return }
+    if (modo === 'entrar') {
+      // de onde o avião da decolagem sai (só a GlobalFly usa)
+      marcarEmbarque((e.currentTarget as HTMLFormElement).querySelector('button[type="submit"]'))
+      await onEntrar(email, senha)
+      return
+    }
     if (modo === 'criar') {
       const r = await onCadastrar({ nome, email, telefone, consentiu: false })
       if (r.ok) {

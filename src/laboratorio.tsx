@@ -73,12 +73,31 @@ function LabLogin() {
   const t = q.get('tema'); if (t) document.documentElement.dataset.tema = t
   const cena = q.get('cena') === 'rastro' ? 'rastro' : 'nuvens'
   const nada = async () => false
-  return <LoginScreen ocupado={false} limparErro={() => undefined} onEntrar={nada} onCadastrar={async () => ({ ok: false })} onEsqueci={nada} cena={cena} />
+  // &voo=1: "Entrar" decola de verdade (sem conta): o início abre por baixo depois de `&espera=` ms
+  const [entrou, setEntrou] = useState(false)
+  useEffect(() => { if (entrou) liberarPouso() }, [entrou])
+  if (entrou) return <Suspense fallback={<Carregando />}><LabInicio /></Suspense>
+  const entrar = async () => {
+    if (!q.has('voo')) return false
+    decolar('Tiago Dalri')
+    window.setTimeout(() => setEntrou(true), Number(q.get('espera') ?? 900))
+    return true
+  }
+  return (
+    <>
+      <LoginScreen ocupado={false} limparErro={() => undefined} onEntrar={entrar} onCadastrar={async () => ({ ok: false })} onEsqueci={nada} cena={cena} />
+      <Decolagem />
+    </>
+  )
 }
 const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine'))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
 import { DerivDesconectada } from './components/DerivDesconectada'
 import { DigitosFlutuante } from './components/DigitosFlutuante'
+import { Decolagem } from './components/entrada/Decolagem'
+import { Carregando } from './components/entrada/Carregando'
+import { decolar, liberarPouso } from './core/decolagem'
+import { CatalogoDeExemplo } from './core/teeds/catalogoRobos'
 
 document.documentElement.dataset.marca = MARCA.id
 aplicarTema(temaGuardado())
@@ -263,6 +282,8 @@ function Laboratorio() {
   if (qual === 'perfil') return <Suspense fallback={null}><LabPerfil /></Suspense>
   if (qual === 'suporte') return <Suspense fallback={null}><LabSuporte /></Suspense>
   if (qual === 'login') return <LabLogin />
+  // ?tela=carregando: o carregando da marca (o mesmo quadro em que a decolagem pousa)
+  if (qual === 'carregando') return <Carregando />
   if (qual === 'aulas') return <LabAulas />
   if (qual === 'minicabine') return <Suspense fallback={null}><LabMiniCabine /></Suspense>
   return (
@@ -274,11 +295,13 @@ function Laboratorio() {
         {qual === 'espera-mosaico' && <div className="rob-workspace-board modo-mosaico"><CabineEspera mosaico /></div>}
         {qual === 'parado' && <div className="rob-workspace-board modo-lista"><Cabine estado={estadoParado} expandido={false} titulo="Robô 1" /></div>}
         {qual === 'preparo' && (
+          <CatalogoDeExemplo itens={CATALOGO_LAB.map((i) => ({ id: i.id, ativo: true, parametros: parametrosPadrao(i.id), lossVirtualAjustavel: true }))}>
           <div className="rob-workspace-board modo-lista"><div className="cabine-caixa cartao parado">
             <RobotSetup identidade={ident} nomeEstrategia={ident.nome} symbols={symbols} symbolInicial="R_75"
               configInicial={config} moeda="USD" isDemo contaId="VRTC1234567" escolherModelo
               onCancelar={nada} onLigar={nada} ligando={false} erro={null} />
           </div></div>
+          </CatalogoDeExemplo>
         )}
         {/* ?tela=digitos: o painel Dígitos ao vivo (ticks de verdade da Deriv, linha pública). */}
         {qual === 'digitos' && <DigitosFlutuante aoFechar={nada} />}

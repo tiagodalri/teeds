@@ -70,6 +70,8 @@ export type Medidor =
 
 export interface Estrategia {
   id: string
+  /** A entrada é por loss virtual e o cliente pode escolher quantos (ou nenhum). */
+  lossVirtualAjustavel?: boolean
   nome: string
   descricao: string
   origem?: string
@@ -151,6 +153,13 @@ export interface ConfigEstrategia {
   parametrosTesteDemo?: boolean
   /** O modo que o cliente escolheu, explícito (antes era inferido pela margem). */
   modo?: Modo
+  /**
+   * Quantos loss virtuais o CLIENTE escolheu esperar (21/10/2026, pedido do
+   * Tiago): 0 = sem loss virtual (entra em toda operação); n ≥ 1 = espera n
+   * dígitos seguidos que teriam perdido. Ausente = o que o painel publicou.
+   * Só vale nos robôs de loss virtual (`Estrategia.lossVirtualAjustavel`).
+   */
+  lossVirtualCliente?: number
 }
 
 /** O que o servidor manda quando o painel publica: o objeto inteiro e a versão. */

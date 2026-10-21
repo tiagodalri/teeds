@@ -147,9 +147,14 @@ function lossesVirtuais(digitos: number[], ganha: (d: number) => boolean): numbe
  * nunca capturados no import. Sem parâmetros, o padrão de cada família.
  */
 const regraDeEntrada = (config: ConfigEstrategia | undefined, padraoQuantos: number, padraoSegue: boolean) => ({
-  quantos: config?.parametros?.entrada.lossVirtual ?? padraoQuantos,
+  // a escolha do cliente vem antes do painel (21/10/2026)
+  quantos: config?.lossVirtualCliente ?? config?.parametros?.entrada.lossVirtual ?? padraoQuantos,
   segue: config?.parametros?.entrada.sequenciaSemAnalise ?? padraoSegue,
 })
+
+/** Quantos loss virtuais esta sessão espera: a escolha do cliente, senão o painel. */
+export const lossVirtualDaSessao = (config: ConfigEstrategia): number | undefined =>
+  config.lossVirtualCliente ?? config.parametros?.entrada.lossVirtual
 
 /**
  * Entrada por loss virtual. Uma fábrica para as duas famílias:
@@ -164,9 +169,10 @@ const regraDeEntrada = (config: ConfigEstrategia | undefined, padraoQuantos: num
  * entra sempre, textos do valor base, sem medidor.
  */
 function entradaPorLossVirtual(ganha: (d: number) => boolean, padraoQuantos: number, padraoSegue: boolean, continua: boolean):
-  Pick<Estrategia, 'entradaContinua' | 'entrar' | 'aguardando' | 'progresso' | 'medidor' | 'aposResultado'> {
+  Pick<Estrategia, 'lossVirtualAjustavel' | 'entradaContinua' | 'entrar' | 'aguardando' | 'progresso' | 'medidor' | 'aposResultado'> {
   const contar = (digitos: number[], quantos: number) => Math.min(quantos, lossesVirtuais(digitos, ganha))
   return {
+    lossVirtualAjustavel: true,
     entradaContinua: continua,
     entrar: ({ digitos, memoria, config }) => {
       const { quantos, segue } = regraDeEntrada(config, padraoQuantos, padraoSegue)

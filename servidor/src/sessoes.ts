@@ -197,6 +197,8 @@ function montarConfigDoCliente(p: Parametros): ConfigEstrategia {
       takeProfit: c.takeProfit,
       stopLoss: c.stopLoss,
       maxOperacoes: Math.max(0, Math.trunc(c.maxOperacoes ?? 0)),
+      // quantos loss virtuais o cliente quer esperar (0 = sem); fora de 0 a 12, vale o painel
+      ...(Number.isInteger(c.lossVirtualCliente) && c.lossVirtualCliente! >= 0 && c.lossVirtualCliente! <= 12 ? { lossVirtualCliente: c.lossVirtualCliente } : {}),
     }
   }
 
