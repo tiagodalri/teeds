@@ -52,6 +52,8 @@ import { assinarMudancas, type AssinaturaRealtime } from './core/teeds/realtime'
 import { lerPerfil, marcarTourVisto } from './core/teeds/perfil'
 import { TourGuiado, passosDoTour } from './components/tour/TourGuiado'
 import { BarraInferior } from './components/barra/BarraInferior'
+import { MiniCabine } from './components/minicabine/MiniCabine'
+import { pararNoServidor, type SessaoViva } from './core/teeds/servidorRobos'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
 // quando a pessoa abre a página ou entra numa live.
@@ -139,6 +141,8 @@ export default function App() {
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null)
   // suporte (20/10/2026): o botão flutuante do admin abre a caixa de entrada
   const [pedidoCaixa, setPedidoCaixa] = useState(0)
+  // as sessões vivas que a tela de robôs busca: a home e a mini-cabine usam as mesmas (21/10/2026)
+  const [vivasRobos, setVivasRobos] = useState<SessaoViva[]>([])
   const [tema, setTema] = useState<Tema>(temaGuardado)
   const alternarTema = () => {
     const novo = tema === 'claro' ? 'escuro' : 'claro'
@@ -830,6 +834,10 @@ export default function App() {
         </div>
       </header>
 
+      {MARCA.inicio && teeds.sessao && tela !== 'robos' && (
+        <MiniCabine sessoes={vivasRobos} sessao={teeds.sessao} aoAbrirCabine={() => setTela('robos')}
+          aoParar={async (id) => { if (teeds.sessao) await pararNoServidor(teeds.sessao, id) }} />
+      )}
       {MARCA.inicio && teeds.sessao && <BarraInferior tela={tela} aoVivoAgora={aoVivoAgora} irPara={(t) => { setVerPerfil(false); setTela(t) }} />}
 
       {MARCA.suporte && teeds.sessao && (
@@ -917,6 +925,7 @@ export default function App() {
           contaId={conta.accountId}
           admin={adminConfirmado}
           mostrarMarkup={mostrarColuna}
+          onSessoesVivas={setVivasRobos}
         />
         </CatalogoProvider>
       </div>
@@ -945,7 +954,7 @@ export default function App() {
           <InicioPagina sessao={teeds.sessao} nome={teeds.usuario?.nome || ''}
             conta={{ conectada: conta.status === 'logado', demo: conta.isDemo, saldo: conta.balance ? conta.balance.amount : null, moeda: conta.account?.currency ?? 'USD' }}
             treino={membroTreino === true && admin !== true ? { noAr: !!treinoAgora, apresentador: treinoAgora?.apresentador ?? undefined } : null}
-            aoIr={setTela} aoConectar={conta.login} />
+            aoIr={setTela} aoConectar={conta.login} vivas={teeds.sessao ? vivasRobos : undefined} />
         </Suspense>
       ) : tela === 'perfil' && MARCA.inicio && teeds.sessao ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo seu perfil…</div></div>}>

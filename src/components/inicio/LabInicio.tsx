@@ -18,7 +18,7 @@ const serie = (n: number, tendencia: number, ruido: number) => {
   return Array.from({ length: n }, (_, i) => (v += tendencia + Math.sin(i * 1.7) * ruido + Math.cos(i * 0.6) * ruido * 0.6))
 }
 
-const EXPERIENTE: DadosDoInicio = {
+export const EXPERIENTE: DadosDoInicio = {
   nome: 'Tiago Dal Ri',
   conta: { conectada: true, demo: true, saldo: 9241.79, moeda: 'USD' },
   hoje: { resultado: 16.7, operacoes: 68, vitorias: 57, derrotas: 11, meta: 25, limite: 15 },

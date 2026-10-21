@@ -42,6 +42,8 @@ interface Props {
   /** Dono da plataforma: enxerga o markup de cada operacao nas cabines. */
   admin?: boolean
   mostrarMarkup?: boolean
+  /** As sessões vivas, para a home e a mini-cabine (sem consultar de novo). */
+  onSessoesVivas?: (lista: SessaoViva[]) => void
 }
 
 /** Teto de robos simultaneos: cada um consome assinaturas da mesma conexao.
@@ -53,7 +55,7 @@ const din = (v: number, m = 'USD') =>
 
 export function RobotsPanel({
   socket, logado, isDemo, moeda, symbols, symbolPadrao, conexao = 'open',
-  entrandoNaDeriv = false, onConectarDeriv, sessaoTeeds, contaId, admin = false, mostrarMarkup = false,
+  entrandoNaDeriv = false, onConectarDeriv, sessaoTeeds, contaId, admin = false, mostrarMarkup = false, onSessoesVivas,
 }: Props) {
   // Modo CEO: cada bloco entrega aqui os números da sessão dele.
   const [estudo, setEstudo] = useState<Map<string, DadosEstudo>>(new Map())
@@ -127,6 +129,7 @@ export function RobotsPanel({
     if (!sessaoTeeds) { setVivasNoServidor([]); return }
     return acompanharVivas(sessaoTeeds, setVivasNoServidor)
   }, [sessaoTeeds?.token]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { onSessoesVivas?.(vivasNoServidor) }, [vivasNoServidor]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /*
     Uma sessão que encerrou (meta, stop, desligada) NÃO some da tela.

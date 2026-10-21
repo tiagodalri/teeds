@@ -27,6 +27,8 @@ interface Props {
   treino: { noAr: boolean; apresentador?: string } | null
   aoIr: (tela: WorkspacePage) => void
   aoConectar?: () => void
+  /** As sessões vivas que a tela de robôs já busca: a home não consulta de novo. */
+  vivas?: SessaoViva[]
 }
 
 type Cotacao = { id: string; nome: string; preco: number; variacao: number; moeda: string; serie?: number[] }
@@ -57,8 +59,9 @@ function marcarJornada(p: { demo?: boolean; primeiraIa?: boolean }) {
 
 const inicioDoDia = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() }
 
-export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar }: Props) {
-  const [vivas, setVivas] = useState<SessaoViva[]>([])
+export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, vivas: vivasDeFora }: Props) {
+  const [vivasProprias, setVivas] = useState<SessaoViva[]>([])
+  const vivas = vivasDeFora ?? vivasProprias
   const [sessoesHoje, setSessoesHoje] = useState<SessaoServidor[] | null>(null)
   const [mercado, setMercado] = useState<{ cotacoes: Cotacao[]; noticias: Noticia[] } | null>(null)
   const [jornada, setJornada] = useState(jornadaGuardada)
@@ -66,9 +69,10 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar }: 
 
   // I.A.s ligadas agora (o mesmo compasso da tela de robôs)
   useEffect(() => {
+    if (vivasDeFora) return
     if (!sessao) { setVivas([]); return }
     return acompanharVivas(sessao, setVivas)
-  }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sessao?.usuario.id, !!vivasDeFora]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // o dia: sessões de hoje (as que já pararam também contam)
   useEffect(() => {
