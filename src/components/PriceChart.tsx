@@ -12,6 +12,7 @@ import {
   type Viewport,
 } from '../core/chart/scales'
 import { MARCA } from '../marca'
+import { ControlesDeZoom } from './grafico/ControlesDeZoom'
 
 export type ChartMode = 'candles' | 'line'
 
@@ -629,6 +630,12 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
     })
   }, [])
 
+  // os botões de zoom: o mesmo passo da rodinha, um pouco maior para valer o toque
+  const zoomPorBotao = (fator: number) => setVp((prev) => {
+    const size = Math.min(CHART.maxCandles, Math.max(CHART.minCandles, Math.round(prev.size * fator)))
+    return { size, offset: Math.min(prev.offset, Math.max(0, candles.length - size)) }
+  })
+
   const pontoEm = (clientX: number, clientY: number) => {
     const rect = canvasRef.current?.getBoundingClientRect()
     const items = view.items
@@ -741,6 +748,15 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
               aria-label="Voltar a escala dos preços ao automático">Auto</button>
           )}
         </div>
+      )}
+
+      {plot.h > 0 && candles.length > 0 && (
+        <ControlesDeZoom style={{ left: plot.x + plot.w / 2, top: plot.y + plot.h - 50 }}
+          podeAfastar={vp.size < Math.min(CHART.maxCandles, Math.max(CHART.minCandles, candles.length))}
+          podeAproximar={vp.size > CHART.minCandles}
+          aoAfastar={() => zoomPorBotao(1.25)}
+          aoAproximar={() => zoomPorBotao(0.8)}
+          aoCentralizar={() => { setVp({ size: CHART.defaultCandles, offset: 0 }); setEscalaY(1) }} />
       )}
 
       <div className="chart-ferramentas" role="toolbar" aria-label="Ferramentas de desenho">

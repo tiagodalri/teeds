@@ -16,6 +16,7 @@ import { carregarDesenhos, carregarIndicadores, salvarDesenhos, salvarIndicadore
 import type { ChartMode, ContractMarker } from '../PriceChart'
 import { IconeCategoria, IconeIndicador } from './IconeIndicador'
 import './grafico-pro.css'
+import { ControlesDeZoom } from './ControlesDeZoom'
 
 interface Props {
   candles: Candle[]
@@ -162,6 +163,14 @@ function estiloDoDesenho(d: Pick<DesenhoSalvo, 'cor' | 'espessura' | 'tracejado'
 export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granularity, loading, markers = [], sessao }: Props) {
   const caixa = useRef<HTMLDivElement>(null)
   const chartRef = useRef<Chart | null>(null)
+  // o zoom de abertura: o botão do meio volta para ele
+  const espacoInicial = useRef(10)
+  // os botões de zoom ficam no pé do painel das velas (acima de MACD, RSI...), não no pé do gráfico todo
+  const [pePainel, setPePainel] = useState<number | null>(null)
+  const medirPainel = () => window.setTimeout(() => {
+    const b = chartRef.current?.getSize('candle_pane', 'main')
+    setPePainel(b ? b.top + b.height - 48 : null)
+  }, 0)
   const dados = useRef<KLineData[]>([])
   const assinante = useRef<((k: KLineData) => void) | null>(null)
   const serie = useRef('')
@@ -194,6 +203,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
     const chart = init(el, { locale: 'pt-BR', styles: estilos(mode) })
     if (!chart) return
     chartRef.current = chart
+    espacoInicial.current = chart.getBarSpace().bar
     chart.setDataLoader({
       getBars: ({ callback }) => callback(dados.current, false),
       subscribeBar: ({ callback }) => { assinante.current = callback },
@@ -202,7 +212,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
     // o tema muda (claro/escuro): o gráfico acompanha
     const tema = new MutationObserver(() => chart.setStyles(estilos(modoRef.current)))
     tema.observe(document.documentElement, { attributes: true, attributeFilter: ['data-tema'] })
-    const tamanho = new ResizeObserver(() => chart.resize())
+    const tamanho = new ResizeObserver(() => { chart.resize(); medirPainel() })
     tamanho.observe(el)
     return () => { tema.disconnect(); tamanho.disconnect(); dispose(el); chartRef.current = null }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -258,6 +268,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
       const criado = id ? chart.getIndicators({ id })[0] : undefined
       if (titulos && criado) chart.overrideIndicator({ id: criado.id, name: ind.id, figures: criado.figures.map((f) => ({ ...f, title: titulos[f.key] ?? f.title })) })
     }
+    medirPainel()
   }, [indicadores])
   const mudarIndicadores = (lista: IndicadorSalvo[]) => { setIndicadores(lista); salvarIndicadores(sessao, lista) }
 
@@ -399,6 +410,10 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
 
         <div className="gp-grafico" ref={caixa} aria-label={`Gráfico de ${symbolName}`}>
           {loading && <span className="gp-carregando">Carregando velas…</span>}
+          <ControlesDeZoom style={pePainel !== null ? { left: '50%', top: pePainel } : { left: '50%', bottom: 44 }}
+            aoAfastar={() => chartRef.current?.zoomAtCoordinate(0.8, undefined, 160)}
+            aoAproximar={() => chartRef.current?.zoomAtCoordinate(1.25, undefined, 160)}
+            aoCentralizar={() => { const c = chartRef.current; if (!c) return; c.setBarSpace(espacoInicial.current); c.scrollToRealTime(200) }} />
           {ferramenta && <span className="gp-dica">{FERRAMENTAS.find((f) => f.id === ferramenta)?.nome}: clique no gráfico para marcar os pontos · Esc cancela</span>}
           {selecionado && (
             <div className="gp-edicao" role="toolbar" aria-label="Editar desenho">
