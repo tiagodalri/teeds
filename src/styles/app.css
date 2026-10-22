@@ -187,7 +187,10 @@ button, input { font: inherit; color: inherit; }
 .chart-contratos span { color: var(--up); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
 .chart-contratos .abaixo span { color: var(--down); }
 .chart-contratos b { justify-self: end; font-size: 15px; font-variant-numeric: tabular-nums; letter-spacing: .03em; }
-.chart-contratos small { grid-column: 1 / -1; color: var(--muted); font-size: 8.5px; }
+.chart-contratos small { grid-column: 1 / -1; color: var(--muted); font-size: 10.5px; }
+/* o preço com o último dígito em destaque (o cliente confere o dígito que valeu) */
+.chart-contratos small .pcd { font-size: 11px; color: var(--text); }
+.chart-contratos > div.encerrada { opacity: .92; }
 /* zoom no pé do gráfico: afastar, voltar ao agora, aproximar (22/10/2026) */
 .chart-zoom { position: absolute; z-index: 4; display: flex; gap: 8px; transform: translateX(-50%); }
 .chart-zoom button {

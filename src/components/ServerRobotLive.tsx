@@ -6,6 +6,7 @@ import { Emblema } from './RobotCard'
 import { Progress } from './Progress'
 import { toOpenContract } from '../core/deriv/trading'
 import { NomeDoRobo } from './NomeDoRobo'
+import { PrecoComDigito } from './preco/PrecoComDigito'
 
 interface Props {
   robo: Robo
@@ -223,13 +224,11 @@ export function ServerRobotLive(props: Props) {
           <div key={o.id} className={`op ${o.aberta ? 'aberta' : o.ganhou ? 'ganhou' : 'perdeu'}`}>
             <span className="op-hora">{hora(o.compra)}</span>
             <span className="op-valor">{din(o.valor, '')}</span>
-            <span className="op-spots">
-              {o.entrada !== null ? o.entrada.toFixed(o.pip) : '—'}
-              <em>→</em>
-              {o.saida !== null ? o.saida.toFixed(o.pip) : (o.aberta ? '…' : '—')}
-              {o.digitoSaida !== null && !o.aberta && (
-                <b className={`dig-chip ${o.ganhou ? 'ok' : 'nao'}`}>{o.digitoSaida}</b>
-              )}
+            {/* um preço só (operações de 1 tick): o que fechou, com o último dígito destacado */}
+            <span className="op-spots" title={o.entrada !== null ? `Entrada ${o.entrada.toFixed(o.pip)}` : undefined}>
+              {o.aberta ? '…'
+                : o.saida !== null ? <PrecoComDigito valor={o.saida} casas={o.pip} tom={o.ganhou ? 'ganho' : 'perda'} />
+                : o.digitoSaida !== null ? <b className={`dig-chip ${o.ganhou ? 'ok' : 'nao'}`}>{o.digitoSaida}</b> : '—'}
             </span>
             <span className="op-res">
               {o.aberta

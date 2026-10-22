@@ -13,6 +13,8 @@ import {
 } from '../core/chart/scales'
 import { MARCA } from '../marca'
 import { ControlesDeZoom } from './grafico/ControlesDeZoom'
+import { PrecoComDigito } from './preco/PrecoComDigito'
+import { NOMES_DE_CONTRATO } from './PositionCard'
 
 export type ChartMode = 'candles' | 'line'
 
@@ -25,6 +27,10 @@ export interface ContractMarker {
   entryPrice: number | null
   expiryEpoch: number
   profit: number
+  /** Situação na Deriv: 'open' enquanto corre; 'won' / 'lost' / 'sold' quando encerrada. */
+  status?: string
+  /** O preço de saída (o tick que decidiu), quando encerrada. */
+  exitPrice?: number | null
 }
 
 interface Props {
@@ -444,20 +450,53 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
       ctx.textBaseline = 'middle'
       ctx.fillText(label, bx + 5, yLast)
 
-      // --- operacoes abertas: entrada, faixa de duracao e expiracao
+      // --- operações manuais: o preço de entrada (com o último dígito em destaque),
+      // a faixa da duração e o vencimento. Encerrada, a operação fica no gráfico
+      // por 2 minutos com o preço de saída: o cliente confere o dígito que valeu.
       if (markers.length && items.length > 1) {
         const passo = items[1].epoch - items[0].epoch || 60
         const inicio = items[0].epoch
         const xPara = (epoch: number) => plot.x + ((epoch - inicio) / passo) * stepX + stepX / 2
 
+        /** "Entrada 39.408,666[1]": rótulo, preço e o último dígito numa "tecla" da cor. */
+        const etiquetaPreco = (rotulo: string, preco: number, x: number, y: number, cor: string, alinharDireita = false) => {
+          const txt = preco.toLocaleString('pt-BR', { minimumFractionDigits: pipSize, maximumFractionDigits: pipSize })
+          const corpo = txt.slice(0, -1), dig = txt.slice(-1)
+          ctx.font = '600 10px ui-sans-serif, -apple-system, system-ui, sans-serif'
+          const wR = ctx.measureText(`${rotulo} `).width
+          ctx.font = '650 10.5px ui-monospace, Menlo, Consolas, monospace'
+          const wC = ctx.measureText(corpo).width
+          ctx.font = '800 11px ui-monospace, Menlo, Consolas, monospace'
+          const wD = ctx.measureText(dig).width + 8
+          const largura = 8 + wR + wC + 2 + wD + 6
+          let lx = alinharDireita ? x - largura : x
+          lx = Math.min(Math.max(plot.x + 4, lx), plot.x + plot.w - largura - 6)
+          const top = y - 20
+          ctx.save()
+          ctx.fillStyle = 'rgba(5, 15, 30, .86)'
+          roundRect(ctx, lx, top, largura, 17, 5); ctx.fill()
+          ctx.strokeStyle = cor; ctx.globalAlpha = .7; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+          ctx.font = '600 10px ui-sans-serif, -apple-system, system-ui, sans-serif'
+          ctx.fillStyle = 'rgba(243, 240, 233, .72)'; ctx.fillText(`${rotulo} `, lx + 8, top + 9)
+          ctx.font = '650 10.5px ui-monospace, Menlo, Consolas, monospace'
+          ctx.fillStyle = '#F3F0E9'; ctx.fillText(corpo, lx + 8 + wR, top + 9)
+          const dx = lx + 8 + wR + wC + 2
+          ctx.fillStyle = cor; ctx.globalAlpha = .9; roundRect(ctx, dx, top + 2.5, wD, 12, 3); ctx.fill(); ctx.globalAlpha = 1
+          ctx.font = '800 11px ui-monospace, Menlo, Consolas, monospace'
+          ctx.fillStyle = '#051528'; ctx.textAlign = 'center'; ctx.fillText(dig, dx + wD / 2, top + 9)
+          ctx.restore()
+        }
+
         for (const m of markers) {
           const subiu = m.type === 'CALL' || m.type === 'MULTUP' || m.type === 'HIGHER'
-          const cor = subiu ? T.up : T.down
+          const encerrada = !!m.status && m.status !== 'open'
+          const cor = encerrada ? (m.profit >= 0 ? T.up : T.down) : subiu ? T.up : T.down
           const xEntrada = xPara(m.entryEpoch)
           const xFim = xPara(m.expiryEpoch)
           const dentro = (x: number) => x >= plot.x && x <= plot.x + plot.w
 
-          // faixa da duracao do contrato
+          // faixa da duração do contrato
           const a = Math.max(plot.x, Math.min(xEntrada, xFim))
           const b = Math.min(plot.x + plot.w, Math.max(xEntrada, xFim))
           if (b > a) {
@@ -465,43 +504,25 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
             ctx.fillRect(a, plot.y, b - a, plot.h)
           }
 
-          // linha do preco de entrada
+          // linha do preço de entrada (encerrada: só até o vencimento)
           if (m.entryPrice != null) {
             const y = toY(m.entryPrice)
             if (y >= plot.y && y <= plot.y + plot.h) {
               ctx.save()
               ctx.setLineDash([4, 5])
               ctx.strokeStyle = cor
-              ctx.globalAlpha = .46
+              ctx.globalAlpha = encerrada ? .4 : .55
               ctx.lineWidth = 1
               ctx.beginPath()
               ctx.moveTo(Math.max(plot.x, a), Math.round(y) + 0.5)
-              ctx.lineTo(plot.x + plot.w, Math.round(y) + 0.5)
+              ctx.lineTo(encerrada ? Math.max(plot.x, b) : plot.x + plot.w, Math.round(y) + 0.5)
               ctx.stroke()
               ctx.restore()
-
-              // etiqueta "entrada" a esquerda da linha
-              ctx.font = '650 9px ui-sans-serif, -apple-system, system-ui, sans-serif'
-              const txt = `entrada ${formatPrice(m.entryPrice, pipSize)}`
-              const tw2 = ctx.measureText(txt).width
-              const lx = Math.min(Math.max(plot.x + 4, xEntrada + 8), plot.x + plot.w - tw2 - 12)
-              ctx.fillStyle = 'rgba(9, 12, 20, .78)'
-              roundRect(ctx, lx - 4, y - 16, tw2 + 8, 13, 3)
-              ctx.fill()
-              ctx.strokeStyle = cor
-              ctx.globalAlpha = .52
-              ctx.lineWidth = .75
-              ctx.stroke()
-              ctx.globalAlpha = .82
-              ctx.fillStyle = cor
-              ctx.textAlign = 'left'
-              ctx.textBaseline = 'middle'
-              ctx.fillText(txt, lx, y - 9.5)
-              ctx.globalAlpha = 1
+              etiquetaPreco('Entrada', m.entryPrice, Math.max(plot.x + 4, xEntrada + 8), y, cor)
 
               // seta no ponto exato de entrada
               if (dentro(xEntrada)) {
-                ctx.globalAlpha = .72
+                ctx.globalAlpha = .8
                 ctx.fillStyle = cor
                 ctx.beginPath()
                 if (subiu) {
@@ -516,9 +537,24 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
             }
           }
 
+          // encerrada: o ponto e o preço de saída (o tick que decidiu)
+          if (encerrada && m.exitPrice != null) {
+            const y = toY(m.exitPrice)
+            const x = Math.min(plot.x + plot.w - 4, Math.max(plot.x + 4, xFim))
+            if (y >= plot.y && y <= plot.y + plot.h) {
+              ctx.save()
+              ctx.fillStyle = cor
+              ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill()
+              ctx.strokeStyle = '#051528'; ctx.lineWidth = 1.5; ctx.stroke()
+              ctx.restore()
+              etiquetaPreco('Saída', m.exitPrice, x - 8, y + 26, cor, true)
+            }
+            continue
+          }
+
           // linha vertical da expiração. Quando o vencimento ainda está além
           // da janela visível, ela fica ancorada na borda direita do gráfico.
-          if (xFim >= plot.x) {
+          if (!encerrada && xFim >= plot.x) {
             const xFimVisivel = Math.min(plot.x + plot.w, xFim)
             ctx.save()
             ctx.setLineDash([3, 3])
@@ -531,7 +567,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
             ctx.restore()
 
             ctx.font = '600 9.5px ui-sans-serif, -apple-system, system-ui, sans-serif'
-            const ft = `expira ${tempoRestante(m.expiryEpoch - agora)}`
+            const ft = `Expira ${tempoRestante(m.expiryEpoch - agora)}`
             const fw = ctx.measureText(ft).width
             ctx.fillStyle = cor
             const etiquetaX = Math.min(plot.x + plot.w - fw - 8, Math.max(plot.x, xFimVisivel - fw / 2 - 4))
@@ -820,10 +856,17 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
       {markers.length > 0 && <div className="chart-contratos" aria-live="polite">
         {markers.map((m) => {
           const acima = m.type === 'CALL' || m.type === 'MULTUP' || m.type === 'HIGHER'
-          return <div key={m.id} className={acima ? 'acima' : 'abaixo'}>
-            <span>{acima ? '▲ Acima' : '▼ Abaixo'}</span>
-            <b>{tempoRestante(m.expiryEpoch - agora)}</b>
-            <small>{m.entryPrice == null ? 'entrada registrada' : `entrada ${formatPrice(m.entryPrice, pipSize)}`}</small>
+          const encerrada = !!m.status && m.status !== 'open'
+          const nome = NOMES_DE_CONTRATO[m.type] ?? m.type
+          const lado = encerrada ? (m.profit >= 0 ? 'acima' : 'abaixo') : acima ? 'acima' : 'abaixo'
+          return <div key={m.id} className={`${lado} ${encerrada ? 'encerrada' : ''}`}>
+            <span>{encerrada ? (m.status === 'won' ? 'Ganhou' : m.status === 'lost' ? 'Perdeu' : 'Encerrada') : `${acima ? '▲' : '▼'} ${nome}`}</span>
+            <b>{encerrada ? `${m.profit >= 0 ? '+' : '−'}${Math.abs(m.profit).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : tempoRestante(m.expiryEpoch - agora)}</b>
+            <small>
+              {encerrada && m.exitPrice != null
+                ? <>Saída <PrecoComDigito valor={m.exitPrice} casas={pipSize} tom={m.profit >= 0 ? 'ganho' : 'perda'} /></>
+                : m.entryPrice == null ? 'Entrada registrada' : <>Entrada <PrecoComDigito valor={m.entryPrice} casas={pipSize} /></>}
+            </small>
           </div>
         })}
       </div>}

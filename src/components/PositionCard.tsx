@@ -2,6 +2,7 @@ import type { OpenContract } from '../core/deriv/trading'
 import './operar/boleta.css'
 import { useClock } from '../hooks/useClock'
 import { dinheiro as emDinheiro, dinheiroComSinal } from '../core/dinheiro'
+import { PrecoComDigito } from './preco/PrecoComDigito'
 
 /** Contagem regressiva ate a expiracao, atualizada a cada segundo. */
 function useCountdown(expiryEpoch: number) {
@@ -12,7 +13,7 @@ function useCountdown(expiryEpoch: number) {
   return { restante, texto: `${mm}:${ss}` }
 }
 
-const NOMES: Record<string, string> = {
+export const NOMES_DE_CONTRATO: Record<string, string> = {
   CALL: 'Subir', PUT: 'Descer', HIGHER: 'Acima', LOWER: 'Abaixo',
   DIGITOVER: 'Último dígito acima', DIGITUNDER: 'Último dígito abaixo',
   DIGITMATCH: 'Dígito exato', DIGITDIFF: 'Dígito diferente',
@@ -76,7 +77,6 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
   // contagem zerada e a Deriv ainda sem fechar: mostra liquidando (o botão segue a regra de antes)
   const liquidandoNaTela = !concluido && (liquidando || (!ticks && restante === 0))
   const progresso = concluido || liquidandoNaTela ? 100 : Math.min(100, Math.max(0, ((duracaoTotal - restante) / duracaoTotal) * 100))
-  const preco = (v: number | null) => (v === null ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: c.pipSize, maximumFractionDigits: c.pipSize }))
   const variacao = c.entrySpot !== null && c.currentSpot !== null ? c.currentSpot - c.entrySpot : null
   const selo = SELO[c.status] ?? null
   const dinheiro = (v: number) => emDinheiro(v, c.currency)
@@ -120,7 +120,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
           <b>{centro}</b>
         </div>
         <div className="bp-id">
-          <b className={comDirecao ? (subiu ? 'sobe' : 'desce') : ''}>{comDirecao && <><i aria-hidden="true">{subiu ? '▲' : '▼'}</i> </>}{NOMES[c.contractType] ?? c.contractType}<span className="bp-ativo"> · {nomeAtivo}</span></b>
+          <b className={comDirecao ? (subiu ? 'sobe' : 'desce') : ''}>{comDirecao && <><i aria-hidden="true">{subiu ? '▲' : '▼'}</i> </>}{NOMES_DE_CONTRATO[c.contractType] ?? c.contractType}<span className="bp-ativo"> · {nomeAtivo}</span></b>
           <small><span className="bp-investido">Investido <em>{dinheiro(c.buyPrice)}</em></span><span className="bp-legenda">{legenda}</span></small>
         </div>
         <div className={`bp-res ${ganhando ? 'ganho' : 'perda'}`}>
@@ -130,9 +130,11 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
       </div>
 
       <div className="bp-spots">
-        <span>Entrada <b>{preco(c.entrySpot)}</b></span>
+        {/* o último dígito em destaque: nas operações de dígitos é ele que decide */}
+        <span>Entrada <PrecoComDigito valor={c.entrySpot} casas={c.pipSize} /></span>
         <span className="bp-seta" aria-hidden="true">→</span>
-        <span>{concluido ? 'Saída' : 'Agora'} <b>{preco(concluido ? (c.exitSpot ?? c.currentSpot) : c.currentSpot)}</b></span>
+        <span>{concluido ? 'Saída' : 'Agora'} <PrecoComDigito valor={concluido ? c.exitSpot : c.currentSpot} casas={c.pipSize}
+          tom={concluido ? (c.status === 'won' ? 'ganho' : c.status === 'lost' ? 'perda' : 'neutro') : 'neutro'} /></span>
         {/* a cor diz se o movimento favorece a posição: na Descer, o preço caindo é verde */}
         {variacao !== null && <span className={`bp-dif ${!comDirecao ? '' : (subiu ? variacao >= 0 : variacao <= 0) ? 'ganho' : 'perda'}`}>{variacao >= 0 ? '+' : '−'}{Math.abs(variacao).toLocaleString('pt-BR', { minimumFractionDigits: c.pipSize, maximumFractionDigits: c.pipSize })}</span>}
       </div>

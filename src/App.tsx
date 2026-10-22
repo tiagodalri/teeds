@@ -614,19 +614,45 @@ export default function App() {
     [conta.contracts, idsManuais],
   )
 
-  const doAtivo = useMemo(
-    () => minhas.filter((c) => c.symbol === symbolCode),
-    [minhas, symbolCode],
-  )
+  /*
+    Operação manual encerrada fica no gráfico por 2 minutos, com o preço de
+    saída e o último dígito (22/10/2026, Tiago: "ajuda o cliente ver qual foi
+    o preço pra saber certinho qual foi o último dígito"). A lista de
+    posições a tira em 7 s; aqui guardamos uma cópia.
+  */
+  const [encerradas, setEncerradas] = useState<Array<{ c: (typeof minhas)[number]; ate: number }>>([])
+  useEffect(() => {
+    const finais = minhas.filter((c) => /^(won|lost|sold|cancelled)$/.test(c.status))
+    if (!finais.length) return
+    setEncerradas((antes) => {
+      const outras = antes.filter((e) => !finais.some((f) => f.contractId === e.c.contractId))
+      const novas = finais.map((c) => ({ c, ate: antes.find((e) => e.c.contractId === c.contractId)?.ate ?? Date.now() + 120_000 }))
+      return [...novas, ...outras].slice(0, 6)
+    })
+  }, [minhas])
+  // tira do gráfico as que passaram dos 2 minutos
+  useEffect(() => {
+    if (!encerradas.length) return
+    const t = window.setInterval(() => setEncerradas((l) => { const v = l.filter((e) => e.ate > Date.now()); return v.length === l.length ? l : v }), 5_000)
+    return () => window.clearInterval(t)
+  }, [encerradas.length])
+
+  const doAtivo = useMemo(() => {
+    const vivas = minhas.filter((c) => c.symbol === symbolCode)
+    const guardadas = encerradas.map((e) => e.c).filter((c) => c.symbol === symbolCode && !vivas.some((v) => v.contractId === c.contractId))
+    return [...vivas, ...guardadas]
+  }, [minhas, encerradas, symbolCode])
   // memorizado por assinatura: o grafico so redesenha quando algo muda de verdade
   const chaveMarcadores = doAtivo
-    .map((c) => `${c.contractId}:${c.entrySpot}:${c.expiryTime}:${c.profit.toFixed(2)}`)
+    .map((c) => `${c.contractId}:${c.entrySpot}:${c.exitSpot}:${c.status}:${c.expiryTime}:${c.profit.toFixed(2)}`)
     .join('|')
   const marcadores: ContractMarker[] = useMemo(
     () =>
       doAtivo.map((c) => ({
         id: c.contractId, type: c.contractType, entryEpoch: c.startTime,
         entryPrice: c.entrySpot, expiryEpoch: c.expiryTime, profit: c.profit,
+        // só o preço de saída da própria Deriv: o atual poderia mostrar um dígito que não decidiu nada
+        status: c.status, exitPrice: c.exitSpot ?? null,
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [chaveMarcadores],

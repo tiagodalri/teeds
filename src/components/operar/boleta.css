@@ -180,7 +180,7 @@
 .bp-res.ganho b, .bp-res.ganho small { color: var(--up); }
 .bp-res.perda b, .bp-res.perda small { color: var(--down); }
 .bp-spots { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 9px 12px; border-radius: 12px; background: color-mix(in srgb, var(--bg) 70%, var(--surface)); border: 1px solid var(--border); color: var(--muted); font-size: 12px; }
-.bp-spots b { color: var(--text); font: 700 12.5px var(--bp-dados); }
+.bp-spots .pcd { color: var(--text); font-size: 12.5px; font-weight: 700; }
 .bp-seta { color: var(--muted); }
 .bp-dif { margin-left: auto; font: 700 12px var(--bp-dados); }
 .bp-dif.ganho { color: var(--up); } .bp-dif.perda { color: var(--down); }
@@ -229,7 +229,9 @@
   .bl-atalho { display: none; }
   .bp { padding: 12px 14px 14px; gap: 10px; }
   .bp-relogio { width: 50px; height: 50px; }
-  .bp-ativo, .bp-legenda, .bp-nums, .bp-spots { display: none; }
+  .bp-ativo, .bp-legenda, .bp-nums { display: none; }
+  /* a linha dos preços fica no celular: é nela que o cliente confere o último dígito */
+  .bp-spots { padding: 8px 10px; font-size: 11.5px; gap: 6px; }
   .bp-investido { display: block; }
 }
 @media (max-width: 900px) { .bl-atalho { display: none; } }

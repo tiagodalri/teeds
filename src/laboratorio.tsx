@@ -130,7 +130,8 @@ const historico: OperacaoMotor[] = resultados.map((ganhou, i) => {
   acumulado = +(acumulado + lucro).toFixed(2)
   return {
     n: i + 1, contractId: 29100000 + i, valor, entrada: 46800 + i * 1.37, saida: 46800 + i * 1.37 + (ganhou ? 0.41 : -0.22),
-    digitoEntrada: (i * 7) % 10, digitoSaida: ganhou ? 3 : 7, lucro, payout: +(valor * 1.92).toFixed(2),
+    // o dígito sai do próprio preço de saída, como no motor (a tabela confere os dois)
+    digitoEntrada: (i * 7) % 10, digitoSaida: Number((46800 + i * 1.37 + (ganhou ? 0.41 : -0.22)).toFixed(4).slice(-1)), lucro, payout: +(valor * 1.92).toFixed(2),
     markupDeriv: null, ganhou, quando: AGORA - (resultados.length - i) * 48_000, esperou: 4 + (i % 5),
     contractType: 'DIGITUNDER', barreira: 5, pipSize: 4,
   }
@@ -372,7 +373,12 @@ function Laboratorio() {
         {qual === 'aovivo-atraso' && <Suspense fallback={null}><TesteAtraso /></Suspense>}
         {/* ?tela=operar (&varias, &vazio, &fechado): a boleta e as posições do Operar manual */}
         {qual === 'operar' && <Suspense fallback={null}><LabOperar /></Suspense>}
-        {qual === 'grafico' && <div style={{ height: 520, display: 'flex' }}><PriceChart candles={VELAS} mode="candles" pipSize={3} symbolName="Volatility 75 (1s)" symbol="lab" indicators={['sma', 'ema']} /></div>}
+        {qual === 'grafico' && <div style={{ height: 520, display: 'flex' }}><PriceChart candles={VELAS} mode="candles" pipSize={3} symbolName="Volatility 75 (1s)" symbol="lab" indicators={['sma', 'ema']}
+          // &marcas=1: uma operação manual aberta e uma encerrada (preço com o último dígito em destaque)
+          markers={new URLSearchParams(location.search).has('marcas') ? [
+            { id: 1, type: 'CALL', entryEpoch: VELAS[VELAS.length - 8].epoch, entryPrice: VELAS[VELAS.length - 8].close, expiryEpoch: VELAS[VELAS.length - 1].epoch + 300, profit: 2.78, status: 'open' },
+            { id: 2, type: 'DIGITOVER', entryEpoch: VELAS[VELAS.length - 30].epoch, entryPrice: VELAS[VELAS.length - 30].close, expiryEpoch: VELAS[VELAS.length - 26].epoch, profit: 0.85, status: 'won', exitPrice: VELAS[VELAS.length - 26].close },
+          ] : []} /></div>}
       </main>
     </div>
   )

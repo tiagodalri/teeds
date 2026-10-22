@@ -1,0 +1,10 @@
+/* preço com o último dígito destacado: o dígito ganha uma "tecla" na cor */
+.pcd { font-family: var(--fonte-dados, ui-monospace, Menlo, Consolas, monospace); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pcd-dig {
+  display: inline-grid; place-items: center; min-width: 1.35em; margin-left: 1px; padding: 0 .18em; border-radius: 5px;
+  background: color-mix(in srgb, var(--gf-ouro, var(--primary)) 20%, transparent); color: var(--text); font-weight: 800;
+}
+.pcd-dig.ganho { background: color-mix(in srgb, var(--up) 22%, transparent); color: var(--up); }
+.pcd-dig.perda { background: color-mix(in srgb, var(--down) 22%, transparent); color: var(--down); }
+/* na tabela das operações dos robôs: um preço só, o que fechou */
+.tv-preco .pcd { font-size: 12.5px; }

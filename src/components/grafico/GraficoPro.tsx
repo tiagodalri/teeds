@@ -372,7 +372,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
   })
 
   /* --------------------------------------------------- posições */
-  const chaveMarcadores = markers.map((m) => `${m.id}:${m.profit.toFixed(2)}`).join('|')
+  const chaveMarcadores = markers.map((m) => `${m.id}:${m.profit.toFixed(2)}:${m.status}:${m.exitPrice}`).join('|')
   useEffect(() => {
     const chart = chartRef.current
     if (!chart) return
@@ -381,11 +381,17 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
       if (m.entryPrice == null) continue
       const subir = /CALL|RISE|UP/i.test(m.type)
       const cor = subir ? css('--up', '#16C784') : css('--down', '#EA3943')
-      const lucro = `${m.profit >= 0 ? '+' : '−'}${Math.abs(m.profit).toFixed(2)}`
+      const lucro = `${m.profit >= 0 ? '+' : '−'}${Math.abs(m.profit).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      const pt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: pipSize, maximumFractionDigits: pipSize })
+      const encerrada = !!m.status && m.status !== 'open'
+      // o preço vai no texto (com o último dígito, que decide nas operações de dígitos)
+      const texto = encerrada
+        ? `${m.status === 'won' ? 'Ganhou' : m.status === 'lost' ? 'Perdeu' : 'Encerrada'} ${lucro} · Saída ${m.exitPrice != null ? pt(m.exitPrice) : '—'}`
+        : `${subir ? '▲ Subir' : '▼ Descer'} · Entrada ${pt(m.entryPrice)} · ${lucro}`
       chart.createOverlay({
         name: 'gfPosicao', groupId: 'gf-posicao', lock: true,
         points: [{ timestamp: m.entryEpoch * 1000, value: m.entryPrice }, { timestamp: m.expiryEpoch * 1000, value: m.entryPrice }],
-        extendData: { texto: `${subir ? '▲ Subir' : '▼ Descer'}  ${lucro}`, cor },
+        extendData: { texto, cor: encerrada ? (m.profit >= 0 ? css('--up', '#16C784') : css('--down', '#EA3943')) : cor },
       } as OverlayCreate)
     }
   }, [chaveMarcadores]) // eslint-disable-line react-hooks/exhaustive-deps

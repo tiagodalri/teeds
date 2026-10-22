@@ -7,6 +7,15 @@ import { AnaliseAoVivo } from './AnaliseAoVivo'
 import { ESTRATEGIAS_LOCAIS, lossVirtualDaSessao, modoDaConfig, NOME_DO_MODO, temModos } from '../core/deriv/strategies'
 import './robot-cockpit.css'
 import { NomeDoRobo } from './NomeDoRobo'
+import { formatarPreco, PrecoComDigito } from './preco/PrecoComDigito'
+
+/**
+ * O preço só aparece com o dígito destacado quando vem com as casas certas e o
+ * último dígito bate com o que decidiu a operação; senão fica só o dígito.
+ * Nunca mostrar um dígito diferente do que valeu.
+ */
+const precoConfere = (v: number | null, casas: number | undefined, digito: number | null): v is number =>
+  v !== null && casas !== undefined && (digito === null || formatarPreco(v, casas).slice(-1) === String(digito))
 
 interface Props {
   estado: EstadoMotor
@@ -413,7 +422,7 @@ export function RobotLive({
             <table className="tv-tabela tv-tabela-enxuta">
               <thead>
                 <tr>
-                  <th>Hora</th><th>Valor</th><th>Dígito</th><th>Resultado</th>
+                  <th>Hora</th><th>Valor</th><th>Preço</th><th>Resultado</th>
                   {mostrarMarkup && <th>Markup</th>}
                 </tr>
               </thead>
@@ -426,8 +435,11 @@ export function RobotLive({
                     <tr key={o.contractId} className={`${o.ganhou ? 'ganhou' : 'perdeu'} ${o.contractId === estado.historico[0]?.contractId ? 'recente' : ''}`}>
                       <td className="tv-hora" data-label="Hora">{relogio(o.quando)}</td>
                       <td data-label="Valor">{num(o.valor)}</td>
-                      <td data-label="Dígito" title={`Entrada ${preco(o.entrada)} · saída ${preco(o.saida)} · operação nº ${o.n}`}>
-                        {o.digitoSaida !== null ? <b className={`tv-chip ${o.ganhou ? 'up' : 'down'}`}>{o.digitoSaida}</b> : '—'}
+                      {/* um preço só (as operações dos robôs são de 1 tick): o que fechou, com o último dígito, que decide, destacado */}
+                      <td data-label="Preço" className="tv-preco" title={`Entrada ${preco(o.entrada)} · saída ${preco(o.saida)} · operação nº ${o.n}`}>
+                        {precoConfere(o.saida, o.pipSize, o.digitoSaida)
+                          ? <PrecoComDigito valor={o.saida} casas={o.pipSize!} tom={o.ganhou ? 'ganho' : 'perda'} />
+                          : o.digitoSaida !== null ? <b className={`tv-chip ${o.ganhou ? 'up' : 'down'}`}>{o.digitoSaida}</b> : '—'}
                       </td>
                       <td data-label="Resultado" className={o.ganhou ? 'up forte' : 'down forte'}>{assinado(o.lucro)}</td>
                       {mostrarMarkup && (
