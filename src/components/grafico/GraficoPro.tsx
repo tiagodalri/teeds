@@ -165,6 +165,26 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
   const chartRef = useRef<Chart | null>(null)
   // o zoom de abertura: o botão do meio volta para ele
   const espacoInicial = useRef(10)
+  /*
+    Zoom pelos botões (22/10/2026): quem está vendo o agora continua vendo o
+    agora. O zoom da biblioteca ancora no meio da tela, e ao afastar a vela
+    atual escorregava para o meio, com um vazio de futuro à direita. Sem
+    animação: o centralizar animado podia parar no meio do caminho.
+  */
+  const noAgora = (c: Chart) => c.getVisibleRange().realTo >= c.getDataList().length - 1
+  const zoomPeloBotao = (fator: number) => {
+    const c = chartRef.current
+    if (!c) return
+    const estavaNoAgora = noAgora(c)
+    c.zoomAtCoordinate(fator)
+    if (estavaNoAgora) c.scrollToRealTime()
+  }
+  const centralizar = () => {
+    const c = chartRef.current
+    if (!c) return
+    c.setBarSpace(espacoInicial.current)
+    c.scrollToRealTime()
+  }
   // os botões de zoom ficam no pé do painel das velas (acima de MACD, RSI...), não no pé do gráfico todo
   const [pePainel, setPePainel] = useState<number | null>(null)
   const medirPainel = () => window.setTimeout(() => {
@@ -203,9 +223,13 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
     const chart = init(el, { locale: 'pt-BR', styles: estilos(mode) })
     if (!chart) return
     chartRef.current = chart
+    if (import.meta.env.DEV) (window as unknown as { __graficoPro?: Chart }).__graficoPro = chart
     espacoInicial.current = chart.getBarSpace().bar
     chart.setDataLoader({
-      getBars: ({ callback }) => callback(dados.current, false),
+      // uma CÓPIA: a biblioteca guarda a lista que recebe. Com a mesma lista, a vela nova
+      // entrava nela antes do aviso, o gráfico achava que era só a última andando, nunca
+      // contava as velas novas e o "agora" dele ficava para trás (o centralizar ia para o passado)
+      getBars: ({ callback }) => callback(dados.current.slice(), false),
       subscribeBar: ({ callback }) => { assinante.current = callback },
       unsubscribeBar: () => { assinante.current = null },
     })
@@ -411,9 +435,9 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
         <div className="gp-grafico" ref={caixa} aria-label={`Gráfico de ${symbolName}`}>
           {loading && <span className="gp-carregando">Carregando velas…</span>}
           <ControlesDeZoom style={pePainel !== null ? { left: '50%', top: pePainel } : { left: '50%', bottom: 44 }}
-            aoAfastar={() => chartRef.current?.zoomAtCoordinate(0.8, undefined, 160)}
-            aoAproximar={() => chartRef.current?.zoomAtCoordinate(1.25, undefined, 160)}
-            aoCentralizar={() => { const c = chartRef.current; if (!c) return; c.setBarSpace(espacoInicial.current); c.scrollToRealTime(200) }} />
+            aoAfastar={() => zoomPeloBotao(0.8)}
+            aoAproximar={() => zoomPeloBotao(1.25)}
+            aoCentralizar={centralizar} />
           {ferramenta && <span className="gp-dica">{FERRAMENTAS.find((f) => f.id === ferramenta)?.nome}: clique no gráfico para marcar os pontos · Esc cancela</span>}
           {selecionado && (
             <div className="gp-edicao" role="toolbar" aria-label="Editar desenho">

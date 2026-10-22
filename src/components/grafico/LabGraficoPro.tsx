@@ -17,11 +17,13 @@ export default function LabGraficoPro() {
     })
   })
   const [modo, setModo] = useState<ChartMode>('candles')
+  const RAPIDO = new URLSearchParams(location.search).has('rapido')
   useEffect(() => {
     const t = setInterval(() => setVelas((v) => {
       const ult = v[v.length - 1]
       const novoPreco = ult.close + (Math.random() - 0.5) * 1.2
-      const agora = Math.floor(Date.now() / 60000) * 60
+      // &rapido=1: uma vela nova a cada 2 s (para testar o gráfico recebendo velas ao vivo)
+      const agora = RAPIDO ? (Math.random() < 0.5 ? ult.epoch + 60 : ult.epoch) : Math.floor(Date.now() / 60000) * 60
       if (agora > ult.epoch) return [...v.slice(-999), { epoch: agora, open: ult.close, high: Math.max(ult.close, novoPreco), low: Math.min(ult.close, novoPreco), close: novoPreco }]
       return [...v.slice(0, -1), { ...ult, close: novoPreco, high: Math.max(ult.high, novoPreco), low: Math.min(ult.low, novoPreco) }]
     }), 1000)
