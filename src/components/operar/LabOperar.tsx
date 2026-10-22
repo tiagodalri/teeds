@@ -51,7 +51,7 @@ export default function LabOperar() {
           <BoletaAtivo nome="75 Index" preco={preco} pipSize={3} direcao={direcao} sintetico aberto />
           <div className="bl-abas" role="tablist"><button type="button" className="on">Subir / Descer</button><button type="button">Dígitos</button></div>
           <div className="bl-corpo">
-            <MostradorValor stake={stake} texto={texto} moeda="USD" alerta={stake > 9241.79}
+            <MostradorValor stake={stake} texto={texto} moeda="USD" alerta={stake > 9241.79} saldo={9241.79}
               aoMudarTexto={(t) => { setTexto(t); const n = Number(t.replace(',', '.')); if (n >= 0.35) setStake(n) }}
               aoMudar={(v) => { setStake(v); setTexto(null) }} aoSair={() => setTexto(null)} />
             <i className="bl-sep" aria-hidden="true" />

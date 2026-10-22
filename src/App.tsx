@@ -1188,7 +1188,7 @@ export default function App() {
             </div>
             <div className="bl-corpo">
               {/* texto enquanto digita: dá para apagar e escrever; aceita vírgula ou ponto, e o mínimo da Deriv vale ao sair do campo */}
-              <MostradorValor stake={stake} texto={stakeTexto} moeda={moeda} alerta={acimaDoSaldo}
+              <MostradorValor stake={stake} texto={stakeTexto} moeda={moeda} alerta={acimaDoSaldo} saldo={conta.balance?.amount ?? null}
                 aoMudarTexto={(t) => { setStakeTexto(t); const n = lerValor(t); if (n >= 0.35) setStake(n) }}
                 aoMudar={(v) => { setStake(v); setStakeTexto(null) }}
                 aoSair={() => { const n = lerValor(stakeTexto ?? ''); if (stakeTexto !== null) setStake(Math.max(0.35, Number.isFinite(n) ? Math.round(n * 100) / 100 : 0.35)); setStakeTexto(null) }} />

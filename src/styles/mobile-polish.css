@@ -9,8 +9,8 @@
   .in-instr-campo input { font-size: 18px !important; }
   .qz-campo input { font-size: 25px !important; }
   .qz-dupla .qz-campo input { font-size: 17px !important; }
-  .bl-num input { font-size: 30px !important; }
-  @media (max-width: 700px) { .bl-num input { font-size: 26px !important; } }
+  .bl-campo-valor input { font-size: 23px !important; }
+  @media (max-width: 700px) { .bl-campo-valor input { font-size: 21px !important; } }
   @media (max-width: 700px) { .in-instr-campo input { font-size: 17px !important; } }
   .workspace-app .workspace-mobile-toggle { width: 44px; height: 44px; min-width: 44px; }
   .workspace-sidebar { padding-bottom: max(16px, var(--sab)); }

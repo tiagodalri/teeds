@@ -42,29 +42,38 @@ const proximo = (v: number, sobe: boolean) => sobe
   ? DEGRAUS.find((d) => d > v + 1e-9) ?? v
   : [...DEGRAUS].reverse().find((d) => d < v - 1e-9) ?? 0.35
 
-export function MostradorValor({ stake, texto, moeda, alerta, aoMudarTexto, aoMudar, aoSair }: {
-  stake: number; texto: string | null; moeda: string; alerta: boolean
+/**
+ * Um campo só, em pílula: − e + dentro dele, o valor no meio (dá para tocar e
+ * digitar). Embaixo, a régua de atalhos com botões do mesmo tamanho.
+ * (22/10/2026, segunda versão: os círculos soltos e o número flutuando no
+ * meio pareciam desalinhados.)
+ */
+export function MostradorValor({ stake, texto, moeda, alerta, saldo = null, aoMudarTexto, aoMudar, aoSair }: {
+  stake: number; texto: string | null; moeda: string; alerta: boolean; saldo?: number | null
   aoMudarTexto: (t: string) => void; aoMudar: (v: number) => void; aoSair: () => void
 }) {
   const visto = texto ?? stake.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })
   return (
     <div className={`bl-most ${alerta ? 'alerta' : ''}`}>
-      <div className="bl-most-cab"><span className="bl-rot" id="bl-valor-rot">Valor da entrada</span></div>
-      <div className="bl-most-num">
-        <button type="button" className="bl-pm" aria-label="Diminuir o valor" disabled={stake <= 0.35} onClick={() => aoMudar(proximo(stake, false))}>−</button>
-        <label className="bl-num">
+      <div className="bl-most-cab">
+        <span className="bl-rot" id="bl-valor-rot">Valor da entrada</span>
+        {saldo !== null && <span className="bl-saldo">Saldo <b>{dinheiro(saldo, moeda)}</b></span>}
+      </div>
+      <div className="bl-campo">
+        <button type="button" className="bl-campo-pm" aria-label="Diminuir o valor" disabled={stake <= 0.35} onClick={() => aoMudar(proximo(stake, false))}>−</button>
+        <label className="bl-campo-valor">
           <small>{simboloMoeda(moeda)}</small>
           <input type="text" inputMode="decimal" autoComplete="off" aria-labelledby="bl-valor-rot" value={visto}
-            style={{ width: `${Math.max(3, visto.length) + 0.4}ch` }}
+            style={{ width: `${Math.max(3, visto.length) + 0.3}ch` }}
             onFocus={(e) => e.currentTarget.select()}
             onChange={(e) => aoMudarTexto(e.target.value.replace(/[^\d.,]/g, ''))}
             onBlur={aoSair} />
         </label>
-        <button type="button" className="bl-pm" aria-label="Aumentar o valor" onClick={() => aoMudar(proximo(stake, true))}>+</button>
+        <button type="button" className="bl-campo-pm" aria-label="Aumentar o valor" onClick={() => aoMudar(proximo(stake, true))}>+</button>
       </div>
-      <div className="bl-marcas" role="group" aria-label="Valores rápidos">
+      <div className="bl-regua" role="group" aria-label="Valores rápidos">
         {[0.35, 1, 5, 10, 50].map((v) => (
-          <button key={v} type="button" className={stake === v ? 'on' : ''} onClick={() => aoMudar(v)}>{v.toLocaleString('pt-BR')}</button>
+          <button key={v} type="button" className={stake === v ? 'on' : ''} aria-pressed={stake === v} onClick={() => aoMudar(v)}>{v.toLocaleString('pt-BR')}</button>
         ))}
       </div>
     </div>
@@ -96,22 +105,22 @@ export function MostradorDuracao({ duracao, unidade, faixa, disponiveis, aoMudar
           ))}
         </span>
       </div>
-      <div className="bl-most-num">
-        <button type="button" className="bl-pm" aria-label="Diminuir a duração" disabled={duracao <= min} onClick={() => aoMudar(Math.max(min, duracao - passo))}>−</button>
-        <label className="bl-num">
+      <div className="bl-campo">
+        <button type="button" className="bl-campo-pm" aria-label="Diminuir a duração" disabled={duracao <= min} onClick={() => aoMudar(Math.max(min, duracao - passo))}>−</button>
+        <label className="bl-campo-valor">
           <input type="text" inputMode="numeric" autoComplete="off" aria-labelledby="bl-dur-rot" value={duracao || ''}
-            style={{ width: `${Math.max(1, String(duracao || '').length) + 0.4}ch` }}
+            style={{ width: `${Math.max(1, String(duracao || '').length) + 0.3}ch` }}
             onFocus={(e) => e.currentTarget.select()}
             onChange={(e) => aoMudar(Number(e.target.value.replace(/\D/g, '')) || 0)}
             onBlur={aoSair} />
-          <small className="depois">{nome}</small>
+          <small>{nome}</small>
         </label>
-        <button type="button" className="bl-pm" aria-label="Aumentar a duração" disabled={duracao >= max} onClick={() => aoMudar(Math.min(max, duracao + passo))}>+</button>
+        <button type="button" className="bl-campo-pm" aria-label="Aumentar a duração" disabled={duracao >= max} onClick={() => aoMudar(Math.min(max, duracao + passo))}>+</button>
       </div>
       {atalhos.length > 0 && (
-        <div className="bl-marcas" role="group" aria-label="Durações rápidas">
+        <div className="bl-regua" role="group" aria-label="Durações rápidas">
           {atalhos.map((v) => (
-            <button key={v} type="button" className={duracao === v ? 'on' : ''} onClick={() => aoMudar(v)}>{v.toLocaleString('pt-BR')}</button>
+            <button key={v} type="button" className={duracao === v ? 'on' : ''} aria-pressed={duracao === v} onClick={() => aoMudar(v)}>{v.toLocaleString('pt-BR')}</button>
           ))}
         </div>
       )}
@@ -128,18 +137,20 @@ export function BotaoCompra({ tipo, payout, moeda, carregando, erro, podeOperar,
   podeOperar: boolean; motivoBloqueio: string | null; comprando: boolean; confirmando: boolean; stake: number
   aoComprar: () => void
 }) {
-  // o preço mudou: o botão acende de leve por meio segundo (como em corretora)
+  // o preço mudou: só o número ganha um realce rápido, no máximo a cada 2 s
+  // (a cotação muda quase todo segundo; acender o botão inteiro o deixava desbotado)
   const [pisca, setPisca] = useState(false)
   const antes = useRef<number | null>(null)
+  const ultimo = useRef(0)
   useEffect(() => {
     if (payout === null) { setPisca(false); return }
-    if (antes.current !== null && Math.abs(antes.current - payout) >= 0.005) {
-      setPisca(true)
-      const t = window.setTimeout(() => setPisca(false), 520)
-      antes.current = payout
-      return () => window.clearTimeout(t)
-    }
+    const mudou = antes.current !== null && Math.abs(antes.current - payout) >= 0.005
     antes.current = payout
+    if (!mudou || Date.now() - ultimo.current < 2000) return
+    ultimo.current = Date.now()
+    setPisca(true)
+    const t = window.setTimeout(() => setPisca(false), 420)
+    return () => window.clearTimeout(t)
   }, [payout])
 
   const titulo = tipo === 'sobe' ? 'Subir' : 'Descer'
@@ -147,7 +158,7 @@ export function BotaoCompra({ tipo, payout, moeda, carregando, erro, podeOperar,
   const travado = !podeOperar || comprando
   const valor = erro ? null : payout
   return (
-    <button type="button" className={`bl-botao ${tipo} ${pisca ? 'pisca' : ''} ${confirmando ? 'confirmando' : ''}`}
+    <button type="button" className={`bl-botao ${tipo} ${confirmando ? 'confirmando' : ''}`}
       disabled={travado} onClick={aoComprar}
       aria-label={comprando ? `${titulo}: comprando` : motivoBloqueio ? `${titulo}: ${motivoBloqueio}` : erro ? `${titulo}: ${erro}`
         : confirmando ? `Confirmar compra de ${titulo} com dinheiro real` : `Comprar ${titulo}${valor !== null ? `, recebe ${dinheiro(valor, moeda)} se acertar` : ''}`}>
@@ -162,7 +173,7 @@ export function BotaoCompra({ tipo, payout, moeda, carregando, erro, podeOperar,
         : erro ? <span className="bl-estado" title={erro}>{erro}</span>
         : <>
             <small>Recebe</small>
-            <strong>{valor !== null ? dinheiro(valor, moeda) : carregando ? '…' : '—'}</strong>
+            <strong className={pisca ? 'pisca' : ''}>{valor !== null ? dinheiro(valor, moeda) : carregando ? '…' : '—'}</strong>
           </>}
     </button>
   )
