@@ -1,5 +1,5 @@
 import type { WorkspacePage } from '../WorkspaceNav'
-import { Monograma } from '../marca/Monograma'
+import { Monograma, TEM_MONOGRAMA } from '../marca/Monograma'
 import { abrirSuporte } from '../../core/teeds/suporte'
 import { alternarValores, MASCARA, useValoresOcultos } from '../../core/privacidade'
 import { MARCA } from '../../marca'
@@ -215,12 +215,14 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                   <button key={r.id} type="button" className={`in-jato ${r.noAr ? 'no-ar' : ''}`}
                     onClick={() => (r.noAr ? aoIr('robos') : aoPrepararRobo(r.id))}
                     aria-label={r.noAr ? `${r.nome}: no ar, ${ocultos ? 'resultado oculto' : `resultado ${sinal(r.resultado)}${numero(r.resultado)}`}. Abrir a cabine.` : `${r.nome}, ${r.chamada}. Configurar e ligar.`}>
+                    {/* a marca da casa no canto: o monograma, não as letras (22/10/2026) */}
+                    {TEM_MONOGRAMA && <Monograma tamanho={30} className="in-jato-mono" />}
                     <img src={`${FOTOS}${r.id}.webp`} srcSet={`${FOTOS}${r.id}-pequena.webp 640w, ${FOTOS}${r.id}.webp 1200w`} sizes="(max-width: 700px) 45vw, 20vw" alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
                     {r.noAr
                       ? <span className={`in-jato-selo ${r.operando ? 'operando' : ''}`}><i aria-hidden="true" />{r.operando ? 'Operando' : 'No ar'}</span>
                       : <span className="in-jato-play" aria-hidden="true"><Icone d={ICONE.play} /></span>}
                     <span className="in-jato-texto">
-                      <small>{MARCA.id === 'globalfly' ? 'GF' : MARCA.nome}</small>
+                      {!TEM_MONOGRAMA && <small>{MARCA.nome}</small>}
                       <b>{curto}</b>
                       {r.noAr
                         ? <em className={ocultos ? '' : r.resultado >= 0 ? 'sobe' : 'cai'}>{ocultos ? MASCARA : `${sinal(r.resultado)}${numero(r.resultado)}`}{r.analise && !r.operando ? ` · ${r.analise.n}/${r.analise.alvo}` : ''}</em>

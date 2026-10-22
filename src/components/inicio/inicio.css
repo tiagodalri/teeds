@@ -214,8 +214,13 @@
 .in-jato-play svg { width: 14px; height: 14px; fill: var(--in-marfim); stroke: none; margin-left: 2px; }
 .in-jato:hover .in-jato-play { background: var(--in-ouro); border-color: var(--in-ouro); }
 .in-jato:hover .in-jato-play svg { fill: var(--in-azul); }
-.in-jato-selo { position: absolute; left: 12px; top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; background: rgba(5, 21, 40, .72); color: var(--in-verde); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.in-jato-selo { position: absolute; right: 12px; top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; background: rgba(5, 21, 40, .72); color: var(--in-verde); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .in-jato-selo i { width: 6px; height: 6px; border-radius: 50%; background: var(--in-verde); animation: in-pulsa 1.6s ease-out infinite; }
+/* o monograma no canto superior esquerdo, sempre na versão clara (a foto é escura);
+   a sombra segura a leitura sobre céu claro. O selo "no ar" fica no canto direito. */
+.in-jato-mono { position: absolute; left: 13px; top: 15px; z-index: 1; filter: drop-shadow(0 1px 6px rgba(5, 21, 40, .7)); }
+.in-jato .monograma .monograma-claro { display: none !important; }
+.in-jato .monograma .monograma-escuro { display: block !important; }
 .in-jato-texto { position: absolute; left: 14px; right: 14px; bottom: 13px; display: grid; gap: 1px; }
 .in-jato-texto small { color: var(--in-ouro-claro); font-size: 10px; font-weight: 800; letter-spacing: .16em; }
 .in-jato-texto b { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
@@ -335,6 +340,9 @@
   .in-cabeca-sub { text-align: left; font-size: 12.5px; }
   .in-frota-trilho { margin: 0 -14px; padding: 2px 14px 8px; }
   .in-jato { flex-basis: 156px; height: 188px; }
+  /* cartão estreito: monograma e selo "operando" mais compactos, com folga entre os dois */
+  .in-jato-mono { left: 11px; top: 13px; transform: scale(.85); transform-origin: left top; }
+  .in-jato-selo { right: 10px; top: 11px; gap: 5px; padding: 3px 8px; font-size: 9px; letter-spacing: .08em; }
   .in-pv { grid-template-columns: minmax(0, 1fr); }
   .in-aula { grid-template-columns: minmax(0, 1fr); grid-template-rows: 150px auto; min-height: 0; }
   .in-aula img, .in-aula::after { grid-column: 1; grid-row: 1; }
