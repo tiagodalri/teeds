@@ -102,7 +102,15 @@ export default function LabSuporte() {
         <div className="topbar-right"><div className="status status-open"><i /> Conectado</div><UserMenu usuario={sessao.usuario} onSair={nada} onPerfil={nada} /></div>
       </header>
       {tela === 'ajuda' ? <AjudaPagina aoIr={(t) => setTela(t as WorkspacePage)} /> : tela === 'gestao' ? (
-        <div className="ger" style={{ padding: 20 }}><AdminSuporte sessao={sessao} marca="globalfly" nomeDaEquipe="Tiago Dal Ri" /></div>
+        // a mesma casca do painel do admin (AdminPanel, modo suporte), para medir a altura de verdade
+        <div className="admin-shell modo-suporte">
+          <aside className="admin-sidebar"><div><span className="rot">Painel de controle</span><h2>Administração</h2></div>
+            <nav>{['Suporte', 'Visão geral', 'Clientes', 'Leads', 'Robôs'].map((n, i) => <button key={n} className={i === 0 ? 'on' : ''} title={n}><i>{n[0]}</i><span>{n}</span>{i === 0 && <b className="admin-fila-suporte">1</b>}</button>)}</nav></aside>
+          <main className="admin-main">
+            <header className="admin-top"><div><span className="rot">GlobalFly Trade Admin</span><h1>Suporte ao cliente</h1><p>As conversas dos clientes, em tempo real: o mais urgente primeiro.</p></div><div className="admin-top-acoes"><button className="admin-refresh">Atualizar</button></div></header>
+            <AdminSuporte sessao={sessao} marca="globalfly" nomeDaEquipe="Tiago Dal Ri" />
+          </main>
+        </div>
       ) : (
         <InicioPanel d={{ nome: 'Lucas Andrade', conta: { conectada: false, demo: true, saldo: 0, moeda: 'USD' }, hoje: null, plano: null, frota: [], cotacoes: [], manchetes: [], aula: null, treino: null, jornada: { deriv: false, demo: false, gestao: false, primeiraIa: false } }} aoIr={(t) => setTela(t)} aoSalvarPlano={() => undefined} aoPrepararRobo={() => undefined} />
       )}

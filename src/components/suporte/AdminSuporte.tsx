@@ -322,6 +322,13 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
   const nomeDe = (c: Conversa) => nomes[c.userId]?.nome || nomes[c.userId]?.email || 'Cliente'
   const ctx = (atual?.contexto ?? {}) as { aparelho?: string; navegador?: string; app?: boolean; tela?: string; largura?: number }
 
+  // o campo cresce com o texto (até 160 px) e volta a uma linha depois de enviar
+  useEffect(() => { if (!texto && campo.current) campo.current.style.height = '' }, [texto])
+
+  // confirmação de leitura, como no WhatsApp: as últimas N mensagens da equipe que o cliente ainda não leu
+  const daEquipe = mensagens.filter((m) => m.autor === 'equipe' && !m.interna && !m.enviando)
+  const naoLidasPeloCliente = new Set(daEquipe.slice(Math.max(0, daEquipe.length - (atual?.naoLidasCliente ?? 0))).map((m) => m.id))
+
   // ------------------------------------------------ tela
   let diaAnterior = ''
   return (
@@ -440,7 +447,11 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
                         <span className="sx-msg-nome">{m.interna ? 'Nota interna · ' : ''}{cliente ? nomeDe(atual).split(' ')[0] : (m.autorNome || 'Equipe').split(' ')[0]}</span>
                         {m.anexo && <Anexo sessao={sessao} caminho={m.anexo} />}
                         {m.texto && <p>{m.texto}</p>}
-                        <time>{m.enviando ? 'enviando…' : horaCurta(m.criadaEm)}</time>
+                        <time>{m.enviando ? 'enviando…' : horaCurta(m.criadaEm)}
+                          {!cliente && !m.interna && !m.enviando && (
+                            <svg className={`sx-lido ${naoLidasPeloCliente.has(m.id) ? '' : 'lido'}`} viewBox="0 0 18 11" aria-label={naoLidasPeloCliente.has(m.id) ? 'Entregue' : 'Lida pelo cliente'}><path d="M1 6l3 3 6-7M7 9l1 1 7-8" /></svg>
+                          )}
+                        </time>
                       </div>
                     </div>]
                 })}
@@ -463,18 +474,19 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
                 <div className="sx-escrever-barra">
                   <button type="button" className={`sx-modo ${!interna ? 'on' : ''}`} onClick={() => setInterna(false)}>Responder</button>
                   <button type="button" className={`sx-modo nota ${interna ? 'on' : ''}`} onClick={() => setInterna(true)}><Ic d={I.nota} />Nota interna</button>
-                  <span />
-                  <button type="button" className="sx-icone" onClick={() => setVerRespostas((v) => !v)} aria-label="Respostas prontas" title="Respostas prontas ( / )"><Ic d={I.raio} /></button>
-                  <button type="button" className="sx-icone" onClick={() => arquivo.current?.click()} aria-label="Mandar imagem"><Ic d={I.clipe} /></button>
-                  <input ref={arquivo} type="file" accept="image/*" hidden onChange={(e) => void mandarPrint(e.target.files?.[0])} />
-                </div>
-                <textarea id="sx-texto" ref={campo} value={texto} onChange={(e) => setTexto(e.target.value)} onKeyDown={teclas}
-                  onPaste={(e) => { const f = Array.from(e.clipboardData.files).find((x) => x.type.startsWith('image/')); if (f) { e.preventDefault(); void mandarPrint(f) } }}
-                  placeholder={interna ? 'Nota só para a equipe (o cliente não vê)' : `Responder ${nomeDe(atual).split(' ')[0]}… ( / para respostas prontas)`} rows={2} />
-                <div className="sx-escrever-fim">
                   <small>{interna ? 'O cliente não vê notas internas.' : 'Enter envia · Shift+Enter quebra a linha'}</small>
-                  {!interna && atual.status !== 'resolvida' && <button type="button" className="sx-btn" disabled={!texto.trim() || enviando} onClick={() => void enviar(true)}>Enviar e encerrar</button>}
-                  <button type="button" className="sx-btn ouro" disabled={!texto.trim() || enviando} onClick={() => void enviar()}><Ic d={I.enviar} />{interna ? 'Salvar nota' : 'Enviar'}</button>
+                  {!interna && atual.status !== 'resolvida' && <button type="button" className="sx-link" disabled={!texto.trim() || enviando} onClick={() => void enviar(true)}>Enviar e encerrar</button>}
+                </div>
+                <div className="sx-escrever-linha">
+                  <button type="button" className={`sx-icone ${verRespostas ? 'on' : ''}`} onClick={() => setVerRespostas((v) => !v)} aria-label="Respostas prontas" title="Respostas prontas ( / )"><Ic d={I.raio} /></button>
+                  <button type="button" className="sx-icone" onClick={() => arquivo.current?.click()} aria-label="Mandar imagem" title="Mandar imagem (ou cole com Ctrl+V)"><Ic d={I.clipe} /></button>
+                  <input ref={arquivo} type="file" accept="image/*" hidden onChange={(e) => void mandarPrint(e.target.files?.[0])} />
+                  <textarea id="sx-texto" ref={campo} value={texto} rows={1}
+                    onChange={(e) => { setTexto(e.target.value); const t = e.currentTarget; t.style.height = 'auto'; t.style.height = `${Math.min(t.scrollHeight, 160)}px` }}
+                    onKeyDown={teclas}
+                    onPaste={(e) => { const f = Array.from(e.clipboardData.files).find((x) => x.type.startsWith('image/')); if (f) { e.preventDefault(); void mandarPrint(f) } }}
+                    placeholder={interna ? 'Nota só para a equipe' : `Mensagem para ${nomeDe(atual).split(' ')[0]}  ·  / respostas prontas`} />
+                  <button type="button" className="sx-enviar" disabled={!texto.trim() || enviando} onClick={() => void enviar()} aria-label={interna ? 'Salvar nota' : 'Enviar'} title={interna ? 'Salvar nota' : 'Enviar'}><Ic d={I.enviar} /></button>
                 </div>
               </div>
             </>
