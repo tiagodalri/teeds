@@ -101,7 +101,8 @@ import { decolar, liberarPouso } from './core/decolagem'
 import { CatalogoDeExemplo } from './core/teeds/catalogoRobos'
 
 document.documentElement.dataset.marca = MARCA.id
-aplicarTema(temaGuardado())
+// &tema=claro|escuro vale em qualquer tela do laboratório (conferência dos dois temas)
+{ const t = new URLSearchParams(location.search).get('tema'); aplicarTema(t === 'claro' || t === 'escuro' ? t : temaGuardado()) }
 // &app=1: simula o app instalado num iPhone (barra de status de 47 px)
 if (new URLSearchParams(location.search).has('app')) {
   document.documentElement.classList.add('app-instalado')

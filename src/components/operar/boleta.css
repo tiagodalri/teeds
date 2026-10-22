@@ -12,6 +12,8 @@
 
 /* tema claro: o ouro de destaque escurece para ler bem sobre o branco */
 :root:not([data-tema='escuro']) .bl { --bl-ouro-claro: color-mix(in srgb, var(--bl-ouro) 78%, #000); }
+/* a faixa do ativo é uma ilha azul no claro (tema da GlobalFly): ali o ouro volta a ser o claro */
+:root[data-marca='globalfly']:not([data-tema='escuro']) .bl-ativo { --bl-ouro-claro: color-mix(in srgb, var(--bl-ouro) 75%, #fff); }
 
 /* o ativo, ao vivo */
 .bl-ativo { position: relative; overflow: hidden; isolation: isolate; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }

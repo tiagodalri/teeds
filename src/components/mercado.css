@@ -106,7 +106,8 @@
 /* ------------------------------------------------ notícias */
 .mc-meta { color: var(--muted); font-size: 11.5px; }
 .mc-meta b { color: var(--mc-ouro); font-weight: 700; }
-.mc-tag { display: inline-block; padding: 3px 8px; border-radius: 6px; background: color-mix(in srgb, var(--bg, #000) 72%, transparent); color: #F3F0E9; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; backdrop-filter: blur(6px); }
+/* sempre azul translúcido: fica sobre a foto da notícia nos dois temas (no claro o fundo do tema virava marfim sob texto marfim) */
+.mc-tag { display: inline-block; padding: 3px 8px; border-radius: 6px; background: rgba(5, 21, 40, .72); color: #F3F0E9; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; backdrop-filter: blur(6px); }
 .mc-capa { display: block; width: 100%; height: 100%; object-fit: cover; background: var(--surface-alt); }
 .mc-capa.vazia {
   position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; overflow: hidden;

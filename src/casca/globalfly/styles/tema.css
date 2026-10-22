@@ -350,16 +350,17 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
    usuário se ajustam sozinhos. O main.tsx marca o <html> com .app-instalado.
    ========================================================================== */
 @media (max-width: 900px) {
-  :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) :is(.workspace-app .topbar, .workspace-app .workspace-mobile-toggle) {
+  /* 22/10/2026: o mesmo cabeçalho azul no navegador do celular, não só no app instalado */
+  :root[data-marca='globalfly']:not([data-tema='escuro']) :is(.workspace-app .topbar, .workspace-app .workspace-mobile-toggle) {
     --bg: var(--gf-azul); --surface: #08172B; --surface-alt: #0C1D33; --border: #1A2D45;
     --text: #F3F0E9; --muted: #93A6BD; --trilho: #1A2D45; --desativado: #4F6179;
     --primary: #B78D39; --primary-soft: rgba(183, 141, 57, .16); --shadow: 0 1px 2px rgba(0, 0, 0, .3);
     color-scheme: dark; color: var(--text);
   }
-  :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) .workspace-app .topbar {
+  :root[data-marca='globalfly']:not([data-tema='escuro']) .workspace-app .topbar {
     background: var(--gf-azul); border-bottom-color: transparent; box-shadow: 0 10px 24px -18px rgba(5, 21, 40, .55);
   }
-  :root.app-instalado[data-marca='globalfly']:not([data-tema='escuro']) .workspace-app .workspace-mobile-toggle { background: #08172B; border-color: #1A2D45; }
+  :root[data-marca='globalfly']:not([data-tema='escuro']) .workspace-app .workspace-mobile-toggle { background: #08172B; border-color: #1A2D45; }
 }
 /* o chat do suporte em tela cheia: o mesmo cabeçalho azul por trás da hora */
 @media (max-width: 640px) {
@@ -405,3 +406,34 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 }
 :root[data-marca='globalfly'][data-tema='escuro'] .robot-workspace .rob-new-button { background: var(--gf-ouro); color: var(--gf-azul); }
 :root[data-marca='globalfly'] .robot-workspace .rob-new-button:hover:not(:disabled) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--gf-ouro) 30%, transparent); }
+
+/* ==========================================================================
+   AZUL GF NO TEMA CLARO: PONTOS DE CONTRASTE (22/10/2026, Tiago)
+   "No modo claro mantenha pontos estratégicos naquele tom de azul escuro":
+   o menu lateral (computador e gaveta do celular), o cabeçalho do Meu perfil
+   e a faixa do ativo na boleta do Operar ficam Azul GF, como o cartão da
+   home e o Plano de voo. Os tokens do escuro valem só dentro dessas ilhas:
+   textos, bordas, verde e vermelho se ajustam sozinhos.
+   ========================================================================== */
+:root[data-marca='globalfly']:not([data-tema='escuro']) :is(.workspace-sidebar, .mp-topo, .bl-ativo) {
+  --bg: var(--gf-azul); --surface: #08172B; --surface-alt: #0C1D33; --border: #1A2D45;
+  --text: #F3F0E9; --muted: #93A6BD; --trilho: #1A2D45; --desativado: #4F6179;
+  --primary: #B78D39; --primary-soft: rgba(183, 141, 57, .16); --shadow: none;
+  --up: #22D66A; --down: #FF3B47; --up-soft: rgba(34, 214, 106, .14); --down-soft: rgba(255, 59, 71, .14);
+  --mp-linha: #1A2D45;
+  color-scheme: dark; color: var(--text);
+}
+:root[data-marca='globalfly']:not([data-tema='escuro']) .workspace-sidebar { background: var(--gf-azul); border-right-color: transparent; }
+:root[data-marca='globalfly']:not([data-tema='escuro']) .mp-topo { background: var(--gf-azul); border-color: transparent; box-shadow: 0 24px 48px -32px rgba(5, 21, 40, .6); }
+:root[data-marca='globalfly']:not([data-tema='escuro']) .bl-ativo { background: var(--gf-azul); }
+/* nas ilhas azuis, sempre a versão reversa da marca (a clara some no azul) */
+:root[data-marca='globalfly']:not([data-tema='escuro']) .workspace-sidebar .marca-assinatura.escura { display: block; }
+:root[data-marca='globalfly']:not([data-tema='escuro']) .workspace-sidebar .marca-assinatura.clara { display: none; }
+:root[data-marca='globalfly']:not([data-tema='escuro']) :is(.workspace-sidebar, .mp-topo) .monograma .monograma-claro { display: none !important; }
+:root[data-marca='globalfly']:not([data-tema='escuro']) :is(.workspace-sidebar, .mp-topo) .monograma .monograma-escuro { display: block !important; }
+:root[data-marca='globalfly']:not([data-tema='escuro']) .mp-quem .mp-sobre::before { background-image: url(/globalfly-gf-escuro.png); }
+/* o cartão da home é Azul GF nos dois temas: dentro dele o verde e o vermelho são sempre os vivos
+   (no claro, o instrumento do plano do dia pegava o verde escuro, feito para fundo marfim) */
+:root[data-marca='globalfly']:not([data-tema='escuro']) .in-painel {
+  --up: #22D66A; --down: #FF3B47; --up-soft: rgba(34, 214, 106, .14); --down-soft: rgba(255, 59, 71, .14);
+}
