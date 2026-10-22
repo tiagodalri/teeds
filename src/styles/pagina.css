@@ -1,0 +1,54 @@
+/* ==========================================================================
+   O PADRÃO DE PÁGINA (22/10/2026, Tiago: "um padrão para a dimensão das
+   telas, que se encaixem no zoom 100%").
+   Antes, cada tela tinha a sua largura (980, 1180, 1240, 1280, 1400, 1420,
+   1480 ou a tela inteira) e a sua margem. Agora toda tela de conteúdo usa a
+   mesma moldura: no máximo 1440 px, centralizada, com a mesma margem lateral
+   e o mesmo respiro no topo e no fim. As telas de trabalho (Operar, cabine
+   dos robôs em andamento, atendimento do suporte, sala ao vivo com palco)
+   continuam ocupando a tela inteira, como um aplicativo.
+   Só no computador: no celular cada tela segue com o ajuste dela.
+   Carregado por último (main.tsx e laboratório).
+   ========================================================================== */
+:root {
+  --pagina-max: 1440px;
+  --pagina-lado: clamp(20px, 2.2vw, 32px);
+  --pagina-topo: 24px;
+  --pagina-fim: 48px;
+}
+
+@media (min-width: 901px) {
+  /* telas com a moldura na própria raiz */
+  .workspace-app :is(.in, .mp, .aj, .mc, .ger.av-pagina:not(.av-com-palco)) {
+    width: 100%; max-width: var(--pagina-max); margin-inline: auto; box-sizing: border-box;
+    padding: var(--pagina-topo) var(--pagina-lado) var(--pagina-fim);
+  }
+
+  /* telas "ger": a raiz ocupa a área e o conteúdo fica na moldura */
+  .workspace-app :is(.go.ger.go-consultoria, .ger.aulas:not(.cine), .ger.insights, .ger.monitoramento) {
+    padding: var(--pagina-topo) var(--pagina-lado) var(--pagina-fim);
+  }
+  /* a raiz já tem a margem: o conteúdo fica com a largura da moldura menos as margens */
+  .workspace-app :is(.go.ger.go-consultoria, .ger.aulas:not(.cine), .ger.insights, .ger.monitoramento) > * {
+    width: 100%; max-width: calc(var(--pagina-max) - 2 * var(--pagina-lado)); margin-inline: auto; box-sizing: border-box;
+  }
+
+  /* central de robôs (sem sessão em andamento): a mesma moldura */
+  .workspace-app .ger.rob.robot-workspace:not(.tem-acompanhamento) {
+    width: 100%; max-width: var(--pagina-max); margin-inline: auto; box-sizing: border-box;
+    padding: var(--pagina-topo) var(--pagina-lado) var(--pagina-fim);
+  }
+
+  /* marketplace: o topo e a vitrine na moldura */
+  .workspace-app .marketplace :is(.market-hero, .market-vitrine) {
+    max-width: var(--pagina-max); margin-inline: auto; box-sizing: border-box;
+    padding-left: var(--pagina-lado); padding-right: var(--pagina-lado);
+  }
+  .workspace-app .marketplace .market-hero { padding-top: var(--pagina-topo); }
+  .workspace-app .marketplace .market-vitrine { padding-bottom: var(--pagina-fim); }
+
+  /* administração (fora do atendimento do suporte): a mesma moldura no conteúdo */
+  .workspace-app .admin-shell:not(.modo-suporte) .admin-main {
+    max-width: var(--pagina-max); padding: var(--pagina-topo) var(--pagina-lado) var(--pagina-fim);
+  }
+}

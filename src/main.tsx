@@ -6,6 +6,8 @@ import './styles/app.css'
 import './styles/tema.css'
 import './styles/ux-refinements.css'
 import './styles/mobile-polish.css'
+// o padrão de página (largura, margens) vem por último: vale sobre o resto
+import './styles/pagina.css'
 import { aplicarTema, temaGuardado } from './core/tema'
 import { MARCA } from './marca'
 import { registrarVisita } from './core/teeds/visitas'
