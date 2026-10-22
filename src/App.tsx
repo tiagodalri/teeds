@@ -4,6 +4,7 @@ import { PriceChart, type ChartMode, type ContractMarker } from './components/Pr
 import { PositionCard } from './components/PositionCard'
 import { DigitsPanel } from './components/DigitsPanel'
 import { BoletaAtivo, BotaoCompra, MostradorDuracao, MostradorValor, ResumoDaCompra } from './components/operar/Boleta'
+import { UltimasEntradas } from './components/operar/UltimasEntradas'
 import { CatalogoProvider } from './core/teeds/catalogoRobos'
 import { usePreferenciaColuna } from './core/teeds/preferenciaColuna'
 import { useMarcaEmFoco } from './core/teeds/marcaEmFoco'
@@ -621,6 +622,7 @@ export default function App() {
     posições a tira em 7 s; aqui guardamos uma cópia.
   */
   const [encerradas, setEncerradas] = useState<Array<{ c: (typeof minhas)[number]; ate: number }>>([])
+  const [ultimasManuais, setUltimasManuais] = useState<Array<(typeof minhas)[number]>>([])
   useEffect(() => {
     const finais = minhas.filter((c) => /^(won|lost|sold|cancelled)$/.test(c.status))
     if (!finais.length) return
@@ -628,6 +630,11 @@ export default function App() {
       const outras = antes.filter((e) => !finais.some((f) => f.contractId === e.c.contractId))
       const novas = finais.map((c) => ({ c, ate: antes.find((e) => e.c.contractId === c.contractId)?.ate ?? Date.now() + 120_000 }))
       return [...novas, ...outras].slice(0, 6)
+    })
+    // a lista "Suas últimas entradas" da coluna do Operar: fica a sessão inteira (as 10 últimas)
+    setUltimasManuais((antes) => {
+      const outras = antes.filter((u) => !finais.some((f) => f.contractId === u.contractId))
+      return [...finais, ...outras].sort((a, b) => b.startTime - a.startTime).slice(0, 10)
     })
   }, [minhas])
   // tira do gráfico as que passaram dos 2 minutos
@@ -1283,6 +1290,11 @@ export default function App() {
                 onEncerrar={encerrar} encerrando={vendendo === c.contractId} />
             ))}
           </section>
+
+          {ultimasManuais.length > 0 && (
+            <UltimasEntradas operacoes={ultimasManuais}
+              nomeDoAtivo={(simbolo) => nomeDoAtivo(symbols.find((s) => s.symbol === simbolo)?.name ?? simbolo)} />
+          )}
         </aside>
       </div>
       )}

@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react'
 import type { OpenContract } from '../../core/deriv/trading'
 import { PositionCard } from '../PositionCard'
+import { UltimasEntradas } from './UltimasEntradas'
 import { BoletaAtivo, BotaoCompra, MostradorDuracao, MostradorValor, ResumoDaCompra } from './Boleta'
 
 const agoraS = () => Math.floor(Date.now() / 1000)
@@ -46,7 +47,7 @@ export default function LabOperar() {
   return (
     <div className="layout layout-operar" style={{ display: 'flex', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg)' }}>
       {/* &largura=330: a coluna do Operar no notebook */}
-      <aside className="trade" style={{ width: `min(${Number(p.get('largura')) || 430}px, 100%)`, borderLeft: 0 }}>
+      <aside className="trade" style={{ width: `min(${Number(p.get('largura')) || 430}px, 100%)`, borderLeft: 0, height: '100vh' }}>
         <section className="bl" aria-label="Boleta de operação">
           <BoletaAtivo nome="75 Index" preco={preco} pipSize={3} direcao={direcao} sintetico aberto />
           <div className="bl-abas" role="tablist"><button type="button" className="on">Subir / Descer</button><button type="button">Dígitos</button></div>
@@ -74,6 +75,13 @@ export default function LabOperar() {
           {posicoes.length === 0 && <div className="bl-posicoes-vazio">As entradas que você fizer aqui aparecem nesta lista, com o resultado ao vivo.</div>}
           {posicoes.map((c) => <PositionCard key={c.contractId} contrato={c} nomeAtivo="75 Index" onEncerrar={() => undefined} encerrando={false} />)}
         </section>
+        {!p.has('vazio') && <UltimasEntradas nomeDoAtivo={() => '75 Index'} operacoes={[
+          { ...contrato(11, 'CALL', 7.84, 0, 'won'), exitSpot: 1091.4573 },
+          { ...contrato(12, 'PUT', -10, 0, 'lost'), exitSpot: 1090.8821 },
+          { ...contrato(13, 'DIGITOVER', 8.5, 0, 'won'), exitSpot: 1090.2236, contractType: 'DIGITOVER' },
+          { ...contrato(14, 'DIGITUNDER', -10, 0, 'lost'), exitSpot: 1089.9518, contractType: 'DIGITUNDER' },
+          { ...contrato(15, 'CALL', 7.84, 0, 'won'), exitSpot: 1089.3302 },
+        ]} />}
       </aside>
     </div>
   )

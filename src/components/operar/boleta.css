@@ -38,13 +38,13 @@
 .bl-abas button.on::after { content: ''; position: absolute; left: 22%; right: 22%; bottom: -1px; height: 2px; border-radius: 2px; background: var(--bl-ouro); }
 .bl-abas button:focus-visible { outline: 2px solid var(--bl-ouro); outline-offset: -4px; border-radius: 8px; }
 
-.bl-corpo { display: grid; gap: 12px; padding: 14px 16px 16px; }
+.bl-corpo { display: grid; gap: 14px; padding: 16px 16px 18px; }
 .bl-corpo > .bl-sep { height: 1px; background: var(--border); }
 
 /* valor e duração: um campo só, em pílula, com − e + dentro (22/10/2026, v2) */
 .bl-most { display: grid; gap: 8px; }
 .bl-most-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 26px; }
-.bl-rot { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.bl-rot { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
 .bl-saldo { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
 .bl-saldo b { color: var(--text); font: 700 11.5px var(--bl-dados); }
 .bl-unid { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: var(--bl-fundo-campo); border: 1px solid var(--border); }
@@ -52,7 +52,7 @@
 .bl-unid button.on { background: color-mix(in srgb, var(--bl-ouro) 16%, transparent); color: var(--bl-ouro-claro); }
 .bl-unid button:disabled { opacity: .35; cursor: not-allowed; }
 .bl-campo {
-  display: grid; grid-template-columns: 48px minmax(0, 1fr) 48px; align-items: stretch; height: 54px; overflow: hidden;
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: stretch; height: 48px; overflow: hidden;
   border-radius: 14px; background: var(--bl-fundo-campo); border: 1px solid var(--border); transition: border-color .15s, box-shadow .15s;
 }
 .bl-campo:focus-within { border-color: color-mix(in srgb, var(--bl-ouro) 70%, var(--border)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bl-ouro) 14%, transparent); }
@@ -67,7 +67,7 @@
 .bl-campo-valor small { color: var(--muted); font-size: 12.5px; font-weight: 700; }
 .bl-campo-valor input {
   min-width: 2ch; max-width: 100%; padding: 0; border: 0; outline: 0; background: none; color: var(--text); text-align: center;
-  font: 700 23px/1.1 var(--bl-dados); letter-spacing: -.01em; font-variant-numeric: tabular-nums;
+  font: 700 20px/1.1 var(--bl-dados); letter-spacing: -.01em; font-variant-numeric: tabular-nums;
 }
 .bl-most.alerta .bl-campo-valor input { color: var(--down); }
 /* a régua de atalhos: botões do mesmo tamanho, alinhados ao campo */
@@ -101,7 +101,7 @@
 .bl-dir { font-weight: 800; font-size: 15.5px; }
 .bl-pct { margin-left: auto; padding: 2px 7px; border-radius: 99px; background: color-mix(in srgb, var(--cor) 14%, transparent); font: 800 11.5px var(--bl-dados); }
 .bl-botao > small { margin-top: 10px; color: var(--muted); font-size: 11.5px; font-weight: 700; }
-.bl-botao > strong { font: 800 21px/1.15 var(--bl-dados); letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; transition: color .4s ease; }
+.bl-botao > strong { font: 800 18px/1.15 var(--bl-dados); letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; transition: color .4s ease; }
 /* preço vivo: só o número acende na cor, rápido, no máximo a cada 2 s */
 .bl-botao > strong.pisca { color: var(--cor); transition: none; }
 .bl-estado { display: grid; margin-top: 10px; color: var(--text); font-size: 13px; font-weight: 800; line-height: 1.25; }
@@ -119,9 +119,13 @@
 /* boleta estreita (coluna curta ou celular): a linha do lucro encurta e fica numa linha só */
 @container boleta (max-width: 360px) {
   .bl-longo, .bl-atalho { display: none; }
+  .bl-rot { letter-spacing: .1em; font-size: 10.5px; }
+  .bl-saldo, .bl-saldo b { font-size: 10.5px; }
   .bl-resumo { flex-wrap: nowrap; font-size: 11.5px; }
   .bl-dir { font-size: 15px; }
-  .bl-botao > strong { font-size: 19px; }
+  .bl-botao > strong { font-size: 16.5px; }
+  .bl-campo-valor input { font-size: 18px; }
+  .bl-campo { height: 46px; grid-template-columns: 40px minmax(0, 1fr) 40px; }
 }
 @container boleta (max-width: 320px) {
   .bl-corpo { padding-inline: 12px; }
@@ -130,7 +134,7 @@
   .bl-botao-lin { gap: 6px; }
   .bl-dir { font-size: 14px; }
   .bl-pct { font-size: 11px; }
-  .bl-botao > strong { font-size: 17px; }
+  .bl-botao > strong { font-size: 15.5px; }
 }
 /* o fim da coluna fica livre: o botão do suporte (canto de baixo) nunca cobre o "Encerrar agora" */
 .layout-operar .trade:has(.bl) { padding-bottom: 92px; }
@@ -238,4 +242,35 @@
 @media (prefers-reduced-motion: reduce) {
   .bl-ativo-preco small i.vivo { animation: none; }
   .bl-botao > strong, .bp-relogio .arco { transition: none; }
+}
+
+/* ------------------------------------------------ computador: a coluna em pé
+   A boleta em cima e, embaixo, as posições e as últimas entradas ocupando o
+   resto da altura (antes sobrava um vazio grande embaixo). */
+@media (min-width: 901px) {
+  .layout-operar .trade:has(.bl) { display: flex; flex-direction: column; gap: 12px; }
+  .layout-operar .trade:has(.bl) > * { margin-top: 0; flex: none; }
+  .layout-operar .trade:has(.bl) > .bl-ultimas { flex: 1 1 auto; min-height: 140px; }
+}
+
+/* ------------------------------------------------ suas últimas entradas */
+.bl-ultimas { display: flex; flex-direction: column; min-height: 0; border-radius: 18px; background: var(--surface); border: 1px solid var(--border); overflow: hidden; }
+.bl-ultimas header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 8px; }
+.bl-ultimas header small { min-width: 22px; padding: 1px 7px; border-radius: 99px; background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--muted); font: 700 11px var(--fonte-dados, ui-monospace, monospace); text-align: center; }
+.bl-ultimas ol { flex: 1; margin: 0; padding: 0 6px 8px; list-style: none; overflow-y: auto; }
+.bl-ultimas li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 9px 8px; border-radius: 10px; }
+.bl-ultimas li + li { border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent); }
+.bl-ult-hora { color: var(--muted); font: 600 11px var(--fonte-dados, ui-monospace, monospace); }
+.bl-ult-nome { display: grid; min-width: 0; }
+.bl-ult-nome b { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bl-ult-nome b i { font-style: normal; }
+.bl-ultimas li.ganho .bl-ult-nome i { color: var(--up); } .bl-ultimas li.perda .bl-ult-nome i { color: var(--down); }
+.bl-ult-nome small { color: var(--muted); font-size: 10.5px; }
+.bl-ult-preco .pcd { font-size: 11.5px; color: var(--text); }
+.bl-ult-res { font: 700 12.5px var(--fonte-dados, ui-monospace, monospace); white-space: nowrap; }
+.bl-ultimas li.ganho .bl-ult-res { color: var(--up); } .bl-ultimas li.perda .bl-ult-res { color: var(--down); }
+@media (max-width: 1199px) and (min-width: 901px) {
+  /* coluna curta do notebook: o ativo some da linha (o preço e o resultado ficam) */
+  .bl-ult-nome small { display: none; }
+  .bl-ultimas li { gap: 8px; padding: 8px 6px; }
 }
