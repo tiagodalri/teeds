@@ -1,0 +1,224 @@
+/* A boleta do Operar manual e o cartão da posição (22/10/2026).
+   Classes próprias (bl-, bp-): o CSS antigo de .quote, .field e .pos não
+   alcança aqui. Ouro marca a escolha; verde e vermelho vivos são as compras. */
+.bl {
+  --bl-ouro: var(--gf-ouro, var(--primary));
+  --bl-ouro-claro: color-mix(in srgb, var(--bl-ouro) 75%, #fff);
+  --bl-dados: var(--fonte-dados, ui-monospace, Menlo, Consolas, monospace);
+  --bl-fundo-campo: color-mix(in srgb, var(--bg) 70%, var(--surface));
+  position: relative; overflow: hidden; border-radius: 20px; background: var(--surface); border: 1px solid var(--border);
+  container: boleta / inline-size;
+}
+
+/* tema claro: o ouro de destaque escurece para ler bem sobre o branco */
+:root:not([data-tema='escuro']) .bl { --bl-ouro-claro: color-mix(in srgb, var(--bl-ouro) 78%, #000); }
+
+/* o ativo, ao vivo */
+.bl-ativo { position: relative; overflow: hidden; isolation: isolate; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+/* o fio de ouro do manual, só dentro do cabeçalho do ativo */
+.bl-ativo::before { content: ''; position: absolute; z-index: -1; left: 58%; top: -30px; width: 1.5px; height: 140px; background: var(--bl-ouro); opacity: .28; transform: rotate(32deg); pointer-events: none; }
+.bl-ativo-ic { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 10px; background: color-mix(in srgb, var(--bl-ouro) 14%, transparent); color: var(--bl-ouro-claro); font: 800 12px var(--bl-dados); }
+.bl-ativo-nome { flex: 1; min-width: 0; display: grid; }
+.bl-ativo-nome b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bl-ativo-nome small { color: var(--muted); font-size: 11.5px; }
+.bl-ativo-preco { display: grid; justify-items: end; }
+.bl-ativo-preco b { font: 700 16px var(--bl-dados); font-variant-numeric: tabular-nums; transition: color .25s; }
+.bl-ativo-preco b.sobe { color: var(--up); } .bl-ativo-preco b.cai { color: var(--down); }
+.bl-ativo-preco small { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 11px; }
+.bl-ativo-preco small i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+.bl-ativo-preco small i.vivo { background: var(--up); box-shadow: 0 0 0 3px color-mix(in srgb, var(--up) 22%, transparent); animation: bl-pulsa 1.8s ease-out infinite; }
+@keyframes bl-pulsa { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--up) 6%, transparent); } }
+
+/* abas: o fio dourado embaixo da ativa */
+.bl-abas { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border-bottom: 1px solid var(--border); }
+.bl-abas button { position: relative; height: 44px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.bl-abas button.on { color: var(--text); }
+.bl-abas button.on::after { content: ''; position: absolute; left: 22%; right: 22%; bottom: -1px; height: 2px; border-radius: 2px; background: var(--bl-ouro); }
+.bl-abas button:focus-visible { outline: 2px solid var(--bl-ouro); outline-offset: -4px; border-radius: 8px; }
+
+.bl-corpo { display: grid; gap: 12px; padding: 14px 16px 16px; }
+.bl-corpo > .bl-sep { height: 1px; background: var(--border); }
+
+/* mostradores, como no Plano de voo */
+.bl-most { display: grid; gap: 8px; }
+.bl-most-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 26px; }
+.bl-rot { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.bl-unid { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: var(--bl-fundo-campo); border: 1px solid var(--border); }
+.bl-unid button { padding: 3px 10px; border: 0; border-radius: 7px; background: none; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.bl-unid button.on { background: color-mix(in srgb, var(--bl-ouro) 16%, transparent); color: var(--bl-ouro-claro); }
+.bl-unid button:disabled { opacity: .35; cursor: not-allowed; }
+.bl-most-num { display: grid; grid-template-columns: 42px 1fr 42px; align-items: center; }
+.bl-pm { width: 42px; height: 42px; display: grid; place-items: center; padding: 0; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; transition: color .15s, border-color .15s; }
+.bl-pm:disabled { opacity: .35; cursor: not-allowed; }
+.bl-pm:active:not(:disabled) { transform: scale(.94); }
+.bl-num { display: flex; align-items: baseline; justify-content: center; gap: 6px; min-width: 0; cursor: text; }
+.bl-num small { color: var(--muted); font-size: 13px; font-weight: 700; }
+.bl-num input {
+  min-width: 2ch; max-width: 100%; padding: 0; border: 0; outline: 0; background: none; color: var(--text); text-align: center;
+  font: 700 30px/1.1 var(--bl-dados); letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.bl-num:focus-within input { color: var(--bl-ouro-claro); }
+.bl-most.alerta .bl-num input { color: var(--down); }
+.bl-marcas { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; }
+.bl-marcas button { min-width: 38px; padding: 4px 11px; border-radius: 99px; border: 1px solid transparent; background: none; color: var(--muted); font: 600 12.5px var(--bl-dados); cursor: pointer; }
+.bl-marcas button.on { color: var(--bl-ouro-claro); border-color: color-mix(in srgb, var(--bl-ouro) 55%, transparent); background: color-mix(in srgb, var(--bl-ouro) 8%, transparent); }
+.bl-alerta { margin: -4px 0 0; color: var(--down); font-size: 12px; text-align: center; }
+
+/* comprar: os dois lado a lado. As cores são as vivas da casa nos dois
+   temas (o botão é sempre "aceso"); o texto é azul-marinho, legível ao sol. */
+.bl-comprar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bl-botao {
+  position: relative; overflow: hidden; display: grid; align-content: start; gap: 1px; min-width: 0; min-height: 96px; padding: 12px 14px 13px;
+  border: 0; border-radius: 16px; color: #051528; text-align: left; font: inherit; cursor: pointer;
+  transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
+}
+.bl-botao::before { content: ''; position: absolute; inset: 0 0 50% 0; background: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, 0)); pointer-events: none; }
+.bl-botao::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: rgba(255, 255, 255, .28); opacity: 0; transition: opacity .5s ease; pointer-events: none; }
+.bl-botao.pisca::after { opacity: 1; transition: none; }
+.bl-botao.sobe { background: #22D66A; box-shadow: 0 14px 28px -16px rgba(34, 214, 106, .85), inset 0 -2px 0 rgba(5, 21, 40, .18); }
+.bl-botao.desce { background: #FF3B47; box-shadow: 0 14px 28px -16px rgba(255, 59, 71, .85), inset 0 -2px 0 rgba(5, 21, 40, .18); }
+.bl-botao:active:not(:disabled) { transform: translateY(1px) scale(.985); }
+.bl-botao:disabled { cursor: not-allowed; filter: saturate(.35) brightness(.8); }
+.bl-botao.confirmando { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--bl-ouro); }
+.bl-botao:focus-visible { outline: 3px solid var(--bl-ouro); outline-offset: 2px; }
+.bl-botao-lin { display: flex; align-items: center; gap: 8px; }
+.bl-seta { display: grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: 50%; background: rgba(5, 21, 40, .16); font-size: 11px; }
+.bl-dir { font-weight: 800; font-size: 16px; }
+.bl-pct { margin-left: auto; font: 800 12px var(--bl-dados); }
+.bl-botao > small { margin-top: 9px; font-size: 11.5px; font-weight: 700; opacity: .78; }
+.bl-botao > strong { font: 800 21px/1.15 var(--bl-dados); letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bl-estado { display: grid; margin-top: 9px; font-size: 13px; font-weight: 800; line-height: 1.25; }
+.bl-estado small { font-size: 11px; font-weight: 700; opacity: .78; }
+.bl-resumo { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+.bl-resumo b { color: var(--text); font: 700 12px var(--bl-dados); }
+.bl-atalho { margin: 2px 0 0; text-align: center; color: var(--muted); font-size: 11.5px; }
+.bl-atalho kbd { padding: 1px 6px; border-radius: 5px; border: 1px solid var(--border); background: var(--bl-fundo-campo); color: var(--text); font: 700 11px var(--bl-dados); }
+
+/* o cartão de conectar a Deriv, quando aparece, fica acima da boleta com respiro */
+.trade > .sem-deriv + .bl { margin-top: 12px; }
+.trade > .bl + .aviso { margin-top: 12px; }
+/* computador: a coluna do Operar ganha um pouco de largura para a boleta (330 → 372 px) */
+@media (min-width: 1200px) { .layout-operar:has(.bl) { grid-template-columns: minmax(0, 1fr) 372px; } }
+/* boleta estreita (coluna curta ou celular): a linha do lucro encurta e fica numa linha só */
+@container boleta (max-width: 360px) {
+  .bl-longo, .bl-atalho { display: none; }
+  .bl-resumo { flex-wrap: nowrap; font-size: 11.5px; }
+  .bl-dir { font-size: 15px; }
+  .bl-botao > strong { font-size: 19px; }
+}
+@container boleta (max-width: 320px) {
+  .bl-corpo { padding-inline: 12px; }
+  .bl-comprar { gap: 8px; }
+  .bl-botao { padding: 10px 10px 11px; }
+  .bl-botao-lin { gap: 6px; }
+  .bl-seta { width: 22px; height: 22px; font-size: 10px; }
+  .bl-dir { font-size: 14px; }
+  .bl-pct { font-size: 11px; }
+  .bl-botao > strong { font-size: 17px; }
+}
+/* o fim da coluna fica livre: o botão do suporte (canto de baixo) nunca cobre o "Encerrar agora" */
+.layout-operar .trade:has(.bl) { padding-bottom: 92px; }
+
+/* ------------------------------------------------ posições */
+.bl-posicoes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 12px; }
+.bl-posicoes-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 4px; color: var(--muted); font-size: 12.5px; font-weight: 700; }
+.bl-posicoes-cab > span { display: grid; min-width: 0; }
+.bl-posicoes-cab > span small { font-size: 11.5px; font-weight: 600; }
+.bl-posicoes-cab > b { white-space: nowrap; }
+.bl-posicoes-cab b { font: 700 13px var(--fonte-dados, ui-monospace, monospace); }
+.bl-posicoes-cab b.ganho { color: var(--up); } .bl-posicoes-cab b.perda { color: var(--down); }
+.bl-posicoes-vazio { padding: 12px 14px; border-radius: 16px; border: 1px dashed var(--border); color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+
+.bp {
+  --bp-ouro: var(--gf-ouro, var(--primary));
+  --bp-dados: var(--fonte-dados, ui-monospace, Menlo, Consolas, monospace);
+  position: relative; display: grid; gap: 12px; padding: 14px 16px 16px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border);
+  container: posicao / inline-size;
+}
+.bp::before { content: ''; position: absolute; left: 0; top: 16px; bottom: 16px; width: 3px; border-radius: 0 3px 3px 0; background: var(--up); }
+.bp.perdendo::before { background: var(--down); }
+.bp.concluida { opacity: .92; }
+.bp-cab { display: flex; align-items: center; gap: 12px; }
+.bp-relogio { position: relative; width: 56px; height: 56px; flex: none; }
+.bp-relogio svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.bp-relogio circle { fill: none; stroke-width: 4; }
+.bp-relogio .fundo { stroke: color-mix(in srgb, var(--border) 80%, transparent); }
+.bp-relogio .arco { stroke: var(--bp-ouro); stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+.bp-relogio b { position: absolute; inset: 0; display: grid; place-items: center; font: 700 12px var(--bp-dados); font-variant-numeric: tabular-nums; }
+.bp-relogio.palavra b { font: 800 9.5px Arimo, Arial, sans-serif; letter-spacing: .02em; }
+.bp-relogio.urgente .arco { stroke: var(--down); }
+.bp-relogio.urgente b { color: var(--down); }
+.bp-relogio.ganhou .arco { stroke: var(--up); } .bp-relogio.ganhou b { color: var(--up); }
+.bp-relogio.perdeu .arco { stroke: var(--down); } .bp-relogio.perdeu b { color: var(--down); }
+.bp-id { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.bp-id b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bp-id b i { font-style: normal; }
+.bp-id b.sobe i { color: var(--up); } .bp-id b.desce i { color: var(--down); }
+.bp-ativo { color: var(--text); }
+.bp-id small { display: grid; color: var(--muted); font-size: 12px; }
+.bp-investido { display: none; white-space: nowrap; }
+.bp-investido em { font-style: normal; font-family: var(--bp-dados); white-space: nowrap; }
+.bp-res { display: grid; justify-items: end; text-align: right; }
+.bp-res b { font: 800 19px var(--bp-dados); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bp-res small { font: 700 11.5px var(--bp-dados); }
+.bp-res.ganho b, .bp-res.ganho small { color: var(--up); }
+.bp-res.perda b, .bp-res.perda small { color: var(--down); }
+.bp-spots { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 9px 12px; border-radius: 12px; background: color-mix(in srgb, var(--bg) 70%, var(--surface)); border: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+.bp-spots b { color: var(--text); font: 700 12.5px var(--bp-dados); }
+.bp-seta { color: var(--muted); }
+.bp-dif { margin-left: auto; font: 700 12px var(--bp-dados); }
+.bp-dif.ganho { color: var(--up); } .bp-dif.perda { color: var(--down); }
+.bp-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bp-nums div { display: grid; gap: 3px; } .bp-nums div:last-child { text-align: right; }
+.bp-nums small { color: var(--muted); font-size: 9.5px; font-weight: 800; letter-spacing: .12em; }
+.bp-nums b { font: 700 15px var(--bp-dados); }
+.bp-encerrar {
+  height: 48px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 14px;
+  border: 0; border-radius: 14px; background: var(--bp-ouro); color: #051528; font: inherit; font-size: 15px; font-weight: 800; white-space: nowrap; cursor: pointer;
+}
+.bp-encerrar span { font-family: var(--bp-dados); }
+.bp-encerrar:disabled { background: color-mix(in srgb, var(--border) 70%, transparent); color: var(--muted); cursor: not-allowed; font-size: 13.5px; }
+.bp-encerrar:focus-visible { outline: 3px solid var(--bp-ouro); outline-offset: 2px; }
+
+/* cartão estreito (coluna curta do notebook): só a direção no título; o relógio já diz o tempo */
+@container posicao (max-width: 340px) {
+  .bp-ativo, .bp-legenda, .bp-seta { display: none; }
+  .bp-spots { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; }
+  .bp-spots .bp-dif { grid-row: 1 / 3; grid-column: 2; align-self: center; }
+  .bp-res b { font-size: 17px; }
+  .bp-relogio { width: 50px; height: 50px; }
+}
+
+@media (hover: hover) {
+  .bl-pm:hover:not(:disabled) { color: var(--text); border-color: color-mix(in srgb, var(--bl-ouro) 55%, var(--border)); }
+  .bl-marcas button:hover:not(.on) { color: var(--text); }
+  .bl-botao:hover:not(:disabled) { filter: brightness(1.05); }
+  .bp-encerrar:hover:not(:disabled) { filter: brightness(1.06); }
+}
+
+/* celular: tudo mais compacto; o ativo some da posição (já está no topo da boleta)
+   e o investido vai para baixo do nome, no lugar das duas colunas */
+@media (max-width: 700px) {
+  .bl-ativo { padding: 9px 14px; }
+  .bl-ativo-ic { width: 30px; height: 30px; }
+  .bl-abas button { height: 40px; }
+  .bl-corpo { gap: 10px; padding: 10px 14px 14px; }
+  .bl-most { gap: 6px; }
+  .bl-most-num { grid-template-columns: 40px 1fr 40px; }
+  .bl-pm { width: 40px; height: 40px; }
+  .bl-num input { font-size: 26px; }
+  .bl-botao { min-height: 88px; padding: 10px 12px 11px; }
+  .bl-botao > small { margin-top: 6px; }
+  .bl-botao > strong { font-size: 19px; }
+  .bl-dir { font-size: 15px; }
+  .bl-atalho { display: none; }
+  .bp { padding: 12px 14px 14px; gap: 10px; }
+  .bp-relogio { width: 50px; height: 50px; }
+  .bp-ativo, .bp-legenda, .bp-nums, .bp-spots { display: none; }
+  .bp-investido { display: block; }
+}
+@media (max-width: 900px) { .bl-atalho { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .bl-ativo-preco small i.vivo { animation: none; }
+  .bl-botao::after, .bp-relogio .arco { transition: none; }
+}

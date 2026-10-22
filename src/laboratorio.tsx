@@ -53,6 +53,7 @@ const SalaDeTreino = lazy(() => import('./components/aovivo/SalaDeTreino').then(
 const LabRecorte = lazy(() => import('./components/aovivo/LabRecorte'))
 const TesteAtraso = lazy(() => import('./components/aovivo/TesteAtraso'))
 const LabGraficoPro = lazy(() => import('./components/grafico/LabGraficoPro'))
+const LabOperar = lazy(() => import('./components/operar/LabOperar'))
 const LabAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.LabAoVivo })))
 const LabInicio = lazy(() => import('./components/inicio/LabInicio'))
 const LabPerfil = lazy(() => import('./components/perfil/LabPerfil'))
@@ -368,6 +369,8 @@ function Laboratorio() {
         {/* ?tela=recorte: a mesma câmera no recorte antigo e no novo, lado a lado. */}
         {qual === 'recorte' && <Suspense fallback={null}><LabRecorte /></Suspense>}
         {qual === 'aovivo-atraso' && <Suspense fallback={null}><TesteAtraso /></Suspense>}
+        {/* ?tela=operar (&varias, &vazio, &fechado): a boleta e as posições do Operar manual */}
+        {qual === 'operar' && <Suspense fallback={null}><LabOperar /></Suspense>}
         {qual === 'grafico' && <div style={{ height: 520, display: 'flex' }}><PriceChart candles={VELAS} mode="candles" pipSize={3} symbolName="Volatility 75 (1s)" symbol="lab" indicators={['sma', 'ema']} /></div>}
       </main>
     </div>

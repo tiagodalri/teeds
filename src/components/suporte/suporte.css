@@ -40,7 +40,8 @@ body.aovivo-lado .sp-lancador-area { right: 400px; }
   font-size: 12.5px; font-weight: 700; box-shadow: 0 10px 24px -14px rgba(0, 0, 0, .6);
   opacity: 0; transform: translateX(6px); transition: opacity .18s, transform .18s; pointer-events: none; white-space: nowrap;
 }
-.sp-lancador:hover .sp-lancador-rotulo, .sp-lancador:focus-visible .sp-lancador-rotulo, .sp-lancador.com-selo .sp-lancador-rotulo { opacity: 1; transform: none; }
+/* o rótulo ("1 aguardando") só aparece no hover: o número já está no selo do botão, e a pílula fixa cobria a tela (22/10/2026) */
+.sp-lancador:hover .sp-lancador-rotulo, .sp-lancador:focus-visible .sp-lancador-rotulo { opacity: 1; transform: none; }
 .sp-lancador-area.aberto .sp-lancador-rotulo { display: none; }
 .sp-selo {
   position: absolute; top: -2px; right: -2px; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: 10px;

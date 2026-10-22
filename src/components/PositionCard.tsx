@@ -1,5 +1,5 @@
 import type { OpenContract } from '../core/deriv/trading'
-import { Progress } from './Progress'
+import './operar/boleta.css'
 import { useClock } from '../hooks/useClock'
 import { dinheiro as emDinheiro, dinheiroComSinal } from '../core/dinheiro'
 
@@ -69,116 +69,85 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
   // Contrato por ticks: o codigo curto traz "_5T_". Relogio nao faz sentido.
   const ticks = /_(\d+)T(?:_|$)/.exec(c.shortcode)?.[1] ?? null
   const subiu = c.contractType === 'CALL' || c.contractType === 'HIGHER' || c.contractType === 'MULTUP'
+  // direção só existe em Subir/Descer, Acima/Abaixo e multiplicador; dígitos não têm lado
+  const comDirecao = /^(CALL|PUT|HIGHER|LOWER|MULTUP|MULTDOWN)$/.test(c.contractType)
   const ganhando = c.profit >= 0
   const duracaoTotal = Math.max(1, c.expiryTime - c.startTime)
-  const progresso = Math.min(100, Math.max(0, ((duracaoTotal - restante) / duracaoTotal) * 100))
-  const fmt = (v: number | null, casas = 2) => (v === null ? '—' : v.toFixed(casas))
-  const variacao =
-    c.entrySpot !== null && c.currentSpot !== null ? c.currentSpot - c.entrySpot : null
+  // contagem zerada e a Deriv ainda sem fechar: mostra liquidando (o botão segue a regra de antes)
+  const liquidandoNaTela = !concluido && (liquidando || (!ticks && restante === 0))
+  const progresso = concluido || liquidandoNaTela ? 100 : Math.min(100, Math.max(0, ((duracaoTotal - restante) / duracaoTotal) * 100))
+  const preco = (v: number | null) => (v === null ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: c.pipSize, maximumFractionDigits: c.pipSize }))
+  const variacao = c.entrySpot !== null && c.currentSpot !== null ? c.currentSpot - c.entrySpot : null
   const selo = SELO[c.status] ?? null
   const dinheiro = (v: number) => emDinheiro(v, c.currency)
+  const pct = `${ganhando ? '+' : '−'}${Math.abs(c.profitPercentage).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
 
-  const carimbo = concluido
-    ? selo
-    : liquidando
-      ? 'liquidando…'
-      : ticks
-        ? `${ticks} ${ticks === '1' ? 'tick' : 'ticks'}`
-        : texto
-  const carimboClasse = concluido
+  // o centro do relógio de painel: a contagem, os ticks, ou o desfecho
+  const centro = concluido ? selo : liquidandoNaTela ? '…' : ticks ? `${ticks}t` : texto
+  const tom = concluido
     ? (c.status === 'won' ? 'ganhou' : c.status === 'lost' ? 'perdeu' : '')
-    : (!ticks && !liquidando && restante <= 15 ? 'urgente' : '')
-
+    : (!ticks && !liquidandoNaTela && restante <= 15 ? 'urgente' : '')
+  const aberta = new Date(c.startTime * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
   const legenda = concluido
-    ? c.status === 'won'
-      ? `Ganhou · recebeu ${dinheiro(c.bidPrice)}`
-      : c.status === 'lost'
-        ? `Perdeu · ${dinheiro(c.buyPrice)} da entrada`
-        : c.status === 'sold'
-          ? `Encerrado antes do fim por ${dinheiro(c.bidPrice)}`
-          : 'Cancelado'
-    : liquidando
-      ? 'venceu · a Deriv está fechando as contas'
-      : ticks
-        ? `vence em ${ticks} ${ticks === '1' ? 'tick' : 'ticks'}`
-        : restante > 0
-          ? `${Math.round(progresso)}% do contrato · faltam ${texto}`
-          : 'liquidando…'
+    ? c.status === 'won' ? `Ganhou · recebeu ${dinheiro(c.bidPrice)}`
+      : c.status === 'lost' ? `Perdeu · ${dinheiro(c.buyPrice)} da entrada`
+      : c.status === 'sold' ? `Encerrada antes do fim por ${dinheiro(c.bidPrice)}`
+      : 'Cancelada'
+    : liquidandoNaTela ? 'Venceu · a Deriv está fechando as contas'
+    : ticks ? `Vence em ${ticks} ${ticks === '1' ? 'tick' : 'ticks'} · aberta às ${aberta}`
+    : `Aberta às ${aberta}`
 
   const rotuloBotao = concluido
-    ? `Concluído · ${selo}`
+    ? `Concluída · ${selo}`
     : liquidando
       ? 'Liquidando…'
       : encerrando
         ? 'Encerrando…'
         : c.isValidToSell
-          ? `Encerrar agora · ${dinheiro(c.bidPrice)}`
+          ? <>Encerrar agora ·<span>{dinheiro(c.bidPrice)}</span></>
           : porQueNaoEncerra(c.motivoSemVenda)
 
+  // o arco do relógio: 2πr com r = 24 (viewBox 56)
+  const CIRC = 150.8
   return (
-    <div className={[
-      'pos',
-      ganhando ? 'pos-ganhando' : 'pos-perdendo',
-      concluido ? `pos-concluida pos-${c.status}` : '',
-      liquidando ? 'pos-liquidando' : '',
-    ].join(' ')}>
-      <div className="pos-cab">
-        <span className={`pos-dir ${subiu ? 'up' : 'down'}`}>
-          {subiu ? '▲' : '▼'} {NOMES[c.contractType] ?? c.contractType}
-        </span>
-        <span className="pos-ativo">{nomeAtivo}</span>
-        <span className={`pos-tempo ${carimboClasse}`}>{carimbo}</span>
-      </div>
-
-      <div className="pos-progresso">
-        <Progress valor={concluido || liquidando ? 100 : progresso} altura={5}
-          cor={ganhando ? 'var(--up)' : 'var(--down)'} vivo={!concluido && !liquidando && restante > 0} />
-        <span className="pos-progresso-txt">{legenda}</span>
-      </div>
-
-      <div className="pos-resultado">
-        <div>
-          <span className="rot">{concluido ? 'Resultado final' : 'Resultado agora'}</span>
-          <strong className={ganhando ? 'ganho' : 'perda'}>
-            {dinheiroComSinal(c.profit, c.currency)}
-          </strong>
-          <span className={`pct ${ganhando ? 'ganho' : 'perda'}`}>
-            {ganhando ? '+' : '−'}{Math.abs(c.profitPercentage).toFixed(1)}%
-          </span>
+    <article className={['bp', ganhando ? 'ganhando' : 'perdendo', concluido ? `concluida ${c.status}` : '', liquidando ? 'liquidando' : ''].join(' ')}>
+      <div className="bp-cab">
+        <div className={`bp-relogio ${tom} ${concluido ? 'palavra' : ''}`} role="timer" aria-label={concluido ? (selo ?? '') : ticks ? `${ticks} ticks` : `Faltam ${texto}`}>
+          <svg viewBox="0 0 56 56" aria-hidden="true">
+            <circle className="fundo" cx="28" cy="28" r="24" />
+            <circle className="arco" cx="28" cy="28" r="24" strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - progresso / 100)} />
+          </svg>
+          <b>{centro}</b>
         </div>
-        <div className="pos-alvo">
-          <span className="rot">{concluido ? 'Pagou' : 'Se ganhar'}</span>
-          <strong>{dinheiro(concluido ? c.bidPrice : c.payout)}</strong>
-          <span className="sub">
-            {concluido ? `entrada ${dinheiro(c.buyPrice)}` : `lucro ${dinheiro(c.payout - c.buyPrice)}`}
-          </span>
+        <div className="bp-id">
+          <b className={comDirecao ? (subiu ? 'sobe' : 'desce') : ''}>{comDirecao && <><i aria-hidden="true">{subiu ? '▲' : '▼'}</i> </>}{NOMES[c.contractType] ?? c.contractType}<span className="bp-ativo"> · {nomeAtivo}</span></b>
+          <small><span className="bp-investido">Investido <em>{dinheiro(c.buyPrice)}</em></span><span className="bp-legenda">{legenda}</span></small>
+        </div>
+        <div className={`bp-res ${ganhando ? 'ganho' : 'perda'}`}>
+          <b>{dinheiroComSinal(c.profit, c.currency)}</b>
+          <small>{pct}</small>
         </div>
       </div>
 
-      <dl className="pos-dados">
-        <div><dt>Investido</dt><dd>{dinheiro(c.buyPrice)}</dd></div>
-        <div><dt>Entrada</dt><dd>{fmt(c.entrySpot, c.pipSize)}</dd></div>
-        {concluido ? (
-          <div><dt>Saída</dt><dd>{fmt(c.exitSpot ?? c.currentSpot, c.pipSize)}</dd></div>
-        ) : (
-          <div><dt>Agora</dt><dd className={variacao === null ? '' : variacao >= 0 ? 'ganho' : 'perda'}>
-            {fmt(c.currentSpot, c.pipSize)}
-            {variacao !== null && (
-              <em>{variacao >= 0 ? ' +' : ' '}{variacao.toFixed(c.pipSize)}</em>
-            )}
-          </dd></div>
-        )}
-        <div><dt>{concluido ? 'Pagou' : 'Encerrar'}</dt><dd>{dinheiro(c.bidPrice)}</dd></div>
-      </dl>
+      <div className="bp-spots">
+        <span>Entrada <b>{preco(c.entrySpot)}</b></span>
+        <span className="bp-seta" aria-hidden="true">→</span>
+        <span>{concluido ? 'Saída' : 'Agora'} <b>{preco(concluido ? (c.exitSpot ?? c.currentSpot) : c.currentSpot)}</b></span>
+        {/* a cor diz se o movimento favorece a posição: na Descer, o preço caindo é verde */}
+        {variacao !== null && <span className={`bp-dif ${!comDirecao ? '' : (subiu ? variacao >= 0 : variacao <= 0) ? 'ganho' : 'perda'}`}>{variacao >= 0 ? '+' : '−'}{Math.abs(variacao).toLocaleString('pt-BR', { minimumFractionDigits: c.pipSize, maximumFractionDigits: c.pipSize })}</span>}
+      </div>
 
-      <button
-        className="btn btn-vender"
+      <div className="bp-nums">
+        <div><small>INVESTIDO</small><b>{dinheiro(c.buyPrice)}</b></div>
+        <div><small>{concluido ? 'PAGOU' : 'SE GANHAR'}</small><b>{dinheiro(concluido ? c.bidPrice : c.payout)}</b></div>
+      </div>
+
+      <button type="button" className="bp-encerrar"
         disabled={concluido || liquidando || !c.isValidToSell || encerrando}
         onClick={() => onEncerrar(c.contractId)}
-        title={!concluido && c.motivoSemVenda ? `Deriv: ${c.motivoSemVenda}` : undefined}
-      >
+        title={!concluido && c.motivoSemVenda ? `Deriv: ${c.motivoSemVenda}` : undefined}>
         {rotuloBotao}
       </button>
-    </div>
+    </article>
   )
 }

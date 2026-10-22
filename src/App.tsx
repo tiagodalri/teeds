@@ -3,6 +3,7 @@ import { useSimulador } from './hooks/useSimulador'
 import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
 import { PositionCard } from './components/PositionCard'
 import { DigitsPanel } from './components/DigitsPanel'
+import { BoletaAtivo, BotaoCompra, MostradorDuracao, MostradorValor, ResumoDaCompra } from './components/operar/Boleta'
 import { CatalogoProvider } from './core/teeds/catalogoRobos'
 import { usePreferenciaColuna } from './core/teeds/preferenciaColuna'
 import { useMarcaEmFoco } from './core/teeds/marcaEmFoco'
@@ -26,6 +27,7 @@ import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLimitesDuracao, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { traduzirErro } from './core/deriv/erros'
+import { nomeDoAtivo } from './core/deriv/market'
 import { ATIVO_DOS_ROBOS, ehSintetico } from './core/deriv/config'
 import { useAccount } from './hooks/useAccount'
 import { minhaSituacao, registrarContaDeriv, registrarPresenca, souAdmin, type SituacaoDaFicha } from './core/teeds/clientes'
@@ -183,7 +185,6 @@ export default function App() {
   const periodos = usePeriodos()
   const [search, setSearch] = useState('')
   const [seletorAtivo, setSeletorAtivo] = useState(false)
-  const [posicoesAbertas, setPosicoesAbertas] = useState(true)
   const [stake, setStake] = useState(10)
   const [stakeTexto, setStakeTexto] = useState<string | null>(null)
   const [duration, setDuration] = useState(5)
@@ -657,10 +658,49 @@ export default function App() {
   }
 
   async function comprar(tipo: 'CALL' | 'PUT') {
+    // o valor digitado ainda não virou número (ex.: "0," no meio da troca): nunca compra o valor antigo
+    if (stakeTexto !== null && lerValor(stakeTexto) !== stake) {
+      setAviso({ tipo: 'erro', texto: 'Confira o valor da entrada antes de comprar.' })
+      return
+    }
     if (!conta.isDemo && confirmar !== tipo) { setConfirmar(tipo); return }
     setConfirmar(null)
     await executar(tipo, { duration, durationUnit: unidade })
   }
+
+  /*
+    Atalhos da boleta (computador): Shift+↑ compra Subir, Shift+↓ compra
+    Descer, + e − mudam o valor. Com Shift de propósito: uma seta solta rola a
+    página, e compra por engano não pode acontecer. Na conta real o primeiro
+    atalho arma e o segundo confirma, igual ao clique. Nunca dispara digitando
+    num campo nem com uma janela aberta por cima.
+  */
+  const atalhoRef = useRef<(e: KeyboardEvent) => void>(() => {})
+  atalhoRef.current = (e: KeyboardEvent) => {
+    // tecla segurada repete o evento: a repetição nunca conta (senão armava e confirmava a conta real num gesto só)
+    if (e.repeat || tela !== 'operar' || modo !== 'direcao' || e.ctrlKey || e.metaKey || e.altKey) return
+    const alvo = e.target as HTMLElement | null
+    if (alvo && (alvo.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName))) return
+    if (document.querySelector('dialog[open], [role="dialog"][aria-modal="true"], .ativo-menu')) return
+    // foco dentro de qualquer painel (suporte, indicadores, chat da sala): o atalho não é dele
+    if (alvo?.closest('dialog, [role="dialog"], .ativo-menu')) return
+    if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault()
+      if (!podeOperar || comprando) return
+      void comprar(e.key === 'ArrowUp' ? 'CALL' : 'PUT')
+    } else if (e.key === '+' || e.key === '=' || e.key === '-') {
+      e.preventDefault()
+      const sobe = e.key === '+' || e.key === '='
+      const degraus = [0.35, 0.5, 1, 2, 3, 5, 10, 15, 20, 25, 50, 75, 100, 150, 200, 250, 500, 750, 1000, 2000, 5000]
+      const v = sobe ? degraus.find((d) => d > stake + 1e-9) ?? stake : [...degraus].reverse().find((d) => d < stake - 1e-9) ?? 0.35
+      setStake(v); setStakeTexto(null)
+    }
+  }
+  useEffect(() => {
+    const ouvir = (e: KeyboardEvent) => atalhoRef.current(e)
+    window.addEventListener('keydown', ouvir)
+    return () => window.removeEventListener('keydown', ouvir)
+  }, [])
 
   async function executar(
     tipo: string,
@@ -1139,137 +1179,83 @@ export default function App() {
               onConectar={conta.login} />
           )}
 
-          <div className="modo-troca">
-            <button className={modo === 'direcao' ? 'on' : ''} onClick={() => setModo('direcao')}>
-              Subir / Descer
-            </button>
-            {sintetico && <button className={modo === 'digitos' ? 'on' : ''} onClick={() => setModo('digitos')}>
-              Dígitos
-            </button>}
-          </div>
-
-          <label className="field"><span>Valor da entrada</span>
-            <div className={`input-wrap ${acimaDoSaldo ? 'alerta' : ''}`}><em>{simboloMoeda(moeda)}</em>
-              {/* texto enquanto digita: dá para apagar e escrever (antes o 0,35 voltava na hora);
-                  aceita vírgula ou ponto, e o mínimo da Deriv vale ao sair do campo */}
-              <input type="text" inputMode="decimal" autoComplete="off" value={stakeTexto ?? stake.toLocaleString('pt-BR', { maximumFractionDigits: 2, useGrouping: false })}
-                onFocus={(e) => e.currentTarget.select()}
-                onChange={(e) => {
-                  const t = e.target.value.replace(/[^\d.,]/g, '')
-                  setStakeTexto(t)
-                  const n = lerValor(t)
-                  if (n >= 0.35) setStake(n)
-                }}
-                onBlur={() => { const n = lerValor(stakeTexto ?? ''); if (stakeTexto !== null) setStake(Math.max(0.35, Number.isFinite(n) ? Math.round(n * 100) / 100 : 0.35)); setStakeTexto(null) }} />
+          <section className="bl" aria-label="Boleta de operação">
+            <BoletaAtivo nome={activeSymbol ? nomeDoAtivo(activeSymbol.name) : ''} preco={tick?.quote ?? null} pipSize={pipSize}
+              direcao={direction} sintetico={sintetico} aberto={mercadoAberto} />
+            <div className="bl-abas" role="tablist" aria-label="Tipo de operação">
+              <button type="button" role="tab" aria-selected={modo === 'direcao'} className={modo === 'direcao' ? 'on' : ''} onClick={() => setModo('direcao')}>Subir / Descer</button>
+              {sintetico && <button type="button" role="tab" aria-selected={modo === 'digitos'} className={modo === 'digitos' ? 'on' : ''} onClick={() => setModo('digitos')}>Dígitos</button>}
             </div>
-          </label>
-          <div className="trade-atalhos" role="group" aria-label="Valores rápidos">
-            {[0.35, 1, 5, 10, 50].map((v) => (
-              <button key={v} type="button" className={stake === v ? 'on' : ''} onClick={() => { setStake(v); setStakeTexto(null) }}>{v.toLocaleString('pt-BR')}</button>
-            ))}
-          </div>
-          {acimaDoSaldo && conta.balance && (
-            <p className="field-alerta">Acima do seu saldo ({dinheiro(conta.balance.amount, moeda)}). A Deriv vai recusar.</p>
-          )}
-
-          {modo === 'direcao' ? (
-            <>
-              <div className="field"><span>Duração</span>
-                <div className="duracao">
-                  <div className="input-wrap">
-                    <input type="number" min={faixa?.[0] ?? 1} max={faixa?.[1]} value={duration}
-                      onFocus={(e) => e.currentTarget.select()}
-                      onChange={(e) => setDuration(Number(e.target.value) || 0)}
-                      onBlur={() => setDuration(dentroDaFaixa)} />
+            <div className="bl-corpo">
+              {/* texto enquanto digita: dá para apagar e escrever; aceita vírgula ou ponto, e o mínimo da Deriv vale ao sair do campo */}
+              <MostradorValor stake={stake} texto={stakeTexto} moeda={moeda} alerta={acimaDoSaldo}
+                aoMudarTexto={(t) => { setStakeTexto(t); const n = lerValor(t); if (n >= 0.35) setStake(n) }}
+                aoMudar={(v) => { setStake(v); setStakeTexto(null) }}
+                aoSair={() => { const n = lerValor(stakeTexto ?? ''); if (stakeTexto !== null) setStake(Math.max(0.35, Number.isFinite(n) ? Math.round(n * 100) / 100 : 0.35)); setStakeTexto(null) }} />
+              {acimaDoSaldo && conta.balance && (
+                <p className="bl-alerta">Acima do seu saldo ({dinheiro(conta.balance.amount, moeda)}). A Deriv vai recusar.</p>
+              )}
+              <i className="bl-sep" aria-hidden="true" />
+              {modo === 'direcao' ? (
+                <>
+                  <MostradorDuracao duracao={duration} unidade={unidade} faixa={faixa}
+                    disponiveis={{ t: !!limites.ticks, s: !!limites.segundos, m: !!limites.minutos }}
+                    aoMudar={setDuration} aoTrocarUnidade={trocarUnidade} aoSair={() => setDuration(dentroDaFaixa)} />
+                  <div className="bl-comprar">
+                    <BotaoCompra tipo="sobe" payout={call.payout} stake={stake} moeda={moeda}
+                      carregando={call.loading} erro={call.error ? traduzirErro(call.error) : null}
+                      podeOperar={podeOperar} motivoBloqueio={motivoBloqueio}
+                      comprando={comprando === 'CALL'} confirmando={confirmar === 'CALL'}
+                      aoComprar={() => comprar('CALL')} />
+                    <BotaoCompra tipo="desce" payout={put.payout} stake={stake} moeda={moeda}
+                      carregando={put.loading} erro={put.error ? traduzirErro(put.error) : null}
+                      podeOperar={podeOperar} motivoBloqueio={motivoBloqueio}
+                      comprando={comprando === 'PUT'} confirmando={confirmar === 'PUT'}
+                      aoComprar={() => comprar('PUT')} />
                   </div>
-                  <div className="segmented mini unidade" role="group" aria-label="Unidade da duração">
-                    {([['t', 'ticks', !!limites.ticks], ['s', 'seg', !!limites.segundos], ['m', 'min', !!limites.minutos]] as const)
-                      .map(([u, nome, existe]) => (
-                        <button key={u} type="button" disabled={!existe} className={unidade === u ? 'on' : ''}
-                          onClick={() => trocarUnidade(u)}>{nome}</button>
-                      ))}
-                  </div>
-                </div>
-                <p className="field-hint">
-                  {faixa
-                    ? unidade === 't'
-                      ? `de ${faixa[0]} a ${faixa[1]} ticks · cada tick é uma cotação nova`
-                      : unidade === 's'
-                        ? `de ${faixa[0]} s a ${faixa[1] >= 3600 ? `${Math.round(faixa[1] / 3600)} h` : `${faixa[1]} s`}`
-                        : `de ${faixa[0]} a ${faixa[1]} min`
-                    : 'essa unidade não vale para este ativo'}
-                </p>
-              </div>
-
-              <div className="quotes">
-                <QuoteCard kind="up" title="Subir" action="Comprar" payout={call.payout} stake={stake} moeda={moeda}
-                  loading={call.loading} error={call.error ? traduzirErro(call.error) : null}
-                  podeOperar={podeOperar} motivoBloqueio={motivoBloqueio}
-                  comprando={comprando === 'CALL'} confirmando={confirmar === 'CALL'}
-                  onBuy={() => comprar('CALL')} />
-                <QuoteCard kind="down" title="Descer" action="Comprar" payout={put.payout} stake={stake} moeda={moeda}
-                  loading={put.loading} error={put.error ? traduzirErro(put.error) : null}
-                  podeOperar={podeOperar} motivoBloqueio={motivoBloqueio}
-                  comprando={comprando === 'PUT'} confirmando={confirmar === 'PUT'}
-                  onBuy={() => comprar('PUT')} />
-              </div>
-            </>
-          ) : (
-            <DigitsPanel
-              symbol={symbolCode}
-              pipSize={pipSize}
-              stake={stake}
-              moeda={moeda}
-              podeOperar={podeOperar}
-              logado={conta.status === 'logado'}
-              comprando={!!comprando && comprando.startsWith('DIGIT')}
-              socket={conta.socket}
-              onComprar={comprarDigito}
-              confirmando={confirmar}
-              onDesarmar={() => setConfirmar(null)}
-              motivoBloqueio={motivoBloqueio}
-            />
-          )}
+                  <ResumoDaCompra payouts={[call.payout, put.payout]} stake={stake} moeda={moeda} duracao={duration} unidade={unidade} />
+                  <p className="bl-atalho">Atalhos: <kbd>Shift</kbd> <kbd>↑</kbd> Subir · <kbd>Shift</kbd> <kbd>↓</kbd> Descer · <kbd>+</kbd> <kbd>−</kbd> valor</p>
+                </>
+              ) : (
+                <DigitsPanel
+                  symbol={symbolCode}
+                  pipSize={pipSize}
+                  stake={stake}
+                  moeda={moeda}
+                  podeOperar={podeOperar}
+                  logado={conta.status === 'logado'}
+                  comprando={!!comprando && comprando.startsWith('DIGIT')}
+                  socket={conta.socket}
+                  onComprar={comprarDigito}
+                  confirmando={confirmar}
+                  onDesarmar={() => setConfirmar(null)}
+                  motivoBloqueio={motivoBloqueio}
+                />
+              )}
+            </div>
+          </section>
 
           {aviso && (
             <p role="status" aria-live="polite"
               className={`aviso ${aviso.tipo === 'ok' ? 'aviso-ok' : 'aviso-erro'}`}>{aviso.texto}</p>
           )}
 
-          <section className={`posicoes-flutuantes posicoes-na-operacao ${posicoesAbertas ? 'aberto' : 'fechado'}`}
-            aria-label="Posições abertas">
-            <button className="pos-flutuante-topo" onClick={() => setPosicoesAbertas((aberto) => !aberto)}
-              aria-expanded={posicoesAbertas}>
-              <span><i className={minhas.length ? 'vivo' : ''} />
-                {minhas.length === 0
-                  ? 'Nenhuma posição sua'
-                  : `${minhas.length} ${minhas.length === 1 ? 'posição sua' : 'posições suas'}`}
-              </span>
-              {minhas.length > 0 && (
-                <strong className={resultadoAberto >= 0 ? 'ganho' : 'perda'}>
-                  {resultadoAberto >= 0 ? '+' : '−'}{Math.abs(resultadoAberto).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </strong>
-              )}
-              <em>{posicoesAbertas ? '−' : '+'}</em>
-            </button>
-            {posicoesAbertas && (
-              <div className="pos-flutuante-corpo">
-                {minhas.length > 0 && (
-                  <div className="pos-resumo">
-                    <span>Investido <b>{dinheiro(investido, moeda)}</b></span>
-                  </div>
-                )}
-                {!derivPronta && <div className="pos-vazio">Conecte sua Deriv para acompanhar posições.</div>}
-                {derivPronta && minhas.length === 0 && (
-                  <div className="pos-vazio">As entradas que você fizer aqui aparecem nesta lista, com o resultado.</div>
-                )}
-                {minhas.map((c) => (
-                  <PositionCard key={c.contractId} contrato={c}
-                    nomeAtivo={symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol}
-                    onEncerrar={encerrar} encerrando={vendendo === c.contractId} />
-                ))}
+          <section className="bl-posicoes" aria-label="Posições abertas">
+            {minhas.length > 1 && (
+              <div className="bl-posicoes-cab">
+                <span>{minhas.length} posições abertas<small>Investido {dinheiro(investido, moeda)}</small></span>
+                <b className={resultadoAberto >= 0 ? 'ganho' : 'perda'}>{resultadoAberto >= 0 ? '+' : '−'}{dinheiro(Math.abs(resultadoAberto), moeda)}</b>
               </div>
             )}
+            {!derivPronta && <div className="bl-posicoes-vazio">Conecte sua Deriv para acompanhar posições.</div>}
+            {derivPronta && minhas.length === 0 && (
+              <div className="bl-posicoes-vazio">As entradas que você fizer aqui aparecem nesta lista, com o resultado ao vivo.</div>
+            )}
+            {minhas.map((c) => (
+              <PositionCard key={c.contractId} contrato={c}
+                nomeAtivo={nomeDoAtivo(symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol)}
+                onEncerrar={encerrar} encerrando={vendendo === c.contractId} />
+            ))}
           </section>
         </aside>
       </div>
@@ -1294,49 +1280,5 @@ function IconeSol() {
       <circle cx="12" cy="12" r="4" />
       <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
     </svg>
-  )
-}
-
-/*
-  Os dois cartoes sao COMPRAS: compra-se um contrato de "sobe" ou um de
-  "desce". O de baixo se chamava "Vender" e o titulo era "Acima/Abaixo" — o
-  nome de outro contrato da Deriv (Higher/Lower). A mesma tela dizia
-  "Subir/Descer" na aba e "Subir" no cartao da posicao. Agora e um vocabulario
-  so, e "vender" ficou reservado para encerrar uma posicao.
-*/
-function QuoteCard(props: {
-  kind: 'up' | 'down'; title: string; action: string; payout: number | null; stake: number; moeda: string
-  loading: boolean; error: string | null; podeOperar: boolean; motivoBloqueio: string | null
-  comprando: boolean; confirmando: boolean; onBuy: () => void
-}) {
-  const {
-    kind, title, action, payout, stake, moeda, loading, error, podeOperar, motivoBloqueio,
-    comprando, confirmando, onBuy,
-  } = props
-  const lucro = payout !== null ? payout - stake : null
-  const pct = payout !== null && stake > 0 ? ((payout - stake) / stake) * 100 : null
-
-  return (
-    <div className={`quote quote-${kind}`}>
-      <div className="quote-head">
-        <span className="arrow">{kind === 'up' ? '▲' : '▼'}</span><span>{title}</span>
-        <span className="quote-rot">se ganhar</span>
-      </div>
-      {error ? <p className="quote-error" title={error}>{error}</p>
-        : loading && payout === null ? <p className="quote-loading">…</p>
-        : payout !== null ? (
-          <>
-            <strong>{dinheiro(payout, moeda)}</strong>
-            <span className="quote-sub">lucro {lucro !== null && lucro !== undefined ? dinheiro(lucro, moeda) : '—'}{pct !== null && ` · ${pct.toFixed(0)}%`}</span>
-          </>
-        ) : <p className="quote-loading">—</p>}
-      <button className={`btn ${confirmando ? 'btn-confirmar' : ''}`}
-        disabled={!podeOperar || comprando} onClick={onBuy}>
-        {comprando ? 'comprando…'
-          : motivoBloqueio ? motivoBloqueio
-          : confirmando ? 'Confirmar (dinheiro real)'
-          : `${action} · ${title}`}
-      </button>
-    </div>
   )
 }
