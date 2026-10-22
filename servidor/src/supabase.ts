@@ -1,7 +1,7 @@
 import './ambiente'
 import { createHash } from 'node:crypto'
 import { emailDeDemonstracao } from '../../src/core/deriv/accountAccess'
-import { emailReal } from '../../src/core/teeds/emailDaConta'
+import { emailReal, marcaDaConta } from '../../src/core/teeds/emailDaConta'
 
 /**
  * Espelha no Supabase tudo que o robô faz.
@@ -401,12 +401,12 @@ export async function limparSessoesOrfas(): Promise<void> {
  * ------------------------------------------------------------------ */
 const CRACHA_LEMBRADO_MS = 60_000
 const CRACHAS_NO_MAXIMO = 5_000
-const crachasConferidos = new Map<string, { dono: { id: string; email: string }; ate: number }>()
+const crachasConferidos = new Map<string, { dono: { id: string; email: string; marca?: string }; ate: number }>()
 
 export async function usuarioDoToken(
   token: string,
-  opcoes: { lembrar?: boolean; agora?: () => number; conferir?: (token: string) => Promise<{ id: string; email: string } | null> } = {},
-): Promise<{ id: string; email: string } | null> {
+  opcoes: { lembrar?: boolean; agora?: () => number; conferir?: (token: string) => Promise<{ id: string; email: string; marca?: string } | null> } = {},
+): Promise<{ id: string; email: string; marca?: string } | null> {
   if (!token) return null
   const agora = (opcoes.agora ?? Date.now)()
   const digital = createHash('sha256').update(token).digest('hex')
@@ -427,7 +427,7 @@ export async function usuarioDoToken(
   return dono
 }
 
-async function conferirNoSupabase(token: string): Promise<{ id: string; email: string } | null> {
+async function conferirNoSupabase(token: string): Promise<{ id: string; email: string; marca?: string } | null> {
   if (!URL_BASE) return null
   try {
     const res = await fetch(`${URL_BASE}/auth/v1/user`, {
@@ -435,7 +435,8 @@ async function conferirNoSupabase(token: string): Promise<{ id: string; email: s
     })
     if (!res.ok) return null
     const u = (await res.json()) as any
-    return u?.id ? { id: String(u.id), email: emailReal(u.email) } : null
+    // a marca sai da etiqueta do login (+marca-globalfly...): a trava de demo pode valer só numa marca
+    return u?.id ? { id: String(u.id), email: emailReal(u.email), marca: marcaDaConta(u.email) } : null
   } catch {
     return null
   }
@@ -451,8 +452,8 @@ async function conferirNoSupabase(token: string): Promise<{ id: string; email: s
  * (onde e cliente comum) — com operacao real liberada. A trava agora e do
  * e-mail, em qualquer marca: uma consulta a menos e nenhuma brecha por cargo.
  */
-export function somenteDemoDoUsuario(dono: { email: string }): boolean {
-  return emailDeDemonstracao(dono.email)
+export function somenteDemoDoUsuario(dono: { email: string; marca?: string }): boolean {
+  return emailDeDemonstracao(dono.email, dono.marca)
 }
 
 /** As contas Deriv que este usuário Teeds registrou. */

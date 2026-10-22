@@ -27,6 +27,8 @@ interface Props {
   configInicial: ConfigEstrategia
   moeda: string
   isDemo: boolean
+  /** Acesso de demonstração: a conta virtual se apresenta como real (sem textos de demo). */
+  demoComoReal?: boolean
   contaId?: string | null
   escolherModelo?: boolean
   onCancelar: () => void
@@ -194,7 +196,7 @@ function MostradorDeDigitos({ valor, mudar, max, padrao }: { valor: number; muda
   )
 }
 
-export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
+export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, demoComoReal = false, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
   const disponiveis = useRobosDisponiveis()
   // Escolhido no cartão da vitrine/home: o preparo já abre nele (a escolha continua a um "Voltar").
   // (lê sem apagar: o React de desenvolvimento chama esta função duas vezes; apaga depois de montar)
@@ -458,7 +460,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
                   <span className="plv-info-rot"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 11H2z" /><path d="M8 6.5v3M8 11.5v.01" /></svg>Antes de decolar</span>
                   <p>A recuperação pode aumentar o valor das entradas. Os robôs desta conta compartilham o saldo. Não há garantia de lucro.</p>
                 </section>
-                {isDemo && dados?.testeDemo && <section><p>Este robô roda uma regra em teste nas contas demo.</p></section>}
+                {isDemo && !demoComoReal && dados?.testeDemo && <section><p>Este robô roda uma regra em teste nas contas demo.</p></section>}
               </div>
               {!isDemo && (
                 <label className={`plv-real ${confirmaReal ? 'ok' : ''}`}>

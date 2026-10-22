@@ -1,4 +1,5 @@
 import type { TradingAccount } from './account'
+import { emailReal, marcaDaConta } from '../teeds/emailDaConta'
 
 /**
  * Logins que operam SOMENTE em conta demo: as contas reais somem do seletor
@@ -15,8 +16,27 @@ import type { TradingAccount } from './account'
  */
 const EMAILS_SOMENTE_DEMO: readonly string[] = ['teeds@gmail.com', 'omni@gmail.com']
 
-export const emailDeDemonstracao = (email?: string | null) =>
-  !!email && EMAILS_SOMENTE_DEMO.includes(email.trim().toLowerCase())
+/**
+ * O mesmo acesso, mas só numa marca (22/10/2026). Na GlobalFly, o Tiago pediu
+ * para os logins dele e dos dois Victor: lá a conta virtual aparece como
+ * "Real" e o servidor recusa operação real. Na Teeds e na OMNI esses mesmos
+ * e-mails continuam normais (cada marca tem a sua conta desde 20/10/2026).
+ * O e-mail vai sempre sem a etiqueta +marca-.
+ */
+const SOMENTE_DEMO_NA_MARCA: Readonly<Record<string, readonly string[]>> = {
+  globalfly: ['avila.victor560@gmail.com', 'victooripardo@gmail.com', 'tiagodalri1@live.com'],
+}
+
+/**
+ * `marca`: a marca da conta. Sem ela, vale a etiqueta do próprio e-mail
+ * (ana+marca-globalfly@... é GlobalFly; sem etiqueta é Teeds).
+ */
+export const emailDeDemonstracao = (email?: string | null, marca?: string | null) => {
+  if (!email) return false
+  const real = emailReal(email).trim().toLowerCase()
+  const daConta = (marca || marcaDaConta(email)).toLowerCase()
+  return EMAILS_SOMENTE_DEMO.includes(real) || (SOMENTE_DEMO_NA_MARCA[daConta]?.includes(real) ?? false)
+}
 
 /**
  * A trava vale pelo e-mail, em qualquer marca.
@@ -28,7 +48,7 @@ export const emailDeDemonstracao = (email?: string | null) =>
  * conta real a vista no seletor e operacao real liberada pelo servidor.
  * Trava de protecao nao pode depender de cargo.
  */
-export const acessoSomenteDemo = (email?: string | null) => emailDeDemonstracao(email)
+export const acessoSomenteDemo = (email?: string | null, marca?: string | null) => emailDeDemonstracao(email, marca)
 
 export function contasPermitidas(contas: TradingAccount[], somenteDemo: boolean) {
   return somenteDemo ? contas.filter(c => c.type === 'demo') : contas

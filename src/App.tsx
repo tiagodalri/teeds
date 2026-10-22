@@ -152,6 +152,9 @@ export default function App() {
   const [mostrarColuna, alterarColuna] = usePreferenciaColuna(teeds.sessao?.usuario.id ?? null, adminConfirmado)
   const simulador = useSimulador(teeds.sessao)
   const conta = useAccount({ email: teeds.sessao?.usuario.email, simulador: adminConfirmado || simulador, tokenTeeds: teeds.sessao?.token })
+  // Acesso somente-demo (demonstração): a conta virtual se apresenta como real nas telas
+  // do próprio cliente. Só a tela muda: as operações continuam indo para a conta virtual.
+  const contasParaMostrar = conta.somenteDemo ? conta.accounts.map((c) => ({ ...c, type: 'real' })) : conta.accounts
   // sair é sair de tudo: a autorização da Deriv deste aparelho sai junto com a conta
   const sairDeTudo = () => {
     conta.logout()
@@ -888,7 +891,7 @@ export default function App() {
       </header>
 
       {MARCA.inicio && teeds.sessao && tela !== 'robos' && (
-        <MiniCabine sessoes={vivasRobos} sessao={teeds.sessao} demo={conta.status === 'logado' ? conta.isDemo : undefined} aoAbrirCabine={() => setTela('robos')}
+        <MiniCabine sessoes={vivasRobos} sessao={teeds.sessao} demo={conta.status === 'logado' ? conta.isDemo : undefined} demoComoReal={conta.somenteDemo} aoAbrirCabine={() => setTela('robos')}
           aoParar={async (id) => { if (teeds.sessao) await pararNoServidor(teeds.sessao, id) }} />
       )}
       {MARCA.inicio && teeds.sessao && <BarraInferior tela={tela} aoVivoAgora={aoVivoAgora} irPara={(t) => { setVerPerfil(false); setTela(t) }} />}
@@ -910,7 +913,7 @@ export default function App() {
       {verPerfil && teeds.sessao && (
         <ProfilePanel
           sessao={teeds.sessao}
-          contas={conta.accounts}
+          contas={contasParaMostrar}
           derivConectada={conta.status === 'logado'}
           onConectarDeriv={conta.login}
           onAtualizar={teeds.atualizarUsuario}
@@ -968,6 +971,7 @@ export default function App() {
           socket={conta.socket}
           logado={conta.status === 'logado'}
           isDemo={conta.isDemo}
+          demoComoReal={conta.somenteDemo}
           moeda={conta.account?.currency ?? 'USD'}
           symbols={symbols}
           symbolPadrao={symbolCode}
@@ -1005,13 +1009,13 @@ export default function App() {
       {tela === 'robos' || tela === 'assistente' ? null : tela === 'inicio' && MARCA.inicio ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o início…</div></div>}>
           <InicioPagina sessao={teeds.sessao} nome={teeds.usuario?.nome || ''}
-            conta={{ conectada: conta.status === 'logado', demo: conta.isDemo, saldo: conta.balance ? conta.balance.amount : null, moeda: conta.account?.currency ?? 'USD' }}
+            conta={{ conectada: conta.status === 'logado', demo: conta.isDemo && !conta.somenteDemo, saldo: conta.balance ? conta.balance.amount : null, moeda: conta.account?.currency ?? 'USD' }}
             treino={membroTreino === true && admin !== true ? { noAr: !!treinoAgora, apresentador: treinoAgora?.apresentador ?? undefined } : null}
             aoIr={setTela} aoConectar={conta.login} vivas={teeds.sessao ? vivasRobos : undefined} />
         </Suspense>
       ) : tela === 'perfil' && MARCA.inicio && teeds.sessao ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo seu perfil…</div></div>}>
-          <MeuPerfil sessao={teeds.sessao} contas={conta.accounts} derivConectada={conta.status === 'logado'} onConectarDeriv={conta.login}
+          <MeuPerfil sessao={teeds.sessao} contas={contasParaMostrar} derivConectada={conta.status === 'logado'} onConectarDeriv={conta.login}
             onMudou={({ nome, fotoUrl }) => { setFotoPerfil(fotoUrl); if (teeds.usuario) teeds.atualizarUsuario({ ...teeds.usuario, nome }) }} />
         </Suspense>
       ) : tela === 'ajuda' && MARCA.suporte ? (

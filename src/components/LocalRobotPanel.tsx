@@ -18,6 +18,8 @@ import { MARCA } from '../marca'
 interface Props {
   socket: TeedsSocket | null
   isDemo: boolean
+  /** Acesso de demonstração: a conta virtual se apresenta como real (sem textos de demo). */
+  demoComoReal?: boolean
   moeda: string
   symbols: ActiveSymbol[]
   symbolPadrao: string | null
@@ -78,7 +80,7 @@ const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export function LocalRobotPanel({
-  socket, isDemo, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
+  socket, isDemo, demoComoReal = false, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
   onRemover, titulo, expandido = false, onExpandir, onSessaoChange, sessaoTeeds, contaId,
   adotar, solicitarPreparo = false, onFecharPreparo, onDigitos, digitosAberto = false,
   mostrarMarkup = false, apresentacao = 'aberta', onAbrir, idEstudo, onEstudo,
@@ -377,6 +379,7 @@ export function LocalRobotPanel({
     configInicial={cfg}
     moeda={moeda}
     isDemo={contaDaSessao?.demo ?? isDemo}
+    demoComoReal={demoComoReal}
     contaId={contaDaSessao?.contaId ?? contaId}
     escolherModelo={solicitarPreparo}
     ligando={ligando}

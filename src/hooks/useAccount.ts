@@ -8,6 +8,7 @@ import { fetchAccounts, fetchTradingSocketUrl, resetDemoBalance, type TradingAcc
 import { TeedsSocket } from '../core/deriv/client'
 import type { ConnectionState } from '../core/deriv/types'
 import { acessoSomenteDemo, contasPermitidas } from '../core/deriv/accountAccess'
+import { MARCA } from '../marca'
 import { limparCacheOperacoes } from '../core/deriv/history'
 import {
   assinarContratos, fetchPortfolio, subscribeBalance, subscribeTransactions,
@@ -26,8 +27,9 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
   const [session, setSession] = useState<AuthSession | null>(null)
   const [accounts, setAccounts] = useState<TradingAccount[]>([])
   const [chosenAccountId, setChosenAccountId] = useState<string | null>(null)
-  const somenteDemo = acessoSomenteDemo(acesso.email)
-  const permitidas = contasPermitidas(accounts, somenteDemo).filter(c => c.type !== 'demo' || acesso.simulador === true)
+  const somenteDemo = acessoSomenteDemo(acesso.email, MARCA.id)
+  // quem é somente-demo opera na conta virtual mesmo sem o plano do simulador: senão ficaria sem conta nenhuma
+  const permitidas = contasPermitidas(accounts, somenteDemo).filter(c => c.type !== 'demo' || acesso.simulador === true || somenteDemo)
   // Nunca migra automaticamente de dinheiro fictício para dinheiro real.
   const account = permitidas.find(c => c.accountId === chosenAccountId) ?? null
   const accountId = account?.accountId ?? null

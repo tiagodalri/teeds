@@ -30,6 +30,8 @@ interface Props {
   socket: TeedsSocket | null
   logado: boolean
   isDemo: boolean
+  /** Acesso de demonstração: a conta virtual se apresenta como real (sem textos de demo). */
+  demoComoReal?: boolean
   moeda: string
   symbols: ActiveSymbol[]
   symbolPadrao: string | null
@@ -58,7 +60,7 @@ let preparoPedido = false
 export function pedirPreparo(): void { preparoPedido = true; window.dispatchEvent(new Event('robos:preparar')) }
 
 export function RobotsPanel({
-  socket, logado, isDemo, moeda, symbols, symbolPadrao, conexao = 'open',
+  socket, logado, isDemo, demoComoReal = false, moeda, symbols, symbolPadrao, conexao = 'open',
   entrandoNaDeriv = false, onConectarDeriv, sessaoTeeds, contaId, admin = false, mostrarMarkup = false, onSessoesVivas,
 }: Props) {
   // Modo CEO: cada bloco entrega aqui os números da sessão dele.
@@ -387,7 +389,7 @@ export function RobotsPanel({
             <div key={v.id} className={`rob-board-slot ${apresentacaoDe(v.id) === 'aberta' ? 'aberta' : ''}`}>
             <LocalRobotPanel
               titulo={`#${i + 1}`}
-              socket={socket} isDemo={v.demo} moeda={v.moeda}
+              socket={socket} isDemo={v.demo} demoComoReal={demoComoReal} moeda={v.moeda}
               symbols={symbols} symbolPadrao={symbolPadrao}
               identidade={identidade(v.roboId)}
               conexao={conexao}
@@ -411,7 +413,7 @@ export function RobotsPanel({
             hidden={!sessoesLocais.has(idBloco)}>
             <LocalRobotPanel
               titulo={`#${doChat.length + Math.max(0, blocosComSessao.indexOf(idBloco)) + 1}`}
-              socket={socket} isDemo={isDemo} moeda={moeda}
+              socket={socket} isDemo={isDemo} demoComoReal={demoComoReal} moeda={moeda}
               symbols={symbols} symbolPadrao={symbolPadrao} identidade={ident}
               conexao={conexao}
               sessaoTeeds={sessaoTeeds} contaId={contaId}

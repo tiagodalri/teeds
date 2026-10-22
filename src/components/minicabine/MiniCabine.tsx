@@ -32,6 +32,8 @@ interface Props {
   aoParar?: (id: string) => Promise<void> | void
   /** A conta escolhida no topo: o total soma só ela (demo e real nunca se misturam). */
   demo?: boolean
+  /** Acesso de demonstração: a sessão na conta virtual aparece como "Real". */
+  demoComoReal?: boolean
 }
 
 type Aviso = { id: string; nome: string; tipo: 'meta' | 'limite' | 'fim'; texto: string; valor: string }
@@ -91,7 +93,7 @@ function Anel({ pct }: { pct: number }) {
   )
 }
 
-export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo }: Props) {
+export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo, demoComoReal = false }: Props) {
   const ocultos = useValoresOcultos()
   const [aberta, setAberta] = useState(lerAberta)
   const [pos, setPos] = useState<Posicao | null>(lerPos)
@@ -244,7 +246,7 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo }: Pr
                     <img src={`${import.meta.env.BASE_URL}robos-globalfly/${s.roboId}-pequena.webp`} alt="" decoding="async" onError={(ev) => { ev.currentTarget.style.visibility = 'hidden' }} />
                     <span className="mcb-robo-nome">
                       <b><NomeDoRobo nome={s.roboNome} /></b>
-                      <small className={e.emOperacao ? 'operando' : 'analisando'}><i aria-hidden="true" />{e.emOperacao ? 'Em operação' : (() => { const k = contagemDoEstado(e); return k && !k.sequencia ? `Analisando ${k.n}/${k.alvo}` : 'Analisando o mercado' })()} · {s.demo ? 'Demo' : 'Real'}</small>
+                      <small className={e.emOperacao ? 'operando' : 'analisando'}><i aria-hidden="true" />{e.emOperacao ? 'Em operação' : (() => { const k = contagemDoEstado(e); return k && !k.sequencia ? `Analisando ${k.n}/${k.alvo}` : 'Analisando o mercado' })()} · {s.demo && !demoComoReal ? 'Demo' : 'Real'}</small>
                     </span>
                     <span className="mcb-robo-res">
                       <b className={ocultos ? '' : e.resultado >= 0 ? 'sobe' : 'cai'}>{v(e.resultado)}</b>
