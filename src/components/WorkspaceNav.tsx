@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Brand } from './Brand'
 import { MARCA } from '../marca'
 import './workspace.css'
+import { RelogioTopo } from './RelogioTopo'
 
 export type WorkspacePage = 'inicio' | 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo' | 'noticias' | 'perfil' | 'ajuda'
 export const PAGE_NAMES: Record<WorkspacePage, string> = { inicio: 'Início', operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', perfil: 'Meu perfil', ajuda: 'Ajuda', ...(MARCA.menu?.nomes ?? {}) }
@@ -53,6 +54,8 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mos
         <p className="workspace-label">Explore</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{MARCA.noticias && item('noticias')}{item('marketplace')}{item('aulas')}{MARCA.suporte && item('ajuda')}
         {admin && <div className="workspace-admin">{item('gestao')}</div>}
       </nav>
+      {/* no celular o topo não tem espaço: a data e a hora ficam no pé do menu */}
+      <RelogioTopo className="no-menu" />
       <button className="workspace-collapse" onClick={() => setCompact(!compact)} aria-label={compact ? 'Expandir menu' : 'Recolher menu'} aria-expanded={!compact}>{compact ? '»' : '«'}<span className="workspace-label"> Recolher menu</span></button>
     </aside>
   </>

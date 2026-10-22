@@ -164,3 +164,25 @@
 .aviso-treino-texto b { font-weight: 800; }
 @media (max-width: 540px) { .aviso-treino .aviso-treino-texto { font-size: 12.5px; line-height: 1.3; } .aviso-treino .aviso-treino-texto b { display: inline; } }
 @media (prefers-reduced-motion: reduce) { .selo-tv i, .selo-tv i::after, .aviso-tv-selo i { animation: none; } .aviso-tv { animation: none; } }
+
+/* ------------------------------------------------ data e hora de Brasília (22/10/2026)
+   Um selo calmo ao lado da conta: data em cinza, hora em destaque nos
+   numerais da casa (tabulares, não "pulam" a cada segundo). */
+.relogio-topo {
+  display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; flex: none;
+  border: 1px solid var(--border); border-radius: 10px; background: transparent;
+  color: var(--muted); font-size: 12.5px; white-space: nowrap; user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+.relogio-topo svg { width: 15px; height: 15px; flex: none; fill: none; stroke: var(--gf-ouro, var(--primary)); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.relogio-topo .relogio-hora { color: var(--text); font-family: var(--fonte-dados, inherit); font-size: 14px; font-weight: 700; letter-spacing: .01em; }
+.relogio-topo small { padding-left: 8px; border-left: 1px solid var(--border); font-size: 9.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+/* no topo só no computador; com a tela apertando, sai primeiro o rótulo, depois a data */
+.relogio-topo.no-menu { display: none; }
+@media (max-width: 1480px) { .topbar-right > .relogio-topo small { display: none; } }
+@media (max-width: 1240px) { .topbar-right > .relogio-topo .relogio-data { display: none; } }
+@media (max-width: 1060px) { .topbar-right > .relogio-topo { display: none; } }
+/* celular: no pé do menu lateral, largo, com a data inteira */
+@media (max-width: 900px) {
+  .workspace-sidebar .relogio-topo.no-menu { display: flex; justify-content: center; margin: 4px 12px 10px; height: 40px; }
+}
