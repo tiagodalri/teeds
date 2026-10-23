@@ -2,10 +2,17 @@ import { MARCA } from '../../marca'
 import type { Aula, Modulo } from './aulas'
 
 /* Pedido de 16/10/2026: a vitrine da GlobalFly já aparece, com as capas.
-   Aula sem vídeo mostra "Em breve" e abre os detalhes; nenhum vídeo de
-   demonstração de outra marca entra aqui. */
+   23/10/2026 (Tiago): enquanto os vídeos certos não chegam, toda aula abre
+   com um vídeo de exemplo em MP4 (o trailer aberto do Sintel, da Blender,
+   sem marca nenhuma) e um material de exemplo, para ver o player, os
+   downloads e o controle de quem assistiu funcionando. Quando o vídeo de
+   verdade é publicado no painel, ele toma o lugar do exemplo. */
 export const SALA_EM_BREVE = false
-export const DEMONSTRACAO_EM_AULA_SEM_VIDEO = false
+export const DEMONSTRACAO_EM_AULA_SEM_VIDEO = true
+export const VIDEOS_DE_EXEMPLO: string[] = ['https://download.blender.org/durian/trailer/sintel_trailer-480p.mp4']
+export const MATERIAIS_DE_EXEMPLO: Array<{ nome: string; url: string; tipo?: string; tamanho?: number }> = [
+  { nome: 'Material de apoio da aula (exemplo)', url: `${import.meta.env.BASE_URL}aulas-globalfly/material-de-exemplo.pdf`, tipo: 'PDF' },
+]
 
 /**
  * O treinamento da GlobalFly Trade: a grade final do Tiago (19/10/2026),

@@ -1,0 +1,6 @@
+-- Aplicada pelo MCP em 23/10/2026 (nome: aulas_materiais_e_controle_por_aluno).
+-- Materiais para baixar em cada aula (coluna aulas_videos.materiais + bucket
+-- 'materiais'), a duração do vídeo no progresso (para o % realmente
+-- assistido) e a consulta teeds_aulas_controle(p_marca) para o admin ver
+-- quem assistiu cada aula. O texto completo está no histórico de migrações
+-- do Supabase do projeto.

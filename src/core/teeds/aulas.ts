@@ -18,6 +18,18 @@ export interface Aula {
   video: string
   /** Ex.: "4 min". Pode ficar vazio ate o video existir. */
   duracao: string
+  /** Arquivos para baixar junto da aula (e-book, planilha, PDF). */
+  materiais?: Material[]
+}
+
+/** Um arquivo para baixar na aula: o nome do botão e o endereço do arquivo. */
+export interface Material {
+  nome: string
+  url: string
+  /** Caminho no bucket `materiais`, quando foi enviado pelo painel. */
+  arquivo?: string
+  tipo?: string
+  tamanho?: number
 }
 
 export interface Modulo {
@@ -38,7 +50,12 @@ export const VIDEO_DEMONSTRACAO = 'https://www.youtube.com/watch?v=M7lc1UVf-VE'
   progresso continuam aqui, iguais para todas.
 */
 export { MODULOS, SALA_EM_BREVE } from './modulosAulas'
-import { DEMONSTRACAO_EM_AULA_SEM_VIDEO, MODULOS } from './modulosAulas'
+import { DEMONSTRACAO_EM_AULA_SEM_VIDEO, MATERIAIS_DE_EXEMPLO, MODULOS, VIDEOS_DE_EXEMPLO } from './modulosAulas'
+
+/** O vídeo de exemplo que entra numa aula sem vídeo (o da marca, se houver; senão o demonstrativo). */
+const exemplo = (n: number) => (VIDEOS_DE_EXEMPLO.length ? VIDEOS_DE_EXEMPLO[(n - 1) % VIDEOS_DE_EXEMPLO.length] : VIDEO_DEMONSTRACAO)
+/** É um vídeo de exemplo (não o da aula de verdade)? */
+export const ehVideoDeExemplo = (video: string) => video === VIDEO_DEMONSTRACAO || VIDEOS_DE_EXEMPLO.includes(video)
 
 /* ------------------------------------------------------------ numeração */
 
@@ -59,6 +76,7 @@ export interface SobreposicaoDaAula {
   titulo?: string | null
   descricao?: string | null
   publicado?: boolean
+  materiais?: Material[]
 }
 
 /**
@@ -74,12 +92,16 @@ export function todasAsAulas(videos: Record<string, SobreposicaoDaAula> = {}): A
     for (const a of m.aulas) {
       const gravado = videos[a.id]
       const vivo = gravado && gravado.publicado !== false && gravado.video.trim() ? gravado : null
+      const video = vivo?.video || a.video || (DEMONSTRACAO_EM_AULA_SEM_VIDEO ? exemplo(n) : '')
+      const doPainel = gravado && gravado.publicado !== false ? gravado.materiais ?? [] : []
       lista.push({
         ...a,
         titulo: vivo?.titulo || a.titulo,
         descricao: vivo?.descricao || a.descricao,
-        video: vivo?.video || a.video || (DEMONSTRACAO_EM_AULA_SEM_VIDEO ? VIDEO_DEMONSTRACAO : ''),
-        duracao: vivo?.duracao || a.duracao || (DEMONSTRACAO_EM_AULA_SEM_VIDEO ? 'Vídeo demonstrativo' : ''),
+        video,
+        duracao: vivo?.duracao || a.duracao || (DEMONSTRACAO_EM_AULA_SEM_VIDEO ? 'Vídeo de exemplo' : ''),
+        // os materiais do painel; numa aula ainda de exemplo, os materiais de exemplo da marca
+        materiais: doPainel.length ? doPainel : a.materiais?.length ? a.materiais : ehVideoDeExemplo(video) ? MATERIAIS_DE_EXEMPLO : [],
         numero: n++, modulo: m,
       })
     }

@@ -19,6 +19,7 @@
 import { SUPABASE, autenticacaoConfigurada } from './config'
 import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
+import type { Material } from './aulas'
 
 export interface VideoDaAula {
   aulaId: string
@@ -29,6 +30,8 @@ export interface VideoDaAula {
   publicado: boolean
   /** Caminho no bucket, quando o vídeo foi enviado (e não linkado). */
   arquivo: string | null
+  /** Os arquivos para baixar na aula (bucket `materiais`). */
+  materiais: Material[]
   atualizadoEm: string
 }
 
@@ -56,6 +59,7 @@ function daLinha(l: any): VideoDaAula {
     aulaId: l.aula_id, video: l.video ?? '', duracao: l.duracao ?? '',
     titulo: l.titulo || null, descricao: l.descricao || null,
     publicado: Boolean(l.publicado), arquivo: l.arquivo || null, atualizadoEm: l.atualizado_em,
+    materiais: Array.isArray(l.materiais) ? (l.materiais as Material[]).filter((m) => m && m.url && m.nome) : [],
   }
 }
 
@@ -83,7 +87,7 @@ export async function listarVideosDasAulas(sessao: SessaoTeeds | null | undefine
 /** Grava (ou atualiza) o vídeo de uma aula desta marca. Só admin passa pelo RLS. */
 export async function salvarVideoDaAula(
   sessao: SessaoTeeds,
-  dados: { aulaId: string; video: string; duracao: string; titulo?: string | null; descricao?: string | null; publicado: boolean; arquivo?: string | null },
+  dados: { aulaId: string; video: string; duracao: string; titulo?: string | null; descricao?: string | null; publicado: boolean; arquivo?: string | null; materiais?: Material[] },
 ): Promise<void> {
   await rest('/aulas_videos?on_conflict=marca,aula_id', sessao.token, {
     method: 'POST',
@@ -97,6 +101,7 @@ export async function salvarVideoDaAula(
       descricao: dados.descricao?.trim() || null,
       publicado: dados.publicado,
       arquivo: dados.arquivo ?? null,
+      ...(dados.materiais ? { materiais: dados.materiais } : {}),
       atualizado_em: new Date().toISOString(),
       atualizado_por: sessao.usuario.id,
     }),
@@ -173,6 +178,77 @@ export async function apagarArquivo(sessao: SessaoTeeds, caminho: string): Promi
     throw new Error(corpo?.message || `Erro ${res.status} ao apagar o arquivo`)
   }
 }
+
+/* ------------------------------------------------------------- materiais */
+
+const BUCKET_MATERIAIS = 'materiais'
+/** O limite de cada material (o do bucket): 50 MB. */
+export const LIMITE_MATERIAL_MB = 50
+
+/** Envia um material da aula (PDF, planilha, e-book) para o bucket `materiais`, na pasta da marca. */
+export async function enviarMaterial(sessao: SessaoTeeds, aulaId: string, arquivo: File): Promise<Material> {
+  const caminho = `${MARCA.id}/${aulaId}/${Date.now().toString(36)}-${nomeSeguro(arquivo.name)}`
+  const res = await fetch(`${SUPABASE.url}/storage/v1/object/${BUCKET_MATERIAIS}/${caminho.split('/').map(encodeURIComponent).join('/')}`, {
+    method: 'POST',
+    headers: { ...cabecalhos(sessao.token), 'Content-Type': arquivo.type || 'application/octet-stream', 'x-upsert': 'true' },
+    body: arquivo,
+  })
+  if (!res.ok) {
+    const corpo = await res.json().catch(() => ({}))
+    if (res.status === 413) throw new Error(`O arquivo passa de ${LIMITE_MATERIAL_MB} MB.`)
+    if (/mime/i.test(corpo?.message ?? '')) throw new Error('Esse tipo de arquivo não é aceito. Use PDF, planilha, documento, apresentação, imagem, ZIP ou e-book.')
+    throw new Error(corpo?.message || `Erro ${res.status} ao enviar o material`)
+  }
+  const extensao = (arquivo.name.split('.').pop() ?? '').toUpperCase()
+  return {
+    nome: arquivo.name.replace(/\.[^.]+$/, ''),
+    url: `${SUPABASE.url}/storage/v1/object/public/${BUCKET_MATERIAIS}/${caminho.split('/').map(encodeURIComponent).join('/')}`,
+    arquivo: caminho, tipo: extensao, tamanho: arquivo.size,
+  }
+}
+
+/** Apaga um material enviado (o registro da aula é atualizado à parte). */
+export async function apagarMaterial(sessao: SessaoTeeds, caminho: string): Promise<void> {
+  const res = await fetch(`${SUPABASE.url}/storage/v1/object/${BUCKET_MATERIAIS}/${caminho.split('/').map(encodeURIComponent).join('/')}`, {
+    method: 'DELETE', headers: cabecalhos(sessao.token),
+  })
+  if (!res.ok && res.status !== 404) throw new Error(`Erro ${res.status} ao apagar o material`)
+}
+
+/** "2,4 MB" */
+export const tamanhoLegivel = (bytes?: number) => !bytes ? '' : bytes < 1048576 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1048576).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`
+
+/* --------------------------------------------------- quem assistiu (admin) */
+
+export interface AssistiuAula {
+  aulaId: string
+  userId: string
+  nome: string
+  email: string
+  plano: string
+  aberturas: number
+  /** Segundos realmente assistidos (avançar o vídeo não conta). */
+  segundos: number
+  duracaoSeg: number
+  /** Até onde chegou no vídeo (0 a 1). */
+  posicaoMax: number
+  concluida: boolean
+  primeiraVez: string
+  ultimaVez: string
+}
+
+/** Cada aula desta marca com quem abriu, quanto assistiu e se concluiu. Só admin. */
+export async function controleDasAulas(sessao: SessaoTeeds): Promise<AssistiuAula[]> {
+  const linhas = await rest<any[]>('/rpc/teeds_aulas_controle', sessao.token, { method: 'POST', body: JSON.stringify({ p_marca: MARCA.id }) })
+  return (linhas ?? []).map((l) => ({
+    aulaId: l.aula_id, userId: l.user_id, nome: l.nome ?? '', email: l.email ?? '', plano: l.plano ?? '',
+    aberturas: l.aberturas ?? 0, segundos: l.segundos ?? 0, duracaoSeg: l.duracao_seg ?? 0,
+    posicaoMax: Number(l.posicao_max ?? 0), concluida: Boolean(l.concluida), primeiraVez: l.primeira_vez, ultimaVez: l.ultima_vez,
+  }))
+}
+
+/** Quanto da aula a pessoa de fato assistiu (0 a 1): segundos assistidos ÷ duração, nunca acima de 1. */
+export const fracaoAssistida = (a: Pick<AssistiuAula, 'segundos' | 'duracaoSeg'>) => (a.duracaoSeg > 0 ? Math.min(1, a.segundos / a.duracaoSeg) : 0)
 
 /* ------------------------------------------------------------ utilidades */
 

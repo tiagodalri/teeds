@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
-import { MODULOS, todasAsAulas } from '../core/teeds/aulas'
+import { ehVideoDeExemplo, MODULOS, todasAsAulas } from '../core/teeds/aulas'
 import {
   horasLegiveis, idiomaLegivel, lerAcessosPorDia, lerAcessosPorHora, lerAlunos, lerAulas, lerDispositivos, lerLocalizacoes,
   lerOrigens, lerResumo, lerVisitas, lerVisitasPorDia, lugarDoFuso, nomeDaOrigem,
@@ -262,7 +262,7 @@ export function InsightsPanel({ sessao, mostrarMarkup = false, onMostrarMarkup }
                 const x = porAula.get(a.id)
                 return (
                   <div key={a.id} className={`ins-linha ${x ? '' : 'vazia'}`}>
-                    <span className="ins-aula-nome"><i>{String(a.numero).padStart(2, '0')}</i><b>{a.titulo}</b>{a.duracao === 'Vídeo demonstrativo' && <small>sem vídeo próprio</small>}</span>
+                    <span className="ins-aula-nome"><i>{String(a.numero).padStart(2, '0')}</i><b>{a.titulo}</b>{ehVideoDeExemplo(a.video) && <small>sem vídeo próprio</small>}</span>
                     <span>{x ? inteiro(x.pessoas) : '—'}</span>
                     <span>{x ? inteiro(x.aberturas) : '—'}</span>
                     <span>{x ? horasLegiveis(x.segundos) : '—'}</span>

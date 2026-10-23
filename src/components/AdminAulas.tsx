@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { MODULOS, playerDoVideo, todasAsAulas, type AulaNumerada } from '../core/teeds/aulas'
 import {
-  apagarArquivo, duracaoDoArquivo, duracaoLegivel, ehArquivoNosso, enviarArquivoDaAula, listarVideosDasAulas,
-  removerVideoDaAula, salvarVideoDaAula, type VideoDaAula,
+  apagarArquivo, apagarMaterial, controleDasAulas, duracaoDoArquivo, duracaoLegivel, ehArquivoNosso, enviarArquivoDaAula, enviarMaterial,
+  fracaoAssistida, LIMITE_MATERIAL_MB, listarVideosDasAulas, removerVideoDaAula, salvarVideoDaAula, tamanhoLegivel, type AssistiuAula, type VideoDaAula,
 } from '../core/teeds/aulasVideos'
+import type { Material } from '../core/teeds/aulas'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { Icone } from './Icone'
@@ -33,6 +34,7 @@ interface Form {
   publicado: boolean
   /** O caminho do arquivo no bucket, se o vídeo atual (ou o recém-enviado) veio de upload. */
   arquivo: string | null
+  materiais: Material[]
 }
 
 export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
@@ -41,16 +43,27 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
   const [erro, setErro] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState<string | null>(null)
   const [aberta, setAberta] = useState<AulaNumerada | null>(null)
-  const [form, setForm] = useState<Form>({ video: '', duracao: '', titulo: '', descricao: '', publicado: true, arquivo: null })
+  const [form, setForm] = useState<Form>({ video: '', duracao: '', titulo: '', descricao: '', publicado: true, arquivo: null, materiais: [] })
   const [salvando, setSalvando] = useState(false)
   const [envio, setEnvio] = useState<{ nome: string; fracao: number; cancelar: () => void } | null>(null)
   const [arquivoAntigo, setArquivoAntigo] = useState<string | null>(null)
   const entradaArquivo = useRef<HTMLInputElement>(null)
+  const entradaMaterial = useRef<HTMLInputElement>(null)
+  const [enviandoMaterial, setEnviandoMaterial] = useState(false)
+  /** Os materiais que estavam salvos ao abrir: o que sair da lista é apagado do bucket ao salvar. */
+  const [materiaisAntigos, setMateriaisAntigos] = useState<Material[]>([])
+  // quem assistiu cada aula (aulas_progresso), para o controle do admin
+  const [controle, setControle] = useState<AssistiuAula[]>([])
+  const [abaModal, setAbaModal] = useState<'conteudo' | 'alunos'>('conteudo')
+  const [busca, setBusca] = useState('')
 
   const catalogo = todasAsAulas()
   const carregar = async () => {
     setCarregando(true)
-    try { setVideos(await listarVideosDasAulas(sessao)) }
+    try {
+      setVideos(await listarVideosDasAulas(sessao))
+      setControle(await controleDasAulas(sessao).catch(() => []))
+    }
     catch (e) { setErro((e as Error).message) }
     finally { setCarregando(false) }
   }
@@ -62,7 +75,8 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
     const v = videos[a.id]
     setAberta(a); setErro(null); setSucesso(null); setEnvio(null)
     setArquivoAntigo(v?.arquivo ?? null)
-    setForm({ video: v?.video ?? '', duracao: v?.duracao ?? '', titulo: v?.titulo ?? '', descricao: v?.descricao ?? '', publicado: v?.publicado ?? true, arquivo: v?.arquivo ?? null })
+    setForm({ video: v?.video ?? '', duracao: v?.duracao ?? '', titulo: v?.titulo ?? '', descricao: v?.descricao ?? '', publicado: v?.publicado ?? true, arquivo: v?.arquivo ?? null, materiais: v?.materiais ?? [] })
+    setMateriaisAntigos(v?.materiais ?? []); setAbaModal('conteudo')
   }
   const fechar = () => { if (envio) envio.cancelar(); setAberta(null); setEnvio(null) }
 
@@ -88,12 +102,14 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
 
   const salvar = async () => {
     if (!aberta) return
-    if (!form.video.trim()) { setErro('Cole um link ou envie o arquivo do vídeo antes de salvar.'); return }
+    if (!form.video.trim() && !form.materiais.length) { setErro('Envie o vídeo ou pelo menos um material antes de salvar.'); return }
     setSalvando(true); setErro(null)
     try {
       // Se o vídeo agora é um link (ou outro arquivo), o arquivo enviado antes vira lixo no bucket.
       const arquivoAtual = ehArquivoNosso(form.video) ? form.arquivo : null
-      await salvarVideoDaAula(sessao, { aulaId: aberta.id, video: form.video, duracao: form.duracao, titulo: form.titulo, descricao: form.descricao, publicado: form.publicado, arquivo: arquivoAtual })
+      await salvarVideoDaAula(sessao, { aulaId: aberta.id, video: form.video, duracao: form.duracao, titulo: form.titulo, descricao: form.descricao, publicado: form.publicado, arquivo: arquivoAtual, materiais: form.materiais })
+      // material tirado da lista: o arquivo sai do bucket
+      for (const m of materiaisAntigos) if (m.arquivo && !form.materiais.some((x) => x.arquivo === m.arquivo)) await apagarMaterial(sessao, m.arquivo).catch(() => undefined)
       if (arquivoAntigo && arquivoAntigo !== arquivoAtual) {
         await apagarArquivo(sessao, arquivoAntigo).catch(() => { /* o registro já está certo; sobra no bucket não derruba a aula */ })
       }
@@ -109,11 +125,48 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
     setSalvando(true); setErro(null)
     try {
       await removerVideoDaAula(sessao, aberta.id, arquivoAntigo)
+      for (const m of materiaisAntigos) if (m.arquivo) await apagarMaterial(sessao, m.arquivo).catch(() => undefined)
       setAberta(null); setSucesso('Vídeo removido.'); await carregar()
     } catch (e) { setErro((e as Error).message) } finally { setSalvando(false) }
   }
 
   const previa = playerDoVideo(form.video)
+
+  const adicionarMaterial = async (arquivo: File | undefined) => {
+    if (!arquivo || !aberta) return
+    if (arquivo.size > LIMITE_MATERIAL_MB * 1048576) { setErro(`O arquivo tem ${(arquivo.size / 1048576).toFixed(0)} MB; o limite de cada material é ${LIMITE_MATERIAL_MB} MB.`); return }
+    setErro(null); setEnviandoMaterial(true)
+    try {
+      const m = await enviarMaterial(sessao, aberta.id, arquivo)
+      setForm((f) => ({ ...f, materiais: [...f.materiais, m] }))
+      setSucesso('Material enviado. Ajuste o nome do botão, se quiser, e clique em Salvar.')
+    } catch (e) { setErro((e as Error).message) } finally {
+      setEnviandoMaterial(false)
+      if (entradaMaterial.current) entradaMaterial.current.value = ''
+    }
+  }
+
+  /* quem assistiu: por aula e na busca por aluno */
+  const pct = (f: number) => `${Math.round(f * 100)}%`
+  const daAula = (id: string) => controle.filter((c) => c.aulaId === id)
+  const resumoDaAula = (id: string) => { const l = daAula(id); return { alunos: l.length, concluiram: l.filter((c) => c.concluida).length } }
+  const tituloDaAula = (id: string) => catalogo.find((a) => a.id === id)?.titulo ?? id
+  const termo = busca.trim().toLowerCase()
+  const achados = termo.length >= 2 ? controle.filter((c) => c.nome.toLowerCase().includes(termo) || c.email.toLowerCase().includes(termo)) : []
+  const linhaAluno = (c: AssistiuAula, mostrarAula: boolean) => (
+    <tr key={`${c.userId}-${c.aulaId}`}>
+      <td>{mostrarAula ? <><b>{tituloDaAula(c.aulaId)}</b><small>{c.nome}</small></> : <><b>{c.nome}</b><small>{c.email}</small></>}</td>
+      <td>{c.plano || '—'}</td>
+      <td className="num">{c.aberturas}×</td>
+      <td className="num"><span className="adm-barra-assistida"><i style={{ width: pct(fracaoAssistida(c)) }} /></span>{c.duracaoSeg ? pct(fracaoAssistida(c)) : '—'}<small>{duracaoLegivel(c.segundos)}{c.duracaoSeg ? ` de ${duracaoLegivel(c.duracaoSeg)}` : ''}</small></td>
+      <td className="num">{pct(c.posicaoMax)}</td>
+      <td>{c.concluida ? <em className="adm-status ativo">Concluiu</em> : <em className="adm-status suspenso">Não concluiu</em>}</td>
+      <td className="num">{quando(c.ultimaVez)}</td>
+    </tr>
+  )
+  const cabecalhoAlunos = (primeira: string) => (
+    <thead><tr><th>{primeira}</th><th>Plano</th><th>Abriu</th><th>Assistiu de fato</th><th>Chegou até</th><th>Situação</th><th>Última vez</th></tr></thead>
+  )
 
   return (
     <div className="admin-aulas">
@@ -123,8 +176,16 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
       <div className="adm-kpis">
         <article><span>Aulas no catálogo</span><strong>{catalogo.length}</strong><small>{MODULOS.length} módulos</small></article>
         <article className="ok"><span>Com vídeo publicado</span><strong>{publicadas}</strong><small>{catalogo.length - publicadas} ainda em demonstração</small></article>
-        <article><span>Onde ficam</span><strong>{MARCA.prosa}</strong><small>cada marca tem os próprios vídeos</small></article>
+        <article><span>Alunos que assistiram</span><strong>{new Set(controle.map((c) => c.userId)).size}</strong><small>{controle.filter((c) => c.concluida).length} aulas concluídas no total</small></article>
       </div>
+
+      <section className="admin-card full admin-aulas-busca">
+        <header><div><span className="rot">Quem assistiu</span><h3>Procure um aluno</h3></div><small>Segundos assistidos contam só com o vídeo tocando: avançar o vídeo não conta.</small></header>
+        <input value={busca} placeholder="Nome ou e-mail do aluno" onChange={(e) => setBusca(e.target.value)} />
+        {termo.length >= 2 && (achados.length
+          ? <div className="adm-tabela-aulas"><table>{cabecalhoAlunos('Aula')}<tbody>{achados.map((c) => linhaAluno(c, true))}</tbody></table></div>
+          : <p className="adm-vazio">Ninguém com esse nome ou e-mail abriu uma aula ainda.</p>)}
+      </section>
 
       {MODULOS.map((m, mi) => (
         <section key={m.id} className="admin-card full admin-aulas-modulo" style={{ ['--aula' as string]: m.cor }}>
@@ -140,7 +201,11 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
                     <b>{v?.titulo || a.titulo}</b>
                     <small>{status === 'demo' ? 'Sem vídeo próprio — a aula abre com o vídeo demonstrativo.' : `${origem(v!.video)} · ${v!.duracao || 'duração não informada'} · atualizado em ${quando(v!.atualizadoEm)}`}</small>
                   </span>
-                  <em className={`adm-status ${status === 'publicada' ? 'ativo' : status === 'oculta' ? 'suspenso' : 'expirado'}`}>{status === 'publicada' ? 'Publicada' : status === 'oculta' ? 'Não publicada' : 'Demonstração'}</em>
+                  <span className="adm-aula-chips">
+                    {(() => { const r = resumoDaAula(a.id); return r.alunos ? <em className="adm-aula-alunos">{r.alunos} {r.alunos === 1 ? 'aluno' : 'alunos'} · {r.concluiram} concluíram</em> : null })()}
+                    {(v?.materiais.length ?? 0) > 0 && <em className="adm-aula-alunos">{v!.materiais.length} {v!.materiais.length === 1 ? 'material' : 'materiais'}</em>}
+                    <em className={`adm-status ${status === 'publicada' ? 'ativo' : status === 'oculta' ? 'suspenso' : 'expirado'}`}>{status === 'publicada' ? 'Publicada' : status === 'oculta' ? 'Não publicada' : 'Demonstração'}</em>
+                  </span>
                   <span className="adm-seta">›</span>
                 </button>
               )
@@ -160,6 +225,16 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
             {erro && <div className="ger-erro">{erro}<button onClick={() => setErro(null)}><IconeFechar /></button></div>}
             {sucesso && <div className="admin-sucesso"><span><Icone nome="certo" />{sucesso}</span><button onClick={() => setSucesso(null)}><IconeFechar /></button></div>}
 
+            <div className="adm-abas-modal" role="tablist">
+              <button role="tab" aria-selected={abaModal === 'conteudo'} className={abaModal === 'conteudo' ? 'on' : ''} onClick={() => setAbaModal('conteudo')}>Vídeo e materiais</button>
+              <button role="tab" aria-selected={abaModal === 'alunos'} className={abaModal === 'alunos' ? 'on' : ''} onClick={() => setAbaModal('alunos')}>Quem assistiu <b>{daAula(aberta.id).length}</b></button>
+            </div>
+
+            {abaModal === 'alunos' ? (
+              daAula(aberta.id).length
+                ? <div className="adm-tabela-aulas"><table>{cabecalhoAlunos('Aluno')}<tbody>{daAula(aberta.id).map((c) => linhaAluno(c, false))}</tbody></table></div>
+                : <p className="adm-vazio">Ninguém abriu esta aula ainda.</p>
+            ) : (
             <div className="admin-editor-form">
               <div className="admin-aula-envio">
                 <span className="rot">Arquivo do vídeo</span>
@@ -200,11 +275,28 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
               </div>
               <label><span>Título (vazio = o do catálogo)</span><input value={form.titulo} placeholder={aberta.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} /></label>
               <label><span>Descrição (vazio = a do catálogo)</span><textarea value={form.descricao} placeholder={aberta.descricao} rows={3} onChange={(e) => setForm({ ...form, descricao: e.target.value })} /></label>
+
+              <div className="admin-aula-materiais">
+                <span className="rot">Materiais para baixar</span>
+                {form.materiais.map((m, i) => (
+                  <div key={m.url} className="admin-aula-material">
+                    <i>{(m.tipo || 'ARQ').slice(0, 4)}</i>
+                    <input value={m.nome} aria-label="Nome do botão" onChange={(e) => setForm((f) => ({ ...f, materiais: f.materiais.map((x, j) => (j === i ? { ...x, nome: e.target.value } : x)) }))} />
+                    <small>{tamanhoLegivel(m.tamanho)}</small>
+                    <button type="button" onClick={() => setForm((f) => ({ ...f, materiais: f.materiais.filter((_, j) => j !== i) }))} aria-label={`Tirar ${m.nome}`}><IconeFechar /></button>
+                  </div>
+                ))}
+                <input ref={entradaMaterial} type="file" hidden accept=".pdf,.epub,.zip,.xlsx,.xls,.csv,.docx,.doc,.pptx,.ppt,.png,.jpg,.jpeg,.webp,.txt"
+                  onChange={(e) => void adicionarMaterial(e.target.files?.[0])} />
+                <button type="button" className="admin-secundario" disabled={enviandoMaterial} onClick={() => entradaMaterial.current?.click()}>{enviandoMaterial ? 'Enviando…' : '+ Adicionar arquivo'}</button>
+                <small>PDF, e-book, planilha, documento, apresentação, imagem ou ZIP, até {LIMITE_MATERIAL_MB} MB cada. O nome aqui é o que aparece no botão para o aluno.</small>
+              </div>
             </div>
+            )}
 
             <footer>
               {videos[aberta.id] ? <button type="button" className="adm-cancelar" onClick={() => void remover()} disabled={salvando || !!envio}>Remover vídeo</button> : <span>A aula fica "em breve" até ter vídeo.</span>}
-              <button onClick={() => void salvar()} disabled={salvando || !!envio}>{salvando ? 'Salvando…' : form.publicado ? 'Salvar e publicar' : 'Salvar sem publicar'}</button>
+              <button onClick={() => void salvar()} disabled={salvando || !!envio || enviandoMaterial}>{salvando ? 'Salvando…' : form.publicado ? 'Salvar e publicar' : 'Salvar sem publicar'}</button>
             </footer>
           </section>
         </div>

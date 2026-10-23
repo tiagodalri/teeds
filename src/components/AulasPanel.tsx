@@ -1,10 +1,10 @@
 import { ResponsiveImage } from './ResponsiveImage'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  aulasVistas, marcarVista, MODULOS, playerDoVideo, SALA_EM_BREVE, todasAsAulas, VIDEO_DEMONSTRACAO,
+  aulasVistas, ehVideoDeExemplo, marcarVista, MODULOS, playerDoVideo, SALA_EM_BREVE, todasAsAulas, VIDEO_DEMONSTRACAO,
   type AulaNumerada,
 } from '../core/teeds/aulas'
-import { listarVideosDasAulas, type VideoDaAula } from '../core/teeds/aulasVideos'
+import { listarVideosDasAulas, tamanhoLegivel, type VideoDaAula } from '../core/teeds/aulasVideos'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA } from '../marca'
 import { Destaques, bannersDaMarca } from './aulas/Destaques'
@@ -174,17 +174,17 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: strin
 
   // Telemetria: segundos realmente assistidos (contados pela cadência do
   // vídeo, não pelo relógio), enviados em lotes; nunca condição para assistir.
-  const assistido = useRef({ acumulado: 0, ultimoTempo: -1, concluidaEnviada: false })
+  const assistido = useRef({ acumulado: 0, ultimoTempo: -1, concluidaEnviada: false, duracao: 0 })
   const despachar = useCallback((aulaId: string, posicao: number, concluida = false) => {
     const t = assistido.current
     if (t.acumulado <= 0 && !concluida) return
     const segundos = Math.round(t.acumulado); t.acumulado = 0
-    void registrarAula(sessao, aulaId, { segundos, posicao, concluida })
+    void registrarAula(sessao, aulaId, { segundos, posicao, concluida, duracao: t.duracao })
   }, [sessao])
   const abrir = (a: AulaNumerada) => {
     if (!a.video) return
     if (abertaId && abertaId !== a.id) despachar(abertaId, 0)
-    assistido.current = { acumulado: 0, ultimoTempo: -1, concluidaEnviada: false }
+    assistido.current = { acumulado: 0, ultimoTempo: -1, concluidaEnviada: false, duracao: 0 }
     setAbertaId(a.id); setModuloAberto(a.modulo.id)
     void registrarAula(sessao, a.id, { abriu: true })
     window.scrollTo({ top: 0 })
@@ -199,6 +199,8 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: strin
     const delta = t.ultimoTempo >= 0 ? segundos - t.ultimoTempo : 0
     if (delta > 0 && delta < 2.5) t.acumulado += delta   // pulo ou retrocesso não conta
     t.ultimoTempo = segundos
+    // a duração do vídeo (para o admin ver quanto da aula a pessoa de fato assistiu)
+    if (fracao > 0.02 && !t.duracao) t.duracao = Math.round(segundos / fracao)
     if (agora - ultimaGravacao.current > 5000) { ultimaGravacao.current = agora; guardarPosicao(abertaId, segundos) }
     if (t.acumulado >= 20) despachar(abertaId, fracao)
     if (fracao >= 0.9 && !t.concluidaEnviada) { t.concluidaEnviada = true; despachar(abertaId, fracao, true) }
@@ -247,9 +249,9 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: strin
                 <p>{aberta.descricao}</p>
                 <div className="cine-chips">
                   <span>Iniciante</span>
-                  <span>{aberta.duracao}</span>
+                  {!ehVideoDeExemplo(aberta.video) && <span>{aberta.duracao}</span>}
                   {vista && <span className="ok">✓ Assistida</span>}
-                  {aberta.video === VIDEO_DEMONSTRACAO && <span className="demo">Demonstração temporária</span>}
+                  {ehVideoDeExemplo(aberta.video) && <span className="demo">Vídeo de exemplo</span>}
                 </div>
               </div>
               <div className="cine-ficha-acoes">
@@ -264,6 +266,21 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: strin
                 </div>
               </div>
             </div>
+
+            {(aberta.materiais?.length ?? 0) > 0 && (
+              <section className="cine-materiais" aria-label="Materiais da aula">
+                <h3>Materiais da aula <small>{aberta.materiais!.length} {aberta.materiais!.length === 1 ? 'arquivo' : 'arquivos'}</small></h3>
+                <div className="cine-materiais-lista">
+                  {aberta.materiais!.map((m) => (
+                    <a key={m.url} className="cine-material" href={m.url} target="_blank" rel="noopener noreferrer" download>
+                      <i aria-hidden="true">{(m.tipo || m.url.split('.').pop() || 'arq').slice(0, 4).toUpperCase()}</i>
+                      <span><b>{m.nome}</b><small>{[m.tipo, tamanhoLegivel(m.tamanho)].filter(Boolean).join(' · ') || 'Arquivo'}</small></span>
+                      <em>Baixar</em>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
 
           <aside className="cine-trilha">
@@ -293,7 +310,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: strin
                           onClick={() => abrir(a)} disabled={!a.video}>
                           <i>{a.id === aberta.id ? '▶' : vistas.has(a.id) ? '✓' : a.numero}</i>
                           <span>{a.titulo}</span>
-                          <em>{a.video ? (a.duracao === 'Vídeo demonstrativo' ? 'demo' : a.duracao) : 'em breve'}</em>
+                          <em>{a.video ? (ehVideoDeExemplo(a.video) ? 'exemplo' : a.duracao) : 'em breve'}</em>
                         </button>
                       ))}
                     </div>

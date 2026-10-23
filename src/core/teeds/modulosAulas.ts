@@ -6,6 +6,9 @@ import type { Modulo } from './aulas'
 export const SALA_EM_BREVE = true
 /** Aula sem vídeo toca o vídeo de demonstração (em vez de aparecer "Em breve"). */
 export const DEMONSTRACAO_EM_AULA_SEM_VIDEO = true
+/** Vídeos e materiais de exemplo desta marca (vazio = o vídeo demonstrativo padrão, sem materiais). */
+export const VIDEOS_DE_EXEMPLO: string[] = []
+export const MATERIAIS_DE_EXEMPLO: Array<{ nome: string; url: string; tipo?: string; tamanho?: number }> = []
 
 /**
  * O catálogo de aulas — a ordem aqui é a ordem na tela. Ver `aulas.ts`.

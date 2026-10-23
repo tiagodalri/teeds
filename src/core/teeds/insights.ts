@@ -86,12 +86,12 @@ export function dispositivoAtual(): string {
  * por chamada), chegou até tal posição, concluiu. Falha em silêncio — a
  * aula nunca depende disso.
  */
-export async function registrarAula(sessao: SessaoTeeds | null | undefined, aulaId: string, dados: { segundos?: number; posicao?: number; concluida?: boolean; abriu?: boolean }): Promise<void> {
+export async function registrarAula(sessao: SessaoTeeds | null | undefined, aulaId: string, dados: { segundos?: number; posicao?: number; concluida?: boolean; abriu?: boolean; duracao?: number }): Promise<void> {
   if (!sessao) return
   try {
     await rpc('teeds_registrar_aula', sessao.token, {
       p_aula: aulaId, p_segundos: Math.max(0, Math.round(dados.segundos ?? 0)), p_posicao: Math.min(1, Math.max(0, dados.posicao ?? 0)),
-      p_concluida: Boolean(dados.concluida), p_abriu: Boolean(dados.abriu),
+      p_concluida: Boolean(dados.concluida), p_abriu: Boolean(dados.abriu), p_duracao: Math.max(0, Math.round(dados.duracao ?? 0)),
     })
   } catch (e) {
     console.warn('[insights] nao consegui registrar a aula:', (e as Error).message)
