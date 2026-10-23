@@ -58,6 +58,7 @@ import { MiniCabine } from './components/minicabine/MiniCabine'
 import { pararNoServidor, type SessaoViva } from './core/teeds/servidorRobos'
 import { sinalGFLiberado } from './core/deriv/accountAccess'
 import { acompanharFimDasSessoes, contratoManual } from './core/som'
+import { registrarOperacaoManual } from './core/teeds/clientes'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
 // quando a pessoa abre a página ou entra numa live.
@@ -628,9 +629,29 @@ export default function App() {
   */
   const [encerradas, setEncerradas] = useState<Array<{ c: (typeof minhas)[number]; ate: number }>>([])
   const [ultimasManuais, setUltimasManuais] = useState<Array<(typeof minhas)[number]>>([])
+  /*
+    O markup das operações manuais (23/10/2026, modo CEO): o oficial da Deriv
+    quando a proposta informa; senão, 3% do pagamento potencial (a regra da
+    Deriv para opções, conferida contra o total oficial do dia). Cada operação
+    manual encerrada vai para operacoes_manuais, uma vez só.
+  */
+  const markupOficial = useRef(new Map<number, number>())
+  const manuaisRegistradas = useRef(new Set<number>())
+  const markupDaManual = (c: { contractId: number; payout: number }) => markupOficial.current.get(c.contractId) ?? Number((c.payout * 0.03).toFixed(4))
   useEffect(() => {
     const finais = minhas.filter((c) => /^(won|lost|sold|cancelled)$/.test(c.status))
     if (!finais.length) return
+    if (teeds.sessao && conta.accountId) {
+      for (const c of finais) {
+        if (manuaisRegistradas.current.has(c.contractId)) continue
+        manuaisRegistradas.current.add(c.contractId)
+        void registrarOperacaoManual(teeds.sessao, {
+          contractId: c.contractId, contaId: conta.accountId, demo: conta.isDemo, ativo: c.symbol, tipoContrato: c.contractType, moeda: c.currency,
+          entrada: c.buyPrice, pagamento: c.payout, resultado: c.profit, markup: markupDaManual(c), markupOficial: markupOficial.current.has(c.contractId),
+          compradaEm: new Date((c.purchaseTime || c.startTime) * 1000).toISOString(), encerradaEm: new Date().toISOString(),
+        })
+      }
+    }
     setEncerradas((antes) => {
       const outras = antes.filter((e) => !finais.some((f) => f.contractId === e.c.contractId))
       const novas = finais.map((c) => ({ c, ate: antes.find((e) => e.c.contractId === c.contractId)?.ate ?? Date.now() + 120_000 }))
@@ -758,6 +779,7 @@ export default function App() {
         throw e
       })
       marcarManual(r.contractId)
+      if (p.appMarkup !== null) markupOficial.current.set(r.contractId, p.appMarkup)
       setAviso({
         tipo: 'ok',
         texto: `Entrada feita: ${dinheiro(r.buyPrice, moeda)} · se ganhar, recebe ${dinheiro(r.payout, moeda)}.`,
@@ -1298,7 +1320,7 @@ export default function App() {
           </section>
 
           {ultimasManuais.length > 0 && (
-            <UltimasEntradas operacoes={ultimasManuais}
+            <UltimasEntradas operacoes={ultimasManuais} markupDe={adminConfirmado && mostrarColuna ? markupDaManual : undefined}
               nomeDoAtivo={(simbolo) => nomeDoAtivo(symbols.find((s) => s.symbol === simbolo)?.name ?? simbolo)} />
           )}
         </aside>

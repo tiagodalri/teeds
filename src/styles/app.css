@@ -6048,3 +6048,16 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .cine-trilha .cine-modulo-aulas .aula-item.on span small { color: var(--aula); font-weight: 700; }
 .cine-trilha .cine-modulo-aulas .aula-item.vista:not(.on) span small { color: var(--up); }
 .cine-trilha .cine-atalhos { margin: 0; padding: 12px 18px 14px; border-top: 1px solid var(--border); }
+
+/* markup das operações manuais no Centro de estudo (23/10/2026) */
+.mm-periodo{display:flex;gap:4px;padding:3px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
+.mm-periodo button{padding:6px 12px;border:0;border-radius:8px;color:var(--muted);background:transparent;font:inherit;font-weight:700;cursor:pointer}
+.mm-periodo button.on{color:var(--text);background:var(--surface)}
+.mm-corpo{display:grid;gap:14px}
+.mm-numeros{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.mm-numeros>div{display:grid;gap:2px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg)}
+.mm-numeros small{color:var(--muted);font-size:12px}.mm-numeros b{font-size:20px;font-variant-numeric:tabular-nums}
+.mm-corpo .adm-tabela-aulas{margin:0}
+.mm-corpo td.positivo{color:var(--up)}.mm-corpo td.negativo{color:var(--down)}
+.mm-nota{margin:0;color:var(--muted);font-size:11.5px;line-height:1.5}
+@media (max-width:720px){.mm-numeros{grid-template-columns:minmax(0,1fr)}}

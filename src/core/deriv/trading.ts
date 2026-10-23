@@ -311,7 +311,7 @@ export async function requestProposal(
     /** Barreira - nos contratos de digito, o digito escolhido. */
     barrier?: string
   },
-): Promise<{ id: string; askPrice: number; payout: number; longcode: string }> {
+): Promise<{ id: string; askPrice: number; payout: number; longcode: string; appMarkup: number | null }> {
   const res = await socket.send({
     proposal: 1,
     amount: params.amount,
@@ -329,6 +329,8 @@ export async function requestProposal(
     askPrice: Number(p.ask_price),
     payout: Number(p.payout),
     longcode: String(p.longcode ?? ''),
+    // o markup oficial deste contrato, quando a Deriv informa na proposta
+    appMarkup: p.app_markup_amount !== undefined && p.app_markup_amount !== null && Number.isFinite(Number(p.app_markup_amount)) ? Number(p.app_markup_amount) : null,
   }
 }
 

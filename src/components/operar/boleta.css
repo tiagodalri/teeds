@@ -274,3 +274,7 @@
   .bl-ult-nome small { display: none; }
   .bl-ultimas li { gap: 8px; padding: 8px 6px; }
 }
+
+/* modo CEO (23/10/2026): o markup de cada entrada manual e o total da lista */
+.bl-ult-res .bl-ult-markup { display: block; color: var(--gf-ouro, var(--primary)); font-size: 10.5px; font-weight: 700; text-align: right; }
+.bl-ult-markup-total { color: var(--gf-ouro, var(--primary)); font-weight: 800; }

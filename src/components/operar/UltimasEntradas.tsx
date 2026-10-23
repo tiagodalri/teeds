@@ -10,10 +10,12 @@ import { NOMES_DE_CONTRATO } from '../PositionCard'
 
 const hora = (epoch: number) => new Date(epoch * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
 
-export function UltimasEntradas({ operacoes, nomeDoAtivo }: { operacoes: OpenContract[]; nomeDoAtivo: (simbolo: string) => string }) {
+export function UltimasEntradas({ operacoes, nomeDoAtivo, markupDe }: { operacoes: OpenContract[]; nomeDoAtivo: (simbolo: string) => string; markupDe?: (c: OpenContract) => number }) {
+  // modo CEO: o markup de cada entrada e o total da lista
+  const totalMarkup = markupDe ? operacoes.reduce((t, c) => t + markupDe(c), 0) : 0
   return (
     <section className="bl-ultimas" aria-label="Suas últimas entradas">
-      <header><span className="bl-rot">Suas últimas entradas</span><small>{operacoes.length}</small></header>
+      <header><span className="bl-rot">Suas últimas entradas</span>{markupDe ? <small className="bl-ult-markup-total" title="Markup gerado por estas entradas">Markup US$ {totalMarkup.toFixed(2).replace('.', ',')}</small> : <small>{operacoes.length}</small>}</header>
       <ol>
         {operacoes.map((c) => {
           const subiu = /^(CALL|HIGHER|MULTUP)$/.test(c.contractType)
@@ -29,7 +31,7 @@ export function UltimasEntradas({ operacoes, nomeDoAtivo }: { operacoes: OpenCon
               <span className="bl-ult-preco" title="Preço de saída: o último dígito é o que valeu">
                 {c.exitSpot !== null ? <PrecoComDigito valor={c.exitSpot} casas={c.pipSize} tom={ganhou ? 'ganho' : 'perda'} /> : '—'}
               </span>
-              <b className="bl-ult-res">{dinheiroComSinal(c.profit, c.currency)}</b>
+              <b className="bl-ult-res">{dinheiroComSinal(c.profit, c.currency)}{markupDe && <small className="bl-ult-markup">markup {markupDe(c).toFixed(2).replace('.', ',')}</small>}</b>
             </li>
           )
         })}

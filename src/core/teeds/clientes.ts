@@ -552,6 +552,28 @@ export async function registrarOperacaoRobo(sessao: SessaoTeeds, op: Omit<Operac
   } catch (e) { console.warn('[teeds] telemetria do robô indisponível:', (e as Error).message) }
 }
 
+/** Uma operação manual encerrada, com o markup (23/10/2026: o modo CEO acompanha o manual também). */
+export interface OperacaoManualRegistro {
+  contractId: number; contaId: string; demo: boolean; ativo: string; tipoContrato: string; moeda: string
+  entrada: number; pagamento: number; resultado: number; markup: number; markupOficial: boolean
+  compradaEm: string; encerradaEm: string
+}
+export async function registrarOperacaoManual(sessao: SessaoTeeds, op: OperacaoManualRegistro): Promise<void> {
+  try {
+    await rest('/operacoes_manuais?on_conflict=user_id,contract_id', sessao.token, {
+      method: 'POST', headers: MESCLAR,
+      body: JSON.stringify({ user_id: sessao.usuario.id, contract_id: op.contractId, marca: MARCA.id, conta_id: op.contaId, demo: op.demo, ativo: op.ativo, tipo_contrato: op.tipoContrato, moeda: op.moeda, entrada: op.entrada, pagamento: op.pagamento, resultado: op.resultado, markup: op.markup, markup_oficial: op.markupOficial, comprada_em: op.compradaEm, encerrada_em: op.encerradaEm }),
+    })
+  } catch (e) { console.warn('[teeds] registro da operação manual indisponível:', (e as Error).message) }
+}
+/** O resumo do markup manual por ativo (admin). */
+export async function resumoMarkupManual(sessao: SessaoTeeds, dias = 30): Promise<Array<{ ativo: string; demo: boolean; operacoes: number; clientes: number; entradas: number; pagamentos: number; resultado: number; markup: number; oficiais: number }>> {
+  try {
+    const linhas = await rest<any[]>('/rpc/teeds_markup_manual', sessao.token, { method: 'POST', body: JSON.stringify({ p_marca: MARCA.id, p_dias: dias }) })
+    return (linhas ?? []).map((l) => ({ ativo: l.ativo, demo: Boolean(l.demo), operacoes: Number(l.operacoes), clientes: Number(l.clientes), entradas: Number(l.entradas), pagamentos: Number(l.pagamentos), resultado: Number(l.resultado), markup: Number(l.markup), oficiais: Number(l.oficiais) }))
+  } catch { return [] }
+}
+
 export async function listarOperacoesRobos(sessao: SessaoTeeds, dias = 90): Promise<OperacaoRoboRegistro[]> {
   const corte = new Date(Date.now() - (dias - 1) * 864e5).toISOString()
   try {

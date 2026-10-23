@@ -784,6 +784,8 @@ body.av-teatro-aberto { overflow: hidden; }
    quem está na sala à direita. Tudo à vista, nada espremido numa aba.
    ========================================================================== */
 .cv { display: grid; gap: 12px; }
+/* a Central ocupa a largura toda (é uma mesa de trabalho, não uma página de leitura) */
+.av-pagina.cv { max-width: none; }
 .cv-num { font-family: var(--fonte-dados, ui-monospace, Menlo, monospace); font-variant-numeric: tabular-nums; }
 .cv-card { display: grid; gap: 9px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); align-content: start; }
 .cv-card h4 { display: flex; align-items: baseline; gap: 8px; margin: 0; color: var(--text); font-size: 13px; font-weight: 700; }

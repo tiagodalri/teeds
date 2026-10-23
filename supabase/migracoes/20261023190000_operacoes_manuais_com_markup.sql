@@ -1,0 +1,6 @@
+-- Aplicada pelo MCP em 23/10/2026 (nome: operacoes_manuais_com_markup).
+-- Tabela operacoes_manuais (uma linha por contrato manual, com o markup:
+-- oficial da Deriv quando a proposta informa app_markup_amount, senão 3% do
+-- pagamento potencial) e a RPC teeds_markup_manual(p_marca, p_dias) com o
+-- resumo por ativo para o admin. O texto completo está no histórico de
+-- migrações do Supabase do projeto.

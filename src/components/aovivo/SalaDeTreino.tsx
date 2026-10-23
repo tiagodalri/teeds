@@ -181,9 +181,9 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   const ocultarTela = !!tela && !verPrevia &&
     (tela.getVideoTracks()[0]?.getSettings() as MediaTrackSettings & { displaySurface?: string } | undefined)?.displaySurface === 'monitor'
   const passos = [
-    { feito: temImagem, titulo: 'Ligue a câmera ou a tela', dica: 'Nos botões aqui em cima. O microfone é opcional.' },
-    { feito: ajustou || sim.ativa, titulo: 'Ajuste a sala', dica: 'Na aba Simulação: tamanho do público, ritmo do chat, fundo.' },
-    { feito: sim.ativa, titulo: 'Comece a simulação', dica: 'É aqui que a transmissão começa: os membros passam a ver e recebem o aviso de ao vivo.' },
+    { feito: temImagem, titulo: 'Ligue a câmera ou a tela', dica: 'Nos botões Tela, Câmera e Microfone, no topo. O microfone é opcional.' },
+    { feito: ajustou || sim.ativa, titulo: 'Ajuste a sala', dica: 'Na coluna da esquerda: tamanho do público, chat e câmera.' },
+    { feito: sim.ativa, titulo: 'Comece a transmissão', dica: 'No botão dourado do topo. Os membros passam a ver você e recebem o aviso de ao vivo.' },
   ]
 
   const momentosRapidos = (
@@ -244,6 +244,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     <div className="cv-controles" onPointerDown={() => setAjustou(true)} onKeyDown={() => setAjustou(true)}>
       <section className="cv-card">
         <h4>Tema dos comentários</h4>
+        <span className="tr-legenda">Um toque muda o assunto do chat simulado por alguns segundos, combinando com o momento da live.</span>
         <div className="tr-momentos-grade">
           {MOMENTOS.map((m) => (
             <button key={m.id} className={sim.momento === m.id ? 'on' : ''} disabled={!sim.ativa} onClick={() => dispararMomento(m.id)}>
@@ -251,7 +252,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
             </button>
           ))}
         </div>
-        {!sim.ativa && <span className="tr-legenda">Liberados quando a simulação começar.</span>}
+        {!sim.ativa && <span className="tr-legenda">Ficam liberados quando a transmissão começar.</span>}
       </section>
 
       <section className="cv-card">
@@ -367,7 +368,6 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
             )}
             <span className="tr-selo"><i aria-hidden />GF Streaming{sim.ativa && <> · {fmt(sim.publicoAgora)} na sala</>}</span>
           </div>
-          {momentosRapidos}
           <section className="cv-card cv-movimento" aria-label="Movimento da sala">
             <h4>Movimento da sala <small>membros reais</small></h4>
             {central.movimento.length === 0
