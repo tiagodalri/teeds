@@ -13,9 +13,11 @@
  * pessoa pode mudar.
  */
 import { registerIndicator, type IndicatorTemplate, type KLineData } from 'klinecharts'
+import { MARCA } from '../../marca'
 
-export type Categoria = 'momentum' | 'tendencia' | 'volatilidade' | 'medias' | 'outros'
+export type Categoria = 'sinal' | 'momentum' | 'tendencia' | 'volatilidade' | 'medias' | 'outros'
 export const CATEGORIAS: Array<{ id: Categoria; nome: string }> = [
+  { id: 'sinal', nome: 'Sinal GF' },
   { id: 'momentum', nome: 'Momentum' },
   { id: 'tendencia', nome: 'Tendência' },
   { id: 'volatilidade', nome: 'Volatilidade' },
@@ -42,6 +44,8 @@ export interface DefinicaoIndicador {
 const P = (rotulo: string, padrao: number, min = 1, max = 500, passo = 1): Parametro => ({ rotulo, padrao, min, max, passo })
 
 export const CATALOGO: DefinicaoIndicador[] = [
+  // ------------------------------------------------------------ o sinal da casa
+  { id: 'GF_SINAL', nome: 'Sinal GF', sigla: 'Sinal GF', categoria: 'sinal', painel: 'principal', descricao: 'Faixas de volatilidade com setas de Subir e Descer quando a vela fecha virando na faixa. O placar na barra do gráfico conta os acertos.', parametros: [P('Período', 20, 5, 100), P('Desvios', 1.8, 1, 4, 0.1), P('Velas entre sinais', 3, 1, 20)] },
   // ------------------------------------------------------------ momentum
   { id: 'MACD', nome: 'MACD', sigla: 'MACD', categoria: 'momentum', painel: 'proprio', descricao: 'Convergência e divergência de médias: linha MACD, linha de sinal e histograma.', parametros: [P('Média rápida', 12), P('Média lenta', 26), P('Sinal', 9)] },
   { id: 'RSI', nome: 'Índice de Força Relativa (RSI)', sigla: 'RSI', categoria: 'momentum', painel: 'proprio', descricao: 'Força dos movimentos de alta contra os de baixa, de 0 a 100 (método de Wilder).', parametros: [P('Período', 14, 2)], varios: true },
@@ -164,7 +168,114 @@ function faixa(chaveA: string, chaveB: string, cor: (r: Record<string, number | 
   }
 }
 
+
+/* ====================================================== o Sinal GF
+ *
+ * 23/10/2026. As faixas são as de Bollinger (média de N fechamentos ± K
+ * desvios). Sinal de Descer: a vela tocou a faixa de cima e fechou em queda;
+ * de Subir: tocou a de baixo e fechou em alta. Entre dois sinais passam pelo
+ * menos M velas.
+ *
+ * A regra de honestidade: cada seta usa só as velas fechadas até ela. A vela
+ * que ainda está se formando nunca gera seta (senão a seta apareceria e
+ * sumiria). As setas não mostram o resultado (Tiago, 23/10/2026); o placar
+ * da barra do gráfico conta todas, certas e erradas, quando a vela seguinte
+ * fecha.
+ * ================================================================== */
+export interface PontoSinal { up?: number; mid?: number; dn?: number; sinal?: 1 | -1; certo?: boolean | null }
+
+export function calcularSinal(d: KLineData[], n: number, k: number, espera: number): PontoSinal[] {
+  const fech = d.map((v) => v.close)
+  const saida: PontoSinal[] = d.map(() => ({}))
+  let ultimo = -Infinity
+  for (let i = n - 1; i < d.length; i++) {
+    const janela = fech.slice(i - n + 1, i + 1), m = media(janela)
+    const desvio = Math.sqrt(janela.reduce((a, b) => a + (b - m) ** 2, 0) / n)
+    const p = saida[i]
+    p.mid = m; p.up = m + k * desvio; p.dn = m - k * desvio
+    const fechada = i < d.length - 1
+    if (!fechada || i - ultimo < espera) continue
+    const v = d[i]
+    if (v.high >= p.up && v.close < v.open) p.sinal = -1
+    else if (v.low <= p.dn && v.close > v.open) p.sinal = 1
+    if (!p.sinal) continue
+    ultimo = i
+    const seguinteFechada = i + 1 < d.length - 1
+    p.certo = seguinteFechada ? (p.sinal === 1 ? fech[i + 1] > fech[i] : fech[i + 1] < fech[i]) : null
+  }
+  return saida
+}
+
+/** O placar das setas que já têm resultado. */
+export function placarDoSinal(r: PontoSinal[]): { certos: number; total: number } {
+  let certos = 0, total = 0
+  for (const p of r) if (p.sinal && p.certo != null) { total++; if (p.certo) certos++ }
+  return { certos, total }
+}
+
+const base = import.meta.env.BASE_URL
+const monogramas: Record<'escuro' | 'claro', HTMLImageElement | null> = { escuro: null, claro: null }
+function monograma(tema: 'escuro' | 'claro'): HTMLImageElement | null {
+  const arquivo = MARCA.monogramaRecorte?.[tema]
+  if (!arquivo || typeof Image === 'undefined') return null
+  if (!monogramas[tema]) { const img = new Image(); img.src = `${base}${arquivo}`; monogramas[tema] = img }
+  const img = monogramas[tema]!
+  return img.complete && img.naturalWidth > 0 ? img : null
+}
+
+const corDoTema = (nome: string, padrao: string) => (typeof document === 'undefined' ? padrao : getComputedStyle(document.documentElement).getPropertyValue(nome).trim() || padrao)
+
+function desenharSinal(params: Parameters<NonNullable<IndicatorTemplate['draw']>>[0]): boolean {
+  const { ctx, chart, indicator, xAxis, yAxis } = params
+  faixa('up', 'mid', () => 'rgba(255, 59, 71, .07)')(params)
+  faixa('mid', 'dn', () => 'rgba(34, 214, 106, .06)')(params)
+  const r = indicator.result as PontoSinal[]
+  const dados = chart.getDataList()
+  const { from, to } = chart.getVisibleRange()
+  const escuro = typeof document !== 'undefined' && document.documentElement.dataset.tema === 'escuro'
+  const img = monograma(escuro ? 'escuro' : 'claro')
+  const sobe = corDoTema('--up', '#22D66A'), desce = corDoTema('--down', '#FF3B47')
+  const fonte = typeof document !== 'undefined' ? getComputedStyle(document.body).fontFamily : 'sans-serif'
+  const lw = 26, lh = Math.round(lw * 96 / 166)
+  ctx.save()
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'alphabetic'
+  // dois sinais do mesmo lado muito perto: o segundo desce (ou sobe) um degrau para não encavalar
+  const ultimoX = { s: -Infinity, d: -Infinity }, degrau = { s: 0, d: 0 }
+  for (let i = Math.max(0, from); i < Math.min(r.length, to); i++) {
+    const p = r[i]
+    if (!p?.sinal || !dados[i]) continue
+    const x = xAxis.convertToPixel(i)
+    const descer = p.sinal === -1
+    const cor = descer ? desce : sobe
+    const lado = descer ? 'd' : 's'
+    degrau[lado] = x - ultimoX[lado] < 46 && degrau[lado] === 0 ? 40 : 0
+    ultimoX[lado] = x
+    if (descer) {
+      let y = yAxis.convertToPixel(dados[i].high) - 6 - degrau.d
+      if (img) { y -= lh; ctx.drawImage(img, x - lw / 2, y, lw, lh); y -= 4 }
+      ctx.fillStyle = cor; ctx.beginPath(); ctx.moveTo(x - 5, y - 7); ctx.lineTo(x + 5, y - 7); ctx.lineTo(x, y); ctx.closePath(); ctx.fill()
+      ctx.font = `800 11.5px ${fonte}`; ctx.fillText('Descer', x, y - 11)
+    } else {
+      let y = yAxis.convertToPixel(dados[i].low) + 6 + degrau.s
+      ctx.fillStyle = cor; ctx.beginPath(); ctx.moveTo(x - 5, y + 7); ctx.lineTo(x + 5, y + 7); ctx.lineTo(x, y); ctx.closePath(); ctx.fill()
+      ctx.font = `800 11.5px ${fonte}`; ctx.fillText('Subir', x, y + 20)
+      y += 24
+      if (img) ctx.drawImage(img, x - lw / 2, y, lw, lh)
+    }
+  }
+  ctx.restore()
+  return false
+}
+
 const PERSONALIZADOS: IndicatorTemplate[] = [
+  {
+    name: 'GF_SINAL', shortName: 'Sinal GF', series: 'price', calcParams: [20, 1.8, 3], precision: 2, shouldOhlc: true,
+    figures: linhas([['up', 'Superior: '], ['mid', 'Meio: '], ['dn', 'Inferior: ']]),
+    styles: { lines: [{ color: '#FF3B47', size: 1.4 }, { color: 'rgba(147, 166, 189, .45)', size: 1 }, { color: '#22D66A', size: 1.4 }] },
+    calc: (d, ind) => { const [n, k, m] = ind.calcParams as number[]; return calcularSinal(d, n, k, m) },
+    draw: desenharSinal,
+  },
   {
     name: 'GF_DONCHIAN', shortName: 'Donchian', series: 'price', calcParams: [20], precision: 2, shouldOhlc: true,
     figures: linhas([['up', 'Superior: '], ['mid', 'Meio: '], ['dn', 'Inferior: ']]),

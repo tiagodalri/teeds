@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Candle } from '../../core/deriv/types'
 import { GraficoPro } from './GraficoPro'
 import type { ChartMode, ContractMarker } from '../PriceChart'
+import { useCandleSeries } from '../../hooks/useMarket'
 
 /** ?tela=grafico-pro: o gráfico profissional com velas de exemplo que andam a cada segundo. */
 export default function LabGraficoPro() {
@@ -17,6 +18,9 @@ export default function LabGraficoPro() {
     })
   })
   const [modo, setModo] = useState<ChartMode>('candles')
+  // &real=1: velas de verdade do 75 Index (5 min), para ver o Sinal GF no mercado real
+  const REAL = new URLSearchParams(location.search).has('real')
+  const reais = useCandleSeries(REAL ? 'R_75' : null, 300)
   const RAPIDO = new URLSearchParams(location.search).has('rapido')
   useEffect(() => {
     const t = setInterval(() => setVelas((v) => {
@@ -37,7 +41,7 @@ export default function LabGraficoPro() {
         <button onClick={() => setModo('candles')}>Velas</button><button onClick={() => setModo('line')}>Linha</button>
       </div>
       <div className="chart" style={{ flex: 1 }}>
-        <GraficoPro candles={velas} mode={modo} pipSize={2} symbol="R_75" symbolName="75 Index" granularity={60} markers={marcadores} sessao={null} />
+        <GraficoPro candles={REAL ? reais.candles : velas} mode={modo} pipSize={2} symbol="R_75" symbolName="75 Index" granularity={REAL ? 300 : 60} loading={REAL && reais.loading} markers={REAL ? [] : marcadores} sessao={null} />
       </div>
     </div>
   )

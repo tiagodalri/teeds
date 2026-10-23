@@ -151,3 +151,10 @@
 @media (prefers-reduced-motion: reduce) { .gp-modal-fundo { animation: none; } }
 .chart > .gp { height: 100%; }
 .gp-carregando-pagina { display: grid; place-items: center; height: 100%; color: var(--muted); font-size: 13px; }
+
+/* Sinal GF (23/10/2026): a contagem até a vela fechar, discreta, à direita da barra */
+.gp-sinal { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; flex: none; padding: 5px 11px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.gp-sinal i { width: 7px; height: 7px; border-radius: 50%; background: var(--gf-ouro, var(--primary)); }
+.gp-sinal b { color: var(--text); font-family: var(--fonte-dados, ui-monospace, Menlo, monospace); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.gp-sinal small { padding-left: 8px; border-left: 1px solid var(--border); font-size: 11.5px; }
+@media (max-width: 640px) { .gp-sinal small { display: none; } }

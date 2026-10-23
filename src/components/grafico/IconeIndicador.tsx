@@ -30,6 +30,7 @@ const DESENHOS: Record<string, Traco[]> = {
   SMA: [...VELAS, ['a', 'M1 17C10 16 18 13 29 9']],
   BBI: [...VELAS, ['a', 'M1 16C8 15 13 14 17 12S24 8 29 6'], ['b', 'M1 19C10 18 18 15 29 10']],
   // Bollinger aperta e abre com a volatilidade (é o que a separa do Keltner, de largura constante)
+  GF_SINAL: [['f', 'M1 6C8 6 12 10 15 9S23 3 29 2V17C23 17 19 16 15 16S8 21 1 21Z'], ['c', 'M1 6C8 6 12 10 15 9S23 3 29 2'], ['a', 'M1 21C8 21 12 16 15 16S23 17 29 17'], ...VELAS],
   BOLL: [['f', 'M1 8C7 8 11 12 15 11S23 3 29 1V16C23 16 19 15 15 15S7 21 1 21Z'], ['b', 'M1 8C7 8 11 12 15 11S23 3 29 1'], ['b', 'M1 21C7 21 11 15 15 15S23 16 29 16'], ...VELAS, ['a', 'M1 15C7 14 11 13 15 13S23 10 29 8']],
   GF_DONCHIAN: [['f', 'M1 9H9V6H17V3H29V13H21V16H12V21H1Z'], ['b', 'M1 9H9V6H17V3H29'], ['b', 'M1 21H12V16H21V13H29'], ...VELAS],
   GF_KELTNER: [['f', 'M1 11C10 9 18 6 29 3V11C18 14 10 17 1 19Z'], ['b', 'M1 11C10 9 18 6 29 3'], ['b', 'M1 19C10 17 18 14 29 11'], ...VELAS],
@@ -75,6 +76,7 @@ export function IconeIndicador({ id }: { id: string }) {
 
 const CATEGORIA: Record<Categoria | 'ativos', string> = {
   ativos: 'M4 19h16M5 15l4-4 3 3 6-7M14 7h4v4',
+  sinal: 'M12 3l3 4h-6zM12 21l-3-4h6zM4 12c3-3 5-3 8 0s5 3 8 0',
   momentum: 'M4 17a8 8 0 1 1 16 0M12 17l4.5-5M7 17h.01M17 17h.01',
   tendencia: 'M3 17l6-6 4 4 8-8M15 7h6v6',
   volatilidade: 'M3 6c6 3 12 3 18 0M3 18c6-3 12-3 18 0M3 12l3-3 3 5 3-4 3 4 3-3 3 1',

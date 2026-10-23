@@ -28,7 +28,21 @@ export interface DesenhoSalvo {
   texto?: string
 }
 
-export const INDICADORES_PADRAO: IndicadorSalvo[] = [{ id: 'MA', params: [20] }]
+/** O Sinal GF (23/10/2026) vem ligado na GlobalFly: quem abre o gráfico já vê as setas. */
+const SINAL_GF: IndicadorSalvo = { id: 'GF_SINAL', params: [20, 1.8, 3] }
+const COM_SINAL = MARCA.id === 'globalfly'
+export const INDICADORES_PADRAO: IndicadorSalvo[] = COM_SINAL ? [SINAL_GF] : [{ id: 'MA', params: [20] }]
+
+interface Guardado { indicadores: IndicadorSalvo[]; sinalOferecido?: boolean }
+/**
+ * Quem já tinha indicadores salvos antes do Sinal GF ganha ele uma vez. A
+ * marca `sinalOferecido` fica gravada junto: se a pessoa tirar o sinal, ele
+ * não volta sozinho.
+ */
+function oferecerSinal(d: Guardado): IndicadorSalvo[] {
+  if (!COM_SINAL || d.sinalOferecido || d.indicadores.some((i) => i.id === SINAL_GF.id)) return d.indicadores
+  return [SINAL_GF, ...d.indicadores]
+}
 
 const chaveLocal = (simbolo: string) => `${MARCA.id}.grafico.${simbolo}`
 
@@ -69,11 +83,16 @@ function agendar(sessao: SessaoTeeds | null, simbolo: string, dados: unknown) {
 
 /** Os indicadores: o do navegador na hora; o do banco quando chegar (se houver). */
 export function carregarIndicadores(sessao: SessaoTeeds | null, aoChegar: (lista: IndicadorSalvo[]) => void): IndicadorSalvo[] {
-  const local = lerLocal<{ indicadores: IndicadorSalvo[] }>('*')?.indicadores
-  if (sessao) void lerBanco<{ indicadores: IndicadorSalvo[] }>(sessao, '*').then((d) => { if (d?.indicadores) { gravarLocal('*', d); aoChegar(d.indicadores) } })
-  return local ?? INDICADORES_PADRAO
+  const usar = (d: Guardado) => {
+    const lista = oferecerSinal(d)
+    if (lista !== d.indicadores || (COM_SINAL && !d.sinalOferecido)) salvarIndicadores(sessao, lista)
+    return lista
+  }
+  const local = lerLocal<Guardado>('*')
+  if (sessao) void lerBanco<Guardado>(sessao, '*').then((d) => { if (d?.indicadores) { gravarLocal('*', d); aoChegar(usar(d)) } })
+  return local?.indicadores ? usar(local) : INDICADORES_PADRAO
 }
-export const salvarIndicadores = (sessao: SessaoTeeds | null, indicadores: IndicadorSalvo[]) => agendar(sessao, '*', { indicadores })
+export const salvarIndicadores = (sessao: SessaoTeeds | null, indicadores: IndicadorSalvo[]) => agendar(sessao, '*', COM_SINAL ? { indicadores, sinalOferecido: true } : { indicadores })
 
 /** Os desenhos de um ativo: o do navegador na hora; o do banco quando chegar. */
 export function carregarDesenhos(sessao: SessaoTeeds | null, simbolo: string, aoChegar: (lista: DesenhoSalvo[]) => void): DesenhoSalvo[] {
