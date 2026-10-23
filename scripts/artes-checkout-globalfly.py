@@ -293,7 +293,10 @@ def lateral(prod):
     for ln in quebrar(d, 'Use na compra o mesmo e-mail da sua conta GlobalFly. É por ele que o acesso é liberado.',
                       f('medium', 19), W - 2 * x0 - 40 * S):
         d.text((x0 + 20 * S, yy), ln, font=f('medium', 19), fill=(214, 225, 238)); yy += 28 * S
-    fim = y + caixa_h + 48 * S
+    yc = y + caixa_h + 30 * S
+    for ln in quebrar(d, 'Fotos: ' + prod['credito'], f('regular', 15), W - 2 * x0):
+        d.text((x0, yc), ln, font=f('regular', 15), fill=(110, 132, 158)); yc += 22 * S
+    fim = yc + 30 * S
     im = im.crop((0, 0, W, fim))
     d = ImageDraw.Draw(im)
     d.rounded_rectangle([3 * S, 3 * S, W - 3 * S, fim - 3 * S], radius=28 * S, outline=(54, 70, 92), width=2 * S)
@@ -301,7 +304,7 @@ def lateral(prod):
 
 
 PRODUTOS = {
-    'gulf': dict(nome='GF Gulf', foto='superior5.webp', fotos=1, foco=0.5, foco_lat=0.5, selo='I.A. EXCLUSIVA',
+    'gulf': dict(credito='Gulfstream G650 por Bene Riobó (CC BY-SA 4.0), via Wikimedia Commons.', nome='GF Gulf', foto='superior5.webp', fotos=1, foco=0.5, foco_lat=0.5, selo='I.A. EXCLUSIVA',
                  titulo_capa=['GF Gulf'], tam_capa=104, titulo_banner=['GF Gulf'], tam_banner=86,
                  frase='Longo alcance nos dígitos altos.',
                  itens=['Acesso por 12 meses à I.A. GF Gulf',
@@ -309,7 +312,7 @@ PRODUTOS = {
                         'Você escolhe valor de entrada, meta e limite de perda',
                         'Opera na sua conta Deriv, pela plataforma GlobalFly',
                         'Renovação anual; cancele quando quiser']),
-    'phenom': dict(nome='GF Phenom', foto='ag2.webp', fotos=1, foco=0.92, foco_capa=0.8, foco_lat=0.6, selo='I.A. EXCLUSIVA',
+    'phenom': dict(credito='Embraer Phenom 300 por Alan Wilson (CC BY-SA 2.0), via Wikimedia Commons.', nome='GF Phenom', foto='ag2.webp', fotos=1, foco=0.92, foco_capa=0.8, foco_lat=0.6, selo='I.A. EXCLUSIVA',
                    titulo_capa=['GF Phenom'], tam_capa=86, titulo_banner=['GF Phenom'], tam_banner=78,
                    frase='Jato leve, pouso preciso nos dígitos baixos.',
                    itens=['Acesso por 12 meses à I.A. GF Phenom',
@@ -317,7 +320,7 @@ PRODUTOS = {
                           'Você escolhe valor de entrada, meta e limite de perda',
                           'Opera na sua conta Deriv, pela plataforma GlobalFly',
                           'Renovação anual; cancele quando quiser']),
-    'pack': dict(nome='Pack Gulf + Phenom', fotos=2, selo='AS DUAS I.A. EXCLUSIVAS',
+    'pack': dict(credito='Gulfstream G650 por Bene Riobó (CC BY-SA 4.0) e Embraer Phenom 300 por Alan Wilson (CC BY-SA 2.0), via Wikimedia Commons.', nome='Pack Gulf + Phenom', fotos=2, selo='AS DUAS I.A. EXCLUSIVAS',
                  titulo_capa=['Pack', 'Gulf + Phenom'], tam_capa=66, titulo_banner=['Pack', 'Gulf + Phenom'], titulo_celular=['Pack', 'Gulf + Phenom'], tam_celular=104,
                  tam_banner=60, frase='As duas juntas, R$ 97 a menos.',
                  itens=['GF Gulf e GF Phenom, as duas I.A. exclusivas',
