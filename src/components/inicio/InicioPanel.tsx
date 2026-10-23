@@ -224,9 +224,8 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                     <span className="in-jato-texto">
                       {!TEM_MONOGRAMA && <small>{MARCA.nome}</small>}
                       <b>{curto}</b>
-                      {r.noAr
-                        ? <em className={ocultos ? '' : r.resultado >= 0 ? 'sobe' : 'cai'}>{ocultos ? MASCARA : `${sinal(r.resultado)}${numero(r.resultado)}`}{r.analise && !r.operando ? ` · ${r.analise.n}/${r.analise.alvo}` : ''}</em>
-                        : <span>{r.chamada}</span>}
+                      {/* só o nome (23/10/2026, Tiago): a frase de cada I.A. saiu do cartão; no ar, fica o resultado */}
+                      {r.noAr && <em className={ocultos ? '' : r.resultado >= 0 ? 'sobe' : 'cai'}>{ocultos ? MASCARA : `${sinal(r.resultado)}${numero(r.resultado)}`}{r.analise && !r.operando ? ` · ${r.analise.n}/${r.analise.alvo}` : ''}</em>}
                     </span>
                   </button>
                 )
