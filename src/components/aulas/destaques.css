@@ -1,16 +1,16 @@
-/* Destaques (Aulas, 21/10/2026). A sala de aulas é sempre escura (cinema):
-   cores fixas da casa, sem depender do tema. */
+/* Destaques (Aulas, 21/10/2026). O banner é sempre azul (no tema claro vira
+   uma ilha escura); só o título da seção e as setas seguem o tema. */
 .dq {
   --dq-azul: #08172B; --dq-fundo: #051528; --dq-ouro: var(--gf-ouro, #B78D39); --dq-marfim: var(--gf-marfim, #F3F0E9); --dq-aco: #93A6BD;
   display: grid; gap: 14px; margin: 22px 0 6px; min-width: 0;
 }
 .dq svg { flex: none; }
 .dq-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.dq-topo h2 { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--dq-marfim); font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.dq-topo h2 { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--text, var(--dq-marfim)); font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
 .dq-topo .monograma .monograma-claro { display: none; }
 .dq-topo .monograma .monograma-escuro { display: block; }
 .dq-setas { display: flex; gap: 6px; }
-.dq-setas button { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(156, 177, 199, .25); background: rgba(255, 255, 255, .04); color: var(--dq-marfim); cursor: pointer; transition: border-color .15s, background .15s; }
+.dq-setas button { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border, rgba(156, 177, 199, .25)); background: var(--surface, rgba(255, 255, 255, .04)); color: var(--text, var(--dq-marfim)); cursor: pointer; transition: border-color .15s, background .15s; }
 .dq-setas button:hover { border-color: var(--dq-ouro); background: rgba(183, 141, 57, .1); }
 .dq-setas svg, .dq-acao svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -18,17 +18,35 @@
 .dq-trilho::-webkit-scrollbar { display: none; }
 .dq-banner {
   position: relative; isolation: isolate; overflow: hidden; flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always;
-  display: grid; grid-template-columns: minmax(0, 1fr) 46%; align-items: center; min-height: 250px; box-sizing: border-box;
-  border-radius: 22px; background: var(--dq-azul); border: 1px solid rgba(183, 141, 57, .28);
+  display: grid; grid-template-columns: minmax(0, 1fr) 44%; align-items: center; min-height: 300px; box-sizing: border-box;
+  border-radius: 22px; border: 1px solid rgba(183, 141, 57, .32);
+  background: radial-gradient(120% 140% at 0% 0%, #0E2440 0%, var(--dq-azul) 46%, #040E1C 100%);
+  box-shadow: 0 30px 60px -38px rgba(5, 21, 40, .85), inset 0 1px 0 rgba(243, 240, 233, .05);
 }
+/* um halo de ouro bem baixo atrás do título */
+.dq-banner::before { content: ''; position: absolute; z-index: -1; left: -8%; top: -30%; width: 46%; height: 120%; background: radial-gradient(closest-side, rgba(183, 141, 57, .16), transparent); pointer-events: none; }
+/* o monograma enorme, tom sobre tom */
+.dq-marca-dagua { position: absolute; z-index: -1; left: 24%; bottom: -120px; color: var(--dq-ouro); opacity: .045; pointer-events: none; }
+.dq-marca-dagua .monograma .monograma-claro { display: none; }
+.dq-marca-dagua .monograma .monograma-escuro { display: block; }
 /* a foto entra pela direita, no corte diagonal do monograma */
-.dq-foto { position: absolute; z-index: -1; top: 0; right: 0; bottom: 0; width: 52%; clip-path: polygon(24% 0, 100% 0, 100% 100%, 0 100%); }
-.dq-foto img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.92) brightness(.82); }
-.dq-foto::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10, 28, 64, .55), rgba(10, 28, 64, 0) 45%), linear-gradient(0deg, rgba(5, 21, 40, .35), transparent 50%); }
-.dq-eixo { position: absolute; z-index: 0; top: 0; right: 0; bottom: 0; width: 52%; height: 100%; overflow: visible; pointer-events: none; }
-.dq-eixo line { stroke: var(--dq-ouro); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.dq-foto { position: absolute; z-index: -1; top: 0; right: 0; bottom: 0; width: 58%; overflow: hidden; clip-path: polygon(24% 0, 100% 0, 100% 100%, 0 100%); }
+.dq-foto img { width: 100%; height: 100%; object-fit: cover; filter: saturate(1.05) contrast(1.04) brightness(.92); transform: scale(1.02); }
+/* a foto aproxima devagar enquanto o banner está na tela */
+.dq-banner.on .dq-foto img { animation: dq-aproxima 8s ease-out both; }
+@keyframes dq-aproxima { from { transform: scale(1.12); } to { transform: scale(1.02); } }
+.dq-foto::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(5, 21, 40, .6), rgba(5, 21, 40, 0) 40%), linear-gradient(0deg, rgba(5, 21, 40, .45), transparent 45%); }
+.dq-eixo { position: absolute; z-index: 0; top: 0; right: 0; bottom: 0; width: 58%; height: 100%; overflow: visible; pointer-events: none; }
+.dq-eixo line { stroke: var(--dq-ouro); stroke-width: 2; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 6px rgba(183, 141, 57, .45)); }
 
-.dq-texto { display: grid; justify-items: start; gap: 10px; padding: 30px 34px; max-width: 34rem; }
+.dq-texto { display: grid; justify-items: start; gap: 12px; padding: 38px 44px; max-width: 36rem; }
+/* a cada troca, o texto entra em cascata */
+.dq-banner.on .dq-texto > * { animation: dq-entra .6s cubic-bezier(.2, .7, .2, 1) both; }
+.dq-banner.on .dq-texto > :nth-child(2) { animation-delay: .07s; }
+.dq-banner.on .dq-texto > :nth-child(3) { animation-delay: .14s; }
+.dq-banner.on .dq-texto > :nth-child(4) { animation-delay: .21s; }
+.dq-banner.on .dq-texto > :nth-child(5) { animation-delay: .28s; }
+@keyframes dq-entra { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 .dq-selo {
   display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 999px; border: 1px solid rgba(156, 177, 199, .22);
   background: rgba(255, 255, 255, .04); color: var(--dq-aco); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
@@ -40,13 +58,20 @@
 @keyframes dq-pulsa { 0% { box-shadow: 0 0 0 0 rgba(229, 56, 59, .6); } 100% { box-shadow: 0 0 0 8px rgba(229, 56, 59, 0); } }
 .dq-banner.ao-vivo { border-color: rgba(229, 56, 59, .5); }
 .dq-banner.ao-vivo .dq-selo { color: #F08A8C; border-color: rgba(229, 56, 59, .4); }
-.dq-texto h3 { margin: 2px 0 0; color: var(--dq-marfim); font-size: clamp(21px, 2.3vw, 27px); font-weight: 700; letter-spacing: -.02em; line-height: 1.15; text-wrap: balance; }
-.dq-texto p { margin: 0; color: var(--dq-aco); font-size: 14.5px; line-height: 1.55; max-width: 42ch; }
+.dq-texto h3 { margin: 2px 0 0; color: var(--dq-marfim); font-size: clamp(24px, 2.4vw, 34px); font-weight: 800; letter-spacing: -.025em; line-height: 1.1; text-wrap: balance; }
+.dq-texto p { margin: 0; color: #B4C3D4; font-size: 15px; line-height: 1.55; max-width: 44ch; }
+/* os três porquês */
+.dq-chaves { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 0; padding: 0; list-style: none; }
+.dq-chaves li { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px 6px 9px; border-radius: 999px; border: 1px solid rgba(183, 141, 57, .3); background: rgba(183, 141, 57, .08); color: var(--dq-marfim); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.dq-chaves svg { width: 14px; height: 14px; fill: none; stroke: var(--dq-ouro); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .dq-acao {
-  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 6px; padding: 0 18px; border: 0; border-radius: 12px;
-  background: var(--dq-ouro); color: #051528; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; transition: transform .15s;
+  display: inline-flex; align-items: center; gap: 8px; min-height: 48px; margin-top: 8px; padding: 0 22px; border: 0; border-radius: 12px;
+  background: linear-gradient(180deg, #D2AE5E, var(--dq-ouro)); color: #051528; font: inherit; font-size: 14.5px; font-weight: 800; cursor: pointer;
+  box-shadow: 0 12px 26px -14px rgba(183, 141, 57, .9), inset 0 1px 0 rgba(255, 255, 255, .35); transition: transform .15s, box-shadow .15s;
 }
-.dq-acao:hover { transform: translateY(-1px); }
+.dq-acao:hover { transform: translateY(-2px); box-shadow: 0 16px 30px -14px rgba(183, 141, 57, 1), inset 0 1px 0 rgba(255, 255, 255, .35); }
+.dq-acao:hover svg { transform: translateX(2px); }
+.dq-acao svg { transition: transform .15s; }
 .dq-acao:focus-visible, .dq-setas button:focus-visible, .dq-pontos button:focus-visible { outline: 2px solid var(--dq-ouro); outline-offset: 2px; }
 
 /* os pontos: o atual vira uma barrinha que enche em 7 s (o tempo até o próximo) */
@@ -61,18 +86,21 @@
 @media (max-width: 700px) {
   .dq { margin-top: 16px; }
   .dq-setas { display: none; }
-  .dq-banner { grid-template-columns: minmax(0, 1fr); grid-template-rows: 150px auto; align-items: start; min-height: 0; border-radius: 20px; }
+  .dq-banner { grid-template-columns: minmax(0, 1fr); grid-template-rows: 170px auto; align-items: start; min-height: 0; border-radius: 20px; }
+  .dq-marca-dagua { left: auto; right: -60px; bottom: -150px; }
+  .dq-chaves { gap: 6px; }
+  .dq-chaves li { font-size: 12px; padding: 5px 10px 5px 8px; }
   .dq-trilho { border-radius: 20px; }
-  .dq-foto { position: relative; grid-row: 1; width: 100%; height: 150px; overflow: hidden; clip-path: polygon(0 0, 100% 0, 100% 78%, 0 100%); }
-  .dq-foto img { display: block; height: 150px; }
+  .dq-foto { position: relative; grid-row: 1; width: 100%; height: 170px; overflow: hidden; clip-path: polygon(0 0, 100% 0, 100% 78%, 0 100%); }
+  .dq-foto img { display: block; height: 170px; }
   .dq-foto::after { background: linear-gradient(0deg, rgba(10, 28, 64, .5), transparent 60%); }
   .dq-eixo { display: none; }
   .dq-texto { grid-row: 2; align-self: start; padding: 6px 18px 20px; gap: 8px; }
-  .dq-texto h3 { font-size: 21px; }
+  .dq-texto h3 { font-size: 23px; }
   .dq-texto p { font-size: 14px; }
   .dq-acao { width: 100%; justify-content: center; min-height: 48px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dq-ponto, .dq-pontos button i { animation: none; }
+  .dq-ponto, .dq-pontos button i, .dq-banner.on .dq-foto img, .dq-banner.on .dq-texto > * { animation: none; }
   .dq-acao, .dq-pontos button { transition: none; }
 }

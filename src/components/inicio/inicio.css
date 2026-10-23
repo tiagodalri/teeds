@@ -239,7 +239,8 @@
 }
 :root[data-tema='escuro'] .in-aula { background: #051528; border: 1px solid #172C47; }
 /* a capa à direita (as capas das aulas têm título próprio): o azul só a encosta, sem cobrir */
-.in-aula img { grid-column: 2; grid-row: 1; width: 100%; height: 100%; object-fit: cover; transition: transform .8s ease; }
+.in-aula img { grid-column: 2; grid-row: 1; width: 100%; height: 0; min-height: 100%; object-fit: cover; transition: transform .8s ease; }
+/* height 0 + min-height 100%: a capa (em pé) acompanha o cartão em vez de esticá-lo para baixo */
 .in-aula:hover img { transform: scale(1.04); }
 .in-aula::after { content: ''; grid-column: 2; grid-row: 1; z-index: 0; background: linear-gradient(90deg, var(--in-azul) 0%, rgba(5, 21, 40, 0) 34%); pointer-events: none; }
 :root[data-tema='escuro'] .in-aula::after { background: linear-gradient(90deg, #051528 0%, rgba(5, 21, 40, 0) 34%); }
@@ -356,4 +357,16 @@
 @media (prefers-reduced-motion: reduce) {
   .in-jato-selo i, .in-esqueleto { animation: none; }
   .in-jato, .in-jato img, .in-aula img, .in-atalho, .in-pilula, .in-instr-arco .ponteiro, .in-instr-arco .feito { transition: none; }
+}
+
+/* computador: o Início é o painel do dia e cabe numa tela só, com o navegador em 100% (23/10/2026) */
+@media (min-width: 901px) {
+  .in-painel { padding: 24px 32px; }
+  .in-jato { height: 176px; }
+  .in-coluna-principal { gap: 20px; }
+  .in-coluna-lado { gap: 14px; }
+  .in-bloco { padding: 16px 18px 6px; }
+  .in-cotacao { padding: 9px 0; }
+  .in-manchete { padding: 9px 0 9px 14px; }
+  .in-manchete::before { top: 11px; bottom: 11px; }
 }

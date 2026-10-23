@@ -24,6 +24,9 @@
     padding: var(--pagina-topo) var(--pagina-lado) var(--pagina-fim);
   }
 
+  /* o Início é um painel: respiro menor para caber numa tela só */
+  .workspace-app .in { gap: 18px; padding-top: 18px; padding-bottom: 24px; }
+
   /* telas "ger": a raiz ocupa a área e o conteúdo fica na moldura */
   .workspace-app :is(.go.ger.go-consultoria, .ger.aulas:not(.cine), .ger.insights, .ger.monitoramento) {
     padding: var(--pagina-topo) var(--pagina-lado) var(--pagina-fim);

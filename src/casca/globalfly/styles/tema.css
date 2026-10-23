@@ -437,3 +437,12 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 :root[data-marca='globalfly']:not([data-tema='escuro']) .in-painel {
   --up: #22D66A; --down: #FF3B47; --up-soft: rgba(34, 214, 106, .14); --down-soft: rgba(255, 59, 71, .14);
 }
+
+/* Aulas no tema claro (23/10/2026): a página é marfim, então os títulos das trilhas
+   saem do marfim (sumiam no fundo) e a capa vira uma ilha Azul GF inteira, sem o
+   esmaecer para o branco embaixo, que apagava os botões. */
+:root[data-marca='globalfly']:not([data-tema='escuro']) .ger.aulas:not(.cine) .aulas-modulo-topo h3 { color: var(--text); }
+:root[data-marca='globalfly']:not([data-tema='escuro']) .ger.aulas:not(.cine) .aulas-modulo-topo p { color: var(--muted); }
+:root[data-marca='globalfly']:not([data-tema='escuro']) .ger.aulas:not(.cine) .aulas-trilha-num { color: color-mix(in srgb, var(--gf-ouro) 70%, var(--text)); }
+:root[data-marca='globalfly']:not([data-tema='escuro']) .ger.aulas:not(.cine) .aulas-capa { background-color: #051528; border-color: #172C47; box-shadow: inset 0 -110px 100px #051528, 0 28px 56px -34px rgba(5, 21, 40, .7); }
+:root[data-marca='globalfly']:not([data-tema='escuro']) .ger.aulas:not(.cine) .aulas-capa::after { background: linear-gradient(transparent, #051528); }

@@ -12,6 +12,9 @@ import './destaques.css'
  *
  * Desenho do brandbook: Azul GF, a foto à direita entrando por um corte
  * diagonal no ângulo do monograma, o ouro só na ação. Sem neon, sem brilho.
+ * 23/10/2026 ("mais impressionantes e chamativos"): foto maior com um
+ * aproximar lento, título grande, três selinhos com o porquê, o monograma
+ * enorme tom sobre tom e o texto entrando em cascata a cada troca.
  * Passa a cada 7 s; para quando o mouse ou o dedo está em cima, quando a aba
  * está escondida e para quem pede menos movimento. No celular, arrasta.
  */
@@ -29,6 +32,8 @@ export interface Banner {
   tela?: string
   marca?: 'deriv' | 'whatsapp' | 'gf'
   aoVivo?: boolean
+  /** Três pontos curtos que resumem o porquê (aparecem como selinhos). */
+  pontos?: string[]
 }
 
 const CAIXA_DERIV = DERIV.deposito
@@ -40,30 +45,35 @@ export function bannersDaMarca({ treino, noAr }: { treino: boolean; noAr: boolea
     id: 'ao-vivo', selo: noAr ? 'Ao vivo agora' : 'Sala de treino', aoVivo: noAr, marca: 'gf',
     titulo: noAr ? 'A sala de treino está no ar' : 'Fique atento às próximas transmissões',
     texto: noAr ? 'A equipe está operando ao vivo agora. Entre para acompanhar cada decisão em tempo real.' : 'Quando a equipe abrir uma sala ao vivo, você recebe o aviso na hora. Opere junto e tire dúvidas no chat.',
+    pontos: noAr ? ['Equipe operando agora', 'Cada decisão explicada', 'Chat aberto'] : ['Aviso na hora', 'Opere junto com a equipe', 'Dúvidas no chat'],
     acao: noAr ? 'Entrar na sala' : 'Conhecer a sala', tela: 'aovivo', imagem: `${BASE}login-globalfly/nuvens.webp`, posicao: 'center 45%',
   })
   if (MARCA.comunidade) l.push({
     id: 'comunidade', selo: 'Comunidade oficial', marca: 'whatsapp',
     titulo: `Entre na comunidade ${MARCA.prosa}`,
     texto: 'Avisos da equipe, novidades da plataforma e a agenda das transmissões, direto no seu WhatsApp.',
+    pontos: ['Avisos da equipe', 'Agenda das transmissões', 'Novidades primeiro'],
     acao: 'Entrar na comunidade', href: MARCA.comunidade, imagem: `${BASE}fundos-globalfly/monograma-gf.jpg`, posicao: '80% center',
   })
   if (MARCA.afiliado) l.push({
     id: 'conta', selo: 'Corretora oficial', marca: 'deriv',
     titulo: 'Abra a sua conta na Deriv',
     texto: 'É gratuito e leva poucos minutos. As operações acontecem na sua conta, e o dinheiro fica sempre com você.',
+    pontos: ['Gratuito', 'Poucos minutos', 'O dinheiro fica com você'],
     acao: 'Abrir minha conta', href: MARCA.afiliado, imagem: `${BASE}aulas-globalfly/conta-deriv.webp`, posicao: 'center 35%',
   })
   l.push({
     id: 'deposito', selo: 'Depósito', marca: 'deriv',
     titulo: 'Faça o seu depósito na Deriv',
     texto: 'Pela área Caixa (Cashier) da sua conta. Assim que o valor cair, o saldo aparece aqui na plataforma.',
+    pontos: ['Pela área Caixa', 'Em dólar (USD)', 'O saldo aparece aqui'],
     acao: 'Depositar na Deriv', href: CAIXA_DERIV, imagem: `${BASE}aulas-globalfly/deriv-confiavel.webp`, posicao: 'center 30%',
   })
   if (MARCA.apostila) l.push({
     id: 'apostila', selo: 'Material de apoio', marca: 'gf',
     titulo: 'Baixe a sua apostila',
     texto: 'O passo a passo da plataforma num só arquivo, para consultar quando quiser.',
+    pontos: ['Passo a passo', 'Tudo num arquivo', 'Consulte quando quiser'],
     acao: 'Baixar a apostila', href: MARCA.apostila, imagem: `${BASE}aulas-globalfly/documentos.webp`,
   })
   return l
@@ -123,10 +133,12 @@ export function Destaques({ banners, aoIr }: { banners: Banner[]; aoIr?: (tela: 
 
       <div className="dq-trilho" ref={trilho}>
         {banners.map((b, i) => (
-          <article key={b.id} className={`dq-banner ${b.marca ?? ''} ${b.aoVivo ? 'ao-vivo' : ''}`} aria-roledescription="destaque" aria-label={`${i + 1} de ${banners.length}: ${b.titulo}`}>
+          <article key={b.id} className={`dq-banner ${b.marca ?? ''} ${b.aoVivo ? 'ao-vivo' : ''} ${i === atual ? 'on' : ''}`} aria-roledescription="destaque" aria-label={`${i + 1} de ${banners.length}: ${b.titulo}`}>
             <div className="dq-foto" aria-hidden="true">
               <img src={b.imagem} alt="" loading={i === 0 ? 'eager' : 'lazy'} style={{ objectPosition: b.posicao ?? 'center' }} />
             </div>
+            {/* o monograma enorme, tom sobre tom, atrás do texto */}
+            <span className="dq-marca-dagua" aria-hidden="true"><Monograma tamanho={420} /></span>
             {/* o fio de ouro exatamente na borda do corte da foto */}
             <svg className="dq-eixo" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line x1="24" y1="0" x2="0" y2="100" /></svg>
             <div className="dq-texto">
@@ -137,6 +149,11 @@ export function Destaques({ banners, aoIr }: { banners: Banner[]; aoIr?: (tela: 
               </span>
               <h3>{b.titulo}</h3>
               <p>{b.texto}</p>
+              {b.pontos && (
+                <ul className="dq-chaves">
+                  {b.pontos.map((t) => <li key={t}><Seta d="M5 12.5l4.2 4.2L19 7" />{t}</li>)}
+                </ul>
+              )}
               <button type="button" className="dq-acao" onClick={() => abrir(b)}>
                 {b.acao}<Seta d={b.href ? 'M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5' : 'M9 6l6 6-6 6'} />
               </button>

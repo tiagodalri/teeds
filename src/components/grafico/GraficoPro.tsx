@@ -190,7 +190,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
   const [pePainel, setPePainel] = useState<number | null>(null)
   const medirPainel = () => window.setTimeout(() => {
     const b = chartRef.current?.getSize('candle_pane', 'main')
-    // o klinecharts mede em px da tela; os botões ficam em px da página (core/escala.ts)
+    // o klinecharts roda sem a escala (gp-kline): mede em px da tela; os botões ficam em px da página (core/escala.ts)
     setPePainel(b ? naPagina(b.top + b.height) - 48 : null)
   }, 0)
   const dados = useRef<KLineData[]>([])
@@ -442,7 +442,8 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
           </div>
         )}
 
-        <div className="gp-grafico" ref={caixa} aria-label={`Gráfico de ${symbolName}`}>
+        <div className="gp-grafico" aria-label={`Gráfico de ${symbolName}`}>
+          <div className="gp-kline" ref={caixa} />
           {loading && <span className="gp-carregando">Carregando velas…</span>}
           <ControlesDeZoom style={pePainel !== null ? { left: '50%', top: pePainel } : { left: '50%', bottom: 44 }}
             aoAfastar={() => zoomPeloBotao(0.8)}

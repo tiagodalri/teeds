@@ -22,6 +22,10 @@
 /* ---------------------------------------------------- área do gráfico */
 .gp-area { display: flex; flex: 1; min-height: 0; }
 .gp-grafico { position: relative; flex: 1; min-width: 0; min-height: 320px; }
+/* o klinecharts não entende a escala do computador (core/escala.ts): mede em px
+   da página e lê o mouse em px da tela, e a mira saía do lugar. Aqui ele roda
+   sem a escala, e o resto do gráfico (botões, avisos) segue com ela. */
+.gp-kline { position: absolute; inset: 0; zoom: calc(1 / var(--escala-pagina, 1)); }
 .gp-ferramentas { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border-right: 1px solid var(--border); overflow-y: auto; scrollbar-width: none; }
 .gp-ferramentas::-webkit-scrollbar { display: none; }
 .gp-ferramentas button { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border: 0; border-radius: 8px; background: none; color: var(--muted); cursor: pointer; }
@@ -136,6 +140,7 @@
   .gp-sep { width: 1px; height: 20px; margin: 0 4px; }
   .gp-area { position: relative; }
   .gp-grafico { padding-bottom: 54px; }
+  .gp-kline { bottom: 54px; }
   .gp-dica { bottom: 62px; }
   .gp-modal { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); height: calc(100dvh - 24px); }
   .gp-modal-menu { flex-direction: row; padding: 10px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--border); }
