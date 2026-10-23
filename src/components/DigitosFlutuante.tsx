@@ -5,6 +5,7 @@ import { nomeDoAtivo } from '../core/deriv/market'
 import { useDigits } from '../hooks/useDigits'
 import { IconeFechar } from './IconeFechar'
 import { MARCA } from '../marca'
+import { naPagina } from '../core/escala'
 
 /**
  * Painel flutuante "Dígitos ao vivo" da área dos robôs.
@@ -112,7 +113,8 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
   })()
 
   // ------------------------------------------------------------ tamanho
-  const larguraMaxima = () => Math.max(LARGURA_MIN, Math.min(LARGURA_MAX, window.innerWidth - 24))
+  // medidas da janela e do ponteiro em px da página (escala do computador: core/escala.ts)
+  const larguraMaxima = () => Math.max(LARGURA_MIN, Math.min(LARGURA_MAX, naPagina(window.innerWidth) - 24))
   const [largura, setLargura] = useState<number>(() => {
     const l = ler<number>(CHAVE_LARGURA, LARGURA)
     return Number.isFinite(l) ? Math.min(Math.max(LARGURA_MIN, l), larguraMaxima()) : LARGURA
@@ -129,31 +131,31 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
   }, [])
   const caixa = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ x: number; y: number }>(() => {
-    const padrao = { x: Math.max(12, window.innerWidth - largura - 24), y: 120 }
+    const padrao = { x: Math.max(12, naPagina(window.innerWidth) - largura - 24), y: 120 }
     const g = ler<Partial<{ x: number; y: number }>>(CHAVE_POS, padrao)
     const x = typeof g?.x === 'number' && Number.isFinite(g.x) ? g.x : padrao.x
     const y = typeof g?.y === 'number' && Number.isFinite(g.y) ? g.y : padrao.y
     return {
-      x: Math.min(Math.max(0, x), Math.max(0, window.innerWidth - largura)),
-      y: Math.min(Math.max(0, y), Math.max(0, window.innerHeight - 120)),
+      x: Math.min(Math.max(0, x), Math.max(0, naPagina(window.innerWidth) - largura)),
+      y: Math.min(Math.max(0, y), Math.max(0, naPagina(window.innerHeight) - 120)),
     }
   })
   const arrasto = useRef<{ dx: number; dy: number } | null>(null)
   const dentroDaTela = (p: { x: number; y: number }) => {
     const h = caixa.current?.offsetHeight ?? 300
     return {
-      x: Math.min(Math.max(0, p.x), Math.max(0, window.innerWidth - largura)),
-      y: Math.min(Math.max(0, p.y), Math.max(0, window.innerHeight - Math.min(h, 120))),
+      x: Math.min(Math.max(0, p.x), Math.max(0, naPagina(window.innerWidth) - largura)),
+      y: Math.min(Math.max(0, p.y), Math.max(0, naPagina(window.innerHeight) - Math.min(h, 120))),
     }
   }
   const comecar = (e: React.PointerEvent) => {
     if (movel || (e.target as HTMLElement).closest('button')) return
-    arrasto.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y }
+    arrasto.current = { dx: naPagina(e.clientX) - pos.x, dy: naPagina(e.clientY) - pos.y }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
   const mover = (e: React.PointerEvent) => {
     if (!arrasto.current) return
-    setPos(dentroDaTela({ x: e.clientX - arrasto.current.dx, y: e.clientY - arrasto.current.dy }))
+    setPos(dentroDaTela({ x: naPagina(e.clientX) - arrasto.current.dx, y: naPagina(e.clientY) - arrasto.current.dy }))
   }
   const soltar = () => {
     if (!arrasto.current) return
@@ -171,13 +173,13 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
   const comecarRedimensao = (e: React.PointerEvent) => {
     if (movel) return
     e.preventDefault(); e.stopPropagation()
-    redimensao.current = { x0: e.clientX, l0: largura }
+    redimensao.current = { x0: naPagina(e.clientX), l0: largura }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
   const redimensionar = (e: React.PointerEvent) => {
     if (!redimensao.current) return
-    const alvo = redimensao.current.l0 + (e.clientX - redimensao.current.x0)
-    const maxAqui = Math.min(larguraMaxima(), window.innerWidth - pos.x - 8)
+    const alvo = redimensao.current.l0 + (naPagina(e.clientX) - redimensao.current.x0)
+    const maxAqui = Math.min(larguraMaxima(), naPagina(window.innerWidth) - pos.x - 8)
     setLargura(Math.round(Math.min(Math.max(LARGURA_MIN, alvo), Math.max(LARGURA_MIN, maxAqui))))
   }
   const soltarRedimensao = () => {

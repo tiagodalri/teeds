@@ -8,6 +8,7 @@ import {
 import { falarComoApresentador, useSimulacao, type MensagemSimulada } from '../../core/live/simulacao'
 import { Icone, abrirPorCima, podeAbrirPorCima, useCelular, useLargo } from './AoVivo'
 import './aovivo.css'
+import { naPagina as emPxDaPagina } from '../../core/escala'
 
 /**
  * A sala de treino fora da página "Ao vivo" (20/10/2026, pedido do Tiago:
@@ -239,8 +240,8 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
   // flutuante: arrasta pela imagem, solta e gruda no canto mais perto. No
   // celular é uma miniatura; o chat abre numa folha por baixo.
   const largura = celular
-    ? Math.round(window.innerWidth * ({ P: 0.38, M: 0.48, G: 0.62 }[t.tamanho]))
-    : Math.min(LARGURA[t.tamanho], window.innerWidth - 24)
+    ? Math.round(emPxDaPagina(window.innerWidth) * ({ P: 0.38, M: 0.48, G: 0.62 }[t.tamanho]))
+    : Math.min(LARGURA[t.tamanho], emPxDaPagina(window.innerWidth) - 24)
   const margem = celular ? 10 : 16
   const posicao: CSSProperties = arrasto
     ? { left: arrasto.x, top: arrasto.y, width: largura }
@@ -258,7 +259,8 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
   const mover = (e: PEvent) => {
     if (!inicio.current) return
     const i = inicio.current
-    setArrasto({ x: i.x + e.clientX - i.px, y: i.y + e.clientY - i.py })
+    // posição medida na tela → px da página (escala do computador: core/escala.ts)
+    setArrasto({ x: emPxDaPagina(i.x + e.clientX - i.px), y: emPxDaPagina(i.y + e.clientY - i.py) })
   }
   const soltar = () => {
     if (!inicio.current) return

@@ -7,6 +7,7 @@ import { contagemDoEstado } from '../RobotResumo'
 import { MARCA } from '../../marca'
 import { simboloMoeda } from '../../core/dinheiro'
 import './mini-cabine.css'
+import { naPagina } from '../../core/escala'
 
 /**
  * A mini-cabine (21/10/2026, ideia do Tiago): com robô ligado, a pessoa vai
@@ -45,10 +46,11 @@ const lerPos = (): Posicao | null => { try { const p = JSON.parse(localStorage.g
 const prende = (v: number) => Math.max(0, Math.min(1, v))
 /** O espaço livre: abaixo do topo e acima da barra de baixo (celular), com folga. */
 function area(w: number, h: number) {
-  const topo = document.querySelector('.workspace-app .topbar')?.getBoundingClientRect().bottom ?? 0
+  // tudo em px da página (escala do computador: core/escala.ts)
+  const topo = naPagina(document.querySelector('.workspace-app .topbar')?.getBoundingClientRect().bottom ?? 0)
   const barra = document.querySelector('.barra-inferior')
-  const base = barra && barra.getBoundingClientRect().height > 0 ? barra.getBoundingClientRect().top : window.innerHeight
-  const minX = 8, maxX = Math.max(minX, window.innerWidth - w - 8)
+  const base = naPagina(barra && barra.getBoundingClientRect().height > 0 ? barra.getBoundingClientRect().top : window.innerHeight)
+  const minX = 8, maxX = Math.max(minX, naPagina(window.innerWidth) - w - 8)
   const minY = Math.max(8, topo + 8), maxY = Math.max(minY, base - h - 8)
   return { minX, maxX, minY, maxY }
 }
@@ -142,20 +144,20 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo, demo
   const pegar = (e: React.PointerEvent) => {
     if (e.button !== 0 || (e.target as HTMLElement).closest('.mcb-nao-arrasta')) return
     const r = raiz.current!.getBoundingClientRect()
-    arrasto.current = { x0: e.clientX, y0: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top, moveu: false }
+    arrasto.current = { x0: naPagina(e.clientX), y0: naPagina(e.clientY), dx: naPagina(e.clientX - r.left), dy: naPagina(e.clientY - r.top), moveu: false }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
   const mover = (e: React.PointerEvent) => {
     const a0 = arrasto.current
     const el = raiz.current
     if (!a0 || !el) return
-    if (!a0.moveu && Math.hypot(e.clientX - a0.x0, e.clientY - a0.y0) < 6) return
+    if (!a0.moveu && Math.hypot(naPagina(e.clientX) - a0.x0, naPagina(e.clientY) - a0.y0) < 6) return
     a0.moveu = true
     setArrastando(true)
     const a = area(el.offsetWidth, el.offsetHeight)
     setPos({
-      x: a.maxX > a.minX ? prende((e.clientX - a0.dx - a.minX) / (a.maxX - a.minX)) : 0,
-      y: a.maxY > a.minY ? prende((e.clientY - a0.dy - a.minY) / (a.maxY - a.minY)) : 1,
+      x: a.maxX > a.minX ? prende((naPagina(e.clientX) - a0.dx - a.minX) / (a.maxX - a.minX)) : 0,
+      y: a.maxY > a.minY ? prende((naPagina(e.clientY) - a0.dy - a.minY) / (a.maxY - a.minY)) : 1,
     })
   }
   const soltar = () => {

@@ -15,6 +15,7 @@ import { MARCA } from '../marca'
 import { ControlesDeZoom } from './grafico/ControlesDeZoom'
 import { PrecoComDigito } from './preco/PrecoComDigito'
 import { NOMES_DE_CONTRATO } from './PositionCard'
+import { naPagina } from '../core/escala'
 
 export type ChartMode = 'candles' | 'line'
 
@@ -676,7 +677,8 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
     const rect = canvasRef.current?.getBoundingClientRect()
     const items = view.items
     if (!rect || !items.length || stepX <= 0) return null
-    const x = clientX - rect.left, y = clientY - rect.top
+    // medidas da tela → px do gráfico (a página tem escala no computador: core/escala.ts)
+    const x = naPagina(clientX - rect.left), y = naPagina(clientY - rect.top)
     if (x < plot.x || x > plot.x + plot.w || y < plot.y || y > plot.y + plot.h) return null
     const passo = items.length > 1 ? (items[1].epoch - items[0].epoch || 60) : 60
     return {
@@ -697,7 +699,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
     }
     const rect = canvasRef.current?.getBoundingClientRect()
     if (rect) {
-      const x = e.clientX - rect.left, y = e.clientY - rect.top
+      const x = naPagina(e.clientX - rect.left), y = naPagina(e.clientY - rect.top)
       const media = linhaPerto(x, y, e.pointerType === 'touch' ? 14 : 7)
       if (media) { abrirEditor(media, x, y); return }
     }
@@ -709,11 +711,11 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
   const onPointerMove = (e: React.PointerEvent) => {
     const rect = canvasRef.current?.getBoundingClientRect()
     if (!rect) return
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    const x = naPagina(e.clientX - rect.left)
+    const y = naPagina(e.clientY - rect.top)
 
     if (drag.current && stepX > 0) {
-      const moved = Math.round((e.clientX - drag.current.x) / stepX)
+      const moved = Math.round(naPagina(e.clientX - drag.current.x) / stepX)
       const maxOffset = Math.max(0, candles.length - vp.size)
       const next = Math.min(maxOffset, Math.max(0, drag.current.offset + moved))
       setVp((prev) => (prev.offset === next ? prev : { ...prev, offset: next }))
@@ -745,7 +747,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
   }
   const eixoMove = (e: React.PointerEvent) => {
     if (!eixo.current) return
-    const nova = eixo.current.escala * Math.exp((e.clientY - eixo.current.y) / 160)
+    const nova = eixo.current.escala * Math.exp(naPagina(e.clientY - eixo.current.y) / 160)
     setEscalaY(Math.min(8, Math.max(0.12, nova)))
   }
   const eixoUp = () => { eixo.current = null }
@@ -818,7 +820,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
               title={`Mudar o período da ${id === 'sma' ? 'média móvel simples' : 'média móvel exponencial'}`}
               onClick={(e) => {
                 const r = wrapRef.current?.getBoundingClientRect(); const b = e.currentTarget.getBoundingClientRect()
-                if (r) abrirEditor(id, b.left - r.left, b.bottom - r.top + 4)
+                if (r) abrirEditor(id, naPagina(b.left - r.left), naPagina(b.bottom - r.top) + 4)
               }}>
               <i aria-hidden="true" />{nomeDaMedia(id, periodos[id])}
             </button>

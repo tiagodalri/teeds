@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { naPagina } from './escala'
 
 /**
  * A decolagem (21/10/2026, pedido do Tiago): ao entrar na conta, um avião
@@ -30,7 +31,8 @@ const avisar = () => ouvintes.forEach((f) => f())
 export function marcarEmbarque(el: Element | null): void {
   if (!el) return
   const r = el.getBoundingClientRect()
-  embarque = { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+  // em px da página (a escala do computador: core/escala.ts)
+  embarque = { x: naPagina(r.left + r.width / 2), y: naPagina(r.top + r.height / 2) }
 }
 
 export function decolar(nome: string | null): void {

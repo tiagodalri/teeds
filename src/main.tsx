@@ -14,6 +14,7 @@ import { registrarVisita } from './core/teeds/visitas'
 import { haTrocaEmAndamento } from './core/trocaEmAndamento'
 // Guarda o pedido de instalação do Chrome assim que ele chega (ver o arquivo).
 import './core/appNativo'
+import { ligarEscala } from './core/escala'
 
 /*
   Os arquivos publicados têm nome fixo. Se uma aba antiga abre uma tela
@@ -56,6 +57,8 @@ if (matchMedia('(display-mode: standalone)').matches || (navigator as unknown as
   document.documentElement.classList.add('app-instalado')
 }
 aplicarTema(temaGuardado())
+// no computador a página nasce em 90% (ver core/escala.ts)
+ligarEscala()
 
 // Quem abriu o site, e por qual caminho chegou. Fora do React de propósito:
 // vale para TODA visita, inclusive a de quem nunca faz login, e o StrictMode

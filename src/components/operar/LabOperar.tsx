@@ -45,7 +45,7 @@ export default function LabOperar() {
     ? [contrato(1, 'CALL', 2.78, 94), contrato(2, 'PUT', -4.1, 12), contrato(3, 'CALL', 7.84, 0, 'won')]
     : [contrato(1, 'CALL', 2.78, 94)]
   return (
-    <div className="layout layout-operar" style={{ display: 'flex', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg)' }}>
+    <div className="layout layout-operar" style={{ display: 'flex', justifyContent: 'center', minHeight: 'calc(100vh / var(--escala-pagina, 1))', background: 'var(--bg)' }}>
       {/* &largura=330: a coluna do Operar no notebook */}
       <aside className="trade" style={{ width: `min(${Number(p.get('largura')) || 430}px, 100%)`, borderLeft: 0, height: '100vh' }}>
         <section className="bl" aria-label="Boleta de operação">

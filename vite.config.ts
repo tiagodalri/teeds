@@ -162,8 +162,25 @@ const FONTES_DA_MARCA: Record<string, string> = {
   globalfly: fonte('family=Arimo:wght@400;500;600;700'),
 }
 
+/**
+ * A escala do computador (src/core/escala.ts) deixa a página em 90%. As
+ * medidas pela tela (vh, dvh, vw...) não acompanham: um bloco de 100dvh
+ * ficaria com 90% da altura e sobraria uma faixa vazia embaixo. Aqui toda
+ * medida pela tela do CSS vira "medida / --escala-pagina" (1 no celular e enquanto
+ * o JS não carrega), e a página ocupa a tela inteira em qualquer escala.
+ */
+const UNIDADE_DA_TELA = /(-?(?:\d+\.?\d*|\.\d+))(dvh|svh|lvh|vh|dvw|svw|lvw|vw|vmin|vmax)\b/g
+const medidasPelaTela = {
+  postcssPlugin: 'teeds:medidas-pela-tela-na-escala',
+  Declaration(decl: { value: string }) {
+    if (decl.value.includes('--escala-pagina') || !/\d(?:dvh|svh|lvh|vh|dvw|svw|lvw|vw|vmin|vmax)\b/.test(decl.value)) return
+    decl.value = decl.value.replace(UNIDADE_DA_TELA, 'calc($1$2 / var(--escala-pagina, 1))')
+  },
+}
+
 export default defineConfig({
   base: MARCA.base,
+  css: { postcss: { plugins: [medidasPelaTela] } },
   plugins: [
     cascaPorMarca(),
     paletaDaMarca(PALETAS[MARCA.id]),

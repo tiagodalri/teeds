@@ -21,6 +21,7 @@ import {
 } from '../../core/live/sala'
 import './aovivo.css'
 import { dataComHora } from '../../core/datas'
+import { naPagina as emPxDaPagina } from '../../core/escala'
 
 /* ===================================================================== peças */
 
@@ -366,8 +367,8 @@ function PlayerConteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPag
   // No celular é uma miniatura (como o player pequeno do YouTube): a pessoa
   // continua operando com a live no canto; o chat abre numa folha por baixo.
   const largura = celular
-    ? Math.round(window.innerWidth * ({ P: 0.38, M: 0.48, G: 0.62 }[s.tamanho]))
-    : Math.min(LARGURA[s.tamanho], window.innerWidth - 24)
+    ? Math.round(emPxDaPagina(window.innerWidth) * ({ P: 0.38, M: 0.48, G: 0.62 }[s.tamanho]))
+    : Math.min(LARGURA[s.tamanho], emPxDaPagina(window.innerWidth) - 24)
   const margem = celular ? 10 : 16
   const posicao: CSSProperties = arrasto
     ? { left: arrasto.x, top: arrasto.y, width: largura }
@@ -385,7 +386,8 @@ function PlayerConteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPag
   const mover = (e: PEvent) => {
     if (!inicio.current) return
     const i = inicio.current
-    setArrasto({ x: i.x + e.clientX - i.px, y: i.y + e.clientY - i.py })
+    // posição medida na tela → px da página (escala do computador: core/escala.ts)
+    setArrasto({ x: emPxDaPagina(i.x + e.clientX - i.px), y: emPxDaPagina(i.y + e.clientY - i.py) })
   }
   const soltar = () => {
     if (!inicio.current) return

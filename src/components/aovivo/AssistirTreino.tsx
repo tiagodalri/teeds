@@ -132,7 +132,7 @@ export function LabAssistirTreino({ fora }: { fora?: ModoDoTreino } = {}) {
   // ?tela=treino-player&modo=flutuante|lado|pilula: o player fora da página, sobre uma tela qualquer
   if (fora) {
     return (
-      <div className="workspace-app" style={{ minHeight: '100vh', padding: 24 }}>
+      <div className="workspace-app" style={{ minHeight: 'calc(100vh / var(--escala-pagina, 1))', padding: 24 }}>
         <p style={{ color: 'var(--muted)' }}>Uma tela qualquer da plataforma (o gráfico, as aulas…). O ensaio segue no player.</p>
         <LabPlayer modo={fora} />
       </div>

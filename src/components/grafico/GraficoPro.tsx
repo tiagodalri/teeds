@@ -17,6 +17,7 @@ import type { ChartMode, ContractMarker } from '../PriceChart'
 import { IconeCategoria, IconeIndicador } from './IconeIndicador'
 import './grafico-pro.css'
 import { ControlesDeZoom } from './ControlesDeZoom'
+import { naPagina } from '../../core/escala'
 
 interface Props {
   candles: Candle[]
@@ -189,7 +190,8 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
   const [pePainel, setPePainel] = useState<number | null>(null)
   const medirPainel = () => window.setTimeout(() => {
     const b = chartRef.current?.getSize('candle_pane', 'main')
-    setPePainel(b ? b.top + b.height - 48 : null)
+    // o klinecharts mede em px da tela; os botões ficam em px da página (core/escala.ts)
+    setPePainel(b ? naPagina(b.top + b.height) - 48 : null)
   }, 0)
   const dados = useRef<KLineData[]>([])
   const assinante = useRef<((k: KLineData) => void) | null>(null)
@@ -204,7 +206,9 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
   const mostrarDica = (e: { currentTarget: HTMLElement }, f: { nome: string; descricao: string }) => {
     const r = e.currentTarget.getBoundingClientRect()
     const acima = window.matchMedia('(max-width: 700px)').matches
-    setDica({ ...f, acima, x: acima ? Math.min(Math.max(r.left + r.width / 2, 130), window.innerWidth - 130) : r.right + 10, y: acima ? r.top - 10 : r.top + r.height / 2 })
+    // medidas da tela → px da página (escala do computador: core/escala.ts)
+    const larg = naPagina(window.innerWidth)
+    setDica({ ...f, acima, x: acima ? Math.min(Math.max(naPagina(r.left + r.width / 2), 130), larg - 130) : naPagina(r.right) + 10, y: acima ? naPagina(r.top) - 10 : naPagina(r.top + r.height / 2) })
   }
   const ajudaDe = (f: { nome: string; descricao: string }) => ({
     onMouseEnter: (e: React.MouseEvent<HTMLElement>) => mostrarDica(e, f),

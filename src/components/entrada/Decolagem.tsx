@@ -5,6 +5,7 @@ import { Monograma } from '../marca/Monograma'
 import { Aviao } from './Aviao'
 import { RotaCarregando } from './Carregando'
 import './decolagem.css'
+import { naPagina } from '../../core/escala'
 
 /**
  * A decolagem (21/10/2026): o voo do login até o início. Três tempos:
@@ -49,7 +50,7 @@ function EmVoo({ voo }: { voo: Voo }) {
   const subida = useRef<Animation[]>([])
   const reduzido = useRef(matchMedia('(prefers-reduced-motion: reduce)').matches)
   // sem o ponto do botão (ex.: entrou por outro caminho), sai de baixo, no centro
-  const origem = voo.origem ?? { x: window.innerWidth / 2, y: window.innerHeight * 0.75 }
+  const origem = voo.origem ?? { x: naPagina(window.innerWidth) / 2, y: naPagina(window.innerHeight) * 0.75 }
   const primeiroNome = voo.nome?.trim().split(/\s+/)[0] ?? ''
 
   useLayoutEffect(() => {

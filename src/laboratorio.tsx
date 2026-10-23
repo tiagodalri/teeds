@@ -101,10 +101,13 @@ import { Decolagem } from './components/entrada/Decolagem'
 import { Carregando } from './components/entrada/Carregando'
 import { decolar, liberarPouso } from './core/decolagem'
 import { CatalogoDeExemplo } from './core/teeds/catalogoRobos'
+import { ligarEscala } from './core/escala'
 
 document.documentElement.dataset.marca = MARCA.id
 // &tema=claro|escuro vale em qualquer tela do laboratório (conferência dos dois temas)
 { const t = new URLSearchParams(location.search).get('tema'); aplicarTema(t === 'claro' || t === 'escuro' ? t : temaGuardado()) }
+// no computador a página nasce em 90% (ver core/escala.ts)
+ligarEscala()
 // &app=1: simula o app instalado num iPhone (barra de status de 47 px)
 if (new URLSearchParams(location.search).has('app')) {
   document.documentElement.classList.add('app-instalado')
@@ -318,14 +321,14 @@ function Laboratorio() {
         {/* ?tela=icones: os ícones dos ativos, como aparecem na lista "Trocar ativo". */}
         {qual === 'icones' && <div className="ativo-menu" style={{ position: 'static', width: 340 }}><div className="symbol-list">{['R_75', '1HZ10V', '1HZ100V', 'frxEURUSD', 'frxGBPUSD', 'frxUSDJPY', 'frxAUDUSD', 'frxUSDCAD', 'frxXAUUSD', 'frxXAGUSD'].map((c) => <button key={c} className="symbol"><IconeAtivo simbolo={c} /><span className="sym-name">{c === 'frxXAUUSD' ? 'Ouro' : c === 'frxXAGUSD' ? 'Prata' : c}</span><span className="dot on" /></button>)}</div></div>}
         {/* ?tela=menu: o menu lateral com a tela de Robôs (I.A. na GlobalFly) aberta. */}
-        {qual === 'menu' && <div className="workspace-app" style={{ minHeight: '100vh' }}><WorkspaceNav page="robos" admin onNavigate={nada} /><LabVitrine /></div>}
+        {qual === 'menu' && <div className="workspace-app" style={{ minHeight: 'calc(100vh / var(--escala-pagina, 1))' }}><WorkspaceNav page="robos" admin onNavigate={nada} /><LabVitrine /></div>}
         {/* ?tela=sem-deriv&voltas=0|1|2: o cartão de corretora desconectada em
             cada estado (nenhum login, uma volta perdida, duas seguidas). */}
         {qual === 'sem-deriv' && <SemDeriv />}
         {/* ?tela=aulas: a sala de aula com o catálogo e as capas da marca. */}
         {qual === 'aulas' && <AulasPanel nome="Tiago" />}
         {/* ?tela=noticias: a aba Notícias, com as fontes de verdade (servidor em produção). */}
-        {qual === 'noticias' && <div className="workspace-app" style={{ minHeight: '100vh' }}><MercadoPanel /></div>}
+        {qual === 'noticias' && <div className="workspace-app" style={{ minHeight: 'calc(100vh / var(--escala-pagina, 1))' }}><MercadoPanel /></div>}
         {/* ?tela=grafico: o gráfico com velas de mentira, médias ligadas (clique na linha). */}
         {/* ?tela=aovivo&modo=pagina|lado|flutuante|pilula&mod=1: a live com vídeo e chat de exemplo. */}
         {qual === 'aovivo' && <Suspense fallback={null}><LabAoVivo modo={(new URLSearchParams(location.search).get('modo') ?? 'pagina') as never} moderador={new URLSearchParams(location.search).has('mod')} /></Suspense>}
@@ -354,7 +357,7 @@ function Laboratorio() {
         )}
         {/* ?tela=treino-no-ar: o que o GF Member vê quando o admin abre a sala de treino. */}
         {qual === 'treino-no-ar' && (
-          <div className="workspace-app" style={{ minHeight: '100vh' }}>
+          <div className="workspace-app" style={{ minHeight: 'calc(100vh / var(--escala-pagina, 1))' }}>
             <WorkspaceNav page="operar" admin={false} onNavigate={nada} aoVivoAgora />
             <div style={{ flex: 1, padding: 16 }}>
               <div className="topbar" style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'flex-end', minHeight: 64 }}>

@@ -8,6 +8,7 @@ import { ESTRATEGIAS_LOCAIS, lossVirtualDaSessao, modoDaConfig, NOME_DO_MODO, te
 import './robot-cockpit.css'
 import { NomeDoRobo } from './NomeDoRobo'
 import { formatarPreco, PrecoComDigito } from './preco/PrecoComDigito'
+import { naPagina } from '../core/escala'
 
 /**
  * O preço só aparece com o dígito destacado quando vem com as casas certas e o
@@ -193,8 +194,9 @@ export function RobotLive({
     const medir = () => {
       const ops = corpo.querySelector<HTMLElement>('.tv-ops')
       if (!ops) return
-      const fundo = corpo.getBoundingClientRect().bottom - parseFloat(getComputedStyle(corpo).paddingBottom || '0')
-      const livre = Math.floor(fundo - ops.getBoundingClientRect().top + corpo.scrollTop) - 1
+      // medidas da tela → px da página (escala do computador: core/escala.ts)
+      const tela = naPagina(corpo.getBoundingClientRect().bottom - ops.getBoundingClientRect().top)
+      const livre = Math.floor(tela - parseFloat(getComputedStyle(corpo).paddingBottom || '0') + corpo.scrollTop) - 1
       tv.style.setProperty('--tv-altura-lista', `${Math.max(240, livre)}px`)
     }
     medir()

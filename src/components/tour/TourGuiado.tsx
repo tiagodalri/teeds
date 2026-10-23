@@ -4,6 +4,7 @@ import type { WorkspacePage } from '../WorkspaceNav'
 import { MARCA } from '../../marca'
 import { Monograma, TEM_MONOGRAMA } from '../marca/Monograma'
 import './tour.css'
+import { naPagina } from '../../core/escala'
 
 /**
  * Tour guiado (20/10/2026, pedido do Tiago): na primeira vez que a pessoa
@@ -158,7 +159,7 @@ export function TourGuiado({ passos, obrigatorio, telaAtual, irPara, aoTerminar,
   })
   const [caixa, setCaixa] = useState<Caixa | null>(null)
   const [procurando, setProcurando] = useState(false)
-  const [tamanho, setTamanho] = useState({ w: window.innerWidth, h: window.innerHeight, cel: celular() })
+  const [tamanho, setTamanho] = useState({ w: naPagina(window.innerWidth), h: naPagina(window.innerHeight), cel: celular() })
   const [alturaCartao, setAlturaCartao] = useState(260)
   const cartao = useRef<HTMLDivElement>(null)
   const alvo = useRef<HTMLElement | null>(null)
@@ -169,7 +170,7 @@ export function TourGuiado({ passos, obrigatorio, telaAtual, irPara, aoTerminar,
   useEffect(() => { if (obrigatorio) try { sessionStorage.setItem(CHAVE, String(i)) } catch { /* só agora */ } }, [i, obrigatorio])
 
   useEffect(() => {
-    const medir = () => setTamanho({ w: window.innerWidth, h: window.innerHeight, cel: celular() })
+    const medir = () => setTamanho({ w: naPagina(window.innerWidth), h: naPagina(window.innerHeight), cel: celular() })
     window.addEventListener('resize', medir)
     window.visualViewport?.addEventListener('resize', medir)
     return () => { window.removeEventListener('resize', medir); window.visualViewport?.removeEventListener('resize', medir) }
@@ -215,7 +216,8 @@ export function TourGuiado({ passos, obrigatorio, telaAtual, irPara, aoTerminar,
       const el = alvo.current
       if (el && el.isConnected) {
         const r = el.getBoundingClientRect()
-        const nova = { top: Math.round(r.top), left: Math.round(r.left), width: Math.round(r.width), height: Math.round(r.height) }
+        // medida da tela → px da página (escala do computador: core/escala.ts)
+        const nova = { top: Math.round(naPagina(r.top)), left: Math.round(naPagina(r.left)), width: Math.round(naPagina(r.width)), height: Math.round(naPagina(r.height)) }
         const chave = `${nova.top}|${nova.left}|${nova.width}|${nova.height}`
         if (chave !== anterior) { anterior = chave; setCaixa(nova) }
       } else if (anterior) { anterior = ''; setCaixa(null) }
