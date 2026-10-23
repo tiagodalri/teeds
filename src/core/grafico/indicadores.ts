@@ -45,7 +45,7 @@ const P = (rotulo: string, padrao: number, min = 1, max = 500, passo = 1): Param
 
 export const CATALOGO: DefinicaoIndicador[] = [
   // ------------------------------------------------------------ o sinal da casa
-  { id: 'GF_SINAL', nome: 'Sinal GF', sigla: 'Sinal GF', categoria: 'sinal', painel: 'principal', descricao: 'Faixas de volatilidade com setas de Subir e Descer quando a vela fecha virando na faixa. O placar na barra do gráfico conta os acertos.', parametros: [P('Período', 20, 5, 100), P('Desvios', 1.8, 1, 4, 0.1), P('Velas entre sinais', 3, 1, 20)] },
+  { id: 'GF_SINAL', nome: 'Sinal GF', sigla: 'Sinal GF', categoria: 'sinal', painel: 'principal', descricao: 'Faixas de volatilidade com setas de Subir e Descer quando a vela fecha virando na faixa. A contagem na barra mostra quando a vela fecha.', parametros: [P('Período', 20, 5, 100), P('Desvios', 1.8, 1, 4, 0.1), P('Velas entre sinais', 3, 1, 20)] },
   // ------------------------------------------------------------ momentum
   { id: 'MACD', nome: 'MACD', sigla: 'MACD', categoria: 'momentum', painel: 'proprio', descricao: 'Convergência e divergência de médias: linha MACD, linha de sinal e histograma.', parametros: [P('Média rápida', 12), P('Média lenta', 26), P('Sinal', 9)] },
   { id: 'RSI', nome: 'Índice de Força Relativa (RSI)', sigla: 'RSI', categoria: 'momentum', painel: 'proprio', descricao: 'Força dos movimentos de alta contra os de baixa, de 0 a 100 (método de Wilder).', parametros: [P('Período', 14, 2)], varios: true },
@@ -178,11 +178,10 @@ function faixa(chaveA: string, chaveB: string, cor: (r: Record<string, number | 
  *
  * A regra de honestidade: cada seta usa só as velas fechadas até ela. A vela
  * que ainda está se formando nunca gera seta (senão a seta apareceria e
- * sumiria). As setas não mostram o resultado (Tiago, 23/10/2026); o placar
- * da barra do gráfico conta todas, certas e erradas, quando a vela seguinte
- * fecha.
+ * sumiria). As setas não mostram o resultado e não há placar (Tiago,
+ * 23/10/2026, com o sinal liberado só para a equipe).
  * ================================================================== */
-export interface PontoSinal { up?: number; mid?: number; dn?: number; sinal?: 1 | -1; certo?: boolean | null }
+export interface PontoSinal { up?: number; mid?: number; dn?: number; sinal?: 1 | -1 }
 
 export function calcularSinal(d: KLineData[], n: number, k: number, espera: number): PontoSinal[] {
   const fech = d.map((v) => v.close)
@@ -198,19 +197,9 @@ export function calcularSinal(d: KLineData[], n: number, k: number, espera: numb
     const v = d[i]
     if (v.high >= p.up && v.close < v.open) p.sinal = -1
     else if (v.low <= p.dn && v.close > v.open) p.sinal = 1
-    if (!p.sinal) continue
-    ultimo = i
-    const seguinteFechada = i + 1 < d.length - 1
-    p.certo = seguinteFechada ? (p.sinal === 1 ? fech[i + 1] > fech[i] : fech[i + 1] < fech[i]) : null
+    if (p.sinal) ultimo = i
   }
   return saida
-}
-
-/** O placar das setas que já têm resultado. */
-export function placarDoSinal(r: PontoSinal[]): { certos: number; total: number } {
-  let certos = 0, total = 0
-  for (const p of r) if (p.sinal && p.certo != null) { total++; if (p.certo) certos++ }
-  return { certos, total }
 }
 
 const base = import.meta.env.BASE_URL

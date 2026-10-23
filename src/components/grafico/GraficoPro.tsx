@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { dispose, init, registerLocale, registerOverlay, type Chart, type DeepPartial, type KLineData, type Overlay, type OverlayCreate, type Styles } from 'klinecharts'
 import type { Candle } from '../../core/deriv/types'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { CATALOGO as CATALOGO_COMPLETO, CATEGORIAS as CATEGORIAS_TODAS, calcularSinal, definicao, placarDoSinal, registrarIndicadores, type Categoria } from '../../core/grafico/indicadores'
+import { CATALOGO as CATALOGO_COMPLETO, CATEGORIAS as CATEGORIAS_TODAS, definicao, registrarIndicadores, type Categoria } from '../../core/grafico/indicadores'
 import { carregarDesenhos, carregarIndicadores, salvarDesenhos, salvarIndicadores, type DesenhoSalvo, type IndicadorSalvo } from '../../core/grafico/layout'
 import type { ChartMode, ContractMarker } from '../PriceChart'
 import { IconeCategoria, IconeIndicador } from './IconeIndicador'
@@ -407,7 +407,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
   }, [chaveMarcadores]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* --------------------------------------------------- Sinal GF */
-  // a contagem discreta até a vela fechar (é quando um sinal pode sair) e o placar das setas do gráfico
+  // a contagem discreta até a vela fechar (é quando um sinal pode sair)
   const sinal = sinalLiberado ? indicadores.find((i) => i.id === 'GF_SINAL') : undefined
   const [agora, setAgora] = useState(() => Date.now())
   useEffect(() => {
@@ -415,11 +415,6 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
     const t = window.setInterval(() => setAgora(Date.now()), 1000)
     return () => window.clearInterval(t)
   }, [!!sinal]) // eslint-disable-line react-hooks/exhaustive-deps
-  const placar = useMemo(() => {
-    if (!sinal || candles.length < 30) return null
-    const [n, k, m] = sinal.params
-    return placarDoSinal(calcularSinal(candles.map((c) => ({ timestamp: c.epoch * 1000, open: c.open, high: c.high, low: c.low, close: c.close })), n, k, m))
-  }, [sinal, candles])
   const falta = granularity > 0 ? granularity - (Math.floor(agora / 1000) % granularity) : 0
   const relogio = `${String(Math.floor(falta / 60)).padStart(2, '0')}:${String(falta % 60).padStart(2, '0')}`
 
@@ -443,9 +438,8 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
           ))}
         </div>
         {sinal && granularity > 0 && (
-          <span className="gp-sinal" title="O Sinal GF só sai no fechamento da vela, quando ela vira na faixa. O placar conta as setas deste gráfico que já têm resultado.">
+          <span className="gp-sinal" title="O Sinal GF só sai no fechamento da vela, quando ela vira na faixa.">
             <i aria-hidden="true" />Próxima leitura <b>{relogio}</b>
-            {placar && placar.total > 0 && <small>{placar.certos} de {placar.total} certos</small>}
           </span>
         )}
       </div>
