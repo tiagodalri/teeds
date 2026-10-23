@@ -244,6 +244,8 @@ export default defineConfig({
           rmSync(join(SAIDA, `robos-${outra.id}`), { recursive: true, force: true })
           // Cenas do login (login-globalfly/...): só no site da marca.
           rmSync(join(SAIDA, `login-${outra.id}`), { recursive: true, force: true })
+          // Artes do checkout externo (checkout-globalfly/: capas e banners da Cakto): só no site da marca.
+          rmSync(join(SAIDA, `checkout-${outra.id}`), { recursive: true, force: true })
           // As telas da landing sao capturadas por marca: as da outra nao entram neste site.
           const telas = join(destinoCaptura, 'plataforma')
           if (existsSync(telas)) for (const arquivo of readdirSync(telas)) if (arquivo.startsWith(`${outra.id}-`)) rmSync(join(telas, arquivo), { force: true })

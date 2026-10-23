@@ -42,9 +42,9 @@ export const segredoDoGancho = () => process.env.CAKTO_WEBHOOK_SECRET ?? ''
 export function produtoDaCakto(cktId: string | null): string | null {
   if (!cktId) return null
   const mapa: Record<string, string> = {
-    [process.env.CAKTO_PROD_GULF || 'c26cd49c-2c90-4922-8118-1b1d0512848c']: 'gf-gulf',
-    [process.env.CAKTO_PROD_PHENOM || 'be31ddfa-ca51-4e8f-8db1-4bd47d39dfff']: 'gf-phenom',
-    [process.env.CAKTO_PROD_PACK || '56522358-d3ee-4641-af05-474f61814d50']: 'gf-pack',
+    [process.env.CAKTO_PROD_GULF || '9df6023b-2178-4439-b33b-fdcea75c7043']: 'gf-gulf',
+    [process.env.CAKTO_PROD_PHENOM || '37f88860-92b2-4977-a254-581569618102']: 'gf-phenom',
+    [process.env.CAKTO_PROD_PACK || '11f87fd7-08b6-47e6-911b-5f8c6126ce76']: 'gf-pack',
   }
   return mapa[cktId] ?? null
 }
