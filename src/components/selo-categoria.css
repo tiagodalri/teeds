@@ -1,0 +1,40 @@
+/* Selo Silver/Gold no topo (GlobalFly, 23/10/2026): metálico e discreto. */
+.selo-categoria {
+  --metal-1: #f6f7f9; --metal-2: #c9ced6; --metal-3: #8d95a1; --metal-borda: rgba(255, 255, 255, .55);
+  --metal-texto: #1d2733; --metal-icone: #5d6774; --metal-sombra: rgba(120, 130, 145, .35);
+  position: relative; overflow: hidden; flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 26px; padding: 0 11px 0 9px; border-radius: 999px;
+  background: linear-gradient(135deg, var(--metal-1) 0%, var(--metal-2) 48%, var(--metal-3) 100%);
+  border: 1px solid var(--metal-borda);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .45) inset, 0 -1px 0 rgba(0, 0, 0, .12) inset, 0 2px 8px var(--metal-sombra);
+  color: var(--metal-texto);
+  font-size: 12px; letter-spacing: .02em; line-height: 1; white-space: nowrap;
+  user-select: none;
+}
+.selo-categoria b { font-weight: 700; }
+.selo-categoria svg { width: 12px; height: 12px; fill: var(--metal-icone); flex-shrink: 0; }
+
+.selo-categoria.gold {
+  --metal-1: #fbefc9; --metal-2: #dcb766; --metal-3: #a77c2c; --metal-borda: rgba(255, 240, 200, .6);
+  --metal-texto: #051528; --metal-icone: #6e4f12; --metal-sombra: rgba(183, 141, 57, .38);
+}
+
+/* um brilho que atravessa o selo uma vez, ao aparecer */
+.selo-categoria::after {
+  content: ''; position: absolute; top: -50%; bottom: -50%; left: -60%; width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .75), transparent);
+  transform: skewX(-18deg);
+  animation: selo-brilho 1.4s ease-out .6s 1 both;
+  pointer-events: none;
+}
+.selo-categoria:hover::after { animation: selo-brilho 1s ease-out 0s 1 both; }
+@keyframes selo-brilho { from { left: -60%; } to { left: 130%; } }
+@media (prefers-reduced-motion: reduce) { .selo-categoria::after { animation: none; display: none; } }
+
+/* celular: o topo é apertado (saldo, menu, iniciais); o selo vira só a estrela */
+@media (max-width: 520px) {
+  .selo-categoria { width: 26px; height: 26px; padding: 0; justify-content: center; }
+  .selo-categoria b { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .selo-categoria svg { width: 13px; height: 13px; }
+}

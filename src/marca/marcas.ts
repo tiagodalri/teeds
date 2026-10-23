@@ -143,6 +143,11 @@ export interface Marca {
    */
   graficoPro?: 'admin' | 'todos'
   /**
+   * Selo da categoria do cliente (Silver/Gold) no topo, entre o "Conectado" e
+   * as iniciais (GlobalFly, 23/10/2026). Vem da coluna `clientes.categoria`.
+   */
+  seloCategoria?: boolean
+  /**
    * Nome e ícone de itens do menu lateral, por marca (19/10/2026: na
    * GlobalFly, "Robôs" virou "I.A." com o símbolo de brilhos, e o Assistente
    * ganhou um balão de conversa para não confundir os dois).
@@ -385,6 +390,7 @@ export const MARCAS: Record<string, Marca> = {
     indicesCompletos: true,
     // 23/10/2026 (Tiago: "tem que ser um gráfico só"): o gráfico profissional para todos
     graficoPro: 'todos',
+    seloCategoria: true,
     menu: {
       nomes: { robos: 'I.A.' },
       icones: {

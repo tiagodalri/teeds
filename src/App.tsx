@@ -45,6 +45,7 @@ import { buyFromProposal, requestProposal, sellContract } from './core/deriv/tra
 import { LIVES_AO_VIVO, MARCA } from './marca'
 import { IconeFechar } from './components/IconeFechar'
 import { RelogioTopo } from './components/RelogioTopo'
+import { SeloCategoria, type Categoria } from './components/SeloCategoria'
 import { dinheiro, simboloMoeda } from './core/dinheiro'
 import { usePeriodos } from './core/chart/periodos'
 import { conviteRecebido, liveNoAr, podeTreinar, treinoNoAr, treinoPedido, type Live, type TreinoNoAr } from './core/live/api'
@@ -172,6 +173,8 @@ export default function App() {
   const [verPerfil, setVerPerfil] = useState(false)
   // "Meu perfil" (GlobalFly, 20/10/2026): a foto vai para o menu do usuário
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null)
+  // Selo Silver/Gold no topo (GlobalFly): vem da ficha, junto com a foto
+  const [categoria, setCategoria] = useState<Categoria | null>(null)
   // suporte (20/10/2026): o botão flutuante do admin abre a caixa de entrada
   const [pedidoCaixa, setPedidoCaixa] = useState(0)
   // as sessões vivas que a tela de robôs busca: a home e a mini-cabine usam as mesmas (21/10/2026)
@@ -449,11 +452,12 @@ export default function App() {
   const chaveTour = teeds.sessao ? `${MARCA.id}.tour.visto.${teeds.sessao.usuario.id}` : ''
   useEffect(() => {
     const sessao = teeds.sessao
-    if (!MARCA.inicio || !sessao) { setFotoPerfil(null); return }
+    if (!MARCA.inicio || !sessao) { setFotoPerfil(null); setCategoria(null); return }
     let vivo = true
     lerPerfil(sessao).then((p) => {
       if (!vivo) return
       setFotoPerfil(p.fotoUrl)
+      setCategoria(MARCA.seloCategoria ? p.categoria : null)
       let visto = !!p.tourVistoEm
       try { visto = visto || !!localStorage.getItem(chaveTour) } catch { /* só a ficha */ }
       if (!visto) setTour((t) => t ?? 'obrigatorio')
@@ -1013,6 +1017,8 @@ export default function App() {
               </div>
             )
           })()}
+
+          {MARCA.seloCategoria && teeds.usuario && categoria && <SeloCategoria categoria={categoria} />}
 
           {teeds.usuario && (
             <UserMenu usuario={teeds.usuario} onSair={sairDeTudo} foto={fotoPerfil}

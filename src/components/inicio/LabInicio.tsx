@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { SeloCategoria, type Categoria } from '../SeloCategoria'
 import { WorkspaceNav } from '../WorkspaceNav'
 import { AccountSwitcher } from '../AccountSwitcher'
 import { UserMenu } from '../UserMenu'
@@ -83,6 +84,8 @@ export default function LabInicio() {
               selecionada="DOT90001234" isDemo saldo={d.conta.saldo} moeda="USD" conectando={false} onTrocar={nada} onRecarregar={nada} onSair={nada} />
           )}
           <div className="status status-open"><i /> Conectado</div>
+          {/* &categoria=gold|silver: o selo do topo (GlobalFly) */}
+          {(q.get('categoria') === 'gold' || q.get('categoria') === 'silver') && <SeloCategoria categoria={q.get('categoria') as Categoria} />}
           <UserMenu usuario={{ id: 'lab', email: 'exemplo@globalflytrade.com', nome: d.nome, telefone: null, cpf: null, criadoEm: '', trocarSenha: false }} onSair={nada} onPerfil={nada} />
         </div>
       </header>

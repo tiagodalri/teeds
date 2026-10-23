@@ -257,6 +257,8 @@ export interface ClienteRegistro {
   tempoTotalSegundos: number
   fusoHorario: string | null
   idioma: string | null
+  /** Selo Silver/Gold (GlobalFly); null nas outras marcas. */
+  categoria: 'silver' | 'gold' | null
 }
 
 export interface PlanoRegistro { id: string; nome: string; duracaoDias: number | null; ativo: boolean }
@@ -319,6 +321,7 @@ const paraCliente = (l: any): ClienteRegistro => ({
   observacoes: l.observacoes ?? null, totalAcessos: Number(l.total_acessos ?? 0),
   tempoTotalSegundos: Number(l.tempo_total_segundos ?? 0),
   fusoHorario: l.fuso_horario ?? null, idioma: l.idioma ?? null,
+  categoria: l.categoria === 'silver' || l.categoria === 'gold' ? l.categoria : null,
 })
 
 export interface PaginaClientes {
@@ -444,11 +447,13 @@ export async function listarProdutosClientes(sessao: SessaoTeeds): Promise<Clien
 
 export async function atualizarAcessoCliente(sessao: SessaoTeeds, userId: string, dados: {
   planoId: string; statusAcesso: ClienteRegistro['statusAcesso']; acessoExpiraEm: string | null; observacoes: string | null
+  /** Selo Silver/Gold (GlobalFly). Omitido = não mexe. */
+  categoria?: 'silver' | 'gold'
 }): Promise<void> {
   if (!planoClienteValido(dados.planoId)) throw new Error('Escolha um dos planos da lista.')
   await rest(`/clientes?user_id=eq.${encodeURIComponent(userId)}&marca=eq.${MARCA.id}`, sessao.token, {
     method: 'PATCH', headers: { Prefer: 'return=minimal' },
-    body: JSON.stringify({ plano_id: dados.planoId, status_acesso: dados.statusAcesso, acesso_expira_em: dados.acessoExpiraEm, observacoes: dados.observacoes }),
+    body: JSON.stringify({ plano_id: dados.planoId, status_acesso: dados.statusAcesso, acesso_expira_em: dados.acessoExpiraEm, observacoes: dados.observacoes, ...(dados.categoria ? { categoria: dados.categoria } : {}) }),
   })
 }
 
