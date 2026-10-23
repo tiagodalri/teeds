@@ -333,7 +333,8 @@ function Laboratorio() {
         {/* ?tela=aovivo&modo=pagina|lado|flutuante|pilula&mod=1: a live com vídeo e chat de exemplo. */}
         {qual === 'aovivo' && <Suspense fallback={null}><LabAoVivo modo={(new URLSearchParams(location.search).get('modo') ?? 'pagina') as never} moderador={new URLSearchParams(location.search).has('mod')} /></Suspense>}
         {/* ?tela=treino: a sala de treino (público e chat simulados). */}
-        {qual === 'treino' && <Suspense fallback={null}><SalaDeTreino apresentador="Tiago" aoSair={() => undefined} /></Suspense>}
+        {/* ?tela=treino&membros=1: a Central ao vivo com membros de mentira entrando, saindo e escrevendo para a equipe */}
+        {qual === 'treino' && <Suspense fallback={null}><LabCentral /></Suspense>}
         {/* ?tela=treino-membro: o membro do plano assistindo o ensaio do admin. */}
         {/* ?tela=inicio&perfil=experiente|novo&tema=escuro|claro: a home, dentro da casca da plataforma */}
         {qual === 'treino-membro' && <Suspense fallback={null}><LabAssistirTreino /></Suspense>}
@@ -390,3 +391,33 @@ function Laboratorio() {
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><Laboratorio /></React.StrictMode>)
+
+/** A Central ao vivo no laboratório: com &membros=1, membros de mentira entram, saem e escrevem. */
+function LabCentral() {
+  useEffect(() => {
+    if (!new URLSearchParams(location.search).has('membros')) return
+    let vivo = true
+    void import('./core/live/treino').then(({ simularTreino }) => import('./core/live/simulacao').then(({ mensagemDeMembro, iniciarSimulacao }) => {
+      if (!vivo) return
+      iniciarSimulacao('Tiago')
+      const todos = ['Ana Paula Reis', 'João Ferreira', 'Mariana Lopes', 'Lucas Martins', 'Camila Santos', 'Pedro Almeida']
+      let presentes = todos.slice(0, 3)
+      simularTreino({ fase: 'conectada', apresentador: true, membros: presentes.length, nomes: presentes })
+      const frases = ['Qual valor de entrada vocês usam com banca de 200?', 'Meu robô parou depois do stop, é normal?', 'Vai ter live amanhã no mesmo horário?', 'Consegui bater a meta hoje!']
+      let n = 0
+      const t = window.setInterval(() => {
+        n++
+        if (n % 3 === 0) { const quem = todos[Math.floor(Math.random() * todos.length)]; mensagemDeMembro(quem, frases[n % frases.length]) }
+        else {
+          const fora = todos.filter((x) => !presentes.includes(x))
+          presentes = fora.length && Math.random() < .6 ? [...presentes, fora[0]] : presentes.slice(1)
+          simularTreino({ membros: presentes.length, nomes: presentes })
+        }
+      }, 2500)
+      cancelar = () => window.clearInterval(t)
+    }))
+    let cancelar = () => {}
+    return () => { vivo = false; cancelar() }
+  }, [])
+  return <SalaDeTreino apresentador="Tiago" aoSair={() => undefined} />
+}

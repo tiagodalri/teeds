@@ -777,3 +777,63 @@ body.av-teatro-aberto { overflow: hidden; }
 .av-previa-oculta span { max-width: 46ch; font-size: 12.5px; line-height: 1.5; }
 .av-previa-oculta button { margin-top: 4px; min-height: 34px; padding: 0 14px; border: 1px solid rgba(255,255,255,.25); border-radius: 9px; background: rgba(255,255,255,.06); color: #fff; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
 .av-previa-oculta button:hover { background: rgba(255,255,255,.12); }
+
+/* ==========================================================================
+   Central ao vivo (23/10/2026): a sala de treino em três colunas.
+   Controles à esquerda, a live e o movimento no centro, o chat da equipe e
+   quem está na sala à direita. Tudo à vista, nada espremido numa aba.
+   ========================================================================== */
+.cv { display: grid; gap: 12px; }
+.cv-num { font-family: var(--fonte-dados, ui-monospace, Menlo, monospace); font-variant-numeric: tabular-nums; }
+.cv-card { display: grid; gap: 9px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); align-content: start; }
+.cv-card h4 { display: flex; align-items: baseline; gap: 8px; margin: 0; color: var(--text); font-size: 13px; font-weight: 700; }
+.cv-card h4 small { margin-left: auto; color: var(--muted); font-size: 11.5px; font-weight: 500; }
+.cv-linha { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); }
+
+.cv-numeros { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.cv-numeros > div { display: grid; gap: 2px; padding: 11px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.cv-numeros small { color: var(--muted); font-size: 12px; }
+.cv-numeros b { font-size: 22px; color: var(--text); line-height: 1.2; }
+.cv-numeros em { color: var(--muted); font-size: 11px; font-style: normal; opacity: .85; }
+
+.cv-grade { display: grid; grid-template-columns: 290px minmax(0, 1fr) 380px; gap: 12px; align-items: start; }
+.cv-controles { display: grid; gap: 12px; align-content: start; }
+.cv-centro { display: grid; gap: 10px; min-width: 0; align-content: start; }
+.cv-palco { aspect-ratio: 16 / 9; width: 100%; height: auto; }
+.cv-direita { display: grid; gap: 12px; min-width: 0; align-content: start; }
+.cv-chat { height: min(560px, calc(100vh - 380px)); min-height: 380px; }
+.cv-chat .av-abas { flex: none; }
+
+.cv-movimento ol { display: grid; margin: 0; padding: 0; list-style: none; max-height: 260px; overflow-y: auto; overscroll-behavior: contain; }
+.cv-movimento li { display: grid; grid-template-columns: 44px 20px minmax(0, 1fr); align-items: center; gap: 8px; padding: 7px 2px; border-top: 1px solid var(--border); font-size: 12.5px; }
+.cv-movimento li:first-child { border-top: 0; }
+.cv-movimento time { color: var(--muted); font-size: 11.5px; }
+.cv-movimento li > i { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; font-style: normal; font-size: 11px; font-weight: 800; }
+.cv-mov-entrou > i { background: color-mix(in srgb, var(--up, #22D66A) 16%, transparent); color: var(--up, #22D66A); }
+.cv-mov-saiu > i { background: color-mix(in srgb, var(--muted) 18%, transparent); color: var(--muted); }
+.cv-mov-mensagem > i { background: color-mix(in srgb, var(--gf-ouro, var(--primary)) 18%, transparent); color: var(--gf-ouro, var(--primary)); }
+.cv-movimento q { color: var(--muted); }
+
+.cv-msg-acoes { display: flex; gap: 14px; margin-top: 4px; font-size: 11.5px; }
+.cv-msg-acoes button { padding: 0; border: 0; background: none; color: var(--gf-ouro, var(--primary)); font: inherit; font-weight: 700; cursor: pointer; }
+.cv-msg-acoes button + button { color: var(--muted); }
+.cv-msg-acoes span { color: var(--muted); }
+.av-msg.cv-vista { opacity: .6; }
+
+.cv-na-sala ul { display: grid; margin: 0; padding: 0; list-style: none; max-height: 220px; overflow-y: auto; }
+.cv-na-sala li { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--border); }
+.cv-na-sala li:first-child { border-top: 0; }
+.cv-na-sala li b { color: var(--muted); font-weight: 600; font-size: 12px; }
+
+/* tela média: os controles descem para baixo da live, em duas colunas */
+@media (max-width: 1360px) {
+  .cv-grade { grid-template-columns: minmax(0, 1fr) 360px; }
+  .cv-controles { grid-column: 1 / -1; grid-row: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .cv-numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cv-numeros > div:last-child { grid-column: 1 / -1; }
+  .cv-grade, .cv-controles { grid-template-columns: minmax(0, 1fr); }
+  .cv-controles { grid-row: auto; }
+  .cv-chat { height: 440px; }
+}

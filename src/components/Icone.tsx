@@ -28,6 +28,8 @@ const TRACOS = {
   produtos: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9',
   comissoes: 'M12 3v18M17 7H9.5a3 3 0 000 6h5a3 3 0 010 6H6',
   monitoramento: 'M3 5h18v11H3zM8 20h8M12 16v4M6 13l3-3 2 2 4-5 3 3',
+  // a Central ao vivo: a antena transmitindo (um ponto com duas ondas de cada lado)
+  aovivo: 'M12 12h.01M8.5 15.5a5 5 0 010-7M15.5 8.5a5 5 0 010 7M5.6 18.4a9 9 0 010-12.8M18.4 5.6a9 9 0 010 12.8',
   insights: 'M4 19h16M6 16V10m4 6V6m4 10v-4m4 4V8',
   atualizar: 'M20 12a8 8 0 11-2.34-5.66M20 4v5h-5',
   buscar: 'M11 18a7 7 0 100-14 7 7 0 000 14zM20 20l-4-4',

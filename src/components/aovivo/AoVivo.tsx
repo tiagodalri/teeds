@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { LocalVideoTrack, type Track } from 'livekit-client'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { apagarLive, conviteRecebido, criarLive, esquecerTreinoPedido, linkDaLive, listarLives, mudarLive, podeTreinar, treinoPedido, type CantoDaCamera, type Live } from '../../core/live/api'
-import { useTreino } from '../../core/live/treino'
+import { centralPedida, useTreino } from '../../core/live/treino'
 import { mudarLinkPublico, useLinkPublico } from '../../core/live/config'
 import { LinkDoTreino, SalaDeTreino } from './SalaDeTreino'
 import { AssistirTreino } from './AssistirTreino'
@@ -936,6 +936,8 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
   const tr = useTreino()
   const ensaioNoAr = admin && tr.apresentador && tr.fase !== 'fora'
   useEffect(() => { if (sessao) void podeTreinar(sessao).then(setPlanoTreino) }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // veio do menu "Central ao vivo" da Administração: abre direto nela
+  useEffect(() => { if (admin && centralPedida()) setTreinando(true) }, [admin])
   // chegou pelo link da sala de treino: abre a aba (o membro já cai assistindo)
   useEffect(() => { if (treino && treinoPedido()) { esquecerTreinoPedido(); setAbaEstado('treino') } }, [treino])
   const CHAVE_ABA = `${MARCA.id}.aovivo.aba`
@@ -986,7 +988,7 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
             </ol>
           </div>
           <div className="tr-porta-acoes">
-            <button className="av-botao-principal" onClick={() => setTreinando(true)}>Abrir sala de treino</button>
+            <button className="av-botao-principal" onClick={() => setTreinando(true)}>Abrir a Central ao vivo</button>
             <LinkDoTreino />
           </div>
         </section>

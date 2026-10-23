@@ -499,3 +499,10 @@ export async function mandarNoTreino(texto: string): Promise<void> {
 
 /** Só para o laboratório: a visão de quem assiste, sem conectar. */
 export function simularTreino(p: Partial<EstadoDoTreino>): void { mudar(p) }
+
+/* A Central ao vivo pedida pela Administração (23/10/2026): o menu leva para
+   "Ao vivo" e a página já abre direto na Central, sem passar pela capa. */
+let centralPedidaAgora = false
+export function pedirCentral(): void { centralPedidaAgora = true }
+/** Lê e consome o pedido. */
+export function centralPedida(): boolean { const p = centralPedidaAgora; centralPedidaAgora = false; return p }
