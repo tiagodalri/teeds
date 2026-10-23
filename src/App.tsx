@@ -327,9 +327,13 @@ export default function App() {
 
   // Nunca mantém um cliente numa rota administrativa, nem após troca de conta
   // ou falha na conferência.
+  // Sem sessão ainda (o login restaurando ao abrir o link /admin), não decide: só a tela de entrada aparece.
   useEffect(() => {
-    if ((admin === false || adminFalhou) && (tela === 'gestao' || tela === 'insights' || tela === 'monitoramento')) setTela('operar')
-  }, [admin, adminFalhou, tela])
+    if (!teeds.sessao) return
+    // o "não é admin" vale só quando a resposta é DESTE login (o false de antes da sessão não conta)
+    const naoEhAdmin = admin === false && adminUserId === teeds.sessao.usuario.id
+    if ((naoEhAdmin || adminFalhou) && (tela === 'gestao' || tela === 'insights' || tela === 'monitoramento')) setTela('operar')
+  }, [admin, adminFalhou, adminUserId, tela, teeds.sessao])
 
   // App com cara de nativo (marcas com `appNativo`): o atalho do ícone abre a
   // tela pedida (?tela=robos) e o voltar do Android/gesto do iPhone volta à
