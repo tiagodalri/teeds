@@ -59,6 +59,7 @@ import { pararNoServidor, type SessaoViva } from './core/teeds/servidorRobos'
 import { sinalGFLiberado } from './core/deriv/accountAccess'
 import { acompanharFimDasSessoes, contratoManual } from './core/som'
 import { registrarOperacaoManual } from './core/teeds/clientes'
+import { caminhoDaTela, telaDoCaminho, telaDoNome } from './core/rotas'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
 // quando a pessoa abre a página ou entra numa live.
@@ -205,9 +206,11 @@ export default function App() {
   // F5 / app voltando do segundo plano: continua na tela em que a pessoa estava (só as telas de cliente)
   const [tela, setTela] = useState<WorkspacePage>(() => {
     const padrao: WorkspacePage = MARCA.inicio ? 'inicio' : 'operar'
-    const antes = (history.state as { tela?: WorkspacePage } | null)?.tela
-    const QUE_VOLTAM: WorkspacePage[] = ['inicio', 'operar', 'robos', 'aulas', 'gerenciamento', 'marketplace', 'noticias', 'perfil', 'ajuda']
-    return antes && QUE_VOLTAM.includes(antes) && (antes !== 'inicio' || MARCA.inicio) && (antes !== 'noticias' || MARCA.noticias) ? antes : padrao
+    // o endereço manda (globalflytrade.com/ia abre a I.A.); sem endereço, a tela em que a pessoa estava
+    const doEndereco = telaDoCaminho(location.pathname) ?? telaDoNome(new URLSearchParams(location.search).get('tela'))
+    const antes = doEndereco ?? (history.state as { tela?: WorkspacePage } | null)?.tela
+    const QUE_VOLTAM: WorkspacePage[] = ['inicio', 'operar', 'robos', 'aulas', 'gerenciamento', 'marketplace', 'noticias', 'perfil', 'ajuda', ...(doEndereco ? ['aovivo', 'assistente', 'gestao', 'insights', 'monitoramento'] as WorkspacePage[] : [])]
+    return antes && QUE_VOLTAM.includes(antes) && (antes !== 'inicio' || MARCA.inicio) && (antes !== 'noticias' || MARCA.noticias) && (antes !== 'aovivo' || MARCA.aoVivo) ? antes : padrao
   })
   const telaAgora = useRef(tela)
   telaAgora.current = tela
@@ -468,15 +471,16 @@ export default function App() {
     // Link da sala de treino (?treino=1): abre o "Ao vivo" já dentro da sala de treino.
     const treino = MARCA.aoVivo && u.searchParams.has('treino')
     if (treino) { try { sessionStorage.setItem(`${MARCA.id}.aovivo.treino`, '1') } catch { /* sem armazenamento */ } }
-    const pedida = convite || treino ? 'aovivo' : u.searchParams.get('tela')
-    const PUBLICAS: WorkspacePage[] = [...(MARCA.inicio ? ['inicio' as const] : []), 'operar', 'robos', 'aulas', 'gerenciamento', 'marketplace', ...(MARCA.aoVivo ? ['aovivo' as const] : []), ...(MARCA.noticias ? ['noticias' as const] : [])]
+    const pedida = convite || treino ? 'aovivo' : telaDoNome(u.searchParams.get('tela'))
+    // as do admin também abrem por link: a trava de admin (logo acima) tira quem não for
+    const PUBLICAS: WorkspacePage[] = [...(MARCA.inicio ? ['inicio' as const] : []), 'operar', 'robos', 'aulas', 'gerenciamento', 'marketplace', 'perfil', 'ajuda', 'assistente', 'gestao', 'insights', 'monitoramento', ...(MARCA.aoVivo ? ['aovivo' as const] : []), ...(MARCA.noticias ? ['noticias' as const] : [])]
     if (pedida && (PUBLICAS as string[]).includes(pedida)) setTela(pedida as WorkspacePage)
     if (u.searchParams.has('tela') || u.searchParams.has('aovivo') || u.searchParams.has('treino') || u.searchParams.get('origem') === 'app') {
       u.searchParams.delete('tela'); u.searchParams.delete('origem'); u.searchParams.delete('aovivo'); u.searchParams.delete('treino')
       history.replaceState(history.state, '', u.pathname + u.search + u.hash)
     }
     const voltar = (e: PopStateEvent) => {
-      const t = (e.state as { tela?: WorkspacePage } | null)?.tela ?? (MARCA.inicio ? 'inicio' : 'operar')
+      const t = (e.state as { tela?: WorkspacePage } | null)?.tela ?? telaDoCaminho(location.pathname) ?? (MARCA.inicio ? 'inicio' : 'operar')
       // a marca só fica se a tela muda de fato; senão travaria e o próximo passo não entraria no histórico
       if (t === telaAgora.current) return
       telaVeioDoVoltar.current = true
@@ -486,11 +490,13 @@ export default function App() {
     return () => window.removeEventListener('popstate', voltar)
   }, [])
   useEffect(() => {
-    if (telaVeioDoVoltar.current) { telaVeioDoVoltar.current = false; return }
+    // o endereço acompanha a tela (rotas.ts); o que vem depois do caminho (?…, #…) fica
+    const url = caminhoDaTela(tela) + location.search + location.hash
+    if (telaVeioDoVoltar.current) { telaVeioDoVoltar.current = false; if (location.pathname !== caminhoDaTela(tela)) history.replaceState(history.state, '', url); return }
     const atual = (history.state as { tela?: WorkspacePage } | null)?.tela
-    if (atual === tela) return
-    if (atual === undefined) history.replaceState({ ...(history.state ?? {}), tela }, '')
-    else history.pushState({ ...(history.state ?? {}), tela }, '')
+    if (atual === tela) { if (location.pathname !== caminhoDaTela(tela)) history.replaceState(history.state, '', url); return }
+    if (atual === undefined) history.replaceState({ ...(history.state ?? {}), tela }, '', url)
+    else history.pushState({ ...(history.state ?? {}), tela }, '', url)
   }, [tela])
 
   useEffect(() => {

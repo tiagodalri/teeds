@@ -263,7 +263,7 @@ export default defineConfig({
         writeFileSync(join(SAIDA, 'CNAME'), new URL(MARCA.redirectUri).hostname + '\n')
         // Endereço que não existe (/robos, /aulas...) cai no app em vez do 404 cru do GitHub:
         // a primeira parte do caminho vira a tela pedida (?tela=), o app ignora o que não conhece.
-        writeFileSync(join(SAIDA, '404.html'), `<!doctype html><meta charset="utf-8"><title>${NOME_CURTO[MARCA.id] ?? MARCA.nome}</title><script>(function(){var p=location.pathname.split('/').filter(Boolean)[0]||'';var q=location.search?location.search.slice(1):'';var t=/^[a-z]+$/.test(p)?'tela='+p:'';location.replace('/'+((t||q)?'?'+[t,q].filter(Boolean).join('&'):'')+location.hash)})()</script>`)
+        writeFileSync(join(SAIDA, '404.html'), `<!doctype html><meta charset="utf-8"><title>${NOME_CURTO[MARCA.id] ?? MARCA.nome}</title><script>(function(){var p=location.pathname.split('/').filter(Boolean)[0]||'';var q=location.search?location.search.slice(1):'';var t=/^[a-z][a-z-]*$/.test(p)?'tela='+p:'';location.replace('/'+((t||q)?'?'+[t,q].filter(Boolean).join('&'):'')+location.hash)})()</script>`)
 
         const pwaDir = `pwa-${MARCA.id}`
         const fundo = FUNDO_DA_MARCA[MARCA.id] ?? '#090a0d'
