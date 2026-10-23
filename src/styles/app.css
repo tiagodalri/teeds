@@ -6061,3 +6061,27 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .mm-corpo td.positivo{color:var(--up)}.mm-corpo td.negativo{color:var(--down)}
 .mm-nota{margin:0;color:var(--muted);font-size:11.5px;line-height:1.5}
 @media (max-width:720px){.mm-numeros{grid-template-columns:minmax(0,1fr)}}
+
+/* Monitoramento ao vivo (23/10/2026): as operações manuais e a etiqueta de origem (I.A. ou Manual) */
+.mon-tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:800;letter-spacing:.02em;vertical-align:middle}
+.mon-tag.ia{color:#8CC4FF;background:rgba(79,163,255,.14);border:1px solid rgba(79,163,255,.35)}
+.mon-tag.manual{color:var(--gf-ouro,#D2AE5E);background:rgba(183,141,57,.14);border:1px solid rgba(183,141,57,.4)}
+.mon-titulo-bloco{display:flex;align-items:center;gap:8px;margin:18px 0 10px;font-size:15px}
+.mon-manuais{display:grid;gap:10px;margin-top:14px;padding:14px 16px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}
+.mon-manuais>header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.mon-manuais h3{display:flex;align-items:center;gap:8px;margin:0;font-size:15px}.mon-manuais h3 small{color:var(--muted);font-size:12px;font-weight:500}
+.mon-manuais-somas{display:flex;gap:16px;color:var(--muted);font-size:12.5px}.mon-manuais-somas b{margin-left:6px;font-variant-numeric:tabular-nums}
+.mon-manuais .pos{color:var(--up)}.mon-manuais .neg{color:var(--down)}.mon-manuais .ouro{color:var(--gf-ouro,var(--primary))}
+.mon-manuais-vazio{margin:0;color:var(--muted);font-size:12.5px}
+.mon-manuais-tabela{overflow-x:auto;max-height:360px;overflow-y:auto}
+.mon-manuais table{width:100%;border-collapse:collapse;font-size:12.5px}
+.mon-manuais th{position:sticky;top:0;padding:8px 10px;background:var(--surface);color:var(--muted);font-size:11px;font-weight:700;text-align:left;white-space:nowrap}
+.mon-manuais td{padding:8px 10px;border-top:1px solid var(--border);white-space:nowrap;vertical-align:middle}
+.mon-manuais td b{display:block}.mon-manuais td small{display:block;color:var(--muted);font-size:11px}
+.mon-manuais td.num{font-variant-numeric:tabular-nums}
+.mon-manuais tr.aberta td{background:color-mix(in srgb,var(--gf-ouro,var(--primary)) 6%,transparent)}
+.mon-conta{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}.mon-conta.real{color:var(--up);background:color-mix(in srgb,var(--up) 14%,transparent)}.mon-conta.demo{color:var(--muted);background:color-mix(in srgb,var(--muted) 14%,transparent)}
+.mon-sit{display:inline-flex;align-items:center;gap:6px;font-weight:700}.mon-sit.aberta{color:var(--gf-ouro,var(--primary))}.mon-sit.ganhou{color:var(--up)}.mon-sit.perdeu{color:var(--down)}.mon-sit.vendida,.mon-sit.encerrada{color:var(--muted)}
+.mon-sit.aberta i{width:7px;height:7px;border-radius:50%;background:currentColor;animation:mon-pulsa 1.4s ease-in-out infinite}
+@keyframes mon-pulsa{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.mon-sit.aberta i{animation:none}}

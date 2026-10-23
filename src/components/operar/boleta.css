@@ -278,3 +278,6 @@
 /* modo CEO (23/10/2026): o markup de cada entrada manual e o total da lista */
 .bl-ult-res .bl-ult-markup { display: block; color: var(--gf-ouro, var(--primary)); font-size: 10.5px; font-weight: 700; text-align: right; }
 .bl-ult-markup-total { color: var(--gf-ouro, var(--primary)); font-weight: 800; }
+/* modo CEO: o markup da posição, numa linha própria embaixo */
+.bp-nums .bp-markup { grid-column: 1 / -1; display: flex !important; align-items: baseline; justify-content: space-between; padding-top: 6px; border-top: 1px dashed var(--border); text-align: left !important; }
+.bp-nums .bp-markup b { color: var(--gf-ouro, var(--primary)); }

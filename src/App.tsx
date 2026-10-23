@@ -672,6 +672,7 @@ export default function App() {
           contractId: c.contractId, contaId: conta.accountId, demo: conta.isDemo, ativo: c.symbol, tipoContrato: c.contractType, moeda: c.currency,
           entrada: c.buyPrice, pagamento: c.payout, resultado: c.profit, markup: markupDaManual(c), markupOficial: markupOficial.current.has(c.contractId),
           compradaEm: new Date((c.purchaseTime || c.startTime) * 1000).toISOString(), encerradaEm: new Date().toISOString(),
+          situacao: c.status === 'won' ? 'ganhou' : c.status === 'lost' ? 'perdeu' : c.status === 'sold' ? 'vendida' : 'encerrada',
         })
       }
     }
@@ -803,6 +804,13 @@ export default function App() {
       })
       marcarManual(r.contractId)
       if (p.appMarkup !== null) markupOficial.current.set(r.contractId, p.appMarkup)
+      // a operação aparece no Monitoramento ao vivo desde a compra (e é atualizada quando fecha)
+      if (teeds.sessao && conta.accountId) void registrarOperacaoManual(teeds.sessao, {
+        contractId: r.contractId, contaId: conta.accountId, demo: conta.isDemo, ativo: symbolCode, tipoContrato: tipo, moeda,
+        entrada: r.buyPrice, pagamento: r.payout, resultado: 0, markup: p.appMarkup ?? Number((r.payout * 0.03).toFixed(4)), markupOficial: p.appMarkup !== null,
+        compradaEm: new Date().toISOString(), encerradaEm: null, situacao: 'aberta',
+        expiraEm: new Date(Date.now() + (extra.durationUnit === 't' ? extra.duration * 2 : extra.durationUnit === 's' ? extra.duration : extra.durationUnit === 'm' ? extra.duration * 60 : extra.durationUnit === 'h' ? extra.duration * 3600 : extra.duration * 86400) * 1000).toISOString(),
+      })
       setAviso({
         tipo: 'ok',
         texto: `Entrada feita: ${dinheiro(r.buyPrice, moeda)} · se ganhar, recebe ${dinheiro(r.payout, moeda)}.`,
@@ -1338,7 +1346,7 @@ export default function App() {
             {minhas.map((c) => (
               <PositionCard key={c.contractId} contrato={c}
                 nomeAtivo={nomeDoAtivo(symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol)}
-                onEncerrar={encerrar} encerrando={vendendo === c.contractId} />
+                onEncerrar={encerrar} encerrando={vendendo === c.contractId} markup={adminConfirmado && mostrarColuna ? markupDaManual(c) : undefined} />
             ))}
           </section>
 

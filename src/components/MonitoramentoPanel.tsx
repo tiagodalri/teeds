@@ -24,6 +24,7 @@ import { MARCAS } from '../marca/marcas'
 const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MARCAS).map(m=>[m.id,m.prosa]))
 import { RobotLive } from './RobotLive'
 import { IconeFechar } from './IconeFechar'
+import { OperacoesManuais } from './monitoramento/OperacoesManuais'
 
 /**
  * Monitoramento ao vivo — a central administrativa.
@@ -122,6 +123,7 @@ export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMa
         <span className={`mon-saude ${saude}`}><i aria-hidden />{ROTULO_SAUDE[saude]}</span>
       </header>
       <div className="mon-selos">
+        <span className="mon-tag ia">I.A.</span>
         {/* Só na Rede: com uma plataforma só, repetir a marca em todo cartão
             seria ruído. Na Rede é a informação que falta para ler o mosaico. */}
         {mostrarMarca && <em className={`mon-selo plataforma ${s.marca}`}>{NOME_DA_MARCA[s.marca] ?? s.marca}</em>}
@@ -617,7 +619,10 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   }, [sessoes, clientes, busca, filtroConta, filtroOnline, filtroRobo, filtroResultado, ordem, agora])
 
   const online = [...sessoes.values()].filter((s) => s.situacao === 'rodando' && s.estado.rodando !== false)
-  const clientesOnline = new Set(online.map((s) => s.userId)).size
+  // quem está operando agora: nos robôs e no manual (as manuais abertas vêm do bloco de operações manuais)
+  const [manuaisAbertas, setManuaisAbertas] = useState<{ n: number; clientes: string[] }>({ n: 0, clientes: [] })
+  const contarManuais = useCallback((n: number, ids: string[]) => setManuaisAbertas({ n, clientes: ids }), [])
+  const clientesOnline = new Set([...online.map((s) => s.userId), ...manuaisAbertas.clientes]).size
   const resultadoTotal = lista.reduce((t, s) => t + (s.estado.resultado ?? 0), 0)
   const alertas = online.filter((s) => semaforo(s, agora) === 'vermelho')
   const desatualizadas = online.filter((s) => saudes.get(s.sessaoId) === 'desatualizado').length
@@ -655,7 +660,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
       {tela === 'pronto' && aba === 'ao-vivo' && !emFoco && (
         <>
           <div className="adm-kpis mon-kpis">
-            <article className="ok"><span>Clientes online</span><strong>{clientesOnline}</strong><small>{online.length} rob{online.length === 1 ? 'ô' : 'ôs'} operando</small></article>
+            <article className="ok"><span>Clientes online</span><strong>{clientesOnline}</strong><small>{online.length} rob{online.length === 1 ? 'ô' : 'ôs'} operando · {manuaisAbertas.n} manua{manuaisAbertas.n === 1 ? 'l aberta' : 'is abertas'}</small></article>
             <article><span>Na visualização</span><strong>{lista.length}</strong><small>de {sessoes.size} {sessoes.size === 1 ? 'sessão' : 'sessões'} no período</small></article>
             <article className={resultadoTotal >= 0 ? 'ok' : 'perigo'}><span>Resultado agregado</span><strong>{assinado(resultadoTotal)}</strong><small>das sessões na visualização</small></article>
             <article className={alertas.length ? 'perigo' : ''}><span>Alertas</span><strong>{alertas.length}</strong><small>perto do stop, recusa ou sem sinal{desatualizadas ? ` · ${desatualizadas} sem atualização` : ''}</small></article>
@@ -675,6 +680,9 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
             <select value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)} aria-label="Ordenar"><option value="fixa">Ordem de início (fixa)</option><option value="atividade">Atualização mais recente</option><option value="risco">Maior risco</option><option value="resultado">Pior resultado</option><option value="operacoes">Mais operações</option><option value="inicio">Início mais recente</option><option value="nome">Nome</option></select>
             <div className="mon-visao" role="group" aria-label="Disposição">{(['compacto', 'confortavel', 'lista'] as Visao[]).map((v) => <button key={v} className={visao === v ? 'on' : ''} aria-pressed={visao === v} aria-label={v} onClick={() => setVisao(v)}>{v === 'compacto' ? '▦' : v === 'confortavel' ? '▣' : '☰'}</button>)}</div>
           </div>
+          <OperacoesManuais sessao={sessao} marcas={marcas} horas={Number(periodo)} conta={filtroConta} busca={busca} mostrarMarkup={mostrarMarkup}
+            clientes={clientes} garantirClientes={garantirClientes} aoContar={contarManuais} />
+          <h3 className="mon-titulo-bloco"><span className="mon-tag ia">I.A.</span> Robôs</h3>
           <div className={`mon-mosaico ${visao}`}>
             {lista.slice(0, limite).map((s) => <Cartao key={s.sessaoId} s={s} cliente={clientes.get(s.userId)} saude={saudes.get(s.sessaoId) ?? 'desatualizado'} visao={visao} mostrarMarca={naRede} aoAbrir={abrirFoco} />)}
             {!lista.length && <div className="mon-estado">{sessoes.size ? <><b>Nenhuma sessão passa pelos filtros.</b>Ajuste o período ou os filtros acima.</> : <><b>Nenhum robô operando nesta marca agora.</b>Quando um cliente ligar um robô, a cabine aparece aqui sozinha.</>}</div>}

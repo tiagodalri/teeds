@@ -31,6 +31,8 @@ interface Props {
   nomeAtivo: string
   onEncerrar: (id: number) => void
   encerrando: boolean
+  /** Modo CEO: o markup desta operação (some quando não é o modo CEO). */
+  markup?: number
 }
 
 /**
@@ -63,7 +65,7 @@ export function porQueNaoEncerra(motivo: string | null): string {
   return 'Só no vencimento'
 }
 
-export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }: Props) {
+export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, markup }: Props) {
   const { restante, texto } = useCountdown(c.expiryTime)
   const concluido = FINAIS.has(c.status)
   const liquidando = !concluido && c.isExpired
@@ -142,6 +144,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando }:
       <div className="bp-nums">
         <div><small>INVESTIDO</small><b>{dinheiro(c.buyPrice)}</b></div>
         <div><small>{concluido ? 'PAGOU' : 'SE GANHAR'}</small><b>{dinheiro(concluido ? c.bidPrice : c.payout)}</b></div>
+        {markup !== undefined && <div className="bp-markup"><small>MARKUP</small><b>{dinheiro(markup)}</b></div>}
       </div>
 
       <button type="button" className="bp-encerrar"

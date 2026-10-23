@@ -556,13 +556,15 @@ export async function registrarOperacaoRobo(sessao: SessaoTeeds, op: Omit<Operac
 export interface OperacaoManualRegistro {
   contractId: number; contaId: string; demo: boolean; ativo: string; tipoContrato: string; moeda: string
   entrada: number; pagamento: number; resultado: number; markup: number; markupOficial: boolean
-  compradaEm: string; encerradaEm: string
+  compradaEm: string; encerradaEm: string | null
+  /** 'aberta' na compra; 'ganhou' | 'perdeu' | 'vendida' | 'encerrada' no fim. */
+  situacao?: string; expiraEm?: string | null
 }
 export async function registrarOperacaoManual(sessao: SessaoTeeds, op: OperacaoManualRegistro): Promise<void> {
   try {
     await rest('/operacoes_manuais?on_conflict=user_id,contract_id', sessao.token, {
       method: 'POST', headers: MESCLAR,
-      body: JSON.stringify({ user_id: sessao.usuario.id, contract_id: op.contractId, marca: MARCA.id, conta_id: op.contaId, demo: op.demo, ativo: op.ativo, tipo_contrato: op.tipoContrato, moeda: op.moeda, entrada: op.entrada, pagamento: op.pagamento, resultado: op.resultado, markup: op.markup, markup_oficial: op.markupOficial, comprada_em: op.compradaEm, encerrada_em: op.encerradaEm }),
+      body: JSON.stringify({ user_id: sessao.usuario.id, contract_id: op.contractId, marca: MARCA.id, conta_id: op.contaId, demo: op.demo, ativo: op.ativo, tipo_contrato: op.tipoContrato, moeda: op.moeda, entrada: op.entrada, pagamento: op.pagamento, resultado: op.resultado, markup: op.markup, markup_oficial: op.markupOficial, comprada_em: op.compradaEm, encerrada_em: op.encerradaEm, situacao: op.situacao ?? 'encerrada', ...(op.expiraEm !== undefined ? { expira_em: op.expiraEm } : {}), atualizado_em: new Date().toISOString() }),
     })
   } catch (e) { console.warn('[teeds] registro da operação manual indisponível:', (e as Error).message) }
 }
