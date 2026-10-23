@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { dispose, init, registerLocale, registerOverlay, type Chart, type DeepPartial, type KLineData, type Overlay, type OverlayCreate, type Styles } from 'klinecharts'
 import type { Candle } from '../../core/deriv/types'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { CATALOGO as CATALOGO_COMPLETO, CATEGORIAS as CATEGORIAS_TODAS, definicao, registrarIndicadores, type Categoria } from '../../core/grafico/indicadores'
+import { CATALOGO as CATALOGO_COMPLETO, CATEGORIAS as CATEGORIAS_TODAS, definicao, quandoMonogramaCarregar, registrarIndicadores, type Categoria } from '../../core/grafico/indicadores'
 import { carregarDesenhos, carregarIndicadores, salvarDesenhos, salvarIndicadores, type DesenhoSalvo, type IndicadorSalvo } from '../../core/grafico/layout'
 import type { ChartMode, ContractMarker } from '../PriceChart'
 import { IconeCategoria, IconeIndicador } from './IconeIndicador'
@@ -302,8 +302,17 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
       const criado = id ? chart.getIndicators({ id })[0] : undefined
       if (titulos && criado) chart.overrideIndicator({ id: criado.id, name: ind.id, figures: criado.figures.map((f) => ({ ...f, title: titulos[f.key] ?? f.title })) })
     }
+    // com o Sinal GF, sobra espaço em cima e embaixo das velas para as setas, que ficam afastadas delas
+    const comSinal = sinalLiberado && indicadores.some((i) => i.id === 'GF_SINAL')
+    chart.overrideYAxis({ paneId: 'candle_pane', gap: comSinal ? { top: 0.3, bottom: 0.32 } : { top: 0.2, bottom: 0.1 } })
     medirPainel()
   }, [indicadores])
+  // o monograma das setas do Sinal GF chegou depois do primeiro desenho: redesenha o indicador
+  useEffect(() => quandoMonogramaCarregar(() => {
+    const chart = chartRef.current
+    const ind = chart?.getIndicators({ name: 'GF_SINAL' })[0]
+    if (chart && ind) chart.overrideIndicator({ id: ind.id, name: 'GF_SINAL', calcParams: [...ind.calcParams] })
+  }), [])
   const mudarIndicadores = (lista: IndicadorSalvo[]) => { setIndicadores(lista); salvarIndicadores(sessao, lista) }
 
   /* ------------------------------------------------------- desenhos */

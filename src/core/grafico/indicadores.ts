@@ -204,10 +204,19 @@ export function calcularSinal(d: KLineData[], n: number, k: number, espera: numb
 
 const base = import.meta.env.BASE_URL
 const monogramas: Record<'escuro' | 'claro', HTMLImageElement | null> = { escuro: null, claro: null }
+const aoCarregar = new Set<() => void>()
+/** Avisa quando o monograma das setas termina de carregar (para o gráfico redesenhar). Devolve o cancelamento. */
+export function quandoMonogramaCarregar(fn: () => void): () => void { aoCarregar.add(fn); return () => { aoCarregar.delete(fn) } }
 function monograma(tema: 'escuro' | 'claro'): HTMLImageElement | null {
   const arquivo = MARCA.monogramaRecorte?.[tema]
   if (!arquivo || typeof Image === 'undefined') return null
-  if (!monogramas[tema]) { const img = new Image(); img.src = `${base}${arquivo}`; monogramas[tema] = img }
+  if (!monogramas[tema]) {
+    const img = new Image()
+    // o gráfico desenha antes da imagem chegar: quando ela chega, ele redesenha
+    img.onload = () => aoCarregar.forEach((fn) => fn())
+    img.src = `${base}${arquivo}`
+    monogramas[tema] = img
+  }
   const img = monogramas[tema]!
   return img.complete && img.naturalWidth > 0 ? img : null
 }
@@ -225,32 +234,53 @@ function desenharSinal(params: Parameters<NonNullable<IndicatorTemplate['draw']>
   const img = monograma(escuro ? 'escuro' : 'claro')
   const sobe = corDoTema('--up', '#22D66A'), desce = corDoTema('--down', '#FF3B47')
   const fonte = typeof document !== 'undefined' ? getComputedStyle(document.body).fontFamily : 'sans-serif'
-  const lw = 26, lh = Math.round(lw * 96 / 166)
+  const lw = 24, lh = Math.round(lw * 96 / 166)
+  // a seta fica afastada da vela (AFASTAR px depois do pavio), ligada a ela por um fio pontilhado
+  const AFASTAR = 16, SETA = 7, ETIQUETA = 19
   ctx.save()
   ctx.textAlign = 'center'
-  ctx.textBaseline = 'alphabetic'
-  // dois sinais do mesmo lado muito perto: o segundo desce (ou sobe) um degrau para não encavalar
+  ctx.textBaseline = 'middle'
+  ctx.font = `700 11px ${fonte}`
+  const etiqueta = (x: number, meio: number, texto: string, cor: string) => {
+    const largura = Math.ceil(ctx.measureText(texto).width) + 16
+    const caixa = new Path2D()
+    caixa.roundRect(x - largura / 2, meio - ETIQUETA / 2, largura, ETIQUETA, ETIQUETA / 2)
+    ctx.fillStyle = escuro ? '#051528' : '#FFFFFF'; ctx.fill(caixa)
+    ctx.globalAlpha = escuro ? .2 : .1; ctx.fillStyle = cor; ctx.fill(caixa); ctx.globalAlpha = 1
+    ctx.strokeStyle = cor; ctx.lineWidth = 1; ctx.stroke(caixa)
+    ctx.fillStyle = cor; ctx.fillText(texto, x, meio + .5)
+  }
+  const fio = (x: number, de: number, ate: number, cor: string) => {
+    ctx.save(); ctx.strokeStyle = cor; ctx.globalAlpha = .55; ctx.lineWidth = 1; ctx.setLineDash([2, 3])
+    ctx.beginPath(); ctx.moveTo(x + .5, de); ctx.lineTo(x + .5, ate); ctx.stroke(); ctx.restore()
+  }
+  // dois sinais do mesmo lado muito perto: o segundo se afasta mais um degrau para não encavalar
   const ultimoX = { s: -Infinity, d: -Infinity }, degrau = { s: 0, d: 0 }
   for (let i = Math.max(0, from); i < Math.min(r.length, to); i++) {
     const p = r[i]
     if (!p?.sinal || !dados[i]) continue
-    const x = xAxis.convertToPixel(i)
+    const x = Math.round(xAxis.convertToPixel(i))
     const descer = p.sinal === -1
     const cor = descer ? desce : sobe
     const lado = descer ? 'd' : 's'
-    degrau[lado] = x - ultimoX[lado] < 46 && degrau[lado] === 0 ? 40 : 0
+    degrau[lado] = x - ultimoX[lado] < 52 && degrau[lado] === 0 ? 34 : 0
     ultimoX[lado] = x
     if (descer) {
-      let y = yAxis.convertToPixel(dados[i].high) - 6 - degrau.d
-      if (img) { y -= lh; ctx.drawImage(img, x - lw / 2, y, lw, lh); y -= 4 }
-      ctx.fillStyle = cor; ctx.beginPath(); ctx.moveTo(x - 5, y - 7); ctx.lineTo(x + 5, y - 7); ctx.lineTo(x, y); ctx.closePath(); ctx.fill()
-      ctx.font = `800 11.5px ${fonte}`; ctx.fillText('Descer', x, y - 11)
+      const pavio = yAxis.convertToPixel(dados[i].high) - 3
+      const ponta = pavio - AFASTAR - degrau.d
+      fio(x, pavio, ponta, cor)
+      ctx.fillStyle = cor; ctx.beginPath(); ctx.moveTo(x - 5, ponta - SETA); ctx.lineTo(x + 5, ponta - SETA); ctx.lineTo(x, ponta); ctx.closePath(); ctx.fill()
+      const meio = ponta - SETA - 3 - ETIQUETA / 2
+      etiqueta(x, meio, 'Descer', cor)
+      if (img) ctx.drawImage(img, x - lw / 2, meio - ETIQUETA / 2 - 4 - lh, lw, lh)
     } else {
-      let y = yAxis.convertToPixel(dados[i].low) + 6 + degrau.s
-      ctx.fillStyle = cor; ctx.beginPath(); ctx.moveTo(x - 5, y + 7); ctx.lineTo(x + 5, y + 7); ctx.lineTo(x, y); ctx.closePath(); ctx.fill()
-      ctx.font = `800 11.5px ${fonte}`; ctx.fillText('Subir', x, y + 20)
-      y += 24
-      if (img) ctx.drawImage(img, x - lw / 2, y, lw, lh)
+      const pavio = yAxis.convertToPixel(dados[i].low) + 3
+      const ponta = pavio + AFASTAR + degrau.s
+      fio(x, pavio, ponta, cor)
+      ctx.fillStyle = cor; ctx.beginPath(); ctx.moveTo(x - 5, ponta + SETA); ctx.lineTo(x + 5, ponta + SETA); ctx.lineTo(x, ponta); ctx.closePath(); ctx.fill()
+      const meio = ponta + SETA + 3 + ETIQUETA / 2
+      etiqueta(x, meio, 'Subir', cor)
+      if (img) ctx.drawImage(img, x - lw / 2, meio + ETIQUETA / 2 + 4, lw, lh)
     }
   }
   ctx.restore()
@@ -398,5 +428,7 @@ let registrados = false
 export function registrarIndicadores(): void {
   if (registrados) return
   registrados = true
+  // as duas versões do monograma das setas já vêm carregando
+  monograma('escuro'); monograma('claro')
   for (const t of PERSONALIZADOS) registerIndicator(t)
 }
