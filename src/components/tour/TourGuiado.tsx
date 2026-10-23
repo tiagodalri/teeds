@@ -62,21 +62,21 @@ export function passosDoTour({ nome, treino }: { nome: string; treino: boolean }
       textoCelular: 'Embaixo ficam as telas que você mais usa: Início, I.A., Manual e Aulas. Em "Mais" (ou neste botão de cima) está o menu completo.',
     },
     {
-      id: 'conta', tela: 'inicio', alvos: ['.in-cartao-conta'], icone: ICONE.conta,
+      id: 'conta', tela: 'inicio', alvos: ['.in-painel-conta'], icone: ICONE.conta,
       titulo: 'Sua conta na corretora',
       texto: `As operações acontecem na sua conta da Deriv. A ${MARCA.prosa} se conecta a ela para operar e mostrar o saldo; o dinheiro fica sempre na sua conta.`,
       dicas: ['Conta demo: saldo de treino, para praticar sem risco.', 'Conta real: quando você já se sentir seguro.', 'O olhinho esconde os valores quando você quiser.'],
     },
     {
-      id: 'hoje', tela: 'inicio', alvos: ['.in-dia'], icone: ICONE.hoje,
+      id: 'hoje', tela: 'inicio', alvos: ['.in-instr'], icone: ICONE.hoje,
       titulo: 'O seu dia',
       texto: 'Aqui você acompanha o resultado do dia, quantas operações foram feitas, e o quanto falta para a meta ou para o limite de perda.',
       dicas: ['Defina a meta e o limite antes da primeira operação: é o que mantém tudo sob controle.'],
     },
     {
-      id: 'atalhos', tela: 'inicio', alvos: ['.in-acoes'], icone: ICONE.atalho,
+      id: 'atalhos', tela: 'inicio', alvos: ['.in-acoes', '.in-painel-acoes'], icone: ICONE.atalho,
       titulo: 'Ações rápidas',
-      texto: 'Ligar uma I.A., operar, definir meta e limite, depositar na Deriv, aulas e suporte: tudo a um toque. Vamos passar pelas principais.',
+      texto: 'Ligar uma I.A., operar e depositar na Deriv: tudo a um toque. Vamos passar pelas principais.',
     },
     {
       id: 'ia', tela: 'robos', alvos: ['.tela-viva:not([hidden]) .vr-cartao', '.tela-viva:not([hidden]) .robot-workspace'], icone: ICONE.ia,
