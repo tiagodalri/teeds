@@ -28,6 +28,20 @@ const SOMENTE_DEMO_NA_MARCA: Readonly<Record<string, readonly string[]>> = {
 }
 
 /**
+ * O Sinal GF (indicador do gráfico, 23/10/2026) fica liberado por enquanto só
+ * para os mesmos três logins da GlobalFly: o Tiago e os dois Victor. Para
+ * abrir para todo mundo, basta trocar `sinalGFLiberado` para devolver true.
+ */
+const PROVAM_O_SINAL: Readonly<Record<string, readonly string[]>> = {
+  globalfly: ['avila.victor560@gmail.com', 'victooripardo@gmail.com', 'tiagodalri1@live.com'],
+}
+export const sinalGFLiberado = (email?: string | null, marca?: string | null) => {
+  if (!email) return false
+  const daConta = (marca || marcaDaConta(email)).toLowerCase()
+  return PROVAM_O_SINAL[daConta]?.includes(emailReal(email).trim().toLowerCase()) ?? false
+}
+
+/**
  * `marca`: a marca da conta. Sem ela, vale a etiqueta do próprio e-mail
  * (ana+marca-globalfly@... é GlobalFly; sem etiqueta é Teeds).
  */

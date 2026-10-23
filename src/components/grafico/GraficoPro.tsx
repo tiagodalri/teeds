@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { dispose, init, registerLocale, registerOverlay, type Chart, type DeepPartial, type KLineData, type Overlay, type OverlayCreate, type Styles } from 'klinecharts'
 import type { Candle } from '../../core/deriv/types'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { CATALOGO, CATEGORIAS, calcularSinal, definicao, placarDoSinal, registrarIndicadores, type Categoria } from '../../core/grafico/indicadores'
+import { CATALOGO as CATALOGO_COMPLETO, CATEGORIAS as CATEGORIAS_TODAS, calcularSinal, definicao, placarDoSinal, registrarIndicadores, type Categoria } from '../../core/grafico/indicadores'
 import { carregarDesenhos, carregarIndicadores, salvarDesenhos, salvarIndicadores, type DesenhoSalvo, type IndicadorSalvo } from '../../core/grafico/layout'
 import type { ChartMode, ContractMarker } from '../PriceChart'
 import { IconeCategoria, IconeIndicador } from './IconeIndicador'
@@ -30,6 +30,8 @@ interface Props {
   loading?: boolean
   markers?: ContractMarker[]
   sessao: SessaoTeeds | null
+  /** O Sinal GF (indicador da casa) está liberado para este login? */
+  sinalLiberado?: boolean
 }
 
 /* ------------------------------------------------------------- registro */
@@ -165,7 +167,7 @@ function estiloDoDesenho(d: Pick<DesenhoSalvo, 'cor' | 'espessura' | 'tracejado'
 
 /* =================================================================== */
 
-export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granularity, loading, markers = [], sessao }: Props) {
+export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granularity, loading, markers = [], sessao, sinalLiberado = false }: Props) {
   const caixa = useRef<HTMLDivElement>(null)
   const chartRef = useRef<Chart | null>(null)
   // o zoom de abertura: o botão do meio volta para ele
@@ -202,7 +204,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
   const serie = useRef('')
   const precisaRecarregar = useRef(true)
 
-  const [indicadores, setIndicadores] = useState<IndicadorSalvo[]>(() => carregarIndicadores(sessao, (l) => setIndicadores(l)))
+  const [indicadores, setIndicadores] = useState<IndicadorSalvo[]>(() => carregarIndicadores(sessao, (l) => setIndicadores(l), sinalLiberado))
   const [painel, setPainel] = useState(false)
   const [ferramenta, setFerramenta] = useState<string | null>(null)
   const [dica, setDica] = useState<{ nome: string; descricao: string; x: number; y: number; acima: boolean } | null>(null)
@@ -406,7 +408,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
 
   /* --------------------------------------------------- Sinal GF */
   // a contagem discreta até a vela fechar (é quando um sinal pode sair) e o placar das setas do gráfico
-  const sinal = indicadores.find((i) => i.id === 'GF_SINAL')
+  const sinal = sinalLiberado ? indicadores.find((i) => i.id === 'GF_SINAL') : undefined
   const [agora, setAgora] = useState(() => Date.now())
   useEffect(() => {
     if (!sinal) return
@@ -502,14 +504,17 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
         </div>
       </div>
 
-      {painel && <PainelDeIndicadores ativos={indicadores} aoMudar={mudarIndicadores} aoFechar={() => setPainel(false)} />}
+      {painel && <PainelDeIndicadores ativos={indicadores} comSinal={sinalLiberado} aoMudar={mudarIndicadores} aoFechar={() => setPainel(false)} />}
     </div>
   )
 }
 
 /* ================================================ painel de indicadores */
 
-function PainelDeIndicadores({ ativos, aoMudar, aoFechar }: { ativos: IndicadorSalvo[]; aoMudar: (l: IndicadorSalvo[]) => void; aoFechar: () => void }) {
+function PainelDeIndicadores({ ativos, comSinal, aoMudar, aoFechar }: { ativos: IndicadorSalvo[]; comSinal: boolean; aoMudar: (l: IndicadorSalvo[]) => void; aoFechar: () => void }) {
+  // o Sinal GF só aparece no menu para quem tem ele liberado
+  const CATALOGO = comSinal ? CATALOGO_COMPLETO : CATALOGO_COMPLETO.filter((d) => d.id !== 'GF_SINAL')
+  const CATEGORIAS = comSinal ? CATEGORIAS_TODAS : CATEGORIAS_TODAS.filter((c) => c.id !== 'sinal')
   const [aba, setAba] = useState<'ativos' | Categoria>(ativos.length ? 'ativos' : 'momentum')
   const [busca, setBusca] = useState('')
   const [editando, setEditando] = useState<number | null>(null)

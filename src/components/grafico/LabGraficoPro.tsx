@@ -41,7 +41,7 @@ export default function LabGraficoPro() {
         <button onClick={() => setModo('candles')}>Velas</button><button onClick={() => setModo('line')}>Linha</button>
       </div>
       <div className="chart" style={{ flex: 1 }}>
-        <GraficoPro candles={REAL ? reais.candles : velas} mode={modo} pipSize={2} symbol="R_75" symbolName="75 Index" granularity={REAL ? 300 : 60} loading={REAL && reais.loading} markers={REAL ? [] : marcadores} sessao={null} />
+        <GraficoPro candles={REAL ? reais.candles : velas} mode={modo} pipSize={2} symbol="R_75" symbolName="75 Index" granularity={REAL ? 300 : 60} loading={REAL && reais.loading} markers={REAL ? [] : marcadores} sessao={null} sinalLiberado={!new URLSearchParams(location.search).has('semsinal')} />
       </div>
     </div>
   )

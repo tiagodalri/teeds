@@ -56,6 +56,7 @@ import { TourGuiado, passosDoTour } from './components/tour/TourGuiado'
 import { BarraInferior } from './components/barra/BarraInferior'
 import { MiniCabine } from './components/minicabine/MiniCabine'
 import { pararNoServidor, type SessaoViva } from './core/teeds/servidorRobos'
+import { sinalGFLiberado } from './core/deriv/accountAccess'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
 // quando a pessoa abre a página ou entra numa live.
@@ -1194,7 +1195,8 @@ export default function App() {
             <div className="chart">
               <Suspense fallback={<div className="gp-carregando-pagina">Abrindo o gráfico…</div>}>
                 <GraficoPro candles={candles} mode={mode} pipSize={pipSize} symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''}
-                  granularity={granularity} loading={loadingCandles} markers={marcadores} sessao={teeds.sessao} />
+                  granularity={granularity} loading={loadingCandles} markers={marcadores} sessao={teeds.sessao}
+                  sinalLiberado={sinalGFLiberado(teeds.sessao?.usuario.email, MARCA.id)} />
               </Suspense>
             </div>
           ) : (
