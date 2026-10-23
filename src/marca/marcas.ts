@@ -383,7 +383,8 @@ export const MARCAS: Record<string, Marca> = {
     ativosSemVolatility: true,
     iconesDeAtivos: true,
     indicesCompletos: true,
-    graficoPro: 'admin',
+    // 23/10/2026 (Tiago: "tem que ser um gráfico só"): o gráfico profissional para todos
+    graficoPro: 'todos',
     menu: {
       nomes: { robos: 'I.A.' },
       icones: {

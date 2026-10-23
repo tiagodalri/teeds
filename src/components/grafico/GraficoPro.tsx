@@ -51,10 +51,14 @@ function registrarTudo() {
       if (!a) return []
       const cor = overlay.extendData?.cor ?? '#4FA3FF'
       const fimX = b && Number.isFinite(b.x) ? b.x : bounding.width
+      const texto = overlay.extendData?.texto ?? ''
+      // perto da borda direita (a entrada de agora, no celular) a etiqueta encosta na borda, sem cortar
+      const largura = texto.length * 6.4 + 14
+      const xEtiqueta = Math.max(4, Math.min(a.x + 8, bounding.width - 6 - largura))
       return [
         { type: 'line', attrs: { coordinates: [a, { x: fimX, y: a.y }] }, styles: { color: cor, size: 1.5, style: 'dashed', dashedValue: [5, 4] }, ignoreEvent: true },
         { type: 'circle', attrs: { x: a.x, y: a.y, r: 4 }, styles: { color: cor }, ignoreEvent: true },
-        { type: 'text', attrs: { x: a.x + 8, y: a.y - 10, text: overlay.extendData?.texto ?? '', align: 'left', baseline: 'bottom' },
+        { type: 'text', attrs: { x: xEtiqueta, y: a.y - 10, text: texto, align: 'left', baseline: 'bottom' },
           styles: { color: '#fff', backgroundColor: cor, borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 3, paddingBottom: 3, size: 11, weight: 700 }, ignoreEvent: true },
       ]
     },
