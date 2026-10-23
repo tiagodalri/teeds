@@ -9,6 +9,7 @@ import './inicio.css'
 import { dataCurta } from '../../core/datas'
 import { simboloMoeda } from '../../core/dinheiro'
 import { ResponsiveImage } from '../ResponsiveImage'
+import { ROBOS_A_VENDA, useRobosBloqueados } from '../../core/teeds/robosLiberados'
 
 /**
  * A home, "painel de bordo" (21/10/2026, aprovada pelo Tiago em mockup):
@@ -105,6 +106,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
   const proximo = faltam.find((p) => p !== passos[2]) ?? null
 
   const noAr = d.frota.filter((r) => r.noAr)
+  const bloqueados = useRobosBloqueados()
   const frota = [...d.frota].sort((a, b) => Number(b.noAr) - Number(a.noAr))
   const subFrota = noAr.length === 0 ? 'Nenhuma I.A. no ar · escolha uma e dê o play'
     : noAr.length === 1 ? `1 I.A. no ar · ${noAr[0].nome.replace(/^(GF|GlobalFly)\s+/i, '')} ${noAr[0].operando ? 'operando' : 'analisando o mercado'}`
@@ -211,15 +213,19 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
             <div className="in-frota-trilho">
               {frota.map((r) => {
                 const curto = r.nome.replace(/^(GF|GlobalFly)\s+/i, '')
+                // I.A. vendida à parte que a pessoa ainda não tem: o cadeado leva ao Marketplace
+                const trancada = !r.noAr && bloqueados.has(r.id)
                 return (
-                  <button key={r.id} type="button" className={`in-jato ${r.noAr ? 'no-ar' : ''}`}
-                    onClick={() => (r.noAr ? aoIr('robos') : aoPrepararRobo(r.id))}
+                  <button key={r.id} type="button" className={`in-jato ${r.noAr ? 'no-ar' : ''} ${trancada ? 'trancada' : ''}`}
+                    onClick={() => (r.noAr ? aoIr('robos') : trancada ? aoIr('marketplace') : aoPrepararRobo(r.id))}
                     aria-label={r.noAr ? `${r.nome}: no ar, ${ocultos ? 'resultado oculto' : `resultado ${sinal(r.resultado)}${numero(r.resultado)}`}. Abrir a cabine.` : `${r.nome}, ${r.chamada}. Configurar e ligar.`}>
                     {/* a marca da casa no canto: o monograma, não as letras (22/10/2026) */}
                     {TEM_MONOGRAMA && <Monograma tamanho={30} className="in-jato-mono" />}
                     <img src={`${FOTOS}${r.id}.webp`} srcSet={`${FOTOS}${r.id}-pequena.webp 640w, ${FOTOS}${r.id}.webp 1200w`} sizes="(max-width: 700px) 45vw, 20vw" alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
                     {r.noAr
                       ? <span className={`in-jato-selo ${r.operando ? 'operando' : ''}`}><i aria-hidden="true" />{r.operando ? 'Operando' : 'No ar'}</span>
+                      : trancada
+                      ? <span className="in-jato-cadeado"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0v3" /></svg>{ROBOS_A_VENDA[r.id]?.preco}</span>
                       : <span className="in-jato-play" aria-hidden="true"><Icone d={ICONE.play} /></span>}
                     <span className="in-jato-texto">
                       {!TEM_MONOGRAMA && <small>{MARCA.nome}</small>}

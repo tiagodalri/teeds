@@ -1,0 +1,6 @@
+-- Aplicada pelo MCP em 23/10/2026 (nome: gf_robos_avulsos_e_simulador_para_todos).
+-- GlobalFly: simulador para todo cliente ativo; Gulf (superior5 = AG7) e Phenom
+-- (ag2 = AG2) vendidos à parte (gf-gulf, gf-phenom, gf-pack); a base da antiga
+-- Stark tem as 5 I.A. (produto gf-base-stark). Funções teeds_robo_liberado,
+-- teeds_meus_robos_bloqueados e a nova teeds_simulador_permitido. O texto
+-- completo está no histórico de migrações do Supabase do projeto.

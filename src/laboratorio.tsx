@@ -183,6 +183,8 @@ const parametros = [
 ]
 function LabVitrine() {
   const [preparo, setPreparo] = useState(false)
+  // &trancadas=1: Gulf e Phenom com cadeado (as I.A. vendidas à parte na GlobalFly)
+  useEffect(() => { if (new URLSearchParams(location.search).has('trancadas')) void import('./core/teeds/robosLiberados').then((m) => m.simularRobosBloqueados(['superior5', 'ag2'])) }, [])
   return (
     <div className="ger rob robot-workspace">
       <div className="ger-topo rob-workspace-header"><div><span className="rob-eyebrow">CENTRAL DE ROBÔS</span><h2>Vamos iniciar sua jornada?</h2><p className="ger-sub">Escolha um modelo, defina seus limites e acompanhe a sessão.</p></div></div>
@@ -315,6 +317,8 @@ function Laboratorio() {
         {qual === 'digitos' && <DigitosFlutuante aoFechar={nada} />}
         {qual === 'catalogo' && <RobotCatalog selected={ident.id} onSelect={nada} />}
         {/* ?tela=vitrine: a vitrine de robôs (GlobalFly); "Configurar" abre o preparo já no robô. */}
+        {/* ?tela=marketplace (&trancadas=1): o Marketplace da marca; com trancadas, Gulf e Phenom aparecem a vender */}
+        {qual === 'marketplace' && <LabMarketplace />}
         {qual === 'vitrine' && <LabVitrine />}
         {/* ?tela=grafico-pro: o gráfico profissional (indicadores e desenhos) com velas de exemplo. */}
         {qual === 'grafico-pro' && <Suspense fallback={null}><LabGraficoPro /></Suspense>}
@@ -421,3 +425,16 @@ function LabCentral() {
   }, [])
   return <SalaDeTreino apresentador="Tiago" aoSair={() => undefined} />
 }
+
+function LabMarketplace() {
+  const [pronto, setPronto] = useState(false)
+  useEffect(() => {
+    void import('./core/teeds/robosLiberados').then(({ simularRobosBloqueados }) => {
+      simularRobosBloqueados(new URLSearchParams(location.search).has('trancadas') ? ['superior5', 'ag2'] : [])
+      setPronto(true)
+    })
+  }, [])
+  if (!pronto) return null
+  return <div className="workspace-app"><Suspense fallback={null}><MarketplaceDoLab sessao={null} /></Suspense></div>
+}
+const MarketplaceDoLab = lazy(() => import('./components/MarketplacePanel').then((m) => ({ default: m.MarketplacePanel })))

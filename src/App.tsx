@@ -60,6 +60,7 @@ import { sinalGFLiberado } from './core/deriv/accountAccess'
 import { acompanharFimDasSessoes, contratoManual } from './core/som'
 import { registrarOperacaoManual } from './core/teeds/clientes'
 import { caminhoDaTela, telaDoCaminho, telaDoNome } from './core/rotas'
+import { carregarRobosBloqueados } from './core/teeds/robosLiberados'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
 // quando a pessoa abre a página ou entra numa live.
@@ -175,6 +176,18 @@ export default function App() {
   const [pedidoCaixa, setPedidoCaixa] = useState(0)
   // as sessões vivas que a tela de robôs busca: a home e a mini-cabine usam as mesmas (21/10/2026)
   const [vivasRobos, setVivasRobos] = useState<SessaoViva[]>([])
+  // as I.A. vendidas à parte (GlobalFly): quais esta pessoa ainda não tem; e o "ir para" do cadeado
+  useEffect(() => {
+    void carregarRobosBloqueados(teeds.sessao)
+    const recarregar = () => { if (document.visibilityState === 'visible') void carregarRobosBloqueados(teeds.sessao) }
+    document.addEventListener('visibilitychange', recarregar)
+    return () => document.removeEventListener('visibilitychange', recarregar)
+  }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const ir = (e: Event) => { const t = telaDoNome((e as CustomEvent<string>).detail); if (t) setTela(t) }
+    window.addEventListener('plataforma:ir', ir)
+    return () => window.removeEventListener('plataforma:ir', ir)
+  }, [])
   // o som do fim da sessão (meta ou stop), de qualquer tela: som.ts
   useEffect(() => { acompanharFimDasSessoes(vivasRobos) }, [vivasRobos])
   const [tema, setTema] = useState<Tema>(temaGuardado)

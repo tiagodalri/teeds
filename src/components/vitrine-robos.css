@@ -210,3 +210,12 @@
 
 /* "Escolha a sua I.A. e comece AGORA!" (texto do Victor): o AGORA em ouro. */
 .vr-cabeca h3 b { color: var(--gf-ouro, #B78D39); text-transform: uppercase; letter-spacing: .02em; }
+
+/* I.A. vendida à parte que a pessoa ainda não tem (23/10/2026, GlobalFly):
+   a foto com o selo "Exclusiva" e o botão vira "Desbloquear · R$ 297" */
+.vr-cadeado { position: absolute; top: 10px; right: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; background: rgba(5, 21, 40, .82); border: 1px solid rgba(183, 141, 57, .6); color: var(--gf-ouro, #D2AE5E); font-size: 11px; font-weight: 800; backdrop-filter: blur(6px); }
+.vr-cadeado svg, .vr-desbloquear svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.vr-trancada .vr-foto img { filter: saturate(.55) brightness(.85); }
+.vr-iniciar.vr-desbloquear { background: transparent; color: var(--gf-ouro, var(--primary)); border: 1px solid color-mix(in srgb, var(--gf-ouro, var(--primary)) 70%, transparent); }
+.vr-iniciar.vr-desbloquear:hover { background: color-mix(in srgb, var(--gf-ouro, var(--primary)) 12%, transparent); }
+:root[data-tema='escuro'] .vr-iniciar.vr-desbloquear { color: var(--gf-ouro, var(--primary)); }

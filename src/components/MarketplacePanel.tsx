@@ -6,6 +6,8 @@ import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { Icone } from './Icone'
+import { irParaTela, useRobosBloqueados } from '../core/teeds/robosLiberados'
+import { abrirSuporte } from '../core/teeds/suporte'
 
 type Categoria = 'Todos' | 'Robôs' | 'Mentorias' | 'Ferramentas'
 
@@ -111,6 +113,35 @@ const PRODUTOS: Produto[] = [
   },
 ]
 
+/*
+  O Marketplace da GlobalFly (23/10/2026, Tiago): três produtos e só. O
+  simulador saiu (todo cliente da GlobalFly já tem a conta demo). À venda, as
+  duas I.A. exclusivas, uma a uma ou no pack com desconto. Raptor, Falcon e
+  Legacy são de todos; a base da antiga Stark já tem as cinco.
+*/
+const PRODUTOS_GF: Produto[] = [
+  {
+    id: 'gf-pack', categoria: 'Robôs', nome: 'Pack Gulf + Phenom',
+    descricao: 'As duas I.A. exclusivas juntas: o Gulf nos dígitos altos e o Phenom nos dígitos baixos, uma o espelho da outra. Levando as duas, você paga R$ 97 a menos.',
+    precoDe: 'R$ 594', preco: 'R$ 497', desconto: 'Economize R$ 97', imagem: 'robos-globalfly/superior5.webp', selo: 'Mais vantajoso', simbolo: 'G+P', tom: 'ouro', destaque: true,
+    itens: ['GF Gulf e GF Phenom liberadas na sua conta', 'R$ 97 a menos do que comprar as duas separadas', 'Você escolhe valor de entrada, meta e limite de perda em cada uma'],
+  },
+  {
+    id: 'gf-gulf', categoria: 'Robôs', nome: 'GF Gulf',
+    descricao: 'Longo alcance: observa o mercado até ver a sequência de dígitos que teria perdido, entra mirando os dígitos altos e segue até fechar a sequência.',
+    precoDe: '', preco: 'R$ 297', desconto: 'I.A. exclusiva', imagem: 'robos-globalfly/superior5.webp', selo: 'I.A. exclusiva', simbolo: 'GU', tom: 'azul',
+    itens: ['Estratégia nos dígitos altos, com entrada depois da análise', 'Liberada na sua conta GlobalFly', 'Você escolhe valor de entrada, meta e limite de perda'],
+  },
+  {
+    id: 'gf-phenom', categoria: 'Robôs', nome: 'GF Phenom',
+    descricao: 'Jato leve, pouso preciso: trabalha no extremo baixo do painel, espera a sequência que teria perdido, entra e segue até fechá-la. O espelho do Gulf.',
+    precoDe: '', preco: 'R$ 297', desconto: 'I.A. exclusiva', imagem: 'robos-globalfly/ag2.webp', selo: 'I.A. exclusiva', simbolo: 'PH', tom: 'azul',
+    itens: ['Estratégia nos dígitos baixos, com entrada depois da análise', 'Liberada na sua conta GlobalFly', 'Você escolhe valor de entrada, meta e limite de perda'],
+  },
+]
+const GF = MARCA.id === 'globalfly'
+const CATALOGO_DA_MARCA = GF ? PRODUTOS_GF : PRODUTOS
+
 const CATEGORIAS: Categoria[] = ['Todos', 'Robôs', 'Mentorias', 'Ferramentas']
 
 /**
@@ -118,14 +149,14 @@ const CATEGORIAS: Categoria[] = ['Todos', 'Robôs', 'Mentorias', 'Ferramentas']
  * está à venda. Os outros produtos aparecem com a tarja "Esgotado" e não
  * abrem. O disponível vem sempre primeiro na vitrine e em evidência.
  */
-const DISPONIVEIS = new Set<string>(['simulador-treino'])
+const DISPONIVEIS = new Set<string>(GF ? PRODUTOS_GF.map((p) => p.id) : ['simulador-treino'])
 const disponivel = (produto: Pick<Produto, 'id'>) => DISPONIVEIS.has(produto.id)
 const ordemDaVitrine = (lista: Produto[]) => [...lista].sort((a, b) => {
   const da = disponivel(a) ? 0 : 1, db = disponivel(b) ? 0 : 1
   if (da !== db) return da - db
-  return PRODUTOS.findIndex((p) => p.id === a.id) - PRODUTOS.findIndex((p) => p.id === b.id)
+  return CATALOGO_DA_MARCA.findIndex((p) => p.id === a.id) - CATALOGO_DA_MARCA.findIndex((p) => p.id === b.id)
 })
-const capaProduto = (arquivo: string) => `${import.meta.env.BASE_URL}marketplace/${MARCA.id === 'teeds' && arquivo === 'simulador-treino.jpg' ? 'simulador-treino-v2.jpeg' : arquivo}`
+const capaProduto = (arquivo: string) => arquivo.includes('/') ? `${import.meta.env.BASE_URL}${arquivo}` : `${import.meta.env.BASE_URL}marketplace/${MARCA.id === 'teeds' && arquivo === 'simulador-treino.jpg' ? 'simulador-treino-v2.jpeg' : arquivo}`
 
 /* Quando o produto tem checkout proprio, o pagamento acontece na Kiwify e as
    garantias escritas para o fluxo "a equipe entra em contato" deixam de ser
@@ -145,12 +176,16 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
   const [pagina, setPagina] = useState(0)
   const [selecionado, setSelecionado] = useState<Produto | null>(null)
   const [interesse, setInteresse] = useState<string | null>(null)
-  const [catalogo, setCatalogo] = useState<Produto[]>(() => ordemDaVitrine(PRODUTOS))
+  const [catalogo, setCatalogo] = useState<Produto[]>(() => ordemDaVitrine(CATALOGO_DA_MARCA))
+  // GlobalFly: o que a pessoa já tem (o Pack conta quando as duas estão liberadas)
+  const bloqueados = useRobosBloqueados()
+  const jaTem = (id: string) => GF && (id === 'gf-gulf' ? !bloqueados.has('superior5') : id === 'gf-phenom' ? !bloqueados.has('ag2') : id === 'gf-pack' ? !bloqueados.has('superior5') && !bloqueados.has('ag2') : false)
   useEffect(() => {
     if (!sessao) return
     listarProdutos(sessao).then((itens) => {
-      const ativos = itens.filter((p) => p.ativo).map((p, indice) => {
-        const base = PRODUTOS.find((x) => x.id === p.id)
+      // na GlobalFly só os três produtos dela (o 'acesso' da base Stark não é vendido)
+      const ativos = itens.filter((p) => p.ativo && p.categoria !== 'acesso' && (!GF || PRODUTOS_GF.some((x) => x.id === p.id))).map((p, indice) => {
+        const base = CATALOGO_DA_MARCA.find((x) => x.id === p.id)
         const valor = p.precoCentavos ?? 0
         return {
           ...(base ?? {
@@ -183,6 +218,8 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
   const comprar = (produto: Produto) => {
     const link = linkDoCheckout(produto.id, sessao?.usuario)
     if (link) { window.open(link, '_blank', 'noopener,noreferrer'); return }
+    // GlobalFly sem página de pagamento ainda: o pedido vai pelo chat do suporte, já escrito
+    if (GF && MARCA.suporte) { setSelecionado(null); abrirSuporte({ mensagem: `Quero comprar: ${produto.nome} (${produto.preco}).` }); return }
     setInteresse(produto.id)
     setSelecionado(null)
   }
@@ -195,28 +232,28 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
       <section className="market-hero">
         <div className="market-hero-conteudo">
           <span className="market-eyebrow">{MARCA.prosa} Marketplace</span>
-          <h1>O próximo nível da sua <em>operação.</em></h1>
-          <p>Robôs premium, acompanhamento especializado e ferramentas criadas para evoluir cada etapa da sua jornada.</p>
+          <h1>{GF ? <>Desbloqueie as I.A. <em>exclusivas.</em></> : <>O próximo nível da sua <em>operação.</em></>}</h1>
+          <p>{GF ? 'O Gulf e o Phenom, uma a uma ou as duas juntas com desconto. Liberadas na sua conta, ao lado das I.A. que você já usa.' : 'Robôs premium, acompanhamento especializado e ferramentas criadas para evoluir cada etapa da sua jornada.'}</p>
           <div className="market-hero-acoes">
-            <button onClick={() => destaque && abrir(destaque)}>Conhecer o Simulador</button>
-            <span><i /> Único produto disponível agora</span>
+            <button onClick={() => destaque && abrir(destaque)}>{GF ? 'Conhecer o Pack' : 'Conhecer o Simulador'}</button>
+            <span><i /> {GF ? 'Pack com R$ 97 de desconto' : 'Único produto disponível agora'}</span>
           </div>
         </div>
         <div className="market-hero-produto" aria-hidden="true">
           <div className="market-orbita"><i /><i /><i /></div>
-          <div className="market-emblema"><small>{MARCA.nome}</small><b>ST</b><span>SIMULADOR</span></div>
-          <span className="market-edicao">DISPONÍVEL AGORA · 01</span>
+          <div className="market-emblema"><small>{MARCA.nome}</small><b>{GF ? 'G+P' : 'ST'}</b><span>{GF ? 'I.A. EXCLUSIVAS' : 'SIMULADOR'}</span></div>
+          <span className="market-edicao">{GF ? 'DISPONÍVEL AGORA · 03' : 'DISPONÍVEL AGORA · 01'}</span>
         </div>
       </section>
 
       <section className="market-vitrine">
         <header className="market-cabecalho">
           <div><span>Explore o ecossistema</span><h2>Produtos em destaque</h2></div>
-          <nav aria-label="Categorias do marketplace">
+          {!GF && <nav aria-label="Categorias do marketplace">
             {CATEGORIAS.map((item) => (
               <button key={item} aria-pressed={categoria === item} className={categoria === item ? 'on' : ''} onClick={() => { setCategoria(item); setPagina(0) }}>{item}</button>
             ))}
-          </nav>
+          </nav>}
         </header>
 
         <div className="market-grade">
@@ -244,7 +281,9 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
                 <p>{produto.descricao}</p>
                 <footer>
                   <span className="market-preco"><del>{produto.precoDe}</del><strong>{produto.preco}<small>{produto.periodo}</small></strong></span>
-                  {aberto
+                  {jaTem(produto.id)
+                    ? <button className="market-ja-tem" onClick={() => irParaTela('robos')}>Já está na sua conta <span>→</span></button>
+                    : aberto
                     ? <button onClick={() => abrir(produto)}>Ver detalhes <span>→</span></button>
                     : <span className="market-card-indisponivel" role="status">Esgotado no momento</span>}
                 </footer>
@@ -319,11 +358,13 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
                   <ul>{selecionado.itens.map((item) => <li key={item}>✓ <span>{item}</span></li>)}</ul>
                   <div className="market-modal-compra">
                     <span className="market-preco"><del>{selecionado.precoDe}</del><strong>{selecionado.preco}<small>{selecionado.periodo}</small></strong><em>{selecionado.desconto}</em></span>
-                    <button onClick={() => comprar(selecionado)}>Quero comprar</button>
+                    {jaTem(selecionado.id)
+                      ? <button onClick={() => { setSelecionado(null); irParaTela('robos') }}>Já está na sua conta: usar agora</button>
+                      : <button onClick={() => comprar(selecionado)}>Quero comprar</button>}
                   </div>
                   <small className="market-aviso">{checkoutAberto
                     ? <>O pagamento é concluído na Kiwify, com cartão, Pix ou boleto. Use o e-mail <b>{sessao?.usuario.email}</b> na compra: é por ele que o acesso é liberado sozinho na sua conta.</>
-                    : <>Nenhuma cobrança é feita por aqui. Ao confirmar, a equipe {MARCA.prosa} recebe seu pedido e entra em contato para concluir a compra.</>}</small>
+                    : GF ? <>Nenhuma cobrança é feita por aqui. O pedido abre no chat do suporte, já escrito, e a equipe {MARCA.prosa} conclui a compra com você.</> : <>Nenhuma cobrança é feita por aqui. Ao confirmar, a equipe {MARCA.prosa} recebe seu pedido e entra em contato para concluir a compra.</>}</small>
                 </>
               )}
             </div>

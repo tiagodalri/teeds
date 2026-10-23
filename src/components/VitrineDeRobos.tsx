@@ -5,6 +5,7 @@ import { useCatalogoCompleto, useRobosDisponiveis } from '../core/teeds/catalogo
 import { MARCA } from '../marca'
 import { pedirModeloDaVitrine } from './RobotSetup'
 import './vitrine-robos.css'
+import { irParaTela, ROBOS_A_VENDA, useRobosBloqueados } from '../core/teeds/robosLiberados'
 
 /**
  * A vitrine da tela Robôs (19/10/2026, GlobalFly): quem ainda não tem robô
@@ -152,7 +153,8 @@ function detalhesDaIA(id: string, p: ParametrosDoRobo): Array<{ titulo: string; 
   return lista1
 }
 
-function ModalDoRobo({ i, nome, base, parametros, aoFechar, aoIniciar }: {
+function ModalDoRobo({ i, nome, base, parametros, aoFechar, aoIniciar, trancada = false }: {
+  trancada?: boolean
   i: Identidade; nome: string; base: string; parametros: ParametrosDoRobo; aoFechar: () => void; aoIniciar: () => void
 }) {
   const v = (MARCA.vitrineDosRobos ?? {})[i.id]
@@ -206,7 +208,7 @@ function ModalDoRobo({ i, nome, base, parametros, aoFechar, aoIniciar }: {
           </section>
         </div>
         <footer className="vr-modal-rodape">
-          <button type="button" className="vr-iniciar" onClick={aoIniciar}><IconePlay /><span>Iniciar operações com o {nome}</span></button>
+          <button type="button" className="vr-iniciar" onClick={aoIniciar}><IconePlay /><span>{trancada ? `Desbloquear o ${nome} · ${ROBOS_A_VENDA[i.id]?.preco ?? ''}` : `Iniciar operações com o ${nome}`}</span></button>
         </footer>
       </div>
     </div>
@@ -218,6 +220,8 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
   const catalogo = useCatalogoCompleto()
   const vitrine = MARCA.vitrineDosRobos ?? {}
   const [aberto, setAberto] = useState<string | null>(null)
+  // as I.A. vendidas à parte que esta pessoa ainda não tem (GlobalFly): cadeado e "Desbloquear"
+  const bloqueados = useRobosBloqueados()
   const robos = IDENTIDADES.filter((i) => disponiveis === null || disponiveis.includes(i.id))
   const parametrosDe = (i: Identidade) => catalogo?.find((c) => c.id === i.id)?.parametros ?? parametrosPadrao(i.id)
   const regra = (i: Identidade) => {
@@ -244,12 +248,14 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
         {robos.map((i) => {
           const v = vitrine[i.id]
           const nome = nomeCurto(i)
+          const trancada = bloqueados.has(i.id)
           return (
-            <article key={i.id} className="vr-cartao" role="listitem">
+            <article key={i.id} className={`vr-cartao ${trancada ? 'vr-trancada' : ''}`} role="listitem">
               <div className="vr-foto">
                 <img src={`${base}${i.id}.webp`} srcSet={`${base}${i.id}-pequena.webp 640w, ${base}${i.id}.webp 1200w`}
                   sizes="(max-width: 700px) 82vw, (max-width: 1279px) 30vw, 20vw" alt="" loading="lazy" decoding="async" width="1200" height="750" />
                 <span className="vr-foto-nome"><b>{nome}</b></span>
+                {trancada && <span className="vr-cadeado"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0v3" /></svg>Exclusiva</span>}
                 <button type="button" className="vr-porque" aria-haspopup="dialog" onClick={() => setAberto(i.id)}>
                   <span aria-hidden="true">✦</span> Por que {nome}?
                 </button>
@@ -259,17 +265,23 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
                 <span className="vr-chamada">{v?.aeronave ?? i.chamada}</span>
                 {v?.gancho && <p className="vr-gancho">{v.gancho}</p>}
                 <NaPratica id={i.id} parametros={parametrosDe(i)} frase={regra(i)} aoAbrir={() => setAberto(i.id)} />
-                <button type="button" className="vr-iniciar" onClick={() => iniciar(i)}>
-                  <IconePlay /><span>Iniciar operações</span>
-                </button>
+                {trancada ? (
+                  <button type="button" className="vr-iniciar vr-desbloquear" onClick={() => irParaTela('marketplace')}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0" /></svg><span>Desbloquear · {ROBOS_A_VENDA[i.id]?.preco ?? 'no Marketplace'}</span>
+                  </button>
+                ) : (
+                  <button type="button" className="vr-iniciar" onClick={() => iniciar(i)}>
+                    <IconePlay /><span>Iniciar operações</span>
+                  </button>
+                )}
               </div>
             </article>
           )
         })}
       </div>
       {doModal && (
-        <ModalDoRobo i={doModal} nome={nomeCurto(doModal)} base={base} parametros={parametrosDe(doModal)}
-          aoFechar={() => setAberto(null)} aoIniciar={() => iniciar(doModal)} />
+        <ModalDoRobo i={doModal} nome={nomeCurto(doModal)} base={base} parametros={parametrosDe(doModal)} trancada={bloqueados.has(doModal.id)}
+          aoFechar={() => setAberto(null)} aoIniciar={() => (bloqueados.has(doModal.id) ? irParaTela('marketplace') : iniciar(doModal))} />
       )}
     </section>
   )

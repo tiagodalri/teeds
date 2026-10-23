@@ -14,6 +14,7 @@ import { acompanharNoServidor, aquecerNoServidor, ligarNoServidor, pararNoServid
 import { RobotCartao, RobotLinha } from './RobotResumo'
 import { resumoDeEstudo, type DadosEstudo } from '../core/teeds/estudoDoDono'
 import { MARCA } from '../marca'
+import { roboBloqueado, ROBOS_A_VENDA } from '../core/teeds/robosLiberados'
 
 interface Props {
   socket: TeedsSocket | null
@@ -276,6 +277,8 @@ export function LocalRobotPanel({
     }
     const escolhida = ESTRATEGIAS_LOCAIS.find(e => e.id === modelo.id)
     if (!escolhida) { setErro('Modelo indisponível. Escolha outro robô.'); return }
+    // I.A. vendida à parte que esta pessoa ainda não tem (GlobalFly): o servidor também barra
+    if (roboBloqueado(escolhida.id)) { setErro(`Esta I.A. é vendida à parte (${ROBOS_A_VENDA[escolhida.id]?.preco ?? 'no Marketplace'}). Desbloqueie no Marketplace para ligar.`); return }
     envioPendente.current = true
     setErro(null)
     setLigando(true)

@@ -17,7 +17,7 @@ import type { AuthSession } from '../../src/core/deriv/auth'
 import type { ConfigEstrategia, Estrategia } from '../../src/core/deriv/engine'
 import {
   abrirSessao, reabrirSessao, encerrarSessao, registrarOperacao, supabaseConfigurado,
-  type SessaoGravada, simuladorPermitido, atualizarVersaoDaSessao,
+  type SessaoGravada, simuladorPermitido, roboLiberado, atualizarVersaoDaSessao,
 } from './supabase'
 import { PublicadorEspelho, espelhoHabilitado } from './espelho'
 
@@ -419,6 +419,8 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
   if (anterior) await encerramentos.get(anterior.id)
   const conta = await acharConta(auth, p.contaId)
   if (conta.type === 'demo' && (!p.userId || !await simuladorPermitido(p.userId, p.marca ?? 'teeds'))) throw new Error('O seu plano não inclui acesso ao simulador.')
+  // I.A. vendida à parte (GlobalFly: Gulf e Phenom): só liga quem comprou, a base Stark e os admins
+  if (p.userId && !await roboLiberado(p.userId, marcaPorId(p.marca).id, estrategia.id)) throw new Error('Esta I.A. é vendida à parte. Desbloqueie no Marketplace para ligar.')
 
   // Os parâmetros que o painel publicou para este robô nesta marca — a
   // conta demo usa a versão em teste, se houver. Só agora dá para saber

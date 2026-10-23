@@ -29,6 +29,11 @@ export async function simuladorPermitido(userId: string, marca: string): Promise
   return (await rest<boolean>('/rpc/teeds_simulador_permitido', {method:'POST',body:JSON.stringify({p_user:userId,p_marca:marca})})) === true
 }
 
+/** A I.A. está liberada para esta pessoa nesta marca? (GlobalFly: Gulf e Phenom são vendidos à parte, 23/10/2026) */
+export async function roboLiberado(userId: string, marca: string, roboId: string): Promise<boolean> {
+  return (await rest<boolean>('/rpc/teeds_robo_liberado', { method: 'POST', body: JSON.stringify({ p_user: userId, p_marca: marca, p_robo: roboId }) })) === true
+}
+
 export async function administradorDaMarca(userId: string, marca: string): Promise<boolean> {
   const linhas = await rest<any[]>(`/administradores?user_id=eq.${encodeURIComponent(userId)}&marca=eq.${encodeURIComponent(marca)}&select=user_id&limit=1`)
   return linhas.length === 1
