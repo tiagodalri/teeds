@@ -68,6 +68,7 @@ export class TeedsSocket {
   ultimoErro: string | null = null
 
   state: ConnectionState = 'idle'
+  private ultimoReconectarForcado = 0
 
   constructor(opts: TeedsSocketOptions = {}) {
     this.url = opts.url ?? DERIV.ws.public
@@ -178,6 +179,11 @@ export class TeedsSocket {
    */
   reconectarAgora(): void {
     if (this.closedByUser) return
+    // Vários robôs dividem a mesma conexão (servidor, uma por conta) e cada
+    // vigia pode pedir o mesmo reconectar ao notar o silêncio: o primeiro
+    // vale, os outros pedidos logo em seguida derrubariam a conexão nova.
+    if (Date.now() - this.ultimoReconectarForcado < 10_000) return
+    this.ultimoReconectarForcado = Date.now()
     if (this.ws) {
       const antigo = this.ws
       this.ws = null

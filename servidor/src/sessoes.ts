@@ -299,6 +299,9 @@ async function abrirConexaoDeOperacao(auth: AuthSession, contaId: string): Promi
 /** Deixa uma conexão pronta para esta conta. Erro aqui não atrapalha ninguém. */
 export function aquecerSala(auth: AuthSession, contaId: string): Promise<void> {
   const chave = chaveDaSala(auth, contaId)
+  // já há robô ligado nesta conta: o próximo play usa a mesma conexão
+  const emUso = conexoes.get(chave)
+  if (emUso && emUso.socket.state !== 'closed') return Promise.resolve()
   const pronta = salas.get(chave)
   if (pronta && Date.now() - pronta.quando < SALA_MAXIMA_MS && pronta.socket.state !== 'closed') return Promise.resolve()
   const jaVem = aquecendo.get(chave)
@@ -336,6 +339,59 @@ setInterval(() => {
   }
 }, 60_000).unref?.()
 
+/* ------------------------------------------------------------------ *
+ * Uma conexão por conta (23/10/2026, recomendação da Deriv para quem roda
+ * vários robôs ao mesmo tempo). Antes, cada robô ligado abria a própria
+ * conexão e pedia o próprio código de acesso; com 3 robôs na mesma conta
+ * eram 3 conexões, 3 assinaturas do preço e 3 do stream de contratos.
+ *
+ * Agora os robôs da mesma conta dividem um socket só. O preço do ativo e o
+ * stream de contratos já são divididos por socket (market.ts, trading.ts),
+ * cada motor só olha o próprio contrato e cada compra sai com o próprio
+ * req_id. Quando o último robô da conta para, a conexão não é jogada fora:
+ * vira a sala quente do próximo play.
+ * ------------------------------------------------------------------ */
+const conexoes = new Map<string, { socket: TeedsSocket; usos: number }>()
+const abrindoConexao = new Map<string, Promise<TeedsSocket>>()
+
+async function usarConexao(auth: AuthSession, contaId: string): Promise<{ socket: TeedsSocket; soltar: () => void }> {
+  const chave = chaveDaSala(auth, contaId)
+  let viva = conexoes.get(chave)
+  if (!viva || viva.socket.state === 'closed') {
+    // dois plays ao mesmo tempo na mesma conta esperam a mesma conexão
+    let abrindo = abrindoConexao.get(chave)
+    if (!abrindo) {
+      abrindo = (async () => pegarSala(auth, contaId) ?? await abrirConexaoDeOperacao(auth, contaId))()
+      abrindoConexao.set(chave, abrindo)
+      abrindo.then(() => abrindoConexao.delete(chave), () => abrindoConexao.delete(chave))
+    }
+    const socket = await abrindo
+    viva = conexoes.get(chave)
+    if (!viva || viva.socket !== socket) { viva = { socket, usos: 0 }; conexoes.set(chave, viva) }
+  }
+  const usada = viva
+  usada.usos += 1
+  let solta = false
+  const soltar = () => {
+    if (solta) return
+    solta = true
+    usada.usos -= 1
+    if (usada.usos > 0) return
+    if (conexoes.get(chave) === usada) conexoes.delete(chave)
+    // o último robô da conta parou: a conexão aberta fica pronta para o próximo play
+    if (usada.socket.state === 'open' && !salas.has(chave)) salas.set(chave, { socket: usada.socket, quando: Date.now() })
+    else usada.socket.disconnect()
+  }
+  return { socket: usada.socket, soltar }
+}
+
+/** Quantas conexões de operação estão abertas e quantos robôs as usam (para o painel e os testes). */
+export function conexoesDeOperacao(): { conexoes: number; robos: number } {
+  let robos = 0
+  for (const c of conexoes.values()) robos += c.usos
+  return { conexoes: conexoes.size, robos }
+}
+
 /** Liga um robô e devolve na hora. Ele segue operando até bater um freio. */
 export async function iniciar(auth: AuthSession, p: Parametros): Promise<Sessao> {
   if (!catalogo(p.marca ?? 'teeds').some(r => r.id === p.roboId && r.ativo)) throw new Error('Este robô está indisponível para novos inícios.')
@@ -370,11 +426,9 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
   const v = vigente(marcaPorId(p.marca).id, estrategia.id, conta.type === 'demo')
   aplicarVigente(config, p, v)
 
-  // A conexão que já estava pronta, quando houver: é ela que tira a REST da
-  // Deriv do caminho do play. Sem sala, abre na hora, como antes.
-  const socket = pegarSala(auth, conta.accountId) ?? await abrirConexaoDeOperacao(auth, conta.accountId)
-  // E já deixa outra pronta para o próximo play desta conta.
-  void aquecerSala(auth, conta.accountId)
+  // A conexão da conta: a dos outros robôs já ligados nela, ou a sala que
+  // estava pronta, ou uma nova. Ver usarConexao.
+  const { socket, soltar } = await usarConexao(auth, conta.accountId)
 
   // Se a conexão de operação não abrir, o socket não pode ficar tentando
   // reconectar para sempre por trás de um pedido que já desistiu.
@@ -389,12 +443,12 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
     try {
       simbolos = await fetchActiveSymbols(socket)
     } catch {
-      socket.disconnect()
+      soltar()
       throw new Error('A Deriv não abriu a conexão de operação a tempo. Ela parece instável agora; tente de novo em instantes.')
     }
     alvo = simbolos.find((s) => s.symbol === ATIVO_DOS_ROBOS) ?? null
     if (!alvo) {
-      socket.disconnect()
+      soltar()
       throw new Error(`A Deriv não ofereceu ${ATIVO_DOS_ROBOS} nesta conta.`)
     }
     ativoLembrado = { quando: Date.now(), alvo }
@@ -430,7 +484,7 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
   // que a primeira operação liquida.
   if (anterior?.gravada) {
     try { await reabrirSessao(anterior.gravada, { ...config, parametrosVersao: v.versao }) }
-    catch (e) { socket.disconnect(); throw e }
+    catch (e) { soltar(); throw e }
   } else if (supabaseConfigurado()) {
     try {
       sessao.gravada = await abrirSessao({
@@ -513,7 +567,7 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
     // última operação sem resultado. Encerra quando ele liquidar.
     if (!e.rodando && !e.emOperacao && e.motivoParada && sessao.terminouEm === null) {
       sessao.terminouEm = Date.now()
-      try { socket.disconnect() } catch { /* já caiu */ }
+      try { soltar() } catch { /* já caiu */ }
       motores.delete(id)
       const fim = Promise.all([sessao.gravada ? encerrarSessao(sessao.gravada, { motivo: e.motivoParada }) : Promise.resolve(), espelho?.encerrar()]).then(() => { sequencias.set(id, espelho?.sequencia ?? 0) })
       encerramentos.set(id, fim)
@@ -530,7 +584,7 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
   } catch (erro) {
     sessao.erro = (erro as Error).message
     sessao.terminouEm = Date.now()
-    try { socket.disconnect() } catch { /* já caiu */ }
+    try { soltar() } catch { /* já caiu */ }
     motores.delete(id)
     if (sessao.gravada) void encerrarSessao(sessao.gravada, { motivo: 'falhou ao ligar', erro: sessao.erro })
     void espelho?.encerrar()   // drenagem limitada (2 min); não segura a parada
