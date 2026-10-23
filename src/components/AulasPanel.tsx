@@ -13,6 +13,7 @@ import { IconeFechar } from './IconeFechar'
 import { Icone } from './Icone'
 import { PlayerAula } from './PlayerAula'
 import { registrarAula } from '../core/teeds/insights'
+import { DERIV } from '../core/deriv/config'
 
 const capa = capaDaAula
 
@@ -267,58 +268,92 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: strin
               </div>
             </div>
 
-            {(aberta.materiais?.length ?? 0) > 0 && (
-              <section className="cine-materiais" aria-label="Materiais da aula">
-                <h3>Materiais da aula <small>{aberta.materiais!.length} {aberta.materiais!.length === 1 ? 'arquivo' : 'arquivos'}</small></h3>
-                <div className="cine-materiais-lista">
-                  {aberta.materiais!.map((m) => (
-                    <a key={m.url} className="cine-material" href={m.url} target="_blank" rel="noopener noreferrer" download>
-                      <i aria-hidden="true">{(m.tipo || m.url.split('.').pop() || 'arq').slice(0, 4).toUpperCase()}</i>
-                      <span><b>{m.nome}</b><small>{[m.tipo, tamanhoLegivel(m.tamanho)].filter(Boolean).join(' · ') || 'Arquivo'}</small></span>
-                      <em>Baixar</em>
-                    </a>
-                  ))}
+            {(() => {
+              // os links relacionados: os padrões da marca e os extras que o painel cadastrou nesta aula
+              const links: Array<{ nome: string; url: string; dica?: string }> = [
+                ...(MARCA.afiliado ? [{ nome: 'Abrir conta na Deriv', url: MARCA.afiliado, dica: 'Gratuito, em poucos minutos' }] : []),
+                { nome: 'Depositar na Deriv', url: DERIV.deposito, dica: 'Pela área Caixa da sua conta' },
+                ...(MARCA.comunidade ? [{ nome: 'Comunidade no WhatsApp', url: MARCA.comunidade, dica: 'Avisos e agenda das transmissões' }] : []),
+                ...(aberta.links ?? []).filter((l) => !/deriv\.com\/dashboard\/deposit/.test(l.url)),
+              ]
+              const materiais = aberta.materiais ?? []
+              return (
+                <div className={`cine-extras ${materiais.length ? '' : 'so-links'}`}>
+                  {materiais.length > 0 && (
+                    <section className="cine-materiais" aria-label="Materiais da aula">
+                      <h3>Materiais da aula <small>{materiais.length} {materiais.length === 1 ? 'arquivo' : 'arquivos'}</small></h3>
+                      <div className="cine-materiais-lista">
+                        {materiais.map((m) => (
+                          <a key={m.url} className="cine-material" href={m.url} target="_blank" rel="noopener noreferrer" download>
+                            <i aria-hidden="true">{(m.tipo || m.url.split('.').pop() || 'arq').slice(0, 4).toUpperCase()}</i>
+                            <span><b>{m.nome}</b><small>{[m.tipo, tamanhoLegivel(m.tamanho)].filter(Boolean).join(' · ') || 'Arquivo'}</small></span>
+                            <em>Baixar</em>
+                          </a>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                  <section className="cine-materiais cine-links" aria-label="Links relacionados">
+                    <h3>Links relacionados</h3>
+                    <div className="cine-materiais-lista">
+                      {links.map((l) => (
+                        <a key={l.url + l.nome} className="cine-material cine-link" href={l.url} target="_blank" rel="noopener noreferrer">
+                          <i aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" /></svg></i>
+                          <span><b>{l.nome}</b><small>{l.dica ?? l.url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}</small></span>
+                          <em>Abrir</em>
+                        </a>
+                      ))}
+                    </div>
+                  </section>
                 </div>
-              </section>
-            )}
+              )
+            })()}
           </div>
 
-          <aside className="cine-trilha">
+          <aside className="cine-trilha" aria-label="Seu progresso no curso">
             <div className="cine-trilha-topo">
               <Anel fracao={assistidas / aulas.length} cor={aberta.modulo.cor} />
               <div>
                 <b>Seu progresso</b>
-                <small>{assistidas} de {aulas.length} aulas assistidas</small>
+                <small>{assistidas} de {aulas.length} aulas assistidas · {MODULOS.length} módulos</small>
               </div>
             </div>
-            {MODULOS.map((m, mi) => {
-              const doModulo = aulas.filter((a) => a.modulo.id === m.id)
-              const feitas = doModulo.filter((a) => vistas.has(a.id)).length
-              const abertoAqui = (moduloAberto ?? aberta.modulo.id) === m.id
-              return (
-                <section key={m.id} className={`cine-modulo ${abertoAqui ? 'aberto' : ''} ${m.id === aberta.modulo.id ? 'atual' : ''}`} style={{ ['--aula' as any]: m.cor }}>
-                  <button className="cine-modulo-cab" onClick={() => setModuloAberto(abertoAqui ? '' : m.id)} aria-expanded={abertoAqui}>
-                    <i>{String(mi + 1).padStart(2, '0')}</i>
-                    <span><b>{m.titulo}</b><small>{feitas}/{doModulo.length} concluídas</small></span>
-                    <em aria-hidden>{abertoAqui ? '▾' : '▸'}</em>
-                  </button>
-                  {abertoAqui && (
-                    <div className="cine-modulo-aulas">
-                      {doModulo.map((a) => (
-                        <button key={a.id}
-                          className={`aula-item ${a.id === aberta.id ? 'on' : ''} ${a.video ? '' : 'sem'} ${vistas.has(a.id) ? 'vista' : ''}`}
-                          onClick={() => abrir(a)} disabled={!a.video}>
-                          <i>{a.id === aberta.id ? '▶' : vistas.has(a.id) ? '✓' : a.numero}</i>
-                          <span>{a.titulo}</span>
-                          <em>{a.video ? (ehVideoDeExemplo(a.video) ? 'exemplo' : a.duracao) : 'em breve'}</em>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </section>
-              )
-            })}
-            <p className="cine-atalhos">Atalhos: <kbd>espaço</kbd> tocar/pausar · <kbd>←</kbd> <kbd>→</kbd> 10 s · <kbd>F</kbd> tela cheia</p>
+            <div className="cine-trilha-modulos">
+              {MODULOS.map((m, mi) => {
+                const doModulo = aulas.filter((a) => a.modulo.id === m.id)
+                const feitas = doModulo.filter((a) => vistas.has(a.id)).length
+                const abertoAqui = (moduloAberto ?? aberta.modulo.id) === m.id
+                return (
+                  <section key={m.id} className={`cine-modulo ${abertoAqui ? 'aberto' : ''} ${m.id === aberta.modulo.id ? 'atual' : ''}`} style={{ ['--aula' as any]: m.cor }}>
+                    <button className="cine-modulo-cab" onClick={() => setModuloAberto(abertoAqui ? '' : m.id)} aria-expanded={abertoAqui}>
+                      <i>{String(mi + 1).padStart(2, '0')}</i>
+                      <span>
+                        <small className="cine-modulo-rot">Módulo {mi + 1}</small>
+                        <b>{m.titulo}</b>
+                        <span className="cine-modulo-barra" aria-hidden="true"><u style={{ width: `${doModulo.length ? (feitas / doModulo.length) * 100 : 0}%` }} /></span>
+                        <small>{feitas} de {doModulo.length} concluídas</small>
+                      </span>
+                      <em aria-hidden>{abertoAqui ? '−' : '+'}</em>
+                    </button>
+                    {abertoAqui && (
+                      <ol className="cine-modulo-aulas">
+                        {doModulo.map((a) => (
+                          <li key={a.id}>
+                            <button
+                              className={`aula-item ${a.id === aberta.id ? 'on' : ''} ${a.video ? '' : 'sem'} ${vistas.has(a.id) ? 'vista' : ''}`}
+                              onClick={() => abrir(a)} disabled={!a.video} aria-current={a.id === aberta.id ? 'true' : undefined}>
+                              <i>{a.id === aberta.id ? '▶' : vistas.has(a.id) ? '✓' : a.numero}</i>
+                              <span>{a.titulo}<small>{a.id === aberta.id ? 'Assistindo agora' : vistas.has(a.id) ? 'Assistida' : a.video ? (ehVideoDeExemplo(a.video) ? 'Vídeo de exemplo' : a.duracao) : 'Em breve'}</small></span>
+                            </button>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </section>
+                )
+              })}
+            </div>
+            <p className="cine-atalhos">Atalhos: <kbd>espaço</kbd> tocar ou pausar · <kbd>←</kbd> <kbd>→</kbd> 10 s · <kbd>F</kbd> tela cheia</p>
           </aside>
         </div>
       </div>

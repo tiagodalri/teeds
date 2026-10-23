@@ -19,7 +19,7 @@
 import { SUPABASE, autenticacaoConfigurada } from './config'
 import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
-import type { Material } from './aulas'
+import type { LinkDaAula, Material } from './aulas'
 
 export interface VideoDaAula {
   aulaId: string
@@ -32,6 +32,7 @@ export interface VideoDaAula {
   arquivo: string | null
   /** Os arquivos para baixar na aula (bucket `materiais`). */
   materiais: Material[]
+  links: LinkDaAula[]
   atualizadoEm: string
 }
 
@@ -60,6 +61,7 @@ function daLinha(l: any): VideoDaAula {
     titulo: l.titulo || null, descricao: l.descricao || null,
     publicado: Boolean(l.publicado), arquivo: l.arquivo || null, atualizadoEm: l.atualizado_em,
     materiais: Array.isArray(l.materiais) ? (l.materiais as Material[]).filter((m) => m && m.url && m.nome) : [],
+    links: Array.isArray(l.links) ? (l.links as LinkDaAula[]).filter((m) => m && m.url && m.nome) : [],
   }
 }
 
@@ -87,7 +89,7 @@ export async function listarVideosDasAulas(sessao: SessaoTeeds | null | undefine
 /** Grava (ou atualiza) o vídeo de uma aula desta marca. Só admin passa pelo RLS. */
 export async function salvarVideoDaAula(
   sessao: SessaoTeeds,
-  dados: { aulaId: string; video: string; duracao: string; titulo?: string | null; descricao?: string | null; publicado: boolean; arquivo?: string | null; materiais?: Material[] },
+  dados: { aulaId: string; video: string; duracao: string; titulo?: string | null; descricao?: string | null; publicado: boolean; arquivo?: string | null; materiais?: Material[]; links?: LinkDaAula[] },
 ): Promise<void> {
   await rest('/aulas_videos?on_conflict=marca,aula_id', sessao.token, {
     method: 'POST',
@@ -102,6 +104,7 @@ export async function salvarVideoDaAula(
       publicado: dados.publicado,
       arquivo: dados.arquivo ?? null,
       ...(dados.materiais ? { materiais: dados.materiais } : {}),
+      ...(dados.links ? { links: dados.links } : {}),
       atualizado_em: new Date().toISOString(),
       atualizado_por: sessao.usuario.id,
     }),

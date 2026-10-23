@@ -5073,6 +5073,7 @@ input, select, textarea, button { vertical-align: middle; }
 .admin-aula-material input{min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;color:var(--text);background:var(--surface);font:inherit;font-size:13px;text-transform:none;letter-spacing:0}
 .admin-aula-material small{color:var(--muted);font-size:11px}
 .admin-aula-material button{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:8px;color:var(--muted);background:transparent;cursor:pointer}
+.admin-aula-link{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) 32px}
 .admin-secundario{justify-self:start;padding:9px 14px;border:1px solid var(--border);border-radius:10px;color:var(--text);background:var(--surface);font:inherit;font-weight:700;cursor:pointer}
 @media (max-width:720px){.admin-aulas-modulo>header>small{display:none}.admin-aula{grid-template-columns:38px 1fr 18px}.admin-aula>.adm-aula-chips{display:none}.admin-aula-duas{grid-template-columns:1fr}}
 
@@ -6009,3 +6010,41 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .chart-media-editor footer button[type='submit'] { border-color: var(--primary); background: var(--primary); color: #fff; }
 :root[data-tema='escuro'] .chart-media-editor footer button[type='submit'] { color: var(--bg); }
 .chart-media-editor footer button:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ==========================================================================
+   Sala de aula, 23/10/2026 (Tiago: "sem acabamento"): materiais e links lado
+   a lado abaixo da ficha, e a coluna do progresso reorganizada, com cada
+   módulo como um bloco: rótulo, título, barra e contagem; as aulas numa lista
+   que quebra a linha em vez de cortar o título.
+   ========================================================================== */
+.cine-extras { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.cine-extras.so-links { grid-template-columns: minmax(0, 1fr); }
+.cine-extras .cine-materiais-lista { grid-template-columns: minmax(0, 1fr); }
+.cine-material b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3; }
+.cine-link i svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 900px) { .cine-extras { grid-template-columns: minmax(0, 1fr); } }
+
+.cine-trilha { gap: 0; padding: 0; overflow-x: hidden; }
+.cine-trilha-topo { gap: 14px; margin: 0; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+.cine-trilha-topo b { font-size: 14px; }
+.cine-trilha-topo small { font-size: 11.5px; }
+.cine-trilha-modulos { display: grid; }
+.cine-trilha .cine-modulo { border-radius: 0; border-bottom: 1px solid var(--border); }
+.cine-trilha .cine-modulo:last-child { border-bottom: 0; }
+.cine-trilha .cine-modulo.atual { background: color-mix(in srgb, var(--aula) 5%, transparent); }
+.cine-trilha .cine-modulo-cab { grid-template-columns: 34px minmax(0, 1fr) 18px; align-items: start; gap: 12px; padding: 14px 18px; border-radius: 0; }
+.cine-trilha .cine-modulo-cab i { width: 34px; height: 34px; border-radius: 10px; font-size: 12px; }
+.cine-trilha .cine-modulo-cab > span { gap: 3px; }
+.cine-trilha .cine-modulo-cab b { font-size: 13.5px; white-space: normal; }
+.cine-trilha .cine-modulo-rot { color: var(--aula); font-size: 10.5px; font-weight: 700; }
+.cine-modulo-barra { display: block; height: 4px; margin: 5px 0 3px; border-radius: 99px; background: var(--border); overflow: hidden; }
+.cine-modulo-barra u { display: block; height: 100%; border-radius: 99px; background: var(--aula); text-decoration: none; }
+.cine-trilha .cine-modulo-cab em { align-self: center; font-size: 16px; line-height: 1; }
+.cine-trilha .cine-modulo-aulas { margin: 0; padding: 0 12px 12px 18px; list-style: none; gap: 2px; }
+.cine-trilha .cine-modulo-aulas .aula-item { display: grid; grid-template-columns: 26px minmax(0, 1fr); align-items: start; gap: 10px; width: 100%; padding: 8px 10px; border-radius: 10px; text-align: left; }
+.cine-trilha .cine-modulo-aulas .aula-item i { width: 26px; height: 26px; margin-top: 1px; }
+.cine-trilha .cine-modulo-aulas .aula-item span { display: grid; gap: 2px; overflow: visible; white-space: normal; font-size: 13px; line-height: 1.35; }
+.cine-trilha .cine-modulo-aulas .aula-item span small { color: var(--muted); font-size: 11px; }
+.cine-trilha .cine-modulo-aulas .aula-item.on span small { color: var(--aula); font-weight: 700; }
+.cine-trilha .cine-modulo-aulas .aula-item.vista:not(.on) span small { color: var(--up); }
+.cine-trilha .cine-atalhos { margin: 0; padding: 12px 18px 14px; border-top: 1px solid var(--border); }

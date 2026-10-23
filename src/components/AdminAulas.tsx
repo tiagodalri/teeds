@@ -5,7 +5,7 @@ import {
   apagarArquivo, apagarMaterial, controleDasAulas, duracaoDoArquivo, duracaoLegivel, ehArquivoNosso, enviarArquivoDaAula, enviarMaterial,
   fracaoAssistida, LIMITE_MATERIAL_MB, listarVideosDasAulas, removerVideoDaAula, salvarVideoDaAula, tamanhoLegivel, type AssistiuAula, type VideoDaAula,
 } from '../core/teeds/aulasVideos'
-import type { Material } from '../core/teeds/aulas'
+import type { LinkDaAula, Material } from '../core/teeds/aulas'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { Icone } from './Icone'
@@ -35,6 +35,7 @@ interface Form {
   /** O caminho do arquivo no bucket, se o vídeo atual (ou o recém-enviado) veio de upload. */
   arquivo: string | null
   materiais: Material[]
+  links: LinkDaAula[]
 }
 
 export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
@@ -43,7 +44,7 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
   const [erro, setErro] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState<string | null>(null)
   const [aberta, setAberta] = useState<AulaNumerada | null>(null)
-  const [form, setForm] = useState<Form>({ video: '', duracao: '', titulo: '', descricao: '', publicado: true, arquivo: null, materiais: [] })
+  const [form, setForm] = useState<Form>({ video: '', duracao: '', titulo: '', descricao: '', publicado: true, arquivo: null, materiais: [], links: [] })
   const [salvando, setSalvando] = useState(false)
   const [envio, setEnvio] = useState<{ nome: string; fracao: number; cancelar: () => void } | null>(null)
   const [arquivoAntigo, setArquivoAntigo] = useState<string | null>(null)
@@ -75,7 +76,7 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
     const v = videos[a.id]
     setAberta(a); setErro(null); setSucesso(null); setEnvio(null)
     setArquivoAntigo(v?.arquivo ?? null)
-    setForm({ video: v?.video ?? '', duracao: v?.duracao ?? '', titulo: v?.titulo ?? '', descricao: v?.descricao ?? '', publicado: v?.publicado ?? true, arquivo: v?.arquivo ?? null, materiais: v?.materiais ?? [] })
+    setForm({ video: v?.video ?? '', duracao: v?.duracao ?? '', titulo: v?.titulo ?? '', descricao: v?.descricao ?? '', publicado: v?.publicado ?? true, arquivo: v?.arquivo ?? null, materiais: v?.materiais ?? [], links: v?.links ?? [] })
     setMateriaisAntigos(v?.materiais ?? []); setAbaModal('conteudo')
   }
   const fechar = () => { if (envio) envio.cancelar(); setAberta(null); setEnvio(null) }
@@ -102,12 +103,14 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
 
   const salvar = async () => {
     if (!aberta) return
-    if (!form.video.trim() && !form.materiais.length) { setErro('Envie o vídeo ou pelo menos um material antes de salvar.'); return }
+    if (!form.video.trim() && !form.materiais.length && !form.links.length) { setErro('Envie o vídeo, um material ou um link antes de salvar.'); return }
+    const links = form.links.map((l) => ({ nome: l.nome.trim(), url: l.url.trim() })).filter((l) => l.nome || l.url)
+    if (links.some((l) => !l.nome || !/^https?:\/\//i.test(l.url))) { setErro('Cada link precisa de um nome e de um endereço começando com https://'); return }
     setSalvando(true); setErro(null)
     try {
       // Se o vídeo agora é um link (ou outro arquivo), o arquivo enviado antes vira lixo no bucket.
       const arquivoAtual = ehArquivoNosso(form.video) ? form.arquivo : null
-      await salvarVideoDaAula(sessao, { aulaId: aberta.id, video: form.video, duracao: form.duracao, titulo: form.titulo, descricao: form.descricao, publicado: form.publicado, arquivo: arquivoAtual, materiais: form.materiais })
+      await salvarVideoDaAula(sessao, { aulaId: aberta.id, video: form.video, duracao: form.duracao, titulo: form.titulo, descricao: form.descricao, publicado: form.publicado, arquivo: arquivoAtual, materiais: form.materiais, links })
       // material tirado da lista: o arquivo sai do bucket
       for (const m of materiaisAntigos) if (m.arquivo && !form.materiais.some((x) => x.arquivo === m.arquivo)) await apagarMaterial(sessao, m.arquivo).catch(() => undefined)
       if (arquivoAntigo && arquivoAntigo !== arquivoAtual) {
@@ -290,6 +293,19 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
                   onChange={(e) => void adicionarMaterial(e.target.files?.[0])} />
                 <button type="button" className="admin-secundario" disabled={enviandoMaterial} onClick={() => entradaMaterial.current?.click()}>{enviandoMaterial ? 'Enviando…' : '+ Adicionar arquivo'}</button>
                 <small>PDF, e-book, planilha, documento, apresentação, imagem ou ZIP, até {LIMITE_MATERIAL_MB} MB cada. O nome aqui é o que aparece no botão para o aluno.</small>
+              </div>
+
+              <div className="admin-aula-materiais">
+                <span className="rot">Links relacionados</span>
+                <small>Abrir conta, depositar e a comunidade já aparecem em todas as aulas. Aqui entram os links extras desta aula.</small>
+                {form.links.map((l, i) => (
+                  <div key={i} className="admin-aula-material admin-aula-link">
+                    <input value={l.nome} placeholder="Nome do botão" aria-label="Nome do botão" onChange={(e) => setForm((f) => ({ ...f, links: f.links.map((x, j) => (j === i ? { ...x, nome: e.target.value } : x)) }))} />
+                    <input value={l.url} placeholder="https://…" aria-label="Endereço" onChange={(e) => setForm((f) => ({ ...f, links: f.links.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) }))} />
+                    <button type="button" onClick={() => setForm((f) => ({ ...f, links: f.links.filter((_, j) => j !== i) }))} aria-label="Tirar o link"><IconeFechar /></button>
+                  </div>
+                ))}
+                <button type="button" className="admin-secundario" onClick={() => setForm((f) => ({ ...f, links: [...f.links, { nome: '', url: '' }] }))}>+ Adicionar link</button>
               </div>
             </div>
             )}

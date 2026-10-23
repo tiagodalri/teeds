@@ -20,7 +20,12 @@ export interface Aula {
   duracao: string
   /** Arquivos para baixar junto da aula (e-book, planilha, PDF). */
   materiais?: Material[]
+  /** Links extras da aula (além dos padrões da marca). */
+  links?: LinkDaAula[]
 }
+
+/** Um link relacionado à aula: o nome do botão e o endereço. */
+export interface LinkDaAula { nome: string; url: string }
 
 /** Um arquivo para baixar na aula: o nome do botão e o endereço do arquivo. */
 export interface Material {
@@ -77,6 +82,7 @@ export interface SobreposicaoDaAula {
   descricao?: string | null
   publicado?: boolean
   materiais?: Material[]
+  links?: LinkDaAula[]
 }
 
 /**
@@ -102,6 +108,7 @@ export function todasAsAulas(videos: Record<string, SobreposicaoDaAula> = {}): A
         duracao: vivo?.duracao || a.duracao || (DEMONSTRACAO_EM_AULA_SEM_VIDEO ? 'Vídeo de exemplo' : ''),
         // os materiais do painel; numa aula ainda de exemplo, os materiais de exemplo da marca
         materiais: doPainel.length ? doPainel : a.materiais?.length ? a.materiais : ehVideoDeExemplo(video) ? MATERIAIS_DE_EXEMPLO : [],
+        links: gravado && gravado.publicado !== false && gravado.links?.length ? gravado.links : a.links ?? [],
         numero: n++, modulo: m,
       })
     }
