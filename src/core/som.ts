@@ -2,28 +2,26 @@ import { useSyncExternalStore } from 'react'
 import { MARCA } from '../marca'
 
 /**
- * Os sons das operações (21/10/2026, pedido do Tiago), no computador, no
- * celular e no app instalado. SÓ quando a operação fecha (nunca na entrada,
- * nem ao ligar o robô; o som do play e o da decolagem saíram no mesmo dia):
- *  - ganho: o "cha-ching" da caixa registradora;
- *  - loss: duas notas graves descendo, curtas e abafadas. Avisa sem
- *    assustar: quem opera com vários robôs ouve isso muitas vezes ao dia.
+ * Os sons das operações. Desde 23/10/2026 (Tiago, depois de pedir várias
+ * vezes) são TRÊS momentos, e não um som a cada micro-operação do robô:
+ *  - play: quando o robô liga (um toque curto subindo, de "decolou");
+ *  - ganho: quando a sessão do robô bate a meta (o "cha-ching");
+ *  - perda: quando a sessão bate o stop (duas notas graves descendo).
+ * As entradas que o robô faz no meio do caminho ficam em silêncio. A
+ * operação manual continua com o som do resultado de cada entrada: ali cada
+ * entrada é uma decisão da pessoa, não uma rajada do robô.
  *
  * Sem arquivo de áudio: o som é sintetizado na hora (Web Audio), então não
- * pesa nada e não depende de rede. É o "cha-ching" da caixa registradora,
- * o mesmo espírito do aviso de venda aprovada (Kiwify e afins): o "cha" é
- * o estalo da gaveta (um chiado curto e um baque grave) e o "ching" são
- * duas batidas de sino metálico, com parciais fora da série harmônica (é
- * isso que soa metal, não apito) e um leve batimento entre pares
- * desafinados, que dá o brilho de moeda. Some em pouco mais de um segundo.
+ * pesa nada e não depende de rede. O "cha" do ganho é o estalo da gaveta (um
+ * chiado curto e um baque grave) e o "ching" são duas batidas de sino
+ * metálico, com parciais fora da série harmônica e um leve batimento entre
+ * pares desafinados, que dá o brilho de moeda.
  *
  * Regras:
- *  - uma vez por contrato: o Manual (aviso da corretora) e os robôs
- *    (histórico da sessão) podem contar a mesma operação; o número do
- *    contrato não deixa tocar duas vezes;
- *  - só toca o que terminou DEPOIS de a tela abrir (abrir a plataforma não
- *    dispara um monte de moedas do que já tinha acontecido);
- *  - vários resultados no mesmo instante (vários robôs) viram um som só;
+ *  - fim de sessão toca uma vez por sessão, e só se esta tela viu a sessão
+ *    rodando (abrir a plataforma não toca o que já tinha acabado);
+ *  - manual: uma vez por contrato, só o que foi comprado nesta tela;
+ *  - vários resultados no mesmo instante viram um som só;
  *  - celular: o navegador só libera áudio depois do primeiro toque na tela;
  *    o iPhone respeita a chave do silencioso;
  *  - dá para desligar (menu do usuário); a escolha fica no aparelho.
@@ -70,17 +68,18 @@ if (typeof window !== 'undefined') {
   for (const ev of ['pointerdown', 'touchend', 'keydown']) window.addEventListener(ev, uma, { passive: true })
 }
 
-export type Som = 'ganho' | 'perda'
+export type Som = 'ganho' | 'perda' | 'play'
 const SINTESE: Record<Som, (c: BaseAudioContext, destino: AudioNode, t: number) => void> = {
   ganho: (c, d, t) => chaChing(c, d, t),
   perda: (c, d, t) => somDePerda(c, d, t),
+  play: (c, d, t) => somDoPlay(c, d, t),
 }
 const ultimaVez: Record<string, number> = {}
 /** Toca um som. `forcar` ignora o intervalo mínimo (o teste ao ligar o som). */
 export function tocarSom(som: Som, forcar = false): void {
   if (!ligado || document.visibilityState === 'hidden') return
   // ganho e perda dividem o intervalo: resultados juntos viram um som só
-  const grupo = 'resultado'
+  const grupo = som === 'play' ? 'play' : 'resultado'
   const agora = performance.now()
   if (!forcar && agora - (ultimaVez[grupo] ?? -1e9) < 350) return
   ultimaVez[grupo] = agora
@@ -183,6 +182,22 @@ export function somDePerda(c: BaseAudioContext, destino: AudioNode, t: number): 
   nota(t + 0.17, 311.13, 0.94, 0.4, 0.6)
 }
 
+/** O play: duas notas limpas subindo (quinta justa), curtas e suaves, com um leve brilho no fim. */
+export function somDoPlay(c: BaseAudioContext, destino: AudioNode, t: number): void {
+  const saida = saidaDoSom(c, destino, 0.55)
+  const nota = (inicio: number, freq: number, pico: number, queda: number) => {
+    for (const [razao, v] of [[1, 1], [2, 0.18], [3, 0.06]] as const) {
+      const o = c.createOscillator(); const g = c.createGain()
+      o.type = 'sine'; o.frequency.value = freq * razao
+      envelope(g, inicio, pico * v, 0.006, queda)
+      o.connect(g); g.connect(saida)
+      o.start(inicio); o.stop(inicio + queda + 0.05)
+    }
+  }
+  nota(t, 659.25, 0.5, 0.22)
+  nota(t + 0.09, 987.77, 0.46, 0.5)
+}
+
 // ------------------------------------------------------------------ quem avisa que terminou
 const tocados = new Set<number | string>()
 const abertosVistos = new Set<number | string>()
@@ -196,8 +211,14 @@ export function contratoAberto(id: number | string): void { abertosVistos.add(id
  * empate fica em silêncio. `vistoAberto` diz se esta tela viu a operação
  * acontecer (para não tocar o passado ao abrir a plataforma).
  */
+const manuais = new Set<number | string>()
+/** O contrato foi comprado na boleta desta tela: o fim dele toca (os do robô não). */
+export function contratoManual(id: number | string): void { manuais.add(id) }
+
 export function operacaoTerminou(id: number | string, lucro: number, opcoes: { vistoAberto?: boolean; quando?: number } = {}): void {
   if (tocados.has(id)) return
+  // contrato do robô: cada micro-operação fica em silêncio (o som é o do fim da sessão)
+  if (!manuais.has(id)) return
   const viu = opcoes.vistoAberto ?? abertosVistos.has(id)
   const recente = opcoes.quando === undefined || opcoes.quando >= inicio - 2000
   // quem não viu a operação aberta não decide por ninguém: o outro caminho (o
@@ -209,4 +230,28 @@ export function operacaoTerminou(id: number | string, lucro: number, opcoes: { v
   abertosVistos.delete(id)
   if (tocados.size > 2000) tocados.clear()
   tocarSom(lucro > 0 ? 'ganho' : 'perda')
+}
+
+/** O robô ligou: o som do play. */
+export function roboLigou(): void { tocarSom('play') }
+
+/**
+ * O fim das sessões dos robôs: quem viu a sessão rodando nesta tela ouve o
+ * ganho quando ela bate a meta e a perda quando bate o stop. Parada manual,
+ * limite de operações ou recusa da corretora terminam em silêncio.
+ */
+const sessoesRodando = new Set<string>()
+const sessoesTocadas = new Set<string>()
+export function acompanharFimDasSessoes(lista: ReadonlyArray<{ id: string; estado?: { rodando?: boolean; emOperacao?: boolean; motivoParada?: string | null } | null }>): void {
+  for (const s of lista) {
+    const e = s.estado
+    if (!e) continue
+    if (e.rodando || e.emOperacao) { sessoesRodando.add(s.id); continue }
+    if (!sessoesRodando.has(s.id) || sessoesTocadas.has(s.id)) continue
+    sessoesRodando.delete(s.id)
+    sessoesTocadas.add(s.id)
+    const motivo = e.motivoParada ?? ''
+    if (/meta de lucro/i.test(motivo)) tocarSom('ganho')
+    else if (/limite de perda/i.test(motivo)) tocarSom('perda')
+  }
 }

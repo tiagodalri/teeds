@@ -57,6 +57,7 @@ import { BarraInferior } from './components/barra/BarraInferior'
 import { MiniCabine } from './components/minicabine/MiniCabine'
 import { pararNoServidor, type SessaoViva } from './core/teeds/servidorRobos'
 import { sinalGFLiberado } from './core/deriv/accountAccess'
+import { acompanharFimDasSessoes, contratoManual } from './core/som'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
 // quando a pessoa abre a página ou entra numa live.
@@ -172,6 +173,8 @@ export default function App() {
   const [pedidoCaixa, setPedidoCaixa] = useState(0)
   // as sessões vivas que a tela de robôs busca: a home e a mini-cabine usam as mesmas (21/10/2026)
   const [vivasRobos, setVivasRobos] = useState<SessaoViva[]>([])
+  // o som do fim da sessão (meta ou stop), de qualquer tela: som.ts
+  useEffect(() => { acompanharFimDasSessoes(vivasRobos) }, [vivasRobos])
   const [tema, setTema] = useState<Tema>(temaGuardado)
   const alternarTema = () => {
     const novo = tema === 'claro' ? 'escuro' : 'claro'
@@ -584,7 +587,8 @@ export default function App() {
   */
   const [manuais, setManuais] = useState<number[]>(() => lerManuais(conta.accountId))
   useEffect(() => { setManuais(lerManuais(conta.accountId)) }, [conta.accountId])
-  const marcarManual = (id: number) => setManuais((lista) => {
+  const marcarManual = (id: number) => { contratoManual(id); marcarNaLista(id) }
+  const marcarNaLista = (id: number) => setManuais((lista) => {
     const next = [...lista.filter((x) => x !== id), id].slice(-60)
     try { if (conta.accountId) sessionStorage.setItem(chaveManuais(conta.accountId), JSON.stringify(next)) } catch { /* sem armazenamento: vale ate recarregar */ }
     return next

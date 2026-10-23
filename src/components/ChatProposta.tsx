@@ -3,6 +3,7 @@ import { identidade } from '../core/deriv/branding'
 import type { ConfigEstrategia } from '../core/deriv/engine'
 import { Emblema } from './RobotCard'
 import { ligarNoServidor } from '../core/teeds/servidorRobos'
+import { roboLigou } from '../core/som'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import type { Proposta } from '../core/teeds/chat'
 
@@ -72,6 +73,7 @@ export function ChatProposta({ proposta, sessao, onLigado }: Props) {
         // Nasceu de uma conversa, e o histórico tem que saber disso.
         origem: 'chat',
       })
+      roboLigou()
       setLigado(true)
       onLigado(s.id, config, proposta.roboId, proposta.contaId, proposta.demo, proposta.moeda)
     } catch (e) {

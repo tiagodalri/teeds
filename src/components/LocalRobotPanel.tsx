@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { operacaoTerminou } from '../core/som'
+import { roboLigou } from '../core/som'
 import type { TeedsSocket } from '../core/deriv/client'
 import { type ConfigEstrategia, type EstadoMotor, type Estrategia } from '../core/deriv/engine'
 import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
@@ -248,22 +248,7 @@ export function LocalRobotPanel({
     )
   }, [sessaoTeeds?.token]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // o som de ganho (som.ts): cada operação nova desta sessão que terminou ganhando toca a moeda.
-  // Na primeira leitura, o que já estava no histórico só é anotado (não toca o passado).
-  const vistasNoHistorico = useRef<Set<number> | null>(null)
-  // outra sessão neste bloco: o histórico dela também só é anotado na primeira leitura
-  useEffect(() => { vistasNoHistorico.current = null }, [idDaSessao])
-  useEffect(() => {
-    const h = estado?.historico
-    if (!h) return
-    const primeira = vistasNoHistorico.current === null
-    if (primeira) vistasNoHistorico.current = new Set()
-    for (const o of h) {
-      if (vistasNoHistorico.current!.has(o.contractId)) continue
-      vistasNoHistorico.current!.add(o.contractId)
-      operacaoTerminou(o.contractId, o.lucro, { vistoAberto: !primeira })
-    }
-  }, [estado?.historico])
+  // som (som.ts): as entradas do robô ficam em silêncio; o som é do play e do fim da sessão (meta ou stop)
 
   // sessão que já estava no ar quando esta tela abriu (a do chat, em geral)
   useEffect(() => {
@@ -297,6 +282,7 @@ export function LocalRobotPanel({
     try {
       const continuarId = sessaoIdRef.current && sessaoRef.current?.estrategia.id === escolhida.id ? sessaoIdRef.current : undefined
       const s = await ligarNoServidor(sessaoTeeds, { roboId: escolhida.id, contaId: continuarId ? (contaDaSessao?.contaId ?? contaId) : contaId, config, ...(continuarId ? { continuarId } : {}) })
+      roboLigou()
       // Commit the new identity/config only after the server accepts it.
       sessaoRef.current = { estrategia: escolhida, ident: modelo }
       setCfg(config)
