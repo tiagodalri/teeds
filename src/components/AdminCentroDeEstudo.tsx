@@ -14,6 +14,7 @@ import { CentroDeEstudoHistorico } from './CentroDeEstudoHistorico'
 import { OrigemDasOperacoes } from './OrigemDasOperacoes'
 import { AdminPlataformas } from './AdminPlataformas'
 import { useEffect, useState } from 'react'
+import { nomeDoSimbolo as nomeDoAtivo } from '../core/deriv/simbolos'
 import { ehMaster, REDE, resumoMarkupManual } from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCAS } from '../marca/marcas'
@@ -48,18 +49,6 @@ export function AdminCentroDeEstudo({ sessao, marcaFoco, onAbrirMarca }: {
   )
 }
 
-/** "frxXAUUSD" → "Ouro (XAU/USD)", "R_75" → "75 Index": o nome que a equipe reconhece. */
-function nomeDoAtivo(simbolo: string): string {
-  const especiais: Record<string, string> = { frxXAUUSD: 'Ouro (XAU/USD)', frxXAGUSD: 'Prata (XAG/USD)', frxXPTUSD: 'Platina (XPT/USD)', frxXPDUSD: 'Paládio (XPD/USD)' }
-  if (especiais[simbolo]) return especiais[simbolo]
-  const fx = simbolo.match(/^frx([A-Z]{3})([A-Z]{3})$/)
-  if (fx) return `${fx[1]}/${fx[2]}`
-  const r = simbolo.match(/^R_(\d+)$/)
-  if (r) return `${r[1]} Index`
-  const s1 = simbolo.match(/^1HZ(\d+)V$/)
-  if (s1) return `${s1[1]} (1s) Index`
-  return simbolo
-}
 const usd = (v: number) => `US$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 /**

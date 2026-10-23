@@ -3,7 +3,7 @@ import { SUPABASE } from '../../core/teeds/config'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import type { ClienteRegistro } from '../../core/teeds/clientes'
 import { assinarMudancas } from '../../core/teeds/realtime'
-import { nomeDoAtivo } from '../../core/deriv/market'
+import { nomeDoSimbolo as nomeDoAtivo } from '../../core/deriv/simbolos'
 import { NOMES_DE_CONTRATO } from '../PositionCard'
 
 /**
