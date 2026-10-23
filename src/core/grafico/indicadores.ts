@@ -238,6 +238,9 @@ function desenharSinal(params: Parameters<NonNullable<IndicatorTemplate['draw']>
   // a seta fica afastada da vela (AFASTAR px depois do pavio), ligada a ela por um fio pontilhado
   const AFASTAR = 16, SETA = 7, ETIQUETA = 19
   ctx.save()
+  // o klinecharts deixa o tracejado da linha de preço ligado no pincel: aqui tudo é traço contínuo
+  ctx.setLineDash([])
+  ctx.lineCap = 'round'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.font = `700 11px ${fonte}`
@@ -250,9 +253,14 @@ function desenharSinal(params: Parameters<NonNullable<IndicatorTemplate['draw']>
     ctx.strokeStyle = cor; ctx.lineWidth = 1; ctx.stroke(caixa)
     ctx.fillStyle = cor; ctx.fillText(texto, x, meio + .5)
   }
+  // o fio entre a vela e a seta: traço fino e contínuo, suave, com um pontinho marcando o pavio
   const fio = (x: number, de: number, ate: number, cor: string) => {
-    ctx.save(); ctx.strokeStyle = cor; ctx.globalAlpha = .55; ctx.lineWidth = 1; ctx.setLineDash([2, 3])
-    ctx.beginPath(); ctx.moveTo(x + .5, de); ctx.lineTo(x + .5, ate); ctx.stroke(); ctx.restore()
+    ctx.save()
+    ctx.globalAlpha = .45; ctx.strokeStyle = cor; ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(x, de); ctx.lineTo(x, ate); ctx.stroke()
+    ctx.globalAlpha = 1; ctx.fillStyle = cor
+    ctx.beginPath(); ctx.arc(x, de, 1.8, 0, Math.PI * 2); ctx.fill()
+    ctx.restore()
   }
   // dois sinais do mesmo lado muito perto: o segundo se afasta mais um degrau para não encavalar
   const ultimoX = { s: -Infinity, d: -Infinity }, degrau = { s: 0, d: 0 }
