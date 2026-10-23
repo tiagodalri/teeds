@@ -249,9 +249,20 @@ export function acompanharFimDasSessoes(lista: ReadonlyArray<{ id: string; estad
     if (e.rodando || e.emOperacao) { sessoesRodando.add(s.id); continue }
     if (!sessoesRodando.has(s.id) || sessoesTocadas.has(s.id)) continue
     sessoesRodando.delete(s.id)
-    sessoesTocadas.add(s.id)
     const motivo = e.motivoParada ?? ''
-    if (/meta de lucro/i.test(motivo)) tocarSom('ganho')
-    else if (/limite de perda/i.test(motivo)) tocarSom('perda')
+    if (/meta de lucro/i.test(motivo)) sessaoBateuLimite(s.id, 'meta')
+    else if (/limite de perda/i.test(motivo)) sessaoBateuLimite(s.id, 'stop')
   }
+}
+
+/**
+ * A sessão bateu a meta ou o stop: o mesmo momento do aviso "Missão
+ * cumprida" / "O stop protegeu sua banca". Uma vez por sessão, venha o
+ * aviso da cabine ou da lista do servidor (que tira a sessão da lista assim
+ * que ela para, por isso a lista sozinha não basta).
+ */
+export function sessaoBateuLimite(id: string, tipo: 'meta' | 'stop'): void {
+  if (sessoesTocadas.has(id)) return
+  sessoesTocadas.add(id)
+  tocarSom(tipo === 'meta' ? 'ganho' : 'perda', true)
 }

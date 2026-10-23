@@ -122,11 +122,20 @@ export async function abrirSessao(dados: {
   // operação ao login errado quando houver dois.
   let dono: { user_id: string; tipo: string; moeda: string | null } | null = null
   if (dados.userId) {
+    // Até 23/10/2026 isto pedia `order=marca.eq.<marca>.desc`, que o
+    // PostgREST não aceita: a busca sempre falhava e caía em
+    // usuarioDaConta, o "primeiro login da conta". A conta demo do Tiago
+    // está ligada a nove logins, e as sessões dele na GlobalFly iam para o
+    // teeds@gmail.com ("Sem nome" no monitoramento). A preferência pela
+    // marca agora é feita aqui, e a falha da busca não é mais engolida.
     const linhas = await rest<any[]>(
-      `/contas_deriv?select=user_id,tipo,moeda&user_id=eq.${encodeURIComponent(dados.userId)}` +
-      `&conta_id=eq.${encodeURIComponent(dados.contaId)}&order=marca.eq.${encodeURIComponent(dados.marca ?? 'teeds')}.desc&limit=1`,
-    ).catch(() => [] as any[])
-    dono = linhas?.[0] ?? null
+      `/contas_deriv?select=user_id,tipo,moeda,marca&user_id=eq.${encodeURIComponent(dados.userId)}` +
+      `&conta_id=eq.${encodeURIComponent(dados.contaId)}&limit=10`,
+    )
+    const marca = dados.marca ?? 'teeds'
+    const achado = (linhas ?? []).find((l) => l.marca === marca) ?? linhas?.[0]
+    // o login que pediu é o dono, mesmo sem vínculo gravado nesta conta
+    dono = achado ? { user_id: achado.user_id, tipo: achado.tipo, moeda: achado.moeda } : { ...(await usuarioDaConta(dados.contaId)), user_id: dados.userId }
   }
   const { user_id, tipo, moeda } = dono ?? await usuarioDaConta(dados.contaId)
 

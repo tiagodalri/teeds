@@ -6067,19 +6067,27 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .mon-tag.ia{color:#8CC4FF;background:rgba(79,163,255,.14);border:1px solid rgba(79,163,255,.35)}
 .mon-tag.manual{color:var(--gf-ouro,#D2AE5E);background:rgba(183,141,57,.14);border:1px solid rgba(183,141,57,.4)}
 .mon-titulo-bloco{display:flex;align-items:center;gap:8px;margin:18px 0 10px;font-size:15px}
-.mon-manuais{display:grid;gap:10px;margin-top:14px;padding:14px 16px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}
-.mon-manuais>header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
-.mon-manuais h3{display:flex;align-items:center;gap:8px;margin:0;font-size:15px}.mon-manuais h3 small{color:var(--muted);font-size:12px;font-weight:500}
-.mon-manuais-somas{display:flex;gap:16px;color:var(--muted);font-size:12.5px}.mon-manuais-somas b{margin-left:6px;font-variant-numeric:tabular-nums}
-.mon-manuais .pos{color:var(--up)}.mon-manuais .neg{color:var(--down)}.mon-manuais .ouro{color:var(--gf-ouro,var(--primary))}
+.mon-manuais{display:grid;gap:12px;margin-top:14px;padding:16px 18px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}
+.mm-cab{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+.mm-cab h3{display:flex;align-items:center;gap:8px;margin:0;font-size:15px}
+.mm-cab p{margin:4px 0 0;color:var(--muted);font-size:12px}
+.mm-somas{display:flex;gap:28px;margin:0}
+.mm-somas>div{display:grid;gap:2px;text-align:right}
+.mm-somas dt{color:var(--muted);font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.mm-somas dd{margin:0;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+.mon-manuais .mm-ganho{color:var(--up)}.mon-manuais .mm-perda{color:var(--down)}.mon-manuais .mm-ouro{color:var(--gf-ouro,var(--primary))}
 .mon-manuais-vazio{margin:0;color:var(--muted);font-size:12.5px}
-.mon-manuais-tabela{overflow-x:auto;max-height:360px;overflow-y:auto}
-.mon-manuais table{width:100%;border-collapse:collapse;font-size:12.5px}
-.mon-manuais th{position:sticky;top:0;padding:8px 10px;background:var(--surface);color:var(--muted);font-size:11px;font-weight:700;text-align:left;white-space:nowrap}
-.mon-manuais td{padding:8px 10px;border-top:1px solid var(--border);white-space:nowrap;vertical-align:middle}
-.mon-manuais td b{display:block}.mon-manuais td small{display:block;color:var(--muted);font-size:11px}
+.mon-manuais-tabela{overflow:auto;max-height:360px;margin:0 -18px -16px;border-top:1px solid var(--border)}
+.mon-manuais table{width:100%;border-collapse:collapse;font-size:13px}
+.mon-manuais th{position:sticky;top:0;z-index:1;padding:10px 12px;background:var(--surface);color:var(--muted);font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;text-align:left;white-space:nowrap}
+.mon-manuais td{height:auto;padding:10px 12px;border-top:1px solid var(--border);white-space:nowrap;vertical-align:middle}
+.mon-manuais th:first-child,.mon-manuais td:first-child{padding-left:18px}.mon-manuais th:last-child,.mon-manuais td:last-child{padding-right:18px}
+.mon-manuais .dir{text-align:right}
+.mon-manuais td b{display:block;font-weight:700}.mon-manuais td small{display:block;margin-top:1px;color:var(--muted);font-size:11px;font-weight:500}
 .mon-manuais td.num{font-variant-numeric:tabular-nums}
-.mon-manuais tr.aberta td{background:color-mix(in srgb,var(--gf-ouro,var(--primary)) 6%,transparent)}
+.mon-manuais tbody tr:hover td{background:color-mix(in srgb,var(--text) 3%,transparent)}
+.mon-manuais tr.mm-aberta td{background:color-mix(in srgb,var(--gf-ouro,var(--primary)) 7%,transparent)}
+@media (max-width:720px){.mm-somas{width:100%;justify-content:space-between}.mm-somas>div{text-align:left}}
 .mon-conta{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}.mon-conta.real{color:var(--up);background:color-mix(in srgb,var(--up) 14%,transparent)}.mon-conta.demo{color:var(--muted);background:color-mix(in srgb,var(--muted) 14%,transparent)}
 .mon-sit{display:inline-flex;align-items:center;gap:6px;font-weight:700}.mon-sit.aberta{color:var(--gf-ouro,var(--primary))}.mon-sit.ganhou{color:var(--up)}.mon-sit.perdeu{color:var(--down)}.mon-sit.vendida,.mon-sit.encerrada{color:var(--muted)}
 .mon-sit.aberta i{width:7px;height:7px;border-radius:50%;background:currentColor;animation:mon-pulsa 1.4s ease-in-out infinite}

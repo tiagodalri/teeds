@@ -25,6 +25,13 @@ const CHECKOUTS: Record<string, Record<string, string>> = {
   teeds: {
     'simulador-treino': 'https://pay.kiwify.com.br/HNyDBOf',
   },
+  // GlobalFly: os robôs avulsos pela Cakto (assinatura anual), 23/10/2026. O
+  // checkout da Cakto pré-preenche com email/name/phone, iguais aos da Kiwify.
+  globalfly: {
+    'gf-gulf': 'https://pay.cakto.com.br/353cn35',
+    'gf-phenom': 'https://pay.cakto.com.br/gcrit9k',
+    'gf-pack': 'https://pay.cakto.com.br/ixxo5z9',
+  },
 }
 
 export interface CompradorDoCheckout {

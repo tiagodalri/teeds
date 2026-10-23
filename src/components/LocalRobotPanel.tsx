@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { roboLigou } from '../core/som'
+import { roboLigou, sessaoBateuLimite } from '../core/som'
 import type { TeedsSocket } from '../core/deriv/client'
 import { type ConfigEstrategia, type EstadoMotor, type Estrategia } from '../core/deriv/engine'
 import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
@@ -170,7 +170,7 @@ export function LocalRobotPanel({
     if (!tipo || limiteJaAvisado(idDaSessao)) return
     const parouAgora = antes.id === idDaSessao && antes.rodando === true
     const chegouParada = antes.id !== idDaSessao
-    if (parouAgora || chegouParada) { marcarLimiteAvisado(idDaSessao); setLimite(tipo) }
+    if (parouAgora || chegouParada) { marcarLimiteAvisado(idDaSessao); setLimite(tipo); sessaoBateuLimite(idDaSessao, tipo) }
   }, [estado?.rodando, estado?.motivoParada, idDaSessao]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /*

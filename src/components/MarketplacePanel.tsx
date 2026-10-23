@@ -123,19 +123,19 @@ const PRODUTOS_GF: Produto[] = [
   {
     id: 'gf-pack', categoria: 'Robôs', nome: 'Pack Gulf + Phenom',
     descricao: 'As duas I.A. exclusivas juntas: o Gulf nos dígitos altos e o Phenom nos dígitos baixos, uma o espelho da outra. Levando as duas, você paga R$ 97 a menos.',
-    precoDe: 'R$ 594', preco: 'R$ 497', desconto: 'Economize R$ 97', imagem: 'robos-globalfly/superior5.webp', selo: 'Mais vantajoso', simbolo: 'G+P', tom: 'ouro', destaque: true,
+    precoDe: 'R$ 594', preco: 'R$ 497', desconto: 'Economize R$ 97', imagem: 'robos-globalfly/superior5.webp', selo: 'Mais vantajoso', simbolo: 'G+P', tom: 'ouro', periodo: 'por ano', destaque: true,
     itens: ['GF Gulf e GF Phenom liberadas na sua conta', 'R$ 97 a menos do que comprar as duas separadas', 'Você escolhe valor de entrada, meta e limite de perda em cada uma'],
   },
   {
     id: 'gf-gulf', categoria: 'Robôs', nome: 'GF Gulf',
     descricao: 'Longo alcance: observa o mercado até ver a sequência de dígitos que teria perdido, entra mirando os dígitos altos e segue até fechar a sequência.',
-    precoDe: '', preco: 'R$ 297', desconto: 'I.A. exclusiva', imagem: 'robos-globalfly/superior5.webp', selo: 'I.A. exclusiva', simbolo: 'GU', tom: 'azul',
+    precoDe: '', preco: 'R$ 297', desconto: 'I.A. exclusiva', imagem: 'robos-globalfly/superior5.webp', selo: 'I.A. exclusiva', simbolo: 'GU', tom: 'azul', periodo: 'por ano',
     itens: ['Estratégia nos dígitos altos, com entrada depois da análise', 'Liberada na sua conta GlobalFly', 'Você escolhe valor de entrada, meta e limite de perda'],
   },
   {
     id: 'gf-phenom', categoria: 'Robôs', nome: 'GF Phenom',
     descricao: 'Jato leve, pouso preciso: trabalha no extremo baixo do painel, espera a sequência que teria perdido, entra e segue até fechá-la. O espelho do Gulf.',
-    precoDe: '', preco: 'R$ 297', desconto: 'I.A. exclusiva', imagem: 'robos-globalfly/ag2.webp', selo: 'I.A. exclusiva', simbolo: 'PH', tom: 'azul',
+    precoDe: '', preco: 'R$ 297', desconto: 'I.A. exclusiva', imagem: 'robos-globalfly/ag2.webp', selo: 'I.A. exclusiva', simbolo: 'PH', tom: 'azul', periodo: 'por ano',
     itens: ['Estratégia nos dígitos baixos, com entrada depois da análise', 'Liberada na sua conta GlobalFly', 'Você escolhe valor de entrada, meta e limite de perda'],
   },
 ]
@@ -349,7 +349,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
                     {(checkoutAberto ? GARANTIAS_DO_CHECKOUT : selecionado.vendas.garantias).map((g) => <li key={g}><Icone nome="certo" />{g}</li>)}
                   </ul>
                   <small className="market-aviso">{checkoutAberto
-                    ? <>O pagamento é concluído na Kiwify, com cartão, Pix ou boleto. Use o e-mail <b>{sessao?.usuario.email}</b> na compra: é por ele que o acesso é liberado sozinho na sua conta.</>
+                    ? <>{GF ? 'O pagamento é concluído na Cakto, com cartão ou Pix, como assinatura anual.' : 'O pagamento é concluído na Kiwify, com cartão, Pix ou boleto.'} Use o e-mail <b>{sessao?.usuario.email}</b> na compra: é por ele que o acesso é liberado sozinho na sua conta.</>
                     : <>Nenhuma cobrança é feita por aqui. Ao confirmar, a equipe {MARCA.prosa} recebe seu pedido e entra em contato para concluir a compra.</>}</small>
                 </div>
               ) : (
@@ -363,7 +363,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
                       : <button onClick={() => comprar(selecionado)}>Quero comprar</button>}
                   </div>
                   <small className="market-aviso">{checkoutAberto
-                    ? <>O pagamento é concluído na Kiwify, com cartão, Pix ou boleto. Use o e-mail <b>{sessao?.usuario.email}</b> na compra: é por ele que o acesso é liberado sozinho na sua conta.</>
+                    ? <>{GF ? 'O pagamento é concluído na Cakto, com cartão ou Pix, como assinatura anual.' : 'O pagamento é concluído na Kiwify, com cartão, Pix ou boleto.'} Use o e-mail <b>{sessao?.usuario.email}</b> na compra: é por ele que o acesso é liberado sozinho na sua conta.</>
                     : GF ? <>Nenhuma cobrança é feita por aqui. O pedido abre no chat do suporte, já escrito, e a equipe {MARCA.prosa} conclui a compra com você.</> : <>Nenhuma cobrança é feita por aqui. Ao confirmar, a equipe {MARCA.prosa} recebe seu pedido e entra em contato para concluir a compra.</>}</small>
                 </>
               )}

@@ -36,6 +36,7 @@ import { ligarColetorDeExtrato } from './extrato'
 import { ligarSincronizadorDeComissoes } from './comissoes'
 import { ligarFaxinaDoEspelho } from './espelho'
 import { aplicarNoBanco, assinaturaConfere, ehOSimulador, lerAviso, tokenDoGancho } from './kiwify'
+import { aplicarNoBanco as aplicarNoBancoCakto, assinaturaConfere as assinaturaCakto, lerAviso as lerAvisoCakto, produtoDaCakto, segredoDoGancho } from './cakto'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -457,6 +458,64 @@ const servidor = createServer(async (req, res) => {
       // Aqui sim vale pedir para repetir: o banco pode ter engasgado por um
       // instante, e a compra não pode se perder por causa disso.
       console.error(`[kiwify] ${aviso.pedido}: não consegui aplicar — ${(e as Error).message}`)
+      res.writeHead(500, tipo); return res.end(JSON.stringify({ erro: 'tente de novo' }))
+    }
+  }
+
+  /*
+    O aviso de compra da Cakto, que libera os robôs avulsos da GlobalFly
+    (gf-gulf, gf-phenom, gf-pack) sozinho. Mesma forma da rota da Kiwify: confere
+    a assinatura sobre o corpo cru, confere o produto e deixa o banco decidir e
+    guardar. O que der errado fica no log e na tabela compras_cakto.
+  */
+  if (url.pathname === '/cakto/compra') {
+    const tipo = { 'content-type': 'application/json; charset=utf-8' }
+    if (req.method !== 'POST') { res.writeHead(405, tipo); return res.end(JSON.stringify({ erro: 'use POST' })) }
+    if (!segredoDoGancho()) {
+      console.error('[cakto] chegou aviso e o servidor não tem CAKTO_WEBHOOK_SECRET — nada foi aplicado')
+      res.writeHead(503, tipo); return res.end(JSON.stringify({ erro: 'gancho não configurado' }))
+    }
+
+    const pedacos: Buffer[] = []; let bytes = 0
+    for await (const parte of req) {
+      bytes += (parte as Buffer).length
+      if (bytes > 256_000) { res.writeHead(413, tipo); return res.end(JSON.stringify({ erro: 'corpo grande demais' })) }
+      pedacos.push(parte as Buffer)
+    }
+    const cru = Buffer.concat(pedacos).toString('utf8')
+    const assinatura = String(req.headers['x-cakto-signature'] ?? '')
+    const timestamp = String(req.headers['x-cakto-timestamp'] ?? '')
+
+    let aviso = null
+    try { aviso = lerAvisoCakto(JSON.parse(cru)) } catch { /* corpo que não é JSON cai no mesmo lugar */ }
+
+    // Assinatura pelo cabeçalho; sem ela, aceita só se o `secret` do corpo bate.
+    const porCabecalho = assinaturaCakto(cru, assinatura, timestamp)
+    const porCorpo = !!aviso?.segredoNoCorpo && aviso.segredoNoCorpo === segredoDoGancho()
+    if (!porCabecalho && !porCorpo) {
+      console.warn('[cakto] assinatura não confere — aviso descartado')
+      res.writeHead(401, tipo); return res.end(JSON.stringify({ erro: 'assinatura inválida' }))
+    }
+
+    if (!aviso) {
+      console.warn('[cakto] aviso sem pedido, evento ou e-mail — ignorado')
+      res.writeHead(200, tipo); return res.end(JSON.stringify({ ok: true, acao: 'ignorado' }))
+    }
+    const produtoId = produtoDaCakto(aviso.produtoCaktoId)
+    if (!produtoId) {
+      console.log(`[cakto] ${aviso.pedido} é de outro produto (${aviso.produtoNome ?? aviso.produtoCaktoId ?? 'sem id'}) — ignorado`)
+      res.writeHead(200, tipo); return res.end(JSON.stringify({ ok: true, acao: 'outro-produto' }))
+    }
+
+    try {
+      const r = await aplicarNoBancoCakto(aviso, produtoId)
+      const quem = aviso.email.replace(/(.{2}).*(@.*)/, '$1***$2')
+      if (r.repetido) console.log(`[cakto] ${aviso.pedido}/${aviso.evento} já tinha sido aplicado — nada a fazer`)
+      else if (r.achou === false) console.warn(`[cakto] ${aviso.pedido}: ${quem} pagou e NÃO tem cadastro na GlobalFly — liberar à mão`)
+      else console.log(`[cakto] ${aviso.pedido}/${aviso.evento}: ${r.acao} ${r.produto} para ${quem}`)
+      res.writeHead(200, tipo); return res.end(JSON.stringify({ ok: true, ...r }))
+    } catch (e) {
+      console.error(`[cakto] ${aviso.pedido}: não consegui aplicar — ${(e as Error).message}`)
       res.writeHead(500, tipo); return res.end(JSON.stringify({ erro: 'tente de novo' }))
     }
   }

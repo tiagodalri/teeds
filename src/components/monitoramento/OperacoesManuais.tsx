@@ -95,30 +95,33 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
 
   return (
     <section className="mon-manuais" aria-label="Operações manuais">
-      <header>
-        <h3><span className="mon-tag manual">Manual</span> Operações manuais <small>{abertas.length} {abertas.length === 1 ? 'aberta agora' : 'abertas agora'} · {lista.length} no período</small></h3>
-        <div className="mon-manuais-somas">
-          <span>Resultado real <b className={resultadoReal >= 0 ? 'pos' : 'neg'}>{usd(resultadoReal)}</b></span>
-          {mostrarMarkup && <span>Markup real <b className="ouro">{usd(markupReal)}</b></span>}
+      <header className="mm-cab">
+        <div>
+          <h3><span className="mon-tag manual">Manual</span> Operações manuais</h3>
+          <p>{abertas.length === 0 ? 'Nenhuma aberta agora' : `${abertas.length} ${abertas.length === 1 ? 'aberta agora' : 'abertas agora'}`} · {lista.length} {lista.length === 1 ? 'operação' : 'operações'} no período</p>
         </div>
+        <dl className="mm-somas">
+          <div><dt>Resultado em conta real</dt><dd className={resultadoReal > 0 ? 'mm-ganho' : resultadoReal < 0 ? 'mm-perda' : ''}>{usd(resultadoReal)}</dd></div>
+          {mostrarMarkup && <div><dt>Markup em conta real</dt><dd className="mm-ouro">{usd(markupReal)}</dd></div>}
+        </dl>
       </header>
       {lista.length === 0 ? <p className="mon-manuais-vazio">Nenhuma operação manual no período. Quando um cliente comprar na tela Manual, ela aparece aqui na hora.</p> : (
         <div className="mon-manuais-tabela"><table>
-          <thead><tr><th>Hora</th><th>Cliente</th><th>Ativo</th><th>Contrato</th><th>Conta</th><th>Entrada</th><th>Situação</th><th>Resultado</th>{mostrarMarkup && <th>Markup</th>}</tr></thead>
+          <thead><tr><th>Hora</th><th>Cliente</th><th>Ativo</th><th>Contrato</th><th>Conta</th><th className="dir">Entrada</th><th>Situação</th><th className="dir">Resultado</th>{mostrarMarkup && <th className="dir">Markup</th>}</tr></thead>
           <tbody>{lista.slice(0, 120).map((o) => {
             const c = clientes.get(o.userId)
             const falta = o.situacao === 'aberta' && o.expiraEm ? Math.max(0, Math.round((Date.parse(o.expiraEm) - agora) / 1000)) : null
             return (
-              <tr key={chave(o)} className={o.situacao === 'aberta' ? 'aberta' : ''}>
+              <tr key={chave(o)} className={o.situacao === 'aberta' ? 'mm-aberta' : ''}>
                 <td className="num">{hora(o.compradaEm)}</td>
-                <td><b>{c?.nome || c?.email || 'Cliente'}</b><small>{c?.email}</small></td>
+                <td className="mm-cliente"><b>{c?.nome || c?.email || 'Cliente'}</b>{c?.nome && c?.email && <small>{c.email}</small>}</td>
                 <td>{nomeDoAtivo(o.ativo)}</td>
                 <td>{NOMES_DE_CONTRATO[o.tipo] ?? o.tipo}</td>
                 <td><span className={`mon-conta ${o.demo ? 'demo' : 'real'}`}>{o.demo ? 'Demo' : 'Real'}</span></td>
-                <td className="num">{usd(o.entrada)}</td>
+                <td className="num dir">{usd(o.entrada)}</td>
                 <td><span className={`mon-sit ${o.situacao}`}>{o.situacao === 'aberta' && <i aria-hidden="true" />}{SITUACAO[o.situacao] ?? o.situacao}{falta !== null && ` · ${String(Math.floor(falta / 60)).padStart(2, '0')}:${String(falta % 60).padStart(2, '0')}`}</span></td>
-                <td className={`num ${o.situacao === 'aberta' ? '' : o.resultado >= 0 ? 'pos' : 'neg'}`}>{o.situacao === 'aberta' ? '—' : usd(o.resultado)}</td>
-                {mostrarMarkup && <td className="num ouro">{usd(o.markup)}{o.demo && <small>estimado</small>}</td>}
+                <td className={`num dir ${o.situacao === 'aberta' ? '' : o.resultado > 0 ? 'mm-ganho' : o.resultado < 0 ? 'mm-perda' : ''}`}>{o.situacao === 'aberta' ? '—' : `${o.resultado > 0 ? '+' : ''}${usd(o.resultado)}`}</td>
+                {mostrarMarkup && <td className="num dir mm-ouro">{usd(o.markup)}{o.demo && <small>estimado</small>}</td>}
               </tr>
             )
           })}</tbody>
