@@ -95,7 +95,11 @@ const PALETAS: Record<string, Paleta> = {
       // a Deriv é marca de terceiro: o vermelho dela não se mexe
       '#ff444f', '#ff5a63',
       // o vermelho do "ao vivo" (20/10/2026, pedido do Tiago: mais vivo que o Alerta)
-      '#E5383B'],
+      '#E5383B',
+      // Organização (só admins, 23/10/2026): a cor de cada área e de cada tipo de marco é
+      // informação (separa Marketing de Desenvolvimento no quadro e no calendário), não enfeite
+      '#A78BFA', '#F472B6', '#38BDF8', '#34D399', '#FBBF24', '#FB923C', '#94A3B8',
+      '#D4A64A', '#F43F5E', '#64748B', '#7C8BA1'],
     // 21/10/2026: vermelho e verde vivos, sem o tom exato (antes #C95F5F e #2F8F72,
     // que apagavam até o gráfico); cada cor herdada mantém a luz e ganha a saturação
     vermelho: { h: 356, s: 0.82 },

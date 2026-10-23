@@ -58,6 +58,7 @@ const LabGraficoPro = lazy(() => import('./components/grafico/LabGraficoPro'))
 const LabOperar = lazy(() => import('./components/operar/LabOperar'))
 const LabAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.LabAoVivo })))
 const LabInicio = lazy(() => import('./components/inicio/LabInicio'))
+const LabOrganizacao = lazy(() => import('./components/organizacao/LabOrganizacao'))
 const LabPerfil = lazy(() => import('./components/perfil/LabPerfil'))
 const LabSuporte = lazy(() => import('./components/suporte/LabSuporte'))
 function LabAulas() {
@@ -290,6 +291,7 @@ function Laboratorio() {
   // a home vem com a casca inteira da plataforma: fora da moldura do laboratório
   if (qual === 'inicio') return <Suspense fallback={null}><LabInicio /></Suspense>
   if (qual === 'perfil') return <Suspense fallback={null}><LabPerfil /></Suspense>
+  if (qual === 'organizacao') return <Suspense fallback={null}><LabOrganizacao /></Suspense>
   if (qual === 'suporte') return <Suspense fallback={null}><LabSuporte /></Suspense>
   if (qual === 'login') return <LabLogin />
   // ?tela=carregando: o carregando da marca (o mesmo quadro em que a decolagem pousa)

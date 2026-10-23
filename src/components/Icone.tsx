@@ -31,6 +31,7 @@ const TRACOS = {
   // a Central ao vivo: a antena transmitindo (um ponto com duas ondas de cada lado)
   aovivo: 'M12 12h.01M8.5 15.5a5 5 0 010-7M15.5 8.5a5 5 0 010 7M5.6 18.4a9 9 0 010-12.8M18.4 5.6a9 9 0 010 12.8',
   insights: 'M4 19h16M6 16V10m4 6V6m4 10v-4m4 4V8',
+  organizacao: 'M4 4h4.5v16H4zM9.75 4h4.5v11h-4.5zM15.5 4H20v7h-4.5z',
   atualizar: 'M20 12a8 8 0 11-2.34-5.66M20 4v5h-5',
   buscar: 'M11 18a7 7 0 100-14 7 7 0 000 14zM20 20l-4-4',
   mais: 'M12 5v14M5 12h14',
