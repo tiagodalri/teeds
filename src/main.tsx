@@ -11,7 +11,8 @@ import './styles/pagina.css'
 import { aplicarTema, temaGuardado } from './core/tema'
 import { MARCA } from './marca'
 import { registrarVisita } from './core/teeds/visitas'
-import { lerParceiroDoLink } from './core/teeds/parceiro'
+import { appDaVitrine, lerParceiroDoLink } from './core/teeds/parceiro'
+import { usarAppDaDeriv } from './core/deriv/auth'
 import { haTrocaEmAndamento } from './core/trocaEmAndamento'
 // Guarda o pedido de instalação do Chrome assim que ele chega (ver o arquivo).
 import './core/appNativo'
@@ -67,7 +68,11 @@ if (MARCA.vocabularioIA) ligarVocabularioIA()
 // vale para TODA visita, inclusive a de quem nunca faz login, e o StrictMode
 // monta os componentes duas vezes em desenvolvimento — aqui contaria dobrado.
 // O link de parceiro (/n, /v) é lido antes: a visita limpa as marcações da barra.
-if (MARCA.parceiros?.length) lerParceiroDoLink()
+if (MARCA.parceiros?.length) {
+  lerParceiroDoLink()
+  // o parceiro vale pela URL: no /n a Deriv conecta e opera pelo app do Naor (27/10/2026)
+  usarAppDaDeriv(appDaVitrine())
+}
 registrarVisita()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

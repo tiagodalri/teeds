@@ -116,6 +116,8 @@ export async function abrirSessao(dados: {
   userId?: string
   /** A versão dos parâmetros do robô com que a sessão nasce; null = padrão do código. */
   parametrosVersao?: number | null
+  /** A vitrine em que o cliente ligou ('n', 'v', '' = direto). undefined = não informada. */
+  parceiro?: string
 }): Promise<SessaoGravada> {
   // A mesma conta da Deriv pode estar ligada a mais de um login. A sessão é
   // de quem pediu — procurar "o dono da conta" com limit 1 atribuiria a
@@ -161,6 +163,8 @@ export async function abrirSessao(dados: {
       // Só manda a coluna quando há versão: assim o servidor novo grava sessões
       // mesmo antes de a migração dos parâmetros existir no banco.
       ...(dados.parametrosVersao != null ? { parametros_versao: dados.parametrosVersao } : {}),
+      // o banco valida o código (desconhecido vira direto)
+      ...(dados.parceiro !== undefined ? { parceiro: dados.parceiro } : {}),
       situacao: 'rodando',
     }),
   })
@@ -584,6 +588,38 @@ export async function guardarSegredoDeriv(
       atualizado_em: new Date().toISOString(),
     }),
   })
+}
+
+/**
+ * A autorização por app (27/10/2026: o parceiro vale pela URL). Um cliente em
+ * comum conecta pelo app do Naor no /n e pelo da marca no /v; cada app guarda
+ * a sua. A tabela antiga (uma por cliente) segue recebendo a última, para quem
+ * ainda lê dela (a coleta de comissões, o servidor antigo).
+ */
+export async function guardarSegredoDerivDoApp(
+  userId: string, appId: string, segredo: string, expiraEm: string | null, marca: string,
+): Promise<void> {
+  if (!URL_BASE) throw new Error('O servidor nao esta ligado ao banco da plataforma.')
+  await rest('/deriv_autorizacoes_apps?on_conflict=user_id,app_id', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ user_id: userId, app_id: appId, segredo, expira_em: expiraEm, marca, atualizado_em: new Date().toISOString() }),
+  })
+}
+
+/** Todas as autorizações deste cliente: as por app (mais recentes primeiro) e a antiga, por último. */
+export async function lerSegredosDeriv(
+  userId: string,
+): Promise<Array<{ segredo: string; marca: string; appId: string | null }>> {
+  if (!URL_BASE) return []
+  const out: Array<{ segredo: string; marca: string; appId: string | null }> = []
+  try {
+    const porApp = await rest<any[]>(`/deriv_autorizacoes_apps?select=segredo,marca,app_id&user_id=eq.${encodeURIComponent(userId)}&order=atualizado_em.desc`)
+    for (const l of porApp ?? []) if (l?.segredo) out.push({ segredo: String(l.segredo), marca: String(l.marca ?? 'teeds'), appId: String(l.app_id) })
+  } catch { /* tabela nova ainda não existe: segue com a antiga */ }
+  const antiga = await lerSegredoDeriv(userId)
+  if (antiga) out.push({ ...antiga, appId: null })
+  return out
 }
 
 export async function lerSegredoDeriv(
@@ -1029,7 +1065,7 @@ export async function appsDosParceiros(): Promise<Array<{ marca: string; codigo:
   return (linhas ?? []).filter((l) => l?.deriv_app_id).map((l) => ({ marca: String(l.marca), codigo: String(l.codigo), appId: String(l.deriv_app_id) }))
 }
 
-/** O app do parceiro deste cliente, se o parceiro tem app liberado; senão null (o padrão da marca). */
+/** (até 27/10/2026) O app do parceiro DA CONTA. Hoje vale a vitrine do pedido: ver appDaVitrine. */
 export async function appDoParceiroDoCliente(userId: string, marca: string): Promise<string | null> {
   if (!URL_BASE) return null
   const c = await rest<any[]>(`/clientes?user_id=eq.${encodeURIComponent(userId)}&marca=eq.${encodeURIComponent(marca)}&select=parceiro&limit=1`)

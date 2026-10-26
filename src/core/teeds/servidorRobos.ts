@@ -1,4 +1,5 @@
 import { RITMO_ROBOS, SERVIDOR } from './config'
+import { vitrine } from './parceiro'
 import { MARCA } from '../../marca'
 import type { SessaoTeeds } from './conta'
 import type { ConfigEstrategia, EstadoMotor } from '../deriv/engine'
@@ -72,7 +73,7 @@ async function api<T>(
  */
 export async function entregarAutorizacao(
   sessao: SessaoTeeds,
-  deriv: { accessToken: string; refreshToken?: string; expiresAt?: number },
+  deriv: { accessToken: string; refreshToken?: string; expiresAt?: number; appId?: string },
 ): Promise<void> {
   try {
     // A marca vai junto: renovar a autorização depois exige saber qual app
@@ -95,7 +96,7 @@ export function ligarNoServidor(
   // ninguém achar que travou.
   return api<SessaoNoServidor>(sessao, '/sessao', {
     method: 'POST',
-    body: JSON.stringify({ ...pedido, marca: MARCA.id }),
+    body: JSON.stringify({ ...pedido, marca: MARCA.id, parceiro: vitrine() }),
   }, 110_000)
 }
 
@@ -108,7 +109,7 @@ export function ligarNoServidor(
  */
 export async function aquecerNoServidor(sessao: SessaoTeeds, contaId: string): Promise<void> {
   try {
-    await api(sessao, '/aquecer', { method: 'POST', body: JSON.stringify({ contaId, marca: MARCA.id }) }, 15_000)
+    await api(sessao, '/aquecer', { method: 'POST', body: JSON.stringify({ contaId, marca: MARCA.id, parceiro: vitrine() }) }, 15_000)
   } catch { /* aquecer é cortesia, não obrigação */ }
 }
 

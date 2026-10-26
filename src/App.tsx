@@ -6,7 +6,7 @@ import { DigitsPanel } from './components/DigitsPanel'
 import { labDoBanco } from './core/laboratorio/dados'
 import { BoletaAtivo, BotaoCompra, MostradorDuracao, MostradorValor, ResumoDaCompra } from './components/operar/Boleta'
 import { UltimasEntradas } from './components/operar/UltimasEntradas'
-import { meuAppDeriv, meuParceiro, meusLinks, vincularParceiro, type MeusLinks } from './core/teeds/parceiro'
+import { meusLinks, vincularParceiro, type MeusLinks } from './core/teeds/parceiro'
 import { CatalogoProvider } from './core/teeds/catalogoRobos'
 import { usePreferenciaColuna } from './core/teeds/preferenciaColuna'
 import { useMarcaEmFoco } from './core/teeds/marcaEmFoco'
@@ -26,7 +26,7 @@ import { decolar, liberarPouso } from './core/decolagem'
 import { definirDonoDoPlano } from './core/teeds/planoDoDia'
 import { NovaSenha } from './components/NovaSenha'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
-import { startLogin, usarAppDaDeriv } from './core/deriv/auth'
+import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLimitesDuracao, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { traduzirErro } from './core/deriv/erros'
@@ -62,7 +62,7 @@ import { pararNoServidor, type SessaoViva } from './core/teeds/servidorRobos'
 import { sinalGFLiberado } from './core/deriv/accountAccess'
 import { acompanharFimDasSessoes, contratoManual } from './core/som'
 import { registrarOperacaoManual } from './core/teeds/clientes'
-import { caminhoDaTela, definirParceiroDoEndereco, telaDoCaminho, telaDoNome } from './core/rotas'
+import { caminhoDaTela, telaDoCaminho, telaDoNome } from './core/rotas'
 import { carregarRobosBloqueados } from './core/teeds/robosLiberados'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
@@ -559,22 +559,16 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioTeedsId, tela])
 
-  // Conta nova que veio por link de parceiro (/n, /v) e entrou por outro caminho: o banco confere e liga.
-  // Parceiros (27/10/2026): o app da Deriv deste cliente (o do parceiro dele) e, para parceiro e
-  // admin geral, a página Divulgação com os links.
+  // Conta nova que veio por link de parceiro (/n, /v) e entrou por outro caminho: o banco liga a conta a
+  // quem a trouxe. Para parceiro e admin geral, a página Divulgação com os links. O app da Deriv e o
+  // endereço seguem a VITRINE (o /n ou /v em que a pessoa está), definida em main.tsx (27/10/2026).
   const [linksDeParceiro, setLinksDeParceiro] = useState<MeusLinks | null>(null)
   useEffect(() => {
     setLinksDeParceiro(null)
-    if (!teeds.sessao || !MARCA.parceiros?.length) { usarAppDaDeriv(null); definirParceiroDoEndereco(undefined); return }
+    if (!teeds.sessao || !MARCA.parceiros?.length) return
     const sessao = teeds.sessao
     void meusLinks(sessao).then(setLinksDeParceiro).catch(() => setLinksDeParceiro(null))
-    // primeiro liga a conta nova ao parceiro do link (se couber); depois lê o que valeu
-    void vincularParceiro(sessao).catch(() => undefined).then(async () => {
-      usarAppDaDeriv(await meuAppDeriv(sessao))
-      // o endereço passa a levar o parceiro da conta (/n/manual); sem parceiro, sem prefixo
-      definirParceiroDoEndereco(await meuParceiro(sessao))
-      history.replaceState(history.state, '', caminhoDaTela(telaAgora.current) + location.search + location.hash)
-    })
+    void vincularParceiro(sessao).catch(() => undefined)
   }, [usuarioTeedsId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -613,6 +607,8 @@ export default function App() {
       accessToken: conta.session.accessToken,
       refreshToken: conta.session.refreshToken,
       expiresAt: conta.session.expiresAt,
+      // o app que emitiu (o do Naor no /n): o servidor guarda uma autorização por app
+      appId: conta.session.appId,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioTeedsId, conta.session?.accessToken])

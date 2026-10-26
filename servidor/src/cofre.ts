@@ -4,7 +4,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
 import { marcaPorId } from '../../src/marca/marcas'
-import { guardarSegredoDeriv, lerSegredoDeriv } from './supabase'
+import { guardarSegredoDeriv, guardarSegredoDerivDoApp, lerSegredosDeriv } from './supabase'
 import { appValido } from './apps-parceiros'
 import type { AuthSession } from '../../src/core/deriv/auth'
 
@@ -67,12 +67,13 @@ export async function guardar(
   userId: string, sessao: AuthSession, marca = 'teeds',
 ): Promise<void> {
   if (!sessao.accessToken) throw new Error('Autorização vazia.')
-  await guardarSegredoDeriv(
-    userId,
-    cifrar(JSON.stringify(sessao)),
-    sessao.expiresAt ? new Date(sessao.expiresAt).toISOString() : null,
-    marca,
-  )
+  const segredo = cifrar(JSON.stringify(sessao))
+  const expira = sessao.expiresAt ? new Date(sessao.expiresAt).toISOString() : null
+  // por app (o parceiro vale pela URL: cada vitrine opera pelo seu app) e, na antiga, a última
+  await guardarSegredoDerivDoApp(userId, appValido(marca, sessao.appId), segredo, expira, marca).catch((e) => {
+    console.warn(`[cofre] nao gravei a autorizacao por app: ${(e as Error).message}`)
+  })
+  await guardarSegredoDeriv(userId, segredo, expira, marca)
 }
 
 /** Uma margem de folga: renovar já expirado é tarde demais. */
@@ -140,23 +141,36 @@ export type DoCofre =
   | { tipo: 'sem-cofre' }
   | { tipo: 'quebrado' }
   | { tipo: 'vencido' }
+  /** Tem autorização, mas de outro app: conectou por outra vitrine (/n ou /v). */
+  | { tipo: 'outro-app' }
 
 /** Um pedaço do identificador, o bastante para achar no log sem expor o cliente. */
 const marca = (userId: string) => `${userId.slice(0, 8)}…`
 
-export async function autorizacaoDoCliente(userId: string): Promise<DoCofre> {
-  const linha = await lerSegredoDeriv(userId)
-  if (!linha) return { tipo: 'sem-cofre' }
+export async function autorizacaoDoCliente(userId: string, appDesejado?: string): Promise<DoCofre> {
+  const linhas = await lerSegredosDeriv(userId)
+  if (!linhas.length) return { tipo: 'sem-cofre' }
 
-  let sessao: AuthSession
-  try {
-    sessao = JSON.parse(decifrar(linha.segredo)) as AuthSession
-  } catch {
-    console.warn(`[cofre] a autorizacao do cliente ${marca(userId)} nao abriu — ele precisa reconectar a Deriv.`)
-    return { tipo: 'quebrado' }
+  /*
+    Com a vitrine (27/10/2026), o pedido diz o app: no /n, o do Naor; no /v e
+    no direto, o da marca. A autorização tem de ser DESSE app, porque é ele
+    que a Deriv credita no markup. Sem app pedido (carteira, coleta), vale a
+    mais recente.
+  */
+  let linha: (typeof linhas)[number] | null = null
+  let sessao: AuthSession | null = null
+  let quebrada = false
+  for (const l of linhas) {
+    let s: AuthSession
+    try { s = JSON.parse(decifrar(l.segredo)) as AuthSession } catch { quebrada = true; continue }
+    if (!s.accessToken) { quebrada = true; continue }
+    const app = appValido(l.marca, l.appId ?? s.appId)
+    if (appDesejado && app !== appDesejado) continue
+    linha = l; sessao = { ...s, appId: app }; break
   }
-  if (!sessao.accessToken) {
-    console.warn(`[cofre] a autorizacao do cliente ${marca(userId)} abriu vazia — ele precisa reconectar a Deriv.`)
+  if (!linha || !sessao) {
+    if (appDesejado && !quebrada) return { tipo: 'outro-app' }
+    console.warn(`[cofre] a autorizacao do cliente ${marca(userId)} nao abriu — ele precisa reconectar a Deriv.`)
     return { tipo: 'quebrado' }
   }
 
@@ -192,9 +206,12 @@ export async function autorizacaoDoCliente(userId: string): Promise<DoCofre> {
  * recusa, e o cliente resolve com um clique em Conectar Deriv.
  */
 export async function autorizacaoParaOperar(
-  userId: string, doServidor: () => AuthSession,
+  userId: string, doServidor: () => AuthSession, appDesejado?: string,
 ): Promise<{ ok: true; sessao: AuthSession } | { ok: false; motivo: string }> {
-  const r = await autorizacaoDoCliente(userId)
+  const r = await autorizacaoDoCliente(userId, appDesejado)
+  if (r.tipo === 'outro-app') {
+    return { ok: false, motivo: 'Neste endereço a Deriv precisa ser conectada de novo. Clique em Conectar Deriv e autorize: leva um clique.' }
+  }
   if (r.tipo === 'ok') return { ok: true, sessao: r.sessao }
 
   if (r.tipo === 'sem-cofre') {

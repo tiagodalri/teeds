@@ -125,6 +125,8 @@ export interface SessaoEspelho {
   /** ISO, escrito pelo banco. */
   atualizadaEm: string
   criadaEm: string
+  /** A vitrine em que a sessão foi ligada: 'n', 'v', '' (direto); null = sessão de antes desta regra. */
+  parceiro?: string | null
 }
 
 export type TipoEvento =

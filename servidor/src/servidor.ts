@@ -29,7 +29,7 @@ import { PADRAO, conferir } from './limites'
 import { conversar } from './chat'
 import { autorizacaoDoCliente, autorizacaoParaOperar, guardar } from './cofre'
 import { concluirLoginDoCliente, iniciarLoginDoCliente, type PedidoDoCliente } from './login-cliente'
-import { appParaConectar, appValido } from './apps-parceiros'
+import { appDaVitrine, appValido, vitrineDoPedido } from './apps-parceiros'
 import type { ConfigEstrategia } from '../../src/core/deriv/engine'
 import { anotarMarcaPedida, ligarCarteiro, tratarGanchoDeEmail } from './gancho-email'
 import { somenteDemoDoUsuario } from './supabase'
@@ -1021,7 +1021,11 @@ const servidor = createServer(async (req, res) => {
         // clicou em "Conectar Deriv" na plataforma. A do servidor entra so
         // quando o cofre esta vazio — nunca para encobrir defeito.
         etapa = 'lendo a autorização guardada'
-        const cofre = await autorizacaoParaOperar(dono.id, autorizacao)
+        // O parceiro vale pela URL (27/10/2026): no /n opera pelo app do Naor, no /v e no direto pelo da marca.
+        // Pedido de site antigo (sem vitrine) segue como antes: a autorização mais recente.
+        const vitrine = vitrineDoPedido(marcaDoPedido, corpo.parceiro)
+        const appDoPedido = vitrine === undefined ? undefined : await appDaVitrine(marcaDoPedido, vitrine)
+        const cofre = await autorizacaoParaOperar(dono.id, autorizacao, appDoPedido)
         if (!cofre.ok) return json(403, { erro: cofre.motivo })
         const auth = cofre.sessao
         etapa = 'listando as contas na Deriv'
@@ -1063,6 +1067,7 @@ const servidor = createServer(async (req, res) => {
           config,
           origem, marca,
           userId: dono.id,
+          parceiro: vitrine,
         })
         console.log(`[ligar] ${quem} ligou em ${((Date.now() - inicio) / 1000).toFixed(1)}s → sessão ${s.id}`)
         return json(200, resumo(s))
@@ -1097,7 +1102,8 @@ const servidor = createServer(async (req, res) => {
         const marcaDoPedido = marcaPorId(typeof corpo.marca === 'string' ? corpo.marca : undefined).id
         const minhas = await contasDoUsuario(dono.id, marcaDoPedido)
         if (!minhas.includes(contaId)) return json(200, { ok: false })
-        const cofre = await autorizacaoParaOperar(dono.id, autorizacao)
+        const vitrineAq = vitrineDoPedido(marcaDoPedido, corpo.parceiro)
+        const cofre = await autorizacaoParaOperar(dono.id, autorizacao, vitrineAq === undefined ? undefined : await appDaVitrine(marcaDoPedido, vitrineAq))
         if (!cofre.ok) return json(200, { ok: false })
         void aquecerSala(cofre.sessao, contaId)
         return json(200, { ok: true })
@@ -1111,13 +1117,16 @@ const servidor = createServer(async (req, res) => {
       if (url.pathname === '/api/deriv/iniciar' && req.method === 'POST') {
         limpar()
         const marcaPedida = typeof corpo.marca === 'string' ? corpo.marca : marcaDaOrigem.id
-        // 27/10/2026: cliente de parceiro conecta pelo app do parceiro (o markup cai lá)
-        const { state, url: ida, pedido } = iniciarLoginDoCliente(dono.id, marcaPedida, RETORNO, Date.now(), await appParaConectar(dono.id, marcaPedida))
+        // o app da vitrine em que o cliente está (/n: o do Naor; /v e direto: o da marca)
+        const vitrineIni = vitrineDoPedido(marcaPedida, corpo.parceiro)
+        const { state, url: ida, pedido } = iniciarLoginDoCliente(dono.id, marcaPedida, RETORNO, Date.now(), await appDaVitrine(marcaPedida, vitrineIni))
         tentativas.set(state, pedido)
         return json(200, { url: ida })
       }
       if (url.pathname === '/api/deriv/sessao' && req.method === 'GET') {
-        const cofre = await autorizacaoDoCliente(dono.id)
+        const marcaSes = url.searchParams.get('marca') || marcaDaOrigem.id
+        const vitrineSes = vitrineDoPedido(marcaSes, url.searchParams.get('parceiro') ?? undefined)
+        const cofre = await autorizacaoDoCliente(dono.id, vitrineSes === undefined ? undefined : await appDaVitrine(marcaSes, vitrineSes))
         if (cofre.tipo !== 'ok') return json(200, { sessao: null, motivo: cofre.tipo })
         const { accessToken, refreshToken, expiresAt, appId } = cofre.sessao
         return json(200, { sessao: { accessToken, refreshToken, expiresAt, appId } })

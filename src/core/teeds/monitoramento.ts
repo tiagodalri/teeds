@@ -53,6 +53,7 @@ export function paraSessaoEspelho(l: Record<string, any>, mae?: Record<string, a
     config: l.config ?? {}, seq: Number(l.seq ?? 0), origemDoSeq: 'foto', estado: l.estado ?? {},
     situacao: (s.situacao ?? 'rodando') as SessaoEspelho['situacao'],
     emitidoEm: Number(l.emitido_em ?? 0), recebidoEm, atualizadaEm: l.atualizada_em ?? '', criadaEm: s.criada_em ?? '',
+    parceiro: s.parceiro !== undefined ? s.parceiro : l.parceiro ?? null,
   }
 }
 
@@ -68,7 +69,7 @@ const filtroDeMarca = (m: Marcas): string => {
   return l.length === 1 ? `marca=eq.${l[0]}` : `marca=in.(${l.join(',')})`
 }
 
-const SELECAO = 'sessao_id,marca,user_id,seq,fase,estado,config,emitido_em,atualizada_em,sessoes_robos!inner(sessao_ref,conta_id,demo,moeda,robo_id,robo_nome,ativo,situacao,criada_em,encerrada_em,motivo_da_parada)'
+const SELECAO = 'sessao_id,marca,user_id,seq,fase,estado,config,emitido_em,atualizada_em,sessoes_robos!inner(sessao_ref,conta_id,demo,moeda,robo_id,robo_nome,ativo,situacao,criada_em,encerrada_em,motivo_da_parada,parceiro)'
 
 /** As fotos das sessões desta marca: as vivas e as encerradas nas últimas horas. */
 /*
@@ -146,19 +147,22 @@ export interface SessaoEncerrada {
   id: string; sessaoRef: string; marca: string; userId: string; contaId: string; demo: boolean; moeda: string
   roboId: string; roboNome: string; ativo: string; situacao: string; operacoes: number; ganhas: number; perdidas: number
   resultado: number; motivoDaParada: string | null; criadaEm: string; encerradaEm: string | null
+  /** A vitrine em que a sessão foi ligada ('n', 'v', '' direto); null = antes desta regra. */
+  parceiro: string | null
 }
 
 /** Sessões encerradas desta marca, para o replay. O padrão cobre a retenção inteira dos eventos. */
 export async function listarEncerradas(sessao: SessaoTeeds, dias: number = LIMITES.retencaoEventosDias, limite = 300, signal?: AbortSignal, marca: Marcas = MARCA.id): Promise<SessaoEncerrada[]> {
   const corte = new Date(Date.now() - dias * 86400_000).toISOString()
   const linhas = await rest<any[]>(
-    `/sessoes_robos?select=id,sessao_ref,marca,user_id,conta_id,demo,moeda,robo_id,robo_nome,ativo,situacao,operacoes,ganhas,perdidas,resultado,motivo_da_parada,criada_em,encerrada_em&${filtroDeMarca(marca)}&situacao=neq.rodando&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc&limit=${limite}`,
+    `/sessoes_robos?select=id,sessao_ref,marca,user_id,conta_id,demo,moeda,robo_id,robo_nome,ativo,situacao,operacoes,ganhas,perdidas,resultado,motivo_da_parada,criada_em,encerrada_em,parceiro&${filtroDeMarca(marca)}&situacao=neq.rodando&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc&limit=${limite}`,
     sessao.token, { signal },
   )
   return (linhas ?? []).map((l) => ({
     id: l.id, sessaoRef: l.sessao_ref ?? '', marca: l.marca ?? '', userId: l.user_id, contaId: l.conta_id, demo: Boolean(l.demo), moeda: l.moeda,
     roboId: l.robo_id, roboNome: l.robo_nome, ativo: l.ativo, situacao: l.situacao, operacoes: l.operacoes ?? 0, ganhas: l.ganhas ?? 0,
     perdidas: l.perdidas ?? 0, resultado: Number(l.resultado ?? 0), motivoDaParada: l.motivo_da_parada, criadaEm: l.criada_em, encerradaEm: l.encerrada_em,
+    parceiro: l.parceiro ?? null,
   }))
 }
 

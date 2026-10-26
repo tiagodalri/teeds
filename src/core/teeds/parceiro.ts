@@ -11,6 +11,12 @@
  *    parceiro guardado, pelo banco, que confere tudo de novo.
  * A regra que vale é a do banco (supabase/migracoes/20261027120000_parceiros_de_divulgacao.sql):
  * aqui é só o transporte.
+ *
+ * A VITRINE (27/10/2026, Tiago: "podem ter clientes em comum, o que deve valer
+ * é a URL: no /n é Naor, no /v é Victor"). Além do parceiro da conta (quem
+ * trouxe), cada operação conta para o endereço em que aconteceu. A vitrine é
+ * o código do endereço desta aba; aberto sem código (globalflytrade.com, o
+ * app instalado), vale o ÚLTIMO endereço de parceiro usado neste navegador.
  */
 import { MARCA } from '../../marca'
 import { SUPABASE } from './config'
@@ -18,6 +24,9 @@ import type { SessaoTeeds } from './conta'
 import { visitante } from './visitas'
 
 const CHAVE = `${MARCA.id}.parceiro`
+const CHAVE_VITRINE = `${MARCA.id}.vitrine`
+/** O código do endereço desta aba: undefined = a aba abriu sem código. */
+let vitrineDaAba: string | undefined
 const VALIDADE_MS = 90 * 24 * 3600_000
 const codigos = () => MARCA.parceiros ?? []
 
@@ -32,6 +41,27 @@ export function parceiroGuardado(): string | null {
   return null
 }
 
+/** A última vitrine de parceiro usada neste navegador (90 dias), ou null. */
+function ultimaVitrine(): string | null {
+  try {
+    const g = JSON.parse(localStorage.getItem(CHAVE_VITRINE) ?? 'null') as Guardado | null
+    if (g && codigos().includes(g.codigo) && Date.now() - g.em < VALIDADE_MS) return g.codigo
+  } catch { /* sem armazenamento: direto */ }
+  return null
+}
+
+/**
+ * A vitrine que vale agora: 'n', 'v' ou '' (direto). É o código do endereço
+ * desta aba; sem código no endereço, o último usado neste navegador.
+ */
+export function vitrine(): string {
+  if (!codigos().length) return ''
+  return vitrineDaAba ?? ultimaVitrine() ?? ''
+}
+
+/** O app da Deriv da vitrine (o do parceiro, se ele tem um liberado), ou null = o da marca. */
+export const appDaVitrine = (): string | null => MARCA.appsDosParceiros?.[vitrine()] ?? null
+
 /** Lê o `?parceiro=` do endereço, guarda (se ainda não há um) e anota o clique. Roda antes da visita. */
 export function lerParceiroDoLink(): void {
   try {
@@ -41,6 +71,12 @@ export function lerParceiroDoLink(): void {
     const daRota = (q.get('parceiro_rota') ?? '').trim().toLowerCase()
     const codigo = (q.get('parceiro') ?? '').trim().toLowerCase()
     if (!codigo && !daRota) return
+    // a vitrine desta aba é o endereço, e fica sendo a última deste navegador (último toque)
+    const doEndereco = codigo || daRota
+    if (codigos().includes(doEndereco)) {
+      vitrineDaAba = doEndereco
+      localStorage.setItem(CHAVE_VITRINE, JSON.stringify({ codigo: doEndereco, em: Date.now() } satisfies Guardado))
+    }
     // tira da barra: um F5 ou um link copiado daqui não carrega o código adiante
     const u = new URL(location.href)
     u.searchParams.delete('parceiro'); u.searchParams.delete('parceiro_rota')

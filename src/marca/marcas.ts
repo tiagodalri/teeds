@@ -159,9 +159,16 @@ export interface Marca {
   parceiros?: string[]
   /**
    * Link de afiliado da Deriv de cada parceiro (27/10/2026). Quem é do parceiro
-   * (pelo link guardado ou pela conta) abre a Deriv por este link; o resto, por `afiliado`.
+   * (pela vitrine: /n, /v) abre a Deriv por este link; o resto, por `afiliado`.
    */
   afiliadosDosParceiros?: Record<string, string>
+  /**
+   * O app da Deriv de cada parceiro que tem app próprio liberado (27/10/2026).
+   * Na vitrine dele (/n), a conexão com a Deriv e as operações saem por este
+   * app: é ele que a Deriv credita no markup. Sem app aqui, vale `appId`.
+   * Precisa bater com parceiros.deriv_app_id no banco (o servidor confere).
+   */
+  appsDosParceiros?: Record<string, string>
   /**
    * Nome e ícone de itens do menu lateral, por marca (19/10/2026: na
    * GlobalFly, "Robôs" virou "I.A." com o símbolo de brilhos, e o Assistente
@@ -416,6 +423,7 @@ export const MARCAS: Record<string, Marca> = {
     parceiros: ['n', 'v'],
     // 27/10/2026 (Tiago): o afiliado do Naor; o Victor e o Direto seguem no da GF
     afiliadosDosParceiros: { n: 'https://t.deriv.link?t=X8KDME25M85P' },
+    appsDosParceiros: { n: '34MLTOJu0MDBoED7yEczz' },
     menu: {
       nomes: { robos: 'I.A.' },
       icones: {

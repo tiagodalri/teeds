@@ -15,6 +15,7 @@
 
 import { SUPABASE, autenticacaoConfigurada } from './config'
 import type { SessaoTeeds } from './conta'
+import { vitrine } from './parceiro'
 import { MARCA } from '../../marca'
 import { MARCAS } from '../../marca/marcas'
 import { lembrarNomesDosPlanos, planoClienteValido } from './planos'
@@ -598,7 +599,7 @@ export async function registrarOperacaoRobo(sessao: SessaoTeeds, op: Omit<Operac
   try {
     await rest('/operacoes_robos?on_conflict=user_id,contract_id', sessao.token, {
       method: 'POST', headers: MESCLAR,
-      body: JSON.stringify({ contract_id: op.contractId, user_id: sessao.usuario.id, marca: MARCA.id, conta_id: op.contaId, robo_id: op.roboId, robo_nome: op.roboNome, ativo: op.ativo, tipo_contrato: op.tipoContrato, moeda: op.moeda, demo: op.demo, entrada: op.entrada, pagamento: op.pagamento, resultado: op.resultado, markup: op.markup, markup_deriv: op.markupDeriv ?? null, ganhou: op.ganhou, executada_em: op.executadaEm }),
+      body: JSON.stringify({ contract_id: op.contractId, user_id: sessao.usuario.id, marca: MARCA.id, conta_id: op.contaId, robo_id: op.roboId, robo_nome: op.roboNome, ativo: op.ativo, tipo_contrato: op.tipoContrato, moeda: op.moeda, demo: op.demo, entrada: op.entrada, pagamento: op.pagamento, resultado: op.resultado, markup: op.markup, markup_deriv: op.markupDeriv ?? null, ganhou: op.ganhou, executada_em: op.executadaEm, parceiro: vitrine() }),
     })
   } catch (e) { console.warn('[teeds] telemetria do robô indisponível:', (e as Error).message) }
 }
@@ -615,7 +616,7 @@ export async function registrarOperacaoManual(sessao: SessaoTeeds, op: OperacaoM
   try {
     await rest('/operacoes_manuais?on_conflict=user_id,contract_id', sessao.token, {
       method: 'POST', headers: MESCLAR,
-      body: JSON.stringify({ user_id: sessao.usuario.id, contract_id: op.contractId, marca: MARCA.id, conta_id: op.contaId, demo: op.demo, ativo: op.ativo, tipo_contrato: op.tipoContrato, moeda: op.moeda, entrada: op.entrada, pagamento: op.pagamento, resultado: op.resultado, markup: op.markup, markup_oficial: op.markupOficial, comprada_em: op.compradaEm, encerrada_em: op.encerradaEm, situacao: op.situacao ?? 'encerrada', ...(op.expiraEm !== undefined ? { expira_em: op.expiraEm } : {}), atualizado_em: new Date().toISOString() }),
+      body: JSON.stringify({ user_id: sessao.usuario.id, contract_id: op.contractId, marca: MARCA.id, conta_id: op.contaId, demo: op.demo, ativo: op.ativo, tipo_contrato: op.tipoContrato, moeda: op.moeda, entrada: op.entrada, pagamento: op.pagamento, resultado: op.resultado, markup: op.markup, markup_oficial: op.markupOficial, comprada_em: op.compradaEm, encerrada_em: op.encerradaEm, situacao: op.situacao ?? 'encerrada', ...(op.expiraEm !== undefined ? { expira_em: op.expiraEm } : {}), atualizado_em: new Date().toISOString(), parceiro: vitrine() }),
     })
   } catch (e) { console.warn('[teeds] registro da operação manual indisponível:', (e as Error).message) }
 }

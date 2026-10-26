@@ -1,6 +1,6 @@
 import type { WorkspacePage } from '../components/WorkspaceNav'
 import { MARCA } from '../marca'
-import { parceiroGuardado } from './teeds/parceiro'
+import { vitrine } from './teeds/parceiro'
 
 /**
  * O endereço de cada tela (23/10/2026, Tiago: "globalflytrade.com/ia,
@@ -43,27 +43,20 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '')
 /*
   O PARCEIRO NO ENDEREÇO (27/10/2026, Tiago: "quando entro em /n ou /v essa
   descrição some... gostaria que ficasse sempre: globalflytrade.com/n/noticias,
-  /v/manual"). Na GlobalFly, quem é de um parceiro navega com o código dele na
-  frente de toda tela. Logado, vale o parceiro da conta (o banco diz); antes de
-  entrar, o do link guardado no navegador. A tela inicial vira /n/inicio: o /n
+  /v/manual"). Na GlobalFly, toda tela leva na frente o código da VITRINE: o
+  endereço em que a pessoa entrou (/n, /v). Desde a regra "o parceiro vale pela
+  URL" (mesmo dia), quem decide é o endereço, não a conta: um cliente em comum
+  é do Naor no /n e do Victor no /v. A tela inicial vira /n/inicio: o /n
   sozinho continua sendo o link de cadastro.
 */
-let parceiroDaConta: string | null | undefined
-/** Logado: o parceiro da conta (null = sem parceiro). undefined volta a seguir o link guardado. */
-export function definirParceiroDoEndereco(codigo: string | null | undefined): void { parceiroDaConta = codigo }
 const codigosDeParceiro = () => MARCA.parceiros ?? []
-/** O parceiro que vale agora: o da conta (logado) ou o do link guardado; '' = nenhum. */
-export function parceiroVigente(): string {
-  if (!codigosDeParceiro().length) return ''
-  const c = parceiroDaConta === undefined ? parceiroGuardado() : parceiroDaConta
-  return c && codigosDeParceiro().includes(c) ? c : ''
-}
-/** O link de abrir conta na Deriv: o do parceiro, quando ele tem um; senão, o da marca. */
+/** O parceiro que vale agora: o da vitrine (o endereço); '' = direto. */
+export function parceiroVigente(): string { return vitrine() }
+/** O link de abrir conta na Deriv: o do parceiro da vitrine, quando ele tem um; senão, o da marca. */
 export const afiliadoDaDeriv = (): string => MARCA.afiliadosDosParceiros?.[parceiroVigente()] ?? MARCA.afiliado
 function prefixo(): string {
-  if (!codigosDeParceiro().length) return ''
-  const c = parceiroDaConta === undefined ? parceiroGuardado() : parceiroDaConta
-  return c && codigosDeParceiro().includes(c) ? `/${c}` : ''
+  const c = parceiroVigente()
+  return c ? `/${c}` : ''
 }
 
 /** "/ia" para a tela de robôs da GlobalFly. A tela inicial da marca fica na raiz. */

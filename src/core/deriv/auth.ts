@@ -1,4 +1,5 @@
 import { DERIV } from './config'
+import { vitrine } from '../teeds/parceiro'
 import { MARCA } from '../../marca'
 import { SERVIDOR } from '../teeds/config'
 import { duranteTroca } from '../trocaEmAndamento'
@@ -419,7 +420,7 @@ export async function startLoginPeloServidor(tokenTeeds: string): Promise<void> 
   const res = await fetch(`${SERVIDOR.url}/api/deriv/iniciar`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${tokenTeeds}` },
-    body: JSON.stringify({ marca: MARCA.id }),
+    body: JSON.stringify({ marca: MARCA.id, parceiro: vitrine() }),
   })
   const dados = await res.json().catch(() => ({}))
   if (!res.ok || !dados?.url) throw new Error(dados?.erro || `Não consegui começar o login (${res.status})`)
@@ -435,7 +436,7 @@ export async function startLoginPeloServidor(tokenTeeds: string): Promise<void> 
  * login pendente. Se chegou, vira a sessão desta visita e o pedido se encerra.
  */
 export async function buscarSessaoDoServidor(tokenTeeds: string): Promise<AuthSession | null> {
-  const res = await fetch(`${SERVIDOR.url}/api/deriv/sessao`, {
+  const res = await fetch(`${SERVIDOR.url}/api/deriv/sessao?marca=${MARCA.id}&parceiro=${encodeURIComponent(vitrine())}`, {
     headers: { authorization: `Bearer ${tokenTeeds}` },
   })
   const dados = await res.json().catch(() => ({}))
@@ -467,20 +468,41 @@ function cleanUrl() {
  * não guardar: o token já tinha sido emitido pela Deriv, e o login terminava
  * em tela de erro com a conta de fato autorizada.
  */
+/*
+  UMA CONEXÃO POR APP (27/10/2026: o parceiro vale pela URL). No /n a Deriv é
+  autorizada pelo app do Naor; no /v e no direto, pelo da marca. Um cliente em
+  comum tem as duas, e cada vitrine usa a sua: é o app que a Deriv credita no
+  markup. A do app da marca fica na chave de sempre; a de um parceiro, na
+  chave com o app no fim.
+*/
+const chaveDoApp = (app: string | undefined | null) => (app && app !== MARCA.appId ? `${KEY_TOKEN}.${app}` : KEY_TOKEN)
+
 export function saveSession(s: AuthSession): void {
   try {
-    localStorage.setItem(KEY_TOKEN, JSON.stringify(s))
+    localStorage.setItem(chaveDoApp(s.appId ?? MARCA.appId), JSON.stringify(s))
   } catch {
     /* Esta visita funciona; a próxima vai pedir para conectar outra vez. */
   }
 }
 
 export function loadSession(): AuthSession | null {
+  const app = appDaConexao ?? MARCA.appId
   try {
-    const raw = localStorage.getItem(KEY_TOKEN)
+    let raw = localStorage.getItem(chaveDoApp(app))
+    if (!raw && app !== MARCA.appId) {
+      // conexão do parceiro guardada na chave de sempre (antes desta regra): muda de lugar
+      const antiga = localStorage.getItem(KEY_TOKEN)
+      const a = antiga ? JSON.parse(antiga) as AuthSession : null
+      if (a?.appId === app) { localStorage.setItem(chaveDoApp(app), antiga!); localStorage.removeItem(KEY_TOKEN); raw = antiga }
+    }
     if (!raw) return null
     const s = JSON.parse(raw) as AuthSession
     if (!s.accessToken) return null
+    // conexão de outro app (de outra vitrine) não serve aqui: a do parceiro vai para a chave dela
+    if ((s.appId ?? MARCA.appId) !== app) {
+      if (app === MARCA.appId && s.appId) { localStorage.setItem(chaveDoApp(s.appId), raw); localStorage.removeItem(KEY_TOKEN) }
+      return null
+    }
     if (s.expiresAt && Date.now() > s.expiresAt) {
       logout()
       return null
@@ -492,6 +514,6 @@ export function loadSession(): AuthSession | null {
 }
 
 export function logout(): void {
-  try { localStorage.removeItem(KEY_TOKEN) } catch { /* nada guardado, nada a apagar */ }
+  try { localStorage.removeItem(chaveDoApp(appDaConexao)) } catch { /* nada guardado, nada a apagar */ }
   esquecerPedido()
 }

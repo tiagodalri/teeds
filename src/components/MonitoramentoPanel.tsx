@@ -391,6 +391,11 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   const parceiros = useParceirosDaMarca(sessao, marcaFoco)
   const [parceiroFoco, trocarParceiro] = useParceiroEmFoco()
   const filtrandoParceiro = parceiros.length > 0 && !!parceiroFoco
+  /** A vitrine de um registro: a dele ('' = direto → null); sem (registro antigo), o parceiro da conta. */
+  function vitrineDoRegistro(parceiro: string | null | undefined, userId: string): string | null | undefined {
+    if (parceiro !== null && parceiro !== undefined) return parceiro || null
+    return clientes.has(userId) ? clientes.get(userId)!.parceiro ?? null : undefined
+  }
   const naRede = marcaFoco === REDE
   /* A Rede soma as plataformas. As consultas aceitam lista (`marca=in.(…)`) e
      o canal ao vivo ganha uma assinatura por marca, porque o filtro dele é de
@@ -577,7 +582,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
     const termo = busca.trim().toLowerCase()
     return encerradas.filter((s) => {
       const c = clientes.get(s.userId)
-      if (filtrandoParceiro && !noFoco(parceiroFoco, c ? c.parceiro ?? null : undefined)) return false
+      if (filtrandoParceiro && !noFoco(parceiroFoco, vitrineDoRegistro(s.parceiro, s.userId))) return false
       if (filtroConta === 'demo' && !s.demo) return false
       if (filtroConta === 'real' && s.demo) return false
       if (filtroRobo !== 'todos' && s.roboId !== filtroRobo) return false
@@ -595,7 +600,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
     const termo = busca.trim().toLowerCase()
     const arr = [...sessoes.values()].filter((s) => {
       const c = clientes.get(s.userId)
-      if (filtrandoParceiro && !noFoco(parceiroFoco, c ? c.parceiro ?? null : undefined)) return false
+      if (filtrandoParceiro && !noFoco(parceiroFoco, vitrineDoRegistro(s.parceiro, s.userId))) return false
       const online = s.situacao === 'rodando' && s.estado.rodando !== false
       if (filtroOnline === 'online' && !online) return false
       if (filtroOnline === 'offline' && online) return false
@@ -628,14 +633,17 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
 
   /* O parceiro em foco vale para TUDO nesta tela: cartões, números do topo,
      operações manuais e encerradas (27/10/2026, Tiago: "o filtro do /n e do
-     /v não funciona, mostra as mesmas operações nas duas"). Ficha que ainda
-     não chegou fica de fora até chegar, para nunca vazar de um parceiro no outro. */
-  const doFoco = useCallback((userId: string) => !filtrandoParceiro
-    || noFoco(parceiroFoco, clientes.has(userId) ? clientes.get(userId)!.parceiro ?? null : undefined), [filtrandoParceiro, parceiroFoco, clientes])
-  const seloDe = useCallback((userId: string) => seloDoParceiro(parceiros, clientes.has(userId) ? clientes.get(userId)!.parceiro ?? null : undefined), [parceiros, clientes])
-  const sessoesNoFoco = [...sessoes.values()].filter((s) => doFoco(s.userId)).length
+     /v não funciona, mostra as mesmas operações nas duas").
+     E vale pela URL (mesmo dia: "podem ter clientes em comum, o que deve
+     valer é a URL"): cada sessão e cada operação guardam a vitrine em que
+     aconteceram. Registro de antes desta regra (null) cai no parceiro da
+     conta; ficha que ainda não chegou fica de fora até chegar. */
+  const doFoco = useCallback((userId: string, parceiro?: string | null) => !filtrandoParceiro
+    || noFoco(parceiroFoco, vitrineDoRegistro(parceiro, userId)), [filtrandoParceiro, parceiroFoco, clientes]) // eslint-disable-line react-hooks/exhaustive-deps
+  const seloDe = useCallback((userId: string, parceiro?: string | null) => seloDoParceiro(parceiros, vitrineDoRegistro(parceiro, userId)), [parceiros, clientes]) // eslint-disable-line react-hooks/exhaustive-deps
+  const sessoesNoFoco = [...sessoes.values()].filter((s) => doFoco(s.userId, s.parceiro)).length
   const online = [...sessoes.values()].filter((s) => s.situacao === 'rodando' && s.estado.rodando !== false
-    && (!filtrandoParceiro || noFoco(parceiroFoco, clientes.has(s.userId) ? clientes.get(s.userId)!.parceiro ?? null : undefined)))
+    && (!filtrandoParceiro || noFoco(parceiroFoco, vitrineDoRegistro(s.parceiro, s.userId))))
   // quem está operando agora: nos robôs e no manual (as manuais abertas vêm do bloco de operações manuais)
   const [manuaisAbertas, setManuaisAbertas] = useState<{ n: number; clientes: string[] }>({ n: 0, clientes: [] })
   const contarManuais = useCallback((n: number, ids: string[]) => setManuaisAbertas({ n, clientes: ids }), [])
@@ -702,7 +710,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
             clientes={clientes} garantirClientes={garantirClientes} aoContar={contarManuais} doFoco={doFoco} selo={seloDe} />
           <h3 className="mon-titulo-bloco"><span className="mon-tag ia">I.A.</span> Robôs</h3>
           <div className={`mon-mosaico ${visao}`}>
-            {lista.slice(0, limite).map((s) => <Cartao key={s.sessaoId} s={s} cliente={clientes.get(s.userId)} saude={saudes.get(s.sessaoId) ?? 'desatualizado'} visao={visao} mostrarMarca={naRede} selo={seloDe(s.userId)} aoAbrir={abrirFoco} />)}
+            {lista.slice(0, limite).map((s) => <Cartao key={s.sessaoId} s={s} cliente={clientes.get(s.userId)} saude={saudes.get(s.sessaoId) ?? 'desatualizado'} visao={visao} mostrarMarca={naRede} selo={seloDe(s.userId, s.parceiro)} aoAbrir={abrirFoco} />)}
             {!lista.length && <div className="mon-estado">{sessoes.size ? <><b>Nenhuma sessão passa pelos filtros.</b>Ajuste o período ou os filtros acima.</> : <><b>Nenhum robô operando nesta marca agora.</b>Quando um cliente ligar um robô, a cabine aparece aqui sozinha.</>}</div>}
           </div>
           {lista.length > limite && <button className="mon-mais" onClick={() => setLimite((l) => l + 60)}>Mostrar mais {Math.min(60, lista.length - limite)} de {lista.length - limite} restantes</button>}
@@ -729,7 +737,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
             <div className="cab"><span>Cliente</span>{naRede && <span>Plataforma</span>}<span>Robô</span><span>Conta</span><span>Operações</span><span>Resultado</span>{mostrarMarkup && <span>Markup</span>}<span>Encerrada</span><span /></div>
             {encerradasFiltradas.slice(0, limiteEncerradas).map((s) => { const c = clientes.get(s.userId); return (
               <button key={s.id} className="ins-linha mon-linha" onClick={() => setReplayDe(s)}>
-                <span className="adm-pessoa"><i>{(c?.nome || c?.email || '?')[0].toUpperCase()}</i><b>{c?.nome || 'Sem nome'}{(() => { const x = seloDe(s.userId); return x ? <em className={`mon-selo parceiro ${x.codigo}`}>{x.texto}</em> : null })()}<small>{mascararEmail(c?.email)}</small></b></span>
+                <span className="adm-pessoa"><i>{(c?.nome || c?.email || '?')[0].toUpperCase()}</i><b>{c?.nome || 'Sem nome'}{(() => { const x = seloDe(s.userId, s.parceiro); return x ? <em className={`mon-selo parceiro ${x.codigo}`}>{x.texto}</em> : null })()}<small>{mascararEmail(c?.email)}</small></b></span>
                 {naRede && <span><em className={`mon-selo plataforma ${s.marca}`}>{NOME_DA_MARCA[s.marca] ?? s.marca}</em></span>}
                 <span>{s.roboNome}</span><span>{mascararConta(s.contaId)} <em className={`mon-tipo ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'demo' : 'real'}</em></span>
                 <span>{s.operacoes} <small className="up">{s.ganhas}</small> <small className="down">{s.perdidas}</small></span>

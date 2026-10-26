@@ -18,11 +18,14 @@ interface OpManual {
   userId: string; contractId: number; marca: string; demo: boolean; ativo: string; tipo: string; moeda: string
   entrada: number; pagamento: number; resultado: number; markup: number; situacao: string
   compradaEm: string; expiraEm: string | null; encerradaEm: string | null
+  /** A vitrine da compra ('n', 'v', '' direto); null = operação de antes desta regra. */
+  parceiro: string | null
 }
 const daLinha = (l: Record<string, any>): OpManual => ({
   userId: l.user_id, contractId: Number(l.contract_id), marca: l.marca, demo: Boolean(l.demo), ativo: l.ativo ?? '', tipo: l.tipo_contrato ?? '', moeda: l.moeda ?? 'USD',
   entrada: Number(l.entrada ?? 0), pagamento: Number(l.pagamento ?? 0), resultado: Number(l.resultado ?? 0), markup: Number(l.markup ?? 0), situacao: l.situacao ?? 'encerrada',
   compradaEm: l.comprada_em, expiraEm: l.expira_em ?? null, encerradaEm: l.encerrada_em ?? null,
+  parceiro: l.parceiro ?? null,
 })
 const chave = (o: Pick<OpManual, 'userId' | 'contractId'>) => `${o.userId}:${o.contractId}`
 const usd = (v: number) => `${v < 0 ? '−' : ''}US$ ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -40,10 +43,10 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
   garantirClientes: (ids: string[]) => void | Promise<void>
   /** Para os números do topo: quantas abertas agora e quantos clientes operando no manual. */
   aoContar?: (abertas: number, clientesOperando: string[]) => void
-  /** O cliente entra na visualização? (o parceiro em foco: /n, /v, Direto) */
-  doFoco?: (userId: string) => boolean
-  /** O selo do parceiro do cliente, quando a marca tem parceiros. */
-  selo?: (userId: string) => { texto: string; codigo: string } | null
+  /** A operação entra na visualização? (a vitrine em foco: /n, /v, Direto) */
+  doFoco?: (userId: string, parceiro: string | null) => boolean
+  /** O selo da vitrine da operação, quando a marca tem parceiros. */
+  selo?: (userId: string, parceiro: string | null) => { texto: string; codigo: string } | null
 }) {
   const [ops, setOps] = useState<Map<string, OpManual>>(new Map())
   const [agora, setAgora] = useState(Date.now())
@@ -83,7 +86,7 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
   const termo = busca.trim().toLowerCase()
   const lista = useMemo(() => [...ops.values()]
     .filter((o) => (conta === 'todas' || (conta === 'demo') === o.demo))
-    .filter((o) => !doFoco || doFoco(o.userId))
+    .filter((o) => !doFoco || doFoco(o.userId, o.parceiro))
     .filter((o) => {
       if (!termo) return true
       const c = clientes.get(o.userId)
@@ -119,7 +122,7 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
             return (
               <tr key={chave(o)} className={o.situacao === 'aberta' ? 'mm-aberta' : ''}>
                 <td className="num">{hora(o.compradaEm)}</td>
-                <td className="mm-cliente"><b>{c?.nome || c?.email || 'Cliente'}{(() => { const x = selo?.(o.userId); return x ? <em className={`mon-selo parceiro ${x.codigo}`}>{x.texto}</em> : null })()}</b>{c?.nome && c?.email && <small>{c.email}</small>}</td>
+                <td className="mm-cliente"><b>{c?.nome || c?.email || 'Cliente'}{(() => { const x = selo?.(o.userId, o.parceiro); return x ? <em className={`mon-selo parceiro ${x.codigo}`}>{x.texto}</em> : null })()}</b>{c?.nome && c?.email && <small>{c.email}</small>}</td>
                 <td>{nomeDoAtivo(o.ativo)}</td>
                 <td>{NOMES_DE_CONTRATO[o.tipo] ?? o.tipo}</td>
                 <td><span className={`mon-conta ${o.demo ? 'demo' : 'real'}`}>{o.demo ? 'Demo' : 'Real'}</span></td>

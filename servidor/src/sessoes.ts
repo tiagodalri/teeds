@@ -35,6 +35,8 @@ import { PublicadorEspelho, espelhoHabilitado } from './espelho'
 
 export interface Parametros {
   continuarId?: string
+  /** A vitrine em que o cliente ligou: 'n', 'v' ou '' (direto). O parceiro vale pela URL (27/10/2026). */
+  parceiro?: string
   roboId: string
   contaId?: string
   valorInicial: number
@@ -503,6 +505,7 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
         marca: marcaPorId(p.marca).id,
         userId: p.userId,
         parametrosVersao: v.versao,
+        parceiro: p.parceiro,
       })
     } catch (e) {
       // o robô não deixa de operar porque o espelho falhou

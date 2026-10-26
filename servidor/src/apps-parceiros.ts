@@ -15,6 +15,8 @@ import { appDoParceiroDoCliente, appsDosParceiros } from './supabase'
  */
 let porMarca = new Map<string, Set<string>>()
 let marcaDoAppParceiro = new Map<string, string>()
+/** `${marca}:${codigo}` → app do parceiro (só app liberado). */
+let appDoCodigo = new Map<string, string>()
 let lidoEm = 0
 
 async function atualizar(): Promise<void> {
@@ -22,9 +24,9 @@ async function atualizar(): Promise<void> {
   lidoEm = Date.now()
   try {
     const lista = await appsDosParceiros()
-    const nova = new Map<string, Set<string>>(), marcas = new Map<string, string>()
-    for (const l of lista) { nova.set(l.marca, (nova.get(l.marca) ?? new Set()).add(l.appId)); marcas.set(l.appId, l.marca) }
-    porMarca = nova; marcaDoAppParceiro = marcas
+    const nova = new Map<string, Set<string>>(), marcas = new Map<string, string>(), codigos = new Map<string, string>()
+    for (const l of lista) { nova.set(l.marca, (nova.get(l.marca) ?? new Set()).add(l.appId)); marcas.set(l.appId, l.marca); codigos.set(`${l.marca}:${l.codigo}`, l.appId) }
+    porMarca = nova; marcaDoAppParceiro = marcas; appDoCodigo = codigos
   } catch (e) { console.warn('[apps] não li os apps dos parceiros:', (e as Error).message) }
 }
 void atualizar()
@@ -47,4 +49,22 @@ export const todasAsMarcasDosApps = () => new Map<string, string>([...Object.val
 export async function appParaConectar(userId: string, marca: string): Promise<string> {
   await atualizar()
   try { return appValido(marca, await appDoParceiroDoCliente(userId, marcaPorId(marca).id)) } catch { return marcaPorId(marca).appId }
+}
+
+/**
+ * A vitrine do pedido (27/10/2026: o parceiro vale pela URL). O navegador diz
+ * em qual endereço o cliente está: 'n', 'v' ou '' (direto). Código de fora da
+ * lista vira direto. O app é o do parceiro daquela vitrine, ou o da marca.
+ */
+export function vitrineDoPedido(marca: string, codigo: unknown): string | undefined {
+  if (typeof codigo !== 'string') return undefined
+  const c = codigo.trim().toLowerCase()
+  if (!c || c === 'direto') return ''
+  return (marcaPorId(marca).parceiros ?? []).includes(c) ? c : ''
+}
+export async function appDaVitrine(marca: string, vitrine: string | undefined): Promise<string> {
+  await atualizar()
+  const m = marcaPorId(marca)
+  if (!vitrine) return m.appId
+  return appDoCodigo.get(`${m.id}:${vitrine}`) ?? m.appId
 }
