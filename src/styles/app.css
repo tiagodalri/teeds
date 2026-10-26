@@ -88,6 +88,8 @@ button, input { font: inherit; color: inherit; }
 .status-open { color: var(--up); }
 .status-connecting i, .status-reconnecting i { background: #f0a020; }
 .status-closed i { background: var(--down); }
+.status.so-bolinha { gap: 0; padding: 0; width: 27px; height: 27px; justify-content: center; }
+.status.so-bolinha i { width: 9px; height: 9px; }
 
 /* ---------------------------------------------------------------- layout */
 .layout { display: grid; grid-template-columns: 236px 1fr 330px; flex: 1; min-height: 0; }

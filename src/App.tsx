@@ -1009,11 +1009,14 @@ export default function App() {
               saldo anda e os robos operam. */}
           {(() => {
             const alvo = derivPronta ? conta.conexao : connection
+            // 26/10/2026 (Tiago): conectado, só a bolinha. Os outros estados seguem escritos, são aviso.
+            const soBolinha = MARCA.aoVivo && alvo === 'open'
+            const rotulo = STATUS_LABEL[alvo] ?? alvo
             return (
-              <div className={`status status-${alvo}`} title={
-                derivPronta ? 'conexão da sua conta na Deriv' : 'conexão de mercado'
+              <div className={`status status-${alvo}${soBolinha ? ' so-bolinha' : ''}`} role="status" aria-label={rotulo} title={
+                `${rotulo}: ${derivPronta ? 'conexão da sua conta na Deriv' : 'conexão de mercado'}`
               }>
-                <i /> {STATUS_LABEL[alvo] ?? alvo}
+                <i /> {!soBolinha && rotulo}
               </div>
             )
           })()}

@@ -83,7 +83,7 @@ export default function LabInicio() {
             <AccountSwitcher contas={[{ accountId: 'DOT90001234', balance: d.conta.saldo ?? 0, currency: 'USD', group: 'row', status: 'active', type: 'demo' }]}
               selecionada="DOT90001234" isDemo saldo={d.conta.saldo} moeda="USD" conectando={false} onTrocar={nada} onRecarregar={nada} onSair={nada} />
           )}
-          <div className="status status-open"><i /> Conectado</div>
+          <div className="status status-open so-bolinha" role="status" aria-label="Conectado" title="Conectado"><i /></div>
           {/* &categoria=gold|silver: o selo do topo (GlobalFly) */}
           {(q.get('categoria') === 'gold' || q.get('categoria') === 'silver') && <SeloCategoria categoria={q.get('categoria') as Categoria} />}
           <UserMenu usuario={{ id: 'lab', email: 'exemplo@globalflytrade.com', nome: d.nome, telefone: null, cpf: null, criadoEm: '', trocarSenha: false }} onSair={nada} onPerfil={nada} />

@@ -350,7 +350,7 @@ function Laboratorio() {
           <div className="workspace-app" style={{ padding: 24, display: 'grid', gap: 24 }}>
             <div className="topbar" style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'flex-end', border: '1px solid var(--border)', borderRadius: 12, padding: '0 16px' }}>
               <button className="selo-tv"><i aria-hidden="true" />Ao vivo</button>
-              <div className="status status-open"><i /> Conectado</div>
+              <div className="status status-open so-bolinha" role="status" aria-label="Conectado" title="Conectado"><i /></div>
             </div>
             <div className="aviso-tv" role="status" style={{ position: 'static', transform: 'none' }}>
               <span className="aviso-tv-selo"><i aria-hidden="true" />Ao vivo agora</span>
@@ -369,7 +369,7 @@ function Laboratorio() {
             <div style={{ flex: 1, padding: 16 }}>
               <div className="topbar" style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'flex-end', minHeight: 64 }}>
                 <button className="selo-tv"><i aria-hidden="true" />Ao vivo</button>
-                <div className="status status-open"><i /> Conectado</div>
+                <div className="status status-open so-bolinha" role="status" aria-label="Conectado" title="Conectado"><i /></div>
               </div>
             </div>
             <div className="aviso-tv aviso-treino" role="status">
