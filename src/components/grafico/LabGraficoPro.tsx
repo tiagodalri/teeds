@@ -34,6 +34,11 @@ export default function LabGraficoPro() {
     return () => clearInterval(t)
   }, [])
   const ult = velas[velas.length - 1]
+  // &fecha=1: uma segunda operação abre e encerra no prejuízo 8 s depois (para ver o resultado no cartão)
+  const FECHA = new URLSearchParams(location.search).has('fecha')
+  const [inicio] = useState(() => Math.floor(Date.now() / 1000))
+  const [fechou, setFechou] = useState(false)
+  useEffect(() => { if (!FECHA) return; const t = setTimeout(() => setFechou(true), 8000); return () => clearTimeout(t) }, [FECHA])
   // uma aberta, duas iguais que fecharam no prejuízo (o caso do print de 26/10/2026) e uma no lucro
   const v = (i: number) => velas[velas.length - i]
   const marcadores: ContractMarker[] = [
@@ -44,6 +49,7 @@ export default function LabGraficoPro() {
     // o print de 26/10/2026 (2): duas de −10,00 no mesmo instante com saídas quase iguais, e uma de −1,07 logo depois
     { id: 5, type: 'CALL', entryEpoch: v(34).epoch, entryPrice: v(34).close, expiryEpoch: v(31).epoch, profit: -10, status: 'lost', exitPrice: v(31).close },
     { id: 6, type: 'CALL', entryEpoch: v(34).epoch, entryPrice: v(34).close + 0.4, expiryEpoch: v(31).epoch, profit: -10, status: 'lost', exitPrice: v(31).close + 0.3 },
+    ...(FECHA ? [{ id: 8, type: 'PUT', entryEpoch: inicio, entryPrice: v(2).close, expiryEpoch: inicio + 10, profit: fechou ? -0.62 : -0.31, ...(fechou ? { status: 'lost', exitPrice: ult.close } : {}) }] : []),
     { id: 7, type: 'PUT', entryEpoch: v(33).epoch, entryPrice: v(33).close, expiryEpoch: v(30).epoch, profit: -1.07, status: 'lost', exitPrice: v(30).close - 0.5 },
   ]
   return (

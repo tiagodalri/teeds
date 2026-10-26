@@ -1279,7 +1279,7 @@ export default function App() {
             <div className="chart">
               <Suspense fallback={<div className="gp-carregando-pagina">Abrindo o gráfico…</div>}>
                 <GraficoPro candles={candles} mode={mode} pipSize={pipSize} symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''}
-                  granularity={granularity} loading={loadingCandles} markers={marcadores} sessao={teeds.sessao}
+                  granularity={granularity} loading={loadingCandles} markers={marcadores} sessao={teeds.sessao} moeda={moeda}
                   sinalLiberado={sinalGFLiberado(teeds.sessao?.usuario.email, MARCA.id)} />
               </Suspense>
             </div>
