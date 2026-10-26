@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import {
-  abrirAnexo, apagarResposta, atualizarConversa, baterPonto, conversasDaMarca, diaDaMensagem, enviarAnexo, ETIQUETAS, fichaDoCliente, haQuanto,
+  abrirAnexo, apagarConversa, apagarResposta, atualizarConversa, baterPonto, conversasDaMarca, diaDaMensagem, enviarAnexo, ETIQUETAS, fichaDoCliente, haQuanto,
   historicoDoCliente, horaCurta, lerMensagens, mandarMensagem, paraConversa, paraMensagem, preencherResposta, PRIORIDADES, respostasProntas,
   salvarResposta, STATUS, trocarEmailPeloSuporte, type Conversa, type FichaDoCliente, type Mensagem, type Prioridade, type RespostaPronta, type StatusDaConversa,
 } from '../../core/teeds/suporte'
@@ -11,6 +11,7 @@ import { assinarMudancas } from '../../core/teeds/realtime'
 import { PERGUNTAS } from '../../core/teeds/faq'
 import type { ResumoDaTriagem } from '../../core/teeds/triagem'
 import { Monograma } from '../marca/Monograma'
+import { MenuDaConversa, type AcaoDaConversa } from './MenuDaConversa'
 import './admin-suporte.css'
 
 /**
@@ -120,6 +121,13 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
   const [soMinhas, setSoMinhas] = useState(false)
   const [soNaoLidas, setSoNaoLidas] = useState(false)
   const [ordem, setOrdem] = useState<'fila' | 'recentes'>('fila')
+  const [verArquivadas, setVerArquivadas] = useState(false)
+  // o menu do botão direito (posição em px da tela) e a confirmação de apagar
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null)
+  const [apagando, setApagando] = useState<Conversa | null>(null)
+  const [ocupadoApagar, setOcupadoApagar] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const toqueLongo = useRef<number | null>(null)
   const [texto, setTexto] = useState('')
   const [interna, setInterna] = useState(false)
   const [enviando, setEnviando] = useState(false)
@@ -153,10 +161,15 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
     const relogio = window.setInterval(() => setAgora(Date.now()), 30_000)
     const canal = assinarMudancas({
       token: sessao.token, canal: `suporte-equipe-${marca}`,
-      tabelas: [{ tabela: 'suporte_conversas', filtro: `marca=eq.${marca}` }, { tabela: 'suporte_mensagens', filtro: `marca=eq.${marca}`, evento: 'INSERT' }],
+      // o DELETE do Realtime não aceita filtro: vem sem filtro, só com o id, e só conversas desta lista são tiradas
+      tabelas: [{ tabela: 'suporte_conversas', filtro: `marca=eq.${marca}` }, { tabela: 'suporte_conversas', evento: 'DELETE' }, { tabela: 'suporte_mensagens', filtro: `marca=eq.${marca}`, evento: 'INSERT' }],
       aoMudar: (m) => {
         if (m.tabela === 'suporte_conversas') {
-          if (m.tipo === 'DELETE') return
+          if (m.tipo === 'DELETE') {
+            const id = m.antiga?.id
+            if (id) { setConversas((l) => l?.filter((x) => x.id !== id) ?? l); if (selecionadaRef.current === id) setSelecionada(null) }
+            return
+          }
           const c = paraConversa(m.linha)
           setConversas((l) => (l ? (l.some((x) => x.id === c.id) ? l.map((x) => (x.id === c.id ? c : x)) : [c, ...l]) : l))
         } else {
@@ -222,7 +235,9 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
   const visiveis = useMemo(() => {
     const q = semAcento(busca.trim())
     return (conversas ?? []).filter((c) => {
-      if (fStatus.size && !fStatus.has(c.status)) return false
+      // arquivadas ficam fora da fila; o botão "Arquivadas" mostra só elas
+      if (verArquivadas !== !!c.arquivadaEm) return false
+      if (!verArquivadas && fStatus.size && !fStatus.has(c.status)) return false
       if (fPrioridade.size && !fPrioridade.has(c.prioridade)) return false
       if (fEtiquetas.size && !c.etiquetas.some((e) => fEtiquetas.has(e))) return false
       if (soMinhas && c.responsavel !== eu) return false
@@ -233,6 +248,9 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
       }
       return true
     }).sort((a, b) => {
+      // fixadas sempre no topo, a fixada por último primeiro (como no WhatsApp)
+      if (!!a.fixadaEm !== !!b.fixadaEm) return a.fixadaEm ? -1 : 1
+      if (a.fixadaEm && b.fixadaEm) return Date.parse(b.fixadaEm) - Date.parse(a.fixadaEm)
       if (ordem === 'recentes') return Date.parse(b.atualizadaEm) - Date.parse(a.atualizadaEm)
       const sa = a.status === 'aberta' ? 2 : a.status === 'respondida' ? 1 : 0
       const sb = b.status === 'aberta' ? 2 : b.status === 'respondida' ? 1 : 0
@@ -241,7 +259,7 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
       if (a.status === 'aberta') return Date.parse(a.aguardandoDesde ?? a.atualizadaEm) - Date.parse(b.aguardandoDesde ?? b.atualizadaEm)
       return Date.parse(b.atualizadaEm) - Date.parse(a.atualizadaEm)
     })
-  }, [conversas, fStatus, fPrioridade, fEtiquetas, soMinhas, soNaoLidas, busca, ordem, nomes, eu])
+  }, [conversas, fStatus, fPrioridade, fEtiquetas, soMinhas, soNaoLidas, busca, ordem, nomes, eu, verArquivadas])
 
   // ------------------------------------------------ números do topo
   const kpis = useMemo(() => {
@@ -261,12 +279,62 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
   }, [conversas, agora])
 
   // ------------------------------------------------ ações
-  async function mudar(campos: Record<string, unknown>) {
-    if (!atual) return
-    const antes = atual
-    setConversas((l) => l?.map((c) => (c.id === atual.id ? { ...c, ...Object.fromEntries(Object.entries(campos).map(([k, v]) => [k.replace(/_(\w)/g, (_, x: string) => x.toUpperCase()), v])) } as Conversa : c)) ?? l)
-    try { await atualizarConversa(sessao, atual.id, campos) } catch (e) { setErro((e as Error).message); setConversas((l) => l?.map((c) => (c.id === antes.id ? antes : c)) ?? l) }
+  async function mudarConversa(alvo: Conversa, campos: Record<string, unknown>) {
+    const antes = alvo
+    setConversas((l) => l?.map((c) => (c.id === alvo.id ? { ...c, ...Object.fromEntries(Object.entries(campos).map(([k, v]) => [k.replace(/_(\w)/g, (_, x: string) => x.toUpperCase()), v])) } as Conversa : c)) ?? l)
+    try { await atualizarConversa(sessao, alvo.id, campos) } catch (e) { setErro((e as Error).message); setConversas((l) => l?.map((c) => (c.id === antes.id ? antes : c)) ?? l) }
   }
+  async function mudar(campos: Record<string, unknown>) { if (atual) await mudarConversa(atual, campos) }
+
+  // ------------------------------------------------ o menu da conversa (botão direito)
+  const abrirMenu = (c: Conversa, x: number, y: number) => setMenu({ id: c.id, x, y })
+  const menuDoItem = (c: Conversa) => (e: React.MouseEvent<HTMLElement>) => {
+    e.preventDefault()
+    // pela tecla de menu do teclado o evento vem sem posição: abre embaixo do item
+    if (!e.clientX && !e.clientY) { const r = e.currentTarget.getBoundingClientRect(); abrirMenu(c, r.left + 24, r.bottom - 8) }
+    else abrirMenu(c, e.clientX, e.clientY)
+  }
+  const toqueDoItem = (c: Conversa) => ({
+    onTouchStart: (e: React.TouchEvent) => {
+      const t = e.touches[0]; const x = t.clientX, y = t.clientY
+      toqueLongo.current = window.setTimeout(() => { toqueLongo.current = null; try { navigator.vibrate?.(12) } catch { /* sem vibração */ } abrirMenu(c, x, y) }, 520)
+    },
+    onTouchEnd: (e: React.TouchEvent) => { if (toqueLongo.current) { clearTimeout(toqueLongo.current); toqueLongo.current = null } else if (menu) e.preventDefault() },
+    onTouchMove: () => { if (toqueLongo.current) { clearTimeout(toqueLongo.current); toqueLongo.current = null } },
+  })
+  async function acaoDoMenu(c: Conversa, a: AcaoDaConversa) {
+    setMenu(null)
+    if (a.tipo === 'fixar') return mudarConversa(c, { fixada_em: c.fixadaEm ? null : new Date().toISOString() })
+    if (a.tipo === 'lida') return mudarConversa(c, { nao_lidas_equipe: c.naoLidasEquipe > 0 ? 0 : 1 })
+    if (a.tipo === 'atribuir') return mudarConversa(c, c.responsavel === eu ? { responsavel: null, responsavel_nome: null } : { responsavel: eu, responsavel_nome: nomeDaEquipe })
+    if (a.tipo === 'prioridade') return mudarConversa(c, { prioridade: a.valor })
+    if (a.tipo === 'resolver') return mudarConversa(c, { status: c.status === 'resolvida' ? 'aberta' : 'resolvida' })
+    if (a.tipo === 'arquivar') {
+      await mudarConversa(c, { arquivada_em: c.arquivadaEm ? null : new Date().toISOString() })
+      setAviso(c.arquivadaEm ? 'Conversa de volta à fila.' : 'Conversa arquivada. Se o cliente escrever de novo, ela volta para a fila.')
+      if (!c.arquivadaEm && c.id === selecionada) setSelecionada(null)
+      return
+    }
+    if (a.tipo === 'copiar-email') {
+      const email = nomes[c.userId]?.email
+      if (!email) return
+      try { await navigator.clipboard.writeText(email); setAviso(`E-mail copiado: ${email}`) } catch { setErro('Não consegui copiar. Selecione o e-mail na ficha do cliente.') }
+      return
+    }
+    if (a.tipo === 'apagar') setApagando(c)
+  }
+  async function confirmarApagar() {
+    if (!apagando) return
+    setOcupadoApagar(true)
+    try {
+      await apagarConversa(sessao, apagando.id)
+      setConversas((l) => l?.filter((x) => x.id !== apagando.id) ?? l)
+      if (selecionada === apagando.id) setSelecionada(null)
+      setAviso('Conversa apagada.')
+      setApagando(null)
+    } catch (e) { setErro((e as Error).message) } finally { setOcupadoApagar(false) }
+  }
+  useEffect(() => { if (!aviso) return; const t = window.setTimeout(() => setAviso(null), 4500); return () => clearTimeout(t) }, [aviso])
   const alternarEtiqueta = (e: string) => atual && void mudar({ etiquetas: atual.etiquetas.includes(e) ? atual.etiquetas.filter((x) => x !== e) : [...atual.etiquetas, e].sort() })
 
   async function enviar(encerrarDepois = false, anexo: string | null = null) {
@@ -356,6 +424,11 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
               <Multi rotulo="Etiquetas" valor={fEtiquetas} aoMudar={setFEtiquetas} opcoes={Object.keys(ETIQUETAS).map((e) => ({ id: e, nome: ETIQUETAS[e], total: contagemEtiquetas[e] ?? 0 }))} />
               <button type="button" className={`sx-filtro ${soMinhas ? 'ativo' : ''}`} onClick={() => setSoMinhas((v) => !v)} aria-pressed={soMinhas}>Minhas</button>
               <button type="button" className={`sx-filtro ${soNaoLidas ? 'ativo' : ''}`} onClick={() => setSoNaoLidas((v) => !v)} aria-pressed={soNaoLidas}>Não lidas</button>
+              {(verArquivadas || (conversas ?? []).some((c) => c.arquivadaEm)) && (
+                <button type="button" className={`sx-filtro ${verArquivadas ? 'ativo' : ''}`} onClick={() => setVerArquivadas((v) => !v)} aria-pressed={verArquivadas}>
+                  Arquivadas <small>{(conversas ?? []).filter((c) => c.arquivadaEm).length}</small>
+                </button>
+              )}
             </div>
             <div className="sx-ordem">
               <span>{visiveis.length} conversa{visiveis.length === 1 ? '' : 's'}{!comResolvidas && ' em aberto'}</span>
@@ -374,10 +447,12 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
               const espera = c.status === 'aberta' && c.aguardandoDesde ? agora - Date.parse(c.aguardandoDesde) : 0
               const n = nomes[c.userId]
               return (
-                <button type="button" role="listitem" key={c.id} className={`sx-item ${c.id === selecionada ? 'on' : ''} ${c.naoLidasEquipe ? 'nao-lida' : ''} p-${c.prioridade} s-${c.status}`} onClick={() => { setSelecionada(c.id); setVerFicha(false) }}>
+                <button type="button" role="listitem" key={c.id} className={`sx-item ${c.id === selecionada ? 'on' : ''} ${c.naoLidasEquipe ? 'nao-lida' : ''} ${menu?.id === c.id ? 'menu-aberto' : ''} p-${c.prioridade} s-${c.status}`}
+                  aria-haspopup="menu" onContextMenu={menuDoItem(c)} {...toqueDoItem(c)}
+                  onClick={() => { setSelecionada(c.id); setVerFicha(false) }}>
                   <span className="sx-avatar">{n?.foto ? <img src={n.foto} alt="" /> : iniciais(nomeDe(c))}</span>
                   <span className="sx-item-corpo">
-                    <span className="sx-item-topo"><b>{nomeDe(c)}</b><time className={espera > SLA_MIN * 60000 ? 'atrasada' : ''}>{c.status === 'aberta' ? haQuanto(c.aguardandoDesde, agora) : haQuanto(c.atualizadaEm, agora)}</time></span>
+                    <span className="sx-item-topo"><b>{nomeDe(c)}</b>{c.fixadaEm && <i className="sx-fixada" title="Fixada no topo" aria-label="Fixada"><Ic d="M15 4l5 5-3 1-3 3 .5 4.5L13 19l-3.5-3.5L5 20l-1-1 4.5-4.5L5 11l1.5-1.5L11 10l3-3z" /></i>}<time className={espera > SLA_MIN * 60000 ? 'atrasada' : ''}>{c.status === 'aberta' ? haQuanto(c.aguardandoDesde, agora) : haQuanto(c.atualizadaEm, agora)}</time></span>
                     <span className="sx-item-texto">{c.ultimaDe === 'equipe' && <em>Você: </em>}{c.ultimaMensagem || c.assunto || 'Conversa aberta'}</span>
                     <span className="sx-item-selos">
                       {c.prioridade !== 'normal' && <i className={`sx-prio ${c.prioridade}`}>{PRIORIDADES[c.prioridade]}</i>}
@@ -573,6 +648,27 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
           </div>
         </div>
       )}
+
+      {menu && (() => {
+        const c = (conversas ?? []).find((x) => x.id === menu.id)
+        return c ? <MenuDaConversa conversa={c} x={menu.x} y={menu.y} minha={c.responsavel === eu} temEmail={!!nomes[c.userId]?.email}
+          aoEscolher={(a) => void acaoDoMenu(c, a)} fechar={() => setMenu(null)} /> : null
+      })()}
+
+      {apagando && (
+        <div className="sx-modal-fundo" onMouseDown={() => !ocupadoApagar && setApagando(null)}>
+          <div className="sx-modal sx-apagar" role="alertdialog" aria-modal="true" aria-labelledby="sx-apagar-titulo" onMouseDown={(e) => e.stopPropagation()}>
+            <h3 id="sx-apagar-titulo">Apagar a conversa com {nomeDe(apagando)}?</h3>
+            <p>As mensagens e os prints somem para a equipe e para o cliente. Não dá para desfazer. Se quiser só tirar da fila, use <b>Arquivar</b>.</p>
+            <div className="sx-modal-acoes">
+              <button type="button" className="sx-btn" disabled={ocupadoApagar} onClick={() => setApagando(null)}>Cancelar</button>
+              <button type="button" className="sx-btn perigo" disabled={ocupadoApagar} onClick={() => void confirmarApagar()} autoFocus>{ocupadoApagar ? 'Apagando…' : 'Apagar conversa'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {aviso && <p className="sx-toast" role="status">{aviso}</p>}
     </section>
   )
 }

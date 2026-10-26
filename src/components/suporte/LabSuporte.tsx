@@ -61,6 +61,7 @@ function instalarRespostas(modo: string) {
   window.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
     const u = String(url); const metodo = init?.method ?? 'GET'
     if (u.includes('/rpc/teeds_suporte_status')) return responder({ online: true, minutos: 6 })
+    if (u.includes('/rpc/teeds_suporte_apagar_conversa')) return responder([])
     if (u.includes('/suporte_conversas')) {
       if (metodo === 'HEAD') return new Response(null, { status: 200, headers: { 'content-range': '0-1/2' } })
       if (metodo === 'PATCH') return new Response(null, { status: 204 })
@@ -99,7 +100,7 @@ export default function LabSuporte() {
       <WorkspaceNav page={tela} admin={modo === 'admin'} mostrarInicio onNavigate={setTela} />
       <header className="topbar">
         <div className="workspace-heading"><strong>{tela === 'ajuda' ? 'Ajuda' : tela === 'gestao' ? 'Administração' : 'Início'}</strong><span>{tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : tela === 'gestao' ? 'Suporte ao cliente' : 'Sua mesa de operações'}</span></div>
-        <div className="topbar-right"><div className="status status-open"><i /> Conectado</div><UserMenu usuario={sessao.usuario} onSair={nada} onPerfil={nada} /></div>
+        <div className="topbar-right"><div className="status status-open so-bolinha" role="status" aria-label="Conectado" title="Conectado"><i /></div><UserMenu usuario={sessao.usuario} onSair={nada} onPerfil={nada} /></div>
       </header>
       {tela === 'ajuda' ? <AjudaPagina aoIr={(t) => setTela(t as WorkspacePage)} /> : tela === 'gestao' ? (
         // a mesma casca do painel do admin (AdminPanel, modo suporte), para medir a altura de verdade

@@ -41,6 +41,9 @@ export interface Conversa {
   naoLidasEquipe: number
   avaliacao: number | null
   avaliacaoComentario: string | null
+  /** Organização da equipe (o cliente não vê): fixada no topo da fila, arquivada fora dela. */
+  fixadaEm: string | null
+  arquivadaEm: string | null
 }
 
 export interface Mensagem {
@@ -89,6 +92,7 @@ export const paraConversa = (l: any): Conversa => ({
   criadaEm: l.criada_em, atualizadaEm: l.atualizada_em, ultimaMensagem: l.ultima_mensagem, ultimaDe: l.ultima_de, ultimaEm: l.ultima_em,
   aguardandoDesde: l.aguardando_desde, primeiraRespostaEm: l.primeira_resposta_em, resolvidaEm: l.resolvida_em,
   naoLidasCliente: l.nao_lidas_cliente ?? 0, naoLidasEquipe: l.nao_lidas_equipe ?? 0, avaliacao: l.avaliacao, avaliacaoComentario: l.avaliacao_comentario,
+  fixadaEm: l.fixada_em ?? null, arquivadaEm: l.arquivada_em ?? null,
 })
 export const paraMensagem = (l: any): Mensagem => ({
   id: l.id, conversaId: l.conversa_id, autor: l.autor, autorId: l.autor_id, autorNome: l.autor_nome, texto: l.texto ?? '',
@@ -145,6 +149,21 @@ export async function mandarMensagem(sessao: SessaoTeeds, conversaId: string, d:
 
 export async function atualizarConversa(sessao: SessaoTeeds, id: string, campos: Record<string, unknown>): Promise<void> {
   await rest(sessao, `/suporte_conversas?id=eq.${id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(campos) })
+}
+
+/**
+ * Apaga a conversa para a equipe e para o cliente (as mensagens vão junto). O
+ * banco guarda na auditoria quem apagou e quantas mensagens havia; os prints
+ * saem do armazenamento logo depois (se falhar, ficam órfãos e sem acesso).
+ */
+export async function apagarConversa(sessao: SessaoTeeds, id: string): Promise<void> {
+  const prints = await rest<string[] | null>(sessao, '/rpc/teeds_suporte_apagar_conversa', { method: 'POST', body: JSON.stringify({ p_id: id }) })
+  if (prints?.length) {
+    await fetch(`${SUPABASE.url}/storage/v1/object/suporte`, {
+      method: 'DELETE', headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefixes: prints }),
+    }).catch(() => undefined)
+  }
 }
 
 export async function statusDoSuporte(sessao: SessaoTeeds): Promise<{ online: boolean; minutos: number | null }> {
