@@ -431,47 +431,156 @@ export function Organizacao({ api, semTitulo = false }: { api: OrgApi; semTitulo
     )
   }
 
+  // a semana (segunda a domingo) que contém o dia escolhido
+  const inicioDaSemana = (d: string) => { const [y, m, x] = d.split('-').map(Number); const dt = new Date(y, m - 1, x); return somarDias(d, -((dt.getDay() + 6) % 7)) }
+  const rotuloDoDia = (d: string) => (d === hoje ? 'Hoje' : d === somarDias(hoje, 1) ? 'Amanhã' : d === somarDias(hoje, -1) ? 'Ontem' : dataCurta(d))
+  const diaDaSemana = (d: string) => { const [y, m, x] = d.split('-').map(Number); return DIAS_SEMANA[new Date(y, m - 1, x).getDay()] }
+
   const vistaDia = () => {
-    const ehHoje = dia === hoje
-    const atrasadasAte = abertas.filter((t) => t.prazo && t.prazo < dia)
-    const proximos = abertas.filter((t) => t.prazo && t.prazo > dia && t.prazo <= somarDias(dia, 7)).sort((a, b) => (a.prazo ?? '').localeCompare(b.prazo ?? '') || ordenar(a, b))
+    const semanaIni = inicioDaSemana(dia)
+    const dias7 = Array.from({ length: 7 }, (_, i) => somarDias(semanaIni, i))
+    const atrasadasAteHoje = abertas.filter((t) => t.prazo && t.prazo < hoje).sort((a, b) => (a.prazo ?? '').localeCompare(b.prazo ?? ''))
+    const doDia = filtradas.filter((t) => t.prazo === dia)
+    const proximos = abertas.filter((t) => t.prazo && t.prazo > dia && t.prazo <= somarDias(dia, 7))
+    const porData = new Map<string, Tarefa[]>()
+    for (const t of [...proximos].sort((a, b) => (a.prazo ?? '').localeCompare(b.prazo ?? '') || ordenar(a, b))) {
+      if (!porData.has(t.prazo!)) porData.set(t.prazo!, []); porData.get(t.prazo!)!.push(t)
+    }
     const semPrazo = abertas.filter((t) => !t.prazo).sort(ordenar)
+    const ms = marcosDoDia(dia)
+
+    // equipe: o que cada um tem (respeita área e busca, ignora o filtro de pessoa)
+    const base = tarefas.filter((t) => t.status !== 'feito' && (!areas.size || areas.has(t.area)) && (!termo || `${t.titulo} ${t.descricao}`.toLowerCase().includes(termo)))
+    const daPessoa = (id: string | null) => base.filter((t) => t.responsavel === id)
+    const linhaEquipe = (id: string | null, nome: string, pes?: Pessoa) => {
+      const l = daPessoa(id)
+      const at = l.filter((t) => t.prazo && t.prazo < hoje).length
+      const hj = l.filter((t) => t.prazo === hoje).length
+      const sem = l.filter((t) => t.prazo && t.prazo > hoje && t.prazo <= somarDias(hoje, 7)).length
+      const ativo = (id === null && pessoa === 'ninguem') || pessoa === id
+      return (
+        <button key={id ?? 'ninguem'} type="button" className={`og-equipe-linha ${ativo ? 'on' : ''}`} onClick={() => setPessoa(id ?? 'ninguem')}>
+          <Avatar pessoa={pes} cor={corDaPessoa(equipe, id)} tamanho={30} />
+          <span className="og-equipe-nome"><b>{nome}</b><small>{l.length} em aberto</small></span>
+          <span className="og-equipe-nums">
+            {at > 0 && <em className="at" title="Atrasadas">{at}</em>}
+            <em className={hj ? 'hj' : ''} title="Para hoje">{hj}</em>
+            <em title="Próximos 7 dias">{sem}</em>
+          </span>
+        </button>
+      )
+    }
+    const proximosMarcos = marcos.filter((m) => m.data >= hoje).sort((a, b) => a.data.localeCompare(b.data) || (a.hora ?? '').localeCompare(b.hora ?? '')).slice(0, 5)
+
     return (
       <div className="og-dia">
-        <div className="og-dia-nav">
-          <button type="button" className="og-btn icone" onClick={() => setDia(somarDias(dia, -1))} aria-label="Dia anterior">‹</button>
-          <div className="og-dia-titulo">
-            <h3>{ehHoje ? 'Hoje' : dia === somarDias(hoje, 1) ? 'Amanhã' : dataCurta(dia)}</h3>
-            <span>{dataLonga(dia)}</span>
+        <div className="og-dia-principal">
+          {/* a semana: um clique leva ao dia */}
+          <div className="og-semana" role="tablist" aria-label="Dias da semana">
+            <button type="button" className="og-semana-seta" onClick={() => setDia(somarDias(dia, -7))} aria-label="Semana anterior">‹</button>
+            {dias7.map((d) => {
+              const n = abertas.filter((t) => t.prazo === d).length
+              const temMarco = marcos.some((m) => m.data === d)
+              const lanc = marcos.some((m) => m.data === d && m.tipo === 'lancamento')
+              return (
+                <button key={d} type="button" role="tab" aria-selected={d === dia}
+                  className={`og-semana-dia ${d === dia ? 'sel' : ''} ${d === hoje ? 'hoje' : ''} ${d < hoje ? 'passado' : ''}`} onClick={() => setDia(d)}>
+                  <small>{d === hoje ? 'Hoje' : diaDaSemana(d)}</small>
+                  <b>{Number(d.slice(8))}</b>
+                  <span className="og-semana-sinais">
+                    {n > 0 ? <em>{n}</em> : <i className="vazio" />}
+                    {temMarco && <i className={`marco ${lanc ? 'lanc' : ''}`} />}
+                  </span>
+                </button>
+              )
+            })}
+            <button type="button" className="og-semana-seta" onClick={() => setDia(somarDias(dia, 7))} aria-label="Próxima semana">›</button>
+            {dia !== hoje && <button type="button" className="og-btn og-semana-hoje" onClick={() => setDia(hoje)}>Hoje</button>}
           </div>
-          <button type="button" className="og-btn icone" onClick={() => setDia(somarDias(dia, 1))} aria-label="Próximo dia">›</button>
-          {!ehHoje && <button type="button" className="og-btn" onClick={() => setDia(hoje)}>Voltar para hoje</button>}
-          <input type="date" className="og-dia-data" value={dia} onChange={(e) => e.target.value && setDia(e.target.value)} aria-label="Escolher o dia" />
-        </div>
-        <div className="og-dia-grade">
-          <div className="og-dia-principal">
-            <h3 className="og-secao">O que precisa acontecer {ehHoje ? 'hoje' : 'neste dia'}</h3>
-            {agendaDoDia(dia)}
-          </div>
-          <aside className="og-dia-lado">
-            {atrasadasAte.length > 0 && (
-              <section className="og-painel alerta">
-                <h4>Atrasadas <b>{atrasadasAte.length}</b></h4>
-                <div className="og-lista">{[...atrasadasAte].sort((a, b) => (a.prazo ?? '').localeCompare(b.prazo ?? '')).map((t) => cartao(t))}</div>
-              </section>
-            )}
-            <section className="og-painel">
-              <h4>Próximos 7 dias <b>{proximos.length}</b></h4>
-              {proximos.length === 0 ? <p className="og-vazio">Nada nos próximos dias.</p> : <div className="og-lista">{proximos.map((t) => cartao(t))}</div>}
+
+          {dia === hoje && atrasadasAteHoje.length > 0 && (
+            <section className="og-bloco-dia alerta">
+              <header><h3>Atrasadas</h3><span>{atrasadasAteHoje.length} {atrasadasAteHoje.length === 1 ? 'tarefa passou do prazo' : 'tarefas passaram do prazo'}</span></header>
+              <div className="og-lista">{atrasadasAteHoje.map((t) => cartao(t))}</div>
             </section>
-            {semPrazo.length > 0 && (
-              <section className="og-painel">
-                <h4>Sem prazo <b>{semPrazo.length}</b></h4>
-                <div className="og-lista">{semPrazo.map((t) => cartao(t))}</div>
+          )}
+
+          <section className="og-bloco-dia destaque">
+            <header>
+              <div><h3>{rotuloDoDia(dia)}</h3><span>{dataLonga(dia)}</span></div>
+              <button type="button" className="og-btn" onClick={() => novaTarefa({ prazo: dia })}>+ Tarefa neste dia</button>
+            </header>
+            {ms.length > 0 && <div className="og-agenda-marcos">{ms.map((m) => <SeloMarco key={m.id} m={m} />)}</div>}
+            {doDia.length === 0 ? (
+              <div className="og-vazio-dia">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M9 15l2 2 4-4" /></svg>
+                <p><b>Nenhuma entrega {dia === hoje ? 'para hoje' : 'neste dia'}{pessoa !== 'todos' ? ` (${nomePessoa})` : ''}.</b><span>{proximos.length ? 'As próximas estão logo abaixo.' : 'Crie uma tarefa ou escolha outro dia na semana acima.'}</span></p>
+              </div>
+            ) : porArea(doDia).map(([area, lista]) => (
+              <section key={area} className="og-grupo" style={{ ['--area' as string]: AREAS[area].cor }}>
+                <h4><i aria-hidden="true" />{AREAS[area].nome}<small>{lista.filter((t) => t.status !== 'feito').length} em aberto</small></h4>
+                <div className="og-lista">{lista.map((t) => cartao(t))}</div>
               </section>
-            )}
-          </aside>
+            ))}
+          </section>
+
+          <section className="og-bloco-dia">
+            <header><h3>Próximos dias</h3><span>{proximos.length ? `${proximos.length} até ${dataCurta(somarDias(dia, 7))}` : 'Nada nos 7 dias seguintes'}</span></header>
+            {[...porData.entries()].map(([d, lista]) => (
+              <div key={d} className="og-data-grupo">
+                <button type="button" className="og-data-rot" onClick={() => setDia(d)}>
+                  <b>{rotuloDoDia(d)}</b><span>{dataLonga(d)}</span>
+                  {marcosDoDia(d).map((m) => <em key={m.id} style={{ ['--marco' as string]: MARCOS[m.tipo].cor }}>{m.titulo}</em>)}
+                </button>
+                <div className="og-lista">{lista.map((t) => cartao(t))}</div>
+              </div>
+            ))}
+          </section>
+
+          {semPrazo.length > 0 && (
+            <section className="og-bloco-dia">
+              <header><h3>Sem prazo</h3><span>{semPrazo.length} para definir quando</span></header>
+              <div className="og-lista">{semPrazo.map((t) => cartao(t))}</div>
+            </section>
+          )}
         </div>
+
+        <aside className="og-dia-lado">
+          <section className="og-painel">
+            <h4>Resumo <small>{nomePessoa}</small></h4>
+            <div className="og-resumo">
+              <div className={atrasadas.length ? 'alerta' : ''}><b>{atrasadas.length}</b><span>Atrasadas</span></div>
+              <div className={paraHoje.length ? 'destaque' : ''}><b>{paraHoje.length}</b><span>Para hoje</span></div>
+              <div><b>{semana.length}</b><span>Próximos 7 dias</span></div>
+              <div className="ok"><b>{concluidas7.length}</b><span>Feitas na semana</span></div>
+            </div>
+          </section>
+          <section className="og-painel">
+            <h4>Equipe <small>clique para ver o dia de cada um</small></h4>
+            <div className="og-equipe">
+              <div className="og-equipe-legenda"><span>Atraso</span><span>Hoje</span><span>7 dias</span></div>
+              {equipe.map((p) => linhaEquipe(p.id, p.id === api.euId ? `${primeiroNome(p.nome)} (você)` : p.nome, p))}
+              {linhaEquipe(null, 'Sem responsável')}
+              <button type="button" className={`og-equipe-todos ${pessoa === 'todos' ? 'on' : ''}`} onClick={() => setPessoa('todos')}>Ver a equipe toda</button>
+            </div>
+          </section>
+          <section className="og-painel">
+            <h4>Próximos marcos</h4>
+            <div className="og-marcos-lista">
+              {proximosMarcos.length === 0 && <p className="og-vazio">Nenhum marco à frente.</p>}
+              {proximosMarcos.map((m) => {
+                const f = diasEntre(hoje, m.data)
+                return (
+                  <button key={m.id} type="button" className="og-marco-linha" style={{ ['--marco' as string]: MARCOS[m.tipo].cor }}
+                    onClick={() => { setDia(m.data); setMarcoAberto(m) }}>
+                    <span className="og-marco-data"><b>{m.data.slice(8)}</b><small>{MESES[Number(m.data.slice(5, 7)) - 1].slice(0, 3)}</small></span>
+                    <span className="og-marco-txt"><b>{m.titulo}</b><small>{f === 0 ? 'Hoje' : f === 1 ? 'Amanhã' : `Em ${f} dias`}{m.hora ? ` · ${m.hora}` : ''}</small></span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        </aside>
       </div>
     )
   }
@@ -562,61 +671,57 @@ export function Organizacao({ api, semTitulo = false }: { api: OrgApi; semTitulo
   // ---------------------------------------------------------------- tela
   return (
     <section className="og">
-      <header className={`og-topo ${semTitulo ? 'sem-titulo' : ''}`}>
-        {!semTitulo && (
+      {!semTitulo && (
+        <header className="og-topo">
           <div>
             <span className="og-rot">Central da equipe</span>
             <h2>Organização</h2>
             <p>Tarefas, responsáveis, prazos e o calendário do lançamento. Tudo que um move aparece na hora para os outros.</p>
           </div>
-        )}
-        <div className="og-topo-lado">
-          {proximoLancamento && faltam !== null && (
-            <button type="button" className="og-contagem" onClick={() => { trocarVista('calendario'); setMes(proximoLancamento.data.slice(0, 7)); setDia(proximoLancamento.data) }}>
-              <b>{faltam === 0 ? 'Hoje' : faltam}</b>
-              <span>{faltam === 0 ? '' : faltam === 1 ? 'dia para' : 'dias para'} {proximoLancamento.titulo.toLowerCase()}<small>{dataLonga(proximoLancamento.data)}{proximoLancamento.hora ? `, ${proximoLancamento.hora}` : ''}</small></span>
-            </button>
-          )}
-          <div className="og-topo-botoes">
-            <button type="button" className="og-btn" onClick={() => novoMarco()}>+ Marco</button>
-            <button type="button" className="og-btn ouro" onClick={() => novaTarefa()}>+ Nova tarefa</button>
-          </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      <div className="og-kpis">
-        <div className={atrasadas.length ? 'alerta' : ''}><span>Atrasadas</span><b>{atrasadas.length}</b></div>
-        <div className={paraHoje.length ? 'destaque' : ''}><span>Para hoje</span><b>{paraHoje.length}</b></div>
-        <div><span>Próximos 7 dias</span><b>{semana.length}</b></div>
-        <div><span>Em aberto</span><b>{abertas.length}</b></div>
-        <div className="ok"><span>Concluídas na semana</span><b>{concluidas7.length}</b></div>
-      </div>
-
-      <div className="og-barra-filtros">
+      <div className="og-cabeca">
         <div className="og-abas" role="tablist">
           {([['dia', 'Meu dia'], ['quadro', 'Quadro'], ['calendario', 'Calendário']] as [Vista, string][]).map(([v, n]) => (
-            <button key={v} type="button" role="tab" aria-selected={vista === v} className={vista === v ? 'on' : ''} onClick={() => trocarVista(v)}>{n}</button>
+            <button key={v} type="button" role="tab" aria-selected={vista === v} className={vista === v ? 'on' : ''} onClick={() => trocarVista(v)}>
+              {n}{v === 'dia' && atrasadas.length > 0 && <em className="og-aba-alerta" title="Atrasadas">{atrasadas.length}</em>}
+            </button>
           ))}
         </div>
+        <div className="og-cabeca-dir">
+          {proximoLancamento && faltam !== null && (
+            <button type="button" className="og-contagem" onClick={() => { trocarVista('calendario'); setMes(proximoLancamento.data.slice(0, 7)); setDia(proximoLancamento.data) }}
+              title={`${proximoLancamento.titulo}: ${dataLonga(proximoLancamento.data)}${proximoLancamento.hora ? `, ${proximoLancamento.hora}` : ''}`}>
+              <b>{faltam === 0 ? 'Hoje' : faltam}</b>
+              <span>{faltam === 0 ? proximoLancamento.titulo : `${faltam === 1 ? 'dia' : 'dias'} para a ${proximoLancamento.titulo.toLowerCase()}`}<small>{dataCurta(proximoLancamento.data)}{proximoLancamento.hora ? ` às ${proximoLancamento.hora}` : ''}</small></span>
+            </button>
+          )}
+          <button type="button" className="og-btn" onClick={() => novoMarco()}>+ Marco</button>
+          <button type="button" className="og-btn ouro" onClick={() => novaTarefa()}>+ Nova tarefa</button>
+        </div>
+      </div>
+
+      <div className="og-filtros">
         <div className="og-pessoas" aria-label="Filtrar por responsável">
           <button type="button" className={pessoa === 'todos' ? 'on' : ''} onClick={() => setPessoa('todos')}>Todos</button>
           {equipe.map((p) => (
             <button key={p.id} type="button" className={pessoa === p.id ? 'on' : ''} onClick={() => setPessoa(p.id)} title={p.nome}>
-              <Avatar pessoa={p} cor={corDaPessoa(equipe, p.id)} tamanho={20} />{p.id === api.euId ? 'Eu' : primeiroNome(p.nome)}
-              {p.id !== api.euId && equipe.filter((x) => primeiroNome(x.nome) === primeiroNome(p.nome)).length > 1 && <small>{p.nome.split(/\s+/).slice(-1)[0]}</small>}
+              <Avatar pessoa={p} cor={corDaPessoa(equipe, p.id)} tamanho={20} />
+              {p.id === api.euId ? 'Eu' : equipe.filter((x) => primeiroNome(x.nome) === primeiroNome(p.nome)).length > 1 ? `${primeiroNome(p.nome)} ${p.nome.split(/\s+/).slice(-1)[0][0]}.` : primeiroNome(p.nome)}
             </button>
           ))}
           <button type="button" className={pessoa === 'ninguem' ? 'on' : ''} onClick={() => setPessoa('ninguem')}>Sem responsável</button>
         </div>
-        <div className="og-areas" aria-label="Filtrar por área">
-          {(Object.keys(AREAS) as Area[]).map((ar) => (
-            <button key={ar} type="button" className={areas.has(ar) ? 'on' : ''} style={{ ['--area' as string]: AREAS[ar].cor }}
-              onClick={() => setAreas((s) => { const n = new Set(s); n.has(ar) ? n.delete(ar) : n.add(ar); return n })}>
-              <i aria-hidden="true" />{AREAS[ar].nome}
-            </button>
-          ))}
-          <input className="og-busca" type="search" placeholder="Buscar tarefa" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar tarefa" />
-        </div>
+        <span className="og-filtros-sep" aria-hidden="true" />
+        <label className="og-area-sel" style={{ ['--area' as string]: areas.size === 1 ? AREAS[[...areas][0]].cor : 'var(--muted)' }}>
+          <i aria-hidden="true" />
+          <select value={areas.size === 1 ? [...areas][0] : ''} onChange={(e) => setAreas(new Set(e.target.value ? [e.target.value as Area] : []))} aria-label="Filtrar por área">
+            <option value="">Todas as áreas</option>
+            {(Object.keys(AREAS) as Area[]).map((ar) => <option key={ar} value={ar}>{AREAS[ar].nome}</option>)}
+          </select>
+        </label>
+        <input className="og-busca" type="search" placeholder="Buscar tarefa" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar tarefa" />
       </div>
 
       {erro && <p className="og-erro">{erro}</p>}
