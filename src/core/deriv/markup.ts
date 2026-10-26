@@ -1,5 +1,5 @@
 import { DERIV } from './config'
-import type { AuthSession } from './auth'
+import { appDaConexaoAtual, type AuthSession } from './auth'
 
 /**
  * Faturamento de markup da Teeds.
@@ -343,7 +343,8 @@ interface ContratoFechado {
  * compra e considerada da plataforma — e por ela que a conta opera aqui. E
  * por isso que este numero se chama "calculado": a Deriv confirma depois.
  */
-const daApp = (appId: unknown) => appId == null || String(appId) === MARCA.appId
+// 27/10/2026: o app do parceiro do cliente (quando ele conecta por lá) também é desta marca
+const daApp = (appId: unknown) => appId == null || String(appId) === MARCA.appId || String(appId) === appDaConexaoAtual()
 
 /** Todos os contratos fechados de um dia (UTC), paginando ate o fim. */
 /**

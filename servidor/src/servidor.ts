@@ -29,6 +29,7 @@ import { PADRAO, conferir } from './limites'
 import { conversar } from './chat'
 import { autorizacaoDoCliente, autorizacaoParaOperar, guardar } from './cofre'
 import { concluirLoginDoCliente, iniciarLoginDoCliente, type PedidoDoCliente } from './login-cliente'
+import { appParaConectar, appValido } from './apps-parceiros'
 import type { ConfigEstrategia } from '../../src/core/deriv/engine'
 import { anotarMarcaPedida, ligarCarteiro, tratarGanchoDeEmail } from './gancho-email'
 import { somenteDemoDoUsuario } from './supabase'
@@ -1110,25 +1111,29 @@ const servidor = createServer(async (req, res) => {
       if (url.pathname === '/api/deriv/iniciar' && req.method === 'POST') {
         limpar()
         const marcaPedida = typeof corpo.marca === 'string' ? corpo.marca : marcaDaOrigem.id
-        const { state, url: ida, pedido } = iniciarLoginDoCliente(dono.id, marcaPedida, RETORNO)
+        // 27/10/2026: cliente de parceiro conecta pelo app do parceiro (o markup cai lá)
+        const { state, url: ida, pedido } = iniciarLoginDoCliente(dono.id, marcaPedida, RETORNO, Date.now(), await appParaConectar(dono.id, marcaPedida))
         tentativas.set(state, pedido)
         return json(200, { url: ida })
       }
       if (url.pathname === '/api/deriv/sessao' && req.method === 'GET') {
         const cofre = await autorizacaoDoCliente(dono.id)
         if (cofre.tipo !== 'ok') return json(200, { sessao: null, motivo: cofre.tipo })
-        const { accessToken, refreshToken, expiresAt } = cofre.sessao
-        return json(200, { sessao: { accessToken, refreshToken, expiresAt } })
+        const { accessToken, refreshToken, expiresAt, appId } = cofre.sessao
+        return json(200, { sessao: { accessToken, refreshToken, expiresAt, appId } })
       }
 
       if (url.pathname === '/api/deriv' && req.method === 'POST') {
         const accessToken = String(corpo.accessToken ?? '').trim()
         if (!accessToken) return json(400, { erro: 'Autorizacao vazia.' })
+        const marcaDoCofre = typeof corpo.marca === 'string' ? corpo.marca : 'teeds'
         await guardar(dono.id, {
           accessToken,
           refreshToken: corpo.refreshToken ? String(corpo.refreshToken) : undefined,
           expiresAt: corpo.expiresAt ? Number(corpo.expiresAt) : undefined,
-        }, typeof corpo.marca === 'string' ? corpo.marca : 'teeds')
+          // o app que emitiu (o do parceiro, quando há): só se for conhecido
+          appId: appValido(marcaDoCofre, typeof corpo.appId === 'string' ? corpo.appId : undefined),
+        }, marcaDoCofre)
         return json(200, { guardado: true })
       }
 

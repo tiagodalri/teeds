@@ -28,6 +28,7 @@ const SLUG: Record<WorkspacePage, string> = {
   insights: 'insights',
   monitoramento: 'monitoramento',
   laboratorio: 'laboratorio',
+  divulgacao: 'divulgacao',
 }
 /** Os outros nomes que também abrem a tela (o de outra marca, o antigo, sem hífen). */
 const APELIDOS: Record<string, WorkspacePage> = {

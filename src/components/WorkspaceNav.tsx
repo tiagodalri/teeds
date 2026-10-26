@@ -4,8 +4,8 @@ import { MARCA } from '../marca'
 import './workspace.css'
 import { RelogioTopo } from './RelogioTopo'
 
-export type WorkspacePage = 'inicio' | 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo' | 'noticias' | 'perfil' | 'ajuda' | 'laboratorio'
-export const PAGE_NAMES: Record<WorkspacePage, string> = { inicio: 'Início', operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', perfil: 'Meu perfil', ajuda: 'Ajuda', laboratorio: 'Laboratório de IA', ...(MARCA.menu?.nomes ?? {}) }
+export type WorkspacePage = 'inicio' | 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo' | 'noticias' | 'perfil' | 'ajuda' | 'laboratorio' | 'divulgacao'
+export const PAGE_NAMES: Record<WorkspacePage, string> = { inicio: 'Início', operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', perfil: 'Meu perfil', ajuda: 'Ajuda', laboratorio: 'Laboratório de IA', divulgacao: 'Divulgação', ...(MARCA.menu?.nomes ?? {}) }
 const paths: Record<string, string> = {
   inicio: 'M3 11l9-7 9 7M5 9.5V20h5v-6h4v6h5V9.5',
   operar: 'M3 17l5-6 4 3 9-11M16 3h5v5', robos: 'M5 7h14v13H5zM12 3v4M8 12h1m6 0h1M9 16h6',
@@ -17,6 +17,7 @@ const paths: Record<string, string> = {
   monitoramento: 'M3 5h18v11H3zM8 20h8M12 16v4M6 13l3-3 2 2 4-5 3 3',
   // o frasco do Laboratório de IA (26/10/2026)
   laboratorio: 'M9 3h6M10 3v6l-5 9a2 2 0 002 3h10a2 2 0 002-3l-5-9V3M7.5 15h9',
+  divulgacao: 'M3 10v4a1 1 0 001 1h3l6 4V5L7 9H4a1 1 0 00-1 1zM16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12',
   aovivo: 'M12 12h.01M8.5 15.5a5 5 0 010-7M15.5 8.5a5 5 0 010 7M5.6 18.4a9 9 0 010-12.8M18.4 5.6a9 9 0 010 12.8',
   // jornal dobrado com a linha do gráfico
   noticias: 'M4 5h13v14a1 1 0 001 1H6a2 2 0 01-2-2zM17 9h3v9a2 2 0 01-2 2M7 9h7M7 12.5h7M7 16h4',
@@ -25,7 +26,7 @@ const paths: Record<string, string> = {
   // a marca pode trocar o desenho de um item (ver `menu` em marcas.ts)
   ...(MARCA.menu?.icones ?? {}),
 }
-export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mostrarAoVivo = true, mostrarInicio = false }: { page: WorkspacePage; admin: boolean; onNavigate: (page: WorkspacePage) => void; aoVivoAgora?: boolean; mostrarAoVivo?: boolean; mostrarInicio?: boolean }) {
+export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mostrarAoVivo = true, mostrarInicio = false, mostrarDivulgacao = false }: { page: WorkspacePage; admin: boolean; onNavigate: (page: WorkspacePage) => void; aoVivoAgora?: boolean; mostrarAoVivo?: boolean; mostrarInicio?: boolean; mostrarDivulgacao?: boolean }) {
   const [compact, setCompact] = useState(false)
   const [open, setOpen] = useState(false)
   // o "Mais" da barra inferior (celular) abre este mesmo menu
@@ -54,6 +55,8 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mos
         {item('robos')}{item('operar')}
         <p className="workspace-label">Ferramentas</p>{item('gerenciamento')}{item('assistente')}
         <p className="workspace-label">Explore</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{MARCA.noticias && item('noticias')}{item('marketplace')}{item('aulas')}{MARCA.suporte && item('ajuda')}
+        {/* parceiros de divulgação (27/10/2026): só quem é parceiro, e o admin geral */}
+        {mostrarDivulgacao && <><p className="workspace-label">Parceiro</p>{item('divulgacao')}</>}
         {admin && <div className="workspace-admin">{MARCA.laboratorioIA && item('laboratorio')}{item('gestao')}</div>}
       </nav>
       {/* no celular o topo não tem espaço: a data e a hora ficam no pé do menu */}

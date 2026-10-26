@@ -5,6 +5,7 @@ import { chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
 import { marcaPorId } from '../../src/marca/marcas'
 import { guardarSegredoDeriv, lerSegredoDeriv } from './supabase'
+import { appValido } from './apps-parceiros'
 import type { AuthSession } from '../../src/core/deriv/auth'
 
 /**
@@ -95,7 +96,8 @@ async function renovar(
         grant_type: 'refresh_token',
         // A app que emitiu é a que renova. Uma autorização da OMNI não se
         // renova com a app da Teeds — a Deriv recusa, e o robô morreria.
-        client_id: marcaPorId(marca).appId,
+        // (27/10/2026: com os parceiros, pode ser o app do parceiro dentro da marca.)
+        client_id: appValido(marca, sessao.appId),
         refresh_token: sessao.refreshToken,
       }).toString(),
     })
@@ -105,6 +107,7 @@ async function renovar(
       accessToken: dados.access_token,
       refreshToken: dados.refresh_token ?? sessao.refreshToken,
       expiresAt: dados.expires_in ? Date.now() + Number(dados.expires_in) * 1000 : undefined,
+      appId: appValido(marca, sessao.appId),
     }
     await guardar(userId, nova, marca)
     console.log(`[cofre] autorizacao renovada para o cliente ${userId.slice(0, 8)}…`)
@@ -165,11 +168,12 @@ export async function autorizacaoDoCliente(userId: string): Promise<DoCofre> {
     precisa deste campo (cada site é montado com uma marca só); o servidor
     precisa, porque atende as duas no mesmo processo.
   */
-  sessao.appId = marcaPorId(linha.marca).appId
+  // 27/10/2026: o app guardado vale se for conhecido (o padrão da marca ou o de um parceiro dela)
+  sessao.appId = appValido(linha.marca, sessao.appId)
 
   if (sessao.expiresAt && Date.now() > sessao.expiresAt - FOLGA) {
     const nova = await renovar(userId, sessao, linha.marca)
-    if (nova) nova.appId = marcaPorId(linha.marca).appId
+    if (nova) nova.appId = sessao.appId
     if (!nova) {
       console.warn(`[cofre] a autorizacao do cliente ${marca(userId)} venceu e nao deu para renovar.`)
       return { tipo: 'vencido' }

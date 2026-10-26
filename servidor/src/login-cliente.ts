@@ -31,6 +31,8 @@ export interface PedidoDoCliente {
   criadaEm: number
   userId: string
   marca: string
+  /** O app da Deriv deste login (27/10/2026: o do parceiro do cliente, ou o da marca). */
+  appId?: string
 }
 
 /** Quanto tempo um pedido vale. A Deriv leva segundos; 10 minutos é folga. */
@@ -39,20 +41,21 @@ export const VALIDADE_MS = 10 * 60_000
 const base64url = (b: Buffer) => b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
 /** A ida: o endereço de autorização da Deriv e o pedido a guardar sob o `state`. */
-export function iniciarLoginDoCliente(userId: string, marca: string, retorno: string, agora = Date.now()) {
+export function iniciarLoginDoCliente(userId: string, marca: string, retorno: string, agora = Date.now(), appId?: string) {
   const m = marcaPorId(marca)
+  const app = appId || m.appId
   const verifier = base64url(randomBytes(48))
   const state = base64url(randomBytes(24))
   const challenge = base64url(createHash('sha256').update(verifier).digest())
   const url = new URL(DERIV.oauth.authorize)
   url.searchParams.set('response_type', 'code')
-  url.searchParams.set('client_id', m.appId)
+  url.searchParams.set('client_id', app)
   url.searchParams.set('redirect_uri', retorno)
   url.searchParams.set('scope', DERIV.scopes.join(' '))
   url.searchParams.set('state', state)
   url.searchParams.set('code_challenge', challenge)
   url.searchParams.set('code_challenge_method', 'S256')
-  const pedido: PedidoDoCliente = { verifier, criadaEm: agora, userId, marca: m.id }
+  const pedido: PedidoDoCliente = { verifier, criadaEm: agora, userId, marca: m.id, appId: app }
   return { state, url: url.toString(), pedido }
 }
 
@@ -73,7 +76,7 @@ export async function concluirLoginDoCliente(
   const m = marcaPorId(pedido.marca)
   const resposta = await trocar(DERIV.oauth.token, new URLSearchParams({
     grant_type: 'authorization_code',
-    client_id: m.appId,
+    client_id: pedido.appId || m.appId,
     code,
     redirect_uri: retorno,
     code_verifier: pedido.verifier,
@@ -86,6 +89,7 @@ export async function concluirLoginDoCliente(
     accessToken: String(dados.access_token),
     refreshToken: dados.refresh_token ? String(dados.refresh_token) : undefined,
     expiresAt: dados.expires_in ? agora + Number(dados.expires_in) * 1000 : undefined,
+    appId: pedido.appId || m.appId,
   }
   await guardar(pedido.userId, sessao, m.id)
   return sessao

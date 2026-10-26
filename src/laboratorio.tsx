@@ -64,6 +64,7 @@ const LabOrganizacao = lazy(() => import('./components/organizacao/LabOrganizaca
 const LabPlanos = lazy(() => import('./components/LabPlanos'))
 const LabCarteira = lazy(() => import('./components/LabCarteira'))
 const LabParceiros = lazy(() => import('./components/LabParceiros'))
+const LabDivulgacao = lazy(() => import('./components/LabDivulgacao'))
 const LabLaboratorio = lazy(() => import('./components/laboratorio/LabLaboratorio'))
 const LabPerfil = lazy(() => import('./components/perfil/LabPerfil'))
 const LabSuporte = lazy(() => import('./components/suporte/LabSuporte'))
@@ -304,6 +305,7 @@ function Laboratorio() {
   // ?tela=carteira (&sem=1): a carteira da Deriv, com e sem a permissão `payment`
   if (qual === 'carteira') return <Suspense fallback={null}><LabCarteira /></Suspense>
   if (qual === 'parceiros') return <Suspense fallback={null}><LabParceiros /></Suspense>
+  if (qual === 'divulgacao') return <Suspense fallback={null}><LabDivulgacao /></Suspense>
   // ?tela=laboratorio-ia: o Laboratório de IA com receitas em memória (ticks e cotações reais da Deriv)
   if (qual === 'laboratorio-ia') return <Suspense fallback={null}><LabLaboratorio /></Suspense>
   if (qual === 'suporte') return <Suspense fallback={null}><LabSuporte /></Suspense>

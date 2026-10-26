@@ -112,3 +112,34 @@ export async function relatorioDosParceiros(sessao: SessaoTeeds, de: string, ate
 
 export const trocarParceiro = (sessao: SessaoTeeds, userId: string, codigo: string | null, motivo: string, marca: string = MARCA.id) =>
   rpc<null>(sessao, 'teeds_trocar_parceiro', { p_user: userId, p_marca: marca, p_codigo: codigo, p_motivo: motivo })
+
+/* ------------------------------------------------------------------ links de divulgação e app da Deriv */
+
+export interface LinkDoParceiro { id: string; titulo: string; url: string; descricao: string | null; ordem: number }
+export interface ParceiroComLinks { codigo: string; nome: string; email: string | null; derivAppId: string | null; appLiberado: boolean; links: LinkDoParceiro[] }
+export interface MeusLinks { geral: boolean; parceiros: ParceiroComLinks[] }
+
+/** Os links que esta pessoa pode ver: os dela (parceiro) ou todos (admin geral). Null = não é parceiro. */
+export async function meusLinks(sessao: SessaoTeeds, marca: string = MARCA.id): Promise<MeusLinks | null> {
+  const r = await rpc<any>(sessao, 'teeds_meus_links', { p_marca: marca })
+  if (!r || !Array.isArray(r.parceiros)) return null
+  return {
+    geral: r.geral === true,
+    parceiros: r.parceiros.map((p: any) => ({
+      codigo: String(p.codigo), nome: String(p.nome ?? ''), email: p.email ?? null, derivAppId: p.deriv_app_id ?? null, appLiberado: p.app_liberado === true,
+      links: (p.links ?? []).map((l: any) => ({ id: String(l.id), titulo: String(l.titulo), url: String(l.url), descricao: l.descricao ?? null, ordem: Number(l.ordem ?? 100) })),
+    })),
+  }
+}
+
+export const salvarLinkDoParceiro = (sessao: SessaoTeeds, codigo: string, link: { id?: string; titulo: string; url: string; descricao?: string; ordem?: number }, marca: string = MARCA.id) =>
+  rpc<string>(sessao, 'teeds_salvar_link_parceiro', { p_marca: marca, p_codigo: codigo, p_id: link.id ?? null, p_titulo: link.titulo, p_url: link.url, p_descricao: link.descricao ?? null, p_ordem: link.ordem ?? 100 })
+
+export const apagarLinkDoParceiro = (sessao: SessaoTeeds, id: string) => rpc<null>(sessao, 'teeds_apagar_link_parceiro', { p_id: id })
+
+export const configurarParceiro = (sessao: SessaoTeeds, codigo: string, email: string, derivAppId: string, marca: string = MARCA.id) =>
+  rpc<null>(sessao, 'teeds_configurar_parceiro', { p_marca: marca, p_codigo: codigo, p_email: email, p_deriv_app_id: derivAppId })
+
+/** O app da Deriv com que este cliente conecta (o do parceiro dele, quando liberado); null = o da marca. */
+export const meuAppDeriv = (sessao: SessaoTeeds, marca: string = MARCA.id) =>
+  rpc<string | null>(sessao, 'teeds_meu_app_deriv', { p_marca: marca }).catch(() => null)

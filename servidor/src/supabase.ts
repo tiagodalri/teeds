@@ -1017,3 +1017,24 @@ export async function salvarRegiaoDoCliente(
     console.warn('[regiao] não gravada:', (erro as Error).message)
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * Parceiros de divulgação (27/10/2026): o app da Deriv de cada parceiro.
+ * Cliente do parceiro conecta pelo app dele e o markup cai lá; a Deriv
+ * separa sozinha. Ver supabase/migracoes/20261027140000_parceiros_links_e_app_deriv.sql.
+ * ------------------------------------------------------------------ */
+export async function appsDosParceiros(): Promise<Array<{ marca: string; codigo: string; appId: string }>> {
+  if (!URL_BASE) return []
+  const linhas = await rest<any[]>('/rpc/teeds_apps_dos_parceiros', { method: 'POST', body: '{}' })
+  return (linhas ?? []).filter((l) => l?.deriv_app_id).map((l) => ({ marca: String(l.marca), codigo: String(l.codigo), appId: String(l.deriv_app_id) }))
+}
+
+/** O app do parceiro deste cliente, se o parceiro tem app liberado; senão null (o padrão da marca). */
+export async function appDoParceiroDoCliente(userId: string, marca: string): Promise<string | null> {
+  if (!URL_BASE) return null
+  const c = await rest<any[]>(`/clientes?user_id=eq.${encodeURIComponent(userId)}&marca=eq.${encodeURIComponent(marca)}&select=parceiro&limit=1`)
+  const codigo = c?.[0]?.parceiro
+  if (!codigo) return null
+  const p = await rest<any[]>(`/parceiros?marca=eq.${encodeURIComponent(marca)}&codigo=eq.${encodeURIComponent(codigo)}&ativo=eq.true&app_liberado=eq.true&select=deriv_app_id&limit=1`)
+  return p?.[0]?.deriv_app_id ? String(p[0].deriv_app_id) : null
+}

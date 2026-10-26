@@ -37,6 +37,25 @@ var GF = (function () {
     if (PARCEIROS.indexOf(daqui) >= 0) { try { localStorage.setItem(CHAVE_PARCEIRO, JSON.stringify({ codigo: daqui, em: Date.now() })) } catch (e) {} return daqui }
     return null
   }
+  // O clique no link do parceiro conta no funil dele (um por navegador, por dia), como no site.
+  ;(function anotarClique() {
+    var q = new URLSearchParams(location.search), codigo = (q.get('parceiro') || '').toLowerCase()
+    if (PARCEIROS.indexOf(codigo) < 0) return
+    var visitante = null
+    try { visitante = JSON.parse(localStorage.getItem('globalfly.visitante') || 'null') } catch (e) {}
+    if (!visitante || !/^[a-zA-Z0-9]{8,40}$/.test(visitante)) {
+      visitante = (Date.now().toString(36) + Math.random().toString(36).slice(2, 14)).replace(/[^a-zA-Z0-9]/g, '')
+      try { localStorage.setItem('globalfly.visitante', JSON.stringify(visitante)) } catch (e) {}
+    }
+    try {
+      fetch(SUPABASE + '/rest/v1/rpc/teeds_toque_parceiro', {
+        method: 'POST', keepalive: true,
+        headers: { apikey: CHAVE, Authorization: 'Bearer ' + CHAVE, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_marca: 'globalfly', p_codigo: codigo, p_visitante: visitante, p_link: (q.get('utm_source') || 'pagina-do-lancamento').slice(0, 60) }),
+      }).catch(function () {})
+    } catch (e) {}
+    parceiro()
+  })()
   function paginaComParceiro() {
     var p = parceiro(), aqui = new URL(location.href)
     if (!p) return aqui.href

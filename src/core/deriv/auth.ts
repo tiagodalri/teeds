@@ -63,6 +63,8 @@ interface PedidoDeLogin {
   criadoEm: number
   /** A Deriv foi aberta numa janela à parte (ver `startLogin`). */
   janela?: boolean
+  /** O app da Deriv deste login (27/10/2026: o do parceiro do cliente, ou o da marca). */
+  appId?: string
 }
 
 /*
@@ -277,6 +279,17 @@ export function ouvirLoginDeOutraJanela(aoConectar: () => void): () => void {
  * Devolve 'janela' quando a Deriv abriu numa janela à parte e esta página
  * continua aqui; 'aba' quando esta própria aba foi para a Deriv.
  */
+/*
+  O APP DA DERIV DESTA CONEXÃO (27/10/2026, parceiros de divulgação). O
+  cliente de um parceiro conecta pelo app DO PARCEIRO: o markup cai lá e a
+  Deriv separa sozinha. A tela informa o app quando a pessoa entra na
+  plataforma (o banco responde, ver teeds_meu_app_deriv); sem informação,
+  vale o app da marca, como sempre.
+*/
+let appDaConexao: string | null = null
+export const appDaConexaoAtual = (): string | null => appDaConexao
+export function usarAppDaDeriv(appId: string | null): void { appDaConexao = appId && /^[A-Za-z0-9_-]{4,64}$/.test(appId) ? appId : null }
+
 export async function startLogin(): Promise<'janela' | 'aba'> {
   /*
     A SEGUNDA VEZ VAI PELA MESMA ABA (16/10/2026, teste com a conta do
@@ -291,7 +304,7 @@ export async function startLogin(): Promise<'janela' | 'aba'> {
 
   const params = new URLSearchParams({
     response_type: 'code',
-    client_id: MARCA.appId,
+    client_id: appDaConexao ?? MARCA.appId,
     redirect_uri: MARCA.redirectUri,
     scope: DERIV.scopes.join(' '),
     state,
@@ -300,9 +313,10 @@ export async function startLogin(): Promise<'janela' | 'aba'> {
   })
   const url = `${DERIV.oauth.authorize}?${params.toString()}`
   // O pedido é guardado ANTES de abrir: a janela pode voltar muito rápido.
-  guardarPedido({ verifier, state, criadoEm: Date.now(), janela: true })
+  const appId = appDaConexao ?? MARCA.appId
+  guardarPedido({ verifier, state, criadoEm: Date.now(), janela: true, appId })
   if (!mesmaAba && abrirJanelaDeLogin(url)) return 'janela'
-  guardarPedido({ verifier, state, criadoEm: Date.now() }, false)
+  guardarPedido({ verifier, state, criadoEm: Date.now(), appId }, false)
   window.location.assign(url)
   return 'aba'
 }
@@ -349,7 +363,7 @@ async function trocarCodigoDaDeriv(): Promise<AuthSession | null> {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type: 'authorization_code',
-      client_id: MARCA.appId,
+      client_id: pedido.appId ?? MARCA.appId,
       code,
       redirect_uri: MARCA.redirectUri,
       code_verifier: verifier,
@@ -367,6 +381,8 @@ async function trocarCodigoDaDeriv(): Promise<AuthSession | null> {
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     expiresAt: data.expires_in ? Date.now() + Number(data.expires_in) * 1000 : undefined,
+    // só quando não é o da marca: o padrão continua sem o campo, como sempre foi
+    ...(pedido.appId && pedido.appId !== MARCA.appId ? { appId: pedido.appId } : {}),
   }
   saveSession(session)
   if (pedido.janela) avisarQueConectou()
@@ -429,6 +445,7 @@ export async function buscarSessaoDoServidor(tokenTeeds: string): Promise<AuthSe
     accessToken: String(s.accessToken),
     refreshToken: s.refreshToken ? String(s.refreshToken) : undefined,
     expiresAt: s.expiresAt ? Number(s.expiresAt) : undefined,
+    ...(s.appId && String(s.appId) !== MARCA.appId ? { appId: String(s.appId) } : {}),
   }
   saveSession(sessao)
   esquecerPedido()

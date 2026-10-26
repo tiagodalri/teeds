@@ -6,7 +6,7 @@ import { DigitsPanel } from './components/DigitsPanel'
 import { labDoBanco } from './core/laboratorio/dados'
 import { BoletaAtivo, BotaoCompra, MostradorDuracao, MostradorValor, ResumoDaCompra } from './components/operar/Boleta'
 import { UltimasEntradas } from './components/operar/UltimasEntradas'
-import { vincularParceiro } from './core/teeds/parceiro'
+import { meuAppDeriv, meusLinks, vincularParceiro, type MeusLinks } from './core/teeds/parceiro'
 import { CatalogoProvider } from './core/teeds/catalogoRobos'
 import { usePreferenciaColuna } from './core/teeds/preferenciaColuna'
 import { useMarcaEmFoco } from './core/teeds/marcaEmFoco'
@@ -26,7 +26,7 @@ import { decolar, liberarPouso } from './core/decolagem'
 import { definirDonoDoPlano } from './core/teeds/planoDoDia'
 import { NovaSenha } from './components/NovaSenha'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
-import { startLogin } from './core/deriv/auth'
+import { startLogin, usarAppDaDeriv } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLimitesDuracao, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { traduzirErro } from './core/deriv/erros'
@@ -69,6 +69,7 @@ import { carregarRobosBloqueados } from './core/teeds/robosLiberados'
 // quando a pessoa abre a página ou entra numa live.
 const AoVivoPage = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.AoVivoPage })))
 const MercadoPanel = lazy(() => import('./components/MercadoPanel').then((m) => ({ default: m.MercadoPanel })))
+const DivulgacaoPanel = lazy(() => import('./components/DivulgacaoPanel').then((m) => ({ default: m.DivulgacaoPanel })))
 const CarteiraDeriv = lazy(() => import('./components/CarteiraDeriv').then((m) => ({ default: m.CarteiraDeriv })))
 const LaboratorioIA = lazy(() => import('./components/laboratorio/LaboratorioIA').then((m) => ({ default: m.LaboratorioIA })))
 const AjudaPagina = lazy(() => import('./components/ajuda/AjudaPagina').then((m) => ({ default: m.AjudaPagina })))
@@ -557,8 +558,15 @@ export default function App() {
   }, [usuarioTeedsId, tela])
 
   // Conta nova que veio por link de parceiro (/n, /v) e entrou por outro caminho: o banco confere e liga.
+  // Parceiros (27/10/2026): o app da Deriv deste cliente (o do parceiro dele) e, para parceiro e
+  // admin geral, a página Divulgação com os links.
+  const [linksDeParceiro, setLinksDeParceiro] = useState<MeusLinks | null>(null)
   useEffect(() => {
-    if (teeds.sessao && MARCA.parceiros?.length) vincularParceiro(teeds.sessao)
+    setLinksDeParceiro(null)
+    if (!teeds.sessao || !MARCA.parceiros?.length) { usarAppDaDeriv(null); return }
+    vincularParceiro(teeds.sessao)
+    void meuAppDeriv(teeds.sessao).then(usarAppDaDeriv)
+    void meusLinks(teeds.sessao).then(setLinksDeParceiro).catch(() => setLinksDeParceiro(null))
   }, [usuarioTeedsId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -964,13 +972,13 @@ export default function App() {
 
   return (
     <div className="app workspace-app">
-      <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} mostrarInicio={!!MARCA.inicio} onNavigate={next => {
+      <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} mostrarInicio={!!MARCA.inicio} mostrarDivulgacao={!!linksDeParceiro} onNavigate={next => {
         setVerPerfil(false)
         if (next === 'assistente') abrirAssistente()
         else setTela(next)
       }} />
       <header className="topbar">
-        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : 'Seu espaço de trabalho'}</span></div>
+        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'divulgacao' ? 'Seus links para divulgar a plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : 'Seu espaço de trabalho'}</span></div>
 
         <div className="topbar-right">
           <RelogioTopo />
@@ -1195,6 +1203,8 @@ export default function App() {
         <Suspense fallback={telaAbrindo('Abrindo o marketplace…')}><MarketplacePanel sessao={teeds.sessao} /></Suspense>
       ) : tela === 'gerenciamento' ? (
         <CatalogoProvider sessao={teeds.sessao}><Suspense fallback={telaAbrindo('Abrindo o gerenciamento…')}><OperationalManagementPanel /></Suspense></CatalogoProvider>
+      ) : tela === 'divulgacao' && linksDeParceiro && teeds.sessao ? (
+        <Suspense fallback={telaAbrindo('Abrindo os links…')}><DivulgacaoPanel sessao={teeds.sessao} inicial={linksDeParceiro} /></Suspense>
       ) : tela === 'laboratorio' && admin === true && MARCA.laboratorioIA ? (
         teeds.sessao ? <Suspense fallback={telaAbrindo('Abrindo o laboratório…')}><LaboratorioIA api={apiDoLaboratorio!} socket={conta.socket} /></Suspense> : null
       ) : tela === 'monitoramento' && admin === true ? (

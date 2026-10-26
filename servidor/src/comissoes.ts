@@ -1,3 +1,4 @@
+import { todasAsMarcasDosApps } from './apps-parceiros'
 import './ambiente'
 
 import { TeedsSocket } from '../../src/core/deriv/client'
@@ -11,7 +12,6 @@ import {
   type ComissaoDiariaGravavel, type ContratosPorOrigemGravavel,
 } from './supabase'
 import { separarPorOrigem, TAXA_MARKUP, type ContratoBruto, type Pistas } from './atribuicao'
-import { MARCAS } from '../../src/marca/marcas'
 import { contadorDeFalhas, deMolho, faltamSegundos } from './deriv-instavel'
 
 /**
@@ -122,8 +122,6 @@ async function pedirComPaciencia(socket: TeedsSocket, corpo: Record<string, unkn
   }
 }
 
-/** app da Deriv → marca nossa ('34gMUQ…' → 'teeds'). */
-const MARCA_DO_APP = new Map(Object.values(MARCAS).map((m) => [m.appId, m.id]))
 
 /**
  * O extrato do dia: contrato → app que executou a compra.
@@ -236,7 +234,8 @@ export async function sincronizarConta(
         appPorContrato: extrato.apps,
         nossosContratos: new Map(registrados.map((r) => [r.contractId, { marca: r.marca, roboId: r.roboId }])),
         janelas,
-        marcaDoApp: MARCA_DO_APP,
+        // 27/10/2026: inclui os apps dos parceiros (contrato pelo app do Naor é GlobalFly, não "externo")
+        marcaDoApp: todasAsMarcasDosApps(),
       }
       // O extrato também sabe a hora da compra quando a tabela de lucros não sabe.
       const comHora = contratos.map((c) => ({ ...c, compradoEm: c.compradoEm ?? extrato.horas.get(c.contractId) ?? null }))
