@@ -138,6 +138,10 @@ export default function App() {
   const connection = useConnection()
   const { symbols, loading: loadingSymbols, error: symbolsError } = useSymbols()
   const teeds = useTeedsAuth()
+  // o Laboratório de IA fala com o banco com o login de quem é admin (26/10/2026).
+  // Fica aqui em cima, com os outros hooks: abaixo dos `return` antecipados da tela
+  // (carregando, login) ele mudava a ordem dos hooks e a página ficava em branco.
+  const apiDoLaboratorio = useMemo(() => (teeds.sessao ? labDoBanco(teeds.sessao, teeds.usuario?.nome || teeds.sessao.usuario.email) : null), [teeds.sessao, teeds.usuario?.nome])
   // o plano do dia é de quem está logado (antes de qualquer tela ler)
   definirDonoDoPlano(teeds.sessao?.usuario.id)
   /*
@@ -952,8 +956,6 @@ export default function App() {
     setTela('assistente')
   }
 
-  // o Laboratório de IA fala com o banco com o login de quem é admin (26/10/2026)
-  const apiDoLaboratorio = useMemo(() => (teeds.sessao ? labDoBanco(teeds.sessao, teeds.usuario?.nome || teeds.sessao.usuario.email) : null), [teeds.sessao, teeds.usuario?.nome])
   return (
     <div className="app workspace-app">
       <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} mostrarInicio={!!MARCA.inicio} onNavigate={next => {
