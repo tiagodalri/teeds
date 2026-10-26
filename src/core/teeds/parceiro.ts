@@ -1,5 +1,5 @@
 /**
- * Parceiros de divulgação (27/10/2026): /n (Naur) e /v (Victor) na GlobalFly.
+ * Parceiros de divulgação (27/10/2026): /n (Naor) e /v (Victor) na GlobalFly.
  *
  * O link chega como `?parceiro=n` (as páginas /n e /v encaminham assim). Aqui:
  *  - o código é guardado no navegador por 90 dias, PRIMEIRO TOQUE: quem já

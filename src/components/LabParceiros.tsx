@@ -6,7 +6,7 @@ import type { SessaoTeeds } from '../core/teeds/conta'
 const cli = (nome: string, email: string, dias: number, ops: number, markup: number, fonte = 'cadastro') =>
   ({ userId: email, nome, email, criadoEm: new Date(Date.now() - dias * 864e5).toISOString(), status: 'ativo', fonte, operacoes: ops, markup, volume: ops * 2.1 })
 const linhas: LinhaDoParceiro[] = [
-  { codigo: 'n', nome: 'Naur Bezerra', cliques: 412, leads: 96, contasNovas: 41, clientes: 41, ativos: 38, operaram: 27, operacoes: 5320, volume: 11172, markup: 334.18, resultado: -812.4,
+  { codigo: 'n', nome: 'Naor Bezerra', cliques: 412, leads: 96, contasNovas: 41, clientes: 41, ativos: 38, operaram: 27, operacoes: 5320, volume: 11172, markup: 334.18, resultado: -812.4,
     lista: [cli('Mariana Souza', 'mariana@exemplo.com', 2, 1240, 88.12), cli('Carlos Lima', 'carlos@exemplo.com', 3, 860, 61.4), cli('Ana Paula Reis', 'ana@exemplo.com', 1, 410, 29.9, 'navegador'), cli('João Pedro', 'joao@exemplo.com', 0, 0, 0)] },
   { codigo: 'v', nome: 'Victor Cordeiro', cliques: 655, leads: 140, contasNovas: 58, clientes: 58, ativos: 55, operaram: 39, operacoes: 8110, volume: 17031, markup: 512.77, resultado: -1203.9,
     lista: [cli('Rafaela Dias', 'rafa@exemplo.com', 4, 2210, 140.3), cli('Bruno Alves', 'bruno@exemplo.com', 5, 990, 66.8, 'manual')] },

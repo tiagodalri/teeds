@@ -3,7 +3,7 @@
 -- rastrear quanto gerou de comissão de markup dos clientes dele de forma
 -- separada... não pode ter mistura".
 --
--- GlobalFly: Naur Bezerra (/n) e Victor Cordeiro (/v). O link abre o cadastro
+-- GlobalFly: Naor Bezerra (/n) e Victor Cordeiro (/v). O link abre o cadastro
 -- e guarda o código do parceiro no navegador (primeiro toque, 90 dias).
 --
 -- Regras:
@@ -33,7 +33,7 @@ drop policy if exists parceiros_leitura_admin on public.parceiros;
 create policy parceiros_leitura_admin on public.parceiros for select to authenticated using (public.teeds_sou_admin_da(marca));
 
 insert into public.parceiros (marca, codigo, nome) values
-  ('globalfly', 'n', 'Naur Bezerra'),
+  ('globalfly', 'n', 'Naor Bezerra'),
   ('globalfly', 'v', 'Victor Cordeiro')
 on conflict (marca, codigo) do update set nome = excluded.nome;
 

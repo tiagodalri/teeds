@@ -407,7 +407,7 @@ export const MARCAS: Record<string, Marca> = {
     laboratorioIA: true,
     // 26/10/2026 (Tiago): "evite sempre a palavra Robôs, vamos trocar tudo por I.A."
     vocabularioIA: true,
-    // 27/10/2026: /n (Naur) e /v (Victor). Cada cliente fica com o parceiro do primeiro link.
+    // 27/10/2026: /n (Naor) e /v (Victor). Cada cliente fica com o parceiro do primeiro link.
     parceiros: ['n', 'v'],
     menu: {
       nomes: { robos: 'I.A.' },
