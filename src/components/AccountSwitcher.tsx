@@ -22,6 +22,8 @@ interface Props {
   /** Chamado ao abrir o menu: hora de reler os saldos de todas as contas. */
   onAbrir?: () => void
   onSair: () => void
+  /** Abre a carteira da Deriv (saldo, depósitos e saques). */
+  onCarteira?: () => void
 }
 
 /**
@@ -123,6 +125,16 @@ export function AccountSwitcher(props: Props) {
                 <path d="M13.5 8a5.5 5.5 0 1 1-1.7-3.9" /><path d="M13.5 2v3h-3" />
               </svg>
               Recarregar simulador
+            </button>
+          )}
+
+          {props.onCarteira && (
+            <button className="menu-acao" role="menuitem" onClick={() => { props.onCarteira?.(); setAberto(false) }}>
+              <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
+                fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2.5 5h10a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1zM2.5 5l7.5-2v2M11 9.5h.01" />
+              </svg>
+              Carteira e depósitos
             </button>
           )}
 

@@ -23,8 +23,15 @@ export const DERIV = {
   },
   /** Todo botão de depósito, em todas as marcas, abre este endereço (pedido do Tiago, 21/10/2026). */
   deposito: 'https://home.deriv.com/dashboard/deposit?from=home&depositSheet=1&returnTo=%2Fhome&currency=USD',
-  /** Escopos concedidos ao app. */
-  scopes: ['trade', 'account_manage', 'application_read'],
+  /**
+   * Escopos pedidos no login. 26/10/2026 (Tiago: "quero ter TODAS as
+   * permissões"): entrou o `payment`, que dá a carteira (saldo, depósitos e
+   * saques) e os agentes de pagamento. Testado antes nos três apps (Teeds,
+   * OMNI, GlobalFly): a Deriv aceita o pedido; escopo não liberado ela recusa
+   * na hora, com invalid_scope. Quem conectou antes segue com os três de
+   * antes até reconectar (a carteira pede para reconectar).
+   */
+  scopes: ['trade', 'account_manage', 'application_read', 'payment'],
 } as const
 
 /**

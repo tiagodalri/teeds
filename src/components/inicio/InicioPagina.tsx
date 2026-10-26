@@ -33,6 +33,7 @@ interface Props {
   treino: { noAr: boolean; apresentador?: string } | null
   aoIr: (tela: WorkspacePage) => void
   aoConectar?: () => void
+  aoAbrirCarteira?: () => void
   /** As sessões vivas que a tela de robôs já busca: a home não consulta de novo. */
   vivas?: SessaoViva[]
 }
@@ -65,7 +66,7 @@ function marcarJornada(p: { demo?: boolean; primeiraIa?: boolean }) {
 
 const inicioDoDia = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() }
 
-export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, vivas: vivasDeFora }: Props) {
+export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, aoAbrirCarteira, vivas: vivasDeFora }: Props) {
   const [vivasProprias, setVivas] = useState<SessaoViva[]>([])
   const vivas = vivasDeFora ?? vivasProprias
   const [sessoesHoje, setSessoesHoje] = useState<SessaoServidor[] | null>(null)
@@ -178,7 +179,7 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, vi
     jornada: { deriv: conta.conectada, demo: !!jornada.demo, gestao: !!planoValido, primeiraIa: !!jornada.primeiraIa },
   }
   return (
-    <InicioPanel d={d} aoIr={aoIr} aoConectar={aoConectar}
+    <InicioPanel d={d} aoIr={aoIr} aoConectar={aoConectar} aoAbrirCarteira={aoAbrirCarteira}
       aoSalvarPlano={(meta, limite) => setPlano(planoSimples(meta, limite, sessao))}
       aoPrepararRobo={(id) => { pedirModeloDaVitrine(id); pedirPreparo(); aoIr('robos') }} />
   )

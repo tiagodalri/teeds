@@ -67,6 +67,7 @@ import { carregarRobosBloqueados } from './core/teeds/robosLiberados'
 // quando a pessoa abre a página ou entra numa live.
 const AoVivoPage = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.AoVivoPage })))
 const MercadoPanel = lazy(() => import('./components/MercadoPanel').then((m) => ({ default: m.MercadoPanel })))
+const CarteiraDeriv = lazy(() => import('./components/CarteiraDeriv').then((m) => ({ default: m.CarteiraDeriv })))
 const AjudaPagina = lazy(() => import('./components/ajuda/AjudaPagina').then((m) => ({ default: m.AjudaPagina })))
 const SuporteWidget = lazy(() => import('./components/suporte/SuporteWidget').then((m) => ({ default: m.SuporteWidget })))
 const MeuPerfil = lazy(() => import('./components/perfil/MeuPerfil').then((m) => ({ default: m.MeuPerfil })))
@@ -171,6 +172,8 @@ export default function App() {
     void teeds.sair()
   }
   const [verPerfil, setVerPerfil] = useState(false)
+  // a carteira da Deriv (escopo `payment`, 26/10/2026)
+  const [verCarteira, setVerCarteira] = useState(false)
   // "Meu perfil" (GlobalFly, 20/10/2026): a foto vai para o menu do usuário
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null)
   // Selo Silver/Gold no topo (GlobalFly): vem da ficha, junto com a foto
@@ -983,6 +986,7 @@ export default function App() {
               onRecarregar={() => conta.recarregarDemo()}
               onAbrir={() => void conta.atualizarContas()}
               onSair={conta.logout}
+              onCarteira={() => setVerCarteira(true)}
             />
           )}
 
@@ -1145,13 +1149,19 @@ export default function App() {
         </div>
       )}
       {MARCA.aoVivo && treinoAtivo && <Suspense fallback={null}><PlayerDoTreino naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
+      {verCarteira && (
+        <Suspense fallback={null}>
+          {/* reconectar: a sessão aberta ignora a volta de um login novo, então desconecta e entra de novo (os robôs rodam no servidor e seguem) */}
+          <CarteiraDeriv session={conta.session} fechar={() => setVerCarteira(false)} reconectar={() => { setVerCarteira(false); conta.logout(); conta.login() }} />
+        </Suspense>
+      )}
       {MARCA.aoVivo && playerAoVivo && <Suspense fallback={null}><PlayerAoVivo naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
       {tela === 'robos' || tela === 'assistente' ? null : tela === 'inicio' && MARCA.inicio ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o início…</div></div>}>
           <InicioPagina sessao={teeds.sessao} nome={teeds.usuario?.nome || ''}
             conta={{ conectada: conta.status === 'logado', demo: conta.isDemo && !conta.somenteDemo, saldo: conta.balance ? conta.balance.amount : null, moeda: conta.account?.currency ?? 'USD' }}
             treino={membroTreino === true && admin !== true ? { noAr: !!treinoAgora, apresentador: treinoAgora?.apresentador ?? undefined } : null}
-            aoIr={setTela} aoConectar={conta.login} vivas={teeds.sessao ? vivasRobos : undefined} />
+            aoIr={setTela} aoConectar={conta.login} aoAbrirCarteira={() => setVerCarteira(true)} vivas={teeds.sessao ? vivasRobos : undefined} />
         </Suspense>
       ) : tela === 'perfil' && MARCA.inicio && teeds.sessao ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo seu perfil…</div></div>}>

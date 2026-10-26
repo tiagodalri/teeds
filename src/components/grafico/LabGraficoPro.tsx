@@ -41,6 +41,10 @@ export default function LabGraficoPro() {
     { id: 2, type: 'CALL', entryEpoch: v(14).epoch, entryPrice: v(14).close, expiryEpoch: v(11).epoch, profit: -0.16, status: 'sold', exitPrice: v(11).close },
     { id: 3, type: 'CALL', entryEpoch: v(14).epoch, entryPrice: v(14).close, expiryEpoch: v(11).epoch, profit: -0.24, status: 'sold', exitPrice: v(11).close },
     { id: 4, type: 'PUT', entryEpoch: v(24).epoch, entryPrice: v(24).close, expiryEpoch: v(20).epoch, profit: 0.92, status: 'won', exitPrice: v(20).close },
+    // o print de 26/10/2026 (2): duas de −10,00 no mesmo instante com saídas quase iguais, e uma de −1,07 logo depois
+    { id: 5, type: 'CALL', entryEpoch: v(34).epoch, entryPrice: v(34).close, expiryEpoch: v(31).epoch, profit: -10, status: 'lost', exitPrice: v(31).close },
+    { id: 6, type: 'CALL', entryEpoch: v(34).epoch, entryPrice: v(34).close + 0.4, expiryEpoch: v(31).epoch, profit: -10, status: 'lost', exitPrice: v(31).close + 0.3 },
+    { id: 7, type: 'PUT', entryEpoch: v(33).epoch, entryPrice: v(33).close, expiryEpoch: v(30).epoch, profit: -1.07, status: 'lost', exitPrice: v(30).close - 0.5 },
   ]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg)' }}>

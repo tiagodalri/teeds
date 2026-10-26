@@ -50,6 +50,8 @@ interface Props {
   aoConectar?: () => void
   aoSalvarPlano: (meta: number, limite: number) => void
   aoPrepararRobo: (id: string) => void
+  /** Abre a carteira da Deriv (saldo, depósitos e saques). */
+  aoAbrirCarteira?: () => void
 }
 
 const numero = (n: number) => Math.abs(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -84,10 +86,11 @@ const ICONE = {
   play: 'M8 5.5v13l10.5-6.5z',
   apostila: 'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h4',
   baixar: 'M12 5v10M8 11l4 4 4-4M6 19h12',
+  carteira: 'M4 7h14a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2zM4 7l11-3v3M16 13.5h.01',
 }
 const Icone = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden="true"><path d={d} /></svg>
 
-export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo }: Props) {
+export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo, aoAbrirCarteira }: Props) {
   const ocultos = useValoresOcultos()
   const conectar = () => (aoConectar ? aoConectar() : aoIr('operar'))
   const moeda = d.conta.moeda
@@ -164,6 +167,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                 <button type="button" className="in-pilula ouro" onClick={() => aoIr('robos')}><Icone d={ICONE.ia} />Ligar I.A.</button>
                 <button type="button" className="in-pilula" onClick={() => aoIr('operar')}><Icone d={ICONE.manual} />Operar</button>
                 <a className="in-pilula" href={CAIXA_DERIV} target="_blank" rel="noopener noreferrer"><Icone d={ICONE.deposito} />Depositar</a>
+                {aoAbrirCarteira && <button type="button" className="in-pilula" onClick={aoAbrirCarteira}><Icone d={ICONE.carteira} />Carteira</button>}
               </>
             ) : (
               <>

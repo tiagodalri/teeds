@@ -36,7 +36,10 @@ export function definirTempoDaDeriv(ms: number) { TEMPO_MAXIMO_MS = ms }
 const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const AVISO_INSTAVEL = 'A Deriv não respondeu a tempo. Ela parece instável agora; tente de novo em instantes.'
 
-async function call<T>(path: string, session: AuthSession, init: RequestInit = {}, repetivel = (init.method ?? 'GET') === 'GET'): Promise<T> {
+/** Erro da Deriv com o código HTTP junto (403 = falta permissão no login, 401 = acesso vencido). */
+export class ErroDaDeriv extends Error { constructor(mensagem: string, readonly status: number) { super(mensagem) } }
+
+export async function call<T>(path: string, session: AuthSession, init: RequestInit = {}, repetivel = (init.method ?? 'GET') === 'GET'): Promise<T> {
   for (let tentativa = 1; ; tentativa++) {
     const ultima = !repetivel || tentativa >= 2
     const ctrl = new AbortController()
@@ -57,8 +60,8 @@ async function call<T>(path: string, session: AuthSession, init: RequestInit = {
     const instavel = res.status >= 500 || res.status === 429
     if (instavel && !ultima) { await pausa(800); continue }
     const first = body?.errors?.[0]
-    if (instavel && !first?.message) throw new Error(`${AVISO_INSTAVEL} (erro ${res.status})`)
-    throw new Error(first?.message || body?.message || `Erro ${res.status} em ${path}`)
+    if (instavel && !first?.message) throw new ErroDaDeriv(`${AVISO_INSTAVEL} (erro ${res.status})`, res.status)
+    throw new ErroDaDeriv(first?.message || body?.message || `Erro ${res.status} em ${path}`, res.status)
   }
 }
 

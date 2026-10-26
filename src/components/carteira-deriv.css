@@ -1,0 +1,66 @@
+/* A carteira da Deriv (26/10/2026). Cores só pelos tokens do tema. */
+.cw-fundo { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 16px; background: rgba(4, 10, 20, .55); backdrop-filter: blur(2px); }
+.cw {
+  display: flex; flex-direction: column; width: min(560px, 100%); max-height: min(760px, calc(100dvh - 32px)); overflow: hidden;
+  border: 1px solid var(--border); border-radius: 18px; background: var(--bg); color: var(--text); box-shadow: 0 30px 80px -24px rgba(0, 0, 0, .6);
+}
+.cw-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 22px 14px; }
+.cw-rot { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.cw-topo h2 { margin: 4px 0 0; font-size: 22px; letter-spacing: -.015em; }
+.cw-fechar { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; }
+.cw-fechar:hover { color: var(--text); }
+
+.cw-resumo { display: grid; gap: 14px; margin: 0 22px; padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.cw-saldo { display: grid; gap: 4px; }
+.cw-saldo span, .cw-totais span { color: var(--muted); font-size: 12px; font-weight: 600; }
+.cw-saldo strong { font-size: 30px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.cw-saldo small { color: var(--muted); font-size: 12px; line-height: 1.45; }
+.cw-totais { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 14px; border-top: 1px solid var(--border); }
+.cw-totais div { display: grid; gap: 3px; }
+.cw-totais b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.cw-totais b.up { color: var(--up); }
+.cw-moedas { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.cw-moedas li { display: flex; gap: 6px; padding: 4px 10px; border-radius: 99px; background: color-mix(in srgb, var(--muted) 10%, transparent); font-size: 12px; }
+.cw-moedas span { color: var(--muted); font-weight: 700; }
+.cw-nota { margin: 0; color: var(--muted); font-size: 11.5px; }
+.cw-carregando { display: inline-block; width: 140px; height: 28px; border-radius: 8px; background: color-mix(in srgb, var(--muted) 14%, transparent); animation: cw-pulsa 1.2s ease-in-out infinite; vertical-align: middle; }
+@keyframes cw-pulsa { 50% { opacity: .5; } }
+
+.cw-lista { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 18px 22px 8px; }
+.cw-lista h3 { margin: 0 0 10px; font-size: 14px; }
+.cw-lista ul { display: grid; margin: 0; padding: 0; list-style: none; }
+.cw-lista li { display: flex; align-items: center; gap: 12px; padding: 11px 2px; border-top: 1px solid var(--border); }
+.cw-lista li:first-child { border-top: 0; }
+.cw-lista li > i { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; font-style: normal; font-weight: 800; }
+.cw-lista li.deposito > i { background: var(--up-soft); color: var(--up); }
+.cw-lista li.saque > i { background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); }
+.cw-mov { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.cw-mov b { font-size: 13.5px; }
+.cw-mov small { color: var(--muted); font-size: 11.5px; }
+.cw-valor { font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+li.deposito .cw-valor { color: var(--up); }
+.cw-vazio, .cw-erro { margin: 6px 0 12px; color: var(--muted); font-size: 13px; }
+.cw-erro { color: var(--down); }
+
+.cw-aviso { display: grid; gap: 8px; justify-items: start; margin: 0 22px 8px; padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.cw-aviso b { font-size: 15px; }
+.cw-aviso p { margin: 0 0 6px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+
+.cw-pe { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 22px 18px; border-top: 1px solid var(--border); }
+.cw-botao {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 16px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer;
+}
+.cw-botao:hover { border-color: var(--primary); }
+.cw-botao.principal { border-color: var(--primary); background: var(--primary); color: var(--surface); }
+:root[data-tema='escuro'] .cw-botao.principal { color: var(--bg); }
+.cw-botao:focus-visible, .cw-fechar:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+@media (max-width: 520px) {
+  .cw-fundo { padding: 0; align-items: end; }
+  .cw { width: 100%; max-height: 92dvh; border-radius: 18px 18px 0 0; }
+  .cw-topo, .cw-lista, .cw-pe { padding-left: 16px; padding-right: 16px; }
+  .cw-resumo, .cw-aviso { margin-left: 16px; margin-right: 16px; }
+  .cw-pe .cw-botao { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .cw-carregando { animation: none; } }
