@@ -59,6 +59,9 @@ export function vitrine(): string {
   return vitrineDaAba ?? ultimaVitrine() ?? ''
 }
 
+/** Este navegador já tem vitrine (pelo endereço desta aba ou por um endereço anterior)? */
+export const temVitrine = (): boolean => !!codigos().length && (vitrineDaAba !== undefined || ultimaVitrine() !== null)
+
 /** O app da Deriv da vitrine (o do parceiro, se ele tem um liberado), ou null = o da marca. */
 export const appDaVitrine = (): string | null => MARCA.appsDosParceiros?.[vitrine()] ?? null
 
@@ -102,7 +105,8 @@ export function lerParceiroDoLink(): void {
  * só os primeiros 300 caracteres: o código não pode ficar no fim e ser cortado).
  */
 export function paginaComParceiro(pagina: URL): URL {
-  const codigo = parceiroGuardado()
+  // o cadastro é do parceiro do endereço em que a pessoa está (o parceiro vale pela URL)
+  const codigo = vitrine() || null
   if (!codigo) return pagina
   const nova = new URL(pagina.origin + pagina.pathname)
   nova.searchParams.set('parceiro', codigo)
@@ -113,7 +117,7 @@ export function paginaComParceiro(pagina: URL): URL {
 
 /** Conta nova que entrou por outro caminho (ex.: comprou direto): o banco liga ao parceiro guardado, se couber. */
 export async function vincularParceiro(sessao: SessaoTeeds): Promise<void> {
-  const codigo = parceiroGuardado()
+  const codigo = vitrine() || null
   if (!codigo) return
   const chave = `${CHAVE}.vinculado.${sessao.usuario.id}`
   try { if (sessionStorage.getItem(chave)) return; sessionStorage.setItem(chave, '1') } catch { /* tenta mesmo assim */ }

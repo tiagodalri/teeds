@@ -10,7 +10,7 @@ import './divulgacao.css'
   encontrar os seus links e não ter essa mistura".
 
   O parceiro vê só os links DELE (o banco decide, pelo e-mail do login). Os de
-  cadastro saem do código do parceiro (/n, a landing com ?parceiro=n); os
+  cadastro saem do código do parceiro (/n, e a landing em /n/cadastro/); os
   outros o admin geral cadastra. O admin geral vê todos, edita os links e
   configura o login e o app da Deriv de cada parceiro.
 */
@@ -65,7 +65,7 @@ export function DivulgacaoPanel({ sessao, inicial }: { sessao: SessaoTeeds; inic
 
   if (!p) return <div className="dv"><p className="dv-vazio">Nenhum parceiro configurado.</p></div>
   const cadastro = comRede(`${site()}/${p.codigo}`, rede)
-  const landing = comRede(`${site()}/cadastro/?parceiro=${p.codigo}`, rede)
+  const landing = comRede(`${site()}/${p.codigo}/cadastro/`, rede)
   const situacaoDoApp = !p.derivAppId ? { cls: 'neutro', txt: `Sem app próprio: os clientes conectam pelo app da ${MARCA.prosa}` }
     : p.appLiberado ? { cls: 'ok', txt: 'App próprio em uso: o markup dos clientes cai nele' }
     : { cls: 'espera', txt: 'App cadastrado, aguardando liberação no servidor' }

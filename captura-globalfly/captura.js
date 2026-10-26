@@ -24,23 +24,39 @@ var GF = (function () {
     return tudo
   }
 
-  // Parceiro de divulgação (27/10/2026): o mesmo guardado pelo site (src/core/teeds/parceiro.ts,
-  // chave globalfly.parceiro, 90 dias, primeiro toque). Vai na FRENTE do endereço gravado: o
-  // servidor guarda só 300 caracteres. A regra que vale é a do banco.
-  var PARCEIROS = ['n', 'v'], CHAVE_PARCEIRO = 'globalfly.parceiro'
-  function parceiro() {
-    try {
-      var g = JSON.parse(localStorage.getItem(CHAVE_PARCEIRO) || 'null')
-      if (g && PARCEIROS.indexOf(g.codigo) >= 0 && Date.now() - g.em < 90 * 864e5) return g.codigo
-    } catch (e) {}
-    var daqui = (new URLSearchParams(location.search).get('parceiro') || '').toLowerCase()
-    if (PARCEIROS.indexOf(daqui) >= 0) { try { localStorage.setItem(CHAVE_PARCEIRO, JSON.stringify({ codigo: daqui, em: Date.now() })) } catch (e) {} return daqui }
-    return null
-  }
-  // O clique no link do parceiro conta no funil dele (um por navegador, por dia), como no site.
-  ;(function anotarClique() {
+  // Parceiro de divulgação (27/10/2026). Vale o ENDEREÇO (Tiago: "o que deve valer é a URL: no
+  // /n é Naor, no /v é Victor"): estas páginas moram em /n/cadastro/ e /v/cadastro/, e o /n ou o
+  // /v fica na barra do começo ao fim. O endereço também vira a vitrine do navegador (a mesma
+  // chave do site, src/core/teeds/parceiro.ts), e o primeiro parceiro fica guardado como "quem
+  // trouxe". Vai na FRENTE do endereço gravado: o servidor guarda só 300 caracteres.
+  var PARCEIROS = ['n', 'v'], CHAVE_PARCEIRO = 'globalfly.parceiro', CHAVE_VITRINE = 'globalfly.vitrine'
+  var doCaminho = (location.pathname.split('/').filter(Boolean)[0] || '').toLowerCase()
+  var DO_ENDERECO = PARCEIROS.indexOf(doCaminho) >= 0 ? doCaminho : null
+  // link antigo (/cadastro/?parceiro=n): passa para /n/cadastro/, levando o resto do endereço
+  ;(function paraOEnderecoDoParceiro() {
     var q = new URLSearchParams(location.search), codigo = (q.get('parceiro') || '').toLowerCase()
-    if (PARCEIROS.indexOf(codigo) < 0) return
+    if (DO_ENDERECO || PARCEIROS.indexOf(codigo) < 0) return
+    location.replace('/' + codigo + location.pathname + location.search + location.hash)
+  })()
+  function guardarCodigo(chave, codigo, so_se_vazio) {
+    try {
+      if (so_se_vazio) {
+        var g = JSON.parse(localStorage.getItem(chave) || 'null')
+        if (g && PARCEIROS.indexOf(g.codigo) >= 0 && Date.now() - g.em < 90 * 864e5) return
+      }
+      localStorage.setItem(chave, JSON.stringify({ codigo: codigo, em: Date.now() }))
+    } catch (e) {}
+  }
+  if (DO_ENDERECO) { guardarCodigo(CHAVE_VITRINE, DO_ENDERECO, false); guardarCodigo(CHAVE_PARCEIRO, DO_ENDERECO, true) }
+  /** O parceiro deste cadastro: o do endereço. */
+  function parceiro() { return DO_ENDERECO }
+  // O clique no link do parceiro conta no funil dele (um por navegador, por dia), como no site:
+  // só na primeira página (/n/cadastro/), não no questionário nem no obrigado.
+  ;(function anotarClique() {
+    var q = new URLSearchParams(location.search)
+    var primeira = /^\/[a-z0-9]+\/cadastro\/?$/.test(location.pathname)
+    var codigo = DO_ENDERECO && (primeira || q.get('parceiro')) ? DO_ENDERECO : null
+    if (!codigo) return
     var visitante = null
     try { visitante = JSON.parse(localStorage.getItem('globalfly.visitante') || 'null') } catch (e) {}
     if (!visitante || !/^[a-zA-Z0-9]{8,40}$/.test(visitante)) {
@@ -54,7 +70,6 @@ var GF = (function () {
         body: JSON.stringify({ p_marca: 'globalfly', p_codigo: codigo, p_visitante: visitante, p_link: (q.get('utm_source') || 'pagina-do-lancamento').slice(0, 60) }),
       }).catch(function () {})
     } catch (e) {}
-    parceiro()
   })()
   function paginaComParceiro() {
     var p = parceiro(), aqui = new URL(location.href)

@@ -290,6 +290,9 @@ export default defineConfig({
           writeFileSync(arquivo, readFileSync(arquivo, 'utf8')
             .replace("content=\"0; url=/?cadastro=1\"", `content="0; url=/?cadastro=1&amp;parceiro=${codigo}"`)
             .replace("q.set('cadastro', '1')", `q.set('cadastro', '1'); q.set('parceiro', '${codigo}')`))
+          // A landing do lançamento também mora no endereço do parceiro (/n/cadastro/): o /n fica
+          // na barra do começo ao fim (Tiago, 27/10/2026). A página lê o parceiro do próprio caminho.
+          if (existsSync(join(SAIDA, 'cadastro'))) cpSync(join(SAIDA, 'cadastro'), join(pasta, 'cadastro'), { recursive: true })
         }
         // O CNAME e o que diz ao GitHub Pages qual dominio serve esta pasta.
         // Sai da tabela de marcas, nao de um arquivo escrito a mao: dominio
@@ -346,6 +349,22 @@ export default defineConfig({
           }),
         }
         writeFileSync(join(SAIDA, 'manifest.webmanifest'), JSON.stringify(manifesto, null, 2) + '\n')
+        /*
+          O app instalado de cada parceiro (27/10/2026). No iPhone, o app da tela inicial não
+          enxerga o que o Safari guardou: se ele abrisse na raiz, quem instalou pelo /n viraria
+          "direto". Na vitrine do parceiro, a página troca o manifesto (src/main.tsx) por este,
+          que abre o app já no endereço dele. Mesmo id: é o mesmo app.
+        */
+        for (const codigo of MARCA.parceiros ?? []) {
+          if (!/^[a-z0-9]{1,20}$/.test(codigo)) continue
+          const comCodigo = (u: string) => `${u}${u.includes('?') ? '&' : '?'}parceiro_rota=${codigo}`
+          const doParceiro = {
+            ...manifesto,
+            start_url: comCodigo(manifesto.start_url),
+            ...('shortcuts' in manifesto && Array.isArray(manifesto.shortcuts) ? { shortcuts: manifesto.shortcuts.map((a: { url: string }) => ({ ...a, url: comCodigo(a.url) })) } : {}),
+          }
+          writeFileSync(join(SAIDA, `manifest-${codigo}.webmanifest`), JSON.stringify(doParceiro, null, 2) + '\n')
+        }
 
         const essenciais = readdirSync(join(SAIDA, 'assets'))
           .filter((arquivo) => /\.(?:js|css)$/.test(arquivo))

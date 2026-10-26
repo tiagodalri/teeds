@@ -11,7 +11,7 @@ import './styles/pagina.css'
 import { aplicarTema, temaGuardado } from './core/tema'
 import { MARCA } from './marca'
 import { registrarVisita } from './core/teeds/visitas'
-import { appDaVitrine, lerParceiroDoLink } from './core/teeds/parceiro'
+import { appDaVitrine, lerParceiroDoLink, vitrine } from './core/teeds/parceiro'
 import { usarAppDaDeriv } from './core/deriv/auth'
 import { haTrocaEmAndamento } from './core/trocaEmAndamento'
 // Guarda o pedido de instalação do Chrome assim que ele chega (ver o arquivo).
@@ -72,6 +72,11 @@ if (MARCA.parceiros?.length) {
   lerParceiroDoLink()
   // o parceiro vale pela URL: no /n a Deriv conecta e opera pelo app do Naor (27/10/2026)
   usarAppDaDeriv(appDaVitrine())
+  // instalar o app daqui instala o app do parceiro: abre sempre no /n (ver vite.config.ts)
+  const v = vitrine()
+  const manifesto = document.querySelector('link[rel="manifest"]')
+  const href = manifesto?.getAttribute('href') ?? ''
+  if (v && /manifest\.webmanifest/.test(href)) manifesto!.setAttribute('href', href.replace('manifest.webmanifest', `manifest-${v}.webmanifest`))
 }
 registrarVisita()
 

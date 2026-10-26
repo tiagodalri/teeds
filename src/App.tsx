@@ -6,7 +6,7 @@ import { DigitsPanel } from './components/DigitsPanel'
 import { labDoBanco } from './core/laboratorio/dados'
 import { BoletaAtivo, BotaoCompra, MostradorDuracao, MostradorValor, ResumoDaCompra } from './components/operar/Boleta'
 import { UltimasEntradas } from './components/operar/UltimasEntradas'
-import { meusLinks, vincularParceiro, type MeusLinks } from './core/teeds/parceiro'
+import { meuParceiro, meusLinks, temVitrine, vincularParceiro, type MeusLinks } from './core/teeds/parceiro'
 import { CatalogoProvider } from './core/teeds/catalogoRobos'
 import { usePreferenciaColuna } from './core/teeds/preferenciaColuna'
 import { useMarcaEmFoco } from './core/teeds/marcaEmFoco'
@@ -568,7 +568,16 @@ export default function App() {
     if (!teeds.sessao || !MARCA.parceiros?.length) return
     const sessao = teeds.sessao
     void meusLinks(sessao).then(setLinksDeParceiro).catch(() => setLinksDeParceiro(null))
-    void vincularParceiro(sessao).catch(() => undefined)
+    void vincularParceiro(sessao).catch(() => undefined).then(async () => {
+      // Aparelho que nunca abriu um endereço de parceiro (o app recém-instalado no iPhone não vê o
+      // que o Safari guardou): vale o parceiro que trouxe a conta, uma vez, e o endereço passa a
+      // levar o código dele. Daí em diante, vale de novo o endereço.
+      if (temVitrine()) return
+      // no meio da volta da Deriv ou de um link de e-mail, não recarrega (o código se perderia)
+      if (/[?&](code|state|confirmar|token_hash)=/.test(location.search)) return
+      const daConta = await meuParceiro(sessao)
+      if (daConta && MARCA.parceiros?.includes(daConta)) location.replace(`/?parceiro_rota=${encodeURIComponent(daConta)}`)
+    })
   }, [usuarioTeedsId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
