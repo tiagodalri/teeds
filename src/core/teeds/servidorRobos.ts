@@ -45,7 +45,7 @@ async function api<T>(
   } catch {
     if (relogio) clearTimeout(relogio)
     if (ctrl.signal.aborted) {
-      throw new Error('A resposta está demorando mais que o normal (a Deriv parece instável). Se o robô ligar, ele aparece na sua lista em instantes; se não, tente de novo.')
+      throw new Error('A resposta está demorando mais que o normal (a Deriv parece instável). Se o robô ligar, aparece na sua lista em instantes; se não, tente de novo.')
     }
     // servidor fora do ar, wi-fi caiu, certificado recusado — para quem
     // está olhando é tudo a mesma coisa: não deu para falar com ele

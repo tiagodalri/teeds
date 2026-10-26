@@ -24,6 +24,7 @@ import './components/robot-workspace.css'
 import './components/workspace.css'
 import { aplicarTema, temaGuardado } from './core/tema'
 import { MARCA } from './marca'
+import { ligarVocabularioIA } from './marca/vocabularioIA'
 import { LoginScreen } from './components/LoginScreen'
 import { RobotCartao } from './components/RobotResumo'
 import { IDENTIDADES } from './core/deriv/branding'
@@ -113,6 +114,7 @@ document.documentElement.dataset.marca = MARCA.id
 { const t = new URLSearchParams(location.search).get('tema'); aplicarTema(t === 'claro' || t === 'escuro' ? t : temaGuardado()) }
 // no computador a página nasce em 90% (ver core/escala.ts)
 ligarEscala()
+if (MARCA.vocabularioIA) ligarVocabularioIA()
 // &app=1: simula o app instalado num iPhone (barra de status de 47 px)
 if (new URLSearchParams(location.search).has('app')) {
   document.documentElement.classList.add('app-instalado')

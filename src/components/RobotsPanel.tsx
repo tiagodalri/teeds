@@ -348,7 +348,7 @@ export function RobotsPanel({
 
       <RobotOverview sessoes={vivasNoServidor} />
       <div className="rob-workspace-toolbar" hidden={!temAcompanhamento}>
-        <div><b>Área de acompanhamento</b><span>{disposicao === 'lista' ? 'Clique numa linha para abrir a cabine dela. Os outros robôs seguem operando na linha deles.' : 'Todos os robôs de uma vez. "Abrir na lista" mostra a cabine completa.'}</span></div>
+        <div><b>Área de acompanhamento</b><span>{disposicao === 'lista' ? 'Clique numa linha para abrir a cabine dela. Os outros robôs seguem operando normalmente.' : 'Todos os robôs de uma vez. "Abrir na lista" mostra a cabine completa.'}</span></div>
         <div className="rob-toolbar-direita">
           {/* Ampliar dígitos para a tela inteira (20/10/2026): no mosaico ou na lista,
               sem precisar abrir a cabine de um robô. O painel é o mesmo dos blocos. */}

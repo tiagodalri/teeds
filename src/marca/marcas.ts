@@ -149,6 +149,8 @@ export interface Marca {
   seloCategoria?: boolean
   /** Laboratório de IA (26/10/2026): os admins da marca montam e testam robôs por receita. */
   laboratorioIA?: boolean
+  /** A palavra "robô" vira "I.A." em toda a tela, com a concordância (ver vocabularioIA.ts). */
+  vocabularioIA?: boolean
   /**
    * Nome e ícone de itens do menu lateral, por marca (19/10/2026: na
    * GlobalFly, "Robôs" virou "I.A." com o símbolo de brilhos, e o Assistente
@@ -397,6 +399,8 @@ export const MARCAS: Record<string, Marca> = {
     seloCategoria: true,
     // 26/10/2026 (Tiago): "todos admins da GF devem poder criar"
     laboratorioIA: true,
+    // 26/10/2026 (Tiago): "evite sempre a palavra Robôs, vamos trocar tudo por I.A."
+    vocabularioIA: true,
     menu: {
       nomes: { robos: 'I.A.' },
       icones: {

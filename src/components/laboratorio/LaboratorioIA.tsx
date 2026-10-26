@@ -505,7 +505,7 @@ function EditorDeGatilho({ gatilho: g, contrato, aoMudar }: { gatilho: Gatilho; 
         {g.tipo === 'lossVirtual' && <ExemploDaSequencia n={g.n} contam={perdem} contrato={contrato} />}
       </div>
 
-      {g.tipo === 'lossVirtual' && <p className="lb-dica">Loss virtual: o robô assiste sem comprar e conta os dígitos que teriam feito a compra perder. Quando a conta chega no número, ele entra.</p>}
+      {g.tipo === 'lossVirtual' && <p className="lb-dica">Loss virtual: o robô assiste sem comprar e conta os dígitos que teriam feito a compra perder. Quando a conta chega no número, é hora de entrar.</p>}
       {g.tipo === 'frequencia' && <p className="lb-dica">No longo prazo cada dígito aparece 10% das vezes. A frequência olha uma janela curta e entra quando um grupo de dígitos está abaixo do normal.</p>}
     </div>
   )
