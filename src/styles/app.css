@@ -5463,6 +5463,11 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 :root[data-tema='escuro'] .mon-selo.plataforma.teeds { color: #e2c278; }
 :root[data-tema='escuro'] .mon-selo.plataforma.omni { color: #9fb2ff; }
 :root[data-tema='escuro'] .mon-selo.plataforma.globalfly { color: #8fc0f5; }
+/* parceiro de divulgação do cliente (27/10/2026): Naor /n, Victor /v ou Direto */
+.mon-selo.parceiro { text-transform: none; letter-spacing: 0; font-weight: 700; color: var(--text); background: var(--surface-alt); }
+.mon-selo.parceiro.n { border-color: color-mix(in srgb, #2F8F72 55%, var(--border)); background: color-mix(in srgb, #2F8F72 12%, transparent); }
+.mon-selo.parceiro.v { border-color: color-mix(in srgb, var(--gf-ouro, #B78D39) 60%, var(--border)); background: color-mix(in srgb, var(--gf-ouro, #B78D39) 14%, transparent); }
+.mm-cliente b .mon-selo.parceiro, .adm-pessoa b .mon-selo.parceiro { margin-left: 8px; padding: 2px 8px; font-size: 10.5px; vertical-align: 1px; }
 /* Na Rede a lista de encerradas ganha a coluna da plataforma. */
 .mon-tabela:has(.mon-selo.plataforma) .cab,
 .mon-tabela:has(.mon-selo.plataforma) .ins-linha { grid-template-columns: 1.5fr .75fr .9fr .9fr .7fr .95fr 1.1fr 24px; }

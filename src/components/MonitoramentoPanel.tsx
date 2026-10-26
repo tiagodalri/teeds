@@ -16,7 +16,7 @@ import { ESTRATEGIAS_LOCAIS, modoDaConfig, NOME_DO_MODO, temModos } from '../cor
 import { identidade } from '../core/deriv/branding'
 import { useMarcaEmFoco, REDE } from '../core/teeds/marcaEmFoco'
 import { SeletorDePlataforma, opcoesDePlataforma } from './SeletorDePlataforma'
-import { noFoco, useParceiroEmFoco, useParceirosDaMarca } from '../core/teeds/parceiroEmFoco'
+import { noFoco, seloDoParceiro, useParceiroEmFoco, useParceirosDaMarca } from '../core/teeds/parceiroEmFoco'
 import { ChaveModoCeo } from './ChaveModoCeo'
 import { MARCA } from '../marca'
 import { nomeDoAtivo } from '../core/deriv/market'
@@ -99,7 +99,7 @@ function mensagemDoErro(e: unknown): { estado: EstadoDaTela; texto: string } {
 
 /* ============================================================ cartão */
 
-export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMarca = false, aoAbrir }: { s: SessaoEspelho; cliente?: ClienteRegistro; saude: Saude; visao: Visao; mostrarMarca?: boolean; aoAbrir: (id: string) => void }) {
+export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMarca = false, selo = null, aoAbrir }: { s: SessaoEspelho; cliente?: ClienteRegistro; saude: Saude; visao: Visao; mostrarMarca?: boolean; selo?: { texto: string; codigo: string } | null; aoAbrir: (id: string) => void }) {
   const e = s.estado
   const cor = semaforo(s, saude === 'ao-vivo' ? s.recebidoEm : saude === 'atencao' ? s.recebidoEm + 3000 : s.recebidoEm + 10_000)
   const { cor: corRobo } = regrasDoRobo(s.roboId)
@@ -128,6 +128,7 @@ export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMa
         {/* Só na Rede: com uma plataforma só, repetir a marca em todo cartão
             seria ruído. Na Rede é a informação que falta para ler o mosaico. */}
         {mostrarMarca && <em className={`mon-selo plataforma ${s.marca}`}>{NOME_DA_MARCA[s.marca] ?? s.marca}</em>}
+        {selo && <em className={`mon-selo parceiro ${selo.codigo}`}>{selo.texto}</em>}
         <em className={`mon-selo conta ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'Conta demo' : 'Conta real'}</em>
         {modo && <em className={`mon-selo modo ${modo}`}>{NOME_DO_MODO[modo]}</em>}
       </div>
@@ -625,6 +626,14 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
     return arr
   }, [sessoes, clientes, busca, filtroConta, filtroOnline, filtroRobo, filtroResultado, ordem, agora, filtrandoParceiro, parceiroFoco])
 
+  /* O parceiro em foco vale para TUDO nesta tela: cartões, números do topo,
+     operações manuais e encerradas (27/10/2026, Tiago: "o filtro do /n e do
+     /v não funciona, mostra as mesmas operações nas duas"). Ficha que ainda
+     não chegou fica de fora até chegar, para nunca vazar de um parceiro no outro. */
+  const doFoco = useCallback((userId: string) => !filtrandoParceiro
+    || noFoco(parceiroFoco, clientes.has(userId) ? clientes.get(userId)!.parceiro ?? null : undefined), [filtrandoParceiro, parceiroFoco, clientes])
+  const seloDe = useCallback((userId: string) => seloDoParceiro(parceiros, clientes.has(userId) ? clientes.get(userId)!.parceiro ?? null : undefined), [parceiros, clientes])
+  const sessoesNoFoco = [...sessoes.values()].filter((s) => doFoco(s.userId)).length
   const online = [...sessoes.values()].filter((s) => s.situacao === 'rodando' && s.estado.rodando !== false
     && (!filtrandoParceiro || noFoco(parceiroFoco, clientes.has(s.userId) ? clientes.get(s.userId)!.parceiro ?? null : undefined)))
   // quem está operando agora: nos robôs e no manual (as manuais abertas vêm do bloco de operações manuais)
@@ -670,7 +679,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
         <>
           <div className="adm-kpis mon-kpis">
             <article className="ok"><span>Clientes online</span><strong>{clientesOnline}</strong><small>{online.length} rob{online.length === 1 ? 'ô' : 'ôs'} operando · {manuaisAbertas.n} manua{manuaisAbertas.n === 1 ? 'l aberta' : 'is abertas'}</small></article>
-            <article><span>Na visualização</span><strong>{lista.length}</strong><small>de {sessoes.size} {sessoes.size === 1 ? 'sessão' : 'sessões'} no período</small></article>
+            <article><span>Na visualização</span><strong>{lista.length}</strong><small>de {sessoesNoFoco} {sessoesNoFoco === 1 ? 'sessão' : 'sessões'} no período{filtrandoParceiro ? ` · ${parceiroFoco === 'direto' ? 'Direto' : seloDoParceiro(parceiros, parceiroFoco)?.texto}` : ''}</small></article>
             <article className={resultadoTotal >= 0 ? 'ok' : 'perigo'}><span>Resultado agregado</span><strong>{assinado(resultadoTotal)}</strong><small>das sessões na visualização</small></article>
             <article className={alertas.length ? 'perigo' : ''}><span>Alertas</span><strong>{alertas.length}</strong><small>perto do stop, recusa ou sem sinal{desatualizadas ? ` · ${desatualizadas} sem atualização` : ''}</small></article>
           </div>
@@ -690,10 +699,10 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
             <div className="mon-visao" role="group" aria-label="Disposição">{(['compacto', 'confortavel', 'lista'] as Visao[]).map((v) => <button key={v} className={visao === v ? 'on' : ''} aria-pressed={visao === v} aria-label={v} onClick={() => setVisao(v)}>{v === 'compacto' ? '▦' : v === 'confortavel' ? '▣' : '☰'}</button>)}</div>
           </div>
           <OperacoesManuais sessao={sessao} marcas={marcas} horas={Number(periodo)} conta={filtroConta} busca={busca} mostrarMarkup={mostrarMarkup}
-            clientes={clientes} garantirClientes={garantirClientes} aoContar={contarManuais} />
+            clientes={clientes} garantirClientes={garantirClientes} aoContar={contarManuais} doFoco={doFoco} selo={seloDe} />
           <h3 className="mon-titulo-bloco"><span className="mon-tag ia">I.A.</span> Robôs</h3>
           <div className={`mon-mosaico ${visao}`}>
-            {lista.slice(0, limite).map((s) => <Cartao key={s.sessaoId} s={s} cliente={clientes.get(s.userId)} saude={saudes.get(s.sessaoId) ?? 'desatualizado'} visao={visao} mostrarMarca={naRede} aoAbrir={abrirFoco} />)}
+            {lista.slice(0, limite).map((s) => <Cartao key={s.sessaoId} s={s} cliente={clientes.get(s.userId)} saude={saudes.get(s.sessaoId) ?? 'desatualizado'} visao={visao} mostrarMarca={naRede} selo={seloDe(s.userId)} aoAbrir={abrirFoco} />)}
             {!lista.length && <div className="mon-estado">{sessoes.size ? <><b>Nenhuma sessão passa pelos filtros.</b>Ajuste o período ou os filtros acima.</> : <><b>Nenhum robô operando nesta marca agora.</b>Quando um cliente ligar um robô, a cabine aparece aqui sozinha.</>}</div>}
           </div>
           {lista.length > limite && <button className="mon-mais" onClick={() => setLimite((l) => l + 60)}>Mostrar mais {Math.min(60, lista.length - limite)} de {lista.length - limite} restantes</button>}
@@ -720,7 +729,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
             <div className="cab"><span>Cliente</span>{naRede && <span>Plataforma</span>}<span>Robô</span><span>Conta</span><span>Operações</span><span>Resultado</span>{mostrarMarkup && <span>Markup</span>}<span>Encerrada</span><span /></div>
             {encerradasFiltradas.slice(0, limiteEncerradas).map((s) => { const c = clientes.get(s.userId); return (
               <button key={s.id} className="ins-linha mon-linha" onClick={() => setReplayDe(s)}>
-                <span className="adm-pessoa"><i>{(c?.nome || c?.email || '?')[0].toUpperCase()}</i><b>{c?.nome || 'Sem nome'}<small>{mascararEmail(c?.email)}</small></b></span>
+                <span className="adm-pessoa"><i>{(c?.nome || c?.email || '?')[0].toUpperCase()}</i><b>{c?.nome || 'Sem nome'}{(() => { const x = seloDe(s.userId); return x ? <em className={`mon-selo parceiro ${x.codigo}`}>{x.texto}</em> : null })()}<small>{mascararEmail(c?.email)}</small></b></span>
                 {naRede && <span><em className={`mon-selo plataforma ${s.marca}`}>{NOME_DA_MARCA[s.marca] ?? s.marca}</em></span>}
                 <span>{s.roboNome}</span><span>{mascararConta(s.contaId)} <em className={`mon-tipo ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'demo' : 'real'}</em></span>
                 <span>{s.operacoes} <small className="up">{s.ganhas}</small> <small className="down">{s.perdidas}</small></span>

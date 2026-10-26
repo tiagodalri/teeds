@@ -29,7 +29,7 @@ const usd = (v: number) => `${v < 0 ? '−' : ''}US$ ${Math.abs(v).toLocaleStrin
 const hora = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 const SITUACAO: Record<string, string> = { aberta: 'Aberta', ganhou: 'Ganhou', perdeu: 'Perdeu', vendida: 'Encerrada antes', encerrada: 'Encerrada' }
 
-export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarMarkup, clientes, garantirClientes, aoContar }: {
+export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarMarkup, clientes, garantirClientes, aoContar, doFoco, selo }: {
   sessao: SessaoTeeds
   marcas: string[]
   horas: number
@@ -40,6 +40,10 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
   garantirClientes: (ids: string[]) => void | Promise<void>
   /** Para os números do topo: quantas abertas agora e quantos clientes operando no manual. */
   aoContar?: (abertas: number, clientesOperando: string[]) => void
+  /** O cliente entra na visualização? (o parceiro em foco: /n, /v, Direto) */
+  doFoco?: (userId: string) => boolean
+  /** O selo do parceiro do cliente, quando a marca tem parceiros. */
+  selo?: (userId: string) => { texto: string; codigo: string } | null
 }) {
   const [ops, setOps] = useState<Map<string, OpManual>>(new Map())
   const [agora, setAgora] = useState(Date.now())
@@ -79,13 +83,14 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
   const termo = busca.trim().toLowerCase()
   const lista = useMemo(() => [...ops.values()]
     .filter((o) => (conta === 'todas' || (conta === 'demo') === o.demo))
+    .filter((o) => !doFoco || doFoco(o.userId))
     .filter((o) => {
       if (!termo) return true
       const c = clientes.get(o.userId)
       return [c?.nome, c?.email, o.ativo, nomeDoAtivo(o.ativo)].some((x) => (x ?? '').toLowerCase().includes(termo))
     })
     .sort((a, b) => Number(b.situacao === 'aberta') - Number(a.situacao === 'aberta') || Date.parse(b.compradaEm) - Date.parse(a.compradaEm)),
-  [ops, conta, termo, clientes])
+  [ops, conta, termo, clientes, doFoco])
 
   const abertas = lista.filter((o) => o.situacao === 'aberta')
   useEffect(() => { aoContar?.(abertas.length, [...new Set(abertas.map((o) => o.userId))]) }, [abertas.length, aoContar]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -114,7 +119,7 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
             return (
               <tr key={chave(o)} className={o.situacao === 'aberta' ? 'mm-aberta' : ''}>
                 <td className="num">{hora(o.compradaEm)}</td>
-                <td className="mm-cliente"><b>{c?.nome || c?.email || 'Cliente'}</b>{c?.nome && c?.email && <small>{c.email}</small>}</td>
+                <td className="mm-cliente"><b>{c?.nome || c?.email || 'Cliente'}{(() => { const x = selo?.(o.userId); return x ? <em className={`mon-selo parceiro ${x.codigo}`}>{x.texto}</em> : null })()}</b>{c?.nome && c?.email && <small>{c.email}</small>}</td>
                 <td>{nomeDoAtivo(o.ativo)}</td>
                 <td>{NOMES_DE_CONTRATO[o.tipo] ?? o.tipo}</td>
                 <td><span className={`mon-conta ${o.demo ? 'demo' : 'real'}`}>{o.demo ? 'Demo' : 'Real'}</span></td>

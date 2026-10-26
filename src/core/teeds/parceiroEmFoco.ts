@@ -54,3 +54,11 @@ export function noFoco(foco: string, parceiro: string | null | undefined): boole
   if (parceiro === undefined) return false
   return foco === 'direto' ? parceiro === null : parceiro === foco
 }
+
+/** O selo do cliente no admin: "Naor /n", "Victor /v" ou "Direto". undefined = a ficha ainda não chegou. */
+export function seloDoParceiro(parceiros: OpcaoDeParceiro[], parceiro: string | null | undefined): { texto: string; codigo: string } | null {
+  if (!parceiros.length || parceiro === undefined) return null
+  if (!parceiro) return { texto: 'Direto', codigo: 'direto' }
+  const p = parceiros.find((x) => x.codigo === parceiro)
+  return { texto: `${(p?.nome ?? parceiro).split(' ')[0]} /${parceiro}`, codigo: parceiro }
+}
