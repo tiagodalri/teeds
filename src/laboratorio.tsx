@@ -73,6 +73,7 @@ function LabSeletor() {
   </div>
 }
 const LabParceiros = lazy(() => import('./components/LabParceiros'))
+const LabChatDaEquipe = lazy(() => import('./components/equipe/LabChatDaEquipe'))
 const LabGerenciamento = lazy(() => import('./components/OperationalManagementPanel').then((m) => ({ default: m.OperationalManagementPanel })))
 const LabDivulgacao = lazy(() => import('./components/LabDivulgacao'))
 const LabLaboratorio = lazy(() => import('./components/laboratorio/LabLaboratorio'))
@@ -315,6 +316,7 @@ function Laboratorio() {
   // ?tela=carteira (&sem=1): a carteira da Deriv, com e sem a permissão `payment`
   if (qual === 'carteira') return <Suspense fallback={null}><LabCarteira /></Suspense>
   if (qual === 'parceiros') return <Suspense fallback={null}><LabParceiros /></Suspense>
+  if (qual === 'equipe') return <Suspense fallback={null}><LabChatDaEquipe /></Suspense>
   // ?tela=seletor: o seletor de plataforma com a linha dos parceiros (admin geral)
   if (qual === 'seletor') return <LabSeletor />
   if (qual === 'divulgacao') return <Suspense fallback={null}><LabDivulgacao /></Suspense>

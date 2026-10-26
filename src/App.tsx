@@ -74,6 +74,8 @@ const CarteiraDeriv = lazy(() => import('./components/CarteiraDeriv').then((m) =
 const LaboratorioIA = lazy(() => import('./components/laboratorio/LaboratorioIA').then((m) => ({ default: m.LaboratorioIA })))
 const AjudaPagina = lazy(() => import('./components/ajuda/AjudaPagina').then((m) => ({ default: m.AjudaPagina })))
 const SuporteWidget = lazy(() => import('./components/suporte/SuporteWidget').then((m) => ({ default: m.SuporteWidget })))
+// o chat da equipe (27/10/2026): só administradores; entra sob demanda
+const ChatDaEquipe = lazy(() => import('./components/equipe/ChatDaEquipe').then((m) => ({ default: m.ChatDaEquipeDoBanco })))
 const MeuPerfil = lazy(() => import('./components/perfil/MeuPerfil').then((m) => ({ default: m.MeuPerfil })))
 // o Início é a primeira tela da GlobalFly: o download começa junto com o app, não depois do primeiro render
 const carregarInicio = () => import('./components/inicio/InicioPagina')
@@ -1071,6 +1073,12 @@ export default function App() {
           <SuporteWidget sessao={teeds.sessao} nome={teeds.usuario?.nome || ''} telaAtual={tela} admin={adminConfirmado}
             escondido={tela === 'aovivo' || (adminConfirmado && tela === 'gestao')}
             irPara={(t) => setTela(t as WorkspacePage)} onAbrirCaixa={abrirCaixaDoSuporte} />
+        </Suspense>
+      )}
+
+      {adminConfirmado && teeds.sessao && (
+        <Suspense fallback={null}>
+          <ChatDaEquipe sessao={teeds.sessao} escondido={tela === 'aovivo'} />
         </Suspense>
       )}
 
