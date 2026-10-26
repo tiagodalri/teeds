@@ -3,8 +3,8 @@ import { subscribeTicks, fetchTickHistory } from '../../core/deriv/market'
 import { publicSocket, type TeedsSocket } from '../../core/deriv/client'
 import { ultimoDigito, type DigitContract } from '../../core/deriv/digits'
 import {
-  DIGITOS_VALIDOS, MODELOS, NOME_DO_CONTRATO, chaveDoContrato, chanceTeorica, digitosQueGanham, frases, problemas, receitaNova,
-  textoContrato, textoTicks, usaDigito, type Condicao, type Contrato, type Gatilho, type Receita,
+  DIGITOS_VALIDOS, MODELOS, NOME_DO_CONTRATO, chaveDoContrato, chanceTeorica, cumpre, digitosQueGanham, frases, problemas, receitaNova,
+  textoCondicao, textoContrato, textoTicks, usaDigito, type Condicao, type Contrato, type Gatilho, type Receita,
 } from '../../core/laboratorio/receita'
 import { estadoInicial, faseAtiva, passo, porDolarEstimado, type Estado, type Evento, type NomeDaFase } from '../../core/laboratorio/maquina'
 import { escadaDaReceita, leituraDoPagamento, simular, type ResultadoDaSimulacao } from '../../core/laboratorio/simular'
@@ -348,17 +348,102 @@ const GATILHOS: Array<{ tipo: Gatilho['tipo']; nome: string; ajuda: string }> = 
   { tipo: 'sempre', nome: 'Sempre', ajuda: 'Entra a cada tick' },
 ]
 
-function EditorDeCondicao({ c, aoMudar }: { c: Condicao; aoMudar: (c: Condicao) => void }) {
-  const tipos: Array<[Condicao['tipo'], string]> = [['menor', 'menores que'], ['maior', 'maiores que'], ['igual', 'iguais a'], ['diferente', 'diferentes de'], ['par', 'pares'], ['impar', 'ímpares']]
-  const temDigito = c.tipo !== 'par' && c.tipo !== 'impar'
+/*
+  Ajustar a análise (26/10/2026, Tiago: "melhorar essa experiência" sobre a
+  frase com contador e dois menus suspensos). Agora a frase só LÊ o que foi
+  escolhido; embaixo, cada pergunta tem a sua linha com todas as opções à
+  vista (um clique, nada escondido em menu) e o teclado de dígitos mostra
+  quais contam. Para sequência e loss virtual, um exemplo desenha os dígitos.
+*/
+
+const CONDICOES: Array<[Condicao['tipo'], string]> = [['menor', 'Menores que'], ['maior', 'Maiores que'], ['igual', 'Iguais a'], ['diferente', 'Diferentes de'], ['par', 'Pares'], ['impar', 'Ímpares']]
+// o dígito que deixaria a condição vazia (nenhum menor que 0, nenhum maior que 9) não aparece para escolher
+const digitoPossivel = (tipo: Condicao['tipo'], d: number) => !(tipo === 'menor' && d === 0) && !(tipo === 'maior' && d === 9)
+const listaDeDigitos = (l: number[]) => l.length === 10 ? 'todos' : l.length > 1 ? `${l.slice(0, -1).join(', ')} e ${l[l.length - 1]}` : l.join('')
+
+function Ajuste({ rotulo, ajuda, children }: { rotulo: string; ajuda?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <span className="lb-cond">
-      <select id={`lb-cond-${c.tipo}`} aria-label="Condição" value={c.tipo} onChange={(e) => {
-        const t = e.target.value as Condicao['tipo']
-        aoMudar(t === 'par' || t === 'impar' ? { tipo: t } : { tipo: t, digito: 'digito' in c ? c.digito : 5 } as Condicao)
-      }}>{tipos.map(([t, n]) => <option key={t} value={t}>{n}</option>)}</select>
-      {temDigito && <select aria-label="Dígito" value={(c as { digito: number }).digito} onChange={(e) => aoMudar({ ...(c as { tipo: 'menor'; digito: number }), digito: Number(e.target.value) })}>{DIGITOS.map((d) => <option key={d} value={d}>{d}</option>)}</select>}
-    </span>
+    <div className="lb-ajuste">
+      <div className="lb-ajuste-rot"><b>{rotulo}</b>{ajuda && <small>{ajuda}</small>}</div>
+      <div className="lb-ajuste-ctl">{children}</div>
+    </div>
+  )
+}
+
+/** Números lado a lado (um clique) para as faixas curtas. */
+function Escolha({ valores, valor, aoMudar, rotulo }: { valores: number[]; valor: number; aoMudar: (n: number) => void; rotulo: string }) {
+  return (
+    <div className="lb-chips grade" role="radiogroup" aria-label={rotulo} style={{ '--qtd': valores.length } as React.CSSProperties}>
+      {valores.map((n) => <button key={n} type="button" role="radio" aria-checked={valor === n} className={valor === n ? 'on' : ''} onClick={() => aoMudar(n)}>{n}</button>)}
+    </div>
+  )
+}
+
+/** Para as faixas longas: atalhos comuns e o contador para o ajuste fino. */
+function Quantidade({ valor, min, max, atalhos, rotulo, aoMudar }: { valor: number; min: number; max: number; atalhos: number[]; rotulo: string; aoMudar: (n: number) => void }) {
+  return (
+    <div className="lb-quantidade">
+      <Contador valor={valor} min={min} max={max} rotulo={rotulo} aoMudar={aoMudar} />
+      <div className="lb-chips leves" aria-label="Atalhos">
+        {atalhos.map((n) => <button key={n} type="button" className={valor === n ? 'on' : ''} onClick={() => aoMudar(n)}>{n}</button>)}
+      </div>
+    </div>
+  )
+}
+
+/** Teclado 0–9. `contam` acende os dígitos que entram na conta; `escolhido` leva a borda. */
+function TecladoDeDigitos({ contam, escolhido, possivel, aoEscolher, rotulo }: { contam: Set<number>; escolhido?: number; possivel?: (d: number) => boolean; aoEscolher?: (d: number) => void; rotulo: string }) {
+  return (
+    <div className="lb-teclado lb-teclado-cond" role={aoEscolher ? 'radiogroup' : 'img'} aria-label={rotulo}>
+      {DIGITOS.map((d) => {
+        const pode = !!aoEscolher && (possivel?.(d) ?? true)
+        return (
+          <button key={d} type="button" disabled={!pode} role={aoEscolher ? 'radio' : undefined} aria-checked={aoEscolher ? escolhido === d : undefined}
+            className={`${contam.has(d) ? 'conta' : 'fora'} ${escolhido === d ? 'sel' : ''} ${aoEscolher ? '' : 'leitura'}`} onClick={() => aoEscolher?.(d)}>{d}</button>
+        )
+      })}
+    </div>
+  )
+}
+
+function EditorDeCondicao({ c, aoMudar }: { c: Condicao; aoMudar: (c: Condicao) => void }) {
+  const temDigito = c.tipo !== 'par' && c.tipo !== 'impar'
+  const contam = DIGITOS.filter((d) => cumpre(c, d))
+  const trocar = (t: Condicao['tipo']) => {
+    if (t === 'par' || t === 'impar') return aoMudar({ tipo: t })
+    const atual = 'digito' in c ? c.digito : 5
+    aoMudar({ tipo: t, digito: digitoPossivel(t, atual) ? atual : t === 'menor' ? 1 : 8 })
+  }
+  return (
+    <>
+      <Ajuste rotulo="Como são esses dígitos">
+        <div className="lb-seg lb-seg-cond" role="radiogroup" aria-label="Condição">
+          {CONDICOES.map(([t, nome]) => <button key={t} type="button" role="radio" aria-checked={c.tipo === t} className={c.tipo === t ? 'on' : ''} onClick={() => trocar(t)}>{nome}</button>)}
+        </div>
+      </Ajuste>
+      <Ajuste rotulo={temDigito ? 'Qual dígito' : 'Os que contam'} ajuda={<>Contam: <b>{listaDeDigitos(contam)}</b></>}>
+        <TecladoDeDigitos rotulo={temDigito ? 'Dígito da condição' : 'Dígitos que contam'} contam={new Set(contam)} escolhido={temDigito ? (c as { digito: number }).digito : undefined}
+          possivel={(d) => digitoPossivel(c.tipo, d)} aoEscolher={temDigito ? (d) => aoMudar({ ...(c as { tipo: 'menor'; digito: number }), digito: d }) : undefined} />
+      </Ajuste>
+    </>
+  )
+}
+
+/** Um exemplo desenhado: alguns dígitos que não contam e, em seguida, os N que contam; aí o robô entra. */
+function ExemploDaSequencia({ n, contam, contrato }: { n: number; contam: number[]; contrato: Contrato }) {
+  const fora = DIGITOS.filter((d) => !contam.includes(d))
+  if (!contam.length) return null
+  const antes = fora.length ? [fora[(3 * 7) % fora.length], fora[(5 * 3) % fora.length]] : []
+  const seguidos = Array.from({ length: n }, (_, i) => contam[(i * 7 + 3) % contam.length])
+  return (
+    <div className="lb-exemplo" aria-label="Exemplo">
+      <span className="lb-ex-rot">Exemplo</span>
+      <ol>
+        {antes.map((d, i) => <li key={`a${i}`} className="fora">{d}</li>)}
+        {seguidos.map((d, i) => <li key={`s${i}`} className="conta">{d}<small>{i + 1}</small></li>)}
+      </ol>
+      <span className="lb-ex-entra">entra com {textoContrato(contrato)}</span>
+    </div>
   )
 }
 
@@ -371,6 +456,8 @@ function EditorDeGatilho({ gatilho: g, contrato, aoMudar }: { gatilho: Gatilho; 
     else if (tipo === 'ausencia') aoMudar({ tipo, digito: 7, n: 15 })
     else aoMudar({ tipo, condicao: { tipo: 'maior', digito: 6 }, janela: 25, pct: 20 })
   }
+  const perdem = DIGITOS.filter((d) => !digitosQueGanham(contrato).includes(d))
+  const seguidos = (n: number) => `${n} ${n === 1 ? 'dígito' : 'dígitos seguidos'}`
   return (
     <div className="lb-gatilho">
       <div className="lb-cartoes" role="radiogroup" aria-label="Tipo de análise">
@@ -380,13 +467,44 @@ function EditorDeGatilho({ gatilho: g, contrato, aoMudar }: { gatilho: Gatilho; 
           </button>
         ))}
       </div>
-      <p className="lb-sentenca">
-        {g.tipo === 'sempre' && <>Entra <b>a cada tick</b>, sem esperar nenhum sinal.</>}
-        {g.tipo === 'lossVirtual' && <>Entra depois de <Contador valor={g.n} min={1} max={12} rotulo={g.n === 1 ? 'dígito' : 'dígitos seguidos'} aoMudar={(n) => aoMudar({ ...g, n })} /> que teriam perdido a compra ({textoContrato(contrato)}).</>}
-        {g.tipo === 'sequencia' && <>Entra depois de <Contador valor={g.n} min={1} max={12} rotulo={g.n === 1 ? 'dígito' : 'dígitos seguidos'} aoMudar={(n) => aoMudar({ ...g, n })} /> <EditorDeCondicao c={g.condicao} aoMudar={(condicao) => aoMudar({ ...g, condicao })} />.</>}
-        {g.tipo === 'ausencia' && <>Entra quando o <select aria-label="Dígito sumido" value={g.digito} onChange={(e) => aoMudar({ ...g, digito: Number(e.target.value) })}>{DIGITOS.map((d) => <option key={d} value={d}>{d}</option>)}</select> não aparece há <Contador valor={g.n} min={2} max={200} rotulo="ticks" aoMudar={(n) => aoMudar({ ...g, n })} />.</>}
-        {g.tipo === 'frequencia' && <>Entra quando os dígitos <EditorDeCondicao c={g.condicao} aoMudar={(condicao) => aoMudar({ ...g, condicao })} /> forem menos de <Contador valor={g.pct} min={1} max={99} rotulo="%" aoMudar={(pct) => aoMudar({ ...g, pct })} /> dos últimos <Contador valor={g.janela} min={10} max={500} rotulo="ticks" aoMudar={(janela) => aoMudar({ ...g, janela })} />.</>}
-      </p>
+
+      <div className="lb-regra">
+        <p className="lb-frase" aria-live="polite">
+          {g.tipo === 'sempre' && <>Entra <mark>a cada tick</mark>, sem esperar nenhum sinal.</>}
+          {g.tipo === 'lossVirtual' && <>Entra depois de <mark>{g.n === 1 ? '1 dígito que teria perdido' : `${g.n} dígitos seguidos que teriam perdido`}</mark> a compra {textoContrato(contrato)}.</>}
+          {g.tipo === 'sequencia' && <>Entra depois de <mark>{seguidos(g.n)} {textoCondicao(g.condicao, g.n !== 1)}</mark>.</>}
+          {g.tipo === 'ausencia' && <>Entra quando o <mark>{g.digito}</mark> não aparece há <mark>{g.n} ticks</mark>.</>}
+          {g.tipo === 'frequencia' && <>Entra quando os dígitos <mark>{textoCondicao(g.condicao)}</mark> forem <mark>menos de {g.pct}%</mark> dos <mark>últimos {g.janela} ticks</mark>.</>}
+        </p>
+
+        {g.tipo !== 'sempre' && (
+          <div className="lb-ajustes">
+            {g.tipo === 'lossVirtual' && <>
+              <Ajuste rotulo="Quantos seguidos"><Escolha rotulo="Quantos seguidos" valores={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]} valor={g.n} aoMudar={(n) => aoMudar({ ...g, n })} /></Ajuste>
+              <Ajuste rotulo="Os que contam" ajuda={<>Fariam {textoContrato(contrato)} perder: <b>{listaDeDigitos(perdem)}</b>. Muda no passo 2.</>}>
+                <TecladoDeDigitos rotulo="Dígitos que teriam perdido" contam={new Set(perdem)} />
+              </Ajuste>
+            </>}
+            {g.tipo === 'sequencia' && <>
+              <Ajuste rotulo="Quantos seguidos"><Escolha rotulo="Quantos seguidos" valores={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]} valor={g.n} aoMudar={(n) => aoMudar({ ...g, n })} /></Ajuste>
+              <EditorDeCondicao c={g.condicao} aoMudar={(condicao) => aoMudar({ ...g, condicao })} />
+            </>}
+            {g.tipo === 'ausencia' && <>
+              <Ajuste rotulo="Qual dígito"><TecladoDeDigitos rotulo="Dígito sumido" contam={new Set([g.digito])} escolhido={g.digito} aoEscolher={(d) => aoMudar({ ...g, digito: d })} /></Ajuste>
+              <Ajuste rotulo="Sumido há quanto tempo"><Quantidade valor={g.n} min={2} max={200} atalhos={[10, 15, 20, 30, 50]} rotulo="ticks" aoMudar={(n) => aoMudar({ ...g, n })} /></Ajuste>
+            </>}
+            {g.tipo === 'frequencia' && <>
+              <EditorDeCondicao c={g.condicao} aoMudar={(condicao) => aoMudar({ ...g, condicao })} />
+              <Ajuste rotulo="Abaixo de" ajuda={<>O normal seria {DIGITOS.filter((d) => cumpre(g.condicao, d)).length * 10}%.</>}><Quantidade valor={g.pct} min={1} max={99} atalhos={[10, 15, 20, 25, 30]} rotulo="%" aoMudar={(pct) => aoMudar({ ...g, pct })} /></Ajuste>
+              <Ajuste rotulo="Olhando os últimos"><Quantidade valor={g.janela} min={10} max={500} atalhos={[10, 25, 50, 100, 200]} rotulo="ticks" aoMudar={(janela) => aoMudar({ ...g, janela })} /></Ajuste>
+            </>}
+          </div>
+        )}
+
+        {g.tipo === 'sequencia' && <ExemploDaSequencia n={g.n} contam={DIGITOS.filter((d) => cumpre(g.condicao, d))} contrato={contrato} />}
+        {g.tipo === 'lossVirtual' && <ExemploDaSequencia n={g.n} contam={perdem} contrato={contrato} />}
+      </div>
+
       {g.tipo === 'lossVirtual' && <p className="lb-dica">Loss virtual: o robô assiste sem comprar e conta os dígitos que teriam feito a compra perder. Quando a conta chega no número, ele entra.</p>}
       {g.tipo === 'frequencia' && <p className="lb-dica">No longo prazo cada dígito aparece 10% das vezes. A frequência olha uma janela curta e entra quando um grupo de dígitos está abaixo do normal.</p>}
     </div>
