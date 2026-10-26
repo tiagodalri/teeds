@@ -297,7 +297,9 @@ export default defineConfig({
         writeFileSync(join(SAIDA, 'CNAME'), new URL(MARCA.redirectUri).hostname + '\n')
         // Endereço que não existe (/robos, /aulas...) cai no app em vez do 404 cru do GitHub:
         // a primeira parte do caminho vira a tela pedida (?tela=), o app ignora o que não conhece.
-        writeFileSync(join(SAIDA, '404.html'), `<!doctype html><meta charset="utf-8"><title>${NOME_CURTO[MARCA.id] ?? MARCA.nome}</title><script>(function(){var p=location.pathname.split('/').filter(Boolean)[0]||'';var q=location.search?location.search.slice(1):'';var t=/^[a-z][a-z-]*$/.test(p)?'tela='+p:'';location.replace('/'+((t||q)?'?'+[t,q].filter(Boolean).join('&'):'')+location.hash)})()</script>`)
+        // 27/10/2026: com parceiros, /n/manual abre o Manual guardando o parceiro (parceiro_rota: sem contar clique).
+        const parceirosDoSite = JSON.stringify((MARCA.parceiros ?? []).filter((c) => /^[a-z0-9]{1,20}$/.test(c)))
+        writeFileSync(join(SAIDA, '404.html'), `<!doctype html><meta charset="utf-8"><title>${NOME_CURTO[MARCA.id] ?? MARCA.nome}</title><script>(function(){var s=location.pathname.split('/').filter(Boolean);var P=${parceirosDoSite};var r=s.length&&P.indexOf(s[0])>=0?s.shift():'';var p=s[0]||'';var q=location.search?location.search.slice(1):'';var t=/^[a-z][a-z-]*$/.test(p)?'tela='+p:'';var x=r?'parceiro_rota='+r:'';var a=[t,q,x].filter(Boolean);location.replace('/'+(a.length?'?'+a.join('&'):'')+location.hash)})()</script>`)
 
         const pwaDir = `pwa-${MARCA.id}`
         const fundo = FUNDO_DA_MARCA[MARCA.id] ?? '#090a0d'

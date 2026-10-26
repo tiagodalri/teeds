@@ -6,7 +6,7 @@ import { DigitsPanel } from './components/DigitsPanel'
 import { labDoBanco } from './core/laboratorio/dados'
 import { BoletaAtivo, BotaoCompra, MostradorDuracao, MostradorValor, ResumoDaCompra } from './components/operar/Boleta'
 import { UltimasEntradas } from './components/operar/UltimasEntradas'
-import { meuAppDeriv, meusLinks, vincularParceiro, type MeusLinks } from './core/teeds/parceiro'
+import { meuAppDeriv, meuParceiro, meusLinks, vincularParceiro, type MeusLinks } from './core/teeds/parceiro'
 import { CatalogoProvider } from './core/teeds/catalogoRobos'
 import { usePreferenciaColuna } from './core/teeds/preferenciaColuna'
 import { useMarcaEmFoco } from './core/teeds/marcaEmFoco'
@@ -62,7 +62,7 @@ import { pararNoServidor, type SessaoViva } from './core/teeds/servidorRobos'
 import { sinalGFLiberado } from './core/deriv/accountAccess'
 import { acompanharFimDasSessoes, contratoManual } from './core/som'
 import { registrarOperacaoManual } from './core/teeds/clientes'
-import { caminhoDaTela, telaDoCaminho, telaDoNome } from './core/rotas'
+import { caminhoDaTela, definirParceiroDoEndereco, telaDoCaminho, telaDoNome } from './core/rotas'
 import { carregarRobosBloqueados } from './core/teeds/robosLiberados'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
@@ -563,10 +563,16 @@ export default function App() {
   const [linksDeParceiro, setLinksDeParceiro] = useState<MeusLinks | null>(null)
   useEffect(() => {
     setLinksDeParceiro(null)
-    if (!teeds.sessao || !MARCA.parceiros?.length) { usarAppDaDeriv(null); return }
-    vincularParceiro(teeds.sessao)
-    void meuAppDeriv(teeds.sessao).then(usarAppDaDeriv)
-    void meusLinks(teeds.sessao).then(setLinksDeParceiro).catch(() => setLinksDeParceiro(null))
+    if (!teeds.sessao || !MARCA.parceiros?.length) { usarAppDaDeriv(null); definirParceiroDoEndereco(undefined); return }
+    const sessao = teeds.sessao
+    void meusLinks(sessao).then(setLinksDeParceiro).catch(() => setLinksDeParceiro(null))
+    // primeiro liga a conta nova ao parceiro do link (se couber); depois lê o que valeu
+    void vincularParceiro(sessao).catch(() => undefined).then(async () => {
+      usarAppDaDeriv(await meuAppDeriv(sessao))
+      // o endereço passa a levar o parceiro da conta (/n/manual); sem parceiro, sem prefixo
+      definirParceiroDoEndereco(await meuParceiro(sessao))
+      history.replaceState(history.state, '', caminhoDaTela(telaAgora.current) + location.search + location.hash)
+    })
   }, [usuarioTeedsId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

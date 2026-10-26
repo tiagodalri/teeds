@@ -1,5 +1,6 @@
 import type { WorkspacePage } from '../components/WorkspaceNav'
 import { MARCA } from '../marca'
+import { parceiroGuardado } from './teeds/parceiro'
 
 /**
  * O endereço de cada tela (23/10/2026, Tiago: "globalflytrade.com/ia,
@@ -39,9 +40,29 @@ const APELIDOS: Record<string, WorkspacePage> = {
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '')
 
+/*
+  O PARCEIRO NO ENDEREÇO (27/10/2026, Tiago: "quando entro em /n ou /v essa
+  descrição some... gostaria que ficasse sempre: globalflytrade.com/n/noticias,
+  /v/manual"). Na GlobalFly, quem é de um parceiro navega com o código dele na
+  frente de toda tela. Logado, vale o parceiro da conta (o banco diz); antes de
+  entrar, o do link guardado no navegador. A tela inicial vira /n/inicio: o /n
+  sozinho continua sendo o link de cadastro.
+*/
+let parceiroDaConta: string | null | undefined
+/** Logado: o parceiro da conta (null = sem parceiro). undefined volta a seguir o link guardado. */
+export function definirParceiroDoEndereco(codigo: string | null | undefined): void { parceiroDaConta = codigo }
+const codigosDeParceiro = () => MARCA.parceiros ?? []
+function prefixo(): string {
+  if (!codigosDeParceiro().length) return ''
+  const c = parceiroDaConta === undefined ? parceiroGuardado() : parceiroDaConta
+  return c && codigosDeParceiro().includes(c) ? `/${c}` : ''
+}
+
 /** "/ia" para a tela de robôs da GlobalFly. A tela inicial da marca fica na raiz. */
 export function caminhoDaTela(tela: WorkspacePage): string {
   const padrao: WorkspacePage = MARCA.inicio ? 'inicio' : 'operar'
+  const p = prefixo()
+  if (p) return `${base}${p}/${SLUG[tela]}`
   return tela === padrao ? `${base}/` : `${base}/${SLUG[tela]}`
 }
 
@@ -57,5 +78,7 @@ export function telaDoNome(nome: string | null | undefined): WorkspacePage | nul
 /** A tela do endereço atual ("/ia" → robos), ou null na raiz e em endereços desconhecidos. */
 export function telaDoCaminho(caminho: string): WorkspacePage | null {
   const resto = caminho.startsWith(base) ? caminho.slice(base.length) : caminho
-  return telaDoNome(resto.split('/').filter(Boolean)[0])
+  const partes = resto.split('/').filter(Boolean)
+  if (partes.length && codigosDeParceiro().includes(partes[0])) partes.shift()
+  return telaDoNome(partes[0])
 }

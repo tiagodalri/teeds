@@ -36,12 +36,19 @@ export function parceiroGuardado(): string | null {
 export function lerParceiroDoLink(): void {
   try {
     const q = new URLSearchParams(location.search)
+    // `parceiro` = clicou no link (/n, /v): conta o clique. `parceiro_rota` = abriu um endereço
+    // de dentro (/n/manual, F5): só guarda, sem contar clique de novo.
+    const daRota = (q.get('parceiro_rota') ?? '').trim().toLowerCase()
     const codigo = (q.get('parceiro') ?? '').trim().toLowerCase()
-    if (!codigo) return
+    if (!codigo && !daRota) return
     // tira da barra: um F5 ou um link copiado daqui não carrega o código adiante
     const u = new URL(location.href)
-    u.searchParams.delete('parceiro')
+    u.searchParams.delete('parceiro'); u.searchParams.delete('parceiro_rota')
     history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash)
+    if (daRota && !codigo) {
+      if (codigos().includes(daRota) && !parceiroGuardado()) localStorage.setItem(CHAVE, JSON.stringify({ codigo: daRota, em: Date.now() } satisfies Guardado))
+      return
+    }
     if (!codigos().includes(codigo)) return
     if (!parceiroGuardado()) localStorage.setItem(CHAVE, JSON.stringify({ codigo, em: Date.now() } satisfies Guardado))
     // o clique conta para o link que foi clicado (mesmo que o navegador já seja de outro parceiro)
@@ -69,12 +76,12 @@ export function paginaComParceiro(pagina: URL): URL {
 }
 
 /** Conta nova que entrou por outro caminho (ex.: comprou direto): o banco liga ao parceiro guardado, se couber. */
-export function vincularParceiro(sessao: SessaoTeeds): void {
+export async function vincularParceiro(sessao: SessaoTeeds): Promise<void> {
   const codigo = parceiroGuardado()
   if (!codigo) return
   const chave = `${CHAVE}.vinculado.${sessao.usuario.id}`
   try { if (sessionStorage.getItem(chave)) return; sessionStorage.setItem(chave, '1') } catch { /* tenta mesmo assim */ }
-  void fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_vincular_parceiro`, {
+  await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_vincular_parceiro`, {
     method: 'POST',
     headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ p_marca: MARCA.id, p_codigo: codigo }),
@@ -143,3 +150,7 @@ export const configurarParceiro = (sessao: SessaoTeeds, codigo: string, email: s
 /** O app da Deriv com que este cliente conecta (o do parceiro dele, quando liberado); null = o da marca. */
 export const meuAppDeriv = (sessao: SessaoTeeds, marca: string = MARCA.id) =>
   rpc<string | null>(sessao, 'teeds_meu_app_deriv', { p_marca: marca }).catch(() => null)
+
+/** O parceiro da conta logada (null = sem parceiro, "Direto"). */
+export const meuParceiro = (sessao: SessaoTeeds, marca: string = MARCA.id) =>
+  rpc<string | null>(sessao, 'teeds_meu_parceiro', { p_marca: marca }).catch(() => null)
