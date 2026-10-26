@@ -26,5 +26,5 @@ export default function LabCarteira() {
   const sem = new URLSearchParams(location.search).has('sem')
   respostas(sem, new URLSearchParams(location.search).has('doc'))
   const session = { accessToken: 'lab', expiresAt: Date.now() + 3600e3 } as unknown as AuthSession
-  return <div className="workspace-app" style={{ minHeight: '100vh', background: 'var(--bg)' }}><CarteiraDeriv session={session} fechar={() => undefined} reconectar={() => alert('reconectar')} /></div>
+  return <div className="workspace-app" style={{ minHeight: '100vh', background: 'var(--bg)' }}><CarteiraDeriv session={session} contas={[{ accountId: 'CR9284711', balance: 20.13, currency: 'USD', group: 'row', status: 'active', type: 'real' }, { accountId: 'VRTC5521873', balance: 10000, currency: 'USD', group: 'row', status: 'active', type: 'demo' }]} fechar={() => undefined} reconectar={() => alert('reconectar')} /></div>
 }

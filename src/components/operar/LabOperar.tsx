@@ -75,7 +75,7 @@ export default function LabOperar() {
           {posicoes.length === 0 && <div className="bl-posicoes-vazio">As entradas que você fizer aqui aparecem nesta lista, com o resultado ao vivo.</div>}
           {posicoes.map((c) => <PositionCard key={c.contractId} contrato={c} nomeAtivo="75 Index" onEncerrar={() => undefined} encerrando={false} />)}
         </section>
-        {!p.has('vazio') && <UltimasEntradas nomeDoAtivo={() => '75 Index'} operacoes={[
+        {!p.has('vazio') && <UltimasEntradas nomeDoAtivo={() => '75 Index'} markupDe={p.has('markup') ? () => 0.54 : undefined} operacoes={[
           { ...contrato(11, 'CALL', 7.84, 0, 'won'), exitSpot: 1091.4573 },
           { ...contrato(12, 'PUT', -10, 0, 'lost'), exitSpot: 1090.8821 },
           { ...contrato(13, 'DIGITOVER', 8.5, 0, 'won'), exitSpot: 1090.2236, contractType: 'DIGITOVER' },

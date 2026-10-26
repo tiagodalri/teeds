@@ -36,7 +36,7 @@ export function UltimasEntradas({ operacoes, nomeDoAtivo, markupDe }: { operacoe
       </dl>
       <div className="bl-ult-tabela">
         <table>
-          <thead><tr><th scope="col">Hora</th><th scope="col">Operação</th><th scope="col" className="num" title="Preço de saída: o último dígito é o que valeu">Saída</th><th scope="col" className="num">Resultado</th></tr></thead>
+          <thead><tr><th scope="col">Operação</th><th scope="col" className="num" title="Preço de saída: o último dígito é o que valeu">Saída</th><th scope="col" className="num">Resultado</th></tr></thead>
           <tbody>
             {operacoes.map((c) => {
               const subiu = /^(CALL|HIGHER|MULTUP)$/.test(c.contractType)
@@ -44,10 +44,9 @@ export function UltimasEntradas({ operacoes, nomeDoAtivo, markupDe }: { operacoe
               const ganhou = c.profit >= 0
               return (
                 <tr key={c.contractId} className={ganhou ? 'ganho' : 'perda'}>
-                  <td className="bl-ult-hora">{hora(c.startTime)}</td>
                   <td className="bl-ult-nome">
-                    <b>{comDirecao && <i aria-hidden="true">{subiu ? '▲ ' : '▼ '}</i>}<span title={NOMES_DE_CONTRATO[c.contractType]}>{nomeCurto(c)}</span></b>
-                    <small>{nomeDoAtivo(c.symbol)}</small>
+                    <b>{comDirecao && <i aria-hidden="true" className={subiu ? 'sobe' : 'desce'}>{subiu ? '▲ ' : '▼ '}</i>}<span title={NOMES_DE_CONTRATO[c.contractType]}>{nomeCurto(c)}</span></b>
+                    <small><span className="bl-ult-hora">{hora(c.startTime)}</span> · {nomeDoAtivo(c.symbol)}</small>
                   </td>
                   <td className="bl-ult-preco num">{c.exitSpot !== null ? <PrecoComDigito valor={c.exitSpot} casas={c.pipSize} tom={ganhou ? 'ganho' : 'perda'} /> : '—'}</td>
                   <td className="num">

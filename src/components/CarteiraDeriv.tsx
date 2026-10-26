@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AuthSession } from '../core/deriv/auth'
+import type { TradingAccount } from '../core/deriv/account'
 import { CarteiraSemPermissao, lerCarteiras, lerMovimentos, moedaLegivel, valorNaMoeda, type Carteira, type MovimentoDaCarteira, type SituacaoDoMovimento } from '../core/deriv/carteira'
 import { DERIV } from '../core/deriv/config'
 import { DerivLogo } from './DerivMarca'
@@ -31,7 +32,7 @@ const quando = (iso: string) => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-export function CarteiraDeriv({ session, fechar, reconectar }: { session: AuthSession | null; fechar: () => void; reconectar: () => void }) {
+export function CarteiraDeriv({ session, contas = [], fechar, reconectar }: { session: AuthSession | null; contas?: TradingAccount[]; fechar: () => void; reconectar: () => void }) {
   const [carteiras, setCarteiras] = useState<Estado<Carteira[]>>({ carregando: true })
   const [movimentos, setMovimentos] = useState<Estado<MovimentoDaCarteira[]>>({ carregando: true })
   const [semPermissao, setSemPermissao] = useState(false)
@@ -60,7 +61,13 @@ export function CarteiraDeriv({ session, fechar, reconectar }: { session: AuthSe
 
   const lista = 'dados' in movimentos ? movimentos.dados : []
   const principal = 'dados' in carteiras ? carteiras.dados.find((c) => c.tipo === 'main') ?? carteiras.dados[0] ?? null : null
-  const saldosComValor = principal?.saldos.filter((s) => s.saldo !== 0) ?? []
+  // 26/10/2026 (Tiago: "tenho 20 dólares na minha conta de opções, não era pra aparecer?"): a carteira
+  // da Deriv e a conta onde as I.A. operam são coisas diferentes. A tela mostra as duas, cada saldo no seu lugar.
+  const deOperacao = [...contas].sort((a, b) => Number(a.type === 'demo') - Number(b.type === 'demo'))
+  const reais = deOperacao.filter((c) => c.type !== 'demo')
+  const saldosDaCarteira = principal?.saldos.length ? principal.saldos : []
+  // o total só quando dá para somar sem inventar câmbio: carteira em dólar (a Deriv converte) + contas reais em USD
+  const totalNaDeriv = principal?.emDolar && reais.every((c) => c.currency === 'USD') ? principal.emDolar.saldo + reais.reduce((t, c) => t + c.balance, 0) : null
   // o total em dólar só vale se a Deriv mandou alguma coisa nele; senão as somas saem das movimentações
   const totalDolar = principal?.emDolar && (principal.emDolar.entradas || principal.emDolar.saidas) ? principal.emDolar : null
 
@@ -103,31 +110,49 @@ export function CarteiraDeriv({ session, fechar, reconectar }: { session: AuthSe
             </div>
           ) : (
             <>
-              {/* ------------------------------------------------ o saldo */}
-              <section className="cw-resumo" aria-label="Saldo da carteira">
-                <span className="cw-r-rot">Saldo na carteira</span>
-                {carteiras.carregando ? <i className="cw-carregando" aria-label="Carregando o saldo" /> : 'erro' in carteiras ? (
-                  <div className="cw-erro-linha"><span>Não consegui ler o saldo agora.</span><button type="button" className="cw-link" onClick={carregar}>Tentar de novo</button></div>
-                ) : (
-                  <div className="cw-saldos">
-                    {principal?.emDolar && saldosComValor.some((s) => s.moeda !== 'USD') ? (
-                      <><strong>{valorNaMoeda(principal.emDolar.saldo, 'USD')}</strong><small>somando todas as moedas, em dólar (aproximado)</small></>
-                    ) : saldosComValor.length ? (
-                      saldosComValor.map((s, i) => <strong key={s.moeda} className={i ? 'menor' : ''}>{valorNaMoeda(s.saldo, s.moeda)}{moedaLegivel(s.moeda).rede && <em>{moedaLegivel(s.moeda).rede}</em>}</strong>)
-                    ) : <strong>{valorNaMoeda(0, principal?.saldos[0]?.moeda ?? 'USD')}</strong>}
-                  </div>
-                )}
-                <p className="cw-explica">O depósito cai aqui primeiro. Para os robôs usarem, o saldo passa para a sua conta de operação.</p>
+              {/* ------------------------------------------------ onde está o dinheiro */}
+              <section className="cw-resumo" aria-label="Seus saldos na Deriv">
+                <div className="cw-r-cabeca">
+                  <span className="cw-r-rot">Seus saldos na Deriv</span>
+                  {totalNaDeriv !== null && <span className="cw-r-total">Total <b>{valorNaMoeda(totalNaDeriv, 'USD')}</b><small> aprox.</small></span>}
+                </div>
+                <ul className="cw-contas">
+                  {deOperacao.map((c) => (
+                    <li key={c.accountId} className={`cw-conta operacao ${c.type === 'demo' ? 'demo' : ''}`}>
+                      <i aria-hidden="true">{c.type === 'demo' ? 'D' : '▲'}</i>
+                      <span className="cw-conta-nome">
+                        <b>{c.type === 'demo' ? 'Conta demonstração' : 'Conta de operação'}</b>
+                        <small>{c.type === 'demo' ? 'dinheiro de treino, não é real' : 'Opções · onde as I.A. operam'} · {c.accountId}</small>
+                      </span>
+                      <strong>{valorNaMoeda(c.balance, c.currency)}</strong>
+                    </li>
+                  ))}
+                  {carteiras.carregando ? (
+                    <li className="cw-conta carteira"><i aria-hidden="true">$</i><span className="cw-conta-nome"><b>Carteira</b><small>lendo o saldo…</small></span><i className="cw-carregando" aria-label="Carregando o saldo" /></li>
+                  ) : 'erro' in carteiras ? (
+                    <li className="cw-conta carteira"><i aria-hidden="true">$</i><span className="cw-conta-nome"><b>Carteira</b><small>Não consegui ler o saldo agora.</small></span><button type="button" className="cw-link" onClick={carregar}>Tentar de novo</button></li>
+                  ) : (saldosDaCarteira.length ? saldosDaCarteira : [{ moeda: 'USD', saldo: 0, entradas: 0, saidas: 0 }]).map((x) => {
+                    const { simbolo, rede } = moedaLegivel(x.moeda)
+                    return (
+                      <li key={x.moeda} className={`cw-conta carteira ${x.saldo === 0 ? 'zerada' : ''}`}>
+                        <i aria-hidden="true">$</i>
+                        <span className="cw-conta-nome"><b>Carteira em {simbolo === 'US$' ? 'dólar' : simbolo}</b><small>{rede ? `${rede} · ` : ''}onde o depósito cai e de onde o saque sai</small></span>
+                        <strong>{valorNaMoeda(x.saldo, x.moeda)}</strong>
+                      </li>
+                    )
+                  })}
+                </ul>
+                <p className="cw-explica">O depósito cai na carteira e passa para a conta de operação. Os depósitos e saques abaixo são os da carteira.</p>
 
                 <div className="cw-totais">
                   <div>
-                    <span>Depositado</span>
+                    <span>Depositado na carteira</span>
                     {totalDolar ? <b className="up">{valorNaMoeda(totalDolar.entradas, 'USD')}</b>
                       : somasPorMoeda.length ? somasPorMoeda.filter(([, t]) => t.dep).map(([m, t]) => <b key={m} className="up">{valorNaMoeda(t.dep, m)}</b>)
                       : <b>{movimentos.carregando ? '…' : '—'}</b>}
                   </div>
                   <div>
-                    <span>Sacado</span>
+                    <span>Sacado da carteira</span>
                     {totalDolar ? <b>{valorNaMoeda(totalDolar.saidas, 'USD')}</b>
                       : somasPorMoeda.length ? somasPorMoeda.filter(([, t]) => t.saq).map(([m, t]) => <b key={m}>{valorNaMoeda(t.saq, m)}</b>)
                       : <b>{movimentos.carregando ? '…' : '—'}</b>}

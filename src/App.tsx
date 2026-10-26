@@ -1158,7 +1158,7 @@ export default function App() {
       {verCarteira && (
         <Suspense fallback={null}>
           {/* reconectar: a sessão aberta ignora a volta de um login novo, então desconecta e entra de novo (os robôs rodam no servidor e seguem) */}
-          <CarteiraDeriv session={conta.session} fechar={() => setVerCarteira(false)} reconectar={() => { setVerCarteira(false); conta.logout(); conta.login() }} />
+          <CarteiraDeriv session={conta.session} contas={conta.accounts} fechar={() => setVerCarteira(false)} reconectar={() => { setVerCarteira(false); conta.logout(); conta.login() }} />
         </Suspense>
       )}
       {MARCA.aoVivo && playerAoVivo && <Suspense fallback={null}><PlayerAoVivo naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}

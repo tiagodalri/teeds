@@ -90,3 +90,26 @@ li.deposito .cw-valor { color: var(--up); }
   .cw-pe .cw-botao { flex: 1; }
 }
 @media (prefers-reduced-motion: reduce) { .cw-carregando, .cw-fantasma > i, .cw-fantasma > span { animation: none; } }
+
+/* os saldos (26/10/2026): a conta de operação (onde as I.A. operam) e a carteira, cada uma numa linha */
+.cw-r-cabeca { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.cw-r-total { color: var(--muted); font-size: 12px; font-weight: 600; }
+.cw-r-total b { color: var(--text); font-size: 14px; font-variant-numeric: tabular-nums; }
+.cw-contas { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.cw-conta { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 14px; }
+.cw-conta + .cw-conta { border-top: 1px solid var(--border); }
+.cw-conta > i { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: color-mix(in srgb, var(--muted) 12%, transparent); color: var(--muted); font-size: 12px; font-style: normal; font-weight: 800; }
+.cw-conta.operacao:not(.demo) > i { background: var(--up-soft); color: var(--up); }
+.cw-conta-nome { display: grid; gap: 2px; min-width: 0; }
+.cw-conta-nome b { font-size: 14px; }
+.cw-conta-nome small { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cw-conta strong { font-size: 18px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cw-conta.operacao:not(.demo) { background: color-mix(in srgb, var(--up) 6%, transparent); }
+.cw-conta.operacao:not(.demo) strong { font-size: 22px; }
+.cw-conta.demo strong, .cw-conta.zerada strong { color: var(--muted); font-size: 15px; }
+.cw-conta .cw-carregando { justify-self: end; }
+@media (max-width: 480px) {
+  .cw-conta { grid-template-columns: minmax(0, 1fr) auto; padding: 10px 12px; }
+  .cw-conta > i:first-child { display: none; }
+  .cw-conta-nome small { white-space: normal; }
+}

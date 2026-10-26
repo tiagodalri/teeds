@@ -255,8 +255,9 @@
 
 /* ------------------------------------------------ suas últimas entradas */
 .bl-ultimas { display: flex; flex-direction: column; min-height: 0; border-radius: 18px; background: var(--surface); border: 1px solid var(--border); overflow: hidden; }
-.bl-ultimas header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px 10px; }
-.bl-ultimas header small { padding: 1px 8px; border-radius: 99px; background: color-mix(in srgb, var(--text) 8%, transparent); font: 700 11px var(--fonte-dados, ui-monospace, monospace); }
+.bl-ultimas header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px 10px; min-width: 0; }
+.bl-ultimas header .bl-rot { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bl-ultimas header small { flex: none; white-space: nowrap; padding: 1px 8px; border-radius: 99px; background: color-mix(in srgb, var(--text) 8%, transparent); font: 700 11px var(--fonte-dados, ui-monospace, monospace); }
 /* o resumo: quatro números numa faixa só */
 .bl-ult-resumo { display: grid; grid-template-columns: repeat(3, minmax(0, .7fr)) minmax(0, 1.4fr); margin: 0 10px 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
 .bl-ult-resumo > div { display: grid; gap: 2px; padding: 8px 10px; min-width: 0; }
@@ -267,25 +268,24 @@
 .bl-ult-total { text-align: right; }
 /* a tabela: cabeçalho fixo, colunas alinhadas, a cor do resultado numa faixa à esquerda */
 .bl-ult-tabela { flex: 1 1 auto; min-height: 132px; overflow-y: auto; padding: 0 6px 6px; }
-.bl-ult-tabela table { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
+.bl-ult-tabela table { width: 100%; table-layout: auto; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
 .bl-ult-tabela th { position: sticky; top: 0; z-index: 1; padding: 6px 8px; background: var(--surface); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10.5px; font-weight: 700; text-align: left; white-space: nowrap; }
 .bl-ult-tabela .num { text-align: right; }
 .bl-ult-tabela td { padding: 8px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); vertical-align: middle; }
 .bl-ult-tabela tr:last-child td { border-bottom: 0; }
 .bl-ult-tabela tbody tr:hover td { background: color-mix(in srgb, var(--text) 4%, transparent); }
-.bl-ult-tabela td:first-child { box-shadow: inset 3px 0 0 var(--bl-ult-cor); border-radius: 4px 0 0 4px; }
 .bl-ult-tabela tr.ganho { --bl-ult-cor: var(--up); } .bl-ult-tabela tr.perda { --bl-ult-cor: var(--down); }
-.bl-ult-hora { color: var(--muted); font: 600 11px var(--fonte-dados, ui-monospace, monospace); white-space: nowrap; }
+.bl-ult-hora { font-family: var(--fonte-dados, ui-monospace, monospace); font-variant-numeric: tabular-nums; }
 .bl-ult-nome { min-width: 0; max-width: 0; width: 100%; }
 .bl-ult-nome b { display: block; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bl-ult-nome b i { font-style: normal; color: var(--bl-ult-cor); }
+.bl-ult-nome b i { font-style: normal; font-size: 10px; }
+.bl-ult-nome b i.sobe { color: var(--up); } .bl-ult-nome b i.desce { color: var(--down); }
 .bl-ult-nome small { display: block; color: var(--muted); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bl-ult-preco { white-space: nowrap; }
 .bl-ult-preco .pcd { font-size: 11.5px; color: var(--text); }
 .bl-ult-res { display: inline-block; padding: 2px 7px; border-radius: 7px; background: color-mix(in srgb, var(--bl-ult-cor) 13%, transparent); color: var(--bl-ult-cor); font: 800 12px var(--fonte-dados, ui-monospace, monospace); white-space: nowrap; }
 @media (max-width: 1199px) and (min-width: 901px) {
   /* coluna curta do notebook: o ativo some da linha (o preço e o resultado ficam) */
-  .bl-ult-nome small { display: none; }
   .bl-ult-tabela td, .bl-ult-tabela th { padding-inline: 5px; }
   .bl-ult-resumo > div { padding: 7px 8px; }
 }
@@ -294,8 +294,6 @@
   /* celular: colunas mais justas para a operação caber inteira */
   .bl-ult-tabela { padding-inline: 4px; }
   .bl-ult-tabela td, .bl-ult-tabela th { padding-inline: 4px; }
-  .bl-ult-tabela td:first-child, .bl-ult-tabela th:first-child { padding-left: 8px; }
-  .bl-ult-hora { font-size: 10.5px; }
   .bl-ult-preco .pcd { font-size: 11px; }
   .bl-ult-res { padding: 2px 5px; font-size: 11.5px; }
   .bl-ult-resumo { margin-inline: 8px; }
@@ -303,7 +301,7 @@
 }
 
 /* modo CEO (23/10/2026): o markup de cada entrada manual e o total da lista */
-.bl-ult-markup { display: block; margin-top: 2px; color: var(--gf-ouro, var(--primary)); font-size: 10.5px; font-weight: 700; text-align: right; }
+.bl-ult-markup { display: block; margin-top: 3px; white-space: nowrap; color: var(--gf-ouro, var(--primary)); font-size: 10.5px; font-weight: 700; text-align: right; }
 .bl-ult-markup-total { color: var(--gf-ouro, var(--primary)); font-weight: 800; }
 /* modo CEO: o markup da posição, numa linha própria embaixo */
 .bp-nums .bp-markup { grid-column: 1 / -1; display: flex !important; align-items: baseline; justify-content: space-between; padding-top: 6px; border-top: 1px dashed var(--border); text-align: left !important; }
