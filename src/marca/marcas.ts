@@ -147,6 +147,8 @@ export interface Marca {
    * as iniciais (GlobalFly, 23/10/2026). Vem da coluna `clientes.categoria`.
    */
   seloCategoria?: boolean
+  /** Laboratório de IA (26/10/2026): os admins da marca montam e testam robôs por receita. */
+  laboratorioIA?: boolean
   /**
    * Nome e ícone de itens do menu lateral, por marca (19/10/2026: na
    * GlobalFly, "Robôs" virou "I.A." com o símbolo de brilhos, e o Assistente
@@ -393,6 +395,8 @@ export const MARCAS: Record<string, Marca> = {
     // 23/10/2026 (Tiago: "tem que ser um gráfico só"): o gráfico profissional para todos
     graficoPro: 'todos',
     seloCategoria: true,
+    // 26/10/2026 (Tiago): "todos admins da GF devem poder criar"
+    laboratorioIA: true,
     menu: {
       nomes: { robos: 'I.A.' },
       icones: {

@@ -234,7 +234,17 @@ export function LocalRobotPanel({
   const olhar = useCallback((id: string) => {
     if (!sessaoTeeds) return
     pararDeOlharRef.current?.()
-    if (sessaoIdRef.current !== id) inicioRef.current = Date.now()
+    if (sessaoIdRef.current !== id) {
+      inicioRef.current = Date.now()
+      /*
+        26/10/2026 (relato do Victor Cordeiro): ligar o robô de novo depois de
+        bater a meta não mostrava o cartão na segunda vez. O estado da sessão
+        ANTERIOR (parada por meta) ficava na tela até chegar o primeiro da nova,
+        e o aviso o lia como "a sessão nova chegou parada por meta": marcava a
+        nova como já avisada logo no começo. O estado antigo sai junto com ela.
+      */
+      setEstado(null)
+    }
     sessaoIdRef.current = id
     setIdDaSessao(id)
     pararDeOlharRef.current = acompanharNoServidor(

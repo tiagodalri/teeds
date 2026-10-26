@@ -3,6 +3,7 @@ import { useSimulador } from './hooks/useSimulador'
 import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
 import { PositionCard } from './components/PositionCard'
 import { DigitsPanel } from './components/DigitsPanel'
+import { labDoBanco } from './core/laboratorio/dados'
 import { BoletaAtivo, BotaoCompra, MostradorDuracao, MostradorValor, ResumoDaCompra } from './components/operar/Boleta'
 import { UltimasEntradas } from './components/operar/UltimasEntradas'
 import { CatalogoProvider } from './core/teeds/catalogoRobos'
@@ -68,6 +69,7 @@ import { carregarRobosBloqueados } from './core/teeds/robosLiberados'
 const AoVivoPage = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.AoVivoPage })))
 const MercadoPanel = lazy(() => import('./components/MercadoPanel').then((m) => ({ default: m.MercadoPanel })))
 const CarteiraDeriv = lazy(() => import('./components/CarteiraDeriv').then((m) => ({ default: m.CarteiraDeriv })))
+const LaboratorioIA = lazy(() => import('./components/laboratorio/LaboratorioIA').then((m) => ({ default: m.LaboratorioIA })))
 const AjudaPagina = lazy(() => import('./components/ajuda/AjudaPagina').then((m) => ({ default: m.AjudaPagina })))
 const SuporteWidget = lazy(() => import('./components/suporte/SuporteWidget').then((m) => ({ default: m.SuporteWidget })))
 const MeuPerfil = lazy(() => import('./components/perfil/MeuPerfil').then((m) => ({ default: m.MeuPerfil })))
@@ -950,6 +952,8 @@ export default function App() {
     setTela('assistente')
   }
 
+  // o Laboratório de IA fala com o banco com o login de quem é admin (26/10/2026)
+  const apiDoLaboratorio = useMemo(() => (teeds.sessao ? labDoBanco(teeds.sessao, teeds.usuario?.nome || teeds.sessao.usuario.email) : null), [teeds.sessao, teeds.usuario?.nome])
   return (
     <div className="app workspace-app">
       <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} mostrarInicio={!!MARCA.inicio} onNavigate={next => {
@@ -958,7 +962,7 @@ export default function App() {
         else setTela(next)
       }} />
       <header className="topbar">
-        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : 'Seu espaço de trabalho'}</span></div>
+        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : 'Seu espaço de trabalho'}</span></div>
 
         <div className="topbar-right">
           <RelogioTopo />
@@ -1183,6 +1187,8 @@ export default function App() {
         <Suspense fallback={telaAbrindo('Abrindo o marketplace…')}><MarketplacePanel sessao={teeds.sessao} /></Suspense>
       ) : tela === 'gerenciamento' ? (
         <CatalogoProvider sessao={teeds.sessao}><Suspense fallback={telaAbrindo('Abrindo o gerenciamento…')}><OperationalManagementPanel /></Suspense></CatalogoProvider>
+      ) : tela === 'laboratorio' && admin === true && MARCA.laboratorioIA ? (
+        teeds.sessao ? <Suspense fallback={telaAbrindo('Abrindo o laboratório…')}><LaboratorioIA api={apiDoLaboratorio!} socket={conta.socket} /></Suspense> : null
       ) : tela === 'monitoramento' && admin === true ? (
           teeds.sessao ? <MonitoramentoBoundary><Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel key={marcaEmFoco} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} /></Suspense></MonitoramentoBoundary> : null
       ) : tela === 'insights' && admin === true ? (

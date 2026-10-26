@@ -62,6 +62,7 @@ const LabInicio = lazy(() => import('./components/inicio/LabInicio'))
 const LabOrganizacao = lazy(() => import('./components/organizacao/LabOrganizacao'))
 const LabPlanos = lazy(() => import('./components/LabPlanos'))
 const LabCarteira = lazy(() => import('./components/LabCarteira'))
+const LabLaboratorio = lazy(() => import('./components/laboratorio/LabLaboratorio'))
 const LabPerfil = lazy(() => import('./components/perfil/LabPerfil'))
 const LabSuporte = lazy(() => import('./components/suporte/LabSuporte'))
 function LabAulas() {
@@ -299,6 +300,8 @@ function Laboratorio() {
   if (qual === 'planos') return <Suspense fallback={null}><LabPlanos /></Suspense>
   // ?tela=carteira (&sem=1): a carteira da Deriv, com e sem a permissão `payment`
   if (qual === 'carteira') return <Suspense fallback={null}><LabCarteira /></Suspense>
+  // ?tela=laboratorio-ia: o Laboratório de IA com receitas em memória (ticks e cotações reais da Deriv)
+  if (qual === 'laboratorio-ia') return <Suspense fallback={null}><LabLaboratorio /></Suspense>
   if (qual === 'suporte') return <Suspense fallback={null}><LabSuporte /></Suspense>
   if (qual === 'login') return <LabLogin />
   // ?tela=carregando: o carregando da marca (o mesmo quadro em que a decolagem pousa)

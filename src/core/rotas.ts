@@ -27,11 +27,13 @@ const SLUG: Record<WorkspacePage, string> = {
   gestao: 'admin',
   insights: 'insights',
   monitoramento: 'monitoramento',
+  laboratorio: 'laboratorio',
 }
 /** Os outros nomes que também abrem a tela (o de outra marca, o antigo, sem hífen). */
 const APELIDOS: Record<string, WorkspacePage> = {
   operar: 'operar', manual: 'operar', robos: 'robos', ia: 'robos', 'ao-vivo': 'aovivo', aovivo: 'aovivo',
   admin: 'gestao', administracao: 'gestao', gestao: 'gestao',
+  'laboratorio-de-ia': 'laboratorio', lab: 'laboratorio',
 }
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '')
