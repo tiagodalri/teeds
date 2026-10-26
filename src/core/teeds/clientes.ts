@@ -259,6 +259,8 @@ export interface ClienteRegistro {
   idioma: string | null
   /** Selo Silver/Gold (GlobalFly); null nas outras marcas. */
   categoria: 'silver' | 'gold' | null
+  /** Parceiro de divulgação que trouxe o cliente (27/10/2026); null = direto. */
+  parceiro?: string | null
 }
 
 /** O que o plano libera (as funções do banco leem daqui: teeds_plano_tem). */
@@ -337,6 +339,7 @@ const paraCliente = (l: any): ClienteRegistro => ({
   tempoTotalSegundos: Number(l.tempo_total_segundos ?? 0),
   fusoHorario: l.fuso_horario ?? null, idioma: l.idioma ?? null,
   categoria: l.categoria === 'silver' || l.categoria === 'gold' ? l.categoria : null,
+  parceiro: l.parceiro ?? null,
 })
 
 export interface PaginaClientes {
@@ -382,6 +385,8 @@ export interface FiltroClientes {
   ordem?: OrdemClientes
   /** Qual plataforma ler. Vazio = a que o admin master escolheu. */
   marca?: string
+  /** Parceiro de divulgação (27/10/2026): '' todos, 'direto' sem parceiro, ou o código. */
+  parceiro?: string
 }
 
 /**
@@ -406,6 +411,7 @@ export async function listarClientesPagina(sessao: SessaoTeeds, filtro: FiltroCl
       p_limite: filtro.limite ?? 50,
       p_offset: filtro.deslocamento ?? 0,
       p_ordem: filtro.ordem ?? 'cadastro',
+      ...(filtro.parceiro ? { p_parceiro: filtro.parceiro } : {}),
     }),
   })
   const n = (v: unknown) => Number(v ?? 0)

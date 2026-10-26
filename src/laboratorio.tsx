@@ -24,6 +24,7 @@ import './components/robot-workspace.css'
 import './components/workspace.css'
 import { aplicarTema, temaGuardado } from './core/tema'
 import { MARCA } from './marca'
+import { SeletorDePlataforma, opcoesDePlataforma } from './components/SeletorDePlataforma'
 import { ligarVocabularioIA } from './marca/vocabularioIA'
 import { LoginScreen } from './components/LoginScreen'
 import { RobotCartao } from './components/RobotResumo'
@@ -63,6 +64,14 @@ const LabInicio = lazy(() => import('./components/inicio/LabInicio'))
 const LabOrganizacao = lazy(() => import('./components/organizacao/LabOrganizacao'))
 const LabPlanos = lazy(() => import('./components/LabPlanos'))
 const LabCarteira = lazy(() => import('./components/LabCarteira'))
+function LabSeletor() {
+  const [v, setV] = useState('globalfly')
+  const [p, setP] = useState('')
+  return <div className="workspace-app" style={{ padding: 32, background: 'var(--bg)', minHeight: '100vh', display: 'grid', gap: 12, alignContent: 'start' }}>
+    <SeletorDePlataforma valor={v} opcoes={opcoesDePlataforma(true, 'teeds')} onTrocar={setV} parceiros={v === 'globalfly' ? [{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }] : []} parceiro={p} onParceiro={setP} />
+    <small style={{ color: 'var(--muted)' }}>parceiro em foco: {p || 'todos'}</small>
+  </div>
+}
 const LabParceiros = lazy(() => import('./components/LabParceiros'))
 const LabGerenciamento = lazy(() => import('./components/OperationalManagementPanel').then((m) => ({ default: m.OperationalManagementPanel })))
 const LabDivulgacao = lazy(() => import('./components/LabDivulgacao'))
@@ -306,6 +315,8 @@ function Laboratorio() {
   // ?tela=carteira (&sem=1): a carteira da Deriv, com e sem a permissão `payment`
   if (qual === 'carteira') return <Suspense fallback={null}><LabCarteira /></Suspense>
   if (qual === 'parceiros') return <Suspense fallback={null}><LabParceiros /></Suspense>
+  // ?tela=seletor: o seletor de plataforma com a linha dos parceiros (admin geral)
+  if (qual === 'seletor') return <LabSeletor />
   if (qual === 'divulgacao') return <Suspense fallback={null}><LabDivulgacao /></Suspense>
   // ?tela=laboratorio-ia: o Laboratório de IA com receitas em memória (ticks e cotações reais da Deriv)
   if (qual === 'laboratorio-ia') return <Suspense fallback={null}><LabLaboratorio /></Suspense>

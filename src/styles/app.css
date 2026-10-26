@@ -5793,6 +5793,14 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .sel-plat-opcoes button[aria-pressed="true"] b { font-weight: 800; }
 .sel-plat-opcoes button[aria-pressed="true"]:hover { background: var(--primary-soft); color: var(--primary); }
 .sel-plat-opcoes button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+/* parceiros de divulgação (27/10/2026): a segunda linha do seletor, só para o admin geral */
+.sel-parc { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sel-parc-opcoes { display: inline-flex; flex-wrap: wrap; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.sel-parc-opcoes button { height: 30px; padding: 0 12px; border: 0; border-radius: 9px; background: none; color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.sel-parc-opcoes button small { opacity: .7; font-family: var(--fonte-dados, ui-monospace, monospace); font-weight: 600; }
+.sel-parc-opcoes button:hover { background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); }
+.sel-parc-opcoes button[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 45%, transparent); }
+.sel-parc-opcoes button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 @media (max-width: 720px) {
   .sel-plat { width: 100%; }
   .sel-plat-opcoes { flex: 1; }

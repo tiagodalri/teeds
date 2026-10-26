@@ -16,6 +16,7 @@ import { ESTRATEGIAS_LOCAIS, modoDaConfig, NOME_DO_MODO, temModos } from '../cor
 import { identidade } from '../core/deriv/branding'
 import { useMarcaEmFoco, REDE } from '../core/teeds/marcaEmFoco'
 import { SeletorDePlataforma, opcoesDePlataforma } from './SeletorDePlataforma'
+import { noFoco, useParceiroEmFoco, useParceirosDaMarca } from '../core/teeds/parceiroEmFoco'
 import { ChaveModoCeo } from './ChaveModoCeo'
 import { MARCA } from '../marca'
 import { nomeDoAtivo } from '../core/deriv/market'
@@ -385,6 +386,10 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   /* A plataforma vem do foco compartilhado: trocar aqui troca na Administração
      e nos Insights, e vice-versa. Antes esta tela era presa à marca do site. */
   const [marcaFoco, trocarMarca] = useMarcaEmFoco()
+  // parceiro de divulgação em foco (27/10/2026): só o admin geral vê a linha; vale para todas as listas daqui
+  const parceiros = useParceirosDaMarca(sessao, marcaFoco)
+  const [parceiroFoco, trocarParceiro] = useParceiroEmFoco()
+  const filtrandoParceiro = parceiros.length > 0 && !!parceiroFoco
   const naRede = marcaFoco === REDE
   /* A Rede soma as plataformas. As consultas aceitam lista (`marca=in.(…)`) e
      o canal ao vivo ganha uma assinatura por marca, porque o filtro dele é de
@@ -571,6 +576,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
     const termo = busca.trim().toLowerCase()
     return encerradas.filter((s) => {
       const c = clientes.get(s.userId)
+      if (filtrandoParceiro && !noFoco(parceiroFoco, c ? c.parceiro ?? null : undefined)) return false
       if (filtroConta === 'demo' && !s.demo) return false
       if (filtroConta === 'real' && s.demo) return false
       if (filtroRobo !== 'todos' && s.roboId !== filtroRobo) return false
@@ -579,7 +585,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
       if (termo && !`${c?.nome ?? ''} ${c?.email ?? ''} ${mascararConta(s.contaId)} ${s.contaId.slice(-4)} ${s.roboNome}`.toLowerCase().includes(termo)) return false
       return true
     })
-  }, [encerradas, clientes, busca, filtroConta, filtroRobo, filtroResultado])
+  }, [encerradas, clientes, busca, filtroConta, filtroRobo, filtroResultado, filtrandoParceiro, parceiroFoco])
   useEffect(() => { setLimiteEncerradas(40) }, [busca, filtroConta, filtroRobo, filtroResultado])
 
   /* ------------------------------------------------- filtros e ordem */
@@ -588,6 +594,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
     const termo = busca.trim().toLowerCase()
     const arr = [...sessoes.values()].filter((s) => {
       const c = clientes.get(s.userId)
+      if (filtrandoParceiro && !noFoco(parceiroFoco, c ? c.parceiro ?? null : undefined)) return false
       const online = s.situacao === 'rodando' && s.estado.rodando !== false
       if (filtroOnline === 'online' && !online) return false
       if (filtroOnline === 'offline' && online) return false
@@ -616,9 +623,10 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
       return b.emitidoEm - a.emitidoEm
     })
     return arr
-  }, [sessoes, clientes, busca, filtroConta, filtroOnline, filtroRobo, filtroResultado, ordem, agora])
+  }, [sessoes, clientes, busca, filtroConta, filtroOnline, filtroRobo, filtroResultado, ordem, agora, filtrandoParceiro, parceiroFoco])
 
-  const online = [...sessoes.values()].filter((s) => s.situacao === 'rodando' && s.estado.rodando !== false)
+  const online = [...sessoes.values()].filter((s) => s.situacao === 'rodando' && s.estado.rodando !== false
+    && (!filtrandoParceiro || noFoco(parceiroFoco, clientes.has(s.userId) ? clientes.get(s.userId)!.parceiro ?? null : undefined)))
   // quem está operando agora: nos robôs e no manual (as manuais abertas vêm do bloco de operações manuais)
   const [manuaisAbertas, setManuaisAbertas] = useState<{ n: number; clientes: string[] }>({ n: 0, clientes: [] })
   const contarManuais = useCallback((n: number, ids: string[]) => setManuaisAbertas({ n, clientes: ids }), [])
@@ -639,7 +647,8 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
           <p>A cabine de cada cliente, reconstruída da telemetria do servidor. Somente visualização — nenhuma ação sobre o robô é possível daqui.</p>
         </div>
         <div className="mon-topo-direita">
-          <SeletorDePlataforma valor={marcaFoco} opcoes={opcoesDePlataforma(ehMaster(), MARCA.id)} onTrocar={(id) => { trocarMarca(id); setFoco(null); setReplayDe(null); setSessoes(new Map()); setMarkups(new Map()) }} />
+          <SeletorDePlataforma valor={marcaFoco} opcoes={opcoesDePlataforma(ehMaster(), MARCA.id)} onTrocar={(id) => { trocarMarca(id); setFoco(null); setReplayDe(null); setSessoes(new Map()); setMarkups(new Map()) }}
+            parceiros={parceiros} parceiro={parceiroFoco} onParceiro={(c) => { trocarParceiro(c); setFoco(null) }} />
           <span className={`mon-canal ${canal}`} role="status"><i aria-hidden />{ROTULO_CANAL[canal]}{rttMs != null && canal === 'ao-vivo' ? ` · ida e volta ~${rttMs} ms` : ''}</span>
           <nav className="mon-abas" role="tablist">
             {(['ao-vivo', 'replay', 'auditoria'] as Aba[]).map((a) => <button key={a} role="tab" aria-selected={aba === a} className={aba === a ? 'on' : ''} onClick={() => { setAba(a); setFoco(null); setReplayDe(null) }}>{a === 'ao-vivo' ? 'Ao vivo' : a === 'replay' ? 'Sessões encerradas' : 'Auditoria'}</button>)}
