@@ -80,7 +80,7 @@ body { font-family: var(--fonte-corpo); letter-spacing: 0; font-variant-numeric:
 h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 
 /* ------------------------------ dados: cotações, preços e códigos */
-.price, .quote strong, .saldo, .pos-resumo b, .trade-conta b, .dig-numeros strong,
+.price, .quote strong, .saldo, .pos-resumo b, .trade-conta b, .dig-numeros dd,
 .chart-contratos b, .rob-nums b, .ops-tabela td.num, .op-valor, .op-res, .op-hora,
 .esc-val, .esc-cotacao b, .tv-crono, .tv-resumo-fixo b, .tv-tabela td, .teatro-nums b,
 .go-cards strong, .go-tabela-corpo b, .sim-valor strong, .cli-num, .resumo-robos b {

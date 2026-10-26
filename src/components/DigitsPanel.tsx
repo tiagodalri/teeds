@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { publicSocket, type TeedsSocket } from '../core/deriv/client'
 import { chanceTeorica, TIPOS_DIGITO, type DigitContract } from '../core/deriv/digits'
 import { traduzirErro } from '../core/deriv/erros'
@@ -25,6 +25,13 @@ interface Props {
 }
 
 const JANELAS = [50, 100, 500, 1000]
+/*
+  A fita dos últimos dígitos (26/10/2026): a caixa tinha altura para pouco mais
+  de duas linhas e a terceira saía cortada, justamente a do dígito mais novo.
+  Agora ela mede a largura e mostra só o que cabe INTEIRO em três linhas, com
+  o mais recente sempre visível no fim.
+*/
+const FITA = { linhas: 3, lado: 17, vao: 3 }
 
 export function DigitsPanel(props: Props) {
   const {
@@ -40,6 +47,17 @@ export function DigitsPanel(props: Props) {
   const [cotando, setCotando] = useState(false)
 
   const estat = useDigits(symbol, pipSize, janela)
+  const fita = useRef<HTMLDivElement>(null)
+  const [cabeNaFita, setCabeNaFita] = useState(24)
+  useEffect(() => {
+    const el = fita.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const medir = () => setCabeNaFita(Math.max(1, Math.floor((el.clientWidth + FITA.vao) / (FITA.lado + FITA.vao))) * FITA.linhas)
+    medir()
+    const ro = new ResizeObserver(medir); ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const naFita = estat.recentes.slice(-cabeNaFita)
   const kind = TIPOS_DIGITO.find((t) => t.tipo === tipoSel)!
 
   // mantem o digito dentro do que o tipo aceita
@@ -107,9 +125,9 @@ export function DigitsPanel(props: Props) {
             {estat.ultimo ?? '—'}
           </strong>
         </div>
-        <div className="dig-fita">
-          {estat.recentes.map((d, i) => (
-            <span key={i} className={`fita-d ${ganhaCom.has(d) ? 'alvo' : ''} ${i === estat.recentes.length - 1 ? 'ultimo' : ''}`}>
+        <div className="dig-fita" ref={fita}>
+          {naFita.map((d, i) => (
+            <span key={i} className={`fita-d ${ganhaCom.has(d) ? 'alvo' : ''} ${i === naFita.length - 1 ? 'ultimo' : ''}`}>
               {d}
             </span>
           ))}
@@ -188,24 +206,24 @@ export function DigitsPanel(props: Props) {
         <p className="dig-frase">
           Resultado positivo se <strong>{kind.descricao(digito)}</strong> depois de {ticks} {ticks === 1 ? 'tick' : 'ticks'}.
         </p>
-        <div className="dig-numeros">
+        {/* 26/10/2026: em lista (nome à esquerda, valor à direita). Lado a lado, os três não cabiam e quebravam em várias linhas. */}
+        <dl className="dig-numeros">
           <div>
-            <span className="rot">Chance teórica</span>
-            <strong>{chance}%</strong>
+            <dt>Chance teórica</dt>
+            <dd>{chance}%</dd>
           </div>
           <div>
-            <span className="rot">Se ganhar</span>
-            <strong>{payout !== null ? dinheiro(payout, moeda) : erroCotacao ? '—' : '…'}</strong>
+            <dt>Se ganhar, recebe</dt>
+            <dd>{payout !== null ? dinheiro(payout, moeda) : erroCotacao ? '—' : '…'}</dd>
           </div>
-          <div>
-            <span className="rot">Lucro</span>
-            <strong className={lucro !== null && lucro > 0 ? 'ganho' : ''}>
-              {lucro !== null
-                ? `${dinheiroComSinal(lucro, moeda)}${stake > 0 ? ` · ${((lucro / stake) * 100).toFixed(0)}%` : ''}`
-                : '—'}
-            </strong>
+          <div className="lucro">
+            <dt>Lucro</dt>
+            <dd className={lucro !== null && lucro > 0 ? 'ganho' : ''}>
+              {lucro !== null ? dinheiroComSinal(lucro, moeda) : '—'}
+              {lucro !== null && stake > 0 && <small>{((lucro / stake) * 100).toFixed(0)}%</small>}
+            </dd>
           </div>
-        </div>
+        </dl>
         {erroCotacao && <p className="dig-erro">{erroCotacao}</p>}
         <button
           className={`btn btn-dig ${confirmando === tipoSel ? 'btn-confirmar' : ''}`}

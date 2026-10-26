@@ -32,6 +32,7 @@ import type { ConfigEstrategia, EstadoMotor, OperacaoMotor, Registro } from './c
 import type { ActiveSymbol } from './core/deriv/types'
 import { RobotLive } from './components/RobotLive'
 import { RobotSetup } from './components/RobotSetup'
+import { DigitsPanel } from './components/DigitsPanel'
 import { VitrineDeRobos } from './components/VitrineDeRobos'
 import { WorkspaceNav } from './components/WorkspaceNav'
 import { IconeAtivo } from './components/IconeAtivo'
@@ -391,6 +392,10 @@ function Laboratorio() {
         {qual === 'aovivo-atraso' && <Suspense fallback={null}><TesteAtraso /></Suspense>}
         {/* ?tela=operar (&varias, &vazio, &fechado): a boleta e as posições do Operar manual */}
         {qual === 'operar' && <Suspense fallback={null}><LabOperar /></Suspense>}
+        {/* ?tela=dig (&largura=300): o painel de Dígitos do Manual na largura da lateral, com ticks públicos do 75 Index */}
+        {qual === 'dig' && <div style={{ width: Number(new URLSearchParams(location.search).get('largura') ?? 300), padding: 12, background: 'var(--bg)' }}>
+          <DigitsPanel symbol="R_75" pipSize={4} stake={10} moeda="USD" podeOperar logado comprando={false} onComprar={nada} confirmando={null} onDesarmar={nada} motivoBloqueio={null} />
+        </div>}
         {qual === 'grafico' && <div style={{ height: 520, display: 'flex' }}><PriceChart candles={VELAS} mode="candles" pipSize={3} symbolName="Volatility 75 (1s)" symbol="lab" indicators={['sma', 'ema']}
           // &marcas=1: uma operação manual aberta e uma encerrada (preço com o último dígito em destaque)
           markers={new URLSearchParams(location.search).has('marcas') ? [
