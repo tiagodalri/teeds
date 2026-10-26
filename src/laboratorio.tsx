@@ -59,6 +59,7 @@ const LabOperar = lazy(() => import('./components/operar/LabOperar'))
 const LabAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.LabAoVivo })))
 const LabInicio = lazy(() => import('./components/inicio/LabInicio'))
 const LabOrganizacao = lazy(() => import('./components/organizacao/LabOrganizacao'))
+const LabPlanos = lazy(() => import('./components/LabPlanos'))
 const LabPerfil = lazy(() => import('./components/perfil/LabPerfil'))
 const LabSuporte = lazy(() => import('./components/suporte/LabSuporte'))
 function LabAulas() {
@@ -292,6 +293,8 @@ function Laboratorio() {
   if (qual === 'inicio') return <Suspense fallback={null}><LabInicio /></Suspense>
   if (qual === 'perfil') return <Suspense fallback={null}><LabPerfil /></Suspense>
   if (qual === 'organizacao') return <Suspense fallback={null}><LabOrganizacao /></Suspense>
+  // ?tela=planos: Administração > Planos com o banco de mentira
+  if (qual === 'planos') return <Suspense fallback={null}><LabPlanos /></Suspense>
   if (qual === 'suporte') return <Suspense fallback={null}><LabSuporte /></Suspense>
   if (qual === 'login') return <LabLogin />
   // ?tela=carregando: o carregando da marca (o mesmo quadro em que a decolagem pousa)

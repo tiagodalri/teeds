@@ -6,7 +6,7 @@ import {
   salvarResposta, STATUS, trocarEmailPeloSuporte, type Conversa, type FichaDoCliente, type Mensagem, type Prioridade, type RespostaPronta, type StatusDaConversa,
 } from '../../core/teeds/suporte'
 import { formatarCPF, formatarTelefone } from '../../core/teeds/conta'
-import { PLANOS_CLIENTE } from '../../core/teeds/planos'
+import { nomeDoPlano } from '../../core/teeds/planos'
 import { assinarMudancas } from '../../core/teeds/realtime'
 import { PERGUNTAS } from '../../core/teeds/faq'
 import type { ResumoDaTriagem } from '../../core/teeds/triagem'
@@ -318,7 +318,7 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
     } catch (e) { setErro((e as Error).message) } finally { setTrocandoEmail(false) }
   }
 
-  const plano = (id: string) => PLANOS_CLIENTE.find((p) => p.id === id)?.nome ?? id
+  const plano = nomeDoPlano
   const nomeDe = (c: Conversa) => nomes[c.userId]?.nome || nomes[c.userId]?.email || 'Cliente'
   const ctx = (atual?.contexto ?? {}) as { aparelho?: string; navegador?: string; app?: boolean; tela?: string; largura?: number }
 

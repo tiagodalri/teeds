@@ -3,6 +3,7 @@ import type { SessaoTeeds } from '../core/teeds/conta'
 import { SERVIDOR } from '../core/teeds/config'
 import './admin-pendentes.css'
 import { PLANOS_CLIENTE } from '../core/teeds/planos'
+import type { PlanoRegistro } from '../core/teeds/clientes'
 import { MARCAS } from '../marca'
 
 const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MARCAS).map(m=>[m.id,m.prosa]))
@@ -23,7 +24,10 @@ interface Pendente {
   Por isso a marca é prop obrigatória: quem renderiza decide, e a tela carrega
   o nome dela no cabeçalho para a dúvida nunca mais existir.
 */
-export function AdminPendentes({ sessao, marca, versao, onAprovado }: {sessao:SessaoTeeds; marca:string; versao:number; onAprovado:()=>void}) {
+export function AdminPendentes({ sessao, marca, versao, onAprovado, planos }: {sessao:SessaoTeeds; marca:string; versao:number; onAprovado:()=>void; planos?: PlanoRegistro[]}) {
+  // os planos disponíveis desta marca (Administração > Planos); sem eles ainda, os de reserva
+  const opcoesDePlano = planos?.length ? planos.filter(p => p.ativo) : PLANOS_CLIENTE
+  const planoPadrao = planos?.find(p => p.padrao && p.ativo)?.id ?? 'essencial'
   const [status,setStatus]=useState('pendente')
   const [plano,setPlano]=useState('essencial')
   const [pagina,setPagina]=useState(0)
@@ -34,6 +38,8 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado }: {sessao:Se
   const [carregando,setCarregando]=useState(true)
   const [revisao,setRevisao]=useState(0)
   const [confirmar,setConfirmar]=useState<{p:Pendente;acao:'aprovar'|'recusar'}|null>(null)
+  // o plano sugerido é o padrão da marca (o de quem se cadastra sozinho)
+  useEffect(() => { setPlano(planoPadrao) }, [planoPadrao])
   async function consultar(path: string, body?: unknown, signal?: AbortSignal) {
     // A marca vai nos dois sentidos: na busca e na decisão. Aprovar é o que
     // cria conta e dispara e-mail — não pode depender de qual site está aberto.
@@ -70,7 +76,7 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado }: {sessao:Se
     <header><div><span className="rot">Cadastros pelo formulário</span><h3>Aprovação de clientes <em className="pendente-marca">{NOME_DA_MARCA[marca] ?? marca}</em></h3><p>Novos cadastros e recadastros aguardam sua aprovação. Cada marca tem a sua conta: quem já é cliente de outra plataforma ganha uma conta nova aqui, com senha própria.</p></div><button disabled={!!ocupado||carregando} onClick={()=>setRevisao(v=>v+1)}>Atualizar</button></header>
     <nav aria-label="Status da aprovação">{[['pendente','Pendentes'],['processando','Em aprovação'],['aprovado','Aprovados'],['recusado','Recusados']].map(([id,nome])=><button key={id} aria-pressed={status===id} disabled={!!ocupado} onClick={()=>{setStatus(id);setPagina(0);setConfirmar(null);setAviso('')}}>{nome}</button>)}</nav>
     {erro&&<p role="alert">{erro}</p>}{aviso&&<p role="status">{aviso}</p>}
-    {confirmar?.acao==='aprovar' && confirmar.p.status==='pendente' && <label>Plano do novo cliente <select value={plano} disabled={!!ocupado} onChange={e=>setPlano(e.target.value)}>{PLANOS_CLIENTE.map(p=><option key={p.id} value={p.id}>{p.nome}</option>)}</select></label>}
+    {confirmar?.acao==='aprovar' && confirmar.p.status==='pendente' && <label>Plano do novo cliente <select value={plano} disabled={!!ocupado} onChange={e=>setPlano(e.target.value)}>{opcoesDePlano.map(p=><option key={p.id} value={p.id}>{p.nome}</option>)}</select></label>}
     {confirmar&&<div className="pendente-confirmar"><b>{confirmar.acao==='aprovar'?'Aprovar':'Recusar'} {confirmar.p.nome}?</b><p>{confirmar.acao==='aprovar'?'Novos clientes recebem o plano escolhido por 30 dias e e-mail com as instruções. Quem já tem conta nesta plataforma mantém a senha e as condições atuais.':'O lead continuará disponível, sem criação de acesso ou envio de e-mail.'}</p><div><button disabled={!!ocupado} onClick={()=>setConfirmar(null)}>Cancelar</button><button className="admin-primary" disabled={!!ocupado} onClick={()=>void decidir()}>{ocupado?'Processando…':'Confirmar'}</button></div></div>}
     {carregando?<p>Carregando cadastros…</p>:lista.length===0&&!erro?<p>Nenhum cadastro nesta situação.</p>:lista.slice(0,50).map(p=><article key={p.id} className="pendente-linha">
       <div><b>{p.nome}</b><span>{p.email}</span><span>{p.telefone}</span>

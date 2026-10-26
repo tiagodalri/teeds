@@ -17,7 +17,7 @@ import { SUPABASE, autenticacaoConfigurada } from './config'
 import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
 import { MARCAS } from '../../marca/marcas'
-import { PLANOS_CLIENTE, planoClienteValido } from './planos'
+import { lembrarNomesDosPlanos, planoClienteValido } from './planos'
 import { emailDaConta } from './emailDaConta'
 import { dispositivoAtual } from './insights'
 
@@ -261,7 +261,22 @@ export interface ClienteRegistro {
   categoria: 'silver' | 'gold' | null
 }
 
-export interface PlanoRegistro { id: string; nome: string; duracaoDias: number | null; ativo: boolean }
+/** O que o plano libera (as funções do banco leem daqui: teeds_plano_tem). */
+export interface RecursosDoPlano { simulador: boolean; salaDeTreino: boolean; aoVivo: boolean }
+/** Um plano como a marca o configurou (planos_da_marca). Os números só vêm do painel de planos. */
+export interface PlanoRegistro {
+  id: string; nome: string; duracaoDias: number | null; ativo: boolean
+  descricao: string | null; padrao: boolean; recursos: RecursosDoPlano; ordem: number; marca: string
+  clientes?: number; ativos?: number; expirados?: number; novos30d?: number; pendentes?: number
+  criadoEm?: string | null; atualizadoEm?: string | null
+}
+const recursosDoBanco = (r: any): RecursosDoPlano => ({ simulador: r?.simulador === true, salaDeTreino: r?.sala_de_treino === true, aoVivo: r?.ao_vivo !== false })
+const planoDoBanco = (l: any, marca: string): PlanoRegistro => ({
+  id: l.id ?? l.plano_id, nome: l.nome, duracaoDias: l.duracao_dias ?? null, ativo: Boolean(l.ativo),
+  descricao: l.descricao ?? null, padrao: Boolean(l.padrao), recursos: recursosDoBanco(l.recursos), ordem: Number(l.ordem) || 0, marca: l.marca ?? marca,
+  clientes: l.clientes, ativos: l.ativos, expirados: l.expirados, novos30d: l.novos_30d, pendentes: l.pendentes,
+  criadoEm: l.criado_em ?? null, atualizadoEm: l.atualizado_em ?? null,
+})
 export interface ProdutoRegistro { id: string; nome: string; categoria: string; precoCentavos: number | null; ativo: boolean }
 export interface ClienteProdutoRegistro { userId: string; produtoId: string; concedidoEm: string; expiraEm: string | null; ativo: boolean }
 
@@ -431,8 +446,21 @@ export async function clientesPorId(sessao: SessaoTeeds, ids: string[], marca?: 
 }
 
 export async function listarPlanos(sessao: SessaoTeeds): Promise<PlanoRegistro[]> {
-  const linhas = await rest<any[]>(`/planos?select=*&marcas=ov.{${marcasEmFoco().join(',')}}&order=nome.asc`, sessao.token)
-  return (linhas ?? []).filter(l => planoClienteValido(l.id)).map((l) => ({ id: l.id, nome: PLANOS_CLIENTE.find(p => p.id === l.id)!.nome, duracaoDias: l.duracao_dias, ativo: Boolean(l.ativo) }))
+  const linhas = await rest<any[]>(`/planos_da_marca?select=*&marca=in.(${marcasEmFoco().join(',')})&order=ordem.asc,nome.asc`, sessao.token)
+  // na visão da rede o mesmo id aparece uma vez por marca: fica o da marca deste site, ou o primeiro
+  const porId = new Map<string, PlanoRegistro>()
+  for (const l of linhas ?? []) { const p = planoDoBanco(l, l.marca); if (!porId.has(p.id) || p.marca === MARCA.id) porId.set(p.id, p) }
+  const lista = [...porId.values()]
+  lembrarNomesDosPlanos(lista)
+  return lista
+}
+
+/** Os planos desta marca com os números de cada um (Administração > Planos). */
+export async function painelDePlanos(sessao: SessaoTeeds): Promise<PlanoRegistro[]> {
+  const linhas = await rest<any[]>('/rpc/teeds_planos_painel', sessao.token, { method: 'POST', body: JSON.stringify({ p_marca: MARCA.id }) })
+  const lista = (linhas ?? []).map((l) => planoDoBanco(l, MARCA.id))
+  lembrarNomesDosPlanos(lista)
+  return lista
 }
 
 export async function listarProdutos(sessao: SessaoTeeds): Promise<ProdutoRegistro[]> {
@@ -464,14 +492,26 @@ export async function definirProdutoCliente(sessao: SessaoTeeds, userId: string,
   })
 }
 
-export async function salvarPlano(sessao: SessaoTeeds, plano: PlanoRegistro): Promise<void> {
-  await rest('/planos?on_conflict=id', sessao.token, {
-    method: 'POST', headers: MESCLAR,
-    // Nasce visível na plataforma onde foi criado. Para valer nas duas, é
-    // acrescentar a outra marca à lista — decisão de quem administra, não
-    // um efeito colateral de onde a pessoa estava quando criou.
-    body: JSON.stringify({ id: plano.id, nome: plano.nome, duracao_dias: plano.duracaoDias, ativo: plano.ativo, marcas: [MARCA.id] }),
+/**
+ * Cria (sem id) ou altera um plano DESTA marca. Antes gravava direto na linha
+ * compartilhada de `planos` e trocava a lista de marcas pela de quem salvava
+ * (editar pela GlobalFly tirava o plano da Teeds). Agora passa pela função do
+ * banco, que só mexe na configuração da marca. Devolve o id.
+ */
+export async function salvarPlano(sessao: SessaoTeeds, plano: Pick<PlanoRegistro, 'id' | 'nome' | 'descricao' | 'duracaoDias' | 'ativo' | 'padrao' | 'recursos'>): Promise<string> {
+  return rest<string>('/rpc/teeds_plano_salvar', sessao.token, {
+    method: 'POST',
+    body: JSON.stringify({
+      p_marca: MARCA.id, p_id: plano.id || null, p_nome: plano.nome, p_descricao: plano.descricao, p_duracao_dias: plano.duracaoDias,
+      p_ativo: plano.ativo, p_padrao: plano.padrao,
+      p_recursos: { simulador: plano.recursos.simulador, sala_de_treino: plano.recursos.salaDeTreino, ao_vivo: plano.recursos.aoVivo },
+    }),
   })
+}
+
+/** Apaga um plano desta marca. O banco recusa se houver cliente nele ou se for o plano de quem se cadastra. */
+export async function apagarPlano(sessao: SessaoTeeds, id: string): Promise<void> {
+  await rest('/rpc/teeds_plano_apagar', sessao.token, { method: 'POST', body: JSON.stringify({ p_marca: MARCA.id, p_id: id }) })
 }
 
 export async function salvarProduto(sessao: SessaoTeeds, produto: ProdutoRegistro): Promise<void> {

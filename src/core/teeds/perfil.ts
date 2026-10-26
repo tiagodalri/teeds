@@ -9,7 +9,7 @@
 import { SUPABASE } from './config'
 import { ehImagem, reduzirImagem } from '../imagem'
 import type { SessaoTeeds } from './conta'
-import { PLANOS_CLIENTE } from './planos'
+import { nomeDoPlano } from './planos'
 import { MARCA } from '../../marca'
 
 export interface Endereco { cep: string; rua: string; numero: string; complemento: string; bairro: string; cidade: string; uf: string }
@@ -53,6 +53,15 @@ async function gravarNaFicha(sessao: SessaoTeeds, campos: Record<string, unknown
 }
 const minhaFicha = (sessao: SessaoTeeds) => `/clientes?user_id=eq.${sessao.usuario.id}&marca=eq.${MARCA.id}`
 
+/** O nome do plano como a marca o configurou (o cliente lê os planos da própria marca). */
+async function nomeDoPlanoNoBanco(sessao: SessaoTeeds, planoId: string): Promise<string> {
+  try {
+    const [p] = await rest<any[]>(`/planos_da_marca?select=nome&marca=eq.${MARCA.id}&plano_id=eq.${encodeURIComponent(planoId)}&limit=1`, sessao)
+    if (p?.nome) return String(p.nome)
+  } catch { /* sem resposta, o nome de reserva */ }
+  return nomeDoPlano(planoId)
+}
+
 export async function lerPerfil(sessao: SessaoTeeds): Promise<Perfil> {
   const [l] = await rest<any[]>(`${minhaFicha(sessao)}&select=${CAMPOS}&limit=1`, sessao)
   const v = (x: unknown) => (x === null || x === undefined ? '' : String(x))
@@ -65,7 +74,7 @@ export async function lerPerfil(sessao: SessaoTeeds): Promise<Perfil> {
     endereco: { cep: v(l?.end_cep), rua: v(l?.end_rua), numero: v(l?.end_numero), complemento: v(l?.end_complemento), bairro: v(l?.end_bairro), cidade: v(l?.end_cidade), uf: v(l?.end_uf) },
     fotoUrl: l?.foto_url ?? null,
     planoId,
-    planoNome: PLANOS_CLIENTE.find((p) => p.id === planoId)?.nome ?? planoId,
+    planoNome: await nomeDoPlanoNoBanco(sessao, planoId),
     status: v(l?.status_acesso) || 'ativo',
     acessoInicio: l?.acesso_inicio ?? null,
     acessoExpira: l?.acesso_expira_em ?? null,
