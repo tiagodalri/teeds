@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#051528" />
+  <meta name="robots" content="noindex" />
+  <title>GlobalFly Trade · Falta pouco</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/pwa-globalfly/favicon-32.png" />
+  <link rel="apple-touch-icon" href="/pwa-globalfly/icon-180.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../estilo.css" />
+</head>
+<body>
+  <div class="pagina">
+    <header class="topo">
+      <img src="/globalfly-assinatura.png" alt="GlobalFly Trade" width="900" height="283" />
+      <span class="passo">Passo 2 de 2</span>
+    </header>
+
+    <main class="centro">
+      <form class="cartao" id="form" novalidate>
+        <div class="progresso"><div><i style="width: 85%"></i></div><span data-ola>Falta só uma pergunta</span></div>
+        <fieldset style="border: 0; margin: 0; padding: 0; min-width: 0">
+          <legend class="pergunta">Você já foi cliente do ecossistema do Victor Cordeiro?</legend>
+          <div class="opcoes">
+            <label class="opcao"><input type="radio" name="cliente" value="sim" id="cliente-sim" /><i></i>Sim</label>
+            <label class="opcao"><input type="radio" name="cliente" value="nao" id="cliente-nao" /><i></i>Não</label>
+          </div>
+        </fieldset>
+
+        <fieldset class="produtos" id="produtos" hidden style="border-left: 0; border-right: 0; border-bottom: 0; margin: 0; padding-left: 0; padding-right: 0; min-width: 0">
+          <h3>De quais produtos você já foi cliente?</h3>
+          <p>Marque todos que se aplicam.</p>
+          <div class="lista-produtos">
+            <label class="produto"><input type="checkbox" name="produto" value="b3" id="p-b3" /><i></i>B3</label>
+            <label class="produto"><input type="checkbox" name="produto" value="fast" id="p-fast" /><i></i>Universidade Trading (Fast)</label>
+            <label class="produto"><input type="checkbox" name="produto" value="calculadora_fast" id="p-calculadora" /><i></i>Calculadora Fast</label>
+            <label class="produto"><input type="checkbox" name="produto" value="stark" id="p-stark" /><i></i>Stark / Starkbot</label>
+            <label class="produto"><input type="checkbox" name="produto" value="plano_socio" id="p-socio" /><i></i>Plano Sócio</label>
+            <label class="produto"><input type="checkbox" name="produto" value="mentoria" id="p-mentoria" /><i></i>Mentoria</label>
+            <label class="produto"><input type="checkbox" name="produto" value="grande_revolucao" id="p-revolucao" /><i></i>A Grande Revolução</label>
+            <label class="produto"><input type="checkbox" name="produto" value="outro" id="p-outro" /><i></i>Outro</label>
+          </div>
+          <label class="campo qual" id="qual" hidden>Qual?
+            <input id="outro" name="outro" maxlength="60" placeholder="Nome do produto" autocomplete="off" />
+          </label>
+        </fieldset>
+
+        <div class="acoes">
+          <button class="botao" type="submit" disabled>Concluir cadastro <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <p class="mensagem" role="status" aria-live="polite"></p>
+        </div>
+      </form>
+    </main>
+
+    <footer class="rodape">
+      <span>© 2026 GlobalFly Trade</span>
+      <span>Operar envolve risco de perda. Resultados passados não garantem resultados futuros.</span>
+    </footer>
+  </div>
+
+  <script src="../captura.js"></script>
+  <script>
+    (function () {
+      var dados = GF.ler()
+      // Sem o cadastro (abriu o link direto), volta para o passo 1
+      if (!dados.email) { location.replace(GF.proxima('../')); return }
+      if (dados.nome) document.querySelector('[data-ola]').textContent = dados.nome + ', falta só uma pergunta'
+
+      var form = document.getElementById('form'), botao = form.querySelector('.botao'), mensagem = form.querySelector('.mensagem')
+      var produtos = document.getElementById('produtos'), qual = document.getElementById('qual')
+
+      function resposta() { var r = form.querySelector('input[name="cliente"]:checked'); return r ? r.value : null }
+      function marcados() { return Array.prototype.map.call(form.querySelectorAll('input[name="produto"]:checked'), function (c) { return c.value }) }
+      function atualizar() {
+        var r = resposta(), lista = marcados()
+        produtos.hidden = r !== 'sim'
+        qual.hidden = lista.indexOf('outro') < 0
+        botao.disabled = !r || (r === 'sim' && lista.length === 0)
+      }
+      form.addEventListener('change', function (ev) {
+        atualizar()
+        if (ev.target.id === 'cliente-sim') produtos.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        if (ev.target.id === 'p-outro' && ev.target.checked) document.getElementById('outro').focus()
+      })
+
+      form.addEventListener('submit', function (ev) {
+        ev.preventDefault()
+        var r = resposta(); if (!r || botao.disabled) return
+        var lista = r === 'sim' ? marcados() : []
+        botao.disabled = true; botao.textContent = 'Enviando…'; mensagem.textContent = ''
+        var seguir = function () { GF.guardar({ respondeu: true }); location.assign(GF.proxima('../obrigado/')) }
+        fetch(GF.SUPABASE + '/rest/v1/rpc/gf_responder_questionario', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', apikey: GF.CHAVE, authorization: 'Bearer ' + GF.CHAVE },
+          body: JSON.stringify({ p_email: dados.email, p_ex_cliente: r === 'sim', p_produtos: lista, p_outro: document.getElementById('outro').value || null }),
+        })
+          // O cadastro já está garantido no passo 1: se a resposta não gravar, a pessoa segue mesmo assim
+          .then(seguir, seguir)
+      })
+    })()
+  </script>
+</body>
+</html>

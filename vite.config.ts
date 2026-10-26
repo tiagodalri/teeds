@@ -221,18 +221,34 @@ export default defineConfig({
         // Copiar no build evita manter duas versoes que poderiam divergir.
         const destinoCaptura = join(SAIDA, 'cadastro')
         rmSync(destinoCaptura, { recursive: true, force: true })
-        cpSync(join(RAIZ, 'captura'), destinoCaptura, { recursive: true })
-        rmSync(join(destinoCaptura, 'LEIA-ME.md'), { force: true })
-        // O GitHub Pages e alguns navegadores guardaram o primeiro 404 dos
-        // recursos externos e exibiram apenas HTML cru. A landing e pequena:
-        // embutir CSS e JS no próprio documento elimina essa dependência e
-        // garante uma única resposta completa, inclusive no primeiro acesso.
-        const htmlCaptura = readFileSync(join(destinoCaptura, 'index.html'), 'utf8')
-          .replace('<link rel="stylesheet" href="./landing.css?v=202609091" />', `<style>${readFileSync(join(destinoCaptura, 'landing.css'), 'utf8')}</style>`)
-          .replace('<script src="./landing.js?v=202609091"></script>', `<script>${readFileSync(join(destinoCaptura, 'landing.js'), 'utf8')}</script>`)
-        writeFileSync(join(destinoCaptura, 'index.html'), htmlCaptura)
-        rmSync(join(destinoCaptura, 'landing.css'), { force: true })
-        rmSync(join(destinoCaptura, 'landing.js'), { force: true })
+        // 26/10/2026: a GlobalFly tem a captação própria do lançamento
+        // (cadastro -> questionário -> obrigado), em captura-globalfly/.
+        if (MARCA.id === 'globalfly') {
+          cpSync(join(RAIZ, 'captura-globalfly'), destinoCaptura, { recursive: true })
+          const estilo = readFileSync(join(destinoCaptura, 'estilo.css'), 'utf8')
+          const comum = readFileSync(join(destinoCaptura, 'captura.js'), 'utf8')
+          for (const pagina of ['index.html', 'questionario/index.html', 'obrigado/index.html']) {
+            const arquivo = join(destinoCaptura, pagina)
+            writeFileSync(arquivo, readFileSync(arquivo, 'utf8')
+              .replace(/<link rel="stylesheet" href="(?:\.\.?\/)estilo\.css" \/>/, () => `<style>${estilo}</style>`)
+              .replace(/<script src="(?:\.\.?\/)captura\.js"><\/script>/, () => `<script>${comum}</script>`))
+          }
+          rmSync(join(destinoCaptura, 'estilo.css'), { force: true })
+          rmSync(join(destinoCaptura, 'captura.js'), { force: true })
+        } else {
+          cpSync(join(RAIZ, 'captura'), destinoCaptura, { recursive: true })
+          rmSync(join(destinoCaptura, 'LEIA-ME.md'), { force: true })
+          // O GitHub Pages e alguns navegadores guardaram o primeiro 404 dos
+          // recursos externos e exibiram apenas HTML cru. A landing e pequena:
+          // embutir CSS e JS no próprio documento elimina essa dependência e
+          // garante uma única resposta completa, inclusive no primeiro acesso.
+          const htmlCaptura = readFileSync(join(destinoCaptura, 'index.html'), 'utf8')
+            .replace('<link rel="stylesheet" href="./landing.css?v=202609091" />', `<style>${readFileSync(join(destinoCaptura, 'landing.css'), 'utf8')}</style>`)
+            .replace('<script src="./landing.js?v=202609091"></script>', `<script>${readFileSync(join(destinoCaptura, 'landing.js'), 'utf8')}</script>`)
+          writeFileSync(join(destinoCaptura, 'index.html'), htmlCaptura)
+          rmSync(join(destinoCaptura, 'landing.css'), { force: true })
+          rmSync(join(destinoCaptura, 'landing.js'), { force: true })
+        }
         for (const outra of Object.values(MARCAS)) {
           if (outra.id === MARCA.id) continue
           rmSync(join(SAIDA, outra.emblema), { force: true })

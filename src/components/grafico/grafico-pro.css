@@ -26,6 +26,12 @@
    da página e lê o mouse em px da tela, e a mira saía do lugar. Aqui ele roda
    sem a escala, e o resto do gráfico (botões, avisos) segue com ela. */
 .gp-kline { position: absolute; inset: 0; zoom: calc(1 / var(--escala-pagina, 1)); }
+/* marca d'água: centralizada na área das velas (fora das escalas de preço e hora) */
+.gp-dagua { position: absolute; inset: 0 84px 30px 0; display: grid; place-items: center; pointer-events: none; user-select: none; }
+.gp-dagua img { width: min(46%, 560px); height: auto; opacity: .07; }
+.gp-dagua-clara { display: none; }
+:root:not([data-tema='escuro']) .gp-dagua-clara { display: block; opacity: .09; }
+:root:not([data-tema='escuro']) .gp-dagua-escura { display: none; }
 .gp-ferramentas { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border-right: 1px solid var(--border); overflow-y: auto; scrollbar-width: none; }
 .gp-ferramentas::-webkit-scrollbar { display: none; }
 .gp-ferramentas button { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border: 0; border-radius: 8px; background: none; color: var(--muted); cursor: pointer; }

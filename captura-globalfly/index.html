@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#051528" />
+  <meta name="description" content="Cadastre-se para a live de lançamento da GlobalFly Trade: segunda, 9 de novembro, às 20h." />
+  <meta property="og:title" content="Live de lançamento da GlobalFly Trade" />
+  <meta property="og:description" content="Segunda, 9 de novembro, às 20h. Cadastre-se e entre na comunidade oficial." />
+  <meta property="og:image" content="https://globalflytrade.com/globalfly-assinatura.png" />
+  <title>GlobalFly Trade · Live de lançamento</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/pwa-globalfly/favicon-32.png" />
+  <link rel="apple-touch-icon" href="/pwa-globalfly/icon-180.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="preload" as="image" href="/login-globalfly/nuvens.webp" />
+  <link rel="stylesheet" href="./estilo.css" />
+</head>
+<body>
+  <div class="pagina">
+    <header class="topo">
+      <img src="/globalfly-assinatura.png" alt="GlobalFly Trade" width="900" height="283" />
+      <span class="passo">Passo 1 de 2</span>
+    </header>
+
+    <main class="cadastro">
+      <section>
+        <span class="selo-live"><i></i>Live de lançamento <span>· segunda, 9/11, às 20h</span></span>
+        <h1>Garanta seu lugar na <em>live de lançamento</em> da GlobalFly Trade.</h1>
+        <p class="chamada">Cadastre-se para receber o link da live, os avisos do lançamento e o acesso à comunidade oficial no WhatsApp.</p>
+        <ul class="motivos">
+          <li><b>✓</b><span>A plataforma apresentada por dentro, ao vivo.</span></li>
+          <li><b>✓</b><span>As condições de lançamento, anunciadas na live.</span></li>
+          <li><b>✓</b><span>Suas dúvidas respondidas na hora.</span></li>
+        </ul>
+      </section>
+
+      <form class="cartao" id="form" novalidate>
+        <h2>Faça seu cadastro</h2>
+        <p class="sub">Leva menos de um minuto.</p>
+        <label class="campo">Nome completo
+          <input id="nome" name="nome" autocomplete="name" maxlength="120" placeholder="Como podemos chamar você?" required />
+          <small data-erro="nome"></small>
+        </label>
+        <label class="campo">Seu melhor e-mail
+          <input id="email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="180" placeholder="voce@email.com" required />
+          <small data-erro="email"></small>
+        </label>
+        <label class="campo">WhatsApp com DDD
+          <input id="telefone" name="telefone" type="tel" inputmode="tel" autocomplete="tel-national" maxlength="16" placeholder="(11) 91234-5678" required />
+          <small data-erro="telefone"></small>
+        </label>
+        <input class="armadilha" id="empresa" name="empresa" tabindex="-1" autocomplete="off" aria-hidden="true" />
+        <button class="botao" type="submit">Continuar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <p class="mensagem" role="status" aria-live="polite"></p>
+        <p class="aviso">Ao continuar, você autoriza a GlobalFly Trade a falar com você por WhatsApp e e-mail sobre o lançamento. Você pode sair quando quiser.</p>
+        <div class="seguro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Seus dados ficam protegidos e não são compartilhados.</div>
+      </form>
+    </main>
+
+    <footer class="rodape">
+      <span>© 2026 GlobalFly Trade</span>
+      <span>Operar envolve risco de perda. Resultados passados não garantem resultados futuros.</span>
+    </footer>
+  </div>
+
+  <script src="./captura.js"></script>
+  <script>
+    (function () {
+      var form = document.getElementById('form'), inicio = Date.now()
+      var tel = form.elements.telefone, botao = form.querySelector('.botao'), mensagem = form.querySelector('.mensagem')
+      var rotuloBotao = botao.innerHTML
+      var visitas = 1
+      try { visitas = Math.min(1000, Number(localStorage.getItem('visitas-captura-globalfly') || 0) + 1); localStorage.setItem('visitas-captura-globalfly', String(visitas)) } catch (e) {}
+
+      tel.addEventListener('input', function () {
+        var d = tel.value.replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '').slice(0, 11)
+        tel.value = d.length <= 2 ? (d ? '(' + d : '') : d.length <= 6 ? '(' + d.slice(0, 2) + ') ' + d.slice(2)
+          : d.length <= 10 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6) : '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7)
+      })
+
+      function erro(campo, texto) {
+        var el = form.elements[campo]; el.setAttribute('aria-invalid', texto ? 'true' : 'false')
+        form.querySelector('[data-erro="' + campo + '"]').textContent = texto || ''
+        return !texto
+      }
+      ;['nome', 'email', 'telefone'].forEach(function (c) { form.elements[c].addEventListener('input', function () { erro(c, '') }) })
+
+      function conferir() {
+        var nome = form.elements.nome.value.trim().replace(/\s+/g, ' ')
+        var email = form.elements.email.value.trim().toLowerCase()
+        var digitos = tel.value.replace(/\D/g, '')
+        var ok = erro('nome', nome.length < 3 ? 'Escreva seu nome.' : '')
+        ok = erro('email', /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? '' : 'Confira o e-mail.') && ok
+        ok = erro('telefone', digitos.length < 10 || digitos.length > 11 || /^0/.test(digitos) ? 'Coloque o DDD e o número.' : '') && ok
+        return ok ? { nome: nome, email: email, telefone: tel.value } : null
+      }
+
+      form.addEventListener('submit', function (ev) {
+        ev.preventDefault()
+        var dados = conferir()
+        if (!dados) { var primeiro = form.querySelector('[aria-invalid="true"]'); if (primeiro) primeiro.focus(); return }
+        botao.disabled = true; botao.textContent = 'Enviando…'; mensagem.textContent = ''; mensagem.className = 'mensagem'
+        var utm = new URLSearchParams(location.search)
+        fetch(GF.MOTOR, {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            marca: 'globalfly', nome: dados.nome, email: dados.email, telefone: dados.telefone, consentiu: true,
+            empresa: form.elements.empresa.value, tempo: Math.round((Date.now() - inicio) / 1000), profundidade: 100, visitas: visitas,
+            pagina: location.href, campanha: utm.get('utm_campaign'), origem: utm.get('utm_source'), meio: utm.get('utm_medium'),
+            conteudo: utm.get('utm_content'), termo: utm.get('utm_term'),
+          }),
+        }).then(function (r) {
+          return r.json().catch(function () { return {} }).then(function (corpo) { if (!r.ok) throw new Error(corpo.erro || 'Não foi possível enviar agora.') })
+        }).then(function () {
+          // Só segue depois de o motor confirmar que o cadastro foi gravado
+          GF.guardar({ nome: dados.nome.split(' ')[0], email: dados.email, quando: Date.now() })
+          location.assign(GF.proxima('./questionario/'))
+        }).catch(function (e) {
+          mensagem.textContent = e instanceof TypeError || !e.message ? 'Sem conexão com a internet. Tente de novo.' : e.message; mensagem.className = 'mensagem erro'
+          botao.disabled = false; botao.innerHTML = rotuloBotao
+        })
+      })
+    })()
+  </script>
+</body>
+</html>

@@ -18,6 +18,7 @@ import { IconeCategoria, IconeIndicador } from './IconeIndicador'
 import './grafico-pro.css'
 import { ControlesDeZoom } from './ControlesDeZoom'
 import { naPagina } from '../../core/escala'
+import { MARCA } from '../../marca'
 
 interface Props {
   candles: Candle[]
@@ -475,6 +476,13 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
         )}
 
         <div className="gp-grafico" aria-label={`Gráfico de ${symbolName}`}>
+          {/* 26/10/2026 (Tiago): a assinatura da casa bem apagada no fundo, por baixo das velas */}
+          {MARCA.assinatura && (
+            <div className="gp-dagua" aria-hidden="true">
+              <img className="gp-dagua-escura" src={`${import.meta.env.BASE_URL}${MARCA.assinatura.escura}`} alt="" draggable={false} />
+              <img className="gp-dagua-clara" src={`${import.meta.env.BASE_URL}${MARCA.assinatura.clara}`} alt="" draggable={false} />
+            </div>
+          )}
           <div className="gp-kline" ref={caixa} />
           {loading && <span className="gp-carregando">Carregando velas…</span>}
           <ControlesDeZoom style={pePainel !== null ? { left: '50%', top: pePainel } : { left: '50%', bottom: 44 }}

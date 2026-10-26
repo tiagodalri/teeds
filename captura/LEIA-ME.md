@@ -1,5 +1,9 @@
 # Captação de leads
 
+> 26/10/2026: a GlobalFly deixou de usar esta landing. O /cadastro dela é o
+> fluxo do lançamento em `captura-globalfly/` (cadastro -> questionário ->
+> obrigado com a comunidade do WhatsApp); o build escolhe a pasta pela marca.
+
 Uma única landing page atende as três marcas sem misturar seus dados. A marca
 sai do domínio (`/cadastro/` dentro do site de cada uma):
 
