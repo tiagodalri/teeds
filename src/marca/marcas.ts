@@ -120,7 +120,7 @@ export interface Marca {
   decolagem?: boolean
   /** Link do grupo (comunidade) no WhatsApp: vira banner em Aulas. */
   comunidade?: string
-  /** Link da apostila (PDF): quando existir, vira banner em Aulas. */
+  /** Link da apostila (PDF): quando existir, vira banner em Aulas e o cartão "Baixar Apostila" no Início. */
   apostila?: string
   /**
    * Nome dos ativos sem a palavra "Volatility" ("75 Index", "10 (1s) Index").
@@ -385,6 +385,8 @@ export const MARCAS: Record<string, Marca> = {
     decolagem: true,
     // 21/10/2026: a comunidade oficial (enviado pelo Tiago)
     comunidade: 'https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq',
+    // 26/10/2026: provisória (o brandbook), até a apostila do aluno ficar pronta
+    apostila: '/globalfly-apostila.pdf',
     ativosSemVolatility: true,
     iconesDeAtivos: true,
     indicesCompletos: true,

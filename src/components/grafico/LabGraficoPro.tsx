@@ -34,7 +34,14 @@ export default function LabGraficoPro() {
     return () => clearInterval(t)
   }, [])
   const ult = velas[velas.length - 1]
-  const marcadores: ContractMarker[] = [{ id: 1, type: 'CALL', entryEpoch: ult.epoch - 240, entryPrice: velas[velas.length - 5].close, expiryEpoch: ult.epoch + 120, profit: 0.85 }]
+  // uma aberta, duas iguais que fecharam no prejuízo (o caso do print de 26/10/2026) e uma no lucro
+  const v = (i: number) => velas[velas.length - i]
+  const marcadores: ContractMarker[] = [
+    { id: 1, type: 'CALL', entryEpoch: ult.epoch - 240, entryPrice: v(5).close, expiryEpoch: ult.epoch + 120, profit: 0.85 },
+    { id: 2, type: 'CALL', entryEpoch: v(14).epoch, entryPrice: v(14).close, expiryEpoch: v(11).epoch, profit: -0.16, status: 'sold', exitPrice: v(11).close },
+    { id: 3, type: 'CALL', entryEpoch: v(14).epoch, entryPrice: v(14).close, expiryEpoch: v(11).epoch, profit: -0.24, status: 'sold', exitPrice: v(11).close },
+    { id: 4, type: 'PUT', entryEpoch: v(24).epoch, entryPrice: v(24).close, expiryEpoch: v(20).epoch, profit: 0.92, status: 'won', exitPrice: v(20).close },
+  ]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg)' }}>
       <div style={{ display: 'flex', gap: 8, padding: 8 }}>

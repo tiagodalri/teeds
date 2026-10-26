@@ -254,7 +254,7 @@ export default defineConfig({
           rmSync(join(SAIDA, outra.emblema), { force: true })
           // Toda peca de marca na raiz com o prefixo da outra (assinatura,
           // monograma claro da GlobalFly...) fica so no site dela.
-          for (const arquivo of readdirSync(SAIDA)) if (arquivo.startsWith(`${outra.id}-`) && /\.(png|svg|webp|jpg)$/.test(arquivo)) rmSync(join(SAIDA, arquivo), { force: true })
+          for (const arquivo of readdirSync(SAIDA)) if (arquivo.startsWith(`${outra.id}-`) && /\.(png|svg|webp|jpg|pdf)$/.test(arquivo)) rmSync(join(SAIDA, arquivo), { force: true })
           rmSync(join(SAIDA, `pwa-${outra.id}`), { recursive: true, force: true })
           // Capas de aula exclusivas de uma marca (aulas-globalfly/...).
           if (outra.id !== 'teeds') rmSync(join(SAIDA, `aulas-${outra.id}`), { recursive: true, force: true })

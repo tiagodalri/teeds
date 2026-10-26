@@ -46,26 +46,79 @@ function registrarTudo() {
     time: 'Hora: ', open: 'Abertura: ', high: 'Máxima: ', low: 'Mínima: ', close: 'Fechamento: ', volume: 'Volume: ',
     change: 'Variação: ', turnover: 'Giro: ', second: 's', minute: 'min', hour: 'h', day: 'd', week: 'sem', month: 'mês', year: 'ano',
   })
-  // As posições abertas: linha da entrada até o vencimento e o resultado na ponta.
-  registerOverlay<{ texto: string; cor: string }>({
-    name: 'gfPosicao', totalStep: 3, lock: true, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+  /*
+    As operações no gráfico (refeito em 26/10/2026, Tiago: "a estética dessas
+    tags não está legal"). Antes: uma etiqueta vermelha chapada e comprida por
+    operação ("Encerrada −0,16 · Saída 33.161,0160"), empilhando quando duas
+    fechavam no mesmo tick. Agora:
+      - aberta: linha tracejada até o vencimento e um selo compacto na entrada
+        (direção e resultado ao vivo, o preço de entrada discreto ao lado);
+      - encerrada: linha apagada, ponto de saída e um selo leve na cor do
+        resultado, com o preço de saída (o último dígito decide nos Dígitos);
+      - operações iguais (mesma entrada e saída) viram um selo só, "2×".
+  */
+  registerOverlay<{ rotulo: string; detalhe: string; cor: string; encerrada: boolean }>({
+    name: 'gfPosicao', totalStep: 4, lock: true, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
     createPointFigures: ({ coordinates, overlay, bounding }) => {
-      const [a, b] = coordinates
+      const [a, b, saida] = coordinates
       if (!a) return []
-      const cor = overlay.extendData?.cor ?? '#4FA3FF'
+      const d = overlay.extendData
+      const cor = d?.cor ?? '#4FA3FF'
       const fimX = b && Number.isFinite(b.x) ? b.x : bounding.width
-      const texto = overlay.extendData?.texto ?? ''
-      // perto da borda direita (a entrada de agora, no celular) a etiqueta encosta na borda, sem cortar
-      const largura = texto.length * 6.4 + 14
-      const xEtiqueta = Math.max(4, Math.min(a.x + 8, bounding.width - 6 - largura))
+      const rotulo = d?.rotulo ?? '', detalhe = d?.detalhe ?? ''
+      const fonte = getComputedStyle(document.body).fontFamily
+      const tamRotulo = d?.encerrada ? 10.5 : 11, padRotulo = d?.encerrada ? 14 : 16
+      const larguraRotulo = medir(rotulo, tamRotulo, 700, fonte) + padRotulo, larguraDetalhe = detalhe ? medir(detalhe, 10, 500, fonte) + 10 : 0
+      const cabe = (x: number) => Math.max(4, Math.min(x, bounding.width - 6 - larguraRotulo - larguraDetalhe))
+      const fundo = css('--surface', '#08172B'), apoio = css('--muted', '#93A6BD')
+      if (!d?.encerrada) {
+        const x = cabe(a.x + 8), y = a.y - 9
+        return [
+          { type: 'line', attrs: { coordinates: [a, { x: fimX, y: a.y }] }, styles: { color: cor, size: 1.4, style: 'dashed', dashedValue: [5, 4] }, ignoreEvent: true },
+          { type: 'circle', attrs: { x: a.x, y: a.y, r: 4.5 }, styles: { style: 'stroke_fill', color: cor, borderColor: fundo, borderSize: 2 }, ignoreEvent: true },
+          { type: 'text', attrs: { x, y, text: rotulo, align: 'left', baseline: 'bottom' },
+            styles: { color: '#fff', backgroundColor: cor, borderRadius: 10, paddingLeft: 8, paddingRight: 8, paddingTop: 3, paddingBottom: 3, size: 11, weight: 700, family: fonte }, ignoreEvent: true },
+          ...(detalhe ? [{ type: 'text', attrs: { x: x + larguraRotulo + 4, y: y - 1.5, text: detalhe, align: 'left', baseline: 'bottom' },
+            styles: { color: apoio, backgroundColor: comAlfa(fundo, .82), borderRadius: 6, paddingLeft: 5, paddingRight: 5, paddingTop: 2, paddingBottom: 2, size: 10, weight: 500, family: fonte }, ignoreEvent: true }] : []),
+        ]
+      }
+      // encerrada: a entrada vira um anel pequeno, a linha fica apagada e o selo vai para a saída
+      const fim = saida && Number.isFinite(saida.y) ? saida : (b ?? a)
+      const x = cabe(fim.x + 9)
       return [
-        { type: 'line', attrs: { coordinates: [a, { x: fimX, y: a.y }] }, styles: { color: cor, size: 1.5, style: 'dashed', dashedValue: [5, 4] }, ignoreEvent: true },
-        { type: 'circle', attrs: { x: a.x, y: a.y, r: 4 }, styles: { color: cor }, ignoreEvent: true },
-        { type: 'text', attrs: { x: xEtiqueta, y: a.y - 10, text: texto, align: 'left', baseline: 'bottom' },
-          styles: { color: '#fff', backgroundColor: cor, borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 3, paddingBottom: 3, size: 11, weight: 700 }, ignoreEvent: true },
+        { type: 'line', attrs: { coordinates: [a, { x: fimX, y: a.y }] }, styles: { color: comAlfa(cor, .45), size: 1, style: 'dashed', dashedValue: [3, 4] }, ignoreEvent: true },
+        ...(saida && b ? [{ type: 'line', attrs: { coordinates: [{ x: b.x, y: a.y }, saida] }, styles: { color: comAlfa(cor, .45), size: 1, style: 'solid' }, ignoreEvent: true }] : []),
+        { type: 'circle', attrs: { x: a.x, y: a.y, r: 3 }, styles: { style: 'stroke', borderColor: comAlfa(cor, .8), borderSize: 1.5 }, ignoreEvent: true },
+        { type: 'circle', attrs: { x: fim.x, y: fim.y, r: 3.5 }, styles: { style: 'stroke_fill', color: cor, borderColor: fundo, borderSize: 1.5 }, ignoreEvent: true },
+        { type: 'text', attrs: { x, y: fim.y, text: rotulo, align: 'left', baseline: 'middle' },
+          styles: { color: cor, backgroundColor: comAlfa(cor, .14), borderColor: comAlfa(cor, .5), borderSize: 1, borderRadius: 10, paddingLeft: 7, paddingRight: 7, paddingTop: 3, paddingBottom: 3, size: 10.5, weight: 700, family: fonte }, ignoreEvent: true },
+        ...(detalhe ? [{ type: 'text', attrs: { x: x + larguraRotulo + 4, y: fim.y, text: detalhe, align: 'left', baseline: 'middle' },
+          styles: { color: apoio, backgroundColor: comAlfa(fundo, .82), borderRadius: 6, paddingLeft: 5, paddingRight: 5, paddingTop: 2, paddingBottom: 2, size: 10, weight: 500, family: fonte }, ignoreEvent: true }] : []),
       ]
     },
   })
+}
+
+let regua: CanvasRenderingContext2D | null = null
+/** A largura do texto como o gráfico vai desenhá-lo (para o preço ficar colado no selo). */
+function medir(texto: string, tamanho: number, peso: number, familia: string): number {
+  regua ??= document.createElement('canvas').getContext('2d')
+  if (!regua) return texto.length * tamanho * 0.6
+  regua.font = `${peso} ${tamanho}px ${familia}`
+  return regua.measureText(texto).width
+}
+
+/** A mesma cor com transparência (aceita #rgb, #rrggbb e rgb()). */
+function comAlfa(cor: string, alfa: number): string {
+  const c = cor.trim()
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c)
+  if (hex) {
+    const h = hex[1].length === 3 ? hex[1].split('').map((x) => x + x).join('') : hex[1]
+    return `rgba(${parseInt(h.slice(0, 2), 16)}, ${parseInt(h.slice(2, 4), 16)}, ${parseInt(h.slice(4, 6), 16)}, ${alfa})`
+  }
+  const rgb = /^rgba?\(([^)]+)\)$/i.exec(c)
+  if (rgb) { const [r, g, b] = rgb[1].split(',').map((x) => x.trim()); return `rgba(${r}, ${g}, ${b}, ${alfa})` }
+  return c
 }
 
 /* --------------------------------------------------------------- visual */
@@ -397,22 +450,31 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
     const chart = chartRef.current
     if (!chart) return
     chart.removeOverlay({ groupId: 'gf-posicao' })
+    const pt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: pipSize, maximumFractionDigits: pipSize })
+    const dinheiro = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    // operações iguais (mesma direção, entrada e saída) viram uma só no gráfico
+    const grupos = new Map<string, ContractMarker[]>()
     for (const m of markers) {
       if (m.entryPrice == null) continue
-      const subir = /CALL|RISE|UP/i.test(m.type)
-      const cor = subir ? css('--up', '#16C784') : css('--down', '#EA3943')
-      const lucro = `${m.profit >= 0 ? '+' : '−'}${Math.abs(m.profit).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-      const pt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: pipSize, maximumFractionDigits: pipSize })
       const encerrada = !!m.status && m.status !== 'open'
-      // o preço vai no texto (com o último dígito, que decide nas operações de dígitos)
-      const texto = encerrada
-        ? `${m.status === 'won' ? 'Ganhou' : m.status === 'lost' ? 'Perdeu' : 'Encerrada'} ${lucro} · Saída ${m.exitPrice != null ? pt(m.exitPrice) : '—'}`
-        : `${subir ? '▲ Subir' : '▼ Descer'} · Entrada ${pt(m.entryPrice)} · ${lucro}`
-      chart.createOverlay({
-        name: 'gfPosicao', groupId: 'gf-posicao', lock: true,
-        points: [{ timestamp: m.entryEpoch * 1000, value: m.entryPrice }, { timestamp: m.expiryEpoch * 1000, value: m.entryPrice }],
-        extendData: { texto, cor: encerrada ? (m.profit >= 0 ? css('--up', '#16C784') : css('--down', '#EA3943')) : cor },
-      } as OverlayCreate)
+      const chave = [m.type, m.entryEpoch, m.entryPrice, m.expiryEpoch, encerrada ? m.exitPrice ?? '' : 'aberta'].join('|')
+      grupos.set(chave, [...(grupos.get(chave) ?? []), m])
+    }
+    for (const lista of grupos.values()) {
+      const m = lista[0]
+      const subir = /CALL|RISE|UP/i.test(m.type)
+      const encerrada = !!m.status && m.status !== 'open'
+      const lucro = lista.reduce((t, x) => t + x.profit, 0)
+      const vezes = lista.length > 1 ? `${lista.length}× ` : ''
+      const seta = subir ? '▲' : '▼'
+      const cor = encerrada ? (lucro >= 0 ? css('--up', '#16C784') : css('--down', '#EA3943')) : (subir ? css('--up', '#16C784') : css('--down', '#EA3943'))
+      const rotulo = encerrada ? `${vezes}${lucro >= 0 ? '✓' : '✕'} ${dinheiro(lucro)}` : `${vezes}${seta} ${subir ? 'Subir' : 'Descer'} ${dinheiro(lucro)}`
+      // o preço vai discreto ao lado (com o último dígito, que decide nas operações de dígitos)
+      const detalhe = encerrada ? (m.exitPrice != null ? `Saída ${pt(m.exitPrice)}` : '') : `Entrada ${pt(m.entryPrice!)}`
+      // sempre os 3 pontos do desenho (com menos, o klinecharts deixa a marcação "em desenho", esperando clique)
+      const points = [{ timestamp: m.entryEpoch * 1000, value: m.entryPrice! }, { timestamp: m.expiryEpoch * 1000, value: m.entryPrice! },
+        { timestamp: m.expiryEpoch * 1000, value: encerrada && m.exitPrice != null ? m.exitPrice : m.entryPrice! }]
+      chart.createOverlay({ name: 'gfPosicao', groupId: 'gf-posicao', lock: true, points, extendData: { rotulo, detalhe, cor, encerrada } } as OverlayCreate)
     }
   }, [chaveMarcadores]) // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -82,6 +82,8 @@ const ICONE = {
   video: 'M3 7a2 2 0 012-2h9a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2zM16 10l5-3v10l-5-3',
   grupo: 'M17 20h5v-2a3 3 0 00-5.4-1.8M9 20H2v-2a4 4 0 018 0v2M12 7a3 3 0 11-6 0 3 3 0 016 0zM20 9a2 2 0 11-4 0 2 2 0 014 0z',
   play: 'M8 5.5v13l10.5-6.5z',
+  apostila: 'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h4',
+  baixar: 'M12 5v10M8 11l4 4 4-4M6 19h12',
 }
 const Icone = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden="true"><path d={d} /></svg>
 
@@ -275,6 +277,13 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                   <span><b>Depositar na Deriv</b><small>No caixa da corretora</small></span>
                   <Icone d={ICONE.externo} />
                 </a>
+                {MARCA.apostila && (
+                  <a className="in-atalho" href={MARCA.apostila} download={`Apostila ${MARCA.nome}.pdf`} target="_blank" rel="noopener">
+                    <span className="in-atalho-icone"><Icone d={ICONE.apostila} /></span>
+                    <span><b>Baixar Apostila</b><small>Material de estudo em PDF</small></span>
+                    <Icone d={ICONE.baixar} />
+                  </a>
+                )}
               </div>
             </div>
           </section>
