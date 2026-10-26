@@ -171,7 +171,10 @@ function Mostrador({ id, rotulo, etiqueta, ajuda, tom, valor, mudar, marcas, fai
 
 /** O loss virtual como mostrador: o número de dígitos e uma régua de casas (Sem, 1, 2, …), as mesmas casas do radar da cabine. */
 function MostradorDeDigitos({ valor, mudar, max, padrao }: { valor: number; mudar: (n: number) => void; max: number; padrao: number }) {
-  const ate = Math.max(8, valor, padrao)
+  // A régua tem sempre "Sem" + 8 casas (26/10/2026: com 9 ou mais, os botões
+  // vazavam do cartão). Acima de 8, ela desliza e mostra as 8 últimas até o valor.
+  const ate = Math.max(8, valor)
+  const casas = [0, ...Array.from({ length: 8 }, (_, i) => ate - 7 + i)]
   return (
     <div className="plv-m tom-aco">
       <div className="plv-m-topo">
@@ -186,7 +189,7 @@ function MostradorDeDigitos({ valor, mudar, max, padrao }: { valor: number; muda
         <button type="button" className="plv-m-passo" onClick={() => mudar(Math.min(max, valor + 1))} disabled={valor >= max} aria-label="Esperar um dígito a mais"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9M8 3.5v9" /></svg></button>
       </div>
       <div className="plv-m-casas" role="radiogroup" aria-labelledby="plv-lv-rot">
-        {Array.from({ length: ate + 1 }, (_, n) => (
+        {casas.map((n) => (
           <button type="button" key={n} role="radio" aria-checked={valor === n} className={`${n === 0 ? 'sem' : ''} ${n > 0 && n <= valor ? 'cheia' : ''} ${valor === n ? 'on' : ''}`}
             onClick={() => mudar(n)} aria-label={n === 0 ? 'Sem loss virtual' : `${n} ${n === 1 ? 'dígito' : 'dígitos'}`}>{n === 0 ? 'Sem' : n}</button>
         ))}
