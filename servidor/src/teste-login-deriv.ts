@@ -221,6 +221,8 @@ conferir('fora de um app instalado, o caminho normal continua valendo', emAppIns
 
 const chamadas: Array<{ url: string; auth: string; metodo: string }> = []
 g.fetch = async (u: string, opcoes: { method?: string; headers?: Record<string, string>; body?: string } = {}) => {
+  // a vitrine (27/10/2026) viaja nos parâmetros: o caminho é o que importa aqui
+  u = u.split('?')[0]
   chamadas.push({ url: u, auth: opcoes.headers?.authorization ?? '', metodo: opcoes.method ?? 'GET' })
   if (u.endsWith('/api/deriv/iniciar')) {
     return { ok: true, json: async () => ({ url: 'https://auth.deriv.com/oauth2/auth?state=state-do-servidor&client_id=x' }) }
