@@ -52,6 +52,14 @@ let parceiroDaConta: string | null | undefined
 /** Logado: o parceiro da conta (null = sem parceiro). undefined volta a seguir o link guardado. */
 export function definirParceiroDoEndereco(codigo: string | null | undefined): void { parceiroDaConta = codigo }
 const codigosDeParceiro = () => MARCA.parceiros ?? []
+/** O parceiro que vale agora: o da conta (logado) ou o do link guardado; '' = nenhum. */
+export function parceiroVigente(): string {
+  if (!codigosDeParceiro().length) return ''
+  const c = parceiroDaConta === undefined ? parceiroGuardado() : parceiroDaConta
+  return c && codigosDeParceiro().includes(c) ? c : ''
+}
+/** O link de abrir conta na Deriv: o do parceiro, quando ele tem um; senão, o da marca. */
+export const afiliadoDaDeriv = (): string => MARCA.afiliadosDosParceiros?.[parceiroVigente()] ?? MARCA.afiliado
 function prefixo(): string {
   if (!codigosDeParceiro().length) return ''
   const c = parceiroDaConta === undefined ? parceiroGuardado() : parceiroDaConta

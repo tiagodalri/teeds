@@ -1,3 +1,4 @@
+import { afiliadoDaDeriv } from '../core/rotas'
 import { useState } from 'react'
 import {
   formatarTelefone, telefoneValido,
@@ -190,7 +191,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
             Seu dinheiro fica na corretora Deriv. Conecte sua conta à {MARCA.prosa}
             {' '}para operar pela plataforma.
           </p>
-          <a className="btn-deriv" href={MARCA.afiliado} target="_blank" rel="noopener noreferrer">
+          <a className="btn-deriv" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">
             <span>Abrir conta na Deriv</span>
             <IconeSaida tamanho={16} />
           </a>

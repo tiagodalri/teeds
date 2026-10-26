@@ -1,3 +1,4 @@
+import { afiliadoDaDeriv } from '../../core/rotas'
 import type { WorkspacePage } from '../WorkspaceNav'
 import { Monograma, TEM_MONOGRAMA } from '../marca/Monograma'
 import { abrirSuporte } from '../../core/teeds/suporte'
@@ -172,7 +173,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
             ) : (
               <>
                 <button type="button" className="in-pilula ouro" onClick={conectar}>Conectar minha Deriv</button>
-                {MARCA.afiliado && <a className="in-pilula" href={MARCA.afiliado} target="_blank" rel="noopener noreferrer">Ainda não tenho conta</a>}
+                {afiliadoDaDeriv() && <a className="in-pilula" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">Ainda não tenho conta</a>}
               </>
             )}
           </div>

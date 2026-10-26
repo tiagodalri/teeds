@@ -1,3 +1,4 @@
+import { afiliadoDaDeriv } from '../../core/rotas'
 import { useEffect, useRef, useState } from 'react'
 import { DerivLogo } from '../DerivMarca'
 import { Monograma } from '../marca/Monograma'
@@ -55,12 +56,12 @@ export function bannersDaMarca({ treino, noAr }: { treino: boolean; noAr: boolea
     pontos: ['Avisos da equipe', 'Agenda das transmissões', 'Novidades primeiro'],
     acao: 'Entrar na comunidade', href: MARCA.comunidade, imagem: `${BASE}fundos-globalfly/monograma-gf.jpg`, posicao: '80% center',
   })
-  if (MARCA.afiliado) l.push({
+  if (afiliadoDaDeriv()) l.push({
     id: 'conta', selo: 'Corretora oficial', marca: 'deriv',
     titulo: 'Abra a sua conta na Deriv',
     texto: 'É gratuito e leva poucos minutos. As operações acontecem na sua conta, e o dinheiro fica sempre com você.',
     pontos: ['Gratuito', 'Poucos minutos', 'O dinheiro fica com você'],
-    acao: 'Abrir minha conta', href: MARCA.afiliado, imagem: `${BASE}aulas-globalfly/conta-deriv.webp`, posicao: 'center 35%',
+    acao: 'Abrir minha conta', href: afiliadoDaDeriv(), imagem: `${BASE}aulas-globalfly/conta-deriv.webp`, posicao: 'center 35%',
   })
   l.push({
     id: 'deposito', selo: 'Depósito', marca: 'deriv',

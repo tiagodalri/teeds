@@ -1,3 +1,4 @@
+import { afiliadoDaDeriv } from '../core/rotas'
 import { DerivLogo, IconeElo } from './DerivMarca'
 import { MARCA } from '../marca'
 import { useState } from 'react'
@@ -129,7 +130,7 @@ export function DerivDesconectada({ acao, entrando, onConectar, compacto = false
           </button>
         )}
         {!voltaPerdida && (
-          <a href={MARCA.afiliado} target="_blank" rel="noopener noreferrer">Ainda não tenho conta</a>
+          <a href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">Ainda não tenho conta</a>
         )}
       </div>
     </div>

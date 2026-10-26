@@ -1,3 +1,4 @@
+import { afiliadoDaDeriv } from '../core/rotas'
 import { ResponsiveImage } from './ResponsiveImage'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
@@ -271,7 +272,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: strin
             {(() => {
               // os links relacionados: os padrões da marca e os extras que o painel cadastrou nesta aula
               const links: Array<{ nome: string; url: string; dica?: string }> = [
-                ...(MARCA.afiliado ? [{ nome: 'Abrir conta na Deriv', url: MARCA.afiliado, dica: 'Gratuito, em poucos minutos' }] : []),
+                ...(afiliadoDaDeriv() ? [{ nome: 'Abrir conta na Deriv', url: afiliadoDaDeriv(), dica: 'Gratuito, em poucos minutos' }] : []),
                 { nome: 'Depositar na Deriv', url: DERIV.deposito, dica: 'Pela área Caixa da sua conta' },
                 ...(MARCA.comunidade ? [{ nome: 'Comunidade no WhatsApp', url: MARCA.comunidade, dica: 'Avisos e agenda das transmissões' }] : []),
                 ...(aberta.links ?? []).filter((l) => !/deriv\.com\/dashboard\/deposit/.test(l.url)),

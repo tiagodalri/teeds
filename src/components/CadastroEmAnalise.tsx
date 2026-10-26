@@ -12,6 +12,7 @@
  * mexer nesse campo, então esconder o menu não é a tranca — é só a cortesia
  * de não mostrar portas que não abrem.
  */
+import { afiliadoDaDeriv } from '../core/rotas'
 import { useState } from 'react'
 import { Brand } from './Brand'
 import { DerivLogo, IconeSaida } from './DerivMarca'
@@ -86,7 +87,7 @@ export function CadastroEmAnalise({ email, nome, aoConferir, aoSair }: {
             Seu dinheiro fica na corretora Deriv. Conecte sua conta à {MARCA.prosa}
             {' '}para operar pela plataforma.
           </p>
-          <a className="btn-deriv" href={MARCA.afiliado} target="_blank" rel="noopener noreferrer">
+          <a className="btn-deriv" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">
             <span>Abrir conta na Deriv</span>
             <IconeSaida />
           </a>

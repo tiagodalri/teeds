@@ -1,3 +1,4 @@
+import { afiliadoDaDeriv } from '../core/rotas'
 import { useEffect, useRef, useState } from 'react'
 import type { TradingAccount } from '../core/deriv/account'
 import { BalanceLive } from './BalanceLive'
@@ -138,7 +139,7 @@ export function AccountSwitcher(props: Props) {
             </button>
           )}
 
-          <a className="menu-acao" role="menuitem" href={MARCA.afiliado}
+          <a className="menu-acao" role="menuitem" href={afiliadoDaDeriv()}
             target="_blank" rel="noopener noreferrer">
             <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
               fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

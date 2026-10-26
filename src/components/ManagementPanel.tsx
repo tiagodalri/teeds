@@ -1,3 +1,4 @@
+import { afiliadoDaDeriv } from '../core/rotas'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AuthSession } from '../core/deriv/auth'
 import { DERIV } from '../core/deriv/config'
@@ -374,7 +375,7 @@ export function ManagementPanel({
   const [copiado, setCopiado] = useState(false)
   const copiarLink = async () => {
     try {
-      await navigator.clipboard.writeText(MARCA.afiliado)
+      await navigator.clipboard.writeText(afiliadoDaDeriv())
       setCopiado(true)
       setTimeout(() => setCopiado(false), 2000)
     } catch {
@@ -445,10 +446,10 @@ export function ManagementPanel({
             </p>
           </div>
           <div className="convite-acao">
-            <code>{MARCA.afiliado}</code>
+            <code>{afiliadoDaDeriv()}</code>
             <div className="convite-botoes">
               <button onClick={copiarLink}>{copiado ? 'copiado!' : 'Copiar link'}</button>
-              <a href={MARCA.afiliado} target="_blank" rel="noopener noreferrer">Abrir</a>
+              <a href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">Abrir</a>
             </div>
           </div>
         </section>
@@ -834,10 +835,10 @@ export function ManagementPanel({
           </p>
         </div>
         <div className="convite-acao">
-          <code>{MARCA.afiliado}</code>
+          <code>{afiliadoDaDeriv()}</code>
           <div className="convite-botoes">
             <button onClick={copiarLink}>{copiado ? 'copiado!' : 'Copiar link'}</button>
-            <a href={MARCA.afiliado} target="_blank" rel="noopener noreferrer">Abrir</a>
+            <a href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">Abrir</a>
           </div>
         </div>
       </section>
