@@ -64,6 +64,7 @@ const LabOrganizacao = lazy(() => import('./components/organizacao/LabOrganizaca
 const LabPlanos = lazy(() => import('./components/LabPlanos'))
 const LabCarteira = lazy(() => import('./components/LabCarteira'))
 const LabParceiros = lazy(() => import('./components/LabParceiros'))
+const LabGerenciamento = lazy(() => import('./components/OperationalManagementPanel').then((m) => ({ default: m.OperationalManagementPanel })))
 const LabDivulgacao = lazy(() => import('./components/LabDivulgacao'))
 const LabLaboratorio = lazy(() => import('./components/laboratorio/LabLaboratorio'))
 const LabPerfil = lazy(() => import('./components/perfil/LabPerfil'))
@@ -338,6 +339,12 @@ function Laboratorio() {
         {/* ?tela=marketplace (&trancadas=1): o Marketplace da marca; com trancadas, Gulf e Phenom aparecem a vender */}
         {qual === 'marketplace' && <LabMarketplace />}
         {qual === 'vitrine' && <LabVitrine />}
+        {/* ?tela=gerenciamento: a tela Gerenciamento com o catálogo de fábrica (para a apostila) */}
+        {qual === 'gerenciamento' && (
+          <CatalogoDeExemplo itens={CATALOGO_LAB.map((i) => ({ id: i.id, ativo: true, parametros: parametrosPadrao(i.id), lossVirtualAjustavel: true }))}>
+            <Suspense fallback={null}><LabGerenciamento /></Suspense>
+          </CatalogoDeExemplo>
+        )}
         {/* ?tela=grafico-pro: o gráfico profissional (indicadores e desenhos) com velas de exemplo. */}
         {qual === 'grafico-pro' && <Suspense fallback={null}><LabGraficoPro /></Suspense>}
         {/* ?tela=icones: os ícones dos ativos, como aparecem na lista "Trocar ativo". */}
