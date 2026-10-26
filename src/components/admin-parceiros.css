@@ -1,0 +1,64 @@
+/* Admin > Parceiros (27/10/2026): os parceiros lado a lado, o funil e o markup de cada um. */
+.ap { --ap-ouro: var(--gf-ouro, var(--primary)); display: grid; gap: 16px; min-width: 0; }
+.ap-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.ap-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.ap-link { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.ap-link span { display: grid; gap: 1px; }
+.ap-link small { color: var(--muted); font-size: 11px; font-weight: 600; }
+.ap-link b { font-size: 14px; font-family: var(--fonte-dados, ui-monospace, monospace); }
+.ap-link button, .ap-trocar, .ap-erro button { height: 32px; padding: 0 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--text); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.ap-link button:hover, .ap-trocar:hover { border-color: var(--ap-ouro); }
+.ap-periodo { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.ap-periodo button { height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.ap-periodo button.on { background: var(--ap-ouro); color: #051528; }
+.ap-dica, .ap-nota { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.ap-dica b { color: var(--text); font-family: var(--fonte-dados, ui-monospace, monospace); font-weight: 600; }
+.ap-erro { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; background: color-mix(in srgb, var(--down) 12%, transparent); color: var(--down); font-size: 13px; font-weight: 600; }
+.ap-carregando, .ap-vazio { padding: 24px; color: var(--muted); font-size: 13.5px; text-align: center; }
+
+.ap-cartoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.ap-cartao { display: grid; gap: 14px; padding: 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.ap-cartao:hover { border-color: color-mix(in srgb, var(--ap-ouro) 55%, var(--border)); }
+.ap-cartao.on { border-color: var(--ap-ouro); box-shadow: inset 0 0 0 1px var(--ap-ouro); }
+.ap-cartao.direto { background: color-mix(in srgb, var(--surface) 70%, var(--bg)); }
+.ap-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ap-cab b { font-size: 15px; }
+.ap-cab small { padding: 2px 8px; border-radius: 99px; background: color-mix(in srgb, var(--ap-ouro) 16%, transparent); color: var(--ap-ouro); font: 700 12px var(--fonte-dados, ui-monospace, monospace); }
+.ap-markup { display: grid; gap: 2px; }
+.ap-markup small { color: var(--muted); font-size: 11.5px; font-weight: 600; }
+.ap-markup strong { font-size: 28px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--up); }
+.ap-cartao.direto .ap-markup strong { color: var(--text); }
+.ap-funil { display: grid; grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); margin: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.ap-funil > div { display: grid; gap: 2px; padding: 8px 10px; }
+.ap-funil > div + div { border-left: 1px solid var(--border); }
+.ap-funil dt { color: var(--muted); font-size: 10.5px; font-weight: 600; }
+.ap-funil dd { margin: 0; font: 800 16px var(--fonte-dados, ui-monospace, monospace); font-variant-numeric: tabular-nums; }
+.ap-rodape { display: grid; gap: 3px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+
+.ap-lista { display: grid; gap: 10px; padding: 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.ap-lista header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ap-lista h3 { margin: 0; font-size: 15px; }
+.ap-lista header small { color: var(--muted); font-size: 12px; }
+.ap-tabela { overflow-x: auto; }
+.ap-tabela table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.ap-tabela th { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11.5px; font-weight: 700; text-align: left; white-space: nowrap; }
+.ap-tabela td { padding: 10px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); vertical-align: middle; }
+.ap-tabela td small { display: block; color: var(--muted); font-size: 11.5px; }
+.ap-tabela .num { text-align: right; white-space: nowrap; }
+.ap-tabela tr:last-child td { border-bottom: 0; }
+
+.ap-modal-fundo { position: fixed; inset: 0; z-index: 500; display: grid; place-items: center; padding: 16px; background: rgba(2, 8, 20, .6); }
+.ap-modal { display: grid; gap: 8px; width: min(440px, 100%); padding: 22px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text); box-shadow: 0 30px 70px -30px rgba(0, 0, 0, .7); }
+.ap-modal h3 { margin: 0; font-size: 17px; }
+.ap-modal p { margin: 0 0 6px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.ap-modal label { margin-top: 6px; font-size: 12.5px; font-weight: 700; }
+.ap-modal select, .ap-modal textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 14px; }
+.ap-modal-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.ap-modal-acoes button { height: 40px; padding: 0 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
+.ap-modal-acoes button.principal { border-color: var(--ap-ouro); background: var(--ap-ouro); color: #051528; }
+.ap-modal-acoes button:disabled { opacity: .5; cursor: not-allowed; }
+@media (max-width: 560px) {
+  .ap-link { flex: 1 1 100%; justify-content: space-between; }
+  .ap-periodo { width: 100%; justify-content: space-between; }
+  .ap-periodo button { flex: 1; padding: 0 6px; }
+}

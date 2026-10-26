@@ -117,7 +117,7 @@
           body: JSON.stringify({
             marca: 'globalfly', nome: dados.nome, email: dados.email, telefone: dados.telefone, consentiu: true,
             empresa: form.elements.empresa.value, tempo: Math.round((Date.now() - inicio) / 1000), profundidade: 100, visitas: visitas,
-            pagina: location.href, campanha: utm.get('utm_campaign'), origem: utm.get('utm_source'), meio: utm.get('utm_medium'),
+            pagina: GF.paginaComParceiro(), campanha: utm.get('utm_campaign'), origem: utm.get('utm_source'), meio: utm.get('utm_medium'),
             conteudo: utm.get('utm_content'), termo: utm.get('utm_term'),
           }),
         }).then(function (r) {

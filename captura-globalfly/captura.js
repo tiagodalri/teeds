@@ -24,6 +24,28 @@ var GF = (function () {
     return tudo
   }
 
+  // Parceiro de divulgação (27/10/2026): o mesmo guardado pelo site (src/core/teeds/parceiro.ts,
+  // chave globalfly.parceiro, 90 dias, primeiro toque). Vai na FRENTE do endereço gravado: o
+  // servidor guarda só 300 caracteres. A regra que vale é a do banco.
+  var PARCEIROS = ['n', 'v'], CHAVE_PARCEIRO = 'globalfly.parceiro'
+  function parceiro() {
+    try {
+      var g = JSON.parse(localStorage.getItem(CHAVE_PARCEIRO) || 'null')
+      if (g && PARCEIROS.indexOf(g.codigo) >= 0 && Date.now() - g.em < 90 * 864e5) return g.codigo
+    } catch (e) {}
+    var daqui = (new URLSearchParams(location.search).get('parceiro') || '').toLowerCase()
+    if (PARCEIROS.indexOf(daqui) >= 0) { try { localStorage.setItem(CHAVE_PARCEIRO, JSON.stringify({ codigo: daqui, em: Date.now() })) } catch (e) {} return daqui }
+    return null
+  }
+  function paginaComParceiro() {
+    var p = parceiro(), aqui = new URL(location.href)
+    if (!p) return aqui.href
+    var nova = new URL(aqui.origin + aqui.pathname)
+    nova.searchParams.set('parceiro', p)
+    aqui.searchParams.forEach(function (v, k) { if (k !== 'parceiro') nova.searchParams.append(k, v) })
+    return nova.href
+  }
+
   // As marcações da campanha (utm) seguem de página em página
   function proxima(caminho) {
     var destino = new URL(caminho, location.href), aqui = new URLSearchParams(location.search)
@@ -31,5 +53,5 @@ var GF = (function () {
     return destino.toString()
   }
 
-  return { MOTOR: MOTOR, SUPABASE: SUPABASE, CHAVE: CHAVE, COMUNIDADE: COMUNIDADE, ler: ler, guardar: guardar, proxima: proxima }
+  return { MOTOR: MOTOR, SUPABASE: SUPABASE, CHAVE: CHAVE, COMUNIDADE: COMUNIDADE, ler: ler, guardar: guardar, proxima: proxima, paginaComParceiro: paginaComParceiro }
 })()

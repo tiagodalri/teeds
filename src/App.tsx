@@ -6,6 +6,7 @@ import { DigitsPanel } from './components/DigitsPanel'
 import { labDoBanco } from './core/laboratorio/dados'
 import { BoletaAtivo, BotaoCompra, MostradorDuracao, MostradorValor, ResumoDaCompra } from './components/operar/Boleta'
 import { UltimasEntradas } from './components/operar/UltimasEntradas'
+import { vincularParceiro } from './core/teeds/parceiro'
 import { CatalogoProvider } from './core/teeds/catalogoRobos'
 import { usePreferenciaColuna } from './core/teeds/preferenciaColuna'
 import { useMarcaEmFoco } from './core/teeds/marcaEmFoco'
@@ -554,6 +555,11 @@ export default function App() {
     return () => marcarPagina(teeds.sessao, null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioTeedsId, tela])
+
+  // Conta nova que veio por link de parceiro (/n, /v) e entrou por outro caminho: o banco confere e liga.
+  useEffect(() => {
+    if (teeds.sessao && MARCA.parceiros?.length) vincularParceiro(teeds.sessao)
+  }, [usuarioTeedsId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!teeds.sessao || !conta.account) return

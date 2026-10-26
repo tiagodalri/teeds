@@ -279,6 +279,18 @@ export default defineConfig({
         }
         // A GlobalFly tem as proprias capas (aulas-globalfly/): as da OMNI nao vao.
         if (MARCA.id === 'globalfly') rmSync(join(SAIDA, 'aulas-especialista'), { recursive: true, force: true })
+        // Links dos parceiros de divulgação (27/10/2026): /n, /v... abrem o cadastro
+        // levando o código; quem guarda e grava é src/core/teeds/parceiro.ts.
+        for (const codigo of MARCA.parceiros ?? []) {
+          if (!/^[a-z0-9]{1,20}$/.test(codigo)) continue
+          const pasta = join(SAIDA, codigo)
+          rmSync(pasta, { recursive: true, force: true })
+          cpSync(join(SAIDA, 'cadastre-se'), pasta, { recursive: true })
+          const arquivo = join(pasta, 'index.html')
+          writeFileSync(arquivo, readFileSync(arquivo, 'utf8')
+            .replace("content=\"0; url=/?cadastro=1\"", `content="0; url=/?cadastro=1&amp;parceiro=${codigo}"`)
+            .replace("q.set('cadastro', '1')", `q.set('cadastro', '1'); q.set('parceiro', '${codigo}')`))
+        }
         // O CNAME e o que diz ao GitHub Pages qual dominio serve esta pasta.
         // Sai da tabela de marcas, nao de um arquivo escrito a mao: dominio
         // trocado num lugar so.

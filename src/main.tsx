@@ -11,6 +11,7 @@ import './styles/pagina.css'
 import { aplicarTema, temaGuardado } from './core/tema'
 import { MARCA } from './marca'
 import { registrarVisita } from './core/teeds/visitas'
+import { lerParceiroDoLink } from './core/teeds/parceiro'
 import { haTrocaEmAndamento } from './core/trocaEmAndamento'
 // Guarda o pedido de instalação do Chrome assim que ele chega (ver o arquivo).
 import './core/appNativo'
@@ -65,6 +66,8 @@ if (MARCA.vocabularioIA) ligarVocabularioIA()
 // Quem abriu o site, e por qual caminho chegou. Fora do React de propósito:
 // vale para TODA visita, inclusive a de quem nunca faz login, e o StrictMode
 // monta os componentes duas vezes em desenvolvimento — aqui contaria dobrado.
+// O link de parceiro (/n, /v) é lido antes: a visita limpa as marcações da barra.
+if (MARCA.parceiros?.length) lerParceiroDoLink()
 registrarVisita()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

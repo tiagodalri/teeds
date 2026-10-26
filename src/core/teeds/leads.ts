@@ -2,6 +2,7 @@ import { SUPABASE, SERVIDOR } from './config'
 import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
 import { origemDoVisitante, visitante } from './visitas'
+import { paginaComParceiro } from './parceiro'
 export interface LeadCapturado { pagina:string|null;id:string;nome:string;email:string;telefone:string;campanha:string|null;origem:string|null;meio:string|null;temperatura:'frio'|'morno'|'quente';pontuacao:number;tempo:number;profundidade:number;visitas:number;convertidoEm:string;exCliente:boolean|null;produtosAnteriores:string[] }
 export async function listarLeads(sessao:SessaoTeeds):Promise<LeadCapturado[]>{const h={apikey:SUPABASE.anonKey,Authorization:`Bearer ${sessao.token}`};const r=await fetch(`${SUPABASE.url}/rest/v1/leads_capturados?select=*&marca=eq.${MARCA.id}&order=convertido_em.desc&limit=2000`,{headers:h});if(r.ok)return(await r.json()).map((l:any)=>({pagina:l.pagina??null,id:l.id,nome:l.nome,email:l.email,telefone:l.telefone,campanha:l.campanha,origem:l.origem,meio:l.meio,temperatura:l.temperatura,pontuacao:l.pontuacao,tempo:l.tempo_na_pagina,profundidade:l.profundidade,visitas:l.visitas,convertidoEm:l.convertido_em,exCliente:l.ex_cliente??null,produtosAnteriores:l.produtos_anteriores??[]}));const a=await fetch(`${SUPABASE.url}/rest/v1/auditoria_admin?select=id,detalhes,criado_em&marca=eq.${MARCA.id}&acao=eq.lead_capturado&order=criado_em.desc&limit=2000`,{headers:h});if(!a.ok)throw new Error('Não foi possível carregar os interessados.');return(await a.json()).map((x:any)=>{const l=x.detalhes||{};return{pagina:l.pagina??null,id:String(x.id),nome:l.nome,email:l.email,telefone:l.telefone,campanha:l.campanha,origem:l.origem,meio:l.meio,temperatura:l.temperatura||'morno',pontuacao:l.pontuacao||50,tempo:l.tempo_na_pagina||0,profundidade:l.profundidade||0,visitas:l.visitas||1,convertidoEm:x.criado_em,exCliente:null,produtosAnteriores:[]}})}
 
@@ -33,11 +34,13 @@ export async function inscreverFilaEspera(dados: DadosFilaEspera): Promise<void>
   }
   try { pagina.searchParams.set('visitante', visitante()) } catch { /* sem armazenamento: segue sem a ligação */ }
   if (guardada.referencia && !utm.get('utm_source')) pagina.searchParams.set('referencia', guardada.referencia)
+  // 27/10/2026: o parceiro do link (/n, /v) vai na frente do endereço; o banco lê de lá
+  const paginaFinal = paginaComParceiro(pagina)
   const r = await fetch(`${SERVIDOR.url}/publico/leads`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       nome: dados.nome.trim(), email: dados.email.trim().toLowerCase(), telefone: dados.telefone,
-      consentiu: dados.consentiu === true, marca: MARCA.id, pagina: pagina.href,
+      consentiu: dados.consentiu === true, marca: MARCA.id, pagina: paginaFinal.href,
       origem: utm.get('utm_source'), campanha: utm.get('utm_campaign'), meio: utm.get('utm_medium'),
       conteudo: utm.get('utm_content'), termo: utm.get('utm_term'),
       tempo: 0, profundidade: 0, visitas: 1,

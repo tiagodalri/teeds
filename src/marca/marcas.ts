@@ -152,6 +152,12 @@ export interface Marca {
   /** A palavra "robô" vira "I.A." em toda a tela, com a concordância (ver vocabularioIA.ts). */
   vocabularioIA?: boolean
   /**
+   * Parceiros de divulgação (27/10/2026): os códigos dos links (/n, /v). Só o
+   * código fica no site; nome e números estão no banco (tabela parceiros),
+   * e só o admin geral vê. Ver supabase/migracoes/20261027120000_parceiros_de_divulgacao.sql.
+   */
+  parceiros?: string[]
+  /**
    * Nome e ícone de itens do menu lateral, por marca (19/10/2026: na
    * GlobalFly, "Robôs" virou "I.A." com o símbolo de brilhos, e o Assistente
    * ganhou um balão de conversa para não confundir os dois).
@@ -401,6 +407,8 @@ export const MARCAS: Record<string, Marca> = {
     laboratorioIA: true,
     // 26/10/2026 (Tiago): "evite sempre a palavra Robôs, vamos trocar tudo por I.A."
     vocabularioIA: true,
+    // 27/10/2026: /n (Naur) e /v (Victor). Cada cliente fica com o parceiro do primeiro link.
+    parceiros: ['n', 'v'],
     menu: {
       nomes: { robos: 'I.A.' },
       icones: {
