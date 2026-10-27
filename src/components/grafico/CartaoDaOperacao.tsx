@@ -49,7 +49,7 @@ export function CartaoDaOperacao({ markers, pipSize, moeda = 'USD' }: { markers:
 
   if (!vivo) return null
   const mostradas = abertas.slice(0, 3)
-  const nome = (m: ContractMarker) => NOMES_DE_CONTRATO[m.type] ?? (sobe(m.type) ? 'Subir' : 'Descer')
+  const nome = (m: ContractMarker) => NOMES_DE_CONTRATO[m.type] ?? (sobe(m.type) ? 'Comprar' : 'Vender')
   const total = abertas.reduce((t, m) => t + m.profit, 0)
 
   return (

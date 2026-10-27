@@ -14,7 +14,7 @@ function useCountdown(expiryEpoch: number) {
 }
 
 export const NOMES_DE_CONTRATO: Record<string, string> = {
-  CALL: 'Subir', PUT: 'Descer', HIGHER: 'Acima', LOWER: 'Abaixo',
+  CALL: 'Comprar', PUT: 'Vender', HIGHER: 'Acima', LOWER: 'Abaixo',
   DIGITOVER: 'Último dígito acima', DIGITUNDER: 'Último dígito abaixo',
   DIGITMATCH: 'Dígito exato', DIGITDIFF: 'Dígito diferente',
   DIGITEVEN: 'Dígito par', DIGITODD: 'Dígito ímpar',
@@ -137,7 +137,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, m
         <span className="bp-seta" aria-hidden="true">→</span>
         <span>{concluido ? 'Saída' : 'Agora'} <PrecoComDigito valor={concluido ? c.exitSpot : c.currentSpot} casas={c.pipSize}
           tom={concluido ? (c.status === 'won' ? 'ganho' : c.status === 'lost' ? 'perda' : 'neutro') : 'neutro'} /></span>
-        {/* a cor diz se o movimento favorece a posição: na Descer, o preço caindo é verde */}
+        {/* a cor diz se o movimento favorece a posição: na Vender, o preço caindo é verde */}
         {variacao !== null && <span className={`bp-dif ${!comDirecao ? '' : (subiu ? variacao >= 0 : variacao <= 0) ? 'ganho' : 'perda'}`}>{variacao >= 0 ? '+' : '−'}{Math.abs(variacao).toLocaleString('pt-BR', { minimumFractionDigits: c.pipSize, maximumFractionDigits: c.pipSize })}</span>}
       </div>
 

@@ -25,7 +25,7 @@ interface Props {
 const NOMES: Record<string, string> = {
   DIGITOVER: 'Acima de', DIGITUNDER: 'Abaixo de', DIGITMATCH: 'Igual a',
   DIGITDIFF: 'Diferente de', DIGITEVEN: 'Par', DIGITODD: 'Ímpar',
-  CALL: 'Subir', PUT: 'Descer', ONETOUCH: 'Toca', NOTOUCH: 'Não toca',
+  CALL: 'Comprar', PUT: 'Vender', ONETOUCH: 'Toca', NOTOUCH: 'Não toca',
 }
 
 const din = (v: number, m = 'USD') => dinheiro(v, m)

@@ -803,8 +803,8 @@ export default function App() {
   }
 
   /*
-    Atalhos da boleta (computador): Shift+↑ compra Subir, Shift+↓ compra
-    Descer, + e − mudam o valor. Com Shift de propósito: uma seta solta rola a
+    Atalhos da boleta (computador): Shift+↑ Comprar, Shift+↓ Vender
+    (27/10/2026: Subir/Descer viraram Comprar/Vender, pedido do Tiago), + e − mudam o valor. Com Shift de propósito: uma seta solta rola a
     página, e compra por engano não pode acontecer. Na conta real o primeiro
     atalho arma e o segundo confirma, igual ao clique. Nunca dispara digitando
     num campo nem com uma janela aberta por cima.
@@ -1353,7 +1353,7 @@ export default function App() {
             <BoletaAtivo nome={activeSymbol ? nomeDoAtivo(activeSymbol.name) : ''} preco={tick?.quote ?? null} pipSize={pipSize}
               direcao={direction} sintetico={sintetico} aberto={mercadoAberto} />
             <div className="bl-abas" role="tablist" aria-label="Tipo de operação">
-              <button type="button" role="tab" aria-selected={modo === 'direcao'} className={modo === 'direcao' ? 'on' : ''} onClick={() => setModo('direcao')}>Subir / Descer</button>
+              <button type="button" role="tab" aria-selected={modo === 'direcao'} className={modo === 'direcao' ? 'on' : ''} onClick={() => setModo('direcao')}>Comprar / Vender</button>
               {sintetico && <button type="button" role="tab" aria-selected={modo === 'digitos'} className={modo === 'digitos' ? 'on' : ''} onClick={() => setModo('digitos')}>Dígitos</button>}
             </div>
             <div className="bl-corpo">
@@ -1384,7 +1384,7 @@ export default function App() {
                       aoComprar={() => comprar('PUT')} />
                   </div>
                   <ResumoDaCompra payouts={[call.payout, put.payout]} stake={stake} moeda={moeda} duracao={duration} unidade={unidade} />
-                  <p className="bl-atalho">Atalhos: <kbd>Shift</kbd> <kbd>↑</kbd> Subir · <kbd>Shift</kbd> <kbd>↓</kbd> Descer · <kbd>+</kbd> <kbd>−</kbd> valor</p>
+                  <p className="bl-atalho">Atalhos: <kbd>Shift</kbd> <kbd>↑</kbd> Comprar · <kbd>Shift</kbd> <kbd>↓</kbd> Vender · <kbd>+</kbd> <kbd>−</kbd> valor</p>
                 </>
               ) : (
                 <DigitsPanel

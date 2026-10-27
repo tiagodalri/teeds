@@ -155,7 +155,7 @@ export function BotaoCompra({ tipo, payout, moeda, carregando, erro, podeOperar,
     return () => window.clearTimeout(t)
   }, [payout])
 
-  const titulo = tipo === 'sobe' ? 'Subir' : 'Descer'
+  const titulo = tipo === 'sobe' ? 'Comprar' : 'Vender'
   const pct = payout !== null && stake > 0 ? Math.round(((payout - stake) / stake) * 100) : null
   const travado = !podeOperar || comprando
   const valor = erro ? null : payout
@@ -163,7 +163,7 @@ export function BotaoCompra({ tipo, payout, moeda, carregando, erro, podeOperar,
     <button type="button" className={`bl-botao ${tipo} ${confirmando ? 'confirmando' : ''}`}
       disabled={travado} onClick={aoComprar}
       aria-label={comprando ? `${titulo}: comprando` : motivoBloqueio ? `${titulo}: ${motivoBloqueio}` : erro ? `${titulo}: ${erro}`
-        : confirmando ? `Confirmar compra de ${titulo}${semDizerReal ? '' : ' com dinheiro real'}` : `Comprar ${titulo}${valor !== null ? `, recebe ${dinheiro(valor, moeda)} se acertar` : ''}`}>
+        : confirmando ? `Confirmar ${titulo}${semDizerReal ? '' : ' com dinheiro real'}` : `${titulo}${valor !== null ? `, recebe ${dinheiro(valor, moeda)} se acertar` : ''}`}>
       <span className="bl-botao-lin">
         <span className="bl-seta" aria-hidden="true">{tipo === 'sobe' ? '▲' : '▼'}</span>
         <span className="bl-dir">{titulo}</span>

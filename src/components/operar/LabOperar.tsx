@@ -50,7 +50,7 @@ export default function LabOperar() {
       <aside className="trade" style={{ width: `min(${Number(p.get('largura')) || 430}px, 100%)`, borderLeft: 0, height: '100vh' }}>
         <section className="bl" aria-label="Boleta de operação">
           <BoletaAtivo nome="75 Index" preco={preco} pipSize={3} direcao={direcao} sintetico aberto />
-          <div className="bl-abas" role="tablist"><button type="button" className="on">Subir / Descer</button><button type="button">Dígitos</button></div>
+          <div className="bl-abas" role="tablist"><button type="button" className="on">Comprar / Vender</button><button type="button">Dígitos</button></div>
           <div className="bl-corpo">
             <MostradorValor stake={stake} texto={texto} moeda="USD" alerta={stake > 9241.79} saldo={9241.79}
               aoMudarTexto={(t) => { setTexto(t); const n = Number(t.replace(',', '.')); if (n >= 0.35) setStake(n) }}
@@ -67,7 +67,7 @@ export default function LabOperar() {
                 comprando={false} confirmando={confirmando === 'PUT'} aoComprar={() => setConfirmando(confirmando === 'PUT' ? null : 'PUT')} />
             </div>
             <ResumoDaCompra payouts={[payouts[0] * escala, payouts[1] * escala]} stake={stake} moeda="USD" duracao={duracao} unidade={unidade} />
-            <p className="bl-atalho">Atalhos: <kbd>Shift</kbd> <kbd>↑</kbd> Subir · <kbd>Shift</kbd> <kbd>↓</kbd> Descer · <kbd>+</kbd> <kbd>−</kbd> valor</p>
+            <p className="bl-atalho">Atalhos: <kbd>Shift</kbd> <kbd>↑</kbd> Comprar · <kbd>Shift</kbd> <kbd>↓</kbd> Vender · <kbd>+</kbd> <kbd>−</kbd> valor</p>
           </div>
         </section>
         <section className="bl-posicoes" aria-label="Posições abertas">

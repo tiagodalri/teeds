@@ -24,7 +24,7 @@ export interface Movimento {
 const NOMES_CONTRATO: Record<string, string> = {
   DIGITOVER: 'Acima de', DIGITUNDER: 'Abaixo de', DIGITMATCH: 'Igual a',
   DIGITDIFF: 'Diferente de', DIGITEVEN: 'Par', DIGITODD: 'Ímpar',
-  CALL: 'Subir', PUT: 'Descer', CALLE: 'Subir ou igual', PUTE: 'Descer ou igual',
+  CALL: 'Comprar', PUT: 'Vender', CALLE: 'Comprar ou igual', PUTE: 'Vender ou igual',
   ONETOUCH: 'Toca', NOTOUCH: 'Não toca', RANGE: 'Dentro da faixa',
   UPORDOWN: 'Fora da faixa', MULTUP: 'Multiplicador para cima',
   MULTDOWN: 'Multiplicador para baixo', ACCU: 'Acumulador',

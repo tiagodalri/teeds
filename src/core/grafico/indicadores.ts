@@ -45,7 +45,7 @@ const P = (rotulo: string, padrao: number, min = 1, max = 500, passo = 1): Param
 
 export const CATALOGO: DefinicaoIndicador[] = [
   // ------------------------------------------------------------ o sinal da casa
-  { id: 'GF_SINAL', nome: 'Sinal GF', sigla: 'Sinal GF', categoria: 'sinal', painel: 'principal', descricao: 'Faixas de volatilidade com setas de Subir e Descer quando a vela fecha virando na faixa. A contagem na barra mostra quando a vela fecha.', parametros: [P('Período', 20, 5, 100), P('Desvios', 1.8, 1, 4, 0.1), P('Velas entre sinais', 3, 1, 20)] },
+  { id: 'GF_SINAL', nome: 'Sinal GF', sigla: 'Sinal GF', categoria: 'sinal', painel: 'principal', descricao: 'Faixas de volatilidade com setas de Comprar e Vender quando a vela fecha virando na faixa. A contagem na barra mostra quando a vela fecha.', parametros: [P('Período', 20, 5, 100), P('Desvios', 1.8, 1, 4, 0.1), P('Velas entre sinais', 3, 1, 20)] },
   // ------------------------------------------------------------ momentum
   { id: 'MACD', nome: 'MACD', sigla: 'MACD', categoria: 'momentum', painel: 'proprio', descricao: 'Convergência e divergência de médias: linha MACD, linha de sinal e histograma.', parametros: [P('Média rápida', 12), P('Média lenta', 26), P('Sinal', 9)] },
   { id: 'RSI', nome: 'Índice de Força Relativa (RSI)', sigla: 'RSI', categoria: 'momentum', painel: 'proprio', descricao: 'Força dos movimentos de alta contra os de baixa, de 0 a 100 (método de Wilder).', parametros: [P('Período', 14, 2)], varios: true },
@@ -279,7 +279,7 @@ function desenharSinal(params: Parameters<NonNullable<IndicatorTemplate['draw']>
       fio(x, pavio, ponta, cor)
       ctx.fillStyle = cor; ctx.beginPath(); ctx.moveTo(x - 5, ponta - SETA); ctx.lineTo(x + 5, ponta - SETA); ctx.lineTo(x, ponta); ctx.closePath(); ctx.fill()
       const meio = ponta - SETA - 3 - ETIQUETA / 2
-      etiqueta(x, meio, 'Descer', cor)
+      etiqueta(x, meio, 'Vender', cor)
       if (img) ctx.drawImage(img, x - lw / 2, meio - ETIQUETA / 2 - 4 - lh, lw, lh)
     } else {
       const pavio = yAxis.convertToPixel(dados[i].low) + 3
@@ -287,7 +287,7 @@ function desenharSinal(params: Parameters<NonNullable<IndicatorTemplate['draw']>
       fio(x, pavio, ponta, cor)
       ctx.fillStyle = cor; ctx.beginPath(); ctx.moveTo(x - 5, ponta + SETA); ctx.lineTo(x + 5, ponta + SETA); ctx.lineTo(x, ponta); ctx.closePath(); ctx.fill()
       const meio = ponta + SETA + 3 + ETIQUETA / 2
-      etiqueta(x, meio, 'Subir', cor)
+      etiqueta(x, meio, 'Comprar', cor)
       if (img) ctx.drawImage(img, x - lw / 2, meio + ETIQUETA / 2 + 4, lw, lh)
     }
   }

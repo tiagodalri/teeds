@@ -81,7 +81,7 @@ for (const [nome, seletor] of [
   ['timeframes do gráfico', '.layout-operar .controls .segmented button { min-height: 44px; min-width: 44px; }'],
   ['indicadores', '.indicadores button { min-height: 44px; font-size: 12px;'],
   ['ferramentas do gráfico', '.chart-ferramentas button { width: 44px; height: 44px; }'],
-  ['Subir/Descer · Dígitos', '.modo-troca button { min-height: 44px; }'],
+  ['Comprar/Vender · Dígitos', '.modo-troca button { min-height: 44px; }'],
   ['valores rápidos', '.trade-atalhos button { min-height: 44px; }'],
   ['barra de posições', '.pos-flutuante-topo { min-height: 44px; }'],
   ['ticks/seg/min', '.segmented.mini button { min-height: 44px; min-width: 44px; font-size: 12px; }'],

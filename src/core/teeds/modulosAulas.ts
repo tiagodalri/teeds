@@ -81,7 +81,7 @@ export const MODULOS: Modulo[] = [
     aulas: [
       {
         id: 'subir-descer',
-        titulo: 'Operando Subir e Descer',
+        titulo: 'Operando Comprar e Vender',
         descricao: 'A operação mais simples: escolher direção, valor e duração — e o que é o pagamento.',
         video: '', duracao: '',
       },
