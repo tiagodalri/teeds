@@ -37,6 +37,7 @@ import { RobotSetup } from './components/RobotSetup'
 import { DigitsPanel } from './components/DigitsPanel'
 import { VitrineDeRobos } from './components/VitrineDeRobos'
 import { WorkspaceNav } from './components/WorkspaceNav'
+import { UserMenu } from './components/UserMenu'
 import { IconeAtivo } from './components/IconeAtivo'
 import { RobotCatalog } from './components/RobotCatalog'
 import { AulasPanel } from './components/AulasPanel'
@@ -363,7 +364,7 @@ function Laboratorio() {
         {/* ?tela=icones: os ícones dos ativos, como aparecem na lista "Trocar ativo". */}
         {qual === 'icones' && <div className="ativo-menu" style={{ position: 'static', width: 340 }}><div className="symbol-list">{['R_75', '1HZ10V', '1HZ100V', 'frxEURUSD', 'frxGBPUSD', 'frxUSDJPY', 'frxAUDUSD', 'frxUSDCAD', 'frxXAUUSD', 'frxXAGUSD'].map((c) => <button key={c} className="symbol"><IconeAtivo simbolo={c} /><span className="sym-name">{c === 'frxXAUUSD' ? 'Ouro' : c === 'frxXAGUSD' ? 'Prata' : c}</span><span className="dot on" /></button>)}</div></div>}
         {/* ?tela=menu: o menu lateral com a tela de Robôs (I.A. na GlobalFly) aberta. */}
-        {qual === 'menu' && <div className="workspace-app" style={{ minHeight: 'calc(100vh / var(--escala-pagina, 1))' }}><WorkspaceNav page="robos" admin onNavigate={nada} /><LabVitrine /></div>}
+        {qual === 'menu' && <div className="workspace-app" style={{ minHeight: 'calc(100vh / var(--escala-pagina, 1))' }}><WorkspaceNav page="robos" admin mostrarInicio mostrarDivulgacao onNavigate={nada} /><div style={{ position: 'fixed', top: 12, right: 16, zIndex: 50 }}><UserMenu admin usuario={{ id: 'lab', nome: 'Tiago Dal Ri', email: 'tiago@exemplo.com' } as never} onSair={nada} onPerfil={nada} /></div><LabVitrine /></div>}
         {/* ?tela=sem-deriv&voltas=0|1|2: o cartão de corretora desconectada em
             cada estado (nenhum login, uma volta perdida, duas seguidas). */}
         {qual === 'sem-deriv' && <SemDeriv />}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useMenuAdminOculto } from '../core/menuDeAdmin'
 import { Brand } from './Brand'
 import { MARCA } from '../marca'
 import './workspace.css'
@@ -29,6 +30,10 @@ const paths: Record<string, string> = {
 export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mostrarAoVivo = true, mostrarInicio = false, mostrarDivulgacao = false }: { page: WorkspacePage; admin: boolean; onNavigate: (page: WorkspacePage) => void; aoVivoAgora?: boolean; mostrarAoVivo?: boolean; mostrarInicio?: boolean; mostrarDivulgacao?: boolean }) {
   const [compact, setCompact] = useState(false)
   const [open, setOpen] = useState(false)
+  // o olhinho do menu do avatar: o admin esconde os itens dele para gravar a tela como um cliente
+  const adminOculto = useMenuAdminOculto()
+  const verAdmin = admin && !adminOculto
+  const verDivulgacao = mostrarDivulgacao && !(admin && adminOculto)
   // o "Mais" da barra inferior (celular) abre este mesmo menu
   useEffect(() => { const abrir = () => setOpen(true); window.addEventListener('menu:abrir', abrir); return () => window.removeEventListener('menu:abrir', abrir) }, [])
   const navigate = (next: WorkspacePage) => { onNavigate(next); setOpen(false) }
@@ -56,8 +61,8 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mos
         <p className="workspace-label">Ferramentas</p>{item('gerenciamento')}{item('assistente')}
         <p className="workspace-label">Explore</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{MARCA.noticias && item('noticias')}{item('marketplace')}{item('aulas')}{MARCA.suporte && item('ajuda')}
         {/* parceiros de divulgação (27/10/2026): só quem é parceiro, e o admin geral */}
-        {mostrarDivulgacao && <><p className="workspace-label">Parceiro</p>{item('divulgacao')}</>}
-        {admin && <div className="workspace-admin">{MARCA.laboratorioIA && item('laboratorio')}{item('gestao')}</div>}
+        {verDivulgacao && <><p className="workspace-label">Parceiro</p>{item('divulgacao')}</>}
+        {verAdmin && <div className="workspace-admin">{MARCA.laboratorioIA && item('laboratorio')}{item('gestao')}</div>}
       </nav>
       {/* no celular o topo não tem espaço: a data e a hora ficam no pé do menu */}
       <RelogioTopo className="no-menu" />

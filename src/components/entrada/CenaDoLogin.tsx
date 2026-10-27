@@ -48,7 +48,7 @@ export function CenaDoLogin({ variante }: { variante: VarianteDaCena }) {
     <aside className={`entrada-cena ${variante}`}>
       <picture className="entrada-cena-foto" aria-hidden="true">
         <source media="(max-width: 999px)" srcSet={`${base}login-globalfly/${variante}-celular.webp`} />
-        <img src={`${base}login-globalfly/${variante}.webp`} alt="" fetchPriority="high" decoding="async" />
+        <img src={`${base}login-globalfly/${variante}.webp`} alt="" {...{ fetchpriority: 'high' }} decoding="async" />
       </picture>
       <div className="entrada-cena-veu" aria-hidden="true" />
       {variante === 'nuvens' && <i className="entrada-cena-eixo" aria-hidden="true" />}

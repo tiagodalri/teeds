@@ -1841,6 +1841,9 @@ button:has(> .icone-fechar) { display: inline-flex; align-items: center; justify
 .menu-acao svg { color: var(--muted); flex-shrink: 0; }
 .menu-acao:hover { background: var(--surface); }
 .menu-acao.perigo { color: var(--down); }
+/* o olhinho dos itens de admin (27/10/2026): discreto, no tom secundário */
+.menu-acao-discreta { color: var(--muted); font-size: .92em; }
+.menu-acao-discreta[aria-checked="false"] svg { color: var(--accent, var(--muted)); }
 .menu-acao.perigo svg { color: var(--down); }
 .menu-acao.perigo:hover { background: var(--down-soft); }
 

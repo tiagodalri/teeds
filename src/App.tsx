@@ -8,6 +8,7 @@ import { BoletaAtivo, BotaoCompra, MostradorDuracao, MostradorValor, ResumoDaCom
 import { UltimasEntradas } from './components/operar/UltimasEntradas'
 import { meuParceiro, meusLinks, temVitrine, vincularParceiro, type MeusLinks } from './core/teeds/parceiro'
 import { marcarPainel, useMeuPapel, useParceiroEmFoco } from './core/teeds/parceiroEmFoco'
+import { TELAS_DE_ADMIN, useMenuAdminOculto } from './core/menuDeAdmin'
 import { CatalogoProvider } from './core/teeds/catalogoRobos'
 import { usePreferenciaColuna } from './core/teeds/preferenciaColuna'
 import { useMarcaEmFoco } from './core/teeds/marcaEmFoco'
@@ -573,6 +574,11 @@ export default function App() {
   const papelAdmin = useMeuPapel(teeds.sessao, MARCA.id)
   // as leituras das telas do admin vão marcadas: no painel, só o escopo (nunca as linhas próprias de quem também opera)
   marcarPainel(admin === true && (tela === 'gestao' || tela === 'monitoramento' || tela === 'insights'))
+  // o olhinho do menu do avatar: ao ocultar os itens de admin, quem está numa tela de admin vai para a de cliente
+  const menuAdminOculto = useMenuAdminOculto()
+  useEffect(() => {
+    if (admin === true && menuAdminOculto && (TELAS_DE_ADMIN as readonly string[]).includes(tela)) setTela(MARCA.inicio ? 'inicio' : 'operar')
+  }, [menuAdminOculto]) // eslint-disable-line react-hooks/exhaustive-deps
   const [parceiroEmFocoAdmin] = useParceiroEmFoco()
   useEffect(() => {
     setLinksDeParceiro(null)
@@ -1073,7 +1079,7 @@ export default function App() {
           {MARCA.seloCategoria && teeds.usuario && categoria && <SeloCategoria categoria={categoria} />}
 
           {teeds.usuario && (
-            <UserMenu usuario={teeds.usuario} onSair={sairDeTudo} foto={fotoPerfil}
+            <UserMenu usuario={teeds.usuario} onSair={sairDeTudo} foto={fotoPerfil} admin={admin === true}
               onPerfil={() => (MARCA.inicio ? setTela('perfil') : setVerPerfil(true))} />
           )}
         </div>

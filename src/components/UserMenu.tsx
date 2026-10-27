@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Usuario } from '../core/teeds/conta'
 import { MARCA } from '../marca'
 import { alternarSom, useSomLigado } from '../core/som'
+import { alternarMenuAdmin, useMenuAdminOculto } from '../core/menuDeAdmin'
 
 interface Props {
   usuario: Usuario
@@ -9,6 +10,8 @@ interface Props {
   onPerfil: () => void
   /** Foto do "Meu perfil" (GlobalFly); sem ela, as iniciais. */
   foto?: string | null
+  /** Administrador: ganha o olhinho que esconde os itens de admin do menu lateral. */
+  admin?: boolean
 }
 
 /** Iniciais do nome — duas no máximo, que é o que cabe num círculo pequeno. */
@@ -20,7 +23,7 @@ function iniciais(nome: string, email: string): string {
 }
 
 /** A conta da Teeds — a da plataforma, não a da corretora. */
-export function UserMenu({ usuario, onSair, onPerfil, foto }: Props) {
+export function UserMenu({ usuario, onSair, onPerfil, foto, admin = false }: Props) {
   const [aberto, setAberto] = useState(false)
   const caixa = useRef<HTMLDivElement>(null)
 
@@ -40,6 +43,7 @@ export function UserMenu({ usuario, onSair, onPerfil, foto }: Props) {
 
   const primeiro = (usuario.nome || usuario.email).split(' ')[0]
   const som = useSomLigado()
+  const adminOculto = useMenuAdminOculto()
 
   return (
     <div className="conta" ref={caixa} data-tour="usuario">
@@ -89,6 +93,21 @@ export function UserMenu({ usuario, onSair, onPerfil, foto }: Props) {
             </svg>
             Sons das operações: {som ? 'ligados' : 'desligados'}
           </button>
+
+          {/* só admin: esconde do menu lateral Administração, Laboratório e Divulgação (para gravar a tela) */}
+          {admin && (
+            <button className="menu-acao menu-acao-discreta" role="menuitemcheckbox" aria-checked={!adminOculto}
+              title={adminOculto ? 'Mostrar no menu os itens de administrador' : 'Ocultar do menu os itens de administrador'}
+              onClick={alternarMenuAdmin}>
+              <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
+                fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z" />
+                <circle cx="8" cy="8" r="2" />
+                {adminOculto && <path d="M2.5 13.5l11-11" />}
+              </svg>
+              Itens de admin: {adminOculto ? 'ocultos' : 'visíveis'}
+            </button>
+          )}
 
           <button className="menu-acao perigo" role="menuitem" onClick={onSair}>
             <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
