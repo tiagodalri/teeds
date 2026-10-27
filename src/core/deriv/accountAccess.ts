@@ -38,8 +38,9 @@ const SOMENTE_DEMO_NA_MARCA: Readonly<Record<string, readonly string[]>> = {
  * (registro, servidor, limite nunca menor que a entrada, confirmação antes de
  * ligar) e as telas do admin mostram o tipo verdadeiro.
  */
+// o Naor (goatwinbrasill@gmail.com) entrou em 27/10/2026, autorizado pelo Tiago
 const ROTULOS_TROCADOS_NA_MARCA: Readonly<Record<string, readonly string[]>> = {
-  globalfly: ['avila.victor560@gmail.com', 'victooripardo@gmail.com', 'tiagodalri1@live.com'],
+  globalfly: ['avila.victor560@gmail.com', 'victooripardo@gmail.com', 'tiagodalri1@live.com', 'goatwinbrasill@gmail.com'],
 }
 export const rotulosTrocados = (email?: string | null, marca?: string | null) => {
   if (!email) return false
