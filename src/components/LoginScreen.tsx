@@ -28,6 +28,16 @@ interface Props {
   cena?: VarianteDaCena
 }
 
+// ícones dos campos e do olho da senha (traço de 1,8, como os do app)
+const ICONES_DOS_CAMPOS: Record<string, string> = {
+  email: 'M3.5 6.5h17v11h-17zM3.5 7l8.5 6 8.5-6',
+  senha: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0v3M12 14.5v2.5',
+  nome: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4.5 20a7.5 7.5 0 0115 0',
+  telefone: 'M8 3h8v18H8zM11 18h2',
+}
+const OLHO = 'M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12zM12 15a3 3 0 100-6 3 3 0 000 6z'
+const OLHO_FECHADO = 'M3 3l18 18M10.6 6.1A9.6 9.6 0 0112 6c6 0 9.5 6 9.5 6a16 16 0 01-3.1 3.8M6.6 6.7C4 8.4 2.5 12 2.5 12S6 18 12 18c1.6 0 3-.4 4.2-1M9.9 9.9a3 3 0 004.2 4.2'
+
 const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
   entrar: {
     titulo: 'Bem-vindo de volta.',
@@ -128,7 +138,8 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   ) => (
     <label className={tocado[chave] && problemas[chave] ? 'ruim' : ''}>
       <span className="rot" id={`entrada-${chave}-rotulo`}>{rotulo}</span>
-      <span className={chave === 'senha' ? 'entrada-senha' : undefined}>
+      <span className={`entrada-campo ${chave === 'senha' ? 'entrada-senha' : ''}`}>
+      {ICONES_DOS_CAMPOS[chave] && <svg className="entrada-icone" viewBox="0 0 24 24" aria-hidden="true"><path d={ICONES_DOS_CAMPOS[chave]} /></svg>}
       <input
         id={`entrada-${chave}`}
         aria-labelledby={`entrada-${chave}-rotulo`}
@@ -138,7 +149,9 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
         aria-describedby={tocado[chave] && problemas[chave] ? `entrada-${chave}-erro` : undefined}
         onKeyUp={chave === 'senha' ? e => setCapsLock(e.getModifierState('CapsLock')) : undefined}
         onBlur={() => { marcar(chave)(); if (chave === 'senha') setCapsLock(false) }} onChange={(e) => aoMudar(e.target.value)} />
-      {chave === 'senha' && <button type="button" aria-controls="entrada-senha" aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={mostrarSenha} onClick={() => setMostrarSenha(v => !v)}>{mostrarSenha ? 'Ocultar' : 'Mostrar'}</button>}
+      {chave === 'senha' && <button type="button" aria-controls="entrada-senha" aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={mostrarSenha} onClick={() => setMostrarSenha(v => !v)}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d={mostrarSenha ? OLHO_FECHADO : OLHO} /></svg>
+      </button>}
       </span>
       {chave === 'senha' && capsLock && <span className="entrada-caps" role="status">Caps Lock ativado</span>}
       {tocado[chave] && problemas[chave] && <em id={`entrada-${chave}-erro`}>{problemas[chave]}</em>}
@@ -194,6 +207,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
           <button className="entrada-btn" type="submit" disabled={!valido || ocupado}>
             {ocupado ? 'um instante…' : t.acao}
           </button>
+          {modo === 'entrar' && comBiometria && <div className="entrada-ou" aria-hidden="true"><span>ou</span></div>}
           {modo === 'entrar' && comBiometria && (
             <button className="entrada-btn entrada-biometria" type="button" disabled={ocupado || (pedeTermos && !(concordo && maior))}
               onClick={async (e) => {
@@ -212,25 +226,20 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
         {erro && <div className="entrada-erro" role="alert">{erro}</div>}
         {recado && <div className="entrada-recado" role="status">{recado}</div>}
 
-        {modo !== 'entrar' && <div className="entrada-troca">
-          <button onClick={() => trocarModo('entrar')}>Já tenho conta: entrar</button>
-        </div>}
+        {modo !== 'entrar' && <p className="entrada-cadastro entrada-voltar">Já tem conta? <button type="button" onClick={() => trocarModo('entrar')}>Entrar</button></p>}
 
-        <div className="entrada-corretora">
-          <div className="corretora-topo">
-            <DerivLogo altura={22} />
+        {/* 27/10/2026: o cartão da Deriv enxuto e todo clicável (antes: título, texto e um botão a mais) */}
+        <a className="entrada-corretora" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">
+          <span className="corretora-topo">
+            <DerivLogo altura={20} />
             <span className="corretora-selo">corretora oficial</span>
-          </div>
-          <b>Abra sua conta gratuitamente.</b>
-          <p>
-            Seu dinheiro fica na corretora Deriv. Conecte sua conta à {MARCA.prosa}
-            {' '}para operar pela plataforma.
-          </p>
-          <a className="btn-deriv" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">
-            <span>Abrir conta na Deriv</span>
-            <IconeSaida tamanho={16} />
-          </a>
-        </div>
+          </span>
+          <span className="corretora-texto">
+            <b>Ainda não tem conta na Deriv?</b>
+            <span>Abra grátis em menos de um minuto. Seu dinheiro fica na corretora, no seu nome.</span>
+          </span>
+          <span className="corretora-ir" aria-hidden="true"><IconeSaida tamanho={16} /></span>
+        </a>
 
         <div className="entrada-seguranca" aria-hidden="true">
           <span><IconeCadeado /> Conexão criptografada</span>

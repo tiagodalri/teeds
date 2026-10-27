@@ -6157,7 +6157,7 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 
 /* Login (27/10/2026): "Esqueci a senha" logo abaixo da senha, as duas caixas
    num grupo só e o cadastro como link, sob o botão principal. */
-.entrada-esqueci { display: flex; justify-content: flex-end; margin-top: -6px; }
+.entrada-esqueci { display: flex; justify-content: flex-end; margin: -6px 0 -6px; }
 .entrada-esqueci button, .entrada-cadastro button {
   min-height: 40px; padding: 8px 2px; border: 0; background: none; cursor: pointer;
   color: var(--gf-ouro, var(--primary)); font: inherit; font-size: 13.5px; font-weight: 650;
@@ -6165,9 +6165,45 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .entrada-esqueci button:hover, .entrada-cadastro button:hover { text-decoration: underline; text-underline-offset: 3px; }
 .entrada-aceites { display: grid; gap: 12px; }
 .entrada-cadastro { margin: -2px 0 0; text-align: center; color: var(--muted); font-size: 13.5px; }
+.entrada-voltar { margin-top: 14px; }
 /* o preenchimento automático do Safari pintava o campo de amarelo e apagava o "Mostrar" */
 .entrada-form input:-webkit-autofill, .entrada-form input:-webkit-autofill:hover, .entrada-form input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--text); caret-color: var(--text);
   -webkit-box-shadow: 0 0 0 1000px color-mix(in srgb, var(--bg) 85%, var(--surface)) inset;
   transition: background-color 9999s ease-out 0s;
 }
+
+/* Login, acabamento (27/10/2026, Tiago: "dá pra melhorar ainda mais, capricha") */
+.entrada-campo { position: relative; display: flex; align-items: center; }
+.entrada-campo input { width: 100%; }
+.entrada-form .entrada-campo input:not([type='checkbox']) { padding-left: 46px; }
+.entrada-icone { position: absolute; left: 15px; z-index: 1; width: 19px; height: 19px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; transition: stroke .15s; }
+.entrada-campo:focus-within .entrada-icone { stroke: var(--gf-ouro, var(--primary)); }
+.entrada-form .entrada-senha input { padding-right: 54px; }
+.entrada-form .entrada-senha button {
+  position: absolute; right: 4px; display: grid; place-items: center; width: 44px; height: 44px; min-height: 44px; padding: 0;
+  border: 0; border-radius: 10px; background: transparent; color: var(--muted); cursor: pointer;
+}
+.entrada-form .entrada-senha button:hover, .entrada-form .entrada-senha button[aria-pressed='true'] { color: var(--text); }
+.entrada-form .entrada-senha button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.entrada-aceites { padding: 14px; border: 1px solid color-mix(in srgb, var(--border) 80%, transparent); border-radius: 14px; background: color-mix(in srgb, var(--surface) 55%, transparent); }
+/* Entrar desativado: neutro (antes era um dourado apagado, com cara de sujo) */
+.entrada-form .entrada-btn[type='submit']:disabled {
+  background: color-mix(in srgb, var(--text) 8%, transparent) !important; color: var(--muted) !important;
+  opacity: 1; box-shadow: none; border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+}
+.entrada-ou { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 11.5px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; }
+.entrada-ou::before, .entrada-ou::after { content: ''; flex: 1; height: 1px; background: color-mix(in srgb, var(--border) 85%, transparent); }
+/* o cartão da Deriv, todo clicável */
+a.entrada-corretora {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'topo ir' 'texto ir'; gap: 8px 14px; align-items: center;
+  color: inherit; text-decoration: none; cursor: pointer; transition: border-color .15s, transform .15s; text-align: left;
+}
+a.entrada-corretora .corretora-topo { justify-content: flex-start; }
+a.entrada-corretora:hover { border-color: color-mix(in srgb, #ff444f 45%, var(--border)); }
+a.entrada-corretora:focus-visible { outline: 2px solid #ff444f; outline-offset: 3px; }
+a.entrada-corretora .corretora-topo { grid-area: topo; margin: 0; }
+.corretora-texto { grid-area: texto; display: grid; gap: 3px; min-width: 0; }
+.corretora-texto b { display: block; color: var(--text); font-size: 14.5px; font-weight: 650; }
+.corretora-texto span { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.corretora-ir { grid-area: ir; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: color-mix(in srgb, #ff444f 12%, transparent); color: #ff444f; }
