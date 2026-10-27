@@ -170,6 +170,12 @@ export interface Marca {
    */
   appsDosParceiros?: Record<string, string>
   /**
+   * Termos de uso e políticas (27/10/2026): no primeiro acesso a pessoa aceita
+   * antes de entrar (obrigatório). Os documentos ficam em src/termos/<marca>/;
+   * o aceite, na tabela termos_aceites. Ver src/core/teeds/termos.ts.
+   */
+  termos?: boolean
+  /**
    * Nome e ícone de itens do menu lateral, por marca (19/10/2026: na
    * GlobalFly, "Robôs" virou "I.A." com o símbolo de brilhos, e o Assistente
    * ganhou um balão de conversa para não confundir os dois).
@@ -424,6 +430,7 @@ export const MARCAS: Record<string, Marca> = {
     // 27/10/2026 (Tiago): o afiliado do Naor; o Victor e o Direto seguem no da GF
     afiliadosDosParceiros: { n: 'https://t.deriv.link?t=X8KDME25M85P' },
     appsDosParceiros: { n: '34MLTOJu0MDBoED7yEczz' },
+    termos: true,
     menu: {
       nomes: { robos: 'I.A.' },
       icones: {

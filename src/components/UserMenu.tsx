@@ -12,6 +12,8 @@ interface Props {
   foto?: string | null
   /** Administrador: ganha o olhinho que esconde os itens de admin do menu lateral. */
   admin?: boolean
+  /** Abre os termos de uso e as políticas (marcas com termos). */
+  onTermos?: () => void
 }
 
 /** Iniciais do nome — duas no máximo, que é o que cabe num círculo pequeno. */
@@ -23,7 +25,7 @@ function iniciais(nome: string, email: string): string {
 }
 
 /** A conta da Teeds — a da plataforma, não a da corretora. */
-export function UserMenu({ usuario, onSair, onPerfil, foto, admin = false }: Props) {
+export function UserMenu({ usuario, onSair, onPerfil, foto, admin = false, onTermos }: Props) {
   const [aberto, setAberto] = useState(false)
   const caixa = useRef<HTMLDivElement>(null)
 
@@ -106,6 +108,16 @@ export function UserMenu({ usuario, onSair, onPerfil, foto, admin = false }: Pro
                 {adminOculto && <path d="M2.5 13.5l11-11" />}
               </svg>
               Itens de admin: {adminOculto ? 'ocultos' : 'visíveis'}
+            </button>
+          )}
+
+          {onTermos && (
+            <button className="menu-acao" role="menuitem" onClick={() => { setAberto(false); onTermos() }}>
+              <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
+                fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 1.8h5.5L12.5 5v9.2H4z" /><path d="M9.5 1.8V5h3M6 8h4.5M6 10.6h4.5" />
+              </svg>
+              Termos e políticas
             </button>
           )}
 

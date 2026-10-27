@@ -28,6 +28,8 @@ import { decolar, liberarPouso } from './core/decolagem'
 import { definirDonoDoPlano } from './core/teeds/planoDoDia'
 import { NovaSenha } from './components/NovaSenha'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
+import { AceiteDosTermos, LeitorDeTermos } from './components/termos/Termos'
+import { aceiteGuardado, jaAceitou } from './core/teeds/termos'
 import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLimitesDuracao, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
@@ -336,6 +338,23 @@ export default function App() {
     if (!teeds.sessao) { setSituacao(null); return }
     let vivo = true
     minhaSituacao(teeds.sessao).then((s) => { if (vivo) setSituacao(s) })
+    return () => { vivo = false }
+  }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /*
+    Termos de uso (27/10/2026): obrigatório no primeiro acesso, e de novo a cada
+    versão nova. A palavra final é do banco (termos_aceites); o atalho do
+    aparelho só evita piscar a tela de aceite para quem já aceitou.
+  */
+  const [termosOk, setTermosOk] = useState<boolean | null>(null)
+  const [verTermos, setVerTermos] = useState(false)
+  useEffect(() => {
+    if (!MARCA.termos || !teeds.sessao) { setTermosOk(null); return }
+    const sessao = teeds.sessao
+    const guardado = aceiteGuardado(sessao.usuario.id)
+    setTermosOk(guardado ? true : null)
+    let vivo = true
+    jaAceitou(sessao).then((ok) => { if (vivo) setTermosOk(ok) }).catch(() => { if (vivo) setTermosOk(guardado) })
     return () => { vivo = false }
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -966,6 +985,12 @@ export default function App() {
     )
   }
 
+  // Termos de uso: ninguém entra sem aceitar (e, enquanto o banco responde, nada da plataforma aparece)
+  if (MARCA.termos && teeds.status === 'logado' && teeds.sessao) {
+    if (termosOk === null) return <div className="entrada"><div className="entrada-esperando">abrindo a {MARCA.prosa}…</div></div>
+    if (termosOk === false) return <AceiteDosTermos sessao={teeds.sessao} aoAceitar={() => setTermosOk(true)} aoSair={sairDeTudo} />
+  }
+
   if (teeds.status === 'deslogado') {
     const convite = LIVES_AO_VIVO && !querLogin ? conviteRecebido() : null
     const treinoSemConta = MARCA.aoVivo && !querLogin && treinoPedido()
@@ -1080,6 +1105,7 @@ export default function App() {
 
           {teeds.usuario && (
             <UserMenu usuario={teeds.usuario} onSair={sairDeTudo} foto={fotoPerfil} admin={admin === true}
+              onTermos={MARCA.termos ? () => setVerTermos(true) : undefined}
               onPerfil={() => (MARCA.inicio ? setTela('perfil') : setVerPerfil(true))} />
           )}
         </div>
@@ -1112,6 +1138,8 @@ export default function App() {
           obrigatorio={tour === 'obrigatorio'} telaAtual={tela} irPara={setTela}
           aoTerminar={(destino) => fimDoTour(destino)} aoFechar={() => (tour === 'obrigatorio' ? fimDoTour() : setTour(null))} />
       )}
+
+      {verTermos && <LeitorDeTermos aoFechar={() => setVerTermos(false)} />}
 
       {verPerfil && teeds.sessao && (
         <ProfilePanel

@@ -38,6 +38,7 @@ import { DigitsPanel } from './components/DigitsPanel'
 import { VitrineDeRobos } from './components/VitrineDeRobos'
 import { WorkspaceNav } from './components/WorkspaceNav'
 import { UserMenu } from './components/UserMenu'
+import { AceiteDosTermos, LeitorDeTermos } from './components/termos/Termos'
 import { IconeAtivo } from './components/IconeAtivo'
 import { RobotCatalog } from './components/RobotCatalog'
 import { AulasPanel } from './components/AulasPanel'
@@ -324,6 +325,10 @@ function Laboratorio() {
   // ?tela=laboratorio-ia: o Laboratório de IA com receitas em memória (ticks e cotações reais da Deriv)
   if (qual === 'laboratorio-ia') return <Suspense fallback={null}><LabLaboratorio /></Suspense>
   if (qual === 'suporte') return <Suspense fallback={null}><LabSuporte /></Suspense>
+  // ?tela=termos (&leitor): o aceite dos termos do primeiro acesso, ou o leitor do menu do avatar
+  if (qual === 'termos') return new URLSearchParams(location.search).has('leitor')
+    ? <LeitorDeTermos aoFechar={nada} />
+    : <AceiteDosTermos sessao={{ token: 'lab', usuario: { id: 'lab', email: 'ana@exemplo.com', nome: 'Ana Souza' } } as never} aoAceitar={nada} aoSair={nada} />
   if (qual === 'login') return <LabLogin />
   // ?tela=carregando: o carregando da marca (o mesmo quadro em que a decolagem pousa)
   if (qual === 'carregando') return <Carregando />
