@@ -3,6 +3,7 @@ import { afiliadoDaDeriv } from '../../core/rotas'
 import type { WorkspacePage } from '../WorkspaceNav'
 import { Monograma, TEM_MONOGRAMA } from '../marca/Monograma'
 import { LogotipoDaIA, temLogotipo } from '../marca/LogotipoDaIA'
+import { fotoDoCartaoAlto } from '../marca/fotoDoCartao'
 import { abrirSuporte } from '../../core/teeds/suporte'
 import { alternarValores, MASCARA, useValoresOcultos } from '../../core/privacidade'
 import { MARCA } from '../../marca'
@@ -64,7 +65,6 @@ const saudacao = () => { const h = new Date().getHours(); return h < 5 ? 'Boa no
 const hojeExtenso = () => dataCurta(new Date())
 /** Depósito na Deriv: sempre na conta da pessoa, na corretora. */
 const CAIXA_DERIV = DERIV.deposito
-const FOTOS = `${import.meta.env.BASE_URL}robos-globalfly/`
 
 /** Linha pequena de uma série (cotação). */
 function Curva({ serie, classe }: { serie: number[]; classe: string }) {
@@ -233,7 +233,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                     aria-label={r.noAr ? `${r.nome}: no ar, ${ocultos ? 'resultado oculto' : `resultado ${sinal(r.resultado)}${numero(r.resultado)}`}. Abrir a cabine.` : `${r.nome}, ${r.chamada}. Configurar e ligar.`}>
                     {/* a marca da casa no canto: o monograma, não as letras (22/10/2026) */}
                     {TEM_MONOGRAMA && <Monograma tamanho={30} className="in-jato-mono" />}
-                    <img src={`${FOTOS}${r.id}.webp`} srcSet={`${FOTOS}${r.id}-pequena.webp 640w, ${FOTOS}${r.id}.webp 1200w`} sizes="(max-width: 700px) 45vw, 20vw" alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
+                    <img {...fotoDoCartaoAlto(r.id)} sizes="(max-width: 700px) 45vw, 20vw" alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
                     {r.noAr
                       ? <span className={`in-jato-selo ${r.operando ? 'operando' : ''}`}><i aria-hidden="true" />{r.operando ? 'Operando' : 'No ar'}</span>
                       : trancada

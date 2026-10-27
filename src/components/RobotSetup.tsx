@@ -19,6 +19,7 @@ import { IconeFechar } from './IconeFechar'
 import { NomeDoRobo } from './NomeDoRobo'
 import { Monograma, TEM_MONOGRAMA } from './marca/Monograma'
 import { LogotipoDaIA, temLogotipo } from './marca/LogotipoDaIA'
+import { fotoDoCartaoAlto } from './marca/fotoDoCartao'
 
 interface Props {
   identidade: Identidade
@@ -367,7 +368,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
             {frota.map((r) => (
               <button type="button" key={r.id} role="radio" aria-checked={r.id === modelo.id} className={`plv-jato ${r.id === modelo.id ? 'on' : ''}`}
                 onClick={() => setModelo(r)} onDoubleClick={() => { setModelo(r); setPasso('plano') }}>
-                <img src={`${FOTOS}${r.id}.webp`} alt="" loading="lazy" decoding="async" />
+                <img {...fotoDoCartaoAlto(r.id)} sizes="(max-width: 700px) 45vw, 200px" alt="" loading="lazy" decoding="async" />
                 {r.id === modelo.id && <span className="plv-jato-marca" aria-hidden="true">✓</span>}
                 <span className="plv-jato-texto">{temLogotipo(r.nome) ? <b><LogotipoDaIA nome={r.nome} fio sobreFoto /></b> : <><small>GF</small><b>{nomeCurto(r.nome)}</b></>}<span>{r.chamada}</span></span>
               </button>
