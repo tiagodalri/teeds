@@ -551,6 +551,8 @@ export async function criarAcessoCliente(sessao: SessaoTeeds, dados: {
   // Garante a ficha quando o trigger ainda estiver processando.
   if (userId) {
     await new Promise((resolve) => setTimeout(resolve, 350))
+    // admin do parceiro (ou o geral com um parceiro em foco): a conta nasce do parceiro dele
+    await rest('/rpc/teeds_atribuir_ao_meu_escopo', sessao.token, { method: 'POST', body: JSON.stringify({ p_user: userId, p_marca: MARCA.id }) }).catch(() => undefined)
     try {
       await rest('/clientes?on_conflict=user_id,marca', sessao.token, {
         method: 'POST', headers: MESCLAR,

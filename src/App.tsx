@@ -7,6 +7,7 @@ import { labDoBanco } from './core/laboratorio/dados'
 import { BoletaAtivo, BotaoCompra, MostradorDuracao, MostradorValor, ResumoDaCompra } from './components/operar/Boleta'
 import { UltimasEntradas } from './components/operar/UltimasEntradas'
 import { meuParceiro, meusLinks, temVitrine, vincularParceiro, type MeusLinks } from './core/teeds/parceiro'
+import { marcarPainel, useMeuPapel, useParceiroEmFoco } from './core/teeds/parceiroEmFoco'
 import { CatalogoProvider } from './core/teeds/catalogoRobos'
 import { usePreferenciaColuna } from './core/teeds/preferenciaColuna'
 import { useMarcaEmFoco } from './core/teeds/marcaEmFoco'
@@ -563,6 +564,11 @@ export default function App() {
   // quem a trouxe. Para parceiro e admin geral, a página Divulgação com os links. O app da Deriv e o
   // endereço seguem a VITRINE (o /n ou /v em que a pessoa está), definida em main.tsx (27/10/2026).
   const [linksDeParceiro, setLinksDeParceiro] = useState<MeusLinks | null>(null)
+  // admin geral x admin do parceiro (27/10/2026); o parceiro em foco refaz as telas do admin (o filtro vale no banco)
+  const papelAdmin = useMeuPapel(teeds.sessao, MARCA.id)
+  // as leituras das telas do admin vão marcadas: no painel, só o escopo (nunca as linhas próprias de quem também opera)
+  marcarPainel(admin === true && (tela === 'gestao' || tela === 'monitoramento' || tela === 'insights'))
+  const [parceiroEmFocoAdmin] = useParceiroEmFoco()
   useEffect(() => {
     setLinksDeParceiro(null)
     if (!teeds.sessao || !MARCA.parceiros?.length) return
@@ -1227,9 +1233,11 @@ export default function App() {
       ) : tela === 'laboratorio' && admin === true && MARCA.laboratorioIA ? (
         teeds.sessao ? <Suspense fallback={telaAbrindo('Abrindo o laboratório…')}><LaboratorioIA api={apiDoLaboratorio!} socket={conta.socket} /></Suspense> : null
       ) : tela === 'monitoramento' && admin === true ? (
-          teeds.sessao ? <MonitoramentoBoundary><Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel key={marcaEmFoco} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} /></Suspense></MonitoramentoBoundary> : null
+          teeds.sessao ? <MonitoramentoBoundary><Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel key={`${marcaEmFoco}:${parceiroEmFocoAdmin}`} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} /></Suspense></MonitoramentoBoundary> : null
+      ) : tela === 'insights' && admin === true && papelAdmin && !papelAdmin.geral ? (
+        <div className="ger"><div className="adm-vazio">Os Insights mostram o site inteiro (visitas, origens e todos os alunos). Ficam só com o admin geral.</div></div>
       ) : tela === 'insights' && admin === true ? (
-        teeds.sessao ? <Suspense fallback={telaAbrindo('Abrindo os insights…')}><InsightsPanel key={marcaEmFoco} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} /></Suspense> : null
+        teeds.sessao ? <Suspense fallback={telaAbrindo('Abrindo os insights…')}><InsightsPanel key={`${marcaEmFoco}:${parceiroEmFocoAdmin}`} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} /></Suspense> : null
       ) : tela === 'gestao' && admin === true ? (
         teeds.sessao && adminConfirmado ? <Suspense fallback={telaAbrindo('Abrindo a administração…')}><AdminPanel abrirSuporte={pedidoCaixa} nomeDaEquipe={teeds.usuario?.nome || ''} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} comissoes={<Suspense fallback={telaAbrindo('Abrindo as comissões…')}><ManagementPanel
           session={conta.session} sessaoTeeds={teeds.sessao} contaId={conta.accountId}

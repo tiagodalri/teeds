@@ -16,7 +16,7 @@ import { ESTRATEGIAS_LOCAIS, modoDaConfig, NOME_DO_MODO, temModos } from '../cor
 import { identidade } from '../core/deriv/branding'
 import { useMarcaEmFoco, REDE } from '../core/teeds/marcaEmFoco'
 import { SeletorDePlataforma, opcoesDePlataforma } from './SeletorDePlataforma'
-import { noFoco, seloDoParceiro, useParceiroEmFoco, useParceirosDaMarca } from '../core/teeds/parceiroEmFoco'
+import { noFoco, rotuloDoParceiro, seloDoParceiro, useMeuPapel, useParceiroEmFoco, useParceirosDaMarca } from '../core/teeds/parceiroEmFoco'
 import { ChaveModoCeo } from './ChaveModoCeo'
 import { MARCA } from '../marca'
 import { nomeDoAtivo } from '../core/deriv/market'
@@ -391,6 +391,9 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   const parceiros = useParceirosDaMarca(sessao, marcaFoco)
   const [parceiroFoco, trocarParceiro] = useParceiroEmFoco()
   const filtrandoParceiro = parceiros.length > 0 && !!parceiroFoco
+  // admin do parceiro: o banco já devolve só o que é dele; aqui só o rótulo
+  const papel = useMeuPapel(sessao, MARCA.id)
+  const doParceiro = !!papel && !papel.geral && !!papel.parceiro
   /** A vitrine de um registro: a dele ('' = direto → null); sem (registro antigo), o parceiro da conta. */
   function vitrineDoRegistro(parceiro: string | null | undefined, userId: string): string | null | undefined {
     if (parceiro !== null && parceiro !== undefined) return parceiro || null
@@ -659,7 +662,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
     <div className="ger monitoramento">
       <header className="mon-topo">
         <div>
-          <span className="rot">{naRede ? `Rede ${MARCA.prosa}` : `${NOME_DA_MARCA[marcaFoco] ?? marcaFoco}`} · Administração</span>
+          <span className="rot">{naRede ? `Rede ${MARCA.prosa}` : `${NOME_DA_MARCA[marcaFoco] ?? marcaFoco}`} · {doParceiro ? `Admin do parceiro ${rotuloDoParceiro(papel!.nomeDoParceiro, papel!.parceiro!)}` : 'Administração'}</span>
           <h2>Monitoramento ao vivo</h2>
           <p>A cabine de cada cliente, reconstruída da telemetria do servidor. Somente visualização — nenhuma ação sobre o robô é possível daqui.</p>
         </div>

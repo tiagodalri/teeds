@@ -55,10 +55,13 @@ async function banco(path: string, method='GET', body?: unknown): Promise<any> {
   if (!r.ok) throw new Error('Não foi possível concluir. Atualize a lista e tente novamente em dois minutos.')
   return r.status===204 ? undefined : r.json().catch(()=>undefined)
 }
-export async function listarPendentes(marca: string, status: string, pagina: number) {
+/** `escopo`: o parceiro cujos cadastros aparecem ('' = direto); undefined = todos (admin geral sem filtro). */
+export async function listarPendentes(marca: string, status: string, pagina: number, escopo?: string) {
   if (!['pendente','processando','aprovado','recusado'].includes(status)) throw new Error('Filtro inválido.')
+  if (escopo !== undefined && !/^[a-z0-9]{0,20}$/.test(escopo)) throw new Error('Filtro inválido.')
   const offset=Math.max(0,Math.floor(pagina))*50
-  return banco(`/rest/v1/clientes_pendentes?marca=eq.${marca}&status=eq.${status}&select=id,nome,email,telefone,status,recadastro,ultima_inscricao_em,criado_em,decidido_em,email_enviado_em&order=ultima_inscricao_em.desc,id.desc&limit=51&offset=${offset}`)
+  const doEscopo = escopo === undefined ? '' : escopo === '' ? '&or=(parceiro.is.null,parceiro.eq.)' : `&parceiro=eq.${escopo}`
+  return banco(`/rest/v1/clientes_pendentes?marca=eq.${marca}&status=eq.${status}${doEscopo}&select=id,nome,email,telefone,status,recadastro,ultima_inscricao_em,criado_em,decidido_em,email_enviado_em,parceiro&order=ultima_inscricao_em.desc,id.desc&limit=51&offset=${offset}`)
 }
 export async function decidirLead(id: string, marca: string, admin: string, acao: string, plano='essencial') {
   // A marca do cadastro decide os planos (o GF Member só existe na GlobalFly);

@@ -34,9 +34,32 @@ export async function roboLiberado(userId: string, marca: string, roboId: string
   return (await rest<boolean>('/rpc/teeds_robo_liberado', { method: 'POST', body: JSON.stringify({ p_user: userId, p_marca: marca, p_robo: roboId }) })) === true
 }
 
+/**
+ * Admin GERAL da marca (27/10/2026: o admin do parceiro, administradores.parceiro,
+ * não passa aqui). É o que vale para o que mexe na plataforma inteira:
+ * parâmetros das I.A., ligar e desligar I.A., central de e-mails.
+ */
 export async function administradorDaMarca(userId: string, marca: string): Promise<boolean> {
-  const linhas = await rest<any[]>(`/administradores?user_id=eq.${encodeURIComponent(userId)}&marca=eq.${encodeURIComponent(marca)}&select=user_id&limit=1`)
+  const linhas = await rest<any[]>(`/administradores?user_id=eq.${encodeURIComponent(userId)}&marca=eq.${encodeURIComponent(marca)}&parceiro=is.null&select=user_id&limit=1`)
   return linhas.length === 1
+}
+
+/**
+ * O papel de quem pede, nesta marca: geral (vê tudo), do parceiro (só o /n ou
+ * o /v dele) ou nenhum. O admin da Teeds (a master) é geral em todas.
+ */
+export async function papelDoAdmin(userId: string, marca: string): Promise<{ geral: boolean; parceiro: string | null } | null> {
+  const linhas = await rest<any[]>(`/administradores?user_id=eq.${encodeURIComponent(userId)}&marca=in.(${encodeURIComponent(marca)},teeds)&select=marca,parceiro`)
+  if (!linhas?.length) return null
+  if (linhas.some((l) => !l.parceiro)) return { geral: true, parceiro: null }
+  const daMarca = linhas.find((l) => l.marca === marca && l.parceiro)
+  return daMarca ? { geral: false, parceiro: String(daMarca.parceiro) } : null
+}
+
+/** O cliente é deste escopo? (a conta veio pelo parceiro, ou operou/conversou na vitrine dele) */
+export async function clienteNoEscopo(marca: string, userId: string, escopo: string): Promise<boolean> {
+  const r = await rest<boolean>('/rpc/teeds_cliente_no_escopo', { method: 'POST', body: JSON.stringify({ p_marca: marca, p_user: userId, p_escopo: escopo }) })
+  return r === true
 }
 
 async function rest<T>(caminho: string, init: RequestInit = {}): Promise<T> {

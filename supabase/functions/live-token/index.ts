@@ -19,6 +19,8 @@
 // v9 (20/10/2026): só quem transmite (admin) publica câmera, microfone e tela;
 // o resto só manda mensagem. Ninguém muda o próprio "crachá" (metadata), que
 // é o que diz quem é o apresentador.
+// v10 (27/10/2026): apresentador = qualquer admin da equipe (`teeds_sou_equipe_da`):
+// o admin do parceiro (Naor no /n, Victor no /v) também apresenta a live.
 //
 // O LiveKit roda no nosso servidor (código aberto, sem conta em serviço de
 // fora). Endereço e chaves ficam na tabela `config_servicos`, que só a chave
@@ -129,7 +131,7 @@ Deno.serve(async (req) => {
     const u = await banco<{ id: string; user_metadata?: Record<string, string> }>('/auth/v1/user', token).catch(() => null)
     if (!u) return resposta(401, { erro: 'Entre na sua conta GF Member para assistir o ensaio.' })
     const rpc = (f: string) => banco<boolean>(`/rest/v1/rpc/${f}`, token, { method: 'POST', body: JSON.stringify({ p_marca: marca }) }).catch(() => false)
-    const [admin, membro] = await Promise.all([rpc('teeds_sou_admin_da'), rpc('teeds_minha_sala_de_treino')])
+    const [admin, membro] = await Promise.all([rpc('teeds_sou_equipe_da'), rpc('teeds_minha_sala_de_treino')])
     if (!admin && !membro) return resposta(403, { erro: 'A sala de treino é exclusiva para membros GF Member.' })
     const [ficha] = await banco<Array<{ nome: string | null }>>(`/rest/v1/clientes?select=nome&user_id=eq.${u.id}&marca=eq.${marca}&limit=1`, token).catch(() => [])
     const completo = String(ficha?.nome || u.user_metadata?.nome || u.user_metadata?.full_name || '').trim()
@@ -192,7 +194,7 @@ Deno.serve(async (req) => {
       const primeiro = String(usuario.user_metadata?.nome || usuario.user_metadata?.full_name || '').trim().split(/\s+/)[0]
       return (await comoConvidado(corpo.nome || primeiro, usuario.id)) ?? resposta(403, { erro: 'Esta transmissão não está liberada para a sua conta.' })
     }
-    const admin = await banco<boolean>('/rest/v1/rpc/teeds_sou_admin_da', token, { method: 'POST', body: JSON.stringify({ p_marca: live.marca }) })
+    const admin = await banco<boolean>('/rest/v1/rpc/teeds_sou_equipe_da', token, { method: 'POST', body: JSON.stringify({ p_marca: live.marca }) })
     const agora = Math.floor(Date.now() / 1000)
 
     // Moderação: silenciar alguém na sala (o banco já guardou o registro).

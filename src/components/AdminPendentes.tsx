@@ -1,3 +1,4 @@
+import { parceiroEmFoco } from '../core/teeds/parceiroEmFoco'
 import { useEffect, useState } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { SERVIDOR } from '../core/teeds/config'
@@ -44,7 +45,8 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos }: {s
     // A marca vai nos dois sentidos: na busca e na decisão. Aprovar é o que
     // cria conta e dispara e-mail — não pode depender de qual site está aberto.
     const junta=path.includes('?')?'&':'?'
-    const r=await fetch(`${SERVIDOR.url}/api/clientes-pendentes${path}${junta}marca=${encodeURIComponent(marca)}`,{
+    const foco=parceiroEmFoco()
+    const r=await fetch(`${SERVIDOR.url}/api/clientes-pendentes${path}${junta}marca=${encodeURIComponent(marca)}${foco?`&parceiro=${encodeURIComponent(foco)}`:''}`,{
       method:body?'POST':'GET',signal,
       headers:{Authorization:`Bearer ${sessao.token}`,'Content-Type':'application/json'},
       ...(body?{body:JSON.stringify({...(body as object),marca})}:{}),

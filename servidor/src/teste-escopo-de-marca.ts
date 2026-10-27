@@ -114,10 +114,11 @@ conferir('e o núcleo não chama nada que siga o seletor sozinho',
   com a marca certa.
 */
 const app = leia('src/App.tsx')
+// a chave leva a marca e o parceiro em foco (27/10/2026): trocar /n por /v também refaz a tela
 conferir('o monitoramento renasce quando a marca muda',
-  /<MonitoramentoPanel key=\{marcaEmFoco\}/.test(app), true)
+  /<MonitoramentoPanel key=\{`\$\{marcaEmFoco\}:\$\{parceiroEmFocoAdmin\}`\}/.test(app), true)
 conferir('os Insights também',
-  /<InsightsPanel key=\{marcaEmFoco\}/.test(app), true)
+  /<InsightsPanel key=\{`\$\{marcaEmFoco\}:\$\{parceiroEmFocoAdmin\}`\}/.test(app), true)
 
 // A marca TEM de estar nas dependências de tudo que a usa, senão a função
 // continua com a marca antiga mesmo depois da troca.

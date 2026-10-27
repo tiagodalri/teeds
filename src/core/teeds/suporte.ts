@@ -10,6 +10,7 @@
 import { SERVIDOR, SUPABASE } from './config'
 import { ehImagem, reduzirImagem } from '../imagem'
 import type { SessaoTeeds } from './conta'
+import { vitrine } from './parceiro'
 import { MARCA } from '../../marca'
 import type { ResumoDaTriagem } from './triagem'
 import { dataCurta } from '../datas'
@@ -127,6 +128,8 @@ export async function abrirConversa(sessao: SessaoTeeds, tela: string, triagem?:
     method: 'POST', headers: { Prefer: 'return=representation' },
     body: JSON.stringify({
       user_id: sessao.usuario.id, marca: MARCA.id, origem: tela,
+      // o endereço em que a conversa nasceu (/n, /v): é do parceiro daquela vitrine
+      parceiro: vitrine(),
       assunto: triagem && triagem.tema !== 'outro' ? `${triagem.rotulo}${ultima ? ` · ${ultima}` : ''}` : null,
       contexto: { ...contextoDoAparelho(tela), ...(triagem ? { triagem } : {}) },
     }),

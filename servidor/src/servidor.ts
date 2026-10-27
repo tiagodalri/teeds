@@ -4,7 +4,7 @@ import { decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros, marcaA
 import { trocarEmailDoCliente } from './trocar-email'
 import { abrirBilhete, registrarDescadastro, paginaDeSaida } from './descadastro'
 import { catalogo, alterarRobo } from './catalogo'
-import { administradorDaMarca } from './supabase'
+import { administradorDaMarca, clienteNoEscopo, papelDoAdmin } from './supabase'
 import { listarEmailsAdmin } from './admin-emails'
 import { receberEventoResend } from './eventos-resend'
 import { lugarDoEndereco } from './regiao'
@@ -851,10 +851,13 @@ const servidor = createServer(async (req, res) => {
         let marca: string
         try { marca = marcaAdministrada(url.searchParams.get('marca') ?? (req.method === 'POST' ? corpo.marca : null), marcaDaOrigem.id) }
         catch { return json(400, { erro: 'Plataforma inválida.' }) }
-        if (!await administradorDaMarca(dono.id, marca) && !await administradorDaMarca(dono.id, 'teeds')) {
-          return json(403, { erro: 'Somente administradores desta plataforma.' })
-        }
-        if (req.method === 'GET') return json(200, await listarPendentes(marca, url.searchParams.get('status') || 'pendente', Number(url.searchParams.get('pagina')) || 0))
+        // 27/10/2026: o admin do parceiro vê e decide só os cadastros do parceiro dele (o banco confere de novo);
+        // o admin geral pode filtrar por parceiro (?parceiro=n | v | direto).
+        const papel = await papelDoAdmin(dono.id, marca)
+        if (!papel) return json(403, { erro: 'Somente administradores desta plataforma.' })
+        const filtro = url.searchParams.get('parceiro')
+        const escopo = !papel.geral ? papel.parceiro ?? '#' : filtro === 'direto' ? '' : filtro && /^[a-z0-9]{1,20}$/.test(filtro) ? filtro : undefined
+        if (req.method === 'GET') return json(200, await listarPendentes(marca, url.searchParams.get('status') || 'pendente', Number(url.searchParams.get('pagina')) || 0, escopo))
         if (req.method === 'POST') return json(200, await decidirLead(String(corpo.id || ''), marca, dono.id, String(corpo.acao || ''), String(corpo.plano || 'essencial')))
         return json(405, { erro: 'Método não permitido.' })
       }
@@ -863,7 +866,10 @@ const servidor = createServer(async (req, res) => {
         if (req.method !== 'POST') return json(405, { erro: 'Método não permitido.' })
         let marca: string
         try { marca = marcaAdministrada(corpo.marca, marcaDaOrigem.id) } catch { return json(400, { erro: 'Plataforma inválida.' }) }
-        if (!await administradorDaMarca(dono.id, marca) && !await administradorDaMarca(dono.id, 'teeds')) return json(403, { erro: 'Somente administradores desta plataforma.' })
+        const papelTroca = await papelDoAdmin(dono.id, marca)
+        if (!papelTroca) return json(403, { erro: 'Somente administradores desta plataforma.' })
+        // o admin do parceiro troca o e-mail só de cliente dele
+        if (!papelTroca.geral && !await clienteNoEscopo(marca, String(corpo.user_id || ''), papelTroca.parceiro ?? '#')) return json(403, { erro: 'Este cliente não é do seu parceiro.' })
         try { return json(200, await trocarEmailDoCliente(String(corpo.user_id || ''), marca, String(corpo.email || ''))) }
         catch (e) { return json(400, { erro: (e as Error).message }) }
       }
