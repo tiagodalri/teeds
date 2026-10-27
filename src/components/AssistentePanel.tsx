@@ -55,9 +55,11 @@ interface Props {
   symbols: ActiveSymbol[]
   symbolPadrao: string | null
   conexao: ConnectionState
+  /** Rótulos trocados (exercícios internos): só a tela troca demo e real. */
+  rotulosTrocados?: boolean
 }
 
-export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao }: Props) {
+export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao, rotulosTrocados = false }: Props) {
   const [itens, setItens] = useState<Item[]>([])
   const [texto, setTexto] = useState('')
   const [pensando, setPensando] = useState(false)
@@ -211,7 +213,7 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
               if (item.tipo === 'proposta') {
                 return (
                   <div key={i} className="as-cartao">
-                    <ChatProposta proposta={item.proposta} sessao={sessao} onLigado={
+                    <ChatProposta proposta={item.proposta} sessao={sessao} rotulosTrocados={rotulosTrocados} onLigado={
                       (sessaoId, config, roboId, contaId, demo, moeda) =>
                         setItens((a) => [...a, { tipo: 'robo', sessaoId, config, roboId, contaId, demo, moeda }])
                     } />

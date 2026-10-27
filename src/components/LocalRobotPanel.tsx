@@ -21,6 +21,8 @@ interface Props {
   isDemo: boolean
   /** Acesso de demonstração: a conta virtual se apresenta como real (sem textos de demo). */
   demoComoReal?: boolean
+  /** Rótulos trocados (exercícios internos): só a tela troca demo e real. */
+  rotulosTrocados?: boolean
   moeda: string
   symbols: ActiveSymbol[]
   symbolPadrao: string | null
@@ -81,7 +83,7 @@ const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export function LocalRobotPanel({
-  socket, isDemo, demoComoReal = false, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
+  socket, isDemo, demoComoReal = false, rotulosTrocados = false, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
   onRemover, titulo, expandido = false, onExpandir, onSessaoChange, sessaoTeeds, contaId,
   adotar, solicitarPreparo = false, onFecharPreparo, onDigitos, digitosAberto = false,
   mostrarMarkup = false, apresentacao = 'aberta', onAbrir, idEstudo, onEstudo,
@@ -379,6 +381,7 @@ export function LocalRobotPanel({
     moeda={moeda}
     isDemo={contaDaSessao?.demo ?? isDemo}
     demoComoReal={demoComoReal}
+    rotulosTrocados={rotulosTrocados}
     contaId={contaDaSessao?.contaId ?? contaId}
     escolherModelo={solicitarPreparo}
     ligando={ligando}

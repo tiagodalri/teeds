@@ -132,10 +132,12 @@ export function MostradorDuracao({ duracao, unidade, faixa, disponiveis, aoMudar
 /** Celular e tablet tocam; computador clica. */
 const TOQUE = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
 
-export function BotaoCompra({ tipo, payout, moeda, carregando, erro, podeOperar, motivoBloqueio, comprando, confirmando, stake, aoComprar }: {
+export function BotaoCompra({ tipo, payout, moeda, carregando, erro, podeOperar, motivoBloqueio, comprando, confirmando, stake, aoComprar, semDizerReal = false }: {
   tipo: 'sobe' | 'desce'; payout: number | null; moeda: string; carregando: boolean; erro: string | null
   podeOperar: boolean; motivoBloqueio: string | null; comprando: boolean; confirmando: boolean; stake: number
   aoComprar: () => void
+  /** Rótulos trocados (exercícios internos): a confirmação continua, sem dizer "dinheiro real". */
+  semDizerReal?: boolean
 }) {
   // o preço mudou: só o número ganha um realce rápido, no máximo a cada 2 s
   // (a cotação muda quase todo segundo; acender o botão inteiro o deixava desbotado)
@@ -161,7 +163,7 @@ export function BotaoCompra({ tipo, payout, moeda, carregando, erro, podeOperar,
     <button type="button" className={`bl-botao ${tipo} ${confirmando ? 'confirmando' : ''}`}
       disabled={travado} onClick={aoComprar}
       aria-label={comprando ? `${titulo}: comprando` : motivoBloqueio ? `${titulo}: ${motivoBloqueio}` : erro ? `${titulo}: ${erro}`
-        : confirmando ? `Confirmar compra de ${titulo} com dinheiro real` : `Comprar ${titulo}${valor !== null ? `, recebe ${dinheiro(valor, moeda)} se acertar` : ''}`}>
+        : confirmando ? `Confirmar compra de ${titulo}${semDizerReal ? '' : ' com dinheiro real'}` : `Comprar ${titulo}${valor !== null ? `, recebe ${dinheiro(valor, moeda)} se acertar` : ''}`}>
       <span className="bl-botao-lin">
         <span className="bl-seta" aria-hidden="true">{tipo === 'sobe' ? '▲' : '▼'}</span>
         <span className="bl-dir">{titulo}</span>
@@ -169,7 +171,7 @@ export function BotaoCompra({ tipo, payout, moeda, carregando, erro, podeOperar,
       </span>
       {comprando ? <span className="bl-estado">Comprando…</span>
         : motivoBloqueio ? <span className="bl-estado">{motivoBloqueio}</span>
-        : confirmando ? <span className="bl-estado">{TOQUE ? 'Toque' : 'Clique'} de novo para confirmar<small>Dinheiro real</small></span>
+        : confirmando ? <span className="bl-estado">{TOQUE ? 'Toque' : 'Clique'} de novo para confirmar{!semDizerReal && <small>Dinheiro real</small>}</span>
         : erro ? <span className="bl-estado" title={erro}>{erro}</span>
         : <>
             <small>Recebe</small>

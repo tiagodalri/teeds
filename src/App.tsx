@@ -60,7 +60,7 @@ import { TourGuiado, passosDoTour } from './components/tour/TourGuiado'
 import { BarraInferior } from './components/barra/BarraInferior'
 import { MiniCabine } from './components/minicabine/MiniCabine'
 import { pararNoServidor, type SessaoViva } from './core/teeds/servidorRobos'
-import { sinalGFLiberado } from './core/deriv/accountAccess'
+import { sinalGFLiberado, tipoNaTela } from './core/deriv/accountAccess'
 import { acompanharFimDasSessoes, contratoManual } from './core/som'
 import { registrarOperacaoManual } from './core/teeds/clientes'
 import { caminhoDaTela, telaDoCaminho, telaDoNome } from './core/rotas'
@@ -175,7 +175,12 @@ export default function App() {
   const conta = useAccount({ email: teeds.sessao?.usuario.email, simulador: adminConfirmado || simulador, tokenTeeds: teeds.sessao?.token })
   // Acesso somente-demo (demonstração): a conta virtual se apresenta como real nas telas
   // do próprio cliente. Só a tela muda: as operações continuam indo para a conta virtual.
-  const contasParaMostrar = conta.somenteDemo ? conta.accounts.map((c) => ({ ...c, type: 'real' })) : conta.accounts
+  // Rótulos trocados (27/10/2026, exercícios internos): a virtual aparece como real e a real como demo, a "real" primeiro.
+  const contasParaMostrar = conta.somenteDemo ? conta.accounts.map((c) => ({ ...c, type: 'real' }))
+    : conta.rotulosTrocados ? conta.accounts.map((c) => ({ ...c, type: tipoNaTela(c.type, true) })).sort((a, b) => Number(a.type === 'demo') - Number(b.type === 'demo'))
+    : conta.accounts
+  // se a conta escolhida aparece como demo na tela do próprio cliente
+  const demoNaTela = conta.rotulosTrocados ? !conta.isDemo : conta.isDemo && !conta.somenteDemo
   // sair é sair de tudo: a autorização da Deriv deste aparelho sai junto com a conta
   const sairDeTudo = () => {
     conta.logout()
@@ -1016,6 +1021,7 @@ export default function App() {
               contas={conta.accounts}
               contasDemonstracao={conta.demonstrationAccounts}
               somenteDemo={conta.somenteDemo}
+              rotulosTrocados={conta.rotulosTrocados}
               selecionada={conta.accountId}
               isDemo={conta.isDemo}
               saldo={conta.balance ? conta.balance.amount : null}
@@ -1074,7 +1080,7 @@ export default function App() {
       </header>
 
       {MARCA.inicio && teeds.sessao && tela !== 'robos' && (
-        <MiniCabine sessoes={vivasRobos} sessao={teeds.sessao} demo={conta.status === 'logado' ? conta.isDemo : undefined} demoComoReal={conta.somenteDemo} aoAbrirCabine={() => setTela('robos')}
+        <MiniCabine sessoes={vivasRobos} sessao={teeds.sessao} demo={conta.status === 'logado' ? conta.isDemo : undefined} demoComoReal={conta.somenteDemo} rotulosTrocados={conta.rotulosTrocados} aoAbrirCabine={() => setTela('robos')}
           aoParar={async (id) => { if (teeds.sessao) await pararNoServidor(teeds.sessao, id) }} />
       )}
       {MARCA.inicio && teeds.sessao && <BarraInferior tela={tela} aoVivoAgora={aoVivoAgora} irPara={(t) => { setVerPerfil(false); setTela(t) }} />}
@@ -1150,6 +1156,7 @@ export default function App() {
             symbols={symbols}
             symbolPadrao={symbolCode}
             conexao={conta.conexao}
+            rotulosTrocados={conta.rotulosTrocados}
           />
         </div>
       )}
@@ -1161,6 +1168,7 @@ export default function App() {
           logado={conta.status === 'logado'}
           isDemo={conta.isDemo}
           demoComoReal={conta.somenteDemo}
+          rotulosTrocados={conta.rotulosTrocados}
           moeda={conta.account?.currency ?? 'USD'}
           symbols={symbols}
           symbolPadrao={symbolCode}
@@ -1204,7 +1212,7 @@ export default function App() {
       {tela === 'robos' || tela === 'assistente' ? null : tela === 'inicio' && MARCA.inicio ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o início…</div></div>}>
           <InicioPagina sessao={teeds.sessao} nome={teeds.usuario?.nome || ''}
-            conta={{ conectada: conta.status === 'logado', demo: conta.isDemo && !conta.somenteDemo, saldo: conta.balance ? conta.balance.amount : null, moeda: conta.account?.currency ?? 'USD' }}
+            conta={{ conectada: conta.status === 'logado', demo: demoNaTela, saldo: conta.balance ? conta.balance.amount : null, moeda: conta.account?.currency ?? 'USD' }}
             treino={membroTreino === true && admin !== true ? { noAr: !!treinoAgora, apresentador: treinoAgora?.apresentador ?? undefined } : null}
             aoIr={setTela} aoConectar={conta.login} aoAbrirCarteira={() => setVerCarteira(true)} vivas={teeds.sessao ? vivasRobos : undefined} />
         </Suspense>
@@ -1367,12 +1375,12 @@ export default function App() {
                     <BotaoCompra tipo="sobe" payout={call.payout} stake={stake} moeda={moeda}
                       carregando={call.loading} erro={call.error ? traduzirErro(call.error) : null}
                       podeOperar={podeOperar} motivoBloqueio={motivoBloqueio}
-                      comprando={comprando === 'CALL'} confirmando={confirmar === 'CALL'}
+                      comprando={comprando === 'CALL'} confirmando={confirmar === 'CALL'} semDizerReal={conta.rotulosTrocados}
                       aoComprar={() => comprar('CALL')} />
                     <BotaoCompra tipo="desce" payout={put.payout} stake={stake} moeda={moeda}
                       carregando={put.loading} erro={put.error ? traduzirErro(put.error) : null}
                       podeOperar={podeOperar} motivoBloqueio={motivoBloqueio}
-                      comprando={comprando === 'PUT'} confirmando={confirmar === 'PUT'}
+                      comprando={comprando === 'PUT'} confirmando={confirmar === 'PUT'} semDizerReal={conta.rotulosTrocados}
                       aoComprar={() => comprar('PUT')} />
                   </div>
                   <ResumoDaCompra payouts={[call.payout, put.payout]} stake={stake} moeda={moeda} duracao={duration} unidade={unidade} />
@@ -1389,6 +1397,7 @@ export default function App() {
                   comprando={!!comprando && comprando.startsWith('DIGIT')}
                   socket={conta.socket}
                   onComprar={comprarDigito}
+                  semDizerReal={conta.rotulosTrocados}
                   confirmando={confirmar}
                   onDesarmar={() => setConfirmar(null)}
                   motivoBloqueio={motivoBloqueio}

@@ -18,6 +18,8 @@ interface Props {
   onComprar: (tipo: DigitContract, barreira: string | undefined, ticks: number) => void
   /** Tipo armado para confirmar em conta real (ou null). Mesma trava do Subir/Descer. */
   confirmando: string | null
+  /** Rótulos trocados (exercícios internos): a confirmação continua, sem dizer "dinheiro real". */
+  semDizerReal?: boolean
   /** Qualquer mudanca de parametro desarma a confirmacao. */
   onDesarmar: () => void
   /** Por que o botao esta travado, para mostrar no lugar de um botao mudo. */
@@ -237,7 +239,7 @@ export function DigitsPanel(props: Props) {
               : motivoBloqueio
                 ? motivoBloqueio
                 : confirmando === tipoSel
-                  ? 'Confirmar (dinheiro real)'
+                  ? (props.semDizerReal ? 'Confirmar' : 'Confirmar (dinheiro real)')
                   : `Comprar por ${dinheiro(stake, moeda)}`}
         </button>
       </div>

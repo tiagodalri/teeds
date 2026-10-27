@@ -7,7 +7,7 @@ import {
 import { fetchAccounts, fetchTradingSocketUrl, resetDemoBalance, type TradingAccount } from '../core/deriv/account'
 import { TeedsSocket } from '../core/deriv/client'
 import type { ConnectionState } from '../core/deriv/types'
-import { acessoSomenteDemo, contasPermitidas } from '../core/deriv/accountAccess'
+import { acessoSomenteDemo, contasPermitidas, rotulosTrocados as temRotulosTrocados } from '../core/deriv/accountAccess'
 import { MARCA } from '../marca'
 import { limparCacheOperacoes } from '../core/deriv/history'
 import {
@@ -28,6 +28,8 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
   const [accounts, setAccounts] = useState<TradingAccount[]>([])
   const [chosenAccountId, setChosenAccountId] = useState<string | null>(null)
   const somenteDemo = acessoSomenteDemo(acesso.email, MARCA.id)
+  // rótulos trocados: as duas contas, a virtual vestida de real e a real de demo (só na tela)
+  const rotulosTrocados = temRotulosTrocados(acesso.email, MARCA.id)
   // quem é somente-demo opera na conta virtual mesmo sem o plano do simulador: senão ficaria sem conta nenhuma
   const permitidas = contasPermitidas(accounts, somenteDemo).filter(c => c.type !== 'demo' || acesso.simulador === true || somenteDemo)
   // Nunca migra automaticamente de dinheiro fictício para dinheiro real.
@@ -452,7 +454,7 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
 
   return {
     status, error, setError, session,
-    accounts: permitidas, demonstrationAccounts: permitidas, account, accountId, setAccountId, isDemo, somenteDemo,
+    accounts: permitidas, demonstrationAccounts: permitidas, account, accountId, setAccountId, isDemo, somenteDemo, rotulosTrocados,
     balance: conexaoDaConta ? balance : null, contracts: conexaoDaConta ? [...contracts.values()] : [],
     socket: conexaoDaConta ? socketRef.current : null, connecting, aviso, setAviso, pulso, conexao,
     comprasRecentes: conexaoDaConta ? comprasRecentes : [],

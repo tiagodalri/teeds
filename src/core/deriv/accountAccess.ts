@@ -24,8 +24,31 @@ const EMAILS_SOMENTE_DEMO: readonly string[] = ['teeds@gmail.com', 'omni@gmail.c
  * O e-mail vai sempre sem a etiqueta +marca-.
  */
 const SOMENTE_DEMO_NA_MARCA: Readonly<Record<string, readonly string[]>> = {
+  globalfly: [],
+}
+
+/**
+ * Rótulos trocados (27/10/2026, Tiago, para exercícios internos; o público não
+ * usa estes acessos e as lives vão sair de contas novas). Os mesmos três logins
+ * da GlobalFly saem do somente-demo e passam a ter as duas contas:
+ *   - a virtual continua aparecendo como "Real" (como desde 22/10);
+ *   - a real entra embaixo, aparecendo como "Demo".
+ * Só as telas do próprio cliente trocam a etiqueta (seletor, início, perfil,
+ * mini-cabine). A lógica segue a conta de verdade: operação na real é real
+ * (registro, servidor, limite nunca menor que a entrada, confirmação antes de
+ * ligar) e as telas do admin mostram o tipo verdadeiro.
+ */
+const ROTULOS_TROCADOS_NA_MARCA: Readonly<Record<string, readonly string[]>> = {
   globalfly: ['avila.victor560@gmail.com', 'victooripardo@gmail.com', 'tiagodalri1@live.com'],
 }
+export const rotulosTrocados = (email?: string | null, marca?: string | null) => {
+  if (!email) return false
+  const daConta = (marca || marcaDaConta(email)).toLowerCase()
+  return ROTULOS_TROCADOS_NA_MARCA[daConta]?.includes(emailReal(email).trim().toLowerCase()) ?? false
+}
+/** O tipo que a tela mostra: com os rótulos trocados, demo vira real e real vira demo. */
+export const tipoNaTela = (tipo: TradingAccount['type'], trocados: boolean): TradingAccount['type'] =>
+  trocados ? (tipo === 'demo' ? 'real' : 'demo') : tipo
 
 /**
  * O Sinal GF (indicador do gráfico, 23/10/2026) fica liberado por enquanto só

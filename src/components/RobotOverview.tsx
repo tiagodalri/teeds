@@ -52,7 +52,7 @@ const numero = (valor: number) => valor.toLocaleString('pt-BR', {
   maximumFractionDigits: 2,
 })
 
-export function RobotOverview({ sessoes }: { sessoes: readonly SessaoViva[] }) {
+export function RobotOverview({ sessoes, rotulosTrocados = false }: { sessoes: readonly SessaoViva[]; rotulosTrocados?: boolean }) {
   const contas = resumirSessoes(sessoes)
 
   return (
@@ -76,7 +76,7 @@ export function RobotOverview({ sessoes }: { sessoes: readonly SessaoViva[] }) {
                   {/* Sem etiqueta nem número da conta. Só quando há mais de um
                       cartão (demo e real ao mesmo tempo) o rótulo diz de qual
                       é — senão seriam dois cartões iguais com números diferentes. */}
-                  <dt>{contas.length > 1 ? `Resultado · ${conta.demo ? 'conta demo' : 'conta real'}` : 'Resultado das sessões'}</dt>
+                  <dt>{contas.length > 1 ? `Resultado · ${(rotulosTrocados ? !conta.demo : conta.demo) ? 'conta demo' : 'conta real'}` : 'Resultado das sessões'}</dt>
                   <dd className={conta.resultado === null || conta.resultado === 0
                     ? 'rob-overview-neutral'
                     : conta.resultado > 0 ? 'rob-overview-positive' : 'rob-overview-negative'}>

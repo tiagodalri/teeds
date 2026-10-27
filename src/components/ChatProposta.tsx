@@ -41,9 +41,11 @@ interface Props {
   sessao: SessaoTeeds
   /** Chamado quando o robô nasceu: o cartão vira painel ao vivo lá em cima. */
   onLigado: (sessaoId: string, config: ConfigEstrategia, roboId: string, contaId: string, demo: boolean, moeda: string) => void
+  /** Rótulos trocados (exercícios internos): a real aparece como demonstração e a virtual como real. Só a tela. */
+  rotulosTrocados?: boolean
 }
 
-export function ChatProposta({ proposta, sessao, onLigado }: Props) {
+export function ChatProposta({ proposta, sessao, onLigado, rotulosTrocados = false }: Props) {
   const id = identidade(proposta.roboId)
   const [entrada, setEntrada] = useState(proposta.entrada)
   const [stop, setStop] = useState(proposta.stopLoss)
@@ -102,7 +104,7 @@ export function ChatProposta({ proposta, sessao, onLigado }: Props) {
           <b>{proposta.roboNome}</b>
           <small>{id.chamada} · {id.chance}% de chance</small>
         </div>
-        {real && <span className="cp-real-marca">dinheiro real</span>}
+        {real && !rotulosTrocados && <span className="cp-real-marca">dinheiro real</span>}
       </header>
 
       <p className="cp-regra">Ganha quando {proposta.regra}.</p>
@@ -129,12 +131,12 @@ export function ChatProposta({ proposta, sessao, onLigado }: Props) {
 
       <footer className="cp-pe">
         <span>
-          {proposta.demo ? 'Conta de demonstração' : 'Conta real'}
+          {(rotulosTrocados ? !proposta.demo : proposta.demo) ? 'Conta de demonstração' : 'Conta real'}
           <br /><small>saldo {din(proposta.saldo, proposta.moeda)}</small>
         </span>
         <button className={`cp-ligar ${confirmando ? 'confirmando' : ''}`} onClick={ligar} disabled={ligando}>
           {ligando ? 'Ligando…'
-            : confirmando ? `Confirmar ${din(entrada, proposta.moeda)} em dinheiro real`
+            : confirmando ? `Confirmar ${din(entrada, proposta.moeda)}${rotulosTrocados ? '' : ' em dinheiro real'}`
             : 'Ligar'}
         </button>
       </footer>

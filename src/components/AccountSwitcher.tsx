@@ -13,6 +13,8 @@ interface Props {
   contas: TradingAccount[]
   contasDemonstracao?: TradingAccount[]
   somenteDemo?: boolean
+  /** Rótulos trocados (27/10/2026, exercícios internos): a virtual veste "Real" e a real veste "Demo". */
+  rotulosTrocados?: boolean
   selecionada: string | null
   isDemo: boolean
   saldo: number | null
@@ -44,7 +46,9 @@ export function AccountSwitcher(props: Props) {
     do Tiago em 10/09/2026. So a etiqueta: o texto "Dinheiro ficticio", o
     numero da conta e a recarga de saldo demo continuam iguais.
   */
-  const cara = (demo: boolean) => (demo && !props.somenteDemo ? 'demo' : 'real')
+  const cara = (demo: boolean) => (props.rotulosTrocados ? (demo ? 'real' : 'demo') : demo && !props.somenteDemo ? 'demo' : 'real')
+  // com os rótulos trocados, a que aparece como "Real" (a virtual) vem primeiro
+  const naOrdem = props.rotulosTrocados ? [...contas].sort((a, b) => Number(a.type !== 'demo') - Number(b.type !== 'demo')) : contas
   const rotulo = (demo: boolean) => (cara(demo) === 'demo' ? 'Demo' : 'Real')
   const [aberto, setAberto] = useState(false)
   const [demonstrando, setDemonstrando] = useState(false)
@@ -84,7 +88,7 @@ export function AccountSwitcher(props: Props) {
         <div className="menu" role="menu">
           <p className="menu-titulo">Suas contas na Deriv</p>
 
-          {contas.map((c) => {
+          {naOrdem.map((c) => {
             const demo = c.type === 'demo'
             const ativa = c.accountId === selecionada
             return (
@@ -118,7 +122,7 @@ export function AccountSwitcher(props: Props) {
 
 
           {/* No acesso somente-demo (teeds@gmail.com) a conta demo se apresenta como real: sem recarga a vista. */}
-          {isDemo && !props.somenteDemo && (
+          {isDemo && !props.somenteDemo && !props.rotulosTrocados && (
             <button className="menu-acao" role="menuitem"
               onClick={() => { onRecarregar(); setAberto(false) }}>
               <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"

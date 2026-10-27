@@ -32,6 +32,8 @@ interface Props {
   isDemo: boolean
   /** Acesso de demonstração: a conta virtual se apresenta como real (sem textos de demo). */
   demoComoReal?: boolean
+  /** Rótulos trocados (exercícios internos): a real aparece como demo e a virtual como real. Só a tela. */
+  rotulosTrocados?: boolean
   moeda: string
   symbols: ActiveSymbol[]
   symbolPadrao: string | null
@@ -60,7 +62,7 @@ let preparoPedido = false
 export function pedirPreparo(): void { preparoPedido = true; window.dispatchEvent(new Event('robos:preparar')) }
 
 export function RobotsPanel({
-  socket, logado, isDemo, demoComoReal = false, moeda, symbols, symbolPadrao, conexao = 'open',
+  socket, logado, isDemo, demoComoReal = false, rotulosTrocados = false, moeda, symbols, symbolPadrao, conexao = 'open',
   entrandoNaDeriv = false, onConectarDeriv, sessaoTeeds, contaId, admin = false, mostrarMarkup = false, onSessoesVivas,
 }: Props) {
   // Modo CEO: cada bloco entrega aqui os números da sessão dele.
@@ -346,7 +348,7 @@ export function RobotsPanel({
         </div>
       </div>
 
-      <RobotOverview sessoes={vivasNoServidor} />
+      <RobotOverview sessoes={vivasNoServidor} rotulosTrocados={rotulosTrocados} />
       <div className="rob-workspace-toolbar" hidden={!temAcompanhamento}>
         <div><b>Área de acompanhamento</b><span>{disposicao === 'lista' ? 'Clique numa linha para abrir a cabine dela. Os outros robôs seguem operando normalmente.' : 'Todos os robôs de uma vez. "Abrir na lista" mostra a cabine completa.'}</span></div>
         <div className="rob-toolbar-direita">
@@ -389,7 +391,7 @@ export function RobotsPanel({
             <div key={v.id} className={`rob-board-slot ${apresentacaoDe(v.id) === 'aberta' ? 'aberta' : ''}`}>
             <LocalRobotPanel
               titulo={`#${i + 1}`}
-              socket={socket} isDemo={v.demo} demoComoReal={demoComoReal} moeda={v.moeda}
+              socket={socket} isDemo={v.demo} demoComoReal={demoComoReal} rotulosTrocados={rotulosTrocados} moeda={v.moeda}
               symbols={symbols} symbolPadrao={symbolPadrao}
               identidade={identidade(v.roboId)}
               conexao={conexao}
@@ -413,7 +415,7 @@ export function RobotsPanel({
             hidden={!sessoesLocais.has(idBloco)}>
             <LocalRobotPanel
               titulo={`#${doChat.length + Math.max(0, blocosComSessao.indexOf(idBloco)) + 1}`}
-              socket={socket} isDemo={isDemo} demoComoReal={demoComoReal} moeda={moeda}
+              socket={socket} isDemo={isDemo} demoComoReal={demoComoReal} rotulosTrocados={rotulosTrocados} moeda={moeda}
               symbols={symbols} symbolPadrao={symbolPadrao} identidade={ident}
               conexao={conexao}
               sessaoTeeds={sessaoTeeds} contaId={contaId}
@@ -591,14 +593,14 @@ export function RobotsPanel({
 
           {confirmaReal && (
             <p className="rob-alerta">
-              Você está na <strong>conta real</strong>. O robô vai operar com dinheiro de verdade.
-              Clique de novo para confirmar.
+              {rotulosTrocados ? <>Clique de novo para confirmar.</> : <>Você está na <strong>conta real</strong>. O robô vai operar com dinheiro de verdade.
+              Clique de novo para confirmar.</>}
             </p>
           )}
 
           <button className={`btn btn-ligar ${confirmaReal ? 'btn-confirmar' : ''}`}
             disabled={!socket || ligando} onClick={ligar}>
-            {ligando ? 'ligando…' : confirmaReal ? 'Confirmar com dinheiro real' : `Ligar robô ${modelo.nome}`}
+            {ligando ? 'ligando…' : confirmaReal ? (rotulosTrocados ? 'Confirmar' : 'Confirmar com dinheiro real') : `Ligar robô ${modelo.nome}`}
           </button>
         </section>
 
