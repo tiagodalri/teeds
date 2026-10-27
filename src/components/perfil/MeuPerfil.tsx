@@ -13,6 +13,7 @@ import { dataCurta } from '../../core/datas'
 import { dataEHora, historicoDeAceites, type HistoricoDeAceites } from '../../core/teeds/termos'
 import { LeitorDeTermos } from '../termos/Termos'
 import { CartaoDeNotificacoes } from '../notificacoes/Notificacoes'
+import { CartaoDeBiometria } from '../biometria/Biometria'
 
 /**
  * "Meu Perfil" (20/10/2026, pedido do Tiago: "capricha"): a pessoa vê e
@@ -317,6 +318,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
         </section>
 
         {/* ------------------------------------------------ notificações no celular */}
+        {MARCA.biometria && <CartaoDeBiometria sessao={sessao} />}
         {MARCA.notificacoes && <CartaoDeNotificacoes sessao={sessao} />}
 
         {/* ------------------------------------------------ termos de uso */}

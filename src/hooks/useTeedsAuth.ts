@@ -6,6 +6,7 @@ import {
 } from '../core/teeds/conta'
 import { autenticacaoConfigurada } from '../core/teeds/config'
 import { inscreverFilaEspera, type DadosFilaEspera } from '../core/teeds/leads'
+import { entrarComBiometria as fazerLoginComBiometria } from '../core/teeds/biometria'
 import { MARCA } from '../marca'
 
 export type StatusTeeds = 'carregando' | 'deslogado' | 'logado' | 'dispensado'
@@ -118,6 +119,21 @@ export function useTeedsAuth() {
     }
   }, [agendarRenovacao])
 
+  // Face ID / digital (27/10/2026): a mesma sessão do login com senha
+  const entrarComBiometria = useCallback(async () => {
+    setOcupado(true); setErro(null)
+    try {
+      const s = await fazerLoginComBiometria()
+      setSessao(s); setStatus('logado'); agendarRenovacao(s)
+      return true
+    } catch (e) {
+      setErro((e as Error).message)
+      return false
+    } finally {
+      setOcupado(false)
+    }
+  }, [agendarRenovacao])
+
   const cadastrar = useCallback(async (dados: DadosFilaEspera) => {
     setOcupado(true); setErro(null)
     try {
@@ -186,6 +202,6 @@ export function useTeedsAuth() {
   return {
     atualizarUsuario,
     status, sessao, usuario: sessao?.usuario ?? null, erro, setErro, recado, setRecado,
-    ocupado, entrar, cadastrar, esqueci, sair, redefinindo, precisaTrocarSenha, definirNovaSenha,
+    ocupado, entrar, entrarComBiometria, cadastrar, esqueci, sair, redefinindo, precisaTrocarSenha, definirNovaSenha,
   }
 }

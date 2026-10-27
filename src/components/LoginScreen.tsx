@@ -1,5 +1,5 @@
 import { afiliadoDaDeriv } from '../core/rotas'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   formatarTelefone, telefoneValido,
 } from '../core/teeds/conta'
@@ -11,6 +11,7 @@ import { abrirNoCadastro } from '../core/teeds/entradaInicial'
 import { CenaDoLogin, type VarianteDaCena } from './entrada/CenaDoLogin'
 import { marcarEmbarque } from '../core/decolagem'
 import { marcarAceiteNoLogin } from '../core/teeds/termos'
+import { biometriaDisponivel, biometriaLigadaAqui, rotuloDaBiometria } from '../core/teeds/biometria'
 
 type Modo = 'entrar' | 'criar' | 'esqueci'
 
@@ -21,6 +22,8 @@ interface Props {
   onEntrar: (email: string, senha: string) => Promise<boolean>
   onCadastrar: (dados: DadosFilaEspera) => Promise<{ ok: boolean }>
   onEsqueci: (email: string) => Promise<boolean>
+  /** Face ID / digital (27/10/2026): aparece quando este aparelho já foi ligado no perfil. */
+  onEntrarComBiometria?: () => Promise<boolean>
   /** Só no laboratório: força a versão da cena (nuvens ou rastro). */
   cena?: VarianteDaCena
 }
@@ -45,7 +48,15 @@ const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
 
 const nomeCompleto = (v: string) => v.trim().split(/\s+/).filter((p) => p.length >= 2).length >= 2
 
-export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, onEsqueci, cena = MARCA.cenaLogin }: Props) {
+export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, onEsqueci, onEntrarComBiometria, cena = MARCA.cenaLogin }: Props) {
+  // o botão do Face ID só aparece no aparelho que já ligou a biometria no perfil
+  const [comBiometria, setComBiometria] = useState(false)
+  useEffect(() => {
+    if (!onEntrarComBiometria || !biometriaLigadaAqui()) return
+    let vivo = true
+    void biometriaDisponivel().then((ok) => { if (vivo) setComBiometria(ok) })
+    return () => { vivo = false }
+  }, [onEntrarComBiometria])
   // Link de campanha de cadastro ou /cadastre-se: abre direto no formulário.
   const [modo, setModo] = useState<Modo>(abrirNoCadastro ? 'criar' : 'entrar')
   const [nome, setNome] = useState('')
@@ -181,6 +192,17 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
             </label>
           )}
 
+          {modo === 'entrar' && comBiometria && (
+            <button className="entrada-btn entrada-biometria" type="button" disabled={ocupado || (pedeTermos && !(concordo && maior))}
+              onClick={async (e) => {
+                marcarEmbarque(e.currentTarget)
+                if (pedeTermos) marcarAceiteNoLogin()
+                await onEntrarComBiometria?.()
+              }}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V6a2 2 0 012-2h2M16 4h2a2 2 0 012 2v2M20 16v2a2 2 0 01-2 2h-2M8 20H6a2 2 0 01-2-2v-2M9 9.5v1M15 9.5v1M12 9v4h-1M9.5 15.5c1.5 1.2 3.5 1.2 5 0" /></svg>
+              Entrar com {rotuloDaBiometria()}
+            </button>
+          )}
           <button className="entrada-btn" type="submit" disabled={!valido || ocupado}>
             {ocupado ? 'um instante…' : t.acao}
           </button>

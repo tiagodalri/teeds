@@ -6144,3 +6144,13 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .mon-sit.aberta i{width:7px;height:7px;border-radius:50%;background:currentColor;animation:mon-pulsa 1.4s ease-in-out infinite}
 @keyframes mon-pulsa{50%{opacity:.35}}
 @media (prefers-reduced-motion:reduce){.mon-sit.aberta i{animation:none}}
+
+/* Entrar com Face ID / digital (27/10/2026): contorno no ouro, abaixo das caixas
+   dos termos e acima do Entrar. Seletor mais forte que o do botão chapado da GF
+   (a regra do escuro usa :is() com um item de 0,2,1, que vale para a lista toda). */
+:root .entrada .entrada-form .entrada-btn.entrada-biometria, :root .entrada-form .entrada-btn.entrada-biometria.entrada-biometria {
+  background: transparent; color: var(--text); box-shadow: none;
+  border: 1.5px solid var(--gf-ouro, var(--primary));
+}
+:root .entrada .entrada-form .entrada-btn.entrada-biometria:hover:not(:disabled) { background: color-mix(in srgb, var(--gf-ouro, var(--primary)) 10%, transparent); }
+.entrada-biometria svg { width: 20px; height: 20px; fill: none; stroke: var(--gf-ouro, var(--primary)); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }

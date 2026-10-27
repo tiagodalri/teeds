@@ -11,6 +11,7 @@ import type { SessaoTeeds } from '../../core/teeds/conta'
 import { ativarNotificacoes, desligarNotificacoes, estadoDasNotificacoes, testarNotificacoes, type EstadoDasNotificacoes } from '../../core/teeds/notificacoes'
 import { MARCA } from '../../marca'
 import './notificacoes.css'
+import { ConviteDeBiometria } from '../biometria/Biometria'
 
 const IA = MARCA.id === 'globalfly'
 const termo = IA ? 'a I.A.' : 'o robô'
@@ -115,4 +116,20 @@ export function ConviteDeNotificacoes({ sessao, aoAbrirPerfil }: { sessao: Sessa
       </button>
     </aside>
   )
+}
+
+/**
+ * Os convites da Início, um de cada vez: primeiro o das notificações; quando
+ * ele já foi resolvido (ligado ou fechado), o do Face ID / digital.
+ */
+export function ConvitesDoInicio({ sessao, aoAbrirPerfil }: { sessao: SessaoTeeds; aoAbrirPerfil: () => void }) {
+  const [notificacoesPendentes, setPendentes] = useState<boolean | null>(null)
+  useEffect(() => {
+    let vivo = true
+    void estadoDasNotificacoes().then((e) => { if (vivo) setPendentes(!fechadoAntes() && (e === 'desligadas' || e === 'instalar')) }).catch(() => { if (vivo) setPendentes(false) })
+    return () => { vivo = false }
+  }, [])
+  if (notificacoesPendentes === null) return null
+  if (notificacoesPendentes && MARCA.notificacoes) return <ConviteDeNotificacoes sessao={sessao} aoAbrirPerfil={aoAbrirPerfil} />
+  return MARCA.biometria ? <ConviteDeBiometria sessao={sessao} /> : null
 }

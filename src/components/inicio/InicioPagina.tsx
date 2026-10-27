@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ConviteDeNotificacoes } from '../notificacoes/Notificacoes'
+import { ConvitesDoInicio } from '../notificacoes/Notificacoes'
 import type { WorkspacePage } from '../WorkspaceNav'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { acompanharVivas, type SessaoViva } from '../../core/teeds/servidorRobos'
@@ -181,7 +181,7 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
   }
   return (
     <InicioPanel d={d} aoIr={aoIr} aoConectar={aoConectar} aoAbrirCarteira={aoAbrirCarteira}
-      topo={MARCA.notificacoes && sessao ? <ConviteDeNotificacoes sessao={sessao} aoAbrirPerfil={() => aoIr('perfil')} /> : null}
+      topo={(MARCA.notificacoes || MARCA.biometria) && sessao ? <ConvitesDoInicio sessao={sessao} aoAbrirPerfil={() => aoIr('perfil')} /> : null}
       aoSalvarPlano={(meta, limite) => setPlano(planoSimples(meta, limite, sessao))}
       aoPrepararRobo={(id) => { pedirModeloDaVitrine(id); pedirPreparo(); aoIr('robos') }} />
   )

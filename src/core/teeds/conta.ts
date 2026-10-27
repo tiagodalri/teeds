@@ -223,6 +223,13 @@ export async function entrar(email: string, senha: string): Promise<SessaoTeeds>
   return s
 }
 
+/** A sessão que veio pronta de outro jeito de entrar (Face ID / digital, biometria.ts). */
+export function entrarComTokens(d: any): SessaoTeeds {
+  const s = montarSessao(d)
+  guardar(s)
+  return s
+}
+
 /** Renova o token com o refresh guardado. */
 export async function renovar(refresh: string): Promise<SessaoTeeds> {
   const d = await chamar('/token?grant_type=refresh_token', { corpo: { refresh_token: refresh } })

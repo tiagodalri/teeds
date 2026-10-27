@@ -1011,6 +1011,7 @@ export default function App() {
         erro={teeds.erro}
         limparErro={() => teeds.setErro(null)}
         onEntrar={teeds.entrar}
+        onEntrarComBiometria={MARCA.biometria ? teeds.entrarComBiometria : undefined}
         onCadastrar={teeds.cadastrar}
         onEsqueci={teeds.esqueci}
       />
