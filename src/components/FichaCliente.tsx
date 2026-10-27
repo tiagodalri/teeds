@@ -119,13 +119,14 @@ function AceitesDosTermos({ sessao, userId }: { sessao: SessaoTeeds; userId: str
             <div><dt>Aceitou pela primeira vez</dt><dd>{dataEHora(h.primeiro.aceitoEm)} <em>(versão {h.primeiro.versao})</em></dd></div>
             <div><dt>De onde</dt><dd>{h.primeiro.ip ? `IP ${h.primeiro.ip} · ` : ''}{aparelhoLegivel(h.primeiro.aparelho)}</dd></div>
             <div><dt>Último aceite</dt><dd>{dataEHora(h.ultimo!.aceitoEm)} <em>({tipo(h.ultimo!.tipo).toLowerCase()})</em></dd></div>
+            <div><dt>Declarou 18 anos ou mais</dt><dd>{h.eventos.some((ev) => ev.maioridade) ? `Sim, em ${dataEHora(h.eventos.find((ev) => ev.maioridade)!.aceitoEm)}` : 'Ainda não (é pedido no próximo login)'}</dd></div>
             <div><dt>Aceites registrados</dt><dd>{h.total} {h.total === 1 ? 'vez' : 'vezes'}
               {h.total > 1 && <button type="button" className="fc-link" onClick={() => setLista((x) => !x)}>{lista ? 'esconder' : 'ver todos'}</button>}</dd></div>
           </dl>
           {lista && <div className="fc-tabela fc-aceites">
             <div className="cab"><span>Quando</span><span>Como</span><span>Versão</span><span>De onde</span></div>
             {[...h.eventos].reverse().map((ev, i) => (
-              <div className="linha" key={i}><span>{dataEHora(ev.aceitoEm)}</span><span>{tipo(ev.tipo)}</span><span>{ev.versao}</span><span>{ev.ip ? `${ev.ip} · ` : ''}{aparelhoLegivel(ev.aparelho)}</span></div>
+              <div className="linha" key={i}><span>{dataEHora(ev.aceitoEm)}</span><span>{tipo(ev.tipo)}{ev.maioridade ? ' · 18+' : ''}</span><span>{ev.versao}</span><span>{ev.ip ? `${ev.ip} · ` : ''}{aparelhoLegivel(ev.aparelho)}</span></div>
             ))}
           </div>}
         </>}

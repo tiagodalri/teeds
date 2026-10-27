@@ -73,7 +73,8 @@ export async function registrarAceite(sessao: SessaoTeeds, tipo: TipoDeAceite = 
   const ev = await fetch(`${SUPABASE.url}/rest/v1/termos_aceites_eventos`, {
     method: 'POST',
     headers: { ...cabecalhos(sessao.token), Prefer: 'return=minimal' },
-    body: JSON.stringify({ user_id: sessao.usuario.id, marca: MARCA.id, versao: VERSAO_TERMOS, tipo, user_agent: aparelho }),
+    // no login, as duas caixas (termos e maioridade) são obrigatórias; no primeiro acesso, o item 2.1 dos termos cobre a idade
+    body: JSON.stringify({ user_id: sessao.usuario.id, marca: MARCA.id, versao: VERSAO_TERMOS, tipo, user_agent: aparelho, declarou_maioridade: tipo === 'login' }),
   })
   if (!ev.ok) throw new Error('Não foi possível registrar o aceite. Tente de novo.')
   if (tipo === 'primeiro_acesso') try { localStorage.setItem(chaveLocal(sessao.usuario.id), '1') } catch { /* sem armazenamento */ }
@@ -98,16 +99,16 @@ export function limparAceiteDoLogin(): void {
   try { sessionStorage.removeItem(RECADO_LOGIN) } catch { /* sem armazenamento */ }
 }
 
-export interface AceiteRegistrado { tipo: TipoDeAceite; versao: string; aceitoEm: string; ip: string | null; aparelho: string | null }
+export interface AceiteRegistrado { tipo: TipoDeAceite; versao: string; aceitoEm: string; ip: string | null; aparelho: string | null; maioridade: boolean }
 export interface HistoricoDeAceites { primeiro: AceiteRegistrado | null; ultimo: AceiteRegistrado | null; total: number; eventos: AceiteRegistrado[] }
 
 /** O histórico de aceites de uma pessoa (a própria, ou um cliente para o admin). */
 export async function historicoDeAceites(token: string, userId: string, marca = MARCA.id): Promise<HistoricoDeAceites> {
-  const url = `${SUPABASE.url}/rest/v1/termos_aceites_eventos?select=tipo,versao,aceito_em,ip,user_agent&user_id=eq.${userId}&marca=eq.${encodeURIComponent(marca)}&order=aceito_em.asc&limit=500`
+  const url = `${SUPABASE.url}/rest/v1/termos_aceites_eventos?select=tipo,versao,aceito_em,ip,user_agent,declarou_maioridade&user_id=eq.${userId}&marca=eq.${encodeURIComponent(marca)}&order=aceito_em.asc&limit=500`
   const res = await fetch(url, { headers: cabecalhos(token) })
   if (!res.ok) throw new Error('Não foi possível ler os aceites.')
-  const linhas = await res.json() as Array<{ tipo: TipoDeAceite; versao: string; aceito_em: string; ip: string | null; user_agent: string | null }>
-  const eventos = linhas.map((l) => ({ tipo: l.tipo, versao: l.versao, aceitoEm: l.aceito_em, ip: l.ip, aparelho: l.user_agent }))
+  const linhas = await res.json() as Array<{ tipo: TipoDeAceite; versao: string; aceito_em: string; ip: string | null; user_agent: string | null; declarou_maioridade: boolean }>
+  const eventos = linhas.map((l) => ({ tipo: l.tipo, versao: l.versao, aceitoEm: l.aceito_em, ip: l.ip, aparelho: l.user_agent, maioridade: !!l.declarou_maioridade }))
   return { primeiro: eventos[0] ?? null, ultimo: eventos[eventos.length - 1] ?? null, total: eventos.length, eventos }
 }
 
