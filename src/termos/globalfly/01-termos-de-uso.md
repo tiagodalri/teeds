@@ -1,6 +1,6 @@
 # Termos de Uso
 
-Estes Termos de Uso regulam o acesso e o uso da plataforma **GlobalFly Trade** ("Plataforma"), oferecida pela empresa responsável pela GlobalFly Trade ("nós"). Ao marcar a caixa de aceite e entrar na Plataforma, você ("Usuário" ou "você") declara que leu, entendeu e concorda com estes Termos, com a Política de Privacidade, com a Política de Cookies e com o Aviso de Riscos. Se você não concordar, não use a Plataforma.
+Estes Termos de Uso regulam o acesso e o uso da plataforma **GlobalFly Trade** ("Plataforma"), oferecida pela GlobalFly Trade ("GlobalFly" ou "nós"). Ao marcar a caixa de aceite e entrar na Plataforma, você ("Usuário" ou "você") declara que leu, entendeu e concorda com estes Termos, com a Política de Privacidade, com a Política de Cookies e com o Aviso de Riscos. Se você não concordar, não use a Plataforma.
 
 ## 1. O que é a Plataforma
 

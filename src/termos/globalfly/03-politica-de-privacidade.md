@@ -4,7 +4,7 @@ Esta Política explica como a **GlobalFly Trade** ("nós") coleta, usa, guarda, 
 
 ## 1. Quem é responsável pelos seus dados
 
-A empresa responsável pela GlobalFly Trade é a controladora dos dados pessoais tratados na Plataforma. Para qualquer assunto sobre os seus dados, fale com o nosso Encarregado pelo **suporte dentro da Plataforma** (menu Ajuda), indicando no assunto "Privacidade".
+A GlobalFly Trade é a controladora dos dados pessoais tratados na Plataforma. Para qualquer assunto sobre os seus dados, fale com o nosso Encarregado pelo **suporte dentro da Plataforma** (menu Ajuda), indicando no assunto "Privacidade".
 
 ## 2. Quais dados coletamos
 
