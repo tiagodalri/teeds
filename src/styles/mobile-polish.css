@@ -553,8 +553,8 @@
    também no navegador do celular. Sem o retângulo azul do toque do Android,
    sem zoom por toque duplo nos botões (+ e − do valor) e sem o iPhone aumentar
    a letra sozinho ao virar a tela. O foco do teclado continua visível. */
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 @media (max-width: 900px), (pointer: coarse) {
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   * { -webkit-tap-highlight-color: transparent; }
   button, a, [role='button'], select, label, summary { touch-action: manipulation; }
 }
