@@ -175,6 +175,10 @@ export interface Marca {
    * o aceite, na tabela termos_aceites. Ver src/core/teeds/termos.ts.
    */
   termos?: boolean
+  /** Relatórios (27/10/2026): a aba de relatórios do cliente, com os números da corretora. */
+  relatorios?: boolean
+  /** O compartilhamento de receita sobre o lucro do mês (0.10 = 10%); aparece nos Relatórios. */
+  compartilhamento?: number
   /**
    * Nome e ícone de itens do menu lateral, por marca (19/10/2026: na
    * GlobalFly, "Robôs" virou "I.A." com o símbolo de brilhos, e o Assistente
@@ -431,6 +435,8 @@ export const MARCAS: Record<string, Marca> = {
     afiliadosDosParceiros: { n: 'https://t.deriv.link?t=X8KDME25M85P' },
     appsDosParceiros: { n: '34MLTOJu0MDBoED7yEczz' },
     termos: true,
+    relatorios: true,
+    compartilhamento: 0.10,
     menu: {
       nomes: { robos: 'I.A.' },
       icones: {

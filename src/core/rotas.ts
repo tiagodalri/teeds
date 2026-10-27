@@ -19,6 +19,7 @@ const SLUG: Record<WorkspacePage, string> = {
   robos: GF ? 'ia' : 'robos',
   assistente: 'assistente',
   gerenciamento: 'gerenciamento',
+  relatorios: 'relatorios',
   aovivo: 'ao-vivo',
   aulas: 'aulas',
   noticias: 'noticias',

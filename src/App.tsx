@@ -93,6 +93,7 @@ const ManagementPanel = lazy(() => import('./components/ManagementPanel').then((
 const AulasPanel = lazy(() => import('./components/AulasPanel').then((m) => ({ default: m.AulasPanel })))
 const MarketplacePanel = lazy(() => import('./components/MarketplacePanel').then((m) => ({ default: m.MarketplacePanel })))
 const OperationalManagementPanel = lazy(() => import('./components/OperationalManagementPanel').then((m) => ({ default: m.OperationalManagementPanel })))
+const RelatoriosPanel = lazy(() => import('./components/relatorios/RelatoriosPanel').then((m) => ({ default: m.RelatoriosPanel })))
 /** "1.234,56", "2.000", "1234.56" ou "12,5" viram número: vírgula é o decimal; ponto com
     trios depois ("2.000") é milhar, senão é decimal ("12.5"). */
 const lerValor = (t: string) => Number(t.includes(',') || /^[1-9]\d{0,2}(\.\d{3})+$/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t)
@@ -247,7 +248,7 @@ export default function App() {
     // o endereço manda (globalflytrade.com/ia abre a I.A.); sem endereço, a tela em que a pessoa estava
     const doEndereco = telaDoCaminho(location.pathname) ?? telaDoNome(new URLSearchParams(location.search).get('tela'))
     const antes = doEndereco ?? (history.state as { tela?: WorkspacePage } | null)?.tela
-    const QUE_VOLTAM: WorkspacePage[] = ['inicio', 'operar', 'robos', 'aulas', 'gerenciamento', 'marketplace', 'noticias', 'perfil', 'ajuda', ...(doEndereco ? ['aovivo', 'assistente', 'gestao', 'insights', 'monitoramento'] as WorkspacePage[] : [])]
+    const QUE_VOLTAM: WorkspacePage[] = ['inicio', 'operar', 'robos', 'aulas', 'gerenciamento', ...(MARCA.relatorios ? ['relatorios' as const] : []), 'marketplace', 'noticias', 'perfil', 'ajuda', ...(doEndereco ? ['aovivo', 'assistente', 'gestao', 'insights', 'monitoramento'] as WorkspacePage[] : [])]
     return antes && QUE_VOLTAM.includes(antes) && (antes !== 'inicio' || MARCA.inicio) && (antes !== 'noticias' || MARCA.noticias) && (antes !== 'aovivo' || MARCA.aoVivo) ? antes : padrao
   })
   const telaAgora = useRef(tela)
@@ -535,7 +536,7 @@ export default function App() {
     if (treino) { try { sessionStorage.setItem(`${MARCA.id}.aovivo.treino`, '1') } catch { /* sem armazenamento */ } }
     const pedida = convite || treino ? 'aovivo' : telaDoNome(u.searchParams.get('tela'))
     // as do admin também abrem por link: a trava de admin (logo acima) tira quem não for
-    const PUBLICAS: WorkspacePage[] = [...(MARCA.inicio ? ['inicio' as const] : []), 'operar', 'robos', 'aulas', 'gerenciamento', 'marketplace', 'perfil', 'ajuda', 'assistente', 'gestao', 'insights', 'monitoramento', ...(MARCA.aoVivo ? ['aovivo' as const] : []), ...(MARCA.noticias ? ['noticias' as const] : [])]
+    const PUBLICAS: WorkspacePage[] = [...(MARCA.inicio ? ['inicio' as const] : []), 'operar', 'robos', 'aulas', 'gerenciamento', ...(MARCA.relatorios ? ['relatorios' as const] : []), 'marketplace', 'perfil', 'ajuda', 'assistente', 'gestao', 'insights', 'monitoramento', ...(MARCA.aoVivo ? ['aovivo' as const] : []), ...(MARCA.noticias ? ['noticias' as const] : [])]
     if (pedida && (PUBLICAS as string[]).includes(pedida)) setTela(pedida as WorkspacePage)
     if (u.searchParams.has('tela') || u.searchParams.has('aovivo') || u.searchParams.has('treino') || u.searchParams.get('origem') === 'app') {
       u.searchParams.delete('tela'); u.searchParams.delete('origem'); u.searchParams.delete('aovivo'); u.searchParams.delete('treino')
@@ -1035,7 +1036,7 @@ export default function App() {
         else setTela(next)
       }} />
       <header className="topbar">
-        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'divulgacao' ? 'Seus links para divulgar a plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : 'Seu espaço de trabalho'}</span></div>
+        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'relatorios' ? 'O seu resultado, com os números da corretora' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'divulgacao' ? 'Seus links para divulgar a plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : 'Seu espaço de trabalho'}</span></div>
 
         <div className="topbar-right">
           <RelogioTopo />
@@ -1274,6 +1275,12 @@ export default function App() {
         <Suspense fallback={telaAbrindo('Abrindo o marketplace…')}><MarketplacePanel sessao={teeds.sessao} /></Suspense>
       ) : tela === 'gerenciamento' ? (
         <CatalogoProvider sessao={teeds.sessao}><Suspense fallback={telaAbrindo('Abrindo o gerenciamento…')}><OperationalManagementPanel /></Suspense></CatalogoProvider>
+      ) : tela === 'relatorios' && MARCA.relatorios && teeds.sessao ? (
+        <Suspense fallback={telaAbrindo('Abrindo os relatórios…')}>
+          <RelatoriosPanel sessao={teeds.sessao} socket={conta.socket} conectada={conta.status === 'logado'} contaDemo={conta.isDemo}
+            rotulosTrocados={conta.rotulosTrocados} saldo={conta.balance ? conta.balance.amount : null}
+            moeda={conta.balance?.currency ?? conta.account?.currency ?? 'USD'} aoIr={(t) => setTela(t)} />
+        </Suspense>
       ) : tela === 'divulgacao' && linksDeParceiro && teeds.sessao ? (
         <Suspense fallback={telaAbrindo('Abrindo os links…')}><DivulgacaoPanel sessao={teeds.sessao} inicial={linksDeParceiro} /></Suspense>
       ) : tela === 'laboratorio' && admin === true && MARCA.laboratorioIA ? (

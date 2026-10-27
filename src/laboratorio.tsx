@@ -61,6 +61,7 @@ const LabRecorte = lazy(() => import('./components/aovivo/LabRecorte'))
 const TesteAtraso = lazy(() => import('./components/aovivo/TesteAtraso'))
 const LabGraficoPro = lazy(() => import('./components/grafico/LabGraficoPro'))
 const LabOperar = lazy(() => import('./components/operar/LabOperar'))
+const LabRelatorios = lazy(() => import('./components/relatorios/LabRelatorios'))
 const LabAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.LabAoVivo })))
 const LabInicio = lazy(() => import('./components/inicio/LabInicio'))
 const LabOrganizacao = lazy(() => import('./components/organizacao/LabOrganizacao'))
@@ -329,6 +330,8 @@ function Laboratorio() {
   if (qual === 'termos') return new URLSearchParams(location.search).has('leitor')
     ? <LeitorDeTermos aoFechar={nada} />
     : <AceiteDosTermos sessao={{ token: 'lab', usuario: { id: 'lab', email: 'ana@exemplo.com', nome: 'Ana Souza' } } as never} aoAceitar={nada} aoSair={nada} />
+  // ?tela=relatorios: a aba Relatórios com 30 dias de exemplo
+  if (qual === 'relatorios') return <Suspense fallback={null}><LabRelatorios /></Suspense>
   if (qual === 'login') return <LabLogin />
   // ?tela=carregando: o carregando da marca (o mesmo quadro em que a decolagem pousa)
   if (qual === 'carregando') return <Carregando />
