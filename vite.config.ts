@@ -183,9 +183,33 @@ const medidasPelaTela = {
   },
 }
 
+/**
+ * Safari (27/10/2026, revisão geral do celular). O projeto não tem autoprefixer:
+ *  - o Safari anterior ao 18 só entende o vidro fosco, as máscaras e o
+ *    user-select com o prefixo -webkit-; sem ele o efeito some no iPhone;
+ *  - o texto com degradê precisa de -webkit-background-clip;
+ *  - no iPhone 100vh conta a área por baixo da barra do navegador: uma janela
+ *    com max-height: calc(100vh - 44px) tinha o pé escondido. Na altura máxima
+ *    vale a altura visível de verdade (svh), com o vh antes para quem não tem.
+ */
+const PREFIXADAS = new Set(['backdrop-filter', 'user-select', 'mask', 'mask-image', 'mask-size', 'mask-position', 'mask-repeat', 'mask-mode'])
+const paraSafari = {
+  postcssPlugin: 'teeds:safari',
+  Declaration(decl: any) {
+    const irmaos = (prop: string) => decl.parent?.some?.((n: any) => n.type === 'decl' && n.prop === prop)
+    if (PREFIXADAS.has(decl.prop) && !irmaos(`-webkit-${decl.prop}`)) decl.cloneBefore({ prop: `-webkit-${decl.prop}` })
+    if (decl.prop === 'background-clip' && /\btext\b/.test(decl.value) && !irmaos('-webkit-background-clip')) decl.cloneBefore({ prop: '-webkit-background-clip' })
+    if (decl.prop === 'max-height' && /\d(?:\.\d+)?vh\b/.test(decl.value) && !decl.value.includes('svh') && !decl._safari) {
+      const visivel = decl.cloneAfter({ value: decl.value.replace(/(\d(?:\.\d+)?)vh\b/g, '$1svh') })
+      visivel._safari = true; decl._safari = true
+    }
+  },
+}
+
 export default defineConfig({
   base: MARCA.base,
-  css: { postcss: { plugins: [medidasPelaTela] } },
+  // paraSafari antes: o svh que ele cria também passa pela escala do computador
+  css: { postcss: { plugins: [paraSafari, medidasPelaTela] } },
   plugins: [
     cascaPorMarca(),
     paletaDaMarca(PALETAS[MARCA.id]),

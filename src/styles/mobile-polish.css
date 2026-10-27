@@ -548,3 +548,25 @@
   .layout-operar .controls .segmented { display: flex; width: 100%; max-width: none; overflow: visible; box-sizing: border-box; }
   .layout-operar .controls .segmented button { flex: 1 1 0; min-width: 0; padding-inline: 4px; font-size: 13px; }
 }
+
+/* 27/10/2026 (revisão geral do celular): o que o app instalado já tinha vale
+   também no navegador do celular. Sem o retângulo azul do toque do Android,
+   sem zoom por toque duplo nos botões (+ e − do valor) e sem o iPhone aumentar
+   a letra sozinho ao virar a tela. O foco do teclado continua visível. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+@media (max-width: 900px), (pointer: coarse) {
+  * { -webkit-tap-highlight-color: transparent; }
+  button, a, [role='button'], select, label, summary { touch-action: manipulation; }
+}
+
+/* 27/10/2026 (revisão geral): alvos de toque que mediam 7 a 30 px de altura.
+   Links e pontinhos ganham uma área invisível em volta (o desenho não muda);
+   chips em fileiras com rolagem crescem um pouco, porque a rolagem cortaria a
+   área invisível. */
+@media (max-width: 900px), (pointer: coarse) {
+  .av-link, .in-link, .in-instr-acao, .vr-detalhes, .dq-pontos > button { position: relative; }
+  .av-link::after, .in-link::after, .in-instr-acao::after, .vr-detalhes::after { content: ''; position: absolute; inset: -10px -6px; }
+  .dq-pontos > button::after { content: ''; position: absolute; inset: -14px -6px; }
+  .mc-filtros > button, .cw-filtros > button, .mp-faltam > button, .in-instr-atalhos > button, .bl-unid > button { min-height: 36px; }
+  .gp-chip { height: 34px; border-radius: 17px; }
+}

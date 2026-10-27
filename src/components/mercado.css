@@ -181,7 +181,8 @@
   .mc-indicadores { gap: 10px; }
   .mc-ind { padding: 12px; }
   .mc-ind > b { font-size: 19px; }
-  .mc-ind header { flex-wrap: wrap; gap: 2px 6px; }
+  /* sempre nome em cima e variação embaixo: antes uns quebravam e outros não (27/10/2026) */
+  .mc-ind header { flex-direction: column; align-items: flex-start; gap: 3px; }
   .mc-grafico, .mc-grafico.vazio { height: 36px; }
   .mc-centros { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .mc-centros li { grid-template-columns: 28px minmax(0, 1fr); grid-template-rows: auto auto; gap: 2px 8px; padding: 9px 10px; }

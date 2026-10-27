@@ -153,6 +153,8 @@
   --bp-ouro: var(--gf-ouro, var(--primary));
   --bp-dados: var(--fonte-dados, ui-monospace, Menlo, Consolas, monospace);
   position: relative; display: grid; gap: 12px; padding: 14px 16px 16px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border);
+  /* coluna limitada: sem ela a linha mais larga esticava o cartão para fora dele a 360 px (27/10/2026) */
+  grid-template-columns: minmax(0, 1fr); min-width: 0;
   container: posicao / inline-size;
 }
 .bp::before { content: ''; position: absolute; left: 0; top: 16px; bottom: 16px; width: 3px; border-radius: 0 3px 3px 0; background: var(--up); }
