@@ -2492,6 +2492,11 @@ button:has(> .icone-fechar) { display: inline-flex; align-items: center; justify
   box-shadow: 0 0 0 4px var(--primary-soft);
 }
 .entrada-form .entrada-btn { margin-top: 6px; }
+/* a caixinha dos termos no login (27/10/2026) */
+.entrada-form .entrada-termos { display: grid; grid-template-columns: 20px 1fr; flex-direction: row; gap: 10px; align-items: start; margin-top: 2px; font-size: 13px; line-height: 1.45; color: var(--muted); cursor: pointer; text-align: left; }
+.entrada-form .entrada-termos input { width: 18px; height: 18px; min-height: 0; margin: 1px 0 0; padding: 0; border: 0; box-shadow: none; accent-color: var(--gf-ouro, var(--primary)); cursor: pointer; }
+.entrada-termos a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+.entrada-termos.ok { color: var(--text); }
 .entrada-par { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 460px) { .entrada-par { grid-template-columns: 1fr; } }
 .entrada-form label.ruim input { border-color: var(--down); }

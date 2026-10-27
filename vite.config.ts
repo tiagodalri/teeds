@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto'
 import { dirname, join, relative, resolve } from 'node:path'
 import { MARCAS, marcaPorId } from './src/marca/marcas'
 import { paletaDaMarca, type Paleta } from './scripts/paleta-da-marca'
+import { paginaDosTermos } from './scripts/pagina-dos-termos'
 
 /**
  * Qual marca este build monta.
@@ -219,6 +220,14 @@ export default defineConfig({
         // A landing de captacao e a mesma estrutura nas duas marcas; ela
         // identifica a marca pelo dominio e fica disponivel em /cadastro/.
         // Copiar no build evita manter duas versoes que poderiam divergir.
+        // Termos e políticas públicos (27/10/2026): /termos/, a partir dos mesmos .md do aceite
+        const pastaDosTermos = join(SRC, 'termos', MARCA.id)
+        rmSync(join(SAIDA, 'termos'), { recursive: true, force: true })
+        if (MARCA.termos && existsSync(pastaDosTermos)) {
+          const versao = readFileSync(join(SRC, 'core', 'teeds', 'termos.ts'), 'utf8').match(/DATA_DA_VERSAO = '([^']+)'/)?.[1] ?? ''
+          cpSync(pastaDosTermos, join(SAIDA, 'termos'), { recursive: true, filter: (f) => !f.endsWith('.md') })
+          writeFileSync(join(SAIDA, 'termos', 'index.html'), paginaDosTermos(pastaDosTermos, MARCA.prosa, versao))
+        }
         const destinoCaptura = join(SAIDA, 'cadastro')
         rmSync(destinoCaptura, { recursive: true, force: true })
         // 26/10/2026: a GlobalFly tem a captação própria do lançamento

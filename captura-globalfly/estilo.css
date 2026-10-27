@@ -152,3 +152,6 @@ h1 em { font-style: normal; color: var(--ouro-claro); }
   .etapas li { padding: 4px 9px; font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* links dos termos (27/10/2026) */
+.aviso a, .rodape a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.aviso a:hover, .rodape a:hover { color: var(--ouro, #B78D39); }

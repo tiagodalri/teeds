@@ -29,7 +29,7 @@ import { definirDonoDoPlano } from './core/teeds/planoDoDia'
 import { NovaSenha } from './components/NovaSenha'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 import { AceiteDosTermos, LeitorDeTermos } from './components/termos/Termos'
-import { aceiteGuardado, jaAceitou } from './core/teeds/termos'
+import { aceiteDoLoginPendente, aceiteGuardado, jaAceitou, limparAceiteDoLogin, registrarAceite } from './core/teeds/termos'
 import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLimitesDuracao, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
@@ -355,6 +355,8 @@ export default function App() {
     setTermosOk(guardado ? true : null)
     let vivo = true
     jaAceitou(sessao).then((ok) => { if (vivo) setTermosOk(ok) }).catch(() => { if (vivo) setTermosOk(guardado) })
+    // a caixinha marcada no login vira um registro no banco (com data, hora, IP e aparelho)
+    if (aceiteDoLoginPendente()) registrarAceite(sessao, 'login').then(limparAceiteDoLogin).catch(() => undefined)
     return () => { vivo = false }
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -10,6 +10,8 @@ import { Monograma } from '../marca/Monograma'
 import { MARCA } from '../../marca'
 import './meu-perfil.css'
 import { dataCurta } from '../../core/datas'
+import { dataEHora, historicoDeAceites, type HistoricoDeAceites } from '../../core/teeds/termos'
+import { LeitorDeTermos } from '../termos/Termos'
 
 /**
  * "Meu Perfil" (20/10/2026, pedido do Tiago: "capricha"): a pessoa vê e
@@ -73,6 +75,15 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
     setPerfil(p); setNome(p.nome); setCpf(p.cpf ? formatarCPF(p.cpf) : ''); setTelefone(formatarTelefone(p.telefone)); setEnd({ ...p.endereco, cep: formatarCep(p.endereco.cep) }); setFoto(p.fotoUrl); setErroCarga(null)
   }).catch(() => setErroCarga('Não consegui abrir seus dados agora. Confira a conexão e tente de novo.'))
   useEffect(() => { void carregar() }, [sessao.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // termos de uso (27/10/2026): quando a pessoa aceitou, e o texto para reler
+  const [aceites, setAceites] = useState<HistoricoDeAceites | null>(null)
+  const [lendoTermos, setLendoTermos] = useState(false)
+  useEffect(() => {
+    if (!MARCA.termos) return
+    let vivo = true
+    historicoDeAceites(sessao.token, sessao.usuario.id).then((h) => { if (vivo) setAceites(h) }).catch(() => undefined)
+    return () => { vivo = false }
+  }, [sessao.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // CEP completo: o endereço se preenche sozinho
   const cepDigitos = end.cep.replace(/\D/g, '')
@@ -303,7 +314,18 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
           </div>
           {senhaRecado && <p className={`mp-recado ${senhaRecado.tipo}`} role="status">{senhaRecado.texto}</p>}
         </section>
+
+        {/* ------------------------------------------------ termos de uso */}
+        {MARCA.termos && <section className="mp-cartao">
+          <h2><Ic d={I.carta} />Termos de uso</h2>
+          {aceites?.primeiro ? <>
+            <div className="mp-atual"><span>Você aceitou pela primeira vez em</span><b>{dataEHora(aceites.primeiro.aceitoEm)}</b></div>
+            {aceites.total > 1 && <p className="mp-nota">Último aceite em {dataEHora(aceites.ultimo!.aceitoEm)}, no login. Cada aceite fica registrado.</p>}
+          </> : <p className="mp-nota">Os termos que você aceitou para usar a {MARCA.prosa}.</p>}
+          <button type="button" className="mp-btn secundario" onClick={() => setLendoTermos(true)}>Ler os termos e políticas</button>
+        </section>}
       </div>
+      {lendoTermos && <LeitorDeTermos aoFechar={() => setLendoTermos(false)} />}
 
       {/* a barra de salvar aparece quando algo mudou (presa embaixo no celular) */}
       <div className={`mp-salvar ${mudou ? 'aberta' : ''}`} aria-hidden={!mudou}>

@@ -673,3 +673,9 @@ button, input, select, textarea { font-family: inherit; }
   display: block; flex: none; pointer-events: none; background: var(--gf-ouro, var(--primary));
   -webkit-mask: var(--mono) center / contain no-repeat; mask: var(--mono) center / contain no-repeat;
 }
+
+/* os aceites dos termos na ficha do cliente (27/10/2026) */
+.fc-aceites { margin-top: 10px; }
+.fc-aceites .cab, .fc-aceites .linha { grid-template-columns: minmax(130px, 1.1fr) minmax(90px, .8fr) minmax(80px, .7fr) minmax(0, 2fr); }
+.fc-link { margin-left: 8px; padding: 0; border: 0; background: none; color: var(--gf-ouro, var(--primary)); font: inherit; font-size: 12.5px; text-decoration: underline; cursor: pointer; }
+@media (max-width: 700px) { .fc-aceites .cab { display: none; } .fc-aceites .linha { grid-template-columns: 1fr 1fr; } }

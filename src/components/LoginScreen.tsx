@@ -10,6 +10,7 @@ import { MARCA } from '../marca'
 import { abrirNoCadastro } from '../core/teeds/entradaInicial'
 import { CenaDoLogin, type VarianteDaCena } from './entrada/CenaDoLogin'
 import { marcarEmbarque } from '../core/decolagem'
+import { marcarAceiteNoLogin } from '../core/teeds/termos'
 
 type Modo = 'entrar' | 'criar' | 'esqueci'
 
@@ -50,6 +51,9 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
+  // Termos de uso (27/10/2026): a cada login a pessoa marca que concorda; o aceite vai para o banco ao entrar
+  const [concordo, setConcordo] = useState(false)
+  const pedeTermos = !!MARCA.termos
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [capsLock, setCapsLock] = useState(false)
   const [telefone, setTelefone] = useState('')
@@ -69,7 +73,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   const valido = modo === 'esqueci'
     ? email.includes('@')
     : modo === 'entrar'
-      ? email.includes('@') && senha.length >= 6
+      ? email.includes('@') && senha.length >= 6 && (!pedeTermos || concordo)
       : nomeCompleto(nome) && email.includes('@') && telefoneValido(telefone)
 
   function trocarModo(m: Modo) {
@@ -84,6 +88,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
     if (modo === 'entrar') {
       // de onde o avião da decolagem sai (só a GlobalFly usa)
       marcarEmbarque((e.currentTarget as HTMLFormElement).querySelector('button[type="submit"]'))
+      if (pedeTermos) marcarAceiteNoLogin()
       await onEntrar(email, senha)
       return
     }
@@ -161,6 +166,13 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
 
           {modo === 'entrar' && campo('senha', 'Senha', senha, setSenha,
             { tipo: 'password', auto: 'current-password', dica: '••••••••' })}
+
+          {modo === 'entrar' && pedeTermos && (
+            <label className={`entrada-termos ${concordo ? 'ok' : ''}`}>
+              <input type="checkbox" checked={concordo} onChange={(e) => setConcordo(e.target.checked)} />
+              <span>Li e concordo com os <a href={`${import.meta.env.BASE_URL}termos/`} target="_blank" rel="noopener">Termos de Uso</a> e a <a href={`${import.meta.env.BASE_URL}termos/#politica-de-privacidade`} target="_blank" rel="noopener">Política de Privacidade</a>.</span>
+            </label>
+          )}
 
           <button className="entrada-btn" type="submit" disabled={!valido || ocupado}>
             {ocupado ? 'um instante…' : t.acao}

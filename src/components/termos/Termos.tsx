@@ -83,7 +83,7 @@ export function AceiteDosTermos({ sessao, aoAceitar, aoSair }: { sessao: SessaoT
   async function aceitar() {
     if (!termos || !riscos || gravando) return
     setGravando(true); setErro(null)
-    try { await registrarAceite(sessao); aoAceitar() } catch (e) { setErro(e instanceof Error ? e.message : 'Não foi possível registrar o aceite.') } finally { setGravando(false) }
+    try { await registrarAceite(sessao, 'primeiro_acesso'); aoAceitar() } catch (e) { setErro(e instanceof Error ? e.message : 'Não foi possível registrar o aceite.') } finally { setGravando(false) }
   }
 
   return (

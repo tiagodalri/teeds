@@ -5,6 +5,7 @@ import { todasAsAulas } from '../core/teeds/aulas'
 import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca } from '../core/deriv/strategies'
 import { MARCA } from '../marca'
 import type { SessaoTeeds } from '../core/teeds/conta'
+import { aparelhoLegivel, dataEHora, historicoDeAceites, type HistoricoDeAceites } from '../core/teeds/termos'
 
 /**
  * A vida inteira de um cliente, dentro da ficha do admin.
@@ -89,6 +90,48 @@ const ABAS: Array<[Aba, string]> = [
   ['geral', 'Visão geral'], ['dinheiro', 'Dinheiro'],
   ['operacoes', 'Operações'], ['comportamento', 'Comportamento'],
 ]
+
+/*
+  Termos de uso (27/10/2026, Tiago: "no perfil de cada cliente mostrar: aceitou
+  os termos pela primeira vez na data tal, à hora tal"). Lê o histórico gravado
+  no banco (termos_aceites_eventos): data, hora, IP e aparelho carimbados pelo
+  servidor. É a prova do aceite, à mão do admin.
+*/
+function AceitesDosTermos({ sessao, userId }: { sessao: SessaoTeeds; userId: string }) {
+  const [h, setH] = useState<HistoricoDeAceites | null>(null)
+  const [erro, setErro] = useState(false)
+  const [lista, setLista] = useState(false)
+  useEffect(() => {
+    let vivo = true
+    setH(null); setErro(false)
+    historicoDeAceites(sessao.token, userId).then((r) => { if (vivo) setH(r) }).catch(() => { if (vivo) setErro(true) })
+    return () => { vivo = false }
+  }, [sessao.token, userId])
+  const tipo = (t: string) => (t === 'primeiro_acesso' ? 'Primeiro acesso' : 'Login')
+  return (
+    <section className="fc-bloco">
+      <h4>Termos de uso</h4>
+      {erro ? <p className="fc-vazio">Não foi possível ler os aceites agora.</p>
+        : !h ? <p className="fc-vazio">Lendo os aceites…</p>
+        : !h.primeiro ? <p className="fc-vazio">Ainda não aceitou os termos. O aceite é pedido no próximo acesso.</p>
+        : <>
+          <dl className="fc-dados">
+            <div><dt>Aceitou pela primeira vez</dt><dd>{dataEHora(h.primeiro.aceitoEm)} <em>(versão {h.primeiro.versao})</em></dd></div>
+            <div><dt>De onde</dt><dd>{h.primeiro.ip ? `IP ${h.primeiro.ip} · ` : ''}{aparelhoLegivel(h.primeiro.aparelho)}</dd></div>
+            <div><dt>Último aceite</dt><dd>{dataEHora(h.ultimo!.aceitoEm)} <em>({tipo(h.ultimo!.tipo).toLowerCase()})</em></dd></div>
+            <div><dt>Aceites registrados</dt><dd>{h.total} {h.total === 1 ? 'vez' : 'vezes'}
+              {h.total > 1 && <button type="button" className="fc-link" onClick={() => setLista((x) => !x)}>{lista ? 'esconder' : 'ver todos'}</button>}</dd></div>
+          </dl>
+          {lista && <div className="fc-tabela fc-aceites">
+            <div className="cab"><span>Quando</span><span>Como</span><span>Versão</span><span>De onde</span></div>
+            {[...h.eventos].reverse().map((ev, i) => (
+              <div className="linha" key={i}><span>{dataEHora(ev.aceitoEm)}</span><span>{tipo(ev.tipo)}</span><span>{ev.versao}</span><span>{ev.ip ? `${ev.ip} · ` : ''}{aparelhoLegivel(ev.aparelho)}</span></div>
+            ))}
+          </div>}
+        </>}
+    </section>
+  )
+}
 
 export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId: string }) {
   const [ficha, setFicha] = useState<Ficha | null>(null)
@@ -185,6 +228,8 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
             </dl> : <p className="fc-vazio">Veio de importação, não do formulário de cadastro.</p>}
           </section>
         </div>
+
+        {MARCA.termos && <AceitesDosTermos sessao={sessao} userId={userId} />}
 
         <section className="fc-bloco">
           <h4>Contas na corretora
