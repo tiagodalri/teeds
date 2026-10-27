@@ -15,6 +15,7 @@ import { RobotCartao, RobotLinha } from './RobotResumo'
 import { resumoDeEstudo, type DadosEstudo } from '../core/teeds/estudoDoDono'
 import { MARCA } from '../marca'
 import { roboBloqueado, ROBOS_A_VENDA } from '../core/teeds/robosLiberados'
+import { NomeDoRobo } from './NomeDoRobo'
 
 interface Props {
   socket: TeedsSocket | null
@@ -392,7 +393,7 @@ export function LocalRobotPanel({
 
   // Draft panels are invisible; the dialog is portaled above the whole app.
   if (!estado) return <>{(adotar || idDaSessao) && <div className="robot-session-loading" role="status">
-    <b>{ident.nome}</b><span>{erro ?? 'Conectando ao acompanhamento da sessão…'}</span>
+    <b><NomeDoRobo nome={ident.nome} id={ident.id} /></b><span>{erro ?? 'Conectando ao acompanhamento da sessão…'}</span>
   </div>}{preparo}</>
 
   // ------------------------------------------------------------ com sessão

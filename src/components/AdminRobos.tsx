@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import './admin-controle.css'
 import { Emblema } from './RobotCard'
+import { NomeDoRobo } from './NomeDoRobo'
 import { AdminControleRobo, ConfirmacaoDeAcao, avisosDe, cartoesSeguros, quando, type AcaoConfirmavel } from './AdminControleRobo'
 import { consultarCatalogo, type ItemCatalogo } from '../core/teeds/catalogoRobos'
 import type { SessaoTeeds } from '../core/teeds/conta'
@@ -114,7 +115,7 @@ export function AdminRobos({ sessao, marca }: { sessao: SessaoTeeds; marca: stri
               <div className="ac-cartao-topo">
                 <Emblema id={ident} tamanho={44} />
                 <div>
-                  <h3>{nome}</h3>
+                  <h3><NomeDoRobo nome={nome} id={id} /></h3>
                   <p>{detalhe ? descrever(id, detalhe.publicado) : ident.descricao}</p>
                 </div>
               </div>

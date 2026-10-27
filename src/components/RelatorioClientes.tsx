@@ -6,6 +6,7 @@ import {
 } from '../core/teeds/clientes'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
+import { NomeDoRobo } from './NomeDoRobo'
 
 /**
  * Resultados por cliente — a tela que responde três perguntas do admin:
@@ -258,7 +259,7 @@ function ExtratoCliente({ sessao, cliente, dias, fechar }: { sessao: SessaoTeeds
           {visiveis.map((o) => (
             <div key={o.contractId}>
               <span>{horaBr(o.executadaEm)}</span>
-              <span>{o.roboNome}<small>{o.ativo} · {o.tipoContrato}</small></span>
+              <span><NomeDoRobo nome={o.roboNome} id={o.roboId} /><small>{o.ativo} · {o.tipoContrato}</small></span>
               <span>{o.contaId}<small>{o.demo ? 'demo' : 'real'}</small></span>
               <span>{o.entrada.toFixed(2)} → {o.pagamento.toFixed(2)}</span>
               <span className={o.ganhou ? 'positivo' : 'negativo'}>{o.resultado > 0 ? '+' : ''}{o.resultado.toFixed(2)}</span>

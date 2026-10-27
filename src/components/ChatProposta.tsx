@@ -6,6 +6,7 @@ import { ligarNoServidor } from '../core/teeds/servidorRobos'
 import { roboLigou } from '../core/som'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import type { Proposta } from '../core/teeds/chat'
+import { NomeDoRobo } from './NomeDoRobo'
 
 /**
  * O cartão de proposta.
@@ -101,7 +102,7 @@ export function ChatProposta({ proposta, sessao, onLigado, rotulosTrocados = fal
       <header className="cp-topo">
         <Emblema id={id} tamanho={44} />
         <div>
-          <b>{proposta.roboNome}</b>
+          <b><NomeDoRobo nome={proposta.roboNome} id={id.id} /></b>
           <small>{id.chamada} · {id.chance}% de chance</small>
         </div>
         {real && !rotulosTrocados && <span className="cp-real-marca">dinheiro real</span>}

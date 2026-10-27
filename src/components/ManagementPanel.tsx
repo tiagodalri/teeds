@@ -21,6 +21,7 @@ import { DerivDesconectada } from './DerivDesconectada'
 import { MARCA } from '../marca'
 import { nomeDoAtivo } from '../core/deriv/market'
 import { MARCAS } from '../marca/marcas'
+import { NomeDoRobo } from './NomeDoRobo'
 
 interface Props {
   session: AuthSession | null
@@ -769,7 +770,7 @@ export function ManagementPanel({
                 </div>
                 {analise.porRobo.map((r) => (
                   <div key={r.roboId} className="ana-linha">
-                    <span><b>{r.roboNome}</b><small>{r.clientes} cliente{r.clientes === 1 ? '' : 's'}</small></span>
+                    <span><b><NomeDoRobo nome={r.roboNome} id={r.roboId} /></b><small>{r.clientes} cliente{r.clientes === 1 ? '' : 's'}</small></span>
                     <span>{r.operacoes.toLocaleString('pt-BR')}</span>
                     <span>{r.operacoes ? Math.round((r.ganhas / r.operacoes) * 100) : 0}%</span>
                     <span>{dinheiro(r.entradas)}</span>

@@ -6,6 +6,7 @@ import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca } from '../core/deriv/strategies'
 import { MARCA } from '../marca'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { aparelhoLegivel, dataEHora, historicoDeAceites, type HistoricoDeAceites } from '../core/teeds/termos'
+import { NomeDoRobo } from './NomeDoRobo'
 
 /**
  * A vida inteira de um cliente, dentro da ficha do admin.
@@ -361,7 +362,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
             <div className="cab"><span>Robô</span><span>Sessões</span><span>Operações</span><span>Acerto</span><span>Resultado</span><span>Markup real</span><span>Última vez</span></div>
             {ficha.robos.porRobo.map((r) => (
               <div className="linha" key={r.roboId}>
-                <span><b>{nomeRobo(r.roboId, r.roboNome)}</b>{r.sessoesDemo > 0 && <small>{n(r.sessoesDemo)} em demonstração</small>}</span>
+                <span><b><NomeDoRobo nome={nomeRobo(r.roboId, r.roboNome)} id={r.roboId} /></b>{r.sessoesDemo > 0 && <small>{n(r.sessoesDemo)} em demonstração</small>}</span>
                 <span>{n(r.sessoes)}</span>
                 <span>{n(r.operacoes)}</span>
                 <span>{r.operacoes ? `${Math.round((r.ganhas / r.operacoes) * 100)}%` : '—'}</span>
@@ -412,7 +413,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
             {ficha.robos.ultimas.map((s, i) => (
               <div className="linha" key={i}>
                 <span>{dataHora(s.criadaEm)}</span>
-                <span>{nomeRobo(s.roboId, s.roboNome)}</span>
+                <span><NomeDoRobo nome={nomeRobo(s.roboId, s.roboNome)} id={s.roboId} /></span>
                 <span>{s.demo ? 'demo' : 'real'}</span>
                 <span>{s.entradaInicial === null ? '—' : usd(s.entradaInicial)}</span>
                 <span>{n(s.operacoes)} <small>{n(s.ganhas)}✓ {n(s.perdidas)}✕</small></span>

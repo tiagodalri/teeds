@@ -12,13 +12,14 @@ const PREFIXO = /^(GF|GlobalFly)\s+/i
  * e-mail, o leitor de tela) o nome continua sendo o texto "GF Raptor".
  *
  * 27/10/2026: as I.A. com logotipo desenhado (Phenom, Raptor, Falcon, Legacy,
- * Gulf) aparecem com ele. `emTexto` mantém o nome escrito no meio de uma
+ * Gulf) aparecem com ele; `id` (o código da I.A.) acha o logotipo mesmo
+ * quando o nome gravado não traz o "GF". `emTexto` mantém o nome escrito no meio de uma
  * frase ("O GF Raptor entra depois de…"), onde um logotipo atrapalha a leitura.
  */
-export function NomeDoRobo({ nome, emTexto = false }: { nome: string; emTexto?: boolean }) {
+export function NomeDoRobo({ nome, id, emTexto = false }: { nome: string; id?: string | null; emTexto?: boolean }) {
+  if (!emTexto && temLogotipo(nome, id)) return <LogotipoDaIA nome={nome} id={id} />
   const m = MARCA.monogramaNosRobos ? nome.match(PREFIXO) : null
   if (!m) return <>{nome}</>
-  if (!emTexto && temLogotipo(nome)) return <LogotipoDaIA nome={nome} />
   return (
     <span className="nome-robo" title={nome}>
       <span className="nome-robo-gf" role="img" aria-label="GF" />

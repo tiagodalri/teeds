@@ -25,6 +25,7 @@ import { VitrineDeRobos } from './VitrineDeRobos'
 import { DigitosFlutuante } from './DigitosFlutuante'
 import { ATIVO_DOS_ROBOS, ehSintetico } from '../core/deriv/config'
 import './robot-workspace.css'
+import { NomeDoRobo } from './NomeDoRobo'
 
 interface Props {
   socket: TeedsSocket | null
@@ -522,7 +523,7 @@ export function RobotsPanel({
           <div className="config-cab">
             <Emblema id={ident} tamanho={44} />
             <div>
-              <b>{ident.nome}</b>
+              <b><NomeDoRobo nome={ident.nome} id={ident.id} /></b>
               <span>{ident.descricao}</span>
             </div>
           </div>

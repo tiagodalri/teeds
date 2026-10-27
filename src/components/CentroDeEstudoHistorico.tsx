@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { janelaEmDatas } from './SeletorDePeriodo'
 import { analiseOperacoes, type AnaliseOperacoes } from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
+import { NomeDoRobo } from './NomeDoRobo'
 
 const DIAS = [1, 7, 30, 90] as const
 type Janela = typeof DIAS[number]
@@ -179,7 +180,7 @@ export function CentroDeEstudoHistorico({ sessao, moeda }: { sessao: SessaoTeeds
               <tbody>
                 {porRobo.map((r) => (
                   <tr key={r.roboId}>
-                    <th scope="row"><span className="ce-robo">{r.roboNome}</span></th>
+                    <th scope="row"><span className="ce-robo"><NomeDoRobo nome={r.roboNome} id={r.roboId} /></span></th>
                     <td>{inteiro(r.operacoes)}</td>
                     <td>{r.operacoes ? pct(r.ganhas / r.operacoes) : '—'}</td>
                     <td>{inteiro(r.clientes)}</td>

@@ -361,6 +361,13 @@ span.logo-ia { color: inherit !important; }
 .plv-passe-nome .logo-ia { font-size: 1.1em; }
 /* o topo do plano de voo é sempre azul: o nome desenhado, um pouco maior que o texto de 17 px */
 .plv-titulo .logo-ia { font-size: 1.3em; vertical-align: middle; }
+/* select de I.A. com o logotipo no campo fechado (CampoComLogotipo) */
+.campo-logo, .go-campos label > span.campo-logo { position: relative; display: block; margin: 0; color: inherit; font-size: inherit; font-weight: inherit; letter-spacing: normal; text-transform: none; }
+/* o texto some em qualquer navegador (Safari incluído) e a setinha é a nossa */
+.campo-logo.tem select { -webkit-appearance: none; appearance: none; color: transparent !important; -webkit-text-fill-color: transparent; text-shadow: none; padding-right: 32px; }
+.campo-logo-seta { position: absolute; right: 8px; top: 50%; width: 12px; height: 12px; transform: translateY(-50%); pointer-events: none; fill: none; stroke: var(--text); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
+.campo-logo.tem select option { -webkit-text-fill-color: var(--text); color: var(--text); }
+.campo-logo-ia, .go-campos label > span.campo-logo > .campo-logo-ia { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); display: flex; margin: 0; pointer-events: none; color: var(--text); font-size: 15px; line-height: 1; letter-spacing: normal; text-transform: none; }
 
 /* ==========================================================================
    APP INSTALADO, TEMA CLARO: UM CABEÇALHO SÓ (20/10/2026)

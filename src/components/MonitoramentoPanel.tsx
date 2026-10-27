@@ -26,6 +26,7 @@ const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MA
 import { RobotLive } from './RobotLive'
 import { IconeFechar } from './IconeFechar'
 import { OperacoesManuais } from './monitoramento/OperacoesManuais'
+import { NomeDoRobo } from './NomeDoRobo'
 
 /**
  * Monitoramento ao vivo — a central administrativa.
@@ -133,7 +134,7 @@ export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMa
         {modo && <em className={`mon-selo modo ${modo}`}>{NOME_DO_MODO[modo]}</em>}
       </div>
       <div className="mon-cartao-robo">
-        <span><b>{s.roboNome}</b><small>{NOME_DO_ATIVO[s.ativo] ?? s.ativo}</small></span>
+        <span><b><NomeDoRobo nome={s.roboNome} id={s.roboId} /></b><small>{NOME_DO_ATIVO[s.ativo] ?? s.ativo}</small></span>
         <em>{ROTULO_FASE[e.fase] ?? e.fase}{e.estrategia ? ` · ${e.estrategia.detalhes?.estrategiaAtual ?? e.estrategia.fase}` : ''}</em>
       </div>
       <div className="mon-cartao-principais">
@@ -742,7 +743,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
               <button key={s.id} className="ins-linha mon-linha" onClick={() => setReplayDe(s)}>
                 <span className="adm-pessoa"><i>{(c?.nome || c?.email || '?')[0].toUpperCase()}</i><b>{c?.nome || 'Sem nome'}{(() => { const x = seloDe(s.userId, s.parceiro); return x ? <em className={`mon-selo parceiro ${x.codigo}`}>{x.texto}</em> : null })()}<small>{mascararEmail(c?.email)}</small></b></span>
                 {naRede && <span><em className={`mon-selo plataforma ${s.marca}`}>{NOME_DA_MARCA[s.marca] ?? s.marca}</em></span>}
-                <span>{s.roboNome}</span><span>{mascararConta(s.contaId)} <em className={`mon-tipo ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'demo' : 'real'}</em></span>
+                <span><NomeDoRobo nome={s.roboNome} id={s.roboId} /></span><span>{mascararConta(s.contaId)} <em className={`mon-tipo ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'demo' : 'real'}</em></span>
                 <span>{s.operacoes} <small className="up">{s.ganhas}</small> <small className="down">{s.perdidas}</small></span>
                 <span className={s.resultado >= 0 ? 'up' : 'down'}>{assinado(s.resultado)} {s.moeda}</span>
                 {mostrarMarkup && <span className={`mon-markup ${s.demo ? 'simulado' : ''}`}>{(() => {

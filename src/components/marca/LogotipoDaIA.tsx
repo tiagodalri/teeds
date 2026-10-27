@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, type ReactNode } from 'react'
 import { MARCA } from '../../marca'
 
 /**
@@ -45,9 +45,14 @@ const DESENHOS: Record<string, Desenho> = {
 const PREFIXO = /^(GF|GlobalFly)\s+/i
 const chave = (nome: string) => nome.replace(PREFIXO, '').trim().toLowerCase()
 
+/** O código de cada I.A. no banco e no servidor (o nome gravado pode variar). */
+const DESENHO_DO_ID: Record<string, string> = { goreme: 'raptor', falcon: 'falcon', legacy: 'legacy', superior5: 'gulf', ag2: 'phenom' }
+const desenhoDe = (nome: string, id?: string | null) => (id && DESENHO_DO_ID[id]) || (PREFIXO.test(nome) && chave(nome) in DESENHOS ? chave(nome) : null)
+const titulo = (k: string) => `GF ${k[0].toUpperCase()}${k.slice(1)}`
+
 /** A I.A. tem logotipo desenhado? Só na GlobalFly e só com o "GF" no nome
  *  (as do Laboratório, por exemplo, seguem em texto). */
-export const temLogotipo = (nome: string) => !!MARCA.monogramaNosRobos && PREFIXO.test(nome) && chave(nome) in DESENHOS
+export const temLogotipo = (nome: string, id?: string | null) => !!MARCA.monogramaNosRobos && !!desenhoDe(nome, id)
 
 /**
  * `fio`: o fio dourado entre o GF e o nome, para os lugares de destaque
@@ -55,26 +60,43 @@ export const temLogotipo = (nome: string) => !!MARCA.monogramaNosRobos && PREFIX
  * versão reversa mesmo no tema claro. `soNome`: sem o GF, onde o monograma já
  * abre a mesma linha (o topo do plano de voo).
  */
-export function LogotipoDaIA({ nome, fio = false, sobreFoto = false, soNome = false, className = '' }: { nome: string; fio?: boolean; sobreFoto?: boolean; soNome?: boolean; className?: string }) {
-  const id = useId().replace(/:/g, '')
-  const d = temLogotipo(nome) ? DESENHOS[chave(nome)] : undefined
-  if (!d) return <>{nome}</>
+export function LogotipoDaIA({ nome, id, fio = false, sobreFoto = false, soNome = false, className = '' }: { nome: string; id?: string | null; fio?: boolean; sobreFoto?: boolean; soNome?: boolean; className?: string }) {
+  const uid = useId().replace(/:/g, '')
+  const k = MARCA.monogramaNosRobos ? desenhoDe(nome, id) : null
+  const d = k ? DESENHOS[k] : undefined
+  if (!k || !d) return <>{nome}</>
   const larguraDaCaixa = d.largura + 18
   return (
-    <span className={`logo-ia ${fio ? 'com-fio' : ''} ${sobreFoto ? 'sobre-foto' : ''} ${className}`} role="img" aria-label={nome.replace(PREFIXO, 'GF ')} title={nome}>
+    <span className={`logo-ia ${fio ? 'com-fio' : ''} ${sobreFoto ? 'sobre-foto' : ''} ${className}`} role="img" aria-label={titulo(k)} title={titulo(k)}>
       {!soNome && <span className="nome-robo-gf logo-ia-gf" aria-hidden="true" />}
       {fio && !soNome && <span className="logo-ia-fio" aria-hidden="true" />}
       <svg className="logo-ia-nome" viewBox={`-6 -6 ${larguraDaCaixa} 112`} style={{ aspectRatio: `${larguraDaCaixa} / 112` }} aria-hidden="true">
         <defs>
-          <mask id={`m${id}`} maskUnits="userSpaceOnUse" x="-60" y="-60" width="1000" height="220">
+          <mask id={`m${uid}`} maskUnits="userSpaceOnUse" x="-60" y="-60" width="1000" height="220">
             <rect x="-60" y="0" width="1000" height="100" style={{ fill: '#fff', stroke: 'none' }} />
             <path d={d.vao} style={{ fill: '#000', stroke: 'none' }} />
           </mask>
         </defs>
         {/* estilo em linha: as regras de ícone das telas (svg { stroke-width… }) não alcançam */}
-        <path d={d.marfim} mask={`url(#m${id})`} style={{ fill: 'none', stroke: 'currentColor', strokeWidth: 13, strokeLinejoin: 'miter', strokeMiterlimit: 8, strokeLinecap: 'butt' }} />
+        <path d={d.marfim} mask={`url(#m${uid})`} style={{ fill: 'none', stroke: 'currentColor', strokeWidth: 13, strokeLinejoin: 'miter', strokeMiterlimit: 8, strokeLinecap: 'butt' }} />
         <path d={d.ouro} style={{ fill: 'var(--logo-ia-ouro)', stroke: 'none' }} />
       </svg>
+    </span>
+  )
+}
+
+/**
+ * Um <select> de I.A. com o logotipo no campo fechado (Gerenciamento, por
+ * exemplo). A lista que abre continua a nativa do aparelho, que só aceita
+ * texto, mas o que fica à vista é a marca de cada I.A.
+ */
+export function CampoComLogotipo({ nome, id, children }: { nome: string; id?: string | null; children: ReactNode }) {
+  const tem = temLogotipo(nome, id)
+  return (
+    <span className={`campo-logo ${tem ? 'tem' : ''}`}>
+      {children}
+      {tem && <span className="campo-logo-ia" aria-hidden="true"><LogotipoDaIA nome={nome} id={id} /></span>}
+      {tem && <svg className="campo-logo-seta" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" /></svg>}
     </span>
   )
 }

@@ -27,7 +27,7 @@ function exemplo(): Relatorio {
     porHora: Array.from({ length: 24 }, (_, h) => ({ hora: h, operacoes: h < 7 ? 0 : 40 + h * 3, ganhas: 30 + h, resultado: h < 7 ? 0 : Math.round((Math.sin(h) * 30 + 6) * 100) / 100 })).filter((x) => x.operacoes > 0),
     ultimas: Array.from({ length: 30 }, (_, i) => {
       const r = i % 3 === 1 ? -1 : Math.round((0.8 + i % 5 * .1) * 100) / 100
-      return { quando: new Date(Date.now() - i * 95000).toISOString(), origem: i % 9 === 0 ? 'manual' as const : 'ia' as const, nome: i % 9 === 0 ? 'Manual' : ['GF Raptor', 'GF Falcon', 'GF Legacy'][i % 3], ativo: i % 9 === 0 ? 'frxEURUSD' : 'R_75', tipo: i % 9 === 0 ? 'CALL' : 'DIGITOVER', entrada: 1, pagamento: r > 0 ? 1 + r : 0, resultado: r, ganhou: r > 0 }
+      return { quando: new Date(Date.now() - i * 95000).toISOString(), origem: i % 9 === 0 ? 'manual' as const : 'ia' as const, id: i % 9 === 0 ? 'manual' : ['goreme', 'falcon', 'legacy'][i % 3], nome: i % 9 === 0 ? 'Manual' : ['GF Raptor', 'GF Falcon', 'GF Legacy'][i % 3], ativo: i % 9 === 0 ? 'frxEURUSD' : 'R_75', tipo: i % 9 === 0 ? 'CALL' : 'DIGITOVER', entrada: 1, pagamento: r > 0 ? 1 + r : 0, resultado: r, ganhou: r > 0 }
     }),
     mes: { inicio: `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-01`, resultado: 236.4, operacoes: 1200 },
   }

@@ -15,6 +15,7 @@ import { MASCARA, useValoresOcultos } from '../../core/privacidade'
 import { tipoNaTela } from '../../core/deriv/accountAccess'
 import { dinheiroDoPeriodo, intervalo, meuRelatorio, nomeDoTipo, PERIODOS, type Dinheiro, type Periodo, type Relatorio } from '../../core/teeds/relatorios'
 import './relatorios.css'
+import { NomeDoRobo } from '../NomeDoRobo'
 
 interface Props {
   sessao: SessaoTeeds
@@ -210,7 +211,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
             <ul className="rel-lista">
               {rel.porOrigem.map((o) => (
                 <li key={`${o.origem}-${o.id}`}>
-                  <div className="rel-lista-cab"><b>{o.nome}</b><span className={classe(o.resultado)}>{vs(o.resultado)}</span></div>
+                  <div className="rel-lista-cab"><b>{o.origem === 'manual' ? o.nome : <NomeDoRobo nome={o.nome} id={o.id} />}</b><span className={classe(o.resultado)}>{vs(o.resultado)}</span></div>
                   <i className={`rel-barra ${classe(o.resultado)}`}><u style={{ width: `${(Math.abs(o.resultado) / maxOrigem) * 100}%` }} /></i>
                   <small>{o.operacoes.toLocaleString('pt-BR')} operações · {pct(o.ganhas, o.operacoes)}% de acerto</small>
                 </li>
@@ -272,7 +273,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
               return (
                 <div className="linha" key={i}>
                   <span>{d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} · {d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                  <span><b>{o.nome}</b><small>{nomeDoTipo(o.tipo)}</small></span>
+                  <span><b>{o.origem === 'manual' ? o.nome : <NomeDoRobo nome={o.nome} id={o.id} />}</b><small>{nomeDoTipo(o.tipo)}</small></span>
                   <span>{o.ativo ? nomeDoSimbolo(o.ativo) : '—'}</span>
                   <span>{ocultos ? MASCARA : `${simboloMoeda(moeda)} ${o.entrada.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
                   <span className={classe(o.resultado)}>{vs(o.resultado)}</span>

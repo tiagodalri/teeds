@@ -42,7 +42,7 @@ export interface Relatorio {
   porOrigem: Array<Fatia & { origem: 'ia' | 'manual'; id: string; nome: string }>
   porAtivo: Array<Fatia & { ativo: string }>
   porHora: Array<Fatia & { hora: number }>
-  ultimas: Array<{ quando: string; origem: 'ia' | 'manual'; nome: string; ativo: string; tipo: string; entrada: number; pagamento: number; resultado: number; ganhou: boolean }>
+  ultimas: Array<{ quando: string; origem: 'ia' | 'manual'; id: string; nome: string; ativo: string; tipo: string; entrada: number; pagamento: number; resultado: number; ganhou: boolean }>
   mes: { inicio: string; resultado: number; operacoes: number }
 }
 
@@ -66,7 +66,7 @@ export async function meuRelatorio(sessao: SessaoTeeds, f: { periodo: Periodo; d
     porAtivo: (r.por_ativo ?? []).map((x: any) => ({ ...fatia(x), ativo: String(x.ativo ?? '') })),
     porHora: (r.por_hora ?? []).map((x: any) => ({ ...fatia(x), hora: n(x.hora) })),
     ultimas: (r.ultimas ?? []).map((x: any) => ({
-      quando: String(x.quando), origem: x.origem === 'manual' ? 'manual' : 'ia', nome: String(x.nome ?? ''), ativo: String(x.ativo ?? ''),
+      quando: String(x.quando), origem: x.origem === 'manual' ? 'manual' : 'ia', id: String(x.id ?? ''), nome: String(x.nome ?? ''), ativo: String(x.ativo ?? ''),
       tipo: String(x.tipo ?? ''), entrada: n(x.entrada), pagamento: n(x.pagamento), resultado: n(x.resultado), ganhou: Boolean(x.ganhou),
     })),
     mes: { inicio: String(r.mes?.inicio ?? ''), resultado: n(r.mes?.resultado), operacoes: n(r.mes?.operacoes) },

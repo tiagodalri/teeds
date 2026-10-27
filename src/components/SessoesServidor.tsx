@@ -5,6 +5,7 @@ import {
   acompanharSessoes, operacoesDaSessao,
   type OperacaoServidor, type SessaoServidor,
 } from '../core/teeds/sessoesServidor'
+import { NomeDoRobo } from './NomeDoRobo'
 
 /**
  * Os robôs que estão rodando no servidor, vistos daqui.
@@ -81,7 +82,7 @@ export function SessoesServidor({ sessao, escondidas = [] }: {
       <article key={s.id} className={`ss-cartao ${viva ? 'viva' : ''}`}>
         <header>
           <div>
-            <b>{s.roboNome}</b>
+            <b><NomeDoRobo nome={s.roboNome} id={s.roboId} /></b>
             <small>
               {viva ? <em className="ss-pulso" /> : null}
               {viva ? 'rodando' : s.situacao === 'erro' ? 'parou com erro' : 'encerrada'}
@@ -186,7 +187,7 @@ export function SessoesServidor({ sessao, escondidas = [] }: {
               {ultima && (
                 <>
                   {' · última: '}
-                  <b>{ultima.roboNome}</b>{' '}
+                  <b><NomeDoRobo nome={ultima.roboNome} /></b>{' '}
                   <b className={classe(ultima.resultado)}>{din(ultima.resultado, ultima.moeda, true)}</b>
                   {ultima.motivoDaParada ? ` · ${ultima.motivoDaParada}` : ''}
                 </>
