@@ -177,6 +177,8 @@ export interface Marca {
   termos?: boolean
   /** Relatórios (27/10/2026): a aba de relatórios do cliente, com os números da corretora. */
   relatorios?: boolean
+  /** Notificações no celular (Web Push) ligadas para esta plataforma (27/10/2026). */
+  notificacoes?: boolean
   /** O compartilhamento de receita sobre o lucro do mês (0.10 = 10%); aparece nos Relatórios. */
   compartilhamento?: number
   /**
@@ -436,6 +438,7 @@ export const MARCAS: Record<string, Marca> = {
     appsDosParceiros: { n: '34MLTOJu0MDBoED7yEczz' },
     termos: true,
     relatorios: true,
+    notificacoes: true,
     compartilhamento: 0.10,
     menu: {
       nomes: { robos: 'I.A.' },

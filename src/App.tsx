@@ -29,6 +29,7 @@ import { definirDonoDoPlano } from './core/teeds/planoDoDia'
 import { NovaSenha } from './components/NovaSenha'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 import { AceiteDosTermos } from './components/termos/Termos'
+import { confirmarInscricao } from './core/teeds/notificacoes'
 import { aceiteDoLoginPendente, aceiteGuardado, jaAceitou, limparAceiteDoLogin, registrarAceite } from './core/teeds/termos'
 import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
@@ -358,6 +359,11 @@ export default function App() {
     // a caixinha marcada no login vira um registro no banco (com data, hora, IP e aparelho)
     if (aceiteDoLoginPendente()) registrarAceite(sessao, 'login').then(limparAceiteDoLogin).catch(() => undefined)
     return () => { vivo = false }
+  }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // notificações: o aparelho já autorizado fica inscrito na conta que entrou (27/10/2026)
+  useEffect(() => {
+    if (MARCA.notificacoes && teeds.sessao) void confirmarInscricao(teeds.sessao)
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const usuarioTeedsId = teeds.sessao?.usuario.id ?? null

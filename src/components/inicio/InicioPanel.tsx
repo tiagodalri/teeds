@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { afiliadoDaDeriv } from '../../core/rotas'
 import type { WorkspacePage } from '../WorkspaceNav'
 import { Monograma, TEM_MONOGRAMA } from '../marca/Monograma'
@@ -54,6 +55,8 @@ interface Props {
   aoPrepararRobo: (id: string) => void
   /** Abre a carteira da Deriv (saldo, depósitos e saques). */
   aoAbrirCarteira?: () => void
+  /** Um aviso acima do painel (o convite das notificações, por exemplo). */
+  topo?: ReactNode
 }
 
 const numero = (n: number) => Math.abs(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -92,7 +95,7 @@ const ICONE = {
 }
 const Icone = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden="true"><path d={d} /></svg>
 
-export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo, aoAbrirCarteira }: Props) {
+export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo, aoAbrirCarteira, topo }: Props) {
   const ocultos = useValoresOcultos()
   const conectar = () => (aoConectar ? aoConectar() : aoIr('operar'))
   const moeda = d.conta.moeda
@@ -121,6 +124,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
 
   return (
     <div className="in">
+      {topo}
       {/* ------------------------------------------------ o painel */}
       <section className={`in-painel ${d.conta.conectada ? '' : 'sem-conta'}`} aria-labelledby="in-ola">
         <i className="in-eixo" aria-hidden="true" />

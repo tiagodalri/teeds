@@ -12,6 +12,7 @@ import './meu-perfil.css'
 import { dataCurta } from '../../core/datas'
 import { dataEHora, historicoDeAceites, type HistoricoDeAceites } from '../../core/teeds/termos'
 import { LeitorDeTermos } from '../termos/Termos'
+import { CartaoDeNotificacoes } from '../notificacoes/Notificacoes'
 
 /**
  * "Meu Perfil" (20/10/2026, pedido do Tiago: "capricha"): a pessoa vê e
@@ -314,6 +315,9 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
           </div>
           {senhaRecado && <p className={`mp-recado ${senhaRecado.tipo}`} role="status">{senhaRecado.texto}</p>}
         </section>
+
+        {/* ------------------------------------------------ notificações no celular */}
+        {MARCA.notificacoes && <CartaoDeNotificacoes sessao={sessao} />}
 
         {/* ------------------------------------------------ termos de uso */}
         {MARCA.termos && <section className="mp-cartao">
