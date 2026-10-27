@@ -2495,6 +2495,24 @@ button:has(> .icone-fechar) { display: inline-flex; align-items: center; justify
 /* a caixinha dos termos no login (27/10/2026) */
 .entrada-form .entrada-termos { display: grid; grid-template-columns: 20px 1fr; flex-direction: row; gap: 10px; align-items: start; margin-top: 2px; font-size: 13px; line-height: 1.45; color: var(--muted); cursor: pointer; text-align: left; }
 .entrada-form .entrada-termos input { width: 18px; height: 18px; min-height: 0; margin: 1px 0 0; padding: 0; border: 0; box-shadow: none; accent-color: var(--gf-ouro, var(--primary)); cursor: pointer; }
+/* 27/10/2026: no iPhone a caixa nativa ignorava o tamanho e descia para baixo
+   da primeira linha (print do Tiago). Agora é desenhada aqui: igual em todo
+   navegador, centrada na primeira linha do texto. */
+.entrada-form .entrada-termos { grid-template-columns: 20px minmax(0, 1fr); align-items: start; }
+/* !important: a tela de entrar dá 44 px de altura a todo campo (era isso que
+   descia a caixa no iPhone) */
+.entrada .entrada-form .entrada-termos input[type='checkbox'], .entrada-form .entrada-termos input[type='checkbox'] {
+  -webkit-appearance: none; appearance: none; display: block; flex: none;
+  width: 20px !important; height: 20px !important; min-width: 20px; min-height: 20px !important; margin: calc((1.45em - 20px) / 2) 0 0 !important; padding: 0 !important;
+  border: 1.5px solid color-mix(in srgb, var(--text) 35%, transparent); border-radius: 6px; background: var(--surface, #fff);
+  font-size: inherit !important; box-shadow: none; cursor: pointer; transition: background-color .15s, border-color .15s;
+}
+.entrada-form .entrada-termos input[type='checkbox']:checked {
+  border-color: var(--gf-ouro, var(--primary));
+  background: var(--gf-ouro, var(--primary)) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.4l3.2 3.1L15 6.6' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 18px 18px no-repeat;
+}
+.entrada-form .entrada-termos input[type='checkbox']:focus-visible { outline: 2px solid var(--gf-ouro, var(--primary)); outline-offset: 2px; }
+.entrada-form .entrada-termos > span { min-width: 0; }
 .entrada-termos a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
 .entrada-termos.ok { color: var(--text); }
 .entrada-par { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

@@ -539,3 +539,12 @@
   .sel-plat { flex-wrap: wrap; }
   .sel-plat-opcoes { flex-wrap: wrap; }
 }
+
+/* 27/10/2026 (print do Tiago no iPhone): os tempos do gráfico rolavam de lado e
+   só "1m" e "5m" apareciam. No celular: os 6 tempos numa linha, por igual, e
+   Velas/Linha logo abaixo, também por igual. */
+@media (max-width: 600px) {
+  .layout-operar .controls { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; width: 100%; overflow: visible; }
+  .layout-operar .controls .segmented { display: flex; width: 100%; max-width: none; overflow: visible; box-sizing: border-box; }
+  .layout-operar .controls .segmented button { flex: 1 1 0; min-width: 0; padding-inline: 4px; font-size: 13px; }
+}

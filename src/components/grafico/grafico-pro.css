@@ -203,3 +203,11 @@
   .gpo-res { font-size: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .gpo { animation: none; } .gpo-barra i { transition: none; } }
+
+/* 27/10/2026: no celular a barra estourava a tela (o chip do Sinal GF cortado).
+   Indicadores e chips na primeira linha; a próxima leitura desce quando não cabe. */
+@media (max-width: 640px) {
+  .gp-barra { flex-wrap: wrap; row-gap: 8px; }
+  .gp-chips { flex: 1 1 0; min-width: 120px; }
+  .gp-sinal { flex: 0 0 auto; }
+}

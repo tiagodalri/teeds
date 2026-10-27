@@ -108,7 +108,14 @@ function comAlfa(cor: string, alfa: number): string {
 const css = (nome: string, padrao: string) => (getComputedStyle(document.documentElement).getPropertyValue(nome).trim() || padrao)
 const CORES_DAS_LINHAS = ['#E0B84F', '#4FA3FF', '#C38BFF', '#2FBF8F', '#FF7A59', '#9CB1C7']
 
-function estilos(modo: ChartMode): DeepPartial<Styles> {
+/* 27/10/2026 (print do Tiago no iPhone): no celular a legenda fixa (Hora,
+   Abertura, Máxima... e os valores de cada indicador) cobria as velas e as
+   setas. No gráfico estreito ela só aparece enquanto o dedo está no gráfico. */
+const toque = () => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+const estreito = (el: HTMLElement | null) => !!el && el.clientWidth > 0 && el.clientWidth < 700
+
+function estilos(modo: ChartMode, compacto = false): DeepPartial<Styles> {
+  const regra = compacto ? 'follow_cross' as const : 'always' as const
   const texto = css('--text', '#e8eef5'), apoio = css('--muted', '#93A6BD'), borda = css('--border', '#1A2D45')
   const alta = css('--up', '#16C784'), baixa = css('--down', '#EA3943'), fundo = css('--surface', '#08172B')
   const fonte = getComputedStyle(document.body).fontFamily
@@ -120,6 +127,7 @@ function estilos(modo: ChartMode): DeepPartial<Styles> {
       area: { lineColor: '#4FA3FF', lineSize: 2, backgroundColor: [{ offset: 0, color: 'rgba(79, 163, 255, .02)' }, { offset: 1, color: 'rgba(79, 163, 255, .22)' }] },
       priceMark: { last: { upColor: alta, downColor: baixa, line: { style: 'dashed' }, text: { family: fonte } }, high: { color: apoio, textFamily: fonte }, low: { color: apoio, textFamily: fonte } },
       tooltip: {
+        showRule: regra,
         title: { show: false },
         legend: { color: apoio, size: 11, family: fonte, template: [
           { title: 'time', value: '{time}' }, { title: 'open', value: '{open}' }, { title: 'high', value: '{high}' }, { title: 'low', value: '{low}' }, { title: 'close', value: '{close}' },
@@ -129,7 +137,7 @@ function estilos(modo: ChartMode): DeepPartial<Styles> {
     indicator: {
       lines: CORES_DAS_LINHAS.map((color) => ({ color, size: 1.6 })),
       bars: [{ upColor: 'rgba(22, 199, 132, .65)', downColor: 'rgba(234, 57, 67, .65)', noChangeColor: apoio }],
-      tooltip: { title: { color: texto, size: 11, family: fonte }, legend: { color: apoio, size: 11, family: fonte } },
+      tooltip: { showRule: regra, title: { color: texto, size: 11, family: fonte }, legend: { color: apoio, size: 11, family: fonte } },
       lastValueMark: { show: false },
     },
     xAxis: { axisLine: { color: borda }, tickLine: { color: borda }, tickText: { color: apoio, family: fonte, size: 11 } },
@@ -204,6 +212,7 @@ function estiloDoDesenho(d: Pick<DesenhoSalvo, 'cor' | 'espessura' | 'tracejado'
 /* =================================================================== */
 
 export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granularity, loading, markers = [], sessao, sinalLiberado = false, moeda = 'USD' }: Props) {
+  const compactoRef = useRef(false)
   const caixa = useRef<HTMLDivElement>(null)
   const chartRef = useRef<Chart | null>(null)
   // o zoom de abertura: o botão do meio volta para ele
@@ -266,7 +275,8 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
   useEffect(() => {
     registrarTudo()
     const el = caixa.current!
-    const chart = init(el, { locale: 'pt-BR', styles: estilos(mode) })
+    compactoRef.current = estreito(el)
+    const chart = init(el, { locale: 'pt-BR', styles: estilos(mode, compactoRef.current) })
     if (!chart) return
     chartRef.current = chart
     if (import.meta.env.DEV) (window as unknown as { __graficoPro?: Chart }).__graficoPro = chart
@@ -280,15 +290,19 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
       unsubscribeBar: () => { assinante.current = null },
     })
     // o tema muda (claro/escuro): o gráfico acompanha
-    const tema = new MutationObserver(() => chart.setStyles(estilos(modoRef.current)))
+    const tema = new MutationObserver(() => chart.setStyles(estilos(modoRef.current, compactoRef.current)))
     tema.observe(document.documentElement, { attributes: true, attributeFilter: ['data-tema'] })
-    const tamanho = new ResizeObserver(() => { chart.resize(); medirPainel() })
+    const tamanho = new ResizeObserver(() => {
+      chart.resize(); medirPainel()
+      const c = estreito(el)
+      if (c !== compactoRef.current) { compactoRef.current = c; chart.setStyles(estilos(modoRef.current, c)) }
+    })
     tamanho.observe(el)
     return () => { tema.disconnect(); tamanho.disconnect(); dispose(el); chartRef.current = null }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const modoRef = useRef(mode)
-  useEffect(() => { modoRef.current = mode; chartRef.current?.setStyles(estilos(mode)) }, [mode])
+  useEffect(() => { modoRef.current = mode; chartRef.current?.setStyles(estilos(mode, compactoRef.current)) }, [mode])
 
   /* ---------------------------------------------------- ativo e tempo */
   useEffect(() => {
@@ -340,7 +354,9 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
     }
     // com o Sinal GF, sobra espaço em cima e embaixo das velas para as setas, que ficam afastadas delas
     const comSinal = sinalLiberado && indicadores.some((i) => i.id === 'GF_SINAL')
-    chart.overrideYAxis({ paneId: 'candle_pane', gap: comSinal ? { top: 0.3, bottom: 0.32 } : { top: 0.2, bottom: 0.1 } })
+    // no toque, arrastar o dedo na coluna dos preços (rolando a página) esticava a escala e as velas
+    // viravam uma linha fina lá em cima (print do Tiago, 27/10/2026): lá a escala fica sempre automática
+    chart.overrideYAxis({ paneId: 'candle_pane', gap: comSinal ? { top: 0.3, bottom: 0.32 } : { top: 0.2, bottom: 0.1 }, scrollZoomEnabled: !toque() })
     medirPainel()
   }, [indicadores])
   // o monograma das setas do Sinal GF chegou depois do primeiro desenho: redesenha o indicador
