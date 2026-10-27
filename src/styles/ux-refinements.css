@@ -90,40 +90,47 @@ button, input, select, textarea { font-family: inherit; }
 .entrada-senha button { position: absolute; right: 4px; min-height: 40px; padding: 8px 10px; border: 0; background: transparent; color: var(--text); cursor: pointer; font-size: 12px; }
 .entrada-caps { font-size: 12px; color: var(--text); }
 
-/* Compact login only: registration and recovery keep their own natural height.
-   Never clip content when the keyboard, text scaling or an error needs space. */
+/* Login no celular (27/10/2026, print do Tiago: "tudo amontoado, socado um em
+   cima do outro"). Antes era um login "compacto" com 4 px entre os itens, para
+   caber numa tela só; com as caixas dos termos e da idade virou poluição. Agora
+   é como nos grandes apps: respiro entre os grupos, campos de 52 px, um botão
+   principal, cadastro como link e a página rola quando precisa. */
 @media (max-width: 600px) {
   body .entrada[data-modo="entrar"] {
     min-height: 100svh;
-    padding: max(8px, var(--sat, 0px)) max(10px, var(--sar, 0px)) max(8px, var(--sab, 0px)) max(10px, var(--sal, 0px));
+    padding: max(12px, var(--sat, 0px)) max(12px, var(--sar, 0px)) max(16px, var(--sab, 0px)) max(12px, var(--sal, 0px));
   }
-  .entrada[data-modo="entrar"] .entrada-caixa { padding: 10px 16px; border-radius: 18px; }
-  .entrada[data-modo="entrar"] .entrada-topo { margin-bottom: 6px; gap: 8px; flex-wrap: nowrap; }
+  .entrada[data-modo="entrar"] .entrada-caixa { padding: 22px 20px 20px; border-radius: 22px; }
+  .entrada[data-modo="entrar"] .entrada-topo { margin-bottom: 22px; gap: 10px; flex-wrap: nowrap; }
   .entrada[data-modo="entrar"] .marca { gap: 8px; }
-  .entrada[data-modo="entrar"] .marca-selo { width: 30px !important; height: 30px !important; }
-  .entrada[data-modo="entrar"] .marca-selo img { width: 30px; height: 30px; }
+  .entrada[data-modo="entrar"] .marca-selo { width: 32px !important; height: 32px !important; }
+  .entrada[data-modo="entrar"] .marca-selo img { width: 32px; height: 32px; }
   .entrada[data-modo="entrar"] .marca-nome { font-size: 17px; letter-spacing: .12em; }
-  .entrada[data-modo="entrar"] .entrada-opera { padding: 4px 6px; font-size: 8px; gap: 4px; }
-  .entrada[data-modo="entrar"] .entrada-opera svg { width: 42px; height: 16px; }
-  .entrada[data-modo="entrar"] .entrada-cabecalho { margin-bottom: 6px; }
-  .entrada[data-modo="entrar"] h1 { font-size: 23px; margin-bottom: 6px; }
-  .entrada[data-modo="entrar"] .entrada-linha { font-size: 12px; line-height: 1.4; }
-  .entrada[data-modo="entrar"] .entrada-form { gap: 4px; }
-  .entrada[data-modo="entrar"] .entrada-form label { gap: 4px; }
-  .entrada[data-modo="entrar"] .entrada-form .rot { font-size: 12px; }
-  .entrada[data-modo="entrar"] .entrada-form input { min-height: 44px; height: 44px; padding: 10px 12px; font-size: 16px; }
-  .entrada[data-modo="entrar"] .entrada-senha input { padding-right: 80px; }
-  .entrada[data-modo="entrar"] .entrada-btn { min-height: 44px; margin-top: 0; padding: 10px 16px; font-size: 14px; }
-  .entrada[data-modo="entrar"] .entrada-troca { margin-top: 2px; }
-  .entrada[data-modo="entrar"] .entrada-corretora { margin-top: 4px; padding: 8px 12px; }
-  .entrada[data-modo="entrar"] .corretora-topo { margin-bottom: 6px; gap: 8px; }
-  .entrada[data-modo="entrar"] .corretora-topo svg { height: 18px; width: auto; }
-  .entrada[data-modo="entrar"] .corretora-selo { font-size: 8px; }
-  .entrada[data-modo="entrar"] .entrada-corretora b { font-size: 12px; }
-  .entrada[data-modo="entrar"] .entrada-corretora p { max-width: none; margin: 4px auto; font-size: 11px; line-height: 1.4; }
-  .entrada[data-modo="entrar"] .btn-deriv { min-height: 44px; padding: 10px 12px; font-size: 12px; }
-  .entrada[data-modo="entrar"] .entrada-seguranca { margin-top: 8px; gap: 6px; font-size: 9px; }
-  .entrada[data-modo="entrar"] .entrada-rodape { margin-top: 6px; font-size: 9px; line-height: 1.4; white-space: normal; letter-spacing: normal; }
+  .entrada[data-modo="entrar"] .entrada-opera { padding: 5px 9px; font-size: 9px; gap: 5px; }
+  .entrada[data-modo="entrar"] .entrada-opera svg { width: 46px; height: 17px; }
+  .entrada[data-modo="entrar"] .entrada-cabecalho { margin-bottom: 24px; }
+  .entrada[data-modo="entrar"] h1 { font-size: 26px; margin-bottom: 8px; }
+  .entrada[data-modo="entrar"] .entrada-linha { font-size: 14px; line-height: 1.5; }
+  .entrada[data-modo="entrar"] .entrada-form { gap: 16px; }
+  .entrada[data-modo="entrar"] .entrada-form label { gap: 8px; }
+  .entrada[data-modo="entrar"] .entrada-form .rot { font-size: 13px; }
+  .entrada[data-modo="entrar"] .entrada-form input:not([type='checkbox']) { min-height: 52px; height: 52px; padding: 12px 16px; font-size: 16px; border-radius: 14px; }
+  .entrada[data-modo="entrar"] .entrada-senha input { padding-right: 88px; }
+  .entrada[data-modo="entrar"] .entrada-esqueci { margin-top: -8px; }
+  .entrada[data-modo="entrar"] .entrada-aceites { gap: 14px; margin-top: 2px; }
+  .entrada[data-modo="entrar"] .entrada-termos { font-size: 14px; }
+  .entrada[data-modo="entrar"] .entrada-btn { min-height: 52px; margin-top: 4px; padding: 12px 18px; font-size: 16px; border-radius: 14px; }
+  .entrada[data-modo="entrar"] .entrada-biometria { margin-top: -4px; }
+  .entrada[data-modo="entrar"] .entrada-cadastro { margin-top: 0; font-size: 14px; }
+  .entrada[data-modo="entrar"] .entrada-corretora { margin-top: 28px; padding: 18px 16px 16px; }
+  .entrada[data-modo="entrar"] .corretora-topo { margin-bottom: 10px; gap: 8px; }
+  .entrada[data-modo="entrar"] .corretora-topo svg { height: 20px; width: auto; }
+  .entrada[data-modo="entrar"] .corretora-selo { font-size: 9px; }
+  .entrada[data-modo="entrar"] .entrada-corretora b { font-size: 15px; }
+  .entrada[data-modo="entrar"] .entrada-corretora p { max-width: none; margin: 6px 0 14px; font-size: 13px; line-height: 1.5; }
+  .entrada[data-modo="entrar"] .btn-deriv { min-height: 48px; padding: 12px 14px; font-size: 14px; }
+  .entrada[data-modo="entrar"] .entrada-seguranca { margin-top: 20px; gap: 8px; font-size: 11px; }
+  .entrada[data-modo="entrar"] .entrada-rodape { margin-top: 12px; font-size: 11px; line-height: 1.5; white-space: normal; letter-spacing: normal; }
 }
 
 /* Comfortable interactions throughout content and administrative panels. */

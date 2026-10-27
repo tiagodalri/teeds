@@ -59,3 +59,6 @@
 @keyframes app-sobe { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes app-aparece { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .app-convite, .app-passos, .app-passos-fundo { animation: none; } }
+
+/* com o convite aberto, o fim da página (a tela de entrar e as telas do app) não fica escondido atrás dele */
+html.com-convite-app .entrada { padding-bottom: calc(132px + var(--sab, 0px)) !important; }

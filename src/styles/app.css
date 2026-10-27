@@ -6154,3 +6154,20 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 }
 :root .entrada .entrada-form .entrada-btn.entrada-biometria:hover:not(:disabled) { background: color-mix(in srgb, var(--gf-ouro, var(--primary)) 10%, transparent); }
 .entrada-biometria svg { width: 20px; height: 20px; fill: none; stroke: var(--gf-ouro, var(--primary)); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Login (27/10/2026): "Esqueci a senha" logo abaixo da senha, as duas caixas
+   num grupo só e o cadastro como link, sob o botão principal. */
+.entrada-esqueci { display: flex; justify-content: flex-end; margin-top: -6px; }
+.entrada-esqueci button, .entrada-cadastro button {
+  min-height: 40px; padding: 8px 2px; border: 0; background: none; cursor: pointer;
+  color: var(--gf-ouro, var(--primary)); font: inherit; font-size: 13.5px; font-weight: 650;
+}
+.entrada-esqueci button:hover, .entrada-cadastro button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.entrada-aceites { display: grid; gap: 12px; }
+.entrada-cadastro { margin: -2px 0 0; text-align: center; color: var(--muted); font-size: 13.5px; }
+/* o preenchimento automático do Safari pintava o campo de amarelo e apagava o "Mostrar" */
+.entrada-form input:-webkit-autofill, .entrada-form input:-webkit-autofill:hover, .entrada-form input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text); caret-color: var(--text);
+  -webkit-box-shadow: 0 0 0 1000px color-mix(in srgb, var(--bg) 85%, var(--surface)) inset;
+  transition: background-color 9999s ease-out 0s;
+}

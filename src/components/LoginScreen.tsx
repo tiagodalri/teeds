@@ -178,20 +178,22 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
 
           {modo === 'entrar' && campo('senha', 'Senha', senha, setSenha,
             { tipo: 'password', auto: 'current-password', dica: '••••••••' })}
+          {modo === 'entrar' && <div className="entrada-esqueci"><button type="button" onClick={() => trocarModo('esqueci')}>Esqueci a senha</button></div>}
 
-          {modo === 'entrar' && pedeTermos && (
+          {modo === 'entrar' && pedeTermos && <div className="entrada-aceites">
             <label className={`entrada-termos ${concordo ? 'ok' : ''}`}>
               <input type="checkbox" checked={concordo} onChange={(e) => setConcordo(e.target.checked)} />
               <span>Li e concordo com os <a href={`${import.meta.env.BASE_URL}termos/`} target="_blank" rel="noopener">Termos de Uso</a> e a <a href={`${import.meta.env.BASE_URL}termos/#politica-de-privacidade`} target="_blank" rel="noopener">Política de Privacidade</a>.</span>
             </label>
-          )}
-          {modo === 'entrar' && pedeTermos && (
             <label className={`entrada-termos ${maior ? 'ok' : ''}`}>
               <input type="checkbox" checked={maior} onChange={(e) => setMaior(e.target.checked)} />
               <span>Declaro ter 18 anos ou mais.</span>
             </label>
-          )}
+          </div>}
 
+          <button className="entrada-btn" type="submit" disabled={!valido || ocupado}>
+            {ocupado ? 'um instante…' : t.acao}
+          </button>
           {modo === 'entrar' && comBiometria && (
             <button className="entrada-btn entrada-biometria" type="button" disabled={ocupado || (pedeTermos && !(concordo && maior))}
               onClick={async (e) => {
@@ -203,24 +205,16 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
               Entrar com {rotuloDaBiometria()}
             </button>
           )}
-          <button className="entrada-btn" type="submit" disabled={!valido || ocupado}>
-            {ocupado ? 'um instante…' : t.acao}
-          </button>
-          {modo === 'entrar' && <button className="entrada-btn" type="button" disabled={ocupado} onClick={() => trocarModo('criar')}>
-            Cadastre-se
-          </button>}
+          {/* 27/10/2026 (print do Tiago, "tudo socado"): um botão principal só; cadastro vira link, como nos grandes apps */}
+          {modo === 'entrar' && <p className="entrada-cadastro">Ainda não tem conta? <button type="button" disabled={ocupado} onClick={() => trocarModo('criar')}>Cadastre-se</button></p>}
         </form>
 
         {erro && <div className="entrada-erro" role="alert">{erro}</div>}
         {recado && <div className="entrada-recado" role="status">{recado}</div>}
 
-        <div className="entrada-troca">
-          {modo === 'entrar' ? (
-            <button onClick={() => trocarModo('esqueci')}>Esqueci a senha</button>
-          ) : (
-            <button onClick={() => trocarModo('entrar')}>Já tenho conta: entrar</button>
-          )}
-        </div>
+        {modo !== 'entrar' && <div className="entrada-troca">
+          <button onClick={() => trocarModo('entrar')}>Já tenho conta: entrar</button>
+        </div>}
 
         <div className="entrada-corretora">
           <div className="corretora-topo">

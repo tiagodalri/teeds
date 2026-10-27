@@ -41,6 +41,13 @@ function ConviteInstalar() {
     return () => { window.clearTimeout(t); parar() }
   }, [])
 
+  // aberto, o convite fica fixo no pé da tela: a página ganha espaço embaixo para nada ficar atrás dele (27/10/2026)
+  const visivel = aberto && !!como
+  useEffect(() => {
+    document.documentElement.classList.toggle('com-convite-app', visivel)
+    return () => document.documentElement.classList.remove('com-convite-app')
+  }, [visivel])
+
   if (!aberto || !como) return null
 
   const fechar = () => { lembrarRecusa(7); setAberto(false); setPassos(false) }
