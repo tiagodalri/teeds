@@ -339,6 +339,29 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 :root[data-tema='escuro'] .nome-robo-gf { background-image: url(/globalfly-gf-escuro.png); }
 .nome-robo-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* Logotipo de cada I.A. (LogotipoDaIA.tsx, 27/10/2026): GF + nome desenhado,
+   o traço dourado como haste de uma letra. A altura das letras do nome é a do
+   monograma; as letras usam a cor do texto, o dourado é o da casa. */
+.logo-ia { --logo-ia-ouro: #B78D39; display: inline-flex; align-items: center; gap: .38em; max-width: 100%; line-height: 1; vertical-align: -.08em; }
+:root[data-tema='escuro'] .logo-ia, .logo-ia.sobre-foto { --logo-ia-ouro: #C69A45; }
+/* as telas têm regras para todo span do cartão (tamanho e cor da legenda): o logotipo herda do nome */
+span.logo-ia { color: inherit !important; }
+.logo-ia > span { font-size: inherit !important; }
+.logo-ia .logo-ia-gf { height: .74em; }
+.logo-ia.sobre-foto .logo-ia-gf { background-image: url(/globalfly-gf-escuro.png); }
+/* !important: várias telas dão tamanho fixo a todo svg de dentro (ícones de 18 px) */
+.logo-ia > svg.logo-ia-nome { flex: none !important; height: .83em !important; width: auto !important; max-width: none !important; margin: 0 !important; overflow: visible; }
+.logo-ia.com-fio { gap: .5em; }
+.logo-ia-fio { flex: none; width: 1px; height: 1.15em; background: #B78D39; }
+/* Nos cartões com foto o nome escrito era grande e em negrito: o logotipo sobe
+   um pouco, mas nunca passa da largura do cartão (os textos ficam presos às duas
+   bordas, então a largura é conhecida; o logotipo mede ~8,5em). */
+.in-jato-texto, .plv-jato-texto, .plv-capa-texto, .vr-foto-nome { container-type: inline-size; }
+.in-jato-texto .logo-ia, .plv-jato-texto .logo-ia, .plv-capa-texto .logo-ia, .vr-foto-nome .logo-ia { font-size: min(1.22em, 11.5cqi); }
+.plv-passe-nome .logo-ia { font-size: 1.1em; }
+/* o topo do plano de voo é sempre azul: o nome desenhado, um pouco maior que o texto de 17 px */
+.plv-titulo .logo-ia { font-size: 1.3em; vertical-align: middle; }
+
 /* ==========================================================================
    APP INSTALADO, TEMA CLARO: UM CABEÇALHO SÓ (20/10/2026)
    O iPhone escreve hora e bateria em branco (barra translúcida). Antes, uma

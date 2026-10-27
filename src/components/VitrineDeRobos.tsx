@@ -5,6 +5,7 @@ import { useCatalogoCompleto, useRobosDisponiveis } from '../core/teeds/catalogo
 import { MARCA } from '../marca'
 import { pedirModeloDaVitrine } from './RobotSetup'
 import './vitrine-robos.css'
+import { LogotipoDaIA, temLogotipo } from './marca/LogotipoDaIA'
 import { irParaTela, ROBOS_A_VENDA, useRobosBloqueados } from '../core/teeds/robosLiberados'
 
 /**
@@ -178,7 +179,7 @@ function ModalDoRobo({ i, nome, base, parametros, aoFechar, aoIniciar, trancada 
             <img src={`${base}${i.id}.webp`} alt="" />
             <div>
               <span className="vr-chamada">{v?.aeronave ?? i.chamada}</span>
-              <h3 id="vr-modal-nome">{nome}</h3>
+              <h3 id="vr-modal-nome">{temLogotipo(i.nome) ? <LogotipoDaIA nome={i.nome} fio sobreFoto /> : nome}</h3>
               {v?.gancho && <p>{v.gancho}</p>}
             </div>
           </header>
@@ -254,7 +255,7 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
               <div className="vr-foto">
                 <img src={`${base}${i.id}.webp`} srcSet={`${base}${i.id}-pequena.webp 640w, ${base}${i.id}.webp 1200w`}
                   sizes="(max-width: 700px) 82vw, (max-width: 1279px) 30vw, 20vw" alt="" loading="lazy" decoding="async" width="1200" height="750" />
-                <span className="vr-foto-nome"><b>{nome}</b></span>
+                <span className="vr-foto-nome"><b>{temLogotipo(i.nome) ? <LogotipoDaIA nome={i.nome} fio sobreFoto /> : nome}</b></span>
                 {trancada && <span className="vr-cadeado"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0v3" /></svg>Exclusiva</span>}
                 <button type="button" className="vr-porque" aria-haspopup="dialog" onClick={() => setAberto(i.id)}>
                   <span aria-hidden="true">✦</span> Por que {nome}?

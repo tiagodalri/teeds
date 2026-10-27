@@ -18,6 +18,7 @@ import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { NomeDoRobo } from './NomeDoRobo'
 import { Monograma, TEM_MONOGRAMA } from './marca/Monograma'
+import { LogotipoDaIA, temLogotipo } from './marca/LogotipoDaIA'
 
 interface Props {
   identidade: Identidade
@@ -339,7 +340,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
           {TEM_MONOGRAMA ? <Monograma tamanho={40} className="plv-mono" /> : <Emblema id={modelo} tamanho={34} />}
           <div className="plv-titulo">
             <small>Plano de voo</small>
-            <b>{passo === 'escolha' ? 'Escolha a sua I.A.' : TEM_MONOGRAMA ? nomeCurto(modelo.nome) : modelo.nome}</b>
+            <b>{passo === 'escolha' ? 'Escolha a sua I.A.' : TEM_MONOGRAMA ? (temLogotipo(modelo.nome) ? <LogotipoDaIA nome={modelo.nome} soNome sobreFoto /> : nomeCurto(modelo.nome)) : modelo.nome}</b>
             {passo !== 'escolha' && <span className="plv-titulo-sub">{modelo.chamada} · {nomeAtivo}</span>}
           </div>
           <button type="button" className="plv-fechar" onClick={onCancelar} disabled={ligando} aria-label="Fechar o preparo"><IconeFechar /></button>
@@ -368,7 +369,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
                 onClick={() => setModelo(r)} onDoubleClick={() => { setModelo(r); setPasso('plano') }}>
                 <img src={`${FOTOS}${r.id}.webp`} alt="" loading="lazy" decoding="async" />
                 {r.id === modelo.id && <span className="plv-jato-marca" aria-hidden="true">✓</span>}
-                <span className="plv-jato-texto"><small>GF</small><b>{nomeCurto(r.nome)}</b><span>{r.chamada}</span></span>
+                <span className="plv-jato-texto">{temLogotipo(r.nome) ? <b><LogotipoDaIA nome={r.nome} fio sobreFoto /></b> : <><small>GF</small><b>{nomeCurto(r.nome)}</b></>}<span>{r.chamada}</span></span>
               </button>
             ))}
           </div>
@@ -398,7 +399,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
                 <div className="plv-capa">
                   <img src={`${FOTOS}${modelo.id}.webp`} alt="" decoding="async" />
                   <span className="plv-capa-ativo">{nomeAtivo}</span>
-                  <div className="plv-capa-texto"><small>GF</small><b>{nomeCurto(modelo.nome)}</b><span>{modelo.chamada}</span></div>
+                  <div className="plv-capa-texto">{temLogotipo(modelo.nome) ? <b><LogotipoDaIA nome={modelo.nome} fio sobreFoto /></b> : <><small>GF</small><b>{nomeCurto(modelo.nome)}</b></>}<span>{modelo.chamada}</span></div>
                 </div>
               ) : <div className="plv-capa sem-foto"><Emblema id={modelo} tamanho={56} /><b><NomeDoRobo nome={modelo.nome} /></b><span>{modelo.chamada}</span></div>}
 
@@ -433,8 +434,8 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
               <div className={`plv-passe-topo ${TEM_FOTOS ? '' : 'sem-foto'}`}>
                 {TEM_FOTOS && <img src={`${FOTOS}${modelo.id}.webp`} alt="" decoding="async" />}
                 <div className="plv-passe-nome">
-                  <small>{TEM_FOTOS ? 'GF · ' : ''}{nomeAtivo}</small>
-                  <b>{TEM_FOTOS ? nomeCurto(modelo.nome) : <NomeDoRobo nome={modelo.nome} />}</b>
+                  <small>{TEM_FOTOS && !temLogotipo(modelo.nome) ? 'GF · ' : ''}{nomeAtivo}</small>
+                  <b>{TEM_FOTOS ? (temLogotipo(modelo.nome) ? <LogotipoDaIA nome={modelo.nome} fio sobreFoto /> : nomeCurto(modelo.nome)) : <NomeDoRobo nome={modelo.nome} />}</b>
                 </div>
               </div>
               <i className="plv-picote" aria-hidden="true" />

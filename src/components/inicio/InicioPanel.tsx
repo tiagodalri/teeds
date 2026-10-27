@@ -1,6 +1,7 @@
 import { afiliadoDaDeriv } from '../../core/rotas'
 import type { WorkspacePage } from '../WorkspaceNav'
 import { Monograma, TEM_MONOGRAMA } from '../marca/Monograma'
+import { LogotipoDaIA, temLogotipo } from '../marca/LogotipoDaIA'
 import { abrirSuporte } from '../../core/teeds/suporte'
 import { alternarValores, MASCARA, useValoresOcultos } from '../../core/privacidade'
 import { MARCA } from '../../marca'
@@ -236,7 +237,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                       : <span className="in-jato-play" aria-hidden="true"><Icone d={ICONE.play} /></span>}
                     <span className="in-jato-texto">
                       {!TEM_MONOGRAMA && <small>{MARCA.nome}</small>}
-                      <b>{curto}</b>
+                      <b>{TEM_MONOGRAMA && temLogotipo(r.nome) ? <LogotipoDaIA nome={r.nome} fio sobreFoto /> : curto}</b>
                       {/* só o nome (23/10/2026, Tiago): a frase de cada I.A. saiu do cartão; no ar, fica o resultado */}
                       {r.noAr && <em className={ocultos ? '' : r.resultado >= 0 ? 'sobe' : 'cai'}>{ocultos ? MASCARA : `${sinal(r.resultado)}${numero(r.resultado)}`}{r.analise && !r.operando ? ` · ${r.analise.n}/${r.analise.alvo}` : ''}</em>}
                     </span>

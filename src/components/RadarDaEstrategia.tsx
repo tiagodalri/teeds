@@ -75,7 +75,7 @@ export function RadarDaEstrategia({ nome, valor, alvo, digitos, ganhaCom, ticksA
       ? <>A sequência está aberta: a próxima entrada sai sem esperar uma nova análise.</>
       : estado === 'zerou'
         ? <>Saiu {zerou!.digito}: a sequência quebrou. O robô recomeça a contagem do zero.</>
-        : <>O <NomeDoRobo nome={nome} /> entra depois de <b>{alvo} dígitos seguidos {faixa}</b>. {n === 0 ? 'Esperando o primeiro.' : <>Já {n === 1 ? 'foi 1' : `foram ${n}`}, {faltam === 1 ? 'falta 1' : `faltam ${faltam}`}.</>}</>
+        : <>O <NomeDoRobo nome={nome} emTexto /> entra depois de <b>{alvo} dígitos seguidos {faixa}</b>. {n === 0 ? 'Esperando o primeiro.' : <>Já {n === 1 ? 'foi 1' : `foram ${n}`}, {faltam === 1 ? 'falta 1' : `faltam ${faltam}`}.</>}</>
 
   return (
     <div className={`radar ${estado}`} role="status" aria-live="polite" aria-label={`${titulo}: ${n} de ${alvo}`}>

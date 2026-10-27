@@ -223,7 +223,7 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo, demo
       {avisos.slice(0, 2).map((a) => (
         <div key={a.id} className={`mcb-aviso ${a.tipo}`} role="status">
           <span className="mcb-aviso-icone"><Ic d={a.tipo === 'meta' ? I.meta : a.tipo === 'limite' ? I.limite : I.parar} /></span>
-          <span><b><NomeDoRobo nome={a.nome} /> {a.texto}</b><small>Resultado da sessão: {ocultos ? `${simboloMoeda(moeda)} ${MASCARA}` : a.valor}</small></span>
+          <span><b><NomeDoRobo nome={a.nome} emTexto /> {a.texto}</b><small>Resultado da sessão: {ocultos ? `${simboloMoeda(moeda)} ${MASCARA}` : a.valor}</small></span>
           <button type="button" onClick={() => setAvisos((l) => l.filter((x) => x.id !== a.id))} aria-label="Fechar aviso"><Ic d={I.x} /></button>
         </div>
       ))}
@@ -272,7 +272,7 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo, demo
                   )}
                   {confirmar === s.id ? (
                     <div className="mcb-confirmar">
-                      <span>Parar <NomeDoRobo nome={s.roboNome} />?</span>
+                      <span>Parar <NomeDoRobo nome={s.roboNome} emTexto />?</span>
                       <button type="button" onClick={() => setConfirmar(null)}>Cancelar</button>
                       <button type="button" className="perigo" disabled={parando === s.id} onClick={() => void parar(s.id)}>{parando === s.id ? 'Parando…' : 'Parar'}</button>
                     </div>

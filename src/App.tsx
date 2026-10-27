@@ -28,7 +28,7 @@ import { decolar, liberarPouso } from './core/decolagem'
 import { definirDonoDoPlano } from './core/teeds/planoDoDia'
 import { NovaSenha } from './components/NovaSenha'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
-import { AceiteDosTermos, LeitorDeTermos } from './components/termos/Termos'
+import { AceiteDosTermos } from './components/termos/Termos'
 import { aceiteDoLoginPendente, aceiteGuardado, jaAceitou, limparAceiteDoLogin, registrarAceite } from './core/teeds/termos'
 import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
@@ -348,7 +348,6 @@ export default function App() {
     aparelho só evita piscar a tela de aceite para quem já aceitou.
   */
   const [termosOk, setTermosOk] = useState<boolean | null>(null)
-  const [verTermos, setVerTermos] = useState(false)
   useEffect(() => {
     if (!MARCA.termos || !teeds.sessao) { setTermosOk(null); return }
     const sessao = teeds.sessao
@@ -1108,7 +1107,6 @@ export default function App() {
 
           {teeds.usuario && (
             <UserMenu usuario={teeds.usuario} onSair={sairDeTudo} foto={fotoPerfil} admin={admin === true}
-              onTermos={MARCA.termos ? () => setVerTermos(true) : undefined}
               onPerfil={() => (MARCA.inicio ? setTela('perfil') : setVerPerfil(true))} />
           )}
         </div>
@@ -1142,7 +1140,6 @@ export default function App() {
           aoTerminar={(destino) => fimDoTour(destino)} aoFechar={() => (tour === 'obrigatorio' ? fimDoTour() : setTour(null))} />
       )}
 
-      {verTermos && <LeitorDeTermos aoFechar={() => setVerTermos(false)} />}
 
       {verPerfil && teeds.sessao && (
         <ProfilePanel
