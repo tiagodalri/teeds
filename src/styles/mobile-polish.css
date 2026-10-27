@@ -517,3 +517,25 @@
   .sel-plat-rot
   { font-size: 11px; }
 }
+
+/* Revisão do PWA (27/10/2026) */
+@media (max-width: 480px) {
+  /* Gerenciamento: o valor do cartão não pode virar "US$ 100,…" */
+  .go-consultoria .go-cards strong { white-space: normal; text-overflow: clip; font-size: clamp(17px, 5.4vw, 22px); }
+  /* três cartões em duas colunas: o terceiro ocupa a linha, em vez de sobrar sozinho pela metade */
+  .go-consultoria .go-cards.tres article:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+@media (max-width: 700px) {
+  /* Aulas: o "Continue assistindo" ocupa a largura toda (antes ficava com 160 px e cortava o título) */
+  .ger.aulas:not(.cine) .aulas-continue .aulas-carrossel { max-width: 100%; }
+  .ger.aulas:not(.cine) .aulas-continue .aulas-carrossel .aula-cartao.continuar { flex: 0 0 100%; width: 100%; max-width: 100%; }
+  .ger.aulas:not(.cine) .aulas-continue .aula-cartao.continuar .aula-cartao-corpo > b { white-space: normal; overflow: visible; }
+  /* o ✓ de aula vista vai para a direita: no canto esquerdo ele cobria o "Vídeo de exemplo" */
+  .ger.aulas:not(.cine) .aulas-carrossel .aula-cartao-capa .aula-vista { left: auto; right: 10px; }
+  .ger.aulas:not(.cine) .aulas-carrossel .aula-cartao-capa .aula-dur { left: 8px; right: auto; max-width: calc(100% - 50px); white-space: normal; line-height: 1.25; }
+}
+@media (max-width: 380px) {
+  /* celular pequeno: o seletor de plataforma do admin quebra a linha em vez de empurrar a página para o lado */
+  .sel-plat { flex-wrap: wrap; }
+  .sel-plat-opcoes { flex-wrap: wrap; }
+}

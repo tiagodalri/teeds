@@ -1093,13 +1093,15 @@ export default function App() {
 
       {MARCA.suporte && teeds.sessao && (
         <Suspense fallback={null}>
-          <SuporteWidget sessao={teeds.sessao} nome={teeds.usuario?.nome || ''} telaAtual={tela} admin={adminConfirmado}
+          {/* com os itens de admin ocultos, o botão do suporte é o do cliente (sem "Caixa de suporte" nem a fila) */}
+          <SuporteWidget key={menuAdminOculto ? 'cliente' : 'equipe'} sessao={teeds.sessao} nome={teeds.usuario?.nome || ''} telaAtual={tela} admin={adminConfirmado && !menuAdminOculto}
             escondido={tela === 'aovivo' || (adminConfirmado && tela === 'gestao')}
             irPara={(t) => setTela(t as WorkspacePage)} onAbrirCaixa={abrirCaixaDoSuporte} />
         </Suspense>
       )}
 
-      {adminConfirmado && teeds.sessao && (
+      {/* o olhinho dos itens de admin também tira o chat interno da equipe (Tiago, 27/10/2026) */}
+      {adminConfirmado && teeds.sessao && !menuAdminOculto && (
         <Suspense fallback={null}>
           <ChatDaEquipe sessao={teeds.sessao} escondido={tela === 'aovivo'} />
         </Suspense>
@@ -1184,7 +1186,7 @@ export default function App() {
           sessaoTeeds={teeds.sessao}
           contaId={conta.accountId}
           admin={adminConfirmado}
-          mostrarMarkup={mostrarColuna}
+          mostrarMarkup={mostrarColuna && !menuAdminOculto}
           onSessoesVivas={setVivasRobos}
         />
         </CatalogoProvider>
@@ -1431,12 +1433,12 @@ export default function App() {
             {minhas.map((c) => (
               <PositionCard key={c.contractId} contrato={c}
                 nomeAtivo={nomeDoAtivo(symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol)}
-                onEncerrar={encerrar} encerrando={vendendo === c.contractId} markup={adminConfirmado && mostrarColuna ? markupDaManual(c) : undefined} />
+                onEncerrar={encerrar} encerrando={vendendo === c.contractId} markup={adminConfirmado && mostrarColuna && !menuAdminOculto ? markupDaManual(c) : undefined} />
             ))}
           </section>
 
           {ultimasManuais.length > 0 && (
-            <UltimasEntradas operacoes={ultimasManuais} markupDe={adminConfirmado && mostrarColuna ? markupDaManual : undefined}
+            <UltimasEntradas operacoes={ultimasManuais} markupDe={adminConfirmado && mostrarColuna && !menuAdminOculto ? markupDaManual : undefined}
               nomeDoAtivo={(simbolo) => nomeDoAtivo(symbols.find((s) => s.symbol === simbolo)?.name ?? simbolo)} />
           )}
         </aside>

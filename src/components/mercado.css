@@ -203,3 +203,8 @@
   .mc-cartao-capa .mc-capa.vazia img, .mc-cartao-capa .mc-sigla { width: 44px; height: 44px; border-radius: 12px; font-size: 15px; }
   .mc-cartao strong { font-size: 14px; }
 }
+
+/* celular bem estreito (320 px): os centros financeiros em uma coluna, sem cortar "Aberta" (27/10/2026) */
+@media (max-width: 360px) {
+  .mc-centros { grid-template-columns: minmax(0, 1fr); }
+}
