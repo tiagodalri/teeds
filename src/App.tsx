@@ -38,7 +38,7 @@ import { traduzirErro } from './core/deriv/erros'
 import { nomeDoAtivo } from './core/deriv/market'
 import { ATIVO_DOS_ROBOS, ehSintetico } from './core/deriv/config'
 import { useAccount } from './hooks/useAccount'
-import { minhaSituacao, registrarContaDeriv, registrarPresenca, souAdmin, type SituacaoDaFicha } from './core/teeds/clientes'
+import { meuPlano, minhaSituacao, registrarContaDeriv, registrarPresenca, souAdmin, type SituacaoDaFicha } from './core/teeds/clientes'
 import { marcarPagina, marcarRegiao, ouvirCliques } from './core/teeds/rastro'
 import { entregarAutorizacao } from './core/teeds/servidorRobos'
 import { AssistentePanel } from './components/AssistentePanel'
@@ -55,6 +55,7 @@ import { RelogioTopo } from './components/RelogioTopo'
 import { SeloCategoria, type Categoria } from './components/SeloCategoria'
 import { dinheiro, simboloMoeda } from './core/dinheiro'
 import { usePeriodos } from './core/chart/periodos'
+import { aulasTravadasParaGfMember } from './core/teeds/aulas'
 import { conviteRecebido, liveNoAr, podeTreinar, treinoNoAr, treinoPedido, type Live, type TreinoNoAr } from './core/live/api'
 import { IconeAtivo } from './components/IconeAtivo'
 import { usePlayerAtivo, useTreinoAtivo } from './core/live/presenca'
@@ -491,6 +492,14 @@ export default function App() {
   useEffect(() => { if (tela === 'aovivo') setAvisoTreino(false) }, [tela])
   // Com as lives desligadas, o "Ao vivo" é só a sala de treino: aparece para admin e GF Member
   const [membroTreino, setMembroTreino] = useState<boolean | null>(null)
+  // O plano da ficha: o GF Member ('treino') vê as aulas com o aviso de liberação até a live (28/10/2026)
+  const [plano, setPlano] = useState<string | null>(null)
+  useEffect(() => {
+    if (!teeds.sessao) { setPlano(null); return }
+    let vivo = true
+    void meuPlano(teeds.sessao).then((p) => { if (vivo) setPlano(p) })
+    return () => { vivo = false }
+  }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // "Meu perfil" e tour guiado (GlobalFly, 20/10/2026): a foto vai para o menu
   // do usuário, e quem nunca fez o tour faz agora (obrigatório na 1ª vez).
@@ -1276,7 +1285,8 @@ export default function App() {
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo as notícias…</div></div>}><MercadoPanel /></Suspense>
       ) : tela === 'aulas' ? (
         <Suspense fallback={telaAbrindo('Abrindo as aulas…')}><AulasPanel nome={teeds.usuario?.nome} sessao={teeds.sessao} aoReverTour={MARCA.inicio ? () => setTour('rever') : undefined}
-          aoIr={(t) => setTela(t as WorkspacePage)} treino={MARCA.aoVivo && (membroTreino === true || admin === true) ? { noAr: !!treinoAgora } : null} /></Suspense>
+          aoIr={(t) => setTela(t as WorkspacePage)} treino={MARCA.aoVivo && (membroTreino === true || admin === true) ? { noAr: !!treinoAgora } : null}
+          travadas={aulasTravadasParaGfMember(plano, admin)} /></Suspense>
       ) : tela === 'marketplace' ? (
         <Suspense fallback={telaAbrindo('Abrindo o marketplace…')}><MarketplacePanel sessao={teeds.sessao} /></Suspense>
       ) : tela === 'gerenciamento' ? (

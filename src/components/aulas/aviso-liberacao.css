@@ -1,0 +1,23 @@
+/* Aulas do GF Member antes da live de lançamento (28/10/2026): o aviso no topo da sala. */
+.aulas-liberacao {
+  display: flex; align-items: center; gap: 16px;
+  margin: 0 0 18px; padding: 18px 22px;
+  border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border));
+  border-radius: 16px;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--primary) 16%, var(--surface)) 0%, var(--surface) 70%);
+}
+.aulas-liberacao-icone {
+  width: 46px; height: 46px; flex: 0 0 auto; display: grid; place-items: center;
+  border-radius: 12px; color: var(--primary); background: color-mix(in srgb, var(--primary) 16%, transparent);
+}
+.aulas-liberacao-icone svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.aulas-liberacao-texto { display: grid; gap: 4px; min-width: 0; }
+.aulas-liberacao-texto b { color: var(--text); font-size: 17px; font-weight: 700; line-height: 1.3; text-wrap: balance; }
+.aulas-liberacao-texto small { color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+@media (max-width: 600px) {
+  .aulas-liberacao { align-items: flex-start; gap: 12px; margin-bottom: 14px; padding: 14px 16px; border-radius: 14px; }
+  .aulas-liberacao-icone { width: 40px; height: 40px; border-radius: 11px; }
+  .aulas-liberacao-texto b { font-size: 15.5px; }
+  .aulas-liberacao-texto small { font-size: 13px; }
+}
+.aulas-travadas .aula-cartao-capa > em { white-space: nowrap; }

@@ -119,6 +119,15 @@ export async function minhaSituacao(sessao: SessaoTeeds): Promise<SituacaoDaFich
   } catch { return 'ativo' }
 }
 
+/** O plano da minha ficha nesta marca (ex.: 'treino', o GF Member); null se não der para ler. */
+export async function meuPlano(sessao: SessaoTeeds): Promise<string | null> {
+  if (!autenticacaoConfigurada()) return null
+  try {
+    const linhas = await rest<any[]>(`/clientes?select=plano_id&marca=eq.${MARCA.id}&user_id=eq.${sessao.usuario.id}&limit=1`, sessao.token, { signal: comPrazo(10_000) })
+    return linhas?.[0]?.plano_id ?? null
+  } catch { return null }
+}
+
 export async function registrarPresenca(sessao: SessaoTeeds, segundos = 0): Promise<void> {
   if (!autenticacaoConfigurada()) return
   const u = sessao.usuario

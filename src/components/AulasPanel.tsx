@@ -2,7 +2,7 @@ import { afiliadoDaDeriv } from '../core/rotas'
 import { ResponsiveImage } from './ResponsiveImage'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  aulasVistas, ehVideoDeExemplo, marcarVista, MODULOS, playerDoVideo, SALA_EM_BREVE, todasAsAulas, VIDEO_DEMONSTRACAO,
+  AVISO_GF_MEMBER, AVISO_GF_MEMBER_CURTO, aulasVistas, ehVideoDeExemplo, marcarVista, MODULOS, playerDoVideo, SALA_EM_BREVE, todasAsAulas, VIDEO_DEMONSTRACAO,
   type AulaNumerada,
 } from '../core/teeds/aulas'
 import { listarVideosDasAulas, tamanhoLegivel, type VideoDaAula } from '../core/teeds/aulasVideos'
@@ -15,6 +15,7 @@ import { Icone } from './Icone'
 import { PlayerAula } from './PlayerAula'
 import { registrarAula } from '../core/teeds/insights'
 import { DERIV } from '../core/deriv/config'
+import './aulas/aviso-liberacao.css'
 
 const capa = capaDaAula
 
@@ -130,7 +131,7 @@ function SalaEmBreve({ aoReverTour }: { aoReverTour?: () => void }) {
 }
 
 /** A porta da sala: o recado enquanto não há vídeo, a vitrine quando houver. */
-export function AulasPanel(props: { nome?: string | null; sessao?: SessaoTeeds | null; aoReverTour?: () => void; aoIr?: (tela: string) => void; treino?: { noAr: boolean } | null }) {
+export function AulasPanel(props: { nome?: string | null; sessao?: SessaoTeeds | null; aoReverTour?: () => void; aoIr?: (tela: string) => void; treino?: { noAr: boolean } | null; travadas?: boolean }) {
   if (AULAS_EM_BREVE) return <SalaEmBreve aoReverTour={props.aoReverTour} />
   return <SalaDeAulas {...props} />
 }
@@ -140,7 +141,7 @@ export function AulasPanel(props: { nome?: string | null; sessao?: SessaoTeeds |
  * modulo, cartoes com capa e numero, player com a lista do modulo ao lado.
  * Aula sem video existe no catalogo mas se apresenta como "em breve".
  */
-function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: string | null; sessao?: SessaoTeeds | null; aoReverTour?: () => void; aoIr?: (tela: string) => void; treino?: { noAr: boolean } | null }) {
+function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false }: { nome?: string | null; sessao?: SessaoTeeds | null; aoReverTour?: () => void; aoIr?: (tela: string) => void; treino?: { noAr: boolean } | null; travadas?: boolean }) {
   // Os vídeos que o painel gravou no banco. Enquanto não chegam (ou se o
   // banco não responder), a sala abre com o catálogo do código.
   const [videos, setVideos] = useState<Record<string, VideoDaAula>>({})
@@ -149,7 +150,8 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: strin
     listarVideosDasAulas(sessao).then((v) => { if (vivo) setVideos(v) })
     return () => { vivo = false }
   }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
-  const aulas = useMemo(() => todasAsAulas(videos), [videos])
+  // GF Member antes da live de lançamento: o catálogo aparece, nenhum vídeo toca
+  const aulas = useMemo(() => { const l = todasAsAulas(videos); return travadas ? l.map((a) => ({ ...a, video: '' })) : l }, [videos, travadas])
   const [vistas, setVistas] = useState<Set<string>>(() => aulasVistas())
   const [abertaId, setAbertaId] = useState<string | null>(null)
   const [detalheId, setDetalheId] = useState<string | null>(null)
@@ -363,7 +365,18 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: strin
 
   /* ---------------------------------------------------------- vitrine */
   return (
-    <div className="ger aulas">
+    <div className={`ger aulas${travadas ? ' aulas-travadas' : ''}`}>
+      {travadas && (
+        <section className="aulas-liberacao" role="status">
+          <span className="aulas-liberacao-icone" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4M12 13.5v3l2 1.2" /></svg>
+          </span>
+          <span className="aulas-liberacao-texto">
+            <b>{AVISO_GF_MEMBER}</b>
+            <small>As aulas do GF Member são liberadas logo depois da live. Até lá, conheça os módulos e o que você vai aprender.</small>
+          </span>
+        </section>
+      )}
       <div className="aulas-capa" style={{
         ['--aulas-hero-mobile' as string]: `linear-gradient(90deg, rgba(5,6,8,.96), rgba(5,6,8,.65)), url(${import.meta.env.BASE_URL}${MARCA.heroAulas.celular})`,
         backgroundImage: `linear-gradient(90deg, rgba(5,6,8,.98) 0%, rgba(5,6,8,.86) 38%, rgba(5,6,8,.2) 72%, rgba(5,6,8,.55) 100%), image-set(url(${import.meta.env.BASE_URL}${MARCA.heroAulas.principal}) type("image/webp"), url(${import.meta.env.BASE_URL}${MARCA.heroAulas.reserva}) type("image/${MARCA.heroAulas.reserva.endsWith('.png') ? 'png' : 'jpeg'}"))`,
@@ -376,7 +389,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: strin
           <div className="aulas-meta">
             <b>{destaque ? `Aula ${destaque.numero} de ${aulas.length}` : `${aulas.length} aulas`}</b>
             <span>Iniciante</span>
-            <span>{destaque?.duracao || 'Em breve'}</span>
+            {!travadas && <span>{destaque?.duracao || 'Em breve'}</span>}
           </div>
           <div className="aulas-progresso">
             <div className="aulas-barra">
@@ -391,7 +404,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: strin
             </button>
           ) : (
             <button className="aulas-continuar indisponivel" onClick={() => destaque && setDetalheId(destaque.id)}>
-              <Icone nome="play" /> Ver apresentação
+              <Icone nome="play" /> {travadas ? AVISO_GF_MEMBER_CURTO : 'Ver apresentação'}
             </button>
           )}
           {destaque && (
@@ -440,15 +453,15 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: strin
                   <span className="aula-cartao-capa" data-num={String(a.numero).padStart(2, '0')}>
                     <ResponsiveImage src={capa(a.id)} alt={`Capa da aula ${a.titulo}`} loading="lazy" />
                     {vistas.has(a.id) && <i className="aula-vista">✓</i>}
-                    {!a.video && <em>Em breve</em>}
+                    {!a.video && <em>{travadas ? 'Em 09/11' : 'Em breve'}</em>}
                     {a.video && <span className="aula-play">▶</span>}
-                    {a.duracao && <span className="aula-dur">{a.duracao}</span>}
+                    {a.duracao && !travadas && <span className="aula-dur">{a.duracao}</span>}
                     <span className="aula-hover-info"><b>{a.titulo}</b><small>{a.descricao}</small></span>
                   </span>
                   <span className="aula-cartao-corpo">
                     <span className="aula-num">Aula {a.numero}</span>
                     <b>{a.titulo}</b>
-                    <span className="aula-card-meta"><i>{a.video ? 'Disponível' : 'Em breve'}</i><i>{a.duracao || 'Duração a definir'}</i></span>
+                    <span className="aula-card-meta"><i>{a.video ? 'Disponível' : travadas ? AVISO_GF_MEMBER_CURTO : 'Em breve'}</i>{!travadas && <i>{a.duracao || 'Duração a definir'}</i>}</span>
                   </span>
                 </button>
               ))}
@@ -467,10 +480,10 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino }: { nome?: strin
               <span className="aula-num">Aula {detalhe.numero} · {detalhe.modulo.titulo}</span>
               <h2>{detalhe.titulo}</h2>
               <p>{detalhe.descricao}</p>
-              <div className="aulas-meta"><b>Iniciante</b><span>{detalhe.duracao || 'Duração a definir'}</span></div>
+              <div className="aulas-meta"><b>Iniciante</b>{!travadas && <span>{detalhe.duracao || 'Duração a definir'}</span>}</div>
               {detalhe.video ? (
                 <button className="aulas-continuar" onClick={() => { setDetalheId(null); abrir(detalhe) }}><Icone nome="play" /> Assistir agora</button>
-              ) : <span className="aula-modal-breve">Esta aula será liberada em breve.</span>}
+              ) : <span className="aula-modal-breve">{travadas ? `${AVISO_GF_MEMBER}.` : 'Esta aula será liberada em breve.'}</span>}
             </div>
           </section>
         </div>

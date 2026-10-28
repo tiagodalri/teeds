@@ -90,7 +90,7 @@ function LabAulas() {
     <div className="app workspace-app">
       <WorkspaceNav page="aulas" admin={false} mostrarInicio onNavigate={() => undefined} />
       <header className="topbar"><div className="workspace-heading"><strong>Aulas</strong><span>Seu espaço de trabalho</span></div></header>
-      <AulasPanel nome="Tiago Dal Ri" sessao={null} aoReverTour={() => undefined} aoIr={() => undefined} treino={{ noAr: q.has('aovivo') }} />
+      <AulasPanel nome="Tiago Dal Ri" sessao={null} aoReverTour={() => undefined} aoIr={() => undefined} treino={{ noAr: q.has('aovivo') }} travadas={q.has('membro')} />
     </div>
   )
 }
