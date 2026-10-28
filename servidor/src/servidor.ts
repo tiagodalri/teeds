@@ -1,6 +1,6 @@
 import { mercado } from './mercado'
 import './ambiente'
-import { decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros, marcaAdministrada } from './aprovacao-leads'
+import { contaComSenhaPropria, decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros, marcaAdministrada } from './aprovacao-leads'
 import { trocarEmailDoCliente } from './trocar-email'
 import { abrirBilhete, registrarDescadastro, paginaDeSaida } from './descadastro'
 import { catalogo, alterarRobo } from './catalogo'
@@ -727,12 +727,17 @@ const servidor = createServer(async (req, res) => {
       const email = String(d.email ?? '').trim().toLowerCase().slice(0, 180)
       const telefone = String(d.telefone ?? '').trim().slice(0, 32)
       if (!marca || nome.length < 3 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || telefone.replace(/\D/g,'').length < 10 || typeof d.consentiu !== 'boolean') throw new Error('Revise nome, e-mail e celular.')
+      // Senha criada no cadastro (28/10/2026). Opcional: sem ela, vale o fluxo da senha provisória.
+      // Nunca vai para tabela nem para log; só para a Auth, e só se a conta ainda não existir.
+      const senha = typeof d.senha === 'string' ? d.senha : ''
+      if (senha && (senha.length < 8 || senha.length > 72 || !senha.trim())) { res.writeHead(400, headers); return res.end(JSON.stringify({ erro: 'A senha precisa ter de 8 a 72 caracteres.' })) }
       const tempo = Math.max(0, Math.min(86400, Number(d.tempo) || 0))
       const profundidade = Math.max(0, Math.min(100, Number(d.profundidade) || 0))
       const visitas = Math.max(1, Math.min(1000, Number(d.visitas) || 1))
       const pontuacao = Math.min(100, 45 + Math.min(20, Math.floor(tempo / 6)) + (profundidade >= 75 ? 20 : profundidade >= 40 ? 10 : 0) + Math.min(15, (visitas - 1) * 5))
       await salvarLeadCapturado({ marca, nome, email, telefone, consentiu: d.consentiu, tempo, profundidade, visitas, pontuacao, temperatura: pontuacao >= 75 ? 'quente' : pontuacao >= 55 ? 'morno' : 'frio', campanha: String(d.campanha ?? '').slice(0,100), origem: String(d.origem ?? '').slice(0,100), meio: String(d.meio ?? '').slice(0,100), conteudo: String(d.conteudo ?? '').slice(0,100), termo: String(d.termo ?? '').slice(0,100), pagina: String(d.pagina ?? '').slice(0,300) })
-      res.writeHead(201, headers); return res.end(JSON.stringify({ ok: true }))
+      const conta = senha ? await contaComSenhaPropria(marca, email, nome, telefone, senha) : 'provisoria'
+      res.writeHead(201, headers); return res.end(JSON.stringify({ ok: true, conta }))
     } catch (e) { console.error('[leads] cadastro recusado:', (e as Error).message); res.writeHead(400, headers); return res.end(JSON.stringify({ erro: 'Não foi possível enviar agora. Tente novamente em instantes.' })) }
   }
 

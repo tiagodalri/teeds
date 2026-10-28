@@ -63,6 +63,47 @@ export async function listarPendentes(marca: string, status: string, pagina: num
   const doEscopo = escopo === undefined ? '' : escopo === '' ? '&or=(parceiro.is.null,parceiro.eq.)' : `&parceiro=eq.${escopo}`
   return banco(`/rest/v1/clientes_pendentes?marca=eq.${marca}&status=eq.${status}${doEscopo}&select=id,nome,email,telefone,status,recadastro,ultima_inscricao_em,criado_em,decidido_em,email_enviado_em,parceiro&order=ultima_inscricao_em.desc,id.desc&limit=51&offset=${offset}`)
 }
+/**
+ * O cliente cria a própria senha no cadastro (28/10/2026, Tiago: "o cliente
+ * cria a própria senha no cadastro... não mexa em quem já tem cadastro").
+ *
+ * Só vale para quem NÃO tem conta nesta marca: a conta nasce aqui, com a
+ * senha que a pessoa digitou, marcada `senha_propria` (a aprovação e os
+ * e-mails nunca mandam nem regravam senha para ela). Quem já tem conta segue
+ * exatamente o fluxo antigo, e a senha digitada é descartada. A senha nunca
+ * é gravada em tabela nem em log: vai direto para a Auth.
+ *
+ *   'criada'     conta nova com a senha da pessoa
+ *   'existente'  já havia conta: nada mudou nela
+ *   'provisoria' não deu para criar agora: o carteiro cria com a provisória (fluxo antigo)
+ */
+export async function contaComSenhaPropria(marca: string, email: string, nome: string, telefone: string, senha: string): Promise<'criada' | 'existente' | 'provisoria'> {
+  const conta = emailDaConta(email, marca)
+  try {
+    const achados = await banco(`/auth/v1/admin/users?filter=${encodeURIComponent(conta)}`)
+    if ((achados?.users ?? []).some((u: any) => String(u.email).toLowerCase() === conta)) return 'existente'
+    const [pendente] = await banco(`/rest/v1/clientes_pendentes?marca=eq.${encodeURIComponent(marca)}&email=eq.${encodeURIComponent(email)}&status=eq.pendente&select=id,user_id&limit=1`) ?? []
+    if (!pendente?.id || pendente.user_id) return pendente?.user_id ? 'existente' : 'provisoria'
+    let usuario: any
+    try {
+      usuario = await banco('/auth/v1/admin/users', 'POST', {
+        email: conta, password: senha, email_confirm: true,
+        user_metadata: { nome, telefone, marca, trocar_senha: false },
+        app_metadata: { cadastro_lead: pendente.id, senha_propria: true },
+      })
+    } catch {
+      // Cadastro duplo no mesmo instante: a outra chamada criou a conta; esta não mexe nela.
+      return 'existente'
+    }
+    if (!usuario?.id) return 'provisoria'
+    await banco(`/rest/v1/clientes_pendentes?id=eq.${pendente.id}&user_id=is.null`, 'PATCH', { user_id: usuario.id })
+    return 'criada'
+  } catch (e) {
+    console.warn('[cadastro] conta com senha própria não criada agora; segue o fluxo da provisória:', (e as Error).message)
+    return 'provisoria'
+  }
+}
+
 export async function decidirLead(id: string, marca: string, admin: string, acao: string, plano='essencial') {
   // A marca do cadastro decide os planos (o GF Member só existe na GlobalFly);
   // até 20/10/2026 valia a marca padrão do servidor e o GF Member era recusado.
@@ -90,7 +131,15 @@ export async function decidirLead(id: string, marca: string, admin: string, acao
   // A consulta protegida retorna apenas o ID. Só a aprovação autenticada
   // renova uma senha existente; um formulário público jamais faz isso.
   const atual=await banco(`/auth/v1/admin/users/${encodeURIComponent(usuario.id)}`)
-  if (atual.app_metadata?.aprovacao_lead!==id || atual.app_metadata?.senha_aprovacao_versao!==VERSAO_SENHA) {
+  if (atual.app_metadata?.senha_propria===true) {
+    // Senha criada pela própria pessoa no cadastro (28/10/2026): só carimba a
+    // aprovação. Nada de senha provisória, nada de troca obrigatória.
+    if (atual.app_metadata?.aprovacao_lead!==id) {
+      await banco(`/auth/v1/admin/users/${encodeURIComponent(usuario.id)}`,'PUT',{
+        app_metadata:{...atual.app_metadata,aprovacao_lead:id},
+      })
+    }
+  } else if (atual.app_metadata?.aprovacao_lead!==id || atual.app_metadata?.senha_aprovacao_versao!==VERSAO_SENHA) {
     const admins=await banco(`/rest/v1/administradores?user_id=eq.${encodeURIComponent(usuario.id)}&select=user_id&limit=1`)
     if (!Array.isArray(admins) || admins.length) throw new Error('Contas administrativas não podem ter a senha renovada pelo cadastro público.')
     /*
@@ -162,8 +211,10 @@ async function despachar(
  * textos. Se o corpo do e-mail morasse dentro do carteiro, a prévia seria uma
  * segunda versão do texto — e uma versão que ninguém checa envelhece calada.
  */
-export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: string) {
-  const acesso=senhaProvisoria
+export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: string, senhaPropria = false) {
+  const acesso=senhaPropria
+    ? `Seus dados de entrada:\nE-mail: ${email}\nSenha: a que você criou no cadastro.\n\nVocê já pode entrar para acompanhar a análise. Se não lembrar a senha, toque em “Esqueci a senha” na tela de entrada e crie uma nova.`
+    : senhaProvisoria
     ? `Seus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${senhaProvisoria}\n\nVocê já pode entrar para acompanhar a tela de espera. Após a aprovação, será necessário criar a sua própria senha antes de usar a plataforma.`
     : `E-mail cadastrado: ${email}. Seu recadastro está em análise. Após a aprovação, você receberá a senha provisória e as instruções de acesso, sem precisar lembrar sua senha antiga. Seu histórico será preservado. Por enquanto, sua senha não foi alterada.`
   return montarEmail(marca,'confirmar',new URL('/',marca.redirectUri).href,{
@@ -176,8 +227,10 @@ export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: s
   })
 }
 
-export function emailDeAprovacao(marca: Marca, email: string, aindaProvisoria: boolean) {
-  const entrada=aindaProvisoria
+export function emailDeAprovacao(marca: Marca, email: string, aindaProvisoria: boolean, senhaPropria = false) {
+  const entrada=senhaPropria
+    ? `Seus dados de entrada:\nE-mail: ${email}\nSenha: a que você criou no cadastro.\n\nSe não lembrar a senha, toque em “Esqueci a senha” na tela de entrada e crie uma nova.`
+    : aindaProvisoria
     ? `Seus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${SENHA_PROVISORIA}\n\nNo primeiro acesso após a aprovação, você deverá criar sua própria senha antes de usar a plataforma. Se você já tinha conta, esta senha substitui a anterior. Seu histórico foi preservado.`
     : `Sua conta e seu histórico foram preservados. Entre com o e-mail ${email} e a sua senha atual. Se não lembrar, clique em “Esqueci a senha” na tela de acesso e você recebe um link para definir uma nova senha.`
   return montarEmail(marca,'convite',new URL('/',marca.redirectUri).href,{
@@ -207,7 +260,10 @@ export async function enviarCadastros() {
   if (cadastrando) return
   cadastrando=true
   try {
-    const lista=await banco('/rest/v1/clientes_pendentes?status=eq.pendente&email_cadastro_em=is.null&select=id,marca,email,nome,telefone,user_id&order=criado_em.asc&limit=20')
+    // 45 s de folga: o cadastro com senha própria cria a conta logo depois do
+    // pedido; o carteiro não pode chegar antes e criar a conta com a provisória.
+    const folga=new Date(Date.now()-45_000).toISOString()
+    const lista=await banco(`/rest/v1/clientes_pendentes?status=eq.pendente&email_cadastro_em=is.null&ultima_inscricao_em=lt.${encodeURIComponent(folga)}&select=id,marca,email,nome,telefone,user_id&order=criado_em.asc&limit=20`)
     for (const p of lista ?? []) {
       try {
         const marca=marcaPorId(p.marca)
@@ -229,8 +285,9 @@ export async function enviarCadastros() {
         if (!usuario?.id) throw new Error('Conta não criada')
         if (!p.user_id) await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}`,'PATCH',{user_id:usuario.id})
 
-        const senhaConhecida=criadaAgora || (usuario.app_metadata?.cadastro_lead===p.id && usuario.user_metadata?.trocar_senha===true)
-        const email=emailDeCadastro(marca,p.email,senhaConhecida?SENHA_PROVISORIA:undefined)
+        const senhaPropria=usuario.app_metadata?.senha_propria===true
+        const senhaConhecida=!senhaPropria && (criadaAgora || (usuario.app_metadata?.cadastro_lead===p.id && usuario.user_metadata?.trocar_senha===true))
+        const email=emailDeCadastro(marca,p.email,senhaConhecida?SENHA_PROVISORIA:undefined,senhaPropria)
         await despachar(marca,p.email,email,`cadastro-lead-${p.id}`)
         await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}&status=eq.pendente`,'PATCH',{email_cadastro_em:new Date().toISOString()})
       } catch { console.warn('[cadastro] E-mail de boas-vindas pendente; será tentado novamente.') }
@@ -255,7 +312,7 @@ export async function enviarAprovacoes() {
         const aindaProvisoria=u.user_metadata?.trocar_senha===true
           && u.app_metadata?.aprovacao_lead===p.id
           && u.app_metadata?.senha_aprovacao_versao===VERSAO_SENHA
-        const email=emailDeAprovacao(marca,p.email,aindaProvisoria)
+        const email=emailDeAprovacao(marca,p.email,aindaProvisoria,u.app_metadata?.senha_propria===true)
         await despachar(marca,p.email,email,`aprovacao-lead-${p.id}`)
         await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}&status=eq.aprovado`,'PATCH',{email_enviado_em:new Date().toISOString()})
       } catch { console.warn('[aprovação] E-mail pendente; será tentado novamente.') }

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros, senhaDoPendente, SENHA_PROVISORIA, marcaAdministrada } from './aprovacao-leads'
+import { contaComSenhaPropria, decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros, senhaDoPendente, SENHA_PROVISORIA, marcaAdministrada } from './aprovacao-leads'
 
 process.env.SUPABASE_URL='https://banco.invalid'
 process.env.SUPABASE_SECRET='somente-teste-sem-credencial-real'
@@ -224,6 +224,62 @@ await teste('marca desconhecida dá erro, não vira a padrão',()=>{
 await teste('a listagem filtra pela marca pedida',async()=>{
   passos=[{path:'clientes_pendentes?marca=eq.omni',data:[]}]
   await listarPendentes('omni','aprovado',0)
+})
+
+/* ---------------- senha criada no cadastro (28/10/2026) ---------------- */
+const SENHA_DA_PESSOA='minha-senha-123'
+const propria={id:uid,app_metadata:{cadastro_lead:id,senha_propria:true},user_metadata:{trocar_senha:false,nome:'Ana'}}
+await teste('cadastro novo cria a conta com a senha da pessoa, sem troca obrigatória',async()=>{
+  passos=[{path:'/auth/v1/admin/users?filter=',data:{users:[]}},
+    {path:'clientes_pendentes?marca=eq.globalfly',data:[{id,user_id:null}]},
+    {path:'/auth/v1/admin/users',body:b=>{assert.equal(b.password,SENHA_DA_PESSOA);assert.equal(b.user_metadata.trocar_senha,false);assert.equal(b.app_metadata.senha_propria,true);assert.equal(b.app_metadata.cadastro_lead,id);assert.equal(b.email,'ana+marca-globalfly@example.invalid')},data:{id:uid}},
+    {path:`clientes_pendentes?id=eq.${id}&user_id=is.null`,body:b=>assert.equal(b.user_id,uid)}]
+  assert.equal(await contaComSenhaPropria('globalfly','ana@example.invalid','Ana','11999999999',SENHA_DA_PESSOA),'criada')
+})
+await teste('quem já tem conta não é tocado: a senha digitada é descartada',async()=>{
+  passos=[{path:'/auth/v1/admin/users?filter=',data:{users:[{id:uid,email:'ana+marca-globalfly@example.invalid'}]}}]
+  assert.equal(await contaComSenhaPropria('globalfly','ana@example.invalid','Ana','1',SENHA_DA_PESSOA),'existente')
+})
+await teste('pedido que já tem conta ligada não ganha outra',async()=>{
+  passos=[{path:'/auth/v1/admin/users?filter=',data:{users:[]}},{path:'clientes_pendentes?marca=eq.globalfly',data:[{id,user_id:uid}]}]
+  assert.equal(await contaComSenhaPropria('globalfly','ana@example.invalid','Ana','1',SENHA_DA_PESSOA),'existente')
+})
+await teste('banco fora do ar: cai no fluxo da provisória sem criar nada',async()=>{
+  passos=[{path:'/auth/v1/admin/users?filter=',status:500}]
+  assert.equal(await contaComSenhaPropria('globalfly','ana@example.invalid','Ana','1',SENHA_DA_PESSOA),'provisoria')
+})
+await teste('aprovar conta de senha própria só carimba: nunca grava senha nem pede troca',async()=>{
+  passos=[{path:'teeds_decidir_lead',data:{...ficha,marca:'globalfly'}},{path:'teeds_auth_do_pendente',data:{id:uid}},
+    {path:`/auth/v1/admin/users/${uid}`,data:propria},
+    {path:`/auth/v1/admin/users/${uid}`,body:b=>{assert.equal(b.password,undefined);assert.equal(b.user_metadata,undefined);assert.equal(b.app_metadata.aprovacao_lead,id);assert.equal(b.app_metadata.senha_propria,true)}},
+    {path:'teeds_finalizar_lead'}]
+  await decidirLead(id,'globalfly',uid,'aprovar','treino')
+})
+await teste('recadastro de conta de senha própria também não regrava a senha',async()=>{
+  const outro='cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+  passos=[{path:'teeds_decidir_lead',data:{...ficha,id:outro,marca:'globalfly'}},{path:'teeds_auth_do_pendente',data:{id:uid}},
+    {path:`/auth/v1/admin/users/${uid}`,data:{...propria,app_metadata:{...propria.app_metadata,aprovacao_lead:id}}},
+    {path:`/auth/v1/admin/users/${uid}`,body:b=>{assert.equal(b.password,undefined);assert.equal(b.app_metadata.aprovacao_lead,outro)}},
+    {path:'teeds_finalizar_lead'}]
+  await decidirLead(outro,'globalfly',uid,'aprovar','treino')
+})
+await teste('e-mail do cadastro de senha própria não fala em senha provisória',async()=>{
+  passos=[{path:'status=eq.pendente&email_cadastro_em=is.null',data:[{id,marca:'globalfly',email:'ana@example.invalid',nome:'Ana',telefone:'1',user_id:uid}]},
+    {path:`/auth/v1/admin/users/${uid}`,data:propria},
+    {path:'api.resend.com/emails',body:b=>{assert.ok(!b.text.includes(SENHA_PROVISORIA));assert.ok(!/provis/i.test(b.text));assert.ok(b.text.includes('a que você criou no cadastro'));assert.ok(b.text.includes('Esqueci a senha'))}},
+    {path:'clientes_pendentes?id=',body:b=>assert.ok(b.email_cadastro_em)}]
+  await enviarCadastros()
+})
+await teste('e-mail de aprovação de senha própria manda entrar com a senha criada',async()=>{
+  passos=[{path:'status=eq.aprovado',data:[{id,marca:'globalfly',email:'ana@example.invalid',user_id:uid}]},
+    {path:`/auth/v1/admin/users/${uid}`,data:{...propria,app_metadata:{...propria.app_metadata,aprovacao_lead:id}}},
+    {path:'api.resend.com/emails',body:b=>{assert.ok(!b.text.includes(SENHA_PROVISORIA));assert.ok(!/provis/i.test(b.text));assert.ok(b.text.includes('a que você criou no cadastro'))}},
+    {path:'clientes_pendentes?id='}]
+  await enviarAprovacoes()
+})
+await teste('o carteiro dá 45 s para a conta de senha própria nascer antes de agir',async()=>{
+  passos=[{path:'ultima_inscricao_em=lt.',data:[]}]
+  await enviarCadastros()
 })
 
 console.log(`${total} testes de aprovação concluídos.`)

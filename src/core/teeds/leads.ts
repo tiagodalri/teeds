@@ -6,7 +6,9 @@ import { paginaComParceiro } from './parceiro'
 export interface LeadCapturado { pagina:string|null;id:string;nome:string;email:string;telefone:string;campanha:string|null;origem:string|null;meio:string|null;temperatura:'frio'|'morno'|'quente';pontuacao:number;tempo:number;profundidade:number;visitas:number;convertidoEm:string;exCliente:boolean|null;produtosAnteriores:string[] }
 export async function listarLeads(sessao:SessaoTeeds):Promise<LeadCapturado[]>{const h={apikey:SUPABASE.anonKey,Authorization:`Bearer ${sessao.token}`};const r=await fetch(`${SUPABASE.url}/rest/v1/leads_capturados?select=*&marca=eq.${MARCA.id}&order=convertido_em.desc&limit=2000`,{headers:h});if(r.ok)return(await r.json()).map((l:any)=>({pagina:l.pagina??null,id:l.id,nome:l.nome,email:l.email,telefone:l.telefone,campanha:l.campanha,origem:l.origem,meio:l.meio,temperatura:l.temperatura,pontuacao:l.pontuacao,tempo:l.tempo_na_pagina,profundidade:l.profundidade,visitas:l.visitas,convertidoEm:l.convertido_em,exCliente:l.ex_cliente??null,produtosAnteriores:l.produtos_anteriores??[]}));const a=await fetch(`${SUPABASE.url}/rest/v1/auditoria_admin?select=id,detalhes,criado_em&marca=eq.${MARCA.id}&acao=eq.lead_capturado&order=criado_em.desc&limit=2000`,{headers:h});if(!a.ok)throw new Error('Não foi possível carregar os interessados.');return(await a.json()).map((x:any)=>{const l=x.detalhes||{};return{pagina:l.pagina??null,id:String(x.id),nome:l.nome,email:l.email,telefone:l.telefone,campanha:l.campanha,origem:l.origem,meio:l.meio,temperatura:l.temperatura||'morno',pontuacao:l.pontuacao||50,tempo:l.tempo_na_pagina||0,profundidade:l.profundidade||0,visitas:l.visitas||1,convertidoEm:x.criado_em,exCliente:null,produtosAnteriores:[]}})}
 
-export interface DadosFilaEspera { nome: string; email: string; telefone: string; consentiu: boolean }
+export interface DadosFilaEspera { nome: string; email: string; telefone: string; consentiu: boolean; senha?: string }
+/** O que o servidor fez com a conta (28/10/2026): criada com a senha da pessoa, já existia, ou ficou para a provisória. */
+export type ContaDoCadastro = 'criada' | 'existente' | 'provisoria'
 /*
   DE ONDE O CADASTRO VEIO (corrigido em 07/10/2026).
 
@@ -20,7 +22,7 @@ export interface DadosFilaEspera { nome: string; email: string; telefone: string
   e o id anônimo do navegador vai junto na página gravada: com ele, cada
   cadastro se liga às visitas que vieram antes, mesmo de dias atrás.
 */
-export async function inscreverFilaEspera(dados: DadosFilaEspera): Promise<void> {
+export async function inscreverFilaEspera(dados: DadosFilaEspera): Promise<ContaDoCadastro> {
   const pagina = new URL(location.href)
   pagina.searchParams.set('origem_cadastro', 'login')
   const daBarra = new URLSearchParams(location.search)
@@ -41,12 +43,15 @@ export async function inscreverFilaEspera(dados: DadosFilaEspera): Promise<void>
     body: JSON.stringify({
       nome: dados.nome.trim(), email: dados.email.trim().toLowerCase(), telefone: dados.telefone,
       consentiu: dados.consentiu === true, marca: MARCA.id, pagina: paginaFinal.href,
+      ...(dados.senha ? { senha: dados.senha } : {}),
       origem: utm.get('utm_source'), campanha: utm.get('utm_campaign'), meio: utm.get('utm_medium'),
       conteudo: utm.get('utm_content'), termo: utm.get('utm_term'),
       tempo: 0, profundidade: 0, visitas: 1,
     }),
   })
-  if (!r.ok) throw new Error('Não foi possível enviar seu cadastro. Tente novamente em instantes.')
+  const corpo = await r.json().catch(() => ({})) as { erro?: string; conta?: ContaDoCadastro }
+  if (!r.ok) throw new Error(r.status === 400 && corpo.erro ? corpo.erro : 'Não foi possível enviar seu cadastro. Tente novamente em instantes.')
+  return corpo.conta === 'criada' || corpo.conta === 'existente' ? corpo.conta : 'provisoria'
 }
 export function origemCadastro(pagina: string | null): string {
   if (!pagina) return 'Não identificada'

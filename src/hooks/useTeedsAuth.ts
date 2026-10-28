@@ -139,11 +139,11 @@ export function useTeedsAuth() {
   const cadastrar = useCallback(async (dados: DadosFilaEspera) => {
     setOcupado(true); setErro(null)
     try {
-      await inscreverFilaEspera(dados)
-      return { ok: true }
+      const conta = await inscreverFilaEspera(dados)
+      return { ok: true, conta }
     } catch (e) {
       setErro((e as Error).message)
-      return { ok: false }
+      return { ok: false as const }
     } finally {
       setOcupado(false)
     }

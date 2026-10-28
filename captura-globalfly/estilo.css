@@ -64,6 +64,14 @@ h1 em { font-style: normal; color: var(--ouro-claro); }
 .campo input:focus { outline: none; border-color: var(--ouro); box-shadow: 0 0 0 3px rgba(183, 141, 57, .22); }
 .campo input[aria-invalid="true"] { border-color: var(--erro); }
 .campo small { color: var(--erro); font-weight: 400; font-size: 13px; min-height: 0; }
+/* senha do cadastro (28/10/2026): o olho dentro do campo */
+.com-olho { position: relative; display: block; }
+.com-olho input { width: 100%; padding-right: 48px; }
+.olho { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--aco); cursor: pointer; }
+.olho svg { width: 20px; height: 20px; }
+.olho[aria-pressed="true"] { color: var(--ouro-claro); }
+.olho:focus-visible { outline: 2px solid var(--ouro); outline-offset: 1px; }
+.dica-senha { margin: -6px 0 16px; color: var(--aco); font-size: 13px; }
 .armadilha { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 
 .botao {
@@ -130,6 +138,8 @@ h1 em { font-style: normal; color: var(--ouro-claro); }
 .acesso { display: grid; gap: 8px; margin-top: 14px; padding: 16px 18px; border: 1px solid var(--linha); border-radius: 12px; background: rgba(5, 21, 40, .5); text-align: left; }
 .acesso strong { font-size: 16px; }
 .acesso p { margin: 0; color: var(--aco); font-size: 14px; line-height: 1.55; }
+.acesso > div { display: grid; gap: 8px; }
+.acesso [hidden] { display: none; }
 .acesso p b { color: var(--marfim); font-weight: 700; }
 .acesso a { justify-self: start; color: var(--ouro-claro); font-size: 14px; font-weight: 700; text-decoration: none; }
 .acesso a:hover { text-decoration: underline; }

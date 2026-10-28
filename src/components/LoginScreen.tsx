@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import {
   formatarTelefone, telefoneValido,
 } from '../core/teeds/conta'
-import type { DadosFilaEspera } from '../core/teeds/leads'
+import type { ContaDoCadastro, DadosFilaEspera } from '../core/teeds/leads'
 import { Brand } from './Brand'
 import { DerivLogo, IconeSaida } from './DerivMarca'
 import { MARCA } from '../marca'
@@ -20,7 +20,7 @@ interface Props {
   erro?: string | null
   limparErro: () => void
   onEntrar: (email: string, senha: string) => Promise<boolean>
-  onCadastrar: (dados: DadosFilaEspera) => Promise<{ ok: boolean }>
+  onCadastrar: (dados: DadosFilaEspera) => Promise<{ ok: boolean; conta?: ContaDoCadastro }>
   onEsqueci: (email: string) => Promise<boolean>
   /** Face ID / digital (27/10/2026): aparece quando este aparelho já foi ligado no perfil. */
   onEntrarComBiometria?: () => Promise<boolean>
@@ -32,6 +32,7 @@ interface Props {
 const ICONES_DOS_CAMPOS: Record<string, string> = {
   email: 'M3.5 6.5h17v11h-17zM3.5 7l8.5 6 8.5-6',
   senha: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0v3M12 14.5v2.5',
+  repetir: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0v3M9.5 15.5l1.8 1.8 3.2-3.6',
   nome: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4.5 20a7.5 7.5 0 0115 0',
   telefone: 'M8 3h8v18H8zM11 18h2',
 }
@@ -46,7 +47,7 @@ const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
   },
   criar: {
     titulo: 'Cadastro Gratuito',
-    linha: 'Deixe seus dados. Você não cria senha agora: em instantes chega no seu e-mail a senha provisória para entrar (confira também o Spam).',
+    linha: 'Deixe seus dados e crie a sua senha. Depois, é só entrar com o e-mail e essa senha.',
     acao: 'Confirmar Cadastro',
   },
   esqueci: {
@@ -56,6 +57,7 @@ const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
   },
 }
 
+const ehSenha = (chave: string) => chave === 'senha' || chave === 'repetir'
 const nomeCompleto = (v: string) => v.trim().split(/\s+/).filter((p) => p.length >= 2).length >= 2
 
 export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, onEsqueci, onEntrarComBiometria, cena = MARCA.cenaLogin }: Props) {
@@ -72,6 +74,8 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
+  // cadastro (28/10/2026): a pessoa cria a senha e repete, para não errar a digitação
+  const [repetir, setRepetir] = useState('')
   // Termos de uso (27/10/2026): a cada login a pessoa marca que concorda; o aceite vai para o banco ao entrar
   const [concordo, setConcordo] = useState(false)
   const [maior, setMaior] = useState(false)
@@ -88,7 +92,10 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   const problemas: Record<string, string | null> = {
     nome: nome && !nomeCompleto(nome) ? 'Escreva o nome e o sobrenome.' : null,
     email: email && !email.includes('@') ? 'Esse e-mail não parece completo.' : null,
-    senha: senha && senha.length < 6 ? 'Pelo menos 6 caracteres.' : null,
+    senha: modo === 'criar'
+      ? (senha && (senha.length < 8 || !senha.trim()) ? 'Pelo menos 8 caracteres.' : null)
+      : (senha && senha.length < 6 ? 'Pelo menos 6 caracteres.' : null),
+    repetir: repetir && repetir !== senha ? 'As duas senhas não são iguais.' : null,
     telefone: telefone && !telefoneValido(telefone) ? 'DDD e número, 10 ou 11 dígitos.' : null,
   }
 
@@ -97,9 +104,10 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
     : modo === 'entrar'
       ? email.includes('@') && senha.length >= 6 && (!pedeTermos || (concordo && maior))
       : nomeCompleto(nome) && email.includes('@') && telefoneValido(telefone)
+        && senha.length >= 8 && senha.length <= 72 && !!senha.trim() && senha === repetir
 
   function trocarModo(m: Modo) {
-    setSenha('')
+    setSenha(''); setRepetir('')
     setModo(m); setRecado(null); setTocado({}); setMostrarSenha(false); setCapsLock(false); limparErro()
   }
 
@@ -115,9 +123,17 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
       return
     }
     if (modo === 'criar') {
-      const r = await onCadastrar({ nome, email, telefone, consentiu: false })
+      const r = await onCadastrar({ nome, email, telefone, consentiu: false, senha })
       if (r.ok) {
-        setSenha('')
+        setSenha(''); setRepetir('')
+        // a página de obrigado da GlobalFly diz como entrar conforme o que o servidor fez com a conta
+        if (MARCA.id === 'globalfly') {
+          try {
+            const guardado = JSON.parse(localStorage.getItem('gf-captacao') || '{}')
+            const dados = JSON.stringify({ ...guardado, nome: nome.trim().split(/\s+/)[0], conta: r.conta ?? 'provisoria', quando: Date.now() })
+            localStorage.setItem('gf-captacao', dados); sessionStorage.setItem('gf-captacao', dados)
+          } catch { /* sem armazenamento: a página mostra o texto geral */ }
+        }
         // Reuse the landing confirmation, on this brand's own domain.
         // Only navigate after the server confirms receipt; no personal data in the URL.
         const obrigado = new URL(`${import.meta.env.BASE_URL}cadastro/obrigado/`, location.origin)
@@ -138,22 +154,22 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   ) => (
     <label className={tocado[chave] && problemas[chave] ? 'ruim' : ''}>
       <span className="rot" id={`entrada-${chave}-rotulo`}>{rotulo}</span>
-      <span className={`entrada-campo ${chave === 'senha' ? 'entrada-senha' : ''}`}>
+      <span className={`entrada-campo ${ehSenha(chave) ? 'entrada-senha' : ''}`}>
       {ICONES_DOS_CAMPOS[chave] && <svg className="entrada-icone" viewBox="0 0 24 24" aria-hidden="true"><path d={ICONES_DOS_CAMPOS[chave]} /></svg>}
       <input
         id={`entrada-${chave}`}
         aria-labelledby={`entrada-${chave}-rotulo`}
-        type={chave === 'senha' && mostrarSenha ? 'text' : extra.tipo ?? 'text'} value={valor} autoComplete={extra.auto}
+        type={ehSenha(chave) && mostrarSenha ? 'text' : extra.tipo ?? 'text'} value={valor} autoComplete={extra.auto}
         inputMode={extra.modo as any} placeholder={extra.dica}
         aria-invalid={Boolean(tocado[chave] && problemas[chave])}
         aria-describedby={tocado[chave] && problemas[chave] ? `entrada-${chave}-erro` : undefined}
-        onKeyUp={chave === 'senha' ? e => setCapsLock(e.getModifierState('CapsLock')) : undefined}
-        onBlur={() => { marcar(chave)(); if (chave === 'senha') setCapsLock(false) }} onChange={(e) => aoMudar(e.target.value)} />
-      {chave === 'senha' && <button type="button" aria-controls="entrada-senha" aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={mostrarSenha} onClick={() => setMostrarSenha(v => !v)}>
+        onKeyUp={ehSenha(chave) ? e => setCapsLock(e.getModifierState('CapsLock')) : undefined}
+        onBlur={() => { marcar(chave)(); if (ehSenha(chave)) setCapsLock(false) }} onChange={(e) => aoMudar(e.target.value)} />
+      {ehSenha(chave) && <button type="button" aria-controls={`entrada-${chave}`} aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={mostrarSenha} onClick={() => setMostrarSenha(v => !v)}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d={mostrarSenha ? OLHO_FECHADO : OLHO} /></svg>
       </button>}
       </span>
-      {chave === 'senha' && capsLock && <span className="entrada-caps" role="status">Caps Lock ativado</span>}
+      {ehSenha(chave) && capsLock && <span className="entrada-caps" role="status">Caps Lock ativado</span>}
       {tocado[chave] && problemas[chave] && <em id={`entrada-${chave}-erro`}>{problemas[chave]}</em>}
     </label>
   )
@@ -188,6 +204,11 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
           {modo === 'criar' && campo('telefone', 'Telefone com DDD', telefone,
             (v) => setTelefone(formatarTelefone(v)),
             { auto: 'tel', tipo: 'tel', dica: '(11) 91234-5678' })}
+
+          {modo === 'criar' && campo('senha', 'Crie sua senha', senha, setSenha,
+            { tipo: 'password', auto: 'new-password', dica: 'Pelo menos 8 caracteres' })}
+          {modo === 'criar' && campo('repetir', 'Repita a senha', repetir, setRepetir,
+            { tipo: 'password', auto: 'new-password', dica: 'Digite a mesma senha' })}
 
           {modo === 'entrar' && campo('senha', 'Senha', senha, setSenha,
             { tipo: 'password', auto: 'current-password', dica: '••••••••' })}
