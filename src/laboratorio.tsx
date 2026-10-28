@@ -27,6 +27,7 @@ import { MARCA } from './marca'
 import { SeletorDePlataforma, opcoesDePlataforma } from './components/SeletorDePlataforma'
 import { ligarVocabularioIA } from './marca/vocabularioIA'
 import { LoginScreen } from './components/LoginScreen'
+import { ExcluirCadastro } from './components/ExcluirCadastro'
 import { RobotCartao } from './components/RobotResumo'
 import { IDENTIDADES } from './core/deriv/branding'
 import { parametrosPadrao } from './core/deriv/parametros'
@@ -333,6 +334,15 @@ function Laboratorio() {
   // ?tela=relatorios: a aba Relatórios com 30 dias de exemplo
   if (qual === 'relatorios') return <Suspense fallback={null}><LabRelatorios /></Suspense>
   if (qual === 'login') return <LabLogin />
+  // ?tela=excluir: o rodapé da ficha do cliente com "Excluir cadastro" e a confirmação aberta
+  if (qual === 'excluir') return (
+    <div style={{ minHeight: '100dvh', background: 'var(--bg)' }}>
+      <section className="adm-modal adm-modal-ficha" style={{ margin: '16px auto' }}>
+        <footer><div className="adm-ficha-perigo"><button className="adm-cancelar">Encerrar acesso</button><button className="adm-cancelar adm-excluir">Excluir cadastro</button></div><span>Cadastrado em 27/10/2026</span><button>Salvar alterações</button></footer>
+      </section>
+      <ExcluirCadastro sessao={{ token: 'lab' } as never} marca={MARCA.id} cliente={{ userId: '00000000-0000-0000-0000-000000000000', nome: 'Cadastro de teste', email: 'teste.exclusao@exemplo.com' }} fechar={nada} excluido={nada} />
+    </div>
+  )
   // ?tela=carregando: o carregando da marca (o mesmo quadro em que a decolagem pousa)
   if (qual === 'carregando') return <Carregando />
   if (qual === 'aulas') return <LabAulas />

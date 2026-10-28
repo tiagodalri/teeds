@@ -1,0 +1,28 @@
+/* Excluir cadastro (28/10/2026): botão na ficha do cliente e a confirmação. */
+.adm-ficha-perigo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-right:auto}
+.adm-ficha-perigo .adm-cancelar{margin-right:0!important}
+.adm-modal>footer .adm-ficha-perigo .adm-excluir{border-style:dashed!important;background:transparent!important}
+.adm-modal>footer .adm-ficha-perigo .adm-excluir:hover{background:var(--down-soft)!important}
+@media(max-width:600px){.adm-ficha-perigo{margin-right:0;flex-direction:column;align-items:stretch}}
+
+.ec-fundo{z-index:170}
+.ec-modal{width:min(480px,100%)}
+.ec-modal>header h3{margin:0;font-size:16px;color:var(--text)}
+.ec-corpo{display:grid;gap:16px;padding:20px 22px}
+.ec-pessoa{display:flex;align-items:center;gap:12px;min-width:0}
+.ec-pessoa>i{width:38px;height:38px;flex:0 0 auto;display:grid;place-items:center;border-radius:50%;color:var(--primary);background:var(--primary-soft);font-style:normal;font-weight:800}
+.ec-pessoa>span{display:grid;gap:2px;min-width:0}
+.ec-pessoa b{font-size:14px;color:var(--text)}
+.ec-pessoa small{color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.ec-aviso{display:flex;gap:10px;margin:0;padding:12px 14px;border:1px solid color-mix(in srgb,var(--down) 35%,var(--border));border-radius:12px;color:var(--text);background:var(--down-soft);font-size:12.5px;line-height:1.55}
+.ec-aviso svg{width:18px;height:18px;flex:0 0 auto;margin-top:1px;fill:none;stroke:var(--down);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ec-aviso b{color:var(--down)}
+.ec-campo{display:grid;gap:8px;color:var(--muted);font-size:12px}
+.ec-campo input{min-height:46px;padding:0 14px;border:1px solid var(--border);border-radius:11px;color:var(--text);background:var(--bg);font:inherit;font-size:15px}
+.ec-campo input:focus{outline:none;border-color:color-mix(in srgb,var(--down) 60%,var(--border));box-shadow:0 0 0 3px color-mix(in srgb,var(--down) 18%,transparent)}
+.ec-erro{margin:0;color:var(--down);font-size:12.5px}
+.adm-modal.ec-modal>footer{justify-content:flex-end;gap:10px}
+.adm-modal.ec-modal>footer button.ec-voltar{color:var(--text)!important;background:transparent!important;border:1px solid var(--border)!important}
+.adm-modal.ec-modal>footer button.ec-excluir{color:#fff!important;background:var(--down)!important;border:0!important}
+.adm-modal.ec-modal>footer button{font-size:13px}
+.adm-modal.ec-modal>footer button:disabled{opacity:.45;cursor:not-allowed}
