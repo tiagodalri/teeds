@@ -30,7 +30,7 @@ export interface DesenhoSalvo {
 
 /**
  * O Sinal GF (23/10/2026) vem ligado na GlobalFly para quem tem ele liberado
- * (por enquanto, só os três logins de accountAccess.ts): quem abre o gráfico
+ * (por enquanto, só os administradores; accountAccess.ts): quem abre o gráfico
  * já vê as setas. Os outros não veem nem o sinal nem a opção no menu.
  */
 const SINAL_GF: IndicadorSalvo = { id: 'GF_SINAL', params: [20, 1.8, 3] }

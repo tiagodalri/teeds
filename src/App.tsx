@@ -1021,6 +1021,8 @@ export default function App() {
   const derivPronta = conta.status === 'logado'
   // gráfico profissional: na GlobalFly, por enquanto só para administradores
   const usarGraficoPro = MARCA.graficoPro === 'todos' || (MARCA.graficoPro === 'admin' && admin === true)
+  // Sinal GF: só administradores; o gráfico remonta quando a conferência do banco volta
+  const sinalGF = sinalGFLiberado(admin, MARCA.id)
 
   function abrirAssistente() {
     if (assistenteLiberado) { setTela('assistente'); return }
@@ -1380,7 +1382,7 @@ export default function App() {
               <Suspense fallback={<div className="gp-carregando-pagina">Abrindo o gráfico…</div>}>
                 <GraficoPro candles={candles} mode={mode} pipSize={pipSize} symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''}
                   granularity={granularity} loading={loadingCandles} markers={marcadores} sessao={teeds.sessao} moeda={moeda}
-                  sinalLiberado={sinalGFLiberado(teeds.sessao?.usuario.email, MARCA.id)} />
+                  sinalLiberado={sinalGF} key={sinalGF ? 'com-sinal' : 'sem-sinal'} />
               </Suspense>
             </div>
           ) : (

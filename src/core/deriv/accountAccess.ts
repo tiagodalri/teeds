@@ -52,18 +52,12 @@ export const tipoNaTela = (tipo: TradingAccount['type'], trocados: boolean): Tra
   trocados ? (tipo === 'demo' ? 'real' : 'demo') : tipo
 
 /**
- * O Sinal GF (indicador do gráfico, 23/10/2026) fica liberado por enquanto só
- * para os mesmos três logins da GlobalFly: o Tiago e os dois Victor. Para
- * abrir para todo mundo, basta trocar `sinalGFLiberado` para devolver true.
+ * O Sinal GF (indicador do gráfico, 23/10/2026): por enquanto só os
+ * administradores da GlobalFly (28/10/2026, Tiago: "não deve estar disponível
+ * pra ninguém, somente para os administradores"). `admin` é a conferência do
+ * banco; enquanto ela não volta (null), fica fechado.
  */
-const PROVAM_O_SINAL: Readonly<Record<string, readonly string[]>> = {
-  globalfly: ['avila.victor560@gmail.com', 'victooripardo@gmail.com', 'tiagodalri1@live.com'],
-}
-export const sinalGFLiberado = (email?: string | null, marca?: string | null) => {
-  if (!email) return false
-  const daConta = (marca || marcaDaConta(email)).toLowerCase()
-  return PROVAM_O_SINAL[daConta]?.includes(emailReal(email).trim().toLowerCase()) ?? false
-}
+export const sinalGFLiberado = (admin: boolean | null, marca?: string | null) => marca === 'globalfly' && admin === true
 
 /**
  * `marca`: a marca da conta. Sem ela, vale a etiqueta do próprio e-mail
