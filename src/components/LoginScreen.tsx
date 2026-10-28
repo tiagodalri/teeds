@@ -46,7 +46,7 @@ const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
   },
   criar: {
     titulo: 'Cadastro Gratuito',
-    linha: 'Deixe seus dados. Após a aprovação, você receberá por e-mail sua senha provisória e as instruções de acesso.',
+    linha: 'Deixe seus dados. Você não cria senha agora: em instantes chega no seu e-mail a senha provisória para entrar (confira também o Spam).',
     acao: 'Confirmar Cadastro',
   },
   esqueci: {

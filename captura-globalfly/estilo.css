@@ -127,6 +127,12 @@ h1 em { font-style: normal; color: var(--ouro-claro); }
 .live span { color: var(--aco); font-size: 14px; }
 .live a { color: var(--ouro-claro); font-size: 14px; font-weight: 700; text-decoration: none; }
 .live a:hover { text-decoration: underline; }
+.acesso { display: grid; gap: 8px; margin-top: 14px; padding: 16px 18px; border: 1px solid var(--linha); border-radius: 12px; background: rgba(5, 21, 40, .5); text-align: left; }
+.acesso strong { font-size: 16px; }
+.acesso p { margin: 0; color: var(--aco); font-size: 14px; line-height: 1.55; }
+.acesso p b { color: var(--marfim); font-weight: 700; }
+.acesso a { justify-self: start; color: var(--ouro-claro); font-size: 14px; font-weight: 700; text-decoration: none; }
+.acesso a:hover { text-decoration: underline; }
 .etapas { display: flex; justify-content: center; gap: 8px; margin: 0 0 26px; padding: 0; list-style: none; flex-wrap: wrap; }
 .etapas li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 99px; background: rgba(156, 177, 199, .1); color: var(--aco); font-size: 13px; }
 .etapas li.feito { color: var(--marfim); }

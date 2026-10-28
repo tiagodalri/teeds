@@ -99,7 +99,10 @@ async function chamar(
 function traduzir(dados: any): string {
   const bruto: string = dados?.error_description || dados?.msg || dados?.message || dados?.error || ''
   const m = bruto.toLowerCase()
-  if (m.includes('invalid login credentials')) return 'E-mail ou senha não conferem.'
+  // 28/10/2026: clientes recém-cadastrados digitavam uma senha inventada (o cadastro não pede senha)
+  if (m.includes('invalid login credentials')) {
+    return 'E-mail ou senha não conferem. Acabou de se cadastrar? A senha provisória está no e-mail “Cadastro recebido” (confira também o Spam ou o Lixo eletrônico). Se preferir, toque em “Esqueci a senha” para criar uma nova.'
+  }
   if (m.includes('email not confirmed')) return 'Confirme o e-mail que enviamos antes de entrar.'
   if (m.includes('already registered') || m.includes('already been registered')) {
     return 'Já existe uma conta com este e-mail. Tente entrar.'
