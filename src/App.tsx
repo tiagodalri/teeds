@@ -66,7 +66,7 @@ import { BarraInferior } from './components/barra/BarraInferior'
 import { MiniCabine } from './components/minicabine/MiniCabine'
 import { pararNoServidor, type SessaoViva } from './core/teeds/servidorRobos'
 import { sinalGFLiberado, tipoNaTela } from './core/deriv/accountAccess'
-import { acompanharFimDasSessoes, contratoManual } from './core/som'
+import { acompanharFimDasSessoes, contratoManual, entradaManual } from './core/som'
 import { registrarOperacaoManual } from './core/teeds/clientes'
 import { caminhoDaTela, telaDoCaminho, telaDoNome } from './core/rotas'
 import { carregarRobosBloqueados } from './core/teeds/robosLiberados'
@@ -896,6 +896,7 @@ export default function App() {
         throw e
       })
       marcarManual(r.contractId)
+      entradaManual()
       if (p.appMarkup !== null) markupOficial.current.set(r.contractId, p.appMarkup)
       // a operação aparece no Monitoramento ao vivo desde a compra (e é atualizada quando fecha)
       if (teeds.sessao && conta.accountId) void registrarOperacaoManual(teeds.sessao, {

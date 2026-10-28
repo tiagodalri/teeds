@@ -7,9 +7,14 @@ import { MARCA } from '../marca'
  *  - play: quando o robô liga (um toque curto subindo, de "decolou");
  *  - ganho: quando a sessão do robô bate a meta (o "cha-ching");
  *  - perda: quando a sessão bate o stop (duas notas graves descendo).
- * As entradas que o robô faz no meio do caminho ficam em silêncio. A
- * operação manual continua com o som do resultado de cada entrada: ali cada
- * entrada é uma decisão da pessoa, não uma rajada do robô.
+ * As entradas que o robô faz no meio do caminho ficam em silêncio.
+ *
+ * Operação MANUAL (28/10/2026, Victor: "põe o barulhinho quando a pessoa entra
+ * na operação, quando ganha, quando perde"): três sons por operação, porque ali
+ * cada entrada é uma decisão da pessoa, não uma rajada do robô:
+ *  - entrada: o play, quando a compra é confirmada;
+ *  - positivo: o cha-ching, quando fecha ganhando (no vencimento ou no "Encerrar agora");
+ *  - negativo: o som de perda, quando fecha perdendo.
  *
  * Sem arquivo de áudio: o som é sintetizado na hora (Web Audio), então não
  * pesa nada e não depende de rede. O "cha" do ganho é o estalo da gaveta (um
@@ -208,24 +213,24 @@ export function contratoAberto(id: number | string): void { abertosVistos.add(id
 
 /**
  * Uma operação terminou: ganho toca o cha-ching, loss toca o som de perda,
- * empate fica em silêncio. `vistoAberto` diz se esta tela viu a operação
- * acontecer (para não tocar o passado ao abrir a plataforma).
+ * empate fica em silêncio. Só os contratos manuais comprados nesta tela tocam.
  */
 const manuais = new Set<number | string>()
 /** O contrato foi comprado na boleta desta tela: o fim dele toca (os do robô não). */
 export function contratoManual(id: number | string): void { manuais.add(id) }
+/** A compra manual foi confirmada pela corretora: o som da entrada. */
+export function entradaManual(): void { tocarSom('play') }
 
-export function operacaoTerminou(id: number | string, lucro: number, opcoes: { vistoAberto?: boolean; quando?: number } = {}): void {
+export function operacaoTerminou(id: number | string, lucro: number, opcoes: { quando?: number } = {}): void {
   if (tocados.has(id)) return
   // contrato do robô: cada micro-operação fica em silêncio (o som é o do fim da sessão)
   if (!manuais.has(id)) return
-  const viu = opcoes.vistoAberto ?? abertosVistos.has(id)
+  // comprado nesta tela nesta visita (a lista `manuais` some ao recarregar): sempre viu.
+  // Antes dependia de a atualização "aberto" chegar antes da final, e a operação curta
+  // ou o "Encerrar agora" terminavam em silêncio.
   const recente = opcoes.quando === undefined || opcoes.quando >= inicio - 2000
-  // quem não viu a operação aberta não decide por ninguém: o outro caminho (o
-  // histórico do robô, que viu) ainda pode tocar. Só fica marcada quando tocou
-  // ou quando é do passado.
+  // empate (lucro zero) e operação do passado ficam em silêncio
   if (!recente || !lucro) { tocados.add(id); return }
-  if (!viu) return
   tocados.add(id)
   abertosVistos.delete(id)
   if (tocados.size > 2000) tocados.clear()
