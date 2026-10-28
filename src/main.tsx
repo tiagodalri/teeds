@@ -120,7 +120,7 @@ if (abertura) {
  * no endereço — o que também força a rede a entregar a página nova. Uma vez
  * só por versão, para nunca virar um laço.
  */
-async function conferirVersao() {
+async function conferirVersao(soAvisar = false) {
   try {
     // no meio de um login (Deriv devolve `code`, Supabase devolve no #) não se mexe
     if (/[?&](code|access_token|confirmar)=/.test(location.search) || /(access_token|error)=/.test(location.hash)) return
@@ -133,6 +133,8 @@ async function conferirVersao() {
     if (!r.ok) return
     const atual = (await r.text()).match(/assets\/[a-z]+\.js\?v=([a-z0-9]+)/)?.[1]
     if (!atual || atual === propria) return
+    // com a tela à mostra e a pessoa trabalhando, não recarrega sozinho: avisa
+    if (soAvisar) { avisarVersaoNova(atual); return }
     const chave = 'app.recarregou-para'
     if (sessionStorage.getItem(chave) === atual) return
     sessionStorage.setItem(chave, atual)
@@ -161,6 +163,30 @@ document.addEventListener('visibilitychange', () => {
   void conferirVersao()
 })
 window.addEventListener('pageshow', (e) => { if (e.persisted) void conferirVersao() })
+
+/*
+ * Aba aberta o dia inteiro, sempre à mostra (28/10/2026: o computador do
+ * Victor seguia na versão da manhã às 14h37, sem a correção do resumo das
+ * sessões). A cada 10 minutos o app pergunta de novo; achando versão nova,
+ * mostra um aviso com "Atualizar" em vez de recarregar no meio do uso. As
+ * sessões rodam no servidor: atualizar a página não as interrompe.
+ */
+let avisadaPara = ''
+function avisarVersaoNova(versao: string) {
+  if (avisadaPara === versao || document.getElementById('aviso-versao')) return
+  avisadaPara = versao
+  const aviso = document.createElement('div')
+  aviso.id = 'aviso-versao'
+  aviso.setAttribute('role', 'status')
+  aviso.innerHTML = '<span><b>Versão nova da plataforma disponível.</b> As sessões em andamento continuam no servidor.</span>'
+    + '<button type="button" data-atualizar>Atualizar agora</button><button type="button" data-depois aria-label="Fechar o aviso">Depois</button>'
+  aviso.querySelector('[data-atualizar]')!.addEventListener('click', () => {
+    const u = new URL(location.href); u.searchParams.set('v', versao); location.replace(u.toString())
+  })
+  aviso.querySelector('[data-depois]')!.addEventListener('click', () => aviso.remove())
+  document.body.appendChild(aviso)
+}
+window.setInterval(() => { if (document.visibilityState === 'visible') void conferirVersao(true) }, 10 * 60_000)
 
 // O PWA usa a mesma aplicacao publicada. A troca do service worker acontece
 // em segundo plano e nunca recarrega uma operacao em andamento.

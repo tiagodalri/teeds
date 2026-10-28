@@ -60,20 +60,20 @@
           <input id="telefone" name="telefone" type="tel" inputmode="tel" autocomplete="tel-national" maxlength="16" placeholder="(11) 91234-5678" required />
           <small data-erro="telefone"></small>
         </label>
-        <label class="campo">Crie sua senha
+        <label class="campo" data-senha hidden>Crie sua senha
           <span class="com-olho">
             <input id="senha" name="senha" type="password" autocomplete="new-password" maxlength="72" placeholder="Pelo menos 8 caracteres" required />
             <button type="button" class="olho" data-olho aria-label="Mostrar senha" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </span>
           <small data-erro="senha"></small>
         </label>
-        <label class="campo">Repita a senha
+        <label class="campo" data-senha hidden>Repita a senha
           <span class="com-olho">
             <input id="repetir" name="repetir" type="password" autocomplete="new-password" maxlength="72" placeholder="Digite a mesma senha" required />
           </span>
           <small data-erro="repetir"></small>
         </label>
-        <p class="dica-senha">É com o e-mail e esta senha que você entra na plataforma.</p>
+        <p class="dica-senha" data-senha hidden>É com o e-mail e esta senha que você entra na plataforma.</p>
         <input class="armadilha" id="empresa" name="empresa" tabindex="-1" autocomplete="off" aria-hidden="true" />
         <button class="botao" type="submit">Continuar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         <p class="mensagem" role="status" aria-live="polite"></p>
@@ -109,10 +109,13 @@
         form.querySelector('[data-erro="' + campo + '"]').textContent = texto || ''
         return !texto
       }
-      ;['nome', 'email', 'telefone', 'senha', 'repetir'].forEach(function (c) { form.elements[c].addEventListener('input', function () { erro(c, '') }) })
+      // os campos de senha só aparecem com a chave ligada (ver captura.js)
+      if (GF.SENHA) Array.prototype.forEach.call(form.querySelectorAll('[data-senha]'), function (el) { el.hidden = false })
+      else Array.prototype.forEach.call(form.querySelectorAll('[data-senha]'), function (el) { el.remove() })
+      ;(GF.SENHA ? ['nome', 'email', 'telefone', 'senha', 'repetir'] : ['nome', 'email', 'telefone']).forEach(function (c) { form.elements[c].addEventListener('input', function () { erro(c, '') }) })
       // o olho mostra as duas senhas juntas, para conferir o que foi digitado
       var olho = form.querySelector('[data-olho]')
-      olho.addEventListener('click', function () {
+      if (olho) olho.addEventListener('click', function () {
         var ver = olho.getAttribute('aria-pressed') !== 'true'
         olho.setAttribute('aria-pressed', String(ver)); olho.setAttribute('aria-label', ver ? 'Ocultar senha' : 'Mostrar senha')
         form.elements.senha.type = ver ? 'text' : 'password'; form.elements.repetir.type = ver ? 'text' : 'password'
@@ -125,9 +128,11 @@
         var ok = erro('nome', nome.length < 3 ? 'Escreva seu nome.' : '')
         ok = erro('email', /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? '' : 'Confira o e-mail.') && ok
         ok = erro('telefone', digitos.length < 10 || digitos.length > 11 || /^0/.test(digitos) ? 'Coloque o DDD e o número.' : '') && ok
-        var senha = form.elements.senha.value, repetir = form.elements.repetir.value
-        ok = erro('senha', senha.length < 8 || !senha.trim() ? 'A senha precisa ter pelo menos 8 caracteres.' : '') && ok
-        ok = erro('repetir', !repetir ? 'Repita a senha.' : repetir !== senha ? 'As duas senhas não são iguais.' : '') && ok
+        var senha = GF.SENHA ? form.elements.senha.value : '', repetir = GF.SENHA ? form.elements.repetir.value : ''
+        if (GF.SENHA) {
+          ok = erro('senha', senha.length < 8 || !senha.trim() ? 'A senha precisa ter pelo menos 8 caracteres.' : '') && ok
+          ok = erro('repetir', !repetir ? 'Repita a senha.' : repetir !== senha ? 'As duas senhas não são iguais.' : '') && ok
+        }
         return ok ? { nome: nome, email: email, telefone: tel.value, senha: senha } : null
       }
 
@@ -140,7 +145,7 @@
         fetch(GF.MOTOR, {
           method: 'POST', headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
-            marca: 'globalfly', nome: dados.nome, email: dados.email, telefone: dados.telefone, consentiu: true, senha: dados.senha,
+            marca: 'globalfly', nome: dados.nome, email: dados.email, telefone: dados.telefone, consentiu: true, senha: GF.SENHA ? dados.senha : undefined,
             empresa: form.elements.empresa.value, tempo: Math.round((Date.now() - inicio) / 1000), profundidade: 100, visitas: visitas,
             pagina: GF.paginaComParceiro(), campanha: utm.get('utm_campaign'), origem: utm.get('utm_source'), meio: utm.get('utm_medium'),
             conteudo: utm.get('utm_content'), termo: utm.get('utm_term'),
@@ -150,7 +155,7 @@
         }).then(function (corpo) {
           // Só segue depois de o motor confirmar que o cadastro foi gravado.
           // A senha nunca é guardada no navegador; só o que o servidor fez com a conta.
-          form.elements.senha.value = ''; form.elements.repetir.value = ''
+          if (GF.SENHA) { form.elements.senha.value = ''; form.elements.repetir.value = '' }
           var conta = corpo.conta === 'criada' || corpo.conta === 'existente' ? corpo.conta : 'provisoria'
           GF.guardar({ nome: dados.nome.split(' ')[0], email: dados.email, conta: conta, quando: Date.now() })
           location.assign(GF.proxima('./questionario/'))

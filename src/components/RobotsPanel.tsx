@@ -349,7 +349,9 @@ export function RobotsPanel({
         </div>
       </div>
 
-      <RobotOverview sessoes={vivasNoServidor} rotulosTrocados={rotulosTrocados} paineis={[...estudo.values()]} moeda={moeda} demoDaTela={isDemo} />
+      {/* só os cartões à mostra (uma linha por sessão): bloco escondido não conta duas vezes */}
+      <RobotOverview sessoes={vivasNoServidor} rotulosTrocados={rotulosTrocados}
+        paineis={chaves.map((k) => estudo.get(k)).filter((d): d is DadosEstudo => !!d)} moeda={moeda} demoDaTela={isDemo} />
       <div className="rob-workspace-toolbar" hidden={!temAcompanhamento}>
         <div><b>Área de acompanhamento</b><span>{disposicao === 'lista' ? 'Clique numa linha para abrir a cabine dela. Os outros robôs seguem operando normalmente.' : 'Todos os robôs de uma vez. "Abrir na lista" mostra a cabine completa.'}</span></div>
         <div className="rob-toolbar-direita">

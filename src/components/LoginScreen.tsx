@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import {
   formatarTelefone, telefoneValido,
 } from '../core/teeds/conta'
-import type { ContaDoCadastro, DadosFilaEspera } from '../core/teeds/leads'
+import { SENHA_NO_CADASTRO, type ContaDoCadastro, type DadosFilaEspera } from '../core/teeds/leads'
 import { Brand } from './Brand'
 import { DerivLogo, IconeSaida } from './DerivMarca'
 import { MARCA } from '../marca'
@@ -47,7 +47,9 @@ const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
   },
   criar: {
     titulo: 'Cadastro Gratuito',
-    linha: 'Deixe seus dados e crie a sua senha. Depois, é só entrar com o e-mail e essa senha.',
+    linha: SENHA_NO_CADASTRO
+      ? 'Deixe seus dados e crie a sua senha. Depois, é só entrar com o e-mail e essa senha.'
+      : 'Deixe seus dados. Você não cria senha agora: em instantes chega no seu e-mail a senha provisória para entrar (confira também o Spam).',
     acao: 'Confirmar Cadastro',
   },
   esqueci: {
@@ -104,7 +106,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
     : modo === 'entrar'
       ? email.includes('@') && senha.length >= 6 && (!pedeTermos || (concordo && maior))
       : nomeCompleto(nome) && email.includes('@') && telefoneValido(telefone)
-        && senha.length >= 8 && senha.length <= 72 && !!senha.trim() && senha === repetir
+        && (!SENHA_NO_CADASTRO || (senha.length >= 8 && senha.length <= 72 && !!senha.trim() && senha === repetir))
 
   function trocarModo(m: Modo) {
     setSenha(''); setRepetir('')
@@ -123,7 +125,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
       return
     }
     if (modo === 'criar') {
-      const r = await onCadastrar({ nome, email, telefone, consentiu: false, senha })
+      const r = await onCadastrar({ nome, email, telefone, consentiu: false, ...(SENHA_NO_CADASTRO ? { senha } : {}) })
       if (r.ok) {
         setSenha(''); setRepetir('')
         // a página de obrigado da GlobalFly diz como entrar conforme o que o servidor fez com a conta
@@ -205,9 +207,9 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
             (v) => setTelefone(formatarTelefone(v)),
             { auto: 'tel', tipo: 'tel', dica: '(11) 91234-5678' })}
 
-          {modo === 'criar' && campo('senha', 'Crie sua senha', senha, setSenha,
+          {modo === 'criar' && SENHA_NO_CADASTRO && campo('senha', 'Crie sua senha', senha, setSenha,
             { tipo: 'password', auto: 'new-password', dica: 'Pelo menos 8 caracteres' })}
-          {modo === 'criar' && campo('repetir', 'Repita a senha', repetir, setRepetir,
+          {modo === 'criar' && SENHA_NO_CADASTRO && campo('repetir', 'Repita a senha', repetir, setRepetir,
             { tipo: 'password', auto: 'new-password', dica: 'Digite a mesma senha' })}
 
           {modo === 'entrar' && campo('senha', 'Senha', senha, setSenha,

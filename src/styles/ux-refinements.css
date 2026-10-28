@@ -684,3 +684,20 @@ button, input, select, textarea { font-family: inherit; }
 .fc-aceites .cab, .fc-aceites .linha { grid-template-columns: minmax(130px, 1.1fr) minmax(90px, .8fr) minmax(80px, .7fr) minmax(0, 2fr); }
 .fc-link { margin-left: 8px; padding: 0; border: 0; background: none; color: var(--gf-ouro, var(--primary)); font: inherit; font-size: 12.5px; text-decoration: underline; cursor: pointer; }
 @media (max-width: 700px) { .fc-aceites .cab { display: none; } .fc-aceites .linha { grid-template-columns: 1fr 1fr; } }
+
+/* Aviso de versão nova (28/10/2026, main.tsx): discreto, embaixo, acima de tudo. */
+#aviso-versao {
+  position: fixed; z-index: 9000; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100vw - 24px);
+  padding: 12px 14px 12px 18px; border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border)); border-radius: 14px;
+  color: var(--text); background: var(--surface); box-shadow: 0 18px 50px #0007; font-size: 13.5px; line-height: 1.4;
+}
+#aviso-versao b { font-weight: 700; }
+#aviso-versao button { flex: 0 0 auto; min-height: 38px; padding: 0 14px; border-radius: 10px; font: inherit; font-weight: 700; cursor: pointer; }
+#aviso-versao [data-atualizar] { border: 0; color: var(--bg); background: var(--primary); }
+#aviso-versao [data-depois] { border: 1px solid var(--border); color: var(--muted); background: transparent; }
+@media (max-width: 600px) {
+  #aviso-versao { flex-wrap: wrap; width: calc(100vw - 24px); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  #aviso-versao span { flex: 1 1 100%; }
+  #aviso-versao button { flex: 1 1 0; }
+}

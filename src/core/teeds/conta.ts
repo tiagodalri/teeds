@@ -14,6 +14,7 @@ import { SERVIDOR, SUPABASE, autenticacaoConfigurada } from './config'
 import { MARCA } from '../../marca'
 import { emailDaConta, emailReal, marcaDaConta } from './emailDaConta'
 import { duranteTroca } from '../trocaEmAndamento'
+import { SENHA_NO_CADASTRO } from './leads'
 
 export interface Usuario {
   id: string
@@ -101,7 +102,9 @@ function traduzir(dados: any): string {
   const m = bruto.toLowerCase()
   // 28/10/2026: clientes recém-cadastrados digitavam uma senha inventada (o cadastro não pede senha)
   if (m.includes('invalid login credentials')) {
-    return 'E-mail ou senha não conferem. Use a senha que você criou no cadastro (cadastros antigos: a senha provisória do e-mail “Cadastro recebido”). Se não lembrar, toque em “Esqueci a senha” e crie uma nova.'
+    return SENHA_NO_CADASTRO
+      ? 'E-mail ou senha não conferem. Use a senha que você criou no cadastro (cadastros antigos: a senha provisória do e-mail “Cadastro recebido”). Se não lembrar, toque em “Esqueci a senha” e crie uma nova.'
+      : 'E-mail ou senha não conferem. Acabou de se cadastrar? A senha provisória está no e-mail “Cadastro recebido” (confira também o Spam ou o Lixo eletrônico). Se preferir, toque em “Esqueci a senha” para criar uma nova.'
   }
   if (m.includes('email not confirmed')) return 'Confirme o e-mail que enviamos antes de entrar.'
   if (m.includes('already registered') || m.includes('already been registered')) {

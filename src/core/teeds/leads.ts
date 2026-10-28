@@ -6,6 +6,14 @@ import { paginaComParceiro } from './parceiro'
 export interface LeadCapturado { pagina:string|null;id:string;nome:string;email:string;telefone:string;campanha:string|null;origem:string|null;meio:string|null;temperatura:'frio'|'morno'|'quente';pontuacao:number;tempo:number;profundidade:number;visitas:number;convertidoEm:string;exCliente:boolean|null;produtosAnteriores:string[] }
 export async function listarLeads(sessao:SessaoTeeds):Promise<LeadCapturado[]>{const h={apikey:SUPABASE.anonKey,Authorization:`Bearer ${sessao.token}`};const r=await fetch(`${SUPABASE.url}/rest/v1/leads_capturados?select=*&marca=eq.${MARCA.id}&order=convertido_em.desc&limit=2000`,{headers:h});if(r.ok)return(await r.json()).map((l:any)=>({pagina:l.pagina??null,id:l.id,nome:l.nome,email:l.email,telefone:l.telefone,campanha:l.campanha,origem:l.origem,meio:l.meio,temperatura:l.temperatura,pontuacao:l.pontuacao,tempo:l.tempo_na_pagina,profundidade:l.profundidade,visitas:l.visitas,convertidoEm:l.convertido_em,exCliente:l.ex_cliente??null,produtosAnteriores:l.produtos_anteriores??[]}));const a=await fetch(`${SUPABASE.url}/rest/v1/auditoria_admin?select=id,detalhes,criado_em&marca=eq.${MARCA.id}&acao=eq.lead_capturado&order=criado_em.desc&limit=2000`,{headers:h});if(!a.ok)throw new Error('Não foi possível carregar os interessados.');return(await a.json()).map((x:any)=>{const l=x.detalhes||{};return{pagina:l.pagina??null,id:String(x.id),nome:l.nome,email:l.email,telefone:l.telefone,campanha:l.campanha,origem:l.origem,meio:l.meio,temperatura:l.temperatura||'morno',pontuacao:l.pontuacao||50,tempo:l.tempo_na_pagina||0,profundidade:l.profundidade||0,visitas:l.visitas||1,convertidoEm:x.criado_em,exCliente:null,produtosAnteriores:[]}})}
 
+/**
+ * Senha criada no cadastro (28/10/2026). Fica DESLIGADA até o servidor rodar o código
+ * que aceita a senha (aprovacao-leads.ts, contaComSenhaPropria): sem ele, a senha
+ * digitada seria ignorada e a conta nasceria com a provisória. Ligar junto com a
+ * chave GF.SENHA de captura-globalfly/captura.js, e só depois de reiniciar o servidor.
+ */
+export const SENHA_NO_CADASTRO = false
+
 export interface DadosFilaEspera { nome: string; email: string; telefone: string; consentiu: boolean; senha?: string }
 /** O que o servidor fez com a conta (28/10/2026): criada com a senha da pessoa, já existia, ou ficou para a provisória. */
 export type ContaDoCadastro = 'criada' | 'existente' | 'provisoria'

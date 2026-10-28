@@ -9,6 +9,9 @@ var GF = (function () {
   // A comunidade oficial (src/marca/marcas.ts, `comunidade`)
   var COMUNIDADE = 'https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq'
   var CHAVE_LOCAL = 'gf-captacao'
+  // Senha criada no cadastro (28/10/2026): DESLIGADA até o servidor rodar o código que a aceita.
+  // Ligar junto com SENHA_NO_CADASTRO (src/core/teeds/leads.ts), só depois de reiniciar o servidor.
+  var SENHA = false
 
   // sessionStorage some quando o navegador do Instagram troca de aba: guarda nos dois
   function ler() {
@@ -87,5 +90,5 @@ var GF = (function () {
     return destino.toString()
   }
 
-  return { MOTOR: MOTOR, SUPABASE: SUPABASE, CHAVE: CHAVE, COMUNIDADE: COMUNIDADE, ler: ler, guardar: guardar, proxima: proxima, paginaComParceiro: paginaComParceiro }
+  return { SENHA: SENHA, MOTOR: MOTOR, SUPABASE: SUPABASE, CHAVE: CHAVE, COMUNIDADE: COMUNIDADE, ler: ler, guardar: guardar, proxima: proxima, paginaComParceiro: paginaComParceiro }
 })()
