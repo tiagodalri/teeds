@@ -18,6 +18,7 @@
  * feio de ler, mas é o que chega inteiro na caixa de entrada.
  */
 import type { Marca } from '../../src/marca/marcas'
+import { paraIA } from '../../src/marca/vocabularioIA'
 
 export type TipoDeEmail = 'confirmar' | 'magico' | 'senha' | 'convite' | 'trocar-email' | 'trocar-email-atual'
 
@@ -189,8 +190,24 @@ function emParagrafos(corpo: string): string {
     .join('')
 }
 
+/**
+ * GlobalFly: a palavra "robô" não aparece em e-mail nenhum (28/10/2026, Tiago:
+ * "troque por I.A. no e-mail também"). O mesmo tradutor da tela
+ * (src/marca/vocabularioIA.ts), com a concordância: "os robôs" vira "as I.A.".
+ */
+function comVocabularioDaMarca(marca: Marca, c: Conteudo): Conteudo {
+  if (!marca.vocabularioIA) return c
+  return {
+    ...c,
+    assunto: paraIA(c.assunto), titulo: paraIA(c.titulo), espia: paraIA(c.espia), corpo: paraIA(c.corpo),
+    ...(c.botao ? { botao: paraIA(c.botao) } : {}),
+    ...(c.aviso ? { aviso: paraIA(c.aviso) } : {}),
+    ...(c.telegram ? { telegram: { ...c.telegram, texto: paraIA(c.telegram.texto) } } : {}),
+  }
+}
+
 export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, personalizado?: Conteudo): EmailPronto {
-  const c = personalizado ?? conteudo(tipo, marca.prosa)
+  const c = comVocabularioDaMarca(marca, personalizado ?? conteudo(tipo, marca.prosa))
   const e = marca.email
   const endereco = seguro(url)
   /*

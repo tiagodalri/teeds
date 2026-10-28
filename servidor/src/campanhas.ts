@@ -42,15 +42,24 @@ import type { Marca } from '../../src/marca/marcas'
  * Tiago, comunicada e reafirmada.
  */
 export function emailDeVolta(marca: Marca, paraOEmail: string): EmailPronto {
+  // GlobalFly (28/10/2026): I.A. é feminina; o texto do Tiago com a concordância feita à mão
+  const ia = !!marca.vocabularioIA
   return montarEmail(marca, 'convite', new URL('/', marca.redirectUri).href, {
-    assunto: `${marca.prosa} - Os melhores robôs voltaram`,
+    assunto: ia ? `${marca.prosa} - As melhores I.A. voltaram` : `${marca.prosa} - Os melhores robôs voltaram`,
     titulo: `A ${marca.prosa} está de volta - Maior, melhor e mais forte.`,
-    espia: `Os robôs estão de volta, revisados e atualizados. E para quem já foi cliente da ${marca.prosa}, o acesso é gratuito.`,
+    espia: ia
+      ? `As I.A. estão de volta, revisadas e atualizadas. E para quem já foi cliente da ${marca.prosa}, o acesso é gratuito.`
+      : `Os robôs estão de volta, revisados e atualizados. E para quem já foi cliente da ${marca.prosa}, o acesso é gratuito.`,
     corpo:
-      `Estamos voltando para o mercado com novidades. Os mesmos robôs de ` +
-      `operação, que por muito tempo foram os mais lucrativos do mercado, agora ` +
-      `estão de volta. Todos atualizados, revisados, melhorados e ` +
-      `significativamente mais assertivos.\n\n` +
+      (ia
+        ? `Estamos voltando para o mercado com novidades. As mesmas I.A. de ` +
+          `operação, que por muito tempo foram as mais lucrativas do mercado, agora ` +
+          `estão de volta. Todas atualizadas, revisadas, melhoradas e ` +
+          `significativamente mais assertivas.\n\n`
+        : `Estamos voltando para o mercado com novidades. Os mesmos robôs de ` +
+          `operação, que por muito tempo foram os mais lucrativos do mercado, agora ` +
+          `estão de volta. Todos atualizados, revisados, melhorados e ` +
+          `significativamente mais assertivos.\n\n`) +
       `O que não muda é o que sempre foi seu: a conta na corretora. O dinheiro ` +
       `nunca passa por nós, nem por um segundo.\n\n` +
       `**E para quem já foi nosso cliente, o acesso é gratuito.** Sem prazo, sem ` +
@@ -101,13 +110,15 @@ export function emailDeRepescagem(marca: Marca, paraOEmail: string): EmailPronto
       // há botão "Cadastre-se" para procurar nessa tela.
       `1. Toque no botão abaixo. Ele abre direto a tela "Cadastro Gratuito".\n` +
       `2. Preencha o nome completo como está no documento, o e-mail que você abre todo dia e o telefone com DDD.\n` +
-      `3. Toque em "Confirmar Cadastro".\n\n` +
+      `3. Crie a sua senha e repita no campo de baixo, para conferir.\n` +
+      `4. Toque em "Confirmar Cadastro".\n\n` +
       `Pronto. O cadastro entra na fila de aprovação, que normalmente é rápida.\n\n` +
       `**O que chega por e-mail**\n\n` +
-      `Em menos de um minuto você recebe "Cadastro recebido", com o seu e-mail e ` +
-      `uma senha provisória. Com ela você já consegue entrar, e vai ver um aviso ` +
-      `de cadastro em análise. É normal, é só aguardar. Quando a equipe liberar, ` +
-      `chega "Cadastro aprovado", e no primeiro acesso você cria a sua própria senha.\n\n` +
+      // 28/10/2026: a senha é criada no próprio cadastro (não há mais senha provisória para conta nova)
+      `Em menos de um minuto você recebe "Cadastro recebido". Com o seu e-mail e a ` +
+      `senha que você criou, você já consegue entrar, e vai ver um aviso de ` +
+      `cadastro em análise. É normal, é só aguardar. Quando a equipe liberar, ` +
+      `chega "Cadastro aprovado" e a plataforma abre inteira.\n\n` +
       `Se não encontrar as mensagens, olhe o spam e o lixo eletrônico. Encontrou ` +
       `por lá, marque como "não é spam" para as próximas chegarem direto.`,
     botao: 'Fazer meu cadastro',
@@ -142,18 +153,21 @@ export function emailDeAcessoGratuito(marca: Marca, paraOEmail: string): EmailPr
       // Números de 03 a 09/10/2026, todas as sessões encerradas da Teeds
       // (demo e real): 103 sessões, 15.695 operações, 74,9% positivas; o
       // segundo mais usado teve 3.978. Conferir antes de reaproveitar.
-      `E você chega numa boa semana. O **Teeds Göreme** virou o grande destaque ` +
-      `da plataforma: foi o robô mais usado dos últimos 7 dias, com mais de 15 mil ` +
-      `operações, e 3 em cada 4 delas positivas.\n\n` +
+      // números da Teeds: só no e-mail da Teeds (nas outras marcas seria outra plataforma)
+      (marca.id === 'teeds'
+        ? `E você chega numa boa semana. O **Teeds Göreme** virou o grande destaque ` +
+          `da plataforma: foi o robô mais usado dos últimos 7 dias, com mais de 15 mil ` +
+          `operações, e 3 em cada 4 delas positivas.\n\n`
+        : '') +
       `Os robôs já estão operando para quem entrou. Para ativar o seu acesso, ` +
       `é só fazer o cadastro. Leva menos de um minuto:\n\n` +
       // Desde o /cadastre-se (09/10/2026) o botão abre DIRETO no formulário,
       // e o texto pode dizer isso sem rodeio: era onde as pessoas se perdiam.
       `1. Toque no botão abaixo. Ele já abre a página de cadastro.\n` +
       `2. Preencha seu nome completo, seu e-mail e seu telefone com DDD.\n` +
-      `3. Toque em "Confirmar Cadastro".\n\n` +
-      `Pronto. Em menos de um minuto chega no seu e-mail a sua senha provisória, ` +
-      `e você já consegue entrar na plataforma.`,
+      `3. Crie a sua senha e repita no campo de baixo.\n` +
+      `4. Toque em "Confirmar Cadastro".\n\n` +
+      `Pronto. Você já consegue entrar na plataforma com o seu e-mail e a senha que criou.`,
     botao: 'Fazer meu cadastro gratuito',
     descadastrar: linkDeDescadastro(marca.id, paraOEmail),
   })
@@ -176,27 +190,29 @@ export function emailDeAcessoGratuito(marca: Marca, paraOEmail: string): EmailPr
  * "7:30 da manhã", a pedido do Tiago, para o lote que sai neste dia.
  */
 export function emailDoDiaDoAg2(marca: Marca, paraOEmail: string): EmailPronto {
+  // o AG2 tem nome próprio em cada marca (GlobalFly: GF Phenom; OMNI: OMNI Under)
+  const ag2 = marca.nomesDosRobos?.ag2 ?? 'AG2'
   const destino = new URL('/cadastre-se', marca.redirectUri)
   destino.searchParams.set('utm_source', 'email')
   destino.searchParams.set('utm_campaign', 'ag2')
   return montarEmail(marca, 'convite', destino.href, {
-    assunto: `Hoje o dia foi do AG2`,
-    titulo: `Hoje o dia foi do AG2.`,
+    assunto: `Hoje o dia foi do ${ag2}`,
+    titulo: `Hoje o dia foi do ${ag2}.`,
     espia: `Sessões de 10 minutos, pausas de 30 e um dia muito bom para quem operou. Venha ver de perto.`,
     corpo:
-      `Desde as 7:30 da manhã, o **AG2** está entregando resultados incríveis para ` +
+      `Desde as 7:30 da manhã, o **${ag2}** está entregando resultados incríveis para ` +
       `quem está operando com ele na ${marca.prosa}.\n\n` +
       `O segredo de hoje está no ritmo: **sessões espaçadas, 10 minutos operando ` +
-      `e 30 minutos de pausa.** O robô entra, faz o trabalho dele, para, e volta ` +
+      `e 30 minutos de pausa.** O robô entra, faz o trabalho, para, e volta ` +
       `na próxima sessão. Disciplina do começo ao fim.\n\n` +
       `No nosso canal do Telegram a turma está mandando os resultados do dia. ` +
       `Entre para acompanhar de perto e ver como cada um está operando.\n\n` +
       `**Ainda não tem o seu acesso?** O cadastro é gratuito e leva menos de um minuto:\n\n` +
       `1. Toque em "Fazer meu cadastro". Ele abre direto a tela "Cadastro Gratuito".\n` +
       `2. Preencha seu nome completo, seu e-mail e seu telefone com DDD.\n` +
-      `3. Toque em "Confirmar Cadastro".\n\n` +
-      `Pronto. Em menos de um minuto chega no seu e-mail a sua senha provisória, ` +
-      `e você já consegue entrar na plataforma.`,
+      `3. Crie a sua senha e repita no campo de baixo.\n` +
+      `4. Toque em "Confirmar Cadastro".\n\n` +
+      `Pronto. Você já consegue entrar na plataforma com o seu e-mail e a senha que criou.`,
     telegram: { url: marca.telegram, texto: 'Entrar no canal do Telegram' },
     botao: 'Fazer meu cadastro',
     descadastrar: linkDeDescadastro(marca.id, paraOEmail),
