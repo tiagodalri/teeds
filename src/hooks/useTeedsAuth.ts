@@ -87,6 +87,8 @@ export function useTeedsAuth() {
         agendarRenovacao(s)
       } catch {
         if (!vivo) return
+        // renovar falhou (rede presa ou recusada): com o acesso ainda válido, entra com ele
+        if (guardada.expiraEm > Date.now() + 15_000) { setSessao(guardada); setStatus('logado'); agendarRenovacao(guardada); return }
         setSessao(null)
         setStatus('deslogado')
       }

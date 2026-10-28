@@ -73,7 +73,11 @@ async function chamar(
   if (!autenticacaoConfigurada()) {
     throw new Error(`O login da ${MARCA.prosa} ainda não foi configurado.`)
   }
+  // prazo (28/10/2026): uma conexão presa não pode segurar a abertura do app para sempre
+  const prazo = new AbortController()
+  const relogio = setTimeout(() => prazo.abort(), 20_000)
   const res = await fetch(url(caminho), {
+    signal: prazo.signal,
     method: opcoes.metodo ?? (opcoes.corpo ? 'POST' : 'GET'),
     headers: {
       apikey: SUPABASE.anonKey,
@@ -81,7 +85,9 @@ async function chamar(
       ...(opcoes.token ? { Authorization: `Bearer ${opcoes.token}` } : {}),
     },
     ...(opcoes.corpo ? { body: JSON.stringify(opcoes.corpo) } : {}),
-  })
+  }).catch((e) => {
+    throw new Error((e as Error)?.name === 'AbortError' ? 'A conexão demorou demais. Confira a internet e tente de novo.' : 'Sem conexão agora. Confira a internet e tente de novo.')
+  }).finally(() => clearTimeout(relogio))
 
   const texto = await res.text()
   const dados = texto ? JSON.parse(texto) : {}

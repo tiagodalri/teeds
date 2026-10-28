@@ -37,7 +37,9 @@ const chaveLocal = (userId: string) => `${MARCA.id}.termos.${VERSAO_TERMOS}.${us
 /** Já aceitou esta versão? Confere no banco; o aparelho só guarda um atalho para não piscar a tela. */
 export async function jaAceitou(sessao: SessaoTeeds): Promise<boolean> {
   const url = `${SUPABASE.url}/rest/v1/termos_aceites?select=versao&user_id=eq.${sessao.usuario.id}&marca=eq.${MARCA.id}&versao=eq.${encodeURIComponent(VERSAO_TERMOS)}&limit=1`
-  const res = await fetch(url, { headers: cabecalhos(sessao.token) })
+  const prazo = new AbortController()
+  const relogio = setTimeout(() => prazo.abort(), 10_000)
+  const res = await fetch(url, { headers: cabecalhos(sessao.token), signal: prazo.signal }).finally(() => clearTimeout(relogio))
   if (!res.ok) throw new Error('Não foi possível conferir o aceite dos termos.')
   const linhas = await res.json() as unknown[]
   const aceitou = linhas.length > 0

@@ -57,6 +57,13 @@
 .dg .monograma .monograma-escuro, .dg-tela .monograma .monograma-escuro { display: block !important; }
 .dg-monograma { margin-bottom: 4px; }
 .dg-legenda { color: var(--dg-aco); font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+/* o carregando que passou do tempo: a saída (28/10/2026) */
+.dg-demorou { display: grid; justify-items: center; gap: 14px; margin-top: 18px; max-width: 320px; text-align: center; animation: dg-surge .4s ease both; }
+.dg-demorou p { margin: 0; color: var(--dg-marfim); font-size: 14px; line-height: 1.5; }
+.dg-demorou > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.dg-demorou button { min-height: 44px; padding: 0 18px; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; }
+.dg-demorou .dg-demorou-tentar { border: 0; color: var(--dg-azul); background: var(--dg-ouro, #c9a24e); }
+.dg-demorou .dg-demorou-sair { border: 1px solid color-mix(in srgb, var(--dg-marfim) 30%, transparent); color: var(--dg-marfim); background: transparent; }
 
 /* a rota: o trilho apagado, o traço de ouro que o avião vai deixando, o avião cruzando */
 .dg-rota { position: relative; display: block; width: 148px; height: 14px; }

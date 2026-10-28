@@ -43,6 +43,9 @@ async function rest<T>(caminho: string, token: string, init: RequestInit = {}): 
   return (await res.json().catch(() => undefined)) as T
 }
 
+/** Sinal que cancela a leitura depois de `ms` (a abertura do app não espera uma conexão presa). */
+const comPrazo = (ms: number) => { const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal }
+
 /** Grava; se a linha ja existir, atualiza — o upsert do PostgREST. */
 const MESCLAR = { Prefer: 'resolution=merge-duplicates,return=minimal' }
 
@@ -109,6 +112,7 @@ export async function minhaSituacao(sessao: SessaoTeeds): Promise<SituacaoDaFich
     const linhas = await rest<any[]>(
       `/clientes?select=status_acesso&marca=eq.${MARCA.id}&user_id=eq.${sessao.usuario.id}&limit=1`,
       sessao.token,
+      { signal: comPrazo(10_000) },
     )
     const s = linhas?.[0]?.status_acesso
     return s === 'pendente' ? 'pendente' : (s ?? 'ativo')
