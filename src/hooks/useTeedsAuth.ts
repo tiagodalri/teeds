@@ -29,22 +29,86 @@ export function useTeedsAuth() {
   const [recado, setRecado] = useState<string | null>(null)
   const relogio = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  /*
+    Várias abas abertas (28/10/2026): a sessão fica no armazenamento do
+    navegador, e a Supabase troca a chave de renovação a cada uso. Quando uma
+    aba renova, a chave que a OUTRA aba guardou na memória deixa de valer: a
+    outra seguia com o acesso vencido, recebendo "não autorizado" em tudo
+    (centenas por hora nos registros) até alguém recarregar. Agora, antes de
+    renovar, a aba olha se outra já renovou e usa essa; se a renovação falhar,
+    olha de novo antes de desistir.
+  */
+  const daOutraAba = (atual: SessaoTeeds): SessaoTeeds | null => {
+    const g = sessaoGuardada()
+    return g && g.usuario.id === atual.usuario.id && g.refresh !== atual.refresh && g.expiraEm > Date.now() + 60_000 ? g : null
+  }
+  const sessaoAtual = useRef<SessaoTeeds | null>(null)
+
   /** Agenda a renovacao para um minuto antes do vencimento. */
   const agendarRenovacao = useCallback((s: SessaoTeeds) => {
     if (relogio.current) clearTimeout(relogio.current)
+    sessaoAtual.current = s
     const daqui = Math.max(30_000, s.expiraEm - Date.now() - 60_000)
-    relogio.current = setTimeout(async () => {
-      try {
-        const nova = await renovar(s.refresh)
-        setSessao(nova)
-        agendarRenovacao(nova)
-      } catch {
-        // refresh vencido: a pessoa entra de novo
-        setSessao(null)
-        setStatus('deslogado')
+    relogio.current = setTimeout(() => { void renovarAgora(s) }, daqui)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const renovando = useRef(false)
+  const renovarAgora = useCallback(async (s: SessaoTeeds) => {
+    const pronta = daOutraAba(s)
+    if (pronta) { setSessao(pronta); agendarRenovacao(pronta); return }
+    // uma renovação por vez nesta aba (o relógio e a conferência podem coincidir)
+    if (renovando.current) return
+    renovando.current = true
+    try {
+      const nova = await renovar(s.refresh)
+      setSessao(nova)
+      agendarRenovacao(nova)
+    } catch (e) {
+      // outra aba pode ter renovado no mesmo instante: usa a dela
+      const dela = daOutraAba(s)
+      if (dela) { setSessao(dela); agendarRenovacao(dela); return }
+      // sem internet (ou a conexão travou): tenta de novo em 30 s, sem tirar a pessoa da conta
+      if (/Sem conexão|demorou demais/.test((e as Error)?.message ?? '')) {
+        if (relogio.current) clearTimeout(relogio.current)
+        relogio.current = setTimeout(() => { void renovarAgora(s) }, 30_000)
+        return
       }
-    }, daqui)
-  }, [])
+      // refresh vencido: a pessoa entra de novo
+      setSessao(null)
+      setStatus('deslogado')
+    } finally {
+      renovando.current = false
+    }
+  }, [agendarRenovacao]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // a ref segue o estado: depois de sair (sessão nula) nada mais é renovado
+  useEffect(() => { sessaoAtual.current = sessao }, [sessao])
+
+  /*
+    Aba que volta para a frente (ou computador que acordou da hibernação): o
+    relógio da renovação pode ter atrasado. Se outra aba já renovou, usa a
+    dela; se o acesso venceu ou vence em menos de 2 min, renova agora.
+  */
+  useEffect(() => {
+    const conferir = () => {
+      const s = sessaoAtual.current
+      if (!s || document.visibilityState === 'hidden') return
+      const pronta = daOutraAba(s)
+      if (pronta) { setSessao(pronta); agendarRenovacao(pronta); return }
+      if (s.expiraEm - Date.now() < 120_000) void renovarAgora(s)
+    }
+    const aoMudarArmazenamento = (e: StorageEvent) => { if (e.key === null || e.key === `${MARCA.id}.conta`) conferir() }
+    document.addEventListener('visibilitychange', conferir)
+    window.addEventListener('focus', conferir)
+    window.addEventListener('storage', aoMudarArmazenamento)
+    const t = window.setInterval(conferir, 60_000)
+    return () => {
+      document.removeEventListener('visibilitychange', conferir)
+      window.removeEventListener('focus', conferir)
+      window.removeEventListener('storage', aoMudarArmazenamento)
+      window.clearInterval(t)
+    }
+  }, [agendarRenovacao, renovarAgora]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // sessao guardada — ou a que acabou de chegar pelo link do e-mail
   useEffect(() => {
