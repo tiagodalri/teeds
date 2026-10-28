@@ -4,7 +4,7 @@ import { ChaveModoCeo } from './ChaveModoCeo'
 import type { ReactNode } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import {
-  atualizarAcessoCliente, clientesPorId, criarAcessoCliente, definirProdutoCliente, listarClientesPagina, listarComissoes, listarContasDeriv, listarMetricasRobos,
+  atualizarAcessoCliente, clientesPorId, criarAcessoCliente, definirProdutoCliente, idsDoParceiro, listarClientesPagina, listarComissoes, listarContasDeriv, listarMetricasRobos,
   type OrdemClientes,
   listarPlanos, listarProdutos, listarProdutosClientes, salvarProduto,
   definirMarcaAdmin, ehMaster, marcaAdmin, REDE,
@@ -164,11 +164,18 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
   const [produtoForm, setProdutoForm] = useState<ProdutoRegistro | null>(null)
   const [salvando, setSalvando] = useState(false)
 
+  // Parceiro em foco (/n, /v, direto): as somas da conta (markup, operações, saldos) ficam só com
+  // os clientes do parceiro, como a contagem de clientes (28/10/2026, Tiago: "as infos não estão
+  // sendo atualizadas"). Sem isto, o markup do próprio admin aparecia em qualquer filtro.
+  const parceiroAtivo = parceirosDoFoco.length ? parceiroFoco : ''
+  const idsDoFoco = useRef<Set<string> | null>(null)
+  const soDoFoco = <T extends { userId: string }>(l: T[]) => idsDoFoco.current ? l.filter((x) => idsDoFoco.current!.has(x.userId)) : l
   const carregar = async () => {
     setCarregando(true); setErro(null)
     try {
-      const [p, pr, l, co, m, mr, rec] = await Promise.all([listarPlanos(sessao), listarProdutos(sessao), listarProdutosClientes(sessao), listarContasDeriv(sessao), listarComissoes(sessao, 90), listarMetricasRobos(sessao, 90), listarClientesPagina(sessao, { limite: 5 })])
-      setPlanos(p); setProdutos(pr); setLiberacoes(l); setContas(co); setMovimento(m); setMetricasRobos(mr); setRecentes(rec.pagina)
+      const [p, pr, l, co, m, mr, rec, ids] = await Promise.all([listarPlanos(sessao), listarProdutos(sessao), listarProdutosClientes(sessao), listarContasDeriv(sessao), listarComissoes(sessao, 90), listarMetricasRobos(sessao, 90), listarClientesPagina(sessao, { limite: 5, parceiro: parceiroAtivo }), parceiroAtivo ? idsDoParceiro(sessao, parceiroAtivo) : Promise.resolve(null)])
+      idsDoFoco.current = ids
+      setPlanos(p); setProdutos(pr); setLiberacoes(l); setContas(soDoFoco(co)); setMovimento(soDoFoco(m)); setMetricasRobos(mr); setRecentes(rec.pagina)
     } catch (e) { setErro((e as Error).message) } finally { setCarregando(false) }
   }
   /** Recarrega tudo, inclusive a página de clientes — depois de salvar algo. */
@@ -212,7 +219,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
   }, [movimento]) // eslint-disable-line react-hooks/exhaustive-deps
   // O servidor refresca o saldo das contas reais a cada poucos minutos; a tela acompanha sem precisar de F5.
   useEffect(() => {
-    const id = setInterval(() => { listarContasDeriv(sessao).then(setContas).catch(() => {}) }, 60_000)
+    const id = setInterval(() => { listarContasDeriv(sessao).then((c) => setContas(soDoFoco(c))).catch(() => {}) }, 60_000)
     return () => clearInterval(id)
   }, [sessao.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -576,6 +576,18 @@ export async function criarAcessoCliente(sessao: SessaoTeeds, dados: {
   return { userId, precisaConfirmar: !corpo?.session }
 }
 
+/**
+ * Os clientes de um parceiro pela CONTA (clientes.parceiro), como a contagem
+ * "Clientes cadastrados" (28/10/2026). As comissões e as contas Deriv são da
+ * conta inteira, não de uma vitrine: o filtro /n ou /v soma só os clientes
+ * do parceiro, e não um admin que testou a vitrine dele. 'direto' = sem parceiro.
+ */
+export async function idsDoParceiro(sessao: SessaoTeeds, parceiro: string): Promise<Set<string>> {
+  const filtro = parceiro === 'direto' ? 'or=(parceiro.is.null,parceiro.eq.)' : `parceiro=eq.${encodeURIComponent(parceiro)}`
+  const linhas = await rest<any[]>(`/clientes?select=user_id&${filtroMarca()}&${filtro}`, sessao.token)
+  return new Set((linhas ?? []).map((l) => String(l.user_id)))
+}
+
 export async function listarContasDeriv(sessao: SessaoTeeds): Promise<ContaDerivRegistro[]> {
   const linhas = await rest<any[]>(`/contas_deriv?select=*&${filtroMarca()}&order=vista_em.desc`, sessao.token)
   return (linhas ?? []).map((l) => ({
