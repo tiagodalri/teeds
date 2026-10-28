@@ -1,4 +1,5 @@
 import type { SessaoViva } from '../core/teeds/servidorRobos'
+import type { DadosEstudo } from '../core/teeds/estudoDoDono'
 
 export interface ResumoContaRobos {
   chave: string
@@ -47,22 +48,48 @@ export function resumirSessoes(sessoes: readonly SessaoViva[]): ResumoContaRobos
   return [...contas.values()]
 }
 
+/**
+ * O resumo a partir dos painéis da tela (28/10/2026, Tiago: o Gulf encerrou com
+ * +73,98 e o "Resultado das sessões" mostrava −5,97). O servidor só lista o que
+ * está rodando; os painéis encerrados continuam na área de acompanhamento até o
+ * X. O total soma exatamente os mesmos números que os cartões mostram,
+ * rodando ou encerrados. "Em execução" conta só os que estão rodando.
+ */
+export function resumirPaineis(paineis: readonly DadosEstudo[], moeda: string, demoDaTela: boolean): ResumoContaRobos[] {
+  const contas = new Map<string, ResumoContaRobos>()
+  for (const p of paineis) {
+    const demo = p.demo ?? demoDaTela
+    const chave = JSON.stringify(['painel', demo])
+    const conta = contas.get(chave) ?? { chave, contaId: '', demo, moeda, ativos: 0, resultado: 0, operacoes: 0 }
+    if (p.rodando) conta.ativos += 1
+    conta.resultado = conta.resultado !== null && Number.isFinite(p.resultado) ? conta.resultado + p.resultado : null
+    conta.operacoes = conta.operacoes !== null && Number.isInteger(p.operacoes) && p.operacoes >= 0 ? conta.operacoes + p.operacoes : null
+    contas.set(chave, conta)
+  }
+  return [...contas.values()]
+}
+
 const numero = (valor: number) => valor.toLocaleString('pt-BR', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 })
 
-export function RobotOverview({ sessoes, rotulosTrocados = false }: { sessoes: readonly SessaoViva[]; rotulosTrocados?: boolean }) {
-  const contas = resumirSessoes(sessoes)
+export function RobotOverview({ sessoes, rotulosTrocados = false, paineis, moeda = 'USD', demoDaTela = false }: {
+  sessoes: readonly SessaoViva[]; rotulosTrocados?: boolean
+  /** Os números de cada painel da área de acompanhamento (rodando ou encerrado). */
+  paineis?: readonly DadosEstudo[]; moeda?: string; demoDaTela?: boolean
+}) {
+  const contas = paineis && paineis.length ? resumirPaineis(paineis, moeda, demoDaTela) : resumirSessoes(sessoes)
+  const temEncerrada = !!paineis?.some((p) => !p.rodando)
 
   return (
     <section className="rob-overview" aria-label="Resumo dos robôs em execução">
       <header className="rob-overview-heading">
         <div>
           <span className="rob-overview-eyebrow">Visão geral</span>
-          <h3>Suas sessões em andamento</h3>
+          <h3>{temEncerrada ? 'Suas sessões na tela' : 'Suas sessões em andamento'}</h3>
         </div>
-        <p>Resumo periódico do servidor.</p>
+        <p>{temEncerrada ? 'Soma todas as sessões da área de acompanhamento, inclusive as encerradas.' : 'Resumo periódico do servidor.'}</p>
       </header>
 
       {contas.length === 0 ? (
