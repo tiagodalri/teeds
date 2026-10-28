@@ -428,7 +428,7 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
     if (!session || !accountId || !acesso.simulador) return
     const conta = accounts.find((a) => a.accountId === accountId)
     if (conta?.type !== 'demo') {
-      setAviso('Só a conta demo pode ser recarregada.')
+      setAviso('Só a conta virtual pode ser recarregada.')
       return
     }
     try {
@@ -437,7 +437,7 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
       // usamos o que a propria resposta devolveu
       setBalance((b) => (b ? { ...b, amount: novo } : { amount: novo, currency: conta.currency, loginId: accountId }))
       setAccounts((lista) => lista.map((a) => (a.accountId === accountId ? { ...a, balance: novo } : a)))
-      setAviso(`Saldo demo recarregado para ${conta.currency} ${novo.toFixed(2)}.`)
+      setAviso(`Saldo virtual recarregado: ${novo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${conta.currency}.`)
     } catch (e) {
       setAviso(`Não consegui recarregar: ${(e as Error).message}`)
     }
