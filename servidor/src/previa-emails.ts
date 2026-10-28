@@ -11,7 +11,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { MARCAS } from '../../src/marca/marcas'
 import { montarEmail, type TipoDeEmail } from './emails'
-import { emailDeCadastro, emailDeAprovacao } from './aprovacao-leads'
+import { emailDeCadastro, emailDeAprovacao, SENHA_PROVISORIA } from './aprovacao-leads'
 import { emailDeAcessoGratuito, emailDeRepescagem, emailDeVolta, emailDoDiaDoAg2 } from './campanhas'
 
 const TIPOS: TipoDeEmail[] = ['confirmar', 'magico', 'senha', 'convite', 'trocar-email', 'trocar-email-atual']
@@ -36,6 +36,11 @@ for (const marca of Object.values(MARCAS)) {
   */
   const exemplo = 'maria.souza@email.com'
   for (const [nome, pronto] of [
+    // 28/10/2026: cadastro novo, com a senha criada pela pessoa (o fluxo de agora)
+    ['cadastro-senha-criada', emailDeCadastro(marca, exemplo, undefined, true)],
+    ['aprovado-senha-criada', emailDeAprovacao(marca, exemplo, false, true)],
+    // fluxo antigo (fila de espera e quem não mandou senha)
+    ['cadastro-provisoria', emailDeCadastro(marca, exemplo, SENHA_PROVISORIA)],
     ['cadastro', emailDeCadastro(marca, exemplo)],
     ['aprovado', emailDeAprovacao(marca, exemplo, true)],
     ['aprovado-com-senha-propria', emailDeAprovacao(marca, exemplo, false)],
@@ -55,7 +60,10 @@ for (const marca of Object.values(MARCAS)) {
   mockup que não acompanha o código vira mentira. Agora sai daqui.
 */
 const FLUXO: Array<{ arquivo: string; nome: string; quando: string }> = [
-  { arquivo: 'cadastro', nome: '1 · Cadastro recebido', quando: 'Confirma a análise. Contas novas recebem a senha provisória para ver a tela de espera; contas existentes só têm a senha renovada na aprovação.' },
+  { arquivo: 'cadastro-senha-criada', nome: '1 · Cadastro recebido (senha criada no cadastro)', quando: 'O fluxo de agora (28/10/2026): a pessoa criou a senha no formulário e já pode entrar para acompanhar a análise.' },
+  { arquivo: 'aprovado-senha-criada', nome: '2 · Cadastro aprovado (senha criada no cadastro)', quando: 'Aprovação de quem criou a senha no cadastro: nenhuma senha vai no e-mail.' },
+  { arquivo: 'cadastro-provisoria', nome: 'Antigo · Cadastro recebido com senha provisória', quando: 'Só para quem se cadastra sem senha (fila de espera da Teeds/OMNI).' },
+  { arquivo: 'cadastro', nome: 'Antigo · Recadastro', quando: 'Confirma a análise. Contas novas recebem a senha provisória para ver a tela de espera; contas existentes só têm a senha renovada na aprovação.' },
   { arquivo: 'aprovado', nome: '2 · Cadastro aprovado', quando: 'Sai após a aprovação com a senha provisória e troca no primeiro acesso, inclusive no recadastro.' },
   { arquivo: 'aprovado-com-senha-propria', nome: '2b · Aprovado, senha já trocada', quando: 'A mesma aprovação, para quem já tinha conta e senha própria. Nenhuma senha é repetida.' },
   { arquivo: 'senha', nome: '3 · Redefinir a senha', quando: 'O link pedido pelo perfil, ou pelo “esqueci a senha”.' },
