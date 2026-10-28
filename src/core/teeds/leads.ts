@@ -12,7 +12,7 @@ export async function listarLeads(sessao:SessaoTeeds):Promise<LeadCapturado[]>{c
  * digitada seria ignorada e a conta nasceria com a provisória. Ligar junto com a
  * chave GF.SENHA de captura-globalfly/captura.js, e só depois de reiniciar o servidor.
  */
-export const SENHA_NO_CADASTRO = false
+export const SENHA_NO_CADASTRO = true
 
 export interface DadosFilaEspera { nome: string; email: string; telefone: string; consentiu: boolean; senha?: string }
 /** O que o servidor fez com a conta (28/10/2026): criada com a senha da pessoa, já existia, ou ficou para a provisória. */

@@ -11,7 +11,7 @@ var GF = (function () {
   var CHAVE_LOCAL = 'gf-captacao'
   // Senha criada no cadastro (28/10/2026): DESLIGADA até o servidor rodar o código que a aceita.
   // Ligar junto com SENHA_NO_CADASTRO (src/core/teeds/leads.ts), só depois de reiniciar o servidor.
-  var SENHA = false
+  var SENHA = true
 
   // sessionStorage some quando o navegador do Instagram troca de aba: guarda nos dois
   function ler() {
