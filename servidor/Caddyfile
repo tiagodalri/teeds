@@ -1,5 +1,11 @@
 # Fonte da verdade do proxy do motor Teeds.
 # Em producao, copie este arquivo para /etc/caddy/Caddyfile.
-motor.teedscompany.com, 198-211-96-238.nip.io {
+motor.teedscompany.com, motor.globalflytrade.com, 198-211-96-238.nip.io {
+  # Pagina "Conectar Deriv" do operador: fechada ao publico (reescrevia o .env).
+  # Para reconectar a conta do servidor: tunel SSH e abrir http://localhost:8080/
+  respond / 404
+  # Transmissao ao vivo (LiveKit): sinalizacao e API da sala.
+  @aovivo path /rtc /rtc/* /twirp/*
+  reverse_proxy @aovivo 127.0.0.1:7880
   reverse_proxy 127.0.0.1:8080
 }

@@ -245,6 +245,13 @@ const servidor = createServer(async (req, res) => {
 
   // ------------------------------------------------------------- a porta
   if (url.pathname === '/') {
+    // A conta Deriv do servidor só se troca de dentro da máquina (túnel SSH
+    // para localhost:8080). Pela internet, qualquer visitante conseguia
+    // concluir o login e trocar o .env do motor.
+    const daMaquina = /^(::1|127\.0\.0\.1|::ffff:127\.0\.0\.1)$/.test(req.socket.remoteAddress ?? '')
+    if (!daMaquina || req.headers['x-forwarded-for']) {
+      return responder(404, pagina('Não encontrado', `<h1>Não encontrado</h1>`, '#f87171'))
+    }
     limpar()
     const verifier = base64url(randomBytes(48))
     const challenge = base64url(createHash('sha256').update(verifier).digest())
@@ -331,7 +338,12 @@ const servidor = createServer(async (req, res) => {
         throw new Error(String(motivo))
       }
 
-      const linhas = [`DERIV_TOKEN=${dados.access_token}`]
+      // Troca só as linhas da Deriv: o mesmo .env guarda Supabase, Resend,
+      // Kiwify, Cakto e Anthropic, e reescrever o arquivo inteiro apagava tudo.
+      const anteriores = existsSync(DESTINO)
+        ? readFileSync(DESTINO, 'utf8').split('\n').filter((l) => l.trim() && !/^DERIV_(TOKEN|REFRESH|EXPIRA_EM)=/.test(l))
+        : []
+      const linhas = [...anteriores, `DERIV_TOKEN=${dados.access_token}`]
       if (dados.refresh_token) linhas.push(`DERIV_REFRESH=${dados.refresh_token}`)
       if (dados.expires_in) linhas.push(`DERIV_EXPIRA_EM=${Date.now() + Number(dados.expires_in) * 1000}`)
       writeFileSync(DESTINO, linhas.join('\n') + '\n')
@@ -1294,7 +1306,8 @@ if (supabaseConfigurado() && process.env.ESPELHO_DESLIGADO !== '1') {
   console.log('Espelho operacional: desligado')
 }
 
-servidor.listen(PORTA, () => {
+// Só a própria máquina: quem vem de fora passa pelo Caddy (HTTPS).
+servidor.listen(PORTA, '127.0.0.1', () => {
   const publico = RETORNO.replace(/\/callback$/, '')
   console.log(`\nServidor da Teeds no ar na porta ${PORTA}`)
   console.log(`Login:  ${publico}`)
