@@ -9,7 +9,7 @@ import { listarEmailsAdmin } from './admin-emails'
 import { receberEventoResend } from './eventos-resend'
 import { lugarDoEndereco } from './regiao'
 
-import { createServer } from 'node:http'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { createHash, randomBytes } from 'node:crypto'
 import { writeFileSync, chmodSync, existsSync, readFileSync } from 'node:fs'
 import { DERIV } from '../../src/core/deriv/config'
@@ -236,7 +236,25 @@ function permitirPedidoDeSenha(email: string, ip: string): boolean {
   return conta(`e:${email}`, 60e3, 1) && conta(`i:${ip}`, 10 * 60e3, 8)
 }
 
-const servidor = createServer(async (req, res) => {
+/*
+  Um pedido que dá errado não pode derrubar o motor (29/10/2026). Quando o
+  aparelho do cliente fecha a conexão no meio do envio, ler o corpo do pedido
+  lança "Error: aborted"; sem ninguém para pegar, o Node encerrava o processo
+  inteiro e todas as I.A.s ligadas de todos os clientes paravam ("o servidor
+  foi reiniciado"). Aconteceu 9 vezes no dia 29. Agora o erro fica neste pedido.
+*/
+const servidor = createServer((req, res) => {
+  atenderPedido(req, res).catch((erro) => {
+    const abortado = req.destroyed || (erro as { code?: string })?.code === 'ECONNRESET' || (erro as Error)?.message === 'aborted'
+    if (!abortado) console.error(`pedido ${req.method} ${(req.url ?? '').split('?')[0]} falhou:`, erro)
+    try {
+      if (!res.headersSent && !res.destroyed) { res.writeHead(500, { 'content-type': 'application/json' }); res.end('{"erro":"falha interna"}') }
+      else if (!res.writableEnded) res.end()
+    } catch { /* a conexão já se foi */ }
+  })
+})
+
+async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
   const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
   const responder = (status: number, html: string) => {
     res.writeHead(status, { 'content-type': 'text/html; charset=utf-8' })
@@ -1254,7 +1272,11 @@ const servidor = createServer(async (req, res) => {
   }
 
   responder(404, pagina('Nada aqui', '<h1>404</h1><p>Endereço desconhecido.</p><a class="botao" href="/">Ir para o login</a>'))
-})
+}
+
+// Rede de segurança: uma promessa esquecida em qualquer canto vira registro, não
+// queda do motor com as sessões de todos os clientes no ar.
+process.on('unhandledRejection', (erro) => { console.error('promessa sem tratamento (o motor segue):', erro) })
 
 // Sessao que ficou "rodando" depois de um reinicio e tela mentindo para o
 // cliente: o robo nao existe mais, mas a Teeds diz que sim.
