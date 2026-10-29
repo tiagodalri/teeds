@@ -269,5 +269,24 @@ export function acompanharFimDasSessoes(lista: ReadonlyArray<{ id: string; estad
 export function sessaoBateuLimite(id: string, tipo: 'meta' | 'stop'): void {
   if (sessoesTocadas.has(id)) return
   sessoesTocadas.add(id)
+  if (outraJanelaJaTocou(id)) return
   tocarSom(tipo === 'meta' ? 'ganho' : 'perda', true)
+}
+
+/**
+ * Janela solta (29/10/2026): a principal e a cabine solta acompanham a mesma
+ * sessão, e cada uma descobre o fim no seu tempo. A primeira que tocar marca a
+ * sessão no aparelho; a outra fica em silêncio. Marcas com mais de um dia saem.
+ */
+const CHAVE_SESSOES_TOCADAS = `${MARCA.id}.somDasSessoes`
+function outraJanelaJaTocou(id: string): boolean {
+  try {
+    const agora = Date.now()
+    const marcadas = JSON.parse(localStorage.getItem(CHAVE_SESSOES_TOCADAS) || '{}') as Record<string, number>
+    if (marcadas[id]) return true
+    for (const k of Object.keys(marcadas)) if (agora - marcadas[k] > 864e5) delete marcadas[k]
+    marcadas[id] = agora
+    localStorage.setItem(CHAVE_SESSOES_TOCADAS, JSON.stringify(marcadas))
+  } catch { /* sem armazenamento: toca nesta janela */ }
+  return false
 }

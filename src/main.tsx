@@ -18,6 +18,7 @@ import { haTrocaEmAndamento } from './core/trocaEmAndamento'
 import './core/appNativo'
 import { ligarEscala } from './core/escala'
 import { ligarVocabularioIA } from './marca/vocabularioIA'
+import { JANELA, ligarJanelaSolta } from './core/janelaSolta'
 
 /*
   Os arquivos publicados têm nome fixo. Se uma aba antiga abre uma tela
@@ -78,13 +79,18 @@ if (MARCA.parceiros?.length) {
   const href = manifesto?.getAttribute('href') ?? ''
   if (v && /manifest\.webmanifest/.test(href)) manifesto!.setAttribute('href', href.replace('manifest.webmanifest', `manifest-${v}.webmanifest`))
 }
-registrarVisita()
+// a janela solta (cabine ou manual fora da plataforma) não é uma visita nova
+if (JANELA) {
+  ligarJanelaSolta()
+  // o tema trocado na janela principal vale aqui na hora
+  window.addEventListener('storage', (e) => { if (e.key === `${MARCA.id}.tema`) aplicarTema(temaGuardado()) })
+} else registrarVisita()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
-    {RecursosDeApp && <Suspense fallback={null}><RecursosDeApp /></Suspense>}
-    {Decolagem && <Suspense fallback={null}><Decolagem /></Suspense>}
+    {RecursosDeApp && !JANELA && <Suspense fallback={null}><RecursosDeApp /></Suspense>}
+    {Decolagem && !JANELA && <Suspense fallback={null}><Decolagem /></Suspense>}
   </React.StrictMode>,
 )
 

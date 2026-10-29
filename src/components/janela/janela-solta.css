@@ -1,0 +1,48 @@
+/* Janela solta (janelaSolta.ts): o botão que solta e a casca da janela. */
+
+.js-botao-lugar { position: relative; display: inline-flex; flex-shrink: 0; }
+.js-botao {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 7px 13px;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text);
+  font: inherit; font-size: 12.5px; font-weight: 650; white-space: nowrap; cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, color .15s ease;
+}
+.js-botao svg { flex-shrink: 0; color: var(--primary); }
+.js-botao:hover { border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); box-shadow: 0 0 0 3px var(--primary-soft); }
+.js-botao:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.js-botao.aberta { color: var(--up); border-color: color-mix(in srgb, var(--up) 45%, var(--border)); }
+.js-ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--up); box-shadow: 0 0 0 3px color-mix(in srgb, var(--up) 22%, transparent); }
+.js-bloqueada {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; width: 290px; padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--down) 45%, var(--border)); border-radius: 10px;
+  background: var(--surface); color: var(--text); font-size: 12px; line-height: 1.45; font-weight: 500;
+  box-shadow: 0 14px 34px -18px rgba(0, 0, 0, .55); white-space: normal;
+}
+
+/* GlobalFly: o detalhe em ouro, como o resto dos controles da casa */
+:root[data-marca='globalfly'] .js-botao svg { color: var(--gf-ouro); }
+:root[data-marca='globalfly'] .js-botao:hover { border-color: color-mix(in srgb, var(--gf-ouro) 60%, var(--border)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gf-ouro) 22%, transparent); }
+:root[data-marca='globalfly'] .js-botao.aberta svg { color: inherit; }
+
+/* No cabeçalho do gráfico da manual: alinhado aos seletores de tempo e de tipo */
+.controls .js-botao { min-height: 30px; padding: 5px 11px; font-size: 12px; }
+
+/* ------------------------------------------------ a própria janela solta */
+/* sem o menu lateral: o painel ocupa a janela inteira */
+.janela-solta .workspace-app,
+.janela-solta .workspace-app:has(.workspace-sidebar.compact) { padding-left: 0; padding-bottom: 0; }
+.janela-solta .workspace-heading span.js-subtitulo { display: inline-flex; align-items: center; gap: 6px; }
+.js-voltar {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 7px 12px;
+  border: 1px solid var(--border); border-radius: 9px; background: transparent; color: var(--text);
+  font: inherit; font-size: 12.5px; font-weight: 650; white-space: nowrap; cursor: pointer;
+}
+.js-voltar:hover { border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); background: var(--surface); }
+.js-voltar:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.js-voltar svg { flex-shrink: 0; }
+:root[data-marca='globalfly'] .js-voltar:hover { border-color: color-mix(in srgb, var(--gf-ouro) 60%, var(--border)); }
+
+@media (prefers-reduced-motion: reduce) { .js-botao { transition: none; } }
+
+/* Na Central de I.A.s: a mesma altura do "+ Novo" ao lado */
+.rob-workspace-actions .js-botao { min-height: 42px; padding: 10px 16px; font-size: 13px; }

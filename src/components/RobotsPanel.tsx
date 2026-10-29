@@ -26,6 +26,7 @@ import { DigitosFlutuante } from './DigitosFlutuante'
 import { ATIVO_DOS_ROBOS, ehSintetico } from '../core/deriv/config'
 import './robot-workspace.css'
 import { NomeDoRobo } from './NomeDoRobo'
+import { BotaoJanelaSolta } from './janela/BotaoJanelaSolta'
 
 interface Props {
   socket: TeedsSocket | null
@@ -345,6 +346,8 @@ export function RobotsPanel({
           </p>
         </div>
         <div className="rob-workspace-actions">
+          {/* a cabine numa janela própria, que a pessoa arrasta para onde quiser (29/10/2026) */}
+          <BotaoJanelaSolta qual="cabine" />
           <button className="rob-new-button" onClick={abrirBloco} disabled={blocos.length >= MAX_BLOCOS && !temPreparoDisponivel}>+ Novo robô</button>
         </div>
       </div>

@@ -67,6 +67,8 @@ import { MiniCabine } from './components/minicabine/MiniCabine'
 import { pararNoServidor, type SessaoViva } from './core/teeds/servidorRobos'
 import { sinalGFLiberado, tipoNaTela } from './core/deriv/accountAccess'
 import { acompanharFimDasSessoes, contratoManual, entradaManual } from './core/som'
+import { JANELA, TELA_DA_JANELA, irNaPlataforma, useIrPelasJanelas, voltarAPlataforma } from './core/janelaSolta'
+import { BotaoJanelaSolta } from './components/janela/BotaoJanelaSolta'
 import { registrarOperacaoManual } from './core/teeds/clientes'
 import { caminhoDaTela, telaDoCaminho, telaDoNome } from './core/rotas'
 import { carregarRobosBloqueados } from './core/teeds/robosLiberados'
@@ -245,7 +247,9 @@ export default function App() {
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
   // GlobalFly abre na home (20/10/2026); as outras marcas, no terminal manual
   // F5 / app voltando do segundo plano: continua na tela em que a pessoa estava (só as telas de cliente)
-  const [tela, setTela] = useState<WorkspacePage>(() => {
+  const [tela, setTelaEscolhida] = useState<WorkspacePage>(() => {
+    // a janela solta mostra só o painel dela (janelaSolta.ts)
+    if (JANELA) return TELA_DA_JANELA[JANELA]
     const padrao: WorkspacePage = MARCA.inicio ? 'inicio' : 'operar'
     // o endereço manda (globalflytrade.com/ia abre a I.A.); sem endereço, a tela em que a pessoa estava
     const doEndereco = telaDoCaminho(location.pathname) ?? telaDoNome(new URLSearchParams(location.search).get('tela'))
@@ -253,6 +257,12 @@ export default function App() {
     const QUE_VOLTAM: WorkspacePage[] = ['inicio', 'operar', 'robos', 'aulas', 'gerenciamento', ...(MARCA.relatorios ? ['relatorios' as const] : []), 'marketplace', 'noticias', 'perfil', 'ajuda', ...(doEndereco ? ['aovivo', 'assistente', 'gestao', 'insights', 'monitoramento'] as WorkspacePage[] : [])]
     return antes && QUE_VOLTAM.includes(antes) && (antes !== 'inicio' || MARCA.inicio) && (antes !== 'noticias' || MARCA.noticias) && (antes !== 'aovivo' || MARCA.aoVivo) ? antes : padrao
   })
+  // Na janela solta a tela não muda: um link de outra tela abre na plataforma principal.
+  const setTela = useCallback((t: WorkspacePage) => {
+    if (JANELA) { if (t !== TELA_DA_JANELA[JANELA]) irNaPlataforma(t); return }
+    setTelaEscolhida(t)
+  }, [])
+  useIrPelasJanelas(setTela)
   const telaAgora = useRef(tela)
   telaAgora.current = tela
   const [pedirCodigoAssistente, setPedirCodigoAssistente] = useState(false)
@@ -1047,14 +1057,16 @@ export default function App() {
   }
 
   return (
-    <div className="app workspace-app">
-      <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} mostrarInicio={!!MARCA.inicio} mostrarDivulgacao={!!linksDeParceiro} onNavigate={next => {
+    <div className={`app workspace-app${JANELA ? ` em-janela-solta janela-${JANELA}` : ''}`}>
+      {!JANELA && <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} mostrarInicio={!!MARCA.inicio} mostrarDivulgacao={!!linksDeParceiro} onNavigate={next => {
         setVerPerfil(false)
         if (next === 'assistente') abrirAssistente()
         else setTela(next)
-      }} />
+      }} />}
       <header className="topbar">
-        <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'relatorios' ? 'O seu resultado, com os números da corretora' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'divulgacao' ? 'Seus links para divulgar a plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : 'Seu espaço de trabalho'}</span></div>
+        {JANELA ? (
+          <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span className="js-subtitulo">Janela solta · arraste para onde quiser</span></div>
+        ) : <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'relatorios' ? 'O seu resultado, com os números da corretora' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'divulgacao' ? 'Seus links para divulgar a plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : 'Seu espaço de trabalho'}</span></div>}
 
         <div className="topbar-right">
           <RelogioTopo />
@@ -1087,24 +1099,24 @@ export default function App() {
             />
           )}
 
-          {MARCA.aoVivo && liveAgora && !playerAoVivo && tela !== 'aovivo' && (
+          {MARCA.aoVivo && !JANELA && liveAgora && !playerAoVivo && tela !== 'aovivo' && (
             <button className="selo-tv" onClick={() => setTela('aovivo')} title={`Ao vivo agora: ${liveAgora.titulo}`}
               aria-label={`Transmissão ao vivo agora: ${liveAgora.titulo}. Assistir`}>
               <i aria-hidden="true" />Ao vivo
             </button>
           )}
-          {MARCA.aoVivo && !liveAgora && treinoAgora && !treinoAtivo && tela !== 'aovivo' && (
+          {MARCA.aoVivo && !JANELA && !liveAgora && treinoAgora && !treinoAtivo && tela !== 'aovivo' && (
             <button className="selo-tv" onClick={() => setTela('aovivo')} title="Sala de treino ao vivo agora"
               aria-label="Sala de treino ao vivo agora. Entrar na sala">
               <i aria-hidden="true" />Ao vivo
             </button>
           )}
 
-          <button className="tema-btn" onClick={alternarTema}
+          {!JANELA && <button className="tema-btn" onClick={alternarTema}
             title={tema === 'claro' ? 'Mudar para o modo escuro' : 'Mudar para o modo claro'}
             aria-label="alternar tema">
             {tema === 'claro' ? <IconeLua /> : <IconeSol />}
-          </button>
+          </button>}
 
           {/* Conectado, o que importa e a conexao da conta: e por ela que o
               saldo anda e os robos operam. */}
@@ -1122,22 +1134,32 @@ export default function App() {
             )
           })()}
 
-          {MARCA.seloCategoria && teeds.usuario && categoria && <SeloCategoria categoria={categoria} />}
+          {MARCA.seloCategoria && !JANELA && teeds.usuario && categoria && <SeloCategoria categoria={categoria} />}
 
-          {teeds.usuario && (
+          {JANELA && (
+            <button type="button" className="js-voltar" onClick={voltarAPlataforma}
+              title="Fecha esta janela e volta para a plataforma">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10 14L4 20M4 14v6h6" /><path d="M14 4h4a2 2 0 012 2v12a2 2 0 01-2 2h-4" />
+              </svg>
+              Voltar à plataforma
+            </button>
+          )}
+
+          {teeds.usuario && !JANELA && (
             <UserMenu usuario={teeds.usuario} onSair={sairDeTudo} foto={fotoPerfil} admin={admin === true}
               onPerfil={() => (MARCA.inicio ? setTela('perfil') : setVerPerfil(true))} />
           )}
         </div>
       </header>
 
-      {MARCA.inicio && teeds.sessao && tela !== 'robos' && (
+      {MARCA.inicio && !JANELA && teeds.sessao && tela !== 'robos' && (
         <MiniCabine sessoes={vivasRobos} sessao={teeds.sessao} demo={conta.status === 'logado' ? conta.isDemo : undefined} demoComoReal={conta.somenteDemo} rotulosTrocados={conta.rotulosTrocados} aoAbrirCabine={() => setTela('robos')}
           aoParar={async (id) => { if (teeds.sessao) await pararNoServidor(teeds.sessao, id) }} />
       )}
-      {MARCA.inicio && teeds.sessao && <BarraInferior tela={tela} aoVivoAgora={aoVivoAgora} irPara={(t) => { setVerPerfil(false); setTela(t) }} />}
+      {MARCA.inicio && !JANELA && teeds.sessao && <BarraInferior tela={tela} aoVivoAgora={aoVivoAgora} irPara={(t) => { setVerPerfil(false); setTela(t) }} />}
 
-      {MARCA.suporte && teeds.sessao && (
+      {MARCA.suporte && !JANELA && teeds.sessao && (
         <Suspense fallback={null}>
           {/* com os itens de admin ocultos, o botão do suporte é o do cliente (sem "Caixa de suporte" nem a fila) */}
           <SuporteWidget key={menuAdminOculto ? 'cliente' : 'equipe'} sessao={teeds.sessao} nome={teeds.usuario?.nome || ''} telaAtual={tela} admin={adminConfirmado && !menuAdminOculto}
@@ -1147,13 +1169,13 @@ export default function App() {
       )}
 
       {/* o olhinho dos itens de admin também tira o chat interno da equipe (Tiago, 27/10/2026) */}
-      {adminConfirmado && teeds.sessao && !menuAdminOculto && (
+      {adminConfirmado && !JANELA && teeds.sessao && !menuAdminOculto && (
         <Suspense fallback={null}>
           <ChatDaEquipe sessao={teeds.sessao} escondido={tela === 'aovivo'} />
         </Suspense>
       )}
 
-      {tour && teeds.sessao && (
+      {tour && !JANELA && teeds.sessao && (
         <TourGuiado passos={passosDoTour({ nome: teeds.usuario?.nome || '', treino: !!MARCA.aoVivo && (membroTreino === true || admin === true) })}
           obrigatorio={tour === 'obrigatorio'} telaAtual={tela} irPara={setTela}
           aoTerminar={(destino) => fimDoTour(destino)} aoFechar={() => (tour === 'obrigatorio' ? fimDoTour() : setTour(null))} />
@@ -1203,7 +1225,7 @@ export default function App() {
           de uma conversa e voltar nao pode apagar o que foi dito, e um robo
           ligado por aqui nao pode parar de ser acompanhado porque alguem foi
           olhar o grafico. */}
-      {teeds.sessao && assistenteLiberado && (
+      {teeds.sessao && assistenteLiberado && !JANELA && (
         <div className="tela-viva" hidden={tela !== 'assistente'}>
           <AssistentePanel
             sessao={teeds.sessao}
@@ -1216,7 +1238,8 @@ export default function App() {
         </div>
       )}
 
-      <div className="tela-viva" hidden={tela !== 'robos'}>
+      {/* a janela solta da manual não acompanha os robôs: quem acompanha é a principal ou a cabine solta */}
+      {JANELA !== 'manual' && <div className="tela-viva" hidden={tela !== 'robos'}>
         <CatalogoProvider sessao={teeds.sessao}>
         <RobotsPanel
           socket={conta.socket}
@@ -1237,8 +1260,8 @@ export default function App() {
           onSessoesVivas={setVivasRobos}
         />
         </CatalogoProvider>
-      </div>
-      {MARCA.aoVivo && avisoLive && !playerAoVivo && tela !== 'aovivo' && (
+      </div>}
+      {MARCA.aoVivo && !JANELA && avisoLive && !playerAoVivo && tela !== 'aovivo' && (
         <div className="aviso-tv" role="status">
           <span className="aviso-tv-selo"><i aria-hidden="true" />Ao vivo agora</span>
           <b>{avisoLive.titulo}</b>
@@ -1246,7 +1269,7 @@ export default function App() {
           <button className="aviso-tv-fechar" onClick={() => setAvisoLive(null)} aria-label="Fechar aviso"><IconeFechar /></button>
         </div>
       )}
-      {MARCA.aoVivo && treinoAgora && avisoTreino && !treinoAtivo && tela !== 'aovivo' && (
+      {MARCA.aoVivo && !JANELA && treinoAgora && avisoTreino && !treinoAtivo && tela !== 'aovivo' && (
         <div className="aviso-tv aviso-treino" role="status">
           <span className="aviso-tv-selo"><i aria-hidden="true" />Ao vivo</span>
           <button className="aviso-treino-texto" onClick={() => { setAvisoTreino(false); setTela('aovivo') }}>
@@ -1256,14 +1279,14 @@ export default function App() {
           <button className="aviso-tv-fechar" onClick={() => setAvisoTreino(false)} aria-label="Fechar aviso"><IconeFechar /></button>
         </div>
       )}
-      {MARCA.aoVivo && treinoAtivo && <Suspense fallback={null}><PlayerDoTreino naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
+      {MARCA.aoVivo && !JANELA && treinoAtivo && <Suspense fallback={null}><PlayerDoTreino naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
       {verCarteira && (
         <Suspense fallback={null}>
           {/* reconectar: a sessão aberta ignora a volta de um login novo, então desconecta e entra de novo (os robôs rodam no servidor e seguem) */}
           <CarteiraDeriv session={conta.session} contas={conta.accounts} fechar={() => setVerCarteira(false)} reconectar={() => { setVerCarteira(false); conta.logout(); conta.login() }} />
         </Suspense>
       )}
-      {MARCA.aoVivo && playerAoVivo && <Suspense fallback={null}><PlayerAoVivo naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
+      {MARCA.aoVivo && !JANELA && playerAoVivo && <Suspense fallback={null}><PlayerAoVivo naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
       {tela === 'robos' || tela === 'assistente' ? null : tela === 'inicio' && MARCA.inicio ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o início…</div></div>}>
           <InicioPagina sessao={teeds.sessao} nome={teeds.usuario?.nome || ''}
@@ -1368,6 +1391,8 @@ export default function App() {
                 <button className={mode === 'candles' ? 'on' : ''} onClick={() => setMode('candles')}>Velas</button>
                 <button className={mode === 'line' ? 'on' : ''} onClick={() => setMode('line')}>Linha</button>
               </div>
+              {/* a operação manual numa janela própria, que a pessoa arrasta para onde quiser (29/10/2026) */}
+              <BotaoJanelaSolta qual="manual" />
             </div>
           </div>
 
