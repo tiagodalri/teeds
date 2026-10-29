@@ -57,6 +57,7 @@ const VELAS = (() => {
   })
 })()
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 const SalaDeTreino = lazy(() => import('./components/aovivo/SalaDeTreino').then((m) => ({ default: m.SalaDeTreino })))
 const LabRecorte = lazy(() => import('./components/aovivo/LabRecorte'))
 const TesteAtraso = lazy(() => import('./components/aovivo/TesteAtraso'))
@@ -345,6 +346,7 @@ function Laboratorio() {
   )
   // ?tela=carregando: o carregando da marca (o mesmo quadro em que a decolagem pousa)
   if (qual === 'carregando') return <Carregando />
+  if (qual === 'analise') return <CadastroEmAnalise email="miqueias.sena@outlook.com" nome="Miqueias Sena" aoConferir={async () => { await new Promise((r) => setTimeout(r, 700)); return false }} aoSair={nada} />
   if (qual === 'aulas') return <LabAulas />
   if (qual === 'minicabine') return <Suspense fallback={null}><LabMiniCabine /></Suspense>
   return (

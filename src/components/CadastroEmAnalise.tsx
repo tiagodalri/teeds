@@ -11,9 +11,16 @@
  * só a aprovação a torna 'ativo'. Um gatilho impede a própria pessoa de
  * mexer nesse campo, então esconder o menu não é a tranca — é só a cortesia
  * de não mostrar portas que não abrem.
+ *
+ * 29/10/2026 (Tiago, print do celular: "ux horrível"): refeita. Os passos
+ * viraram uma linha do tempo alinhada; o botão dourado "Já fui aprovado" (que
+ * gritava uma ação que a pessoa ainda não pode fazer) virou um botão discreto,
+ * e a tela passou a conferir sozinha — a cada minuto e quando a pessoa volta
+ * para a aba depois de ler o e-mail. A ação útil da espera, abrir a conta na
+ * corretora, ficou como o destaque.
  */
 import { afiliadoDaDeriv } from '../core/rotas'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Brand } from './Brand'
 import { DerivLogo, IconeSaida } from './DerivMarca'
 import { MARCA } from '../marca'
@@ -28,22 +35,44 @@ export function CadastroEmAnalise({ email, nome, aoConferir, aoSair }: {
   const [conferindo, setConferindo] = useState(false)
   const [recado, setRecado] = useState<string | null>(null)
   const primeiroNome = (nome ?? '').trim().split(/\s+/)[0]
+  const conferirRef = useRef(aoConferir)
+  conferirRef.current = aoConferir
 
   async function conferir() {
     if (conferindo) return
     setConferindo(true); setRecado(null)
     try {
-      const liberado = await aoConferir()
-      if (!liberado) setRecado('Ainda em análise. Assim que for aprovado, você recebe o e-mail de liberação.')
+      const liberado = await conferirRef.current()
+      if (!liberado) setRecado('Ainda em análise. Quando for aprovado, o e-mail chega e esta tela abre a plataforma sozinha.')
+    } catch {
+      setRecado('Não deu para conferir agora. Tente de novo em instantes.')
     } finally { setConferindo(false) }
   }
+
+  // confere sozinha: a cada minuto com a tela à mostra e quando a pessoa volta para ela
+  useEffect(() => {
+    let ocupada = false
+    const emSilencio = () => {
+      if (ocupada || document.visibilityState !== 'visible') return
+      ocupada = true
+      void conferirRef.current().catch(() => false).finally(() => { ocupada = false })
+    }
+    const t = window.setInterval(emSilencio, 60_000)
+    document.addEventListener('visibilitychange', emSilencio)
+    window.addEventListener('focus', emSilencio)
+    return () => {
+      window.clearInterval(t)
+      document.removeEventListener('visibilitychange', emSilencio)
+      window.removeEventListener('focus', emSilencio)
+    }
+  }, [])
 
   return (
     <div className="entrada" data-modo="espera">
       <div className="entrada-aurora" aria-hidden="true" />
       <div className="entrada-grade" aria-hidden="true" />
 
-      <div className="entrada-caixa">
+      <div className="entrada-caixa espera-caixa">
         <header className="entrada-topo">
           <div className="entrada-marca"><Brand tamanho={46} /></div>
           <div className="entrada-opera">
@@ -52,45 +81,48 @@ export function CadastroEmAnalise({ email, nome, aoConferir, aoSair }: {
           </div>
         </header>
 
-        <div className="entrada-cabecalho">
+        <div className="espera-cabeca">
+          <span className="espera-selo"><i aria-hidden="true" />Em análise</span>
           <h1>{primeiroNome ? `${primeiroNome}, seu cadastro está em análise.` : 'Seu cadastro está em análise.'}</h1>
-          <p className="entrada-linha">
-            Recebemos o seu cadastro na {MARCA.prosa} e a nossa equipe está conferindo.
-            Assim que for aprovado, chega um e-mail em <b>{email}</b> avisando que o acesso está liberado.
-          </p>
+          <p>Quando for aprovado, avisamos em <b>{email}</b>.</p>
         </div>
 
-        <ol className="espera-passos">
-          <li className="feito"><i aria-hidden>✓</i><span><b>Cadastro recebido</b><small>Seus dados chegaram e a sua conta de acesso já está criada.</small></span></li>
-          <li className="agora"><i aria-hidden>●</i><span><b>Em análise</b><small>Nossa equipe confere os cadastros um a um. É a etapa em que você está.</small></span></li>
-          <li><i aria-hidden>○</i><span><b>Acesso liberado</b><small>Você recebe o e-mail de aprovação e a plataforma abre inteira, com os robôs.</small></span></li>
+        <ol className="espera-passos" aria-label="Etapas do cadastro">
+          <li className="feito">
+            <i aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4L19 7" /></svg></i>
+            <span><b>Cadastro recebido</b><small>Sua conta de acesso já está criada.</small></span>
+          </li>
+          <li className="agora" aria-current="step">
+            <i aria-hidden="true" />
+            <span><b>Em análise <em>agora</em></b><small>Nossa equipe confere cada cadastro, um a um.</small></span>
+          </li>
+          <li>
+            <i aria-hidden="true" />
+            <span><b>Acesso liberado</b><small>O e-mail chega e a plataforma abre por inteiro.</small></span>
+          </li>
         </ol>
 
-        {recado && <p className="entrada-mini" role="status">{recado}</p>}
-
-        <button className="entrada-btn" type="button" onClick={() => void conferir()} disabled={conferindo}>
-          {conferindo ? 'conferindo…' : 'Já fui aprovado — conferir agora'}
-        </button>
-
-        <p className="entrada-mini">
-          Nada a fazer por enquanto. Se quiser adiantar, já pode abrir a sua conta na corretora —
-          ela é sua, e é lá que o seu dinheiro fica.
-        </p>
-
-        <div className="entrada-corretora">
-          <div className="corretora-topo">
-            <DerivLogo altura={22} />
-            <span className="corretora-selo">corretora oficial</span>
+        <section className="espera-enquanto" aria-labelledby="espera-enquanto-titulo">
+          <span className="espera-rotulo" id="espera-enquanto-titulo">Enquanto isso</span>
+          <div className="entrada-corretora espera-corretora">
+            <div className="corretora-topo">
+              <DerivLogo altura={20} />
+              <span className="corretora-selo">corretora oficial</span>
+            </div>
+            <b>Adiante: abra sua conta na Deriv</b>
+            <p>É grátis. O seu dinheiro fica na sua conta da corretora, e a {MARCA.prosa} se conecta a ela para operar.</p>
+            <a className="btn-deriv" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">
+              <span>Abrir conta na Deriv</span>
+              <IconeSaida />
+            </a>
           </div>
-          <b>Abra sua conta gratuitamente.</b>
-          <p>
-            Seu dinheiro fica na corretora Deriv. Conecte sua conta à {MARCA.prosa}
-            {' '}para operar pela plataforma.
-          </p>
-          <a className="btn-deriv" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">
-            <span>Abrir conta na Deriv</span>
-            <IconeSaida />
-          </a>
+        </section>
+
+        <div className="espera-conferir">
+          <button className="espera-conferir-btn" type="button" onClick={() => void conferir()} disabled={conferindo}>
+            {conferindo ? 'Conferindo…' : 'Já recebi o e-mail de aprovação'}
+          </button>
+          <p className="entrada-mini" role="status">{recado ?? 'Esta tela também confere sozinha, a cada minuto.'}</p>
         </div>
 
         <div className="entrada-troca">

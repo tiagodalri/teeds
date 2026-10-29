@@ -2529,15 +2529,77 @@ button:has(> .icone-fechar) { display: inline-flex; align-items: center; justify
   background: var(--up-soft); color: #0d6b38; font-size: 12.5px; line-height: 1.55;
   border: 1px solid color-mix(in srgb, var(--up) 22%, transparent);
 }
-/* Os três passos do cadastro, na tela de quem espera a liberação. */
-.espera-passos { display: grid; gap: 12px; margin: 4px 0 14px; padding: 0; list-style: none; }
-.espera-passos li { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: 10px; color: var(--muted); }
-.espera-passos i { display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid var(--border); border-radius: 50%; font-size: 10px; font-style: normal; line-height: 1; }
-.espera-passos b { display: block; font-size: 13px; color: var(--text); }
-.espera-passos small { display: block; margin-top: 2px; font-size: 11px; line-height: 1.5; }
-.espera-passos .feito i { border-color: var(--up); color: var(--up); }
-.espera-passos .agora i { border-color: var(--primary); color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
-.espera-passos .agora b { color: var(--primary); }
+/* A tela de quem espera a liberação (refeita em 29/10/2026): tudo alinhado à
+   esquerda, os passos numa linha do tempo e a ação útil (a conta na Deriv) em destaque. */
+.entrada-caixa.espera-caixa { text-align: left; }
+.espera-cabeca { display: grid; gap: 10px; margin-bottom: 22px; }
+.espera-cabeca h1 { margin: 0; font-size: 26px; }
+.espera-cabeca p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--muted); overflow-wrap: anywhere; }
+.espera-cabeca p b { color: var(--text); font-weight: 620; }
+.espera-selo {
+  justify-self: start; display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 11px 5px 9px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.espera-selo i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: espera-pulso 1.8s ease-in-out infinite; }
+@keyframes espera-pulso {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 55%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary) 0%, transparent); }
+}
+
+/* A linha do tempo: o fio liga os três pontos; o trecho já andado fica na cor do passo feito. */
+.espera-passos { display: grid; gap: 0; margin: 0 0 24px; padding: 16px 16px 2px; list-style: none; border: 1px solid var(--border); border-radius: 16px; background: color-mix(in srgb, var(--bg) 55%, transparent); }
+.espera-passos li { position: relative; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 12px; padding-bottom: 16px; color: var(--muted); }
+.espera-passos li:not(:last-child)::before { content: ''; position: absolute; left: 11.5px; top: 28px; bottom: 4px; width: 1px; background: var(--border); }
+.espera-passos li.feito::before { background: color-mix(in srgb, var(--up) 55%, var(--border)); }
+.espera-passos i { position: relative; display: grid; place-items: center; width: 24px; height: 24px; box-sizing: border-box; border: 1.5px solid var(--border); border-radius: 50%; background: var(--bg); }
+.espera-passos i svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.espera-passos .feito i { border-color: var(--up); background: var(--up); color: #fff; }
+.espera-passos .agora i { border-color: var(--primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 16%, transparent); }
+.espera-passos .agora i::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }
+.espera-passos span { min-width: 0; padding-top: 2px; }
+.espera-passos b { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 650; color: var(--text); }
+.espera-passos b em { font-style: normal; font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--primary); }
+.espera-passos small { display: block; margin-top: 3px; font-size: 12.5px; line-height: 1.5; }
+.espera-passos li:not(.feito):not(.agora) b { color: var(--muted); }
+
+.espera-enquanto { display: grid; gap: 10px; }
+.espera-rotulo { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+/* (ux-refinements.css centraliza o bloco da corretora na entrada; aqui ele é a ação principal) */
+.entrada[data-modo="espera"] .entrada-corretora.espera-corretora { margin-top: 0; padding: 18px 18px 18px; text-align: left; border-radius: 16px; }
+.entrada[data-modo="espera"] .espera-corretora .corretora-topo { justify-content: flex-start; margin-bottom: 12px; }
+.entrada[data-modo="espera"] .espera-corretora b { font-size: 15px; }
+.entrada[data-modo="espera"] .espera-corretora p { max-width: none; margin: 6px 0 16px; font-size: 13px; line-height: 1.55; }
+.entrada[data-modo="espera"] .espera-corretora .btn-deriv {
+  width: 100%; min-height: 46px; justify-content: center; box-sizing: border-box; border: 0; border-radius: 12px;
+  background: #ff444f; color: #fff; font-size: 14px; font-weight: 650; box-shadow: 0 10px 22px -14px rgba(255, 68, 79, .9);
+}
+.entrada[data-modo="espera"] .espera-corretora .btn-deriv:hover { filter: brightness(1.06); }
+
+.espera-conferir { display: grid; gap: 8px; margin-top: 22px; text-align: center; }
+.espera-conferir-btn {
+  width: 100%; min-height: 46px; padding: 12px 16px; box-sizing: border-box;
+  border: 1px solid var(--border); border-radius: 13px; background: transparent; color: var(--text);
+  font: inherit; font-size: 14px; font-weight: 620; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.espera-conferir-btn:hover:not(:disabled) { border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); background: color-mix(in srgb, var(--primary) 6%, transparent); }
+.espera-conferir-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.espera-conferir-btn:disabled { opacity: .6; cursor: default; }
+.espera-conferir .entrada-mini { margin: 0; font-size: 12px; }
+/* o convite para instalar o app não cobre esta tela: quem espera ainda não usa a plataforma */
+body:has(.entrada[data-modo="espera"]) .app-convite { display: none; }
+/* a caixa nunca passa da tela (o cabeçalho com a marca empurrava a coluna da grade) */
+.entrada[data-modo="espera"] { grid-template-columns: minmax(0, 1fr); }
+.entrada[data-modo="espera"] .entrada-caixa { justify-self: center; min-width: 0; }
+@media (max-width: 520px) {
+  .entrada[data-modo="espera"] { padding: 20px 14px 28px; }
+  .espera-cabeca h1 { font-size: 23px; }
+  /* a marca e o "opera com" dividem a linha quando cabem; senão o selo desce */
+  .entrada[data-modo="espera"] .entrada-topo { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 14px; margin-bottom: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { .espera-selo i { animation: none; } }
 
 .entrada-troca {
   display: flex; align-items: center; justify-content: center; gap: 8px;
