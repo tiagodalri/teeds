@@ -328,3 +328,5 @@ details.ac-mais > div { display: grid; gap: 14px; padding: 0 0 16px; }
   .ac-stepper.grande b { min-width: 64px; font-size: 32px; }
   .ac-grafico-area { height: 130px; }
 }
+/* Confirmação de descarte no lugar do botão (29/10/2026) */
+.ac-confirma-descarte{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12.5px;text-align:left}

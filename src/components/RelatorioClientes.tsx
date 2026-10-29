@@ -23,6 +23,8 @@ import { NomeDoRobo } from './NomeDoRobo'
 const usd = (v: number, sinal = false) =>
   `${sinal && v > 0 ? '+' : ''}US$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const inteiro = (v: number) => v.toLocaleString('pt-BR')
+/** Número com vírgula decimal (pt-BR): "12,50", nunca "12.50". */
+const dec = (v: number, casas = 2) => v.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })
 const diaBr = (iso: string | null) => iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—'
 const horaBr = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
 const classe = (v: number) => v > 0 ? 'positivo' : v < 0 ? 'negativo' : ''
@@ -111,22 +113,22 @@ export function RelatorioClientes({ sessao }: { sessao: SessaoTeeds }) {
       <div className="rc-conta" role="group" aria-label="Tipo de conta">
         {CONTAS.map(([id, nome]) => <button key={id} className={conta === id ? 'on' : ''} aria-pressed={conta === id} onClick={() => setConta(id)}>{nome}</button>)}
       </div>
-      {carregando && <span className="rc-carregando">atualizando…</span>}
+      {carregando && <span className="rc-carregando">Atualizando…</span>}
     </div>
 
     <div className="adm-kpis">
-      <article><span>Clientes que operaram</span><strong>{totais.clientes}</strong><small>{conta === 'demo' ? 'em demonstração' : `${totais.ganhando} no lucro · ${totais.perdendo} no prejuízo`}</small></article>
+      <article><span>Clientes que operaram</span><strong>{totais.clientes}</strong><small>{conta === 'demo' ? 'Em demonstração' : `${totais.ganhando} no lucro · ${totais.perdendo} no prejuízo`}</small></article>
       {/* Cada cartão mostra UM mundo por vez. Em "Lado a lado" os dois aparecem
           na mesma ficha, um sobre o outro — nunca somados numa cifra só. */}
       <article><span>Operações · {dias} dias</span>
         <strong>{inteiro(totais.vendo.operacoes)}</strong>
-        <small>{conta === 'ambas' ? `${inteiro(totais.demo.operacoes)} em demonstração` : conta === 'demo' ? 'dinheiro de mentira' : 'só contas reais'}</small></article>
+        <small>{conta === 'ambas' ? `${inteiro(totais.demo.operacoes)} em demonstração` : conta === 'demo' ? 'Dinheiro fictício' : 'Só contas reais'}</small></article>
       <article className={totais.vendo.resultado >= 0 ? 'ok' : 'perigo'}><span>Resultado dos clientes</span>
         <strong>{usd(totais.vendo.resultado, true)}</strong>
-        <small>{conta === 'ambas' ? `${usd(totais.demo.resultado, true)} em demonstração` : conta === 'demo' ? 'resultado fictício' : 'o que ganharam ou perderam de verdade'}</small></article>
+        <small>{conta === 'ambas' ? `${usd(totais.demo.resultado, true)} em demonstração` : conta === 'demo' ? 'Resultado fictício' : 'O que ganharam ou perderam de verdade'}</small></article>
       <article className="alerta"><span>Comissão {conta === 'demo' ? 'simulada' : 'calculada'}</span>
         <strong>{usd(totais.vendo.comissao)}</strong>
-        <small>{conta === 'ambas' ? `${usd(totais.demo.comissao)} seria em demonstração` : conta === 'demo' ? 'não entra no caixa' : 'comissão de verdade'}</small></article>
+        <small>{conta === 'ambas' ? `${usd(totais.demo.comissao)} seria em demonstração` : conta === 'demo' ? 'Não entra no caixa' : 'Comissão de verdade'}</small></article>
     </div>
 
     {totais.semResultado > 0 && <div className="rc-aviso">
@@ -149,7 +151,7 @@ export function RelatorioClientes({ sessao }: { sessao: SessaoTeeds }) {
           return (
           <button key={l.userId} onClick={() => setAberto(l)}>
             <span className="adm-pessoa"><i>{(l.nome || l.email || '?')[0].toUpperCase()}</i><b>{l.nome || 'Sem nome'}<small>{l.email}</small></b></span>
-            <span>{dois ? par(`${m.contas} real`, String(d.contas)) : <>{m.contas}<small>{conta === 'demo' ? 'demo' : 'real'}</small></>}</span>
+            <span>{dois ? par(`${m.contas} ${m.contas === 1 ? 'real' : 'reais'}`, String(d.contas)) : <>{m.contas}<small>{conta === 'demo' ? 'demo' : 'real'}</small></>}</span>
             <span>{par(inteiro(m.operacoes), inteiro(d.operacoes))}</span>
             <span>{par(usd(m.entradas), usd(d.entradas))}</span>
             <span>{par(usd(m.pagamentos), usd(d.pagamentos))}</span>
@@ -166,7 +168,7 @@ export function RelatorioClientes({ sessao }: { sessao: SessaoTeeds }) {
     <section className="admin-card full rc-conferencia">
       <header>
         <div><span className="rot">Conferência · só conta real</span><h3>O nosso número e o da Deriv, dia a dia</h3></div>
-        <div className="rc-totais"><span>calculada <b>{usd(calculadaTotal)}</b></span><span>oficial <b>{usd(oficialTotal)}</b></span>{temOficial && <span className={classe(calculadaTotal - oficialTotal)}>diferença <b>{usd(calculadaTotal - oficialTotal, true)}</b></span>}</div>
+        <div className="rc-totais"><span>Calculada <b>{usd(calculadaTotal)}</b></span><span>Oficial <b>{usd(oficialTotal)}</b></span>{temOficial && <span className={classe(calculadaTotal - oficialTotal)}>Diferença <b>{usd(calculadaTotal - oficialTotal, true)}</b></span>}</div>
       </header>
       {/*
         Falta o número oficial? Antes de acusar problema, é preciso saber por
@@ -198,7 +200,7 @@ export function RelatorioClientes({ sessao }: { sessao: SessaoTeeds }) {
             <span className={d.oficial ? classe(d.diferenca) : ''}>{d.oficial ? usd(d.diferenca, true) : <small>—</small>}</span>
             <span>{d.diferencaPct === null
               ? <small title={d.soDemo ? 'Só demonstração nesse dia — não gera comissão' : 'O número da Deriv ainda não chegou'}>—</small>
-              : `${d.diferencaPct > 0 ? '+' : ''}${d.diferencaPct.toFixed(2)}%`}</span>
+              : `${d.diferencaPct > 0 ? '+' : ''}${dec(d.diferencaPct)}%`}</span>
             <span>{inteiro(d.operacoes)}</span>
             <span>{d.clientes}</span>
           </div>
@@ -214,9 +216,12 @@ export function RelatorioClientes({ sessao }: { sessao: SessaoTeeds }) {
 /** O extrato de um cliente: as operações dos robôs, uma a uma, com os dois markups. */
 function ExtratoCliente({ sessao, cliente, dias, fechar }: { sessao: SessaoTeeds; cliente: LinhaClientePorConta; dias: number; fechar: () => void }) {
   const [ops, setOps] = useState<OperacaoRoboRegistro[] | null>(null)
+  const [erroOps, setErroOps] = useState<string | null>(null)
   useEffect(() => {
     let vivo = true
+    setErroOps(null)
     operacoesDoCliente(sessao, cliente.userId, dias).then((o) => vivo && setOps(o))
+      .catch((e) => { if (vivo) { setErroOps((e as Error).message || 'Não foi possível carregar o extrato.'); setOps([]) } })
     return () => { vivo = false }
   }, [sessao.token, cliente.userId, dias])
 
@@ -244,14 +249,14 @@ function ExtratoCliente({ sessao, cliente, dias, fechar }: { sessao: SessaoTeeds
         <div><span>Operações · {dias}d</span><b>{inteiro(cliente.real.operacoes)}</b>{cliente.demo.operacoes > 0 && <small className="rc-demo-val">{inteiro(cliente.demo.operacoes)} em demonstração</small>}</div>
         <div><span>Resultado</span><b className={classe(cliente.real.resultado)}>{usd(cliente.real.resultado, true)}</b>{cliente.demo.operacoes > 0 && <small className="rc-demo-val">{usd(cliente.demo.resultado, true)} em demonstração</small>}</div>
         <div><span>Comissão de verdade</span><b>{usd(cliente.real.comissao)}</b>{cliente.demo.comissao > 0 && <small className="rc-demo-val">{usd(cliente.demo.comissao)} seria em demonstração</small>}</div>
-        <div><span>Contas</span><b>{cliente.real.contas} real</b>{cliente.demo.contas > 0 && <small className="rc-demo-val">{cliente.demo.contas} demo</small>}</div>
+        <div><span>Contas</span><b>{cliente.real.contas} {cliente.real.contas === 1 ? 'real' : 'reais'}</b>{cliente.demo.contas > 0 && <small className="rc-demo-val">{cliente.demo.contas} demo</small>}</div>
       </div>
       <div className="rc-extrato-corpo">
         <div className="rc-extrato-resumo">
           <span className="rot">Extrato dos robôs</span>
-          {ops === null ? <p>Carregando…</p> : ops.length === 0
+          {ops === null ? <p>Carregando…</p> : erroOps ? <p role="alert">{erroOps} Feche e abra o extrato para tentar de novo.</p> : ops.length === 0
             ? <p>Nenhuma operação de robô registrada nesse período. O extrato operação a operação existe só para o que os robôs da {MARCA.prosa} executaram a partir de 04/09 — o que veio antes, ou foi manual, entra só nos totais do dia.</p>
-            : <p>{ops.length >= TETO_CONSULTA ? <>últimas <b>{inteiro(ops.length)}</b> operações <small>(teto da consulta — o cliente tem {inteiro(cliente.real.operacoesRobos + cliente.demo.operacoesRobos)} no período)</small></> : <>{inteiro(ops.length)} operações</>} · {resumo.vitorias} vitórias ({ops.length ? Math.round(resumo.vitorias / ops.length * 100) : 0}%) · {resumo.robos.join(', ')}<br />
+            : <p>{ops.length >= TETO_CONSULTA ? <>Últimas <b>{inteiro(ops.length)}</b> operações <small>(teto da consulta — o cliente tem {inteiro(cliente.real.operacoesRobos + cliente.demo.operacoesRobos)} no período)</small></> : <>{inteiro(ops.length)} operações</>} · {resumo.vitorias} vitórias ({ops.length ? Math.round(resumo.vitorias / ops.length * 100) : 0}%) · {resumo.robos.join(', ')}<br />
               markup calculado <b>{usd(resumo.markupCalc)}</b> · markup medido pela Deriv <b>{resumo.medidas ? usd(resumo.markupDeriv) : '—'}</b> <small>({resumo.medidas} de {ops.length} operações com o valor da Deriv)</small></p>}
         </div>
         {visiveis.length > 0 && <div className="rc-tabela ops">
@@ -261,10 +266,10 @@ function ExtratoCliente({ sessao, cliente, dias, fechar }: { sessao: SessaoTeeds
               <span>{horaBr(o.executadaEm)}</span>
               <span><NomeDoRobo nome={o.roboNome} id={o.roboId} /><small>{o.ativo} · {o.tipoContrato}</small></span>
               <span>{o.contaId}<small>{o.demo ? 'demo' : 'real'}</small></span>
-              <span>{o.entrada.toFixed(2)} → {o.pagamento.toFixed(2)}</span>
-              <span className={o.ganhou ? 'positivo' : 'negativo'}>{o.resultado > 0 ? '+' : ''}{o.resultado.toFixed(2)}</span>
-              <span>{o.markup.toFixed(4)}</span>
-              <span>{o.markupDeriv === null || o.markupDeriv === undefined ? <small>não informado</small> : o.markupDeriv.toFixed(4)}</span>
+              <span>{dec(o.entrada)} → {dec(o.pagamento)}</span>
+              <span className={o.ganhou ? 'positivo' : 'negativo'}>{o.resultado > 0 ? '+' : ''}{dec(o.resultado)}</span>
+              <span>{dec(o.markup, 4)}</span>
+              <span>{o.markupDeriv === null || o.markupDeriv === undefined ? <small>Não informado</small> : dec(o.markupDeriv, 4)}</span>
             </div>
           ))}
           {(ops?.length ?? 0) > MAX_LINHAS_EXTRATO && <div className="adm-vazio">Mostrando as {MAX_LINHAS_EXTRATO} mais recentes de {inteiro(ops!.length)}.</div>}

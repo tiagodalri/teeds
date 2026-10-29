@@ -77,7 +77,7 @@ export function RobotScope(props: Props) {
               {d}
             </span>
           ))}
-          {estat.recentes.length === 0 && <span className="viv-nada">lendo o mercado…</span>}
+          {estat.recentes.length === 0 && <span className="viv-nada">Lendo o mercado…</span>}
         </div>
       </div>
 
@@ -98,7 +98,7 @@ export function RobotScope(props: Props) {
 
       <p className="esc-nota">
         {estat.carregando
-          ? 'lendo o histórico…'
+          ? 'Lendo o histórico…'
           : <>Nos últimos <b>{estat.total}</b> ticks, os dígitos que este robô precisa
               saíram <b style={{ color: ident.cor }}>{naZona.toFixed(1)}%</b> das vezes.</>}
       </p>

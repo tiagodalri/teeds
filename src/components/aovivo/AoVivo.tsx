@@ -10,6 +10,7 @@ import { AssistirTreino } from './AssistirTreino'
 import { MedidorDeVolume } from './MedidorDeVolume'
 import { SeletorDeFundo } from './SeletorDeFundo'
 import { LIVES_AO_VIVO, MARCA } from '../../marca'
+import { abrirSuporte } from '../../core/teeds/suporte'
 
 const MARCA_PROSA = MARCA.prosa
 import { FUNDOS } from '../../core/live/fundos'
@@ -142,7 +143,7 @@ export function CartaoEnquete({ s, compacto = false }: { s: EstadoDaSala; compac
           ) : (
             <div key={i} className={`av-enquete-opcao barra ${e.meuVoto === i ? 'minha' : ''} ${vencedora === i ? 'vencedora' : ''}`}>
               <i style={{ width: `${pct}%` }} aria-hidden />
-              <span>{o}{e.meuVoto === i && <em>seu voto</em>}</span>
+              <span>{o}{e.meuVoto === i && <em>Seu voto</em>}</span>
               <b>{pct}%</b>
             </div>
           )
@@ -240,7 +241,7 @@ export function Chat({ s, aberto = true }: { s: EstadoDaSala; aberto?: boolean }
         {s.mensagens.length === 0 && <p className="av-chat-vazio">As mensagens aparecem aqui. Diga oi para a turma.</p>}
         {s.mensagens.map((m) => (
           <div key={m.id} className={`av-msg ${m.doModerador ? 'mod' : ''}`}>
-            <p><b>{m.nome}{m.doModerador && <em>moderador</em>}</b> {m.texto}</p>
+            <p><b>{m.nome}{m.doModerador && <em>Moderador</em>}</b> {m.texto}</p>
             <time>{hora(m.criadaEm)}</time>
             {s.moderador && !m.doModerador && (
               <>
@@ -561,7 +562,7 @@ function MesaDoApresentador({ s, sessao, aoMudar }: { s: EstadoDaSala; sessao: S
         title={semSuporte ? 'Compartilhar a tela só no computador' : undefined}
         onClick={() => void fazer(nome, () => ligar(!ligado))}>
         <IconeFonte nome={nome} ligado={ligado} />
-        <span><b>{rotulo}</b><small>{semSuporte ? 'só no computador' : ocupado === nome ? 'abrindo…' : !ligado ? 'desligado' : nome === 'camera' && s.fundo !== 'nenhum' ? `no ar · ${s.fundo === 'desfoque' ? 'fundo desfocado' : FUNDOS.find((f) => f.id === s.fundo)?.nome ?? 'com fundo'}` : 'no ar'}</small></span>
+        <span><b>{rotulo}</b><small>{semSuporte ? 'Só no computador' : ocupado === nome ? 'Abrindo…' : !ligado ? 'Desligado' : nome === 'camera' && s.fundo !== 'nenhum' ? `No ar · ${s.fundo === 'desfoque' ? 'fundo desfocado' : FUNDOS.find((f) => f.id === s.fundo)?.nome ?? 'com fundo'}` : 'No ar'}</small></span>
       </button>
     )
   }
@@ -621,7 +622,7 @@ const MENSAGENS_DA_EQUIPE: Array<{ id: string; rotulo: string; textos: string[] 
   { id: 'gestao', rotulo: 'Lembrete de gestão', textos: [
     'Lembrete: defina meta e limite de perda antes de ligar o robô. Bateu, para.',
     'Gestão primeiro: meta e limite definidos antes de qualquer entrada.',
-    'Quem respeita o limite fica no jogo. Configurem meta e stop antes de começar.',
+    'Quem respeita o limite continua operando amanhã. Configurem meta e limite de perda antes de começar.',
   ] },
   { id: 'meta', rotulo: 'Meta batida', textos: [
     'Meta batida, robô desligado. É assim que se protege o resultado.',
@@ -829,7 +830,7 @@ function PainelDeEnquete({ s }: { s: EstadoDaSala }) {
       {opcoes.map((o, i) => (
         <div key={i} className="av-painel-linha">
           <input value={o} maxLength={60} placeholder={`Opção ${i + 1}`} aria-label={`Opção ${i + 1}`} onChange={(ev) => setOpcoes(opcoes.map((x, j) => (j === i ? ev.target.value : x)))} />
-          {opcoes.length > 2 && <button type="button" className="av-link" aria-label="Tirar esta opção" onClick={() => setOpcoes(opcoes.filter((_, j) => j !== i))}>tirar</button>}
+          {opcoes.length > 2 && <button type="button" className="av-link" aria-label="Tirar esta opção" onClick={() => setOpcoes(opcoes.filter((_, j) => j !== i))}>Tirar</button>}
         </div>
       ))}
       <div className="av-painel-linha entre">
@@ -950,7 +951,17 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
   if (admin && (treinando || ensaioNoAr)) return <SalaDeTreino sessao={sessao} apresentador={(sessao.usuario.nome || '').trim().split(/\s+/)[0] || 'professor'} aoSair={() => setTreinando(false)} />
   if (LIVES_AO_VIVO && s.fase !== 'fora' && s.live) return <SalaConectada s={s} sessao={sessao} aoMudar={() => void carregar()} />
   // Lives desligadas (20/10/2026): o "Ao vivo" é só a sala de treino, sem abas
-  if (!LIVES_AO_VIVO && !admin) return <div className="ger av-pagina"><p className="av-vazio">A sala de treino é exclusiva para membros GF Member.</p></div>
+  // 29/10/2026: quem não tem o plano não cai num beco: o caminho é falar com a equipe
+  if (!LIVES_AO_VIVO && !admin) return (
+    <div className="ger av-pagina">
+      <section className="av-destaque calmo">
+        <span className="av-sobretitulo">Sala de treino</span>
+        <h2>A sala de treino faz parte do GF Member</h2>
+        <p>Quem é do plano assiste às transmissões da equipe e tira dúvidas no chat.</p>
+        {MARCA.suporte && <button className="av-botao-principal" onClick={() => abrirSuporte({ tema: 'plano', mensagem: 'Quero saber como entrar no GF Member.' })}>Quero ser GF Member</button>}
+      </section>
+    </div>
+  )
 
   const noAr = lives?.find((l) => l.status === 'ao_vivo') ?? null
   const proximas = (lives ?? []).filter((l) => l.status === 'agendada')
@@ -970,7 +981,7 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
           </button>
           <button role="tab" aria-selected={abaAtual === 'treino'} className={abaAtual === 'treino' ? 'on' : ''} onClick={() => setAba('treino')}>
             <b>Sala de treino</b>
-            <small>{admin ? 'Ensaio com público simulado; os membros assistem' : 'Assista o ensaio como aluno'}</small>
+            <small>{admin ? 'Ensaio com público simulado; os membros assistem' : 'Assista à transmissão como aluno'}</small>
           </button>
         </div>
       )}
@@ -980,7 +991,7 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
           <div className="tr-porta-texto">
             <span className="av-sobretitulo">Sala de treino</span>
             <h2 id="tr-porta-titulo">Ensaie a live com os membros assistindo</h2>
-            <p>Você usa sua tela, câmera e microfone de verdade diante de um público e de um chat simulados. Os membros GF Member entram pelo link e assistem como se fossem alunos; um membro não vê as mensagens dos outros. A imagem leva sempre o selo "GF Streaming".</p>
+            <p>Você usa sua tela, câmera e microfone de verdade diante de um público e de um chat simulados. Os alunos do GF Member entram pelo link e assistem como se fossem alunos; um membro não vê as mensagens dos outros. A imagem leva sempre o selo "GF Streaming".</p>
             <ol className="av-passos">
               <li><i>1</i><span><b>Abra a sala de treino</b>Só administradores abrem; ela já vem com os ajustes à mostra.</span></li>
               <li><i>2</i><span><b>Mande o link aos membros</b>Eles entram com a conta deles e esperam o ensaio começar.</span></li>

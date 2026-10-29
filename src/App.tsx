@@ -23,7 +23,7 @@ import { UserMenu } from './components/UserMenu'
 import { ProfilePanel } from './components/ProfilePanel'
 import { DerivLogo, IconeElo } from './components/DerivMarca'
 import { LoginScreen } from './components/LoginScreen'
-import { Carregando } from './components/entrada/Carregando'
+import { Abrindo, Carregando } from './components/entrada/Carregando'
 import { decolar, liberarPouso } from './core/decolagem'
 import { definirDonoDoPlano } from './core/teeds/planoDoDia'
 import { NovaSenha } from './components/NovaSenha'
@@ -34,9 +34,9 @@ import { aceiteDoLoginPendente, aceiteGuardado, jaAceitou, limparAceiteDoLogin, 
 import { startLogin } from './core/deriv/auth'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLimitesDuracao, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
-import { traduzirErro } from './core/deriv/erros'
+import { pedeDeposito, traduzirErro } from './core/deriv/erros'
 import { nomeDoAtivo } from './core/deriv/market'
-import { ATIVO_DOS_ROBOS, ehSintetico } from './core/deriv/config'
+import { ATIVO_DOS_ROBOS, DERIV, ehSintetico } from './core/deriv/config'
 import { useAccount } from './hooks/useAccount'
 import { meuPlano, minhaSituacao, registrarContaDeriv, registrarPresenca, souAdmin, type SituacaoDaFicha } from './core/teeds/clientes'
 import { marcarPagina, marcarRegiao, ouvirCliques } from './core/teeds/rastro'
@@ -420,6 +420,8 @@ export default function App() {
   // do menu e o aviso "Live iniciada" (fica até ele entrar ou fechar).
   const [treinoAgora, setTreinoAgora] = useState<TreinoNoAr | null>(null)
   const [avisoTreino, setAvisoTreino] = useState(false)
+  // o aviso de "Live iniciada" também sai sozinho (cobria o topo no celular)
+  useEffect(() => { if (!avisoTreino) return; const t = window.setTimeout(() => setAvisoTreino(false), 20000); return () => window.clearTimeout(t) }, [avisoTreino])
   const aoVivoAgora = Boolean(liveAgora) || Boolean(treinoAgora)
   // Convidado que prefere entrar na conta: a tela de login no lugar da porta do convite.
   const [querLogin, setQuerLogin] = useState(false)
@@ -652,7 +654,7 @@ export default function App() {
       num aviso de console que ninguém lê.
     */
     void registrarContaDeriv(teeds.sessao, conta.account).then((recado) => {
-      if (recado) conta.setAviso(recado)
+      if (recado) conta.setAviso(recado, 'erro')
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioTeedsId, conta.account?.accountId])
@@ -737,7 +739,7 @@ export default function App() {
     if (achada) {
       marcarManual(achada.contractId)
       setCompraPendente(null)
-      setAviso({ tipo: 'ok', texto: `A entrada de ${dinheiro(achada.valor, moeda)} foi confirmada e está em Posições.` })
+      setAviso({ tipo: 'ok', texto: `A entrada de ${dinheiro(achada.valor, moeda)} foi confirmada e está na lista abaixo da boleta.` })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conta.comprasRecentes, compraPendente, manuais])
@@ -825,7 +827,9 @@ export default function App() {
     ficava ativo e o pedido entrava numa fila para disparar sozinho depois.
   */
   const linhaAberta = conta.conexao === 'open'
-  const podeOperar = conta.status === 'logado' && !!conta.socket && !conta.connecting && linhaAberta && !!symbolCode && mercadoAberto
+  // 29/10/2026: valor acima do saldo também trava a compra (antes o botão seguia ativo e a Deriv recusava)
+  const acimaDoSaldo = !!conta.balance && stake > conta.balance.amount
+  const podeOperar = conta.status === 'logado' && !!conta.socket && !conta.connecting && linhaAberta && !!symbolCode && mercadoAberto && !acimaDoSaldo
   // Por que o botao esta travado — para o cliente nao ficar adivinhando.
   const motivoBloqueio = podeOperar ? null
     : conta.status !== 'logado' ? 'Conecte a Deriv para operar'
@@ -833,8 +837,8 @@ export default function App() {
     : !mercadoAberto ? 'Mercado fechado agora'
     : conta.connecting ? 'Conectando à sua conta…'
     : !linhaAberta ? 'Reconectando à Deriv…'
+    : acimaDoSaldo ? 'Saldo insuficiente'
     : 'Indisponível agora'
-  const acimaDoSaldo = !!conta.balance && stake > conta.balance.amount
 
   // A mesma trava de conta real vale para os dois modos. Dígitos pulavam ela.
   async function comprarDigito(tipo: DigitContract, barreira: string | undefined, ticks: number) {
@@ -846,7 +850,7 @@ export default function App() {
   async function comprar(tipo: 'CALL' | 'PUT') {
     // o valor digitado ainda não virou número (ex.: "0," no meio da troca): nunca compra o valor antigo
     if (stakeTexto !== null && lerValor(stakeTexto) !== stake) {
-      setAviso({ tipo: 'erro', texto: 'Confira o valor da entrada antes de comprar.' })
+      setAviso({ tipo: 'erro', texto: 'Digite um valor a partir de US$ 0,35.' })
       return
     }
     if (!conta.isDemo && confirmar !== tipo) { setConfirmar(tipo); return }
@@ -965,7 +969,7 @@ export default function App() {
   useEffect(() => { if (!abrindo) liberarPouso() }, [abrindo])
   if (abrindo) {
     if (MARCA.decolagem) return <Carregando />
-    return <div className="entrada"><div className="entrada-esperando">abrindo a {MARCA.prosa}…</div></div>
+    return <Abrindo />
   }
 
   /*
@@ -1015,7 +1019,7 @@ export default function App() {
 
   // Termos de uso: ninguém entra sem aceitar (e, enquanto o banco responde, nada da plataforma aparece)
   if (MARCA.termos && teeds.status === 'logado' && teeds.sessao) {
-    if (termosOk === null) return <div className="entrada"><div className="entrada-esperando">abrindo a {MARCA.prosa}…</div></div>
+    if (termosOk === null) return MARCA.decolagem ? <Carregando /> : <Abrindo />
     if (termosOk === false) return <AceiteDosTermos sessao={teeds.sessao} aoAceitar={() => setTermosOk(true)} aoSair={sairDeTudo} />
   }
 
@@ -1058,7 +1062,7 @@ export default function App() {
 
   return (
     <div className={`app workspace-app${JANELA ? ` em-janela-solta janela-${JANELA}` : ''}`}>
-      {!JANELA && <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} mostrarInicio={!!MARCA.inicio} mostrarDivulgacao={!!linksDeParceiro} onNavigate={next => {
+      {!JANELA && <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} mostrarInicio={!!MARCA.inicio} mostrarDivulgacao={!!linksDeParceiro} mostrarAssistente={admin === true || assistenteLiberado} onNavigate={next => {
         setVerPerfil(false)
         if (next === 'assistente') abrirAssistente()
         else setTela(next)
@@ -1066,7 +1070,7 @@ export default function App() {
       <header className="topbar">
         {JANELA ? (
           <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span className="js-subtitulo">Janela solta · arraste para onde quiser</span></div>
-        ) : <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de negociação, na mão' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'relatorios' ? 'O seu resultado, com os números da corretora' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'divulgacao' ? 'Seus links para divulgar a plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : 'Seu espaço de trabalho'}</span></div>}
+        ) : <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de operação manual' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'relatorios' ? 'O seu resultado, com os números da corretora' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'divulgacao' ? 'Seus links para divulgar a plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : 'Seu espaço de trabalho'}</span></div>}
 
         <div className="topbar-right">
           <RelogioTopo />
@@ -1114,7 +1118,7 @@ export default function App() {
 
           {!JANELA && <button className="tema-btn" onClick={alternarTema}
             title={tema === 'claro' ? 'Mudar para o modo escuro' : 'Mudar para o modo claro'}
-            aria-label="alternar tema">
+            aria-label="Alternar tema">
             {tema === 'claro' ? <IconeLua /> : <IconeSol />}
           </button>}
 
@@ -1199,21 +1203,21 @@ export default function App() {
       {teeds.recado && (
         <div className="faixa faixa-ok">
           {teeds.recado}
-          <button onClick={() => teeds.setRecado(null)}>fechar</button>
+          <button onClick={() => teeds.setRecado(null)}>Fechar</button>
         </div>
       )}
 
       {conta.aviso && (
-        <div className="faixa faixa-ok">
+        <div className={`faixa ${conta.avisoTipo === 'erro' ? 'faixa-erro' : 'faixa-ok'}`} role={conta.avisoTipo === 'erro' ? 'alert' : 'status'}>
           {conta.aviso}
-          <button onClick={() => conta.setAviso(null)}>fechar</button>
+          <button onClick={() => conta.setAviso(null)}>Fechar</button>
         </div>
       )}
 
       {conta.error && (
         <div className="faixa faixa-erro">
-          {conta.error}
-          <button onClick={() => conta.setError(null)}>fechar</button>
+          {traduzirErro(conta.error)}
+          <button onClick={() => conta.setError(null)}>Fechar</button>
         </div>
       )}
 
@@ -1234,6 +1238,7 @@ export default function App() {
             symbolPadrao={symbolCode}
             conexao={conta.conexao}
             rotulosTrocados={conta.rotulosTrocados}
+            demoComoReal={conta.somenteDemo}
           />
         </div>
       )}
@@ -1273,7 +1278,7 @@ export default function App() {
         <div className="aviso-tv aviso-treino" role="status">
           <span className="aviso-tv-selo"><i aria-hidden="true" />Ao vivo</span>
           <button className="aviso-treino-texto" onClick={() => { setAvisoTreino(false); setTela('aovivo') }}>
-            <b>Live iniciada.</b> Clique para entrar na sala.
+            <b>Live iniciada.</b> A sala está aberta.
           </button>
           <button className="aviso-tv-assistir" onClick={() => { setAvisoTreino(false); setTela('aovivo') }}>Entrar</button>
           <button className="aviso-tv-fechar" onClick={() => setAvisoTreino(false)} aria-label="Fechar aviso"><IconeFechar /></button>
@@ -1283,7 +1288,7 @@ export default function App() {
       {verCarteira && (
         <Suspense fallback={null}>
           {/* reconectar: a sessão aberta ignora a volta de um login novo, então desconecta e entra de novo (os robôs rodam no servidor e seguem) */}
-          <CarteiraDeriv session={conta.session} contas={conta.accounts} fechar={() => setVerCarteira(false)} reconectar={() => { setVerCarteira(false); conta.logout(); conta.login() }} />
+          <CarteiraDeriv session={conta.session} contas={conta.accounts} somenteDemo={conta.somenteDemo} rotulosTrocados={conta.rotulosTrocados} fechar={() => setVerCarteira(false)} reconectar={() => { setVerCarteira(false); conta.logout(); conta.login() }} />
         </Suspense>
       )}
       {MARCA.aoVivo && !JANELA && playerAoVivo && <Suspense fallback={null}><PlayerAoVivo naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
@@ -1358,7 +1363,7 @@ export default function App() {
                     <input className="search" autoFocus placeholder="Buscar ativo…" value={search}
                       onChange={(e) => setSearch(e.target.value)} />
                     <div className="symbol-list">
-                      {loadingSymbols && <p className="hint">carregando ativos…</p>}
+                      {loadingSymbols && <p className="hint">Carregando ativos…</p>}
                       {symbolsError && <p className="hint error">{symbolsError}</p>}
                       {groups.map(([market, list]) => (
                         <section key={market}>
@@ -1424,14 +1429,14 @@ export default function App() {
           ) : (
             <PriceChart candles={candles} mode={mode} pipSize={pipSize} symbol={symbolCode ?? undefined}
               symbolName={activeSymbol?.name ?? ''} loading={loadingCandles}
-              markers={marcadores} indicators={indicadores} />
+              markers={marcadores} indicators={indicadores} moeda={moeda} />
           )}
         </main>
 
         <aside className="trade">
           {!derivPronta && (
             <DerivDesconectada compacto
-              acao="O gráfico e os dígitos são públicos, mas comprar exige a sua conta."
+              acao="Para comprar, conecte a sua conta da Deriv."
               entrando={conta.status === 'entrando'}
               onConectar={conta.login} />
           )}
@@ -1445,12 +1450,15 @@ export default function App() {
             </div>
             <div className="bl-corpo">
               {/* texto enquanto digita: dá para apagar e escrever; aceita vírgula ou ponto, e o mínimo da Deriv vale ao sair do campo */}
-              <MostradorValor stake={stake} texto={stakeTexto} moeda={moeda} alerta={acimaDoSaldo} saldo={conta.balance?.amount ?? null}
+              <MostradorValor stake={stake} texto={stakeTexto} moeda={moeda} alerta={acimaDoSaldo} saldo={conta.balance?.amount ?? null} conta={derivPronta ? (demoNaTela ? 'demo' : 'real') : null}
                 aoMudarTexto={(t) => { setStakeTexto(t); const n = lerValor(t); if (n >= 0.35) setStake(n) }}
                 aoMudar={(v) => { setStake(v); setStakeTexto(null) }}
                 aoSair={() => { const n = lerValor(stakeTexto ?? ''); if (stakeTexto !== null) setStake(Math.max(0.35, Number.isFinite(n) ? Math.round(n * 100) / 100 : 0.35)); setStakeTexto(null) }} />
               {acimaDoSaldo && conta.balance && (
-                <p className="bl-alerta">Acima do seu saldo ({dinheiro(conta.balance.amount, moeda)}). A Deriv vai recusar.</p>
+                <p className="bl-alerta">
+                  Valor maior que o seu saldo ({dinheiro(conta.balance.amount, moeda)}). Diminua o valor ou{' '}
+                  <a href={DERIV.deposito} target="_blank" rel="noopener noreferrer">deposite na Deriv</a>.
+                </p>
               )}
               <i className="bl-sep" aria-hidden="true" />
               {modo === 'direcao' ? (
@@ -1484,6 +1492,7 @@ export default function App() {
                   comprando={!!comprando && comprando.startsWith('DIGIT')}
                   socket={conta.socket}
                   onComprar={comprarDigito}
+                  onConectarDeriv={conta.login}
                   semDizerReal={conta.rotulosTrocados}
                   confirmando={confirmar}
                   onDesarmar={() => setConfirmar(null)}
@@ -1495,7 +1504,7 @@ export default function App() {
 
           {aviso && (
             <p role="status" aria-live="polite"
-              className={`aviso ${aviso.tipo === 'ok' ? 'aviso-ok' : 'aviso-erro'}`}>{aviso.texto}</p>
+              className={`aviso ${aviso.tipo === 'ok' ? 'aviso-ok' : 'aviso-erro'}`}>{aviso.texto}{pedeDeposito(aviso.texto) && <> <a href={DERIV.deposito} target="_blank" rel="noopener noreferrer">Depositar na Deriv</a></>}</p>
           )}
 
           <section className="bl-posicoes" aria-label="Posições abertas">
@@ -1505,14 +1514,13 @@ export default function App() {
                 <b className={resultadoAberto >= 0 ? 'ganho' : 'perda'}>{resultadoAberto >= 0 ? '+' : '−'}{dinheiro(Math.abs(resultadoAberto), moeda)}</b>
               </div>
             )}
-            {!derivPronta && <div className="bl-posicoes-vazio">Conecte sua Deriv para acompanhar posições.</div>}
             {derivPronta && minhas.length === 0 && (
               <div className="bl-posicoes-vazio">As entradas que você fizer aqui aparecem nesta lista, com o resultado ao vivo.</div>
             )}
             {minhas.map((c) => (
               <PositionCard key={c.contractId} contrato={c}
                 nomeAtivo={nomeDoAtivo(symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol)}
-                onEncerrar={encerrar} encerrando={vendendo === c.contractId} markup={adminConfirmado && mostrarColuna && !menuAdminOculto ? markupDaManual(c) : undefined} />
+                onEncerrar={encerrar} real={!conta.isDemo} encerrando={vendendo === c.contractId} markup={adminConfirmado && mostrarColuna && !menuAdminOculto ? markupDaManual(c) : undefined} />
             ))}
           </section>
 

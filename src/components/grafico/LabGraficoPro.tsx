@@ -54,8 +54,12 @@ export default function LabGraficoPro() {
   ]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg)' }}>
+      {/* o mesmo seletor do Operar (antes eram dois botões crus do navegador) */}
       <div style={{ display: 'flex', gap: 8, padding: 8 }}>
-        <button onClick={() => setModo('candles')}>Velas</button><button onClick={() => setModo('line')}>Linha</button>
+        <div className="segmented">
+          <button className={modo === 'candles' ? 'on' : ''} onClick={() => setModo('candles')}>Velas</button>
+          <button className={modo === 'line' ? 'on' : ''} onClick={() => setModo('line')}>Linha</button>
+        </div>
       </div>
       <div className="chart" style={{ flex: 1 }}>
         <GraficoPro candles={REAL ? reais.candles : velas} mode={modo} pipSize={2} symbol="R_75" symbolName="75 Index" granularity={REAL ? 300 : 60} loading={REAL && reais.loading} markers={REAL ? [] : marcadores} sessao={null} sinalLiberado={!new URLSearchParams(location.search).has('semsinal')} />

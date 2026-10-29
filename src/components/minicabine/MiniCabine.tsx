@@ -39,7 +39,8 @@ interface Props {
   rotulosTrocados?: boolean
 }
 
-type Aviso = { id: string; nome: string; tipo: 'meta' | 'limite' | 'fim'; texto: string; valor: string }
+/** 'erro': a parada pedida aqui falhou (título e instrução, sem nome de I.A. nem resultado). */
+type Aviso = { id: string; nome: string; tipo: 'meta' | 'limite' | 'fim' | 'erro'; texto: string; valor: string }
 const CHAVE = `${MARCA.id}.miniCabine.aberta`
 const CHAVE_POS = `${MARCA.id}.miniCabine.posicao`
 /** Onde a pessoa deixou (fração do espaço livre, 0 a 1): vale em qualquer tamanho de tela. */
@@ -178,8 +179,8 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo, demo
       const e = s.estado
       if (antes && e.operacoes > antes.operacoes) {
         const lucro = e.historico[0]?.lucro ?? e.ultimoLucro ?? 0
+        // só o "respiro" visual: vibrar a cada entrada quebrava a regra dos 3 momentos (play, meta, stop)
         setPulso({ chave: Date.now(), lucro, moeda: s.moeda })
-        if (navigator.vibrate && document.visibilityState === 'visible') try { navigator.vibrate(lucro >= 0 ? 12 : [10, 40, 10]) } catch { /* sem vibração */ }
       }
       if (antes?.rodando && !e.rodando) avisarFim(s)
       if (e.rodando) avisadas.current.delete(s.id)
@@ -213,7 +214,7 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo, demo
     if (!aoParar) return
     setParando(id)
     try { await aoParar(id) }
-    catch { setAvisos((l) => [...l, { id: `erro-${id}-${Date.now()}`, nome: 'Não consegui parar agora', tipo: 'fim', texto: 'Tente de novo ou pare pela tela de I.A.', valor: '' }]) }
+    catch { setAvisos((l) => [...l, { id: `erro-${id}-${Date.now()}`, nome: 'Não deu para parar agora.', tipo: 'erro', texto: 'Tente de novo ou pare pela tela de I.A.', valor: '' }]) }
     finally { setParando(null); setConfirmar(null) }
   }
 
@@ -222,8 +223,10 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo, demo
       {/* avisos: meta, limite, fim */}
       {avisos.slice(0, 2).map((a) => (
         <div key={a.id} className={`mcb-aviso ${a.tipo}`} role="status">
-          <span className="mcb-aviso-icone"><Ic d={a.tipo === 'meta' ? I.meta : a.tipo === 'limite' ? I.limite : I.parar} /></span>
-          <span><b><NomeDoRobo nome={a.nome} emTexto /> {a.texto}</b><small>Resultado da sessão: {ocultos ? `${simboloMoeda(moeda)} ${MASCARA}` : a.valor}</small></span>
+          <span className="mcb-aviso-icone"><Ic d={a.tipo === 'meta' ? I.meta : a.tipo === 'limite' || a.tipo === 'erro' ? I.limite : I.parar} /></span>
+          {a.tipo === 'erro'
+            ? <span><b>{a.nome}</b><small>{a.texto}</small></span>
+            : <span><b><NomeDoRobo nome={a.nome} emTexto /> {a.texto}</b><small>Resultado da sessão: {ocultos ? `${simboloMoeda(moeda)} ${MASCARA}` : a.valor}</small></span>}
           <button type="button" onClick={() => setAvisos((l) => l.filter((x) => x.id !== a.id))} aria-label="Fechar aviso"><Ic d={I.x} /></button>
         </div>
       ))}

@@ -1,0 +1,12 @@
+/* Dígitos ao vivo (painel flutuante): revisão visual (29/10/2026).
+   Os percentuais ficavam 3 px acima de cada barra e, nas barras perto de 10%,
+   encostavam no tracejado dos 10% (o fundo do número cortava a linha).
+   Agora os dez números ficam numa fileira própria em cima da área das barras,
+   alinhados como o eixo dos dígitos embaixo: nunca cruzam o tracejado. */
+.pd .pd-area { margin-top: calc(22px * var(--pd-escala)); }
+.pd .pd-barra em {
+  top: calc(-17px * var(--pd-escala)); bottom: auto; padding: 0; background: none;
+  font-size: calc(11px * var(--pd-escala)); letter-spacing: -.02em; transition: none;
+}
+/* "Acima de 10%": rótulo com só a primeira letra maiúscula (regra da casa) */
+.pd .pd-alta > span { text-transform: none; letter-spacing: .01em; font-size: calc(11.5px * var(--pd-escala)); }

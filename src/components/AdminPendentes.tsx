@@ -69,7 +69,7 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos }: {s
     setOcupado(p.id);setErro('');setAviso('')
     try {
       const r=await consultar('',{id:p.id,acao,plano})
-      setAviso(r.status==='aprovado'?'Cadastro aprovado. O e-mail de acesso entrou na fila de envio.':'Cadastro recusado. O lead foi preservado e nenhum acesso foi criado.')
+      setAviso(r.status==='aprovado'?'Cadastro aprovado. O e-mail de acesso entrou na fila de envio.':'Cadastro recusado. O pedido foi guardado e nenhum e-mail foi enviado.')
       setConfirmar(null);setRevisao(v=>v+1)
       if(r.status==='aprovado')onAprovado()
     }catch(e){setErro((e as Error).message)}finally{setOcupado(null)}
@@ -78,14 +78,25 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos }: {s
     <header><div><span className="rot">Cadastros pelo formulário</span><h3>Aprovação de clientes <em className="pendente-marca">{NOME_DA_MARCA[marca] ?? marca}</em></h3><p>Novos cadastros e recadastros aguardam sua aprovação. Cada marca tem a sua conta: quem já é cliente de outra plataforma ganha uma conta nova aqui, com senha própria.</p></div><button disabled={!!ocupado||carregando} onClick={()=>setRevisao(v=>v+1)}>Atualizar</button></header>
     <nav aria-label="Status da aprovação">{[['pendente','Pendentes'],['processando','Em aprovação'],['aprovado','Aprovados'],['recusado','Recusados']].map(([id,nome])=><button key={id} aria-pressed={status===id} disabled={!!ocupado} onClick={()=>{setStatus(id);setPagina(0);setConfirmar(null);setAviso('')}}>{nome}</button>)}</nav>
     {erro&&<p role="alert">{erro}</p>}{aviso&&<p role="status">{aviso}</p>}
-    {confirmar?.acao==='aprovar' && confirmar.p.status==='pendente' && <label>Plano do novo cliente <select value={plano} disabled={!!ocupado} onChange={e=>setPlano(e.target.value)}>{opcoesDePlano.map(p=><option key={p.id} value={p.id}>{p.nome}</option>)}</select></label>}
-    {confirmar&&<div className="pendente-confirmar"><b>{confirmar.acao==='aprovar'?'Aprovar':'Recusar'} {confirmar.p.nome}?</b><p>{confirmar.acao==='aprovar'?'Novos clientes recebem o plano escolhido por 30 dias e e-mail com as instruções. Quem já tem conta nesta plataforma mantém a senha e as condições atuais.':'O lead continuará disponível, sem criação de acesso ou envio de e-mail.'}</p><div><button disabled={!!ocupado} onClick={()=>setConfirmar(null)}>Cancelar</button><button className="admin-primary" disabled={!!ocupado} onClick={()=>void decidir()}>{ocupado?'Processando…':'Confirmar'}</button></div></div>}
     {carregando?<p>Carregando cadastros…</p>:lista.length===0&&!erro?<p>Nenhum cadastro nesta situação.</p>:lista.slice(0,50).map(p=><article key={p.id} className="pendente-linha">
       <div><b>{p.nome}</b><span>{p.email}</span><span>{p.telefone}</span>
-        {p.recadastro&&<strong className="pendente-recadastro">Já estava na base — recadastro{p.status==='pendente'?' aguardando aprovação':''}</strong>}
+        {p.recadastro&&<strong className="pendente-recadastro">Já estava na base: recadastro{p.status==='pendente'?' aguardando aprovação':''}</strong>}
       </div>
       <div><small>Último cadastro: {new Date(p.ultima_inscricao_em||p.criado_em).toLocaleString('pt-BR')}</small><span>{p.status==='aprovado'?(p.email_enviado_em?'E-mail enviado':'E-mail na fila de envio'):p.status==='processando'?'Aprovação iniciada; pode ser retomada após dois minutos.':p.status==='recusado'?'Recusado':'Pendente de aprovação'}</span></div>
-      {['pendente','processando'].includes(p.status)&&<div className="pendente-acoes"><button disabled={!!ocupado} className="admin-primary" onClick={()=>setConfirmar({p,acao:'aprovar'})}>{p.status==='processando'?'Retomar aprovação':'Aprovar'}</button>{p.status==='pendente'&&<button disabled={!!ocupado} onClick={()=>setConfirmar({p,acao:'recusar'})}>Recusar</button>}</div>}
+      {['pendente','processando'].includes(p.status)&&confirmar?.p.id!==p.id&&<div className="pendente-acoes"><button disabled={!!ocupado} className="admin-primary" onClick={()=>setConfirmar({p,acao:'aprovar'})}>{p.status==='processando'?'Retomar aprovação':'Aprovar'}</button>{p.status==='pendente'&&<button disabled={!!ocupado} onClick={()=>setConfirmar({p,acao:'recusar'})}>Recusar</button>}</div>}
+      {/* A confirmação nasce na linha do próprio cadastro (29/10/2026): no topo
+          da lista, quem clicava no 30º cadastro não via a pergunta. */}
+      {confirmar?.p.id===p.id&&<div className="pendente-confirmar" role="group" aria-label={`Confirmar: ${confirmar.acao==='aprovar'?'aprovar':'recusar'} ${p.nome}`}>
+        <b>{confirmar.acao==='aprovar'?'Aprovar':'Recusar'} {p.nome}?</b>
+        {confirmar.acao==='aprovar' && p.status==='pendente' && <label>Plano do cliente <select value={plano} disabled={!!ocupado} onChange={e=>setPlano(e.target.value)}>{opcoesDePlano.map(o=><option key={o.id} value={o.id}>{o.nome}</option>)}</select></label>}
+        {/* Fiel a servidor/src/aprovacao-leads.ts (decidirLead) e à função teeds_finalizar_lead:
+            o plano escolhido sempre passa a valer; situação e validade só mudam para quem estava em análise;
+            a senha só é regravada (para a provisória) em conta que não tem senha própria do cadastro. */}
+        <p>{confirmar.acao==='aprovar'
+          ? 'O plano escolhido passa a valer e o cliente recebe o e-mail de aprovação. Quem criou a senha no cadastro continua com ela. Quem já tinha conta antes deste cadastro passa a entrar com a senha provisória do e-mail e cria uma nova no primeiro acesso: a senha antiga deixa de valer. Quem já tinha acesso liberado nesta plataforma mantém a situação e a validade atuais.'
+          : 'Nenhum e-mail é enviado e o pedido fica guardado na aba Recusados. A conta criada no cadastro continua só com a tela de análise.'}</p>
+        <div><button disabled={!!ocupado} onClick={()=>setConfirmar(null)}>Cancelar</button><button className="admin-primary" disabled={!!ocupado} onClick={()=>void decidir()}>{ocupado?'Processando…':confirmar.acao==='aprovar'?'Aprovar':'Recusar'}</button></div>
+      </div>}
     </article>)}
     <footer><button disabled={pagina===0||!!ocupado||carregando} onClick={()=>setPagina(p=>p-1)}>Anterior</button><span>Página {pagina+1}</span><button disabled={lista.length<=50||!!ocupado||carregando} onClick={()=>setPagina(p=>p+1)}>Próxima</button></footer>
   </section>

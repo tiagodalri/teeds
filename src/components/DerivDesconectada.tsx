@@ -2,6 +2,7 @@ import { afiliadoDaDeriv } from '../core/rotas'
 import { DerivLogo, IconeElo } from './DerivMarca'
 import { MARCA } from '../marca'
 import { useState } from 'react'
+import './deriv-desconectada.css'
 import { emAppInstalado, voltasPerdidas } from '../core/deriv/auth'
 
 interface Props {
@@ -109,6 +110,8 @@ export function DerivDesconectada({ acao, entrando, onConectar, compacto = false
           {voltaPerdida
             ? <>A Deriv já confirmou a sua conta. Toque abaixo para terminar:
                 a conexão acontece aqui mesmo, em segundos.</>
+            // no cartão compacto (dentro de um painel) só a frase da tela: a explicação longa fica para o cartão grande
+            : compacto ? acao
             : <>{acao} Você está na {MARCA.prosa}, mas o dinheiro fica na corretora — e é
                 preciso ligar as duas.</>}
         </p>

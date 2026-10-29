@@ -211,3 +211,21 @@
   .gp-chips { flex: 1 1 0; min-width: 120px; }
   .gp-sinal { flex: 0 0 auto; }
 }
+
+/* o × do resultado: o desenho continua pequeno, a área de toque tem 44 px (29/10/2026, revisão) */
+.gpo-x { position: relative; }
+.gpo-x::after { content: ''; position: absolute; inset: -11px; }
+
+/* o histórico não veio: diz o que houve e oferece tentar de novo (29/10/2026, revisão) */
+.gp-erro { position: absolute; z-index: 6; left: 50%; top: 38%; transform: translateX(-50%); display: grid; gap: 10px; justify-items: start; width: min(300px, calc(100% - 32px)); padding: 14px 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); text-align: left; }
+.gp-erro b { font-size: 13.5px; line-height: 1.4; }
+.gp-erro button { min-height: 44px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--primary); color: var(--surface); font: inherit; font-weight: 800; cursor: pointer; }
+
+/* celular, Operar manual: a área das velas tinha ~265 px e o zoom (−, mira, +) ficava em cima
+   das últimas velas e do rótulo da mínima. Um pouco mais de altura para o gráfico respirar
+   (29/10/2026, revisão visual). */
+@media (max-width: 700px) {
+  .layout-operar > .main:has(.gp) { height: auto; min-height: 0; }
+  .layout-operar > .main:has(.gp) > .chart { flex: none; }
+  .layout-operar .chart .gp-grafico { min-height: 400px; }
+}

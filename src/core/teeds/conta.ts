@@ -103,14 +103,14 @@ function traduzir(dados: any): string {
   // 28/10/2026: clientes recém-cadastrados digitavam uma senha inventada (o cadastro não pede senha)
   if (m.includes('invalid login credentials')) {
     return SENHA_NO_CADASTRO
-      ? 'E-mail ou senha não conferem. Use a senha que você criou no cadastro (cadastros antigos: a senha provisória do e-mail “Cadastro recebido”). Se não lembrar, toque em “Esqueci a senha” e crie uma nova.'
+      ? 'E-mail ou senha não conferem. Se não lembrar a senha, toque em “Esqueci a senha” e crie uma nova.'
       : 'E-mail ou senha não conferem. Acabou de se cadastrar? A senha provisória está no e-mail “Cadastro recebido” (confira também o Spam ou o Lixo eletrônico). Se preferir, toque em “Esqueci a senha” para criar uma nova.'
   }
   if (m.includes('email not confirmed')) return 'Confirme o e-mail que enviamos antes de entrar.'
   if (m.includes('already registered') || m.includes('already been registered')) {
     return 'Já existe uma conta com este e-mail. Tente entrar.'
   }
-  if (m.includes('password should be at least')) return 'A senha precisa de pelo menos 6 caracteres.'
+  if (m.includes('password should be at least')) return 'A senha precisa de pelo menos 8 caracteres.'
   if (dados?.error_code === 'same_password' || m.includes('should be different from the old')) {
     return 'A senha nova precisa ser diferente da atual.'
   }
@@ -127,7 +127,7 @@ function traduzir(dados: any): string {
     de dizer o que FAZER, não repetir o jargão do Supabase em inglês.
   */
   if (dados?.error_code === 'session_not_found' || m.includes('session_id claim') || m.includes('session from session')) {
-    return 'Sua sessão expirou. Entre de novo com a senha que você recebeu por e-mail e refaça este passo.'
+    return 'Sua sessão expirou. Entre de novo e refaça este passo.'
   }
   if (m.includes('unable to validate email') || m.includes('invalid email')) return 'Esse e-mail não parece válido.'
   if (m.includes('rate limit') || m.includes('too many')) return 'Muitas tentativas. Espere um minuto e tente de novo.'

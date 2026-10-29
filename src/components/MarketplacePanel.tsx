@@ -8,6 +8,7 @@ import { IconeFechar } from './IconeFechar'
 import { Icone } from './Icone'
 import { irParaTela, useRobosBloqueados } from '../core/teeds/robosLiberados'
 import { abrirSuporte } from '../core/teeds/suporte'
+import './marketplace.css'
 
 type Categoria = 'Todos' | 'Robôs' | 'Mentorias' | 'Ferramentas'
 
@@ -122,7 +123,7 @@ const PRODUTOS: Produto[] = [
 const PRODUTOS_GF: Produto[] = [
   {
     id: 'gf-pack', categoria: 'Robôs', nome: 'Pack Gulf + Phenom',
-    descricao: 'As duas I.A. exclusivas juntas: o Gulf nos dígitos altos e o Phenom nos dígitos baixos, uma o espelho da outra. Levando as duas, você paga R$ 97 a menos.',
+    descricao: 'As duas I.A. exclusivas juntas: a Gulf nos dígitos altos e a Phenom nos dígitos baixos, uma espelho da outra. Levando as duas, você paga R$ 97 a menos.',
     precoDe: 'R$ 594', preco: 'R$ 497', desconto: 'Economize R$ 97', imagem: 'robos-globalfly/superior5.webp', selo: 'Mais vantajoso', simbolo: 'G+P', tom: 'ouro', periodo: 'por ano', destaque: true,
     itens: ['GF Gulf e GF Phenom liberadas na sua conta', 'R$ 97 a menos do que comprar as duas separadas', 'Você escolhe valor de entrada, meta e limite de perda em cada uma'],
   },
@@ -134,7 +135,7 @@ const PRODUTOS_GF: Produto[] = [
   },
   {
     id: 'gf-phenom', categoria: 'Robôs', nome: 'GF Phenom',
-    descricao: 'Jato leve, pouso preciso: trabalha no extremo baixo do painel, espera a sequência que teria perdido, entra e segue até fechá-la. O espelho do Gulf.',
+    descricao: 'Jato leve, pouso preciso: trabalha no extremo baixo do painel, espera a sequência que teria perdido, entra e segue até fechá-la. O espelho da Gulf.',
     precoDe: '', preco: 'R$ 297', desconto: 'I.A. exclusiva', imagem: 'robos-globalfly/ag2.webp', selo: 'I.A. exclusiva', simbolo: 'PH', tom: 'azul', periodo: 'por ano',
     itens: ['Estratégia nos dígitos baixos, com entrada depois da análise', 'Liberada na sua conta GlobalFly', 'Você escolhe valor de entrada, meta e limite de perda'],
   },
@@ -164,7 +165,7 @@ const capaProduto = (arquivo: string) => arquivo.includes('/') ? `${import.meta.
    feita por aqui" numa tela que leva direto ao cartao e' mentira. */
 const GARANTIAS_DO_CHECKOUT = [
   'Pagamento seguro pela Kiwify',
-  'Cartao, Pix ou boleto',
+  'Cartão, Pix ou boleto',
   'Acesso liberado sozinho na sua conta',
 ]
 
@@ -233,7 +234,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
         <div className="market-hero-conteudo">
           <span className="market-eyebrow">{MARCA.prosa} Marketplace</span>
           <h1>{GF ? <>Desbloqueie as I.A. <em>exclusivas.</em></> : <>O próximo nível da sua <em>operação.</em></>}</h1>
-          <p>{GF ? 'O Gulf e o Phenom, uma a uma ou as duas juntas com desconto. Liberadas na sua conta, ao lado das I.A. que você já usa.' : 'Robôs premium, acompanhamento especializado e ferramentas criadas para evoluir cada etapa da sua jornada.'}</p>
+          <p>{GF ? 'A Gulf e a Phenom, uma a uma ou as duas juntas com desconto. Liberadas na sua conta, ao lado das I.A. que você já usa.' : 'Robôs premium, acompanhamento especializado e ferramentas criadas para evoluir cada etapa da sua jornada.'}</p>
           <div className="market-hero-acoes">
             <button onClick={() => destaque && abrir(destaque)}>{GF ? 'Conhecer o Pack' : 'Conhecer o Simulador'}</button>
             <span><i /> {GF ? 'Pack com R$ 97 de desconto' : 'Único produto disponível agora'}</span>
@@ -241,8 +242,8 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
         </div>
         <div className="market-hero-produto" aria-hidden="true">
           <div className="market-orbita"><i /><i /><i /></div>
-          <div className="market-emblema"><small>{MARCA.nome}</small><b>{GF ? 'G+P' : 'ST'}</b><span>{GF ? 'I.A. EXCLUSIVAS' : 'SIMULADOR'}</span></div>
-          <span className="market-edicao">{GF ? 'DISPONÍVEL AGORA · 03' : 'DISPONÍVEL AGORA · 01'}</span>
+          <div className="market-emblema"><small>{MARCA.nome}</small><b>{GF ? 'G+P' : 'ST'}</b><span>{GF ? 'I.A. exclusivas' : 'Simulador'}</span></div>
+          <span className="market-edicao">{GF ? 'Disponível agora · 03' : 'Disponível agora · 01'}</span>
         </div>
       </section>
 
@@ -267,7 +268,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
                 {!aberto && <span className="market-card-selo">{produto.selo}</span>}
                 {aberto && <span className="market-card-desconto">{produto.desconto}</span>}
                 <span className="market-card-num">{String(pagina * 3 + indice + 1).padStart(2, '0')}</span>
-                <div className="market-card-identidade"><b>{produto.simbolo}</b><small>{MARCA.nome} ORIGINAL</small></div>
+                <div className="market-card-identidade"><b>{produto.simbolo}</b><small>{MARCA.nome} original</small></div>
                 <span className="market-card-tipo">{produto.categoria}</span>
               </button>
               <div className="market-card-corpo">
@@ -306,7 +307,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
             <button className="market-modal-fechar" onClick={() => setSelecionado(null)} aria-label="Fechar"><IconeFechar /></button>
             <div className="market-modal-arte">
               <ResponsiveImage src={capaProduto(selecionado.imagem)} alt="" />
-              <span>{selecionado.selo}</span><b>{selecionado.simbolo}</b><small>{MARCA.nome} ORIGINAL</small>
+              <span>{selecionado.selo}</span><b>{selecionado.simbolo}</b><small>{MARCA.nome} original</small>
             </div>
             <div className={`market-modal-corpo ${selecionado.vendas ? 'com-vendas' : ''}`}>
               <span className="market-eyebrow">{selecionado.categoria}{selecionado.vendas ? ` · ${selecionado.selo}` : ''}</span>
@@ -373,7 +374,7 @@ export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
       )}
 
       {interesse && (
-        <div className="market-toast" role="status"><i>✓</i><span><b>Pedido registrado</b><small>A equipe {MARCA.prosa} entra em contato para concluir a compra.</small></span><button onClick={() => setInteresse(null)}><IconeFechar /></button></div>
+        <div className="market-toast" role="status"><i>✓</i><span><b>Pedido registrado</b><small>A equipe {MARCA.prosa} entra em contato para concluir a compra.</small></span><button onClick={() => setInteresse(null)} aria-label="Fechar o aviso"><IconeFechar /></button></div>
       )}
     </main>
   )

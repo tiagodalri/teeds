@@ -210,3 +210,67 @@
   .tv-tabela tr { grid-template-columns: minmax(0, 1fr); gap: 6px; }
   .tv-tabela td[data-label='Resultado'] { padding-top: 6px; }
 }
+
+/* 29/10/2026: no Assistente, a linha da sessão já é o cabeçalho (com o
+   "Desligar"); o cabeçalho da cabine repetia os mesmos botões. */
+.as-robo .cabine-caixa.aberta .tv-topo { display: none; }
+.tv-alerta .tv-alerta-link { color: inherit; font-weight: 700; text-decoration: underline; white-space: nowrap; }
+/* "Parar tudo" do Assistente pede confirmação: a frase ocupa a linha, os botões embaixo */
+.as-confirmar { align-items: center; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--down) 55%, var(--border)); border-radius: 12px; background: var(--down-soft); }
+.as-confirmar > span { flex: 1 1 100%; color: var(--text); font-size: 13.5px; line-height: 1.45; text-align: left; }
+.as-confirmar button { min-height: 44px; }
+.as-confirmar button.perigo { border-color: var(--down); color: var(--down); font-weight: 700; }
+
+/* ==================================================================
+   Revisão visual da cabine (29/10/2026)
+   ================================================================== */
+/* "Ampliar dígitos" continua botão (pedido do Victor, 19/10), mas não é a
+   ação principal da cabine: contorno dourado em vez de botão cheio. */
+.tv-analise-legenda .tv-ampliar,
+.tv-analise-legenda .tv-ampliar[aria-expanded='true'] {
+  background: transparent; color: var(--primary); box-shadow: none;
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); font-weight: 650;
+}
+.tv-analise-legenda .tv-ampliar:hover { filter: none; background: var(--primary-soft); border-color: var(--primary); }
+/* o motivo do encerramento alinha com os cartões (o corpo já tem o recuo) */
+.tv.tv-cockpit .ux-session-reason { margin: 0; border-radius: 0 10px 10px 0; }
+/* o dígito destacado do preço é mais alto que a linha: alinha pela base do texto */
+.tv.tv-cockpit .tv-tabela-enxuta td { vertical-align: baseline; }
+
+/* filtro das operações: três botões, no lugar do <select> */
+.tv-filtro { flex: none; display: inline-flex; gap: 2px; margin-left: auto; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); }
+.tv-filtro button { min-height: 26px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.tv-filtro button:hover { color: var(--text); }
+.tv-filtro button[aria-pressed='true'] { background: var(--primary-soft); color: var(--primary); }
+.tv-filtro button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+/* Celular: cada operação é uma linha de lista, sem rótulos em caixa alta.
+   Preço com o dígito em cima, hora e valor embaixo, resultado à direita. */
+@container (max-width: 560px) {
+  .tv.tv-cockpit .tv-ops-topo { flex-wrap: wrap; row-gap: 8px; }
+  .tv.tv-cockpit .tv-ops-topo .tv-rot { font-size: 13px; font-weight: 650; }
+  .tv.tv-cockpit .tv-filtro { width: 100%; margin-left: 0; }
+  .tv.tv-cockpit .tv-filtro button { flex: 1; min-height: 34px; }
+  .tv.tv-cockpit .tv-tabela tr {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'preco preco res' 'hora valor res' 'markup markup markup';
+    gap: 3px 10px; align-items: center; padding: 11px 16px;
+  }
+  .tv.tv-cockpit .tv-tabela tr.ganhou { box-shadow: inset 3px 0 0 var(--up); }
+  .tv.tv-cockpit .tv-tabela tr.perdeu { box-shadow: inset 3px 0 0 var(--down); }
+  .tv.tv-cockpit .tv-tabela td,
+  .tv.tv-cockpit .tv-tabela td:first-child,
+  .tv.tv-cockpit .tv-tabela td:nth-child(2),
+  .tv.tv-cockpit .tv-tabela td:last-child { display: block; padding: 0; border: 0; text-align: left; vertical-align: initial; box-shadow: none; }
+  .tv.tv-cockpit .tv-tabela td::before { content: none; color: inherit; font-size: inherit; font-weight: 400; letter-spacing: 0; text-transform: none; }
+  .tv.tv-cockpit .tv-tabela td.tv-hora { grid-area: hora; font-size: 11.5px; color: var(--muted); }
+  .tv.tv-cockpit .tv-tabela td[data-label='Valor'] { grid-area: valor; font-size: 11.5px; color: var(--muted); }
+  .tv.tv-cockpit .tv-tabela td[data-label='Valor']::before { content: '· Valor '; font-family: var(--fonte-corpo, system-ui, sans-serif); }
+  .tv.tv-cockpit .tv-tabela td.tv-preco { grid-area: preco; text-align: left; }
+  .tv.tv-cockpit .tv-tabela td.tv-preco .pcd { font-size: 13.5px; }
+  .tv.tv-cockpit .tv-tabela td[data-label='Resultado'] { grid-area: res; padding: 0; border: 0; text-align: right; font-size: 15px; }
+  .tv.tv-cockpit .tv-tabela td[data-label='Markup'] { grid-area: markup; font-size: 11.5px; color: var(--muted); }
+  .tv.tv-cockpit .tv-tabela td[data-label='Markup']::before { content: 'Markup '; font-family: var(--fonte-corpo, system-ui, sans-serif); }
+  .tv.tv-cockpit .tv-tabela td[colspan] { grid-area: auto; grid-column: 1 / -1; text-align: center; }
+  .tv.tv-cockpit .tv-tabela tr:has(td[colspan]) { grid-template-areas: none; box-shadow: none; }
+}

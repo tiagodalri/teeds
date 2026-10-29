@@ -16,6 +16,7 @@ import { PlayerAula } from './PlayerAula'
 import { registrarAula } from '../core/teeds/insights'
 import { DERIV } from '../core/deriv/config'
 import './aulas/aviso-liberacao.css'
+import './aulas/sala-de-aula.css'
 
 const capa = capaDaAula
 
@@ -113,18 +114,16 @@ function CartaoDoTour({ aoAbrir }: { aoAbrir: () => void }) {
   )
 }
 
-function SalaEmBreve({ aoReverTour }: { aoReverTour?: () => void }) {
+function SalaEmBreve({ aoReverTour, aoIr }: { aoReverTour?: () => void; aoIr?: (tela: string) => void }) {
   return (
     <div className="ger aulas-breve">
       {aoReverTour && <CartaoDoTour aoAbrir={aoReverTour} />}
       <section className="breve-cartao">
         <span className="breve-selo">Treinamento original {MARCA.prosa}</span>
-        <h2>Disponível em breve</h2>
-        <p>
-          As aulas serão disponibilizadas em breve. Assim que forem liberadas, elas
-          aparecem aqui para você, sem precisar fazer nada.
-        </p>
+        <h2>As aulas chegam em breve</h2>
+        <p>Quando forem liberadas, aparecem aqui sozinhas.</p>
         <p className="breve-nota">Enquanto isso, os robôs seguem disponíveis na plataforma.</p>
+        {aoIr && <button type="button" className="breve-ir" onClick={() => aoIr('robos')}>Ver os robôs</button>}
       </section>
     </div>
   )
@@ -132,7 +131,7 @@ function SalaEmBreve({ aoReverTour }: { aoReverTour?: () => void }) {
 
 /** A porta da sala: o recado enquanto não há vídeo, a vitrine quando houver. */
 export function AulasPanel(props: { nome?: string | null; sessao?: SessaoTeeds | null; aoReverTour?: () => void; aoIr?: (tela: string) => void; treino?: { noAr: boolean } | null; travadas?: boolean }) {
-  if (AULAS_EM_BREVE) return <SalaEmBreve aoReverTour={props.aoReverTour} />
+  if (AULAS_EM_BREVE) return <SalaEmBreve aoReverTour={props.aoReverTour} aoIr={props.aoIr} />
   return <SalaDeAulas {...props} />
 }
 
@@ -254,7 +253,6 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
                 <div className="cine-chips">
                   <span>Iniciante</span>
                   {!ehVideoDeExemplo(aberta.video) && <span>{aberta.duracao}</span>}
-                  {vista && <span className="ok">✓ Assistida</span>}
                   {ehVideoDeExemplo(aberta.video) && <span className="demo">Vídeo de exemplo</span>}
                 </div>
               </div>
@@ -356,7 +354,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
                 )
               })}
             </div>
-            <p className="cine-atalhos">Atalhos: <kbd>espaço</kbd> tocar ou pausar · <kbd>←</kbd> <kbd>→</kbd> 10 s · <kbd>F</kbd> tela cheia</p>
+            {player?.tipo === 'mp4' && <p className="cine-atalhos">Atalhos: <kbd>espaço</kbd> tocar ou pausar · <kbd>←</kbd> <kbd>→</kbd> 10 s · <kbd>F</kbd> tela cheia</p>}
           </aside>
         </div>
       </div>
@@ -372,8 +370,8 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
             <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4M12 13.5v3l2 1.2" /></svg>
           </span>
           <span className="aulas-liberacao-texto">
-            <b>{AVISO_GF_MEMBER}</b>
-            <small>As aulas do GF Member são liberadas logo depois da live. Até lá, conheça os módulos e o que você vai aprender.</small>
+            <b>Suas aulas abrem em 9 de novembro, depois da live</b>
+            <small>Até lá, veja os módulos e o que você vai aprender.</small>
           </span>
         </section>
       )}
@@ -398,13 +396,16 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
             <span>{Math.round((assistidas / aulas.length) * 100)}% concluído</span>
           </div>
           <div className="aulas-hero-acoes">
-          {destaque?.video ? (
+          {travadas ? (
+            // GF Member antes da live: nenhum botão finge que dá para assistir (29/10/2026)
+            <span className="aulas-abre-em" role="note"><Icone nome="info" />{AVISO_GF_MEMBER_CURTO}, depois da live</span>
+          ) : destaque?.video ? (
             <button className="aulas-continuar" onClick={() => abrir(destaque)}>
               <Icone nome="play" /> {assistidas > 0 ? 'Continuar assistindo' : 'Começar agora'}
             </button>
           ) : (
             <button className="aulas-continuar indisponivel" onClick={() => destaque && setDetalheId(destaque.id)}>
-              <Icone nome="play" /> {travadas ? AVISO_GF_MEMBER_CURTO : 'Ver apresentação'}
+              <Icone nome="play" /> Ver apresentação
             </button>
           )}
           {destaque && (
@@ -412,7 +413,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
           )}
           </div>
         </div>
-        <div className="aulas-hero-marca" aria-hidden>{MARCA.nome} ORIGINAL</div>
+        <div className="aulas-hero-marca" aria-hidden>{MARCA.nome} original</div>
       </div>
 
       {/* os banners de destaque: comunidade, Deriv, sala ao vivo, apostila (21/10/2026) */}
@@ -425,7 +426,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
           <Fileira rotulo="Continue assistindo">
             <button className="aula-cartao continuar" onClick={() => abrir(proxima)}>
               <span className="aula-cartao-capa"><ResponsiveImage src={capa(proxima.id)} alt="" /><span className="aula-play">▶</span></span>
-              <span className="aula-cartao-corpo"><span className="aula-num">Aula {proxima.numero}</span><b>{proxima.titulo}</b><i className="aula-progresso-card"><u style={{ width: '35%' }} /></i></span>
+              <span className="aula-cartao-corpo"><span className="aula-num">Aula {proxima.numero}</span><b>{proxima.titulo}</b></span>
             </button>
           </Fileira>
         </section>
@@ -453,7 +454,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
                   <span className="aula-cartao-capa" data-num={String(a.numero).padStart(2, '0')}>
                     <ResponsiveImage src={capa(a.id)} alt={`Capa da aula ${a.titulo}`} loading="lazy" />
                     {vistas.has(a.id) && <i className="aula-vista">✓</i>}
-                    {!a.video && <em>{travadas ? 'Em 09/11' : 'Em breve'}</em>}
+                    {!a.video && <em>{travadas ? 'Em 9/11' : 'Em breve'}</em>}
                     {a.video && <span className="aula-play">▶</span>}
                     {a.duracao && !travadas && <span className="aula-dur">{a.duracao}</span>}
                     <span className="aula-hover-info"><b>{a.titulo}</b><small>{a.descricao}</small></span>
@@ -461,7 +462,8 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
                   <span className="aula-cartao-corpo">
                     <span className="aula-num">Aula {a.numero}</span>
                     <b>{a.titulo}</b>
-                    <span className="aula-card-meta"><i>{a.video ? 'Disponível' : travadas ? AVISO_GF_MEMBER_CURTO : 'Em breve'}</i>{!travadas && <i>{a.duracao || 'Duração a definir'}</i>}</span>
+                    {/* a duração já aparece na capa: aqui só o que a capa não diz (revisão visual, 29/10/2026) */}
+                    {!travadas && <span className="aula-card-meta"><i>{a.video ? 'Disponível' : 'Em breve'}</i>{!a.duracao && <i>Duração a definir</i>}</span>}
                   </span>
                 </button>
               ))}

@@ -323,10 +323,42 @@ export function RobotsPanel({
   const apresentacaoDe = (chave: string): 'aberta' | 'linha' | 'cartao' =>
     disposicao === 'mosaico' ? 'cartao' : abertaEfetiva === chave ? 'aberta' : 'linha'
 
+  // As sessões que já estão no servidor (ligadas pelo chat, por outro aparelho
+  // ou antes de a Deriv cair aqui): o mesmo painel em qualquer caso.
+  const paineisDoServidor = doChat.length > 0 && (
+    <div className="rob-board-group">
+      {doChat.map((v, i) => (
+        <div key={v.id} className={`rob-board-slot ${apresentacaoDe(v.id) === 'aberta' ? 'aberta' : ''}`}>
+        <LocalRobotPanel
+          titulo={`#${i + 1}`}
+          socket={socket} isDemo={v.demo} demoComoReal={demoComoReal} rotulosTrocados={rotulosTrocados} moeda={v.moeda}
+          symbols={symbols} symbolPadrao={symbolPadrao}
+          identidade={identidade(v.roboId)}
+          conexao={conexao}
+          sessaoTeeds={sessaoTeeds} contaId={v.contaId}
+          adotar={{ id: v.id, config: v.config, origem: v.origem }}
+          apresentacao={apresentacaoDe(v.id)}
+          onAbrir={() => disposicao === 'mosaico' ? abrirNaLista(v.id) : alternarAberta(v.id)}
+          onDigitos={() => alternarDigitos(v.id)}
+          digitosAberto={digitosDe === v.id}
+          mostrarMarkup={admin && mostrarMarkup}
+          idEstudo={v.id} onEstudo={receberEstudo}
+          onRemover={retidas.has(v.id) ? () => fecharRetida(v.id) : undefined} />
+        </div>
+      ))}
+    </div>
+  )
+
   if (!logado) {
+    /*
+      Sem a Deriv neste aparelho, as sessões que já operam no servidor
+      continuam à vista, com o "Desligar" (29/10/2026). Antes a tela mostrava
+      só o cartão de conectar, e quem tinha robô ligado não conseguia pará-lo.
+    */
     return (
-      <div className="ger">
-        <div className="ger-topo"><div><h2>Robôs</h2></div></div>
+      <div className="ger rob robot-workspace">
+        <div className="ger-topo"><div><h2>{doChat.length ? 'Suas sessões' : 'Robôs'}</h2></div></div>
+        {doChat.length > 0 && <div className="rob-workspace-board modo-lista">{paineisDoServidor}</div>}
         <DerivDesconectada
           acao="Os robôs compram e vendem contratos de verdade."
           entrando={entrandoNaDeriv}
@@ -340,15 +372,19 @@ export function RobotsPanel({
       <div className="ger-topo rob-workspace-header">
         <div>
           <span className="rob-eyebrow">CENTRAL DE ROBÔS</span>
-          <h2>{temAcompanhamento ? 'Suas sessões' : MARCA.vitrineDosRobos ? 'Vamos iniciar sua jornada?' : 'Vamos preparar seu primeiro robô?'}</h2>
-          <p className="ger-sub">
-            {temAcompanhamento ? 'Acompanhe cada sessão. Abra os detalhes quando precisar.' : 'Escolha um modelo, defina seus limites e acompanhe a sessão.'}
-          </p>
+          {/* GlobalFly sem sessão: a vitrine logo abaixo já tem o título e a frase; aqui não repete. */}
+          {(temAcompanhamento || !MARCA.vitrineDosRobos) && <>
+            <h2>{temAcompanhamento ? 'Suas sessões' : 'Vamos preparar seu primeiro robô?'}</h2>
+            <p className="ger-sub">
+              {temAcompanhamento ? 'Acompanhe cada sessão. Abra os detalhes quando precisar.' : 'Escolha um modelo, defina seus limites e acompanhe a sessão.'}
+            </p>
+          </>}
         </div>
         <div className="rob-workspace-actions">
           {/* a cabine numa janela própria, que a pessoa arrasta para onde quiser (29/10/2026) */}
           <BotaoJanelaSolta qual="cabine" />
-          <button className="rob-new-button" onClick={abrirBloco} disabled={blocos.length >= MAX_BLOCOS && !temPreparoDisponivel}>+ Novo robô</button>
+          <button className="rob-new-button" onClick={abrirBloco} disabled={blocos.length >= MAX_BLOCOS && !temPreparoDisponivel}
+            title={blocos.length >= MAX_BLOCOS && !temPreparoDisponivel ? `Limite de ${MAX_BLOCOS} robôs ao mesmo tempo` : undefined}>+ Novo robô</button>
         </div>
       </div>
 
@@ -356,7 +392,7 @@ export function RobotsPanel({
       <RobotOverview sessoes={vivasNoServidor} rotulosTrocados={rotulosTrocados}
         paineis={chaves.map((k) => estudo.get(k)).filter((d): d is DadosEstudo => !!d)} moeda={moeda} demoDaTela={isDemo} />
       <div className="rob-workspace-toolbar" hidden={!temAcompanhamento}>
-        <div><b>Área de acompanhamento</b><span>{disposicao === 'lista' ? 'Clique numa linha para abrir a cabine dela. Os outros robôs seguem operando normalmente.' : 'Todos os robôs de uma vez. "Abrir na lista" mostra a cabine completa.'}</span></div>
+        <div><b>Área de acompanhamento</b><span>{disposicao === 'lista' ? 'Abra uma linha para ver a cabine dela. Os outros robôs seguem operando normalmente.' : 'Todos os robôs de uma vez. "Abrir na lista" mostra a cabine completa.'}</span></div>
         <div className="rob-toolbar-direita">
           {/* Ampliar dígitos para a tela inteira (20/10/2026): no mosaico ou na lista,
               sem precisar abrir a cabine de um robô. O painel é o mesmo dos blocos. */}
@@ -391,29 +427,7 @@ export function RobotsPanel({
         ele — e esconder o painel porque a vitrine estava noutro cartão
         seria a tela fingindo que o robô não existe.
       */}
-      {doChat.length > 0 && (
-        <div className="rob-board-group">
-          {doChat.map((v, i) => (
-            <div key={v.id} className={`rob-board-slot ${apresentacaoDe(v.id) === 'aberta' ? 'aberta' : ''}`}>
-            <LocalRobotPanel
-              titulo={`#${i + 1}`}
-              socket={socket} isDemo={v.demo} demoComoReal={demoComoReal} rotulosTrocados={rotulosTrocados} moeda={v.moeda}
-              symbols={symbols} symbolPadrao={symbolPadrao}
-              identidade={identidade(v.roboId)}
-              conexao={conexao}
-              sessaoTeeds={sessaoTeeds} contaId={v.contaId}
-              adotar={{ id: v.id, config: v.config, origem: v.origem }}
-              apresentacao={apresentacaoDe(v.id)}
-              onAbrir={() => disposicao === 'mosaico' ? abrirNaLista(v.id) : alternarAberta(v.id)}
-              onDigitos={() => alternarDigitos(v.id)}
-              digitosAberto={digitosDe === v.id}
-              mostrarMarkup={admin && mostrarMarkup}
-              idEstudo={v.id} onEstudo={receberEstudo}
-              onRemover={retidas.has(v.id) ? () => fecharRetida(v.id) : undefined} />
-            </div>
-          ))}
-        </div>
-      )}
+      {paineisDoServidor}
 
       {ident.onde === 'teeds' && <div className="rob-board-group">
         {blocos.map((idBloco) => (
@@ -606,7 +620,7 @@ export function RobotsPanel({
 
           <button className={`btn btn-ligar ${confirmaReal ? 'btn-confirmar' : ''}`}
             disabled={!socket || ligando} onClick={ligar}>
-            {ligando ? 'ligando…' : confirmaReal ? (rotulosTrocados ? 'Confirmar' : 'Confirmar com dinheiro real') : `Ligar robô ${modelo.nome}`}
+            {ligando ? 'Ligando…' : confirmaReal ? (rotulosTrocados ? 'Confirmar' : 'Confirmar com dinheiro real') : `Ligar robô ${modelo.nome}`}
           </button>
         </section>
 

@@ -41,11 +41,13 @@ interface Props {
   ocultos: boolean
   /** Só falta este passo na jornada: o cabeçalho avisa. */
   ultimoPasso: boolean
+  /** Sem a Deriv conectada: salvar o plano não disputa com o "Conectar" (botão sem o ouro). */
+  discreto?: boolean
   aoSalvar: (meta: number, limite: number) => void
   aoVerIas: () => void
 }
 
-export function InstrumentoDoDia({ plano, resultado, moeda, ocultos, ultimoPasso, aoSalvar, aoVerIas }: Props) {
+export function InstrumentoDoDia({ plano, resultado, moeda, ocultos, ultimoPasso, discreto = false, aoSalvar, aoVerIas }: Props) {
   const [editando, setEditando] = useState(!plano)
   const [meta, setMeta] = useState(plano ? n2(plano.meta) : '25,00')
   const [limite, setLimite] = useState(plano ? n2(plano.limite) : '15,00')
@@ -90,7 +92,7 @@ export function InstrumentoDoDia({ plano, resultado, moeda, ocultos, ultimoPasso
           </label>
         </div>
         {erro && <p className="in-instr-erro" role="alert">{erro}</p>}
-        <button type="submit" className="in-instr-salvar">Salvar plano do dia</button>
+        <button type="submit" className={`in-instr-salvar${discreto ? ' discreto' : ''}`}>Salvar plano do dia</button>
       </form>
     )
   }
@@ -106,7 +108,7 @@ export function InstrumentoDoDia({ plano, resultado, moeda, ocultos, ultimoPasso
   const pctMeta = Math.max(0, Math.round((r / plano.meta) * 100))
   const pctLimite = Math.max(0, Math.round((-r / plano.limite) * 100))
   const estado = bateu ? 'meta' : estourou ? 'limite' : r >= 0 ? 'ganho' : 'perda'
-  const frase = ocultos ? 'valores ocultos'
+  const frase = ocultos ? 'Valores ocultos'
     : bateu ? 'Meta batida. Hora de pousar.'
     : estourou ? 'Limite atingido. Hora de desligar.'
     : resultado === null ? 'Nenhuma operação ainda hoje'

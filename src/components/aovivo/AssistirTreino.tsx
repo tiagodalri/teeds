@@ -11,7 +11,7 @@ import './aovivo.css'
  * (19/10/2026): a imagem, o chat e o tamanho da sala. O selo "Simulação"
  * fica sempre na imagem e o número leva "simulado": quem assiste sabe o que
  * está vendo. 20/10/2026: o aviso de simulação sai do cabeçalho (fica só no
- * selo da imagem); o cabeçalho é "Transmissão exclusiva para GF Members" e
+ * selo da imagem); o cabeçalho é "Transmissão exclusiva do GF Member" e
  * o membro vê só o público simulado, o apresentador e as próprias mensagens.
  * Também 20/10/2026: tela cheia, e ao sair da página o ensaio continua no
  * player (flutuante, miniatura, ao lado do gráfico ou só o áudio), igual à
@@ -47,8 +47,8 @@ export function AssistirTreino({ sessao, conectar = true }: { sessao: SessaoTeed
         {MARCA.id === 'globalfly' && <img className="tr-cabeca-selo" src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
         <div className="tr-cabeca-texto">
           <span className="tr-cabeca-sobre">Sala de treino</span>
-          <h1>Transmissão exclusiva para <em>GF Members</em></h1>
-          <p>{t.presente && primeiro ? <>Com <b>{primeiro}</b>. Você está entre os membros convidados.</> : 'Fique nesta tela: a transmissão começa assim que o apresentador entrar.'}</p>
+          <h1>Transmissão exclusiva do <em>GF Member</em></h1>
+          <p>{t.presente && primeiro ? <>Com <b>{primeiro}</b>. Você está entre os membros convidados.</> : 'Ainda não há transmissão agora. Quando a equipe abrir a sala, o menu Ao vivo ganha um ponto vermelho.'}</p>
         </div>
         <span className={`tr-status ${status.cls}`} role="status"><i aria-hidden /><span className="tr-status-longo">{status.txt}</span>{'curto' in status && <span className="tr-status-curto" aria-hidden>{status.curto}</span>}</span>
       </header>

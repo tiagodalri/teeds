@@ -34,7 +34,8 @@ import { ROBOS_A_VENDA, useRobosBloqueados } from '../../core/teeds/robosLiberad
 
 export interface DadosDoInicio {
   nome: string
-  conta: { conectada: boolean; demo: boolean; saldo: number | null; moeda: string }
+  /** operaEmDemo: a conta de verdade (a etiqueta pode estar trocada); null = a corretora ainda não respondeu. */
+  conta: { conectada: boolean; demo: boolean; operaEmDemo?: boolean | null; saldo: number | null; moeda: string }
   /** null = ainda sem operação hoje */
   hoje: { resultado: number; operacoes: number; vitorias: number; derrotas: number } | null
   /** Meta e limite em dólar; null = ainda não definidos. */
@@ -42,6 +43,8 @@ export interface DadosDoInicio {
   /** As I.A.s da marca, na ordem da casa; as que estão no ar trazem o resultado. */
   frota: Array<{ id: string; nome: string; chamada: string; noAr: boolean; operando: boolean; resultado: number; analise: { n: number; alvo: number } | null }>
   cotacoes: Array<{ id: string; nome: string; valor: string; variacao: number; serie: number[] }>
+  /** A leitura do mercado falhou (sem cotação para mostrar). */
+  mercadoFalhou?: boolean
   manchetes: Array<{ titulo: string; fonte: string; quando: string; link?: string }>
   aula: { modulo: string; titulo: string; capa: string; feitas: number; total: number } | null
   treino: { noAr: boolean; apresentador?: string } | null
@@ -58,6 +61,8 @@ interface Props {
   aoAbrirCarteira?: () => void
   /** Um aviso acima do painel (o convite das notificações, por exemplo). */
   topo?: ReactNode
+  /** Lê o mercado de novo (depois de uma falha). */
+  aoRecarregarMercado?: () => void
 }
 
 const numero = (n: number) => Math.abs(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -95,25 +100,34 @@ const ICONE = {
 }
 const Icone = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden="true"><path d={d} /></svg>
 
-export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo, aoAbrirCarteira, topo }: Props) {
+export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo, aoAbrirCarteira, topo, aoRecarregarMercado }: Props) {
   const ocultos = useValoresOcultos()
   const conectar = () => (aoConectar ? aoConectar() : aoIr('operar'))
   const moeda = d.conta.moeda
   const h = d.hoje
-  const acerto = h && h.operacoes > 0 ? Math.round((h.vitorias / h.operacoes) * 100) : null
+  const positivas = h && h.operacoes > 0 ? Math.round((h.vitorias / h.operacoes) * 100) : null
   const primeiro = d.nome.trim().split(/\s+/)[0]
   const sinal = (n: number) => (n > 0 ? '+' : n < 0 ? '−' : '')
 
+  // Treinar é na conta demo DE VERDADE (a etiqueta pode estar trocada): já nela, a I.A. em
+  // demo conclui o passo; fora dela, o menu da conta abre para trocar (nunca leva ao Manual na real)
+  const jaEmDemo = d.conta.operaEmDemo ?? d.conta.demo
+  const treinar = () => {
+    if (jaEmDemo) { aoIr('robos'); return }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.dispatchEvent(new Event('conta:abrir'))
+  }
   // a jornada: o passo do plano mora no instrumento; os outros, numa faixa fina
   const passos = [
-    { feito: d.jornada.deriv, titulo: 'Conecte sua Deriv', fazer: conectar },
-    { feito: d.jornada.demo, titulo: 'Treine na conta demo', fazer: () => aoIr('operar') },
-    { feito: d.jornada.gestao, titulo: 'Monte o plano do dia', fazer: () => document.getElementById('in-instr-titulo')?.scrollIntoView({ behavior: 'smooth', block: 'center' }) },
-    { feito: d.jornada.primeiraIa, titulo: 'Ligue sua primeira I.A.', fazer: () => aoIr('robos') },
+    { feito: d.jornada.deriv, titulo: 'Conecte sua Deriv', acao: 'Começar', fazer: conectar },
+    { feito: d.jornada.demo, titulo: 'Treine com uma I.A. na conta demo', acao: jaEmDemo ? 'Começar' : 'Trocar para a demo', fazer: treinar },
+    { feito: d.jornada.gestao, titulo: 'Monte o plano do dia', acao: 'Começar', fazer: () => document.getElementById('in-instr-titulo')?.scrollIntoView({ behavior: 'smooth', block: 'center' }) },
+    { feito: d.jornada.primeiraIa, titulo: 'Ligue sua primeira I.A.', acao: 'Começar', fazer: () => aoIr('robos') },
   ]
   const faltam = passos.filter((p) => !p.feito)
   const soFaltaOPlano = faltam.length === 1 && !d.jornada.gestao
-  const proximo = faltam.find((p) => p !== passos[2]) ?? null
+  // sem a Deriv, o próprio painel já pede a conexão: a faixa não repete o mesmo botão
+  const proximo = d.conta.conectada ? faltam.find((p) => p !== passos[2]) ?? null : null
 
   const noAr = d.frota.filter((r) => r.noAr)
   const bloqueados = useRobosBloqueados()
@@ -156,7 +170,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
               <dl className="in-trio">
                 <div><dt>Hoje</dt><dd className={!h || ocultos ? '' : h.resultado >= 0 ? 'sobe' : 'cai'}>{!h ? '—' : ocultos ? MASCARA : `${sinal(h.resultado)}${numero(h.resultado)}`}</dd></div>
                 <div><dt>Operações</dt><dd>{h?.operacoes ?? 0}</dd></div>
-                <div><dt>Acerto</dt><dd>{acerto === null ? '—' : `${acerto}%`}</dd></div>
+                <div><dt>Positivas</dt><dd>{positivas === null ? '—' : `${positivas}%`}</dd></div>
               </dl>
             </>
           ) : (
@@ -185,13 +199,14 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
         </div>
 
         <InstrumentoDoDia key={d.plano ? `${d.plano.meta}|${d.plano.limite}` : 'sem-plano'} plano={d.plano} resultado={h ? h.resultado : null} moeda={moeda} ocultos={ocultos}
-          ultimoPasso={soFaltaOPlano} aoSalvar={aoSalvarPlano} aoVerIas={() => aoIr('robos')} />
+          ultimoPasso={soFaltaOPlano} discreto={!d.conta.conectada} aoSalvar={aoSalvarPlano} aoVerIas={() => aoIr('robos')} />
       </section>
 
       {/* ------------------------------------------------ atalhos (celular: a fileira de app de banco) */}
       <nav className="in-acoes" aria-label="Ações rápidas">
         {[
-          { id: 'ia', rotulo: 'Ligar I.A.', icone: ICONE.ia, principal: true, fazer: () => aoIr('robos') },
+          // sem a Deriv a ação principal é conectar (no painel): o atalho da I.A. não disputa com ela
+          { id: 'ia', rotulo: 'Ligar I.A.', icone: ICONE.ia, principal: d.conta.conectada, fazer: () => aoIr('robos') },
           { id: 'manual', rotulo: 'Operar', icone: ICONE.manual, fazer: () => aoIr('operar') },
           { id: 'gestao', rotulo: 'Gerenciar', icone: ICONE.gestao, fazer: () => aoIr('gerenciamento') },
           { id: 'deposito', rotulo: 'Depositar', icone: ICONE.deposito, externo: true, fazer: () => window.open(CAIXA_DERIV, '_blank', 'noopener') },
@@ -209,15 +224,16 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
       {proximo && (
         <section className="in-jornada" aria-label="Sua jornada">
           <ol aria-hidden="true">{passos.map((p, i) => <li key={p.titulo} className={p.feito ? 'feito' : p === proximo ? 'agora' : ''}>{p.feito ? <Icone d={ICONE.check} /> : i + 1}</li>)}</ol>
-          <p><b>{faltam.length === 1 ? 'Falta 1 passo:' : `Faltam ${faltam.length} passos.`}</b> {proximo.titulo.toLowerCase().replace(/^./, (c) => c.toUpperCase())}.</p>
-          <button type="button" className="in-pilula ouro" onClick={proximo.fazer}>Começar</button>
+          <p><b>{faltam.length === 1 ? 'Falta 1 passo:' : `Faltam ${faltam.length} passos.`}</b> {proximo.titulo.replace(/\.$/, '')}.</p>
+          <button type="button" className="in-pilula ouro" onClick={proximo.fazer}>{proximo.acao}</button>
         </section>
       )}
 
       <div className="in-grade">
         <div className="in-coluna-principal">
           {/* ------------------------------------------------ sua frota */}
-          <section className="in-frota" aria-labelledby="in-frota-titulo">
+          {/* sem I.A. para mostrar (a lista ainda não chegou), o título não fica sozinho sobre um vazio */}
+          {frota.length > 0 && <section className="in-frota" aria-labelledby="in-frota-titulo">
             <header className="in-cabeca">
               <h2 id="in-frota-titulo">Sua frota</h2>
               <span className="in-cabeca-sub">{subFrota}</span>
@@ -230,7 +246,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                 return (
                   <button key={r.id} type="button" className={`in-jato ${r.noAr ? 'no-ar' : ''} ${trancada ? 'trancada' : ''}`}
                     onClick={() => (r.noAr ? aoIr('robos') : trancada ? aoIr('marketplace') : aoPrepararRobo(r.id))}
-                    aria-label={r.noAr ? `${r.nome}: no ar, ${ocultos ? 'resultado oculto' : `resultado ${sinal(r.resultado)}${numero(r.resultado)}`}. Abrir a cabine.` : `${r.nome}, ${r.chamada}. Configurar e ligar.`}>
+                    aria-label={r.noAr ? `${r.nome}: no ar, ${ocultos ? 'resultado oculto' : `resultado ${sinal(r.resultado)}${numero(r.resultado)}`}. Abrir a cabine.` : trancada ? `${r.nome}: liberar no Marketplace.` : `${r.nome}, ${r.chamada}. Configurar e ligar.`}>
                     {/* a marca da casa no canto: o monograma, não as letras (22/10/2026) */}
                     {TEM_MONOGRAMA && <Monograma tamanho={30} className="in-jato-mono" />}
                     <img {...fotoDoCartaoAlto(r.id)} sizes="(max-width: 700px) 45vw, 20vw" alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
@@ -249,7 +265,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                 )
               })}
             </div>
-          </section>
+          </section>}
 
           {/* ------------------------------------------------ para você */}
           <section className="in-para-voce" aria-labelledby="in-pv-titulo">
@@ -318,7 +334,13 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                     </span>
                   </div>
                 ))}
-                {!d.cotacoes.length && [0, 1, 2, 3].map((i) => <div key={i} className="in-cotacao carregando"><span className="in-esqueleto" /><span className="in-esqueleto curto" /></div>)}
+                {!d.cotacoes.length && d.mercadoFalhou && (
+                  <div className="in-mercado-falhou" role="status">
+                    <span>Cotações indisponíveis agora.</span>
+                    {aoRecarregarMercado && <button type="button" className="in-link" onClick={aoRecarregarMercado}>Tentar de novo</button>}
+                  </div>
+                )}
+                {!d.cotacoes.length && !d.mercadoFalhou && [0, 1, 2, 3].map((i) => <div key={i} className="in-cotacao carregando"><span className="in-esqueleto" /><span className="in-esqueleto curto" /></div>)}
               </div>
             </section>
             {d.manchetes.length > 0 && (

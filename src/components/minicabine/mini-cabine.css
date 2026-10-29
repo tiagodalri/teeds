@@ -45,7 +45,7 @@
   --mcb-gf: url(/globalfly-gf-escuro.png);
 }
 .mcb svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-.mcb button { font: inherit; color: inherit; cursor: pointer; }
+.mcb :where(button) { font: inherit; color: inherit; cursor: pointer; }
 .mcb .sobe { color: var(--mcb-verde); }
 .mcb .cai { color: var(--mcb-coral); }
 .mcb :focus-visible { outline: 2px solid var(--mcb-ouro); outline-offset: 2px; }
@@ -152,6 +152,8 @@
 .mcb-aviso-icone { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--mcb-vidro); }
 .mcb-aviso.meta .mcb-aviso-icone { background: color-mix(in srgb, var(--mcb-verde) 16%, transparent); color: var(--mcb-verde); }
 .mcb-aviso.limite .mcb-aviso-icone { background: color-mix(in srgb, var(--mcb-coral) 16%, transparent); color: var(--mcb-coral); }
+.mcb-aviso.erro { border-color: color-mix(in srgb, var(--mcb-coral) 55%, transparent); }
+.mcb-aviso.erro .mcb-aviso-icone { background: color-mix(in srgb, var(--mcb-coral) 16%, transparent); color: var(--mcb-coral); }
 .mcb-aviso > span:nth-child(2) { display: grid; gap: 2px; min-width: 0; }
 .mcb-aviso b { font-size: 13.5px; }
 .mcb-aviso small { color: var(--mcb-suave); font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -174,6 +176,15 @@
   @keyframes mcb-sobe { 0% { opacity: 0; transform: translateY(6px); } 15%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-8px); } }
   /* com o cartão aberto, o botão do suporte dá licença */
   body:has(.mcb.aberta) .sp-lancador-area { display: none; }
+  /* alvos de toque de 44 px no celular */
+  .mcb-icone, .mcb-aviso > button { width: 44px; height: 44px; }
+  .mcb-acoes button, .mcb-confirmar button { min-height: 44px; }
+  /* o convite do app (z 120) ocupa o rodapé inteiro: a pílula sobe acima dele em vez de cobrir o texto */
+  body:has(.barra-inferior):has(.app-convite) .mcb:not(.solta) { bottom: calc(160px + var(--sab, 0px)); }
+  /* menu lateral aberto (z 60): a pílula sairia por cima dos últimos itens da gaveta */
+  body:has(.workspace-sidebar.mobile-open) .mcb { display: none; }
+  /* o aviso de versão nova ocupa a largura toda no rodapé: a pílula dá licença até ele ser resolvido */
+  body:has(#aviso-versao) .mcb { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .mcb-pilula, .mcb-onda, .mcb-cartao, .mcb-aviso, .mcb-vivo > i, .mcb-robo-nome small.operando i, .mcb-entradas i.agora { animation: none; }
@@ -202,3 +213,4 @@
 .mcb-robo-nome small.analisando { color: var(--mcb-analisando); }
 .mcb-robo-nome small.analisando i { background: var(--mcb-analisando); animation: mcb-pulsa-ouro 1.6s ease-out infinite; }
 @keyframes mcb-pulsa-ouro { 0% { box-shadow: 0 0 0 0 rgba(215, 178, 106, .55); } 100% { box-shadow: 0 0 0 7px rgba(215, 178, 106, 0); } }
+

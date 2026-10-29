@@ -411,7 +411,7 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
         <article><span>Satisfação</span><strong>{kpis.media === null ? '—' : `${kpis.media.toFixed(1)} ★`}</strong><small>{kpis.notas} avaliaç{kpis.notas === 1 ? 'ão' : 'ões'}</small></article>
       </div>
 
-      {erro && <p className="sx-erro" role="alert">{erro}<button type="button" onClick={() => setErro(null)}>fechar</button></p>}
+      {erro && <p className="sx-erro" role="alert">{erro}<button type="button" onClick={() => setErro(null)}>Fechar</button></p>}
 
       <div className="sx-mesa">
         {/* ------------------------------------------------ fila */}
@@ -522,7 +522,7 @@ export function AdminSuporte({ sessao, marca, nomeDaEquipe }: Props) {
                         <span className="sx-msg-nome">{m.interna ? 'Nota interna · ' : ''}{cliente ? nomeDe(atual).split(' ')[0] : (m.autorNome || 'Equipe').split(' ')[0]}</span>
                         {m.anexo && <Anexo sessao={sessao} caminho={m.anexo} />}
                         {m.texto && <p>{m.texto}</p>}
-                        <time>{m.enviando ? 'enviando…' : horaCurta(m.criadaEm)}
+                        <time>{m.enviando ? 'Enviando…' : horaCurta(m.criadaEm)}
                           {!cliente && !m.interna && !m.enviando && (
                             <svg className={`sx-lido ${naoLidasPeloCliente.has(m.id) ? '' : 'lido'}`} viewBox="0 0 18 11" aria-label={naoLidasPeloCliente.has(m.id) ? 'Entregue' : 'Lida pelo cliente'}><path d="M1 6l3 3 6-7M7 9l1 1 7-8" /></svg>
                           )}

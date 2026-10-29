@@ -44,10 +44,11 @@ for (const marca of Object.values(MARCAS)) {
     ['cadastro', emailDeCadastro(marca, exemplo)],
     ['aprovado', emailDeAprovacao(marca, exemplo, true)],
     ['aprovado-com-senha-propria', emailDeAprovacao(marca, exemplo, false)],
-    ['volta', emailDeVolta(marca, exemplo)],
+    // sem canal do Telegram a campanha recusa a marca (29/10/2026): a prévia pula
+    ...(marca.telegram ? [['volta', emailDeVolta(marca, exemplo)] as const] : []),
     ['repescagem', emailDeRepescagem(marca, exemplo)],
     ['acesso-gratuito', emailDeAcessoGratuito(marca, exemplo)],
-    ['dia-do-ag2', emailDoDiaDoAg2(marca, exemplo)],
+    ...(marca.telegram ? [['dia-do-ag2', emailDoDiaDoAg2(marca, exemplo)] as const] : []),
   ] as const) {
     writeFileSync(join(PASTA, `${marca.id}-${nome}.html`), pronto.html)
     indice.push(`${marca.nome.padEnd(6)} ${nome.padEnd(14)} ${pronto.assunto}`)

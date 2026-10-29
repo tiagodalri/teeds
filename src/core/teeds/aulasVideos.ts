@@ -71,10 +71,15 @@ function daLinha(l: any): VideoDaAula {
  * Os vídeos desta marca, por id de aula. Falha em silêncio: a sala de aula
  * abre com o catálogo do código se o banco não responder.
  */
-export async function listarVideosDasAulas(sessao: SessaoTeeds | null | undefined): Promise<Record<string, VideoDaAula>> {
+/*
+  `marca` (29/10/2026): o painel do master administra a plataforma escolhida no
+  seletor, não a do site aberto. Sem o parâmetro, com o seletor em OMNI, o admin
+  trocava o vídeo "da OMNI" e quem mudava era a Teeds. Padrão: a marca do site.
+*/
+export async function listarVideosDasAulas(sessao: SessaoTeeds | null | undefined, marca: string = MARCA.id): Promise<Record<string, VideoDaAula>> {
   if (!sessao || !autenticacaoConfigurada()) return {}
   try {
-    const linhas = await rest<any[]>(`/aulas_videos?select=*&marca=eq.${MARCA.id}`, sessao.token)
+    const linhas = await rest<any[]>(`/aulas_videos?select=*&marca=eq.${encodeURIComponent(marca)}`, sessao.token)
     const mapa: Record<string, VideoDaAula> = {}
     for (const l of linhas ?? []) mapa[l.aula_id] = daLinha(l)
     return mapa
@@ -90,12 +95,13 @@ export async function listarVideosDasAulas(sessao: SessaoTeeds | null | undefine
 export async function salvarVideoDaAula(
   sessao: SessaoTeeds,
   dados: { aulaId: string; video: string; duracao: string; titulo?: string | null; descricao?: string | null; publicado: boolean; arquivo?: string | null; materiais?: Material[]; links?: LinkDaAula[] },
+  marca: string = MARCA.id,
 ): Promise<void> {
   await rest('/aulas_videos?on_conflict=marca,aula_id', sessao.token, {
     method: 'POST',
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify({
-      marca: MARCA.id,
+      marca,
       aula_id: dados.aulaId,
       video: dados.video.trim(),
       duracao: dados.duracao.trim(),
@@ -112,8 +118,8 @@ export async function salvarVideoDaAula(
 }
 
 /** Apaga o registro (a aula volta a ser "em breve") e o arquivo enviado, se houver. */
-export async function removerVideoDaAula(sessao: SessaoTeeds, aulaId: string, arquivo?: string | null): Promise<void> {
-  await rest(`/aulas_videos?marca=eq.${MARCA.id}&aula_id=eq.${encodeURIComponent(aulaId)}`, sessao.token, {
+export async function removerVideoDaAula(sessao: SessaoTeeds, aulaId: string, arquivo?: string | null, marca: string = MARCA.id): Promise<void> {
+  await rest(`/aulas_videos?marca=eq.${encodeURIComponent(marca)}&aula_id=eq.${encodeURIComponent(aulaId)}`, sessao.token, {
     method: 'DELETE', headers: { Prefer: 'return=minimal' },
   })
   if (arquivo) await apagarArquivo(sessao, arquivo)
@@ -142,9 +148,9 @@ const nomeSeguro = (nome: string) =>
  * A política do bucket só aceita a pasta da própria marca.
  */
 export function enviarArquivoDaAula(
-  sessao: SessaoTeeds, aulaId: string, arquivo: File, aoProgredir?: (fracao: number) => void,
+  sessao: SessaoTeeds, aulaId: string, arquivo: File, aoProgredir?: (fracao: number) => void, marca: string = MARCA.id,
 ): { promessa: Promise<{ caminho: string; url: string }>; cancelar: () => void } {
-  const caminho = `${MARCA.id}/${aulaId}/${Date.now().toString(36)}-${nomeSeguro(arquivo.name)}`
+  const caminho = `${marca}/${aulaId}/${Date.now().toString(36)}-${nomeSeguro(arquivo.name)}`
   const xhr = new XMLHttpRequest()
   const promessa = new Promise<{ caminho: string; url: string }>((resolver, rejeitar) => {
     xhr.open('POST', `${SUPABASE.url}/storage/v1/object/${BUCKET}/${caminho.split('/').map(encodeURIComponent).join('/')}`)
@@ -189,8 +195,8 @@ const BUCKET_MATERIAIS = 'materiais'
 export const LIMITE_MATERIAL_MB = 50
 
 /** Envia um material da aula (PDF, planilha, e-book) para o bucket `materiais`, na pasta da marca. */
-export async function enviarMaterial(sessao: SessaoTeeds, aulaId: string, arquivo: File): Promise<Material> {
-  const caminho = `${MARCA.id}/${aulaId}/${Date.now().toString(36)}-${nomeSeguro(arquivo.name)}`
+export async function enviarMaterial(sessao: SessaoTeeds, aulaId: string, arquivo: File, marca: string = MARCA.id): Promise<Material> {
+  const caminho = `${marca}/${aulaId}/${Date.now().toString(36)}-${nomeSeguro(arquivo.name)}`
   const res = await fetch(`${SUPABASE.url}/storage/v1/object/${BUCKET_MATERIAIS}/${caminho.split('/').map(encodeURIComponent).join('/')}`, {
     method: 'POST',
     headers: { ...cabecalhos(sessao.token), 'Content-Type': arquivo.type || 'application/octet-stream', 'x-upsert': 'true' },
@@ -241,8 +247,8 @@ export interface AssistiuAula {
 }
 
 /** Cada aula desta marca com quem abriu, quanto assistiu e se concluiu. Só admin. */
-export async function controleDasAulas(sessao: SessaoTeeds): Promise<AssistiuAula[]> {
-  const linhas = await rest<any[]>('/rpc/teeds_aulas_controle', sessao.token, { method: 'POST', body: JSON.stringify({ p_marca: MARCA.id }) })
+export async function controleDasAulas(sessao: SessaoTeeds, marca: string = MARCA.id): Promise<AssistiuAula[]> {
+  const linhas = await rest<any[]>('/rpc/teeds_aulas_controle', sessao.token, { method: 'POST', body: JSON.stringify({ p_marca: marca }) })
   return (linhas ?? []).map((l) => ({
     aulaId: l.aula_id, userId: l.user_id, nome: l.nome ?? '', email: l.email ?? '', plano: l.plano ?? '',
     aberturas: l.aberturas ?? 0, segundos: l.segundos ?? 0, duracaoSeg: l.duracao_seg ?? 0,

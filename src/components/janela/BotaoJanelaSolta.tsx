@@ -32,7 +32,7 @@ export function BotaoJanelaSolta({ qual, className = '' }: { qual: QualJanela; c
     : 'Abre esta tela numa janela própria: arraste para onde quiser, até para outro monitor.'
   return (
     <span className={`js-botao-lugar ${className}`}>
-      <button type="button" className={`js-botao${aberta ? ' aberta' : ''}`} title={titulo} aria-label={titulo}
+      <button type="button" className={`js-botao${aberta ? ' aberta' : ''}`} title={titulo}
         onClick={() => setBloqueada(!abrirJanelaSolta(qual))}>
         {aberta ? <i className="js-ponto" aria-hidden="true" /> : <IconeSoltar />}
         <span>{aberta ? 'Janela aberta' : 'Soltar janela'}</span>

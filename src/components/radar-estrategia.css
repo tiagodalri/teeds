@@ -86,3 +86,19 @@
 .rc-casas { display: inline-flex; gap: 4px; }
 .rc-casas i { display: block !important; width: 14px !important; height: 14px !important; border-radius: 4px !important; border: 1.5px dashed color-mix(in srgb, currentColor 45%, transparent); background: transparent !important; }
 .rc-casas i.on { border-style: solid; border-color: currentColor; background: color-mix(in srgb, currentColor 30%, transparent) !important; }
+
+/* Revisão visual (29/10/2026) */
+/* o pontinho do "Analisando agora" fica na altura da primeira linha quando o texto quebra */
+.radar-vida { align-items: flex-start; line-height: 1.45; }
+.radar-vida i { flex: none; margin-top: calc(.725em - 3px); }
+/* no cartão do mosaico, o brilho do ponto era cortado pela borda do texto (overflow) */
+.rc-espera-ponto { animation: rc-ponto-pisca 1.6s ease-in-out infinite; }
+@keyframes rc-ponto-pisca { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .rc-espera-ponto { animation: none; } }
+/* o estado ("ANALISANDO O MERCADO") quebrava em duas linhas a 375 px, com
+   "MERCADO" sozinho e o ponto no meio das duas: cabe numa linha no celular */
+.radar-estado { align-items: flex-start; line-height: 1.3; }
+.radar-estado i { flex: none; margin-top: calc(.65em - 4px); }
+@media (max-width: 640px) {
+  .radar-estado { font-size: 11.5px; letter-spacing: .03em; }
+}

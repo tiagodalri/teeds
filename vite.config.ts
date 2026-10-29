@@ -432,7 +432,7 @@ export default defineConfig({
           `self.addEventListener('push',e=>{let d={};try{d=e.data?e.data.json():{}}catch(_){d={corpo:e.data?e.data.text():''}}`,
           `e.waitUntil(self.registration.showNotification(d.titulo||${JSON.stringify(nome)},{body:d.corpo||'',icon:'./${pwaDir}/icon-192.png',${existsSync(join('public', pwaDir, 'badge-96.png')) ? `badge:'./${pwaDir}/badge-96.png',` : ''}tag:d.tag||undefined,renotify:!!d.tag,data:{url:d.url||'./'}}))});`,
           `self.addEventListener('notificationclick',e=>{e.notification.close();const alvo=new URL((e.notification.data&&e.notification.data.url)||'./',self.registration.scope).href;`,
-          `e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{for(const c of cs){if(c.url.startsWith(self.registration.scope)&&'focus' in c)return c.focus()}return self.clients.openWindow(alvo)}))});`,
+          `e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{if(!alvo.startsWith(self.registration.scope))return self.clients.openWindow(alvo);for(const c of cs){if(c.url.startsWith(self.registration.scope)&&'focus' in c)return c.focus()}return self.clients.openWindow(alvo)}))});`,
           '',
         ].join('\n'))
       },

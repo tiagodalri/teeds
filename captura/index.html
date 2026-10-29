@@ -33,7 +33,7 @@
         <p data-intro></p>
         <div class="hero-acoes"><a class="botao" href="#cadastro">Entrar na fila de espera <span>→</span></a><small>Vagas iniciais limitadas, com acesso gratuito. Liberação mediante aprovação.</small></div>
         <ul class="provas" aria-label="Por que confiar">
-          <li><b>✓</b><span>Você define <strong>quanto quer ganhar</strong> e <strong>quanto aceita perder</strong>. O robô obedece.</span></li>
+          <li><b>✓</b><span>Você define a <strong>meta de ganho</strong> e o <strong>limite de perda</strong>. O robô para quando chega a um dos dois.</span></li>
           <li><b>✓</b><span>O saldo fica na <strong>sua conta na corretora</strong>. A plataforma nunca guarda o seu dinheiro.</span></li>
           <li><b>✓</b><span><strong>Liga e desliga quando quiser</strong>, do computador ou do celular.</span></li>
         </ul>
@@ -106,7 +106,7 @@
       <div class="ativo-texto">
         <span class="sobretitulo">O ativo</span>
         <h2>Um índice feito para estratégia, não para notícia.</h2>
-        <p>Os robôs operam o <b>Volatility 75 Index</b>, um índice que mede a volatilidade do mercado no espaço de 75 movimentações. Por isso ele é mais estável e tem um ritmo mais previsível do que moedas e ações: é o cenário ideal para a estratégia do robô ser aplicada com consistência, do jeito que foi desenhada.</p>
+        <p>Os robôs operam o <b>Volatility 75 Index</b>, um índice sintético da Deriv com volatilidade constante de 75%. Ele não depende de notícia, balanço nem horário de pregão, então a regra do robô é aplicada sempre do mesmo jeito, do jeito que foi desenhada. Isso não garante resultado: perdas fazem parte e o stop existe para elas.</p>
         <p>Ele funciona 24 horas por dia, 7 dias por semana, sem abrir e fechar pregão, sem notícia derrubando o gráfico e sem gap de um dia para o outro. O robô lê o último dígito de cada movimento e entra só quando a regra dele é atendida.</p>
       </div>
       <div class="ativo-cards">
@@ -157,9 +157,8 @@
 
     <!-- ========================================================== SESSÕES -->
     <section class="bloco escuro" id="sessoes">
-      <div class="bloco-cab"><span class="sobretitulo">Sessões na prática</span><h2>Como uma sessão termina quando a gestão é respeitada</h2><p>Vinte sessões de exemplo, no formato em que a plataforma resume cada uma: robô, duração, operações, acertos e resultado. Inclusive as que pararam no stop, porque isso também faz parte.</p></div>
+      <div class="bloco-cab"><span class="sobretitulo">Sessões na prática</span><h2>Uma sessão termina na meta, no stop ou quando você desliga</h2><p>Três exemplos ilustrativos, um de cada, no formato em que a plataforma resume cada sessão: duração, operações, ganhadoras e resultado.</p></div>
       <div class="sessoes" id="lista-sessoes" data-sessoes></div>
-      <button class="sessoes-expandir" type="button" aria-controls="lista-sessoes" aria-expanded="false">Ver todas as sessões de exemplo</button>
     </section>
 
 
@@ -195,7 +194,7 @@
       <div class="cadastro-texto"><span class="sobretitulo">Fila de espera aberta</span><h2>Seu próximo passo começa aqui.</h2><p>Cadastre-se para participar da primeira liberação de vagas, com acesso gratuito à plataforma. Assim que seu cadastro for aprovado, você receberá as instruções de acesso por e-mail.</p><ul><li><i>✓</i> Quantidade inicial de vagas limitada</li><li><i>✓</i> Acesso liberado mediante aprovação</li><li><i>✓</i> Cadastro gratuito, sem cobrança nesta página</li></ul></div>
       <form id="form-lead" novalidate>
         <div class="form-top"><span>Leva menos de 1 minuto</span><b>Seus dados estão protegidos</b></div>
-        <label>Nome completo<input name="nome" autocomplete="name" maxlength="120" placeholder="Como podemos chamar você?" required></label>
+        <label>Nome completo<input name="nome" autocomplete="name" autocapitalize="words" maxlength="120" placeholder="Nome e sobrenome" required></label>
         <label>Seu melhor e-mail<input name="email" type="email" autocomplete="email" maxlength="180" placeholder="voce@email.com" required></label>
         <label>WhatsApp com DDD<input name="telefone" type="tel" autocomplete="tel" maxlength="19" placeholder="(00) 00000-0000" required></label>
         <input class="armadilha" name="empresa" tabindex="-1" autocomplete="off" aria-hidden="true">

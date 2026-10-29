@@ -61,18 +61,14 @@ export function UserMenu({ usuario, onSair, onPerfil, foto, admin = false }: Pro
 
       {aberto && (
         <div className="menu menu-curto" role="menu">
-          <button className="menu-eu" role="menuitem"
-            onClick={() => { setAberto(false); onPerfil() }}>
+          {/* quem está logado: só o cabeçalho do menu (o "Meu perfil" logo abaixo é a ação) */}
+          <div className="menu-eu">
             <span className="avatar grande">{foto ? <img src={foto} alt="" /> : iniciais(usuario.nome ?? '', usuario.email)}</span>
             <div>
               <b>{usuario.nome || primeiro}</b>
               <em>{usuario.email}</em>
             </div>
-            <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" className="menu-eu-seta">
-              <path d="M4.5 2.5 L8 6 L4.5 9.5" fill="none" stroke="currentColor"
-                strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+          </div>
 
           <div className="menu-linha" />
 

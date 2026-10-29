@@ -215,14 +215,21 @@ export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: s
   const acesso=senhaPropria
     ? `Seus dados de entrada:\nE-mail: ${email}\nSenha: a que você criou no cadastro.\n\nVocê já pode entrar para acompanhar a análise. Se não lembrar a senha, toque em “Esqueci a senha” na tela de entrada e crie uma nova.`
     : senhaProvisoria
-    ? `Seus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${senhaProvisoria}\n\nVocê já pode entrar para acompanhar a tela de espera. Após a aprovação, será necessário criar a sua própria senha antes de usar a plataforma.`
-    : `E-mail cadastrado: ${email}. Seu recadastro está em análise. Após a aprovação, você receberá a senha provisória e as instruções de acesso, sem precisar lembrar sua senha antiga. Seu histórico será preservado. Por enquanto, sua senha não foi alterada.`
+    ? `Seus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${senhaProvisoria}\n\nVocê já pode entrar para acompanhar a análise. Após a aprovação, será necessário criar a sua própria senha antes de usar a plataforma.`
+    : `Você já tinha uma conta com o e-mail ${email}. Ela foi mantida como está: sua senha não foi alterada, e uma senha nova digitada no cadastro não vale para ela.\n\nApós a aprovação, você recebe por e-mail a senha provisória e as instruções de acesso. Seu histórico continua guardado.`
+  /*
+    Recadastro de conta existente (29/10/2026): sem botão de entrar. A pessoa
+    acabou de digitar uma senha que não vale para esta conta e, em geral, não
+    lembra a antiga — um botão "Entrar" seria uma ação que ela não consegue
+    fazer. O próximo passo dela é esperar o e-mail da aprovação.
+  */
+  const podeEntrar=senhaPropria||!!senhaProvisoria
   return montarEmail(marca,'confirmar',new URL('/',marca.redirectUri).href,{
     assunto:`Cadastro recebido · ${marca.prosa}`,
     titulo:'Cadastro recebido',
     espia:`Seu cadastro na ${marca.prosa} foi recebido e está em análise.`,
-    corpo:`Recebemos o seu cadastro na ${marca.prosa}. Ele está em análise pela nossa equipe — assim que for aprovado, você recebe um segundo e-mail com as orientações de acesso.\n\n${acesso}`,
-    botao:'Entrar na plataforma',
+    corpo:`Recebemos o seu cadastro na ${marca.prosa}. Ele está em análise pela nossa equipe; avisamos por e-mail quando for aprovado.\n\n${acesso}`,
+    ...(podeEntrar?{botao:'Entrar na plataforma'}:{}),
     aviso:'Se não foi você que se cadastrou, pode ignorar este e-mail. Não compartilhe seus dados de acesso.',
   })
 }
@@ -232,13 +239,13 @@ export function emailDeAprovacao(marca: Marca, email: string, aindaProvisoria: b
     ? `Seus dados de entrada:\nE-mail: ${email}\nSenha: a que você criou no cadastro.\n\nSe não lembrar a senha, toque em “Esqueci a senha” na tela de entrada e crie uma nova.`
     : aindaProvisoria
     ? `Seus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${SENHA_PROVISORIA}\n\nNo primeiro acesso após a aprovação, você deverá criar sua própria senha antes de usar a plataforma. Se você já tinha conta, esta senha substitui a anterior. Seu histórico foi preservado.`
-    : `Sua conta e seu histórico foram preservados. Entre com o e-mail ${email} e a sua senha atual. Se não lembrar, clique em “Esqueci a senha” na tela de acesso e você recebe um link para definir uma nova senha.`
+    : `Sua conta e seu histórico foram preservados. Entre com o e-mail ${email} e a sua senha atual. Se não lembrar, toque em “Esqueci a senha” na tela de entrada e você recebe um link para definir uma nova senha.`
   return montarEmail(marca,'convite',new URL('/',marca.redirectUri).href,{
     assunto:`Cadastro aprovado · seu acesso à ${marca.prosa} está liberado`,
     titulo:'Cadastro aprovado',
     espia:`Seu acesso à ${marca.prosa} foi liberado.`,
     corpo:`Parabéns! Seu cadastro na ${marca.prosa} foi aprovado e o seu acesso está liberado. Você já pode entrar, conectar a sua conta da corretora e começar a operar.\n\n${entrada}`,
-    botao:'Acessar a plataforma',
+    botao:'Entrar na plataforma',
     aviso:'Guarde seus dados de acesso com segurança. Não compartilhe sua senha com ninguém.',
   })
 }

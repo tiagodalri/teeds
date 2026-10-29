@@ -20,6 +20,9 @@ import { NomeDoRobo } from './NomeDoRobo'
 import { Monograma, TEM_MONOGRAMA } from './marca/Monograma'
 import { LogotipoDaIA, temLogotipo } from './marca/LogotipoDaIA'
 import { fotoDoCartaoAlto } from './marca/fotoDoCartao'
+import { DERIV } from '../core/deriv/config'
+import { irParaTela, useRobosBloqueados } from '../core/teeds/robosLiberados'
+import { etiquetaDaConta } from './RobotResumo'
 
 interface Props {
   identidade: Identidade
@@ -34,6 +37,8 @@ interface Props {
   /** Rótulos trocados (exercícios internos): a confirmação da real continua, sem dizer "dinheiro real". */
   rotulosTrocados?: boolean
   contaId?: string | null
+  /** Saldo da conta em que a sessão vai rodar (null = ainda não chegou ou é outra conta). */
+  saldo?: number | null
   escolherModelo?: boolean
   onCancelar: () => void
   onLigar: (cfg: ConfigEstrategia, symbol: string, modelo?: Identidade) => void
@@ -102,6 +107,14 @@ export const pedirModeloDaVitrine = (id: string) => { modeloDaVitrine = id }
 type Passo = 'escolha' | 'plano' | 'decolar'
 const FOTOS = `${import.meta.env.BASE_URL}robos-globalfly/`
 const TEM_FOTOS = MARCA.id === 'globalfly'
+/*
+  O tema de aviação ("Plano de voo", "Decolar", azul e ouro) é da GlobalFly.
+  Teeds e OMNI usam o mesmo preparo com palavras e cores delas (29/10/2026).
+*/
+const GF = MARCA.id === 'globalfly'
+const T = GF
+  ? { escolha: 'Escolha a I.A.', escolhaTitulo: 'Escolha a sua I.A.', plano: 'Plano de voo', decolar: 'Decolar', topo: 'Plano de voo', antes: 'Antes de decolar', revisar: 'Revisar e decolar', indisponivel: 'Esta I.A. está indisponível agora. Escolha outra.' }
+  : { escolha: 'Escolha o robô', escolhaTitulo: 'Escolha o seu robô', plano: 'Valores', decolar: 'Revisão', topo: 'Configurar robô', antes: 'Antes de iniciar', revisar: 'Revisar', indisponivel: 'Este robô está indisponível agora. Escolha outro.' }
 /** Nos campos, sem ponto de milhar ("1500,00"): é o formato que a validação do preparo aceita. */
 const n2 = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })
 const ler = (t: string) => { const v = Number(t.trim().replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')); return Number.isFinite(v) ? v : NaN }
@@ -203,8 +216,10 @@ function MostradorDeDigitos({ valor, mudar, max, padrao }: { valor: number; muda
   )
 }
 
-export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, demoComoReal = false, rotulosTrocados = false, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
+export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, demoComoReal = false, rotulosTrocados = false, saldo = null, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
   const disponiveis = useRobosDisponiveis()
+  // I.A. vendida à parte que a pessoa ainda não tem: cadeado já na escolha, não no fim do preparo
+  const bloqueados = useRobosBloqueados()
   // Escolhido no cartão da vitrine/home: o preparo já abre nele (a escolha continua a um "Voltar").
   // (lê sem apagar: o React de desenvolvimento chama esta função duas vezes; apaga depois de montar)
   const [daVitrine] = useState(() => {
@@ -275,9 +290,13 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   const limite = valorDePreparo(valores.stopLoss, isDemo ? 0 : (entrada ?? 0.35), 10_000)
   const erroEntrada = entrada === null ? `A entrada vai de ${din(0.35, moeda)} a ${din(10_000, moeda)}.` : null
   const erroMeta = meta === null ? `Informe a meta em ${moeda} (zero desliga a meta).` : null
-  const erroLimite = limite === null ? (!isDemo && entrada !== null && ler(valores.stopLoss) < entrada ? (rotulosTrocados ? 'O limite não pode ser menor que a entrada.' : 'Na conta real, o limite não pode ser menor que a entrada.') : `Informe o limite em ${moeda}${isDemo ? ' (zero desliga o freio)' : ''}.`) : null
-  const disponivel = disponiveis === null || disponiveis.includes(modelo.id)
+  const erroLimite = limite === null ? (!isDemo && entrada !== null && ler(valores.stopLoss) < entrada ? (rotulosTrocados ? 'O limite de perda não pode ser menor que a entrada.' : 'Na conta real, o limite de perda não pode ser menor que a entrada.') : `Informe o limite de perda em ${moeda}${isDemo ? ' (zero desliga o limite)' : ''}.`) : null
+  const trancada = bloqueados.has(modelo.id)
+  const disponivel = (disponiveis === null || disponiveis.includes(modelo.id)) && !trancada
   const planoValido = disponivel && entrada !== null && meta !== null && limite !== null
+  // A conta em que a sessão vai rodar, com a etiqueta da tela (só etiqueta) e o saldo quando houver
+  const contaRotulo = etiquetaDaConta(isDemo, rotulosTrocados, demoComoReal)
+  const saldoCurto = saldo !== null && (entrada !== null && saldo < entrada || limite !== null && limite > 0 && saldo < limite)
 
   useEffect(() => { corpo.current?.scrollTo({ top: 0 }) }, [passo])
   useEffect(() => { if (!ligando) submitted.current = false }, [ligando, erro])
@@ -325,12 +344,12 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   }
 
   const frota = (MARCA.robos as readonly string[]).filter((id) => IDENTIDADES.some((i) => i.id === id) && (!disponiveis || disponiveis.includes(id))).map(identidadeDoRobo)
-  const PASSOS: Array<{ id: Passo; nome: string }> = [{ id: 'escolha', nome: 'Escolha a I.A.' }, { id: 'plano', nome: 'Plano de voo' }, { id: 'decolar', nome: 'Decolar' }]
+  const PASSOS: Array<{ id: Passo; nome: string }> = [{ id: 'escolha', nome: T.escolha }, { id: 'plano', nome: T.plano }, { id: 'decolar', nome: T.decolar }]
   const ordem = PASSOS.findIndex((p) => p.id === passo)
   const opcaoModo = OPCOES_DE_MODO.find((o) => o.id === modo)
 
   return <RobotDialog label="Configurar robô" busy={ligando} onCancel={onCancelar}>
-    <form className={`robot-launch plv plv-no-${passo}`} onSubmit={(e) => { e.preventDefault(); if (passo !== 'decolar') avancar() }}
+    <form className={`robot-launch plv plv-no-${passo} ${GF ? 'plv-gf' : ''}`} onSubmit={(e) => { e.preventDefault(); if (passo !== 'decolar') avancar() }}
       onKeyDown={(e) => { if (e.key === 'Enter' && (e.repeat || e.nativeEvent.isComposing)) e.preventDefault() }}>
       {/* ------------------------------------------------ o topo azul */}
       <header className={`plv-topo ${TEM_FOTOS && passo === 'plano' ? 'com-foto' : ''}`}>
@@ -340,10 +359,14 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
         <div className="plv-topo-linha">
           {TEM_MONOGRAMA ? <Monograma tamanho={40} className="plv-mono" /> : <Emblema id={modelo} tamanho={34} />}
           <div className="plv-titulo">
-            <small>Plano de voo</small>
-            <b>{passo === 'escolha' ? 'Escolha a sua I.A.' : TEM_MONOGRAMA ? (temLogotipo(modelo.nome) ? <LogotipoDaIA nome={modelo.nome} soNome sobreFoto /> : nomeCurto(modelo.nome)) : modelo.nome}</b>
+            <small>{T.topo}</small>
+            <b>{passo === 'escolha' ? T.escolhaTitulo : TEM_MONOGRAMA ? (temLogotipo(modelo.nome) ? <LogotipoDaIA nome={modelo.nome} soNome sobreFoto /> : nomeCurto(modelo.nome)) : modelo.nome}</b>
             {passo !== 'escolha' && <span className="plv-titulo-sub">{modelo.chamada} · {nomeAtivo}</span>}
           </div>
+          {/* em que conta a sessão vai rodar, em todos os passos */}
+          <span className={`plv-conta ${contaRotulo === 'Real' ? 'real' : ''}`}>
+            Conta {contaRotulo.toLowerCase()}{saldo !== null && <b>{din(saldo, moeda)}</b>}
+          </span>
           <button type="button" className="plv-fechar" onClick={onCancelar} disabled={ligando} aria-label="Fechar o preparo"><IconeFechar /></button>
         </div>
         {/* computador: os 3 passos com nome */}
@@ -366,10 +389,11 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
         {passo === 'escolha' && (TEM_FOTOS ? (
           <div className="plv-frota" role="radiogroup" aria-label="Escolha a I.A.">
             {frota.map((r) => (
-              <button type="button" key={r.id} role="radio" aria-checked={r.id === modelo.id} className={`plv-jato ${r.id === modelo.id ? 'on' : ''}`}
-                onClick={() => setModelo(r)} onDoubleClick={() => { setModelo(r); setPasso('plano') }}>
+              <button type="button" key={r.id} role="radio" aria-checked={r.id === modelo.id} className={`plv-jato ${r.id === modelo.id ? 'on' : ''} ${bloqueados.has(r.id) ? 'trancada' : ''}`}
+                onClick={() => setModelo(r)} onDoubleClick={() => { setModelo(r); if (!bloqueados.has(r.id)) setPasso('plano') }}>
                 <img {...fotoDoCartaoAlto(r.id)} sizes="(max-width: 700px) 45vw, 200px" alt="" loading="lazy" decoding="async" />
                 {r.id === modelo.id && <span className="plv-jato-marca" aria-hidden="true">✓</span>}
+                {bloqueados.has(r.id) && <span className="plv-jato-cadeado">Exclusiva</span>}
                 <span className="plv-jato-texto">{temLogotipo(r.nome) ? <b><LogotipoDaIA nome={r.nome} fio sobreFoto /></b> : <><small>GF</small><b>{nomeCurto(r.nome)}</b></>}<span>{r.chamada}</span></span>
               </button>
             ))}
@@ -386,7 +410,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
             <p>{parametros ? descrever(modelo.id, parametros) : modelo.descricao}</p>
             <dl className="plv-ficha-fatos">
               <div><dt>Ativo</dt><dd>{nomeAtivo}</dd></div>
-              <div><dt>Entrada</dt><dd>{lvDoPainel > 0 ? `após ${lvDoPainel} loss virtuais` : 'em toda operação'}</dd></div>
+              <div><dt>Entrada</dt><dd>{lvDoPainel > 0 ? `Depois de ${lvDoPainel} ${lvDoPainel === 1 ? 'dígito' : 'dígitos seguidos'} fora da faixa` : 'Em toda operação'}</dd></div>
               <div><dt>Modos</dt><dd>{comModo ? 'Conservador e agressivo' : 'Conservador'}</dd></div>
             </dl>
           </section>
@@ -420,7 +444,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
               {comLV && <MostradorDeDigitos valor={lv} mudar={escolherLv} max={LOSS_VIRTUAL_MAXIMO} padrao={lvDoPainel} />}
               <Mostrador id="plv-entrada" rotulo="Entrada" tom="ouro" ajuda="O valor de cada operação." valor={valores.valorAoVencer} mudar={mudar('valorAoVencer')}
                 marcas={[0.35, 1, 5, 25]} faixa={[0.35, 50]} passoMin={0.05} moeda={moeda} erro={erroEntrada} aoEnter={avancar} />
-              <Mostrador id="plv-meta" rotulo="Meta de ganho" tom="verde" etiqueta={plano ? 'do plano do dia' : undefined} ajuda="O robô para ao alcançar este ganho." valor={valores.takeProfit} mudar={mudar('takeProfit')}
+              <Mostrador id="plv-meta" rotulo="Meta de ganho" tom="verde" etiqueta={plano ? 'do plano do dia' : undefined} ajuda="O robô para ao chegar a este ganho." valor={valores.takeProfit} mudar={mudar('takeProfit')}
                 marcas={[10, 25, 100, 500]} faixa={[5, 1000]} passoMin={1} moeda={moeda} erro={erroMeta} aoEnter={avancar} />
               <Mostrador id="plv-limite" rotulo="Limite de perda" tom="coral" etiqueta={plano ? 'do plano do dia' : undefined} ajuda="O robô para antes de passar desta perda." valor={valores.stopLoss} mudar={mudar('stopLoss')}
                 marcas={[5, 15, 50, 250]} faixa={[2, 1000]} passoMin={1} moeda={moeda} erro={erroLimite} aoEnter={avancar} />
@@ -464,7 +488,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
                   <p>{regra ? descrever(modelo.id, regra) : modelo.descricao}</p>
                 </section>
                 <section>
-                  <span className="plv-info-rot"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 11H2z" /><path d="M8 6.5v3M8 11.5v.01" /></svg>Antes de decolar</span>
+                  <span className="plv-info-rot"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2l6 11H2z" /><path d="M8 6.5v3M8 11.5v.01" /></svg>{T.antes}</span>
                   <p>A recuperação pode aumentar o valor das entradas. Os robôs desta conta compartilham o saldo. Não há garantia de lucro.</p>
                 </section>
                 {isDemo && !demoComoReal && !rotulosTrocados && dados?.testeDemo && <section><p>Este robô roda uma regra em teste nas contas demo.</p></section>}
@@ -479,20 +503,31 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
           </div>
         )}
 
+        {passo !== 'escolha' && saldoCurto && saldo !== null && (
+          <p className="plv-aviso" role="status">
+            Seu saldo ({din(saldo, moeda)}) é menor que {entrada !== null && saldo < entrada ? 'a entrada' : 'o limite de perda'}.{' '}
+            <a href={DERIV.deposito} target="_blank" rel="noopener noreferrer">Depositar na Deriv</a>
+          </p>
+        )}
         {erro && <p className="plv-erro-geral" role="alert">{erro}</p>}
-        {!disponivel && passo !== 'escolha' && <p className="plv-erro-geral" role="alert">Esta I.A. está indisponível agora. Escolha outra.</p>}
+        {trancada && <p className="plv-erro-geral" role="status">Esta I.A. é vendida à parte. Desbloqueie no Marketplace para ligar.</p>}
+        {!disponivel && !trancada && passo !== 'escolha' && <p className="plv-erro-geral" role="alert">{T.indisponivel}</p>}
+        {/* celular: o rodapé não tem espaço para a dica, e este aviso não pode sumir */}
+        {ligando && segundos >= 12 && <p className="plv-lenta" role="status">A Deriv está lenta agora. Seguimos tentando. Não clique de novo.</p>}
       </div>
 
       {/* ------------------------------------------------ o rodapé */}
       <footer className="plv-rodape">
         <button type="button" className="plv-voltar" disabled={ligando} onClick={voltar}>{passo === primeiroPasso ? 'Cancelar' : '← Voltar'}</button>
-        <span className="plv-rodape-dica">{ligando && segundos >= 12 ? 'A Deriv está lenta agora. Seguimos tentando. Não clique de novo.' : passo === 'decolar' ? 'Você acompanha a sessão de qualquer tela' : 'Nada será operado ainda'}</span>
-        {passo === 'decolar'
+        <span className="plv-rodape-dica">{ligando && segundos >= 12 ? 'A Deriv está lenta agora. Seguimos tentando. Não clique de novo.' : passo === 'decolar' ? 'Você acompanha a sessão de qualquer tela.' : 'Nada será operado ainda.'}</span>
+        {trancada
+          ? <button type="button" className="plv-principal" onClick={() => { onCancelar(); irParaTela('marketplace') }}>Desbloquear no Marketplace<span aria-hidden="true">→</span></button>
+          : passo === 'decolar'
           ? <button type="button" className="plv-principal" disabled={ligando || !planoValido || (!isDemo && !confirmaReal)} onClick={iniciar}>
               {ligando ? `Iniciando… ${segundos}s` : <><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6L12.6 8z" fill="currentColor" /></svg>Iniciar robô</>}
             </button>
           : <button type="submit" className="plv-principal" disabled={ligando || (passo === 'plano' ? !planoValido : !disponivel)}>
-              {passo === 'escolha' ? 'Continuar' : 'Revisar e decolar'}<span aria-hidden="true">→</span>
+              {passo === 'escolha' ? 'Continuar' : T.revisar}<span aria-hidden="true">→</span>
             </button>}
       </footer>
     </form>

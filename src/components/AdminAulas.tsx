@@ -7,6 +7,7 @@ import {
 } from '../core/teeds/aulasVideos'
 import type { LinkDaAula, Material } from '../core/teeds/aulas'
 import { MARCA } from '../marca'
+import { DEMONSTRACAO_EM_AULA_SEM_VIDEO } from '../core/teeds/modulosAulas'
 import { IconeFechar } from './IconeFechar'
 import { Icone } from './Icone'
 
@@ -24,6 +25,8 @@ const origem = (v: string) => {
   if (ehArquivoNosso(v)) return 'arquivo enviado'
   return p.tipo === 'youtube' ? (/youtu/.test(v) ? 'YouTube' : 'link') : p.tipo === 'vimeo' ? 'Vimeo' : 'arquivo externo'
 }
+/** O que o aluno vê numa aula sem vídeo próprio — a mesma regra de todasAsAulas (aulas.ts). */
+const SEM_VIDEO = DEMONSTRACAO_EM_AULA_SEM_VIDEO ? 'a aula abre com o vídeo demonstrativo' : 'a aula aparece como “em breve”'
 const quando = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 interface Form {
@@ -38,7 +41,8 @@ interface Form {
   links: LinkDaAula[]
 }
 
-export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
+/** `marca`: a plataforma em foco no painel (o seletor do master), não a do site aberto. */
+export function AdminAulas({ sessao, marca = MARCA.id }: { sessao: SessaoTeeds; marca?: string }) {
   const [videos, setVideos] = useState<Record<string, VideoDaAula>>({})
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
@@ -62,8 +66,8 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
   const carregar = async () => {
     setCarregando(true)
     try {
-      setVideos(await listarVideosDasAulas(sessao))
-      setControle(await controleDasAulas(sessao).catch(() => []))
+      setVideos(await listarVideosDasAulas(sessao, marca))
+      setControle(await controleDasAulas(sessao, marca).catch(() => []))
     }
     catch (e) { setErro((e as Error).message) }
     finally { setCarregando(false) }
@@ -87,7 +91,7 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
     if (arquivo.size > LIMITE_MB * 1024 * 1024) { setErro(`O arquivo tem ${(arquivo.size / 1048576).toFixed(0)} MB; o limite é ${LIMITE_MB} MB. Exporte com bitrate menor ou cole um link.`); return }
     setErro(null); setSucesso(null)
     const segundos = await duracaoDoArquivo(arquivo)
-    const { promessa, cancelar } = enviarArquivoDaAula(sessao, aberta.id, arquivo, (f) => setEnvio((e) => e ? { ...e, fracao: f } : e))
+    const { promessa, cancelar } = enviarArquivoDaAula(sessao, aberta.id, arquivo, (f) => setEnvio((e) => e ? { ...e, fracao: f } : e), marca)
     setEnvio({ nome: arquivo.name, fracao: 0, cancelar })
     try {
       const { caminho, url } = await promessa
@@ -110,7 +114,7 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
     try {
       // Se o vídeo agora é um link (ou outro arquivo), o arquivo enviado antes vira lixo no bucket.
       const arquivoAtual = ehArquivoNosso(form.video) ? form.arquivo : null
-      await salvarVideoDaAula(sessao, { aulaId: aberta.id, video: form.video, duracao: form.duracao, titulo: form.titulo, descricao: form.descricao, publicado: form.publicado, arquivo: arquivoAtual, materiais: form.materiais, links })
+      await salvarVideoDaAula(sessao, { aulaId: aberta.id, video: form.video, duracao: form.duracao, titulo: form.titulo, descricao: form.descricao, publicado: form.publicado, arquivo: arquivoAtual, materiais: form.materiais, links }, marca)
       // material tirado da lista: o arquivo sai do bucket
       for (const m of materiaisAntigos) if (m.arquivo && !form.materiais.some((x) => x.arquivo === m.arquivo)) await apagarMaterial(sessao, m.arquivo).catch(() => undefined)
       if (arquivoAntigo && arquivoAntigo !== arquivoAtual) {
@@ -124,10 +128,11 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
 
   const remover = async () => {
     if (!aberta) return
-    if (!window.confirm(`Tirar o vídeo de "${aberta.titulo}"? A aula volta a aparecer como "em breve".`)) return
+    // Remover apaga a linha inteira da aula: vídeo, título, descrição, links e os arquivos dos materiais.
+    if (!window.confirm(`Remover o vídeo de "${aberta.titulo}"? Também apaga os materiais, os links e o título e a descrição personalizados desta aula, e ${SEM_VIDEO}. Não dá para desfazer.`)) return
     setSalvando(true); setErro(null)
     try {
-      await removerVideoDaAula(sessao, aberta.id, arquivoAntigo)
+      await removerVideoDaAula(sessao, aberta.id, arquivoAntigo, marca)
       for (const m of materiaisAntigos) if (m.arquivo) await apagarMaterial(sessao, m.arquivo).catch(() => undefined)
       setAberta(null); setSucesso('Vídeo removido.'); await carregar()
     } catch (e) { setErro((e as Error).message) } finally { setSalvando(false) }
@@ -140,7 +145,7 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
     if (arquivo.size > LIMITE_MATERIAL_MB * 1048576) { setErro(`O arquivo tem ${(arquivo.size / 1048576).toFixed(0)} MB; o limite de cada material é ${LIMITE_MATERIAL_MB} MB.`); return }
     setErro(null); setEnviandoMaterial(true)
     try {
-      const m = await enviarMaterial(sessao, aberta.id, arquivo)
+      const m = await enviarMaterial(sessao, aberta.id, arquivo, marca)
       setForm((f) => ({ ...f, materiais: [...f.materiais, m] }))
       setSucesso('Material enviado. Ajuste o nome do botão, se quiser, e clique em Salvar.')
     } catch (e) { setErro((e as Error).message) } finally {
@@ -202,7 +207,7 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
                   <i>{String(a.numero).padStart(2, '0')}</i>
                   <span className="admin-aula-texto">
                     <b>{v?.titulo || a.titulo}</b>
-                    <small>{status === 'demo' ? 'Sem vídeo próprio — a aula abre com o vídeo demonstrativo.' : `${origem(v!.video)} · ${v!.duracao || 'duração não informada'} · atualizado em ${quando(v!.atualizadoEm)}`}</small>
+                    <small>{status === 'demo' ? `Sem vídeo próprio: ${SEM_VIDEO}.` : `${origem(v!.video)} · ${v!.duracao || 'duração não informada'} · atualizado em ${quando(v!.atualizadoEm)}`}</small>
                   </span>
                   <span className="adm-aula-chips">
                     {(() => { const r = resumoDaAula(a.id); return r.alunos ? <em className="adm-aula-alunos">{r.alunos} {r.alunos === 1 ? 'aluno' : 'alunos'} · {r.concluiram} concluíram</em> : null })()}
@@ -311,7 +316,7 @@ export function AdminAulas({ sessao }: { sessao: SessaoTeeds }) {
             )}
 
             <footer>
-              {videos[aberta.id] ? <button type="button" className="adm-cancelar" onClick={() => void remover()} disabled={salvando || !!envio}>Remover vídeo</button> : <span>A aula fica "em breve" até ter vídeo.</span>}
+              {videos[aberta.id] ? <button type="button" className="adm-cancelar" onClick={() => void remover()} disabled={salvando || !!envio}>Remover vídeo e materiais</button> : <span>Sem vídeo próprio, {SEM_VIDEO}.</span>}
               <button onClick={() => void salvar()} disabled={salvando || !!envio || enviandoMaterial}>{salvando ? 'Salvando…' : form.publicado ? 'Salvar e publicar' : 'Salvar sem publicar'}</button>
             </footer>
           </section>

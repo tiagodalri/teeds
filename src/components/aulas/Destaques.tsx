@@ -167,7 +167,7 @@ export function Destaques({ banners, aoIr }: { banners: Banner[]; aoIr?: (tela: 
         <div className="dq-pontos" role="tablist" aria-label="Escolher destaque">
           {banners.map((b, i) => (
             <button key={b.id} type="button" role="tab" aria-selected={i === atual} aria-label={b.titulo} className={i === atual ? 'on' : ''} onClick={() => ir(i)}>
-              {i === atual && !parado && <i key={atual} />}
+              <span aria-hidden="true">{i === atual && !parado && <i key={atual} />}</span>
             </button>
           ))}
         </div>

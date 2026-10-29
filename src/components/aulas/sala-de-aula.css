@@ -1,0 +1,107 @@
+/* Sala de aula: ajustes da revisão de UX de 29/10/2026. Os seletores levam
+   um nível a mais (.cine-player, .ger.aulas) para valer por cima do app.css
+   sem depender da ordem dos arquivos. */
+
+/* Fim da aula: o quadro fica por cima de tudo e cabe no celular (a 375 px o
+   vídeo tem ~193 px de altura; o título e o "Cancelar" ficavam cortados). */
+.cine-player .cine-fim { z-index: 2; }
+@media (max-width: 720px) {
+  .cine-player .cine-fim { gap: 6px; padding: 12px; }
+  .cine-player .cine-fim h3, .cine-player .cine-fim-cancelar { display: none; }
+  .cine-player .cine-fim p { margin: 0 0 4px; }
+  .cine-player .cine-fim > div { gap: 8px; }
+  .cine-player .cine-fim :is(.cine-fim-ir, .cine-fim-ficar) { min-height: 44px; padding: 0 14px; }
+}
+
+/* Dedo, não ponteiro: os controles do player com 44 px. Os atalhos de
+   teclado não aparecem onde não há teclado. */
+@media (hover: none) {
+  .cine-player .cine-linha > button, .cine-player .cine-vel > button { min-width: 44px; height: 44px; }
+  .cine-trilha .cine-atalhos { display: none; }
+}
+
+/* O modal "Mais informações" fica acima da barra inferior (140), do botão
+   do suporte (145) e da miniatura da sala de treino (150), e rola quando a
+   tela é baixa (celular deitado). */
+.ger.aulas .aula-modal-fundo { z-index: 160; overflow-y: auto; }
+.ger.aulas .aula-modal { max-height: calc(100dvh - 24px); overflow-y: auto; }
+
+/* A assinatura da capa: a caixa alta vem do CSS, não do texto. */
+.ger.aulas .aulas-hero-marca { text-transform: uppercase; }
+
+/* GF Member antes da live: no lugar do botão principal, um aviso que não é botão. */
+.aulas-abre-em {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; box-sizing: border-box;
+  border: 1px dashed color-mix(in srgb, var(--marca-noite) 55%, transparent); border-radius: 7px;
+  background: rgba(255, 255, 255, .06); color: rgba(255, 255, 255, .86); font-size: 13px; font-weight: 650;
+}
+.aulas-abre-em .icone-traco { width: 16px; height: 16px; color: var(--marca-noite); }
+
+/* A sala fechada (Teeds/OMNI): o caminho para o que já está disponível. */
+.breve-cartao .breve-ir {
+  min-height: 44px; margin-top: 14px; padding: 0 18px; border: 1px solid var(--primary); border-radius: 12px;
+  background: transparent; color: var(--primary); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.breve-cartao .breve-ir:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* ==========================================================================
+   Revisão visual de 29/10/2026 (vitrine das aulas). Os seletores levam um
+   nível a mais que os de app.css, ux-refinements.css, mobile-polish.css e
+   da casca, para valerem sem depender da ordem dos arquivos.
+   ========================================================================== */
+
+/* O selo da capa: frase normal (não caixa alta espaçada) e numa linha só;
+   antes quebrava em duas dentro da pílula no celular. */
+.ger.aulas .aulas-capa .aulas-selo {
+  display: inline-flex; align-items: center; max-width: 100%; box-sizing: border-box;
+  font-size: 12.5px; letter-spacing: .01em; line-height: 1.3; text-transform: none;
+}
+/* A capa é sempre escura: o monograma é o claro também no tema claro
+   (no claro aparecia só o traço dourado, o "GF" escuro sumia no fundo). */
+:root[data-marca='globalfly'] .ger.aulas .aulas-capa .aulas-selo::before { background-image: url(/globalfly-gf-escuro.png); }
+
+/* Linha de informações: o separador também depois do "Aula 1 de 19" e um
+   tamanho que se lê no computador (era 11 px, 9,9 px com a escala de 90%). */
+.ger.aulas:not(.cine) .aulas-capa .aulas-meta { font-size: 13px; }
+.ger.aulas .aulas-meta b + span::before { content: '•'; margin-right: 10px; opacity: .45; }
+.ger.aulas:not(.cine) .aulas-capa .aulas-capa-texto > p { font-size: 14.5px; line-height: 1.55; }
+.ger.aulas:not(.cine) .aulas-capa .aulas-progresso > span { font-size: 13px; }
+/* Os dois botões da capa no tamanho de botão (eram 12 px, espremidos). */
+.ger.aulas:not(.cine) .aulas-capa .aulas-hero-acoes button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; font-size: 14px; }
+/* No celular os dois não cabem lado a lado: um embaixo do outro, na mesma largura. */
+@media (max-width: 520px) {
+  .ger.aulas:not(.cine) .aulas-capa .aulas-hero-acoes button { flex: 1 1 100%; justify-content: center; }
+}
+
+/* "Rever o tour" é secundário: o dourado fica para a ação do destaque. */
+.ger .aulas-tour button {
+  border: 1px solid color-mix(in srgb, var(--gf-ouro, var(--primary)) 60%, var(--border));
+  background: transparent; color: var(--text);
+}
+.ger .aulas-tour button:hover { background: color-mix(in srgb, var(--gf-ouro, var(--primary)) 12%, transparent); }
+
+/* O número do módulo na mesma família do título (a monoespaçada destoava). */
+.ger.aulas:not(.cine) .aulas-modulo-topo .aulas-trilha-num { font-family: inherit; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+
+/* Cartão da aula. "Aula 1": rótulo com a primeira maiúscula, legível. */
+.ger.aulas .aula-cartao:not(.continuar) .aula-num,
+.ger.aulas .aula-cartao.continuar .aula-num { font-size: 12.5px; font-weight: 700; letter-spacing: .01em; text-transform: none; }
+/* O título em no máximo duas linhas: a altura mínima de 34 px deixava
+   aparecer a metade de cima da terceira linha. */
+.ger.aulas:not(.cine) .aulas-modulo .aulas-carrossel .aula-cartao-corpo > b { font-size: 14px; line-height: 1.25; min-height: 2.5em; max-height: 2.5em; }
+/* "Disponível": texto comum, na fonte do texto e num tamanho legível. */
+.ger.aulas .aulas-modulo .aula-cartao .aula-card-meta {
+  flex-wrap: nowrap; gap: 6px; overflow: hidden; white-space: nowrap;
+  font-family: inherit; font-size: 12.5px; font-weight: 500;
+}
+/* A etiqueta da capa, o subtítulo do módulo e o contador num tamanho legível no computador. */
+.ger.aulas:not(.cine) .aulas-modulo .aulas-carrossel .aula-cartao-capa .aula-dur { font-size: 12px; }
+.ger.aulas:not(.cine) .aulas-modulo .aulas-modulo-topo p { font-size: 13.5px; }
+.ger.aulas:not(.cine) .aulas-modulo .aulas-modulo-topo .aulas-conta { font-size: 13px; }
+/* A etiqueta da capa ("Vídeo de exemplo", duração) numa linha só no celular. */
+@media (max-width: 700px) {
+  .ger.aulas:not(.cine) .aulas-modulo .aulas-carrossel .aula-cartao-capa .aula-dur {
+    max-width: calc(100% - 46px); padding: 3px 8px; font-size: 11px; line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+}

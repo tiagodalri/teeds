@@ -16,6 +16,7 @@ import { tipoNaTela } from '../../core/deriv/accountAccess'
 import { dinheiroDoPeriodo, intervalo, meuRelatorio, nomeDoTipo, PERIODOS, type Dinheiro, type Periodo, type Relatorio } from '../../core/teeds/relatorios'
 import './relatorios.css'
 import { NomeDoRobo } from '../NomeDoRobo'
+import { DERIV } from '../../core/deriv/config'
 
 interface Props {
   sessao: SessaoTeeds
@@ -37,7 +38,7 @@ const classe = (v: number) => (v > 0 ? 'sobe' : v < 0 ? 'cai' : '')
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 
 /* ------------------------------------------------ a curva do período */
-function Curva({ pontos, rotulos, ocultos }: { pontos: Array<{ chave: string; valor: number; ops: number }>; rotulos: [string, string, string]; ocultos: boolean }) {
+function Curva({ pontos, rotulos, ocultos, moeda }: { pontos: Array<{ chave: string; valor: number; ops: number }>; rotulos: [string, string, string]; ocultos: boolean; moeda: string }) {
   const W = 640, H = 220, P = 14, base = H - 30
   const acum: number[] = []
   pontos.reduce((s, p) => { const v = s + p.valor; acum.push(v); return v }, 0)
@@ -57,7 +58,7 @@ function Curva({ pontos, rotulos, ocultos }: { pontos: Array<{ chave: string; va
         return (
           <rect key={p.chave} className={`barra ${classe(p.valor)}`} x={x} width={Math.max(1.5, largura * 0.64)} rx={Math.min(3, largura * 0.2)}
             y={p.valor >= 0 ? zeroBar - h : zeroBar} height={Math.max(p.ops ? 1.5 : 0, h)}>
-            <title>{`${p.chave}: ${ocultos ? MASCARA : dinheiroComSinal(p.valor)} · ${p.ops} operação${p.ops === 1 ? '' : 'ões'}`}</title>
+            <title>{`${p.chave}: ${ocultos ? MASCARA : dinheiroComSinal(p.valor, moeda)} · ${p.ops} ${p.ops === 1 ? 'operação' : 'operações'}`}</title>
           </rect>
         )
       })}
@@ -89,7 +90,8 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
     if (exemplo) { setRel(exemplo.relatorio); setCarregando(false); return }
     meuRelatorio(sessao, { periodo, demo })
       .then((r) => { if (vivo) setRel(r) })
-      .catch((e) => { if (vivo) setErro(e instanceof Error ? e.message : 'Não foi possível montar o relatório.') })
+      // nunca o texto cru do navegador ("Failed to fetch"): sempre o que fazer
+      .catch(() => { if (vivo) setErro('Não foi possível montar o relatório agora. Toque em Atualizar para tentar de novo.') })
       .finally(() => { if (vivo) setCarregando(false) })
     return () => { vivo = false }
   }, [sessao.token, periodo, demo, versao]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -180,19 +182,20 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
             <b className={`rel-numero ${classe(t.resultado)}`}>{vs(t.resultado)}</b>
             <p>{t.operacoes.toLocaleString('pt-BR')} operações · {pct(t.ganhas, t.operacoes)}% de acerto · {v(t.entradas)} em entradas</p>
           </div>
-          <Curva pontos={serie.pontos} rotulos={serie.rotulos} ocultos={ocultos} />
+          <Curva pontos={serie.pontos} rotulos={serie.rotulos} ocultos={ocultos} moeda={moeda} />
         </section>
 
         {/* ------------------------------------------------ números */}
         <div className="rel-kpis">
           <div><span>Operações</span><b>{t.operacoes.toLocaleString('pt-BR')}</b><small>{t.ganhas.toLocaleString('pt-BR')} com ganho</small></div>
           <div><span>Acerto</span><b>{pct(t.ganhas, t.operacoes)}%</b><i className="rel-trilho"><u style={{ width: `${pct(t.ganhas, t.operacoes)}%` }} /></i></div>
-          <div><span>{periodo === 'hoje' ? 'Maior ganho' : 'Melhor dia'}</span><b className="sobe">{periodo === 'hoje' ? vs(t.maiorGanho) : melhorDia ? vs(melhorDia.resultado) : '—'}</b><small>{periodo === 'hoje' ? 'numa operação' : melhorDia ? diaCurto(melhorDia.dia) : ''}</small></div>
-          <div><span>{periodo === 'hoje' ? 'Maior perda' : 'Pior dia'}</span><b className="cai">{periodo === 'hoje' ? vs(t.maiorPerda) : piorDia ? vs(piorDia.resultado) : '—'}</b><small>{periodo === 'hoje' ? 'numa operação' : piorDia ? `${diaCurto(piorDia.dia)} · ${diasPositivos} de ${diasComOp.length} dias no positivo` : ''}</small></div>
+          <div><span>{periodo === 'hoje' ? 'Maior ganho' : 'Melhor dia'}</span><b className="sobe">{periodo === 'hoje' ? vs(t.maiorGanho) : melhorDia ? vs(melhorDia.resultado) : '—'}</b><small>{periodo === 'hoje' ? 'Numa operação' : melhorDia ? diaCurto(melhorDia.dia) : ''}</small></div>
+          <div><span>{periodo === 'hoje' ? 'Maior perda' : 'Pior dia'}</span><b className="cai">{periodo === 'hoje' ? vs(t.maiorPerda) : piorDia ? vs(piorDia.resultado) : '—'}</b><small>{periodo === 'hoje' ? 'Numa operação' : piorDia ? `${diaCurto(piorDia.dia)} · ${diasPositivos} de ${diasComOp.length} dias no positivo` : ''}</small></div>
         </div>
 
-        {/* ------------------------------------------------ compartilhamento do mês (só na conta real) */}
-        {taxa > 0 && (
+        {/* ------------------------------------------------ compartilhamento do mês (só na conta real: na aba
+            demo os números da real confundiam; o filtro usa o tipo verdadeiro, nunca a etiqueta) */}
+        {taxa > 0 && !demo && (
           <section className="rel-comp">
             <div>
               <span className="rel-rot">Compartilhamento de {mesNome}</span>
@@ -246,12 +249,15 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
       {/* ------------------------------------------------ dinheiro na corretora */}
       {rel && !demo && (
         <section className="rel-bloco rel-dinheiro">
-          <h3>Na corretora</h3>
+          <div className="rel-bloco-cab">
+            <h3>Na corretora</h3>
+            <a className="rel-link" href={DERIV.deposito} target="_blank" rel="noopener noreferrer">Depositar na Deriv ↗</a>
+          </div>
           {!contaDoFiltro ? <p className="rel-nota">{conectada ? `Para ver depósitos e saques, escolha a conta ${rotuloConta(false)} no topo da plataforma.` : 'Conecte a corretora para ver o saldo, os depósitos e os saques.'}</p> : <>
             <div className="rel-kpis tres">
-              <div><span>Saldo agora</span><b>{saldo === null ? '—' : v(saldo)}</b><small>ao vivo da corretora</small></div>
-              <div><span>Depósitos no período</span><b className="sobe">{dinheiroP ? v(dinheiroP.depositos) : '…'}</b><small>{dinheiroP ? `${dinheiroP.movimentos.filter((x) => x.tipo === 'deposit').length} depósito(s)` : 'lendo o extrato'}</small></div>
-              <div><span>Saques no período</span><b>{dinheiroP ? v(dinheiroP.saques) : '…'}</b><small>{dinheiroP ? `${dinheiroP.movimentos.filter((x) => x.tipo === 'withdrawal').length} saque(s)` : 'lendo o extrato'}</small></div>
+              <div><span>Saldo agora</span><b>{saldo === null ? '—' : v(saldo)}</b><small>Ao vivo da corretora</small></div>
+              <div><span>Depósitos no período</span><b className="sobe">{dinheiroP ? v(dinheiroP.depositos) : '…'}</b><small>{dinheiroP ? (() => { const n = dinheiroP.movimentos.filter((x) => x.tipo === 'deposit').length; return `${n} ${n === 1 ? 'depósito' : 'depósitos'}` })() : 'Lendo o extrato…'}</small></div>
+              <div><span>Saques no período</span><b>{dinheiroP ? v(dinheiroP.saques) : '…'}</b><small>{dinheiroP ? (() => { const n = dinheiroP.movimentos.filter((x) => x.tipo === 'withdrawal').length; return `${n} ${n === 1 ? 'saque' : 'saques'}` })() : 'Lendo o extrato…'}</small></div>
             </div>
             {dinheiroP && dinheiroP.movimentos.length > 0 && <ul className="rel-movs">
               {dinheiroP.movimentos.slice(0, 8).map((m, i) => (

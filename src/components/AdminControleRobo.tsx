@@ -665,6 +665,8 @@ export function AdminControleRobo({ sessao, roboId, marca, detalhe: detalheInici
   const [confirmacao, setConfirmacao] = useState<AcaoConfirmavel | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [erroAcao, setErroAcao] = useState('')
+  // Descartar pede um segundo clique (29/10/2026): publicar exige o nome, descartar agia no primeiro toque.
+  const [confirmaDescarte, setConfirmaDescarte] = useState<'teste' | 'rascunho' | null>(null)
   const [chaveHistorico, setChaveHistorico] = useState(0)
   const [estadoRascunho, setEstadoRascunho] = useState<'ok' | 'salvando' | 'erro' | 'invalido'>('ok')
   const [salvoEm, setSalvoEm] = useState<string | null>(detalheInicial.rascunhoEm)
@@ -830,7 +832,7 @@ export function AdminControleRobo({ sessao, roboId, marca, detalhe: detalheInici
           </div>
           <div className="ac-cab-versao">
             <span className={`ac-estado ${detalhe.versao === null ? '' : 'verde'}`}>{versaoTexto}</span>
-            {igualAoPadrao && <span className="ac-estado">igual ao padrão da plataforma</span>}
+            {igualAoPadrao && <span className="ac-estado">Igual ao padrão da plataforma</span>}
             {detalhe.sessoesVivas.total > 0 && <span className="ac-estado">{detalhe.sessoesVivas.total} {detalhe.sessoesVivas.total === 1 ? 'sessão em andamento' : 'sessões em andamento'}</span>}
           </div>
           {detalhe.testeDemo && (
@@ -841,7 +843,11 @@ export function AdminControleRobo({ sessao, roboId, marca, detalhe: detalheInici
               <div>
                 <button type="button" className="ac-btn mini azul" onClick={promover}>Promover para todos</button>
                 <button type="button" className="ac-btn mini" onClick={() => { if (detalhe.testeDemo) setRascunho(detalhe.testeDemo) }}>Editar a partir do teste</button>
-                <button type="button" className="ac-btn mini leve" onClick={() => void descartarOTeste()}>Descartar teste</button>
+                {confirmaDescarte === 'teste'
+                  ? <span className="ac-confirma-descarte">Descartar o teste? As contas demo voltam para a regra publicada.
+                      <button type="button" className="ac-btn mini leve" onClick={() => { setConfirmaDescarte(null); void descartarOTeste() }}>Sim, descartar</button>
+                      <button type="button" className="ac-btn mini" onClick={() => setConfirmaDescarte(null)}>Não</button></span>
+                  : <button type="button" className="ac-btn mini leve" onClick={() => setConfirmaDescarte('teste')}>Descartar teste</button>}
               </div>
             </div>
           )}
@@ -850,18 +856,22 @@ export function AdminControleRobo({ sessao, roboId, marca, detalhe: detalheInici
               <span>
                 <b>Você tem alterações não publicadas em {diffs.length} {diffs.length === 1 ? 'campo' : 'campos'}:</b> {diffs.map(resumirDiferenca).join(' · ')}
                 <small>
-                  {estadoRascunho === 'invalido' ? 'rascunho com erros: corrija para salvar'
-                    : estadoRascunho === 'salvando' ? 'salvando o rascunho na nuvem…'
-                    : estadoRascunho === 'erro' ? 'não deu para salvar o rascunho na nuvem — vamos tentar de novo na próxima alteração'
-                    : salvoEm ? `rascunho salvo na nuvem às ${quando(salvoEm).slice(-5)}` : 'rascunho ainda não salvo'}
+                  {estadoRascunho === 'invalido' ? 'Rascunho com erros: corrija para salvar'
+                    : estadoRascunho === 'salvando' ? 'Salvando o rascunho na nuvem…'
+                    : estadoRascunho === 'erro' ? 'Não deu para salvar o rascunho na nuvem — vamos tentar de novo na próxima alteração'
+                    : salvoEm ? `Rascunho salvo na nuvem às ${quando(salvoEm).slice(-5)}` : 'Rascunho ainda não salvo'}
                 </small>
               </span>
             </div>
           )}
           {erros.length > 0 && <ul className="ac-erros">{erros.map((e) => <li key={e}>✕ {e}</li>)}</ul>}
-          {erroAcao && <div className="ac-faixa vermelha"><span>{erroAcao}</span><button type="button" className="ac-btn mini leve" onClick={() => setErroAcao('')}>fechar</button></div>}
+          {erroAcao && <div className="ac-faixa vermelha"><span>{erroAcao}</span><button type="button" className="ac-btn mini leve" onClick={() => setErroAcao('')}>Fechar</button></div>}
           <div className="ac-cab-acoes">
-            {difere && <button type="button" className="ac-btn leve" onClick={() => void descartarRascunho()}>Descartar rascunho</button>}
+            {difere && (confirmaDescarte === 'rascunho'
+              ? <span className="ac-confirma-descarte">Descartar as alterações não publicadas?
+                  <button type="button" className="ac-btn leve" onClick={() => { setConfirmaDescarte(null); void descartarRascunho() }}>Sim, descartar</button>
+                  <button type="button" className="ac-btn" onClick={() => setConfirmaDescarte(null)}>Não</button></span>
+              : <button type="button" className="ac-btn leve" onClick={() => setConfirmaDescarte('rascunho')}>Descartar rascunho</button>)}
             {detalhe.versao !== null && <button type="button" className="ac-btn leve" onClick={restaurarPadrao}>Restaurar padrão</button>}
             <button type="button" className="ac-btn azul" onClick={testar} disabled={!podeAgir} title={!difere ? 'O rascunho é igual ao publicado' : erros.length ? 'Corrija os erros antes' : ''}>Testar no demo</button>
             <button type="button" className="ac-btn primario" onClick={publicar} disabled={!podeAgir} title={!difere ? 'O rascunho é igual ao publicado' : erros.length ? 'Corrija os erros antes' : ''}>Publicar para todos</button>

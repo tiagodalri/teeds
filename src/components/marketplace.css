@@ -1,0 +1,100 @@
+/* ==========================================================================
+   Marketplace: revisão visual de 29/10/2026.
+   O desenho base mora em styles/app.css (com ajustes em ux-refinements.css,
+   mobile-polish.css e pagina.css). Aqui só o que a revisão corrigiu, com um
+   nível a mais no seletor (main.marketplace) para valer sem depender da ordem
+   dos arquivos. Com a escala de 90% do computador, 11 px viram 9,9 px: nada
+   de texto abaixo de 12 px aqui.
+   ========================================================================== */
+
+/* Rótulos com a primeira maiúscula, não em caixa alta espaçada. */
+main.marketplace .market-eyebrow,
+main.marketplace .market-cabecalho > div span {
+  font-size: 12.5px; font-weight: 700; letter-spacing: .01em; text-transform: none;
+}
+
+/* O topo: texto e botão no tamanho de leitura. */
+main.marketplace .market-hero-conteudo > p { font-size: 14.5px; line-height: 1.55; }
+main.marketplace .market-hero-acoes button { min-height: 44px; padding: 0 20px; font-size: 14px; }
+main.marketplace .market-hero-acoes > span { font-size: 13px; }
+
+/* O cartão --------------------------------------------------------------- */
+/* Na capa: o tipo ("I.A.") repetia o rótulo logo abaixo, em 8 px. Sai. */
+main.marketplace .market-card-capa .market-card-tipo { display: none; }
+/* A capa é sempre uma foto escura: número e assinatura em marfim nos dois temas. */
+main.marketplace .market-card-capa .market-card-num { color: rgba(243, 240, 233, .72); font-size: 12.5px; letter-spacing: .04em; }
+main.marketplace .market-card-identidade small { font-size: 11px; letter-spacing: .14em; color: rgba(243, 240, 233, .7); }
+main.marketplace .market-card-identidade b { font-size: 22px; }
+/* A etiqueta da capa: frase normal e legível. */
+main.marketplace .market-card-capa :is(.market-card-desconto, .market-card-selo) {
+  padding: 5px 9px; border-radius: 6px; font-size: 12.5px; letter-spacing: .01em; text-transform: none;
+}
+
+/* O corpo: o espaço entre título e descrição vinha dobrado (gap + margem). */
+main.marketplace .market-card-corpo { gap: 10px; }
+main.marketplace .market-card-corpo > p { min-height: 0; margin: 0 0 6px; font-size: 14px; line-height: 1.55; }
+main.marketplace .market-card-meta { margin-bottom: 4px; }
+main.marketplace .market-card-corpo > div .market-card-meta > span { font-size: 12.5px; letter-spacing: .01em; text-transform: none; }
+main.marketplace .market-card-meta .market-disponibilidade { font-size: 12.5px; }
+main.marketplace .market-card-corpo h3 { font-size: 18px; }
+main.marketplace .market-card-corpo footer button { font-size: 13.5px; }
+main.marketplace .market-preco del { font-size: 12.5px; }
+main.marketplace .market-preco strong { font-size: 17px !important; }
+main.marketplace .market-preco strong small { font-size: 12.5px !important; }
+main.marketplace .market-preco em { font-size: 12px; letter-spacing: .01em; }
+main.marketplace .market-card-indisponivel { font-size: 13px; }
+
+/* GlobalFly: todos os cartões estão à venda, então o contorno e o brilho
+   verdes não destacavam nada e brigavam com a identidade azul e ouro.
+   O cartão fica neutro; o ouro aparece no passar do mouse e nos rótulos. */
+:root[data-marca='globalfly'] main.marketplace .market-card.disponivel {
+  border-color: var(--border); box-shadow: 0 18px 50px -38px rgba(0, 0, 0, .8);
+}
+:root[data-marca='globalfly'] main.marketplace .market-card.disponivel:hover {
+  border-color: color-mix(in srgb, var(--gf-ouro, #B78D39) 60%, var(--border));
+  box-shadow: 0 24px 55px -32px rgba(0, 0, 0, .6);
+}
+:root[data-marca='globalfly'] main.marketplace .market-card.disponivel .market-card-corpo > div .market-card-meta > span { color: var(--gf-ouro, #B78D39); }
+:root[data-marca='globalfly'] main.marketplace .market-card.disponivel .market-card-corpo footer button span { color: var(--gf-ouro, #B78D39); }
+:root[data-marca='globalfly'] main.marketplace .market-card.disponivel .market-card-capa .market-card-desconto {
+  border: 1px solid rgba(183, 141, 57, .65); background: rgba(5, 21, 40, .82); color: #E3C27A;
+}
+/* Dourado sobre marfim não tem contraste: no tema claro o rótulo escurece. */
+:root[data-marca='globalfly']:not([data-tema='escuro']) main.marketplace .market-card.disponivel .market-card-corpo > div .market-card-meta > span {
+  color: color-mix(in srgb, var(--gf-ouro, #B78D39) 62%, var(--text));
+}
+
+/* A faixa do fim: na mesma moldura e margem da vitrine (antes ia de borda a
+   borda, com caixinhas de fundo desalinhadas dos cartões e texto de 9 px). */
+main.marketplace > .market-garantia {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;
+  max-width: 1420px; margin: 0 auto 32px; padding: 20px 0 0; box-sizing: border-box;
+  border: 0; border-top: 1px solid var(--border); border-radius: 0; background: transparent;
+}
+main.marketplace > .market-garantia > div { padding: 0; background: transparent; }
+main.marketplace > .market-garantia b { font-size: 14px; }
+main.marketplace > .market-garantia small { font-size: 13px; line-height: 1.45; }
+@media (min-width: 901px) {
+  .workspace-app main.marketplace > .market-garantia {
+    width: calc(100% - 2 * var(--pagina-lado, 28px)); max-width: calc(var(--pagina-max, 1440px) - 2 * var(--pagina-lado, 28px));
+    margin-bottom: var(--pagina-fim, 48px);
+  }
+}
+@media (max-width: 900px) {
+  main.marketplace > .market-garantia {
+    grid-template-columns: 1fr; gap: 14px; margin: 0 max(16px, var(--sal, 0px)) 32px; padding-top: 18px;
+  }
+}
+
+/* A janela do produto: o mesmo piso de tamanho. */
+main.marketplace .market-modal-arte span { font-size: 12px; letter-spacing: .02em; text-transform: none; }
+main.marketplace .market-modal-arte small { font-size: 10px; }
+main.marketplace .market-modal-corpo > p { font-size: 14.5px; line-height: 1.6; }
+main.marketplace .market-modal-corpo li { font-size: 14px; line-height: 1.5; }
+main.marketplace .market-modal-compra strong small { font-size: 12px; }
+main.marketplace .market-modal-compra button { min-height: 46px; font-size: 14.5px; }
+main.marketplace .market-vendas-preco em { text-transform: none; letter-spacing: .01em; font-size: 12px; }
+main.marketplace .market-toast b { font-size: 14px; }
+main.marketplace .market-toast small { font-size: 13px; }
+/* O ponto verde tem um halo de 5 px: recuado, o halo para na margem da página. */
+main.marketplace .market-hero-acoes > span i { flex: none; margin-left: 5px; }

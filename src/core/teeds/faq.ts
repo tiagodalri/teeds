@@ -162,7 +162,7 @@ export const PERGUNTAS: Pergunta[] = [
     id: 'quantas-ias', categoria: 'ia', pergunta: 'Posso ligar mais de uma I.A. ao mesmo tempo?',
     termos: 'várias mais de uma simultâneo ao mesmo tempo limite de robôs',
     resposta: [
-      'Pode, até 10 sessões ao mesmo tempo por conta. Lembre que cada uma usa o seu saldo: some as entradas de todas antes de ligar.',
+      'Pode, até 10 sessões ao mesmo tempo por conta. Lembre-se de que cada uma usa o seu saldo: some as entradas de todas antes de ligar.',
     ],
   },
   {

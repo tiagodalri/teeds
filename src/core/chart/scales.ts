@@ -50,8 +50,25 @@ export function priceTicks(range: PriceRange, target = 5): number[] {
   return out
 }
 
+/**
+ * Preço na tela: sempre no formato brasileiro, "1.234,567" (29/10/2026, revisão:
+ * o cabeçalho do Operar mostrava "1234.567" e a boleta "1.234,567", na mesma tela).
+ */
 export function formatPrice(value: number, pipSize = 2): string {
-  return value.toFixed(pipSize)
+  return value.toLocaleString('pt-BR', { minimumFractionDigits: pipSize, maximumFractionDigits: pipSize })
+}
+
+/**
+ * Um número já em texto à moda americana ("-1234.567") no formato brasileiro
+ * ("-1.234,567"). Para bibliotecas que entregam o número pronto em texto (o
+ * klinecharts passa por aqui o eixo, a dica e as marcas de preço).
+ */
+export function textoBR(valor: string | number): string {
+  const s = String(valor)
+  const m = /^(-?)(\d+)(?:\.(\d+))?(.*)$/.exec(s)
+  if (!m) return s
+  const [, sinal, inteiro, decimais, resto] = m
+  return `${sinal}${inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}${decimais !== undefined ? `,${decimais}` : ''}${resto}`
 }
 
 export function formatClock(epoch: number): string {

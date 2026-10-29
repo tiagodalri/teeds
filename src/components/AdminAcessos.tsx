@@ -13,26 +13,31 @@ export function AdminAcessos({sessao}:{sessao:SessaoTeeds}) {
   const [acessaram,setAcessaram]=useState(0)
   const [pagina,setPagina]=useState(0)
   const [carregando,setCarregando]=useState(true)
+  const [erro,setErro]=useState<string|null>(null)
+  const [tentativa,setTentativa]=useState(0)
   // Quem já entrou vem primeiro, do acesso mais recente para o mais antigo. As
   // contas que nunca entraram (as 11 mil importadas em 11/09, por exemplo)
   // ficam no fim — senão elas enterrariam quem de fato usa a plataforma.
   // Quem ordena é o banco, que devolve só a página pedida.
   useEffect(()=>{
     let vivo = true
-    setCarregando(true)
+    setCarregando(true); setErro(null)
     listarClientesPagina(sessao,{ordem:'acessos',limite:POR_PAGINA,deslocamento:pagina*POR_PAGINA})
       .then(r=>{ if(!vivo) return; setNaPagina(r.pagina); setTotal(r.total); setAcessaram(r.acessaram) })
-      .catch(()=>{})
+      // antes o erro era engolido e a tabela ficava vazia, sem dizer por quê
+      .catch((e)=>{ if(vivo) setErro((e as Error).message || 'Não foi possível carregar os acessos.') })
       .finally(()=>{ if(vivo) setCarregando(false) })
     return ()=>{ vivo = false }
-  },[sessao.usuario.id,pagina]) // eslint-disable-line react-hooks/exhaustive-deps
+  },[sessao.usuario.id,pagina,tentativa]) // eslint-disable-line react-hooks/exhaustive-deps
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA))
   const n = (x: number) => x.toLocaleString('pt-BR')
   return <section className="admin-card full admin-acessos">
-    <header><div><span className="rot">Comportamento de uso</span><h3>Acessos e permanência</h3></div><small>{n(acessaram)} de {n(total)} clientes já entraram · atualização a cada minuto enquanto a plataforma está aberta</small></header>
+    <header><div><span className="rot">Comportamento de uso</span><h3>Acessos e permanência</h3></div><small>{n(acessaram)} de {n(total)} clientes já entraram · Atualização a cada minuto enquanto a plataforma está aberta</small></header>
     <div className="rc-tabela acessos"><div className="cab"><span>Cliente</span><span>Último acesso</span><span>Acessos</span><span>Tempo total</span><span>Região aproximada</span></div>
       {naPagina.map(c=><div key={c.userId}><span><b>{c.nome||'Sem nome'}</b><small>{c.email}</small></span><span>{c.totalAcessos>0 ? new Date(c.vistoEm).toLocaleString('pt-BR') : 'Nunca acessou'}</span><strong>{c.totalAcessos}</strong><span>{tempo(c.tempoTotalSegundos)}</span><span>{c.fusoHorario||'Ainda não medida'}<small>{c.idioma||''}</small></span></div>)}
       {carregando && !naPagina.length && <div className="adm-vazio">Carregando…</div>}
+      {!carregando && erro && <div className="adm-vazio" role="alert">{erro} <button type="button" className="admin-refresh" onClick={()=>setTentativa(t=>t+1)}>Tentar de novo</button></div>}
+      {!carregando && !erro && !naPagina.length && <div className="adm-vazio">Nenhum cliente nesta plataforma ainda.</div>}
     </div>
     {total > POR_PAGINA && <div className="adm-paginas"><span>{n(pagina * POR_PAGINA + 1)}–{n(Math.min(total, pagina * POR_PAGINA + naPagina.length))} de {n(total)} clientes</span><div><button onClick={() => setPagina(0)} disabled={pagina === 0}>« Primeira</button><button onClick={() => setPagina(pagina - 1)} disabled={pagina === 0}>‹ Anterior</button><b>Página {n(pagina + 1)} de {n(totalPaginas)}</b><button onClick={() => setPagina(pagina + 1)} disabled={pagina >= totalPaginas - 1}>Próxima ›</button><button onClick={() => setPagina(totalPaginas - 1)} disabled={pagina >= totalPaginas - 1}>Última »</button></div></div>}
   </section>

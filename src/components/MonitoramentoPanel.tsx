@@ -93,7 +93,7 @@ function regrasDoRobo(roboId: string) {
 function mensagemDoErro(e: unknown): { estado: EstadoDaTela; texto: string } {
   if (e instanceof ErroDoMonitoramento) {
     if (e.semPermissao) return { estado: 'sem-permissao', texto: 'Sem permissão para o monitoramento desta marca.' }
-    if (e.status === 0 || e.status >= 500) return { estado: 'indisponivel', texto: 'Supabase indisponível no momento. Nada foi perdido: o servidor continua gravando.' }
+    if (e.status === 0 || e.status >= 500) return { estado: 'indisponivel', texto: 'Banco de dados fora do ar no momento. Nada foi perdido: o servidor continua gravando.' }
   }
   return { estado: 'erro', texto: (e as Error)?.message || 'Falha inesperada.' }
 }
@@ -138,7 +138,7 @@ export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMa
         <em>{ROTULO_FASE[e.fase] ?? e.fase}{e.estrategia ? ` · ${e.estrategia.detalhes?.estrategiaAtual ?? e.estrategia.fase}` : ''}</em>
       </div>
       <div className="mon-cartao-principais">
-        <span><i>Resultado</i><b className={e.resultado >= 0 ? 'up' : 'down'}>{assinado(e.resultado)} <small>{s.moeda}</small></b><small>nesta sessão</small></span>
+        <span><i>Resultado</i><b className={e.resultado >= 0 ? 'up' : 'down'}>{assinado(e.resultado)} <small>{s.moeda}</small></b><small>Nesta sessão</small></span>
         <span className="markup"><i>Markup</i><b>{din(markup, s.moeda)}</b><small>{s.demo ? 'projeção simulada' : 'calculado em tempo real'}</small></span>
         <span><i>Operações</i><b>{e.operacoes}</b><small><em className="up">{e.vitorias} ganhas</em><em className="down">{e.derrotas} perdidas</em></small></span>
       </div>
@@ -151,7 +151,7 @@ export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMa
         <span><i className="down" /><small>Margem até o stop</small><b className="down">{din(margem, s.moeda)}</b></span>
         <span><i className="up" /><small>Falta para a meta</small><b className="up">{din(falta, s.moeda)}</b></span>
       </div>}
-      <footer><span>{s.emitidoEm ? `Atualizado às ${hora(s.emitidoEm)}` : '—'}</span><span>{s.demo ? 'Projeção — não é receita real' : e.conexao !== 'open' ? 'Deriv: ' + e.conexao : e.falha ? 'recusa da Deriv' : 'Markup local · 3% do pagamento'}</span></footer>
+      <footer><span>{s.emitidoEm ? `Atualizado às ${hora(s.emitidoEm)}` : '—'}</span><span>{s.demo ? 'Projeção — não é receita real' : e.conexao !== 'open' ? 'Deriv: ' + e.conexao : e.falha ? 'Recusa da Deriv' : 'Markup local · 3% do pagamento'}</span></footer>
     </button>
   )
 })
@@ -224,7 +224,7 @@ function CabineEspelho({ s, estado, cliente, modo, saude, idade, rtt, desvio, ev
 
       <div className="mon-foco-extras">
         <section className="admin-card mon-estrategia">
-          <header><div><span className="rot">Estratégia</span><h3>{est ? `Fase: ${est.fase}` : 'Sem telemetria de estratégia'}</h3></div>{est && <small>{est.virtual ? 'virtual (sem entrada real)' : 'entrada liberada'}</small>}</header>
+          <header><div><span className="rot">Estratégia</span><h3>{est ? `Fase: ${est.fase}` : 'Sem telemetria de estratégia'}</h3></div>{est && <small>{est.virtual ? 'Virtual (sem entrada real)' : 'Entrada liberada'}</small>}</header>
           {est && (
             <dl>
               <div><dt>Contrato</dt><dd>{est.contrato ?? '—'}{est.barreira != null ? ` · barreira ${est.barreira}` : ''}</dd></div>
@@ -346,7 +346,7 @@ function Replay({ sessao, encerrada, clientes, marca, aoFechar, aoErro, mostrarM
   return (
     <div className="mon-replay">
       {autorizado === false && <div className="mon-estado erro" role="alert"><b>Replay não aberto</b>Não foi possível registrar a auditoria deste acesso. Sem registro, a sessão não é exibida.<button onClick={aoFechar}>Voltar</button></div>}
-      {autorizado && carregando && <div className="mon-estado" role="status"><b>Carregando histórico…</b>{carregados ? `${carregados} eventos lidos` : 'lendo a sessão'}<button onClick={aoFechar}>Cancelar</button></div>}
+      {autorizado && carregando && <div className="mon-estado" role="status"><b>Carregando histórico…</b>{carregados ? `${carregados} eventos lidos` : 'Lendo a sessão'}<button onClick={aoFechar}>Cancelar</button></div>}
       {autorizado && !carregando && !passos.length && <div className="mon-estado" role="status"><b>Histórico indisponível</b>Esta sessão não tem eventos guardados: é anterior ao espelho, ou os eventos já passaram da retenção.<button onClick={aoFechar}>Voltar</button></div>}
       {cabecalho && passo && (
         <CabineEspelho s={cabecalho} estado={passo.estado} cliente={clientes.get(encerrada.userId)} modo="replay" saude="encerrada" idade={null} rtt={null} desvio={null}
@@ -684,13 +684,13 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
       {canalRuim && tela === 'pronto' && <div className="mon-aviso" role="status">{canal === 'token-expirado' ? 'A sessão do administrador expirou: o canal ao vivo foi fechado. Entre de novo para continuar.' : 'Reconectando ao canal ao vivo… Os dados na tela podem estar desatualizados; a idade de cada atualização aparece nos cartões.'}</div>}
 
       {tela === 'sem-permissao' && <div className="mon-estado erro" role="alert"><b>Sem permissão</b>Esta conta não é administradora da {MARCA.prosa}. A tentativa foi registrada.</div>}
-      {tela === 'indisponivel' && <div className="mon-estado erro" role="alert"><b>Supabase indisponível</b>Não foi possível ler o espelho agora. O servidor dos robôs continua gravando; nada se perde.<button onClick={() => void carregarTudo()}>Tentar de novo</button></div>}
-      {tela === 'carregando' && <div className="mon-estado" role="status"><b>Carregando…</b>lendo as sessões desta marca</div>}
+      {tela === 'indisponivel' && <div className="mon-estado erro" role="alert"><b>Banco de dados fora do ar</b>Não foi possível ler o espelho agora. O servidor dos robôs continua gravando; nada se perde.<button onClick={() => void carregarTudo()}>Tentar de novo</button></div>}
+      {tela === 'carregando' && <div className="mon-estado" role="status"><b>Carregando…</b>Lendo as sessões desta marca</div>}
 
       {tela === 'pronto' && aba === 'ao-vivo' && !emFoco && (
         <>
           <div className="adm-kpis mon-kpis">
-            <article className="ok"><span>Clientes online</span><strong>{clientesOnline}</strong><small>{online.length} rob{online.length === 1 ? 'ô' : 'ôs'} operando · {manuaisAbertas.n} manua{manuaisAbertas.n === 1 ? 'l aberta' : 'is abertas'}</small></article>
+            <article className="ok"><span>Clientes online</span><strong>{clientesOnline}</strong><small>{online.length} {online.length === 1 ? 'robô' : 'robôs'} operando · {manuaisAbertas.n} manua{manuaisAbertas.n === 1 ? 'l aberta' : 'is abertas'}</small></article>
             <article><span>Na visualização</span><strong>{lista.length}</strong><small>de {sessoesNoFoco} {sessoesNoFoco === 1 ? 'sessão' : 'sessões'} no período{filtrandoParceiro ? ` · ${parceiroFoco === 'direto' ? 'Direto' : seloDoParceiro(parceiros, parceiroFoco)?.texto}` : ''}</small></article>
             <article className={resultadoTotal >= 0 ? 'ok' : 'perigo'}><span>Resultado agregado</span><strong>{assinado(resultadoTotal)}</strong><small>das sessões na visualização</small></article>
             <article className={alertas.length ? 'perigo' : ''}><span>Alertas</span><strong>{alertas.length}</strong><small>perto do stop, recusa ou sem sinal{desatualizadas ? ` · ${desatualizadas} sem atualização` : ''}</small></article>
@@ -712,7 +712,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
           </div>
           <OperacoesManuais sessao={sessao} marcas={marcas} horas={Number(periodo)} conta={filtroConta} busca={busca} mostrarMarkup={mostrarMarkup}
             clientes={clientes} garantirClientes={garantirClientes} aoContar={contarManuais} doFoco={doFoco} selo={seloDe} />
-          <h3 className="mon-titulo-bloco"><span className="mon-tag ia">I.A.</span> Robôs</h3>
+          <h3 className="mon-titulo-bloco"><span className="mon-tag ia">I.A.</span> {MARCA.vocabularioIA ? 'Sessões automáticas' : 'Robôs'}</h3>
           <div className={`mon-mosaico ${visao}`}>
             {lista.slice(0, limite).map((s) => <Cartao key={s.sessaoId} s={s} cliente={clientes.get(s.userId)} saude={saudes.get(s.sessaoId) ?? 'desatualizado'} visao={visao} mostrarMarca={naRede} selo={seloDe(s.userId, s.parceiro)} aoAbrir={abrirFoco} />)}
             {!lista.length && <div className="mon-estado">{sessoes.size ? <><b>Nenhuma sessão passa pelos filtros.</b>Ajuste o período ou os filtros acima.</> : <><b>Nenhum robô operando nesta marca agora.</b>Quando um cliente ligar um robô, a cabine aparece aqui sozinha.</>}</div>}
@@ -750,7 +750,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
                   const m = markups.get(s.id)
                   // Sem número é diferente de zero: a soma pode não ter vindo.
                   if (!m) return <em className="mon-markup-sem">—</em>
-                  return <>{m.markup.toFixed(2)} {s.moeda}{s.demo && <small>simulado</small>}</>
+                  return <>{m.markup.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {s.moeda}{s.demo && <small>Simulado</small>}</>
                 })()}</span>}
                 <span>{s.encerradaEm ? dataHora(s.encerradaEm) : '—'}<small>{s.motivoDaParada ?? s.situacao}</small></span>
                 <span className="adm-seta">▶</span>

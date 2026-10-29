@@ -84,7 +84,7 @@ export function PalcoDoTreino({ compacto = false, filhos }: { compacto?: boolean
               : eu ? <><b>Sua imagem aparece aqui</b>{!compacto && <span>Ligue a câmera ou a tela na sala de treino.</span>}</>
                 : t.encerrada ? <><b>A transmissão terminou</b>{!compacto && <span>Obrigado por assistir. Quando a próxima começar, você recebe o aviso.</span>}</>
                   : t.presente ? <><b>A transmissão começa em instantes</b>{!compacto && <span>O apresentador está na sala se preparando.</span>}</>
-                  : <><b>A transmissão ainda não começou</b>{!compacto && <span>Deixe esta tela aberta: a imagem aparece aqui sozinha.</span>}</>}
+                  : <><b>A transmissão ainda não começou</b></>}
         </div>
       )}
       {/* o selo da sala (20/10/2026: "GF Streaming", antes "Simulação"; sem o "(simulado)": quem assiste é GF Member, na sala de treino) */}
@@ -132,7 +132,7 @@ export function ChatDoTreino({ titulo = true }: { titulo?: boolean }) {
           <p key={m.id} className="tr-entrada">{m.nome} {m.saida ? 'saiu' : 'entrou'}</p>
         ) : (
           <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''} ${m.minha ? 'tr-minha' : ''}`}>
-            <p><b>{m.nome}{m.apresentador && <em>{eu ? 'você' : 'apresentador'}</em>}{m.minha && <em className="tr-tag-membro">você</em>}{eu && m.membro && <em className="tr-tag-membro">membro</em>}</b> {m.texto}</p>
+            <p><b>{m.nome}{m.apresentador && <em>{eu ? 'Você' : 'Apresentador'}</em>}{m.minha && <em className="tr-tag-membro">Você</em>}{eu && m.membro && <em className="tr-tag-membro">Membro</em>}</b> {m.texto}</p>
             <time>{hora(m.hora)}</time>
           </div>
         ))}
@@ -190,6 +190,26 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
     const id = window.setTimeout(() => void sairDoTreino(), 20_000)
     return () => window.clearTimeout(id)
   }, [naPagina, eu, t.presente, t.fase])
+
+  // Grudada embaixo à direita, a miniatura mora no canto do botão do suporte: mede quanto ela
+  // ocupa da borda de baixo para o suporte (e o chat da equipe) subirem para cima dela (29/10/2026).
+  const noCantoDoSuporte = !naPagina && t.fase !== 'fora' && modo === 'flutuante' && t.cantoPlayer === 'inf-dir'
+  useEffect(() => {
+    const raiz = document.documentElement
+    if (!noCantoDoSuporte) { raiz.style.removeProperty('--av-livre-embaixo'); return }
+    const el = caixa.current
+    if (!el) return
+    const medir = () => {
+      const r = el.getBoundingClientRect()
+      raiz.style.setProperty('--av-livre-embaixo', `${Math.round(emPxDaPagina(window.innerHeight - r.top) + 10)}px`)
+    }
+    medir()
+    const obs = new ResizeObserver(medir)
+    obs.observe(el)
+    el.addEventListener('transitionend', medir)
+    window.addEventListener('resize', medir)
+    return () => { obs.disconnect(); el.removeEventListener('transitionend', medir); window.removeEventListener('resize', medir); raiz.style.removeProperty('--av-livre-embaixo') }
+  }, [noCantoDoSuporte, t.tamanho, celular, chat])
 
   if (naPagina || t.fase === 'fora') return <SomDoTreino />
 
@@ -288,7 +308,7 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
   )
   return (
     <>
-      <div className={`av-flutuante ${t.cantoPlayer.startsWith('inf') ? 'embaixo' : ''} ${arrasto ? 'arrastando' : ''} ${celular ? `mini lado-${t.cantoPlayer.endsWith('esq') ? 'esq' : 'dir'}` : ''}`} style={posicao} ref={caixa} role="region" aria-label="Sala de treino">
+      <div className={`av-flutuante ${t.cantoPlayer.startsWith('inf') ? 'embaixo' : ''} ${arrasto ? 'arrastando' : ''} ${celular ? `mini lado-${t.cantoPlayer.endsWith('esq') ? 'esq' : 'dir'}` : ''}`} style={posicao} ref={caixa} data-canto={t.cantoPlayer} role="region" aria-label="Sala de treino">
         <SomDoTreino />
         <div className="av-flutuante-video" onPointerDown={descer} onPointerMove={mover} onPointerUp={soltar} onPointerCancel={soltar}>
           <PalcoDoTreino compacto />

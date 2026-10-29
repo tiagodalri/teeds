@@ -28,6 +28,8 @@ export interface PassoDoTour {
   /** No celular o texto pode mudar (ex.: "toque no menu"). */
   textoCelular?: string
   dicas?: string[]
+  /** Dicas que só valem no tour obrigatório da primeira vez (ao rever, somem). */
+  dicasDaPrimeiraVez?: string[]
 }
 
 const ICONE = {
@@ -51,9 +53,10 @@ export function passosDoTour({ nome, treino }: { nome: string; treino: boolean }
   return [
     {
       id: 'ola', icone: ICONE.ola,
-      titulo: primeiro ? `Bem-vindo, ${primeiro}!` : `Bem-vindo à ${MARCA.prosa}!`,
+      titulo: primeiro ? `Boas-vindas, ${primeiro}!` : `Boas-vindas à ${MARCA.prosa}!`,
       texto: `Em uns 2 minutos você conhece a ${MARCA.prosa}: onde fica cada coisa e por onde começar. Use os botões abaixo para avançar e voltar.`,
-      dicas: ['Este tour aparece só desta vez.', 'Depois ele fica em Aulas, para rever quando quiser.'],
+      dicasDaPrimeiraVez: ['Este tour aparece só desta vez.'],
+      dicas: ['Ele fica em Aulas, para rever quando quiser.'],
     },
     {
       id: 'menu', tela: 'inicio', alvos: ['#workspace-navigation', '.barra-inferior', '.workspace-mobile-toggle'], icone: ICONE.menu,
@@ -104,23 +107,25 @@ export function passosDoTour({ nome, treino }: { nome: string; treino: boolean }
       id: 'aulas', tela: 'aulas', alvos: ['[data-tour="rever-tour"]', '.aulas-capa'], icone: ICONE.aulas,
       titulo: 'Aulas',
       texto: 'Do zero à operação, uma aula de cada vez. Comece pela primeira: ela mostra como deixar tudo pronto.',
-      dicas: ['Este tour fica aqui: toque em "Rever o tour" quando quiser.'],
+      dicas: ['Este tour fica aqui, no botão "Rever o tour".'],
     },
     {
       id: 'perfil', tela: 'inicio', alvos: ['[data-tour="usuario"]'], icone: ICONE.perfil,
       titulo: 'Meu perfil',
-      texto: 'Toque na sua foto para abrir o perfil: lá você completa seus dados (nome, CPF, telefone e endereço), coloca uma foto e vê seu plano e até quando vai o seu acesso.',
+      texto: 'Clique na sua foto para abrir o perfil: lá você completa seus dados (nome, CPF, telefone e endereço), coloca uma foto e vê seu plano e até quando vai o seu acesso.',
+      textoCelular: 'Toque na sua foto para abrir o perfil: lá você completa seus dados (nome, CPF, telefone e endereço), coloca uma foto e vê seu plano e até quando vai o seu acesso.',
     },
     ...(MARCA.suporte ? [{
       id: 'suporte', alvos: ['[data-tour="suporte"]'], icone: ICONE.suporte,
       titulo: 'Ajuda e suporte',
-      texto: 'Ficou com alguma dúvida? Toque aqui e fale com a nossa equipe pelo chat: a resposta chega aqui mesmo, na plataforma. Dá para mandar print da tela.',
+      texto: 'Ficou com alguma dúvida? Clique aqui e fale com a nossa equipe pelo chat: a resposta chega aqui mesmo, na plataforma. Dá para mandar print da tela.',
+      textoCelular: 'Ficou com alguma dúvida? Toque aqui e fale com a nossa equipe pelo chat: a resposta chega aqui mesmo, na plataforma. Dá para mandar print da tela.',
       dicas: ['No menu, em Ajuda, ficam as respostas das dúvidas mais comuns.'],
     }] : []),
     {
       id: 'pronto', icone: ICONE.pronto,
       titulo: 'Tudo pronto!',
-      texto: `Próximos passos: complete o seu perfil, conecte a sua Deriv e assista à primeira aula. Bem-vindo a bordo da ${MARCA.prosa}!`,
+      texto: `Próximos passos: complete o seu perfil, conecte a sua Deriv e assista à primeira aula. Boas-vindas a bordo da ${MARCA.prosa}!`,
     },
   ]
 }
@@ -319,7 +324,10 @@ export function TourGuiado({ passos, obrigatorio, telaAtual, irPara, aoTerminar,
           </div>
         )}
         <p id="tg-texto" className="tg-texto">{texto}</p>
-        {passo.dicas && <ul className="tg-dicas">{passo.dicas.map((d) => <li key={d}>{d}</li>)}</ul>}
+        {(() => {
+          const dicas = [...(obrigatorio ? passo.dicasDaPrimeiraVez ?? [] : []), ...(passo.dicas ?? [])]
+          return dicas.length > 0 && <ul className="tg-dicas">{dicas.map((d) => <li key={d}>{d}</li>)}</ul>
+        })()}
         {procurando && <p className="tg-abrindo" aria-live="polite">Abrindo a tela…</p>}
 
         <div className="tg-trilho" aria-hidden="true"><i style={{ width: `${pct}%` }} /></div>

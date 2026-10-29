@@ -37,6 +37,9 @@ const diaCurto = (iso: string) => {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
+/** Valor cru do banco ("ativo", "celular") com a primeira letra maiúscula, como todo rótulo da casa. */
+const rotulo = (v?: string | null) => (v ? v[0].toUpperCase() + v.slice(1) : '—')
+
 /** "há 3 dias", "há 2 h". A pergunta do atendimento é essa, não a data seca. */
 export function haQuantoTempo(iso: string | null | undefined): string {
   if (!iso) return 'nunca'
@@ -191,8 +194,8 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
         <div className="fc-kpis">
           <div><span>Último acesso</span><b>{dataHora(c.vistoEm)}</b><small>{haQuantoTempo(c.vistoEm)}</small></div>
           <div><span>Tempo na plataforma</span><b>{horasLegiveis(c.tempoTotalSegundos)}</b><small>{n(c.totalAcessos)} acesso{c.totalAcessos === 1 ? '' : 's'} · média de {horasLegiveis(sessaoMedia)}</small></div>
-          <div className={saldo > 0 ? 'ok' : ''}><span>Saldo real</span><b>{reais.length ? usd(saldo) : '—'}</b><small>{reais.length ? `${reais.length} conta${reais.length === 1 ? '' : 's'} real${reais.length === 1 ? '' : 'is'}` : 'sem conta conectada'}</small></div>
-          <div className={mk.comissaoReal > 0 ? 'ok' : ''}><span>Markup real</span><b>{usd4(mk.comissaoReal)}</b><small>o que a casa ganhou com ela</small></div>
+          <div className={saldo > 0 ? 'ok' : ''}><span>Saldo real</span><b>{reais.length ? usd(saldo) : '—'}</b><small>{reais.length ? `${reais.length} conta${reais.length === 1 ? '' : 's'} real${reais.length === 1 ? '' : 'is'}` : 'Sem conta conectada'}</small></div>
+          <div className={mk.comissaoReal > 0 ? 'ok' : ''}><span>Markup real</span><b>{usd4(mk.comissaoReal)}</b><small>O que a casa ganhou com o cliente</small></div>
         </div>
 
         {c.sessaoAtual && <p className="fc-agora">● Está na plataforma agora, há {horasLegiveis(c.sessaoAtualSegundos)}.</p>}
@@ -205,7 +208,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
               <div><dt>E-mail</dt><dd>{c.email || '—'}</dd></div>
               <div><dt>Telefone</dt><dd>{c.telefone || '—'}</dd></div>
               <div><dt>CPF</dt><dd>{c.cpf || '—'}</dd></div>
-              <div><dt>Situação</dt><dd>{c.situacao}</dd></div>
+              <div><dt>Situação</dt><dd>{rotulo(c.situacao)}</dd></div>
               <div><dt>Cadastro</dt><dd>{soData(c.criadoEm)} <em>({haQuantoTempo(c.criadoEm)})</em></dd></div>
               <div><dt>Acesso expira</dt><dd>{soData(c.acessoExpiraEm)}</dd></div>
               {/* A cidade vem do IP, resolvida no servidor, que não guarda o
@@ -223,7 +226,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
             <h4>Como entrou</h4>
             {ficha.cadastro ? <dl className="fc-dados">
               <div><dt>Pediu cadastro</dt><dd>{dataHora(ficha.cadastro.pedidoEm)}</dd></div>
-              <div><dt>Situação do pedido</dt><dd>{ficha.cadastro.status}{ficha.cadastro.recadastro ? ' · recadastro' : ''}</dd></div>
+              <div><dt>Situação do pedido</dt><dd>{rotulo(ficha.cadastro.status)}{ficha.cadastro.recadastro ? ' · recadastro' : ''}</dd></div>
               <div><dt>Decidido em</dt><dd>{dataHora(ficha.cadastro.decididoEm)}</dd></div>
               <div><dt>E-mail de boas-vindas</dt><dd>{dataHora(ficha.cadastro.emailCadastroEm)}</dd></div>
               <div><dt>E-mail de aprovação</dt><dd>{dataHora(ficha.cadastro.emailAprovacaoEm)}</dd></div>
@@ -235,7 +238,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
 
         <section className="fc-bloco">
           <h4>Contas na corretora
-            {ficha.autorizacao?.expiraEm && <small>autorização da Deriv válida até {soData(ficha.autorizacao.expiraEm)}</small>}</h4>
+            {ficha.autorizacao?.expiraEm && <small>Autorização da Deriv válida até {soData(ficha.autorizacao.expiraEm)}</small>}</h4>
           {ficha.contas.length ? <div className="fc-tabela fc-contas">
             <div className="cab"><span>Conta</span><span>Tipo</span><span>Saldo</span><span>Conectada</span><span>Saldo visto</span><span>Extrato lido</span></div>
             {ficha.contas.map((x, i) => (
@@ -264,14 +267,14 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
       {/* --------------------------------------------------------- dinheiro */}
       {aba === 'dinheiro' && <>
         <div className="fc-kpis">
-          <div className={mk.comissaoReal > 0 ? 'ok' : ''}><span>Markup real</span><b>{usd4(mk.comissaoReal)}</b><small>conta real · o que a casa ganhou</small></div>
-          <div><span>Markup total</span><b>{usd4(mk.comissao)}</b><small>somando demonstração</small></div>
-          <div className={ex.depositos > 0 ? 'ok' : ''}><span>Depositou</span><b>{usd(ex.depositos)}</b><small>{ex.saques ? `sacou ${usd(Math.abs(ex.saques))}` : 'nenhum saque'}</small></div>
+          <div className={mk.comissaoReal > 0 ? 'ok' : ''}><span>Markup real</span><b>{usd4(mk.comissaoReal)}</b><small>Conta real · o que a casa ganhou</small></div>
+          <div><span>Markup total</span><b>{usd4(mk.comissao)}</b><small>Somando demonstração</small></div>
+          <div className={ex.depositos > 0 ? 'ok' : ''}><span>Depositou</span><b>{usd(ex.depositos)}</b><small>{ex.saques ? `Sacou ${usd(Math.abs(ex.saques))}` : 'Nenhum saque'}</small></div>
           <div className={ops.resultadoReal >= 0 ? 'ok' : 'ruim'}><span>Resultado real</span><b>{usd(ops.resultadoReal)}</b><small>{n(ops.reais)} operações reais</small></div>
         </div>
 
         <section className="fc-bloco">
-          <h4>Markup dia a dia <small>últimos 90 dias · a barra é a comissão do dia</small></h4>
+          <h4>Markup dia a dia <small>Últimos 90 dias · a barra é a comissão do dia</small></h4>
           {ficha.markup.porDia.length ? <>
             <div className="fc-barras">
               {ficha.markup.porDia.map((d) => (
@@ -301,7 +304,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
           </section>
 
           <section className="fc-bloco">
-            <h4>Por origem <small>qual aplicativo comprou o contrato</small></h4>
+            <h4>Por origem <small>Qual aplicativo comprou o contrato</small></h4>
             {ficha.markup.porOrigem.length ? <>
               <div className="fc-tabela fc-mkorigem">
                 <div className="cab"><span>Origem</span><span>Operações</span><span>Markup</span><span>Resultado</span></div>
@@ -330,13 +333,13 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
         </div>
 
         <section className="fc-bloco">
-          <h4>Extrato da corretora <small>depósitos, saques e ajustes lidos da Deriv</small></h4>
+          <h4>Extrato da corretora <small>Depósitos, saques e ajustes lidos da Deriv</small></h4>
           {ficha.extrato.lancamentos.length ? <div className="fc-tabela fc-extrato">
             <div className="cab"><span>Quando</span><span>Conta</span><span>Tipo</span><span>Descrição</span><span>Valor</span><span>Saldo depois</span></div>
             {ficha.extrato.lancamentos.map((x, i) => (
               <div className="linha" key={i}>
                 <span>{dataHora(x.ocorridaEm)}</span>
-                <span>{x.contaId}{x.demo && <small>demo</small>}</span>
+                <span>{x.contaId}{x.demo && <small>Demo</small>}</span>
                 <span>{x.tipo || '—'}</span>
                 <span title={x.descricao || ''}>{x.descricao || '—'}</span>
                 <span className={x.valor > 0 ? 'ok' : x.valor < 0 ? 'ruim' : ''}>{usd(x.valor)}</span>
@@ -352,12 +355,12 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
         <div className="fc-kpis">
           <div><span>Operações</span><b>{n(ops.total)}</b><small>{n(ops.reais)} em conta real</small></div>
           <div><span>Acerto</span><b>{ops.total ? `${acerto}%` : '—'}</b><small>{n(ops.ganhas)} ganhas</small></div>
-          <div><span>Volume apostado</span><b>{usd(ops.entradas)}</b><small>{usd(ops.entradasReais)} em conta real</small></div>
-          <div><span>Opera desde</span><b>{soData(ops.primeira)}</b><small>última {haQuantoTempo(ops.ultima)}</small></div>
+          <div><span>Volume operado</span><b>{usd(ops.entradas)}</b><small>{usd(ops.entradasReais)} em conta real</small></div>
+          <div><span>Opera desde</span><b>{soData(ops.primeira)}</b><small>Última {haQuantoTempo(ops.ultima)}</small></div>
         </div>
 
         <section className="fc-bloco">
-          <h4>Robôs <small>todas as sessões, desde sempre</small></h4>
+          <h4>Robôs <small>Todas as sessões, desde sempre</small></h4>
           {ficha.robos.porRobo.length ? <div className="fc-tabela fc-robos">
             <div className="cab"><span>Robô</span><span>Sessões</span><span>Operações</span><span>Acerto</span><span>Resultado</span><span>Markup real</span><span>Última vez</span></div>
             {ficha.robos.porRobo.map((r) => (
@@ -391,7 +394,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
           </section>
 
           <section className="fc-bloco">
-            <h4>Em que hora opera <small>fuso da pessoa</small></h4>
+            <h4>Em que hora opera <small>Fuso da pessoa</small></h4>
             {ficha.operacoes.porHora.length ? <>
               <div className="fc-barras baixa">
                 {Array.from({ length: 24 }, (_, h) => {
@@ -433,7 +436,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
             {ficha.operacoes.ultimas.map((o, i) => (
               <div className="linha" key={i}>
                 <span>{dataHora(o.executadaEm)}</span>
-                <span>{o.roboNome || '—'}{o.demo && <small>demo</small>}</span>
+                <span>{o.roboNome || '—'}{o.demo && <small>Demo</small>}</span>
                 <span>{o.tipoContrato || '—'}<small>{o.ativo}</small></span>
                 <span>{usd(o.entrada)}</span>
                 <span>{o.digitoSaida ?? '—'}</span>
@@ -448,14 +451,14 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
       {/* ---------------------------------------------------- comportamento */}
       {aba === 'comportamento' && <>
         <div className="fc-kpis">
-          <div><span>Dias com acesso</span><b>{n(ficha.acessos.diasComAcesso)}</b><small>{ficha.acessos.primeiroDia ? `desde ${soData(ficha.acessos.primeiroDia)}` : 'nunca entrou'}</small></div>
-          <div><span>Aparelho</span><b>{ficha.acessos.porDispositivo[0]?.dispositivo ?? '—'}</b><small>{ficha.acessos.porDispositivo.map((d) => `${d.dispositivo} ${n(d.acessos)}`).join(' · ') || 'sem registro'}</small></div>
+          <div><span>Dias com acesso</span><b>{n(ficha.acessos.diasComAcesso)}</b><small>{ficha.acessos.primeiroDia ? `Desde ${soData(ficha.acessos.primeiroDia)}` : 'Nunca entrou'}</small></div>
+          <div><span>Aparelho</span><b>{rotulo(ficha.acessos.porDispositivo[0]?.dispositivo)}</b><small>{ficha.acessos.porDispositivo.map((d) => `${rotulo(d.dispositivo)} ${n(d.acessos)}`).join(' · ') || 'Sem registro'}</small></div>
           <div><span>Aulas abertas</span><b>{n(ficha.aulas.length)}</b><small>{n(ficha.aulas.filter((a) => a.concluida).length)} concluída{ficha.aulas.filter((a) => a.concluida).length === 1 ? '' : 's'}</small></div>
           <div><span>E-mails recebidos</span><b>{n(ficha.emails?.enviados ?? 0)}</b><small>{n(ficha.emails?.abertos ?? 0)} aberto{(ficha.emails?.abertos ?? 0) === 1 ? '' : 's'}</small></div>
         </div>
 
         <section className="fc-bloco">
-          <h4>Quando entra <small>últimos 90 dias · a barra é o tempo de cada dia</small></h4>
+          <h4>Quando entra <small>Últimos 90 dias · a barra é o tempo de cada dia</small></h4>
           {ficha.acessos.dias.length ? <>
             <div className="fc-barras">
               {ficha.acessos.dias.map((d) => (
@@ -474,7 +477,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
         </section>
 
         <section className="fc-bloco">
-          <h4>Por onde andou <small>telas abertas e tempo em cada uma</small></h4>
+          <h4>Por onde andou <small>Telas abertas e tempo em cada uma</small></h4>
           {rastro?.paginas.length ? <div className="fc-tabela fc-paginas">
             <div className="cab"><span>Tela</span><span>Visitas</span><span>Tempo</span><span>Última vez</span></div>
             {rastro.paginas.map((p, i) => (
@@ -489,7 +492,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
         </section>
 
         <section className="fc-bloco">
-          <h4>No que clicou <small>o rótulo que a pessoa leu no botão</small></h4>
+          <h4>No que clicou <small>O rótulo que a pessoa leu no botão</small></h4>
           {rastro?.cliques.length ? <div className="fc-tabela fc-cliques">
             <div className="cab"><span>Botão</span><span>Na tela</span><span>Vezes</span><span>Última vez</span></div>
             {rastro.cliques.map((c, i) => (
@@ -510,7 +513,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
             <div className="cab"><span>Aula</span><span>Aberturas</span><span>Tempo</span><span>Até onde</span><span>Primeira vez</span><span>Última vez</span></div>
             {ficha.aulas.map((a) => (
               <div className="linha" key={a.aulaId}>
-                <span><b>{tituloAula(a.aulaId)}</b>{a.concluida && <small>concluída</small>}</span>
+                <span><b>{tituloAula(a.aulaId)}</b>{a.concluida && <small>Concluída</small>}</span>
                 <span>{n(a.aberturas)}</span>
                 <span>{horasLegiveis(a.segundos)}</span>
                 <span><i className="fc-prog"><u style={{ width: `${Math.round(a.posicaoMax * 100)}%` }} /></i>{Math.round(a.posicaoMax * 100)}%</span>
@@ -523,7 +526,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
 
         <section className="fc-bloco">
           <h4>E-mails que a casa mandou
-            <small>clique numa linha para ver a linha do tempo de entrega</small></h4>
+            <small>Clique numa linha para ver a linha do tempo de entrega</small></h4>
           {ficha.emails && ficha.emails.enviados > 0 ? <>
             <div className="fc-resumo-email">
               <span>{n(ficha.emails.enviados)} enviados</span>

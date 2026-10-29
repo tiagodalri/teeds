@@ -13,7 +13,7 @@
 
 /* ------------------------------------------------ cabeçalho */
 .mc-cabeca { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.mc-sobre { display: inline-flex; align-items: center; gap: 8px; color: var(--mc-ouro); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.mc-sobre { display: inline-flex; align-items: center; gap: 8px; color: var(--mc-ouro); font-size: 12px; font-weight: 800; letter-spacing: .01em; }
 .mc-pulso { position: relative; width: 7px; height: 7px; border-radius: 50%; background: var(--up); }
 .mc-pulso::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid var(--up); animation: mc-pulso 1.8s ease-out infinite; }
 @keyframes mc-pulso { 0% { transform: scale(.4); opacity: .9; } 100% { transform: scale(1.5); opacity: 0; } }
@@ -31,7 +31,7 @@
 .mc-faixa ul { display: flex; margin: 0; padding: 0; list-style: none; }
 .mc-faixa li { display: flex; align-items: baseline; gap: 9px; padding: 12px 26px; white-space: nowrap; font-variant-numeric: tabular-nums; position: relative; }
 .mc-faixa li::after { content: ''; position: absolute; right: 0; top: 30%; bottom: 30%; width: 1px; background: var(--mc-linha); }
-.mc-faixa li span { color: var(--muted); font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.mc-faixa li span { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .01em; }
 .mc-faixa li b { color: var(--text); font-size: 14px; font-weight: 700; }
 .mc-faixa li em { font-style: normal; font-size: 12px; font-weight: 700; }
 .mc-faixa-vazia { margin: 0; padding: 13px 16px; color: var(--muted); font-size: 13px; }
@@ -45,7 +45,7 @@
   box-shadow: 0 1px 0 color-mix(in srgb, #fff 4%, transparent) inset;
 }
 .mc-ind header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.mc-ind header span { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.mc-ind header span { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .01em; }
 .mc-ind header em { font-style: normal; font-size: 12.5px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .mc-ind > b { color: var(--text); font-size: 26px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mc-ind small { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
@@ -83,10 +83,12 @@
 .mc-centro-texto span { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mc-centro-hora { display: grid; justify-items: end; gap: 3px; }
 .mc-centro-hora time { color: var(--text); font: 700 15px var(--fonte-dados, ui-monospace, monospace); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
-.mc-centro-hora em { padding: 1px 7px; border-radius: 8px; background: var(--surface-alt); color: var(--muted); font-size: 10px; font-style: normal; font-weight: 800; letter-spacing: .03em; white-space: nowrap; }
+.mc-centro-hora em { padding: 1px 7px; border-radius: 8px; background: var(--surface-alt); color: var(--muted); font-size: 11px; font-style: normal; font-weight: 800; letter-spacing: .01em; white-space: nowrap; }
 .mc-centro-hora em.aberta { background: color-mix(in srgb, var(--up) 16%, transparent); color: var(--up); }
 .mc-centro-hora em.intervalo { background: color-mix(in srgb, var(--mc-ouro) 18%, transparent); color: var(--mc-ouro); }
 .mc-ceu { position: absolute; top: 8px; right: 8px; width: 6px; height: 6px; border-radius: 50%; }
+/* o pontinho do dia/noite tem a sua faixa à direita: antes encostava no último número da hora (29/10/2026) */
+.mc-centros li { padding-right: 24px; }
 .mc-ceu.dia { background: var(--mc-ouro); box-shadow: 0 0 6px color-mix(in srgb, var(--mc-ouro) 70%, transparent); }
 .mc-ceu.noite { background: transparent; box-shadow: inset -2px -1px 0 0 var(--muted); }
 
@@ -107,7 +109,7 @@
 .mc-meta { color: var(--muted); font-size: 11.5px; }
 .mc-meta b { color: var(--mc-ouro); font-weight: 700; }
 /* sempre azul translúcido: fica sobre a foto da notícia nos dois temas (no claro o fundo do tema virava marfim sob texto marfim) */
-.mc-tag { display: inline-block; padding: 3px 8px; border-radius: 6px; background: rgba(5, 21, 40, .72); color: #F3F0E9; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; backdrop-filter: blur(6px); }
+.mc-tag { display: inline-block; padding: 3px 8px; border-radius: 6px; background: rgba(5, 21, 40, .72); color: #F3F0E9; font-size: 11.5px; font-weight: 800; letter-spacing: .01em; backdrop-filter: blur(6px); }
 .mc-capa { display: block; width: 100%; height: 100%; object-fit: cover; background: var(--surface-alt); }
 .mc-capa.vazia {
   position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; overflow: hidden;
@@ -124,7 +126,7 @@
   box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .55);
 }
 .mc-destaque .mc-sigla { width: 76px; height: 76px; border-radius: 20px; font-size: 26px; }
-.mc-capa.vazia small { color: var(--mc-ouro); font-size: 9.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.mc-capa.vazia small { color: var(--mc-ouro); font-size: 11.5px; font-weight: 800; letter-spacing: .01em; }
 .mc-destaque .mc-capa.vazia img { width: 76px; height: 76px; border-radius: 20px; }
 .mc-destaque .mc-capa.vazia { justify-content: flex-start; padding-top: 70px; }
 
@@ -143,7 +145,7 @@
 .mc-destaque .mc-meta i { margin-left: 10px; color: #fff; font-style: normal; font-weight: 700; }
 
 .mc-ultimas { display: grid; align-content: start; padding: 16px 18px 6px; border: 1px solid var(--mc-linha); border-radius: 18px; background: var(--surface); }
-.mc-ultimas h5 { margin: 0 0 4px; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.mc-ultimas h5 { margin: 0 0 4px; color: var(--muted); font-size: 12.5px; font-weight: 700; letter-spacing: .01em; }
 .mc-ultimas ol { margin: 0; padding: 0; list-style: none; counter-reset: ultima; }
 .mc-ultimas li { counter-increment: ultima; border-top: 1px solid var(--mc-linha); }
 .mc-ultimas li:first-child { border-top: 0; }
@@ -190,7 +192,7 @@
   .mc-centro-texto span { display: none; }
   .mc-centro-hora { grid-column: 2; justify-items: start; grid-auto-flow: column; align-items: center; gap: 6px; }
   .mc-centro-hora time { font-size: 13px; }
-  .mc-centro-hora em { font-size: 9.5px; padding: 1px 5px; }
+  .mc-centro-hora em { font-size: 11px; padding: 1px 6px; }
   .mc-secao > span { flex-basis: 100%; }
   .mc-destaque { min-height: 320px; border-radius: 16px; }
   .mc-destaque-texto { padding: 18px; }

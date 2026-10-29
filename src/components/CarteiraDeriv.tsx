@@ -4,6 +4,7 @@ import type { TradingAccount } from '../core/deriv/account'
 import { CarteiraSemPermissao, lerCarteiras, lerMovimentos, moedaLegivel, valorNaMoeda, type Carteira, type MovimentoDaCarteira, type SituacaoDoMovimento } from '../core/deriv/carteira'
 import { DERIV } from '../core/deriv/config'
 import { DerivLogo } from './DerivMarca'
+import { MARCA } from '../marca'
 import './carteira-deriv.css'
 
 /*
@@ -32,7 +33,18 @@ const quando = (iso: string) => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-export function CarteiraDeriv({ session, contas = [], fechar, reconectar }: { session: AuthSession | null; contas?: TradingAccount[]; fechar: () => void; reconectar: () => void }) {
+/** Onde as contas de opção operam, no vocabulário da marca (na GlobalFly é I.A.; nas outras, robôs). */
+const ONDE_OPERAM = MARCA.vocabularioIA ? 'onde as I.A. operam' : 'onde os robôs operam'
+
+export function CarteiraDeriv({ session, contas = [], fechar, reconectar, somenteDemo = false, rotulosTrocados = false }: {
+  session: AuthSession | null; contas?: TradingAccount[]; fechar: () => void; reconectar: () => void
+  /** Acesso de demonstração: a conta virtual se apresenta como real (só o rótulo; as somas seguem a conta de verdade). */
+  somenteDemo?: boolean
+  /** Rótulos trocados (uso interno): a virtual veste "Real" e a real veste "Demo" (só o rótulo). */
+  rotulosTrocados?: boolean
+}) {
+  // como a conta aparece na tela; quem soma e filtra continua sendo o tipo de verdade
+  const pareceDemo = (c: TradingAccount) => (rotulosTrocados ? c.type !== 'demo' : c.type === 'demo' && !somenteDemo)
   const [carteiras, setCarteiras] = useState<Estado<Carteira[]>>({ carregando: true })
   const [movimentos, setMovimentos] = useState<Estado<MovimentoDaCarteira[]>>({ carregando: true })
   const [semPermissao, setSemPermissao] = useState(false)
@@ -105,7 +117,7 @@ export function CarteiraDeriv({ session, contas = [], fechar, reconectar }: { se
           ) : semPermissao ? (
             <div className="cw-aviso">
               <b>Falta uma permissão</b>
-              <p>A sua conexão com a Deriv é de antes da carteira chegar à plataforma. Reconecte uma vez e autorize o acesso à carteira. Os robôs continuam rodando normalmente.</p>
+              <p>A sua conexão com a Deriv é de antes de a carteira chegar à plataforma. Reconecte uma vez e autorize o acesso à carteira. As operações em andamento continuam normalmente.</p>
               <button type="button" className="cw-botao principal" onClick={reconectar}>Reconectar a Deriv</button>
             </div>
           ) : (
@@ -118,19 +130,19 @@ export function CarteiraDeriv({ session, contas = [], fechar, reconectar }: { se
                 </div>
                 <ul className="cw-contas">
                   {deOperacao.map((c) => (
-                    <li key={c.accountId} className={`cw-conta operacao ${c.type === 'demo' ? 'demo' : ''}`}>
-                      <i aria-hidden="true">{c.type === 'demo' ? 'D' : '▲'}</i>
+                    <li key={c.accountId} className={`cw-conta operacao ${pareceDemo(c) ? 'demo' : ''}`}>
+                      <i aria-hidden="true">{pareceDemo(c) ? 'D' : '▲'}</i>
                       <span className="cw-conta-nome">
-                        <b>{c.type === 'demo' ? 'Conta demonstração' : 'Conta de operação'}</b>
-                        <small>{c.type === 'demo' ? 'dinheiro de treino, não é real' : 'Opções · onde as I.A. operam'} · {c.accountId}</small>
+                        <b>{pareceDemo(c) ? 'Conta demonstração' : 'Conta de operação'}</b>
+                        <small>{pareceDemo(c) ? 'Dinheiro de treino, não é real' : `Opções · ${ONDE_OPERAM}`} · {c.accountId}</small>
                       </span>
                       <strong>{valorNaMoeda(c.balance, c.currency)}</strong>
                     </li>
                   ))}
                   {carteiras.carregando ? (
-                    <li className="cw-conta carteira"><i aria-hidden="true">$</i><span className="cw-conta-nome"><b>Carteira</b><small>lendo o saldo…</small></span><i className="cw-carregando" aria-label="Carregando o saldo" /></li>
+                    <li className="cw-conta carteira"><i aria-hidden="true">$</i><span className="cw-conta-nome"><b>Carteira</b><small>Lendo o saldo…</small></span><i className="cw-carregando" aria-label="Carregando o saldo" /></li>
                   ) : 'erro' in carteiras ? (
-                    <li className="cw-conta carteira"><i aria-hidden="true">$</i><span className="cw-conta-nome"><b>Carteira</b><small>Não consegui ler o saldo agora.</small></span><button type="button" className="cw-link" onClick={carregar}>Tentar de novo</button></li>
+                    <li className="cw-conta carteira"><i aria-hidden="true">$</i><span className="cw-conta-nome"><b>Carteira</b><small>Não deu para ler o saldo agora.</small></span><button type="button" className="cw-link" onClick={carregar}>Tentar de novo</button></li>
                   ) : (saldosDaCarteira.length ? saldosDaCarteira : [{ moeda: 'USD', saldo: 0, entradas: 0, saidas: 0 }]).map((x) => {
                     const { simbolo, rede } = moedaLegivel(x.moeda)
                     return (
@@ -176,7 +188,7 @@ export function CarteiraDeriv({ session, contas = [], fechar, reconectar }: { se
                 {movimentos.carregando ? (
                   <ul aria-label="Carregando">{[0, 1, 2].map((i) => <li key={i} className="cw-fantasma"><i /><span /></li>)}</ul>
                 ) : 'erro' in movimentos ? (
-                  <div className="cw-erro-linha"><span>Não consegui ler as movimentações agora.</span><button type="button" className="cw-link" onClick={carregar}>Tentar de novo</button></div>
+                  <div className="cw-erro-linha"><span>Não deu para ler as movimentações agora.</span><button type="button" className="cw-link" onClick={carregar}>Tentar de novo</button></div>
                 ) : visiveis.length === 0 ? (
                   <p className="cw-vazio">{lista.length ? 'Nada com esse filtro.' : 'Nenhum depósito ou saque ainda.'}</p>
                 ) : (
@@ -205,7 +217,8 @@ export function CarteiraDeriv({ session, contas = [], fechar, reconectar }: { se
         </div>
 
         <footer className="cw-pe">
-          <a className="cw-botao principal" href={DERIV.deposito} target="_blank" rel="noopener noreferrer">Depositar na Deriv</a>
+          {/* sem a permissão, a ação principal é reconectar (acima): o depósito vira secundário */}
+          <a className={`cw-botao${semPermissao ? '' : ' principal'}`} href={DERIV.deposito} target="_blank" rel="noopener noreferrer">Depositar na Deriv</a>
           <button type="button" className="cw-botao" onClick={fechar}>Fechar</button>
         </footer>
       </section>

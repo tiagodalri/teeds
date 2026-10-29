@@ -6,7 +6,7 @@
   display: grid; gap: 14px; min-width: 0;
 }
 .sx svg { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-.sx button { font: inherit; color: inherit; }
+.sx :where(button) { font: inherit; color: inherit; }
 .sx-rot { color: var(--sx-ouro); font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 
 /* números */

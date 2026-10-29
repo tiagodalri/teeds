@@ -87,7 +87,7 @@ function MarkupManual({ sessao }: { sessao: SessaoTeeds }) {
                 <td className="num">{l.clientes}</td>
                 <td className="num">{usd(l.entradas)}</td>
                 <td className={`num ${l.resultado >= 0 ? 'positivo' : 'negativo'}`}>{usd(l.resultado)}</td>
-                <td className="num"><b>{usd(l.markup)}</b>{l.demo && <small>estimado, conta virtual</small>}</td>
+                <td className="num"><b>{usd(l.markup)}</b>{l.demo && <small>Estimado, conta virtual</small>}</td>
               </tr>
             ))}</tbody>
           </table></div>

@@ -118,7 +118,7 @@ function EditorDePlano({ sessao, plano, temOutroPadrao, fechar, aoSalvar, aoApag
   const semVencimento = r.duracaoDias == null
   const mudou = useMemo(() => !plano || JSON.stringify(r) !== JSON.stringify({ id: plano.id, nome: plano.nome, descricao: plano.descricao ?? '', duracaoDias: plano.duracaoDias, ativo: plano.ativo, padrao: plano.padrao, recursos: plano.recursos }), [r, plano])
   const emUso = (plano?.clientes ?? 0) + (plano?.pendentes ?? 0)
-  const motivoNaoApaga = !plano ? '' : plano.padrao ? 'É o plano de quem se cadastra. Marque outro como padrão antes.' : emUso ? `Há ${numero(emUso)} cliente(s) neste plano. Mude o plano deles antes, ou só deixe o plano indisponível.` : ''
+  const motivoNaoApaga = !plano ? '' : plano.padrao ? 'É o plano de quem se cadastra. Marque outro como padrão antes.' : emUso ? `${emUso === 1 ? 'Há 1 cliente' : `Há ${numero(emUso)} clientes`} neste plano. Mude o plano antes, ou só deixe o plano indisponível.` : ''
 
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape' && !salvando) fechar() }

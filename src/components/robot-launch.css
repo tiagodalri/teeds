@@ -166,3 +166,4 @@
   .robot-launch-bilhete-topo { padding: 12px 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .robot-launch-casas i { animation: none; } }
+.robot-launch-dialog:focus { outline: none; }

@@ -15,6 +15,16 @@ import { linkDeDescadastro } from './descadastro'
 import type { Marca } from '../../src/marca/marcas'
 
 /**
+ * Campanha cujo destino é o canal não sai sem canal (29/10/2026). A GlobalFly
+ * ainda não tem Telegram: o botão principal sairia com endereço vazio. Lança
+ * erro em vez de mandar — quem dispara vê o motivo antes do primeiro envio.
+ */
+function exigirTelegram(marca: Marca): string {
+  if (!marca.telegram) throw new Error(`A ${marca.prosa} ainda não tem canal do Telegram: esta campanha não pode ser enviada.`)
+  return marca.telegram
+}
+
+/**
  * O convite de volta para quem já foi cliente.
  *
  * Pedido do Tiago em 30/09/2026, para a base da Teeds. A mensagem tem duas
@@ -42,6 +52,7 @@ import type { Marca } from '../../src/marca/marcas'
  * Tiago, comunicada e reafirmada.
  */
 export function emailDeVolta(marca: Marca, paraOEmail: string): EmailPronto {
+  const canal = exigirTelegram(marca)
   // GlobalFly (28/10/2026): I.A. é feminina; o texto do Tiago com a concordância feita à mão
   const ia = !!marca.vocabularioIA
   return montarEmail(marca, 'convite', new URL('/', marca.redirectUri).href, {
@@ -68,7 +79,7 @@ export function emailDeVolta(marca: Marca, paraOEmail: string): EmailPronto {
       `Entre agora no nosso canal oficial do Telegram para ter acesso às ` +
       `informações sobre a reativação do seu acesso. Todas as comunicações serão ` +
       `feitas por lá e é importante que você não perca nenhum detalhe.`,
-    telegram: { url: marca.telegram, texto: 'Entrar no canal oficial' },
+    telegram: { url: canal, texto: 'Entrar no canal oficial' },
     descadastrar: linkDeDescadastro(marca.id, paraOEmail),
     // Sem botão da plataforma e sem tarja de recado (Tiago, 30/09/2026).
     // O convite tem um destino só, o canal: dois botões dividiriam a atenção
@@ -192,6 +203,7 @@ export function emailDeAcessoGratuito(marca: Marca, paraOEmail: string): EmailPr
 export function emailDoDiaDoAg2(marca: Marca, paraOEmail: string): EmailPronto {
   // o AG2 tem nome próprio em cada marca (GlobalFly: GF Phenom; OMNI: OMNI Under)
   const ag2 = marca.nomesDosRobos?.ag2 ?? 'AG2'
+  const canal = exigirTelegram(marca)
   const destino = new URL('/cadastre-se', marca.redirectUri)
   destino.searchParams.set('utm_source', 'email')
   destino.searchParams.set('utm_campaign', 'ag2')
@@ -213,7 +225,7 @@ export function emailDoDiaDoAg2(marca: Marca, paraOEmail: string): EmailPronto {
       `3. Crie a sua senha e repita no campo de baixo.\n` +
       `4. Toque em "Confirmar Cadastro".\n\n` +
       `Pronto. Você já consegue entrar na plataforma com o seu e-mail e a senha que criou.`,
-    telegram: { url: marca.telegram, texto: 'Entrar no canal do Telegram' },
+    telegram: { url: canal, texto: 'Entrar no canal do Telegram' },
     botao: 'Fazer meu cadastro',
     descadastrar: linkDeDescadastro(marca.id, paraOEmail),
   })

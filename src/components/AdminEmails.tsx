@@ -61,8 +61,11 @@ export function AdminEmails({sessao,marca}:{sessao:SessaoTeeds;marca:string}) {
       <label>Filtrar por evento<select value={status} onChange={e=>setStatus(e.target.value)}><option value="todos">Todos</option><option value="sem-abertura">Sem abertura registrada</option>{Object.entries(statusNome).map(([id,nome])=><option key={id} value={id}>{nome}</option>)}</select></label>
     </div>
     <p className="email-nota">{visiveis.length} encontrados nos {emails.length} registros carregados{atualizado&&' · Consultado às '+atualizado}. Ao atualizar, a lista volta aos envios mais recentes.</p>
-    <p className="email-nota">Abertura não comprova leitura: aplicativos podem carregar o e-mail automaticamente ou bloquear o rastreamento. Cliques também podem vir de verificadores automáticos. “Sem registro” não significa “não leu”.</p>
-    <p className="email-nota">Horários e contagens de eventos{rastreio?.desde?' a partir de '+quando(rastreio.desde):' a partir da ativação da integração'}. Não há recuperação retroativa de aberturas não rastreadas. A lista de envios depende da retenção do Resend.</p>
+    {/* As ressalvas ficam a um clique: três parágrafos fixos empurravam a lista para baixo. */}
+    <details className="email-nota"><summary>Como ler estes números</summary>
+      <p>Abertura não comprova leitura: aplicativos podem carregar o e-mail automaticamente ou bloquear o rastreamento. Cliques também podem vir de verificadores automáticos. “Sem registro” não significa “não leu”.</p>
+      <p>Horários e contagens de eventos{rastreio?.desde?' a partir de '+quando(rastreio.desde):' a partir da ativação da integração'}. Não há recuperação retroativa de aberturas não rastreadas. A lista de envios depende da retenção do Resend.</p>
+    </details>
     {aviso&&<p role="status" className="email-aviso">{aviso}</p>}
     {erro&&<p role="alert" className="email-erro">{erro} Os dados exibidos podem estar desatualizados.</p>}
     <div className="email-lista" aria-busy={ocupado}>

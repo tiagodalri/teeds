@@ -500,7 +500,7 @@ export function ManagementPanel({
               </select>
             </label>
             {(horaDe !== 0 || horaAte !== 23) && (
-              <button className="filtro-limpar" onClick={() => { setHoraDe(0); setHoraAte(23) }}>o dia todo</button>
+              <button className="filtro-limpar" onClick={() => { setHoraDe(0); setHoraAte(23) }}>O dia todo</button>
             )}
           </div>
         </div>
@@ -607,7 +607,7 @@ export function ManagementPanel({
           <p className="ger-nota">
             {progresso
               ? `somando dia a dia — ${progresso.feitos} de ${progresso.total}…`
-              : 'somando suas operações…'}
+              : 'Somando suas operações…'}
           </p>
         )}
 
@@ -685,7 +685,7 @@ export function ManagementPanel({
             ele aparece ao lado. Horário no relógio do seu computador.
           </p>
 
-          {analiseCarregando && !analise && <p className="ger-nota">filtrando no banco…</p>}
+          {analiseCarregando && !analise && <p className="ger-nota">Filtrando no banco…</p>}
           {analise && analise.total.operacoes === 0 && (
             <p className="ger-nota">Nenhuma operação de robô neste filtro.</p>
           )}

@@ -532,7 +532,7 @@ export function ChatDaEquipe({ api, escondido = false }: Props) {
                               </>
                             )}
                             <span className="eq-msg-hora">
-                              {m.falhou ? <>Não foi <button type="button" onClick={(e) => { e.stopPropagation(); void mandar(m.conversaId, m, m) }}>Tentar de novo</button></> : horaCurta(m.criadaEm)}
+                              {m.falhou ? <>Não enviou · <button type="button" onClick={(e) => { e.stopPropagation(); void mandar(m.conversaId, m, m) }}>Tentar de novo</button></> : horaCurta(m.criadaEm)}
                               {minha && !m.falhou && !m.apagada && (m.enviando
                                 ? <Ic d={I.relogio} className="eq-tique" />
                                 : <Ic d={lida ? I.visto : I.enviada} className={`eq-tique ${lida ? 'lida' : ''}`} />)}

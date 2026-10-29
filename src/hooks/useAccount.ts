@@ -9,6 +9,7 @@ import { TeedsSocket } from '../core/deriv/client'
 import type { ConnectionState } from '../core/deriv/types'
 import { acessoSomenteDemo, contasPermitidas, rotulosTrocados as temRotulosTrocados } from '../core/deriv/accountAccess'
 import { MARCA } from '../marca'
+import { traduzirErro } from '../core/deriv/erros'
 import { limparCacheOperacoes } from '../core/deriv/history'
 import {
   assinarContratos, fetchPortfolio, subscribeBalance, subscribeTransactions,
@@ -422,13 +423,21 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
     setError(null)
   }, [])
 
-  const [aviso, setAviso] = useState<string | null>(null)
+  /*
+    O aviso da faixa tem tipo (29/10/2026, revisão): falhas ("não deu para ligar a
+    conta", "não deu para recarregar") saíam na faixa VERDE de sucesso e sumiam em
+    5 s. Agora 'erro' vai na faixa de erro e fica até a pessoa fechar; só o 'ok' some.
+    `setAviso(texto)` continua valendo para quem já chamava (tipo 'ok').
+  */
+  const [aviso, setAvisoTexto] = useState<string | null>(null)
+  const [avisoTipo, setAvisoTipo] = useState<'ok' | 'erro'>('ok')
+  const setAviso = useCallback((texto: string | null, tipo: 'ok' | 'erro' = 'ok') => { setAvisoTexto(texto); setAvisoTipo(tipo) }, [])
 
   const recarregarDemo = useCallback(async () => {
     if (!session || !accountId || !acesso.simulador) return
     const conta = accounts.find((a) => a.accountId === accountId)
     if (conta?.type !== 'demo') {
-      setAviso('Só a conta virtual pode ser recarregada.')
+      setAviso('Só a conta virtual pode ser recarregada.', 'erro')
       return
     }
     try {
@@ -439,15 +448,15 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
       setAccounts((lista) => lista.map((a) => (a.accountId === accountId ? { ...a, balance: novo } : a)))
       setAviso(`Saldo virtual recarregado: ${novo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${conta.currency}.`)
     } catch (e) {
-      setAviso(`Não consegui recarregar: ${(e as Error).message}`)
+      setAviso(`Não deu para recarregar o saldo virtual: ${traduzirErro((e as Error).message)}`, 'erro')
     }
-  }, [session, accountId, accounts, acesso.simulador])
+  }, [session, accountId, accounts, acesso.simulador, setAviso])
 
   useEffect(() => {
-    if (!aviso) return
+    if (!aviso || avisoTipo !== 'ok') return
     const t = setTimeout(() => setAviso(null), 5000)
     return () => clearTimeout(t)
-  }, [aviso])
+  }, [aviso, avisoTipo, setAviso])
 
   const isDemo = account?.type === 'demo'
   const conexaoDaConta = accountId !== null && socketAccountRef.current === accountId
@@ -456,7 +465,7 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
     status, error, setError, session,
     accounts: permitidas, demonstrationAccounts: permitidas, account, accountId, setAccountId, isDemo, somenteDemo, rotulosTrocados,
     balance: conexaoDaConta ? balance : null, contracts: conexaoDaConta ? [...contracts.values()] : [],
-    socket: conexaoDaConta ? socketRef.current : null, connecting, aviso, setAviso, pulso, conexao,
+    socket: conexaoDaConta ? socketRef.current : null, connecting, aviso, avisoTipo, setAviso, pulso, conexao,
     comprasRecentes: conexaoDaConta ? comprasRecentes : [],
     login, logout, recarregarDemo, atualizarContas,
   }

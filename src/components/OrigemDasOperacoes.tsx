@@ -79,11 +79,16 @@ export function OrigemDasOperacoes({ sessao, naRede = false }: { sessao: SessaoT
   const [comDemo, setComDemo] = useState(false)
   const [linhas, setLinhas] = useState<OrigemDoContrato[]>([])
   const [carregando, setCarregando] = useState(true)
+  const [falhou, setFalhou] = useState(false)
 
   useEffect(() => {
     let vivo = true
-    setCarregando(true)
-    contratosPorOrigem(sessao, janela).then((r) => { if (vivo) { setLinhas(r); setCarregando(false) } })
+    setCarregando(true); setFalhou(false)
+    contratosPorOrigem(sessao, janela)
+      .then((r) => { if (vivo) setLinhas(r) })
+      // sem isto, uma falha deixava "Lendo a separação…" para sempre
+      .catch(() => { if (vivo) { setLinhas([]); setFalhou(true) } })
+      .finally(() => { if (vivo) setCarregando(false) })
     return () => { vivo = false }
   }, [sessao, janela])
 
@@ -104,13 +109,14 @@ export function OrigemDasOperacoes({ sessao, naRede = false }: { sessao: SessaoT
         </div>
         <div className="pl-filtros">
           <SeletorDePeriodo dias={janela} opcoes={DIAS} onTrocar={setJanela} />
-          <label className="ce-demo"><input type="checkbox" checked={comDemo} onChange={(e) => setComDemo(e.target.checked)} /> incluir demo</label>
+          <label className="ce-demo"><input type="checkbox" checked={comDemo} onChange={(e) => setComDemo(e.target.checked)} /> Incluir demo</label>
         </div>
       </header>
 
       <div className="ce-card-corpo">
         {carregando && !linhas.length && <p className="ce-vazio">Lendo a separação…</p>}
-        {!carregando && !visiveis.length && (
+        {!carregando && falhou && <p className="ce-vazio">Não foi possível ler a separação agora. Troque o período para tentar de novo.</p>}
+        {!carregando && !falhou && !visiveis.length && (
           <p className="ce-vazio">
             Nada separado ainda neste período. O servidor separa as contas a cada passada de comissões;
             dias anteriores a 30/09/2026 não têm essa separação.

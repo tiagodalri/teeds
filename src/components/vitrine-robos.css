@@ -219,3 +219,10 @@
 .vr-iniciar.vr-desbloquear { background: transparent; color: var(--gf-ouro, var(--primary)); border: 1px solid color-mix(in srgb, var(--gf-ouro, var(--primary)) 70%, transparent); }
 .vr-iniciar.vr-desbloquear:hover { background: color-mix(in srgb, var(--gf-ouro, var(--primary)) 12%, transparent); }
 :root[data-tema='escuro'] .vr-iniciar.vr-desbloquear { color: var(--gf-ouro, var(--primary)); }
+
+/* Revisão visual (29/10/2026): no celular a fileira era cortada na margem da
+   página (o 2º cartão sumia num corte seco a 12 px da borda). Ela agora
+   corre até a borda da tela, e o primeiro cartão continua alinhado ao título. */
+@media (max-width: 700px) {
+  .robot-workspace .vr-grade { margin-inline: -12px; padding-inline: 12px; scroll-padding-inline: 12px; }
+}

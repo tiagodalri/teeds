@@ -45,12 +45,15 @@ export function Movimentacoes({ sessao }: { sessao: SessaoTeeds }) {
   const [recentes, setRecentes] = useState<MovimentacaoRegistro[]>([])
   const [coletas, setColetas] = useState<ColetaExtrato[]>([])
   const [carregando, setCarregando] = useState(false)
+  const [falhou, setFalhou] = useState(false)
 
   useEffect(() => {
     let vivo = true
-    setCarregando(true)
+    setCarregando(true); setFalhou(false)
     Promise.all([movimentacoesDiarias(sessao, dias), movimentacoesRecentes(sessao, dias), coletasDeExtrato(sessao)])
       .then(([d, r, c]) => { if (vivo) { setPorDia(d); setRecentes(r); setColetas(c) } })
+      // sem isto, uma falha virava o vazio "Nada ainda", como se não houvesse movimentação
+      .catch(() => { if (vivo) setFalhou(true) })
       .finally(() => vivo && setCarregando(false))
     return () => { vivo = false }
   }, [sessao.token, dias])
@@ -76,9 +79,9 @@ export function Movimentacoes({ sessao }: { sessao: SessaoTeeds }) {
   return <>
     <div className="rc-filtros">
       <div className="rc-periodo">{PERIODOS.map((p) => <button key={p} className={dias === p ? 'on' : ''} onClick={() => setDias(p)}>{p} dias</button>)}</div>
-      <span className="rc-carregando">{carregando ? 'atualizando…' : saude.contas
-        ? `coleta: ${saude.contas} conta${saude.contas === 1 ? '' : 's'} · última ${haQuanto(saude.ultima)}${saude.comErro ? ` · ${saude.comErro} com erro` : ''}`
-        : 'a coleta ainda não rodou'}</span>
+      <span className="rc-carregando">{carregando ? 'Atualizando…' : saude.contas
+        ? `Coleta: ${saude.contas} conta${saude.contas === 1 ? '' : 's'} · última ${haQuanto(saude.ultima)}${saude.comErro ? ` · ${saude.comErro} com erro` : ''}`
+        : 'A coleta ainda não rodou'}</span>
     </div>
 
     <div className="adm-kpis">
@@ -104,7 +107,8 @@ export function Movimentacoes({ sessao }: { sessao: SessaoTeeds }) {
           </div>
         ))}
       </div>}
-      {!carregando && porDia.length === 0 && <div className="adm-vazio">
+      {!carregando && falhou && <div className="adm-vazio">Não conseguimos ler as movimentações agora. Troque o período ou volte em instantes para tentar de novo.</div>}
+      {!carregando && !falhou && porDia.length === 0 && <div className="adm-vazio">
         {saude.contas
           ? 'Nenhum depósito nem saque em conta real nesse período.'
           : `Nada ainda. O servidor lê o extrato de cada cliente que conectou a Deriv na ${MARCA.prosa}; a primeira passada acontece pouco depois de ele subir.`}
@@ -121,14 +125,14 @@ export function Movimentacoes({ sessao }: { sessao: SessaoTeeds }) {
             <span className="adm-pessoa"><i>{(m.nome || m.email || '?')[0].toUpperCase()}</i><b>{m.nome || 'Sem nome'}<small>{m.email}</small></b></span>
             <span>{m.contaId}<small>{m.moeda}</small></span>
             <span className={m.tipo === 'deposit' ? 'positivo' : 'negativo'}>{m.tipo === 'deposit' ? 'Depósito' : 'Saque'}</span>
-            <span className={m.tipo === 'deposit' ? 'positivo' : 'negativo'}>{m.tipo === 'deposit' ? '+' : '-'}{usd(m.valor)}</span>
+            <span className={m.tipo === 'deposit' ? 'positivo' : 'negativo'}>{m.tipo === 'deposit' ? '+' : '−'}{usd(m.valor)}</span>
             <span>{m.saldoDepois === null ? <small>—</small> : usd(m.saldoDepois)}</span>
             <span><small title={m.descricao ?? ''}>{m.descricao ?? '—'}</small></span>
           </div>
         ))}
         {recentes.length > MAX_LINHAS && <div className="adm-vazio">Mostrando as {MAX_LINHAS} mais recentes de {inteiro(recentes.length)}.</div>}
       </div>}
-      {!carregando && visiveis.length === 0 && <div className="adm-vazio">Nenhuma movimentação nesse período.</div>}
+      {!carregando && !falhou && visiveis.length === 0 && <div className="adm-vazio">Nenhuma movimentação nesse período.</div>}
     </section>
 
     {coletas.length > 0 && <section className="admin-card full">

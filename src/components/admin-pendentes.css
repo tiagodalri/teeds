@@ -14,3 +14,8 @@
 .pendente-confirmar{padding:16px;border:1px solid var(--primary,#cfa94f);border-radius:10px;margin:14px 0;font-size:13px;line-height:1.6}
 .admin-pendentes footer{justify-content:flex-end;margin-top:14px;font-size:12px}
 @media(max-width:700px){.pendente-linha{grid-template-columns:minmax(0,1fr)}.admin-pendentes header{flex-wrap:wrap}.admin-pendentes button{min-height:44px}}
+/* A confirmação dentro da linha do cadastro (29/10/2026): ocupa a largura toda, texto alinhado à esquerda. */
+.pendente-linha>.pendente-confirmar{grid-column:1/-1;margin:0;display:grid;gap:10px;text-align:left}
+.pendente-confirmar p{margin:0}
+.pendente-confirmar label{display:grid;gap:6px;max-width:320px;font-size:13px}
+.pendente-confirmar select{min-height:40px;padding:0 10px;border:1px solid var(--border,#343842);border-radius:9px;background:transparent;color:inherit;font:inherit}

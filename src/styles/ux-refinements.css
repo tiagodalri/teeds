@@ -81,7 +81,7 @@ button, input, select, textarea { font-family: inherit; }
 .entrada-erro { color: var(--down); }
 .entrada-recado { color: var(--up); }
 .entrada-mini, .entrada-seguranca { font-size: 12px; }
-.entrada-rodape { max-width: none; font-size: 7px; line-height: 1.5; letter-spacing: -.015em; white-space: nowrap; }
+.entrada-rodape { max-width: 46ch; font-size: 11.5px; line-height: 1.5; letter-spacing: normal; white-space: normal; }
 @media (max-width: 520px) {
   .entrada-rodape { font-size: 10px; letter-spacing: normal; white-space: normal; }
 }
@@ -114,7 +114,9 @@ button, input, select, textarea { font-family: inherit; }
   .entrada .entrada-form { gap: 16px; }
   .entrada .entrada-form label { gap: 8px; }
   .entrada .entrada-form .rot { font-size: 13px; }
-  .entrada .entrada-form input:not([type='checkbox']) { min-height: 52px; height: 52px; padding: 12px 16px 12px 46px; font-size: 16px; border-radius: 14px; }
+  .entrada .entrada-form input:not([type='checkbox']) { min-height: 52px; height: 52px; padding: 12px 16px; font-size: 16px; border-radius: 14px; }
+  /* o recuo de 46 px é para o ícone do campo: só onde há ícone (a tela de senha nova não tem) */
+  .entrada .entrada-campo:has(.entrada-icone) input:not([type='checkbox']) { padding-left: 46px; }
   .entrada .entrada-senha input { padding-right: 54px; }
   .entrada .entrada-esqueci { margin: -8px 0 -6px; }
   .entrada .entrada-aceites { gap: 14px; margin-top: 2px; padding: 14px; }
@@ -696,7 +698,7 @@ button, input, select, textarea { font-family: inherit; }
 #aviso-versao button { flex: 0 0 auto; min-height: 38px; padding: 0 14px; border-radius: 10px; font: inherit; font-weight: 700; cursor: pointer; }
 #aviso-versao [data-atualizar] { border: 0; color: var(--bg); background: var(--primary); }
 #aviso-versao [data-depois] { border: 1px solid var(--border); color: var(--muted); background: transparent; }
-@media (max-width: 600px) {
+@media (max-width: 900px) {
   #aviso-versao { flex-wrap: wrap; width: calc(100vw - 24px); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
   #aviso-versao span { flex: 1 1 100%; }
   #aviso-versao button { flex: 1 1 0; }

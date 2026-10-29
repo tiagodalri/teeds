@@ -17,6 +17,7 @@ import { MARCA } from '../marca'
 const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MARCAS).map(m=>[m.id,m.prosa]))
 import { IconeFechar } from './IconeFechar'
 import { Icone } from './Icone'
+import './insights-tabelas.css'
 
 /**
  * Insights — o painel de inteligência da plataforma.
@@ -177,11 +178,11 @@ export function InsightsPanel({ sessao, mostrarMarkup = false, onMostrarMarkup }
         <article><span>Visitas hoje</span><strong>{visitas ? inteiro(visitas.visitasHoje) : '—'}</strong><small>{visitas ? `${inteiro(visitas.visitantesHoje)} pessoa${visitas.visitantesHoje === 1 ? '' : 's'}` : ''}</small></article>
         <article><span>Viraram cadastro</span><strong>{visitas ? `${conversao}%` : '—'}</strong><small>{resumo ? `${inteiro(resumo.novos)} cadastro${resumo.novos === 1 ? '' : 's'} no período` : ''}</small></article>
         <article className="ok"><span>Pessoas ativas · {periodo} dias</span><strong>{resumo ? inteiro(resumo.ativos) : '—'}</strong><small>{resumo ? `${inteiro(resumo.ativosHoje)} entraram hoje` : ''}</small></article>
-        <article><span>Acessos</span><strong>{resumo ? inteiro(resumo.acessos) : '—'}</strong><small>{resumo ? `sessão média de ${horasLegiveis(tempoMedioSessao)}` : ''}</small></article>
-        <article><span>Tempo na plataforma</span><strong>{resumo ? horasLegiveis(resumo.segundos) : '—'}</strong><small>somando todo mundo</small></article>
-        <article><span>Novos cadastros</span><strong>{resumo ? inteiro(resumo.novos) : '—'}</strong><small>{resumo ? `de ${inteiro(resumo.clientes)} no total` : ''}</small></article>
+        <article><span>Acessos</span><strong>{resumo ? inteiro(resumo.acessos) : '—'}</strong><small>{resumo ? `Sessão média de ${horasLegiveis(tempoMedioSessao)}` : ''}</small></article>
+        <article><span>Tempo na plataforma</span><strong>{resumo ? horasLegiveis(resumo.segundos) : '—'}</strong><small>Somando todo mundo</small></article>
+        <article><span>Novos cadastros</span><strong>{resumo ? inteiro(resumo.novos) : '—'}</strong><small>{resumo ? `De ${inteiro(resumo.clientes)} no total` : ''}</small></article>
         <article className="alerta"><span>Assistiram aulas</span><strong>{resumo ? inteiro(resumo.aulasPessoas) : '—'}</strong><small>{resumo ? `${horasLegiveis(resumo.aulasSegundos)} assistidos` : ''}</small></article>
-        <article><span>Aulas concluídas</span><strong>{resumo ? inteiro(resumo.aulasConcluidas) : '—'}</strong><small>chegaram a 90% do vídeo</small></article>
+        <article><span>Aulas concluídas</span><strong>{resumo ? inteiro(resumo.aulasConcluidas) : '—'}</strong><small>Chegaram a 90% do vídeo</small></article>
         <article><span>Com a Deriv conectada</span><strong>{resumo ? inteiro(resumo.comDeriv) : '—'}</strong><small>{resumo ? `${pct(resumo.comDeriv, resumo.clientes)}% da base` : ''}</small></article>
       </div>
 
@@ -239,7 +240,7 @@ export function InsightsPanel({ sessao, mostrarMarkup = false, onMostrarMarkup }
         </section>
 
         <section className="admin-card ins-card">
-          <header><div><span className="rot">Horários</span><h3>Em que hora a plataforma é mais usada</h3></div><small>{picoHora.acessos ? `pico às ${String(picoHora.hora).padStart(2, '0')}h` : 'sem dados ainda'}</small></header>
+          <header><div><span className="rot">Horários</span><h3>Em que hora a plataforma é mais usada</h3></div><small>{picoHora.acessos ? `Pico às ${String(picoHora.hora).padStart(2, '0')}h` : 'Sem dados ainda'}</small></header>
           <div className="ins-barras ins-horas" style={{ ['--n' as string]: 24 }}>
             {horas.map((h) => (
               <div key={h.hora} className={`ins-barra ${h.hora === picoHora.hora && h.acessos ? 'pico' : ''}`} title={`${String(h.hora).padStart(2, '0')}h: ${h.acessos} acesso${h.acessos === 1 ? '' : 's'}`}>
@@ -262,7 +263,7 @@ export function InsightsPanel({ sessao, mostrarMarkup = false, onMostrarMarkup }
                 const x = porAula.get(a.id)
                 return (
                   <div key={a.id} className={`ins-linha ${x ? '' : 'vazia'}`}>
-                    <span className="ins-aula-nome"><i>{String(a.numero).padStart(2, '0')}</i><b>{a.titulo}</b>{ehVideoDeExemplo(a.video) && <small>sem vídeo próprio</small>}</span>
+                    <span className="ins-aula-nome"><i>{String(a.numero).padStart(2, '0')}</i><b>{a.titulo}</b>{ehVideoDeExemplo(a.video) && <small>Sem vídeo próprio</small>}</span>
                     <span>{x ? inteiro(x.pessoas) : '—'}</span>
                     <span>{x ? inteiro(x.aberturas) : '—'}</span>
                     <span>{x ? horasLegiveis(x.segundos) : '—'}</span>
@@ -278,7 +279,7 @@ export function InsightsPanel({ sessao, mostrarMarkup = false, onMostrarMarkup }
 
       <div className="ins-grade">
         <section className="admin-card ins-card">
-          <header><div><span className="rot">Localização</span><h3>De onde os clientes acessam</h3></div><small>aproximada pelo fuso horário</small></header>
+          <header><div><span className="rot">Localização</span><h3>De onde os clientes acessam</h3></div><small>Aproximada pelo fuso horário</small></header>
           {porPais.length > 0 && (
             <div className="ins-paises">
               {porPais.slice(0, 6).map(([pais, x]) => <div key={pais}><span>{pais}<b>{inteiro(x.pessoas)}</b></span><i><em style={{ width: `${pct(x.pessoas, clientesComAcesso)}%` }} /></i></div>)}

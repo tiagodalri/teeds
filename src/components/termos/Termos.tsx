@@ -116,6 +116,8 @@ export function AceiteDosTermos({ sessao, aoAceitar, aoSair }: { sessao: SessaoT
           </label>
         </div>
 
+        {/* o que falta fica logo abaixo das caixas, antes dos botões (no celular ficava depois do Sair) */}
+        {(!termos || !riscos) && <p className="tm-dica">Marque as duas caixas para continuar.</p>}
         {erro && <p className="tm-erro" role="alert">{erro}</p>}
         <div className="tm-acoes">
           <button type="button" className="tm-sair" onClick={aoSair}>Sair</button>
@@ -123,7 +125,6 @@ export function AceiteDosTermos({ sessao, aoAceitar, aoSair }: { sessao: SessaoT
             {gravando ? 'Registrando…' : 'Concordo e quero entrar'}
           </button>
         </div>
-        {(!termos || !riscos) && <p className="tm-dica">Marque as duas caixas para continuar.</p>}
       </div>
     </div>
   )

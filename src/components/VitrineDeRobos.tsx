@@ -65,14 +65,14 @@ function planoDeVoo(id: string, p: ParametrosDoRobo): Etapa[] {
   const margem = p.recuperacao.modos.conservador.margem
   const tabela = p.recuperacao.escada.tipo === 'tabela'
   const recalcula: Etapa = tabela
-    ? { titulo: 'Recupera em degraus', texto: <>Se uma entrada não vem, a próxima segue a <b>escada definida</b>, degrau a degrau, até fechar a sequência.</> }
-    : { titulo: 'Recalcula na hora', texto: <>Se uma entrada não vem, a I.A. calcula a próxima pelo <b>pagamento real do contrato</b>, para cobrir a anterior{margem >= 0.08 ? <> e fechar com cerca de <b>{pct(margem)} sobre a entrada</b></> : ' e fechar no lucro'}.</> }
+    ? { titulo: 'Recupera em degraus', texto: <>Se uma entrada não vem, a próxima segue a <b>escada definida</b>, degrau a degrau, buscando fechar a sequência. Se ela chegar ao seu limite de perda, a sessão para.</> }
+    : { titulo: 'Recalcula na hora', texto: <>Se uma entrada não vem, a I.A. calcula a próxima pelo <b>pagamento real do contrato</b>, buscando cobrir a anterior{margem >= 0.08 ? <> com cerca de <b>{pct(margem)} sobre a entrada</b></> : ''}. Se a sequência chegar ao seu limite de perda, a sessão para.</> }
 
   if (RECUPERA_EM[id]) {
     const alvo = RECUPERA_EM[id]
     return [
       { titulo: 'Cobre quase o painel', texto: <>Entra em todo tick, com <b>só o {lista(fora)} contra</b>.</> },
-      { titulo: 'Troca de lado na perda', texto: <>Se o {lista(fora)} aparece, a I.A. muda de contrato e mira o <b>{lista(alvo)}</b>, que pagam bem mais.</> },
+      { titulo: 'Troca de lado na perda', texto: <>Se o {lista(fora)} aparece, a I.A. muda de contrato e mira o <b>{lista(alvo)}</b>, que pagam bem mais quando a operação é positiva.</> },
       { titulo: 'Volta à rota', texto: <>Recuperou, retorna para a cobertura ampla e segue operando.</> },
     ]
   }
@@ -138,17 +138,17 @@ function detalhesDaIA(id: string, p: ParametrosDoRobo): Array<{ titulo: string; 
   const lista1: Array<{ titulo: string; texto: ReactNode }> = [
     { titulo: 'Onde ela ganha', texto: <>A cada operação, a I.A. mira o <b>último dígito</b> do preço do índice. Ela ganha se esse dígito for <b>{faixa(ganham)}</b>: {ganham.length} dos 10 possíveis.</> },
     n > 0
-      ? { titulo: 'Quando ela entra', texto: <>A I.A. acompanha o mercado ao vivo e espera o momento certo: só entra depois de ver <b>{n === 1 ? '1 dígito' : `${n} dígitos seguidos`}</b> fora da faixa (de {faixa(fora)}). É o que o mercado chama de <b>loss virtual</b>: perdas que teriam acontecido se ela já estivesse operando, mas que não custaram nada, porque ela só observava. Fechou a sequência, ela entra{p.entrada.sequenciaSemAnalise ? ' e acompanha até o fim, sem esperar de novo a cada entrada' : ', e volta a observar antes de cada nova entrada'}.</> }
+      ? { titulo: 'Quando ela entra', texto: <>A I.A. acompanha o mercado ao vivo e espera o sinal da estratégia: só entra depois de ver <b>{n === 1 ? '1 dígito' : `${n} dígitos seguidos`}</b> fora da faixa (de {faixa(fora)}). É o que o mercado chama de <b>loss virtual</b>: perdas que teriam acontecido se ela já estivesse operando, mas que não custaram nada, porque ela só observava. Fechou a sequência, ela entra{p.entrada.sequenciaSemAnalise ? ' e acompanha até o fim, sem esperar de novo a cada entrada' : ', e volta a observar antes de cada nova entrada'}.</> }
       : { titulo: 'Quando ela entra', texto: <>Sem esperar sinal. Como a faixa dela já cobre <b>{ganham.length} dos 10 dígitos</b>, a I.A. entra direto, a cada tick, enquanto a sessão estiver ligada.</> },
     { titulo: 'Quanto dura cada operação', texto: <><b>Um tick.</b> A operação se resolve no preço seguinte, em cerca de 2 segundos, e a I.A. já fica pronta para a próxima.</> },
     RECUPERA_EM[id]
-      ? { titulo: 'Se uma entrada não vem', texto: <>A I.A. <b>troca de lado</b>: muda de contrato e mira o <b>{lista(RECUPERA_EM[id])}</b>, que pagam bem mais por acerto, para recuperar a entrada anterior. Recuperou, volta para a cobertura ampla.</> }
+      ? { titulo: 'Se uma entrada não vem', texto: <>A I.A. <b>troca de lado</b>: muda de contrato e mira o <b>{lista(RECUPERA_EM[id])}</b>, que pagam bem mais quando a operação é positiva, buscando recuperar a entrada anterior. Recuperou, volta para a cobertura ampla.</> }
       : p.recuperacao.escada.tipo === 'tabela'
-        ? { titulo: 'Se uma entrada não vem', texto: <>A próxima entrada segue uma <b>escada definida</b>, degrau a degrau, até fechar a sequência.</> }
-        : { titulo: 'Se uma entrada não vem', texto: <>A I.A. <b>recalcula a próxima entrada na hora</b>, pelo pagamento real do contrato, para cobrir o que ficou para trás e fechar a sequência{margem >= 0.02 ? <> com cerca de <b>{pct(margem)} sobre a entrada</b></> : ' no lucro'}.</> },
+        ? { titulo: 'Se uma entrada não vem', texto: <>A próxima entrada segue uma <b>escada definida</b>, degrau a degrau, buscando fechar a sequência. Se ela chegar ao seu limite de perda, a sessão para.</> }
+        : { titulo: 'Se uma entrada não vem', texto: <>A I.A. <b>recalcula a próxima entrada na hora</b>, pelo pagamento real do contrato, buscando cobrir o que ficou para trás{margem >= 0.02 ? <> com cerca de <b>{pct(margem)} sobre a entrada</b></> : ''}. Se a sequência chegar ao seu limite de perda, a sessão para.</> },
     { titulo: 'Perfis de operação', texto: agressivo
-      ? <><b>Conservador ou agressivo</b>, você escolhe na hora de ligar. No conservador, a recuperação mira cobrir e fechar no lucro; no agressivo, mira um lucro maior na volta.</>
-      : <><b>Conservador.</b> A recuperação mira cobrir o que ficou para trás e fechar no lucro, sem acelerar.</> },
+      ? <><b>Conservador ou agressivo</b>, você escolhe na hora de ligar. No conservador, a recuperação busca cobrir o que ficou para trás; no agressivo, busca um ganho maior na volta. Os dois param no seu limite de perda.</>
+      : <><b>Conservador.</b> A recuperação busca cobrir o que ficou para trás, sem acelerar, e para no seu limite de perda.</> },
     { titulo: 'Você no comando', texto: <>Antes de ligar, você define o <b>valor de entrada</b>, a <b>meta</b> e o <b>limite de perda</b>. A I.A. respeita os três e para sozinha quando bate a meta ou o limite.</> },
   ]
   return lista1
@@ -209,7 +209,7 @@ function ModalDoRobo({ i, nome, base, parametros, aoFechar, aoIniciar, trancada 
           </section>
         </div>
         <footer className="vr-modal-rodape">
-          <button type="button" className="vr-iniciar" onClick={aoIniciar}><IconePlay /><span>{trancada ? `Desbloquear o ${nome} · ${ROBOS_A_VENDA[i.id]?.preco ?? ''}` : `Iniciar operações com o ${nome}`}</span></button>
+          <button type="button" className="vr-iniciar" onClick={aoIniciar}><IconePlay /><span>{trancada ? (ROBOS_A_VENDA[i.id]?.preco ? `Desbloquear o ${nome} · ${ROBOS_A_VENDA[i.id].preco}` : `Desbloquear o ${nome} no Marketplace`) : `Iniciar operações com o ${nome}`}</span></button>
         </footer>
       </div>
     </div>
@@ -268,7 +268,7 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
                 <NaPratica id={i.id} parametros={parametrosDe(i)} frase={regra(i)} aoAbrir={() => setAberto(i.id)} />
                 {trancada ? (
                   <button type="button" className="vr-iniciar vr-desbloquear" onClick={() => irParaTela('marketplace')}>
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0" /></svg><span>Desbloquear · {ROBOS_A_VENDA[i.id]?.preco ?? 'no Marketplace'}</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0" /></svg><span>{ROBOS_A_VENDA[i.id]?.preco ? `Desbloquear · ${ROBOS_A_VENDA[i.id].preco}` : 'Desbloquear no Marketplace'}</span>
                   </button>
                 ) : (
                   <button type="button" className="vr-iniciar" onClick={() => iniciar(i)}>

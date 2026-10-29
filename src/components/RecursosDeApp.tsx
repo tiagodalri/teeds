@@ -36,9 +36,18 @@ function ConviteInstalar() {
   useEffect(() => {
     if (/[?&](code|access_token)=/.test(location.search)) return // no meio de um login, não
     const atualizar = () => setComo(comoInstalar())
-    const t = window.setTimeout(() => { atualizar(); if (!conviteRecusado()) setAberto(true) }, 4000)
+    // Só dentro da plataforma (29/10/2026): no login, no cadastro, nos termos e na
+    // espera da aprovação o convite cobria botões e aparecia no meio da digitação.
+    const naPlataforma = () => !!document.querySelector('.workspace-app')
+    let desde = 0
+    const conferir = () => {
+      if (!naPlataforma()) { desde = 0; setAberto(false); return }
+      if (!desde) desde = Date.now()
+      if (Date.now() - desde >= 4000 && !conviteRecusado()) { atualizar(); setAberto(true) }
+    }
+    const t = window.setInterval(conferir, 1000)
     const parar = ouvirInstalacao(atualizar)
-    return () => { window.clearTimeout(t); parar() }
+    return () => { window.clearInterval(t); parar() }
   }, [])
 
   // aberto, o convite fica fixo no pé da tela: a página ganha espaço embaixo para nada ficar atrás dele (27/10/2026)
@@ -60,7 +69,9 @@ function ConviteInstalar() {
           <b>Instale o app {MARCA.prosa}</b>
           <span>{como === 'abrir-no-navegador'
             ? 'Para instalar, abra este endereço no Safari.'
-            : 'Abre em tela cheia, direto da tela inicial do celular.'}</span>
+            : matchMedia('(hover: hover) and (pointer: fine)').matches
+              ? 'Abre em janela própria, como um aplicativo.'
+              : 'Abre em tela cheia, direto da tela inicial do celular.'}</span>
         </div>
         {como === 'botao' && (
           <button className="app-convite-acao" onClick={async () => { if (await instalar()) setAberto(false) }}>Instalar</button>

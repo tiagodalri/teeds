@@ -4,6 +4,7 @@ import { chanceTeorica, TIPOS_DIGITO, type DigitContract } from '../core/deriv/d
 import { traduzirErro } from '../core/deriv/erros'
 import { dinheiro, dinheiroComSinal } from '../core/dinheiro'
 import { useDigits } from '../hooks/useDigits'
+import './digitos-painel.css'
 
 interface Props {
   symbol: string | null
@@ -24,9 +25,15 @@ interface Props {
   onDesarmar: () => void
   /** Por que o botao esta travado, para mostrar no lugar de um botao mudo. */
   motivoBloqueio: string | null
+  /** Sem a Deriv: o botão vira "Conectar a Deriv" (antes era um botão morto com esse texto). */
+  onConectarDeriv?: () => void
 }
 
 const JANELAS = [50, 100, 500, 1000]
+/** Celular e tablet tocam; computador clica. */
+const TOQUE = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
+// o número em cima de cada barra, sem o "%" (vai no título) e sem ",0": dez números cabem na lateral de 300 px (29/10/2026)
+const pctBarra = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
 /*
   A fita dos últimos dígitos (26/10/2026): a caixa tinha altura para pouco mais
   de duas linhas e a terceira saía cortada, justamente a do dígito mais novo.
@@ -139,7 +146,7 @@ export function DigitsPanel(props: Props) {
       {/* ---------- distribuicao ---------- */}
       <div className="dig-sec">
         <div className="dig-sec-topo">
-          <span className="rot">Frequência dos dígitos</span>
+          <span className="rot">Frequência dos dígitos (%)</span>
           <div className="segmented mini">
             {JANELAS.map((j) => (
               <button key={j} className={janela === j ? 'on' : ''} onClick={() => setJanela(j)}>{j}</button>
@@ -153,15 +160,16 @@ export function DigitsPanel(props: Props) {
               className={`dig-barra ${ganhaCom.has(d) ? 'alvo' : ''} ${kind.usaDigito && d === digito ? 'sel' : ''}`}
               onClick={() => kind.usaDigito && kind.digitosValidos.includes(d) && setDigito(d)}
               title={`${estat.conta[d]} vezes em ${estat.total}`}
+              disabled={!kind.usaDigito || !kind.digitosValidos.includes(d)}
             >
               <span className="col" style={{ height: `${(p / maxPct) * 100}%` }} />
-              <em>{p.toFixed(1)}%</em>
+              <em>{pctBarra(p)}</em>
               <b>{d}</b>
             </button>
           ))}
         </div>
         <p className="dig-nota">
-          {estat.carregando ? 'lendo o histórico…' : `últimos ${estat.total} ticks · cada dígito tende a 10% no longo prazo`}
+          {estat.carregando ? 'Lendo o histórico…' : `Últimas ${estat.total} cotações · cada dígito tende a 10% no longo prazo`}
         </p>
       </div>
 
@@ -200,7 +208,7 @@ export function DigitsPanel(props: Props) {
             <button key={t} className={ticks === t ? 'on' : ''} onClick={() => setTicks(t)}>{t}</button>
           ))}
         </div>
-        <p className="dig-nota">em ticks: cada tick é uma nova cotação</p>
+        <p className="dig-nota">Em ticks: cada tick é uma nova cotação.</p>
       </div>
 
       {/* ---------- resumo e compra ---------- */}
@@ -227,21 +235,22 @@ export function DigitsPanel(props: Props) {
           </div>
         </dl>
         {erroCotacao && <p className="dig-erro">{erroCotacao}</p>}
-        <button
-          className={`btn btn-dig ${confirmando === tipoSel ? 'btn-confirmar' : ''}`}
-          disabled={!podeOperar || comprando || cotando || payout === null}
-          onClick={() => onComprar(tipoSel, kind.usaDigito ? String(digito) : undefined, ticks)}
-        >
-          {comprando
-            ? 'comprando…'
-            : !logado
-              ? 'Conecte a Deriv para operar'
-              : motivoBloqueio
-                ? motivoBloqueio
-                : confirmando === tipoSel
-                  ? (props.semDizerReal ? 'Confirmar' : 'Confirmar (dinheiro real)')
-                  : `Comprar por ${dinheiro(stake, moeda)}`}
-        </button>
+        {!logado ? (
+          <button type="button" className="btn btn-dig" onClick={props.onConectarDeriv} disabled={!props.onConectarDeriv}>Conectar a Deriv</button>
+        ) : (<>
+          {motivoBloqueio && !comprando && <p className="dig-erro" role="status">{motivoBloqueio}</p>}
+          <button
+            className={`btn btn-dig ${confirmando === tipoSel ? 'btn-confirmar' : ''}`}
+            disabled={!podeOperar || comprando || cotando || payout === null}
+            onClick={() => onComprar(tipoSel, kind.usaDigito ? String(digito) : undefined, ticks)}
+          >
+            {comprando
+              ? 'Enviando…'
+              : confirmando === tipoSel
+                ? `${TOQUE ? 'Toque' : 'Clique'} de novo para confirmar ${dinheiro(stake, moeda)}${props.semDizerReal ? '' : ' · Dinheiro real'}`
+                : `Comprar por ${dinheiro(stake, moeda)}`}
+          </button>
+        </>)}
       </div>
     </div>
   )

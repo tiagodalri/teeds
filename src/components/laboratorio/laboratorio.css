@@ -12,7 +12,7 @@
   display: grid; gap: 24px; width: 100%; max-width: 1280px; margin: 0 auto;
   padding: 24px clamp(16px, 2.4vw, 32px) 56px; color: var(--text); min-width: 0; box-sizing: border-box;
 }
-.lb button { font: inherit; }
+.lb :where(button) { font: inherit; }
 .lb-sutil { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 0; }
 .lb :is(button, input, select):focus-visible { outline: 2px solid var(--lb-ouro); outline-offset: 2px; }
 

@@ -119,7 +119,7 @@ export function CentroDeEstudoHistorico({ sessao, moeda }: { sessao: SessaoTeeds
             <div className="ce-tile destaque">
               <i>Markup do período</i>
               <b>{moeda} {cents(t.markup)}</b>
-              <small>{medidoPct > 0 ? `${pct(medidoPct)} medido pela Deriv` : 'estimativa de 3% do pagamento'}</small>
+              <small>{medidoPct > 0 ? `${pct(medidoPct)} medido pela Deriv` : 'Estimativa de 3% do pagamento'}</small>
             </div>
             <div className="ce-tile">
               <i>Operações</i>
@@ -129,12 +129,12 @@ export function CentroDeEstudoHistorico({ sessao, moeda }: { sessao: SessaoTeeds
             <div className="ce-tile">
               <i>Volume movimentado</i>
               <b>{moeda} {num(t.entradas)}</b>
-              <small>markup de {moeda} {cents(t.entradas > 0 ? (t.markup / t.entradas) * 1000 : 0)} por mil</small>
+              <small>Markup de {moeda} {cents(t.entradas > 0 ? (t.markup / t.entradas) * 1000 : 0)} por mil</small>
             </div>
             <div className="ce-tile">
               <i>Resultado dos clientes</i>
               <b className={t.resultado >= 0 ? 'up' : 'down'}>{moeda} {assinado(t.resultado)}</b>
-              <small>quanto as contas ganharam ou perderam no período</small>
+              <small>Quanto as contas ganharam ou perderam no período</small>
             </div>
           </div>
 

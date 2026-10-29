@@ -63,7 +63,7 @@
   .workspace-sidebar.compact .brand-wordmark { display: flex; }
   .workspace-sidebar.compact .workspace-link { justify-content: flex-start; }
   .workspace-collapse { display: none; }
-  .workspace-app .workspace-mobile-toggle { display: grid; place-items: center; position: fixed; top: calc(var(--sat) + 8px); left: max(12px, var(--sal)); z-index: 71; width: 40px; height: 40px; min-width: 40px; min-height: 40px; padding: 0; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
+  .workspace-app .workspace-mobile-toggle { display: grid; place-items: center; position: fixed; top: calc(var(--sat) + 6px); left: max(12px, var(--sal)); z-index: 71; width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
   .workspace-app .workspace-mobile-toggle svg { width: 22px; height: 22px; }
   .workspace-app .workspace-mobile-toggle[aria-expanded='true'] { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); background: var(--primary-soft); }
   .workspace-shade { display: block; position: fixed; inset: var(--topo-h) 0 0; z-index: 59; background: #0008; border: 0; }
@@ -82,6 +82,10 @@
 }
 @media (max-width: 540px) {
   .workspace-app .topbar-right { gap: 6px; }
+  /* o fio que separa o avatar ficava a 6 px dele, ou seja, colado na borda do botão da conta
+     (o espaço entre os dois aqui é de 6 px): o avatar ganha 4 px e o fio vai para o meio do vão */
+  .workspace-app .topbar-right :is(.status, .conta) + .conta { margin-left: 4px; }
+  .workspace-app .topbar-right :is(.status, .conta) + .conta::before { left: -5.5px; }
   .workspace-app .topbar-right .status { display: none; }
   .workspace-app .rv-galeria { grid-template-columns: 1fr; }
 }
@@ -162,7 +166,21 @@
 /* Aviso da sala de treino: o texto inteiro também abre a sala, e no celular ele aparece (quebra em duas linhas). */
 .aviso-treino-texto { min-width: 0; padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
 .aviso-treino-texto b { font-weight: 800; }
-@media (max-width: 540px) { .aviso-treino .aviso-treino-texto { font-size: 12.5px; line-height: 1.3; } .aviso-treino .aviso-treino-texto b { display: inline; } }
+@media (max-width: 540px) {
+  .aviso-treino .aviso-treino-texto { font-size: 12.5px; line-height: 1.3; } .aviso-treino .aviso-treino-texto b { display: inline; }
+  /* 29/10/2026: a 375 px o selo vermelho, o texto, o "Entrar" e o ✕ não cabiam juntos (texto espremido em três
+     linhas e um vão grande antes do ✕). O texto já diz "Live iniciada": o selo sai, e o texto ocupa o meio,
+     com um ponto vermelho pulsando no lugar do selo */
+  .aviso-treino .aviso-tv-selo { display: none; }
+  .aviso-treino { gap: 10px; padding-left: 14px; }
+  .aviso-treino .aviso-treino-texto { flex: 1 1 auto; position: relative; padding-left: 16px; }
+  .aviso-treino .aviso-treino-texto::before {
+    content: ''; position: absolute; left: 0; top: .45em; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--ao-vivo); animation: selo-tv-ponto 1.4s ease-in-out infinite;
+  }
+  .aviso-treino .aviso-tv-fechar { margin-left: -4px; }
+}
+@media (max-width: 540px) and (prefers-reduced-motion: reduce) { .aviso-treino .aviso-treino-texto::before { animation: none; } }
 @media (prefers-reduced-motion: reduce) { .selo-tv i, .selo-tv i::after, .aviso-tv-selo i { animation: none; } .aviso-tv { animation: none; } }
 
 /* ------------------------------------------------ data e hora (22/10/2026; no fuso do aparelho desde 23/10)
@@ -184,3 +202,59 @@
 @media (max-width: 900px) {
   .workspace-sidebar .relogio-topo.no-menu { display: flex; justify-content: center; margin: 4px 12px 10px; height: 40px; }
 }
+
+/* ==========================================================================
+   Revisão da casca no celular (29/10/2026)
+   ========================================================================== */
+@media (max-width: 900px) {
+  /* a conexão: "Conectado" segue escondido (não há espaço), mas conectando,
+     reconectando e caído aparecem como a bolinha colorida — antes nada avisava */
+  .workspace-app .topbar-right .status:is(.status-connecting, .status-reconnecting, .status-closed) {
+    display: flex; gap: 0; padding: 0; width: 27px; height: 27px; justify-content: center; font-size: 0; flex-shrink: 0;
+  }
+  .workspace-app .topbar-right .status:is(.status-connecting, .status-reconnecting, .status-closed) i { width: 9px; height: 9px; }
+
+  /* "Ao vivo agora" / "Live iniciada": abaixo do cabeçalho, sem cobrir o botão do menu nem o da conta */
+  .workspace-app .aviso-tv { top: calc(var(--topo-h, 56px) + 8px); }
+  .aviso-tv-fechar { width: 44px; height: 44px; }
+}
+@media (max-width: 760px) {
+  /* o botão da conta (Demo/Real) com alvo de toque de 44 px */
+  .workspace-app .topbar .conta-chip { height: 44px; }
+  /* o menu da conta preso à direita do botão saía cortado pela esquerda a 375 px
+     (o botão não fica no canto: tema, selo e avatar vêm depois): no celular ele
+     ocupa a largura da tela, logo abaixo do cabeçalho */
+  .workspace-app .topbar .conta > .menu.menu-contas {
+    position: fixed; left: max(12px, var(--sal, 0px)); right: max(12px, var(--sar, 0px)); top: calc(var(--topo-h, 56px) + 6px);
+    width: auto; max-width: none; max-height: calc(100dvh - var(--topo-h, 56px) - 96px); overflow-y: auto; overscroll-behavior: contain;
+  }
+}
+/* o cartão de quem está logado, no menu do avatar, é só um cabeçalho (não é mais botão) */
+.menu > .menu-eu { cursor: default; }
+.menu > .menu-eu:hover { background: none; }
+
+/* ==========================================================================
+   Revisão visual do menu lateral no computador (29/10/2026)
+   ========================================================================== */
+@media (min-width: 901px) {
+  /* Quando os itens não cabem (admin: Parceiro, Laboratório, Administração), a lista rola;
+     antes o último item aparecia cortado ao meio, como um defeito. Agora ele some num degradê
+     e a rolagem leva até ele inteiro. */
+  .workspace-sidebar nav {
+    padding-bottom: 28px; scrollbar-width: thin; overscroll-behavior: contain;
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(180deg, #000 calc(100% - 28px), transparent);
+  }
+  /* rótulo do grupo (Operações, Ferramentas...): só a primeira letra maiúscula, como os outros rótulos da casa */
+  .workspace-sidebar nav > p { font-size: 12px; letter-spacing: .01em; text-transform: none; font-weight: 700; }
+}
+/* telas baixas (notebook de 900 px, 1080p com a barra do navegador): itens um pouco mais justos,
+   para o menu inteiro caber sem rolar */
+@media (min-width: 901px) and (max-height: 960px) {
+  .workspace-link { min-height: 40px; margin: 2px 0; padding: 8px 12px; }
+  .workspace-sidebar nav > p { margin: 16px 12px 6px; }
+  .workspace-admin { margin-top: 14px; padding-top: 10px; }
+}
+/* a etiqueta "Demo"/"Real" do botão da conta no topo: era caixa alta a 9,5 px (abaixo do mínimo de 11 px
+   da casa); fica com a primeira letra maiúscula, legível, no mesmo centro óptico do saldo */
+.workspace-app .topbar .conta-chip .selo { text-transform: none; font-size: 11.5px; font-weight: 700; letter-spacing: .01em; }

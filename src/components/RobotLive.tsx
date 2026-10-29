@@ -9,6 +9,9 @@ import './robot-cockpit.css'
 import { NomeDoRobo } from './NomeDoRobo'
 import { formatarPreco, PrecoComDigito } from './preco/PrecoComDigito'
 import { naPagina } from '../core/escala'
+import { simboloMoeda } from '../core/dinheiro'
+import { DERIV } from '../core/deriv/config'
+import { motivoLegivel } from './RobotResumo'
 
 /**
  * O preço só aparece com o dígito destacado quando vem com as casas certas e o
@@ -50,6 +53,8 @@ interface Props {
   digitosAberto?: boolean
   /** Coluna de markup (3% do pagamento) nas últimas operações. */
   mostrarMarkup?: boolean
+  /** Demonstração ou rótulos trocados: a palavra "demo" não aparece nos detalhes. */
+  esconderDemo?: boolean
 }
 
 const num = (v: number) =>
@@ -82,7 +87,7 @@ function Curva({ pontos, positivo }: { pontos: number[]; positivo: boolean }) {
     }
   }, [pontos])
 
-  if (!d) return <div className="tv-curva-vazia">a curva desenha na primeira operação</div>
+  if (!d) return <div className="tv-curva-vazia">A curva aparece na primeira operação.</div>
 
   const cor = positivo ? 'var(--tv-up)' : 'var(--tv-down)'
   return (
@@ -106,7 +111,7 @@ function Curva({ pontos, positivo }: { pontos: number[]; positivo: boolean }) {
  * (22/09/2026): quando entra, como recupera e qual versão da plataforma.
  * Só existe quando o servidor mandou `parametros`; sessões antigas não mudam.
  */
-function regraDaSessao(config: ConfigEstrategia, estrategiaId?: string): Array<{ rot: string; valor: string }> {
+function regraDaSessao(config: ConfigEstrategia, estrategiaId?: string, esconderDemo = false): Array<{ rot: string; valor: string }> {
   const p = config.parametros
   if (!p || !estrategiaId) return []
   const n = lossVirtualDaSessao(config) ?? p.entrada.lossVirtual
@@ -114,10 +119,10 @@ function regraDaSessao(config: ConfigEstrategia, estrategiaId?: string): Array<{
     ? 'após a análise de 25 dígitos'
     : n === 0 ? 'em toda operação' : n === 1 ? 'após 1 dígito que teria perdido' : `após ${n} dígitos seguidos que teriam perdido`
   const escada = p.recuperacao.escada
-  const recuperacao = escada.tipo === 'tabela' ? `tabela, ${escada.degraus.length} ${escada.degraus.length === 1 ? 'degrau' : 'degraus'}` : 'calculada pelo payout'
+  const recuperacao = escada.tipo === 'tabela' ? `tabela, ${escada.degraus.length} ${escada.degraus.length === 1 ? 'degrau' : 'degraus'}` : 'calculada pelo pagamento do contrato'
   const modo = temModos(estrategiaId, p) ? ` · modo ${NOME_DO_MODO[modoDaConfig(estrategiaId, config.fatorGale, config.lucroSobrePrejuizo, config)].toLowerCase()}` : ''
   const versao = config.parametrosVersao ? `v${config.parametrosVersao}` : ''
-  const regra = config.parametrosTesteDemo ? `${versao ? `${versao} · ` : ''}em teste no demo` : versao ? `${versao} da plataforma` : 'padrão da plataforma'
+  const regra = config.parametrosTesteDemo && !esconderDemo ? `${versao ? `${versao} · ` : ''}em teste no demo` : versao ? `${versao} da plataforma` : 'padrão da plataforma'
   return [
     { rot: 'Quando entra', valor: quandoEntra },
     { rot: 'Recuperação', valor: recuperacao + modo },
@@ -135,11 +140,11 @@ export function RobotLive({
   estado, config, moeda, estrategiaId, nomeEstrategia, ativo, titulo, regra, ganhaCom,
   parametros = [], conexao = 'open', onDesligar, desligando = false, onLigarDeNovo, onRemover,
   expandido = false, onExpandir, contaDaSessao, onDigitos, digitosAberto = false,
-  mostrarMarkup = false,
+  mostrarMarkup = false, esconderDemo = false,
 }: Props) {
   const [detalhes, setDetalhes] = useState(false)
   // Os parâmetros do chamador mais a regra da sessão (quando entra, recuperação, versão).
-  const detalhesDaSessao = juntarDetalhes(parametros, regraDaSessao(config, estrategiaId))
+  const detalhesDaSessao = juntarDetalhes(parametros, regraDaSessao(config, estrategiaId, esconderDemo))
   const [registroAberto, setRegistroAberto] = useState(false)
   const [filtroHistorico, setFiltroHistorico] = useState('todas')
   const [analisesPalm, setAnalisesPalm] = useState<Array<{ id: number; hora: number; texto: string }>>([])
@@ -238,10 +243,9 @@ export function RobotLive({
     return m && m.tipo === 'contagem' ? m : null
   }, [estrategiaId, estado.digitos, config])
 
+  // A conexão deste aparelho com a Deriv não muda a fase: a sessão opera no servidor (29/10/2026).
   const fase = !estado.rodando
     ? { chave: 'parado', texto: estado.emOperacao ? 'Concluindo o contrato' : 'Robô parado' }
-    : conexao !== 'open'
-      ? { chave: 'sem-sinal', texto: conexao === 'connecting' || conexao === 'reconnecting' ? 'Reconectando' : 'Sem conexão' }
     : emCurso
       ? { chave: 'operando', texto: 'Operando' }
       : estado.emOperacao
@@ -270,7 +274,6 @@ export function RobotLive({
         </div>
 
         <div className="tv-acoes">
-          {estado.rodando && onDesligar && <button className="tv-btn ligar" disabled title="O robô já está operando"><span aria-hidden>▶</span> Continuar</button>}
           {/* O botão "Focar" (modo foco de um robô só) foi retirado a pedido do Tiago em 15/09/2026:
               atrapalhava mais do que ajudava. O modo continua no código, sem porta de entrada. */}
           {estado.rodando && onDesligar && (
@@ -287,7 +290,7 @@ export function RobotLive({
       </header>
 
       <nav className="tv-abas tv-atalhos" aria-label={`Detalhes de ${titulo}`}>
-        <span><i /> {estado.rodando ? conexao === 'open' ? 'Acompanhamento ao vivo' : 'Aguardando conexão' : estado.emOperacao ? 'Desligado — concluindo o contrato' : 'Sessão encerrada'}</span>
+        <span><i /> {estado.rodando ? 'Acompanhamento ao vivo' : estado.emOperacao ? 'Desligado — concluindo o contrato' : 'Sessão encerrada'}</span>
         <button aria-expanded={detalhes} className={detalhes ? 'on' : ''} onClick={() => setDetalhes((v) => !v)}>
           <i aria-hidden>⌁</i> {detalhes ? 'Ocultar estratégia' : 'Detalhes da estratégia'}
         </button>
@@ -297,7 +300,7 @@ export function RobotLive({
       </nav>
 
       <div className="tv-corpo">
-      {!estado.rodando && estado.motivoParada && <p className="ux-session-reason"><strong>Motivo do encerramento:</strong> {estado.motivoParada}</p>}
+      {!estado.rodando && estado.motivoParada && <p className="ux-session-reason"><strong>Motivo do encerramento:</strong> {motivoLegivel(estado.motivoParada, moeda)}</p>}
       <div className="tv-assinatura" aria-hidden>
         <img src={`${import.meta.env.BASE_URL}${MARCA.emblema}`} alt="" />
         <span>{MARCA.nome} ENGINE</span>
@@ -310,20 +313,24 @@ export function RobotLive({
           <i />
           <span>
             <b>A Deriv recusou a compra.</b> {estado.falha.texto}
-            {!estado.rodando && ' O robô foi desligado.'}
+            {!estado.rodando && ' O robô foi desligado. Confira o saldo e ligue de novo.'}
+            {/saldo|balance|insuficiente|insufficient/i.test(estado.falha.texto) && (
+              <> <a className="tv-alerta-link" href={DERIV.deposito} target="_blank" rel="noopener noreferrer">Depositar na Deriv</a></>
+            )}
           </span>
         </div>
       )}
 
-      {/* Sem conexão da conta não chega preço nem dá para comprar: melhor
-          dizer isso do que deixar a tela parecendo travada. */}
+      {/* A conexão deste aparelho com a Deriv caiu. A sessão opera no
+          servidor, com a conexão dela: nada para por isso (29/10/2026). Antes
+          a tela dizia que o robô estava parado, e ele seguia operando. */}
       {estado.rodando && conexao !== 'open' && (
         <div className="tv-alerta">
           <i />
           <span>
             {conexao === 'reconnecting' || conexao === 'connecting'
-              ? 'Sem conexão com a sua conta na Deriv — reconectando. O robô volta a operar sozinho assim que o sinal voltar.'
-              : 'A conexão com a sua conta caiu. O robô está parado até ela voltar.'}
+              ? 'Reconectando este aparelho à Deriv. O robô continua operando no servidor normalmente.'
+              : 'A conexão deste aparelho com a Deriv caiu. O robô continua operando no servidor normalmente.'}
           </span>
         </div>
       )}
@@ -345,7 +352,7 @@ export function RobotLive({
         <section className="tv-palm-analise" aria-label="Análises recentes do The Palm">
           <header>
             <span><i /> Análise ao vivo</span>
-            <small>{estado.rodando ? `${estado.ticksAnalisados} ticks analisados` : 'análise pausada'}</small>
+            <small>{estado.rodando ? `${estado.ticksAnalisados.toLocaleString('pt-BR')} ${estado.ticksAnalisados === 1 ? 'dígito lido' : 'dígitos lidos'}` : 'Análise pausada'}</small>
           </header>
           <div className="tv-palm-feed" aria-live="polite">
             {analisesPalm.length > 0 ? analisesPalm.map((aviso) => (
@@ -378,7 +385,7 @@ export function RobotLive({
               {d}
             </span>
           ))}
-          {fita.length === 0 && <span className="tv-nada">lendo o mercado…</span>}
+          {fita.length === 0 && <span className="tv-nada">Lendo o mercado…</span>}
         </div>
       </section>}
 
@@ -386,14 +393,14 @@ export function RobotLive({
         <div className="tv-curva-caixa">
           <div className="tv-curva-legenda"><span>Evolução da sessão</span><b className={positivo ? 'up' : 'down'}>{assinado(estado.resultado)} {moeda}</b></div>
           <Curva pontos={estado.curva} positivo={positivo} />
-          {config.takeProfit > 0 && <div className="tv-curva-meta"><span>Meta {moeda} {num(config.takeProfit)}</span><span>faltam <b>{num(Math.max(0, config.takeProfit - estado.resultado))}</b></span></div>}
+          {config.takeProfit > 0 && <div className="tv-curva-meta"><span>Meta de ganho {simboloMoeda(moeda)} {num(config.takeProfit)}</span><span>Faltam <b>{num(Math.max(0, config.takeProfit - estado.resultado))}</b></span></div>}
           <div className="tv-trilho">
-            <span className="down">−{num(config.stopLoss)}</span>
+            <span className="down">{config.stopLoss > 0 ? `−${num(config.stopLoss)}` : 'Sem limite'}</span>
             <div className="tv-barra">
               <u />
               <i style={{ left: `${pos}%` }} className={positivo ? 'up' : 'down'} />
             </div>
-            <span className="up">+{num(config.takeProfit)}</span>
+            <span className="up">{config.takeProfit > 0 ? `+${num(config.takeProfit)}` : 'Sem meta'}</span>
           </div>
         </div>
       </section>
@@ -405,9 +412,15 @@ export function RobotLive({
           {/* A lista inteira fica na tabela, que rola: antes só as 5 últimas
               apareciam e o resto dependia de um botão que pouca gente via. */}
           <span className="tv-rot">Operações da sessão{estado.historico.length > 0 ? ` (${estado.historico.length})` : ''}</span>
-          {estado.historico.length > 0 && <select className="ux-history-filter" aria-label={`Filtrar operações de ${titulo}`} value={filtroHistorico} onChange={e => setFiltroHistorico(e.target.value)}>
-            <option value="todas">Todas</option><option value="ganhos">Ganhos</option><option value="perdas">Perdas</option>
-          </select>}
+          {/* 29/10/2026: era um <select>; no celular ele herda 16 px (contra o
+              zoom do iPhone) e ficava maior que o título. Três botões pequenos. */}
+          {estado.historico.length > 0 && (
+            <div className="tv-filtro" role="group" aria-label={`Filtrar operações de ${titulo}`}>
+              {([['todas', 'Todas'], ['ganhos', 'Ganhos'], ['perdas', 'Perdas']] as const).map(([valor, rotulo]) => (
+                <button key={valor} type="button" aria-pressed={filtroHistorico === valor} onClick={() => setFiltroHistorico(valor)}>{rotulo}</button>
+              ))}
+            </div>
+          )}
         </div>
 
         {estado.historico.length === 0 ? (
@@ -481,7 +494,7 @@ export function RobotLive({
       </section>
       {registroAberto && (
         <section className="tv-registro-painel">
-          <div className="tv-ops-topo"><span className="tv-rot">Registro da sessão</span><small>{estado.registros.length} eventos</small></div>
+          <div className="tv-ops-topo"><span className="tv-rot">Registro da sessão</span><small>{estado.registros.length} {estado.registros.length === 1 ? 'evento' : 'eventos'}</small></div>
           <div className="tv-rolo">
             {estado.registros.length === 0 && <p className="tv-registro-vazio">Os eventos da sessão aparecerão aqui conforme o robô operar.</p>}
             <ul className="tv-registro">

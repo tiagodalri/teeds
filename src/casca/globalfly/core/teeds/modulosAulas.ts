@@ -33,13 +33,13 @@ export const MODULOS: Modulo[] = [
     cor: '#B78D39',
     aulas: [
       aula('introducao', `Introdução à ${MARCA.prosa}`, 'Quem está por trás da plataforma, o que você vai encontrar aqui e como aproveitar o treinamento do começo ao fim.'),
-      aula('visao-geral', 'Conhecendo a Plataforma e suas funcionalidades', 'Cada aba, cada botão e cada tela: onde ficam os robôs, o gráfico, o histórico e as configurações.'),
+      aula('visao-geral', 'Conhecendo a plataforma e suas funções', 'Cada aba, cada botão e cada tela: onde ficam os robôs, o gráfico, o histórico e as configurações.'),
       aula('conta-deriv', 'Abertura de conta', 'O cadastro na corretora passo a passo e como conectar a sua conta à plataforma.'),
       aula('primeiro-deposito', 'Como depositar?', 'As formas de colocar saldo na sua conta da corretora, com as opções disponíveis no Brasil.'),
-      aula('saldo-demo-real', 'Saldo DEMO e saldo REAL', 'A diferença entre as duas contas, quando usar cada uma e como trocar entre elas sem erro.'),
-      aula('documentos', 'Como enviar suas documentações?', 'Quais documentos a corretora pede, como enviar e o que fazer se a verificação não for aprovada de primeira.'),
+      aula('saldo-demo-real', 'Conta demo e conta real', 'A diferença entre as duas contas, quando usar cada uma e como trocar entre elas sem erro.'),
+      aula('documentos', 'Como enviar seus documentos?', 'Quais documentos a corretora pede, como enviar e o que fazer se a verificação não for aprovada de primeira.'),
       aula('autenticador', 'Ativando o autenticador de 2 passos', 'Uma camada a mais de proteção na sua conta: como ativar, qual aplicativo usar e como guardar os códigos.'),
-      aula('deriv-confiavel', 'Corretora Deriv é confiável?', 'Há quanto tempo ela opera, como funciona a regulação e o que observar antes de depositar.'),
+      aula('deriv-confiavel', 'A Deriv é confiável?', 'Há quanto tempo ela opera, como funciona a regulação e o que observar antes de depositar.'),
     ],
   },
   {
@@ -60,13 +60,13 @@ export const MODULOS: Modulo[] = [
   },
   {
     id: 'gestao',
-    titulo: 'Gerenciamento e Emocional',
+    titulo: 'Gerenciamento e emocional',
     chamada: 'O que separa uma sessão boa de um mês consistente.',
     cor: '#29445F',
     aulas: [
-      aula('gerenciamento', 'O que é Gerenciamento de Risco?', 'Por que o tamanho da entrada, a meta e o limite de perda importam mais do que a estratégia escolhida.'),
+      aula('gerenciamento', 'O que é gerenciamento de risco?', 'Por que o tamanho da entrada, a meta e o limite de perda importam mais do que a estratégia escolhida.'),
       aula('gestao-na-pratica', 'Como fazer gestão na prática?', 'Como montar o seu plano: valor por entrada, meta do dia, limite de perda e quando parar.'),
-      aula('planilha', 'Como usar a planilha de Gerenciamento?', 'O passo a passo da planilha: preencher a banca, acompanhar cada dia e ajustar o plano.'),
+      aula('planilha', 'Como usar a planilha de gerenciamento?', 'O passo a passo da planilha: preencher a banca, acompanhar cada dia e ajustar o plano.'),
     ],
   },
 ]

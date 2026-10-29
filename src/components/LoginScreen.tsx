@@ -13,6 +13,7 @@ import { CenaDoLogin, type VarianteDaCena } from './entrada/CenaDoLogin'
 import { marcarEmbarque } from '../core/decolagem'
 import { marcarAceiteNoLogin } from '../core/teeds/termos'
 import { biometriaDisponivel, biometriaLigadaAqui, rotuloDaBiometria } from '../core/teeds/biometria'
+import './entrada/login.css'
 
 type Modo = 'entrar' | 'criar' | 'esqueci'
 
@@ -42,22 +43,30 @@ const OLHO_FECHADO = 'M3 3l18 18M10.6 6.1A9.6 9.6 0 0112 6c6 0 9.5 6 9.5 6a16 16
 
 const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
   entrar: {
-    titulo: 'Bem-vindo de volta.',
-    linha: `Entre na sua conta ${MARCA.prosa}. A conexão com a corretora vem depois, lá dentro.`,
+    // 29/10/2026: quem chega pela primeira vez também abre aqui; "Bem-vindo de volta" não servia para essa pessoa
+    titulo: 'Entre na sua conta.',
+    linha: `Use o e-mail e a senha do seu cadastro na ${MARCA.prosa}. A conexão com a corretora vem depois, lá dentro.`,
     acao: 'Entrar',
   },
   criar: {
-    titulo: 'Cadastro Gratuito',
+    titulo: 'Cadastro gratuito',
     linha: SENHA_NO_CADASTRO
       ? 'Deixe seus dados e crie a sua senha. Depois, é só entrar com o e-mail e essa senha.'
       : 'Deixe seus dados. Você não cria senha agora: em instantes chega no seu e-mail a senha provisória para entrar (confira também o Spam).',
-    acao: 'Confirmar Cadastro',
+    acao: 'Confirmar cadastro',
   },
   esqueci: {
     titulo: 'Esqueceu a senha?',
-    linha: 'Diga o seu e-mail e mandamos um link para você criar uma nova.',
+    linha: 'Informe o seu e-mail e enviamos um link para você criar uma senha nova.',
     acao: 'Enviar link',
   },
+}
+
+/** Os campos de cada modo, na ordem da tela (o primeiro com problema recebe o foco). */
+const CAMPOS_DO_MODO: Record<Modo, string[]> = {
+  entrar: ['email', 'senha'],
+  criar: SENHA_NO_CADASTRO ? ['nome', 'email', 'telefone', 'senha', 'repetir'] : ['nome', 'email', 'telefone'],
+  esqueci: ['email'],
 }
 
 const ehSenha = (chave: string) => chave === 'senha' || chave === 'repetir'
@@ -88,35 +97,59 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   const [telefone, setTelefone] = useState('')
   const [recado, setRecado] = useState<string | null>(null)
   const [tocado, setTocado] = useState<Record<string, boolean>>({})
+  // 29/10/2026: o botão principal não fica mais cinza sem explicação. Tocou com algo faltando,
+  // a tela mostra o que falta em cada campo (inclusive os vazios) e leva o foco até lá.
+  const [tentou, setTentou] = useState(false)
 
   const t = TEXTOS[modo]
   const marcar = (campo: string) => () => setTocado((x) => ({ ...x, [campo]: true }))
 
-  const problemas: Record<string, string | null> = {
-    nome: nome && !nomeCompleto(nome) ? 'Escreva o nome e o sobrenome.' : null,
-    email: email && !email.includes('@') ? 'Esse e-mail não parece completo.' : null,
-    senha: modo === 'criar'
-      ? (senha && (senha.length < 8 || !senha.trim()) ? 'Pelo menos 8 caracteres.' : null)
-      : (senha && senha.length < 6 ? 'Pelo menos 6 caracteres.' : null),
-    repetir: repetir && repetir !== senha ? 'As duas senhas não são iguais.' : null,
-    telefone: telefone && !telefoneValido(telefone) ? 'DDD e número, 10 ou 11 dígitos.' : null,
-  }
+  /** O problema de cada campo; com `vazios`, campo em branco também conta (depois de tocar no botão). */
+  const avaliar = (vazios: boolean): Record<string, string | null> => ({
+    nome: !nome.trim() ? (vazios ? 'Escreva o nome e o sobrenome.' : null)
+      : !nomeCompleto(nome) ? 'Escreva o nome e o sobrenome.' : null,
+    email: !email.trim() ? (vazios ? 'Escreva o seu e-mail.' : null)
+      : !email.includes('@') ? 'Esse e-mail não parece completo.' : null,
+    senha: !senha ? (vazios ? (modo === 'criar' ? 'Crie uma senha com pelo menos 8 caracteres.' : 'Digite a sua senha.') : null)
+      : modo === 'criar'
+        ? (senha.length < 8 || !senha.trim() ? 'Pelo menos 8 caracteres.' : senha.length > 72 ? 'No máximo 72 caracteres.' : null)
+        : (senha.length < 6 ? 'Pelo menos 6 caracteres.' : null),
+    repetir: !repetir ? (vazios ? 'Repita a senha.' : null) : repetir !== senha ? 'As duas senhas não são iguais.' : null,
+    telefone: !telefone ? (vazios ? 'Escreva o telefone com DDD.' : null)
+      : !telefoneValido(telefone) ? 'DDD e número, 10 ou 11 dígitos.' : null,
+  })
+  const problemas = avaliar(tentou)
+  const faltaAceite = modo === 'entrar' && pedeTermos && !(concordo && maior)
 
   const valido = modo === 'esqueci'
     ? email.includes('@')
     : modo === 'entrar'
-      ? email.includes('@') && senha.length >= 6 && (!pedeTermos || (concordo && maior))
+      ? email.includes('@') && senha.length >= 6 && !faltaAceite
       : nomeCompleto(nome) && email.includes('@') && telefoneValido(telefone)
         && (!SENHA_NO_CADASTRO || (senha.length >= 8 && senha.length <= 72 && !!senha.trim() && senha === repetir))
 
+  /** Mostra tudo o que falta e põe o foco no primeiro ponto a corrigir. */
+  function mostrarOQueFalta(soOAceite = false) {
+    setTentou(true)
+    const p = avaliar(true)
+    const campos = soOAceite ? [] : CAMPOS_DO_MODO[modo]
+    setTocado((x) => ({ ...x, ...Object.fromEntries(campos.map((c) => [c, true])) }))
+    const primeiro = campos.find((c) => p[c])
+    const alvo = primeiro
+      ? document.getElementById(`entrada-${primeiro}`)
+      : document.querySelector<HTMLInputElement>('.entrada-aceites input[type="checkbox"]:not(:checked)')
+    alvo?.focus()
+  }
+
   function trocarModo(m: Modo) {
     setSenha(''); setRepetir('')
-    setModo(m); setRecado(null); setTocado({}); setMostrarSenha(false); setCapsLock(false); limparErro()
+    setModo(m); setRecado(null); setTocado({}); setTentou(false); setMostrarSenha(false); setCapsLock(false); limparErro()
   }
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault()
-    if (!valido || ocupado) return
+    if (ocupado) return
+    if (!valido) { mostrarOQueFalta(); return }
     setRecado(null)
     if (modo === 'entrar') {
       // de onde o avião da decolagem sai (só a GlobalFly usa)
@@ -189,7 +222,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
         <header className="entrada-topo">
           <div className="entrada-marca"><Brand tamanho={46} /></div>
           <div className="entrada-opera">
-            <span>opera com</span>
+            <span>Opera com</span>
             <DerivLogo altura={15} />
           </div>
         </header>
@@ -228,15 +261,22 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
               <input type="checkbox" checked={maior} onChange={(e) => setMaior(e.target.checked)} />
               <span>Declaro ter 18 anos ou mais.</span>
             </label>
+            {tentou && faltaAceite && <p className="entrada-aceites-falta" role="alert">Marque as duas caixas para entrar.</p>}
           </div>}
 
-          <button className="entrada-btn" type="submit" disabled={!valido || ocupado}>
-            {ocupado ? 'um instante…' : t.acao}
+          <button className="entrada-btn" type="submit" disabled={ocupado}>
+            {ocupado ? 'Um instante…' : t.acao}
           </button>
+          {modo === 'criar' && pedeTermos && (
+            <p className="entrada-aviso-cadastro">
+              Ao continuar, você concorda com os <a href={`${import.meta.env.BASE_URL}termos/`} target="_blank" rel="noopener">Termos de Uso</a> e a <a href={`${import.meta.env.BASE_URL}termos/#politica-de-privacidade`} target="_blank" rel="noopener">Política de Privacidade</a>.
+            </p>
+          )}
           {modo === 'entrar' && comBiometria && <div className="entrada-ou" aria-hidden="true"><span>ou</span></div>}
           {modo === 'entrar' && comBiometria && (
-            <button className="entrada-btn entrada-biometria" type="button" disabled={ocupado || (pedeTermos && !(concordo && maior))}
+            <button className="entrada-btn entrada-biometria" type="button" disabled={ocupado}
               onClick={async (e) => {
+                if (faltaAceite) { mostrarOQueFalta(true); return }
                 marcarEmbarque(e.currentTarget)
                 if (pedeTermos) marcarAceiteNoLogin()
                 await onEntrarComBiometria?.()
@@ -258,11 +298,11 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
         <a className="entrada-corretora" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">
           <span className="corretora-topo">
             <DerivLogo altura={20} />
-            <span className="corretora-selo">corretora oficial</span>
+            <span className="corretora-selo">Corretora oficial</span>
           </span>
           <span className="corretora-texto">
             <b>Ainda não tem conta na Deriv?</b>
-            <span>Abra grátis em menos de um minuto. Seu dinheiro fica na corretora, no seu nome.</span>
+            <span>Abra grátis, direto no site da Deriv. Seu dinheiro fica na corretora, no seu nome.</span>
           </span>
           <span className="corretora-ir" aria-hidden="true"><IconeSaida tamanho={16} /></span>
         </a>

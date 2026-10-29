@@ -22,13 +22,13 @@ const ROBOS = {
 const MARCAS = {
   teeds: {
     nome: 'TEEDS', cor: '#d2aa51', escura: '#8c6926', emblema: '/teeds-marca.png', assinatura: 'TRADING TECHNOLOGY', tema: '#090a0d',
-    intro: 'A Teeds reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
+    intro: 'A Teeds reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define a meta de ganho e o limite de perda; o robô cuida da execução, 24 horas, na sua conta da corretora, e para quando chega a um dos dois.',
     demo: { id: 'thepalm', nome: 'Sessão demonstrativa' },
     fotos: [['teeds-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['teeds-gerenciamento.webp', 'Gerenciamento', 'A planilha que calcula entrada, limites e objetivo antes de ligar o robô.'], ['teeds-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['teeds-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
   },
   omni: {
     nome: 'OMNI', cor: '#6c93c6', escura: '#0e2a4e', emblema: '/omni-marca.png', assinatura: 'FINANCIAL INTELLIGENCE', tema: '#081525',
-    intro: 'A OMNI reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define quanto quer ganhar e quanto aceita perder; o robô cuida da execução, 24 horas, na sua conta da corretora.',
+    intro: 'A OMNI reúne robôs de operação, gestão de risco e acompanhamento ao vivo em uma plataforma só. Você define a meta de ganho e o limite de perda; o robô cuida da execução, 24 horas, na sua conta da corretora, e para quando chega a um dos dois.',
     demo: { id: 'firstblock', nome: 'Sessão demonstrativa' },
     fotos: [['omni-robos.webp', 'Robôs', 'Cada robô numa linha, com a cabine aberta mostrando a análise, as operações e a curva da sessão.'], ['omni-gerenciamento.webp', 'Gerenciamento', 'A planilha que calcula entrada, limites e objetivo antes de ligar o robô.'], ['omni-aulas.webp', 'Aulas', 'O treinamento da plataforma, do primeiro acesso à leitura de dígitos.'], ['omni-marketplace.webp', 'Marketplace', 'Ferramentas e produtos da casa, como o Simulador de Treinamento.']],
   },
@@ -118,36 +118,27 @@ for (const [arquivo, titulo, legenda] of config.fotos) {
 }
 
 /* ------------------------------------------------ sessões na prática */
-/* Vinte sessões ILUSTRATIVAS, geradas com semente fixa: 18 positivas (meta ou
-   encerramento manual no lucro) e 2 negativas (stop). Está escrito na tela. */
+/* Os três jeitos de uma sessão terminar, um de cada: na meta, no stop e
+   desligada pela pessoa. 29/10/2026 (revisão): antes eram vinte sessões com
+   dezoito na meta, o que virava promessa de resultado pela imagem. */
 ;(() => {
   const el = document.querySelector('[data-sessoes]'); if (!el) return
-  let semente = 777
-  const sortear = () => { semente |= 0; semente = semente + 0x6D2B79F5 | 0; let t = Math.imul(semente ^ semente >>> 15, 1 | semente); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 }
-  const entre = (a, b) => a + sortear() * (b - a)
   const num = v => Math.abs(v).toFixed(2).replace('.', ',')
-  const sessoes = []
-  for (let i = 0; i < 20; i++) {
-    const negativa = i === 6 || i === 15
-    const robo = `Sessão de exemplo ${String(i + 1).padStart(2, '0')}`
-    const meta = [20, 30, 50, 80, 100, 150, 200][Math.floor(sortear() * 7)]
-    const resultado = negativa ? -Math.round(entre(0.45, 0.8) * meta * 100) / 100 : Math.round(entre(0.92, 1.06) * meta * 100) / 100
-    const ops = Math.round(entre(9, 64)), ganhas = negativa ? Math.round(ops * entre(0.42, 0.55)) : Math.round(ops * entre(0.68, 0.92))
-    const minutos = Math.round(entre(6, 95))
-    // curva: ruído com deriva até o resultado
-    const pontos = [0]; let v = 0
-    for (let k = 1; k <= 24; k++) { const alvo = resultado * k / 24; v = alvo + (sortear() - 0.5) * meta * 0.25 * (1 - k / 24); pontos.push(k === 24 ? resultado : v) }
-    sessoes.push({ robo, meta, resultado, ops, ganhas, minutos, pontos, negativa })
-  }
+  const sessoes = [
+    { tipo: 'meta', titulo: 'Exemplo 1', selo: 'Parou na meta', resultado: 50, ops: 31, ganhas: 21, minutos: 42, pontos: [0, -4, 3, 9, 6, 14, 11, 20, 27, 22, 31, 38, 34, 43, 50] },
+    { tipo: 'stop', titulo: 'Exemplo 2', selo: 'Parou no stop', resultado: -25, ops: 18, ganhas: 8, minutos: 23, pontos: [0, 4, 2, -3, 1, -6, -9, -5, -12, -10, -16, -14, -19, -22, -25] },
+    { tipo: 'manual', titulo: 'Exemplo 3', selo: 'Desligada por você', resultado: 8.4, ops: 12, ganhas: 7, minutos: 15, pontos: [0, 2, -1, 3, 5, 2, 6, 4, 8.4] },
+  ]
   for (const s of sessoes) {
     const art = document.createElement('article')
-    art.className = `sessao ${s.negativa ? 'stop' : 'meta'}`
+    art.className = `sessao ${s.tipo}`
+    const n = s.pontos.length - 1
     const min = Math.min(...s.pontos, 0), max = Math.max(...s.pontos, 1)
-    const x = i => (i / 24) * 200, y = p => 44 - ((p - min) / (max - min || 1)) * 40
+    const x = i => (i / n) * 200, y = p => 44 - ((p - min) / (max - min || 1)) * 40
     const d = s.pontos.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p).toFixed(1)}`).join(' ')
-    art.innerHTML = `<header><b></b><span class="selo"></span></header><strong class="valor"></strong><svg viewBox="0 0 200 48" preserveAspectRatio="none" aria-hidden="true"><path d="${d}"/></svg><footer><span><i>Operações</i><b></b></span><span><i>Acertos</i><b></b></span><span><i>Duração</i><b></b></span></footer>`
-    art.querySelector('header b').textContent = s.robo
-    art.querySelector('.selo').textContent = s.negativa ? 'Parou no stop' : 'Meta batida'
+    art.innerHTML = `<header><b></b><span class="selo"></span></header><strong class="valor"></strong><svg viewBox="0 0 200 48" preserveAspectRatio="none" aria-hidden="true"><path d="${d}"/></svg><footer><span><i>Operações</i><b></b></span><span><i>Ganhadoras</i><b></b></span><span><i>Duração</i><b></b></span></footer>`
+    art.querySelector('header b').textContent = s.titulo
+    art.querySelector('.selo').textContent = s.selo
     art.querySelector('.valor').textContent = `${s.resultado < 0 ? '−' : '+'}${num(s.resultado)} USD`
     const f = art.querySelectorAll('footer b'); f[0].textContent = String(s.ops); f[1].textContent = `${s.ganhas} de ${s.ops}`; f[2].textContent = `${s.minutos} min`
     el.appendChild(art)
@@ -158,7 +149,7 @@ for (const [arquivo, titulo, legenda] of config.fotos) {
 const nomeNoTexto = config.prosa ?? config.nome
 const FAQ = [
   ['Preciso ter experiência para usar?', `Não. A plataforma foi feita para quem está começando: aulas curtas dentro dela, conta demo com dinheiro fictício e a equipe ${nomeNoTexto} acompanhando a configuração. Quem já opera encontra gráfico, indicadores e operação manual também.`],
-  ['Onde fica o meu dinheiro?', `Na sua própria conta na Deriv, corretora internacional com mais de 20 anos de mercado. A ${nomeNoTexto} recebe apenas uma autorização para operar; depósitos e saques são feitos por você, direto na corretora. A plataforma nunca guarda saldo.`],
+  ['Onde fica o meu dinheiro?', `Na sua própria conta na Deriv, corretora internacional fundada em 1999. A ${nomeNoTexto} recebe apenas uma autorização para operar; depósitos e saques são feitos por você, direto na corretora. A plataforma nunca guarda saldo.`],
   ['Posso perder dinheiro?', 'Pode. Toda operação financeira envolve risco, e ninguém sério promete ganho garantido. O que a plataforma faz é colocar o risco sob controle: você define o stop de perda antes de ligar e o robô para ali. O quanto arriscar é sempre decisão sua.'],
   ['Quanto preciso para começar?', 'Você pode começar na conta demo, sem dinheiro nenhum, e conhecer tudo com calma. Na conta real, a entrada mínima por operação é pequena (a partir de US$ 0,35) e o valor total é você quem define.'],
   ['O robô opera sozinho? Preciso deixar o computador ligado?', 'Ele opera no nosso servidor, 24 horas, com a sua conta conectada. Pode fechar o notebook ou trancar o celular: o robô continua e para sozinho quando bater a meta ou o stop.'],
@@ -319,7 +310,7 @@ addEventListener('focusout', atualizarCta)
 window.visualViewport?.addEventListener('resize', atualizarCta)
 atualizarCta()
 const maisSessoes = document.querySelector('.sessoes-expandir')
-maisSessoes.addEventListener('click', () => {
+if (maisSessoes) maisSessoes.addEventListener('click', () => {
   const expandida = document.querySelector('[data-sessoes]').classList.toggle('expandida')
   maisSessoes.setAttribute('aria-expanded', String(expandida))
   maisSessoes.textContent = expandida ? 'Mostrar menos sessões' : 'Ver todas as sessões de exemplo'
@@ -333,6 +324,10 @@ const visitas = Math.min(1000, Number(armazenamentoLer(chaveVisitas) || 0) + 1)
 try { localStorage.setItem(chaveVisitas, String(visitas)) } catch {}
 const form = document.querySelector('#form-lead')
 const telefone = form.elements.telefone
+// nome e sobrenome, como o cadastro do app exige (29/10/2026)
+const campoNome = form.elements.nome
+const conferirNome = () => campoNome.setCustomValidity(campoNome.value.trim().split(/\s+/).filter(p => p.length >= 2).length >= 2 || !campoNome.value.trim() ? '' : 'Escreva o nome e o sobrenome.')
+campoNome.addEventListener('input', conferirNome)
 telefone.addEventListener('input', () => {
   const d = telefone.value.replace(/\D/g, '').slice(0, 11)
   telefone.value = d.length <= 10 ? d.replace(/^(\d{0,2})(\d{0,4})(\d{0,4})$/, (_,a,b,c) => `${a?'('+a:''}${a.length===2?') ':''}${b}${c?'-'+c:''}`) : d.replace(/^(\d{2})(\d{5})(\d{0,4})$/, '($1) $2-$3')
@@ -340,6 +335,7 @@ telefone.addEventListener('input', () => {
 form.addEventListener('submit', async event => {
   event.preventDefault()
   const mensagem = form.querySelector('.mensagem'), botao = form.querySelector('button')
+  conferirNome()
   if (!form.reportValidity()) return
   botao.disabled = true; botao.textContent = 'Enviando…'; mensagem.textContent = ''
   const dados = Object.fromEntries(new FormData(form))
@@ -355,12 +351,14 @@ form.addEventListener('submit', async event => {
     if (!resposta.ok) throw new Error(corpo.erro || 'Não foi possível enviar agora.')
     // Só avança depois de o motor confirmar que o lead foi preservado. O nome
     // vai só para personalizar a próxima tela (ela usa textContent, nunca HTML).
+    // o primeiro nome vai pela sessão do navegador, nunca na URL (histórico, analytics, referer)
+    try { sessionStorage.setItem('captura-nome', String(dados.nome).trim().split(/\s+/)[0].slice(0, 40)) } catch {}
     const proxima = new URL('./obrigado/', location.href)
-    proxima.searchParams.set('nome', String(dados.nome).trim().split(/\s+/)[0])
     for (const [chave, valor] of utm) if (chave.startsWith('utm_')) proxima.searchParams.set(chave, valor)
     location.assign(proxima)
   } catch (e) {
-    mensagem.textContent = e.message; mensagem.className = 'mensagem erro'
+    // sem rede o navegador rejeita com "Load failed"/"Failed to fetch", em inglês
+    mensagem.textContent = e instanceof TypeError || !e.message ? 'Sem conexão com a internet. Tente de novo.' : e.message; mensagem.className = 'mensagem erro'
     botao.disabled = false; botao.innerHTML = 'Tentar novamente <span>→</span>'
   }
 })

@@ -16,6 +16,7 @@ import { resumoDeEstudo, type DadosEstudo } from '../core/teeds/estudoDoDono'
 import { MARCA } from '../marca'
 import { roboBloqueado, ROBOS_A_VENDA } from '../core/teeds/robosLiberados'
 import { NomeDoRobo } from './NomeDoRobo'
+import { simboloMoeda } from '../core/dinheiro'
 
 interface Props {
   socket: TeedsSocket | null
@@ -81,7 +82,7 @@ const PADRAO: ConfigEstrategia = {
 }
 
 const din = (v: number, m = 'USD') =>
-  `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  `${simboloMoeda(m)} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export function LocalRobotPanel({
   socket, isDemo, demoComoReal = false, rotulosTrocados = false, moeda, symbols, symbolPadrao, identidade, conexao = 'open',
@@ -156,6 +157,25 @@ export function LocalRobotPanel({
     if (!preparoAberto || !sessaoTeeds || !contaId) return
     void aquecerNoServidor(sessaoTeeds, contaDaSessao?.contaId ?? contaId)
   }, [preparoAberto, sessaoTeeds, contaId, contaDaSessao?.contaId])
+
+  /*
+    O saldo da conta, para o preparo dizer em que conta a sessão vai rodar e
+    avisar quando o limite de perda passa do saldo (29/10/2026). Só quando a
+    sessão é da conta escolhida no topo: a linha aberta é a dela.
+  */
+  const [saldo, setSaldo] = useState<number | null>(null)
+  const mesmaConta = (contaDaSessao?.contaId ?? contaId) === contaId
+  useEffect(() => {
+    if (!preparoAberto || !socket || !mesmaConta) { setSaldo(null); return }
+    let vivo = true
+    socket.send({ balance: 1 })
+      .then((r) => {
+        const v = Number((r as { balance?: { balance?: unknown } }).balance?.balance)
+        if (vivo) setSaldo(Number.isFinite(v) ? v : null)
+      })
+      .catch(() => { if (vivo) setSaldo(null) })
+    return () => { vivo = false }
+  }, [preparoAberto, socket, mesmaConta])
 
   /*
    * Meta ou stop: o aviso no meio da tela. Vale quando a sessão para enquanto
@@ -343,6 +363,7 @@ export function LocalRobotPanel({
    * porventura estivesse aberto assim que ele liquidar.
    */
   const [desligando, setDesligando] = useState(false)
+  const [confirmarFechar, setConfirmarFechar] = useState(false)
   function desligar() {
     const id = sessaoIdRef.current
     if (!id || !sessaoTeeds || desligando) return
@@ -364,12 +385,12 @@ export function LocalRobotPanel({
     {
       rot: 'Recuperação',
       valor: cfg.fatorGale === 0
-        ? 'desligado'
-        : temModos(ident.id, cfg.parametros) ? `modo ${NOME_DO_MODO[modoDaConfig(ident.id, cfg.fatorGale, cfg.lucroSobrePrejuizo, cfg)].toLowerCase()}` : `automática ${MARCA.prosa}`,
+        ? 'Desligada'
+        : temModos(ident.id, cfg.parametros) ? `Modo ${NOME_DO_MODO[modoDaConfig(ident.id, cfg.fatorGale, cfg.lucroSobrePrejuizo, cfg)].toLowerCase()}` : 'Automática',
     },
-    { rot: 'Teto', valor: cfg.valorMaximo > 0 ? din(cfg.valorMaximo, moedaDosParametros) : 'sem teto' },
-    { rot: 'Para se ganhar', valor: din(cfg.takeProfit, moedaDosParametros) },
-    { rot: 'Para se perder', valor: din(cfg.stopLoss, moedaDosParametros) },
+    { rot: 'Valor máximo por entrada', valor: cfg.valorMaximo > 0 ? din(cfg.valorMaximo, moedaDosParametros) : 'Sem máximo' },
+    { rot: 'Meta de ganho', valor: cfg.takeProfit > 0 ? din(cfg.takeProfit, moedaDosParametros) : 'Sem meta' },
+    { rot: 'Limite de perda', valor: cfg.stopLoss > 0 ? din(cfg.stopLoss, moedaDosParametros) : 'Sem limite' },
   ]
 
   const preparo = (preparando || solicitarPreparo) && <RobotSetup
@@ -384,6 +405,7 @@ export function LocalRobotPanel({
     demoComoReal={demoComoReal}
     rotulosTrocados={rotulosTrocados}
     contaId={contaDaSessao?.contaId ?? contaId}
+    saldo={saldo}
     escolherModelo={solicitarPreparo}
     ligando={ligando}
     erro={erro}
@@ -392,21 +414,41 @@ export function LocalRobotPanel({
   />
 
   // Draft panels are invisible; the dialog is portaled above the whole app.
-  if (!estado) return <>{(adotar || idDaSessao) && <div className="robot-session-loading" role="status">
+  // Carregando, ou o acompanhamento falhou: nunca um beco sem saída. A sessão
+  // pode estar operando; daqui dá para tentar de novo ou desligar (29/10/2026).
+  if (!estado) return <>{(adotar || idDaSessao) && <div className="robot-session-loading" role={erro ? 'alert' : 'status'}>
     <b><NomeDoRobo nome={ident.nome} id={ident.id} /></b><span>{erro ?? 'Conectando ao acompanhamento da sessão…'}</span>
+    {erro && sessaoIdRef.current && (
+      <div className="robot-session-acoes">
+        <button type="button" className="tv-btn" onClick={() => { setErro(null); if (sessaoIdRef.current) olhar(sessaoIdRef.current) }}>Tentar de novo</button>
+        <button type="button" className="tv-btn parar" onClick={desligar} disabled={desligando}>{desligando ? 'Desligando…' : 'Desligar'}</button>
+      </div>
+    )}
   </div>}{preparo}</>
 
   // ------------------------------------------------------------ com sessão
   const modo = temModos(ident.id, cfg.parametros) ? NOME_DO_MODO[modoDaConfig(ident.id, cfg.fatorGale, cfg.lucroSobrePrejuizo, cfg)].toLowerCase() : null
-  const aoRemover = onRemover ? () => {
-    if (rodando && !window.confirm('Este robô está operando no servidor. Deseja desligar e fechar o bloco?')) return
+  // Fechar uma sessão ligada também a desliga: pergunta antes, dentro da
+  // tela (o confirm nativo não passa pelo vocabulário da marca).
+  const fecharDeVez = () => {
+    setConfirmarFechar(false)
     desligar()
     pararDeOlharRef.current?.()
-    onRemover()
-  } : undefined
+    onRemover?.()
+  }
+  const aoRemover = onRemover ? () => { if (rodando) setConfirmarFechar(true); else fecharDeVez() } : undefined
+  const confirmacao = confirmarFechar && rodando && (
+    <div className="rob-confirmar" role="alertdialog" aria-label="Desligar e fechar">
+      <span>Desligar <b><NomeDoRobo nome={ident.nome} id={ident.id} emTexto /></b> e fechar este painel? A operação aberta termina normalmente.</span>
+      <div>
+        <button type="button" className="tv-btn" onClick={() => setConfirmarFechar(false)}>Cancelar</button>
+        <button type="button" className="tv-btn parar" onClick={fecharDeVez}>Desligar e fechar</button>
+      </div>
+    </div>
+  )
   const resumo = {
     estado, config: cfg, moeda: contaDaSessao?.moeda ?? moeda, nome: ident.nome, cor: ident.cor, numero: titulo,
-    inicio: inicioRef.current, demo: contaDaSessao?.demo ?? null, modo, conexao, ceo: mostrarMarkup,
+    inicio: inicioRef.current, demo: contaDaSessao?.demo ?? null, rotulosTrocados, demoComoReal, modo, conexao, ceo: mostrarMarkup,
     onDesligar: rodando ? desligar : undefined, desligando,
     onLigarDeNovo: !rodando ? () => { setErro(null); setPreparando(true) } : undefined,
     onRemover: aoRemover,
@@ -414,27 +456,28 @@ export function LocalRobotPanel({
   // O aviso de meta ou stop aparece em qualquer apresentação — inclusive
   // com a cabine de outro robô aberta. Fecha só no X. (Decisão de 16/09.)
   const aviso = limite && <LimiteAtingido
-    tipo={limite} estado={estado} config={cfg} nome={`${titulo} · ${ident.nome}`} cor={ident.cor}
+    tipo={limite} estado={estado} config={cfg} nome={ident.nome} cor={ident.cor}
     moeda={contaDaSessao?.moeda ?? moeda}
     onFechar={() => setLimite(null)}
     onLigarDeNovo={() => { setLimite(null); setErro(null); setPreparando(true) }}
   />
   if (apresentacao === 'linha') return (
     <div className={`cabine-caixa linha ${rodando ? 'rodando' : 'parado'}`} style={{ ['--robo' as any]: ident.cor, ['--robo-suave' as any]: ident.corSuave }}>
-      <RobotLinha {...resumo} aberta={false} onAbrir={() => onAbrir?.()} />
-      {preparo}{aviso}
+      <RobotLinha {...resumo} aberta={false} onAbrir={onAbrir} />
+      {confirmacao}{preparo}{aviso}
     </div>
   )
   if (apresentacao === 'cartao') return (
     <div className={`cabine-caixa cartao ${rodando ? 'rodando' : 'parado'}`} style={{ ['--robo' as any]: ident.cor, ['--robo-suave' as any]: ident.corSuave }}>
       <RobotCartao {...resumo} onAbrirNaLista={() => onAbrir?.()} />
-      {preparo}{aviso}
+      {confirmacao}{preparo}{aviso}
     </div>
   )
   return (
     <div className={`cabine-caixa aberta ${expandido ? 'expandido' : ''} ${rodando ? 'rodando' : 'parado'}`}
       style={{ ['--robo' as any]: ident.cor, ['--robo-suave' as any]: ident.corSuave }}>
-      <RobotLinha {...resumo} aberta onAbrir={() => onAbrir?.()} />
+      <RobotLinha {...resumo} aberta onAbrir={onAbrir} />
+      {confirmacao}
       <RobotLive
         estado={estado}
         config={cfg}
@@ -454,6 +497,7 @@ export function LocalRobotPanel({
         onDigitos={onDigitos}
         digitosAberto={digitosAberto}
         mostrarMarkup={mostrarMarkup}
+        esconderDemo={demoComoReal || rotulosTrocados}
         onDesligar={rodando ? desligar : undefined}
         desligando={desligando}
         onLigarDeNovo={!rodando ? () => { setErro(null); setPreparando(true) } : undefined}

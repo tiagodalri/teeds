@@ -8,9 +8,9 @@
   display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 22px 26px 40px;
   width: 100%; max-width: 1180px; margin: 0 auto; min-width: 0; box-sizing: border-box;
 }
-.mp button { font: inherit; color: inherit; }
+.mp :where(button) { font: inherit; color: inherit; }
 .mp svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.mp-sobre { color: var(--mp-ouro); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.mp-sobre { color: var(--mp-ouro); font-size: 12.5px; font-weight: 700; letter-spacing: .01em; }
 .mp-carregando { padding: 60px 0; color: var(--muted); text-align: center; }
 
 /* ------------------------------------------------ topo: foto, nome, quanto falta */
@@ -65,8 +65,10 @@
 .mp-faltam button:hover { border-style: solid; }
 
 /* ------------------------------------------------ cartões */
-.mp-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
-.mp-cartao { display: grid; gap: 14px; padding: 20px; border: 1px solid var(--mp-linha); border-radius: 18px; background: var(--surface); min-width: 0; }
+/* os cartões vizinhos com a mesma altura (stretch): com `start`, o mais baixo deixava um buraco embaixo dele;
+   o conteúdo de cada um continua no alto (align-content) */
+.mp-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: stretch; }
+.mp-cartao { display: grid; gap: 14px; align-content: start; padding: 20px; border: 1px solid var(--mp-linha); border-radius: 18px; background: var(--surface); min-width: 0; }
 .mp-cartao h2 { display: flex; align-items: center; gap: 9px; margin: 0; color: var(--text); font-size: 16px; font-weight: 700; }
 .mp-cartao h2 svg { color: var(--mp-ouro); }
 
@@ -74,7 +76,7 @@
 .mp-plano-nome { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
 .mp-fichas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; margin: 0; }
 .mp-fichas div { display: grid; gap: 2px; min-width: 0; }
-.mp-fichas dt { color: var(--muted); font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.mp-fichas dt { color: var(--muted); font-size: 12.5px; font-weight: 600; }
 .mp-fichas dd { margin: 0; color: var(--text); font-size: 14px; font-weight: 600; }
 .mp-fichas dd.ok { color: var(--up); }
 .mp-fichas dd.ruim { color: var(--down); }
@@ -105,12 +107,12 @@
 .mp-campo.uf input { text-transform: uppercase; text-align: center; }
 
 .mp-atual { display: grid; gap: 2px; padding: 12px 14px; border-radius: 12px; background: var(--surface-alt); border: 1px solid var(--mp-linha); }
-.mp-atual span { color: var(--muted); font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.mp-atual span { color: var(--muted); font-size: 12.5px; font-weight: 600; }
 .mp-atual b { color: var(--text); font-size: 15px; overflow-wrap: anywhere; outline: none; }
 
 .mp-contas { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .mp-contas li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 11px 14px; border-radius: 12px; background: var(--surface-alt); border: 1px solid var(--mp-linha); }
-.mp-contas i { padding: 3px 8px; border-radius: 6px; font-size: 10.5px; font-style: normal; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.mp-contas i { padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-style: normal; font-weight: 700; letter-spacing: .01em; }
 .mp-contas i.demo { background: color-mix(in srgb, var(--mp-ouro) 18%, transparent); color: var(--mp-ouro); }
 .mp-contas i.real { background: var(--up-soft); color: var(--up); }
 .mp-contas b { color: var(--text); font-family: var(--mp-dados); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; }
@@ -129,6 +131,10 @@
 .mp-btn.ouro { border-color: transparent; background: var(--mp-ouro); color: #051528 !important; }
 .mp-btn.deriv { border-color: transparent; background: #ff444f; color: #fff !important; }
 .mp-btn.secundario { background: transparent; }
+/* um dourado por tela: o cheio fica para o que decide o acesso (renovar o plano, salvar);
+   ligar Face ID / Touch ID e os avisos são opcionais, então vão no contorno dourado */
+.mp-grade > .mp-cartao:not(.mp-plano) .mp-btn.ouro { border-color: color-mix(in srgb, var(--mp-ouro) 60%, var(--border)); background: color-mix(in srgb, var(--mp-ouro) 8%, transparent); color: var(--text) !important; }
+.mp-grade > .mp-cartao:not(.mp-plano) .mp-btn.ouro:hover:not(:disabled) { border-color: var(--mp-ouro); background: color-mix(in srgb, var(--mp-ouro) 15%, transparent); }
 .mp button:focus-visible, .mp-btn:focus-visible { outline: 2px solid var(--mp-ouro); outline-offset: 2px; }
 .mp-recado { margin: 0; padding: 11px 14px; border-radius: 12px; font-size: 13.5px; line-height: 1.5; }
 .mp-recado.ok { background: var(--up-soft); color: var(--up); }

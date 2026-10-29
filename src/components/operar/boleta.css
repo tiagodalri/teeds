@@ -26,7 +26,7 @@
 .bl-ativo-preco { display: grid; justify-items: end; }
 .bl-ativo-preco b { font: 700 16px var(--bl-dados); font-variant-numeric: tabular-nums; transition: color .25s; }
 .bl-ativo-preco b.sobe { color: var(--up); } .bl-ativo-preco b.cai { color: var(--down); }
-.bl-ativo-preco small { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 11px; }
+.bl-ativo-preco small { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 11.5px; }
 .bl-ativo-preco small i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
 .bl-ativo-preco small i.vivo { background: var(--up); box-shadow: 0 0 0 3px color-mix(in srgb, var(--up) 22%, transparent); animation: bl-pulsa 1.8s ease-out infinite; }
 @keyframes bl-pulsa { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--up) 6%, transparent); } }
@@ -44,8 +44,12 @@
 /* valor e duração: um campo só, em pílula, com − e + dentro (22/10/2026, v2) */
 .bl-most { display: grid; gap: 8px; }
 .bl-most-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 26px; }
-.bl-rot { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
-.bl-saldo { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+/* rótulo com só a primeira letra maiúscula (regra da casa, 29/10/2026): sem caixa alta */
+.bl-rot { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; }
+.bl-saldo { display: inline-flex; align-items: center; gap: 8px; min-width: 0; color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+/* o tipo da conta, sempre à vista junto do saldo: quem vai comprar sabe se é dinheiro real */
+.bl-conta { flex: none; padding: 1px 7px; border-radius: 99px; font-style: normal; font-size: 10.5px; font-weight: 800; border: 1px solid var(--border); color: var(--muted); }
+.bl-conta.real { color: var(--up); border-color: color-mix(in srgb, var(--up) 45%, transparent); background: color-mix(in srgb, var(--up) 10%, transparent); }
 .bl-saldo b { color: var(--text); font: 700 11.5px var(--bl-dados); }
 .bl-unid { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: var(--bl-fundo-campo); border: 1px solid var(--border); }
 .bl-unid button { padding: 3px 10px; border: 0; border-radius: 7px; background: none; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
@@ -78,7 +82,10 @@
 }
 .bl-regua button.on { color: var(--bl-ouro-claro); border-color: color-mix(in srgb, var(--bl-ouro) 60%, transparent); background: color-mix(in srgb, var(--bl-ouro) 12%, transparent); }
 .bl-regua button:focus-visible { outline: 2px solid var(--bl-ouro); outline-offset: 2px; }
-.bl-alerta { margin: -4px 0 0; color: var(--down); font-size: 12px; text-align: center; }
+.bl-alerta { margin: -4px 0 0; color: var(--down); font-size: 12px; line-height: 1.45; text-align: left; }
+/* o link de depósito da Deriv dentro do alerta de saldo (App: DERIV.deposito) */
+.bl-alerta a { display: inline-flex; align-items: center; min-height: 32px; margin-left: 4px; color: var(--bl-ouro-claro, var(--primary)); font-weight: 800; text-decoration: underline; text-underline-offset: 2px; }
+.aviso a { font-weight: 800; color: inherit; text-decoration: underline; text-underline-offset: 2px; margin-left: 4px; }
 
 /* comprar: os dois lado a lado. Fundo escuro com um véu da cor, borda na cor
    e só a seta e o nome coloridos (22/10/2026: o verde e o vermelho chapados
@@ -101,26 +108,33 @@
 .bl-dir { font-weight: 800; font-size: 15.5px; }
 .bl-pct { margin-left: auto; padding: 2px 7px; border-radius: 99px; background: color-mix(in srgb, var(--cor) 14%, transparent); font: 800 11.5px var(--bl-dados); }
 .bl-botao > small { margin-top: 10px; color: var(--muted); font-size: 11.5px; font-weight: 700; }
-.bl-botao > strong { font: 800 18px/1.15 var(--bl-dados); letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; transition: color .4s ease; }
+.bl-botao > strong { font: 800 18px/1.15 var(--bl-dados); letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; transition: color .4s ease; }
 /* preço vivo: só o número acende na cor, rápido, no máximo a cada 2 s */
 .bl-botao > strong.pisca { color: var(--cor); transition: none; }
 .bl-estado { display: grid; margin-top: 10px; color: var(--text); font-size: 13px; font-weight: 800; line-height: 1.25; }
 .bl-estado small { font-size: 11px; font-weight: 700; opacity: .78; }
 .bl-resumo { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
 .bl-resumo b { color: var(--text); font: 700 12px var(--bl-dados); }
-.bl-atalho { margin: 2px 0 0; text-align: center; color: var(--muted); font-size: 11.5px; }
+.bl-atalho { margin: 2px 0 0; text-align: center; color: var(--muted); font-size: 11.5px; text-wrap: balance; }
 .bl-atalho kbd { padding: 1px 6px; border-radius: 5px; border: 1px solid var(--border); background: var(--bl-fundo-campo); color: var(--text); font: 700 11px var(--bl-dados); }
 
 /* o cartão de conectar a Deriv, quando aparece, fica acima da boleta com respiro */
+/* GlobalFly no claro: o "primary-soft" (azul a 13% sobre o marfim) deixava o cartão cinza e sujo.
+   Fica como no escuro: fio de ouro e um véu leve de ouro sobre o branco (29/10/2026, revisão visual). */
+:root[data-marca='globalfly']:not([data-tema='escuro']) .trade > .sem-deriv.compacto {
+  border-color: color-mix(in srgb, var(--gf-ouro, var(--primary)) 55%, var(--border));
+  background: color-mix(in srgb, var(--gf-ouro, var(--primary)) 7%, var(--surface));
+}
 .trade > .sem-deriv + .bl { margin-top: 12px; }
 .trade > .bl + .aviso { margin-top: 12px; }
 /* computador: a coluna do Operar ganha um pouco de largura para a boleta (330 → 372 px) */
 @media (min-width: 1200px) { .layout-operar:has(.bl) { grid-template-columns: minmax(0, 1fr) 372px; } }
 /* boleta estreita (coluna curta ou celular): a linha do lucro encurta e fica numa linha só */
 @container boleta (max-width: 360px) {
-  .bl-longo, .bl-atalho { display: none; }
-  .bl-rot { letter-spacing: .1em; font-size: 10.5px; }
-  .bl-saldo, .bl-saldo b { font-size: 10.5px; }
+  .bl-atalho { display: none; }
+  /* rótulo estreito: o mesmo da boleta larga, só um pouco menor (antes 10,5 px com letras espaçadas) */
+  .bl-rot { letter-spacing: .01em; font-size: 12px; }
+  .bl-saldo, .bl-saldo b { font-size: 11.5px; }
   .bl-resumo { flex-wrap: nowrap; font-size: 11.5px; }
   .bl-dir { font-size: 15px; }
   .bl-botao > strong { font-size: 16.5px; }
@@ -136,8 +150,14 @@
   .bl-pct { font-size: 11px; }
   .bl-botao > strong { font-size: 15.5px; }
 }
-/* o fim da coluna fica livre: o botão do suporte (canto de baixo) nunca cobre o "Encerrar agora" */
+/* o fim da coluna fica livre: o botão do suporte (canto de baixo) nunca cobre o "Encerrar agora".
+   No celular o suporte sobe quando há a pílula da live ou o convite do app (barra-inferior.css),
+   e a folga sobe junto (29/10/2026, revisão: o convite cobria o último cartão). */
 .layout-operar .trade:has(.bl) { padding-bottom: 92px; }
+@media (max-width: 900px) {
+  body:has(.av-pilula) .layout-operar .trade:has(.bl) { padding-bottom: calc(142px + var(--sab, 0px)); }
+  body:has(.app-convite) .layout-operar .trade:has(.bl) { padding-bottom: calc(176px + var(--sab, 0px)); }
+}
 
 /* ------------------------------------------------ posições */
 .bl-posicoes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 12px; }
@@ -192,7 +212,7 @@
 .bp-dif.ganho { color: var(--up); } .bp-dif.perda { color: var(--down); }
 .bp-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .bp-nums div { display: grid; gap: 3px; } .bp-nums div:last-child { text-align: right; }
-.bp-nums small { color: var(--muted); font-size: 9.5px; font-weight: 800; letter-spacing: .12em; }
+.bp-nums small { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .01em; }
 .bp-nums b { font: 700 15px var(--bp-dados); }
 .bp-encerrar {
   height: 48px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 14px;
@@ -201,6 +221,8 @@
 .bp-encerrar span { font-family: var(--bp-dados); }
 .bp-encerrar:disabled { background: color-mix(in srgb, var(--border) 70%, transparent); color: var(--muted); cursor: not-allowed; font-size: 13.5px; }
 .bp-encerrar:focus-visible { outline: 3px solid var(--bp-ouro); outline-offset: 2px; }
+/* conta real: o primeiro toque arma o "Encerrar agora"; o segundo encerra (29/10/2026) */
+.bp-encerrar.armado { background: var(--surface); color: var(--text); box-shadow: inset 0 0 0 2px var(--bp-ouro), 0 0 0 3px color-mix(in srgb, var(--bp-ouro) 22%, transparent); white-space: normal; line-height: 1.2; }
 
 /* cartão estreito (coluna curta do notebook): só a direção no título; o relógio já diz o tempo */
 @container posicao (max-width: 340px) {
@@ -230,7 +252,8 @@
   .bl-campo-valor input { font-size: 21px; }
   .bl-botao { min-height: 88px; padding: 10px 12px 11px; }
   .bl-botao > small { margin-top: 6px; }
-  .bl-botao > strong { font-size: 19px; }
+  /* o valor do botão fica com o tamanho das @container acima (antes um 19 px aqui as anulava e "US$ 1.950,00" vazava a 375 px) */
+  .bl-botao > strong { font-size: clamp(14px, 4.4vw, 18px); }
   .bl-dir { font-size: 15px; }
   .bl-atalho { display: none; }
   .bp { padding: 12px 14px 14px; gap: 10px; }
@@ -264,16 +287,16 @@
 .bl-ult-resumo { display: grid; grid-template-columns: repeat(3, minmax(0, .7fr)) minmax(0, 1.4fr); margin: 0 10px 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
 .bl-ult-resumo > div { display: grid; gap: 2px; padding: 8px 10px; min-width: 0; }
 .bl-ult-resumo > div + div { border-left: 1px solid var(--border); }
-.bl-ult-resumo dt { color: var(--muted); font-size: 10.5px; font-weight: 600; }
+.bl-ult-resumo dt { color: var(--muted); font-size: 11.5px; font-weight: 600; }
 .bl-ult-resumo dd { margin: 0; font: 800 14px var(--fonte-dados, ui-monospace, monospace); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bl-ult-resumo dd.ganho { color: var(--up); } .bl-ult-resumo dd.perda { color: var(--down); }
 .bl-ult-total { text-align: right; }
 /* a tabela: cabeçalho fixo, colunas alinhadas, a cor do resultado numa faixa à esquerda */
 .bl-ult-tabela { flex: 1 1 auto; min-height: 132px; overflow-y: auto; padding: 0 6px 6px; }
 .bl-ult-tabela table { width: 100%; table-layout: auto; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
-.bl-ult-tabela th { position: sticky; top: 0; z-index: 1; padding: 6px 8px; background: var(--surface); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10.5px; font-weight: 700; text-align: left; white-space: nowrap; }
+.bl-ult-tabela th { position: sticky; top: 0; z-index: 1; padding: 6px 8px; background: var(--surface); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11.5px; font-weight: 700; text-align: left; white-space: nowrap; }
 .bl-ult-tabela .num { text-align: right; }
-.bl-ult-tabela td { padding: 8px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); vertical-align: middle; }
+.bl-ult-tabela td { padding: 8px; font-size: 12px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); vertical-align: middle; }
 .bl-ult-tabela tr:last-child td { border-bottom: 0; }
 .bl-ult-tabela tbody tr:hover td { background: color-mix(in srgb, var(--text) 4%, transparent); }
 .bl-ult-tabela tr.ganho { --bl-ult-cor: var(--up); } .bl-ult-tabela tr.perda { --bl-ult-cor: var(--down); }
@@ -282,7 +305,7 @@
 .bl-ult-nome b { display: block; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bl-ult-nome b i { font-style: normal; font-size: 10px; }
 .bl-ult-nome b i.sobe { color: var(--up); } .bl-ult-nome b i.desce { color: var(--down); }
-.bl-ult-nome small { display: block; color: var(--muted); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bl-ult-nome small { display: block; color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bl-ult-preco { white-space: nowrap; }
 .bl-ult-preco .pcd { font-size: 11.5px; color: var(--text); }
 .bl-ult-res { display: inline-block; padding: 2px 7px; border-radius: 7px; background: color-mix(in srgb, var(--bl-ult-cor) 13%, transparent); color: var(--bl-ult-cor); font: 800 12px var(--fonte-dados, ui-monospace, monospace); white-space: nowrap; }
@@ -308,3 +331,32 @@
 /* modo CEO: o markup da posição, numa linha própria embaixo */
 .bp-nums .bp-markup { grid-column: 1 / -1; display: flex !important; align-items: baseline; justify-content: space-between; padding-top: 6px; border-top: 1px dashed var(--border); text-align: left !important; }
 .bp-nums .bp-markup b { color: var(--gf-ouro, var(--primary)); }
+
+/* ------------------------------------------------ alvos de toque (29/10/2026, revisão)
+   No toque, nada menor que 44 px: valores rápidos, unidade da duração e o fechar do seletor de ativo. */
+@media (max-width: 900px), (pointer: coarse) {
+  .bl-regua button { height: 44px; }
+  .layout-operar .bl-unid > button { min-height: 44px; padding-inline: 12px; }
+  .layout-operar .ativo-menu-topo button { width: 44px; height: 44px; margin: -7px -7px -7px 0; }
+}
+
+/* ------------------------------------------------ rótulos sem caixa alta no Operar (regra da casa)
+   As regras globais (app.css, ux-refinements.css) põem "ATIVO", "COTAÇÃO", os grupos do seletor
+   e os rótulos dos Dígitos em caixa alta; aqui, com seletor mais forte, só a primeira letra. */
+.layout-operar .chart-title .manual-ativo-texto small,
+.layout-operar .chart-title .manual-cotacao > small,
+.layout-operar .symbol-list h4,
+.layout-operar .dig .rot { text-transform: none; letter-spacing: .01em; }
+.layout-operar .dig .rot { font-size: 11.5px; font-weight: 700; }
+.layout-operar .chart-title .manual-ativo-texto small,
+.layout-operar .chart-title .manual-cotacao > small { font-size: 11.5px; }
+
+/* ------------------------------------------------ gráfico das outras marcas (PriceChart)
+   A dica da vela com os nomes por extenso, um por linha (antes "A M m F"); e o erro do histórico. */
+.chart-tip div.ohlc { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.chart-tip div.ohlc > span { display: flex; justify-content: space-between; gap: 12px; }
+.chart-loading.chart-erro { pointer-events: auto; align-content: center; justify-items: center; gap: 10px; padding: 16px; }
+.chart-loading.chart-erro b { color: var(--text); font-size: 13.5px; }
+.chart-loading.chart-erro button { min-height: 44px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--primary); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+/* as barras dos dígitos só são botão quando dá para escolher o dígito por elas */
+.dig .dig-barra:disabled { cursor: default; opacity: 1; color: inherit; }

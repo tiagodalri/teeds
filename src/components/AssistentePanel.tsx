@@ -36,10 +36,12 @@ const din = (v: number, moeda = 'USD') =>
  * As outras duas vão para a IA, porque exigem entender o que foi escrito.
  */
 type Sugestao = { texto: string; atalho?: 'robos' | 'parar' }
+// Os exemplos usam os robôs que ESTA marca oferece (a OMNI não tem o superior5).
+const [PRIMEIRO, SEGUNDO] = MARCA.robos
 const SUGESTOES: Sugestao[] = [
   { texto: 'Como estão meus robôs?', atalho: 'robos' },
-  { texto: `Qual a diferença entre o ${nomeDaEstrategia('ag2')} e o ${nomeDaEstrategia('superior5')}?` },
-  { texto: `Ligar o ${nomeDaEstrategia('ag2')} com 1 dólar na demo` },
+  ...(PRIMEIRO && SEGUNDO ? [{ texto: `Qual a diferença entre o ${nomeDaEstrategia(PRIMEIRO)} e o ${nomeDaEstrategia(SEGUNDO)}?` }] : []),
+  ...(PRIMEIRO ? [{ texto: `Ligar o ${nomeDaEstrategia(PRIMEIRO)} com 1 dólar na demo` }] : []),
   { texto: 'Parar tudo', atalho: 'parar' },
 ]
 
@@ -57,9 +59,11 @@ interface Props {
   conexao: ConnectionState
   /** Rótulos trocados (exercícios internos): só a tela troca demo e real. */
   rotulosTrocados?: boolean
+  /** Acesso de demonstração: a conta virtual se apresenta como real. */
+  demoComoReal?: boolean
 }
 
-export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao, rotulosTrocados = false }: Props) {
+export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao, rotulosTrocados = false, demoComoReal = false }: Props) {
   const [itens, setItens] = useState<Item[]>([])
   const [texto, setTexto] = useState('')
   const [pensando, setPensando] = useState(false)
@@ -67,6 +71,8 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
   const [uso, setUso] = useState<{ hoje: number; teto: number } | null>(null)
   const [vivas, setVivas] = useState<SessaoViva[]>([])
   const [copiado, setCopiado] = useState<number | null>(null)
+  // "Parar tudo" desliga as sessões de todas as contas: pergunta antes (29/10/2026)
+  const [confirmarParar, setConfirmarParar] = useState(false)
   const fim = useRef<HTMLDivElement | null>(null)
   const campo = useRef<HTMLTextAreaElement | null>(null)
 
@@ -97,7 +103,7 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
         const linhas = lista.map((v) => {
           const e = v.estado
           return `• ${v.roboNome} — ${e?.operacoes ?? 0} operações, ${din(e?.resultado ?? 0, v.moeda)}` +
-            `${v.demo ? ' (demonstração)' : ''}`
+            `${(rotulosTrocados ? !v.demo : v.demo && !demoComoReal) ? ' (demonstração)' : ''}`
         })
         return responder(
           `${lista.length === 1 ? 'Um robô operando' : `${lista.length} robôs operando`}, ` +
@@ -144,7 +150,7 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
   }
 
   const tocar = (s: Sugestao) =>
-    s.atalho ? void atalho(s.atalho, s.texto) : void enviar(s.texto)
+    s.atalho === 'parar' ? setConfirmarParar(true) : s.atalho ? void atalho(s.atalho, s.texto) : void enviar(s.texto)
 
   function tecla(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void enviar(texto) }
@@ -204,7 +210,7 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
                       <p>{item.texto}</p>
                       <button className="as-copiar" onClick={() => void copiar(item.texto, i)}
                         title="Copiar" aria-label="Copiar">
-                        {copiado === i ? 'copiado' : 'copiar'}
+                        {copiado === i ? 'Copiado' : 'Copiar'}
                       </button>
                     </div>
                   </div>
@@ -224,7 +230,7 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
                 <div key={i} className="as-robo">
                   <LocalRobotPanel
                     titulo="Robô do assistente"
-                    socket={socket} isDemo={item.demo} moeda={item.moeda}
+                    socket={socket} isDemo={item.demo} demoComoReal={demoComoReal} rotulosTrocados={rotulosTrocados} moeda={item.moeda}
                     symbols={symbols} symbolPadrao={symbolPadrao}
                     identidade={identidade(item.roboId)}
                     conexao={conexao}
@@ -252,6 +258,14 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
                 {resultadoVivo >= 0 ? '+' : '−'}{din(Math.abs(resultadoVivo), vivas[0].moeda)}
               </b>
             </button>
+          )}
+
+          {confirmarParar && (
+            <div className="as-sugestoes as-confirmar" role="alertdialog" aria-label="Parar tudo">
+              <span>Desligar todos os robôs ligados, em todas as contas? Operações abertas terminam normalmente.</span>
+              <button type="button" onClick={() => setConfirmarParar(false)}>Cancelar</button>
+              <button type="button" className="perigo" onClick={() => { setConfirmarParar(false); void atalho('parar', 'Parar tudo') }}>Desligar tudo</button>
+            </div>
           )}
 
           {!vazio && (

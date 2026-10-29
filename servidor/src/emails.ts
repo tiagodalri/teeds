@@ -81,7 +81,7 @@ function conteudo(tipo: TipoDeEmail, prosa: string): Conteudo {
         assunto: `Confirme o seu e-mail · ${prosa}`,
         titulo: 'Confirme o seu e-mail',
         espia: `Falta um clique para a sua conta ${prosa} ficar pronta.`,
-        corpo: `Sua conta na ${prosa} foi criada. Confirme este endereço para poder entrar — depois é só conectar a sua conta da Deriv e começar.`,
+        corpo: `Sua conta na ${prosa} foi criada. Confirme este endereço para poder entrar — depois é só conectar a sua conta da Deriv e começar.\n\nPara entrar, use a sua senha. Se não souber qual é, toque em “Esqueci a senha” na tela de entrada e crie uma nova.`,
         botao: 'Confirmar meu e-mail',
         aviso: 'Se não foi você que criou esta conta, pode ignorar este e-mail. Nada acontece sem essa confirmação.',
       }
@@ -106,7 +106,7 @@ function conteudo(tipo: TipoDeEmail, prosa: string): Conteudo {
     case 'convite':
       return {
         assunto: `Seu acesso à ${prosa} está pronto`,
-        titulo: 'Você foi convidado',
+        titulo: 'Seu acesso está pronto',
         espia: `Criaram um acesso para você na ${prosa}.`,
         corpo: `Criaram um acesso para você na ${prosa}. Use o botão abaixo para definir a sua senha e entrar pela primeira vez.`,
         botao: 'Ativar meu acesso',
@@ -207,7 +207,13 @@ function comVocabularioDaMarca(marca: Marca, c: Conteudo): Conteudo {
 }
 
 export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, personalizado?: Conteudo): EmailPronto {
-  const c = comVocabularioDaMarca(marca, personalizado ?? conteudo(tipo, marca.prosa))
+  const bruto = comVocabularioDaMarca(marca, personalizado ?? conteudo(tipo, marca.prosa))
+  /*
+    Canal sem endereço não vira botão (29/10/2026): a GlobalFly ainda não tem
+    Telegram, e o botão saía com href vazio — o principal do e-mail, sem
+    destino. Sem endereço, o bloco do canal simplesmente não existe.
+  */
+  const c: Conteudo = bruto.telegram?.url ? bruto : { ...bruto, telegram: undefined }
   const e = marca.email
   const endereco = seguro(url)
   /*
@@ -215,7 +221,7 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
     mensagem é o canal — e é ele que precisa estar escrito por extenso, para
     quem abrir num cliente que não desenha botão nenhum.
   */
-  const reserva = c.botao ? endereco : seguro(c.telegram?.url ?? url)
+  const reserva = c.botao ? endereco : c.telegram ? seguro(c.telegram.url) : ''
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -295,15 +301,15 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
         </td>
       </tr>`}
 
-      <!-- link avulso, para quando o botao nao funciona -->
-      <tr>
+      <!-- link avulso, para quando o botao nao funciona (so existe se ha botao) -->
+      ${!reserva ? '' : `<tr>
         <td style="padding:16px 32px 0;font-family:${SANS};">
           <p style="margin:0;font-size:11.5px;line-height:1.6;color:#7a8699;">
             Se o botão não funcionar, copie e cole este endereço no navegador:<br>
             <span style="color:${e.faixa};word-break:break-all;">${reserva}</span>
           </p>
         </td>
-      </tr>
+      </tr>`}
 
       ${!c.aviso ? '' : `
       <!-- aviso -->
@@ -334,7 +340,9 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
 
     <div style="max-width:520px;margin:16px auto 0;font-family:${SANS};
                 font-size:11px;line-height:1.6;color:#8b95a6;text-align:center;">
-      Você recebeu este e-mail porque alguém usou este endereço na ${seguro(marca.prosa)}.
+      ${c.descadastrar
+        ? `Você recebeu este e-mail porque já teve cadastro na ${seguro(marca.prosa)}.`
+        : `Você recebeu este e-mail porque alguém usou este endereço na ${seguro(marca.prosa)}.`}
     </div>
 
   </td></tr>
@@ -342,17 +350,19 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
 </body>
 </html>`
 
+  // O negrito (**…**) só existe no HTML; no texto puro os asteriscos apareciam crus.
+  const semNegrito = (t: string) => t.replace(/\*\*/g, '')
   const texto = [
     marca.nome,
     '',
     c.titulo,
     '',
-    c.corpo,
+    semNegrito(c.corpo),
     '',
     // A versão em texto puro vai para quem bloqueia HTML. O canal não pode
     // sumir ali: é o destino principal do e-mail em que ele aparece.
     ...(c.telegram ? [`${c.telegram.texto}: ${c.telegram.url}`, ''] : []),
-    ...(c.botao ? [url, ''] : []),
+    ...(c.botao ? [`${c.botao}: ${url}`, ''] : []),
     ...(c.aviso ? [c.aviso, ''] : []),
     ...(c.descadastrar ? [`Para não receber mais: ${c.descadastrar}`, ''] : []),
     '—',

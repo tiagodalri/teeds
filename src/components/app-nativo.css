@@ -11,17 +11,22 @@
   animation: app-sobe .28s cubic-bezier(.2, .8, .2, 1) both;
 }
 @media (min-width: 900px) { .app-convite { left: auto; right: 20px; bottom: 20px; width: 420px; } }
+/* celular estreito: o texto fica com a linha toda e o botão desce, largo (o texto quebrava em 6 linhas) */
+@media (max-width: 480px) {
+  .app-convite { grid-template-columns: 44px minmax(0, 1fr) 44px; row-gap: 10px; }
+  .app-convite-acao { grid-column: 1 / -1; grid-row: 2; width: 100%; }
+}
 .app-convite-icone { width: 44px; height: 44px; border-radius: 11px; }
 .app-convite-texto { display: grid; gap: 2px; min-width: 0; }
 .app-convite-texto b { font-size: 14px; line-height: 1.25; }
 .app-convite-texto span { color: var(--muted); font-size: 12px; line-height: 1.35; }
 .app-convite-acao {
-  min-height: 40px; padding: 0 16px; border: 0; border-radius: 10px; cursor: pointer;
+  min-height: 44px; padding: 0 16px; border: 0; border-radius: 10px; cursor: pointer;
   background: var(--primary); color: var(--surface); font: inherit; font-size: 13.5px; font-weight: 700; white-space: nowrap;
 }
 :root[data-tema='escuro'] .app-convite-acao { color: #051528; }
 .app-convite-fechar {
-  width: 34px; height: 34px; border: 0; border-radius: 50%; cursor: pointer;
+  width: 44px; height: 44px; border: 0; border-radius: 50%; cursor: pointer;
   background: transparent; color: var(--muted); font-size: 22px; line-height: 1;
 }
 .app-convite-fechar:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }

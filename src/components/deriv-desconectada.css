@@ -1,0 +1,5 @@
+/* O cartão "Conecte a sua conta da Deriv" (29/10/2026). O compacto (dentro da boleta e dos painéis)
+   pintava o fundo e a borda com --primary: no claro da GlobalFly, --primary é o azul, e ele saía
+   cinza com borda escura; no escuro, dourado. Agora tem a mesma cara do cartão grande nos dois
+   temas: o fundo da página e a borda comum. Só o tamanho muda. */
+.sem-deriv.compacto { background: var(--bg); border-color: var(--border); }

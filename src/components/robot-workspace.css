@@ -99,7 +99,7 @@
 .rs-modo.agressivo { background: var(--primary); color: var(--bg); }
 .rs-modo.conservador { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--border); }
 .rs-kpi { display: grid; gap: 2px; min-width: 0; }
-.rs-kpi i { color: var(--muted); font-size: 8.5px; font-style: normal; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-kpi i { color: var(--muted); font-size: 11px; font-style: normal; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rs-kpi b { font-size: 15px; font-weight: 650; letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rs-kpi b small { font-size: 9px; color: var(--muted); font-weight: 500; }
 .rl .up, .rc .up { color: var(--up); } .rl .down, .rc .down { color: var(--down); }
@@ -142,7 +142,7 @@
 .robot-workspace .tv-corpo { flex: none; overflow: visible; scrollbar-gutter: auto; }
 .robot-workspace .tv-assinatura { display: none; }
 .robot-workspace .tv-atalhos { background: transparent; padding: 6px 12px; }
-.robot-workspace .tv-atalhos > span { font-size: 9px; letter-spacing: .035em; }
+.robot-workspace .tv-atalhos > span { font-size: 11px; letter-spacing: .035em; }
 .robot-workspace .tv-atalhos button { font-size: 11px; }
 .robot-workspace .tv-fluxo { margin: 14px 16px 0; padding: 12px; grid-template-columns: minmax(0, 1fr) minmax(30px, .4fr) minmax(0, 1fr); }
 .robot-workspace .tv-fluxo-etapa small { white-space: normal; }
@@ -222,6 +222,9 @@
   .rl .rs-contadores { display: inline; }
   .rl .rs-quem small { white-space: normal; }
   .rl .rs-acoes .tv-btn:not(.rs-abrir) { display: none; }
+  /* sessão ligada: o "Desligar" fica à mão mesmo com a linha fechada (só o ■, 44 px) */
+  .rl.viva:not(.aberta) .rs-acoes .tv-btn.parar { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0; font-size: 0; }
+  .rl.viva:not(.aberta) .rs-acoes .tv-btn.parar > span { font-size: 14px; }
   .rl.aberta { grid-template-columns: minmax(0, 1fr) auto; }
   .rl.aberta .rs-acoes { grid-column: 1 / -1; justify-content: stretch; }
   .rl.aberta .rs-acoes .tv-btn { display: inline-flex; justify-content: center; min-height: 40px; }
@@ -283,3 +286,31 @@
 .fceo-item.destaque b { color: var(--primary); }
 .fceo-nota { margin-left: auto; max-width: 46ch; color: var(--muted); font-size: 10.5px; line-height: 1.45; text-align: right; }
 @container robot-desk (max-width: 720px) { .fceo-nota { margin-left: 0; text-align: left; } }
+
+/* ------------------------------------------------------------------
+   29/10/2026: confirmação de "Desligar e fechar" dentro da tela (o confirm
+   nativo não passava pelo vocabulário da marca) e as saídas do painel que
+   não conseguiu acompanhar a sessão.
+   ------------------------------------------------------------------ */
+.rob-confirmar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 6px 0; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--down) 55%, var(--border)); border-radius: 12px; background: var(--down-soft); color: var(--text); font-size: 13.5px; line-height: 1.45; text-align: left; }
+.rob-confirmar > span { flex: 1 1 260px; min-width: 0; }
+.rob-confirmar > div { display: flex; gap: 8px; flex-wrap: wrap; }
+.rob-confirmar .tv-btn { min-height: 44px; }
+.robot-session-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.robot-session-acoes .tv-btn { min-height: 44px; }
+
+/* Painel de dígitos: a nota de que o passado não indica o próximo dígito */
+.pd-nota { display: block; padding: 6px 10px 10px; color: var(--muted); font-size: calc(11px * var(--pd-escala, 1)); line-height: 1.4; text-align: left; }
+
+/* Celular: a gaveta de dígitos nascia em bottom: 0, atrás da barra inferior
+   (z 140) e do botão de suporte (z 145). Sobe acima da barra e fica por cima. */
+@media (max-width: 760px) {
+  .pd.pd-movel { z-index: 147; }
+  body:has(.barra-inferior) .pd.pd-movel { bottom: calc(64px + var(--sab, 0px)); max-height: calc(78dvh - 64px); padding-bottom: 0; }
+}
+
+/* Revisão visual (29/10/2026): os rótulos da linha e do cartão do robô eram
+   CAIXA ALTA espaçada e, no cartão do mosaico, saíam cortados ("RESULTA…",
+   "OPERAÇ…"). Agora só a primeira letra maiúscula, como no resto da cabine. */
+.rs-kpi i { font-size: 11.5px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.rc-op { align-items: baseline; }

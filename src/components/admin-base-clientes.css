@@ -1,0 +1,22 @@
+/*
+  A base de clientes do painel no celular (29/10/2026). A tabela é uma grade
+  de 7 colunas com overflow:hidden; a 375 px as colunas Saldo, Último acesso
+  e Cadastro saíam espremidas e cortadas. Abaixo de 700 px cada linha vira um
+  cartão: o cliente em cima, os outros campos em duas colunas, cada um com o
+  nome escrito em cima. Escopo em .adm-base-clientes para não mexer na tabela
+  da Central de clientes (ClientesAdmin), que tem as próprias regras.
+*/
+@media (max-width: 700px) {
+  .admin-card.full.adm-base-clientes > .adm-tabela { margin: 0 12px 16px; display: grid; gap: 10px; overflow: visible; border: 0; background: transparent; }
+  .adm-base-clientes .adm-tabela > .adm-linha.cab { display: none; }
+  .adm-base-clientes .adm-tabela > button.adm-linha { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; font-size: 13px; }
+  .adm-base-clientes .adm-tabela > button.adm-linha > span { display: block; min-width: 0; overflow-wrap: anywhere; text-align: left; }
+  .adm-base-clientes .adm-tabela > button.adm-linha > .adm-pessoa { display: flex; grid-column: 1 / -1; }
+  .adm-base-clientes .adm-tabela > button.adm-linha > .adm-seta { display: none; }
+  .adm-base-clientes .adm-tabela > button.adm-linha > span:nth-child(n+2)::before { display: block; margin-bottom: 4px; color: var(--muted); font-size: 11px; font-weight: 650; }
+  .adm-base-clientes .adm-tabela > button.adm-linha > span:nth-child(2)::before { content: 'Plano'; }
+  .adm-base-clientes .adm-tabela > button.adm-linha > span:nth-child(3)::before { content: 'Status'; }
+  .adm-base-clientes .adm-tabela > button.adm-linha > span:nth-child(4)::before { content: 'Último acesso'; }
+  .adm-base-clientes .adm-tabela > button.adm-linha > span:nth-child(5)::before { content: 'Saldo real Deriv'; }
+  .adm-base-clientes .adm-tabela > button.adm-linha > span:nth-child(6)::before { content: 'Cadastro'; }
+}

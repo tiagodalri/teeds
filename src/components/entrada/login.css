@@ -1,0 +1,59 @@
+/* Login e cadastro, acabamento de 29/10/2026 (revisão de UX).
+   Seletores com .entrada na frente para valer sobre app.css e ux-refinements.css. */
+
+/* "Esqueci a senha", "Cadastre-se" e "Entrar": alvo de toque de 44 px (eram 40) */
+.entrada .entrada-form .entrada-esqueci button,
+.entrada .entrada-cadastro button { min-height: 44px; }
+
+/* o que falta nas caixas dos termos, logo abaixo delas */
+.entrada .entrada-aceites .entrada-aceites-falta {
+  margin: 0; color: var(--down); font-size: 13px; line-height: 1.45; text-align: left;
+}
+
+/* o aviso dos termos sob o botão do cadastro */
+.entrada .entrada-form .entrada-aviso-cadastro {
+  margin: -4px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; text-align: center;
+}
+.entrada .entrada-aviso-cadastro a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ------------------------------------------------ revisão visual (29/10/2026, foto por foto) */
+/* A assinatura da GF é uma imagem com 6,6% de respiro transparente à esquerda: a letra ficava
+   12–14 px para dentro dos campos. Puxa a imagem para a mesma margem do resto e deixa ela
+   encolher, para o selo "Opera com" nunca encostar na borda do celular. */
+.entrada .entrada-topo { min-width: 0; }
+.entrada .entrada-marca { flex: 0 1 auto; min-width: 0; }
+.entrada .entrada-marca:has(.marca-assinatura) { margin-left: -12px; }
+.entrada .entrada-marca > .marca { flex: 0 1 auto; min-width: 0; }
+.entrada .entrada-marca .marca-assinatura-par { max-width: 100%; }
+.entrada .entrada-marca .marca-assinatura { max-width: 100%; height: auto; }
+.entrada .entrada-opera { flex: none; }
+
+/* rótulos com a primeira letra maiúscula (nada de caixa alta) e nunca abaixo de 11 px */
+.entrada .entrada-opera { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.entrada .corretora-selo { text-transform: none; letter-spacing: 0; font-size: 11.5px; font-weight: 650; padding: 3px 9px; }
+.entrada .entrada-ou { text-transform: none; letter-spacing: 0; font-size: 13px; }
+
+/* o erro de cada campo no mesmo corpo do aviso das caixas (era 11 px, sumia embaixo do campo) */
+.entrada .entrada-form label em { font-size: 13px; line-height: 1.4; }
+.entrada .entrada-form .entrada-aviso-cadastro { text-wrap: balance; }
+
+/* no claro, o ouro sobre o marfim não passa no contraste (2,7:1): os links ficam num ouro escuro (5:1) */
+:root:not([data-tema='escuro']) .entrada .entrada-esqueci button,
+:root:not([data-tema='escuro']) .entrada .entrada-cadastro button {
+  color: color-mix(in srgb, var(--gf-ouro, var(--primary)) 65%, var(--text));
+}
+
+@media (max-width: 600px) {
+  .entrada .entrada-topo { flex-wrap: nowrap; gap: 12px; }
+  .entrada .entrada-opera { padding: 5px 10px; font-size: 11.5px; gap: 6px; }
+  .entrada .corretora-selo { font-size: 11px; }
+}
+
+/* ------------------------------------------------ a tela de quem espera a aprovação */
+.entrada[data-modo='espera'] .espera-selo { text-transform: none; letter-spacing: 0; font-size: 13px; }
+.entrada[data-modo='espera'] .espera-passos b em { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 700; }
+.entrada[data-modo='espera'] .espera-rotulo { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 650; }
+@media (max-width: 520px) {
+  /* a marca e o selo dividem a linha: a assinatura encolhe em vez de empurrar o selo para baixo */
+  .entrada[data-modo='espera'] .entrada-topo { flex-wrap: nowrap; }
+}

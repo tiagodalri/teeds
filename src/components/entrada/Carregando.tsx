@@ -39,8 +39,33 @@ export function Carregando({ texto = 'Preparando sua cabine' }: { texto?: string
             <p>Está demorando mais que o normal. Confira a internet e tente de novo.</p>
             <div>
               <button type="button" className="dg-demorou-tentar" onClick={() => location.reload()}>Tentar de novo</button>
-              <button type="button" className="dg-demorou-sair" onClick={() => void entrarDeNovo()}>Entrar de novo</button>
+              <button type="button" className="dg-demorou-sair" onClick={() => void entrarDeNovo()}>Sair e entrar de novo</button>
             </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * O "abrindo" das marcas sem a cena de voo (OMNI e Teeds) e da espera dos
+ * termos (29/10/2026): o mesmo prazo de 15 s e a mesma saída do Carregando,
+ * no visual da tela de entrada.
+ */
+export function Abrindo() {
+  const [demorou, setDemorou] = useState(false)
+  useEffect(() => { const t = window.setTimeout(() => setDemorou(true), DEMOROU); return () => window.clearTimeout(t) }, [])
+  const entrarDeNovo = async () => { await sair(); location.reload() }
+  return (
+    <div className="entrada">
+      <div className="entrada-abrindo">
+        <div className="entrada-esperando" role="status">Abrindo a {MARCA.prosa}…</div>
+        {demorou && (
+          <div className="entrada-abrindo-demorou" role="alert">
+            <p>Está demorando mais que o normal. Confira a internet e tente de novo.</p>
+            <button type="button" className="entrada-btn" onClick={() => location.reload()}>Tentar de novo</button>
+            <button type="button" className="entrada-abrindo-sair" onClick={() => void entrarDeNovo()}>Sair e entrar de novo</button>
           </div>
         )}
       </div>

@@ -29,6 +29,10 @@
   body:has(.barra-inferior):has(.av-pilula) .sp-lancador-area { bottom: calc(126px + var(--sab, 0px)); }
   body:has(.barra-inferior) .app-convite { bottom: calc(76px + var(--sab, 0px)); }
   body:has(.barra-inferior):has(.app-convite) .sp-lancador-area { bottom: calc(160px + var(--sab, 0px)); }
+  /* o convite do app ocupa o rodapé inteiro: a pílula da sala sobe acima dele (cobria "Instalar" e o ×),
+     e o suporte, se as duas estiverem na tela, sobe mais um degrau */
+  body:has(.barra-inferior):has(.app-convite) .av-pilula { bottom: calc(160px + var(--sab, 0px)); }
+  body:has(.barra-inferior):has(.app-convite):has(.av-pilula) .sp-lancador-area { bottom: calc(212px + var(--sab, 0px)); }
   body:has(.barra-inferior):has(.sp-lancador) .workspace-app :is(.in, .mp, .aj, .ger) { padding-bottom: 84px; }
   /* o menu completo (gaveta) termina acima da barra */
   body:has(.barra-inferior) .workspace-sidebar.mobile-open { padding-bottom: calc(80px + var(--sab, 0px)); }

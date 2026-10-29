@@ -7,7 +7,7 @@
 .rel-filtros > * { min-width: 0; }
 .rel-seg { display: inline-flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow-x: auto; scrollbar-width: none; max-width: 100%; }
 .rel-seg::-webkit-scrollbar { display: none; }
-.rel-seg button { flex: none; min-height: 36px; padding: 0 13px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; white-space: nowrap; }
+.rel-seg button { flex: none; min-height: 44px; padding: 0 13px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; white-space: nowrap; }
 .rel-seg button.on { background: color-mix(in srgb, var(--rel-ouro) 16%, var(--surface)); color: var(--text); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rel-ouro) 55%, transparent); }
 .rel-conta button.on.real { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--up) 60%, transparent); background: color-mix(in srgb, var(--up) 10%, var(--surface)); }
 .rel-atualizar { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
@@ -20,7 +20,8 @@
 .rel-esqueleto i:first-child { height: 240px; }
 @keyframes rel-brilho { to { background-position: -200% 0; } }
 
-.rel-rot { display: block; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+/* rótulos com só a primeira letra maiúscula (regra da casa, 29/10/2026) */
+.rel-rot { display: block; font-size: 12.5px; font-weight: 700; letter-spacing: .01em; color: var(--muted); }
 
 /* o resultado em destaque, com a curva */
 .rel-heroi { display: grid; grid-template-columns: minmax(240px, .8fr) minmax(0, 1.6fr); gap: 18px; align-items: center; padding: 22px 24px; border: 1px solid var(--border); border-radius: 20px;
@@ -29,7 +30,7 @@
 .rel-heroi.cai { border-color: color-mix(in srgb, var(--down) 28%, var(--border)); }
 .rel-heroi-txt { display: grid; gap: 8px; min-width: 0; }
 .rel-numero { font-family: var(--rel-dados); font-size: clamp(30px, 5vw, 46px); line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.rel-heroi-txt p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+.rel-heroi-txt p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.45; text-wrap: pretty; }
 .rel-curva { width: 100%; height: auto; display: block; overflow: visible; }
 .rel-curva .zero { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 4; }
 .rel-curva .barra { fill: color-mix(in srgb, var(--muted) 30%, transparent); }
@@ -42,9 +43,10 @@
 .rel-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .rel-kpis.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .rel-kpis > div { display: grid; gap: 4px; align-content: start; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); min-width: 0; }
-.rel-kpis span { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.rel-kpis b { font-family: var(--rel-dados); font-size: clamp(18px, 2.4vw, 22px); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rel-kpis small { font-size: 12px; color: var(--muted); }
+.rel-kpis span { font-size: 12px; font-weight: 700; letter-spacing: .01em; color: var(--muted); }
+/* o número inteiro sempre à vista: a 375 px "+US$ 1.234,56" virava "+US$ 1.234,…" (29/10/2026) */
+.rel-kpis b { font-family: var(--rel-dados); font-size: clamp(15px, 4.2vw, 22px); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rel-kpis small { font-size: 12px; color: var(--muted); text-wrap: pretty; }
 .rel-trilho { display: block; height: 5px; margin-top: 4px; border-radius: 3px; background: var(--border); overflow: hidden; }
 .rel-trilho u { display: block; height: 100%; border-radius: 3px; background: var(--rel-ouro); }
 
@@ -58,6 +60,8 @@
 .rel-duas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .rel-bloco { display: grid; gap: 10px; padding: 18px 18px 16px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); min-width: 0; }
 .rel-bloco h3 { margin: 0; font-size: 15.5px; letter-spacing: -.01em; }
+.rel-bloco-cab { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.rel-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--rel-ouro); font-size: 13.5px; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
 .rel-sub { margin-top: 8px !important; }
 .rel-nota { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
 
@@ -87,7 +91,7 @@
 
 .rel-ops { display: grid; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .rel-ops .cab, .rel-ops .linha { display: grid; grid-template-columns: 1.1fr 1.3fr 1fr .8fr .9fr; gap: 10px; align-items: center; padding: 9px 14px; font-size: 13px; }
-.rel-ops .cab { background: var(--surface-alt, var(--surface)); font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.rel-ops .cab { background: var(--surface-alt, var(--surface)); font-size: 12px; font-weight: 700; letter-spacing: .01em; color: var(--muted); }
 .rel-ops .linha + .linha { border-top: 1px solid var(--border); }
 .rel-ops .linha > span:first-child, .rel-ops .linha > span:nth-child(4), .rel-ops .linha > span:last-child { font-family: var(--rel-dados); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rel-ops .linha > span:last-child { text-align: right; }
@@ -114,7 +118,14 @@
 @media (max-width: 600px) {
   .rel-seg:not(.rel-conta) { display: flex; width: 100%; }
   .rel-seg:not(.rel-conta) button { flex: 1 1 auto; padding: 0 6px; font-size: 12.5px; }
-  .rel-kpis.tres { grid-template-columns: minmax(0, 1fr); }
+  .rel-kpis.tres { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  /* saldo, depósitos e saques: três linhas compactas (rótulo à esquerda, valor à direita), não três cartões altos */
+  .rel-kpis.tres > div { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'rot valor' 'nota valor'; align-items: center; column-gap: 12px; row-gap: 2px; padding: 12px 14px; }
+  .rel-kpis.tres > div > span { grid-area: rot; }
+  .rel-kpis.tres > div > small { grid-area: nota; }
+  .rel-kpis.tres > div > b { grid-area: valor; font-size: 18px; }
+  /* a conta e o "Atualizar" na mesma linha, cada um na sua ponta (antes o botão ficava solto no meio) */
+  .rel-atualizar { margin-left: auto; }
   .rel-ops .cab { display: none; }
   .rel-ops .linha { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'nome res' 'quando entrada'; row-gap: 2px; }
   .rel-ops .linha > span:nth-child(1) { grid-area: quando; font-size: 11.5px; color: var(--muted); }
@@ -123,6 +134,8 @@
   .rel-ops .linha > span:nth-child(4) { grid-area: entrada; text-align: right; font-size: 11.5px; color: var(--muted); }
   .rel-ops .linha > span:nth-child(5) { grid-area: res; }
   .rel-horas i { height: 24px; border-radius: 3px; }
+  /* o SVG da curva encolhe para ~320 px: as datas em 11 px viravam ~5 px; aqui ficam ~11 px na tela */
+  .rel-curva .eixo { font-size: 22px; }
   .rel-horas { gap: 2px; }
 }
 @media (prefers-reduced-motion: reduce) { .rel-esqueleto i { animation: none; } }

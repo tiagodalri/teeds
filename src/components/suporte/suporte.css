@@ -17,6 +17,14 @@
 body:has(.av-pilula) .sp-lancador-area { bottom: calc(68px + var(--sab, 0px)); }
 body:has(.app-convite) .sp-lancador-area { bottom: calc(100px + var(--sab, 0px)); }
 body.aovivo-lado .sp-lancador-area { right: 400px; }
+/* a miniatura da sala de treino no canto de baixo à direita: o botão sobe para cima dela.
+   --av-livre-embaixo é medida pelo player (PlayerDoTreino.tsx): da borda de baixo da tela até o topo dele. */
+body:has(.av-flutuante.embaixo[data-canto$='dir']) .sp-lancador-area { bottom: var(--av-livre-embaixo, 220px); }
+@media (min-width: 641px) {
+  body:has(.av-flutuante.embaixo[data-canto$='dir']) .sp-painel {
+    bottom: calc(var(--av-livre-embaixo, 220px) + 72px); height: min(640px, calc(100dvh - var(--av-livre-embaixo, 220px) - 110px));
+  }
+}
 .sp-lancador {
   position: relative; display: flex; align-items: center; gap: 10px; padding: 0; border: 0; background: none; color: var(--text); cursor: pointer; font: inherit;
 }
@@ -197,6 +205,13 @@ body:has(.av-pilula) .sp-painel { bottom: calc(140px + var(--sab, 0px)); }
 
 .sp-ampliada { position: fixed; inset: 0; z-index: 1500; display: grid; place-items: center; padding: 20px; border: 0; background: rgba(2, 8, 20, .88); cursor: zoom-out; }
 .sp-ampliada img { max-width: 100%; max-height: 100%; border-radius: 10px; }
+/* fechar à vista (antes só tocando no fundo) */
+.sp-ampliada-fechar {
+  position: absolute; top: calc(12px + var(--sat, 0px)); right: calc(12px + var(--sar, 0px)); display: grid; place-items: center; width: 44px; height: 44px;
+  border: 1px solid rgba(243, 240, 233, .3); border-radius: 50%; background: rgba(2, 8, 20, .7); color: #F3F0E9; cursor: pointer;
+}
+.sp-ampliada-fechar svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.sp-ampliada-fechar:focus-visible { outline: 2px solid var(--sp-ouro); outline-offset: 2px; }
 
 /* ------------------------------------------------ celular e app */
 @media (max-width: 640px) {
@@ -213,6 +228,15 @@ body:has(.av-pilula) .sp-painel { bottom: calc(140px + var(--sab, 0px)); }
   .sp-escrever textarea { font-size: 16px; } /* 16 px: o iPhone não dá zoom */
   .sp-msg { max-width: 90%; }
   html.sp-aberto, html.sp-aberto body { overflow: hidden; }
+  /* dedo, não ponteiro (29/10/2026): os alvos do chat com 44 px */
+  .sp-icone-btn, .sp-escrever .sp-icone-btn, .sp-trilha-voltar, .sp-estrelas button { width: 44px; height: 44px; }
+  .sp-cabeca { grid-template-columns: 44px minmax(0, 1fr) 44px; }
+  .sp-icone-vazio { width: 44px; }
+  .sp-enviar { width: 44px; height: 44px; }
+  .sp-btn { min-height: 44px; }
+  .sp-resolveu button { min-height: 44px; padding: 0 6px; }
+  /* o chat em tela cheia: a miniatura da sala de treino não fica por cima (o som continua) */
+  html.sp-aberto .av-flutuante { visibility: hidden; }
 }
 @keyframes sp-abre-cel { from { opacity: 0; transform: translateY(24px); } }
 @media (prefers-reduced-motion: reduce) {
@@ -280,3 +304,4 @@ body:has(.av-pilula) .sp-painel { bottom: calc(140px + var(--sab, 0px)); }
 @media (prefers-reduced-motion: reduce) { .sp-pergunta { animation: none; } .sp-temas button { transition: none; } }
 /* revisão 21/10/2026: no celular, campo com menos de 16 px faz o iPhone dar zoom ao tocar */
 @media (max-width: 700px) { .sp-fim textarea { font-size: 16px; } }
+

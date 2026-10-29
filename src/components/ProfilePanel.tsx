@@ -43,16 +43,18 @@ export function ProfilePanel({ sessao, onAtualizar, onFechar, contas = [], deriv
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [recado, setRecado] = useState<string | null>(null)
+  // o retorno aparece embaixo do botão que a pessoa tocou, não no fim do painel
+  const [onde, setOnde] = useState<'dados' | 'senha'>('dados')
 
   const mudouDados =
     nome.trim() !== (u.nome ?? '').trim() ||
     telefone.replace(/\D/g, '') !== (u.telefone ?? '')
   const dadosValidos = nome.trim().length >= 2 && telefoneValido(telefone)
-  const senhaValida = senha.length >= 6 && senha === repetir
+  const senhaValida = senha.length >= 8 && senha === repetir
 
   async function salvarDados() {
     if (!dadosValidos || salvando) return
-    setSalvando(true); setErro(null); setRecado(null)
+    setOnde('dados'); setSalvando(true); setErro(null); setRecado(null)
     try {
       onAtualizar(await atualizarPerfil(sessao.token, { nome, telefone }))
       setRecado('Dados atualizados.')
@@ -73,7 +75,7 @@ export function ProfilePanel({ sessao, onAtualizar, onFechar, contas = [], deriv
   */
   async function pedirLinkDeSenha() {
     if (salvando) return
-    setSalvando(true); setErro(null); setRecado(null)
+    setOnde('senha'); setSalvando(true); setErro(null); setRecado(null)
     try {
       await recuperarSenha(sessao.usuario.email)
       setRecado(`Link enviado para ${sessao.usuario.email}. Ele vale por uma hora.`)
@@ -82,7 +84,7 @@ export function ProfilePanel({ sessao, onAtualizar, onFechar, contas = [], deriv
 
   async function salvarSenha() {
     if (!senhaValida || salvando) return
-    setSalvando(true); setErro(null); setRecado(null)
+    setOnde('senha'); setSalvando(true); setErro(null); setRecado(null)
     try {
       await trocarSenha(sessao.token, senha)
       setSenha(''); setRepetir('')
@@ -93,6 +95,11 @@ export function ProfilePanel({ sessao, onAtualizar, onFechar, contas = [], deriv
       setSalvando(false)
     }
   }
+
+  const retorno = <>
+    {erro && <div className="entrada-erro" role="alert">{erro}</div>}
+    {recado && <div className="entrada-recado" role="status">{recado}</div>}
+  </>
 
   return (
     <div className="qz-fundo" onMouseDown={(e) => { if (e.target === e.currentTarget) onFechar() }}>
@@ -123,12 +130,13 @@ export function ProfilePanel({ sessao, onAtualizar, onFechar, contas = [], deriv
               <div><span className="rot">Cliente desde</span><b>{desde(u.criadoEm) ?? '—'}</b></div>
             </div>
             <p className="perfil-nota">
-              CPF e e-mail não mudam por aqui. Se precisar corrigir, me chame.
+              CPF e e-mail não mudam por aqui. Para corrigir, fale com o suporte.
             </p>
             <button className="perfil-btn" disabled={!mudouDados || !dadosValidos || salvando}
               onClick={salvarDados}>
-              {salvando ? 'salvando…' : 'Salvar dados'}
+              {salvando && onde === 'dados' ? 'Salvando…' : 'Salvar dados'}
             </button>
+            {onde === 'dados' && retorno}
           </section>
 
           <div className="perfil-linha" />
@@ -170,7 +178,7 @@ export function ProfilePanel({ sessao, onAtualizar, onFechar, contas = [], deriv
             <label>
               <span className="rot">Nova senha</span>
               <input type="password" value={senha} autoComplete="new-password"
-                placeholder="pelo menos 6 caracteres"
+                placeholder="Pelo menos 8 caracteres"
                 onChange={(e) => setSenha(e.target.value)} />
             </label>
             <label>
@@ -182,20 +190,18 @@ export function ProfilePanel({ sessao, onAtualizar, onFechar, contas = [], deriv
               <p className="perfil-erro">As duas senhas não são iguais.</p>
             )}
             <button className="perfil-btn" disabled={!senhaValida || salvando} onClick={salvarSenha}>
-              {salvando ? 'salvando…' : 'Trocar senha'}
+              {salvando && onde === 'senha' ? 'Salvando…' : 'Trocar senha'}
             </button>
             <p className="perfil-ou">ou</p>
             <button className="perfil-btn secundario" disabled={salvando} onClick={pedirLinkDeSenha}>
               Receber um link por e-mail
             </button>
             <p className="entrada-mini">
-              Mandamos um link para {sessao.usuario.email}. Ele vale por uma hora e abre a tela
+              O link chega em {sessao.usuario.email}, vale por uma hora e abre a tela
               de criar a nova senha, com a confirmação.
             </p>
+            {onde === 'senha' && retorno}
           </section>
-
-          {erro && <div className="entrada-erro">{erro}</div>}
-          {recado && <div className="entrada-recado">{recado}</div>}
         </div>
       </div>
     </div>

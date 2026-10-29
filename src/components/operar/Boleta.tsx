@@ -25,11 +25,11 @@ export function BoletaAtivo({ nome, preco, pipSize, direcao, sintetico, aberto }
       <span className="bl-ativo-ic" aria-hidden="true">{sigla}</span>
       <div className="bl-ativo-nome">
         <b>{nome || 'Ativo'}</b>
-        <small>{!aberto ? 'Mercado fechado agora' : sintetico ? 'Sintético · 24 h' : 'Mercado aberto'}</small>
+        <small>{!aberto ? 'Mercado fechado agora' : sintetico ? 'Aberto 24 h' : 'Mercado aberto'}</small>
       </div>
       <span className="bl-ativo-preco" aria-live="off">
         <b className={direcao === 'up' ? 'sobe' : direcao === 'down' ? 'cai' : ''}>{preco === null ? '—' : fmtPreco(preco, pipSize)}</b>
-        <small><i className={preco !== null && aberto ? 'vivo' : ''} aria-hidden="true" />{preco !== null && aberto ? 'Ao vivo' : 'Aguardando'}</small>
+        <small><i className={preco !== null && aberto ? 'vivo' : ''} aria-hidden="true" />{!aberto ? 'Fechado' : preco !== null ? 'Ao vivo' : 'Aguardando'}</small>
       </span>
     </div>
   )
@@ -48,22 +48,36 @@ const proximo = (v: number, sobe: boolean) => sobe
  * (22/10/2026, segunda versão: os círculos soltos e o número flutuando no
  * meio pareciam desalinhados.)
  */
-export function MostradorValor({ stake, texto, moeda, alerta, saldo = null, aoMudarTexto, aoMudar, aoSair }: {
+/** O menor valor que a Deriv aceita numa entrada. */
+export const VALOR_MINIMO = 0.35
+// a mesma leitura do App (lerValor): vírgula decimal, ou ponto quando não é milhar
+const lerTexto = (t: string) => Number(t.includes(',') || /^[1-9]\d{0,2}(\.\d{3})+$/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t)
+
+export function MostradorValor({ stake, texto, moeda, alerta, saldo = null, conta = null, aoMudarTexto, aoMudar, aoSair }: {
   stake: number; texto: string | null; moeda: string; alerta: boolean; saldo?: number | null
+  /** O tipo da conta como a tela mostra (com rótulos trocados, já trocado): o selo fica ao lado do saldo. */
+  conta?: 'real' | 'demo' | null
   aoMudarTexto: (t: string) => void; aoMudar: (v: number) => void; aoSair: () => void
 }) {
   const visto = texto ?? stake.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })
+  // digitando um valor abaixo do mínimo: diz na hora, em vez de corrigir calado ao sair do campo
+  const abaixo = texto !== null && texto.trim() !== '' && Number.isFinite(lerTexto(texto)) && lerTexto(texto) < VALOR_MINIMO
   return (
-    <div className={`bl-most ${alerta ? 'alerta' : ''}`}>
+    <div className={`bl-most ${alerta || abaixo ? 'alerta' : ''}`}>
       <div className="bl-most-cab">
         <span className="bl-rot" id="bl-valor-rot">Valor da entrada</span>
-        {saldo !== null && <span className="bl-saldo">Saldo <b>{dinheiro(saldo, moeda)}</b></span>}
+        {(saldo !== null || conta) && (
+          <span className="bl-saldo">
+            {conta && <i className={`bl-conta ${conta}`}>{conta === 'real' ? 'Conta real' : 'Conta demo'}</i>}
+            {saldo !== null && <>Saldo <b>{dinheiro(saldo, moeda)}</b></>}
+          </span>
+        )}
       </div>
       <div className="bl-campo">
         <button type="button" className="bl-campo-pm" aria-label="Diminuir o valor" disabled={stake <= 0.35} onClick={() => aoMudar(proximo(stake, false))}>−</button>
         <label className="bl-campo-valor">
           <small>{simboloMoeda(moeda)}</small>
-          <input type="text" inputMode="decimal" autoComplete="off" aria-labelledby="bl-valor-rot" value={visto}
+          <input type="text" inputMode="decimal" autoComplete="off" aria-labelledby="bl-valor-rot" aria-invalid={abaixo || undefined} value={visto}
             style={{ width: `${Math.max(3, visto.length) + 0.3}ch` }}
             onFocus={(e) => e.currentTarget.select()}
             onChange={(e) => aoMudarTexto(e.target.value.replace(/[^\d.,]/g, ''))}
@@ -71,6 +85,7 @@ export function MostradorValor({ stake, texto, moeda, alerta, saldo = null, aoMu
         </label>
         <button type="button" className="bl-campo-pm" aria-label="Aumentar o valor" onClick={() => aoMudar(proximo(stake, true))}>+</button>
       </div>
+      {abaixo && <p className="bl-alerta" role="status">O valor mínimo é {dinheiro(VALOR_MINIMO, moeda)}.</p>}
       <div className="bl-regua" role="group" aria-label="Valores rápidos">
         {[0.35, 1, 5, 10, 50].map((v) => (
           <button key={v} type="button" className={stake === v ? 'on' : ''} aria-pressed={stake === v} onClick={() => aoMudar(v)}>{v.toLocaleString('pt-BR')}</button>
@@ -82,7 +97,8 @@ export function MostradorValor({ stake, texto, moeda, alerta, saldo = null, aoMu
 
 /* ------------------------------------------------ o mostrador da duração */
 type Unidade = 't' | 's' | 'm'
-const NOME_UNIDADE: Record<Unidade, [string, string]> = { t: ['tick', 'ticks'], s: ['seg', 'seg'], m: ['min', 'min'] }
+// tick é cada nova cotação do ativo: na tela, "cotação" (jargão só no botão, com a explicação no title)
+const NOME_UNIDADE: Record<Unidade, [string, string]> = { t: ['cotação', 'cotações'], s: ['seg', 'seg'], m: ['min', 'min'] }
 const ATALHOS: Record<Unidade, number[]> = { t: [1, 3, 5, 7, 10], s: [15, 30, 60, 120, 300], m: [1, 5, 15, 30, 60] }
 
 export function MostradorDuracao({ duracao, unidade, faixa, disponiveis, aoMudar, aoTrocarUnidade, aoSair }: {
@@ -101,6 +117,7 @@ export function MostradorDuracao({ duracao, unidade, faixa, disponiveis, aoMudar
         <span className="bl-unid" role="group" aria-label="Unidade da duração">
           {(['t', 's', 'm'] as const).map((u) => (
             <button key={u} type="button" disabled={!disponiveis[u]} className={unidade === u ? 'on' : ''}
+              title={u === 't' ? 'Ticks: cada tick é uma nova cotação do ativo' : u === 's' ? 'Segundos' : 'Minutos'}
               onClick={() => aoTrocarUnidade(u)}>{u === 't' ? 'Ticks' : u === 's' ? 'Seg' : 'Min'}</button>
           ))}
         </span>
@@ -162,16 +179,16 @@ export function BotaoCompra({ tipo, payout, moeda, carregando, erro, podeOperar,
   return (
     <button type="button" className={`bl-botao ${tipo} ${confirmando ? 'confirmando' : ''}`}
       disabled={travado} onClick={aoComprar}
-      aria-label={comprando ? `${titulo}: comprando` : motivoBloqueio ? `${titulo}: ${motivoBloqueio}` : erro ? `${titulo}: ${erro}`
-        : confirmando ? `Confirmar ${titulo}${semDizerReal ? '' : ' com dinheiro real'}` : `${titulo}${valor !== null ? `, recebe ${dinheiro(valor, moeda)} se acertar` : ''}`}>
+      aria-label={comprando ? `${titulo}: enviando` : motivoBloqueio ? `${titulo}: ${motivoBloqueio}` : erro ? `${titulo}: ${erro}`
+        : confirmando ? `Confirmar ${titulo} de ${dinheiro(stake, moeda)}${semDizerReal ? '' : ' com dinheiro real'}` : `${titulo}${valor !== null ? `, recebe ${dinheiro(valor, moeda)} se acertar` : ''}`}>
       <span className="bl-botao-lin">
         <span className="bl-seta" aria-hidden="true">{tipo === 'sobe' ? '▲' : '▼'}</span>
         <span className="bl-dir">{titulo}</span>
         {pct !== null && !erro && <span className="bl-pct">{pct}%</span>}
       </span>
-      {comprando ? <span className="bl-estado">Comprando…</span>
+      {comprando ? <span className="bl-estado">Enviando…</span>
         : motivoBloqueio ? <span className="bl-estado">{motivoBloqueio}</span>
-        : confirmando ? <span className="bl-estado">{TOQUE ? 'Toque' : 'Clique'} de novo para confirmar{!semDizerReal && <small>Dinheiro real</small>}</span>
+        : confirmando ? <span className="bl-estado">{TOQUE ? 'Toque' : 'Clique'} de novo para confirmar {dinheiro(stake, moeda)}{!semDizerReal && <small>Dinheiro real</small>}</span>
         : erro ? <span className="bl-estado" title={erro}>{erro}</span>
         : <>
             <small>Recebe</small>
@@ -191,7 +208,7 @@ export function ResumoDaCompra({ payouts, stake, moeda, duracao, unidade }: {
   const lucro = !lucros.length ? null : dinheiro(Math.max(...lucros), moeda)
   const ate = lucros.length > 1 && Math.abs(Math.max(...lucros) - Math.min(...lucros)) >= 0.005
   const fecha = unidade === 't'
-    ? <>Fecha em <b>{duracao} {duracao === 1 ? 'tick' : 'ticks'}</b></>
+    ? <>Fecha após <b>{duracao} {duracao === 1 ? 'cotação' : 'cotações'}</b></>
     : (() => {
         const fim = new Date(agora + duracao * (unidade === 'm' ? 60_000 : 1000))
         const hora = fim.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
@@ -200,7 +217,8 @@ export function ResumoDaCompra({ payouts, stake, moeda, duracao, unidade }: {
       })()
   return (
     <div className="bl-resumo">
-      <span>Lucro <span className="bl-longo">se acertar </span>{ate ? 'até ' : ''}<b>{lucro ?? '—'}</b></span>
+      {/* a condição nunca some (29/10/2026): sem ela, "Lucro até US$ X" soava como promessa */}
+      <span>Se acertar: {ate ? 'até ' : ''}<b>{lucro ? `+${lucro}` : '—'}</b></span>
       <span>{fecha}</span>
     </div>
   )

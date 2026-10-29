@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import './aulas/sala-de-aula.css'
 
 /**
  * O player da sala de aula, com os próprios controles.
@@ -220,7 +221,7 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
               <div>
                 <button className="cine-fim-ir" onClick={() => { setContagem(null); proxima.abrir() }}>Assistir agora →</button>
                 <button className="cine-fim-ficar" onClick={() => { setContagem(null); const v = video.current; if (v) { v.currentTime = 0; void v.play() } }}>Rever esta aula</button>
-                {contagem != null && <button className="cine-fim-ficar" onClick={() => setContagem(null)}>Cancelar</button>}
+                {contagem != null && <button className="cine-fim-ficar cine-fim-cancelar" onClick={() => setContagem(null)}>Cancelar</button>}
               </div>
             </>
           ) : (
@@ -233,7 +234,8 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
         </div>
       )}
 
-      <div className="cine-controles" onClick={(e) => e.stopPropagation()}>
+      {/* no fim da aula, os controles somem: por cima do quadro "Aula concluída" eles cobriam os botões (29/10/2026) */}
+      {!acabou && <div className="cine-controles" onClick={(e) => e.stopPropagation()}>
         <div ref={barra} className={`cine-barra ${arrastando ? 'arrastando' : ''}`} onPointerDown={iniciarArraste} role="slider" tabIndex={0} aria-label="Progresso" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} aria-valuetext={`${fmt(tempo)} de ${fmt(duracao)}`}
           onKeyDown={e => {
             const v = video.current
@@ -269,7 +271,7 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
               : <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>}
           </button>
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

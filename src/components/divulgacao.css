@@ -60,3 +60,24 @@
   .dv-seg { width: 100%; }
   .dv-seg button { flex: 1; }
 }
+
+/* Revisão visual de 29/10/2026 ------------------------------------------- */
+/* Rótulo com a primeira maiúscula. */
+.dv-rot { font-size: 13px; letter-spacing: .01em; text-transform: none; }
+/* Um dourado por bloco: "Copiar" é dourado só no link principal; nos outros,
+   o botão secundário (eram quatro botões dourados na mesma tela). */
+.dv-link:not(.principal) .dv-link-acoes button.principal {
+  border-color: color-mix(in srgb, var(--dv-ouro) 60%, var(--border)); background: var(--surface); color: var(--text);
+}
+.dv-link:not(.principal) .dv-link-acoes button.principal:hover { background: color-mix(in srgb, var(--dv-ouro) 12%, transparent); }
+/* O endereço em dourado não tinha contraste sobre o marfim: no claro, escurece. */
+:root:not([data-tema='escuro']) :is(.dv-link-texto code, .dv-rot) { color: color-mix(in srgb, var(--dv-ouro) 62%, var(--text)); }
+/* Textos de apoio no piso de leitura (a escala de 90% do computador encolhe tudo). */
+.dv-link-texto small, .dv-redes > span, .dv-redes button, .dv-dica { font-size: 13px; }
+@media (max-width: 640px) {
+  /* cartão dentro de cartão: o de fora com menos recuo, sobra largura para o link */
+  .dv { padding-inline: 16px; }
+  .dv-bloco { padding: 16px; }
+  .dv-link { padding: 14px; }
+  .dv-link-acoes :is(button, a) { height: 44px; }
+}

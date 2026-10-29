@@ -19,6 +19,7 @@ import './grafico-pro.css'
 import { ControlesDeZoom } from './ControlesDeZoom'
 import { CartaoDaOperacao } from './CartaoDaOperacao'
 import { naPagina } from '../../core/escala'
+import { textoBR } from '../../core/chart/scales'
 import { MARCA } from '../../marca'
 
 interface Props {
@@ -36,6 +37,10 @@ interface Props {
   sinalLiberado?: boolean
   /** Moeda da conta, para o resultado no cartão das operações. */
   moeda?: string
+  /** O histórico de velas não veio (erro da corretora ou da rede): o gráfico diz isso em vez de ficar vazio. */
+  erro?: string | null
+  /** Tentar de novo. Sem ele, o botão recarrega a página. */
+  aoTentarDeNovo?: () => void
 }
 
 /* ------------------------------------------------------------- registro */
@@ -211,7 +216,7 @@ function estiloDoDesenho(d: Pick<DesenhoSalvo, 'cor' | 'espessura' | 'tracejado'
 
 /* =================================================================== */
 
-export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granularity, loading, markers = [], sessao, sinalLiberado = false, moeda = 'USD' }: Props) {
+export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granularity, loading, markers = [], sessao, sinalLiberado = false, moeda = 'USD', erro = null, aoTentarDeNovo }: Props) {
   const compactoRef = useRef(false)
   const caixa = useRef<HTMLDivElement>(null)
   const chartRef = useRef<Chart | null>(null)
@@ -223,6 +228,14 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
     atual escorregava para o meio, com um vazio de futuro à direita. Sem
     animação: o centralizar animado podia parar no meio do caminho.
   */
+  // o histórico não veio: depois de 1,5 s sem velas e sem carregar, o gráfico diz isso
+  // (o useCandleSeries só desliga o "carregando" aos 12 s, sem dizer que falhou)
+  const [semVelas, setSemVelas] = useState(false)
+  useEffect(() => {
+    if (loading || candles.length) { setSemVelas(false); return }
+    const t = window.setTimeout(() => setSemVelas(true), 1500)
+    return () => window.clearTimeout(t)
+  }, [loading, candles.length])
   const noAgora = (c: Chart) => c.getVisibleRange().realTo >= c.getDataList().length - 1
   const zoomPeloBotao = (fator: number) => {
     const c = chartRef.current
@@ -276,7 +289,8 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
     registrarTudo()
     const el = caixa.current!
     compactoRef.current = estreito(el)
-    const chart = init(el, { locale: 'pt-BR', styles: estilos(mode, compactoRef.current) })
+    // números no formato brasileiro no eixo, na dica e nas marcas ("1.234,567"), iguais à boleta
+    const chart = init(el, { locale: 'pt-BR', styles: estilos(mode, compactoRef.current), thousandsSeparator: { sign: '.', format: textoBR } })
     if (!chart) return
     chartRef.current = chart
     if (import.meta.env.DEV) (window as unknown as { __graficoPro?: Chart }).__graficoPro = chart
@@ -541,7 +555,13 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
           )}
           <div className="gp-kline" ref={caixa} />
           <CartaoDaOperacao markers={markers} pipSize={pipSize} moeda={moeda} />
-          {loading && <span className="gp-carregando">Carregando velas…</span>}
+          {loading && !erro && <span className="gp-carregando">Carregando velas…</span>}
+          {(erro || semVelas) && !loading && !candles.length && (
+            <div className="gp-erro" role="alert">
+              <b>Não conseguimos carregar o gráfico agora.</b>
+              <button type="button" onClick={() => (aoTentarDeNovo ? aoTentarDeNovo() : window.location.reload())}>Tentar de novo</button>
+            </div>
+          )}
           <ControlesDeZoom style={pePainel !== null ? { left: '50%', top: pePainel } : { left: '50%', bottom: 44 }}
             aoAfastar={() => zoomPeloBotao(0.8)}
             aoAproximar={() => zoomPeloBotao(1.25)}

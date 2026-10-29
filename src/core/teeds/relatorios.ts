@@ -93,10 +93,11 @@ export async function dinheiroDoPeriodo(socket: TeedsSocket, periodo: Periodo): 
 }
 
 /** O nome do tipo de contrato, como a tela de operar mostra. */
+/** O mesmo nome das outras telas (PositionCard › NOMES_DE_CONTRATO): substantivo, não o verbo do botão. */
 export function nomeDoTipo(tipo: string): string {
   const nomes: Record<string, string> = {
     DIGITOVER: 'Dígito acima', DIGITUNDER: 'Dígito abaixo', DIGITMATCH: 'Dígito igual', DIGITDIFF: 'Dígito diferente',
-    DIGITEVEN: 'Par', DIGITODD: 'Ímpar', CALL: 'Comprar', PUT: 'Vender', CALLE: 'Comprar', PUTE: 'Vender',
+    DIGITEVEN: 'Par', DIGITODD: 'Ímpar', CALL: 'Compra', PUT: 'Venda', CALLE: 'Compra', PUTE: 'Venda',
   }
   return nomes[tipo] ?? tipo
 }

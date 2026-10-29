@@ -72,6 +72,9 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
   const [repetir, setRepetir] = useState('')
   const [senhaRecado, setSenhaRecado] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
   const arquivo = useRef<HTMLInputElement>(null)
+  // o recado mora no topo, mas no celular quem salva está na barra do rodapé: a tela vai até ele
+  const recadoRef = useRef<HTMLParagraphElement>(null)
+  useEffect(() => { if (recado) recadoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, [recado])
 
   const carregar = () => lerPerfil(sessao).then((p) => {
     setPerfil(p); setNome(p.nome); setCpf(p.cpf ? formatarCPF(p.cpf) : ''); setTelefone(formatarTelefone(p.telefone)); setEnd({ ...p.endereco, cep: formatarCep(p.endereco.cep) }); setFoto(p.fotoUrl); setErroCarga(null)
@@ -150,7 +153,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
     try { await removerFoto(sessao); setFoto(null); onMudou?.({ nome: perfil?.nome ?? nome, fotoUrl: null }) } catch { /* fica como estava */ } finally { setEnviandoFoto(false) }
   }
 
-  const senhaOk = senha.length >= 6 && senha === repetir
+  const senhaOk = senha.length >= 8 && senha === repetir
   async function salvarSenha() {
     if (!senhaOk) return
     setSenhaRecado(null)
@@ -205,7 +208,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
         </div>
       </section>
 
-      {recado && <p className={`mp-recado ${recado.tipo}`} role="status">{recado.texto}</p>}
+      {recado && <p ref={recadoRef} className={`mp-recado ${recado.tipo}`} role="status">{recado.texto}</p>}
 
       <div className="mp-grade">
         {/* ------------------------------------------------ plano */}
@@ -307,7 +310,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
         {/* ------------------------------------------------ segurança */}
         <section className="mp-cartao">
           <h2><Ic d={I.chave} />Senha</h2>
-          <label className="mp-campo"><span>Nova senha</span><input type="password" value={senha} autoComplete="new-password" placeholder="Pelo menos 6 caracteres" onChange={(e) => setSenha(e.target.value)} /></label>
+          <label className="mp-campo"><span>Nova senha</span><input type="password" value={senha} autoComplete="new-password" placeholder="Pelo menos 8 caracteres" onChange={(e) => setSenha(e.target.value)} /></label>
           <label className="mp-campo"><span>Repita a senha</span><input type="password" value={repetir} autoComplete="new-password" onChange={(e) => setRepetir(e.target.value)} aria-invalid={!!repetir && senha !== repetir} />
             {repetir && senha !== repetir && <small className="erro">As duas senhas não são iguais.</small>}</label>
           <div className="mp-acoes">

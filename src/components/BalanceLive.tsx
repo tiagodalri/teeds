@@ -33,7 +33,7 @@ export function BalanceLive({ valor, moeda, conectando }: Props) {
   }, [valor])
 
   if (valor === null) {
-    return <strong className="saldo saldo-vazio">{conectando ? 'conectando…' : '—'}</strong>
+    return <strong className="saldo saldo-vazio">{conectando ? 'Conectando…' : '—'}</strong>
   }
 
   // o olhinho fechado: nem o valor, nem a variação

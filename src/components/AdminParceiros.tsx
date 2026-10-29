@@ -85,7 +85,7 @@ export function AdminParceiros({ sessao, marca = MARCA.id, api = DO_BANCO }: { s
           {PERIODOS.map((p) => <button key={p.id} type="button" role="tab" aria-selected={periodo === p.id} className={periodo === p.id ? 'on' : ''} onClick={() => setPeriodo(p.id)}>{p.nome}</button>)}
         </div>
       </div>
-      <p className="ap-dica">Para saber de qual rede veio, o parceiro pode usar <b>{site}/n?utm_source=instagram</b> (ou youtube, whatsapp…). Continua contando para ele.</p>
+      <p className="ap-dica">Para saber de qual rede veio, o parceiro pode acrescentar <b>?utm_source=instagram</b> ao próprio link (ou youtube, whatsapp…), por exemplo <b>{site}/código-do-parceiro?utm_source=instagram</b>. Continua contando para ele.</p>
 
       {erro && <div className="ap-erro">{erro} <button type="button" onClick={() => setRodada((n) => n + 1)}>Tentar de novo</button></div>}
       {!linhas && !erro && <div className="ap-carregando">Carregando os números…</div>}
@@ -123,7 +123,7 @@ export function AdminParceiros({ sessao, marca = MARCA.id, api = DO_BANCO }: { s
                       {grupo.lista.map((c) => (
                         <tr key={c.userId}>
                           <td><b>{c.nome || 'Sem nome'}</b><small>{c.email}</small></td>
-                          <td>{new Date(c.criadoEm).toLocaleDateString('pt-BR')}<small>{c.status}</small></td>
+                          <td>{new Date(c.criadoEm).toLocaleDateString('pt-BR')}<small>{c.status ? c.status[0].toUpperCase() + c.status.slice(1) : ''}</small></td>
                           <td>{c.fonte ? FONTE[c.fonte] ?? c.fonte : '—'}</td>
                           <td className="num">{int(c.operacoes)}</td>
                           <td className="num"><b>{usd(c.markup)}</b></td>

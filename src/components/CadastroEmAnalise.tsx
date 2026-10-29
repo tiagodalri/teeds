@@ -24,6 +24,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Brand } from './Brand'
 import { DerivLogo, IconeSaida } from './DerivMarca'
 import { MARCA } from '../marca'
+import './entrada/login.css'
 
 export function CadastroEmAnalise({ email, nome, aoConferir, aoSair }: {
   email: string
@@ -76,7 +77,7 @@ export function CadastroEmAnalise({ email, nome, aoConferir, aoSair }: {
         <header className="entrada-topo">
           <div className="entrada-marca"><Brand tamanho={46} /></div>
           <div className="entrada-opera">
-            <span>opera com</span>
+            <span>Opera com</span>
             <DerivLogo altura={15} />
           </div>
         </header>
@@ -94,7 +95,7 @@ export function CadastroEmAnalise({ email, nome, aoConferir, aoSair }: {
           </li>
           <li className="agora" aria-current="step">
             <i aria-hidden="true" />
-            <span><b>Em análise <em>agora</em></b><small>Nossa equipe confere cada cadastro, um a um.</small></span>
+            <span><b>Em análise <em>Agora</em></b><small>Nossa equipe confere cada cadastro, um a um.</small></span>
           </li>
           <li>
             <i aria-hidden="true" />
@@ -107,7 +108,7 @@ export function CadastroEmAnalise({ email, nome, aoConferir, aoSair }: {
           <div className="entrada-corretora espera-corretora">
             <div className="corretora-topo">
               <DerivLogo altura={20} />
-              <span className="corretora-selo">corretora oficial</span>
+              <span className="corretora-selo">Corretora oficial</span>
             </div>
             <b>Adiante: abra sua conta na Deriv</b>
             <p>É grátis. O seu dinheiro fica na sua conta da corretora, e a {MARCA.prosa} se conecta a ela para operar.</p>

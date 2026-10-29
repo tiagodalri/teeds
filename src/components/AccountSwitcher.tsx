@@ -68,6 +68,15 @@ export function AccountSwitcher(props: Props) {
     }
   }, [aberto])
 
+  // outras telas pedem a troca de conta (o passo "Treine na conta demo" do Início): o menu abre
+  const onAbrirRef = useRef(props.onAbrir)
+  onAbrirRef.current = props.onAbrir
+  useEffect(() => {
+    const abrir = () => { onAbrirRef.current?.(); setAberto(true) }
+    window.addEventListener('conta:abrir', abrir)
+    return () => window.removeEventListener('conta:abrir', abrir)
+  }, [])
+
   return (
     <div className="conta" ref={caixa}>
       <button
@@ -85,7 +94,7 @@ export function AccountSwitcher(props: Props) {
       </button>
 
       {aberto && (
-        <div className="menu" role="menu">
+        <div className="menu menu-contas" role="menu">
           <p className="menu-titulo">Suas contas na Deriv</p>
 
           {naOrdem.map((c) => {

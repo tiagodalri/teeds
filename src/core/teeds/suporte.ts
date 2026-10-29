@@ -80,7 +80,10 @@ async function rest<T>(sessao: SessaoTeeds, caminho: string, init: RequestInit =
   const r = await fetch(`${SUPABASE.url}/rest/v1${caminho}`, { ...init, headers: cabecalho(sessao, init.headers as Record<string, string>) })
   if (!r.ok) {
     const c = await r.json().catch(() => ({}))
-    throw new Error(String(c?.message || `Não consegui falar com o suporte agora (${r.status}). Tente de novo.`))
+    // o texto do banco é técnico (e em inglês): fica no console, a pessoa lê o nosso (29/10/2026).
+    // Só o recado escrito por nós numa função (raise exception, código P0001) passa adiante.
+    if (c?.message) console.warn('suporte:', r.status, c.code, c.message)
+    throw new Error(c?.code === 'P0001' && c?.message ? String(c.message) : 'Não consegui falar com o suporte agora. Tente de novo em instantes.')
   }
   if (r.status === 204) return undefined as T
   const texto = await r.text()

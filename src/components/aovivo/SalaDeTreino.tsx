@@ -91,7 +91,7 @@ export const linkDoTreino = () => `${location.origin}${import.meta.env.BASE_URL}
 export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
   const [copiado, setCopiado] = useState(false)
   const link = linkDoTreino()
-  const texto = `Sala de treino da ${MARCA.prosa}: acompanhe o ensaio da live como se fosse um aluno. Entre com a sua conta por aqui: ${link}`
+  const texto = `Sala de treino da ${MARCA.prosa}: transmissão exclusiva do GF Member. Entre com a sua conta por aqui: ${link}`
   const copiar = async () => {
     try { await navigator.clipboard.writeText(link) } catch {
       const t = document.createElement('textarea'); t.value = link; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove()
@@ -111,7 +111,7 @@ export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
           ? <button className="av-botao-whats" onClick={() => void navigator.share({ text: texto }).catch(() => undefined)}>Compartilhar</button>
           : <a className="av-botao-whats" href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
       </div>
-      <p className="tr-link-nota">Só membros GF Member (e administradores) entram, com a conta deles. Eles assistem o seu ensaio como alunos, com o selo "GF Streaming" sempre na imagem.</p>
+      <p className="tr-link-nota">Só quem é do GF Member (e os administradores) entra, com a própria conta. Eles assistem ao seu ensaio como alunos, com o selo "GF Streaming" sempre na imagem.</p>
     </div>
   )
 }
@@ -405,7 +405,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
                 <p key={m.id} className="tr-entrada">{m.nome} {m.saida ? 'saiu' : 'entrou'}</p>
               ) : (
                 <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''} ${m.membro && central.respondidas.has(m.id) ? 'cv-vista' : ''}`}>
-                  <p><b>{m.nome}{m.apresentador && <em>você</em>}{m.membro && <em className="tr-tag-membro">membro</em>}</b> {m.texto}</p>
+                  <p><b>{m.nome}{m.apresentador && <em>Você</em>}{m.membro && <em className="tr-tag-membro">Membro</em>}</b> {m.texto}</p>
                   <time>{hora(m.hora)}</time>
                   {m.membro && abaChat === 'equipe' && (
                     <div className="cv-msg-acoes">
@@ -426,7 +426,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
           <section className="cv-card cv-na-sala" aria-label="Membros na sala">
             <h4>Na sala agora <small>{naSala.length} {naSala.length === 1 ? 'membro' : 'membros'}</small></h4>
             {naSala.length === 0
-              ? <span className="tr-legenda">Ninguém ainda. Mande o link abaixo para os membros GF Member.</span>
+              ? <span className="tr-legenda">Ninguém ainda. Mande o link abaixo para quem é do GF Member.</span>
               : <ul>{naSala.map(([n, desde]) => <li key={n}><span>{n}</span><b className="cv-num">{duracao(Date.now() - desde)}</b></li>)}</ul>}
             <LinkDoTreino compacto />
           </section>

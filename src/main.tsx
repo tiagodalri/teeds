@@ -184,8 +184,8 @@ function avisarVersaoNova(versao: string) {
   const aviso = document.createElement('div')
   aviso.id = 'aviso-versao'
   aviso.setAttribute('role', 'status')
-  aviso.innerHTML = '<span><b>Versão nova da plataforma disponível.</b> As sessões em andamento continuam no servidor.</span>'
-    + '<button type="button" data-atualizar>Atualizar agora</button><button type="button" data-depois aria-label="Fechar o aviso">Depois</button>'
+  aviso.innerHTML = '<span><b>Versão nova disponível.</b> O que está em andamento continua normalmente.</span>'
+    + '<button type="button" data-atualizar>Atualizar agora</button><button type="button" data-depois>Depois</button>'
   aviso.querySelector('[data-atualizar]')!.addEventListener('click', () => {
     const u = new URL(location.href); u.searchParams.set('v', versao); location.replace(u.toString())
   })

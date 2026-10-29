@@ -1,0 +1,39 @@
+/* Gerenciamento: revisão visual (29/10/2026). O CSS base mora em app.css e
+   ux-refinements.css; aqui só o acabamento, com seletor mais forte (.go.go-consultoria).
+   - rótulos com só a primeira letra maiúscula (regra da casa), sem letras espaçadas;
+   - nada menor que 11 px na tela (o computador roda a 90%: 12 px viram 10,8);
+   - o círculo decorativo do topo saiu: no celular ele cortava o selo e o título;
+   - celular: os três números viram linhas (rótulo à esquerda, valor à direita)
+     e a planilha cabe sem a rolagem dupla presa num quadro de 150 px. */
+
+.go.go-consultoria .go-hero::after { display: none; }
+.go.go-consultoria .go-selo { font-size: 12px; letter-spacing: .01em; text-transform: none; }
+.go.go-consultoria .go-campos label > span,
+.go.go-consultoria .go-cards article > span,
+.go.go-consultoria .go-tabela-cab { font-size: 12px; letter-spacing: .01em; text-transform: none; }
+.go.go-consultoria .go-cards small { font-size: 12px; }
+.go.go-consultoria .go-tabela-corpo > div { font-size: 12.5px; }
+.go.go-consultoria .go-tabela-corpo em { font-size: 11.5px; padding: 4px 9px; }
+.go.go-consultoria .go-status { font-size: 12px; }
+
+@media (max-width: 700px) {
+  /* os três números: uma lista compacta em vez de 2 + 1 cartões desencontrados */
+  .go.go-consultoria .go-cards.tres { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .go.go-consultoria .go-cards.tres article {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'rot valor' 'nota valor';
+    align-items: center; column-gap: 12px; row-gap: 2px; padding: 12px 14px;
+  }
+  .go.go-consultoria .go-cards.tres article > span { grid-area: rot; font-size: 13px; }
+  .go.go-consultoria .go-cards.tres small { grid-area: nota; margin-top: 0; }
+  .go.go-consultoria .go-cards.tres strong { grid-area: valor; margin-top: 0; font-size: 20px; }
+
+  /* a planilha: colunas mais justas (rola de lado só o necessário) e altura de verdade */
+  .go.go-consultoria .go-consulta-scroll { max-height: 62vh; margin-inline: -4px; }
+  .go.go-consultoria .go-consulta-scroll.go-tabela-seis .go-tabela-cab,
+  .go.go-consultoria .go-consulta-scroll.go-tabela-seis .go-tabela-corpo { min-width: 640px; }
+  .go.go-consultoria .go-consulta-scroll.go-tabela-seis .go-tabela-cab,
+  .go.go-consultoria .go-consulta-scroll.go-tabela-seis .go-tabela-corpo > div { grid-template-columns: 62px 82px 112px 104px 74px minmax(118px, 1fr); gap: 10px; }
+  .go.go-consultoria .go-tabela-cab { position: sticky; top: 0; z-index: 1; padding-top: 4px; background: var(--bg); }
+  .go.go-consultoria .go-tabela-cab > span { white-space: nowrap; }
+  .go.go-consultoria .go-tabela-corpo > div { min-height: 44px; }
+}

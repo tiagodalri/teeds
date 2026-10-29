@@ -6,7 +6,7 @@ import './workspace.css'
 import { RelogioTopo } from './RelogioTopo'
 
 export type WorkspacePage = 'inicio' | 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo' | 'noticias' | 'perfil' | 'ajuda' | 'laboratorio' | 'divulgacao' | 'relatorios'
-export const PAGE_NAMES: Record<WorkspacePage, string> = { inicio: 'Início', operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', perfil: 'Meu perfil', ajuda: 'Ajuda', laboratorio: 'Laboratório de IA', divulgacao: 'Divulgação', relatorios: 'Relatórios', ...(MARCA.menu?.nomes ?? {}) }
+export const PAGE_NAMES: Record<WorkspacePage, string> = { inicio: 'Início', operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', perfil: 'Meu perfil', ajuda: 'Ajuda', laboratorio: 'Laboratório de I.A.', divulgacao: 'Divulgação', relatorios: 'Relatórios', ...(MARCA.menu?.nomes ?? {}) }
 const paths: Record<string, string> = {
   relatorios: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
   inicio: 'M3 11l9-7 9 7M5 9.5V20h5v-6h4v6h5V9.5',
@@ -28,7 +28,7 @@ const paths: Record<string, string> = {
   // a marca pode trocar o desenho de um item (ver `menu` em marcas.ts)
   ...(MARCA.menu?.icones ?? {}),
 }
-export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mostrarAoVivo = true, mostrarInicio = false, mostrarDivulgacao = false }: { page: WorkspacePage; admin: boolean; onNavigate: (page: WorkspacePage) => void; aoVivoAgora?: boolean; mostrarAoVivo?: boolean; mostrarInicio?: boolean; mostrarDivulgacao?: boolean }) {
+export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mostrarAoVivo = true, mostrarInicio = false, mostrarDivulgacao = false, mostrarAssistente = true }: { page: WorkspacePage; admin: boolean; onNavigate: (page: WorkspacePage) => void; aoVivoAgora?: boolean; mostrarAoVivo?: boolean; mostrarInicio?: boolean; mostrarDivulgacao?: boolean; /** O Assistente só para quem pode usar (admin ou acesso já liberado): para os outros era uma porta trancada. */ mostrarAssistente?: boolean }) {
   const [compact, setCompact] = useState(false)
   const [open, setOpen] = useState(false)
   // o olhinho do menu do avatar: o admin esconde os itens dele para gravar a tela como um cliente
@@ -59,8 +59,8 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mos
         {mostrarInicio && item('inicio')}
         <p className="workspace-label">Operações</p>
         {item('robos')}{item('operar')}
-        <p className="workspace-label">Ferramentas</p>{MARCA.relatorios && item('relatorios')}{item('gerenciamento')}{item('assistente')}
-        <p className="workspace-label">Explore</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{MARCA.noticias && item('noticias')}{item('marketplace')}{item('aulas')}{MARCA.suporte && item('ajuda')}
+        <p className="workspace-label">Ferramentas</p>{MARCA.relatorios && item('relatorios')}{item('gerenciamento')}{mostrarAssistente && item('assistente')}
+        <p className="workspace-label">Explorar</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{MARCA.noticias && item('noticias')}{item('marketplace')}{item('aulas')}{MARCA.suporte && item('ajuda')}
         {/* parceiros de divulgação (27/10/2026): só quem é parceiro, e o admin geral */}
         {verDivulgacao && <><p className="workspace-label">Parceiro</p>{item('divulgacao')}</>}
         {verAdmin && <div className="workspace-admin">{MARCA.laboratorioIA && item('laboratorio')}{item('gestao')}</div>}

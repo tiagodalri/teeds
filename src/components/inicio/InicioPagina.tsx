@@ -58,7 +58,7 @@ function haQuanto(iso: string) {
   if (min < 1) return 'agora'
   if (min < 60) return `há ${min} min`
   const h = Math.round(min / 60)
-  return h < 24 ? `há ${h} h` : 'ontem'
+  return h < 24 ? `há ${h} h` : h < 48 ? 'ontem' : `há ${Math.round(h / 24)} dias`
 }
 
 // o que a pessoa já fez fica marcado (a jornada não volta a pedir)
@@ -82,6 +82,9 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
   const vivas = vivasDeFora ?? vivasProprias
   const [sessoesHoje, setSessoesHoje] = useState<SessaoServidor[] | null>(() => diaJaLido(sessao?.usuario.id))
   const [mercado, setMercado] = useState<{ cotacoes: Cotacao[]; noticias: Noticia[] } | null>(null)
+  // a leitura do mercado falhou (o bloco deixa de "carregar" para sempre e oferece tentar de novo)
+  const [mercadoFalhou, setMercadoFalhou] = useState(false)
+  const [rodadaMercado, setRodadaMercado] = useState(0)
   const [jornada, setJornada] = useState(jornadaGuardada)
   const [plano, setPlano] = useState(planoDoDia)
   const disponiveis = useRobosDisponiveis()
@@ -124,12 +127,16 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
     let vivo = true
     const ler = () => fetch(`${SERVIDOR.url}/publico/mercado`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (vivo && d) setMercado({ cotacoes: d.cotacoes ?? [], noticias: d.noticias ?? [] }) })
-      .catch(() => undefined)
+      .then((d) => {
+        if (!vivo) return
+        if (d) { setMercado({ cotacoes: d.cotacoes ?? [], noticias: d.noticias ?? [] }); setMercadoFalhou(false) } else setMercadoFalhou(true)
+      })
+      .catch(() => { if (vivo) setMercadoFalhou(true) })
+    setMercadoFalhou(false)
     ler()
     const t = window.setInterval(ler, 5 * 60_000)
     return () => { vivo = false; window.clearInterval(t) }
-  }, [])
+  }, [rodadaMercado])
 
   // a jornada aprende com o que aparece: sessão em demo, primeira I.A.
   useEffect(() => {
@@ -186,12 +193,13 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
   const IDS = ['dolar', 'ibovespa', 'sp500', 'bitcoin']
   const d: DadosDoInicio = {
     nome,
-    conta: { conectada: conta.conectada, demo: conta.demo, saldo: conta.saldo, moeda: conta.moeda || 'USD' },
+    conta: { conectada: conta.conectada, demo: conta.demo, operaEmDemo: conta.operaEmDemo, saldo: conta.saldo, moeda: conta.moeda || 'USD' },
     hoje,
     plano: planoValido,
     frota,
     cotacoes: IDS.map((id) => mercado?.cotacoes.find((c) => c.id === id)).filter((c): c is Cotacao => !!c)
       .map((c) => ({ id: c.id, nome: c.nome, valor: preco(c), variacao: c.variacao, serie: c.serie ?? [] })),
+    mercadoFalhou,
     manchetes: [...(mercado?.noticias ?? [])].sort((a, b) => Date.parse(b.quando) - Date.parse(a.quando)).slice(0, 3)
       .map((n) => ({ titulo: n.titulo, fonte: n.fonte, quando: haQuanto(n.quando), link: n.link })),
     aula,
@@ -199,7 +207,7 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
     jornada: { deriv: conta.conectada, demo: !!jornada.demo, gestao: !!planoValido, primeiraIa: !!jornada.primeiraIa },
   }
   return (
-    <InicioPanel d={d} aoIr={aoIr} aoConectar={aoConectar} aoAbrirCarteira={aoAbrirCarteira}
+    <InicioPanel d={d} aoIr={aoIr} aoConectar={aoConectar} aoAbrirCarteira={aoAbrirCarteira} aoRecarregarMercado={() => setRodadaMercado((n) => n + 1)}
       topo={(MARCA.notificacoes || MARCA.biometria) && sessao ? <ConvitesDoInicio sessao={sessao} aoAbrirPerfil={() => aoIr('perfil')} /> : null}
       aoSalvarPlano={(meta, limite) => setPlano(planoSimples(meta, limite, sessao))}
       aoPrepararRobo={(id) => { pedirModeloDaVitrine(id); pedirPreparo(); aoIr('robos') }} />

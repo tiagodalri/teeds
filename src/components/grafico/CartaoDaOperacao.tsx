@@ -13,7 +13,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import type { ContractMarker } from '../PriceChart'
-import { NOMES_DE_CONTRATO } from '../PositionCard'
+import { nomeDaOperacao } from '../PositionCard'
 import { PrecoComDigito } from '../preco/PrecoComDigito'
 import { dinheiroComSinal } from '../../core/dinheiro'
 
@@ -49,7 +49,7 @@ export function CartaoDaOperacao({ markers, pipSize, moeda = 'USD' }: { markers:
 
   if (!vivo) return null
   const mostradas = abertas.slice(0, 3)
-  const nome = (m: ContractMarker) => NOMES_DE_CONTRATO[m.type] ?? (sobe(m.type) ? 'Comprar' : 'Vender')
+  const nome = (m: ContractMarker) => nomeDaOperacao(m.type)
   const total = abertas.reduce((t, m) => t + m.profit, 0)
 
   return (
@@ -63,7 +63,7 @@ export function CartaoDaOperacao({ markers, pipSize, moeda = 'USD' }: { markers:
           <div key={m.id} className={`gpo-op aberta ${sobe(m.type) ? 'sobe' : 'desce'}`}>
             <div className="gpo-topo">
               <span className="gpo-dir">{comDirecao(m.type) && <i aria-hidden="true">{sobe(m.type) ? '▲' : '▼'}</i>}{nome(m)}</span>
-              <span className="gpo-tempo">{falta > 0 ? <>faltam <b>{relogio(falta)}</b></> : 'encerrando…'}</span>
+              <span className="gpo-tempo">{falta > 0 ? <>Faltam <b>{relogio(falta)}</b></> : 'Encerrando…'}</span>
             </div>
             <div className="gpo-meio">
               <span className="gpo-preco"><small>Entrada</small><PrecoComDigito valor={m.entryPrice} casas={pipSize} /></span>

@@ -1,0 +1,16 @@
+/* Dígitos do Manual: revisão visual (29/10/2026). Base em app.css; aqui o acabamento.
+   - as dez barras sempre dentro da caixa: "1fr" crescia até o texto e, a 300 px, as
+     últimas barras saíam pela direita;
+   - rótulos com só a primeira letra maiúscula (regra da casa), em qualquer lugar onde o painel apareça. */
+.dig .dig-barras { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+.dig .dig-barra { min-width: 0; }
+.dig .dig-barra em { font-size: 11px; letter-spacing: -.02em; white-space: nowrap; }
+.dig .dig-agora .rot,
+.dig .dig-sec .rot { text-transform: none; letter-spacing: .01em; font-size: 12px; font-weight: 700; }
+.dig .dig-sec-topo { gap: 10px; }
+.dig .dig-nota { font-size: 12px; line-height: 1.45; }
+/* lateral estreita: o rótulo numa linha só e os botões da janela descem para a linha de baixo, à direita */
+.dig .dig-sec-topo { flex-wrap: wrap; row-gap: 6px; }
+.dig .dig-sec-topo .rot { margin-bottom: 0; white-space: nowrap; }
+.dig .dig-sec-topo .segmented { margin-left: auto; }
+.dig .dig-sec-topo + .dig-barras { margin-top: 8px; }

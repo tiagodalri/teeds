@@ -1,0 +1,13 @@
+/*
+  Insights no celular (29/10/2026): "Quem mais estuda" (5 colunas) e
+  "Cidade / região" (4 colunas) não tinham regra abaixo de 760 px e
+  espremiam a 375 px. Ficam as colunas que respondem a pergunta da tabela.
+*/
+@media (max-width: 760px) {
+  .ins-tabela.ins-alunos > .cab, .ins-tabela.ins-alunos > .ins-linha { grid-template-columns: minmax(0, 1.6fr) .6fr .8fr; padding-inline: 12px; }
+  .ins-tabela.ins-alunos > .cab > :nth-child(3), .ins-tabela.ins-alunos > .ins-linha > :nth-child(3),
+  .ins-tabela.ins-alunos > .cab > :nth-child(4), .ins-tabela.ins-alunos > .ins-linha > :nth-child(4) { display: none; }
+  .ins-tabela.ins-lugares > .cab, .ins-tabela.ins-lugares > .ins-linha { grid-template-columns: minmax(0, 1.6fr) .6fr .7fr; padding-inline: 12px; }
+  .ins-tabela.ins-lugares > .cab > :nth-child(2), .ins-tabela.ins-lugares > .ins-linha > :nth-child(2) { display: none; }
+  .ins-tabela:is(.ins-alunos, .ins-lugares) span { min-width: 0; overflow-wrap: anywhere; }
+}

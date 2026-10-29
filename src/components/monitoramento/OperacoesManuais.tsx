@@ -129,7 +129,7 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
                 <td className="num dir">{usd(o.entrada)}</td>
                 <td><span className={`mon-sit ${o.situacao}`}>{o.situacao === 'aberta' && <i aria-hidden="true" />}{SITUACAO[o.situacao] ?? o.situacao}{falta !== null && ` · ${String(Math.floor(falta / 60)).padStart(2, '0')}:${String(falta % 60).padStart(2, '0')}`}</span></td>
                 <td className={`num dir ${o.situacao === 'aberta' ? '' : o.resultado > 0 ? 'mm-ganho' : o.resultado < 0 ? 'mm-perda' : ''}`}>{o.situacao === 'aberta' ? '—' : `${o.resultado > 0 ? '+' : ''}${usd(o.resultado)}`}</td>
-                {mostrarMarkup && <td className="num dir mm-ouro">{usd(o.markup)}{o.demo && <small>estimado</small>}</td>}
+                {mostrarMarkup && <td className="num dir mm-ouro">{usd(o.markup)}{o.demo && <small>Estimado</small>}</td>}
               </tr>
             )
           })}</tbody>

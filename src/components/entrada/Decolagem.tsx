@@ -116,7 +116,7 @@ function EmVoo({ voo }: { voo: Voo }) {
       </div>
       <div className="dg-chegada">
         <Monograma tamanho={84} className="dg-monograma" />
-        <b>{primeiroNome ? `Bem-vindo a bordo, ${primeiroNome}` : 'Bem-vindo a bordo'}</b>
+        <b>{primeiroNome ? `Boas-vindas a bordo, ${primeiroNome}` : 'Boas-vindas a bordo'}</b>
         <RotaCarregando />
         <span className="dg-legenda">Preparando sua cabine</span>
       </div>

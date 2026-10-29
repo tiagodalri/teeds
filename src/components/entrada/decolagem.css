@@ -56,7 +56,7 @@
 .dg .monograma .monograma-claro, .dg-tela .monograma .monograma-claro { display: none !important; }
 .dg .monograma .monograma-escuro, .dg-tela .monograma .monograma-escuro { display: block !important; }
 .dg-monograma { margin-bottom: 4px; }
-.dg-legenda { color: var(--dg-aco); font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+.dg-legenda { color: var(--dg-aco); font-size: 14px; font-weight: 600; letter-spacing: .01em; }
 /* o carregando que passou do tempo: a saída (28/10/2026) */
 .dg-demorou { display: grid; justify-items: center; gap: 14px; margin-top: 18px; max-width: 320px; text-align: center; animation: dg-surge .4s ease both; }
 .dg-demorou p { margin: 0; color: var(--dg-marfim); font-size: 14px; line-height: 1.5; }
@@ -95,3 +95,9 @@
   .dg-rota-aviao { animation: none; transform: translateX(65px); }
   .dg-chegada { transition: opacity .3s ease; transform: none; }
 }
+
+/* o "abrindo" das marcas sem voo (Abrindo, em Carregando.tsx; 29/10/2026) */
+.entrada-abrindo { position: relative; z-index: 1; display: grid; justify-items: center; gap: 16px; width: min(340px, 100%); text-align: center; }
+.entrada-abrindo-demorou { display: grid; gap: 10px; width: 100%; }
+.entrada-abrindo-demorou p { margin: 0; color: var(--text); font-size: 14px; line-height: 1.5; }
+.entrada-abrindo-sair { min-height: 44px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }

@@ -89,7 +89,9 @@ function haQuanto(iso: string, agora: number) {
   if (min < 1) return 'agora'
   if (min < 60) return `há ${min} min`
   const hh = Math.round(min / 60)
-  return hh < 24 ? `há ${hh} h` : 'ontem'
+  if (hh < 24) return `há ${hh} h`
+  const dias = Math.round(hh / 24)
+  return dias <= 1 ? 'ontem' : `há ${dias} dias`
 }
 
 function Grafico({ serie, sobe }: { serie: number[]; sobe: boolean }) {
@@ -103,7 +105,16 @@ function Grafico({ serie, sobe }: { serie: number[]; sobe: boolean }) {
   )
 }
 
-function Indicador({ c }: { c?: Cotacao }) {
+function Indicador({ c, nome, falhou = false }: { c?: Cotacao; nome: string; falhou?: boolean }) {
+  // sem resposta do servidor: o cartão diz isso em vez de ficar piscando para sempre
+  if (!c && falhou) return (
+    <article className="mc-ind">
+      <header><span>{nome}</span></header>
+      <b>—</b>
+      <div className="mc-grafico vazio" />
+      <small>Indisponível agora</small>
+    </article>
+  )
   if (!c) return <div className="mc-ind mc-esqueleto" />
   const sobe = c.variacao >= 0
   return (
@@ -241,7 +252,7 @@ export function MercadoPanel() {
       </div>
 
       <section className="mc-indicadores" aria-label="Indicadores do dia">
-        {['dolar', 'ibovespa', 'sp500', 'bitcoin'].map((id) => <Indicador key={id} c={achar(id)} />)}
+        {([['dolar', 'Dólar'], ['ibovespa', 'Ibovespa'], ['sp500', 'S&P 500'], ['bitcoin', 'Bitcoin']] as const).map(([id, nome]) => <Indicador key={id} c={achar(id)} nome={nome} falhou={erro && !dados} />)}
       </section>
 
       <CentrosFinanceiros />
@@ -271,7 +282,7 @@ export function MercadoPanel() {
                 <span className="mc-tag">{NOME_DA_CATEGORIA[destaque.categoria]}</span>
                 <h4>{destaque.titulo}</h4>
                 {destaque.resumo && <p>{destaque.resumo}</p>}
-                <span className="mc-meta"><b>{destaque.fonte}</b> · {haQuanto(destaque.quando, agora)} <i>Ler no {destaque.fonte} ↗</i></span>
+                <span className="mc-meta"><b>{destaque.fonte}</b> · {haQuanto(destaque.quando, agora)} <i>Ler a matéria ↗</i></span>
               </div>
             </a>
             <aside className="mc-ultimas" aria-label="Últimas">

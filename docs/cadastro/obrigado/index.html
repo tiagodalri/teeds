@@ -21,7 +21,7 @@
       <div class="conteudo">
         <span class="etapa"><i></i> Cadastro recebido</span>
         <h1><span data-saudacao>Obrigado.</span><br><em data-fila>Você está na fila.</em></h1>
-        <p class="texto">Seu cadastro foi recebido e está aguardando aprovação. Fique de olho no e-mail informado: assim que seu acesso for aprovado, avisamos por lá com as instruções para entrar na plataforma. Se você criou uma senha no cadastro, é com ela que você entra.</p>
+        <p class="texto">Seu cadastro foi recebido e está aguardando aprovação. Fique de olho no e-mail informado: assim que seu acesso for aprovado, avisamos por lá com as instruções para entrar na plataforma.</p>
         <div class="passos"><div class="passo"><b>1</b><span>Aguarde a aprovação do seu cadastro.</span></div><div class="passo"><b>2</b><span>Confira seu e-mail, incluindo spam e promoções.</span></div><div class="passo"><b>3</b><span data-passo-canal>Acompanhe as novidades no nosso canal do Telegram.</span></div></div>
       </div>
       <div class="acao">
@@ -64,7 +64,7 @@
     if(c.assinaturaImagem){const i=document.createElement('img');i.className='assinatura-oficial';i.src=c.assinaturaImagem;i.alt=c.nome;i.width=900;i.height=283;document.querySelector('.topo .marca').replaceChildren(i)}
     document.title=`Obrigado · ${c.nome}`;
     if(c.telegram)document.querySelector('[data-telegram]').href=c.telegram;else{document.querySelector('[data-com-canal]').hidden=true;document.querySelector('[data-sem-canal]').hidden=false;document.querySelector('[data-passo-canal]').textContent='Fique atento também ao WhatsApp: a equipe pode falar com você por lá.';document.querySelector('[data-rodape]').textContent='Pronto. Você já pode fechar esta página.'}
-    const nome=(p.get('nome')||'').trim().split(/\s+/)[0].slice(0,40);if(nome)document.querySelector('[data-saudacao]').textContent=`Obrigado, ${nome}.`;
+    let nome='';try{nome=(sessionStorage.getItem('captura-nome')||'').trim().split(/\s+/)[0].slice(0,40)}catch(e){}if(nome)document.querySelector('[data-saudacao]').textContent=`Obrigado, ${nome}.`;
   </script>
 </body>
 </html>

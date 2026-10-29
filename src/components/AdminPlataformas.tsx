@@ -129,7 +129,7 @@ export function AdminPlataformas({ sessao, marcaFoco, onAbrirMarca }: {
         <article className="alerta">
           <span>Markup da rede · {janela} dias</span>
           <strong>US$ {cents(totalExtrato)}</strong>
-          <small>pelo extrato da Deriv · {janelaEmDatas(janela)} · {inteiro(totalOpsExtrato)} contratos</small>
+          <small>Pelo extrato da Deriv · {janelaEmDatas(janela)} · {inteiro(totalOpsExtrato)} contratos</small>
         </article>
         <article>
           <span>Registrado pelos robôs</span>
@@ -197,7 +197,7 @@ export function AdminPlataformas({ sessao, marcaFoco, onAbrirMarca }: {
             </tbody>
             <tfoot>
               <tr>
-                <th scope="row"><span className="pl-marca">Rede</span><small>todas as plataformas</small></th>
+                <th scope="row"><span className="pl-marca">Rede</span><small>Todas as plataformas</small></th>
                 <td>{inteiro(totalClientes)}</td>
                 <td>{inteiro(totalAtivos24h)}</td>
                 <td>{inteiro(totalContas)}</td>

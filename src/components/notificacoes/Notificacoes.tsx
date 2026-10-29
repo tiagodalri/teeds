@@ -53,9 +53,9 @@ export function CartaoDeNotificacoes({ sessao }: { sessao: SessaoTeeds }) {
       <h2><Sino />Notificações no celular</h2>
       <p className="mp-nota">Você fica sabendo na hora, mesmo com o app fechado, quando {termo}:</p>
       <ul className="nt-lista">
-        <li>bateu a meta;</li>
-        <li>parou no limite de perda;</li>
-        <li>foi {IA ? 'desligada' : 'desligado'} por falta de saldo ou manutenção.</li>
+        <li>bater a meta;</li>
+        <li>parar no limite de perda;</li>
+        <li>for {IA ? 'desligada' : 'desligado'} por falta de saldo ou manutenção.</li>
       </ul>
 
       {estado === null && <p className="mp-nota">Verificando este aparelho…</p>}
@@ -101,7 +101,7 @@ export function ConviteDeNotificacoes({ sessao, aoAbrirPerfil }: { sessao: Sessa
     try { await ativarNotificacoes(sessao); setFeito(true); fechar() } catch (e) { setErro(e instanceof Error ? e.message : 'Não deu certo agora.') } finally { setOcupado(false); reler() }
   }
   return (
-    <aside className="nt-convite" aria-label="Notificações no celular">
+    <aside className={`nt-convite${estado === 'instalar' ? ' nt-convite-instalar' : ''}`} aria-label="Notificações no celular">
       <span className="nt-convite-icone"><Sino /></span>
       <div className="nt-convite-texto">
         <b>Saiba na hora quando {termo} bater a meta ou parar</b>

@@ -120,7 +120,7 @@ export function AdminRobos({ sessao, marca }: { sessao: SessaoTeeds; marca: stri
                 </div>
               </div>
               <div className="ac-cartao-estados">
-                {(!carga || carga.estado === 'carregando') && <span className="ac-estado">carregando as regras…</span>}
+                {(!carga || carga.estado === 'carregando') && <span className="ac-estado">Carregando as regras…</span>}
                 {carga?.estado === 'erro' && <span className="ac-estado vermelho">✕ {carga.erro}</span>}
                 {detalhe && (detalhe.versao === null
                   ? <span className="ac-estado">Padrão da plataforma</span>
@@ -135,7 +135,7 @@ export function AdminRobos({ sessao, marca }: { sessao: SessaoTeeds; marca: stri
               <div className="ac-cartao-rodape">
                 {catalogoDaquiMesmo
                   ? <button type="button" className="ac-switch" role="switch" aria-checked={!oculto} disabled={salvando || !item} aria-label={`Disponibilidade de ${nome}`} onClick={() => { if (item) void alterar(item) }}><i />{!item ? '…' : oculto ? 'Oculto' : 'Ativo'}</button>
-                  : <small className="ac-nota" style={{ margin: 0 }}>ligar/desligar só no painel da própria plataforma</small>}
+                  : <small className="ac-nota" style={{ margin: 0 }}>Ligar e desligar só no painel da própria plataforma</small>}
                 {detalhe && detalhe.versao !== null && <button type="button" className="ac-btn leve" onClick={() => restaurarPadrao(id, detalhe)}>Restaurar padrão</button>}
                 <button type="button" className="ac-btn primario" disabled={!detalhe} onClick={() => setAberto(id)}>Ajustar</button>
               </div>

@@ -25,7 +25,7 @@ export const opcoesDePlataforma = (master: boolean, marcaPropria: string): Opcao
   const cada = marcas.map((m) => ({
     id: m.id,
     nome: m.prosa,
-    papel: m.id === 'teeds' ? 'plataforma master' : 'whitelabel',
+    papel: m.id === 'teeds' ? 'Plataforma master' : 'Whitelabel',
   }))
   // Quem administra uma plataforma só não tem rede para ver: a rede dele é
   // ela. Sem a opção, o seletor inteiro some (veja o componente abaixo).

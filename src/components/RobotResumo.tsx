@@ -14,6 +14,7 @@
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { markupDaOperacao } from '../core/deriv/markup'
 import { NomeDoRobo } from './NomeDoRobo'
+import { simboloMoeda } from '../core/dinheiro'
 
 export interface ResumoProps {
   estado: EstadoMotor
@@ -27,6 +28,10 @@ export interface ResumoProps {
   /** Quando esta tela começou a acompanhar a sessão (ms). */
   inicio: number | null
   demo: boolean | null
+  /** Rótulos trocados (exercícios internos): a etiqueta da tela inverte demo e real. Só a etiqueta, nunca filtro. */
+  rotulosTrocados?: boolean
+  /** Acesso de demonstração: a conta virtual aparece como "Real". */
+  demoComoReal?: boolean
   /** "agressivo" / "conservador", só nos robôs que têm modo. */
   modo?: string | null
   conexao?: string
@@ -60,15 +65,51 @@ export function contagemDoEstado(e: EstadoMotor): { n: number; alvo: number; seq
   return { n: c.itens.filter((i) => i.valor === '✕').length, alvo: c.itens.length, sequencia: false }
 }
 
-/** A fase da sessão em uma palavra, com a mesma régua da cabine completa. */
-export function faseDoEstado(e: EstadoMotor, conexao = 'open'): { chave: 'parado' | 'sem-sinal' | 'recuperando' | 'operando' | 'cacando'; texto: string } {
+/**
+ * A fase da sessão em uma palavra, com a mesma régua da cabine completa.
+ *
+ * A conexão deste aparelho com a Deriv NÃO entra aqui (29/10/2026): a sessão
+ * opera no servidor, então uma queda no navegador não para nada. Antes o chip
+ * dizia "Sem conexão" e a pessoa achava que o robô tinha parado.
+ */
+export function faseDoEstado(e: EstadoMotor, _conexao = 'open'): { chave: 'parado' | 'sem-sinal' | 'recuperando' | 'operando' | 'cacando'; texto: string } {
+  void _conexao
   if (!e.rodando) return { chave: 'parado', texto: e.emOperacao ? 'Concluindo o contrato' : 'Encerrada' }
-  if (conexao !== 'open') return { chave: 'sem-sinal', texto: conexao === 'connecting' || conexao === 'reconnecting' ? 'Reconectando' : 'Sem conexão' }
   if (e.perdasSeguidas >= 1) return { chave: 'recuperando', texto: `Recuperando · nível ${e.perdasSeguidas}` }
   if (e.emCurso) return { chave: 'operando', texto: 'Operando' }
   if (e.emOperacao) return { chave: 'operando', texto: 'Enviando ordem' }
   const k = contagemDoEstado(e)
   return { chave: 'cacando', texto: k && !k.sequencia ? `Analisando ${k.n}/${k.alvo}` : 'Analisando' }
+}
+
+const valorEmTexto = (v: string, moeda: string) =>
+  `${simboloMoeda(moeda)} ${Math.abs(Number(v)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const comPonto = (t: string) => (/[.!?…]$/.test(t) ? t : `${t}.`)
+
+/**
+ * O motivo de parada que o motor grava, dito para a pessoa (29/10/2026).
+ * O motor escreve em minúscula e com ponto decimal ("meta de lucro atingida
+ * (USD 10.00)"); a tela traduz para uma frase com o valor em reais de leitura
+ * ("Meta de ganho atingida: +US$ 10,00."). O texto do motor continua igual,
+ * porque o som e o aviso de meta/stop leem dele.
+ */
+export function motivoLegivel(motivo: string, moeda = 'USD'): string {
+  const t = motivo.trim()
+  let m: RegExpMatchArray | null
+  if ((m = t.match(/^meta de lucro atingida \((\S+) (-?[\d.]+)\)/i))) return `Meta de ganho atingida: +${valorEmTexto(m[2], m[1])}.`
+  if ((m = t.match(/^limite de perda atingido \((\S+) (-?[\d.]+)\)/i))) return `Limite de perda atingido: −${valorEmTexto(m[2], m[1])}.`
+  if ((m = t.match(/^limite de perda protegido \((\S+) ([\d.]+)\)/i))) return `Parou antes de passar do limite de perda de ${valorEmTexto(m[2], m[1])}.`
+  if (/^tabela de recupera[çc][ãa]o esgotada/i.test(t)) return 'A recuperação chegou ao último degrau e a sessão parou.'
+  if ((m = t.match(/^limite de (\d+) opera[çc][õo]es/i))) return `Chegou ao limite de ${m[1]} operações.`
+  if ((m = t.match(/^pr[óo]xima entrada \(([\d.]+)\) passaria do teto/i))) return `A próxima entrada (${valorEmTexto(m[1], moeda)}) passaria do valor máximo por entrada.`
+  if ((m = t.match(/^a Deriv recusou (?:a compra|\d+ compras seguidas) — (.*)$/i))) return comPonto(`A Deriv recusou a compra: ${m[1].trim()}`)
+  if (/^voc[êe] (desligou|pediu para parar)/i.test(t)) return 'Você desligou.'
+  return comPonto(t.charAt(0).toUpperCase() + t.slice(1))
+}
+
+/** A etiqueta da conta como a tela mostra (rótulos trocados e demonstração). Só etiqueta: nunca filtra dado. */
+export function etiquetaDaConta(demo: boolean, rotulosTrocados = false, demoComoReal = false): 'Demo' | 'Real' {
+  return (rotulosTrocados ? !demo : demo && !demoComoReal) ? 'Demo' : 'Real'
 }
 
 /** A curva da sessão em miniatura. Sem eixo, sem número: só a forma. */
@@ -114,6 +155,7 @@ function SeloDoModo({ modo }: { modo: string }) {
 }
 
 function Quem({ p, fase }: { p: ResumoProps; fase: ReturnType<typeof faseDoEstado> }) {
+  const conta = p.demo === null ? null : etiquetaDaConta(p.demo, p.rotulosTrocados, p.demoComoReal)
   return (
     <div className="rs-quem">
       <i className={`rs-farol ${fase.chave}`} aria-hidden />
@@ -122,7 +164,7 @@ function Quem({ p, fase }: { p: ResumoProps; fase: ReturnType<typeof faseDoEstad
         <small>
           {p.numero}
           {p.inicio ? ` · ${hora(p.inicio)}` : ''}
-          {p.demo === false && <> · <em className="real">REAL</em></>}
+          {conta && <> · <em className={conta === 'Real' ? 'real' : 'demo'}>{conta}</em></>}
           <span className="rs-contadores"> · <em className="up">{p.estado.vitorias} positivas</em> · <em className="down">{p.estado.derrotas} negativas</em></span>
         </small>
       </div>
@@ -152,7 +194,7 @@ function Acoes({ p, extra }: { p: ResumoProps; extra?: React.ReactNode }) {
 
 /* ------------------------------------------------------------ em lista */
 
-export function RobotLinha(p: ResumoProps & { aberta: boolean; onAbrir: () => void }) {
+export function RobotLinha(p: ResumoProps & { aberta: boolean; onAbrir?: () => void }) {
   const e = p.estado
   const fase = faseDoEstado(e, p.conexao)
   const positivo = e.resultado >= 0
@@ -160,17 +202,17 @@ export function RobotLinha(p: ResumoProps & { aberta: boolean; onAbrir: () => vo
   return (
     <div className={`rl ${p.aberta ? 'aberta' : ''} ${p.ceo ? 'ceo' : ''} ${fase.chave} ${e.rodando ? 'viva' : 'encerrada'}`}
       style={{ ['--robo' as string]: p.cor }}
-      role="button" tabIndex={0} aria-expanded={p.aberta}
-      onClick={p.onAbrir} onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); p.onAbrir() } }}>
+      role={p.onAbrir ? 'button' : undefined} tabIndex={p.onAbrir ? 0 : undefined} aria-expanded={p.onAbrir ? p.aberta : undefined}
+      onClick={p.onAbrir} onKeyDown={(ev) => { if (p.onAbrir && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); p.onAbrir() } }}>
       <Quem p={p} fase={fase} />
-      <span className="rs-kpi"><i>{e.rodando ? 'Entrada atual' : 'Última entrada'}</i><b>{p.moeda} {num(entrada)}</b></span>
+      <span className="rs-kpi"><i>{e.rodando ? 'Entrada atual' : 'Última entrada'}</i><b>{simboloMoeda(p.moeda)} {num(entrada)}</b></span>
       <span className="rs-kpi"><i>Operações</i><b>{e.operacoes}</b></span>
       <span className="rs-kpi"><i>Positivas</i><b className="up">{e.vitorias}</b></span>
       <span className="rs-kpi"><i>Negativas</i><b className="down">{e.derrotas}</b></span>
       {p.ceo && <span className="rs-kpi rs-markup"><i>Markup</i><b>{centavos(markupDaSessao(e))}</b></span>}
       <span className="rs-kpi rs-resultado"><i>{e.rodando ? 'Resultado' : 'Resultado final'}</i><b className={positivo ? 'up' : 'down'}>{assinado(e.resultado)} <small>{p.moeda}</small></b></span>
       <Sparkline pontos={e.curva} positivo={positivo} />
-      <Acoes p={p} extra={
+      <Acoes p={p} extra={p.onAbrir &&
         <button type="button" className="tv-btn rs-abrir" aria-expanded={p.aberta} onClick={p.onAbrir}>{p.aberta ? 'Fechar ▴' : 'Abrir ▾'}</button>
       } />
     </div>
@@ -188,9 +230,9 @@ export function RobotCartao(p: ResumoProps & { onAbrirNaLista: () => void }) {
   const emCurso = e.emCurso
   // O que a linha do contrato diz, em uma frase.
   const contrato = !e.rodando
-    ? (e.emOperacao ? 'Concluindo o contrato em andamento' : e.motivoParada ? `Encerrada: ${e.motivoParada}` : 'Sessão encerrada')
-    : emCurso ? `Contrato em andamento · ${p.moeda} ${num(emCurso.valor)}`
-    : e.aguardando || 'Aguardando sinal da estratégia'
+    ? (e.emOperacao ? 'Concluindo o contrato em andamento' : e.motivoParada ? `Encerrada: ${motivoLegivel(e.motivoParada, p.moeda)}` : 'Sessão encerrada')
+    : emCurso ? `Contrato em andamento · ${simboloMoeda(p.moeda)} ${num(emCurso.valor)}`
+    : e.aguardando ? e.aguardando.charAt(0).toUpperCase() + e.aguardando.slice(1) : 'Aguardando sinal da estratégia'
   return (
     <div className={`rc ${p.ceo ? 'ceo' : ''} ${fase.chave} ${e.rodando ? 'viva' : 'encerrada'}`} style={{ ['--robo' as string]: p.cor }}>
       <header className="rc-topo">
@@ -199,7 +241,7 @@ export function RobotCartao(p: ResumoProps & { onAbrirNaLista: () => void }) {
       </header>
       <div className="rc-kpis">
         <span className="rs-kpi rs-resultado"><i>{e.rodando ? 'Resultado' : 'Resultado final'}</i><b className={positivo ? 'up' : 'down'}>{assinado(e.resultado)}</b></span>
-        <span className="rs-kpi"><i>Entrada</i><b>{p.moeda} {num(entrada)}</b></span>
+        <span className="rs-kpi"><i>Entrada</i><b>{simboloMoeda(p.moeda)} {num(entrada)}</b></span>
         <span className="rs-kpi"><i>Operações</i><b>{e.operacoes}</b></span>
         <span className="rs-kpi"><i>Positivas</i><b className="up">{e.vitorias}</b></span>
         <span className="rs-kpi"><i>Negativas</i><b className="down">{e.derrotas}</b></span>

@@ -22,6 +22,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Antes de tudo, a trava dos textos (29/10/2026): palavras proibidas, promessa
+# da I.A., textos em minúscula e erro cru na tela não chegam ao site.
+node scripts/conferir-textos.mjs
+
 REF_OMNI="scripts/digital-omni.txt"
 REF_GLOBALFLY="scripts/digital-globalfly.txt"
 

@@ -59,6 +59,9 @@ async function chaveDa(marca: string): Promise<{ publica: string; privada: strin
 
 const SITE: Record<string, string> = { globalfly: 'https://globalflytrade.com' }
 
+/** O depósito na Deriv: o MESMO endereço de DERIV.deposito (src/core/deriv/config.ts), obrigatório onde se fala em depositar. */
+const DEPOSITO_DERIV = 'https://home.deriv.com/dashboard/deposit?from=home&depositSheet=1&returnTo=%2Fhome&currency=USD'
+
 interface Aviso { titulo: string; corpo: string; tag: string; url?: string }
 
 /** Manda para todos os aparelhos da pessoa naquela plataforma; tira os que não existem mais. */
@@ -126,18 +129,19 @@ function mensagemDaSessao(s: { id: string; marca: string; robo_nome: string | nu
     : `Resultado: ${res}`
   const tempo = duracao(s.criada_em, s.encerrada_em ?? s.atualizada_em)
   const base = { tag: `sessao-${s.id}`, url: './' }
-  const aviso = (emoji: string, situacao: string, linha2: string): Aviso =>
-    ({ ...base, titulo: `${emoji} ${nome} · ${situacao}`, corpo: `${numeros}\n${linha2}` })
+  const aviso = (emoji: string, situacao: string, linha2: string, url?: string): Aviso =>
+    ({ ...base, ...(url ? { url } : {}), titulo: `${emoji} ${nome} · ${situacao}`, corpo: `${numeros}\n${linha2}` })
 
   if (/meta de lucro atingida/i.test(motivo)) return aviso('✅', 'Meta atingida', `${tempo ? `Sessão de ${tempo} encerrada. ` : ''}${quem} já foi ${desligad}.`)
   if (/limite de perda protegido/i.test(motivo)) return aviso('🛡️', 'Limite protegido', 'A próxima entrada passaria do seu limite de perda. Parou antes.')
-  if (/limite de perda/i.test(motivo)) return aviso('🛡️', 'Limite de perda', 'Parou no limite que você definiu. Sua banca está protegida.')
+  if (/limite de perda/i.test(motivo)) return aviso('🛡️', 'Limite de perda', 'Parou no limite de perda que você definiu.')
   if (/limite de \d+ operações/i.test(motivo)) return aviso('🏁', 'Sessão concluída', 'Completou o número de operações que você definiu.')
-  if (/InsufficientBalance|saldo/i.test(motivo)) return aviso('💳', 'Saldo insuficiente', 'A corretora recusou a próxima entrada por falta de saldo. Deposite na corretora para voltar a operar.')
+  if (/InsufficientBalance|saldo/i.test(motivo)) return aviso('💳', 'Saldo insuficiente', 'A corretora recusou a próxima entrada por falta de saldo. Toque para depositar na Deriv.', DEPOSITO_DERIV)
   if (/Deriv recusou/i.test(motivo)) return aviso('⚠️', 'Entrada recusada', 'A corretora recusou a compra. Abra o app para ver o motivo.')
   if (/servidor foi reiniciado|manutenção/i.test(motivo)) return aviso('🔧', 'Sessão interrompida', `Houve uma manutenção na plataforma. Você pode ligar ${gf ? 'a I.A.' : 'o robô'} de novo quando quiser.`)
-  const texto = motivo ? motivo[0].toUpperCase() + motivo.slice(1) : (s.situacao === 'erro' ? 'Parou por um erro' : 'Sessão encerrada')
-  return aviso('ℹ️', 'Sessão encerrada', `${texto.replace(/\.$/, '')}.`)
+  if (/tabela de recupera/i.test(motivo)) return aviso('🛡️', 'Recuperação encerrada', `Chegou ao fim da recuperação e parou para proteger a conta. ${quem} já foi ${desligad}.`)
+  // Motivo desconhecido: nunca o texto cru do motor para o cliente.
+  return aviso('ℹ️', 'Sessão encerrada', s.situacao === 'erro' ? 'Parou por um erro. Abra o app para ver o resumo.' : 'A sessão foi encerrada. Abra o app para ver o resumo.')
 }
 
 /* ------------------------------------------------------------------ entrada */

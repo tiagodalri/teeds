@@ -14,7 +14,8 @@ import {
 import { MARCA } from '../marca'
 import { ControlesDeZoom } from './grafico/ControlesDeZoom'
 import { PrecoComDigito } from './preco/PrecoComDigito'
-import { NOMES_DE_CONTRATO } from './PositionCard'
+import { nomeDaOperacao } from './PositionCard'
+import { dinheiroComSinal } from '../core/dinheiro'
 import { naPagina } from '../core/escala'
 
 export type ChartMode = 'candles' | 'line'
@@ -46,6 +47,12 @@ interface Props {
   indicators?: string[]
   /** Código do ativo, para guardar os desenhos por ativo. */
   symbol?: string
+  /** Moeda da conta, para o resultado das operações no canto. */
+  moeda?: string
+  /** O histórico de velas não veio: o gráfico diz isso em vez de "sem dados". */
+  erro?: string | null
+  /** Tentar de novo. Sem ele, o botão recarrega a página. */
+  aoTentarDeNovo?: () => void
 }
 
 /** Ferramentas de desenho do gráfico. */
@@ -71,7 +78,7 @@ interface Cursor {
  * Grafico da Teeds - desenhado do zero em canvas.
  * Sem bibliotecas de terceiros: controle total sobre desenho e interacao.
  */
-export function PriceChart({ candles, mode, pipSize, symbolName, loading, markers = [], indicators = [], symbol = '' }: Props) {
+export function PriceChart({ candles, mode, pipSize, symbolName, loading, markers = [], indicators = [], symbol = '', moeda = 'USD', erro = null, aoTentarDeNovo }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -809,7 +816,7 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
           <button type="button" title="Desfazer o último desenho" aria-label="Desfazer o último desenho" onClick={desfazer}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3" /></svg></button>
           <button type="button" title="Apagar todos os desenhos" aria-label="Apagar todos os desenhos" onClick={apagarTudo}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" /></svg></button>
         </>}
-        {ferramenta === 'tendencia' && <span className="dica">{pendente ? 'clique no segundo ponto' : 'clique no primeiro ponto'}</span>}
+        {ferramenta === 'tendencia' && <span className="dica">{pendente ? 'Marque o segundo ponto' : 'Marque o primeiro ponto'}</span>}
       </div>
 
       {(indicators.includes('sma') || indicators.includes('ema')) && (
@@ -859,11 +866,11 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
         {markers.map((m) => {
           const acima = m.type === 'CALL' || m.type === 'MULTUP' || m.type === 'HIGHER'
           const encerrada = !!m.status && m.status !== 'open'
-          const nome = NOMES_DE_CONTRATO[m.type] ?? m.type
+          const nome = nomeDaOperacao(m.type)
           const lado = encerrada ? (m.profit >= 0 ? 'acima' : 'abaixo') : acima ? 'acima' : 'abaixo'
           return <div key={m.id} className={`${lado} ${encerrada ? 'encerrada' : ''}`}>
             <span>{encerrada ? (m.status === 'won' ? 'Ganhou' : m.status === 'lost' ? 'Perdeu' : 'Encerrada') : `${acima ? '▲' : '▼'} ${nome}`}</span>
-            <b>{encerrada ? `${m.profit >= 0 ? '+' : '−'}${Math.abs(m.profit).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : tempoRestante(m.expiryEpoch - agora)}</b>
+            <b>{encerrada ? dinheiroComSinal(m.profit, moeda) : tempoRestante(m.expiryEpoch - agora)}</b>
             <small>
               {encerrada && m.exitPrice != null
                 ? <>Saída <PrecoComDigito valor={m.exitPrice} casas={pipSize} tom={m.profit >= 0 ? 'ganho' : 'perda'} /></>
@@ -879,10 +886,10 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
           <span>{formatDateTime(hovered.epoch)}</span>
           {mode === 'candles' ? (
             <div className="ohlc">
-              <span>A <b>{formatPrice(hovered.open, pipSize)}</b></span>
-              <span>M <b>{formatPrice(hovered.high, pipSize)}</b></span>
-              <span>m <b>{formatPrice(hovered.low, pipSize)}</b></span>
-              <span>F <b>{formatPrice(hovered.close, pipSize)}</b></span>
+              <span>Abertura <b>{formatPrice(hovered.open, pipSize)}</b></span>
+              <span>Máxima <b>{formatPrice(hovered.high, pipSize)}</b></span>
+              <span>Mínima <b>{formatPrice(hovered.low, pipSize)}</b></span>
+              <span>Fechamento <b>{formatPrice(hovered.close, pipSize)}</b></span>
             </div>
           ) : (
             <div className="ohlc"><span>Preço <b>{formatPrice(hovered.close, pipSize)}</b></span></div>
@@ -890,8 +897,13 @@ export function PriceChart({ candles, mode, pipSize, symbolName, loading, marker
         </div>
       )}
 
-      {loading && <div className="chart-loading">carregando mercado…</div>}
-      {!loading && !candles.length && <div className="chart-loading">sem dados para este ativo</div>}
+      {loading && !erro && <div className="chart-loading">Carregando o gráfico…</div>}
+      {!loading && !candles.length && (erro
+        ? <div className="chart-loading chart-erro" role="alert">
+            <b>Não conseguimos carregar o gráfico agora.</b>
+            <button type="button" onClick={() => (aoTentarDeNovo ? aoTentarDeNovo() : window.location.reload())}>Tentar de novo</button>
+          </div>
+        : <div className="chart-loading">Sem dados deste ativo agora. Escolha outro ativo.</div>)}
     </div>
   )
 }

@@ -75,7 +75,7 @@ body.aovivo-lado .eq-lancador-area { right: 400px; }
   animation: eq-abre .24s cubic-bezier(.2, .8, .2, 1); transform-origin: bottom right;
 }
 @keyframes eq-abre { from { opacity: 0; transform: translateY(10px) scale(.985); } }
-.eq-painel button { font: inherit; }
+.eq-painel :where(button) { font: inherit; }
 .eq-painel button:focus-visible { outline: 2px solid var(--eq-ouro); outline-offset: 2px; }
 .eq-icone-btn { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--muted); cursor: pointer; flex: none; }
 .eq-icone-btn:hover { background: var(--surface-alt); color: var(--text); }
@@ -256,6 +256,14 @@ body.aovivo-lado .eq-lancador-area { right: 400px; }
   body:has(.barra-inferior):has(.sp-lancador-area) .eq-lancador-area { bottom: calc(146px + var(--sab, 0px)); }
   body:has(.mcb.aberta) .eq-lancador-area { display: none; }
 }
+/* 29/10/2026: com o convite do app na tela o suporte sobe (100 px; 160 px com a barra) e este
+   botão ficava por baixo dele; com a miniatura da sala de treino no canto, os dois sobem acima dela */
+body:has(.app-convite):has(.sp-lancador-area) .eq-lancador-area { bottom: calc(172px + var(--sab, 0px)); }
+@media (max-width: 900px) {
+  body:has(.barra-inferior):has(.app-convite):has(.sp-lancador-area) .eq-lancador-area { bottom: calc(230px + var(--sab, 0px)); }
+}
+body:has(.av-flutuante.embaixo[data-canto$='dir']) .eq-lancador-area { bottom: var(--av-livre-embaixo, 220px); }
+body:has(.av-flutuante.embaixo[data-canto$='dir']):has(.sp-lancador-area) .eq-lancador-area { bottom: calc(var(--av-livre-embaixo, 220px) + 72px); }
 @keyframes eq-abre-cel { from { opacity: 0; transform: translateY(24px); } }
 
 @media (prefers-reduced-motion: reduce) {

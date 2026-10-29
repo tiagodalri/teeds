@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { MARCA } from '../marca'
+import { simboloMoeda } from '../core/dinheiro'
 import './limite-atingido.css'
 
 /*
@@ -130,7 +131,7 @@ export function LimiteAtingido({ tipo, estado, config, nome, cor, moeda, onFecha
   useEffect(() => {
     if (typeof document === 'undefined' || !document.hidden) return
     const original = document.title
-    document.title = `${meta ? '● Meta batida' : '● Stop atingido'} — ${original}`
+    document.title = `${meta ? '● Meta batida' : '● Limite de perda atingido'} — ${original}`
     const voltou = () => { if (!document.hidden) document.title = original }
     document.addEventListener('visibilitychange', voltou)
     return () => { document.removeEventListener('visibilitychange', voltou); document.title = original }
@@ -139,7 +140,7 @@ export function LimiteAtingido({ tipo, estado, config, nome, cor, moeda, onFecha
   const dados = useMemo(() => {
     const h = estado.historico
     return {
-      acerto: estado.operacoes ? Math.round((estado.vitorias / estado.operacoes) * 100) : 0,
+      positivas: estado.operacoes ? Math.round((estado.vitorias / estado.operacoes) * 100) : 0,
       maior: h.reduce((m, o) => Math.max(m, o.valor), 0),
       tempo: h.length > 1 ? duracao(h[0].quando - h[h.length - 1].quando) : '—',
     }
@@ -174,12 +175,12 @@ export function LimiteAtingido({ tipo, estado, config, nome, cor, moeda, onFecha
           </svg>
         </div>
 
-        <span className="limite-rotulo">{meta ? 'Meta batida' : 'Stop atingido'} · robô pausado</span>
-        <h2 id="limite-titulo">{meta ? 'Missão cumprida.' : 'O stop protegeu sua banca.'}</h2>
+        <span className="limite-rotulo">{meta ? 'Meta batida' : 'Limite de perda atingido'} · sessão encerrada</span>
+        <h2 id="limite-titulo">{meta ? 'Missão cumprida.' : 'O stop protegeu seu saldo.'}</h2>
         <p id="limite-frase" className="limite-frase">
           {meta
-            ? <>O <b>{nome}</b> chegou na meta de <b>{moeda} {num(config.takeProfit)}</b> e parou sozinho, como combinado.</>
-            : <>O <b>{nome}</b> chegou no limite de perda de <b>{moeda} {num(config.stopLoss)}</b> e parou sozinho — ele não passa desse valor.</>}
+            ? <>O <b>{nome}</b> chegou à meta de ganho de <b>{simboloMoeda(moeda)} {num(config.takeProfit)}</b> e parou sozinho, como combinado.</>
+            : <>O <b>{nome}</b> chegou ao limite de perda de <b>{simboloMoeda(moeda)} {num(config.stopLoss)}</b> e parou sozinho — ele não passa desse valor.</>}
         </p>
 
         <div className="limite-resultado">
@@ -190,7 +191,7 @@ export function LimiteAtingido({ tipo, estado, config, nome, cor, moeda, onFecha
 
         <Curva pontos={estado.curva} />
 
-        <div className="limite-trilho" aria-label={`Resultado entre o stop de ${num(stop)} e a meta de ${num(alvo)}`}>
+        <div className="limite-trilho" aria-label={`Resultado entre o limite de perda de ${num(stop)} e a meta de ganho de ${num(alvo)}`}>
           <div className="barra">
             <u style={{ left: `${zero}%` }} />
             <b style={{ left: `${Math.min(zero, ponto)}%`, width: `${Math.abs(ponto - zero)}%` }} />
@@ -201,7 +202,7 @@ export function LimiteAtingido({ tipo, estado, config, nome, cor, moeda, onFecha
 
         <dl className="limite-dados">
           <div><dt>Operações</dt><dd>{estado.operacoes}</dd></div>
-          <div><dt>Acertos</dt><dd>{estado.vitorias}<small> · {dados.acerto}%</small></dd></div>
+          <div><dt>Positivas</dt><dd>{estado.vitorias}<small> · {dados.positivas}%</small></dd></div>
           <div><dt>Maior entrada</dt><dd>{num(dados.maior)}</dd></div>
           <div><dt>Duração</dt><dd>{dados.tempo}</dd></div>
         </dl>
@@ -209,11 +210,12 @@ export function LimiteAtingido({ tipo, estado, config, nome, cor, moeda, onFecha
         <p className="limite-conselho">
           {meta
             ? 'Parar no alvo é o que separa quem ganha de quem devolve. O resultado já está no seu saldo.'
-            : 'Perder o combinado faz parte do plano. Evite religar no calor do momento: revise a entrada e o stop no Gerenciamento antes da próxima sessão.'}
+            : 'Perder o combinado faz parte do plano. Evite religar no calor do momento: revise a entrada e o limite de perda no Gerenciamento antes da próxima sessão.'}
         </p>
 
         <div className="limite-acoes">
-          {onLigarDeNovo && <button type="button" className="secundario" onClick={onLigarDeNovo}>Ligar de novo</button>}
+          {/* no limite de perda, o texto pede para não religar no calor do momento: o botão de religar fica só na meta */}
+          {meta && onLigarDeNovo && <button type="button" className="secundario" onClick={onLigarDeNovo}>Ligar de novo</button>}
           <button type="button" className="primario" ref={principal} onClick={onFechar}>{meta ? 'Fechar e comemorar' : 'Entendi'}</button>
         </div>
       </section>

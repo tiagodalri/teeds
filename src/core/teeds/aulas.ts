@@ -68,8 +68,8 @@ export const ehVideoDeExemplo = (video: string) => video === VIDEO_DEMONSTRACAO 
  * Até lá a sala mostra o catálogo com o aviso e nenhum vídeo toca. Se o
  * Tiago não liberar antes, abrem sozinhas no dia seguinte (10/11, 00h de Brasília).
  */
-export const AVISO_GF_MEMBER = 'Disponível em 09 de novembro de 2026 após a live'
-export const AVISO_GF_MEMBER_CURTO = 'Disponível em 09/11'
+export const AVISO_GF_MEMBER = 'Disponível em 9 de novembro de 2026, após a live'
+export const AVISO_GF_MEMBER_CURTO = 'Disponível em 9/11'
 const GF_MEMBER_LIBERA_EM = Date.parse('2026-11-10T03:00:00Z')
 export const aulasTravadasParaGfMember = (plano: string | null, admin: boolean | null) =>
   plano === 'treino' && admin !== true && Date.now() < GF_MEMBER_LIBERA_EM

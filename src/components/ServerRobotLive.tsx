@@ -184,7 +184,7 @@ export function ServerRobotLive(props: Props) {
             <span>desde {hora(emAndamento.compra)}</span>
           </div>
           <Progress cor={ident.cor} altura={6} />
-          <p className="foco-espera">aguardando o resultado…</p>
+          <p className="foco-espera">Aguardando o resultado…</p>
           {emAndamento.entrada !== null && (
             <p className="foco-entrada">preço de entrada {emAndamento.entrada.toFixed(emAndamento.pip)}</p>
           )}

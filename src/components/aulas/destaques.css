@@ -49,7 +49,7 @@
 @keyframes dq-entra { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 .dq-selo {
   display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 999px; border: 1px solid rgba(156, 177, 199, .22);
-  background: rgba(255, 255, 255, .04); color: var(--dq-aco); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  background: rgba(255, 255, 255, .04); color: var(--dq-aco); font-size: 12.5px; font-weight: 700; letter-spacing: .01em;
 }
 .dq-selo .monograma .monograma-claro { display: none; }
 .dq-selo .monograma .monograma-escuro { display: block; }
@@ -75,11 +75,13 @@
 .dq-acao:focus-visible, .dq-setas button:focus-visible, .dq-pontos button:focus-visible { outline: 2px solid var(--dq-ouro); outline-offset: 2px; }
 
 /* os pontos: o atual vira uma barrinha que enche em 7 s (o tempo até o próximo) */
-.dq-pontos { display: flex; justify-content: center; gap: 6px; }
-.dq-pontos button { position: relative; width: 7px; height: 7px; padding: 0; border: 0; border-radius: 4px; background: rgba(156, 177, 199, .3); overflow: hidden; cursor: pointer; transition: width .25s; }
-.dq-pontos button.on { width: 28px; background: rgba(183, 141, 57, .35); }
+/* 29/10/2026: o ponto continua pequeno, mas a área de toque tem 25 × 32 px (no celular é o único controle) */
+.dq-pontos { display: flex; justify-content: center; gap: 0; }
+.dq-pontos button { display: grid; place-items: center; height: 32px; padding: 0 9px; border: 0; background: none; cursor: pointer; }
+.dq-pontos button > span { position: relative; display: block; width: 7px; height: 7px; border-radius: 4px; background: rgba(156, 177, 199, .3); overflow: hidden; transition: width .25s; }
+.dq-pontos button.on > span { width: 28px; background: rgba(183, 141, 57, .35); }
 .dq-pontos button i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--dq-ouro); animation: dq-enche 7s linear forwards; }
-.dq-pontos button.on:not(:has(i)) { background: var(--dq-ouro); }
+.dq-pontos button.on > span:not(:has(i)) { background: var(--dq-ouro); }
 @keyframes dq-enche { to { width: 100%; } }
 
 /* ------------------------------------------------ celular e app: a foto em cima, o texto embaixo */
@@ -102,5 +104,5 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .dq-ponto, .dq-pontos button i, .dq-banner.on .dq-foto img, .dq-banner.on .dq-texto > * { animation: none; }
-  .dq-acao, .dq-pontos button { transition: none; }
+  .dq-acao, .dq-pontos button > span { transition: none; }
 }

@@ -5,7 +5,9 @@
 .tm-tela { grid-template-columns: minmax(0, 1fr); }
 .tm-topo { display: flex; justify-content: center; padding-top: 6px; }
 .tm-cabeca { text-align: center; display: grid; gap: 6px; }
-.tm-rot { font-size: 11px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; color: var(--gf-ouro, var(--primary)); }
+.tm-rot { font-size: 13px; font-weight: 700; color: var(--gf-ouro, var(--primary)); }
+/* no claro, ouro escuro: o ouro puro sobre o marfim não passa no contraste */
+:root:not([data-tema='escuro']) .tm-rot { color: color-mix(in srgb, var(--gf-ouro, var(--primary)) 65%, var(--text)); }
 .tm-cabeca h1 { margin: 0; font-size: clamp(22px, 4.6vw, 30px); line-height: 1.15; letter-spacing: -.02em; text-wrap: balance; }
 .tm-cabeca p { margin: 0; color: var(--muted); font-size: 14.5px; }
 
@@ -16,7 +18,12 @@
 .tm-leitor { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0; }
 .tm-abas { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .tm-abas::-webkit-scrollbar { display: none; }
-.tm-abas button { flex: none; min-height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 99px; background: var(--surface); color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+@media (min-width: 601px) { .tm-abas { flex-wrap: wrap; overflow: visible; } }
+@media (max-width: 600px) {
+  /* a fileira rola: o esmaecido na borda direita mostra que há mais abas (antes a última aparecia cortada seca) */
+  .tm-abas { margin-right: -16px; padding-right: 32px; -webkit-mask: linear-gradient(90deg, #000 calc(100% - 44px), transparent); mask: linear-gradient(90deg, #000 calc(100% - 44px), transparent); }
+}
+.tm-abas button { flex: none; min-height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 99px; background: var(--surface); color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .tm-abas button.on { border-color: var(--gf-ouro, var(--primary)); color: var(--text); background: color-mix(in srgb, var(--gf-ouro, var(--primary)) 12%, var(--surface)); }
 .tm-pagina { max-height: min(46dvh, 460px); overflow-y: auto; overscroll-behavior: contain; padding: 18px 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
 .tm-pagina:focus-visible { outline: 2px solid var(--gf-ouro, var(--primary)); outline-offset: 2px; }
@@ -36,24 +43,36 @@
 .tm-aceites label { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font-size: 14px; line-height: 1.45; cursor: pointer; }
 .tm-aceites label.ok { border-color: var(--gf-ouro, var(--primary)); }
 .tm-aceites input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--gf-ouro, var(--primary)); }
+/* a caixa desenhada igual à do login (a nativa ficava um quadrado cinza no escuro) */
+.tm-aceites input[type='checkbox'] {
+  -webkit-appearance: none; appearance: none; display: block; flex: none; width: 20px; height: 20px; margin: calc((1.45em - 20px) / 2) 0 0; padding: 0;
+  border: 1.5px solid color-mix(in srgb, var(--text) 35%, transparent); border-radius: 6px; background: var(--bg); cursor: pointer; transition: background-color .15s, border-color .15s;
+}
+.tm-aceites input[type='checkbox']:checked {
+  border-color: var(--gf-ouro, var(--primary));
+  background: var(--gf-ouro, var(--primary)) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.4l3.2 3.1L15 6.6' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 18px 18px no-repeat;
+}
+.tm-aceites input[type='checkbox']:focus-visible { outline: 2px solid var(--gf-ouro, var(--primary)); outline-offset: 2px; }
 .tm-erro { margin: 0; color: var(--down); font-size: 13.5px; text-align: center; }
 .tm-acoes { display: flex; gap: 10px; }
 .tm-acoes button { min-height: 50px; border-radius: 12px; font: inherit; font-weight: 700; cursor: pointer; }
 .tm-sair { padding: 0 18px; border: 1px solid var(--border); background: transparent; color: var(--muted); }
 .tm-entrar { flex: 1; border: 0; background: var(--gf-ouro, var(--primary)); color: #051528; font-size: 15.5px; }
-.tm-entrar:disabled { opacity: .45; cursor: not-allowed; }
-.tm-dica { margin: -6px 0 0; text-align: center; font-size: 12.5px; color: var(--muted); }
+/* desativado neutro, como o Entrar do login (o dourado apagado parecia sujo) */
+.tm-entrar:disabled { cursor: not-allowed; background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--muted); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 80%, transparent); }
+.tm-dica { margin: -8px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
 
 .tm-modal { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; padding: 16px; }
 .tm-modal-fundo { position: absolute; inset: 0; border: 0; background: rgba(2, 8, 20, .62); cursor: pointer; }
 .tm-modal-caixa { position: relative; width: min(760px, 100%); max-height: calc(100dvh - 32px); display: grid; grid-template-rows: auto 1fr; gap: 12px; padding: 16px; border: 1px solid var(--border); border-radius: 18px; background: var(--bg); color: var(--text); overflow: hidden; }
 .tm-modal-caixa header { display: flex; align-items: center; justify-content: space-between; font-size: 16px; }
-.tm-modal-caixa header button { width: 40px; height: 40px; border: 0; border-radius: 10px; background: var(--surface); color: var(--text); font-size: 16px; cursor: pointer; }
+.tm-modal-caixa header button { width: 44px; height: 44px; border: 0; border-radius: 10px; background: var(--surface); color: var(--text); font-size: 16px; cursor: pointer; }
 .tm-modal-caixa .tm-pagina { max-height: calc(100dvh - 190px); }
 
 @media (max-width: 600px) {
   .tm-resumo { grid-template-columns: minmax(0, 1fr); }
   .tm-pagina { max-height: 40dvh; padding: 14px; }
   .tm-acoes { flex-direction: column-reverse; }
-  .tm-sair { min-height: 44px !important; }
+  /* no celular o Sair vira link, como o "Sair desta conta" da tela de análise: não disputa com o botão principal */
+  .tm-sair { min-height: 44px !important; border-color: transparent; background: none; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
 }

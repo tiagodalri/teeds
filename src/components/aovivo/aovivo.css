@@ -839,3 +839,65 @@ body.av-teatro-aberto { overflow: hidden; }
   .cv-controles { grid-row: auto; }
   .cv-chat { height: 440px; }
 }
+
+/* ---------------------------------------------------------- revisão de 29/10/2026 */
+/* A miniatura não senta em cima da barra inferior do celular (z 140): sobe junto com o
+   suporte e a pílula. Fora do arrasto (no arrasto ela usa top/left). */
+@media (max-width: 900px) {
+  body:has(.barra-inferior) .av-flutuante.embaixo:not(.arrastando) { bottom: calc(76px + var(--sab, 0px)) !important; }
+}
+/* Dedo, não ponteiro: os botões do player, da pílula e da miniatura com 44 px. */
+@media (hover: none) {
+  .av-controles button, .av-pilula button { min-width: 44px; height: 44px; }
+  .av-pilula { height: 48px; border-radius: 24px; padding-right: 2px; }
+  .av-mini-barra button, .av-mini-barra .av-chat-botao { min-width: 44px; min-height: 44px; height: 44px; border-radius: 22px; }
+}
+
+/* ==========================================================================
+   Revisão visual de 29/10/2026 (sala ao vivo, sala de treino, Central).
+   ========================================================================== */
+/* Rótulos com a primeira maiúscula, não em caixa alta espaçada. O "Ao vivo"
+   vermelho e o selo "GF Streaming" da imagem continuam como estão: são
+   sinais, não rótulos. */
+.av-sobretitulo, .cv-topo-rotulo, .av-link-live-texto small, .av-painel-sec h4 { font-size: 12.5px; letter-spacing: .01em; text-transform: none; }
+.av-fixada small, .av-painel-fixada small { font-size: 12px; letter-spacing: .01em; text-transform: none; }
+.av-msg em, .tr-tag-membro { padding: 1px 6px; font-size: 11px; letter-spacing: .01em; text-transform: none; }
+.tr-chip { font-size: 12.5px; letter-spacing: .01em; text-transform: none; }
+.tr-momento, .tr-momentos-rapidos > span, .av-enquete-opcao.barra em { font-size: 12px; letter-spacing: .01em; text-transform: none; }
+.tr-cabeca-sobre { font-size: 12.5px; letter-spacing: .02em; text-transform: none; }
+.tr-chat-topo h2 { font-size: 14px; letter-spacing: 0; text-transform: none; }
+
+/* "Compartilhar" do link da sala era um <button> sem fundo definido: saía
+   cinza de sistema, com cara de desligado. Agora é o botão secundário. */
+.av-botao-whats { background: transparent; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+/* O campo do chat corta o texto de ajuda com reticências, não no meio da palavra. */
+.av-escrever input { text-overflow: ellipsis; }
+
+/* "A sala de treino faz parte do GF Member": título com entrelinha de título. */
+.av-destaque h2 { line-height: 1.25; text-wrap: balance; }
+
+@media (max-width: 700px) {
+  /* a mesma margem lateral das outras páginas no celular (era 12 px) */
+  .av-pagina { padding: 16px 16px 24px; }
+  .av-destaque { padding: 20px; }
+  .av-destaque .av-botao-principal { width: 100%; }
+
+  /* Central: Tela, Câmera e Microfone lado a lado (o Microfone sobrava sozinho na segunda linha) */
+  .av-mesa-fontes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .av-fonte { flex-direction: column; align-items: flex-start; gap: 6px; min-height: 0; padding: 10px 12px; }
+  /* o botão de começar ocupa a largura (antes ficava empurrado para a direita) */
+  .av-mesa-acao { justify-content: stretch; }
+  .av-mesa-acao > .tr-botao-iniciar, .av-mesa-acao > .av-botao-iniciar, .av-mesa-acao > .av-botao-encerrar { flex: 1 1 100%; justify-content: center; }
+  .av-mesa-acao > .av-link { margin-inline: auto; }
+}
+@media (max-width: 640px) {
+  /* Quem assiste: o "Ao vivo" entra na coluna do texto, acima do título,
+     em vez de flutuar por cima do sobretítulo e do título. */
+  .tr-cabeca { grid-template-columns: auto minmax(0, 1fr); }
+  .tr-cabeca-selo { grid-column: 1; grid-row: 1 / span 2; }
+  .tr-cabeca .tr-status { position: static; grid-column: 2; grid-row: 1; justify-self: start; }
+  .tr-cabeca-texto { grid-column: 2; grid-row: 2; }
+  .tr-cabeca:not(:has(.tr-cabeca-selo)) { grid-template-columns: minmax(0, 1fr); }
+  .tr-cabeca:not(:has(.tr-cabeca-selo)) > * { grid-column: 1; }
+}

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { OpenContract } from '../core/deriv/trading'
 import './operar/boleta.css'
 import { useClock } from '../hooks/useClock'
@@ -13,18 +14,37 @@ function useCountdown(expiryEpoch: number) {
   return { restante, texto: `${mm}:${ss}` }
 }
 
+/**
+ * O nome de cada operação, igual em todas as telas (posição, últimas entradas,
+ * gráfico, relatórios). Substantivo, não o verbo do botão: "Compra", não "Comprar"
+ * (29/10/2026, revisão). Os de dígito sem o número; com o número, `nomeDaOperacao`.
+ */
 export const NOMES_DE_CONTRATO: Record<string, string> = {
-  CALL: 'Comprar', PUT: 'Vender', HIGHER: 'Acima', LOWER: 'Abaixo',
-  DIGITOVER: 'Último dígito acima', DIGITUNDER: 'Último dígito abaixo',
-  DIGITMATCH: 'Dígito exato', DIGITDIFF: 'Dígito diferente',
-  DIGITEVEN: 'Dígito par', DIGITODD: 'Dígito ímpar',
+  CALL: 'Compra', PUT: 'Venda', CALLE: 'Compra', PUTE: 'Venda', HIGHER: 'Acima', LOWER: 'Abaixo',
+  DIGITOVER: 'Dígito acima', DIGITUNDER: 'Dígito abaixo',
+  DIGITMATCH: 'Dígito igual', DIGITDIFF: 'Dígito diferente',
+  DIGITEVEN: 'Par', DIGITODD: 'Ímpar',
   MULTUP: 'Multiplicador ↑', MULTDOWN: 'Multiplicador ↓', ACCU: 'Acumulador',
   ONETOUCH: 'Toca', NOTOUCH: 'Não toca',
 }
 
+/** Com o dígito escolhido: "Acima de 4", "Igual a 7". Sem ele, o nome da tabela acima. */
+export function nomeDaOperacao(tipo: string, barreira?: number | string | null): string {
+  const b = barreira === null || barreira === undefined || barreira === '' ? null : barreira
+  if (b !== null) {
+    if (tipo === 'DIGITOVER') return `Acima de ${b}`
+    if (tipo === 'DIGITUNDER') return `Abaixo de ${b}`
+    if (tipo === 'DIGITMATCH') return `Igual a ${b}`
+    if (tipo === 'DIGITDIFF') return `Diferente de ${b}`
+  }
+  return NOMES_DE_CONTRATO[tipo] ?? tipo
+}
+
 /** Estados em que a Deriv ja deu a palavra final. */
 const FINAIS = new Set(['won', 'lost', 'sold', 'cancelled'])
-const SELO: Record<string, string> = { won: 'Ganhou', lost: 'Perdeu', sold: 'Encerrado', cancelled: 'Cancelado' }
+const SELO: Record<string, string> = { won: 'Ganhou', lost: 'Perdeu', sold: 'Encerrada', cancelled: 'Cancelada' }
+/** Celular e tablet tocam; computador clica. */
+const TOQUE = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
 
 interface Props {
   contrato: OpenContract
@@ -33,6 +53,11 @@ interface Props {
   encerrando: boolean
   /** Modo CEO: o markup desta operação (some quando não é o modo CEO). */
   markup?: number
+  /**
+   * Conta real (o tipo verdadeiro, nunca a etiqueta da tela): o "Encerrar agora"
+   * pede um segundo toque, como a compra. Em demo encerra direto.
+   */
+  real?: boolean
 }
 
 /**
@@ -49,7 +74,7 @@ interface Props {
  *
  * "Encerrar" e vender o contrato de volta para a Deriv antes do fim. A
  * palavra "vender" saiu daqui de proposito: na mesma tela ela ja e o botao
- * de apostar na queda, e um leigo lia "Vender" achando que estava saindo.
+ * da queda, e um leigo lia "Vender" achando que estava saindo.
  */
 /**
  * O motivo da Deriv para não deixar encerrar, em poucas palavras (o botão é
@@ -65,7 +90,14 @@ export function porQueNaoEncerra(motivo: string | null): string {
   return 'Só no vencimento'
 }
 
-export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, markup }: Props) {
+export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, markup, real = false }: Props) {
+  // conta real: o primeiro toque arma, o segundo encerra; desarma sozinho em 8 s
+  const [armado, setArmado] = useState(false)
+  useEffect(() => {
+    if (!armado) return
+    const t = window.setTimeout(() => setArmado(false), 8_000)
+    return () => window.clearTimeout(t)
+  }, [armado])
   const { restante, texto } = useCountdown(c.expiryTime)
   const concluido = FINAIS.has(c.status)
   const liquidando = !concluido && c.isExpired
@@ -84,8 +116,8 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, m
   const dinheiro = (v: number) => emDinheiro(v, c.currency)
   const pct = `${ganhando ? '+' : '−'}${Math.abs(c.profitPercentage).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
 
-  // o centro do relógio de painel: a contagem, os ticks, ou o desfecho
-  const centro = concluido ? selo : liquidandoNaTela ? '…' : ticks ? `${ticks}t` : texto
+  // o centro do relógio de painel: a contagem, as cotações (ticks), ou o desfecho
+  const centro = concluido ? selo : liquidandoNaTela ? '…' : ticks ? `${ticks} cot.` : texto
   const tom = concluido
     ? (c.status === 'won' ? 'ganhou' : c.status === 'lost' ? 'perdeu' : '')
     : (!ticks && !liquidandoNaTela && restante <= 15 ? 'urgente' : '')
@@ -95,8 +127,8 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, m
       : c.status === 'lost' ? `Perdeu · ${dinheiro(c.buyPrice)} da entrada`
       : c.status === 'sold' ? `Encerrada antes do fim por ${dinheiro(c.bidPrice)}`
       : 'Cancelada'
-    : liquidandoNaTela ? 'Venceu · a Deriv está fechando as contas'
-    : ticks ? `Vence em ${ticks} ${ticks === '1' ? 'tick' : 'ticks'} · aberta às ${aberta}`
+    : liquidandoNaTela ? 'Tempo esgotado · aguardando o resultado da Deriv'
+    : ticks ? `Fecha após ${ticks} ${ticks === '1' ? 'cotação' : 'cotações'} · aberta às ${aberta}`
     : `Aberta às ${aberta}`
 
   const rotuloBotao = concluido
@@ -106,7 +138,9 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, m
       : encerrando
         ? 'Encerrando…'
         : c.isValidToSell
-          ? <>Encerrar agora ·<span>{dinheiro(c.bidPrice)}</span></>
+          ? armado
+            ? <>{TOQUE ? 'Toque' : 'Clique'} de novo para encerrar ·<span>{dinheiro(c.bidPrice)}</span></>
+            : <>Encerrar agora ·<span>{dinheiro(c.bidPrice)}</span></>
           : porQueNaoEncerra(c.motivoSemVenda)
 
   // o arco do relógio: 2πr com r = 24 (viewBox 56)
@@ -114,7 +148,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, m
   return (
     <article className={['bp', ganhando ? 'ganhando' : 'perdendo', concluido ? `concluida ${c.status}` : '', liquidando ? 'liquidando' : ''].join(' ')}>
       <div className="bp-cab">
-        <div className={`bp-relogio ${tom} ${concluido ? 'palavra' : ''}`} role="timer" aria-label={concluido ? (selo ?? '') : ticks ? `${ticks} ticks` : `Faltam ${texto}`}>
+        <div className={`bp-relogio ${tom} ${concluido || (ticks && !liquidandoNaTela) ? 'palavra' : ''}`} role="timer" aria-label={concluido ? (selo ?? '') : ticks ? `Fecha após ${ticks} ${ticks === '1' ? 'cotação' : 'cotações'}` : `Faltam ${texto}`}>
           <svg viewBox="0 0 56 56" aria-hidden="true">
             <circle className="fundo" cx="28" cy="28" r="24" />
             <circle className="arco" cx="28" cy="28" r="24" strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - progresso / 100)} />
@@ -122,7 +156,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, m
           <b>{centro}</b>
         </div>
         <div className="bp-id">
-          <b className={comDirecao ? (subiu ? 'sobe' : 'desce') : ''}>{comDirecao && <><i aria-hidden="true">{subiu ? '▲' : '▼'}</i> </>}{NOMES_DE_CONTRATO[c.contractType] ?? c.contractType}<span className="bp-ativo"> · {nomeAtivo}</span></b>
+          <b className={comDirecao ? (subiu ? 'sobe' : 'desce') : ''}>{comDirecao && <><i aria-hidden="true">{subiu ? '▲' : '▼'}</i> </>}{nomeDaOperacao(c.contractType, c.barrier)}<span className="bp-ativo"> · {nomeAtivo}</span></b>
           <small><span className="bp-investido">Investido <em>{dinheiro(c.buyPrice)}</em></span><span className="bp-legenda">{legenda}</span></small>
         </div>
         <div className={`bp-res ${ganhando ? 'ganho' : 'perda'}`}>
@@ -142,14 +176,19 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, m
       </div>
 
       <div className="bp-nums">
-        <div><small>INVESTIDO</small><b>{dinheiro(c.buyPrice)}</b></div>
-        <div><small>{concluido ? 'PAGOU' : 'SE GANHAR'}</small><b>{dinheiro(concluido ? c.bidPrice : c.payout)}</b></div>
-        {markup !== undefined && <div className="bp-markup"><small>MARKUP</small><b>{dinheiro(markup)}</b></div>}
+        <div><small>Investido</small><b>{dinheiro(c.buyPrice)}</b></div>
+        <div><small>{concluido ? 'Pagou' : 'Se ganhar'}</small><b>{dinheiro(concluido ? c.bidPrice : c.payout)}</b></div>
+        {markup !== undefined && <div className="bp-markup"><small>Markup</small><b>{dinheiro(markup)}</b></div>}
       </div>
 
-      <button type="button" className="bp-encerrar"
+      <button type="button" className={`bp-encerrar ${armado ? 'armado' : ''}`}
         disabled={concluido || liquidando || !c.isValidToSell || encerrando}
-        onClick={() => onEncerrar(c.contractId)}
+        aria-label={armado ? `Confirmar: encerrar agora por ${dinheiro(c.bidPrice)}` : undefined}
+        onClick={() => {
+          if (real && !armado) { setArmado(true); return }
+          setArmado(false)
+          onEncerrar(c.contractId)
+        }}
         title={!concluido && c.motivoSemVenda ? `Deriv: ${c.motivoSemVenda}` : undefined}>
         {rotuloBotao}
       </button>

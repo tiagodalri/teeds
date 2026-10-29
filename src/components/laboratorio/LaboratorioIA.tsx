@@ -142,7 +142,7 @@ export function LaboratorioIA({ api, socket }: Props) {
           <input id="lb-nome" className="lb-nome" value={r.nome} maxLength={60} aria-label="Nome do robô" onChange={(e) => mexer((x) => { x.nome = e.target.value })} />
           <div className="lb-situacao">
             <span className={`lb-pilula s-${aberta?.situacao ?? 'novo'}`}>{aberta ? SITUACAO[aberta.situacao] : 'Rascunho novo'}</span>
-            {mudou && <span className="lb-mudou">mudanças não salvas</span>}
+            {mudou && <span className="lb-mudou">Mudanças não salvas</span>}
           </div>
         </div>
         <div className="lb-acoes">
@@ -283,7 +283,7 @@ export function LaboratorioIA({ api, socket }: Props) {
             {passoAtual > 1 ? <button type="button" className="lb-btn" onClick={() => ir(passoAtual - 1)}>← Voltar</button> : <span />}
             {passoAtual < 4
               ? <button type="button" className="lb-btn principal" onClick={() => ir(passoAtual + 1)}>Próximo: {PASSOS[passoAtual].nome} →</button>
-              : <button type="button" className="lb-btn principal" disabled={ocupado || (!mudou && !!aberta)} onClick={() => void salvar()}>{aberta ? 'Salvar a receita' : 'Salvar o robô'}</button>}
+              : <button type="button" className="lb-btn principal" disabled={ocupado || (!mudou && !!aberta)} onClick={() => void salvar()}>Salvar a receita</button>}
           </footer>
         </main>
 
@@ -551,21 +551,21 @@ function CartaoDoPagamento({ contrato, porDolar, cotado, recuperacao = false }: 
       <div className="lb-pg-principal">
         <span>Cada US$ 1 vira</span>
         <b>{usd(porDolar)}</b>
-        <small>quando ganha · {cotado ? 'cotado agora na Deriv' : 'estimado, cotando…'}</small>
+        <small>Quando ganha · {cotado ? 'cotado agora na Deriv' : 'estimado, cotando…'}</small>{/* texto-ok: continuação depois do ponto */}
       </div>
       <div className="lb-pg-regua">
         <div className="lb-pg-linha"><span>Chance teórica <b>{pct(l.chance, 0)}</b></span><span>Para empatar <b>{pct(l.equilibrio)}</b></span></div>
         <div className="lb-pg-trilho" aria-label={`Chance teórica ${pct(l.chance, 0)}; precisa de ${pct(l.equilibrio)} para empatar`}>
           <i className="chance" style={{ width: `${l.chance * 100}%` }} /><em style={{ left: `${Math.min(100, l.equilibrio * 100)}%` }} />
         </div>
-        <small className="lb-sutil">{folga >= 0 ? 'A chance teórica passa do ponto de equilíbrio.' : `Faltam ${pct(-folga)} de acerto para empatar só com o pagamento: a análise e a gestão fazem a diferença.`}</small>
+        <small className="lb-sutil">{folga >= 0 ? 'A chance teórica passa do ponto de equilíbrio.' : `Faltam ${pct(-folga)} de acerto para empatar só com o pagamento. Só o teste no histórico mostra se a análise compensa essa diferença.`}</small>
       </div>
       <button type="button" className="lb-link" aria-expanded={aberto} onClick={() => setAberto((v) => !v)}>{aberto ? 'Fechar' : 'Como ler o pagamento?'}</button>
       {aberto && (
         <div className="lb-pg-explica">
           <p><b>Cada US$ 1 vira {usd(porDolar)}</b>: é o que a Deriv paga quando ganha, com a entrada de volta (lucro de {l.lucroPct.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%). Quanto menos dígitos ganham, maior o pagamento.</p>
-          <p><b>Para empatar, {pct(l.equilibrio)}</b>: é quanto o robô precisa acertar no longo prazo só com esse pagamento (1 ÷ {porDolar.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}).</p>
-          <p><b>Na teoria, de cada US$ 100 voltam US$ {l.volta.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</b>. A diferença é a margem da corretora e do markup; por isso a estratégia mora na hora de entrar e na gestão.</p>
+          <p><b>Para empatar, {pct(l.equilibrio)}</b>: é a parte das operações que precisa ganhar no longo prazo só com esse pagamento (1 ÷ {porDolar.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}).</p>
+          <p><b>Na teoria, de cada US$ 100 voltam US$ {l.volta.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</b>. A diferença é a margem da corretora e do markup. Nenhuma regra de entrada ou de gestão garante cobrir essa diferença: o teste no histórico mostra como a receita se comportou, não o que vai acontecer.</p>
           <p className="lb-sutil">Cotado com US$ 10 no 75 Index ({ATIVO_DO_LAB}), {textoContrato(contrato)} por {textoTicks(contrato.ticks)}.</p>
         </div>
       )}
@@ -643,7 +643,7 @@ function FitaAoVivo({ receita, porDolar, base }: { receita: Receita; porDolar: (
     <section className="lb-cartao lb-aovivo" aria-label="O robô decidindo ao vivo">
       <header>
         <h3>Ao vivo no 75 Index</h3>
-        <span className={`lb-ao-vivo ${conectado ? 'on' : ''}`}><i />{conectado ? 'ticks reais' : 'conectando…'}</span>
+        <span className={`lb-ao-vivo ${conectado ? 'on' : ''}`}><i />{conectado ? 'Ticks reais' : 'Conectando…'}</span>
       </header>
       <div className={`lb-fase-agora ${estado.fase}`}>
         <span><i className={`lb-bola ${estado.fase === 'recuperacao' ? 'rec' : 'base'}`} />{estado.fase === 'recuperacao' ? 'Recuperação' : 'Base'} · {textoContrato(fase.contrato)}</span>
@@ -651,7 +651,7 @@ function FitaAoVivo({ receita, porDolar, base }: { receita: Receita; porDolar: (
       </div>
       <div className="lb-progresso" aria-label={estado.progresso}>
         <div className="lb-progresso-barra"><i style={{ width: `${Math.min(100, (estado.atual / Math.max(1, estado.alvo)) * 100)}%` }} /></div>
-        <small>{estado.aberta ? `${estado.progresso} · esperando o resultado` : estado.progresso || 'olhando os dígitos'}</small>
+        <small>{estado.aberta ? `${estado.progresso} · esperando o resultado` : estado.progresso || 'Olhando os dígitos'}</small>
       </div>
       <div className="lb-fita" aria-hidden="true">
         {marcas.map((m, i) => (
@@ -724,7 +724,7 @@ function ResultadoSimulado({ s, de, ate, base, chanceBase, equilibrioBase }: { s
         <div><span>Entradas</span><b>{s.entradas.toLocaleString('pt-BR')}</b><small>{s.entradasPorHora} por hora</small></div>
         <div><span>Acerto na base</span><b>{pct(acertoBase)}</b><small>teórica {pct(chanceBase, 0)} · equilíbrio {pct(equilibrioBase)}</small></div>
         <div><span>Pior queda</span><b className="down">{usd(-s.piorQueda)}</b><small>do ponto mais alto até o fundo</small></div>
-        <div><span>Maior sequência de perdas</span><b>{s.maiorSequenciaDePerdas}</b><small>{s.desistencias ? `${s.desistencias} desistência(s)` : 'sem desistências'}</small></div>
+        <div><span>Maior sequência de perdas</span><b>{s.maiorSequenciaDePerdas}</b><small>{s.desistencias ? `${s.desistencias} ${s.desistencias === 1 ? 'desistência' : 'desistências'}` : 'Sem desistências'}</small></div>
         <div><span>Maior compra</span><b>{usd(s.maiorEntrada)}</b><small>{(s.maiorEntrada / base).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}× a entrada</small></div>
       </div>
       <Curva valores={s.curva} quebrou={!!s.quebrou} />

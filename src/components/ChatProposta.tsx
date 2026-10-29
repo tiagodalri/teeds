@@ -103,7 +103,7 @@ export function ChatProposta({ proposta, sessao, onLigado, rotulosTrocados = fal
         <Emblema id={id} tamanho={44} />
         <div>
           <b><NomeDoRobo nome={proposta.roboNome} id={id.id} /></b>
-          <small>{id.chamada} · {id.chance}% de chance</small>
+          <small>{id.chamada}</small>
         </div>
         {real && !rotulosTrocados && <span className="cp-real-marca">dinheiro real</span>}
       </header>
@@ -117,12 +117,12 @@ export function ChatProposta({ proposta, sessao, onLigado, rotulosTrocados = fal
             onChange={(e) => setEntrada(Number(e.target.value))} />
         </label>
         <label>
-          <span>Parar na perda</span>
+          <span>Limite de perda</span>
           <input type="number" min="1" step="1" value={stop}
             onChange={(e) => setStop(Number(e.target.value))} />
         </label>
         <label>
-          <span>Parar no ganho</span>
+          <span>Meta de ganho</span>
           <input type="number" min="1" step="1" value={meta}
             onChange={(e) => setMeta(Number(e.target.value))} />
         </label>
@@ -133,7 +133,7 @@ export function ChatProposta({ proposta, sessao, onLigado, rotulosTrocados = fal
       <footer className="cp-pe">
         <span>
           {(rotulosTrocados ? !proposta.demo : proposta.demo) ? 'Conta de demonstração' : 'Conta real'}
-          <br /><small>saldo {din(proposta.saldo, proposta.moeda)}</small>
+          <br /><small>Saldo {din(proposta.saldo, proposta.moeda)}</small>
         </span>
         <button className={`cp-ligar ${confirmando ? 'confirmando' : ''}`} onClick={ligar} disabled={ligando}>
           {ligando ? 'Ligando…'
@@ -142,10 +142,13 @@ export function ChatProposta({ proposta, sessao, onLigado, rotulosTrocados = fal
         </button>
       </footer>
 
+      {/* com rótulos trocados a tela chama esta conta de demonstração: o aviso não pode dizer "real" */}
       {confirmando && (
         <p className="cp-aviso">
-          Esta conta é real. Cada entrada de {din(entrada, proposta.moeda)} é dinheiro seu,
-          e o robô para sozinho em {din(stop, proposta.moeda)} de perda.
+          {rotulosTrocados
+            ? <>Confira os valores. O robô para sozinho em {din(stop, proposta.moeda)} de perda.</>
+            : <>Esta conta é real. Cada entrada de {din(entrada, proposta.moeda)} é dinheiro seu,
+              e o robô para sozinho em {din(stop, proposta.moeda)} de perda.</>}
         </p>
       )}
     </div>

@@ -122,6 +122,7 @@ export function DivulgacaoPanel({ sessao, inicial }: { sessao: SessaoTeeds; inic
             <input id="dv-url" value={editando.url} inputMode="url" placeholder="https://" onChange={(e) => setEditando({ ...editando, url: e.target.value.trim() })} />
             <label htmlFor="dv-desc">Para que serve (opcional)</label>
             <input id="dv-desc" value={editando.descricao} maxLength={200} onChange={(e) => setEditando({ ...editando, descricao: e.target.value })} />
+            {erro && <div className="dv-erro" role="alert">{erro}</div>}
             <div className="dv-form-acoes">
               {editando.id && <button type="button" className="perigo" disabled={ocupado} onClick={() => void executar(() => apagarLinkDoParceiro(sessao, editando.id!), () => setEditando(null))}>Apagar</button>}
               <span />
@@ -155,16 +156,18 @@ export function DivulgacaoPanel({ sessao, inicial }: { sessao: SessaoTeeds; inic
           ) : (
             <form className="dv-form" onSubmit={(e) => { e.preventDefault(); void executar(() => configurarParceiro(sessao, p.codigo, config.email, config.app), () => setConfig(null)) }}>
               <label htmlFor="dv-email">E-mail de login do parceiro</label>
-              <input id="dv-email" type="email" value={config.email} placeholder="o mesmo e-mail com que ele entra na plataforma" onChange={(e) => setConfig({ ...config, email: e.target.value })} />
+              <input id="dv-email" type="email" value={config.email} placeholder="O mesmo e-mail com que ele entra na plataforma" onChange={(e) => setConfig({ ...config, email: e.target.value })} />
               <label htmlFor="dv-app">App da Deriv do parceiro (app_id)</label>
-              <input id="dv-app" value={config.app} placeholder="o identificador do app criado na Deriv" onChange={(e) => setConfig({ ...config, app: e.target.value.trim() })} />
+              <input id="dv-app" value={config.app} placeholder="O identificador do app criado na Deriv" onChange={(e) => setConfig({ ...config, app: e.target.value.trim() })} />
               <small className="dv-dica">Trocar o app deixa ele aguardando liberação: o servidor das I.A. precisa conhecer o app antes dos clientes conectarem por ele.</small>
+              {erro && <div className="dv-erro" role="alert">{erro}</div>}
               <div className="dv-form-acoes"><span /><button type="button" onClick={() => setConfig(null)} disabled={ocupado}>Cancelar</button><button type="submit" className="principal" disabled={ocupado}>{ocupado ? 'Salvando…' : 'Salvar'}</button></div>
             </form>
           )}
         </section>
       )}
-      {erro && <div className="dv-erro" role="alert">{erro}</div>}
+      {/* com um formulário aberto, o erro aparece dentro dele, perto do botão (29/10/2026) */}
+      {erro && !editando && !config && <div className="dv-erro" role="alert">{erro}</div>}
     </div>
   )
 }

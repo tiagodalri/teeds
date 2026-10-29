@@ -694,7 +694,7 @@ export function Organizacao({ api, semTitulo = false }: { api: OrgApi; semTitulo
             <button type="button" className="og-contagem" onClick={() => { trocarVista('calendario'); setMes(proximoLancamento.data.slice(0, 7)); setDia(proximoLancamento.data) }}
               title={`${proximoLancamento.titulo}: ${dataLonga(proximoLancamento.data)}${proximoLancamento.hora ? `, ${proximoLancamento.hora}` : ''}`}>
               <b>{faltam === 0 ? 'Hoje' : faltam}</b>
-              <span>{faltam === 0 ? proximoLancamento.titulo : `${faltam === 1 ? 'dia' : 'dias'} para a ${proximoLancamento.titulo.toLowerCase()}`}<small>{dataCurta(proximoLancamento.data)}{proximoLancamento.hora ? ` às ${proximoLancamento.hora}` : ''}</small></span>
+              <span>{faltam === 0 ? proximoLancamento.titulo : `${faltam === 1 ? 'dia' : 'dias'} para a ${proximoLancamento.titulo.toLowerCase()}`}<small>{dataCurta(proximoLancamento.data)}{proximoLancamento.hora ? ` às ${proximoLancamento.hora}` : ''}</small></span> {/* texto-ok: painel interno, "3 dias para a live" */}
             </button>
           )}
           <button type="button" className="og-btn" onClick={() => novoMarco()}>+ Marco</button>

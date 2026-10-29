@@ -6,7 +6,7 @@
   --og-raio: 14px;
   display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; color: var(--text); min-width: 0;
 }
-.og button { font: inherit; }
+.og :where(button) { font: inherit; }
 .og-carregando, .og-vazio { margin: 0; color: var(--muted); font-size: 12.5px; }
 .og-vazio { padding: 10px 2px; }
 .og-erro { margin: 0; padding: 10px 12px; border-radius: 10px; color: var(--down); background: var(--down-soft); font-size: 13px; }
@@ -347,3 +347,10 @@
   .og-fundo { padding: 10px; align-items: end; }
 }
 @media (prefers-reduced-motion: reduce) { .og-cartao, .og-barra i { transition: none; } }
+
+/* Revisão visual de 29/10/2026: rótulos com a primeira maiúscula, não em
+   caixa alta espaçada, e no piso de leitura (a escala de 90% do computador
+   leva 10,5 px a 9,5 px). Os dias da semana e os meses abreviados do
+   calendário continuam em caixa alta: são abreviações, não rótulos. */
+.og-rot { font-size: 12.5px; letter-spacing: .01em; text-transform: none; }
+.og-area { font-size: 12px; letter-spacing: .01em; text-transform: none; }

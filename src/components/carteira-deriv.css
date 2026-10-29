@@ -1,11 +1,14 @@
 /* A carteira da Deriv (26/10/2026). Cores só pelos tokens do tema. */
-.cw-fundo { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 16px; background: rgba(4, 10, 20, .55); backdrop-filter: blur(2px); }
+/* acima da barra de baixo (140), da mini-cabine (144), do suporte (145) e da pílula da sala (150):
+   com 120 o rodapé "Depositar na Deriv" ficava atrás da barra no celular */
+.cw-fundo { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 16px 16px calc(16px + var(--sab, 0px)); background: rgba(4, 10, 20, .55); backdrop-filter: blur(2px); }
+body:has(.cw-fundo) :is(.barra-inferior, .mcb, .sp-lancador-area) { display: none; }
 .cw {
-  display: flex; flex-direction: column; width: min(560px, 100%); max-height: min(760px, calc(100dvh - 32px)); overflow: hidden;
+  display: flex; flex-direction: column; width: min(560px, 100%); max-height: min(880px, calc(100dvh - 32px)); overflow: hidden;
   border: 1px solid var(--border); border-radius: 18px; background: var(--bg); color: var(--text); box-shadow: 0 30px 80px -24px rgba(0, 0, 0, .6);
 }
 .cw-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 22px 14px; }
-.cw-rot { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.cw-rot { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; font-weight: 600; }
 .cw-topo h2 { margin: 4px 0 0; font-size: 22px; letter-spacing: -.015em; }
 .cw-topo-acoes { display: flex; gap: 8px; }
 .cw-icone, .cw-fechar { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; }
@@ -90,6 +93,11 @@ li.deposito .cw-valor { color: var(--up); }
   .cw-pe .cw-botao { flex: 1; }
 }
 @media (prefers-reduced-motion: reduce) { .cw-carregando, .cw-fantasma > i, .cw-fantasma > span { animation: none; } }
+
+/* 29/10/2026: com 760 px de altura, a lista de depósitos e saques começava exatamente no pé da janela
+   (só o título e as abas apareciam, parecia vazia); a janela usa a altura da tela até 880 px e o fim
+   da área que rola ganha um degradê, sinal de que há mais embaixo */
+.cw-corpo { -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(180deg, #000 calc(100% - 24px), transparent); padding-bottom: 16px; }
 
 /* os saldos (26/10/2026): a conta de operação (onde as I.A. operam) e a carteira, cada uma numa linha */
 .cw-r-cabeca { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

@@ -60,8 +60,8 @@ export function Convidado({ codigo, aoEntrarNaConta }: { codigo: string | null; 
         <main className="cv-caixa">
           <section className="cv-cartao">
             <span className="av-sobretitulo">Sala de treino da {MARCA.prosa}</span>
-            <h1>Entre na sua conta para assistir o ensaio</h1>
-            <p>A sala de treino é exclusiva para membros <b>GF Member</b>. Entre com a sua conta e você cai direto no ensaio.</p>
+            <h1>Entre na sua conta para assistir à transmissão</h1>
+            <p>A sala de treino é exclusiva do <b>GF Member</b>. Entre com a sua conta e a transmissão abre direto.</p>
             <button className="av-botao-principal" onClick={aoEntrarNaConta}>Entrar na conta</button>
           </section>
         </main>

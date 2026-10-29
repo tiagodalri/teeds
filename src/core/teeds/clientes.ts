@@ -189,7 +189,8 @@ export async function registrarContaDeriv(
     const cru = (e as Error).message
     // Desde 07/09 a mesma conta pode estar em mais de um login: nao ha mais
     // "outro dono". Se falhar, e problema de rede ou de permissao — diz qual.
-    const recado = `Não consegui ligar a conta ${conta.accountId} ao seu login: ${cru}`
+    // o erro técnico fica no console (para o suporte); o cliente lê o que fazer
+    const recado = `Não deu para ligar a conta ${conta.accountId} da Deriv ao seu login. Conecte a Deriv de novo ou fale com o suporte.`
     console.warn('[teeds] conta Deriv:', cru)
     return recado
   }
@@ -497,18 +498,18 @@ export async function atualizarAcessoCliente(sessao: SessaoTeeds, userId: string
   planoId: string; statusAcesso: ClienteRegistro['statusAcesso']; acessoExpiraEm: string | null; observacoes: string | null
   /** Selo Silver/Gold (GlobalFly). Omitido = não mexe. */
   categoria?: 'silver' | 'gold'
-}): Promise<void> {
-  if (!planoClienteValido(dados.planoId)) throw new Error('Escolha um dos planos da lista.')
-  await rest(`/clientes?user_id=eq.${encodeURIComponent(userId)}&marca=eq.${MARCA.id}`, sessao.token, {
+}, marca: string = MARCA.id): Promise<void> {
+  if (!planoClienteValido(dados.planoId, MARCAS[marca] ?? MARCA)) throw new Error('Escolha um dos planos da lista.')
+  await rest(`/clientes?user_id=eq.${encodeURIComponent(userId)}&marca=eq.${encodeURIComponent(marca)}`, sessao.token, {
     method: 'PATCH', headers: { Prefer: 'return=minimal' },
     body: JSON.stringify({ plano_id: dados.planoId, status_acesso: dados.statusAcesso, acesso_expira_em: dados.acessoExpiraEm, observacoes: dados.observacoes, ...(dados.categoria ? { categoria: dados.categoria } : {}) }),
   })
 }
 
-export async function definirProdutoCliente(sessao: SessaoTeeds, userId: string, produtoId: string, ativo: boolean): Promise<void> {
+export async function definirProdutoCliente(sessao: SessaoTeeds, userId: string, produtoId: string, ativo: boolean, marca: string = MARCA.id): Promise<void> {
   await rest('/cliente_produtos?on_conflict=user_id,produto_id,marca', sessao.token, {
     method: 'POST', headers: MESCLAR,
-    body: JSON.stringify({ user_id: userId, produto_id: produtoId, marca: MARCA.id, ativo, origem: 'admin', concedido_em: new Date().toISOString() }),
+    body: JSON.stringify({ user_id: userId, produto_id: produtoId, marca, ativo, origem: 'admin', concedido_em: new Date().toISOString() }),
   })
 }
 
@@ -546,16 +547,20 @@ export async function salvarProduto(sessao: SessaoTeeds, produto: ProdutoRegistr
  * O trigger do banco cria a ficha de cliente; depois o painel configura plano
  * e validade. Se a confirmação de e-mail estiver ativa, o cliente confirma no
  * próprio e-mail antes do primeiro acesso.
+ *
+ * `marca` (29/10/2026): a plataforma em foco no painel. Antes era sempre a do
+ * site aberto: com o master na Teeds e o seletor em OMNI, a conta nascia na
+ * Teeds e o cliente da OMNI recebia o e-mail da Teeds.
  */
 export async function criarAcessoCliente(sessao: SessaoTeeds, dados: {
   nome: string; email: string; telefone?: string; cpf?: string; senha: string
-}): Promise<{ userId: string | null; precisaConfirmar: boolean }> {
+}, marca: string = MARCA.id): Promise<{ userId: string | null; precisaConfirmar: boolean }> {
   const res = await fetch(`${SUPABASE.url}/auth/v1/signup`, {
     method: 'POST',
     headers: { apikey: SUPABASE.anonKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: emailDaConta(dados.email, MARCA.id), senha: undefined, password: dados.senha,
-      data: { nome: dados.nome.trim(), telefone: dados.telefone?.trim() || null, cpf: dados.cpf?.trim() || null, marca: MARCA.id, trocar_senha: true },
+      email: emailDaConta(dados.email, marca), senha: undefined, password: dados.senha,
+      data: { nome: dados.nome.trim(), telefone: dados.telefone?.trim() || null, cpf: dados.cpf?.trim() || null, marca, trocar_senha: true },
     }),
   })
   const corpo = await res.json().catch(() => ({}))
@@ -565,11 +570,11 @@ export async function criarAcessoCliente(sessao: SessaoTeeds, dados: {
   if (userId) {
     await new Promise((resolve) => setTimeout(resolve, 350))
     // admin do parceiro (ou o geral com um parceiro em foco): a conta nasce do parceiro dele
-    await rest('/rpc/teeds_atribuir_ao_meu_escopo', sessao.token, { method: 'POST', body: JSON.stringify({ p_user: userId, p_marca: MARCA.id }) }).catch(() => undefined)
+    await rest('/rpc/teeds_atribuir_ao_meu_escopo', sessao.token, { method: 'POST', body: JSON.stringify({ p_user: userId, p_marca: marca }) }).catch(() => undefined)
     try {
       await rest('/clientes?on_conflict=user_id,marca', sessao.token, {
         method: 'POST', headers: MESCLAR,
-        body: JSON.stringify({ user_id: userId, marca: MARCA.id, nome: dados.nome.trim(), email: dados.email.trim().toLowerCase(), telefone: dados.telefone?.trim() || null, cpf: dados.cpf?.trim() || null }),
+        body: JSON.stringify({ user_id: userId, marca, nome: dados.nome.trim(), email: dados.email.trim().toLowerCase(), telefone: dados.telefone?.trim() || null, cpf: dados.cpf?.trim() || null }),
       })
     } catch { /* o trigger já criou ou a confirmação ainda está pendente */ }
   }

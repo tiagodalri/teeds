@@ -344,7 +344,12 @@ export function SuporteWidget({ sessao, nome, telaAtual, admin, escondido = fals
         setConversas((l) => [conversa!, ...(l ?? [])]); setAtual(conversa); setMensagens([]); setVista('conversa'); setPilha(INICIO_DA_TRIAGEM)
       }
       setEnviando(true)
-      const caminho = await enviarAnexo(sessao, conversa, f)
+      // a foto aparece na hora como "enviando": reduzir e subir um HEIC grande leva alguns segundos (29/10/2026)
+      const tempId = `temp-img-${Date.now()}`
+      const idDaConversa = conversa.id
+      setMensagens((l) => [...l, { id: tempId, conversaId: idDaConversa, autor: 'cliente', autorId: uid, autorNome: nome, texto: 'Enviando imagem…', anexo: null, interna: false, criadaEm: new Date().toISOString(), enviando: true }])
+      let caminho: string
+      try { caminho = await enviarAnexo(sessao, conversa, f) } finally { setMensagens((l) => l.filter((x) => x.id !== tempId)) }
       setEnviando(false)
       await mandar(texto.trim(), caminho, conversa)
       setTexto('')
@@ -414,13 +419,13 @@ export function SuporteWidget({ sessao, nome, telaAtual, admin, escondido = fals
             <span className="sp-equipe-avatar"><Monograma tamanho={26} /><i className={status.online ? 'online' : ''} /></span>
             <span>
               <b>Suporte {MARCA.prosa}</b>
-              <small>{status.online ? <><i className="sp-ponto" />Online agora</> : 'Respondemos o quanto antes'}{respostaEm && ` · responde ${respostaEm}`}</small>
+              <small>{status.online ? <><i className="sp-ponto" />Online agora{respostaEm && ` · responde ${respostaEm}`}</> : respostaEm ? `Responde ${respostaEm}` : 'Respondemos o quanto antes'}</small>
             </span>
           </div>
           <button type="button" className="sp-icone-btn" onClick={() => setAberto(false)} aria-label="Fechar o suporte"><Ic d={I.fechar} /></button>
         </header>
 
-        {!online && <p className="sp-offline">Sem internet agora. A mensagem vai assim que a conexão voltar.</p>}
+        {!online && <p className="sp-offline">Sem internet agora. Quando a conexão voltar, toque em enviar.</p>}
 
         {/* ------------------------------------------------ histórico */}
         {vista === 'historico' ? (
@@ -520,7 +525,7 @@ export function SuporteWidget({ sessao, nome, telaAtual, admin, escondido = fals
                           {!meu && <span className="sp-msg-nome">{(m.autorNome || 'Equipe').split(' ')[0]} · Equipe</span>}
                           {m.anexo && <Anexo sessao={sessao} caminho={m.anexo} aoAmpliar={setAmpliada} />}
                           {m.texto && <p>{m.texto}</p>}
-                          <span className="sp-msg-hora">{m.falhou ? <button type="button" onClick={() => { setMensagens((l) => l.filter((x) => x.id !== m.id)); void mandar(m.texto, m.anexo) }}>Não enviou · tentar de novo</button> : m.enviando ? 'enviando…' : horaCurta(m.criadaEm)}
+                          <span className="sp-msg-hora">{m.falhou ? <button type="button" onClick={() => { setMensagens((l) => l.filter((x) => x.id !== m.id)); void mandar(m.texto, m.anexo) }}>Não enviou · Tentar de novo</button> : m.enviando ? 'Enviando…' : horaCurta(m.criadaEm)}
                             {meu && !m.enviando && !m.falhou && <Ic d={I.certo} className="sp-visto" />}</span>
                         </div>
                       </div>]
@@ -595,7 +600,10 @@ export function SuporteWidget({ sessao, nome, telaAtual, admin, escondido = fals
         )}
       </div>
       {ampliada && (
-        <button type="button" className="sp-ampliada" onClick={() => setAmpliada(null)} aria-label="Fechar imagem"><img src={ampliada} alt="Imagem ampliada" /></button>
+        <div className="sp-ampliada" role="dialog" aria-label="Imagem ampliada" onClick={() => setAmpliada(null)}>
+          <img src={ampliada} alt="Imagem ampliada" />
+          <button type="button" className="sp-ampliada-fechar" onClick={() => setAmpliada(null)} aria-label="Fechar imagem"><Ic d={I.fechar} /></button>
+        </div>
       )}
     </>
   )

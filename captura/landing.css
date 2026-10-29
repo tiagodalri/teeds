@@ -410,3 +410,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 [data-marca=globalfly] input:focus{border-color:var(--cor);box-shadow:0 0 0 3px color-mix(in srgb,var(--cor) 18%,transparent)}
 [data-marca=globalfly] :is(.consentimento,.aviso-legal){color:var(--gf-apoio)}
 @media(max-width:900px){[data-marca=globalfly] .cadastro:before{display:none}}
+/* sessões na prática (29/10/2026): três exemplos, um de cada jeito de terminar */
+.sessoes{grid-template-columns:repeat(3,minmax(0,1fr));max-width:960px}
+.sessao.manual .selo{color:var(--muted);background:color-mix(in srgb,var(--muted) 16%,transparent)}
+@media(max-width:600px){.sessoes{grid-template-columns:minmax(0,1fr)}}

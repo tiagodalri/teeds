@@ -6,6 +6,7 @@ import { useDigits } from '../hooks/useDigits'
 import { IconeFechar } from './IconeFechar'
 import { MARCA } from '../marca'
 import { naPagina } from '../core/escala'
+import './digitos-flutuante.css'
 
 /**
  * Painel flutuante "Dígitos ao vivo" da área dos robôs.
@@ -213,19 +214,18 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
         {!movel && <span className="pd-grip" aria-hidden="true">⋮⋮</span>}
         <b>Dígitos ao vivo</b>
         <span className="pd-ativo">{ativoCurto}</span>
-        <span className="pd-ultimo" title="último dígito que chegou">{estat.ultimo ?? '—'}</span>
+        <span className="pd-ultimo" title="Último dígito que chegou">{estat.ultimo ?? '—'}</span>
         <button className="pd-fechar" onClick={aoFechar} aria-label="Fechar"><IconeFechar /></button>
       </div>
 
       <div className="pd-janela">
-        <span>últimos</span>
-        <div className="segmented mini" role="group" aria-label="Quantos ticks contar">
+        <span>Últimos</span>
+        <div className="segmented mini" role="group" aria-label="Quantos dígitos contar">
           {JANELAS.map((j) => (
-            <button key={j} type="button" className={janela === j ? 'on' : ''} onClick={() => trocarJanela(j)}
-              title={j === 25 ? 'a memória do robô' : undefined}>{j}</button>
+            <button key={j} type="button" className={janela === j ? 'on' : ''} onClick={() => trocarJanela(j)}>{j}</button>
           ))}
         </div>
-        <span>ticks</span>
+        <span>dígitos</span>
       </div>
 
       <div className="pd-grafico" aria-label="Frequência de cada dígito">
@@ -234,7 +234,7 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
         <div className="pd-area">
           {estat.total > 0 && (
             <span className="pd-esperado" style={{ bottom: `${Math.min(100, (ESPERADO / maxPct) * 100)}%` }}
-              title={`esperado: ${ESPERADO}% para cada dígito`} aria-hidden="true" />
+              title={`Esperado: ${ESPERADO}% para cada dígito`} aria-hidden="true" />
           )}
           {estat.pct.map((pct, d) => {
             const z = desvios[d]
@@ -265,9 +265,9 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
 
       <div className="pd-resumo">
         <div className="pd-alta">
-          <span>Em alta</span>
-          {lendo ? <small>lendo o mercado</small>
-            : emAlta.length === 0 ? <small>nenhum dígito acima do esperado</small>
+          <span>Acima de 10%</span>
+          {lendo ? <small>Lendo o mercado</small>
+            : emAlta.length === 0 ? <small>Nenhum dígito acima de 10%</small>
             : <div className="pd-chips">
                 {emAlta.slice(0, 5).map(({ d, z }) => (
                   <b key={d} style={{ ['--brilho' as string]: brilho(z).toFixed(2) }}
@@ -281,6 +281,9 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
           <span><b>{(100 - metadeDeBaixo).toFixed(0)}%</b> 5 a 9</span>
         </div>
       </div>
+
+      {/* o painel descreve o que já saiu; não é indicação do próximo dígito (29/10/2026) */}
+      <small className="pd-nota">Cada tick é independente: isto mostra o que já saiu, não o próximo dígito.</small>
 
       {!movel && (
         <button type="button" className="pd-alca" aria-label={`Redimensionar o painel (largura ${largura}px). Setas ajustam; Home volta ao padrão.`}

@@ -27,7 +27,8 @@ button, input { font: inherit; }
 
 .pagina { width: min(1120px, 100%); margin: 0 auto; padding: max(20px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom)); display: grid; gap: 40px; min-height: 100vh; min-height: 100dvh; grid-template-rows: auto 1fr auto; }
 .topo { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 8px; }
-.topo img { width: 190px; height: auto; }
+/* a assinatura tem 6,6% de respiro transparente à esquerda: puxa para a letra alinhar com o resto da página */
+.topo img { width: 190px; height: auto; margin-left: -12px; }
 .passo { color: var(--aco); font-size: 13px; font-weight: 700; letter-spacing: .04em; }
 
 /* ------------------------------------------------ cadastro */
@@ -66,8 +67,8 @@ h1 em { font-style: normal; color: var(--ouro-claro); }
 .campo small { color: var(--erro); font-weight: 400; font-size: 13px; min-height: 0; }
 /* senha do cadastro (28/10/2026): o olho dentro do campo */
 .com-olho { position: relative; display: block; }
-.com-olho input { width: 100%; padding-right: 48px; }
-.olho { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--aco); cursor: pointer; }
+.com-olho input { width: 100%; padding-right: 52px; }
+.olho { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--aco); cursor: pointer; }
 .olho svg { width: 20px; height: 20px; }
 .olho[aria-pressed="true"] { color: var(--ouro-claro); }
 .olho:focus-visible { outline: 2px solid var(--ouro); outline-offset: 1px; }
@@ -97,7 +98,7 @@ h1 em { font-style: normal; color: var(--ouro-claro); }
 .progresso div { height: 4px; border-radius: 99px; background: rgba(156, 177, 199, .18); overflow: hidden; }
 .progresso i { display: block; height: 100%; border-radius: inherit; background: var(--ouro); }
 .progresso span { color: var(--aco); font-size: 13px; font-weight: 700; }
-.pergunta { margin: 0 0 18px; padding: 0; font-weight: 700; font-size: clamp(22px, 3vw, 26px); line-height: 1.25; letter-spacing: -.01em; text-wrap: balance; }
+.pergunta { width: 100%; margin: 0 0 18px; padding: 0; font-weight: 700; font-size: clamp(22px, 3vw, 26px); line-height: 1.25; letter-spacing: -.01em; text-wrap: balance; }
 .opcoes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .opcao { position: relative; display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 0 18px; border: 1px solid rgba(156, 177, 199, .3); border-radius: 12px; background: rgba(5, 21, 40, .55); cursor: pointer; font-size: 17px; font-weight: 700; transition: border-color .15s, background .15s; }
 .opcao input { position: absolute; opacity: 0; pointer-events: none; }
@@ -116,7 +117,7 @@ h1 em { font-style: normal; color: var(--ouro-claro); }
 .produto:has(input:checked) { border-color: var(--ouro); background: rgba(183, 141, 57, .1); }
 .produto:has(input:checked) i { border-color: var(--ouro); background: var(--ouro); }
 .produto:has(input:checked) i::after { content: ""; width: 10px; height: 5px; margin-top: -3px; border: solid var(--azul); border-width: 0 0 2.5px 2.5px; transform: rotate(-45deg); }
-.qual { margin-top: 10px; }
+.qual { margin: 12px 0 0; }
 .qual[hidden] { display: none; }
 .acoes { margin-top: 26px; }
 
@@ -125,7 +126,7 @@ h1 em { font-style: normal; color: var(--ouro-claro); }
 .obrigado { text-align: center; }
 .obrigado h1 { margin: 0 0 12px; font-size: clamp(28px, 4vw, 38px); }
 .obrigado .chamada { margin: 0 auto 26px; font-size: 17px; }
-.ultimo { margin: 0 0 10px; color: var(--ouro-claro); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.ultimo { margin: 0 0 8px; color: var(--ouro-claro); font-size: 15px; font-weight: 700; }
 .live { display: flex; align-items: center; gap: 16px; margin-top: 22px; padding: 16px 18px; border: 1px solid var(--linha); border-radius: 12px; background: rgba(5, 21, 40, .5); text-align: left; }
 .live .data { flex: none; display: grid; place-items: center; width: 58px; height: 62px; border-radius: 10px; background: var(--marfim); color: var(--azul); line-height: 1; }
 .live .data b { font: 700 24px/1 ui-monospace, "SF Mono", Menlo, monospace; }
@@ -157,7 +158,7 @@ h1 em { font-style: normal; color: var(--ouro-claro); }
 }
 @media (max-width: 520px) {
   .pagina { padding-inline: 16px; }
-  .topo img { width: 150px; }
+  .topo img { width: 150px; margin-left: -10px; }
   h1 { margin-top: 18px; }
   .chamada { font-size: 16.5px; }
   .cartao { padding: 22px 18px; }

@@ -7,14 +7,14 @@
   display: grid; gap: 18px; width: 100%; max-width: 980px; margin: 0 auto; padding: 22px 26px 48px; box-sizing: border-box; min-width: 0;
 }
 .aj svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.aj button { font: inherit; color: inherit; }
+.aj :where(button) { font: inherit; color: inherit; }
 
 .aj-topo {
   position: relative; overflow: hidden; display: grid; gap: 10px; padding: 30px 30px 24px; border-radius: 22px;
   border: 1px solid var(--aj-linha); background: linear-gradient(150deg, color-mix(in srgb, var(--aj-ouro) 9%, var(--surface)), var(--surface) 55%);
 }
 .aj-topo-marca { position: absolute; right: -40px; top: -50px; opacity: .05; }
-.aj-sobre { display: inline-flex; align-items: center; gap: 7px; color: var(--aj-ouro); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.aj-sobre { display: inline-flex; align-items: center; gap: 7px; color: var(--aj-ouro); font-size: 12.5px; font-weight: 700; letter-spacing: .01em; }
 .aj-topo h1 { position: relative; margin: 0; font-size: clamp(26px, 3.4vw, 36px); font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
 .aj-topo > p { position: relative; margin: 0; color: var(--muted); font-size: 15px; }
 .aj-busca {
@@ -47,7 +47,7 @@
 .aj-lista { display: grid; gap: 22px; }
 .aj-contagem { margin: 0; color: var(--muted); font-size: 13px; }
 .aj-grupo { display: grid; gap: 8px; }
-.aj-grupo h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.aj-grupo h2 { display: flex; align-items: center; gap: 8px; margin: 6px 0 4px; font-size: 16.5px; font-weight: 800; letter-spacing: -.01em; color: var(--text); }
 .aj-grupo h2 svg { color: var(--aj-ouro); width: 16px; height: 16px; }
 .aj-item { border-radius: 16px; border: 1px solid var(--aj-linha); background: var(--surface); scroll-margin: 90px; transition: border-color .15s; }
 .aj-item.aberta { border-color: color-mix(in srgb, var(--aj-ouro) 55%, var(--border)); }
@@ -90,12 +90,15 @@
   .aj-topo { padding: 22px 16px 18px; border-radius: 18px; }
   .aj-busca input { height: 50px; }
   .aj-populares { display: none; }
-  .aj-categorias { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -12px; padding: 2px 12px 4px; scrollbar-width: none; }
+  .aj-categorias { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 12px; margin: 0 -12px; padding: 2px 12px 4px; scrollbar-width: none; }
   .aj-categorias::-webkit-scrollbar { display: none; }
   .aj-categorias button { flex: 0 0 140px; scroll-snap-align: start; padding: 12px; }
   .aj-item h3 button { padding: 15px 14px; font-size: 14.5px; }
   .aj-resposta { padding: 0 14px 14px; }
   .aj-falar { grid-template-columns: auto minmax(0, 1fr); padding: 18px 16px; }
   .aj-falar > button { grid-column: 1 / -1; min-height: 50px; }
+  /* dedo, não ponteiro (29/10/2026) */
+  .aj-busca button, .aj-voto button { min-width: 44px; min-height: 44px; }
+  .aj-ir { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { .aj-resposta { animation: none; } .aj-categorias button, .aj-item h3 i::before, .aj-item h3 i::after { transition: none; } }
