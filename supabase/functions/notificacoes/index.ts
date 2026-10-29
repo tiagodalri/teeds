@@ -94,23 +94,50 @@ const dinheiro = (v: number, moeda: string) => {
   return `${v > 0 ? '+' : v < 0 ? '−' : ''}${f}`
 }
 
-function mensagemDaSessao(s: { id: string; marca: string; robo_nome: string | null; robo_id: string; resultado: number | null; moeda: string | null; motivo_da_parada: string | null; situacao: string; operacoes: number | null }): Aviso | null {
+/** "12 min", "1 h 05 min", "menos de 1 min". */
+function duracao(de: string | null, ate: string | null): string | null {
+  if (!de || !ate) return null
+  const min = Math.round((Date.parse(ate) - Date.parse(de)) / 60000)
+  if (!Number.isFinite(min) || min < 0) return null
+  if (min < 1) return 'menos de 1 min'
+  if (min < 60) return `${min} min`
+  return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`
+}
+
+/*
+  As mensagens (29/10/2026, Tiago aprovou o mockup e pediu emoji: "e se colocar
+  emoji nas ganhadoras? tipo aquele tickzinho verde"). Título curto e padronizado
+  ("✅ GF Phenom · Meta atingida"), corpo com os números da sessão na 1ª linha e
+  o que aconteceu na 2ª. O iPhone e o Android mostram emoji, mas não cor nem
+  negrito: o "+" e o "−" do resultado fazem esse papel.
+*/
+function mensagemDaSessao(s: { id: string; marca: string; robo_nome: string | null; robo_id: string; resultado: number | null; moeda: string | null; motivo_da_parada: string | null; situacao: string; operacoes: number | null; ganhas: number | null; criada_em: string | null; encerrada_em: string | null; atualizada_em: string | null }): Aviso | null {
   const motivo = (s.motivo_da_parada ?? '').trim()
   if (/^você pediu para parar/i.test(motivo)) return null
   const gf = s.marca === 'globalfly'
   const nome = (s.robo_nome || s.robo_id || (gf ? 'A I.A.' : 'O robô')).trim()
-  const ela = gf ? 'ela' : 'ele', desligad = gf ? 'desligada' : 'desligado'
-  const resultado = `Resultado da sessão: ${dinheiro(Number(s.resultado ?? 0), s.moeda ?? 'USD')}.`
+  const quem = gf ? 'A I.A.' : 'O robô'
+  const desligad = gf ? 'desligada' : 'desligado'
+  const res = dinheiro(Number(s.resultado ?? 0), s.moeda ?? 'USD')
+  const n = Number(s.operacoes ?? 0), g = Number(s.ganhas ?? 0)
+  // 1ª linha: o resultado e as operações
+  const numeros = n > 0
+    ? `${res} em ${n} ${n === 1 ? 'operação' : 'operações'} · ${g} ${g === 1 ? 'positiva' : 'positivas'}`
+    : `Resultado: ${res}`
+  const tempo = duracao(s.criada_em, s.encerrada_em ?? s.atualizada_em)
   const base = { tag: `sessao-${s.id}`, url: './' }
-  if (/meta de lucro atingida/i.test(motivo)) return { ...base, titulo: `${nome} bateu a meta`, corpo: `${resultado} ${gf ? 'A I.A.' : 'O robô'} já foi ${desligad}.` }
-  if (/limite de perda protegido/i.test(motivo)) return { ...base, titulo: `${nome} parou para proteger o seu limite`, corpo: `A próxima entrada passaria do limite de perda que você definiu. ${resultado}` }
-  if (/limite de perda/i.test(motivo)) return { ...base, titulo: `${nome} parou no limite de perda`, corpo: `${resultado} ${gf ? 'Ela' : 'Ele'} foi ${desligad} como você definiu.` }
-  if (/limite de \d+ operações/i.test(motivo)) return { ...base, titulo: `${nome} completou as operações da sessão`, corpo: resultado }
-  if (/InsufficientBalance|saldo/i.test(motivo)) return { ...base, titulo: `${nome} parou: saldo insuficiente`, corpo: `A Deriv não aceitou a próxima entrada por falta de saldo. ${resultado}` }
-  if (/Deriv recusou/i.test(motivo)) return { ...base, titulo: `${nome} parou`, corpo: `A Deriv recusou a compra. Abra o app para ver o motivo. ${resultado}` }
-  if (/servidor foi reiniciado|manutenção/i.test(motivo)) return { ...base, titulo: `${nome} foi ${desligad}`, corpo: `Houve uma manutenção na plataforma. Você pode ligar ${ela} de novo quando quiser.` }
-  const texto = motivo ? motivo[0].toUpperCase() + motivo.slice(1) : (s.situacao === 'erro' ? 'Parou por um erro' : 'A sessão terminou')
-  return { ...base, titulo: `${nome} parou`, corpo: `${texto.replace(/\.$/, '')}. ${resultado}` }
+  const aviso = (emoji: string, situacao: string, linha2: string): Aviso =>
+    ({ ...base, titulo: `${emoji} ${nome} · ${situacao}`, corpo: `${numeros}\n${linha2}` })
+
+  if (/meta de lucro atingida/i.test(motivo)) return aviso('✅', 'Meta atingida', `${tempo ? `Sessão de ${tempo} encerrada. ` : ''}${quem} já foi ${desligad}.`)
+  if (/limite de perda protegido/i.test(motivo)) return aviso('🛡️', 'Limite protegido', 'A próxima entrada passaria do seu limite de perda. Parou antes.')
+  if (/limite de perda/i.test(motivo)) return aviso('🛡️', 'Limite de perda', 'Parou no limite que você definiu. Sua banca está protegida.')
+  if (/limite de \d+ operações/i.test(motivo)) return aviso('🏁', 'Sessão concluída', 'Completou o número de operações que você definiu.')
+  if (/InsufficientBalance|saldo/i.test(motivo)) return aviso('💳', 'Saldo insuficiente', 'A corretora recusou a próxima entrada por falta de saldo. Deposite na corretora para voltar a operar.')
+  if (/Deriv recusou/i.test(motivo)) return aviso('⚠️', 'Entrada recusada', 'A corretora recusou a compra. Abra o app para ver o motivo.')
+  if (/servidor foi reiniciado|manutenção/i.test(motivo)) return aviso('🔧', 'Sessão interrompida', `Houve uma manutenção na plataforma. Você pode ligar ${gf ? 'a I.A.' : 'o robô'} de novo quando quiser.`)
+  const texto = motivo ? motivo[0].toUpperCase() + motivo.slice(1) : (s.situacao === 'erro' ? 'Parou por um erro' : 'Sessão encerrada')
+  return aviso('ℹ️', 'Sessão encerrada', `${texto.replace(/\.$/, '')}.`)
 }
 
 /* ------------------------------------------------------------------ entrada */
@@ -133,7 +160,7 @@ Deno.serve(async (req) => {
     const u = await quem.json()
     const gf = corpo.marca === 'globalfly'
     const r = await enviar(u.id, corpo.marca, {
-      titulo: 'Notificações ligadas', tag: 'teste', url: './',
+      titulo: '🔔 Notificações ligadas', tag: 'teste', url: './',
       corpo: gf ? 'Quando uma I.A. bater a meta ou parar, você fica sabendo aqui, mesmo com o app fechado.' : 'Quando um robô bater a meta ou parar, você fica sabendo aqui, mesmo com o app fechado.',
     })
     return json(r)
@@ -145,7 +172,7 @@ Deno.serve(async (req) => {
     if (!corpo.id) return json({ erro: 'sem sessão' }, 400)
     // o motivo pode chegar numa gravação logo depois da troca de situação
     await new Promise((ok) => setTimeout(ok, 1500))
-    const r = await rest(`sessoes_robos?id=eq.${corpo.id}&select=id,user_id,marca,robo_nome,robo_id,resultado,moeda,motivo_da_parada,situacao,operacoes`)
+    const r = await rest(`sessoes_robos?id=eq.${corpo.id}&select=id,user_id,marca,robo_nome,robo_id,resultado,moeda,motivo_da_parada,situacao,operacoes,ganhas,criada_em,encerrada_em,atualizada_em`)
     const s = r.ok ? (await r.json())[0] : null
     if (!s) return json({ erro: 'sessão não encontrada' }, 404)
     const aviso = mensagemDaSessao(s)
