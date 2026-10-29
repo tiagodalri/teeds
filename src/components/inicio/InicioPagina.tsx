@@ -30,7 +30,12 @@ import { InicioPanel, type DadosDoInicio } from './InicioPanel'
 interface Props {
   sessao: SessaoTeeds | null
   nome: string
-  conta: { conectada: boolean; demo: boolean; saldo: number | null; moeda: string }
+  /**
+   * demo: como a conta aparece na tela (rótulo). operaEmDemo: a conta de verdade
+   * em que as I.A.s operam (null enquanto a corretora não respondeu). São
+   * diferentes no acesso somente-demo e nos rótulos trocados.
+   */
+  conta: { conectada: boolean; demo: boolean; operaEmDemo?: boolean | null; saldo: number | null; moeda: string }
   treino: { noAr: boolean; apresentador?: string } | null
   aoIr: (tela: WorkspacePage) => void
   aoConectar?: () => void
@@ -66,11 +71,16 @@ function marcarJornada(p: { demo?: boolean; primeiraIa?: boolean }) {
 }
 
 const inicioDoDia = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() }
+// o último dia lido fica guardado enquanto o app está aberto: voltar ao Início
+// mostra o Hoje na hora, sem passar pelo vazio até a próxima consulta
+let diaGuardado: { userId: string; desde: number; sessoes: SessaoServidor[] } | null = null
+const diaJaLido = (userId?: string) =>
+  diaGuardado && diaGuardado.userId === userId && diaGuardado.desde === inicioDoDia() ? diaGuardado.sessoes : null
 
 export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, aoAbrirCarteira, vivas: vivasDeFora }: Props) {
   const [vivasProprias, setVivas] = useState<SessaoViva[]>([])
   const vivas = vivasDeFora ?? vivasProprias
-  const [sessoesHoje, setSessoesHoje] = useState<SessaoServidor[] | null>(null)
+  const [sessoesHoje, setSessoesHoje] = useState<SessaoServidor[] | null>(() => diaJaLido(sessao?.usuario.id))
   const [mercado, setMercado] = useState<{ cotacoes: Cotacao[]; noticias: Noticia[] } | null>(null)
   const [jornada, setJornada] = useState(jornadaGuardada)
   const [plano, setPlano] = useState(planoDoDia)
@@ -97,7 +107,11 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
     let vivo = true
     // desde a meia-noite (com folga de 1 h), e espaço para um dia cheio de sessões
     const ler = () => listarSessoes(sessao, (Date.now() - inicioDoDia()) / 3600_000 + 1, 300)
-      .then((l) => { if (vivo) setSessoesHoje(l.filter((s) => Date.parse(s.criadaEm) >= inicioDoDia())) })
+      .then((l) => {
+        const doDia = l.filter((s) => Date.parse(s.criadaEm) >= inicioDoDia())
+        diaGuardado = { userId: sessao.usuario.id, desde: inicioDoDia(), sessoes: doDia }
+        if (vivo) setSessoesHoje(doDia)
+      })
       .catch(() => undefined)
     ler()
     const t = window.setInterval(ler, 30_000)
@@ -126,7 +140,12 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
   }, [vivas, sessoesHoje]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const ligadas = vivas.filter((v) => v.estado?.rodando || v.estado?.emOperacao)
-  const daConta = (sessoesHoje ?? []).filter((s) => s.demo === conta.demo)
+  // O dia soma a conta em que as I.A.s operam de verdade, não o rótulo da tela
+  // (29/10/2026, Victor: com rótulos trocados o Início comparava a sessão demo
+  // com a conta "real" da tela e o Hoje zerava; piscava enquanto a corretora
+  // respondia). Antes de a corretora responder, vale a conta da sessão mais recente.
+  const demoDoDia = conta.operaEmDemo ?? sessoesHoje?.[0]?.demo ?? conta.demo
+  const daConta = (sessoesHoje ?? []).filter((s) => s.demo === demoDoDia)
   const hoje: DadosDoInicio['hoje'] = !daConta.length ? null : {
     resultado: daConta.reduce((t, s) => t + s.resultado, 0),
     operacoes: daConta.reduce((t, s) => t + s.operacoes, 0),

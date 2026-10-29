@@ -1267,7 +1267,7 @@ export default function App() {
       {tela === 'robos' || tela === 'assistente' ? null : tela === 'inicio' && MARCA.inicio ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o início…</div></div>}>
           <InicioPagina sessao={teeds.sessao} nome={teeds.usuario?.nome || ''}
-            conta={{ conectada: conta.status === 'logado', demo: demoNaTela, saldo: conta.balance ? conta.balance.amount : null, moeda: conta.account?.currency ?? 'USD' }}
+            conta={{ conectada: conta.status === 'logado', demo: demoNaTela, operaEmDemo: conta.account ? conta.isDemo : null, saldo: conta.balance ? conta.balance.amount : null, moeda: conta.account?.currency ?? 'USD' }}
             treino={membroTreino === true && admin !== true ? { noAr: !!treinoAgora, apresentador: treinoAgora?.apresentador ?? undefined } : null}
             aoIr={setTela} aoConectar={conta.login} aoAbrirCarteira={() => setVerCarteira(true)} vivas={teeds.sessao ? vivasRobos : undefined} />
         </Suspense>
