@@ -9,7 +9,7 @@ var GF = (function () {
   // A comunidade oficial (src/marca/marcas.ts, `comunidade`)
   var COMUNIDADE_GF = 'https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq'
   // 29/10/2026 (Tiago): cada parceiro com a própria comunidade (src/marca/marcas.ts, `comunidadesDosParceiros`)
-  var COMUNIDADES_DOS_PARCEIROS = { n: 'https://chat.whatsapp.com/FZpOI5S5Hhe2EOYIOul2C2' }
+  var COMUNIDADES_DOS_PARCEIROS = { n: 'https://chat.whatsapp.com/FZpOI5S5Hhe2EOYIOul2C2', v: 'https://chat.whatsapp.com/KWk0g33mPzYL6ZUqU89Xue' }
   var CHAVE_LOCAL = 'gf-captacao'
   // Senha criada no cadastro (28/10/2026): DESLIGADA até o servidor rodar o código que a aceita.
   // Ligar junto com SENHA_NO_CADASTRO (src/core/teeds/leads.ts), só depois de reiniciar o servidor.

@@ -439,8 +439,8 @@ export const MARCAS: Record<string, Marca> = {
     parceiros: ['n', 'v'],
     // 27/10/2026 (Tiago): o afiliado do Naor; o Victor e o Direto seguem no da GF
     afiliadosDosParceiros: { n: 'https://t.deriv.link?t=X8KDME25M85P' },
-    // 29/10/2026 (Tiago): a comunidade do Naor; o Victor e o Direto seguem na da GF
-    comunidadesDosParceiros: { n: 'https://chat.whatsapp.com/FZpOI5S5Hhe2EOYIOul2C2' },
+    // 29/10/2026 (Tiago): a comunidade de cada parceiro (Naor no /n, Victor Cordeiro no /v); o Direto segue na da GF
+    comunidadesDosParceiros: { n: 'https://chat.whatsapp.com/FZpOI5S5Hhe2EOYIOul2C2', v: 'https://chat.whatsapp.com/KWk0g33mPzYL6ZUqU89Xue' },
     appsDosParceiros: { n: '34MLTOJu0MDBoED7yEczz' },
     termos: true,
     relatorios: true,
