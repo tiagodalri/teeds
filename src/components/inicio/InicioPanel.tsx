@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { afiliadoDaDeriv } from '../../core/rotas'
+import { afiliadoDaDeriv, comunidadeDaVitrine } from '../../core/rotas'
 import type { WorkspacePage } from '../WorkspaceNav'
 import { Monograma, TEM_MONOGRAMA } from '../marca/Monograma'
 import { LogotipoDaIA, temLogotipo } from '../marca/LogotipoDaIA'
@@ -276,7 +276,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                   </button>
                 )}
                 {MARCA.comunidade && (
-                  <a className="in-atalho" href={MARCA.comunidade} target="_blank" rel="noopener noreferrer">
+                  <a className="in-atalho" href={comunidadeDaVitrine()} target="_blank" rel="noopener noreferrer">
                     <span className="in-atalho-icone"><Icone d={ICONE.grupo} /></span>
                     <span><b>Comunidade</b><small>Grupo oficial no WhatsApp</small></span>
                     <Icone d={ICONE.externo} />

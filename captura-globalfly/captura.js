@@ -7,7 +7,9 @@ var GF = (function () {
   var SUPABASE = 'https://wonxykovfvfnuhzpqsle.supabase.co'
   var CHAVE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvbnh5a292ZnZmbnVoenBxc2xlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyMDU3MTgsImV4cCI6MjEwMzc4MTcxOH0.5n9ePaGLNMOHOzitZULblGCsTj3ORJDgsWvc17V_0PU'
   // A comunidade oficial (src/marca/marcas.ts, `comunidade`)
-  var COMUNIDADE = 'https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq'
+  var COMUNIDADE_GF = 'https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq'
+  // 29/10/2026 (Tiago): cada parceiro com a própria comunidade (src/marca/marcas.ts, `comunidadesDosParceiros`)
+  var COMUNIDADES_DOS_PARCEIROS = { n: 'https://chat.whatsapp.com/FZpOI5S5Hhe2EOYIOul2C2' }
   var CHAVE_LOCAL = 'gf-captacao'
   // Senha criada no cadastro (28/10/2026): DESLIGADA até o servidor rodar o código que a aceita.
   // Ligar junto com SENHA_NO_CADASTRO (src/core/teeds/leads.ts), só depois de reiniciar o servidor.
@@ -51,6 +53,8 @@ var GF = (function () {
     } catch (e) {}
   }
   if (DO_ENDERECO) { guardarCodigo(CHAVE_VITRINE, DO_ENDERECO, false); guardarCodigo(CHAVE_PARCEIRO, DO_ENDERECO, true) }
+  /** A comunidade do WhatsApp: a do parceiro do endereço (/n), senão a oficial da GF. */
+  var COMUNIDADE = (DO_ENDERECO && COMUNIDADES_DOS_PARCEIROS[DO_ENDERECO]) || COMUNIDADE_GF
   /** O parceiro deste cadastro: o do endereço. */
   function parceiro() { return DO_ENDERECO }
   // O clique no link do parceiro conta no funil dele (um por navegador, por dia), como no site:

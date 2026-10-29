@@ -8,6 +8,7 @@ import { Brand } from './Brand'
 import { DerivLogo, IconeSaida } from './DerivMarca'
 import { MARCA } from '../marca'
 import { abrirNoCadastro } from '../core/teeds/entradaInicial'
+import { vitrine } from '../core/teeds/parceiro'
 import { CenaDoLogin, type VarianteDaCena } from './entrada/CenaDoLogin'
 import { marcarEmbarque } from '../core/decolagem'
 import { marcarAceiteNoLogin } from '../core/teeds/termos'
@@ -138,7 +139,9 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
         }
         // Reuse the landing confirmation, on this brand's own domain.
         // Only navigate after the server confirms receipt; no personal data in the URL.
-        const obrigado = new URL(`${import.meta.env.BASE_URL}cadastro/obrigado/`, location.origin)
+        // na vitrine de um parceiro (/n), o obrigado dele: a comunidade do WhatsApp é a do parceiro
+        const v = MARCA.parceiros?.length ? vitrine() : ''
+        const obrigado = new URL(`${import.meta.env.BASE_URL}${v ? `${v}/` : ''}cadastro/obrigado/`, location.origin)
         if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
           obrigado.searchParams.set('marca', MARCA.id)
         }

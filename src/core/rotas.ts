@@ -55,6 +55,8 @@ const codigosDeParceiro = () => MARCA.parceiros ?? []
 export function parceiroVigente(): string { return vitrine() }
 /** O link de abrir conta na Deriv: o do parceiro da vitrine, quando ele tem um; senão, o da marca. */
 export const afiliadoDaDeriv = (): string => MARCA.afiliadosDosParceiros?.[parceiroVigente()] ?? MARCA.afiliado
+/** A comunidade no WhatsApp: a do parceiro da vitrine, quando ele tem uma; senão, a da marca. */
+export const comunidadeDaVitrine = (): string | undefined => MARCA.comunidadesDosParceiros?.[parceiroVigente()] ?? MARCA.comunidade
 function prefixo(): string {
   const c = parceiroVigente()
   return c ? `/${c}` : ''

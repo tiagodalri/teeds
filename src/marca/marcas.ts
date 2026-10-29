@@ -162,6 +162,8 @@ export interface Marca {
    * (pela vitrine: /n, /v) abre a Deriv por este link; o resto, por `afiliado`.
    */
   afiliadosDosParceiros?: Record<string, string>
+  /** A comunidade no WhatsApp de cada parceiro (29/10/2026): na vitrine dele (/n), os botões de comunidade levam a ela. */
+  comunidadesDosParceiros?: Record<string, string>
   /**
    * O app da Deriv de cada parceiro que tem app próprio liberado (27/10/2026).
    * Na vitrine dele (/n), a conexão com a Deriv e as operações saem por este
@@ -437,6 +439,8 @@ export const MARCAS: Record<string, Marca> = {
     parceiros: ['n', 'v'],
     // 27/10/2026 (Tiago): o afiliado do Naor; o Victor e o Direto seguem no da GF
     afiliadosDosParceiros: { n: 'https://t.deriv.link?t=X8KDME25M85P' },
+    // 29/10/2026 (Tiago): a comunidade do Naor; o Victor e o Direto seguem na da GF
+    comunidadesDosParceiros: { n: 'https://chat.whatsapp.com/FZpOI5S5Hhe2EOYIOul2C2' },
     appsDosParceiros: { n: '34MLTOJu0MDBoED7yEczz' },
     termos: true,
     relatorios: true,

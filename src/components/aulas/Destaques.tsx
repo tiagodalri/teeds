@@ -1,4 +1,4 @@
-import { afiliadoDaDeriv } from '../../core/rotas'
+import { afiliadoDaDeriv, comunidadeDaVitrine } from '../../core/rotas'
 import { useEffect, useRef, useState } from 'react'
 import { DerivLogo } from '../DerivMarca'
 import { Monograma } from '../marca/Monograma'
@@ -54,7 +54,7 @@ export function bannersDaMarca({ treino, noAr }: { treino: boolean; noAr: boolea
     titulo: `Entre na comunidade ${MARCA.prosa}`,
     texto: 'Avisos da equipe, novidades da plataforma e a agenda das transmissões, direto no seu WhatsApp.',
     pontos: ['Avisos da equipe', 'Agenda das transmissões', 'Novidades primeiro'],
-    acao: 'Entrar na comunidade', href: MARCA.comunidade, imagem: `${BASE}fundos-globalfly/monograma-gf.jpg`, posicao: '80% center',
+    acao: 'Entrar na comunidade', href: comunidadeDaVitrine()!, imagem: `${BASE}fundos-globalfly/monograma-gf.jpg`, posicao: '80% center',
   })
   if (afiliadoDaDeriv()) l.push({
     id: 'conta', selo: 'Corretora oficial', marca: 'deriv',
