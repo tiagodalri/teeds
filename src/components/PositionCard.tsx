@@ -6,7 +6,7 @@ import { dinheiro as emDinheiro, dinheiroComSinal } from '../core/dinheiro'
 import { PrecoComDigito } from './preco/PrecoComDigito'
 
 /** Contagem regressiva ate a expiracao, atualizada a cada segundo. */
-function useCountdown(expiryEpoch: number) {
+export function useCountdown(expiryEpoch: number) {
   const agora = Math.floor(useClock() / 1000)
   const restante = Math.max(0, expiryEpoch - agora)
   const mm = String(Math.floor(restante / 60)).padStart(2, '0')

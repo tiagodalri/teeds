@@ -109,6 +109,7 @@ const PlayerAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) =>
 // Gráfico profissional (KLineChart): só baixa para quem vê (hoje, admin da GlobalFly).
 const GraficoPro = lazy(() => import('./components/grafico/GraficoPro').then((m) => ({ default: m.GraficoPro })))
 // O gráfico do TradingView (30/10/2026): só baixa para quem escolhe ele no seletor.
+const PainelDeComando = lazy(() => import('./components/grafico/PainelDeComando').then((m) => ({ default: m.PainelDeComando })))
 const GraficoTradingView = lazy(() => import('./components/grafico/GraficoTradingView').then((m) => ({ default: m.GraficoTradingView })))
 // Quem chega pelo link da live sem conta (fase de testes, com o link público ligado).
 const Convidado = lazy(() => import('./components/aovivo/Convidado').then((m) => ({ default: m.Convidado })))
@@ -1050,6 +1051,22 @@ export default function App() {
   }
 
   const derivPronta = conta.status === 'logado'
+  // Comprar e Vender: os MESMOS botões na boleta e no painel flutuante da tela cheia (30/10/2026)
+  const botoesDeCompra = (
+    <div className="bl-comprar">
+      <BotaoCompra tipo="sobe" payout={call.payout} stake={stake} moeda={moeda}
+        carregando={call.loading} erro={call.error ? traduzirErro(call.error) : null}
+        podeOperar={podeOperar} motivoBloqueio={motivoBloqueio}
+        comprando={comprando === 'CALL'} confirmando={confirmar === 'CALL'} semDizerReal={conta.rotulosTrocados}
+        aoComprar={() => comprar('CALL')} />
+      <BotaoCompra tipo="desce" payout={put.payout} stake={stake} moeda={moeda}
+        carregando={put.loading} erro={put.error ? traduzirErro(put.error) : null}
+        podeOperar={podeOperar} motivoBloqueio={motivoBloqueio}
+        comprando={comprando === 'PUT'} confirmando={confirmar === 'PUT'} semDizerReal={conta.rotulosTrocados}
+        aoComprar={() => comprar('PUT')} />
+    </div>
+  )
+  const resumoDaCompra = <ResumoDaCompra payouts={[call.payout, put.payout]} stake={stake} moeda={moeda} duracao={duration} unidade={unidade} />
   // gráfico profissional: na GlobalFly, por enquanto só para administradores
   const usarGraficoPro = MARCA.graficoPro === 'todos' || (MARCA.graficoPro === 'admin' && admin === true)
   // Sinal GF: só administradores; o gráfico remonta quando a conferência do banco volta
@@ -1440,7 +1457,16 @@ export default function App() {
                 {/* GlobalFly | TradingView (30/10/2026): o nosso é o padrão; o do TradingView fica ao lado, por escolha */}
                 {qualGrafico === 'tradingview' ? (
                   <GraficoTradingView symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''} granularity={granularity} mode={mode}
-                    barra={<SeletorDeGrafico valor={qualGrafico} aoTrocar={trocarGrafico} />} />
+                    barra={<SeletorDeGrafico valor={qualGrafico} aoTrocar={trocarGrafico} />}
+                    painel={<PainelDeComando nome={activeSymbol ? nomeDoAtivo(activeSymbol.name) : ''}
+                      preco={price !== null ? formatPrice(price, pipSize) : null} direcao={direction} aberto={mercadoAberto} moeda={moeda}
+                      stake={stake} aoMudarStake={(v) => { setStake(v); setStakeTexto(null) }}
+                      duracao={duration} unidade={unidade} faixa={faixa} disponiveis={{ t: !!limites.ticks, s: !!limites.segundos, m: !!limites.minutos }}
+                      aoMudarDuracao={setDuration} aoTrocarUnidade={trocarUnidade}
+                      botoes={botoesDeCompra} resumo={resumoDaCompra}
+                      saldo={conta.balance ? conta.balance.amount : null} conta={derivPronta ? (demoNaTela ? 'Demo' : 'Real') : null}
+                      aoConectar={conta.login} conectando={conta.status === 'entrando'}
+                      posicoes={minhas} aoEncerrar={encerrar} encerrando={vendendo} real={!conta.isDemo} aviso={aviso} />} />
                 ) : (
                   <GraficoPro candles={candles} mode={mode} pipSize={pipSize} symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''}
                     granularity={granularity} loading={loadingCandles} markers={marcadores} sessao={teeds.sessao} moeda={moeda}
@@ -1489,19 +1515,8 @@ export default function App() {
                   <MostradorDuracao duracao={duration} unidade={unidade} faixa={faixa}
                     disponiveis={{ t: !!limites.ticks, s: !!limites.segundos, m: !!limites.minutos }}
                     aoMudar={setDuration} aoTrocarUnidade={trocarUnidade} aoSair={() => setDuration(dentroDaFaixa)} />
-                  <div className="bl-comprar">
-                    <BotaoCompra tipo="sobe" payout={call.payout} stake={stake} moeda={moeda}
-                      carregando={call.loading} erro={call.error ? traduzirErro(call.error) : null}
-                      podeOperar={podeOperar} motivoBloqueio={motivoBloqueio}
-                      comprando={comprando === 'CALL'} confirmando={confirmar === 'CALL'} semDizerReal={conta.rotulosTrocados}
-                      aoComprar={() => comprar('CALL')} />
-                    <BotaoCompra tipo="desce" payout={put.payout} stake={stake} moeda={moeda}
-                      carregando={put.loading} erro={put.error ? traduzirErro(put.error) : null}
-                      podeOperar={podeOperar} motivoBloqueio={motivoBloqueio}
-                      comprando={comprando === 'PUT'} confirmando={confirmar === 'PUT'} semDizerReal={conta.rotulosTrocados}
-                      aoComprar={() => comprar('PUT')} />
-                  </div>
-                  <ResumoDaCompra payouts={[call.payout, put.payout]} stake={stake} moeda={moeda} duracao={duration} unidade={unidade} />
+                  {botoesDeCompra}
+                  {resumoDaCompra}
                   <p className="bl-atalho">Atalhos: <kbd>Shift</kbd> <kbd>↑</kbd> Comprar · <kbd>Shift</kbd> <kbd>↓</kbd> Vender · <kbd>+</kbd> <kbd>−</kbd> valor</p>
                 </>
               ) : (

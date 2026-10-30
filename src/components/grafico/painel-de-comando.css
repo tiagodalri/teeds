@@ -1,0 +1,100 @@
+/* O painel de comando flutuante, por cima do TradingView em tela cheia (30/10/2026).
+   Vidro escuro no mesmo preto do TradingView; os tons (#0F0F0F, #1C1C1C,
+   #2A2A2A, #2E2E2E, #8C8C8C, #DBDBDB) estão na lista "manter" da paleta da GF
+   (vite.config.ts), para não virarem marinho. Verde e vermelho são as compras. */
+.pdc, .pdc-pilula {
+  --surface: #1C1C1C; --surface-alt: #2A2A2A; --bg: #0F0F0F; --text: #DBDBDB; --muted: #8C8C8C; --border: #2E2E2E;
+  --bl-ouro: var(--gf-ouro, #B78D39); --bl-dados: var(--fonte-dados, ui-monospace, Menlo, Consolas, monospace);
+  /* começa embaixo à esquerda, sobre o histórico (à direita ficam as velas de agora e a escala de preço) */
+  position: absolute; z-index: 20; left: 72px; bottom: 44px; color: var(--text);
+  background: #0F0F0FEB; border: 1px solid var(--border); box-shadow: 0 18px 50px #000000A6;
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  font-variant-numeric: tabular-nums; touch-action: none;
+}
+.pdc { display: grid; gap: 10px; width: 312px; padding: 0 12px 12px; border-radius: 16px; animation: pdc-entra .22s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes pdc-entra { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .pdc { animation: none; } }
+
+/* cabeça: a alça para arrastar, o ativo e o preço ao vivo, a conta, recolher */
+.pdc-cab { display: flex; align-items: center; gap: 9px; margin: 0 -12px; padding: 10px 10px 9px 12px; border-bottom: 1px solid var(--border); cursor: grab; user-select: none; }
+.pdc-cab:active { cursor: grabbing; }
+.pdc-alca { flex: none; width: 8px; height: 16px; background-image: radial-gradient(circle, var(--muted) 1.2px, transparent 1.4px); background-size: 4px 4px; opacity: .8; }
+.pdc-ativo { display: grid; min-width: 0; flex: 1; line-height: 1.2; }
+.pdc-ativo span { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pdc-preco { font: 700 15px var(--bl-dados); color: var(--text); }
+.pdc-preco.sobe, .pdc .sobe, .pdc-pilula .sobe { color: var(--up); }
+.pdc-preco.cai, .pdc .cai, .pdc-pilula .cai { color: var(--down); }
+.pdc-conta { flex: none; padding: 3px 8px; border-radius: 999px; background: var(--surface-alt); color: var(--text); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.pdc-conta.real { box-shadow: inset 0 0 0 1px var(--bl-ouro); }
+.pdc-recolher { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+.pdc-recolher:hover { background: var(--surface-alt); color: var(--text); }
+.pdc-recolher svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+
+/* valor e duração lado a lado, compactos */
+.pdc-ajustes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pdc-campo { display: grid; gap: 5px; min-width: 0; }
+.pdc-rot { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 11.5px; font-weight: 700; }
+.pdc-unid { display: inline-flex; gap: 2px; }
+.pdc-unid button { width: 22px; height: 20px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--muted); font: inherit; font-size: 10.5px; font-weight: 800; cursor: pointer; }
+.pdc-unid button.on { background: var(--surface-alt); color: var(--bl-ouro); }
+.pdc-unid button:disabled { opacity: .3; cursor: default; }
+.pdc-passo { display: grid; grid-template-columns: 30px minmax(0, 1fr) 30px; align-items: center; height: 40px; border: 1px solid var(--border); border-radius: 11px; background: var(--bg); overflow: hidden; }
+.pdc-passo > button { height: 100%; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 17px; cursor: pointer; }
+.pdc-passo > button:hover:not(:disabled) { background: var(--surface-alt); }
+.pdc-passo > button:disabled { opacity: .3; cursor: default; }
+.pdc-passo label { display: flex; align-items: baseline; justify-content: center; gap: 4px; min-width: 0; }
+.pdc-passo label small { color: var(--muted); font-size: 10.5px; font-weight: 700; }
+.pdc-passo label b { font: 700 15px var(--bl-dados); }
+.pdc-passo input { width: 100%; min-width: 0; border: 0; background: transparent; color: var(--text); font: 700 15px var(--bl-dados); text-align: center; outline: none; padding: 0; }
+.pdc-passo:focus-within { border-color: var(--bl-ouro); }
+
+/* os botões da boleta, em corpo compacto */
+.pdc-botoes .bl-comprar { gap: 8px; }
+.pdc-botoes .bl-botao { min-height: 72px; padding: 10px 11px; border-radius: 13px; }
+.pdc-botoes .bl-botao > small { margin-top: 5px; font-size: 10.5px; }
+.pdc-botoes .bl-botao > strong { font-size: 15.5px; }
+.pdc-botoes .bl-estado { font-size: 11px; line-height: 1.3; }
+.pdc-resumo .bl-resumo { font-size: 11.5px; color: var(--muted); }
+.pdc-resumo .bl-resumo b { color: var(--text); }
+
+.pdc-sem { display: grid; gap: 10px; padding: 4px 0 2px; }
+.pdc-sem p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text); }
+.pdc-conectar { min-height: 42px; border: 0; border-radius: 11px; background: #ff444f; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+
+.pdc-aviso { margin: 0; padding: 8px 10px; border-radius: 10px; font-size: 12px; line-height: 1.45; background: var(--surface-alt); }
+.pdc-aviso.erro { box-shadow: inset 3px 0 0 var(--down); }
+.pdc-aviso.ok { box-shadow: inset 3px 0 0 var(--up); }
+
+/* posições abertas: uma linha cada, com a barra do tempo embaixo */
+.pdc-posicoes { display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid var(--border); }
+.pdc-posicoes-cab { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--muted); font-weight: 700; }
+.pdc-posicoes-cab b { font: 700 13.5px var(--bl-dados); }
+.pdc-pos { position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 7px 8px 9px; border-radius: 10px; background: var(--surface); overflow: hidden; }
+.pdc-pos-dir { font-size: 11px; }
+.pdc-pos-tempo { font: 600 12.5px var(--bl-dados); color: var(--text); }
+.pdc-pos > b { font: 700 13px var(--bl-dados); }
+.pdc-encerrar { min-width: 70px; height: 26px; padding: 0 8px; border: 1px solid var(--border); border-radius: 7px; background: transparent; color: var(--text); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.pdc-encerrar.armado { border-color: var(--bl-ouro); color: var(--bl-ouro); }
+.pdc-encerrar.vazio { border: 0; }
+.pdc-pos-barra { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--bl-ouro); transition: width 1s linear; }
+.pdc-mais, .pdc-dica { color: var(--muted); font-size: 10.5px; }
+.pdc-dica { text-align: center; }
+
+/* recolhido: uma pílula com o preço, o resultado das abertas e "Operar" */
+.pdc-pilula { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px; cursor: grab; user-select: none; }
+.pdc-pilula-nome { font-size: 12px; font-weight: 700; color: var(--muted); }
+.pdc-pilula .pdc-preco { font-size: 14px; }
+.pdc-pilula-res { font: 700 12.5px var(--bl-dados); }
+.pdc-abrir { height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--bl-ouro); color: #0F0F0F; font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; }
+
+.pdc button:focus-visible, .pdc-pilula button:focus-visible { outline: 2px solid var(--bl-ouro); outline-offset: 2px; }
+
+/* celular (gráfico ampliado): encaixado embaixo, na largura da tela, sem arrastar */
+@media (max-width: 700px) {
+  .pdc, .pdc-pilula { left: 8px !important; right: 8px !important; top: auto !important; bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important; }
+  .pdc { width: auto; max-height: 62dvh; overflow-y: auto; }
+  .pdc-cab, .pdc-pilula { cursor: default; }
+  .pdc-alca { display: none; }
+  .pdc-pilula { justify-content: space-between; }
+  .pdc-dica { display: none; }
+}

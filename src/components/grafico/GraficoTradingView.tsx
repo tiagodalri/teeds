@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import './grafico-tradingview.css'
 
 /**
@@ -31,13 +31,15 @@ export function simboloNoTradingView(codigo: string): string | null {
 /** Os tempos da plataforma nos do TradingView. */
 const INTERVALO: Record<number, string> = { 60: '1', 120: '2', 180: '3', 300: '5', 600: '10', 900: '15', 1800: '30', 3600: '60', 7200: '120', 14400: '240', 28800: '480', 86400: 'D' }
 
-export function GraficoTradingView({ symbol, symbolName, granularity, mode, barra }: {
+export function GraficoTradingView({ symbol, symbolName, granularity, mode, barra, painel }: {
   symbol: string
   symbolName: string
   granularity: number
   mode: 'candles' | 'line'
   /** O seletor de gráfico, na mesma barra (e no mesmo lugar) do gráfico GlobalFly. */
   barra: ReactNode
+  /** O painel de comando flutuante: só aparece com o gráfico em tela cheia. */
+  painel?: ReactNode
 }) {
   const caixa = useRef<HTMLDivElement>(null)
   const raiz = useRef<HTMLDivElement>(null)
@@ -131,6 +133,8 @@ export function GraficoTradingView({ symbol, symbolName, granularity, mode, barr
               ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg>
               : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>}
           </button>
+          {/* fronteira própria: o painel baixa na primeira tela cheia sem esconder o gráfico */}
+          {grande && <Suspense fallback={null}>{painel}</Suspense>}
         </div>
       ) : (
         <div className="gtv-sem">
