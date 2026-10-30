@@ -50,7 +50,9 @@ import { aplicarTema, temaGuardado, type Tema } from './core/tema'
 import { DerivDesconectada } from './components/DerivDesconectada'
 import type { Granularity } from './core/deriv/types'
 import { formatPrice } from './core/chart/scales'
-import { buyFromProposal, requestProposal, sellContract } from './core/deriv/trading'
+import { atualizarLimites, buyFromProposal, cancelarContrato, cotarMultiplicador, ehMultiplicador, requestProposal, sellContract, type CotacaoMultiplicador } from './core/deriv/trading'
+import { BoletaMultiplicador, type PedidoMultiplicador } from './components/operar/BoletaMultiplicador'
+import { CartaoMultiplicador } from './components/operar/CartaoMultiplicador'
 import { LIVES_AO_VIVO, MARCA } from './marca'
 import { IconeFechar } from './components/IconeFechar'
 import { RelogioTopo } from './components/RelogioTopo'
@@ -262,7 +264,7 @@ export default function App() {
     // o endereço manda (globalflytrade.com/ia abre a I.A.); sem endereço, a tela em que a pessoa estava
     const doEndereco = telaDoCaminho(location.pathname) ?? telaDoNome(new URLSearchParams(location.search).get('tela'))
     const antes = doEndereco ?? (history.state as { tela?: WorkspacePage } | null)?.tela
-    const QUE_VOLTAM: WorkspacePage[] = ['inicio', 'operar', 'robos', 'aulas', 'gerenciamento', ...(MARCA.relatorios ? ['relatorios' as const] : []), 'marketplace', 'noticias', 'perfil', 'ajuda', ...(doEndereco ? ['aovivo', 'assistente', 'gestao', 'insights', 'monitoramento'] as WorkspacePage[] : [])]
+    const QUE_VOLTAM: WorkspacePage[] = ['inicio', 'operar', 'robos', 'aulas', 'gerenciamento', ...(MARCA.relatorios ? ['relatorios' as const] : []), 'marketplace', 'noticias', 'perfil', 'ajuda', ...(doEndereco ? ['aovivo', 'assistente', 'gestao', 'insights', 'monitoramento', 'multiplicadores'] as WorkspacePage[] : [])]
     return antes && QUE_VOLTAM.includes(antes) && (antes !== 'inicio' || MARCA.inicio) && (antes !== 'noticias' || MARCA.noticias) && (antes !== 'aovivo' || MARCA.aoVivo) ? antes : padrao
   })
   // Na janela solta a tela não muda: um link de outra tela abre na plataforma principal.
@@ -414,7 +416,7 @@ export default function App() {
     if (!teeds.sessao) return
     // o "não é admin" vale só quando a resposta é DESTE login (o false de antes da sessão não conta)
     const naoEhAdmin = admin === false && adminUserId === teeds.sessao.usuario.id
-    if ((naoEhAdmin || adminFalhou) && (tela === 'gestao' || tela === 'insights' || tela === 'monitoramento')) setTela('operar')
+    if ((naoEhAdmin || adminFalhou) && (tela === 'gestao' || tela === 'insights' || tela === 'monitoramento' || tela === 'multiplicadores')) setTela('operar')
   }, [admin, adminFalhou, adminUserId, tela, teeds.sessao])
 
   // App com cara de nativo (marcas com `appNativo`): o atalho do ícone abre a
@@ -570,7 +572,7 @@ export default function App() {
     if (treino) { try { sessionStorage.setItem(`${MARCA.id}.aovivo.treino`, '1') } catch { /* sem armazenamento */ } }
     const pedida = convite || treino ? 'aovivo' : telaDoNome(u.searchParams.get('tela'))
     // as do admin também abrem por link: a trava de admin (logo acima) tira quem não for
-    const PUBLICAS: WorkspacePage[] = [...(MARCA.inicio ? ['inicio' as const] : []), 'operar', 'robos', 'aulas', 'gerenciamento', ...(MARCA.relatorios ? ['relatorios' as const] : []), 'marketplace', 'perfil', 'ajuda', 'assistente', 'gestao', 'insights', 'monitoramento', ...(MARCA.aoVivo ? ['aovivo' as const] : []), ...(MARCA.noticias ? ['noticias' as const] : [])]
+    const PUBLICAS: WorkspacePage[] = [...(MARCA.inicio ? ['inicio' as const] : []), 'operar', 'robos', 'aulas', 'gerenciamento', ...(MARCA.relatorios ? ['relatorios' as const] : []), 'marketplace', 'perfil', 'ajuda', 'assistente', 'gestao', 'insights', 'monitoramento', 'multiplicadores', ...(MARCA.aoVivo ? ['aovivo' as const] : []), ...(MARCA.noticias ? ['noticias' as const] : [])]
     if (pedida && (PUBLICAS as string[]).includes(pedida)) setTela(pedida as WorkspacePage)
     if (u.searchParams.has('tela') || u.searchParams.has('aovivo') || u.searchParams.has('treino') || u.searchParams.get('origem') === 'app') {
       u.searchParams.delete('tela'); u.searchParams.delete('origem'); u.searchParams.delete('aovivo'); u.searchParams.delete('treino')
@@ -752,10 +754,13 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conta.comprasRecentes, compraPendente, manuais])
   const idsManuais = useMemo(() => new Set(manuais), [manuais])
-  const minhas = useMemo(
+  const minhasTodas = useMemo(
     () => conta.contracts.filter((c) => idsManuais.has(c.contractId)),
     [conta.contracts, idsManuais],
   )
+  // Multiplicadores (30/10/2026): cada tela com as suas posições (o multiplicador não tem prazo nem relógio)
+  const naTelaMult = tela === 'multiplicadores'
+  const minhas = useMemo(() => minhasTodas.filter((c) => ehMultiplicador(c) === naTelaMult), [minhasTodas, naTelaMult])
 
   /*
     Operação manual encerrada fica no gráfico por 2 minutos, com o preço de
@@ -775,7 +780,8 @@ export default function App() {
   const manuaisRegistradas = useRef(new Set<number>())
   const markupDaManual = (c: { contractId: number; payout: number }) => markupOficial.current.get(c.contractId) ?? Number((c.payout * 0.03).toFixed(4))
   useEffect(() => {
-    const finais = minhas.filter((c) => /^(won|lost|sold|cancelled)$/.test(c.status))
+    // todas as manuais, das duas telas: a que fechou enquanto a pessoa estava na outra também é registrada
+    const finais = minhasTodas.filter((c) => /^(won|lost|sold|cancelled)$/.test(c.status))
     if (!finais.length) return
     if (teeds.sessao && conta.accountId) {
       for (const c of finais) {
@@ -799,7 +805,7 @@ export default function App() {
       const outras = antes.filter((u) => !finais.some((f) => f.contractId === u.contractId))
       return [...finais, ...outras].sort((a, b) => b.startTime - a.startTime).slice(0, 10)
     })
-  }, [minhas])
+  }, [minhasTodas])
   // tira do gráfico as que passaram dos 2 minutos
   useEffect(() => {
     if (!encerradas.length) return
@@ -808,8 +814,9 @@ export default function App() {
   }, [encerradas.length])
 
   const doAtivo = useMemo(() => {
-    const vivas = minhas.filter((c) => c.symbol === symbolCode)
-    const guardadas = encerradas.map((e) => e.c).filter((c) => c.symbol === symbolCode && !vivas.some((v) => v.contractId === c.contractId))
+    // multiplicador não vai para o gráfico como marca de entrada com vencimento (não tem prazo)
+    const vivas = minhas.filter((c) => c.symbol === symbolCode && !ehMultiplicador(c))
+    const guardadas = encerradas.map((e) => e.c).filter((c) => c.symbol === symbolCode && !ehMultiplicador(c) && !vivas.some((v) => v.contractId === c.contractId))
     return [...vivas, ...guardadas]
   }, [minhas, encerradas, symbolCode])
   // memorizado por assinatura: o grafico so redesenha quando algo muda de verdade
@@ -936,6 +943,59 @@ export default function App() {
     } finally {
       setComprando(null)
     }
+  }
+
+  /*
+    Multiplicadores (30/10/2026, só administradores por enquanto). A compra
+    cota de novo na hora (a cotação da tela pode ter vencido) e segue o mesmo
+    caminho do Manual: entra na lista de manuais, registra no banco com o
+    markup que a Deriv informou, e o som da entrada.
+  */
+  const podeOperarMult = conta.status === 'logado' && !!conta.socket && !conta.connecting && linhaAberta && !!symbolCode && mercadoAberto
+  async function executarMultiplicador(pedido: PedidoMultiplicador, _cotacaoNaTela: CotacaoMultiplicador) {
+    if (!conta.socket || !symbolCode) return
+    setComprando(pedido.tipo)
+    setAviso(null)
+    try {
+      const p = await cotarMultiplicador(conta.socket, {
+        symbol: symbolCode, tipo: pedido.tipo, amount: pedido.stake, currency: moeda, multiplier: pedido.multiplicador,
+        takeProfit: pedido.takeProfit, stopLoss: pedido.stopLoss, cancellation: pedido.cancelamento,
+      })
+      const r = await buyFromProposal(conta.socket, p.id, p.askPrice).catch((e: Error) => {
+        if (!/LinhaFechada/.test(e.message)) setCompraPendente({ valor: p.askPrice, desde: Date.now() })
+        throw e
+      })
+      marcarManual(r.contractId)
+      entradaManual()
+      if (p.appMarkup !== null) markupOficial.current.set(r.contractId, p.appMarkup)
+      if (teeds.sessao && conta.accountId) void registrarOperacaoManual(teeds.sessao, {
+        contractId: r.contractId, contaId: conta.accountId, demo: conta.isDemo, ativo: symbolCode, tipoContrato: pedido.tipo, moeda,
+        entrada: r.buyPrice, pagamento: 0, resultado: 0, markup: p.appMarkup ?? 0, markupOficial: p.appMarkup !== null,
+        compradaEm: new Date().toISOString(), encerradaEm: null, situacao: 'aberta', expiraEm: null,
+      })
+      setAviso({
+        tipo: 'ok',
+        texto: `Multiplicador aberto: ${pedido.tipo === 'MULTUP' ? 'Sobe' : 'Desce'} x${pedido.multiplicador} com ${dinheiro(pedido.stake, moeda)}. A perda para em ${dinheiro(pedido.stake, moeda)}.`,
+      })
+    } catch (e) {
+      setAviso({ tipo: 'erro', texto: traduzirErro((e as Error).message) })
+    } finally {
+      setComprando(null)
+    }
+  }
+  async function mudarLimitesMult(contractId: number, limites: { takeProfit: number | null; stopLoss: number | null }) {
+    if (!conta.socket) throw new Error('Conecte a Deriv para mudar os limites.')
+    try {
+      await atualizarLimites(conta.socket, contractId, limites)
+      setAviso({ tipo: 'ok', texto: 'Limites atualizados.' })
+    } catch (e) { throw new Error(traduzirErro((e as Error).message)) }
+  }
+  async function cancelarMult(contractId: number) {
+    if (!conta.socket) throw new Error('Conecte a Deriv para cancelar.')
+    try {
+      const r = await cancelarContrato(conta.socket, contractId)
+      setAviso({ tipo: 'ok', texto: `Operação cancelada: ${dinheiro(r.devolvido, moeda)} voltaram para a conta.` })
+    } catch (e) { throw new Error(traduzirErro((e as Error).message)) }
   }
 
   /** Encerra uma posicao antes do fim (vende de volta para a Deriv, a mercado). */
@@ -1094,7 +1154,7 @@ export default function App() {
       <header className="topbar">
         {JANELA ? (
           <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span className="js-subtitulo">Janela solta · arraste para onde quiser</span></div>
-        ) : <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de operação manual' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'relatorios' ? 'O seu resultado, com os números da corretora' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'divulgacao' ? 'Seus links para divulgar a plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : 'Seu espaço de trabalho'}</span></div>}
+        ) : <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de operação manual' : tela === 'multiplicadores' ? 'Sem prazo: fecha quando quiser, e a perda para na entrada' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'relatorios' ? 'O seu resultado, com os números da corretora' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'divulgacao' ? 'Seus links para divulgar a plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : 'Seu espaço de trabalho'}</span></div>}
 
         <div className="topbar-right">
           <RelogioTopo />
@@ -1458,7 +1518,7 @@ export default function App() {
                 {qualGrafico === 'tradingview' ? (
                   <GraficoTradingView symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''} granularity={granularity} mode={mode}
                     barra={<SeletorDeGrafico valor={qualGrafico} aoTrocar={trocarGrafico} />}
-                    painel={<PainelDeComando nome={activeSymbol ? nomeDoAtivo(activeSymbol.name) : ''}
+                    painel={naTelaMult ? undefined : <PainelDeComando nome={activeSymbol ? nomeDoAtivo(activeSymbol.name) : ''}
                       preco={price !== null ? formatPrice(price, pipSize) : null} direcao={direction} aberto={mercadoAberto} moeda={moeda}
                       stake={stake} aoMudarStake={(v) => { setStake(v); setStakeTexto(null) }}
                       duracao={duration} unidade={unidade} faixa={faixa} disponiveis={{ t: !!limites.ticks, s: !!limites.segundos, m: !!limites.minutos }}
@@ -1490,6 +1550,38 @@ export default function App() {
               onConectar={conta.login} />
           )}
 
+          {naTelaMult ? (
+            <>
+              <BoletaMultiplicador
+                cabecalho={<BoletaAtivo nome={activeSymbol ? nomeDoAtivo(activeSymbol.name) : ''} preco={tick?.quote ?? null} pipSize={pipSize}
+                  direcao={direction} sintetico={sintetico} aberto={mercadoAberto} />}
+                socket={conta.socket} simbolo={symbolCode} pipSize={pipSize} moeda={moeda}
+                saldo={conta.balance ? conta.balance.amount : null} conta={derivPronta ? (demoNaTela ? 'demo' : 'real') : null}
+                contaReal={!conta.isDemo} semDizerReal={conta.rotulosTrocados}
+                podeOperar={podeOperarMult} motivoBloqueio={podeOperarMult ? null : motivoBloqueio} admin={adminConfirmado}
+                comprando={comprando === 'MULTUP' || comprando === 'MULTDOWN' ? comprando : null} aoComprar={executarMultiplicador} />
+              {aviso && (
+                <p role="status" aria-live="polite" className={`aviso ${aviso.tipo === 'ok' ? 'aviso-ok' : 'aviso-erro'}`}>{aviso.texto}{pedeDeposito(aviso.texto) && <> <a href={DERIV.deposito} target="_blank" rel="noopener noreferrer">Depositar na Deriv</a></>}</p>
+              )}
+              <section className="bl-posicoes" aria-label="Multiplicadores abertos">
+                {minhas.length > 1 && (
+                  <div className="bl-posicoes-cab">
+                    <span>{minhas.length} multiplicadores abertos<small>Investido {dinheiro(investido, moeda)}</small></span>
+                    <b className={resultadoAberto >= 0 ? 'ganho' : 'perda'}>{resultadoAberto >= 0 ? '+' : '−'}{dinheiro(Math.abs(resultadoAberto), moeda)}</b>
+                  </div>
+                )}
+                {derivPronta && minhas.length === 0 && (
+                  <div className="mpos-vazio">Os multiplicadores que você abrir aparecem aqui, com o resultado ao vivo. Não têm prazo: você fecha quando quiser.</div>
+                )}
+                {minhas.map((c) => (
+                  <CartaoMultiplicador key={c.contractId} c={c} real={!conta.isDemo}
+                    nomeAtivo={nomeDoAtivo(symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol)}
+                    fechando={vendendo === c.contractId} aoFechar={encerrar} aoMudarLimites={mudarLimitesMult} aoCancelar={cancelarMult} />
+                ))}
+              </section>
+            </>
+          ) : (
+          <>
           <section className="bl" aria-label="Boleta de operação">
             <BoletaAtivo nome={activeSymbol ? nomeDoAtivo(activeSymbol.name) : ''} preco={tick?.quote ?? null} pipSize={pipSize}
               direcao={direction} sintetico={sintetico} aberto={mercadoAberto} />
@@ -1565,6 +1657,8 @@ export default function App() {
           {ultimasManuais.length > 0 && (
             <UltimasEntradas operacoes={ultimasManuais} markupDe={adminConfirmado && mostrarColuna && !menuAdminOculto ? markupDaManual : undefined}
               nomeDoAtivo={(simbolo) => nomeDoAtivo(symbols.find((s) => s.symbol === simbolo)?.name ?? simbolo)} />
+          )}
+          </>
           )}
         </aside>
       </div>

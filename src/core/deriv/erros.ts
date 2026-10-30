@@ -39,8 +39,23 @@ export function traduzirErro(texto: string): string {
     return 'A autorização da Deriv venceu. Conecte a Deriv de novo.'
   if (/tempo esgotado/.test(baixo))
     return 'A Deriv demorou para responder. Confira suas posições abertas antes de tentar de novo.'
-  if (/minimum stake|stake.*minimum|amount.*minimum/.test(baixo))
-    return 'Valor abaixo do mínimo de US$ 0,35.'
+  // multiplicadores (30/10/2026)
+  if (/multiplier is not in acceptable range/.test(baixo))
+    return 'Este multiplicador não está disponível neste ativo. Escolha outro.'
+  if (/either (stop loss|take profit) or deal cancellation/.test(baixo))
+    return 'Use o cancelamento ou o take profit e o stop loss, não os dois juntos.'
+  if (/deal cancellation/.test(baixo) && /expired|not available|no longer/.test(baixo))
+    return 'O prazo do cancelamento já acabou. Para sair, feche a operação.'
+  if (/deal cancellation/.test(baixo))
+    return 'O cancelamento não está disponível neste ativo agora.'
+  if (/take profit/.test(baixo))
+    return 'O take profit está fora do que a Deriv aceita. Ajuste o valor.'
+  if (/stop loss/.test(baixo))
+    return 'O stop loss está fora do que a Deriv aceita: ele vai de US$ 0,30 até o valor da entrada.'
+  if (/minimum stake|stake.*minimum|amount.*minimum|stake amount that.s at least|at least \d/.test(baixo)) {
+    const minimo = /at least\s+([\d.]+)/.exec(baixo)?.[1]
+    return `Valor abaixo do mínimo de US$ ${minimo ? Number(minimo).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,35'}.`
+  }
   if (/maximum stake|stake.*maximum|maximum purchase|exceeds/.test(baixo))
     return 'Valor acima do máximo para esta operação.'
   if (/duration|expiry/.test(baixo))

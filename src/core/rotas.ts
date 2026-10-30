@@ -16,6 +16,7 @@ const GF = MARCA.id === 'globalfly'
 const SLUG: Record<WorkspacePage, string> = {
   inicio: 'inicio',
   operar: GF ? 'manual' : 'operar',
+  multiplicadores: 'multiplicadores',
   robos: GF ? 'ia' : 'robos',
   assistente: 'assistente',
   gerenciamento: 'gerenciamento',

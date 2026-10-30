@@ -15,7 +15,7 @@ const ouvintes = new Set<() => void>()
 const avisar = () => ouvintes.forEach((f) => f())
 
 /** As telas que somem do menu junto com os itens de admin. */
-export const TELAS_DE_ADMIN = ['gestao', 'insights', 'monitoramento', 'laboratorio', 'divulgacao'] as const
+export const TELAS_DE_ADMIN = ['gestao', 'insights', 'monitoramento', 'laboratorio', 'divulgacao', 'multiplicadores'] as const
 
 export function alternarMenuAdmin(): void {
   oculto = !oculto

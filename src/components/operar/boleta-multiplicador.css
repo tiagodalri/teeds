@@ -1,0 +1,66 @@
+/* A boleta e o cartão do multiplicador (30/10/2026). Mesma família da boleta
+   do Manual (bl-): as mesmas cores, o mesmo campo de valor e os mesmos botões. */
+.mt-bloco { display: grid; gap: 9px; }
+.mt-nota { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.mt-nota b { color: var(--text); }
+.mt-opcional { color: var(--muted); font-size: 11.5px; }
+
+.mt-mults { display: grid; grid-template-columns: repeat(auto-fit, minmax(52px, 1fr)); gap: 6px; }
+.mt-mults button { height: 38px; border: 1px solid var(--border); border-radius: 10px; background: var(--bl-fundo-campo); color: var(--text); font: 700 13.5px var(--bl-dados); cursor: pointer; transition: border-color .15s, background .15s; }
+.mt-mults button:hover { border-color: var(--muted); }
+.mt-mults button.on { border-color: var(--bl-ouro); background: color-mix(in srgb, var(--bl-ouro) 14%, var(--surface)); color: var(--bl-ouro); }
+.mt-mults button:focus-visible, .mt-prazos button:focus-visible { outline: 2px solid var(--bl-ouro); outline-offset: 2px; }
+
+.mt-exposicao { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mt-exposicao span { display: grid; gap: 2px; padding: 9px 11px; border-radius: 11px; background: var(--bl-fundo-campo); color: var(--muted); font-size: 11.5px; font-weight: 600; }
+.mt-exposicao b { color: var(--text); font: 700 15px var(--bl-dados); }
+
+.mt-limites { display: grid; gap: 6px; }
+.mt-limite { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--bl-fundo-campo); cursor: pointer; }
+.mt-limite.off { opacity: .5; cursor: default; }
+.mt-limite > input[type='checkbox'] { width: 18px; height: 18px; margin: 0; accent-color: var(--bl-ouro); }
+.mt-limite-nome { display: grid; gap: 1px; color: var(--text); font-size: 13px; font-weight: 700; min-width: 0; }
+.mt-limite-nome small { color: var(--muted); font-size: 11px; font-weight: 600; }
+.mt-limite-valor { display: inline-flex; align-items: baseline; gap: 4px; padding: 5px 8px; border-radius: 8px; background: var(--surface); }
+.mt-limite-valor small { color: var(--muted); font-size: 10.5px; font-weight: 700; }
+.mt-limite-valor input { width: 6ch; border: 0; background: transparent; color: var(--text); font: 700 14px var(--bl-dados); text-align: right; outline: none; padding: 0; }
+.mt-limite-valor input:disabled { color: var(--muted); }
+.mt-cancel { grid-template-columns: minmax(0, 1fr); cursor: default; }
+.mt-prazos { display: flex; flex-wrap: wrap; gap: 4px; }
+.mt-prazos button { min-width: 38px; height: 30px; padding: 0 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: 700 12px var(--bl-dados); cursor: pointer; }
+.mt-prazos button.on { border-color: var(--bl-ouro); color: var(--bl-ouro); }
+
+.mt-botoes .bl-botao > strong { font-size: 16px; }
+.mt-markup { margin: 0; padding: 8px 10px; border-radius: 10px; border: 1px dashed color-mix(in srgb, var(--bl-ouro) 55%, transparent); color: var(--muted); font-size: 12px; }
+.mt-markup b { color: var(--bl-ouro); }
+
+/* ------------------------------------------------ o cartão da posição */
+.mpos { --bl-dados: var(--fonte-dados, ui-monospace, Menlo, Consolas, monospace); --bl-ouro: var(--gf-ouro, var(--primary)); --bl-fundo-campo: color-mix(in srgb, var(--bg) 70%, var(--surface)); position: relative; display: grid; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); overflow: hidden; }
+.mpos.ganhou { border-color: color-mix(in srgb, var(--up) 45%, var(--border)); }
+.mpos.perdeu { border-color: color-mix(in srgb, var(--down) 45%, var(--border)); }
+.mpos-cab { display: flex; align-items: center; gap: 8px; }
+.mpos-dir { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+.mpos-dir.sobe { background: color-mix(in srgb, var(--up) 14%, transparent); color: var(--up); }
+.mpos-dir.desce { background: color-mix(in srgb, var(--down) 14%, transparent); color: var(--down); }
+.mpos-ativo { flex: 1; min-width: 0; color: var(--text); font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mpos-selo { padding: 2px 8px; border-radius: 999px; background: var(--surface-alt); color: var(--muted); font-size: 11px; font-weight: 800; }
+.mpos-res { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; }
+.mpos-res b { font: 800 24px var(--bl-dados); letter-spacing: -.02em; white-space: nowrap; }
+.mpos-res small { color: var(--muted); font-size: 12px; text-align: right; }
+.mpos .sobe { color: var(--up); } .mpos .cai { color: var(--down); }
+.mpos-precos { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.mpos-precos b { color: var(--text); font-family: var(--bl-dados); }
+.mpos-lim { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.mpos-lim li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 9px; border-radius: 9px; background: var(--bl-fundo-campo, var(--surface-alt)); color: var(--muted); font-size: 12px; }
+.mpos-lim li b { color: var(--text); font-family: var(--bl-dados); font-weight: 700; }
+.mpos-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.mpos-acoes button { flex: 1 1 auto; min-height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 11px; background: transparent; color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.mpos-acoes button.principal { border-color: color-mix(in srgb, var(--bl-ouro, var(--primary)) 60%, transparent); color: var(--bl-ouro, var(--primary)); }
+.mpos-acoes button.armado { background: color-mix(in srgb, var(--bl-ouro, var(--primary)) 14%, transparent); }
+.mpos-acoes button:disabled { opacity: .5; cursor: default; }
+.mpos-edita { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; }
+.mpos-edita label { display: grid; gap: 4px; color: var(--muted); font-size: 11.5px; font-weight: 700; }
+.mpos-edita input { min-width: 0; height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--bl-fundo-campo, var(--surface-alt)); color: var(--text); font: 700 14px var(--bl-dados, monospace); }
+.mpos-edita button { height: 38px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--bl-ouro, var(--primary)); color: #051528; font: inherit; font-weight: 800; cursor: pointer; }
+.mpos-erro { margin: 0; color: var(--down); font-size: 12px; }
+.mpos-vazio { padding: 16px; border: 1px dashed var(--border); border-radius: 16px; color: var(--muted); font-size: 13px; line-height: 1.5; text-align: center; }

@@ -52,7 +52,41 @@ export interface OpenContract {
    * pagamento fingindo ser medicao.
    */
   appMarkup: number | null
+  /** Só nos multiplicadores (MULTUP/MULTDOWN): o multiplicador e os limites de saída em vigor. */
+  mult?: DadosDoMultiplicador
 }
+
+/** Um limite de saída do multiplicador: o valor em dinheiro e o preço do ativo em que ele dispara. */
+export interface LimiteDeSaida { valor: number; preco: number | null }
+export interface DadosDoMultiplicador {
+  multiplicador: number
+  takeProfit: LimiteDeSaida | null
+  stopLoss: LimiteDeSaida | null
+  /** Onde a Deriv fecha sozinha: a perda chegou ao valor de entrada. */
+  stopOut: LimiteDeSaida | null
+  /** Cancelamento contratado: até quando dá para desistir e receber a entrada de volta (epoch s). */
+  cancelamentoAte: number | null
+  comissao: number | null
+}
+
+const limiteDe = (l: any): LimiteDeSaida | null => {
+  if (!l || l.order_amount === null || l.order_amount === undefined) return null
+  const preco = l.value === null || l.value === undefined || l.value === '' ? null : Number(l.value)
+  return { valor: Math.abs(Number(l.order_amount)), preco: Number.isFinite(preco) ? preco : null }
+}
+function dadosDoMultiplicador(p: Record<string, any>): DadosDoMultiplicador | undefined {
+  if (!/^MULT(UP|DOWN)$/.test(p.contract_type ?? '')) return undefined
+  const lo = p.limit_order ?? {}
+  return {
+    multiplicador: Number(p.multiplier ?? 0),
+    takeProfit: limiteDe(lo.take_profit),
+    stopLoss: limiteDe(lo.stop_loss),
+    stopOut: limiteDe(lo.stop_out),
+    cancelamentoAte: p.cancellation?.date_expiry ? Number(p.cancellation.date_expiry) : null,
+    comissao: p.commission === undefined || p.commission === null ? null : Number(p.commission),
+  }
+}
+export const ehMultiplicador = (c: { contractType: string }) => /^MULT(UP|DOWN)$/.test(c.contractType)
 
 export function toOpenContract(p: Record<string, any>): OpenContract {
   const num = (v: any) => (v === null || v === undefined || v === '' ? null : Number(v))
@@ -82,6 +116,7 @@ export function toOpenContract(p: Record<string, any>): OpenContract {
     expiryTime: Number(p.date_expiry ?? p.expiry_time ?? 0),
     pipSize: precisaoInformada(p.pip_size) ?? (p.underlying_symbol === 'R_75' ? 4 : 2),
     pipSizeInformado: precisaoInformada(p.pip_size) !== null,
+    mult: dadosDoMultiplicador(p),
   }
 }
 
@@ -332,6 +367,77 @@ export async function requestProposal(
     // o markup oficial deste contrato, quando a Deriv informa na proposta
     appMarkup: p.app_markup_amount !== undefined && p.app_markup_amount !== null && Number.isFinite(Number(p.app_markup_amount)) ? Number(p.app_markup_amount) : null,
   }
+}
+
+/* ------------------------------------------------------------ multiplicadores (30/10/2026) */
+
+/** O que a Deriv aceita de multiplicador neste ativo; null = o ativo não tem multiplicador. */
+export async function faixaDoMultiplicador(socket: TeedsSocket, simbolo: string): Promise<{ multiplicadores: number[]; cancelamentos: string[] } | null> {
+  const res = await socket.send({ contracts_for: simbolo })
+  const lista = ((res.contracts_for as any)?.available ?? []) as Array<Record<string, any>>
+  const m = lista.find((c) => c.contract_type === 'MULTUP')
+  if (!m) return null
+  return {
+    multiplicadores: ((m.multiplier_range ?? []) as unknown[]).map(Number).filter((n) => n > 0),
+    cancelamentos: ((m.cancellation_range ?? []) as unknown[]).map(String),
+  }
+}
+
+export interface CotacaoMultiplicador {
+  id: string
+  /** O que sai da conta: a entrada mais o cancelamento, se contratado. */
+  askPrice: number
+  comissao: number
+  stopOut: LimiteDeSaida | null
+  takeProfit: LimiteDeSaida | null
+  stopLoss: LimiteDeSaida | null
+  custoDoCancelamento: number | null
+  appMarkup: number | null
+  minimo: number | null
+  maximo: number | null
+}
+
+/**
+ * Cota um multiplicador. Sem prazo: a Deriv fecha sozinha quando a perda chega
+ * à entrada (stop out), no take profit, no stop loss, ou quando a pessoa fecha.
+ * Cancelamento e take profit/stop loss não andam juntos (regra da Deriv).
+ */
+export async function cotarMultiplicador(
+  socket: TeedsSocket,
+  params: { symbol: string; tipo: 'MULTUP' | 'MULTDOWN'; amount: number; currency: string; multiplier: number; takeProfit?: number | null; stopLoss?: number | null; cancellation?: string | null },
+): Promise<CotacaoMultiplicador> {
+  const limite: Record<string, number> = {}
+  if (params.takeProfit) limite.take_profit = params.takeProfit
+  if (params.stopLoss) limite.stop_loss = params.stopLoss
+  const res = await socket.send({
+    proposal: 1, amount: params.amount, basis: 'stake', contract_type: params.tipo, currency: params.currency,
+    underlying_symbol: params.symbol, multiplier: params.multiplier,
+    ...(params.cancellation ? { cancellation: params.cancellation } : Object.keys(limite).length ? { limit_order: limite } : {}),
+  }, 20_000, { imediato: true })
+  const p = res.proposal as Record<string, any>
+  const lo = p.limit_order ?? {}
+  const num = (v: any) => (v === undefined || v === null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v))
+  return {
+    id: String(p.id),
+    askPrice: Number(p.ask_price),
+    comissao: Number(p.commission ?? 0),
+    stopOut: limiteDe(lo.stop_out), takeProfit: limiteDe(lo.take_profit), stopLoss: limiteDe(lo.stop_loss),
+    custoDoCancelamento: num(p.cancellation?.ask_price),
+    appMarkup: num(p.app_markup_amount),
+    minimo: num(p.validation_params?.stake?.min ?? p.contract_details?.minimum_stake),
+    maximo: num(p.validation_params?.stake?.max ?? p.contract_details?.maximum_stake),
+  }
+}
+
+/** Muda (ou tira, com null) o take profit e o stop loss de um multiplicador aberto. */
+export async function atualizarLimites(socket: TeedsSocket, contractId: number, limites: { takeProfit: number | null; stopLoss: number | null }): Promise<void> {
+  await socket.send({ contract_update: 1, contract_id: contractId, limit_order: { take_profit: limites.takeProfit, stop_loss: limites.stopLoss } }, 20_000, { imediato: true })
+}
+
+/** Desiste do multiplicador dentro do prazo do cancelamento contratado: a entrada volta. */
+export async function cancelarContrato(socket: TeedsSocket, contractId: number): Promise<{ devolvido: number }> {
+  const res = await socket.send({ cancel: contractId }, 20_000, { imediato: true })
+  return { devolvido: Number((res.cancel as any)?.sold_for ?? 0) }
 }
 
 /** Historico de operacoes fechadas. */

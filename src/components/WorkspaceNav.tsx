@@ -5,12 +5,14 @@ import { MARCA } from '../marca'
 import './workspace.css'
 import { RelogioTopo } from './RelogioTopo'
 
-export type WorkspacePage = 'inicio' | 'operar' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo' | 'noticias' | 'perfil' | 'ajuda' | 'laboratorio' | 'divulgacao' | 'relatorios'
-export const PAGE_NAMES: Record<WorkspacePage, string> = { inicio: 'Início', operar: 'Manual', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', perfil: 'Meu perfil', ajuda: 'Ajuda', laboratorio: 'Laboratório de I.A.', divulgacao: 'Divulgação', relatorios: 'Relatórios', ...(MARCA.menu?.nomes ?? {}) }
+export type WorkspacePage = 'inicio' | 'operar' | 'multiplicadores' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo' | 'noticias' | 'perfil' | 'ajuda' | 'laboratorio' | 'divulgacao' | 'relatorios'
+export const PAGE_NAMES: Record<WorkspacePage, string> = { inicio: 'Início', operar: 'Manual', multiplicadores: 'Multiplicadores', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', perfil: 'Meu perfil', ajuda: 'Ajuda', laboratorio: 'Laboratório de I.A.', divulgacao: 'Divulgação', relatorios: 'Relatórios', ...(MARCA.menu?.nomes ?? {}) }
 const paths: Record<string, string> = {
   relatorios: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
   inicio: 'M3 11l9-7 9 7M5 9.5V20h5v-6h4v6h5V9.5',
-  operar: 'M3 17l5-6 4 3 9-11M16 3h5v5', robos: 'M5 7h14v13H5zM12 3v4M8 12h1m6 0h1M9 16h6',
+  operar: 'M3 17l5-6 4 3 9-11M16 3h5v5',
+  // multiplicadores (30/10/2026): o "x" do multiplicador com a seta do preço
+  multiplicadores: 'M4 6l6 6M10 6l-6 6M13 19l3.5-4 2.5 2 3-5M19 12h3v3', robos: 'M5 7h14v13H5zM12 3v4M8 12h1m6 0h1M9 16h6',
   assistente: 'M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z',
   gerenciamento: 'M4 20V10m8 10V4m8 16v-7',
   marketplace: 'M4 8h16l-1 13H5zM8 8V6a4 4 0 018 0v2', aulas: 'M3 5h7l2 2 2-2h7v15h-7l-2 1-2-1H3zM12 7v14',
@@ -59,6 +61,8 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mos
         {mostrarInicio && item('inicio')}
         <p className="workspace-label">Operações</p>
         {item('robos')}{item('operar')}
+        {/* Multiplicadores (30/10/2026): por enquanto só administradores */}
+        {verAdmin && item('multiplicadores')}
         <p className="workspace-label">Ferramentas</p>{MARCA.relatorios && item('relatorios')}{item('gerenciamento')}{mostrarAssistente && item('assistente')}
         <p className="workspace-label">Explorar</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{MARCA.noticias && item('noticias')}{item('marketplace')}{item('aulas')}{MARCA.suporte && item('ajuda')}
         {/* parceiros de divulgação (27/10/2026): só quem é parceiro, e o admin geral */}

@@ -53,15 +53,17 @@ export const VALOR_MINIMO = 0.35
 // a mesma leitura do App (lerValor): vírgula decimal, ou ponto quando não é milhar
 const lerTexto = (t: string) => Number(t.includes(',') || /^[1-9]\d{0,2}(\.\d{3})+$/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t)
 
-export function MostradorValor({ stake, texto, moeda, alerta, saldo = null, conta = null, aoMudarTexto, aoMudar, aoSair }: {
+export function MostradorValor({ stake, texto, moeda, alerta, saldo = null, conta = null, aoMudarTexto, aoMudar, aoSair, minimo = VALOR_MINIMO, atalhos = [0.35, 1, 5, 10, 50] }: {
   stake: number; texto: string | null; moeda: string; alerta: boolean; saldo?: number | null
+  /** O menor valor aceito (multiplicador: US$ 1) e os valores rápidos da régua. */
+  minimo?: number; atalhos?: number[]
   /** O tipo da conta como a tela mostra (com rótulos trocados, já trocado): o selo fica ao lado do saldo. */
   conta?: 'real' | 'demo' | null
   aoMudarTexto: (t: string) => void; aoMudar: (v: number) => void; aoSair: () => void
 }) {
   const visto = texto ?? stake.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })
   // digitando um valor abaixo do mínimo: diz na hora, em vez de corrigir calado ao sair do campo
-  const abaixo = texto !== null && texto.trim() !== '' && Number.isFinite(lerTexto(texto)) && lerTexto(texto) < VALOR_MINIMO
+  const abaixo = texto !== null && texto.trim() !== '' && Number.isFinite(lerTexto(texto)) && lerTexto(texto) < minimo
   return (
     <div className={`bl-most ${alerta || abaixo ? 'alerta' : ''}`}>
       <div className="bl-most-cab">
@@ -74,7 +76,7 @@ export function MostradorValor({ stake, texto, moeda, alerta, saldo = null, cont
         )}
       </div>
       <div className="bl-campo">
-        <button type="button" className="bl-campo-pm" aria-label="Diminuir o valor" disabled={stake <= 0.35} onClick={() => aoMudar(proximo(stake, false))}>−</button>
+        <button type="button" className="bl-campo-pm" aria-label="Diminuir o valor" disabled={stake <= minimo} onClick={() => aoMudar(Math.max(minimo, proximo(stake, false)))}>−</button>
         <label className="bl-campo-valor">
           <small>{simboloMoeda(moeda)}</small>
           <input type="text" inputMode="decimal" autoComplete="off" aria-labelledby="bl-valor-rot" aria-invalid={abaixo || undefined} value={visto}
@@ -85,9 +87,9 @@ export function MostradorValor({ stake, texto, moeda, alerta, saldo = null, cont
         </label>
         <button type="button" className="bl-campo-pm" aria-label="Aumentar o valor" onClick={() => aoMudar(proximo(stake, true))}>+</button>
       </div>
-      {abaixo && <p className="bl-alerta" role="status">O valor mínimo é {dinheiro(VALOR_MINIMO, moeda)}.</p>}
+      {abaixo && <p className="bl-alerta" role="status">O valor mínimo é {dinheiro(minimo, moeda)}.</p>}
       <div className="bl-regua" role="group" aria-label="Valores rápidos">
-        {[0.35, 1, 5, 10, 50].map((v) => (
+        {atalhos.map((v) => (
           <button key={v} type="button" className={stake === v ? 'on' : ''} aria-pressed={stake === v} onClick={() => aoMudar(v)}>{v.toLocaleString('pt-BR')}</button>
         ))}
       </div>
