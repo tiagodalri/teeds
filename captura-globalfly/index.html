@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#051528" />
-  <meta name="description" content="Cadastre-se para a live de lançamento da GlobalFly Trade: segunda, 9 de novembro, às 20h." />
+  <meta name="description" content="Um iMac, uma viagem internacional e a plataforma de R$ 2.000 liberada de graça para quem assistir à live de lançamento do início ao fim. Segunda, 9/11, às 20h." />
   <meta property="og:title" content="Live de lançamento da GlobalFly Trade" />
-  <meta property="og:description" content="Segunda, 9 de novembro, às 20h. Cadastre-se e entre na comunidade oficial." />
+  <meta property="og:description" content="Um iMac, uma viagem internacional e a plataforma de R$ 2.000 liberada de graça para quem ficar na live até o fim. Segunda, 9/11, às 20h." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://globalflytrade.com/cadastro/" />
   <meta property="og:site_name" content="GlobalFly Trade" />
@@ -27,27 +27,49 @@
   <link rel="stylesheet" href="./estilo.css" />
 </head>
 <body>
-  <div class="pagina">
+  <div class="pagina venda">
     <header class="topo">
       <img src="/globalfly-assinatura.png" alt="GlobalFly Trade" width="900" height="283" />
-      <span class="passo">Passo 1 de 2</span>
+      <span class="selo-live"><i></i>Ao vivo <span>· seg, 9/11, 20h</span></span>
     </header>
 
-    <main class="cadastro">
-      <section>
-        <span class="selo-live"><i></i>Live de lançamento <span>· segunda, 9/11, às 20h</span></span>
-        <h1>Garanta seu lugar na <em>live de lançamento</em> da GlobalFly Trade.</h1>
-        <p class="chamada">Cadastre-se para receber o link da live, os avisos do lançamento e o acesso à comunidade oficial no WhatsApp.</p>
-        <ul class="motivos">
-          <li><b>✓</b><span>A plataforma apresentada por dentro, ao vivo.</span></li>
-          <li><b>✓</b><span>As condições de lançamento, anunciadas na live.</span></li>
-          <li><b>✓</b><span>Suas dúvidas respondidas na hora.</span></li>
+    <!-- 30/10/2026 (Tiago e Naor, áudio 1): a página deixa de ser lista de espera e vira página de vendas.
+         Os presentes vêm ANTES de a pessoa saber o que é o produto; o "Garanta seu lugar" desce para o formulário;
+         o cadastro cria a conta de verdade (a senha fica: "ele vai se sentir importante, está abrindo uma conta"). -->
+    <main class="cadastro v-heroi">
+      <section class="v-abertura">
+        <p class="v-gancho">Isso aqui a gente não vai te vender.</p>
+        <h1>Um iMac, uma viagem internacional e a plataforma de <em>R$ 2.000 liberada de graça.</em></h1>
+        <p class="chamada">Para quem assistir à live de lançamento da GlobalFly Trade do início ao fim. Você abre a sua conta hoje, e a live libera o acesso.</p>
+        <p class="v-apresenta" data-apresenta hidden></p>
+        <ul class="v-premios" aria-label="O que a live entrega">
+          <li class="v-premio">
+            <svg viewBox="0 0 64 48" aria-hidden="true"><rect x="4" y="3" width="56" height="33" rx="4" fill="#0A2038" stroke="#D4A64A" stroke-width="2.5"/><rect x="9" y="8" width="46" height="23" rx="2" fill="#12304F"/><path d="M27 37h10l2 6H25z" fill="#9CB1C7"/><rect x="19" y="43" width="26" height="3" rx="1.5" fill="#9CB1C7"/></svg>
+            <b>iMac</b><small>Presente no fim da live</small>
+          </li>
+          <li class="v-premio">
+            <svg viewBox="0 0 64 48" aria-hidden="true"><path d="M6 33l27-9 15-12c5-3 8-1 6 3L43 28l-6 15-5 1 1-14-14 4-4 6H11l1-7z" fill="#D4A64A"/><path d="M4 44h56" stroke="#9CB1C7" stroke-width="2" stroke-dasharray="3 4"/></svg>
+            <b>Viagem internacional</b><small>Presente no fim da live</small>
+          </li>
+          <li class="v-premio v-premio-acesso">
+            <svg viewBox="0 0 64 48" aria-hidden="true"><path d="M5 40l12-11 9 5 13-16 9 6 11-14" fill="none" stroke="#5FC48C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="59" cy="10" r="3.5" fill="#5FC48C"/></svg>
+            <b>Acesso à GlobalFly</b><small><s>R$ 2.000</s> R$ 0 com a live inteira</small>
+          </li>
         </ul>
+        <div class="v-relogio" data-relogio>
+          <span class="v-relogio-rotulo" data-relogio-rotulo>Faltam</span>
+          <span class="v-num"><b data-d>--</b><small>dias</small></span>
+          <span class="v-num"><b data-h>--</b><small>horas</small></span>
+          <span class="v-num"><b data-m>--</b><small>min</small></span>
+          <span class="v-num"><b data-s>--</b><small>seg</small></span>
+        </div>
+        <a class="botao v-cta so-estreito" href="#cadastro" data-ir-ao-form>Abrir minha conta grátis <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
       </section>
 
       <form class="cartao" id="form" novalidate>
-        <h2>Faça seu cadastro</h2>
-        <p class="sub">Leva menos de um minuto.</p>
+        <span class="v-ancora" id="cadastro"></span>
+        <h2>Abra sua conta e garanta seu lugar</h2>
+        <p class="sub">Sua conta é criada agora. O acesso abre na live do dia 9.</p>
         <label class="campo">Nome completo
           <input id="nome" name="nome" autocomplete="name" autocapitalize="words" maxlength="120" placeholder="Nome e sobrenome" required />
           <small data-erro="nome"></small>
@@ -63,7 +85,7 @@
         <label class="campo" data-senha hidden>Crie sua senha
           <span class="com-olho">
             <input id="senha" name="senha" type="password" autocomplete="new-password" maxlength="72" placeholder="Pelo menos 8 caracteres" required />
-            <button type="button" class="olho" data-olho aria-label="Mostrar senha" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            <button type="button" class="olho" data-olho aria-label="Mostrar senha" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </span>
           <small data-erro="senha"></small>
         </label>
@@ -73,14 +95,80 @@
           </span>
           <small data-erro="repetir"></small>
         </label>
-        <p class="dica-senha" data-senha hidden>É com o e-mail e esta senha que você entra na plataforma.</p>
+        <p class="dica-senha" data-senha hidden>É com o seu e-mail e esta senha que você entra na GlobalFly. Guarde bem.</p>
         <input class="armadilha" id="empresa" name="empresa" tabindex="-1" autocomplete="off" aria-hidden="true" />
-        <button class="botao" type="submit">Continuar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <button class="botao" type="submit">Abrir minha conta <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         <p class="mensagem" role="status" aria-live="polite"></p>
-        <p class="aviso">Ao continuar, você concorda com os <a href="/termos/#termos-de-uso" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="/termos/#politica-de-privacidade" target="_blank" rel="noopener">Política de Privacidade</a> e autoriza a GlobalFly Trade a falar com você por WhatsApp, e-mail e SMS sobre o lançamento. Você pode cancelar esses avisos quando quiser.</p>
-        <div class="seguro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Seus dados ficam protegidos e nunca são vendidos.</div>
+        <p class="aviso">Ao continuar, você concorda com os <a href="/termos/#termos-de-uso" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="/termos/#politica-de-privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.</p>
+        <div class="seguro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Seus dados ficam protegidos e não são compartilhados.</div>
       </form>
     </main>
+
+    <section class="v-secao">
+      <div class="v-cabeca">
+        <span class="v-rotulo">Não é lista de espera</span>
+        <h2>Você não entra numa fila. Você abre a sua conta.</h2>
+        <p>Quem se cadastra hoje já tem e-mail e senha na GlobalFly. Falta uma coisa só: estar na live.</p>
+      </div>
+      <ol class="v-linha">
+        <li><span class="v-quando">Hoje</span><b>Conta criada</b><p>Você escolhe a sua senha e já entra com ela.</p></li>
+        <li><span class="v-quando">Até 9/11</span><b>Celular pronto</b><p>Lá dentro, ative os avisos e instale o app. A gente te chama na hora certa.</p></li>
+        <li><span class="v-quando">9/11, 20h</span><b>Live dentro da GlobalFly</b><p>Você assiste pela própria plataforma, e a sua presença é marcada sozinha.</p></li>
+        <li class="v-fim"><span class="v-quando">No fim da live</span><b>Acesso liberado</b><p>Ficou do início ao fim, a GlobalFly fica liberada para você. E saem os dois presentes.</p></li>
+      </ol>
+    </section>
+
+    <section class="v-secao">
+      <div class="v-cabeca">
+        <span class="v-rotulo">O que a live libera</span>
+        <h2>A plataforma completa, para operar em dólar com I.A.</h2>
+      </div>
+      <ul class="v-libera">
+        <li><b>As I.A. de operação</b><p>Você escolhe a I.A., a entrada, a meta e o limite de perda. Ela opera por você.</p></li>
+        <li><b>Operação manual</b><p>Gráfico ao vivo para quem gosta de operar com as próprias mãos.</p></li>
+        <li><b>Salas ao vivo</b><p>Operações acompanhadas pela equipe, em tempo real, todos os dias.</p></li>
+        <li><b>Aulas e apostila</b><p>Do primeiro passo ao gerenciamento, no seu ritmo.</p></li>
+        <li><b>Relatórios</b><p>Tudo o que você operou, dia a dia, num lugar só.</p></li>
+        <li><b>US$ 10.000 virtuais</b><p>Para treinar à vontade antes de usar o seu dinheiro.</p></li>
+      </ul>
+    </section>
+
+    <section class="v-secao v-porque">
+      <div class="v-cabeca">
+        <span class="v-rotulo">Por que de graça</span>
+        <h2>O preço do seu acesso é o seu tempo.</h2>
+        <p>A partir da live, o acesso à GlobalFly custa R$ 2.000. Quem assistir à live de lançamento do começo ao fim fica isento. A gente quer você lá, porque é na live que mostramos a plataforma por dentro: como cada I.A. opera, como funciona o gerenciamento e como começar do jeito certo.</p>
+      </div>
+      <blockquote>“A única coisa que você precisa fazer é estar lá. Do começo ao fim.”</blockquote>
+    </section>
+
+    <section class="v-secao">
+      <div class="v-cabeca">
+        <span class="v-rotulo">Perguntas</span>
+        <h2>Antes de abrir a sua conta</h2>
+      </div>
+      <div class="v-perguntas">
+        <details><summary>Preciso pagar alguma coisa?</summary><p>Não. Abrir a conta e assistir à live é de graça. Ficou até o fim, o acesso à plataforma também é.</p></details>
+        <details><summary>Por que a conta fica travada até a live?</summary><p>Porque é a live que libera o acesso. Até lá, você já entra com o seu e-mail e a sua senha, prepara o celular e acompanha quanto falta.</p></details>
+        <details><summary>Como vocês sabem que eu fiquei até o fim?</summary><p>A live passa dentro da GlobalFly, e a presença é marcada sozinha enquanto ela está aberta na sua tela. Deixe a tela ligada e a live aberta até o final.</p></details>
+        <details><summary>Como funcionam os presentes?</summary><p>No fim da live, mostramos na tela quantas pessoas ficaram do início ao fim. O iMac e a viagem vão para duas pessoas dessa lista. A regra completa é publicada nesta página antes da live.</p></details>
+        <details><summary>Preciso ter conta em corretora?</summary><p>Para operar com dinheiro real, sim: a GlobalFly opera na Deriv. Na live, mostramos como abrir a conta e como fazer o primeiro <a href="https://home.deriv.com/dashboard/deposit?from=home&amp;depositSheet=1&amp;returnTo=%2Fhome&amp;currency=USD" target="_blank" rel="noopener">depósito na Deriv</a>. Antes disso, você treina com os US$ 10.000 virtuais.</p></details>
+        <details><summary>Funciona no celular?</summary><p>Sim. Dentro da plataforma, você instala o app e ativa os avisos, para a gente te chamar na hora da live.</p></details>
+        <details><summary>Já tenho conta na GlobalFly. Preciso me cadastrar?</summary><p>Pode usar o mesmo e-mail. A sua conta continua a mesma, com a senha de sempre, e você também é avisado da live.</p></details>
+      </div>
+    </section>
+
+    <section class="v-secao v-final">
+      <h2>Segunda, 9/11, às 20h. Você vai estar lá?</h2>
+      <div class="v-relogio" data-relogio>
+        <span class="v-relogio-rotulo" data-relogio-rotulo>Faltam</span>
+        <span class="v-num"><b data-d>--</b><small>dias</small></span>
+        <span class="v-num"><b data-h>--</b><small>horas</small></span>
+        <span class="v-num"><b data-m>--</b><small>min</small></span>
+        <span class="v-num"><b data-s>--</b><small>seg</small></span>
+      </div>
+      <a class="botao v-cta" href="#cadastro" data-ir-ao-form>Abrir minha conta grátis</a>
+    </section>
 
     <footer class="rodape">
       <span>© 2026 GlobalFly Trade</span>
@@ -89,7 +177,66 @@
     </footer>
   </div>
 
+  <!-- celular: o botão de cadastro sempre à mão, menos quando o formulário já está na tela -->
+  <div class="v-barra" data-barra hidden>
+    <span class="v-barra-tempo" data-barra-tempo></span>
+    <a class="botao" href="#cadastro" data-ir-ao-form>Abrir minha conta grátis</a>
+  </div>
+
   <script src="./captura.js"></script>
+  <script>
+    // Página de vendas do lançamento (30/10/2026): relógio, quem apresenta, barra fixa do celular e pixel.
+    (function () {
+      GF.pixel()
+      // quem apresenta vem do endereço: o anúncio do Naor cai no /n, o do Victor no /v
+      var APRESENTA = { n: 'Naor Bezerra', v: 'Victor Cordeiro' }
+      var quem = APRESENTA[GF.parceiro() || '']
+      var apresenta = document.querySelector('[data-apresenta]')
+      apresenta.textContent = quem ? 'Ao vivo com ' + quem : 'Ao vivo com a equipe GlobalFly'
+      apresenta.hidden = false
+
+      // relógio até a live: 9/11/2026, 20h de Brasília (23h UTC). Depois do começo, o texto muda sozinho.
+      var INICIO = Date.UTC(2026, 10, 9, 23, 0, 0), FIM = INICIO + 3 * 36e5
+      var relogios = document.querySelectorAll('[data-relogio]'), barraTempo = document.querySelector('[data-barra-tempo]')
+      function dois(n) { return (n < 10 ? '0' : '') + n }
+      function tique() {
+        var agora = Date.now(), falta = Math.max(0, INICIO - agora)
+        var d = Math.floor(falta / 864e5), h = Math.floor(falta / 36e5) % 24, m = Math.floor(falta / 6e4) % 60, seg = Math.floor(falta / 1e3) % 60
+        Array.prototype.forEach.call(relogios, function (r) {
+          if (agora >= INICIO) {
+            r.classList.add('v-acabou')
+            r.querySelector('[data-relogio-rotulo]').textContent = agora < FIM ? 'A live está no ar agora' : 'A live de lançamento já aconteceu'
+            return
+          }
+          r.querySelector('[data-d]').textContent = d
+          r.querySelector('[data-h]').textContent = dois(h)
+          r.querySelector('[data-m]').textContent = dois(m)
+          r.querySelector('[data-s]').textContent = dois(seg)
+        })
+        if (barraTempo) barraTempo.textContent = agora >= INICIO ? '' : 'Faltam ' + d + 'd ' + dois(h) + 'h ' + dois(m) + 'min'
+      }
+      tique(); setInterval(tique, 1000)
+
+      // os botões levam ao formulário e já põem o cursor no primeiro campo
+      var form = document.getElementById('form')
+      Array.prototype.forEach.call(document.querySelectorAll('[data-ir-ao-form]'), function (a) {
+        a.addEventListener('click', function (ev) {
+          ev.preventDefault()
+          form.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
+          setTimeout(function () { try { form.elements.nome.focus({ preventScroll: true }) } catch (e) { form.elements.nome.focus() } }, 450)
+        })
+      })
+
+      // barra fixa no celular: aparece depois da abertura e some enquanto o formulário está na tela
+      var barra = document.querySelector('[data-barra]'), abertura = document.querySelector('.v-abertura')
+      if (barra && 'IntersectionObserver' in window) {
+        var vendoForm = false, passouAbertura = false
+        var atualizar = function () { barra.hidden = !(passouAbertura && !vendoForm) }
+        new IntersectionObserver(function (e) { vendoForm = e[0].isIntersecting; atualizar() }).observe(form)
+        new IntersectionObserver(function (e) { passouAbertura = !e[0].isIntersecting && e[0].boundingClientRect.top < 0; atualizar() }).observe(abertura)
+      }
+    })()
+  </script>
   <script>
     (function () {
       var form = document.getElementById('form'), inicio = Date.now()
@@ -140,7 +287,7 @@
         ev.preventDefault()
         var dados = conferir()
         if (!dados) { var primeiro = form.querySelector('[aria-invalid="true"]'); if (primeiro) primeiro.focus(); return }
-        botao.disabled = true; botao.textContent = 'Enviando…'; mensagem.textContent = ''; mensagem.className = 'mensagem'
+        botao.disabled = true; botao.textContent = 'Criando sua conta…'; mensagem.textContent = ''; mensagem.className = 'mensagem'
         var utm = new URLSearchParams(location.search)
         fetch(GF.MOTOR, {
           method: 'POST', headers: { 'content-type': 'application/json' },

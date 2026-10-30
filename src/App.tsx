@@ -30,6 +30,8 @@ import { decolar, liberarPouso } from './core/decolagem'
 import { definirDonoDoPlano } from './core/teeds/planoDoDia'
 import { NovaSenha } from './components/NovaSenha'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
+import { PreAcesso } from './components/PreAcesso'
+import { emPreAcesso } from './core/teeds/lancamento'
 import { AceiteDosTermos } from './components/termos/Termos'
 import { confirmarInscricao } from './core/teeds/notificacoes'
 import { aceiteDoLoginPendente, aceiteGuardado, jaAceitou, limparAceiteDoLogin, registrarAceite } from './core/teeds/termos'
@@ -1063,6 +1065,21 @@ export default function App() {
     primeiro acesso DEPOIS da aprovação, que é quando a plataforma abre.
   */
   if (teeds.status === 'logado' && teeds.sessao && situacao === 'pendente') {
+    // Lançamento da GlobalFly (30/10/2026): até o fim da live de 9/11, a conta nova é Pré-acesso.
+    if (emPreAcesso()) {
+      return (
+        <PreAcesso
+          sessao={teeds.sessao}
+          nome={teeds.sessao.usuario.nome}
+          aoConferir={async () => {
+            const agora = await minhaSituacao(teeds.sessao!)
+            setSituacao(agora)
+            return agora !== 'pendente'
+          }}
+          aoSair={sairDeTudo}
+        />
+      )
+    }
     return (
       <CadastroEmAnalise
         email={teeds.sessao.usuario.email}

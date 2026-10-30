@@ -1,0 +1,25 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//GlobalFly Trade//Live de lancamento//PT
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:live-lancamento-20261109@globalflytrade.com
+DTSTAMP:20261030T000000Z
+DTSTART:20261109T230000Z
+DTEND:20261110T010000Z
+SUMMARY:Live de lançamento da GlobalFly Trade
+DESCRIPTION:Assista do início ao fim para liberar o seu acesso. A live passa dentro da GlobalFly: https://globalflytrade.com
+URL:https://globalflytrade.com
+BEGIN:VALARM
+TRIGGER:-PT1H
+ACTION:DISPLAY
+DESCRIPTION:Falta 1 hora para a live da GlobalFly
+END:VALARM
+BEGIN:VALARM
+TRIGGER:-PT10M
+ACTION:DISPLAY
+DESCRIPTION:A live da GlobalFly começa em 10 minutos
+END:VALARM
+END:VEVENT
+END:VCALENDAR

@@ -2603,6 +2603,47 @@ body:has(.entrada[data-modo="espera"]) .app-convite { display: none; }
   .entrada[data-modo="espera"] .entrada-topo { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 14px; margin-bottom: 22px; }
 }
 @media (prefers-reduced-motion: reduce) { .espera-selo i { animation: none; } }
+/* Pré-acesso do lançamento da GlobalFly (30/10/2026): a conta pronta, a contagem até a live e o que
+   fazer para não perder o dia (avisos, app, agenda, comunidade). Mesma casca da tela de espera. */
+.pre-selo { color: var(--primary); }
+.pre-relogio { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 24px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--primary) 40%, var(--border)); border-radius: 16px; background: color-mix(in srgb, var(--primary) 7%, transparent); }
+.pre-relogio-rotulo { font-size: 13px; font-weight: 650; color: var(--muted); margin-right: 4px; }
+.pre-num { display: grid; justify-items: center; min-width: 54px; padding: 6px 4px; border-radius: 10px; background: var(--bg); border: 1px solid var(--border); }
+.pre-num b { font: 700 20px/1.1 ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; color: var(--text); }
+.pre-num small { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.pre-noar { display: grid; gap: 4px; }
+.pre-noar b { font-size: 15px; color: var(--primary); }
+.pre-noar span { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.pre-acoes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pre-acoes > li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; background: color-mix(in srgb, var(--bg) 55%, transparent); }
+.pre-acoes > li > div { display: grid; gap: 3px; min-width: 0; }
+.pre-acoes b { font-size: 14px; font-weight: 650; color: var(--text); }
+.pre-acoes small { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.pre-acoes .pre-erro { color: var(--down); }
+.pre-n, .pre-visto { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-style: normal; font-size: 12.5px; font-weight: 700; border: 1.5px solid var(--border); color: var(--muted); box-sizing: border-box; }
+.pre-visto { border-color: var(--up); background: var(--up); color: #fff; }
+.pre-visto svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.pre-acoes > li.feito { border-color: color-mix(in srgb, var(--up) 40%, var(--border)); }
+.pre-botao { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 14px; border-radius: 10px; border: 0; background: var(--primary); color: #fff; font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.pre-botao:hover:not(:disabled) { filter: brightness(1.06); }
+.pre-botao:disabled { opacity: .6; cursor: default; }
+.pre-botao:focus-visible, .pre-links a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.pre-links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 2px; }
+.pre-links a { font-size: 13px; font-weight: 650; color: var(--primary); text-decoration: none; }
+.pre-links a:hover { text-decoration: underline; }
+.pre-ios { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.pre-ios b { font-size: 12.5px; }
+.pre-deriv { margin-top: 22px; }
+.pre-deriv p a { color: var(--primary); font-weight: 650; }
+@media (max-width: 520px) {
+  .pre-acoes > li { grid-template-columns: 26px minmax(0, 1fr); }
+  .pre-acoes > li > .pre-botao { grid-column: 2; justify-self: start; }
+  .pre-relogio { gap: 6px; }
+  .pre-relogio-rotulo { width: 100%; }
+  .pre-num { flex: 1; min-width: 0; }
+  .pre-num b { font-size: 18px; }
+}
+
 
 .entrada-troca {
   display: flex; align-items: center; justify-content: center; gap: 8px;

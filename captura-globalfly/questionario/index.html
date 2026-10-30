@@ -66,6 +66,8 @@
   <script>
     (function () {
       var dados = GF.ler()
+      // o cadastro acabou de ser gravado (o motor confirmou antes de trazer a pessoa para cá)
+      if (dados.email) GF.pixel('Lead')
       // Sem o cadastro (abriu o link direto), volta para o passo 1
       if (!dados.email) { location.replace(GF.proxima('../')); return }
       if (dados.nome) document.querySelector('[data-ola]').textContent = dados.nome + ', falta só uma pergunta'

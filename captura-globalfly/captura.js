@@ -94,5 +94,29 @@ var GF = (function () {
     return destino.toString()
   }
 
-  return { SENHA: SENHA, MOTOR: MOTOR, SUPABASE: SUPABASE, CHAVE: CHAVE, COMUNIDADE: COMUNIDADE, ler: ler, guardar: guardar, proxima: proxima, paginaComParceiro: paginaComParceiro }
+  // Pixel da Meta (30/10/2026, pendente desde 26/10): cada vitrine com o pixel do parceiro que paga o
+  // anúncio. /n = conta de anúncios do Naor. /v e o direto ficam sem pixel até chegar o número deles.
+  var PIXELS = { n: '1625935188283999' }
+  var pixelPronto = false
+  /** Conta a visita (PageView) e, se vier, um evento do funil: 'Lead' no cadastro, 'CompleteRegistration' no obrigado. */
+  function pixel(evento) {
+    var id = PIXELS[DO_ENDERECO || '']
+    // teste local não suja o pixel do parceiro
+    if (!id || /^(localhost|127\.|\[::1\])/.test(location.hostname)) return
+    try {
+      if (!pixelPronto) {
+        /* eslint-disable */
+        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js')
+        window.fbq('init', id); window.fbq('track', 'PageView'); pixelPronto = true
+      }
+      // cada evento do funil conta uma vez por pessoa, mesmo se ela recarregar a página
+      if (evento) {
+        var chave = 'pixel.' + evento, dados = ler()
+        if (dados[chave]) return
+        window.fbq('track', evento); var marca = {}; marca[chave] = Date.now(); guardar(marca)
+      }
+    } catch (e) {}
+  }
+
+  return { SENHA: SENHA, pixel: pixel, parceiro: parceiro, MOTOR: MOTOR, SUPABASE: SUPABASE, CHAVE: CHAVE, COMUNIDADE: COMUNIDADE, ler: ler, guardar: guardar, proxima: proxima, paginaComParceiro: paginaComParceiro }
 })()

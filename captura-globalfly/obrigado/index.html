@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#051528" />
   <meta name="robots" content="noindex" />
-  <title>GlobalFly Trade · Cadastro recebido</title>
+  <title>GlobalFly Trade · Sua conta está pronta</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/pwa-globalfly/favicon-32.png" />
   <link rel="apple-touch-icon" href="/pwa-globalfly/icon-180.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,43 +22,53 @@
     <main class="centro">
       <section class="cartao obrigado">
         <div class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
-        <h1 data-titulo>Cadastro recebido!</h1>
+        <h1 data-titulo>Sua conta está pronta!</h1>
         <ol class="etapas" aria-label="Seu progresso">
-          <li class="feito">Cadastro</li>
+          <li class="feito">Conta criada</li>
           <li class="feito" data-etapa-questionario>Questionário</li>
-          <li class="agora">Comunidade</li>
+          <li class="agora">Live de 9/11</li>
         </ol>
-        <p class="ultimo">Último passo</p>
-        <p class="chamada">Entre na comunidade oficial no WhatsApp. É por lá que chegam o link da live e todos os avisos do lançamento.</p>
-        <a class="botao" id="comunidade" href="https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>
-          <span>Entrar na comunidade<span class="so-largo"> do WhatsApp</span></span>
-        </a>
-        <div class="live">
-          <div class="data"><b>09</b><small>nov</small></div>
-          <div>
-            <strong>Live de lançamento</strong>
-            <span>Segunda-feira, às 20h (horário de Brasília)</span>
-            <a id="agenda" href="https://calendar.google.com/calendar/render?action=TEMPLATE&amp;text=Live%20de%20lan%C3%A7amento%20da%20GlobalFly%20Trade&amp;dates=20261109T230000Z/20261110T010000Z&amp;details=O%20link%20chega%20na%20comunidade%20oficial%20no%20WhatsApp." target="_blank" rel="noopener">Salvar na agenda</a>
-          </div>
-        </div>
+        <!-- 30/10/2026: a conta nasce no cadastro e a live libera o acesso. Daqui a pessoa sai com três
+             coisas feitas, cada uma é um caminho para a gente chamá-la no dia 9 (Naor: "vamos ficar o dia
+             inteiro mandando notificação"). -->
+        <p class="chamada">Agora falta uma coisa só: estar na live de <b>segunda, 9/11, às 20h</b>, do início ao fim. É ela que libera o seu acesso, de graça.</p>
+        <p class="ultimo">Para não perder a live</p>
+        <ol class="o-passos">
+          <li>
+            <span class="o-n">1</span>
+            <div><strong>Entre na comunidade do WhatsApp</strong><span>O link da live e os avisos chegam por lá.</span></div>
+            <a class="botao o-botao" id="comunidade" href="https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq" target="_blank" rel="noopener">Entrar na comunidade</a>
+          </li>
+          <li>
+            <span class="o-n">2</span>
+            <div><strong>Salve na sua agenda</strong><span>Segunda, 9 de novembro, às 20h (Brasília).</span></div>
+            <span class="o-agenda">
+              <a class="o-link" id="agenda" href="https://calendar.google.com/calendar/render?action=TEMPLATE&amp;text=Live%20de%20lan%C3%A7amento%20da%20GlobalFly%20Trade&amp;dates=20261109T230000Z/20261110T010000Z&amp;details=Assista%20do%20in%C3%ADcio%20ao%20fim%20para%20liberar%20o%20seu%20acesso.%20A%20live%20passa%20dentro%20da%20GlobalFly%3A%20https%3A%2F%2Fglobalflytrade.com" target="_blank" rel="noopener">Google Agenda</a>
+              <a class="o-link" href="../live-globalfly.ics">iPhone e outras</a>
+            </span>
+          </li>
+          <li>
+            <span class="o-n">3</span>
+            <div><strong>Entre na GlobalFly e ative os avisos</strong><span data-acesso-curto>Use o e-mail do cadastro e a senha que você criou. Lá dentro, ative os avisos no celular e instale o app.</span></div>
+            <a class="botao o-botao o-claro" id="plataforma" href="../../">Entrar na GlobalFly</a>
+          </li>
+        </ol>
         <div class="acesso">
-          <strong>Seu acesso à plataforma</strong>
+          <strong>Seu acesso</strong>
           <!-- O texto segue o que o servidor fez com a conta (28/10/2026): criada com a senha da pessoa,
                já existente, ou (fallback e cadastros antigos) com a senha provisória por e-mail. -->
           <div data-acesso="criada" hidden>
             <p>Sua conta está criada. Entre com o <b>e-mail do cadastro</b> e a <b>senha que você acabou de criar</b>.</p>
-            <p>Enquanto o cadastro está em análise, você vê a tela de acompanhamento; depois da aprovação, a plataforma abre inteira. Esqueceu a senha? Toque em <b>“Esqueci a senha”</b> na tela de entrada.</p>
+            <p>Até a live, a conta fica em <b>pré-acesso</b>: você entra, vê quanto falta e prepara o celular. O acesso completo abre na live. Esqueceu a senha? Toque em <b>“Esqueci a senha”</b> na tela de entrada.</p>
           </div>
           <div data-acesso="existente" hidden>
-            <p>Você já tinha cadastro com este e-mail, e ele continua valendo. Entre com a <b>sua senha atual</b>.</p>
+            <p>Você já tinha conta com este e-mail, e ela continua valendo. Entre com a <b>sua senha atual</b>.</p>
             <p>Não lembra? Toque em <b>“Esqueci a senha”</b> na tela de entrada e crie uma nova.</p>
           </div>
           <div data-acesso="provisoria" hidden>
-            <p>Enviamos a <b>senha provisória</b> para o seu e-mail (assunto: <b>“Cadastro recebido · GlobalFly Trade”</b>). Não encontrou? Confira o <b>Spam</b> ou o <b>Lixo eletrônico</b>.</p>
-            <p>Entre com o e-mail do cadastro e a senha provisória. No primeiro acesso, você escolhe a sua.</p>
+            <p>Enviamos a <b>senha de entrada</b> para o seu e-mail (assunto: <b>“Cadastro recebido · GlobalFly Trade”</b>). Não encontrou? Confira o <b>Spam</b> ou o <b>Lixo eletrônico</b>.</p>
+            <p>Entre com o e-mail do cadastro e essa senha. No primeiro acesso, você escolhe a sua.</p>
           </div>
-          <a id="plataforma" href="../../">Ir para a plataforma</a>
         </div>
       </section>
     </main>
@@ -74,12 +84,14 @@
     (function () {
       var dados = GF.ler()
       // textContent: o nome nunca entra como HTML
-      if (dados.nome) document.querySelector('[data-titulo]').textContent = 'Cadastro recebido, ' + dados.nome + '!'
+      if (dados.nome) document.querySelector('[data-titulo]').textContent = dados.nome + ', sua conta está pronta!'
       document.getElementById('comunidade').href = GF.COMUNIDADE
       // quem se cadastrou pelo app não passou pelo questionário: a etapa não aparece como feita
       if (!dados.respondeu) document.querySelector('[data-etapa-questionario]').remove()
       var conta = dados.conta === 'criada' || dados.conta === 'existente' ? dados.conta : 'provisoria'
       document.querySelector('[data-acesso="' + conta + '"]').hidden = false
+      if (conta !== 'criada') document.querySelector('[data-acesso-curto]').textContent = 'Lá dentro, ative os avisos no celular e instale o app. Os dados de entrada estão logo abaixo.'
+      GF.pixel('CompleteRegistration')
     })()
   </script>
 </body>
