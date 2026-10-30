@@ -19,3 +19,9 @@
 .pendente-confirmar p{margin:0}
 .pendente-confirmar label{display:grid;gap:6px;max-width:320px;font-size:13px}
 .pendente-confirmar select{min-height:40px;padding:0 10px;border:1px solid var(--border,#343842);border-radius:9px;background:transparent;color:inherit;font:inherit}
+/* O parceiro na aprovação (30/10/2026): selo na linha e a escolha ao lado do plano. */
+.pendente-escolhas{display:flex!important;gap:12px;flex-wrap:wrap;align-items:end}
+.pendente-escolhas label{flex:1 1 220px}
+.pendente-dica{color:var(--muted,#9298a3);font-size:12.5px}
+.pendente-parceiro{display:inline-block;margin-left:8px;padding:1px 8px;border:1px solid var(--border,#343842);border-radius:999px;color:var(--muted,#9298a3);font-size:11.5px;font-style:normal;font-weight:600;vertical-align:1px}
+.pendente-parceiro.n,.pendente-parceiro.v{border-color:var(--primary,#cfa94f);color:var(--primary,#cfa94f)}

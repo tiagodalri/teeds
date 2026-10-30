@@ -443,6 +443,36 @@ const NOMES_DE_EVENTO: Array<[RegExp, string]> = [
   [/^Unemployment Change$/i, 'Variação do desemprego'],
   [/^CB Leading Index$/i, 'Indicador antecedente (Conference Board)'],
   [/^Leading Index$/i, 'Indicador antecedente'],
+  [/^ADP Weekly Employment Change$/i, 'ADP: emprego privado na semana'],
+  [/^ANZ Business Confidence$/i, 'Confiança empresarial (ANZ)'],
+  [/^API Weekly Statistical Bulletin$/i, 'Estoques de petróleo (API)'],
+  [/^Annual Budget Release$/i, 'Orçamento anual do governo'],
+  [/^Autumn Forecast Statement$/i, 'Orçamento de outono do governo'],
+  [/^BOC Monetary Policy Report$/i, 'Relatório de política monetária do Canadá'],
+  [/^BOC Press Conference$/i, 'Entrevista do Banco do Canadá'],
+  [/^BOC Rate Statement$/i, 'Comunicado de juros do Canadá'],
+  [/^BOJ Core CPI$/i, 'Núcleo da inflação do Banco do Japão'],
+  [/^BOJ Outlook Report$/i, 'Relatório de perspectivas do Banco do Japão'],
+  [/^BRC Shop Price Index$/i, 'Preços no varejo (BRC)'],
+  [/^CBI Realized Sales$/i, 'Vendas realizadas (CBI)'],
+  [/^Consumer Spending$/i, 'Gastos do consumidor'],
+  [/^Private Payrolls$/i, 'Emprego no setor privado'],
+  [/^GfK Consumer Climate$/i, 'Clima do consumidor (GfK)'],
+  [/^Goods Trade Balance$/i, 'Balança comercial de bens'],
+  [/^(Nationwide |S&P\/CS Composite-20 )?HPI$/i, 'Preço dos imóveis'],
+  [/^Monthly Unemployment Rate$/i, 'Taxa de desemprego'],
+  [/^KOF Economic Barometer$/i, 'Barômetro econômico (KOF)'],
+  [/^M(\d) Money Supply$/i, 'Oferta de moeda M$1'],
+  [/^Mortgage Approvals$/i, 'Financiamentos imobiliários aprovados'],
+  [/^Net Lending to Individuals$/i, 'Crédito às pessoas'],
+  [/^Non-Manufacturing PMI$/i, 'PMI de serviços (fora da indústria)'],
+  [/^Private Loans$/i, 'Empréstimos privados'],
+  [/^Private Sector Credit$/i, 'Crédito ao setor privado'],
+  [/^RBNZ Press Conference$/i, 'Entrevista do banco central da Nova Zelândia'],
+  [/^RBNZ Rate Statement$/i, 'Comunicado de juros da Nova Zelândia'],
+  [/^Richmond Manufacturing Index$/i, 'Indústria de Richmond'],
+  [/^SPPI$/i, 'Preços de serviços às empresas (SPPI)'],
+  [/^UBS Economic Expectations$/i, 'Expectativas econômicas (UBS)'],
   // qualquer outro discurso: "Discurso: RBA Assist Gov Jones"
   [/^(.+) Speaks$/i, 'Discurso: $1'],
 ]
@@ -452,7 +482,8 @@ export function emPortugues(original: string): string {
   let t = original.trim(), pais = ''
   for (const [re, nome] of PAISES_DO_TITULO) if (re.test(t) && !/^German (ifo|ZEW)/i.test(t)) { pais = nome; t = t.replace(re, ''); break }
   const periodo = /\sm\/m$/i.test(t) ? ' · no mês' : /\sy\/y$/i.test(t) ? ' · em 12 meses' : /\sq\/q$/i.test(t) ? ' · no trimestre' : ''
-  const base = t.replace(/\s[myq]\/[myq]$/i, '')
+  // "Prelim", "Flash", "Final"… dizem a versão do número, não o que ele é
+  const base = t.replace(/\s[myq]\/[myq]$/i, '').replace(/^(?:(?:Prelim|Flash|Final|Revised|Advance)\s+)+(?!GDP)/i, '')
   const achado = NOMES_DE_EVENTO.find(([re]) => re.test(base))
   if (!achado) return original
   const nome = base.replace(achado[0], achado[1])
