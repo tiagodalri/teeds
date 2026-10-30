@@ -1,16 +1,37 @@
 /* O gráfico do TradingView no Manual e o seletor GlobalFly | TradingView (30/10/2026). */
-.gtv { position: relative; display: flex; flex-direction: column; flex: 1; height: 100%; min-height: 0; min-width: 0; }
-.gtv-barra { justify-content: space-between; }
-.gtv-titulo { min-width: 0; color: var(--text); font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.gtv-titulo small { color: var(--muted); font-size: 12px; font-weight: 600; }
+/* Sempre o visual escuro do TradingView (fundo preto), nos dois temas: o gráfico
+   "de fora" se distingue do nosso à primeira vista (Tiago, 30/10/2026). */
+.gtv {
+  --gtv-fundo: #000; --gtv-linha: #2a2a2a; --gtv-texto: #dbdbdb; --gtv-apagado: #8c8c8c;
+  position: relative; display: flex; flex-direction: column; flex: 1; height: 100%; min-height: 0; min-width: 0; background: var(--gtv-fundo);
+}
+.gtv-barra { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 46px; padding: 8px 12px; box-sizing: border-box; background: var(--gtv-fundo); border-bottom: 1px solid var(--gtv-linha); }
+.gtv-acoes { display: flex; align-items: center; gap: 6px; flex: none; }
+.gtv-titulo { min-width: 0; color: var(--gtv-texto); font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gtv-titulo small { color: var(--gtv-apagado); font-size: 12px; font-weight: 600; }
+.gtv .seletor-grafico { border-color: var(--gtv-linha); background: #1c1c1c; }
+.gtv .seletor-grafico button { color: var(--gtv-apagado); }
+.gtv .seletor-grafico button:hover { color: var(--gtv-texto); }
+.gtv .seletor-grafico button.on { background: #2e2e2e; color: #fff; box-shadow: none; }
+/* o ícone de tela cheia, no cantinho de cima à direita, na barra do próprio TradingView (lado vazio dela) */
+.gtv-tela-cheia {
+  position: absolute; z-index: 3; right: 8px; top: 5px; display: grid; place-items: center; width: 32px; height: 32px;
+  border: 1px solid var(--gtv-linha); border-radius: 8px; background: #0F0F0FD1; color: var(--gtv-texto); cursor: pointer;
+}
+.gtv-tela-cheia:hover { background: #2e2e2e; color: #fff; }
+.gtv-tela-cheia:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.gtv-tela-cheia svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+/* tela cheia do navegador: só o gráfico, de ponta a ponta */
+.gtv-cheia { width: 100vw; height: 100vh; }
+.gtv-cheia .gtv-area { min-height: 0; }
 .gtv-area { position: relative; flex: 1; min-height: 320px; }
 /* o iframe do TradingView roda sem a escala de 90% do computador (core/escala.ts), como o nosso gráfico (.gp-kline) */
 .gtv-caixa { position: absolute; inset: 0; zoom: calc(1 / var(--escala-pagina, 1)); }
 .gtv-caixa > div, .gtv-caixa iframe { width: 100% !important; height: 100% !important; }
 .gtv-sem { display: grid; place-content: center; justify-items: center; gap: 8px; min-height: 420px; padding: 24px; text-align: center; }
-.gtv-sem b { color: var(--text); font-size: 15px; }
-.gtv-sem span { color: var(--muted); font-size: 13.5px; max-width: 38ch; line-height: 1.5; }
-.gtv-ampliado { position: fixed; inset: 0; z-index: 330; background: var(--bg); padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+.gtv-sem b { color: var(--gtv-texto); font-size: 15px; }
+.gtv-sem span { color: var(--gtv-apagado); font-size: 13.5px; max-width: 38ch; line-height: 1.5; }
+.gtv-ampliado { position: fixed; inset: 0; z-index: 330; background: var(--gtv-fundo); padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
 .gtv-ampliado .gtv-area { min-height: 0; }
 body:has(.gtv-ampliado) { overflow: hidden; }
 body:has(.gtv-ampliado) :is(.barra-inferior, .mcb, .sp-lancador-area, .eq-lancador-area, .app-convite, .av-pilula, #aviso-versao) { display: none !important; }
@@ -28,4 +49,11 @@ body:has(.gtv-ampliado) :is(.barra-inferior, .mcb, .sp-lancador-area, .eq-lancad
   .seletor-grafico .sg-curto { display: inline; }
   .gtv-area { min-height: max(380px, calc(100dvh - 330px)); }
   .gtv-titulo small { display: none; }
+}
+
+/* o mesmo ícone: no canto do gráfico no computador, na barra no celular */
+.gtv-tela-cheia.na-barra { position: static; display: none; }
+@media (max-width: 700px) {
+  .gtv-tela-cheia.no-canto { display: none; }
+  .gtv-tela-cheia.na-barra { display: grid; width: 34px; height: 34px; }
 }

@@ -31,25 +31,45 @@ export function simboloNoTradingView(codigo: string): string | null {
 /** Os tempos da plataforma nos do TradingView. */
 const INTERVALO: Record<number, string> = { 60: '1', 120: '2', 180: '3', 300: '5', 600: '10', 900: '15', 1800: '30', 3600: '60', 7200: '120', 14400: '240', 28800: '480', 86400: 'D' }
 
-export function GraficoTradingView({ symbol, symbolName, granularity, mode, tema, barra }: {
+export function GraficoTradingView({ symbol, symbolName, granularity, mode, barra }: {
   symbol: string
   symbolName: string
   granularity: number
   mode: 'candles' | 'line'
-  tema: 'claro' | 'escuro'
   /** O seletor de gráfico, na mesma barra (e no mesmo lugar) do gráfico GlobalFly. */
   barra: ReactNode
 }) {
   const caixa = useRef<HTMLDivElement>(null)
+  const raiz = useRef<HTMLDivElement>(null)
+  /*
+    Tela cheia só do gráfico (30/10/2026, Tiago: "um iconezinho de tela cheia no
+    cantinho do gráfico"). No computador e no Android é a tela cheia do próprio
+    navegador, só com o gráfico; no iPhone (o Safari não deixa) o gráfico cobre
+    a tela do aparelho. Esc ou o mesmo ícone volta.
+  */
   const [ampliado, setAmpliado] = useState(false)
+  const [cheia, setCheia] = useState(false)
   const simbolo = simboloNoTradingView(symbol)
 
+  useEffect(() => {
+    const mudou = () => setCheia(document.fullscreenElement === raiz.current && !!raiz.current)
+    document.addEventListener('fullscreenchange', mudou)
+    return () => document.removeEventListener('fullscreenchange', mudou)
+  }, [])
   useEffect(() => {
     if (!ampliado) return
     const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') setAmpliado(false) }
     window.addEventListener('keydown', tecla)
     return () => window.removeEventListener('keydown', tecla)
   }, [ampliado])
+  const grande = cheia || ampliado
+  const alternarTelaCheia = () => {
+    if (cheia) { void document.exitFullscreen().catch(() => undefined); return }
+    if (ampliado) { setAmpliado(false); return }
+    const el = raiz.current
+    if (el && document.fullscreenEnabled && el.requestFullscreen) el.requestFullscreen().catch(() => setAmpliado(true))
+    else setAmpliado(true)
+  }
 
   useEffect(() => {
     const el = caixa.current
@@ -60,7 +80,6 @@ export function GraficoTradingView({ symbol, symbolName, granularity, mode, tema
     alvo.style.height = '100%'
     alvo.style.width = '100%'
     el.appendChild(alvo)
-    const escuro = tema === 'escuro'
     const script = document.createElement('script')
     script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
     script.type = 'text/javascript'
@@ -70,11 +89,13 @@ export function GraficoTradingView({ symbol, symbolName, granularity, mode, tema
       symbol: simbolo,
       interval: INTERVALO[granularity] ?? '1',
       timezone: 'America/Sao_Paulo',
-      theme: escuro ? 'dark' : 'light',
+      // sempre o visual escuro do próprio TradingView, nos dois temas da plataforma
+      // (Tiago: "fundo preto, para diferenciar do tradicional")
+      theme: 'dark',
       style: mode === 'line' ? '2' : '1',
       locale: 'br',
-      backgroundColor: escuro ? '#051528' : '#ffffff',
-      gridColor: escuro ? 'rgba(255, 255, 255, 0.05)' : 'rgba(5, 21, 40, 0.06)',
+      backgroundColor: 'rgba(0, 0, 0, 1)',
+      gridColor: 'rgba(242, 242, 242, 0.06)',
       hide_side_toolbar: false,
       hide_volume: true,
       allow_symbol_change: false,
@@ -84,24 +105,33 @@ export function GraficoTradingView({ symbol, symbolName, granularity, mode, tema
     })
     el.appendChild(script)
     return () => { el.innerHTML = '' }
-  }, [simbolo, granularity, mode, tema])
+  }, [simbolo, granularity, mode])
 
   return (
-    <div className={`gtv${ampliado ? ' gtv-ampliado' : ''}`}>
-      <div className="gp-barra gtv-barra">
+    <div ref={raiz} className={`gtv${ampliado ? ' gtv-ampliado' : ''}${cheia ? ' gtv-cheia' : ''}`}>
+      <div className="gtv-barra">
         <span className="gtv-titulo">{symbolName || symbol}<small> · no TradingView</small></span>
-        <div className="gp-tamanho">
+        <div className="gtv-acoes">
           {barra}
-          <button type="button" className="gp-botao-ind gp-so-celular" onClick={() => setAmpliado((x) => !x)} aria-pressed={ampliado}
-            title={ampliado ? 'Voltar ao tamanho normal' : 'Ampliar o gráfico na tela inteira'} aria-label={ampliado ? 'Fechar o gráfico ampliado' : 'Ampliar o gráfico'}>
-            {ampliado
-              ? <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg>
-              : <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>}
+          {/* no celular o canto do gráfico é do próprio TradingView: o ícone fica aqui, ao lado do seletor */}
+          <button type="button" className="gtv-tela-cheia na-barra" onClick={alternarTelaCheia} aria-pressed={grande}
+            title={grande ? 'Sair da tela cheia (Esc)' : 'Tela cheia só do gráfico'} aria-label={grande ? 'Sair da tela cheia' : 'Tela cheia só do gráfico'}>
+            {grande
+              ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg>
+              : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>}
           </button>
         </div>
       </div>
       {simbolo ? (
-        <div className="gtv-area"><div className="gtv-caixa tradingview-widget-container" ref={caixa} /></div>
+        <div className="gtv-area">
+          <div className="gtv-caixa tradingview-widget-container" ref={caixa} />
+          <button type="button" className="gtv-tela-cheia no-canto" onClick={alternarTelaCheia} aria-pressed={grande}
+            title={grande ? 'Sair da tela cheia (Esc)' : 'Tela cheia só do gráfico'} aria-label={grande ? 'Sair da tela cheia' : 'Tela cheia só do gráfico'}>
+            {grande
+              ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg>
+              : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>}
+          </button>
+        </div>
       ) : (
         <div className="gtv-sem">
           <b>{symbolName || symbol} não está no TradingView.</b>

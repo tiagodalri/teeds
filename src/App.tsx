@@ -1439,7 +1439,7 @@ export default function App() {
               <Suspense fallback={<div className="gp-carregando-pagina">Abrindo o gráfico…</div>}>
                 {/* GlobalFly | TradingView (30/10/2026): o nosso é o padrão; o do TradingView fica ao lado, por escolha */}
                 {qualGrafico === 'tradingview' ? (
-                  <GraficoTradingView symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''} granularity={granularity} mode={mode} tema={tema}
+                  <GraficoTradingView symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''} granularity={granularity} mode={mode}
                     barra={<SeletorDeGrafico valor={qualGrafico} aoTrocar={trocarGrafico} />} />
                 ) : (
                   <GraficoPro candles={candles} mode={mode} pipSize={pipSize} symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''}

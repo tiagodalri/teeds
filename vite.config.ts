@@ -100,7 +100,10 @@ const PALETAS: Record<string, Paleta> = {
       // Organização (só admins, 23/10/2026): a cor de cada área e de cada tipo de marco é
       // informação (separa Marketing de Desenvolvimento no quadro e no calendário), não enfeite
       '#A78BFA', '#F472B6', '#38BDF8', '#34D399', '#FBBF24', '#FB923C', '#94A3B8',
-      '#D4A64A', '#F43F5E', '#64748B', '#7C8BA1'],
+      '#D4A64A', '#F43F5E', '#64748B', '#7C8BA1',
+      // o gráfico do TradingView (30/10/2026, Tiago: "fundo preto, para diferenciar do
+      // tradicional"): os cinzas dele ficam cinzas, sem virar o marinho da GF
+      '#000000', '#0F0F0F', '#1C1C1C', '#2A2A2A', '#2E2E2E', '#8C8C8C', '#DBDBDB'],
     // 21/10/2026: vermelho e verde vivos, sem o tom exato (antes #C95F5F e #2F8F72,
     // que apagavam até o gráfico); cada cor herdada mantém a luz e ganha a saturação
     vermelho: { h: 356, s: 0.82 },
