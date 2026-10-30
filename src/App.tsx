@@ -1322,7 +1322,7 @@ export default function App() {
         <CatalogoProvider sessao={teeds.sessao}><Suspense fallback={telaAbrindo('Abrindo o gerenciamento…')}><OperationalManagementPanel /></Suspense></CatalogoProvider>
       ) : tela === 'relatorios' && MARCA.relatorios && teeds.sessao ? (
         <Suspense fallback={telaAbrindo('Abrindo os relatórios…')}>
-          <RelatoriosPanel sessao={teeds.sessao} socket={conta.socket} conectada={conta.status === 'logado'} contaDemo={conta.isDemo}
+          <RelatoriosPanel sessao={teeds.sessao} socket={conta.socket} conectada={conta.status === 'logado'} contaDemo={conta.account ? conta.isDemo : null}
             rotulosTrocados={conta.rotulosTrocados} saldo={conta.balance ? conta.balance.amount : null}
             moeda={conta.balance?.currency ?? conta.account?.currency ?? 'USD'} aoIr={(t) => setTela(t)} />
         </Suspense>

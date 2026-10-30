@@ -5,7 +5,7 @@
  * saques (ao vivo da Deriv), o compartilhamento estimado do mês e as últimas
  * operações. Ver src/core/teeds/relatorios.ts.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import type { TeedsSocket } from '../../core/deriv/client'
 import { MARCA } from '../../marca'
@@ -22,8 +22,8 @@ interface Props {
   sessao: SessaoTeeds
   socket: TeedsSocket | null
   conectada: boolean
-  /** A conta escolhida agora é demo (o tipo verdadeiro). */
-  contaDemo: boolean
+  /** A conta conectada agora é demo (o tipo verdadeiro); null enquanto a Deriv não disse qual é. */
+  contaDemo: boolean | null
   /** Rótulos trocados (acessos internos): só a etiqueta da tela muda. */
   rotulosTrocados?: boolean
   saldo: number | null
@@ -74,27 +74,66 @@ function Curva({ pontos, rotulos, ocultos, moeda }: { pontos: Array<{ chave: str
 export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosTrocados = false, saldo, moeda, aoIr, exemplo }: Props) {
   const ocultos = useValoresOcultos()
   const [periodo, setPeriodo] = useState<Periodo>('30d')
-  const [demo, setDemo] = useState<boolean>(contaDemo)
+  // 30/10/2026 (vídeo do Victor: "o relatório estava com outro valor e voltou
+  // para o valor antigo"): a conta do filtro só segue a conta conectada quando
+  // ela é conhecida. Antes, enquanto a Deriv conectava (ou numa reconexão),
+  // isDemo valia false e o relatório lia a outra conta, depois voltava — o
+  // número pulava entre as duas. Sem Deriv nenhuma, depois de 4 s, fica a real.
+  const [escolhida, setDemo] = useState<boolean | null>(contaDemo)
+  const demo = escolhida ?? false
   const [rel, setRel] = useState<Relatorio | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [carregando, setCarregando] = useState(true)
   const [dinheiroP, setDinheiroP] = useState<Dinheiro | null>(null)
   const [todas, setTodas] = useState(false)
   const [versao, setVersao] = useState(0)
-
-  useEffect(() => { setDemo(contaDemo) }, [contaDemo])
+  const [pulso, setPulso] = useState(0)
+  const contaConhecida = useRef<boolean | null>(contaDemo)
+  const montadoDe = useRef<string | null>(null)
+  const versaoVista = useRef(0)
 
   useEffect(() => {
+    if (contaDemo === null || contaDemo === contaConhecida.current) return
+    contaConhecida.current = contaDemo
+    setDemo(contaDemo)
+  }, [contaDemo])
+  useEffect(() => {
+    if (escolhida !== null) return
+    const t = window.setTimeout(() => setDemo((d) => d ?? false), 4000)
+    return () => window.clearTimeout(t)
+  }, [escolhida])
+
+  // fica em dia sozinho: a cada 30 s com a tela à mostra e ao voltar para ela
+  useEffect(() => {
+    if (exemplo) return
+    const bater = () => { if (document.visibilityState === 'visible') setPulso((x) => x + 1) }
+    const t = window.setInterval(bater, 30_000)
+    document.addEventListener('visibilitychange', bater)
+    window.addEventListener('focus', bater)
+    return () => { window.clearInterval(t); document.removeEventListener('visibilitychange', bater); window.removeEventListener('focus', bater) }
+  }, [exemplo])
+
+  useEffect(() => {
+    if (escolhida === null) return
     let vivo = true
-    setCarregando(true); setErro(null)
-    if (exemplo) { setRel(exemplo.relatorio); setCarregando(false); return }
-    meuRelatorio(sessao, { periodo, demo })
-      .then((r) => { if (vivo) setRel(r) })
-      // nunca o texto cru do navegador ("Failed to fetch"): sempre o que fazer
-      .catch(() => { if (vivo) setErro('Não foi possível montar o relatório agora. Toque em Atualizar para tentar de novo.') })
+    // outra conta ou outro período: os números antigos saem da tela na hora
+    const chave = `${periodo}|${escolhida}`
+    const mesmoFiltro = montadoDe.current === chave
+    if (!mesmoFiltro) setRel(null)
+    // a batida automática atualiza em silêncio; o botão Atualizar mostra que está trabalhando
+    const pedido = !mesmoFiltro || versao !== versaoVista.current
+    versaoVista.current = versao
+    if (pedido) setCarregando(true)
+    setErro(null)
+    if (exemplo) { setRel(exemplo.relatorio); setCarregando(false); montadoDe.current = chave; return }
+    meuRelatorio(sessao, { periodo, demo: escolhida })
+      .then((r) => { if (vivo) { setRel(r); montadoDe.current = chave } })
+      // nunca o texto cru do navegador ("Failed to fetch"): sempre o que fazer;
+      // na atualização automática, uma falha não apaga o que já está na tela
+      .catch(() => { if (vivo && !mesmoFiltro) setErro('Não foi possível montar o relatório agora. Toque em Atualizar para tentar de novo.') })
       .finally(() => { if (vivo) setCarregando(false) })
     return () => { vivo = false }
-  }, [sessao.token, periodo, demo, versao]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sessao.token, periodo, escolhida, versao, pulso]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // depósitos e saques: ao vivo da Deriv, só quando a conta conectada é a do filtro
   const contaDoFiltro = !!exemplo?.dinheiro || (conectada && socket && demo === contaDemo)
