@@ -268,9 +268,18 @@
 .mc-ag-tabela { border-top: 1px solid var(--mc-linha); font-variant-numeric: tabular-nums; }
 .mc-ag-cab, .mc-ag-linha { display: grid; grid-template-columns: 64px 128px minmax(0, 1fr) 92px 92px 92px; align-items: center; gap: 12px; padding: 0 24px; }
 .mc-ag-cab { min-height: 36px; background: var(--surface-alt); color: color-mix(in srgb, var(--text) 70%, var(--surface)); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
-.mc-ag-corpo { max-height: 430px; overflow-y: auto; scrollbar-width: thin; position: relative; }
 .mc-ag-linha { min-height: 54px; padding-block: 8px; border-top: 1px solid var(--mc-linha); color: var(--text); }
-.mc-ag-linha:first-child { border-top: 0; }
+.mc-ag-grupo + [role='rowgroup'] > .mc-ag-linha:first-child { border-top: 0; }
+/* as faixas dos grupos: "A seguir" (com a hora de agora) e "Já divulgados hoje" */
+.mc-ag-grupo { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 14px 24px 8px; border-top: 1px solid var(--mc-linha); }
+.mc-ag-grupo b { color: var(--text); font-size: 13.5px; font-weight: 800; }
+.mc-ag-grupo span { color: color-mix(in srgb, var(--text) 66%, var(--surface)); font-size: 12.5px; }
+.mc-ag-grupo.a-seguir b { color: var(--mc-ouro); }
+.mc-ag-cab + .mc-ag-grupo { border-top: 0; }
+.mc-ag-nada { margin: 0; padding: 6px 24px 18px; color: var(--text); font-size: 14px; line-height: 1.55; }
+.mc-ag-mais { display: block; width: 100%; min-height: 46px; border: 0; border-top: 1px solid var(--mc-linha); background: transparent; color: var(--mc-ouro); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.mc-ag-mais:hover { background: color-mix(in srgb, var(--mc-ouro) 6%, transparent); }
+.mc-ag-mais:focus-visible { outline: 2px solid var(--mc-ouro); outline-offset: -2px; }
 .mc-ag-linha time { font: 700 14.5px var(--fonte-dados, ui-monospace, monospace); }
 .mc-ag-pais { font-size: 13.5px; font-weight: 600; }
 .mc-ag-evento { display: grid; gap: 2px; min-width: 0; }
@@ -286,9 +295,6 @@
 .mc-impacto-rot.alto::before { background: var(--down); box-shadow: 0 0 0 3px color-mix(in srgb, var(--down) 22%, transparent); }
 .mc-impacto-rot.medio::before { background: var(--mc-ouro); }
 .mc-impacto-rot.feriado::before { background: transparent; border: 2px solid var(--muted); width: 7px; height: 7px; }
-.mc-ag-agora { position: relative; height: 26px; margin: 0 24px; display: flex; align-items: center; }
-.mc-ag-agora::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px solid var(--mc-ouro); }
-.mc-ag-agora span { position: relative; padding: 2px 10px; border-radius: 999px; background: var(--mc-ouro); color: #0b1424; font-size: 11.5px; font-weight: 800; }
 .mc-agenda-vazia { margin: 0; padding: 26px 24px; border-top: 1px solid var(--mc-linha); color: var(--text); font-size: 14px; }
 .mc-agenda-fonte { margin: 0; padding: 12px 24px 16px; border-top: 1px solid var(--mc-linha); color: color-mix(in srgb, var(--text) 66%, var(--surface)); font-size: 12px; line-height: 1.5; }
 
@@ -306,7 +312,7 @@
   .mc-agenda-topo { padding: 16px 16px 12px; }
   .mc-agenda-controles { width: 100%; justify-content: space-between; }
   .mc-ag-cab { display: none; }
-  .mc-ag-corpo { max-height: none; }
+  .mc-ag-grupo, .mc-ag-nada { padding-inline: 16px; }
   /* no celular cada evento vira um cartão de duas linhas: hora, país e impacto em cima; previsão e anterior embaixo */
   .mc-ag-linha { grid-template-columns: 52px minmax(0, 1fr) auto; grid-template-areas: 'hora evento impacto' 'hora pais pais' 'hora prev ant'; gap: 4px 10px; padding: 12px 16px; }
   .mc-ag-linha time { grid-area: hora; align-self: start; padding-top: 1px; }
@@ -317,7 +323,6 @@
   .mc-ag-linha > span[data-rotulo='Anterior'] { grid-area: ant; }
   .mc-ag-linha > .num::before { content: attr(data-rotulo) ' '; color: color-mix(in srgb, var(--text) 62%, var(--surface)); font-weight: 600; }
   .mc-ag-pais { font-size: 12.5px; color: color-mix(in srgb, var(--text) 75%, var(--surface)); }
-  .mc-ag-agora { margin: 0 16px; }
   .mc-agenda-vazia, .mc-agenda-fonte { padding-inline: 16px; }
 }
 .mc-resumo-topo > div:first-child { flex: 1; min-width: 0; }

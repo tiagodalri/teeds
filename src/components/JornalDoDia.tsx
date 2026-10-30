@@ -1,4 +1,4 @@
-import { Fragment as Fragmento, useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 /**
  * O jornal do dia e a agenda econômica (30/10/2026, vídeo do Victor: "vou usar
@@ -102,16 +102,16 @@ export function JornalDoDia({ cotacoes, manchetes, agenda, data }: {
     .filter((e) => todos || e.impacto === 'alto' || e.impacto === 'medio' || e.impacto === 'feriado')
   const proximo = dia === 'hoje' ? eventos.find((e) => Date.parse(e.quando) > agora.getTime()) : undefined
   const fortesHoje = eventosHoje.filter((e) => e.impacto === 'alto')
-  const jaSairam = dia === 'hoje' ? eventos.filter((e) => Date.parse(e.quando) <= agora.getTime()).length : 0
-
-  // a tabela abre na linha "Agora" (com o último que já saiu à mostra), não no começo do dia
-  const corpoDaTabela = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const caixa = corpoDaTabela.current, marco = caixa?.querySelector<HTMLElement>('.mc-ag-agora')
-    if (!caixa || !marco) return
-    const antes = marco.previousElementSibling as HTMLElement | null
-    caixa.scrollTop = Math.max(0, (antes ?? marco).offsetTop - 8)
-  }, [jaSairam, dia, todos])
+  // 30/10/2026 (Tiago: "os mais recentes em cima, não embaixo"): no Hoje, primeiro
+  // o que vem (o próximo no topo), depois o que já saiu, do mais recente ao mais antigo
+  const agoraMs = agora.getTime()
+  const aSeguir = dia === 'hoje' ? eventos.filter((e) => Date.parse(e.quando) > agoraMs) : eventos
+  const divulgados = dia === 'hoje' ? eventos.filter((e) => Date.parse(e.quando) <= agoraMs).reverse() : []
+  const [verTodosDivulgados, setVerTodosDivulgados] = useState(false)
+  const divulgadosNaTela = verTodosDivulgados ? divulgados : divulgados.slice(0, 3)
+  // sem mais nada hoje: o próximo evento de impacto dos outros dias, para a tela não ficar muda
+  const depoisDeHoje = (agenda ?? []).find((e) => Date.parse(e.quando) > agoraMs && diaLocal(new Date(e.quando)) !== diaLocal(agora) && (e.impacto === 'alto' || e.impacto === 'medio'))
+  const quandoDepois = depoisDeHoje && new Date(depoisDeHoje.quando).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })
 
   async function copiar() {
     const partes = [`*Jornal do dia · ${data}*`]
@@ -192,41 +192,36 @@ export function JornalDoDia({ cotacoes, manchetes, agenda, data }: {
             </div>
           </header>
 
-          {eventos.length ? (
+          {agenda.length === 0 ? (
+            <p className="mc-agenda-vazia">A agenda da semana está chegando. Ela aparece aqui em instantes.</p>
+          ) : (
             <div className="mc-ag-tabela" role="table" aria-label="Eventos">
               <div className="mc-ag-cab" role="row">
                 <span role="columnheader">Hora</span><span role="columnheader">País</span><span role="columnheader">Evento</span>
                 <span role="columnheader">Impacto</span><span role="columnheader" className="num">Previsão</span><span role="columnheader" className="num">Anterior</span>
               </div>
-              <div className="mc-ag-corpo" ref={corpoDaTabela} role="rowgroup">
-                {eventos.map((e, i) => {
-                  const passou = dia === 'hoje' && Date.parse(e.quando) <= agora.getTime()
-                  return (
-                    <Fragmento key={e.id}>
-                      {dia === 'hoje' && i === jaSairam && jaSairam > 0 && <Agora />}
-                      <div role="row" className={`mc-ag-linha ${e.impacto} ${passou ? 'saiu' : ''} ${e === proximo ? 'proximo' : ''}`}>
-                        <time role="cell" dateTime={e.quando}>{hora(e.quando)}</time>
-                        <span role="cell" className="mc-ag-pais">{PAIS[e.moeda] ?? e.moeda}</span>
-                        <span role="cell" className="mc-ag-evento">
-                          <b title={e.titulo !== e.original ? e.original : undefined}>{e.titulo}</b>
-                          {e === proximo && <small className="prox">Próximo</small>}
-                        </span>
-                        <span role="cell"><span className={`mc-impacto-rot ${e.impacto}`}>{IMPACTO[e.impacto]}</span></span>
-                        <span role="cell" className="num" data-rotulo="Previsão">{e.previsao ? numeroBR(e.previsao) : '—'}</span>
-                        <span role="cell" className="num" data-rotulo="Anterior">{e.anterior ? numeroBR(e.anterior) : '—'}</span>
-                      </div>
-                    </Fragmento>
-                  )
-                })}
-                {/* tudo do dia já saiu: o "Agora" fica no fim */}
-                {dia === 'hoje' && jaSairam > 0 && jaSairam === eventos.length && <Agora />}
-              </div>
+
+              {dia === 'hoje' && <div className="mc-ag-grupo a-seguir" role="presentation"><b>A seguir</b><span>Agora, {hora(agora.toISOString())}</span></div>}
+              {aSeguir.length ? (
+                <div role="rowgroup">{aSeguir.map((e) => <LinhaDoEvento key={e.id} e={e} proximo={e === proximo} />)}</div>
+              ) : (
+                <p className="mc-ag-nada">
+                  {dia === 'hoje' ? 'Nenhum outro evento de impacto hoje.' : todos ? 'Nenhum evento neste dia.' : 'Nenhum evento de alto ou médio impacto neste dia.'}
+                  {dia === 'hoje' && depoisDeHoje && <> O próximo é <b>{depoisDeHoje.titulo}</b> ({PAIS[depoisDeHoje.moeda] ?? depoisDeHoje.moeda}), {quandoDepois} às {hora(depoisDeHoje.quando)}.</>}
+                  {!todos && <> Ligue <b>Incluir baixo impacto</b> para ver os menores.</>}
+                </p>
+              )}
+
+              {divulgados.length > 0 && <>
+                <div className="mc-ag-grupo" role="presentation"><b>Já divulgados hoje</b><span>{divulgados.length} {divulgados.length === 1 ? 'evento' : 'eventos'}, do mais recente ao mais antigo</span></div>
+                <div role="rowgroup">{divulgadosNaTela.map((e) => <LinhaDoEvento key={e.id} e={e} saiu />)}</div>
+                {divulgados.length > 3 && (
+                  <button type="button" className="mc-ag-mais" onClick={() => setVerTodosDivulgados((x) => !x)} aria-expanded={verTodosDivulgados}>
+                    {verTodosDivulgados ? 'Mostrar só os 3 mais recentes' : `Ver os outros ${divulgados.length - 3} já divulgados`}
+                  </button>
+                )}
+              </>}
             </div>
-          ) : (
-            <p className="mc-agenda-vazia">
-              {agenda.length === 0 ? 'A agenda da semana está chegando. Ela aparece aqui em instantes.'
-                : todos ? 'Nenhum evento neste dia.' : 'Nenhum evento de alto ou médio impacto neste dia. Ligue Incluir baixo impacto para ver todos.'}
-            </p>
           )}
           <p className="mc-agenda-fonte">Principais economias (EUA, Europa, Reino Unido, Japão, China…), pelo calendário do Forex Factory. Previsão é a estimativa do mercado; o número oficial sai na hora marcada.</p>
         </article>
@@ -235,7 +230,19 @@ export function JornalDoDia({ cotacoes, manchetes, agenda, data }: {
   )
 }
 
-/** A linha "Agora" da agenda: separa o que já saiu do que ainda vem. */
-function Agora() {
-  return <div className="mc-ag-agora" role="presentation"><span>Agora · {hora(new Date().toISOString())}</span></div>
+/** Uma linha da agenda: hora, país, evento, impacto, previsão e anterior. */
+function LinhaDoEvento({ e, proximo = false, saiu = false }: { e: Evento; proximo?: boolean; saiu?: boolean }) {
+  return (
+    <div role="row" className={`mc-ag-linha ${e.impacto} ${saiu ? 'saiu' : ''} ${proximo ? 'proximo' : ''}`}>
+      <time role="cell" dateTime={e.quando}>{hora(e.quando)}</time>
+      <span role="cell" className="mc-ag-pais">{PAIS[e.moeda] ?? e.moeda}</span>
+      <span role="cell" className="mc-ag-evento">
+        <b title={e.titulo !== e.original ? e.original : undefined}>{e.titulo}</b>
+        {proximo && <small className="prox">Próximo</small>}
+      </span>
+      <span role="cell"><span className={`mc-impacto-rot ${e.impacto}`}>{IMPACTO[e.impacto]}</span></span>
+      <span role="cell" className="num" data-rotulo="Previsão">{e.previsao ? numeroBR(e.previsao) : '—'}</span>
+      <span role="cell" className="num" data-rotulo="Anterior">{e.anterior ? numeroBR(e.anterior) : '—'}</span>
+    </div>
+  )
 }
