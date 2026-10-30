@@ -265,6 +265,20 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
   const [indicadores, setIndicadores] = useState<IndicadorSalvo[]>(() => carregarIndicadores(sessao, (l) => setIndicadores(l), sinalLiberado))
   const [painel, setPainel] = useState(false)
   const [ferramenta, setFerramenta] = useState<string | null>(null)
+  /*
+    30/10/2026 (áudio do Victor: "o gráfico ficou muito pequeno no celular… deixa
+    algum campo que a pessoa consegue minimizar, aumentar"): no celular a barra
+    de desenhos fica recolhida atrás do botão Desenhos (não come mais 54 px do
+    gráfico) e o botão Ampliar abre o gráfico na tela inteira; Esc ou Fechar volta.
+  */
+  const [desenhosAbertos, setDesenhosAbertos] = useState(false)
+  const [ampliado, setAmpliado] = useState(false)
+  useEffect(() => {
+    if (!ampliado) return
+    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') setAmpliado(false) }
+    window.addEventListener('keydown', tecla)
+    return () => window.removeEventListener('keydown', tecla)
+  }, [ampliado])
   const [dica, setDica] = useState<{ nome: string; descricao: string; x: number; y: number; acima: boolean } | null>(null)
   /** A caixinha de ajuda das ferramentas: fixa na tela, porque a barra rola e cortaria um balão preso nela. */
   const mostrarDica = (e: { currentTarget: HTMLElement }, f: { nome: string; descricao: string }) => {
@@ -501,7 +515,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
   /* ============================================================ tela */
   const ativos = indicadores.map((i) => ({ salvo: i, def: definicao(i.id) })).filter((x) => x.def)
   return (
-    <div className="gp">
+    <div className={`gp${ampliado ? ' gp-ampliado' : ''}${desenhosAbertos || ferramenta ? ' gp-com-desenhos' : ''}`}>
       <div className="gp-barra">
         <button type="button" className={`gp-botao-ind ${painel ? 'on' : ''}`} onClick={() => setPainel(true)}>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M3 17l5-6 4 3 8-9M3 21h18" /></svg>
@@ -522,6 +536,20 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
             <i aria-hidden="true" />Próxima leitura <b>{relogio}</b>
           </span>
         )}
+        <div className="gp-tamanho">
+          <button type="button" className={`gp-botao-ind gp-so-celular ${desenhosAbertos ? 'on' : ''}`} aria-pressed={desenhosAbertos}
+            onClick={() => { setDesenhosAbertos((x) => !x); if (desenhosAbertos) escolherFerramenta(null) }} title="Ferramentas de desenho" aria-label="Desenhos">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16zM14 6l3 3" /></svg>
+            <span>Desenhos</span>
+          </button>
+          <button type="button" className="gp-botao-ind gp-so-celular" onClick={() => setAmpliado((x) => !x)} aria-pressed={ampliado}
+            title={ampliado ? 'Voltar ao tamanho normal' : 'Ampliar o gráfico na tela inteira'} aria-label={ampliado ? 'Fechar o gráfico ampliado' : 'Ampliar o gráfico'}>
+            {ampliado
+              ? <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg>
+              : <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>}
+            <span>{ampliado ? 'Fechar' : 'Ampliar'}</span>
+          </button>
+        </div>
       </div>
 
       <div className="gp-area">

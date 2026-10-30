@@ -1396,8 +1396,15 @@ export default function App() {
                 ))}
               </div>
               <div className="segmented">
-                <button className={mode === 'candles' ? 'on' : ''} onClick={() => setMode('candles')}>Velas</button>
-                <button className={mode === 'line' ? 'on' : ''} onClick={() => setMode('line')}>Linha</button>
+                {/* no celular só o desenho (a fileira dos tempos e esta viram uma só, 30/10/2026) */}
+                <button className={mode === 'candles' ? 'on' : ''} onClick={() => setMode('candles')} aria-label="Velas" title="Velas">
+                  <svg className="modo-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M7 17v4M17 5v3M17 16v3" /><rect x="5" y="7" width="4" height="10" rx="1" /><rect x="15" y="8" width="4" height="8" rx="1" /></svg>
+                  <span className="modo-txt">Velas</span>
+                </button>
+                <button className={mode === 'line' ? 'on' : ''} onClick={() => setMode('line')} aria-label="Linha" title="Linha">
+                  <svg className="modo-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-6 4 3 8-9" /></svg>
+                  <span className="modo-txt">Linha</span>
+                </button>
               </div>
               {/* a operação manual numa janela própria, que a pessoa arrasta para onde quiser (29/10/2026) */}
               <BotaoJanelaSolta qual="manual" />

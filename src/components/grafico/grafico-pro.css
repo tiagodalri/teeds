@@ -229,3 +229,36 @@
   .layout-operar > .main:has(.gp) > .chart { flex: none; }
   .layout-operar .chart .gp-grafico { min-height: 400px; }
 }
+
+/* ---------------------------------------------------- tamanho do gráfico (30/10/2026, áudio do Victor)
+   Desenhos e Ampliar ficam na barra, à direita. No celular a barra de desenhos
+   só aparece aberta (ou com uma ferramenta em uso) e o gráfico ganha a altura
+   que ela ocupava; Ampliar põe o gráfico na tela inteira. */
+.gp-tamanho { display: flex; gap: 6px; margin-left: auto; flex: none; }
+.gp-so-celular { display: none !important; }
+@media (max-width: 700px) {
+  .gp-so-celular { display: inline-flex !important; }
+  .gp-tamanho .gp-botao-ind { height: 34px; padding: 0 10px; }
+  .gp:not(.gp-com-desenhos) .gp-ferramentas { display: none; }
+  .gp:not(.gp-com-desenhos) .gp-grafico { padding-bottom: 0; }
+  .gp:not(.gp-com-desenhos) .gp-kline { bottom: 0; }
+  .gp:not(.gp-com-desenhos) .gp-dica { bottom: 8px; }
+  .layout-operar .chart .gp-grafico { min-height: max(380px, calc(100dvh - 330px)); }
+}
+@media (max-width: 700px) {
+  /* no celular só o desenho (lápis e setas), para caberem na linha dos Indicadores */
+  .gp-tamanho .gp-botao-ind span { display: none; }
+  .gp-tamanho .gp-botao-ind { width: 38px; padding: 0; justify-content: center; }
+  .gp-barra { flex-wrap: nowrap; }
+  .gp-chips { min-width: 0; }
+  .gp-sinal { order: 9; }
+  .gp-barra:has(.gp-sinal) { flex-wrap: wrap; }
+}
+.gp-ampliado {
+  position: fixed; inset: 0; z-index: 330; background: var(--bg);
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+.gp-ampliado .gp-area { flex: 1; min-height: 0; }
+.layout-operar .chart .gp-ampliado .gp-grafico, .gp-ampliado .gp-grafico { min-height: 0; }
+body:has(.gp-ampliado) { overflow: hidden; }
+body:has(.gp-ampliado) :is(.barra-inferior, .mcb, .sp-lancador-area, .eq-lancador-area, .app-convite, .av-pilula, #aviso-versao) { display: none !important; }

@@ -6301,3 +6301,15 @@ body:has(:is(.aula-modal-fundo, .market-modal-fundo, .cw-fundo, .adm-modal-fundo
 @media (max-width: 900px), (pointer: coarse) {
   .tela-cheia-btn { display: none !important; }
 }
+
+/* Velas/Linha (30/10/2026): o desenho só aparece no celular, onde a fileira vira uma só com os tempos */
+.layout-operar .controls .modo-ico { display: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 600px) {
+  /* div.controls: mais forte que a regra de 27/10 do mobile-polish (uma fileira embaixo da outra) */
+  .layout-operar div.controls { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+  .layout-operar div.controls .segmented button { min-height: 40px; }
+  .layout-operar div.controls .segmented:nth-child(2) { width: auto; }
+  .layout-operar div.controls .segmented:nth-child(2) button { flex: none; width: 42px; padding: 0; display: inline-grid; place-items: center; }
+  .layout-operar .controls .modo-ico { display: block; }
+  .layout-operar .controls .modo-txt { display: none; }
+}
