@@ -333,6 +333,12 @@ export function subscribeBalance(socket: TeedsSocket, onBalance: (b: Balance) =>
   })
 }
 
+/** O markup do app que a Deriv informa na cotação: em contract_details (esquema oficial) ou no topo. */
+function markupDaCotacao(p: Record<string, any>): number | null {
+  const v = p.contract_details?.app_markup_amount ?? p.app_markup_amount
+  return v === undefined || v === null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v)
+}
+
 /** Cotacao de um contrato dentro da conexao autenticada (devolve o id para comprar). */
 export async function requestProposal(
   socket: TeedsSocket,
@@ -365,7 +371,9 @@ export async function requestProposal(
     payout: Number(p.payout),
     longcode: String(p.longcode ?? ''),
     // o markup oficial deste contrato, quando a Deriv informa na proposta
-    appMarkup: p.app_markup_amount !== undefined && p.app_markup_amount !== null && Number.isFinite(Number(p.app_markup_amount)) ? Number(p.app_markup_amount) : null,
+    // o esquema oficial da Deriv põe o markup dentro de contract_details ("The markup amount charged
+    // on a client's stake amount"); até 30/10/2026 lia-se só no topo e nunca vinha (markup_oficial sempre false)
+    appMarkup: markupDaCotacao(p),
   }
 }
 
@@ -423,7 +431,7 @@ export async function cotarMultiplicador(
     comissao: Number(p.commission ?? 0),
     stopOut: limiteDe(lo.stop_out), takeProfit: limiteDe(lo.take_profit), stopLoss: limiteDe(lo.stop_loss),
     custoDoCancelamento: num(p.cancellation?.ask_price),
-    appMarkup: num(p.app_markup_amount),
+    appMarkup: markupDaCotacao(p),
     minimo: num(p.validation_params?.stake?.min ?? p.contract_details?.minimum_stake),
     maximo: num(p.validation_params?.stake?.max ?? p.contract_details?.maximum_stake),
   }
