@@ -274,6 +274,26 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
         sock.connect()
 
         paradas.push(subscribeBalance(sock, (b) => alive && setBalance(b)))
+        /*
+          O saldo do topo nunca congela (30/10/2026, Tiago: "precisa ser
+          atualizado sempre em tempo real"). A assinatura acima é a fonte
+          principal, mas se ela cair ou parar de mandar, o número ficava
+          travado. Reforços: o saldo que vem em cada transação (compra e
+          venda), uma leitura a cada 15 s com a tela à mostra, e outra ao
+          voltar para a aba.
+        */
+        const lerSaldo = () => {
+          if (!alive || document.visibilityState === 'hidden') return
+          void sock.send({ balance: 1 }).then((r) => {
+            const b = r.balance as Record<string, any> | undefined
+            if (alive && b && Number.isFinite(Number(b.balance))) setBalance({ amount: Number(b.balance), currency: b.currency ?? 'USD', loginId: b.loginid ?? accountId })
+          }).catch(() => { /* a próxima leitura tenta de novo */ })
+        }
+        const relogioSaldo = window.setInterval(lerSaldo, 15_000)
+        const aoVoltar = () => { if (document.visibilityState === 'visible') lerSaldo() }
+        document.addEventListener('visibilitychange', aoVoltar)
+        window.addEventListener('focus', lerSaldo)
+        paradas.push(() => { window.clearInterval(relogioSaldo); document.removeEventListener('visibilitychange', aoVoltar); window.removeEventListener('focus', lerSaldo) })
 
         // uma assinatura so, para todos os contratos da conta
         paradas.push(
@@ -295,6 +315,9 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
           subscribeTransactions(sock, (t) => {
             if (!alive) return
             setPulso((n) => n + 1)
+            // a transação já traz o saldo depois dela: o topo muda na mesma hora, e confere de novo logo depois
+            if (Number.isFinite(t.balance)) setBalance((b) => (b ? { ...b, amount: t.balance } : b))
+            window.setTimeout(lerSaldo, 1500)
             if (t.action === 'buy' && t.contractId !== null) {
               const compra = { contractId: t.contractId, valor: Math.abs(t.amount), quando: Date.now() }
               setComprasRecentes((lista) => [...lista, compra].slice(-20))

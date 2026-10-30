@@ -158,7 +158,8 @@ export function subscribeTransactions(
       action: t.action ?? '',
       contractId: t.contract_id != null ? Number(t.contract_id) : null,
       amount: Number(t.amount ?? 0),
-      balance: Number(t.balance ?? 0),
+      // sem saldo na mensagem: NaN (nunca um zero falso no topo)
+      balance: t.balance === undefined || t.balance === null ? Number.NaN : Number(t.balance),
     })
   })
 }
