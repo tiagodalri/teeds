@@ -187,19 +187,21 @@ body.lp::before { display: none; }
 
 /* ---------- abertura */
 .lp-heroi { position: relative; isolation: isolate; overflow: hidden; padding: max(18px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 34px max(20px, env(safe-area-inset-left)); }
-.lp-ceu { position: absolute; inset: 0; z-index: -3; background:
-  linear-gradient(180deg, rgba(5, 21, 40, .35) 0%, rgba(5, 21, 40, .15) 35%, rgba(5, 21, 40, .8) 78%, var(--azul) 100%),
+/* 30/10/2026 (Tiago): o céu estava forte demais e brigava com o texto, o iMac e a viagem. Fica de fundo, escuro. */
+.lp-ceu { position: absolute; inset: 0; z-index: -3; filter: saturate(.7) brightness(.78); background:
+  radial-gradient(60% 70% at 22% 45%, rgba(5, 21, 40, .55), transparent 70%),
+  linear-gradient(180deg, rgba(5, 21, 40, .74) 0%, rgba(5, 21, 40, .6) 35%, rgba(5, 21, 40, .88) 76%, var(--azul) 100%),
   url("/login-globalfly/rastro.webp") center 35% / cover no-repeat; transform: scale(1.06); animation: lp-respira 22s ease-in-out infinite alternate; }
 @keyframes lp-respira { to { transform: scale(1.14) translate3d(-1.5%, 1%, 0); } }
-@media (max-width: 720px) { .lp-ceu { background: linear-gradient(180deg, rgba(5, 21, 40, .3) 0%, rgba(5, 21, 40, .2) 30%, rgba(5, 21, 40, .85) 70%, var(--azul) 100%), url("/login-globalfly/rastro-celular.webp") center top / cover no-repeat; } }
-.lp-estrelas { position: absolute; inset: 0; z-index: -2; pointer-events: none; opacity: .55; background-image:
+@media (max-width: 720px) { .lp-ceu { background: linear-gradient(180deg, rgba(5, 21, 40, .74) 0%, rgba(5, 21, 40, .62) 30%, rgba(5, 21, 40, .9) 66%, var(--azul) 100%), url("/login-globalfly/rastro-celular.webp") center top / cover no-repeat; } }
+.lp-estrelas { position: absolute; inset: 0; z-index: -2; pointer-events: none; opacity: .4; background-image:
   radial-gradient(1.2px 1.2px at 12% 18%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 28% 8%, #fff 50%, transparent 51%),
   radial-gradient(1.4px 1.4px at 46% 22%, #F3D58C 50%, transparent 51%), radial-gradient(1px 1px at 64% 12%, #fff 50%, transparent 51%),
   radial-gradient(1.2px 1.2px at 82% 26%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 92% 6%, #F3D58C 50%, transparent 51%),
   radial-gradient(1px 1px at 6% 40%, #fff 50%, transparent 51%), radial-gradient(1.3px 1.3px at 55% 4%, #fff 50%, transparent 51%);
   animation: lp-cintila 5s ease-in-out infinite alternate; }
 @keyframes lp-cintila { to { opacity: .2; } }
-.lp-rastro { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+.lp-rastro { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; opacity: .75; }
 .lp-rastro path { fill: none; stroke-linecap: round; }
 .lp-rastro-linha { stroke: url(#rastro-ouro); stroke-width: 2.4; stroke-dasharray: 2200; stroke-dashoffset: 2200; animation: lp-desenha 3.2s cubic-bezier(.45, .05, .2, 1) .3s forwards; filter: drop-shadow(0 0 6px rgba(212, 166, 74, .6)); }
 .lp-rastro-brilho { stroke: #FFF2CC; stroke-width: 4; stroke-dasharray: 60 2200; stroke-dashoffset: 60; opacity: 0; animation: lp-cometa 7s ease-in-out 3.4s infinite; filter: drop-shadow(0 0 10px #F3D58C); }
@@ -217,7 +219,7 @@ body.lp::before { display: none; }
 .lp-l:nth-child(2) { animation-delay: .12s; }
 .lp-l:nth-child(3) { animation-delay: .24s; }
 .lp-ouro { margin-top: 10px; font-size: .62em; line-height: 1.08; letter-spacing: -.02em; background: linear-gradient(100deg, #D4A64A 0%, #F6DE9C 40%, #D4A64A 60%, #B78D39 100%); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: lp-sobe .9s cubic-bezier(.2, .7, .2, 1) .24s both, lp-brilha 5s linear 1.4s infinite; }
-@keyframes lp-sobe { from { opacity: 0; transform: translateY(26px); } }
+@keyframes lp-sobe { from { transform: translateY(22px); } }
 @keyframes lp-brilha { to { background-position: -220% 0; } }
 .lp-sub { margin: 22px 0 0; max-width: 33em; font-size: 18px; color: #D5DCE4; }
 .lp-sub b { color: var(--marfim); }
@@ -243,7 +245,7 @@ body.lp::before { display: none; }
 .lp-imac figcaption b { font-size: 15px; }
 @keyframes lp-flutua { 50% { transform: translateX(-50%) translateY(-12px); } }
 
-.lp-embarque { overflow: visible; position: absolute; left: -2%; bottom: 2%; width: min(72%, 440px); display: grid; grid-template-columns: 38% 1fr; border-radius: 16px; background: var(--marfim); color: var(--azul); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .7); transform: rotate(-5deg); animation: lp-entra-esq 1s cubic-bezier(.2, .7, .2, 1) .5s both; }
+.lp-embarque { overflow: visible; position: absolute; left: -2%; bottom: 0; width: min(76%, 470px); display: grid; grid-template-columns: 38% 1fr; border-radius: 16px; background: var(--marfim); color: var(--azul); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .7); transform: rotate(-5deg); animation: lp-entra-esq 1s cubic-bezier(.2, .7, .2, 1) .5s both; }
 .lp-embarque-foto { position: relative; min-height: 150px; border-radius: 16px 0 0 16px; overflow: hidden; }
 .lp-embarque-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .lp-embarque-dados { position: relative; padding: 12px 14px 12px 16px; display: grid; gap: 6px; border-left: 2px dashed rgba(5, 21, 40, .25); }
@@ -262,8 +264,8 @@ body.lp::before { display: none; }
 .lp-ingresso s { font-size: 15px; font-weight: 700; opacity: .65; }
 .lp-ingresso b { font-size: 44px; line-height: 1; letter-spacing: -.03em; }
 .lp-ingresso-pe { font-size: 12px; font-weight: 700; }
-@keyframes lp-entra-esq { from { opacity: 0; transform: translate(-40px, 30px) rotate(-12deg); } }
-@keyframes lp-entra-dir { from { opacity: 0; transform: translate(40px, 30px) rotate(14deg); } }
+@keyframes lp-entra-esq { from { transform: translate(-30px, 24px) rotate(-11deg); } }
+@keyframes lp-entra-dir { from { transform: translate(30px, 24px) rotate(13deg); } }
 
 /* painel de partidas */
 .lp-painel { position: relative; max-width: 1280px; margin: 6px auto 0; padding: 14px 16px 16px; border-radius: 16px; background: rgba(3, 12, 24, .78); border: 1px solid rgba(212, 166, 74, .28); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 22px; align-items: center; }
@@ -295,7 +297,7 @@ body.lp::before { display: none; }
 
 /* avião cruzando a abertura pelo rastro */
 .lp-aviao { position: absolute; z-index: -1; left: -18%; top: 78%; width: clamp(150px, 17vw, 260px); height: auto; transform: rotate(-24deg); opacity: 0; pointer-events: none; animation: lp-voa 16s linear 1.2s infinite; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .35)); }
-@keyframes lp-voa { 0% { left: -18%; top: 84%; opacity: 0; } 6% { opacity: .95; } 70% { opacity: .95; } 78%, 100% { left: 108%; top: -14%; opacity: 0; } }
+@keyframes lp-voa { 0% { left: -18%; top: 84%; opacity: 0; } 6% { opacity: .7; } 70% { opacity: .7; } 78%, 100% { left: 108%; top: -14%; opacity: 0; } }
 
 /* ---------- presentes */
 .lp-presentes { display: grid; gap: 34px; }
@@ -326,6 +328,28 @@ body.lp::before { display: none; }
 .lp-pr-preco s { font-size: 20px; font-weight: 700; opacity: .6; }
 .lp-pr-preco b { font-size: 46px; line-height: 1; letter-spacing: -.03em; color: var(--azul); }
 .lp-creditos { flex-basis: 100%; font-size: 11px; color: rgba(156, 177, 199, .6); }
+
+
+/* abertura: a frase do dia em cima, menor */
+.lp-dia { font-size: .5em; letter-spacing: -.01em; color: #C9D5E2; margin-bottom: 6px; }
+/* cartão de embarque: passageiro é você, o assento é ficar do início ao fim */
+.lp-passageiro { display: grid; gap: 0; }
+.lp-passageiro small { font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #6B7D92; }
+.lp-passageiro b { font: 700 26px/1.05 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .04em; text-transform: uppercase; }
+.lp-embarque-campos { margin: 2px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.lp-embarque-campos div:first-child { grid-column: 1 / -1; }
+.lp-embarque-campos dt { font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #6B7D92; }
+.lp-embarque-campos dd { margin: 1px 0 0; font-size: 13px; font-weight: 700; color: var(--azul); line-height: 1.2; }
+.lp-embarque-campos div:first-child dd { font-size: 15px; color: #8C6A22; }
+.lp-barras { display: block; height: 16px; margin-top: 4px; opacity: .75; background: repeating-linear-gradient(90deg, #051528 0 2px, transparent 2px 4px, #051528 4px 5px, transparent 5px 8px, #051528 8px 11px, transparent 11px 12px); }
+@media (max-width: 600px) {
+  .lp-dia { font-size: .56em; }
+  .lp-embarque { width: 90%; }
+  .lp-passageiro b { font-size: 21px; }
+  .lp-embarque-campos dd { font-size: 11.5px; }
+  .lp-embarque-campos div:first-child dd { font-size: 13px; }
+  .lp-embarque-tag { font-size: 11.5px; }
+}
 
 /* ---------- corpo */
 .lp-corpo { max-width: 1280px; margin: 0 auto; padding: 70px max(20px, env(safe-area-inset-right)) max(30px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); display: grid; gap: 110px; }
@@ -484,7 +508,7 @@ body.lp::before { display: none; }
   .lp-palco { height: 118vw; max-height: 470px; margin-top: 6px; }
   .lp-imac { width: 92%; top: 0; }
   .lp-imac figcaption { right: 0; top: -4%; font-size: 12px; }
-  .lp-embarque { width: 76%; bottom: 2%; grid-template-columns: 34% 1fr; }
+  .lp-embarque { width: 92%; bottom: 0; grid-template-columns: 30% 1fr; }
   .lp-embarque-foto { min-height: 108px; }
   .lp-rota b { font-size: 19px; }
   .lp-rota svg { width: 36px; }
@@ -558,3 +582,27 @@ body.lp::before { display: none; }
   .lp-cabine-res span { font-size: 10.5px; }
   .lp-cabine-res b { font-size: 18px; }
 }
+.lp-titulo { font-size: clamp(34px, 4.7vw, 66px); }
+.lp-titulo .lp-ouro { font-size: .56em; }
+.lp-embarque-dados { padding-top: 20px; }
+@media (max-width: 600px) { .lp-titulo { font-size: clamp(32px, 9.6vw, 44px); } .lp-titulo .lp-ouro { font-size: .66em; } }
+/* celular (30/10/2026): o palco empilha. iMac em cima, cartão de embarque inteiro embaixo, ingresso na lateral do iMac */
+@media (max-width: 600px) {
+  .lp-titulo { gap: 0; }
+  .lp-titulo .lp-ouro { margin-top: 12px; line-height: 1.12; }
+  .lp-palco { height: auto; max-height: none; min-height: 0; display: grid; gap: 22px; padding-top: 12px; }
+  .lp-halo { top: 30%; }
+  .lp-imac { position: relative; left: auto; top: auto; width: 86%; justify-self: start; transform: none; animation: lp-flutua-cel 7s ease-in-out infinite; }
+  .lp-imac figcaption { right: -10%; top: -6%; }
+  @keyframes lp-flutua-cel { 50% { transform: translateY(-8px); } }
+  .lp-embarque { position: relative; left: auto; bottom: auto; width: 100%; transform: rotate(-1.5deg); }
+  .lp-embarque-dados { padding-top: 28px; }
+  .lp-ingresso { top: 16%; bottom: auto; right: -4px; width: 124px; padding: 10px 12px; transform: rotate(7deg); }
+  .lp-ingresso b { font-size: 28px; }
+  .lp-ingresso s { font-size: 13px; }
+  .lp-ingresso-pe { font-size: 10.5px; line-height: 1.25; }
+}
+.lp-sub { margin-top: 28px; }
+.lp-embarque-tag { top: -18px; }
+.lp-embarque-dados { padding-top: 28px; }
+@media (max-width: 600px) { .lp-sub { margin-top: 24px; } }
