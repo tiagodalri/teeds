@@ -88,7 +88,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
   useEffect(() => { void souAdminGeral(sessao).then(setSouGeral) }, [sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     let vivo = true
-    const contar = () => fetch(`${SUPABASE.url}/rest/v1/org_tarefas?marca=eq.${MARCA.id}&responsavel=eq.${sessao.usuario.id}&status=neq.feito&prazo=lte.${hojeISO()}&select=id`, {
+    const contar = () => fetch(`${SUPABASE.url}/rest/v1/org_tarefas?marca=eq.${MARCA.id}&responsaveis=cs.%7B${sessao.usuario.id}%7D&status=neq.feito&prazo=lte.${hojeISO()}&select=id`, {
       headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}` },
     }).then((r) => (r.ok ? r.json() : [])).then((l: unknown[]) => { if (vivo) setMinhasPendentes(Array.isArray(l) ? l.length : 0) }).catch(() => undefined)
     void contar()

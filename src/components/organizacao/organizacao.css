@@ -354,3 +354,9 @@
    calendário continuam em caixa alta: são abreviações, não rótulos. */
 .og-rot { font-size: 12.5px; letter-spacing: .01em; text-transform: none; }
 .og-area { font-size: 12px; letter-spacing: .01em; text-transform: none; }
+
+/* Vários responsáveis no cartão (30/10/2026): avatares sobrepostos */
+.og-pilha { display: inline-flex; align-items: center; }
+.og-pilha .og-avatar { box-shadow: 0 0 0 2px var(--og-cartao); }
+.og-pilha .og-avatar + .og-avatar { margin-left: -6px; }
+.og-pilha-mais { background: color-mix(in srgb, var(--muted) 24%, var(--og-cartao)); color: var(--text); }

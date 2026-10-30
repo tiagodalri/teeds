@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import {
   AREAS, MARCOS, PRIORIDADES, STATUS, diasEntre, hojeISO, somarDias,
-  type Area, type Comentario, type Dados, type Marco, type Mudanca, type NovaTarefa, type OrgApi,
-  type Pessoa, type Prioridade, type Status, type Tarefa, type TipoMarco,
+  type Area, type Dados, type Marco, type Mudanca, type NovaTarefa, type OrgApi,
+  type Pessoa, type Status, type Tarefa, type TipoMarco,
 } from '../../core/teeds/organizacao'
+import { Avatar, PilhaDeAvatares, corDaPessoa, dataCurta, dataLonga, nomeCurto, primeiroNome } from './apoio'
+import { JanelaTarefa } from './JanelaTarefa'
 import './organizacao.css'
 
 /*
@@ -20,31 +22,9 @@ const COLUNAS: Status[] = ['a_fazer', 'fazendo', 'revisao', 'feito']
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
-const dataLonga = (iso: string) => {
-  const [a, m, d] = iso.split('-').map(Number)
-  const t = new Date(a, m - 1, d).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
-  return t.charAt(0).toUpperCase() + t.slice(1)
-}
-const dataCurta = (iso: string) => { const [, m, d] = iso.split('-'); return `${d}/${m}` }
-const primeiroNome = (n: string) => (n.trim().split(/\s+/)[0] || n)
-const iniciais = (n: string) => { const p = n.trim().split(/\s+/).filter(Boolean); return ((p[0]?.[0] ?? '?') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase() }
-const CORES_PESSOA = ['#B78D39', '#38BDF8', '#A78BFA', '#34D399', '#F472B6', '#FB923C']
-const corDaPessoa = (equipe: Pessoa[], id: string | null) => {
-  const i = equipe.findIndex((p) => p.id === id)
-  return i < 0 ? '#64748B' : CORES_PESSOA[i % CORES_PESSOA.length]
-}
 const ordenar = (a: Tarefa, b: Tarefa) =>
   PRIORIDADES[a.prioridade].peso - PRIORIDADES[b.prioridade].peso
   || (a.prazo ?? '9999').localeCompare(b.prazo ?? '9999') || a.ordem - b.ordem
-
-function Avatar({ pessoa, cor, tamanho = 22 }: { pessoa: Pessoa | undefined; cor: string; tamanho?: number }) {
-  return (
-    <span className="og-avatar" style={{ width: tamanho, height: tamanho, background: pessoa ? cor : 'transparent', fontSize: tamanho * 0.42 }}
-      title={pessoa ? pessoa.nome : 'Sem responsável'} data-vazio={pessoa ? undefined : ''}>
-      {pessoa ? iniciais(pessoa.nome) : '?'}
-    </span>
-  )
-}
 
 function Prazo({ prazo, feito }: { prazo: string | null; feito: boolean }) {
   if (!prazo) return null
@@ -55,10 +35,9 @@ function Prazo({ prazo, feito }: { prazo: string | null; feito: boolean }) {
 }
 
 // ------------------------------------------------------------------ cartão de tarefa
-function CartaoTarefa({ t, equipe, comentarios, aoAbrir, aoAlternar, arrastavel }: {
-  t: Tarefa; equipe: Pessoa[]; comentarios: number; aoAbrir: () => void; aoAlternar: () => void; arrastavel?: boolean
+function CartaoTarefa({ t, equipe, comentarios, anexos, aoAbrir, aoAlternar, arrastavel }: {
+  t: Tarefa; equipe: Pessoa[]; comentarios: number; anexos: number; aoAbrir: () => void; aoAlternar: () => void; arrastavel?: boolean
 }) {
-  const pessoa = equipe.find((p) => p.id === t.responsavel)
   const feitos = t.checklist.filter((c) => c.feito).length
   const feito = t.status === 'feito'
   return (
@@ -77,157 +56,14 @@ function CartaoTarefa({ t, equipe, comentarios, aoAbrir, aoAlternar, arrastavel 
         <b className="og-cartao-titulo">{t.titulo}</b>
         <span className="og-cartao-pe">
           <Prazo prazo={t.prazo} feito={feito} />
+          {t.descricao.trim() && <span className="og-meta" title="Tem descrição"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4h10M3 7h10M3 10h7" /></svg></span>}
           {t.checklist.length > 0 && <span className={`og-meta ${feitos === t.checklist.length ? 'completo' : ''}`} title="Checklist"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5" /><path d="M5.2 8.2l2 2 3.6-4" /></svg>{feitos}/{t.checklist.length}</span>}
+          {anexos > 0 && <span className="og-meta" title="Anexos"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 7.5l-5.2 5.2a3.2 3.2 0 01-4.5-4.5L8.8 2.7a2.1 2.1 0 013 3L6.4 11.1a1 1 0 01-1.5-1.5L9.7 4.8" /></svg>{anexos}</span>}
           {comentarios > 0 && <span className="og-meta" title="Comentários"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3.5h10a1 1 0 011 1v6a1 1 0 01-1 1H7l-3 2.5v-2.5H3a1 1 0 01-1-1v-6a1 1 0 011-1z" /></svg>{comentarios}</span>}
-          <span className="og-cartao-dono"><Avatar pessoa={pessoa} cor={corDaPessoa(equipe, t.responsavel)} /></span>
+          <span className="og-cartao-dono"><PilhaDeAvatares ids={t.responsaveis} equipe={equipe} /></span>
         </span>
       </button>
     </article>
-  )
-}
-
-// ------------------------------------------------------------------ janela da tarefa
-function JanelaTarefa({ api, inicial, equipe, aoFechar, aoSalvar, aoApagar, aoVerComentarios }: {
-  api: OrgApi; inicial: Tarefa | NovaTarefa & { id?: undefined }; equipe: Pessoa[]
-  aoFechar: () => void; aoSalvar: (t: Tarefa) => void; aoApagar: (id: string) => void
-  /** Os comentários carregados, para a central saber de que tarefa é cada um. */
-  aoVerComentarios: (ids: string[], tarefaId: string) => void
-}) {
-  const [f, setF] = useState<NovaTarefa>({
-    titulo: inicial.titulo, descricao: inicial.descricao, area: inicial.area, status: inicial.status,
-    prioridade: inicial.prioridade, responsavel: inicial.responsavel, prazo: inicial.prazo, checklist: inicial.checklist,
-  })
-  const [salvando, setSalvando] = useState(false)
-  const [erro, setErro] = useState<string | null>(null)
-  const [novoItem, setNovoItem] = useState('')
-  const [coms, setComs] = useState<Comentario[]>([])
-  const [texto, setTexto] = useState('')
-  const id = inicial.id
-  const titulo = useRef<HTMLInputElement>(null)
-  useEffect(() => { if (!id) titulo.current?.focus() }, [id])
-  useEffect(() => {
-    if (!id) return
-    let vivo = true
-    api.comentarios(id).then((c) => { if (vivo) { setComs(c); aoVerComentarios(c.map((x) => x.id), id) } }).catch(() => undefined)
-    return () => { vivo = false }
-  }, [api, id]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') aoFechar() }
-    document.addEventListener('keydown', esc)
-    return () => document.removeEventListener('keydown', esc)
-  }, [aoFechar])
-
-  const salvar = async () => {
-    if (!f.titulo.trim()) { setErro('Dê um título para a tarefa.'); titulo.current?.focus(); return }
-    setSalvando(true); setErro(null)
-    try {
-      const t = id ? await api.alterarTarefa(id, f) : await api.criarTarefa(f)
-      aoSalvar(t); aoFechar()
-    } catch (e) { setErro((e as Error).message) } finally { setSalvando(false) }
-  }
-  const apagar = async () => {
-    if (!id || !window.confirm('Apagar esta tarefa? Isso não tem volta.')) return
-    try { await api.apagarTarefa(id); aoApagar(id); aoFechar() } catch (e) { setErro((e as Error).message) }
-  }
-  const comentar = async () => {
-    if (!id || !texto.trim()) return
-    try { const c = await api.comentar(id, texto); setComs((x) => [...x, c]); setTexto('') } catch (e) { setErro((e as Error).message) }
-  }
-  const nome = (uid: string | null) => equipe.find((p) => p.id === uid)?.nome ?? 'Alguém'
-  const feitos = f.checklist.filter((c) => c.feito).length
-
-  return (
-    <div className="og-fundo" onMouseDown={aoFechar}>
-      <section className="og-janela" role="dialog" aria-modal="true" aria-label={id ? 'Editar tarefa' : 'Nova tarefa'}
-        onMouseDown={(e) => e.stopPropagation()} style={{ ['--area' as string]: AREAS[f.area].cor }}>
-        <header className="og-janela-topo">
-          <span className="og-area grande">{AREAS[f.area].nome}</span>
-          <button type="button" className="og-fechar" onClick={aoFechar} aria-label="Fechar">×</button>
-        </header>
-        <input ref={titulo} className="og-titulo-campo" value={f.titulo} placeholder="O que precisa ser feito?"
-          onChange={(e) => setF({ ...f, titulo: e.target.value })} maxLength={200} />
-
-        <div className="og-campos">
-          <label><span>Responsável</span>
-            <select value={f.responsavel ?? ''} onChange={(e) => setF({ ...f, responsavel: e.target.value || null })}>
-              <option value="">Sem responsável</option>
-              {equipe.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-            </select>
-          </label>
-          <label><span>Prazo</span>
-            <input type="date" value={f.prazo ?? ''} onChange={(e) => setF({ ...f, prazo: e.target.value || null })} />
-          </label>
-          <label><span>Importância</span>
-            <select value={f.prioridade} onChange={(e) => setF({ ...f, prioridade: e.target.value as Prioridade })}>
-              {(Object.keys(PRIORIDADES) as Prioridade[]).map((p) => <option key={p} value={p}>{PRIORIDADES[p].nome}</option>)}
-            </select>
-          </label>
-          <label><span>Área</span>
-            <select value={f.area} onChange={(e) => setF({ ...f, area: e.target.value as Area })}>
-              {(Object.keys(AREAS) as Area[]).map((a) => <option key={a} value={a}>{AREAS[a].nome}</option>)}
-            </select>
-          </label>
-          <label><span>Situação</span>
-            <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value as Status })}>
-              {COLUNAS.map((s) => <option key={s} value={s}>{STATUS[s]}</option>)}
-            </select>
-          </label>
-        </div>
-
-        <label className="og-bloco"><span>Descrição</span>
-          <textarea value={f.descricao} rows={4} placeholder="Detalhes, links, o que é considerado pronto…"
-            onChange={(e) => setF({ ...f, descricao: e.target.value })} />
-        </label>
-
-        <div className="og-bloco">
-          <span>Checklist {f.checklist.length > 0 && <em>{feitos}/{f.checklist.length}</em>}</span>
-          {f.checklist.length > 0 && <div className="og-barra"><i style={{ width: `${(feitos / f.checklist.length) * 100}%` }} /></div>}
-          <ul className="og-checklist">
-            {f.checklist.map((c, i) => (
-              <li key={i} className={c.feito ? 'feito' : ''}>
-                <label>
-                  <input type="checkbox" checked={c.feito} onChange={() => setF({ ...f, checklist: f.checklist.map((x, j) => (j === i ? { ...x, feito: !x.feito } : x)) })} />
-                  <span>{c.texto}</span>
-                </label>
-                <button type="button" aria-label="Remover item" onClick={() => setF({ ...f, checklist: f.checklist.filter((_, j) => j !== i) })}>×</button>
-              </li>
-            ))}
-          </ul>
-          <form className="og-add-item" onSubmit={(e) => { e.preventDefault(); if (novoItem.trim()) { setF({ ...f, checklist: [...f.checklist, { texto: novoItem.trim(), feito: false }] }); setNovoItem('') } }}>
-            <input value={novoItem} placeholder="Adicionar item e Enter" onChange={(e) => setNovoItem(e.target.value)} maxLength={200} />
-          </form>
-        </div>
-
-        {id && (
-          <div className="og-bloco">
-            <span>Comentários</span>
-            <ul className="og-comentarios">
-              {coms.map((c) => (
-                <li key={c.id}>
-                  <b>{primeiroNome(nome(c.autor))}</b>
-                  <small>{new Date(c.criadoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</small>
-                  <p>{c.texto}</p>
-                  {c.autor === api.euId && <button type="button" onClick={() => void api.apagarComentario(c.id).then(() => setComs((x) => x.filter((y) => y.id !== c.id)))}>Apagar</button>}
-                </li>
-              ))}
-              {coms.length === 0 && <li className="vazio">Nenhum comentário ainda.</li>}
-            </ul>
-            <form className="og-add-item" onSubmit={(e) => { e.preventDefault(); void comentar() }}>
-              <input value={texto} placeholder="Escrever um comentário e Enter" onChange={(e) => setTexto(e.target.value)} maxLength={4000} />
-            </form>
-          </div>
-        )}
-
-        {erro && <p className="og-erro">{erro}</p>}
-        <footer className="og-janela-pe">
-          {id ? <button type="button" className="og-btn perigo" onClick={() => void apagar()}>Apagar</button> : <span />}
-          <span className="og-pe-acoes">
-            <button type="button" className="og-btn" onClick={aoFechar}>Cancelar</button>
-            <button type="button" className="og-btn ouro" disabled={salvando} onClick={() => void salvar()}>{salvando ? 'Salvando…' : id ? 'Salvar' : 'Criar tarefa'}</button>
-          </span>
-        </footer>
-      </section>
-    </div>
   )
 }
 
@@ -309,7 +145,9 @@ export function Organizacao({ api, semTitulo = false }: { api: OrgApi; semTitulo
   const [tarefaAberta, setTarefaAberta] = useState<Tarefa | (NovaTarefa & { id?: undefined }) | null>(null)
   const [marcoAberto, setMarcoAberto] = useState<Marco | (Omit<Marco, 'id'> & { id?: undefined }) | null>(null)
   const [arrastandoSobre, setArrastandoSobre] = useState<Status | null>(null)
+  const [chaveNova, setChaveNova] = useState(0)
   const comentarioDaTarefa = useRef(new Map<string, string>())
+  const anexoDaTarefa = useRef(new Map<string, string>())
 
   const trocarVista = (v: Vista) => { setVista(v); try { localStorage.setItem('org.vista', v) } catch { /* só nesta sessão */ } }
 
@@ -332,15 +170,17 @@ export function Organizacao({ api, semTitulo = false }: { api: OrgApi; semTitulo
           : d.marcos.some((x) => x.id === m.item.id) ? d.marcos.map((x) => (x.id === m.item.id ? m.item : x)) : [...d.marcos, m.item]
         return { ...d, marcos }
       }
-      const cont = { ...d.contagemComentarios }
+      // comentários e anexos: só a contagem por tarefa (o mapa evita contar duas vezes o que eu mesmo salvei)
+      const mapa = m.tipo === 'comentario' ? comentarioDaTarefa.current : anexoDaTarefa.current
+      const cont = { ...(m.tipo === 'comentario' ? d.contagemComentarios : d.contagemAnexos) }
       if (m.acao === 'salvou') {
-        if (!comentarioDaTarefa.current.has(m.item.id)) { cont[m.item.tarefaId] = (cont[m.item.tarefaId] ?? 0) + 1; comentarioDaTarefa.current.set(m.item.id, m.item.tarefaId) }
+        if (!mapa.has(m.item.id)) { cont[m.item.tarefaId] = (cont[m.item.tarefaId] ?? 0) + 1; mapa.set(m.item.id, m.item.tarefaId) }
       } else {
-        const tid = m.tarefaId ?? comentarioDaTarefa.current.get(m.id)
+        const tid = m.tarefaId ?? mapa.get(m.id)
         if (tid && cont[tid]) cont[tid] -= 1
-        comentarioDaTarefa.current.delete(m.id)
+        mapa.delete(m.id)
       }
-      return { ...d, contagemComentarios: cont }
+      return m.tipo === 'comentario' ? { ...d, contagemComentarios: cont } : { ...d, contagemAnexos: cont }
     })
   }, [])
   useEffect(() => api.acompanhar(aplicar), [api, aplicar])
@@ -362,11 +202,12 @@ export function Organizacao({ api, semTitulo = false }: { api: OrgApi; semTitulo
   const tarefas = dados?.tarefas ?? []
   const marcos = dados?.marcos ?? []
   const contagem = dados?.contagemComentarios ?? {}
+  const contagemAnexos = dados?.contagemAnexos ?? {}
 
   // filtros que valem em todas as visões
   const termo = busca.trim().toLowerCase()
   const filtradas = useMemo(() => tarefas.filter((t) => {
-    if (pessoa === 'ninguem' ? t.responsavel !== null : pessoa !== 'todos' && t.responsavel !== pessoa) return false
+    if (pessoa === 'ninguem' ? t.responsaveis.length > 0 : pessoa !== 'todos' && !t.responsaveis.includes(pessoa)) return false
     if (areas.size && !areas.has(t.area)) return false
     if (termo && !(`${t.titulo} ${t.descricao}`.toLowerCase().includes(termo))) return false
     return true
@@ -385,7 +226,7 @@ export function Organizacao({ api, semTitulo = false }: { api: OrgApi; semTitulo
 
   const novaTarefa = (extra: Partial<NovaTarefa> = {}) => setTarefaAberta({
     titulo: '', descricao: '', area: areas.size === 1 ? [...areas][0] : 'geral', status: 'a_fazer', prioridade: 'media',
-    responsavel: pessoa !== 'todos' && pessoa !== 'ninguem' ? pessoa : null, prazo: vista === 'dia' ? dia : null, checklist: [], ...extra,
+    responsaveis: pessoa !== 'todos' && pessoa !== 'ninguem' ? [pessoa] : [], inicio: null, prazo: vista === 'dia' ? dia : null, checklist: [], ...extra,
   })
   const novoMarco = (data = vista === 'calendario' ? dia : hoje) => setMarcoAberto({ titulo: '', descricao: '', data, hora: null, tipo: 'outro' })
 
@@ -401,7 +242,7 @@ export function Organizacao({ api, semTitulo = false }: { api: OrgApi; semTitulo
     return [...g.entries()].sort((a, b) => Object.keys(AREAS).indexOf(a[0]) - Object.keys(AREAS).indexOf(b[0]))
   }
   const cartao = (t: Tarefa, arrastavel = false) => (
-    <CartaoTarefa key={t.id} t={t} equipe={equipe} comentarios={contagem[t.id] ?? 0} arrastavel={arrastavel}
+    <CartaoTarefa key={t.id} t={t} equipe={equipe} comentarios={contagem[t.id] ?? 0} anexos={contagemAnexos[t.id] ?? 0} arrastavel={arrastavel}
       aoAbrir={() => setTarefaAberta(t)} aoAlternar={() => void alternarFeito(t)} />
   )
 
@@ -451,7 +292,7 @@ export function Organizacao({ api, semTitulo = false }: { api: OrgApi; semTitulo
 
     // equipe: o que cada um tem (respeita área e busca, ignora o filtro de pessoa)
     const base = tarefas.filter((t) => t.status !== 'feito' && (!areas.size || areas.has(t.area)) && (!termo || `${t.titulo} ${t.descricao}`.toLowerCase().includes(termo)))
-    const daPessoa = (id: string | null) => base.filter((t) => t.responsavel === id)
+    const daPessoa = (id: string | null) => base.filter((t) => (id === null ? t.responsaveis.length === 0 : t.responsaveis.includes(id)))
     const linhaEquipe = (id: string | null, nome: string, pes?: Pessoa) => {
       const l = daPessoa(id)
       const at = l.filter((t) => t.prazo && t.prazo < hoje).length
@@ -708,7 +549,7 @@ export function Organizacao({ api, semTitulo = false }: { api: OrgApi; semTitulo
           {equipe.map((p) => (
             <button key={p.id} type="button" className={pessoa === p.id ? 'on' : ''} onClick={() => setPessoa(p.id)} title={p.nome}>
               <Avatar pessoa={p} cor={corDaPessoa(equipe, p.id)} tamanho={20} />
-              {p.id === api.euId ? 'Eu' : equipe.filter((x) => primeiroNome(x.nome) === primeiroNome(p.nome)).length > 1 ? `${primeiroNome(p.nome)} ${p.nome.split(/\s+/).slice(-1)[0][0]}.` : primeiroNome(p.nome)}
+              {p.id === api.euId ? 'Eu' : nomeCurto(equipe, p)}
             </button>
           ))}
           <button type="button" className={pessoa === 'ninguem' ? 'on' : ''} onClick={() => setPessoa('ninguem')}>Sem responsável</button>
@@ -730,9 +571,11 @@ export function Organizacao({ api, semTitulo = false }: { api: OrgApi; semTitulo
       {vista === 'calendario' && vistaCalendario()}
 
       {tarefaAberta && (
-        <JanelaTarefa api={api} inicial={tarefaAberta} equipe={equipe} aoFechar={() => setTarefaAberta(null)}
+        <JanelaTarefa key={tarefaAberta.id ?? `nova-${chaveNova}`} api={api} inicial={tarefaAberta} equipe={equipe} aoFechar={() => setTarefaAberta(null)}
           aoSalvar={salvarLocal} aoApagar={(id) => aplicar({ tipo: 'tarefa', acao: 'apagou', id })}
-          aoVerComentarios={(ids, tid) => ids.forEach((c) => comentarioDaTarefa.current.set(c, tid))} />
+          aoDuplicar={(copia) => { setChaveNova((n) => n + 1); setTarefaAberta(copia) }}
+          aoVerComentarios={(ids, tid) => ids.forEach((c) => comentarioDaTarefa.current.set(c, tid))}
+          aoVerAnexos={(ids, tid) => ids.forEach((a) => anexoDaTarefa.current.set(a, tid))} />
       )}
       {marcoAberto && (
         <JanelaMarco api={api} inicial={marcoAberto} aoFechar={() => setMarcoAberto(null)}

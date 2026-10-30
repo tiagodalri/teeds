@@ -1,0 +1,236 @@
+/* Janela da tarefa (Organização), refeita em 30/10/2026: conteúdo à esquerda,
+   propriedades à direita, rodapé fixo. Usa os tons da central (.og). */
+.ot-fundo { padding: 20px; }
+.ot {
+  position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(1080px, 100%); max-height: calc(100vh - 40px); overflow: hidden;
+  border: 1px solid var(--border); border-top: 3px solid var(--area); border-radius: 18px;
+  background: var(--og-cartao); color: var(--text); box-shadow: 0 30px 80px rgba(0, 0, 0, .45);
+}
+.ot :where(button, input, select, textarea) { font: inherit; }
+.ot button:focus-visible, .ot input:focus-visible, .ot select:focus-visible { outline: 2px solid var(--og-ouro); outline-offset: 2px; }
+
+/* ------------------------------------------------ topo */
+.ot-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px 10px 24px; }
+.ot-trilha { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; color: var(--muted); font-size: 13px; }
+.ot-trilha i { width: 9px; height: 9px; border-radius: 50%; background: var(--area); }
+.ot-trilha span:first-of-type { color: var(--area); font-weight: 700; }
+.ot-trilha b { color: var(--text); font-weight: 700; }
+.ot-sep { opacity: .5; }
+.ot-nao-salvo { padding: 2px 8px; border-radius: 999px; background: var(--og-ouro-suave); color: var(--og-ouro); font-size: 11.5px; font-style: normal; font-weight: 700; }
+.ot-topo-acoes { display: flex; align-items: center; gap: 8px; }
+.ot-btn-leve { height: 34px; padding: 0 12px; font-size: 12.5px; }
+
+.ot-rolagem { overflow: auto; overscroll-behavior: contain; padding: 4px 24px 22px; }
+
+/* ------------------------------------------------ título */
+.ot-titulo { display: grid; gap: 6px; }
+.ot-titulo label { font-size: 12.5px; font-weight: 700; color: var(--text); }
+.ot-titulo textarea {
+  width: 100%; min-height: 52px; padding: 11px 14px; resize: none; overflow: hidden;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text);
+  font-size: 21px; font-weight: 700; line-height: 1.3; outline: none;
+}
+.ot-titulo textarea::placeholder { color: color-mix(in srgb, var(--muted) 70%, transparent); font-weight: 600; }
+.ot-titulo textarea:focus { border-color: var(--og-ouro); box-shadow: 0 0 0 3px var(--og-ouro-suave); }
+.ot-titulo small { color: var(--muted); font-size: 12px; }
+
+/* ------------------------------------------------ duas colunas */
+.ot-grade { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; margin-top: 20px; align-items: start; }
+.ot-principal { display: grid; gap: 22px; min-width: 0; }
+.ot-lado { display: grid; gap: 18px; align-content: start; padding-left: 24px; border-left: 1px solid var(--border); }
+
+.ot-secao { display: grid; gap: 10px; }
+.ot-secao > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; }
+.ot-secao h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14.5px; font-weight: 700; }
+.ot-secao h3 em { padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); font-size: 11.5px; font-style: normal; font-variant-numeric: tabular-nums; }
+.ot-barra { flex: 1; max-width: 220px; }
+
+/* ------------------------------------------------ descrição */
+.ot-alternar { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--bg); border: 1px solid var(--border); }
+.ot-alternar button { height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; }
+.ot-alternar button.on { background: var(--og-cartao); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.ot-editor { display: grid; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); overflow: hidden; }
+.ot-editor:focus-within { border-color: var(--og-ouro); box-shadow: 0 0 0 3px var(--og-ouro-suave); }
+.ot-ferramentas { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; padding: 5px 6px; border-bottom: 1px solid var(--border); }
+.ot-ferramentas > span { width: 1px; height: 18px; margin: 0 4px; background: var(--border); }
+.ot-ferramentas button {
+  display: grid; place-items: center; width: 30px; height: 28px; padding: 0; border: 0; border-radius: 7px;
+  background: transparent; color: var(--muted); font-size: 14px; cursor: pointer;
+}
+.ot-ferramentas button:hover { background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--text); }
+.ot-ferramentas svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.ot-ferramentas svg circle, .ot-ferramentas svg text { fill: currentColor; stroke: none; font-weight: 700; }
+.ot-editor textarea { width: 100%; min-height: 150px; padding: 12px 14px; border: 0; background: transparent; color: var(--text); font-size: 13.5px; line-height: 1.6; resize: vertical; outline: none; }
+.ot-dica { padding: 7px 14px 9px; border-top: 1px dashed var(--border); color: var(--muted); font-size: 11.5px; }
+.ot-descricao-vista {
+  display: block; width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px;
+  background: transparent; color: var(--text); text-align: left; cursor: text;
+}
+.ot-descricao-vista:hover { border-color: color-mix(in srgb, var(--og-ouro) 50%, var(--border)); }
+
+.ot-rico { font-size: 13.5px; line-height: 1.6; overflow-wrap: anywhere; }
+.ot-rico > :first-child { margin-top: 0; }
+.ot-rico > :last-child { margin-bottom: 0; }
+.ot-rico p { margin: 0 0 8px; }
+.ot-rico ul, .ot-rico ol { margin: 0 0 8px; padding-left: 22px; }
+.ot-rico li + li { margin-top: 2px; }
+.ot-rico h5 { margin: 12px 0 6px; font-size: 14.5px; font-weight: 750; }
+.ot-rico blockquote { margin: 0 0 8px; padding: 6px 12px; border-left: 3px solid var(--og-ouro); border-radius: 0 8px 8px 0; background: var(--og-ouro-suave); }
+.ot-rico blockquote p { margin: 0; }
+.ot-rico code { padding: 1px 5px; border-radius: 5px; background: color-mix(in srgb, var(--muted) 16%, transparent); font-size: 12.5px; }
+.ot-rico a { color: var(--og-ouro); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+
+/* ------------------------------------------------ subtarefas */
+.ot-subs { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.ot-subs li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; padding: 3px 6px; border-radius: 10px; }
+.ot-subs li:hover, .ot-subs li:focus-within { background: color-mix(in srgb, var(--muted) 8%, transparent); }
+.ot-subs input[type='checkbox'] { width: 17px; height: 17px; margin: 0; accent-color: var(--up); cursor: pointer; }
+.ot-sub-texto { width: 100%; min-width: 0; height: 32px; padding: 0 8px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text); font-size: 13.5px; }
+.ot-sub-texto:hover { border-color: var(--border); }
+.ot-sub-texto:focus { outline: none; border-color: var(--og-ouro); background: var(--bg); }
+.ot-subs li.feito .ot-sub-texto { text-decoration: line-through; color: var(--muted); }
+.ot-sub-dono, .ot-sub-prazo { position: relative; display: inline-grid; place-items: center; cursor: pointer; }
+.ot-sub-dono select, .ot-sub-prazo input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.ot-sub-prazo span { display: inline-grid; place-items: center; min-width: 28px; height: 24px; padding: 0 6px; border-radius: 7px; color: var(--muted); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ot-sub-prazo.tem span { background: color-mix(in srgb, var(--muted) 12%, transparent); color: var(--text); }
+.ot-sub-prazo.atrasada span { background: var(--down-soft); color: var(--down); }
+.ot-sub-prazo svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; }
+.ot-sub-acoes { display: inline-flex; gap: 0; opacity: 0; transition: opacity .12s; }
+.ot-subs li:hover .ot-sub-acoes, .ot-subs li:focus-within .ot-sub-acoes { opacity: 1; }
+.ot-sub-acoes button { width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--muted); font-size: 14px; cursor: pointer; }
+.ot-sub-acoes button:hover:not(:disabled) { background: color-mix(in srgb, var(--muted) 16%, transparent); color: var(--text); }
+.ot-sub-acoes button:disabled { opacity: .3; cursor: default; }
+.ot-add { display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px dashed var(--border); border-radius: 10px; }
+.ot-add:focus-within { border-style: solid; border-color: var(--og-ouro); }
+.ot-add span { color: var(--muted); font-size: 17px; }
+.ot-add input { flex: 1; min-width: 0; height: 38px; border: 0; background: transparent; color: var(--text); font-size: 13.5px; outline: none; }
+
+/* ------------------------------------------------ anexos */
+.ot-anexos { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.ot-anexos li { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 6px; border: 1px solid var(--border); border-radius: 12px; }
+.ot-anexos li.pendente { border-style: dashed; }
+.ot-anexo-capa { display: grid; place-items: center; width: 52px; height: 52px; padding: 0; overflow: hidden; border: 0; border-radius: 9px; background: var(--bg); cursor: pointer; }
+.ot-anexo-capa img { width: 100%; height: 100%; object-fit: cover; }
+.ot-anexo-capa b { color: var(--og-ouro); font-size: 12px; font-weight: 800; letter-spacing: .02em; }
+.ot-anexo-carregando { width: 100%; height: 100%; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--muted) 14%, transparent), transparent); }
+.ot-anexo-info { display: grid; gap: 2px; min-width: 0; }
+.ot-anexo-nome { padding: 0; border: 0; background: none; color: var(--text); font-size: 13.5px; font-weight: 650; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+button.ot-anexo-nome:hover { color: var(--og-ouro); text-decoration: underline; }
+.ot-anexo-info small { color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ot-anexo-acoes { display: flex; align-items: center; gap: 4px; padding-right: 4px; }
+.ot-anexo-acoes button { height: 28px; padding: 0 9px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); font-size: 12px; font-weight: 700; cursor: pointer; }
+.ot-anexo-acoes button:last-child { width: 28px; padding: 0; color: var(--muted); font-size: 15px; }
+.ot-soltar {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border: 1.5px dashed var(--border); border-radius: 12px;
+  background: transparent; color: var(--text); text-align: left; cursor: pointer; transition: border-color .12s, background .12s;
+}
+.ot-soltar:hover { border-color: var(--og-ouro); background: var(--og-ouro-suave); }
+.ot-soltar svg { flex: none; width: 24px; height: 24px; fill: none; stroke: var(--og-ouro); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.ot-soltar span { display: grid; gap: 2px; }
+.ot-soltar b { font-size: 13px; }
+.ot-soltar small { color: var(--muted); font-size: 11.5px; }
+.ot-enviando { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted); font-size: 12.5px; }
+.ot-enviando i { width: 14px; height: 14px; border: 2px solid var(--og-ouro-suave); border-top-color: var(--og-ouro); border-radius: 50%; animation: ot-gira .8s linear infinite; }
+@keyframes ot-gira { to { transform: rotate(360deg); } }
+.ot-soltar-aqui {
+  position: absolute; inset: 8px; z-index: 5; display: grid; place-items: center; pointer-events: none;
+  border: 2px dashed var(--og-ouro); border-radius: 14px; background: color-mix(in srgb, var(--og-cartao) 82%, transparent);
+}
+.ot-soltar-aqui b { padding: 10px 18px; border-radius: 999px; background: var(--og-ouro); color: #051528; font-size: 14px; }
+
+/* ------------------------------------------------ atividade */
+.ot-atividade { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.ot-evento { display: flex; align-items: baseline; gap: 10px; padding-left: 9px; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.ot-evento i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: color-mix(in srgb, var(--muted) 45%, transparent); transform: translateY(-1px); }
+.ot-evento b { color: var(--text); font-weight: 700; }
+.ot-evento time { margin-left: 4px; white-space: nowrap; }
+.ot-comentario { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; }
+.ot-comentario > div { padding: 9px 12px 10px; border-radius: 4px 12px 12px 12px; background: var(--bg); }
+.ot-comentario-cab { display: flex; align-items: baseline; gap: 8px; margin: 0 0 3px; font-size: 12.5px; }
+.ot-comentario-cab time { color: var(--muted); font-size: 11.5px; }
+.ot-comentario-cab button { margin-left: auto; padding: 0; border: 0; background: none; color: var(--muted); font-size: 11.5px; cursor: pointer; }
+.ot-comentario-cab button:hover { color: var(--down); }
+.ot-comentar { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; align-items: start; gap: 10px; }
+.ot-comentar textarea { width: 100%; min-height: 40px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text); font-size: 13.5px; line-height: 1.5; resize: vertical; outline: none; }
+.ot-comentar textarea:focus { border-color: var(--og-ouro); }
+.ot-comentar .og-btn { height: 40px; }
+
+/* ------------------------------------------------ propriedades */
+.ot-prop { display: grid; gap: 8px; }
+.ot-prop-rot { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12.5px; font-weight: 700; color: var(--text); }
+.ot-prop-rot small { color: var(--muted); font-size: 11.5px; font-weight: 500; }
+.ot-situacao { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ot-situacao button {
+  display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg); color: var(--text); font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.ot-situacao i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--cor); }
+.ot-situacao button.on { border-color: var(--cor); background: color-mix(in srgb, var(--cor) 16%, var(--og-cartao)); font-weight: 750; box-shadow: inset 0 0 0 1px var(--cor); }
+
+.ot-pessoas { display: grid; gap: 4px; }
+.ot-pessoas button {
+  display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 5px 10px 5px 6px; border: 1px solid transparent; border-radius: 10px;
+  background: transparent; color: var(--text); text-align: left; cursor: pointer;
+}
+.ot-pessoas button:hover { background: var(--bg); }
+.ot-pessoas button.on { border-color: color-mix(in srgb, var(--og-ouro) 45%, var(--border)); background: var(--og-ouro-suave); }
+.ot-pessoa-nome { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ot-marca { flex: none; width: 18px; height: 18px; padding: 2px; border: 1.5px solid var(--border); border-radius: 6px; fill: none; stroke: transparent; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.ot-pessoas button.on .ot-marca { border-color: var(--og-ouro); background: var(--og-ouro); stroke: #051528; }
+
+.ot-prioridade { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.ot-prioridade button { height: 32px; padding: 0 4px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; }
+.ot-prioridade button.on.p-baixa { border-color: var(--muted); color: var(--text); background: color-mix(in srgb, var(--muted) 16%, var(--og-cartao)); }
+.ot-prioridade button.on.p-media { border-color: #38BDF8; color: var(--text); background: color-mix(in srgb, #38BDF8 16%, var(--og-cartao)); }
+.ot-prioridade button.on.p-alta { border-color: #FB923C; color: #b45309; background: color-mix(in srgb, #FB923C 18%, var(--og-cartao)); }
+:root[data-tema='escuro'] .ot-prioridade button.on.p-alta { color: #fdba74; }
+.ot-prioridade button.on.p-urgente { border-color: var(--down); color: #fff; background: var(--down); }
+
+.ot-area-sel { position: relative; display: flex; align-items: center; }
+.ot-area-sel i { position: absolute; left: 12px; width: 9px; height: 9px; border-radius: 50%; background: var(--area); pointer-events: none; }
+.ot-area-sel select { width: 100%; height: 38px; padding: 0 10px 0 28px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
+
+.ot-datas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ot-datas label { display: grid; gap: 4px; }
+.ot-datas small { color: var(--muted); font-size: 11.5px; font-weight: 600; }
+.ot-datas input { width: 100%; min-width: 0; height: 38px; padding: 0 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-size: 13px; }
+.ot-datas input:focus, .ot-area-sel select:focus { outline: none; border-color: var(--og-ouro); }
+.ot-atalhos { display: flex; flex-wrap: wrap; gap: 4px; }
+.ot-atalhos button { height: 26px; padding: 0 9px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--muted); font-size: 11.5px; font-weight: 700; cursor: pointer; }
+.ot-atalhos button:hover { color: var(--text); border-color: color-mix(in srgb, var(--og-ouro) 50%, var(--border)); }
+.ot-atalhos button.on { border-color: var(--og-ouro); background: var(--og-ouro-suave); color: var(--text); }
+
+.ot-registro { display: grid; gap: 6px; padding-top: 14px; border-top: 1px solid var(--border); }
+.ot-registro p { display: flex; justify-content: space-between; gap: 10px; margin: 0; font-size: 12.5px; }
+.ot-registro span { color: var(--muted); }
+.ot-registro b { font-weight: 650; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------ rodapé */
+.ot-pe { display: grid; gap: 8px; padding: 12px 24px 14px; border-top: 1px solid var(--border); background: var(--og-cartao); }
+.ot-pe-linha { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ot-atalho { color: var(--muted); font-size: 12px; }
+.ot-erro { margin: 0; }
+
+/* ------------------------------------------------ telas menores */
+@media (max-width: 860px) {
+  .ot-grade { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  .ot-lado { order: -1; padding: 16px; border: 1px solid var(--border); border-radius: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 20px; }
+  .ot-registro { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .ot-fundo { padding: 0; align-items: end; }
+  .ot { width: 100%; max-height: 94dvh; border-radius: 18px 18px 0 0; }
+  .ot-topo { padding: 12px 12px 8px 16px; }
+  .ot-rolagem { padding: 4px 16px 18px; }
+  .ot-titulo textarea { font-size: 18px; }
+  .ot-lado { padding: 12px; grid-template-columns: minmax(0, 1fr); }
+  .ot-subs li { gap: 4px; padding: 2px; }
+  .ot-sub-acoes button:not(:last-child) { display: none; }
+  .ot-pe { padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .ot-atalho { display: none; }
+  .ot-comentar { grid-template-columns: minmax(0, 1fr) auto; }
+  .ot-comentar .og-avatar { display: none; }
+}
+@media (hover: none) { .ot-sub-acoes { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ot-enviando i { animation: none; } .ot-soltar, .ot-sub-acoes { transition: none; } }
