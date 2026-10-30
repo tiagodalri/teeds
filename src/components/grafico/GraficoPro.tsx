@@ -7,7 +7,7 @@
  *
  * A Deriv manda só preço; tudo o que é indicador é calculado aqui.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { dispose, init, registerLocale, registerOverlay, type Chart, type DeepPartial, type KLineData, type Overlay, type OverlayCreate, type Styles } from 'klinecharts'
 import type { Candle } from '../../core/deriv/types'
 import type { SessaoTeeds } from '../../core/teeds/conta'
@@ -41,6 +41,8 @@ interface Props {
   erro?: string | null
   /** Tentar de novo. Sem ele, o botão recarrega a página. */
   aoTentarDeNovo?: () => void
+  /** O seletor GlobalFly | TradingView, na barra de cima (30/10/2026). */
+  barraExtra?: ReactNode
 }
 
 /* ------------------------------------------------------------- registro */
@@ -216,7 +218,7 @@ function estiloDoDesenho(d: Pick<DesenhoSalvo, 'cor' | 'espessura' | 'tracejado'
 
 /* =================================================================== */
 
-export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granularity, loading, markers = [], sessao, sinalLiberado = false, moeda = 'USD', erro = null, aoTentarDeNovo }: Props) {
+export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granularity, loading, markers = [], sessao, sinalLiberado = false, moeda = 'USD', erro = null, aoTentarDeNovo, barraExtra }: Props) {
   const compactoRef = useRef(false)
   const caixa = useRef<HTMLDivElement>(null)
   const chartRef = useRef<Chart | null>(null)
@@ -537,6 +539,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
           </span>
         )}
         <div className="gp-tamanho">
+          {barraExtra}
           <button type="button" className={`gp-botao-ind gp-so-celular ${desenhosAbertos ? 'on' : ''}`} aria-pressed={desenhosAbertos}
             onClick={() => { setDesenhosAbertos((x) => !x); if (desenhosAbertos) escolherFerramenta(null) }} title="Ferramentas de desenho" aria-label="Desenhos">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16zM14 6l3 3" /></svg>

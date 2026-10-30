@@ -3,6 +3,7 @@ import { useSimulador } from './hooks/useSimulador'
 import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
 import { PositionCard } from './components/PositionCard'
 import { BotaoTelaCheia } from './components/BotaoTelaCheia'
+import { SeletorDeGrafico, graficoGuardado, guardarGrafico, type QualGrafico } from './components/grafico/SeletorDeGrafico'
 import { DigitsPanel } from './components/DigitsPanel'
 import { labDoBanco } from './core/laboratorio/dados'
 import { BoletaAtivo, BotaoCompra, MostradorDuracao, MostradorValor, ResumoDaCompra } from './components/operar/Boleta'
@@ -107,6 +108,8 @@ const PlayerDoTreino = lazy(() => import('./components/aovivo/PlayerDoTreino'))
 const PlayerAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.PlayerGlobal })))
 // Gráfico profissional (KLineChart): só baixa para quem vê (hoje, admin da GlobalFly).
 const GraficoPro = lazy(() => import('./components/grafico/GraficoPro').then((m) => ({ default: m.GraficoPro })))
+// O gráfico do TradingView (30/10/2026): só baixa para quem escolhe ele no seletor.
+const GraficoTradingView = lazy(() => import('./components/grafico/GraficoTradingView').then((m) => ({ default: m.GraficoTradingView })))
 // Quem chega pelo link da live sem conta (fase de testes, com o link público ligado).
 const Convidado = lazy(() => import('./components/aovivo/Convidado').then((m) => ({ default: m.Convidado })))
 
@@ -222,6 +225,9 @@ export default function App() {
   // o som do fim da sessão (meta ou stop), de qualquer tela: som.ts
   useEffect(() => { acompanharFimDasSessoes(vivasRobos) }, [vivasRobos])
   const [tema, setTema] = useState<Tema>(temaGuardado)
+  // GlobalFly | TradingView: a escolha fica neste aparelho
+  const [qualGrafico, setQualGrafico] = useState<QualGrafico>(graficoGuardado)
+  const trocarGrafico = (q: QualGrafico) => { setQualGrafico(q); guardarGrafico(q) }
   const alternarTema = () => {
     const novo = tema === 'claro' ? 'escuro' : 'claro'
     setTema(novo)
@@ -1431,9 +1437,16 @@ export default function App() {
           {usarGraficoPro ? (
             <div className="chart">
               <Suspense fallback={<div className="gp-carregando-pagina">Abrindo o gráfico…</div>}>
-                <GraficoPro candles={candles} mode={mode} pipSize={pipSize} symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''}
-                  granularity={granularity} loading={loadingCandles} markers={marcadores} sessao={teeds.sessao} moeda={moeda}
-                  sinalLiberado={sinalGF} key={sinalGF ? 'com-sinal' : 'sem-sinal'} />
+                {/* GlobalFly | TradingView (30/10/2026): o nosso é o padrão; o do TradingView fica ao lado, por escolha */}
+                {qualGrafico === 'tradingview' ? (
+                  <GraficoTradingView symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''} granularity={granularity} mode={mode} tema={tema}
+                    barra={<SeletorDeGrafico valor={qualGrafico} aoTrocar={trocarGrafico} />} />
+                ) : (
+                  <GraficoPro candles={candles} mode={mode} pipSize={pipSize} symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''}
+                    granularity={granularity} loading={loadingCandles} markers={marcadores} sessao={teeds.sessao} moeda={moeda}
+                    sinalLiberado={sinalGF} key={sinalGF ? 'com-sinal' : 'sem-sinal'}
+                    barraExtra={<SeletorDeGrafico valor={qualGrafico} aoTrocar={trocarGrafico} />} />
+                )}
               </Suspense>
             </div>
           ) : (

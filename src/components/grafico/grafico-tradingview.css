@@ -1,0 +1,31 @@
+/* O gráfico do TradingView no Manual e o seletor GlobalFly | TradingView (30/10/2026). */
+.gtv { position: relative; display: flex; flex-direction: column; flex: 1; height: 100%; min-height: 0; min-width: 0; }
+.gtv-barra { justify-content: space-between; }
+.gtv-titulo { min-width: 0; color: var(--text); font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gtv-titulo small { color: var(--muted); font-size: 12px; font-weight: 600; }
+.gtv-area { position: relative; flex: 1; min-height: 320px; }
+/* o iframe do TradingView roda sem a escala de 90% do computador (core/escala.ts), como o nosso gráfico (.gp-kline) */
+.gtv-caixa { position: absolute; inset: 0; zoom: calc(1 / var(--escala-pagina, 1)); }
+.gtv-caixa > div, .gtv-caixa iframe { width: 100% !important; height: 100% !important; }
+.gtv-sem { display: grid; place-content: center; justify-items: center; gap: 8px; min-height: 420px; padding: 24px; text-align: center; }
+.gtv-sem b { color: var(--text); font-size: 15px; }
+.gtv-sem span { color: var(--muted); font-size: 13.5px; max-width: 38ch; line-height: 1.5; }
+.gtv-ampliado { position: fixed; inset: 0; z-index: 330; background: var(--bg); padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+.gtv-ampliado .gtv-area { min-height: 0; }
+body:has(.gtv-ampliado) { overflow: hidden; }
+body:has(.gtv-ampliado) :is(.barra-inferior, .mcb, .sp-lancador-area, .eq-lancador-area, .app-convite, .av-pilula, #aviso-versao) { display: none !important; }
+
+/* o seletor: discreto, na barra de cima do gráfico, no mesmo lugar nos dois */
+.seletor-grafico { display: inline-flex; flex: none; padding: 2px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-alt); }
+.seletor-grafico button { height: 28px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.seletor-grafico button:hover { color: var(--text); }
+.seletor-grafico button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / .2); }
+.seletor-grafico button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.seletor-grafico .sg-curto { display: none; }
+@media (max-width: 700px) {
+  .seletor-grafico button { height: 30px; padding: 0 9px; }
+  .seletor-grafico .sg-longo { display: none; }
+  .seletor-grafico .sg-curto { display: inline; }
+  .gtv-area { min-height: max(380px, calc(100dvh - 330px)); }
+  .gtv-titulo small { display: none; }
+}
