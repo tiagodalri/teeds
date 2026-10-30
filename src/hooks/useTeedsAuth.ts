@@ -8,6 +8,9 @@ import { autenticacaoConfigurada } from '../core/teeds/config'
 import { inscreverFilaEspera, type DadosFilaEspera } from '../core/teeds/leads'
 import { entrarComBiometria as fazerLoginComBiometria } from '../core/teeds/biometria'
 import { MARCA } from '../marca'
+import { ACESSO_RECUSADO, vigiarAcessoRecusado } from '../core/teeds/acessoRecusado'
+
+vigiarAcessoRecusado()
 
 export type StatusTeeds = 'carregando' | 'deslogado' | 'logado' | 'dispensado'
 
@@ -73,9 +76,10 @@ export function useTeedsAuth() {
         relogio.current = setTimeout(() => { void renovarAgora(s) }, 30_000)
         return
       }
-      // refresh vencido: a pessoa entra de novo
+      // refresh vencido (ou o login foi encerrado em outro aparelho): a pessoa entra de novo
       setSessao(null)
       setStatus('deslogado')
+      setRecado('Seu acesso foi encerrado. Entre de novo para continuar.')
     } finally {
       renovando.current = false
     }
@@ -109,6 +113,27 @@ export function useTeedsAuth() {
       window.clearInterval(t)
     }
   }, [agendarRenovacao, renovarAgora]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /*
+    O servidor recusou o acesso (30/10/2026): confere se o login ainda existe.
+    Se a Supabase também não reconhece mais a sessão (saiu em outro aparelho,
+    senha trocada), renova; se nem a renovação passa, renovarAgora leva a
+    pessoa para entrar de novo. Uma conferência a cada 30 s, no máximo.
+  */
+  const ultimaConferencia = useRef(0)
+  useEffect(() => {
+    const aoRecusar = () => {
+      const s = sessaoAtual.current
+      if (!s || Date.now() - ultimaConferencia.current < 30_000) return
+      ultimaConferencia.current = Date.now()
+      void buscarUsuario(s.token).catch((e) => {
+        if (/Sem conexão|demorou demais/.test((e as Error)?.message ?? '')) return
+        void renovarAgora(s)
+      })
+    }
+    window.addEventListener(ACESSO_RECUSADO, aoRecusar)
+    return () => window.removeEventListener(ACESSO_RECUSADO, aoRecusar)
+  }, [renovarAgora])
 
   // sessao guardada — ou a que acabou de chegar pelo link do e-mail
   useEffect(() => {

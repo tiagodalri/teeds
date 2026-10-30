@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { IDENTIDADES, type Identidade } from '../core/deriv/branding'
 import { descrever, digitosQueGanham, parametrosPadrao, type ParametrosDoRobo } from '../core/deriv/parametros'
-import { useCatalogoCompleto, useRobosDisponiveis } from '../core/teeds/catalogoRobos'
+import { recarregarCatalogo, useCatalogoCompleto, useCatalogoFalhou, useRobosDisponiveis } from '../core/teeds/catalogoRobos'
 import { MARCA } from '../marca'
 import { pedirModeloDaVitrine } from './RobotSetup'
 import './vitrine-robos.css'
@@ -219,6 +219,7 @@ function ModalDoRobo({ i, nome, base, parametros, aoFechar, aoIniciar, trancada 
 export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
   const disponiveis = useRobosDisponiveis()
   const catalogo = useCatalogoCompleto()
+  const falhou = useCatalogoFalhou()
   const vitrine = MARCA.vitrineDosRobos ?? {}
   const [aberto, setAberto] = useState<string | null>(null)
   // as I.A. vendidas à parte que esta pessoa ainda não tem (GlobalFly): cadeado e "Desbloquear"
@@ -241,10 +242,20 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
         <div>
           {/* Textos sugeridos pelo Victor (19/10/2026). */}
           <h3 id="vr-titulo">Escolha a sua I.A. e comece <b>agora</b>!</h3>
-          <p>{robos.length} estratégias, cada uma pensada para o seu perfil, seja ele agressivo ou conservador.</p>
+          <p>{robos.length ? `${robos.length} estratégias, cada uma pensada para o seu perfil, seja ele agressivo ou conservador.` : 'Estratégias pensadas para o seu perfil, seja ele agressivo ou conservador.'}</p>
         </div>
         <small>As operações só começam depois da sua confirmação.</small>
       </header>
+      {/* 30/10/2026 (Victor: tela em branco): sem a lista, a vitrine diz o que houve em vez de ficar vazia */}
+      {robos.length === 0 && (
+        <div className="vr-sem-lista" role={falhou ? 'alert' : 'status'}>
+          {falhou ? <>
+            <b>Não conseguimos carregar as I.A. agora.</b>
+            <span>Pode ser a internet ou o seu acesso, que venceu. Tente de novo; se continuar, saia e entre na sua conta.</span>
+            <button type="button" onClick={recarregarCatalogo}>Tentar de novo</button>
+          </> : catalogo === null ? <span>Carregando as I.A.…</span> : <span>Nenhuma I.A. disponível no momento.</span>}
+        </div>
+      )}
       <div className="vr-grade" role="list">
         {robos.map((i) => {
           const v = vitrine[i.id]

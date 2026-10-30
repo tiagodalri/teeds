@@ -252,7 +252,10 @@ export async function renovar(refresh: string): Promise<SessaoTeeds> {
 
 export async function sair(token?: string): Promise<void> {
   try {
-    if (token) await chamar('/logout', { corpo: {}, token })
+    // só este aparelho (30/10/2026): o "Sair" do iPhone do Victor derrubava o
+    // login do Mac dele também (o padrão da Supabase é sair de todos), e o Mac
+    // seguia com a tela aberta, recebendo "não autorizado" em tudo
+    if (token) await chamar('/logout?scope=local', { corpo: {}, token })
   } catch {
     /* o servidor pode recusar um token ja vencido: sair localmente basta */
   }

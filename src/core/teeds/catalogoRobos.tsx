@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { SessaoTeeds } from './conta'
 import { SERVIDOR } from './config'
 import { parametrosPadrao, type ParametrosDoRobo } from '../deriv/parametros'
@@ -40,12 +40,18 @@ interface Catalogo {
   ids: string[]
   /** A lista inteira; null enquanto o servidor não respondeu (ou sem sessão). */
   itens: ItemCatalogo[] | null
+  /** A última consulta falhou e não há lista boa guardada (a vitrine diz isso em vez de ficar vazia). */
+  falhou: boolean
 }
 const Contexto = createContext<Catalogo | null>(null)
 /** Ids dos robôs ativos; null = fora do provider (ainda não carregou). */
 export const useRobosDisponiveis = (): string[] | null => useContext(Contexto)?.ids ?? null
 /** A lista inteira do catálogo, para quem percorre vários robôs num map; null = ainda não carregou. */
 export const useCatalogoCompleto = (): ItemCatalogo[] | null => useContext(Contexto)?.itens ?? null
+/** O catálogo não carregou (servidor fora do ar ou acesso recusado) e não há lista guardada. */
+export const useCatalogoFalhou = (): boolean => useContext(Contexto)?.falhou ?? false
+/** Pede o catálogo de novo agora (o botão "Tentar de novo" da vitrine). */
+export const recarregarCatalogo = () => window.dispatchEvent(new Event('catalogo-alterado'))
 /**
  * Os parâmetros vigentes de um robô. null = ainda não carregou (ou visitante
  * sem sessão): quem usa cai em parametrosPadrao(id). Servidor sem o campo
@@ -59,25 +65,30 @@ export function useParametrosDoRobo(id: string): ParametrosDoCatalogo | null {
 }
 export function CatalogoProvider({ sessao, children }: {sessao: SessaoTeeds | null; children: ReactNode}) {
   const [itens, setItens] = useState<ItemCatalogo[] | null>(null)
+  const [falhou, setFalhou] = useState(false)
+  const guardados = useRef<ItemCatalogo[] | null>(null)
+  useEffect(()=>{ guardados.current = itens }, [itens])
   useEffect(()=>{
     let vivo = true
-    setItens(null)
+    setItens(null); setFalhou(false)
     // Sem sessão não há catálogo: a lista fica vazia (ids) e sem parâmetros (null).
     // Erro de rede segue o comportamento antigo: nenhum robô disponível.
     // com o app em segundo plano a consulta de 10 s pausa (bateria e dados do celular); volta ao reabrir
-    const carregar = () => { if (sessao && document.visibilityState !== 'hidden') void consultarCatalogo(sessao).then(r=>{if(vivo)setItens(r)}).catch(()=>{if(vivo)setItens([])}) }
+    // 30/10/2026: uma falha não apaga a lista boa (a vitrine ficava vazia, "0 estratégias");
+    // sem lista guardada, a vitrine mostra o aviso com "Tentar de novo"
+    const carregar = () => { if (sessao && document.visibilityState !== 'hidden') void consultarCatalogo(sessao).then(r=>{if(vivo){setItens(r);setFalhou(false)}}).catch(()=>{if(vivo&&!guardados.current)setFalhou(true)}) }
     carregar(); const t=setInterval(carregar,10000)
     window.addEventListener('catalogo-alterado',carregar)
     document.addEventListener('visibilitychange',carregar)
     return ()=>{vivo=false;clearInterval(t);window.removeEventListener('catalogo-alterado',carregar);document.removeEventListener('visibilitychange',carregar)}
   },[sessao?.token])
   // A lista de ids só muda quando o catálogo muda: evita efeitos rodando à toa em quem depende dela.
-  const valor = useMemo<Catalogo>(() => ({ ids: (itens ?? []).filter(i=>i.ativo).map(i=>i.id), itens }), [itens])
+  const valor = useMemo<Catalogo>(() => ({ ids: (itens ?? []).filter(i=>i.ativo).map(i=>i.id), itens, falhou }), [itens, falhou])
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>
 }
 
 /** Laboratório: um catálogo fixo, sem servidor (as telas de preparo com dados de exemplo). */
 export function CatalogoDeExemplo({ itens, children }: { itens: ItemCatalogo[]; children: ReactNode }) {
-  const valor = useMemo<Catalogo>(() => ({ ids: itens.filter((i) => i.ativo).map((i) => i.id), itens }), [itens])
+  const valor = useMemo<Catalogo>(() => ({ ids: itens.filter((i) => i.ativo).map((i) => i.id), itens, falhou: false }), [itens])
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>
 }
