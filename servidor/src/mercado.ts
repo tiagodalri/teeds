@@ -25,7 +25,7 @@ export interface Noticia {
   quando: string
   categoria: Categoria
 }
-export type Categoria = 'bolsa' | 'cambio' | 'juros' | 'internacional' | 'cripto' | 'commodities' | 'economia'
+export type Categoria = 'bolsa' | 'eua' | 'forex' | 'cambio' | 'juros' | 'internacional' | 'cripto' | 'commodities' | 'economia'
 
 export interface Cotacao {
   id: string
@@ -39,7 +39,13 @@ export interface Cotacao {
   serie?: number[]
 }
 
-const FEEDS: Array<{ fonte: string; url: string; site: string }> = [
+/**
+ * 30/10/2026 (Victor: "algo da bolsa americana, Nasdaq, e um site grande e
+ * confiável de Forex"): os feeds temáticos do Investing.com em português —
+ * Moedas e Câmbio (o Forex) e Mercado de Ações (Wall Street e as bolsas lá
+ * fora). `assunto` diz de que é o feed; `limite` quantas entram por vez.
+ */
+const FEEDS: Array<{ fonte: string; url: string; site: string; assunto?: 'forex' | 'eua'; limite?: number }> = [
   { fonte: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/', site: 'https://www.infomoney.com.br/' },
   { fonte: 'Money Times', url: 'https://www.moneytimes.com.br/feed/', site: 'https://www.moneytimes.com.br/' },
   { fonte: 'Exame', url: 'https://exame.com/feed/', site: 'https://exame.com/' },
@@ -48,6 +54,10 @@ const FEEDS: Array<{ fonte: string; url: string; site: string }> = [
   { fonte: 'Investing.com', url: 'https://br.investing.com/rss/news.rss', site: 'https://br.investing.com/' },
   { fonte: 'Seu Dinheiro', url: 'https://www.seudinheiro.com/feed/', site: 'https://www.seudinheiro.com/' },
   { fonte: 'E-Investidor', url: 'https://einvestidor.estadao.com.br/feed/', site: 'https://einvestidor.estadao.com.br/' },
+  { fonte: 'Investing.com', url: 'https://br.investing.com/rss/news_1.rss', site: 'https://br.investing.com/', assunto: 'forex', limite: 14 },
+  { fonte: 'Investing.com', url: 'https://br.investing.com/rss/news_25.rss', site: 'https://br.investing.com/', limite: 12 },
+  // os balanços das empresas americanas (Intel, Nvidia, Apple…), que mexem com a Nasdaq
+  { fonte: 'Investing.com', url: 'https://br.investing.com/rss/news_1063.rss', site: 'https://br.investing.com/', assunto: 'eua', limite: 8 },
 ]
 
 const NAVEGADOR = 'Mozilla/5.0 (compatible; GlobalFlyMercado/1.0)'
@@ -145,7 +155,7 @@ async function buscarFoto(link: string): Promise<string | null> {
  */
 let icones: { em: number; mapa: Record<string, string> } = { em: 0, mapa: {} }
 async function atualizarIcones(): Promise<void> {
-  const pares = await Promise.allSettled(FEEDS.map(async (f) => {
+  const pares = await Promise.allSettled(FEEDS.filter((f, i, a) => a.findIndex((x) => x.fonte === f.fonte) === i).map(async (f) => {
     const html = (await buscar(f.site, 8000)).slice(0, 300_000)
     const links = [...html.matchAll(/<link[^>]+rel=["'][^"']*(?:apple-touch-icon|icon)[^"']*["'][^>]*>/gi)].map((m) => m[0])
     const melhor = links
@@ -174,9 +184,13 @@ async function completarFotos(lista: Noticia[]): Promise<void> {
 
 const REGRAS: Array<[Categoria, RegExp]> = [
   ['cripto', /bitcoin|cripto|ethereum|\bbtc\b|blockchain/i],
+  // Forex: as moedas entre si, lá fora (o dólar contra o real fica em Câmbio)
+  ['forex', /forex|libra esterlina|\biene\b|franco su[íi][çc]o|yuan|d[óo]lar (australiano|canadense|neozeland[êe]s)|eur\/usd|usd\/jpy|gbp\/usd|\bdxy\b|[íi]ndice do d[óo]lar|moedas (globais|emergentes|do g10)/i],
   ['cambio', /d[óo]lar|c[âa]mbio|\beuro\b|real se|moeda/i],
   ['juros', /copom|selic|juros|infla[çc][ãa]o|ipca|banco central|\bfed\b|treasur/i],
   ['commodities', /petr[óo]leo|brent|\bouro\b|min[ée]rio|commodit|soja|caf[ée]|milho/i],
+  // a bolsa americana antes da regra geral de ações
+  ['eua', /^por que as a[çc][õo]es d|wall street|nasdaq|s&p ?500|dow jones|\bnyse\b|bolsas? de nova york|bolsas? americanas?|a[çc][õo]es americanas|big techs?|nvidia|apple|microsoft|tesla|alphabet|amazon|meta platforms|payroll|treasur/i],
   ['bolsa', /ibovespa|a[çc][õo]es|bolsa(?! fam)|\bb3\b|dividend/i],
   ['bolsa', /\b[A-Z]{4}\d{1,2}\b/], // código de ação: PETR4, VALE3
   ['internacional', /eua|estados unidos|china|europa|wall street|nasdaq|s&p|trump|jap[ãa]o|alemanha/i],
@@ -186,7 +200,21 @@ const categoriaDe = (t: string): Categoria => REGRAS.find(([, r]) => r.test(t))?
 /** Fora do assunto (o G1 Economia traz de tudo): esporte, novela, foguete… */
 const FORA_DO_ASSUNTO = /foguete|novela|\bbbb\b|futebol|campeonato|celebridade|hor[óo]scopo|receita de|loteria|mega-sena|quina\b|onde assistir|navegador|smartphone|iphone|celular novo|s[ée]rie da netflix|filme/i
 
-function lerFeed(fonte: string, xml: string): Noticia[] {
+/**
+ * O assunto de cada notícia: pelo título primeiro (o resumo cita de tudo e
+ * puxava "Ibovespa hoje" para os EUA), pelo resumo só se o título não disser.
+ * No feed de Moedas, o que é do real fica em Câmbio e o resto é Forex; no de
+ * balanços, tudo é bolsa americana.
+ */
+function categoriaNoFeed(titulo: string, resumo: string, assunto?: 'forex' | 'eua'): Categoria {
+  const peloTitulo = categoriaDe(titulo)
+  const geral = peloTitulo !== 'economia' ? peloTitulo : categoriaDe(`${titulo} ${resumo}`)
+  if (assunto === 'eua') return 'eua'
+  if (assunto !== 'forex' || geral === 'cripto') return geral
+  return /\breal\b|R\$|ptax|d[óo]lar [àa] vista|reais/i.test(`${titulo} ${resumo}`) ? 'cambio' : 'forex'
+}
+
+function lerFeed(fonte: string, xml: string, assunto?: 'forex' | 'eua'): Noticia[] {
   const itens = xml.match(/<item[\s>][\s\S]*?<\/item>/gi) ?? []
   return itens.slice(0, 40).flatMap((item) => {
     const titulo = texto(campo(item, 'title'))
@@ -200,7 +228,7 @@ function lerFeed(fonte: string, xml: string): Noticia[] {
     let resumo = texto(campo(item, 'description')).replace(/\s*The post .*$/i, '').replace(/\s*O post .* apareceu primeiro em .*$/i, '')
     if (resumo.length > 230) resumo = resumo.slice(0, 220).replace(/\s+\S*$/, '') + '…'
     if (resumo.toLowerCase().startsWith(titulo.toLowerCase().slice(0, 40))) resumo = ''
-    return [{ id: `${fonte}:${link}`, titulo, resumo, link, imagem: imagemDo(item), fonte, quando: new Date(data).toISOString(), categoria: categoriaDe(`${titulo} ${resumo}`) }]
+    return [{ id: `${fonte}:${link}`, titulo, resumo, link, imagem: imagemDo(item), fonte, quando: new Date(data).toISOString(), categoria: categoriaNoFeed(titulo, resumo, assunto) }]
   })
 }
 
@@ -210,7 +238,9 @@ let noticias: { em: number; lista: Noticia[] } = { em: 0, lista: [] }
 let buscandoNoticias: Promise<void> | null = null
 
 async function atualizarNoticias(): Promise<void> {
-  const resultados = await Promise.allSettled(FEEDS.map(async (f) => lerFeed(f.fonte, await buscar(f.url))))
+  // cada feed entra com o seu limite (o Investing tem três: geral, Moedas e Ações)
+  const doFeed = new Map<string, number>()
+  const resultados = await Promise.allSettled(FEEDS.map(async (f, i) => lerFeed(f.fonte, await buscar(f.url), f.assunto).map((n) => { doFeed.set(n.id, i); return n })))
   const todas = resultados.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
   if (!todas.length) return // tudo caiu: fica a última lista boa
   const limite = Date.now() - 2 * 864e5
@@ -219,11 +249,15 @@ async function atualizarNoticias(): Promise<void> {
     .filter((n) => Date.parse(n.quando) >= limite && Date.parse(n.quando) <= Date.now() + 5 * 60e3)
     .sort((a, b) => Date.parse(b.quando) - Date.parse(a.quando))
     .filter((n) => { const k = chaveDoTitulo(n.titulo); if (vistas.has(k)) return false; vistas.add(k); return true })
-  // No máximo 12 por fonte, para nenhum portal ocupar a página toda.
-  const porFonte = new Map<string, number>()
+  // No máximo 12 por feed (ou o limite dele), para nenhum portal ocupar a página toda.
+  const porFeed = new Map<number, number>()
   noticias = {
     em: Date.now(),
-    lista: lista.filter((n) => { const c = (porFonte.get(n.fonte) ?? 0) + 1; porFonte.set(n.fonte, c); return c <= 12 }).slice(0, 72),
+    lista: lista.filter((n) => {
+      const i = doFeed.get(n.id) ?? -1
+      const c = (porFeed.get(i) ?? 0) + 1; porFeed.set(i, c)
+      return c <= (FEEDS[i]?.limite ?? 12)
+    }).slice(0, 100),
   }
   void completarFotos(noticias.lista)
 }
@@ -306,14 +340,152 @@ async function atualizarCotacoes(): Promise<void> {
   cotacoes = { em: Date.now(), lista: [...antigas.values()].sort((a, b) => ordem.indexOf(a.id) - ordem.indexOf(b.id)) }
 }
 
+/* ------------------------------------------------------------ agenda econômica */
+
+/**
+ * A agenda econômica da semana (30/10/2026, Victor: "um calendário de
+ * notícia, o meu jornal do dia"): o calendário público do Forex Factory, o
+ * mais usado por quem opera Forex, sem chave. Ele limita os pedidos (poucos
+ * por hora): guardamos por 1 hora, e depois de um "429" esperamos 30 min.
+ * Os nomes chegam em inglês; os conhecidos viram português, o original fica
+ * junto para quem quiser procurar.
+ */
+export interface Evento {
+  id: string
+  quando: string
+  /** Moeda/região do evento (USD, EUR…); "ALL" é de todas. */
+  moeda: string
+  titulo: string
+  original: string
+  impacto: 'alto' | 'medio' | 'baixo' | 'feriado'
+  previsao: string
+  anterior: string
+}
+
+const NOMES_DE_EVENTO: Array<[RegExp, string]> = [
+  [/^Non-Farm Employment Change$/i, 'Payroll: vagas criadas fora do campo'],
+  [/^ADP Non-Farm Employment Change$/i, 'ADP: vagas no setor privado'],
+  [/^Unemployment Rate$/i, 'Taxa de desemprego'],
+  [/^Unemployment Claims$/i, 'Pedidos de seguro-desemprego'],
+  [/^Average Hourly Earnings/i, 'Ganho médio por hora'],
+  [/^JOLTS Job Openings$/i, 'JOLTS: vagas em aberto'],
+  [/^Employment Change$/i, 'Variação do emprego'],
+  [/^Claimant Count Change$/i, 'Pedidos de auxílio-desemprego'],
+  [/^Employment Cost Index/i, 'Índice de custo do emprego'],
+  [/^Core CPI Flash Estimate/i, 'Núcleo da inflação ao consumidor (prévia)'],
+  [/^CPI Flash Estimate/i, 'Inflação ao consumidor (prévia)'],
+  [/^(Tokyo )?Core CPI/i, 'Núcleo da inflação ao consumidor (CPI)'],
+  [/^(Prelim |Flash )?CPI/i, 'Inflação ao consumidor (CPI)'],
+  [/^Trimmed Mean CPI/i, 'Inflação ao consumidor, média aparada'],
+  [/^Core PPI/i, 'Núcleo da inflação ao produtor (PPI)'],
+  [/^PPI/i, 'Inflação ao produtor (PPI)'],
+  [/^Core PCE Price Index/i, 'Núcleo do PCE (inflação preferida do Fed)'],
+  [/^PCE Price Index/i, 'PCE: inflação de gastos pessoais'],
+  [/^Personal Income/i, 'Renda pessoal'],
+  [/^Personal Spending/i, 'Gastos pessoais'],
+  [/^(Advance|Prelim|Final|Flash)? ?GDP/i, 'PIB'],
+  [/^Core Retail Sales/i, 'Núcleo das vendas no varejo'],
+  [/^Retail Sales/i, 'Vendas no varejo'],
+  [/^Federal Funds Rate$/i, 'Decisão de juros do Fed'],
+  [/^FOMC Statement$/i, 'Comunicado do Fed (FOMC)'],
+  [/^FOMC Press Conference$/i, 'Entrevista do Fed após a decisão'],
+  [/^FOMC Meeting Minutes$/i, 'Ata do Fed (FOMC)'],
+  [/^FOMC Member (.+) Speaks$/i, 'Discurso de $1, do Fed'],
+  [/^Fed Chair (.+) Speaks$/i, 'Discurso do presidente do Fed, $1'],
+  [/^Fed Vice Chair.*? (\S+) Speaks$/i, 'Discurso do vice do Fed, $1'],
+  [/^Main Refinancing Rate$/i, 'Decisão de juros do BCE'],
+  [/^Monetary Policy Statement$/i, 'Comunicado de política monetária'],
+  [/^ECB Press Conference$/i, 'Entrevista do BCE após a decisão'],
+  [/^ECB President (.+) Speaks$/i, 'Discurso da presidente do BCE, $1'],
+  [/^Official Bank Rate$/i, 'Decisão de juros do Banco da Inglaterra'],
+  [/^BOE Gov (.+) Speaks$/i, 'Discurso do presidente do BoE, $1'],
+  [/^BOJ Policy Rate$/i, 'Decisão de juros do Banco do Japão'],
+  [/^BOJ Press Conference$/i, 'Entrevista do Banco do Japão'],
+  [/^BOJ Gov (.+) Speaks$/i, 'Discurso do presidente do BoJ, $1'],
+  [/^Cash Rate$/i, 'Decisão de juros da Austrália'],
+  [/^Overnight Rate$/i, 'Decisão de juros do Canadá'],
+  [/^SNB Policy Rate$/i, 'Decisão de juros da Suíça'],
+  [/^Official Cash Rate$/i, 'Decisão de juros da Nova Zelândia'],
+  [/^ISM Manufacturing PMI$/i, 'ISM: indústria'],
+  [/^ISM Services PMI$/i, 'ISM: serviços'],
+  [/^(Flash |Final )?Manufacturing PMI$/i, 'PMI da indústria'],
+  [/^(Flash |Final )?Services PMI$/i, 'PMI de serviços'],
+  [/^Chicago PMI$/i, 'PMI de Chicago'],
+  [/^Empire State Manufacturing Index$/i, 'Indústria de Nova York (Empire State)'],
+  [/^Philly Fed Manufacturing Index$/i, 'Indústria da Filadélfia (Philly Fed)'],
+  [/^CB Consumer Confidence$/i, 'Confiança do consumidor (Conference Board)'],
+  [/^(Prelim |Revised )?UoM Consumer Sentiment$/i, 'Sentimento do consumidor (Michigan)'],
+  [/^(Prelim |Revised )?UoM Inflation Expectations$/i, 'Expectativa de inflação (Michigan)'],
+  [/^Consumer Confidence$/i, 'Confiança do consumidor'],
+  [/^Crude Oil Inventories$/i, 'Estoques de petróleo'],
+  [/^Natural Gas Storage$/i, 'Estoques de gás natural'],
+  [/^Core Durable Goods Orders/i, 'Núcleo das encomendas de bens duráveis'],
+  [/^Durable Goods Orders/i, 'Encomendas de bens duráveis'],
+  [/^Industrial Production/i, 'Produção industrial'],
+  [/^Factory Orders/i, 'Encomendas à indústria'],
+  [/^Building Permits/i, 'Licenças de construção'],
+  [/^Housing Starts/i, 'Construção de casas iniciadas'],
+  [/^New Home Sales/i, 'Venda de casas novas'],
+  [/^Existing Home Sales/i, 'Venda de casas usadas'],
+  [/^Pending Home Sales/i, 'Vendas pendentes de casas'],
+  [/^Trade Balance$/i, 'Balança comercial'],
+  [/^Current Account$/i, 'Conta corrente'],
+  [/^Import Prices/i, 'Preços de importação'],
+  [/^Federal Budget Balance$/i, 'Resultado do orçamento federal'],
+  [/^Beige Book$/i, 'Livro Bege do Fed'],
+  [/^(\d+)-y Bond Auction$/i, 'Leilão de títulos de $1 anos'],
+  [/^Bank Holiday$/i, 'Feriado bancário'],
+  [/^German ifo Business Climate$/i, 'Clima de negócios na Alemanha (ifo)'],
+  [/^German ZEW Economic Sentiment$/i, 'Sentimento econômico na Alemanha (ZEW)'],
+  [/^Wholesale Inventories/i, 'Estoques no atacado'],
+  [/^Business Inventories/i, 'Estoques das empresas'],
+  [/^Treasury Currency Report$/i, 'Relatório de câmbio do Tesouro dos EUA'],
+  [/^Unemployment Change$/i, 'Variação do desemprego'],
+  [/^CB Leading Index$/i, 'Indicador antecedente (Conference Board)'],
+  [/^Leading Index$/i, 'Indicador antecedente'],
+  // qualquer outro discurso: "Discurso: RBA Assist Gov Jones"
+  [/^(.+) Speaks$/i, 'Discurso: $1'],
+]
+const PAISES_DO_TITULO: Array<[RegExp, string]> = [[/^Tokyo /i, 'Tóquio'], [/^German /i, 'Alemanha'], [/^French /i, 'França'], [/^Italian /i, 'Itália'], [/^Spanish /i, 'Espanha'], [/^Chinese /i, 'China']]
+
+export function emPortugues(original: string): string {
+  let t = original.trim(), pais = ''
+  for (const [re, nome] of PAISES_DO_TITULO) if (re.test(t) && !/^German (ifo|ZEW)/i.test(t)) { pais = nome; t = t.replace(re, ''); break }
+  const periodo = /\sm\/m$/i.test(t) ? ' · no mês' : /\sy\/y$/i.test(t) ? ' · em 12 meses' : /\sq\/q$/i.test(t) ? ' · no trimestre' : ''
+  const base = t.replace(/\s[myq]\/[myq]$/i, '')
+  const achado = NOMES_DE_EVENTO.find(([re]) => re.test(base))
+  if (!achado) return original
+  const nome = base.replace(achado[0], achado[1])
+  return `${pais ? `${pais}: ` : ''}${nome}${periodo}`
+}
+
+let agenda: { em: number; lista: Evento[]; esperarAte: number } = { em: 0, lista: [], esperarAte: 0 }
+let buscandoAgenda: Promise<void> | null = null
+async function atualizarAgenda(): Promise<void> {
+  if (Date.now() < agenda.esperarAte) return
+  const r = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json', { headers: { 'user-agent': NAVEGADOR, accept: 'application/json' }, signal: AbortSignal.timeout(8000) })
+  if (r.status === 429) { agenda.esperarAte = Date.now() + 30 * 60e3; return }
+  if (!r.ok) throw new Error(`${r.status} na agenda`)
+  const d = (await r.json()) as Array<{ title: string; country: string; date: string; impact: string; forecast?: string; previous?: string }>
+  const IMPACTO: Record<string, Evento['impacto']> = { High: 'alto', Medium: 'medio', Low: 'baixo', Holiday: 'feriado' }
+  const lista = d.flatMap((e, i) => {
+    const quando = Date.parse(e.date)
+    if (!Number.isFinite(quando) || !e.title) return []
+    return [{ id: `${quando}:${e.country}:${i}`, quando: new Date(quando).toISOString(), moeda: e.country, titulo: emPortugues(e.title), original: e.title, impacto: IMPACTO[e.impact] ?? 'baixo', previsao: e.forecast ?? '', anterior: e.previous ?? '' }]
+  }).sort((a, b) => Date.parse(a.quando) - Date.parse(b.quando))
+  if (lista.length) agenda = { em: Date.now(), lista, esperarAte: 0 }
+}
+
 /** O que a aba precisa, guardado; só busca de novo quando venceu. */
-export async function mercado(): Promise<{ cotacoes: Cotacao[]; noticias: Noticia[]; portais: Record<string, string>; atualizadoEm: string }> {
+export async function mercado(): Promise<{ cotacoes: Cotacao[]; noticias: Noticia[]; portais: Record<string, string>; agenda: Evento[]; atualizadoEm: string }> {
   const agora = Date.now()
   if (agora - icones.em > 864e5) void atualizarIcones().catch(() => undefined)
   const vencidas: Promise<void>[] = []
   if (agora - noticias.em > 5 * 60e3) vencidas.push(buscandoNoticias ??= atualizarNoticias().catch(() => undefined).finally(() => { buscandoNoticias = null }))
+  // a agenda nunca segura a resposta: vem por trás e aparece na leitura seguinte
+  if (agora - agenda.em > 60 * 60e3 && !buscandoAgenda) buscandoAgenda = atualizarAgenda().catch(() => undefined).finally(() => { buscandoAgenda = null })
   if (agora - cotacoes.em > 45e3) vencidas.push(buscandoCotacoes ??= atualizarCotacoes().catch(() => undefined).finally(() => { buscandoCotacoes = null }))
   // Primeira vez: espera. Depois: responde na hora com o guardado e atualiza por trás.
   if (!noticias.lista.length || !cotacoes.lista.length) await Promise.all(vencidas)
-  return { cotacoes: cotacoes.lista, noticias: noticias.lista, portais: icones.mapa, atualizadoEm: new Date(Math.max(noticias.em, cotacoes.em) || agora).toISOString() }
+  return { cotacoes: cotacoes.lista, noticias: noticias.lista, portais: icones.mapa, agenda: agenda.lista, atualizadoEm: new Date(Math.max(noticias.em, cotacoes.em) || agora).toISOString() }
 }

@@ -211,3 +211,61 @@
 @media (max-width: 360px) {
   .mc-centros { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ------------------------------------------------ jornal do dia e agenda econômica (30/10/2026) */
+.mc-jornal { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 14px; align-items: start; }
+.mc-jornal.sem-agenda { grid-template-columns: minmax(0, 1fr); }
+.mc-resumo, .mc-agenda { display: grid; gap: 12px; padding: 16px 18px; border: 1px solid var(--mc-linha); border-radius: 16px; background: var(--surface); min-width: 0; }
+.mc-resumo .mc-secao, .mc-agenda .mc-secao { margin-bottom: 0; }
+.mc-resumo-linhas { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.mc-resumo-linhas li { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: baseline; color: var(--text); font-size: 14px; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.mc-resumo-linhas li i { font-style: normal; font-size: 10px; color: var(--muted); }
+.mc-resumo-linhas li.sobe i { color: var(--up); }
+.mc-resumo-linhas li.cai i { color: var(--down); }
+.mc-resumo-vazio, .mc-agenda-vazia { margin: 0; padding: 18px 0; color: var(--muted); font-size: 13px; }
+.mc-resumo-pe { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 2px; }
+.mc-copiar { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border: 1px solid var(--mc-ouro); border-radius: 12px; background: transparent; color: var(--mc-ouro); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s; }
+.mc-copiar:hover:not(:disabled) { background: color-mix(in srgb, var(--mc-ouro) 12%, transparent); }
+.mc-copiar:disabled { opacity: .5; cursor: default; }
+.mc-copiar:focus-visible { outline: 2px solid var(--mc-ouro); outline-offset: 2px; }
+.mc-copiar svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.mc-resumo-pe small { flex: 1; min-width: 180px; color: var(--muted); font-size: 11.5px; }
+
+.mc-agenda .mc-filtros { flex: 1; justify-content: flex-end; }
+.mc-agenda .mc-filtros .mc-todos { margin-left: 4px; }
+.mc-eventos { position: relative; display: grid; align-content: start; margin: 0; padding: 0; list-style: none; max-height: 372px; overflow-y: auto; scrollbar-width: thin; }
+.mc-eventos li { display: grid; grid-template-columns: 50px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 4px; border-top: 1px solid var(--mc-linha); }
+.mc-eventos li:first-child { border-top: 0; }
+.mc-eventos time { color: var(--text); font: 700 13.5px var(--fonte-dados, ui-monospace, monospace); font-variant-numeric: tabular-nums; }
+.mc-evento-texto { display: grid; gap: 2px; min-width: 0; }
+.mc-evento-texto b { color: var(--text); font-size: 13.5px; font-weight: 650; line-height: 1.35; }
+.mc-evento-texto small { color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.mc-evento-texto small em { color: var(--mc-ouro); font-style: normal; font-weight: 700; }
+.mc-eventos li.passou { opacity: .55; }
+.mc-eventos li.proximo { margin-inline: -8px; padding-inline: 12px; border-radius: 12px; background: color-mix(in srgb, var(--mc-ouro) 9%, transparent); border-top-color: transparent; }
+.mc-eventos li.proximo + li { border-top-color: transparent; }
+/* o impacto em três barrinhas: uma, duas ou três acesas */
+.mc-impacto { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
+.mc-impacto s { width: 4px; border-radius: 1px; background: var(--mc-linha); text-decoration: none; }
+.mc-impacto s:nth-child(1) { height: 6px; } .mc-impacto s:nth-child(2) { height: 10px; } .mc-impacto s:nth-child(3) { height: 14px; }
+.baixo .mc-impacto s:nth-child(1), .medio .mc-impacto s:nth-child(-n+2) { background: var(--mc-ouro); }
+.alto .mc-impacto s { background: var(--down); }
+.feriado .mc-impacto s { background: var(--muted); opacity: .5; }
+.mc-agenda-fonte { margin: 0; color: var(--muted); font-size: 11px; }
+
+@media (max-width: 1100px) {
+  .mc-jornal { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .mc-resumo, .mc-agenda { padding: 14px; }
+  .mc-agenda .mc-filtros { justify-content: flex-start; flex-basis: 100%; }
+  .mc-resumo-linhas li { font-size: 13.5px; }
+  .mc-eventos { max-height: none; }
+  .mc-eventos li { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; }
+}
+/* lado a lado: a agenda tem a altura do jornal e rola por dentro (sem buraco embaixo do jornal) */
+@media (min-width: 1101px) {
+  .mc-jornal:not(.sem-agenda) { align-items: stretch; }
+  .mc-jornal:not(.sem-agenda) .mc-agenda { contain: size; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 300px; }
+  .mc-jornal:not(.sem-agenda) .mc-eventos { max-height: none; min-height: 0; }
+}

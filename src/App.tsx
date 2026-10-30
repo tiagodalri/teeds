@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } fro
 import { useSimulador } from './hooks/useSimulador'
 import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
 import { PositionCard } from './components/PositionCard'
+import { BotaoTelaCheia } from './components/BotaoTelaCheia'
 import { DigitsPanel } from './components/DigitsPanel'
 import { labDoBanco } from './core/laboratorio/dados'
 import { BoletaAtivo, BotaoCompra, MostradorDuracao, MostradorValor, ResumoDaCompra } from './components/operar/Boleta'
@@ -1115,6 +1116,8 @@ export default function App() {
               <i aria-hidden="true" />Ao vivo
             </button>
           )}
+
+          {!JANELA && <BotaoTelaCheia />}
 
           {!JANELA && <button className="tema-btn" onClick={alternarTema}
             title={tema === 'claro' ? 'Mudar para o modo escuro' : 'Mudar para o modo claro'}

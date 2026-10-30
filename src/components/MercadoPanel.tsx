@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { SERVIDOR } from '../core/teeds/config'
 import './mercado.css'
 import { dataCurta } from '../core/datas'
+import { JornalDoDia, type Evento } from './JornalDoDia'
 
 /**
  * Notícias (19/10/2026): o radar do mercado, de fontes grátis e sem cadastro
@@ -14,13 +15,13 @@ import { dataCurta } from '../core/datas'
  * sintéticos que os robôs operam.
  */
 
-type Categoria = 'bolsa' | 'cambio' | 'juros' | 'internacional' | 'cripto' | 'commodities' | 'economia'
+type Categoria = 'bolsa' | 'eua' | 'forex' | 'cambio' | 'juros' | 'internacional' | 'cripto' | 'commodities' | 'economia'
 interface Noticia { id: string; titulo: string; resumo: string; link: string; imagem: string | null; fonte: string; quando: string; categoria: Categoria }
 interface Cotacao { id: string; nome: string; preco: number; variacao: number; moeda: string; hora: string; atrasada: boolean; serie?: number[] }
-interface Dados { cotacoes: Cotacao[]; noticias: Noticia[]; portais?: Record<string, string>; atualizadoEm: string }
+interface Dados { cotacoes: Cotacao[]; noticias: Noticia[]; portais?: Record<string, string>; agenda?: Evento[]; atualizadoEm: string }
 
 const CATEGORIAS: Array<{ id: Categoria | 'tudo'; nome: string }> = [
-  { id: 'tudo', nome: 'Tudo' }, { id: 'bolsa', nome: 'Bolsa' }, { id: 'cambio', nome: 'Câmbio' }, { id: 'juros', nome: 'Juros' },
+  { id: 'tudo', nome: 'Tudo' }, { id: 'bolsa', nome: 'Bolsa' }, { id: 'eua', nome: 'EUA e Nasdaq' }, { id: 'forex', nome: 'Forex' }, { id: 'cambio', nome: 'Câmbio' }, { id: 'juros', nome: 'Juros' },
   { id: 'internacional', nome: 'Internacional' }, { id: 'cripto', nome: 'Cripto' }, { id: 'commodities', nome: 'Commodities' }, { id: 'economia', nome: 'Economia' },
 ]
 const NOME_DA_CATEGORIA = Object.fromEntries(CATEGORIAS.map((c) => [c.id, c.nome])) as Record<Categoria, string>
@@ -226,6 +227,9 @@ export function MercadoPanel() {
   const achar = (id: string) => cot.find((c) => c.id === id)
   const relogio = new Date(agora)
   const hoje = dataCurta(relogio)
+  // as manchetes do jornal: as de mercado primeiro (o G1 traz de tudo), as mais recentes de cada assunto
+  const manchetesDoJornal = [...todas.filter((n) => n.categoria !== 'economia'), ...todas.filter((n) => n.categoria === 'economia')].slice(0, 4)
+  const diaDaSemana = relogio.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })
 
   return (
     <div className="mc">
@@ -254,6 +258,9 @@ export function MercadoPanel() {
       <section className="mc-indicadores" aria-label="Indicadores do dia">
         {([['dolar', 'Dólar'], ['ibovespa', 'Ibovespa'], ['sp500', 'S&P 500'], ['bitcoin', 'Bitcoin']] as const).map(([id, nome]) => <Indicador key={id} c={achar(id)} nome={nome} falhou={erro && !dados} />)}
       </section>
+
+      <JornalDoDia cotacoes={cot} agenda={dados?.agenda} data={diaDaSemana.charAt(0).toUpperCase() + diaDaSemana.slice(1)}
+        manchetes={manchetesDoJornal.map((n) => ({ id: n.id, titulo: n.titulo, fonte: n.fonte, link: n.link }))} />
 
       <CentrosFinanceiros />
 
@@ -316,7 +323,7 @@ export function MercadoPanel() {
 
       {dados && (
         <p className="mc-fontes">
-          Fontes: {[...new Set(todas.map((n) => n.fonte))].join(', ')}. Câmbio pela AwesomeAPI e Yahoo Finance; bolsas, ouro e petróleo pelo Yahoo Finance. As notícias abrem no site de origem.
+          Fontes: {[...new Set(todas.map((n) => n.fonte))].join(', ')}. Câmbio pela AwesomeAPI e Yahoo Finance; bolsas, ouro e petróleo pelo Yahoo Finance{dados.agenda?.length ? '; agenda econômica pelo Forex Factory' : ''}. As notícias abrem no site de origem.
         </p>
       )}
     </div>

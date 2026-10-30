@@ -6296,3 +6296,8 @@ body:has(:is(.aula-modal-fundo, .market-modal-fundo, .cw-fundo, .adm-modal-fundo
 @media (min-width: 901px) {
   body:has(.sp-lancador-area, .mcb) .workspace-app { padding-bottom: 96px; }
 }
+
+/* Tela cheia (30/10/2026): só no computador; no celular o app instalado já ocupa a tela. */
+@media (max-width: 900px), (pointer: coarse) {
+  .tela-cheia-btn { display: none !important; }
+}
