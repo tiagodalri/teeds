@@ -26,48 +26,150 @@
   <link rel="preload" as="image" href="/login-globalfly/nuvens.webp" />
   <link rel="stylesheet" href="./estilo.css" />
 </head>
-<body>
-  <div class="pagina venda">
-    <header class="topo">
+<body class="lp">
+  <!-- 30/10/2026 (Tiago: "página envolvente, imersiva, quebre padrões"). O tema é o da marca: aviação.
+       As I.A. são jatos, a live é o embarque, a viagem vira cartão de embarque e o acesso vira ingresso dourado.
+       Presentes antes de tudo (áudio 1: "ele tem que saber o que vai ganhar antes de saber o que é"). -->
+
+  <section class="lp-heroi">
+    <div class="lp-ceu" aria-hidden="true"></div>
+    <svg class="lp-rastro" viewBox="0 0 1440 900" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="rastro-ouro" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stop-color="#B78D39" stop-opacity="0" />
+          <stop offset=".55" stop-color="#D4A64A" stop-opacity=".55" />
+          <stop offset="1" stop-color="#F3D58C" stop-opacity="1" />
+        </linearGradient>
+      </defs>
+      <path class="lp-rastro-linha" d="M-60 880 C 420 640, 900 360, 1500 -40" />
+      <path class="lp-rastro-brilho" d="M-60 880 C 420 640, 900 360, 1500 -40" />
+    </svg>
+    <div class="lp-estrelas" aria-hidden="true"></div>
+    <img class="lp-aviao" src="./img/aviao.webp" alt="" width="520" height="131" aria-hidden="true" />
+
+    <header class="lp-topo">
       <img src="/globalfly-assinatura.png" alt="GlobalFly Trade" width="900" height="283" />
-      <span class="selo-live"><i></i>Ao vivo <span>· seg, 9/11, 20h</span></span>
+      <span class="lp-aovivo"><i></i>Ao vivo · seg, 9/11, 20h</span>
     </header>
 
-    <!-- 30/10/2026 (Tiago e Naor, áudio 1): a página deixa de ser lista de espera e vira página de vendas.
-         Os presentes vêm ANTES de a pessoa saber o que é o produto; o "Garanta seu lugar" desce para o formulário;
-         o cadastro cria a conta de verdade (a senha fica: "ele vai se sentir importante, está abrindo uma conta"). -->
-    <main class="cadastro v-heroi">
-      <section class="v-abertura">
-        <p class="v-gancho">Isso aqui a gente não vai te vender.</p>
-        <h1>Um iMac, uma viagem internacional e a plataforma de <em>R$ 2.000 liberada de graça.</em></h1>
-        <p class="chamada">Para quem assistir à live de lançamento da GlobalFly Trade do início ao fim. Você abre a sua conta hoje, e a live libera o acesso.</p>
-        <p class="v-apresenta" data-apresenta hidden></p>
-        <ul class="v-premios" aria-label="O que a live entrega">
-          <li class="v-premio">
-            <svg viewBox="0 0 64 48" aria-hidden="true"><rect x="4" y="3" width="56" height="33" rx="4" fill="#0A2038" stroke="#D4A64A" stroke-width="2.5"/><rect x="9" y="8" width="46" height="23" rx="2" fill="#12304F"/><path d="M27 37h10l2 6H25z" fill="#9CB1C7"/><rect x="19" y="43" width="26" height="3" rx="1.5" fill="#9CB1C7"/></svg>
-            <b>iMac</b><small>Presente no fim da live</small>
-          </li>
-          <li class="v-premio">
-            <svg viewBox="0 0 64 48" aria-hidden="true"><path d="M6 33l27-9 15-12c5-3 8-1 6 3L43 28l-6 15-5 1 1-14-14 4-4 6H11l1-7z" fill="#D4A64A"/><path d="M4 44h56" stroke="#9CB1C7" stroke-width="2" stroke-dasharray="3 4"/></svg>
-            <b>Viagem internacional</b><small>Presente no fim da live</small>
-          </li>
-          <li class="v-premio v-premio-acesso">
-            <svg viewBox="0 0 64 48" aria-hidden="true"><path d="M5 40l12-11 9 5 13-16 9 6 11-14" fill="none" stroke="#5FC48C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="59" cy="10" r="3.5" fill="#5FC48C"/></svg>
-            <b>Acesso à GlobalFly</b><small><s>R$ 2.000</s> R$ 0 com a live inteira</small>
-          </li>
-        </ul>
-        <div class="v-relogio" data-relogio>
-          <span class="v-relogio-rotulo" data-relogio-rotulo>Faltam</span>
-          <span class="v-num"><b data-d>--</b><small>dias</small></span>
-          <span class="v-num"><b data-h>--</b><small>horas</small></span>
-          <span class="v-num"><b data-m>--</b><small>min</small></span>
-          <span class="v-num"><b data-s>--</b><small>seg</small></span>
-        </div>
-        <a class="botao v-cta so-estreito" href="#cadastro" data-ir-ao-form>Abrir minha conta grátis <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
-      </section>
+    <div class="lp-heroi-grade">
+      <div class="lp-texto">
+        <p class="lp-gancho">Isso aqui a gente não vai te vender.</p>
+        <h1 class="lp-titulo">
+          <span class="lp-l">Um iMac.</span>
+          <span class="lp-l">Uma viagem internacional.</span>
+          <span class="lp-l lp-ouro">E a plataforma de R$&nbsp;2.000 liberada de graça.</span>
+        </h1>
+        <p class="lp-sub">Para quem ficar na live de lançamento da GlobalFly Trade <b>do início ao fim</b>. Você abre a sua conta hoje, e a live libera o acesso.</p>
+        <p class="lp-apresenta" data-apresenta hidden></p>
+        <a class="lp-cta" href="#cadastro" data-ir-ao-form><span>Abrir minha conta grátis</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <span class="lp-mini">Leva 1 minuto. Sem cartão.</span>
+      </div>
 
-      <form class="cartao" id="form" novalidate>
-        <span class="v-ancora" id="cadastro"></span>
+      <div class="lp-palco" aria-label="Os presentes da live: um iMac, uma viagem internacional e o acesso à plataforma">
+        <div class="lp-halo" aria-hidden="true"></div>
+        <figure class="lp-imac">
+          <img src="./img/imac.webp" alt="iMac com a tela da live de lançamento da GlobalFly" width="900" height="738" />
+          <figcaption><b>iMac</b> no fim da live</figcaption>
+        </figure>
+
+        <div class="lp-embarque" aria-label="Viagem internacional">
+          <div class="lp-embarque-foto"><img src="./img/viagem.webp" alt="Asa de avião sobre as nuvens no pôr do sol" width="1200" height="744" loading="eager" /></div>
+          <div class="lp-embarque-dados">
+            <span class="lp-embarque-rot">Cartão de embarque</span>
+            <div class="lp-rota"><b>BR</b><svg viewBox="0 0 60 12" aria-hidden="true"><path d="M2 6h50" stroke="#D4A64A" stroke-width="1.5" stroke-dasharray="3 3"/><path d="M50 2l7 4-7 4z" fill="#D4A64A"/></svg><b>???</b></div>
+            <div class="lp-embarque-pe"><span>Voo <b>GF 0911</b></span><span>Embarque <b>fim da live</b></span></div>
+          </div>
+          <span class="lp-embarque-tag">✈ Viagem internacional</span>
+        </div>
+
+        <div class="lp-ingresso" aria-label="Acesso à GlobalFly: de R$ 2.000 por R$ 0">
+          <span class="lp-ingresso-rot">Acesso GlobalFly</span>
+          <s>R$ 2.000</s>
+          <b>R$ 0</b>
+          <span class="lp-ingresso-pe">com a live inteira</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="lp-painel" data-relogio>
+      <div class="lp-painel-cab"><span>Partida</span><span>Voo</span><span>Destino</span><span class="lp-painel-status">Situação</span></div>
+      <div class="lp-painel-linha">
+        <span class="lp-painel-hora">20:00</span>
+        <span>GF 0911</span>
+        <span>Live de lançamento · seg, 9/11</span>
+        <span class="lp-painel-status"><i></i><em data-relogio-rotulo>Embarque aberto</em></span>
+      </div>
+      <div class="lp-flaps" aria-label="Contagem até a live">
+        <span class="lp-flap"><b data-d>--</b><small>dias</small></span>
+        <span class="lp-flap"><b data-h>--</b><small>horas</small></span>
+        <span class="lp-flap"><b data-m>--</b><small>min</small></span>
+        <span class="lp-flap"><b data-s>--</b><small>seg</small></span>
+      </div>
+    </div>
+  </section>
+
+  <div class="lp-faixa" aria-hidden="true">
+    <div class="lp-faixa-rolo">
+      <span>Ao vivo · 9/11 · 20h</span><span>iMac</span><span>Viagem internacional</span><span>Plataforma de R$ 2.000 de graça</span><span>I.A. operando em dólar</span><span>Fique até o fim</span>
+      <span>Ao vivo · 9/11 · 20h</span><span>iMac</span><span>Viagem internacional</span><span>Plataforma de R$ 2.000 de graça</span><span>I.A. operando em dólar</span><span>Fique até o fim</span>
+    </div>
+  </div>
+
+  <main class="lp-corpo">
+  <section class="lp-presentes" aria-labelledby="presentes-titulo">
+    <div class="lp-cab lp-presentes-cab">
+      <span class="lp-rotulo">No fim da live</span>
+      <h2 id="presentes-titulo">Três presentes. Um deles é para todo mundo que ficar até o fim.</h2>
+    </div>
+    <div class="lp-presentes-grade">
+      <article class="lp-pr lp-pr-viagem">
+        <img class="lp-pr-fundo" src="./img/viagem.webp" alt="Asa de avião sobre as nuvens no pôr do sol" width="1400" height="933" loading="lazy" />
+        <img class="lp-pr-aviao" src="./img/aviao.webp" alt="" width="520" height="131" aria-hidden="true" loading="lazy" />
+        <div class="lp-pr-texto">
+          <span class="lp-pr-para">Para uma pessoa</span>
+          <h3>✈ Viagem internacional</h3>
+          <p>Passaporte na mão e embarque. Uma viagem para fora do Brasil vai para uma das pessoas que ficarem na live do início ao fim.</p>
+          <div class="lp-pr-voo"><span>Voo <b>GF 0911</b></span><span>Embarque <b>fim da live</b></span><span>Destino <b>internacional</b></span></div>
+        </div>
+      </article>
+      <article class="lp-pr lp-pr-imac">
+        <img class="lp-pr-foto" src="./img/imac.webp" alt="iMac" width="900" height="738" loading="lazy" />
+        <div class="lp-pr-texto">
+          <span class="lp-pr-para">Para outra pessoa</span>
+          <h3>iMac</h3>
+          <p>Um iMac novo para outra pessoa que ficar na live do início ao fim.</p>
+        </div>
+      </article>
+      <article class="lp-pr lp-pr-acesso">
+        <div class="lp-pr-texto">
+          <span class="lp-pr-para">Para todo mundo que ficar até o fim</span>
+          <h3>Acesso à GlobalFly</h3>
+          <p class="lp-pr-preco"><s>R$ 2.000</s> <b>R$ 0</b></p>
+          <p>As I.A., a operação manual, as salas ao vivo, as aulas e os relatórios. Liberado na hora em que a live termina.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+
+    <section class="lp-checkin" id="cadastro">
+      <div class="lp-checkin-texto">
+        <span class="lp-rotulo">Check-in</span>
+        <h2>Não é lista de espera. É a sua conta.</h2>
+        <p>Quem se cadastra hoje já sai com e-mail e senha na GlobalFly. A conta fica pronta agora. Falta uma coisa só para destravar tudo: estar na live.</p>
+        <ul class="lp-checklist">
+          <li><b>Hoje</b> você cria a sua senha e já entra.</li>
+          <li><b>Até 9/11</b> ativa os avisos e instala o app. A gente te chama na hora.</li>
+          <li><b>Na live</b> a sua presença é marcada sozinha, dentro da plataforma.</li>
+          <li><b>No fim</b> o acesso é liberado e saem os dois presentes.</li>
+        </ul>
+      </div>
+
+      <form class="cartao lp-cartao" id="form" novalidate>
+        <div class="lp-canhoto" aria-hidden="true">
+          <span>Cartão de embarque</span><span>GF 0911 · 9/11 · 20h</span>
+        </div>
         <h2>Abra sua conta e garanta seu lugar</h2>
         <p class="sub">Sua conta é criada agora. O acesso abre na live do dia 9.</p>
         <label class="campo">Nome completo
@@ -102,29 +204,66 @@
         <p class="aviso">Ao continuar, você concorda com os <a href="/termos/#termos-de-uso" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="/termos/#politica-de-privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.</p>
         <div class="seguro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Seus dados ficam protegidos e não são compartilhados.</div>
       </form>
-    </main>
+    </section>
 
-    <section class="v-secao">
-      <div class="v-cabeca">
-        <span class="v-rotulo">Não é lista de espera</span>
-        <h2>Você não entra numa fila. Você abre a sua conta.</h2>
-        <p>Quem se cadastra hoje já tem e-mail e senha na GlobalFly. Falta uma coisa só: estar na live.</p>
+    <section class="lp-cabine-sec">
+      <div class="lp-cab">
+        <span class="lp-rotulo">A cabine</span>
+        <h2>É isso que a live libera: uma I.A. operando por você, em dólar.</h2>
+        <p>Você escolhe a I.A., a entrada, a meta e o limite de perda. Ela entra, sai, recupera e para sozinha quando bate a meta ou o limite.</p>
       </div>
-      <ol class="v-linha">
-        <li><span class="v-quando">Hoje</span><b>Conta criada</b><p>Você escolhe a sua senha e já entra com ela.</p></li>
-        <li><span class="v-quando">Até 9/11</span><b>Celular pronto</b><p>Lá dentro, ative os avisos e instale o app. A gente te chama na hora certa.</p></li>
-        <li><span class="v-quando">9/11, 20h</span><b>Live dentro da GlobalFly</b><p>Você assiste pela própria plataforma, e a sua presença é marcada sozinha.</p></li>
-        <li class="v-fim"><span class="v-quando">No fim da live</span><b>Acesso liberado</b><p>Ficou do início ao fim, a GlobalFly fica liberada para você. E saem os dois presentes.</p></li>
+
+      <div class="lp-cabine" data-cabine>
+        <div class="lp-cabine-topo">
+          <div class="lp-cabine-quem">
+            <img data-cab-capa src="/aulas-globalfly/robo-phenom-mobile.webp" alt="" width="640" height="960" />
+            <div><b data-cab-nome>GF Phenom</b><span><i data-cab-farol></i><em data-cab-fase>Analisando o mercado</em></span></div>
+          </div>
+          <div class="lp-cabine-res"><span>Resultado da sessão</span><b data-cab-res>+US$ 0,00</b></div>
+        </div>
+        <div class="lp-cabine-grafico"><canvas data-cab-grafico width="900" height="260" aria-hidden="true"></canvas><span class="lp-cabine-par">Volatility 75 · ao vivo</span></div>
+        <div class="lp-cabine-meta">
+          <span class="lp-meta-rot"><b>Limite</b> −US$ 20</span>
+          <div class="lp-meta-trilho"><i data-cab-barra></i><u></u></div>
+          <span class="lp-meta-rot lp-meta-alvo"><b>Meta</b> +US$ 10</span>
+        </div>
+        <div class="lp-cabine-ops">
+          <div class="lp-ops-cab"><span>#</span><span>Entrada</span><span>Direção</span><span>Resultado</span></div>
+          <ol data-cab-ops></ol>
+        </div>
+        <div class="lp-cabine-fim" data-cab-fim hidden><b>Meta atingida</b><span data-cab-fim-txt></span></div>
+        <p class="lp-cabine-aviso">Demonstração ilustrativa, com valores fictícios. Não é resultado real e não garante resultado futuro.</p>
+      </div>
+
+      <div class="lp-hangar" aria-label="As I.A. da GlobalFly">
+        <figure><img src="/aulas-globalfly/robo-phenom-mobile.webp" alt="GF Phenom" width="640" height="960" loading="lazy" /></figure>
+        <figure><img src="/aulas-globalfly/robo-gulf-mobile.webp" alt="GF Gulf" width="640" height="960" loading="lazy" /></figure>
+        <figure><img src="/aulas-globalfly/robo-raptor-mobile.webp" alt="GF Raptor" width="640" height="960" loading="lazy" /></figure>
+        <figure><img src="/aulas-globalfly/robo-falcon-mobile.webp" alt="GF Falcon" width="640" height="960" loading="lazy" /></figure>
+        <figure><img src="/aulas-globalfly/robo-legacy-mobile.webp" alt="GF Legacy" width="640" height="960" loading="lazy" /></figure>
+      </div>
+    </section>
+
+    <section class="lp-rota-sec">
+      <div class="lp-cab">
+        <span class="lp-rotulo">A rota</span>
+        <h2>Do cadastro ao acesso liberado</h2>
+      </div>
+      <ol class="lp-voo">
+        <li><span class="lp-voo-ponto"></span><span class="lp-voo-quando">Hoje</span><b>Conta criada</b><p>Você escolhe a sua senha e já entra com ela.</p></li>
+        <li><span class="lp-voo-ponto"></span><span class="lp-voo-quando">Até 9/11</span><b>Celular pronto</b><p>Avisos ligados e app instalado. A gente te chama na hora certa.</p></li>
+        <li><span class="lp-voo-ponto"></span><span class="lp-voo-quando">9/11, 20h</span><b>Live dentro da GlobalFly</b><p>Você assiste pela plataforma e a presença é marcada sozinha.</p></li>
+        <li class="lp-voo-fim"><span class="lp-voo-ponto"></span><span class="lp-voo-quando">Fim da live</span><b>Acesso liberado</b><p>Ficou do início ao fim: a GlobalFly é sua. E saem o iMac e a viagem.</p></li>
       </ol>
     </section>
 
-    <section class="v-secao">
-      <div class="v-cabeca">
-        <span class="v-rotulo">O que a live libera</span>
-        <h2>A plataforma completa, para operar em dólar com I.A.</h2>
+    <section class="lp-libera-sec">
+      <div class="lp-cab">
+        <span class="lp-rotulo">O que a live libera</span>
+        <h2>A plataforma completa</h2>
       </div>
-      <ul class="v-libera">
-        <li><b>As I.A. de operação</b><p>Você escolhe a I.A., a entrada, a meta e o limite de perda. Ela opera por você.</p></li>
+      <ul class="lp-libera">
+        <li><b>As I.A. de operação</b><p>Phenom, Gulf, Raptor, Falcon e Legacy. Cada uma com a sua estratégia.</p></li>
         <li><b>Operação manual</b><p>Gráfico ao vivo para quem gosta de operar com as próprias mãos.</p></li>
         <li><b>Salas ao vivo</b><p>Operações acompanhadas pela equipe, em tempo real, todos os dias.</p></li>
         <li><b>Aulas e apostila</b><p>Do primeiro passo ao gerenciamento, no seu ritmo.</p></li>
@@ -133,21 +272,18 @@
       </ul>
     </section>
 
-    <section class="v-secao v-porque">
-      <div class="v-cabeca">
-        <span class="v-rotulo">Por que de graça</span>
-        <h2>O preço do seu acesso é o seu tempo.</h2>
-        <p>A partir da live, o acesso à GlobalFly custa R$ 2.000. Quem assistir à live de lançamento do começo ao fim fica isento. A gente quer você lá, porque é na live que mostramos a plataforma por dentro: como cada I.A. opera, como funciona o gerenciamento e como começar do jeito certo.</p>
-      </div>
+    <section class="lp-porque">
+      <span class="lp-rotulo">Por que de graça</span>
       <blockquote>“A única coisa que você precisa fazer é estar lá. Do começo ao fim.”</blockquote>
+      <p>A partir da live, o acesso à GlobalFly custa R$ 2.000. Quem assistir à live de lançamento inteira fica isento. A gente quer você lá, porque é na live que mostramos a plataforma por dentro: como cada I.A. opera, como funciona o gerenciamento e como começar do jeito certo.</p>
     </section>
 
-    <section class="v-secao">
-      <div class="v-cabeca">
-        <span class="v-rotulo">Perguntas</span>
+    <section class="lp-perguntas-sec">
+      <div class="lp-cab">
+        <span class="lp-rotulo">Perguntas</span>
         <h2>Antes de abrir a sua conta</h2>
       </div>
-      <div class="v-perguntas">
+      <div class="lp-perguntas">
         <details><summary>Preciso pagar alguma coisa?</summary><p>Não. Abrir a conta e assistir à live é de graça. Ficou até o fim, o acesso à plataforma também é.</p></details>
         <details><summary>Por que a conta fica travada até a live?</summary><p>Porque é a live que libera o acesso. Até lá, você já entra com o seu e-mail e a sua senha, prepara o celular e acompanha quanto falta.</p></details>
         <details><summary>Como vocês sabem que eu fiquei até o fim?</summary><p>A live passa dentro da GlobalFly, e a presença é marcada sozinha enquanto ela está aberta na sua tela. Deixe a tela ligada e a live aberta até o final.</p></details>
@@ -158,26 +294,27 @@
       </div>
     </section>
 
-    <section class="v-secao v-final">
-      <h2>Segunda, 9/11, às 20h. Você vai estar lá?</h2>
-      <div class="v-relogio" data-relogio>
-        <span class="v-relogio-rotulo" data-relogio-rotulo>Faltam</span>
-        <span class="v-num"><b data-d>--</b><small>dias</small></span>
-        <span class="v-num"><b data-h>--</b><small>horas</small></span>
-        <span class="v-num"><b data-m>--</b><small>min</small></span>
-        <span class="v-num"><b data-s>--</b><small>seg</small></span>
+    <section class="lp-final">
+      <span class="lp-aovivo"><i></i>Ao vivo · seg, 9/11, 20h</span>
+      <h2>O embarque é na segunda, às 20h. Você vai estar lá?</h2>
+      <div class="lp-flaps" data-relogio>
+        <span class="lp-flap"><b data-d>--</b><small>dias</small></span>
+        <span class="lp-flap"><b data-h>--</b><small>horas</small></span>
+        <span class="lp-flap"><b data-m>--</b><small>min</small></span>
+        <span class="lp-flap"><b data-s>--</b><small>seg</small></span>
+        <em class="lp-sr" data-relogio-rotulo></em>
       </div>
-      <a class="botao v-cta" href="#cadastro" data-ir-ao-form>Abrir minha conta grátis</a>
+      <a class="lp-cta" href="#cadastro" data-ir-ao-form><span>Abrir minha conta grátis</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
     </section>
 
-    <footer class="rodape">
+    <footer class="rodape lp-rodape">
       <span>© 2026 GlobalFly Trade</span>
       <span>Operar envolve risco de perda. Resultados passados não garantem resultados futuros.</span>
       <a href="/termos/" target="_blank" rel="noopener">Termos e políticas</a>
+      <span class="lp-creditos">Fotos: Wikimedia Commons. iMac, AzureSaturn (CC0); asa no pôr do sol, Jacky Lo (CC0); avião, Mathew Schwartz (CC BY 3.0). iMac é marca da Apple Inc., que não participa desta ação.</span>
     </footer>
-  </div>
+  </main>
 
-  <!-- celular: o botão de cadastro sempre à mão, menos quando o formulário já está na tela -->
   <div class="v-barra" data-barra hidden>
     <span class="v-barra-tempo" data-barra-tempo></span>
     <a class="botao" href="#cadastro" data-ir-ao-form>Abrir minha conta grátis</a>
@@ -185,9 +322,12 @@
 
   <script src="./captura.js"></script>
   <script>
-    // Página de vendas do lançamento (30/10/2026): relógio, quem apresenta, barra fixa do celular e pixel.
+    // Página de vendas do lançamento (30/10/2026): painel de embarque, cabine com uma I.A. operando
+    // (demonstração ilustrativa), quem apresenta, barra fixa do celular e pixel.
     (function () {
       GF.pixel()
+      var reduzir = matchMedia('(prefers-reduced-motion: reduce)').matches
+
       // quem apresenta vem do endereço: o anúncio do Naor cai no /n, o do Victor no /v
       var APRESENTA = { n: 'Naor Bezerra', v: 'Victor Cordeiro' }
       var quem = APRESENTA[GF.parceiro() || '']
@@ -195,49 +335,175 @@
       apresenta.textContent = quem ? 'Ao vivo com ' + quem : 'Ao vivo com a equipe GlobalFly'
       apresenta.hidden = false
 
-      // relógio até a live: 9/11/2026, 20h de Brasília (23h UTC). Depois do começo, o texto muda sozinho.
+      // ------------------------------------------------ painel de embarque (contagem até 9/11, 20h de Brasília)
       var INICIO = Date.UTC(2026, 10, 9, 23, 0, 0), FIM = INICIO + 3 * 36e5
       var relogios = document.querySelectorAll('[data-relogio]'), barraTempo = document.querySelector('[data-barra-tempo]')
       function dois(n) { return (n < 10 ? '0' : '') + n }
+      function virar(el, valor) {
+        if (el.textContent === valor) return
+        el.textContent = valor
+        if (reduzir) return
+        var flap = el.parentNode; flap.classList.remove('vira'); void flap.offsetWidth; flap.classList.add('vira')
+      }
       function tique() {
         var agora = Date.now(), falta = Math.max(0, INICIO - agora)
         var d = Math.floor(falta / 864e5), h = Math.floor(falta / 36e5) % 24, m = Math.floor(falta / 6e4) % 60, seg = Math.floor(falta / 1e3) % 60
         Array.prototype.forEach.call(relogios, function (r) {
+          var rot = r.querySelector('[data-relogio-rotulo]')
           if (agora >= INICIO) {
-            r.classList.add('v-acabou')
-            r.querySelector('[data-relogio-rotulo]').textContent = agora < FIM ? 'A live está no ar agora' : 'A live de lançamento já aconteceu'
+            r.classList.add('lp-acabou')
+            if (rot) rot.textContent = agora < FIM ? 'Embarcando agora' : 'Partiu'
             return
           }
-          r.querySelector('[data-d]').textContent = d
-          r.querySelector('[data-h]').textContent = dois(h)
-          r.querySelector('[data-m]').textContent = dois(m)
-          r.querySelector('[data-s]').textContent = dois(seg)
+          if (rot && !rot.classList.contains('lp-sr')) rot.textContent = d < 1 ? 'Última chamada' : 'Embarque aberto'
+          virar(r.querySelector('[data-d]'), dois(d)); virar(r.querySelector('[data-h]'), dois(h))
+          virar(r.querySelector('[data-m]'), dois(m)); virar(r.querySelector('[data-s]'), dois(seg))
         })
-        if (barraTempo) barraTempo.textContent = agora >= INICIO ? '' : 'Faltam ' + d + 'd ' + dois(h) + 'h ' + dois(m) + 'min'
+        if (barraTempo) barraTempo.textContent = agora >= INICIO ? '' : 'Faltam ' + d + 'd ' + dois(h) + 'h ' + dois(m) + 'min para a live'
       }
       tique(); setInterval(tique, 1000)
 
-      // os botões levam ao formulário e já põem o cursor no primeiro campo
+      // ------------------------------------------------ botões que levam ao formulário
       var form = document.getElementById('form')
       Array.prototype.forEach.call(document.querySelectorAll('[data-ir-ao-form]'), function (a) {
         a.addEventListener('click', function (ev) {
           ev.preventDefault()
-          form.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
-          setTimeout(function () { try { form.elements.nome.focus({ preventScroll: true }) } catch (e) { form.elements.nome.focus() } }, 450)
+          document.getElementById('cadastro').scrollIntoView({ behavior: reduzir ? 'auto' : 'smooth', block: 'start' })
+          setTimeout(function () { try { form.elements.nome.focus({ preventScroll: true }) } catch (e) { form.elements.nome.focus() } }, 500)
         })
       })
 
       // barra fixa no celular: aparece depois da abertura e some enquanto o formulário está na tela
-      var barra = document.querySelector('[data-barra]'), abertura = document.querySelector('.v-abertura')
+      var barra = document.querySelector('[data-barra]'), heroi = document.querySelector('.lp-heroi')
       if (barra && 'IntersectionObserver' in window) {
-        var vendoForm = false, passouAbertura = false
-        var atualizar = function () { barra.hidden = !(passouAbertura && !vendoForm) }
+        var vendoForm = false, passou = false
+        var atualizar = function () { barra.hidden = !(passou && !vendoForm) }
         new IntersectionObserver(function (e) { vendoForm = e[0].isIntersecting; atualizar() }).observe(form)
-        new IntersectionObserver(function (e) { passouAbertura = !e[0].isIntersecting && e[0].boundingClientRect.top < 0; atualizar() }).observe(abertura)
+        new IntersectionObserver(function (e) { passou = !e[0].isIntersecting && e[0].boundingClientRect.top < 0; atualizar() }).observe(heroi)
       }
+
+      // ------------------------------------------------ entrada das seções (tudo já está visível sem script)
+      if ('IntersectionObserver' in window && !reduzir) {
+        var alvos = document.querySelectorAll('.lp-cab, .lp-checkin-texto, .lp-cabine, .lp-hangar figure, .lp-voo li, .lp-libera li, .lp-porque, .lp-final')
+        var obs = new IntersectionObserver(function (es) {
+          es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('lp-visto'); obs.unobserve(e.target) } })
+        }, { rootMargin: '0px 0px -8% 0px' })
+        Array.prototype.forEach.call(alvos, function (el, i) {
+          if (el.getBoundingClientRect().top > innerHeight) { el.classList.add('lp-anima'); el.style.transitionDelay = (i % 5) * 70 + 'ms'; obs.observe(el) }
+        })
+      }
+
+      // ------------------------------------------------ cabine: uma I.A. operando (demonstração ilustrativa)
+      var cab = document.querySelector('[data-cabine]')
+      if (!cab) return
+      var IAS = [['GF Phenom', 'phenom'], ['GF Gulf', 'gulf'], ['GF Raptor', 'raptor'], ['GF Falcon', 'falcon'], ['GF Legacy', 'legacy']]
+      var el = function (q) { return cab.querySelector(q) }
+      var tela = el('[data-cab-grafico]'), ctx = tela.getContext('2d')
+      var nomeEl = el('[data-cab-nome]'), capaEl = el('[data-cab-capa]'), faseEl = el('[data-cab-fase]'), farol = el('[data-cab-farol]')
+      var resEl = el('[data-cab-res]'), barraMeta = el('[data-cab-barra]'), lista = el('[data-cab-ops]'), fim = el('[data-cab-fim]'), fimTxt = el('[data-cab-fim-txt]')
+      var META = 10, LIMITE = -20, BASE = 1
+      var precos = [], marcas = [], preco = 1000, tendencia = 0
+      var s, ia = 0, rodando = false, visivel = false, relogioOps = null
+      function dinheiro(v) { return (v < 0 ? '−' : '+') + 'US$ ' + Math.abs(v).toFixed(2).replace('.', ',') }
+      function valor(v) { return 'US$ ' + v.toFixed(2).replace('.', ',') }
+      for (var k = 0; k < 140; k++) { preco += (Math.random() - .5) * 2.2; precos.push(preco) }
+
+      function desenhar() {
+        var dpr = Math.min(2, window.devicePixelRatio || 1), w = tela.clientWidth, h = tela.clientHeight
+        if (tela.width !== Math.round(w * dpr)) { tela.width = Math.round(w * dpr); tela.height = Math.round(h * dpr) }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h)
+        var min = Math.min.apply(null, precos), max = Math.max.apply(null, precos), pad = (max - min) * .18 + .5
+        var X = function (i) { return i / (precos.length - 1) * (w - 54) }, Y = function (p) { return h - 12 - (p - min + pad) / (max - min + pad * 2) * (h - 24) }
+        ctx.strokeStyle = 'rgba(156,177,199,.10)'; ctx.lineWidth = 1
+        for (var g = 1; g < 4; g++) { ctx.beginPath(); ctx.moveTo(0, h * g / 4); ctx.lineTo(w, h * g / 4); ctx.stroke() }
+        var grad = ctx.createLinearGradient(0, 0, 0, h); grad.addColorStop(0, 'rgba(212,166,74,.28)'); grad.addColorStop(1, 'rgba(212,166,74,0)')
+        ctx.beginPath(); precos.forEach(function (p, i) { i ? ctx.lineTo(X(i), Y(p)) : ctx.moveTo(X(i), Y(p)) })
+        ctx.lineTo(X(precos.length - 1), h); ctx.lineTo(0, h); ctx.closePath(); ctx.fillStyle = grad; ctx.fill()
+        ctx.beginPath(); precos.forEach(function (p, i) { i ? ctx.lineTo(X(i), Y(p)) : ctx.moveTo(X(i), Y(p)) })
+        ctx.strokeStyle = '#D4A64A'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke()
+        marcas.forEach(function (m) {
+          var i = m.i - (precosTotal - precos.length); if (i < 0) return
+          var x = X(i), y = Y(precos[i])
+          ctx.fillStyle = m.ok === null ? '#F3F0E9' : m.ok ? '#5FC48C' : '#F1828A'
+          ctx.beginPath(); ctx.arc(x, y, 4.5, 0, 7); ctx.fill()
+          ctx.beginPath(); ctx.moveTo(x, y + (m.sobe ? 10 : -10)); ctx.lineTo(x - 4, y + (m.sobe ? 16 : -16)); ctx.lineTo(x + 4, y + (m.sobe ? 16 : -16)); ctx.closePath(); ctx.fill()
+        })
+        var ux = X(precos.length - 1), uy = Y(precos[precos.length - 1])
+        ctx.fillStyle = '#F3D58C'; ctx.beginPath(); ctx.arc(ux, uy, 3.5, 0, 7); ctx.fill()
+        ctx.fillStyle = 'rgba(212,166,74,.16)'; ctx.fillRect(w - 52, uy - 10, 52, 20)
+        ctx.fillStyle = '#F3D58C'; ctx.font = '600 11px ui-monospace, Menlo, monospace'; ctx.fillText(precos[precos.length - 1].toFixed(2), w - 48, uy + 4)
+      }
+      var precosTotal = precos.length
+      function passo() {
+        tendencia = tendencia * .92 + (Math.random() - .5) * .5
+        preco += tendencia + (Math.random() - .5) * 1.6
+        precos.push(preco); precosTotal++; if (precos.length > 140) precos.shift()
+        desenhar()
+      }
+
+      function nova() {
+        s = { res: 0, entrada: BASE, n: 0, ganhas: 0 }
+        lista.innerHTML = ''; marcas = []; fim.hidden = true
+        nomeEl.textContent = IAS[ia][0]; capaEl.src = '/aulas-globalfly/robo-' + IAS[ia][1] + '-mobile.webp'
+        mostrar()
+      }
+      function mostrar() {
+        resEl.textContent = dinheiro(s.res); resEl.className = s.res > 0 ? 'pos' : s.res < 0 ? 'neg' : ''
+        barraMeta.style.left = Math.max(0, Math.min(100, (s.res - LIMITE) / (META - LIMITE) * 100)) + '%'
+      }
+      function fase(texto, estado) { faseEl.textContent = texto; farol.className = estado || '' }
+      function operar() {
+        if (!rodando) return
+        fase('Analisando o mercado', 'analise')
+        relogioOps = setTimeout(function () {
+          if (!rodando) return
+          var sobe = Math.random() < .5, entrada = s.entrada, n = ++s.n
+          var marca = { i: precosTotal - 1, sobe: sobe, ok: null }; marcas.push(marca); if (marcas.length > 8) marcas.shift()
+          fase('Entrada de ' + valor(entrada) + ' · ' + (sobe ? 'sobe' : 'desce'), 'entrada')
+          var li = document.createElement('li')
+          li.innerHTML = '<span>' + n + '</span><span>' + valor(entrada) + '</span><span class="' + (sobe ? 'up' : 'down') + '">' + (sobe ? '▲ Sobe' : '▼ Desce') + '</span><span class="lp-op-res">aguardando</span>'
+          lista.insertBefore(li, lista.firstChild); while (lista.children.length > 5) lista.removeChild(lista.lastChild)
+          relogioOps = setTimeout(function () {
+            if (!rodando) return
+            var ganhou = Math.random() < .7, delta = ganhou ? +(entrada * .95).toFixed(2) : -entrada
+            marca.ok = ganhou; s.res = +(s.res + delta).toFixed(2); if (ganhou) s.ganhas++
+            var r = li.querySelector('.lp-op-res'); r.textContent = dinheiro(delta); r.className = 'lp-op-res ' + (ganhou ? 'pos' : 'neg')
+            li.classList.add(ganhou ? 'ganhou' : 'perdeu')
+            // depois de uma perda, a I.A. sobe a entrada para recuperar; acertou, volta para a entrada inicial
+            s.entrada = ganhou ? BASE : +(Math.min(entrada * 2.1, s.res - LIMITE)).toFixed(2)
+            mostrar()
+            if (s.res >= META || s.res <= LIMITE || s.entrada < .35) {
+              var bateu = s.res >= META
+              fase(bateu ? 'Meta atingida' : 'Limite de perda atingido', bateu ? 'meta' : 'stop')
+              fim.querySelector('b').textContent = bateu ? 'Meta atingida' : 'Limite de perda atingido'
+              fim.className = 'lp-cabine-fim ' + (bateu ? 'pos' : 'neg')
+              fimTxt.textContent = dinheiro(s.res) + ' em ' + s.n + ' operações · ' + s.ganhas + ' positivas'
+              fim.hidden = false
+              relogioOps = setTimeout(function () { ia = (ia + 1) % IAS.length; nova(); operar() }, 4200)
+              return
+            }
+            relogioOps = setTimeout(operar, 700)
+          }, 1500)
+        }, 1100)
+      }
+      var relogioGrafico = null
+      function ligar() {
+        if (rodando) return
+        // retomou com uma entrada pela metade: ela some, e a sessão segue de onde estava
+        var pendente = lista.firstChild && lista.firstChild.querySelector('.lp-op-res:not(.pos):not(.neg)')
+        if (pendente) { lista.removeChild(lista.firstChild); marcas.pop(); s.n-- }
+        rodando = true; relogioGrafico = setInterval(passo, reduzir ? 600 : 160); operar()
+      }
+      function desligar() { rodando = false; clearInterval(relogioGrafico); clearTimeout(relogioOps) }
+      nova(); desenhar()
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (e) { visivel = e[0].isIntersecting; visivel && !document.hidden ? ligar() : desligar() }, { threshold: .15 }).observe(cab)
+        document.addEventListener('visibilitychange', function () { document.hidden ? desligar() : visivel && ligar() })
+      } else ligar()
+      addEventListener('resize', desenhar)
     })()
   </script>
-  <script>
+<script>
     (function () {
       var form = document.getElementById('form'), inicio = Date.now()
       var tel = form.elements.telefone, botao = form.querySelector('.botao'), mensagem = form.querySelector('.mensagem')
