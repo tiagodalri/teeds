@@ -549,8 +549,9 @@
       })
 
       var atual = 0, s = null, k = 0, acum = [0], mostrado = 0, alvo = 0, positivas = 0
-      var rodando = false, visivel = false, timer = null, quadro = null, pausaFim = false, inicio = 0, DURACAO = 16000
-      function passoMs() { return Math.max(140, Math.min(700, DURACAO / s.ops.length)) }
+      var rodando = false, visivel = false, timer = null, quadro = null, pausaFim = false, inicio = 0
+      // uma operação por segundo (31/10/2026, Tiago: "rápida, mas nem tanto")
+      function passoMs() { return 1000 }
 
       function escolher(i, pelaPessoa) {
         clearTimeout(timer); atual = i; s = SESSOES[i]; k = 0; acum = [0]; mostrado = 0; alvo = 0; positivas = 0; pausaFim = false
