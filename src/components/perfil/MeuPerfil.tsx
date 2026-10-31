@@ -237,7 +237,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
           <h2><Ic d={I.pessoa} />Dados pessoais</h2>
           <label className="mp-campo">
             <span>Nome completo</span>
-            <input id="mp-nome" value={nome} autoComplete="name" autoCapitalize="words" enterKeyHint="next" placeholder="Seu nome e sobrenome" onChange={(e) => setNome(e.target.value)} aria-invalid={!nomeOk} />
+            <input id="mp-nome" value={nome} autoComplete="name" autoCapitalize="words" enterKeyHint="next" placeholder="Seu nome e sobrenome" onChange={(e) => setNome(e.target.value)} aria-invalid={!nomeOk && !!nome.trim()} />
             {!nomeOk && nome.trim() && <small className="erro">Coloque nome e sobrenome.</small>}
           </label>
           <label className="mp-campo">

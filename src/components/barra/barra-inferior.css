@@ -34,8 +34,8 @@
   body:has(.barra-inferior):has(.app-convite) .av-pilula { bottom: calc(160px + var(--sab, 0px)); }
   body:has(.barra-inferior):has(.app-convite):has(.av-pilula) .sp-lancador-area { bottom: calc(212px + var(--sab, 0px)); }
   body:has(.barra-inferior):has(.sp-lancador) .workspace-app :is(.in, .mp, .aj, .ger) { padding-bottom: 84px; }
-  /* o menu completo (gaveta) termina acima da barra */
-  body:has(.barra-inferior) .workspace-sidebar.mobile-open { padding-bottom: calc(80px + var(--sab, 0px)); }
+  /* 31/10/2026: com a gaveta aberta a barra some (fim do app.css), então a gaveta vai até o pé.
+     Antes ela reservava 80 px para a barra, e no app instalado o último item (Ajuda) ficava atrás do relógio. */
   /* teclado aberto: a barra sai (não sobe grudada no teclado) */
   body:has(:is(input, textarea, select):focus) .barra-inferior { display: none; }
 }
