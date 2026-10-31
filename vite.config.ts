@@ -167,7 +167,11 @@ const fonte = (familias: string) => `<link rel="stylesheet" href="https://fonts.
 const FONTES_DA_MARCA: Record<string, string> = {
   teeds: fonte('family=Cinzel:wght@500;600'),
   omni: fonte('family=Cinzel:wght@500;600&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700'),
-  globalfly: fonte('family=Arimo:wght@400;500;600;700'),
+  // 31/10/2026: a da GlobalFly não segura mais a primeira pintura. A Arimo tem
+  // as mesmas medidas da Arial (a reserva), então a troca não mexe em nada na tela.
+  globalfly: `<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'" />
+    <noscript>${fonte('family=Arimo:wght@400;500;600;700')}</noscript>`,
 }
 
 /**
@@ -236,6 +240,41 @@ export default defineConfig({
             .replace('%FONTES%', FONTES_DA_MARCA[MARCA.id] ?? FONTES_DA_MARCA.teeds)
             .replace('%ABERTURA%', aberturaDoApp())
             .replace('</head>', `${telasDeAbertura()}</head>`),
+      },
+    },
+    {
+      /*
+        Abrir mais rápido (31/10/2026). Logo depois do JS principal o app pede o
+        Início, a decolagem e os recursos do app, e cada um puxa os próprios
+        pedaços: uma fila de idas e vindas antes da primeira tela. Com o aviso no
+        <head> o navegador baixa tudo junto com o principal. O "?v=" entra
+        depois, em scripts/versao.mjs, igual aos outros assets. O crossorigin é o
+        mesmo que o carregador do Vite usa: sem ele o CSS seria baixado duas vezes.
+      */
+      name: 'teeds:adiantar-a-abertura',
+      transformIndexHtml: {
+        order: 'post' as const,
+        handler: (html: string, ctx: { bundle?: Record<string, any> }) => {
+          if (!ctx.bundle) return html
+          const nomes = [MARCA.inicio && 'InicioPagina', MARCA.decolagem && 'Decolagem', MARCA.appNativo && 'RecursosDeApp'].filter(Boolean)
+          const pedacos = Object.values(ctx.bundle).filter((c: any) => c.type === 'chunk')
+          const porArquivo = new Map(pedacos.map((c: any) => [c.fileName, c]))
+          const js = new Set<string>(); const css = new Set<string>()
+          const juntar = (c: any) => {
+            if (!c || c.isEntry || js.has(c.fileName)) return
+            js.add(c.fileName)
+            for (const f of c.viteMetadata?.importedCss ?? []) css.add(f)
+            for (const f of c.imports ?? []) juntar(porArquivo.get(f))
+          }
+          for (const c of pedacos) if (!c.isEntry && nomes.includes(c.name) && c.isDynamicEntry) juntar(c)
+          return {
+            html,
+            tags: [
+              ...[...js].map((f) => ({ tag: 'link', attrs: { rel: 'modulepreload', crossorigin: true, href: `${MARCA.base}${f}` }, injectTo: 'head' as const })),
+              ...[...css].map((f) => ({ tag: 'link', attrs: { rel: 'preload', as: 'style', crossorigin: true, href: `${MARCA.base}${f}` }, injectTo: 'head' as const })),
+            ],
+          }
+        },
       },
     },
     {
@@ -420,13 +459,15 @@ export default defineConfig({
           `const CACHE='${MARCA.id}-${assinatura}';`,
           `const SHELL=${JSON.stringify(preCache)};`,
           `self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).catch(()=>{}));self.skipWaiting()});`,
-          `self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));`,
+          // Pré-carga da navegação (31/10/2026): o navegador já pede a página enquanto o
+          // service worker acorda, em vez de esperar ele acordar para só então pedir.
+          `self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.registration.navigationPreload&&self.registration.navigationPreload.enable().catch(()=>{})).then(()=>self.clients.claim())));`,
           `self.addEventListener('fetch',e=>{const r=e.request;const u=new URL(r.url);if(r.method!=='GET'||u.origin!==self.location.origin||r.cache==='no-store'||u.searchParams.has('vivo'))return;`,
           // Só a RAIZ vira o app guardado para uso sem rede (09/10/2026). Antes
           // qualquer navegação era gravada como './index.html': abrir /cadastro
           // (a landing) ou /cadastre-se (o encaminhamento) trocava o app guardado
           // por outra página. Sem rede, qualquer endereço continua caindo no app.
-          `if(r.mode==='navigate'){const raiz=u.pathname===new URL('./',self.location).pathname;e.respondWith(fetch(r).then(x=>{if(x.ok&&raiz)caches.open(CACHE).then(c=>c.put('./index.html',x.clone()));return x}).catch(()=>caches.match('./index.html')));return}`,
+          `if(r.mode==='navigate'){const raiz=u.pathname===new URL('./',self.location).pathname;e.respondWith(Promise.resolve(e.preloadResponse).catch(()=>null).then(p=>p||fetch(r)).then(x=>{if(x.ok&&raiz)caches.open(CACHE).then(c=>c.put('./index.html',x.clone()));return x}).catch(()=>caches.match('./index.html')));return}`,
           `if(/\\/assets\\/.+\\.(?:js|css)$/.test(u.pathname)&&u.searchParams.has('v')){e.respondWith(caches.match(r).then(h=>h||fetch(r).then(x=>{if(x.ok)caches.open(CACHE).then(c=>c.put(r,x.clone()));return x})));return}`,
           `if(r.destination==='image'||r.destination==='font'){e.respondWith(caches.match(r).then(h=>{const n=fetch(r).then(x=>{if(x.ok)caches.open(CACHE).then(c=>c.put(r,x.clone()));return x}).catch(()=>h);return h||n}));return}`,
           `e.respondWith(fetch(r).then(x=>{if(x.ok&&!/\\.json$/.test(u.pathname))caches.open(CACHE).then(c=>c.put(r,x.clone()));return x}).catch(()=>caches.match(r)))});`,

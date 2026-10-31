@@ -73,15 +73,33 @@ function marcarJornada(p: { demo?: boolean; primeiraIa?: boolean }) {
 const inicioDoDia = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() }
 // o último dia lido fica guardado enquanto o app está aberto: voltar ao Início
 // mostra o Hoje na hora, sem passar pelo vazio até a próxima consulta
-let diaGuardado: { userId: string; desde: number; sessoes: SessaoServidor[] } | null = null
+// 31/10/2026: também fica no aparelho, para o app reaberto já mostrar o dia
+// enquanto a consulta nova chega
+const CHAVE_DIA = `${MARCA.id}.inicio.dia`
+let diaGuardado: { userId: string; desde: number; sessoes: SessaoServidor[] } | null = (() => {
+  try { return JSON.parse(localStorage.getItem(CHAVE_DIA) || 'null') } catch { return null }
+})()
 const diaJaLido = (userId?: string) =>
   diaGuardado && diaGuardado.userId === userId && diaGuardado.desde === inicioDoDia() ? diaGuardado.sessoes : null
+function guardarDia(d: NonNullable<typeof diaGuardado>) {
+  diaGuardado = d
+  try { localStorage.setItem(CHAVE_DIA, JSON.stringify(d)) } catch { /* só agora */ }
+}
+
+// o último mercado lido aparece na hora; o novo chega por trás
+const CHAVE_MERCADO = `${MARCA.id}.inicio.mercado`
+function mercadoGuardado(): { cotacoes: Cotacao[]; noticias: Noticia[] } | null {
+  try {
+    const m = JSON.parse(localStorage.getItem(CHAVE_MERCADO) || 'null')
+    return m && Date.now() - m.em < 6 * 3600_000 ? { cotacoes: m.cotacoes ?? [], noticias: m.noticias ?? [] } : null
+  } catch { return null }
+}
 
 export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, aoAbrirCarteira, vivas: vivasDeFora }: Props) {
   const [vivasProprias, setVivas] = useState<SessaoViva[]>([])
   const vivas = vivasDeFora ?? vivasProprias
   const [sessoesHoje, setSessoesHoje] = useState<SessaoServidor[] | null>(() => diaJaLido(sessao?.usuario.id))
-  const [mercado, setMercado] = useState<{ cotacoes: Cotacao[]; noticias: Noticia[] } | null>(null)
+  const [mercado, setMercado] = useState<{ cotacoes: Cotacao[]; noticias: Noticia[] } | null>(mercadoGuardado)
   // a leitura do mercado falhou (o bloco deixa de "carregar" para sempre e oferece tentar de novo)
   const [mercadoFalhou, setMercadoFalhou] = useState(false)
   const [rodadaMercado, setRodadaMercado] = useState(0)
@@ -112,7 +130,7 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
     const ler = () => listarSessoes(sessao, (Date.now() - inicioDoDia()) / 3600_000 + 1, 300)
       .then((l) => {
         const doDia = l.filter((s) => Date.parse(s.criadaEm) >= inicioDoDia())
-        diaGuardado = { userId: sessao.usuario.id, desde: inicioDoDia(), sessoes: doDia }
+        guardarDia({ userId: sessao.usuario.id, desde: inicioDoDia(), sessoes: doDia })
         if (vivo) setSessoesHoje(doDia)
       })
       .catch(() => undefined)
@@ -129,7 +147,11 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!vivo) return
-        if (d) { setMercado({ cotacoes: d.cotacoes ?? [], noticias: d.noticias ?? [] }); setMercadoFalhou(false) } else setMercadoFalhou(true)
+        if (d) {
+          const m = { cotacoes: d.cotacoes ?? [], noticias: d.noticias ?? [] }
+          try { localStorage.setItem(CHAVE_MERCADO, JSON.stringify({ ...m, em: Date.now() })) } catch { /* só agora */ }
+          setMercado(m); setMercadoFalhou(false)
+        } else setMercadoFalhou(true)
       })
       .catch(() => { if (vivo) setMercadoFalhou(true) })
     setMercadoFalhou(false)

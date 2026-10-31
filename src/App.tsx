@@ -359,10 +359,20 @@ export default function App() {
   // ------------------------------------------------------------------
   // Lê a situação da ficha a cada sessão nova. Enquanto não voltar, o App
   // segue mostrando "abrindo a plataforma…" — nunca a plataforma por engano.
+  // 31/10/2026 (abrir mais rápido): quem já estava ativo neste aparelho entra
+  // na hora e a conferência com o banco corre por trás. Só "ativo" fica
+  // guardado: pendente, suspenso etc. continuam esperando a resposta.
   useEffect(() => {
     if (!teeds.sessao) { setSituacao(null); return }
+    const chave = `${MARCA.id}.situacao.${teeds.sessao.usuario.id}`
+    let guardada: string | null = null
+    try { guardada = localStorage.getItem(chave) } catch { /* sem armazenamento */ }
+    if (guardada === 'ativo') setSituacao('ativo')
     let vivo = true
-    minhaSituacao(teeds.sessao).then((s) => { if (vivo) setSituacao(s) })
+    minhaSituacao(teeds.sessao).then((s) => {
+      try { if (s === 'ativo') localStorage.setItem(chave, s); else localStorage.removeItem(chave) } catch { /* só agora */ }
+      if (vivo) setSituacao(s)
+    })
     return () => { vivo = false }
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 

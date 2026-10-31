@@ -10,7 +10,7 @@ import { naPagina } from '../../core/escala'
 /**
  * A decolagem (21/10/2026): o voo do login até o início. Três tempos:
  *
- *  1. Subida (1,6 s): o avião de ouro sai do botão "Entrar" e sobe na
+ *  1. Subida (1,1 s): o avião de ouro sai do botão "Entrar" e sobe na
  *     diagonal do monograma (32°), acelerando, deixando dois rastros finos
  *     (os motores). O Azul GF varre a tela atrás dele, na mesma diagonal.
  *  2. Cruzeiro: o céu fechado em Azul GF com o monograma, "Bem-vindo a
@@ -25,9 +25,9 @@ import { naPagina } from '../../core/escala'
 
 /** Diagonal do monograma: o eixo do voo. */
 const ANGULO = -32
-const SUBIDA = 1600
-/** Tempo mínimo até o céu abrir, para a chegada não piscar. */
-const MINIMO = 2300
+const SUBIDA = 1100
+/** Tempo mínimo até o céu abrir, para a chegada não piscar (31/10/2026: era 2,3 s; o Tiago achou a entrada lenta). */
+const MINIMO = 1500
 /** Se a plataforma demorar, o céu abre assim mesmo (ela tem o próprio carregando). */
 const MAXIMO = 8000
 
