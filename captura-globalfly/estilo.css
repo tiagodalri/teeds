@@ -407,7 +407,6 @@ body.lp::before { display: none; }
 .lp-manual svg { width: 40px; height: 12px; }
 .lp-manual-lucro { margin-left: auto; text-align: right; }
 .lp-manual-lucro dd { font-size: 30px; color: #5FC48C; }
-.lp-real-nota { margin: 0; max-width: 60em; font-size: 12.5px; color: #7F95AE; }
 
 /* ---------- tripulação */
 .lp-comando { display: grid; gap: 34px; }
