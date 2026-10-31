@@ -19,7 +19,8 @@
 
 @media (min-width: 901px) {
   /* telas com a moldura na própria raiz */
-  .workspace-app :is(.in, .mp, .aj, .mc, .ger.av-pagina:not(.av-com-palco)) {
+  /* 31/10/2026: Relatórios entrou na moldura (tinha 1180 px própria e ficava mais estreita) */
+  .workspace-app :is(.in, .mp, .aj, .mc, .rel, .ger.av-pagina:not(.av-com-palco)) {
     width: 100%; max-width: var(--pagina-max); margin-inline: auto; box-sizing: border-box;
     padding: var(--pagina-topo) var(--pagina-lado) var(--pagina-fim);
   }
