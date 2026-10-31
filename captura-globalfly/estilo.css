@@ -711,6 +711,7 @@ body.lp::before { display: none; }
 .lp-cab-ops li.perdeu { background: rgba(241, 130, 138, .08); }
 .lp-op-n { color: var(--aco); }
 .lp-op-tipo { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--marfim); font-family: Arimo, "Helvetica Neue", Arial, sans-serif; font-weight: 700; white-space: nowrap; overflow: hidden; }
+.lp-op-tipo b { font: 600 13px/1.1 ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; color: var(--marfim); }
 .lp-op-tipo em { flex: none; padding: 2px 6px; border-radius: 6px; background: rgba(243, 213, 140, .14); color: #F3D58C; font-size: 10px; font-style: normal; letter-spacing: .03em; }
 .lp-op-ent { color: var(--aco); }
 .lp-op-res { text-align: right; color: var(--aco); white-space: nowrap; }

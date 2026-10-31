@@ -511,6 +511,7 @@
       // ------------------------------------------------ cabine: reprise de sessões reais, operação por operação
       // (31/10/2026) Uma sessão de cada I.A., gravada na plataforma e terminada na meta: [entrada, 1 = dígito acima
       // / 0 = abaixo, resultado, preço do Volatility 75 na entrada]. Nada aqui é sorteado: é a sessão como foi.
+      // Na fila aparece o preço do índice em cada entrada (pedido do Tiago, no lugar de "Dígito acima/abaixo").
       var cab = document.querySelector('[data-cabine]')
       if (!cab) return
       var SESSOES = [
@@ -527,7 +528,7 @@
       var nEl = q('[data-cab-n]'), posEl = q('[data-cab-pos]'), entEl = q('[data-cab-ent]'), lista = q('[data-cab-ops]')
       var alerta = q('[data-cab-alerta]'), alertaTit = q('[data-cab-alerta-titulo]'), alertaTxt = q('[data-cab-alerta-txt]'), nota = q('[data-cab-nota]')
       var moeda = function (v, sinal) { var t = 'US$ ' + Math.abs(v).toFixed(2).replace('.', ','); return sinal ? (v < 0 ? '−' : '+') + t : t }
-      var preco = function (v) { return v.toFixed(2).replace('.', ',') }
+      var preco = function (v) { return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
       // a fita de cada I.A. (como os stories): toca para ver aquela sessão
       SESSOES.forEach(function (s, i) {
         var b = document.createElement('button')
@@ -570,7 +571,7 @@
         if (!rodando || pausaFim) return
         var op = s.ops[k], n = k + 1, recup = op[0] > s.ops[0][0] + 0.001
         var li = document.createElement('li')
-        li.innerHTML = '<span class="lp-op-n">#' + n + '</span><span class="lp-op-tipo">' + (op[1] ? 'Dígito acima' : 'Dígito abaixo') + (recup ? '<em>Recuperação</em>' : '') + '</span><span class="lp-op-ent">' + moeda(op[0]) + '</span><span class="lp-op-res">…</span>'
+        li.innerHTML = '<span class="lp-op-n">#' + n + '</span><span class="lp-op-tipo">' + '<b>' + preco(op[3]) + '</b>' + (recup ? '<em>Recuperação</em>' : '') + '</span><span class="lp-op-ent">' + moeda(op[0]) + '</span><span class="lp-op-res">…</span>'
         lista.insertBefore(li, lista.firstChild); while (lista.children.length > 5) lista.removeChild(lista.lastChild)
         entEl.textContent = moeda(op[0]); precoEl.textContent = preco(op[3])
         fase(recup ? 'Recuperando' : 'Operando', recup ? 'recupera' : 'opera')
@@ -647,7 +648,7 @@
         for (var x = 0; x < qtd && k < s.ops.length - 1; x++) {
           var op = s.ops[k], n = k + 1, recup = op[0] > s.ops[0][0] + 0.001, ganhou = op[2] > 0
           var li = document.createElement('li'); li.className = ganhou ? 'ganhou' : 'perdeu'; li.style.animation = 'none'
-          li.innerHTML = '<span class="lp-op-n">#' + n + '</span><span class="lp-op-tipo">' + (op[1] ? 'Dígito acima' : 'Dígito abaixo') + (recup ? '<em>Recuperação</em>' : '') + '</span><span class="lp-op-ent">' + moeda(op[0]) + '</span><span class="lp-op-res ' + (ganhou ? 'pos' : 'neg') + '">' + moeda(op[2], true) + '</span>'
+          li.innerHTML = '<span class="lp-op-n">#' + n + '</span><span class="lp-op-tipo">' + '<b>' + preco(op[3]) + '</b>' + (recup ? '<em>Recuperação</em>' : '') + '</span><span class="lp-op-ent">' + moeda(op[0]) + '</span><span class="lp-op-res ' + (ganhou ? 'pos' : 'neg') + '">' + moeda(op[2], true) + '</span>'
           lista.insertBefore(li, lista.firstChild)
           if (ganhou) positivas++
           k = n; alvo = +(alvo + op[2]).toFixed(2); acum.push(alvo)
