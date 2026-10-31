@@ -42,10 +42,8 @@
         </linearGradient>
       </defs>
       <path class="lp-rastro-linha" d="M-60 880 C 420 640, 900 360, 1500 -40" />
-      <path class="lp-rastro-brilho" d="M-60 880 C 420 640, 900 360, 1500 -40" />
     </svg>
     <div class="lp-estrelas" aria-hidden="true"></div>
-    <img class="lp-aviao" src="./img/aviao.webp" alt="" width="520" height="131" aria-hidden="true" />
 
     <header class="lp-topo">
       <img src="/globalfly-assinatura.png" alt="GlobalFly Trade" width="900" height="283" />
@@ -61,13 +59,18 @@
           <span class="lp-l lp-ouro">E quem ficar até o fim leva de graça a plataforma de R$&nbsp;3.000.</span>
         </h1>
         <p class="lp-sub">No final da live de lançamento, quem ficou <b>do início ao fim</b> recebe o acesso gratuito à GlobalFly Trade e concorre ao iMac e à viagem internacional. Você abre a sua conta hoje.</p>
-        <p class="lp-apresenta" data-apresenta hidden></p>
+        <p class="lp-apresenta" data-apresenta hidden><span class="lp-rostos" data-rostos></span><span data-apresenta-texto></span></p>
         <a class="lp-cta" href="#cadastro" data-ir-ao-form><span>Abrir minha conta grátis</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         <span class="lp-mini">Leva 1 minuto. Sem cartão.</span>
       </div>
 
       <div class="lp-palco" aria-label="Na live: acesso gratuito à plataforma e a chance de ganhar um iMac e uma viagem internacional">
         <div class="lp-halo" aria-hidden="true"></div>
+        <div class="lp-aviso-real" aria-label="Resultado real de uma sessão na plataforma">
+          <img src="/pwa-globalfly/icon-180.png" alt="" width="36" height="36" />
+          <div><span class="lp-aviso-app">GlobalFly · agora</span><b>✅ GF Raptor · Meta atingida</b><span>+US$ 125,21 em 286 operações · 227 positivas</span></div>
+          <em>Sessão real · conta demo · 29/10</em>
+        </div>
         <figure class="lp-imac">
           <img src="./img/imac.webp" alt="iMac com a tela da live de lançamento da GlobalFly" width="900" height="738" />
           <figcaption>Concorra a este <b>iMac</b></figcaption>
@@ -122,6 +125,76 @@
   </div>
 
   <main class="lp-corpo">
+  <section class="lp-real" aria-labelledby="real-titulo">
+    <div class="lp-cab">
+      <span class="lp-rotulo">A plataforma por dentro</span>
+      <h2 id="real-titulo">Isso é a GlobalFly funcionando. Números tirados da própria plataforma.</h2>
+      <p>Você escolhe a I.A., define entrada, meta e limite de perda, e ela opera sozinha. Quando a sessão termina, o aviso chega no seu celular.</p>
+    </div>
+    <div class="lp-real-grade">
+      <div class="lp-celular" aria-label="Avisos de sessões encerradas na meta, no celular">
+        <div class="lp-celular-tela">
+          <div class="lp-celular-hora"><span>sexta-feira, 30 de outubro</span><b>12:10</b></div>
+          <div class="lp-notifs">
+            <div class="lp-notif"><img src="/pwa-globalfly/icon-180.png" alt="" width="34" height="34" /><div><span class="lp-notif-app">GlobalFly <em>12:08</em></span><b>✅ GF Falcon · Meta atingida</b><span>+US$ 62,55 em 46 operações · 30 positivas</span></div></div>
+            <div class="lp-notif"><img src="/pwa-globalfly/icon-180.png" alt="" width="34" height="34" /><div><span class="lp-notif-app">GlobalFly <em>11:42</em></span><b>✅ GF Legacy · Meta atingida</b><span>+US$ 10,27 em 74 operações · 45 positivas</span></div></div>
+            <div class="lp-notif"><img src="/pwa-globalfly/icon-180.png" alt="" width="34" height="34" /><div><span class="lp-notif-app">GlobalFly <em>08:58</em></span><b>✅ GF Raptor · Meta atingida</b><span>+US$ 100,45 em 628 operações · 473 positivas</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lp-prints">
+        <article class="lp-print">
+          <header><div><b>GF Raptor</b><span>Volatility 75 · sessão encerrada</span></div><span class="lp-selo-meta">Meta atingida</span></header>
+          <div class="lp-print-res"><b>+US$ 125,21</b><span>em 10 minutos</span></div>
+          <svg class="lp-curva" data-curva viewBox="0 0 600 150" preserveAspectRatio="none" aria-label="Resultado da sessão, operação a operação"></svg>
+          <dl class="lp-print-dados">
+            <div><dt>Operações</dt><dd>286</dd></div><div><dt>Positivas</dt><dd class="pos">227</dd></div><div><dt>Negativas</dt><dd class="neg">59</dd></div>
+            <div><dt>Entrada</dt><dd>US$ 2,50</dd></div><div><dt>Meta</dt><dd>US$ 120</dd></div><div><dt>Limite</dt><dd>US$ 300</dd></div>
+          </dl>
+          <footer>Conta demo · 29/10/2026, 18:15 às 18:25</footer>
+        </article>
+
+        <article class="lp-print lp-print-manual">
+          <header><div><b>Operação manual</b><span>Volatility 75 · Sobe · 1 minuto</span></div><span class="lp-selo-meta">Ganhou</span></header>
+          <div class="lp-manual">
+            <div><dt>Entrada</dt><dd>US$ 100,00</dd></div>
+            <svg viewBox="0 0 40 12" aria-hidden="true"><path d="M2 6h30" stroke="#D4A64A" stroke-width="1.6"/><path d="M30 2l7 4-7 4z" fill="#D4A64A"/></svg>
+            <div><dt>Recebeu</dt><dd>US$ 178,32</dd></div>
+            <div class="lp-manual-lucro"><dt>Lucro</dt><dd>+US$ 78,32</dd></div>
+          </div>
+          <footer>Conta demo · 29/10/2026, 20:02</footer>
+        </article>
+      </div>
+    </div>
+    <p class="lp-real-nota">Sessões e operações reais feitas na GlobalFly em conta de demonstração (dólares virtuais), entre 29 e 30/10/2026. Escolhemos exemplos que terminaram com lucro: nem toda sessão termina na meta, e há sessões que param no limite de perda. Resultados passados não garantem resultados futuros.</p>
+  </section>
+
+  <section class="lp-comando" aria-labelledby="comando-titulo">
+    <div class="lp-cab">
+      <span class="lp-rotulo">Quem está no comando</span>
+      <h2 id="comando-titulo" data-comando-titulo>Quem pilota a live de lançamento</h2>
+    </div>
+    <div class="lp-tripulacao">
+      <article class="lp-piloto" data-piloto="n">
+        <figure class="lp-piloto-capa"><img src="./img/naor-capa.webp" alt="Naor Bezerra" width="800" height="1067" loading="lazy" /></figure>
+        <div class="lp-piloto-info">
+          <span class="lp-piloto-cargo">Comandante da live</span>
+          <h3>Naor Bezerra</h3>
+          <figure class="lp-piloto-real"><img src="./img/naor-evento.webp" alt="Naor Bezerra em evento do mercado financeiro" width="900" height="1154" loading="lazy" /><figcaption>Naor em evento do mercado financeiro</figcaption></figure>
+        </div>
+      </article>
+      <article class="lp-piloto" data-piloto="v">
+        <figure class="lp-piloto-capa"><img src="./img/victor-capa.webp" alt="Victor Cordeiro" width="800" height="1067" loading="lazy" /></figure>
+        <div class="lp-piloto-info">
+          <span class="lp-piloto-cargo">Comandante da live</span>
+          <h3>Victor Cordeiro</h3>
+          <figure class="lp-piloto-real"><img src="./img/victor-turma.webp" alt="Victor Cordeiro em aula presencial" width="900" height="1200" loading="lazy" /><figcaption>Victor em aula presencial</figcaption></figure>
+        </div>
+      </article>
+    </div>
+  </section>
+
   <section class="lp-presentes" aria-labelledby="presentes-titulo">
     <div class="lp-cab lp-presentes-cab">
       <span class="lp-rotulo">No fim da live</span>
@@ -130,7 +203,6 @@
     <div class="lp-presentes-grade">
       <article class="lp-pr lp-pr-viagem">
         <img class="lp-pr-fundo" src="./img/viagem.webp" alt="Asa de avião sobre as nuvens no pôr do sol" width="1400" height="933" loading="lazy" />
-        <img class="lp-pr-aviao" src="./img/aviao.webp" alt="" width="520" height="131" aria-hidden="true" loading="lazy" />
         <div class="lp-pr-texto">
           <span class="lp-pr-para">Você concorre</span>
           <h3>✈ Viagem internacional</h3>
@@ -335,10 +407,40 @@
 
       // quem apresenta vem do endereço: o anúncio do Naor cai no /n, o do Victor no /v
       var APRESENTA = { n: 'Naor Bezerra', v: 'Victor Cordeiro' }
-      var quem = APRESENTA[GF.parceiro() || '']
+      var vitrine = GF.parceiro() || ''
+      var quem = APRESENTA[vitrine]
       var apresenta = document.querySelector('[data-apresenta]')
-      apresenta.textContent = quem ? 'Ao vivo com ' + quem : 'Ao vivo com a equipe GlobalFly'
+      var rostos = vitrine ? [vitrine] : ['n', 'v']
+      document.querySelector('[data-rostos]').innerHTML = rostos.map(function (c) {
+        return '<img src="./img/' + (c === 'n' ? 'naor' : 'victor') + '-rosto.webp" alt="" width="200" height="200" />'
+      }).join('')
+      apresenta.querySelector('[data-apresenta-texto]').textContent = quem ? 'Ao vivo com ' + quem : 'Ao vivo com Naor Bezerra e Victor Cordeiro'
       apresenta.hidden = false
+      // quem é da vitrine vem primeiro e vira o comandante; o outro aparece como copiloto
+      var titulo = document.querySelector('[data-comando-titulo]')
+      if (quem) {
+        titulo.textContent = 'Na live, quem pilota é o ' + quem + '.'
+        Array.prototype.forEach.call(document.querySelectorAll('[data-piloto]'), function (el) {
+          var meu = el.getAttribute('data-piloto') === vitrine
+          el.classList.toggle('lp-piloto-principal', meu)
+          if (!meu) el.querySelector('.lp-piloto-cargo').textContent = 'Copiloto'
+        })
+      }
+
+      // a curva real da sessão do print (GF Raptor, 29/10, 286 operações), operação a operação
+      var CURVA = [-2.5,-5.22,-5.07,-4.92,-4.77,-4.62,-4.47,-4.32,-4.17,-4.02,-6.52,-1.29,-1.14,-0.99,-0.84,-0.69,-3.19,2.04,2.19,2.34,2.49,2.64,2.79,2.94,3.09,3.24,3.39,3.54,3.69,3.84,3.99,4.14,4.29,4.44,4.59,4.74,2.24,-0.48,7.49,7.64,7.79,7.94,8.09,8.24,8.39,8.54,8.69,8.84,8.99,9.14,9.29,9.44,9.59,9.74,9.89,10.04,10.19,10.34,10.49,10.64,10.79,8.29,5.57,13.54,13.69,13.84,13.99,14.14,14.29,14.44,14.59,14.74,14.89,15.04,15.19,12.69,9.97,5.83,-0.53,-10.64,-27.25,-54.54,31.73,31.88,32.03,32.18,32.33,32.48,32.63,32.78,32.93,33.08,33.23,30.73,35.96,36.11,36.26,36.41,36.56,36.71,36.86,37.01,34.51,31.79,39.76,39.91,40.06,40.21,40.36,40.51,40.66,40.81,40.96,41.11,41.26,41.41,41.56,41.71,41.86,42.01,42.16,42.31,42.46,42.61,42.76,42.91,43.06,43.21,43.36,43.51,43.66,43.81,43.96,44.11,44.26,44.41,44.56,44.71,44.86,45.01,45.16,45.31,45.46,45.61,45.76,45.91,46.06,46.21,46.36,46.51,46.66,46.81,46.96,47.11,47.26,47.41,47.56,45.06,50.29,47.79,45.07,40.93,34.57,24.46,7.85,60.36,57.86,55.14,63.11,63.26,63.41,63.56,63.71,63.86,64.01,64.16,61.66,58.94,66.91,67.06,67.21,67.36,67.51,65.01,62.29,58.15,70.39,70.54,70.69,70.84,70.99,71.14,68.64,65.92,61.78,55.42,45.31,77.27,77.42,77.57,77.72,77.87,78.02,78.17,78.32,78.47,78.62,78.77,76.27,73.55,81.52,81.67,81.82,81.97,82.12,82.27,82.42,82.57,82.72,82.87,83.02,80.52,85.75,85.9,86.05,86.2,83.7,80.98,76.84,70.48,60.37,92.33,92.48,92.63,92.78,90.28,87.56,83.42,95.66,95.81,95.96,96.11,96.26,96.41,96.56,96.71,96.86,97.01,97.16,97.31,97.46,94.96,100.19,100.34,100.49,100.64,100.79,98.29,95.57,103.54,103.69,103.84,103.99,104.14,104.29,104.44,101.94,107.17,107.32,107.47,107.62,107.77,107.92,108.07,108.22,108.37,108.52,108.67,106.17,103.45,99.31,92.95,82.84,66.23,38.94,125.21]
+      ;(function () {
+        var svg = document.querySelector('[data-curva]'); if (!svg) return
+        var min = -60, max = 130, X = function (i) { return (i / (CURVA.length - 1) * 600).toFixed(1) }, Y = function (v) { return (8 + (max - v) / (max - min) * 134).toFixed(1) }
+        var pts = CURVA.map(function (v, i) { return X(i) + ',' + Y(v) }).join(' ')
+        svg.innerHTML = '<defs><linearGradient id="curva-ouro" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5FC48C" stop-opacity=".35"/><stop offset="1" stop-color="#5FC48C" stop-opacity="0"/></linearGradient></defs>' +
+          '<line x1="0" x2="600" y1="' + Y(0) + '" y2="' + Y(0) + '" stroke="rgba(156,177,199,.35)" stroke-dasharray="4 4"/>' +
+          '<line x1="0" x2="600" y1="' + Y(120) + '" y2="' + Y(120) + '" stroke="rgba(95,196,140,.6)" stroke-dasharray="4 4"/>' +
+          '<text x="4" y="' + (Y(120) - 4) + '" fill="#5FC48C" font-size="11" font-family="ui-monospace, Menlo, monospace">meta</text>' +
+          '<polygon points="0,' + Y(0) + ' ' + pts + ' 600,' + Y(0) + '" fill="url(#curva-ouro)"/>' +
+          '<polyline class="lp-curva-linha" points="' + pts + '" fill="none" stroke="#5FC48C" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
+          '<circle cx="600" cy="' + Y(125.21) + '" r="4" fill="#5FC48C"/>'
+      })()
 
       // ------------------------------------------------ painel de embarque (contagem até 9/11, 20h de Brasília)
       var INICIO = Date.UTC(2026, 10, 9, 23, 0, 0), FIM = INICIO + 3 * 36e5
