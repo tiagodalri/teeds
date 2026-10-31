@@ -60,6 +60,11 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 import { PreAcesso } from './components/PreAcesso'
 const SalaDeTreino = lazy(() => import('./components/aovivo/SalaDeTreino').then((m) => ({ default: m.SalaDeTreino })))
+const LabCentralExtras = lazy(() => import('./components/aovivo/SalaDeTreino').then((m) => ({ default: function Extras() {
+  // a faixa "Quem recebe" e o histórico das transmissões, com respostas de mentira do banco
+  const sessao = { token: 'lab', usuario: { id: 'lab', nome: 'Tiago', email: 'lab@lab' } } as never
+  return <div className="ger av-pagina tr-sala cv"><m.DestinoDaTransmissao sessao={sessao} noAr={false} /><m.HistoricoDasTransmissoes sessao={sessao} noAr={false} /></div>
+} })))
 const LabRecorte = lazy(() => import('./components/aovivo/LabRecorte'))
 const TesteAtraso = lazy(() => import('./components/aovivo/TesteAtraso'))
 const LabGraficoPro = lazy(() => import('./components/grafico/LabGraficoPro'))
@@ -132,6 +137,23 @@ import { CatalogoDeExemplo } from './core/teeds/catalogoRobos'
 import { ligarEscala } from './core/escala'
 
 document.documentElement.dataset.marca = MARCA.id
+// ?tela=central-extras: o banco responde com plataformas e transmissões de exemplo
+if (new URLSearchParams(location.search).get('tela') === 'central-extras') {
+  const original = window.fetch.bind(window)
+  const agora = Date.now()
+  const json = (d: unknown) => Promise.resolve(new Response(JSON.stringify(d), { status: 200, headers: { 'content-type': 'application/json' } }))
+  window.fetch = (u: RequestInfo | URL, i?: RequestInit) => {
+    const url = String(u)
+    if (url.includes('teeds_plataformas_ao_vivo')) return json([{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }])
+    if (url.includes('teeds_criar_teste_ao_vivo')) return json('a1b2c3d4e5f6')
+    if (url.includes('/rest/v1/transmissoes')) return json([
+      { id: '1', apresentador: 'Victor Dias', teste: false, vitrines: null, iniciada_em: new Date(agora - 40 * 60000).toISOString(), encerrada_em: null, pico: 38, pessoas: 52, tempo_medio_s: 1260, mensagens: 87, presencas: [{ id: 'a', nome: 'Carla', segundos: 2400, entradas: 1 }, { id: 'b', nome: 'João', segundos: 1800, entradas: 2 }, { id: 'c', nome: 'Marcos', segundos: 300, entradas: 1 }], atualizada_em: new Date(agora - 20000).toISOString() },
+      { id: '2', apresentador: 'Victor Dias', teste: false, vitrines: ['v'], iniciada_em: new Date(agora - 26 * 3600000).toISOString(), encerrada_em: new Date(agora - 24.5 * 3600000).toISOString(), pico: 61, pessoas: 74, tempo_medio_s: 3120, mensagens: 143, presencas: [], atualizada_em: new Date(agora - 24.5 * 3600000).toISOString() },
+      { id: '3', apresentador: 'Victor Dias', teste: true, vitrines: null, iniciada_em: new Date(agora - 50 * 3600000).toISOString(), encerrada_em: new Date(agora - 49.8 * 3600000).toISOString(), pico: 2, pessoas: 2, tempo_medio_s: 540, mensagens: 4, presencas: [], atualizada_em: new Date(agora - 49.8 * 3600000).toISOString() },
+    ])
+    return original(u, i)
+  }
+}
 // &tema=claro|escuro vale em qualquer tela do laboratório (conferência dos dois temas)
 { const t = new URLSearchParams(location.search).get('tema'); aplicarTema(t === 'claro' || t === 'escuro' ? t : temaGuardado()) }
 // no computador a página nasce em 90% (ver core/escala.ts)
@@ -409,6 +431,8 @@ function Laboratorio() {
         {/* ?tela=treino: a sala de treino (público e chat simulados). */}
         {/* ?tela=treino&membros=1: a Central ao vivo com membros de mentira entrando, saindo e escrevendo para a equipe */}
         {qual === 'treino' && <Suspense fallback={null}><LabCentral /></Suspense>}
+        {/* ?tela=central-extras: quem recebe (plataformas / teste) e o histórico das transmissões */}
+        {qual === 'central-extras' && <Suspense fallback={null}><LabCentralExtras /></Suspense>}
         {/* ?tela=treino-membro: o membro do plano assistindo o ensaio do admin. */}
         {/* ?tela=inicio&perfil=experiente|novo&tema=escuro|claro: a home, dentro da casca da plataforma */}
         {qual === 'treino-membro' && <Suspense fallback={null}><LabAssistirTreino /></Suspense>}

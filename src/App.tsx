@@ -569,7 +569,10 @@ export default function App() {
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const mostrarAoVivo = LIVES_AO_VIVO || admin === true || membroTreino === true
   useEffect(() => {
-    if (!LIVES_AO_VIVO && tela === 'aovivo' && admin === false && membroTreino === false) setTela('operar')
+    // quem abriu um link de transmissão de teste (31/10/2026) vê a sala mesmo sem ser GF Member
+    let comTeste = false
+    try { comTeste = !!sessionStorage.getItem(`${MARCA.id}.aovivo.teste`) } catch { /* sem armazenamento */ }
+    if (!LIVES_AO_VIVO && tela === 'aovivo' && admin === false && membroTreino === false && !comTeste) setTela('operar')
   }, [tela, admin, membroTreino])
 
   const telaVeioDoVoltar = useRef(false)
@@ -582,12 +585,15 @@ export default function App() {
     // Link da sala de treino (?treino=1): abre o "Ao vivo" já dentro da sala de treino.
     const treino = MARCA.aoVivo && u.searchParams.has('treino')
     if (treino) { try { sessionStorage.setItem(`${MARCA.id}.aovivo.treino`, '1') } catch { /* sem armazenamento */ } }
+    // Link da transmissão de teste (?teste=<código>, 31/10/2026): só quem tem o link vê.
+    const teste = MARCA.aoVivo ? u.searchParams.get('teste') : null
+    if (teste && /^[0-9a-f]{12}$/.test(teste)) { try { sessionStorage.setItem(`${MARCA.id}.aovivo.teste`, teste) } catch { /* sem armazenamento */ } }
     const pedida = convite || treino ? 'aovivo' : telaDoNome(u.searchParams.get('tela'))
     // as do admin também abrem por link: a trava de admin (logo acima) tira quem não for
     const PUBLICAS: WorkspacePage[] = [...(MARCA.inicio ? ['inicio' as const] : []), 'operar', 'robos', 'aulas', 'gerenciamento', ...(MARCA.relatorios ? ['relatorios' as const] : []), 'marketplace', 'perfil', 'ajuda', 'assistente', 'gestao', 'insights', 'monitoramento', 'multiplicadores', ...(MARCA.aoVivo ? ['aovivo' as const] : []), ...(MARCA.noticias ? ['noticias' as const] : [])]
     if (pedida && (PUBLICAS as string[]).includes(pedida)) setTela(pedida as WorkspacePage)
-    if (u.searchParams.has('tela') || u.searchParams.has('aovivo') || u.searchParams.has('treino') || u.searchParams.get('origem') === 'app') {
-      u.searchParams.delete('tela'); u.searchParams.delete('origem'); u.searchParams.delete('aovivo'); u.searchParams.delete('treino')
+    if (u.searchParams.has('tela') || u.searchParams.has('aovivo') || u.searchParams.has('treino') || u.searchParams.has('teste') || u.searchParams.get('origem') === 'app') {
+      u.searchParams.delete('tela'); u.searchParams.delete('origem'); u.searchParams.delete('aovivo'); u.searchParams.delete('treino'); u.searchParams.delete('teste')
       history.replaceState(history.state, '', u.pathname + u.search + u.hash)
     }
     const voltar = (e: PopStateEvent) => {

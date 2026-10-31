@@ -21,6 +21,11 @@
 // é o que diz quem é o apresentador.
 // v10 (27/10/2026): apresentador = qualquer admin da equipe (`teeds_sou_equipe_da`):
 // o admin do parceiro (Naor no /n, Victor no /v) também apresenta a live.
+// v11 (31/10/2026, pedido do Victor Dias): transmissão de teste, com link
+// privado (`teste`: código de `aovivo_testes`), numa sala só dela
+// (`teste-<marca>-<código>`): entra quem tem o link e uma conta, e ninguém é
+// avisado. E as plataformas: com a sala no ar só para algumas vitrines
+// (`treino_no_ar.vitrines`), o membro de outra não entra.
 //
 // O LiveKit roda no nosso servidor (código aberto, sem conta em serviço de
 // fora). Endereço e chaves ficam na tabela `config_servicos`, que só a chave
@@ -117,7 +122,7 @@ Deno.serve(async (req) => {
   // Sem conta, o navegador manda a chave pública no lugar do token da pessoa.
   const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
   if (!token) return resposta(401, { erro: 'Entre na sua conta para assistir.' })
-  const corpo = await req.json().catch(() => ({})) as { liveId?: string; convite?: string; acao?: string; identidade?: string; nome?: string; marca?: string }
+  const corpo = await req.json().catch(() => ({})) as { liveId?: string; convite?: string; acao?: string; identidade?: string; nome?: string; marca?: string; teste?: string; vitrine?: string; apresentar?: boolean }
   let { liveId } = corpo
   const { acao, identidade } = corpo
 
@@ -126,26 +131,41 @@ Deno.serve(async (req) => {
   if (acao === 'treino') {
     const marca = String(corpo.marca ?? '')
     if (!['teeds', 'omni', 'globalfly'].includes(marca)) return resposta(400, { erro: 'Marca inválida.' })
-    const sala = `treino-${marca}`
+    const teste = typeof corpo.teste === 'string' && /^[0-9a-f]{12}$/.test(corpo.teste) ? corpo.teste : null
+    if (teste) {
+      const [t] = await servico<Array<{ codigo: string }>>(`/rest/v1/aovivo_testes?select=codigo&codigo=eq.${teste}&marca=eq.${marca}&expira_em=gt.${encodeURIComponent(new Date().toISOString())}`).catch(() => [])
+      if (!t) return resposta(404, { erro: 'Este link de teste expirou. Peça um novo a quem está transmitindo.' })
+    }
+    const sala = teste ? `teste-${marca}-${teste}` : `treino-${marca}`
     const agora = Math.floor(Date.now() / 1000)
     const u = await banco<{ id: string; user_metadata?: Record<string, string> }>('/auth/v1/user', token).catch(() => null)
-    if (!u) return resposta(401, { erro: 'Entre na sua conta GF Member para assistir o ensaio.' })
+    if (!u) return resposta(401, { erro: teste ? 'Entre na sua conta para ver a transmissão de teste.' : 'Entre na sua conta GF Member para assistir o ensaio.' })
     const rpc = (f: string) => banco<boolean>(`/rest/v1/rpc/${f}`, token, { method: 'POST', body: JSON.stringify({ p_marca: marca }) }).catch(() => false)
-    const [admin, membro] = await Promise.all([rpc('teeds_sou_equipe_da'), rpc('teeds_minha_sala_de_treino')])
-    if (!admin && !membro) return resposta(403, { erro: 'A sala de treino é exclusiva para membros GF Member.' })
+    const [equipe, membro] = await Promise.all([rpc('teeds_sou_equipe_da'), rpc('teeds_minha_sala_de_treino')])
+    // no teste, quem abre o link assiste (mesmo sendo da equipe); só a Central transmite
+    const admin = equipe && (!teste || corpo.apresentar === true)
+    if (!teste && !admin && !membro) return resposta(403, { erro: 'A sala de treino é exclusiva para membros GF Member.' })
+    // no ar só para algumas plataformas: quem é de outra não entra
+    if (!teste && !equipe) {
+      const [noAr] = await servico<Array<{ vitrines: string[] | null; visto_em: string }>>(`/rest/v1/treino_no_ar?select=vitrines,visto_em&marca=eq.${marca}`).catch(() => [])
+      if (noAr?.vitrines && Date.now() - Date.parse(noAr.visto_em) < 75_000) {
+        const minha = await banco<string>('/rest/v1/rpc/teeds_minha_vitrine_ao_vivo', token, { method: 'POST', body: JSON.stringify({ p_marca: marca, p_vitrine: String(corpo.vitrine ?? '') }) }).catch(() => 'direto')
+        if (!noAr.vitrines.includes(minha)) return resposta(403, { erro: 'Esta transmissão é para os alunos de outra plataforma.' })
+      }
+    }
     const [ficha] = await banco<Array<{ nome: string | null }>>(`/rest/v1/clientes?select=nome&user_id=eq.${u.id}&marca=eq.${marca}&limit=1`, token).catch(() => [])
     const completo = String(ficha?.nome || u.user_metadata?.nome || u.user_metadata?.full_name || '').trim()
     const nome = (admin ? completo : completo.split(/\s+/)[0]) || (admin ? 'Apresentador' : 'Membro')
     const ingresso = await assinar({
       iss: LK_KEY, sub: u.id, name: nome, nbf: agora, exp: agora + 6 * 3600,
-      metadata: JSON.stringify({ moderador: admin, treino: true }),
+      metadata: JSON.stringify({ moderador: admin, treino: true, ...(teste ? { teste: true } : {}) }),
       video: {
         room: sala, roomJoin: true, canSubscribe: true, canPublishData: true,
         canPublish: admin, roomAdmin: admin, canUpdateOwnMetadata: false,
         ...(admin ? { canPublishSources: ['camera', 'microphone', 'screen_share', 'screen_share_audio'] } : {}),
       },
     })
-    return resposta(200, { url: LK_URL, token: ingresso, nome, moderador: admin, silenciado: false })
+    return resposta(200, { url: LK_URL, token: ingresso, nome, moderador: admin, silenciado: false, teste: !!teste })
   }
 
   // Quem chegou pelo link: informações públicas da live (se o link estiver aberto).

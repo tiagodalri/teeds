@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { definirModoDoTreino, entrarNoTreino, modoForaDoTreino, sairDoTreino, simularTreino, useTreino, type ModoDoTreino } from '../../core/live/treino'
+import { definirModoDoTreino, entrarNoTreino, esquecerTesteDoLink, modoForaDoTreino, sairDoTreino, simularTreino, testeDoLink, useTreino, type ModoDoTreino } from '../../core/live/treino'
 import { MARCA } from '../../marca'
 import { ICONE_PALCO, abrirPorCima, podeAbrirPorCima, useLargo, useTeatro } from './AoVivo'
 import PlayerDoTreino, { ChatDoTreino, PalcoDoTreino } from './PlayerDoTreino'
@@ -40,16 +40,26 @@ export function AssistirTreino({ sessao, conectar = true }: { sessao: SessaoTeed
           : { cls: 'fora', txt: 'Aguardando início', curto: 'Em breve' }
   const primeiro = (t.quemApresenta || '').trim().split(/\s+/)[0]
   const modoFora = modoForaDoTreino()
+  // chegou pelo link de uma transmissão de teste (31/10/2026)
+  const teste = !!testeDoLink()
 
   return (
     <div className="tr-assistir av-aluno">
       <header className="tr-cabeca" style={MARCA.id === 'globalfly' ? { '--tr-marca': `url(${import.meta.env.BASE_URL}globalfly-gf-escuro.png)` } as CSSProperties : undefined}>
         {MARCA.id === 'globalfly' && <img className="tr-cabeca-selo" src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
-        <div className="tr-cabeca-texto">
-          <span className="tr-cabeca-sobre">Sala de treino</span>
-          <h1>Transmissão exclusiva do <em>GF Member</em></h1>
-          <p>{t.presente && primeiro ? <>Com <b>{primeiro}</b>. Você está entre os membros convidados.</> : 'Ainda não há transmissão agora. Quando a equipe abrir a sala, o menu Ao vivo ganha um ponto vermelho.'}</p>
-        </div>
+        {teste ? (
+          <div className="tr-cabeca-texto">
+            <span className="tr-cabeca-sobre">Transmissão de teste</span>
+            <h1>Só quem tem o link <em>vê esta transmissão</em></h1>
+            <p>{t.presente && primeiro ? <>Com <b>{primeiro}</b>. Ninguém mais foi avisado.</> : 'Aguardando quem transmite começar o teste.'}</p>
+          </div>
+        ) : (
+          <div className="tr-cabeca-texto">
+            <span className="tr-cabeca-sobre">Sala de treino</span>
+            <h1>Transmissão exclusiva do <em>GF Member</em></h1>
+            <p>{t.presente && primeiro ? <>Com <b>{primeiro}</b>. Você está entre os membros convidados.</> : 'Ainda não há transmissão agora. Quando a equipe abrir a sala, o menu Ao vivo ganha um ponto vermelho.'}</p>
+          </div>
+        )}
         <span className={`tr-status ${status.cls}`} role="status"><i aria-hidden /><span className="tr-status-longo">{status.txt}</span>{'curto' in status && <span className="tr-status-curto" aria-hidden>{status.curto}</span>}</span>
       </header>
 
@@ -77,7 +87,7 @@ export function AssistirTreino({ sessao, conectar = true }: { sessao: SessaoTeed
         )}
         {t.fase === 'fora' && conectar && sessao
           ? <button className="av-botao-secundario" onClick={() => void entrarNoTreino(sessao)}>Entrar de novo na transmissão</button>
-          : <button className="av-link" onClick={() => void sairDoTreino()}>Sair da transmissão</button>}
+          : <button className="av-link" onClick={() => { if (teste) esquecerTesteDoLink(); void sairDoTreino() }}>{teste ? 'Sair do teste' : 'Sair da transmissão'}</button>}
       </div>
     </div>
   )

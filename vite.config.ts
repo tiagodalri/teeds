@@ -335,6 +335,8 @@ export default defineConfig({
           if (outra.id !== 'teeds') rmSync(join(SAIDA, `aulas-${outra.id}`), { recursive: true, force: true })
           // Fundos de câmera da live (fundos-globalfly/...): só no site da marca.
           rmSync(join(SAIDA, `fundos-${outra.id}`), { recursive: true, force: true })
+          // Cenas prontas do estúdio da live (estudio-globalfly/...): só no site da marca.
+          rmSync(join(SAIDA, `estudio-${outra.id}`), { recursive: true, force: true })
           // Fotos da vitrine de robôs (robos-globalfly/...): só no site da marca.
           rmSync(join(SAIDA, `robos-${outra.id}`), { recursive: true, force: true })
           // Cenas do login (login-globalfly/...): só no site da marca.

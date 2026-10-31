@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import type { CantoDaCamera } from '../../core/live/api'
 import {
   abrirChatDoTreino, ajustar, dispararMomento, falarComoApresentador, iniciarSimulacao, limparChat, pararSimulacao, useSimulacao,
@@ -10,8 +10,13 @@ import { MedidorDeVolume } from './MedidorDeVolume'
 import { MARCA } from '../../marca'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import {
-  alternarFonte, cantoDoTreino, cantoNoTreino, entrarNoTreino, prepararSalaDoAdmin, sairDoTreino, trocarFundoDoTreino, useTreino,
+  alternarFonte, cantoDoTreino, cantoNoTreino, definirVitrinesDoTreino, entrarNoTreino, linkDoTeste, prepararSalaDoAdmin, sairDoTreino,
+  trocarFundoDoTreino, trocarTeste, usarEstudioNoTreino, useTreino,
 } from '../../core/live/treino'
+import { listarTransmissoes, plataformasDaMarca, type Transmissao } from '../../core/live/historico'
+
+// o estúdio de cenas (31/10/2026) só baixa quando é usado
+const Estudio = lazy(() => import('./estudio/Estudio'))
 
 /**
  * Sala de treino (plano "treino"): o influenciador ensaia a live com a tela,
@@ -126,7 +131,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     prepararSalaDoAdmin()
     if (!sessao) return
     if (tr.apresentador && (tr.fase === 'conectada' || tr.fase === 'conectando' || tr.fase === 'reconectando')) return
-    void entrarNoTreino(sessao)
+    void entrarNoTreino(sessao, '', true)
   }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const { tela, camera, mic } = tr.local
   const fundo = tr.fundo
@@ -152,6 +157,19 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   }, [sim.mensagens.length, aba])
 
   const ligar = async (qual: 'tela' | 'camera' | 'mic') => { setErro(null); setErro(await alternarFonte(qual)) }
+  // Estúdio de cenas (como o OBS) ou só tela e câmera, como antes (31/10/2026)
+  const CHAVE_MODO = `${MARCA.id}.central.modo`
+  const computador = typeof window !== 'undefined' && window.matchMedia('(min-width: 901px)').matches
+  const [modo, setModoEstado] = useState<'estudio' | 'simples'>(() => {
+    try { const g = localStorage.getItem(CHAVE_MODO); if (g === 'estudio' || g === 'simples') return g } catch { /* sem armazenamento */ }
+    return computador ? 'estudio' : 'simples'
+  })
+  const setModo = (m: 'estudio' | 'simples') => {
+    setModoEstado(m)
+    try { localStorage.setItem(CHAVE_MODO, m) } catch { /* só agora */ }
+    if (m === 'simples') void usarEstudioNoTreino(null)
+  }
+  const comEstudio = modo === 'estudio' && computador
   const sairDaSala = () => { void sairDoTreino(); aoSair() }
 
   const podeTela = typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.getDisplayMedia === 'function'
@@ -163,7 +181,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d={ICONE[qual === 'mic' ? 'microfone' : qual]} />{!ligado && <path d="M4 4l16 16" />}
         </svg>
-        <span><b>{rotulo}</b><small>{semSuporte ? 'só no computador' : ligado ? 'ligada no ensaio' : 'desligada'}</small></span>
+        <span><b>{rotulo}</b><small>{semSuporte ? 'Só no computador' : ligado ? 'Ligada no ensaio' : 'Desligada'}</small></span>
       </button>
     )
   }
@@ -175,13 +193,15 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   )
 
   const comecar = () => { iniciarSimulacao(apresentador); setAba('chat') }
-  const temImagem = !!tela || !!camera
+  const temImagem = !!tela || !!camera || comEstudio
   // tela inteira: sem prévia aqui por padrão (evita o espelho infinito e poupa o computador)
   const [verPrevia, setVerPrevia] = useState(false)
   const ocultarTela = !!tela && !verPrevia &&
     (tela.getVideoTracks()[0]?.getSettings() as MediaTrackSettings & { displaySurface?: string } | undefined)?.displaySurface === 'monitor'
   const passos = [
-    { feito: temImagem, titulo: 'Ligue a câmera ou a tela', dica: 'Nos botões Tela, Câmera e Microfone, no topo. O microfone é opcional.' },
+    comEstudio
+      ? { feito: true, titulo: 'Monte as cenas no estúdio', dica: 'Abaixo: cenas, fontes, mixer e transição. O que está em Ao vivo é o que os alunos recebem.' }
+      : { feito: temImagem, titulo: 'Ligue a câmera ou a tela', dica: 'Nos botões Tela, Câmera e Microfone, no topo. O microfone é opcional.' },
     { feito: ajustou || sim.ativa, titulo: 'Ajuste a sala', dica: 'Na coluna da esquerda: tamanho do público, chat e câmera.' },
     { feito: sim.ativa, titulo: 'Comece a transmissão', dica: 'No botão dourado do topo. Os membros passam a ver você e recebem o aviso de ao vivo.' },
   ]
@@ -315,9 +335,15 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
           )}
         </div>
         <div className="av-mesa-fontes" role="group" aria-label="O que entra na transmissão">
-          {fonte('tela', 'Tela', !!tela)}
-          {fonte('camera', 'Câmera', !!camera)}
-          {fonte('mic', 'Microfone', !!mic)}
+          {computador && <div className="tr-seg cv-modo" role="radiogroup" aria-label="De onde vem a imagem">
+            <button role="radio" aria-checked={comEstudio} className={comEstudio ? 'on' : ''} disabled={sim.ativa} title={sim.ativa ? 'Encerre a transmissão para trocar' : undefined} onClick={() => setModo('estudio')}>Estúdio de cenas</button>
+            <button role="radio" aria-checked={!comEstudio} className={!comEstudio ? 'on' : ''} disabled={sim.ativa} title={sim.ativa ? 'Encerre a transmissão para trocar' : undefined} onClick={() => setModo('simples')}>Tela e câmera</button>
+          </div>}
+          {!comEstudio && <>
+            {fonte('tela', 'Tela', !!tela)}
+            {fonte('camera', 'Câmera', !!camera)}
+            {fonte('mic', 'Microfone', !!mic)}
+          </>}
         </div>
         <div className="av-mesa-acao">
           {sim.ativa
@@ -327,6 +353,8 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
         </div>
         {erro && <p className="av-erro" role="alert">{erro}</p>}
       </section>
+
+      {sessao && <DestinoDaTransmissao sessao={sessao} noAr={sim.ativa} />}
 
       {!sim.ativa && (
         <ol className="tr-passos" aria-label="Como começar">
@@ -338,6 +366,8 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
           ))}
         </ol>
       )}
+
+      {comEstudio && <Suspense fallback={<section className="es es-carregando"><p>Abrindo o estúdio…</p></section>}><Estudio /></Suspense>}
 
       <div className="cv-numeros" role="group" aria-label="Números da transmissão">
         <div><small>Membros na sala</small><b className="cv-num">{tr.membros}</b><em>reais, sem a simulação</em></div>
@@ -351,7 +381,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
         {controles}
 
         <div className="cv-centro">
-          <div className="av-palco cv-palco">
+          {!comEstudio && <div className="av-palco cv-palco">
             {tela && ocultarTela ? (
               <div className="av-previa-oculta">
                 <b>Sua tela inteira está na transmissão</b>
@@ -367,7 +397,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
               </div>
             )}
             <span className="tr-selo"><i aria-hidden />GF Streaming{sim.ativa && <> · {fmt(sim.publicoAgora)} na sala</>}</span>
-          </div>
+          </div>}
           <section className="cv-card cv-movimento" aria-label="Movimento da sala">
             <h4>Movimento da sala <small>membros reais</small></h4>
             {central.movimento.length === 0
@@ -432,6 +462,147 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
           </section>
         </div>
       </div>
+
+      {sessao && <HistoricoDasTransmissoes sessao={sessao} noAr={sim.ativa} />}
     </div>
+  )
+}
+
+/* ------------------------------------------- quem recebe (31/10/2026) */
+
+/**
+ * Antes de começar: transmissão de verdade (para as plataformas marcadas) ou
+ * de teste, com um link privado e sem avisar ninguém. Pedido do Victor Dias:
+ * "uma opção de teste que cria só um link" e "em quais plataformas eu quero
+ * abrir a live: a do Victor Cordeiro, a do Naor, ou as duas".
+ */
+export function DestinoDaTransmissao({ sessao, noAr }: { sessao: SessaoTeeds; noAr: boolean }) {
+  const tr = useTreino()
+  const [plataformas, setPlataformas] = useState<Array<{ codigo: string; nome: string }>>([])
+  const [ocupado, setOcupado] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+  const [copiado, setCopiado] = useState(false)
+  useEffect(() => { if (MARCA.parceiros?.length) void plataformasDaMarca(sessao).then(setPlataformas) }, [sessao.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const opcoes = plataformas.length ? [...plataformas.map((p) => ({ codigo: p.codigo, nome: p.nome, rota: `/${p.codigo}` })), { codigo: 'direto', nome: 'Direto', rota: 'sem parceiro' }] : []
+  const todas = tr.vitrines === null
+  const marcada = (c: string) => todas || tr.vitrines!.includes(c)
+  const alternar = (c: string) => {
+    const atual = todas ? opcoes.map((o) => o.codigo) : tr.vitrines!
+    const nova = atual.includes(c) ? atual.filter((x) => x !== c) : [...atual, c]
+    if (!nova.length) { setErro('Deixe pelo menos uma plataforma marcada.'); return }
+    setErro(null)
+    definirVitrinesDoTreino(nova.length === opcoes.length ? null : nova)
+  }
+  const mudarTeste = async (ligar: boolean) => { setOcupado(true); setErro(null); setErro(await trocarTeste(sessao, ligar)); setOcupado(false) }
+  const link = tr.teste ? linkDoTeste(tr.teste) : ''
+  const copiar = async () => {
+    try { await navigator.clipboard.writeText(link) } catch {
+      const t = document.createElement('textarea'); t.value = link; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove()
+    }
+    setCopiado(true); window.setTimeout(() => setCopiado(false), 1800)
+  }
+  const texto = `Transmissão de teste da ${MARCA.prosa} (só quem tem este link vê): ${link}`
+  const nativo = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+  return (
+    <section className={`cv-destino ${tr.teste ? 'teste' : ''}`} aria-label="Quem recebe a transmissão">
+      <div className="cv-destino-modo">
+        <span className="cv-destino-rotulo">Quem recebe</span>
+        <div className="tr-seg" role="radiogroup" aria-label="Tipo de transmissão">
+          <button role="radio" aria-checked={!tr.teste} className={!tr.teste ? 'on' : ''} disabled={noAr || ocupado} onClick={() => { if (tr.teste) void mudarTeste(false) }}>De verdade</button>
+          <button role="radio" aria-checked={!!tr.teste} className={tr.teste ? 'on' : ''} disabled={noAr || ocupado} onClick={() => { if (!tr.teste) void mudarTeste(true) }}>Teste com link privado</button>
+        </div>
+        {noAr && <small className="cv-destino-trava">Encerre a transmissão para trocar</small>}
+      </div>
+      {tr.teste ? (
+        <div className="cv-destino-teste">
+          <p><b>Ninguém é avisado.</b> Sem ponto vermelho e sem aviso de live: só quem abrir este link (com a conta) vê. Os membros na sala de sempre não recebem nada. O link vale 12 horas.</p>
+          <div className="av-link-live compacto">
+            <div className="av-link-live-texto"><small>Link da transmissão de teste</small><code title={link}>{link.replace(/^https?:\/\//, '')}</code></div>
+            <div className="av-link-live-acoes">
+              <button className={`av-botao-mini ${copiado ? 'ok' : ''}`} onClick={() => void copiar()}>{copiado ? 'Copiado' : 'Copiar'}</button>
+              {nativo
+                ? <button className="av-botao-whats" onClick={() => void navigator.share({ text: texto }).catch(() => undefined)}>Compartilhar</button>
+                : <a className="av-botao-whats" href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
+            </div>
+          </div>
+        </div>
+      ) : opcoes.length > 0 ? (
+        <div className="cv-destino-plataformas">
+          <span>Abre nas plataformas:</span>
+          <div className="cv-plataformas" role="group" aria-label="Plataformas">
+            {opcoes.map((o) => (
+              <button key={o.codigo} type="button" role="checkbox" aria-checked={marcada(o.codigo)} disabled={noAr} className={marcada(o.codigo) ? 'on' : ''} onClick={() => alternar(o.codigo)}>
+                <i aria-hidden>{marcada(o.codigo) ? '✓' : ''}</i>{o.nome}<small>{o.rota}</small>
+              </button>
+            ))}
+          </div>
+          <small className="cv-destino-nota">{todas ? 'Todos os membros recebem o aviso de ao vivo.' : 'Só os membros das plataformas marcadas recebem o aviso e entram na sala.'}</small>
+        </div>
+      ) : null}
+      {erro && <p className="av-erro" role="alert">{erro}</p>}
+    </section>
+  )
+}
+
+/* ---------------------------------------- histórico das lives (31/10/2026) */
+
+const quando = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+const tempo = (s: number) => {
+  if (s < 60) return `${s} s`
+  const m = Math.floor(s / 60)
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`
+}
+
+export function HistoricoDasTransmissoes({ sessao, noAr }: { sessao: SessaoTeeds; noAr: boolean }) {
+  const [lista, setLista] = useState<Transmissao[] | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+  const [aberta, setAberta] = useState<string | null>(null)
+  const [nomes, setNomes] = useState<Record<string, string>>({})
+  useEffect(() => { void plataformasDaMarca(sessao).then((l) => setNomes(Object.fromEntries(l.map((p) => [p.codigo, p.nome])))) }, [sessao.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    let vivo = true
+    const ler = () => listarTransmissoes(sessao).then((l) => { if (vivo) { setLista(l); setErro(null) } }).catch(() => { if (vivo) setErro('Não consegui carregar o histórico.') })
+    void ler()
+    const t = window.setInterval(() => void ler(), 30_000)
+    return () => { vivo = false; window.clearInterval(t) }
+  }, [sessao.usuario.id, noAr]) // eslint-disable-line react-hooks/exhaustive-deps
+  const plataformas = (t: Transmissao) => t.teste ? 'Teste (link privado)' : !t.vitrines ? 'Todas as plataformas' : t.vitrines.map((v) => (v === 'direto' ? 'Direto' : nomes[v] ?? `/${v}`)).join(', ')
+  return (
+    <section className="cv-card cv-historico" aria-labelledby="cv-hist-titulo">
+      <h4 id="cv-hist-titulo">Histórico das transmissões <small>membros reais; o público simulado não entra</small></h4>
+      {erro && <p className="av-erro">{erro}</p>}
+      {lista && lista.length === 0 && <span className="tr-legenda">A primeira transmissão aparece aqui assim que começar: pessoas, pico, tempo médio e mensagens.</span>}
+      {lista && lista.length > 0 && (
+        <div className="cv-hist-tabela">
+          <table>
+            <thead><tr><th>Quando</th><th>Duração</th><th>Para quem</th><th className="n">Pessoas</th><th className="n">Pico</th><th className="n">Tempo médio</th><th className="n">Mensagens</th><th aria-label="Detalhes" /></tr></thead>
+            <tbody>
+              {lista.map((t) => {
+                const fim = t.encerrada_em ?? t.atualizada_em
+                const viva = !t.encerrada_em && Date.now() - Date.parse(t.atualizada_em) < 90_000
+                const dur = Math.max(0, Math.round((Date.parse(viva ? new Date().toISOString() : fim) - Date.parse(t.iniciada_em)) / 1000))
+                return [
+                  <tr key={t.id} className={aberta === t.id ? 'on' : ''}>
+                    <td>{quando(t.iniciada_em)}{viva && <em className="cv-hist-vivo">No ar</em>}</td>
+                    <td className="cv-num">{tempo(dur)}</td>
+                    <td>{plataformas(t)}</td>
+                    <td className="n cv-num">{t.pessoas}</td>
+                    <td className="n cv-num">{t.pico}</td>
+                    <td className="n cv-num">{t.pessoas ? tempo(t.tempo_medio_s) : '—'}</td>
+                    <td className="n cv-num">{t.mensagens}</td>
+                    <td><button type="button" className="av-link" disabled={!t.presencas.length} onClick={() => setAberta(aberta === t.id ? null : t.id)}>{aberta === t.id ? 'Fechar' : 'Quem veio'}</button></td>
+                  </tr>,
+                  aberta === t.id && (
+                    <tr key={`${t.id}-p`} className="cv-hist-pessoas"><td colSpan={8}>
+                      <ul>{t.presencas.map((p) => <li key={p.id}><span>{p.nome}</span><b className="cv-num">{tempo(p.segundos)}</b>{p.entradas > 1 && <small>entrou {p.entradas} vezes</small>}</li>)}</ul>
+                    </td></tr>
+                  ),
+                ]
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   )
 }

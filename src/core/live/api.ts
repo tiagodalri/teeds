@@ -9,6 +9,7 @@
 import { SUPABASE } from '../teeds/config'
 import type { SessaoTeeds } from '../teeds/conta'
 import { MARCA } from '../../marca'
+import { vitrine } from '../teeds/parceiro'
 
 export type StatusDaLive = 'agendada' | 'ao_vivo' | 'encerrada'
 
@@ -217,7 +218,8 @@ export function podeTreinar(sessao: SessaoTeeds): Promise<boolean> {
 /** A sala de treino está no ar agora? Só responde a GF Member e admin (teeds_treino_agora). */
 export interface TreinoNoAr { iniciadaEm: string; apresentador: string | null }
 export async function treinoNoAr(sessao: SessaoTeeds): Promise<TreinoNoAr | null> {
-  const r = await rest<TreinoNoAr | null>('/rpc/teeds_treino_agora', sessao, { method: 'POST', body: JSON.stringify({ p_marca: MARCA.id }) })
+  // a plataforma do endereço (/n, /v): a live pode estar aberta só para algumas (31/10/2026)
+  const r = await rest<TreinoNoAr | null>('/rpc/teeds_treino_agora', sessao, { method: 'POST', body: JSON.stringify({ p_marca: MARCA.id, p_vitrine: vitrine() }) })
   return r && r.iniciadaEm ? r : null
 }
 

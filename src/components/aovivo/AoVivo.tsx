@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { LocalVideoTrack, type Track } from 'livekit-client'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { apagarLive, conviteRecebido, criarLive, esquecerTreinoPedido, linkDaLive, listarLives, mudarLive, podeTreinar, treinoPedido, type CantoDaCamera, type Live } from '../../core/live/api'
-import { centralPedida, useTreino } from '../../core/live/treino'
+import { centralPedida, testeDoLink, useTreino } from '../../core/live/treino'
 import { mudarLinkPublico, useLinkPublico } from '../../core/live/config'
 import { LinkDoTreino, SalaDeTreino } from './SalaDeTreino'
 import { AssistirTreino } from './AssistirTreino'
@@ -946,6 +946,8 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
   const setAba = (a: 'transmissao' | 'treino') => { setAbaEstado(a); try { localStorage.setItem(CHAVE_ABA, a) } catch { /* só agora */ } }
 
   if (!sessao) return <div className="ger av-pagina"><p className="av-vazio">Entre na sua conta para ver as transmissões.</p></div>
+  // link de transmissão de teste (31/10/2026): qualquer conta com o link assiste; quem transmite segue na Central
+  if (testeDoLink() && !(admin && (treinando || ensaioNoAr))) return <div className="ger av-pagina"><AssistirTreino sessao={sessao} /></div>
   if (soTreino) return <div className="ger av-pagina"><AssistirTreino sessao={sessao} /></div>
   if (!admin && planoTreino === null) return <div className="ger av-pagina"><p className="av-vazio">Carregando…</p></div>
   if (admin && (treinando || ensaioNoAr)) return <SalaDeTreino sessao={sessao} apresentador={(sessao.usuario.nome || '').trim().split(/\s+/)[0] || 'professor'} aoSair={() => setTreinando(false)} />

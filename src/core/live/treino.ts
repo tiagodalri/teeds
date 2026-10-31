@@ -20,8 +20,8 @@
  * "Simulação" e o número marcado como simulado.
  */
 import {
-  LocalAudioTrack, LocalVideoTrack, Participant, RemoteParticipant, Room, RoomEvent, ScreenSharePresets, Track, VideoPresets,
-  type LocalTrackPublication,
+  AudioPresets, LocalAudioTrack, LocalVideoTrack, Participant, RemoteParticipant, Room, RoomEvent, ScreenSharePresets, Track, VideoPresets,
+  type LocalTrackPublication, type TrackPublishOptions,
 } from 'livekit-client'
 import { useSyncExternalStore } from 'react'
 import { SUPABASE } from '../teeds/config'
@@ -31,6 +31,8 @@ import type { CantoDaCamera } from './api'
 import { mensagemDeMembro, ouvirSimulacao, pararSimulacao, simulacaoAgora, type MensagemSimulada, type Momento } from './simulacao'
 import { marcarTreinoAtivo } from './presenca'
 import { aplicarFundo, fundoGuardado, guardarFundo, prepararFundo, type EscolhaDeFundo } from './fundos'
+import { vitrine } from '../teeds/parceiro'
+import { abrirTransmissao, gravarTransmissao, type Presenca } from './historico'
 
 /**
  * Como a sala segue quando a pessoa sai da página "Ao vivo" (20/10/2026,
@@ -71,6 +73,12 @@ export interface EstadoDoTreino {
   local: Record<Fonte, MediaStream | null>
   fundo: EscolhaDeFundo
   aplicandoFundo: boolean
+  /** O estúdio (cenas) é quem manda a imagem e o som (31/10/2026). */
+  usandoEstudio: boolean
+  /** Transmissão de teste: código do link privado (ninguém é avisado). */
+  teste: string | null
+  /** Para quais plataformas a live abre (null = todas). */
+  vitrines: string[] | null
 }
 
 const CHAVE_PLAYER = `${MARCA.id}.treino.player`
@@ -90,11 +98,15 @@ const INICIAL: EstadoDoTreino = {
   sim: { ativa: false, publico: 0, momento: null, pausada: false, chatAberto: true }, mensagens: [], somBloqueado: false, encerrada: false,
   modo: 'palco', tamanho: 'M', cantoPlayer: 'inf-dir',
   local: { tela: null, camera: null, mic: null }, fundo: 'nenhum', aplicandoFundo: false,
+  usandoEstudio: false, teste: null, vitrines: null,
 }
 /** O estado do zero, mas com as preferências da pessoa e o que o admin já tem ligado. */
 const zerado = (): EstadoDoTreino => {
   const { tamanho, cantoPlayer } = prefsDoPlayer()
-  return { ...INICIAL, tamanho, cantoPlayer, local: estado?.local ?? INICIAL.local, fundo: fundoGuardado() }
+  return {
+    ...INICIAL, tamanho, cantoPlayer, local: estado?.local ?? INICIAL.local, fundo: fundoGuardado(),
+    usandoEstudio: estado?.usandoEstudio ?? false, teste: estado?.teste ?? null, vitrines: estado?.vitrines ?? null,
+  }
 }
 let estado: EstadoDoTreino = INICIAL
 estado = zerado()
@@ -112,6 +124,10 @@ type Pacote =
   | { t: 'fim' }
 
 let sala: Room | null = null
+/** O código da transmissão de teste em que esta pessoa está (quem transmite ou quem abriu o link). */
+let testeAtual: string | null = null
+/** A Central transmite no teste (true); quem abre o link só assiste. */
+let apresentarNoTeste = false
 let desligarEscuta: (() => void) | null = null
 let timerEstado: number | undefined
 let enviadas = new Set<string>()
@@ -126,7 +142,7 @@ async function pedirIngresso(sessao: SessaoTeeds | null, nome: string): Promise<
   const r = await fetch(`${SUPABASE.url}/functions/v1/live-token`, {
     method: 'POST',
     headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao?.token ?? SUPABASE.anonKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ acao: 'treino', marca: MARCA.id, nome }),
+    body: JSON.stringify({ acao: 'treino', marca: MARCA.id, nome, vitrine: vitrine(), ...(testeAtual ? { teste: testeAtual, apresentar: apresentarNoTeste } : {}) }),
   })
   const dados = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(dados?.erro || `Não consegui abrir a sala de treino (${r.status}).`)
@@ -151,6 +167,7 @@ function atualizarSala() {
     else if (pub.source === Track.Source.Camera) camera = t
     else if (t.kind === Track.Kind.Audio) audios.push(t)
   }
+  if (estado.apresentador) anotarPresencas(membros.map((p) => ({ id: p.identity, nome: p.name || 'Membro' })))
   mudar({
     membros: membros.length, nomes: membros.map((p) => p.name || 'Membro').slice(0, 80),
     presente: estado.apresentador || !!quemTransmite, quemApresenta: quemTransmite?.name || '', tela, camera, audios,
@@ -183,7 +200,7 @@ function comecarARepassar() {
     repassar()
     // Começar simulação = a transmissão começa; Encerrar = acaba, na hora (20/10/2026)
     const ativa = simulacaoAgora().ativa
-    if (ativa !== eraAtiva) { eraAtiva = ativa; void (ativa ? republicarFontes() : encerrarTransmissao()) }
+    if (ativa !== eraAtiva) { eraAtiva = ativa; void (ativa ? republicarFontes() : encerrarTransmissao()); if (ativa) comecarRegistro(); else fecharRegistro() }
     conferirAnuncio()
     const e = JSON.stringify(pacoteDeEstado())
     if (e !== ultimo) { ultimo = e; void enviar(JSON.parse(e)) }
@@ -213,20 +230,22 @@ function anunciar(noAr: boolean, aoFechar = false) {
   // o token mais novo (a sessão é renovada pelo app; o ensaio pode passar de 1 h)
   const s = sessaoGuardada()
   if (!s || (!noAr && !anunciado)) return
+  // transmissão de teste: ninguém é avisado (31/10/2026)
+  if (noAr && estado.teste) return
   anunciado = noAr
   void fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_treino_pulso`, {
     method: 'POST', keepalive: aoFechar,
     headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${s.token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ p_marca: MARCA.id, p_no_ar: noAr, p_apresentador: estado.meuNome }),
+    body: JSON.stringify({ p_marca: MARCA.id, p_no_ar: noAr, p_apresentador: estado.meuNome, p_vitrines: estado.vitrines }),
   }).catch(() => undefined)
 }
 /** Só quando muda (ligou ou desligou tudo); o pulso de 15 s mantém o resto. */
-const conferirAnuncio = () => { if (estado.apresentador && estaNoAr() !== anunciado) anunciar(estaNoAr()) }
-const aoFecharAba = () => anunciar(false, true)
+const conferirAnuncio = () => { if (estado.apresentador && !estado.teste && estaNoAr() !== anunciado) anunciar(estaNoAr()) }
+const aoFecharAba = () => { anunciar(false, true); if (registro.id) gravarTransmissao(registro.id, resumoDoRegistro(true), true) }
 
 function comecarAAnunciar() {
   window.clearInterval(timerAnuncio)
-  timerAnuncio = window.setInterval(() => { if (anunciado || estaNoAr()) anunciar(estaNoAr()) }, 15_000)
+  timerAnuncio = window.setInterval(() => { if (!estado.teste && (anunciado || estaNoAr())) anunciar(estaNoAr()) }, 15_000)
   window.addEventListener('pagehide', aoFecharAba)
   conferirAnuncio()
 }
@@ -242,9 +261,11 @@ function pararDeAnunciar() {
  * Entra na sala de treino: o admin para transmitir, o membro para assistir.
  * Sem conta (fase de testes), vai o nome que a pessoa digitou.
  */
-export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Promise<void> {
+export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = '', comoCentral = false): Promise<void> {
   if (sala && estado.fase !== 'erro') return
   await desconectar()
+  // a Central usa o teste que ela mesma ligou; quem assiste, o do link que abriu
+  testeAtual = comoCentral ? (apresentarNoTeste ? testeAtual : null) : testeDoLink()
   mudar({ ...zerado(), fase: 'conectando' })
   try {
     const ingresso = await pedirIngresso(sessao, nome)
@@ -284,7 +305,7 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Pro
         try { pacote = JSON.parse(new TextDecoder().decode(dados)) } catch { return }
         if (estado.apresentador) {
           // do membro: a mensagem entra no chat da simulação (e volta para todos)
-          if (pacote.t === 'membro') mensagemDeMembro(p.name || 'Membro', String(pacote.texto))
+          if (pacote.t === 'membro') { mensagemDeMembro(p.name || 'Membro', String(pacote.texto)); if (registro.inicio) registro.mensagens++ }
           return
         }
         if (!ehApresentador(p)) return
@@ -307,7 +328,7 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = ''): Pro
       })
     await r.connect(ingresso.url, ingresso.token, { autoSubscribe: true })
     await r.startAudio().catch(() => undefined)
-    mudar({ fase: 'conectada', apresentador: ingresso.moderador, meuNome: ingresso.nome, somBloqueado: !r.canPlaybackAudio })
+    mudar({ fase: 'conectada', apresentador: ingresso.moderador, meuNome: ingresso.nome, somBloqueado: !r.canPlaybackAudio, teste: testeAtual })
     if (ingresso.moderador) { comecarARepassar(); comecarAAnunciar() }
     marcarTreinoAtivo(true)
     // o que o admin já tinha ligado antes de a sala abrir entra agora
@@ -337,6 +358,7 @@ async function desconectar(): Promise<void> {
  */
 export async function sairDoTreino(): Promise<void> {
   const eraApresentador = estado.apresentador
+  if (eraApresentador && registro.inicio) fecharRegistro()
   await desconectar()
   if (eraApresentador) pararSimulacao()
   desligarFontesLocais()
@@ -378,6 +400,12 @@ async function encerrarTransmissao() {
 
 /** Republica o que está ligado (começou a simulação, ou a sala abriu do zero). */
 async function republicarFontes() {
+  if (estudio) {
+    await publicarNoTreino('camera', null)
+    await publicarNoTreino('tela', estudio.video)
+    await publicarNoTreino('mic', estudio.audio)
+    return
+  }
   const { tela, mic } = estado.local
   if (cameraFaixa) await publicarNoTreino('camera', cameraFaixa)
   if (tela) await publicarNoTreino('tela', tela.getVideoTracks()[0] ?? null)
@@ -394,7 +422,7 @@ const mostrarCamera = (lt: LocalVideoTrack) => new MediaStream([lt.mediaStreamTr
 export async function alternarFonte(qual: Fonte): Promise<string | null> {
   const atual = estado.local[qual]
   if (atual) {
-    void publicarNoTreino(qual, null)
+    void publicarCru(qual, null)
     atual.getTracks().forEach((t) => t.stop())
     if (qual === 'camera') { cameraFaixa?.stop(); cameraFaixa = null; cameraBruta = null }
     mudar({ local: { ...estado.local, [qual]: null } })
@@ -411,17 +439,17 @@ export async function alternarFonte(qual: Fonte): Promise<string | null> {
       if (!ainda) return
       if (qual === 'camera') { cameraFaixa?.stop(); cameraFaixa = null; cameraBruta = null }
       mudar({ local: { ...estado.local, [qual]: null } })
-      void publicarNoTreino(qual, null)
+      void publicarCru(qual, null)
     })
     if (qual === 'camera') {
       const lt = new LocalVideoTrack(f.getVideoTracks()[0], undefined, true)
       cameraFaixa = lt; cameraBruta = bruta
       mudar({ local: { ...estado.local, camera: mostrarCamera(lt) } })
-      void publicarNoTreino('camera', lt)
+      void publicarCru('camera', lt)
       if (estado.fundo !== 'nenhum') void trocarFundoDoTreino(estado.fundo)
     } else {
       mudar({ local: { ...estado.local, [qual]: f } })
-      void publicarNoTreino(qual, qual === 'tela' ? f.getVideoTracks()[0] : f.getAudioTracks()[0])
+      void publicarCru(qual, qual === 'tela' ? f.getVideoTracks()[0] : f.getAudioTracks()[0])
     }
     return null
   } catch {
@@ -455,6 +483,8 @@ export async function liberarSomDoTreino(): Promise<void> {
  * das próprias câmeras e telas; aqui só se publica o que ela já abriu.
  */
 let filaDePublicacao: Promise<unknown> = Promise.resolve()
+/** Câmera, tela e microfone avulsos: com o estúdio no comando, ficam só na prévia do admin. */
+const publicarCru = (qual: 'tela' | 'camera' | 'mic', faixa: LocalVideoTrack | MediaStreamTrack | null) => (estudio ? Promise.resolve() : publicarNoTreino(qual, faixa))
 export function publicarNoTreino(qual: 'tela' | 'camera' | 'mic', faixa: LocalVideoTrack | MediaStreamTrack | null): Promise<void> {
   const vez = filaDePublicacao.then(() => publicarAgora(qual, faixa)).catch(() => undefined)
   filaDePublicacao = vez
@@ -470,7 +500,13 @@ async function publicarAgora(qual: 'tela' | 'camera' | 'mic', faixa: LocalVideoT
   const local = faixa instanceof LocalVideoTrack ? faixa
     : qual === 'mic' ? new LocalAudioTrack(faixa, undefined, true) : new LocalVideoTrack(faixa, undefined, true)
   const source = qual === 'tela' ? Track.Source.ScreenShare : qual === 'camera' ? Track.Source.Camera : Track.Source.Microphone
-  await sala.localParticipant.publishTrack(local, { source })
+  // A saída do estúdio: imagem de 1080p a 30 quadros (tem vídeo e transição) e
+  // som de música em estéreo, sem cortar silêncio (o stinger e as músicas não podem picotar).
+  const doEstudio = !!estudio && (faixa === estudio.video || faixa === estudio.audio || (local as LocalVideoTrack | LocalAudioTrack).mediaStreamTrack === estudio.video || (local as LocalVideoTrack | LocalAudioTrack).mediaStreamTrack === estudio.audio)
+  const opcoes: TrackPublishOptions = { source }
+  if (doEstudio && qual === 'tela') Object.assign(opcoes, { screenShareEncoding: { maxBitrate: 3_500_000, maxFramerate: 30 }, screenShareSimulcastLayers: [ScreenSharePresets.h360fps15, ScreenSharePresets.h720fps30], degradationPreference: 'balanced' })
+  if (doEstudio && qual === 'mic') Object.assign(opcoes, { audioPreset: AudioPresets.musicHighQualityStereo, dtx: false, red: true, forceStereo: true })
+  await sala.localParticipant.publishTrack(local, opcoes)
   publicadas[qual] = local
   atualizarSala()
   conferirAnuncio()
@@ -506,3 +542,127 @@ let centralPedidaAgora = false
 export function pedirCentral(): void { centralPedidaAgora = true }
 /** Lê e consome o pedido. */
 export function centralPedida(): boolean { const p = centralPedidaAgora; centralPedidaAgora = false; return p }
+
+/* ------------------------------------------------- o estúdio (31/10/2026) */
+
+let estudio: { video: MediaStreamTrack; audio: MediaStreamTrack } | null = null
+
+/**
+ * Liga (ou desliga) o estúdio de cenas como a fonte da transmissão: a imagem
+ * e o som finais dele vão aos alunos no lugar da tela, câmera e microfone
+ * avulsos. Fora do ar, nada chega aos membros (como antes).
+ */
+export async function usarEstudioNoTreino(saida: { video: MediaStreamTrack; audio: MediaStreamTrack } | null): Promise<void> {
+  if (saida?.video === estudio?.video && saida?.audio === estudio?.audio) return
+  estudio = saida
+  mudar({ usandoEstudio: !!saida })
+  if (saida) { await republicarFontes(); return }
+  await Promise.all((['tela', 'camera', 'mic'] as const).map((q) => publicarNoTreino(q, null)))
+  await republicarFontes()
+}
+
+/* -------------------------------------------- plataformas e teste (31/10) */
+
+/** Para quais plataformas a próxima transmissão abre (null = todas). Só fora do ar. */
+export function definirVitrinesDoTreino(v: string[] | null): void {
+  if (estaNoAr()) return
+  mudar({ vitrines: v && v.length ? [...v].sort() : null })
+}
+
+const CHAVE_TESTE = `${MARCA.id}.aovivo.teste`
+/** Quem abriu o link de teste (?teste=código): vale nesta aba até sair. */
+export function testeDoLink(): string | null {
+  try {
+    const q = new URLSearchParams(location.search).get('teste')
+    if (q && /^[0-9a-f]{12}$/.test(q)) { sessionStorage.setItem(CHAVE_TESTE, q); return q }
+    const g = sessionStorage.getItem(CHAVE_TESTE)
+    return g && /^[0-9a-f]{12}$/.test(g) ? g : null
+  } catch { return null }
+}
+export function esquecerTesteDoLink(): void {
+  try { sessionStorage.removeItem(CHAVE_TESTE) } catch { /* nada guardado */ }
+  if (!estado.apresentador) testeAtual = null
+}
+
+export const linkDoTeste = (codigo: string) => `${location.origin}${import.meta.env.BASE_URL}?treino=1&teste=${codigo}`
+
+/**
+ * Liga a transmissão de teste: a Central troca para uma sala só dela, com
+ * um link privado. Ninguém é avisado (sem selo vermelho, sem "Live
+ * iniciada"); só quem tem o link vê. Desligar volta para a sala de sempre.
+ */
+export async function trocarTeste(sessao: SessaoTeeds, ligar: boolean): Promise<string | null> {
+  if (estaNoAr()) return 'Encerre a transmissão antes de trocar entre teste e de verdade.'
+  let codigo: string | null = null
+  if (ligar) {
+    const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_criar_teste_ao_vivo`, {
+      method: 'POST', headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_marca: MARCA.id }),
+    }).catch(() => null)
+    codigo = r?.ok ? String(await r.json()) : null
+    if (!codigo) return 'Não consegui criar o link de teste. Tente de novo.'
+  }
+  testeAtual = codigo
+  apresentarNoTeste = !!codigo
+  await desconectar()
+  mudar({ teste: codigo, fase: 'fora' })
+  await entrarNoTreino(sessao, '', true)
+  return null
+}
+
+/* ------------------------------------- o histórico da transmissão (31/10) */
+
+/*
+  Quem transmite anota quem entrou e saiu (pela identidade da conta), o pico
+  e as mensagens dos membros; grava o resumo a cada 30 s e no fim. Fica aqui
+  (e não na tela) para continuar gravando com a Central fechada.
+*/
+const registro = {
+  id: null as string | null,
+  inicio: 0,
+  pessoas: new Map<string, { nome: string; ms: number; entradas: number; desde: number | null }>(),
+  pico: 0,
+  mensagens: 0,
+  timer: 0,
+}
+
+function anotarPresencas(agora: Array<{ id: string; nome: string }>) {
+  if (!registro.inicio) return
+  const t = Date.now()
+  const ids = new Set(agora.map((p) => p.id))
+  for (const p of agora) {
+    const r = registro.pessoas.get(p.id) ?? { nome: p.nome, ms: 0, entradas: 0, desde: null }
+    if (r.desde === null) { r.desde = t; r.entradas++ }
+    r.nome = p.nome
+    registro.pessoas.set(p.id, r)
+  }
+  for (const [id, r] of registro.pessoas) if (!ids.has(id) && r.desde !== null) { r.ms += t - r.desde; r.desde = null }
+  registro.pico = Math.max(registro.pico, agora.length)
+}
+
+function resumoDoRegistro(fim = false) {
+  const t = Date.now()
+  const presencas: Presenca[] = [...registro.pessoas].map(([id, r]) => ({
+    id, nome: r.nome, entradas: r.entradas, segundos: Math.round((r.ms + (r.desde !== null ? t - r.desde : 0)) / 1000),
+  })).sort((a, b) => b.segundos - a.segundos)
+  const total = presencas.reduce((s, p) => s + p.segundos, 0)
+  return {
+    pico: registro.pico, pessoas: presencas.length, mensagens: registro.mensagens, presencas,
+    tempo_medio_s: presencas.length ? Math.round(total / presencas.length) : 0,
+    ...(fim ? { encerrada_em: new Date().toISOString() } : {}),
+  }
+}
+
+function comecarRegistro() {
+  window.clearInterval(registro.timer)
+  registro.id = null; registro.inicio = Date.now(); registro.pessoas = new Map(); registro.pico = 0; registro.mensagens = 0
+  if (sala) anotarPresencas([...sala.remoteParticipants.values()].filter((p) => !ehApresentador(p)).map((p) => ({ id: p.identity, nome: p.name || 'Membro' })))
+  void abrirTransmissao({ apresentador: estado.meuNome, teste: !!estado.teste, vitrines: estado.vitrines }).then((id) => { if (registro.inicio) registro.id = id })
+  registro.timer = window.setInterval(() => { if (registro.id) gravarTransmissao(registro.id, resumoDoRegistro()) }, 30_000)
+}
+
+function fecharRegistro() {
+  window.clearInterval(registro.timer)
+  if (registro.id) gravarTransmissao(registro.id, resumoDoRegistro(true))
+  registro.id = null; registro.inicio = 0
+}

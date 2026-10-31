@@ -901,3 +901,40 @@ body.av-teatro-aberto { overflow: hidden; }
   .tr-cabeca:not(:has(.tr-cabeca-selo)) { grid-template-columns: minmax(0, 1fr); }
   .tr-cabeca:not(:has(.tr-cabeca-selo)) > * { grid-column: 1; }
 }
+
+/* ---------------------------------------- Central: estúdio, destino e histórico (31/10/2026) */
+.cv-modo button:disabled { opacity: .55; cursor: default; }
+
+.cv-destino { display: grid; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.cv-destino.teste { border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); background: color-mix(in srgb, var(--primary) 6%, var(--surface)); }
+.cv-destino-modo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.cv-destino-rotulo { color: var(--text); font-size: 13px; font-weight: 700; }
+.cv-destino-trava { color: var(--muted); font-size: 11.5px; }
+.cv-destino-teste { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 10px 16px; align-items: center; }
+.cv-destino-teste p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.cv-destino-teste p b { color: var(--text); }
+.cv-destino-plataformas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; color: var(--muted); font-size: 12.5px; }
+.cv-plataformas { display: flex; flex-wrap: wrap; gap: 6px; }
+.cv-plataformas button { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 12px 0 8px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.cv-plataformas button small { color: var(--muted); font-size: 11px; font-weight: 500; }
+.cv-plataformas button i { display: inline-grid; place-items: center; width: 18px; height: 18px; border: 1.5px solid var(--border); border-radius: 5px; font-size: 11px; font-style: normal; font-weight: 800; color: var(--surface); }
+.cv-plataformas button.on { border-color: var(--primary); background: var(--primary-soft); }
+.cv-plataformas button.on i { border-color: var(--primary); background: var(--primary); }
+:root[data-tema='escuro'] .cv-plataformas button.on i { color: var(--bg); }
+.cv-plataformas button:disabled { opacity: .6; cursor: default; }
+.cv-destino-nota { flex-basis: 100%; color: var(--muted); font-size: 11.5px; }
+
+.cv-historico { gap: 10px; }
+.cv-hist-tabela { overflow-x: auto; }
+.cv-historico table { width: 100%; border-collapse: collapse; font-size: 12.5px; color: var(--text); }
+.cv-historico th { padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11.5px; font-weight: 600; text-align: left; white-space: nowrap; }
+.cv-historico td { padding: 8px 10px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); white-space: nowrap; }
+.cv-historico .n { text-align: right; }
+.cv-historico tr.on td { background: color-mix(in srgb, var(--primary) 7%, transparent); }
+.cv-hist-vivo { margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--down) 16%, transparent); color: var(--down); font-size: 10.5px; font-style: normal; font-weight: 700; }
+.cv-hist-pessoas td { white-space: normal; }
+.cv-hist-pessoas ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 16px; margin: 0; padding: 4px 0; list-style: none; }
+.cv-hist-pessoas li { display: flex; align-items: baseline; gap: 8px; }
+.cv-hist-pessoas li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cv-hist-pessoas li small { color: var(--muted); font-size: 11px; }
+@media (max-width: 900px) { .cv-destino-teste { grid-template-columns: 1fr; } }
