@@ -287,25 +287,37 @@
       </div>
 
       <div class="lp-cabine" data-cabine>
-        <div class="lp-cabine-topo">
-          <div class="lp-cabine-quem">
-            <img data-cab-capa src="/aulas-globalfly/robo-phenom-mobile.webp" alt="" width="640" height="960" />
-            <div><b data-cab-nome>GF Phenom</b><span><i data-cab-farol></i><em data-cab-fase>Analisando o mercado</em></span></div>
+        <div class="lp-cab-ias" role="tablist" aria-label="Escolha a I.A." data-cab-ias></div>
+        <div class="lp-cab-tela">
+          <div class="lp-cab-topo">
+            <img data-cab-capa src="/aulas-globalfly/robo-raptor-mobile.webp" alt="" width="640" height="960" />
+            <div class="lp-cab-quem">
+              <b data-cab-nome>GF Raptor</b>
+              <span class="lp-cab-status" data-cab-status><i aria-hidden="true"></i><em data-cab-fase>Operando</em></span>
+            </div>
+            <div class="lp-cab-res"><span>Resultado</span><b data-cab-res>+US$ 0,00</b></div>
           </div>
-          <div class="lp-cabine-res"><span>Resultado da sessão</span><b data-cab-res>+US$ 0,00</b></div>
+          <div class="lp-cab-meta">
+            <span>Meta <b data-cab-meta>US$ 100</b></span>
+            <div class="lp-cab-trilho"><i data-cab-barra></i></div>
+            <span class="lp-cab-pct" data-cab-pct>0%</span>
+          </div>
+          <div class="lp-cab-grafico">
+            <canvas data-cab-grafico width="900" height="300" aria-hidden="true"></canvas>
+            <span class="lp-cab-ativo"><i aria-hidden="true"></i>Volatility 75 <b data-cab-preco>—</b></span>
+          </div>
+          <dl class="lp-cab-nums">
+            <div><dt>Operações</dt><dd data-cab-n>0</dd></div>
+            <div><dt>Positivas</dt><dd class="pos" data-cab-pos>0</dd></div>
+            <div><dt>Entrada</dt><dd data-cab-ent>—</dd></div>
+          </dl>
+          <ol class="lp-cab-ops" data-cab-ops aria-live="off"></ol>
+          <div class="lp-cab-alerta" data-cab-alerta hidden>
+            <img src="/pwa-globalfly/icon-180.png" alt="" width="36" height="36" />
+            <div><span>GlobalFly · agora</span><b data-cab-alerta-titulo>✅ GF Raptor · Meta atingida</b><em data-cab-alerta-txt></em></div>
+          </div>
         </div>
-        <div class="lp-cabine-grafico"><canvas data-cab-grafico width="900" height="260" aria-hidden="true"></canvas><span class="lp-cabine-par">Volatility 75 · ao vivo</span></div>
-        <div class="lp-cabine-meta">
-          <span class="lp-meta-rot"><b>Limite</b> −US$ 20</span>
-          <div class="lp-meta-trilho"><i data-cab-barra></i><u></u></div>
-          <span class="lp-meta-rot lp-meta-alvo"><b>Meta</b> +US$ 10</span>
-        </div>
-        <div class="lp-cabine-ops">
-          <div class="lp-ops-cab"><span>#</span><span>Entrada</span><span>Direção</span><span>Resultado</span></div>
-          <ol data-cab-ops></ol>
-        </div>
-        <div class="lp-cabine-fim" data-cab-fim hidden><b>Meta atingida</b><span data-cab-fim-txt></span></div>
-        <p class="lp-cabine-aviso">Demonstração ilustrativa, com valores fictícios. Não é resultado real e não garante resultado futuro.</p>
+        <p class="lp-cab-nota" data-cab-nota>Reprise de sessões gravadas na plataforma, operação por operação.</p>
       </div>
 
       <div class="lp-hangar" aria-label="As I.A. da GlobalFly">
@@ -496,114 +508,164 @@
         })
       }
 
-      // ------------------------------------------------ cabine: uma I.A. operando (demonstração ilustrativa)
+      // ------------------------------------------------ cabine: reprise de sessões reais, operação por operação
+      // (31/10/2026) Uma sessão de cada I.A., gravada na plataforma e terminada na meta: [entrada, 1 = dígito acima
+      // / 0 = abaixo, resultado, preço do Volatility 75 na entrada]. Nada aqui é sorteado: é a sessão como foi.
       var cab = document.querySelector('[data-cabine]')
       if (!cab) return
-      var IAS = [['GF Phenom', 'phenom'], ['GF Gulf', 'gulf'], ['GF Raptor', 'raptor'], ['GF Falcon', 'falcon'], ['GF Legacy', 'legacy']]
-      var el = function (q) { return cab.querySelector(q) }
-      var tela = el('[data-cab-grafico]'), ctx = tela.getContext('2d')
-      var nomeEl = el('[data-cab-nome]'), capaEl = el('[data-cab-capa]'), faseEl = el('[data-cab-fase]'), farol = el('[data-cab-farol]')
-      var resEl = el('[data-cab-res]'), barraMeta = el('[data-cab-barra]'), lista = el('[data-cab-ops]'), fim = el('[data-cab-fim]'), fimTxt = el('[data-cab-fim-txt]')
-      var META = 10, LIMITE = -20, BASE = 1
-      var precos = [], marcas = [], preco = 1000, tendencia = 0
-      var s, ia = 0, rodando = false, visivel = false, relogioOps = null
-      function dinheiro(v) { return (v < 0 ? '−' : '+') + 'US$ ' + Math.abs(v).toFixed(2).replace('.', ',') }
-      function valor(v) { return 'US$ ' + v.toFixed(2).replace('.', ',') }
-      for (var k = 0; k < 140; k++) { preco += (Math.random() - .5) * 2.2; precos.push(preco) }
+      var SESSOES = [
+        { n: 'GF Raptor', f: 'raptor', meta: 100, dia: '27/10', ops: [[10,0,0.62,33778.26],[10,0,0.62,33777.02],[10,0,0.62,33763.80],[10,0,0.62,33770.76],[10,0,0.62,33761.34],[10,0,-10,33764.56],[10.86,1,-10.86,33770.18],[16.54,1,-16.54,33762.82],[25.41,1,-25.41,33755.71],[40.39,1,-40.39,33755.43],[66.36,1,-66.36,33752.63],[109.03,1,209.77,33759.29],[10,0,0.62,33757.97],[10,0,0.62,33755.48],[10,0,-10,33748.61],[10.86,1,-10.86,33741.09],[16.54,1,31.82,33743.23],[10,0,0.62,33763.44],[10,0,-10,33758.85],[10.86,1,-10.86,33763.31],[16.54,1,31.82,33763.50],[10,0,0.62,33772.17],[10,0,0.62,33764.34],[10,0,0.62,33763.08],[10,0,0.62,33771.05],[10,0,0.62,33781.71],[10,0,0.62,33786.02],[10,0,0.62,33782.72],[10,0,0.62,33791.00],[10,0,0.62,33790.97],[10,0,0.62,33787.79],[10,0,0.62,33775.81],[10,0,0.62,33785.69],[10,0,0.62,33785.38],[10,0,0.62,33784.28],[10,0,0.62,33789.87],[10,0,0.62,33791.76],[10,0,0.62,33795.91],[10,0,0.62,33801.79],[10,0,0.62,33799.11],[10,0,0.62,33805.76],[10,0,-10,33804.11],[10.86,1,20.89,33807.71],[10,0,-10,33802.30],[10.86,1,-10.86,33799.59],[16.54,1,31.82,33794.80]] },
+        { n: 'GF Falcon', f: 'falcon', meta: 60, dia: '30/10', ops: [[5,0,-5,39062.78],[10.17,0,-10.17,39065.83],[28.98,0,16.16,39074.80],[5,0,2.79,39075.09],[5,0,-5,39079.68],[10.17,0,5.67,39079.48],[5,0,2.79,39100.83],[5,0,2.79,39105.93],[5,0,2.79,39100.68],[5,0,2.79,39096.24],[5,0,-5,39093.58],[10.17,0,-10.17,39093.39],[28.98,0,16.16,39091.78],[5,0,2.79,39096.32],[5,0,2.79,39099.13],[5,0,2.79,39102.99],[5,0,-5,39113.52],[10.17,0,5.67,39117.58],[5,0,-5,39122.70],[10.17,0,5.67,39117.22],[5,0,-5,39114.78],[10.17,0,5.67,39101.40],[5,0,2.79,39091.85],[5,0,2.79,39106.89],[5,0,-5,39114.57],[10.17,0,5.67,39125.32],[5,0,2.79,39131.90],[5,0,-5,39131.67],[10.17,0,5.67,39138.17],[5,0,2.79,39125.32],[5,0,2.79,39130.92],[5,0,-5,39130.47],[10.17,0,5.67,39120.04],[5,0,2.79,39120.55],[5,0,2.79,39120.50],[5,0,2.79,39116.69],[5,0,-5,39104.73],[10.17,0,-10.17,39106.28],[28.98,0,16.16,39109.18],[5,0,-5,39097.39],[10.17,0,-10.17,39108.95],[28.98,0,-28.98,39109.20],[82.55,0,46.03,39109.91],[5,0,2.79,39111.34],[5,0,2.79,39113.44],[5,0,2.79,39108.36]] },
+        { n: 'GF Gulf', f: 'gulf', meta: 40, dia: '30/10', ops: [[5,1,9.62,38829.04],[5,1,-5,38857.60],[5.36,1,10.31,38861.32],[5,1,-5,38909.21],[5.36,1,-5.36,38909.59],[8.24,1,-8.24,38903.84],[12.65,1,-12.65,38909.95],[20.1,1,38.67,38919.75],[5,1,-5,38940.82],[5.36,1,-5.36,38945.83],[8.24,1,-8.24,38934.73],[12.65,1,24.34,38942.38],[5,1,9.62,38961.27],[5,1,-5,38981.15],[5.36,1,-5.36,38979.26],[8.24,1,-8.24,38979.89],[12.65,1,-12.65,38967.52],[20.1,1,-20.1,38961.84],[33.02,1,-33.02,38976.54],[53.34,1,102.62,38982.83]] },
+        { n: 'GF Phenom', f: 'phenom', meta: 10, dia: '28/10', ops: [[1,0,-1,34598.58],[1.08,0,2.08,34600.45],[1,0,-1,34513.89],[1.08,0,2.08,34506.37],[1,0,-1,34473.37],[1.08,0,2.08,34464.68],[1,0,-1,34467.30],[1.08,0,-1.08,34467.60],[1.65,0,-1.65,34473.44],[2.54,0,-2.54,34471.28],[4.03,0,-4.03,34479.02],[6.63,0,12.76,34483.63],[1,0,1.92,34508.73],[1,0,-1,34549.52],[1.08,0,-1.08,34557.86],[1.65,0,-1.65,34552.40],[2.54,0,-2.54,34538.28],[4.03,0,-4.03,34532.79],[6.63,0,-6.63,34531.37],[10.89,0,20.95,34537.18]] },
+        { n: 'GF Legacy', f: 'legacy', meta: 10, dia: '31/10', ops: [[0.35,1,0.2,38363.75],[0.35,1,0.2,38366.30],[0.35,1,0.2,38372.17],[0.35,1,-0.35,38357.20],[0.7,1,0.39,38352.34],[0.35,1,0.2,38347.22],[0.35,1,-0.35,38353.79],[0.7,1,0.39,38361.38],[0.35,1,0.2,38360.19],[0.35,1,0.2,38371.63],[0.35,1,0.2,38370.03],[0.35,1,0.2,38371.18],[0.35,1,-0.35,38379.62],[0.7,1,0.39,38379.42],[0.35,1,0.2,38370.46],[0.35,1,0.2,38357.07],[0.35,1,0.2,38360.49],[0.35,1,0.2,38353.40],[0.35,1,-0.35,38354.21],[0.7,1,-0.7,38357.37],[2.01,1,1.12,38370.57],[0.35,1,0.2,38362.84],[0.35,1,0.2,38349.79],[0.35,1,0.2,38340.59],[0.35,1,-0.35,38339.33],[0.7,1,0.39,38349.29],[0.35,1,-0.35,38368.03],[0.7,1,-0.7,38372.07],[2.01,1,1.12,38365.44],[0.35,1,0.2,38359.06],[0.35,1,-0.35,38363.61],[0.7,1,-0.7,38362.57],[2.01,1,-2.01,38350.96],[5.73,1,3.2,38352.86],[0.35,1,0.2,38349.96],[0.35,1,0.2,38341.48],[0.35,1,0.2,38330.24],[0.35,1,0.2,38327.53],[0.35,1,0.2,38330.43],[0.35,1,0.2,38329.22],[0.35,1,0.2,38330.68],[0.35,1,-0.35,38321.18],[0.7,1,0.39,38317.96],[0.35,1,0.2,38329.23],[0.35,1,-0.35,38329.97],[0.7,1,0.39,38330.83],[0.35,1,0.2,38324.76],[0.35,1,-0.35,38334.46],[0.7,1,0.39,38334.64],[0.35,1,0.2,38339.92],[0.35,1,-0.35,38348.38],[0.7,1,-0.7,38346.35],[2.01,1,1.12,38363.02],[0.35,1,-0.35,38375.29],[0.7,1,-0.7,38377.23],[2.01,1,-2.01,38373.63],[5.73,1,-5.73,38361.94],[16.3,1,9.09,38377.87],[0.35,1,-0.35,38369.08],[0.7,1,-0.7,38367.05],[2.01,1,-2.01,38377.89],[5.73,1,3.2,38374.09],[0.35,1,0.2,38368.62],[0.35,1,0.2,38367.60],[0.35,1,0.2,38349.95],[0.35,1,0.2,38348.84],[0.35,1,-0.35,38355.61],[0.7,1,-0.7,38365.66],[2.01,1,1.12,38358.35],[0.35,1,0.2,38357.69],[0.35,1,-0.35,38376.29],[0.7,1,-0.7,38384.46],[2.01,1,1.12,38396.95],[0.35,1,0.2,38396.86],[0.35,1,-0.35,38381.53],[0.7,1,-0.7,38385.00],[2.01,1,1.12,38389.45],[0.35,1,-0.35,38385.35],[0.7,1,-0.7,38396.02],[2.01,1,1.12,38400.21],[0.35,1,-0.35,38419.16],[0.7,1,-0.7,38423.97],[2.01,1,-2.01,38420.80],[5.73,1,-5.73,38416.72],[16.3,1,9.09,38414.54],[0.35,1,0.2,38410.25],[0.35,1,-0.35,38404.41],[0.7,1,0.39,38420.09],[0.35,1,0.2,38411.25],[0.35,1,-0.35,38418.74],[0.7,1,0.39,38425.75],[0.35,1,0.2,38426.94],[0.35,1,0.2,38432.75],[0.35,1,0.2,38432.60],[0.35,1,-0.35,38429.06],[0.7,1,0.39,38426.40],[0.35,1,-0.35,38412.58],[0.7,1,0.39,38414.17],[0.35,1,0.2,38411.45],[0.35,1,-0.35,38406.22],[0.7,1,0.39,38398.86],[0.35,1,0.2,38401.05],[0.35,1,0.2,38401.46],[0.35,1,0.2,38400.17]] },
+      ]
+      var q = function (s) { return cab.querySelector(s) }
+      var tela = q('[data-cab-grafico]'), ctx = tela.getContext('2d')
+      var ias = q('[data-cab-ias]'), capa = q('[data-cab-capa]'), nomeEl = q('[data-cab-nome]'), status = q('[data-cab-status]'), faseEl = q('[data-cab-fase]')
+      var resEl = q('[data-cab-res]'), metaEl = q('[data-cab-meta]'), barra = q('[data-cab-barra]'), pct = q('[data-cab-pct]'), precoEl = q('[data-cab-preco]')
+      var nEl = q('[data-cab-n]'), posEl = q('[data-cab-pos]'), entEl = q('[data-cab-ent]'), lista = q('[data-cab-ops]')
+      var alerta = q('[data-cab-alerta]'), alertaTit = q('[data-cab-alerta-titulo]'), alertaTxt = q('[data-cab-alerta-txt]'), nota = q('[data-cab-nota]')
+      var moeda = function (v, sinal) { var t = 'US$ ' + Math.abs(v).toFixed(2).replace('.', ','); return sinal ? (v < 0 ? '−' : '+') + t : t }
+      var preco = function (v) { return v.toFixed(2).replace('.', ',') }
+      // a fita de cada I.A. (como os stories): toca para ver aquela sessão
+      SESSOES.forEach(function (s, i) {
+        var b = document.createElement('button')
+        b.type = 'button'; b.setAttribute('role', 'tab'); b.className = 'lp-cab-ia'
+        b.innerHTML = '<img src="/aulas-globalfly/robo-' + s.f + '-mobile.webp" alt="" width="64" height="96" loading="lazy" /><span>' + s.n.replace('GF ', '') + '</span><i><u></u></i>'
+        b.addEventListener('click', function () { escolher(i, true) })
+        ias.appendChild(b)
+      })
+      var fitas = ias.querySelectorAll('.lp-cab-ia')
+      // as capas do hangar também escolhem a I.A. da cabine
+      var hangar = document.querySelectorAll('.lp-hangar figure')
+      Array.prototype.forEach.call(hangar, function (fig) {
+        var img = fig.querySelector('img'), i = SESSOES.map(function (x) { return x.n }).indexOf(img ? img.alt : '')
+        if (i < 0) return
+        fig.dataset.ia = String(i); fig.setAttribute('role', 'button'); fig.tabIndex = 0; fig.setAttribute('aria-label', 'Ver a sessão da ' + SESSOES[i].n)
+        var ir = function () { escolher(i, true); if (cab.getBoundingClientRect().top < 0) cab.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
+        fig.addEventListener('click', ir); fig.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ir() } })
+      })
 
+      var atual = 0, s = null, k = 0, acum = [0], mostrado = 0, alvo = 0, positivas = 0
+      var rodando = false, visivel = false, timer = null, quadro = null, pausaFim = false, inicio = 0, DURACAO = 16000
+      function passoMs() { return Math.max(140, Math.min(700, DURACAO / s.ops.length)) }
+
+      function escolher(i, pelaPessoa) {
+        clearTimeout(timer); atual = i; s = SESSOES[i]; k = 0; acum = [0]; mostrado = 0; alvo = 0; positivas = 0; pausaFim = false
+        lista.innerHTML = ''; alerta.hidden = true; inicio = performance.now()
+        capa.src = '/aulas-globalfly/robo-' + s.f + '-mobile.webp'; nomeEl.textContent = s.n
+        metaEl.textContent = moeda(s.meta); entEl.textContent = moeda(s.ops[0][0]); precoEl.textContent = preco(s.ops[0][3])
+        nota.textContent = 'Reprise da sessão de ' + s.dia + ', gravada na plataforma, operação por operação.'
+        nEl.textContent = '0 de ' + s.ops.length; posEl.textContent = '0'
+        fase('Operando', 'opera')
+        Array.prototype.forEach.call(hangar || [], function (fig) { fig.classList.toggle('on', fig.dataset.ia === String(i)) })
+        Array.prototype.forEach.call(fitas, function (f, j) { f.classList.toggle('on', j === i); f.classList.toggle('vista', j < i); f.setAttribute('aria-selected', String(j === i)); f.querySelector('u').style.width = j < i ? '100%' : '0%' })
+        if (pelaPessoa) fitas[i].scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' })
+        if (rodando) timer = setTimeout(operar, 500)
+      }
+      function fase(t, c) { faseEl.textContent = t; status.className = 'lp-cab-status ' + c }
+
+      function operar() {
+        if (!rodando || pausaFim) return
+        var op = s.ops[k], n = k + 1, recup = op[0] > s.ops[0][0] + 0.001
+        var li = document.createElement('li')
+        li.innerHTML = '<span class="lp-op-n">#' + n + '</span><span class="lp-op-tipo">' + (op[1] ? 'Dígito acima' : 'Dígito abaixo') + (recup ? '<em>Recuperação</em>' : '') + '</span><span class="lp-op-ent">' + moeda(op[0]) + '</span><span class="lp-op-res">…</span>'
+        lista.insertBefore(li, lista.firstChild); while (lista.children.length > 5) lista.removeChild(lista.lastChild)
+        entEl.textContent = moeda(op[0]); precoEl.textContent = preco(op[3])
+        fase(recup ? 'Recuperando' : 'Operando', recup ? 'recupera' : 'opera')
+        var meio = passoMs() * .45
+        timer = setTimeout(function () {
+          if (!rodando) return
+          var ganhou = op[2] > 0, r = li.querySelector('.lp-op-res')
+          r.textContent = moeda(op[2], true); r.className = 'lp-op-res ' + (ganhou ? 'pos' : 'neg'); li.classList.add(ganhou ? 'ganhou' : 'perdeu')
+          if (ganhou) positivas++
+          k = n; alvo = +(alvo + op[2]).toFixed(2); acum.push(alvo)
+          nEl.textContent = n + ' de ' + s.ops.length; posEl.textContent = String(positivas)
+          if (k >= s.ops.length) return terminar()
+          timer = setTimeout(operar, passoMs() - meio)
+        }, meio)
+      }
+      function terminar() {
+        pausaFim = true
+        fase('Meta atingida', 'meta')
+        alertaTit.textContent = '✅ ' + s.n + ' · Meta atingida'
+        alertaTxt.textContent = moeda(alvo, true) + ' em ' + s.ops.length + ' operações · ' + positivas + ' positivas'
+        alerta.hidden = false
+        timer = setTimeout(function () { escolher((atual + 1) % SESSOES.length) }, 4200)
+      }
+
+      // o número e a fita andam em tempo de quadro; o gráfico se desenha com a curva entrando aos poucos
       function desenhar() {
         var dpr = Math.min(2, window.devicePixelRatio || 1), w = tela.clientWidth, h = tela.clientHeight
-        if (tela.width !== Math.round(w * dpr)) { tela.width = Math.round(w * dpr); tela.height = Math.round(h * dpr) }
+        if (!w || !h) return
+        if (tela.width !== Math.round(w * dpr) || tela.height !== Math.round(h * dpr)) { tela.width = Math.round(w * dpr); tela.height = Math.round(h * dpr) }
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h)
-        var min = Math.min.apply(null, precos), max = Math.max.apply(null, precos), pad = (max - min) * .18 + .5
-        var X = function (i) { return i / (precos.length - 1) * (w - 54) }, Y = function (p) { return h - 12 - (p - min + pad) / (max - min + pad * 2) * (h - 24) }
-        ctx.strokeStyle = 'rgba(156,177,199,.10)'; ctx.lineWidth = 1
-        for (var g = 1; g < 4; g++) { ctx.beginPath(); ctx.moveTo(0, h * g / 4); ctx.lineTo(w, h * g / 4); ctx.stroke() }
-        var grad = ctx.createLinearGradient(0, 0, 0, h); grad.addColorStop(0, 'rgba(212,166,74,.28)'); grad.addColorStop(1, 'rgba(212,166,74,0)')
-        ctx.beginPath(); precos.forEach(function (p, i) { i ? ctx.lineTo(X(i), Y(p)) : ctx.moveTo(X(i), Y(p)) })
-        ctx.lineTo(X(precos.length - 1), h); ctx.lineTo(0, h); ctx.closePath(); ctx.fillStyle = grad; ctx.fill()
-        ctx.beginPath(); precos.forEach(function (p, i) { i ? ctx.lineTo(X(i), Y(p)) : ctx.moveTo(X(i), Y(p)) })
-        ctx.strokeStyle = '#D4A64A'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke()
-        marcas.forEach(function (m) {
-          var i = m.i - (precosTotal - precos.length); if (i < 0) return
-          var x = X(i), y = Y(precos[i])
-          ctx.fillStyle = m.ok === null ? '#F3F0E9' : m.ok ? '#5FC48C' : '#F1828A'
-          ctx.beginPath(); ctx.arc(x, y, 4.5, 0, 7); ctx.fill()
-          ctx.beginPath(); ctx.moveTo(x, y + (m.sobe ? 10 : -10)); ctx.lineTo(x - 4, y + (m.sobe ? 16 : -16)); ctx.lineTo(x + 4, y + (m.sobe ? 16 : -16)); ctx.closePath(); ctx.fill()
-        })
-        var ux = X(precos.length - 1), uy = Y(precos[precos.length - 1])
-        ctx.fillStyle = '#F3D58C'; ctx.beginPath(); ctx.arc(ux, uy, 3.5, 0, 7); ctx.fill()
-        ctx.fillStyle = 'rgba(212,166,74,.16)'; ctx.fillRect(w - 52, uy - 10, 52, 20)
-        ctx.fillStyle = '#F3D58C'; ctx.font = '600 11px ui-monospace, Menlo, monospace'; ctx.fillText(precos[precos.length - 1].toFixed(2), w - 48, uy + 4)
+        var tudo = [0]; for (var i = 0, a = 0; i < s.ops.length; i++) { a += s.ops[i][2]; tudo.push(a) }
+        var min = Math.min(0, Math.min.apply(null, tudo)), max = Math.max(s.meta, Math.max.apply(null, tudo))
+        var pad = (max - min) * .1, topo = 30, base = h - 14
+        var X = function (i) { return 10 + i / s.ops.length * (w - 20) }, Y = function (v) { return base - (v - min + pad) / (max - min + pad * 2) * (base - topo) }
+        // a meta e o zero
+        ctx.setLineDash([5, 5]); ctx.lineWidth = 1
+        ctx.strokeStyle = 'rgba(95,196,140,.55)'; ctx.beginPath(); ctx.moveTo(0, Y(s.meta)); ctx.lineTo(w, Y(s.meta)); ctx.stroke()
+        ctx.strokeStyle = 'rgba(156,177,199,.22)'; ctx.beginPath(); ctx.moveTo(0, Y(0)); ctx.lineTo(w, Y(0)); ctx.stroke(); ctx.setLineDash([])
+        ctx.fillStyle = 'rgba(95,196,140,.85)'; ctx.font = '700 10.5px ui-monospace, "SF Mono", Menlo, monospace'; ctx.textAlign = 'right'
+        ctx.fillText('META ' + moeda(s.meta), w - 8, Y(s.meta) - 6); ctx.textAlign = 'left'
+        // a curva até onde a sessão chegou, com a última perna crescendo
+        var feito = acum.length - 1, frac = Math.min(1, (performance.now() - ultimoPonto) / 260)
+        var pts = acum.map(function (v, i) { return [X(i), Y(v)] })
+        if (feito > 0 && frac < 1) { var a0 = pts[feito - 1], a1 = pts[feito]; pts[feito] = [a0[0] + (a1[0] - a0[0]) * frac, a0[1] + (a1[1] - a0[1]) * frac] }
+        var grad = ctx.createLinearGradient(0, topo, 0, base); grad.addColorStop(0, 'rgba(212,166,74,.30)'); grad.addColorStop(1, 'rgba(212,166,74,0)')
+        ctx.beginPath(); pts.forEach(function (p, i) { i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]) })
+        ctx.lineTo(pts[pts.length - 1][0], Y(min - pad)); ctx.lineTo(pts[0][0], Y(min - pad)); ctx.closePath(); ctx.fillStyle = grad; ctx.fill()
+        ctx.beginPath(); pts.forEach(function (p, i) { i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]) })
+        ctx.strokeStyle = '#E2B95C'; ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.shadowColor = 'rgba(226,185,92,.6)'; ctx.shadowBlur = 8; ctx.stroke(); ctx.shadowBlur = 0
+        // pontinhos verdes e vermelhos de cada operação (nas sessões curtas)
+        if (s.ops.length <= 50) for (var j = 1; j < pts.length; j++) { if (j === feito && frac < 1) continue; ctx.fillStyle = s.ops[j - 1][2] > 0 ? '#5FC48C' : '#F1828A'; ctx.beginPath(); ctx.arc(pts[j][0], pts[j][1], 2.6, 0, 7); ctx.fill() }
+        var u = pts[pts.length - 1], pulso = (Math.sin(performance.now() / 180) + 1) / 2
+        ctx.fillStyle = 'rgba(243,213,140,' + (.18 + pulso * .2) + ')'; ctx.beginPath(); ctx.arc(u[0], u[1], 8 + pulso * 4, 0, 7); ctx.fill()
+        ctx.fillStyle = '#F3D58C'; ctx.beginPath(); ctx.arc(u[0], u[1], 4, 0, 7); ctx.fill()
       }
-      var precosTotal = precos.length
-      function passo() {
-        tendencia = tendencia * .92 + (Math.random() - .5) * .5
-        preco += tendencia + (Math.random() - .5) * 1.6
-        precos.push(preco); precosTotal++; if (precos.length > 140) precos.shift()
+      var ultimoPonto = 0, acumAntes = 1
+      function quadroDeTela() {
+        if (acum.length !== acumAntes) { acumAntes = acum.length; ultimoPonto = performance.now() }
+        // o resultado corre até o valor novo, como um contador
+        mostrado += (alvo - mostrado) * .22; if (Math.abs(alvo - mostrado) < .005) mostrado = alvo
+        resEl.textContent = moeda(mostrado, true); resEl.className = mostrado > 0.004 ? 'pos' : mostrado < -0.004 ? 'neg' : ''
+        var p = Math.max(0, Math.min(1, mostrado / s.meta))
+        barra.style.width = (p * 100) + '%'; barra.className = mostrado < 0 ? 'neg' : ''; pct.textContent = Math.round(Math.max(0, mostrado) / s.meta * 100) + '%'
+        if (!pausaFim) fitas[atual].querySelector('u').style.width = Math.min(100, (k / s.ops.length) * 100) + '%'
+        else fitas[atual].querySelector('u').style.width = '100%'
         desenhar()
+        if (rodando) quadro = requestAnimationFrame(quadroDeTela)
       }
-
-      function nova() {
-        s = { res: 0, entrada: BASE, n: 0, ganhas: 0 }
-        lista.innerHTML = ''; marcas = []; fim.hidden = true
-        nomeEl.textContent = IAS[ia][0]; capaEl.src = '/aulas-globalfly/robo-' + IAS[ia][1] + '-mobile.webp'
-        mostrar()
+      function ligar() { if (rodando) return; rodando = true; if (pausaFim) timer = setTimeout(function () { escolher((atual + 1) % SESSOES.length) }, 1500); else timer = setTimeout(operar, 400); quadro = requestAnimationFrame(quadroDeTela) }
+      function desligar() { rodando = false; clearTimeout(timer); cancelAnimationFrame(quadro) }
+      escolher(0)
+      // a cabine nunca aparece vazia: as quatro primeiras operações da sessão já chegam na tela
+      function adiantar(qtd) {
+        for (var x = 0; x < qtd && k < s.ops.length - 1; x++) {
+          var op = s.ops[k], n = k + 1, recup = op[0] > s.ops[0][0] + 0.001, ganhou = op[2] > 0
+          var li = document.createElement('li'); li.className = ganhou ? 'ganhou' : 'perdeu'; li.style.animation = 'none'
+          li.innerHTML = '<span class="lp-op-n">#' + n + '</span><span class="lp-op-tipo">' + (op[1] ? 'Dígito acima' : 'Dígito abaixo') + (recup ? '<em>Recuperação</em>' : '') + '</span><span class="lp-op-ent">' + moeda(op[0]) + '</span><span class="lp-op-res ' + (ganhou ? 'pos' : 'neg') + '">' + moeda(op[2], true) + '</span>'
+          lista.insertBefore(li, lista.firstChild)
+          if (ganhou) positivas++
+          k = n; alvo = +(alvo + op[2]).toFixed(2); acum.push(alvo)
+        }
+        mostrado = alvo; entEl.textContent = moeda(s.ops[k][0]); precoEl.textContent = preco(s.ops[k - 1][3])
+        nEl.textContent = k + ' de ' + s.ops.length; posEl.textContent = String(positivas)
       }
-      function mostrar() {
-        resEl.textContent = dinheiro(s.res); resEl.className = s.res > 0 ? 'pos' : s.res < 0 ? 'neg' : ''
-        barraMeta.style.left = Math.max(0, Math.min(100, (s.res - LIMITE) / (META - LIMITE) * 100)) + '%'
-      }
-      function fase(texto, estado) { faseEl.textContent = texto; farol.className = estado || '' }
-      function operar() {
-        if (!rodando) return
-        fase('Analisando o mercado', 'analise')
-        relogioOps = setTimeout(function () {
-          if (!rodando) return
-          var sobe = Math.random() < .5, entrada = s.entrada, n = ++s.n
-          var marca = { i: precosTotal - 1, sobe: sobe, ok: null }; marcas.push(marca); if (marcas.length > 8) marcas.shift()
-          fase('Entrada de ' + valor(entrada) + ' · ' + (sobe ? 'sobe' : 'desce'), 'entrada')
-          var li = document.createElement('li')
-          li.innerHTML = '<span>' + n + '</span><span>' + valor(entrada) + '</span><span class="' + (sobe ? 'up' : 'down') + '">' + (sobe ? '▲ Sobe' : '▼ Desce') + '</span><span class="lp-op-res">aguardando</span>'
-          lista.insertBefore(li, lista.firstChild); while (lista.children.length > 5) lista.removeChild(lista.lastChild)
-          relogioOps = setTimeout(function () {
-            if (!rodando) return
-            var ganhou = Math.random() < .7, delta = ganhou ? +(entrada * .95).toFixed(2) : -entrada
-            marca.ok = ganhou; s.res = +(s.res + delta).toFixed(2); if (ganhou) s.ganhas++
-            var r = li.querySelector('.lp-op-res'); r.textContent = dinheiro(delta); r.className = 'lp-op-res ' + (ganhou ? 'pos' : 'neg')
-            li.classList.add(ganhou ? 'ganhou' : 'perdeu')
-            // depois de uma perda, a I.A. sobe a entrada para recuperar; acertou, volta para a entrada inicial
-            s.entrada = ganhou ? BASE : +(Math.min(entrada * 2.1, s.res - LIMITE)).toFixed(2)
-            mostrar()
-            if (s.res >= META || s.res <= LIMITE || s.entrada < .35) {
-              var bateu = s.res >= META
-              fase(bateu ? 'Meta atingida' : 'Limite de perda atingido', bateu ? 'meta' : 'stop')
-              fim.querySelector('b').textContent = bateu ? 'Meta atingida' : 'Limite de perda atingido'
-              fim.className = 'lp-cabine-fim ' + (bateu ? 'pos' : 'neg')
-              fimTxt.textContent = dinheiro(s.res) + ' em ' + s.n + ' operações · ' + s.ganhas + ' positivas'
-              fim.hidden = false
-              relogioOps = setTimeout(function () { ia = (ia + 1) % IAS.length; nova(); operar() }, 4200)
-              return
-            }
-            relogioOps = setTimeout(operar, 700)
-          }, 1500)
-        }, 1100)
-      }
-      var relogioGrafico = null
-      function ligar() {
-        if (rodando) return
-        // retomou com uma entrada pela metade: ela some, e a sessão segue de onde estava
-        var pendente = lista.firstChild && lista.firstChild.querySelector('.lp-op-res:not(.pos):not(.neg)')
-        if (pendente) { lista.removeChild(lista.firstChild); marcas.pop(); s.n-- }
-        rodando = true; relogioGrafico = setInterval(passo, reduzir ? 600 : 160); operar()
-      }
-      function desligar() { rodando = false; clearInterval(relogioGrafico); clearTimeout(relogioOps) }
-      nova(); desenhar()
-      if ('IntersectionObserver' in window) {
-        new IntersectionObserver(function (e) { visivel = e[0].isIntersecting; visivel && !document.hidden ? ligar() : desligar() }, { threshold: .15 }).observe(cab)
+      if (!reduzir) { adiantar(4); quadroDeTela() }
+      if (reduzir) {
+        // sem animação: a sessão inteira de uma vez
+        s.ops.forEach(function (op) { alvo = +(alvo + op[2]).toFixed(2); acum.push(alvo); if (op[2] > 0) positivas++ })
+        k = s.ops.length; mostrado = alvo; nEl.textContent = k + ' de ' + k; posEl.textContent = String(positivas)
+        terminar(); clearTimeout(timer); rodando = false; quadroDeTela()
+      } else if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (e) { visivel = e[0].isIntersecting; visivel && !document.hidden ? ligar() : desligar() }, { threshold: .2 }).observe(cab)
         document.addEventListener('visibilitychange', function () { document.hidden ? desligar() : visivel && ligar() })
       } else ligar()
-      addEventListener('resize', desenhar)
+      addEventListener('resize', function () { if (!rodando) desenhar() })
     })()
   </script>
 <script>
