@@ -234,7 +234,7 @@ function SituacaoDaFonte({ f, e }: { f: Fonte; e: EstadoDoEstudio }) {
   if (s === 'ligando') return <small className="es-fonte-estado">Ligando…</small>
   return (
     <button type="button" className={`es-ligar ${s === 'erro' ? 'erro' : ''}`} title={e.errosDeCaptura[chave]} onClick={(ev) => { ev.stopPropagation(); void ligarCaptura(f) }}>
-      {s === 'erro' ? 'Tentar de novo' : f.tipo === 'tela' ? 'Escolher tela' : 'Ligar'}
+      {s === 'erro' ? 'Tentar de novo' : f.tipo === 'tela' ? 'Escolher' : 'Ligar'}
     </button>
   )
 }
@@ -416,7 +416,7 @@ function DocaControles({ e }: { e: EstadoDoEstudio }) {
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d={ACAO.flutuante} /></svg>Monitor flutuante
       </button>
       {semPip && <p className="es-nota">Este navegador não abre a janela flutuante. Use o Chrome no computador.</p>}
-      <p className="es-nota">Vai operar em outra janela? Abra o monitor flutuante: você continua vendo o que os alunos recebem e o estúdio não para.</p>
+      <p className="es-nota">Vai operar em outra janela? O monitor flutuante mostra o que os alunos recebem por cima de tudo.</p>
     </>} />
   )
 }
@@ -543,7 +543,7 @@ function Propriedades({ f, e, fechar }: { f: Fonte; e: EstadoDoEstudio; fechar: 
 
 /* ================================================================ estúdio */
 
-export default function Estudio() {
+export default function Estudio({ app = false }: { app?: boolean }) {
   const e = useEstudio()
   const [prop, setProp] = useState(false)
   // abre o estúdio e passa a imagem e o som dele para a transmissão
@@ -562,13 +562,13 @@ export default function Estudio() {
   const nomeDaTransicao = c.transicao === 'stinger' && e.stinger.situacao === 'pronto' ? 'Stinger' : c.transicao === 'corte' ? 'Corte' : `Esmaecer (${c.duracaoMs} ms)`
 
   return (
-    <section className="es" aria-label="Estúdio" onPointerDown={() => { if (e.somBloqueado) void liberarSom() }}>
+    <section className={`es ${app ? 'es-app' : ''}`} aria-label="Estúdio" onPointerDown={() => { if (e.somBloqueado) void liberarSom() }}>
       {e.aviso && <div className="es-aviso" role="status"><span>{e.aviso}</span><button type="button" aria-label="Fechar aviso" onClick={fecharAviso}>×</button></div>}
       <div className={`es-palcos ${c.modoEstudio ? 'duplo' : 'unico'}`}>
         {c.modoEstudio && (
           <figure className="es-palco">
             <figcaption><b>Prévia:</b> {previa?.nome}</figcaption>
-            <Monitor qual="previa" editavel e={e} />
+            <div className="es-palco-area"><Monitor qual="previa" editavel e={e} /></div>
           </figure>
         )}
         {c.modoEstudio && (
@@ -580,7 +580,7 @@ export default function Estudio() {
         )}
         <figure className="es-palco">
           <figcaption><b className="es-vivo"><i aria-hidden />Ao vivo:</b> {noAr?.nome}<span className="es-figura-dica">O que os alunos recebem</span></figcaption>
-          <Monitor qual="aovivo" editavel={!c.modoEstudio} e={e} />
+          <div className="es-palco-area"><Monitor qual="aovivo" editavel={!c.modoEstudio} e={e} /></div>
         </figure>
       </div>
 

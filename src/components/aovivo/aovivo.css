@@ -938,3 +938,130 @@ body.av-teatro-aberto { overflow: hidden; }
 .cv-hist-pessoas li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .cv-hist-pessoas li small { color: var(--muted); font-size: 11px; }
 @media (max-width: 900px) { .cv-destino-teste { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   Central como aplicativo (31/10/2026, "como se fosse um OBS nativo"):
+   tela inteira por cima da plataforma, sempre noturna (as fichas do tema
+   viram noite aqui dentro, como na cabine .tv), estúdio no meio, coluna
+   de chat e sala à direita e barra de estado embaixo, como o OBS.
+   A GlobalFly troca as fichas pelo azul-noite dela (casca/globalfly).
+   ============================================================ */
+.cv-app {
+  --bg: #0c0e13; --surface: #14171f; --surface-alt: #10131a; --border: #262b36;
+  --text: #eef0f4; --muted: #8e96a6; --primary: #d0aa52; --primary-soft: rgba(208, 170, 82, .14);
+  --down: #f0555a; --down-soft: rgba(240, 85, 90, .16); --up: #1fc06a;
+  --cv-painel: #11141b; --cv-linha: rgba(255, 255, 255, .06);
+  color-scheme: dark;
+  position: fixed; inset: 0; z-index: 250;
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--bg); color: var(--text);
+  font-size: 13px;
+}
+.cv-app .cv-num { font-family: var(--fonte-dados, ui-monospace, Menlo, monospace); font-variant-numeric: tabular-nums; }
+
+/* -------- barra de cima */
+.cv-app-topo { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 12px; border-bottom: 1px solid var(--border); background: var(--cv-painel); }
+.cv-app-marca { display: flex; align-items: center; gap: 9px; padding-right: 12px; border-right: 1px solid var(--border); }
+.cv-app-marca img { height: 24px; width: auto; }
+.cv-app-marca span { display: grid; line-height: 1.15; }
+.cv-app-marca b { font-size: 13.5px; letter-spacing: .01em; }
+.cv-app-marca small { color: var(--muted); font-size: 11px; }
+.cv-app-estado { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.cv-app-estado i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.cv-app-estado.vivo { border-color: color-mix(in srgb, var(--down) 60%, transparent); background: var(--down-soft); color: var(--down); }
+.cv-app-estado.vivo i { background: var(--down); animation: av-pulsa 1.4s ease-in-out infinite; }
+.cv-app-estado b { color: var(--text); font-size: 12.5px; letter-spacing: 0; }
+.cv-app-conexao { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.cv-app-conexao.on b { color: var(--text); }
+.cv-app-conexao.erro { color: var(--down); }
+.cv-app-destino { position: relative; }
+.cv-app-pill { display: inline-flex; align-items: center; gap: 7px; max-width: 320px; height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cv-app-pill small { color: var(--muted); font-size: 11px; font-weight: 500; }
+.cv-app-pill i { color: var(--muted); font-style: normal; font-size: 10px; }
+.cv-app-pill:hover, .cv-app-pill.on { border-color: var(--primary); }
+.cv-app-pill.teste { border-color: color-mix(in srgb, var(--primary) 60%, transparent); background: var(--primary-soft); }
+.cv-app-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 5; display: grid; gap: 8px; justify-items: end; width: min(560px, 80vw); padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 24px 60px rgba(0, 0, 0, .5); }
+.cv-app-pop .cv-destino { width: 100%; box-sizing: border-box; }
+.cv-app-pop .cv-destino-teste { grid-template-columns: 1fr; }
+.cv-app-espaco { flex: 1; }
+.cv-app .cv-modo { width: 240px; flex: none; }
+.cv-app .tr-botao-iniciar, .cv-app .av-botao-encerrar { min-height: 36px; padding: 0 16px; font-size: 13px; border-radius: 9px; white-space: nowrap; }
+.cv-app-ico { display: inline-grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+.cv-app-ico:hover { color: var(--text); border-color: var(--primary); }
+.cv-app-sair { height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.cv-app-sair:hover { color: var(--text); }
+.cv-app-erro { position: absolute; top: 58px; left: 50%; transform: translateX(-50%); z-index: 6; padding: 8px 12px; border-radius: 8px; background: var(--surface); box-shadow: 0 8px 24px rgba(0, 0, 0, .4); }
+
+/* -------- corpo: estúdio + coluna */
+.cv-app-corpo { display: grid; grid-template-columns: minmax(0, 1fr) clamp(300px, 22vw, 380px); min-height: 0; }
+.cv-app-lado { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; border-left: 1px solid var(--border); background: var(--cv-painel); }
+.cv-app-abas { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border-bottom: 1px solid var(--border); }
+.cv-app-abas button { position: relative; height: 38px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.cv-app-abas button.on { color: var(--text); border-bottom-color: var(--primary); }
+.cv-app-abas .av-badge-aba { margin-left: 5px; }
+.cv-app-painel { display: grid; gap: 10px; align-content: start; min-height: 0; overflow: auto; padding: 10px; }
+.cv-app-painel.aba-chat { padding: 0; align-content: stretch; }
+.cv-app-painel .cv-chat { height: 100%; min-height: 0; border: 0; border-radius: 0; }
+.cv-app-painel .cv-card { background: var(--surface); }
+.cv-app-painel .cv-controles { gap: 10px; }
+
+/* -------- barra de estado (como a do OBS) */
+.cv-app-status { display: flex; align-items: center; gap: 18px; height: 28px; padding: 0 12px; border-top: 1px solid var(--border); background: var(--cv-painel); color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; }
+.cv-app-status b { color: var(--text); font-weight: 600; }
+.cv-app-status em { color: var(--primary); font-style: normal; }
+.cv-app-status > span:first-child { display: inline-flex; align-items: center; gap: 6px; }
+.cv-app-status > span:first-child i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.cv-app-status > span.vivo { color: var(--down); font-weight: 700; }
+.cv-app-status > span.vivo i { background: var(--down); }
+
+/* -------- histórico na coluna */
+.cv-hist-lista { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.cv-hist-lista > li { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-alt); }
+.cv-hist-lista > li.on { border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); }
+.cv-hist-lista button { display: grid; gap: 4px; width: 100%; padding: 9px 10px; border: 0; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.cv-hist-lista button:disabled { cursor: default; }
+.cv-hist-topo { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.cv-hist-topo small { margin-left: auto; color: var(--muted); }
+.cv-hist-para { color: var(--muted); font-size: 11.5px; }
+.cv-hist-nums { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 11.5px; }
+.cv-hist-nums b { color: var(--text); }
+.cv-hist-quem { display: grid; gap: 3px; margin: 0; padding: 0 10px 9px; list-style: none; font-size: 12px; }
+.cv-hist-quem li { display: flex; justify-content: space-between; gap: 8px; }
+
+/* ---------------------------------------------- estúdio no aplicativo */
+.cv-app .es.es-app { height: 100%; min-height: 0; box-sizing: border-box; padding: 8px; gap: 6px;
+  grid-template-rows: auto minmax(0, 1fr) auto clamp(210px, 29vh, 300px); }
+.cv-app .es-app:not(:has(> .es-aviso)) { grid-template-rows: minmax(0, 1fr) auto clamp(210px, 29vh, 300px); }
+.cv-app .es-app .es-palcos { height: 100%; min-height: 0; align-items: stretch; }
+.cv-app .es-app .es-palcos.duplo { grid-template-columns: minmax(0, 1fr) 118px minmax(0, 1fr); }
+.cv-app .es-app .es-palcos.unico { max-width: none; }
+.cv-app .es-app .es-palco { grid-template-rows: auto minmax(0, 1fr); min-height: 0; height: 100%; }
+.cv-app .es-app .es-palco-area { container-type: size; display: grid; place-items: center; min-height: 0; min-width: 0; border-radius: 6px; background: var(--surface-alt); box-shadow: inset 0 0 0 1px var(--cv-linha); }
+.cv-app .es-app .es-monitor { width: min(100cqw, calc(100cqh * 16 / 9)); border-radius: 2px; }
+.cv-app .es-app .es-meio { align-content: center; }
+.cv-app .es-app .es-barra-fonte { padding: 4px 8px; border-radius: 6px; font-size: 12px; }
+.cv-app .es-app .es-barra-fonte .es-botao { min-height: 26px; padding: 0 10px; font-size: 12px; }
+.cv-app .es-app .es-docas { min-height: 0; gap: 6px; }
+.cv-app .es-app .es-doca { min-height: 0; max-height: none; border-radius: 6px; background: var(--cv-painel); }
+.cv-app .es-app .es-doca h4 { padding: 6px 10px; font-size: 12px; background: var(--surface-alt); }
+.cv-app .es-app .es-doca-corpo { padding: 6px; gap: 6px; overflow-x: hidden; }
+.cv-app .es-app .es-fontes li { gap: 3px; padding-right: 2px; }
+.cv-app .es-app .es-fontes li .es-ico { width: 24px; }
+.cv-app .es-app .es-ligar { padding: 0 7px; font-size: 11px; }
+.cv-app .es-app .es-doca li { min-height: 28px; border-radius: 4px; font-size: 12.5px; }
+.cv-app .es-app .es-doca li.on { background: color-mix(in srgb, var(--primary) 24%, transparent); }
+.cv-app .es-app .es-doca-rodape { padding: 2px 4px; background: var(--surface-alt); }
+.cv-app .es-app .es-canal { padding: 6px 8px; border-radius: 6px; }
+@media (max-width: 1500px) {
+  .cv-app .es-app .es-docas { grid-template-columns: minmax(0, .75fr) minmax(0, 1.2fr) minmax(0, 1.15fr) minmax(0, 1.1fr) minmax(0, .85fr); }
+  .cv-app .es-app .es-ligar { max-width: 74px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cv-app-corpo { grid-template-columns: minmax(0, 1fr) 300px; }
+  .cv-app .es-app .es-controles .es-nota { display: none; }
+  .cv-app .es-app .es-transicoes { grid-column: auto; }
+  .cv-app .es-app .es-controles { grid-column: auto; }
+  .cv-app-conexao { display: none; }
+}
+@media (max-width: 1250px) {
+  .cv-app-corpo { grid-template-columns: minmax(0, 1fr) 290px; }
+  .cv-app-marca small, .cv-app .cv-modo { display: none; }
+}

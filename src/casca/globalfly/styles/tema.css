@@ -477,3 +477,12 @@ span.logo-ia { color: inherit !important; }
 :root[data-marca='globalfly']:not([data-tema='escuro']) .ger.aulas:not(.cine) .aulas-trilha-num { color: color-mix(in srgb, var(--gf-ouro) 70%, var(--text)); }
 :root[data-marca='globalfly']:not([data-tema='escuro']) .ger.aulas:not(.cine) .aulas-capa { background-color: #051528; border-color: #172C47; box-shadow: inset 0 -110px 100px #051528, 0 28px 56px -34px rgba(5, 21, 40, .7); }
 :root[data-marca='globalfly']:not([data-tema='escuro']) .ger.aulas:not(.cine) .aulas-capa::after { background: linear-gradient(transparent, #051528); }
+
+/* Central ao vivo como aplicativo (31/10/2026): a noite azul da GlobalFly,
+   com o ouro da marca, nos dois temas (:root vence a ficha neutra do aovivo.css). */
+:root .cv-app {
+  --bg: #040D1A; --surface: #0C1D33; --surface-alt: #0A1A2F; --border: #1A2D45;
+  --text: #F3F0E9; --muted: #93A6BD; --primary: #D0AA52; --primary-soft: rgba(208, 170, 82, .15);
+  --down: #FF3B47; --down-soft: rgba(255, 59, 71, .15); --up: #22D66A;
+  --cv-painel: #071427; --cv-linha: rgba(147, 166, 189, .1);
+}

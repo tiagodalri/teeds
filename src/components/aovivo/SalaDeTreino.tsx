@@ -170,6 +170,13 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     if (m === 'simples') void usarEstudioNoTreino(null)
   }
   const comEstudio = modo === 'estudio' && computador
+  const [abaLado, setAbaLado] = useState<'chat' | 'sala' | 'simulacao' | 'historico'>('chat')
+  const [verDestino, setVerDestino] = useState(false)
+  const [nomesDasPlataformas, setNomes] = useState<Record<string, string>>({})
+  useEffect(() => { if (sessao && MARCA.parceiros?.length) void plataformasDaMarca(sessao).then((l) => setNomes(Object.fromEntries(l.map((p) => [p.codigo, p.nome])))) }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [cheia, setCheia] = useState(false)
+  useEffect(() => { const f = () => setCheia(!!document.fullscreenElement); document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f) }, [])
+  const alternarTelaCheia = () => { if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined); else void document.documentElement.requestFullscreen?.().catch(() => undefined) }
   const sairDaSala = () => { void sairDoTreino(); aoSair() }
 
   const podeTela = typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.getDisplayMedia === 'function'
@@ -192,7 +199,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     </div>
   )
 
-  const comecar = () => { iniciarSimulacao(apresentador); setAba('chat') }
+  const comecar = () => { iniciarSimulacao(apresentador); setAba('chat'); setAbaLado('chat') }
   const temImagem = !!tela || !!camera || comEstudio
   // tela inteira: sem prévia aqui por padrão (evita o espelho infinito e poupa o computador)
   const [verPrevia, setVerPrevia] = useState(false)
@@ -304,7 +311,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
         </div>
       </section>
 
-      <section className="cv-card">
+      {!comEstudio && <section className="cv-card">
         <h4>Câmera e microfone</h4>
         <div className="av-painel-linha entre">
           <span id="tr-canto">Seu rosto sobre a tela</span>
@@ -317,9 +324,156 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
         {!mic && <span className="tr-legenda">Ligue o microfone no topo para ver o volume.</span>}
         <span className="tr-rotulo">Fundo da câmera</span>
         <SeletorDeFundo valor={fundo} cameraLigada={!!camera} aplicando={tr.aplicandoFundo} onEscolher={(e) => void trocarFundoDoTreino(e)} />
-      </section>
+      </section>}
     </div>
   )
+
+  const movimento = (
+    <section className="cv-card cv-movimento" aria-label="Movimento da sala">
+      <h4>Movimento da sala <small>membros reais</small></h4>
+      {central.movimento.length === 0
+        ? <span className="tr-legenda">Quando um membro entrar, sair ou mandar mensagem, aparece aqui.</span>
+        : <ol>
+          {central.movimento.slice(0, 40).map((m) => (
+            <li key={m.id} className={`cv-mov-${m.tipo}`}>
+              <time className="cv-num">{hora(m.hora)}</time>
+              <i aria-hidden>{m.tipo === 'entrou' ? '→' : m.tipo === 'saiu' ? '←' : '✉'}</i>
+              <span><b>{m.nome}</b> {m.tipo === 'entrou' ? 'entrou' : m.tipo === 'saiu' ? `saiu · ${m.texto}` : <>escreveu: <q>{m.texto}</q></>}</span>
+            </li>
+          ))}
+        </ol>}
+    </section>
+  )
+  const chatDaSala = (
+    <section className="av-chat cv-chat" aria-label="Chat">
+      <div className="av-abas" role="tablist" aria-label="Mensagens">
+        <button role="tab" aria-selected={abaChat === 'equipe'} className={abaChat === 'equipe' ? 'on' : ''} onClick={() => setAbaChat('equipe')}>
+          Para a equipe{naoRespondidas > 0 && <span className="av-badge-aba">{naoRespondidas > 99 ? '99+' : naoRespondidas}</span>}
+        </button>
+        <button role="tab" aria-selected={abaChat === 'todos'} className={abaChat === 'todos' ? 'on' : ''} onClick={() => setAbaChat('todos')}>Todos</button>
+      </div>
+      {sim.momento && abaChat === 'todos' && <div className="tr-momento">Tema: {MOMENTOS.find((m) => m.id === sim.momento)?.rotulo}</div>}
+      <div className="av-mensagens" ref={lista} role="log" aria-live="off">
+        {mensagensDoChat.length === 0 && (
+          <div className="av-chat-vazio tr-chat-vazio">
+            {abaChat === 'equipe' ? 'As mensagens dos membros de verdade aparecem aqui, separadas do chat simulado.' : sim.ativa ? 'O público está chegando…' : 'O chat ganha vida quando você começar a transmissão.'}
+          </div>
+        )}
+        {mensagensDoChat.map((m) => m.sistema ? (
+          <p key={m.id} className="tr-sistema" role="status">{m.texto}</p>
+        ) : m.entrada ? (
+          <p key={m.id} className="tr-entrada">{m.nome} {m.saida ? 'saiu' : 'entrou'}</p>
+        ) : (
+          <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''} ${m.membro && central.respondidas.has(m.id) ? 'cv-vista' : ''}`}>
+            <p><b>{m.nome}{m.apresentador && <em>Você</em>}{m.membro && <em className="tr-tag-membro">Membro</em>}</b> {m.texto}</p>
+            <time>{hora(m.hora)}</time>
+            {m.membro && abaChat === 'equipe' && (
+              <div className="cv-msg-acoes">
+                <button type="button" onClick={() => responder(m.nome)}>Responder no chat</button>
+                {!central.respondidas.has(m.id) ? <button type="button" onClick={() => marcarVista(m.id)}>Marcar como vista</button> : <span>Vista</span>}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <form className="av-escrever" onSubmit={(e) => { e.preventDefault(); falarComoApresentador(texto); setTexto('') }}>
+        <label htmlFor="tr-campo" className="av-oculto">Responder no chat</label>
+        <input id="tr-campo" value={texto} maxLength={500} autoComplete="off" placeholder="Escreva como equipe, todos veem" onChange={(e) => setTexto(e.target.value)} />
+        <button type="submit" disabled={!texto.trim()}>Enviar</button>
+      </form>
+    </section>
+  )
+  const naSalaCard = (
+    <section className="cv-card cv-na-sala" aria-label="Membros na sala">
+      <h4>Na sala agora <small>{naSala.length} {naSala.length === 1 ? 'membro' : 'membros'}</small></h4>
+      {naSala.length === 0
+        ? <span className="tr-legenda">Ninguém ainda. Mande o link abaixo para quem é do GF Member.</span>
+        : <ul>{naSala.map(([n, desde]) => <li key={n}><span>{n}</span><b className="cv-num">{duracao(Date.now() - desde)}</b></li>)}</ul>}
+      <LinkDoTreino compacto />
+    </section>
+  )
+
+  /* A Central como um aplicativo de transmissão (31/10/2026, "como se fosse
+     um OBS nativo"): tela inteira, sempre noturna, estúdio no meio, chat e
+     sala na coluna da direita, barra de estado embaixo. */
+  if (comEstudio) {
+    const destino = tr.teste ? 'Teste com link privado' : !tr.vitrines ? 'Todas as plataformas' : tr.vitrines.map((v) => (v === 'direto' ? 'Direto' : nomesDasPlataformas[v] ?? `/${v}`)).join(', ')
+    return (
+      <div className={`cv-app ${sim.ativa ? 'no-ar' : ''} ${tr.teste ? 'em-teste' : ''}`} aria-label="Central ao vivo">
+        <header className="cv-app-topo">
+          <div className="cv-app-marca">
+            {MARCA.id === 'globalfly' && <img src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
+            <span><b>Central ao vivo</b><small>Sala de treino</small></span>
+          </div>
+          <span className={`cv-app-estado ${sim.ativa ? 'vivo' : ''}`} role="status">
+            <i aria-hidden />{sim.ativa ? (tr.teste ? 'Teste no ar' : 'Ao vivo') : 'Fora do ar'}{sim.ativa && <b className="cv-num">{relogio(Date.now() - central.noArDesde)}</b>}
+          </span>
+          {sessao && (
+            <span className={`cv-app-conexao ${tr.fase === 'conectada' ? 'on' : tr.fase === 'erro' ? 'erro' : ''}`} title={tr.fase === 'erro' ? tr.erro ?? undefined : undefined}>
+              {tr.fase === 'conectada' ? <><b className="cv-num">{tr.membros}</b> {tr.membros === 1 ? 'membro na sala' : 'membros na sala'}</> : tr.fase === 'erro' ? 'Sem conexão com a sala' : 'Abrindo a sala…'}
+            </span>
+          )}
+          {sessao && (
+            <div className="cv-app-destino">
+              <button type="button" className={`cv-app-pill ${verDestino ? 'on' : ''} ${tr.teste ? 'teste' : ''}`} aria-expanded={verDestino} onClick={() => setVerDestino(!verDestino)}>
+                <small>Para</small>{destino}<i aria-hidden>▾</i>
+              </button>
+              {verDestino && (
+                <div className="cv-app-pop" role="dialog" aria-label="Quem recebe a transmissão">
+                  <DestinoDaTransmissao sessao={sessao} noAr={sim.ativa} />
+                  <button type="button" className="av-link" onClick={() => setVerDestino(false)}>Fechar</button>
+                </div>
+              )}
+            </div>
+          )}
+          <span className="cv-app-espaco" />
+          {computador && <div className="tr-seg cv-modo" role="radiogroup" aria-label="De onde vem a imagem">
+            <button role="radio" aria-checked={comEstudio} className={comEstudio ? 'on' : ''} disabled={sim.ativa} title={sim.ativa ? 'Encerre a transmissão para trocar' : undefined} onClick={() => setModo('estudio')}>Estúdio de cenas</button>
+            <button role="radio" aria-checked={!comEstudio} className={!comEstudio ? 'on' : ''} disabled={sim.ativa} title={sim.ativa ? 'Encerre a transmissão para trocar' : undefined} onClick={() => setModo('simples')}>Tela e câmera</button>
+          </div>}
+          {sim.ativa
+            ? <button className="av-botao-encerrar" onClick={() => pararSimulacao()}>Encerrar transmissão</button>
+            : <button className="tr-botao-iniciar" onClick={comecar}><i aria-hidden />Começar transmissão</button>}
+          <button type="button" className="cv-app-ico" aria-label={cheia ? 'Sair da tela cheia' : 'Tela cheia'} title={cheia ? 'Sair da tela cheia' : 'Tela cheia'} onClick={alternarTelaCheia}>
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={cheia ? 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5' : 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'} /></svg>
+          </button>
+          <button type="button" className="cv-app-sair" onClick={sairDaSala}>Sair da Central</button>
+        </header>
+        {erro && <p className="av-erro cv-app-erro" role="alert">{erro}</p>}
+
+        <div className="cv-app-corpo">
+          <Suspense fallback={<section className="es es-carregando"><p>Abrindo o estúdio…</p></section>}><Estudio app /></Suspense>
+          <aside className="cv-app-lado" aria-label="Chat e sala">
+            <div className="cv-app-abas" role="tablist" aria-label="Painéis">
+              {(['chat', 'sala', 'simulacao', 'historico'] as const).map((a) => (
+                <button key={a} role="tab" aria-selected={abaLado === a} className={abaLado === a ? 'on' : ''} onClick={() => setAbaLado(a)}>
+                  {a === 'chat' ? 'Chat' : a === 'sala' ? 'Sala' : a === 'simulacao' ? 'Simulação' : 'Histórico'}
+                  {a === 'chat' && naoRespondidas > 0 && <span className="av-badge-aba">{naoRespondidas > 99 ? '99+' : naoRespondidas}</span>}
+                </button>
+              ))}
+            </div>
+            <div className={`cv-app-painel aba-${abaLado}`}>
+              {abaLado === 'chat' && chatDaSala}
+              {abaLado === 'sala' && <>{naSalaCard}{movimento}</>}
+              {abaLado === 'simulacao' && controles}
+              {abaLado === 'historico' && sessao && <HistoricoDasTransmissoes sessao={sessao} noAr={sim.ativa} compacto />}
+            </div>
+          </aside>
+        </div>
+
+        <footer className="cv-app-status" aria-label="Estado da transmissão">
+          <span className={sim.ativa ? 'vivo' : ''}><i aria-hidden />{sim.ativa ? (tr.teste ? 'Teste no ar' : 'Ao vivo') : 'Fora do ar'} <b className="cv-num">{sim.ativa ? relogio(Date.now() - central.noArDesde) : '00:00:00'}</b></span>
+          <span>Membros <b className="cv-num">{tr.membros}</b></span>
+          <span>Pico <b className="cv-num">{central.pico}</b></span>
+          <span>Passaram <b className="cv-num">{central.pessoas.size}</b></span>
+          <span>Para a equipe <b className="cv-num">{central.paraEquipe}</b>{naoRespondidas > 0 && <em> · {naoRespondidas} sem resposta</em>}</span>
+          <span>Público simulado <b className="cv-num">{sim.ativa ? fmt(sim.publicoAgora) : '—'}</b></span>
+          <span className="cv-app-espaco" />
+          <span>Saída <b className="cv-num">1920×1080 · 30 fps</b></span>
+        </footer>
+      </div>
+    )
+  }
 
   return (
     <div className="ger av-pagina av-com-palco tr-sala cv">
@@ -398,68 +552,13 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
             )}
             <span className="tr-selo"><i aria-hidden />GF Streaming{sim.ativa && <> · {fmt(sim.publicoAgora)} na sala</>}</span>
           </div>}
-          <section className="cv-card cv-movimento" aria-label="Movimento da sala">
-            <h4>Movimento da sala <small>membros reais</small></h4>
-            {central.movimento.length === 0
-              ? <span className="tr-legenda">Quando um membro entrar, sair ou mandar mensagem, aparece aqui.</span>
-              : <ol>
-                {central.movimento.slice(0, 40).map((m) => (
-                  <li key={m.id} className={`cv-mov-${m.tipo}`}>
-                    <time className="cv-num">{hora(m.hora)}</time>
-                    <i aria-hidden>{m.tipo === 'entrou' ? '→' : m.tipo === 'saiu' ? '←' : '✉'}</i>
-                    <span><b>{m.nome}</b> {m.tipo === 'entrou' ? 'entrou' : m.tipo === 'saiu' ? `saiu · ${m.texto}` : <>escreveu: <q>{m.texto}</q></>}</span>
-                  </li>
-                ))}
-              </ol>}
-          </section>
+          {movimento}
         </div>
 
         <div className="cv-direita">
-          <section className="av-chat cv-chat" aria-label="Chat">
-            <div className="av-abas" role="tablist" aria-label="Mensagens">
-              <button role="tab" aria-selected={abaChat === 'equipe'} className={abaChat === 'equipe' ? 'on' : ''} onClick={() => setAbaChat('equipe')}>
-                Para a equipe{naoRespondidas > 0 && <span className="av-badge-aba">{naoRespondidas > 99 ? '99+' : naoRespondidas}</span>}
-              </button>
-              <button role="tab" aria-selected={abaChat === 'todos'} className={abaChat === 'todos' ? 'on' : ''} onClick={() => setAbaChat('todos')}>Todos</button>
-            </div>
-            {sim.momento && abaChat === 'todos' && <div className="tr-momento">Tema: {MOMENTOS.find((m) => m.id === sim.momento)?.rotulo}</div>}
-            <div className="av-mensagens" ref={lista} role="log" aria-live="off">
-              {mensagensDoChat.length === 0 && (
-                <div className="av-chat-vazio tr-chat-vazio">
-                  {abaChat === 'equipe' ? 'As mensagens dos membros de verdade aparecem aqui, separadas do chat simulado.' : sim.ativa ? 'O público está chegando…' : 'O chat ganha vida quando você começar a transmissão.'}
-                </div>
-              )}
-              {mensagensDoChat.map((m) => m.sistema ? (
-                <p key={m.id} className="tr-sistema" role="status">{m.texto}</p>
-              ) : m.entrada ? (
-                <p key={m.id} className="tr-entrada">{m.nome} {m.saida ? 'saiu' : 'entrou'}</p>
-              ) : (
-                <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''} ${m.membro && central.respondidas.has(m.id) ? 'cv-vista' : ''}`}>
-                  <p><b>{m.nome}{m.apresentador && <em>Você</em>}{m.membro && <em className="tr-tag-membro">Membro</em>}</b> {m.texto}</p>
-                  <time>{hora(m.hora)}</time>
-                  {m.membro && abaChat === 'equipe' && (
-                    <div className="cv-msg-acoes">
-                      <button type="button" onClick={() => responder(m.nome)}>Responder no chat</button>
-                      {!central.respondidas.has(m.id) ? <button type="button" onClick={() => marcarVista(m.id)}>Marcar como vista</button> : <span>Vista</span>}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <form className="av-escrever" onSubmit={(e) => { e.preventDefault(); falarComoApresentador(texto); setTexto('') }}>
-              <label htmlFor="tr-campo" className="av-oculto">Responder no chat</label>
-              <input id="tr-campo" value={texto} maxLength={500} autoComplete="off" placeholder="Escreva como equipe, todos veem" onChange={(e) => setTexto(e.target.value)} />
-              <button type="submit" disabled={!texto.trim()}>Enviar</button>
-            </form>
-          </section>
+          {chatDaSala}
 
-          <section className="cv-card cv-na-sala" aria-label="Membros na sala">
-            <h4>Na sala agora <small>{naSala.length} {naSala.length === 1 ? 'membro' : 'membros'}</small></h4>
-            {naSala.length === 0
-              ? <span className="tr-legenda">Ninguém ainda. Mande o link abaixo para quem é do GF Member.</span>
-              : <ul>{naSala.map(([n, desde]) => <li key={n}><span>{n}</span><b className="cv-num">{duracao(Date.now() - desde)}</b></li>)}</ul>}
-            <LinkDoTreino compacto />
-          </section>
+          {naSalaCard}
         </div>
       </div>
 
@@ -553,7 +652,7 @@ const tempo = (s: number) => {
   return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`
 }
 
-export function HistoricoDasTransmissoes({ sessao, noAr }: { sessao: SessaoTeeds; noAr: boolean }) {
+export function HistoricoDasTransmissoes({ sessao, noAr, compacto = false }: { sessao: SessaoTeeds; noAr: boolean; compacto?: boolean }) {
   const [lista, setLista] = useState<Transmissao[] | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [aberta, setAberta] = useState<string | null>(null)
@@ -572,7 +671,28 @@ export function HistoricoDasTransmissoes({ sessao, noAr }: { sessao: SessaoTeeds
       <h4 id="cv-hist-titulo">Histórico das transmissões <small>membros reais; o público simulado não entra</small></h4>
       {erro && <p className="av-erro">{erro}</p>}
       {lista && lista.length === 0 && <span className="tr-legenda">A primeira transmissão aparece aqui assim que começar: pessoas, pico, tempo médio e mensagens.</span>}
-      {lista && lista.length > 0 && (
+      {lista && lista.length > 0 && compacto && (
+        <ul className="cv-hist-lista">
+          {lista.map((t) => {
+            const viva = !t.encerrada_em && Date.now() - Date.parse(t.atualizada_em) < 90_000
+            const dur = Math.max(0, Math.round((Date.parse(viva ? new Date().toISOString() : (t.encerrada_em ?? t.atualizada_em)) - Date.parse(t.iniciada_em)) / 1000))
+            return (
+              <li key={t.id} className={aberta === t.id ? 'on' : ''}>
+                <button type="button" disabled={!t.presencas.length} aria-expanded={aberta === t.id} onClick={() => setAberta(aberta === t.id ? null : t.id)}>
+                  <span className="cv-hist-topo"><b>{quando(t.iniciada_em)}</b>{viva && <em className="cv-hist-vivo">No ar</em>}<small className="cv-num">{tempo(dur)}</small></span>
+                  <span className="cv-hist-para">{plataformas(t)}</span>
+                  <span className="cv-hist-nums">
+                    <span><b className="cv-num">{t.pessoas}</b> pessoas</span><span><b className="cv-num">{t.pico}</b> pico</span>
+                    <span><b className="cv-num">{t.pessoas ? tempo(t.tempo_medio_s) : '—'}</b> média</span><span><b className="cv-num">{t.mensagens}</b> msgs</span>
+                  </span>
+                </button>
+                {aberta === t.id && <ul className="cv-hist-quem">{t.presencas.map((p) => <li key={p.id}><span>{p.nome}</span><b className="cv-num">{tempo(p.segundos)}</b></li>)}</ul>}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      {lista && lista.length > 0 && !compacto && (
         <div className="cv-hist-tabela">
           <table>
             <thead><tr><th>Quando</th><th>Duração</th><th>Para quem</th><th className="n">Pessoas</th><th className="n">Pico</th><th className="n">Tempo médio</th><th className="n">Mensagens</th><th aria-label="Detalhes" /></tr></thead>

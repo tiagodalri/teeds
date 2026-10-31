@@ -6328,7 +6328,7 @@ a.entrada-corretora .corretora-topo { grid-area: topo; margin: 0; }
 .ec-fundo, .ac-confirm-fundo { z-index: 310; }
 body:has(:is(.aula-modal-fundo, .market-modal-fundo, .cw-fundo, .adm-modal-fundo, .ec-fundo,
   .ac-modal-fundo, .ac-confirm-fundo, .tm-modal, .gp-modal-fundo, .av-folha-fundo, .beta-fundo,
-  .ap-modal-fundo, .app-passos-fundo, .vr-modal-fundo, .workspace-sidebar.mobile-open, .pd.pd-movel))
+  .ap-modal-fundo, .app-passos-fundo, .vr-modal-fundo, .workspace-sidebar.mobile-open, .pd.pd-movel, .cv-app))
   :is(.barra-inferior, .mcb, .sp-lancador-area, .eq-lancador-area, .app-convite, .av-pilula) { display: none !important; }
 
 /* Os flutuantes do pé (suporte, mini-cabine) ficam onde sempre estiveram (o Tiago não

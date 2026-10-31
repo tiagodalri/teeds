@@ -736,6 +736,8 @@ export function iniciarEstudio(): Promise<void> {
   iniciando ??= (async () => {
     let config = await lerConfig()
     if (!config || config.versao !== 1 || !config.cenas?.length) { config = cenasProntas(); void salvarConfig(config).catch(() => undefined) }
+    // 31/10/2026: a cena pronta aberta no tema claro nasceu com o título no azul do tema (invisível no fundo escuro)
+    config = { ...config, cenas: config.cenas.map((c) => ({ ...c, fontes: c.fontes.map((f) => (f.tipo === 'texto' && f.nome === 'Live iniciando' && f.texto?.cor.toLowerCase() === '#051528' ? { ...f, texto: { ...f.texto, cor: '#D6AE5B' } } : f)) })) }
     ;[saida, saidaCtx] = tela2d(LARGURA, ALTURA)
     ;[previa, previaCtx] = tela2d(LARGURA / 2, ALTURA / 2)
     saida.className = 'es-tela'; previa.className = 'es-tela'

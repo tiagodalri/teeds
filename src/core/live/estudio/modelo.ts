@@ -9,9 +9,8 @@ import { ALTURA, CANAL_PADRAO, LARGURA, novoId, type Cena, type ConfigDoEstudio,
 const BASE = import.meta.env.BASE_URL
 const GF = MARCA.id === 'globalfly'
 
-const corDaMarca = () => {
-  try { return getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#d0aa52' } catch { return '#d0aa52' }
-}
+/** O dourado da arte da live (o mesmo nos dois temas: a cena é sempre noturna). */
+const OURO = '#D6AE5B'
 
 const fonte = (f: Partial<Fonte> & Pick<Fonte, 'tipo' | 'nome'>): Fonte => ({
   id: novoId(), visivel: true, bloqueada: false, x: 0, y: 0, w: LARGURA, h: ALTURA,
@@ -27,7 +26,7 @@ const linha = (nome: string, estilo: EstiloDeTexto, y: number): Fonte =>
   fonte({ tipo: 'texto', nome, texto: estilo, x: LARGURA / 2 - 400, y, w: 800, h: estilo.tamanho * 1.3, encaixar: null })
 
 export function cenasProntas(): ConfigDoEstudio {
-  const ouro = corDaMarca()
+  const ouro = OURO
   const fundo = (): Fonte => GF
     ? fonte({ tipo: 'imagem', nome: 'Fundo', url: `${BASE}estudio-globalfly/fundo.webp`, nomeDoArquivo: 'fundo.webp', bloqueada: true })
     : fonte({ tipo: 'cor', nome: 'Fundo', cor: '#0a0d14', bloqueada: true })
