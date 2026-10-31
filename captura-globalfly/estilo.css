@@ -754,3 +754,15 @@ body.lp::before { display: none; }
 
 .lp-hangar figure[data-ia] { cursor: pointer; }
 .lp-hangar figure[data-ia].on { border-color: rgba(212, 166, 74, .7); box-shadow: 0 0 0 1px rgba(212, 166, 74, .4), 0 18px 40px -20px rgba(212, 166, 74, .6); }
+
+/* revisão do celular (31/10/2026) */
+@media (max-width: 600px) {
+  /* o celular de exemplo sem a sobra vazia embaixo dos avisos */
+  .lp-celular { aspect-ratio: 9 / 15.6; }
+  /* no cartão final, a asa desce e o alto fica escuro: o título não briga com a foto */
+  .lp-final::before { background: linear-gradient(180deg, rgba(5, 21, 40, .9) 0%, rgba(5, 21, 40, .84) 42%, rgba(5, 21, 40, .55) 68%, rgba(5, 21, 40, .94) 100%), url("./img/viagem.webp") 70% 100% / cover no-repeat; }
+}
+@media (max-width: 400px) {
+  /* o canhoto do formulário numa linha só, mesmo no Android pequeno */
+  .lp-canhoto { font-size: 10px; letter-spacing: .03em; white-space: nowrap; }
+}

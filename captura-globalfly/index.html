@@ -407,8 +407,8 @@
 
   <script src="./captura.js"></script>
   <script>
-    // Página de vendas do lançamento (30/10/2026): painel de embarque, cabine com uma I.A. operando
-    // (demonstração ilustrativa), quem apresenta, barra fixa do celular e pixel.
+    // Página de vendas do lançamento (30/10/2026): painel de embarque, cabine com a reprise de sessões reais
+    // (31/10/2026), quem apresenta, barra fixa do celular e pixel.
     (function () {
       GF.pixel()
       var reduzir = matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -524,7 +524,7 @@
       var q = function (s) { return cab.querySelector(s) }
       var tela = q('[data-cab-grafico]'), ctx = tela.getContext('2d')
       var ias = q('[data-cab-ias]'), capa = q('[data-cab-capa]'), nomeEl = q('[data-cab-nome]'), status = q('[data-cab-status]'), faseEl = q('[data-cab-fase]')
-      var resEl = q('[data-cab-res]'), metaEl = q('[data-cab-meta]'), barra = q('[data-cab-barra]'), pct = q('[data-cab-pct]'), precoEl = q('[data-cab-preco]')
+      var resEl = q('[data-cab-res]'), metaEl = q('[data-cab-meta]'), barraMeta = q('[data-cab-barra]'), pct = q('[data-cab-pct]'), precoEl = q('[data-cab-preco]')
       var nEl = q('[data-cab-n]'), posEl = q('[data-cab-pos]'), entEl = q('[data-cab-ent]'), lista = q('[data-cab-ops]')
       var alerta = q('[data-cab-alerta]'), alertaTit = q('[data-cab-alerta-titulo]'), alertaTxt = q('[data-cab-alerta-txt]'), nota = q('[data-cab-nota]')
       var moeda = function (v, sinal) { var t = 'US$ ' + Math.abs(v).toFixed(2).replace('.', ','); return sinal ? (v < 0 ? '−' : '+') + t : t }
@@ -635,7 +635,7 @@
         mostrado += (alvo - mostrado) * .22; if (Math.abs(alvo - mostrado) < .005) mostrado = alvo
         resEl.textContent = moeda(mostrado, true); resEl.className = mostrado > 0.004 ? 'pos' : mostrado < -0.004 ? 'neg' : ''
         var p = Math.max(0, Math.min(1, mostrado / s.meta))
-        barra.style.width = (p * 100) + '%'; barra.className = mostrado < 0 ? 'neg' : ''; pct.textContent = Math.round(Math.max(0, mostrado) / s.meta * 100) + '%'
+        barraMeta.style.width = (p * 100) + '%'; barraMeta.className = mostrado < 0 ? 'neg' : ''; pct.textContent = Math.round(Math.max(0, mostrado) / s.meta * 100) + '%'
         if (!pausaFim) fitas[atual].querySelector('u').style.width = Math.min(100, (k / s.ops.length) * 100) + '%'
         else fitas[atual].querySelector('u').style.width = '100%'
         desenhar()
