@@ -148,7 +148,7 @@ export function AdminNotificacoes({ sessao }: { sessao: SessaoTeeds }) {
           <header>
             <div><span className="rot">2 · Prévia</span><h3>Como chega no celular</h3></div>
             <div className="pn-troca" role="group" aria-label="Aparelho da prévia">
-              <button type="button" className={aparelho === 'iphone' ? 'on' : ''} onClick={() => setAparelho('iphone')}>iPhone</button>
+              <button type="button" className={aparelho === 'iphone' ? 'on' : ''} onClick={() => setAparelho('iphone')}>iPhone</button>{/* texto-ok: iPhone é nome de marca, escrito assim */}
               <button type="button" className={aparelho === 'android' ? 'on' : ''} onClick={() => setAparelho('android')}>Android</button>
             </div>
           </header>
