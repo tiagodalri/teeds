@@ -76,6 +76,21 @@
 .pn-recado.ok { background: color-mix(in srgb, var(--up) 12%, transparent); }
 .pn-recado.erro { background: color-mix(in srgb, var(--down) 12%, transparent); color: var(--down); }
 
+/* o histórico, com o rastreio (02/11/2026) */
+.pn-numeros { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.pn-numeros em { font-style: normal; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; background: var(--surface-alt, var(--bg)); border: 1px solid var(--border); color: var(--text); font-variant-numeric: tabular-nums; }
+.pn-numeros em.ouro { border-color: var(--primary); background: var(--primary-soft); }
+.pn-ver { justify-self: end; margin-top: 2px; padding: 0; border: 0; background: none; color: var(--primary); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.pn-ver:hover { text-decoration: underline; }
+.pn-quem { grid-column: 1 / -1; max-height: 360px; overflow: auto; border: 1px solid var(--border); border-radius: 12px; }
+.pn-quem table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pn-quem th { position: sticky; top: 0; text-align: left; padding: 9px 12px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--surface, var(--bg)); border-bottom: 1px solid var(--border); }
+.pn-quem td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; font-variant-numeric: tabular-nums; }
+.pn-quem tr:last-child td { border-bottom: 0; }
+.pn-quem td b { display: block; font-size: 13.5px; }
+.pn-quem td small { display: block; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.pn-sim { color: var(--up); font-weight: 700; }
+.pn-nao { color: var(--muted); }
 /* o histórico */
 .pn-historico ul { list-style: none; margin: 0; padding: 0; display: grid; }
 .pn-historico li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }

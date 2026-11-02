@@ -16,7 +16,8 @@ import './painel-notificacoes.css'
 
 type Publico = 'todos' | 'aguardando' | 'membros' | 'ativos'
 type Contagem = Record<Publico | 'eu', { pessoas: number; aparelhos: number }>
-interface Disparo { id: string; criado_em: string; titulo: string; corpo: string; publico: string; parceiro: string | null; aparelhos: number | null; enviados: number | null; falhas: number | null; teste: boolean }
+interface Disparo { id: string; criado_em: string; titulo: string; corpo: string; publico: string; parceiro: string | null; aparelhos: number | null; enviados: number | null; falhas: number | null; teste: boolean; pessoas?: number; recebidos?: number; abertos?: number; pessoas_abriram?: number }
+interface Pessoa { pessoa: string | null; nome: string | null; email: string | null; parceiro: string | null; aparelhos: number; recebeu_em: string | null; abriu_em: string | null }
 
 const PUBLICOS: Array<{ id: Publico; nome: string; quem: string }> = [
   { id: 'aguardando', nome: 'Aguardando live', quem: 'Inscritos que ainda esperam a live' },
@@ -58,6 +59,17 @@ export function AdminNotificacoes({ sessao }: { sessao: SessaoTeeds }) {
   const [ocupado, setOcupado] = useState<'teste' | 'envio' | null>(null)
   const [confirmar, setConfirmar] = useState(false)
   const [recado, setRecado] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
+  const [aberto, setAberto] = useState<string | null>(null)
+  const [quem, setQuem] = useState<Pessoa[] | null>(null)
+
+  async function verQuem(id: string) {
+    if (aberto === id) { setAberto(null); return }
+    setAberto(id); setQuem(null)
+    try {
+      const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_push_quem`, { method: 'POST', headers: cab, body: JSON.stringify({ p_disparo: id }) })
+      setQuem(r.ok ? await r.json() : [])
+    } catch { setQuem([]) }
+  }
 
   const cab = { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' }
 
@@ -69,7 +81,8 @@ export function AdminNotificacoes({ sessao }: { sessao: SessaoTeeds }) {
   }
   async function lerHistorico() {
     try {
-      const r = await fetch(`${SUPABASE.url}/rest/v1/push_disparos?marca=eq.${MARCA.id}&select=id,criado_em,titulo,corpo,publico,parceiro,aparelhos,enviados,falhas,teste&order=criado_em.desc&limit=20`, { headers: cab })
+      // com os números do rastreio: quantos aparelhos mostraram a notificação e quantos tocaram nela
+      const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_push_historico`, { method: 'POST', headers: cab, body: JSON.stringify({ p_marca: MARCA.id }) })
       if (r.ok) setHistorico(await r.json())
     } catch { /* o histórico é só consulta */ }
   }
@@ -221,9 +234,32 @@ export function AdminNotificacoes({ sessao }: { sessao: SessaoTeeds }) {
               <li key={d.id}>
                 <div><b>{d.titulo}</b><span>{d.corpo}</span></div>
                 <div className="pn-hist-dados">
-                  <span>{nomeDoPublico(d.publico)}{d.parceiro ? ` · ${PARCEIROS.find((p) => p.id === d.parceiro)?.nome ?? d.parceiro}` : ''}</span>
-                  <span>{plural(d.enviados ?? 0, 'aparelho', 'aparelhos')} · {quando(d.criado_em)}</span>
+                  <span>{nomeDoPublico(d.publico)}{d.parceiro ? ` · ${PARCEIROS.find((p) => p.id === d.parceiro)?.nome ?? d.parceiro}` : ''} · {quando(d.criado_em)}</span>
+                  <span className="pn-numeros">
+                    <em title="Aparelhos que o envio alcançou">{plural(d.enviados ?? 0, 'enviada', 'enviadas')}</em>
+                    <em title="Apareceu na tela do aparelho">{plural(d.recebidos ?? 0, 'recebida', 'recebidas')}</em>
+                    <em className="ouro" title="A pessoa tocou na notificação">{plural(d.abertos ?? 0, 'aberta', 'abertas')}{d.recebidos ? ` · ${Math.round(((d.abertos ?? 0) / d.recebidos) * 100)}%` : ''}</em>
+                  </span>
+                  <button type="button" className="pn-ver" onClick={() => void verQuem(d.id)} aria-expanded={aberto === d.id}>{aberto === d.id ? 'Fechar' : 'Ver quem recebeu'}</button>
                 </div>
+                {aberto === d.id && (
+                  <div className="pn-quem">
+                    {quem === null ? <p className="pn-vazio">Carregando…</p> : quem.length === 0 ? <p className="pn-vazio">Nenhum aparelho alcançado neste envio.</p> : (
+                      <table>
+                        <thead><tr><th>Pessoa</th><th>Recebeu</th><th>Abriu</th></tr></thead>
+                        <tbody>
+                          {quem.map((q, i) => (
+                            <tr key={q.pessoa ?? i}>
+                              <td><b>{q.nome || 'Sem nome'}</b><small>{q.email}{q.parceiro ? ` · /${q.parceiro}` : ''}{q.aparelhos > 1 ? ` · ${q.aparelhos} aparelhos` : ''}</small></td>
+                              <td>{q.recebeu_em ? quando(q.recebeu_em) : <span className="pn-nao">Ainda não</span>}</td>
+                              <td>{q.abriu_em ? <span className="pn-sim">{quando(q.abriu_em)}</span> : <span className="pn-nao">Não</span>}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
               </li>
             ))}
           </ul>

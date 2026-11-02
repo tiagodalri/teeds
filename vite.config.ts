@@ -482,10 +482,14 @@ export default defineConfig({
           `e.respondWith(fetch(r).then(x=>{if(x.ok&&!/\\.json$/.test(u.pathname))caches.open(CACHE).then(c=>c.put(r,x.clone()));return x}).catch(()=>caches.match(r)))});`,
           // Notificações (27/10/2026): a função `notificacoes` do Supabase manda {titulo, corpo, tag, url}.
           // A mesma tag substitui o aviso anterior; tocar abre (ou traz para a frente) o app.
+          // Rastreio (02/11/2026): o disparo do painel traz {disparo, eco, eco_chave}; o aparelho
+          // avisa o banco quando a notificação aparece ('recebeu') e quando é tocada ('clicou').
+          `const eco=(d,tipo)=>d&&d.disparo&&d.eco?self.registration.pushManager.getSubscription().then(s=>s&&fetch(d.eco,{method:'POST',headers:{'content-type':'application/json',apikey:d.eco_chave,authorization:'Bearer '+d.eco_chave},body:JSON.stringify({p_disparo:d.disparo,p_endpoint:s.endpoint,p_tipo:tipo})})).catch(()=>{}):Promise.resolve();`,
           `self.addEventListener('push',e=>{let d={};try{d=e.data?e.data.json():{}}catch(_){d={corpo:e.data?e.data.text():''}}`,
-          `e.waitUntil(self.registration.showNotification(d.titulo||${JSON.stringify(nome)},{body:d.corpo||'',icon:'./${pwaDir}/icon-192.png',${existsSync(join('public', pwaDir, 'badge-96.png')) ? `badge:'./${pwaDir}/badge-96.png',` : ''}tag:d.tag||undefined,renotify:!!d.tag,data:{url:d.url||'./'}}))});`,
-          `self.addEventListener('notificationclick',e=>{e.notification.close();const alvo=new URL((e.notification.data&&e.notification.data.url)||'./',self.registration.scope).href;`,
-          `e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{if(!alvo.startsWith(self.registration.scope))return self.clients.openWindow(alvo);for(const c of cs){if(c.url.startsWith(self.registration.scope)&&'focus' in c)return c.focus()}return self.clients.openWindow(alvo)}))});`,
+          `const r=d.disparo?{disparo:d.disparo,eco:d.eco,eco_chave:d.eco_chave}:null;`,
+          `e.waitUntil(Promise.all([self.registration.showNotification(d.titulo||${JSON.stringify(nome)},{body:d.corpo||'',icon:'./${pwaDir}/icon-192.png',${existsSync(join('public', pwaDir, 'badge-96.png')) ? `badge:'./${pwaDir}/badge-96.png',` : ''}tag:d.tag||undefined,renotify:!!d.tag,data:{url:d.url||'./',rastro:r}}),eco(r,'recebeu')]))});`,
+          `self.addEventListener('notificationclick',e=>{e.notification.close();const dd=e.notification.data||{};const alvo=new URL(dd.url||'./',self.registration.scope).href;`,
+          `e.waitUntil(Promise.all([eco(dd.rastro,'clicou'),self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{if(!alvo.startsWith(self.registration.scope))return self.clients.openWindow(alvo);for(const c of cs){if(c.url.startsWith(self.registration.scope)&&'focus' in c)return c.focus()}return self.clients.openWindow(alvo)})]))});`,
           '',
         ].join('\n'))
       },

@@ -256,19 +256,40 @@ async function disparar(req: Request, corpo: Record<string, unknown>) {
   if (destino.startsWith('http') && !/^https:\/\//.test(destino)) return json({ erro: 'O link precisa começar com https://' }, 400)
 
   const rd = await rest('rpc/teeds_push_destinos', { method: 'POST', body: JSON.stringify({ p_marca: marca, p_publico: publico, p_parceiro: parceiro, p_eu: u.id }) })
-  const lista: Array<{ tabela: string; chave: string; endpoint: string; p256dh: string; auth: string; parceiro: string | null }> = rd.ok ? await rd.json() : []
+  const lista: Array<{ tabela: string; chave: string; endpoint: string; p256dh: string; auth: string; parceiro: string | null; pessoa: string | null }> = rd.ok ? await rd.json() : []
+
+  // Rastreio (02/11/2026, Tiago: "consigo rastrear quem recebeu e quem clicou?"): o disparo
+  // nasce antes do envio e o número dele vai na notificação; o service worker do app avisa
+  // o banco (teeds_push_evento) quando ela aparece e quando é tocada. Os aparelhos alcançados
+  // ficam em push_disparo_destinos ANTES do envio, para o primeiro "recebeu" já encontrar a linha.
+  const rc = await rest('push_disparos', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({
+    marca, criado_por: u.id, titulo, corpo: texto, destino, publico, parceiro, aparelhos: lista.length, teste: publico === 'eu',
+  }) })
+  const disparo: string | null = rc.ok ? (await rc.json())[0]?.id ?? null : null
+  const aparelhoDe = new Map<string, string>()
+  for (const a of lista) aparelhoDe.set(a.endpoint, await sha256(a.endpoint))
+  if (disparo) {
+    const linhas = lista.map((a) => ({ disparo, aparelho: aparelhoDe.get(a.endpoint), pessoa: a.pessoa }))
+    for (let i = 0; i < linhas.length; i += 500) {
+      await rest('push_disparo_destinos', { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates' }, body: JSON.stringify(linhas.slice(i, i + 500)) })
+    }
+  }
+  const eco = disparo ? { disparo, eco: `${SUPABASE_URL}/rest/v1/rpc/teeds_push_evento`, eco_chave: Deno.env.get('SUPABASE_ANON_KEY') || req.headers.get('apikey') || '' } : {}
+
   const chave = await chaveDa(marca)
   const vapidDetails = { subject: SITE[marca] ?? 'https://globalflytrade.com', publicKey: chave.publica, privateKey: chave.privada }
   const tag = `painel-${Date.now()}`
   let enviados = 0, falhas = 0
+  const falharam: string[] = []
   for (let i = 0; i < lista.length; i += 50) {
     await Promise.all(lista.slice(i, i + 50).map(async (a) => {
       try {
         await webpush.sendNotification({ endpoint: a.endpoint, keys: { p256dh: a.p256dh, auth: a.auth } },
-          JSON.stringify({ titulo, corpo: texto, tag, url: enderecoDoDestino(marca, destino, a.parceiro) }), { TTL: 12 * 3600, urgency: 'high', vapidDetails })
+          JSON.stringify({ titulo, corpo: texto, tag, url: enderecoDoDestino(marca, destino, a.parceiro), ...eco }), { TTL: 12 * 3600, urgency: 'high', vapidDetails })
         enviados++
       } catch (e) {
         falhas++
+        falharam.push(aparelhoDe.get(a.endpoint)!)
         const status = (e as { statusCode?: number }).statusCode
         if (status === 404 || status === 410) {
           await rest(a.tabela === 'lancamento_push' ? `lancamento_push?endpoint=eq.${encodeURIComponent(a.chave)}` : `push_assinaturas?id=eq.${a.chave}`, { method: 'DELETE' })
@@ -276,12 +297,20 @@ async function disparar(req: Request, corpo: Record<string, unknown>) {
       }
     }))
   }
-  await rest('push_disparos', { method: 'POST', body: JSON.stringify({
-    marca, criado_por: u.id, titulo, corpo: texto, destino, publico, parceiro,
-    aparelhos: lista.length, enviados, falhas, teste: publico === 'eu',
-  }) })
+  if (disparo) {
+    // quem não recebeu não conta como alcançado
+    for (let i = 0; i < falharam.length; i += 100) {
+      await rest(`push_disparo_destinos?disparo=eq.${disparo}&aparelho=in.(${falharam.slice(i, i + 100).join(',')})`, { method: 'DELETE' })
+    }
+    await rest(`push_disparos?id=eq.${disparo}`, { method: 'PATCH', body: JSON.stringify({ enviados, falhas }) })
+  }
   console.log('disparo', marca, publico, parceiro, { aparelhos: lista.length, enviados, falhas })
   return json({ aparelhos: lista.length, enviados, falhas })
+}
+
+async function sha256(texto: string): Promise<string> {
+  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto))
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
 /* ------------------------------------------------------------------ entrada */
