@@ -13,7 +13,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { MARCA } from '../../marca'
-import { API_DO_BANCO, CONTAS_DE_ANUNCIO, type ApiAnuncios, type Anuncio, type DetalheDoAnuncio, type FunilDoBanco, type Metricas, type PainelDaMeta, type Quebra, type RespostaDaMeta } from '../../core/teeds/anuncios'
+import { API_DO_BANCO, CONTAS_DE_ANUNCIO, type ApiAnuncios, type Anuncio, type DetalheDoAnuncio, type FunilDoBanco, type Horarios as DadosDeHorario, type Metricas, type PainelDaMeta, type Quebra, type RespostaDaMeta } from '../../core/teeds/anuncios'
+import { Alertas, Custos, Filtros, Horarios, METRICA, Relatorio, alertas, aplicar, formatar, somarLinhas, useColunas, type Base, type Linha, type Regra } from './Indicadores'
 import { Funil3D, type EtapaDoFunil } from './Funil3D'
 import './admin-anuncios.css'
 
@@ -35,7 +36,16 @@ const PERIODOS = [
   { id: '14', nome: '14 dias', de: () => diasAtras(13), ate: () => iso(new Date()) },
   { id: '30', nome: '30 dias', de: () => diasAtras(29), ate: () => iso(new Date()) },
   { id: 'lancamento', nome: 'Lançamento', de: () => '2026-11-02', ate: () => iso(new Date()) },
+  { id: 'personalizado', nome: 'Escolher datas', de: () => diasAtras(6), ate: () => iso(new Date()) },
 ] as const
+/** O período anterior, do mesmo tamanho, logo antes (para as comparações). */
+const anteriorA = (de: string, ate: string) => {
+  const d0 = new Date(`${de}T12:00:00`), d1 = new Date(`${ate}T12:00:00`), dias = Math.round((+d1 - +d0) / 864e5) + 1
+  const fim = new Date(d0); fim.setDate(fim.getDate() - 1)
+  const ini = new Date(fim); ini.setDate(ini.getDate() - (dias - 1))
+  return { de: iso(ini), ate: iso(fim) }
+}
+const dataBr = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`
 type IdPeriodo = (typeof PERIODOS)[number]['id']
 
 const STATUS: Record<string, [string, string]> = {
@@ -141,8 +151,6 @@ function Barras({ titulo, linhas, nome }: { titulo: string; linhas: Quebra[]; no
   )
 }
 
-type Coluna = 'gasto' | 'impressoes' | 'ctr' | 'cpc' | 'cpm' | 'lpv' | 'metaCad' | 'nossoCad' | 'custoCad' | 'liberados' | 'gancho' | 'retencao'
-
 /** `intervalo`: de quanto em quanto tempo o nosso banco é lido (o laboratório acelera). */
 export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }: { sessao: SessaoTeeds; api?: ApiAnuncios; intervalo?: number }) {
   const contas = CONTAS_DE_ANUNCIO[MARCA.id] ?? []
@@ -155,14 +163,24 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
   const [carregando, setCarregando] = useState(false)
   const [origem, setOrigem] = useState<'todos' | 'anuncios'>('todos')
   const [campanha, setCampanha] = useState('')
-  const [ordem, setOrdem] = useState<{ col: Coluna; desc: boolean }>({ col: 'gasto', desc: true })
+  const [ordem, setOrdem] = useState<{ col: string; desc: boolean }>({ col: 'gasto', desc: true })
+  const [conjunto, setConjunto] = useState('')
+  const [busca, setBusca] = useState('')
+  const [atalhos, setAtalhos] = useState<string[]>([])
+  const [regras, setRegras] = useState<Regra[]>([])
+  const [colunas, setColunas] = useColunas()
+  const [relatorio, setRelatorio] = useState(false)
+  const [escolha, setEscolha] = useState({ de: diasAtras(6), ate: iso(new Date()) })
+  const [anterior, setAnterior] = useState<Base | null>(null)
+  const [horarios, setHorarios] = useState<DadosDeHorario | null>(null)
   const [aberto, setAberto] = useState<Anuncio | null>(null)
   const [chave, setChave] = useState('')
   const [salvando, setSalvando] = useState<{ ok?: string; erro?: string; indo?: boolean }>({})
   const [banco, setBanco] = useState<string | null>(null)
   const [agora, setAgora] = useState(Date.now())
   const p = PERIODOS.find((x) => x.id === periodo)!
-  const de = p.de(), ate = p.ate()
+  const de = periodo === 'personalizado' ? escolha.de : p.de(), ate = periodo === 'personalizado' ? escolha.ate : p.ate()
+  const nomeDoPeriodo = de === ate ? dataBr(de) : `${dataBr(de)} a ${dataBr(ate)}`
 
   const carregar = async (forcar = false) => {
     if (!parceiro) return
@@ -171,8 +189,19 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
     if (m.status === 'fulfilled') { setMeta(m.value); setAoVivo(null) } else setErro(m.reason?.message ?? 'Não consegui falar com a Meta agora.')
     if (f.status === 'fulfilled') { setFunil(f.value); setBanco(new Date().toISOString()) } else setErro((e) => e ?? f.reason?.message)
     setCarregando(false)
+    // o período anterior e os horários vêm depois, sem segurar a tela
+    const ant = anteriorA(de, ate)
+    void Promise.allSettled([api.resumo(sessao, parceiro, ant.de, ant.ate), api.funil(sessao, parceiro, ant.de, ant.ate), api.horarios(sessao, parceiro, de, ate)]).then(([r, fa, h]) => {
+      const fun = fa.status === 'fulfilled' ? fa.value : null
+      setAnterior({ meta: r.status === 'fulfilled' && 'total' in r.value ? r.value.total : null, banco: fun ? (origemRef.current === 'anuncios' ? fun.anuncio : fun.total) : null, comecou: fun?.passos?.comecou ?? null })
+      anteriorBruto.current = fun
+      if (h.status === 'fulfilled') setHorarios(h.value)
+    })
   }
-  useEffect(() => { setMeta(null); setFunil(null); void carregar() }, [parceiro, periodo, sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
+  const origemRef = useRef(origem); origemRef.current = origem
+  const anteriorBruto = useRef<FunilDoBanco | null>(null)
+  useEffect(() => { setAnterior((a) => (a && anteriorBruto.current ? { ...a, banco: origem === 'anuncios' ? anteriorBruto.current.anuncio : anteriorBruto.current.total } : a)) }, [origem])
+  useEffect(() => { setMeta(null); setFunil(null); setAnterior(null); setHorarios(null); void carregar() }, [parceiro, periodo, de, ate, sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ao vivo: o nosso banco a cada 10 s; a Meta (só o total) a cada 60 s
   const vivo = useRef({ de, ate, parceiro }); vivo.current = { de, ate, parceiro }
@@ -211,29 +240,16 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
   ]
 
   const nossoPorAnuncio = useMemo(() => new Map((funil?.porAnuncio ?? []).map((a) => [a.id, a])), [funil])
-  const anuncios = useMemo(() => {
-    if (!painel) return []
-    const val = (a: Anuncio): number => {
-      const n = nossoPorAnuncio.get(a.id)
-      switch (ordem.col) {
-        case 'gasto': return a.m.gasto
-        case 'impressoes': return a.m.impressoes
-        case 'ctr': return a.m.ctrLink
-        case 'cpc': return a.m.cpcLink || Infinity
-        case 'cpm': return a.m.cpm || Infinity
-        case 'lpv': return a.m.lpv
-        case 'metaCad': return a.m.cadastros
-        case 'nossoCad': return n?.cadastros ?? 0
-        case 'custoCad': return n?.cadastros ? a.m.gasto / n.cadastros : Infinity
-        case 'liberados': return n?.liberados ?? 0
-        case 'gancho': return gancho(a.m)
-        case 'retencao': return retencao(a.m)
-      }
-    }
-    return painel.anuncios.filter((a) => !campanha || a.campanhaId === campanha)
-      .sort((a, b) => (ordem.desc ? val(b) - val(a) : val(a) - val(b)))
-  }, [painel, campanha, ordem, nossoPorAnuncio])
-
+  const linhas: Linha[] = useMemo(() => (painel?.anuncios ?? [])
+    .filter((a) => (!campanha || a.campanhaId === campanha) && (!conjunto || a.conjuntoId === conjunto))
+    .map((a) => ({ a, real: nossoPorAnuncio.get(a.id) })), [painel, campanha, conjunto, nossoPorAnuncio])
+  const filtradas = useMemo(() => {
+    const m = METRICA.get(ordem.col)
+    const v = (l: Linha) => { const x = m?.valor(l); return x == null || !Number.isFinite(x) ? (ordem.desc ? -Infinity : Infinity) : x }
+    return aplicar(linhas, busca, atalhos, regras).sort((x, y) => (ordem.desc ? v(y) - v(x) : v(x) - v(y)))
+  }, [linhas, busca, atalhos, regras, ordem])
+  const somaFiltrada = useMemo(() => (filtradas.length > 1 ? somarLinhas(filtradas) : null), [filtradas])
+  const listaDeAlertas = useMemo(() => alertas(linhas, total, etapasDoBanco, anterior), [linhas, total, etapasDoBanco, anterior])
   const dias = useMemo(() => {
     const mapa = new Map<string, { dia: string; gasto: number; meta: number; nosso: number }>()
     for (let d = new Date(`${de}T12:00:00`); iso(d) <= ate; d.setDate(d.getDate() + 1)) mapa.set(iso(d), { dia: iso(d), gasto: 0, meta: 0, nosso: 0 })
@@ -253,9 +269,10 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
   const chaveRuim = meta != null && 'chaveInvalida' in meta
   const atualizado = banco ? Math.max(0, Math.round((agora - Date.parse(banco)) / 1000)) : null
   const campanhaDe = (id: string) => painel?.campanhas.find((c) => c.id === id)?.nome ?? ''
-  const cabecalho = (col: Coluna, nome: string, dica?: string) => (
-    <th className="num"><button type="button" title={dica} className={ordem.col === col ? 'on' : ''} onClick={() => setOrdem((o) => ({ col, desc: o.col === col ? !o.desc : true }))}>{nome}{ordem.col === col ? (ordem.desc ? ' ↓' : ' ↑') : ''}</button></th>
-  )
+  const cabecalho = (id: string) => {
+    const m = METRICA.get(id)!
+    return <th key={id} className="num"><button type="button" title={m.dica ?? m.nome} className={ordem.col === id ? 'on' : ''} onClick={() => setOrdem((o) => ({ col: id, desc: o.col === id ? !o.desc : !m.menorMelhor }))}>{m.curto}{ordem.col === id ? (ordem.desc ? ' ↓' : ' ↑') : ''}</button></th>
+  }
 
   if (!contas.length) return <p className="aa-vazio">Nenhum parceiro desta plataforma tem conta de anúncios ligada.</p>
 
@@ -270,6 +287,13 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
         <div className="aa-periodo" role="tablist" aria-label="Período">
           {PERIODOS.map((x) => <button key={x.id} type="button" role="tab" aria-selected={periodo === x.id} className={periodo === x.id ? 'on' : ''} onClick={() => setPeriodo(x.id)}>{x.nome}</button>)}
         </div>
+        {periodo === 'personalizado' && (
+          <div className="aa-datas">
+            <label>De <input type="date" value={escolha.de} max={escolha.ate} onChange={(e) => e.target.value && setEscolha((x) => ({ ...x, de: e.target.value }))} /></label>
+            <label>Até <input type="date" value={escolha.ate} min={escolha.de} max={iso(new Date())} onChange={(e) => e.target.value && setEscolha((x) => ({ ...x, ate: e.target.value }))} /></label>
+          </div>
+        )}
+        <button type="button" className="aa-atualizar" onClick={() => setRelatorio(true)}>Relatório</button>
         <button type="button" className="aa-atualizar" onClick={() => void carregar(true)} disabled={carregando}>{carregando ? 'Atualizando…' : 'Atualizar agora'}</button>
       </div>
 
@@ -326,6 +350,16 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
         </div>
       )}
 
+      <section className="aa-cartao">
+        <header><div><span className="rot">Indicadores de custo · comparados com {anteriorA(de, ate).de === anteriorA(de, ate).ate ? dataBr(anteriorA(de, ate).de) : `${dataBr(anteriorA(de, ate).de)} a ${dataBr(anteriorA(de, ate).ate)}`}</span><h3>Quanto custa cada passo</h3></div></header>
+        <Custos atual={{ meta: total, banco: etapasDoBanco, comecou: funil?.passos?.comecou ?? null }} anterior={anterior} origem={origem} />
+      </section>
+
+      <section className="aa-cartao">
+        <header><div><span className="rot">Indicadores inteligentes</span><h3>O que merece atenção</h3></div></header>
+        <Alertas lista={listaDeAlertas} />
+      </section>
+
       {painel && (
         <>
           <section className="aa-cartao">
@@ -334,51 +368,47 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
           </section>
 
           <section className="aa-cartao">
+            <header><div><span className="rot">Quando as pessoas se cadastram</span><h3>Melhores horários</h3></div></header>
+            <Horarios dados={horarios} origem={origem} />
+          </section>
+
+          <section className="aa-cartao">
             <header>
-              <div><span className="rot">{int(anuncios.length)} {anuncios.length === 1 ? 'anúncio' : 'anúncios'}</span><h3>Cada anúncio</h3></div>
-              <select value={campanha} onChange={(e) => setCampanha(e.target.value)} aria-label="Campanha">
-                <option value="">Todas as campanhas</option>
-                {painel.campanhas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-              </select>
+              <div><span className="rot">{int(filtradas.length)} de {int(linhas.length)} {linhas.length === 1 ? 'anúncio' : 'anúncios'}</span><h3>Cada anúncio</h3></div>
+              <div className="aa-selects">
+                <select value={campanha} onChange={(e) => { setCampanha(e.target.value); setConjunto('') }} aria-label="Campanha">
+                  <option value="">Todas as campanhas</option>
+                  {painel.campanhas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+                <select value={conjunto} onChange={(e) => setConjunto(e.target.value)} aria-label="Conjunto de anúncios">
+                  <option value="">Todos os conjuntos</option>
+                  {painel.conjuntos.filter((c) => !campanha || c.campanhaId === campanha).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              </div>
             </header>
-            {!anuncios.length ? <p className="aa-vazio">Nenhum anúncio com entrega neste período.</p> : (
+            <Filtros linhas={linhas} busca={busca} setBusca={setBusca} atalhos={atalhos} setAtalhos={setAtalhos} regras={regras} setRegras={setRegras} colunas={colunas} setColunas={setColunas} />
+            {!filtradas.length ? <p className="aa-vazio">{linhas.length ? 'Nenhum anúncio passa por esses filtros.' : 'Nenhum anúncio com entrega neste período.'}</p> : (
               <div className="aa-tabela">
                 <table>
-                  <thead><tr>
-                    <th>Anúncio</th>
-                    {cabecalho('gasto', 'Investido')}{cabecalho('impressoes', 'Impressões')}{cabecalho('ctr', 'CTR', 'Cliques no link a cada 100 impressões')}
-                    {cabecalho('cpc', 'CPC', 'Custo por clique no link')}{cabecalho('cpm', 'CPM', 'Custo por mil impressões')}{cabecalho('lpv', 'Na página', 'Visualizações da página de destino')}
-                    {cabecalho('metaCad', 'Cad. Meta', 'Cadastros que o pixel atribuiu a este anúncio')}{cabecalho('nossoCad', 'Cad. reais', 'Cadastros que chegaram na plataforma por este anúncio')}
-                    {cabecalho('custoCad', 'Custo/cad.', 'Investido ÷ cadastros reais')}{cabecalho('liberados', 'GF Member')}
-                    {cabecalho('gancho', 'Gancho', 'Quantos viram 3 segundos do vídeo a cada 100 impressões')}{cabecalho('retencao', 'Retenção', 'Dos que viram 3 segundos, quantos foram até o fim (ou 15 s)')}
-                    <th>Qualidade</th>
-                  </tr></thead>
+                  <thead><tr><th>Anúncio</th>{colunas.map(cabecalho)}<th>Qualidade</th></tr></thead>
                   <tbody>
-                    {anuncios.map((a) => {
-                      const n = nossoPorAnuncio.get(a.id)
-                      return (
-                        <tr key={a.id} onClick={() => setAberto(a)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') setAberto(a) }}>
-                          <td className="aa-ad">
-                            {a.criativo.miniatura ? <img src={a.criativo.miniatura} alt="" loading="lazy" /> : <span className="aa-sem-img" />}
-                            <div><b>{a.nome}</b><small>{campanhaDe(a.campanhaId)}</small><Status s={a.status} /></div>
-                          </td>
-                          <td className="num"><b>{brl(a.m.gasto)}</b></td>
-                          <td className="num">{int(a.m.impressoes)}</td>
-                          <td className="num">{pc(a.m.ctrLink)}</td>
-                          <td className="num">{a.m.cpcLink ? brl(a.m.cpcLink) : '—'}</td>
-                          <td className="num">{a.m.cpm ? brl(a.m.cpm) : '—'}</td>
-                          <td className="num">{int(a.m.lpv)}</td>
-                          <td className="num">{int(a.m.cadastros)}</td>
-                          <td className="num"><b>{int(n?.cadastros ?? 0)}</b></td>
-                          <td className="num"><b>{custo(a.m.gasto, n?.cadastros ?? 0)}</b></td>
-                          <td className="num">{int(n?.liberados ?? 0)}</td>
-                          <td className="num">{a.criativo.tipo === 'video' ? pc(gancho(a.m), 1) : '—'}</td>
-                          <td className="num">{a.criativo.tipo === 'video' ? pc(retencao(a.m), 1) : '—'}</td>
-                          <td>{a.ranking.qualidade ? <span className={`aa-rank ${RANK[a.ranking.qualidade]?.[1]}`}>{RANK[a.ranking.qualidade]?.[0]}</span> : <small className="aa-mudo">Poucos dados</small>}</td>
-                        </tr>
-                      )
-                    })}
+                    {filtradas.map((l) => (
+                      <tr key={l.a.id} onClick={() => setAberto(l.a)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') setAberto(l.a) }}>
+                        <td className="aa-ad">
+                          {l.a.criativo.miniatura ? <img src={l.a.criativo.miniatura} alt="" loading="lazy" /> : <span className="aa-sem-img" />}
+                          <div><b>{l.a.nome}</b><small>{campanhaDe(l.a.campanhaId)}</small><Status s={l.a.status} /></div>
+                        </td>
+                        {colunas.map((id) => { const m = METRICA.get(id)!; return <td key={id} className={`num ${ordem.col === id ? 'aa-ordem' : ''}`}>{formatar(m.formato, m.valor(l))}</td> })}
+                        <td>{l.a.ranking.qualidade ? <span className={`aa-rank ${RANK[l.a.ranking.qualidade]?.[1]}`}>{RANK[l.a.ranking.qualidade]?.[0]}</span> : <small className="aa-mudo">Poucos dados</small>}</td>
+                      </tr>
+                    ))}
                   </tbody>
+                  {somaFiltrada && (
+                    <tfoot><tr><td>Total dos {int(filtradas.length)} filtrados</td>{colunas.map((id) => {
+                      const m = METRICA.get(id)!
+                      return <td key={id} className="num">{id === 'frequencia' || id === 'alcance' ? '—' : formatar(m.formato, m.valor(somaFiltrada))}</td>
+                    })}<td /></tr></tfoot>
+                  )}
                 </table>
               </div>
             )}
@@ -451,6 +481,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
       {painel?.avisos.length ? <p className="aa-nota">Algumas partes não vieram da Meta agora: {painel.avisos.join(' · ')}</p> : null}
       {painel && <p className="aa-nota">Números da Meta de {hora(painel.em)}{painel.doCache ? ' (guardados há menos de 5 minutos)' : ''}. A Meta pode levar até algumas horas para fechar os números do dia.</p>}
 
+      {relatorio && <Relatorio fechar={() => setRelatorio(false)} periodo={nomeDoPeriodo} total={total} banco={etapasDoBanco} linhas={filtradas} colunas={colunas} lista={listaDeAlertas} comecou={funil?.passos?.comecou ?? null} />}
       {aberto && painel && <AnuncioAberto a={aberto} fechar={() => setAberto(null)} sessao={sessao} api={api} parceiro={parceiro} de={de} ate={ate} nosso={nossoPorAnuncio.get(aberto.id)} campanha={campanhaDe(aberto.campanhaId)} conjunto={painel.conjuntos.find((s) => s.id === aberto.conjuntoId)?.nome ?? ''} />}
     </div>
   )

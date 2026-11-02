@@ -71,13 +71,16 @@ export interface ApiAnuncios {
   anuncio: (sessao: SessaoTeeds, parceiro: string, id: string, de: string, ate: string) => Promise<DetalheDoAnuncio>
   funil: (sessao: SessaoTeeds, parceiro: string, de: string, ate: string) => Promise<FunilDoBanco>
   salvarChave: (sessao: SessaoTeeds, parceiro: string, chave: string) => Promise<unknown>
+  horarios: (sessao: SessaoTeeds, parceiro: string, de: string, ate: string) => Promise<Horarios>
 }
+export interface Horarios { porHora: Array<{ hora: number; cadastros: number; deAnuncio: number }>; porSemana: Array<{ dia: number; cadastros: number; deAnuncio: number }> }
 export const API_DO_BANCO: ApiAnuncios = {
   painel: (s, parceiro, de, ate, forcar) => funcao(s, { acao: 'painel', parceiro, de, ate, forcar: !!forcar }),
   resumo: (s, parceiro, de, ate) => funcao(s, { acao: 'resumo', parceiro, de, ate }),
   anuncio: (s, parceiro, id, de, ate) => funcao(s, { acao: 'anuncio', parceiro, id, de, ate }),
   funil: (s, parceiro, de, ate) => rpc(s, 'teeds_meta_funil', { p_marca: MARCA.id, p_parceiro: parceiro, p_de: de, p_ate: ate }),
   salvarChave: (s, parceiro, chave) => rpc(s, 'teeds_meta_ads_chave_salvar', { p_marca: MARCA.id, p_parceiro: parceiro, p_chave: chave }),
+  horarios: (s, parceiro, de, ate) => rpc(s, 'teeds_meta_horarios', { p_marca: MARCA.id, p_parceiro: parceiro, p_de: de, p_ate: ate }),
 }
 
 /** Os parceiros que têm conta de anúncios ligada (o mesmo mapa de supabase/functions/meta-ads). */
