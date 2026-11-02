@@ -46,7 +46,7 @@ export function senhaDoPendente(id: string, chave: string): string {
   if (!chave) throw new Error('Servidor sem credencial de acesso.')
   return `Tp!9${createHmac('sha256', chave).update(`aprovacao-lead:v1:${id}`).digest('base64url').slice(0,24)}`
 }
-async function banco(path: string, method='GET', body?: unknown): Promise<any> {
+export async function banco(path: string, method='GET', body?: unknown): Promise<any> {
   const r = await fetch(`${base()}${path}`, {
     method, signal: AbortSignal.timeout(20000),
     headers: { apikey: segredo(), Authorization: `Bearer ${segredo()}`, 'Content-Type':'application/json' },
@@ -184,7 +184,7 @@ export async function decidirLead(id: string, marca: string, admin: string, acao
  * lado do remetente. Sem eles a mensagem de lista vai para o spam — e quem
  * quer sair sem achar o botão marca como spam, que é o pior sinal possível.
  */
-async function despachar(
+export async function despachar(
   marca: ReturnType<typeof marcaPorId>, para: string,
   email: {assunto:string;html:string;texto:string}, chaveUnica: string,
   descadastrar?: string,
@@ -211,7 +211,39 @@ async function despachar(
  * textos. Se o corpo do e-mail morasse dentro do carteiro, a prévia seria uma
  * segunda versão do texto — e uma versão que ninguém checa envelhece calada.
  */
-export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: string, senhaPropria = false) {
+/**
+ * Lançamento da GlobalFly (funil aprovado pelo Tiago em 02/11/2026): quem se
+ * inscreve até a live recebe "inscrição confirmada" com o acesso, e não
+ * "cadastro em análise"; quem fica na live até o fim recebe "acesso liberado".
+ * As mesmas datas de src/core/teeds/lancamento.ts (que não roda no Node).
+ */
+export const INICIO_DA_LIVE = Date.UTC(2026, 10, 9, 23, 0, 0)
+export const FIM_DA_LIVE = INICIO_DA_LIVE + 3 * 36e5
+export const noLancamento = (marca: Marca, agora = Date.now()) => marca.id === 'globalfly' && agora < FIM_DA_LIVE
+/** A comunidade do WhatsApp de quem veio por um parceiro (/n, /v); sem parceiro, a da marca. */
+export const comunidadeDe = (marca: Marca, parceiro?: string | null) =>
+  (parceiro && marca.comunidadesDosParceiros?.[parceiro]) || marca.comunidade
+
+function emailDeInscricaoNaLive(marca: Marca, email: string, senhaProvisoria: string | undefined, senhaPropria: boolean, comunidade?: string) {
+  const acesso=senhaPropria
+    ? `Seus dados de entrada:\nE-mail: ${email}\nSenha: a que você criou no cadastro.\n\nSe não lembrar a senha, toque em “Esqueci a senha” na tela de entrada e crie uma nova.`
+    : senhaProvisoria
+    ? `Seus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${senhaProvisoria}`
+    : `Você já tinha uma conta com o e-mail ${email}. Ela foi mantida como está: entre com a sua senha de sempre.`
+  return montarEmail(marca,'confirmar',new URL('/',marca.redirectUri).href,{
+    assunto:'Inscrição confirmada · live de 09/11, às 20h',
+    titulo:'Sua vaga na live está garantida',
+    espia:'Sua conta na GlobalFly já foi criada. A plataforma é liberada na live de 09/11, às 20h.',
+    corpo:`Sua inscrição na live de lançamento da ${marca.prosa} está confirmada: **segunda, 09/11, às 20h** (horário de Brasília), dentro da própria plataforma.\n\nSua conta já foi criada. Entre agora e conheça a plataforma: ela fica trancada até a live, com a contagem regressiva. Assista do início ao fim e o acesso é liberado para você, sem pagar nada.\n\n${acesso}`,
+    botao:'Entrar na GlobalFly',
+    ...(comunidade?{whatsapp:{url:comunidade,texto:'Entrar na comunidade do WhatsApp'}}:{}),
+    aviso:'Se não foi você que se inscreveu, pode ignorar este e-mail. Não compartilhe seus dados de acesso.',
+    motivo:`Você recebeu este e-mail porque se inscreveu na live de lançamento da ${marca.prosa}.`,
+  })
+}
+
+export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: string, senhaPropria = false, comunidade?: string) {
+  if (noLancamento(marca)) return emailDeInscricaoNaLive(marca,email,senhaProvisoria,senhaPropria,comunidade)
   const acesso=senhaPropria
     ? `Seus dados de entrada:\nE-mail: ${email}\nSenha: a que você criou no cadastro.\n\nVocê já pode entrar para acompanhar a análise. Se não lembrar a senha, toque em “Esqueci a senha” na tela de entrada e crie uma nova.`
     : senhaProvisoria
@@ -235,11 +267,21 @@ export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: s
 }
 
 export function emailDeAprovacao(marca: Marca, email: string, aindaProvisoria: boolean, senhaPropria = false) {
+  // liberado na live de lançamento (até 7 dias depois): o e-mail fala da live, não de "cadastro aprovado"
+  const daLive = marca.id === 'globalfly' && Date.now() >= INICIO_DA_LIVE && Date.now() < INICIO_DA_LIVE + 7 * 864e5
   const entrada=senhaPropria
     ? `Seus dados de entrada:\nE-mail: ${email}\nSenha: a que você criou no cadastro.\n\nSe não lembrar a senha, toque em “Esqueci a senha” na tela de entrada e crie uma nova.`
     : aindaProvisoria
     ? `Seus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${SENHA_PROVISORIA}\n\nNo primeiro acesso após a aprovação, você deverá criar sua própria senha antes de usar a plataforma. Se você já tinha conta, esta senha substitui a anterior. Seu histórico foi preservado.`
     : `Sua conta e seu histórico foram preservados. Entre com o e-mail ${email} e a sua senha atual. Se não lembrar, toque em “Esqueci a senha” na tela de entrada e você recebe um link para definir uma nova senha.`
+  if (daLive) return montarEmail(marca,'convite',new URL('/',marca.redirectUri).href,{
+    assunto:`Seu acesso está liberado · bem-vindo à ${marca.prosa}`,
+    titulo:'Seu acesso está liberado',
+    espia:'Você ficou na live até o fim. A plataforma é sua.',
+    corpo:`Você ficou na live de lançamento até o fim e agora é **GF Member**. A ${marca.prosa} está liberada para você: as I.A., a operação manual, as aulas e a sala de treino.\n\nO próximo passo é conectar a sua conta da Deriv dentro da plataforma.\n\n${entrada}`,
+    botao:'Entrar na GlobalFly',
+    aviso:'Guarde seus dados de acesso com segurança. Não compartilhe sua senha com ninguém.',
+  })
   return montarEmail(marca,'convite',new URL('/',marca.redirectUri).href,{
     assunto:`Cadastro aprovado · seu acesso à ${marca.prosa} está liberado`,
     titulo:'Cadastro aprovado',
@@ -270,7 +312,7 @@ export async function enviarCadastros() {
     // 45 s de folga: o cadastro com senha própria cria a conta logo depois do
     // pedido; o carteiro não pode chegar antes e criar a conta com a provisória.
     const folga=new Date(Date.now()-45_000).toISOString()
-    const lista=await banco(`/rest/v1/clientes_pendentes?status=eq.pendente&email_cadastro_em=is.null&ultima_inscricao_em=lt.${encodeURIComponent(folga)}&select=id,marca,email,nome,telefone,user_id&order=criado_em.asc&limit=20`)
+    const lista=await banco(`/rest/v1/clientes_pendentes?status=eq.pendente&email_cadastro_em=is.null&ultima_inscricao_em=lt.${encodeURIComponent(folga)}&select=id,marca,email,nome,telefone,user_id,parceiro&order=criado_em.asc&limit=20`)
     for (const p of lista ?? []) {
       try {
         const marca=marcaPorId(p.marca)
@@ -294,7 +336,7 @@ export async function enviarCadastros() {
 
         const senhaPropria=usuario.app_metadata?.senha_propria===true
         const senhaConhecida=!senhaPropria && (criadaAgora || (usuario.app_metadata?.cadastro_lead===p.id && usuario.user_metadata?.trocar_senha===true))
-        const email=emailDeCadastro(marca,p.email,senhaConhecida?SENHA_PROVISORIA:undefined,senhaPropria)
+        const email=emailDeCadastro(marca,p.email,senhaConhecida?SENHA_PROVISORIA:undefined,senhaPropria,comunidadeDe(marca,p.parceiro))
         await despachar(marca,p.email,email,`cadastro-lead-${p.id}`)
         await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}&status=eq.pendente`,'PATCH',{email_cadastro_em:new Date().toISOString()})
       } catch { console.warn('[cadastro] E-mail de boas-vindas pendente; será tentado novamente.') }

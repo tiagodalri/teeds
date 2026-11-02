@@ -31,7 +31,9 @@ import { definirDonoDoPlano } from './core/teeds/planoDoDia'
 import { NovaSenha } from './components/NovaSenha'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 import { PreAcesso } from './components/PreAcesso'
-import { emPreAcesso } from './core/teeds/lancamento'
+import { emPreAcesso, estadoDaLive, idDoYoutube, INICIO_DA_LIVE, PLANO_AGUARDANDO, trancadoAteALive, type EstadoDaLive } from './core/teeds/lancamento'
+import { TrancaDoLancamento } from './components/lancamento/TrancaDoLancamento'
+import { LiveDoLancamento } from './components/lancamento/LiveDoLancamento'
 import { AceiteDosTermos } from './components/termos/Termos'
 import { confirmarInscricao } from './core/teeds/notificacoes'
 import { aceiteDoLoginPendente, aceiteGuardado, jaAceitou, limparAceiteDoLogin, registrarAceite } from './core/teeds/termos'
@@ -534,6 +536,40 @@ export default function App() {
     void meuPlano(teeds.sessao).then((p) => { if (vivo) setPlano(p) })
     return () => { vivo = false }
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /*
+    Funil da live de lançamento (GlobalFly, aprovado em 02/11/2026): quem se
+    inscreveu entra na plataforma de verdade, trancada até a live de 09/11
+    (TrancaDoLancamento). O administrador vê como o inscrito vê com ?ver=inscrito.
+  */
+  const previaInscrito = MARCA.id === 'globalfly' && admin === true && new URLSearchParams(location.search).get('ver') === 'inscrito'
+  const trancado = previaInscrito || trancadoAteALive(situacao, plano, admin)
+  const [live, setLive] = useState<EstadoDaLive | null>(null)
+  const [assistindoLive, setAssistindoLive] = useState(false)
+  useEffect(() => {
+    const sessao = teeds.sessao
+    if (MARCA.id !== 'globalfly' || !sessao || situacao === null) { setLive(null); return }
+    let vivo = true
+    let t = 0
+    const ler = () => {
+      void estadoDaLive(sessao).then((e) => { if (vivo) setLive(e) }).catch(() => undefined).finally(() => {
+        if (!vivo) return
+        // perto e durante a live, de 20 em 20 s; no resto, de 2 em 2 min
+        const perto = Math.abs(Date.now() - INICIO_DA_LIVE) < 5 * 36e5
+        t = window.setTimeout(ler, perto ? 20_000 : 120_000)
+      })
+    }
+    ler()
+    return () => { vivo = false; window.clearTimeout(t) }
+  }, [teeds.sessao?.usuario.id, situacao]) // eslint-disable-line react-hooks/exhaustive-deps
+  // trancado, só o Início
+  useEffect(() => { if (trancado && tela !== 'inicio' && MARCA.inicio) setTela('inicio') }, [trancado, tela]) // eslint-disable-line react-hooks/exhaustive-deps
+  // liberado na live: a plataforma abre com um recado
+  const estavaTrancado = useRef(false)
+  useEffect(() => {
+    if (estavaTrancado.current && !trancado && situacao === 'ativo') setAviso({ tipo: 'ok', texto: `Acesso liberado. Bem-vindo à ${MARCA.prosa}, GF Member.` })
+    estavaTrancado.current = trancado
+  }, [trancado, situacao])
 
   // "Meu perfil" e tour guiado (GlobalFly, 20/10/2026): a foto vai para o menu
   // do usuário, e quem nunca fez o tour faz agora (obrigatório na 1ª vez).
@@ -1080,8 +1116,9 @@ export default function App() {
     pedir trabalho sem entregar nada. A senha provisória só é trocada no
     primeiro acesso DEPOIS da aprovação, que é quando a plataforma abre.
   */
-  if (teeds.status === 'logado' && teeds.sessao && situacao === 'pendente') {
-    // Lançamento da GlobalFly (30/10/2026): até o fim da live de 9/11, a conta nova é Pré-acesso.
+  if (teeds.status === 'logado' && teeds.sessao && situacao === 'pendente' && !trancado) {
+    // Lançamento da GlobalFly (30/10/2026): até o fim da live de 09/11, a conta nova é Pré-acesso.
+    // Desde 02/11/2026 o inscrito entra trancado (acima); esta tela fica para quem ainda não tem o plano lido.
     if (emPreAcesso()) {
       return (
         <PreAcesso
@@ -1111,7 +1148,7 @@ export default function App() {
   }
 
   // Aprovado e ainda com a senha provisória: cria a própria antes de entrar.
-  if (teeds.status === 'logado' && teeds.precisaTrocarSenha) {
+  if (teeds.status === 'logado' && teeds.precisaTrocarSenha && !trancado) {
     return (
       <NovaSenha ocupado={teeds.ocupado} erro={teeds.erro} onDefinir={teeds.definirNovaSenha}
         obrigatoria onSair={sairDeTudo} />
@@ -1233,6 +1270,13 @@ export default function App() {
             </button>
           )}
 
+          {!trancado && !JANELA && live?.noAr && idDoYoutube(live.youtube) && (
+            <button className="selo-tv" onClick={() => setAssistindoLive(true)} title="Live de lançamento ao vivo agora"
+              aria-label="Live de lançamento ao vivo agora. Assistir">
+              <i aria-hidden="true" />Ao vivo
+            </button>
+          )}
+
           {!JANELA && <BotaoTelaCheia />}
 
           {!JANELA && <button className="tema-btn" onClick={alternarTema}
@@ -1276,13 +1320,13 @@ export default function App() {
         </div>
       </header>
 
-      {MARCA.inicio && !JANELA && teeds.sessao && tela !== 'robos' && (
+      {MARCA.inicio && !JANELA && teeds.sessao && tela !== 'robos' && !trancado && (
         <MiniCabine sessoes={vivasRobos} sessao={teeds.sessao} demo={conta.status === 'logado' ? conta.isDemo : undefined} demoComoReal={conta.somenteDemo} rotulosTrocados={conta.rotulosTrocados} aoAbrirCabine={() => setTela('robos')}
           aoParar={async (id) => { if (teeds.sessao) await pararNoServidor(teeds.sessao, id) }} />
       )}
       {MARCA.inicio && !JANELA && teeds.sessao && <BarraInferior tela={tela} aoVivoAgora={aoVivoAgora} irPara={(t) => { setVerPerfil(false); setTela(t) }} />}
 
-      {MARCA.suporte && !JANELA && teeds.sessao && (
+      {MARCA.suporte && !JANELA && teeds.sessao && !trancado && (
         <Suspense fallback={null}>
           {/* com os itens de admin ocultos, o botão do suporte é o do cliente (sem "Caixa de suporte" nem a fila) */}
           <SuporteWidget key={menuAdminOculto ? 'cliente' : 'equipe'} sessao={teeds.sessao} nome={teeds.usuario?.nome || ''} telaAtual={tela} admin={adminConfirmado && !menuAdminOculto}
@@ -1298,7 +1342,24 @@ export default function App() {
         </Suspense>
       )}
 
-      {tour && !JANELA && teeds.sessao && (
+      {trancado && !JANELA && teeds.sessao && (
+        <TrancaDoLancamento sessao={teeds.sessao} nome={teeds.usuario?.nome} estado={live} previa={previaInscrito}
+          aoConferir={async () => {
+            const [s, p] = await Promise.all([minhaSituacao(teeds.sessao!), meuPlano(teeds.sessao!)])
+            // minhaSituacao responde 'ativo' quando a leitura falha: só abre com o plano novo lido do banco
+            const liberado = s === 'ativo' && !!p && p !== PLANO_AGUARDANDO
+            if (!liberado) return false
+            setPlano(p)
+            setSituacao(s)
+            return true
+          }} />
+      )}
+      {/* quem já tem a plataforma também assiste à live de lançamento aqui dentro */}
+      {!trancado && assistindoLive && live && teeds.sessao && (
+        <LiveDoLancamento sessao={teeds.sessao} estado={live} aoFechar={() => setAssistindoLive(false)} />
+      )}
+
+      {tour && !JANELA && teeds.sessao && !trancado && (
         <TourGuiado passos={passosDoTour({ nome: teeds.usuario?.nome || '', treino: !!MARCA.aoVivo && (membroTreino === true || admin === true) })}
           obrigatorio={tour === 'obrigatorio'} telaAtual={tela} irPara={setTela}
           aoTerminar={(destino) => fimDoTour(destino)} aoFechar={() => (tour === 'obrigatorio' ? fimDoTour() : setTour(null))} />

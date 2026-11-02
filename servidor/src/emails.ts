@@ -68,10 +68,19 @@ interface Conteudo {
    * que todo cliente entende.
    */
   telegram?: { url: string; texto: string }
+  /**
+   * Um segundo botão, no verde do WhatsApp (lançamento da GlobalFly,
+   * 02/11/2026: a comunidade da live). Vem DEPOIS do botão da marca.
+   */
+  whatsapp?: { url: string; texto: string }
+  /** A linha miúda de baixo ("Você recebeu este e-mail porque…"), quando o motivo é outro. */
+  motivo?: string
 }
 
 /** O azul da marca do Telegram. */
 const AZUL_TELEGRAM = '#2AABEE'
+/** O verde do WhatsApp, um tom abaixo do oficial para o texto branco ler bem. */
+const VERDE_WHATSAPP = '#1FA855'
 
 /** O que cada e-mail diz. Só texto — a aparência é a mesma para todos. */
 function conteudo(tipo: TipoDeEmail, prosa: string): Conteudo {
@@ -203,6 +212,8 @@ function comVocabularioDaMarca(marca: Marca, c: Conteudo): Conteudo {
     ...(c.botao ? { botao: paraIA(c.botao) } : {}),
     ...(c.aviso ? { aviso: paraIA(c.aviso) } : {}),
     ...(c.telegram ? { telegram: { ...c.telegram, texto: paraIA(c.telegram.texto) } } : {}),
+    ...(c.whatsapp ? { whatsapp: { ...c.whatsapp, texto: paraIA(c.whatsapp.texto) } } : {}),
+    ...(c.motivo ? { motivo: paraIA(c.motivo) } : {}),
   }
 }
 
@@ -301,6 +312,22 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
         </td>
       </tr>`}
 
+      ${!c.whatsapp?.url ? '' : `
+      <!-- botao da comunidade no WhatsApp -->
+      <tr>
+        <td style="padding:12px 32px 0;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td align="center" bgcolor="${VERDE_WHATSAPP}" style="background:${VERDE_WHATSAPP};border-radius:11px;">
+                <a href="${seguro(c.whatsapp.url)}"
+                   style="display:block;padding:14px 24px;font-family:${SANS};font-size:15px;
+                          font-weight:600;color:#ffffff;text-decoration:none;">${seguro(c.whatsapp.texto)}</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`}
+
       <!-- link avulso, para quando o botao nao funciona (so existe se ha botao) -->
       ${!reserva ? '' : `<tr>
         <td style="padding:16px 32px 0;font-family:${SANS};">
@@ -340,7 +367,7 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
 
     <div style="max-width:520px;margin:16px auto 0;font-family:${SANS};
                 font-size:11px;line-height:1.6;color:#8b95a6;text-align:center;">
-      ${c.descadastrar
+      ${c.motivo ? seguro(c.motivo) : c.descadastrar
         ? `Você recebeu este e-mail porque já teve cadastro na ${seguro(marca.prosa)}.`
         : `Você recebeu este e-mail porque alguém usou este endereço na ${seguro(marca.prosa)}.`}
     </div>
@@ -363,6 +390,7 @@ export function montarEmail(marca: Marca, tipo: TipoDeEmail, url: string, person
     // sumir ali: é o destino principal do e-mail em que ele aparece.
     ...(c.telegram ? [`${c.telegram.texto}: ${c.telegram.url}`, ''] : []),
     ...(c.botao ? [`${c.botao}: ${url}`, ''] : []),
+    ...(c.whatsapp?.url ? [`${c.whatsapp.texto}: ${c.whatsapp.url}`, ''] : []),
     ...(c.aviso ? [c.aviso, ''] : []),
     ...(c.descadastrar ? [`Para não receber mais: ${c.descadastrar}`, ''] : []),
     '—',

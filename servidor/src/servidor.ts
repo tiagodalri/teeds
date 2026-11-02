@@ -1,5 +1,6 @@
 import { mercado } from './mercado'
 import './ambiente'
+import { enviarEmailsDoLancamento } from './lancamento-emails'
 import { contaComSenhaPropria, decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros, marcaAdministrada } from './aprovacao-leads'
 import { trocarEmailDoCliente } from './trocar-email'
 import { abrirBilhete, registrarDescadastro, paginaDeSaida } from './descadastro'
@@ -1291,7 +1292,8 @@ if (process.env.RESEND_CHAVE && supabaseConfigurado()) {
   ligarCarteiro({ pendentes: emailsPendentes, entregue: emailEntregue, falhou: emailFalhou })
   void enviarCadastros()
   void enviarAprovacoes()
-  setInterval(() => { void enviarCadastros(); void enviarAprovacoes() }, 30_000).unref()
+  void enviarEmailsDoLancamento()
+  setInterval(() => { void enviarCadastros(); void enviarAprovacoes(); void enviarEmailsDoLancamento() }, 30_000).unref()
   console.log('E-mails: o servidor manda, um por marca (Resend)')
 } else {
   console.log('E-mails: sem RESEND_CHAVE — o Supabase continua mandando o padrao dele')

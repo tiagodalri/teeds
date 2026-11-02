@@ -22,21 +22,21 @@
     <main class="centro">
       <section class="cartao obrigado">
         <div class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
-        <h1 data-titulo>Sua conta está pronta!</h1>
+        <h1 data-titulo>Sua inscrição na live está confirmada!</h1>
         <ol class="etapas" aria-label="Seu progresso">
-          <li class="feito">Conta criada</li>
+          <li class="feito">Inscrição</li>
           <li class="feito" data-etapa-questionario>Questionário</li>
           <li class="agora">Live de 09/11</li>
         </ol>
         <!-- 30/10/2026: a conta nasce no cadastro e a live libera o acesso. Daqui a pessoa sai com três
              coisas feitas, cada uma é um caminho para a gente chamá-la no dia 09/11 (Naor: "vamos ficar o dia
              inteiro mandando notificação"). -->
-        <p class="chamada">Agora falta uma coisa só: estar na live de <b>segunda, 09/11, às 20h</b>, do início ao fim. É ela que libera o seu acesso, de graça.</p>
+        <p class="chamada">Sua vaga na live de <b>segunda, 09/11, às 20h</b> está garantida e a sua conta já foi criada. Assista do início ao fim: é a live que libera o seu acesso, de graça.</p>
         <p class="ultimo">Para não perder a live</p>
         <ol class="o-passos">
           <li>
             <span class="o-n">1</span>
-            <div><strong>Entre na comunidade do WhatsApp</strong><span>O link da live e os avisos chegam por lá.</span></div>
+            <div><strong>Entre na comunidade do WhatsApp</strong><span>Os avisos do lançamento chegam por&nbsp;lá.</span></div>
             <a class="botao o-botao" id="comunidade" href="https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq" target="_blank" rel="noopener">Entrar na comunidade</a>
           </li>
           <li>
@@ -49,7 +49,7 @@
           </li>
           <li>
             <span class="o-n">3</span>
-            <div><strong>Entre na GlobalFly e ative os avisos</strong><span data-acesso-curto>Use o e-mail do cadastro e a senha que você criou. Lá dentro, ative os avisos no celular e instale o app.</span></div>
+            <div><strong>Entre na GlobalFly e ative os avisos</strong><span data-acesso-curto>Use o e-mail do cadastro e a senha que você criou. Você já vê a plataforma, trancada até a live, e ativa os avisos no celular.</span></div>
             <a class="botao o-botao o-claro" id="plataforma" href="../../">Entrar na GlobalFly</a>
           </li>
         </ol>
@@ -59,15 +59,15 @@
                já existente, ou (fallback e cadastros antigos) com a senha provisória por e-mail. -->
           <div data-acesso="criada" hidden>
             <p>Sua conta está criada. Entre com o <b>e-mail do cadastro</b> e a <b>senha que você acabou de criar</b>.</p>
-            <p>Até a live, a conta fica em <b>pré-acesso</b>: você entra, vê quanto falta e prepara o celular. O acesso completo abre na live. Esqueceu a senha? Toque em <b>“Esqueci a senha”</b> na tela de entrada.</p>
+            <p>Até a live, a plataforma fica <b>trancada, com a contagem regressiva</b>: você entra, conhece tudo e prepara o celular. A live passa lá dentro e libera o acesso. Esqueceu a senha? Toque em <b>“Esqueci a senha”</b> na tela de entrada.</p>
           </div>
           <div data-acesso="existente" hidden>
             <p>Você já tinha conta com este e-mail, e ela continua valendo. Entre com a <b>sua senha atual</b>.</p>
             <p>Não lembra? Toque em <b>“Esqueci a senha”</b> na tela de entrada e crie uma nova.</p>
           </div>
           <div data-acesso="provisoria" hidden>
-            <p>Enviamos a <b>senha de entrada</b> para o seu e-mail (assunto: <b>“Cadastro recebido · GlobalFly Trade”</b>). Não encontrou? Confira o <b>Spam</b> ou o <b>Lixo eletrônico</b>.</p>
-            <p>Entre com o e-mail do cadastro e essa senha. No primeiro acesso, você escolhe a sua.</p>
+            <p>Enviamos a <b>senha de entrada</b> para o seu e-mail (assunto: <b>“Inscrição confirmada · live de 09/11, às 20h”</b>). Não encontrou? Confira o <b>Spam</b> ou o <b>Lixo eletrônico</b>.</p>
+            <p>Entre com o e-mail do cadastro e essa senha. No primeiro acesso, você escolhe a&nbsp;sua.</p>
           </div>
         </div>
       </section>
@@ -84,7 +84,7 @@
     (function () {
       var dados = GF.ler()
       // textContent: o nome nunca entra como HTML
-      if (dados.nome) document.querySelector('[data-titulo]').textContent = dados.nome + ', sua conta está pronta!'
+      if (dados.nome) document.querySelector('[data-titulo]').textContent = dados.nome + ', sua inscrição na live está confirmada!'
       document.getElementById('comunidade').href = GF.COMUNIDADE
       // quem se cadastrou pelo app não passou pelo questionário: a etapa não aparece como feita
       if (!dados.respondeu) document.querySelector('[data-etapa-questionario]').remove()

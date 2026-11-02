@@ -59,6 +59,7 @@ const VELAS = (() => {
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 import { PreAcesso } from './components/PreAcesso'
+import { AdminLancamento } from './components/lancamento/AdminLancamento'
 const SalaDeTreino = lazy(() => import('./components/aovivo/SalaDeTreino').then((m) => ({ default: m.SalaDeTreino })))
 const LabCentralExtras = lazy(() => import('./components/aovivo/SalaDeTreino').then((m) => ({ default: function Extras() {
   // a faixa "Quem recebe" e o histórico das transmissões, com respostas de mentira do banco
@@ -378,6 +379,14 @@ function Laboratorio() {
   )
   // ?tela=carregando: o carregando da marca (o mesmo quadro em que a decolagem pousa)
   if (qual === 'carregando') return <Carregando />
+  if (qual === 'lancamento-admin') {
+    // o painel da live com respostas de mentira (o banco de verdade só responde ao admin geral)
+    const f = window.fetch
+    window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => String(u).includes('teeds_lancamento_')
+      ? new Response(JSON.stringify(String(u).includes('painel') ? { inicioPrevisto: '2026-11-09T23:00:00Z', youtube: null, noAr: new URLSearchParams(location.search).has('noar'), comecouEm: null, terminouEm: null, liberadoEm: null, liberados: null, minimoPct: 80, aguardando: 412, assistindoAgora: 318, assistiram: 356, ficaram: 241, total: 74 } : {}), { status: 200 })
+      : f(u, i)) as typeof fetch
+    return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><AdminLancamento sessao={{ token: 'lab' } as never} /></div></Suspense>
+  }
   if (qual === 'preacesso') return <PreAcesso sessao={{ token: 'lab' } as never} nome="Ana Souza" aoConferir={async () => false} aoSair={nada} />
   if (qual === 'analise') return <CadastroEmAnalise email="miqueias.sena@outlook.com" nome="Miqueias Sena" aoConferir={async () => { await new Promise((r) => setTimeout(r, 700)); return false }} aoSair={nada} />
   if (qual === 'aulas') return <LabAulas />

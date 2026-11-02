@@ -8,6 +8,9 @@ import { InicioPagina } from './InicioPagina'
 import { TourGuiado, passosDoTour } from '../tour/TourGuiado'
 import { BarraInferior } from '../barra/BarraInferior'
 import { RelogioTopo } from '../RelogioTopo'
+import { TrancaDoLancamento } from '../lancamento/TrancaDoLancamento'
+import { LiveDoLancamento } from '../lancamento/LiveDoLancamento'
+import type { EstadoDaLive } from '../../core/teeds/lancamento'
 
 /**
  * ?tela=inicio&perfil=experiente|novo&tema=escuro|claro — a home dentro da
@@ -61,6 +64,16 @@ const NOVO: DadosDoInicio = {
   jornada: { deriv: false, demo: false, gestao: false, primeiraIa: false },
 }
 
+function estadoLab(fase: string | null): EstadoDaLive {
+  const q = new URLSearchParams(location.search)
+  const inicio = fase === 'antes' || !fase ? '2026-11-09T23:00:00Z' : new Date(Date.now() - 40 * 6e4).toISOString()
+  return {
+    inicioPrevisto: inicio, youtube: q.get('video') ?? (fase === 'no-ar' ? 'jfKfPfyJRdk' : null), noAr: fase === 'no-ar',
+    comecouEm: fase === 'antes' ? null : inicio, terminouEm: fase === 'depois' || fase === 'liberando' ? new Date().toISOString() : null,
+    liberadoEm: fase === 'depois' ? new Date().toISOString() : null, meusMinutos: 0,
+  }
+}
+
 export default function LabInicio() {
   const q = new URLSearchParams(location.search)
   const novo = q.get('perfil') === 'novo'
@@ -95,6 +108,9 @@ export default function LabInicio() {
         : <InicioPanel d={d} aoIr={nada} aoSalvarPlano={(meta, limite) => setPlano({ meta, limite })} aoPrepararRobo={nada} />}
       <BarraInferior tela="inicio" irPara={nada} />
       {/* &tour=1[&passo=N]: o tour guiado por cima da home (os passos de outras telas ficam no centro) */}
+      {/* &trancado=antes|no-ar|depois|liberando[&aviso=0]: a plataforma do inscrito até a live; &live=1: a sala da live */}
+      {q.has('trancado') && <TrancaDoLancamento sessao={{ token: 'lab' } as never} nome={d.nome} estado={estadoLab(q.get('trancado'))} aoConferir={async () => false} />}
+      {q.has('live') && <LiveDoLancamento sessao={{ token: 'lab' } as never} estado={estadoLab('no-ar')} aoFechar={nada} />}
       {q.has('tour') && <TourGuiado passos={passosDoTour({ nome: d.nome, treino: true })} obrigatorio={q.get('tour') !== 'rever'}
         telaAtual="inicio" irPara={nada} aoTerminar={nada} aoFechar={nada} />}
     </div>

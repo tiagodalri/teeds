@@ -37,17 +37,10 @@ export function PreAcesso({ sessao, nome, aoConferir, aoSair }: {
 }) {
   const primeiroNome = (nome ?? '').trim().split(/\s+/)[0]
   const [agora, setAgora] = useState(Date.now())
-  const [avisos, setAvisos] = useState<EstadoDasNotificacoes | null>(null)
-  const [ligando, setLigando] = useState(false)
-  const [recadoAvisos, setRecadoAvisos] = useState<string | null>(null)
-  const [como, setComo] = useState<ComoInstalar>(() => comoInstalar())
-  const [passosIos, setPassosIos] = useState(false)
   const conferirRef = useRef(aoConferir)
   conferirRef.current = aoConferir
 
   useEffect(() => { const t = window.setInterval(() => setAgora(Date.now()), 1000); return () => window.clearInterval(t) }, [])
-  useEffect(() => { void estadoDasNotificacoes().then(setAvisos).catch(() => setAvisos('sem-suporte')) }, [])
-  useEffect(() => ouvirInstalacao(() => setComo(comoInstalar())), [])
 
   // confere sozinha: a cada minuto com a tela à mostra e quando a pessoa volta para ela
   useEffect(() => {
@@ -67,24 +60,9 @@ export function PreAcesso({ sessao, nome, aoConferir, aoSair }: {
     }
   }, [])
 
-  async function ligarAvisos() {
-    // no iPhone o pedido de permissão precisa nascer do toque: nada de espera antes
-    setLigando(true); setRecadoAvisos(null)
-    try {
-      await ativarNotificacoes(sessao)
-      setAvisos('ligadas')
-    } catch (e) {
-      setRecadoAvisos((e as Error).message)
-      void estadoDasNotificacoes().then(setAvisos).catch(() => undefined)
-    } finally { setLigando(false) }
-  }
-
   const falta = Math.max(0, INICIO_DA_LIVE - agora)
   const noAr = agora >= INICIO_DA_LIVE && agora < FIM_DA_LIVE
   const d = Math.floor(falta / 864e5), h = Math.floor(falta / 36e5) % 24, m = Math.floor(falta / 6e4) % 60, s = Math.floor(falta / 1e3) % 60
-  const instalado = emAppInstalado()
-  const comunidade = comunidadeDaVitrine()
-
   return (
     <div className="entrada" data-modo="espera">
       <div className="entrada-aurora" aria-hidden="true" />
@@ -102,14 +80,14 @@ export function PreAcesso({ sessao, nome, aoConferir, aoSair }: {
         <div className="espera-cabeca">
           <span className="espera-selo pre-selo"><i aria-hidden="true" />Pré-acesso</span>
           <h1>{primeiroNome ? `${primeiroNome}, sua conta está pronta.` : 'Sua conta está pronta.'}</h1>
-          <p>O acesso completo é liberado na live de lançamento, <b>segunda, 9/11, às 20h</b>. Assista do início ao fim e a {MARCA.prosa} fica liberada para você, sem pagar nada.</p>
+          <p>O acesso completo é liberado na live de lançamento, <b>segunda, 09/11, às 20h</b>. Assista do início ao fim e a {MARCA.prosa} fica liberada para você, sem pagar nada.</p>
         </div>
 
         <div className="pre-relogio" role="timer" aria-live="off">
           {noAr ? (
             <div className="pre-noar">
               <b>A live está no ar agora</b>
-              <span>O link está na comunidade do WhatsApp. Fique até o fim para liberar o seu acesso.</span>
+              <span>Ela passa dentro da GlobalFly. Fique até o fim para liberar o seu acesso.</span>
             </div>
           ) : agora >= FIM_DA_LIVE ? (
             <div className="pre-noar"><b>A live terminou</b><span>A liberação acontece em instantes. Esta tela abre a plataforma sozinha.</span></div>
@@ -126,71 +104,7 @@ export function PreAcesso({ sessao, nome, aoConferir, aoSair }: {
 
         <section className="espera-enquanto" aria-labelledby="pre-titulo">
           <span className="espera-rotulo" id="pre-titulo">Para não perder a live</span>
-          <ul className="pre-acoes">
-            <li className={avisos === 'ligadas' ? 'feito' : ''}>
-              {avisos === 'ligadas' ? <Visto /> : <i className="pre-n" aria-hidden="true">1</i>}
-              <div>
-                <b>{avisos === 'ligadas' ? 'Avisos ligados neste aparelho' : 'Ative os avisos no celular'}</b>
-                <small>
-                  {avisos === 'ligadas' ? 'A gente te chama antes de a live começar.'
-                    : avisos === 'instalar' ? 'No iPhone, os avisos só funcionam com o app instalado. Instale primeiro, no passo abaixo, e abra a GlobalFly pelo ícone.'
-                    : avisos === 'bloqueadas' ? 'Os avisos estão bloqueados neste aparelho. Libere nos ajustes do navegador e volte aqui.'
-                    : avisos === 'sem-suporte' ? 'Este navegador não recebe avisos. Entre pelo celular para ativar.'
-                    : 'A gente te chama antes de a live começar, mesmo com o app fechado.'}
-                </small>
-                {recadoAvisos && <small className="pre-erro" role="status">{recadoAvisos}</small>}
-              </div>
-              {avisos === 'desligadas' && (
-                <button type="button" className="pre-botao" onClick={() => void ligarAvisos()} disabled={ligando}>{ligando ? 'Ativando…' : 'Ativar avisos'}</button>
-              )}
-            </li>
-
-            <li className={instalado ? 'feito' : ''}>
-              {instalado ? <Visto /> : <i className="pre-n" aria-hidden="true">2</i>}
-              <div>
-                <b>{instalado ? 'App instalado' : 'Instale o app'}</b>
-                <small>
-                  {instalado ? 'A GlobalFly fica na sua tela inicial, a um toque.'
-                    : como === 'abrir-no-navegador' ? 'Daqui não dá para instalar. Abra globalflytrade.com no Safari ou no Chrome e entre de novo.'
-                    : como === 'ios' ? 'No iPhone, a instalação é pelo Safari, em três toques.'
-                    : como === 'botao' ? 'Um toque e a GlobalFly vai para a sua tela inicial.'
-                    : 'No celular, abra globalflytrade.com e instale o app pelo navegador.'}
-                </small>
-                {como === 'ios' && passosIos && (
-                  <ol className="pre-ios">
-                    <li>Toque em <b>Compartilhar</b> na barra do Safari. Se não aparecer, toque em <b>···</b> e depois em Compartilhar.</li>
-                    <li>Role a lista e toque em <b>Adicionar à Tela de Início</b>.</li>
-                    <li>Toque em <b>Adicionar</b> e abra a GlobalFly pelo ícone.</li>
-                  </ol>
-                )}
-              </div>
-              {!instalado && como === 'botao' && <button type="button" className="pre-botao" onClick={() => void instalar()}>Instalar</button>}
-              {!instalado && como === 'ios' && !passosIos && <button type="button" className="pre-botao" onClick={() => setPassosIos(true)}>Como instalar</button>}
-            </li>
-
-            <li>
-              <i className="pre-n" aria-hidden="true">3</i>
-              <div>
-                <b>Salve na sua agenda</b>
-                <small>Segunda, 9 de novembro, às 20h (Brasília), com lembrete 1 hora antes.</small>
-                <span className="pre-links">
-                  <a href={AGENDA_DA_LIVE.google} target="_blank" rel="noopener noreferrer">Google Agenda</a>
-                  <a href={AGENDA_DA_LIVE.arquivo}>iPhone e outras</a>
-                </span>
-              </div>
-            </li>
-
-            {comunidade && (
-              <li>
-                <i className="pre-n" aria-hidden="true">4</i>
-                <div>
-                  <b>Entre na comunidade do WhatsApp</b>
-                  <small>O link da live e os avisos do lançamento chegam por lá.</small>
-                </div>
-                <a className="pre-botao" href={comunidade} target="_blank" rel="noopener noreferrer">Entrar</a>
-              </li>
-            )}
-          </ul>
+          <ChecklistDaLive sessao={sessao} />
         </section>
 
         <section className="espera-enquanto pre-deriv" aria-labelledby="pre-deriv-titulo">
@@ -214,5 +128,103 @@ export function PreAcesso({ sessao, nome, aoConferir, aoSair }: {
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * Os quatro passos para não perder a live (avisos, app, agenda, comunidade).
+ * Mora aqui e aparece também na plataforma trancada (TrancaDoLancamento).
+ */
+export function ChecklistDaLive({ sessao }: { sessao: SessaoTeeds }) {
+  const [avisos, setAvisos] = useState<EstadoDasNotificacoes | null>(null)
+  const [ligando, setLigando] = useState(false)
+  const [recadoAvisos, setRecadoAvisos] = useState<string | null>(null)
+  const [como, setComo] = useState<ComoInstalar>(() => comoInstalar())
+  const [passosIos, setPassosIos] = useState(false)
+
+  useEffect(() => { void estadoDasNotificacoes().then(setAvisos).catch(() => setAvisos('sem-suporte')) }, [])
+  useEffect(() => ouvirInstalacao(() => setComo(comoInstalar())), [])
+
+  async function ligarAvisos() {
+    // no iPhone o pedido de permissão precisa nascer do toque: nada de espera antes
+    setLigando(true); setRecadoAvisos(null)
+    try {
+      await ativarNotificacoes(sessao)
+      setAvisos('ligadas')
+    } catch (e) {
+      setRecadoAvisos((e as Error).message)
+      void estadoDasNotificacoes().then(setAvisos).catch(() => undefined)
+    } finally { setLigando(false) }
+  }
+
+  const instalado = emAppInstalado()
+  const comunidade = comunidadeDaVitrine()
+
+  return (
+    <ul className="pre-acoes">
+      <li className={avisos === 'ligadas' ? 'feito' : ''}>
+        {avisos === 'ligadas' ? <Visto /> : <i className="pre-n" aria-hidden="true">1</i>}
+        <div>
+          <b>{avisos === 'ligadas' ? 'Avisos ligados neste aparelho' : 'Ative os avisos no celular'}</b>
+          <small>
+            {avisos === 'ligadas' ? 'A gente te chama antes de a live começar.'
+              : avisos === 'instalar' ? 'No iPhone, os avisos só funcionam com o app instalado. Instale primeiro, no passo abaixo, e abra a GlobalFly pelo ícone.'
+              : avisos === 'bloqueadas' ? 'Os avisos estão bloqueados neste aparelho. Libere nos ajustes do navegador e volte aqui.'
+              : avisos === 'sem-suporte' ? 'Este navegador não recebe avisos. Entre pelo celular para ativar.'
+              : 'A gente te chama antes de a live começar, mesmo com o app fechado.'}
+          </small>
+          {recadoAvisos && <small className="pre-erro" role="status">{recadoAvisos}</small>}
+        </div>
+        {avisos === 'desligadas' && (
+          <button type="button" className="pre-botao" onClick={() => void ligarAvisos()} disabled={ligando}>{ligando ? 'Ativando…' : 'Ativar avisos'}</button>
+        )}
+      </li>
+
+      <li className={instalado ? 'feito' : ''}>
+        {instalado ? <Visto /> : <i className="pre-n" aria-hidden="true">2</i>}
+        <div>
+          <b>{instalado ? 'App instalado' : 'Instale o app'}</b>
+          <small>
+            {instalado ? 'A GlobalFly fica na sua tela inicial, a um toque.'
+              : como === 'abrir-no-navegador' ? 'Daqui não dá para instalar. Abra globalflytrade.com no Safari ou no Chrome e entre de novo.'
+              : como === 'ios' ? 'No iPhone, a instalação é pelo Safari, em três toques.'
+              : como === 'botao' ? 'Um toque e a GlobalFly vai para a sua tela inicial.'
+              : 'No celular, abra globalflytrade.com e instale o app pelo navegador.'}
+          </small>
+          {como === 'ios' && passosIos && (
+            <ol className="pre-ios">
+              <li>Toque em <b>Compartilhar</b> na barra do Safari. Se não aparecer, toque em <b>···</b> e depois em Compartilhar.</li>
+              <li>Role a lista e toque em <b>Adicionar à Tela de Início</b>.</li>
+              <li>Toque em <b>Adicionar</b> e abra a GlobalFly pelo ícone.</li>
+            </ol>
+          )}
+        </div>
+        {!instalado && como === 'botao' && <button type="button" className="pre-botao" onClick={() => void instalar()}>Instalar</button>}
+        {!instalado && como === 'ios' && !passosIos && <button type="button" className="pre-botao" onClick={() => setPassosIos(true)}>Como instalar</button>}
+      </li>
+
+      <li>
+        <i className="pre-n" aria-hidden="true">3</i>
+        <div>
+          <b>Salve na sua agenda</b>
+          <small>Segunda, 09/11, às 20h (Brasília), com lembrete 1 hora antes.</small>
+          <span className="pre-links">
+            <a href={AGENDA_DA_LIVE.google} target="_blank" rel="noopener noreferrer">Google Agenda</a>
+            <a href={AGENDA_DA_LIVE.arquivo}>iPhone e outras</a>
+          </span>
+        </div>
+      </li>
+
+      {comunidade && (
+        <li>
+          <i className="pre-n" aria-hidden="true">4</i>
+          <div>
+            <b>Entre na comunidade do WhatsApp</b>
+            <small>Os avisos do lançamento chegam por lá.</small>
+          </div>
+          <a className="pre-botao" href={comunidade} target="_blank" rel="noopener noreferrer">Entrar</a>
+        </li>
+      )}
+    </ul>
   )
 }

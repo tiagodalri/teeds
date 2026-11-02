@@ -370,7 +370,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
             <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4M12 13.5v3l2 1.2" /></svg>
           </span>
           <span className="aulas-liberacao-texto">
-            <b>Suas aulas abrem em 9 de novembro, depois da live</b>
+            <b>Suas aulas abrem em 09/11, depois da live</b>
             <small>Até lá, veja os módulos e o que você vai aprender.</small>
           </span>
         </section>
@@ -454,7 +454,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
                   <span className="aula-cartao-capa" data-num={String(a.numero).padStart(2, '0')}>
                     <ResponsiveImage src={capa(a.id)} alt={`Capa da aula ${a.titulo}`} loading="lazy" />
                     {vistas.has(a.id) && <i className="aula-vista">✓</i>}
-                    {!a.video && <em>{travadas ? 'Em 9/11' : 'Em breve'}</em>}
+                    {!a.video && <em>{travadas ? 'Em 09/11' : 'Em breve'}</em>}
                     {a.video && <span className="aula-play">▶</span>}
                     {a.duracao && !travadas && <span className="aula-dur">{a.duracao}</span>}
                     <span className="aula-hover-info"><b>{a.titulo}</b><small>{a.descricao}</small></span>
