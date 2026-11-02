@@ -107,6 +107,31 @@ var GF = (function () {
    * Contact (comunidade), Schedule (calendário), AtivouNotificacoes, BaixouApp, EntrouNaPlataforma.
    * `vezes`: 'uma' (padrão) conta uma vez por pessoa; 'sempre' conta cada vez.
    */
+  var PELO_SERVIDOR = ['Lead', 'CompleteRegistration']
+  function cookie(nome) { var m = document.cookie.match(new RegExp('(?:^|; )' + nome + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : '' }
+  function visitante() { try { return JSON.parse(localStorage.getItem('globalfly.visitante') || 'null') || '' } catch (e) { return '' } }
+  // Correspondência avançada (02/11/2026): depois do cadastro, o pixel leva e-mail, celular e nome,
+  // que o próprio código da Meta embaralha no aparelho antes de enviar. A Meta reconhece quem
+  // se cadastrou e entrega o anúncio para gente parecida.
+  function quemE() {
+    var d = ler(), u = { country: 'br' }, tel = String(d.tel || '').replace(/\D/g, ''), v = visitante()
+    if (d.email) u.em = d.email
+    if (tel.length === 10 || tel.length === 11) u.ph = '55' + tel
+    if (d.nome) u.fn = String(d.nome).toLowerCase()
+    if (d.sobrenome) u.ln = String(d.sobrenome).toLowerCase()
+    if (v) u.external_id = v
+    return u
+  }
+  // API de Conversões (supabase/functions/meta-conversoes): o mesmo evento, pelo servidor
+  function pixelPeloServidor(evento, codigo, dados) {
+    try {
+      fetch(SUPABASE + '/functions/v1/meta-conversoes', {
+        method: 'POST', keepalive: true, headers: { 'content-type': 'application/json', apikey: CHAVE },
+        body: JSON.stringify({ marca: 'globalfly', parceiro: DO_ENDERECO, evento: evento, event_id: codigo, email: dados.email,
+          url: location.origin + location.pathname, fbp: cookie('_fbp'), fbc: cookie('_fbc'), externo: visitante() }),
+      }).catch(function () {})
+    } catch (e) {}
+  }
   function pixel(evento, dadosDoEvento, vezes) {
     var id = PIXELS[DO_ENDERECO || '']
     // teste local não suja o pixel do parceiro
@@ -115,13 +140,17 @@ var GF = (function () {
       if (!pixelPronto) {
         /* eslint-disable */
         !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js')
-        window.fbq('init', id); window.fbq('track', 'PageView'); pixelPronto = true
+        window.fbq('init', id, quemE()); window.fbq('track', 'PageView'); pixelPronto = true
       }
       // cada evento do funil conta uma vez por pessoa, mesmo se ela recarregar a página
       if (evento) {
         var chave = 'pixel.' + evento, dados = ler()
         if (vezes !== 'sempre' && dados[chave]) return
-        window.fbq(PADRAO.indexOf(evento) >= 0 ? 'track' : 'trackCustom', evento, dadosDoEvento || {})
+        // as duas conversões também vão pelo servidor, com o mesmo código: a Meta conta uma vez só
+        var pelaApi = PELO_SERVIDOR.indexOf(evento) >= 0 && dados.cad && dados.email
+        var codigo = pelaApi ? evento + '-' + dados.cad : undefined
+        window.fbq(PADRAO.indexOf(evento) >= 0 ? 'track' : 'trackCustom', evento, dadosDoEvento || {}, codigo ? { eventID: codigo } : undefined)
+        if (pelaApi) pixelPeloServidor(evento, codigo, dados)
         var marca = {}; marca[chave] = Date.now(); guardar(marca)
       }
     } catch (e) {}

@@ -160,6 +160,16 @@ export async function relatorioDosParceiros(sessao: SessaoTeeds, de: string, ate
 export const trocarParceiro = (sessao: SessaoTeeds, userId: string, codigo: string | null, motivo: string, marca: string = MARCA.id) =>
   rpc<null>(sessao, 'teeds_trocar_parceiro', { p_user: userId, p_marca: marca, p_codigo: codigo, p_motivo: motivo })
 
+/* ------------------------------------------------------------------ pixel da Meta pelo servidor (02/11/2026) */
+
+/** Envio do pixel pela API de Conversões (supabase/functions/meta-conversoes). A chave nunca volta do banco. */
+export interface SituacaoDoPixel { temChave: boolean; chaveEm: string | null; enviados: number; semChave: number; ultimoEnvio: string | null; ultimoErro: { em: string; detalhe: string | null } | null }
+export const situacaoDoPixel = (sessao: SessaoTeeds, parceiro: string, marca: string = MARCA.id) =>
+  rpc<SituacaoDoPixel>(sessao, 'teeds_meta_situacao', { p_marca: marca, p_parceiro: parceiro })
+/** Guarda a chave do parceiro; chave vazia apaga. */
+export const salvarChaveDoPixel = (sessao: SessaoTeeds, parceiro: string, chave: string, marca: string = MARCA.id) =>
+  rpc<null>(sessao, 'teeds_meta_chave_salvar', { p_marca: marca, p_parceiro: parceiro, p_chave: chave })
+
 /* ------------------------------------------------------------------ links de divulgação e app da Deriv */
 
 export interface LinkDoParceiro { id: string; titulo: string; url: string; descricao: string | null; ordem: number }

@@ -45,6 +45,7 @@ Não vendemos os seus dados. Compartilhamos apenas o necessário com:
 - **A corretora**, para conectar a sua conta e executar as operações que você comanda;
 - **Prestadores de serviço** que fazem a Plataforma funcionar: hospedagem, banco de dados, envio de e-mail, mensagens (WhatsApp e SMS), transmissão de vídeo, meios de pagamento e ferramentas de medição. Todos tratam os dados apenas para essa finalidade;
 - **Parceiros de divulgação**, apenas para que saibam quais cadastros chegaram pelo link deles, com o mínimo de dados necessário;
+- **Plataformas de anúncio** (como a Meta, dona do Facebook e do Instagram), para medir os resultados das campanhas e mostrar os anúncios a pessoas com interesses parecidos. O e-mail, o telefone e o nome vão embaralhados por criptografia irreversível (hash), nunca em texto aberto;
 - **Autoridades públicas**, quando houver obrigação legal ou ordem judicial;
 - **Assessores profissionais** (advogados, contadores, auditores), sob dever de sigilo;
 - Em caso de reorganização, venda ou fusão do negócio, com o novo responsável, que continuará obrigado por esta Política.

@@ -18,6 +18,10 @@ export default function LabParceiros() {
   const api: ApiParceiros = {
     relatorio: async () => { await new Promise((r) => setTimeout(r, 400)); if (erro) throw new Error('Só o admin geral vê o relatório por parceiro.'); return linhas },
     trocar: async () => { await new Promise((r) => setTimeout(r, 400)); return null },
+    pixel: async () => (new URLSearchParams(location.search).has('chave')
+      ? { temChave: true, chaveEm: new Date(Date.now() - 864e5).toISOString(), enviados: 37, semChave: 0, ultimoEnvio: new Date(Date.now() - 600e3).toISOString(), ultimoErro: null }
+      : { temChave: false, chaveEm: null, enviados: 0, semChave: 12, ultimoEnvio: null, ultimoErro: null }),
+    salvarChave: async (_s, _p, chave) => { await new Promise((r) => setTimeout(r, 400)); if (chave && !/^EA/.test(chave)) throw new Error('Essa não parece a chave da Meta. Ela começa com EA e é bem comprida: copie de novo no Gerenciador de Eventos.'); return null },
   }
   const sessao = { token: 'lab', usuario: { id: 'lab' } } as unknown as SessaoTeeds
   return <div className="workspace-app" style={{ minHeight: '100vh', background: 'var(--bg)', padding: 24, boxSizing: 'border-box' }}><AdminParceiros sessao={sessao} api={api} /></div>

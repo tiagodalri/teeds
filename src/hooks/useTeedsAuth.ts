@@ -6,7 +6,7 @@ import {
 } from '../core/teeds/conta'
 import { autenticacaoConfigurada } from '../core/teeds/config'
 import { inscreverFilaEspera, type DadosFilaEspera } from '../core/teeds/leads'
-import { eventoDoPixel } from '../core/teeds/pixelDoParceiro'
+import { eventoDoPixel, iniciarPixelDoParceiro } from '../core/teeds/pixelDoParceiro'
 import { entrarComBiometria as fazerLoginComBiometria } from '../core/teeds/biometria'
 import { MARCA } from '../marca'
 import { ACESSO_RECUSADO, vigiarAcessoRecusado } from '../core/teeds/acessoRecusado'
@@ -230,7 +230,8 @@ export function useTeedsAuth() {
     setOcupado(true); setErro(null)
     try {
       const conta = await inscreverFilaEspera(dados)
-      eventoDoPixel('CompleteRegistration', { origem: 'app' }, true)
+      iniciarPixelDoParceiro({ email: dados.email, nome: dados.nome, telefone: dados.telefone })
+      eventoDoPixel('CompleteRegistration', { origem: 'app' }, true, dados.email)
       return { ok: true, conta }
     } catch (e) {
       setErro((e as Error).message)

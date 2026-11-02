@@ -564,7 +564,8 @@ export default function App() {
     return () => { vivo = false; window.clearTimeout(t) }
   }, [teeds.sessao?.usuario.id, situacao]) // eslint-disable-line react-hooks/exhaustive-deps
   // Pixel do parceiro (02/11/2026): abriu a plataforma, cada tela, entrou na conta
-  useEffect(() => { iniciarPixelDoParceiro() }, [])
+  // o pixel abre quando já se sabe quem está usando (correspondência avançada, 02/11/2026)
+  useEffect(() => { if (teeds.status !== 'carregando') iniciarPixelDoParceiro(teeds.sessao?.usuario) }, [teeds.status]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (teeds.status === 'logado') eventoDoPixel('ViewContent', { content_name: tela }, true) }, [tela, teeds.status])
   useEffect(() => { if (teeds.status === 'logado') eventoDoPixel('Entrou', undefined, true) }, [teeds.status])
   // trancado, só o Início

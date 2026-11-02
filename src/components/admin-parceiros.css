@@ -62,3 +62,27 @@
   .ap-periodo { width: 100%; justify-content: space-between; }
   .ap-periodo button { flex: 1; padding: 0 6px; }
 }
+
+/* O pixel da Meta do parceiro (02/11/2026) */
+.ap-pixel { display: grid; gap: 12px; padding: 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.ap-pixel header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ap-pixel h3 { margin: 0; font-size: 15px; }
+.ap-pixel header small { color: var(--muted); font: 600 12px var(--fonte-dados, ui-monospace, monospace); }
+.ap-pixel-itens { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ap-pixel-itens li { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 4px 12px; align-items: baseline; padding: 10px 12px 10px 30px; position: relative; border-radius: 10px; background: var(--bg); font-size: 13px; line-height: 1.45; }
+.ap-pixel-itens li::before { content: ''; position: absolute; left: 12px; top: 15px; width: 8px; height: 8px; border-radius: 50%; background: var(--up); }
+.ap-pixel-itens li.falta::before { background: var(--ap-ouro); }
+.ap-pixel-itens span { color: var(--muted); text-wrap: pretty; }
+.ap-pixel-chave { display: grid; gap: 6px; }
+.ap-pixel-chave label { font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.ap-pixel-chave > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.ap-pixel-chave input { flex: 1 1 260px; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 14px; }
+.ap-pixel-chave input:focus { outline: 2px solid var(--ap-ouro); outline-offset: 1px; }
+.ap-pixel-chave button { height: 40px; padding: 0 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.ap-pixel-chave button.principal { border-color: var(--ap-ouro); background: var(--ap-ouro); color: #051528; }
+.ap-pixel-chave button:disabled { opacity: .55; cursor: default; }
+.ap-pixel-ok { margin: 0; padding: 10px 14px; border-radius: 10px; background: color-mix(in srgb, var(--up) 12%, transparent); font-size: 13px; }
+@media (max-width: 600px) {
+  .ap-pixel-itens li { grid-template-columns: minmax(0, 1fr); }
+  .ap-pixel-chave button { flex: 1 1 auto; }
+}

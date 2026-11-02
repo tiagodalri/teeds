@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA } from '../marca'
-import { relatorioDosParceiros, trocarParceiro, type LinhaDoParceiro } from '../core/teeds/parceiro'
+import { relatorioDosParceiros, trocarParceiro, situacaoDoPixel, salvarChaveDoPixel, type LinhaDoParceiro, type SituacaoDoPixel } from '../core/teeds/parceiro'
+import { pixelDoParceiro } from '../core/teeds/pixelDoParceiro'
 import './admin-parceiros.css'
 
 /*
@@ -31,8 +32,64 @@ const FONTE: Record<string, string> = { cadastro: 'Cadastro pelo link', navegado
 const pct = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 100)}%` : '—')
 
 /** `api` existe para o laboratório (?tela=parceiros) trocar o banco por números de exemplo. */
-export interface ApiParceiros { relatorio: typeof relatorioDosParceiros; trocar: typeof trocarParceiro }
-const DO_BANCO: ApiParceiros = { relatorio: relatorioDosParceiros, trocar: trocarParceiro }
+export interface ApiParceiros { relatorio: typeof relatorioDosParceiros; trocar: typeof trocarParceiro; pixel: typeof situacaoDoPixel; salvarChave: typeof salvarChaveDoPixel }
+const DO_BANCO: ApiParceiros = { relatorio: relatorioDosParceiros, trocar: trocarParceiro, pixel: situacaoDoPixel, salvarChave: salvarChaveDoPixel }
+const quando = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', ' às')
+
+/*
+  O pixel da Meta do parceiro (02/11/2026, Tiago: "termine a configuração completa do pixel").
+  No site ele já está ligado (captura.js e pixelDoParceiro.ts). Aqui o admin geral cola a chave
+  da API de Conversões que o dono do pixel gera; com ela, os cadastros vão também pelo servidor.
+*/
+function PixelDaMeta({ sessao, marca, codigo, nome, api }: { sessao: SessaoTeeds; marca: string; codigo: string; nome: string; api: ApiParceiros }) {
+  const id = pixelDoParceiro(marca, codigo)
+  const [sit, setSit] = useState<SituacaoDoPixel | null>(null)
+  const [chave, setChave] = useState('')
+  const [estado, setEstado] = useState<{ salvando: boolean; erro: string | null; ok: string | null }>({ salvando: false, erro: null, ok: null })
+  const [rodada, setRodada] = useState(0)
+  useEffect(() => {
+    if (!id) return
+    let vivo = true
+    api.pixel(sessao, codigo, marca).then((s) => vivo && setSit(s)).catch((e) => vivo && setEstado((x) => ({ ...x, erro: (e as Error).message })))
+    return () => { vivo = false }
+  }, [id, codigo, marca, rodada, sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (!id) return null
+  const salvar = async (valor: string) => {
+    setEstado({ salvando: true, erro: null, ok: null })
+    try {
+      await api.salvarChave(sessao, codigo, valor, marca)
+      setChave(''); setEstado({ salvando: false, erro: null, ok: valor ? 'Chave salva. Os próximos cadastros já vão pelo servidor também.' : 'Chave removida.' }); setRodada((n) => n + 1)
+    } catch (e) { setEstado({ salvando: false, erro: (e as Error).message, ok: null }) }
+  }
+  const primeiro = nome.split(' ')[0]
+  return (
+    <div className="ap-pixel">
+      <header><h3>Pixel da Meta de {primeiro}</h3><small>{id}</small></header>
+      <ul className="ap-pixel-itens">
+        <li className="ok"><b>No site</b><span>Ligado em todas as páginas do /{codigo}: visita, formulário, cadastro, inscrição, cada passo do obrigado e a plataforma.</span></li>
+        <li className={sit?.temChave ? 'ok' : 'falta'}>
+          <b>Pelo servidor</b>
+          <span>{!sit ? 'Conferindo…' : sit.temChave
+            ? `Ligado desde ${quando(sit.chaveEm!)} · ${sit.enviados.toLocaleString('pt-BR')} ${sit.enviados === 1 ? 'conversão enviada' : 'conversões enviadas'} em 7 dias${sit.ultimoEnvio ? ` · última às ${new Date(sit.ultimoEnvio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}`
+            : `Falta a chave de ${primeiro}. Até ela chegar, os cadastros contam só pelo navegador${sit.semChave ? ` (${sit.semChave.toLocaleString('pt-BR')} em 7 dias)` : ''}.`}</span>
+        </li>
+      </ul>
+      {sit?.temChave && sit.ultimoErro && (!sit.ultimoEnvio || sit.ultimoErro.em > sit.ultimoEnvio) && <div className="ap-erro">A Meta recusou o último envio ({quando(sit.ultimoErro.em)}): {sit.ultimoErro.detalhe ?? 'sem detalhe'}. Confira a chave.</div>}
+      <form className="ap-pixel-chave" onSubmit={(e) => { e.preventDefault(); if (chave.trim()) void salvar(chave) }}>
+        <label htmlFor={`ap-pixel-${codigo}`}>Chave da API de Conversões</label>
+        <div>
+          <input id={`ap-pixel-${codigo}`} type="password" autoComplete="off" spellCheck={false} value={chave} onChange={(e) => setChave(e.target.value)}
+            placeholder={sit?.temChave ? 'Chave salva. Cole outra para trocar' : 'Cole a chave que começa com EA'} />
+          <button type="submit" className="principal" disabled={estado.salvando || !chave.trim()}>{estado.salvando ? 'Salvando…' : 'Salvar chave'}</button>
+          {sit?.temChave && <button type="button" disabled={estado.salvando} onClick={() => void salvar('')}>Remover</button>}
+        </div>
+      </form>
+      {estado.erro && <div className="ap-erro">{estado.erro}</div>}
+      {estado.ok && <p className="ap-pixel-ok">{estado.ok}</p>}
+      <p className="ap-nota">Onde {primeiro} pega a chave: Gerenciador de Eventos › o pixel acima › Configurações › API de Conversões › Gerar token de acesso. A chave fica guardada no servidor e não aparece de novo nem para quem salvou.</p>
+    </div>
+  )
+}
 
 export function AdminParceiros({ sessao, marca = MARCA.id, api = DO_BANCO }: { sessao: SessaoTeeds; marca?: string; api?: ApiParceiros }) {
   const [periodo, setPeriodo] = useState<(typeof PERIODOS)[number]['id']>('tudo')
@@ -111,6 +168,8 @@ export function AdminParceiros({ sessao, marca = MARCA.id, api = DO_BANCO }: { s
             ))}
           </div>
           <p className="ap-nota">Markup = o das operações em conta real dos clientes de cada grupo, no período (I.A. e manuais). Demonstração fica fora. Cada cliente pertence a um grupo só: o do primeiro link que usou.</p>
+
+          {parceiros.map((p) => <PixelDaMeta key={`pixel-${p.codigo}`} sessao={sessao} marca={marca} codigo={p.codigo} nome={p.nome} api={api} />)}
 
           {grupo && (
             <div className="ap-lista">

@@ -807,7 +807,10 @@
           // A senha nunca é guardada no navegador; só o que o servidor fez com a conta.
           if (GF.SENHA) { form.elements.senha.value = ''; form.elements.repetir.value = '' }
           var conta = corpo.conta === 'criada' || corpo.conta === 'existente' ? corpo.conta : 'provisoria'
-          GF.guardar({ nome: dados.nome.split(' ')[0], email: dados.email, conta: conta, quando: Date.now() })
+          // sobrenome, celular e o código do cadastro: para o pixel reconhecer a pessoa (captura.js, quemE)
+          var partes = dados.nome.split(' ')
+          GF.guardar({ nome: partes[0], sobrenome: partes.length > 1 ? partes[partes.length - 1] : '', email: dados.email, tel: tel.value.replace(/\D/g, ''),
+            cad: Date.now().toString(36) + Math.random().toString(36).slice(2, 10), conta: conta, quando: Date.now() })
           location.assign(GF.proxima('./questionario/'))
         }).catch(function (e) {
           mensagem.textContent = e instanceof TypeError || !e.message ? 'Sem conexão com a internet. Tente de novo.' : e.message; mensagem.className = 'mensagem erro'
