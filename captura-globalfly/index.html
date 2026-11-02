@@ -539,11 +539,11 @@
       ;(function () {
         var form = document.getElementById('cadastro')
         if (form && 'IntersectionObserver' in window) {
-          var olho = new IntersectionObserver(function (es) { if (es.some(function (e) { return e.isIntersecting })) { GF.pixel('ViewContent', { content_name: 'formulario' }); olho.disconnect() } }, { threshold: 0.3 })
+          var olho = new IntersectionObserver(function (es) { if (es.some(function (e) { return e.isIntersecting })) { GF.pixel('ViewContent', { content_name: 'formulario' }); GF.passo('formulario'); olho.disconnect() } }, { threshold: 0.3 })
           olho.observe(form)
         }
-        document.addEventListener('click', function (ev) { if (ev.target.closest && ev.target.closest('[data-ir-ao-form]')) GF.pixel('ClicouCadastrar') }, true)
-        document.addEventListener('focusin', function (ev) { if (ev.target.closest && ev.target.closest('#cadastro input')) GF.pixel('ComecouCadastro') }, true)
+        document.addEventListener('click', function (ev) { if (ev.target.closest && ev.target.closest('[data-ir-ao-form]')) { GF.pixel('ClicouCadastrar'); GF.passo('clicou') } }, true)
+        document.addEventListener('focusin', function (ev) { if (ev.target.closest && ev.target.closest('#cadastro input')) { GF.pixel('ComecouCadastro'); GF.passo('comecou') } }, true)
       })()
       Array.prototype.forEach.call(document.querySelectorAll('[data-ir-ao-form]'), function (a) {
         a.addEventListener('click', function (ev) {

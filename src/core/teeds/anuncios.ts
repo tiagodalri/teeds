@@ -42,6 +42,8 @@ export interface FunilDoBanco {
   porDia: Array<{ dia: string; cadastros: number; deAnuncio: number }>
   porOrigem: Array<{ origem: string; cadastros: number }>
   servidor: { enviados: number; semChave: number; erros: number }
+  /** Passos da página antes do cadastro (parceiro_toques e funil_passos). */
+  passos?: { visitas: number; formulario: number; clicou: number; comecou: number }
 }
 
 async function funcao<T>(sessao: SessaoTeeds, corpo: Record<string, unknown>): Promise<T> {

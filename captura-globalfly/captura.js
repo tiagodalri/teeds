@@ -132,6 +132,18 @@ var GF = (function () {
       }).catch(function () {})
     } catch (e) {}
   }
+  // Os passos antes do cadastro também ficam no nosso banco (02/11/2026): a Meta segura eventos
+  // próprios novos até o dono do pixel aprovar, e o funil da aba Anúncios não pode depender disso.
+  function passo(nome) {
+    var v = visitante()
+    if (!DO_ENDERECO || !v || /^(localhost|127\.|\[::1\])/.test(location.hostname)) return
+    try {
+      fetch(SUPABASE + '/rest/v1/rpc/gf_funil_passo', {
+        method: 'POST', keepalive: true, headers: { apikey: CHAVE, Authorization: 'Bearer ' + CHAVE, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_marca: 'globalfly', p_parceiro: DO_ENDERECO, p_visitante: v, p_passo: nome }),
+      }).catch(function () {})
+    } catch (e) {}
+  }
   function pixel(evento, dadosDoEvento, vezes) {
     var id = PIXELS[DO_ENDERECO || '']
     // teste local não suja o pixel do parceiro
@@ -159,5 +171,5 @@ var GF = (function () {
     } catch (e) {}
   }
 
-  return { SENHA: SENHA, pixel: pixel, parceiro: parceiro, MOTOR: MOTOR, SUPABASE: SUPABASE, CHAVE: CHAVE, COMUNIDADE: COMUNIDADE, ler: ler, guardar: guardar, proxima: proxima, paginaComParceiro: paginaComParceiro }
+  return { SENHA: SENHA, pixel: pixel, passo: passo, parceiro: parceiro, MOTOR: MOTOR, SUPABASE: SUPABASE, CHAVE: CHAVE, COMUNIDADE: COMUNIDADE, ler: ler, guardar: guardar, proxima: proxima, paginaComParceiro: paginaComParceiro }
 })()

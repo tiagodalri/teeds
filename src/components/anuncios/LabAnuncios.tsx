@@ -66,6 +66,7 @@ function funil(): FunilDoBanco {
     porAnuncio: [{ id: ads[0].id, cadastros: 138 + vivos, questionario: 112, notificacoes: 61, live: 0, liberados: 0 }, { id: ads[1].id, cadastros: 84, questionario: 66, notificacoes: 32, live: 0, liberados: 0 }],
     porDia: [], porOrigem: [{ origem: 'meta', cadastros: cad }, { origem: 'sem origem', cadastros: 14 }, { origem: 'instagram', cadastros: 7 }],
     servidor: { enviados: cad * 2 - 3, semChave: 0, erros: 0 },
+    passos: { visitas: 2410 + vivos * 9, formulario: 1720 + vivos * 6, clicou: 1190 + vivos * 4, comecou: 690 + vivos * 3 },
   }
 }
 

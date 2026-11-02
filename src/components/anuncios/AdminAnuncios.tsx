@@ -202,7 +202,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
     { id: 'imp', nome: 'Viram o anúncio', valor: total?.impressoes ?? 0, fonte: 'Meta', custo: total?.impressoes ? gasto / total.impressoes : null },
     { id: 'cli', nome: 'Clicaram no anúncio', valor: total?.cliquesLink ?? 0, fonte: 'Meta', custo: total?.cliquesLink ? gasto / total.cliquesLink : null },
     { id: 'lpv', nome: 'Chegaram na página', valor: total?.lpv ?? 0, fonte: 'Meta', custo: total?.lpv ? gasto / total.lpv : null },
-    { id: 'com', nome: 'Começaram o cadastro', valor: pixelEv?.get('ComecouCadastro') ?? 0, fonte: 'Pixel', custo: null },
+    { id: 'com', nome: 'Começaram o cadastro', valor: funil?.passos?.comecou ?? pixelEv?.get('ComecouCadastro') ?? 0, fonte: 'Plataforma', custo: null },
     { id: 'cad', nome: 'Cadastrados', valor: etapasDoBanco?.cadastros ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.cadastros ? gasto / etapasDoBanco.cadastros : null },
     { id: 'que', nome: 'Questionário respondido', valor: etapasDoBanco?.questionario ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.questionario ? gasto / etapasDoBanco.questionario : null },
     { id: 'not', nome: 'Notificações ativadas', valor: etapasDoBanco?.notificacoes ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.notificacoes ? gasto / etapasDoBanco.notificacoes : null },
@@ -308,7 +308,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
           </div>
         </header>
         <Funil3D etapas={etapas} mostrarCusto={comCusto} />
-        <p className="aa-nota">As três primeiras etapas vêm da Meta (a cada minuto), “Começaram o cadastro” vem do pixel e o resto vem da plataforma, a cada 10 segundos. {origem === 'anuncios' ? 'Só anúncios: contam os cadastros que chegaram por um anúncio da Meta.' : `Todo o /${parceiro}: todos os cadastros da página, de anúncio ou não.`}</p>
+        <p className="aa-nota">As três primeiras etapas vêm da Meta (a cada minuto) e o resto vem da plataforma, a cada 10 segundos. {origem === 'anuncios' ? 'Só anúncios: contam os cadastros que chegaram por um anúncio da Meta.' : `Todo o /${parceiro}: todos os cadastros da página, de anúncio ou não.`}</p>
       </section>
 
       {total && (
