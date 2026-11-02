@@ -19,6 +19,7 @@ import { emAppInstalado } from '../core/deriv/auth'
 import { comoInstalar, instalar, ouvirInstalacao, type ComoInstalar } from '../core/appNativo'
 import { ativarNotificacoes, estadoDasNotificacoes, type EstadoDasNotificacoes } from '../core/teeds/notificacoes'
 import { AGENDA_DA_LIVE, FIM_DA_LIVE, INICIO_DA_LIVE } from '../core/teeds/lancamento'
+import { eventoDoPixel } from '../core/teeds/pixelDoParceiro'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import './entrada/login.css'
 
@@ -222,7 +223,7 @@ export function ChecklistDaLive({ sessao }: { sessao: SessaoTeeds }) {
             <b>Entre na comunidade do WhatsApp</b>
             <small>Os avisos do lançamento chegam por lá.</small>
           </div>
-          <a className="pre-botao" href={comunidade} target="_blank" rel="noopener noreferrer">Entrar</a>
+          <a className="pre-botao" href={comunidade} target="_blank" rel="noopener noreferrer" onClick={() => eventoDoPixel('Contact', { content_name: 'comunidade-whatsapp' })}>Entrar</a>
         </li>
       )}
     </ul>

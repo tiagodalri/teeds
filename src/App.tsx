@@ -33,6 +33,7 @@ import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 import { PreAcesso } from './components/PreAcesso'
 import { emPreAcesso, estadoDaLive, idDoYoutube, INICIO_DA_LIVE, PLANO_AGUARDANDO, trancadoAteALive, type EstadoDaLive } from './core/teeds/lancamento'
 import { TrancaDoLancamento } from './components/lancamento/TrancaDoLancamento'
+import { eventoDoPixel, iniciarPixelDoParceiro } from './core/teeds/pixelDoParceiro'
 import { LiveDoLancamento } from './components/lancamento/LiveDoLancamento'
 import { AceiteDosTermos } from './components/termos/Termos'
 import { confirmarInscricao } from './core/teeds/notificacoes'
@@ -562,12 +563,19 @@ export default function App() {
     ler()
     return () => { vivo = false; window.clearTimeout(t) }
   }, [teeds.sessao?.usuario.id, situacao]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Pixel do parceiro (02/11/2026): abriu a plataforma, cada tela, entrou na conta
+  useEffect(() => { iniciarPixelDoParceiro() }, [])
+  useEffect(() => { if (teeds.status === 'logado') eventoDoPixel('ViewContent', { content_name: tela }, true) }, [tela, teeds.status])
+  useEffect(() => { if (teeds.status === 'logado') eventoDoPixel('Entrou', undefined, true) }, [teeds.status])
   // trancado, só o Início
   useEffect(() => { if (trancado && tela !== 'inicio' && MARCA.inicio) setTela('inicio') }, [trancado, tela]) // eslint-disable-line react-hooks/exhaustive-deps
   // liberado na live: a plataforma abre com um recado
   const estavaTrancado = useRef(false)
   useEffect(() => {
-    if (estavaTrancado.current && !trancado && situacao === 'ativo') setAviso({ tipo: 'ok', texto: `Acesso liberado. Bem-vindo à ${MARCA.prosa}, GF Member.` })
+    if (estavaTrancado.current && !trancado && situacao === 'ativo') {
+      setAviso({ tipo: 'ok', texto: `Acesso liberado. Bem-vindo à ${MARCA.prosa}, GF Member.` })
+      eventoDoPixel('AcessoLiberado', undefined, true)
+    }
     estavaTrancado.current = trancado
   }, [trancado, situacao])
 

@@ -535,6 +535,16 @@
 
       // ------------------------------------------------ botões que levam ao formulário
       var form = document.getElementById('form')
+      // Pixel (02/11/2026): chegou no formulário, clicou para se cadastrar, começou a preencher
+      ;(function () {
+        var form = document.getElementById('cadastro')
+        if (form && 'IntersectionObserver' in window) {
+          var olho = new IntersectionObserver(function (es) { if (es.some(function (e) { return e.isIntersecting })) { GF.pixel('ViewContent', { content_name: 'formulario' }); olho.disconnect() } }, { threshold: 0.3 })
+          olho.observe(form)
+        }
+        document.addEventListener('click', function (ev) { if (ev.target.closest && ev.target.closest('[data-ir-ao-form]')) GF.pixel('ClicouCadastrar') }, true)
+        document.addEventListener('focusin', function (ev) { if (ev.target.closest && ev.target.closest('#cadastro input')) GF.pixel('ComecouCadastro') }, true)
+      })()
       Array.prototype.forEach.call(document.querySelectorAll('[data-ir-ao-form]'), function (a) {
         a.addEventListener('click', function (ev) {
           ev.preventDefault()

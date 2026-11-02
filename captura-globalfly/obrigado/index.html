@@ -162,7 +162,7 @@
         botaoApp.addEventListener('click', function () {
           if (pedidoApp) {
             pedidoApp.prompt()
-            pedidoApp.userChoice.then(function (r) { if (r.outcome === 'accepted') appInstalado() })
+            pedidoApp.userChoice.then(function (r) { if (r.outcome === 'accepted') { appInstalado(); GF.pixel('BaixouApp') } })
             pedidoApp = null
             return
           }
@@ -219,6 +219,7 @@
                   if (ok !== true) throw new Error('nao gravou')
                   reg.showNotification('🔔 Notificações ativadas', { body: 'A gente te chama no dia 09/11, antes de a live começar.', icon: '/pwa-globalfly/icon-192.png', badge: '/pwa-globalfly/badge-96.png', tag: 'live-confirmacao' })
                   avisosLigados()
+                  GF.pixel('AtivouNotificacoes')
                 })
               })
           }).catch(function (e) {
@@ -240,6 +241,11 @@
         var bola = li.querySelector('.o-n'); if (bola && bola.textContent !== '✓') bola.textContent = n
       })
       GF.pixel('CompleteRegistration')
+      if (dados.respondeu) GF.pixel('RespondeuQuestionario')
+      // cada passo do obrigado também conta no pixel (02/11/2026)
+      document.getElementById('comunidade').addEventListener('click', function () { GF.pixel('Contact', { content_name: 'comunidade-whatsapp' }) })
+      document.getElementById('agenda').addEventListener('click', function () { GF.pixel('Schedule', { content_name: 'live-09-11' }) })
+      document.getElementById('plataforma').addEventListener('click', function () { GF.pixel('EntrouNaPlataforma') })
     })()
   </script>
 </body>

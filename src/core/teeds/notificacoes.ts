@@ -15,6 +15,7 @@ import { SUPABASE } from './config'
 import type { SessaoTeeds } from './conta'
 import { aparelhoLegivel } from './termos'
 import { MARCA } from '../../marca'
+import { eventoDoPixel } from './pixelDoParceiro'
 
 export type EstadoDasNotificacoes = 'sem-suporte' | 'instalar' | 'bloqueadas' | 'desligadas' | 'ligadas'
 
@@ -81,6 +82,7 @@ export async function ativarNotificacoes(sessao: SessaoTeeds): Promise<void> {
   }
   if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chave })
   await gravar(sessao, sub)
+  eventoDoPixel('AtivouNotificacoes', undefined, true)
 }
 
 /** Desliga neste aparelho (os outros aparelhos da pessoa continuam recebendo). */

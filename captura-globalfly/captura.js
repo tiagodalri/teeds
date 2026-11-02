@@ -98,8 +98,16 @@ var GF = (function () {
   // anúncio. /n = conta de anúncios do Naor. /v e o direto ficam sem pixel até chegar o número deles.
   var PIXELS = { n: '1625935188283999' }
   var pixelPronto = false
-  /** Conta a visita (PageView) e, se vier, um evento do funil: 'Lead' no cadastro, 'CompleteRegistration' no obrigado. */
-  function pixel(evento) {
+  // Os eventos padrão da Meta (o resto vai como evento próprio, com trackCustom)
+  var PADRAO = ['PageView', 'ViewContent', 'Lead', 'CompleteRegistration', 'Contact', 'Schedule', 'Subscribe', 'InitiateCheckout', 'SubmitApplication', 'StartTrial', 'Search', 'FindLocation', 'CustomizeProduct', 'Donate', 'AddToCart', 'AddToWishlist', 'AddPaymentInfo', 'Purchase']
+  /**
+   * Conta a visita (PageView) e, se vier, um evento do funil (02/11/2026, Tiago: "rastrear TODOS os eventos").
+   * Página de vendas: ViewContent (chegou no formulário), ClicouCadastrar, ComecouCadastro.
+   * Questionário: Lead (cadastro enviado). Obrigado: CompleteRegistration, RespondeuQuestionario,
+   * Contact (comunidade), Schedule (calendário), AtivouNotificacoes, BaixouApp, EntrouNaPlataforma.
+   * `vezes`: 'uma' (padrão) conta uma vez por pessoa; 'sempre' conta cada vez.
+   */
+  function pixel(evento, dadosDoEvento, vezes) {
     var id = PIXELS[DO_ENDERECO || '']
     // teste local não suja o pixel do parceiro
     if (!id || /^(localhost|127\.|\[::1\])/.test(location.hostname)) return
@@ -112,8 +120,9 @@ var GF = (function () {
       // cada evento do funil conta uma vez por pessoa, mesmo se ela recarregar a página
       if (evento) {
         var chave = 'pixel.' + evento, dados = ler()
-        if (dados[chave]) return
-        window.fbq('track', evento); var marca = {}; marca[chave] = Date.now(); guardar(marca)
+        if (vezes !== 'sempre' && dados[chave]) return
+        window.fbq(PADRAO.indexOf(evento) >= 0 ? 'track' : 'trackCustom', evento, dadosDoEvento || {})
+        var marca = {}; marca[chave] = Date.now(); guardar(marca)
       }
     } catch (e) {}
   }

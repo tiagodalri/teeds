@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from 'react'
 import { MARCA } from '../../marca'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { idDoYoutube, marcarPresenca, type EstadoDaLive } from '../../core/teeds/lancamento'
+import { eventoDoPixel } from '../../core/teeds/pixelDoParceiro'
 
 interface PlayerYT { destroy(): void; getPlayerState?(): number }
 declare global {
@@ -90,7 +91,7 @@ export function LiveDoLancamento({ sessao, estado, aoFechar }: {
   async function marcar() {
     const vale = comApi.current ? tocando.current : document.visibilityState === 'visible'
     if (!vale) return
-    try { if (await marcarPresenca(sessao)) setMarcadaEm(Date.now()) } catch { /* tenta de novo em 30 s */ }
+    try { if (await marcarPresenca(sessao)) { setMarcadaEm(Date.now()); eventoDoPixel('AssistiuLive', undefined, true) } } catch { /* tenta de novo em 30 s */ }
   }
 
   // a cada 30 s, enquanto a live toca
