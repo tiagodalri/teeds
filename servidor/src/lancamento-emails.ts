@@ -20,7 +20,7 @@ import { marcaPorId, type Marca } from '../../src/marca/marcas'
 import { DERIV } from '../../src/core/deriv/config'
 import { montarEmail } from './emails'
 import { jaSairam, linkDeDescadastro } from './descadastro'
-import { banco, comunidadeDe, despachar, INICIO_DA_LIVE } from './aprovacao-leads'
+import { banco, comunidadeDe, despachar, enderecoDe, INICIO_DA_LIVE } from './aprovacao-leads'
 
 const MARCA = 'globalfly'
 const PLANO_AGUARDANDO = 'globalfly-aguardando-live'
@@ -143,7 +143,8 @@ export function emailDoLancamento(marca: Marca, etapa: string, p: Inscrito) {
   if (!e) throw new Error(`Etapa desconhecida: ${etapa}`)
   const c = e.montar(marca, p)
   const comunidade = c.comunidade ? comunidadeDe(marca, p.parceiro) : undefined
-  return montarEmail(marca, 'convite', c.url ?? new URL('/', marca.redirectUri).href, {
+  // o endereço do parceiro de quem se inscreveu: /n/ para o Naor, /v/ para o Victor
+  return montarEmail(marca, 'convite', c.url ?? enderecoDe(marca, p.parceiro), {
     assunto: c.assunto, titulo: c.titulo, espia: c.espia, corpo: c.corpo,
     ...(c.botao ? { botao: c.botao } : {}),
     ...(comunidade ? { whatsapp: { url: comunidade, texto: 'Entrar na comunidade do WhatsApp' } } : {}),
