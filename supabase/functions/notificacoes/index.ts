@@ -9,6 +9,8 @@
 //                                      a sessão de I.A. terminou; avisa a pessoa
 //   { acao: 'lancamento', etapa }     do carteiro do servidor (x-gatilho): os avisos
 //                                      da live de 09/11 ('hoje', 'uma-hora', 'ao-vivo')
+//   { acao: 'disparo', ... }          do painel (Administração › Notificações), com o
+//                                      token do admin geral: título, texto, destino, público
 //
 // A chave VAPID de cada plataforma nasce aqui na primeira vez e fica em
 // config_servicos (VAPID_<MARCA>), que só a chave de serviço lê. O segredo do
@@ -209,6 +211,79 @@ async function avisarALive(etapa: string): Promise<{ enviados: number; falhas: n
   return { enviados, falhas, aparelhos: lista.length }
 }
 
+/* ------------------------------------------------- disparo pelo painel */
+
+/*
+  Administração › Notificações (02/11/2026, Tiago: "um painel pra disparar
+  notificações, personalizar cada uma, ver um preview, selecionar pra quem").
+  Só o administrador geral. Quem recebe sai de teeds_push_destinos (banco); cada
+  um abre o destino no endereço do próprio parceiro (/n, /v ou a raiz).
+*/
+const TELAS = new Set(['inicio', 'aovivo', 'aulas', 'robos', 'operar', 'relatorios', 'gerenciamento', 'noticias'])
+// as mesmas comunidades de src/marca/marcas.ts (comunidade e comunidadesDosParceiros da GlobalFly)
+const COMUNIDADES: Record<string, string> = {
+  n: 'https://chat.whatsapp.com/FZpOI5S5Hhe2EOYIOul2C2',
+  v: 'https://chat.whatsapp.com/KWk0g33mPzYL6ZUqU89Xue',
+  '': 'https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq',
+}
+
+function enderecoDoDestino(marca: string, destino: string, parceiro: string | null): string {
+  const p = parceiro === 'n' || parceiro === 'v' ? parceiro : ''
+  if (destino === 'comunidade') return COMUNIDADES[p] ?? COMUNIDADES['']
+  if (/^https:\/\//.test(destino)) return destino
+  const tela = TELAS.has(destino) ? destino : 'inicio'
+  const site = SITE[marca] ?? 'https://globalflytrade.com'
+  if (p) return `${site}/${p}/${tela}`
+  return tela === 'inicio' ? `${site}/` : `${site}/?tela=${tela}`
+}
+
+async function disparar(req: Request, corpo: Record<string, unknown>) {
+  const marca = String(corpo.marca ?? '')
+  if (!MARCAS.has(marca)) return json({ erro: 'Plataforma inválida.' }, 400)
+  const quem = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SERVICO, Authorization: req.headers.get('Authorization') ?? '' } })
+  if (!quem.ok) return json({ erro: 'Entre na sua conta.' }, 401)
+  const u = await quem.json()
+  const adm = await rest(`administradores?user_id=eq.${u.id}&parceiro=is.null&or=(marca.eq.${marca},marca.eq.teeds)&select=user_id&limit=1`)
+  if (!adm.ok || !(await adm.json()).length) return json({ erro: 'Só o administrador geral dispara notificações.' }, 403)
+
+  const titulo = String(corpo.titulo ?? '').trim().slice(0, 70)
+  const texto = String(corpo.corpo ?? '').trim().slice(0, 200)
+  const destino = String(corpo.destino ?? 'inicio').trim().slice(0, 500)
+  const publico = String(corpo.publico ?? '')
+  const parceiro = corpo.parceiro === 'n' || corpo.parceiro === 'v' || corpo.parceiro === 'direto' ? String(corpo.parceiro) : null
+  if (!titulo || !texto) return json({ erro: 'Escreva o título e a mensagem.' }, 400)
+  if (!['todos', 'aguardando', 'membros', 'ativos', 'eu'].includes(publico)) return json({ erro: 'Escolha para quem enviar.' }, 400)
+  if (destino.startsWith('http') && !/^https:\/\//.test(destino)) return json({ erro: 'O link precisa começar com https://' }, 400)
+
+  const rd = await rest('rpc/teeds_push_destinos', { method: 'POST', body: JSON.stringify({ p_marca: marca, p_publico: publico, p_parceiro: parceiro, p_eu: u.id }) })
+  const lista: Array<{ tabela: string; chave: string; endpoint: string; p256dh: string; auth: string; parceiro: string | null }> = rd.ok ? await rd.json() : []
+  const chave = await chaveDa(marca)
+  const vapidDetails = { subject: SITE[marca] ?? 'https://globalflytrade.com', publicKey: chave.publica, privateKey: chave.privada }
+  const tag = `painel-${Date.now()}`
+  let enviados = 0, falhas = 0
+  for (let i = 0; i < lista.length; i += 50) {
+    await Promise.all(lista.slice(i, i + 50).map(async (a) => {
+      try {
+        await webpush.sendNotification({ endpoint: a.endpoint, keys: { p256dh: a.p256dh, auth: a.auth } },
+          JSON.stringify({ titulo, corpo: texto, tag, url: enderecoDoDestino(marca, destino, a.parceiro) }), { TTL: 12 * 3600, urgency: 'high', vapidDetails })
+        enviados++
+      } catch (e) {
+        falhas++
+        const status = (e as { statusCode?: number }).statusCode
+        if (status === 404 || status === 410) {
+          await rest(a.tabela === 'lancamento_push' ? `lancamento_push?endpoint=eq.${encodeURIComponent(a.chave)}` : `push_assinaturas?id=eq.${a.chave}`, { method: 'DELETE' })
+        }
+      }
+    }))
+  }
+  await rest('push_disparos', { method: 'POST', body: JSON.stringify({
+    marca, criado_por: u.id, titulo, corpo: texto, destino, publico, parceiro,
+    aparelhos: lista.length, enviados, falhas, teste: publico === 'eu',
+  }) })
+  console.log('disparo', marca, publico, parceiro, { aparelhos: lista.length, enviados, falhas })
+  return json({ aparelhos: lista.length, enviados, falhas })
+}
+
 /* ------------------------------------------------------------------ entrada */
 
 Deno.serve(async (req) => {
@@ -234,6 +309,8 @@ Deno.serve(async (req) => {
     })
     return json(r)
   }
+
+  if (corpo.acao === 'disparo') return disparar(req, corpo as Record<string, unknown>)
 
   if (corpo.acao === 'lancamento') {
     const segredo = await lerConfig('PUSH_GATILHO')

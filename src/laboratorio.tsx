@@ -60,6 +60,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 import { PreAcesso } from './components/PreAcesso'
 import { AdminLancamento } from './components/lancamento/AdminLancamento'
+import { AdminNotificacoes as AdminNotificacoesLab } from './components/notificacoes/AdminNotificacoes'
 const SalaDeTreino = lazy(() => import('./components/aovivo/SalaDeTreino').then((m) => ({ default: m.SalaDeTreino })))
 const LabCentralExtras = lazy(() => import('./components/aovivo/SalaDeTreino').then((m) => ({ default: function Extras() {
   // a faixa "Quem recebe" e o histórico das transmissões, com respostas de mentira do banco
@@ -379,6 +380,17 @@ function Laboratorio() {
   )
   // ?tela=carregando: o carregando da marca (o mesmo quadro em que a decolagem pousa)
   if (qual === 'carregando') return <Carregando />
+  if (qual === 'notificacoes-admin') {
+    // o painel de notificações com respostas de mentira
+    const f = window.fetch
+    window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => {
+      const url = String(u)
+      if (url.includes('teeds_push_publicos')) return new Response(JSON.stringify({ todos: { pessoas: 1284, aparelhos: 1502 }, aguardando: { pessoas: 912, aparelhos: 1040 }, membros: { pessoas: 318, aparelhos: 402 }, ativos: { pessoas: 372, aparelhos: 462 }, eu: { pessoas: 1, aparelhos: 2 } }), { status: 200 })
+      if (url.includes('push_disparos')) return new Response(JSON.stringify([{ id: '1', criado_em: '2026-11-02T14:10:00Z', titulo: '⏰ Falta 1 hora para a live', corpo: 'Às 20h, dentro da GlobalFly. Abra o app e deixe tudo pronto.', publico: 'aguardando', parceiro: 'n', aparelhos: 412, enviados: 398, falhas: 14, teste: false }, { id: '2', criado_em: '2026-11-02T13:58:00Z', titulo: '⏰ Falta 1 hora para a live', corpo: 'Às 20h, dentro da GlobalFly.', publico: 'eu', parceiro: null, aparelhos: 2, enviados: 2, falhas: 0, teste: true }]), { status: 200 })
+      return f(u, i)
+    }) as typeof fetch
+    return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><AdminNotificacoesLab sessao={{ token: 'lab' } as never} /></div></Suspense>
+  }
   if (qual === 'lancamento-admin') {
     // o painel da live com respostas de mentira (o banco de verdade só responde ao admin geral)
     const f = window.fetch

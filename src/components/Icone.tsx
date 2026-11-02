@@ -45,6 +45,8 @@ const TRACOS = {
   simulacao: 'M3 12c3-6 6-6 9 0s6 6 9 0',
   estrela: 'M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z',
   suporte: 'M4 5h16v11H9l-5 4zM8 9.5h8M8 12.5h5',
+  // Administração › Notificações (02/11/2026): o sino
+  sino: 'M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.6 2H4.9l1.6-2zM10 20.5a2 2 0 0 0 4 0',
 } as const
 
 /** Os que se desenham cheios: um "play" vazado parece botão desligado. */

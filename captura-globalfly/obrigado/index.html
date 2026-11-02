@@ -8,6 +8,18 @@
   <title>GlobalFly Trade · Inscrição confirmada</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/pwa-globalfly/favicon-32.png" />
   <link rel="apple-touch-icon" href="/pwa-globalfly/icon-180.png" />
+  <!-- 02/11/2026: "Baixar o app" daqui. O manifesto do parceiro (o app instalado abre com o /n ou o /v);
+       aberto pelo ícone, esta página leva direto para a plataforma -->
+  <script>
+    (function () {
+      var p = (location.pathname.split('/')[1] || '').toLowerCase(), parceiro = p === 'n' || p === 'v' ? p : ''
+      if (matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) { location.replace(parceiro ? '/' + parceiro + '/inicio' : '/'); return }
+      var l = document.createElement('link'); l.rel = 'manifest'; l.href = '/manifest' + (parceiro ? '-' + parceiro : '') + '.webmanifest'
+      document.head.appendChild(l)
+    })()
+  </script>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="GlobalFly" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&display=swap" rel="stylesheet">
@@ -46,19 +58,21 @@
             <!-- 02/11/2026 (Tiago): um botão só; o aparelho decide (Apple: arquivo da agenda; o resto: Google Agenda) -->
             <a class="botao o-botao o-claro" id="agenda" href="https://calendar.google.com/calendar/render?action=TEMPLATE&amp;text=Live%20de%20lan%C3%A7amento%20da%20GlobalFly%20Trade&amp;dates=20261109T230000Z/20261110T010000Z&amp;details=Assista%20do%20in%C3%ADcio%20ao%20fim%20para%20liberar%20o%20seu%20acesso.%20A%20live%20passa%20dentro%20da%20GlobalFly%3A%20https%3A%2F%2Fglobalflytrade.com" target="_blank" rel="noopener">Adicionar ao calendário</a>
           </li>
+          <li id="passo-app">
+            <span class="o-n" data-app-n>3</span>
+            <div><strong data-app-titulo>Baixe o app</strong><span data-app-texto>A GlobalFly fica na tela do seu celular, a um toque, como um aplicativo.</span>
+              <ol class="o-ios" data-app-passos hidden></ol>
+            </div>
+            <button class="botao o-botao" type="button" id="app">Baixar o app</button>
+          </li>
           <li id="passo-avisos">
-            <span class="o-n" data-avisos-n>3</span>
+            <span class="o-n" data-avisos-n>4</span>
             <div><strong data-avisos-titulo>Ative as notificações</strong><span data-avisos-texto>A gente te chama no dia 09/11, antes de a live começar, mesmo com o celular bloqueado.</span>
-              <ol class="o-ios" data-avisos-ios hidden>
-                <li>Toque em <b>Compartilhar</b> na barra do&nbsp;Safari.</li>
-                <li>Toque em <b>Adicionar à Tela de Início</b> e depois em <b>Adicionar</b>.</li>
-                <li>Abra a GlobalFly pelo ícone, entre na sua conta e toque em <b>Ativar avisos</b>.</li>
-              </ol>
             </div>
             <button class="botao o-botao" type="button" id="avisos">Ativar notificações</button>
           </li>
           <li>
-            <span class="o-n">4</span>
+            <span class="o-n">5</span>
             <div><strong>Entre na GlobalFly</strong><span data-acesso-curto>Use o e-mail do cadastro e a senha que você criou. Você já vê a plataforma, trancada até a&nbsp;live.</span></div>
             <a class="botao o-botao o-claro" id="plataforma" href="/">Entrar na GlobalFly</a>
           </li>
@@ -109,6 +123,57 @@
       var agenda = document.getElementById('agenda')
       if (ios || safariMac) { agenda.href = '../live-globalfly.ics'; agenda.removeAttribute('target') }
 
+      // Baixar o app (02/11/2026, Tiago: "um botão pra pessoa já baixar o app"). Cada aparelho do seu jeito:
+      // Chrome/Android instala num toque; iPhone pelo Compartilhar do Safari; dentro do Instagram ou do
+      // Facebook (de onde vem o anúncio) não se instala nada: primeiro abre no navegador.
+      var passoAvisosFora = false
+      var parceiroApp = GF.parceiro(), naPlataforma = parceiroApp ? '/' + parceiroApp + '/inicio' : '/'
+      var embutido = /FBAN|FBAV|Instagram|Line\/|TikTok|Twitter|LinkedInApp|WhatsApp/i.test(ua)
+      var android = /Android/i.test(ua)
+      var botaoApp = document.getElementById('app'), passoApp = document.getElementById('passo-app')
+      var textoApp = document.querySelector('[data-app-texto]'), listaApp = document.querySelector('[data-app-passos]')
+      var pedidoApp = null
+      function passos(itens) { listaApp.innerHTML = itens.map(function (t) { return '<li>' + t + '</li>' }).join(''); listaApp.hidden = false; botaoApp.hidden = true }
+      if ('serviceWorker' in navigator && !embutido) navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {})
+      window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); pedidoApp = e })
+      window.addEventListener('appinstalled', function () { appInstalado() })
+      function appInstalado() {
+        passoApp.classList.add('feito'); botaoApp.hidden = true; listaApp.hidden = true
+        document.querySelector('[data-app-n]').textContent = '✓'
+        document.querySelector('[data-app-titulo]').textContent = 'App instalado'
+        textoApp.textContent = 'A GlobalFly já está na tela do seu celular. Abra pelo ícone.'
+      }
+      if (embutido && android) {
+        textoApp.textContent = 'Daqui de dentro do aplicativo não dá para instalar. Abra no Chrome e baixe por lá.'
+        botaoApp.outerHTML = '<a class="botao o-botao" id="app" href="intent://' + location.host + naPlataforma + '#Intent;scheme=https;package=com.android.chrome;end">Abrir no Chrome</a>'
+      } else if (embutido) {
+        textoApp.textContent = 'Daqui de dentro do aplicativo não dá para instalar. São três toques:'
+        passos(['Toque em <b>···</b> no canto da tela e em <b>Abrir no navegador</b>.', 'Lá, toque em <b>Entrar na GlobalFly</b> e entre na sua conta.', 'Toque em <b>Compartilhar</b> e em <b>Adicionar à Tela de Início</b>.'])
+      } else if (ios) {
+        // no iPhone, o app e as notificações vêm juntos: o passo das notificações sai e entra aqui
+        document.querySelector('[data-app-titulo]').textContent = 'Baixe o app e ative as notificações'
+        textoApp.textContent = 'No iPhone, o app fica na tela de início e é por ele que chegam as notificações. São três toques:'
+        botaoApp.textContent = 'Como baixar no iPhone'
+        botaoApp.addEventListener('click', function () {
+          passos(['Toque em <b>Compartilhar</b> na barra do&nbsp;Safari.', 'Toque em <b>Adicionar à Tela de Início</b> e depois em <b>Adicionar</b>.', 'Abra a GlobalFly pelo ícone, entre na sua conta e toque em <b>Ativar avisos</b>.'])
+        })
+        passoAvisosFora = true
+      } else {
+        botaoApp.addEventListener('click', function () {
+          if (pedidoApp) {
+            pedidoApp.prompt()
+            pedidoApp.userChoice.then(function (r) { if (r.outcome === 'accepted') appInstalado() })
+            pedidoApp = null
+            return
+          }
+          // o Chrome ainda não ofereceu a instalação (ou é outro navegador): pelo menu
+          textoApp.textContent = android ? 'Pelo menu do navegador:' : 'Pela barra de endereço do navegador:'
+          passos(android
+            ? ['Toque em <b>⋮</b> no canto de cima.', 'Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.']
+            : ['Clique no ícone de <b>instalar</b> no fim da barra de endereço.', 'Confirme em <b>Instalar</b>.'])
+        })
+      }
+
       // Notificações (02/11/2026, Tiago: "Ative as notificações... já pro cadastro dessa pessoa"):
       // o aparelho fica guardado pelo e-mail do cadastro e recebe os avisos do dia da live
       var botaoAvisos = document.getElementById('avisos'), passoAvisos = document.getElementById('passo-avisos')
@@ -121,18 +186,16 @@
         tituloAvisos.textContent = 'Notificações ativadas'
         textoAvisos.textContent = 'Pronto: a gente te chama neste aparelho no dia 09/11, antes de a live começar.'
       }
-      if (ios && !instalado) {
-        // no iPhone, notificação só com o app na tela de início
-        textoAvisos.textContent = 'No iPhone, as notificações funcionam com o app na tela de início. São três toques:'
-        botaoAvisos.textContent = 'Como ativar no iPhone'
-        botaoAvisos.addEventListener('click', function () { document.querySelector('[data-avisos-ios]').hidden = false; botaoAvisos.hidden = true })
+      if (passoAvisosFora || embutido) {
+        // iPhone: as notificações vêm com o app (passo de cima). Instagram/Facebook: só no navegador.
+        passoAvisos.hidden = true
       } else if (!suporte) {
         textoAvisos.textContent = 'Este navegador não recebe notificações. Abra a GlobalFly pelo celular e ative lá dentro.'
         botaoAvisos.hidden = true
       } else if (Notification.permission === 'denied') {
         textoAvisos.textContent = 'As notificações estão bloqueadas neste navegador. Libere nos ajustes do site e toque de novo.'
       }
-      if (suporte && !(ios && !instalado)) {
+      if (suporte && !passoAvisos.hidden) {
         botaoAvisos.addEventListener('click', function () {
           if (botaoAvisos.disabled) return
           botaoAvisos.disabled = true; botaoAvisos.textContent = 'Ativando…'
@@ -169,6 +232,13 @@
       var conta = dados.conta === 'criada' || dados.conta === 'existente' ? dados.conta : 'provisoria'
       document.querySelector('[data-acesso="' + conta + '"]').hidden = false
       if (conta !== 'criada') document.querySelector('[data-acesso-curto]').textContent = 'Os dados de entrada estão logo abaixo.'
+      // os números seguem só os passos que aparecem neste aparelho
+      var n = 0
+      Array.prototype.forEach.call(document.querySelectorAll('.o-passos > li'), function (li) {
+        if (li.hidden) return
+        n++
+        var bola = li.querySelector('.o-n'); if (bola && bola.textContent !== '✓') bola.textContent = n
+      })
       GF.pixel('CompleteRegistration')
     })()
   </script>
