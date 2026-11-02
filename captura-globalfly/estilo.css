@@ -766,3 +766,14 @@ body.lp::before { display: none; }
   /* o canhoto do formulário numa linha só, mesmo no Android pequeno */
   .lp-canhoto { font-size: 10px; letter-spacing: .03em; white-space: nowrap; }
 }
+
+/* topo do celular mais limpo (02/11/2026, Tiago: "muito carregado, poluição visual") */
+@media (max-width: 600px) {
+  .lp-rastro, .lp-estrelas { display: none; }
+  .lp-sub { display: none; }
+  .lp-gancho { margin-bottom: 14px; font-size: 14px; }
+  .lp-titulo .lp-ouro { font-size: .58em; margin-top: 14px; line-height: 1.22; }
+  .lp-apresenta { margin-top: 22px; }
+  .lp-cta { margin-top: 18px; }
+}
+@media (max-width: 720px) { .lp-ceu { background: linear-gradient(180deg, rgba(5, 21, 40, .78) 0%, rgba(5, 21, 40, .66) 30%, rgba(5, 21, 40, .9) 66%, var(--azul) 100%), url("/login-globalfly/nuvens-celular.webp") center top / cover no-repeat; } }
