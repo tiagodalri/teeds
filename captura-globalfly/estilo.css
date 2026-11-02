@@ -327,7 +327,6 @@ body.lp::before { display: none; }
 .lp-pr-preco { display: flex; align-items: baseline; gap: 12px; }
 .lp-pr-preco s { font-size: 20px; font-weight: 700; opacity: .6; }
 .lp-pr-preco b { font-size: 46px; line-height: 1; letter-spacing: -.03em; color: var(--azul); }
-.lp-creditos { flex-basis: 100%; font-size: 11px; color: rgba(156, 177, 199, .6); }
 
 
 /* abertura: a frase do dia em cima, menor */
