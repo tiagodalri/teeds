@@ -154,6 +154,44 @@ export function emailDoLancamento(marca: Marca, etapa: string, p: Inscrito) {
 }
 export const ETAPAS_DO_LANCAMENTO = ETAPAS.map((e) => e.id)
 
+/**
+ * As notificações do dia da live (02/11/2026): "É hoje" às 10h, "Falta 1 hora"
+ * às 19h e "A live começou" quando ela entra no ar (pelo painel ou às 20h).
+ * Quem manda é a função `notificacoes` do Supabase (as chaves do Web Push moram
+ * lá); aqui só se decide a hora, uma vez por etapa (marca em lancamento_emails).
+ */
+const AVISOS_NO_CELULAR: Array<{ id: string; aberta: (agora: number, live: { comecou_em: string | null; terminou_em: string | null }) => boolean }> = [
+  { id: 'hoje', aberta: (agora) => agora >= em(9, 10) && agora < em(9, 18) },
+  { id: 'uma-hora', aberta: (agora) => agora >= em(9, 19) && agora < em(9, 19, 50) },
+  { id: 'ao-vivo', aberta: (agora, l) => !l.terminou_em && (
+    (l.comecou_em !== null && agora - Date.parse(l.comecou_em) < h) || (agora >= INICIO_DA_LIVE && agora < INICIO_DA_LIVE + h)) },
+]
+
+async function avisarNoCelular(agora: number, live: { comecou_em: string | null; terminou_em: string | null }) {
+  for (const aviso of AVISOS_NO_CELULAR) {
+    if (!aviso.aberta(agora, live)) continue
+    try {
+      // marca antes de mandar: a chave primária garante uma vez só, mesmo com duas rodadas juntas
+      await banco('/rest/v1/lancamento_emails', 'POST', { marca: MARCA, email: '*celular*', etapa: `push-${aviso.id}` })
+    } catch { continue }
+    try {
+      const [cfg] = await banco('/rest/v1/config_servicos?chave=eq.PUSH_GATILHO&select=valor') ?? []
+      const base = (process.env.SUPABASE_URL ?? '').replace(/\/+$/, '')
+      const chave = process.env.SUPABASE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+      const r = await fetch(`${base}/functions/v1/notificacoes`, {
+        method: 'POST', signal: AbortSignal.timeout(120_000),
+        headers: { apikey: chave, Authorization: `Bearer ${chave}`, 'Content-Type': 'application/json', 'x-gatilho': cfg?.valor ?? '' },
+        body: JSON.stringify({ acao: 'lancamento', etapa: aviso.id }),
+      })
+      console.log(`[lançamento] notificação "${aviso.id}":`, r.status, await r.text().catch(() => ''))
+      if (!r.ok) throw new Error(String(r.status))
+    } catch {
+      // não saiu: tira a marca para tentar na próxima rodada
+      await banco(`/rest/v1/lancamento_emails?marca=eq.${MARCA}&email=eq.*celular*&etapa=eq.push-${aviso.id}`, 'DELETE').catch(() => undefined)
+    }
+  }
+}
+
 let rodando = false
 /** Uma rodada do carteiro: fecha a live sozinha se preciso e manda as etapas abertas. */
 export async function enviarEmailsDoLancamento(agora = Date.now()) {
@@ -165,8 +203,9 @@ export async function enviarEmailsDoLancamento(agora = Date.now()) {
 
     const marca = marcaPorId(MARCA)
     if (!marca.email.remetente) return
-    const [live] = await banco(`/rest/v1/lancamento_live?marca=eq.${MARCA}&select=liberado_em`) ?? []
+    const [live] = await banco(`/rest/v1/lancamento_live?marca=eq.${MARCA}&select=liberado_em,comecou_em,terminou_em`) ?? []
     const liberadoEm = live?.liberado_em ? Date.parse(live.liberado_em) : null
+    if (live) await avisarNoCelular(agora, { comecou_em: live.comecou_em ?? null, terminou_em: live.terminou_em ?? null })
     const inscritos: Inscrito[] = await banco(`/rest/v1/clientes?marca=eq.${MARCA}&status_acesso=eq.pendente&plano_id=eq.${PLANO_AGUARDANDO}&select=email,nome,parceiro,criado_em&order=criado_em.asc&limit=5000`) ?? []
     if (!inscritos.length) return
     const sairam = await jaSairam(MARCA)   // sem a lista, não manda (lança e para aqui)

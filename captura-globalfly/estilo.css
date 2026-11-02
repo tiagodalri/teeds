@@ -646,6 +646,15 @@ body.lp::before { display: none; }
 .o-link { color: var(--ouro-claro); font-size: 14px; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .o-link:hover { text-decoration: underline; }
 .obrigado .chamada b { color: var(--marfim); }
+/* notificações e calendário no obrigado (02/11/2026) */
+.o-passos li.feito { border-color: rgba(212, 166, 74, .55); background: rgba(183, 141, 57, .08); }
+.o-passos li.feito .o-n { background: var(--ouro); color: var(--azul); }
+.o-passos button.o-botao:disabled { opacity: .7; cursor: default; }
+.o-ios { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; color: var(--aco); font-size: 13.5px; line-height: 1.5; }
+.o-ios[hidden] { display: none; }
+.o-passos .o-ios li { display: list-item; padding: 0; border: 0; border-radius: 0; background: none; }
+.o-passos [hidden] { display: none !important; }
+.o-ios b { color: var(--marfim); }
 @media (max-width: 520px) {
   .o-passos li { grid-template-columns: 32px minmax(0, 1fr); }
   .o-botao, .o-agenda { grid-column: 2; justify-self: stretch; }

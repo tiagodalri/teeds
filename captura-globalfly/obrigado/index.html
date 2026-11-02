@@ -43,14 +43,23 @@
           <li>
             <span class="o-n">2</span>
             <div><strong>Salve na sua agenda</strong><span>Segunda, 09/11, às 20h (Brasília).</span></div>
-            <span class="o-agenda">
-              <a class="o-link" id="agenda" href="https://calendar.google.com/calendar/render?action=TEMPLATE&amp;text=Live%20de%20lan%C3%A7amento%20da%20GlobalFly%20Trade&amp;dates=20261109T230000Z/20261110T010000Z&amp;details=Assista%20do%20in%C3%ADcio%20ao%20fim%20para%20liberar%20o%20seu%20acesso.%20A%20live%20passa%20dentro%20da%20GlobalFly%3A%20https%3A%2F%2Fglobalflytrade.com" target="_blank" rel="noopener">Google Agenda</a>
-              <a class="o-link" href="../live-globalfly.ics">iPhone e outras</a>
-            </span>
+            <!-- 02/11/2026 (Tiago): um botão só; o aparelho decide (Apple: arquivo da agenda; o resto: Google Agenda) -->
+            <a class="botao o-botao o-claro" id="agenda" href="https://calendar.google.com/calendar/render?action=TEMPLATE&amp;text=Live%20de%20lan%C3%A7amento%20da%20GlobalFly%20Trade&amp;dates=20261109T230000Z/20261110T010000Z&amp;details=Assista%20do%20in%C3%ADcio%20ao%20fim%20para%20liberar%20o%20seu%20acesso.%20A%20live%20passa%20dentro%20da%20GlobalFly%3A%20https%3A%2F%2Fglobalflytrade.com" target="_blank" rel="noopener">Adicionar ao calendário</a>
+          </li>
+          <li id="passo-avisos">
+            <span class="o-n" data-avisos-n>3</span>
+            <div><strong data-avisos-titulo>Ative as notificações</strong><span data-avisos-texto>A gente te chama no dia 09/11, antes de a live começar, mesmo com o celular bloqueado.</span>
+              <ol class="o-ios" data-avisos-ios hidden>
+                <li>Toque em <b>Compartilhar</b> na barra do&nbsp;Safari.</li>
+                <li>Toque em <b>Adicionar à Tela de Início</b> e depois em <b>Adicionar</b>.</li>
+                <li>Abra a GlobalFly pelo ícone, entre na sua conta e toque em <b>Ativar avisos</b>.</li>
+              </ol>
+            </div>
+            <button class="botao o-botao" type="button" id="avisos">Ativar notificações</button>
           </li>
           <li>
-            <span class="o-n">3</span>
-            <div><strong>Entre na GlobalFly e ative os&nbsp;avisos</strong><span data-acesso-curto>Use o e-mail do cadastro e a senha que você criou. Você já vê a plataforma, trancada até a live, e ativa os avisos no celular.</span></div>
+            <span class="o-n">4</span>
+            <div><strong>Entre na GlobalFly</strong><span data-acesso-curto>Use o e-mail do cadastro e a senha que você criou. Você já vê a plataforma, trancada até a&nbsp;live.</span></div>
             <a class="botao o-botao o-claro" id="plataforma" href="/">Entrar na GlobalFly</a>
           </li>
         </ol>
@@ -91,9 +100,75 @@
       document.getElementById('plataforma').href = GF.parceiro() ? '/' + GF.parceiro() + '/inicio' : '/'
       // quem se cadastrou pelo app não passou pelo questionário: a etapa não aparece como feita
       if (!dados.respondeu) document.querySelector('[data-etapa-questionario]').remove()
+
+      // Calendário (02/11/2026): iPhone, iPad e Safari do Mac abrem o arquivo da agenda (a Apple pergunta onde salvar);
+      // os outros, o Google Agenda já preenchido
+      var ua = navigator.userAgent
+      var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      var safariMac = /Macintosh/.test(ua) && /Safari\//.test(ua) && !/Chrome|Chromium|CriOS|Edg|Firefox|FxiOS|OPR/.test(ua)
+      var agenda = document.getElementById('agenda')
+      if (ios || safariMac) { agenda.href = '../live-globalfly.ics'; agenda.removeAttribute('target') }
+
+      // Notificações (02/11/2026, Tiago: "Ative as notificações... já pro cadastro dessa pessoa"):
+      // o aparelho fica guardado pelo e-mail do cadastro e recebe os avisos do dia da live
+      var botaoAvisos = document.getElementById('avisos'), passoAvisos = document.getElementById('passo-avisos')
+      var textoAvisos = document.querySelector('[data-avisos-texto]'), tituloAvisos = document.querySelector('[data-avisos-titulo]')
+      var instalado = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+      var suporte = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
+      function avisosLigados() {
+        passoAvisos.classList.add('feito'); botaoAvisos.hidden = true
+        document.querySelector('[data-avisos-n]').textContent = '✓'
+        tituloAvisos.textContent = 'Notificações ativadas'
+        textoAvisos.textContent = 'Pronto: a gente te chama neste aparelho no dia 09/11, antes de a live começar.'
+      }
+      if (ios && !instalado) {
+        // no iPhone, notificação só com o app na tela de início
+        textoAvisos.textContent = 'No iPhone, as notificações funcionam com o app na tela de início. São três toques:'
+        botaoAvisos.textContent = 'Como ativar no iPhone'
+        botaoAvisos.addEventListener('click', function () { document.querySelector('[data-avisos-ios]').hidden = false; botaoAvisos.hidden = true })
+      } else if (!suporte) {
+        textoAvisos.textContent = 'Este navegador não recebe notificações. Abra a GlobalFly pelo celular e ative lá dentro.'
+        botaoAvisos.hidden = true
+      } else if (Notification.permission === 'denied') {
+        textoAvisos.textContent = 'As notificações estão bloqueadas neste navegador. Libere nos ajustes do site e toque de novo.'
+      }
+      if (suporte && !(ios && !instalado)) {
+        botaoAvisos.addEventListener('click', function () {
+          if (botaoAvisos.disabled) return
+          botaoAvisos.disabled = true; botaoAvisos.textContent = 'Ativando…'
+          // o pedido de permissão nasce do toque, sem espera antes (o iPhone exige)
+          Notification.requestPermission().then(function (permissao) {
+            if (permissao !== 'granted') throw new Error('negada')
+            return Promise.all([
+              navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(function () { return navigator.serviceWorker.ready }),
+              fetch(GF.SUPABASE + '/functions/v1/notificacoes', { method: 'POST', headers: { 'content-type': 'application/json', apikey: GF.CHAVE }, body: JSON.stringify({ acao: 'chave', marca: 'globalfly' }) }).then(function (r) { return r.json() }),
+            ])
+          }).then(function (r) {
+            var reg = r[0], b64 = r[1].chave.replace(/-/g, '+').replace(/_/g, '/')
+            var chave = Uint8Array.from(atob(b64 + '='.repeat((4 - b64.length % 4) % 4)), function (c) { return c.charCodeAt(0) })
+            return reg.pushManager.getSubscription().then(function (s) { return s || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chave }) })
+              .then(function (sub) {
+                var j = sub.toJSON()
+                return fetch(GF.SUPABASE + '/rest/v1/rpc/gf_avisos_da_live', {
+                  method: 'POST', headers: { 'content-type': 'application/json', apikey: GF.CHAVE, authorization: 'Bearer ' + GF.CHAVE },
+                  body: JSON.stringify({ p_email: dados.email, p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_parceiro: GF.parceiro() }),
+                }).then(function (x) { return x.json() }).then(function (ok) {
+                  if (ok !== true) throw new Error('nao gravou')
+                  reg.showNotification('🔔 Notificações ativadas', { body: 'A gente te chama no dia 09/11, antes de a live começar.', icon: '/pwa-globalfly/icon-192.png', badge: '/pwa-globalfly/badge-96.png', tag: 'live-confirmacao' })
+                  avisosLigados()
+                })
+              })
+          }).catch(function (e) {
+            botaoAvisos.disabled = false; botaoAvisos.textContent = 'Tentar de novo'
+            textoAvisos.textContent = String(e && e.message) === 'negada'
+              ? 'O aparelho não deixou ativar. Toque de novo e escolha “Permitir”.'
+              : 'Não deu para ativar agora. Toque de novo em instantes.'
+          })
+        })
+      }
       var conta = dados.conta === 'criada' || dados.conta === 'existente' ? dados.conta : 'provisoria'
       document.querySelector('[data-acesso="' + conta + '"]').hidden = false
-      if (conta !== 'criada') document.querySelector('[data-acesso-curto]').textContent = 'Lá dentro, ative os avisos no celular e instale o app. Os dados de entrada estão logo abaixo.'
+      if (conta !== 'criada') document.querySelector('[data-acesso-curto]').textContent = 'Os dados de entrada estão logo abaixo.'
       GF.pixel('CompleteRegistration')
     })()
   </script>

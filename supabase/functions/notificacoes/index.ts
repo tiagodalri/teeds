@@ -7,6 +7,8 @@
 //                                      teste para os aparelhos dela
 //   { acao: 'sessao', id }            do gatilho do banco (cabeçalho x-gatilho):
 //                                      a sessão de I.A. terminou; avisa a pessoa
+//   { acao: 'lancamento', etapa }     do carteiro do servidor (x-gatilho): os avisos
+//                                      da live de 09/11 ('hoje', 'uma-hora', 'ao-vivo')
 //
 // A chave VAPID de cada plataforma nasce aqui na primeira vez e fica em
 // config_servicos (VAPID_<MARCA>), que só a chave de serviço lê. O segredo do
@@ -144,6 +146,69 @@ function mensagemDaSessao(s: { id: string; marca: string; robo_nome: string | nu
   return aviso('ℹ️', 'Sessão encerrada', s.situacao === 'erro' ? 'Parou por um erro. Abra o app para ver o resumo.' : 'A sessão foi encerrada. Abra o app para ver o resumo.')
 }
 
+/* ------------------------------------------------- a live de lançamento */
+
+/*
+  Live de lançamento da GlobalFly (02/11/2026, Tiago: "Ative as notificações...
+  vai ser ativado pro cadastro dessa pessoa"). Os avisos do dia 09/11 vão para
+  quem ainda espera a live: os aparelhos ativados na página de obrigado
+  (lancamento_push, pelo e-mail) e os ativados dentro da plataforma
+  (push_assinaturas, pela conta). Quem chama é o carteiro do servidor, com o
+  segredo do gatilho, uma vez por etapa.
+*/
+const AVISOS_DA_LIVE: Record<string, { titulo: string; corpo: string }> = {
+  hoje: { titulo: '✈️ A live é hoje, às 20h', corpo: 'Assista do início ao fim e a GlobalFly é liberada para você, sem pagar nada.' },
+  'uma-hora': { titulo: '⏰ Falta 1 hora para a live', corpo: 'Às 20h, dentro da GlobalFly. Abra o app e deixe tudo pronto.' },
+  'ao-vivo': { titulo: '🔴 A live começou', corpo: 'Toque para assistir. Fique até o fim para liberar o seu acesso.' },
+}
+
+interface Aparelho { tabela: 'lancamento_push' | 'push_assinaturas'; chave: string; endpoint: string; p256dh: string; auth: string; parceiro: string | null }
+
+async function avisarALive(etapa: string): Promise<{ enviados: number; falhas: number; aparelhos: number }> {
+  const texto = AVISOS_DA_LIVE[etapa]
+  const marca = 'globalfly'
+  // quem ainda espera a live
+  const r = await rest(`clientes?marca=eq.${marca}&status_acesso=eq.pendente&plano_id=eq.globalfly-aguardando-live&select=user_id,email,parceiro&limit=20000`)
+  const esperando: Array<{ user_id: string; email: string | null; parceiro: string | null }> = r.ok ? await r.json() : []
+  const porEmail = new Map(esperando.filter((c) => c.email).map((c) => [c.email!.toLowerCase(), c.parceiro]))
+  const aparelhos = new Map<string, Aparelho>()
+  const rp = await rest(`lancamento_push?marca=eq.${marca}&select=endpoint,email,parceiro,p256dh,auth&limit=20000`)
+  for (const a of (rp.ok ? await rp.json() : []) as Array<{ endpoint: string; email: string; parceiro: string | null; p256dh: string; auth: string }>) {
+    if (!porEmail.has(a.email.toLowerCase())) continue
+    aparelhos.set(a.endpoint, { tabela: 'lancamento_push', chave: a.endpoint, endpoint: a.endpoint, p256dh: a.p256dh, auth: a.auth, parceiro: a.parceiro ?? porEmail.get(a.email.toLowerCase()) ?? null })
+  }
+  const parceiroDe = new Map(esperando.map((c) => [c.user_id, c.parceiro]))
+  const ids = esperando.map((c) => c.user_id)
+  for (let i = 0; i < ids.length; i += 100) {
+    const rs = await rest(`push_assinaturas?marca=eq.${marca}&user_id=in.(${ids.slice(i, i + 100).join(',')})&select=id,user_id,endpoint,p256dh,auth`)
+    for (const a of (rs.ok ? await rs.json() : []) as Array<{ id: string; user_id: string; endpoint: string; p256dh: string; auth: string }>) {
+      aparelhos.set(a.endpoint, { tabela: 'push_assinaturas', chave: a.id, endpoint: a.endpoint, p256dh: a.p256dh, auth: a.auth, parceiro: parceiroDe.get(a.user_id) ?? null })
+    }
+  }
+  const chave = await chaveDa(marca)
+  const vapidDetails = { subject: SITE[marca], publicKey: chave.publica, privateKey: chave.privada }
+  const lista = [...aparelhos.values()]
+  let enviados = 0, falhas = 0
+  for (let i = 0; i < lista.length; i += 50) {
+    await Promise.all(lista.slice(i, i + 50).map(async (a) => {
+      // o endereço do parceiro de cada um: /n/inicio, /v/inicio ou a raiz
+      const url = `${SITE[marca]}/${a.parceiro === 'n' || a.parceiro === 'v' ? `${a.parceiro}/inicio` : ''}`
+      try {
+        await webpush.sendNotification({ endpoint: a.endpoint, keys: { p256dh: a.p256dh, auth: a.auth } },
+          JSON.stringify({ ...texto, tag: `live-${etapa}`, url }), { TTL: etapa === 'ao-vivo' ? 2 * 3600 : 6 * 3600, urgency: 'high', vapidDetails })
+        enviados++
+      } catch (e) {
+        falhas++
+        const status = (e as { statusCode?: number }).statusCode
+        if (status === 404 || status === 410) {
+          await rest(a.tabela === 'lancamento_push' ? `lancamento_push?endpoint=eq.${encodeURIComponent(a.chave)}` : `push_assinaturas?id=eq.${a.chave}`, { method: 'DELETE' })
+        }
+      }
+    }))
+  }
+  return { enviados, falhas, aparelhos: lista.length }
+}
+
 /* ------------------------------------------------------------------ entrada */
 
 Deno.serve(async (req) => {
@@ -167,6 +232,16 @@ Deno.serve(async (req) => {
       titulo: '🔔 Notificações ligadas', tag: 'teste', url: './',
       corpo: gf ? 'Quando uma I.A. bater a meta ou parar, você fica sabendo aqui, mesmo com o app fechado.' : 'Quando um robô bater a meta ou parar, você fica sabendo aqui, mesmo com o app fechado.',
     })
+    return json(r)
+  }
+
+  if (corpo.acao === 'lancamento') {
+    const segredo = await lerConfig('PUSH_GATILHO')
+    if (!segredo || req.headers.get('x-gatilho') !== segredo) return json({ erro: 'não autorizado' }, 401)
+    const etapa = (corpo as { etapa?: string }).etapa ?? ''
+    if (!AVISOS_DA_LIVE[etapa]) return json({ erro: 'etapa desconhecida' }, 400)
+    const r = await avisarALive(etapa)
+    console.log('lancamento', etapa, r)
     return json(r)
   }
 
