@@ -777,3 +777,101 @@ body.lp::before { display: none; }
   .lp-cta { margin-top: 18px; }
 }
 @media (max-width: 720px) { .lp-ceu { background: linear-gradient(180deg, rgba(5, 21, 40, .78) 0%, rgba(5, 21, 40, .66) 30%, rgba(5, 21, 40, .9) 66%, var(--azul) 100%), url("/login-globalfly/nuvens-celular.webp") center top / cover no-repeat; } }
+
+/* ------------------------------------------------ O que é a GlobalFly (02/11/2026) */
+.lp-oque { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 34px 56px; align-items: center; }
+.lp-oque > .lp-cab { grid-column: 1; }
+.lp-oque > .lp-cab p b { color: var(--marfim); }
+.lp-oque-fluxo { grid-column: 2; position: relative; display: grid; padding: 18px; border-radius: 24px; background: linear-gradient(180deg, rgba(18, 48, 79, .55), rgba(8, 26, 46, .55)); border: 1px solid rgba(156, 177, 199, .16); box-shadow: 0 40px 80px -50px rgba(0, 0, 0, .8); }
+.lp-oque-no { display: grid; grid-template-columns: 52px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 14px; row-gap: 3px; align-items: center; padding: 14px 16px; border-radius: 16px; background: rgba(156, 177, 199, .06); border: 1px solid rgba(156, 177, 199, .14); }
+.lp-oque-no i { grid-row: 1 / span 2; width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; background: rgba(212, 166, 74, .1); border: 1px solid rgba(212, 166, 74, .28); color: var(--ouro-claro); }
+.lp-oque-no svg { width: 26px; height: 26px; }
+.lp-oque-no img { width: 34px; height: auto; }
+.lp-oque-no b { align-self: end; font-size: 17px; letter-spacing: -.01em; }
+.lp-oque-no span { align-self: start; font-size: 14px; line-height: 1.4; color: var(--aco); }
+.lp-oque-ia { background: linear-gradient(135deg, rgba(212, 166, 74, .16), rgba(212, 166, 74, .04)); border-color: rgba(212, 166, 74, .45); box-shadow: 0 0 50px -18px rgba(212, 166, 74, .55); }
+.lp-oque-ia i { background: #071A30; border-color: rgba(212, 166, 74, .6); }
+.lp-oque-ia b { color: var(--ouro-claro); }
+/* a ligação entre as partes: uma linha tracejada com um pontinho dourado correndo (as operações indo e vindo) */
+.lp-oque-linha { position: relative; height: 30px; }
+.lp-oque-linha::before { content: ""; position: absolute; left: 42px; top: 0; bottom: 0; width: 2px; background: repeating-linear-gradient(180deg, rgba(212, 166, 74, .55) 0 5px, transparent 5px 10px); }
+.lp-oque-linha u { position: absolute; left: 39px; top: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--ouro-claro); box-shadow: 0 0 12px var(--ouro-claro); animation: lp-oque-corre 1.6s ease-in-out infinite; }
+.lp-oque-linha + .lp-oque-no + .lp-oque-linha u { animation-delay: .8s; }
+@keyframes lp-oque-corre { 0% { top: -4px; opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { top: calc(100% - 4px); opacity: 0; } }
+
+.lp-oque-passos { grid-column: 1 / -1; list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; counter-reset: passo; }
+.lp-oque-passos li { position: relative; display: grid; gap: 8px; align-content: start; padding: 22px; border-radius: 18px; background: linear-gradient(180deg, rgba(18, 48, 79, .6), rgba(10, 32, 56, .4)); border: 1px solid rgba(156, 177, 199, .16); transition: border-color .25s, transform .25s; }
+.lp-oque-passos li:hover { border-color: rgba(212, 166, 74, .45); transform: translateY(-2px); }
+.lp-oque-passos span { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 4px; background: rgba(212, 166, 74, .12); border: 1px solid rgba(212, 166, 74, .5); color: var(--ouro-claro); font: 700 15px/1 ui-monospace, "SF Mono", Menlo, monospace; }
+.lp-oque-passos b { font-size: 18px; letter-spacing: -.01em; }
+.lp-oque-passos p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--aco); }
+.lp-oque-calma { grid-column: 1 / -1; margin: 0; justify-self: center; max-width: 46em; padding: 14px 20px; border-radius: 14px; background: rgba(212, 166, 74, .08); border: 1px solid rgba(212, 166, 74, .3); color: #D5DCE4; font-size: 15.5px; line-height: 1.5; text-align: center; }
+.lp-oque-calma b { color: var(--ouro-claro); }
+@media (max-width: 1024px) {
+  .lp-oque { grid-template-columns: minmax(0, 1fr); }
+  .lp-oque > .lp-cab, .lp-oque-fluxo { grid-column: 1; }
+  .lp-oque-passos { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .lp-oque { gap: 26px; }
+  .lp-oque-fluxo { padding: 12px; border-radius: 20px; }
+  .lp-oque-no { grid-template-columns: 46px minmax(0, 1fr); padding: 12px 14px; column-gap: 12px; }
+  .lp-oque-no i { width: 46px; height: 46px; border-radius: 12px; }
+  .lp-oque-no svg { width: 23px; height: 23px; }
+  .lp-oque-no img { width: 30px; }
+  .lp-oque-no b { font-size: 16px; }
+  .lp-oque-no span { font-size: 13.5px; }
+  .lp-oque-linha { height: 24px; }
+  .lp-oque-linha::before { left: 37px; }
+  .lp-oque-linha u { left: 34px; }
+  .lp-oque-passos { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .lp-oque-passos li { grid-template-columns: 34px minmax(0, 1fr); column-gap: 14px; row-gap: 4px; padding: 16px; border-radius: 16px; }
+  .lp-oque-passos span { grid-row: 1 / span 2; margin: 0; }
+  .lp-oque-passos b { font-size: 16.5px; align-self: center; }
+  .lp-oque-passos p { font-size: 14.5px; }
+  .lp-oque-calma { font-size: 14.5px; padding: 12px 16px; text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) { .lp-oque-linha u { animation: none; top: 50%; } }
+
+/* padrão das seções (02/11/2026): o mesmo respiro entre o cabeçalho e o conteúdo em todas */
+.lp-real, .lp-comando, .lp-presentes, .lp-rota-sec, .lp-libera-sec { gap: 34px; }
+@media (max-width: 600px) { .lp-real, .lp-comando, .lp-presentes, .lp-rota-sec, .lp-libera-sec, .lp-cabine-sec, .lp-checkin, .lp-perguntas-sec { gap: 26px; } }
+
+/* palco do celular sem nada encostando (02/11/2026, Tiago: "elementos sobrepondo, o card da notificação com o
+   'Concorra a este iMac'"). Uma grade de três faixas: o aviso, o iMac (o ingresso dourado cola nele de propósito,
+   na mesma faixa) e o cartão de embarque. Cada peça tem o seu lugar; as posições soltas de antes saem. */
+@media (max-width: 600px) {
+  .lp-palco { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "aviso" "imac" "embarque"; row-gap: 34px; height: auto; max-height: none; min-height: 0; margin-top: 10px; padding-top: 0; }
+  .lp-aviso-real { grid-area: aviso; position: relative; inset: auto; width: 100%; order: 0; }
+  .lp-imac { grid-area: imac; position: relative; inset: auto; width: 82%; margin: 0; justify-self: start; transform: none; animation: lp-flutua-cel 7s ease-in-out infinite; }
+  .lp-imac figcaption { top: -16px; right: -10%; }
+  .lp-ingresso { grid-area: imac; position: relative; inset: auto; justify-self: end; align-self: end; width: 130px; margin: 0 0 16% 0; padding: 10px 12px; transform: rotate(7deg); z-index: 2; }
+  .lp-embarque { grid-area: embarque; position: relative; inset: auto; width: 100%; transform: rotate(-1.5deg); }
+}
+@media (max-width: 600px) and (prefers-reduced-motion: reduce) { .lp-imac { animation: none; } }
+@media (max-width: 600px) {
+  .lp-ingresso { margin-bottom: 4%; width: 124px; }
+  .lp-ingresso-pe { font-size: 11px; line-height: 1.25; }
+}
+@media (max-width: 400px) {
+  .lp-embarque-rot { font-size: 9px; letter-spacing: .1em; white-space: nowrap; }
+  .lp-ingresso { width: 116px; }
+  .lp-ingresso b { font-size: 26px; }
+}
+
+/* palco do computador também em faixas (02/11/2026): aviso, iMac com o ingresso colado no canto e cartão de embarque.
+   A colagem solta de antes deixava o aviso sobre o logo do iMac e o ingresso encostado no cartão. */
+@media (min-width: 601px) {
+  .lp-palco { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "aviso" "imac" "embarque"; row-gap: 34px; min-height: 0; height: auto; max-height: none; align-content: start; }
+  .lp-halo { top: 42%; }
+  .lp-aviso-real { grid-area: aviso; position: relative; inset: auto; width: min(360px, 74%); justify-self: start; }
+  .lp-imac { grid-area: imac; position: relative; inset: auto; width: 76%; margin: 0; justify-self: center; transform: none; animation: lp-flutua-cel 7s ease-in-out infinite; }
+  .lp-imac figcaption { top: -16px; right: -8%; }
+  .lp-ingresso { grid-area: imac; position: relative; inset: auto; justify-self: end; align-self: end; width: 176px; margin: 0 0 4% 0; transform: rotate(6deg); z-index: 2; }
+  .lp-embarque { grid-area: embarque; position: relative; inset: auto; width: min(100%, 520px); justify-self: start; transform: rotate(-2deg); }
+}
+@keyframes lp-flutua-cel { 50% { transform: translateY(-8px); } }
+/* a etiqueta da viagem fica acima do texto do cartão, sem cobrir o "Cartão de embarque" */
+.lp-embarque-dados { padding-top: 32px; }
+@media (prefers-reduced-motion: reduce) { .lp-imac { animation: none; } }
+.lp-painel-status { white-space: nowrap; }

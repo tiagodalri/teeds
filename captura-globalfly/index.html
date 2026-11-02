@@ -124,6 +124,37 @@
   </div>
 
   <main class="lp-corpo">
+  <section class="lp-oque" aria-labelledby="oque-titulo">
+    <div class="lp-cab">
+      <span class="lp-rotulo">Para quem está chegando agora</span>
+      <h2 id="oque-titulo">O que é a GlobalFly?</h2>
+      <p>É uma plataforma em que <b>I.A. de operação trabalham por você</b>, na sua própria conta de corretora, seguindo as regras que você escolhe. Não precisa entender de gráfico nem ficar olhando a tela.</p>
+    </div>
+    <div class="lp-oque-fluxo" aria-label="Como as partes se ligam">
+      <div class="lp-oque-no">
+        <i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg></i>
+        <b>Você</b><span>Escolhe a I.A., a meta e o limite, pelo celular</span>
+      </div>
+      <div class="lp-oque-linha" aria-hidden="true"><u></u></div>
+      <div class="lp-oque-no lp-oque-ia">
+        <i aria-hidden="true"><img src="/globalfly-gf-escuro.png" alt="" width="546" height="315" /></i>
+        <b>A I.A. da GlobalFly</b><span>Opera sozinha, em segundos, e para na meta ou no limite</span>
+      </div>
+      <div class="lp-oque-linha" aria-hidden="true"><u></u></div>
+      <div class="lp-oque-no">
+        <i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20.5h18"/></svg></i>
+        <b>Sua conta na Deriv</b><span>Corretora internacional: o dinheiro fica sempre no seu nome</span>
+      </div>
+    </div>
+    <ol class="lp-oque-passos">
+      <li><span>1</span><b>Abra a sua conta</b><p>Na GlobalFly e na Deriv. Leva poucos minutos e o seu dinheiro fica na sua conta.</p></li>
+      <li><span>2</span><b>Escolha a I.A. e as regras</b><p>Quanto entra em cada operação, a meta do dia e o limite de perda. Quem decide é você.</p></li>
+      <li><span>3</span><b>A I.A. opera por você</b><p>Ela entra e sai do mercado em dólar e para sozinha quando bate a meta ou o limite.</p></li>
+      <li><span>4</span><b>Acompanhe pelo celular</b><p>Cada operação, o resultado e o aviso quando a sessão termina.</p></li>
+    </ol>
+    <p class="lp-oque-calma"><b>Nunca operou?</b> As aulas ensinam do zero, e você treina com US$ 10.000 virtuais antes de usar o seu dinheiro.</p>
+  </section>
+
   <section class="lp-real" aria-labelledby="real-titulo">
     <div class="lp-cab">
       <span class="lp-rotulo">A plataforma por dentro</span>
@@ -488,18 +519,20 @@
         })
       })
 
-      // barra fixa no celular: aparece depois da abertura e some enquanto o formulário está na tela
+      // barra fixa no celular: aparece depois da abertura e some enquanto o formulário ou o cartão final está na tela
       var barra = document.querySelector('[data-barra]'), heroi = document.querySelector('.lp-heroi')
       if (barra && 'IntersectionObserver' in window) {
-        var vendoForm = false, passou = false
-        var atualizar = function () { barra.hidden = !(passou && !vendoForm) }
+        var vendoForm = false, passou = false, vendoFinal = false, final = document.querySelector('.lp-final')
+        var atualizar = function () { barra.hidden = !(passou && !vendoForm && !vendoFinal) }
         new IntersectionObserver(function (e) { vendoForm = e[0].isIntersecting; atualizar() }).observe(form)
+        // no cartão final já tem o mesmo botão: a barra sai para não repetir
+        if (final) new IntersectionObserver(function (e) { vendoFinal = e[0].isIntersecting; atualizar() }).observe(final)
         new IntersectionObserver(function (e) { passou = !e[0].isIntersecting && e[0].boundingClientRect.top < 0; atualizar() }).observe(heroi)
       }
 
       // ------------------------------------------------ entrada das seções (tudo já está visível sem script)
       if ('IntersectionObserver' in window && !reduzir) {
-        var alvos = document.querySelectorAll('.lp-cab, .lp-checkin-texto, .lp-cabine, .lp-hangar figure, .lp-voo li, .lp-libera li, .lp-porque, .lp-final')
+        var alvos = document.querySelectorAll('.lp-cab, .lp-oque-no, .lp-oque-passos li, .lp-checkin-texto, .lp-cabine, .lp-hangar figure, .lp-voo li, .lp-libera li, .lp-porque, .lp-final')
         var obs = new IntersectionObserver(function (es) {
           es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('lp-visto'); obs.unobserve(e.target) } })
         }, { rootMargin: '0px 0px -8% 0px' })
