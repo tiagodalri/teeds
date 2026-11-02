@@ -923,3 +923,4 @@ body.lp::before { display: none; }
 @keyframes lp-iphone-flutua-3d { 0%, 100% { transform: perspective(1600px) rotateY(-5deg); } 50% { transform: perspective(1600px) rotateY(-3deg) translateY(-10px); } }
 @media (max-width: 600px) { .lp-iphone { max-width: 290px; } }
 @media (prefers-reduced-motion: reduce) { .lp-iphone, .lp-iphone-fundo, .lp-iphone .lp-notif, .lp-iphone-reflexo { animation: none; } .lp-iphone .lp-notif { opacity: 1; transform: none; } }
+.lp-iphone-hora b { margin-top: 2.6cqw; }
