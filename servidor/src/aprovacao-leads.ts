@@ -232,7 +232,8 @@ export const comunidadeDe = (marca: Marca, parceiro?: string | null) =>
  */
 export const enderecoDe = (marca: Marca, parceiro?: string | null) => {
   const c = doParceiro(marca, parceiro)
-  return new URL(c ? `/${c}/` : '/', marca.redirectUri).href
+  // /n/inicio (e não /n/, que abre o formulário de cadastro): a tela de entrar, guardando o parceiro
+  return new URL(c ? `/${c}/inicio` : '/', marca.redirectUri).href
 }
 
 function emailDeInscricaoNaLive(marca: Marca, email: string, senhaProvisoria: string | undefined, senhaPropria: boolean, parceiro?: string | null) {

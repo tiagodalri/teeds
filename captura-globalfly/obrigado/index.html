@@ -23,20 +23,21 @@
       <section class="cartao obrigado">
         <div class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
         <h1 data-titulo>Sua inscrição na live está confirmada!</h1>
-        <ol class="etapas" aria-label="Seu progresso">
-          <li class="feito">Inscrição</li>
-          <li class="feito" data-etapa-questionario>Questionário</li>
-          <li class="agora">Live de 09/11</li>
+        <!-- 02/11/2026: o mesmo indicador de etapas do questionário -->
+        <ol class="quiz-etapas obrigado-etapas" aria-label="Sua inscrição">
+          <li class="feito"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i><span>Cadastro</span></li>
+          <li class="feito" data-etapa-questionario><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i><span>Uma pergunta</span></li>
+          <li class="agora" aria-current="step"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></i><span>Live de 09/11</span></li>
         </ol>
         <!-- 30/10/2026: a conta nasce no cadastro e a live libera o acesso. Daqui a pessoa sai com três
              coisas feitas, cada uma é um caminho para a gente chamá-la no dia 09/11 (Naor: "vamos ficar o dia
              inteiro mandando notificação"). -->
-        <p class="chamada">Sua vaga na live de <b>segunda, 09/11, às 20h</b> está garantida e a sua conta já foi criada. Assista do início ao fim: é a live que libera o seu acesso, de graça.</p>
+        <p class="chamada">Sua vaga na live de <b>segunda, 09/11, às 20h</b> está garantida e a sua conta já foi criada. Assista do início ao fim: é a live que libera o seu acesso, de&nbsp;graça.</p>
         <p class="ultimo">Para não perder a live</p>
         <ol class="o-passos">
           <li>
             <span class="o-n">1</span>
-            <div><strong>Entre na comunidade do WhatsApp</strong><span>Os avisos do lançamento chegam por&nbsp;lá.</span></div>
+            <div><strong>Entre na comunidade do&nbsp;WhatsApp</strong><span>Os avisos do lançamento chegam por&nbsp;lá.</span></div>
             <a class="botao o-botao" id="comunidade" href="https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq" target="_blank" rel="noopener">Entrar na comunidade</a>
           </li>
           <li>
@@ -49,8 +50,8 @@
           </li>
           <li>
             <span class="o-n">3</span>
-            <div><strong>Entre na GlobalFly e ative os avisos</strong><span data-acesso-curto>Use o e-mail do cadastro e a senha que você criou. Você já vê a plataforma, trancada até a live, e ativa os avisos no celular.</span></div>
-            <a class="botao o-botao o-claro" id="plataforma" href="../../">Entrar na GlobalFly</a>
+            <div><strong>Entre na GlobalFly e ative os&nbsp;avisos</strong><span data-acesso-curto>Use o e-mail do cadastro e a senha que você criou. Você já vê a plataforma, trancada até a live, e ativa os avisos no celular.</span></div>
+            <a class="botao o-botao o-claro" id="plataforma" href="/">Entrar na GlobalFly</a>
           </li>
         </ol>
         <div class="acesso">
@@ -59,7 +60,7 @@
                já existente, ou (fallback e cadastros antigos) com a senha provisória por e-mail. -->
           <div data-acesso="criada" hidden>
             <p>Sua conta está criada. Entre com o <b>e-mail do cadastro</b> e a <b>senha que você acabou de criar</b>.</p>
-            <p>Até a live, a plataforma fica <b>trancada, com a contagem regressiva</b>: você entra, conhece tudo e prepara o celular. A live passa lá dentro e libera o acesso. Esqueceu a senha? Toque em <b>“Esqueci a senha”</b> na tela de entrada.</p>
+            <p>Até a live, a plataforma fica <b>trancada, com a contagem regressiva</b>: você entra, conhece tudo e prepara o celular. A live passa lá dentro e libera o acesso. Esqueceu a senha? Toque em <b>“Esqueci a senha”</b> na tela de&nbsp;entrada.</p>
           </div>
           <div data-acesso="existente" hidden>
             <p>Você já tinha conta com este e-mail, e ela continua valendo. Entre com a <b>sua senha atual</b>.</p>
@@ -86,6 +87,8 @@
       // textContent: o nome nunca entra como HTML
       if (dados.nome) document.querySelector('[data-titulo]').textContent = dados.nome + ', sua inscrição na live está confirmada!'
       document.getElementById('comunidade').href = GF.COMUNIDADE
+      // a tela de ENTRAR guardando o parceiro (/n/inicio); o /n/ sozinho abriria o formulário de cadastro
+      document.getElementById('plataforma').href = GF.parceiro() ? '/' + GF.parceiro() + '/inicio' : '/'
       // quem se cadastrou pelo app não passou pelo questionário: a etapa não aparece como feita
       if (!dados.respondeu) document.querySelector('[data-etapa-questionario]').remove()
       var conta = dados.conta === 'criada' || dados.conta === 'existente' ? dados.conta : 'provisoria'
