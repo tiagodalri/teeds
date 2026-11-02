@@ -75,5 +75,5 @@ export function origemCadastro(pagina: string | null): string {
 }
 
 /** Os produtos do questionário da GlobalFly (cadastro -> questionário), com o nome que a pessoa viu. */
-const PRODUTOS_ANTERIORES:Record<string,string>={b3:'B3',fast:'Universidade Trading (Fast)',calculadora_fast:'Calculadora Fast',stark:'Stark / Starkbot',plano_socio:'Plano Sócio',mentoria:'Mentoria',grande_revolucao:'A Grande Revolução',outro:'Outro'}
+const PRODUTOS_ANTERIORES:Record<string,string>={b3:'B3',fast:'Universidade Trading (Fast)',calculadora_fast:'Calculadora Fast',stark:'Stark / Starkbot',plano_socio:'Plano Sócio',mentoria:'Mentoria',grande_revolucao:'A Grande Revolução',n_compartilhamento:'Compartilhamento de Receita (Naor)',n_sala_b3:'Sala ao vivo B3 (Naor)',n_clube_3:'Clube dos 3% (Naor)',n_mentoria_gps:'Mentoria GPS (Naor)',n_rtp:'Indicador RTP (Naor)',n_goatwin:'Indicador GoatWin (Naor)',outro:'Outro'}
 export function respostaDoQuestionario(l:LeadCapturado):string|null{if(l.exCliente===null)return null;if(!l.exCliente)return 'Novo, nunca foi cliente';return 'Ex-cliente: '+(l.produtosAnteriores.map(p=>p.startsWith('outro: ')?p.slice(7):PRODUTOS_ANTERIORES[p]??p).join(', ')||'sem produto marcado')}

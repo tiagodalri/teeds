@@ -17,24 +17,30 @@
   <div class="pagina">
     <header class="topo">
       <img src="/globalfly-assinatura.png" alt="GlobalFly Trade" width="900" height="283" />
-      <span class="passo">Passo 2 de 2</span>
     </header>
 
     <main class="centro">
-      <form class="cartao" id="form" novalidate>
-        <div class="progresso"><div><i style="width: 85%"></i></div><span data-ola>Falta só uma pergunta</span></div>
+      <form class="cartao quiz" id="form" novalidate>
+        <!-- 02/11/2026 (Tiago: "melhorar o layout desse quiz... padrão top igual o resto"): as três etapas com nome -->
+        <ol class="quiz-etapas" aria-label="Sua inscrição">
+          <li class="feito"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i><span>Cadastro</span></li>
+          <li class="agora" aria-current="step"><i aria-hidden="true">2</i><span>Uma pergunta</span></li>
+          <li><i aria-hidden="true">3</i><span>Live de 09/11</span></li>
+        </ol>
+        <p class="quiz-ola" data-ola>Falta só uma pergunta</p>
         <fieldset style="border: 0; margin: 0; padding: 0; min-width: 0">
-          <legend class="pergunta">Você já foi cliente do ecossistema do Victor Cordeiro?</legend>
+          <legend class="pergunta" data-pergunta>Você já foi cliente do ecossistema do Victor Cordeiro?</legend>
+          <p class="quiz-sub">Assim a equipe prepara a live pensando em quem já conhece o trabalho e em quem está chegando agora.</p>
           <div class="opcoes">
-            <label class="opcao"><input type="radio" name="cliente" value="sim" id="cliente-sim" /><i></i>Sim</label>
-            <label class="opcao"><input type="radio" name="cliente" value="nao" id="cliente-nao" /><i></i>Não</label>
+            <label class="opcao"><input type="radio" name="cliente" value="sim" id="cliente-sim" /><i></i><span><b>Sim</b><small>Já fui cliente de algum produto</small></span></label>
+            <label class="opcao"><input type="radio" name="cliente" value="nao" id="cliente-nao" /><i></i><span><b>Não</b><small>Primeira vez aqui</small></span></label>
           </div>
         </fieldset>
 
         <fieldset class="produtos" id="produtos" hidden style="border-left: 0; border-right: 0; border-bottom: 0; margin: 26px 0 0; padding: 22px 0 0; min-width: 0">
           <h3>De quais produtos você já foi cliente?</h3>
           <p>Marque todos que se aplicam.</p>
-          <div class="lista-produtos">
+          <div class="lista-produtos" id="lista-produtos">
             <label class="produto"><input type="checkbox" name="produto" value="b3" id="p-b3" /><i></i>B3</label>
             <label class="produto"><input type="checkbox" name="produto" value="fast" id="p-fast" /><i></i>Universidade Trading (Fast)</label>
             <label class="produto"><input type="checkbox" name="produto" value="calculadora_fast" id="p-calculadora" /><i></i>Calculadora Fast</label>
@@ -48,10 +54,25 @@
             <input id="outro" name="outro" maxlength="60" placeholder="Nome do produto" autocomplete="off" />
           </label>
         </fieldset>
+        <!-- 02/11/2026 (Tiago): no /n a pergunta é sobre o ecossistema do Naor, com os produtos dele.
+             Os códigos com "n_" ficam separados dos do Victor (gf_responder_questionario e leads.ts). -->
+        <template id="produtos-naor">
+          <label class="produto"><input type="checkbox" name="produto" value="n_compartilhamento" id="p-n-compartilhamento" /><i></i>Compartilhamento de Receita</label>
+          <label class="produto"><input type="checkbox" name="produto" value="n_sala_b3" id="p-n-sala-b3" /><i></i>Sala ao vivo B3</label>
+          <label class="produto"><input type="checkbox" name="produto" value="n_clube_3" id="p-n-clube" /><i></i>Clube dos 3%</label>
+          <label class="produto"><input type="checkbox" name="produto" value="n_mentoria_gps" id="p-n-gps" /><i></i>Mentoria GPS</label>
+          <label class="produto"><input type="checkbox" name="produto" value="n_rtp" id="p-n-rtp" /><i></i>Indicador RTP</label>
+          <label class="produto"><input type="checkbox" name="produto" value="n_goatwin" id="p-n-goatwin" /><i></i>Indicador GoatWin</label>
+          <label class="produto"><input type="checkbox" name="produto" value="outro" id="p-outro" /><i></i>Outro</label>
+        </template>
 
         <div class="acoes">
-          <button class="botao" type="submit" disabled>Concluir cadastro <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <button class="botao" type="submit" disabled>Concluir inscrição <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
           <p class="mensagem" role="status" aria-live="polite"></p>
+        </div>
+        <div class="quiz-ingresso">
+          <span class="quiz-data"><b>09</b><small>nov</small></span>
+          <span><strong>Sua vaga na live de lançamento</strong><small>Segunda, às 20h (Brasília), dentro da&nbsp;GlobalFly</small></span>
         </div>
       </form>
     </main>
@@ -71,6 +92,12 @@
       // Sem o cadastro (abriu o link direto), volta para o passo 1
       if (!dados.email) { location.replace(GF.proxima('../')); return }
       if (dados.nome) document.querySelector('[data-ola]').textContent = dados.nome + ', falta só uma pergunta'
+
+      // no /n, o ecossistema do Naor: outra pergunta e os produtos dele
+      if (GF.parceiro() === 'n') {
+        document.querySelector('[data-pergunta]').textContent = 'Você já foi cliente do ecossistema do Naor Bezerra?'
+        document.getElementById('lista-produtos').replaceChildren(document.getElementById('produtos-naor').content.cloneNode(true))
+      }
 
       var form = document.getElementById('form'), botao = form.querySelector('.botao'), mensagem = form.querySelector('.mensagem')
       var produtos = document.getElementById('produtos'), qual = document.getElementById('qual')

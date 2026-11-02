@@ -168,6 +168,50 @@ h1 em { font-style: normal; color: var(--ouro-claro); }
   .etapas { gap: 6px; }
   .etapas li { padding: 4px 9px; font-size: 12px; }
 }
+/* ------------------------------------------------ questionário (02/11/2026: no padrão da página de vendas) */
+.quiz { padding: 30px 32px 0; overflow: hidden; }
+.quiz-etapas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 26px; padding: 0; list-style: none; counter-reset: none; }
+.quiz-etapas li { position: relative; display: grid; justify-items: center; gap: 8px; color: var(--aco); font-size: 12.5px; font-weight: 700; text-align: center; }
+.quiz-etapas li::before { content: ""; position: absolute; top: 15px; right: 50%; width: 100%; height: 2px; background: rgba(156, 177, 199, .2); z-index: 0; }
+.quiz-etapas li:first-child::before { display: none; }
+.quiz-etapas li.feito + li::before, .quiz-etapas li.feito::before { background: var(--ouro); }
+.quiz-etapas i { position: relative; z-index: 1; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; font-style: normal; font-size: 13.5px; background: #0B2140; box-shadow: inset 0 0 0 2px rgba(156, 177, 199, .3); }
+.quiz-etapas i svg { width: 15px; height: 15px; }
+.quiz-etapas .feito i { background: var(--ouro); color: var(--azul); box-shadow: none; }
+.quiz-etapas .feito { color: var(--marfim); }
+.quiz-etapas .agora i { color: var(--ouro-claro); box-shadow: inset 0 0 0 2px var(--ouro), 0 0 0 5px rgba(183, 141, 57, .16); }
+.quiz-etapas .agora { color: var(--ouro-claro); }
+.quiz-ola { margin: 0 0 6px; color: var(--ouro-claro); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.quiz .pergunta { margin-bottom: 8px; }
+.quiz-sub { margin: 0 0 20px; color: var(--aco); font-size: 15px; line-height: 1.55; text-wrap: pretty; }
+.quiz .opcao { min-height: 74px; padding: 12px 18px; gap: 14px; border-radius: 14px; }
+.quiz .opcao span { display: grid; gap: 2px; }
+.quiz .opcao b { font-size: 17px; }
+.quiz .opcao small { color: var(--aco); font-size: 13px; font-weight: 400; line-height: 1.35; text-wrap: balance; }
+.quiz .opcao:has(input:checked) small { color: var(--marfim); opacity: .8; }
+.quiz .produto { min-height: 52px; border-radius: 12px; }
+.quiz .lista-produtos { gap: 10px; }
+/* número ímpar de produtos: o último ocupa a linha inteira, sem buraco ao lado */
+.quiz .lista-produtos .produto:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.quiz .acoes { margin-top: 24px; }
+.quiz .botao:disabled { opacity: 1; background: rgba(156, 177, 199, .14); color: rgba(156, 177, 199, .75); }
+.quiz-ingresso { display: flex; align-items: center; gap: 14px; margin: 26px -32px 0; padding: 16px 32px; border-top: 1px dashed rgba(156, 177, 199, .28); background: rgba(5, 21, 40, .45); }
+.quiz-data { flex: none; display: grid; place-items: center; width: 48px; height: 52px; border-radius: 10px; background: var(--marfim); color: var(--azul); line-height: 1; }
+.quiz-data b { font: 700 20px/1 ui-monospace, "SF Mono", Menlo, monospace; }
+.quiz-ingresso .quiz-data small { margin-top: 3px; color: #8A6A2A; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.quiz-ingresso > span:last-child { display: grid; gap: 2px; min-width: 0; }
+.quiz-ingresso strong { font-size: 14.5px; }
+.quiz-ingresso small { color: var(--aco); font-size: 13px; }
+@media (max-width: 520px) {
+  .quiz { padding: 22px 18px 0; }
+  .quiz-etapas { margin-bottom: 22px; }
+  .quiz-etapas li { font-size: 11.5px; }
+  .quiz .opcoes { gap: 10px; }
+  .quiz .opcao { min-height: 68px; padding: 10px 14px; gap: 12px; }
+  .quiz .opcao b { font-size: 16px; }
+  .quiz .opcao small { font-size: 12.5px; }
+  .quiz-ingresso { margin: 22px -18px 0; padding: 14px 18px; }
+}
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 /* links dos termos (27/10/2026) */
 .aviso a, .rodape a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
