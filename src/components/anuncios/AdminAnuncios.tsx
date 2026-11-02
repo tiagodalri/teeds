@@ -172,6 +172,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
   const [relatorio, setRelatorio] = useState(false)
   const [escolha, setEscolha] = useState({ de: diasAtras(6), ate: iso(new Date()) })
   const [anterior, setAnterior] = useState<Base | null>(null)
+  const [abrirConectar, setAbrirConectar] = useState(false)
   const [horarios, setHorarios] = useState<DadosDeHorario | null>(null)
   const [aberto, setAberto] = useState<Anuncio | null>(null)
   const [chave, setChave] = useState('')
@@ -298,7 +299,14 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
       </div>
 
       {erro && <div className="aa-erro">{erro}</div>}
-      {(semChave || chaveRuim) && (
+      {painel?.ponte && !abrirConectar && (
+        <div className="aa-ponte">
+          <i aria-hidden="true" />
+          <p><b>Números da Meta pela integração do Claude</b> · atualizados às {hora(painel.ponte.em)}. Chegam a cada 30 minutos, com o computador do Tiago ligado. Com a chave do {nomeParceiro}, ficam ao vivo.</p>
+          <button type="button" onClick={() => setAbrirConectar(true)}>Colar a chave</button>
+        </div>
+      )}
+      {(semChave || chaveRuim || abrirConectar) && (
         <section className="aa-conectar">
           <div>
             <h3>{chaveRuim ? 'A chave da Meta parou de funcionar' : `Conectar a conta de anúncios do ${nomeParceiro}`}</h3>
@@ -523,7 +531,7 @@ function AnuncioAberto({ a, fechar, sessao, api, parceiro, de, ate, nosso, campa
     return () => { vivo = false; window.removeEventListener('keydown', esc) }
   }, [a.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const m = a.m
-  const marcado = /utm_content=\{\{ad\.id\}\}/.test(a.criativo.marcacoes)
+  const marcado = a.criativo.marcacoes == null || /utm_content=\{\{ad\.id\}\}/.test(a.criativo.marcacoes)
   const video = [['3 s', m.video3s], ['25%', m.p25], ['50%', m.p50], ['75%', m.p75], ['95%', m.p95], ['100%', m.p100]] as const
   const maxV = Math.max(1, m.video3s)
   const dias = (det?.porDia ?? []).map((d) => ({ dia: d.dia, gasto: d.gasto, meta: d.cadastros, nosso: 0 }))

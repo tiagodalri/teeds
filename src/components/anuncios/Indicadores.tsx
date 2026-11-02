@@ -137,7 +137,7 @@ export const ATALHOS: Array<{ id: string; nome: string; dica: string; passa: (l:
   { id: 'gancho-fraco', nome: 'Gancho fraco', dica: 'Vídeo em que menos de 20% param para ver 3 s', passa: (l) => { const v = METRICA.get('gancho')!.valor(l); return v != null && l.a.m.impressoes >= 500 && v < 20 } },
   { id: 'clique-caro', nome: 'Clique caro', dica: 'CPC 40% acima da média', passa: ({ a }, c) => c.cpc != null && a.m.cpcLink > 0 && a.m.cpcLink >= c.cpc * 1.4 },
   { id: 'pagina-fraca', nome: 'Página não converte', dica: 'Chega gente na página, mas o cadastro fica abaixo da metade da média', passa: (l, c) => { const v = METRICA.get('conversaoPagina')!.valor(l); return l.a.m.lpv >= 30 && v != null && c.convPagina != null && v < c.convPagina / 2 } },
-  { id: 'sem-marcacao', nome: 'Sem marcação', dica: 'O link não tem utm_content={{ad.id}}: os cadastros dele não aparecem como reais', passa: ({ a }) => !/utm_content=\{\{ad\.id\}\}/.test(a.criativo.marcacoes) },
+  { id: 'sem-marcacao', nome: 'Sem marcação', dica: 'O link não tem utm_content={{ad.id}}: os cadastros dele não aparecem como reais', passa: ({ a }) => a.criativo.marcacoes != null && !/utm_content=\{\{ad\.id\}\}/.test(a.criativo.marcacoes) },
 ]
 
 export function contexto(linhas: Linha[]): Contexto {
@@ -264,7 +264,7 @@ export function alertas(linhas: Linha[], total: Metricas | null, banco: FunilDoB
       lista.push({ tipo: 'critico', titulo: `Gastando sem cadastro: ${l.a.nome}`, texto: `${brl(l.a.m.gasto)} investidos e nenhum cadastro. Considere pausar.` })
     else if (custo != null && c.custoCad != null && custo <= c.custoCad * 0.7 && (l.real?.cadastros ?? 0) >= 5)
       lista.push({ tipo: 'bom', titulo: `Campeão: ${l.a.nome}`, texto: `${brl(custo)} por cadastro, ${pc((1 - custo / c.custoCad) * 100, 0)} abaixo da média. Bom candidato para receber mais verba.` })
-    if (l.a.status === 'ACTIVE' && !/utm_content=\{\{ad\.id\}\}/.test(l.a.criativo.marcacoes))
+    if (l.a.status === 'ACTIVE' && l.a.criativo.marcacoes != null && !/utm_content=\{\{ad\.id\}\}/.test(l.a.criativo.marcacoes))
       lista.push({ tipo: 'atencao', titulo: `Sem marcação: ${l.a.nome}`, texto: 'O link não tem utm_content={{ad.id}}, então os cadastros dele não são ligados a ele aqui.' })
   }
   const peso = { critico: 0, atencao: 1, bom: 2 }

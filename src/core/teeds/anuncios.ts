@@ -17,7 +17,7 @@ export interface Campanha { id: string; nome: string; status: string; objetivo: 
 export interface Conjunto { id: string; nome: string; status: string; campanhaId: string; orcDia: number; orcTotal: number; otimizacao: string; publico: string; m: Metricas }
 export interface Anuncio {
   id: string; nome: string; status: string; campanhaId: string; conjuntoId: string; criadoEm: string
-  criativo: { miniatura: string | null; imagem: string | null; titulo: string; texto: string; tipo: 'video' | 'imagem' | 'carrossel'; cta: string; marcacoes: string }
+  criativo: { miniatura: string | null; imagem: string | null; titulo: string; texto: string; tipo: 'video' | 'imagem' | 'carrossel'; cta: string; marcacoes: string | null }
   ranking: { qualidade: Ranking; engajamento: Ranking; conversao: Ranking }
   m: Metricas
 }
@@ -31,6 +31,8 @@ export interface PainelDaMeta {
   quebras: { idadeGenero: Quebra[]; posicionamento: Quebra[]; aparelho: Quebra[]; regiao: Quebra[] }
   pixel: { id: string; eventos: Array<{ nome: string; total: number }>; porDia: Array<{ dia: string; ev: Record<string, number> }>; desde: string } | { id: string; erro: string }
   avisos: string[]; em: string; chaveEm?: string; doCache?: boolean
+  /** Números trazidos pela ponte (a tarefa do Claude com a integração Meta Ads), sem chave própria. */
+  ponte?: { em: string }
 }
 export type RespostaDaMeta = PainelDaMeta | { semChave: true } | { chaveInvalida: true; erro: string }
 export interface DetalheDoAnuncio { porDia: Array<Metricas & { dia: string }>; idadeGenero: Quebra[]; posicionamento: Quebra[] }

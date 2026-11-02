@@ -6,6 +6,8 @@
 //   rankings), idade/gênero, posicionamento, aparelho, estado e os eventos do pixel.
 // POST { acao: 'resumo', marca, parceiro, de, ate }
 //   só o total do período (o funil ao vivo pede a cada minuto, sem guardar).
+// Sem a chave: monta tudo a partir da ponte (meta_ponte_*, gravada pela tarefa agendada do Claude
+// que lê a conta pela integração Meta Ads). Só campanhas com o nome começando em "GF |".
 // POST { acao: 'anuncio', marca, parceiro, id, de, ate }
 //   um anúncio: dia a dia, idade/gênero e posicionamento.
 //
@@ -27,6 +29,10 @@ const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo
 const CONTAS: Record<string, Record<string, { conta: string; pixel: string }>> = {
   globalfly: { n: { conta: '977357031377237', pixel: '1625935188283999' } },
 }
+
+// A conta do Naor tem outras campanhas (o quiz da Universidade Trading): só entram as da GlobalFly
+const PREFIXO = 'GF |'
+const SO_GF = JSON.stringify([{ field: 'campaign.name', operator: 'CONTAIN', value: PREFIXO }])
 
 const rest = (caminho: string, init: RequestInit = {}) => fetch(`${SUPABASE_URL}/rest/v1/${caminho}`, {
   ...init,
@@ -106,7 +112,7 @@ function publico(t: any): string {
 async function painel(chave: string, cfg: { conta: string; pixel: string }, de: string, ate: string) {
   const act = `act_${cfg.conta}`
   const tr = JSON.stringify({ since: de, until: ate })
-  const ins = (extra: Record<string, string>) => graph(chave, `${act}/insights`, { time_range: tr, fields: CAMPOS, limit: '500', ...extra })
+  const ins = (extra: Record<string, string>) => graph(chave, `${act}/insights`, { time_range: tr, fields: CAMPOS, limit: '500', filtering: SO_GF, ...extra })
   const avisos: string[] = []
   const talvez = async <T,>(nome: string, p: Promise<T>, padrao: T): Promise<T> => {
     try { return await p } catch (e) {
@@ -126,7 +132,7 @@ async function painel(chave: string, cfg: { conta: string; pixel: string }, de: 
     talvez('Campanhas', ins({ level: 'campaign', fields: `${CAMPOS},campaign_id` }), []),
     talvez('Conjuntos', ins({ level: 'adset', fields: `${CAMPOS},adset_id` }), []),
     talvez('Anúncios', ins({ level: 'ad', fields: `${CAMPOS},ad_id,quality_ranking,engagement_rate_ranking,conversion_rate_ranking` }), []),
-    talvez('Lista de campanhas', graph(chave, `${act}/campaigns`, { fields: 'id,name,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time,bid_strategy,created_time', limit: '200' }, 3), []),
+    talvez('Lista de campanhas', graph(chave, `${act}/campaigns`, { fields: 'id,name,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time,bid_strategy,created_time', limit: '200', filtering: JSON.stringify([{ field: 'name', operator: 'CONTAIN', value: PREFIXO }]) }, 3), []),
     talvez('Lista de conjuntos', graph(chave, `${act}/adsets`, { fields: 'id,name,effective_status,campaign_id,daily_budget,lifetime_budget,optimization_goal,targeting,start_time,end_time', limit: '200' }, 3), []),
     talvez('Lista de anúncios', graph(chave, `${act}/ads`, { fields: 'id,name,effective_status,adset_id,campaign_id,created_time,creative{id,thumbnail_url,image_url,title,body,object_type,call_to_action_type,video_id,url_tags}', thumbnail_width: '320', thumbnail_height: '320', limit: '200' }, 3), []),
     talvez('Idade e gênero', ins({ level: 'account', breakdowns: 'age,gender' }), []),
@@ -139,6 +145,8 @@ async function painel(chave: string, cfg: { conta: string; pixel: string }, de: 
       : Promise.resolve({ ok: true as const, l: [] as any[] }),
   ])
 
+  const gf = new Set(campanhas.map((c: any) => c.id))
+  const conjuntosGf = conjuntos.filter((c: any) => gf.has(c.campaign_id)), anunciosGf = anuncios.filter((a: any) => gf.has(a.campaign_id))
   const mapa = (l: any[], campo: string) => new Map(l.map((r) => [String(r[campo]), metricas(r)]))
   const mCamp = mapa(porCampanha, 'campaign_id'), mConj = mapa(porConjunto, 'adset_id'), mAd = mapa(porAnuncio, 'ad_id')
   const rank = new Map(porAnuncio.map((r: any) => [String(r.ad_id), { qualidade: RANKING[r.quality_ranking] ?? '', engajamento: RANKING[r.engagement_rate_ranking] ?? '', conversao: RANKING[r.conversion_rate_ranking] ?? '' }]))
@@ -168,11 +176,11 @@ async function painel(chave: string, cfg: { conta: string; pixel: string }, de: 
       id: c.id, nome: c.name, status: c.effective_status, objetivo: c.objective, orcDia: n(c.daily_budget) / 100, orcTotal: n(c.lifetime_budget) / 100,
       inicio: c.start_time ?? null, fim: c.stop_time ?? null, lance: c.bid_strategy ?? null, m: m ? limpar(m) : vazio,
     })),
-    conjuntos: conjuntos.map((c: any) => ({ c, m: mConj.get(c.id) })).filter(({ c, m }) => doPeriodo(m, c.effective_status, c.start_time)).map(({ c, m }) => ({
+    conjuntos: conjuntosGf.map((c: any) => ({ c, m: mConj.get(c.id) })).filter(({ c, m }) => doPeriodo(m, c.effective_status, c.start_time)).map(({ c, m }) => ({
       id: c.id, nome: c.name, status: c.effective_status, campanhaId: c.campaign_id, orcDia: n(c.daily_budget) / 100, orcTotal: n(c.lifetime_budget) / 100,
       otimizacao: c.optimization_goal ?? '', publico: publico(c.targeting), m: m ? limpar(m) : vazio,
     })),
-    anuncios: anuncios.map((a: any) => ({ a, m: mAd.get(a.id) })).filter(({ a, m }) => doPeriodo(m, a.effective_status, a.created_time)).map(({ a, m }) => ({
+    anuncios: anunciosGf.map((a: any) => ({ a, m: mAd.get(a.id) })).filter(({ a, m }) => doPeriodo(m, a.effective_status, a.created_time)).map(({ a, m }) => ({
       id: a.id, nome: a.name, status: a.effective_status, campanhaId: a.campaign_id, conjuntoId: a.adset_id, criadoEm: a.created_time,
       criativo: { miniatura: a.creative?.thumbnail_url ?? null, imagem: a.creative?.image_url ?? null, titulo: a.creative?.title ?? '', texto: a.creative?.body ?? '',
                   tipo: a.creative?.video_id ? 'video' : a.creative?.object_type === 'SHARE' && !a.creative?.image_url ? 'carrossel' : 'imagem', cta: a.creative?.call_to_action_type ?? '',
@@ -191,6 +199,68 @@ async function painel(chave: string, cfg: { conta: string; pixel: string }, de: 
       : { id: cfg.pixel, erro: pixel.erro },
     avisos,
     em: new Date().toISOString(),
+  }
+}
+
+/* ------------------------------------------------------------------ a ponte (sem chave própria) */
+
+const SOMAVEIS = ['gasto', 'impressoes', 'alcance', 'cliques', 'cliquesLink', 'lpv', 'viewContent', 'leads', 'cadastros', 'eventosProprios', 'engajamento', 'reacoes',
+  'comentarios', 'compartilhamentos', 'salvos', 'video3s', 'videoPlay', 'thruplay', 'p25', 'p50', 'p75', 'p95', 'p100']
+/** Soma linhas de métricas e refaz as taxas a partir das somas (o alcance somado é aproximado). */
+function somar(lista: any[]) {
+  const t: Record<string, number> = Object.fromEntries(SOMAVEIS.map((k) => [k, 0]))
+  for (const d of lista) for (const k of SOMAVEIS) t[k] += n(d?.[k])
+  return {
+    ...t, frequencia: t.alcance ? t.impressoes / t.alcance : 0, ctrLink: t.impressoes ? (t.cliquesLink / t.impressoes) * 100 : 0,
+    ctr: t.impressoes ? (t.cliques / t.impressoes) * 100 : 0, cpcLink: t.cliquesLink ? t.gasto / t.cliquesLink : 0, cpm: t.impressoes ? (t.gasto / t.impressoes) * 1000 : 0,
+  }
+}
+const agrupar = <T,>(l: T[], chave: (x: T) => string) => { const m = new Map<string, T[]>(); for (const x of l) { const k = chave(x); m.set(k, [...(m.get(k) ?? []), x]) } return m }
+
+async function daPonte(marca: string, parceiro: string, de: string, ate: string, pixel: string) {
+  const f = `marca=eq.${marca}&parceiro=eq.${parceiro}`
+  const ler = async (t: string, extra = '') => { const r = await rest(`${t}?${f}${extra}`); return r.ok ? await r.json() : [] }
+  const [estado] = await ler('meta_ponte_estado', '&select=conta,atualizado_em')
+  if (!estado) return null
+  const periodo = `&dia=gte.${de}&dia=lte.${ate}`
+  const [dias, entidades, quebras, px] = await Promise.all([
+    ler('meta_ponte_dia', `${periodo}&select=dia,id,dados&limit=20000`), ler('meta_ponte_entidade', '&select=tipo,id,dados&limit=5000'),
+    ler('meta_ponte_quebra', `${periodo}&select=dia,tipo,chave,dados&limit=20000`), ler('meta_ponte_pixel', `${periodo}&select=dia,evento,total&limit=5000`),
+  ])
+  const porAd = agrupar(dias as any[], (d) => d.id)
+  const m = (lista: any[] | undefined) => somar((lista ?? []).map((d) => d.dados))
+  const ent = (tipo: string) => (entidades as any[]).filter((e) => e.tipo === tipo)
+  const doPeriodo = (mm: any, status: string) => mm.gasto > 0 || mm.impressoes > 0 || status === 'ACTIVE'
+  const camp = agrupar(dias as any[], (d) => String(d.dados?.campanhaId ?? '')), conj = agrupar(dias as any[], (d) => String(d.dados?.conjuntoId ?? ''))
+  const eventos = new Map<string, number>(), eventosDia = new Map<string, Record<string, number>>()
+  for (const e of px as any[]) {
+    eventos.set(e.evento, (eventos.get(e.evento) ?? 0) + n(e.total))
+    const d = eventosDia.get(e.dia) ?? {}; d[e.evento] = (d[e.evento] ?? 0) + n(e.total); eventosDia.set(e.dia, d)
+  }
+  const quebra = (tipo: string, chaves: string[]) => [...agrupar((quebras as any[]).filter((q) => q.tipo === tipo), (q) => q.chave)]
+    .map(([chave, l]) => ({ ...Object.fromEntries(chaves.map((k, i) => [k, chave.split('|')[i] ?? ''])), ...somar(l.map((q) => q.dados)) })).sort((a, b) => b.gasto - a.gasto)
+  const c = estado.conta ?? {}
+  return {
+    conta: { id: String(c.id ?? ''), nome: c.nome ?? '', moeda: c.moeda ?? 'BRL', status: n(c.status) || 1, gastoTotal: n(c.gastoTotal), saldo: 0, limite: 0, fuso: c.fuso ?? 'America/Sao_Paulo', motivo: 0 },
+    periodo: { de, ate },
+    total: somar((dias as any[]).map((d) => d.dados)),
+    porDia: [...agrupar(dias as any[], (d) => d.dia)].map(([dia, l]) => ({ dia, ...m(l) })).sort((a, b) => a.dia.localeCompare(b.dia)),
+    campanhas: ent('campanha').map((e) => ({ id: e.id, nome: e.dados.nome ?? '', status: e.dados.status ?? '', objetivo: e.dados.objetivo ?? '', orcDia: n(e.dados.orcDia), orcTotal: n(e.dados.orcTotal), inicio: e.dados.inicio ?? null, fim: null, lance: null, m: m(camp.get(e.id)) }))
+      .filter((x) => doPeriodo(x.m, x.status)),
+    conjuntos: ent('conjunto').map((e) => ({ id: e.id, nome: e.dados.nome ?? '', status: e.dados.status ?? '', campanhaId: e.dados.campanhaId ?? '', orcDia: n(e.dados.orcDia), orcTotal: n(e.dados.orcTotal), otimizacao: e.dados.otimizacao ?? '', publico: e.dados.publico ?? '', m: m(conj.get(e.id)) }))
+      .filter((x) => doPeriodo(x.m, x.status)),
+    anuncios: ent('anuncio').map((e) => ({
+      id: e.id, nome: e.dados.nome ?? '', status: e.dados.status ?? '', campanhaId: e.dados.campanhaId ?? '', conjuntoId: e.dados.conjuntoId ?? '', criadoEm: e.dados.criadoEm ?? '',
+      criativo: { miniatura: e.dados.miniatura ?? null, imagem: e.dados.imagem ?? null, titulo: e.dados.titulo ?? '', texto: e.dados.texto ?? '', tipo: e.dados.tipo ?? 'imagem', cta: e.dados.cta ?? '', marcacoes: e.dados.marcacoes ?? '' },
+      ranking: { qualidade: e.dados.qualidade ?? '', engajamento: e.dados.engajamento ?? '', conversao: e.dados.conversao ?? '' }, m: m(porAd.get(e.id)),
+    })).filter((x) => doPeriodo(x.m, x.status)),
+    quebras: {
+      idadeGenero: quebra('idadeGenero', ['age', 'gender']), posicionamento: quebra('posicionamento', ['publisher_platform', 'platform_position']),
+      aparelho: quebra('aparelho', ['device_platform']), regiao: quebra('regiao', ['region']),
+    },
+    pixel: { id: pixel, eventos: [...eventos].map(([nome, total]) => ({ nome, total })).sort((a, b) => b.total - a.total),
+             porDia: [...eventosDia].map(([dia, ev]) => ({ dia, ev })).sort((a, b) => a.dia.localeCompare(b.dia)), desde: `${de}T03:00:00Z` },
+    avisos: [], em: estado.atualizado_em, ponte: { em: estado.atualizado_em },
   }
 }
 
@@ -231,13 +301,26 @@ Deno.serve(async (req) => {
 
   const c = await rest(`config_servicos?chave=eq.META_ADS_${marca.toUpperCase()}_${parceiro.toUpperCase()}&select=valor,atualizado_em`)
   const linha = c.ok ? (await c.json())[0] : null
-  if (!linha?.valor) return json({ semChave: true })
+  if (!linha?.valor) {
+    // sem chave própria: os números que a tarefa do Claude trouxe pela integração (a ponte)
+    const ponte = await daPonte(marca, parceiro, de, ate, cfg.pixel)
+    if (!ponte) return json({ semChave: true })
+    if (d.acao === 'resumo') return json({ total: ponte.total, em: ponte.em })
+    if (d.acao === 'anuncio') {
+      const id = String(d.id ?? '')
+      return json({ porDia: ponte.porDia.length ? (await (async () => {
+        const r = await rest(`meta_ponte_dia?marca=eq.${marca}&parceiro=eq.${parceiro}&id=eq.${encodeURIComponent(id)}&dia=gte.${de}&dia=lte.${ate}&select=dia,dados&order=dia`)
+        return (r.ok ? await r.json() : []).map((x: any) => ({ dia: x.dia, ...somar([x.dados]) }))
+      })()) : [], idadeGenero: [], posicionamento: [] })
+    }
+    return json(ponte)
+  }
   const chave = linha.valor as string
 
   try {
     // o funil ao vivo: só o total do período, uma consulta (a tela pede a cada minuto)
     if (d.acao === 'resumo') {
-      const l = await graph(chave, `act_${cfg.conta}/insights`, { time_range: JSON.stringify({ since: de, until: ate }), fields: CAMPOS, level: 'account' }, 1)
+      const l = await graph(chave, `act_${cfg.conta}/insights`, { time_range: JSON.stringify({ since: de, until: ate }), fields: CAMPOS, level: 'account', filtering: SO_GF }, 1)
       return json({ total: l[0] ? limpar(metricas(l[0])) : limpar(metricas({})), em: new Date().toISOString() })
     }
     if (d.acao === 'anuncio') {
