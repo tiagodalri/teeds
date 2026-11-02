@@ -10,7 +10,8 @@
 // Só manda o que é de um cadastro de verdade: o e-mail tem de estar em
 // leads_capturados (últimas 48 h, pela página do parceiro). Cada event_id vai uma vez
 // só (meta_conversoes). Sem a chave do parceiro em config_servicos
-// (META_CAPI_<MARCA>_<PARCEIRO>), anota 'sem-chave' e não manda nada.
+// (META_CAPI_<MARCA>_<PARCEIRO>, ou a da conta de anúncios META_ADS_<MARCA>_<PARCEIRO>),
+// anota 'sem-chave' e não manda nada.
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICO = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -71,8 +72,11 @@ Deno.serve(async (req) => {
   const linha = ins.ok ? (await ins.json())[0] : null
   if (!linha) return json({ ok: true, motivo: 'ja-enviado' })
 
-  const cfg = await rest(`config_servicos?chave=eq.META_CAPI_${marca.toUpperCase()}_${parceiro.toUpperCase()}&select=valor`)
-  const chave = cfg.ok ? (await cfg.json())[0]?.valor : null
+  // a chave só do pixel; sem ela, a da conta de anúncios (Administração › Anúncios), se tiver acesso ao pixel
+  const sufixo = `${marca.toUpperCase()}_${parceiro.toUpperCase()}`
+  const cfg = await rest(`config_servicos?chave=in.(META_CAPI_${sufixo},META_ADS_${sufixo})&select=chave,valor`)
+  const chaves: Array<{ chave: string; valor: string }> = cfg.ok ? await cfg.json() : []
+  const chave = (chaves.find((c) => c.chave.startsWith('META_CAPI_')) ?? chaves[0])?.valor ?? null
   if (!chave) { await anotar(linha.id, 'sem-chave', null); return json({ ok: true, motivo: 'sem-chave' }) }
 
   const partes = String(lead.nome ?? '').trim().split(/\s+/)

@@ -149,7 +149,10 @@ var GF = (function () {
         // as duas conversões também vão pelo servidor, com o mesmo código: a Meta conta uma vez só
         var pelaApi = PELO_SERVIDOR.indexOf(evento) >= 0 && dados.cad && dados.email
         var codigo = pelaApi ? evento + '-' + dados.cad : undefined
-        window.fbq(PADRAO.indexOf(evento) >= 0 ? 'track' : 'trackCustom', evento, dadosDoEvento || {}, codigo ? { eventID: codigo } : undefined)
+        var chamada = [PADRAO.indexOf(evento) >= 0 ? 'track' : 'trackCustom', evento, dadosDoEvento || {}]
+        // o código só vai quando existe: um quarto argumento vazio faz o pixel engolir o evento
+        if (codigo) chamada.push({ eventID: codigo })
+        window.fbq.apply(window, chamada)
         if (pelaApi) pixelPeloServidor(evento, codigo, dados)
         var marca = {}; marca[chave] = Date.now(); guardar(marca)
       }

@@ -82,7 +82,9 @@ export function eventoDoPixel(nome: string, dados?: Record<string, unknown>, uma
     if (umaVez && jaContou.has(chave)) return
     jaContou.add(chave)
     const codigo = email ? `${nome}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}` : undefined
-    window.fbq(PADRAO.has(nome) ? 'track' : 'trackCustom', nome, dados ?? {}, codigo ? { eventID: codigo } : undefined)
+    // o código só vai quando existe: um quarto argumento vazio faz o pixel engolir o evento
+    if (codigo) window.fbq(PADRAO.has(nome) ? 'track' : 'trackCustom', nome, dados ?? {}, { eventID: codigo })
+    else window.fbq(PADRAO.has(nome) ? 'track' : 'trackCustom', nome, dados ?? {})
     if (codigo && email) {
       void fetch(`${SUPABASE.url}/functions/v1/meta-conversoes`, {
         method: 'POST', keepalive: true, headers: { 'content-type': 'application/json', apikey: SUPABASE.anonKey },

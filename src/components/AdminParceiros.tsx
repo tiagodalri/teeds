@@ -64,14 +64,14 @@ function PixelDaMeta({ sessao, marca, codigo, nome, api }: { sessao: SessaoTeeds
   const primeiro = nome.split(' ')[0]
   return (
     <div className="ap-pixel">
-      <header><h3>Pixel da Meta de {primeiro}</h3><small>{id}</small></header>
+      <header><h3>Pixel da Meta do {primeiro}</h3><small>{id}</small></header>
       <ul className="ap-pixel-itens">
         <li className="ok"><b>No site</b><span>Ligado em todas as páginas do /{codigo}: visita, formulário, cadastro, inscrição, cada passo do obrigado e a plataforma.</span></li>
         <li className={sit?.temChave ? 'ok' : 'falta'}>
           <b>Pelo servidor</b>
           <span>{!sit ? 'Conferindo…' : sit.temChave
             ? `Ligado desde ${quando(sit.chaveEm!)} · ${sit.enviados.toLocaleString('pt-BR')} ${sit.enviados === 1 ? 'conversão enviada' : 'conversões enviadas'} em 7 dias${sit.ultimoEnvio ? ` · última às ${new Date(sit.ultimoEnvio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}`
-            : `Falta a chave de ${primeiro}. Até ela chegar, os cadastros contam só pelo navegador${sit.semChave ? ` (${sit.semChave.toLocaleString('pt-BR')} em 7 dias)` : ''}.`}</span>
+            : `Falta a chave do ${primeiro}. Até ela chegar, os cadastros contam só pelo navegador${sit.semChave ? ` (${sit.semChave.toLocaleString('pt-BR')} em 7 dias)` : ''}.`}</span>
         </li>
       </ul>
       {sit?.temChave && sit.ultimoErro && (!sit.ultimoEnvio || sit.ultimoErro.em > sit.ultimoEnvio) && <div className="ap-erro">A Meta recusou o último envio ({quando(sit.ultimoErro.em)}): {sit.ultimoErro.detalhe ?? 'sem detalhe'}. Confira a chave.</div>}
@@ -86,7 +86,7 @@ function PixelDaMeta({ sessao, marca, codigo, nome, api }: { sessao: SessaoTeeds
       </form>
       {estado.erro && <div className="ap-erro">{estado.erro}</div>}
       {estado.ok && <p className="ap-pixel-ok">{estado.ok}</p>}
-      <p className="ap-nota">Onde {primeiro} pega a chave: Gerenciador de Eventos › o pixel acima › Configurações › API de Conversões › Gerar token de acesso. A chave fica guardada no servidor e não aparece de novo nem para quem salvou.</p>
+      <p className="ap-nota">Onde o {primeiro} pega a chave: Gerenciador de Eventos › o pixel acima › Configurações › API de Conversões › Gerar token de acesso. A chave fica guardada no servidor e não aparece de novo nem para quem salvou.</p>
     </div>
   )
 }
