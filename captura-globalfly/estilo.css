@@ -924,3 +924,36 @@ body.lp::before { display: none; }
 @media (max-width: 600px) { .lp-iphone { max-width: 290px; } }
 @media (prefers-reduced-motion: reduce) { .lp-iphone, .lp-iphone-fundo, .lp-iphone .lp-notif, .lp-iphone-reflexo { animation: none; } .lp-iphone .lp-notif { opacity: 1; transform: none; } }
 .lp-iphone-hora b { margin-top: 2.6cqw; }
+
+/* ------------------------------------------------ vidro nas telas (02/11/2026, Tiago: "efeito de reflexo, impressão de que a tela é de vidro")
+   Um brilho fixo em diagonal, de borda nítida, como a luz da sala batendo no vidro, uma claridade suave no alto e uma
+   faixa de luz que atravessa a tela de tempos em tempos. No iMac, recortado no formato exato da tela da foto. */
+.lp-com-vidro { position: relative; display: block; }
+.lp-com-vidro img { display: block; width: 100%; height: auto; }
+.lp-pr-foto img { display: block; width: 100%; height: auto; }
+.lp-vidro { position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  clip-path: polygon(3.19% 4.65%, 96.62% 3.7%, 94.19% 67.97%, 6.04% 68.02%);
+  background:
+    linear-gradient(116deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, .07) 20%, rgba(255, 255, 255, .02) 34%, rgba(255, 255, 255, 0) 46%),
+    radial-gradient(70% 40% at 70% 0%, rgba(255, 255, 255, .09), transparent 70%),
+    linear-gradient(116deg, transparent 40%, rgba(255, 255, 255, .2) 47%, rgba(255, 255, 255, .05) 52%, transparent 58%);
+  background-size: auto, auto, 320% 100%; background-repeat: no-repeat;
+  background-position: 0 0, 0 0, 130% 0;
+  mix-blend-mode: screen; animation: lp-vidro-passa 8s ease-in-out infinite; }
+@keyframes lp-vidro-passa { 0%, 55% { background-position: 0 0, 0 0, 130% 0; } 85%, 100% { background-position: 0 0, 0 0, -45% 0; } }
+.lp-pr-imac .lp-vidro { animation-delay: 2.5s; }
+/* o iPhone ganha o mesmo vidro: brilho fixo em diagonal + faixa que passa */
+.lp-iphone-reflexo {
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, .13) 0%, rgba(255, 255, 255, .05) 24%, rgba(255, 255, 255, .015) 38%, rgba(255, 255, 255, 0) 50%),
+    radial-gradient(90% 30% at 50% 0%, rgba(255, 255, 255, .08), transparent 70%),
+    linear-gradient(118deg, transparent 40%, rgba(255, 255, 255, .2) 47%, rgba(255, 255, 255, .04) 52%, transparent 58%);
+  background-size: auto, auto, 320% 100%; background-repeat: no-repeat; background-position: 0 0, 0 0, 130% 0;
+  mix-blend-mode: screen; animation: lp-vidro-passa 7s ease-in-out 1s infinite; }
+@media (prefers-reduced-motion: reduce) { .lp-vidro, .lp-iphone-reflexo { animation: none; } }
+
+/* quebras de linha (02/11/2026, Tiago: "só o 9 ficou na linha de baixo"): parágrafos sem palavra sozinha na
+   última linha e títulos com as linhas equilibradas */
+body.lp :is(p, li, dd, dt, figcaption, small, em, blockquote, .lp-mini, .lp-oque-no span, .lp-pr-texto p) { text-wrap: pretty; }
+body.lp :is(h1, h2, h3, .lp-titulo .lp-l, .lp-cab h2, .lp-final h2) { text-wrap: balance; }
+body.lp :is(summary, label, .botao, .lp-cta span) { text-wrap: balance; }
