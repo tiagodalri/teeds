@@ -39,7 +39,7 @@ const rest = (caminho: string, init: RequestInit = {}) => fetch(`${SUPABASE_URL}
   headers: { apikey: SERVICO, Authorization: `Bearer ${SERVICO}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
 })
 
-class ErroDaMeta extends Error { constructor(msg: string, public codigo: number) { super(msg) } }
+class ErroDaMeta extends Error { constructor(msg: string, public codigo: number, public sub = 0) { super(msg) } }
 
 /** Uma consulta à Graph API, seguindo as páginas (até `paginas`). */
 async function graph(chave: string, caminho: string, params: Record<string, string>, paginas = 10): Promise<any[]> {
@@ -49,7 +49,7 @@ async function graph(chave: string, caminho: string, params: Record<string, stri
   for (let i = 0; url && i < paginas; i++) {
     const r = await fetch(url)
     const d = await r.json().catch(() => ({}))
-    if (!r.ok || d.error) throw new ErroDaMeta(d?.error?.error_user_msg || d?.error?.message || `HTTP ${r.status}`, d?.error?.code ?? r.status)
+    if (!r.ok || d.error) throw new ErroDaMeta(d?.error?.error_user_msg || d?.error?.message || `HTTP ${r.status}`, d?.error?.code ?? r.status, d?.error?.error_subcode ?? 0)
     if (Array.isArray(d.data)) tudo.push(...d.data); else { tudo.push(d); break }
     url = d.paging?.next ?? null
   }
@@ -278,6 +278,32 @@ async function anuncio(chave: string, cfg: { conta: string }, id: string, de: st
   }
 }
 
+/**
+ * Quando a Meta recusa a chave com um erro genérico ("API access blocked", permissão…), descobre
+ * o motivo de verdade: o debug_token diz de qual app é a chave, as permissões e as contas que ela
+ * alcança. A resposta vira um passo a passo para quem gerou a chave.
+ */
+async function diagnostico(chave: string, cfg: { conta: string }, e: ErroDaMeta): Promise<string> {
+  const detalhe = `Resposta da Meta: ${e.message}${e.codigo ? ` (código ${e.codigo}${e.sub ? `/${e.sub}` : ''})` : ''}`
+  let info: any = null
+  try { info = (await graph(chave, 'debug_token', { input_token: chave }, 1))[0]?.data } catch { /* a própria consulta falhou */ }
+  if (!info) return `A Meta não deixou nem conferir a chave. Gere uma nova no usuário do sistema e cole de novo.\n${detalhe}`
+  const app = info.application ? `o app “${info.application}”` : 'o app da chave'
+  const linkApp = info.app_id ? ` (developers.facebook.com/apps/${info.app_id})` : ''
+  if (info.is_valid === false) return `A chave não vale mais. Gere uma nova, com validade Nunca, e cole de novo.\n${detalhe}`
+  const escopos: string[] = info.scopes ?? []
+  const faltam = ['ads_read', 'ads_management'].filter((x) => !escopos.includes(x))
+  if (faltam.length === 2) return `A chave foi gerada sem as permissões de anúncio. Ao gerar o token, marque ads_read e ads_management (e business_management).\n${detalhe}`
+  const alcance = (info.granular_scopes ?? []).filter((g: any) => g.scope === 'ads_read' || g.scope === 'ads_management').flatMap((g: any) => g.target_ids ?? [])
+  if (alcance.length && !alcance.includes(cfg.conta) && !alcance.includes(`act_${cfg.conta}`)) {
+    return `A chave não alcança a conta de anúncios ${cfg.conta}. Em Usuários do sistema › Atribuir ativos, adicione essa conta com controle total e gere o token de novo.\n${detalhe}`
+  }
+  if (e.codigo === 200 || /blocked/i.test(e.message)) {
+    return `A Meta bloqueou ${app}${linkApp} para a API de anúncios. Acontece quando o app está restrito, em análise ou sem o produto Marketing API. Abra o app e veja o aviso no painel; se o app estiver restrito, gere a chave com outro app do mesmo negócio.\n${detalhe}`
+  }
+  return detalhe
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS })
   if (req.method !== 'POST') return json({ erro: 'Use POST' }, 405)
@@ -340,6 +366,7 @@ Deno.serve(async (req) => {
   } catch (e) {
     if (e instanceof ErroDaMeta && e.codigo === 190) return json({ chaveInvalida: true, erro: 'A Meta não aceitou a chave (venceu ou foi trocada). Cole uma nova.' })
     if (e instanceof ErroDaMeta && [4, 17, 32, 613, 80004].includes(e.codigo)) return json({ erro: 'A Meta pediu uma pausa nas consultas. Tente de novo em alguns minutos.' }, 429)
+    if (e instanceof ErroDaMeta) return json({ erro: await diagnostico(chave, cfg, e) }, 502)
     return json({ erro: `A Meta respondeu: ${(e as Error).message}` }, 502)
   }
 })

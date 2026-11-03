@@ -200,16 +200,23 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
 
   // a conta e o período em vigor: resposta que chega depois de trocar (Naor ↔ Victor) é descartada
   const vigente = useRef(''); vigente.current = `${parceiro}|${de}|${ate}`
-  const carregar = async (forcar = false) => {
-    if (!parceiro) return
+  /** Devolve o erro da Meta (ou null). `calado`: quem chamou mostra o erro no lugar dele. */
+  const carregar = async (forcar = false, calado = false): Promise<string | null> => {
+    if (!parceiro) return null
     const pedido = `${parceiro}|${de}|${ate}`
     setCarregando(true); setErro(null)
     const [m, f] = await Promise.allSettled([api.painel(sessao, parceiro, de, ate, forcar), api.funil(sessao, parceiro, de, ate)])
-    if (vigente.current !== pedido) return
-    if (m.status === 'fulfilled') { setMeta(m.value); setAoVivo(null) } else setErro(m.reason?.message ?? 'Não consegui falar com a Meta agora.')
+    if (vigente.current !== pedido) return null
+    const recusou = m.status === 'fulfilled' && m.value && 'chaveInvalida' in m.value ? ((m.value as { erro?: string }).erro ?? 'A Meta não aceitou a chave.') : null
+    const falhaDaMeta = m.status === 'fulfilled' ? recusou : (m.reason?.message ?? 'Não consegui falar com a Meta agora.') as string
+    if (m.status === 'fulfilled') { setMeta(m.value); setAoVivo(null) } else if (!calado) setErro(falhaDaMeta)
     if (f.status === 'fulfilled') { setFunil(f.value); setBanco(new Date().toISOString()) } else setErro((e) => e ?? f.reason?.message)
     setCarregando(false)
-    // o período anterior e os horários vêm depois, sem segurar a tela
+    carregouOutras(pedido, de, ate)
+    return falhaDaMeta
+  }
+  // o período anterior e os horários vêm depois, sem segurar a tela
+  const carregouOutras = (pedido: string, de: string, ate: string) => {
     const ant = anteriorA(de, ate)
     void Promise.allSettled([api.resumo(sessao, parceiro, ant.de, ant.ate), api.funil(sessao, parceiro, ant.de, ant.ate), api.horarios(sessao, parceiro, de, ate)]).then(([r, fa, h]) => {
       if (vigente.current !== pedido) return
@@ -283,8 +290,14 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
 
   const salvarChave = async (valor: string) => {
     setSalvando({ indo: true })
-    try { await api.salvarChave(sessao, parceiro, valor); setChave(''); setSalvando({ ok: valor ? 'Conta conectada. Buscando os números…' : 'Chave removida.' }); void carregar(true) }
-    catch (e) { setSalvando({ erro: (e as Error).message }) }
+    try { await api.salvarChave(sessao, parceiro, valor) }
+    catch (e) { setSalvando({ erro: (e as Error).message }); return }
+    setChave('')
+    if (!valor) { setSalvando({ ok: 'Chave removida.' }); void carregar(true); return }
+    // só diz "conectada" depois que a Meta aceitou a chave de verdade
+    setSalvando({ indo: true, ok: 'Chave guardada. Testando com a Meta…' })
+    const falha = await carregar(true, true)
+    setSalvando(falha ? { erro: falha } : { ok: 'Conta conectada. Os números já estão na tela.' })
   }
 
   const contaAtual = contas.find((c) => c.codigo === parceiro)
@@ -294,8 +307,11 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const copiarChave = async () => {
     if (!vizinha) return
     setSalvando({ indo: true })
-    try { await api.copiarChave(sessao, vizinha.codigo, parceiro); setSalvando({ ok: 'Conta conectada com a mesma chave. Buscando os números…' }); void carregar(true) }
-    catch (e) { setSalvando({ erro: (e as Error).message }) }
+    try { await api.copiarChave(sessao, vizinha.codigo, parceiro) }
+    catch (e) { setSalvando({ erro: (e as Error).message }); return }
+    setSalvando({ indo: true, ok: 'Chave copiada. Testando com a Meta…' })
+    const falha = await carregar(true, true)
+    setSalvando(falha ? { erro: falha } : { ok: 'Conta conectada com a mesma chave. Os números já estão na tela.' })
   }
   const semChave = meta != null && 'semChave' in meta
   const chaveRuim = meta != null && 'chaveInvalida' in meta
