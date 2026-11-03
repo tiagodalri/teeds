@@ -579,6 +579,8 @@ export default function App() {
     if (estavaTrancado.current && !trancado && situacao === 'ativo') {
       setAviso({ tipo: 'ok', texto: `Acesso liberado. Bem-vindo à ${MARCA.prosa}, GF Member.` })
       eventoDoPixel('AcessoLiberado', undefined, true)
+      // liberado com a live ainda no ar (20h30): a live continua aberta, agora por cima da plataforma
+      if (live?.noAr) setAssistindoLive(true)
     }
     estavaTrancado.current = trancado
   }, [trancado, situacao])

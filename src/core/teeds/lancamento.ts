@@ -20,6 +20,14 @@ export const INICIO_DA_LIVE = Date.UTC(2026, 10, 9, 23, 0, 0)
 /** Margem de 3 horas para a live terminar e a liberação acontecer. */
 export const FIM_DA_LIVE = INICIO_DA_LIVE + 3 * 36e5
 
+/**
+ * 09/11, 20h30 de Brasília (03/11/2026, Tiago: "depois da live, em torno das 20h30, todos tenham o
+ * acesso liberado e sejam cadastrados como GF Member... válido até 09/11/2027"). Nessa hora o banco
+ * libera todo inscrito (teeds_lancamento_liberar_agora), assistindo ou não, e a tranca sai de quem
+ * já tinha acesso.
+ */
+export const LIBERACAO_DE_TODOS = INICIO_DA_LIVE + 30 * 6e4
+
 /** O plano de quem se inscreveu e ainda não passou pela live. */
 export const PLANO_AGUARDANDO = 'globalfly-aguardando-live'
 
@@ -38,9 +46,13 @@ export function emPreAcesso(agora = Date.now()): boolean {
  * A plataforma trancada: inscrito da GF ainda não liberado. Até o fim da live,
  * vale para todo cadastro pendente; depois, só para quem está no plano
  * "Aguardando live" (os outros pendentes voltam à tela de análise de sempre).
+ * Quem já tinha acesso fica trancado até LIBERACAO_DE_TODOS.
  */
 export function trancadoAteALive(situacao: string | null, plano: string | null, admin: boolean | null, agora = Date.now()): boolean {
-  if (MARCA.id !== 'globalfly' || admin === true || situacao !== 'pendente') return false
+  if (MARCA.id !== 'globalfly' || admin === true) return false
+  // quem já tinha acesso (cliente, não administrador) também espera a live (Tiago, 03/11/2026)
+  if (situacao === 'ativo') return admin === false && agora < LIBERACAO_DE_TODOS
+  if (situacao !== 'pendente') return false
   return plano === PLANO_AGUARDANDO || agora < FIM_DA_LIVE
 }
 

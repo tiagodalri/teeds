@@ -79,18 +79,18 @@ export function AdminLancamento({ sessao }: { sessao: SessaoTeeds }) {
           <div><dt>Liberação</dt><dd>{hora(p?.liberadoEm ?? null)}</dd></div>
           <div><dt>Até o fim é</dt><dd>{p?.minimoPct ?? 80}% da live, com os últimos 10&nbsp;min</dd></div>
         </dl>
-        <p className="adm-lanc-texto">Às 20h de 09/11 a live entra no ar sozinha. Use <b>Começar agora</b> se for abrir antes. No fim, <b>Encerrar e liberar</b> marca o fim e transforma em GF Member quem ficou até o fim.</p>
+        <p className="adm-lanc-texto">Às 20h de 09/11 a live entra no ar sozinha. Use <b>Começar agora</b> se for abrir antes. Às <b>20h30</b>, todos os inscritos viram GF Member sozinhos, com acesso até 09/11/2027, mesmo quem não assistiu, e a live continua no ar para quem está vendo. <b>Encerrar e liberar</b> faz o mesmo na hora e marca o fim da live.</p>
         <div className="adm-lanc-botoes">
           {!p?.noAr && <button className="admin-primary" disabled={ocupado !== null} onClick={() => void fazer('comecar')}>{ocupado === 'comecar' ? 'Abrindo…' : encerrada ? 'Começar de novo' : 'Começar agora'}</button>}
           {p?.noAr && !confirmar && <button className="admin-primary" disabled={ocupado !== null} onClick={() => setConfirmar(true)}>Encerrar e liberar</button>}
           {p?.noAr && confirmar && (
             <span className="adm-lanc-confirma">
-              <b>Encerrar agora libera {p.ficaram} {p.ficaram === 1 ? 'pessoa' : 'pessoas'}.</b>
+              <b>Encerrar agora libera os {p.aguardando} {p.aguardando === 1 ? 'inscrito' : 'inscritos'} como GF Member.</b>
               <button className="admin-primary" disabled={ocupado !== null} onClick={() => void fazer('encerrar')}>{ocupado === 'encerrar' ? 'Liberando…' : 'Confirmar'}</button>
               <button onClick={() => setConfirmar(false)}>Cancelar</button>
             </span>
           )}
-          {encerrada && <button disabled={ocupado !== null} onClick={() => void fazer('liberar')}>{ocupado === 'liberar' ? 'Liberando…' : 'Liberar de novo quem ficou'}</button>}
+          {encerrada && <button disabled={ocupado !== null} onClick={() => void fazer('liberar')}>{ocupado === 'liberar' ? 'Liberando…' : 'Liberar de novo os inscritos'}</button>}
           {encerrada && !p?.liberadoEm && <button disabled={ocupado !== null} onClick={() => void fazer('retomar')}>Voltar ao ar</button>}
         </div>
       </section>

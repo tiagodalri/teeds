@@ -290,8 +290,8 @@ export function emailDeAprovacao(marca: Marca, email: string, aindaProvisoria: b
   if (daLive) return montarEmail(marca,'convite',enderecoDe(marca,parceiro),{
     assunto:`Seu acesso está liberado · bem-vindo à ${marca.prosa}`,
     titulo:'Seu acesso está liberado',
-    espia:'Você ficou na live até o fim. A plataforma é sua.',
-    corpo:`Você ficou na live de lançamento até o fim e agora é **GF Member**. A ${marca.prosa} está liberada para você: as I.A., a operação manual, as aulas e a sala de treino.\n\nO próximo passo é conectar a sua conta da Deriv dentro da plataforma.\n\n${entrada}`,
+    espia:'A live de lançamento aconteceu. A plataforma é sua, até 09/11/2027.',
+    corpo:`A live de lançamento da ${marca.prosa} aconteceu e agora você é **GF Member**, com acesso até **09/11/2027**. A plataforma está liberada para você: as I.A., a operação manual, as aulas e a sala de treino.\n\nO próximo passo é conectar a sua conta da Deriv dentro da plataforma.\n\n${entrada}`,
     botao:'Entrar na GlobalFly',
     aviso:'Guarde seus dados de acesso com segurança. Não compartilhe sua senha com ninguém.',
   })

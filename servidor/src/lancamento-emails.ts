@@ -200,8 +200,8 @@ export async function enviarEmailsDoLancamento(agora = Date.now()) {
   if (rodando || agora < Date.UTC(2026, 10, 2) || agora > INICIO_DA_LIVE + 4 * 864e5) return
   rodando = true
   try {
-    // ninguém encerrou: 3 h depois do horário marcado, a live fecha e libera quem ficou
-    if (agora >= INICIO_DA_LIVE + 3 * h) await banco('/rest/v1/rpc/teeds_lancamento_fechar_sozinha', 'POST', { p_marca: MARCA }).catch(() => undefined)
+    // 20h30 de 09/11: todos os inscritos viram GF Member (Tiago, 03/11/2026); a live fecha sozinha 3 h depois
+    if (agora >= INICIO_DA_LIVE + 0.5 * h) await banco('/rest/v1/rpc/teeds_lancamento_fechar_sozinha', 'POST', { p_marca: MARCA }).catch(() => undefined)
 
     const marca = marcaPorId(MARCA)
     if (!marca.email.remetente) return

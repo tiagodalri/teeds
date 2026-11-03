@@ -27,8 +27,6 @@
 .pendente-parceiro.n,.pendente-parceiro.v{border-color:var(--primary,#cfa94f);color:var(--primary,#cfa94f)}
 /* Lançamento da GF (03/11/2026): no lugar do Aprovar, o aviso de que a live libera sozinha. */
 .pendente-acoes .pendente-na-live{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:9px;background:var(--primary-soft,#cfa94f18);color:var(--primary,#cfa94f);font-size:13px;font-weight:650;white-space:nowrap}
-.admin-pendentes button.pendente-antes{border-color:transparent;color:var(--muted,#9298a3);font-size:12.5px;text-decoration:underline;text-underline-offset:3px}
-.pendente-confirmar .pendente-alerta{padding:10px 12px;border-radius:9px;background:color-mix(in srgb,var(--down,#e5484d) 12%,transparent);color:var(--down,#e5484d);font-weight:600}
 /* O questionário na aprovação (03/11/2026): de quem é o cliente e o que respondeu, numa coluna própria. */
 .pendente-linha{grid-template-columns:minmax(0,1fr) minmax(0,1.35fr) minmax(0,.85fr) auto}
 .pendente-linha>.pdq{align-content:start;gap:7px}

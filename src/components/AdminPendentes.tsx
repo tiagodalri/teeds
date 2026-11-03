@@ -134,13 +134,13 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
     Lançamento da GF (03/11/2026, Tiago: "achei que eu precisasse aprovar para ela receber que o
     cadastro está ok"): até o fim da live o cadastro já é a conta. A pessoa recebeu "Inscrição
     confirmada" com o acesso, entra com a senha que criou e vê a plataforma trancada; o acesso abre
-    sozinho no fim da live. Aprovar antes abriria tudo e mandaria "cadastro aprovado", então o botão
-    sai da frente e fica só "Liberar antes da live", com o aviso.
+    sozinho às 20h30 de 09/11. Aprovar antes só mandaria "cadastro aprovado" (até 20h30 todo cliente que
+    não é administrador fica trancado), então o botão sai da frente.
   */
   const naLive = marca === 'globalfly' && Date.now() < FIM_DA_LIVE
   return <section className="admin-card admin-pendentes">
     <header><div><span className="rot">Cadastros pelo formulário</span><h3>Aprovação de clientes <em className="pendente-marca">{NOME_DA_MARCA[marca] ?? marca}</em></h3><p>{naLive
-      ? 'Até a live de 09/11 não precisa aprovar ninguém. Quem se inscreve já recebe a confirmação por e‑mail, entra com a senha que criou e vê a plataforma trancada, com a contagem. No fim da live, quem assistiu até o fim é liberado sozinho.'
+      ? 'Até a live de 09/11 não precisa aprovar ninguém. Quem se inscreve já recebe a confirmação por e‑mail, entra com a senha que criou e vê a plataforma trancada, com a contagem. Em 09/11, às 20h30, todos viram GF Member sozinhos, com acesso até 09/11/2027.'
       : 'Novos cadastros e recadastros aguardam sua aprovação. Cada marca tem a sua conta: quem já é cliente de outra plataforma ganha uma conta nova aqui, com senha própria.'}</p></div><button disabled={!!ocupado||carregando} onClick={()=>setRevisao(v=>v+1)}>Atualizar</button></header>
     <nav aria-label="Status da aprovação">{[['pendente','Pendentes'],['processando','Em aprovação'],['aprovado','Aprovados'],['recusado','Recusados']].map(([id,nome])=><button key={id} aria-pressed={status===id} disabled={!!ocupado} onClick={()=>{setStatus(id);setPagina(0);setConfirmar(null);setAviso('')}}>{nome}</button>)}</nav>
     {erro&&<p role="alert">{erro}</p>}{aviso&&<p role="status">{aviso}</p>}
@@ -175,13 +175,12 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
       })()}
       <div><small>Último cadastro: {new Date(p.ultima_inscricao_em||p.criado_em).toLocaleString('pt-BR')}</small><span>{p.status==='aprovado'?(p.email_enviado_em?'E-mail enviado':'E-mail na fila de envio'):p.status==='processando'?'Aprovação iniciada; pode ser retomada após dois minutos.':p.status==='recusado'?'Recusado':naLive?'Inscrito na live · confirmação enviada':'Pendente de aprovação'}</span></div>
       {['pendente','processando'].includes(p.status)&&confirmar?.p.id!==p.id&&<div className="pendente-acoes">{naLive&&p.status==='pendente'
-        ? <><span className="pendente-na-live">Libera sozinho no fim da live</span><button disabled={!!ocupado} className="pendente-antes" onClick={()=>setConfirmar({p,acao:'aprovar'})}>Liberar antes da live</button></>
+        ? <span className="pendente-na-live">Libera sozinho em 09/11, 20h30</span>
         : <button disabled={!!ocupado} className="admin-primary" onClick={()=>setConfirmar({p,acao:'aprovar'})}>{p.status==='processando'?'Retomar aprovação':'Aprovar'}</button>}{p.status==='pendente'&&<button disabled={!!ocupado} onClick={()=>setConfirmar({p,acao:'recusar'})}>Recusar</button>}</div>}
       {/* A confirmação nasce na linha do próprio cadastro (29/10/2026): no topo
           da lista, quem clicava no 30º cadastro não via a pergunta. */}
       {confirmar?.p.id===p.id&&<div className="pendente-confirmar" role="group" aria-label={`Confirmar: ${confirmar.acao==='aprovar'?'aprovar':'recusar'} ${p.nome}`}>
-        <b>{confirmar.acao==='aprovar'?(naLive&&p.status==='pendente'?'Liberar':'Aprovar'):'Recusar'} {p.nome}{confirmar.acao==='aprovar'&&naLive&&p.status==='pendente'?' antes da live':''}?</b>
-        {confirmar.acao==='aprovar'&&naLive&&p.status==='pendente'&&<p className="pendente-alerta">Isso abre a plataforma inteira agora, tira a pessoa da contagem e dos e-mails da live e manda o e‑mail “Cadastro aprovado”. Use só para alguém da equipe ou um caso combinado.</p>}
+        <b>{confirmar.acao==='aprovar'?'Aprovar':'Recusar'} {p.nome}?</b>
         {confirmar.acao==='aprovar' && (p.status==='pendente' || parceiros.length>0) && <div className="pendente-escolhas">
           {p.status==='pendente' && <label>Plano do cliente <select value={plano} disabled={!!ocupado} onChange={e=>setPlano(e.target.value)}>{opcoesDePlano.map(o=><option key={o.id} value={o.id}>{o.nome}</option>)}</select></label>}
           {parceiros.length>0 && <label>Parceiro do cliente <select value={parceiro} disabled={!!ocupado} onChange={e=>setParceiro(e.target.value)}>
@@ -196,7 +195,7 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
         <p>{confirmar.acao==='aprovar'
           ? 'O plano escolhido passa a valer e o cliente recebe o e-mail de aprovação. Quem criou a senha no cadastro continua com ela. Quem já tinha conta antes deste cadastro passa a entrar com a senha provisória do e-mail e cria uma nova no primeiro acesso: a senha antiga deixa de valer. Quem já tinha acesso liberado nesta plataforma mantém a situação e a validade atuais.'
           : 'Nenhum e-mail é enviado e o pedido fica guardado na aba Recusados. A conta criada no cadastro continua só com a tela de análise.'}</p>
-        <div><button disabled={!!ocupado} onClick={()=>setConfirmar(null)}>Cancelar</button><button className="admin-primary" disabled={!!ocupado} onClick={()=>void decidir()}>{ocupado?'Processando…':confirmar.acao==='aprovar'?(naLive&&p.status==='pendente'?'Liberar agora':'Aprovar'):'Recusar'}</button></div>
+        <div><button disabled={!!ocupado} onClick={()=>setConfirmar(null)}>Cancelar</button><button className="admin-primary" disabled={!!ocupado} onClick={()=>void decidir()}>{ocupado?'Processando…':confirmar.acao==='aprovar'?'Aprovar':'Recusar'}</button></div>
       </div>}
     </article>)}
     <footer><button disabled={pagina===0||!!ocupado||carregando} onClick={()=>setPagina(p=>p-1)}>Anterior</button><span>Página {pagina+1}</span><button disabled={lista.length<=50||!!ocupado||carregando} onClick={()=>setPagina(p=>p+1)}>Próxima</button></footer>
