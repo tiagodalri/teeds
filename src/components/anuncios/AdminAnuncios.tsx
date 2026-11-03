@@ -164,7 +164,9 @@ function Barras({ titulo, linhas, nome }: { titulo: string; linhas: Quebra[]; no
 /** `intervalo`: de quanto em quanto tempo o nosso banco é lido (o laboratório acelera). */
 export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_ESTUDIO, intervalo = 10_000 }: { sessao: SessaoTeeds; api?: ApiAnuncios; apiEstudio?: ApiEstudio; intervalo?: number }) {
   const contas = CONTAS_DE_ANUNCIO[MARCA.id] ?? []
-  const [parceiro, setParceiro] = useState(contas[0]?.codigo ?? '')
+  // a conta escolhida (Naor ou Victor) fica lembrada neste aparelho
+  const [parceiro, setParceiroAgora] = useState(() => { try { const v = localStorage.getItem('aa-parceiro'); return contas.some((c) => c.codigo === v) ? v! : contas[0]?.codigo ?? '' } catch { return contas[0]?.codigo ?? '' } })
+  const setParceiro = (c: string) => { setParceiroAgora(c); setAbrirConectar(false); setSalvando({}); try { localStorage.setItem('aa-parceiro', c) } catch { /* sem memória neste aparelho */ } }
   const [periodo, setPeriodo] = useState<IdPeriodo>('lancamento')
   const [meta, setMeta] = useState<RespostaDaMeta | null>(null)
   const [funil, setFunil] = useState<FunilDoBanco | null>(null)
@@ -278,7 +280,16 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
     catch (e) { setSalvando({ erro: (e as Error).message }) }
   }
 
-  const nomeParceiro = contas.find((c) => c.codigo === parceiro)?.nome ?? ''
+  const contaAtual = contas.find((c) => c.codigo === parceiro)
+  const nomeParceiro = contaAtual?.nome ?? ''
+  // outra conta do mesmo gerenciador de negócios: a mesma chave serve às duas
+  const vizinha = contas.find((c) => c.codigo !== parceiro && contaAtual && c.negocio === contaAtual.negocio)
+  const copiarChave = async () => {
+    if (!vizinha) return
+    setSalvando({ indo: true })
+    try { await api.copiarChave(sessao, vizinha.codigo, parceiro); setSalvando({ ok: 'Conta conectada com a mesma chave. Buscando os números…' }); void carregar(true) }
+    catch (e) { setSalvando({ erro: (e as Error).message }) }
+  }
   const semChave = meta != null && 'semChave' in meta
   const chaveRuim = meta != null && 'chaveInvalida' in meta
   const atualizado = banco ? Math.max(0, Math.round((agora - Date.parse(banco)) / 1000)) : null
@@ -297,8 +308,12 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
     <div className="aa">
       <div className="aa-topo">
         <div className="aa-conta">
-          {contas.length > 1 && <select value={parceiro} onChange={(e) => setParceiro(e.target.value)} aria-label="Conta de anúncios">{contas.map((c) => <option key={c.codigo} value={c.codigo}>{c.nome}</option>)}</select>}
-          <div><small>Conta de anúncios do {nomeParceiro}</small><b>{painel?.conta.nome || `Conta ${contas.find((c) => c.codigo === parceiro)?.conta}`}</b></div>
+          {contas.length > 1 && (
+            <div className="aa-troca aa-contas" role="tablist" aria-label="Conta de anúncios">
+              {contas.map((c) => <button key={c.codigo} type="button" role="tab" aria-selected={parceiro === c.codigo} className={parceiro === c.codigo ? 'on' : ''} onClick={() => setParceiro(c.codigo)}>{c.nome}<small>/{c.codigo}</small></button>)}
+            </div>
+          )}
+          <div><small>Conta de anúncios do {nomeParceiro}</small><b>{painel?.conta.nome || contaAtual?.contaNome}</b></div>
           {painel && <span className={`aa-status ${painel.conta.status === 1 ? 'ok' : 'erro'}`}>{painel.conta.status === 1 ? 'Conta ativa' : 'Conta com restrição'}</span>}
         </div>
         <div className="aa-acoes">
@@ -346,7 +361,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
             <p>{chaveRuim ? 'A Meta recusou a chave guardada (venceu ou foi trocada). Cole uma nova abaixo.' : 'O funil já mostra o que acontece dentro da plataforma. Para trazer investimento, cliques e cada anúncio, cole aqui a chave de acesso da conta de anúncios. A mesma chave liga também o envio do pixel pelo servidor.'}</p>
             <ol>
               <li>Em <b>business.facebook.com</b>, abrir <b>Configurações do negócio › Usuários do sistema</b> e escolher o usuário (ou criar um).</li>
-              <li><b>Atribuir ativos</b>: a conta <b>CA - NAOR BEZERRA</b> (controle total) e o pixel <b>PIXEL - NAOR BEZERRA OFICIAL</b>.</li>
+              <li><b>Atribuir ativos</b>: a conta <b>{contaAtual?.contaNome}</b> (controle total) e o pixel <b>{contaAtual?.pixelNome}</b>.</li>
               <li><b>Gerar novo token</b>, validade <b>Nunca</b>, com todas as permissões.</li>
             </ol>
           </div>
@@ -354,6 +369,11 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
             <label htmlFor="aa-chave">Chave de acesso da Meta</label>
             <input id="aa-chave" type="password" autoComplete="off" spellCheck={false} value={chave} onChange={(e) => setChave(e.target.value)} placeholder="Cole a chave que começa com EA" />
             <button type="submit" disabled={salvando.indo || !chave.trim()}>{salvando.indo ? 'Conectando…' : 'Conectar'}</button>
+            {vizinha && !chaveRuim && (
+              <button type="button" className="aa-mesma-chave" onClick={() => void copiarChave()} disabled={salvando.indo}>Usar a mesma chave do {vizinha.nome}
+                <small>As duas contas estão no mesmo gerenciador de negócios. Antes, confira se a conta {contaAtual?.contaNome} e o {contaAtual?.pixelNome} estão em “Atribuir ativos” do mesmo usuário.</small>
+              </button>
+            )}
             {abrirConectar && !semChave && !chaveRuim && <button type="button" className="aa-cancelar" onClick={() => setAbrirConectar(false)}>Agora não</button>}
             {salvando.erro && <p className="aa-erro">{salvando.erro}</p>}
             {salvando.ok && <p className="aa-ok">{salvando.ok}</p>}
@@ -425,7 +445,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
       )}
 
       {aba === 'estudio' && (
-        <EstudioDeAnuncios sessao={sessao} api={apiEstudio} parceiro={parceiro} contaNome={painel?.conta.nome || 'CA - NAOR BEZERRA'} painel={painel} funil={funil}
+        <EstudioDeAnuncios sessao={sessao} api={apiEstudio} parceiro={parceiro} contaNome={painel?.conta.nome || contaAtual?.contaNome || ''} painel={painel} funil={funil}
           custoPorCadastro={total && cadDeAnuncio ? total.gasto / cadDeAnuncio : null} recarregar={() => void carregar(true)}
           abrirChave={() => { setAbrirConectar(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }} pedido={pedidoEstudio} />
       )}

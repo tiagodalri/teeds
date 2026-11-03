@@ -1,5 +1,5 @@
 // Recebe a ponte da Meta (02/11/2026): o script scripts/ponte-meta/enviar.py, rodado pela tarefa
-// agendada do Claude no Mac do Tiago, manda aqui o que a integração Meta Ads leu da conta do Naor.
+// agendada do Claude no Mac do Tiago, manda aqui o que a integração Meta Ads leu das contas do Naor (/n) e do Victor (/v).
 // Só aceita com o segredo da ponte (cabeçalho x-ponte): o segredo mora num arquivo no Mac e aqui
 // fica só a impressão digital dele (PONTE_META_HASH em config_servicos).
 //
@@ -12,7 +12,7 @@ const rest = (caminho: string, init: RequestInit = {}) => fetch(`${SUPABASE_URL}
   ...init,
   headers: { apikey: SERVICO, Authorization: `Bearer ${SERVICO}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
 })
-const PARCEIROS: Record<string, string[]> = { globalfly: ['n'] }
+const PARCEIROS: Record<string, string[]> = { globalfly: ['n', 'v'] }
 
 async function sha256(texto: string) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto))

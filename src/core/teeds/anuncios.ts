@@ -73,6 +73,8 @@ export interface ApiAnuncios {
   anuncio: (sessao: SessaoTeeds, parceiro: string, id: string, de: string, ate: string) => Promise<DetalheDoAnuncio>
   funil: (sessao: SessaoTeeds, parceiro: string, de: string, ate: string) => Promise<FunilDoBanco>
   salvarChave: (sessao: SessaoTeeds, parceiro: string, chave: string) => Promise<unknown>
+  /** copia, no servidor, a chave de um parceiro para outro do mesmo gerenciador de negócios */
+  copiarChave: (sessao: SessaoTeeds, de: string, para: string) => Promise<unknown>
   horarios: (sessao: SessaoTeeds, parceiro: string, de: string, ate: string) => Promise<Horarios>
 }
 export interface Horarios { porHora: Array<{ hora: number; cadastros: number; deAnuncio: number }>; porSemana: Array<{ dia: number; cadastros: number; deAnuncio: number }> }
@@ -82,10 +84,19 @@ export const API_DO_BANCO: ApiAnuncios = {
   anuncio: (s, parceiro, id, de, ate) => funcao(s, { acao: 'anuncio', parceiro, id, de, ate }),
   funil: (s, parceiro, de, ate) => rpc(s, 'teeds_meta_funil', { p_marca: MARCA.id, p_parceiro: parceiro, p_de: de, p_ate: ate }),
   salvarChave: (s, parceiro, chave) => rpc(s, 'teeds_meta_ads_chave_salvar', { p_marca: MARCA.id, p_parceiro: parceiro, p_chave: chave }),
+  copiarChave: (s, de, para) => rpc(s, 'teeds_meta_ads_chave_copiar', { p_marca: MARCA.id, p_de: de, p_para: para }),
   horarios: (s, parceiro, de, ate) => rpc(s, 'teeds_meta_horarios', { p_marca: MARCA.id, p_parceiro: parceiro, p_de: de, p_ate: ate }),
 }
 
-/** Os parceiros que têm conta de anúncios ligada (o mesmo mapa de supabase/functions/meta-ads). */
-export const CONTAS_DE_ANUNCIO: Partial<Record<string, Array<{ codigo: string; nome: string; conta: string }>>> = {
-  globalfly: [{ codigo: 'n', nome: 'Naor', conta: '977357031377237' }],
+/**
+ * Os parceiros que têm conta de anúncios ligada (o mesmo mapa de supabase/functions/meta-ads).
+ * 03/11/2026: entrou a do Victor Cordeiro. As duas estão no mesmo gerenciador de negócios
+ * (`negocio`), então a mesma chave serve às duas (o botão "Usar a mesma chave" copia no servidor).
+ */
+export interface ContaDeAnuncio { codigo: string; nome: string; conta: string; contaNome: string; pixelNome: string; negocio: string }
+export const CONTAS_DE_ANUNCIO: Partial<Record<string, ContaDeAnuncio[]>> = {
+  globalfly: [
+    { codigo: 'n', nome: 'Naor', conta: '977357031377237', contaNome: 'CA - NAOR BEZERRA', pixelNome: 'PIXEL - NAOR BEZERRA OFICIAL', negocio: '1170351821880082' },
+    { codigo: 'v', nome: 'Victor', conta: '854985874324156', contaNome: 'CA Victor Cordeiro Real', pixelNome: 'Pixel Victor Cordeiro ATIVO', negocio: '1170351821880082' },
+  ],
 }

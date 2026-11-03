@@ -34,7 +34,11 @@ const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo
 
 // a conta, o pixel, a página e o Instagram de cada parceiro (conferidos na conta em 03/11/2026)
 const CONTAS: Record<string, Record<string, { conta: string; pixel: string; pagina: string; paginaNome: string; instagram: string; usuario: string; link: string }>> = {
-  globalfly: { n: { conta: '977357031377237', pixel: '1625935188283999', pagina: '483727028157678', paginaNome: 'Naor Bezzera', instagram: '17841406873438157', usuario: 'naorbezerra_', link: 'https://globalflytrade.com/n/cadastro/' } },
+  globalfly: {
+    n: { conta: '977357031377237', pixel: '1625935188283999', pagina: '483727028157678', paginaNome: 'Naor Bezzera', instagram: '17841406873438157', usuario: 'naorbezerra_', link: 'https://globalflytrade.com/n/cadastro/' },
+    // Victor: a conta não tem Instagram ligado; o estúdio procura o da página e, sem ele, o anúncio sai com a página
+    v: { conta: '854985874324156', pixel: '2208036990064467', pagina: '100283049512812', paginaNome: 'Victor Cordeiroi', instagram: '', usuario: '', link: 'https://globalflytrade.com/v/cadastro/' },
+  },
 }
 const PREFIXO = 'GF |'
 const MARCACOES = 'utm_source=meta&utm_medium=pago&utm_campaign={{campaign.name}}&utm_content={{ad.id}}'
@@ -135,9 +139,11 @@ async function criarConjunto(chave: string, act: string, cfg: { pixel: string },
 
 async function criarCriativo(chave: string, act: string, cfg: { pagina: string; instagram: string }, nome: string, midia: Midia, texto: Texto, link: string, avisos: string[]) {
   const cta = { type: BOTOES.includes(texto.botao) ? texto.botao : 'SIGN_UP', value: { link } }
+  // sem Instagram ligado, a Meta usa a página também no Instagram
+  const ig = cfg.instagram ? { instagram_user_id: cfg.instagram } : {}
   const historia = midia.tipo === 'video'
-    ? { page_id: cfg.pagina, instagram_user_id: cfg.instagram, video_data: { video_id: midia.videoId, image_hash: midia.posterHash, message: texto.principal, title: texto.titulo, link_description: texto.descricao || undefined, call_to_action: cta } }
-    : { page_id: cfg.pagina, instagram_user_id: cfg.instagram, link_data: { link, image_hash: midia.hash, message: texto.principal, name: texto.titulo, description: texto.descricao || undefined, call_to_action: cta } }
+    ? { page_id: cfg.pagina, ...ig, video_data: { video_id: midia.videoId, image_hash: midia.posterHash, message: texto.principal, title: texto.titulo, link_description: texto.descricao || undefined, call_to_action: cta } }
+    : { page_id: cfg.pagina, ...ig, link_data: { link, image_hash: midia.hash, message: texto.principal, name: texto.titulo, description: texto.descricao || undefined, call_to_action: cta } }
   // sem as "melhorias automáticas" de texto da Meta: ela poderia reescrever com palavras que a marca não usa
   const base = { name: nome, object_story_spec: historia, url_tags: MARCACOES }
   try {
@@ -174,6 +180,11 @@ async function criar(chave: string, cfg: typeof CONTAS['globalfly']['n'], r: any
   if (!(await videoPronto(chave, d.midia)) || !(await videoPronto(chave, teste ? d.midiaB : undefined))) return { aguardando: 'video', progresso: p }
 
   const nomeAd = comPrefixo(d.nomeAnuncio || 'Anúncio')
+  // sem Instagram fixo (Victor): o que estiver ligado à página, se houver
+  if (!cfg.instagram) {
+    const pg = await ler(chave, cfg.pagina, { fields: 'instagram_business_account{id}' }).catch(() => null)
+    cfg = { ...cfg, instagram: pg?.instagram_business_account?.id ?? '' }
+  }
   // 1) a campanha: nova (pausada) ou uma da GF que já existe
   if (!p.campanhaId) {
     if (d.destino.campanha === 'nova') {
@@ -242,7 +253,7 @@ Deno.serve(async (req) => {
 
   const c = await rest(`config_servicos?chave=eq.META_ADS_${marca.toUpperCase()}_${parceiro.toUpperCase()}&select=valor`)
   const chave = c.ok ? ((await c.json())[0]?.valor as string | undefined) : undefined
-  const padrao = { conta: cfg.conta, pagina: { id: cfg.pagina, nome: cfg.paginaNome, foto: null as string | null }, instagram: { id: cfg.instagram, usuario: cfg.usuario, foto: null as string | null }, link: cfg.link, maxDia: MAX_DIA }
+  const padrao = { conta: cfg.conta, pagina: { id: cfg.pagina, nome: cfg.paginaNome, foto: null as string | null }, instagram: { id: cfg.instagram, usuario: cfg.usuario || cfg.paginaNome, foto: null as string | null }, link: cfg.link, maxDia: MAX_DIA }
 
   if (acao === 'contexto' && !chave) {
     // sem a chave: dá para montar rascunhos com as campanhas que a ponte trouxe; criar, só com a chave
@@ -265,11 +276,11 @@ Deno.serve(async (req) => {
         ler(chave, `${act}/campaigns`, { fields: 'id,name,effective_status,daily_budget', filtering: filtro, limit: '200' }),
         ler(chave, `${act}/adsets`, { fields: 'id,name,effective_status,campaign_id,campaign{name},daily_budget,targeting', limit: '300' }),
       ])
-      const ig = pagina?.instagram_business_account
+      const igDaPagina = pagina?.instagram_business_account
       return json({
         ...padrao,
         pagina: { id: cfg.pagina, nome: pagina?.name ?? cfg.paginaNome, foto: pagina?.picture?.data?.url ?? null },
-        instagram: { id: ig?.id ?? cfg.instagram, usuario: ig?.username ?? cfg.usuario, foto: ig?.profile_picture_url ?? null },
+        instagram: { id: igDaPagina?.id ?? cfg.instagram, usuario: igDaPagina?.username ?? (cfg.usuario || pagina?.name || cfg.paginaNome), foto: igDaPagina?.profile_picture_url ?? pagina?.picture?.data?.url ?? null },
         campanhas: (campanhas.data ?? []).map((x: any) => ({ id: x.id, nome: x.name, status: x.effective_status, orcDia: Number(x.daily_budget ?? 0) / 100 })),
         conjuntos: (conjuntos.data ?? []).filter((x: any) => String(x.campaign?.name ?? '').includes(PREFIXO))
           .map((x: any) => ({ id: x.id, nome: x.name, status: x.effective_status, campanhaId: x.campaign_id, orcDia: Number(x.daily_budget ?? 0) / 100, publico: x.targeting?.targeting_automation?.advantage_audience === 1 ? 'Público Advantage+' : `${x.targeting?.age_min ?? 18}–${x.targeting?.age_max ?? 65} anos` })),

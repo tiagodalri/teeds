@@ -133,6 +133,7 @@ export default function LabAnuncios() {
     anuncio: (_s, _p, id, de, ate) => espera({ porDia: painel(de, ate).porDia.map((d) => ({ ...d, gasto: d.gasto / 3 })), idadeGenero: painel(de, ate).quebras.idadeGenero, posicionamento: painel(de, ate).quebras.posicionamento }, 500 + id.length),
     funil: () => espera(funil()),
     salvarChave: () => espera(null),
+    copiarChave: () => espera(null),
     horarios: () => espera({
       porHora: Array.from({ length: 24 }, (_, hora) => { const n = Math.round(Math.max(0, Math.sin((hora - 6) / 24 * Math.PI * 2) * 14 + 9 + (hora >= 19 && hora <= 22 ? 12 : 0))); return { hora, cadastros: n + 2, deAnuncio: n } }),
       porSemana: [31, 44, 41, 38, 47, 36, 29].map((n, dia) => ({ dia, cadastros: n + 3, deAnuncio: n })),

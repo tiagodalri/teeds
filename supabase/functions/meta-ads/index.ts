@@ -27,7 +27,7 @@ const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo
 
 // conta de anúncios e pixel de cada parceiro (o pixel é o mesmo de captura.js)
 const CONTAS: Record<string, Record<string, { conta: string; pixel: string }>> = {
-  globalfly: { n: { conta: '977357031377237', pixel: '1625935188283999' } },
+  globalfly: { n: { conta: '977357031377237', pixel: '1625935188283999' }, v: { conta: '854985874324156', pixel: '2208036990064467' } },
 }
 
 // A conta do Naor tem outras campanhas (o quiz da Universidade Trading): só entram as da GlobalFly

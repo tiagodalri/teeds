@@ -8,8 +8,9 @@ numa pasta e chama este script, que monta os números no formato do painel e man
 meta-ponte do Supabase. O segredo da ponte fica em ~/.config/globalfly/ponte-meta.segredo (gerado
 neste Mac; no banco só existe a impressão digital dele).
 
-  python3 enviar.py plano     -> limpa a pasta e diz o período e o horário do pixel a pedir
-  python3 enviar.py enviar    -> lê a pasta, monta e envia; imprime o resumo
+  python3 enviar.py plano [n|v]   -> limpa a pasta do parceiro e diz o período e o horário do pixel a pedir
+  python3 enviar.py enviar [n|v]  -> lê a pasta do parceiro, monta e envia; imprime o resumo
+  (03/11/2026: n = conta do Naor, v = conta do Victor Cordeiro; sem o código, vale o Naor)
 
 Arquivos esperados na pasta (a resposta da ferramenta, sem mexer):
   campanhas.json   ads_get_ad_entities, level=campaign, só as "GF |"
@@ -23,12 +24,19 @@ Arquivo que faltar é pulado (sem campanhas "GF |", só vão a conta e o pixel).
 import json, os, sys, shutil, urllib.request
 from datetime import datetime, timedelta, timezone
 
-MARCA, PARCEIRO = 'globalfly', 'n'
-CONTA = {'id': '977357031377237', 'nome': 'CA - NAOR BEZERRA', 'moeda': 'BRL', 'status': 1, 'fuso': 'America/Sao_Paulo'}
+MARCA = 'globalfly'
+CONTAS = {
+    'n': {'id': '977357031377237', 'nome': 'CA - NAOR BEZERRA', 'moeda': 'BRL', 'status': 1, 'fuso': 'America/Sao_Paulo'},
+    'v': {'id': '854985874324156', 'nome': 'CA Victor Cordeiro Real', 'moeda': 'BRL', 'status': 1, 'fuso': 'America/Sao_Paulo'},
+}
+PARCEIRO = sys.argv[2] if len(sys.argv) > 2 else 'n'
+if PARCEIRO not in CONTAS:
+    sys.exit(f'Parceiro desconhecido: {PARCEIRO} (use n ou v)')
+CONTA = CONTAS[PARCEIRO]
 INICIO = '2026-11-02'  # o lançamento: antes disso não há campanha da GlobalFly
 FUNCAO = 'https://wonxykovfvfnuhzpqsle.supabase.co/functions/v1/meta-ponte'
 SEGREDO = os.path.expanduser('~/.config/globalfly/ponte-meta.segredo')
-PASTA = os.path.expanduser('~/Library/Caches/globalfly-ponte')
+PASTA = os.path.expanduser(f'~/Library/Caches/globalfly-ponte/{PARCEIRO}')
 BRT = timezone(timedelta(hours=-3))
 
 # nome do campo da integração -> nome no painel (Metricas, em src/core/teeds/anuncios.ts)
