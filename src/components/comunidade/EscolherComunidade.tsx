@@ -37,13 +37,14 @@ export const LogoInstagram = ({ tam = 28 }: { tam?: number }) => (
 
 function Janela({ fechar, whatsapp, instagram }: { fechar: () => void; whatsapp: string; instagram: string }) {
   const caixa = useRef<HTMLDivElement>(null)
+  const fecharAgora = useRef(fechar); fecharAgora.current = fechar
   useEffect(() => {
     const antes = document.activeElement as HTMLElement | null
     caixa.current?.querySelector<HTMLAnchorElement>('a')?.focus()
-    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') fechar() }
+    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') fecharAgora.current() }
     window.addEventListener('keydown', tecla)
     return () => { window.removeEventListener('keydown', tecla); antes?.focus?.() }
-  }, [fechar])
+  }, [])
   const opcoes = [
     { id: 'whatsapp', href: whatsapp, logo: <LogoWhatsApp tam={34} />, nome: 'Comunidade no WhatsApp', texto: 'Avisos da equipe e a agenda das transmissões, direto no seu celular.' },
     { id: 'instagram', href: instagram, logo: <LogoInstagram tam={34} />, nome: 'Comunidade no Instagram', texto: 'O canal oficial, com os bastidores e as novidades da plataforma.' },

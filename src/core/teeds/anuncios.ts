@@ -63,7 +63,9 @@ async function rpc<T>(sessao: SessaoTeeds, nome: string, corpo: unknown): Promis
     body: JSON.stringify(corpo),
   })
   if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(String(e?.message || `Não consegui falar com o banco agora (${r.status}).`)) }
-  return r.json() as Promise<T>
+  // salvar e copiar a chave não devolvem nada (corpo vazio): não é erro
+  const texto = await r.text()
+  return (texto ? JSON.parse(texto) : null) as T
 }
 
 /** O que a tela usa; o laboratório troca por números de exemplo. */

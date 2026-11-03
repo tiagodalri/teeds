@@ -43,10 +43,11 @@ export function Confirmar({ titulo, children, botao, perigo, indo, erro, confirm
   titulo: string; children: ReactNode; botao: string; perigo?: boolean; indo?: boolean; erro?: string | null; confirmar: () => void; cancelar: () => void
 }) {
   const caixa = useRef<HTMLDivElement>(null)
+  const atual = useRef({ indo, cancelar }); atual.current = { indo, cancelar }
   useEffect(() => {
     const antes = document.activeElement as HTMLElement | null
     caixa.current?.querySelector<HTMLButtonElement>('button.es-cancelar')?.focus()
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape' && !indo) cancelar() }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape' && !atual.current.indo) atual.current.cancelar() }
     window.addEventListener('keydown', esc)
     return () => { window.removeEventListener('keydown', esc); antes?.focus?.() }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps

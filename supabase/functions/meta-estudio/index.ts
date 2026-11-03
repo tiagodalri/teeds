@@ -243,6 +243,7 @@ async function montarSegmentacao(chave: string, act: string, cfg: { pixel: strin
   const nomeCad = `GF | Cadastrados pelo pixel (/${parceiro})`
   const cadastrados = () => publicoDoPixel(chave, act, nomeCad, criarPublicos && { rule: regraDoPixel(cfg.pixel, 180, [{ field: 'event', operator: 'eq', value: 'CompleteRegistration' }]), prefill: true, description: 'Criado pelo Estúdio de anúncios da GlobalFly' })
   if (modo === 'inteligente' && p.inteligente) {
+    try {
     if (p.inteligente.tipo === 'semelhantes') {
       const pct = Math.min(10, Math.max(1, Math.round(p.inteligente.percentual || 1)))
       const origem = await cadastrados()
@@ -255,10 +256,21 @@ async function montarSegmentacao(chave: string, act: string, cfg: { pixel: strin
       if (id) t.custom_audiences = [{ id }]
       else avisos.push(criarPublicos ? 'Não consegui montar o público de remarketing.' : 'O público de remarketing é criado junto com o anúncio: a estimativa ainda não conta com ele.')
     }
+    } catch (e) {
+      // o público do pixel é o coração desse modo: sem ele, melhor parar do que anunciar para o Brasil todo
+      if (criarPublicos) throw new Error(`A Meta não deixou montar o público do pixel: ${(e as Error).message}`)
+      avisos.push(`A estimativa não conta com o público do pixel agora (${(e as Error).message}).`)
+    }
+    if (criarPublicos && !t.custom_audiences) throw new Error('O público do pixel ainda não tem gente suficiente (o semelhante precisa de pelo menos 100 cadastros vistos pelo pixel). Use "A Meta encontra" ou "Eu escolho" por enquanto.')
   }
   if (p.excluirCadastrados || (modo === 'inteligente' && p.inteligente?.tipo === 'remarketing')) {
-    const id = await cadastrados()
-    if (id) t.excluded_custom_audiences = [{ id }]
+    // tirar quem já se cadastrou é um extra: se a Meta não deixar montar o público, o anúncio segue sem ele
+    try {
+      const id = await cadastrados()
+      if (id) t.excluded_custom_audiences = [{ id }]
+    } catch (e) {
+      avisos.push(`Não deu para tirar quem já se cadastrou (${(e as Error).message}). O anúncio segue sem essa exclusão.`)
+    }
   }
   // onde aparece: automático (Advantage+) ou escolhido
   const pos = p.posicionamentos
@@ -320,10 +332,11 @@ async function criar(chave: string, cfg: typeof CONTAS['globalfly']['n'], parcei
   if (teste && d.teste!.variavel === 'criativo' && !d.midiaB) throw new Error('Falta o criativo da versão B.')
   if (!d.texto?.principal?.trim() || !d.texto?.titulo?.trim()) throw new Error('Falta o texto ou o título do anúncio.')
   if (!/^https:\/\/(www\.)?globalflytrade\.com\//.test(d.link ?? '')) throw new Error('O link precisa ser uma página da GlobalFly (globalflytrade.com).')
-  conferirTexto(d.texto.principal, d.texto.titulo, d.texto.descricao, d.textoB?.principal, d.textoB?.titulo, d.textoB?.descricao, d.nomeAnuncio)
+  const testaTexto = teste && d.teste!.variavel === 'texto', testaCriativo = teste && d.teste!.variavel === 'criativo'
+  conferirTexto(d.texto.principal, d.texto.titulo, d.texto.descricao, ...(testaTexto ? [d.textoB?.principal, d.textoB?.titulo, d.textoB?.descricao] : []), d.nomeAnuncio)
   const diario = Number(d.diario)
   if (!(diario >= 6 && diario <= MAX_DIA)) throw new Error(`O orçamento por dia precisa ficar entre R$ 6 e R$ ${MAX_DIA.toLocaleString('pt-BR')}.`)
-  if (!(await videoPronto(chave, d.midia)) || !(await videoPronto(chave, teste ? d.midiaB : undefined))) return { aguardando: 'video', progresso: p }
+  if (!(await videoPronto(chave, d.midia)) || !(await videoPronto(chave, testaCriativo ? d.midiaB : undefined))) return { aguardando: 'video', progresso: p }
 
   const nomeAd = comPrefixo(d.nomeAnuncio || 'Anúncio')
   // sem Instagram fixo (Victor): o que estiver ligado à página, se houver
@@ -404,27 +417,31 @@ Deno.serve(async (req) => {
   const chave = c.ok ? ((await c.json())[0]?.valor as string | undefined) : undefined
   const padrao = { conta: cfg.conta, pagina: { id: cfg.pagina, nome: cfg.paginaNome, foto: null as string | null }, instagram: { id: cfg.instagram, usuario: cfg.usuario || cfg.paginaNome, foto: null as string | null }, link: cfg.link, maxDia: MAX_DIA }
 
-  if (acao === 'contexto' && !chave) {
-    // sem a chave: dá para montar rascunhos com as campanhas que a ponte trouxe; criar, só com a chave
+  // sem a chave (ou com a chave recusada pela Meta): dá para montar rascunhos com as campanhas que a ponte trouxe
+  const contextoSemChave = async (chaveInvalida = false) => {
     const r = await rest(`meta_ponte_entidade?marca=eq.${marca}&parceiro=eq.${parceiro}&tipo=in.(campanha,conjunto)&select=tipo,id,dados`)
     const l = r.ok ? await r.json() : []
     return json({
-      ...padrao, semChave: true,
+      ...padrao, semChave: true, ...(chaveInvalida ? { chaveInvalida: true } : {}),
       campanhas: l.filter((e: any) => e.tipo === 'campanha').map((e: any) => ({ id: e.id, nome: e.dados.nome, status: e.dados.status, orcDia: Number(e.dados.orcDia) || 0 })),
       conjuntos: l.filter((e: any) => e.tipo === 'conjunto').map((e: any) => ({ id: e.id, nome: e.dados.nome, status: e.dados.status, campanhaId: e.dados.campanhaId, orcDia: Number(e.dados.orcDia) || 0, publico: e.dados.publico ?? '' })),
     })
   }
+  if (acao === 'contexto' && !chave) return contextoSemChave()
   if (!chave) return json({ semChave: true, erro: 'Para subir e mexer nos anúncios daqui, falta conectar a chave da conta de anúncios.' }, 409)
   const act = `act_${cfg.conta}`
 
   try {
     if (acao === 'contexto') {
       const filtro = JSON.stringify([{ field: 'name', operator: 'CONTAIN', value: PREFIXO }])
-      const [pagina, campanhas, conjuntos] = await Promise.all([
+      const [pagina, campanhas, conjuntos] = (await Promise.all([
         ler(chave, cfg.pagina, { fields: 'name,picture{url},instagram_business_account{id,username,profile_picture_url}' }).catch(() => null),
         ler(chave, `${act}/campaigns`, { fields: 'id,name,effective_status,daily_budget', filtering: filtro, limit: '200' }),
-        ler(chave, `${act}/adsets`, { fields: 'id,name,effective_status,campaign_id,campaign{name},daily_budget,targeting', limit: '300' }),
-      ])
+        // só os conjuntos das campanhas da GF (a conta do Naor tem muitos outros); se a Meta não aceitar o filtro, sem ele
+        ler(chave, `${act}/adsets`, { fields: 'id,name,effective_status,campaign_id,campaign{name},daily_budget,targeting', limit: '500', filtering: JSON.stringify([{ field: 'campaign.name', operator: 'CONTAIN', value: PREFIXO }]) })
+          .catch(() => ler(chave, `${act}/adsets`, { fields: 'id,name,effective_status,campaign_id,campaign{name},daily_budget,targeting', limit: '500' })),
+      ]).catch(async (e) => { if (e instanceof ErroDaMeta && e.codigo === 190) return null; throw e })) ?? [null, null, null]
+      if (!campanhas) return contextoSemChave(true)
       const igDaPagina = pagina?.instagram_business_account
       return json({
         ...padrao,
@@ -543,6 +560,12 @@ Deno.serve(async (req) => {
             p.avisos = [...(p.avisos ?? []), `A Meta não abriu o teste A/B oficial (${(e as Error).message}). As duas versões rodam lado a lado na mesma campanha, e a comparação continua aqui.`]
           }
         }
+        // o anúncio entrou numa campanha ou num público que já existia e está pausado: ele não entrega até ligar o de cima
+        try {
+          const a = await ler(chave, String(p.anuncioId), { fields: 'adset{name,status},campaign{name,status}' })
+          if (a.adset?.status === 'PAUSED') p.avisos = [...(p.avisos ?? []), `O público "${a.adset.name}" está pausado: o anúncio só entrega quando ele for ligado (em Rodando agora ou no Gerenciador).`]
+          if (a.campaign?.status === 'PAUSED') p.avisos = [...(p.avisos ?? []), `A campanha "${a.campaign.name}" está pausada: o anúncio só entrega quando ela for ligada.`]
+        } catch { /* a conferência é um extra */ }
         await mudar({ situacao: 'ligado', progresso: p })
         await anotar('ligou', 'anuncio', p.anuncioId, r.nome, { diario: r.dados?.diario, teste: r.tipo === 'teste' })
         return json({ situacao: 'ligado', progresso: p })
@@ -586,6 +609,7 @@ Deno.serve(async (req) => {
       const aumento = Math.min(100, Math.max(5, Number(d.aumento) || 20))
       const alvo = await daGf(chave, 'conjunto', String(d.conjuntoId))
       const antes = await ler(chave, String(d.conjuntoId), { fields: 'daily_budget' })
+      if (!Number(antes.daily_budget)) return json({ erro: 'Esse público usa o orçamento da campanha: escale pela campanha, no Gerenciador.' }, 400)
       const novoDia = Math.min(MAX_DIA, Math.round((Number(antes.daily_budget) / 100) * (1 + aumento / 100)))
       const copia = await gravar(chave, `${d.conjuntoId}/copies`, { deep_copy: true, status_option: 'PAUSED', rename_options: { rename_suffix: ' · escala' } })
       const novo = String(copia.copied_adset_id ?? copia.ad_object_ids?.[0]?.copied_id ?? '')

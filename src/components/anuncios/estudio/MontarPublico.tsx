@@ -57,13 +57,18 @@ function Busca({ placeholder, tipo, local, api, sessao, parceiro, semChave, esco
   const normal = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   useEffect(() => {
     setErro(null)
-    if (q.trim().length < 2) { setItens(null); return }
+    if (q.trim().length < 2) { setItens(null); setBuscando(false); return }
     if (semChave) { setItens(local.filter((x) => normal(x.nome).includes(normal(q.trim()))).slice(0, 20)); return }
+    // a resposta de uma busca antiga não passa por cima da atual
+    let valendo = true
     setBuscando(true)
     const t = setTimeout(() => {
-      api.buscar(sessao, parceiro, tipo, q.trim()).then((r) => setItens(r)).catch((e) => { setErro((e as Error).message); setItens(local.filter((x) => normal(x.nome).includes(normal(q.trim())))) }).finally(() => setBuscando(false))
+      api.buscar(sessao, parceiro, tipo, q.trim())
+        .then((r) => { if (valendo) setItens(r) })
+        .catch((e) => { if (valendo) { setErro((e as Error).message); setItens(local.filter((x) => normal(x.nome).includes(normal(q.trim())))) } })
+        .finally(() => { if (valendo) setBuscando(false) })
     }, 350)
-    return () => clearTimeout(t)
+    return () => { valendo = false; clearTimeout(t) }
   }, [q]) // eslint-disable-line react-hooks/exhaustive-deps
   const livre = semChave && q.trim().length >= 2 && !(itens ?? []).some((x) => normal(x.nome) === normal(q.trim()))
   return (
@@ -118,17 +123,19 @@ export function MontarPublico({ publico: entrada, mudar, sessao, api, parceiro, 
   useEffect(() => {
     if (semChave) return
     setTamanho((t) => ({ v: t?.v ?? null, avisos: [], indo: true }))
+    let valendo = true
     const t = setTimeout(() => {
-      api.estimar(sessao, parceiro, p).then((r) => setTamanho({ v: r.tamanho, avisos: r.avisos })).catch((e) => setTamanho({ v: null, avisos: [], erro: (e as Error).message }))
+      api.estimar(sessao, parceiro, p).then((r) => { if (valendo) setTamanho({ v: r.tamanho, avisos: r.avisos }) }).catch((e) => { if (valendo) setTamanho({ v: null, avisos: [], erro: (e as Error).message }) })
     }, 900)
-    return () => clearTimeout(t)
+    return () => { valendo = false; clearTimeout(t) }
   }, [chaveDoPublico, semChave]) // eslint-disable-line react-hooks/exhaustive-deps
   // "também pode gostar": interesses parecidos com os escolhidos (com a chave)
   const nomesEscolhidos = (p.interesses ?? []).filter((i) => i.tipo === 'interesse').map((i) => i.nome).join('|')
   useEffect(() => {
     if (semChave || !nomesEscolhidos) { setSugestoes([]); return }
-    const t = setTimeout(() => api.sugerir(sessao, parceiro, nomesEscolhidos.split('|')).then(setSugestoes).catch(() => setSugestoes([])), 700)
-    return () => clearTimeout(t)
+    let valendo = true
+    const t = setTimeout(() => api.sugerir(sessao, parceiro, nomesEscolhidos.split('|')).then((r) => { if (valendo) setSugestoes(r) }).catch(() => { if (valendo) setSugestoes([]) }), 700)
+    return () => { valendo = false; clearTimeout(t) }
   }, [nomesEscolhidos, semChave]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const problemas = problemasDoPublico(p)

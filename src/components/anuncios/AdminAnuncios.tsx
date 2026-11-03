@@ -198,16 +198,21 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const de = periodo === 'personalizado' ? escolha.de : p.de(), ate = periodo === 'personalizado' ? escolha.ate : p.ate()
   const nomeDoPeriodo = de === ate ? dataBr(de) : `${dataBr(de)} a ${dataBr(ate)}`
 
+  // a conta e o período em vigor: resposta que chega depois de trocar (Naor ↔ Victor) é descartada
+  const vigente = useRef(''); vigente.current = `${parceiro}|${de}|${ate}`
   const carregar = async (forcar = false) => {
     if (!parceiro) return
+    const pedido = `${parceiro}|${de}|${ate}`
     setCarregando(true); setErro(null)
     const [m, f] = await Promise.allSettled([api.painel(sessao, parceiro, de, ate, forcar), api.funil(sessao, parceiro, de, ate)])
+    if (vigente.current !== pedido) return
     if (m.status === 'fulfilled') { setMeta(m.value); setAoVivo(null) } else setErro(m.reason?.message ?? 'Não consegui falar com a Meta agora.')
     if (f.status === 'fulfilled') { setFunil(f.value); setBanco(new Date().toISOString()) } else setErro((e) => e ?? f.reason?.message)
     setCarregando(false)
     // o período anterior e os horários vêm depois, sem segurar a tela
     const ant = anteriorA(de, ate)
     void Promise.allSettled([api.resumo(sessao, parceiro, ant.de, ant.ate), api.funil(sessao, parceiro, ant.de, ant.ate), api.horarios(sessao, parceiro, de, ate)]).then(([r, fa, h]) => {
+      if (vigente.current !== pedido) return
       const fun = fa.status === 'fulfilled' ? fa.value : null
       setAnterior({ meta: r.status === 'fulfilled' && 'total' in r.value ? r.value.total : null, banco: fun ? (origemRef.current === 'anuncios' ? fun.anuncio : fun.total) : null, comecou: fun?.passos?.comecou ?? null })
       anteriorBruto.current = fun
@@ -225,12 +230,14 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
     const t1 = setInterval(() => {
       if (document.hidden) return
       const v = vivo.current
-      api.funil(sessao, v.parceiro, v.de, v.ate).then((f) => { setFunil(f); setBanco(new Date().toISOString()) }).catch(() => { /* tenta de novo */ })
+      const pedido = `${v.parceiro}|${v.de}|${v.ate}`
+      api.funil(sessao, v.parceiro, v.de, v.ate).then((f) => { if (vigente.current !== pedido) return; setFunil(f); setBanco(new Date().toISOString()) }).catch(() => { /* tenta de novo */ })
     }, intervalo)
     const t2 = setInterval(() => {
       if (document.hidden) return
       const v = vivo.current
-      api.resumo(sessao, v.parceiro, v.de, v.ate).then((r) => { if ('total' in r) setAoVivo(r) }).catch(() => { /* idem */ })
+      const pedido = `${v.parceiro}|${v.de}|${v.ate}`
+      api.resumo(sessao, v.parceiro, v.de, v.ate).then((r) => { if (vigente.current === pedido && 'total' in r) setAoVivo(r) }).catch(() => { /* idem */ })
     }, 60_000)
     const t3 = setInterval(() => setAgora(Date.now()), 1000)
     return () => { clearInterval(t1); clearInterval(t2); clearInterval(t3) }
@@ -445,9 +452,9 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
       )}
 
       {aba === 'estudio' && (
-        <EstudioDeAnuncios sessao={sessao} api={apiEstudio} parceiro={parceiro} contaNome={painel?.conta.nome || contaAtual?.contaNome || ''} painel={painel} funil={funil}
+        <EstudioDeAnuncios key={parceiro} sessao={sessao} api={apiEstudio} parceiro={parceiro} contaNome={painel?.conta.nome || contaAtual?.contaNome || ''} painel={painel} funil={funil}
           custoPorCadastro={total && cadDeAnuncio ? total.gasto / cadDeAnuncio : null} recarregar={() => void carregar(true)}
-          abrirChave={() => { setAbrirConectar(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }} pedido={pedidoEstudio} />
+          abrirChave={() => { setAbrirConectar(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }} pedido={pedidoEstudio} aoUsarPedido={() => setPedidoEstudio(null)} />
       )}
 
       {aba === 'custos' && (

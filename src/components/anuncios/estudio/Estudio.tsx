@@ -71,12 +71,14 @@ const SITUACAO: Record<Rascunho['situacao'], [string, string]> = {
   rascunho: ['Rascunho', 'cinza'], criando: ['Criando na Meta', 'azul'], pausado: ['Pronto para ligar', 'ouro'], ligado: ['No ar', 'verde'], erro: ['Parou no meio', 'vermelho'],
 }
 
-export function EstudioDeAnuncios({ sessao, api, parceiro, contaNome, painel, funil, custoPorCadastro, recarregar, abrirChave, pedido }: {
+export function EstudioDeAnuncios({ sessao, api, parceiro, contaNome, painel, funil, custoPorCadastro, recarregar, abrirChave, pedido, aoUsarPedido }: {
   sessao: SessaoTeeds; api: ApiEstudio; parceiro: string; contaNome: string
   painel: PainelDaMeta | null; funil: FunilDoBanco | null; custoPorCadastro: number | null
   recarregar: () => void; abrirChave: () => void
   /** o botão "Subir anúncio" do topo da página abre o estúdio direto no passo a passo */
   pedido: { tipo: 'novo' | 'teste'; n: number } | null
+  /** o pedido foi atendido: não abre de novo ao voltar para a aba */
+  aoUsarPedido?: () => void
 }) {
   const [ctx, setCtx] = useState<ContextoDoEstudio | null>(null)
   const [erroCtx, setErroCtx] = useState<string | null>(null)
@@ -97,7 +99,7 @@ export function EstudioDeAnuncios({ sessao, api, parceiro, contaNome, painel, fu
     api.historico(sessao, parceiro).then(setHistorico).catch(() => setHistorico([]))
   }
   useEffect(carregarTudo, [parceiro, sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (pedido && ctx) setCriador({ tipo: pedido.tipo, inicial: null }) }, [pedido?.n, !!ctx]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (pedido && ctx) { setCriador({ tipo: pedido.tipo, inicial: null }); aoUsarPedido?.() } }, [pedido?.n, !!ctx]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!aviso) return; const t = setTimeout(() => setAviso(null), aviso.acao ? 12000 : 5000); return () => clearTimeout(t) }, [aviso])
 
   /* ---------------------------------------------- o que está rodando, com o diagnóstico */
@@ -163,14 +165,18 @@ export function EstudioDeAnuncios({ sessao, api, parceiro, contaNome, painel, fu
   })
   const abrirEscala = (a: Anuncio) => {
     const s = painel?.conjuntos.find((c) => c.id === a.conjuntoId)
-    if (s) setEscala({ conjuntoId: s.id, nome: s.nome, atual: s.orcDia, aumento: 20 })
+    if (s && s.orcDia > 0) { setIndo({}); setEscala({ conjuntoId: s.id, nome: s.nome, atual: s.orcDia, aumento: 20 }) }
   }
   const ligarRascunho = (r: Rascunho) => {
     setIndo({})
     setConfirmar({
       titulo: 'Ligar e começar a gastar?', botao: 'Ligar agora',
       corpo: <><p><b>{r.nome}</b> {r.tipo === 'teste' ? 'começa o teste A/B' : 'começa a entregar'}: até <b>{brl(r.dados.diario)} por dia</b> na conta <b>{contaNome}</b>{r.tipo === 'teste' ? `, metade em cada versão, por ${r.dados.teste?.dias ?? 7} dias` : ''}.</p><p className="es-mudo">Dá para pausar a qualquer momento.</p></>,
-      fazer: async () => { await api.ligar(sessao, parceiro, r.id); return r.tipo === 'teste' ? 'Teste A/B no ar.' : 'Anúncio no ar. A Meta revisa antes de entregar.' },
+      fazer: async () => {
+        const res = await api.ligar(sessao, parceiro, r.id)
+        const novos = (res.progresso.avisos ?? []).filter((a) => !(r.progresso.avisos ?? []).includes(a))
+        return `${r.tipo === 'teste' ? 'Teste A/B no ar.' : 'Anúncio no ar. A Meta revisa antes de entregar.'}${novos.length ? ` Atenção: ${novos.join(' ')}` : ''}`
+      },
     })
   }
   const arquivar = (r: Rascunho) => {
@@ -219,7 +225,7 @@ export function EstudioDeAnuncios({ sessao, api, parceiro, contaNome, painel, fu
       {semChave && (
         <div className="es-faixa">
           <Icone nome="aviso" tam={18} />
-          <p><b>Falta a chave da conta de anúncios.</b> Já dá para montar e salvar rascunhos. Enviar para a Meta e mexer no que está rodando liberam quando ela for conectada.</p>
+          <p>{ctx.chaveInvalida ? <><b>A Meta recusou a chave da conta</b> (ela venceu ou foi trocada).</> : <b>Falta a chave da conta de anúncios.</b>} Já dá para montar e salvar rascunhos. Enviar para a Meta e mexer no que está rodando liberam quando {ctx.chaveInvalida ? 'uma chave nova' : 'ela'} for conectada.</p>
           <button type="button" className="es-btn fino" onClick={abrirChave}>Colar a chave</button>
         </div>
       )}
@@ -266,7 +272,7 @@ export function EstudioDeAnuncios({ sessao, api, parceiro, contaNome, painel, fu
                         {(r.situacao === 'rascunho' || r.situacao === 'erro' || r.situacao === 'criando') && <button type="button" className="es-btn fino principal" onClick={() => setCriador({ tipo: r.tipo, inicial: r })}>{r.situacao === 'erro' ? 'Tentar de novo' : 'Continuar'}</button>}
                         {r.situacao === 'pausado' && <button type="button" className="es-btn fino principal" onClick={() => ligarRascunho(r)} disabled={semChave}><Icone nome="ligar" tam={14} />Ligar</button>}
                         {r.situacao === 'ligado' && <button type="button" className="es-btn fino" onClick={() => setVista('testes')}>Ver o teste</button>}
-                        {r.situacao !== 'ligado' && r.situacao !== 'criando' && <button type="button" className="es-btn fino icone" onClick={() => arquivar(r)} aria-label={`Tirar ${r.nome} da lista`} title="Tirar da lista"><Icone nome="lixo" tam={15} /></button>}
+                        {r.situacao !== 'ligado' && <button type="button" className="es-btn fino icone" onClick={() => arquivar(r)} aria-label={`Tirar ${r.nome} da lista`} title="Tirar da lista"><Icone nome="lixo" tam={15} /></button>}
                       </div>
                     </li>
                   )
@@ -306,12 +312,12 @@ export function EstudioDeAnuncios({ sessao, api, parceiro, contaNome, painel, fu
                       <div><dt>Por cadastro</dt><dd>{r?.cadastros ? brl(a.m.gasto / r.cadastros) : '—'}</dd></div>
                     </dl>
                     <div className="es-rod-acoes">
-                      {d.acao === 'escalar' && <button type="button" className="es-btn fino principal" onClick={() => abrirEscala(a)} disabled={semChave}><Icone nome="escalar" tam={14} />Escalar</button>}
+                      {d.acao === 'escalar' && (conjunto?.orcDia ?? 0) > 0 && <button type="button" className="es-btn fino principal" onClick={() => abrirEscala(a)} disabled={semChave}><Icone nome="escalar" tam={14} />Escalar</button>}
                       {d.acao === 'trocar' && <button type="button" className="es-btn fino principal" onClick={() => trocarVideo(a)}><Icone nome="subir" tam={14} />Trocar o criativo</button>}
                       {d.acao === 'pausar' && <button type="button" className="es-btn fino perigo" onClick={() => pausarOuLigar(a, false)} disabled={semChave}><Icone nome="pausar" tam={14} />Pausar</button>}
                       {d.acao === 'ligar' && <button type="button" className="es-btn fino principal" onClick={() => pausarOuLigar(a, true)} disabled={semChave}><Icone nome="ligar" tam={14} />Ligar</button>}
                       {a.status === 'ACTIVE' && d.acao !== 'pausar' && <button type="button" className="es-btn fino" onClick={() => pausarOuLigar(a, false)} disabled={semChave}><Icone nome="pausar" tam={14} />Pausar</button>}
-                      {conjunto && conjunto.orcDia > 0 && <button type="button" className="es-btn fino" onClick={() => setOrcamento({ conjuntoId: conjunto.id, nome: conjunto.nome, atual: conjunto.orcDia, novo: conjunto.orcDia })} disabled={semChave}>{brl(conjunto.orcDia, 0)}/dia · Mudar</button>}
+                      {conjunto && conjunto.orcDia > 0 && <button type="button" className="es-btn fino" onClick={() => { setIndo({}); setOrcamento({ conjuntoId: conjunto.id, nome: conjunto.nome, atual: conjunto.orcDia, novo: conjunto.orcDia }) }} disabled={semChave}>{brl(conjunto.orcDia, 0)}/dia · Mudar</button>}
                     </div>
                   </li>
                 )

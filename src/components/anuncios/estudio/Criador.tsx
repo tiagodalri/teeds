@@ -69,13 +69,26 @@ async function lerArquivo(f: File): Promise<{ midia: Midia; capa: Blob | null }>
     const poster = await dataUrl(await quadro(img, img.naturalWidth, img.naturalHeight, 420, 0.72))
     return { midia: { tipo: 'imagem', nome: f.name, largura: img.naturalWidth, altura: img.naturalHeight, tamanho: f.size, poster, local }, capa: null }
   }
+  // o vídeo fica na página (invisível) enquanto é lido: o Safari do iPhone não carrega quadros de vídeo solto
   const v = document.createElement('video')
   v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = local
-  await new Promise<void>((ok, falha) => { v.onloadeddata = () => ok(); v.onerror = () => falha(new Error('Não consegui abrir esse vídeo. Use MP4 ou MOV.')) })
-  v.currentTime = Math.min(1.2, (v.duration || 3) / 3)
-  await new Promise<void>((ok) => { v.onseeked = () => ok(); setTimeout(ok, 1500) })
-  const [mini, capa] = await Promise.all([quadro(v, v.videoWidth, v.videoHeight, 420, 0.72), quadro(v, v.videoWidth, v.videoHeight, 1080, 0.9)])
-  return { midia: { tipo: 'video', nome: f.name, largura: v.videoWidth, altura: v.videoHeight, duracao: v.duration, tamanho: f.size, poster: await dataUrl(mini), local }, capa }
+  v.setAttribute('playsinline', ''); v.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none'
+  document.body.appendChild(v)
+  try {
+    await new Promise<void>((ok, falha) => {
+      const t = setTimeout(() => falha(new Error('Esse vídeo demorou para abrir neste navegador. Tente pelo computador ou converta para MP4.')), 15000)
+      v.onloadedmetadata = () => { clearTimeout(t); ok() }
+      v.onerror = () => { clearTimeout(t); falha(new Error('Não consegui abrir esse vídeo. Use MP4 ou MOV.')) }
+    })
+    // tocar e pausar faz o navegador montar o primeiro quadro
+    await v.play().catch(() => { /* sem permissão para tocar: segue com o que tiver */ }); v.pause()
+    v.currentTime = Math.min(1.2, (v.duration || 3) / 3)
+    await new Promise<void>((ok) => { v.onseeked = () => ok(); setTimeout(ok, 2500) })
+    if (!v.videoWidth || !v.videoHeight) throw new Error('Não consegui ler as medidas desse vídeo. Tente pelo computador ou converta para MP4.')
+    const [mini, capa] = await Promise.all([quadro(v, v.videoWidth, v.videoHeight, 420, 0.72), quadro(v, v.videoWidth, v.videoHeight, 1080, 0.9)])
+    if (!capa) throw new Error('Não consegui tirar a capa desse vídeo (a Meta exige uma). Tente pelo computador ou converta para MP4.')
+    return { midia: { tipo: 'video', nome: f.name, largura: v.videoWidth, altura: v.videoHeight, duracao: v.duration, tamanho: f.size, poster: await dataUrl(mini), local }, capa }
+  } finally { v.remove() }
 }
 
 const tamanho = (b: number) => (b > 1e9 ? `${(b / 1e9).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} GB` : `${Math.max(1, Math.round(b / 1e6))} MB`)
@@ -90,7 +103,8 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
   fechar: (mudou: boolean) => void
   aprendizado?: Aprendizado | null
 }) {
-  const [id, setId] = useState<string | null>(inicial?.id ?? null)
+  // o id do rascunho mora em idRef (os salvamentos são em fila); o estado só redesenha a tela
+  const [, setId] = useState<string | null>(inicial?.id ?? null)
   const [dados, setDados] = useState<DadosDoRascunho>(() => ({ ...dadosNovos(ctx, tipo), ...(inicial?.dados ?? {}), ...(prefill ?? {}) }))
   const [passo, setPasso] = useState(0)
   const [lado, setLado] = useState<Lado>('a')
@@ -107,6 +121,9 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
   const [ligar, setLigar] = useState<{ indo?: boolean; erro?: string | null } | null>(null)
   const [verPrevia, setVerPrevia] = useState(false)
   const arquivos = useRef<Partial<Record<Lado, { f: File; capa: Blob | null }>>>({})
+  const enderecos = useRef<string[]>([])
+  const aberto = useRef(true)
+  useEffect(() => () => { aberto.current = false; pararSalvar(); for (const u of enderecos.current) URL.revokeObjectURL(u) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const mudou = useRef(false)
   const teste = tipo === 'teste'
   const variavel = dados.teste?.variavel
@@ -131,17 +148,34 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
   const previaTexto = lado === 'b' && variavel === 'texto' ? dados.textoB! : dados.texto
 
   // o rascunho se salva sozinho (um segundo depois da última mudança)
-  const nomeFinal = dados.nomeAnuncio.trim() || (dados.midia?.nome ? dados.midia.nome.replace(/\.[a-z0-9]+$/i, '') : `${teste ? 'Teste A/B' : 'Anúncio'} de ${ddmm()}`)
+  const nomeDe = (d: DadosDoRascunho) => d.nomeAnuncio.trim() || (d.midia?.nome ? d.midia.nome.replace(/\.[a-z0-9]+$/i, '') : `${teste ? 'Teste A/B' : 'Anúncio'} de ${ddmm()}`)
+  const nomeFinal = nomeDe(dados)
+  // os salvamentos vão um de cada vez (o id fica numa ref): nunca nasce rascunho repetido
+  const idRef = useRef<string | null>(inicial?.id ?? null)
+  const fila = useRef<Promise<unknown>>(Promise.resolve())
+  const relogioSalvar = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dadosRef = useRef(dados); dadosRef.current = dados
+  const salvarAgora = () => {
+    const p = fila.current.then(() => {
+      const d = dadosRef.current, nome = nomeDe(d)
+      return api.salvar(sessao, parceiro, idRef.current, tipo, nome, { ...d, nomeAnuncio: nome }).then((novo) => { idRef.current = novo; setId(novo); setSalvo('salvo'); return novo })
+    })
+    fila.current = p.catch(() => setSalvo('erro'))
+    return p
+  }
+  const pararSalvar = () => { if (relogioSalvar.current) { clearTimeout(relogioSalvar.current); relogioSalvar.current = null; return true } return false }
   useEffect(() => {
     if (!mudou.current || criando || feito) return
     setSalvo('salvando')
-    const t = setTimeout(() => {
-      api.salvar(sessao, parceiro, id, tipo, nomeFinal, { ...dados, nomeAnuncio: nomeFinal })
-        .then((novo) => { setId(novo); setSalvo('salvo') })
-        .catch(() => setSalvo('erro'))
-    }, 1000)
-    return () => clearTimeout(t)
+    pararSalvar()
+    relogioSalvar.current = setTimeout(() => { relogioSalvar.current = null; void salvarAgora().catch(() => {}) }, 1000)
   }, [dados]) // eslint-disable-line react-hooks/exhaustive-deps
+  /** Sair sem perder o último segundo: o que estava para salvar é salvo antes de fechar. */
+  const sair = async () => {
+    if (pararSalvar() && !feito) await salvarAgora().catch(() => {})
+    else await fila.current
+    fechar(mudou.current)
+  }
 
   /* ---------------------------------------------- o arquivo: medidas, prévia e envio para a conta */
   const enviar = async (l: Lado, f: File, capa: Blob | null, m: Midia) => {
@@ -166,7 +200,7 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
       guardar({ videoId, posterHash: capaSubida.hash })
       setEnvio((e) => ({ ...e, [l]: { fase: 'processando', fracao: 0 } }))
       // a Meta processa o vídeo depois do envio: acompanha até ficar pronto
-      for (let i = 0; i < 120; i++) {
+      for (let i = 0; i < 120 && aberto.current; i++) {
         const s = await api.estadoVideo(sessao, parceiro, videoId)
         if (s.estado === 'ready') { setEnvio((e) => ({ ...e, [l]: { fase: 'pronto', fracao: 1 } })); return }
         if (s.estado === 'error') throw new Error('A Meta não conseguiu processar o vídeo. Tente com outro arquivo (MP4 ou MOV).')
@@ -186,6 +220,7 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
     setEnvio((e) => ({ ...e, [l]: { fase: 'lendo', fracao: 0 } }))
     try {
       const { midia, capa } = await lerArquivo(f)
+      if (midia.local) enderecos.current.push(midia.local)
       arquivos.current[l] = { f, capa }
       mudar((d) => ({ ...(l === 'b' ? { ...d, midiaB: midia } : { ...d, midia }), nomeAnuncio: d.nomeAnuncio || (l === 'a' ? f.name.replace(/\.[a-z0-9]+$/i, '') : d.nomeAnuncio) }))
       void enviar(l, f, capa, midia)
@@ -197,7 +232,8 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
 
   /* ---------------------------------------------- conferências */
   const sinais = useMemo(() => [...sinaisDoTexto(dados.texto), ...(teste && variavel === 'texto' && dados.textoB ? sinaisDoTexto(dados.textoB).map((s) => ({ ...s, motivo: `Versão B: ${s.motivo}` })) : [])], [dados.texto, dados.textoB, teste, variavel])
-  const vermelhos = sinais.filter((s) => s.cor === 'vermelho')
+  // o nome do anúncio também aparece para quem vê (e a função barra as mesmas palavras nele)
+  const vermelhos = [...sinais, ...sinaisDoTexto({ titulo: nomeFinal }).map((s) => ({ ...s, motivo: `No nome do anúncio: ${s.motivo}` }))].filter((s) => s.cor === 'vermelho')
   const custo = custoPorCadastro && custoPorCadastro > 0 ? custoPorCadastro : null
   const porDia = custo ? dados.diario / custo : null
   const diasSugeridos = porDia ? Math.min(14, Math.max(3, Math.ceil(80 / porDia))) : 7
@@ -211,6 +247,7 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
     { ok: !!dados.texto.principal.trim() && !!dados.texto.titulo.trim() && (!teste || variavel !== 'texto' || (!!dados.textoB?.principal.trim() && !!dados.textoB?.titulo.trim())), nome: 'Texto e título preenchidos', falta: 'Falta o texto ou o título', passo: 'mensagem' as IdPasso },
     { ok: !vermelhos.length, nome: 'Nenhuma palavra que a marca não usa', falta: `${vermelhos.length} ${vermelhos.length === 1 ? 'trecho precisa' : 'trechos precisam'} mudar`, passo: 'mensagem' as IdPasso },
     ...(!conjuntoExistente ? [{ ok: !problemasDoPublico(dados.publico).length && (!teste || variavel !== 'publico' || !problemasDoPublico(dados.publicoB ?? {}).length), nome: 'Público montado', falta: problemasDoPublico(dados.publico)[0] ?? problemasDoPublico(dados.publicoB ?? {})[0] ?? 'Revise o público', passo: 'publico' as IdPasso }] : []),
+    ...(!conjuntoExistente ? [{ ok: dados.diario >= 6 && dados.diario <= ctx.maxDia, nome: 'Orçamento dentro do limite', falta: `O orçamento por dia precisa ficar entre R$ 6 e ${brl(ctx.maxDia, 0)}`, passo: 'orcamento' as IdPasso }] : []),
     { ok: true, nome: 'Link com a marcação do anúncio (cada cadastro fica ligado a ele)', passo: 'destino' as IdPasso },
     { ok: true, nome: 'Pixel do Naor, otimizando para inscrição concluída', passo: 'destino' as IdPasso },
     { ok: true, nome: 'Nome no padrão "GF |", para o painel reconhecer', passo: 'destino' as IdPasso },
@@ -225,8 +262,8 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
     setErro(null); setCriando({ etapa: 0 })
     const relogio = setInterval(() => setCriando((c) => (c ? { ...c, etapa: Math.min(ETAPAS.length - 1, c.etapa + 1) } : c)), 900)
     try {
-      const novo = await api.salvar(sessao, parceiro, id, tipo, nomeFinal, { ...dados, nomeAnuncio: nomeFinal })
-      setId(novo)
+      pararSalvar()
+      const novo = await salvarAgora()
       let r = await api.criar(sessao, parceiro, novo)
       for (let i = 0; r.aguardando === 'video' && i < 60; i++) {
         setCriando((c) => (c ? { ...c, aguardandoVideo: true } : c))
@@ -240,20 +277,20 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
     finally { clearInterval(relogio); setCriando(null) }
   }
   const confirmarLigar = async () => {
-    if (!id) return
+    const rid = idRef.current
+    if (!rid) return
     setLigar({ indo: true })
-    try { const r = await api.ligar(sessao, parceiro, id); setAvisos((a) => [...new Set([...a, ...(r.progresso.avisos ?? [])])]); setFeito('ligado'); setLigar(null) }
+    try { const r = await api.ligar(sessao, parceiro, rid); setAvisos((a) => [...new Set([...a, ...(r.progresso.avisos ?? [])])]); setFeito('ligado'); setLigar(null) }
     catch (e) { setLigar({ erro: (e as Error).message }) }
   }
 
   // Esc fecha (salvando); a página de trás não rola enquanto o estúdio está aberto
   useEffect(() => {
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape' && !ligar && !criando) fechar(mudou.current) }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape' && !ligar && !criando) void sair() }
     window.addEventListener('keydown', esc)
     const antes = document.body.style.overflow; document.body.style.overflow = 'hidden'
     return () => { window.removeEventListener('keydown', esc); document.body.style.overflow = antes }
   }, [ligar, criando]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => { for (const m of [dados.midia, dados.midiaB]) if (m?.local) URL.revokeObjectURL(m.local) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const seguir = () => setPasso((p) => Math.min(ordem.length - 1, p + 1))
   const voltar = () => setPasso((p) => Math.max(0, p - 1))
@@ -280,13 +317,14 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
   )
 
   const telaCriativo = (() => {
-    const m = midiaDe(lado), e = envio[lado]
+    const lm: Lado = temLados ? lado : 'a'
+    const m = midiaDe(lm), e = envio[lm]
     return (
       <div className="es-campos">
         {temLados && <Lados />}
         {!m ? (
-          <label className="es-solta" onDragOver={(ev) => ev.preventDefault()} onDrop={(ev) => { ev.preventDefault(); void escolher(lado, ev.dataTransfer.files[0]) }}>
-            <input type="file" accept="video/mp4,video/quicktime,video/*,image/jpeg,image/png,image/webp" onChange={(ev) => { void escolher(lado, ev.target.files?.[0]); ev.target.value = '' }} />
+          <label className="es-solta" onDragOver={(ev) => ev.preventDefault()} onDrop={(ev) => { ev.preventDefault(); void escolher(lm, ev.dataTransfer.files[0]) }}>
+            <input type="file" accept="video/mp4,video/quicktime,video/*,image/jpeg,image/png,image/webp" onChange={(ev) => { void escolher(lm, ev.target.files?.[0]); ev.target.value = '' }} />
             <span className="es-solta-ic"><Icone nome="subir" tam={30} /></span>
             <b>{e?.fase === 'lendo' ? 'Abrindo o arquivo…' : 'Arraste o vídeo ou a imagem aqui'}</b>
             <small>ou toque para escolher · vídeo vertical (9:16) funciona em todos os lugares</small>
@@ -302,10 +340,10 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
                 {e?.fase === 'processando' && <><span className="es-barra viva"><i style={{ width: `${Math.max(8, Math.round(e.fracao * 100))}%` }} /></span>A Meta está preparando o vídeo{e.fracao > 0 ? ` · ${Math.round(e.fracao * 100)}%` : '…'}</>}
                 {(e?.fase === 'pronto' || (!e && pronta(m))) && <><Icone nome="ok" tam={16} />Na biblioteca da conta</>}
                 {e?.fase === 'local' && (ctx.semChave ? 'Fica só nesta tela até a chave ser conectada' : 'Escolha o arquivo de novo para enviar')}
-                {e?.fase === 'erro' && <>{e.erro} {arquivos.current[lado] && <button type="button" onClick={() => tentarDeNovo(lado)}>Tentar de novo</button>}</>}
+                {e?.fase === 'erro' && <>{e.erro} {arquivos.current[lm] && <button type="button" onClick={() => tentarDeNovo(lm)}>Tentar de novo</button>}</>}
               </div>
             </div>
-            <label className="es-btn fino">Trocar<input type="file" accept="video/*,image/jpeg,image/png,image/webp" onChange={(ev) => { void escolher(lado, ev.target.files?.[0]); ev.target.value = '' }} /></label>
+            <label className="es-btn fino">Trocar<input type="file" accept="video/*,image/jpeg,image/png,image/webp" onChange={(ev) => { void escolher(lm, ev.target.files?.[0]); ev.target.value = '' }} /></label>
           </div>
         )}
         {!m && e?.fase === 'erro' && <p className="es-erro">{e.erro}</p>}
@@ -462,7 +500,7 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
   return (
     <div className="es-criador" role="dialog" aria-modal="true" aria-labelledby="es-criador-titulo" data-sem-vocabulario="">
       <header className="es-topo">
-        <button type="button" className="es-btn fino" onClick={() => fechar(mudou.current)} disabled={!!criando}><Icone nome="fechar" tam={16} />{feito ? 'Fechar' : 'Salvar e sair'}</button>
+        <button type="button" className="es-btn fino" onClick={() => void sair()} disabled={!!criando}><Icone nome="fechar" tam={16} />{feito ? 'Fechar' : 'Salvar e sair'}</button>
         <div className="es-titulo">
           <small>{teste ? 'Teste A/B' : 'Anúncio novo'}</small>
           <input id="es-criador-titulo" value={dados.nomeAnuncio} placeholder={nomeFinal} onChange={(e) => mudar((d) => ({ ...d, nomeAnuncio: e.target.value }))} aria-label="Nome do anúncio" disabled={!!feito} />
@@ -480,7 +518,7 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
           {avisos.map((a) => <p key={a} className="es-dica amarelo">{a}</p>)}
           <div className="es-feito-acoes">
             {feito === 'pausado' && <button type="button" className="es-btn principal grande" onClick={() => setLigar({})}><Icone nome="ligar" tam={18} />Ligar agora</button>}
-            <button type="button" className="es-btn grande" onClick={() => fechar(true)}>{feito === 'pausado' ? 'Deixar pausado' : 'Voltar ao estúdio'}</button>
+            <button type="button" className="es-btn grande" onClick={() => { mudou.current = true; void sair() }}>{feito === 'pausado' ? 'Deixar pausado' : 'Voltar ao estúdio'}</button>
           </div>
           <div className="es-feito-previa">{previa}</div>
         </div>

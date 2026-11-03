@@ -122,5 +122,6 @@ export function problemasDoPublico(entrada: Partial<Publico>): string[] {
   if (pos.modo === 'manual' && !pos.aparelhos.length) l.push('Escolha celular, computador ou os dois.')
   if (p.modo === 'padrao' && p.idadeMin > 25) l.push('No Advantage+, a idade mínima vai até 25 anos (o resto a Meta decide). Use "Eu escolho" para travar a idade.')
   if (p.modelos?.length && p.sistema === 'todos') l.push('Ao escolher modelos de celular, escolha também o sistema (iPhone ou Android).')
+  if (pos.modo === 'manual' && (pos.messenger || pos.audienceNetwork) && !pos.facebook.length) l.push('Messenger e Audience Network só funcionam junto com algum lugar do Facebook.')
   return l
 }

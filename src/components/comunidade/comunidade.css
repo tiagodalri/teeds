@@ -20,7 +20,7 @@
 .cm-opcao:hover .cm-ir svg { stroke: var(--cm-cor); }
 @media (max-width: 480px) {
   .cm-fundo { align-items: end; padding: 0; }
-  .cm-janela { width: 100%; border-radius: 22px 22px 0 0; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); animation-name: cm-gaveta; }
+  .cm-janela { width: 100%; border-radius: 22px 22px 0 0; padding-bottom: calc(24px + var(--sab, 0px)); animation-name: cm-gaveta; }
   @keyframes cm-gaveta { from { transform: translateY(40px); opacity: 0; } }
 }
 @media (prefers-reduced-motion: reduce) { .cm-fundo, .cm-janela { animation: none; } .cm-opcao, .cm-opcao:hover { transform: none; transition: none; } }

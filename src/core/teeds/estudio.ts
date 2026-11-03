@@ -39,7 +39,8 @@ export interface Rascunho {
   progresso: Progresso; erro: string | null; criadoEm: string; atualizadoEm: string
 }
 export interface ContextoDoEstudio {
-  semChave?: boolean; conta: string; maxDia: number; link: string
+  /** chaveInvalida: há chave, mas a Meta recusou (venceu ou foi trocada); o estúdio abre como sem chave */
+  semChave?: boolean; chaveInvalida?: boolean; conta: string; maxDia: number; link: string
   pagina: { id: string; nome: string; foto: string | null }
   instagram: { id: string; usuario: string; foto: string | null }
   campanhas: Array<{ id: string; nome: string; status: string; orcDia: number }>
