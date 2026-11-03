@@ -133,8 +133,9 @@ async function painel(chave: string, cfg: { conta: string; pixel: string }, de: 
     talvez('Conjuntos', ins({ level: 'adset', fields: `${CAMPOS},adset_id` }), []),
     talvez('Anúncios', ins({ level: 'ad', fields: `${CAMPOS},ad_id,quality_ranking,engagement_rate_ranking,conversion_rate_ranking` }), []),
     talvez('Lista de campanhas', graph(chave, `${act}/campaigns`, { fields: 'id,name,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time,bid_strategy,created_time', limit: '200', filtering: JSON.stringify([{ field: 'name', operator: 'CONTAIN', value: PREFIXO }]) }, 3), []),
-    talvez('Lista de conjuntos', graph(chave, `${act}/adsets`, { fields: 'id,name,effective_status,campaign_id,daily_budget,lifetime_budget,optimization_goal,targeting,start_time,end_time', limit: '200' }, 3), []),
-    talvez('Lista de anúncios', graph(chave, `${act}/ads`, { fields: 'id,name,effective_status,adset_id,campaign_id,created_time,creative{id,thumbnail_url,image_url,title,body,object_type,call_to_action_type,video_id,url_tags}', thumbnail_width: '320', thumbnail_height: '320', limit: '200' }, 3), []),
+    // só os da GF: a conta do Naor tem centenas de anúncios de outros produtos, e pedir todos estoura o limite da Meta
+    talvez('Lista de conjuntos', graph(chave, `${act}/adsets`, { fields: 'id,name,effective_status,campaign_id,daily_budget,lifetime_budget,optimization_goal,targeting,start_time,end_time', limit: '100', filtering: SO_GF }, 5), []),
+    talvez('Lista de anúncios', graph(chave, `${act}/ads`, { fields: 'id,name,effective_status,adset_id,campaign_id,created_time,creative{id,thumbnail_url,image_url,title,body,object_type,call_to_action_type,video_id,url_tags}', thumbnail_width: '320', thumbnail_height: '320', limit: '50', filtering: SO_GF }, 8), []),
     talvez('Idade e gênero', ins({ level: 'account', breakdowns: 'age,gender' }), []),
     talvez('Posicionamentos', ins({ level: 'account', breakdowns: 'publisher_platform,platform_position' }), []),
     talvez('Aparelhos', ins({ level: 'account', breakdowns: 'device_platform' }), []),
