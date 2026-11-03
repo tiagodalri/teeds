@@ -189,6 +189,8 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const [aberto, setAberto] = useState<Anuncio | null>(null)
   const [chave, setChave] = useState('')
   const [salvando, setSalvando] = useState<{ ok?: string; erro?: string; indo?: boolean }>({})
+  // a Meta recusou a chave guardada (bloqueio, permissão): o campo para trocar aparece sozinho
+  const [falhaMeta, setFalhaMeta] = useState<string | null>(null)
   const [banco, setBanco] = useState<string | null>(null)
   const [agora, setAgora] = useState(Date.now())
   const [aba, setAbaAgora] = useState<IdAba>(abaGuardada)
@@ -209,6 +211,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
     if (vigente.current !== pedido) return null
     const recusou = m.status === 'fulfilled' && m.value && 'chaveInvalida' in m.value ? ((m.value as { erro?: string }).erro ?? 'A Meta não aceitou a chave.') : null
     const falhaDaMeta = m.status === 'fulfilled' ? recusou : (m.reason?.message ?? 'Não consegui falar com a Meta agora.') as string
+    setFalhaMeta(m.status === 'fulfilled' ? null : falhaDaMeta)
     if (m.status === 'fulfilled') { setMeta(m.value); setAoVivo(null) } else if (!calado) setErro(falhaDaMeta)
     if (f.status === 'fulfilled') { setFunil(f.value); setBanco(new Date().toISOString()) } else setErro((e) => e ?? f.reason?.message)
     setCarregando(false)
@@ -229,7 +232,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const origemRef = useRef(origem); origemRef.current = origem
   const anteriorBruto = useRef<FunilDoBanco | null>(null)
   useEffect(() => { setAnterior((a) => (a && anteriorBruto.current ? { ...a, banco: origem === 'anuncios' ? anteriorBruto.current.anuncio : anteriorBruto.current.total } : a)) }, [origem])
-  useEffect(() => { setMeta(null); setFunil(null); setAnterior(null); setHorarios(null); void carregar() }, [parceiro, periodo, de, ate, sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setMeta(null); setFunil(null); setAnterior(null); setHorarios(null); setFalhaMeta(null); void carregar() }, [parceiro, periodo, de, ate, sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ao vivo: o nosso banco a cada 10 s; a Meta (só o total) a cada 60 s
   const vivo = useRef({ de, ate, parceiro }); vivo.current = { de, ate, parceiro }
@@ -314,7 +317,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
     setSalvando(falha ? { erro: falha } : { ok: 'Conta conectada com a mesma chave. Os números já estão na tela.' })
   }
   const semChave = meta != null && 'semChave' in meta
-  const chaveRuim = meta != null && 'chaveInvalida' in meta
+  const chaveRuim = (meta != null && 'chaveInvalida' in meta) || (!!falhaMeta && !(meta && 'total' in meta))
   const atualizado = banco ? Math.max(0, Math.round((agora - Date.parse(banco)) / 1000)) : null
   const campanhaDe = (id: string) => painel?.campanhas.find((c) => c.id === id)?.nome ?? ''
   const cabecalho = (id: string) => {
@@ -381,7 +384,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
         <section className="aa-conectar">
           <div>
             <h3>{chaveRuim ? 'A chave da Meta parou de funcionar' : `Conectar a conta de anúncios do ${nomeParceiro}`}</h3>
-            <p>{chaveRuim ? 'A Meta recusou a chave guardada (venceu ou foi trocada). Cole uma nova abaixo.' : 'O funil já mostra o que acontece dentro da plataforma. Para trazer investimento, cliques e cada anúncio, cole aqui a chave de acesso da conta de anúncios. A mesma chave liga também o envio do pixel pelo servidor.'}</p>
+            <p>{chaveRuim ? 'A Meta recusou a chave guardada. Gere uma nova e cole abaixo: ela substitui a antiga na hora.' : 'O funil já mostra o que acontece dentro da plataforma. Para trazer investimento, cliques e cada anúncio, cole aqui a chave de acesso da conta de anúncios. A mesma chave liga também o envio do pixel pelo servidor.'}</p>
             <ol>
               <li>Em <b>business.facebook.com</b>, abrir <b>Configurações do negócio › Usuários do sistema</b> e escolher o usuário (ou criar um).</li>
               <li><b>Atribuir ativos</b>: a conta <b>{contaAtual?.contaNome}</b> (controle total) e o pixel <b>{contaAtual?.pixelNome}</b>.</li>

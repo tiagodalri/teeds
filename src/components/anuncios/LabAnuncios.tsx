@@ -4,7 +4,7 @@ import type { ApiAnuncios, FunilDoBanco, Metricas, PainelDaMeta } from '../../co
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import type { ApiEstudio, ItemDoHistorico, PublicoSalvo, Rascunho } from '../../core/teeds/estudio'
 
-/** Laboratório: Administração › Anúncios com números de exemplo (?tela=anuncios-admin; &sem-chave=1 mostra o conectar). */
+/** Laboratório: Administração › Anúncios com números de exemplo (?tela=anuncios-admin; &sem-chave=1 mostra o conectar; &chave-bloqueada=1, a chave guardada que a Meta recusa). */
 const m = (gasto: number, imp: number, cliques: number, lpv: number, cad: number, v3 = 0, thru = 0): Metricas => ({
   gasto, impressoes: imp, alcance: Math.round(imp / 1.42), frequencia: 1.42, cliques: Math.round(cliques * 1.6), cliquesLink: cliques,
   ctrLink: cliques / imp * 100, ctr: cliques * 1.6 / imp * 100, cpcLink: cliques ? gasto / cliques : 0, cpm: imp ? gasto / imp * 1000 : 0, lpv,
@@ -150,10 +150,11 @@ function estudioDeMentira(semChave: boolean): ApiEstudio {
 
 export default function LabAnuncios() {
   const q = new URLSearchParams(location.search)
-  const semChave = q.has('sem-chave')
+  const semChave = q.has('sem-chave'), bloqueada = q.has('chave-bloqueada')
   const espera = <T,>(v: T, ms = 300) => new Promise<T>((r) => setTimeout(() => r(v), ms))
   const api: ApiAnuncios = {
-    painel: (_s, _p, de, ate) => espera(semChave ? { semChave: true as const } : painel(de, ate)),
+    painel: (_s, _p, de, ate) => (bloqueada ? espera(null).then(() => { throw new Error('A Meta não deixou nem conferir a chave. Gere uma nova no usuário do sistema e cole de novo.\nResposta da Meta: API access blocked. (código 200)') })
+      : espera(semChave ? { semChave: true as const } : painel(de, ate))),
     resumo: () => espera(semChave ? { semChave: true as const } : { total: { ...total, impressoes: total.impressoes + vivos * 40, cliquesLink: total.cliquesLink + vivos }, em: new Date().toISOString() }),
     anuncio: (_s, _p, id, de, ate) => espera({ porDia: painel(de, ate).porDia.map((d) => ({ ...d, gasto: d.gasto / 3 })), idadeGenero: painel(de, ate).quebras.idadeGenero, posicionamento: painel(de, ate).quebras.posicionamento }, 500 + id.length),
     funil: () => espera(funil()),
