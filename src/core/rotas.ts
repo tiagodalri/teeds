@@ -59,7 +59,12 @@ export const afiliadoDaDeriv = (): string => MARCA.afiliadosDosParceiros?.[parce
 /** A comunidade no WhatsApp: a do parceiro da vitrine, quando ele tem uma; senão, a da marca. */
 export const comunidadeDaVitrine = (): string | undefined => MARCA.comunidadesDosParceiros?.[parceiroVigente()] ?? MARCA.comunidade
 /** A comunidade no Instagram (03/11/2026): a do parceiro da vitrine, quando ele tem uma; senão, a da marca. */
-export const comunidadeInstagramDaVitrine = (): string | undefined => MARCA.comunidadesInstagramDosParceiros?.[parceiroVigente()] ?? MARCA.comunidadeInstagram
+export const comunidadeInstagramDaVitrine = (): string | undefined => {
+  const c = parceiroVigente()
+  // parceiro com WhatsApp próprio e sem Instagram próprio (o Naor, por enquanto): não herda o Instagram de outro
+  if (c && MARCA.comunidadesDosParceiros?.[c] && !MARCA.comunidadesInstagramDosParceiros?.[c]) return undefined
+  return MARCA.comunidadesInstagramDosParceiros?.[c] ?? MARCA.comunidadeInstagram
+}
 function prefixo(): string {
   const c = parceiroVigente()
   return c ? `/${c}` : ''

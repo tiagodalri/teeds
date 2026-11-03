@@ -449,6 +449,10 @@ export const MARCAS: Record<string, Marca> = {
     afiliadosDosParceiros: { n: 'https://t.deriv.link?t=X8KDME25M85P' },
     // 29/10/2026 (Tiago): a comunidade de cada parceiro (Naor no /n, Victor Cordeiro no /v); o Direto segue na da GF
     comunidadesDosParceiros: { n: 'https://chat.whatsapp.com/FZpOI5S5Hhe2EOYIOul2C2', v: 'https://chat.whatsapp.com/KWk0g33mPzYL6ZUqU89Xue' },
+    // 03/11/2026 (Tiago): os canais de comunidade no Instagram. O do Victor Cordeiro vale no /v e no Direto;
+    // o do Naor, no /n. Com os dois links (WhatsApp e Instagram), o botão Comunidade abre a escolha.
+    comunidadeInstagram: 'https://www.instagram.com/channel/mUZkEI4Aa-CZN1AU/',
+    comunidadesInstagramDosParceiros: { n: 'https://www.instagram.com/channel/AbZq0nybGPyVvFxU/', v: 'https://www.instagram.com/channel/mUZkEI4Aa-CZN1AU/' },
     appsDosParceiros: { n: '34MLTOJu0MDBoED7yEczz' },
     termos: true,
     relatorios: true,
