@@ -194,7 +194,12 @@ export interface Marca {
    * ganhou um balão de conversa para não confundir os dois).
    * Ícone = caminho SVG em 24x24, traço.
    */
-  menu?: { nomes?: Record<string, string>; icones?: Record<string, string> }
+  /**
+   * `ordemDoCliente` (03/11/2026, GlobalFly): a ordem do menu para os clientes (Ferramentas: Ao vivo, Aulas,
+   * Gerenciamento, Relatórios; Explorar: Notícias, Marketplace, Ajuda e o Assistente por último, com cadeado).
+   * Os administradores seguem com a ordem de sempre.
+   */
+  menu?: { nomes?: Record<string, string>; icones?: Record<string, string>; ordemDoCliente?: boolean }
   /**
    * Vitrine dos robôs na tela Robôs (19/10/2026, GlobalFly): no lugar do
    * quadro vazio, um cartão por robô com a foto (public/robos-<marca>/<id>.webp)
@@ -452,6 +457,8 @@ export const MARCAS: Record<string, Marca> = {
     compartilhamento: 0.10,
     menu: {
       nomes: { robos: 'I.A.' },
+      // 03/11/2026 (Tiago): a ordem do menu dos clientes (GF Member, com ou sem simulador)
+      ordemDoCliente: true,
       icones: {
         // brilhos: uma estrela grande e duas pequenas (o símbolo usual de IA)
         robos: 'M10 4l1.8 4.9L16.7 10.7l-4.9 1.8L10 17.4l-1.8-4.9L3.3 10.7l4.9-1.8z M18 3v4 M16 5h4 M18.5 15.5v4 M16.5 17.5h4',

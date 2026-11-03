@@ -63,8 +63,16 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mos
         {item('robos')}{item('operar')}
         {/* Multiplicadores (30/10/2026): por enquanto só administradores */}
         {verAdmin && item('multiplicadores')}
-        <p className="workspace-label">Ferramentas</p>{MARCA.relatorios && item('relatorios')}{item('gerenciamento')}{mostrarAssistente && item('assistente')}
-        <p className="workspace-label">Explorar</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{MARCA.noticias && item('noticias')}{item('marketplace')}{item('aulas')}{MARCA.suporte && item('ajuda')}
+        {/* 03/11/2026 (Tiago): para os clientes da GF, Ferramentas = Ao vivo, Aulas, Gerenciamento, Relatórios;
+            Explorar = Notícias, Marketplace, Ajuda e o Assistente por último (com o cadeado: pede o código).
+            O admin (com o olhinho aberto) continua com a ordem de sempre. */}
+        {MARCA.menu?.ordemDoCliente && !verAdmin ? <>
+          <p className="workspace-label">Ferramentas</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{item('aulas')}{item('gerenciamento')}{MARCA.relatorios && item('relatorios')}
+          <p className="workspace-label">Explorar</p>{MARCA.noticias && item('noticias')}{item('marketplace')}{MARCA.suporte && item('ajuda')}{item('assistente')}
+        </> : <>
+          <p className="workspace-label">Ferramentas</p>{MARCA.relatorios && item('relatorios')}{item('gerenciamento')}{mostrarAssistente && item('assistente')}
+          <p className="workspace-label">Explorar</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{MARCA.noticias && item('noticias')}{item('marketplace')}{item('aulas')}{MARCA.suporte && item('ajuda')}
+        </>}
         {/* parceiros de divulgação (27/10/2026): só quem é parceiro, e o admin geral */}
         {verDivulgacao && <><p className="workspace-label">Parceiro</p>{item('divulgacao')}</>}
         {verAdmin && <div className="workspace-admin">{MARCA.laboratorioIA && item('laboratorio')}{item('gestao')}</div>}
