@@ -7,8 +7,21 @@ import { PLANOS_CLIENTE } from '../core/teeds/planos'
 import type { PlanoRegistro } from '../core/teeds/clientes'
 import { MARCAS } from '../marca'
 import { FIM_DA_LIVE } from '../core/teeds/lancamento'
+import { PRODUTOS_ANTERIORES } from '../core/teeds/leads'
 
 const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MARCAS).map(m=>[m.id,m.prosa]))
+
+/*
+  O QUESTIONÁRIO NA APROVAÇÃO (03/11/2026, Tiago: "eu quero saber o que o cara respondeu lá naquele
+  formulário... uma coluna bem visível para saber de quem é o cliente"). A resposta mora em
+  leads_capturados (gf_responder_questionario); aqui ela é lida pelo e-mail de cada cadastro da página,
+  com a mesma regra de acesso da aba Leads (o parceiro vê só os dele).
+*/
+interface Resposta { exCliente: boolean | null; produtos: string[]; em: string | null; tempo: number | null; temperatura: string | null }
+const NOME_DO_PARCEIRO: Record<string, string> = { n: 'Naor', v: 'Victor' }
+const nomeDoProduto = (p: string) => p.startsWith('outro: ') ? `Outro: ${p.slice(7)}` : (PRODUTOS_ANTERIORES[p] ?? p).replace(/ \((Naor|Victor)\)$/, '')
+const duracao = (s: number) => s >= 60 ? `${Math.floor(s / 60)} min${s % 60 ? ` ${s % 60} s` : ''}` : `${s} s`
+const TEMPERATURA: Record<string, string> = { quente: 'Lead quente', morno: 'Lead morno', frio: 'Lead frio' }
 
 interface Pendente {
   id: string; nome: string; email: string; telefone: string
@@ -53,6 +66,29 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
   useEffect(()=>{ setParceiro(confirmar?.p.parceiro ?? '') },[confirmar?.p.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // o plano sugerido é o padrão da marca (o de quem se cadastra sozinho)
   useEffect(() => { setPlano(planoPadrao) }, [planoPadrao])
+  // as respostas do questionário dos cadastros desta página (chave: e-mail em minúsculas)
+  const [respostas,setRespostas]=useState<Map<string,Resposta>|null>(null)
+  useEffect(()=>{
+    setRespostas(null)
+    const emails=[...new Set(lista.map(p=>p.email.trim().toLowerCase()).filter(Boolean))]
+    if(!emails.length)return
+    const c=new AbortController()
+    const em=emails.map(e=>`"${e.replace(/"/g,'')}"`).join(',')
+    fetch(`${SUPABASE.url}/rest/v1/leads_capturados?select=email,email_normalizado,ex_cliente,produtos_anteriores,questionario_em,tempo_na_pagina,temperatura&marca=eq.${encodeURIComponent(marca)}&email_normalizado=in.(${encodeURIComponent(em)})`,
+      {headers:{apikey:SUPABASE.anonKey,Authorization:`Bearer ${sessao.token}`},signal:c.signal})
+      .then(r=>r.ok?r.json():[]).then((l:any[])=>{
+        const m=new Map<string,Resposta>()
+        for(const x of l){
+          const chave=String(x.email_normalizado||x.email||'').toLowerCase()
+          const antes=m.get(chave)
+          // o mesmo e-mail pode ter mais de uma linha: vale a que tem questionário respondido
+          if(antes?.em&&!x.questionario_em)continue
+          m.set(chave,{exCliente:x.ex_cliente??null,produtos:x.produtos_anteriores??[],em:x.questionario_em??null,tempo:x.tempo_na_pagina??null,temperatura:x.temperatura??null})
+        }
+        setRespostas(m)
+      }).catch(()=>{ if(!c.signal.aborted)setRespostas(new Map()) })
+    return()=>c.abort()
+  },[lista,marca,sessao.token])
   async function consultar(path: string, body?: unknown, signal?: AbortSignal) {
     // A marca vai nos dois sentidos: na busca e na decisão. Aprovar é o que
     // cria conta e dispara e-mail — não pode depender de qual site está aberto.
@@ -108,10 +144,35 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
       : 'Novos cadastros e recadastros aguardam sua aprovação. Cada marca tem a sua conta: quem já é cliente de outra plataforma ganha uma conta nova aqui, com senha própria.'}</p></div><button disabled={!!ocupado||carregando} onClick={()=>setRevisao(v=>v+1)}>Atualizar</button></header>
     <nav aria-label="Status da aprovação">{[['pendente','Pendentes'],['processando','Em aprovação'],['aprovado','Aprovados'],['recusado','Recusados']].map(([id,nome])=><button key={id} aria-pressed={status===id} disabled={!!ocupado} onClick={()=>{setStatus(id);setPagina(0);setConfirmar(null);setAviso('')}}>{nome}</button>)}</nav>
     {erro&&<p role="alert">{erro}</p>}{aviso&&<p role="status">{aviso}</p>}
+    {!carregando&&respostas&&lista.length>0&&(()=>{
+      const rs=lista.map(p=>respostas.get(p.email.trim().toLowerCase()))
+      const ex=rs.filter(r=>r?.em&&r.exCliente).length, novos=rs.filter(r=>r?.em&&r.exCliente===false).length, sem=rs.length-ex-novos
+      const conta=new Map<string,number>()
+      for(const r of rs)if(r?.em&&r.exCliente)for(const pr of r.produtos){const n=nomeDoProduto(pr.startsWith('outro: ')?'outro':pr);conta.set(n,(conta.get(n)??0)+1)}
+      const top=[...conta].sort((a,b)=>b[1]-a[1]).slice(0,4)
+      return <div className="pdq-resumo" aria-label="Respostas do questionário nesta página">
+        <span><b>{lista.length}</b> {lista.length===1?'cadastro':'cadastros'}</span>
+        <span className="ex"><b>{ex}</b> já {ex===1?'foi cliente':'foram clientes'}</span>
+        <span className="novo"><b>{novos}</b> {novos===1?'nunca foi':'nunca foram'}</span>
+        {sem>0&&<span className="sem"><b>{sem}</b> sem resposta</span>}
+        {top.length>0&&<span className="top">Mais citados: {top.map(([n,q])=>`${n} (${q})`).join(' · ')}</span>}
+      </div>
+    })()}
     {carregando?<p>Carregando cadastros…</p>:lista.length===0&&!erro?<p>Nenhum cadastro nesta situação.</p>:lista.slice(0,50).map(p=><article key={p.id} className="pendente-linha">
-      <div><b>{p.nome}{(()=>{const selo=seloDoParceiro(parceiros,p.parceiro??null);return selo&&<em className={`pendente-parceiro ${selo.codigo}`}>{selo.texto}</em>})()}</b><span>{p.email}</span><span>{p.telefone}</span>
+      <div><b>{p.nome}</b><span>{p.email}</span><span>{p.telefone}</span>
         {p.recadastro&&<strong className="pendente-recadastro">Já estava na base: recadastro{p.status==='pendente'?' aguardando aprovação':''}</strong>}
       </div>
+      {(()=>{
+        const dono=p.parceiro?NOME_DO_PARCEIRO[p.parceiro]??(seloDoParceiro(parceiros,p.parceiro)?.texto.split(' ')[0]||p.parceiro):null
+        const r=respostas?.get(p.email.trim().toLowerCase())
+        const tipo=!respostas?'carregando':!r?.em?'sem':r.exCliente?'ex':'novo'
+        return <div className="pdq">
+          <span className={`pdq-dono ${p.parceiro??'direto'}`}>{dono?`Cliente do ${dono}`:'Direto, sem parceiro'}{p.parceiro&&<small>/{p.parceiro}</small>}</span>
+          <span className={`pdq-resp ${tipo}`}>{tipo==='carregando'?'Lendo o questionário…':tipo==='sem'?'Não respondeu o questionário':tipo==='ex'?`Já foi cliente ${dono?`do ${dono}`:'do ecossistema'}`:'Nunca foi cliente'}</span>
+          {r?.em&&r.exCliente&&<span className="pdq-produtos">{r.produtos.length?r.produtos.map(x=><i key={x}>{nomeDoProduto(x)}</i>):<i className="vazio">Sem produto marcado</i>}</span>}
+          {r&&<small className="pdq-detalhe">{[r.em&&`Respondeu em ${new Date(r.em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`, r.tempo?`${duracao(r.tempo)} na página`:null, r.temperatura?TEMPERATURA[r.temperatura]??null:null].filter(Boolean).join(' · ')}</small>}
+        </div>
+      })()}
       <div><small>Último cadastro: {new Date(p.ultima_inscricao_em||p.criado_em).toLocaleString('pt-BR')}</small><span>{p.status==='aprovado'?(p.email_enviado_em?'E-mail enviado':'E-mail na fila de envio'):p.status==='processando'?'Aprovação iniciada; pode ser retomada após dois minutos.':p.status==='recusado'?'Recusado':naLive?'Inscrito na live · confirmação enviada':'Pendente de aprovação'}</span></div>
       {['pendente','processando'].includes(p.status)&&confirmar?.p.id!==p.id&&<div className="pendente-acoes">{naLive&&p.status==='pendente'
         ? <><span className="pendente-na-live">Libera sozinho no fim da live</span><button disabled={!!ocupado} className="pendente-antes" onClick={()=>setConfirmar({p,acao:'aprovar'})}>Liberar antes da live</button></>
