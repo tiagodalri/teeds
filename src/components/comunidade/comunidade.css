@@ -11,7 +11,7 @@
 .cm-opcao { --cm-cor: #25D366; display: grid; grid-template-columns: 52px minmax(0, 1fr) 20px; align-items: center; gap: 14px; padding: 14px 16px; border: 1.5px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text); text-decoration: none; transition: border-color .15s, transform .15s, background .15s; }
 .cm-opcao.instagram { --cm-cor: #D6249F; }
 .cm-opcao:hover { border-color: var(--cm-cor); background: color-mix(in srgb, var(--cm-cor) 6%, var(--surface)); transform: translateY(-1px); }
-.cm-opcao:focus-visible { outline: 2px solid var(--cm-cor); outline-offset: 2px; }
+.cm-opcao:focus-visible, .cm-fechar:focus-visible { outline: 2px solid var(--cm-cor, var(--gf-ouro, var(--primary))); outline-offset: 2px; box-shadow: none; }
 .cm-logo { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--bg); box-shadow: 0 0 0 1px var(--border); }
 .cm-texto { display: grid; gap: 3px; min-width: 0; }
 .cm-texto b { font-size: 15.5px; }

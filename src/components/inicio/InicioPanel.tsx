@@ -297,7 +297,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                 {MARCA.comunidade && (
                   <button type="button" className="in-atalho" onClick={comunidade.abrir} aria-haspopup={comunidade.escolha ? 'dialog' : undefined}>
                     <span className="in-atalho-icone"><Icone d={ICONE.grupo} /></span>
-                    <span><b>Comunidade</b><small>{comunidade.escolha ? 'Grupos oficiais no WhatsApp e no Instagram' : 'Grupo oficial no WhatsApp'}</small></span>
+                    <span><b>Comunidade</b><small>{comunidade.escolha ? 'No WhatsApp e no Instagram' : 'Grupo oficial no WhatsApp'}</small></span>
                     <Icone d={comunidade.escolha ? ICONE.seta : ICONE.externo} />
                   </button>
                 )}

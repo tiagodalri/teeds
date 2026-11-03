@@ -103,7 +103,12 @@ const PALETAS: Record<string, Paleta> = {
       '#D4A64A', '#F43F5E', '#64748B', '#7C8BA1',
       // o gráfico do TradingView (30/10/2026, Tiago: "fundo preto, para diferenciar do
       // tradicional"): os cinzas dele ficam cinzas, sem virar o marinho da GF
-      '#000000', '#0F0F0F', '#1C1C1C', '#2A2A2A', '#2E2E2E', '#8C8C8C', '#DBDBDB'],
+      '#000000', '#0F0F0F', '#1C1C1C', '#2A2A2A', '#2E2E2E', '#8C8C8C', '#DBDBDB',
+      // marcas de terceiros (03/11/2026): o verde do WhatsApp, o rosa e o degradê do Instagram e o azul
+      // do Facebook (janela da comunidade e prévia do Estúdio), e os cinzas das telas do Instagram e do
+      // Facebook na prévia: são a cara dos aplicativos, não enfeite da GF
+      '#25D366', '#D6249F', '#1877F2', '#F9CE34', '#EE2A7B', '#6228D7',
+      '#050505', '#65676B', '#E4E6EB', '#F0F2F5', '#EFF3FA', '#F1F1F1', '#E6E6E6'],
     // 21/10/2026: vermelho e verde vivos, sem o tom exato (antes #C95F5F e #2F8F72,
     // que apagavam até o gráfico); cada cor herdada mantém a luz e ganha a saturação
     vermelho: { h: 356, s: 0.82 },
