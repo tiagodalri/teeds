@@ -229,15 +229,15 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
   const comCusto = origem === 'anuncios' && gasto > 0
 
   const etapas: EtapaDoFunil[] = [
-    { id: 'imp', nome: 'Viram o anúncio', valor: total?.impressoes ?? 0, fonte: 'Meta', custo: total?.impressoes ? gasto / total.impressoes : null },
-    { id: 'cli', nome: 'Clicaram no anúncio', valor: total?.cliquesLink ?? 0, fonte: 'Meta', custo: total?.cliquesLink ? gasto / total.cliquesLink : null },
-    { id: 'lpv', nome: 'Chegaram na página', valor: total?.lpv ?? 0, fonte: 'Meta', custo: total?.lpv ? gasto / total.lpv : null },
-    { id: 'com', nome: 'Começaram o cadastro', valor: funil?.passos?.comecou ?? pixelEv?.get('ComecouCadastro') ?? 0, fonte: 'Plataforma', custo: null },
-    { id: 'cad', nome: 'Cadastrados', valor: etapasDoBanco?.cadastros ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.cadastros ? gasto / etapasDoBanco.cadastros : null },
-    { id: 'que', nome: 'Questionário respondido', valor: etapasDoBanco?.questionario ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.questionario ? gasto / etapasDoBanco.questionario : null },
-    { id: 'not', nome: 'Notificações ativadas', valor: etapasDoBanco?.notificacoes ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.notificacoes ? gasto / etapasDoBanco.notificacoes : null },
-    { id: 'liv', nome: 'Assistiram à live', valor: etapasDoBanco?.live ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.live ? gasto / etapasDoBanco.live : null },
-    { id: 'gfm', nome: 'GF Member', valor: etapasDoBanco?.liberados ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.liberados ? gasto / etapasDoBanco.liberados : null },
+    { id: 'imp', dica: 'Impressões do anúncio', nome: 'Viram o anúncio', valor: total?.impressoes ?? 0, fonte: 'Meta', custo: total?.impressoes ? gasto / total.impressoes : null },
+    { id: 'cli', dica: 'Cliques no link do anúncio', nome: 'Clicaram no anúncio', valor: total?.cliquesLink ?? 0, fonte: 'Meta', custo: total?.cliquesLink ? gasto / total.cliquesLink : null },
+    { id: 'lpv', dica: 'A página abriu depois do clique', nome: 'Chegaram na página', valor: total?.lpv ?? 0, fonte: 'Meta', custo: total?.lpv ? gasto / total.lpv : null },
+    { id: 'com', dica: 'Mexeram no formulário de cadastro', nome: 'Começaram o cadastro', valor: funil?.passos?.comecou ?? pixelEv?.get('ComecouCadastro') ?? 0, fonte: 'Plataforma', custo: null },
+    { id: 'cad', dica: 'Cadastro enviado', nome: 'Cadastrados', valor: etapasDoBanco?.cadastros ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.cadastros ? gasto / etapasDoBanco.cadastros : null },
+    { id: 'que', dica: 'Inscrição completa', nome: 'Questionário respondido', valor: etapasDoBanco?.questionario ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.questionario ? gasto / etapasDoBanco.questionario : null },
+    { id: 'not', dica: 'Avisos da live ligados no celular', nome: 'Notificações ativadas', valor: etapasDoBanco?.notificacoes ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.notificacoes ? gasto / etapasDoBanco.notificacoes : null },
+    { id: 'liv', dica: 'Presença na live de 09/11', nome: 'Assistiram à live', valor: etapasDoBanco?.live ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.live ? gasto / etapasDoBanco.live : null },
+    { id: 'gfm', dica: 'Acesso liberado depois da live', nome: 'GF Member', valor: etapasDoBanco?.liberados ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.liberados ? gasto / etapasDoBanco.liberados : null },
   ]
 
   const nossoPorAnuncio = useMemo(() => new Map((funil?.porAnuncio ?? []).map((a) => [a.id, a])), [funil])

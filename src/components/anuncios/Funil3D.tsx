@@ -9,10 +9,15 @@
  * piso para o funil não ficar vazio embaixo); as que não seguem escapam pela parede e somem.
  * Os números e as setas ficam ao lado, em HTML, para ficarem nítidos e legíveis.
  * Quando um número de verdade sobe, a etapa acende e uma bolinha grande desce por ela.
+ *
+ * 03/11/2026 (Tiago: "tá difícil de atrelar qual fase do funil significa cada uma"): cada anel
+ * tem a cor da origem (aço = Meta, ouro = plataforma) e uma linha que sai da borda dele até o
+ * número da etapa na lista; passar o mouse num lado acende o outro.
  */
 import { useEffect, useRef, useState } from 'react'
 
-export interface EtapaDoFunil { id: string; nome: string; valor: number; fonte: 'Meta' | 'Pixel' | 'Plataforma'; custo?: number | null }
+/** `dica`: o que a etapa conta, em poucas palavras (aparece embaixo do nome). */
+export interface EtapaDoFunil { id: string; nome: string; valor: number; fonte: 'Meta' | 'Pixel' | 'Plataforma'; custo?: number | null; dica?: string }
 
 interface Bolinha { etapa: number; y: number; ang: number; giro: number; vel: number; raio: number; viva: boolean; fuga: number; destaque: boolean; brilho: number; alvo: number; rastro: number[] }
 
@@ -47,6 +52,9 @@ export function Funil3D({ etapas, mostrarCusto }: { etapas: EtapaDoFunil[]; most
   const anteriores = useRef<number[] | null>(null)
   const novas = useRef<number[]>([])
   const [acesa, setAcesa] = useState<Record<number, number>>({})
+  const [foco, setFoco] = useState<number | null>(null)
+  const focoRef = useRef<number | null>(null)
+  focoRef.current = foco
 
   // quando um número sobe: a etapa acende e desce uma bolinha grande por ela
   useEffect(() => {
@@ -123,13 +131,16 @@ export function Funil3D({ etapas, mostrarCusto }: { etapas: EtapaDoFunil[]; most
       const raio = (y: number) => rTopo + (rBase - rTopo) * Math.min(1, Math.max(0, (y - topo) / (base - topo)))
       const achat = 0.27
       const [R, G, B] = RGB
+      // aço para o que vem da Meta (o anúncio), ouro para o que acontece na plataforma
+      const ACO: [number, number, number] = claro ? [74, 104, 142] : [124, 156, 196]
+      const corDe = (i: number): [number, number, number] => (dados.current[i]?.fonte === 'Meta' ? ACO : [R, G, B])
       const tom = (i: number, a: number, luz = 0) => {
-        const f = 1 - (i / Math.max(1, n - 1)) * 0.3
-        return `rgba(${Math.min(255, R * f + 90 * luz) | 0},${Math.min(255, G * f + 80 * luz) | 0},${Math.min(255, B * f + 60 * luz) | 0},${a})`
+        const f = 1 - (i / Math.max(1, n - 1)) * 0.22, [r, g, b] = corDe(i)
+        return `rgba(${Math.min(255, r * f + 90 * luz) | 0},${Math.min(255, g * f + 80 * luz) | 0},${Math.min(255, b * f + 60 * luz) | 0},${a})`
       }
       // a montagem: cada anel entra com um leve atraso, de cima para baixo
       const entrada = (i: number) => { if (reduzir) return 1; const k = Math.min(1, Math.max(0, (agora - inicio - i * 70) / 650)); return 1 - Math.pow(1 - k, 3) }
-      for (let i = 0; i < n; i++) acesas.current[i] = Math.max(0, (acesas.current[i] ?? 0) - dt * 0.5)
+      for (let i = 0; i < n; i++) acesas.current[i] = Math.max(focoRef.current === i ? 0.55 : 0, (acesas.current[i] ?? 0) - dt * 0.5)
 
       // o chão: um halo dourado embaixo do funil
       const yb = base + 4, rb = rBase * 2.6
@@ -255,6 +266,20 @@ export function Funil3D({ etapas, mostrarCusto }: { etapas: EtapaDoFunil[]; most
       }
       ctx.globalAlpha = 1
 
+      // 4) as linhas-guia: da borda direita de cada anel até o número da etapa, na lista ao lado
+      for (let i = 0; i < n; i++) {
+        const e = entrada(i); if (e <= 0) continue
+        const yM = topo + (i + 0.5) * h, xR = cx + raio(yM) * (0.9 + 0.1 * e), ativo = focoRef.current === i || acesas.current[i] > 0.6
+        ctx.globalAlpha = e
+        ctx.setLineDash(ativo ? [] : [3, 4])
+        ctx.beginPath(); ctx.moveTo(xR + 5, yM); ctx.lineTo(largura, yM)
+        ctx.strokeStyle = tom(i, ativo ? 0.95 : 0.5, ativo ? 0.3 : 0); ctx.lineWidth = ativo ? 2 : 1; ctx.stroke()
+        ctx.setLineDash([])
+        ctx.beginPath(); ctx.arc(xR, yM, ativo ? 4.5 : 3.2, 0, Math.PI * 2)
+        ctx.fillStyle = tom(i, 1, ativo ? 0.4 : 0.15); ctx.fill()
+      }
+      ctx.globalAlpha = 1
+
       q = requestAnimationFrame(desenhar)
     }
     // só anima quando dá para ver: fora da tela ou em outra aba, para
@@ -269,29 +294,45 @@ export function Funil3D({ etapas, mostrarCusto }: { etapas: EtapaDoFunil[]; most
     return () => { desligar(); io.disconnect(); ro.disconnect(); temaObs.disconnect(); document.removeEventListener('visibilitychange', aba) }
   }, [])
 
+  // o mouse no funil acende a etapa daquele anel (a mesma conta de altura do desenho)
+  const sobreOFunil = (ev: React.MouseEvent<HTMLDivElement>) => {
+    const caixaDoPalco = ev.currentTarget.getBoundingClientRect(), y = ev.clientY - caixaDoPalco.top
+    const h = (caixaDoPalco.height - 18 - 14) / etapas.length, i = Math.floor((y - 18) / h)
+    setFoco(i >= 0 && i < etapas.length ? i : null)
+  }
+  const temMeta = etapas.some((e) => e.fonte === 'Meta'), temPlataforma = etapas.some((e) => e.fonte !== 'Meta')
+
   return (
-    <div className="fu" ref={caixa} style={{ ['--fu-n' as string]: etapas.length }}>
-      <div className="fu-palco" aria-hidden="true"><canvas ref={tela} className="fu-cone" /></div>
-      <ol className="fu-etapas">
-        {etapas.map((e, i) => {
-          const anterior = etapas[i - 1]
-          return (
-            <li key={e.id} className={acesa[i] && Date.now() - acesa[i] < 2500 ? 'acesa' : ''}>
-              {anterior && (
-                <span className="fu-passa" aria-label={`${pct(e.valor, anterior.valor)} seguem de ${anterior.nome} para ${e.nome}`}>
-                  <i aria-hidden="true"><b /><b /><b /></i>{pct(e.valor, anterior.valor)}
-                </span>
-              )}
-              <div className="fu-linha">
-                <small className={`fu-fonte ${e.fonte.toLowerCase()}`}>{e.fonte}</small>
-                <span className="fu-nome">{e.nome}</span>
+    <div className="fu-caixa">
+      <div className="fu" ref={caixa} style={{ ['--fu-n' as string]: etapas.length }}>
+        <div className="fu-palco" onMouseMove={sobreOFunil} onMouseLeave={() => setFoco(null)} aria-hidden="true"><canvas ref={tela} className="fu-cone" /></div>
+        <ol className="fu-etapas">
+          {etapas.map((e, i) => {
+            const anterior = etapas[i - 1]
+            const classes = [e.fonte === 'Meta' ? 'meta' : 'plataforma', acesa[i] && Date.now() - acesa[i] < 2500 ? 'acesa' : '', foco === i ? 'fu-foco' : ''].join(' ')
+            return (
+              <li key={e.id} className={classes} onMouseEnter={() => setFoco(i)} onMouseLeave={() => setFoco(null)}>
+                {anterior && anterior.valor > 0 && (
+                  <span className="fu-passa" title={`De ${anterior.nome} para ${e.nome}`} aria-label={`${pct(e.valor, anterior.valor)} seguem de ${anterior.nome} para ${e.nome}`}>
+                    <i aria-hidden="true"><b /><b /><b /></i>{pct(e.valor, anterior.valor)}
+                  </span>
+                )}
+                <span className="fu-n" aria-hidden="true">{i + 1}</span>
+                <div className="fu-texto">
+                  <span className="fu-nome">{e.nome}</span>
+                  <small>{e.dica ?? e.fonte}{mostrarCusto && e.custo != null && e.valor > 0 ? ` · ${brl(e.custo)} cada` : ''}</small>
+                </div>
                 <strong><NumeroVivo valor={e.valor} /></strong>
-                {mostrarCusto && e.custo != null && e.valor > 0 && <em>{brl(e.custo)} cada</em>}
-              </div>
-            </li>
-          )
-        })}
-      </ol>
+              </li>
+            )
+          })}
+        </ol>
+      </div>
+      <div className="fu-legenda">
+        {temMeta && <span className="meta"><i />Anúncio, contado pela Meta</span>}
+        {temPlataforma && <span className="plataforma"><i />Dentro da GlobalFly, contado pela plataforma</span>}
+        <span className="passa"><i>%</i>Quantos passaram da etapa anterior</span>
+      </div>
     </div>
   )
 }
