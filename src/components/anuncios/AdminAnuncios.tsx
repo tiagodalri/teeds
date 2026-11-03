@@ -13,7 +13,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { MARCA } from '../../marca'
-import { API_DO_BANCO, CONTAS_DE_ANUNCIO, type ApiAnuncios, type Anuncio, type DetalheDoAnuncio, type FunilDoBanco, type Horarios as DadosDeHorario, type Metricas, type PainelDaMeta, type Quebra, type RespostaDaMeta } from '../../core/teeds/anuncios'
+import { API_DO_BANCO, CONTAS_DE_ANUNCIO, type ApiAnuncios, type Descoberta, type Anuncio, type DetalheDoAnuncio, type FunilDoBanco, type Horarios as DadosDeHorario, type Metricas, type PainelDaMeta, type Quebra, type RespostaDaMeta } from '../../core/teeds/anuncios'
 import { Alertas, Custos, Filtros, Horarios, METRICA, Relatorio, alertas, aplicar, formatar, somarLinhas, useColunas, type Base, type Linha, type Regra } from './Indicadores'
 import { Funil3D, type EtapaDoFunil } from './Funil3D'
 import { EstudioDeAnuncios } from './estudio/Estudio'
@@ -166,7 +166,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const contas = CONTAS_DE_ANUNCIO[MARCA.id] ?? []
   // a conta escolhida (Naor ou Victor) fica lembrada neste aparelho
   const [parceiro, setParceiroAgora] = useState(() => { try { const v = localStorage.getItem('aa-parceiro'); return contas.some((c) => c.codigo === v) ? v! : contas[0]?.codigo ?? '' } catch { return contas[0]?.codigo ?? '' } })
-  const setParceiro = (c: string) => { setParceiroAgora(c); setAbrirConectar(false); setSalvando({}); try { localStorage.setItem('aa-parceiro', c) } catch { /* sem memória neste aparelho */ } }
+  const setParceiro = (c: string) => { setParceiroAgora(c); setAbrirConectar(false); setSalvando({}); setContasDaChave(null); setEscolhendo({}); try { localStorage.setItem('aa-parceiro', c) } catch { /* sem memória neste aparelho */ } }
   const [periodo, setPeriodo] = useState<IdPeriodo>('lancamento')
   const [meta, setMeta] = useState<RespostaDaMeta | null>(null)
   const [funil, setFunil] = useState<FunilDoBanco | null>(null)
@@ -191,6 +191,10 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const [salvando, setSalvando] = useState<{ ok?: string; erro?: string; indo?: boolean }>({})
   // a Meta recusou a chave guardada (bloqueio, permissão): o campo para trocar aparece sozinho
   const [falhaMeta, setFalhaMeta] = useState<string | null>(null)
+  // escolher a conta que a chave enxerga (03/11/2026: o Victor anuncia por um login novo)
+  const [contasDaChave, setContasDaChave] = useState<Descoberta | null>(null)
+  const [pick, setPick] = useState<{ conta: string; pixel: string; pagina: string }>({ conta: '', pixel: '', pagina: '' })
+  const [escolhendo, setEscolhendo] = useState<{ indo?: boolean; erro?: string }>({})
   const [banco, setBanco] = useState<string | null>(null)
   const [agora, setAgora] = useState(Date.now())
   const [aba, setAbaAgora] = useState<IdAba>(abaGuardada)
@@ -298,9 +302,36 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
     setChave('')
     if (!valor) { setSalvando({ ok: 'Chave removida.' }); void carregar(true); return }
     // só diz "conectada" depois que a Meta aceitou a chave de verdade
+    setSalvando({ indo: true, ok: 'Chave guardada. Procurando as contas que ela alcança…' })
+    if (await abrirEscolha(true)) { setSalvando({ ok: 'Chave guardada. Agora escolha a conta de anúncios.' }); return }
     setSalvando({ indo: true, ok: 'Chave guardada. Testando com a Meta…' })
     const falha = await carregar(true, true)
     setSalvando(falha ? { erro: falha } : { ok: 'Conta conectada. Os números já estão na tela.' })
+  }
+
+  /** Lê as contas que a chave alcança. `soSePreciso`: só abre se a conta de agora não estiver entre elas. Devolve se abriu. */
+  const abrirEscolha = async (soSePreciso = false): Promise<boolean> => {
+    setEscolhendo({ indo: true })
+    try {
+      const r = await api.descobrir(sessao, parceiro)
+      if (!('contas' in r)) { setEscolhendo({ erro: 'erro' in r ? r.erro : 'Cole a chave primeiro.' }); return !soSePreciso }
+      const alcanca = r.contas.some((c) => c.id === r.atual.conta)
+      if (soSePreciso && alcanca && contaAtual?.contaNome) { setEscolhendo({}); return false }
+      const inicial = r.contas.find((c) => c.id === r.atual.conta) ?? (r.contas.length === 1 ? r.contas[0] : null)
+      setPick({ conta: inicial?.id ?? '', pixel: inicial?.pixels.find((x) => x.id === r.atual.pixel)?.id ?? (inicial?.pixels.length === 1 ? inicial.pixels[0].id : ''),
+        pagina: r.paginas.find((x) => x.id === r.atual.pagina)?.id ?? (r.paginas.length === 1 ? r.paginas[0].id : '') })
+      setContasDaChave(r); setEscolhendo({})
+      return true
+    } catch (e) { setEscolhendo({ erro: (e as Error).message }); return !soSePreciso }
+  }
+  const usarConta = async () => {
+    setEscolhendo({ indo: true })
+    try {
+      await api.escolher(sessao, parceiro, pick.conta, pick.pixel, pick.pagina || null)
+      setContasDaChave(null); setEscolhendo({}); setSalvando({ indo: true, ok: 'Conta escolhida. Testando com a Meta…' })
+      const falha = await carregar(true, true)
+      setSalvando(falha ? { erro: falha } : { ok: 'Conta conectada. Os números já estão na tela.' })
+    } catch (e) { setEscolhendo({ erro: (e as Error).message }) }
   }
 
   const contaAtual = contas.find((c) => c.codigo === parceiro)
@@ -339,7 +370,9 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
               {contas.map((c) => <button key={c.codigo} type="button" role="tab" aria-selected={parceiro === c.codigo} className={parceiro === c.codigo ? 'on' : ''} onClick={() => setParceiro(c.codigo)}>{c.nome}<small>/{c.codigo}</small></button>)}
             </div>
           )}
-          <div><small>Conta de anúncios do {nomeParceiro}</small><b>{painel?.conta.nome || contaAtual?.contaNome}</b></div>
+          <div><small>Conta de anúncios do {nomeParceiro}</small><b>{painel?.conta.nome || contaAtual?.contaNome || 'Conta ainda não escolhida'}</b>
+            {meta && !semChave && !contasDaChave && <button type="button" className="aa-trocar-conta" onClick={() => void abrirEscolha()} disabled={escolhendo.indo}>{escolhendo.indo ? 'Procurando…' : 'Trocar a conta'}</button>}
+          </div>
           {painel && <span className={`aa-status ${painel.conta.status === 1 ? 'ok' : 'erro'}`}>{painel.conta.status === 1 ? 'Conta ativa' : 'Conta com restrição'}</span>}
         </div>
         <div className="aa-acoes">
@@ -386,9 +419,11 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
             <h3>{chaveRuim ? 'A chave da Meta parou de funcionar' : `Conectar a conta de anúncios do ${nomeParceiro}`}</h3>
             <p>{chaveRuim ? 'A Meta recusou a chave guardada. Gere uma nova e cole abaixo: ela substitui a antiga na hora.' : 'O funil já mostra o que acontece dentro da plataforma. Para trazer investimento, cliques e cada anúncio, cole aqui a chave de acesso da conta de anúncios. A mesma chave liga também o envio do pixel pelo servidor.'}</p>
             <ol>
-              <li>Em <b>business.facebook.com</b>, abrir <b>Configurações do negócio › Usuários do sistema</b> e escolher o usuário (ou criar um).</li>
-              <li><b>Atribuir ativos</b>: a conta <b>{contaAtual?.contaNome}</b> (controle total) e o pixel <b>{contaAtual?.pixelNome}</b>.</li>
-              <li><b>Gerar novo token</b>, validade <b>Nunca</b>, com todas as permissões.</li>
+              <li>Entre no Facebook com o login dono da conta de anúncios. Em <b>developers.facebook.com</b>, <b>Criar app</b> com o caso de uso <b>Criar e gerenciar anúncios com a API de Marketing</b>, ligado ao gerenciador de negócios da conta.</li>
+              <li>Em <b>business.facebook.com › Configurações › Usuários do sistema</b>, criar um usuário <b>Administrador</b> (ou usar o que já existe).</li>
+              <li><b>Atribuir ativos</b> a ele, com controle total: {contaAtual?.contaNome ? <>a conta <b>{contaAtual.contaNome}</b>, o pixel <b>{contaAtual.pixelNome}</b></> : <>a conta de anúncios, o pixel</>}, a página do Facebook e o app criado.</li>
+              <li><b>Gerar novo token</b> com esse app, validade <b>Nunca</b>, marcando <b>ads_read</b>, <b>ads_management</b> e <b>business_management</b>. Se o negócio pedir, outro administrador aprova.</li>
+              <li>Cole aqui. A plataforma mostra as contas que a chave alcança para você escolher.</li>
             </ol>
           </div>
           <form onSubmit={(e) => { e.preventDefault(); if (chave.trim()) void salvarChave(chave) }}>
@@ -400,6 +435,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
                 <small>As duas contas estão no mesmo gerenciador de negócios. Antes, confira se a conta {contaAtual?.contaNome} e o {contaAtual?.pixelNome} estão em “Atribuir ativos” do mesmo usuário.</small>
               </button>
             )}
+            {chaveRuim && !contasDaChave && <button type="button" className="aa-cancelar" onClick={() => void abrirEscolha()} disabled={escolhendo.indo}>{escolhendo.indo ? 'Procurando…' : 'Ver as contas que a chave guardada alcança'}</button>}
             {abrirConectar && !semChave && !chaveRuim && <button type="button" className="aa-cancelar" onClick={() => setAbrirConectar(false)}>Agora não</button>}
             {salvando.erro && <p className="aa-erro">{salvando.erro}</p>}
             {salvando.ok && <p className="aa-ok">{salvando.ok}</p>}
@@ -407,6 +443,47 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
           </form>
         </section>
       )}
+
+      {contasDaChave && (() => {
+        const c = contasDaChave.contas.find((x) => x.id === pick.conta)
+        return (
+          <section className="aa-conectar aa-escolher" aria-labelledby="aa-escolher-titulo">
+            <div>
+              <h3 id="aa-escolher-titulo">Qual é a conta de anúncios do {nomeParceiro}?</h3>
+              <p>{contasDaChave.contas.length ? 'A chave alcança estas contas. Escolha a que vai anunciar a GlobalFly: o painel, o Estúdio e o pixel do servidor passam a usar ela.' : 'A chave não alcança nenhuma conta de anúncios. Em Usuários do sistema › Atribuir ativos, adicione a conta com controle total e toque em Procurar de novo.'}</p>
+              <div className="aa-escolher-lista" role="radiogroup" aria-label="Contas de anúncios">
+                {contasDaChave.contas.map((x) => (
+                  <label key={x.id} className={pick.conta === x.id ? 'on' : ''}>
+                    <input type="radio" name="aa-conta" checked={pick.conta === x.id} onChange={() => setPick({ conta: x.id, pixel: x.pixels.length === 1 ? x.pixels[0].id : '', pagina: pick.pagina })} />
+                    <span><b>{x.nome || `Conta ${x.id}`}</b><small>Nº {x.id}{x.negocio ? ` · ${x.negocio}` : ''} · {x.status === 1 ? 'Ativa' : 'Com restrição'}{x.moeda ? ` · ${x.moeda}` : ''}</small></span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); if (pick.conta && pick.pixel) void usarConta() }}>
+              <label htmlFor="aa-pixel">Pixel da conta</label>
+              <select id="aa-pixel" value={pick.pixel} onChange={(e) => setPick({ ...pick, pixel: e.target.value })} disabled={!c}>
+                <option value="">{!c ? 'Escolha a conta primeiro' : c.pixels.length ? 'Escolha o pixel' : 'Essa conta não tem pixel'}</option>
+                {c?.pixels.map((x) => <option key={x.id} value={x.id}>{x.nome || x.id} · {x.id}</option>)}
+              </select>
+              <label htmlFor="aa-pagina">Página que assina os anúncios</label>
+              <select id="aa-pagina" value={pick.pagina} onChange={(e) => setPick({ ...pick, pagina: e.target.value })}>
+                <option value="">{contasDaChave.paginas.length ? 'Escolher depois' : 'A chave não alcança nenhuma página'}</option>
+                {contasDaChave.paginas.map((x) => <option key={x.id} value={x.id}>{x.nome}{x.instagram ? ` · @${x.instagram.usuario}` : ''}</option>)}
+              </select>
+              <button type="submit" disabled={escolhendo.indo || !pick.conta || !pick.pixel}>{escolhendo.indo ? 'Guardando…' : 'Usar esta conta'}</button>
+              <button type="button" className="aa-cancelar" onClick={() => void abrirEscolha()} disabled={escolhendo.indo}>Procurar de novo</button>
+              <button type="button" className="aa-cancelar" onClick={() => { setContasDaChave(null); setEscolhendo({}) }} disabled={escolhendo.indo}>Agora não</button>
+              {escolhendo.erro && <p className="aa-erro">{escolhendo.erro}</p>}
+              {c && !c.pixels.length && <small>Crie o pixel no Gerenciador de Eventos dessa conta (ou atribua o pixel ao usuário do sistema) e toque em Procurar de novo.</small>}
+              {!pick.pagina && <small>Sem a página, o painel funciona, mas o Estúdio só sobe anúncio depois que ela for escolhida.</small>}
+            </form>
+          </section>
+        )
+      })()}
+      {!contasDaChave && escolhendo.erro && <div className="aa-erro">{escolhendo.erro}</div>}
+      {/* o recado de quem acabou de escolher a conta, quando o quadro de conectar não está na tela */}
+      {!contasDaChave && !(semChave || chaveRuim || abrirConectar) && (salvando.ok || salvando.erro) && <p className={salvando.erro ? 'aa-erro' : 'aa-ok'} role="status">{salvando.erro ?? salvando.ok}</p>}
 
       {/* o resumo do período em uma frase, para quem só quer saber se está indo bem */}
       {total && (

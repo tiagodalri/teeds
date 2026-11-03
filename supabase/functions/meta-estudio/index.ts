@@ -48,6 +48,23 @@ const CONTAS: Record<string, Record<string, { conta: string; pixel: string; pagi
     v: { conta: '854985874324156', pixel: '2208036990064467', pagina: '100283049512812', paginaNome: 'Victor Cordeiroi', instagram: '', usuario: '', link: 'https://globalflytrade.com/v/cadastro/' },
   },
 }
+// 03/11/2026: a conta escolhida em Administração › Anúncios (META_CONTA_<MARCA>_<PARCEIRO>) vale por cima desta
+async function contaDe(marca: string, parceiro: string) {
+  const base = CONTAS[marca]?.[parceiro]
+  if (!base) return null
+  const r = await rest(`config_servicos?chave=eq.META_CONTA_${marca.toUpperCase()}_${parceiro.toUpperCase()}&select=valor`)
+  const linha = r.ok ? (await r.json())[0] : null
+  try {
+    const o = linha?.valor ? JSON.parse(linha.valor) : null
+    if (!o) return base
+    // conta nova sem página escolhida: não herda a página da conta antiga
+    const trocouConta = o.conta && o.conta !== base.conta
+    return { ...base, conta: o.conta ?? base.conta, pixel: o.pixel ?? base.pixel,
+      pagina: o.pagina ?? (trocouConta ? '' : base.pagina), paginaNome: o.paginaNome ?? (trocouConta ? '' : base.paginaNome),
+      instagram: o.instagram ?? (trocouConta ? '' : base.instagram), usuario: o.usuario ?? (trocouConta ? '' : base.usuario) }
+  } catch { return base }
+}
+
 const PREFIXO = 'GF |'
 const MARCACOES = 'utm_source=meta&utm_medium=pago&utm_campaign={{campaign.name}}&utm_content={{ad.id}}'
 const BOTOES = ['SIGN_UP', 'LEARN_MORE', 'SUBSCRIBE', 'WATCH_MORE', 'APPLY_NOW']
@@ -328,6 +345,7 @@ async function criar(chave: string, cfg: typeof CONTAS['globalfly']['n'], parcei
   p.avisos = p.avisos ?? []
   const teste = r.tipo === 'teste' && d.teste
   // conferências antes de gastar qualquer chamada
+  if (!cfg.pagina) throw new Error('Falta escolher a página que assina os anúncios: em Administração › Anúncios, toque em Trocar a conta e escolha a página.')
   if (!d.midia || (d.midia.tipo === 'imagem' ? !d.midia.hash : !d.midia.videoId)) throw new Error('Falta o vídeo ou a imagem do anúncio.')
   if (teste && d.teste!.variavel === 'criativo' && !d.midiaB) throw new Error('Falta o criativo da versão B.')
   if (!d.texto?.principal?.trim() || !d.texto?.titulo?.trim()) throw new Error('Falta o texto ou o título do anúncio.')
@@ -397,7 +415,7 @@ Deno.serve(async (req) => {
   let d: Record<string, any>
   try { d = await req.json() } catch { return json({ erro: 'Corpo inválido' }, 400) }
   const marca = String(d.marca ?? ''), parceiro = String(d.parceiro ?? ''), acao = String(d.acao ?? '')
-  const cfg = CONTAS[marca]?.[parceiro]
+  const cfg = await contaDe(marca, parceiro)
   if (!cfg) return json({ erro: 'Esse parceiro não tem conta de anúncios ligada.' }, 400)
 
   // só o admin geral (a mesma regra do painel)
@@ -435,7 +453,7 @@ Deno.serve(async (req) => {
     if (acao === 'contexto') {
       const filtro = JSON.stringify([{ field: 'name', operator: 'CONTAIN', value: PREFIXO }])
       const [pagina, campanhas, conjuntos] = (await Promise.all([
-        ler(chave, cfg.pagina, { fields: 'name,picture{url},instagram_business_account{id,username,profile_picture_url}' }).catch(() => null),
+        cfg.pagina ? ler(chave, cfg.pagina, { fields: 'name,picture{url},instagram_business_account{id,username,profile_picture_url}' }).catch(() => null) : Promise.resolve(null),
         ler(chave, `${act}/campaigns`, { fields: 'id,name,effective_status,daily_budget', filtering: filtro, limit: '200' }),
         // só os conjuntos das campanhas da GF (a conta do Naor tem muitos outros); se a Meta não aceitar o filtro, sem ele
         ler(chave, `${act}/adsets`, { fields: 'id,name,effective_status,campaign_id,campaign{name},daily_budget,targeting', limit: '500', filtering: JSON.stringify([{ field: 'campaign.name', operator: 'CONTAIN', value: PREFIXO }]) })

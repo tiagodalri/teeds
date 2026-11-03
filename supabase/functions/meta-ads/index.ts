@@ -10,6 +10,12 @@
 // que lê a conta pela integração Meta Ads). Só campanhas com o nome começando em "GF |".
 // POST { acao: 'anuncio', marca, parceiro, id, de, ate }
 //   um anúncio: dia a dia, idade/gênero e posicionamento.
+// POST { acao: 'descobrir', marca, parceiro }
+//   as contas de anúncios (com os pixels) e as páginas que a chave guardada enxerga.
+// POST { acao: 'escolher', marca, parceiro, conta, pixel, pagina? }
+//   a conta que o parceiro usa passa a ser essa (META_CONTA_<MARCA>_<PARCEIRO> em config_servicos,
+//   03/11/2026: o Victor anuncia por um login novo, com outra conta). Vale também no Estúdio e no
+//   envio do pixel pelo servidor.
 //
 // A chave (META_ADS_<MARCA>_<PARCEIRO> em config_servicos) é colada na própria aba e nunca
 // sai daqui. A resposta do painel fica 5 minutos em meta_ads_cache: abrir a aba de novo
@@ -26,8 +32,10 @@ const CORS = {
 const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
 // conta de anúncios e pixel de cada parceiro (o pixel é o mesmo de captura.js)
-const CONTAS: Record<string, Record<string, { conta: string; pixel: string }>> = {
-  globalfly: { n: { conta: '977357031377237', pixel: '1625935188283999' }, v: { conta: '854985874324156', pixel: '2208036990064467' } },
+// 03/11/2026: a conta antiga do Victor (CA Victor Cordeiro Real) era de ações passadas; a nova vem de um
+// login novo e é escolhida na tela (contaDe). Sem ela, o /v não mostra os números da ponte da conta antiga.
+const CONTAS: Record<string, Record<string, { conta: string; pixel: string; semPonte?: boolean }>> = {
+  globalfly: { n: { conta: '977357031377237', pixel: '1625935188283999' }, v: { conta: '854985874324156', pixel: '2208036990064467', semPonte: true } },
 }
 
 // A conta do Naor tem outras campanhas (o quiz da Universidade Trading): só entram as da GlobalFly
@@ -38,6 +46,16 @@ const rest = (caminho: string, init: RequestInit = {}) => fetch(`${SUPABASE_URL}
   ...init,
   headers: { apikey: SERVICO, Authorization: `Bearer ${SERVICO}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
 })
+
+type Conta = { conta: string; pixel: string; semPonte?: boolean; contaNome?: string; pixelNome?: string; pagina?: string; paginaNome?: string; instagram?: string; usuario?: string }
+/** A conta escolhida na tela (Administração › Anúncios) por cima da do código. */
+async function contaDe(marca: string, parceiro: string): Promise<Conta | null> {
+  const base = CONTAS[marca]?.[parceiro]
+  if (!base) return null
+  const r = await rest(`config_servicos?chave=eq.META_CONTA_${marca.toUpperCase()}_${parceiro.toUpperCase()}&select=valor`)
+  const linha = r.ok ? (await r.json())[0] : null
+  try { return linha?.valor ? { ...base, ...JSON.parse(linha.valor) } : base } catch { return base }
+}
 
 class ErroDaMeta extends Error { constructor(msg: string, public codigo: number, public sub = 0) { super(msg) } }
 
@@ -109,7 +127,7 @@ function publico(t: any): string {
   return partes.join(' · ')
 }
 
-async function painel(chave: string, cfg: { conta: string; pixel: string }, de: string, ate: string) {
+async function painel(chave: string, cfg: Conta, de: string, ate: string) {
   const act = `act_${cfg.conta}`
   const tr = JSON.stringify({ since: de, until: ate })
   const ins = (extra: Record<string, string>) => graph(chave, `${act}/insights`, { time_range: tr, fields: CAMPOS, limit: '500', filtering: SO_GF, ...extra })
@@ -311,8 +329,7 @@ Deno.serve(async (req) => {
   let d: Record<string, unknown>
   try { d = await req.json() } catch { return json({ erro: 'Corpo inválido' }, 400) }
   const marca = String(d.marca ?? ''), parceiro = String(d.parceiro ?? '')
-  const cfg = CONTAS[marca]?.[parceiro]
-  if (!cfg) return json({ erro: 'Esse parceiro não tem conta de anúncios ligada.' }, 400)
+  if (!CONTAS[marca]?.[parceiro]) return json({ erro: 'Esse parceiro não tem conta de anúncios ligada.' }, 400)
 
   // só o admin geral (a mesma regra do banco)
   const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
@@ -322,6 +339,44 @@ Deno.serve(async (req) => {
   })
   if (!quem.ok || (await quem.json()) !== true) return json({ erro: 'Só o administrador geral vê os anúncios.' }, 403)
 
+  const cfg = (await contaDe(marca, parceiro))!
+
+  // trocar a conta: ver o que a chave enxerga e escolher (não depende do período)
+  if (d.acao === 'descobrir' || d.acao === 'escolher') {
+    const k = await rest(`config_servicos?chave=eq.META_ADS_${marca.toUpperCase()}_${parceiro.toUpperCase()}&select=valor`)
+    const chaveP = k.ok ? (await k.json())[0]?.valor as string | undefined : undefined
+    if (!chaveP) return json({ semChave: true })
+    try {
+      const [contas, paginas] = await Promise.all([
+        graph(chaveP, 'me/adaccounts', { fields: 'account_id,name,account_status,currency,business{id,name}', limit: '100' }, 3),
+        graph(chaveP, 'me/accounts', { fields: 'id,name,instagram_business_account{id,username}', limit: '100' }, 3).catch(() => []),
+      ])
+      const comPixels = await Promise.all(contas.slice(0, 30).map(async (c: any) => ({
+        id: String(c.account_id), nome: c.name ?? '', status: Number(c.account_status ?? 0), moeda: c.currency ?? '', negocio: c.business?.name ?? '',
+        pixels: (await graph(chaveP, `act_${c.account_id}/adspixels`, { fields: 'id,name', limit: '50' }, 1).catch(() => [])).map((x: any) => ({ id: String(x.id), nome: x.name ?? '' })),
+      })))
+      const pags = paginas.map((x: any) => ({ id: String(x.id), nome: x.name ?? '', instagram: x.instagram_business_account ? { id: String(x.instagram_business_account.id), usuario: x.instagram_business_account.username ?? '' } : null }))
+      if (d.acao === 'descobrir') return json({ atual: { conta: cfg.conta, pixel: cfg.pixel, pagina: cfg.pagina ?? null }, contas: comPixels, paginas: pags })
+      // escolher: só vale o que a própria chave alcança
+      const c = comPixels.find((x) => x.id === String(d.conta ?? ''))
+      if (!c) return json({ erro: 'Essa chave não alcança essa conta de anúncios.' }, 400)
+      const px = c.pixels.find((x: any) => x.id === String(d.pixel ?? ''))
+      if (!px) return json({ erro: 'Escolha um pixel dessa conta.' }, 400)
+      const pg = d.pagina ? pags.find((x: any) => x.id === String(d.pagina)) : null
+      if (d.pagina && !pg) return json({ erro: 'Essa chave não alcança essa página.' }, 400)
+      const valor: Conta = { conta: c.id, contaNome: c.nome, pixel: px.id, pixelNome: px.nome,
+        ...(pg ? { pagina: pg.id, paginaNome: pg.nome, instagram: pg.instagram?.id ?? '', usuario: pg.instagram?.usuario ?? '' } : {}) }
+      const g = await rest('config_servicos?on_conflict=chave', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' },
+        body: JSON.stringify({ chave: `META_CONTA_${marca.toUpperCase()}_${parceiro.toUpperCase()}`, valor: JSON.stringify(valor), atualizado_em: new Date().toISOString() }) })
+      if (!g.ok) return json({ erro: 'Não consegui guardar a conta escolhida.' }, 500)
+      await rest(`meta_ads_cache?chave=like.${encodeURIComponent(`${marca}:${parceiro}:`)}*`, { method: 'DELETE' })
+      return json({ ok: true, conta: valor })
+    } catch (e) {
+      if (e instanceof ErroDaMeta && e.codigo === 190) return json({ chaveInvalida: true, erro: 'A Meta não aceitou a chave (venceu ou foi trocada). Cole uma nova.' })
+      return json({ erro: e instanceof ErroDaMeta ? await diagnostico(chaveP, cfg, e) : (e as Error).message }, 502)
+    }
+  }
+
   const data = /^\d{4}-\d{2}-\d{2}$/
   const de = String(d.de ?? ''), ate = String(d.ate ?? '')
   if (!data.test(de) || !data.test(ate) || de > ate) return json({ erro: 'Período inválido.' }, 400)
@@ -330,7 +385,7 @@ Deno.serve(async (req) => {
   const linha = c.ok ? (await c.json())[0] : null
   if (!linha?.valor) {
     // sem chave própria: os números que a tarefa do Claude trouxe pela integração (a ponte)
-    const ponte = await daPonte(marca, parceiro, de, ate, cfg.pixel)
+    const ponte = cfg.semPonte ? null : await daPonte(marca, parceiro, de, ate, cfg.pixel)
     if (!ponte) return json({ semChave: true })
     if (d.acao === 'resumo') return json({ total: ponte.total, em: ponte.em })
     if (d.acao === 'anuncio') {

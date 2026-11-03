@@ -412,3 +412,16 @@
   .aa-contas button { justify-content: center; }
   .aa-conta > div:not(.aa-troca) { flex: 1 1 auto; min-width: 0; }
 }
+/* Escolher a conta que a chave alcança (03/11/2026) */
+.aa-trocar-conta { margin-left: 10px; padding: 0; border: 0; background: none; color: var(--aa-ouro); font: inherit; font-size: 12px; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.aa-trocar-conta:disabled { opacity: .6; cursor: default; }
+.aa-trocar-conta:focus-visible { outline: 2px solid var(--aa-ouro); outline-offset: 2px; border-radius: 4px; }
+.aa-escolher-lista { display: grid; gap: 8px; margin-top: 4px; }
+.aa-escolher-lista label { color: var(--text); font-weight: 400; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); cursor: pointer; }
+.aa-escolher-lista label.on { border-color: var(--aa-ouro); box-shadow: 0 0 0 1px var(--aa-ouro) inset; }
+.aa-escolher-lista input { accent-color: var(--aa-ouro); width: 18px; height: 18px; flex: none; }
+.aa-escolher-lista span { display: grid; gap: 2px; min-width: 0; }
+.aa-escolher-lista b { color: var(--text); font-size: 14px; overflow-wrap: anywhere; }
+.aa-escolher-lista small { color: var(--muted); font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
+.aa-escolher select { height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: 13.5px; min-width: 0; width: 100%; }
+@media (max-width: 760px) { .aa-trocar-conta { display: block; margin: 4px 0 0; } }

@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
 
   const marca = String(d.marca ?? ''), parceiro = String(d.parceiro ?? ''), evento = String(d.evento ?? '')
   const eventId = String(d.event_id ?? ''), email = String(d.email ?? '').trim().toLowerCase()
-  const pixel = PIXELS[marca]?.[parceiro]
+  let pixel = PIXELS[marca]?.[parceiro]
   if (!pixel || !EVENTOS.has(evento) || !/^[A-Za-z0-9-]{8,80}$/.test(eventId) || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ ok: false }, 400)
   const url = String(d.url ?? '')
   const pagina = url.startsWith(SITES[marca]) ? url.slice(0, 500) : `${SITES[marca]}${parceiro}/cadastro/`
@@ -74,9 +74,11 @@ Deno.serve(async (req) => {
 
   // a chave só do pixel; sem ela, a da conta de anúncios (Administração › Anúncios), se tiver acesso ao pixel
   const sufixo = `${marca.toUpperCase()}_${parceiro.toUpperCase()}`
-  const cfg = await rest(`config_servicos?chave=in.(META_CAPI_${sufixo},META_ADS_${sufixo})&select=chave,valor`)
+  const cfg = await rest(`config_servicos?chave=in.(META_CAPI_${sufixo},META_ADS_${sufixo},META_CONTA_${sufixo})&select=chave,valor`)
   const chaves: Array<{ chave: string; valor: string }> = cfg.ok ? await cfg.json() : []
-  const chave = (chaves.find((c) => c.chave.startsWith('META_CAPI_')) ?? chaves[0])?.valor ?? null
+  const chave = (chaves.find((c) => c.chave.startsWith('META_CAPI_')) ?? chaves.find((c) => c.chave.startsWith('META_ADS_')))?.valor ?? null
+  // o pixel da conta escolhida em Administração › Anúncios (03/11/2026), por cima do mapa
+  try { const o = JSON.parse(chaves.find((c) => c.chave.startsWith('META_CONTA_'))?.valor ?? 'null'); if (o?.pixel) pixel = String(o.pixel) } catch { /* fica o do mapa */ }
   if (!chave) { await anotar(linha.id, 'sem-chave', null); return json({ ok: true, motivo: 'sem-chave' }) }
 
   const partes = String(lead.nome ?? '').trim().split(/\s+/)

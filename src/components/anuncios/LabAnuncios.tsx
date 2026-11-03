@@ -153,6 +153,16 @@ export default function LabAnuncios() {
   const semChave = q.has('sem-chave'), bloqueada = q.has('chave-bloqueada')
   const espera = <T,>(v: T, ms = 300) => new Promise<T>((r) => setTimeout(() => r(v), ms))
   const api: ApiAnuncios = {
+    // &trocar-conta=1: a chave enxerga duas contas e a tela pede para escolher
+    descobrir: () => espera({
+      atual: { conta: '977357031377237', pixel: '1625935188283999', pagina: null },
+      contas: [
+        { id: '1000000000000001', nome: 'CA Daniel Campione', status: 1, moeda: 'BRL', negocio: 'Daniel Campione', pixels: [{ id: '2000000000000001', nome: 'Pixel Daniel Campione' }] },
+        { id: '1000000000000002', nome: 'CA Victor GF', status: 1, moeda: 'BRL', negocio: 'Daniel Campione', pixels: [] },
+      ],
+      paginas: [{ id: '3000000000000001', nome: 'Victor Cordeiro', instagram: { id: '4000000000000001', usuario: 'victorcordeiro' } }],
+    }),
+    escolher: () => espera({ ok: true }),
     painel: (_s, _p, de, ate) => (bloqueada ? espera(null).then(() => { throw new Error('A Meta não deixou nem conferir a chave. Gere uma nova no usuário do sistema e cole de novo.\nResposta da Meta: API access blocked. (código 200)') })
       : espera(semChave ? { semChave: true as const } : painel(de, ate))),
     resumo: () => espera(semChave ? { semChave: true as const } : { total: { ...total, impressoes: total.impressoes + vivos * 40, cliquesLink: total.cliquesLink + vivos }, em: new Date().toISOString() }),
