@@ -11,7 +11,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { Brand } from './Brand'
-import { DerivLogo, IconeSaida } from './DerivMarca'
+import { IconeSaida } from './DerivMarca'
 import { MARCA } from '../marca'
 import { afiliadoDaDeriv, comunidadeDaVitrine } from '../core/rotas'
 import { DERIV } from '../core/deriv/config'
@@ -72,10 +72,6 @@ export function PreAcesso({ sessao, nome, aoConferir, aoSair }: {
       <div className="entrada-caixa espera-caixa pre-caixa">
         <header className="entrada-topo">
           <div className="entrada-marca"><Brand tamanho={46} /></div>
-          <div className="entrada-opera">
-            <span>Opera com</span>
-            <DerivLogo altura={15} />
-          </div>
         </header>
 
         <div className="espera-cabeca">
@@ -110,15 +106,12 @@ export function PreAcesso({ sessao, nome, aoConferir, aoSair }: {
 
         <section className="espera-enquanto pre-deriv" aria-labelledby="pre-deriv-titulo">
           <span className="espera-rotulo" id="pre-deriv-titulo">Chegue pronto</span>
+          {/* no lançamento a corretora não é nomeada (03/11/2026): o nome aparece só depois do acesso liberado */}
           <div className="entrada-corretora espera-corretora">
-            <div className="corretora-topo">
-              <DerivLogo altura={20} />
-              <span className="corretora-selo">Corretora oficial</span>
-            </div>
-            <b>Abra sua conta na Deriv antes da live</b>
-            <p>É grátis. O seu dinheiro fica na sua conta da corretora, e a {MARCA.prosa} se conecta a ela para operar. Na live, mostramos o primeiro <a href={DERIV.deposito} target="_blank" rel="noopener noreferrer">depósito na Deriv</a>, passo a passo.</p>
-            <a className="btn-deriv" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">
-              <span>Abrir conta na Deriv</span>
+            <b>Abra sua conta na corretora antes da{"\u00a0"}live</b>
+            <p>É grátis. O seu dinheiro fica na sua conta da corretora, e a {MARCA.prosa} se conecta a ela para operar. Na live, mostramos o primeiro <a href={DERIV.deposito} target="_blank" rel="noopener noreferrer">depósito</a>, passo a passo.</p>
+            <a className="btn-deriv btn-corretora" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">
+              <span>Abrir minha conta na corretora</span>
               <IconeSaida />
             </a>
           </div>

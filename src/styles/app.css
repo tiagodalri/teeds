@@ -6358,3 +6358,8 @@ body:has(:is(.aula-modal-fundo, .market-modal-fundo, .cw-fundo, .adm-modal-fundo
   .layout-operar .controls .modo-ico { display: block; }
   .layout-operar .controls .modo-txt { display: none; }
 }
+
+/* lançamento da GF: trancada até a live, a plataforma não mostra o logotipo da corretora (corretoraDiscreta.ts) */
+html[data-corretora-discreta] .deriv-logo { display: none !important; }
+/* o botão de abrir conta no Pré-acesso, sem o vermelho da corretora */
+.entrada[data-modo="espera"] .espera-corretora .btn-deriv.btn-corretora { background: var(--primary); color: #fff; box-shadow: none; }

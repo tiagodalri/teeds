@@ -138,10 +138,11 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
         <ChecklistDaLive sessao={sessao} />
         <div className="tl-deriv">
           <div>
-            <b>Abra sua conta na Deriv antes da live</b>
-            <span>É grátis. Na live, mostramos o primeiro <a href={DERIV.deposito} target="_blank" rel="noopener noreferrer">depósito na Deriv</a>, passo a passo.</span>
+            <b>Abra sua conta na corretora antes da{"\u00a0"}live</b>
+            <span>É grátis. Na live, mostramos o primeiro <a href={DERIV.deposito} target="_blank" rel="noopener noreferrer">depósito</a>, passo a passo.</span>
           </div>
-          <a className="tl-botao tl-botao-deriv" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">Abrir conta na Deriv</a>
+          {/* no lançamento a corretora não é nomeada (03/11/2026): o nome aparece só depois do acesso liberado */}
+          <a className="tl-botao" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">Abrir minha conta na corretora</a>
         </div>
         <div className="tl-acoes">
           <button type="button" className="tl-botao tl-botao-calmo" onClick={() => setAviso('aviso')}>Voltar</button>

@@ -15,6 +15,8 @@
  * Regras de texto da casa: sem ponto de exclamação (pesa no filtro de spam),
  * sem "aposta", "sorte", "chute" ou "jogar"; a I.A. não "aprende", não "prevê",
  * não "acerta" e não "garante"; falou em depósito, vai o link de depósito da Deriv.
+ * Antes do acesso liberado, a corretora não é nomeada (03/11/2026, Tiago: "só vamos anunciar
+ * que é a Deriv para quem já tiver o acesso"): é sempre "a corretora".
  */
 import { marcaPorId, type Marca } from '../../src/marca/marcas'
 import { DERIV } from '../../src/core/deriv/config'
@@ -49,7 +51,7 @@ const ETAPAS: Etapa[] = [
       assunto: `O que é a ${marca.prosa}, em um minuto`,
       titulo: `O que é a ${marca.prosa}`,
       espia: 'As I.A. analisam o mercado e operam por você, na sua conta, com as regras que você escolhe.',
-      corpo: `${ola(p)}a ${marca.prosa} é uma plataforma em que **as I.A. analisam o mercado e operam automaticamente por você**, direto na sua conta da corretora Deriv e seguindo as regras que você escolhe: quanto buscar no dia e quanto aceitar perder.\n\nVocê não precisa entender de gráfico nem ficar na frente da tela. O dinheiro fica sempre na sua conta da Deriv, no seu nome.\n\nNa live de **segunda, 09/11, às 20h**, a equipe mostra tudo funcionando ao vivo. Quem ficar até o fim recebe a plataforma liberada, sem pagar nada.`,
+      corpo: `${ola(p)}a ${marca.prosa} é uma plataforma em que **as I.A. analisam o mercado e operam automaticamente por você**, direto na sua conta da corretora e seguindo as regras que você escolhe: quanto buscar no dia e quanto aceitar perder.\n\nVocê não precisa entender de gráfico nem ficar na frente da tela. O dinheiro fica sempre na sua conta da corretora, no seu nome.\n\nNa live de **segunda, 09/11, às 20h**, a equipe mostra tudo funcionando ao vivo. Quem ficar até o fim recebe a plataforma liberada, sem pagar nada.`,
       botao: 'Ver a plataforma',
       comunidade: true,
     }),
@@ -58,11 +60,11 @@ const ETAPAS: Etapa[] = [
     id: 'deriv',
     aberta: (agora) => agora >= em(5, 10) && agora < em(7, 9),
     montar: (marca, p) => ({
-      assunto: 'Abra sua conta na Deriv antes da live',
+      assunto: 'Abra sua conta na corretora antes da live',
       titulo: 'Chegue à live com a conta pronta',
       espia: 'É grátis e leva poucos minutos. Na live, mostramos o primeiro depósito passo a passo.',
-      corpo: `${ola(p)}para usar a ${marca.prosa} logo depois da live, você precisa de uma conta na Deriv, a corretora em que as I.A. operam. É grátis e leva poucos minutos.\n\n1. Crie a sua conta pelo botão abaixo.\n2. Confirme o seu e-mail.\n3. Na live, mostramos o primeiro depósito na Deriv, passo a passo, por este link: ${DERIV.deposito}\n\nQuem chega à live com a conta pronta já sai dela com tudo ligado.`,
-      botao: 'Abrir conta na Deriv',
+      corpo: `${ola(p)}para usar a ${marca.prosa} logo depois da live, você precisa de uma conta na corretora em que as I.A. operam. É grátis e leva poucos minutos.\n\n1. Crie a sua conta pelo botão abaixo.\n2. Confirme o seu e-mail.\n3. Na live, mostramos o primeiro depósito, passo a passo, por este link: ${DERIV.deposito}\n\nQuem chega à live com a conta pronta já sai dela com tudo ligado.`,
+      botao: 'Abrir minha conta na corretora',
       url: (p.parceiro && marca.afiliadosDosParceiros?.[p.parceiro]) || marca.afiliado,
     }),
   },

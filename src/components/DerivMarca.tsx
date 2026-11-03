@@ -31,7 +31,7 @@ const DERIV_WORDMARK = 'M14.4906 0.757054L13.2523 7.77699H8.95374C4.94349 7.7769
 
 export function DerivLogo({ altura = 20, cor = DERIV_VERMELHO }: { altura?: number; cor?: string }) {
   return (
-    <svg role="img" aria-label="Deriv" height={altura} width={altura * (72.3333 / 24)}
+    <svg className="deriv-logo" role="img" aria-label="Deriv" height={altura} width={altura * (72.3333 / 24)}
       viewBox="0 0 73 24" fill="none" xmlns="http://www.w3.org/2000/svg"
       style={{ display: 'block' }}>
       <path d={DERIV_WORDMARK} fill={cor} />

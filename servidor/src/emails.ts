@@ -90,7 +90,7 @@ function conteudo(tipo: TipoDeEmail, prosa: string): Conteudo {
         assunto: `Confirme o seu e-mail · ${prosa}`,
         titulo: 'Confirme o seu e-mail',
         espia: `Falta um clique para a sua conta ${prosa} ficar pronta.`,
-        corpo: `Sua conta na ${prosa} foi criada. Confirme este endereço para poder entrar — depois é só conectar a sua conta da Deriv e começar.\n\nPara entrar, use a sua senha. Se não souber qual é, toque em “Esqueci a senha” na tela de entrada e crie uma nova.`,
+        corpo: `Sua conta na ${prosa} foi criada. Confirme este endereço para poder entrar — depois é só conectar a sua conta da corretora e começar.\n\nPara entrar, use a sua senha. Se não souber qual é, toque em “Esqueci a senha” na tela de entrada e crie uma nova.`,
         botao: 'Confirmar meu e-mail',
         aviso: 'Se não foi você que criou esta conta, pode ignorar este e-mail. Nada acontece sem essa confirmação.',
       }

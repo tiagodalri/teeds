@@ -33,6 +33,7 @@ import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 import { PreAcesso } from './components/PreAcesso'
 import { emPreAcesso, estadoDaLive, idDoYoutube, INICIO_DA_LIVE, PLANO_AGUARDANDO, trancadoAteALive, type EstadoDaLive } from './core/teeds/lancamento'
 import { TrancaDoLancamento } from './components/lancamento/TrancaDoLancamento'
+import { ligarCorretoraDiscreta } from './marca/corretoraDiscreta'
 import { eventoDoPixel, iniciarPixelDoParceiro } from './core/teeds/pixelDoParceiro'
 import { LiveDoLancamento } from './components/lancamento/LiveDoLancamento'
 import { AceiteDosTermos } from './components/termos/Termos'
@@ -545,6 +546,8 @@ export default function App() {
   */
   const previaInscrito = MARCA.id === 'globalfly' && admin === true && new URLSearchParams(location.search).get('ver') === 'inscrito'
   const trancado = previaInscrito || trancadoAteALive(situacao, plano, admin)
+  // trancada até a live, a plataforma de trás também não diz o nome da corretora (03/11/2026)
+  useEffect(() => (trancado ? ligarCorretoraDiscreta() : undefined), [trancado])
   const [live, setLive] = useState<EstadoDaLive | null>(null)
   const [assistindoLive, setAssistindoLive] = useState(false)
   useEffect(() => {
@@ -1241,7 +1244,7 @@ export default function App() {
             <button className="btn-deriv" onClick={conta.login}
               disabled={conta.status === 'entrando'}>
               <IconeElo />
-              {conta.status === 'entrando' ? 'Abrindo…' : <>Conectar <DerivLogo altura={13} cor="#fff" /></>}
+              {conta.status === 'entrando' ? 'Abrindo…' : trancado ? 'Conectar corretora' : <>Conectar <DerivLogo altura={13} cor="#fff" /></>}
             </button>
           )}
 
