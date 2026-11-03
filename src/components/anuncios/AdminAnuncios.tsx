@@ -16,6 +16,8 @@ import { MARCA } from '../../marca'
 import { API_DO_BANCO, CONTAS_DE_ANUNCIO, type ApiAnuncios, type Anuncio, type DetalheDoAnuncio, type FunilDoBanco, type Horarios as DadosDeHorario, type Metricas, type PainelDaMeta, type Quebra, type RespostaDaMeta } from '../../core/teeds/anuncios'
 import { Alertas, Custos, Filtros, Horarios, METRICA, Relatorio, alertas, aplicar, formatar, somarLinhas, useColunas, type Base, type Linha, type Regra } from './Indicadores'
 import { Funil3D, type EtapaDoFunil } from './Funil3D'
+import { EstudioDeAnuncios } from './estudio/Estudio'
+import { API_DO_ESTUDIO, type ApiEstudio } from '../../core/teeds/estudio'
 import './admin-anuncios.css'
 
 const brl = (v: number, casas = 2) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: casas, maximumFractionDigits: casas })
@@ -50,7 +52,7 @@ type IdPeriodo = (typeof PERIODOS)[number]['id']
 
 // 03/11/2026 (Tiago: "precisa ser mais intuitiva"): a página virou abas; a escolhida fica lembrada neste aparelho
 const ABAS = [
-  { id: 'geral', nome: 'Visão geral' }, { id: 'custos', nome: 'Custos' }, { id: 'anuncios', nome: 'Anúncios' },
+  { id: 'geral', nome: 'Visão geral' }, { id: 'estudio', nome: 'Estúdio' }, { id: 'custos', nome: 'Custos' }, { id: 'anuncios', nome: 'Anúncios' },
   { id: 'publico', nome: 'Público' }, { id: 'rastreio', nome: 'Pixel e rastreio' },
 ] as const
 type IdAba = (typeof ABAS)[number]['id']
@@ -160,7 +162,7 @@ function Barras({ titulo, linhas, nome }: { titulo: string; linhas: Quebra[]; no
 }
 
 /** `intervalo`: de quanto em quanto tempo o nosso banco é lido (o laboratório acelera). */
-export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }: { sessao: SessaoTeeds; api?: ApiAnuncios; intervalo?: number }) {
+export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_ESTUDIO, intervalo = 10_000 }: { sessao: SessaoTeeds; api?: ApiAnuncios; apiEstudio?: ApiEstudio; intervalo?: number }) {
   const contas = CONTAS_DE_ANUNCIO[MARCA.id] ?? []
   const [parceiro, setParceiro] = useState(contas[0]?.codigo ?? '')
   const [periodo, setPeriodo] = useState<IdPeriodo>('lancamento')
@@ -188,6 +190,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
   const [banco, setBanco] = useState<string | null>(null)
   const [agora, setAgora] = useState(Date.now())
   const [aba, setAbaAgora] = useState<IdAba>(abaGuardada)
+  const [pedidoEstudio, setPedidoEstudio] = useState<{ tipo: 'novo' | 'teste'; n: number } | null>(null)
   const setAba = (a: IdAba) => { setAbaAgora(a); try { localStorage.setItem('aa-aba', a) } catch { /* sem memória neste aparelho */ } }
   const p = PERIODOS.find((x) => x.id === periodo)!
   const de = periodo === 'personalizado' ? escolha.de : p.de(), ate = periodo === 'personalizado' ? escolha.ate : p.ate()
@@ -299,6 +302,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
           {painel && <span className={`aa-status ${painel.conta.status === 1 ? 'ok' : 'erro'}`}>{painel.conta.status === 1 ? 'Conta ativa' : 'Conta com restrição'}</span>}
         </div>
         <div className="aa-acoes">
+          <button type="button" className="aa-atualizar aa-subir" onClick={() => { setAba('estudio'); setPedidoEstudio({ tipo: 'novo', n: Date.now() }) }}><span aria-hidden="true">+</span>Subir anúncio</button>
           <button type="button" className="aa-atualizar" onClick={() => setRelatorio(true)}>Relatório</button>
           <button type="button" className="aa-atualizar" onClick={() => void carregar(true)} disabled={carregando}>{carregando ? 'Atualizando…' : 'Atualizar agora'}</button>
         </div>
@@ -374,6 +378,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
             {x.nome}
             {x.id === 'anuncios' && painel ? <i>{int(painel.anuncios.length)}</i> : null}
             {x.id === 'geral' && qtdAlertas ? <i className="alerta">{qtdAlertas}</i> : null}
+            {x.id === 'estudio' ? <i className="novo">Novo</i> : null}
           </button>
         ))}
       </nav>
@@ -417,6 +422,12 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
             <Horarios dados={horarios} origem={origem} />
           </section>
         </>
+      )}
+
+      {aba === 'estudio' && (
+        <EstudioDeAnuncios sessao={sessao} api={apiEstudio} parceiro={parceiro} contaNome={painel?.conta.nome || 'CA - NAOR BEZERRA'} painel={painel} funil={funil}
+          custoPorCadastro={total && cadDeAnuncio ? total.gasto / cadDeAnuncio : null} recarregar={() => void carregar(true)}
+          abrirChave={() => { setAbrirConectar(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }} pedido={pedidoEstudio} />
       )}
 
       {aba === 'custos' && (

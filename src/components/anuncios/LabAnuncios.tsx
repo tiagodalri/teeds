@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { AdminAnuncios } from './AdminAnuncios'
 import type { ApiAnuncios, FunilDoBanco, Metricas, PainelDaMeta } from '../../core/teeds/anuncios'
 import type { SessaoTeeds } from '../../core/teeds/conta'
+import type { ApiEstudio, ItemDoHistorico, Rascunho } from '../../core/teeds/estudio'
 
 /** Laboratório: Administração › Anúncios com números de exemplo (?tela=anuncios-admin; &sem-chave=1 mostra o conectar). */
 const m = (gasto: number, imp: number, cliques: number, lpv: number, cad: number, v3 = 0, thru = 0): Metricas => ({
@@ -70,6 +72,57 @@ function funil(): FunilDoBanco {
   }
 }
 
+/* o estúdio de mentira: guarda tudo na memória da aba e finge o envio para a Meta (&estudio-sem-chave=1 testa sem a chave) */
+const agoraMenos = (min: number) => new Date(Date.now() - min * 60e3).toISOString()
+const rascunhosLab: Rascunho[] = [
+  { id: '00000000-0000-4000-8000-000000000001', tipo: 'teste', nome: 'Naor na mesa x Bastidores', situacao: 'ligado', erro: null, criadoEm: agoraMenos(2000), atualizadoEm: agoraMenos(1900),
+    progresso: { anuncioId: ads[0].id, anuncioB: ads[1].id, conjuntoId: 's1', conjuntoB: 's2', estudoId: '1', avisos: [] },
+    dados: { nomeAnuncio: 'Naor na mesa x Bastidores', midia: { tipo: 'video', nome: 'v01.mp4', largura: 1080, altura: 1920, tamanho: 3e7, poster: miniatura('#B8862F', 'V01') }, midiaB: { tipo: 'video', nome: 'v02.mp4', largura: 1080, altura: 1920, tamanho: 3e7, poster: miniatura('#3a6fd8', 'V02') },
+      texto: { principal: '', titulo: 'Live gratuita dia 09/11', descricao: '', botao: 'SIGN_UP' }, link: 'https://globalflytrade.com/n/cadastro/', destino: { campanha: 'c1', nomeCampanha: '', conjunto: 'novo', nomeConjunto: '' },
+      publico: { modo: 'padrao', idadeMin: 18, idadeMax: 65, genero: 'todos' }, diario: 400, teste: { variavel: 'criativo', dias: 7 } } },
+  { id: '00000000-0000-4000-8000-000000000002', tipo: 'novo', nome: 'Convite da live · versão curta', situacao: 'rascunho', erro: null, criadoEm: agoraMenos(90), atualizadoEm: agoraMenos(35), progresso: {},
+    dados: { nomeAnuncio: 'Convite da live · versão curta', midia: { tipo: 'imagem', nome: 'convite.jpg', largura: 1080, altura: 1350, tamanho: 8e5, poster: miniatura('#7a4fd0', 'IMG') },
+      texto: { principal: 'Dia 09/11 tem live ao vivo com o Naor.', titulo: 'Live gratuita dia 09/11', descricao: '', botao: 'SIGN_UP' }, link: 'https://globalflytrade.com/n/cadastro/', destino: { campanha: 'nova', nomeCampanha: 'Live 09/11 | Cadastros', conjunto: 'novo', nomeConjunto: 'Público do lançamento' },
+      publico: { modo: 'padrao', idadeMin: 18, idadeMax: 65, genero: 'todos' }, diario: 300 } },
+]
+const historicoLab: ItemDoHistorico[] = [
+  { id: 3, quem: 'Tiago', acao: 'orcamento', alvoTipo: 'conjunto', alvoId: 's1', alvoNome: 'Brasil · 25–55 · aberto', detalhe: { antes: 250, depois: 300 }, em: agoraMenos(180) },
+  { id: 2, quem: 'Tiago', acao: 'ligou', alvoTipo: 'anuncio', alvoId: ads[0].id, alvoNome: 'Naor na mesa x Bastidores', detalhe: { diario: 400 }, em: agoraMenos(1900) },
+  { id: 1, quem: 'Tiago', acao: 'criou_teste', alvoTipo: 'anuncio', alvoId: ads[0].id, alvoNome: 'Naor na mesa x Bastidores', detalhe: {}, em: agoraMenos(1950) },
+]
+function estudioDeMentira(semChave: boolean): ApiEstudio {
+  const espera = <T,>(v: T, ms = 350) => new Promise<T>((r) => setTimeout(() => r(v), ms))
+  const anotar = (acao: string, alvoNome: string, detalhe: Record<string, unknown> = {}) => historicoLab.unshift({ id: Date.now(), quem: 'Tiago', acao, alvoTipo: 'anuncio', alvoId: '', alvoNome, detalhe, em: new Date().toISOString() })
+  const achar = (id: string) => rascunhosLab.find((r) => r.id === id)!
+  return {
+    contexto: () => espera({
+      ...(semChave ? { semChave: true } : {}), conta: '977357031377237', maxDia: 5000, link: 'https://globalflytrade.com/n/cadastro/',
+      pagina: { id: '483727028157678', nome: 'Naor Bezzera', foto: null }, instagram: { id: '17841406873438157', usuario: 'naorbezerra_', foto: null },
+      campanhas: [{ id: 'c1', nome: 'GF | Live 09/11 | Cadastros', status: 'ACTIVE', orcDia: 0 }],
+      conjuntos: [{ id: 's1', nome: 'Brasil · 25–55 · aberto', status: 'ACTIVE', campanhaId: 'c1', orcDia: 300, publico: 'Público Advantage+' }],
+    }),
+    rascunhos: () => espera(rascunhosLab.filter((r) => (r.situacao as string) !== 'arquivado').map((r) => ({ ...r }))),
+    salvar: (_s, _p, id, tipo, nome, dados) => {
+      const limpo = JSON.parse(JSON.stringify(dados, (k, v) => (k === 'local' ? undefined : v)))
+      if (id) { const r = achar(id); if (r) Object.assign(r, { nome, dados: limpo, atualizadoEm: new Date().toISOString() }); return espera(id, 250) }
+      const novo = `00000000-0000-4000-8000-${String(Date.now()).slice(-12)}`
+      rascunhosLab.unshift({ id: novo, tipo, nome, dados: limpo, situacao: 'rascunho', progresso: {}, erro: null, criadoEm: new Date().toISOString(), atualizadoEm: new Date().toISOString() })
+      return espera(novo, 250)
+    },
+    arquivar: (_s, id) => { const i = rascunhosLab.findIndex((r) => r.id === id); if (i >= 0) rascunhosLab.splice(i, 1); return espera(null) },
+    historico: () => espera([...historicoLab]),
+    subirImagem: () => espera({ hash: `hash${Date.now()}` }, 900),
+    subirVideo: async (_s, _p, _f, andamento) => { for (let i = 1; i <= 10; i++) { await espera(null, 180); andamento(i / 10) } return { videoId: `v${Date.now()}` } },
+    estadoVideo: (() => { let n = 0; return () => espera(++n % 3 === 0 ? { estado: 'ready', progresso: 100 } : { estado: 'processing', progresso: (n % 3) * 40 }, 300) })(),
+    criar: async (_s, _p, id) => { await espera(null, 3200); const r = achar(id); r.situacao = 'pausado'; r.progresso = { anuncioId: 'novo1', campanhaId: 'c9', campanhaNova: true, conjuntoId: 's9', conjuntoNovo: true, avisos: [] }; anotar(r.tipo === 'teste' ? 'criou_teste' : 'criou', r.nome); return { situacao: 'pausado', progresso: r.progresso } },
+    ligar: async (_s, _p, id) => { await espera(null, 900); const r = achar(id); r.situacao = 'ligado'; anotar('ligou', r.nome, { diario: r.dados.diario }); return { situacao: 'ligado', progresso: r.progresso } },
+    vencedor: async (_s, _p, id, v) => { const r = achar(id); r.progresso = { ...r.progresso, vencedor: v }; anotar('vencedor', r.nome, { vencedor: v.toUpperCase() }); return espera({ situacao: r.situacao, progresso: r.progresso }) },
+    status: (_s, _p, _t, _id, ligar) => { anotar(ligar ? 'ligou' : 'pausou', 'Anúncio do laboratório'); return espera({ ok: true }, 700) },
+    orcamento: (_s, _p, _c, diario) => { anotar('orcamento', 'Brasil · 25–55 · aberto', { antes: 300, depois: diario }); return espera({ ok: true }, 700) },
+    escalar: (_s, _p, _c, aumento) => { anotar('escalou', 'Brasil · 25–55 · aberto · escala', { aumento, diario: Math.round(300 * (1 + aumento / 100)) }); return espera({ conjuntoId: 's3', diario: Math.round(300 * (1 + aumento / 100)) }, 900) },
+  }
+}
+
 export default function LabAnuncios() {
   const q = new URLSearchParams(location.search)
   const semChave = q.has('sem-chave')
@@ -86,5 +139,6 @@ export default function LabAnuncios() {
     }),
   }
   const sessao = { token: 'lab', usuario: { id: 'lab' } } as unknown as SessaoTeeds
-  return <div className="workspace-app" style={{ minHeight: '100vh', background: 'var(--bg)', padding: 'clamp(12px, 3vw, 28px)', boxSizing: 'border-box' }}><AdminAnuncios sessao={sessao} api={api} intervalo={q.has('rapido') ? 2500 : undefined} /></div>
+  const [estudio] = useState(() => estudioDeMentira(q.has('estudio-sem-chave')))
+  return <div className="workspace-app" style={{ minHeight: '100vh', background: 'var(--bg)', padding: 'clamp(12px, 3vw, 28px)', boxSizing: 'border-box' }}><AdminAnuncios sessao={sessao} api={api} apiEstudio={estudio} intervalo={q.has('rapido') ? 2500 : undefined} /></div>
 }
