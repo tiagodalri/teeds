@@ -104,7 +104,7 @@ export function Custos({ atual, anterior, origem }: { atual: Base; anterior: Bas
   ]
   return (
     <>
-      {origem === 'todos' && <p className="aa-nota">Os custos de cadastro em diante dividem o investimento por todos os cadastros do /n. Para ver só o que veio de anúncio, troque para “Só anúncios” no funil.</p>}
+      {origem === 'todos' && <p className="aa-nota">Os custos de cadastro em diante dividem o investimento por todos os cadastros do /n. Para ver só o que veio de anúncio, escolha “Só os de anúncio” lá em cima.</p>}
       <div className="aa-custos">
         {itens.map((it) => {
           const v = it.v(atual), d = anterior ? variacao(v, it.v(anterior)) : null

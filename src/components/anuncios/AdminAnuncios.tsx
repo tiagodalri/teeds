@@ -48,6 +48,14 @@ const anteriorA = (de: string, ate: string) => {
 const dataBr = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`
 type IdPeriodo = (typeof PERIODOS)[number]['id']
 
+// 03/11/2026 (Tiago: "precisa ser mais intuitiva"): a página virou abas; a escolhida fica lembrada neste aparelho
+const ABAS = [
+  { id: 'geral', nome: 'Visão geral' }, { id: 'custos', nome: 'Custos' }, { id: 'anuncios', nome: 'Anúncios' },
+  { id: 'publico', nome: 'Público' }, { id: 'rastreio', nome: 'Pixel e rastreio' },
+] as const
+type IdAba = (typeof ABAS)[number]['id']
+const abaGuardada = (): IdAba => { try { const v = localStorage.getItem('aa-aba'); return ABAS.some((a) => a.id === v) ? v as IdAba : 'geral' } catch { return 'geral' } }
+
 const STATUS: Record<string, [string, string]> = {
   ACTIVE: ['No ar', 'ok'], PAUSED: ['Pausado', 'pausa'], CAMPAIGN_PAUSED: ['Campanha pausada', 'pausa'], ADSET_PAUSED: ['Conjunto pausado', 'pausa'],
   IN_PROCESS: ['Processando', 'aviso'], PENDING_REVIEW: ['Em análise', 'aviso'], DISAPPROVED: ['Reprovado', 'erro'], WITH_ISSUES: ['Com problema', 'erro'],
@@ -179,6 +187,8 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
   const [salvando, setSalvando] = useState<{ ok?: string; erro?: string; indo?: boolean }>({})
   const [banco, setBanco] = useState<string | null>(null)
   const [agora, setAgora] = useState(Date.now())
+  const [aba, setAbaAgora] = useState<IdAba>(abaGuardada)
+  const setAba = (a: IdAba) => { setAbaAgora(a); try { localStorage.setItem('aa-aba', a) } catch { /* sem memória neste aparelho */ } }
   const p = PERIODOS.find((x) => x.id === periodo)!
   const de = periodo === 'personalizado' ? escolha.de : p.de(), ate = periodo === 'personalizado' ? escolha.ate : p.ate()
   const nomeDoPeriodo = de === ate ? dataBr(de) : `${dataBr(de)} a ${dataBr(ate)}`
@@ -277,6 +287,9 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
 
   if (!contas.length) return <p className="aa-vazio">Nenhum parceiro desta plataforma tem conta de anúncios ligada.</p>
 
+  const cadDeAnuncio = funil?.anuncio.cadastros ?? 0
+  const qtdAlertas = listaDeAlertas.filter((a) => a.tipo !== 'bom').length
+
   return (
     <div className="aa">
       <div className="aa-topo">
@@ -285,17 +298,33 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
           <div><small>Conta de anúncios do {nomeParceiro}</small><b>{painel?.conta.nome || `Conta ${contas.find((c) => c.codigo === parceiro)?.conta}`}</b></div>
           {painel && <span className={`aa-status ${painel.conta.status === 1 ? 'ok' : 'erro'}`}>{painel.conta.status === 1 ? 'Conta ativa' : 'Conta com restrição'}</span>}
         </div>
-        <div className="aa-periodo" role="tablist" aria-label="Período">
-          {PERIODOS.map((x) => <button key={x.id} type="button" role="tab" aria-selected={periodo === x.id} className={periodo === x.id ? 'on' : ''} onClick={() => setPeriodo(x.id)}>{x.nome}</button>)}
+        <div className="aa-acoes">
+          <button type="button" className="aa-atualizar" onClick={() => setRelatorio(true)}>Relatório</button>
+          <button type="button" className="aa-atualizar" onClick={() => void carregar(true)} disabled={carregando}>{carregando ? 'Atualizando…' : 'Atualizar agora'}</button>
         </div>
-        {periodo === 'personalizado' && (
-          <div className="aa-datas">
-            <label>De <input type="date" value={escolha.de} max={escolha.ate} onChange={(e) => e.target.value && setEscolha((x) => ({ ...x, de: e.target.value }))} /></label>
-            <label>Até <input type="date" value={escolha.ate} min={escolha.de} max={iso(new Date())} onChange={(e) => e.target.value && setEscolha((x) => ({ ...x, ate: e.target.value }))} /></label>
+      </div>
+
+      {/* os dois filtros que valem para a página inteira */}
+      <div className="aa-filtro-geral">
+        <div className="aa-campo">
+          <small>Período</small>
+          <div className="aa-periodo" role="tablist" aria-label="Período">
+            {PERIODOS.map((x) => <button key={x.id} type="button" role="tab" aria-selected={periodo === x.id} className={periodo === x.id ? 'on' : ''} onClick={() => setPeriodo(x.id)}>{x.nome}</button>)}
           </div>
-        )}
-        <button type="button" className="aa-atualizar" onClick={() => setRelatorio(true)}>Relatório</button>
-        <button type="button" className="aa-atualizar" onClick={() => void carregar(true)} disabled={carregando}>{carregando ? 'Atualizando…' : 'Atualizar agora'}</button>
+          {periodo === 'personalizado' && (
+            <div className="aa-datas">
+              <label>De <input type="date" value={escolha.de} max={escolha.ate} onChange={(e) => e.target.value && setEscolha((x) => ({ ...x, de: e.target.value }))} /></label>
+              <label>Até <input type="date" value={escolha.ate} min={escolha.de} max={iso(new Date())} onChange={(e) => e.target.value && setEscolha((x) => ({ ...x, ate: e.target.value }))} /></label>
+            </div>
+          )}
+        </div>
+        <div className="aa-campo">
+          <small>Cadastros que entram na conta</small>
+          <div className="aa-troca" role="group" aria-label="De onde vieram os cadastros">
+            <button type="button" className={origem === 'todos' ? 'on' : ''} onClick={() => setOrigem('todos')}>Todos do /{parceiro}</button>
+            <button type="button" className={origem === 'anuncios' ? 'on' : ''} onClick={() => setOrigem('anuncios')}>Só os de anúncio</button>
+          </div>
+        </div>
       </div>
 
       {erro && <div className="aa-erro">{erro}</div>}
@@ -310,17 +339,18 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
         <section className="aa-conectar">
           <div>
             <h3>{chaveRuim ? 'A chave da Meta parou de funcionar' : `Conectar a conta de anúncios do ${nomeParceiro}`}</h3>
-            <p>{chaveRuim ? 'A Meta recusou a chave guardada (venceu ou foi trocada). Cole uma nova abaixo.' : 'O funil abaixo já mostra o que acontece dentro da plataforma. Para trazer investimento, cliques e cada anúncio, cole aqui a chave de acesso da conta de anúncios. A mesma chave liga também o envio do pixel pelo servidor.'}</p>
+            <p>{chaveRuim ? 'A Meta recusou a chave guardada (venceu ou foi trocada). Cole uma nova abaixo.' : 'O funil já mostra o que acontece dentro da plataforma. Para trazer investimento, cliques e cada anúncio, cole aqui a chave de acesso da conta de anúncios. A mesma chave liga também o envio do pixel pelo servidor.'}</p>
             <ol>
-              <li>Em <b>business.facebook.com</b>, abrir <b>Configurações do negócio › Usuários do sistema</b> e criar um usuário (Administrador).</li>
+              <li>Em <b>business.facebook.com</b>, abrir <b>Configurações do negócio › Usuários do sistema</b> e escolher o usuário (ou criar um).</li>
               <li><b>Atribuir ativos</b>: a conta <b>CA - NAOR BEZERRA</b> (controle total) e o pixel <b>PIXEL - NAOR BEZERRA OFICIAL</b>.</li>
-              <li><b>Gerar novo token</b>, validade <b>Nunca</b>, com as permissões <b>ads_read</b>, <b>ads_management</b> e <b>business_management</b>.</li>
+              <li><b>Gerar novo token</b>, validade <b>Nunca</b>, com todas as permissões.</li>
             </ol>
           </div>
           <form onSubmit={(e) => { e.preventDefault(); if (chave.trim()) void salvarChave(chave) }}>
             <label htmlFor="aa-chave">Chave de acesso da Meta</label>
             <input id="aa-chave" type="password" autoComplete="off" spellCheck={false} value={chave} onChange={(e) => setChave(e.target.value)} placeholder="Cole a chave que começa com EA" />
             <button type="submit" disabled={salvando.indo || !chave.trim()}>{salvando.indo ? 'Conectando…' : 'Conectar'}</button>
+            {abrirConectar && !semChave && !chaveRuim && <button type="button" className="aa-cancelar" onClick={() => setAbrirConectar(false)}>Agora não</button>}
             {salvando.erro && <p className="aa-erro">{salvando.erro}</p>}
             {salvando.ok && <p className="aa-ok">{salvando.ok}</p>}
             <small>A chave fica guardada no servidor e não aparece de novo nem para quem salvou.</small>
@@ -328,61 +358,94 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
         </section>
       )}
 
-      <section className="aa-cartao aa-funil">
-        <header>
-          <div><span className="rot">Ao vivo</span><h3>Funil do lançamento</h3></div>
-          <div className="aa-funil-acoes">
-            <span className="aa-vivo"><i />{atualizado == null ? 'Conectando…' : atualizado < 5 ? 'Atualizado agora' : `Atualizado há ${atualizado} s`}</span>
-            <div className="aa-troca" role="group" aria-label="De onde vieram os cadastros">
-              <button type="button" className={origem === 'todos' ? 'on' : ''} onClick={() => setOrigem('todos')}>Todo o /{parceiro}</button>
-              <button type="button" className={origem === 'anuncios' ? 'on' : ''} onClick={() => setOrigem('anuncios')}>Só anúncios</button>
-            </div>
-          </div>
-        </header>
-        <Funil3D etapas={etapas} mostrarCusto={comCusto} />
-        <p className="aa-nota">As três primeiras etapas vêm da Meta (a cada minuto) e o resto vem da plataforma, a cada 10 segundos. {origem === 'anuncios' ? 'Só anúncios: contam os cadastros que chegaram por um anúncio da Meta.' : `Todo o /${parceiro}: todos os cadastros da página, de anúncio ou não.`}</p>
-      </section>
-
+      {/* o resumo do período em uma frase, para quem só quer saber se está indo bem */}
       {total && (
-        <div className="aa-kpis">
-          <div><small>Investido</small><b>{brl(total.gasto)}</b><span>{painel ? `${int(total.impressoes)} impressões` : ''}</span></div>
-          <div className="destaque"><small>Cadastros na plataforma</small><b>{int(funil?.anuncio.cadastros ?? 0)}</b><span>vindos de anúncio · a Meta contou {int(total.cadastros)}</span></div>
-          <div className="destaque"><small>Custo por cadastro</small><b>{custo(total.gasto, funil?.anuncio.cadastros ?? 0)}</b><span>pela Meta: {custo(total.gasto, total.cadastros)}</span></div>
-          <div><small>Custo por GF Member</small><b>{custo(total.gasto, funil?.anuncio.liberados ?? 0)}</b><span>{int(funil?.anuncio.liberados ?? 0)} liberados vindos de anúncio</span></div>
-          <div><small>CPM</small><b>{brl(total.cpm)}</b><span>mil impressões</span></div>
-          <div><small>CTR no link</small><b>{pc(total.ctrLink)}</b><span>{int(total.cliquesLink)} cliques</span></div>
-          <div><small>Custo por clique</small><b>{brl(total.cpcLink)}</b><span>no link</span></div>
-          <div><small>Alcance</small><b>{int(total.alcance)}</b><span>frequência {dec(total.frequencia)}</span></div>
-          <div><small>Página carregou</small><b>{pc(razao(total.lpv, total.cliquesLink) * 100, 1)}</b><span>{int(total.lpv)} de {int(total.cliquesLink)} cliques</span></div>
-          <div><small>Página → cadastro</small><b>{pc(razao(funil?.anuncio.cadastros ?? 0, total.lpv) * 100, 1)}</b><span>de quem chegou pelo anúncio</span></div>
-        </div>
+        <p className="aa-resumo">
+          <span>{de === ate ? `Em ${dataBr(de)}` : `De ${ddmm(de)} a ${ddmm(ate)}`}, </span>
+          <b>{brl(total.gasto)}</b> investidos trouxeram <b>{int(cadDeAnuncio)} {cadDeAnuncio === 1 ? 'cadastro' : 'cadastros'}</b> pelos anúncios
+          {cadDeAnuncio > 0 && <>, <b>{custo(total.gasto, cadDeAnuncio)}</b> cada</>}.
+          {qtdAlertas > 0 && <> <button type="button" onClick={() => setAba('geral')}>{qtdAlertas === 1 ? '1 ponto pede atenção' : `${qtdAlertas} pontos pedem atenção`}</button></>}
+        </p>
       )}
 
-      <section className="aa-cartao">
-        <header><div><span className="rot">Indicadores de custo · comparados com {anteriorA(de, ate).de === anteriorA(de, ate).ate ? dataBr(anteriorA(de, ate).de) : `${dataBr(anteriorA(de, ate).de)} a ${dataBr(anteriorA(de, ate).ate)}`}</span><h3>Quanto custa cada passo</h3></div></header>
-        <Custos atual={{ meta: total, banco: etapasDoBanco, comecou: funil?.passos?.comecou ?? null }} anterior={anterior} origem={origem} />
-      </section>
+      <nav className="aa-abas" role="tablist" aria-label="Partes do painel">
+        {ABAS.map((x) => (
+          <button key={x.id} type="button" role="tab" aria-selected={aba === x.id} className={aba === x.id ? 'on' : ''} onClick={() => setAba(x.id)}>
+            {x.nome}
+            {x.id === 'anuncios' && painel ? <i>{int(painel.anuncios.length)}</i> : null}
+            {x.id === 'geral' && qtdAlertas ? <i className="alerta">{qtdAlertas}</i> : null}
+          </button>
+        ))}
+      </nav>
 
-      <section className="aa-cartao">
-        <header><div><span className="rot">Indicadores inteligentes</span><h3>O que merece atenção</h3></div></header>
-        <Alertas lista={listaDeAlertas} />
-      </section>
-
-      {painel && (
+      {aba === 'geral' && (
         <>
-          <section className="aa-cartao">
-            <header><div><span className="rot">Dia a dia</span><h3>Investimento e cadastros</h3></div></header>
-            <GraficoDoDia dias={dias} />
+          <section className="aa-cartao aa-funil">
+            <header>
+              <div><span className="rot">Ao vivo</span><h3>Funil do lançamento</h3></div>
+              <span className="aa-vivo"><i />{atualizado == null ? 'Conectando…' : atualizado < 5 ? 'Atualizado agora' : `Atualizado há ${atualizado} s`}</span>
+            </header>
+            <Funil3D etapas={etapas} mostrarCusto={comCusto} />
+            <p className="aa-nota">As três primeiras etapas vêm da Meta, a cada minuto. As outras vêm da plataforma, a cada 10 segundos. {origem === 'anuncios' ? 'Contam só os cadastros que chegaram por um anúncio da Meta.' : `Contam todos os cadastros do /${parceiro}, de anúncio ou não.`}</p>
           </section>
+
+          {total && (
+            <div className="aa-kpis principais">
+              <div><small>Investido</small><b>{brl(total.gasto)}</b><span>{painel ? `${int(total.impressoes)} impressões` : ''}</span></div>
+              <div className="destaque"><small>Cadastros pelos anúncios</small><b>{int(cadDeAnuncio)}</b><span>a Meta contou {int(total.cadastros)}</span></div>
+              <div className="destaque"><small>Custo por cadastro</small><b>{custo(total.gasto, cadDeAnuncio)}</b><span>pela conta da Meta: {custo(total.gasto, total.cadastros)}</span></div>
+              <div><small>Custo por GF Member</small><b>{custo(total.gasto, funil?.anuncio.liberados ?? 0)}</b><span>{int(funil?.anuncio.liberados ?? 0)} liberados vindos de anúncio</span></div>
+            </div>
+          )}
+
+          {listaDeAlertas.length ? (
+            <section className="aa-cartao">
+              <header><div><span className="rot">Indicadores inteligentes</span><h3>O que merece atenção</h3></div></header>
+              <Alertas lista={listaDeAlertas} />
+            </section>
+          ) : <p className="aa-tudo-ok"><i aria-hidden="true" /><span><b>Nada fora do normal</b> neste período: custos e anúncios dentro do esperado.</span></p>}
+
+          {painel && (
+            <section className="aa-cartao">
+              <header><div><span className="rot">Dia a dia</span><h3>Investimento e cadastros</h3></div></header>
+              <GraficoDoDia dias={dias} />
+            </section>
+          )}
 
           <section className="aa-cartao">
             <header><div><span className="rot">Quando as pessoas se cadastram</span><h3>Melhores horários</h3></div></header>
             <Horarios dados={horarios} origem={origem} />
           </section>
+        </>
+      )}
 
+      {aba === 'custos' && (
+        <>
+          {total && (
+            <section className="aa-cartao">
+              <header><div><span className="rot">Entrega dos anúncios</span><h3>Como o anúncio está rodando</h3></div></header>
+              <div className="aa-kpis seis">
+                <div><small>CPM</small><b>{brl(total.cpm)}</b><span>custo de mil impressões</span></div>
+                <div><small>CTR no link</small><b>{pc(total.ctrLink)}</b><span>{int(total.cliquesLink)} cliques a cada {int(total.impressoes)} impressões</span></div>
+                <div><small>Custo por clique</small><b>{brl(total.cpcLink)}</b><span>no link do anúncio</span></div>
+                <div><small>Alcance</small><b>{int(total.alcance)}</b><span>pessoas · cada uma viu {dec(total.frequencia)} vezes</span></div>
+                <div><small>Página carregou</small><b>{pc(razao(total.lpv, total.cliquesLink) * 100, 1)}</b><span>{int(total.lpv)} de {int(total.cliquesLink)} cliques</span></div>
+                <div><small>Página → cadastro</small><b>{pc(razao(cadDeAnuncio, total.lpv) * 100, 1)}</b><span>de quem chegou pelo anúncio</span></div>
+              </div>
+            </section>
+          )}
+          <section className="aa-cartao">
+            <header><div><span className="rot">Comparado com {anteriorA(de, ate).de === anteriorA(de, ate).ate ? dataBr(anteriorA(de, ate).de) : `${dataBr(anteriorA(de, ate).de)} a ${dataBr(anteriorA(de, ate).ate)}`}</span><h3>Quanto custa cada passo</h3></div></header>
+            <Custos atual={{ meta: total, banco: etapasDoBanco, comecou: funil?.passos?.comecou ?? null }} anterior={anterior} origem={origem} />
+          </section>
+        </>
+      )}
+
+      {aba === 'anuncios' && (!painel ? <p className="aa-vazio">{semChave ? 'Os anúncios aparecem quando a conta for conectada.' : 'Carregando…'}</p> : (
+        <>
           <section className="aa-cartao">
             <header>
-              <div><span className="rot">{int(filtradas.length)} de {int(linhas.length)} {linhas.length === 1 ? 'anúncio' : 'anúncios'}</span><h3>Cada anúncio</h3></div>
+              <div><span className="rot">{int(filtradas.length)} de {int(linhas.length)} {linhas.length === 1 ? 'anúncio' : 'anúncios'} · clique em um para ver tudo dele</span><h3>Cada anúncio</h3></div>
               <div className="aa-selects">
                 <select value={campanha} onChange={(e) => { setCampanha(e.target.value); setConjunto('') }} aria-label="Campanha">
                   <option value="">Todas as campanhas</option>
@@ -437,54 +500,58 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, intervalo = 10_000 }
               </div>
             )}
           </section>
-
-          <section className="aa-cartao">
-            <header><div><span className="rot">Quem viu</span><h3>Público e posicionamentos</h3></div></header>
-            <div className="aa-quebras">
-              <Barras titulo="Idade e gênero" linhas={painel.quebras.idadeGenero} nome={(q) => `${q.age} · ${q.gender === 'male' ? 'Homens' : q.gender === 'female' ? 'Mulheres' : 'Outros'}`} />
-              <Barras titulo="Onde apareceu" linhas={painel.quebras.posicionamento} nome={(q) => `${PLATAFORMA[String(q.publisher_platform)] ?? q.publisher_platform} · ${POSICAO[String(q.platform_position)] ?? String(q.platform_position).replace(/_/g, ' ')}`} />
-              <Barras titulo="Aparelho" linhas={painel.quebras.aparelho} nome={(q) => APARELHO[String(q.device_platform)] ?? String(q.device_platform)} />
-              <Barras titulo="Estados" linhas={painel.quebras.regiao} nome={(q) => String(q.region)} />
-            </div>
-          </section>
         </>
-      )}
+      ))}
 
-      <div className="aa-dupla">
+      {aba === 'publico' && (!painel ? <p className="aa-vazio">{semChave ? 'O público aparece quando a conta for conectada.' : 'Carregando…'}</p> : (
         <section className="aa-cartao">
-          <header><div><span className="rot">Pixel {painel?.pixel.id ?? ''}</span><h3>Eventos que a Meta recebeu</h3></div></header>
-          {!painel ? <p className="aa-vazio">{semChave ? 'Aparece quando a conta for conectada.' : 'Carregando…'}</p>
-            : 'erro' in painel.pixel ? <p className="aa-erro">Não consegui ler o pixel com esta chave: {painel.pixel.erro}</p> : (
-              <ul className="aa-eventos">
-                {painel.pixel.eventos.map((e) => {
-                  const max = Math.max(1, ...('eventos' in painel.pixel ? painel.pixel.eventos.map((x) => x.total) : [1]))
-                  return (
-                    <li key={e.nome} className={EVENTOS[e.nome] ? '' : 'fora'}>
-                      <div><b>{EVENTOS[e.nome] ?? e.nome}</b><small>{EVENTOS[e.nome] ? e.nome : 'de outro site do pixel'}</small></div>
-                      <strong>{int(e.total)}</strong>
-                      <i style={{ width: `${(e.total / max) * 100}%` }} />
-                    </li>
-                  )
-                })}
-                {!painel.pixel.eventos.length && <li className="aa-vazio">Nenhum evento no período.</li>}
-              </ul>
-            )}
-          <p className="aa-nota">Contagem da própria Meta, de todas as páginas que usam este pixel (o quiz da Universidade Trading também). Eventos da plataforma em destaque.</p>
+          <header><div><span className="rot">Quem viu os anúncios</span><h3>Público e posicionamentos</h3></div></header>
+          <div className="aa-quebras">
+            <Barras titulo="Idade e gênero" linhas={painel.quebras.idadeGenero} nome={(q) => `${q.age} · ${q.gender === 'male' ? 'Homens' : q.gender === 'female' ? 'Mulheres' : 'Outros'}`} />
+            <Barras titulo="Onde apareceu" linhas={painel.quebras.posicionamento} nome={(q) => `${PLATAFORMA[String(q.publisher_platform)] ?? q.publisher_platform} · ${POSICAO[String(q.platform_position)] ?? String(q.platform_position).replace(/_/g, ' ')}`} />
+            <Barras titulo="Aparelho" linhas={painel.quebras.aparelho} nome={(q) => APARELHO[String(q.device_platform)] ?? String(q.device_platform)} />
+            <Barras titulo="Estados" linhas={painel.quebras.regiao} nome={(q) => String(q.region)} />
+          </div>
         </section>
-        <section className="aa-cartao">
-          <header><div><span className="rot">Rastreio</span><h3>Pelo servidor e de onde vieram</h3></div></header>
-          <dl className="aa-servidor">
-            <div><dt>Conversões enviadas pelo servidor</dt><dd>{int(funil?.servidor.enviados ?? 0)}</dd></div>
-            <div><dt>Esperando a chave</dt><dd>{int(funil?.servidor.semChave ?? 0)}</dd></div>
-            <div><dt>Recusadas pela Meta</dt><dd className={funil?.servidor.erros ? 'ruim' : ''}>{int(funil?.servidor.erros ?? 0)}</dd></div>
-          </dl>
-          <h4 className="aa-sub">Cadastros por origem</h4>
-          <ul className="aa-origens">
-            {(funil?.porOrigem ?? []).map((o) => <li key={o.origem}><span>{o.origem === 'sem origem' ? 'Sem marcação (link direto, orgânico)' : o.origem}</span><b>{int(o.cadastros)}</b></li>)}
-            {funil && !funil.porOrigem.length && <li className="aa-vazio">Nenhum cadastro no período.</li>}
-          </ul>
-        </section>
-      </div>
+      ))}
+
+      {aba === 'rastreio' && (
+        <div className="aa-dupla">
+          <section className="aa-cartao">
+            <header><div><span className="rot">Pixel {painel?.pixel.id ?? ''}</span><h3>Eventos que a Meta recebeu</h3></div></header>
+            {!painel ? <p className="aa-vazio">{semChave ? 'Aparece quando a conta for conectada.' : 'Carregando…'}</p>
+              : 'erro' in painel.pixel ? <p className="aa-erro">Não consegui ler o pixel com esta chave: {painel.pixel.erro}</p> : (
+                <ul className="aa-eventos">
+                  {painel.pixel.eventos.map((e) => {
+                    const max = Math.max(1, ...('eventos' in painel.pixel ? painel.pixel.eventos.map((x) => x.total) : [1]))
+                    return (
+                      <li key={e.nome} className={EVENTOS[e.nome] ? '' : 'fora'}>
+                        <div><b>{EVENTOS[e.nome] ?? e.nome}</b><small>{EVENTOS[e.nome] ? e.nome : 'de outro site do pixel'}</small></div>
+                        <strong>{int(e.total)}</strong>
+                        <i style={{ width: `${(e.total / max) * 100}%` }} />
+                      </li>
+                    )
+                  })}
+                  {!painel.pixel.eventos.length && <li className="aa-vazio">Nenhum evento no período.</li>}
+                </ul>
+              )}
+            <p className="aa-nota">Contagem da própria Meta, de todas as páginas que usam este pixel (o quiz da Universidade Trading também). Os eventos da plataforma aparecem em destaque.</p>
+          </section>
+          <section className="aa-cartao">
+            <header><div><span className="rot">Rastreio</span><h3>Pelo servidor e de onde vieram</h3></div></header>
+            <dl className="aa-servidor">
+              <div><dt>Conversões enviadas pelo servidor</dt><dd>{int(funil?.servidor.enviados ?? 0)}</dd></div>
+              <div><dt>Esperando a chave</dt><dd>{int(funil?.servidor.semChave ?? 0)}</dd></div>
+              <div><dt>Recusadas pela Meta</dt><dd className={funil?.servidor.erros ? 'ruim' : ''}>{int(funil?.servidor.erros ?? 0)}</dd></div>
+            </dl>
+            <h4 className="aa-sub">Cadastros por origem</h4>
+            <ul className="aa-origens">
+              {(funil?.porOrigem ?? []).map((o) => <li key={o.origem}><span>{o.origem === 'sem origem' ? 'Sem marcação (link direto, orgânico)' : o.origem}</span><b>{int(o.cadastros)}</b></li>)}
+              {funil && !funil.porOrigem.length && <li className="aa-vazio">Nenhum cadastro no período.</li>}
+            </ul>
+          </section>
+        </div>
+      )}
 
       {painel?.avisos.length ? <p className="aa-nota">Algumas partes não vieram da Meta agora: {painel.avisos.join(' · ')}</p> : null}
       {painel && <p className="aa-nota">Números da Meta de {hora(painel.em)}{painel.doCache ? ' (guardados há menos de 5 minutos)' : ''}. A Meta pode levar até algumas horas para fechar os números do dia.</p>}

@@ -13,6 +13,10 @@
  * 03/11/2026 (Tiago: "tá difícil de atrelar qual fase do funil significa cada uma"): cada anel
  * tem a cor da origem (aço = Meta, ouro = plataforma) e uma linha que sai da borda dele até o
  * número da etapa na lista; passar o mouse num lado acende o outro.
+ *
+ * 03/11/2026 (Tiago: "título invadindo o desenho do funil"): a boca do funil tinha 56 px emprestados
+ * de cima, por baixo do título do cartão. Agora o espaço é do próprio funil (--fu-boca, a primeira
+ * linha da grade), e no computador a legenda ocupa esse espaço ao lado da boca.
  */
 import { useEffect, useRef, useState } from 'react'
 
@@ -77,9 +81,10 @@ export function Funil3D({ etapas, mostrarCusto }: { etapas: EtapaDoFunil[]; most
     const ctx = cv.getContext('2d')
     if (!ctx) return
     const reduzir = matchMedia('(prefers-reduced-motion: reduce)').matches
-    let largura = 0, altura = 0, dpr = 1
+    let largura = 0, altura = 0, dpr = 1, boca = 56
     const medir = () => {
       dpr = Math.min(2, window.devicePixelRatio || 1)
+      boca = parseFloat(getComputedStyle(cx0).getPropertyValue('--fu-boca')) || 56
       largura = cv.clientWidth; altura = cv.clientHeight
       cv.width = Math.round(largura * dpr); cv.height = Math.round(altura * dpr)
     }
@@ -125,8 +130,8 @@ export function Funil3D({ etapas, mostrarCusto }: { etapas: EtapaDoFunil[]; most
       ctx.clearRect(0, 0, largura, altura)
       if (!n || !largura || !altura) { q = requestAnimationFrame(desenhar); return }
 
-      // o canvas sobra 56 px para cima (CSS .fu-cone): a boca do funil cabe sem cortar e os anéis seguem alinhados às etapas
-      const topo = 18 + 56, base = altura - 14, h = (base - topo) / n
+      // a primeira linha da grade (--fu-boca) é a folga da boca: o anel de cima cabe sem cortar e os anéis seguem alinhados às etapas
+      const topo = 18 + boca, base = altura - 14, h = (base - topo) / n
       const cx = largura / 2, rTopo = Math.min(largura * 0.45, 220), rBase = rTopo * 0.2
       const raio = (y: number) => rTopo + (rBase - rTopo) * Math.min(1, Math.max(0, (y - topo) / (base - topo)))
       const achat = 0.27
@@ -296,8 +301,9 @@ export function Funil3D({ etapas, mostrarCusto }: { etapas: EtapaDoFunil[]; most
 
   // o mouse no funil acende a etapa daquele anel (a mesma conta de altura do desenho)
   const sobreOFunil = (ev: React.MouseEvent<HTMLDivElement>) => {
-    const caixaDoPalco = ev.currentTarget.getBoundingClientRect(), y = ev.clientY - caixaDoPalco.top
-    const h = (caixaDoPalco.height - 18 - 14) / etapas.length, i = Math.floor((y - 18) / h)
+    const boca = parseFloat(getComputedStyle(ev.currentTarget).getPropertyValue('--fu-boca')) || 56
+    const caixaDoPalco = ev.currentTarget.getBoundingClientRect(), y = ev.clientY - caixaDoPalco.top - boca
+    const h = (caixaDoPalco.height - boca - 18 - 14) / etapas.length, i = Math.floor((y - 18) / h)
     setFoco(i >= 0 && i < etapas.length ? i : null)
   }
   const temMeta = etapas.some((e) => e.fonte === 'Meta'), temPlataforma = etapas.some((e) => e.fonte !== 'Meta')
@@ -327,11 +333,11 @@ export function Funil3D({ etapas, mostrarCusto }: { etapas: EtapaDoFunil[]; most
             )
           })}
         </ol>
-      </div>
-      <div className="fu-legenda">
-        {temMeta && <span className="meta"><i />Anúncio, contado pela Meta</span>}
-        {temPlataforma && <span className="plataforma"><i />Dentro da GlobalFly, contado pela plataforma</span>}
-        <span className="passa"><i>%</i>Quantos passaram da etapa anterior</span>
+        <div className="fu-legenda">
+          {temMeta && <span className="meta"><i />No anúncio, contado pela Meta</span>}
+          {temPlataforma && <span className="plataforma"><i />Dentro da GlobalFly, contado pela plataforma</span>}
+          <span className="passa"><i>%</i>Quantos seguiram da etapa anterior</span>
+        </div>
       </div>
     </div>
   )

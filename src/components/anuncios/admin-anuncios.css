@@ -42,11 +42,12 @@
 .aa-vivo i { width: 8px; height: 8px; border-radius: 50%; background: var(--up); box-shadow: 0 0 0 0 color-mix(in srgb, var(--up) 60%, transparent); animation: aa-pulso 1.8s infinite; }
 @keyframes aa-pulso { 70% { box-shadow: 0 0 0 8px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
 
-.fu { --fu-ouro: var(--aa-ouro); --fu-aco: #7C9CC4; --fu-h: 74px; position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); min-height: calc(var(--fu-n) * var(--fu-h) + 32px); }
-.fu-palco { position: relative; min-width: 0; }
+.fu { --fu-ouro: var(--aa-ouro); --fu-aco: #7C9CC4; --fu-h: 74px; --fu-boca: 56px; position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); grid-template-rows: var(--fu-boca) auto; }
+/* o palco ocupa as duas linhas: a de cima (--fu-boca) é a folga da boca do funil */
+.fu-palco { position: relative; min-width: 0; grid-column: 1; grid-row: 1 / 3; }
 /* o canvas fica solto no palco: o tamanho dele nunca empurra a altura do funil */
-.fu-cone { position: absolute; top: -56px; left: 0; width: 100%; height: calc(100% + 56px); display: block; pointer-events: none; }
-.fu-etapas { list-style: none; margin: 0; padding: 18px 0 14px; display: grid; grid-auto-rows: 1fr; }
+.fu-cone { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.fu-etapas { grid-column: 2; grid-row: 2; min-height: calc(var(--fu-n) * var(--fu-h) + 32px); list-style: none; margin: 0; padding: 18px 0 14px; display: grid; grid-auto-rows: 1fr; }
 /* cada etapa: o número (ligado ao anel pela linha-guia), o nome com a explicação e o total */
 .fu-etapas li { --fu-cor: var(--aa-ouro); position: relative; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; column-gap: 12px; padding: 0 12px 0 0; border-radius: 12px; transition: background .25s; }
 .fu-etapas li.meta { --fu-cor: var(--fu-aco); }
@@ -69,7 +70,7 @@
 .fu-passa i b:nth-child(3) { animation-delay: 1s; }
 @keyframes aa-seta { 0% { top: -6px; opacity: 0; } 30% { opacity: 1; } 100% { top: 12px; opacity: 0; } }
 .fu-caixa { --fu-aco: #7C9CC4; display: grid; gap: 12px; }
-.fu-legenda { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: 12px; }
+.fu-legenda { grid-column: 2; grid-row: 1; align-self: center; display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: 12px; }
 .fu-legenda span { display: inline-flex; align-items: center; gap: 6px; }
 .fu-legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
 .fu-legenda .meta i { background: var(--fu-aco); }
@@ -207,7 +208,8 @@
   .aa-periodo { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); box-sizing: border-box; }
   .aa-periodo button { padding: 0 6px; }
   .aa-atualizar { width: 100%; }
-  .fu { --fu-h: 86px; grid-template-columns: minmax(0, .62fr) minmax(0, 1.38fr); }
+  .fu { --fu-h: 86px; --fu-boca: 30px; grid-template-columns: minmax(0, .62fr) minmax(0, 1.38fr); grid-template-rows: var(--fu-boca) auto auto; }
+  .fu-legenda { grid-column: 1 / -1; grid-row: 3; margin-top: 10px; }
   .fu-etapas li { grid-template-columns: 24px minmax(0, 1fr) auto; column-gap: 8px; padding-right: 6px; }
   .fu-etapas li::before { left: 11px; }
   .fu-n { width: 24px; height: 24px; font-size: 11px; box-shadow: 0 0 0 3px var(--bg); }
@@ -351,3 +353,45 @@
 .aa-ponte p { flex: 1 1 320px; margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted); text-wrap: pretty; }
 .aa-ponte p b { color: var(--text); }
 .aa-ponte button { height: 34px; padding: 0 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+
+/* 03/11/2026: a página em abas, os filtros gerais e o resumo do período em uma frase */
+.aa-acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+.aa-filtro-geral { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 24px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); }
+.aa-campo { display: grid; gap: 6px; min-width: 0; }
+.aa-campo > small { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.aa-campo .aa-datas { margin-top: 2px; }
+.aa-resumo { margin: 0; font-size: 16px; line-height: 1.55; text-wrap: pretty; }
+.aa-resumo span { color: var(--muted); }
+.aa-resumo b { font-variant-numeric: tabular-nums; }
+.aa-resumo button { padding: 0; border: 0; background: none; color: var(--aa-ouro); font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.aa-abas { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border); scrollbar-width: none; }
+.aa-abas::-webkit-scrollbar { display: none; }
+.aa-abas button { position: relative; display: inline-flex; align-items: center; gap: 7px; flex: none; height: 44px; padding: 0 14px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.aa-abas button::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: transparent; }
+.aa-abas button:hover { color: var(--text); }
+.aa-abas button.on { color: var(--text); }
+.aa-abas button.on::after { background: var(--aa-ouro); }
+.aa-abas button:focus-visible { outline: 2px solid var(--aa-ouro); outline-offset: -4px; border-radius: 8px; }
+.aa-abas i { min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; display: inline-grid; place-items: center; border-radius: 99px; background: var(--surface); color: var(--muted); font-style: normal; font-size: 11px; font-variant-numeric: tabular-nums; }
+.aa-abas i.alerta { background: color-mix(in srgb, var(--aa-ouro) 22%, transparent); color: var(--aa-ouro); }
+.aa-kpis.principais { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.aa-kpis.seis { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.aa-tudo-ok { display: flex; align-items: center; gap: 10px; margin: 0; padding: 12px 16px; border: 1px solid var(--border); border-radius: 14px; color: var(--muted); font-size: 13.5px; }
+.aa-tudo-ok i { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--up); }
+.aa-tudo-ok b { color: var(--text); }
+.aa-kpis.principais b { font-size: 24px; }
+.aa-conectar .aa-cancelar { background: none; border: 1px solid var(--border); color: var(--muted); font-weight: 700; }
+@media (max-width: 1180px) { .aa-kpis.seis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .aa-kpis.principais { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .aa-acoes { width: 100%; }
+  .aa-acoes .aa-atualizar { flex: 1 1 0; width: auto; }
+  .aa-filtro-geral { padding: 12px; }
+  .aa-campo { width: 100%; }
+  .aa-troca { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .aa-resumo { font-size: 15px; }
+  .aa-periodo button:last-child { grid-column: 1 / -1; }
+  .aa-abas button { padding: 0 10px; font-size: 13.5px; }
+  .aa-kpis.principais b { font-size: 19px; }
+  .aa-kpis.seis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
