@@ -28,6 +28,25 @@ function posicoesGuardadas(): Record<string, number> {
 function guardarPosicao(id: string, segundos: number) {
   try { const p = posicoesGuardadas(); p[id] = Math.floor(segundos); localStorage.setItem(CHAVE_POSICAO, JSON.stringify(p)) } catch { /* sem armazenamento */ }
 }
+/** "Minha jornada" (03/11/2026): a última aula aberta e a duração de cada vídeo (para a barra de onde parou). */
+const CHAVE_ULTIMA = `${MARCA.id}.aulas.ultima`, CHAVE_DURACAO = `${MARCA.id}.aulas.duracao`
+const ultimaAberta = (): string | null => { try { return localStorage.getItem(CHAVE_ULTIMA) } catch { return null } }
+function guardarUltima(id: string) { try { localStorage.setItem(CHAVE_ULTIMA, id) } catch { /* sem armazenamento */ } }
+function duracoesGuardadas(): Record<string, number> {
+  try { return JSON.parse(localStorage.getItem(CHAVE_DURACAO) || '{}') as Record<string, number> } catch { return {} }
+}
+function guardarDuracao(id: string, segundos: number) {
+  try { const d = duracoesGuardadas(); if (d[id] === Math.round(segundos)) return; d[id] = Math.round(segundos); localStorage.setItem(CHAVE_DURACAO, JSON.stringify(d)) } catch { /* sem armazenamento */ }
+}
+/** "12:30", "1:02:10" ou "12 min" em segundos (0 se não der para ler). */
+function segundosDe(texto: string | undefined): number {
+  if (!texto) return 0
+  const relogio = texto.match(/^(\d+):(\d{2})(?::(\d{2}))?$/)
+  if (relogio) return relogio[3] != null ? +relogio[1] * 3600 + +relogio[2] * 60 + +relogio[3] : +relogio[1] * 60 + +relogio[2]
+  const minutos = texto.match(/(\d+)\s*min/)
+  return minutos ? +minutos[1] * 60 : 0
+}
+const relogio = (s: number) => { const t = Math.max(0, Math.floor(s)), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), x = t % 60; return h ? `${h}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}` : `${m}:${String(x).padStart(2, '0')}` }
 
 /** Anel de progresso do curso, na trilha. */
 function Anel({ fracao, cor }: { fracao: number; cor: string }) {
@@ -184,8 +203,10 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
     const segundos = Math.round(t.acumulado); t.acumulado = 0
     void registrarAula(sessao, aulaId, { segundos, posicao, concluida, duracao: t.duracao })
   }, [sessao])
-  const abrir = (a: AulaNumerada) => {
+  const abrir = (a: AulaNumerada, doInicio = false) => {
     if (!a.video) return
+    if (doInicio) guardarPosicao(a.id, 0)
+    guardarUltima(a.id)
     if (abertaId && abertaId !== a.id) despachar(abertaId, 0)
     assistido.current = { acumulado: 0, ultimoTempo: -1, concluidaEnviada: false, duracao: 0 }
     setAbertaId(a.id); setModuloAberto(a.modulo.id)
@@ -203,7 +224,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
     if (delta > 0 && delta < 2.5) t.acumulado += delta   // pulo ou retrocesso não conta
     t.ultimoTempo = segundos
     // a duração do vídeo (para o admin ver quanto da aula a pessoa de fato assistiu)
-    if (fracao > 0.02 && !t.duracao) t.duracao = Math.round(segundos / fracao)
+    if (fracao > 0.02 && !t.duracao) { t.duracao = Math.round(segundos / fracao); guardarDuracao(abertaId, t.duracao) }
     if (agora - ultimaGravacao.current > 5000) { ultimaGravacao.current = agora; guardarPosicao(abertaId, segundos) }
     if (t.acumulado >= 20) despachar(abertaId, fracao)
     if (fracao >= 0.9 && !t.concluidaEnviada) { t.concluidaEnviada = true; despachar(abertaId, fracao, true) }
@@ -375,62 +396,64 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
           </span>
         </section>
       )}
-      <div className="aulas-capa" style={{
-        ['--aulas-hero-mobile' as string]: `linear-gradient(90deg, rgba(5,6,8,.96), rgba(5,6,8,.65)), url(${import.meta.env.BASE_URL}${MARCA.heroAulas.celular})`,
-        backgroundImage: `linear-gradient(90deg, rgba(5,6,8,.98) 0%, rgba(5,6,8,.86) 38%, rgba(5,6,8,.2) 72%, rgba(5,6,8,.55) 100%), image-set(url(${import.meta.env.BASE_URL}${MARCA.heroAulas.principal}) type("image/webp"), url(${import.meta.env.BASE_URL}${MARCA.heroAulas.reserva}) type("image/${MARCA.heroAulas.reserva.endsWith('.png') ? 'png' : 'jpeg'}"))`,
-        backgroundPosition: MARCA.heroAulas.posicao ?? 'center right',
-      }}>
-        <div className="aulas-capa-texto">
-          <span className="aulas-selo">Treinamento original {MARCA.prosa}</span>
-          <h2>{destaque?.titulo ?? `Aprenda a usar a ${MARCA.prosa}${nome ? `, ${nome.split(' ')[0]}` : ''}`}</h2>
-          <p>{destaque?.descricao ?? 'Da conta na corretora ao primeiro robô ligado, uma aula de cada vez.'}</p>
-          <div className="aulas-meta">
-            <b>{destaque ? `Aula ${destaque.numero} de ${aulas.length}` : `${aulas.length} aulas`}</b>
-            <span>Iniciante</span>
-            {!travadas && <span>{destaque?.duracao || 'Em breve'}</span>}
-          </div>
-          <div className="aulas-progresso">
-            <div className="aulas-barra">
-              <i style={{ width: `${(assistidas / aulas.length) * 100}%` }} />
-            </div>
-            <span>{Math.round((assistidas / aulas.length) * 100)}% concluído</span>
-          </div>
-          <div className="aulas-hero-acoes">
-          {travadas ? (
-            // GF Member antes da live: nenhum botão finge que dá para assistir (29/10/2026)
-            <span className="aulas-abre-em" role="note"><Icone nome="info" />{AVISO_GF_MEMBER_CURTO}, depois da live</span>
-          ) : destaque?.video ? (
-            <button className="aulas-continuar" onClick={() => abrir(destaque)}>
-              <Icone nome="play" /> {assistidas > 0 ? 'Continuar assistindo' : 'Começar agora'}
-            </button>
-          ) : (
-            <button className="aulas-continuar indisponivel" onClick={() => destaque && setDetalheId(destaque.id)}>
-              <Icone nome="play" /> Ver apresentação
-            </button>
-          )}
-          {destaque && (
-            <button className="aulas-detalhes" onClick={() => setDetalheId(destaque.id)}><Icone nome="info" />Mais informações</button>
-          )}
-          </div>
-        </div>
-        <div className="aulas-hero-marca" aria-hidden>{MARCA.nome} original</div>
-      </div>
-
-      {/* os banners de destaque: comunidade, Deriv, sala ao vivo, apostila (21/10/2026) */}
+      {/* 03/11/2026 (Tiago): os destaques no topo, de ponta a ponta; embaixo, a minha jornada */}
       {MARCA.inicio && <Destaques banners={bannersDaMarca({ treino: !!treino, noAr: !!treino?.noAr })} aoIr={aoIr} />}
-      {aoReverTour && <CartaoDoTour aoAbrir={aoReverTour} />}
 
-      {assistidas > 0 && proxima && (
-        <section className="aulas-modulo aulas-continue">
-          <div className="aulas-modulo-topo"><div><h3>Continue assistindo</h3><p>Retome de onde parou.</p></div></div>
-          <Fileira rotulo="Continue assistindo">
-            <button className="aula-cartao continuar" onClick={() => abrir(proxima)}>
-              <span className="aula-cartao-capa"><ResponsiveImage src={capa(proxima.id)} alt="" /><span className="aula-play">▶</span></span>
-              <span className="aula-cartao-corpo"><span className="aula-num">Aula {proxima.numero}</span><b>{proxima.titulo}</b></span>
+      {(() => {
+        // a última aula aberta: se não terminou, é de onde a pessoa parou; se terminou, a próxima
+        const posicoes = posicoesGuardadas(), duracoes = duracoesGuardadas()
+        const ultima = aulas.find((a) => a.id === ultimaAberta() && a.video) ?? null
+        const seguinteDe = (a: AulaNumerada) => aulas.slice(aulas.indexOf(a) + 1).find((x) => x.video && !vistas.has(x.id)) ?? null
+        const parou = ultima && !vistas.has(ultima.id) && (posicoes[ultima.id] ?? 0) > 5 ? ultima : null
+        const aula = parou ?? (ultima ? seguinteDe(ultima) : null) ?? destaque
+        if (!aula) return null
+        const onde = parou ? posicoes[parou.id] ?? 0 : 0
+        const total = parou ? duracoes[parou.id] || segundosDe(parou.duracao) : 0
+        const fracaoAula = total ? Math.min(1, onde / total) : 0
+        const estado = travadas ? 'travada' : parou ? 'parou' : assistidas > 0 || ultima ? 'proxima' : 'inicio'
+        const titulo = estado === 'parou' ? 'Continue de onde parou' : estado === 'proxima' ? 'A sua próxima aula' : estado === 'travada' ? 'O seu treinamento' : `Comece por aqui${nome ? `, ${nome.split(' ')[0]}` : ''}`
+        return (
+          <section className="aulas-jornada" style={{ ['--aula' as string]: aula.modulo.cor }} aria-labelledby="aulas-jornada-titulo">
+            <div className="aulas-jornada-texto">
+              <span className="aulas-jornada-rot">Minha jornada</span>
+              <h2 id="aulas-jornada-titulo">{titulo}</h2>
+              <p className="aulas-jornada-aula"><b>Aula {aula.numero} de {aulas.length} · {aula.titulo}</b><small>{aula.modulo.titulo}</small></p>
+              {estado === 'parou' && <p className="aulas-jornada-onde">Você parou em <b>{relogio(onde)}</b>{total ? <> de {relogio(total)}</> : null}.</p>}
+              <div className="aulas-jornada-curso" aria-label={`${assistidas} de ${aulas.length} aulas concluídas`}>
+                <span className="aulas-barra"><i style={{ width: `${(assistidas / aulas.length) * 100}%` }} /></span>
+                <small>{assistidas} de {aulas.length} aulas concluídas · {Math.round((assistidas / aulas.length) * 100)}%</small>
+              </div>
+              <div className="aulas-hero-acoes">
+                {estado === 'travada' ? (
+                  <span className="aulas-abre-em" role="note"><Icone nome="info" />{AVISO_GF_MEMBER_CURTO}, depois da live</span>
+                ) : estado === 'parou' ? (
+                  <>
+                    <button className="aulas-continuar" onClick={() => abrir(aula)}><Icone nome="play" />Continuar de onde parei</button>
+                    <button className="aulas-detalhes" onClick={() => abrir(aula, true)}><span aria-hidden="true">↺</span>Assistir do início</button>
+                  </>
+                ) : aula.video ? (
+                  <>
+                    <button className="aulas-continuar" onClick={() => abrir(aula)}><Icone nome="play" />{estado === 'proxima' ? `Assistir a aula ${aula.numero}` : 'Começar agora'}</button>
+                    {estado === 'proxima' && ultima && vistas.has(ultima.id)
+                      ? <button className="aulas-detalhes" onClick={() => abrir(ultima, true)}><span aria-hidden="true">↺</span>Rever a aula {ultima.numero}</button>
+                      : <button className="aulas-detalhes" onClick={() => setDetalheId(aula.id)}><Icone nome="info" />Mais informações</button>}
+                  </>
+                ) : (
+                  <button className="aulas-continuar indisponivel" onClick={() => setDetalheId(aula.id)}><Icone nome="play" />Ver apresentação</button>
+                )}
+              </div>
+            </div>
+            <button type="button" className="aulas-jornada-capa" onClick={() => (aula.video && !travadas ? abrir(aula) : setDetalheId(aula.id))} aria-label={`Abrir a aula ${aula.titulo}`}>
+              <ResponsiveImage src={capa(aula.id)} alt="" />
+              {aula.video && !travadas && <span className="aula-play">▶</span>}
+              {estado === 'parou' && <span className="aulas-jornada-ondeBarra" aria-hidden="true"><i style={{ width: `${Math.max(3, fracaoAula * 100)}%` }} /></span>}
+              {aula.duracao && !travadas && <span className="aula-dur">{estado === 'parou' && total ? `faltam ${relogio(total - onde)}` : aula.duracao}</span>}
             </button>
-          </Fileira>
-        </section>
-      )}
+          </section>
+        )
+      })()}
+
+      {aoReverTour && <CartaoDoTour aoAbrir={aoReverTour} />}
 
       {MODULOS.map((m, mi) => {
         const doModulo = aulas.filter((a) => a.modulo.id === m.id)

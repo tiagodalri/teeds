@@ -58,6 +58,8 @@ export function parceiroVigente(): string { return vitrine() }
 export const afiliadoDaDeriv = (): string => MARCA.afiliadosDosParceiros?.[parceiroVigente()] ?? MARCA.afiliado
 /** A comunidade no WhatsApp: a do parceiro da vitrine, quando ele tem uma; senão, a da marca. */
 export const comunidadeDaVitrine = (): string | undefined => MARCA.comunidadesDosParceiros?.[parceiroVigente()] ?? MARCA.comunidade
+/** A comunidade no Instagram (03/11/2026): a do parceiro da vitrine, quando ele tem uma; senão, a da marca. */
+export const comunidadeInstagramDaVitrine = (): string | undefined => MARCA.comunidadesInstagramDosParceiros?.[parceiroVigente()] ?? MARCA.comunidadeInstagram
 function prefixo(): string {
   const c = parceiroVigente()
   return c ? `/${c}` : ''

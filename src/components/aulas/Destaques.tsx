@@ -1,4 +1,5 @@
-import { afiliadoDaDeriv, comunidadeDaVitrine } from '../../core/rotas'
+import { afiliadoDaDeriv, comunidadeDaVitrine, comunidadeInstagramDaVitrine } from '../../core/rotas'
+import { useComunidade } from '../comunidade/EscolherComunidade'
 import { useEffect, useRef, useState } from 'react'
 import { DerivLogo } from '../DerivMarca'
 import { Monograma } from '../marca/Monograma'
@@ -35,6 +36,8 @@ export interface Banner {
   aoVivo?: boolean
   /** Três pontos curtos que resumem o porquê (aparecem como selinhos). */
   pontos?: string[]
+  /** 03/11/2026: o botão abre a escolha da comunidade (WhatsApp ou Instagram) em vez do link */
+  comunidade?: boolean
 }
 
 const CAIXA_DERIV = DERIV.deposito
@@ -52,9 +55,11 @@ export function bannersDaMarca({ treino, noAr }: { treino: boolean; noAr: boolea
   if (MARCA.comunidade) l.push({
     id: 'comunidade', selo: 'Comunidade oficial', marca: 'whatsapp',
     titulo: `Entre na comunidade ${MARCA.prosa}`,
-    texto: 'Avisos da equipe, novidades da plataforma e a agenda das transmissões, direto no seu WhatsApp.',
+    texto: comunidadeInstagramDaVitrine()
+      ? 'Avisos da equipe, novidades da plataforma e a agenda das transmissões, no WhatsApp e no Instagram.'
+      : 'Avisos da equipe, novidades da plataforma e a agenda das transmissões, direto no seu WhatsApp.',
     pontos: ['Avisos da equipe', 'Agenda das transmissões', 'Novidades primeiro'],
-    acao: 'Entrar na comunidade', href: comunidadeDaVitrine()!, imagem: `${BASE}fundos-globalfly/monograma-gf.jpg`, posicao: '80% center',
+    acao: 'Entrar na comunidade', href: comunidadeDaVitrine()!, comunidade: true, imagem: `${BASE}fundos-globalfly/monograma-gf.jpg`, posicao: '80% center',
   })
   if (afiliadoDaDeriv()) l.push({
     id: 'conta', selo: 'Corretora oficial', marca: 'deriv',
@@ -91,6 +96,7 @@ export function Destaques({ banners, aoIr }: { banners: Banner[]; aoIr?: (tela: 
   const trilho = useRef<HTMLDivElement>(null)
   const [atual, setAtual] = useState(0)
   const [parado, setParado] = useState(false)
+  const comunidade = useComunidade()
 
   // qual está na tela (o arrasto do dedo também conta)
   useEffect(() => {
@@ -116,7 +122,7 @@ export function Destaques({ banners, aoIr }: { banners: Banner[]; aoIr?: (tela: 
   }, [atual, parado, banners.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!banners.length) return null
-  const abrir = (b: Banner) => (b.href ? window.open(b.href, '_blank', 'noopener') : b.tela && aoIr?.(b.tela))
+  const abrir = (b: Banner) => (b.comunidade ? comunidade.abrir() : b.href ? window.open(b.href, '_blank', 'noopener') : b.tela && aoIr?.(b.tela))
 
   return (
     <section className="dq" aria-roledescription="carrossel" aria-label="Destaques"
@@ -156,7 +162,7 @@ export function Destaques({ banners, aoIr }: { banners: Banner[]; aoIr?: (tela: 
                 </ul>
               )}
               <button type="button" className="dq-acao" onClick={() => abrir(b)}>
-                {b.acao}<Seta d={b.href ? 'M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5' : 'M9 6l6 6-6 6'} />
+                {b.acao}<Seta d={b.href && !(b.comunidade && comunidade.escolha) ? 'M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5' : 'M9 6l6 6-6 6'} />
               </button>
             </div>
           </article>
@@ -172,6 +178,7 @@ export function Destaques({ banners, aoIr }: { banners: Banner[]; aoIr?: (tela: 
           ))}
         </div>
       )}
+      {comunidade.janela}
     </section>
   )
 }

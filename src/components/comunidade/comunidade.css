@@ -1,0 +1,26 @@
+/* A escolha da comunidade (03/11/2026): WhatsApp ou Instagram, cada um com o próprio logotipo. */
+.cm-fundo { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 16px; background: rgba(3, 9, 20, .58); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); animation: cm-aparece .18s ease-out; }
+@keyframes cm-aparece { from { opacity: 0; } }
+.cm-janela { position: relative; display: grid; gap: 6px; width: min(460px, 100%); padding: 28px 24px 24px; border: 1px solid var(--border); border-radius: 22px; background: var(--bg); color: var(--text); box-shadow: 0 30px 90px -30px rgba(0, 0, 0, .6); box-sizing: border-box; animation: cm-sobe .25s cubic-bezier(.2, .8, .2, 1); }
+@keyframes cm-sobe { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+.cm-janela h2 { margin: 0; padding-right: 36px; font-size: 21px; letter-spacing: -.02em; line-height: 1.2; text-wrap: balance; }
+.cm-janela > p { margin: 0 0 12px; color: var(--muted); font-size: 14px; line-height: 1.5; text-wrap: pretty; }
+.cm-fechar { position: absolute; top: 14px; right: 14px; display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); color: var(--text); cursor: pointer; }
+.cm-fechar svg { width: 16px; height: 16px; }
+.cm-opcoes { display: grid; gap: 10px; }
+.cm-opcao { --cm-cor: #25D366; display: grid; grid-template-columns: 52px minmax(0, 1fr) 20px; align-items: center; gap: 14px; padding: 14px 16px; border: 1.5px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text); text-decoration: none; transition: border-color .15s, transform .15s, background .15s; }
+.cm-opcao.instagram { --cm-cor: #D6249F; }
+.cm-opcao:hover { border-color: var(--cm-cor); background: color-mix(in srgb, var(--cm-cor) 6%, var(--surface)); transform: translateY(-1px); }
+.cm-opcao:focus-visible { outline: 2px solid var(--cm-cor); outline-offset: 2px; }
+.cm-logo { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--bg); box-shadow: 0 0 0 1px var(--border); }
+.cm-texto { display: grid; gap: 3px; min-width: 0; }
+.cm-texto b { font-size: 15.5px; }
+.cm-texto small { color: var(--muted); font-size: 12.5px; line-height: 1.45; text-wrap: pretty; }
+.cm-ir svg { width: 18px; height: 18px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.cm-opcao:hover .cm-ir svg { stroke: var(--cm-cor); }
+@media (max-width: 480px) {
+  .cm-fundo { align-items: end; padding: 0; }
+  .cm-janela { width: 100%; border-radius: 22px 22px 0 0; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); animation-name: cm-gaveta; }
+  @keyframes cm-gaveta { from { transform: translateY(40px); opacity: 0; } }
+}
+@media (prefers-reduced-motion: reduce) { .cm-fundo, .cm-janela { animation: none; } .cm-opcao, .cm-opcao:hover { transform: none; transition: none; } }

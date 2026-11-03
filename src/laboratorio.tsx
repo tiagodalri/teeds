@@ -159,6 +159,8 @@ if (new URLSearchParams(location.search).get('tela') === 'central-extras') {
 }
 // &tema=claro|escuro vale em qualquer tela do laboratório (conferência dos dois temas)
 { const t = new URLSearchParams(location.search).get('tema'); aplicarTema(t === 'claro' || t === 'escuro' ? t : temaGuardado()) }
+// &ig=1: simula o link da comunidade no Instagram (a escolha WhatsApp ou Instagram)
+if (new URLSearchParams(location.search).has('ig') && !MARCA.comunidadeInstagram) (MARCA as { comunidadeInstagram?: string }).comunidadeInstagram = 'https://www.instagram.com/channel/exemplo/'
 // no computador a página nasce em 90% (ver core/escala.ts)
 ligarEscala()
 if (MARCA.vocabularioIA) ligarVocabularioIA()

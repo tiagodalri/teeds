@@ -164,6 +164,9 @@ export interface Marca {
   afiliadosDosParceiros?: Record<string, string>
   /** A comunidade no WhatsApp de cada parceiro (29/10/2026): na vitrine dele (/n), os botões de comunidade levam a ela. */
   comunidadesDosParceiros?: Record<string, string>
+  /** 03/11/2026: a comunidade no Instagram (canal). Com ela, o botão Comunidade abre a escolha WhatsApp ou Instagram. */
+  comunidadeInstagram?: string
+  comunidadesInstagramDosParceiros?: Record<string, string>
   /**
    * O app da Deriv de cada parceiro que tem app próprio liberado (27/10/2026).
    * Na vitrine dele (/n), a conexão com a Deriv e as operações saem por este

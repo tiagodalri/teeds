@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { afiliadoDaDeriv, comunidadeDaVitrine } from '../../core/rotas'
+import { afiliadoDaDeriv } from '../../core/rotas'
+import { useComunidade } from '../comunidade/EscolherComunidade'
 import type { WorkspacePage } from '../WorkspaceNav'
 import { Monograma, TEM_MONOGRAMA } from '../marca/Monograma'
 import { LogotipoDaIA, temLogotipo } from '../marca/LogotipoDaIA'
@@ -102,6 +103,8 @@ const Icone = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden="tr
 
 export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo, aoAbrirCarteira, topo, aoRecarregarMercado }: Props) {
   const ocultos = useValoresOcultos()
+  // a comunidade: com o Instagram configurado, abre a escolha WhatsApp ou Instagram (03/11/2026)
+  const comunidade = useComunidade()
   const conectar = () => (aoConectar ? aoConectar() : aoIr('operar'))
   const moeda = d.conta.moeda
   const h = d.hoje
@@ -292,11 +295,11 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                   </button>
                 )}
                 {MARCA.comunidade && (
-                  <a className="in-atalho" href={comunidadeDaVitrine()} target="_blank" rel="noopener noreferrer">
+                  <button type="button" className="in-atalho" onClick={comunidade.abrir} aria-haspopup={comunidade.escolha ? 'dialog' : undefined}>
                     <span className="in-atalho-icone"><Icone d={ICONE.grupo} /></span>
-                    <span><b>Comunidade</b><small>Grupo oficial no WhatsApp</small></span>
-                    <Icone d={ICONE.externo} />
-                  </a>
+                    <span><b>Comunidade</b><small>{comunidade.escolha ? 'Grupos oficiais no WhatsApp e no Instagram' : 'Grupo oficial no WhatsApp'}</small></span>
+                    <Icone d={comunidade.escolha ? ICONE.seta : ICONE.externo} />
+                  </button>
                 )}
                 <a className="in-atalho" href={CAIXA_DERIV} target="_blank" rel="noopener noreferrer">
                   <span className="in-atalho-icone"><Icone d={ICONE.deposito} /></span>
@@ -362,6 +365,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
         )}
       </div>
 
+      {comunidade.janela}
       <footer className="in-rodape">
         <Monograma tamanho={24} />
         <p>Resultados passados não garantem resultados futuros. Operar envolve risco: use valores que você pode perder e respeite o seu limite.</p>
