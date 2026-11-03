@@ -239,7 +239,7 @@
 .es-barra i { display: block; height: 100%; border-radius: 99px; background: var(--es-ouro); transition: width .3s; }
 .es-barra.viva i { background: linear-gradient(90deg, var(--es-ouro), color-mix(in srgb, var(--es-ouro) 40%, #fff), var(--es-ouro)); background-size: 200% 100%; animation: es-brilho 1.4s linear infinite; }
 @keyframes es-brilho { to { background-position: -200% 0; } }
-.es-encaixes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.es-encaixes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .es-encaixes button { display: grid; gap: 2px; width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .es-encaixes b { font-size: 13px; }
 .es-encaixes span { font-size: 12px; color: var(--es-verde); font-weight: 600; }
@@ -352,10 +352,10 @@
 
 /* ------------------------------------------------------------------ a prévia no celular */
 .ep { display: grid; justify-items: center; gap: 12px; width: 100%; }
-.ep-lugares { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; width: 100%; max-width: 300px; padding: 4px; border-radius: 12px; background: color-mix(in srgb, var(--text) 7%, transparent); box-sizing: border-box; }
+.ep-lugares { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; width: 100%; max-width: 320px; padding: 4px; border-radius: 12px; background: color-mix(in srgb, var(--text) 7%, transparent); box-sizing: border-box; }
 .ep-lugares button { position: relative; height: 32px; border: 0; border-radius: 9px; background: none; color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
 .ep-lugares button.on { background: var(--bg); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.15); }
-.ep-lugares i.ep-alerta { position: absolute; top: 6px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--es-amarelo); }
+.ep-lugares i.ep-alerta { position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--es-amarelo); }
 .ep-celular { position: relative; width: 290px; max-width: 100%; aspect-ratio: 9 / 19; padding: 9px; border-radius: 46px; background: #0c0e12; box-shadow: 0 0 0 1.5px #2a2e36, 0 40px 70px -34px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.06); box-sizing: border-box; }
 .ep-celular::before { content: ''; position: absolute; top: 17px; left: 50%; z-index: 4; width: 82px; height: 22px; border-radius: 99px; background: #000; transform: translateX(-50%); }
 .ep-rotulo { position: absolute; top: -10px; right: -6px; z-index: 5; padding: 3px 9px; border-radius: 99px; background: var(--es-ouro); color: #071425; font-size: 11px; font-weight: 800; }
@@ -498,3 +498,43 @@
   .es-giro, .es-criando-caixa li.on i, .es-barra.viva i { animation-duration: 3s; }
   .es-acao, .es-acao:hover { transform: none; transition: none; }
 }
+
+/* 03/11/2026: a prévia mais fiel (foto de verdade, ícones do Instagram, Reels completo e o Feed do Facebook) */
+.ep-ig-topo { position: absolute; top: 40px; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; color: #111; }
+.ep-ig-topo b { font-family: 'Segoe Script', 'Brush Script MT', cursive; font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
+.ep-ig-topo span { display: flex; gap: 12px; }
+.ep-feed { padding-top: 70px; }
+.ep-feed header, .ep-fb header { padding: 6px 10px; }
+.ep-mais { display: flex; color: #222; }
+.ep-acoes { display: flex; align-items: center; gap: 14px; padding: 9px 12px 3px; color: #111; }
+.ep-acoes .ep-dir { margin-left: auto; display: flex; }
+.ep-av.mini { width: 22px; height: 22px; padding: 1.5px; }
+.ep-av.fb { background: none; padding: 0; }
+.ep-av.fb img, .ep-av.fb span { border: 1px solid #ddd; }
+.ep-vertical header { gap: 8px; }
+.ep-fechar { margin-left: auto; font-size: 15px; opacity: .9; }
+.ep-lado { bottom: 150px; gap: 20px; }
+.ep-lado svg { filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
+.ep-reels-quem { display: flex; align-items: center; gap: 7px; }
+.ep-seguir { padding: 2px 9px; border: 1px solid rgba(255,255,255,.8); border-radius: 7px; font-size: 10.5px; font-weight: 700; }
+.ep-audio { font-size: 10.5px !important; opacity: .85; }
+.ep-vertical.reels .ep-botao { justify-content: space-between; padding: 0 12px; background: rgba(255,255,255,.18); color: #fff; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.ep-vertical.reels .ep-botao i { font-size: 16px; }
+.ep-fb { display: flex; flex-direction: column; height: 100%; padding-top: 40px; background: #fff; color: #050505; font-size: 12px; }
+.ep-fb-topo { padding: 4px 12px 6px; border-bottom: 1px solid #e4e6eb; }
+.ep-fb-topo b { color: #1877F2; font-size: 22px; font-weight: 800; letter-spacing: -.04em; font-family: Helvetica, Arial, sans-serif; }
+.ep-fb header { display: flex; align-items: center; gap: 8px; }
+.ep-fb header div { display: grid; line-height: 1.2; }
+.ep-fb header b { font-size: 12.5px; }
+.ep-fb header small { color: #65676b; font-size: 10.5px; }
+.ep-fb-texto { margin: 2px 12px 8px; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.ep-fb-texto button { padding: 0; border: 0; background: none; color: #65676b; font: inherit; font-weight: 600; cursor: pointer; }
+.ep-midia.fb { aspect-ratio: 1 / 1; }
+.ep-fb-link { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #f0f2f5; }
+.ep-fb-link div { display: grid; gap: 1px; flex: 1; min-width: 0; }
+.ep-fb-link small { color: #65676b; font-size: 9.5px; letter-spacing: .02em; }
+.ep-fb-link b { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ep-fb-link span { color: #65676b; font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ep-fb-link em { flex: none; padding: 6px 10px; border-radius: 6px; background: #e4e6eb; font-style: normal; font-size: 11.5px; font-weight: 700; }
+.ep-fb-acoes { display: flex; justify-content: space-around; padding: 9px 8px; border-top: 1px solid #e4e6eb; color: #65676b; font-size: 11.5px; font-weight: 600; }
+@media (max-width: 640px) { .es-encaixes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

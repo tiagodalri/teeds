@@ -18,7 +18,9 @@ export interface Midia {
   local?: string
 }
 export interface Texto { principal: string; titulo: string; descricao: string; botao: string }
-export interface Publico { modo: 'padrao' | 'personalizado'; idadeMin: number; idadeMax: number; genero: 'todos' | 'homens' | 'mulheres' }
+import type { Interesse, Local, Publico } from './publicos'
+export type { Publico } from './publicos'
+export { PUBLICO_PADRAO } from './publicos'
 export type Variavel = 'criativo' | 'texto' | 'publico'
 export interface DadosDoRascunho {
   nomeAnuncio: string; midia?: Midia; midiaB?: Midia; texto: Texto; textoB?: Texto; link: string
@@ -43,6 +45,11 @@ export interface ContextoDoEstudio {
   campanhas: Array<{ id: string; nome: string; status: string; orcDia: number }>
   conjuntos: Array<{ id: string; nome: string; status: string; campanhaId: string; orcDia: number; publico: string }>
 }
+/** Um público guardado na biblioteca (Estúdio › Públicos), para usar em outros anúncios. */
+export interface PublicoSalvo { id: string; nome: string; publico: Publico; tamanho?: [number, number] | null; atualizadoEm: string }
+/** O que a busca ao vivo da Meta devolve (precisa da chave). */
+export type TipoDeBusca = 'interesse' | 'comportamento' | 'local' | 'aparelho'
+export type ResultadoDaBusca = (Interesse | Local | { tipo: 'aparelho'; nome: string }) & { tamanho?: [number, number]; caminho?: string; detalhe?: string }
 export interface ItemDoHistorico { id: number; quem: string; acao: string; alvoTipo: string; alvoId: string; alvoNome: string; detalhe: Record<string, unknown>; em: string }
 export type RespostaDeCriar = { situacao: Situacao; progresso: Progresso; aguardando?: 'video' }
 
@@ -50,7 +57,6 @@ export const BOTOES: Array<{ id: string; nome: string }> = [
   { id: 'SIGN_UP', nome: 'Cadastre-se' }, { id: 'LEARN_MORE', nome: 'Saiba mais' }, { id: 'APPLY_NOW', nome: 'Inscreva-se' },
   { id: 'WATCH_MORE', nome: 'Assistir' }, { id: 'SUBSCRIBE', nome: 'Assinar' },
 ]
-export const PUBLICO_PADRAO: Publico = { modo: 'padrao', idadeMin: 18, idadeMax: 65, genero: 'todos' }
 
 async function funcao<T>(sessao: SessaoTeeds, corpo: Record<string, unknown>): Promise<T> {
   const r = await fetch(`${SUPABASE.url}/functions/v1/meta-estudio`, {
@@ -67,7 +73,9 @@ async function rpc<T>(sessao: SessaoTeeds, nome: string, corpo: unknown): Promis
     body: JSON.stringify(corpo),
   })
   if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(String(e?.message || `Não consegui falar com o banco agora (${r.status}).`)) }
-  return r.json() as Promise<T>
+  // função que não devolve nada (arquivar) responde vazio: não é erro
+  const texto = await r.text()
+  return (texto ? JSON.parse(texto) : null) as T
 }
 
 const paraBase64 = (b: Blob) => new Promise<string>((ok, falha) => {
@@ -93,6 +101,12 @@ export interface ApiEstudio {
   status: (s: SessaoTeeds, parceiro: string, tipo: 'campanha' | 'conjunto' | 'anuncio', id: string, ligar: boolean, cascata?: boolean) => Promise<unknown>
   orcamento: (s: SessaoTeeds, parceiro: string, conjuntoId: string, diario: number) => Promise<unknown>
   escalar: (s: SessaoTeeds, parceiro: string, conjuntoId: string, aumento: number) => Promise<{ conjuntoId: string; diario: number }>
+  buscar: (s: SessaoTeeds, parceiro: string, tipo: TipoDeBusca, q: string) => Promise<ResultadoDaBusca[]>
+  sugerir: (s: SessaoTeeds, parceiro: string, nomes: string[]) => Promise<ResultadoDaBusca[]>
+  estimar: (s: SessaoTeeds, parceiro: string, publico: Publico) => Promise<{ tamanho: [number, number] | null; avisos: string[] }>
+  publicos: (s: SessaoTeeds, parceiro: string) => Promise<PublicoSalvo[]>
+  salvarPublico: (s: SessaoTeeds, parceiro: string, id: string | null, nome: string, publico: Publico, tamanho: [number, number] | null) => Promise<string>
+  arquivarPublico: (s: SessaoTeeds, id: string) => Promise<unknown>
 }
 
 export const API_DO_ESTUDIO: ApiEstudio = {
@@ -127,6 +141,12 @@ export const API_DO_ESTUDIO: ApiEstudio = {
   status: (s, parceiro, tipo, id, ligar, cascata) => funcao(s, { acao: 'status', parceiro, tipo, id, ligar, cascata: !!cascata }),
   orcamento: (s, parceiro, conjuntoId, diario) => funcao(s, { acao: 'orcamento', parceiro, conjuntoId, diario }),
   escalar: (s, parceiro, conjuntoId, aumento) => funcao(s, { acao: 'escalar', parceiro, conjuntoId, aumento }),
+  buscar: (s, parceiro, tipo, q) => funcao<{ itens: ResultadoDaBusca[] }>(s, { acao: 'buscar', parceiro, tipo, q }).then((r) => r.itens),
+  sugerir: (s, parceiro, nomes) => funcao<{ itens: ResultadoDaBusca[] }>(s, { acao: 'sugerir', parceiro, nomes }).then((r) => r.itens),
+  estimar: (s, parceiro, publico) => funcao(s, { acao: 'estimar', parceiro, publico }),
+  publicos: (s, parceiro) => rpc(s, 'teeds_estudio_publicos', { p_marca: MARCA.id, p_parceiro: parceiro }),
+  salvarPublico: (s, parceiro, id, nome, publico, tamanho) => rpc(s, 'teeds_estudio_publico_salvar', { p_marca: MARCA.id, p_parceiro: parceiro, p_id: id, p_nome: nome, p_publico: publico, p_tamanho: tamanho }),
+  arquivarPublico: (s, id) => rpc(s, 'teeds_estudio_publico_arquivar', { p_marca: MARCA.id, p_id: id }),
 }
 
 /* ------------------------------------------------------------------ o semáforo do texto */

@@ -13,11 +13,57 @@ import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import type { SessaoTeeds } from '../../../core/teeds/conta'
 import type { Anuncio, FunilDoBanco, PainelDaMeta } from '../../../core/teeds/anuncios'
 import { certezaDoTeste, type ApiEstudio, type ContextoDoEstudio, type DadosDoRascunho, type ItemDoHistorico, type Rascunho } from '../../../core/teeds/estudio'
-import { Criador } from './Criador'
+import { Criador, fotoDaConta } from './Criador'
+import type { Aprendizado } from './MontarPublico'
+import { POSICIONAMENTO_AUTO, type Publico } from '../../../core/teeds/publicos'
 import { Confirmar, Icone, brl, int, quando } from './pecas'
 import './estudio.css'
 
 type Vista = 'inicio' | 'rodando' | 'testes' | 'historico'
+
+/**
+ * "O que já funciona" (03/11/2026): lê as quebras da Meta com cadastro (idade e gênero, estado,
+ * lugar, aparelho) e devolve as frases e o público pronto para aplicar. Só com 10 cadastros ou mais.
+ */
+function aprenderDosCadastros(painel: PainelDaMeta | null): Aprendizado | null {
+  const q = painel?.quebras
+  if (!q) return null
+  const soma = (l: Array<{ cadastros: number }>) => l.reduce((a, x) => a + (x.cadastros || 0), 0)
+  if (soma(q.idadeGenero) < 10) return null
+  const frases: string[] = [], aplicar: Partial<Publico> = {}
+  // idade e gênero: as faixas que somam 60% dos cadastros
+  const porIdade = new Map<string, number>(), porGenero = new Map<string, number>()
+  for (const x of q.idadeGenero) { porIdade.set(String(x.age), (porIdade.get(String(x.age)) ?? 0) + x.cadastros); porGenero.set(String(x.gender), (porGenero.get(String(x.gender)) ?? 0) + x.cadastros) }
+  const total = soma(q.idadeGenero), faixas = [...porIdade].sort((a, b) => b[1] - a[1])
+  const escolhidas: string[] = []; let acc = 0
+  for (const [f, n] of faixas) { if (acc / total >= 0.6) break; escolhidas.push(f); acc += n }
+  const limites = escolhidas.flatMap((f) => f.replace('+', '-65').split('-').map(Number)).filter((n) => n >= 13)
+  if (limites.length) { aplicar.idadeMin = Math.max(18, Math.min(...limites)); aplicar.idadeMax = Math.min(65, Math.max(...limites)) }
+  const homens = (porGenero.get('male') ?? 0) / total, mulheres = (porGenero.get('female') ?? 0) / total
+  aplicar.genero = homens >= 0.72 ? 'homens' : mulheres >= 0.72 ? 'mulheres' : 'todos'
+  frases.push(`${aplicar.genero === 'homens' ? 'Homens' : aplicar.genero === 'mulheres' ? 'Mulheres' : 'Pessoas'} de ${aplicar.idadeMin} a ${aplicar.idadeMax}${aplicar.idadeMax === 65 ? '+' : ''} (${Math.round((acc / total) * 100)}% dos cadastros)`)
+  // estados: os que somam metade dos cadastros (até 4)
+  const reg = [...q.regiao].filter((x) => x.cadastros > 0).sort((a, b) => b.cadastros - a.cadastros), totalReg = soma(reg)
+  const estados: string[] = []; let accR = 0
+  for (const x of reg) { if (estados.length >= 4 || (accR / Math.max(1, totalReg) >= 0.5 && estados.length)) break; estados.push(String(x.region).replace(/\s*\((state|estado)\)\s*$/i, '')); accR += x.cadastros }
+  if (estados.length && totalReg && accR / totalReg < 0.95) { aplicar.locais = estados.map((nome) => ({ tipo: 'estado' as const, nome })); frases.push(`${estados.join(', ')} (${Math.round((accR / totalReg) * 100)}%)`) }
+  // lugares: se poucos lugares concentram 80% dos cadastros, a sugestão é ficar neles
+  const mapa: Record<string, [string, string, string]> = {
+    'instagram|instagram_reels': ['instagram', 'reels', 'Reels do Instagram'], 'instagram|instagram_stories': ['instagram', 'story', 'Stories do Instagram'], 'instagram|feed': ['instagram', 'stream', 'Feed do Instagram'],
+    'instagram|instagram_explore': ['instagram', 'explore', 'Explorar do Instagram'], 'facebook|feed': ['facebook', 'feed', 'Feed do Facebook'], 'facebook|facebook_reels': ['facebook', 'facebook_reels', 'Reels do Facebook'], 'facebook|facebook_stories': ['facebook', 'story', 'Stories do Facebook'],
+  }
+  const pos = [...q.posicionamento].filter((x) => x.cadastros > 0).sort((a, b) => b.cadastros - a.cadastros), totalPos = soma(pos)
+  const lugares: Array<[string, string, string]> = []; let accP = 0
+  for (const x of pos) { const m = mapa[`${x.publisher_platform}|${x.platform_position}`]; if (!m || lugares.length >= 3 || accP / Math.max(1, totalPos) >= 0.8) break; lugares.push(m); accP += x.cadastros }
+  if (lugares.length && totalPos && accP / totalPos >= 0.8) {
+    aplicar.posicionamentos = { ...POSICIONAMENTO_AUTO, modo: 'manual', instagram: lugares.filter((l) => l[0] === 'instagram').map((l) => l[1]), facebook: lugares.filter((l) => l[0] === 'facebook').map((l) => l[1]) }
+    frases.push(`${lugares.map((l) => l[2]).join(', ')} (${Math.round((accP / totalPos) * 100)}%)`)
+  }
+  // aparelho
+  const ap = q.aparelho.filter((x) => x.cadastros > 0), totalAp = soma(ap), celular = soma(ap.filter((x) => /mobile/.test(String(x.device_platform))))
+  if (totalAp && celular / totalAp >= 0.95) frases.push(`no celular (${Math.round((celular / totalAp) * 100)}%)`)
+  return { frases, aplicar }
+}
 type Cor = 'verde' | 'amarelo' | 'vermelho' | 'azul' | 'cinza'
 interface Diagnostico { cor: Cor; frase: string; acao: 'pausar' | 'ligar' | 'trocar' | 'escalar' | null; campeao?: boolean }
 
@@ -56,6 +102,7 @@ export function EstudioDeAnuncios({ sessao, api, parceiro, contaNome, painel, fu
 
   /* ---------------------------------------------- o que está rodando, com o diagnóstico */
   const real = useMemo(() => new Map((funil?.porAnuncio ?? []).map((a) => [a.id, a])), [funil])
+  const aprendizado = useMemo(() => aprenderDosCadastros(painel), [painel])
   const anuncios = useMemo(() => (painel?.anuncios ?? []).filter((a) => !['ARCHIVED', 'DELETED'].includes(a.status)), [painel])
   const media = useMemo(() => {
     let g = 0, c = 0
@@ -164,7 +211,7 @@ export function EstudioDeAnuncios({ sessao, api, parceiro, contaNome, painel, fu
           <p>Tudo nasce pausado. Nada gasta antes de você ligar.</p>
         </div>
         <div className="es-conta">
-          <i className="es-av">{ctx.instagram.foto ? <img src={ctx.instagram.foto} alt="" /> : ctx.instagram.usuario.slice(0, 1).toUpperCase()}</i>
+          <i className="es-av"><img src={fotoDaConta(ctx)} alt="" /></i>
           <div><b>@{ctx.instagram.usuario}</b><small>{contaNome}</small></div>
         </div>
       </section>
@@ -295,7 +342,7 @@ export function EstudioDeAnuncios({ sessao, api, parceiro, contaNome, painel, fu
 
       {criador && (
         <Criador sessao={sessao} api={api} parceiro={parceiro} ctx={ctx} tipo={criador.tipo} inicial={criador.inicial} prefill={criador.prefill}
-          custoPorCadastro={custoPorCadastro} contaNome={contaNome} fechar={fecharCriador} />
+          custoPorCadastro={custoPorCadastro} contaNome={contaNome} fechar={fecharCriador} aprendizado={aprendizado} />
       )}
 
       {confirmar && <Confirmar titulo={confirmar.titulo} botao={confirmar.botao} perigo={confirmar.perigo} indo={indo.indo} erro={indo.erro} confirmar={() => void executar()} cancelar={() => setConfirmar(null)}>{confirmar.corpo}</Confirmar>}

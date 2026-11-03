@@ -21,6 +21,14 @@
 //   orcamento { conjuntoId, diario } muda o orçamento por dia de um conjunto da GF
 //   escalar { conjuntoId, aumento }  duplica um conjunto campeão (pausado) com orçamento maior
 //   vencedor { id, vencedor }        fim do teste A/B: pausa a versão que perdeu
+//   buscar { tipo, q }               busca ao vivo da Meta: interesse, comportamento, local (estado/cidade), aparelho
+//   sugerir { nomes }                interesses parecidos com os escolhidos
+//   estimar { publico }              tamanho estimado do público (pessoas por mês), sem criar nada
+//
+// 03/11/2026 (Tiago: "está bem cru... cadê interesses, aparelho, iPhone 15/16/17, Insta ou Face"):
+// o público completo (local, idade, gênero, interesses, exclusões, idioma, sistema, modelo de celular,
+// só Wi-Fi, onde aparece, semelhantes e remarketing do pixel). O que vem só com o nome é procurado na
+// Meta na hora; o que não for achado vira aviso e fica de fora (nada é inventado).
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICO = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -110,29 +118,167 @@ function conferirTexto(...textos: Array<string | undefined>) {
 
 type Midia = { tipo: 'imagem' | 'video'; hash?: string; videoId?: string; posterHash?: string; nome?: string }
 type Texto = { principal: string; titulo: string; descricao?: string; botao: string }
-type Publico = { modo: 'padrao' | 'personalizado'; idadeMin: number; idadeMax: number; genero: 'todos' | 'homens' | 'mulheres' }
+type Local = { tipo: 'estado' | 'cidade'; nome: string; chave?: string; raio?: number }
+type Interesse = { tipo: 'interesse' | 'comportamento'; nome: string; id?: string }
+type Publico = {
+  modo: string; idadeMin: number; idadeMax: number; genero: 'todos' | 'homens' | 'mulheres'
+  locais?: Local[]; interesses?: Interesse[]; excluirInteresses?: Interesse[]; portugues?: boolean
+  sistema?: 'todos' | 'ios' | 'android'; modelos?: string[]; soWifi?: boolean
+  posicionamentos?: { modo: 'auto' | 'manual'; instagram: string[]; facebook: string[]; messenger: boolean; audienceNetwork: boolean; aparelhos: string[] }
+  inteligente?: { tipo: 'semelhantes' | 'remarketing'; percentual: number; dias: number }; excluirCadastrados?: boolean
+}
 interface Dados {
   nomeAnuncio: string; midia?: Midia; midiaB?: Midia; texto: Texto; textoB?: Texto; link: string
   destino: { campanha: string; nomeCampanha?: string; conjunto: string; nomeConjunto?: string }
   publico: Publico; publicoB?: Publico; diario: number; teste?: { variavel: 'criativo' | 'texto' | 'publico'; dias: number }
 }
 
-function segmentacao(p: Publico) {
-  // padrão do lançamento: Brasil, público Advantage+ (a Meta encontra quem se cadastra)
-  if (p.modo !== 'personalizado') return { geo_locations: { countries: ['BR'] }, age_min: 18, age_max: 65, targeting_automation: { advantage_audience: 1 } }
-  const idadeMin = Math.min(65, Math.max(18, Math.round(p.idadeMin || 18))), idadeMax = Math.min(65, Math.max(idadeMin, Math.round(p.idadeMax || 65)))
+const normal = (t: string) => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+const busca = async (chave: string, params: Record<string, string>) => (await ler(chave, 'search', { locale: 'pt_BR', limit: '50', ...params })).data ?? []
+const faixa = (x: any): [number, number] | undefined => (x?.audience_size_lower_bound != null ? [Number(x.audience_size_lower_bound), Number(x.audience_size_upper_bound ?? x.audience_size_lower_bound)] : undefined)
+
+/** Procura na Meta o que o público tem só pelo nome (com memória dentro da mesma chamada). */
+function resolvedor(chave: string) {
+  const listas = new Map<string, Promise<any[]>>()
+  const lista = (classe: string) => { if (!listas.has(classe)) listas.set(classe, busca(chave, { type: 'adTargetingCategory', class: classe, limit: '1000' }).catch(() => [])); return listas.get(classe)! }
+  const melhor = (itens: any[], nome: string) => itens.find((x) => normal(x.name) === normal(nome)) ?? itens.find((x) => normal(x.name).includes(normal(nome))) ?? null
   return {
-    geo_locations: { countries: ['BR'] }, age_min: idadeMin, age_max: idadeMax,
-    ...(p.genero === 'homens' ? { genders: [1] } : p.genero === 'mulheres' ? { genders: [2] } : {}),
-    targeting_automation: { advantage_audience: 0 },
+    async local(l: Local) {
+      if (l.chave) return l.chave
+      const r = await busca(chave, { type: 'adgeolocation', q: l.nome, location_types: JSON.stringify([l.tipo === 'estado' ? 'region' : 'city']), country_code: 'BR' }).catch(() => [])
+      return (melhor(r, l.nome) ?? r[0])?.key ?? null
+    },
+    async interesse(i: Interesse) {
+      if (i.id) return { id: i.id, name: i.nome }
+      if (i.tipo === 'comportamento') { const x = melhor(await lista('behaviors'), i.nome); return x ? { id: String(x.id), name: x.name } : null }
+      const r = await busca(chave, { type: 'adinterest', q: i.nome }).catch(() => [])
+      const x = melhor(r, i.nome) ?? r[0]
+      return x ? { id: String(x.id), name: x.name } : null
+    },
+    async aparelhos(nomes: string[]) {
+      const todos = await lista('user_device')
+      return nomes.map((n) => ({ pedido: n, achado: melhor(todos, n)?.name as string | undefined }))
+    },
+    async portugues() {
+      const r = await busca(chave, { type: 'adlocale', q: 'Portuguese' }).catch(() => [])
+      return r.filter((x: any) => /portug/i.test(x.name)).map((x: any) => Number(x.key))
+    },
   }
 }
 
-async function criarConjunto(chave: string, act: string, cfg: { pixel: string }, campanhaId: string, nome: string, diario: number, publico: Publico) {
+/** Um público do pixel na conta (procura pelo nome; se não existir e `criar`, cria). Nenhum dado pessoal sai daqui. */
+async function publicoDoPixel(chave: string, act: string, nome: string, criar: false | Record<string, unknown>) {
+  const achados = await ler(chave, `${act}/customaudiences`, { fields: 'id,name', filtering: JSON.stringify([{ field: 'name', operator: 'EQUAL', value: nome }]), limit: '5' }).catch(() => ({ data: [] }))
+  const ja = (achados.data ?? []).find((x: any) => x.name === nome)
+  if (ja) return String(ja.id)
+  if (!criar) return null
+  const d = await gravar(chave, `${act}/customaudiences`, { name: nome, ...criar })
+  return String(d.id)
+}
+const regraDoPixel = (pixel: string, dias: number, filtros: Array<Record<string, string>>) => ({
+  inclusions: { operator: 'or', rules: [{ event_sources: [{ id: pixel, type: 'pixel' }], retention_seconds: Math.round(dias * 86400), filter: { operator: 'and', filters: filtros } }] },
+})
+
+/**
+ * A segmentação da Meta a partir do público do Estúdio. `criarPublicos`: na hora de criar o anúncio,
+ * os públicos do pixel (cadastrados, visitantes, semelhantes) são criados se ainda não existirem;
+ * na estimativa, não (entra só o que já existe).
+ */
+async function montarSegmentacao(chave: string, act: string, cfg: { pixel: string }, parceiro: string, p: Publico, avisos: string[], criarPublicos: boolean) {
+  const r = resolvedor(chave)
+  const t: Record<string, any> = {}
+  const modo = p.modo === 'personalizado' ? 'detalhado' : p.modo
+  // onde: Brasil todo ou estados e cidades (com raio)
+  const locais = p.locais ?? []
+  if (!locais.length) t.geo_locations = { countries: ['BR'] }
+  else {
+    const regioes: any[] = [], cidades: any[] = []
+    for (const l of locais) {
+      const k = await r.local(l)
+      if (!k) { avisos.push(`Não achei "${l.nome}" na Meta: ficou de fora.`); continue }
+      if (l.tipo === 'estado') regioes.push({ key: String(k) })
+      else cidades.push({ key: String(k), ...(l.raio ? { radius: Math.min(80, Math.max(17, Math.round(l.raio))), distance_unit: 'kilometer' } : {}) })
+    }
+    t.geo_locations = regioes.length || cidades.length ? { ...(regioes.length ? { regions: regioes } : {}), ...(cidades.length ? { cities: cidades } : {}) } : { countries: ['BR'] }
+    if (!regioes.length && !cidades.length) avisos.push('Nenhum lugar foi achado: o anúncio vale para o Brasil todo.')
+  }
+  // idade e gênero (no Advantage+ só a idade mínima é trava, até 25)
+  if (modo === 'padrao') {
+    t.age_min = Math.min(25, Math.max(18, Math.round(p.idadeMin || 18))); t.age_max = 65
+    t.targeting_automation = { advantage_audience: 1 }
+  } else {
+    const min = Math.min(65, Math.max(18, Math.round(p.idadeMin || 18)))
+    t.age_min = min; t.age_max = Math.min(65, Math.max(min, Math.round(p.idadeMax || 65)))
+    if (p.genero === 'homens') t.genders = [1]; else if (p.genero === 'mulheres') t.genders = [2]
+    t.targeting_automation = { advantage_audience: 0 }
+  }
+  // interesses, comportamentos e exclusões
+  if (modo === 'detalhado') {
+    const grupo = async (lista: Interesse[] = []) => {
+      const interests: any[] = [], behaviors: any[] = []
+      for (const i of lista) {
+        const x = await r.interesse(i)
+        if (!x) { avisos.push(`Não achei "${i.nome}" na Meta: ficou de fora.`); continue }
+        ;(i.tipo === 'comportamento' ? behaviors : interests).push(x)
+      }
+      return { ...(interests.length ? { interests } : {}), ...(behaviors.length ? { behaviors } : {}) }
+    }
+    const inclui = await grupo(p.interesses), exclui = await grupo(p.excluirInteresses)
+    if (Object.keys(inclui).length) t.flexible_spec = [inclui]
+    if (Object.keys(exclui).length) t.exclusions = exclui
+  }
+  // idioma, sistema, modelo de celular e Wi-Fi
+  if (modo !== 'padrao') {
+    if (p.portugues) { const l = await r.portugues(); if (l.length) t.locales = l; else avisos.push('Não consegui marcar o idioma português: ficou sem filtro de idioma.') }
+    if (p.sistema === 'ios') t.user_os = ['iOS']; else if (p.sistema === 'android') t.user_os = ['Android']
+    if (p.modelos?.length && t.user_os) {
+      const achados = await r.aparelhos(p.modelos)
+      const ok = achados.filter((a) => a.achado).map((a) => a.achado!)
+      for (const a of achados) if (!a.achado) avisos.push(`A Meta não tem o aparelho "${a.pedido}" na lista: ficou de fora.`)
+      if (ok.length) t.user_device = [...new Set(ok)]
+    }
+    if (p.soWifi) t.wireless_carrier = ['Wifi']
+  }
+  // públicos do pixel: semelhantes, remarketing e quem já se cadastrou
+  const nomeCad = `GF | Cadastrados pelo pixel (/${parceiro})`
+  const cadastrados = () => publicoDoPixel(chave, act, nomeCad, criarPublicos && { rule: regraDoPixel(cfg.pixel, 180, [{ field: 'event', operator: 'eq', value: 'CompleteRegistration' }]), prefill: true, description: 'Criado pelo Estúdio de anúncios da GlobalFly' })
+  if (modo === 'inteligente' && p.inteligente) {
+    if (p.inteligente.tipo === 'semelhantes') {
+      const pct = Math.min(10, Math.max(1, Math.round(p.inteligente.percentual || 1)))
+      const origem = await cadastrados()
+      const id = origem ? await publicoDoPixel(chave, act, `GF | Semelhantes ${pct}% aos cadastrados (/${parceiro})`, criarPublicos && { subtype: 'LOOKALIKE', origin_audience_id: origem, lookalike_spec: { ratio: pct / 100, country: 'BR' } }) : null
+      if (id) t.custom_audiences = [{ id }]
+      else avisos.push(criarPublicos ? 'Não consegui montar o público semelhante.' : 'O público semelhante é criado junto com o anúncio: a estimativa ainda não conta com ele.')
+    } else {
+      const dias = Math.min(180, Math.max(1, Math.round(p.inteligente.dias || 30)))
+      const id = await publicoDoPixel(chave, act, `GF | Visitaram /${parceiro} em ${dias} dias`, criarPublicos && { rule: regraDoPixel(cfg.pixel, dias, [{ field: 'url', operator: 'i_contains', value: `/${parceiro}/` }]), prefill: true, description: 'Criado pelo Estúdio de anúncios da GlobalFly' })
+      if (id) t.custom_audiences = [{ id }]
+      else avisos.push(criarPublicos ? 'Não consegui montar o público de remarketing.' : 'O público de remarketing é criado junto com o anúncio: a estimativa ainda não conta com ele.')
+    }
+  }
+  if (p.excluirCadastrados || (modo === 'inteligente' && p.inteligente?.tipo === 'remarketing')) {
+    const id = await cadastrados()
+    if (id) t.excluded_custom_audiences = [{ id }]
+  }
+  // onde aparece: automático (Advantage+) ou escolhido
+  const pos = p.posicionamentos
+  if (pos?.modo === 'manual') {
+    const plataformas = [pos.facebook?.length ? 'facebook' : '', pos.instagram?.length ? 'instagram' : '', pos.messenger ? 'messenger' : '', pos.audienceNetwork ? 'audience_network' : ''].filter(Boolean)
+    t.publisher_platforms = plataformas
+    if (pos.facebook?.length) t.facebook_positions = pos.facebook
+    if (pos.instagram?.length) t.instagram_positions = pos.instagram
+    if (pos.messenger) t.messenger_positions = ['messenger_home', 'story']
+    if (pos.audienceNetwork) t.audience_network_positions = ['classic', 'rewarded_video']
+    if (pos.aparelhos?.length && pos.aparelhos.length < 2) t.device_platforms = pos.aparelhos
+  }
+  return t
+}
+
+async function criarConjunto(chave: string, act: string, cfg: { pixel: string }, campanhaId: string, nome: string, diario: number, targeting: Record<string, unknown>) {
   const d = await gravar(chave, `${act}/adsets`, {
     name: nome, campaign_id: campanhaId, status: 'PAUSED', daily_budget: Math.round(diario * 100), billing_event: 'IMPRESSIONS',
     optimization_goal: 'OFFSITE_CONVERSIONS', bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
-    promoted_object: { pixel_id: cfg.pixel, custom_event_type: 'COMPLETE_REGISTRATION' }, targeting: segmentacao(publico),
+    promoted_object: { pixel_id: cfg.pixel, custom_event_type: 'COMPLETE_REGISTRATION' }, targeting,
   })
   return String(d.id)
 }
@@ -165,7 +311,7 @@ async function videoPronto(chave: string, m?: Midia) {
   return v.status?.video_status === 'ready'
 }
 
-async function criar(chave: string, cfg: typeof CONTAS['globalfly']['n'], r: any, salvar: (p: any) => Promise<void>) {
+async function criar(chave: string, cfg: typeof CONTAS['globalfly']['n'], parceiro: string, r: any, salvar: (p: any) => Promise<void>) {
   const d = r.dados as Dados, p = { ...(r.progresso ?? {}) } as Record<string, any>, act = `act_${cfg.conta}`
   p.avisos = p.avisos ?? []
   const teste = r.tipo === 'teste' && d.teste
@@ -197,13 +343,16 @@ async function criar(chave: string, cfg: typeof CONTAS['globalfly']['n'], r: any
     await salvar(p)
   }
   // 2) o conjunto (no teste, um para cada versão, com metade do orçamento cada)
+  const precisaA = teste ? !p.conjuntoId : !p.conjuntoId && d.destino.conjunto === 'novo'
+  const alvoA = precisaA ? await montarSegmentacao(chave, act, cfg, parceiro, d.publico, p.avisos, true) : null
+  const alvoB = teste && !p.conjuntoB ? (d.teste!.variavel === 'publico' && d.publicoB ? await montarSegmentacao(chave, act, cfg, parceiro, d.publicoB, p.avisos, true) : alvoA ?? await montarSegmentacao(chave, act, cfg, parceiro, d.publico, p.avisos, true)) : null
   if (teste) {
     const nomeC = comPrefixo(d.destino.nomeConjunto || d.nomeAnuncio || 'Teste')
-    if (!p.conjuntoId) { p.conjuntoId = await criarConjunto(chave, act, cfg, p.campanhaId, `${nomeC} · Versão A`, diario / 2, d.publico); p.conjuntoNovo = true; await salvar(p) }
-    if (!p.conjuntoB) { p.conjuntoB = await criarConjunto(chave, act, cfg, p.campanhaId, `${nomeC} · Versão B`, diario / 2, d.teste!.variavel === 'publico' && d.publicoB ? d.publicoB : d.publico); await salvar(p) }
+    if (!p.conjuntoId) { p.conjuntoId = await criarConjunto(chave, act, cfg, p.campanhaId, `${nomeC} · Versão A`, diario / 2, alvoA!); p.conjuntoNovo = true; await salvar(p) }
+    if (!p.conjuntoB) { p.conjuntoB = await criarConjunto(chave, act, cfg, p.campanhaId, `${nomeC} · Versão B`, diario / 2, alvoB!); await salvar(p) }
   } else if (!p.conjuntoId) {
     if (d.destino.conjunto === 'novo') {
-      p.conjuntoId = await criarConjunto(chave, act, cfg, p.campanhaId, comPrefixo(d.destino.nomeConjunto || 'Público do lançamento'), diario, d.publico); p.conjuntoNovo = true
+      p.conjuntoId = await criarConjunto(chave, act, cfg, p.campanhaId, comPrefixo(d.destino.nomeConjunto || 'Público do lançamento'), diario, alvoA!); p.conjuntoNovo = true
     } else {
       await daGf(chave, 'conjunto', d.destino.conjunto); p.conjuntoId = d.destino.conjunto
     }
@@ -287,6 +436,40 @@ Deno.serve(async (req) => {
       })
     }
 
+    if (acao === 'buscar') {
+      const q = String(d.q ?? '').trim().slice(0, 80), tipo = String(d.tipo ?? '')
+      if (q.length < 2) return json({ itens: [] })
+      if (tipo === 'interesse') {
+        const r = await busca(chave, { type: 'adinterest', q })
+        return json({ itens: r.map((x: any) => ({ tipo: 'interesse', nome: x.name, id: String(x.id), tamanho: faixa(x), caminho: (x.path ?? []).slice(0, -1).join(' › ') || x.topic || '' })) })
+      }
+      if (tipo === 'comportamento' || tipo === 'aparelho') {
+        const r = await busca(chave, { type: 'adTargetingCategory', class: tipo === 'aparelho' ? 'user_device' : 'behaviors', limit: '1000' })
+        const n = normal(q)
+        const itens = r.filter((x: any) => normal(x.name).includes(n)).slice(0, 30)
+        return json({ itens: itens.map((x: any) => tipo === 'aparelho' ? { tipo: 'aparelho', nome: x.name, detalhe: x.platform ?? '' } : { tipo: 'comportamento', nome: x.name, id: String(x.id), tamanho: faixa(x), caminho: (x.path ?? []).slice(0, -1).join(' › ') }) })
+      }
+      if (tipo === 'local') {
+        const r = await busca(chave, { type: 'adgeolocation', q, location_types: JSON.stringify(['region', 'city']), country_code: 'BR' })
+        return json({ itens: r.map((x: any) => ({ tipo: x.type === 'region' ? 'estado' : 'cidade', nome: x.name, chave: String(x.key), detalhe: x.type === 'city' ? x.region ?? '' : 'Estado' })) })
+      }
+      return json({ erro: 'Tipo de busca inválido.' }, 400)
+    }
+    if (acao === 'sugerir') {
+      const nomes = (Array.isArray(d.nomes) ? d.nomes : []).map(String).filter(Boolean).slice(0, 10)
+      if (!nomes.length) return json({ itens: [] })
+      const r = await busca(chave, { type: 'adinterestsuggestion', interest_list: JSON.stringify(nomes), limit: '20' })
+      return json({ itens: r.map((x: any) => ({ tipo: 'interesse', nome: x.name, id: String(x.id), tamanho: faixa(x), caminho: (x.path ?? []).slice(0, -1).join(' › ') })) })
+    }
+    if (acao === 'estimar') {
+      const avisos: string[] = []
+      const targeting = await montarSegmentacao(chave, act, cfg, parceiro, d.publico as Publico, avisos, false)
+      const e = await ler(chave, `${act}/delivery_estimate`, { optimization_goal: 'OFFSITE_CONVERSIONS', targeting_spec: JSON.stringify(targeting), promoted_object: JSON.stringify({ pixel_id: cfg.pixel, custom_event_type: 'COMPLETE_REGISTRATION' }) })
+      const x = e.data?.[0] ?? {}
+      const lo = Number(x.estimate_mau_lower_bound ?? x.estimate_mau ?? 0), hi = Number(x.estimate_mau_upper_bound ?? x.estimate_mau ?? 0)
+      return json({ tamanho: lo || hi ? [lo, hi || lo] : null, avisos })
+    }
+
     if (acao === 'imagem') {
       const bytes = b64(String(d.base64 ?? ''))
       if (!bytes.length || bytes.length > 30e6) return json({ erro: 'A imagem precisa ter até 30 MB.' }, 400)
@@ -327,7 +510,7 @@ Deno.serve(async (req) => {
         if (!['rascunho', 'erro', 'criando'].includes(r.situacao)) return json({ situacao: r.situacao, progresso: r.progresso })
         await mudar({ situacao: 'criando', erro: null })
         try {
-          const feito = await criar(chave, cfg, r, async (p) => { await mudar({ progresso: p }) })
+          const feito = await criar(chave, cfg, parceiro, r, async (p) => { await mudar({ progresso: p }) })
           if ('aguardando' in feito) return json({ situacao: 'criando', aguardando: feito.aguardando, progresso: feito.progresso })
           await mudar({ situacao: 'pausado', progresso: feito.progresso })
           await anotar(r.tipo === 'teste' ? 'criou_teste' : 'criou', 'anuncio', feito.progresso.anuncioId, r.nome, { diario: r.dados?.diario, avisos: feito.progresso.avisos })

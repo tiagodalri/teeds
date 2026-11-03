@@ -11,6 +11,8 @@ import {
   type Rascunho, type Texto, type Variavel,
 } from '../../../core/teeds/estudio'
 import { Previa, encaixe, NOME_DO_ENCAIXE, type Lugar } from './Previa'
+import { MontarPublico, type Aprendizado } from './MontarPublico'
+import { problemasDoPublico, publicoCompleto, resumoDoPublico } from '../../../core/teeds/publicos'
 import { Confirmar, Icone, brl, int } from './pecas'
 
 type Lado = 'a' | 'b'
@@ -37,6 +39,9 @@ const MODELOS: Array<{ nome: string; texto: Texto }> = [
   { nome: 'Bastidores da I.A.', texto: { principal: 'Já viu uma I.A. operando ao vivo? Na GlobalFly a estratégia roda na sua conta e você acompanha cada entrada na tela, com o seu gerenciamento. Cadastre-se e veja como funciona.', titulo: 'Veja a I.A. operando ao vivo', descricao: 'Cadastro gratuito', botao: 'LEARN_MORE' } },
   { nome: 'Direto ao ponto', texto: { principal: 'A GlobalFly abre as portas na live de 09/11. Faça seu cadastro agora e receba o aviso quando começar.', titulo: 'Cadastre-se para a live', descricao: '', botao: 'SIGN_UP' } },
 ]
+
+/** A foto do perfil: a do Instagram (com a chave) ou a da página, que a Meta mostra sem chave. */
+export const fotoDaConta = (ctx: ContextoDoEstudio) => ctx.instagram.foto ?? `https://graph.facebook.com/${ctx.pagina.id}/picture?type=large`
 
 const ddmm = () => { const d = new Date(); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}` }
 export function dadosNovos(ctx: ContextoDoEstudio, tipo: 'novo' | 'teste'): DadosDoRascunho {
@@ -79,10 +84,11 @@ const pronta = (m?: Midia) => !!m && (m.tipo === 'imagem' ? !!m.hash : !!m.video
 
 interface Envio { fase: 'lendo' | 'enviando' | 'processando' | 'pronto' | 'erro' | 'local'; fracao: number; erro?: string }
 
-export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, custoPorCadastro, contaNome, fechar }: {
+export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, custoPorCadastro, contaNome, fechar, aprendizado }: {
   sessao: SessaoTeeds; api: ApiEstudio; parceiro: string; ctx: ContextoDoEstudio; tipo: 'novo' | 'teste'
   inicial: Rascunho | null; prefill?: Partial<DadosDoRascunho>; custoPorCadastro: number | null; contaNome: string
   fechar: (mudou: boolean) => void
+  aprendizado?: Aprendizado | null
 }) {
   const [id, setId] = useState<string | null>(inicial?.id ?? null)
   const [dados, setDados] = useState<DadosDoRascunho>(() => ({ ...dadosNovos(ctx, tipo), ...(inicial?.dados ?? {}), ...(prefill ?? {}) }))
@@ -117,8 +123,8 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
   const mudar = (f: (d: DadosDoRascunho) => DadosDoRascunho) => { mudou.current = true; setDados(f) }
   const texto = lado === 'b' && variavel === 'texto' ? dados.textoB! : dados.texto
   const setTexto = (t: Partial<Texto>) => mudar((d) => (lado === 'b' && variavel === 'texto' ? { ...d, textoB: { ...d.textoB!, ...t } } : { ...d, texto: { ...d.texto, ...t } }))
-  const publico = lado === 'b' && variavel === 'publico' ? dados.publicoB! : dados.publico
-  const setPublico = (p: Partial<Publico>) => mudar((d) => (lado === 'b' && variavel === 'publico' ? { ...d, publicoB: { ...d.publicoB!, ...p } } : { ...d, publico: { ...d.publico, ...p } }))
+  const publico = publicoCompleto(lado === 'b' && variavel === 'publico' ? dados.publicoB : dados.publico)
+  const setPublico = (p: Partial<Publico>) => mudar((d) => (lado === 'b' && variavel === 'publico' ? { ...d, publicoB: { ...publicoCompleto(d.publicoB), ...p } } : { ...d, publico: { ...publicoCompleto(d.publico), ...p } }))
   const midiaDe = (l: Lado) => (l === 'b' && variavel === 'criativo' ? dados.midiaB : dados.midia)
   // a prévia mostra a versão do lado escolhido; o que não muda vem da versão A
   const previaMidia = lado === 'b' && variavel === 'criativo' ? dados.midiaB : dados.midia
@@ -204,6 +210,7 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
       falta: ctx.semChave ? 'Sobe quando a chave for conectada' : !dados.midia || (teste && variavel === 'criativo' && !dados.midiaB) ? 'Falta escolher o arquivo' : 'Esperando o envio terminar', passo: 'criativo' as IdPasso },
     { ok: !!dados.texto.principal.trim() && !!dados.texto.titulo.trim() && (!teste || variavel !== 'texto' || (!!dados.textoB?.principal.trim() && !!dados.textoB?.titulo.trim())), nome: 'Texto e título preenchidos', falta: 'Falta o texto ou o título', passo: 'mensagem' as IdPasso },
     { ok: !vermelhos.length, nome: 'Nenhuma palavra que a marca não usa', falta: `${vermelhos.length} ${vermelhos.length === 1 ? 'trecho precisa' : 'trechos precisam'} mudar`, passo: 'mensagem' as IdPasso },
+    ...(!conjuntoExistente ? [{ ok: !problemasDoPublico(dados.publico).length && (!teste || variavel !== 'publico' || !problemasDoPublico(dados.publicoB ?? {}).length), nome: 'Público montado', falta: problemasDoPublico(dados.publico)[0] ?? problemasDoPublico(dados.publicoB ?? {})[0] ?? 'Revise o público', passo: 'publico' as IdPasso }] : []),
     { ok: true, nome: 'Link com a marcação do anúncio (cada cadastro fica ligado a ele)', passo: 'destino' as IdPasso },
     { ok: true, nome: 'Pixel do Naor, otimizando para inscrição concluída', passo: 'destino' as IdPasso },
     { ok: true, nome: 'Nome no padrão "GF |", para o painel reconhecer', passo: 'destino' as IdPasso },
@@ -304,7 +311,7 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
         {!m && e?.fase === 'erro' && <p className="es-erro">{e.erro}</p>}
         {m && (
           <ul className="es-encaixes" aria-label="Como fica em cada lugar">
-            {(['feed', 'stories', 'reels'] as Lugar[]).map((l) => { const f = encaixe(m, l); return <li key={l} className={f}><button type="button" onClick={() => setLugar(l)}><b>{l === 'feed' ? 'Feed' : l === 'stories' ? 'Stories' : 'Reels'}</b><span>{NOME_DO_ENCAIXE[f]}</span></button></li> })}
+            {(['feed', 'stories', 'reels', 'facebook'] as Lugar[]).map((l) => { const f = encaixe(m, l); return <li key={l} className={f}><button type="button" onClick={() => setLugar(l)}><b>{l === 'feed' ? 'Feed' : l === 'stories' ? 'Stories' : l === 'reels' ? 'Reels' : 'Facebook'}</b><span>{NOME_DO_ENCAIXE[f]}</span></button></li> })}
           </ul>
         )}
         {m?.tipo === 'video' && (m.duracao ?? 0) > 90 && <p className="es-dica amarelo">Vídeos acima de 90 segundos não entram nos Reels. Para Reels, até 60 segundos rende mais.</p>}
@@ -388,28 +395,7 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
   const telaPublico = (
     <div className="es-campos">
       {temLados && <Lados />}
-      <div className="es-opcoes">
-        <button type="button" className={`es-opcao ${publico.modo === 'padrao' ? 'on' : ''}`} aria-pressed={publico.modo === 'padrao'} onClick={() => setPublico({ modo: 'padrao' })}>
-          <span className="es-radio" aria-hidden="true" /><div><b>Público padrão do lançamento <em className="es-rec">Recomendado</em></b><small>Brasil, 18 a 65+. A Meta procura quem tem mais chance de se cadastrar (Advantage+).</small></div>
-        </button>
-        <button type="button" className={`es-opcao ${publico.modo === 'personalizado' ? 'on' : ''}`} aria-pressed={publico.modo === 'personalizado'} onClick={() => setPublico({ modo: 'personalizado' })}>
-          <span className="es-radio" aria-hidden="true" /><div><b>Escolher idade e gênero</b><small>Só no Brasil. Útil para testar um público específico.</small></div>
-        </button>
-      </div>
-      {publico.modo === 'personalizado' && (
-        <div className="es-personalizar">
-          <div className="es-campo">
-            <span>Idade: <b>{publico.idadeMin} a {publico.idadeMax}{publico.idadeMax === 65 ? '+' : ''} anos</b></span>
-            <div className="es-duas">
-              <label>De <input id={`es-idade-min-${lado}`} type="number" min={18} max={publico.idadeMax} value={publico.idadeMin} onChange={(e) => setPublico({ idadeMin: Math.min(publico.idadeMax, Math.max(18, Number(e.target.value) || 18)) })} /></label>
-              <label>Até <input id={`es-idade-max-${lado}`} type="number" min={publico.idadeMin} max={65} value={publico.idadeMax} onChange={(e) => setPublico({ idadeMax: Math.max(publico.idadeMin, Math.min(65, Number(e.target.value) || 65)) })} /></label>
-            </div>
-          </div>
-          <div className="es-campo"><span>Gênero</span>
-            <div className="es-chips">{(['todos', 'homens', 'mulheres'] as const).map((g) => <button key={g} type="button" className={publico.genero === g ? 'on' : ''} aria-pressed={publico.genero === g} onClick={() => setPublico({ genero: g })}>{g === 'todos' ? 'Todos' : g === 'homens' ? 'Homens' : 'Mulheres'}</button>)}</div>
-          </div>
-        </div>
-      )}
+      <MontarPublico key={lado} publico={publico} mudar={setPublico} sessao={sessao} api={api} parceiro={parceiro} semChave={!!ctx.semChave} aprendizado={aprendizado} />
     </div>
   )
 
@@ -442,7 +428,7 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
     </div>
   )
 
-  const publicoTexto = (p: Publico) => (p.modo === 'padrao' ? 'Padrão do lançamento (Brasil, 18 a 65+, Advantage+)' : `Brasil, ${p.idadeMin} a ${p.idadeMax}${p.idadeMax === 65 ? '+' : ''} anos${p.genero === 'todos' ? '' : `, só ${p.genero}`}`)
+  const publicoTexto = (p?: Publico) => resumoDoPublico(p ?? {})
   const telaRevisar = (
     <div className="es-campos">
       <ul className="es-checks">
@@ -469,7 +455,7 @@ export function Criador({ sessao, api, parceiro, ctx, tipo, inicial, prefill, cu
 
   const telas: Record<IdPasso, ReactElement> = { teste: telaTeste, criativo: telaCriativo, mensagem: telaMensagem, destino: telaDestino, publico: telaPublico, orcamento: telaOrcamento, revisar: telaRevisar }
   const previa = (
-    <Previa midia={previaMidia} texto={previaTexto} usuario={ctx.instagram.usuario} foto={ctx.instagram.foto} lugar={lugar} setLugar={setLugar}
+    <Previa midia={previaMidia} texto={previaTexto} usuario={ctx.instagram.usuario} foto={fotoDaConta(ctx)} paginaNome={ctx.pagina.nome} link={dados.link} lugar={lugar} setLugar={setLugar}
       rotulo={teste && variavel && variavel !== 'publico' ? `Versão ${lado.toUpperCase()}` : undefined} />
   )
 

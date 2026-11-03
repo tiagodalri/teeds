@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AdminAnuncios } from './AdminAnuncios'
 import type { ApiAnuncios, FunilDoBanco, Metricas, PainelDaMeta } from '../../core/teeds/anuncios'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import type { ApiEstudio, ItemDoHistorico, Rascunho } from '../../core/teeds/estudio'
+import type { ApiEstudio, ItemDoHistorico, PublicoSalvo, Rascunho } from '../../core/teeds/estudio'
 
 /** Laboratório: Administração › Anúncios com números de exemplo (?tela=anuncios-admin; &sem-chave=1 mostra o conectar). */
 const m = (gasto: number, imp: number, cliques: number, lpv: number, cad: number, v3 = 0, thru = 0): Metricas => ({
@@ -90,6 +90,7 @@ const historicoLab: ItemDoHistorico[] = [
   { id: 2, quem: 'Tiago', acao: 'ligou', alvoTipo: 'anuncio', alvoId: ads[0].id, alvoNome: 'Naor na mesa x Bastidores', detalhe: { diario: 400 }, em: agoraMenos(1900) },
   { id: 1, quem: 'Tiago', acao: 'criou_teste', alvoTipo: 'anuncio', alvoId: ads[0].id, alvoNome: 'Naor na mesa x Bastidores', detalhe: {}, em: agoraMenos(1950) },
 ]
+const publicosLab: PublicoSalvo[] = [{ id: 'p1', nome: 'Traders SP · 25–45', publico: { modo: 'detalhado', idadeMin: 25, idadeMax: 45, genero: 'todos', locais: [{ tipo: 'estado', nome: 'São Paulo' }], interesses: [{ tipo: 'interesse', nome: 'Day trading' }, { tipo: 'interesse', nome: 'Forex' }] }, tamanho: [2.1e6, 2.4e6], atualizadoEm: agoraMenos(300) }]
 function estudioDeMentira(semChave: boolean): ApiEstudio {
   const espera = <T,>(v: T, ms = 350) => new Promise<T>((r) => setTimeout(() => r(v), ms))
   const anotar = (acao: string, alvoNome: string, detalhe: Record<string, unknown> = {}) => historicoLab.unshift({ id: Date.now(), quem: 'Tiago', acao, alvoTipo: 'anuncio', alvoId: '', alvoNome, detalhe, em: new Date().toISOString() })
@@ -119,6 +120,30 @@ function estudioDeMentira(semChave: boolean): ApiEstudio {
     vencedor: async (_s, _p, id, v) => { const r = achar(id); r.progresso = { ...r.progresso, vencedor: v }; anotar('vencedor', r.nome, { vencedor: v.toUpperCase() }); return espera({ situacao: r.situacao, progresso: r.progresso }) },
     status: (_s, _p, _t, _id, ligar) => { anotar(ligar ? 'ligou' : 'pausou', 'Anúncio do laboratório'); return espera({ ok: true }, 700) },
     orcamento: (_s, _p, _c, diario) => { anotar('orcamento', 'Brasil · 25–55 · aberto', { antes: 300, depois: diario }); return espera({ ok: true }, 700) },
+    // a busca e a estimativa de mentira: uma lista fixa que imita o que a Meta devolve
+    buscar: (_s, _p, tipo, q) => {
+      const n = q.toLowerCase()
+      const base: Record<string, Array<Record<string, unknown>>> = {
+        interesse: [['Day trading', 'Investimento', 4.1e6], ['Forex', 'Investimento', 2.3e6], ['Mercado de ações', 'Investimento', 9.8e6], ['Bolsa de valores', 'Investimento', 7.2e6], ['Análise técnica', 'Investimento', 1.4e6], ['Criptomoeda', 'Tecnologia', 6.6e6], ['Finanças pessoais', 'Negócios', 12.5e6], ['Empreendedorismo', 'Negócios', 31e6]].map(([nome, caminho, t]) => ({ tipo: 'interesse', nome, id: `6003${String(nome).length}${Math.round(Number(t) / 1e5)}`, caminho, tamanho: [Math.round(Number(t) * 0.9), Number(t)] })),
+        comportamento: [['Usuários de dispositivos iOS', 'Comportamentos › Usuários de dispositivos móveis'], ['Administradores de página de empresa', 'Comportamentos › Atividades digitais']].map(([nome, caminho]) => ({ tipo: 'comportamento', nome, id: `6015${String(nome).length}`, caminho })),
+        local: [['São Paulo', 'estado'], ['São Paulo', 'cidade'], ['Campinas', 'cidade'], ['Santos', 'cidade'], ['Sorocaba', 'cidade'], ['Ribeirão Preto', 'cidade'], ['Rio de Janeiro', 'cidade'], ['Minas Gerais', 'estado']].map(([nome, t]) => ({ tipo: t, nome, chave: `${nome}-${t}`, detalhe: t === 'cidade' ? 'Cidade' : 'Estado' })),
+        aparelho: ['iPhone 17 Pro Max', 'iPhone 16 Pro', 'iPhone 15', 'Galaxy S24 Ultra', 'Galaxy A55'].map((nome) => ({ tipo: 'aparelho', nome, detalhe: /iPhone/.test(nome) ? 'iOS' : 'Android' })),
+      }
+      return espera((base[tipo] ?? []).filter((x) => String(x.nome).toLowerCase().includes(n)) as never, 300)
+    },
+    sugerir: () => espera([{ tipo: 'interesse', nome: 'Trader', id: '6003999', caminho: 'Investimento', tamanho: [1.1e6, 1.3e6] }, { tipo: 'interesse', nome: 'Opções (finanças)', id: '6003998', caminho: 'Investimento', tamanho: [6e5, 7e5] }] as never, 400),
+    estimar: (_s, _p, pub) => {
+      let t = 98e6
+      if (pub.locais?.length) t *= Math.min(1, 0.22 * pub.locais.length)
+      if (pub.modo !== 'padrao') t *= ((pub.idadeMax - pub.idadeMin) / 47) * (pub.genero === 'todos' ? 1 : 0.5)
+      if (pub.modo === 'detalhado' && pub.interesses?.length) t *= Math.min(0.4, 0.06 * pub.interesses.length)
+      if (pub.modelos?.length) t *= Math.min(0.3, 0.02 * pub.modelos.length); else if (pub.sistema && pub.sistema !== 'todos') t *= pub.sistema === 'ios' ? 0.22 : 0.78
+      if (pub.modo === 'inteligente') t = pub.inteligente?.tipo === 'semelhantes' ? 1.6e6 * (pub.inteligente.percentual || 1) : 18e3
+      return espera({ tamanho: [Math.round(t * 0.85), Math.round(t)] as [number, number], avisos: [] }, 600)
+    },
+    publicos: () => espera([...publicosLab]),
+    salvarPublico: (_s, _p, _id, nome, publico, tamanho) => { const id = `p${Date.now()}`; publicosLab.unshift({ id, nome, publico, tamanho, atualizadoEm: new Date().toISOString() }); return espera(id) },
+    arquivarPublico: (_s, id) => { const i = publicosLab.findIndex((x) => x.id === id); if (i >= 0) publicosLab.splice(i, 1); return espera(null) },
     escalar: (_s, _p, _c, aumento) => { anotar('escalou', 'Brasil · 25–55 · aberto · escala', { aumento, diario: Math.round(300 * (1 + aumento / 100)) }); return espera({ conjuntoId: 's3', diario: Math.round(300 * (1 + aumento / 100)) }, 900) },
   }
 }
