@@ -15,7 +15,8 @@ export function useSimulador(sessao: SessaoTeeds | null) {
         if(vivo)setAcesso({token:sessao.token,permitido})
       }catch{if(vivo)setAcesso({token:sessao.token,permitido:false})}
     }
-    void consultar();const t=setInterval(()=>void consultar(),30000)
+    // 04/11/2026: a cada 2 min e só com a aba visível (antes 30 s em toda aba aberta, até escondida); o foco consulta na hora
+    void consultar();const t=setInterval(()=>{if(!document.hidden)void consultar()},120000)
     window.addEventListener('focus',consultar)
     return()=>{vivo=false;clearInterval(t);window.removeEventListener('focus',consultar)}
   },[sessao?.token])

@@ -255,7 +255,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
   }, [movimento]) // eslint-disable-line react-hooks/exhaustive-deps
   // O servidor refresca o saldo das contas reais a cada poucos minutos; a tela acompanha sem precisar de F5.
   useEffect(() => {
-    const id = setInterval(() => { listarContasDeriv(sessao).then((c) => setContas(soDoFoco(c))).catch(() => {}) }, 60_000)
+    const id = setInterval(() => { if (!document.hidden) listarContasDeriv(sessao).then((c) => setContas(soDoFoco(c))).catch(() => {}) }, 60_000)
     return () => clearInterval(id)
   }, [sessao.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -324,7 +324,8 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
     let vivo = true
     const ver = () => aguardandoEquipe(sessao, marcaFoco).then((n) => vivo && setFilaSuporte(n)).catch(() => undefined)
     ver()
-    const t = window.setInterval(ver, 30_000)
+    // aba escondida não pergunta (04/11/2026, o banco lotou com as perguntas repetidas)
+    const t = window.setInterval(() => { if (!document.hidden) ver() }, 30_000)
     return () => { vivo = false; window.clearInterval(t) }
   }, [marcaFoco, naRede]) // eslint-disable-line react-hooks/exhaustive-deps
   const nomeDoFoco = naRede ? 'Rede' : (MARCAS[marcaFoco]?.prosa ?? marcaFoco)

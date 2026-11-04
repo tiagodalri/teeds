@@ -167,7 +167,7 @@ export function SuporteWidget({ sessao, nome, telaAtual, admin, escondido = fals
     let vivo = true
     const ver = () => aguardandoEquipe(sessao, MARCA.id).then((n) => vivo && setFilaAdmin(n)).catch(() => undefined)
     ver()
-    const t = window.setInterval(ver, 30_000)
+    const t = window.setInterval(() => { if (!document.hidden) ver() }, 30_000)
     return () => { vivo = false; window.clearInterval(t) }
   }, [admin, uid]) // eslint-disable-line react-hooks/exhaustive-deps
 

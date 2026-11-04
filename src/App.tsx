@@ -698,7 +698,8 @@ export default function App() {
     const inicio = Date.now()
     const marcar = () => void registrarPresenca(teeds.sessao!, (Date.now() - inicio) / 1000)
     marcar()
-    const relogio = window.setInterval(marcar, 60_000)
+    // aba escondida não grava a cada minuto (04/11/2026); o tempo conta do início, e a saída grava
+    const relogio = window.setInterval(() => { if (!document.hidden) marcar() }, 60_000)
     return () => { window.clearInterval(relogio); marcar() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioTeedsId])
