@@ -47,7 +47,7 @@ interface Props {
   exemplo?: { relatorio: RelatorioCompleto; dinheiro?: Dinheiro }
 }
 
-const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0)
+const pct = (a: number, b: number) => (b !== 0 ? Math.round((a / b) * 100) : 0)
 const classe = (v: number) => (v > 0 ? 'sobe' : v < 0 ? 'cai' : '')
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -72,7 +72,10 @@ function lerGuardado(): Guardado {
 
 /* ------------------------------------------------ a curva do período */
 function Curva({ pontos, rotulos, ocultos, moeda }: { pontos: Array<{ chave: string; valor: number; ops: number }>; rotulos: [string, string, string]; ocultos: boolean; moeda: string }) {
-  const W = 640, H = 220, P = 14, base = H - 30
+  // no celular o desenho é mais estreito (mais alto na tela); no computador, largo e baixo
+  const [estreito, setEstreito] = useState(() => typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches)
+  useEffect(() => { const m = matchMedia('(max-width: 700px)'); const f = () => setEstreito(m.matches); m.addEventListener('change', f); return () => m.removeEventListener('change', f) }, [])
+  const W = estreito ? 420 : 960, H = estreito ? 220 : 190, P = 12, base = H - 28
   const acum: number[] = []
   pontos.reduce((s, p) => { const v = s + p.valor; acum.push(v); return v }, 0)
   const maxBar = Math.max(1e-9, ...pontos.map((p) => Math.abs(p.valor)))
@@ -266,7 +269,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
       leituras.push({ tom: m.resultado >= 0 ? 'sobe' : 'cai', texto: <><b>{m.nome}</b> teve o melhor resultado: {vs(m.resultado)} em {m.operacoes.toLocaleString('pt-BR')} operações, {pct(m.ganhas, m.operacoes)}% de acerto.</> })
       const negativas = rel.porOrigem.filter((o) => o.resultado < 0).sort((a, b) => a.resultado - b.resultado)
       const totalNeg = negativas.reduce((s, o) => s + o.resultado, 0)
-      if (negativas.length > 1) leituras.push({ tom: 'cai', texto: <><b>{negativas[0].nome}</b> respondeu por {pct(negativas[0].resultado, totalNeg)}% do resultado negativo das estratégias que ficaram no vermelho.</> })
+      if (negativas.length > 1) leituras.push({ tom: 'cai', texto: <><b>{negativas[0].nome}</b> foi a que mais pesou no negativo: {vs(negativas[0].resultado)}, {pct(negativas[0].resultado, totalNeg)}% das perdas entre as estratégias no vermelho.</> })
     }
     const dows = rel.porDiaSemana.filter((d) => d.operacoes >= 5)
     if (dows.length > 2) {
@@ -291,32 +294,37 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
     <div className={`rel ${carregando && rel ? 'lendo' : ''}`}>
       {/* ------------------------------------------------ barra de filtros */}
       <div className="rel-barra-filtros">
-        <div className="rel-seg rel-periodos" role="tablist" aria-label="Período">
-          {PERIODOS.map((p) => <button key={p.id} type="button" role="tab" aria-selected={periodo === p.id} className={periodo === p.id ? 'on' : ''} onClick={() => { setPeriodo(p.id); setDatasAbertas(false) }}>{p.rotulo}</button>)}
-          <button type="button" role="tab" aria-selected={periodo === 'personalizado'} className={`rel-datas-btn ${periodo === 'personalizado' ? 'on' : ''}`} onClick={() => setDatasAbertas((x) => !x)} aria-expanded={datasAbertas}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
-            {periodo === 'personalizado' ? rotuloDoPeriodo : 'Escolher datas'}
-          </button>
-        </div>
-        <div className="rel-linha">
-          <div className="rel-seg rel-conta" role="tablist" aria-label="Conta">
-            {[false, true].map((d) => <button key={String(d)} type="button" role="tab" aria-selected={demo === d} className={`${demo === d ? 'on' : ''} ${rotuloConta(d) === 'Real' ? 'real' : 'demo'}`} onClick={() => setDemo(d)}>Conta {rotuloConta(d)}</button>)}
+        <div className="rel-faixa">
+          <div className="rel-seg rel-periodos" role="tablist" aria-label="Período">
+            {PERIODOS.map((p) => <button key={p.id} type="button" role="tab" aria-selected={periodo === p.id} className={periodo === p.id ? 'on' : ''} onClick={() => { setPeriodo(p.id); setDatasAbertas(false) }}>{p.rotulo}</button>)}
+            <button type="button" role="tab" aria-selected={periodo === 'personalizado'} className={`rel-datas-btn ${periodo === 'personalizado' ? 'on' : ''}`} onClick={() => setDatasAbertas((x) => !x)} aria-expanded={datasAbertas}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
+              {periodo === 'personalizado' ? rotuloDoPeriodo : 'Datas'}
+            </button>
           </div>
-          <button type="button" className={`rel-filtros-btn ${nFiltros ? 'com' : ''}`} onClick={() => setPainelAberto(true)} disabled={!rel}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>Filtros{nFiltros ? <b>{nFiltros}</b> : null}
-          </button>
-          <button type="button" className="rel-atualizar" onClick={() => setVersao((x) => x + 1)} disabled={carregando} aria-label="Atualizar">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4" /></svg><span>{carregando ? 'Atualizando…' : 'Atualizar'}</span>
-          </button>
+          <div className="rel-linha">
+            <div className="rel-seg rel-conta" role="tablist" aria-label="Conta">
+              {[false, true].map((d) => <button key={String(d)} type="button" role="tab" aria-selected={demo === d} className={`${demo === d ? 'on' : ''} ${rotuloConta(d) === 'Real' ? 'real' : 'demo'}`} onClick={() => setDemo(d)}>{rotuloConta(d)}</button>)}
+            </div>
+            <button type="button" className={`rel-filtros-btn ${nFiltros ? 'com' : ''}`} onClick={() => setPainelAberto(true)} disabled={!rel}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>Filtros{nFiltros ? <b>{nFiltros}</b> : null}
+            </button>
+            <button type="button" className="rel-atualizar" onClick={() => setVersao((x) => x + 1)} disabled={carregando} aria-label="Atualizar" title="Atualizar">
+              <svg className={carregando ? 'gira' : ''} viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4" /></svg>
+            </button>
+          </div>
         </div>
         {datasAbertas && <EscolherDatas inicial={periodo === 'personalizado' ? faixa : null} aoAplicar={(i) => { setPersonalizado(i); setPeriodo('personalizado'); setDatasAbertas(false) }} aoFechar={() => setDatasAbertas(false)} />}
-        {(selos.length > 0 || atalhos.length > 0) && (
-          <div className="rel-selos" aria-label="Filtros ativos e atalhos">
-            {selos.map((s) => <button key={s.id} type="button" className="rel-selo on" onClick={s.tirar} aria-label={`Tirar o filtro ${s.texto}`}>{s.texto}<i aria-hidden="true">×</i></button>)}
-            {selos.length > 1 && <button type="button" className="rel-selo limpar" onClick={() => setFiltros({})}>Limpar filtros</button>}
-            {atalhos.map((a) => (
-              <button key={a.id} type="button" className="rel-selo atalho" onClick={a.aplicar}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4z" /></svg>{a.rotulo}</button>
-            ))}
+        {selos.length > 0 && (
+          <div className="rel-selos" aria-label="Filtros ligados">
+            {selos.map((x) => <button key={x.id} type="button" className="rel-selo on" onClick={x.tirar} aria-label={`Tirar o filtro ${x.texto}`}>{x.texto}<i aria-hidden="true">×</i></button>)}
+            {selos.length > 1 && <button type="button" className="rel-selo limpar" onClick={() => setFiltros({})}>Limpar</button>}
+          </div>
+        )}
+        {atalhos.length > 0 && (
+          <div className="rel-selos rel-sugestoes" aria-label="Sugestões de filtro">
+            <span className="rel-sugestoes-rot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4z" /></svg>Sugestões</span>
+            {atalhos.map((a) => <button key={a.id} type="button" className="rel-selo atalho" onClick={a.aplicar}>{a.rotulo}</button>)}
           </div>
         )}
       </div>
@@ -340,26 +348,28 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
       {rel && !vazio && t && <>
         {/* ------------------------------------------------ o resultado */}
         <section className={`rel-heroi ${classe(t.resultado)}`}>
-          <div className="rel-heroi-txt">
-            <span className="rel-rot">Resultado · {rotuloDoPeriodo.toLowerCase()} · conta {rotuloConta(demo).toLowerCase()}{nFiltros ? ` · ${nFiltros} ${nFiltros === 1 ? 'filtro' : 'filtros'}` : ''}</span>
-            <b className={`rel-numero ${classe(t.resultado)}`}>{vs(t.resultado)}</b>
-            {rel.anterior.operacoes > 0
-              ? <span className={`rel-compara ${classe(delta)}`}><i aria-hidden="true">{delta >= 0 ? '▲' : '▼'}</i>{vs(delta)} em relação a {nomeDoAnterior}</span>
-              : <span className="rel-compara">Sem operações em {nomeDoAnterior} para comparar</span>}
-            <p>{t.operacoes.toLocaleString('pt-BR')} operações · {pct(t.ganhas, t.operacoes)}% de acerto · {v(t.entradas)} em entradas</p>
+          <div className="rel-heroi-topo">
+            <div className="rel-heroi-txt">
+              <span className="rel-rot">Resultado · {rotuloDoPeriodo.toLowerCase()} · conta {rotuloConta(demo).toLowerCase()}{nFiltros ? ` · ${nFiltros} ${nFiltros === 1 ? 'filtro' : 'filtros'}` : ''}</span>
+              <b className={`rel-numero ${classe(t.resultado)}`}>{vs(t.resultado)}</b>
+              {rel.anterior.operacoes > 0
+                ? <span className={`rel-compara ${classe(delta)}`}><i aria-hidden="true">{delta >= 0 ? '▲' : '▼'}</i>{vs(delta)} <em>em relação a {nomeDoAnterior}</em></span>
+                : <span className="rel-compara"><em>Sem operações em {nomeDoAnterior} para comparar</em></span>}
+            </div>
+            <dl className="rel-heroi-mini">
+              <div><dt>Operações</dt><dd>{t.operacoes.toLocaleString('pt-BR')}</dd><small><em className="sobe">{t.ganhas.toLocaleString('pt-BR')}</em> ganhas · <em className="cai">{(t.operacoes - t.ganhas).toLocaleString('pt-BR')}</em> perdidas</small></div>
+              <div><dt>Acerto</dt><dd>{pct(t.ganhas, t.operacoes)}%</dd><i className="rel-trilho"><u style={{ width: `${pct(t.ganhas, t.operacoes)}%` }} /></i></div>
+              <div><dt>Fator de lucro</dt><dd className={fator == null || fator >= 1 ? 'sobe' : 'cai'}>{fator == null ? 'Sem perdas' : fator.toLocaleString('pt-BR', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}</dd><small>{v(t.somaGanhos)} em ganhos ÷ {v(Math.abs(t.somaPerdas))} em perdas</small></div>
+            </dl>
           </div>
           <Curva pontos={serie.pontos} rotulos={serie.rotulos} ocultos={ocultos} moeda={moeda} />
         </section>
 
-        {/* ------------------------------------------------ números */}
-        <div className="rel-kpis">
-          <div><span>Operações</span><b>{t.operacoes.toLocaleString('pt-BR')}</b><small><em className="sobe">{t.ganhas.toLocaleString('pt-BR')} ganhas</em> · <em className="cai">{(t.operacoes - t.ganhas).toLocaleString('pt-BR')} perdidas</em></small></div>
-          <div><span>Acerto</span><b>{pct(t.ganhas, t.operacoes)}%</b><i className="rel-trilho"><u style={{ width: `${pct(t.ganhas, t.operacoes)}%` }} /></i></div>
-          <div><span>Média por operação</span><b className={classe(t.resultado)}>{vs(t.resultado / t.operacoes)}</b><small>{t.entradas ? `${((t.resultado / t.entradas) * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% sobre o total de entradas` : ''}</small></div>
-          <div><span>Fator de lucro</span><b className={fator == null || fator >= 1 ? 'sobe' : 'cai'}>{fator == null ? 'Sem perdas' : fator.toLocaleString('pt-BR', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}</b><small>Ganhos {v(t.somaGanhos)} ÷ perdas {v(Math.abs(t.somaPerdas))}</small></div>
+        <div className="rel-kpis cinco">
+          <div><span>Média por operação</span><b className={classe(t.resultado)}>{vs(t.resultado / t.operacoes)}</b><small>{t.entradas ? `${((t.resultado / t.entradas) * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% sobre ${v(t.entradas)} em entradas` : ''}</small></div>
           <div><span>{umDia ? 'Maior ganho' : 'Melhor dia'}</span><b className="sobe">{umDia ? vs(t.maiorGanho) : melhorDia ? vs(melhorDia.resultado) : '—'}</b><small>{umDia ? 'Numa operação' : melhorDia ? diaCurto(melhorDia.dia) : ''}</small></div>
           <div><span>{umDia ? 'Maior perda' : 'Pior dia'}</span><b className="cai">{umDia ? vs(t.maiorPerda) : piorDia ? vs(piorDia.resultado) : '—'}</b><small>{umDia ? 'Numa operação' : piorDia ? `${diaCurto(piorDia.dia)} · ${diasPositivos} de ${diasComOp.length} dias no positivo` : ''}</small></div>
-          <div><span>Maior sequência</span><b className="sobe">{rel.sequencias.ganhos} ganhos</b><small>De perdas: <em className="cai">{rel.sequencias.perdas} seguidas</em></small></div>
+          <div><span>Sequências</span><b><em className="sobe">{rel.sequencias.ganhos}</em><small> / </small><em className="cai">{rel.sequencias.perdas}</em></b><small>Mais ganhos e mais perdas seguidas</small></div>
           <div><span>Maior queda</span><b className={rel.queda.maior > 0 ? 'cai' : ''}>{rel.queda.maior > 0 ? (ocultos ? MASCARA : `−${dinheiro(rel.queda.maior, moeda)}`) : v(0)}</b><small>Do pico até o fundo seguinte</small></div>
         </div>
 
