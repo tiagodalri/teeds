@@ -84,7 +84,7 @@ function LabSeletor() {
   const [v, setV] = useState('globalfly')
   const [p, setP] = useState('')
   return <div className="workspace-app" style={{ padding: 32, background: 'var(--bg)', minHeight: '100vh', display: 'grid', gap: 12, alignContent: 'start' }}>
-    <SeletorDePlataforma valor={v} opcoes={opcoesDePlataforma(true, 'teeds')} onTrocar={setV} parceiros={v === 'globalfly' ? [{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }] : []} parceiro={p} onParceiro={setP} />
+    <SeletorDePlataforma valor={v} opcoes={opcoesDePlataforma(true, 'teeds')} onTrocar={setV} parceiros={v === 'globalfly' ? [{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }, { codigo: 'd', nome: 'Douglas' }] : []} parceiro={p} onParceiro={setP} />
     <small style={{ color: 'var(--muted)' }}>parceiro em foco: {p || 'todos'}</small>
   </div>
 }
@@ -149,7 +149,7 @@ if (new URLSearchParams(location.search).get('tela') === 'central-extras') {
   const json = (d: unknown) => Promise.resolve(new Response(JSON.stringify(d), { status: 200, headers: { 'content-type': 'application/json' } }))
   window.fetch = (u: RequestInfo | URL, i?: RequestInit) => {
     const url = String(u)
-    if (url.includes('teeds_plataformas_ao_vivo')) return json([{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }])
+    if (url.includes('teeds_plataformas_ao_vivo')) return json([{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }, { codigo: 'd', nome: 'Douglas' }])
     if (url.includes('teeds_criar_teste_ao_vivo')) return json('a1b2c3d4e5f6')
     if (url.includes('/rest/v1/transmissoes')) return json([
       { id: '1', apresentador: 'Victor Dias', teste: false, vitrines: null, iniciada_em: new Date(agora - 40 * 60000).toISOString(), encerrada_em: null, pico: 38, pessoas: 52, tempo_medio_s: 1260, mensagens: 87, presencas: [{ id: 'a', nome: 'Carla', segundos: 2400, entradas: 1 }, { id: 'b', nome: 'João', segundos: 1800, entradas: 2 }, { id: 'c', nome: 'Marcos', segundos: 300, entradas: 1 }], atualizada_em: new Date(agora - 20000).toISOString() },
@@ -375,7 +375,7 @@ function Laboratorio() {
   if (qual === 'multiplicador') return <Suspense fallback={null}><LabMultiplicador /></Suspense>
   if (qual === 'painel-comando') return <Suspense fallback={null}><LabPainelDeComando /></Suspense>
   // ?tela=pendentes: a aprovação de clientes como o admin geral vê (com a escolha do parceiro); a lista vem do servidor
-  if (qual === 'pendentes') return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><AdminPendentesLab sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab', telefone: null, cpf: null, criadoEm: '', trocarSenha: false } } as never} marca="globalfly" versao={0} onAprovado={() => undefined} parceiros={[{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }]} /></div></Suspense>
+  if (qual === 'pendentes') return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><AdminPendentesLab sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab', telefone: null, cpf: null, criadoEm: '', trocarSenha: false } } as never} marca="globalfly" versao={0} onAprovado={() => undefined} parceiros={[{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }, { codigo: 'd', nome: 'Douglas' }]} /></div></Suspense>
   if (qual === 'login') return <LabLogin />
   // ?tela=excluir: o rodapé da ficha do cliente com "Excluir cadastro" e a confirmação aberta
   if (qual === 'excluir') return (

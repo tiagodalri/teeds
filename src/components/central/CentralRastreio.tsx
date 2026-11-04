@@ -58,7 +58,7 @@ const lembrar = <T extends string>(chave: string, validos: readonly T[], padrao:
 }
 const guardar = (chave: string, v: string) => { try { localStorage.setItem(chave, v) } catch { /* sem armazenamento: só não lembra */ } }
 
-const PARCEIROS = [{ id: 'n', nome: 'Naor /n' }, { id: 'v', nome: 'Victor /v' }, { id: '', nome: 'Todos' }] as const
+const PARCEIROS = [{ id: 'n', nome: 'Naor /n' }, { id: 'v', nome: 'Victor /v' }, { id: 'd', nome: 'Douglas /d' }, { id: '', nome: 'Todos' }] as const
 
 // ------------------------------------------------------------------ como cada passo aparece
 const CAMPO: Record<string, string> = { nome: 'o nome', email: 'o e-mail', telefone: 'o WhatsApp', cliente: 'a resposta', produto: 'um produto', outro: 'o “outro”' }
@@ -221,7 +221,7 @@ export function Leitura({ itens, titulo }: { itens: Array<{ tipo: 'ok' | 'atenca
 // ------------------------------------------------------------------ a tela
 export function CentralRastreio({ sessao, api = API_DA_CENTRAL, apiAnuncios = API_DO_BANCO }: { sessao: SessaoTeeds; api?: ApiCentral; apiAnuncios?: ApiAnuncios }) {
   const [aba, setAba] = useState<IdAba>(() => lembrar('cr-aba', ABAS.map((a) => a.id), 'origens'))
-  const [parceiro, setParceiro] = useState<string>(() => lembrar('cr-parceiro', ['n', 'v', ''], 'n'))
+  const [parceiro, setParceiro] = useState<string>(() => lembrar('cr-parceiro', ['n', 'v', 'd', ''], 'n'))
   const [periodo, setPeriodo] = useState<IdPeriodo>(() => lembrar('cr-periodo', PERIODOS.map((p) => p.id), 'hoje'))
   const p = PERIODOS.find((x) => x.id === periodo)!
   const de = p.de(), ate = 'ate' in p ? p.ate() : iso(new Date())
@@ -728,7 +728,7 @@ export function Links({ sessao, api, links, setLinks, parceiro }: { sessao: Sess
             <select value={canal} onChange={(e) => setCanal(e.target.value)}>{CANAIS_DE_LINK.map((c) => <option key={c} value={c}>{nomeDoCanal(c)}</option>)}</select>
           </label>
           <label><span>Página</span>
-            <select value={para} onChange={(e) => setPara(e.target.value)}><option value="n">Naor /n</option><option value="v">Victor /v</option></select>
+            <select value={para} onChange={(e) => setPara(e.target.value)}><option value="n">Naor /n</option><option value="v">Victor /v</option><option value="d">Douglas /d</option></select>
           </label>
           <label><span>Código</span><input value={cod} onChange={(e) => { setMexeuNoCodigo(true); setCodigo(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')) }} placeholder="telegram-0411" maxLength={40} /></label>{/* texto-ok: o código do link é sempre minúsculo */}
           <div className="cr-form-fim">

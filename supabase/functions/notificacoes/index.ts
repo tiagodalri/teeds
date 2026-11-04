@@ -194,7 +194,7 @@ async function avisarALive(etapa: string): Promise<{ enviados: number; falhas: n
   for (let i = 0; i < lista.length; i += 50) {
     await Promise.all(lista.slice(i, i + 50).map(async (a) => {
       // o endereço do parceiro de cada um: /n/inicio, /v/inicio ou a raiz
-      const url = `${SITE[marca]}/${a.parceiro === 'n' || a.parceiro === 'v' ? `${a.parceiro}/inicio` : ''}`
+      const url = `${SITE[marca]}/${PARCEIROS.has(a.parceiro ?? '') ? `${a.parceiro}/inicio` : ''}`
       try {
         await webpush.sendNotification({ endpoint: a.endpoint, keys: { p256dh: a.p256dh, auth: a.auth } },
           JSON.stringify({ ...texto, tag: `live-${etapa}`, url }), { TTL: etapa === 'ao-vivo' ? 2 * 3600 : 6 * 3600, urgency: 'high', vapidDetails })
@@ -219,6 +219,8 @@ async function avisarALive(etapa: string): Promise<{ enviados: number; falhas: n
   Só o administrador geral. Quem recebe sai de teeds_push_destinos (banco); cada
   um abre o destino no endereço do próprio parceiro (/n, /v ou a raiz).
 */
+// os códigos de src/marca/marcas.ts (parceiros da GlobalFly): /n Naor, /v Victor, /d Douglas
+const PARCEIROS = new Set(['n', 'v', 'd'])
 const TELAS = new Set(['inicio', 'aovivo', 'aulas', 'robos', 'operar', 'relatorios', 'gerenciamento', 'noticias'])
 // as mesmas comunidades de src/marca/marcas.ts (comunidade e comunidadesDosParceiros da GlobalFly)
 const COMUNIDADES: Record<string, string> = {
@@ -228,7 +230,7 @@ const COMUNIDADES: Record<string, string> = {
 }
 
 function enderecoDoDestino(marca: string, destino: string, parceiro: string | null): string {
-  const p = parceiro === 'n' || parceiro === 'v' ? parceiro : ''
+  const p = PARCEIROS.has(parceiro ?? '') ? parceiro! : ''
   if (destino === 'comunidade') return COMUNIDADES[p] ?? COMUNIDADES['']
   if (/^https:\/\//.test(destino)) return destino
   const tela = TELAS.has(destino) ? destino : 'inicio'
@@ -250,7 +252,7 @@ async function disparar(req: Request, corpo: Record<string, unknown>) {
   const texto = String(corpo.corpo ?? '').trim().slice(0, 200)
   const destino = String(corpo.destino ?? 'inicio').trim().slice(0, 500)
   const publico = String(corpo.publico ?? '')
-  const parceiro = corpo.parceiro === 'n' || corpo.parceiro === 'v' || corpo.parceiro === 'direto' ? String(corpo.parceiro) : null
+  const parceiro = PARCEIROS.has(String(corpo.parceiro ?? '')) || corpo.parceiro === 'direto' ? String(corpo.parceiro) : null
   if (!titulo || !texto) return json({ erro: 'Escreva o título e a mensagem.' }, 400)
   if (!['todos', 'aguardando', 'membros', 'ativos', 'eu'].includes(publico)) return json({ erro: 'Escolha para quem enviar.' }, 400)
   if (destino.startsWith('http') && !/^https:\/\//.test(destino)) return json({ erro: 'O link precisa começar com https://' }, 400)

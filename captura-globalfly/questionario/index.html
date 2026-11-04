@@ -65,6 +65,11 @@
           <label class="produto"><input type="checkbox" name="produto" value="n_goatwin" id="p-n-goatwin" /><i></i>Indicador GoatWin</label>
           <label class="produto"><input type="checkbox" name="produto" value="outro" id="p-outro" /><i></i>Outro</label>
         </template>
+        <!-- 04/11/2026: no /d, o ecossistema do Douglas. Enquanto a lista de produtos dele não chega, a pessoa
+             escreve qual foi (grava como "outro: …", que o painel já mostra). -->
+        <template id="produtos-douglas">
+          <label class="produto"><input type="checkbox" name="produto" value="outro" id="p-outro" checked /><i></i>Produto do Douglas</label>
+        </template>
 
         <div class="acoes">
           <button class="botao" type="submit" disabled>Concluir inscrição <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
@@ -97,6 +102,12 @@
       if (GF.parceiro() === 'n') {
         document.querySelector('[data-pergunta]').textContent = 'Você já foi cliente do ecossistema do Naor Bezerra?'
         document.getElementById('lista-produtos').replaceChildren(document.getElementById('produtos-naor').content.cloneNode(true))
+      }
+      if (GF.parceiro() === 'd') {
+        document.querySelector('[data-pergunta]').textContent = 'Você já foi cliente do ecossistema do Douglas?'
+        document.querySelector('#produtos h3').textContent = 'De qual produto você já foi cliente?'
+        document.querySelector('#produtos > p').textContent = 'Escreva o nome abaixo.'
+        document.getElementById('lista-produtos').replaceChildren(document.getElementById('produtos-douglas').content.cloneNode(true))
       }
 
       var form = document.getElementById('form'), botao = form.querySelector('.botao'), mensagem = form.querySelector('.mensagem')

@@ -12,7 +12,7 @@ const rest = (caminho: string, init: RequestInit = {}) => fetch(`${SUPABASE_URL}
   ...init,
   headers: { apikey: SERVICO, Authorization: `Bearer ${SERVICO}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
 })
-const PARCEIROS: Record<string, string[]> = { globalfly: ['n', 'v'] }
+const PARCEIROS: Record<string, string[]> = { globalfly: ['n', 'v', 'd'] }
 
 async function sha256(texto: string) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto))

@@ -26,7 +26,7 @@ const PUBLICOS: Array<{ id: Publico; nome: string; quem: string }> = [
   { id: 'todos', nome: 'Todos', quem: 'Toda a base com notificações ativadas' },
 ]
 const PARCEIROS: Array<{ id: string; nome: string }> = [
-  { id: '', nome: 'Todas as páginas' }, { id: 'n', nome: 'Naor (/n)' }, { id: 'v', nome: 'Victor (/v)' }, { id: 'direto', nome: 'Direto' },
+  { id: '', nome: 'Todas as páginas' }, { id: 'n', nome: 'Naor (/n)' }, { id: 'v', nome: 'Victor (/v)' }, { id: 'd', nome: 'Douglas (/d)' }, { id: 'direto', nome: 'Direto' },
 ]
 const DESTINOS: Array<{ id: string; nome: string }> = [
   { id: 'inicio', nome: 'Início da plataforma' }, { id: 'aovivo', nome: 'Ao vivo' }, { id: 'aulas', nome: 'Aulas' },

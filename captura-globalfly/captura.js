@@ -34,7 +34,7 @@ var GF = (function () {
   // /v fica na barra do começo ao fim. O endereço também vira a vitrine do navegador (a mesma
   // chave do site, src/core/teeds/parceiro.ts), e o primeiro parceiro fica guardado como "quem
   // trouxe". Vai na FRENTE do endereço gravado: o servidor guarda só 300 caracteres.
-  var PARCEIROS = ['n', 'v'], CHAVE_PARCEIRO = 'globalfly.parceiro', CHAVE_VITRINE = 'globalfly.vitrine'
+  var PARCEIROS = ['n', 'v', 'd'], CHAVE_PARCEIRO = 'globalfly.parceiro', CHAVE_VITRINE = 'globalfly.vitrine'
   var doCaminho = (location.pathname.split('/').filter(Boolean)[0] || '').toLowerCase()
   var DO_ENDERECO = PARCEIROS.indexOf(doCaminho) >= 0 ? doCaminho : null
   // link antigo (/cadastro/?parceiro=n): passa para /n/cadastro/, levando o resto do endereço

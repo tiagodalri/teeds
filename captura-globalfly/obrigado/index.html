@@ -12,7 +12,7 @@
        aberto pelo ícone, esta página leva direto para a plataforma -->
   <script>
     (function () {
-      var p = (location.pathname.split('/')[1] || '').toLowerCase(), parceiro = p === 'n' || p === 'v' ? p : ''
+      var p = (location.pathname.split('/')[1] || '').toLowerCase(), parceiro = ['n', 'v', 'd'].indexOf(p) >= 0 ? p : ''
       if (matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) { location.replace(parceiro ? '/' + parceiro + '/inicio' : '/'); return }
       var l = document.createElement('link'); l.rel = 'manifest'; l.href = '/manifest' + (parceiro ? '-' + parceiro : '') + '.webmanifest'
       document.head.appendChild(l)

@@ -18,7 +18,7 @@ const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MA
   com a mesma regra de acesso da aba Leads (o parceiro vê só os dele).
 */
 interface Resposta { exCliente: boolean | null; produtos: string[]; em: string | null; tempo: number | null; temperatura: string | null }
-const NOME_DO_PARCEIRO: Record<string, string> = { n: 'Naor', v: 'Victor' }
+const NOME_DO_PARCEIRO: Record<string, string> = { n: 'Naor', v: 'Victor', d: 'Douglas' }
 const nomeDoProduto = (p: string) => p.startsWith('outro: ') ? `Outro: ${p.slice(7)}` : (PRODUTOS_ANTERIORES[p] ?? p).replace(/ \((Naor|Victor)\)$/, '')
 const duracao = (s: number) => s >= 60 ? `${Math.floor(s / 60)} min${s % 60 ? ` ${s % 60} s` : ''}` : `${s} s`
 const TEMPERATURA: Record<string, string> = { quente: 'Lead quente', morno: 'Lead morno', frio: 'Lead frio' }

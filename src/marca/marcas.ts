@@ -444,7 +444,8 @@ export const MARCAS: Record<string, Marca> = {
     // 26/10/2026 (Tiago): "evite sempre a palavra Robôs, vamos trocar tudo por I.A."
     vocabularioIA: true,
     // 27/10/2026: /n (Naor) e /v (Victor). Cada cliente fica com o parceiro do primeiro link.
-    parceiros: ['n', 'v'],
+    // 04/11/2026 (Tiago): /d para o Douglas, o terceiro expert, separado igual aos outros dois.
+    parceiros: ['n', 'v', 'd'],
     // 27/10/2026 (Tiago): o afiliado do Naor; o Victor e o Direto seguem no da GF
     afiliadosDosParceiros: { n: 'https://t.deriv.link?t=X8KDME25M85P' },
     // 29/10/2026 (Tiago): a comunidade de cada parceiro (Naor no /n, Victor Cordeiro no /v); o Direto segue na da GF

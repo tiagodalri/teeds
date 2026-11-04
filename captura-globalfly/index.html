@@ -473,7 +473,8 @@
       var vitrine = GF.parceiro() || ''
       var quem = APRESENTA[vitrine]
       var apresenta = document.querySelector('[data-apresenta]')
-      var rostos = vitrine ? [vitrine] : ['n', 'v']
+      // sem rosto próprio na página (o /d, do Douglas), aparece a dupla da live, como no direto
+      var rostos = quem ? [vitrine] : ['n', 'v']
       document.querySelector('[data-rostos]').innerHTML = rostos.map(function (c) {
         return '<img src="./img/' + (c === 'n' ? 'naor' : 'victor') + '-rosto.webp" alt="" width="200" height="200" />'
       }).join('')
