@@ -203,13 +203,39 @@ export const DoAnuncioAoDinheiro = memo(function DoAnuncioAoDinheiro({ pessoas, 
       {falha && <p className="aa-erro">Não consegui atualizar agora ({falha}). Os números abaixo são da última leitura.</p>}
       {total > pessoas.length && <p className="aa-erro">O período tem {int(total)} cadastros e a tela trouxe os {int(pessoas.length)} mais recentes: escolha um período menor para ver todos.</p>}
       <div className="aa-kpis jc-kpis">
-        <div><small>Cadastros</small><b>{int(s.cadastros)}</b><span>{custoCad ? `${dinheiro(custoCad)} cada${meta ? ` · a Meta contou ${int(meta.cadastros)}` : ''}` : `${pc(razao(s.questionario, s.cadastros) * 100, 0)} completaram`}</span></div>
+        <div><small>Cadastros</small><b>{int(s.cadastros)}</b><span>{custoCad ? `${dinheiro(custoCad)} cada${meta && meta.cadastros !== s.cadastros ? ` · a Meta atribui ${int(meta.cadastros)}` : ''}` : `${pc(razao(s.questionario, s.cadastros) * 100, 0)} completaram`}</span></div>
         <div><small>Entraram na plataforma</small><b>{int(s.plataforma)}</b><span>{pc(razao(s.plataforma, s.cadastros) * 100, 0)} dos cadastros</span></div>
         <div><small>Conta real conectada</small><b>{int(s.derivReal)}</b><span>{pc(razao(s.derivReal, s.plataforma) * 100, 0)} de quem entrou</span></div>
         <div className="destaque"><small>Depositaram</small><b>{int(s.depositantes)}</b><span>{custoDep ? `${dinheiro(custoDep)} por depositante` : `${pc(razao(s.depositantes, s.cadastros) * 100)} dos cadastros`}</span></div>
         <div className="destaque"><small>Depositado</small><b>{usd(s.depositado)}</b><span>{ticket != null ? `1º depósito típico ${usd(ticket)}` : 'sem depósitos ainda'}{ateDeposito != null && dep.length >= 3 ? ` · em ${horas(ateDeposito)}` : ''}</span></div>
         <div className="destaque"><small>Markup estimado</small><b>{usd(s.markup)}</b><span>{retorno != null ? `${brl(retorno)} por R$ 1 investido` : s.cadastros ? `${usd(s.markup / s.cadastros)} por cadastro` : '—'}</span></div>
       </div>
+
+      {/* 04/11/2026, Tiago: "pq aqui mostra 8 cadastros se a meta informou 16?". Os dois estão certos, contam coisas diferentes:
+          aqui, quem chegou pelo link do anúncio (com a marcação); a Meta, todo cadastro de quem clicou no anúncio, por qualquer caminho. */}
+      {soAnuncio && meta && meta.cadastros !== s.cadastros && (() => {
+        const fora = (pessoas ?? []).filter((p) => p.canal !== 'anuncio-meta')
+        const social = fora.filter((p) => ['instagram', 'facebook', 'bio-instagram', 'stories'].includes(p.canal)).length
+        const semOrigem = fora.filter((p) => ['direto', 'sem-origem'].includes(p.canal)).length
+        return (
+          <section className="aa-cartao jc-diferenca">
+            <b>Por que a Meta conta {int(meta.cadastros)} e aqui {s.cadastros === 1 ? 'é 1' : `são ${int(s.cadastros)}`}?</b>
+            {meta.cadastros > s.cadastros ? <p>
+              Aqui entram só os {int(s.cadastros)} que chegaram pelo link do próprio anúncio, com a marcação de qual anúncio foi: esses dá para seguir até o depósito.
+              A Meta conta mais porque reconhece a pessoa pelo e-mail (o cadastro também vai pelo servidor) e dá ao anúncio todo cadastro de quem clicou nele e se cadastrou depois,
+              mesmo voltando por outro caminho: pelo perfil, pela bio, por um link repassado ou abrindo o site de novo.
+              {social + semOrigem > 0 ? <> No período, fora os {int(s.cadastros)}, houve {[social ? <><b>{int(social)}</b> pelo Instagram ou Facebook sem a marcação</> : null, semOrigem ? <><b>{int(semOrigem)}</b> sem origem</> : null].filter(Boolean).map((x, i, l) => <span key={i}>{i ? (i === l.length - 1 ? ' e ' : ', ') : ''}{x}</span>)}
+                {social + semOrigem >= meta.cadastros - s.cadastros
+                  ? <>: é entre eles que estão os outros {int(meta.cadastros - s.cadastros)} que a Meta credita ao anúncio.</>
+                  : <>. A diferença passa disso porque a Meta conta eventos, não pessoas: a mesma pessoa pode contar mais de uma vez.</>}</> : null}
+              {' '}Para decidir, o custo por cadastro daqui ({custoCad ? dinheiro(custoCad) : '—'}) é o garantido; o da Meta ({meta.cadastros ? dinheiro(gasto / meta.cadastros) : '—'}) é o teto otimista.
+            </p> : <p>
+              A Meta contou menos do que chegou pelo link do anúncio: o pixel não enxerga todo mundo (bloqueador de anúncio, navegador que barra o rastreio, quem fechou a página antes do pixel carregar).
+              Aqui vale o cadastro gravado no banco, pessoa por pessoa.
+            </p>}
+          </section>
+        )
+      })()}
 
       <section className="aa-cartao">
         <header>

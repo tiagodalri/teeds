@@ -52,3 +52,9 @@
   .aa > .aa-abas button { padding: 0 9px; font-size: 13px; height: 40px; }
 }
 .jc-selo { margin-left: 8px; padding: 1px 7px; border-radius: 99px; background: color-mix(in srgb, var(--aa-ouro) 16%, transparent); color: var(--aa-ouro); font-size: 10.5px; font-style: normal; font-weight: 800; letter-spacing: .02em; vertical-align: 1px; }
+
+/* por que a Meta conta diferente (04/11/2026) */
+.jc-diferenca { display: grid; gap: 6px; padding: 16px 20px; border-left: 3px solid var(--cr-alerta, #b7791f); }
+.jc-diferenca > b { font-size: 14px; }
+.jc-diferenca p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--muted); max-width: 120ch; }
+.jc-diferenca p b { color: var(--text); }
