@@ -15,6 +15,14 @@
 //   desconectar              apaga a conexão
 //   metricas { dias }        conta, últimos posts e stories no ar, com as métricas da Meta
 // GET ?code=&state=          a volta do login da Meta (a janela mostra "pronto" e fecha sozinha)
+//
+// 04/11/2026 (Tiago: "não quero trocar a conta, só quero vincular o insta"): o jeito mais curto é a MESMA
+// chave do usuário do sistema que já serve aos anúncios (META_ADS_<MARCA>_<PARCEIRO>, app "GlobalFly" do
+// Naor), gerada de novo com as permissões do Instagram. Sem login separado:
+//   chave { chave }          confere a chave nova (continua servindo aos anúncios? lê as métricas do
+//                            Instagram?) e só então troca a chave guardada. A conta de anúncios escolhida
+//                            (META_CONTA_*) não muda.
+// A conexão pelo login (acima) continua valendo e vem na frente quando existe.
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICO = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -49,10 +57,18 @@ const apagarCfg = (chave: string) => rest(`config_servicos?chave=eq.${encodeURIC
 
 type App = { appId: string; segredo: string }
 type Conta = { id: string; usuario: string; nome: string; foto: string | null; seguidores: number; posts: number; pagina: string; paginaNome: string; token: string }
-type Conexao = Conta & { conectadoEm: string; conectadoPor: string | null }
+type Conexao = Conta & { conectadoEm: string; conectadoPor: string | null; fonte?: 'login' | 'chave' }
 const chaveApp = (marca: string) => `META_IG_APP_${marca.toUpperCase()}`
 const chaveConexao = (marca: string, p: string) => `META_IG_${marca.toUpperCase()}_${p.toUpperCase()}`
 const chaveCandidatos = (marca: string, p: string) => `META_IG_CANDIDATOS_${marca.toUpperCase()}_${p.toUpperCase()}`
+const chaveDeAnuncios = (marca: string, p: string) => `META_ADS_${marca.toUpperCase()}_${p.toUpperCase()}`
+// o Instagram de cada parceiro (o mesmo do estúdio de anúncios); a conta escolhida no painel vale por cima
+const IG_PADRAO: Record<string, { id: string; pagina: string }> = { 'globalfly:n': { id: '17841406873438157', pagina: 'Naor Bezzera' } }
+async function lerTexto(chave: string): Promise<{ valor: string; em: string } | null> {
+  const r = await rest(`config_servicos?chave=eq.${encodeURIComponent(chave)}&select=valor,atualizado_em`)
+  const l = r.ok ? (await r.json())[0] : null
+  return l?.valor ? { valor: String(l.valor), em: String(l.atualizado_em) } : null
+}
 
 class ErroDaMeta extends Error { constructor(msg: string, public codigo = 0) { super(msg) } }
 async function graph(caminho: string, params: Record<string, string>) {
@@ -62,6 +78,23 @@ async function graph(caminho: string, params: Record<string, string>) {
   return d
 }
 const talvez = async <T,>(p: Promise<T>, padrao: T): Promise<T> => { try { return await p } catch { return padrao } }
+
+/** O Instagram lido pela chave de anúncios: { conexao } quando lê as métricas; senão o que falta. */
+async function pelaChave(marca: string, parceiro: string, chaveNova?: string) {
+  const guardada = chaveNova ? { valor: chaveNova, em: new Date().toISOString() } : await lerTexto(chaveDeAnuncios(marca, parceiro))
+  if (!guardada) return { existe: false, lePerfil: false, leMetricas: false, conexao: null as Conexao | null }
+  const cfg = await lerCfg<{ instagram?: string; paginaNome?: string }>(`META_CONTA_${marca.toUpperCase()}_${parceiro.toUpperCase()}`)
+  const igId = cfg?.instagram || IG_PADRAO[`${marca}:${parceiro}`]?.id || ''
+  if (!igId) return { existe: true, lePerfil: false, leMetricas: false, conexao: null }
+  const chave = guardada.valor
+  const perfil = await talvez(graph(igId, { fields: 'username,name,profile_picture_url,followers_count,media_count', access_token: chave }), null as any)
+  const leMetricas = !!perfil && await graph(`${igId}/insights`, { metric: 'reach', period: 'day', metric_type: 'total_value', access_token: chave }).then(() => true).catch(() => false)
+  const conexao: Conexao | null = perfil && leMetricas ? {
+    id: igId, usuario: perfil.username ?? '', nome: perfil.name ?? '', foto: perfil.profile_picture_url ?? null, seguidores: Number(perfil.followers_count ?? 0),
+    posts: Number(perfil.media_count ?? 0), pagina: '', paginaNome: cfg?.paginaNome || IG_PADRAO[`${marca}:${parceiro}`]?.pagina || '', token: chave,
+    conectadoEm: guardada.em, conectadoPor: null, fonte: 'chave' } : null
+  return { existe: true, lePerfil: !!perfil, leMetricas, conexao, usuario: perfil?.username ?? null, seguidores: perfil ? Number(perfil.followers_count ?? 0) : null }
+}
 
 // o "state" do login: quem pediu, para qual parceiro, de onde, assinado com o segredo do aplicativo
 const b64url = (b: Uint8Array) => btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
@@ -193,21 +226,45 @@ Deno.serve(async (req) => {
       return json({ ok: true })
     }
     if (acao === 'estado') {
-      const c = await lerCfg<Conexao>(chaveConexao(marca, parceiro))
+      const login = await lerCfg<Conexao>(chaveConexao(marca, parceiro))
+      const ch = await pelaChave(marca, parceiro)
+      const c = login ?? ch.conexao
       const cand = c ? null : await lerCfg<{ contas: Conta[] }>(chaveCandidatos(marca, parceiro))
       let valida: boolean | null = null
-      if (c) valida = await graph(c.id, { fields: 'id', access_token: c.token }).then(() => true).catch(() => false)
+      if (login) valida = await graph(login.id, { fields: 'id', access_token: login.token }).then(() => true).catch(() => false)
+      else if (c) valida = true
       return json({
         app: { configurado: !!app, appId: app?.appId ?? null, volta: VOLTA },
-        conexao: c ? { id: c.id, usuario: c.usuario, nome: c.nome, foto: c.foto, seguidores: c.seguidores, posts: c.posts, pagina: c.paginaNome, conectadoEm: c.conectadoEm, valida } : null,
+        chave: { existe: ch.existe, lePerfil: ch.lePerfil, leMetricas: ch.leMetricas, usuario: ch.usuario ?? null, seguidores: ch.seguidores ?? null },
+        conexao: c ? { id: c.id, usuario: c.usuario, nome: c.nome, foto: c.foto, seguidores: c.seguidores, posts: c.posts, pagina: c.paginaNome, conectadoEm: c.conectadoEm, valida, fonte: login ? 'login' : 'chave' } : null,
         candidatos: (cand?.contas ?? []).map((x) => ({ id: x.id, usuario: x.usuario, foto: x.foto, seguidores: x.seguidores, pagina: x.paginaNome })),
       })
     }
-    if (!app) return json({ erro: 'Falta configurar o aplicativo da Meta.' }, 400)
+    if (acao === 'chave') {
+      const nova = String(d.chave ?? '').trim()
+      if (!/^EA[A-Za-z0-9]{40,}$/.test(nova)) return json({ erro: 'Isso não parece uma chave da Meta: ela começa com "EA" e é bem comprida. Copie de novo o token gerado.' }, 400)
+      const info = await graph('debug_token', { input_token: nova, access_token: nova }).then((r) => r.data).catch(() => null)
+      if (!info?.is_valid) return json({ erro: 'A Meta não aceitou essa chave. Gere de novo, com validade Nunca.' }, 400)
+      const escopos: string[] = info.scopes ?? []
+      const faltamAnuncio = ['ads_read', 'ads_management'].filter((x) => !escopos.includes(x))
+      if (faltamAnuncio.length) return json({ erro: `Essa chave não tem as permissões dos anúncios (${faltamAnuncio.join(', ')}). Ela vai substituir a atual, então precisa de tudo o que a atual tem. Gere de novo marcando também essas.` }, 400)
+      const faltamIg = ['instagram_basic', 'instagram_manage_insights'].filter((x) => !escopos.includes(x))
+      if (faltamIg.length) return json({ erro: `A chave nova ainda não tem as permissões do Instagram: ${faltamIg.join(', ')}. Se elas não aparecem na lista ao gerar, o app GlobalFly precisa do caso de uso do Instagram (developers.facebook.com › app GlobalFly › Casos de uso).` }, 400)
+      const teste = await pelaChave(marca, parceiro, nova)
+      if (!teste.leMetricas) return json({ erro: teste.lePerfil ? 'A chave lê o perfil, mas a Meta ainda recusa as métricas. Confira se o @ do Instagram foi atribuído ao usuário do sistema com controle total.' : 'A chave não alcança o Instagram. Em Usuários do sistema › Atribuir ativos, adicione a conta do Instagram com controle total e gere a chave de novo.' }, 400)
+      const r = await rest('config_servicos?on_conflict=chave', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' },
+        body: JSON.stringify({ chave: chaveDeAnuncios(marca, parceiro), valor: nova, atualizado_em: new Date().toISOString() }) })
+      if (!r.ok) return json({ erro: 'Não consegui guardar a chave agora.' }, 500)
+      await rest(`meta_ads_cache?chave=like.${encodeURIComponent(`${marca}:${parceiro}:`)}*`, { method: 'DELETE' })
+      return json({ ok: true, usuario: teste.usuario })
+    }
+    if (acao === 'metricas' && !app) {
+      // sem aplicativo próprio: vale a chave de anúncios
+    } else if (!app) return json({ erro: 'Falta configurar o aplicativo da Meta.' }, 400)
     if (acao === 'inicio') {
       const origem = String(d.origem ?? '')
-      const estado = await criarEstado({ m: marca, p: parceiro, u: usuario?.id ?? '', o: origem, x: d.link ? '1' : '0' }, app.segredo)
-      const q = new URLSearchParams({ client_id: app.appId, redirect_uri: VOLTA, state: estado, response_type: 'code', scope: ESCOPOS.join(','), auth_type: 'rerequest' })
+      const estado = await criarEstado({ m: marca, p: parceiro, u: usuario?.id ?? '', o: origem, x: d.link ? '1' : '0' }, app!.segredo)
+      const q = new URLSearchParams({ client_id: app!.appId, redirect_uri: VOLTA, state: estado, response_type: 'code', scope: ESCOPOS.join(','), auth_type: 'rerequest' })
       return json({ url: `https://www.facebook.com/v24.0/dialog/oauth?${q}` })
     }
     if (acao === 'escolher') {
@@ -223,7 +280,7 @@ Deno.serve(async (req) => {
       return json({ ok: true })
     }
     if (acao === 'metricas') {
-      const c = await lerCfg<Conexao>(chaveConexao(marca, parceiro))
+      const c = (await lerCfg<Conexao>(chaveConexao(marca, parceiro))) ?? (await pelaChave(marca, parceiro)).conexao
       if (!c) return json({ erro: 'O Instagram ainda não foi conectado.' }, 400)
       const dias = Math.max(1, Math.min(30, Number(d.dias ?? 7)))
       const [perfil, conta, posts, stories] = await Promise.all([

@@ -7,13 +7,14 @@ import type { PessoaDaJornada } from '../../core/teeds/central'
 import { apiCentralDeMentira } from '../central/LabCentral'
 import type { ApiInstagram, EstadoDoInstagram, MidiaDoInstagram } from '../../core/teeds/instagram'
 
-/* O Instagram de mentira: ?ig=app (falta o aplicativo), ?ig=conectar (falta o Naor), sem nada = conectado. */
+/* O Instagram de mentira: ?ig=chave (a chave ainda sem permissão), ?ig=app, ?ig=conectar; sem nada = conectado pela chave. */
 function instagramDeMentira(fase: string): ApiInstagram {
-  let app = fase !== 'app', ligado = fase !== 'app' && fase !== 'conectar'
+  let app = fase !== 'app' && fase !== 'chave', ligado = fase === ''
   const espera = <T,>(v: T, ms = 500) => new Promise<T>((r) => setTimeout(() => r(v), ms))
   const estado = (): EstadoDoInstagram => ({
     app: { configurado: app, appId: app ? '1234567890123' : null, volta: 'https://wonxykovfvfnuhzpqsle.supabase.co/functions/v1/meta-instagram' },
-    conexao: ligado ? { id: '17841406873438157', usuario: 'naorbezerra_', nome: 'Naor Bezerra', foto: null, seguidores: 48210, posts: 612, pagina: 'Naor Bezzera', conectadoEm: new Date(Date.now() - 3600_000).toISOString(), valida: true } : null,
+    chave: { existe: true, lePerfil: true, leMetricas: ligado, usuario: 'naorbezerra_', seguidores: 385345 },
+    conexao: ligado ? { id: '17841406873438157', usuario: 'naorbezerra_', nome: 'Naor Bezerra', foto: null, seguidores: 48210, posts: 612, pagina: 'Naor Bezzera', conectadoEm: new Date(Date.now() - 3600_000).toISOString(), valida: true, fonte: 'chave' } : null,
     candidatos: [],
   })
   const midia = (i: number, tipo: MidiaDoInstagram['tipo']): MidiaDoInstagram => ({ id: `m${tipo}${i}`, tipo, legenda: ['Liberação na segunda, 09/11 🎁', 'Bastidores do escritório ao vivo', 'Você só compartilha se lucrar', 'Pergunta do dia: qual I.A. você quer ver operando?'][i % 4],
@@ -23,6 +24,7 @@ function instagramDeMentira(fase: string): ApiInstagram {
   return {
     estado: () => espera(estado()),
     salvarApp: async () => { await espera(null, 900); app = true },
+    salvarChave: async (_s, _p, chave) => { await espera(null, 1200); if (!chave.startsWith('EA')) throw new Error('Isso não parece uma chave da Meta: ela começa com "EA" e é bem comprida.'); ligado = true },
     inicio: async (_s, _p, link) => { await espera(null, 400); if (!link) setTimeout(() => { ligado = true; window.postMessage({ gfInstagram: true }, '*') }, 1500); return 'https://www.facebook.com/v24.0/dialog/oauth?client_id=1234567890123&state=exemplo' },
     escolher: async () => { ligado = true },
     desconectar: async () => { await espera(null, 400); ligado = false },

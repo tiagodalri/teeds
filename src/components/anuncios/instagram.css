@@ -50,3 +50,11 @@
 }
 /* a chave secreta escondida sem ser campo de senha (o navegador não preenche com o login) */
 .ig-segredo { -webkit-text-security: disc; font-family: ui-monospace, monospace; }
+.ig-situacao { margin: 12px 0 4px; padding: 10px 14px; border-left: 3px solid var(--muted); border-radius: 8px; background: var(--surface); font-size: 13px; line-height: 1.5; }
+.ig-situacao.meio { border-left-color: var(--aa-ouro); }
+.ig-form-chave { grid-template-columns: 1fr auto; }
+.ig-outro > summary { cursor: pointer; font-size: 13px; font-weight: 650; color: var(--muted); }
+.ig-outro[open] > summary { margin-bottom: 12px; }
+.ig-outro .aa-cartao { box-shadow: none; border: 0; padding: 0; background: none; }
+@media (max-width: 640px) { .ig-form-chave { grid-template-columns: 1fr; } }
+.ig-botao { display: flex; margin-top: 8px; }

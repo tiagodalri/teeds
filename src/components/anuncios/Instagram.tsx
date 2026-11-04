@@ -31,10 +31,73 @@ export function InstagramDoParceiro({ sessao, api, parceiro, nomeDoParceiro }: {
 
   if (erro && !estado) return <p className="aa-erro">{erro}</p>
   if (!estado) return <p className="aa-vazio">Conferindo o Instagram…</p>
-  if (!estado.app.configurado) return <ConfigurarApp sessao={sessao} api={api} parceiro={parceiro} volta={estado.app.volta} aoSalvar={ler} nomeDoParceiro={nomeDoParceiro} />
   if (!estado.conexao && estado.candidatos.length) return <EscolherConta sessao={sessao} api={api} parceiro={parceiro} estado={estado} aoEscolher={ler} />
-  if (!estado.conexao) return <Conectar sessao={sessao} api={api} parceiro={parceiro} nomeDoParceiro={nomeDoParceiro} aoAtualizar={ler} />
+  if (!estado.conexao) return (
+    <>
+      <PelaChave sessao={sessao} api={api} parceiro={parceiro} estado={estado} nomeDoParceiro={nomeDoParceiro} aoSalvar={ler} />
+      {/* o outro caminho (login do próprio parceiro por um aplicativo da plataforma) fica guardado, fechado */}
+      <details className="aa-cartao ig-outro">
+        <summary>Outro jeito: o {nomeDoParceiro.split(' ')[0] || 'parceiro'} entra com o próprio Facebook, por um aplicativo da plataforma</summary>
+        {!estado.app.configurado
+          ? <ConfigurarApp sessao={sessao} api={api} parceiro={parceiro} volta={estado.app.volta} aoSalvar={ler} nomeDoParceiro={nomeDoParceiro} />
+          : <Conectar sessao={sessao} api={api} parceiro={parceiro} nomeDoParceiro={nomeDoParceiro} aoAtualizar={ler} />}
+      </details>
+    </>
+  )
   return <Conectado sessao={sessao} api={api} parceiro={parceiro} estado={estado} nomeDoParceiro={nomeDoParceiro} aoMudar={ler} />
+}
+
+/* ------------------------------------------------------------ pela chave dos anúncios (o caminho curto) */
+
+function PelaChave({ sessao, api, parceiro, estado, nomeDoParceiro, aoSalvar }: { sessao: SessaoTeeds; api: ApiInstagram; parceiro: string; estado: EstadoDoInstagram; nomeDoParceiro: string; aoSalvar: () => void }) {
+  const primeiro = nomeDoParceiro.split(' ')[0] || 'parceiro'
+  const [chave, setChave] = useState('')
+  const [indo, setIndo] = useState<{ salvando?: boolean; erro?: string; copiou?: boolean }>({})
+  const ch = estado.chave
+  const mensagem = `${primeiro}, para ligar o seu Instagram na plataforma, preciso de uma chave nova, gerada no mesmo lugar da chave dos anúncios:
+
+1. Abra business.facebook.com/settings › Usuários › Usuários do sistema › clique no usuário da GlobalFly.
+
+2. Clique em "Atribuir ativos":
+• em Páginas, marque a sua página com controle total;
+• em Contas do Instagram, marque o @${ch.usuario || 'seu Instagram'} com controle total.
+Salve.
+
+3. Ainda nesse usuário, clique em "Gerar novo token" › app GlobalFly › validade Nunca › marque as mesmas permissões de antes e mais estas:
+instagram_basic, instagram_manage_insights, instagram_manage_comments, instagram_content_publish
+
+(Se essas não aparecerem na lista: developers.facebook.com › app GlobalFly › Casos de uso › adicione o do Instagram e gere de novo.)
+
+4. Copie o token e me mande.
+
+A conta de anúncios continua a mesma: a chave nova só ganha as permissões do Instagram.`
+  const salvar = async () => {
+    setIndo({ salvando: true })
+    try { await api.salvarChave(sessao, parceiro, chave.trim()); setChave(''); setIndo({}); aoSalvar() }
+    catch (e) { setIndo({ erro: (e as Error).message }) }
+  }
+  return (
+    <section className="aa-cartao ig-passos">
+      <header><div><span className="rot">Instagram</span><h3>Vincular o Instagram do {primeiro}</h3>
+        <p>Pela mesma chave que já liga os anúncios: o {primeiro} gera uma chave nova, com as permissões do Instagram, e você cola aqui. A conta de anúncios não muda.</p></div></header>
+      <div className={`ig-situacao ${ch.lePerfil ? 'meio' : ''}`}>
+        {!ch.existe ? <>Ainda não há chave dos anúncios do {primeiro} guardada.</>
+          : ch.lePerfil ? <>Hoje a chave já enxerga <b>@{ch.usuario}</b>{ch.seguidores != null ? ` (${int(ch.seguidores)} seguidores)` : ''}, mas a Meta recusa as <b>métricas, posts e stories</b>: faltam as permissões do Instagram.</>
+          : <>Hoje a chave dos anúncios não enxerga o Instagram do {primeiro}.</>}
+      </div>
+      <ol className="ig-lista">
+        <li><b>Mande a mensagem para o {primeiro}</b> (o passo a passo para gerar a chave nova):
+          <span className="ig-botao"><button type="button" className="aa-atualizar aa-subir" onClick={async () => { if (await copiar(mensagem)) { setIndo({ copiou: true }); setTimeout(() => setIndo({}), 2000) } }}>{indo.copiou ? 'Mensagem copiada' : `Copiar a mensagem para o ${primeiro}`}</button></span></li>
+        <li><b>Quando ele mandar a chave</b>, cole aqui embaixo. A plataforma confere com a Meta se ela lê o Instagram e se continua servindo aos anúncios. Só então troca a chave.</li>
+      </ol>
+      <form className="ig-form ig-form-chave" autoComplete="off" onSubmit={(e) => { e.preventDefault(); void salvar() }}>
+        <label><span>Chave nova do {primeiro}</span><input name="meta-chave-nova" type="text" className="ig-segredo" value={chave} onChange={(e) => setChave(e.target.value.trim())} placeholder="Começa com EA… e é bem comprida" autoComplete="off" data-lpignore="true" data-1p-ignore spellCheck={false} /></label>
+        <button type="submit" className="aa-atualizar aa-subir" disabled={indo.salvando || chave.length < 40}>{indo.salvando ? 'Conferindo com a Meta…' : 'Conferir e vincular'}</button>
+      </form>
+      {indo.erro && <p className="aa-erro" role="alert">{indo.erro}</p>}
+      <p className="aa-nota">A chave fica só no servidor. Se a conferência falhar, nada muda: a chave atual continua ligando os anúncios.</p>
+    </section>
+  )
 }
 
 /* ------------------------------------------------------------ 1. o aplicativo */
@@ -176,7 +239,7 @@ function Conectado({ sessao, api, parceiro, estado, nomeDoParceiro, aoMudar }: {
         <div className="ig-acoes">
           <div className="aa-periodo" role="tablist" aria-label="Período">{PERIODOS_IG.map((p) => <button key={p.dias} type="button" role="tab" aria-selected={dias === p.dias} className={dias === p.dias ? 'on' : ''} onClick={() => setDias(p.dias)}>{p.nome}</button>)}</div>
           <button type="button" className="aa-atualizar" onClick={() => void ler()} disabled={lendo}>{lendo ? 'Lendo…' : 'Atualizar'}</button>
-          <button type="button" className="aa-atualizar ig-sair" disabled={saindo} onClick={async () => { if (!confirm(`Desconectar o Instagram @${c.usuario} da plataforma?`)) return; setSaindo(true); try { await api.desconectar(sessao, parceiro); aoMudar() } finally { setSaindo(false) } }}>Desconectar</button>
+          {c.fonte === 'chave' ? <small className="aa-mudo">Ligado pela chave dos anúncios</small> : <button type="button" className="aa-atualizar ig-sair" disabled={saindo} onClick={async () => { if (!confirm(`Desconectar o Instagram @${c.usuario} da plataforma?`)) return; setSaindo(true); try { await api.desconectar(sessao, parceiro); aoMudar() } finally { setSaindo(false) } }}>Desconectar</button>}
         </div>
       </section>
 

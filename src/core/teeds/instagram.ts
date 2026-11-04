@@ -9,7 +9,9 @@ import { MARCA } from '../../marca'
 
 export interface EstadoDoInstagram {
   app: { configurado: boolean; appId: string | null; volta: string }
-  conexao: { id: string; usuario: string; nome: string; foto: string | null; seguidores: number; posts: number; pagina: string; conectadoEm: string; valida: boolean | null } | null
+  /** A chave de anúncios do parceiro (o mesmo usuário do sistema): já lê o Instagram? */
+  chave: { existe: boolean; lePerfil: boolean; leMetricas: boolean; usuario: string | null; seguidores: number | null }
+  conexao: { id: string; usuario: string; nome: string; foto: string | null; seguidores: number; posts: number; pagina: string; conectadoEm: string; valida: boolean | null; fonte: 'login' | 'chave' } | null
   candidatos: Array<{ id: string; usuario: string; foto: string | null; seguidores: number; pagina: string }>
 }
 export interface MidiaDoInstagram {
@@ -30,6 +32,8 @@ export interface MetricasDoInstagram {
 export interface ApiInstagram {
   estado(s: SessaoTeeds, parceiro: string): Promise<EstadoDoInstagram>
   salvarApp(s: SessaoTeeds, parceiro: string, appId: string, segredo: string): Promise<void>
+  /** Troca a chave de anúncios por uma nova com as permissões do Instagram (a conta de anúncios não muda). */
+  salvarChave(s: SessaoTeeds, parceiro: string, chave: string): Promise<void>
   /** `link`: um endereço de 48 h para mandar ao parceiro (ele entra com o Facebook dele, no celular dele). */
   inicio(s: SessaoTeeds, parceiro: string, link?: boolean): Promise<string>
   escolher(s: SessaoTeeds, parceiro: string, igId: string): Promise<void>
@@ -50,6 +54,7 @@ async function funcao<T>(sessao: SessaoTeeds, corpo: Record<string, unknown>): P
 export const API_DO_INSTAGRAM: ApiInstagram = {
   estado: (s, parceiro) => funcao(s, { acao: 'estado', parceiro }),
   salvarApp: async (s, parceiro, appId, segredo) => { await funcao(s, { acao: 'app', parceiro, appId, segredo }) },
+  salvarChave: async (s, parceiro, chave) => { await funcao(s, { acao: 'chave', parceiro, chave }) },
   inicio: async (s, parceiro, link) => (await funcao<{ url: string }>(s, { acao: 'inicio', parceiro, origem: location.origin, link: !!link })).url,
   escolher: async (s, parceiro, igId) => { await funcao(s, { acao: 'escolher', parceiro, igId }) },
   desconectar: async (s, parceiro) => { await funcao(s, { acao: 'desconectar', parceiro }) },
