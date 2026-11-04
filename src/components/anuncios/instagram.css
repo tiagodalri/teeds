@@ -48,3 +48,5 @@
   .ig-perfil .aa-periodo button { flex: 1; }
   .ig-perfil > img, .ig-perfil > .ig-foto-vazia { width: 48px; height: 48px; }
 }
+/* a chave secreta escondida sem ser campo de senha (o navegador não preenche com o login) */
+.ig-segredo { -webkit-text-security: disc; font-family: ui-monospace, monospace; }

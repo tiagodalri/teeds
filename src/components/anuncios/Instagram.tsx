@@ -61,9 +61,9 @@ function ConfigurarApp({ sessao, api, parceiro, volta, aoSalvar, nomeDoParceiro 
         <li>Em <i>Configurações do app › Básico</i>, copie o <b>ID do aplicativo</b> e a <b>Chave secreta do aplicativo</b> (botão <i>Mostrar</i>) e cole aqui embaixo.</li>
         <li>Em <i>Funções do app › Funções</i>, adicione o {nomeDoParceiro} como <b>Testador</b>. Ele aceita o convite pelo Facebook dele. Enquanto a Meta não aprova o app, só quem está nessa lista consegue conectar.</li>
       </ol>
-      <form className="ig-form" onSubmit={(e) => { e.preventDefault(); void salvar() }}>
-        <label><span>ID do aplicativo</span><input inputMode="numeric" value={appId} onChange={(e) => setAppId(e.target.value)} placeholder="Só números" autoComplete="off" /></label>
-        <label><span>Chave secreta do aplicativo</span><input type="password" value={segredo} onChange={(e) => setSegredo(e.target.value)} placeholder="32 letras e números" autoComplete="off" /></label>
+      <form className="ig-form" autoComplete="off" onSubmit={(e) => { e.preventDefault(); void salvar() }}>
+        <label><span>ID do aplicativo</span><input name="meta-app-id" inputMode="numeric" value={appId} onChange={(e) => setAppId(e.target.value.replace(/\D/g, ''))} placeholder="Só números, ex.: 1234567890123456" autoComplete="off" data-lpignore="true" data-1p-ignore spellCheck={false} /></label>
+        <label><span>Chave secreta do aplicativo</span><input name="meta-app-secret" type="text" className="ig-segredo" value={segredo} onChange={(e) => setSegredo(e.target.value.trim())} placeholder="32 letras e números" autoComplete="off" data-lpignore="true" data-1p-ignore spellCheck={false} /></label>
         <button type="submit" className="aa-atualizar aa-subir" disabled={indo.salvando || !appId.trim() || !segredo.trim()}>{indo.salvando ? 'Conferindo com a Meta…' : 'Salvar e conferir'}</button>
       </form>
       {indo.erro && <p className="aa-erro" role="alert">{indo.erro}</p>}
