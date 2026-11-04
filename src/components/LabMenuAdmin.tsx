@@ -1,10 +1,13 @@
 /** Laboratório: o menu da Administração em grupos (laboratorio.html?tela=menu-admin). Dados de mentira. */
 import { useState } from 'react'
 import { MenuDoAdmin, type GrupoDoMenu } from './MenuDoAdmin'
-import type { NomeIcone } from './Icone'
+import { Icone, type NomeIcone } from './Icone'
+import { SeletorDePlataforma } from './SeletorDePlataforma'
+import './admin-topo.css'
 
 export default function LabMenuAdmin() {
   const [aba, setAba] = useState('anuncios')
+  const [parc, setParc] = useState('n')
   const it = (id: string, nome: string, icone: NomeIcone, extra: { n?: number; urgente?: boolean; sai?: boolean } = {}) =>
     ({ id, nome, icone, sai: extra.sai, selo: extra.n != null ? { n: extra.n, urgente: extra.urgente } : null, onClick: () => setAba(id) })
   const grupos: GrupoDoMenu[] = [
@@ -22,7 +25,10 @@ export default function LabMenuAdmin() {
         <MenuDoAdmin grupos={grupos} ativa={aba} />
         <small>Somente administradores podem visualizar e alterar estes dados.</small>
       </aside>
-      <main className="admin-main"><header className="admin-top"><div><span className="rot">GlobalFly Trade Admin</span><h1>{aba}</h1><p>Conteúdo de exemplo da aba.</p></div></header>
+      <main className="admin-main"><header className="admin-top"><div><span className="rot">GlobalFly Trade Admin</span><h1>Anúncios e rastreio</h1><p>Do anúncio ao dinheiro: de onde vem cada pessoa, cada passo dela, o que cada anúncio e cada divulgação trazem, até o depósito e o markup.</p></div>
+        <div className="admin-top-acoes"><SeletorDePlataforma valor="globalfly" opcoes={[{ id: 'globalfly', nome: 'GlobalFly Trade', papel: '' }]} onTrocar={() => undefined}
+          parceiros={[{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }]} parceiro={parc} onParceiro={setParc} soParceiros />
+          <button className="admin-refresh"><Icone nome="atualizar" />Atualizar</button></div></header>
         <div style={{ height: 1400 }} /></main>
     </div>
   )

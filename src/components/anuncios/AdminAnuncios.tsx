@@ -174,7 +174,9 @@ function Barras({ titulo, linhas, nome }: { titulo: string; linhas: Quebra[]; no
  * parceiro com conta e avisa qual conta está mostrando (o topo marca essa). `seletorNoTopo`: o topo já mostra
  * as contas, então os botões Naor/Victor daqui somem (no laboratório, sem topo, eles ficam).
  */
-export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_ESTUDIO, intervalo = 10_000, apiCentral = API_DA_CENTRAL, buscarJornada, parceiroDoTopo, aoTrocarConta, seletorNoTopo = false }: { sessao: SessaoTeeds; api?: ApiAnuncios; apiEstudio?: ApiEstudio; intervalo?: number; apiCentral?: ApiCentral; buscarJornada?: typeof jornadaCompleta; parceiroDoTopo?: string; aoTrocarConta?: (codigo: string, codigos: string[]) => void; seletorNoTopo?: boolean }) {
+export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_ESTUDIO, intervalo = 10_000, apiCentral = API_DA_CENTRAL, buscarJornada, parceiroDoTopo, aoTrocarConta, seletorNoTopo = false, atualizarPedido = 0, aoMudarCarregando }: { sessao: SessaoTeeds; api?: ApiAnuncios; apiEstudio?: ApiEstudio; intervalo?: number; apiCentral?: ApiCentral; buscarJornada?: typeof jornadaCompleta; parceiroDoTopo?: string; aoTrocarConta?: (codigo: string, codigos: string[]) => void; seletorNoTopo?: boolean
+  /** O "Atualizar" do topo do painel (cada clique soma 1) e o aviso de quando está lendo: no painel, o botão daqui some. */
+  atualizarPedido?: number; aoMudarCarregando?: (indo: boolean) => void }) {
   const contas = CONTAS_DE_ANUNCIO[MARCA.id] ?? []
   // a conta escolhida (Naor ou Victor) fica lembrada neste aparelho
   const [parceiro, setParceiroAgora] = useState(() => {
@@ -255,6 +257,9 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const anteriorBruto = useRef<FunilDoBanco | null>(null)
   useEffect(() => { setAnterior((a) => (a && anteriorBruto.current ? { ...a, banco: origem === 'anuncios' ? anteriorBruto.current.anuncio : anteriorBruto.current.total, comecou: origem === 'anuncios' ? anteriorBruto.current.passosAnuncio?.comecou ?? null : anteriorBruto.current.passos?.comecou ?? null } : a)) }, [origem])
   useEffect(() => { setMeta(null); setFunil(null); setAnterior(null); setHorarios(null); setFalhaMeta(null); void carregar() }, [parceiro, periodo, de, ate, sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
+  // o "Atualizar" do topo do painel
+  useEffect(() => { if (atualizarPedido > 0) void carregar(true) }, [atualizarPedido]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { aoMudarCarregando?.(carregando) }, [carregando]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ao vivo: o nosso banco a cada 10 s; a Meta (só o total) a cada 60 s
   const vivo = useRef({ de, ate, parceiro }); vivo.current = { de, ate, parceiro }
@@ -430,7 +435,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
         <div className="aa-acoes">
           <button type="button" className="aa-atualizar aa-subir" onClick={() => { setAba('estudio'); setPedidoEstudio({ tipo: 'novo', n: Date.now() }) }}><span aria-hidden="true">+</span>Subir anúncio</button>
           <button type="button" className="aa-atualizar" onClick={() => setRelatorio(true)}>Relatório</button>
-          <button type="button" className="aa-atualizar" onClick={() => void carregar(true)} disabled={carregando}>{carregando ? 'Atualizando…' : 'Atualizar agora'}</button>
+          {!aoMudarCarregando && <button type="button" className="aa-atualizar" onClick={() => void carregar(true)} disabled={carregando}>{carregando ? 'Atualizando…' : 'Atualizar agora'}</button>}
         </div>
       </div>
 

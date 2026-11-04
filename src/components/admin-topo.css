@@ -1,0 +1,23 @@
+/*
+  Cabeçalho da Administração padronizado (04/11/2026, Tiago: "bem confuso esse header aqui, botão
+  de atualizar ali, tudo meio jogado sem layout"). Antes: título à esquerda e, à direita, os filtros
+  e o "Atualizar" quebrando linha onde dava. Agora, em toda aba: título e frase em cima; embaixo,
+  uma barra única com os filtros à esquerda e o "Atualizar" sempre na ponta direita.
+*/
+.admin-main > .admin-top { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; min-height: 0; margin-bottom: 22px; }
+.admin-main > .admin-top > div:first-child { max-width: 880px; }
+.admin-top-acoes { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; min-width: 0; padding: 8px 8px 8px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.admin-top-acoes .sel-plat + .sel-parc { padding-left: 18px; border-left: 1px solid var(--border); }
+.admin-top-acoes .admin-refresh { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; min-height: 38px; }
+.admin-top-acoes .admin-refresh .icone-traco { width: 16px; height: 16px; }
+/* sem filtro nenhum (plataforma de uma marca só, admin do parceiro): fica só o botão, sem a barra */
+.admin-top-acoes:not(:has(.sel-plat, .sel-parc)) { padding: 0; border: 0; background: none; }
+
+@media (max-width: 760px) {
+  .admin-top-acoes { gap: 8px; padding: 8px; }
+  .admin-top-acoes .sel-plat + .sel-parc { padding-left: 0; border-left: 0; }
+  .admin-top-acoes .sel-parc { flex: 1 1 100%; min-width: 0; }
+  .admin-top-acoes .sel-parc-opcoes { flex: 1; }
+  .admin-top-acoes .sel-parc-opcoes button { flex: 1; }
+  .admin-top-acoes .admin-refresh { flex: 1 1 100%; justify-content: center; margin-left: 0; }
+}

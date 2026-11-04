@@ -48,7 +48,8 @@ export function SeletorDePlataforma({ valor, opcoes, onTrocar, parceiros = [], p
   const nomeDaMarca = opcoes.find((o) => o.id === valor)?.nome ?? ''
   return (
     <>
-    <div className="sel-plat" role="group" aria-label="O que este painel está mostrando">
+    {/* uma plataforma só (o painel da GF): o "Vendo" com um botão só não escolhe nada, então some */}
+    {opcoes.length > 1 && <div className="sel-plat" role="group" aria-label="O que este painel está mostrando">
       <span className="sel-plat-rot">Vendo</span>
       <div className="sel-plat-opcoes">
         {opcoes.map((o) => (
@@ -70,7 +71,7 @@ export function SeletorDePlataforma({ valor, opcoes, onTrocar, parceiros = [], p
           </button>
         ))}
       </div>
-    </div>
+    </div>}
     {parceiros.length > 0 && onParceiro && (
       <div className="sel-parc" role="group" aria-label={soParceiros ? 'Conta de anúncios do parceiro' : 'Parceiro de divulgação'}>
         <span className="sel-plat-rot">Parceiro</span>
@@ -78,7 +79,7 @@ export function SeletorDePlataforma({ valor, opcoes, onTrocar, parceiros = [], p
           {!soParceiros && <button type="button" aria-pressed={!parceiro} onClick={() => { if (parceiro) onParceiro('') }}>Todos</button>}
           {parceiros.map((p) => (
             <button key={p.codigo} type="button" aria-pressed={parceiro === p.codigo} onClick={() => { if (parceiro !== p.codigo) onParceiro(p.codigo) }} title={soParceiros ? `A conta de anúncios do ${p.nome.split(' ')[0]}` : `${nomeDaMarca} · ${p.nome}`}>
-              {nomeDaMarca} {p.nome.split(' ')[0]} <small>/{p.codigo}</small>
+              {opcoes.length > 1 ? `${nomeDaMarca} ` : ''}{p.nome.split(' ')[0]} <small>/{p.codigo}</small>
             </button>
           ))}
           {!soParceiros && <button type="button" aria-pressed={parceiro === 'direto'} onClick={() => { if (parceiro !== 'direto') onParceiro('direto') }} title="Quem chegou sem link de parceiro">Direto</button>}
