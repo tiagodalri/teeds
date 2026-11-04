@@ -251,6 +251,7 @@ function analiseDeMentira(fase: string): ApiAnalise {
       atual = atual ? { ...atual, situacao, resultado, aplicadoEm: new Date().toISOString() } : atual
       return espera({ situacao, resultado }, 1800)
     },
+    salvarChave: (_s, _p, valor) => (valor.startsWith('sk-ant-') ? (fase = '', espera(undefined, 900)) : Promise.reject(new Error('Isso não parece uma chave da Anthropic (começa com sk-ant-).'))),
   }
 }
 

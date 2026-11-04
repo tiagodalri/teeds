@@ -16,7 +16,9 @@
 // orçamento entre R$ 6 e R$ 5.000 e no máximo o dobro (ou a metade) do atual, e o orçamento tem de ser o
 // mesmo que a I.A. viu (se alguém mudou no Gerenciador no meio, a mudança é pulada e avisada).
 //
-// A chave da I.A. fica no segredo ANTHROPIC_API_KEY das funções (Supabase › Edge Functions › Secrets).
+// A chave da I.A. (Anthropic) é colada na própria tela, como a da Meta: fica em config_servicos
+// (ANTHROPIC_API_KEY) e nunca volta para a tela. Se existir o segredo ANTHROPIC_API_KEY das funções, ele vale também.
+//   chave_ia { valor }               testa a chave na Anthropic e guarda
 
 import Anthropic from 'npm:@anthropic-ai/sdk'
 
@@ -24,7 +26,12 @@ declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void }
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICO = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const CHAVE_IA = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
+/** A chave da I.A.: a colada na tela (config_servicos) ou, sem ela, o segredo das funções. */
+async function chaveIA(): Promise<string> {
+  const r = await rest('config_servicos?chave=eq.ANTHROPIC_API_KEY&select=valor')
+  const v = r.ok ? ((await r.json())[0]?.valor as string | undefined) : undefined
+  return (v ?? '').trim() || (Deno.env.get('ANTHROPIC_API_KEY') ?? '')
+}
 const MODELO = 'claude-opus-5-5'
 const GRAPH = 'https://graph.facebook.com/v24.0'
 const PREFIXO = 'GF |'
@@ -264,12 +271,12 @@ ENTREGA
 - alerta: só se houver algo que ele precisa saber antes de aprovar (ex.: a Meta reanalisa anúncios de conjunto novo; hoje é o último dia antes da live). Senão, vazio.`
 }
 
-async function analisar(id: string, cab: Record<string, string>, marca: string, parceiro: string, de: string, ate: string) {
+async function analisar(id: string, cab: Record<string, string>, marca: string, parceiro: string, de: string, ate: string, chave: string) {
   const mudar = (campos: Record<string, unknown>) => rest(`anuncios_analises?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(campos) })
   try {
     const entrada = await montarEntrada(cab, marca, parceiro, de, ate)
     await mudar({ entrada })
-    const cliente = new Anthropic({ apiKey: CHAVE_IA })
+    const cliente = new Anthropic({ apiKey: chave })
     const resposta = await cliente.messages.create({
       model: MODELO, max_tokens: 16000,
       system: instrucoes(entrada),
@@ -442,6 +449,18 @@ Deno.serve(async (req) => {
   const paraTela = (a: any) => a && ({ id: a.id, situacao: a.situacao, dados: a.dados, erro: a.erro, criadoEm: a.criado_em, prontaEm: a.pronta_em, aplicadoEm: a.aplicado_em, resultado: a.resultado, quem: a.quem_nome, modelo: a.modelo, de: a.de, ate: a.ate })
 
   try {
+    // a chave da I.A., colada aqui: só entra depois que a Anthropic a aceitou
+    if (acao === 'chave_ia') {
+      const valor = String(d.valor ?? '').trim()
+      if (!/^sk-ant-[A-Za-z0-9_-]{20,}$/.test(valor)) return json({ erro: 'Isso não parece uma chave da Anthropic (começa com sk-ant-).' }, 400)
+      try { await new Anthropic({ apiKey: valor }).models.list({ limit: 1 }) }
+      catch (e) { return json({ erro: `A Anthropic não aceitou a chave: ${(e as Error).message.slice(0, 200)}` }, 400) }
+      const g = await rest('config_servicos?on_conflict=chave', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' }, body: JSON.stringify({ chave: 'ANTHROPIC_API_KEY', valor, atualizado_em: new Date().toISOString() }) })
+      if (!g.ok) return json({ erro: 'Não consegui guardar a chave.' }, 500)
+      await rest('anuncios_historico', { method: 'POST', body: JSON.stringify({ marca, parceiro, quem: usuario?.id ?? null, quem_nome: nomeDeQuem, acao: 'chave_ia', alvo_tipo: 'conta', alvo_id: '', alvo_nome: 'Chave da I.A.', detalhe: {} }) })
+      return json({ ok: true })
+    }
+    const CHAVE_IA = await chaveIA()
     if (acao === 'ultima') {
       if (!data.test(de) || !data.test(ate)) return json({ erro: 'Período inválido.' }, 400)
       const r = await rest(`anuncios_analises?marca=eq.${marca}&parceiro=eq.${parceiro}&de=eq.${de}&ate=eq.${ate}&order=criado_em.desc&limit=1`)
@@ -450,7 +469,7 @@ Deno.serve(async (req) => {
     }
     if (acao === 'analisar') {
       if (!data.test(de) || !data.test(ate) || de > ate) return json({ erro: 'Período inválido.' }, 400)
-      if (!CHAVE_IA) return json({ semIA: true, erro: 'Falta a chave da I.A. no servidor (segredo ANTHROPIC_API_KEY das funções).' }, 409)
+      if (!CHAVE_IA) return json({ semIA: true, erro: 'Falta a chave da I.A.: cole a chave da Anthropic no cartão da Visão geral.' }, 409)
       // a análise pronta de até 30 minutos atrás serve, a não ser que peçam de novo
       if (!d.forcar) {
         const r = await rest(`anuncios_analises?marca=eq.${marca}&parceiro=eq.${parceiro}&de=eq.${de}&ate=eq.${ate}&situacao=in.(pronta,analisando)&criado_em=gte.${new Date(Date.now() - 30 * 60e3).toISOString()}&order=criado_em.desc&limit=1`)
@@ -460,7 +479,7 @@ Deno.serve(async (req) => {
       const ins = await rest('anuncios_analises?select=*', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ marca, parceiro, de, ate, situacao: 'analisando', quem: usuario?.id ?? null, quem_nome: nomeDeQuem }) })
       const linha = ins.ok ? (await ins.json())[0] : null
       if (!linha) return json({ erro: 'Não consegui guardar a análise.' }, 500)
-      EdgeRuntime.waitUntil(analisar(linha.id, cab, marca, parceiro, de, ate))
+      EdgeRuntime.waitUntil(analisar(linha.id, cab, marca, parceiro, de, ate, CHAVE_IA))
       return json({ temIA: true, analise: paraTela(linha) })
     }
     if (acao === 'aplicar') {

@@ -48,6 +48,8 @@ export function AnaliseIA({ sessao, api, parceiro, de, ate, nomeDoPeriodo, conta
   const [escolhidas, setEscolhidas] = useState<Set<string>>(new Set())
   const [resultado, setResultado] = useState<ResultadoDaMudanca[]>([])
   const [erroAplicar, setErroAplicar] = useState<string | null>(null)
+  const [chaveIA, setChaveIA] = useState('')
+  const [salvandoChave, setSalvandoChave] = useState<{ indo?: boolean; erro?: string }>({})
   const vivo = useRef(0)
 
   // a última análise do período; enquanto estiver "analisando", pergunta de novo a cada 3 s
@@ -89,6 +91,15 @@ export function AnaliseIA({ sessao, api, parceiro, de, ate, nomeDoPeriodo, conta
       if (vivo.current !== minha) return
       if (x instanceof ErroSemIA) setSemIA(x.message); else setErro((x as Error).message)
     } finally { if (vivo.current === minha) setPedindo(false) }
+  }
+
+  // a chave da Anthropic colada aqui: o servidor testa, guarda e a análise começa na sequência
+  const guardarChave = async () => {
+    setSalvandoChave({ indo: true })
+    try { await api.salvarChave(sessao, parceiro, chaveIA.trim()) }
+    catch (x) { setSalvandoChave({ erro: (x as Error).message }); return }
+    setSalvandoChave({}); setChaveIA(''); setSemIA(null)
+    void analisar(false)
   }
 
   const analise = estado?.analise ?? null
@@ -135,11 +146,15 @@ export function AnaliseIA({ sessao, api, parceiro, de, ate, nomeDoPeriodo, conta
       </header>
 
       {semIA && (
-        <div className="ia-sem">
-          <b>Falta a chave da I.A. no servidor.</b>
-          <p>No Supabase, em <b>Edge Functions › Secrets</b>, crie o segredo <code>ANTHROPIC_API_KEY</code> com uma chave da Anthropic (console.anthropic.com › API keys). Depois, volte aqui e toque em Analisar. A chave fica só no servidor.</p>
-          <small>{semIA}</small>
-        </div>
+        <form className="ia-sem" onSubmit={(e) => { e.preventDefault(); void guardarChave() }}>
+          <b>Falta a chave da I.A.</b>
+          <p>Cole aqui a chave da Anthropic (em <b>console.anthropic.com › API keys</b>, criar chave). Ela fica guardada no servidor, como a da Meta, e não aparece de novo nem para quem salvou.</p>
+          <div className="ia-sem-form">
+            <input className="ia-segredo" type="text" inputMode="text" autoComplete="off" autoCapitalize="off" spellCheck={false} name="chave-da-ia" aria-label="Chave da Anthropic" placeholder="Cole a chave que começa com sk-ant-" value={chaveIA} onChange={(e) => setChaveIA(e.target.value)} />
+            <button type="submit" className="ia-principal" disabled={salvandoChave.indo || !chaveIA.trim()}>{salvandoChave.indo ? 'Testando…' : 'Guardar e analisar'}</button>
+          </div>
+          {salvandoChave.erro && <p className="aa-erro">{salvandoChave.erro}</p>}
+        </form>
       )}
       {erro && <p className="aa-erro">{erro}</p>}
 

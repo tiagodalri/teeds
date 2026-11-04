@@ -33,6 +33,8 @@ export interface ApiAnalise {
   ultima: (sessao: SessaoTeeds, parceiro: string, de: string, ate: string) => Promise<EstadoDaAnalise>
   analisar: (sessao: SessaoTeeds, parceiro: string, de: string, ate: string, forcar?: boolean) => Promise<EstadoDaAnalise>
   aplicar: (sessao: SessaoTeeds, parceiro: string, id: string, escolhidas: string[]) => Promise<{ situacao: SituacaoDaAnalise; resultado: ResultadoDaMudanca[] }>
+  /** A chave da Anthropic, colada na tela: o servidor testa, guarda e nunca devolve. */
+  salvarChave: (sessao: SessaoTeeds, parceiro: string, valor: string) => Promise<void>
 }
 
 async function funcao<T>(sessao: SessaoTeeds, corpo: Record<string, unknown>): Promise<T> {
@@ -54,4 +56,5 @@ export const API_DA_ANALISE: ApiAnalise = {
   ultima: (s, parceiro, de, ate) => funcao(s, { acao: 'ultima', parceiro, de, ate }),
   analisar: (s, parceiro, de, ate, forcar = false) => funcao(s, { acao: 'analisar', parceiro, de, ate, forcar }),
   aplicar: (s, parceiro, id, escolhidas) => funcao(s, { acao: 'aplicar', parceiro, id, escolhidas }),
+  salvarChave: async (s, parceiro, valor) => { await funcao(s, { acao: 'chave_ia', parceiro, valor }) },
 }

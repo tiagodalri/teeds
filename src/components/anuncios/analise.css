@@ -11,6 +11,11 @@
 .ia-sem p { margin: 0; }
 .ia-sem code { padding: 1px 6px; border-radius: 6px; background: color-mix(in srgb, var(--text) 8%, transparent); font-size: 12.5px; }
 .ia-sem small { color: var(--muted); }
+.ia-sem-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; margin-top: 4px; }
+.ia-sem-form input { height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 14px; }
+/* a chave escondida sem ser campo de senha (o navegador não preenche com o login) */
+.ia-segredo { -webkit-text-security: disc; font-family: ui-monospace, monospace; }
+@media (max-width: 640px) { .ia-sem-form { grid-template-columns: 1fr; } }
 .ia-lendo { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--surface); font-size: 13.5px; line-height: 1.5; color: var(--muted); }
 .ia-lendo i { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--aa-ouro); animation: ia-pulso 1.2s ease-in-out infinite; }
 @keyframes ia-pulso { 0%, 100% { transform: scale(.7); opacity: .5; } 50% { transform: scale(1.15); opacity: 1; } }
