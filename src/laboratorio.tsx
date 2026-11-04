@@ -90,6 +90,7 @@ function LabSeletor() {
 }
 const LabParceiros = lazy(() => import('./components/LabParceiros'))
 const LabAnuncios = lazy(() => import('./components/anuncios/LabAnuncios'))
+const LabCentralRastreio = lazy(() => import('./components/central/LabCentral'))
 const LabChatDaEquipe = lazy(() => import('./components/equipe/LabChatDaEquipe'))
 const LabGerenciamento = lazy(() => import('./components/OperationalManagementPanel').then((m) => ({ default: m.OperationalManagementPanel })))
 const LabDivulgacao = lazy(() => import('./components/LabDivulgacao'))
@@ -353,6 +354,7 @@ function Laboratorio() {
   if (qual === 'carteira') return <Suspense fallback={null}><LabCarteira /></Suspense>
   if (qual === 'parceiros') return <Suspense fallback={null}><LabParceiros /></Suspense>
   if (qual === 'anuncios-admin') return <Suspense fallback={null}><LabAnuncios /></Suspense>
+  if (qual === 'central-rastreio') return <Suspense fallback={null}><LabCentralRastreio /></Suspense>
   if (qual === 'equipe') return <Suspense fallback={null}><LabChatDaEquipe /></Suspense>
   // ?tela=seletor: o seletor de plataforma com a linha dos parceiros (admin geral)
   if (qual === 'seletor') return <LabSeletor />

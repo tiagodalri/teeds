@@ -286,7 +286,8 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
     return aplicar(linhas, busca, atalhos, regras).sort((x, y) => (ordem.desc ? v(y) - v(x) : v(x) - v(y)))
   }, [linhas, busca, atalhos, regras, ordem])
   const somaFiltrada = useMemo(() => (filtradas.length > 1 ? somarLinhas(filtradas) : null), [filtradas])
-  const listaDeAlertas = useMemo(() => alertas(linhas, total, etapasDoBanco, anterior), [linhas, total, etapasDoBanco, anterior])
+  // o custo comparado com o período anterior usa só os cadastros que vieram de anúncio, qualquer que seja a escolha da tela
+  const listaDeAlertas = useMemo(() => alertas(linhas, total, etapasDoBanco, anterior, funil ? { agora: funil.anuncio.cadastros, antes: anteriorBruto.current?.anuncio.cadastros ?? null } : null), [linhas, total, etapasDoBanco, anterior, funil])
   const dias = useMemo(() => {
     const mapa = new Map<string, { dia: string; gasto: number; meta: number; nosso: number }>()
     for (let d = new Date(`${de}T12:00:00`); iso(d) <= ate; d.setDate(d.getDate() + 1)) mapa.set(iso(d), { dia: iso(d), gasto: 0, meta: 0, nosso: 0 })

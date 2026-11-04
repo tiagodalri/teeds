@@ -49,6 +49,8 @@ const TRACOS = {
   megafone: 'M4 10.5v3a1 1 0 0 0 1 1h2l5.5 4V5.5L7 9.5H5a1 1 0 0 0-1 1zM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11',
   // Administração › Notificações (02/11/2026): o sino
   sino: 'M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.6 2H4.9l1.6-2zM10 20.5a2 2 0 0 0 4 0',
+  // Administração › Central de rastreio (04/11/2026): o radar
+  radar: 'M12 3a9 9 0 1 0 9 9M12 7a5 5 0 1 0 5 5M12 12l6.5-6.5M12 11a1 1 0 1 0 0 2',
 } as const
 
 /** Os que se desenham cheios: um "play" vazado parece botão desligado. */

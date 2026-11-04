@@ -789,8 +789,13 @@
       form.addEventListener('submit', function (ev) {
         ev.preventDefault()
         var dados = conferir()
-        if (!dados) { var primeiro = form.querySelector('[aria-invalid="true"]'); if (primeiro) primeiro.focus(); return }
+        if (!dados) {
+          var primeiro = form.querySelector('[aria-invalid="true"]'); if (primeiro) primeiro.focus()
+          GF.rastro('erro-campos', { campos: Array.prototype.map.call(form.querySelectorAll('[aria-invalid="true"]'), function (c) { return c.name }).join(',') })
+          return
+        }
         botao.disabled = true; botao.textContent = 'Criando sua conta…'; mensagem.textContent = ''; mensagem.className = 'mensagem'
+        GF.rastro('enviou')
         var utm = new URLSearchParams(location.search)
         fetch(GF.MOTOR, {
           method: 'POST', headers: { 'content-type': 'application/json' },
@@ -811,9 +816,12 @@
           var partes = dados.nome.split(' ')
           GF.guardar({ nome: partes[0], sobrenome: partes.length > 1 ? partes[partes.length - 1] : '', email: dados.email, tel: tel.value.replace(/\D/g, ''),
             cad: Date.now().toString(36) + Math.random().toString(36).slice(2, 10), conta: conta, quando: Date.now() })
+          // Central de rastreio: liga este navegador (e de onde ele veio) ao cadastro que o motor gravou
+          GF.rastro('cadastro', { conta: conta }, dados.email)
           location.assign(GF.proxima('./questionario/'))
         }).catch(function (e) {
           mensagem.textContent = e instanceof TypeError || !e.message ? 'Sem conexão com a internet. Tente de novo.' : e.message; mensagem.className = 'mensagem erro'
+          GF.rastro('erro-cadastro', { erro: String(mensagem.textContent).slice(0, 90) })
           botao.disabled = false; botao.innerHTML = rotuloBotao
         })
       })

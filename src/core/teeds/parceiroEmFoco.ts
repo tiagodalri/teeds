@@ -133,4 +133,4 @@ export function useMeuPapel(sessao: SessaoTeeds | null, marca: string): PapelDoA
 /** O rótulo do parceiro: "Naor /n". */
 export const rotuloDoParceiro = (nome: string | null, codigo: string) => `${(nome ?? codigo).split(' ')[0]} /${codigo}`
 /** As abas e telas do admin que mexem na plataforma inteira: só o admin geral. */
-export const SO_DO_ADMIN_GERAL = ['emails', 'aulas', 'robos', 'planos', 'produtos', 'comissoes', 'estudo', 'parceiros', 'anuncios'] as const
+export const SO_DO_ADMIN_GERAL = ['emails', 'aulas', 'robos', 'planos', 'produtos', 'comissoes', 'estudo', 'parceiros', 'anuncios', 'central'] as const

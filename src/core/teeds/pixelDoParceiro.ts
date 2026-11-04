@@ -76,6 +76,7 @@ const cookie = (nome: string) => decodeURIComponent(document.cookie.match(new Re
  * `email`: o cadastro pelo app, que vai também pelo servidor com o mesmo código.
  */
 export function eventoDoPixel(nome: string, dados?: Record<string, unknown>, umaVez = false, email?: string): void {
+  naJornada(nome, dados)
   try {
     if (!carregar() || !window.fbq) return
     const chave = `${nome}:${JSON.stringify(dados ?? {})}`
@@ -93,6 +94,35 @@ export function eventoDoPixel(nome: string, dados?: Record<string, unknown>, uma
       }).catch(() => { /* o pixel do navegador já contou */ })
     }
   } catch { /* o pixel nunca atrapalha a plataforma */ }
+}
+
+/*
+  Central de rastreio (04/11/2026): o que a pessoa faz na plataforma entra na mesma jornada das
+  páginas de cadastro (captura.js, gf_rastro). Liga pelo id do navegador (globalfly.visitante) e
+  pelo login: o banco só aceita navegador que já passou pelas páginas de cadastro.
+*/
+const NA_JORNADA: Record<string, string> = {
+  Entrou: 'app-entrou', ViewContent: 'app-tela', CompleteRegistration: 'app-cadastro', AtivouNotificacoes: 'app-notificacoes',
+  AssistiuLive: 'app-live', AcessoLiberado: 'app-liberado',
+}
+const jaNaJornada = new Set<string>()
+function naJornada(nome: string, dados?: Record<string, unknown>): void {
+  try {
+    const evento = NA_JORNADA[nome]
+    if (!evento || MARCA.id !== 'globalfly' || /^(localhost|127\.|\[::1\])/.test(location.hostname)) return
+    const visitante = lerJson<string>('globalfly.visitante'), token = lerJson<{ token?: string }>(`${MARCA.id}.conta`)?.token
+    if (!visitante || !token || token === 'lab') return
+    const tela = typeof dados?.content_name === 'string' ? dados.content_name : ''
+    // a mesma tela conta uma vez por aba
+    const chave = `${evento}:${tela}`
+    if (jaNaJornada.has(chave)) return
+    jaNaJornada.add(chave)
+    void fetch(`${SUPABASE.url}/rest/v1/rpc/gf_rastro_app`, {
+      method: 'POST', keepalive: true,
+      headers: { 'content-type': 'application/json', apikey: SUPABASE.anonKey, authorization: `Bearer ${token}` },
+      body: JSON.stringify({ p_marca: MARCA.id, p_visitante: visitante, p_evento: evento, p_pagina: tela ? `${location.pathname} · ${tela}` : location.pathname }),
+    }).catch(() => { /* a jornada nunca atrapalha a plataforma */ })
+  } catch { /* idem */ }
 }
 
 /** Abre o pixel (PageView) quando a plataforma sabe quem está usando (ou que ninguém está logado). */

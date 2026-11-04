@@ -121,6 +121,7 @@
         var r = resposta(); if (!r || botao.disabled) return
         var lista = r === 'sim' ? marcados() : []
         botao.disabled = true; botao.textContent = 'Enviando…'; mensagem.textContent = ''
+        GF.rastro('respondeu', { exCliente: r === 'sim', produtos: lista.join(',') || undefined })
         var seguir = function () { GF.guardar({ respondeu: true }); location.assign(GF.proxima('../obrigado/')) }
         fetch(GF.SUPABASE + '/rest/v1/rpc/gf_responder_questionario', {
           method: 'POST',

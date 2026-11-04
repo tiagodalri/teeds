@@ -38,9 +38,11 @@ var GF = (function () {
   var doCaminho = (location.pathname.split('/').filter(Boolean)[0] || '').toLowerCase()
   var DO_ENDERECO = PARCEIROS.indexOf(doCaminho) >= 0 ? doCaminho : null
   // link antigo (/cadastro/?parceiro=n): passa para /n/cadastro/, levando o resto do endereço
+  var REDIRECIONANDO = false
   ;(function paraOEnderecoDoParceiro() {
     var q = new URLSearchParams(location.search), codigo = (q.get('parceiro') || '').toLowerCase()
     if (DO_ENDERECO || PARCEIROS.indexOf(codigo) < 0) return
+    REDIRECIONANDO = true
     location.replace('/' + codigo + location.pathname + location.search + location.hash)
   })()
   function guardarCodigo(chave, codigo, so_se_vazio) {
@@ -87,12 +89,97 @@ var GF = (function () {
     return nova.href
   }
 
-  // As marcações da campanha (utm) seguem de página em página
+  // As marcações da campanha (utm, e o ?o= dos links da Central de rastreio) seguem de página em página
   function proxima(caminho) {
     var destino = new URL(caminho, location.href), aqui = new URLSearchParams(location.search)
-    aqui.forEach(function (valor, chave) { if (/^(utm_|fbclid|gclid|src|sck)/.test(chave)) destino.searchParams.set(chave, valor) })
+    aqui.forEach(function (valor, chave) { if (/^(utm_|fbclid|gclid|src|sck|o$)/.test(chave)) destino.searchParams.set(chave, valor) })
     return destino.toString()
   }
+
+  // ------------------------------------------------------------------ Central de rastreio (04/11/2026)
+  // Tiago: "rastreia tudo, cada passo, cada evento, cada clique, jornada detalhada". Cada página
+  // conta a entrada (uma por sessão do navegador), o quanto a pessoa rolou, quanto tempo ficou, os
+  // cliques e cada passo do cadastro, com de onde ela veio: a marcação do link (utm, ou o código ?o=
+  // que a Central gera para o Telegram, os stories etc.), o site que mandou e o navegador embutido
+  // (Instagram, Facebook, Telegram e TikTok se identificam). O banco guarda o primeiro e o último
+  // toque (gf_rastro); quem lê é Administração › Central de rastreio.
+  function garantirVisitante() {
+    var v = visitante()
+    if (v && /^[a-zA-Z0-9]{8,40}$/.test(v)) return v
+    v = (Date.now().toString(36) + Math.random().toString(36).slice(2, 14)).replace(/[^a-zA-Z0-9]/g, '')
+    try { localStorage.setItem('globalfly.visitante', JSON.stringify(v)) } catch (e) {}
+    return v
+  }
+  var UA = navigator.userAgent || ''
+  var NAVEGADOR = /Instagram/i.test(UA) ? 'instagram' : /FBAN|FBAV|FB_IAB|FBIOS|FB4A/i.test(UA) ? 'facebook' : /Telegram/i.test(UA) ? 'telegram'
+    : /musical_ly|BytedanceWebview|TikTok/i.test(UA) ? 'tiktok' : /WhatsApp/i.test(UA) ? 'whatsapp' : /Edg/i.test(UA) ? 'edge'
+    : /CriOS|Chrome/i.test(UA) ? 'chrome' : /Safari/i.test(UA) ? 'safari' : /Firefox/i.test(UA) ? 'firefox' : ''
+  var DISPOSITIVO = /iPad|Tablet/i.test(UA) ? 'tablet' : /Mobi|Android|iPhone/i.test(UA) ? 'celular' : 'computador'
+  /** De onde esta visita veio: a marcação do endereço, quem mandou a pessoa e o navegador. */
+  var TOQUE = (function () {
+    var q = new URLSearchParams(location.search), ref = ''
+    try { if (document.referrer) { var h = new URL(document.referrer).hostname.replace(/^www\./, ''); if (h !== location.hostname.replace(/^www\./, '')) ref = h } } catch (e) {}
+    return {
+      origem: q.get('utm_source') || '', meio: q.get('utm_medium') || '', campanha: q.get('utm_campaign') || '',
+      conteudo: q.get('utm_content') || '', termo: q.get('utm_term') || '', link: (q.get('o') || '').toLowerCase().slice(0, 40),
+      ref: ref, nav: NAVEGADOR, disp: DISPOSITIVO, fbclid: q.has('fbclid'),
+    }
+  })()
+  // teste local não suja a central (a não ser que se peça: localStorage gf.rastro.local = 1)
+  var TESTE_LOCAL = /^(localhost|127\.|\[::1\])/.test(location.hostname) && !(function () { try { return localStorage.getItem('gf.rastro.local') } catch (e) { return null } })()
+  function rastro(evento, detalhe, email) {
+    // a página do link antigo vai trocar de endereço: quem conta a visita é a nova (com a referência certa)
+    if (TESTE_LOCAL || REDIRECIONANDO) return
+    try {
+      fetch(SUPABASE + '/rest/v1/rpc/gf_rastro', {
+        method: 'POST', keepalive: true, headers: { apikey: CHAVE, Authorization: 'Bearer ' + CHAVE, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_marca: 'globalfly', p_parceiro: DO_ENDERECO, p_visitante: garantirVisitante(), p_evento: evento,
+          p_pagina: location.pathname, p_toque: TOQUE, p_detalhe: detalhe || null, p_email: email || null }),
+      }).catch(function () {})
+    } catch (e) {}
+  }
+  // os eventos do pixel que também entram na jornada, com o nome que a central usa
+  var NA_JORNADA = { Lead: 'questionario', CompleteRegistration: 'obrigado', Contact: 'comunidade',
+    Schedule: 'agenda', AtivouNotificacoes: 'notificacoes', BaixouApp: 'baixou-app', EntrouNaPlataforma: 'plataforma' }
+  ;(function acompanhar() {
+    // entrada: uma por sessão do navegador; as outras páginas da mesma sessão contam como página
+    var nova = true
+    try { nova = !sessionStorage.getItem('gf.rastro.sessao'); sessionStorage.setItem('gf.rastro.sessao', '1') } catch (e) {}
+    rastro(nova ? 'entrada' : 'pagina')
+    // até onde rolou (25, 50, 75 e 100%), uma vez cada por página
+    var marcos = [25, 50, 75, 100], maior = 0, inicio = Date.now(), saiu = 0, pedido = false
+    function rolagem() {
+      pedido = false
+      var alto = Math.max(1, document.documentElement.scrollHeight - innerHeight), pc = Math.round(Math.min(1, scrollY / alto) * 100)
+      if (pc > maior) maior = pc
+      while (marcos.length && maior >= marcos[0]) rastro('rolou-' + marcos.shift())
+    }
+    addEventListener('scroll', function () { if (marcos.length && !pedido) { pedido = true; requestAnimationFrame(rolagem) } }, { passive: true })
+    // quanto tempo ficou (ao sair ou trocar de aba; no mínimo 5 s entre um aviso e outro)
+    function sair() {
+      if (Date.now() - saiu < 5000) return
+      saiu = Date.now()
+      rastro('saiu', { segundos: Math.round((Date.now() - inicio) / 1000), rolou: maior })
+    }
+    addEventListener('pagehide', sair)
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') sair() })
+    // cada clique em botão ou link, com o texto dele
+    document.addEventListener('click', function (ev) {
+      var alvo = ev.target && ev.target.closest && ev.target.closest('a, button, [role="button"], summary')
+      if (!alvo) return
+      var nome = (alvo.getAttribute('data-rastro') || alvo.getAttribute('aria-label') || alvo.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 50)
+      var para = ''
+      try { if (alvo.href) { var u = new URL(alvo.href, location.href); para = u.hostname === location.hostname ? u.pathname + u.hash : u.hostname } } catch (e) {}
+      rastro('clique', { alvo: nome || '(sem texto)', para: para || undefined })
+    }, true)
+    // cada campo do formulário preenchido: o nome do campo, nunca o que foi digitado
+    var campos = {}
+    document.addEventListener('change', function (ev) {
+      var c = ev.target, nome = c && c.name
+      if (!nome || !c.closest || !c.closest('form') || campos[nome] || /senha|repetir|empresa/.test(nome)) return
+      campos[nome] = 1; rastro('campo', { campo: nome })
+    }, true)
+  })()
 
   // Pixel da Meta (30/10/2026, pendente desde 26/10): cada vitrine com o pixel do parceiro que paga o
   // anúncio. /n = conta de anúncios do Naor; /v = do Victor Cordeiro (03/11/2026). O direto fica sem pixel.
@@ -135,6 +222,7 @@ var GF = (function () {
   // Os passos antes do cadastro também ficam no nosso banco (02/11/2026): a Meta segura eventos
   // próprios novos até o dono do pixel aprovar, e o funil da aba Anúncios não pode depender disso.
   function passo(nome) {
+    rastro(nome)
     var v = visitante()
     if (!DO_ENDERECO || !v || /^(localhost|127\.|\[::1\])/.test(location.hostname)) return
     try {
@@ -145,6 +233,7 @@ var GF = (function () {
     } catch (e) {}
   }
   function pixel(evento, dadosDoEvento, vezes) {
+    if (evento && NA_JORNADA[evento]) rastro(NA_JORNADA[evento])
     var id = PIXELS[DO_ENDERECO || '']
     // teste local não suja o pixel do parceiro
     if (!id || /^(localhost|127\.|\[::1\])/.test(location.hostname)) return
@@ -171,5 +260,5 @@ var GF = (function () {
     } catch (e) {}
   }
 
-  return { SENHA: SENHA, pixel: pixel, passo: passo, parceiro: parceiro, MOTOR: MOTOR, SUPABASE: SUPABASE, CHAVE: CHAVE, COMUNIDADE: COMUNIDADE, ler: ler, guardar: guardar, proxima: proxima, paginaComParceiro: paginaComParceiro }
+  return { SENHA: SENHA, pixel: pixel, passo: passo, rastro: rastro, parceiro: parceiro, MOTOR: MOTOR, SUPABASE: SUPABASE, CHAVE: CHAVE, COMUNIDADE: COMUNIDADE, ler: ler, guardar: guardar, proxima: proxima, paginaComParceiro: paginaComParceiro }
 })()

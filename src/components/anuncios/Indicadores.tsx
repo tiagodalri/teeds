@@ -107,7 +107,8 @@ export function Custos({ atual, anterior, origem }: { atual: Base; anterior: Bas
       {origem === 'todos' && <p className="aa-nota">Os custos de cadastro em diante dividem o investimento por todos os cadastros do /n. Para ver só o que veio de anúncio, escolha “Só os de anúncio” lá em cima.</p>}
       <div className="aa-custos">
         {itens.map((it) => {
-          const v = it.v(atual), d = anterior ? variacao(v, it.v(anterior)) : null
+          // comparar só quando os dois períodos têm investimento de verdade (R$ 30+); com base minúscula a seta mente
+          const v = it.v(atual), d = anterior && g(atual) >= 30 && g(anterior) >= 30 ? variacao(v, it.v(anterior)) : null
           return (
             <div key={it.nome} className={v == null ? 'vazio' : ''}>
               <small>{it.nome}</small>
@@ -131,19 +132,24 @@ interface Contexto { custoCad: number | null; cpc: number | null; convPagina: nu
 export const ATALHOS: Array<{ id: string; nome: string; dica: string; passa: (l: Linha, c: Contexto) => boolean }> = [
   { id: 'no-ar', nome: 'No ar', dica: 'Só os que estão entregando', passa: ({ a }) => a.status === 'ACTIVE' },
   { id: 'campeoes', nome: 'Campeões', dica: 'Custo por cadastro 20% abaixo da média, com 3 ou mais cadastros', passa: (l, c) => { const v = METRICA.get('custoCadReal')!.valor(l); return v != null && c.custoCad != null && v <= c.custoCad * 0.8 && (l.real?.cadastros ?? 0) >= 3 } },
-  { id: 'sem-cadastro', nome: 'Gastando sem cadastro', dica: 'Já gastou 1,5 vez o custo médio por cadastro e não trouxe nenhum', passa: ({ a, real }, c) => (real?.cadastros ?? 0) === 0 && a.m.gasto >= Math.max(15, (c.custoCad ?? 20) * 1.5) },
-  { id: 'caros', nome: 'Cadastro caro', dica: 'Custo por cadastro 30% acima da média', passa: (l, c) => { const v = METRICA.get('custoCadReal')!.valor(l); return v != null && c.custoCad != null && v >= c.custoCad * 1.3 } },
+  { id: 'sem-cadastro', nome: 'Gastando sem cadastro', dica: 'Já gastou 1,5 vez o custo médio por cadastro e não trouxe nenhum', passa: (l, c) => (l.real?.cadastros ?? 0) === 0 && marcado(l) && l.a.m.gasto >= Math.max(30, (c.custoCad ?? 20) * 1.5) },
+  { id: 'caros', nome: 'Cadastro caro', dica: 'Custo por cadastro 30% acima da média', passa: (l, c) => { const v = METRICA.get('custoCadReal')!.valor(l); return marcado(l) && (l.real?.cadastros ?? 0) >= 3 && v != null && c.custoCad != null && v >= c.custoCad * 1.3 } },
   { id: 'fadiga', nome: 'Público cansado', dica: 'Frequência acima de 2,5', passa: ({ a }) => a.m.frequencia >= 2.5 },
   { id: 'gancho-fraco', nome: 'Gancho fraco', dica: 'Vídeo em que menos de 20% param para ver 3 s', passa: (l) => { const v = METRICA.get('gancho')!.valor(l); return v != null && l.a.m.impressoes >= 500 && v < 20 } },
   { id: 'clique-caro', nome: 'Clique caro', dica: 'CPC 40% acima da média', passa: ({ a }, c) => c.cpc != null && a.m.cpcLink > 0 && a.m.cpcLink >= c.cpc * 1.4 },
-  { id: 'pagina-fraca', nome: 'Página não converte', dica: 'Chega gente na página, mas o cadastro fica abaixo da metade da média', passa: (l, c) => { const v = METRICA.get('conversaoPagina')!.valor(l); return l.a.m.lpv >= 30 && v != null && c.convPagina != null && v < c.convPagina / 2 } },
+  { id: 'pagina-fraca', nome: 'Página não converte', dica: 'Chega gente na página, mas o cadastro fica abaixo da metade da média', passa: (l, c) => { const v = METRICA.get('conversaoPagina')!.valor(l); return marcado(l) && l.a.m.lpv >= 30 && v != null && c.convPagina != null && v < c.convPagina / 2 } },
   { id: 'sem-marcacao', nome: 'Sem marcação', dica: 'O link não tem utm_content={{ad.id}}: os cadastros dele não aparecem como reais', passa: ({ a }) => a.criativo.marcacoes != null && !/utm_content=\{\{ad\.id\}\}/.test(a.criativo.marcacoes) },
 ]
 
+/** O anúncio leva a marcação utm_content={{ad.id}}: só assim os cadastros dele são ligados a ele. */
+export const marcado = (l: Linha) => l.a.criativo.marcacoes == null || /utm_content=\{\{ad\.id\}\}/.test(l.a.criativo.marcacoes)
 export function contexto(linhas: Linha[]): Contexto {
-  const gasto = linhas.reduce((s, l) => s + l.a.m.gasto, 0), cad = linhas.reduce((s, l) => s + (l.real?.cadastros ?? 0), 0)
-  const cliques = linhas.reduce((s, l) => s + l.a.m.cliquesLink, 0), lpv = linhas.reduce((s, l) => s + l.a.m.lpv, 0)
-  return { custoCad: div(gasto, cad), cpc: div(gasto, cliques), convPagina: lpv ? (cad / lpv) * 100 : null }
+  // o custo médio por cadastro só com os anúncios marcados (os sem marcação têm gasto e nenhum cadastro ligado)
+  const m = linhas.filter(marcado)
+  const gasto = m.reduce((s, l) => s + l.a.m.gasto, 0), cad = m.reduce((s, l) => s + (l.real?.cadastros ?? 0), 0)
+  const cliques = linhas.reduce((s, l) => s + l.a.m.cliquesLink, 0), lpv = m.reduce((s, l) => s + l.a.m.lpv, 0)
+  const gastoTodos = linhas.reduce((s, l) => s + l.a.m.gasto, 0)
+  return { custoCad: cad >= 3 ? div(gasto, cad) : null, cpc: div(gastoTodos, cliques), convPagina: lpv >= 50 ? (cad / lpv) * 100 : null }
 }
 
 export function aplicar(linhas: Linha[], busca: string, atalhos: string[], regras: Regra[]): Linha[] {
@@ -242,27 +248,34 @@ export function Filtros({ linhas, busca, setBusca, atalhos, setAtalhos, regras, 
 /* ------------------------------------------------------------------ alertas */
 
 export interface Alerta { tipo: 'bom' | 'atencao' | 'critico'; titulo: string; texto: string }
-export function alertas(linhas: Linha[], total: Metricas | null, banco: FunilDoBanco['total'] | null, anterior: { meta: Metricas | null; banco: FunilDoBanco['total'] | null } | null): Alerta[] {
+export function alertas(linhas: Linha[], total: Metricas | null, banco: FunilDoBanco['total'] | null, anterior: { meta: Metricas | null; banco: FunilDoBanco['total'] | null } | null, deAnuncio?: { agora: number; antes: number | null } | null): Alerta[] {
   const lista: Alerta[] = []
   const c = contexto(linhas)
   if (total && total.cliquesLink >= 50 && total.lpv / total.cliquesLink < 0.6)
     lista.push({ tipo: 'critico', titulo: 'Muita gente clica e não chega na página', texto: `Só ${pc((total.lpv / total.cliquesLink) * 100, 0)} dos cliques viraram visita. Costuma ser página lenta no celular ou clique sem querer. Vale testar a velocidade da página no 4G.` })
-  if (total && banco && total.lpv >= 50 && banco.cadastros / total.lpv < 0.08)
-    lista.push({ tipo: 'atencao', titulo: 'A página está convertendo pouco', texto: `${pc((banco.cadastros / total.lpv) * 100, 1)} de quem chega se cadastra. Abaixo de 8% a promessa do anúncio e a da página costumam estar desencontradas.` })
+  // 04/11/2026 (Tiago: "lógica rasa"): conversão só com os cadastros QUE VIERAM dos anúncios (ligados pela marcação),
+  // divididos pelas visitas que os mesmos anúncios levaram, e com amostra que sustente a conclusão
+  const lpvMarcados = linhas.filter(marcado).reduce((s, l) => s + l.a.m.lpv, 0), cadMarcados = linhas.filter(marcado).reduce((s, l) => s + (l.real?.cadastros ?? 0), 0)
+  if (lpvMarcados >= 150 && cadMarcados / lpvMarcados < 0.08)
+    lista.push({ tipo: 'atencao', titulo: 'A página está convertendo pouco', texto: `${pc((cadMarcados / lpvMarcados) * 100, 1)} de quem chega pelos anúncios se cadastra (${int(cadMarcados)} de ${int(lpvMarcados)} visitas). Abaixo de 8% a promessa do anúncio e a da página costumam estar desencontradas.` })
   if (banco && banco.cadastros >= 20 && banco.questionario / banco.cadastros < 0.6)
     lista.push({ tipo: 'atencao', titulo: 'Muitos param no questionário', texto: `${pc((banco.questionario / banco.cadastros) * 100, 0)} completam a inscrição depois do cadastro.` })
-  if (total && total.frequencia >= 2.5)
+  if (total && total.frequencia >= 2.5 && total.impressoes >= 3000)
     lista.push({ tipo: 'atencao', titulo: 'O público está vendo o anúncio muitas vezes', texto: `Frequência ${dec(total.frequencia)}. Hora de trazer criativos novos ou abrir o público.` })
-  if (anterior?.meta && total && banco && anterior.banco) {
-    const agora = div(total.gasto, banco.cadastros), antes = div(anterior.meta.gasto, anterior.banco.cadastros)
-    if (agora != null && antes != null && agora > antes * 1.25) lista.push({ tipo: 'critico', titulo: 'O cadastro ficou mais caro', texto: `${brl(agora)} agora contra ${brl(antes)} no período anterior (+${dec(((agora - antes) / antes) * 100, 0)}%).` })
-    if (agora != null && antes != null && agora < antes * 0.85) lista.push({ tipo: 'bom', titulo: 'O cadastro ficou mais barato', texto: `${brl(agora)} agora contra ${brl(antes)} no período anterior (−${dec(((antes - agora) / antes) * 100, 0)}%).` })
+  // comparar só quando os DOIS períodos têm gasto e cadastros de verdade: com o anterior zerado não há base
+  // (antes saía "R$ 0,91 contra R$ 0,00 (+∞%)")
+  // e sempre com os cadastros QUE VIERAM de anúncio (um post orgânico não pode baratear o anúncio)
+  if (anterior?.meta && total && deAnuncio && deAnuncio.antes != null && total.gasto >= 30 && anterior.meta.gasto >= 30 && deAnuncio.agora >= 5 && deAnuncio.antes >= 5) {
+    const agora = div(total.gasto, deAnuncio.agora), antes = div(anterior.meta.gasto, deAnuncio.antes)
+    if (agora != null && antes != null && antes > 0 && agora > antes * 1.25) lista.push({ tipo: 'critico', titulo: 'O cadastro ficou mais caro', texto: `${brl(agora)} agora contra ${brl(antes)} no período anterior (+${dec(((agora - antes) / antes) * 100, 0)}%).` })
+    if (agora != null && antes != null && antes > 0 && agora < antes * 0.85) lista.push({ tipo: 'bom', titulo: 'O cadastro ficou mais barato', texto: `${brl(agora)} agora contra ${brl(antes)} no período anterior (−${dec(((antes - agora) / antes) * 100, 0)}%).` })
   }
   for (const l of linhas) {
     const custo = METRICA.get('custoCadReal')!.valor(l)
-    if ((l.real?.cadastros ?? 0) === 0 && l.a.m.gasto >= Math.max(15, (c.custoCad ?? 20) * 1.5) && l.a.status === 'ACTIVE')
+    // sem a marcação no link não dá para saber se trouxe cadastro: aí o aviso é o de "Sem marcação", não este
+    if ((l.real?.cadastros ?? 0) === 0 && marcado(l) && l.a.m.gasto >= Math.max(30, (c.custoCad ?? 20) * 1.5) && l.a.status === 'ACTIVE')
       lista.push({ tipo: 'critico', titulo: `Gastando sem cadastro: ${l.a.nome}`, texto: `${brl(l.a.m.gasto)} investidos e nenhum cadastro. Considere pausar.` })
-    else if (custo != null && c.custoCad != null && custo <= c.custoCad * 0.7 && (l.real?.cadastros ?? 0) >= 5)
+    else if (custo != null && c.custoCad != null && custo <= c.custoCad * 0.7 && (l.real?.cadastros ?? 0) >= 5 && linhas.filter((x) => (x.real?.cadastros ?? 0) > 0).length >= 2)
       lista.push({ tipo: 'bom', titulo: `Campeão: ${l.a.nome}`, texto: `${brl(custo)} por cadastro, ${pc((1 - custo / c.custoCad) * 100, 0)} abaixo da média. Bom candidato para receber mais verba.` })
     if (l.a.status === 'ACTIVE' && l.a.criativo.marcacoes != null && !/utm_content=\{\{ad\.id\}\}/.test(l.a.criativo.marcacoes))
       lista.push({ tipo: 'atencao', titulo: `Sem marcação: ${l.a.nome}`, texto: 'O link não tem utm_content={{ad.id}}, então os cadastros dele não são ligados a ele aqui.' })
