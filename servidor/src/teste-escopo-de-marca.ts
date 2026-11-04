@@ -161,7 +161,8 @@ const pendentes = leia('src/components/AdminPendentes.tsx')
 conferir('a aprovação recebe a marca por prop', /marca:string/.test(pendentes), true)
 conferir('e manda a marca na chamada', /marca=\$\{encodeURIComponent\(marca\)\}/.test(pendentes), true)
 conferir('a aprovação refaz a busca quando a marca muda',
-  /\},\[sessao\.token,marca,status,pagina,versao,revisao\]\)/.test(pendentes), true)
+  // 03/11/2026: a aba é lida inteira (sem página), mas a marca continua na lista do efeito
+  /\},\[sessao\.token,marca,status,versao,revisao\]\)/.test(pendentes), true)
 
 console.log(`\n${passou} certos, ${falhou} errados`)
 process.exit(falhou ? 1 : 0)

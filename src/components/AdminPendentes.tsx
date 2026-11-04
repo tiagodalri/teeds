@@ -23,6 +23,23 @@ const nomeDoProduto = (p: string) => p.startsWith('outro: ') ? `Outro: ${p.slice
 const duracao = (s: number) => s >= 60 ? `${Math.floor(s / 60)} min${s % 60 ? ` ${s % 60} s` : ''}` : `${s} s`
 const TEMPERATURA: Record<string, string> = { quente: 'Lead quente', morno: 'Lead morno', frio: 'Lead frio' }
 
+/*
+  A CONTA CERTA (03/11/2026, Tiago: "tem muito mais que isso e o número travou em 51... não posso perder
+  lead nenhum"). Nenhum cadastro se perdia: o servidor entrega de 50 em 50 e o resumo somava só a página
+  aberta (51 = 50 da página + 1 que só avisa que há outra). Agora a aba lê a lista inteira direto do
+  banco, com a mesma regra de acesso do servidor (RLS por marca e parceiro, e o parceiro em foco), e o
+  resumo, os filtros e a busca valem para todos. Se o banco não responder, a reserva é o servidor, página
+  por página até a última. A tela desenha 50 por vez ("Mostrar mais") só para não pesar.
+*/
+const POR_VEZ = 50
+const LOTE = 1000
+const CAMPOS = 'id,nome,email,telefone,status,recadastro,ultima_inscricao_em,criado_em,decidido_em,email_enviado_em,parceiro'
+const ABAS: Array<[string, string]> = [['pendente', 'Pendentes'], ['processando', 'Em aprovação'], ['aprovado', 'Aprovados'], ['recusado', 'Recusados']]
+type Tipo = 'ex' | 'novo' | 'sem'
+const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+const mesmoDia = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+const pct = (n: number, t: number) => (t ? Math.round((n / t) * 100) : 0)
+
 interface Pendente {
   id: string; nome: string; email: string; telefone: string
   status: string; criado_em: string; email_enviado_em: string | null
@@ -53,7 +70,11 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
   const planoPadrao = planos?.find(p => p.padrao && p.ativo)?.id ?? 'essencial'
   const [status,setStatus]=useState('pendente')
   const [plano,setPlano]=useState('essencial')
-  const [pagina,setPagina]=useState(0)
+  const [mostrar,setMostrar]=useState(POR_VEZ)
+  const [busca,setBusca]=useState('')
+  const [filtroParceiro,setFiltroParceiro]=useState('')
+  const [filtroResp,setFiltroResp]=useState<''|Tipo>('')
+  const [contagem,setContagem]=useState<Record<string,number>>({})
   const [lista,setLista]=useState<Pendente[]>([])
   const [erro,setErro]=useState('')
   const [aviso,setAviso]=useState('')
@@ -73,10 +94,16 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
     const emails=[...new Set(lista.map(p=>p.email.trim().toLowerCase()).filter(Boolean))]
     if(!emails.length)return
     const c=new AbortController()
-    const em=emails.map(e=>`"${e.replace(/"/g,'')}"`).join(',')
-    fetch(`${SUPABASE.url}/rest/v1/leads_capturados?select=email,email_normalizado,ex_cliente,produtos_anteriores,questionario_em,tempo_na_pagina,temperatura&marca=eq.${encodeURIComponent(marca)}&email_normalizado=in.(${encodeURIComponent(em)})`,
-      {headers:{apikey:SUPABASE.anonKey,Authorization:`Bearer ${sessao.token}`},signal:c.signal})
-      .then(r=>r.ok?r.json():[]).then((l:any[])=>{
+    // de 80 em 80 e-mails por pedido (o endereço não pode crescer sem fim)
+    const lotes:string[][]=[]
+    for(let i=0;i<emails.length;i+=80)lotes.push(emails.slice(i,i+80))
+    Promise.all(lotes.map(lote=>{
+      const em=lote.map(e=>`"${e.replace(/"/g,'')}"`).join(',')
+      return fetch(`${SUPABASE.url}/rest/v1/leads_capturados?select=email,email_normalizado,ex_cliente,produtos_anteriores,questionario_em,tempo_na_pagina,temperatura&marca=eq.${encodeURIComponent(marca)}&email_normalizado=in.(${encodeURIComponent(em)})`,
+        {headers:{apikey:SUPABASE.anonKey,Authorization:`Bearer ${sessao.token}`},signal:c.signal})
+        .then(r=>r.ok?r.json():[])
+    })).then((partes:any[][])=>{
+        const l=partes.flat()
         const m=new Map<string,Resposta>()
         for(const x of l){
           const chave=String(x.email_normalizado||x.email||'').toLowerCase()
@@ -103,14 +130,39 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
     if(!r.ok)throw new Error(d.erro||'Não foi possível consultar as aprovações.')
     return d
   }
+  const cabecalhos={apikey:SUPABASE.anonKey,Authorization:`Bearer ${sessao.token}`}
+  // a aba inteira, direto do banco, de mil em mil
+  async function lerTodos(st:string,signal:AbortSignal):Promise<Pendente[]>{
+    const todos:Pendente[]=[]
+    for(let de=0;;de+=LOTE){
+      const r=await fetch(`${SUPABASE.url}/rest/v1/clientes_pendentes?marca=eq.${encodeURIComponent(marca)}&status=eq.${st}&select=${CAMPOS}&order=ultima_inscricao_em.desc,id.desc&limit=${LOTE}&offset=${de}`,{headers:cabecalhos,signal})
+      if(!r.ok)throw new Error('Não foi possível ler os cadastros.')
+      const l=await r.json() as Pendente[]
+      todos.push(...l)
+      if(l.length<LOTE)return todos
+    }
+  }
+  // a reserva: o servidor, de 50 em 50, até a última página
+  async function lerPeloServidor(st:string,signal:AbortSignal):Promise<Pendente[]>{
+    const todos:Pendente[]=[]
+    for(let pg=0;pg<400;pg++){
+      const l=await consultar(`?status=${st}&pagina=${pg}`,undefined,signal) as Pendente[]
+      todos.push(...l.slice(0,50))
+      if(l.length<=50)break
+    }
+    return todos
+  }
   useEffect(()=>{
     const c=new AbortController()
     setCarregando(true);setErro('');setLista([])
-    consultar(`?status=${status}&pagina=${pagina}`,undefined,c.signal)
-      .then(setLista).catch(e=>{if(!c.signal.aborted)setErro(e.message)})
+    lerTodos(status,c.signal).catch(e=>{if(c.signal.aborted)throw e;return lerPeloServidor(status,c.signal)})
+      .then(l=>{setLista(l);setContagem(v=>({...v,[status]:l.length}))}).catch(e=>{if(!c.signal.aborted)setErro(e.message)})
       .finally(()=>{if(!c.signal.aborted)setCarregando(false)})
+    // o número de cada aba (a aberta vale pela lista lida)
+    for(const [id] of ABAS)if(id!==status)fetch(`${SUPABASE.url}/rest/v1/clientes_pendentes?marca=eq.${encodeURIComponent(marca)}&status=eq.${id}&select=id&limit=1`,{headers:{...cabecalhos,Prefer:'count=exact'},signal:c.signal})
+      .then(r=>{const n=Number((r.headers.get('content-range')??'').split('/')[1]);if(r.ok&&Number.isFinite(n))setContagem(v=>({...v,[id]:n}))}).catch(()=>undefined)
     return()=>c.abort()
-  },[sessao.token,marca,status,pagina,versao,revisao])
+  },[sessao.token,marca,status,versao,revisao]) // eslint-disable-line react-hooks/exhaustive-deps
   async function decidir() {
     if(!confirmar||ocupado)return
     const {p,acao}=confirmar
@@ -138,34 +190,62 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
     não é administrador fica trancado), então o botão sai da frente.
   */
   const naLive = marca === 'globalfly' && Date.now() < FIM_DA_LIVE
+  // filtros: parceiro (só o admin geral, sem parceiro em foco no topo), resposta do questionário e busca
+  const chaveDe=(p:Pendente)=>p.email.trim().toLowerCase()
+  const tipoDe=(p:Pendente):Tipo=>{const r=respostas?.get(chaveDe(p));return !r?.em?'sem':r.exCliente?'ex':'novo'}
+  const mostraParceiros=parceiros.length>0&&!parceiroEmFoco()
+  const doParceiro=(p:Pendente,f:string)=>!f||(f==='direto'?!p.parceiro:p.parceiro===f)
+  const base=lista.filter(p=>doParceiro(p,mostraParceiros?filtroParceiro:''))
+  const termo=semAcento(busca.trim()),digitos=busca.replace(/\D/g,'')
+  const casa=(p:Pendente)=>!termo||semAcento(p.nome).includes(termo)||p.email.toLowerCase().includes(termo)||(digitos.length>=3&&p.telefone.replace(/\D/g,'').includes(digitos))
+  const visiveis=base.filter(p=>(!filtroResp||(respostas!==null&&tipoDe(p)===filtroResp))&&casa(p))
+  const filtrando=!!(busca.trim()||filtroResp||(mostraParceiros&&filtroParceiro))
+  const limpar=()=>{setBusca('');setFiltroResp('');setFiltroParceiro('');setMostrar(POR_VEZ)}
+  const resumo=(()=>{
+    const n={ex:0,novo:0,sem:0} as Record<Tipo,number>
+    const conta=new Map<string,number>()
+    const agora=new Date();let hoje=0
+    for(const p of base){
+      const t=tipoDe(p);n[t]++
+      if(mesmoDia(new Date(p.ultima_inscricao_em||p.criado_em),agora))hoje++
+      const r=respostas?.get(chaveDe(p))
+      if(t==='ex'&&r)for(const pr of r.produtos){const nome=nomeDoProduto(pr.startsWith('outro: ')?'outro':pr);conta.set(nome,(conta.get(nome)??0)+1)}
+    }
+    return {n,hoje,top:[...conta].sort((a,b)=>b[1]-a[1]).slice(0,6)}
+  })()
+  const rotuloDoTotal=(q:number)=>status==='pendente'?(naLive?(q===1?'inscrito aguardando a live':'inscritos aguardando a live'):(q===1?'cadastro pendente':'cadastros pendentes')):status==='processando'?'em aprovação':status==='aprovado'?(q===1?'aprovado':'aprovados'):(q===1?'recusado':'recusados')
+  type Chip=[string,string,number]
+  const chipsDeParceiro:Chip[]=!mostraParceiros?[]:([['','Todos',lista.length] as Chip,...parceiros.map((o):Chip=>[o.codigo,o.nome.split(' ')[0],lista.filter(p=>p.parceiro===o.codigo).length]),['direto','Direto',lista.filter(p=>!p.parceiro).length] as Chip]).filter(([id,,q])=>id===''||q>0)
   return <section className="admin-card admin-pendentes">
     <header><div><span className="rot">Cadastros pelo formulário</span><h3>Aprovação de clientes <em className="pendente-marca">{NOME_DA_MARCA[marca] ?? marca}</em></h3><p>{naLive
       ? 'Até a live de 09/11 não precisa aprovar ninguém. Quem se inscreve já recebe a confirmação por e‑mail, entra com a senha que criou e vê a plataforma trancada, com a contagem. Em 09/11, às 20h30, todos viram GF Member sozinhos, com acesso até 09/11/2027.'
       : 'Novos cadastros e recadastros aguardam sua aprovação. Cada marca tem a sua conta: quem já é cliente de outra plataforma ganha uma conta nova aqui, com senha própria.'}</p></div><button disabled={!!ocupado||carregando} onClick={()=>setRevisao(v=>v+1)}>Atualizar</button></header>
-    <nav aria-label="Status da aprovação">{[['pendente','Pendentes'],['processando','Em aprovação'],['aprovado','Aprovados'],['recusado','Recusados']].map(([id,nome])=><button key={id} aria-pressed={status===id} disabled={!!ocupado} onClick={()=>{setStatus(id);setPagina(0);setConfirmar(null);setAviso('')}}>{nome}</button>)}</nav>
+    <nav aria-label="Status da aprovação">{ABAS.map(([id,nome])=><button key={id} aria-pressed={status===id} disabled={!!ocupado} onClick={()=>{setStatus(id);setMostrar(POR_VEZ);setFiltroResp('');setConfirmar(null);setAviso('')}}>{nome}{contagem[id]!=null&&<span className="pdq-aba-n">{contagem[id]}</span>}</button>)}</nav>
     {erro&&<p role="alert">{erro}</p>}{aviso&&<p role="status">{aviso}</p>}
-    {!carregando&&respostas&&lista.length>0&&(()=>{
-      const rs=lista.map(p=>respostas.get(p.email.trim().toLowerCase()))
-      const ex=rs.filter(r=>r?.em&&r.exCliente).length, novos=rs.filter(r=>r?.em&&r.exCliente===false).length, sem=rs.length-ex-novos
-      const conta=new Map<string,number>()
-      for(const r of rs)if(r?.em&&r.exCliente)for(const pr of r.produtos){const n=nomeDoProduto(pr.startsWith('outro: ')?'outro':pr);conta.set(n,(conta.get(n)??0)+1)}
-      const top=[...conta].sort((a,b)=>b[1]-a[1]).slice(0,4)
-      return <div className="pdq-resumo" aria-label="Respostas do questionário nesta página">
-        <span><b>{lista.length}</b> {lista.length===1?'cadastro':'cadastros'}</span>
-        <span className="ex"><b>{ex}</b> já {ex===1?'foi cliente':'foram clientes'}</span>
-        <span className="novo"><b>{novos}</b> {novos===1?'nunca foi':'nunca foram'}</span>
-        {sem>0&&<span className="sem"><b>{sem}</b> sem resposta</span>}
-        {top.length>0&&<span className="top">Mais citados: {top.map(([n,q])=>`${n} (${q})`).join(' · ')}</span>}
+    {!carregando&&lista.length>0&&<div className="pdq-painel" aria-label="Resumo de todos os cadastros desta aba">
+      <div className="pdq-topo">
+        <p className="pdq-total"><b>{base.length}</b><span>{rotuloDoTotal(base.length)}</span>{resumo.hoje>0&&<em>+{resumo.hoje} hoje</em>}</p>
+        {chipsDeParceiro.length>2&&<div className="pdq-chips" role="group" aria-label="Filtrar por parceiro">{chipsDeParceiro.map(([id,nome,q])=><button key={id||'todos'} aria-pressed={filtroParceiro===id} onClick={()=>{setFiltroParceiro(id);setMostrar(POR_VEZ)}}>{nome}<b>{q}</b></button>)}</div>}
       </div>
-    })()}
-    {carregando?<p>Carregando cadastros…</p>:lista.length===0&&!erro?<p>Nenhum cadastro nesta situação.</p>:lista.slice(0,50).map(p=><article key={p.id} className="pendente-linha">
+      {respostas?<>
+        <div className="pdq-barra" aria-hidden="true">{(['ex','novo','sem'] as Tipo[]).map(t=>resumo.n[t]>0&&<i key={t} className={t} style={{flexGrow:resumo.n[t]}}/>)}</div>
+        <div className="pdq-legenda" role="group" aria-label="Filtrar pela resposta do questionário">{([['ex','Já foram clientes'],['novo','Nunca foram clientes'],['sem','Não responderam']] as Array<[Tipo,string]>).map(([t,nome])=><button key={t} className={t} aria-pressed={filtroResp===t} disabled={!resumo.n[t]&&filtroResp!==t} onClick={()=>{setFiltroResp(v=>v===t?'':t);setMostrar(POR_VEZ)}}><i aria-hidden="true"/><b>{resumo.n[t]}</b>{nome}<small>{pct(resumo.n[t],base.length)}%</small></button>)}</div>
+        {resumo.top.length>0&&<div className="pdq-top"><span>Mais citados por quem já foi cliente</span><div>{resumo.top.map(([n,q])=><i key={n}>{n}<b>{q}</b></i>)}</div></div>}
+      </>:<p className="pdq-lendo">Lendo as respostas do questionário…</p>}
+    </div>}
+    {!carregando&&lista.length>0&&<div className="pdq-busca">
+      <input id="pendentes-busca" type="search" value={busca} placeholder="Buscar: nome, e-mail ou telefone" aria-label="Buscar cadastro por nome, e-mail ou telefone" onChange={e=>{setBusca(e.target.value);setMostrar(POR_VEZ)}}/>
+      {filtrando&&<button onClick={limpar}>Limpar filtros</button>}
+      <span aria-live="polite">{visiveis.length!==base.length?`${visiveis.length} de ${base.length}`:`${base.length} no total`}</span>
+    </div>}
+    {carregando?<p>Carregando cadastros…</p>:lista.length===0&&!erro?<p>Nenhum cadastro nesta situação.</p>:visiveis.length===0?<p className="pdq-nada">Nenhum cadastro com esses filtros. <button onClick={limpar}>Limpar filtros</button></p>:visiveis.slice(0,mostrar).map(p=><article key={p.id} className="pendente-linha">
       <div><b>{p.nome}</b><span>{p.email}</span><span>{p.telefone}</span>
         {p.recadastro&&<strong className="pendente-recadastro">Já estava na base: recadastro{p.status==='pendente'?' aguardando aprovação':''}</strong>}
       </div>
       {(()=>{
         const dono=p.parceiro?NOME_DO_PARCEIRO[p.parceiro]??(seloDoParceiro(parceiros,p.parceiro)?.texto.split(' ')[0]||p.parceiro):null
         const r=respostas?.get(p.email.trim().toLowerCase())
-        const tipo=!respostas?'carregando':!r?.em?'sem':r.exCliente?'ex':'novo'
+        const tipo=!respostas?'carregando':tipoDe(p)
         return <div className="pdq">
           <span className={`pdq-dono ${p.parceiro??'direto'}`}>{dono?`Cliente do ${dono}`:'Direto, sem parceiro'}{p.parceiro&&<small>/{p.parceiro}</small>}</span>
           <span className={`pdq-resp ${tipo}`}>{tipo==='carregando'?'Lendo o questionário…':tipo==='sem'?'Não respondeu o questionário':tipo==='ex'?`Já foi cliente ${dono?`do ${dono}`:'do ecossistema'}`:'Nunca foi cliente'}</span>
@@ -198,6 +278,9 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
         <div><button disabled={!!ocupado} onClick={()=>setConfirmar(null)}>Cancelar</button><button className="admin-primary" disabled={!!ocupado} onClick={()=>void decidir()}>{ocupado?'Processando…':confirmar.acao==='aprovar'?'Aprovar':'Recusar'}</button></div>
       </div>}
     </article>)}
-    <footer><button disabled={pagina===0||!!ocupado||carregando} onClick={()=>setPagina(p=>p-1)}>Anterior</button><span>Página {pagina+1}</span><button disabled={lista.length<=50||!!ocupado||carregando} onClick={()=>setPagina(p=>p+1)}>Próxima</button></footer>
+    {!carregando&&visiveis.length>0&&<footer>
+      <span>Mostrando {Math.min(mostrar,visiveis.length)} de {visiveis.length}</span>
+      {visiveis.length>mostrar&&<><button onClick={()=>setMostrar(m=>m+POR_VEZ)}>Mostrar mais {Math.min(POR_VEZ,visiveis.length-mostrar)}</button>{visiveis.length-mostrar>POR_VEZ&&<button onClick={()=>setMostrar(visiveis.length)}>Mostrar todos</button>}</>}
+    </footer>}
   </section>
 }

@@ -42,11 +42,41 @@
 .pdq-produtos i{padding:3px 9px;border-radius:7px;background:color-mix(in srgb,currentColor 8%,transparent);font-size:12px;font-style:normal;line-height:1.4;overflow-wrap:anywhere}
 .pdq-produtos i.vazio{color:var(--muted,#9298a3)}
 .pendente-linha .pdq-detalhe{font-size:12px}
-.pdq-resumo{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline;margin:0 0 4px;padding:12px 14px;border:1px solid var(--border,#30343e);border-radius:10px;font-size:13px;color:var(--muted,#9298a3)}
-.pdq-resumo b{color:var(--text,inherit);font-size:15px;font-variant-numeric:tabular-nums}
-.pdq-resumo .ex b{color:var(--up,#2fb67c)}
-.pdq-resumo .novo b{color:var(--info,#5b8def)}
-.pdq-resumo .top{flex-basis:100%}
+.pdq-aba-n{display:inline-block;min-width:22px;margin-left:8px;padding:1px 7px;border-radius:999px;background:color-mix(in srgb,currentColor 10%,transparent);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;text-align:center}
+/* O resumo da aba inteira (03/11/2026): total, barra do questionário que também filtra, parceiros e produtos. */
+.pdq-painel{display:grid;gap:14px;margin:0 0 12px;padding:18px;border:1px solid var(--border,#30343e);border-radius:12px}
+.pdq-topo{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between}
+.pdq-total{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:0}
+.pdq-total b{font-size:34px;line-height:1;font-weight:750;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pdq-total span{font-size:15px;color:var(--muted,#9298a3)}
+.pdq-total em{padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--up,#2fb67c) 14%,transparent);color:var(--up,#2fb67c);font-size:12.5px;font-style:normal;font-weight:700;font-variant-numeric:tabular-nums}
+.pdq-chips{display:flex;flex-wrap:wrap;gap:6px}
+.admin-pendentes .pdq-chips button{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:6px 12px;border-radius:999px;font-weight:600}
+.pdq-chips b{font-variant-numeric:tabular-nums;opacity:.7}
+.pdq-barra{display:flex;gap:3px;height:10px;border-radius:999px;overflow:hidden;background:color-mix(in srgb,currentColor 6%,transparent)}
+.pdq-barra i{display:block;min-width:4px;flex-basis:0}
+.pdq-barra .ex,.pdq-legenda .ex i{background:var(--up,#2fb67c)}
+.pdq-barra .novo,.pdq-legenda .novo i{background:var(--info,#5b8def)}
+.pdq-barra .sem,.pdq-legenda .sem i{background:color-mix(in srgb,currentColor 28%,transparent)}
+.pdq-legenda{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.admin-pendentes .pdq-legenda button{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;min-height:44px;padding:10px 12px;border-radius:10px;text-align:left;font-size:13px;color:var(--muted,#9298a3)}
+.pdq-legenda button i{align-self:center;width:9px;height:9px;border-radius:50%}
+.pdq-legenda button b{font-size:18px;line-height:1;color:var(--text,inherit);font-variant-numeric:tabular-nums}
+.pdq-legenda button small{margin-left:auto;font-size:12px;font-variant-numeric:tabular-nums}
+.admin-pendentes .pdq-legenda button[aria-pressed=true]{color:inherit}
+.pdq-top{display:grid;gap:8px}
+.pdq-top>span{font-size:12px;color:var(--muted,#9298a3)}
+.pdq-top>div{display:flex;flex-wrap:wrap;gap:6px}
+.pdq-top i{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border-radius:7px;background:color-mix(in srgb,currentColor 7%,transparent);font-size:12.5px;font-style:normal}
+.pdq-top i b{font-variant-numeric:tabular-nums;color:var(--primary,#cfa94f)}
+.pdq-lendo{margin:0;font-size:13px;color:var(--muted,#9298a3)}
+.pdq-busca{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 6px}
+.pdq-busca input{flex:1 1 280px;min-height:42px;padding:0 14px;border:1px solid var(--border,#343842);border-radius:10px;background:transparent;color:inherit;font:inherit;font-size:14px}
+.pdq-busca input:focus-visible{outline:2px solid var(--primary,#cfa94f);outline-offset:2px}
+.pdq-busca span{margin-left:auto;font-size:13px;color:var(--muted,#9298a3);font-variant-numeric:tabular-nums}
+.pdq-nada{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:14px;color:var(--muted,#9298a3)}
+.admin-pendentes footer span{margin-right:auto;color:var(--muted,#9298a3);font-variant-numeric:tabular-nums}
+@media(max-width:700px){.admin-pendentes nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.admin-pendentes nav button{display:flex;justify-content:space-between;align-items:center}.pdq-legenda{grid-template-columns:minmax(0,1fr)}.pdq-busca span{margin-left:0}.pdq-total b{font-size:30px}}
 @media(max-width:1180px) and (min-width:701px){
   .pendente-linha{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}
   .pendente-linha>.pendente-acoes{justify-content:flex-end}
