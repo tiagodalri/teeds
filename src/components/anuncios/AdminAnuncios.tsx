@@ -228,14 +228,14 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
     void Promise.allSettled([api.resumo(sessao, parceiro, ant.de, ant.ate), api.funil(sessao, parceiro, ant.de, ant.ate), api.horarios(sessao, parceiro, de, ate)]).then(([r, fa, h]) => {
       if (vigente.current !== pedido) return
       const fun = fa.status === 'fulfilled' ? fa.value : null
-      setAnterior({ meta: r.status === 'fulfilled' && 'total' in r.value ? r.value.total : null, banco: fun ? (origemRef.current === 'anuncios' ? fun.anuncio : fun.total) : null, comecou: fun?.passos?.comecou ?? null })
+      setAnterior({ meta: r.status === 'fulfilled' && 'total' in r.value ? r.value.total : null, banco: fun ? (origemRef.current === 'anuncios' ? fun.anuncio : fun.total) : null, comecou: fun ? (origemRef.current === 'anuncios' ? fun.passosAnuncio?.comecou ?? null : fun.passos?.comecou ?? null) : null })
       anteriorBruto.current = fun
       if (h.status === 'fulfilled') setHorarios(h.value)
     })
   }
   const origemRef = useRef(origem); origemRef.current = origem
   const anteriorBruto = useRef<FunilDoBanco | null>(null)
-  useEffect(() => { setAnterior((a) => (a && anteriorBruto.current ? { ...a, banco: origem === 'anuncios' ? anteriorBruto.current.anuncio : anteriorBruto.current.total } : a)) }, [origem])
+  useEffect(() => { setAnterior((a) => (a && anteriorBruto.current ? { ...a, banco: origem === 'anuncios' ? anteriorBruto.current.anuncio : anteriorBruto.current.total, comecou: origem === 'anuncios' ? anteriorBruto.current.passosAnuncio?.comecou ?? null : anteriorBruto.current.passos?.comecou ?? null } : a)) }, [origem])
   useEffect(() => { setMeta(null); setFunil(null); setAnterior(null); setHorarios(null); setFalhaMeta(null); void carregar() }, [parceiro, periodo, de, ate, sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ao vivo: o nosso banco a cada 10 s; a Meta (só o total) a cada 60 s
@@ -263,13 +263,19 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const pixelEv = painel && 'eventos' in painel.pixel ? new Map(painel.pixel.eventos.map((e) => [e.nome, e.total])) : null
   const gasto = total?.gasto ?? 0
   const comCusto = origem === 'anuncios' && gasto > 0
+  // "começaram o cadastro" no mesmo grupo das outras etapas: só anúncio, ou todo o /n (aí sem % a partir das etapas da Meta)
+  // só anúncio: a contagem existe desde 04/11/2026 (Central de rastreio). Período que começa antes fica sem taxa e sem custo,
+  // senão "começaram" (desde 04/11) contra "cadastrados" (desde o início do período) passaria de 100%
+  const parcial = origem === 'anuncios' && de < '2026-11-04'
+  const comecouBruto = funil ? (origem === 'anuncios' ? funil.passosAnuncio?.comecou ?? null : funil.passos?.comecou ?? null) : null
+  const comecou = parcial ? null : comecouBruto
 
   const etapas: EtapaDoFunil[] = [
     { id: 'imp', dica: 'Impressões do anúncio', nome: 'Viram o anúncio', valor: total?.impressoes ?? 0, fonte: 'Meta', custo: total?.impressoes ? gasto / total.impressoes : null },
     { id: 'cli', dica: 'Cliques no link do anúncio', nome: 'Clicaram no anúncio', valor: total?.cliquesLink ?? 0, fonte: 'Meta', custo: total?.cliquesLink ? gasto / total.cliquesLink : null },
     { id: 'lpv', dica: 'A página abriu depois do clique', nome: 'Chegaram na página', valor: total?.lpv ?? 0, fonte: 'Meta', custo: total?.lpv ? gasto / total.lpv : null },
-    { id: 'com', dica: 'Mexeram no formulário de cadastro', nome: 'Começaram o cadastro', valor: funil?.passos?.comecou ?? pixelEv?.get('ComecouCadastro') ?? 0, fonte: 'Plataforma', custo: null },
-    { id: 'cad', dica: 'Cadastro enviado', nome: 'Cadastrados', valor: etapasDoBanco?.cadastros ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.cadastros ? gasto / etapasDoBanco.cadastros : null },
+    { id: 'com', dica: origem !== 'anuncios' ? 'Todo o /n: mexeram no formulário' : parcial ? 'Vindos de anúncio, contados desde 04/11' : 'Vindos de anúncio, mexeram no formulário', nome: 'Começaram o cadastro', valor: comecouBruto ?? (origem === 'anuncios' ? 0 : pixelEv?.get('ComecouCadastro') ?? 0), fonte: 'Plataforma', custo: comecou ? gasto / comecou : null, semTaxa: origem !== 'anuncios' || parcial },
+    { id: 'cad', dica: 'Cadastro enviado', nome: 'Cadastrados', valor: etapasDoBanco?.cadastros ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.cadastros ? gasto / etapasDoBanco.cadastros : null, semTaxa: parcial },
     { id: 'que', dica: 'Inscrição completa', nome: 'Questionário respondido', valor: etapasDoBanco?.questionario ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.questionario ? gasto / etapasDoBanco.questionario : null },
     { id: 'not', dica: 'Avisos da live ligados no celular', nome: 'Notificações ativadas', valor: etapasDoBanco?.notificacoes ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.notificacoes ? gasto / etapasDoBanco.notificacoes : null },
     { id: 'liv', dica: 'Presença na live de 09/11', nome: 'Assistiram à live', valor: etapasDoBanco?.live ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.live ? gasto / etapasDoBanco.live : null },
@@ -571,7 +577,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
           )}
           <section className="aa-cartao">
             <header><div><span className="rot">Comparado com {anteriorA(de, ate).de === anteriorA(de, ate).ate ? dataBr(anteriorA(de, ate).de) : `${dataBr(anteriorA(de, ate).de)} a ${dataBr(anteriorA(de, ate).ate)}`}</span><h3>Quanto custa cada passo</h3></div></header>
-            <Custos atual={{ meta: total, banco: etapasDoBanco, comecou: funil?.passos?.comecou ?? null }} anterior={anterior} origem={origem} />
+            <Custos atual={{ meta: total, banco: etapasDoBanco, comecou }} anterior={anterior} origem={origem} />
           </section>
         </>
       )}
@@ -691,7 +697,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
       {painel?.avisos.length ? <p className="aa-nota">Algumas partes não vieram da Meta agora: {painel.avisos.join(' · ')}</p> : null}
       {painel && <p className="aa-nota">Números da Meta de {hora(painel.em)}{painel.doCache ? ' (guardados há menos de 5 minutos)' : ''}. A Meta pode levar até algumas horas para fechar os números do dia.</p>}
 
-      {relatorio && <Relatorio fechar={() => setRelatorio(false)} periodo={nomeDoPeriodo} total={total} banco={etapasDoBanco} linhas={filtradas} colunas={colunas} lista={listaDeAlertas} comecou={funil?.passos?.comecou ?? null} />}
+      {relatorio && <Relatorio fechar={() => setRelatorio(false)} periodo={nomeDoPeriodo} total={total} banco={etapasDoBanco} linhas={filtradas} colunas={colunas} lista={listaDeAlertas} comecou={comecou} origem={origem} />}
       {aberto && painel && <AnuncioAberto a={aberto} fechar={() => setAberto(null)} sessao={sessao} api={api} parceiro={parceiro} de={de} ate={ate} nosso={nossoPorAnuncio.get(aberto.id)} campanha={campanhaDe(aberto.campanhaId)} conjunto={painel.conjuntos.find((s) => s.id === aberto.conjuntoId)?.nome ?? ''} />}
     </div>
   )

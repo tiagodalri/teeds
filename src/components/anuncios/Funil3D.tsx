@@ -21,7 +21,9 @@
 import { useEffect, useRef, useState } from 'react'
 
 /** `dica`: o que a etapa conta, em poucas palavras (aparece embaixo do nome). */
-export interface EtapaDoFunil { id: string; nome: string; valor: number; fonte: 'Meta' | 'Pixel' | 'Plataforma'; custo?: number | null; dica?: string }
+export interface EtapaDoFunil { id: string; nome: string; valor: number; fonte: 'Meta' | 'Pixel' | 'Plataforma'; custo?: number | null; dica?: string
+  /** A etapa conta outro grupo de pessoas que a anterior (ex.: todo o /n depois de etapas só de anúncio): sem a % de passagem. */
+  semTaxa?: boolean }
 
 interface Bolinha { etapa: number; y: number; ang: number; giro: number; vel: number; raio: number; viva: boolean; fuga: number; destaque: boolean; brilho: number; alvo: number; rastro: number[] }
 
@@ -318,7 +320,7 @@ export function Funil3D({ etapas, mostrarCusto }: { etapas: EtapaDoFunil[]; most
             const classes = [e.fonte === 'Meta' ? 'meta' : 'plataforma', acesa[i] && Date.now() - acesa[i] < 2500 ? 'acesa' : '', foco === i ? 'fu-foco' : ''].join(' ')
             return (
               <li key={e.id} className={classes} onMouseEnter={() => setFoco(i)} onMouseLeave={() => setFoco(null)}>
-                {anterior && anterior.valor > 0 && (
+                {anterior && anterior.valor > 0 && !e.semTaxa && (
                   <span className="fu-passa" title={`De ${anterior.nome} para ${e.nome}`} aria-label={`${pct(e.valor, anterior.valor)} seguem de ${anterior.nome} para ${e.nome}`}>
                     <i aria-hidden="true"><b /><b /><b /></i>{pct(e.valor, anterior.valor)}
                   </span>

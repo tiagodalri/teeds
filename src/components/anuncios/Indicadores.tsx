@@ -94,7 +94,7 @@ export function Custos({ atual, anterior, origem }: { atual: Base; anterior: Bas
     { nome: 'Custo por clique', v: (b) => div(g(b), b.meta?.cliques ?? 0), base: (b) => `${int(b.meta?.cliques ?? 0)} cliques (todos)` },
     { nome: 'Custo por clique no link', v: (b) => b.meta?.cpcLink || null, base: (b) => `${int(b.meta?.cliquesLink ?? 0)} cliques no link` },
     { nome: 'Custo por visita na página', v: (b) => div(g(b), b.meta?.lpv ?? 0), base: (b) => `${int(b.meta?.lpv ?? 0)} visitas` },
-    { nome: 'Custo por quem começou o cadastro', v: (b) => div(g(b), b.comecou ?? 0), base: (b) => `${int(b.comecou ?? 0)} começaram`, nota: 'inclui quem chegou sem anúncio' },
+    { nome: 'Custo por quem começou o cadastro', v: (b) => div(g(b), b.comecou ?? 0), base: (b) => `${int(b.comecou ?? 0)} começaram`, nota: origem === 'anuncios' ? 'só quem veio de anúncio' : 'inclui quem chegou sem anúncio' },
     { nome: 'Custo por cadastro', v: (b) => div(g(b), b.banco?.cadastros ?? 0), base: (b) => `${int(b.banco?.cadastros ?? 0)} cadastros reais` },
     { nome: 'Custo por cadastro (Meta)', v: (b) => div(g(b), b.meta?.cadastros ?? 0), base: (b) => `${int(b.meta?.cadastros ?? 0)} que o pixel contou` },
     { nome: 'Custo por inscrição completa', v: (b) => div(g(b), b.banco?.questionario ?? 0), base: (b) => `${int(b.banco?.questionario ?? 0)} com o questionário` },
@@ -325,8 +325,8 @@ export function Horarios({ dados, origem }: { dados: { porHora: Array<{ hora: nu
 
 /* ------------------------------------------------------------------ relatório */
 
-export function Relatorio({ fechar, periodo, total, banco, linhas, colunas, lista, comecou }: {
-  fechar: () => void; periodo: string; total: Metricas | null; banco: FunilDoBanco['total'] | null; linhas: Linha[]; colunas: string[]; lista: Alerta[]; comecou: number | null
+export function Relatorio({ fechar, periodo, total, banco, linhas, colunas, lista, comecou, origem = 'todos' }: {
+  fechar: () => void; periodo: string; total: Metricas | null; banco: FunilDoBanco['total'] | null; linhas: Linha[]; colunas: string[]; lista: Alerta[]; comecou: number | null; origem?: 'todos' | 'anuncios'
 }) {
   const [copiado, setCopiado] = useState(false)
   useEffect(() => {
@@ -388,7 +388,7 @@ export function Relatorio({ fechar, periodo, total, banco, linhas, colunas, list
             <thead><tr><th>Etapa</th><th className="num">Pessoas</th><th className="num">Custo por pessoa</th><th className="num">Passaram da anterior</th></tr></thead>
             <tbody>
               {([['Impressões', total?.impressoes], ['Cliques no link', total?.cliquesLink], ['Chegaram na página', total?.lpv], ['Começaram o cadastro', comecou], ['Cadastros', banco?.cadastros], ['Inscrições completas', banco?.questionario], ['Notificações ativadas', banco?.notificacoes], ['Assistiram à live', banco?.live], ['GF Member', banco?.liberados]] as Array<[string, number | null | undefined]>).map(([nome, n], i, arr) => (
-                <tr key={nome}><td>{nome}</td><td className="num">{int(n ?? 0)}</td><td className="num">{nome === 'Impressões' ? `${brl(total?.cpm ?? 0)} / mil` : custoDe(n)}</td><td className="num">{i && arr[i - 1][1] ? pc(((n ?? 0) / (arr[i - 1][1] ?? 1)) * 100, 1) : '—'}</td></tr>
+                <tr key={nome}><td>{nome}</td><td className="num">{int(n ?? 0)}</td><td className="num">{nome === 'Impressões' ? `${brl(total?.cpm ?? 0)} / mil` : i >= 3 && origem !== 'anuncios' ? '—' : custoDe(n)}</td><td className="num">{i && arr[i - 1][1] && !(i === 3 && origem !== 'anuncios') ? pc(((n ?? 0) / (arr[i - 1][1] ?? 1)) * 100, 1) : '—'}</td></tr>
               ))}
             </tbody>
           </table>

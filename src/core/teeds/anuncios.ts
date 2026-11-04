@@ -46,6 +46,8 @@ export interface FunilDoBanco {
   servidor: { enviados: number; semChave: number; erros: number }
   /** Passos da página antes do cadastro (parceiro_toques e funil_passos). */
   passos?: { visitas: number; formulario: number; clicou: number; comecou: number }
+  /** Os mesmos passos só de quem veio dos anúncios (Central de rastreio, desde 04/11/2026). */
+  passosAnuncio?: { visitas: number; formulario: number; clicou: number; comecou: number }
 }
 
 async function funcao<T>(sessao: SessaoTeeds, corpo: Record<string, unknown>): Promise<T> {
