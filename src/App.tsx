@@ -425,6 +425,33 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioTeedsId])
 
+  /*
+    04/11/2026 (Tiago: "pq às vezes as coisas de adm somem da minha tela?"). A conferência acima roda uma
+    vez por conta. Se ela falhava (login vencido na hora de abrir, rede oscilando), o admin ficava sem os
+    itens de administração até sair e entrar de novo. Agora a falha tenta de novo sozinha: em 1,5 s e
+    depois com espera crescente (até 1 min), na hora em que a rede volta ou a aba ganha foco, e de novo
+    quando o login renova o token.
+  */
+  const tokenTeeds = teeds.sessao?.token ?? null
+  useEffect(() => {
+    const sessao = teeds.sessao
+    if (!adminFalhou || !sessao) return
+    let ativo = true
+    let n = 0
+    let espera = 0
+    const tentar = () => {
+      if (!ativo) return
+      souAdmin(sessao, true).then((permitido) => {
+        if (ativo) { setAdminUserId(sessao.usuario.id); setAdmin(permitido); setAdminFalhou(false) }
+      }).catch(() => { if (ativo) espera = window.setTimeout(tentar, Math.min(60_000, 3_000 * 2 ** n++)) })
+    }
+    espera = window.setTimeout(tentar, 1_500)
+    const agora = () => { window.clearTimeout(espera); tentar() }
+    window.addEventListener('online', agora)
+    window.addEventListener('focus', agora)
+    return () => { ativo = false; window.clearTimeout(espera); window.removeEventListener('online', agora); window.removeEventListener('focus', agora) }
+  }, [adminFalhou, tokenTeeds]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Nunca mantém um cliente numa rota administrativa, nem após troca de conta
   // ou falha na conferência.
   // Sem sessão ainda (o login restaurando ao abrir o link /admin), não decide: só a tela de entrada aparece.
