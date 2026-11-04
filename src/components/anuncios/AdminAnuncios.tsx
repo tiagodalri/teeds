@@ -168,11 +168,23 @@ function Barras({ titulo, linhas, nome }: { titulo: string; linhas: Quebra[]; no
 }
 
 /** `intervalo`: de quanto em quanto tempo o nosso banco é lido (o laboratório acelera). */
-export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_ESTUDIO, intervalo = 10_000, apiCentral = API_DA_CENTRAL, buscarJornada }: { sessao: SessaoTeeds; api?: ApiAnuncios; apiEstudio?: ApiEstudio; intervalo?: number; apiCentral?: ApiCentral; buscarJornada?: typeof jornadaCompleta }) {
+/**
+ * `parceiroDoTopo` / `aoTrocarConta` (04/11/2026, Tiago: "esse filtro não está respondendo"): no painel a conta
+ * é escolhida no filtro Parceiro do topo, o mesmo das outras abas. A tela segue o topo quando ele aponta um
+ * parceiro com conta e avisa qual conta está mostrando (o topo marca essa). `seletorNoTopo`: o topo já mostra
+ * as contas, então os botões Naor/Victor daqui somem (no laboratório, sem topo, eles ficam).
+ */
+export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_ESTUDIO, intervalo = 10_000, apiCentral = API_DA_CENTRAL, buscarJornada, parceiroDoTopo, aoTrocarConta, seletorNoTopo = false }: { sessao: SessaoTeeds; api?: ApiAnuncios; apiEstudio?: ApiEstudio; intervalo?: number; apiCentral?: ApiCentral; buscarJornada?: typeof jornadaCompleta; parceiroDoTopo?: string; aoTrocarConta?: (codigo: string, codigos: string[]) => void; seletorNoTopo?: boolean }) {
   const contas = CONTAS_DE_ANUNCIO[MARCA.id] ?? []
   // a conta escolhida (Naor ou Victor) fica lembrada neste aparelho
-  const [parceiro, setParceiroAgora] = useState(() => { try { const v = localStorage.getItem('aa-parceiro'); return contas.some((c) => c.codigo === v) ? v! : contas[0]?.codigo ?? '' } catch { return contas[0]?.codigo ?? '' } })
+  const [parceiro, setParceiroAgora] = useState(() => {
+    if (parceiroDoTopo && contas.some((c) => c.codigo === parceiroDoTopo)) return parceiroDoTopo
+    try { const v = localStorage.getItem('aa-parceiro'); return contas.some((c) => c.codigo === v) ? v! : contas[0]?.codigo ?? '' } catch { return contas[0]?.codigo ?? '' }
+  })
   const setParceiro = (c: string) => { setParceiroAgora(c); setAbrirConectar(false); setSalvando({}); setContasDaChave(null); setEscolhendo({}); try { localStorage.setItem('aa-parceiro', c) } catch { /* sem memória neste aparelho */ } }
+  // o topo escolheu um parceiro com conta: a tela vai para ela; e o topo sempre sabe qual conta está aberta
+  useEffect(() => { if (parceiroDoTopo && parceiroDoTopo !== parceiro && contas.some((c) => c.codigo === parceiroDoTopo)) setParceiro(parceiroDoTopo) }, [parceiroDoTopo]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { aoTrocarConta?.(parceiro, contas.map((c) => c.codigo)) }, [parceiro]) // eslint-disable-line react-hooks/exhaustive-deps
   const [periodo, setPeriodo] = useState<IdPeriodo>('lancamento')
   const [meta, setMeta] = useState<RespostaDaMeta | null>(null)
   const [funil, setFunil] = useState<FunilDoBanco | null>(null)
@@ -405,7 +417,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
     <div className="aa">
       <div className="aa-topo">
         <div className="aa-conta">
-          {contas.length > 1 && (
+          {contas.length > 1 && !seletorNoTopo && (
             <div className="aa-troca aa-contas" role="tablist" aria-label="Conta de anúncios">
               {contas.map((c) => <button key={c.codigo} type="button" role="tab" aria-selected={parceiro === c.codigo} className={parceiro === c.codigo ? 'on' : ''} onClick={() => setParceiro(c.codigo)}>{c.nome}<small>/{c.codigo}</small></button>)}
             </div>

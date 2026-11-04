@@ -5937,6 +5937,7 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .sel-parc-opcoes button small { opacity: .7; font-family: var(--fonte-dados, ui-monospace, monospace); font-weight: 600; }
 .sel-parc-opcoes button:hover { background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); }
 .sel-parc-opcoes button[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 45%, transparent); }
+.sel-parc-opcoes button[aria-pressed="true"] { cursor: default; }
 .sel-parc-opcoes button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 @media (max-width: 720px) {
   .sel-plat { width: 100%; }
