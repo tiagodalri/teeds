@@ -243,7 +243,9 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const [aoVivo, setAoVivo] = useState<{ total: Metricas; em: string } | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [carregando, setCarregando] = useState(false)
-  const [origem, setOrigem] = useState<'todos' | 'anuncios'>('todos')
+  // 04/11/2026: começa em "Só os de anúncio", que é o que se compara com o Gerenciador (o aparelho lembra a escolha)
+  const [origem, setOrigemAgora] = useState<'todos' | 'anuncios'>(() => { try { return localStorage.getItem('aa-origem') === 'todos' ? 'todos' : 'anuncios' } catch { return 'anuncios' } })
+  const setOrigem = (o: 'todos' | 'anuncios') => { setOrigemAgora(o); try { localStorage.setItem('aa-origem', o) } catch { /* só não lembra */ } }
   const [campanha, setCampanha] = useState('')
   const [ordem, setOrdem] = useState<{ col: string; desc: boolean }>({ col: 'gasto', desc: true })
   const [conjunto, setConjunto] = useState('')
@@ -371,7 +373,8 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const comecou = parcial ? null : comecouBruto
 
   const etapas: EtapaDoFunil[] = [
-    { id: 'imp', dica: 'Impressões do anúncio', nome: 'Viram o anúncio', valor: total?.impressoes ?? 0, fonte: 'Meta', custo: total?.impressoes ? gasto / total.impressoes : null },
+    // 04/11/2026: "viram" são PESSOAS (o Alcance do Gerenciador); as impressões são as vezes que o anúncio apareceu
+    { id: 'imp', dica: total?.alcance ? `Pessoas diferentes (alcance) · apareceu ${int(total.impressoes)} vezes` : 'Impressões do anúncio', nome: 'Viram o anúncio', valor: total?.alcance || total?.impressoes || 0, fonte: 'Meta', custo: total?.alcance ? gasto / total.alcance : null },
     { id: 'cli', dica: 'Cliques no link do anúncio', nome: 'Clicaram no anúncio', valor: total?.cliquesLink ?? 0, fonte: 'Meta', custo: total?.cliquesLink ? gasto / total.cliquesLink : null },
     { id: 'lpv', dica: 'A página abriu depois do clique', nome: 'Chegaram na página', valor: total?.lpv ?? 0, fonte: 'Meta', custo: total?.lpv ? gasto / total.lpv : null },
     { id: 'com', dica: origem !== 'anuncios' ? 'Todo o /n: mexeram no formulário' : parcial ? 'Vindos de anúncio, contados desde 04/11' : 'Vindos de anúncio, mexeram no formulário', nome: 'Começaram o cadastro', valor: comecouBruto ?? (origem === 'anuncios' ? 0 : pixelEv?.get('ComecouCadastro') ?? 0), fonte: 'Plataforma', custo: comecou ? gasto / comecou : null, semTaxa: origem !== 'anuncios' || parcial },
@@ -617,6 +620,8 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
           <span>{de === ate ? `Em ${dataBr(de)}` : `De ${ddmm(de)} a ${ddmm(ate)}`}, </span>
           <b>{brl(total.gasto)}</b> investidos trouxeram <b>{int(cadDeAnuncio)} {cadDeAnuncio === 1 ? 'cadastro' : 'cadastros'}</b> pelos anúncios
           {cadDeAnuncio > 0 && <>, <b>{custo(total.gasto, cadDeAnuncio)}</b> cada</>}.
+          {/* 04/11/2026: o número do Gerenciador ao lado, para não parecer erro (a Meta conta por outra regra) */}
+          {total.cadastros > 0 && total.cadastros !== cadDeAnuncio && <> No Gerenciador: <b>{int(total.cadastros)}</b> ({custo(total.gasto, total.cadastros)} cada). <button type="button" onClick={() => setAba('geral')}>Por que é diferente?</button></>}
           {qtdAlertas > 0 && <> <button type="button" onClick={() => setAba('geral')}>{qtdAlertas === 1 ? '1 ponto pede atenção' : `${qtdAlertas} pontos pedem atenção`}</button></>}
         </p>
       )}

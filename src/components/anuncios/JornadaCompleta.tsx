@@ -180,7 +180,7 @@ export const DoAnuncioAoDinheiro = memo(function DoAnuncioAoDinheiro({ pessoas, 
   // a trilha: no "só anúncio", começa nas etapas da Meta (mesmo grupo de pessoas); no "todos", começa no cadastro
   const trilha: Array<{ nome: string; dica: string; n: number; meta?: boolean; filtro?: string }> = [
     ...(soAnuncio && meta ? [
-      { nome: 'Viram o anúncio', dica: 'Impressões (Meta)', n: meta.impressoes, meta: true },
+      { nome: 'Viram o anúncio', dica: meta.alcance ? `Pessoas diferentes (Meta) · ${int(meta.impressoes)} vezes na tela` : 'Impressões (Meta)', n: meta.alcance || meta.impressoes, meta: true },
       { nome: 'Clicaram no link', dica: 'Cliques no link (Meta)', n: meta.cliquesLink, meta: true },
       { nome: 'Chegaram na página', dica: 'A página abriu (Meta)', n: meta.lpv, meta: true },
     ] : []),
@@ -221,7 +221,7 @@ export const DoAnuncioAoDinheiro = memo(function DoAnuncioAoDinheiro({ pessoas, 
           <section className="aa-cartao jc-diferenca">
             <b>Por que a Meta conta {int(meta.cadastros)} e aqui {s.cadastros === 1 ? 'é 1' : `são ${int(s.cadastros)}`}?</b>
             {meta.cadastros > s.cadastros ? <p>
-              Aqui entram só os {int(s.cadastros)} que chegaram pelo link do próprio anúncio, com a marcação de qual anúncio foi: esses dá para seguir até o depósito.
+              Aqui entram os {int(s.cadastros)} que a plataforma viu chegar pelo anúncio: pelo link marcado ou numa visita pelo anúncio até 7 dias antes do cadastro. Esses dá para seguir até o depósito.
               A Meta conta mais porque reconhece a pessoa pelo e-mail (o cadastro também vai pelo servidor) e dá ao anúncio todo cadastro de quem clicou nele e se cadastrou depois,
               mesmo voltando por outro caminho: pelo perfil, pela bio, por um link repassado ou abrindo o site de novo.
               {social + semOrigem > 0 ? <> No período, fora os {int(s.cadastros)}, houve {[social ? <><b>{int(social)}</b> pelo Instagram ou Facebook sem a marcação</> : null, semOrigem ? <><b>{int(semOrigem)}</b> sem origem</> : null].filter(Boolean).map((x, i, l) => <span key={i}>{i ? (i === l.length - 1 ? ' e ' : ', ') : ''}{x}</span>)}
