@@ -63,7 +63,7 @@ let links: LinkDeRastreio[] = [
   { id: '1', codigo: 'telegram-canal-naor-0411', nome: 'Telegram, canal do Naor, 04/11', canal: 'telegram', parceiro: 'n', arquivado: false, criado_em: ha(300), visitantes: 121, cadastros: 31 },
   { id: '2', codigo: 'stories-naor-0411-manha', nome: 'Stories do Naor, 04/11 de manhã', canal: 'stories', parceiro: 'n', arquivado: false, criado_em: ha(280), visitantes: 58, cadastros: 12 },
 ]
-const api: ApiCentral = {
+export const apiCentralDeMentira: ApiCentral = {
   resumo: async () => resumo, aoVivo: async (_s, _p, depois) => (depois ? [] : feed), pessoas: async () => pessoas, pessoa: async (_s, v) => ficha(v),
   links: async () => links,
   criarLink: async (_s, parceiro, nome, canal, codigo) => { const l = { id: String(Date.now()), codigo, nome, canal, parceiro, arquivado: false, criado_em: new Date().toISOString(), visitantes: 0, cadastros: 0 }; links = [l, ...links]; return l },
@@ -74,5 +74,5 @@ const apiAnuncios = { painel: async () => painel } as unknown as ApiAnuncios
 const sessao = { token: 'lab' } as unknown as SessaoTeeds
 
 export default function LabCentral() {
-  return <div className="workspace-app" style={{ minHeight: '100vh', background: 'var(--bg)', padding: 'clamp(12px, 3vw, 28px)', boxSizing: 'border-box' }}><CentralRastreio sessao={sessao} api={api} apiAnuncios={apiAnuncios} /></div>
+  return <div className="workspace-app" style={{ minHeight: '100vh', background: 'var(--bg)', padding: 'clamp(12px, 3vw, 28px)', boxSizing: 'border-box' }}><CentralRastreio sessao={sessao} api={apiCentralDeMentira} apiAnuncios={apiAnuncios} /></div>
 }

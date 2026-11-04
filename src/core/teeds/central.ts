@@ -92,3 +92,23 @@ export const enderecoDoLink = (parceiro: string | null, codigo: string) =>
 /** Um código curto a partir do nome ("Telegram canal do Naor 04/11" → telegram-canal-do-naor-04-11). */
 export const codigoDoNome = (nome: string) => nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '')
+
+/** Uma pessoa (cadastro) com tudo o que fez depois: teeds_jornada_completa. Valores em US$ são da Deriv. */
+export interface PessoaDaJornada {
+  id: string; nome: string; email: string; telefone: string; cadastro_em: string; questionario_em: string | null; ex_cliente: boolean | null; parceiro: string | null
+  canal: string; anuncio: string | null; link: string | null; visitante: string | null; dispositivo: string | null; navegador: string | null; visitas: number | null; chegou_em: string | null
+  comunidade: boolean | null; app: boolean | null; plataforma: boolean | null; agenda: boolean | null; segundos_na_pagina: number | null
+  notificacoes: boolean; emails: number; tem_conta: boolean; conta_em: string | null; status_acesso: string | null; categoria: string | null
+  acessos: number; segundos_na_plataforma: number; visto_em: string | null; primeiro_acesso: string | null; minutos_live: number
+  deriv_real_em: string | null; saldo_real: number | null; deriv_demo_em: string | null
+  deposito1_em: string | null; deposito1_valor: number | null; depositado: number; depositos: number; sacado: number
+  sessoes_ia: number; sessoes_ia_reais: number; operacoes_reais: number; resultado_real: number
+  /** Markup estimado pelo servidor (3% do pagamento das contas reais), desde o cadastro. */
+  markup: number
+  /** Já tinha conta antes deste cadastro (recadastro): o que fez antes não entra. */
+  cliente_antes: boolean
+}
+export interface Jornada { total: number; pessoas: PessoaDaJornada[] }
+export async function jornadaCompleta(sessao: SessaoTeeds, parceiro: string, de: string, ate: string): Promise<Jornada> {
+  return (await rpc<Jornada | null>(sessao, 'teeds_jornada_completa', { p_marca: MARCA.id, p_parceiro: parceiro || null, p_de: de, p_ate: ate })) ?? { total: 0, pessoas: [] }
+}

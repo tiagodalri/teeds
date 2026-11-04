@@ -91,7 +91,10 @@ export function Funil3D({ etapas, mostrarCusto }: { etapas: EtapaDoFunil[]; most
       cv.width = Math.round(largura * dpr); cv.height = Math.round(altura * dpr)
     }
     medir()
-    const ro = new ResizeObserver(medir); ro.observe(cv)
+    // depois de medir, confere de novo se está na tela: no topo da página o observador de visibilidade pode ter
+    // respondido "fora" antes do layout (altura 0) e não avisa de novo enquanto ninguém rola (04/11/2026)
+    const ro = new ResizeObserver(() => { medir(); conferirTela() }); ro.observe(cv)
+    let conferirTela = () => {}
 
     // a cor vem do tema (ouro da GF); as bolinhas são carimbos prontos, não desenhos a cada quadro
     const rgbDe = (c: string): [number, number, number] => {
@@ -295,6 +298,7 @@ export function Funil3D({ etapas, mostrarCusto }: { etapas: EtapaDoFunil[]; most
     let naTela = true
     const io = new IntersectionObserver(([e]) => { naTela = e.isIntersecting; if (naTela && !document.hidden) ligar(); else desligar() })
     io.observe(cv)
+    conferirTela = () => { const r = cv.getBoundingClientRect(); if (r.height > 0 && r.bottom > 0 && r.top < innerHeight && !document.hidden) { naTela = true; ligar() } }
     const aba = () => { if (document.hidden) desligar(); else if (naTela) ligar() }
     document.addEventListener('visibilitychange', aba)
     ligar()

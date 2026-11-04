@@ -3,6 +3,29 @@ import { AdminAnuncios } from './AdminAnuncios'
 import type { ApiAnuncios, FunilDoBanco, Metricas, PainelDaMeta } from '../../core/teeds/anuncios'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import type { ApiEstudio, ItemDoHistorico, PublicoSalvo, Rascunho } from '../../core/teeds/estudio'
+import type { PessoaDaJornada } from '../../core/teeds/central'
+import { apiCentralDeMentira } from '../central/LabCentral'
+
+/** 160 cadastros de exemplo com a jornada inteira (anúncio → depósito → markup). */
+const NOMES = ['Mariana Souza', 'Carlos Lima', 'Ana Paula Reis', 'Roberto Alves', 'Juliana Prado', 'Felipe Rocha', 'Patrícia Gomes', 'Lucas Martins', 'Camila Duarte', 'Rafael Nunes']
+const jornadaDeMentira = async () => { const pessoas: PessoaDaJornada[] = Array.from({ length: 160 }, (_, i) => {
+  const r = (k: number) => ((i * 9301 + k * 49297) % 233280) / 233280
+  const deAnuncio = r(1) < 0.62, canal = deAnuncio ? 'anuncio-meta' : ['telegram', 'stories', 'instagram', 'sem-origem'][Math.floor(r(2) * 4)]
+  const cad = new Date(Date.now() - r(3) * 2.5 * 864e5).toISOString()
+  const quest = r(4) < 0.86, entrou = r(5) < 0.62, real = entrou && r(6) < 0.38, depositou = real && r(7) < 0.55
+  const dep1 = depositou ? new Date(+new Date(cad) + (2 + r(8) * 30) * 36e5).toISOString() : null, v1 = depositou ? [10, 20, 30, 50, 100][Math.floor(r(9) * 5)] : null
+  return {
+    id: `p${i}`, nome: `${NOMES[i % 10]} ${i}`, email: `pessoa${i}@gmail.com`, telefone: '(11) 98888-0000', cadastro_em: cad, questionario_em: quest ? cad : null, ex_cliente: quest ? r(10) < 0.4 : null, parceiro: 'n',
+    canal, anuncio: deAnuncio ? `12021000000000000${1 + (i % 3)}` : null, link: null, visitante: `vis${i}abcdEFGH`, dispositivo: 'celular', navegador: 'instagram', visitas: 1, chegou_em: cad,
+    comunidade: r(11) < 0.45, app: r(12) < 0.12, plataforma: entrou, agenda: r(13) < 0.1, segundos_na_pagina: 60,
+    notificacoes: r(14) < 0.3, emails: Math.floor(r(15) * 3), tem_conta: true, conta_em: cad, status_acesso: 'pendente', categoria: 'gold',
+    acessos: entrou ? 1 + Math.floor(r(16) * 20) : 0, segundos_na_plataforma: entrou ? Math.floor(r(17) * 4000) : 0, visto_em: cad, primeiro_acesso: entrou ? cad.slice(0, 10) : null, minutos_live: 0,
+    deriv_real_em: real ? cad : null, saldo_real: real ? 20 : null, deriv_demo_em: entrou ? cad : null,
+    deposito1_em: dep1, deposito1_valor: v1, depositado: depositou ? (v1 ?? 0) * (1 + Math.floor(r(18) * 2)) : 0, depositos: depositou ? 1 : 0, sacado: 0,
+    sessoes_ia: entrou ? Math.floor(r(19) * 30) : 0, sessoes_ia_reais: depositou ? 3 : 0, operacoes_reais: depositou ? 40 : 0, resultado_real: 0, markup: depositou ? Math.round(r(20) * 300) / 100 : 0,
+    cliente_antes: i % 23 === 0,
+  }
+}); return { total: pessoas.length, pessoas } }
 
 /** Laboratório: Administração › Anúncios com números de exemplo (?tela=anuncios-admin; &sem-chave=1 mostra o conectar; &chave-bloqueada=1, a chave guardada que a Meta recusa). */
 const m = (gasto: number, imp: number, cliques: number, lpv: number, cad: number, v3 = 0, thru = 0): Metricas => ({
@@ -177,5 +200,5 @@ export default function LabAnuncios() {
   }
   const sessao = { token: 'lab', usuario: { id: 'lab' } } as unknown as SessaoTeeds
   const [estudio] = useState(() => estudioDeMentira(q.has('estudio-sem-chave')))
-  return <div className="workspace-app" style={{ minHeight: '100vh', background: 'var(--bg)', padding: 'clamp(12px, 3vw, 28px)', boxSizing: 'border-box' }}><AdminAnuncios sessao={sessao} api={api} apiEstudio={estudio} intervalo={q.has('rapido') ? 2500 : undefined} /></div>
+  return <div className="workspace-app" style={{ minHeight: '100vh', background: 'var(--bg)', padding: 'clamp(12px, 3vw, 28px)', boxSizing: 'border-box' }}><AdminAnuncios sessao={sessao} api={api} apiEstudio={estudio} intervalo={q.has('rapido') ? 2500 : undefined} apiCentral={apiCentralDeMentira} buscarJornada={jornadaDeMentira} /></div>
 }

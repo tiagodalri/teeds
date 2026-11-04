@@ -209,7 +209,7 @@ function lerCanais(r: ResumoDaCentral): Array<{ tipo: 'ok' | 'atencao' | 'info';
   return saida
 }
 
-function Leitura({ itens, titulo }: { itens: Array<{ tipo: 'ok' | 'atencao' | 'info'; texto: string }>; titulo: string }) {
+export function Leitura({ itens, titulo }: { itens: Array<{ tipo: 'ok' | 'atencao' | 'info'; texto: string }>; titulo: string }) {
   return (
     <section className="aa-cartao cr-leitura">
       <header><div><span className="rot">Inteligência</span><h3>{titulo}</h3></div></header>
@@ -301,14 +301,14 @@ export function CentralRastreio({ sessao, api = API_DA_CENTRAL, apiAnuncios = AP
 }
 
 /** De onde veio, numa etiqueta: o canal e, se houver, o anúncio ou o link. */
-function Origem({ canal, conteudo, link, nomeDoAnuncio, nomeDoLink }: { canal: string; conteudo: string | null; link: string | null; nomeDoAnuncio: Map<string, Anuncio>; nomeDoLink: Map<string, string> }) {
+export function Origem({ canal, conteudo, link, nomeDoAnuncio, nomeDoLink }: { canal: string; conteudo: string | null; link: string | null; nomeDoAnuncio: Map<string, Anuncio>; nomeDoLink: Map<string, string> }) {
   const ad = conteudo ? nomeDoAnuncio.get(conteudo) : undefined
   const extra = link ? nomeDoLink.get(link) ?? link : canal === 'anuncio-meta' && conteudo ? (ad ? ad.nome.replace(/^GF \| /, '') : `anúncio ${conteudo.slice(-5)}`) : null
   return <span className={`cr-canal c-${canal}`}><i aria-hidden="true" />{nomeDoCanal(canal)}{extra && <small>{extra}</small>}</span>
 }
 
 // ------------------------------------------------------------------ Origens
-function Origens({ resumo, nomeDoLink, nomeDoAnuncio, irParaLinks }: { resumo: ResumoDaCentral | null; nomeDoLink: Map<string, string>; nomeDoAnuncio: Map<string, Anuncio>; irParaLinks: () => void }) {
+export function Origens({ resumo, nomeDoLink, nomeDoAnuncio, irParaLinks }: { resumo: ResumoDaCentral | null; nomeDoLink: Map<string, string>; nomeDoAnuncio: Map<string, Anuncio>; irParaLinks: () => void }) {
   if (!resumo) return <p className="aa-vazio">Carregando…</p>
   const t = resumo.total
   const maxCad = Math.max(1, ...resumo.porCanal.map((c) => c.cadastros))
@@ -429,7 +429,7 @@ function CurvaDeRetencao({ lista }: { lista: Criativo[] }) {
   )
 }
 
-function Criativos({ meta, resumo }: { meta: { anuncios: Anuncio[]; falha: string | null; carregando: boolean }; resumo: ResumoDaCentral | null }) {
+export function Criativos({ meta, resumo }: { meta: { anuncios: Anuncio[]; falha: string | null; carregando: boolean }; resumo: ResumoDaCentral | null }) {
   const [separar, setSeparar] = useState(() => lembrar('cr-separar', ['1', '0'], '0') === '1')
   useEffect(() => { guardar('cr-separar', separar ? '1' : '0') }, [separar])
   const lista = useMemo(() => agrupar(meta.anuncios.filter((a) => a.m.impressoes > 0 || a.m.gasto > 0), resumo?.porAnuncio ?? [], separar), [meta.anuncios, resumo, separar])
@@ -498,7 +498,7 @@ function Criativos({ meta, resumo }: { meta: { anuncios: Anuncio[]; falha: strin
 }
 
 // ------------------------------------------------------------------ Ao vivo
-function AoVivo({ sessao, api, parceiro, nomeDoAnuncio, nomeDoLink, abrir }: { sessao: SessaoTeeds; api: ApiCentral; parceiro: string; nomeDoAnuncio: Map<string, Anuncio>; nomeDoLink: Map<string, string>; abrir: (v: string) => void }) {
+export function AoVivo({ sessao, api, parceiro, nomeDoAnuncio, nomeDoLink, abrir }: { sessao: SessaoTeeds; api: ApiCentral; parceiro: string; nomeDoAnuncio: Map<string, Anuncio>; nomeDoLink: Map<string, string>; abrir: (v: string) => void }) {
   const [eventos, setEventos] = useState<EventoAoVivo[] | null>(null)
   const [tudo, setTudo] = useState(() => lembrar('cr-tudo', ['1', '0'], '1') === '1')
   const [falha, setFalha] = useState<string | null>(null)
@@ -554,7 +554,7 @@ function AoVivo({ sessao, api, parceiro, nomeDoAnuncio, nomeDoLink, abrir }: { s
 }
 
 // ------------------------------------------------------------------ Pessoas
-function Pessoas({ sessao, api, parceiro, de, ate, nomeDoAnuncio, nomeDoLink, abrir }: { sessao: SessaoTeeds; api: ApiCentral; parceiro: string; de: string; ate: string; nomeDoAnuncio: Map<string, Anuncio>; nomeDoLink: Map<string, string>; abrir: (v: string) => void }) {
+export function Pessoas({ sessao, api, parceiro, de, ate, nomeDoAnuncio, nomeDoLink, abrir }: { sessao: SessaoTeeds; api: ApiCentral; parceiro: string; de: string; ate: string; nomeDoAnuncio: Map<string, Anuncio>; nomeDoLink: Map<string, string>; abrir: (v: string) => void }) {
   const [lista, setLista] = useState<PessoaDaLista[] | null>(null)
   const [busca, setBusca] = useState('')
   const [canal, setCanal] = useState('')
@@ -612,7 +612,7 @@ function Pessoas({ sessao, api, parceiro, de, ate, nomeDoAnuncio, nomeDoLink, ab
 }
 
 // ------------------------------------------------------------------ a ficha de uma pessoa
-function Ficha({ sessao, api, visitante, fechar, abrir, nomeDoAnuncio, nomeDoLink }: { sessao: SessaoTeeds; api: ApiCentral; visitante: string; fechar: () => void; abrir: (v: string) => void; nomeDoAnuncio: Map<string, Anuncio>; nomeDoLink: Map<string, string> }) {
+export function Ficha({ sessao, api, visitante, fechar, abrir, nomeDoAnuncio, nomeDoLink }: { sessao: SessaoTeeds; api: ApiCentral; visitante: string; fechar: () => void; abrir: (v: string) => void; nomeDoAnuncio: Map<string, Anuncio>; nomeDoLink: Map<string, string> }) {
   const [f, setF] = useState<FichaDaPessoa | null | undefined>(undefined)
   const [falha, setFalha] = useState<string | null>(null)
   const [tudo, setTudo] = useState(false)
@@ -691,7 +691,7 @@ function Ficha({ sessao, api, visitante, fechar, abrir, nomeDoAnuncio, nomeDoLin
 }
 
 // ------------------------------------------------------------------ Links
-function Links({ sessao, api, links, setLinks, parceiro }: { sessao: SessaoTeeds; api: ApiCentral; links: LinkDeRastreio[]; setLinks: (l: LinkDeRastreio[]) => void; parceiro: string }) {
+export function Links({ sessao, api, links, setLinks, parceiro }: { sessao: SessaoTeeds; api: ApiCentral; links: LinkDeRastreio[]; setLinks: (l: LinkDeRastreio[]) => void; parceiro: string }) {
   const [nome, setNome] = useState('')
   const [canal, setCanal] = useState<string>('telegram')
   const [para, setPara] = useState(parceiro || 'n')

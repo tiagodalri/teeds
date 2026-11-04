@@ -10,13 +10,16 @@
  * (teeds_meta_funil), que a Meta não enxerga. O cadastro de cada anúncio é ligado a ele pela
  * marcação utm_content={{ad.id}} no link do anúncio.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { MARCA } from '../../marca'
 import { API_DO_BANCO, CONTAS_DE_ANUNCIO, type ApiAnuncios, type Descoberta, type Anuncio, type DetalheDoAnuncio, type FunilDoBanco, type Horarios as DadosDeHorario, type Metricas, type PainelDaMeta, type Quebra, type RespostaDaMeta } from '../../core/teeds/anuncios'
 import { Alertas, Custos, Filtros, Horarios, METRICA, Relatorio, alertas, aplicar, formatar, somarLinhas, useColunas, type Base, type Linha, type Regra } from './Indicadores'
 import { Funil3D, type EtapaDoFunil } from './Funil3D'
 import { EstudioDeAnuncios } from './estudio/Estudio'
+import { DoAnuncioAoDinheiro, TabelaDaJornada, useJornada } from './JornadaCompleta'
+import { AoVivo, Criativos as CriativosDaCentral, Ficha, Links, Origens, Pessoas as VisitantesDaCentral } from '../central/CentralRastreio'
+import { API_DA_CENTRAL, jornadaCompleta, type ApiCentral, type LinkDeRastreio, type ResumoDaCentral } from '../../core/teeds/central'
 import { API_DO_ESTUDIO, type ApiEstudio } from '../../core/teeds/estudio'
 import './admin-anuncios.css'
 
@@ -51,9 +54,12 @@ const dataBr = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4
 type IdPeriodo = (typeof PERIODOS)[number]['id']
 
 // 03/11/2026 (Tiago: "precisa ser mais intuitiva"): a página virou abas; a escolhida fica lembrada neste aparelho
+// 04/11/2026 (Tiago: "não quero que a central de rastreio seja algo separado... tudo precisa andar em conjunto"):
+// a Central de rastreio vive aqui dentro. A home é a jornada do anúncio ao dinheiro.
 const ABAS = [
-  { id: 'geral', nome: 'Visão geral' }, { id: 'estudio', nome: 'Estúdio' }, { id: 'custos', nome: 'Custos' }, { id: 'anuncios', nome: 'Anúncios' },
-  { id: 'publico', nome: 'Público' }, { id: 'rastreio', nome: 'Pixel e rastreio' },
+  { id: 'geral', nome: 'Visão geral' }, { id: 'aovivo', nome: 'Ao vivo' }, { id: 'pessoas', nome: 'Pessoas' }, { id: 'origens', nome: 'Origens e links' },
+  { id: 'criativos', nome: 'Criativos' }, { id: 'anuncios', nome: 'Anúncios' }, { id: 'custos', nome: 'Custos' }, { id: 'publico', nome: 'Público' },
+  { id: 'rastreio', nome: 'Pixel' }, { id: 'estudio', nome: 'Estúdio' },
 ] as const
 type IdAba = (typeof ABAS)[number]['id']
 const abaGuardada = (): IdAba => { try { const v = localStorage.getItem('aa-aba'); return ABAS.some((a) => a.id === v) ? v as IdAba : 'geral' } catch { return 'geral' } }
@@ -162,7 +168,7 @@ function Barras({ titulo, linhas, nome }: { titulo: string; linhas: Quebra[]; no
 }
 
 /** `intervalo`: de quanto em quanto tempo o nosso banco é lido (o laboratório acelera). */
-export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_ESTUDIO, intervalo = 10_000 }: { sessao: SessaoTeeds; api?: ApiAnuncios; apiEstudio?: ApiEstudio; intervalo?: number }) {
+export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_ESTUDIO, intervalo = 10_000, apiCentral = API_DA_CENTRAL, buscarJornada }: { sessao: SessaoTeeds; api?: ApiAnuncios; apiEstudio?: ApiEstudio; intervalo?: number; apiCentral?: ApiCentral; buscarJornada?: typeof jornadaCompleta }) {
   const contas = CONTAS_DE_ANUNCIO[MARCA.id] ?? []
   // a conta escolhida (Naor ou Victor) fica lembrada neste aparelho
   const [parceiro, setParceiroAgora] = useState(() => { try { const v = localStorage.getItem('aa-parceiro'); return contas.some((c) => c.codigo === v) ? v! : contas[0]?.codigo ?? '' } catch { return contas[0]?.codigo ?? '' } })
@@ -260,6 +266,33 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const painel = meta && 'total' in meta ? meta as PainelDaMeta : null
   const total = aoVivo?.total ?? painel?.total ?? null
   const etapasDoBanco = funil ? (origem === 'anuncios' ? funil.anuncio : funil.total) : null
+  // a jornada completa de cada cadastro (home e Pessoas) e as partes da Central de rastreio
+  // a jornada (3 mil linhas) só carrega nas abas que a mostram
+  const jornada = useJornada(sessao, parceiro, de, ate, buscarJornada, aba === 'geral' || aba === 'pessoas')
+  const [resumoCentral, setResumoCentral] = useState<ResumoDaCentral | null>(null)
+  const [linksCentral, setLinksCentral] = useState<LinkDeRastreio[]>([])
+  const [ficha, setFicha] = useState<string | null>(null)
+  const [filtroPessoas, setFiltroPessoas] = useState<string | null>(null)
+  const [quemNasPessoas, setQuemNasPessoas] = useState<'cadastros' | 'visitantes'>('cadastros')
+  const precisaCentral = aba === 'origens' || aba === 'criativos'
+  const [falhaCentral, setFalhaCentral] = useState<string | null>(null)
+  // os nomes dos links valem para todas as abas (Ao vivo, Pessoas, a ficha)
+  useEffect(() => { void apiCentral.links(sessao).then(setLinksCentral).catch(() => { /* sem nome: aparece o código */ }) }, [sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!precisaCentral) return
+    let vivo = true
+    // outro parceiro ou período: os números antigos saem da tela na hora
+    setResumoCentral(null); setFalhaCentral(null)
+    const puxar = () => apiCentral.resumo(sessao, parceiro, de, ate).then((r) => { if (vivo) { setResumoCentral(r); setFalhaCentral(null) } }).catch((e) => vivo && setFalhaCentral((e as Error).message))
+    void puxar()
+    const t = setInterval(() => { if (document.visibilityState === 'visible') void puxar() }, 30000)
+    return () => { vivo = false; clearInterval(t) }
+  }, [precisaCentral, parceiro, de, ate, sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
+  const nomeDoAnuncio = useMemo(() => new Map((painel?.anuncios ?? []).map((a) => [a.id, a])), [painel])
+  const fecharFicha = useCallback(() => setFicha(null), [])
+  const irParaPessoas = useCallback((f: string) => { setFiltroPessoas(f); setQuemNasPessoas('cadastros'); setAbaAgora('pessoas'); try { localStorage.setItem('aa-aba', 'pessoas') } catch { /* só não lembra */ } window.scrollTo({ top: 0, behavior: 'smooth' }) }, [])
+  const anunciosDoPainel = useMemo(() => painel?.anuncios ?? [], [painel])
+  const nomeDoLink = useMemo(() => new Map(linksCentral.map((l) => [l.codigo, l.nome])), [linksCentral])
   const pixelEv = painel && 'eventos' in painel.pixel ? new Map(painel.pixel.eventos.map((e) => [e.nome, e.total])) : null
   const gasto = total?.gasto ?? 0
   const comCusto = origem === 'anuncios' && gasto > 0
@@ -504,7 +537,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
 
       <nav className="aa-abas" role="tablist" aria-label="Partes do painel">
         {ABAS.map((x) => (
-          <button key={x.id} type="button" role="tab" aria-selected={aba === x.id} className={aba === x.id ? 'on' : ''} onClick={() => setAba(x.id)}>
+          <button key={x.id} type="button" role="tab" aria-selected={aba === x.id} className={aba === x.id ? 'on' : ''} onClick={() => { if (x.id === 'pessoas') setFiltroPessoas(null); setAba(x.id) }}>
             {x.nome}
             {x.id === 'anuncios' && painel ? <i>{int(painel.anuncios.length)}</i> : null}
             {x.id === 'geral' && qtdAlertas ? <i className="alerta">{qtdAlertas}</i> : null}
@@ -515,27 +548,11 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
 
       {aba === 'geral' && (
         <>
-          <section className="aa-cartao aa-funil">
-            <header>
-              <div><span className="rot">Ao vivo</span><h3>Funil do lançamento</h3></div>
-              <span className="aa-vivo"><i />{atualizado == null ? 'Conectando…' : atualizado < 5 ? 'Atualizado agora' : `Atualizado há ${atualizado} s`}</span>
-            </header>
-            <Funil3D etapas={etapas} mostrarCusto={comCusto} />
-            <p className="aa-nota">As três primeiras etapas vêm da Meta, a cada minuto. As outras vêm da plataforma, a cada 10 segundos. {origem === 'anuncios' ? 'Contam só os cadastros que chegaram por um anúncio da Meta.' : `Contam todos os cadastros do /${parceiro}, de anúncio ou não.`}</p>
-          </section>
-
-          {total && (
-            <div className="aa-kpis principais">
-              <div><small>Investido</small><b>{brl(total.gasto)}</b><span>{painel ? `${int(total.impressoes)} impressões` : ''}</span></div>
-              <div className="destaque"><small>Cadastros pelos anúncios</small><b>{int(cadDeAnuncio)}</b><span>a Meta contou {int(total.cadastros)}</span></div>
-              <div className="destaque"><small>Custo por cadastro</small><b>{custo(total.gasto, cadDeAnuncio)}</b><span>pela conta da Meta: {custo(total.gasto, total.cadastros)}</span></div>
-              <div><small>Custo por GF Member</small><b>{custo(total.gasto, funil?.anuncio.liberados ?? 0)}</b><span>{int(funil?.anuncio.liberados ?? 0)} liberados vindos de anúncio</span></div>
-            </div>
-          )}
-
+          <DoAnuncioAoDinheiro pessoas={jornada.pessoas} total={jornada.total} falha={jornada.falha} gasto={total?.gasto ?? 0} moeda={painel?.conta.moeda ?? 'BRL'} meta={total} anuncios={anunciosDoPainel}
+            origem={origem} parceiro={parceiro} aPessoas={irParaPessoas} />
           {listaDeAlertas.length ? (
             <section className="aa-cartao">
-              <header><div><span className="rot">Indicadores inteligentes</span><h3>O que merece atenção</h3></div></header>
+              <header><div><span className="rot">Anúncios da Meta</span><h3>O que merece atenção nos anúncios</h3></div></header>
               <Alertas lista={listaDeAlertas} />
             </section>
           ) : <p className="aa-tudo-ok"><i aria-hidden="true" /><span><b>Nada fora do normal</b> neste período: custos e anúncios dentro do esperado.</span></p>}
@@ -553,6 +570,45 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
           </section>
         </>
       )}
+
+      {aba === 'aovivo' && (
+        <>
+          <section className="aa-cartao aa-funil">
+            <header>
+              <div><span className="rot">Ao vivo</span><h3>Funil do lançamento</h3></div>
+              <span className="aa-vivo"><i />{atualizado == null ? 'Conectando…' : atualizado < 5 ? 'Atualizado agora' : `Atualizado há ${atualizado} s`}</span>
+            </header>
+            <Funil3D etapas={etapas} mostrarCusto={comCusto} />
+            <p className="aa-nota">As três primeiras etapas vêm da Meta, a cada minuto. As outras vêm da plataforma, a cada 10 segundos. {origem === 'anuncios' ? 'Contam só os cadastros que chegaram por um anúncio da Meta.' : `Contam todos os cadastros do /${parceiro}, de anúncio ou não.`}</p>
+          </section>
+
+          <AoVivo sessao={sessao} api={apiCentral} parceiro={parceiro} nomeDoAnuncio={nomeDoAnuncio} nomeDoLink={nomeDoLink} abrir={setFicha} />
+        </>
+      )}
+
+      {aba === 'pessoas' && (
+        <>
+          <div className="aa-troca jc-quem-troca" role="group" aria-label="Quem mostrar">
+            <button type="button" className={quemNasPessoas === 'cadastros' ? 'on' : ''} onClick={() => setQuemNasPessoas('cadastros')}>Cadastros e a jornada completa</button>
+            <button type="button" className={quemNasPessoas === 'visitantes' ? 'on' : ''} onClick={() => setQuemNasPessoas('visitantes')}>Todos os visitantes</button>
+          </div>
+          {quemNasPessoas === 'cadastros'
+            ? <TabelaDaJornada pessoas={jornada.pessoas} falha={jornada.falha} filtroInicial={filtroPessoas} origem={origem} nomeDoAnuncio={nomeDoAnuncio} abrir={setFicha} />
+            : <VisitantesDaCentral sessao={sessao} api={apiCentral} parceiro={parceiro} de={de} ate={ate} nomeDoAnuncio={nomeDoAnuncio} nomeDoLink={nomeDoLink} abrir={setFicha} />}
+        </>
+      )}
+
+      {aba === 'origens' && (
+        <>
+          {falhaCentral && <p className="aa-erro">{falhaCentral}</p>}
+          <Origens resumo={resumoCentral} nomeDoLink={nomeDoLink} nomeDoAnuncio={nomeDoAnuncio} irParaLinks={() => document.getElementById('aa-links')?.scrollIntoView({ behavior: 'smooth' })} />
+          <div id="aa-links"><Links key={parceiro} sessao={sessao} api={apiCentral} links={linksCentral} setLinks={setLinksCentral} parceiro={parceiro} /></div>
+        </>
+      )}
+
+      {aba === 'criativos' && <CriativosDaCentral meta={{ anuncios: anunciosDoPainel, falha: semChave ? 'Os criativos aparecem quando a conta for conectada.' : !painel && falhaMeta ? falhaMeta : null, carregando: !painel && !semChave && !falhaMeta }} resumo={resumoCentral} />}
+
+      {ficha && <Ficha sessao={sessao} api={apiCentral} visitante={ficha} fechar={fecharFicha} abrir={setFicha} nomeDoAnuncio={nomeDoAnuncio} nomeDoLink={nomeDoLink} />}
 
       {aba === 'estudio' && (
         <EstudioDeAnuncios key={parceiro} sessao={sessao} api={apiEstudio} parceiro={parceiro} contaNome={painel?.conta.nome || contaAtual?.contaNome || ''} painel={painel} funil={funil}

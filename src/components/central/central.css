@@ -1,5 +1,5 @@
 /* Administração › Central de rastreio (04/11/2026). Usa as peças da aba Anúncios (aa-*) e estas. */
-.cr { --cr-verde: var(--up); --cr-alerta: var(--gf-ouro, var(--primary)); }
+.cr, .aa { --cr-verde: var(--up); --cr-alerta: var(--gf-ouro, var(--primary)); }
 .cr-topo { justify-content: space-between; }
 .cr-abas { flex-wrap: wrap; overflow: visible; }
 .cr-pulso { width: 7px; height: 7px; border-radius: 50%; background: var(--up); box-shadow: 0 0 0 0 color-mix(in srgb, var(--up) 60%, transparent); animation: aa-pulso 1.8s infinite; }
