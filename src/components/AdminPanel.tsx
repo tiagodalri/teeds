@@ -27,6 +27,7 @@ import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { ExcluirCadastro } from './ExcluirCadastro'
 import { Icone, type NomeIcone } from './Icone'
+import { MenuDoAdmin, type GrupoDoMenu, type ItemDoMenu } from './MenuDoAdmin'
 import { AdminParceiros } from './AdminParceiros'
 import { souAdminGeral } from '../core/teeds/parceiro'
 import { rotuloDoParceiro, SO_DO_ADMIN_GERAL, useMeuPapel, useParceiroEmFoco, useParceirosDaMarca } from '../core/teeds/parceiroEmFoco'
@@ -385,8 +386,49 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
                 : <em className="adm-nunca">Não conectada</em>}</span><span>{data(c.criadoEm)}</span><span className="adm-seta">›</span></button>})}{buscando && !naPagina.length && <div className="adm-vazio">Buscando…</div>}{!buscando && !naPagina.length && <div className="adm-vazio">Nenhum cliente encontrado.</div>}</div>{paginacao}</>
 
   // no suporte o painel vira um app de atendimento: menu só com ícones e a conversa na altura da tela
+  /* O menu em grupos (04/11/2026, Tiago: "estou achando confuso o menu dividido dessa forma").
+     "Criar acesso" saiu do menu: é o botão "Novo cliente" dentro de Clientes (o menu marca Clientes). */
+  const soGeral = (id: string) => !doParceiro || !(SO_DO_ADMIN_GERAL as readonly string[]).includes(id)
+  const item = (id: Aba, nome: string, icone: NomeIcone, selo?: ItemDoMenu['selo']): ItemDoMenu => ({ id, nome, icone, selo, onClick: () => setAba(id) })
+  const naGf = souGeral && marcaFoco === 'globalfly'
+  const gruposDoMenu: GrupoDoMenu[] = ([
+    { id: 'topo', titulo: null, itens: [
+      item('visao', 'Visão geral', 'inicio'),
+      ...(MARCA.suporte ? [item('suporte', 'Suporte', 'suporte', { n: filaSuporte, urgente: true, dica: 'Conversas esperando a equipe' })] : []),
+      item('organizacao', 'Organização', 'organizacao', { n: minhasPendentes, urgente: true, dica: 'Suas tarefas atrasadas ou para hoje' }),
+    ] },
+    { id: 'captacao', titulo: 'Captação', itens: [
+      ...(naGf ? [item('anuncios', 'Anúncios', 'megafone')] : []),
+      item('leads', 'Leads', 'leads'),
+      ...(souGeral && MARCA.parceiros?.length ? [item('parceiros', 'Parceiros', 'parceiros')] : []),
+    ] },
+    { id: 'contato', titulo: 'Lançamento e contato', itens: [
+      ...(naGf ? [item('lancamento', 'Live de lançamento', 'aovivo')] : []),
+      ...(MARCA.aoVivo ? [{ id: 'central-ao-vivo', nome: 'Central ao vivo', icone: 'aovivo' as NomeIcone, sai: true, onClick: () => { pedirCentral(); onNavigate('aovivo') } }] : []),
+      ...(naGf ? [item('notificacoes', 'Notificações', 'sino')] : []),
+      item('emails', 'E-mails', 'emails'),
+    ] },
+    { id: 'clientes', titulo: 'Clientes', itens: [
+      item('clientes', 'Clientes', 'clientes', { n: totalClientes }),
+      item('movimentacoes', 'Depósitos e saques', 'movimentacoes'),
+      item('resultados', 'Resultados', 'resultados'),
+    ] },
+    { id: 'numeros', titulo: 'Números', itens: [
+      item('inteligencia', 'Inteligência', 'inteligencia'),
+      item('estudo', 'Centro de estudo', 'estudo'),
+      item('comissoes', 'Comissões', 'comissoes'),
+      ...(!doParceiro ? [{ id: 'insights', nome: 'Insights', icone: 'insights' as NomeIcone, sai: true, onClick: () => onNavigate('insights') }] : []),
+      { id: 'monitoramento', nome: 'Monitoramento ao vivo', icone: 'monitoramento' as NomeIcone, sai: true, onClick: () => onNavigate('monitoramento') },
+    ] },
+    { id: 'config', titulo: 'Configurações da plataforma', itens: [
+      item('aulas', 'Aulas', 'aulas'),
+      item('robos', 'Robôs', 'robos'),
+      item('planos', 'Planos', 'planos'),
+      item('produtos', 'Produtos', 'produtos'),
+    ] },
+  ] as GrupoDoMenu[]).map((g) => ({ ...g, itens: g.itens.filter((i) => soGeral(i.id)) }))
   return <div className={`admin-shell ${aba === 'suporte' && !naRede ? 'modo-suporte' : ''}`}>
-    <aside className="admin-sidebar"><div><span className="rot">Painel de controle</span><h2>Administração</h2><p>{doParceiro ? `Os clientes e as operações do ${rotuloDoParceiro(papel!.nomeDoParceiro, papel!.parceiro!)}` : `Gestão completa da ${MARCA.prosa}`}</p></div><nav ref={navAbas}>{([...(MARCA.suporte ? [['suporte','Suporte','suporte']] : []),['visao','Visão geral','inicio'],['organizacao','Organização','organizacao'],['estudo','Centro de estudo','estudo'],['inteligencia','Inteligência','inteligencia'],['leads','Leads','leads'],...(souGeral && MARCA.parceiros?.length ? [['parceiros','Parceiros','parceiros']] : []),...(souGeral && marcaFoco === 'globalfly' ? [['anuncios','Anúncios','megafone'],['lancamento','Live de lançamento','aovivo'],['notificacoes','Notificações','sino']] : []),['emails','E-mails','emails'],['clientes','Clientes','clientes'],['resultados','Resultados','resultados'],['movimentacoes','Depósitos e saques','movimentacoes'],['acessos','Criar acesso','acesso'],['aulas','Aulas','aulas'],['robos','Robôs','robos'],['planos','Planos','planos'],['produtos','Produtos','produtos'],['comissoes','Comissões','comissoes']] as [Aba,string,NomeIcone][]).filter(([id]) => !doParceiro || !(SO_DO_ADMIN_GERAL as readonly string[]).includes(id)).map(([id,nome,ico]) => <button key={id} className={aba === id ? 'on' : ''} onClick={() => setAba(id)} title={nome}><i><Icone nome={ico} /></i><span>{nome}</span>{id === 'clientes' && <b>{totalClientes}</b>}{id === 'organizacao' && minhasPendentes > 0 && <b className="admin-fila-suporte" title="Suas tarefas atrasadas ou para hoje">{minhasPendentes}</b>}{id === 'suporte' && filaSuporte > 0 && <b className="admin-fila-suporte">{filaSuporte}</b>}</button>)}<div className="admin-submenus" aria-label="Ferramentas administrativas">{MARCA.aoVivo && <button onClick={() => { pedirCentral(); onNavigate('aovivo') }}><i><Icone nome="aovivo" /></i><span>Central ao vivo</span></button>}<button onClick={() => onNavigate('monitoramento')}><i><Icone nome="monitoramento" /></i><span>Monitoramento ao vivo</span></button>{!doParceiro && <button onClick={() => onNavigate('insights')}><i><Icone nome="insights" /></i><span>Insights</span></button>}</div></nav><small>Somente administradores podem visualizar e alterar estes dados.</small></aside>
+    <aside className="admin-sidebar"><div><span className="rot">Painel de controle</span><h2>Administração</h2><p>{doParceiro ? `Os clientes e as operações do ${rotuloDoParceiro(papel!.nomeDoParceiro, papel!.parceiro!)}` : `Gestão completa da ${MARCA.prosa}`}</p></div><MenuDoAdmin navRef={navAbas} ativa={aba === 'acessos' ? 'clientes' : aba} grupos={gruposDoMenu} /><small>Somente administradores podem visualizar e alterar estes dados.</small></aside>
     <main className="admin-main" ref={mainAdmin}><header className="admin-top"><div><span className="rot">{naRede ? `Rede ${MARCA.prosa}` : doParceiro ? `${nomeDoFoco} · Admin do parceiro ${rotuloDoParceiro(papel!.nomeDoParceiro, papel!.parceiro!)}` : `${nomeDoFoco} Admin`}</span><h1>{aba === 'anuncios' ? 'Anúncios e rastreio' : aba === 'notificacoes' ? 'Notificações no celular' : aba === 'lancamento' ? 'Live de lançamento' : aba === 'organizacao' ? 'Organização' : aba === 'suporte' ? 'Suporte ao cliente' : aba === 'leads' ? 'Leads e interessados' : aba === 'parceiros' ? 'Parceiros de divulgação' : aba === 'emails' ? 'Central de e-mails' : aba === 'estudo' ? 'Centro de estudo' : aba === 'robos' ? 'Robôs da plataforma' : aba === 'visao' ? 'Visão geral' : aba === 'inteligencia' ? 'Inteligência do negócio' : aba === 'clientes' ? 'Gestão de clientes' : aba === 'resultados' ? 'Resultados por cliente' : aba === 'movimentacoes' ? 'Depósitos e saques' : aba === 'acessos' ? 'Criar novo acesso' : aba === 'aulas' ? 'Aulas e vídeos' : aba === 'planos' ? 'Planos e assinaturas' : aba === 'produtos' ? 'Catálogo de produtos' : 'Comissões e resultados'}</h1><p>{aba === 'anuncios' ? 'Do anúncio ao dinheiro: de onde vem cada pessoa, cada passo dela, o que cada anúncio e cada divulgação trazem, até o depósito e o markup.' : aba === 'notificacoes' ? 'Escreva, veja como chega no celular, escolha para quem e envie.' : aba === 'lancamento' ? 'A live de 09/11: o link do YouTube, começar, encerrar e liberar quem ficou até o fim.' : aba === 'organizacao' ? 'Tarefas, responsáveis, prazos e o calendário do lançamento. O que um muda aparece na hora para os outros.' : aba === 'suporte' ? 'As conversas dos clientes, em tempo real: o mais urgente primeiro.' : aba === 'leads' ? 'Quem se cadastrou, de onde veio e quão quente está.' : aba === 'parceiros' ? 'Quem trouxe cada cliente e quanto de markup cada parceiro gerou. Só você vê esta aba.' : aba === 'emails' ? 'Consulte os disparos e acompanhe os status de envio.' : aba === 'estudo' ? (naRede ? 'A rede somada: as plataformas lado a lado e o histórico de todas juntas.' : `Markup, volume e desempenho dos robôs da ${nomeDoFoco} no período.`) : aba === 'robos' ? 'Ligue, desligue e ajuste as regras de cada robô desta plataforma.' : aba === 'visao' ? (naRede ? 'Todas as plataformas somadas, em um só lugar.' : `Tudo da ${nomeDoFoco} que precisa de atenção, em um só lugar.`) : aba === 'inteligencia' ? 'Comportamento, carteira, atividade e receita organizados para decidir melhor.' : aba === 'clientes' ? 'Consulte, filtre e edite acessos existentes.' : aba === 'resultados' ? 'Quanto cada cliente operou, ganhou ou perdeu, e gerou de comissão — e o nosso número contra o da Deriv.' : aba === 'movimentacoes' ? 'Quanto entrou e quanto saiu das contas reais dos clientes na Deriv, dia a dia.' : aba === 'acessos' ? 'Cadastre uma pessoa e defina sua liberação inicial.' : aba === 'aulas' ? 'Envie ou troque o vídeo de cada aula. Entra no ar na hora, sem republicar o site.' : aba === 'planos' ? 'Configure as opções comerciais da plataforma.' : aba === 'produtos' ? 'Gerencie os itens e extras do Marketplace.' : 'Acompanhe volume, operações e comissões da sua conta.'}</p></div><div className="admin-top-acoes">{aba === 'anuncios' && contaAnuncio
             ? <SeletorDePlataforma valor={marcaFoco} opcoes={opcoes} onTrocar={trocarPlataforma} parceiros={parceirosDoFoco.filter((p) => contaAnuncio.codigos.includes(p.codigo))} parceiro={contaAnuncio.conta} onParceiro={(c) => { trocarParceiroFoco(c); setPagina(0) }} soParceiros />
             : <SeletorDePlataforma valor={marcaFoco} opcoes={opcoes} onTrocar={trocarPlataforma} parceiros={parceirosDoFoco} parceiro={parceiroFoco} onParceiro={(c) => { trocarParceiroFoco(c); setPagina(0) }} />}<button className="admin-refresh" onClick={() => void recarregar()} disabled={carregando}><Icone nome="atualizar" />{carregando ? 'Atualizando…' : 'Atualizar'}</button></div></header>
@@ -431,3 +473,4 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
 }
 
 function Editor({titulo,fechar,salvar,salvando,children}:{titulo:string;fechar:()=>void;salvar:()=>void;salvando:boolean;children:ReactNode}) { return <div className="adm-modal-fundo" onMouseDown={fechar}><section className="adm-modal admin-editor" onMouseDown={e=>e.stopPropagation()}><header><h3>{titulo}</h3><button onClick={fechar}><IconeFechar /></button></header><div className="admin-editor-form">{children}</div><footer><span>As alterações entram em vigor imediatamente.</span><button onClick={salvar} disabled={salvando}>{salvando?'Salvando…':'Salvar'}</button></footer></section></div> }
+

@@ -1,0 +1,34 @@
+/* O menu da Administração em grupos (04/11/2026). Ver MenuDoAdmin.tsx. */
+.admin-sidebar nav { gap: 16px; }
+.admin-sidebar .adm-grupo { display: grid; gap: 4px; }
+.admin-sidebar .adm-grupo-itens { display: grid; gap: 3px; }
+.admin-sidebar .adm-grupo-itens[data-fechado] { display: none; }
+
+/* o título do grupo: pequeno, em caixa alta, e fecha o grupo */
+.admin-sidebar nav .adm-grupo-tit {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 26px; padding: 0 11px; border: 0; border-radius: 8px; background: none;
+  color: color-mix(in srgb, var(--muted) 85%, transparent);
+  font-size: 10.5px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; cursor: pointer;
+}
+.admin-sidebar nav .adm-grupo-tit:hover { color: var(--text); background: none; }
+.admin-sidebar nav .adm-grupo-tit:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.admin-sidebar nav .adm-grupo-tit svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .16s ease; }
+.admin-sidebar nav .adm-grupo-tit[aria-expanded="false"] svg { transform: rotate(-90deg); }
+
+/* o item que abre outra tela */
+.admin-sidebar nav .adm-sai { font-style: normal; font-size: 13px; line-height: 1; color: var(--muted); opacity: .8; }
+.admin-sidebar nav button:hover .adm-sai { color: var(--text); opacity: 1; }
+
+/* celular e tablet: a fila de abas que rola de lado. Os grupos não fecham e o título vira um rótulo. */
+@media (max-width: 980px) {
+  .admin-sidebar nav { gap: 5px; }
+  .admin-sidebar .adm-grupo,
+  .admin-sidebar .adm-grupo-itens,
+  .admin-sidebar .adm-grupo-itens[data-fechado] { display: contents; }
+  .admin-sidebar nav .adm-grupo-tit {
+    pointer-events: none; min-width: max-content; margin-left: 8px; padding: 0 2px 0 12px;
+    border-left: 1px solid var(--border); border-radius: 0; font-size: 9.5px;
+  }
+  .admin-sidebar nav .adm-grupo-tit svg { display: none; }
+}
