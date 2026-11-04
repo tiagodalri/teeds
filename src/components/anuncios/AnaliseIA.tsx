@@ -19,6 +19,13 @@ const IMPACTO = { alto: 'Impacto alto', medio: 'Impacto médio', baixo: 'Impacto
 const QUANDO = { agora: 'Agora', 'esta-semana': 'Esta semana', 'depois-da-live': 'Depois da live' }
 const ONDE: Record<string, string> = { instagram_reels: 'Reels do Instagram', instagram_stories: 'Stories do Instagram', instagram_feed: 'Feed do Instagram', facebook_feed: 'Feed do Facebook', facebook_reels: 'Reels do Facebook' }
 
+/** Os erros que a Anthropic devolve em inglês, ditos do nosso jeito. */
+function erroEmPortugues(e: string): string {
+  if (/credit balance is too low/i.test(e)) return 'a conta da Anthropic está sem créditos. Em console.anthropic.com › Plans & Billing, compre créditos (US$ 5 rendem dezenas de análises) e toque em Tentar de novo.'
+  if (/rate limit|overloaded|529/i.test(e)) return 'a Anthropic pediu uma pausa (muitas consultas no momento). Espere um minuto e toque em Tentar de novo.'
+  if (/authentication|invalid x-api-key|401/i.test(e)) return 'a Anthropic não aceitou a chave guardada. Gere uma nova em console.anthropic.com › API keys e cole no cartão.'
+  return e
+}
 /** O que a mudança faz, em uma linha. */
 function oQueMuda(m: Mudanca, moeda: (v: number) => string): string {
   if (m.tipo === 'orcamento') return `${moeda(m.diarioDe)} → ${moeda(m.diarioPara)} por dia`
@@ -173,7 +180,7 @@ export function AnaliseIA({ sessao, api, parceiro, de, ate, nomeDoPeriodo, conta
 
       {analise?.situacao === 'erro' && !analisando && (
         <div className="ia-vazio">
-          <p className="aa-erro">A análise não terminou: {analise.erro}</p>
+          <p className="aa-erro">A análise não terminou: {erroEmPortugues(analise.erro ?? '')}</p>
           <button type="button" className="aa-atualizar" onClick={() => void analisar(true)}>Tentar de novo</button>
         </div>
       )}
