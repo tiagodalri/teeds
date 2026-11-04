@@ -42,6 +42,15 @@
 .pdq-produtos i{padding:3px 9px;border-radius:7px;background:color-mix(in srgb,currentColor 8%,transparent);font-size:12px;font-style:normal;line-height:1.4;overflow-wrap:anywhere}
 .pdq-produtos i.vazio{color:var(--muted,#9298a3)}
 .pendente-linha .pdq-detalhe{font-size:12px}
+.pdq-geral{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;margin:4px 0 0;padding:14px 16px;border-radius:12px;background:color-mix(in srgb,currentColor 4%,transparent)}
+.pdq-geral p{margin:0;font-size:14px}
+.pdq-geral>p:first-child b{font-size:22px;font-weight:750;font-variant-numeric:tabular-nums;margin-right:4px}
+.pdq-geral-parceiros{display:flex;flex-wrap:wrap;gap:8px}
+.pdq-geral-parceiros span{display:inline-flex;align-items:baseline;gap:8px;padding:5px 12px;border-radius:999px;border:1px solid var(--border,#343842);font-size:13px}
+.pdq-geral-parceiros span.n,.pdq-geral-parceiros span.v{border-color:var(--primary,#cfa94f);color:var(--primary,#cfa94f)}
+.pdq-geral-parceiros small{font-size:12.5px;font-weight:600}
+.pdq-geral-parceiros b{font-size:15px;font-variant-numeric:tabular-nums}
+.pdq-geral .pdq-geral-status{flex-basis:100%;font-size:12.5px;color:var(--muted,#9298a3)}
 .pdq-aba-n{display:inline-block;min-width:22px;margin-left:8px;padding:1px 7px;border-radius:999px;background:color-mix(in srgb,currentColor 10%,transparent);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;text-align:center}
 /* O resumo da aba inteira (03/11/2026): total, barra do questionário que também filtra, parceiros e produtos. */
 .pdq-painel{display:grid;gap:14px;margin:0 0 12px;padding:18px;border:1px solid var(--border,#30343e);border-radius:12px}

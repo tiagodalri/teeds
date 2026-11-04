@@ -75,6 +75,8 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
   const [filtroParceiro,setFiltroParceiro]=useState('')
   const [filtroResp,setFiltroResp]=useState<''|Tipo>('')
   const [contagem,setContagem]=useState<Record<string,number>>({})
+  // visão geral: todas as abas, uma pessoa por e-mail (vale o cadastro mais recente)
+  const [geral,setGeral]=useState<{total:number;porParceiro:Record<string,number>;porStatus:Record<string,number>}|null>(null)
   const [lista,setLista]=useState<Pendente[]>([])
   const [erro,setErro]=useState('')
   const [aviso,setAviso]=useState('')
@@ -158,9 +160,28 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
     lerTodos(status,c.signal).catch(e=>{if(c.signal.aborted)throw e;return lerPeloServidor(status,c.signal)})
       .then(l=>{setLista(l);setContagem(v=>({...v,[status]:l.length}))}).catch(e=>{if(!c.signal.aborted)setErro(e.message)})
       .finally(()=>{if(!c.signal.aborted)setCarregando(false)})
-    // o número de cada aba (a aberta vale pela lista lida)
-    for(const [id] of ABAS)if(id!==status)fetch(`${SUPABASE.url}/rest/v1/clientes_pendentes?marca=eq.${encodeURIComponent(marca)}&status=eq.${id}&select=id&limit=1`,{headers:{...cabecalhos,Prefer:'count=exact'},signal:c.signal})
-      .then(r=>{const n=Number((r.headers.get('content-range')??'').split('/')[1]);if(r.ok&&Number.isFinite(n))setContagem(v=>({...v,[id]:n}))}).catch(()=>undefined)
+    // o número de cada aba e a visão geral, numa leitura só de todas as abas
+    ;(async()=>{
+      const todos:Array<{email:string;status:string;parceiro:string|null;ultima_inscricao_em:string|null;criado_em:string}>=[]
+      for(let de=0;;de+=LOTE){
+        const r=await fetch(`${SUPABASE.url}/rest/v1/clientes_pendentes?marca=eq.${encodeURIComponent(marca)}&select=email,status,parceiro,ultima_inscricao_em,criado_em&order=id&limit=${LOTE}&offset=${de}`,{headers:cabecalhos,signal:c.signal})
+        if(!r.ok)return
+        const l=await r.json();todos.push(...l)
+        if(l.length<LOTE)break
+      }
+      const abas:Record<string,number>=Object.fromEntries(ABAS.map(([id])=>[id,0]))
+      const pessoas=new Map<string,(typeof todos)[number]>()
+      for(const x of todos){
+        abas[x.status]=(abas[x.status]??0)+1
+        const k=x.email.trim().toLowerCase(),antes=pessoas.get(k)
+        const quando=(y:typeof x)=>new Date(y.ultima_inscricao_em||y.criado_em).getTime()
+        if(!antes||quando(x)>quando(antes))pessoas.set(k,x)
+      }
+      const porParceiro:Record<string,number>={},porStatus:Record<string,number>={}
+      for(const x of pessoas.values()){const pp=x.parceiro||'direto';porParceiro[pp]=(porParceiro[pp]??0)+1;porStatus[x.status]=(porStatus[x.status]??0)+1}
+      setContagem(v=>({...abas,[status]:v[status]??abas[status]??0}))
+      setGeral({total:pessoas.size,porParceiro,porStatus})
+    })().catch(()=>undefined)
     return()=>c.abort()
   },[sessao.token,marca,status,versao,revisao]) // eslint-disable-line react-hooks/exhaustive-deps
   async function decidir() {
@@ -220,6 +241,11 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
     <header><div><span className="rot">Cadastros pelo formulário</span><h3>Aprovação de clientes <em className="pendente-marca">{NOME_DA_MARCA[marca] ?? marca}</em></h3><p>{naLive
       ? 'Até a live de 09/11 não precisa aprovar ninguém. Quem se inscreve já recebe a confirmação por e‑mail, entra com a senha que criou e vê a plataforma trancada, com a contagem. Em 09/11, às 20h30, todos viram GF Member sozinhos, com acesso até 09/11/2027.'
       : 'Novos cadastros e recadastros aguardam sua aprovação. Cada marca tem a sua conta: quem já é cliente de outra plataforma ganha uma conta nova aqui, com senha própria.'}</p></div><button disabled={!!ocupado||carregando} onClick={()=>setRevisao(v=>v+1)}>Atualizar</button></header>
+    {geral&&geral.total>0&&<div className="pdq-geral" aria-label="Visão geral de todas as abas">
+      <p><b>{geral.total}</b> {geral.total===1?'pessoa inscrita':'pessoas inscritas'} no total</p>
+      <div className="pdq-geral-parceiros">{[...Object.keys(NOME_DO_PARCEIRO).filter(k=>geral.porParceiro[k]),...Object.keys(geral.porParceiro).filter(k=>k!=='direto'&&!NOME_DO_PARCEIRO[k]),...(geral.porParceiro.direto?['direto']:[])].map(k=><span key={k} className={k}><small>{k==='direto'?'Direto':`${NOME_DO_PARCEIRO[k]??k} /${k}`}</small><b>{geral.porParceiro[k]}</b></span>)}</div>
+      <p className="pdq-geral-status">{[['pendente',naLive?'aguardando a live':'pendentes'],['aprovado','já aprovados'],['processando','em aprovação'],['recusado','recusados']].filter(([k])=>geral.porStatus[k]).map(([k,n])=>`${geral.porStatus[k]} ${n}`).join(' · ')}</p>
+    </div>}
     <nav aria-label="Status da aprovação">{ABAS.map(([id,nome])=><button key={id} aria-pressed={status===id} disabled={!!ocupado} onClick={()=>{setStatus(id);setMostrar(POR_VEZ);setFiltroResp('');setConfirmar(null);setAviso('')}}>{nome}{contagem[id]!=null&&<span className="pdq-aba-n">{contagem[id]}</span>}</button>)}</nav>
     {erro&&<p role="alert">{erro}</p>}{aviso&&<p role="status">{aviso}</p>}
     {!carregando&&lista.length>0&&<div className="pdq-painel" aria-label="Resumo de todos os cadastros desta aba">
