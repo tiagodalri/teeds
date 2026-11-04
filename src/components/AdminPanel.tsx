@@ -195,7 +195,6 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
   const carregar = async () => {
     const n = ++leitura.current
     setCarregando(true); setErro(null)
-    listarMetricasRobos(sessao, 90).then((mr) => { if (leitura.current === n) setMetricasRobos(mr) }).catch(() => undefined)
     try {
       const [p, pr, l, co, m, rec, ids] = await Promise.all([listarPlanos(sessao), listarProdutos(sessao), listarProdutosClientes(sessao), listarContasDeriv(sessao), listarComissoes(sessao, 90), listarClientesPagina(sessao, { limite: 5, parceiro: parceiroAtivo }), parceiroAtivo ? idsDoParceiro(sessao, parceiroAtivo) : Promise.resolve(null)])
       if (leitura.current !== n) return
@@ -203,6 +202,18 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
       setPlanos(p); setProdutos(pr); setLiberacoes(l); setContas(soDoFoco(co)); setMovimento(soDoFoco(m)); setRecentes(rec.pagina)
     } catch (e) { if (leitura.current === n) setErro((e as Error).message) } finally { if (leitura.current === n) setCarregando(false) }
   }
+  /* O desempenho por robô (operacoes_robos de 90 dias, 3 s em média) só aparece na aba Inteligência.
+     04/11/2026: ele rodava a cada abertura do painel e a cada troca de parceiro, mesmo sem ninguém olhar,
+     e junto com o resto lotou as conexões do banco (o login travou de 10:50 às 11:11). Agora só lê com a
+     aba aberta, uma vez por plataforma e parceiro (e de novo no "Atualizar"). */
+  const robosLidos = useRef('')
+  useEffect(() => {
+    if (aba !== 'inteligencia') return
+    const chave = `${chaveDoFoco}:${versao}`
+    if (robosLidos.current === chave) return
+    robosLidos.current = chave
+    listarMetricasRobos(sessao, 90).then((mr) => { if (robosLidos.current === chave) setMetricasRobos(mr) }).catch(() => { robosLidos.current = '' })
+  }, [aba, chaveDoFoco, versao]) // eslint-disable-line react-hooks/exhaustive-deps
   /** Recarrega tudo, inclusive a página de clientes — depois de salvar algo. */
   const recarregar = async () => { setVersao((v) => v + 1); await carregar() }
   useEffect(() => { void carregar() }, [sessao.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
