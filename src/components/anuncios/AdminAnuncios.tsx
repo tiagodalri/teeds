@@ -21,6 +21,8 @@ import { DoAnuncioAoDinheiro, TabelaDaJornada, useJornada } from './JornadaCompl
 import { AoVivo, Criativos as CriativosDaCentral, Ficha, Links, Origens, Pessoas as VisitantesDaCentral } from '../central/CentralRastreio'
 import { API_DA_CENTRAL, jornadaCompleta, type ApiCentral, type LinkDeRastreio, type ResumoDaCentral } from '../../core/teeds/central'
 import { API_DO_ESTUDIO, type ApiEstudio } from '../../core/teeds/estudio'
+import { API_DO_INSTAGRAM, type ApiInstagram } from '../../core/teeds/instagram'
+import { InstagramDoParceiro } from './Instagram'
 import './admin-anuncios.css'
 
 const brl = (v: number, casas = 2) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: casas, maximumFractionDigits: casas })
@@ -57,7 +59,7 @@ type IdPeriodo = (typeof PERIODOS)[number]['id']
 // 04/11/2026 (Tiago: "não quero que a central de rastreio seja algo separado... tudo precisa andar em conjunto"):
 // a Central de rastreio vive aqui dentro. A home é a jornada do anúncio ao dinheiro.
 const ABAS = [
-  { id: 'geral', nome: 'Visão geral' }, { id: 'aovivo', nome: 'Ao vivo' }, { id: 'pessoas', nome: 'Pessoas' }, { id: 'origens', nome: 'Origens e links' },
+  { id: 'geral', nome: 'Visão geral' }, { id: 'aovivo', nome: 'Ao vivo' }, { id: 'pessoas', nome: 'Pessoas' }, { id: 'origens', nome: 'Origens e links' }, { id: 'instagram', nome: 'Instagram' },
   { id: 'criativos', nome: 'Criativos' }, { id: 'anuncios', nome: 'Anúncios' }, { id: 'custos', nome: 'Custos' }, { id: 'publico', nome: 'Público' },
   { id: 'rastreio', nome: 'Pixel' }, { id: 'estudio', nome: 'Estúdio' },
 ] as const
@@ -222,9 +224,9 @@ function OrcamentoDoConjunto({ conjunto, campanha, anuncios, valorNovo, moeda, s
  * parceiro com conta e avisa qual conta está mostrando (o topo marca essa). `seletorNoTopo`: o topo já mostra
  * as contas, então os botões Naor/Victor daqui somem (no laboratório, sem topo, eles ficam).
  */
-export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_ESTUDIO, intervalo = 10_000, apiCentral = API_DA_CENTRAL, buscarJornada, parceiroDoTopo, aoTrocarConta, seletorNoTopo = false, atualizarPedido = 0, aoMudarCarregando }: { sessao: SessaoTeeds; api?: ApiAnuncios; apiEstudio?: ApiEstudio; intervalo?: number; apiCentral?: ApiCentral; buscarJornada?: typeof jornadaCompleta; parceiroDoTopo?: string; aoTrocarConta?: (codigo: string, codigos: string[]) => void; seletorNoTopo?: boolean
+export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_ESTUDIO, intervalo = 10_000, apiCentral = API_DA_CENTRAL, buscarJornada, parceiroDoTopo, aoTrocarConta, seletorNoTopo = false, atualizarPedido = 0, aoMudarCarregando, apiInstagram = API_DO_INSTAGRAM }: { sessao: SessaoTeeds; api?: ApiAnuncios; apiEstudio?: ApiEstudio; intervalo?: number; apiCentral?: ApiCentral; buscarJornada?: typeof jornadaCompleta; parceiroDoTopo?: string; aoTrocarConta?: (codigo: string, codigos: string[]) => void; seletorNoTopo?: boolean
   /** O "Atualizar" do topo do painel (cada clique soma 1) e o aviso de quando está lendo: no painel, o botão daqui some. */
-  atualizarPedido?: number; aoMudarCarregando?: (indo: boolean) => void }) {
+  atualizarPedido?: number; aoMudarCarregando?: (indo: boolean) => void; apiInstagram?: ApiInstagram }) {
   const contas = CONTAS_DE_ANUNCIO[MARCA.id] ?? []
   // a conta escolhida (Naor ou Victor) fica lembrada neste aparelho
   const [parceiro, setParceiroAgora] = useState(() => {
@@ -681,6 +683,8 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
             : <VisitantesDaCentral sessao={sessao} api={apiCentral} parceiro={parceiro} de={de} ate={ate} nomeDoAnuncio={nomeDoAnuncio} nomeDoLink={nomeDoLink} abrir={setFicha} />}
         </>
       )}
+
+      {aba === 'instagram' && <InstagramDoParceiro key={parceiro} sessao={sessao} api={apiInstagram} parceiro={parceiro} nomeDoParceiro={nomeParceiro} />}
 
       {aba === 'origens' && (
         <>

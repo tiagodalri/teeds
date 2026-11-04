@@ -1,0 +1,50 @@
+/* A aba Instagram de Anúncios (04/11/2026). Reaproveita aa-cartao, aa-kpis, aa-atualizar. */
+.ig-passos > header p { max-width: 80ch; }
+.ig-lista { display: grid; gap: 10px; margin: 14px 0; padding-left: 22px; font-size: 13.5px; line-height: 1.55; }
+.ig-lista li::marker { color: var(--aa-ouro); font-weight: 800; }
+.ig-lista i { font-style: normal; font-weight: 600; color: var(--text); }
+.ig-copiar { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.ig-copiar code { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 12px; word-break: break-all; }
+.ig-copiar button, .ig-link { padding: 0; border: 0; background: none; color: var(--aa-ouro); font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.ig-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
+.ig-form label { display: grid; gap: 5px; font-size: 12px; font-weight: 650; color: var(--muted); }
+.ig-form input { height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: 14px; }
+.ig-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ig-perfil { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.ig-perfil > img, .ig-perfil > .ig-foto-vazia { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: none; }
+.ig-perfil > div:not(.ig-acoes) { display: grid; gap: 2px; margin-right: auto; min-width: 0; }
+.ig-perfil b { font-size: 17px; }
+.ig-perfil small { color: var(--muted); font-size: 12px; }
+.ig-foto-vazia { display: inline-block; background: var(--surface); border: 1px solid var(--border); }
+.ig-candidatos { display: grid; gap: 8px; }
+.ig-candidatos button { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.ig-candidatos img, .ig-candidatos .ig-foto-vazia { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.ig-candidatos span { display: grid; margin-right: auto; }
+.ig-candidatos small { color: var(--muted); }
+.ig-candidatos em { font-style: normal; font-weight: 700; color: var(--aa-ouro); }
+.ig-kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.ig-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.ig-item { display: grid; gap: 4px; padding: 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); text-decoration: none; }
+.ig-item:hover { border-color: var(--aa-ouro); }
+.ig-capa { position: relative; display: block; aspect-ratio: 4 / 5; border-radius: 8px; overflow: hidden; background: color-mix(in srgb, var(--text) 8%, transparent); }
+.ig-grade.story .ig-capa { aspect-ratio: 9 / 16; }
+.ig-capa img { width: 100%; height: 100%; object-fit: cover; }
+.ig-capa em { position: absolute; left: 6px; top: 6px; padding: 2px 7px; border-radius: 99px; background: rgba(0, 0, 0, .55); color: #fff; font-style: normal; font-size: 10.5px; font-weight: 700; }
+.ig-num { font-size: 13px; color: var(--muted); }
+.ig-num b { color: var(--text); font-size: 15px; }
+.ig-det { font-size: 11.5px; color: var(--muted); }
+.ig-item small { font-size: 11px; color: var(--muted); line-height: 1.35; }
+@media (max-width: 980px) { .ig-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .ig-form { grid-template-columns: 1fr; }
+  .ig-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ig-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ig-acoes > button { flex: 1 1 100%; }
+}
+.ig-sair { color: var(--muted) !important; }
+.ig-perfil .aa-periodo { display: inline-flex; flex-wrap: nowrap; }
+@media (max-width: 640px) {
+  .ig-perfil .aa-periodo { display: flex; width: 100%; }
+  .ig-perfil .aa-periodo button { flex: 1; }
+  .ig-perfil > img, .ig-perfil > .ig-foto-vazia { width: 48px; height: 48px; }
+}

@@ -5,6 +5,37 @@ import type { SessaoTeeds } from '../../core/teeds/conta'
 import type { ApiEstudio, ItemDoHistorico, PublicoSalvo, Rascunho } from '../../core/teeds/estudio'
 import type { PessoaDaJornada } from '../../core/teeds/central'
 import { apiCentralDeMentira } from '../central/LabCentral'
+import type { ApiInstagram, EstadoDoInstagram, MidiaDoInstagram } from '../../core/teeds/instagram'
+
+/* O Instagram de mentira: ?ig=app (falta o aplicativo), ?ig=conectar (falta o Naor), sem nada = conectado. */
+function instagramDeMentira(fase: string): ApiInstagram {
+  let app = fase !== 'app', ligado = fase !== 'app' && fase !== 'conectar'
+  const espera = <T,>(v: T, ms = 500) => new Promise<T>((r) => setTimeout(() => r(v), ms))
+  const estado = (): EstadoDoInstagram => ({
+    app: { configurado: app, appId: app ? '1234567890123' : null, volta: 'https://wonxykovfvfnuhzpqsle.supabase.co/functions/v1/meta-instagram' },
+    conexao: ligado ? { id: '17841406873438157', usuario: 'naorbezerra_', nome: 'Naor Bezerra', foto: null, seguidores: 48210, posts: 612, pagina: 'Naor Bezzera', conectadoEm: new Date(Date.now() - 3600_000).toISOString(), valida: true } : null,
+    candidatos: [],
+  })
+  const midia = (i: number, tipo: MidiaDoInstagram['tipo']): MidiaDoInstagram => ({ id: `m${tipo}${i}`, tipo, legenda: ['Liberação na segunda, 09/11 🎁', 'Bastidores do escritório ao vivo', 'Você só compartilha se lucrar', 'Pergunta do dia: qual I.A. você quer ver operando?'][i % 4],
+    link: '#', imagem: null, quando: new Date(Date.now() - (i + 1) * (tipo === 'story' ? 3 : 30) * 3600_000).toISOString(), curtidas: 900 - i * 70, comentarios: 120 - i * 9,
+    views: (tipo === 'story' ? 4200 : 18000) - i * (tipo === 'story' ? 380 : 1600), alcance: (tipo === 'story' ? 3900 : 12000) - i * 300, salvos: 210 - i * 15, compartilhamentos: 95 - i * 6,
+    interacoes: 1300 - i * 90, respostas: tipo === 'story' ? 44 - i * 4 : null, tempoMedio: tipo === 'reel' ? 11.4 - i * 0.6 : null })
+  return {
+    estado: () => espera(estado()),
+    salvarApp: async () => { await espera(null, 900); app = true },
+    inicio: async (_s, _p, link) => { await espera(null, 400); if (!link) setTimeout(() => { ligado = true; window.postMessage({ gfInstagram: true }, '*') }, 1500); return 'https://www.facebook.com/v24.0/dialog/oauth?client_id=1234567890123&state=exemplo' },
+    escolher: async () => { ligado = true },
+    desconectar: async () => { await espera(null, 400); ligado = false },
+    metricas: (_s, _p, dias) => espera({
+      perfil: { usuario: 'naorbezerra_', nome: 'Naor Bezerra', foto: null, seguidores: 48210, seguindo: 312, posts: 612 }, dias,
+      conta: { views: 182000 * dias / 7, reach: 61000 * dias / 7, profile_views: 5400 * dias / 7, accounts_engaged: 7300 * dias / 7, total_interactions: 15200 * dias / 7, website_clicks: 830 * dias / 7, likes: 11800, comments: 1400, shares: 880, saves: 1120, follows_and_unfollows: 610,
+        seguidoresPorDia: Array.from({ length: Math.min(dias, 30) }, (_, i) => ({ dia: new Date(Date.now() - i * 86400_000).toISOString().slice(0, 10), novos: 40 + (i % 5) * 12 })) },
+      posts: Array.from({ length: 8 }, (_, i) => midia(i, i % 3 === 0 ? 'reel' : i % 3 === 1 ? 'carrossel' : 'foto')),
+      stories: Array.from({ length: 4 }, (_, i) => midia(i, 'story')),
+      lidoEm: new Date().toISOString(),
+    }, 700),
+  }
+}
 
 /** 160 cadastros de exemplo com a jornada inteira (anúncio → depósito → markup). */
 const NOMES = ['Mariana Souza', 'Carlos Lima', 'Ana Paula Reis', 'Roberto Alves', 'Juliana Prado', 'Felipe Rocha', 'Patrícia Gomes', 'Lucas Martins', 'Camila Duarte', 'Rafael Nunes']
@@ -174,6 +205,7 @@ function estudioDeMentira(semChave: boolean): ApiEstudio {
 export default function LabAnuncios() {
   const q = new URLSearchParams(location.search)
   const semChave = q.has('sem-chave'), bloqueada = q.has('chave-bloqueada')
+  const [instagram] = useState(() => instagramDeMentira(q.get('ig') ?? ''))
   const espera = <T,>(v: T, ms = 300) => new Promise<T>((r) => setTimeout(() => r(v), ms))
   const api: ApiAnuncios = {
     // &trocar-conta=1: a chave enxerga duas contas e a tela pede para escolher
@@ -200,5 +232,5 @@ export default function LabAnuncios() {
   }
   const sessao = { token: 'lab', usuario: { id: 'lab' } } as unknown as SessaoTeeds
   const [estudio] = useState(() => estudioDeMentira(q.has('estudio-sem-chave')))
-  return <div className="workspace-app" style={{ minHeight: '100vh', background: 'var(--bg)', padding: 'clamp(12px, 3vw, 28px)', boxSizing: 'border-box' }}><AdminAnuncios sessao={sessao} api={api} apiEstudio={estudio} intervalo={q.has('rapido') ? 2500 : undefined} apiCentral={apiCentralDeMentira} buscarJornada={jornadaDeMentira} /></div>
+  return <div className="workspace-app" style={{ minHeight: '100vh', background: 'var(--bg)', padding: 'clamp(12px, 3vw, 28px)', boxSizing: 'border-box' }}><AdminAnuncios sessao={sessao} api={api} apiEstudio={estudio} apiInstagram={instagram} intervalo={q.has('rapido') ? 2500 : undefined} apiCentral={apiCentralDeMentira} buscarJornada={jornadaDeMentira} /></div>
 }
