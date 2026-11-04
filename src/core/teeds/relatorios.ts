@@ -15,20 +15,25 @@ import { MARCA } from '../../marca'
 import type { TeedsSocket } from '../deriv/client'
 import { buscarExtrato } from '../deriv/statement'
 
-export type Periodo = 'hoje' | '7d' | '30d' | 'mes' | 'mes-passado'
+export type Periodo = 'hoje' | 'ontem' | '7d' | '30d' | 'mes' | 'mes-passado' | '90d' | 'personalizado'
 export const PERIODOS: Array<{ id: Periodo; rotulo: string }> = [
-  { id: 'hoje', rotulo: 'Hoje' }, { id: '7d', rotulo: '7 dias' }, { id: '30d', rotulo: '30 dias' },
-  { id: 'mes', rotulo: 'Este mês' }, { id: 'mes-passado', rotulo: 'Mês passado' },
+  { id: 'hoje', rotulo: 'Hoje' }, { id: 'ontem', rotulo: 'Ontem' }, { id: '7d', rotulo: '7 dias' }, { id: '30d', rotulo: '30 dias' },
+  { id: 'mes', rotulo: 'Este mês' }, { id: 'mes-passado', rotulo: 'Mês passado' }, { id: '90d', rotulo: '90 dias' },
 ]
+export interface Intervalo { de: string; ate: string }
 
 const FUSO = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo'
 const dataLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
+export const hojeLocal = () => dataLocal(new Date())
 /** O intervalo de datas (no fuso de quem vê) de cada período. */
-export function intervalo(p: Periodo, agora = new Date()): { de: string; ate: string } {
+export function intervalo(p: Periodo, agora = new Date(), personalizado?: Intervalo | null): Intervalo {
   const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate())
   const menos = (n: number) => new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - n)
-  if (p === 'hoje') return { de: dataLocal(hoje), ate: dataLocal(hoje) }
+  if (p === 'personalizado' && personalizado) return personalizado
+  if (p === 'hoje' || p === 'personalizado') return { de: dataLocal(hoje), ate: dataLocal(hoje) }
+  if (p === 'ontem') return { de: dataLocal(menos(1)), ate: dataLocal(menos(1)) }
+  if (p === '90d') return { de: dataLocal(menos(89)), ate: dataLocal(hoje) }
   if (p === '7d') return { de: dataLocal(menos(6)), ate: dataLocal(hoje) }
   if (p === '30d') return { de: dataLocal(menos(29)), ate: dataLocal(hoje) }
   if (p === 'mes') return { de: dataLocal(new Date(hoje.getFullYear(), hoje.getMonth(), 1)), ate: dataLocal(hoje) }
@@ -73,11 +78,83 @@ export async function meuRelatorio(sessao: SessaoTeeds, f: { periodo: Periodo; d
   }
 }
 
+/* ---------------------------------------------- 04/11/2026: filtros e métricas */
+
+/** Os filtros do painel (Tiago: "só ganhadoras, só perdedoras, robôs específicos, intervalos personalizados"). */
+export interface Filtros {
+  resultado?: 'ganhas' | 'perdidas' | null
+  estrategias?: string[]
+  ativos?: string[]
+  tipos?: string[]
+  /** 0 = domingo … 6 = sábado */
+  dias?: number[]
+  horaDe?: number | null
+  horaAte?: number | null
+  entradaMin?: number | null
+  entradaMax?: number | null
+}
+export const quantosFiltros = (f: Filtros) =>
+  (f.resultado ? 1 : 0) + (f.estrategias?.length ? 1 : 0) + (f.ativos?.length ? 1 : 0) + (f.tipos?.length ? 1 : 0) + (f.dias?.length ? 1 : 0)
+  + (f.horaDe != null || f.horaAte != null ? 1 : 0) + (f.entradaMin != null || f.entradaMax != null ? 1 : 0)
+
+export interface OpcaoDeFiltro { id: string; nome?: string; origem?: 'ia' | 'manual'; operacoes: number }
+export interface RelatorioCompleto extends Relatorio {
+  de: string; ate: string
+  total: Relatorio['total'] & { somaGanhos: number; somaPerdas: number }
+  anterior: { de: string; ate: string; operacoes: number; ganhas: number; entradas: number; resultado: number }
+  sequencias: { ganhos: number; perdas: number }
+  queda: { maior: number; pico: number }
+  porTipo: Array<Fatia & { tipo: string }>
+  porDiaSemana: Array<Fatia & { dow: number }>
+  contagem: number
+  opcoes: { estrategias: OpcaoDeFiltro[]; ativos: OpcaoDeFiltro[]; tipos: OpcaoDeFiltro[]; entradaMax: number }
+}
+
+export async function relatorioCompleto(sessao: SessaoTeeds, f: { de: string; ate: string; demo: boolean; filtros: Filtros; limite?: number }): Promise<RelatorioCompleto> {
+  const filtros = {
+    resultado: f.filtros.resultado ?? null, estrategias: f.filtros.estrategias ?? [], ativos: f.filtros.ativos ?? [], tipos: f.filtros.tipos ?? [],
+    dias: f.filtros.dias ?? [], hora_de: f.filtros.horaDe ?? null, hora_ate: f.filtros.horaAte ?? null,
+    entrada_min: f.filtros.entradaMin ?? null, entrada_max: f.filtros.entradaMax ?? null,
+  }
+  const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_meu_relatorio_v2`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_marca: MARCA.id, p_de: f.de, p_ate: f.ate, p_fuso: FUSO, p_demo: f.demo, p_filtros: filtros, p_limite: f.limite ?? 500 }),
+  })
+  if (!res.ok) {
+    const corpo = await res.json().catch(() => ({}))
+    throw new Error(/até 400 dias|data final/.test(corpo?.message ?? '') ? corpo.message : 'Não foi possível montar o relatório agora.')
+  }
+  const r = await res.json()
+  const t = r.total ?? {}
+  const op = (l: any[]): OpcaoDeFiltro[] => (l ?? []).map((x) => ({ id: String(x.id ?? ''), nome: x.nome ? String(x.nome) : undefined, origem: x.origem === 'manual' ? 'manual' : x.origem ? 'ia' : undefined, operacoes: n(x.operacoes) }))
+  return {
+    de: String(r.de), ate: String(r.ate),
+    total: { ...fatia(t), entradas: n(t.entradas), pagamentos: n(t.pagamentos), maiorGanho: n(t.maior_ganho), maiorPerda: n(t.maior_perda), primeira: t.primeira ?? null, ultima: t.ultima ?? null, somaGanhos: n(t.soma_ganhos), somaPerdas: n(t.soma_perdas) },
+    anterior: { de: String(r.anterior?.de ?? ''), ate: String(r.anterior?.ate ?? ''), operacoes: n(r.anterior?.operacoes), ganhas: n(r.anterior?.ganhas), entradas: n(r.anterior?.entradas), resultado: n(r.anterior?.resultado) },
+    sequencias: { ganhos: n(r.sequencias?.ganhos), perdas: n(r.sequencias?.perdas) },
+    queda: { maior: n(r.queda?.maior), pico: n(r.queda?.pico) },
+    porDia: (r.por_dia ?? []).map((x: any) => ({ ...fatia(x), dia: String(x.dia) })),
+    porOrigem: (r.por_origem ?? []).map((x: any) => ({ ...fatia(x), origem: x.origem === 'manual' ? 'manual' : 'ia', id: String(x.id), nome: String(x.nome ?? '') })),
+    porAtivo: (r.por_ativo ?? []).map((x: any) => ({ ...fatia(x), ativo: String(x.ativo ?? '') })),
+    porTipo: (r.por_tipo ?? []).map((x: any) => ({ ...fatia(x), tipo: String(x.tipo ?? '') })),
+    porHora: (r.por_hora ?? []).map((x: any) => ({ ...fatia(x), hora: n(x.hora) })),
+    porDiaSemana: (r.por_dia_semana ?? []).map((x: any) => ({ ...fatia(x), dow: n(x.dow) })),
+    contagem: n(r.contagem),
+    ultimas: (r.ultimas ?? []).map((x: any) => ({
+      quando: String(x.quando), origem: x.origem === 'manual' ? 'manual' : 'ia', id: String(x.id ?? ''), nome: String(x.nome ?? ''), ativo: String(x.ativo ?? ''),
+      tipo: String(x.tipo ?? ''), entrada: n(x.entrada), pagamento: n(x.pagamento), resultado: n(x.resultado), ganhou: Boolean(x.ganhou),
+    })),
+    opcoes: { estrategias: op(r.opcoes?.estrategias), ativos: op(r.opcoes?.ativos), tipos: op(r.opcoes?.tipos), entradaMax: n(r.opcoes?.entrada_max) },
+    mes: { inicio: String(r.mes?.inicio ?? ''), resultado: n(r.mes?.resultado), operacoes: n(r.mes?.operacoes) },
+  }
+}
+
 export interface Dinheiro { depositos: number; saques: number; movimentos: Array<{ tipo: 'deposit' | 'withdrawal'; valor: number; quando: number }> }
 
 /** Depósitos e saques do período, ao vivo do extrato da Deriv (só a conta conectada agora). */
-export async function dinheiroDoPeriodo(socket: TeedsSocket, periodo: Periodo): Promise<Dinheiro> {
-  const { de, ate } = intervalo(periodo)
+export async function dinheiroDoPeriodo(socket: TeedsSocket, periodo: Periodo | Intervalo): Promise<Dinheiro> {
+  const { de, ate } = typeof periodo === 'string' ? intervalo(periodo) : periodo
   const [a, m, d] = de.split('-').map(Number), [a2, m2, d2] = ate.split('-').map(Number)
   const desde = new Date(a, m - 1, d).getTime() / 1000, ateFim = new Date(a2, m2 - 1, d2, 23, 59, 59).getTime() / 1000
   const ler = (tipo: 'deposit' | 'withdrawal') => buscarExtrato(socket, { tipo, limite: 200, de: desde, ate: ateFim })

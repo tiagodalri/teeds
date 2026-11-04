@@ -1,8 +1,8 @@
 /** Laboratório (?tela=relatorios): a aba Relatórios com 30 dias de exemplo, sem banco nem corretora. */
 import { RelatoriosPanel } from './RelatoriosPanel'
-import type { Relatorio } from '../../core/teeds/relatorios'
+import type { RelatorioCompleto } from '../../core/teeds/relatorios'
 
-function exemplo(): Relatorio {
+function exemplo(): RelatorioCompleto {
   let semente = 7
   const rnd = () => { semente = (semente * 9301 + 49297) % 233280; return semente / 233280 }
   const hoje = new Date()
@@ -14,8 +14,20 @@ function exemplo(): Relatorio {
   })
   const soma = (k: 'operacoes' | 'ganhas' | 'resultado') => porDia.reduce((s, d) => s + d[k], 0)
   const resultado = Math.round(soma('resultado') * 100) / 100
+  const de = porDia[0].dia, ate = porDia[porDia.length - 1].dia
   return {
-    total: { operacoes: soma('operacoes'), ganhas: soma('ganhas'), resultado, entradas: soma('operacoes') * 1.2, pagamentos: 0, maiorGanho: 18.4, maiorPerda: -22.1, primeira: null, ultima: null },
+    de, ate, contagem: 30,
+    anterior: { de, ate, operacoes: 1400, ganhas: 900, entradas: 1600, resultado: resultado - 84.3 },
+    sequencias: { ganhos: 31, perdas: 6 },
+    queda: { maior: 96.4, pico: resultado + 40 },
+    porTipo: [{ tipo: 'DIGITOVER', operacoes: 1300, ganhas: 900, resultado: resultado * .7 }, { tipo: 'DIGITUNDER', operacoes: 430, ganhas: 260, resultado: resultado * .3 }, { tipo: 'CALL', operacoes: 24, ganhas: 11, resultado: 12.5 }],
+    porDiaSemana: [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dow: d, operacoes: d === 0 ? 0 : 200 + d * 30, ganhas: 130 + d * 18, resultado: d === 0 ? 0 : Math.round((Math.cos(d) * 60 + 10) * 100) / 100 })).filter((x) => x.operacoes > 0),
+    opcoes: {
+      estrategias: [{ id: 'goreme', nome: 'GF Raptor', origem: 'ia', operacoes: 820 }, { id: 'falcon', nome: 'GF Falcon', origem: 'ia', operacoes: 610 }, { id: 'legacy', nome: 'GF Legacy', origem: 'ia', operacoes: 300 }, { id: 'manual', nome: 'Manual', origem: 'manual', operacoes: 24 }],
+      ativos: [{ id: 'R_75', operacoes: 1500 }, { id: '1HZ100V', operacoes: 230 }, { id: 'frxEURUSD', operacoes: 24 }],
+      tipos: [{ id: 'DIGITOVER', operacoes: 1300 }, { id: 'DIGITUNDER', operacoes: 430 }, { id: 'CALL', operacoes: 24 }], entradaMax: 42.5,
+    },
+    total: { operacoes: soma('operacoes'), ganhas: soma('ganhas'), resultado, entradas: soma('operacoes') * 1.2, pagamentos: 0, maiorGanho: 18.4, maiorPerda: -22.1, primeira: null, ultima: null, somaGanhos: resultado + 380, somaPerdas: -380 },
     porDia,
     porOrigem: [
       { origem: 'ia', id: 'goreme', nome: 'GF Raptor', operacoes: 820, ganhas: 560, resultado: resultado * .6 },
