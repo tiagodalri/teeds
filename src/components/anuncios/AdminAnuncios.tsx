@@ -92,7 +92,7 @@ const gancho = (m: Metricas) => razao(m.video3s, m.impressoes) * 100
 const retencao = (m: Metricas) => razao(m.thruplay, m.video3s) * 100
 
 /** O gráfico do dia a dia: barras do investimento, linhas dos cadastros. */
-function GraficoDoDia({ dias }: { dias: Array<{ dia: string; gasto: number; meta: number; nosso: number }> }) {
+function GraficoDoDia({ dias, origem, soMeta = false }: { dias: Array<{ dia: string; gasto: number; meta: number; nosso: number }>; origem: 'todos' | 'anuncios'; soMeta?: boolean }) {
   const [foco, setFoco] = useState<number | null>(null)
   // o desenho tem a largura real da caixa: o texto dos eixos fica sempre do mesmo tamanho
   const caixa = useRef<HTMLDivElement>(null)
@@ -132,12 +132,13 @@ function GraficoDoDia({ dias }: { dias: Array<{ dia: string; gasto: number; meta
           </g>
         ))}
         <path d={linha('meta')} className="aa-g-linha meta" />
-        <path d={linha('nosso')} className="aa-g-linha nosso" />
-        {dias.map((d, i) => <circle key={d.dia} cx={xg(i)} cy={yc(d.nosso)} r={foco === i ? 4.5 : 3} className="aa-g-ponto" />)}
+        {!soMeta && <path d={linha('nosso')} className="aa-g-linha nosso" />}
+        {/* 04/11/2026: o ponto (e o custo do dia) é o cadastro da Meta, o mesmo do Gerenciador */}
+        {dias.map((d, i) => <circle key={d.dia} cx={xg(i)} cy={yc(d.meta)} r={foco === i ? 4.5 : 3} className="aa-g-ponto" />)}
       </svg>
       <div className="aa-g-legenda">
-        <span><i className="barra" />Investido</span><span><i className="nosso" />Cadastros na plataforma</span><span><i className="meta" />Cadastros que a Meta contou</span>
-        {f && <b>{ddmm(f.dia)}: {brl(f.gasto)} · {int(f.nosso)} na plataforma · {int(f.meta)} pela Meta · {custo(f.gasto, f.nosso)} cada</b>}
+        <span><i className="barra" />Investido</span><span><i className="meta" />Cadastros (como no Gerenciador)</span>{!soMeta && <span><i className="nosso" />{origem === 'anuncios' ? 'Acompanhados pessoa a pessoa' : 'Todos os cadastros do /n'}</span>}
+        {f && <b>{ddmm(f.dia)}: {brl(f.gasto)} · {int(f.meta)} {f.meta === 1 ? 'cadastro' : 'cadastros'} · {custo(f.gasto, f.meta)} cada{soMeta ? '' : ` · ${int(f.nosso)} ${origem === 'anuncios' ? 'acompanhados' : 'no /n'}`}</b>}
       </div>
     </div>
   )
@@ -372,14 +373,20 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const comecouBruto = funil ? (origem === 'anuncios' ? funil.passosAnuncio?.comecou ?? null : funil.passos?.comecou ?? null) : null
   const comecou = parcial ? null : comecouBruto
 
+  const cadMeta = total?.cadastros ?? 0
   const etapas: EtapaDoFunil[] = [
     // 04/11/2026: "viram" são PESSOAS (o Alcance do Gerenciador); as impressões são as vezes que o anúncio apareceu
     { id: 'imp', dica: total?.alcance ? `Pessoas diferentes (alcance) · apareceu ${int(total.impressoes)} vezes` : 'Impressões do anúncio', nome: 'Viram o anúncio', valor: total?.alcance || total?.impressoes || 0, fonte: 'Meta', custo: total?.alcance ? gasto / total.alcance : null },
     { id: 'cli', dica: 'Cliques no link do anúncio', nome: 'Clicaram no anúncio', valor: total?.cliquesLink ?? 0, fonte: 'Meta', custo: total?.cliquesLink ? gasto / total.cliquesLink : null },
     { id: 'lpv', dica: 'A página abriu depois do clique', nome: 'Chegaram na página', valor: total?.lpv ?? 0, fonte: 'Meta', custo: total?.lpv ? gasto / total.lpv : null },
     { id: 'com', dica: origem !== 'anuncios' ? 'Todo o /n: mexeram no formulário' : parcial ? 'Vindos de anúncio, contados desde 04/11' : 'Vindos de anúncio, mexeram no formulário', nome: 'Começaram o cadastro', valor: comecouBruto ?? (origem === 'anuncios' ? 0 : pixelEv?.get('ComecouCadastro') ?? 0), fonte: 'Plataforma', custo: comecou ? gasto / comecou : null, semTaxa: origem !== 'anuncios' || parcial },
-    { id: 'cad', dica: 'Cadastro enviado', nome: 'Cadastrados', valor: etapasDoBanco?.cadastros ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.cadastros ? gasto / etapasDoBanco.cadastros : null, semTaxa: parcial },
-    { id: 'que', dica: 'Inscrição completa', nome: 'Questionário respondido', valor: etapasDoBanco?.questionario ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.questionario ? gasto / etapasDoBanco.questionario : null },
+    // só anúncio: o cadastro é o da Meta (o mesmo do Gerenciador). As etapas seguintes são de quem a plataforma
+    // acompanha pessoa a pessoa, então o questionário não leva % sobre os da Meta (seria outra base)
+    origem === 'anuncios'
+      ? { id: 'cad', dica: `Como no Gerenciador · ${total?.lpv ? `${pc(razao(cadMeta, total.lpv) * 100, 1)} de quem chegou na página` : 'cadastros da Meta'}`, nome: 'Cadastrados', valor: cadMeta, fonte: 'Meta', custo: cadMeta ? gasto / cadMeta : null, semTaxa: true }
+      : { id: 'cad', dica: 'Cadastro enviado', nome: 'Cadastrados', valor: etapasDoBanco?.cadastros ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.cadastros ? gasto / etapasDoBanco.cadastros : null, semTaxa: parcial },
+    { id: 'que', dica: origem === 'anuncios' && etapasDoBanco ? `Dos ${int(etapasDoBanco.cadastros)} acompanhados pessoa a pessoa${etapasDoBanco.cadastros ? `: ${pc(razao(etapasDoBanco.questionario, etapasDoBanco.cadastros) * 100, 0)}` : ''}` : 'Inscrição completa',
+      nome: 'Questionário respondido', valor: etapasDoBanco?.questionario ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.questionario ? gasto / etapasDoBanco.questionario : null, semTaxa: origem === 'anuncios' },
     { id: 'not', dica: 'Avisos da live ligados no celular', nome: 'Notificações ativadas', valor: etapasDoBanco?.notificacoes ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.notificacoes ? gasto / etapasDoBanco.notificacoes : null },
     { id: 'liv', dica: 'Presença na live de 09/11', nome: 'Assistiram à live', valor: etapasDoBanco?.live ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.live ? gasto / etapasDoBanco.live : null },
     { id: 'gfm', dica: 'Acesso liberado depois da live', nome: 'GF Member', valor: etapasDoBanco?.liberados ?? 0, fonte: 'Plataforma', custo: etapasDoBanco?.liberados ? gasto / etapasDoBanco.liberados : null },
@@ -415,7 +422,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   }, [filtradas, painel, orcNovo])
   const somaFiltrada = useMemo(() => (filtradas.length > 1 ? somarLinhas(filtradas) : null), [filtradas])
   // o custo comparado com o período anterior usa só os cadastros que vieram de anúncio, qualquer que seja a escolha da tela
-  const listaDeAlertas = useMemo(() => alertas(linhas, total, etapasDoBanco, anterior, funil ? { agora: funil.anuncio.cadastros, antes: anteriorBruto.current?.anuncio.cadastros ?? null } : null), [linhas, total, etapasDoBanco, anterior, funil])
+  const listaDeAlertas = useMemo(() => alertas(linhas, total, etapasDoBanco, anterior, total ? { agora: total.cadastros, antes: anterior?.meta?.cadastros ?? null } : null), [linhas, total, etapasDoBanco, anterior])
   const dias = useMemo(() => {
     const mapa = new Map<string, { dia: string; gasto: number; meta: number; nosso: number }>()
     for (let d = new Date(`${de}T12:00:00`); iso(d) <= ate; d.setDate(d.getDate() + 1)) mapa.set(iso(d), { dia: iso(d), gasto: 0, meta: 0, nosso: 0 })
@@ -487,7 +494,11 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
 
   if (!contas.length) return <p className="aa-vazio">Nenhum parceiro desta plataforma tem conta de anúncios ligada.</p>
 
-  const cadDeAnuncio = funil?.anuncio.cadastros ?? 0
+  // 04/11/2026, Tiago: "os números da plataforma precisam bater com os da Meta, não pode ter divergência".
+  // O cadastro dos anúncios é o da Meta, o mesmo do Gerenciador. A plataforma acompanha pessoa a pessoa
+  // só quem chegou pelo link do anúncio neste aparelho (cadAcompanhados): é a base das etapas seguintes.
+  const cadDeAnuncio = total?.cadastros ?? 0
+  const cadAcompanhados = funil?.anuncio.cadastros ?? 0
   const qtdAlertas = listaDeAlertas.filter((a) => a.tipo !== 'bom').length
 
   return (
@@ -619,9 +630,8 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
         <p className="aa-resumo">
           <span>{de === ate ? `Em ${dataBr(de)}` : `De ${ddmm(de)} a ${ddmm(ate)}`}, </span>
           <b>{brl(total.gasto)}</b> investidos trouxeram <b>{int(cadDeAnuncio)} {cadDeAnuncio === 1 ? 'cadastro' : 'cadastros'}</b> pelos anúncios
-          {cadDeAnuncio > 0 && <>, <b>{custo(total.gasto, cadDeAnuncio)}</b> cada</>}.
-          {/* 04/11/2026: o número do Gerenciador ao lado, para não parecer erro (a Meta conta por outra regra) */}
-          {total.cadastros > 0 && total.cadastros !== cadDeAnuncio && <> No Gerenciador: <b>{int(total.cadastros)}</b> ({custo(total.gasto, total.cadastros)} cada). <button type="button" onClick={() => setAba('geral')}>Por que é diferente?</button></>}
+          {cadDeAnuncio > 0 && <>, <b>{custo(total.gasto, cadDeAnuncio)}</b> cada</>}, como no Gerenciador.
+          {funil && cadDeAnuncio > 0 && cadAcompanhados !== cadDeAnuncio && <> A plataforma segue {int(cadAcompanhados)} deles pessoa a pessoa até o depósito. <button type="button" onClick={() => setAba('geral')}>Por que não todos?</button></>}
           {qtdAlertas > 0 && <> <button type="button" onClick={() => setAba('geral')}>{qtdAlertas === 1 ? '1 ponto pede atenção' : `${qtdAlertas} pontos pedem atenção`}</button></>}
         </p>
       )}
@@ -651,7 +661,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
           {painel && (
             <section className="aa-cartao">
               <header><div><span className="rot">Dia a dia</span><h3>Investimento e cadastros</h3></div></header>
-              <GraficoDoDia dias={dias} />
+              <GraficoDoDia dias={dias} origem={origem} />
             </section>
           )}
 
@@ -670,7 +680,9 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
               <span className="aa-vivo"><i />{atualizado == null ? 'Conectando…' : atualizado < 5 ? 'Atualizado agora' : `Atualizado há ${atualizado} s`}</span>
             </header>
             <Funil3D etapas={etapas} mostrarCusto={comCusto} />
-            <p className="aa-nota">As três primeiras etapas vêm da Meta, a cada minuto. As outras vêm da plataforma, a cada 10 segundos. {origem === 'anuncios' ? 'Contam só os cadastros que chegaram por um anúncio da Meta.' : `Contam todos os cadastros do /${parceiro}, de anúncio ou não.`}</p>
+            <p className="aa-nota">{origem === 'anuncios'
+                ? 'As etapas da Meta (viram, clicaram, chegaram e os cadastros) são as mesmas do Gerenciador, a cada minuto. Começaram o cadastro e do questionário em diante, a plataforma conta quem ela acompanha pessoa a pessoa, a cada 10 segundos.'
+                : `As três primeiras etapas vêm da Meta, a cada minuto. As outras vêm da plataforma, a cada 10 segundos, com todos os cadastros do /${parceiro}, de anúncio ou não.`}</p>
           </section>
 
           <AoVivo sessao={sessao} api={apiCentral} parceiro={parceiro} nomeDoAnuncio={nomeDoAnuncio} nomeDoLink={nomeDoLink} abrir={setFicha} />
@@ -720,7 +732,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
                 <div><small>Custo por clique</small><b>{brl(total.cpcLink)}</b><span>no link do anúncio</span></div>
                 <div><small>Alcance</small><b>{int(total.alcance)}</b><span>pessoas · cada uma viu {dec(total.frequencia)} vezes</span></div>
                 <div><small>Página carregou</small><b>{pc(razao(total.lpv, total.cliquesLink) * 100, 1)}</b><span>{int(total.lpv)} de {int(total.cliquesLink)} cliques</span></div>
-                <div><small>Página → cadastro</small><b>{pc(razao(cadDeAnuncio, total.lpv) * 100, 1)}</b><span>de quem chegou pelo anúncio</span></div>
+                <div><small>Página → cadastro</small><b>{pc(razao(cadDeAnuncio, total.lpv) * 100, 1)}</b><span>{int(cadDeAnuncio)} cadastros de {int(total.lpv)} visitas</span></div>
               </div>
             </section>
           )}
@@ -910,7 +922,7 @@ function AnuncioAberto({ a, fechar, sessao, api, parceiro, de, ate, nosso, campa
             <small>{a.criativo.tipo === 'video' ? 'Vídeo' : a.criativo.tipo === 'carrossel' ? 'Carrossel' : 'Imagem'}{a.criativo.cta ? ` · botão “${BOTAO[a.criativo.cta] ?? a.criativo.cta.replace(/_/g, ' ').toLowerCase()}”` : ''}</small>
             {a.criativo.titulo && <b>{a.criativo.titulo}</b>}
             {a.criativo.texto && <p>{a.criativo.texto}</p>}
-            {!marcado && <p className="aa-aviso">Este anúncio não tem a marcação utm_content={'{{ad.id}}'} no link: os cadastros dele não aparecem como “reais” aqui.</p>}
+            {!marcado && <p className="aa-aviso">Este anúncio não tem a marcação utm_content={'{{ad.id}}'} no link: os cadastros dele contam (são os da Meta), mas a plataforma não consegue seguir essas pessoas até o depósito.</p>}
           </div>
         </div>
         <div className="aa-kpis mini">
@@ -922,15 +934,17 @@ function AnuncioAberto({ a, fechar, sessao, api, parceiro, de, ate, nosso, campa
           <div><small>CTR no link</small><b>{pc(m.ctrLink)}</b></div>
           <div><small>Custo por clique</small><b>{m.cpcLink ? brl(m.cpcLink) : '—'}</b></div>
           <div><small>Chegaram na página</small><b>{int(m.lpv)}</b></div>
-          <div><small>Cadastros (Meta)</small><b>{int(m.cadastros)}</b></div>
-          <div className="destaque"><small>Cadastros reais</small><b>{int(nosso?.cadastros ?? 0)}</b></div>
-          <div className="destaque"><small>Custo por cadastro</small><b>{custo(m.gasto, nosso?.cadastros ?? 0)}</b></div>
+          {/* 04/11/2026: cadastro e custo como no Gerenciador; os acompanhados pessoa a pessoa ao lado */}
+          <div className="destaque"><small>Cadastros</small><b>{int(m.cadastros)}</b></div>
+          <div className="destaque"><small>Custo por cadastro</small><b>{custo(m.gasto, m.cadastros)}</b></div>
+          <div><small>Acompanhados</small><b>{int(nosso?.cadastros ?? 0)}</b></div>
           <div><small>Engajamento</small><b>{int(m.engajamento)}</b></div>
         </div>
         <section>
           <h4>O que esse anúncio trouxe para a plataforma</h4>
+          <p className="aa-nota">Das pessoas que a plataforma acompanha pessoa a pessoa (chegaram pelo link deste anúncio).</p>
           <ol className="aa-trilha">
-            {([['Cadastros', nosso?.cadastros], ['Questionário', nosso?.questionario], ['Notificações', nosso?.notificacoes], ['Assistiram à live', nosso?.live], ['GF Member', nosso?.liberados]] as const).map(([nome, v]) => (
+            {([['Acompanhados', nosso?.cadastros], ['Questionário', nosso?.questionario], ['Notificações', nosso?.notificacoes], ['Assistiram à live', nosso?.live], ['GF Member', nosso?.liberados]] as const).map(([nome, v]) => (
               <li key={nome}><b>{int(v ?? 0)}</b><span>{nome}</span></li>
             ))}
           </ol>
@@ -956,7 +970,7 @@ function AnuncioAberto({ a, fechar, sessao, api, parceiro, de, ate, nosso, campa
         {!det && !erro && <p className="aa-vazio">Carregando o dia a dia…</p>}
         {det && (
           <>
-            <section><h4>Dia a dia</h4><GraficoDoDia dias={dias} /></section>
+            <section><h4>Dia a dia</h4><GraficoDoDia dias={dias} origem="anuncios" soMeta /></section>
             <div className="aa-quebras dupla">
               <Barras titulo="Idade e gênero" linhas={det.idadeGenero} nome={(q) => `${q.age} · ${q.gender === 'male' ? 'Homens' : q.gender === 'female' ? 'Mulheres' : 'Outros'}`} />
               <Barras titulo="Onde apareceu" linhas={det.posicionamento} nome={(q) => `${PLATAFORMA[String(q.publisher_platform)] ?? q.publisher_platform} · ${POSICAO[String(q.platform_position)] ?? String(q.platform_position).replace(/_/g, ' ')}`} />

@@ -318,7 +318,7 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
    chapado (azul sobre ouro passa de 6:1), sem degradê e sem sombra dourada. */
 :root[data-marca='globalfly'] .aulas { --aula: var(--gf-ouro) !important; }
 :root[data-marca='globalfly'] .aulas .aula-proxima { background: var(--gf-ouro); color: var(--gf-azul); box-shadow: none; }
-:root[data-marca='globalfly'] .aulas .aula-item.on { background: rgba(183, 141, 57, .12); box-shadow: inset 2px 0 0 var(--gf-ouro); }
+:root[data-marca='globalfly'] .aulas .aula-item.on { color: var(--text); background: rgba(183, 141, 57, .12); box-shadow: inset 2px 0 0 var(--gf-ouro); }
 :root[data-marca='globalfly'] .aulas .aula-item.on i { background: var(--gf-ouro); border-color: var(--gf-ouro); color: var(--gf-azul); box-shadow: none; }
 /* ============================ fim do bloco sem gradiente nem brilho */
 

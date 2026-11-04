@@ -97,15 +97,15 @@
 .aa-g-barra { fill: color-mix(in srgb, var(--aa-ouro) 45%, transparent); transition: fill .2s; }
 .aa-g-barra.on { fill: var(--aa-ouro); }
 .aa-g-linha { fill: none; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
-.aa-g-linha.nosso { stroke: var(--up); }
-.aa-g-linha.meta { stroke: #6ea2ff; stroke-dasharray: 5 4; }
+.aa-g-linha.meta { stroke: var(--up); }
+.aa-g-linha.nosso { stroke: #6ea2ff; stroke-dasharray: 5 4; }
 .aa-g-ponto { fill: var(--up); stroke: var(--bg); stroke-width: 1.5; }
 .aa-g-legenda { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; color: var(--muted); font-size: 12px; }
 .aa-g-legenda span { display: inline-flex; align-items: center; gap: 6px; }
 .aa-g-legenda i { width: 14px; height: 3px; border-radius: 2px; }
 .aa-g-legenda i.barra { height: 10px; width: 10px; background: color-mix(in srgb, var(--aa-ouro) 45%, transparent); }
-.aa-g-legenda i.nosso { background: var(--up); }
-.aa-g-legenda i.meta { background: #6ea2ff; }
+.aa-g-legenda i.meta { background: var(--up); }
+.aa-g-legenda i.nosso { background: #6ea2ff; }
 .aa-g-legenda b { margin-left: auto; color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* tabelas */

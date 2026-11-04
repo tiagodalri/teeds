@@ -152,3 +152,27 @@
 }
 @media (prefers-reduced-motion: reduce) { .ger.aulas .aulas-jornada-capa, .ger.aulas .aulas-jornada-capa:hover { transform: none; transition: none; } }
 .ger.aulas .aulas-jornada-capa .aula-dur { top: auto; left: auto; transform: none; width: auto; max-width: calc(100% - 20px); }
+
+/* 04/11/2026: o que a grade do painel acrescenta à sala */
+.aulas-modulo-descricao { margin-top: 4px !important; max-width: 70ch; font-size: 13px; opacity: .8; }
+.aulas-assunto + .aulas-assunto, .aulas-assunto { margin-top: 14px; }
+.aulas-assunto-topo { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 8px; }
+.aulas-assunto-topo h4 { margin: 0; font-size: 15px; letter-spacing: -.005em; }
+.aulas-assunto-topo h4::before { content: ''; display: inline-block; width: 14px; height: 2px; margin-right: 8px; vertical-align: .3em; background: var(--aula); }
+.aulas-assunto-topo p { flex-basis: 100%; margin: 0; font-size: 12.5px; opacity: .75; }
+.aulas-assunto-topo small { font-size: 11.5px; opacity: .6; }
+.cine-modulo-aulas li[data-assunto]::before { content: attr(data-assunto); display: block; margin: 10px 0 4px 6px; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--aula); }
+
+.cine-topicos { margin-top: 18px; padding: 16px 18px; border: 1px solid var(--border, #ffffff1f); border-radius: 14px; }
+.cine-topicos h3 { display: flex; align-items: baseline; gap: 10px; margin: 0 0 10px; font-size: 15px; }
+.cine-topicos h3 small { font-size: 11.5px; font-weight: 600; opacity: .6; }
+.cine-topicos ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.cine-topicos li > button, .cine-topicos li > div { width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 10px; border: 0; border-radius: 10px; color: inherit; background: transparent; text-align: left; font: inherit; font-size: 14px; }
+.cine-topicos li > button { cursor: pointer; }
+.cine-topicos li > button:hover { background: color-mix(in srgb, var(--aula) 14%, transparent); }
+.cine-topicos time, .cine-topicos li i { flex: none; min-width: 52px; padding: 3px 8px; border-radius: 7px; text-align: center; font-style: normal; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--aula); background: color-mix(in srgb, var(--aula) 14%, transparent); }
+.cine-topicos li span { flex: 1; min-width: 0; }
+.cine-topicos li em { font-style: normal; font-size: 11px; opacity: .5; }
+.aula-modal-topicos { margin: 4px 0 12px; padding-left: 18px; font-size: 13.5px; line-height: 1.6; opacity: .85; }
+.aula-modal-topicos li::marker { color: var(--aula); }
+.in-aula-capa-desenhada { position: relative; display: block; align-self: stretch; min-height: 120px; aspect-ratio: 2 / 3; overflow: hidden; border-radius: inherit; }

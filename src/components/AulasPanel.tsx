@@ -1,15 +1,15 @@
 import { afiliadoDaDeriv, comunidadeDaVitrine } from '../core/rotas'
-import { ResponsiveImage } from './ResponsiveImage'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  AVISO_GF_MEMBER, AVISO_GF_MEMBER_CURTO, aulasVistas, ehVideoDeExemplo, marcarVista, MODULOS, playerDoVideo, SALA_EM_BREVE, todasAsAulas, VIDEO_DEMONSTRACAO,
-  type AulaNumerada,
+  AVISO_GF_MEMBER, AVISO_GF_MEMBER_CURTO, aulasVistas, ehVideoDeExemplo, marcarVista, MODULOS, playerDoVideo, SALA_EM_BREVE, todasAsAulas, usarModulosDaGrade, VIDEO_DEMONSTRACAO,
+  type AulaNumerada, type Modulo,
 } from '../core/teeds/aulas'
+import { gradePublicadaEmCache, modulosParaSala, segundosDoTempo, type GradeAulas } from '../core/teeds/gradeAulas'
+import { CapaDaAula } from './aulas/CapaDaAula'
 import { listarVideosDasAulas, tamanhoLegivel, type VideoDaAula } from '../core/teeds/aulasVideos'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA } from '../marca'
 import { Destaques, bannersDaMarca } from './aulas/Destaques'
-import { capaDaAula } from './capasAulas'
 import { IconeFechar } from './IconeFechar'
 import { Icone } from './Icone'
 import { PlayerAula } from './PlayerAula'
@@ -17,8 +17,6 @@ import { registrarAula } from '../core/teeds/insights'
 import { DERIV } from '../core/deriv/config'
 import './aulas/aviso-liberacao.css'
 import './aulas/sala-de-aula.css'
-
-const capa = capaDaAula
 
 /** Onde a pessoa parou em cada aula (segundos), neste navegador. */
 const CHAVE_POSICAO = `${MARCA.id}.aulas.posicao`
@@ -149,8 +147,16 @@ function SalaEmBreve({ aoReverTour, aoIr }: { aoReverTour?: () => void; aoIr?: (
 }
 
 /** A porta da sala: o recado enquanto não há vídeo, a vitrine quando houver. */
-export function AulasPanel(props: { nome?: string | null; sessao?: SessaoTeeds | null; aoReverTour?: () => void; aoIr?: (tela: string) => void; treino?: { noAr: boolean } | null; travadas?: boolean }) {
-  if (AULAS_EM_BREVE) return <SalaEmBreve aoReverTour={props.aoReverTour} aoIr={props.aoIr} />
+interface PropsDaSala {
+  nome?: string | null; sessao?: SessaoTeeds | null; aoReverTour?: () => void; aoIr?: (tela: string) => void; treino?: { noAr: boolean } | null; travadas?: boolean
+  /** O plano da pessoa e se é admin: valem para as aulas de um plano só ou com data de liberação (grade do painel). */
+  plano?: string | null; admin?: boolean | null
+  /** Prévia do painel (04/11/2026): a grade em edição, ainda não publicada. Nada é gravado no progresso. */
+  previa?: GradeAulas | null
+}
+
+export function AulasPanel(props: PropsDaSala) {
+  if (AULAS_EM_BREVE && !props.previa) return <SalaEmBreve aoReverTour={props.aoReverTour} aoIr={props.aoIr} />
   return <SalaDeAulas {...props} />
 }
 
@@ -159,7 +165,32 @@ export function AulasPanel(props: { nome?: string | null; sessao?: SessaoTeeds |
  * modulo, cartoes com capa e numero, player com a lista do modulo ao lado.
  * Aula sem video existe no catalogo mas se apresenta como "em breve".
  */
-function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false }: { nome?: string | null; sessao?: SessaoTeeds | null; aoReverTour?: () => void; aoIr?: (tela: string) => void; treino?: { noAr: boolean } | null; travadas?: boolean }) {
+/** Os assuntos de um módulo, cada um com as suas aulas (assunto sem título = sem agrupamento). */
+function gruposDoModulo(m: Modulo, doModulo: AulaNumerada[]) {
+  if (!m.assuntos?.length) return [{ id: m.id, titulo: '', descricao: '', aulas: doModulo }]
+  return m.assuntos.map((s) => ({ id: s.id, titulo: s.titulo, descricao: s.descricao ?? '', aulas: doModulo.filter((a) => a.assunto?.id === s.id) }))
+    .filter((g) => g.aulas.length)
+    // assuntos sem título seguidos viram um grupo só (as aulas aparecem direto no módulo)
+    .reduce<Array<{ id: string; titulo: string; descricao: string; aulas: AulaNumerada[] }>>((l, g) => {
+      const ult = l[l.length - 1]
+      if (ult && !ult.titulo && !g.titulo) { ult.aulas = [...ult.aulas, ...g.aulas]; return l }
+      return [...l, g]
+    }, [])
+}
+
+function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false, plano = null, admin = null, previa }: PropsDaSala) {
+  // A grade publicada no painel (04/11/2026). undefined = lendo; null = não há (vale o catálogo do código).
+  const [grade, setGrade] = useState<GradeAulas | null | undefined>(previa !== undefined ? previa : undefined)
+  useEffect(() => {
+    if (previa !== undefined) { setGrade(previa); return }
+    let vivo = true
+    gradePublicadaEmCache(sessao).then((g) => { if (vivo) setGrade(g) })
+    return () => { vivo = false }
+  }, [previa, sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const modulos = useMemo(() => (grade ? modulosParaSala(grade, { plano, admin: previa ? false : admin }) : MODULOS), [grade, plano, admin, previa])
+  // o início, a ficha e os insights leem os mesmos módulos
+  useEffect(() => { if (!previa && grade !== undefined) usarModulosDaGrade(grade ? modulos : null) }, [modulos, grade, previa])
+  const [irPara, setIrPara] = useState<{ segundos: number; vez: number } | null>(null)
   // Os vídeos que o painel gravou no banco. Enquanto não chegam (ou se o
   // banco não responder), a sala abre com o catálogo do código.
   const [videos, setVideos] = useState<Record<string, VideoDaAula>>({})
@@ -169,7 +200,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
     return () => { vivo = false }
   }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // GF Member antes da live de lançamento: o catálogo aparece, nenhum vídeo toca
-  const aulas = useMemo(() => { const l = todasAsAulas(videos); return travadas ? l.map((a) => ({ ...a, video: '' })) : l }, [videos, travadas])
+  const aulas = useMemo(() => { const l = todasAsAulas(videos, modulos); return travadas ? l.map((a) => ({ ...a, video: '' })) : l }, [videos, travadas, modulos])
   const [vistas, setVistas] = useState<Set<string>>(() => aulasVistas())
   const [abertaId, setAbertaId] = useState<string | null>(null)
   const [detalheId, setDetalheId] = useState<string | null>(null)
@@ -201,16 +232,16 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
     const t = assistido.current
     if (t.acumulado <= 0 && !concluida) return
     const segundos = Math.round(t.acumulado); t.acumulado = 0
-    void registrarAula(sessao, aulaId, { segundos, posicao, concluida, duracao: t.duracao })
-  }, [sessao])
+    if (!previa) void registrarAula(sessao, aulaId, { segundos, posicao, concluida, duracao: t.duracao })
+  }, [sessao, previa])
   const abrir = (a: AulaNumerada, doInicio = false) => {
     if (!a.video) return
     if (doInicio) guardarPosicao(a.id, 0)
     guardarUltima(a.id)
     if (abertaId && abertaId !== a.id) despachar(abertaId, 0)
     assistido.current = { acumulado: 0, ultimoTempo: -1, concluidaEnviada: false, duracao: 0 }
-    setAbertaId(a.id); setModuloAberto(a.modulo.id)
-    void registrarAula(sessao, a.id, { abriu: true })
+    setAbertaId(a.id); setModuloAberto(a.modulo.id); setIrPara(null)
+    if (!previa) void registrarAula(sessao, a.id, { abriu: true })
     window.scrollTo({ top: 0 })
   }
   // Ao sair da aula (ou da tela), o que ficou acumulado vai para o banco.
@@ -231,6 +262,9 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
     if (fracao >= 0.9 && !aulasVistas().has(abertaId)) setVistas(new Set(marcarVista(abertaId, true)))
   }, [abertaId, despachar])
 
+  // a grade do painel ainda chegando: não pisca o catálogo antigo antes da grade nova
+  if (grade === undefined && sessao) return <div className="ger aulas"><div className="adm-vazio">Abrindo as aulas…</div></div>
+
   /* ----------------------------------------------------------- player */
   if (aberta) {
     const player = playerDoVideo(aberta.video)
@@ -239,7 +273,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
     const anterior = aulas.slice(0, idx).reverse().find((a) => a.video) ?? null
     const vista = vistas.has(aberta.id)
     const posicao = posicoesGuardadas()[aberta.id] ?? 0
-    const numModulo = MODULOS.findIndex((m) => m.id === aberta.modulo.id) + 1
+    const numModulo = modulos.findIndex((m) => m.id === aberta.modulo.id) + 1
 
     return (
       <div className={`ger aulas cine ${tocando ? 'tocando' : ''}`} style={{ ['--aula' as any]: aberta.modulo.cor }}>
@@ -253,26 +287,26 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
             <div className="cine-video">
               {player?.tipo === 'mp4' ? (
                 <PlayerAula key={aberta.id} src={player.src} titulo={aberta.titulo} posicaoInicial={posicao}
-                  aoAvancar={aoAvancar} aoTocar={setTocando}
+                  aoAvancar={aoAvancar} aoTocar={setTocando} pularPara={irPara}
                   proxima={seguinte ? { titulo: seguinte.titulo, abrir: () => abrir(seguinte) } : null} />
               ) : player ? (
                 <iframe src={player.src} title={aberta.titulo} allowFullScreen
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
               ) : (
                 <div className="aula-embreve-palco">
-                  <ResponsiveImage src={capa(aberta.id)} alt="" />
-                  <span>em breve</span>
+                  <CapaDaAula aula={aberta} cor={aberta.modulo.cor} numero={aberta.numero} alt="" />
+                  <span>{aberta.bloqueio ?? 'em breve'}</span>
                 </div>
               )}
             </div>
 
             <div className="cine-ficha">
               <div className="cine-ficha-texto">
-                <span className="aula-num">Aula {aberta.numero}</span>
+                <span className="aula-num">Aula {aberta.numero}{aberta.assunto?.titulo ? ` · ${aberta.assunto.titulo}` : ''}</span>
                 <h2>{aberta.titulo}</h2>
                 <p>{aberta.descricao}</p>
                 <div className="cine-chips">
-                  <span>Iniciante</span>
+                  <span>{aberta.nivel || 'Iniciante'}</span>
                   {!ehVideoDeExemplo(aberta.video) && <span>{aberta.duracao}</span>}
                   {ehVideoDeExemplo(aberta.video) && <span className="demo">Vídeo de exemplo</span>}
                 </div>
@@ -289,6 +323,25 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
                 </div>
               </div>
             </div>
+
+            {!!aberta.topicos?.length && (
+              <section className="cine-topicos" aria-label="O que você vai ver nesta aula">
+                <h3>O que você vai ver nesta aula <small>{aberta.topicos.length} {aberta.topicos.length === 1 ? 'tópico' : 'tópicos'}</small></h3>
+                <ol>
+                  {aberta.topicos.map((t, i) => {
+                    const seg = segundosDoTempo(t.tempo)
+                    const pula = seg != null && player?.tipo === 'mp4'
+                    return (
+                      <li key={i}>
+                        {pula
+                          ? <button type="button" onClick={() => setIrPara({ segundos: seg, vez: Date.now() })}><time>{t.tempo}</time><span>{t.titulo}</span><em aria-hidden="true">▶</em></button>
+                          : <div>{t.tempo ? <time>{t.tempo}</time> : <i aria-hidden="true">{i + 1}</i>}<span>{t.titulo}</span></div>}
+                      </li>
+                    )
+                  })}
+                </ol>
+              </section>
+            )}
 
             {(() => {
               // os links relacionados: os padrões da marca e os extras que o painel cadastrou nesta aula
@@ -337,11 +390,11 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
               <Anel fracao={assistidas / aulas.length} cor={aberta.modulo.cor} />
               <div>
                 <b>Seu progresso</b>
-                <small>{assistidas} de {aulas.length} aulas assistidas · {MODULOS.length} módulos</small>
+                <small>{assistidas} de {aulas.length} aulas assistidas · {modulos.length} {modulos.length === 1 ? 'módulo' : 'módulos'}</small>
               </div>
             </div>
             <div className="cine-trilha-modulos">
-              {MODULOS.map((m, mi) => {
+              {modulos.map((m, mi) => {
                 const doModulo = aulas.filter((a) => a.modulo.id === m.id)
                 const feitas = doModulo.filter((a) => vistas.has(a.id)).length
                 const abertoAqui = (moduloAberto ?? aberta.modulo.id) === m.id
@@ -359,13 +412,13 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
                     </button>
                     {abertoAqui && (
                       <ol className="cine-modulo-aulas">
-                        {doModulo.map((a) => (
-                          <li key={a.id}>
+                        {doModulo.map((a, ai) => (
+                          <li key={a.id} data-assunto={a.assunto?.titulo && a.assunto.id !== doModulo[ai - 1]?.assunto?.id ? a.assunto.titulo : undefined}>
                             <button
                               className={`aula-item ${a.id === aberta.id ? 'on' : ''} ${a.video ? '' : 'sem'} ${vistas.has(a.id) ? 'vista' : ''}`}
                               onClick={() => abrir(a)} disabled={!a.video} aria-current={a.id === aberta.id ? 'true' : undefined}>
                               <i>{a.id === aberta.id ? '▶' : vistas.has(a.id) ? '✓' : a.numero}</i>
-                              <span>{a.titulo}<small>{a.id === aberta.id ? 'Assistindo agora' : vistas.has(a.id) ? 'Assistida' : a.video ? (ehVideoDeExemplo(a.video) ? 'Vídeo de exemplo' : a.duracao) : 'Em breve'}</small></span>
+                              <span>{a.titulo}<small>{a.id === aberta.id ? 'Assistindo agora' : vistas.has(a.id) ? 'Assistida' : a.video ? (ehVideoDeExemplo(a.video) ? 'Vídeo de exemplo' : a.duracao) : a.bloqueio ?? 'Em breve'}</small></span>
                             </button>
                           </li>
                         ))}
@@ -444,7 +497,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
               </div>
             </div>
             <button type="button" className="aulas-jornada-capa" onClick={() => (aula.video && !travadas ? abrir(aula) : setDetalheId(aula.id))} aria-label={`Abrir a aula ${aula.titulo}`}>
-              <ResponsiveImage src={capa(aula.id)} alt="" />
+              <CapaDaAula aula={aula} cor={aula.modulo.cor} numero={aula.numero} alt="" />
               {aula.video && !travadas && <span className="aula-play">▶</span>}
               {estado === 'parou' && <span className="aulas-jornada-ondeBarra" aria-hidden="true"><i style={{ width: `${Math.max(3, fracaoAula * 100)}%` }} /></span>}
               {aula.duracao && !travadas && <span className="aula-dur">{estado === 'parou' && total ? `faltam ${relogio(total - onde)}` : aula.duracao}</span>}
@@ -455,8 +508,29 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
 
       {aoReverTour && <CartaoDoTour aoAbrir={aoReverTour} />}
 
-      {MODULOS.map((m, mi) => {
+      {modulos.map((m, mi) => {
         const doModulo = aulas.filter((a) => a.modulo.id === m.id)
+        const grupos = gruposDoModulo(m, doModulo)
+        const cartao = (a: AulaNumerada) => (
+          <button key={a.id} data-num={String(a.numero).padStart(2, '0')}
+            className={`aula-cartao ${a.video ? '' : 'sem'}`}
+            onClick={() => a.video ? abrir(a) : setDetalheId(a.id)}>
+            <span className="aula-cartao-capa" data-num={String(a.numero).padStart(2, '0')}>
+              <CapaDaAula aula={a} cor={m.cor} numero={a.numero} alt={`Capa da aula ${a.titulo}`} loading="lazy" />
+              {vistas.has(a.id) && <i className="aula-vista">✓</i>}
+              {!a.video && <em>{travadas ? 'Em 09/11' : a.bloqueio ?? 'Em breve'}</em>}
+              {a.video && <span className="aula-play">▶</span>}
+              {a.duracao && !travadas && <span className="aula-dur">{a.duracao}</span>}
+              <span className="aula-hover-info"><b>{a.titulo}</b><small>{a.descricao}</small></span>
+            </span>
+            <span className="aula-cartao-corpo">
+              <span className="aula-num">Aula {a.numero}</span>
+              <b>{a.titulo}</b>
+              {/* a duração já aparece na capa: aqui só o que a capa não diz (revisão visual, 29/10/2026) */}
+              {!travadas && <span className="aula-card-meta"><i>{a.video ? 'Disponível' : a.bloqueio ? 'Trancada' : 'Em breve'}</i>{!a.duracao && <i>Duração a definir</i>}</span>}
+            </span>
+          </button>
+        )
         return (
           <section key={m.id} className="aulas-modulo" style={{ ['--aula' as any]: m.cor }}>
             <div className="aulas-modulo-topo">
@@ -464,33 +538,18 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
               <div>
                 <h3>{m.titulo}</h3>
                 <p>{m.chamada}</p>
+                {m.descricao && <p className="aulas-modulo-descricao">{m.descricao}</p>}
               </div>
               <span className="aulas-conta">
                 {doModulo.filter((a) => vistas.has(a.id)).length}/{doModulo.length}
               </span>
             </div>
-            <Fileira rotulo={m.titulo}>
-              {doModulo.map((a) => (
-                <button key={a.id} data-num={String(a.numero).padStart(2, '0')}
-                  className={`aula-cartao ${a.video ? '' : 'sem'}`}
-                  onClick={() => a.video ? abrir(a) : setDetalheId(a.id)}>
-                  <span className="aula-cartao-capa" data-num={String(a.numero).padStart(2, '0')}>
-                    <ResponsiveImage src={capa(a.id)} alt={`Capa da aula ${a.titulo}`} loading="lazy" />
-                    {vistas.has(a.id) && <i className="aula-vista">✓</i>}
-                    {!a.video && <em>{travadas ? 'Em 09/11' : 'Em breve'}</em>}
-                    {a.video && <span className="aula-play">▶</span>}
-                    {a.duracao && !travadas && <span className="aula-dur">{a.duracao}</span>}
-                    <span className="aula-hover-info"><b>{a.titulo}</b><small>{a.descricao}</small></span>
-                  </span>
-                  <span className="aula-cartao-corpo">
-                    <span className="aula-num">Aula {a.numero}</span>
-                    <b>{a.titulo}</b>
-                    {/* a duração já aparece na capa: aqui só o que a capa não diz (revisão visual, 29/10/2026) */}
-                    {!travadas && <span className="aula-card-meta"><i>{a.video ? 'Disponível' : 'Em breve'}</i>{!a.duracao && <i>Duração a definir</i>}</span>}
-                  </span>
-                </button>
-              ))}
-            </Fileira>
+            {grupos.map((g) => (
+              <div key={g.id} className={g.titulo ? 'aulas-assunto' : undefined}>
+                {g.titulo && <div className="aulas-assunto-topo"><h4>{g.titulo}</h4>{g.descricao && <p>{g.descricao}</p>}<small>{g.aulas.length} {g.aulas.length === 1 ? 'aula' : 'aulas'}</small></div>}
+                <Fileira rotulo={g.titulo || m.titulo}>{g.aulas.map(cartao)}</Fileira>
+              </div>
+            ))}
           </section>
         )
       })}
@@ -500,15 +559,18 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
           <section className="aula-modal" role="dialog" aria-modal="true" aria-label={detalhe.titulo}
             style={{ ['--aula' as any]: detalhe.modulo.cor }} onClick={(e) => e.stopPropagation()}>
             <button className="aula-modal-fechar" onClick={() => setDetalheId(null)} aria-label="Fechar"><IconeFechar /></button>
-            <div className="aula-modal-capa"><ResponsiveImage src={capa(detalhe.id)} alt={`Capa da aula ${detalhe.titulo}`} /></div>
+            <div className="aula-modal-capa"><CapaDaAula aula={detalhe} cor={detalhe.modulo.cor} numero={detalhe.numero} alt={`Capa da aula ${detalhe.titulo}`} /></div>
             <div className="aula-modal-corpo">
               <span className="aula-num">Aula {detalhe.numero} · {detalhe.modulo.titulo}</span>
               <h2>{detalhe.titulo}</h2>
               <p>{detalhe.descricao}</p>
-              <div className="aulas-meta"><b>Iniciante</b>{!travadas && <span>{detalhe.duracao || 'Duração a definir'}</span>}</div>
+              {!!detalhe.topicos?.length && (
+                <ul className="aula-modal-topicos">{detalhe.topicos.slice(0, 6).map((t, i) => <li key={i}>{t.titulo}</li>)}</ul>
+              )}
+              <div className="aulas-meta"><b>{detalhe.nivel || 'Iniciante'}</b>{!travadas && <span>{detalhe.duracao || 'Duração a definir'}</span>}</div>
               {detalhe.video ? (
                 <button className="aulas-continuar" onClick={() => { setDetalheId(null); abrir(detalhe) }}><Icone nome="play" /> Assistir agora</button>
-              ) : <span className="aula-modal-breve">{travadas ? `${AVISO_GF_MEMBER}.` : 'Esta aula será liberada em breve.'}</span>}
+              ) : <span className="aula-modal-breve">{travadas ? `${AVISO_GF_MEMBER}.` : detalhe.bloqueio ? `${detalhe.bloqueio}.` : 'Esta aula será liberada em breve.'}</span>}
             </div>
           </section>
         </div>

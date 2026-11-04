@@ -131,6 +131,7 @@ function LabLogin() {
     </>
   )
 }
+const AdminAulasLab = lazy(() => import('./components/AdminAulas').then((m) => ({ default: m.AdminAulas })))
 const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine'))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
 import { DerivDesconectada } from './components/DerivDesconectada'
@@ -411,6 +412,22 @@ function Laboratorio() {
   }
   if (qual === 'preacesso') return <PreAcesso sessao={{ token: 'lab' } as never} nome="Ana Souza" aoConferir={async () => false} aoSair={nada} />
   if (qual === 'analise') return <CadastroEmAnalise email="miqueias.sena@outlook.com" nome="Miqueias Sena" aoConferir={async () => { await new Promise((r) => setTimeout(r, 700)); return false }} aoSair={nada} />
+  if (qual === 'aulas-admin') {
+    // ?tela=aulas-admin: o editor da grade das aulas, com o banco de mentira (o rascunho fica só na memória)
+    const f = window.fetch
+    let rascunho: unknown = null
+    window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => {
+      const url = String(u), ok = (d: unknown, status = 200) => new Response(JSON.stringify(d), { status, headers: { 'content-type': 'application/json' } })
+      if (url.includes('/rest/v1/aulas_grade_versoes')) return ok([])
+      if (url.includes('/rest/v1/aulas_grade')) { if (i?.method === 'POST') { rascunho = JSON.parse(String(i.body)).rascunho; return new Response(null, { status: 201 }) } return ok(rascunho ? [{ rascunho, rascunho_em: new Date().toISOString() }] : []) }
+      if (url.includes('teeds_aulas_publicar')) return ok(new Date().toISOString())
+      if (url.includes('/rest/v1/aulas_videos')) return ok([])
+      if (url.includes('teeds_aulas_controle')) return ok([])
+      if (url.includes('/rest/v1/planos_da_marca')) return ok([{ plano_id: 'treino', nome: 'GF Member', marca: MARCA.id, ativo: true, ordem: 1 }, { plano_id: 'black', nome: 'Black', marca: MARCA.id, ativo: true, ordem: 2 }, { plano_id: 'prestige', nome: 'Prestige', marca: MARCA.id, ativo: true, ordem: 3 }])
+      return f(u, i)
+    }) as typeof fetch
+    return <Suspense fallback={null}><div className="app workspace-app"><main className="admin-page" style={{ padding: 24 }}><AdminAulasLab sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab' } } as never} marca={MARCA.id} /></main></div></Suspense>
+  }
   if (qual === 'aulas') return <LabAulas />
   if (qual === 'minicabine') return <Suspense fallback={null}><LabMiniCabine /></Suspense>
   return (

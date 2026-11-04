@@ -25,6 +25,8 @@ interface Props {
   aoAvancar?: (fracao: number, segundos: number) => void
   aoTocar?: (tocando: boolean) => void
   proxima?: ProximaAula | null
+  /** Pular para um ponto do vídeo (os tópicos da aula). `vez` muda a cada clique, para repetir o mesmo ponto. */
+  pularPara?: { segundos: number; vez: number } | null
 }
 
 const VELOCIDADES = [1, 1.25, 1.5, 2]
@@ -42,7 +44,7 @@ const fmt = (s: number) => {
   return h ? `${h}:${String(m % 60).padStart(2, '0')}:${String(r).padStart(2, '0')}` : `${m}:${String(r).padStart(2, '0')}`
 }
 
-export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar, proxima }: Props) {
+export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar, proxima, pularPara }: Props) {
   const caixa = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
   const barra = useRef<HTMLDivElement>(null)
@@ -62,6 +64,14 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
   const [arrastando, setArrastando] = useState(false)
   const sumir = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retomou = useRef(false)
+
+  // um tópico da aula foi clicado: o vídeo vai até ele e toca
+  useEffect(() => {
+    const v = video.current
+    if (!v || !pularPara) return
+    v.currentTime = Math.max(0, pularPara.segundos)
+    void v.play().catch(() => undefined)
+  }, [pularPara])
 
   /* ------------------------------------------------ controles somem sozinhos */
   const acordar = useCallback(() => {

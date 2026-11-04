@@ -13,6 +13,7 @@ import { InstrumentoDoDia } from './InstrumentoDoDia'
 import './inicio.css'
 import { dataCurta } from '../../core/datas'
 import { simboloMoeda } from '../../core/dinheiro'
+import { CapaDesenhada } from '../aulas/CapaDaAula'
 import { ResponsiveImage } from '../ResponsiveImage'
 import { ROBOS_A_VENDA, useRobosBloqueados } from '../../core/teeds/robosLiberados'
 
@@ -47,7 +48,7 @@ export interface DadosDoInicio {
   /** A leitura do mercado falhou (sem cotação para mostrar). */
   mercadoFalhou?: boolean
   manchetes: Array<{ titulo: string; fonte: string; quando: string; link?: string }>
-  aula: { modulo: string; titulo: string; capa: string; feitas: number; total: number } | null
+  aula: { modulo: string; titulo: string; capa: string; cor?: string; feitas: number; total: number } | null
   treino: { noAr: boolean; apresentador?: string } | null
   jornada: { deriv: boolean; demo: boolean; gestao: boolean; primeiraIa: boolean }
 }
@@ -276,7 +277,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
             <div className="in-pv">
               {d.aula && (
                 <button type="button" className="in-aula" onClick={() => aoIr('aulas')}>
-                  <ResponsiveImage src={d.aula.capa} alt="" loading="lazy" />
+                  {d.aula.capa ? <ResponsiveImage src={d.aula.capa} alt="" loading="lazy" /> : <span className="in-aula-capa-desenhada"><CapaDesenhada titulo={d.aula.titulo} cor={d.aula.cor} /></span>}
                   <span className="in-aula-texto">
                     <span className="in-sobre">Continue de onde parou</span>
                     <b>{d.aula.titulo}</b>

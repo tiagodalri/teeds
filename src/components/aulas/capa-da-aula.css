@@ -1,0 +1,18 @@
+/* Capa desenhada (04/11/2026): aula nova sem imagem própria. Preenche o espaço da capa. */
+.capa-desenhada {
+  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px;
+  padding: 14% 12% 12%; overflow: hidden; color: #fff; text-align: left;
+  background:
+    radial-gradient(120% 70% at 80% 0%, color-mix(in srgb, var(--capa) 70%, transparent), transparent 60%),
+    linear-gradient(160deg, color-mix(in srgb, var(--capa) 38%, #0a1424) 0%, #060c18 100%);
+}
+.capa-desenhada-luz { position: absolute; right: -18%; top: -10%; width: 3px; height: 140%; background: linear-gradient(transparent, var(--capa), transparent); transform: rotate(28deg); opacity: .7; }
+.capa-desenhada-marca { position: absolute; top: 9%; left: 12%; font-size: 9px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; color: color-mix(in srgb, var(--capa) 60%, #fff); }
+.capa-desenhada-num { font-size: clamp(30px, 9vw, 64px); line-height: .9; font-weight: 800; letter-spacing: -.04em; color: color-mix(in srgb, var(--capa) 55%, #fff); opacity: .9; }
+.capa-desenhada-titulo { font-size: clamp(12px, 2.2vw, 17px); line-height: 1.2; font-weight: 800; text-wrap: balance; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+/* nos lugares em que a capa não tem posição própria */
+.aula-cartao-capa, .aulas-jornada-capa, .aula-modal-capa, .aula-embreve-palco { position: relative; }
+/* no cartão da vitrine o título já vem embaixo da capa: a capa desenhada fica só com a marca e o número */
+.aula-cartao-capa .capa-desenhada { justify-content: flex-start; padding-top: 34%; }
+.aula-cartao-capa .capa-desenhada-titulo { display: none; }
+.aula-cartao-capa .capa-desenhada-num { font-size: clamp(40px, 5vw, 72px); }

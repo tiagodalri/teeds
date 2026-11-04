@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
-import { ehVideoDeExemplo, MODULOS, todasAsAulas } from '../core/teeds/aulas'
+import { ehVideoDeExemplo, todasAsAulas } from '../core/teeds/aulas'
+import { useModulosEmUso } from '../core/teeds/gradeAulas'
 import {
   horasLegiveis, idiomaLegivel, lerAcessosPorDia, lerAcessosPorHora, lerAlunos, lerAulas, lerDispositivos, lerLocalizacoes,
   lerOrigens, lerResumo, lerVisitas, lerVisitasPorDia, lugarDoFuso, nomeDaOrigem,
@@ -54,7 +55,9 @@ export function InsightsPanel({ sessao, mostrarMarkup = false, onMostrarMarkup }
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [lidoEm, setLidoEm] = useState<Date | null>(null)
-  const catalogo = useMemo(() => todasAsAulas(), [])
+  // 04/11/2026: os módulos da grade publicada no painel (ou os do código)
+  const modulos = useModulosEmUso(sessao, { admin: true })
+  const catalogo = useMemo(() => todasAsAulas({}, modulos), [modulos])
 
   /*
     RECEITA DO PERÍODO, SÓ NO MODO CEO (09/10/2026). Os Insights falavam de
@@ -256,7 +259,7 @@ export function InsightsPanel({ sessao, mostrarMarkup = false, onMostrarMarkup }
         <header><div><span className="rot">Aulas</span><h3>Quem assistiu o quê, e até onde</h3></div><small>{periodo} dias</small></header>
         <div className="ins-tabela ins-aulas">
           <div className="cab"><span>Aula</span><span>Pessoas</span><span>Aberturas</span><span>Tempo assistido</span><span>Progresso médio</span><span>Concluíram</span></div>
-          {MODULOS.map((m) => (
+          {modulos.map((m) => (
             <div key={m.id} className="ins-grupo">
               <em style={{ ['--aula' as string]: m.cor }}>{m.titulo}</em>
               {catalogo.filter((a) => a.modulo.id === m.id).map((a) => {

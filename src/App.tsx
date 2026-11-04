@@ -1537,7 +1537,7 @@ export default function App() {
       ) : tela === 'aulas' ? (
         <Suspense fallback={telaAbrindo('Abrindo as aulas…')}><AulasPanel nome={teeds.usuario?.nome} sessao={teeds.sessao} aoReverTour={MARCA.inicio ? () => setTour('rever') : undefined}
           aoIr={(t) => setTela(t as WorkspacePage)} treino={MARCA.aoVivo && (membroTreino === true || admin === true) ? { noAr: !!treinoAgora } : null}
-          travadas={aulasTravadasParaGfMember(plano, admin)} /></Suspense>
+          travadas={aulasTravadasParaGfMember(plano, admin)} plano={plano} admin={admin} /></Suspense>
       ) : tela === 'marketplace' ? (
         <Suspense fallback={telaAbrindo('Abrindo o marketplace…')}><MarketplacePanel sessao={teeds.sessao} /></Suspense>
       ) : tela === 'gerenciamento' ? (

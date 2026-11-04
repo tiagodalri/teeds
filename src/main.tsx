@@ -84,9 +84,14 @@ if (JANELA) {
   ligarJanelaSolta()
   // o tema trocado na janela principal vale aqui na hora
   window.addEventListener('storage', (e) => { if (e.key === `${MARCA.id}.tema`) aplicarTema(temaGuardado()) })
-} else registrarVisita()
+} else if (new URLSearchParams(location.search).get('previa') !== 'aulas') registrarVisita()
+
+// 04/11/2026: a prévia da sala de aula, aberta pelo painel num quadro (aulas/PreviaDasAulas.tsx)
+const PreviaDasAulas = new URLSearchParams(location.search).get('previa') === 'aulas' && window.parent !== window
+  ? lazy(() => import('./components/aulas/PreviaDasAulas')) : null
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
+  PreviaDasAulas ? <Suspense fallback={null}><PreviaDasAulas /></Suspense> :
   <React.StrictMode>
     <App />
     {RecursosDeApp && !JANELA && <Suspense fallback={null}><RecursosDeApp /></Suspense>}

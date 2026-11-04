@@ -22,7 +22,21 @@ export interface Aula {
   materiais?: Material[]
   /** Links extras da aula (além dos padrões da marca). */
   links?: LinkDaAula[]
+  /* ---- 04/11/2026: o que a grade do painel (gradeAulas.ts) acrescenta ---- */
+  /** A capa enviada pelo painel (URL). Sem ela, vale a capa do código pelo id. */
+  capa?: string
+  /** Os tópicos da aula, com o minuto em que cada um começa no vídeo (opcional). */
+  topicos?: Topico[]
+  /** O assunto (agrupamento dentro do módulo) a que a aula pertence. */
+  assunto?: { id: string; titulo: string }
+  /** O selo de nível no cartão ("Iniciante", "Avançado"...). */
+  nivel?: string
+  /** Por que a aula ainda não abre ("Disponível em 12/11"); nulo = abre. */
+  bloqueio?: string | null
 }
+
+/** Um tópico da aula: o que ela cobre e, se houver, o minuto no vídeo ("3:40"). */
+export interface Topico { titulo: string; tempo?: string }
 
 /** Um link relacionado à aula: o nome do botão e o endereço. */
 export interface LinkDaAula { nome: string; url: string }
@@ -44,6 +58,12 @@ export interface Modulo {
   /** Cor da capa dos cartoes deste modulo. */
   cor: string
   aulas: Aula[]
+  /** Texto mais longo do módulo (grade do painel). */
+  descricao?: string
+  /** Os assuntos do módulo, na ordem (grade do painel). Assunto sem título = sem agrupamento. */
+  assuntos?: Array<{ id: string; titulo: string; descricao?: string }>
+  /** Veio da grade publicada no painel (e não do código): o painel é a única fonte. */
+  daGrade?: boolean
 }
 
 /** Placeholder oficial usado somente enquanto os vídeos Teeds não chegaram. */
@@ -75,6 +95,20 @@ const GF_MEMBER_LIBERA_EM = Date.parse('2026-11-09T23:30:00Z')
 export const aulasTravadasParaGfMember = (plano: string | null, admin: boolean | null) =>
   plano === 'treino' && admin !== true && Date.now() < GF_MEMBER_LIBERA_EM
 
+/* -------------------------------------------- a grade em uso na sala */
+
+/*
+  04/11/2026: a grade montada no painel (gradeAulas.ts) substitui o catálogo
+  do código assim que é publicada. Quem lê os módulos fora da sala (início,
+  ficha do cliente, insights) pede `modulosEmUso()`; a sala avisa quando a
+  grade chega, e quem quiser redesenhar assina `aoMudarModulos`.
+*/
+let modulosDaGrade: Modulo[] | null = null
+const ouvintes = new Set<() => void>()
+export const modulosEmUso = (): Modulo[] => modulosDaGrade ?? MODULOS
+export function usarModulosDaGrade(m: Modulo[] | null) { modulosDaGrade = m && m.length ? m : null; for (const f of ouvintes) f() }
+export function aoMudarModulos(f: () => void) { ouvintes.add(f); return () => { ouvintes.delete(f) } }
+
 /* ------------------------------------------------------------ numeração */
 
 export interface AulaNumerada extends Aula {
@@ -104,14 +138,15 @@ export interface SobreposicaoDaAula {
  * `videos` é o que o painel gravou: uma aula com vídeo publicado ali deixa
  * de ser demonstração e passa a abrir o vídeo de verdade.
  */
-export function todasAsAulas(videos: Record<string, SobreposicaoDaAula> = {}): AulaNumerada[] {
+export function todasAsAulas(videos: Record<string, SobreposicaoDaAula> = {}, modulos: Modulo[] = modulosEmUso()): AulaNumerada[] {
   const lista: AulaNumerada[] = []
   let n = 1
-  for (const m of MODULOS) {
+  for (const m of modulos) {
     for (const a of m.aulas) {
-      const gravado = videos[a.id]
+      // com a grade do painel publicada, ela já traz o vídeo de cada aula: nada por cima
+      const gravado = m.daGrade ? undefined : videos[a.id]
       const vivo = gravado && gravado.publicado !== false && gravado.video.trim() ? gravado : null
-      const video = vivo?.video || a.video || (DEMONSTRACAO_EM_AULA_SEM_VIDEO ? exemplo(n) : '')
+      const video = a.bloqueio ? '' : vivo?.video || a.video || (DEMONSTRACAO_EM_AULA_SEM_VIDEO ? exemplo(n) : '')
       const doPainel = gravado && gravado.publicado !== false ? gravado.materiais ?? [] : []
       lista.push({
         ...a,

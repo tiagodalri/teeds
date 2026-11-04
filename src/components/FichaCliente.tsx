@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { lerFichaCliente, lerRastroCliente, type FichaCliente as Ficha, type RastroCliente } from '../core/teeds/clientes'
 import { horasLegiveis, idiomaLegivel, lugarDoFuso } from '../core/teeds/insights'
 import { todasAsAulas } from '../core/teeds/aulas'
+import { useModulosEmUso } from '../core/teeds/gradeAulas'
 import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca } from '../core/deriv/strategies'
 import { MARCA } from '../marca'
 import type { SessaoTeeds } from '../core/teeds/conta'
@@ -145,7 +146,9 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
   const [aba, setAba] = useState<Aba>('geral')
   const [emailAberto, setEmailAberto] = useState<number | null>(null)
   const [rastro, setRastro] = useState<RastroCliente | null>(null)
-  const catalogo = useMemo(() => todasAsAulas(), [])
+  // 04/11/2026: os módulos da grade publicada no painel (ou os do código)
+  const modulos = useModulosEmUso(sessao, { admin: true })
+  const catalogo = useMemo(() => todasAsAulas({}, modulos), [modulos])
 
   useEffect(() => {
     let vivo = true

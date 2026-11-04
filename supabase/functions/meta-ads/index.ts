@@ -80,6 +80,10 @@ const acao = (lista: any[] | undefined, ...tipos: string[]) => {
   return 0
 }
 
+// 04/11/2026, Tiago: "os números da plataforma precisam bater com os da Meta". O Gerenciador conta cada conjunto
+// pela atribuição dele (hoje: clique de 7 dias; o NB1 Aberto também visualização de 1 dia). Sem isto a API usa a
+// janela padrão da conta e o número pode sair diferente do Gerenciador.
+const UNIFICADO = { use_unified_attribution_setting: 'true' }
 const CAMPOS = 'spend,impressions,reach,frequency,clicks,inline_link_clicks,inline_link_click_ctr,ctr,cpc,cpm,cost_per_inline_link_click,actions,'
   + 'video_play_actions,video_thruplay_watched_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p95_watched_actions,video_p100_watched_actions'
 
@@ -130,7 +134,7 @@ function publico(t: any): string {
 async function painel(chave: string, cfg: Conta, de: string, ate: string) {
   const act = `act_${cfg.conta}`
   const tr = JSON.stringify({ since: de, until: ate })
-  const ins = (extra: Record<string, string>) => graph(chave, `${act}/insights`, { time_range: tr, fields: CAMPOS, limit: '500', filtering: SO_GF, ...extra })
+  const ins = (extra: Record<string, string>) => graph(chave, `${act}/insights`, { time_range: tr, fields: CAMPOS, limit: '500', filtering: SO_GF, ...UNIFICADO, ...extra })
   const avisos: string[] = []
   const talvez = async <T,>(nome: string, p: Promise<T>, padrao: T): Promise<T> => {
     try { return await p } catch (e) {
@@ -286,7 +290,7 @@ async function daPonte(marca: string, parceiro: string, de: string, ate: string,
 async function anuncio(chave: string, cfg: { conta: string }, id: string, de: string, ate: string) {
   const tr = JSON.stringify({ since: de, until: ate })
   const filtro = JSON.stringify([{ field: 'ad.id', operator: 'EQUAL', value: id }])
-  const ins = (extra: Record<string, string>) => graph(chave, `act_${cfg.conta}/insights`, { time_range: tr, fields: CAMPOS, level: 'ad', filtering: filtro, limit: '500', ...extra })
+  const ins = (extra: Record<string, string>) => graph(chave, `act_${cfg.conta}/insights`, { time_range: tr, fields: CAMPOS, level: 'ad', filtering: filtro, limit: '500', ...UNIFICADO, ...extra })
   const [porDia, idadeGenero, posicionamento] = await Promise.all([
     ins({ time_increment: '1' }), ins({ breakdowns: 'age,gender' }).catch(() => []), ins({ breakdowns: 'publisher_platform,platform_position' }).catch(() => []),
   ])
@@ -402,7 +406,7 @@ Deno.serve(async (req) => {
   try {
     // o funil ao vivo: só o total do período, uma consulta (a tela pede a cada minuto)
     if (d.acao === 'resumo') {
-      const l = await graph(chave, `act_${cfg.conta}/insights`, { time_range: JSON.stringify({ since: de, until: ate }), fields: CAMPOS, level: 'account', filtering: SO_GF }, 1)
+      const l = await graph(chave, `act_${cfg.conta}/insights`, { time_range: JSON.stringify({ since: de, until: ate }), fields: CAMPOS, level: 'account', filtering: SO_GF, ...UNIFICADO }, 1)
       return json({ total: l[0] ? limpar(metricas(l[0])) : limpar(metricas({})), em: new Date().toISOString() })
     }
     if (d.acao === 'anuncio') {
