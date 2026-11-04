@@ -303,13 +303,31 @@ async function montarSegmentacao(chave: string, act: string, cfg: { pixel: strin
   return t
 }
 
-async function criarConjunto(chave: string, act: string, cfg: { pixel: string }, campanhaId: string, nome: string, diario: number, targeting: Record<string, unknown>) {
-  const d = await gravar(chave, `${act}/adsets`, {
-    name: nome, campaign_id: campanhaId, status: 'PAUSED', daily_budget: Math.round(diario * 100), billing_event: 'IMPRESSIONS',
-    optimization_goal: 'OFFSITE_CONVERSIONS', bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
-    promoted_object: { pixel_id: cfg.pixel, custom_event_type: 'COMPLETE_REGISTRATION' }, targeting,
-  })
-  return String(d.id)
+// 04/11/2026: para público no Brasil a Meta exige o anunciante e o pagador VERIFICADOS em cada conjunto
+// ("Forneça um anunciante verificado..."). O Gerenciador põe o padrão da conta sozinho; a API não.
+// O certo vai em regional_regulated_categories + regional_regulation_identities (o id do portfólio com a
+// verificação, na conta do Naor a GOATWIN LTDA). Não inventamos o id: copiamos de um conjunto da conta que já o tem.
+type Identidade = { regional_regulated_categories: string[]; regional_regulation_identities: Record<string, string> }
+async function identidadeVerificada(chave: string, act: string): Promise<Identidade | null> {
+  const l = await ler(chave, `${act}/adsets`, { fields: 'regional_regulated_categories,regional_regulation_identities', limit: '100' }).catch(() => ({ data: [] }))
+  const com = (l.data ?? []).find((x: any) => x.regional_regulation_identities?.universal_beneficiary)
+  return com ? { regional_regulated_categories: com.regional_regulated_categories ?? ['BRAZIL_REGULATION'], regional_regulation_identities: com.regional_regulation_identities } : null
+}
+
+async function criarConjunto(chave: string, act: string, cfg: { pixel: string }, campanhaId: string, nome: string, diario: number, targeting: Record<string, unknown>, identidade: Identidade | null) {
+  try {
+    const d = await gravar(chave, `${act}/adsets`, {
+      name: nome, campaign_id: campanhaId, status: 'PAUSED', daily_budget: Math.round(diario * 100), billing_event: 'IMPRESSIONS',
+      optimization_goal: 'OFFSITE_CONVERSIONS', bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+      promoted_object: { pixel_id: cfg.pixel, custom_event_type: 'COMPLETE_REGISTRATION' }, targeting, ...(identidade ?? {}),
+    })
+    return String(d.id)
+  } catch (e) {
+    if (!identidade && /anunciante verificado|verified advertiser/i.test((e as Error).message)) {
+      throw new Error('A Meta exige o anunciante verificado nesta conta e ainda não há nenhum conjunto com ele para copiar. Publique um conjunto pelo Gerenciador uma vez (ele puxa o anunciante padrão da conta) e tente de novo.')
+    }
+    throw e
+  }
 }
 
 async function criarCriativo(chave: string, act: string, cfg: { pagina: string; instagram: string }, nome: string, midia: Midia, texto: Texto, link: string, avisos: string[]) {
@@ -377,13 +395,14 @@ async function criar(chave: string, cfg: typeof CONTAS['globalfly']['n'], parcei
   const precisaA = teste ? !p.conjuntoId : !p.conjuntoId && d.destino.conjunto === 'novo'
   const alvoA = precisaA ? await montarSegmentacao(chave, act, cfg, parceiro, d.publico, p.avisos, true) : null
   const alvoB = teste && !p.conjuntoB ? (d.teste!.variavel === 'publico' && d.publicoB ? await montarSegmentacao(chave, act, cfg, parceiro, d.publicoB, p.avisos, true) : alvoA ?? await montarSegmentacao(chave, act, cfg, parceiro, d.publico, p.avisos, true)) : null
+  const identidade = (teste ? !p.conjuntoId || !p.conjuntoB : precisaA) ? await identidadeVerificada(chave, act) : null
   if (teste) {
     const nomeC = comPrefixo(d.destino.nomeConjunto || d.nomeAnuncio || 'Teste')
-    if (!p.conjuntoId) { p.conjuntoId = await criarConjunto(chave, act, cfg, p.campanhaId, `${nomeC} · Versão A`, diario / 2, alvoA!); p.conjuntoNovo = true; await salvar(p) }
-    if (!p.conjuntoB) { p.conjuntoB = await criarConjunto(chave, act, cfg, p.campanhaId, `${nomeC} · Versão B`, diario / 2, alvoB!); await salvar(p) }
+    if (!p.conjuntoId) { p.conjuntoId = await criarConjunto(chave, act, cfg, p.campanhaId, `${nomeC} · Versão A`, diario / 2, alvoA!, identidade); p.conjuntoNovo = true; await salvar(p) }
+    if (!p.conjuntoB) { p.conjuntoB = await criarConjunto(chave, act, cfg, p.campanhaId, `${nomeC} · Versão B`, diario / 2, alvoB!, identidade); await salvar(p) }
   } else if (!p.conjuntoId) {
     if (d.destino.conjunto === 'novo') {
-      p.conjuntoId = await criarConjunto(chave, act, cfg, p.campanhaId, comPrefixo(d.destino.nomeConjunto || 'Público do lançamento'), diario, alvoA!); p.conjuntoNovo = true
+      p.conjuntoId = await criarConjunto(chave, act, cfg, p.campanhaId, comPrefixo(d.destino.nomeConjunto || 'Público do lançamento'), diario, alvoA!, identidade); p.conjuntoNovo = true
     } else {
       await daGf(chave, 'conjunto', d.destino.conjunto); p.conjuntoId = d.destino.conjunto
     }
