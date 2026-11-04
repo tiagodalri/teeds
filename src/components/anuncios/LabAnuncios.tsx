@@ -6,6 +6,7 @@ import type { ApiEstudio, ItemDoHistorico, PublicoSalvo, Rascunho } from '../../
 import type { PessoaDaJornada } from '../../core/teeds/central'
 import { apiCentralDeMentira } from '../central/LabCentral'
 import type { ApiInstagram, EstadoDoInstagram, MidiaDoInstagram } from '../../core/teeds/instagram'
+import { ErroSemIA, type Analise, type ApiAnalise, type LeituraDaIA } from '../../core/teeds/analise'
 
 /* O Instagram de mentira: ?ig=chave (a chave ainda sem permissão), ?ig=app, ?ig=conectar; sem nada = conectado pela chave. */
 function instagramDeMentira(fase: string): ApiInstagram {
@@ -204,6 +205,55 @@ function estudioDeMentira(semChave: boolean): ApiEstudio {
   }
 }
 
+/**
+ * A leitura da I.A. de mentira (&ia=sem-ia: falta a chave no servidor; &ia=pronta: já analisada; &ia=aplicada).
+ * Sem nada: começa vazia, "Analisar" leva 2,5 s e fica pronta; "Confirmar e aplicar" devolve 1 falha para
+ * ver o resultado parcial.
+ */
+function analiseDeMentira(fase: string): ApiAnalise {
+  const espera = <T,>(v: T, ms = 300) => new Promise<T>((r) => setTimeout(() => r(v), ms))
+  const dados: LeituraDaIA = {
+    resumo: 'De 02/11 a 04/11, R$ 892,20 trouxeram 260 cadastros a R$ 3,43 cada, 18% mais barato que no período anterior (R$ 4,18). O Vídeo 01 carrega a conta: 54% dos cadastros a R$ 2,92. A Imagem do convite está 2 vezes mais cara (R$ 5,91) e já consumiu R$ 183 com qualidade abaixo da média.',
+    panorama: [
+      { tipo: 'bom', titulo: 'O Vídeo 01 é o motor da conta', texto: '141 cadastros a R$ 2,92, contra R$ 3,37 do Vídeo 02 e R$ 5,91 da Imagem. O gancho de 36% (quem para 3 s) e a qualidade “acima da média” explicam: o criativo prende e a Meta entrega mais barato.' },
+      { tipo: 'critico', titulo: 'A Imagem do convite custa o dobro', texto: 'R$ 5,91 por cadastro com 31 cadastros e qualidade “abaixo da média”. Em 3 dias gastou R$ 183,10 que, no Vídeo 01, dariam uns 62 cadastros.' },
+      { tipo: 'atencao', titulo: 'Homens de 25 a 44 convertem 40% mais barato', texto: '55% do investimento vai para eles e o custo por cadastro fica em R$ 2,70; mulheres de 25 a 44 ficam em R$ 4,60. Vale um conjunto só para esse grupo, com o mesmo criativo.' },
+      { tipo: 'info', titulo: 'Reels do Instagram é onde o cadastro sai mais barato', texto: '38% do gasto, R$ 2,95 por cadastro; o feed do Facebook fica em R$ 4,40.' },
+      { tipo: 'bom', titulo: 'A página converte bem', texto: '14,4% de quem chega na página se cadastra (260 de 1.800). Acima dos 8% que separam página boa de página fraca.' },
+    ],
+    plano: [
+      { titulo: 'Escalar o Vídeo 01 sem mexer no original', porque: 'Duplicar o conjunto com R$ 30 por dia preserva o aprendizado do original e testa se o custo de R$ 2,92 segura com mais verba.', impacto: 'alto', quando: 'agora' },
+      { titulo: 'Pausar a Imagem do convite', porque: 'R$ 5,91 por cadastro com 31 cadastros já é amostra: os R$ 20 por dia dela rendem mais no Vídeo 01.', impacto: 'alto', quando: 'agora' },
+      { titulo: 'Conjunto só para homens de 25 a 44, Reels e Stories', porque: 'É o grupo mais barato (R$ 2,70) no posicionamento mais barato. Um conjunto próprio deixa a Meta concentrar a entrega.', impacto: 'medio', quando: 'agora' },
+      { titulo: 'Gravar um Vídeo 03 com o mesmo gancho do 01', porque: 'A frequência já está em 1,42 em 3 dias. Até a live, um criativo novo evita o público cansar do mesmo vídeo.', impacto: 'medio', quando: 'esta-semana' },
+    ],
+    mudancas: [
+      { id: 'm1', tipo: 'duplicar', alvoTipo: 'conjunto', alvoId: 's1', alvoNome: 'Brasil · 25–55 · aberto', nome: 'Brasil · 25–55 · aberto · escala', diarioDe: 20, diarioPara: 30, ligar: true, publico: { idadeMin: 0, idadeMax: 0, genero: 'todos', estados: [], ondeAparece: [] }, porque: 'O conjunto entrega o Vídeo 01 a R$ 2,92 por cadastro com 141 cadastros. Uma cópia com R$ 30 por dia escala sem reiniciar o aprendizado do original.', risco: 'medio' },
+      { id: 'm2', tipo: 'pausar', alvoTipo: 'anuncio', alvoId: '120210000000000003', alvoNome: 'Imagem · Convite da live 09/11', nome: '', diarioDe: 0, diarioPara: 0, ligar: false, publico: { idadeMin: 0, idadeMax: 0, genero: 'todos', estados: [], ondeAparece: [] }, porque: 'R$ 5,91 por cadastro (2 vezes o Vídeo 01) com 31 cadastros e qualidade abaixo da média. A verba vai sobrar para os vídeos no mesmo conjunto.', risco: 'baixo' },
+      { id: 'm3', tipo: 'novo_publico', alvoTipo: 'conjunto', alvoId: 's1', alvoNome: 'Brasil · 25–55 · aberto', nome: 'Homens 25–44 · Reels e Stories', diarioDe: 20, diarioPara: 20, ligar: true, publico: { idadeMin: 25, idadeMax: 44, genero: 'homens', estados: [], ondeAparece: ['instagram_reels', 'instagram_stories'] }, porque: 'Homens de 25 a 44 custam R$ 2,70 por cadastro e Reels/Stories R$ 2,95: juntos, o grupo mais barato da conta. Com os mesmos anúncios, R$ 20 por dia.', risco: 'alto' },
+      { id: 'm4', tipo: 'orcamento', alvoTipo: 'conjunto', alvoId: 's1', alvoNome: 'Brasil · 25–55 · aberto', nome: '', diarioDe: 20, diarioPara: 24, ligar: false, publico: { idadeMin: 0, idadeMax: 0, genero: 'todos', estados: [], ondeAparece: [] }, porque: 'Com a Imagem pausada, +20% no conjunto mantém o ritmo de entrega dos dois vídeos.', risco: 'baixo' },
+    ],
+    alerta: fase === 'pronta' ? '' : 'Conjunto novo passa pela análise da Meta de novo (até 24 h). Hoje é 04/11: as cópias precisam estar no ar até sexta para rodar o fim de semana antes da live.',
+  }
+  const base = (situacao: Analise['situacao'], extra: Partial<Analise> = {}): Analise => ({ id: 'a1', situacao, dados, erro: null, criadoEm: new Date(Date.now() - 50e3).toISOString(), prontaEm: new Date().toISOString(), aplicadoEm: null, resultado: null, quem: 'Tiago', modelo: 'claude-opus-5-5', de: '2026-11-02', ate: '2026-11-04', ...extra })
+  let atual: Analise | null = fase === 'pronta' ? base('pronta') : fase === 'aplicada' ? base('aplicada', { aplicadoEm: new Date().toISOString(), resultado: dados.mudancas.map((m) => ({ id: m.id, ok: true, mensagem: m.tipo === 'orcamento' ? 'R$ 20,00 → R$ 24,00 por dia' : m.tipo === 'pausar' ? 'Pausado' : `Conjunto "GF | ${m.nome}" criado com R$ ${m.diarioPara},00 por dia, ligado` })) }) : null
+  return {
+    ultima: () => espera({ temIA: fase !== 'sem-ia', analise: atual }),
+    analisar: () => {
+      if (fase === 'sem-ia') return Promise.reject(new ErroSemIA('Falta a chave da I.A. no servidor (segredo ANTHROPIC_API_KEY das funções).'))
+      atual = base('analisando', { prontaEm: null, dados: null })
+      setTimeout(() => { atual = base('pronta') }, 2500)
+      return espera({ temIA: true, analise: atual })
+    },
+    aplicar: (_s, _p, _id, escolhidas) => {
+      const resultado = escolhidas.map((id) => { const m = dados.mudancas.find((x) => x.id === id)!; return id === 'm3' ? { id, ok: false, mensagem: 'A Meta respondeu: Forneça um anunciante verificado para este conjunto (código 100).' } : { id, ok: true, mensagem: m.tipo === 'orcamento' ? 'R$ 20,00 → R$ 24,00 por dia' : m.tipo === 'pausar' ? 'Pausado' : `Conjunto "GF | ${m.nome}" criado com R$ ${m.diarioPara},00 por dia, ligado` } })
+      const situacao = resultado.every((r) => r.ok) ? 'aplicada' as const : 'parcial' as const
+      atual = atual ? { ...atual, situacao, resultado, aplicadoEm: new Date().toISOString() } : atual
+      return espera({ situacao, resultado }, 1800)
+    },
+  }
+}
+
 export default function LabAnuncios() {
   const q = new URLSearchParams(location.search)
   const semChave = q.has('sem-chave'), bloqueada = q.has('chave-bloqueada')
@@ -234,5 +284,6 @@ export default function LabAnuncios() {
   }
   const sessao = { token: 'lab', usuario: { id: 'lab' } } as unknown as SessaoTeeds
   const [estudio] = useState(() => estudioDeMentira(q.has('estudio-sem-chave')))
-  return <div className="workspace-app" style={{ minHeight: '100vh', background: 'var(--bg)', padding: 'clamp(12px, 3vw, 28px)', boxSizing: 'border-box' }}><AdminAnuncios sessao={sessao} api={api} apiEstudio={estudio} apiInstagram={instagram} intervalo={q.has('rapido') ? 2500 : undefined} apiCentral={apiCentralDeMentira} buscarJornada={jornadaDeMentira} /></div>
+  const [analise] = useState(() => analiseDeMentira(q.get('ia') ?? ''))
+  return <div className="workspace-app" style={{ minHeight: '100vh', background: 'var(--bg)', padding: 'clamp(12px, 3vw, 28px)', boxSizing: 'border-box' }}><AdminAnuncios sessao={sessao} api={api} apiEstudio={estudio} apiInstagram={instagram} apiAnalise={analise} intervalo={q.has('rapido') ? 2500 : undefined} apiCentral={apiCentralDeMentira} buscarJornada={jornadaDeMentira} /></div>
 }

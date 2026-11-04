@@ -23,6 +23,8 @@ import { API_DA_CENTRAL, jornadaCompleta, type ApiCentral, type LinkDeRastreio, 
 import { API_DO_ESTUDIO, type ApiEstudio } from '../../core/teeds/estudio'
 import { API_DO_INSTAGRAM, type ApiInstagram } from '../../core/teeds/instagram'
 import { InstagramDoParceiro } from './Instagram'
+import { API_DA_ANALISE, type ApiAnalise } from '../../core/teeds/analise'
+import { AnaliseIA } from './AnaliseIA'
 import './admin-anuncios.css'
 
 const brl = (v: number, casas = 2) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: casas, maximumFractionDigits: casas })
@@ -225,9 +227,9 @@ function OrcamentoDoConjunto({ conjunto, campanha, anuncios, valorNovo, moeda, s
  * parceiro com conta e avisa qual conta está mostrando (o topo marca essa). `seletorNoTopo`: o topo já mostra
  * as contas, então os botões Naor/Victor daqui somem (no laboratório, sem topo, eles ficam).
  */
-export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_ESTUDIO, intervalo = 10_000, apiCentral = API_DA_CENTRAL, buscarJornada, parceiroDoTopo, aoTrocarConta, seletorNoTopo = false, atualizarPedido = 0, aoMudarCarregando, apiInstagram = API_DO_INSTAGRAM }: { sessao: SessaoTeeds; api?: ApiAnuncios; apiEstudio?: ApiEstudio; intervalo?: number; apiCentral?: ApiCentral; buscarJornada?: typeof jornadaCompleta; parceiroDoTopo?: string; aoTrocarConta?: (codigo: string, codigos: string[]) => void; seletorNoTopo?: boolean
+export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_ESTUDIO, intervalo = 10_000, apiCentral = API_DA_CENTRAL, buscarJornada, parceiroDoTopo, aoTrocarConta, seletorNoTopo = false, atualizarPedido = 0, aoMudarCarregando, apiInstagram = API_DO_INSTAGRAM, apiAnalise = API_DA_ANALISE }: { sessao: SessaoTeeds; api?: ApiAnuncios; apiEstudio?: ApiEstudio; intervalo?: number; apiCentral?: ApiCentral; buscarJornada?: typeof jornadaCompleta; parceiroDoTopo?: string; aoTrocarConta?: (codigo: string, codigos: string[]) => void; seletorNoTopo?: boolean
   /** O "Atualizar" do topo do painel (cada clique soma 1) e o aviso de quando está lendo: no painel, o botão daqui some. */
-  atualizarPedido?: number; aoMudarCarregando?: (indo: boolean) => void; apiInstagram?: ApiInstagram }) {
+  atualizarPedido?: number; aoMudarCarregando?: (indo: boolean) => void; apiInstagram?: ApiInstagram; apiAnalise?: ApiAnalise }) {
   const contas = CONTAS_DE_ANUNCIO[MARCA.id] ?? []
   // a conta escolhida (Naor ou Victor) fica lembrada neste aparelho
   const [parceiro, setParceiroAgora] = useState(() => {
@@ -421,6 +423,11 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
     return soma
   }, [filtradas, painel, orcNovo])
   const somaFiltrada = useMemo(() => (filtradas.length > 1 ? somarLinhas(filtradas) : null), [filtradas])
+  const totalDiaDaConta = useMemo(() => {
+    const ligado = (s: string) => /ACTIVE|IN_PROCESS|PENDING|WITH_ISSUES/.test(s)
+    return (painel?.conjuntos ?? []).filter((c) => ligado(c.status)).reduce((s, c) => s + (orcNovo[c.id] ?? c.orcDia), 0)
+      + (painel?.campanhas ?? []).filter((c) => ligado(c.status)).reduce((s, c) => s + c.orcDia, 0)
+  }, [painel, orcNovo])
   // o custo comparado com o período anterior usa só os cadastros que vieram de anúncio, qualquer que seja a escolha da tela
   const listaDeAlertas = useMemo(() => alertas(linhas, total, etapasDoBanco, anterior, total ? { agora: total.cadastros, antes: anterior?.meta?.cadastros ?? null } : null), [linhas, total, etapasDoBanco, anterior])
   const dias = useMemo(() => {
@@ -649,6 +656,9 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
 
       {aba === 'geral' && (
         <>
+          {/* 04/11/2026: a leitura da I.A. vem primeiro ("logo que a gente bate o olho") */}
+          <AnaliseIA sessao={sessao} api={apiAnalise} parceiro={parceiro} de={de} ate={ate} nomeDoPeriodo={nomeDoPeriodo} contaNome={painel?.conta.nome || contaAtual?.contaNome || ''}
+            totalDiaAtual={totalDiaDaConta} moeda={(v) => naMoedaDaConta(v, painel?.conta.moeda ?? 'BRL')} pronta={!!painel} recarregar={() => void carregar(true)} />
           <DoAnuncioAoDinheiro pessoas={jornada.pessoas} total={jornada.total} falha={jornada.falha} gasto={total?.gasto ?? 0} moeda={painel?.conta.moeda ?? 'BRL'} meta={total} anuncios={anunciosDoPainel}
             origem={origem} parceiro={parceiro} aPessoas={irParaPessoas} />
           {listaDeAlertas.length ? (

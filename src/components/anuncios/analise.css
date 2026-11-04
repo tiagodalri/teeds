@@ -1,0 +1,90 @@
+/* A leitura da I.A. na Visão geral dos anúncios (04/11/2026). Reaproveita aa-cartao, aa-atualizar, aa-erro. */
+.ia-cartao { background: radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--aa-ouro) 9%, transparent), transparent 55%), var(--bg); }
+.ia-cartao > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ia-quando { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ia-quando small { color: var(--muted); font-size: 12px; }
+.ia-principal { height: 40px; padding: 0 18px; border: 1px solid var(--aa-ouro); border-radius: 10px; background: var(--aa-ouro); color: #051528; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.ia-principal:disabled { opacity: .55; cursor: default; }
+.ia-vazio { display: grid; gap: 12px; justify-items: start; }
+.ia-vazio p { margin: 0; max-width: 72ch; font-size: 14px; line-height: 1.55; color: var(--muted); }
+.ia-sem { display: grid; gap: 6px; padding: 12px 14px; border-radius: 10px; background: var(--surface); font-size: 13.5px; line-height: 1.5; }
+.ia-sem p { margin: 0; }
+.ia-sem code { padding: 1px 6px; border-radius: 6px; background: color-mix(in srgb, var(--text) 8%, transparent); font-size: 12.5px; }
+.ia-sem small { color: var(--muted); }
+.ia-lendo { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--surface); font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+.ia-lendo i { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--aa-ouro); animation: ia-pulso 1.2s ease-in-out infinite; }
+@keyframes ia-pulso { 0%, 100% { transform: scale(.7); opacity: .5; } 50% { transform: scale(1.15); opacity: 1; } }
+.ia-resumo { margin: 0; font-size: 18px; line-height: 1.55; text-wrap: pretty; max-width: 90ch; }
+.ia-panorama { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ia-panorama li { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 12px; align-items: start; padding: 10px 12px; border-radius: 10px; background: var(--surface); font-size: 13.5px; line-height: 1.5; text-wrap: pretty; }
+.ia-panorama li i { width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--muted); }
+.ia-panorama li div { display: grid; gap: 2px; }
+.ia-panorama li.bom i { background: var(--up); }
+.ia-panorama li.atencao i { background: var(--aa-ouro); }
+.ia-panorama li.atencao { background: color-mix(in srgb, var(--aa-ouro) 9%, var(--surface)); }
+.ia-panorama li.critico i { background: var(--down); }
+.ia-panorama li.critico { background: color-mix(in srgb, var(--down) 9%, var(--surface)); }
+.ia-plano { display: grid; gap: 10px; }
+.ia-plano h4 { margin: 4px 0 0; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.ia-plano ol { margin: 0; padding-left: 22px; display: grid; gap: 10px; }
+.ia-plano li { display: grid; gap: 3px; font-size: 13.5px; line-height: 1.5; text-wrap: pretty; }
+.ia-plano li::marker { color: var(--aa-ouro); font-weight: 800; }
+.ia-plano-topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ia-plano-topo small { color: var(--muted); font-size: 11.5px; }
+.ia-impacto { font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 99px; background: var(--surface); color: var(--muted); }
+.ia-impacto.alto { background: color-mix(in srgb, var(--aa-ouro) 22%, transparent); color: var(--text); }
+.ia-impacto.medio { background: color-mix(in srgb, var(--aa-ouro) 10%, transparent); }
+.ia-alerta { margin: 0; padding: 10px 14px; border-left: 3px solid var(--aa-ouro); border-radius: 8px; background: color-mix(in srgb, var(--aa-ouro) 8%, var(--surface)); font-size: 13.5px; line-height: 1.5; }
+.ia-rodape { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid var(--border); font-size: 13.5px; color: var(--muted); }
+.ia-feito-aviso { display: inline-flex; align-items: center; gap: 8px; }
+.ia-feito-aviso i { width: 8px; height: 8px; border-radius: 50%; background: var(--up); }
+
+/* o modal: lista → confirmação → resultado */
+.ia-fundo { justify-content: center; align-items: flex-start; overflow-y: auto; padding: 24px 16px; box-sizing: border-box; }
+.ia-modal { width: min(820px, 100%); display: grid; gap: 16px; padding: 22px; border: 1px solid var(--border); border-radius: 18px; background: var(--bg); box-sizing: border-box; }
+.ia-modal > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ia-modal > header > div { display: grid; gap: 4px; }
+.ia-modal > header h3 { margin: 0; font-size: 18px; }
+.ia-modal > header small { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.ia-modal .rot { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.ia-fechar { flex: none; width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font-size: 20px; cursor: pointer; }
+.ia-mudancas { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ia-mudancas li { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); opacity: .6; }
+.ia-mudancas li.on { opacity: 1; border-color: color-mix(in srgb, var(--aa-ouro) 55%, var(--border)); }
+.ia-mudancas label { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 12px; padding: 12px 14px; cursor: pointer; }
+.ia-mudancas input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--aa-ouro); }
+.ia-mudancas label > div { display: grid; gap: 4px; min-width: 0; font-size: 13.5px; line-height: 1.5; }
+.ia-mudancas strong { font-weight: 700; color: var(--aa-ouro); }
+.ia-mudancas span, .ia-resumo-lista span { color: var(--muted); text-wrap: pretty; }
+.ia-m-topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ia-m-topo b { font-size: 14px; }
+.ia-m-topo small { color: var(--muted); font-size: 11.5px; }
+.ia-tipo { flex: none; font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; background: color-mix(in srgb, var(--text) 8%, transparent); }
+.ia-tipo.pausar { background: color-mix(in srgb, var(--down) 14%, transparent); }
+.ia-tipo.ligar, .ia-tipo.duplicar { background: color-mix(in srgb, var(--up) 14%, transparent); }
+.ia-tipo.novo_publico, .ia-tipo.orcamento { background: color-mix(in srgb, var(--aa-ouro) 20%, transparent); }
+.ia-risco { margin-left: auto; font-style: normal; font-size: 11px; font-weight: 700; color: var(--muted); }
+.ia-risco.medio { color: var(--aa-ouro); }
+.ia-risco.alto { color: var(--down); }
+.ia-resumo-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ia-resumo-lista li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; background: var(--surface); font-size: 13.5px; line-height: 1.45; }
+.ia-resumo-lista li > div { display: grid; gap: 1px; min-width: 0; }
+.ia-resumo-lista li > i { font-style: normal; font-weight: 900; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; }
+.ia-resumo-lista li.ok > i { background: color-mix(in srgb, var(--up) 18%, transparent); color: var(--up); }
+.ia-resumo-lista li.falhou > i { background: color-mix(in srgb, var(--down) 16%, transparent); color: var(--down); }
+.ia-girando { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--aa-ouro); border-radius: 50%; animation: ia-gira .8s linear infinite; }
+@keyframes ia-gira { to { transform: rotate(360deg); } }
+.ia-modal > footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--border); }
+.ia-total { display: grid; gap: 1px; }
+.ia-total small { color: var(--muted); font-size: 11.5px; }
+.ia-total b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.ia-botoes { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+@media (max-width: 640px) {
+  .ia-resumo { font-size: 16px; }
+  .ia-modal { padding: 16px; }
+  .ia-fundo { padding: 12px 10px; }
+  .ia-botoes { width: 100%; }
+  .ia-botoes button { flex: 1 1 auto; }
+  .ia-rodape .ia-principal, .ia-quando .aa-atualizar { width: 100%; }
+  .ia-risco { margin-left: 0; }
+}
