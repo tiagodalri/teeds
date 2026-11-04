@@ -454,7 +454,8 @@ export const MARCAS: Record<string, Marca> = {
     // o do Naor, no /n. Com os dois links (WhatsApp e Instagram), o botão Comunidade abre a escolha.
     comunidadeInstagram: 'https://www.instagram.com/channel/mUZkEI4Aa-CZN1AU/',
     comunidadesInstagramDosParceiros: { n: 'https://www.instagram.com/channel/AbZq0nybGPyVvFxU/', v: 'https://www.instagram.com/channel/mUZkEI4Aa-CZN1AU/' },
-    appsDosParceiros: { n: '34MLTOJu0MDBoED7yEczz' },
+    // 04/11/2026: GlobalFly Trade D, o app da Deriv do Douglas (/d), ligado depois do reinício do servidor
+    appsDosParceiros: { n: '34MLTOJu0MDBoED7yEczz', d: '34RW7SdJ3nEG1sBRwnuRa' },
     termos: true,
     relatorios: true,
     notificacoes: true,
