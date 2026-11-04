@@ -425,3 +425,21 @@
 .aa-escolher-lista small { color: var(--muted); font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
 .aa-escolher select { height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: 13.5px; min-width: 0; width: 100%; }
 @media (max-width: 760px) { .aa-trocar-conta { display: block; margin: 4px 0 0; } }
+
+/* orçamento por dia com o lápis (04/11/2026) */
+.aa-tabela td.aa-orc-cel { cursor: default; }
+.aa-orc { display: inline-grid; grid-template-columns: auto auto auto; align-items: baseline; justify-content: end; column-gap: 2px; }
+.aa-orc b { font-weight: 700; }
+.aa-orc-dia { color: var(--muted); font-size: 11px; }
+.aa-orc-lapis { align-self: center; display: inline-grid; place-items: center; width: 26px; height: 26px; margin-left: 6px; padding: 0; border: 1px solid transparent; border-radius: 7px; background: none; color: var(--muted); cursor: pointer; }
+.aa-orc-lapis svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.aa-orc-lapis:hover, .aa-orc-lapis:focus-visible { color: var(--aa-ouro); border-color: var(--border); background: var(--surface); outline: none; }
+.aa-orc-div { grid-column: 1 / -1; justify-self: end; color: var(--muted); font-size: 10.5px; }
+.aa-orc-form { display: inline-grid; grid-template-columns: auto auto auto; align-items: center; gap: 6px; justify-content: end; }
+.aa-orc-form label { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 8px; border: 1px solid var(--aa-ouro); border-radius: 8px; background: var(--surface); }
+.aa-orc-form label span { color: var(--muted); font-size: 12px; }
+.aa-orc-form input { width: 64px; border: 0; outline: none; background: none; color: var(--text); font: inherit; font-weight: 700; text-align: right; }
+.aa-orc-form button { height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: var(--aa-ouro); color: #111; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.aa-orc-form button:disabled { opacity: .6; cursor: default; }
+.aa-orc-form .aa-orc-cancelar { width: 32px; padding: 0; border: 1px solid var(--border); background: none; color: var(--muted); font-size: 16px; }
+.aa-orc-erro { grid-column: 1 / -1; justify-self: end; color: var(--down); font-size: 11px; }

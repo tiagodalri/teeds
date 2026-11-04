@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { MARCA } from '../../marca'
-import { API_DO_BANCO, CONTAS_DE_ANUNCIO, type ApiAnuncios, type Descoberta, type Anuncio, type DetalheDoAnuncio, type FunilDoBanco, type Horarios as DadosDeHorario, type Metricas, type PainelDaMeta, type Quebra, type RespostaDaMeta } from '../../core/teeds/anuncios'
+import { API_DO_BANCO, CONTAS_DE_ANUNCIO, type ApiAnuncios, type Descoberta, type Anuncio, type Campanha, type Conjunto, type DetalheDoAnuncio, type FunilDoBanco, type Horarios as DadosDeHorario, type Metricas, type PainelDaMeta, type Quebra, type RespostaDaMeta } from '../../core/teeds/anuncios'
 import { Alertas, Custos, Filtros, Horarios, METRICA, Relatorio, alertas, aplicar, formatar, somarLinhas, useColunas, type Base, type Linha, type Regra } from './Indicadores'
 import { Funil3D, type EtapaDoFunil } from './Funil3D'
 import { EstudioDeAnuncios } from './estudio/Estudio'
@@ -164,6 +164,54 @@ function Barras({ titulo, linhas, nome }: { titulo: string; linhas: Quebra[]; no
         </ul>
       )}
     </section>
+  )
+}
+
+const naMoedaDaConta = (v: number, moeda: string) => v.toLocaleString('pt-BR', { style: 'currency', currency: moeda || 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 2 })
+
+/** A célula do orçamento por dia, com o lápis para mudar (no conjunto, pela função meta-estudio). */
+function OrcamentoDoConjunto({ conjunto, campanha, anuncios, valorNovo, moeda, salvar }: {
+  conjunto: Conjunto | null; campanha: Campanha | null; anuncios: number; valorNovo?: number; moeda: string; salvar: (v: number) => Promise<void>
+}) {
+  const [editando, setEditando] = useState(false)
+  const [texto, setTexto] = useState('')
+  const [estado, setEstado] = useState<{ indo?: boolean; erro?: string }>({})
+  if (!conjunto) return <small className="aa-mudo">—</small>
+  // orçamento na campanha (CBO): mostra o da campanha e não edita aqui
+  if (!conjunto.orcDia) {
+    return campanha?.orcDia ? <span title="Orçamento da campanha (dividido entre os conjuntos): mude no Gerenciador">{naMoedaDaConta(campanha.orcDia, moeda)}<small className="aa-orc-dia">/dia · campanha</small></span>
+      : <small className="aa-mudo" title="Orçamento total, não por dia">{conjunto.orcTotal ? `${naMoedaDaConta(conjunto.orcTotal, moeda)} total` : '—'}</small>
+  }
+  const atual = valorNovo ?? conjunto.orcDia
+  const dica = anuncios > 1 ? `Orçamento do conjunto ${conjunto.nome}: vale para os ${anuncios} anúncios dele` : `Orçamento do conjunto ${conjunto.nome}`
+  const abrir = () => { setTexto(String(atual).replace('.', ',')); setEstado({}); setEditando(true) }
+  const confirmar = async () => {
+    const v = Number(texto.replace(/\./g, '').replace(',', '.'))
+    if (!(v >= 6 && v <= 5000)) { setEstado({ erro: 'Entre R$ 6 e R$ 5.000' }); return }
+    if (v === atual) { setEditando(false); return }
+    setEstado({ indo: true })
+    try { await salvar(v); setEditando(false); setEstado({}) } catch (e) { setEstado({ erro: (e as Error).message || 'A Meta não aceitou agora' }) }
+  }
+  if (!editando) {
+    return (
+      <span className="aa-orc" title={dica}>
+        <b>{naMoedaDaConta(atual, moeda)}</b><small className="aa-orc-dia">/dia</small>
+        <button type="button" className="aa-orc-lapis" onClick={abrir} aria-label={`Mudar o orçamento por dia de ${conjunto.nome}`} title="Mudar o orçamento por dia">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" /></svg>
+        </button>
+        {anuncios > 1 && <small className="aa-orc-div">{anuncios} anúncios</small>}
+      </span>
+    )
+  }
+  return (
+    <form className="aa-orc-form" onSubmit={(e) => { e.preventDefault(); void confirmar() }}>
+      <label><span>R$</span><input autoFocus inputMode="decimal" value={texto} onChange={(e) => setTexto(e.target.value)} disabled={estado.indo}
+        onKeyDown={(e) => { if (e.key === 'Escape') setEditando(false) }} aria-label="Novo orçamento por dia" /></label>
+      <button type="submit" disabled={estado.indo}>{estado.indo ? 'Salvando…' : 'Salvar'}</button>
+      <button type="button" className="aa-orc-cancelar" onClick={() => setEditando(false)} disabled={estado.indo} aria-label="Cancelar">×</button>
+      {estado.erro && <small className="aa-orc-erro" role="alert">{estado.erro}</small>}
+      {anuncios > 1 && !estado.erro && <small className="aa-orc-div">Vale para os {anuncios} anúncios do conjunto</small>}
+    </form>
   )
 }
 
@@ -341,6 +389,25 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
     const v = (l: Linha) => { const x = m?.valor(l); return x == null || !Number.isFinite(x) ? (ordem.desc ? -Infinity : Infinity) : x }
     return aplicar(linhas, busca, atalhos, regras).sort((x, y) => (ordem.desc ? v(y) - v(x) : v(x) - v(y)))
   }, [linhas, busca, atalhos, regras, ordem])
+
+  // o orçamento por dia (04/11/2026, Tiago: "uma coluna mostrando quanto tá o investimento diário de cada anúncio, com o lápis"):
+  // é do conjunto (os anúncios do mesmo conjunto dividem); o que acabou de ser salvo aparece na hora, antes da Meta reler
+  const [orcNovo, setOrcNovo] = useState<Record<string, number>>({})
+  useEffect(() => { setOrcNovo({}) }, [parceiro, meta])
+  const qtdPorConjunto = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const a of painel?.anuncios ?? []) m.set(a.conjuntoId, (m.get(a.conjuntoId) ?? 0) + 1)
+    return m
+  }, [painel])
+  const orcamentoDosFiltrados = useMemo(() => {
+    const vistos = new Set<string>(); let soma = 0
+    for (const l of filtradas) {
+      const c = painel?.conjuntos.find((x) => x.id === l.a.conjuntoId)
+      if (!c || vistos.has(c.id) || !/ACTIVE|IN_PROCESS|PENDING|WITH_ISSUES/.test(c.status)) continue
+      vistos.add(c.id); soma += orcNovo[c.id] ?? c.orcDia
+    }
+    return soma
+  }, [filtradas, painel, orcNovo])
   const somaFiltrada = useMemo(() => (filtradas.length > 1 ? somarLinhas(filtradas) : null), [filtradas])
   // o custo comparado com o período anterior usa só os cadastros que vieram de anúncio, qualquer que seja a escolha da tela
   const listaDeAlertas = useMemo(() => alertas(linhas, total, etapasDoBanco, anterior, funil ? { agora: funil.anuncio.cadastros, antes: anteriorBruto.current?.anuncio.cadastros ?? null } : null), [linhas, total, etapasDoBanco, anterior, funil])
@@ -675,7 +742,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
             {!filtradas.length ? <p className="aa-vazio">{linhas.length ? 'Nenhum anúncio passa por esses filtros.' : 'Nenhum anúncio com entrega neste período.'}</p> : (
               <div className="aa-tabela">
                 <table>
-                  <thead><tr><th>Anúncio</th>{colunas.map(cabecalho)}<th>Qualidade</th></tr></thead>
+                  <thead><tr><th>Anúncio</th><th className="num" title="O orçamento por dia do conjunto do anúncio, como no Gerenciador. O lápis muda na Meta.">Orçamento/dia</th>{colunas.map(cabecalho)}<th>Qualidade</th></tr></thead>
                   <tbody>
                     {filtradas.map((l) => (
                       <tr key={l.a.id} onClick={() => setAberto(l.a)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') setAberto(l.a) }}>
@@ -683,13 +750,18 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
                           {l.a.criativo.miniatura ? <img src={l.a.criativo.miniatura} alt="" loading="lazy" /> : <span className="aa-sem-img" />}
                           <div><b>{l.a.nome}</b><small>{campanhaDe(l.a.campanhaId)}</small><Status s={l.a.status} /></div>
                         </td>
+                        <td className="num aa-orc-cel" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                          <OrcamentoDoConjunto conjunto={painel?.conjuntos.find((x) => x.id === l.a.conjuntoId) ?? null} campanha={painel?.campanhas.find((x) => x.id === l.a.campanhaId) ?? null}
+                            anuncios={qtdPorConjunto.get(l.a.conjuntoId) ?? 1} valorNovo={orcNovo[l.a.conjuntoId]} moeda={painel?.conta.moeda ?? 'BRL'}
+                            salvar={async (v) => { await apiEstudio.orcamento(sessao, parceiro, l.a.conjuntoId, v); setOrcNovo((o) => ({ ...o, [l.a.conjuntoId]: v })) }} />
+                        </td>
                         {colunas.map((id) => { const m = METRICA.get(id)!; return <td key={id} className={`num ${ordem.col === id ? 'aa-ordem' : ''}`}>{formatar(m.formato, m.valor(l))}</td> })}
                         <td>{l.a.ranking.qualidade ? <span className={`aa-rank ${RANK[l.a.ranking.qualidade]?.[1]}`}>{RANK[l.a.ranking.qualidade]?.[0]}</span> : <small className="aa-mudo">Poucos dados</small>}</td>
                       </tr>
                     ))}
                   </tbody>
                   {somaFiltrada && (
-                    <tfoot><tr><td>Total dos {int(filtradas.length)} filtrados</td>{colunas.map((id) => {
+                    <tfoot><tr><td>Total dos {int(filtradas.length)} filtrados</td><td className="num" title="Soma dos conjuntos ligados destes anúncios (cada conjunto conta uma vez)">{naMoedaDaConta(orcamentoDosFiltrados, painel?.conta.moeda ?? 'BRL')}<small className="aa-orc-dia">/dia</small></td>{colunas.map((id) => {
                       const m = METRICA.get(id)!
                       return <td key={id} className="num">{id === 'frequencia' || id === 'alcance' ? '—' : formatar(m.formato, m.valor(somaFiltrada))}</td>
                     })}<td /></tr></tfoot>

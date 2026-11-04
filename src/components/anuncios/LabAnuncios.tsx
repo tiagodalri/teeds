@@ -59,8 +59,8 @@ function painel(de: string, ate: string): PainelDaMeta {
     conta: { id: '977357031377237', nome: 'CA - NAOR BEZERRA', moeda: 'BRL', status: 1, gastoTotal: 16878.4, saldo: 0, limite: 0, fuso: 'America/Sao_Paulo', motivo: 0 },
     periodo: { de, ate }, total,
     porDia: dias.map((dia, i) => ({ dia, ...m(total.gasto * peso[i] / soma, Math.round(total.impressoes * peso[i] / soma), Math.round(total.cliquesLink * peso[i] / soma), Math.round(total.lpv * peso[i] / soma), Math.round(total.cadastros * peso[i] / soma)) })),
-    campanhas: [{ id: 'c1', nome: 'GF | Live 09/11 | Cadastros', status: 'ACTIVE', objetivo: 'OUTCOME_LEADS', orcDia: 300, orcTotal: 0, inicio: '2026-11-02', fim: null, lance: 'LOWEST_COST_WITHOUT_CAP', m: total }],
-    conjuntos: [{ id: 's1', nome: 'Brasil · 25–55 · aberto', status: 'ACTIVE', campanhaId: 'c1', orcDia: 0, orcTotal: 0, otimizacao: 'OFFSITE_CONVERSIONS', publico: '25–55 anos · Brasil · público Advantage+', m: total }],
+    campanhas: [{ id: 'c1', nome: 'GF | Live 09/11 | Cadastros', status: 'ACTIVE', objetivo: 'OUTCOME_LEADS', orcDia: 0, orcTotal: 0, inicio: '2026-11-02', fim: null, lance: 'LOWEST_COST_WITHOUT_CAP', m: total }],
+    conjuntos: [{ id: 's1', nome: 'Brasil · 25–55 · aberto', status: 'ACTIVE', campanhaId: 'c1', orcDia: 20, orcTotal: 0, otimizacao: 'OFFSITE_CONVERSIONS', publico: '25–55 anos · Brasil · público Advantage+', m: total }],
     anuncios: ads.map((a, i) => ({
       id: a.id, nome: a.nome, status: i === 2 ? 'PAUSED' : 'ACTIVE', campanhaId: 'c1', conjuntoId: 's1', criadoEm: '2026-11-02T12:00:00Z',
       criativo: { miniatura: miniatura(['#B8862F', '#3a6fd8', '#7a4fd0'][i], ['V01', 'V02', 'IMG'][i]), imagem: null, titulo: 'Live gratuita 09/11, às 20h', texto: 'A I.A. que opera com você. Inscreva-se e assista à live de lançamento da GlobalFly.', tipo: a.tipo, cta: 'SIGN_UP', marcacoes: i === 2 ? '' : 'utm_source=meta&utm_medium=pago&utm_content={{ad.id}}' },
