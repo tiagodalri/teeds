@@ -4,6 +4,11 @@ import {
   buscarSessaoDoServidor, completeLogin, emAppInstalado, idadeDoPedido, loadSession, loginPendente, voltasPerdidas,
   logout as clearSession, ouvirLoginDeOutraJanela, startLogin, startLoginPeloServidor, type AuthSession,
 } from '../core/deriv/auth'
+
+const CHAVE_SAIU = `${MARCA.id}.deriv.saiu`
+const saiuDePropósito = () => { try { return !!localStorage.getItem(CHAVE_SAIU) } catch { return false } }
+const marcarSaida = () => { try { localStorage.setItem(CHAVE_SAIU, String(Date.now())) } catch { /* sem armazenamento: conecta direto */ } }
+const esquecerSaida = () => { try { localStorage.removeItem(CHAVE_SAIU) } catch { /* idem */ } }
 import { fetchAccounts, fetchTradingSocketUrl, resetDemoBalance, type TradingAccount } from '../core/deriv/account'
 import { TeedsSocket } from '../core/deriv/client'
 import type { ConnectionState } from '../core/deriv/types'
@@ -406,7 +411,26 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, accountId, somenteDemo, chaveDasContas])
 
+  /*
+    TROCAR DE CONTA NA DERIV (04/11/2026, Tiago: "quando desconecta e clica
+    para conectar de novo, ele já usa o último acesso e loga automático... tem
+    gente que opera com mais de uma conta"). A Deriv guarda a sessão no site
+    dela e ignora os pedidos de "mostre o login de novo" (prompt=login e
+    max_age=0 foram testados). Então, depois de um "Desconectar" de propósito,
+    o próximo Conectar pergunta: continuar na mesma conta ou entrar com outra.
+    Para entrar com outra, a pessoa sai no site da Deriv e volta (EscolherContaDeriv).
+  */
+  const [escolhaDeConta, setEscolhaDeConta] = useState(false)
+  const loginDireto = useRef<() => void>(() => undefined)
   const login = useCallback(() => {
+    if (saiuDePropósito()) { setEscolhaDeConta(true); return }
+    loginDireto.current()
+  }, [])
+  const continuarConectando = useCallback(() => {
+    esquecerSaida(); setEscolhaDeConta(false); loginDireto.current()
+  }, [])
+  const fecharEscolhaDeConta = useCallback(() => setEscolhaDeConta(false), [])
+  const entrar = useCallback(() => {
     setStatus('entrando')
     const ida = (async () => {
       // App instalado abrindo a frio: a sessão da plataforma ainda pode estar
@@ -431,7 +455,8 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
       setStatus('erro')
     })
   }, [])
-  loginRef.current = login
+  loginDireto.current = entrar
+  loginRef.current = entrar
 
   const logout = useCallback(() => {
     socketRef.current?.disconnect()
@@ -445,6 +470,10 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
     setStatus('deslogado')
     setError(null)
   }, [])
+  /** O "Desconectar" do menu e o "Sair" da plataforma: o próximo Conectar pergunta qual conta. */
+  const desconectar = useCallback(() => { marcarSaida(); logout() }, [logout])
+  // conectou de novo: a escolha já foi feita
+  useEffect(() => { if (session) esquecerSaida() }, [session])
 
   /*
     O aviso da faixa tem tipo (29/10/2026, revisão): falhas ("não deu para ligar a
@@ -490,6 +519,6 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
     balance: conexaoDaConta ? balance : null, contracts: conexaoDaConta ? [...contracts.values()] : [],
     socket: conexaoDaConta ? socketRef.current : null, connecting, aviso, avisoTipo, setAviso, pulso, conexao,
     comprasRecentes: conexaoDaConta ? comprasRecentes : [],
-    login, logout, recarregarDemo, atualizarContas,
+    login, logout, desconectar, escolhaDeConta, continuarConectando, fecharEscolhaDeConta, recarregarDemo, atualizarContas,
   }
 }

@@ -1,0 +1,23 @@
+/* Escolher a conta da Deriv ao reconectar (04/11/2026) */
+.ecd-fundo { position: fixed; z-index: 200; inset: 0; display: grid; place-items: center; padding: 16px; background: #000b; backdrop-filter: blur(8px); }
+.ecd { position: relative; width: min(480px, 100%); max-height: calc(100dvh - 32px); overflow: auto; display: grid; gap: 12px; padding: 26px 24px 22px; border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border)); border-radius: 20px; background: var(--surface); color: var(--text); box-shadow: 0 30px 90px #000a; }
+.ecd-fechar { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; }
+.ecd-rot { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--gf-ouro, var(--primary)); }
+.ecd h2 { margin: 0; padding-right: 40px; font-size: 21px; letter-spacing: -.01em; }
+.ecd > p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.ecd-opcoes { display: grid; gap: 10px; margin-top: 4px; }
+.ecd-opcao { display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.ecd-opcao b { font-size: 15px; }
+.ecd-opcao small { font-size: 13px; color: var(--muted); line-height: 1.45; }
+.ecd-opcao.principal { border-color: color-mix(in srgb, var(--gf-ouro, var(--primary)) 60%, var(--border)); background: color-mix(in srgb, var(--gf-ouro, var(--primary)) 9%, var(--bg)); }
+.ecd-opcao:hover { border-color: var(--gf-ouro, var(--primary)); }
+.ecd-passos { margin: 0; padding-left: 20px; display: grid; gap: 12px; }
+.ecd-passos li { display: list-item; padding-left: 4px; font-size: 14px; line-height: 1.45; }
+.ecd-passos li b { display: block; margin-bottom: 3px; }
+.ecd-passos li::marker { font-weight: 800; color: var(--gf-ouro, var(--primary)); }
+.ecd-passos small { display: block; color: var(--muted); font-size: 12.5px; }
+.ecd-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.ecd-btn { flex: 1 1 auto; min-height: 46px; padding: 0 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
+.ecd-btn.ouro { flex: 2 1 auto; border: 0; background: var(--gf-ouro, var(--primary)); color: #051528; }
+.ecd-voltar { justify-self: start; padding: 4px 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
+.ecd button:focus-visible { outline: 2px solid var(--gf-ouro, var(--primary)); outline-offset: 2px; }

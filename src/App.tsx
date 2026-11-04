@@ -40,6 +40,7 @@ import { AceiteDosTermos } from './components/termos/Termos'
 import { confirmarInscricao } from './core/teeds/notificacoes'
 import { aceiteDoLoginPendente, aceiteGuardado, jaAceitou, limparAceiteDoLogin, registrarAceite } from './core/teeds/termos'
 import { startLogin } from './core/deriv/auth'
+import { EscolherContaDeriv } from './components/deriv/EscolherContaDeriv'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLimitesDuracao, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { pedeDeposito, traduzirErro } from './core/deriv/erros'
@@ -204,7 +205,8 @@ export default function App() {
   const demoNaTela = conta.rotulosTrocados ? !conta.isDemo : conta.isDemo && !conta.somenteDemo
   // sair é sair de tudo: a autorização da Deriv deste aparelho sai junto com a conta
   const sairDeTudo = () => {
-    conta.logout()
+    // quem entrar depois neste aparelho escolhe a conta da Deriv (não cai na desta pessoa)
+    conta.desconectar()
     try { localStorage.removeItem(`${MARCA.id}.deriv.dono`) } catch { /* sem armazenamento */ }
     void teeds.sair()
   }
@@ -1294,7 +1296,7 @@ export default function App() {
               onTrocar={conta.setAccountId}
               onRecarregar={() => conta.recarregarDemo()}
               onAbrir={() => void conta.atualizarContas()}
-              onSair={conta.logout}
+              onSair={conta.desconectar}
               onCarteira={() => setVerCarteira(true)}
             />
           )}
@@ -1507,6 +1509,8 @@ export default function App() {
         </div>
       )}
       {MARCA.aoVivo && !JANELA && treinoAtivo && <Suspense fallback={null}><PlayerDoTreino naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
+      {/* 04/11/2026: depois de desconectar, o Conectar pergunta qual conta da Deriv (EscolherContaDeriv) */}
+      {conta.escolhaDeConta && <EscolherContaDeriv aoContinuar={conta.continuarConectando} aoFechar={conta.fecharEscolhaDeConta} />}
       {verCarteira && (
         <Suspense fallback={null}>
           {/* reconectar: a sessão aberta ignora a volta de um login novo, então desconecta e entra de novo (os robôs rodam no servidor e seguem) */}

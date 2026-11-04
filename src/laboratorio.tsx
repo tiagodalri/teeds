@@ -135,6 +135,7 @@ const AdminAulasLab = lazy(() => import('./components/AdminAulas').then((m) => (
 const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine'))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
 import { DerivDesconectada } from './components/DerivDesconectada'
+import { EscolherContaDeriv } from './components/deriv/EscolherContaDeriv'
 import { DigitosFlutuante } from './components/DigitosFlutuante'
 import { Decolagem } from './components/entrada/Decolagem'
 import { Carregando } from './components/entrada/Carregando'
@@ -428,6 +429,8 @@ function Laboratorio() {
     }) as typeof fetch
     return <Suspense fallback={null}><div className="app workspace-app"><main className="admin-page" style={{ padding: 24 }}><AdminAulasLab sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab' } } as never} marca={MARCA.id} /></main></div></Suspense>
   }
+  // ?tela=escolher-deriv: a escolha de conta da Deriv ao reconectar
+  if (qual === 'escolher-deriv') return <div className="app workspace-app" style={{ minHeight: '100dvh' }}><EscolherContaDeriv aoContinuar={() => undefined} aoFechar={() => undefined} /></div>
   if (qual === 'aulas') return <LabAulas />
   if (qual === 'minicabine') return <Suspense fallback={null}><LabMiniCabine /></Suspense>
   return (
