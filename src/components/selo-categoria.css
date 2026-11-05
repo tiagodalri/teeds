@@ -43,10 +43,10 @@
 button.selo-categoria { cursor: pointer; font: inherit; font-size: 12px; }
 button.selo-categoria:focus-visible { outline: 2px solid var(--gf-ouro, #B78D39); outline-offset: 2px; }
 .selo-categoria.black {
-  --metal-1: #4a505a; --metal-2: #1d2127; --metal-3: #07080a; --metal-borda: rgba(255, 255, 255, .22);
+  --metal-1: #4a4a4d; --metal-2: #1c1c1e; --metal-3: #060606; --metal-borda: rgba(255, 255, 255, .22);
   --metal-texto: #f3f0e9; --metal-icone: #d9b465; --metal-sombra: rgba(0, 0, 0, .45);
 }
 .selo-categoria.prestige {
-  --metal-1: #ffffff; --metal-2: #cfdbe7; --metal-3: #7e93aa; --metal-borda: rgba(255, 255, 255, .7);
-  --metal-texto: #051528; --metal-icone: #B78D39; --metal-sombra: rgba(126, 147, 170, .45);
+  --metal-1: #fffaf0; --metal-2: #e3d3ae; --metal-3: #a98d5c; --metal-borda: rgba(255, 255, 255, .7);
+  --metal-texto: #2a1f10; --metal-icone: #8a6a2a; --metal-sombra: rgba(140, 110, 60, .4);
 }

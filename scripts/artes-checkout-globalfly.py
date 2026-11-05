@@ -12,6 +12,24 @@ S = 2  # desenha em 2x e reduz: bordas suaves
 NAVY = (5, 21, 40); NAVY2 = (11, 35, 64); NAVY3 = (16, 46, 82)
 GOLD = (183, 141, 57); GOLD_L = (216, 185, 104)
 CREAM = (244, 239, 230); STEEL = (157, 179, 204)
+CAIXA = (11, 35, 64); LINHA = (40, 60, 88); MOLDURA = (54, 70, 92); TEXTO2 = (214, 225, 238); APAGADO = (110, 132, 158)
+
+# Black e Prestige têm o próprio mundo de cor: preto de verdade e champanhe.
+PALETAS = {
+    'navy': dict(NAVY=(5, 21, 40), NAVY2=(11, 35, 64), NAVY3=(16, 46, 82), GOLD=(183, 141, 57), GOLD_L=(216, 185, 104),
+                 CREAM=(244, 239, 230), STEEL=(157, 179, 204), CAIXA=(11, 35, 64), LINHA=(40, 60, 88), MOLDURA=(54, 70, 92),
+                 TEXTO2=(214, 225, 238), APAGADO=(110, 132, 158)),
+    'black': dict(NAVY=(7, 7, 8), NAVY2=(20, 20, 22), NAVY3=(30, 30, 33), GOLD=(196, 158, 82), GOLD_L=(226, 196, 128),
+                  CREAM=(244, 240, 232), STEEL=(160, 158, 152), CAIXA=(19, 19, 21), LINHA=(46, 45, 43), MOLDURA=(58, 56, 52),
+                  TEXTO2=(222, 218, 210), APAGADO=(112, 110, 104)),
+    'prestige': dict(NAVY=(12, 10, 9), NAVY2=(28, 23, 19), NAVY3=(40, 33, 27), GOLD=(201, 172, 120), GOLD_L=(232, 212, 170),
+                     CREAM=(246, 240, 228), STEEL=(178, 166, 148), CAIXA=(26, 22, 18), LINHA=(58, 50, 41), MOLDURA=(72, 62, 50),
+                     TEXTO2=(232, 224, 210), APAGADO=(128, 116, 100)),
+}
+
+
+def usar_paleta(nome):
+    globals().update(PALETAS[nome])
 
 
 def f(face, px):
@@ -104,55 +122,144 @@ def cadeado(d, x, y, s):
     d.ellipse([x + s * 0.43, y + s * 0.6, x + s * 0.57, y + s * 0.74], fill=NAVY)
 
 
+def _metal(w, h, c_esq, c_meio, c_dir, escovado=10, seed=1):
+    """Chapa de metal: degradê em diagonal, risco de escovado fino e um brilho especular."""
+    import random, math
+    random.seed(seed)
+    g = Image.new('RGB', (w, h))
+    px = g.load()
+    for x in range(w):
+        for y in range(0, h):
+            t = (x / w) * 0.75 + (y / h) * 0.25
+            if t < 0.5:
+                k = t / 0.5; a, b = c_esq, c_meio
+            else:
+                k = (t - 0.5) / 0.5; a, b = c_meio, c_dir
+            px[x, y] = tuple(int(a[i] * (1 - k) + b[i] * k) for i in range(3))
+    # escovado: linhas horizontais finas com ruído
+    risco = Image.new('L', (w, h), 128)
+    rd = ImageDraw.Draw(risco)
+    for y in range(h):
+        v = 128 + random.randint(-escovado, escovado)
+        rd.line([(0, y), (w, y)], fill=v)
+    risco = risco.filter(ImageFilter.GaussianBlur(0.6))
+    claro = Image.new('RGB', (w, h), (255, 255, 255)); escuro = Image.new('RGB', (w, h), (0, 0, 0))
+    mc = risco.point(lambda v: max(0, v - 128) * 2); me = risco.point(lambda v: max(0, 128 - v) * 2)
+    g = Image.composite(claro, g, mc.point(lambda v: v // 5))
+    g = Image.composite(escuro, g, me.point(lambda v: v // 5))
+    # brilho especular em faixa diagonal
+    luz = Image.new('L', (w, h), 0)
+    ImageDraw.Draw(luz).polygon([(w * 0.30, 0), (w * 0.52, 0), (w * 0.30, h), (w * 0.08, h)], fill=70)
+    luz = luz.filter(ImageFilter.GaussianBlur(w * 0.06))
+    return Image.composite(claro, g, luz)
+
+
+def _gravado(c, xy, texto, fonte, cor, sombra, luz, esp=0):
+    """Letra gravada no metal: sombra embaixo, luz em cima, cor no meio."""
+    d = ImageDraw.Draw(c)
+    x, y = xy
+    def escreve(dx, dy, cr):
+        xx = x
+        for ch in texto:
+            d.text((xx + dx, y + dy), ch, font=fonte, fill=cr)
+            xx += d.textlength(ch, font=fonte) + esp
+    escreve(0, 2, sombra); escreve(0, -1, luz); escreve(0, 0, cor)
+
+
+def _monograma(altura, cor_letra, cor_faixa):
+    """O GF da marca, recolorido: letras numa cor, a faixa diagonal em outra."""
+    base = Image.open(P + 'globalfly-gf-escuro.png').convert('RGBA')
+    r = altura / base.height
+    base = base.resize((int(base.width * r), int(altura)), Image.LANCZOS)
+    px = base.load()
+    out = Image.new('RGBA', base.size, (0, 0, 0, 0))
+    po = out.load()
+    for y in range(base.height):
+        for x in range(base.width):
+            rr, gg, bb, a = px[x, y]
+            if a == 0:
+                continue
+            faixa = (rr - bb) > 40  # a faixa é dourada; as letras são creme
+            c = cor_faixa if faixa else cor_letra
+            po[x, y] = (c[0], c[1], c[2], a)
+    return out
+
+
+def _carimbo(c, img, xy, sombra=(0, 0, 0, 200), luz=(255, 255, 255, 70)):
+    """Cola o monograma como se estivesse gravado: sombra embaixo, fio de luz em cima."""
+    a = img.split()[3]
+    s_ = Image.new('RGBA', img.size, sombra); s_.putalpha(a.point(lambda v: v * sombra[3] // 255))
+    l_ = Image.new('RGBA', img.size, luz); l_.putalpha(a.point(lambda v: v * luz[3] // 255))
+    x, y = xy
+    c.alpha_composite(s_, (x, y + 2)); c.alpha_composite(l_, (x, y - 1)); c.alpha_composite(img, (x, y))
+
+
 def cena_cartao(tipo, w, h):
-    """Black e Prestige não têm foto: o cartão metálico do GF Member, inclinado, sobre o navy com brilho dourado."""
-    W, H = 1600, 1000
+    """O cartão do subplano como peça de metal. Black: obsidiana com ouro. Prestige: champanhe com platina."""
+    import math
+    W, H = 1800, 1100
+    fundo_a, fundo_b = (NAVY2, NAVY)
     im = Image.new('RGB', (W, H), NAVY)
     d = ImageDraw.Draw(im)
     for y in range(H):
         t = y / H
-        d.line([(0, y), (W, y)], fill=tuple(int(NAVY2[i] * (1 - t) + NAVY[i] * t) for i in range(3)))
+        d.line([(0, y), (W, y)], fill=tuple(int(fundo_a[i] * (1 - t) + fundo_b[i] * t) for i in range(3)))
     brilho = Image.new('L', (W, H), 0)
-    ImageDraw.Draw(brilho).ellipse([W * 0.30, H * 0.05, W * 0.95, H * 0.95], fill=90)
-    brilho = brilho.filter(ImageFilter.GaussianBlur(160))
+    ImageDraw.Draw(brilho).ellipse([W * 0.38, H * 0.02, W * 1.0, H * 0.98], fill=70 if tipo == 'black' else 95)
+    brilho = brilho.filter(ImageFilter.GaussianBlur(190))
     im = Image.composite(Image.new('RGB', (W, H), GOLD), im, brilho)
-    d = ImageDraw.Draw(im)
-    d.line([(W * 0.78, 0), (W * 0.52, H)], fill=(120, 96, 52), width=3)
 
-    def cartao(nome, c1, c2, txt, sub, ang, cx, cy, esc=1.0):
-        cw, ch = int(860 * esc), int(540 * esc)
+    def cartao(nome, metal, txt, txt_sombra, txt_luz, rotulo, ang, cx, cy, esc=1.0, seed=1, mono_letra=(214, 180, 108), mono_faixa=(240, 214, 150)):
+        cw, ch = int(1000 * esc), int(630 * esc)
+        r = int(46 * esc)
+        chapa = _metal(cw, ch, *metal, seed=seed)
         c = Image.new('RGBA', (cw, ch), (0, 0, 0, 0))
-        g = Image.new('RGB', (cw, ch))
-        gd = ImageDraw.Draw(g)
-        for x in range(cw):
-            t = x / cw
-            k = 0.5 + 0.5 * __import__('math').sin(t * 3.1 + 0.4)
-            gd.line([(x, 0), (x, ch)], fill=tuple(int(c1[i] * (1 - k) + c2[i] * k) for i in range(3)))
         m = Image.new('L', (cw, ch), 0)
-        ImageDraw.Draw(m).rounded_rectangle([0, 0, cw - 1, ch - 1], radius=int(40 * esc), fill=255)
-        c.paste(g, (0, 0), m)
+        ImageDraw.Draw(m).rounded_rectangle([0, 0, cw - 1, ch - 1], radius=r, fill=255)
+        c.paste(chapa, (0, 0), m)
         cd = ImageDraw.Draw(c)
-        cd.rounded_rectangle([1, 1, cw - 2, ch - 2], radius=int(40 * esc), outline=(255, 255, 255, 60), width=2)
-        fo = ImageFont.truetype(AV, int(26 * esc), index=2)
-        x = int(60 * esc)
-        for chx in 'GF MEMBER':
-            cd.text((x, int(56 * esc)), chx, font=fo, fill=sub)
-            x += cd.textlength(chx, font=fo) + int(7 * esc)
-        cd.rounded_rectangle([cw - int(170 * esc), int(56 * esc), cw - int(70 * esc), int(126 * esc)], radius=int(12 * esc), fill=GOLD_L)
-        cd.line([(cw - int(120 * esc), int(56 * esc)), (cw - int(120 * esc), int(126 * esc))], fill=GOLD, width=2)
-        cd.text((int(60 * esc), ch - int(190 * esc)), nome, font=ImageFont.truetype(AV, int(108 * esc), index=0), fill=txt)
-        sombra = Image.new('RGBA', (cw + 200, ch + 200), (0, 0, 0, 0))
-        ImageDraw.Draw(sombra).rounded_rectangle([100, 130, cw + 100, ch + 130], radius=40, fill=(0, 0, 0, 170))
-        sombra = sombra.filter(ImageFilter.GaussianBlur(40)).rotate(ang, expand=True, resample=Image.BICUBIC)
+        # aro: luz em cima, sombra embaixo
+        cd.rounded_rectangle([1, 1, cw - 2, ch - 2], radius=r, outline=(255, 255, 255, 46), width=2)
+        cd.arc([1, 1, 2 * r, 2 * r], 180, 270, fill=(255, 255, 255, 90), width=2)
+        cd.line([(r, 2), (cw - r, 2)], fill=(255, 255, 255, 70), width=2)
+        mono = _monograma(int(92 * esc), mono_letra, mono_faixa)
+        _carimbo(c, mono, (int(66 * esc), int(64 * esc)), sombra=txt_sombra, luz=txt_luz[:3] + (90,))
+        # chip dourado com trilhas
+        x0, y0, x1, y1 = cw - int(200 * esc), int(64 * esc), cw - int(84 * esc), int(150 * esc)
+        chip = _metal(x1 - x0, y1 - y0, (150, 116, 54), (236, 206, 138), (170, 132, 64), escovado=4, seed=seed + 7)
+        mk = Image.new('L', chip.size, 0)
+        ImageDraw.Draw(mk).rounded_rectangle([0, 0, chip.width - 1, chip.height - 1], radius=int(14 * esc), fill=255)
+        c.paste(chip, (x0, y0), mk)
+        tr = (120, 90, 40, 150)
+        cd.line([(x0 + (x1 - x0) // 2, y0 + 6), (x0 + (x1 - x0) // 2, y1 - 6)], fill=tr, width=2)
+        for k in (0.33, 0.66):
+            yy = y0 + int((y1 - y0) * k)
+            cd.line([(x0 + 6, yy), (x0 + (x1 - x0) // 2 - 14, yy)], fill=tr, width=2)
+            cd.line([(x0 + (x1 - x0) // 2 + 14, yy), (x1 - 6, yy)], fill=tr, width=2)
+        # contactless
+        cxl, cyl = cw - int(240 * esc), int(107 * esc)
+        for i, rr in enumerate((10, 18, 26)):
+            rr = int(rr * esc)
+            cd.arc([cxl - rr, cyl - rr, cxl + rr, cyl + rr], -50, 50, fill=rotulo + (170,), width=max(2, int(3 * esc)))
+        fn = ImageFont.truetype(AV, int(118 * esc), index=0)
+        _gravado(c, (int(70 * esc), ch - int(210 * esc)), nome, fn, txt, txt_sombra, txt_luz)
+        fs = ImageFont.truetype(AV, int(24 * esc), index=5)
+        _gravado(c, (int(74 * esc), ch - int(70 * esc)), 'GF MEMBER', fs, rotulo, txt_sombra, txt_luz, esp=int(7 * esc))
+        sombra = Image.new('RGBA', (cw + 260, ch + 260), (0, 0, 0, 0))
+        ImageDraw.Draw(sombra).rounded_rectangle([130, 170, cw + 130, ch + 170], radius=r, fill=(0, 0, 0, 200))
+        sombra = sombra.filter(ImageFilter.GaussianBlur(48)).rotate(ang, expand=True, resample=Image.BICUBIC)
         im.paste(sombra, (int(cx - sombra.width / 2), int(cy - sombra.height / 2)), sombra)
-        r = c.rotate(ang, expand=True, resample=Image.BICUBIC)
-        im.paste(r, (int(cx - r.width / 2), int(cy - r.height / 2)), r)
+        rc = c.rotate(ang, expand=True, resample=Image.BICUBIC)
+        im.paste(rc, (int(cx - rc.width / 2), int(cy - rc.height / 2)), rc)
 
+    OBSIDIANA = ((10, 10, 11), (44, 44, 47), (14, 14, 15))
+    CHAMPANHE = ((176, 152, 112), (240, 228, 202), (166, 142, 104))
+    ouro = (214, 180, 108)
     if tipo == 'black':
-        cartao('Black', (14, 18, 26), (58, 66, 82), CREAM, (200, 170, 110, 255), 9, W * 0.66, H * 0.52)
+        cartao('Black', OBSIDIANA, ouro, (0, 0, 0, 255), (255, 236, 190, 255), (200, 166, 98), 9, W * 0.68, H * 0.44, 0.96, 3)
     else:
-        cartao('Black', (14, 18, 26), (58, 66, 82), CREAM, (200, 170, 110, 255), 16, W * 0.56, H * 0.62, 0.78)
-        cartao('Prestige', (196, 204, 218), (246, 248, 252), NAVY, (120, 98, 52, 255), 7, W * 0.70, H * 0.46)
+        cartao('Black', OBSIDIANA, ouro, (0, 0, 0, 255), (255, 236, 190, 255), (200, 166, 98), 16, W * 0.58, H * 0.52, 0.70, 3)
+        cartao('Prestige', CHAMPANHE, (58, 44, 26), (255, 250, 236, 255), (40, 30, 16, 255), (96, 74, 40), 7, W * 0.72, H * 0.40, 0.96, 5, mono_letra=(52, 39, 22), mono_faixa=(176, 136, 62))
     return cobrir(im, w, h, 0.62)
 
 
@@ -218,7 +325,7 @@ def capa(prod):
 
 
 def faixa_email(d, x, y, w, h, tam):
-    d.rounded_rectangle([x, y, x + w, y + h], radius=int(h * 0.3), fill=(11, 35, 64), outline=GOLD, width=2 * S)
+    d.rounded_rectangle([x, y, x + w, y + h], radius=int(h * 0.3), fill=CAIXA, outline=GOLD, width=2 * S)
     fo_b = f('demi', tam); fo = f('medium', tam)
     t1 = 'Importante: '
     t2 = 'use na compra o mesmo e-mail da sua conta GlobalFly.'
@@ -247,7 +354,7 @@ def banner(prod):
     for t in ['Acesso por 12 meses', 'Liberação automática', 'Pix ou cartão em até 12x']:
         fo = f('demi', 20)
         tw = d.textlength(t, font=fo)
-        d.rounded_rectangle([x, yb, x + tw + 40 * S, yb + 46 * S], radius=23 * S, outline=GOLD, width=2 * S, fill=(11, 35, 64))
+        d.rounded_rectangle([x, yb, x + tw + 40 * S, yb + 46 * S], radius=23 * S, outline=GOLD, width=2 * S, fill=CAIXA)
         d.text((x + 20 * S, yb + 10 * S), t, font=fo, fill=CREAM)
         x += tw + 54 * S
     faixa_email(d, 40 * S, 500 * S, W - 80 * S, 72 * S, 24)
@@ -280,13 +387,13 @@ def banner_celular(prod):
     x = 66 * S
     for t in ['12 meses', 'Liberação automática', 'Pix ou 12x']:
         fo = f('demi', 32); tw = d.textlength(t, font=fo)
-        d.rounded_rectangle([x, y, x + tw + 52 * S, y + 70 * S], radius=35 * S, outline=GOLD, width=3 * S, fill=(11, 35, 64))
+        d.rounded_rectangle([x, y, x + tw + 52 * S, y + 70 * S], radius=35 * S, outline=GOLD, width=3 * S, fill=CAIXA)
         d.text((x + 26 * S, y + 15 * S), t, font=fo, fill=CREAM)
         x += tw + 70 * S
     y += 110 * S
     # aviso do e-mail em duas linhas
     h = 150 * S
-    d.rounded_rectangle([50 * S, y, W - 50 * S, y + h], radius=34 * S, fill=(11, 35, 64), outline=GOLD, width=3 * S)
+    d.rounded_rectangle([50 * S, y, W - 50 * S, y + h], radius=34 * S, fill=CAIXA, outline=GOLD, width=3 * S)
     d.text((86 * S, y + 24 * S), 'Importante', font=f('demi', 34), fill=GOLD_L)
     d.text((86 * S, y + 76 * S), 'Use o mesmo e-mail da sua conta GlobalFly.', font=f('medium', 34), fill=CREAM)
     fim = y + h + 50 * S
@@ -305,7 +412,7 @@ def lateral(prod):
     im.paste(mono, (W - 420 * S, H - 470 * S), mono)
     d = ImageDraw.Draw(im)
     # moldura dourada fina
-    d.rounded_rectangle([3 * S, 3 * S, W - 3 * S, H - 3 * S], radius=28 * S, outline=(54, 70, 92), width=2 * S)
+    d.rounded_rectangle([3 * S, 3 * S, W - 3 * S, H - 3 * S], radius=28 * S, outline=MOLDURA, width=2 * S)
     # foto pequena no topo
     topo = fundo_foto(prod, W - 12 * S, 300 * S, inicio=0.0) if prod['fotos'] == 2 else \
         imagem(prod, W - 12 * S, 300 * S, prod.get('foco_lat', 0.5))
@@ -329,11 +436,11 @@ def lateral(prod):
         linhas = quebrar(d, item, fo, W - x0 - 100 * S)
         check(d, x0 + 15 * S, y + 17 * S, 15 * S)
         for ln in linhas:
-            d.text((x0 + 48 * S, y), ln, font=fo, fill=(214, 225, 238))
+            d.text((x0 + 48 * S, y), ln, font=fo, fill=TEXTO2)
             y += 32 * S
         y += 20 * S
     y += 12 * S
-    d.line([(x0, y), (W - x0, y)], fill=(40, 60, 88), width=2 * S)
+    d.line([(x0, y), (W - x0, y)], fill=LINHA, width=2 * S)
     y += 34 * S
     cadeado(d, x0, y, 34 * S)
     d.text((x0 + 52 * S, y - 2 * S), 'Compra segura', font=f('demi', 24), fill=CREAM)
@@ -344,20 +451,20 @@ def lateral(prod):
     y += 26 * S
     # aviso do e-mail (é por ele que a liberação acha a conta)
     caixa_h = 132 * S
-    d.rounded_rectangle([x0 - 4 * S, y, W - x0 + 4 * S, y + caixa_h], radius=18 * S, fill=(11, 35, 64),
+    d.rounded_rectangle([x0 - 4 * S, y, W - x0 + 4 * S, y + caixa_h], radius=18 * S, fill=CAIXA,
                         outline=GOLD, width=2 * S)
     d.text((x0 + 20 * S, y + 20 * S), 'Importante', font=f('demi', 20), fill=GOLD_L)
     yy = y + 52 * S
     for ln in quebrar(d, 'Use na compra o mesmo e-mail da sua conta GlobalFly. É por ele que o acesso é liberado.',
                       f('medium', 19), W - 2 * x0 - 40 * S):
-        d.text((x0 + 20 * S, yy), ln, font=f('medium', 19), fill=(214, 225, 238)); yy += 28 * S
+        d.text((x0 + 20 * S, yy), ln, font=f('medium', 19), fill=TEXTO2); yy += 28 * S
     yc = y + caixa_h + 30 * S
     for ln in (quebrar(d, 'Fotos: ' + prod['credito'], f('regular', 15), W - 2 * x0) if prod.get('credito') else []):
-        d.text((x0, yc), ln, font=f('regular', 15), fill=(110, 132, 158)); yc += 22 * S
+        d.text((x0, yc), ln, font=f('regular', 15), fill=APAGADO); yc += 22 * S
     fim = yc + 30 * S
     im = im.crop((0, 0, W, fim))
     d = ImageDraw.Draw(im)
-    d.rounded_rectangle([3 * S, 3 * S, W - 3 * S, fim - 3 * S], radius=28 * S, outline=(54, 70, 92), width=2 * S)
+    d.rounded_rectangle([3 * S, 3 * S, W - 3 * S, fim - 3 * S], radius=28 * S, outline=MOLDURA, width=2 * S)
     return im.resize((700, fim // S), Image.LANCZOS)
 
 
@@ -386,7 +493,7 @@ PRODUTOS = {
                         'Acesso por 12 meses, liberado sozinho na sua conta GlobalFly',
                         'Você escolhe valor de entrada, meta e limite de perda em cada uma',
                         'Renovação anual; cancele quando quiser']),
-    'black': dict(nome='GF Member Black', cartao='black', fotos=1, selo='GF MEMBER · SUBPLANO',
+    'black': dict(nome='GF Member Black', cartao='black', paleta='black', fotos=1, selo='GF MEMBER · SUBPLANO',
                   titulo_capa=['Black'], tam_capa=110, titulo_banner=['GF Member', 'Black'], tam_banner=70,
                   titulo_celular=['GF Member', 'Black'], tam_celular=104,
                   frase='As 5 I.A., mais simulador e a sala extra.',
@@ -395,7 +502,7 @@ PRODUTOS = {
                          'Simulador 12 h por dia',
                          'Sala ao vivo extra todos os dias',
                          'Liberado sozinho na sua conta GlobalFly assim que o pagamento é confirmado']),
-    'prestige': dict(nome='GF Member Prestige', cartao='prestige', fotos=1, selo='GF MEMBER · SUBPLANO',
+    'prestige': dict(nome='GF Member Prestige', cartao='prestige', paleta='prestige', fotos=1, selo='GF MEMBER · SUBPLANO',
                      titulo_capa=['Prestige'], tam_capa=100, titulo_banner=['GF Member', 'Prestige'], tam_banner=70,
                      titulo_celular=['GF Member', 'Prestige'], tam_celular=104,
                      frase='Tudo liberado, sem compartilhamento.',
@@ -411,6 +518,7 @@ if __name__ == '__main__':
     so = sys.argv[1:]
     for k, p in PRODUTOS.items():
         if so and k not in so: continue
+        usar_paleta(p.get('paleta', 'navy'))
         capa(p).save(OUT + f'capa-{k}.jpg', quality=88, optimize=True, progressive=True)
         banner(p).save(OUT + f'banner-{k}.jpg', quality=88, optimize=True, progressive=True)
         banner_celular(p).save(OUT + f'banner-celular-{k}.jpg', quality=88, optimize=True, progressive=True)

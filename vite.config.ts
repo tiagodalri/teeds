@@ -108,7 +108,12 @@ const PALETAS: Record<string, Paleta> = {
       // do Facebook (janela da comunidade e prévia do Estúdio), e os cinzas das telas do Instagram e do
       // Facebook na prévia: são a cara dos aplicativos, não enfeite da GF
       '#25D366', '#D6249F', '#1877F2', '#F9CE34', '#EE2A7B', '#6228D7',
-      '#050505', '#65676B', '#E4E6EB', '#F0F2F5', '#EFF3FA', '#F1F1F1', '#E6E6E6'],
+      '#050505', '#65676B', '#E4E6EB', '#F0F2F5', '#EFF3FA', '#F1F1F1', '#E6E6E6',
+      // subplanos do GF Member (05/11/2026, Tiago: "o black não está black, está azul"): o Black é
+      // preto de verdade e o Prestige é champanhe; sem isto a paleta puxava os dois para o marinho
+      '#3B3B3E', '#151516', '#2C2A26', '#4A4A4D', '#1C1C1E', '#060606',
+      '#FBF5E8', '#E3D3AE', '#A98D5C', '#FFFAF0', '#E6D6B2', '#F7F0E1', '#DCCAA2', '#6B5430',
+      '#2A1F10', '#3A2B16', '#8A6A2A', '#D9B465', '#E7C77A', '#FFFDF7', '#ECE3CF', '#BFAE8C'],
     // 21/10/2026: vermelho e verde vivos, sem o tom exato (antes #C95F5F e #2F8F72,
     // que apagavam até o gráfico); cada cor herdada mantém a luz e ganha a saturação
     vermelho: { h: 356, s: 0.82 },

@@ -8,8 +8,8 @@
 .mpl-topo p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
 .mpl-selo, .mpl-nome { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 13px; font-style: normal; font-size: 13px; font-weight: 800; letter-spacing: .02em; }
 .mpl-selo.gold, .mpl-nome.gold { color: #051528; background: linear-gradient(135deg, #fbefc9, #dcb766 50%, #a77c2c); }
-.mpl-selo.black, .mpl-nome.black { color: #f3f0e9; background: linear-gradient(135deg, #3a3f47, #15181d 55%, #050608); box-shadow: inset 0 0 0 1px #ffffff26; }
-.mpl-selo.prestige, .mpl-nome.prestige { color: #051528; background: linear-gradient(135deg, #f3f0e9, #c9d6e4 45%, #7e93aa); box-shadow: inset 0 0 0 1px #ffffff66; }
+.mpl-selo.black, .mpl-nome.black { color: #f3f0e9; background: linear-gradient(135deg, #3b3b3e, #151516 55%, #050505); box-shadow: inset 0 0 0 1px #ffffff26; }
+.mpl-selo.prestige, .mpl-nome.prestige { color: #2a1f10; background: linear-gradient(135deg, #fbf5e8, #e3d3ae 45%, #a98d5c); box-shadow: inset 0 0 0 1px #ffffff66; }
 .mpl-uso { display: grid; gap: 6px; max-width: 420px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
 .mpl-uso > div { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
 .mpl-uso span { color: var(--muted); font-variant-numeric: tabular-nums; }

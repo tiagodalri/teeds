@@ -4,8 +4,8 @@
 .msp-rot { display: block; font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--msp-ouro); }
 .msp-chip { display: inline-flex; align-items: center; height: 24px; padding: 0 11px; border-radius: 12px; font-size: 12.5px; font-weight: 800; vertical-align: middle; }
 .msp-chip.gold { color: #051528; background: linear-gradient(135deg, #fbefc9, #dcb766 50%, #a77c2c); }
-.msp-chip.black { color: #f3f0e9; background: linear-gradient(135deg, #3a3f47, #15181d 55%, #050608); box-shadow: inset 0 0 0 1px #ffffff26; }
-.msp-chip.prestige { color: #051528; background: linear-gradient(135deg, #f3f0e9, #c9d6e4 45%, #7e93aa); }
+.msp-chip.black { color: #f3f0e9; background: linear-gradient(135deg, #3b3b3e, #151516 55%, #050505); box-shadow: inset 0 0 0 1px #ffffff26; }
+.msp-chip.prestige { color: #2a1f10; background: linear-gradient(135deg, #fffdf7, #ece3cf 50%, #bfae8c); }
 .msp-btn { min-height: 48px; padding: 0 22px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); color: var(--text); font: inherit; font-weight: 800; cursor: pointer; }
 .msp-btn.ouro { border: 0; background: linear-gradient(135deg, #e7c77a, #B78D39); color: #051528; box-shadow: 0 10px 30px -14px #B78D39; }
 .msp-btn.largo { width: 100%; }
@@ -24,12 +24,17 @@
 .msp-heroi-arte { position: relative; height: 230px; }
 .msp-cartao-arte { position: absolute; left: 50%; top: 50%; width: 180px; height: 112px; display: grid; align-content: space-between; padding: 14px 16px; border-radius: 14px;
   transform: translate(calc(-50% + (var(--i) - 1) * 46px), calc(-50% + (var(--i) - 1) * -26px)) rotate(calc((var(--i) - 1) * 7deg)); box-shadow: 0 24px 50px -20px #000; }
+.msp-cartao-arte { align-content: end; gap: 1px; }
+/* o monograma GF gravado no cartão, na cor de cada metal */
+.msp-mono { position: absolute; left: 16px; top: 14px; width: 36px; height: 21px; background: currentColor; -webkit-mask: url(/globalfly-gf-escuro.png) left center / contain no-repeat; mask: url(/globalfly-gf-escuro.png) left center / contain no-repeat; }
+.msp-cartao-arte.black .msp-mono { background: #d9b465; }
+.msp-cartao-arte.prestige .msp-mono { background: #3a2b16; }
 .msp-cartao-arte small { font-size: 9px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; opacity: .75; }
 .msp-cartao-arte b { font-size: 22px; letter-spacing: -.01em; }
 .msp-cartao-arte i { position: absolute; right: 14px; top: 14px; width: 26px; height: 20px; border-radius: 4px; background: linear-gradient(135deg, #f6e3a8, #b88a32); opacity: .9; }
 .msp-cartao-arte.gold { color: #051528; background: linear-gradient(135deg, #fbefc9, #dcb766 50%, #a77c2c); }
-.msp-cartao-arte.black { color: #f3f0e9; background: linear-gradient(135deg, #3a3f47, #15181d 55%, #050608); border: 1px solid #ffffff1f; }
-.msp-cartao-arte.prestige { color: #051528; background: linear-gradient(135deg, #ffffff, #cfdbe7 45%, #7e93aa); }
+.msp-cartao-arte.black { color: #f3f0e9; background: linear-gradient(135deg, #3b3b3e, #151516 55%, #050505); border: 1px solid #ffffff1f; }
+.msp-cartao-arte.prestige { color: #2a1f10; background: linear-gradient(135deg, #fffdf7, #ece3cf 50%, #bfae8c); box-shadow: inset 0 0 0 1px #ffffff99; }
 
 /* o meu subplano */
 .msp-meu { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px 28px; align-items: center; padding: 18px 22px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); }
@@ -42,8 +47,8 @@
 .msp-planos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .msp-planos.n1 { grid-template-columns: minmax(0, 560px); justify-content: center; }
 .msp-plano { position: relative; display: grid; align-content: start; gap: 16px; padding: 26px 24px 20px; border-radius: 24px; overflow: hidden; }
-.msp-plano.black { color: #f3f0e9; background: radial-gradient(100% 80% at 100% 0%, #2a3039 0%, transparent 60%), linear-gradient(160deg, #15181d, #050608); border: 1px solid #ffffff1f; box-shadow: 0 30px 70px -40px #000; }
-.msp-plano.prestige { color: #051528; background: radial-gradient(100% 80% at 100% 0%, #ffffff 0%, transparent 60%), linear-gradient(160deg, #eef3f8, #b9c9da); border: 1px solid #ffffffaa; box-shadow: 0 30px 70px -40px #3c5674; }
+.msp-plano.black { color: #f3f0e9; background: radial-gradient(100% 80% at 100% 0%, #2c2a26 0%, transparent 60%), linear-gradient(160deg, #151516, #050505); border: 1px solid #ffffff1f; box-shadow: 0 30px 70px -40px #000; }
+.msp-plano.prestige { color: #2a1f10; background: radial-gradient(100% 80% at 100% 0%, #ffffff 0%, transparent 60%), linear-gradient(160deg, #f7f0e1, #dccaa2); border: 1px solid #ffffffaa; box-shadow: 0 30px 70px -40px #6b5430; }
 .msp-plano.gold { color: #051528; background: linear-gradient(160deg, #fbefc9, #dcb766); }
 .msp-plano header { display: grid; gap: 6px; }
 .msp-plano-selo { justify-self: start; padding: 4px 10px; border-radius: 10px; font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; background: #B78D3933; color: #d9b465; }

@@ -58,7 +58,7 @@ export function MarketplaceDoGF({ sessao }: { sessao?: SessaoTeeds | null }) {
           </div>
         </div>
         <div className="msp-heroi-arte" aria-hidden="true">
-          {planos.map((s, i) => <span key={s.id} className={`msp-cartao-arte ${s.id}`} style={{ ['--i' as string]: i }}><small>GF Member</small><b>{s.nome}</b><i /></span>)}
+          {planos.map((s, i) => <span key={s.id} className={`msp-cartao-arte ${s.id}`} style={{ ['--i' as string]: i }}><em className="msp-mono" aria-hidden /><b>{s.nome}</b><small>GF Member</small><i /></span>)}
         </div>
       </section>
 
