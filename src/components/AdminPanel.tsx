@@ -6,7 +6,7 @@ import './plano/meu-plano.css'
 
 /* Revisão de 04/11/2026: o filtro de parceiro só aparece onde muda alguma coisa (as configurações
    valem para a plataforma inteira), e a chave do Modo CEO só onde há markup ou dinheiro na tela. */
-const ABAS_SEM_PARCEIRO = ['aulas', 'robos', 'planos', 'produtos']
+const ABAS_SEM_PARCEIRO = ['aulas', 'robos', 'planos', 'produtos', 'whatsapp']
 const ABAS_COM_MODO_CEO = ['visao', 'inteligencia', 'resultados', 'comissoes', 'estudo', 'movimentacoes', 'clientes', 'leads', 'parceiros']
 import type { ReactNode } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
