@@ -98,9 +98,11 @@ function painel(de: string, ate: string): PainelDaMeta {
     periodo: { de, ate }, total,
     porDia: dias.map((dia, i) => ({ dia, ...m(total.gasto * peso[i] / soma, Math.round(total.impressoes * peso[i] / soma), Math.round(total.cliquesLink * peso[i] / soma), Math.round(total.lpv * peso[i] / soma), Math.round(total.cadastros * peso[i] / soma)) })),
     campanhas: [{ id: 'c1', nome: 'GF | Live 09/11 | Cadastros', status: 'ACTIVE', objetivo: 'OUTCOME_LEADS', orcDia: 0, orcTotal: 0, inicio: '2026-11-02', fim: null, lance: 'LOWEST_COST_WITHOUT_CAP', m: total }],
-    conjuntos: [{ id: 's1', nome: 'Brasil · 25–55 · aberto', status: 'ACTIVE', campanhaId: 'c1', orcDia: 20, orcTotal: 0, otimizacao: 'OFFSITE_CONVERSIONS', publico: '25–55 anos · Brasil · público Advantage+', m: total }],
+    conjuntos: [{ id: 's1', nome: 'Brasil · 25–55 · aberto', status: 'ACTIVE', campanhaId: 'c1', orcDia: 20, orcTotal: 0, otimizacao: 'OFFSITE_CONVERSIONS', publico: '25–55 anos · Brasil · público Advantage+', m: total },
+      // 05/11/2026: uma cópia de escala com orçamento total até a live (vira ≈ por dia na tela)
+      { id: 's2', nome: 'GF | ESCALA | NB1 | Amplo | Android', status: 'ACTIVE', campanhaId: 'c1', orcDia: 0, orcTotal: 333, inicio: '2026-11-05T07:00:00-0300', fim: '2026-11-09T20:00:00-0300', otimizacao: 'OFFSITE_CONVERSIONS', publico: 'Brasil · Android · público Advantage+', m: total }],
     anuncios: ads.map((a, i) => ({
-      id: a.id, nome: a.nome, status: SITUACAO_DO_LAB[i] ?? 'ACTIVE', campanhaId: 'c1', conjuntoId: 's1', criadoEm: '2026-11-02T12:00:00Z',
+      id: a.id, nome: a.nome, status: SITUACAO_DO_LAB[i] ?? 'ACTIVE', campanhaId: 'c1', conjuntoId: i === 3 ? 's2' : 's1', criadoEm: '2026-11-02T12:00:00Z',
       criativo: { miniatura: miniatura(['#B8862F', '#3a6fd8', '#7a4fd0', '#2F8F72', '#c0563f'][i % 5], ['V01', 'V02', 'IMG', 'V03', 'V04'][i % 5]), imagem: null, titulo: 'Live gratuita 09/11, às 20h', texto: 'A I.A. que opera com você. Inscreva-se e assista à live de lançamento da GlobalFly.', tipo: a.tipo, cta: 'SIGN_UP', marcacoes: i === 2 ? '' : 'utm_source=meta&utm_medium=pago&utm_content={{ad.id}}' },
       ranking: { qualidade: a.rank, engajamento: a.rank, conversao: i === 0 ? 'acima' : 'media' }, m: a.m,
     })),

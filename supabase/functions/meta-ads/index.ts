@@ -201,6 +201,8 @@ async function painel(chave: string, cfg: Conta, de: string, ate: string) {
     })),
     conjuntos: conjuntosGf.map((c: any) => ({ c, m: mConj.get(c.id) })).filter(({ c, m }) => doPeriodo(m, c.effective_status, c.start_time)).map(({ c, m }) => ({
       id: c.id, nome: c.name, status: c.effective_status, campanhaId: c.campaign_id, orcDia: n(c.daily_budget) / 100, orcTotal: n(c.lifetime_budget) / 100,
+      // 05/11/2026: o começo e o fim, para o orçamento total virar "por dia" na tela (as cópias de escala)
+      inicio: c.start_time ?? null, fim: c.end_time ?? null,
       otimizacao: c.optimization_goal ?? '', publico: publico(c.targeting), m: m ? limpar(m) : vazio,
     })),
     anuncios: anunciosGf.map((a: any) => ({ a, m: mAd.get(a.id) })).filter(({ a, m }) => doPeriodo(m, a.effective_status, a.created_time)).map(({ a, m }) => ({

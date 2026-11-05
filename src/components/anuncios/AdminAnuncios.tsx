@@ -199,6 +199,18 @@ function Barras({ titulo, linhas, nome }: { titulo: string; linhas: Quebra[]; no
 
 const naMoedaDaConta = (v: number, moeda: string) => v.toLocaleString('pt-BR', { style: 'currency', currency: moeda || 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 2 })
 
+/*
+  O orçamento por dia de um conjunto (05/11/2026, Tiago: "os anúncios ativos estão totalizando R$ 172 por dia, é isso?"):
+  o diário, ou o orçamento total dividido pelos dias entre o começo e o fim (as cópias de escala nascem com total
+  até a live). É uma média: a Meta reparte o total pelos horários programados, e um dia pode sair um pouco diferente.
+*/
+const diasDoConjunto = (c: Conjunto): number | null => {
+  if (!c.inicio || !c.fim) return null
+  const d = (Date.parse(c.fim) - Date.parse(c.inicio)) / 864e5
+  return Number.isFinite(d) && d > 0 ? Math.max(1, d) : null
+}
+const porDiaDoTotal = (c: Conjunto): number => { const d = diasDoConjunto(c); return !c.orcDia && c.orcTotal && d ? Math.round(c.orcTotal / d) : 0 }
+
 /** A célula do orçamento por dia, com o lápis para mudar (no conjunto, pela função meta-estudio). */
 function OrcamentoDoConjunto({ conjunto, campanha, anuncios, valorNovo, moeda, salvar }: {
   conjunto: Conjunto | null; campanha: Campanha | null; anuncios: number; valorNovo?: number; moeda: string; salvar: (v: number) => Promise<void>
@@ -210,7 +222,13 @@ function OrcamentoDoConjunto({ conjunto, campanha, anuncios, valorNovo, moeda, s
   // orçamento na campanha (CBO): mostra o da campanha e não edita aqui
   if (!conjunto.orcDia) {
     return campanha?.orcDia ? <span title="Orçamento da campanha (dividido entre os conjuntos): mude no Gerenciador">{naMoedaDaConta(campanha.orcDia, moeda)}<small className="aa-orc-dia">/dia · campanha</small></span>
-      : <small className="aa-mudo" title="Orçamento total, não por dia">{conjunto.orcTotal ? `${naMoedaDaConta(conjunto.orcTotal, moeda)} total` : '—'}</small>
+      : !conjunto.orcTotal ? <small className="aa-mudo">—</small>
+        : porDiaDoTotal(conjunto) ? (
+          <span className="aa-orc" title={`Orçamento total de ${naMoedaDaConta(conjunto.orcTotal, moeda)} até ${conjunto.fim ? new Date(conjunto.fim).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : 'o fim'}; em média, ${naMoedaDaConta(porDiaDoTotal(conjunto), moeda)} por dia`}>
+            <b>≈ {naMoedaDaConta(porDiaDoTotal(conjunto), moeda)}</b><small className="aa-orc-dia">/dia</small>
+            <small className="aa-orc-div">{naMoedaDaConta(conjunto.orcTotal, moeda)} total</small>
+          </span>
+        ) : <small className="aa-mudo" title="Orçamento total, não por dia">{naMoedaDaConta(conjunto.orcTotal, moeda)} total</small>
   }
   const atual = valorNovo ?? conjunto.orcDia
   const dica = anuncios > 1 ? `Orçamento do conjunto ${conjunto.nome}: vale para os ${anuncios} anúncios dele` : `Orçamento do conjunto ${conjunto.nome}`
@@ -475,19 +493,20 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
     for (const a of painel?.anuncios ?? []) m.set(a.conjuntoId, (m.get(a.conjuntoId) ?? 0) + 1)
     return m
   }, [painel])
+  // o diário e a média por dia dos conjuntos com orçamento total, separados para o rodapé explicar a conta
   const orcamentoDosFiltrados = useMemo(() => {
-    const vistos = new Set<string>(); let soma = 0
+    const vistos = new Set<string>(); let diario = 0, doTotal = 0
     for (const l of filtradas) {
-      const c = painel?.conjuntos.find((x) => x.id === l.a.conjuntoId)
+      const c = conjuntoPorId.get(l.a.conjuntoId)
       if (!c || vistos.has(c.id) || !/ACTIVE|IN_PROCESS|PENDING|WITH_ISSUES/.test(c.status)) continue
-      vistos.add(c.id); soma += orcNovo[c.id] ?? c.orcDia
+      vistos.add(c.id); diario += orcNovo[c.id] ?? c.orcDia; doTotal += porDiaDoTotal(c)
     }
-    return soma
-  }, [filtradas, painel, orcNovo])
+    return { diario, doTotal, soma: diario + doTotal }
+  }, [filtradas, conjuntoPorId, orcNovo])
   const somaFiltrada = useMemo(() => (filtradas.length > 1 ? somarLinhas(filtradas) : null), [filtradas])
   const totalDiaDaConta = useMemo(() => {
     const ligado = (s: string) => /ACTIVE|IN_PROCESS|PENDING|WITH_ISSUES/.test(s)
-    return (painel?.conjuntos ?? []).filter((c) => ligado(c.status)).reduce((s, c) => s + (orcNovo[c.id] ?? c.orcDia), 0)
+    return (painel?.conjuntos ?? []).filter((c) => ligado(c.status)).reduce((s, c) => s + (orcNovo[c.id] ?? c.orcDia) + porDiaDoTotal(c), 0)
       + (painel?.campanhas ?? []).filter((c) => ligado(c.status)).reduce((s, c) => s + c.orcDia, 0)
   }, [painel, orcNovo])
   // o custo comparado com o período anterior usa só os cadastros que vieram de anúncio, qualquer que seja a escolha da tela
@@ -853,7 +872,10 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
                     ))}
                   </tbody>
                   {somaFiltrada && (
-                    <tfoot><tr><td>Total dos {int(filtradas.length)} filtrados</td><td className="num" title="Soma dos conjuntos ligados destes anúncios (cada conjunto conta uma vez)">{naMoedaDaConta(orcamentoDosFiltrados, painel?.conta.moeda ?? 'BRL')}<small className="aa-orc-dia">/dia</small></td>{colunas.map((id) => {
+                    <tfoot><tr><td>Total dos {int(filtradas.length)} filtrados</td><td className="num" title={orcamentoDosFiltrados.doTotal ? `Soma dos conjuntos ligados destes anúncios (cada conjunto conta uma vez): ${naMoedaDaConta(orcamentoDosFiltrados.diario, painel?.conta.moeda ?? 'BRL')} de orçamento diário e, em média, ${naMoedaDaConta(orcamentoDosFiltrados.doTotal, painel?.conta.moeda ?? 'BRL')} por dia dos conjuntos com orçamento total` : 'Soma dos conjuntos ligados destes anúncios (cada conjunto conta uma vez)'}>
+                      {orcamentoDosFiltrados.doTotal ? '≈ ' : ''}{naMoedaDaConta(orcamentoDosFiltrados.soma, painel?.conta.moeda ?? 'BRL')}<small className="aa-orc-dia">/dia</small>
+                      {orcamentoDosFiltrados.doTotal > 0 && <small className="aa-orc-conta">{naMoedaDaConta(orcamentoDosFiltrados.diario, painel?.conta.moeda ?? 'BRL')} diário + ≈ {naMoedaDaConta(orcamentoDosFiltrados.doTotal, painel?.conta.moeda ?? 'BRL')} dos totais</small>}
+                    </td>{colunas.map((id) => {
                       const m = METRICA.get(id)!
                       return <td key={id} className="num">{id === 'frequencia' || id === 'alcance' ? '—' : formatar(m.formato, m.valor(somaFiltrada))}</td>
                     })}<td /></tr></tfoot>

@@ -463,3 +463,4 @@
 .aa-orc-form button:disabled { opacity: .6; cursor: default; }
 .aa-orc-form .aa-orc-cancelar { width: 32px; padding: 0; border: 1px solid var(--border); background: none; color: var(--muted); font-size: 16px; }
 .aa-orc-erro { grid-column: 1 / -1; justify-self: end; color: var(--down); font-size: 11px; }
+.aa-orc-conta { display: block; margin-top: 2px; color: var(--muted); font-size: 10.5px; font-weight: 600; white-space: nowrap; }

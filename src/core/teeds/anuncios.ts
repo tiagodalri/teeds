@@ -14,7 +14,7 @@ export interface Metricas {
 }
 export type Ranking = '' | 'acima' | 'media' | 'abaixo10' | 'abaixo20' | 'abaixo35'
 export interface Campanha { id: string; nome: string; status: string; objetivo: string; orcDia: number; orcTotal: number; inicio: string | null; fim: string | null; lance: string | null; m: Metricas }
-export interface Conjunto { id: string; nome: string; status: string; campanhaId: string; orcDia: number; orcTotal: number; otimizacao: string; publico: string; m: Metricas }
+export interface Conjunto { id: string; nome: string; status: string; campanhaId: string; orcDia: number; orcTotal: number; inicio?: string | null; fim?: string | null; otimizacao: string; publico: string; m: Metricas }
 export interface Anuncio {
   id: string; nome: string; status: string; campanhaId: string; conjuntoId: string; criadoEm: string
   criativo: { miniatura: string | null; imagem: string | null; titulo: string; texto: string; tipo: 'video' | 'imagem' | 'carrossel'; cta: string; marcacoes: string | null }
