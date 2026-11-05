@@ -479,3 +479,7 @@
 .aa-separados-grade li i { font-style: normal; font-weight: 800; font-variant-numeric: tabular-nums; }
 @media (max-width: 1000px) { .aa-separados-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .aa-separados-grade { grid-template-columns: minmax(0, 1fr); } }
+
+/* 05/11/2026, noite: as datas exatas do período, para escolher o mesmo no Gerenciador */
+.aa-campo .aa-periodo-datas { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+@media (max-width: 720px) { .aa-periodo button { white-space: normal; line-height: 1.15; height: auto; min-height: 32px; } }

@@ -190,7 +190,9 @@ export const DoAnuncioAoDinheiro = memo(function DoAnuncioAoDinheiro({ pessoas, 
       { nome: 'Chegaram na página', dica: 'A página abriu (Meta)', n: meta.lpv, meta: true },
       { nome: 'Se cadastraram', dica: 'Cadastros da Meta, como no Gerenciador', n: meta.cadastros, meta: true },
     ] : []),
-    ...PASSOS.map((p) => ({ nome: acomp && p.id === 'cad' ? 'Acompanhados' : p.nome, dica: acomp && p.id === 'cad' ? 'Os que a plataforma segue pessoa a pessoa' : p.dica, n: grupo.filter(p.fez).length, filtro: p.id })),
+    // 05/11/2026, noite ("não temos que ter 2 números diferentes para o mesmo indicador"): no só anúncio o cadastro
+    // é o da Meta (acima); a contagem própria da plataforma não aparece como um segundo número de cadastro
+    ...PASSOS.filter((p) => !(soAnuncio && meta && p.id === 'cad')).map((p) => ({ nome: p.nome, dica: p.dica, n: grupo.filter(p.fez).length, filtro: p.id })),
   ]
   // duas escalas: as etapas da Meta (milhares de impressões) apagariam as da plataforma numa escala só
   const topoMeta = Math.max(1, ...trilha.filter((t) => t.meta).map((t) => t.n)), topoBanco = Math.max(1, ...trilha.filter((t) => !t.meta).map((t) => t.n))
@@ -202,7 +204,7 @@ export const DoAnuncioAoDinheiro = memo(function DoAnuncioAoDinheiro({ pessoas, 
         <p>
           {soAnuncio && gasto > 0 ? <><b>{dinheiro(gasto)}</b> investidos trouxeram </> : null}
           <b>{int(cadMeta ?? s.cadastros)} cadastros</b>{custoCad ? <> ({dinheiro(custoCad)} cada{cadMeta != null ? ', como no Gerenciador' : ''})</> : null}.
-          {acomp ? <> Dos <b>{int(s.cadastros)}</b> que a plataforma acompanha pessoa a pessoa,</> : null} <b>{int(s.plataforma)}</b> entraram na plataforma, <b>{int(s.derivReal)}</b> conectaram a conta real e <b>{int(s.depositantes)}</b> depositaram <b>{usd(s.depositado)}</b>
+          {' '}<b>{int(s.plataforma)}</b> entraram na plataforma, <b>{int(s.derivReal)}</b> conectaram a conta real e <b>{int(s.depositantes)}</b> depositaram <b>{usd(s.depositado)}</b>
           {s.markup > 0 ? <>, gerando cerca de <b>{usd(s.markup)}</b> de markup{retorno != null ? <> ({brl(retorno)} para cada R$ 1,00 investido)</> : null}</> : null}.
         </p>
       </section>
@@ -210,37 +212,14 @@ export const DoAnuncioAoDinheiro = memo(function DoAnuncioAoDinheiro({ pessoas, 
       {falha && <p className="aa-erro">Não consegui atualizar agora ({falha}). Os números abaixo são da última leitura.</p>}
       {total > pessoas.length && <p className="aa-erro">O período tem {int(total)} cadastros e a tela trouxe os {int(pessoas.length)} mais recentes: escolha um período menor para ver todos.</p>}
       <div className="aa-kpis jc-kpis">
-        <div><small>Cadastros</small><b>{int(cadMeta ?? s.cadastros)}</b><span>{custoCad ? `${dinheiro(custoCad)} cada${acomp ? ` · ${int(s.cadastros)} acompanhados` : ''}` : `${pc(razao(s.questionario, s.cadastros) * 100, 0)} completaram`}</span></div>
-        <div><small>Entraram na plataforma</small><b>{int(s.plataforma)}</b><span>{pc(razao(s.plataforma, s.cadastros) * 100, 0)} dos {acomp ? 'acompanhados' : 'cadastros'}</span></div>
+        <div><small>Cadastros</small><b>{int(cadMeta ?? s.cadastros)}</b><span>{custoCad ? `${dinheiro(custoCad)} cada` : `${pc(razao(s.questionario, s.cadastros) * 100, 0)} completaram`}</span></div>
+        <div><small>Entraram na plataforma</small><b>{int(s.plataforma)}</b><span>{acomp ? 'vindos pelo link dos anúncios' : `${pc(razao(s.plataforma, s.cadastros) * 100, 0)} dos cadastros`}</span></div>
         <div><small>Conta real conectada</small><b>{int(s.derivReal)}</b><span>{pc(razao(s.derivReal, s.plataforma) * 100, 0)} de quem entrou</span></div>
-        <div className="destaque"><small>Depositaram</small><b>{int(s.depositantes)}</b><span>{custoDep ? `${dinheiro(custoDep)} por depositante` : `${pc(razao(s.depositantes, s.cadastros) * 100)} dos ${acomp ? 'acompanhados' : 'cadastros'}`}</span></div>
+        <div className="destaque"><small>Depositaram</small><b>{int(s.depositantes)}</b><span>{custoDep ? `${dinheiro(custoDep)} por depositante` : acomp ? 'vindos pelo link dos anúncios' : `${pc(razao(s.depositantes, s.cadastros) * 100)} dos cadastros`}</span></div>
         <div className="destaque"><small>Depositado</small><b>{usd(s.depositado)}</b><span>{ticket != null ? `1º depósito típico ${usd(ticket)}` : 'sem depósitos ainda'}{ateDeposito != null && dep.length >= 3 ? ` · em ${horas(ateDeposito)}` : ''}</span></div>
-        <div className="destaque"><small>Markup estimado</small><b>{usd(s.markup)}</b><span>{retorno != null ? `${brl(retorno)} por R$ 1 investido` : s.cadastros ? `${usd(s.markup / s.cadastros)} por ${acomp ? 'acompanhado' : 'cadastro'}` : '—'}</span></div>
+        <div className="destaque"><small>Markup estimado</small><b>{usd(s.markup)}</b><span>{retorno != null ? `${brl(retorno)} por R$ 1 investido` : (cadMeta ?? s.cadastros) ? `${usd(s.markup / (cadMeta ?? s.cadastros))} por cadastro` : '—'}</span></div>
       </div>
 
-      {/* 04/11/2026, Tiago: "os números da plataforma precisam bater com os da Meta, não pode ter divergência". O cadastro
-          é o da Meta em toda a aba; aqui só se explica por que a jornada pessoa a pessoa tem menos gente. */}
-      {soAnuncio && meta && acomp && (() => {
-        const fora = (pessoas ?? []).filter((p) => p.canal !== 'anuncio-meta')
-        const social = fora.filter((p) => ['instagram', 'facebook', 'bio-instagram', 'stories'].includes(p.canal)).length
-        const semOrigem = fora.filter((p) => ['direto', 'sem-origem'].includes(p.canal)).length
-        const resto = meta.cadastros - s.cadastros
-        return (
-          <section className="aa-cartao jc-diferenca">
-            <b>Por que a jornada mostra {int(s.cadastros)} {s.cadastros === 1 ? 'pessoa' : 'pessoas'} e não os {int(meta.cadastros)} cadastros?</b>
-            {resto > 0 ? <p>
-              Os {int(meta.cadastros)} são os cadastros da Meta, os mesmos do Gerenciador, e valem para o investimento e o custo por cadastro.
-              A Meta reconhece a pessoa pela conta dela (o cadastro também vai pelo servidor, com o e-mail) e dá ao anúncio quem clicou nele e se cadastrou até 7 dias depois, mesmo voltando por outro caminho: pelo perfil, pela bio, por outro aparelho.
-              A plataforma só liga a pessoa ao anúncio quando ela chega pelo link do anúncio: esses {int(s.cadastros)} dá para seguir um a um até o depósito.
-              {social + semOrigem > 0 ? <> No período, fora eles, houve {[social ? <><b>{int(social)}</b> pelo Instagram ou Facebook sem a marcação</> : null, semOrigem ? <><b>{int(semOrigem)}</b> sem origem</> : null].filter(Boolean).map((x, i, l) => <span key={i}>{i ? (i === l.length - 1 ? ' e ' : ', ') : ''}{x}</span>)}
-                {social + semOrigem >= resto ? <>: os outros {int(resto)} da Meta estão entre eles.</> : <>.</>}</> : null}
-            </p> : <p>
-              A Meta contou menos do que chegou pelo link do anúncio: o pixel não enxerga todo mundo (bloqueador de anúncio, navegador que barra o rastreio, quem fechou a página antes do pixel carregar).
-              O investimento e o custo por cadastro seguem os {int(meta.cadastros)} da Meta, como no Gerenciador.
-            </p>}
-          </section>
-        )
-      })()}
 
       <section className="aa-cartao">
         <header>
@@ -252,7 +231,7 @@ export const DoAnuncioAoDinheiro = memo(function DoAnuncioAoDinheiro({ pessoas, 
             const ant = trilha[i - 1]
             // Meta → Meta: quantos seguiram da etapa anterior. Da plataforma: % dos cadastros (as etapas da
             // plataforma não são uma fila: dá para ligar a I.A. sem ligar as notificações, por exemplo)
-            const passa = t.meta ? (ant?.meta && ant.n >= 10 ? razao(t.n, ant.n) * 100 : null) : (t.filtro !== 'cad' && s.cadastros >= 10 ? razao(t.n, s.cadastros) * 100 : null)
+            const passa = t.meta ? (ant?.meta && ant.n >= 10 ? razao(t.n, ant.n) * 100 : null) : (t.filtro !== 'cad' && !acomp && s.cadastros >= 10 ? razao(t.n, s.cadastros) * 100 : null)
             return (
               <li key={t.nome} className={t.meta ? 'meta' : ''}>
                 <button type="button" disabled={!t.filtro} onClick={() => t.filtro && aPessoas(t.filtro)} title={t.filtro ? 'Ver quem são' : undefined}>
@@ -265,7 +244,7 @@ export const DoAnuncioAoDinheiro = memo(function DoAnuncioAoDinheiro({ pessoas, 
             )
           })}
         </ol>
-        <p className="aa-nota">{soAnuncio && meta ? 'Nas etapas da Meta (até os cadastros, como no Gerenciador), a % é quantos seguiram da etapa anterior. ' : ''}Da plataforma em diante, a % é sobre os {acomp ? 'acompanhados pessoa a pessoa' : 'cadastros'}. Clique numa etapa para ver quem são. Comunidade conta desde 04/11.</p>
+        <p className="aa-nota">{soAnuncio && meta ? 'Nas etapas da Meta (até os cadastros, como no Gerenciador), a % é quantos seguiram da etapa anterior. ' : ''}{acomp ? 'Da plataforma em diante, contam as pessoas que chegaram pelo link dos anúncios.' : 'Da plataforma em diante, a % é sobre os cadastros.'} Clique numa etapa para ver quem são. Comunidade conta desde 04/11.</p>
       </section>
 
       <section className="aa-cartao jc-leitura">
@@ -298,7 +277,7 @@ export const DoAnuncioAoDinheiro = memo(function DoAnuncioAoDinheiro({ pessoas, 
                     <tr key={g.nome} tabIndex={-1}>
                       <td><span className="jc-quem">{g.miniatura ? <img src={g.miniatura} alt="" /> : null}<b>{g.nome}</b></span></td>
                       <td className="num">{g.gasto != null ? dinheiro(g.gasto) : '—'}</td>
-                      <td className="num"><b>{int(cad)}</b>{g.meta != null && g.meta !== x.cadastros ? <small className="jc-acomp">{int(x.cadastros)} acompanh.</small> : null}</td>
+                      <td className="num"><b>{int(cad)}</b></td>
                       <td className="num">{g.gasto && cad ? dinheiro(g.gasto / cad) : '—'}</td>
                       <td className="num">{x.cadastros ? pc(razao(x.questionario, x.cadastros) * 100, 0) : '—'}</td>
                       <td className="num">{int(x.plataforma)}</td>

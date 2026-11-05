@@ -27,7 +27,7 @@ export interface Metrica { id: string; nome: string; curto: string; formato: For
 
 /** Todas as métricas de um anúncio. `null` = não se aplica (sem base para a conta). */
 export const METRICAS: Metrica[] = [
-  { id: 'gasto', nome: 'Investido', curto: 'Investido', formato: 'brl', valor: ({ a }) => a.m.gasto },
+  { id: 'gasto', nome: 'Valor gasto', curto: 'Valor gasto', formato: 'brl', valor: ({ a }) => a.m.gasto },
   { id: 'impressoes', nome: 'Impressões', curto: 'Impressões', formato: 'int', valor: ({ a }) => a.m.impressoes },
   { id: 'alcance', nome: 'Alcance', curto: 'Alcance', formato: 'int', valor: ({ a }) => a.m.alcance },
   { id: 'frequencia', nome: 'Frequência', curto: 'Freq.', formato: 'dec', dica: 'Quantas vezes, em média, cada pessoa viu o anúncio', valor: ({ a }) => a.m.frequencia || null },
@@ -50,10 +50,11 @@ export const METRICAS: Metrica[] = [
   // são os do Gerenciador; os acompanhados pessoa a pessoa (chegaram pelo link do anúncio) ficam como coluna à parte
   // 05/11/2026 (Tiago: "tem que ser cadastros únicos"): o cadastro do anúncio é o da pessoa que veio por ele, uma por e-mail;
   // o da Meta fica como referência (conta também quem viu o anúncio e chegou por outro caminho)
-  { id: 'cadReal', nome: 'Cadastros únicos', curto: 'Cadastros', formato: 'int', dica: 'Pessoas diferentes (uma por e-mail) que se cadastraram por este anúncio. Quem veio por outro caminho não entra.', valor: ({ real }) => real?.cadastros ?? 0 },
-  { id: 'custoCadReal', nome: 'Custo por cadastro único', curto: 'R$/cad.', formato: 'brl', menorMelhor: true, dica: 'O investido dividido pelos cadastros únicos deste anúncio', valor: ({ a, real }) => div(a.m.gasto, real?.cadastros ?? 0) },
-  { id: 'cadMeta', nome: 'Cadastros na Meta', curto: 'Meta', formato: 'int', dica: 'O número do Gerenciador. Conta também quem viu o anúncio e chegou por outro caminho.', valor: ({ a }) => a.m.cadastros },
-  { id: 'custoCadMeta', nome: 'Custo por cadastro na Meta', curto: 'R$/Meta', formato: 'brl', menorMelhor: true, dica: 'O custo por resultado do Gerenciador', valor: ({ a }) => div(a.m.gasto, a.m.cadastros) },
+  // 05/11/2026, noite (Tiago, com os prints do Gerenciador do Naor: "preciso que seja tipo um espelho do gerenciador";
+  // "não temos que ter 2 números diferentes para o mesmo indicador, use apenas o do gerenciador oficial"):
+  // o cadastro é só o Resultado do Gerenciador. A contagem própria da plataforma (pessoas únicas) saiu da aba.
+  { id: 'cadMeta', nome: 'Resultados', curto: 'Resultados', formato: 'int', dica: 'Registro concluído no site, o mesmo número do Gerenciador', valor: ({ a }) => a.m.cadastros },
+  { id: 'custoCadMeta', nome: 'Custo por resultado', curto: 'Custo/result.', formato: 'brl', menorMelhor: true, dica: 'O custo por resultado do Gerenciador', valor: ({ a }) => div(a.m.gasto, a.m.cadastros) },
   { id: 'conversaoPagina', nome: 'Página → cadastro', curto: 'Conv. pág.', formato: 'pct', dica: 'Cadastros (Meta) ÷ quem chegou na página', valor: ({ a }) => (a.m.lpv ? (a.m.cadastros / a.m.lpv) * 100 : null) },
   { id: 'questionario', nome: 'Inscrições completas', curto: 'Inscrições', formato: 'int', valor: ({ real }) => real?.questionario ?? 0 },
   { id: 'custoInscricao', nome: 'Custo por inscrição completa', curto: 'R$/inscr.', formato: 'brl', menorMelhor: true, valor: ({ a, real }) => div(a.m.gasto, real?.questionario ?? 0) },
@@ -64,7 +65,8 @@ export const METRICAS: Metrica[] = [
   { id: 'custoGfm', nome: 'Custo por GF Member', curto: 'R$/GF Member', formato: 'brl', menorMelhor: true, valor: ({ a, real }) => div(a.m.gasto, real?.liberados ?? 0) },
 ]
 export const METRICA = new Map(METRICAS.map((m) => [m.id, m]))
-export const COLUNAS_PADRAO = ['gasto', 'impressoes', 'ctrLink', 'cpcLink', 'cpm', 'custoView', 'lpv', 'custoLpv', 'cadReal', 'custoCadReal', 'cadMeta', 'custoInscricao', 'liberados', 'gancho', 'retencao']
+// a ordem do Gerenciador: Resultados, Alcance, Frequência, Custo por resultado, Valor gasto; depois o resto
+export const COLUNAS_PADRAO = ['cadMeta', 'alcance', 'frequencia', 'custoCadMeta', 'gasto', 'impressoes', 'ctrLink', 'cpcLink', 'cpm', 'lpv', 'custoLpv', 'custoInscricao', 'liberados', 'gancho', 'retencao']
 export const formatar = (f: Formato, v: number | null) => (v == null || !Number.isFinite(v) ? '—' : f === 'brl' ? brl(v) : f === 'int' ? int(v) : f === 'pct' ? pc(v, v < 10 ? 2 : 1) : dec(v))
 
 /** Uma linha que soma várias (para o total da tabela): as taxas são refeitas a partir das somas. */
@@ -100,9 +102,8 @@ export function Custos({ atual, anterior, origem }: { atual: Base; anterior: Bas
     { nome: 'Custo por visita na página', v: (b) => div(g(b), b.meta?.lpv ?? 0), base: (b) => `${int(b.meta?.lpv ?? 0)} visitas` },
     { nome: 'Custo por quem começou o cadastro', v: (b) => div(g(b), b.comecou ?? 0), base: (b) => `${int(b.comecou ?? 0)} começaram`, nota: origem === 'anuncios' ? 'só quem veio de anúncio' : 'inclui quem chegou sem anúncio' },
     { nome: 'Custo por cadastro', v: (b) => div(g(b), b.meta?.cadastros ?? 0), base: (b) => `${int(b.meta?.cadastros ?? 0)} cadastros, como no Gerenciador` },
-    origem === 'anuncios'
-      ? { nome: 'Custo por cadastro acompanhado', v: (b) => div(g(b), b.banco?.cadastros ?? 0), base: (b) => `${int(b.banco?.cadastros ?? 0)} acompanhados pessoa a pessoa` }
-      : { nome: 'Custo por cadastro do /n', v: (b) => div(g(b), b.banco?.cadastros ?? 0), base: (b) => `${int(b.banco?.cadastros ?? 0)} cadastros, de anúncio ou não` },
+    // 05/11/2026, noite: no "só anúncio" o cadastro é um número só, o do Gerenciador (o item acima)
+    ...(origem === 'anuncios' ? [] : [{ nome: 'Custo por cadastro do /n', v: (b: Base) => div(g(b), b.banco?.cadastros ?? 0), base: (b: Base) => `${int(b.banco?.cadastros ?? 0)} cadastros, de anúncio ou não` }]),
     { nome: 'Custo por inscrição completa', v: (b) => div(g(b), b.banco?.questionario ?? 0), base: (b) => `${int(b.banco?.questionario ?? 0)} com o questionário` },
     { nome: 'Custo por notificação ativada', v: (b) => div(g(b), b.banco?.notificacoes ?? 0), base: (b) => `${int(b.banco?.notificacoes ?? 0)} ativaram` },
     { nome: 'Custo por presença na live', v: (b) => div(g(b), b.banco?.live ?? 0), base: (b) => `${int(b.banco?.live ?? 0)} assistiram` },
@@ -136,9 +137,9 @@ export interface FiltroSalvo { nome: string; regras: Regra[]; atalhos: string[] 
 export interface Contexto { custoCad: number | null; cpc: number | null; convPagina: number | null }
 
 export const ATALHOS: Array<{ id: string; nome: string; dica: string; passa: (l: Linha, c: Contexto) => boolean }> = [
-  { id: 'campeoes', nome: 'Campeões', dica: 'Custo por cadastro 20% abaixo da média, com 3 ou mais cadastros', passa: (l, c) => { const v = METRICA.get('custoCadReal')!.valor(l); return v != null && c.custoCad != null && v <= c.custoCad * 0.8 && (l.real?.cadastros ?? 0) >= 3 } },
-  { id: 'sem-cadastro', nome: 'Gastando sem cadastro', dica: 'Já gastou 1,5 vez o custo médio por cadastro e não trouxe nenhum', passa: (l, c) => (l.real?.cadastros ?? 0) === 0 && l.a.m.gasto >= Math.max(30, (c.custoCad ?? 20) * 1.5) },
-  { id: 'caros', nome: 'Cadastro caro', dica: 'Custo por cadastro 30% acima da média', passa: (l, c) => { const v = METRICA.get('custoCadReal')!.valor(l); return (l.real?.cadastros ?? 0) >= 3 && v != null && c.custoCad != null && v >= c.custoCad * 1.3 } },
+  { id: 'campeoes', nome: 'Campeões', dica: 'Custo por cadastro 20% abaixo da média, com 3 ou mais cadastros', passa: (l, c) => { const v = METRICA.get('custoCadMeta')!.valor(l); return v != null && c.custoCad != null && v <= c.custoCad * 0.8 && l.a.m.cadastros >= 3 } },
+  { id: 'sem-cadastro', nome: 'Gastando sem cadastro', dica: 'Já gastou 1,5 vez o custo médio por cadastro e não trouxe nenhum', passa: (l, c) => l.a.m.cadastros === 0 && l.a.m.gasto >= Math.max(30, (c.custoCad ?? 20) * 1.5) },
+  { id: 'caros', nome: 'Cadastro caro', dica: 'Custo por cadastro 30% acima da média', passa: (l, c) => { const v = METRICA.get('custoCadMeta')!.valor(l); return l.a.m.cadastros >= 3 && v != null && c.custoCad != null && v >= c.custoCad * 1.3 } },
   { id: 'fadiga', nome: 'Público cansado', dica: 'Frequência acima de 2,5', passa: ({ a }) => a.m.frequencia >= 2.5 },
   { id: 'gancho-fraco', nome: 'Gancho fraco', dica: 'Vídeo em que menos de 20% param para ver 3 s', passa: (l) => { const v = METRICA.get('gancho')!.valor(l); return v != null && l.a.m.impressoes >= 500 && v < 20 } },
   { id: 'clique-caro', nome: 'Clique caro', dica: 'CPC 40% acima da média', passa: ({ a }, c) => c.cpc != null && a.m.cpcLink > 0 && a.m.cpcLink >= c.cpc * 1.4 },
@@ -149,8 +150,8 @@ export const ATALHOS: Array<{ id: string; nome: string; dica: string; passa: (l:
 /** O anúncio leva a marcação utm_content={{ad.id}}: só assim os cadastros dele são ligados a ele. */
 export const marcado = (l: Linha) => l.a.criativo.marcacoes == null || /utm_content=\{\{ad\.id\}\}/.test(l.a.criativo.marcacoes)
 export function contexto(linhas: Linha[]): Contexto {
-  // 05/11/2026: as médias com os cadastros únicos (uma pessoa por e-mail), de todos os anúncios
-  const gasto = linhas.reduce((s, l) => s + l.a.m.gasto, 0), cad = linhas.reduce((s, l) => s + (l.real?.cadastros ?? 0), 0)
+  // 05/11/2026, noite: as médias com os Resultados do Gerenciador, de todos os anúncios (espelho do Gerenciador)
+  const gasto = linhas.reduce((s, l) => s + l.a.m.gasto, 0), cad = linhas.reduce((s, l) => s + l.a.m.cadastros, 0)
   const cliques = linhas.reduce((s, l) => s + l.a.m.cliquesLink, 0), lpv = linhas.reduce((s, l) => s + l.a.m.lpv, 0)
   return { custoCad: cad >= 3 ? div(gasto, cad) : null, cpc: div(gasto, cliques), convPagina: lpv >= 50 ? (cad / lpv) * 100 : null }
 }
@@ -161,7 +162,7 @@ export function aplicar(linhas: Linha[], busca: string, atalhos: string[], regra
   return linhas.filter((l) =>
     (!q || l.a.nome.toLowerCase().includes(q) || l.a.criativo.titulo.toLowerCase().includes(q) || l.a.id.includes(q))
     && atalhos.every((id) => ATALHOS.find((x) => x.id === id)?.passa(l, c) ?? true)
-    && regras.every((r) => { const v = METRICA.get(r.metrica)?.valor(l); if (v == null) return false; return r.op === '>' ? v > r.valor : r.op === '<' ? v < r.valor : Math.abs(v - r.valor) < 1e-9 }))
+    && regras.every((r) => { if (!METRICA.has(r.metrica)) return true; const v = METRICA.get(r.metrica)?.valor(l); if (v == null) return false; return r.op === '>' ? v > r.valor : r.op === '<' ? v < r.valor : Math.abs(v - r.valor) < 1e-9 }))
 }
 
 const ler = <T,>(chave: string, padrao: T): T => { try { const v = localStorage.getItem(chave); return v ? JSON.parse(v) as T : padrao } catch { return padrao } }
@@ -179,6 +180,10 @@ export function useColunas(): [string[], (c: string[]) => void] {
     // 05/11/2026: o cadastro único vem primeiro, com o custo dele; o da Meta fica depois, como referência (uma vez por aparelho)
     let jaUnicos = false
     try { jaUnicos = localStorage.getItem(`${CHAVE_COLUNAS}.unicos`) === '1'; localStorage.setItem(`${CHAVE_COLUNAS}.unicos`, '1') } catch { /* segue sem lembrar */ }
+    // 05/11/2026, noite: uma vez por aparelho, as colunas voltam ao padrão espelho do Gerenciador
+    let jaEspelho = false
+    try { jaEspelho = localStorage.getItem(`${CHAVE_COLUNAS}.espelho`) === '1'; localStorage.setItem(`${CHAVE_COLUNAS}.espelho`, '1') } catch { /* segue sem lembrar */ }
+    if (!jaEspelho) { gravar(CHAVE_COLUNAS, COLUNAS_PADRAO); return COLUNAS_PADRAO }
     if (!jaUnicos) {
       const sem = lista.filter((id) => id !== 'cadReal' && id !== 'custoCadReal' && id !== 'custoCadMeta')
       const onde = sem.indexOf('cadMeta')
@@ -187,7 +192,9 @@ export function useColunas(): [string[], (c: string[]) => void] {
     }
     return lista.filter((id) => METRICA.has(id))
   })
-  return [c, (n) => { setC(n); gravar(CHAVE_COLUNAS, n) }]
+  // nunca uma coluna que não existe mais (a de pessoas únicas saiu em 05/11/2026): quebrava a tabela
+  const validas = useMemo(() => c.filter((id) => METRICA.has(id)), [c])
+  return [validas, (n) => { const ok = n.filter((id) => METRICA.has(id)); setC(ok); gravar(CHAVE_COLUNAS, ok) }]
 }
 
 /*
@@ -262,7 +269,7 @@ export function Filtros({ linhas, ctx, busca, setBusca, atalhos, setAtalhos, reg
             )
           })}
           <div className="aa-regras-acoes">
-            <button type="button" onClick={() => setRegras([...regras, { metrica: 'custoCadReal', op: '<', valor: 5 }])}>+ Condição</button>
+            <button type="button" onClick={() => setRegras([...regras, { metrica: 'custoCadMeta', op: '<', valor: 5 }])}>+ Condição</button>
             <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome para guardar este filtro" aria-label="Nome do filtro" />
             <button type="button" className="principal" disabled={!nome.trim() || (!regras.length && !atalhos.length)} onClick={salvar}>Guardar filtro</button>
           </div>
@@ -308,11 +315,12 @@ export function alertas(linhas: Linha[], total: Metricas | null, banco: FunilDoB
     if (agora != null && antes != null && antes > 0 && agora < antes * 0.85) lista.push({ tipo: 'bom', titulo: 'O cadastro ficou mais barato', texto: `${brl(agora)} agora contra ${brl(antes)} no período anterior (−${dec(((antes - agora) / antes) * 100, 0)}%).` })
   }
   for (const l of linhas) {
-    const custo = METRICA.get('custoCadReal')!.valor(l), unicos = l.real?.cadastros ?? 0
-    if (unicos === 0 && l.a.m.gasto >= Math.max(30, (c.custoCad ?? 20) * 1.5) && l.a.status === 'ACTIVE')
-      lista.push({ tipo: 'critico', titulo: `Gastando sem cadastro: ${l.a.nome}`, texto: `${brl(l.a.m.gasto)} investidos e nenhum cadastro único. Considere pausar.` })
-    else if (custo != null && c.custoCad != null && custo <= c.custoCad * 0.7 && unicos >= 5 && linhas.filter((x) => (x.real?.cadastros ?? 0) > 0).length >= 2)
-      lista.push({ tipo: 'bom', titulo: `Campeão: ${l.a.nome}`, texto: `${brl(custo)} por cadastro, ${pc((1 - custo / c.custoCad) * 100, 0)} abaixo da média. Bom candidato para receber mais verba.` })
+    // 05/11/2026, noite: com os Resultados do Gerenciador
+    const custo = METRICA.get('custoCadMeta')!.valor(l), res = l.a.m.cadastros
+    if (res === 0 && l.a.m.gasto >= Math.max(30, (c.custoCad ?? 20) * 1.5) && l.a.status === 'ACTIVE')
+      lista.push({ tipo: 'critico', titulo: `Gastando sem resultado: ${l.a.nome}`, texto: `${brl(l.a.m.gasto)} investidos e nenhum resultado no Gerenciador. Considere pausar.` })
+    else if (custo != null && c.custoCad != null && custo <= c.custoCad * 0.7 && res >= 5 && linhas.filter((x) => x.a.m.cadastros > 0).length >= 2)
+      lista.push({ tipo: 'bom', titulo: `Campeão: ${l.a.nome}`, texto: `${brl(custo)} por resultado, ${pc((1 - custo / c.custoCad) * 100, 0)} abaixo da média. Bom candidato para receber mais verba.` })
     if (l.a.status === 'ACTIVE' && l.a.criativo.marcacoes != null && !/utm_content=\{\{ad\.id\}\}/.test(l.a.criativo.marcacoes))
       lista.push({ tipo: 'atencao', titulo: `Sem marcação: ${l.a.nome}`, texto: 'O link não tem utm_content={{ad.id}}. Os cadastros dele contam (são os da Meta), mas a plataforma não consegue seguir essas pessoas até o depósito.' })
   }
@@ -373,22 +381,20 @@ export function Relatorio({ fechar, periodo, total, banco, linhas, colunas, list
   }, [fechar])
   const g = total?.gasto ?? 0
   const custoDe = (n: number | undefined | null) => (n ? brl(g / n) : '—')
-  const ordenados = [...linhas].filter((l) => (l.real?.cadastros ?? 0) > 0).sort((a, b) => (METRICA.get('custoCadReal')!.valor(a) ?? 1e9) - (METRICA.get('custoCadReal')!.valor(b) ?? 1e9))
-  // 05/11/2026: o cadastro do relatório é o único (uma pessoa por e-mail, dos anúncios); o da Meta vai junto como referência
+  const ordenados = [...linhas].filter((l) => l.a.m.cadastros > 0).sort((a, b) => (METRICA.get('custoCadMeta')!.valor(a) ?? 1e9) - (METRICA.get('custoCadMeta')!.valor(b) ?? 1e9))
+  // 05/11/2026, noite: o relatório espelha o Gerenciador (Resultados e Custo por resultado), sem outra contagem de cadastro
   const cadMeta = total?.cadastros ?? 0
-  const unicos = linhas.reduce((s, l) => s + (l.real?.cadastros ?? 0), 0)
   const linhasDoTexto = [
     `*Relatório de anúncios · GlobalFly /n*`, `Período: ${periodo}`, '',
-    `Investido: ${brl(g)}`, `Impressões: ${int(total?.impressoes ?? 0)} · alcance ${int(total?.alcance ?? 0)}`,
+    `Valor gasto: ${brl(g)}`, `Resultados (Registro concluído): ${int(cadMeta)} · custo por resultado ${custoDe(cadMeta)}`,
+    `Alcance: ${int(total?.alcance ?? 0)} · frequência ${dec(total?.frequencia ?? 0)} · impressões ${int(total?.impressoes ?? 0)}`,
     `Cliques no link: ${int(total?.cliquesLink ?? 0)} (CTR ${pc(total?.ctrLink ?? 0)}) · CPC ${brl(total?.cpcLink ?? 0)}`,
     `Chegaram na página: ${int(total?.lpv ?? 0)} · ${custoDe(total?.lpv)} cada`,
     `Começaram o cadastro: ${int(comecou ?? 0)}`,
-    `Cadastros únicos pelos anúncios: ${int(unicos)} · ${custoDe(unicos)} cada`,
-    `No Gerenciador: ${int(cadMeta)} (conta também quem viu o anúncio e chegou por outro caminho)`,
     `Inscrições completas: ${int(banco?.questionario ?? 0)} · ${custoDe(banco?.questionario)} cada`,
     `Notificações ativadas: ${int(banco?.notificacoes ?? 0)}`,
     `Assistiram à live: ${int(banco?.live ?? 0)} · GF Member: ${int(banco?.liberados ?? 0)}`,
-    ...(ordenados.length ? ['', '*Melhores anúncios (custo por cadastro)*', ...ordenados.slice(0, 3).map((l, i) => `${i + 1}. ${l.a.nome}: ${formatar('brl', METRICA.get('custoCadReal')!.valor(l))} · ${int(l.real?.cadastros ?? 0)} cadastros únicos`)] : []),
+    ...(ordenados.length ? ['', '*Melhores anúncios (custo por resultado)*', ...ordenados.slice(0, 3).map((l, i) => `${i + 1}. ${l.a.nome}: ${formatar('brl', METRICA.get('custoCadMeta')!.valor(l))} · ${int(l.a.m.cadastros)} resultados`)] : []),
     ...(lista.length ? ['', '*Pontos de atenção*', ...lista.filter((a) => a.tipo !== 'bom').slice(0, 5).map((a) => `• ${a.titulo}`)] : []),
   ]
   const texto = linhasDoTexto.join('\n')
@@ -416,9 +422,10 @@ export function Relatorio({ fechar, periodo, total, banco, linhas, colunas, list
         </header>
         <div className="aa-rel-corpo">
           <div className="aa-kpis mini">
-            <div><small>Investido</small><b>{brl(g)}</b></div>
-            <div><small>Cadastros únicos</small><b>{int(unicos)}</b></div>
-            <div><small>Custo por cadastro único</small><b>{custoDe(unicos)}</b></div>
+            <div><small>Valor gasto</small><b>{brl(g)}</b></div>
+            <div><small>Resultados</small><b>{int(cadMeta)}</b></div>
+            <div><small>Custo por resultado</small><b>{custoDe(cadMeta)}</b></div>
+            <div><small>Alcance</small><b>{int(total?.alcance ?? 0)}</b></div>
             <div><small>Inscrições completas</small><b>{int(banco?.questionario ?? 0)}</b></div>
             <div><small>Custo por inscrição</small><b>{custoDe(banco?.questionario)}</b></div>
             <div><small>GF Member</small><b>{int(banco?.liberados ?? 0)}</b></div>
@@ -430,7 +437,7 @@ export function Relatorio({ fechar, periodo, total, banco, linhas, colunas, list
               {/* "passaram": sempre contra uma base do mesmo lugar. Cadastros (Meta) contra quem chegou na página (Meta);
                   inscrições contra os cadastros que a plataforma acompanha pessoa a pessoa */}
               {([['Impressões', total?.impressoes, null, true], ['Cliques no link', total?.cliquesLink, total?.impressoes, true], ['Chegaram na página', total?.lpv, total?.cliquesLink, true],
-                ['Começaram o cadastro', comecou, origem === 'anuncios' ? total?.lpv : null, origem === 'anuncios'], ['Cadastros na Meta', cadMeta, total?.lpv, true], ['Cadastros únicos', unicos, null, true],
+                ['Começaram o cadastro', comecou, origem === 'anuncios' ? total?.lpv : null, origem === 'anuncios'], ['Resultados (Gerenciador)', cadMeta, total?.lpv, true],
                 ['Inscrições completas', banco?.questionario, banco?.cadastros, origem === 'anuncios'], ['Notificações ativadas', banco?.notificacoes, banco?.questionario, origem === 'anuncios'],
                 ['Assistiram à live', banco?.live, banco?.notificacoes, origem === 'anuncios'], ['GF Member', banco?.liberados, banco?.live, origem === 'anuncios']] as Array<[string, number | null | undefined, number | null | undefined, boolean]>).map(([nome, n, base, comCusto]) => (
                 <tr key={nome}><td>{nome}</td><td className="num">{int(n ?? 0)}</td><td className="num">{nome === 'Impressões' ? `${brl(total?.cpm ?? 0)} / mil` : comCusto ? custoDe(n) : '—'}</td><td className="num">{base ? pc(((n ?? 0) / base) * 100, 1) : '—'}</td></tr>
