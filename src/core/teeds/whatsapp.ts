@@ -45,7 +45,7 @@ export interface MidiaWpp { caminho?: string | null; mime?: string; nome?: strin
 export interface MensagemWpp {
   id: string; contatoId: string; wamid: string | null; direcao: 'entrada' | 'saida' | 'nota'; tipo: TipoMsg
   texto: string | null; midia: MidiaWpp | null; modelo: { nome: string; idioma: string } | null; citando: string | null
-  reacao: string | null; reacaoEquipe: string | null; status: StatusMsg; erro: string | null; autor: string | null; criadoEm: string
+  reacao: string | null; reacaoEquipe: string | null; favorita?: boolean; status: StatusMsg; erro: string | null; autor: string | null; criadoEm: string
   /** só na tela: ainda indo, ou não foi */
   enviando?: boolean; falhouAqui?: string
 }
@@ -59,8 +59,13 @@ export interface PessoaDaEquipe { id: string; nome: string }
 export interface Parceiro { codigo: string; nome: string }
 export interface DadosDeConexao { phoneNumberId: string; wabaId: string; appId: string; token: string; appSecret: string; parceiro: string | null }
 
+/** Alguém da plataforma (cliente ou lead) para começar uma conversa. */
+export interface PessoaDaPlataforma { origem: 'cliente' | 'lead'; id: string; nome: string | null; email: string | null; telefone: string; parceiro: string | null; subplano: string | null; contatoId: string | null; criadoEm: string | null }
+/** Uma mensagem achada na busca da lista. */
+export interface AchadoWpp { id: string; contatoId: string; texto: string; direcao: MensagemWpp['direcao']; criadoEm: string }
+
 /** Tudo o que a conversa já trocou de arquivo, link e nota (para os Dados do contato). */
-export interface ArquivosDoContato { midias: MensagemWpp[]; docs: MensagemWpp[]; links: MensagemWpp[]; notas: MensagemWpp[] }
+export interface ArquivosDoContato { midias: MensagemWpp[]; docs: MensagemWpp[]; links: MensagemWpp[]; notas: MensagemWpp[]; favoritas: MensagemWpp[] }
 
 export type MudancaWpp = { tipo: 'contato'; item: ContatoWpp } | { tipo: 'mensagem'; item: MensagemWpp; nova: boolean }
 
@@ -87,6 +92,11 @@ export interface WhatsAppApi {
   modelos(): Promise<ModeloWpp[]>
   ficha(contatoId: string): Promise<FichaWpp | null>
   arquivos(contatoId: string): Promise<ArquivosDoContato>
+  buscarPessoas(q: string): Promise<PessoaDaPlataforma[]>
+  buscarMensagens(q: string): Promise<AchadoWpp[]>
+  favoritar(mensagemId: string, sim: boolean): Promise<void>
+  /** A conversa inteira, da mais velha para a mais nova (para exportar). */
+  todasMensagens(contatoId: string): Promise<MensagemWpp[]>
   equipe(): Promise<PessoaDaEquipe[]>
   parceiros(): Promise<Parceiro[]>
   abrirArquivo(m: MidiaWpp): Promise<string>
@@ -161,7 +171,7 @@ export const daContato = (l: any): ContatoWpp => ({
 })
 export const daMensagem = (l: any): MensagemWpp => ({
   id: l.id, contatoId: l.contato_id, wamid: l.wamid ?? null, direcao: l.direcao, tipo: l.tipo ?? 'texto', texto: l.texto ?? null,
-  midia: l.midia ?? null, modelo: l.modelo ?? null, citando: l.citando ?? null, reacao: l.reacao ?? null, reacaoEquipe: l.reacao_equipe ?? null, status: l.status ?? 'pendente',
+  midia: l.midia ?? null, modelo: l.modelo ?? null, citando: l.citando ?? null, reacao: l.reacao ?? null, reacaoEquipe: l.reacao_equipe ?? null, favorita: !!l.favorita, status: l.status ?? 'pendente',
   erro: l.erro ?? null, autor: l.autor ?? null, criadoEm: l.criado_em,
 })
 const daFicha = (j: any): FichaWpp | null => j ? ({
@@ -262,15 +272,31 @@ export function whatsappDoBanco(sessao: SessaoTeeds, marca: string): WhatsAppApi
       return (l ?? []).map((m) => ({ nome: m.nome, idioma: m.idioma, categoria: m.categoria ?? null, situacao: m.situacao ?? null, componentes: m.componentes ?? [] }))
     },
     async ficha(contatoId) { return daFicha(await rpc<any>('whatsapp_ficha', { p_contato: contatoId })) },
+    async buscarPessoas(q) {
+      const l = await rpc<any[]>('whatsapp_buscar_pessoas', { p_marca: marca, p_q: q }).catch(() => [])
+      return (l ?? []).map((x) => ({ origem: x.origem, id: x.id, nome: x.nome ?? null, email: x.email ?? null, telefone: x.telefone, parceiro: x.parceiro ?? null, subplano: x.subplano ?? null, contatoId: x.contato_id ?? null, criadoEm: x.criado_em ?? null }))
+    },
+    async buscarMensagens(q) {
+      const t = q.trim().replace(/[*,()]/g, ' ')
+      if (t.length < 3) return []
+      const l = await rest<any[]>(`/whatsapp_mensagens?marca=eq.${marca}&texto=ilike.*${encodeURIComponent(t)}*&select=id,contato_id,texto,direcao,criado_em&order=criado_em.desc&limit=30`).catch(() => [])
+      return (l ?? []).map((m) => ({ id: m.id, contatoId: m.contato_id, texto: m.texto ?? '', direcao: m.direcao, criadoEm: m.criado_em }))
+    },
+    async favoritar(mensagemId, sim) { await rpc('whatsapp_favoritar', { p_mensagem: mensagemId, p_sim: sim }) },
+    async todasMensagens(contatoId) {
+      const l = await rest<any[]>(`/whatsapp_mensagens?contato_id=eq.${contatoId}&select=*&order=criado_em.asc&limit=5000`)
+      return (l ?? []).map(daMensagem)
+    },
     async arquivos(contatoId) {
       const base = `/whatsapp_mensagens?contato_id=eq.${contatoId}&select=*&order=criado_em.desc`
-      const [midias, docs, links, notas] = await Promise.all([
+      const [midias, docs, links, notas, favoritas] = await Promise.all([
         rest<any[]>(`${base}&tipo=in.(imagem,video,figurinha)&limit=300`),
         rest<any[]>(`${base}&tipo=in.(documento,audio)&limit=200`),
         rest<any[]>(`${base}&direcao=in.(entrada,saida)&texto=ilike.*http*&limit=200`),
         rest<any[]>(`${base}&direcao=eq.nota&limit=100`),
+        rest<any[]>(`${base}&favorita=eq.true&limit=100`),
       ])
-      return { midias: (midias ?? []).map(daMensagem), docs: (docs ?? []).map(daMensagem), links: (links ?? []).map(daMensagem), notas: (notas ?? []).map(daMensagem) }
+      return { midias: (midias ?? []).map(daMensagem), docs: (docs ?? []).map(daMensagem), links: (links ?? []).map(daMensagem), notas: (notas ?? []).map(daMensagem), favoritas: (favoritas ?? []).map(daMensagem) }
     },
     async equipe() {
       const l = await rpc<any[]>('equipe_contatos', { p_marca: marca }).catch(() => [])
@@ -464,8 +490,27 @@ export function whatsappDeExemplo(base: Partial<EstadoWpp> = {}, euId = 'eu'): W
         docs: daqui.filter((m) => m.tipo === 'documento' || m.tipo === 'audio'),
         links: daqui.filter((m) => m.direcao !== 'nota' && /https?:\/\//.test(m.texto ?? '')),
         notas: daqui.filter((m) => m.direcao === 'nota'),
+        favoritas: daqui.filter((m) => m.favorita),
       }
     },
+    async buscarPessoas(q) {
+      await espera(180)
+      const pessoas: PessoaDaPlataforma[] = [
+        ...contatos.filter((c) => c.userId).map((c) => ({ origem: 'cliente' as const, id: c.userId!, nome: fichas[c.id]?.cliente?.nome ?? c.nome, email: fichas[c.id]?.cliente?.email ?? null, telefone: c.waId, parceiro: 'n', subplano: fichas[c.id]?.cliente?.subplano ?? 'gold', contatoId: c.id, criadoEm: c.criadoEm })),
+        { origem: 'cliente', id: 'u9', nome: 'Beatriz Lima', email: 'bia.lima@exemplo.com', telefone: '(41) 99876-1122', parceiro: 'n', subplano: 'gold', contatoId: null, criadoEm: em(26 * h) },
+        { origem: 'cliente', id: 'u10', nome: 'Diego Ferraz', email: 'diego.ferraz@exemplo.com', telefone: '(62) 98111-4455', parceiro: 'n', subplano: 'black', contatoId: null, criadoEm: em(3 * 24 * h) },
+        { origem: 'lead', id: 'l11', nome: 'Larissa Souza', email: 'larissa.s@exemplo.com', telefone: '(85) 99700-3322', parceiro: 'n', subplano: null, contatoId: null, criadoEm: em(5 * h) },
+        { origem: 'lead', id: 'l12', nome: 'Thiago Martins', email: 'thiago.m@exemplo.com', telefone: '(51) 99654-7788', parceiro: 'n', subplano: null, contatoId: null, criadoEm: em(9 * h) },
+      ]
+      const t = q.trim().toLowerCase(), d = q.replace(/\D/g, '')
+      return pessoas.filter((p) => !t || (p.nome ?? '').toLowerCase().includes(t) || (p.email ?? '').toLowerCase().includes(t) || (d.length >= 3 && p.telefone.replace(/\D/g, '').includes(d)))
+    },
+    async buscarMensagens(q) {
+      const t = q.trim().toLowerCase(); if (t.length < 3) return []
+      return mensagens.filter((m) => (m.texto ?? '').toLowerCase().includes(t)).slice(-30).reverse().map((m) => ({ id: m.id, contatoId: m.contatoId, texto: m.texto ?? '', direcao: m.direcao, criadoEm: m.criadoEm }))
+    },
+    async favoritar(mensagemId, sim) { const m = mensagens.find((x) => x.id === mensagemId); if (!m) return; m.favorita = sim; avisar({ tipo: 'mensagem', item: { ...m }, nova: false }) },
+    async todasMensagens(contatoId) { return mensagens.filter((m) => m.contatoId === contatoId).map((m) => ({ ...m })) },
     async equipe() { return [{ id: euId, nome: 'Você' }, { id: 'naor', nome: 'Naor' }, { id: 'saymonn', nome: 'Saymonn' }] },
     async parceiros() { return [{ codigo: 'n', nome: 'Naor' }, { codigo: 'v', nome: 'Victor' }, { codigo: 'd', nome: 'Douglas' }] },
     async abrirArquivo(m) { if (m.exemplo && m.exemplo !== 'audio') return m.exemplo; throw new Error('exemplo') },

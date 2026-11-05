@@ -336,6 +336,16 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
     const t = window.setInterval(() => { if (!document.hidden) ver() }, 30_000)
     return () => { vivo = false; window.clearInterval(t) }
   }, [marcaFoco, naRede]) // eslint-disable-line react-hooks/exhaustive-deps
+  // "Conversar no WhatsApp" na ficha do cliente (05/11/2026): fecha a ficha e abre a conversa
+  const [pedidoWpp, setPedidoWpp] = useState<{ numero: string; nome: string; vez: number } | null>(null)
+  useEffect(() => {
+    const f = (e: Event) => {
+      const d = (e as CustomEvent<{ numero: string; nome: string }>).detail
+      if (!d?.numero) return
+      setCliente(null); setAba('whatsapp'); setPedidoWpp({ numero: d.numero, nome: d.nome, vez: Date.now() })
+    }
+    window.addEventListener('whatsapp:conversar', f); return () => window.removeEventListener('whatsapp:conversar', f)
+  }, [])
   // conversas do WhatsApp esperando resposta (05/11/2026): o selo verde no menu, como no aplicativo
   const [filaWhatsApp, setFilaWhatsApp] = useState(0)
   useEffect(() => {
@@ -499,7 +509,8 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
       {aba === 'resultados' && <RelatorioClientes key={chaveDoFoco} sessao={sessao} />}
       {aba === 'movimentacoes' && <Movimentacoes key={chaveDoFoco} sessao={sessao} />}
       {aba === 'anuncios' && souGeral && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminAnuncios sessao={sessao} parceiroDoTopo={parceiroFoco} aoTrocarConta={aoTrocarContaAnuncio} seletorNoTopo={parceirosDoFoco.some((p) => contaAnuncio?.codigos.includes(p.codigo))} atualizarPedido={pedidoAnuncios} aoMudarCarregando={setCarregandoAnuncios} /></Suspense>}
-      {aba === 'whatsapp' && marcaFoco === 'globalfly' && !naRede && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><CentralWhatsApp key={chaveDoFoco} sessao={sessao} marca={marcaFoco} /></Suspense>}
+      {aba === 'whatsapp' && marcaFoco === 'globalfly' && !naRede && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><CentralWhatsApp key={chaveDoFoco} sessao={sessao} marca={marcaFoco} pedido={pedidoWpp}
+        onAbrirCliente={(id) => { void clientesPorId(sessao, [id], marcaFoco).then((l) => { if (l[0]) abrirCliente(l[0]) }) }} /></Suspense>}
       {aba === 'notificacoes' && souGeral && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminNotificacoes sessao={sessao} /></Suspense>}
       {aba === 'lancamento' && souGeral && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminLancamento sessao={sessao} /></Suspense>}
       {aba === 'parceiros' && !naRede && souGeral && <AdminParceiros key={chaveDoFoco} sessao={sessao} marca={marcaFoco} />}

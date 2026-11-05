@@ -209,7 +209,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
             <h4>Quem é</h4>
             <dl className="fc-dados">
               <div><dt>E-mail</dt><dd>{c.email || '—'}</dd></div>
-              <div><dt>Telefone</dt><dd>{c.telefone || '—'}</dd></div>
+              <div><dt>Telefone</dt><dd>{c.telefone || '—'}{c.telefone && MARCA.id === 'globalfly' && <button type="button" className="fc-whatsapp" title="Abrir a conversa no WhatsApp oficial" onClick={() => window.dispatchEvent(new CustomEvent('whatsapp:conversar', { detail: { numero: c.telefone, nome: c.nome ?? '' } }))}>Conversar no WhatsApp</button>}</dd></div>
               <div><dt>CPF</dt><dd>{c.cpf || '—'}</dd></div>
               <div><dt>Situação</dt><dd>{rotulo(c.situacao)}</dd></div>
               <div><dt>Cadastro</dt><dd>{soData(c.criadoEm)} <em>({haQuantoTempo(c.criadoEm)})</em></dd></div>
