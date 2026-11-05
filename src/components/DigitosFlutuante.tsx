@@ -79,6 +79,31 @@ function forcaDoDesvio(pct: number, total: number): number {
 const ACENDE = 0.75
 const SATURA = 2
 
+/*
+  05/11/2026 (vídeo do Naor: "o cara tá vendo o dígito aqui, mas se ele quer ativar a I.A., o dígito
+  some da frente"): a janela de ligar a I.A. é um <dialog> modal, que sobe para a camada de cima do
+  navegador e deixa o resto da página por baixo e sem clique. Enquanto ela está aberta, o painel passa
+  a ser desenhado DENTRO dela: continua por cima, arrastável, e a pessoa escolhe a I.A. olhando os
+  dígitos. Fechou a janela, ele volta para o <body>. Posição e tamanho ficam guardados, então a troca
+  não mexe em nada. No celular o painel é gaveta e cobriria os botões da janela: lá fica como era.
+*/
+const JANELA_DA_IA = 'dialog.robot-launch-dialog[open]'
+function useOndeDesenhar(movel: boolean): HTMLElement {
+  const achar = () => (movel ? null : document.querySelector<HTMLElement>(JANELA_DA_IA)) ?? document.body
+  const [alvo, setAlvo] = useState<HTMLElement>(achar)
+  useEffect(() => {
+    const ver = () => setAlvo(achar())
+    ver()
+    // as janelas entram como filhas diretas do <body> (portal) e abrem com o atributo open
+    const filhos = new MutationObserver(ver)
+    filhos.observe(document.body, { childList: true })
+    const abertas = new MutationObserver(ver)
+    abertas.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['open'] })
+    return () => { filhos.disconnect(); abertas.disconnect() }
+  }, [movel]) // eslint-disable-line react-hooks/exhaustive-deps
+  return alvo
+}
+
 export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
   const [janela, setJanela] = useState<number>(() => {
     const j = ler<number>(CHAVE_JANELA, 25)
@@ -130,6 +155,7 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
     mq.addEventListener('change', ouvir)
     return () => mq.removeEventListener('change', ouvir)
   }, [])
+  const alvo = useOndeDesenhar(movel)
   const caixa = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ x: number; y: number }>(() => {
     const padrao = { x: Math.max(12, naPagina(window.innerWidth) - largura - 24), y: 120 }
@@ -295,5 +321,5 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
       )}
     </div>
   )
-  return createPortal(painel, document.body)
+  return createPortal(painel, alvo)
 }
