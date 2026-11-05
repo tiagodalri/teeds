@@ -79,7 +79,11 @@ const ads = [
   { id: '120210000000000001', nome: 'Vídeo 01 · Naor na mesa · “O mercado mudou”', m: m(412.3, 48210, 1190, 902, 141, 17350, 5210), tipo: 'video' as const, rank: 'acima' as const },
   { id: '120210000000000002', nome: 'Vídeo 02 · Bastidores da I.A. operando', m: m(296.8, 39920, 802, 610, 88, 12780, 3110), tipo: 'video' as const, rank: 'media' as const },
   { id: '120210000000000003', nome: 'Imagem · Convite da live 09/11', m: m(183.1, 30110, 402, 288, 31, 0, 0), tipo: 'imagem' as const, rank: 'abaixo35' as const },
+  // 05/11/2026: um em análise e um reprovado, para as abas de situação terem o que mostrar
+  { id: '120210000000000004', nome: 'Vídeo 03 · Cópia Android (em análise)', m: m(0, 0, 0, 0, 0, 0, 0), tipo: 'video' as const, rank: 'media' as const },
+  { id: '120210000000000005', nome: 'Vídeo 04 · “Só compartilha se lucrar”', m: m(13.5, 2100, 30, 22, 1, 800, 200), tipo: 'video' as const, rank: 'abaixo20' as const },
 ]
+const SITUACAO_DO_LAB = ['ACTIVE', 'ACTIVE', 'PAUSED', 'PENDING_REVIEW', 'DISAPPROVED']
 const miniatura = (cor: string, texto: string) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0B2546"/><stop offset="1" stop-color="${cor}"/></linearGradient></defs><rect width="160" height="160" fill="url(#g)"/><text x="80" y="92" text-anchor="middle" font-family="Arial" font-weight="700" font-size="22" fill="#F3F0E9">${texto}</text></svg>`)}`
 const total = somar(ads.map((a) => a.m))
 
@@ -96,8 +100,8 @@ function painel(de: string, ate: string): PainelDaMeta {
     campanhas: [{ id: 'c1', nome: 'GF | Live 09/11 | Cadastros', status: 'ACTIVE', objetivo: 'OUTCOME_LEADS', orcDia: 0, orcTotal: 0, inicio: '2026-11-02', fim: null, lance: 'LOWEST_COST_WITHOUT_CAP', m: total }],
     conjuntos: [{ id: 's1', nome: 'Brasil · 25–55 · aberto', status: 'ACTIVE', campanhaId: 'c1', orcDia: 20, orcTotal: 0, otimizacao: 'OFFSITE_CONVERSIONS', publico: '25–55 anos · Brasil · público Advantage+', m: total }],
     anuncios: ads.map((a, i) => ({
-      id: a.id, nome: a.nome, status: i === 2 ? 'PAUSED' : 'ACTIVE', campanhaId: 'c1', conjuntoId: 's1', criadoEm: '2026-11-02T12:00:00Z',
-      criativo: { miniatura: miniatura(['#B8862F', '#3a6fd8', '#7a4fd0'][i], ['V01', 'V02', 'IMG'][i]), imagem: null, titulo: 'Live gratuita 09/11, às 20h', texto: 'A I.A. que opera com você. Inscreva-se e assista à live de lançamento da GlobalFly.', tipo: a.tipo, cta: 'SIGN_UP', marcacoes: i === 2 ? '' : 'utm_source=meta&utm_medium=pago&utm_content={{ad.id}}' },
+      id: a.id, nome: a.nome, status: SITUACAO_DO_LAB[i] ?? 'ACTIVE', campanhaId: 'c1', conjuntoId: 's1', criadoEm: '2026-11-02T12:00:00Z',
+      criativo: { miniatura: miniatura(['#B8862F', '#3a6fd8', '#7a4fd0', '#2F8F72', '#c0563f'][i % 5], ['V01', 'V02', 'IMG', 'V03', 'V04'][i % 5]), imagem: null, titulo: 'Live gratuita 09/11, às 20h', texto: 'A I.A. que opera com você. Inscreva-se e assista à live de lançamento da GlobalFly.', tipo: a.tipo, cta: 'SIGN_UP', marcacoes: i === 2 ? '' : 'utm_source=meta&utm_medium=pago&utm_content={{ad.id}}' },
       ranking: { qualidade: a.rank, engajamento: a.rank, conversao: i === 0 ? 'acima' : 'media' }, m: a.m,
     })),
     quebras: {

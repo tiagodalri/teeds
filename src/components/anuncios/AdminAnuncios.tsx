@@ -10,11 +10,11 @@
  * (teeds_meta_funil), que a Meta não enxerga. O cadastro de cada anúncio é ligado a ele pela
  * marcação utm_content={{ad.id}} no link do anúncio.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { MARCA } from '../../marca'
 import { API_DO_BANCO, CONTAS_DE_ANUNCIO, type ApiAnuncios, type Descoberta, type Anuncio, type Campanha, type Conjunto, type DetalheDoAnuncio, type FunilDoBanco, type Horarios as DadosDeHorario, type Metricas, type PainelDaMeta, type Quebra, type RespostaDaMeta } from '../../core/teeds/anuncios'
-import { Alertas, Custos, Filtros, Horarios, METRICA, Relatorio, alertas, aplicar, formatar, somarLinhas, useColunas, type Base, type Linha, type Regra } from './Indicadores'
+import { Alertas, Custos, Filtros, Horarios, METRICA, Relatorio, alertas, aplicar, contexto, formatar, somarLinhas, useColunas, type Base, type Linha, type Regra } from './Indicadores'
 import { Funil3D, type EtapaDoFunil } from './Funil3D'
 import { EstudioDeAnuncios } from './estudio/Estudio'
 import { DoAnuncioAoDinheiro, TabelaDaJornada, useJornada } from './JornadaCompleta'
@@ -74,6 +74,31 @@ const STATUS: Record<string, [string, string]> = {
   PREAPPROVED: ['Pré-aprovado', 'aviso'], PENDING_BILLING_INFO: ['Falta pagamento', 'erro'], ARCHIVED: ['Arquivado', 'pausa'], DELETED: ['Apagado', 'pausa'],
 }
 const Status = ({ s }: { s: string }) => { const [nome, tipo] = STATUS[s] ?? [s.toLowerCase().replace(/_/g, ' '), 'pausa']; return <span className={`aa-status ${tipo}`}>{nome}</span> }
+/*
+  A situação de cada anúncio (05/11/2026, Tiago: "não consigo filtrar por ativos, pausados, reprovados").
+  Os mesmos estados do Gerenciador, agrupados como ele mostra. "Todos" fica sempre à esquerda.
+*/
+const SITUACOES = [
+  { id: 'todos', nome: 'Todos', passa: () => true },
+  { id: 'ativos', nome: 'No ar', passa: (s: string) => s === 'ACTIVE' },
+  { id: 'analise', nome: 'Em análise', passa: (s: string) => /^(IN_PROCESS|PENDING_REVIEW|PREAPPROVED)$/.test(s) },
+  { id: 'pausados', nome: 'Pausados', passa: (s: string) => /PAUSED$|^(ARCHIVED|DELETED)$/.test(s) },
+  { id: 'problema', nome: 'Reprovados ou com problema', passa: (s: string) => /^(DISAPPROVED|WITH_ISSUES|PENDING_BILLING_INFO)$/.test(s) },
+] as const
+type IdSituacao = (typeof SITUACOES)[number]['id']
+const situacaoGuardada = (): IdSituacao => { try { const v = localStorage.getItem('aa-situacao'); return SITUACOES.some((x) => x.id === v) ? v as IdSituacao : 'todos' } catch { return 'todos' } }
+
+/*
+  "Atualizado há X s" com o relógio só dele (05/11/2026, Tiago: "lentidão"): antes o relógio de 1 s vivia na
+  página e redesenhava tudo, tabelas e gráficos, a cada segundo. Agora só este rótulo conta os segundos.
+*/
+function Atualizado({ desde }: { desde: string | null }) {
+  const [, tique] = useState(0)
+  useEffect(() => { const t = setInterval(() => { if (!document.hidden) tique((n) => n + 1) }, 1000); return () => clearInterval(t) }, [])
+  const s = desde ? Math.max(0, Math.round((Date.now() - Date.parse(desde)) / 1000)) : null
+  return <span className="aa-vivo"><i />{s == null ? 'Conectando…' : s < 5 ? 'Atualizado agora' : `Atualizado há ${s} s`}</span>
+}
+
 const RANK: Record<string, [string, string]> = { acima: ['Acima da média', 'ok'], media: ['Na média', 'media'], abaixo35: ['Abaixo (35% piores)', 'aviso'], abaixo20: ['Abaixo (20% piores)', 'erro'], abaixo10: ['Abaixo (10% piores)', 'erro'] }
 const OTIMIZA: Record<string, string> = { OFFSITE_CONVERSIONS: 'Conversões no site', LANDING_PAGE_VIEWS: 'Visualizações da página', LINK_CLICKS: 'Cliques no link', REACH: 'Alcance', IMPRESSIONS: 'Impressões', THRUPLAY: 'Visualizações de vídeo', LEAD_GENERATION: 'Cadastros no Facebook', VALUE: 'Valor' }
 const OBJETIVO: Record<string, string> = { OUTCOME_LEADS: 'Cadastros', OUTCOME_SALES: 'Vendas', OUTCOME_TRAFFIC: 'Tráfego', OUTCOME_ENGAGEMENT: 'Engajamento', OUTCOME_AWARENESS: 'Reconhecimento', OUTCOME_APP_PROMOTION: 'App' }
@@ -220,6 +245,29 @@ function OrcamentoDoConjunto({ conjunto, campanha, anuncios, valorNovo, moeda, s
   )
 }
 
+/*
+  Uma linha da tabela (05/11/2026, "lentidão"): só redesenha quando os números dela mudam. Antes, cada tecla na
+  busca, cada abrir de painel e cada leitura do banco redesenhavam as 22 linhas com as 15 colunas.
+*/
+const LinhaDoAnuncio = memo(function LinhaDoAnuncio({ l, colunas, ordemCol, conjunto, campanha, anuncios, valorNovo, moeda, abrir, salvar }: {
+  l: Linha; colunas: string[]; ordemCol: string; conjunto: Conjunto | null; campanha: Campanha | null; anuncios: number; valorNovo?: number; moeda: string
+  abrir: (a: Anuncio) => void; salvar: (conjuntoId: string, v: number) => Promise<void>
+}) {
+  return (
+    <tr onClick={() => abrir(l.a)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') abrir(l.a) }}>
+      <td className="aa-ad">
+        {l.a.criativo.miniatura ? <img src={l.a.criativo.miniatura} alt="" loading="lazy" decoding="async" width={48} height={48} /> : <span className="aa-sem-img" />}
+        <div><b>{l.a.nome}</b><small>{campanha?.nome ?? ''}</small><Status s={l.a.status} /></div>
+      </td>
+      <td className="num aa-orc-cel" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        <OrcamentoDoConjunto conjunto={conjunto} campanha={campanha} anuncios={anuncios} valorNovo={valorNovo} moeda={moeda} salvar={(v) => salvar(l.a.conjuntoId, v)} />
+      </td>
+      {colunas.map((id) => { const m = METRICA.get(id)!; return <td key={id} className={`num ${ordemCol === id ? 'aa-ordem' : ''}`}>{formatar(m.formato, m.valor(l))}</td> })}
+      <td>{l.a.ranking.qualidade ? <span className={`aa-rank ${RANK[l.a.ranking.qualidade]?.[1]}`}>{RANK[l.a.ranking.qualidade]?.[0]}</span> : <small className="aa-mudo">Poucos dados</small>}</td>
+    </tr>
+  )
+})
+
 /** `intervalo`: de quanto em quanto tempo o nosso banco é lido (o laboratório acelera). */
 /**
  * `parceiroDoTopo` / `aoTrocarConta` (04/11/2026, Tiago: "esse filtro não está respondendo"): no painel a conta
@@ -253,6 +301,10 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const [ordem, setOrdem] = useState<{ col: string; desc: boolean }>({ col: 'gasto', desc: true })
   const [conjunto, setConjunto] = useState('')
   const [busca, setBusca] = useState('')
+  // a busca filtra a tabela um instante depois da tecla: digitar não trava
+  const buscaAdiada = useDeferredValue(busca)
+  const [situacao, setSituacaoAgora] = useState<IdSituacao>(situacaoGuardada)
+  const setSituacao = (v: IdSituacao) => { setSituacaoAgora(v); try { localStorage.setItem('aa-situacao', v) } catch { /* só não lembra */ } }
   const [atalhos, setAtalhos] = useState<string[]>([])
   const [regras, setRegras] = useState<Regra[]>([])
   const [colunas, setColunas] = useColunas()
@@ -271,7 +323,6 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const [pick, setPick] = useState<{ conta: string; pixel: string; pagina: string }>({ conta: '', pixel: '', pagina: '' })
   const [escolhendo, setEscolhendo] = useState<{ indo?: boolean; erro?: string }>({})
   const [banco, setBanco] = useState<string | null>(null)
-  const [agora, setAgora] = useState(Date.now())
   const [aba, setAbaAgora] = useState<IdAba>(abaGuardada)
   const [pedidoEstudio, setPedidoEstudio] = useState<{ tipo: 'novo' | 'teste'; n: number } | null>(null)
   const setAba = (a: IdAba) => { setAbaAgora(a); try { localStorage.setItem('aa-aba', a) } catch { /* sem memória neste aparelho */ } }
@@ -331,8 +382,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
       const pedido = `${v.parceiro}|${v.de}|${v.ate}`
       api.resumo(sessao, v.parceiro, v.de, v.ate).then((r) => { if (vigente.current === pedido && 'total' in r) setAoVivo(r) }).catch(() => { /* idem */ })
     }, 60_000)
-    const t3 = setInterval(() => setAgora(Date.now()), 1000)
-    return () => { clearInterval(t1); clearInterval(t2); clearInterval(t3) }
+    return () => { clearInterval(t1); clearInterval(t2) }
   }, [sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const painel = meta && 'total' in meta ? meta as PainelDaMeta : null
@@ -398,11 +448,23 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const linhas: Linha[] = useMemo(() => (painel?.anuncios ?? [])
     .filter((a) => (!campanha || a.campanhaId === campanha) && (!conjunto || a.conjuntoId === conjunto))
     .map((a) => ({ a, real: nossoPorAnuncio.get(a.id) })), [painel, campanha, conjunto, nossoPorAnuncio])
+  // as médias dos atalhos são as de todos os anúncios; a situação só escolhe quais aparecem
+  const ctxDosAtalhos = useMemo(() => contexto(linhas), [linhas])
+  const contagemDaSituacao = useMemo(() => new Map(SITUACOES.map((x) => [x.id, linhas.filter((l) => x.passa(l.a.status)).length])), [linhas])
+  const regraDaSituacao = SITUACOES.find((x) => x.id === situacao) ?? SITUACOES[0]
+  const linhasNaSituacao = useMemo(() => linhas.filter((l) => regraDaSituacao.passa(l.a.status)), [linhas, regraDaSituacao])
   const filtradas = useMemo(() => {
     const m = METRICA.get(ordem.col)
     const v = (l: Linha) => { const x = m?.valor(l); return x == null || !Number.isFinite(x) ? (ordem.desc ? -Infinity : Infinity) : x }
-    return aplicar(linhas, busca, atalhos, regras).sort((x, y) => (ordem.desc ? v(y) - v(x) : v(x) - v(y)))
-  }, [linhas, busca, atalhos, regras, ordem])
+    return aplicar(linhasNaSituacao, buscaAdiada, atalhos, regras, ctxDosAtalhos).sort((x, y) => (ordem.desc ? v(y) - v(x) : v(x) - v(y)))
+  }, [linhasNaSituacao, buscaAdiada, atalhos, regras, ordem, ctxDosAtalhos])
+  const conjuntoPorId = useMemo(() => new Map((painel?.conjuntos ?? []).map((c) => [c.id, c])), [painel])
+  const campanhaPorId = useMemo(() => new Map((painel?.campanhas ?? []).map((c) => [c.id, c])), [painel])
+  const abrirAnuncio = useCallback((a: Anuncio) => setAberto(a), [])
+  const salvarOrcamento = useCallback(async (conjuntoId: string, v: number) => {
+    await apiEstudio.orcamento(sessao, parceiro, conjuntoId, v)
+    setOrcNovo((o) => ({ ...o, [conjuntoId]: v }))
+  }, [apiEstudio, sessao, parceiro])
 
   // o orçamento por dia (04/11/2026, Tiago: "uma coluna mostrando quanto tá o investimento diário de cada anúncio, com o lápis"):
   // é do conjunto (os anúncios do mesmo conjunto dividem); o que acabou de ser salvo aparece na hora, antes da Meta reler
@@ -492,7 +554,6 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   }
   const semChave = meta != null && 'semChave' in meta
   const chaveRuim = (meta != null && 'chaveInvalida' in meta) || (!!falhaMeta && !(meta && 'total' in meta))
-  const atualizado = banco ? Math.max(0, Math.round((agora - Date.parse(banco)) / 1000)) : null
   const campanhaDe = (id: string) => painel?.campanhas.find((c) => c.id === id)?.nome ?? ''
   const cabecalho = (id: string) => {
     const m = METRICA.get(id)!
@@ -687,7 +748,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
           <section className="aa-cartao aa-funil">
             <header>
               <div><span className="rot">Ao vivo</span><h3>Funil do lançamento</h3></div>
-              <span className="aa-vivo"><i />{atualizado == null ? 'Conectando…' : atualizado < 5 ? 'Atualizado agora' : `Atualizado há ${atualizado} s`}</span>
+              <Atualizado desde={banco} />
             </header>
             <Funil3D etapas={etapas} mostrarCusto={comCusto} />
             <p className="aa-nota">{origem === 'anuncios'
@@ -758,37 +819,37 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
           <section className="aa-cartao">
             <header>
               <div><span className="rot">{int(filtradas.length)} de {int(linhas.length)} {linhas.length === 1 ? 'anúncio' : 'anúncios'} · clique em um para ver tudo dele</span><h3>Cada anúncio</h3></div>
-              <div className="aa-selects">
-                <select value={campanha} onChange={(e) => { setCampanha(e.target.value); setConjunto('') }} aria-label="Campanha">
+            </header>
+            <div className="aa-situacao" role="tablist" aria-label="Situação do anúncio">
+              {SITUACOES.map((x) => {
+                const n = contagemDaSituacao.get(x.id) ?? 0
+                return (
+                  <button key={x.id} type="button" role="tab" aria-selected={situacao === x.id} className={`${situacao === x.id ? 'on' : ''} ${x.id}`} disabled={x.id !== 'todos' && n === 0 && situacao !== x.id} onClick={() => setSituacao(x.id)}>
+                    {x.nome}<i>{int(n)}</i>
+                  </button>
+                )
+              })}
+            </div>
+            <Filtros linhas={linhasNaSituacao} ctx={ctxDosAtalhos} busca={busca} setBusca={setBusca} atalhos={atalhos} setAtalhos={setAtalhos} regras={regras} setRegras={setRegras} colunas={colunas} setColunas={setColunas}
+              outrosAtivos={!!campanha || !!conjunto} aoLimpar={() => { setCampanha(''); setConjunto('') }}
+              seletores={<>
+                <select className={campanha ? 'on' : ''} value={campanha} onChange={(e) => { setCampanha(e.target.value); setConjunto('') }} aria-label="Campanha">
                   <option value="">Todas as campanhas</option>
                   {painel.campanhas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </select>
-                <select value={conjunto} onChange={(e) => setConjunto(e.target.value)} aria-label="Conjunto de anúncios">
+                <select className={conjunto ? 'on' : ''} value={conjunto} onChange={(e) => setConjunto(e.target.value)} aria-label="Conjunto de anúncios">
                   <option value="">Todos os conjuntos</option>
                   {painel.conjuntos.filter((c) => !campanha || c.campanhaId === campanha).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </select>
-              </div>
-            </header>
-            <Filtros linhas={linhas} busca={busca} setBusca={setBusca} atalhos={atalhos} setAtalhos={setAtalhos} regras={regras} setRegras={setRegras} colunas={colunas} setColunas={setColunas} />
-            {!filtradas.length ? <p className="aa-vazio">{linhas.length ? 'Nenhum anúncio passa por esses filtros.' : 'Nenhum anúncio com entrega neste período.'}</p> : (
+              </>} />
+            {!filtradas.length ? <p className="aa-vazio">{!linhas.length ? 'Nenhum anúncio com entrega neste período.' : !linhasNaSituacao.length ? `Nenhum anúncio ${situacao === 'ativos' ? 'no ar' : regraDaSituacao.nome.toLowerCase()} neste período.` : 'Nenhum anúncio passa por esses filtros.'}</p> : (
               <div className="aa-tabela">
                 <table>
                   <thead><tr><th>Anúncio</th><th className="num" title="O orçamento por dia do conjunto do anúncio, como no Gerenciador. O lápis muda na Meta.">Orçamento/dia</th>{colunas.map(cabecalho)}<th>Qualidade</th></tr></thead>
                   <tbody>
                     {filtradas.map((l) => (
-                      <tr key={l.a.id} onClick={() => setAberto(l.a)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') setAberto(l.a) }}>
-                        <td className="aa-ad">
-                          {l.a.criativo.miniatura ? <img src={l.a.criativo.miniatura} alt="" loading="lazy" /> : <span className="aa-sem-img" />}
-                          <div><b>{l.a.nome}</b><small>{campanhaDe(l.a.campanhaId)}</small><Status s={l.a.status} /></div>
-                        </td>
-                        <td className="num aa-orc-cel" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                          <OrcamentoDoConjunto conjunto={painel?.conjuntos.find((x) => x.id === l.a.conjuntoId) ?? null} campanha={painel?.campanhas.find((x) => x.id === l.a.campanhaId) ?? null}
-                            anuncios={qtdPorConjunto.get(l.a.conjuntoId) ?? 1} valorNovo={orcNovo[l.a.conjuntoId]} moeda={painel?.conta.moeda ?? 'BRL'}
-                            salvar={async (v) => { await apiEstudio.orcamento(sessao, parceiro, l.a.conjuntoId, v); setOrcNovo((o) => ({ ...o, [l.a.conjuntoId]: v })) }} />
-                        </td>
-                        {colunas.map((id) => { const m = METRICA.get(id)!; return <td key={id} className={`num ${ordem.col === id ? 'aa-ordem' : ''}`}>{formatar(m.formato, m.valor(l))}</td> })}
-                        <td>{l.a.ranking.qualidade ? <span className={`aa-rank ${RANK[l.a.ranking.qualidade]?.[1]}`}>{RANK[l.a.ranking.qualidade]?.[0]}</span> : <small className="aa-mudo">Poucos dados</small>}</td>
-                      </tr>
+                      <LinhaDoAnuncio key={l.a.id} l={l} colunas={colunas} ordemCol={ordem.col} conjunto={conjuntoPorId.get(l.a.conjuntoId) ?? null} campanha={campanhaPorId.get(l.a.campanhaId) ?? null}
+                        anuncios={qtdPorConjunto.get(l.a.conjuntoId) ?? 1} valorNovo={orcNovo[l.a.conjuntoId]} moeda={painel?.conta.moeda ?? 'BRL'} abrir={abrirAnuncio} salvar={salvarOrcamento} />
                     ))}
                   </tbody>
                   {somaFiltrada && (

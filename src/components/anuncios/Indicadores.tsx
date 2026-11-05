@@ -11,7 +11,7 @@
  * - Alertas: o que merece atenção agora, em frases curtas, com o que fazer.
  * - Relatório: o resumo para o WhatsApp, a planilha e a versão para imprimir ou salvar em PDF.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Anuncio, FunilDoBanco, Metricas } from '../../core/teeds/anuncios'
 
 export const brl = (v: number, casas = 2) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: casas, maximumFractionDigits: casas })
@@ -131,10 +131,9 @@ export function Custos({ atual, anterior, origem }: { atual: Base; anterior: Bas
 
 export interface Regra { metrica: string; op: '>' | '<' | '='; valor: number }
 export interface FiltroSalvo { nome: string; regras: Regra[]; atalhos: string[] }
-interface Contexto { custoCad: number | null; cpc: number | null; convPagina: number | null }
+export interface Contexto { custoCad: number | null; cpc: number | null; convPagina: number | null }
 
 export const ATALHOS: Array<{ id: string; nome: string; dica: string; passa: (l: Linha, c: Contexto) => boolean }> = [
-  { id: 'no-ar', nome: 'No ar', dica: 'Só os que estão entregando', passa: ({ a }) => a.status === 'ACTIVE' },
   { id: 'campeoes', nome: 'Campeões', dica: 'Custo por cadastro 20% abaixo da média, com 3 ou mais cadastros', passa: (l, c) => { const v = METRICA.get('custoCadMeta')!.valor(l); return v != null && c.custoCad != null && v <= c.custoCad * 0.8 && l.a.m.cadastros >= 3 } },
   { id: 'sem-cadastro', nome: 'Gastando sem cadastro', dica: 'Já gastou 1,5 vez o custo médio por cadastro e não trouxe nenhum', passa: (l, c) => l.a.m.cadastros === 0 && l.a.m.gasto >= Math.max(30, (c.custoCad ?? 20) * 1.5) },
   { id: 'caros', nome: 'Cadastro caro', dica: 'Custo por cadastro 30% acima da média', passa: (l, c) => { const v = METRICA.get('custoCadMeta')!.valor(l); return l.a.m.cadastros >= 3 && v != null && c.custoCad != null && v >= c.custoCad * 1.3 } },
@@ -154,8 +153,9 @@ export function contexto(linhas: Linha[]): Contexto {
   return { custoCad: cad >= 3 ? div(gasto, cad) : null, cpc: div(gasto, cliques), convPagina: lpv >= 50 ? (cad / lpv) * 100 : null }
 }
 
-export function aplicar(linhas: Linha[], busca: string, atalhos: string[], regras: Regra[]): Linha[] {
-  const c = contexto(linhas), q = busca.trim().toLowerCase()
+/** `c`: as médias que valem para os atalhos (as de todos os anúncios, mesmo quando a tela mostra só uma situação). */
+export function aplicar(linhas: Linha[], busca: string, atalhos: string[], regras: Regra[], c: Contexto = contexto(linhas)): Linha[] {
+  const q = busca.trim().toLowerCase()
   return linhas.filter((l) =>
     (!q || l.a.nome.toLowerCase().includes(q) || l.a.criativo.titulo.toLowerCase().includes(q) || l.a.id.includes(q))
     && atalhos.every((id) => ATALHOS.find((x) => x.id === id)?.passa(l, c) ?? true)
@@ -179,14 +179,22 @@ export function useColunas(): [string[], (c: string[]) => void] {
   return [c, (n) => { setC(n); gravar(CHAVE_COLUNAS, n) }]
 }
 
-export function Filtros({ linhas, busca, setBusca, atalhos, setAtalhos, regras, setRegras, colunas, setColunas }: {
-  linhas: Linha[]; busca: string; setBusca: (v: string) => void; atalhos: string[]; setAtalhos: (v: string[]) => void
+/*
+  05/11/2026 (Tiago: "cabeçalho com filtros bagunçado, experiência ruim"): uma barra só, na ordem em que
+  se filtra (buscar, campanha, conjunto, condições, colunas), e embaixo só os atalhos que têm anúncio.
+  Os que estão em zero somem; a situação (no ar, pausados...) virou abas acima, em AdminAnuncios.
+*/
+export function Filtros({ linhas, ctx, busca, setBusca, atalhos, setAtalhos, regras, setRegras, colunas, setColunas, seletores, outrosAtivos = false, aoLimpar }: {
+  linhas: Linha[]; ctx?: Contexto; busca: string; setBusca: (v: string) => void; atalhos: string[]; setAtalhos: (v: string[]) => void
   regras: Regra[]; setRegras: (v: Regra[]) => void; colunas: string[]; setColunas: (v: string[]) => void
+  /** Os seletores de campanha e conjunto, que entram na mesma barra. */
+  seletores?: ReactNode; outrosAtivos?: boolean; aoLimpar?: () => void
 }) {
   const [salvos, setSalvos] = useState<FiltroSalvo[]>(() => ler(CHAVE_FILTROS, []))
   const [painel, setPainel] = useState<'' | 'regras' | 'colunas'>('')
   const [nome, setNome] = useState('')
-  const c = useMemo(() => contexto(linhas), [linhas])
+  const proprio = useMemo(() => contexto(linhas), [linhas])
+  const c = ctx ?? proprio
   const contagem = useMemo(() => new Map(ATALHOS.map((x) => [x.id, linhas.filter((l) => x.passa(l, c)).length])), [linhas, c])
   const salvar = () => {
     if (!nome.trim() || (!regras.length && !atalhos.length)) return
@@ -194,19 +202,27 @@ export function Filtros({ linhas, busca, setBusca, atalhos, setAtalhos, regras, 
     setSalvos(novos); gravar(CHAVE_FILTROS, novos); setNome('')
   }
   const apagar = (n: string) => { const novos = salvos.filter((s) => s.nome !== n); setSalvos(novos); gravar(CHAVE_FILTROS, novos) }
-  const ativo = atalhos.length > 0 || regras.length > 0 || busca.trim() !== ''
+  const ativo = atalhos.length > 0 || regras.length > 0 || busca.trim() !== '' || outrosAtivos
+  const visiveis = ATALHOS.filter((x) => atalhos.includes(x.id) || (contagem.get(x.id) ?? 0) > 0)
   return (
     <div className="aa-filtros">
-      <div className="aa-filtros-linha">
-        <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar anúncio pelo nome, título ou número" aria-label="Buscar anúncio" />
-        <button type="button" className={painel === 'regras' ? 'on' : ''} onClick={() => setPainel(painel === 'regras' ? '' : 'regras')}>Filtro personalizado{regras.length ? ` (${regras.length})` : ''}</button>
-        <button type="button" className={painel === 'colunas' ? 'on' : ''} onClick={() => setPainel(painel === 'colunas' ? '' : 'colunas')}>Colunas ({colunas.length})</button>
-        {ativo && <button type="button" className="aa-limpar" onClick={() => { setBusca(''); setAtalhos([]); setRegras([]) }}>Limpar filtros</button>}
+      <div className="aa-barra">
+        <label className="aa-busca">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+          <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar pelo nome, título ou número" aria-label="Buscar anúncio" />
+        </label>
+        {seletores}
+        <div className="aa-barra-botoes">
+          <button type="button" className={painel === 'regras' || regras.length ? 'on' : ''} aria-expanded={painel === 'regras'} onClick={() => setPainel(painel === 'regras' ? '' : 'regras')}>Condições{regras.length ? ` (${regras.length})` : ''}</button>
+          <button type="button" className={painel === 'colunas' ? 'on' : ''} aria-expanded={painel === 'colunas'} onClick={() => setPainel(painel === 'colunas' ? '' : 'colunas')}>Colunas ({colunas.length})</button>
+          {ativo && <button type="button" className="aa-limpar" onClick={() => { setBusca(''); setAtalhos([]); setRegras([]); aoLimpar?.() }}>Limpar</button>}
+        </div>
       </div>
-      <div className="aa-atalhos" role="group" aria-label="Filtros inteligentes">
-        {ATALHOS.map((x) => {
+      {(visiveis.length > 0 || salvos.length > 0) && <div className="aa-atalhos" role="group" aria-label="Atalhos">
+        <span className="aa-atalhos-rot">Atalhos</span>
+        {visiveis.map((x) => {
           const on = atalhos.includes(x.id), n = contagem.get(x.id) ?? 0
-          return <button key={x.id} type="button" title={x.dica} className={`${on ? 'on' : ''} ${n === 0 && !on ? 'zero' : ''}`} onClick={() => setAtalhos(on ? atalhos.filter((a) => a !== x.id) : [...atalhos, x.id])}>{x.nome}<i>{n}</i></button>
+          return <button key={x.id} type="button" title={x.dica} aria-pressed={on} className={on ? 'on' : ''} onClick={() => setAtalhos(on ? atalhos.filter((a) => a !== x.id) : [...atalhos, x.id])}>{x.nome}<i>{n}</i></button>
         })}
         {salvos.map((s) => (
           <span key={s.nome} className="aa-salvo">
@@ -214,7 +230,7 @@ export function Filtros({ linhas, busca, setBusca, atalhos, setAtalhos, regras, 
             <button type="button" aria-label={`Apagar o filtro ${s.nome}`} onClick={() => apagar(s.nome)}>×</button>
           </span>
         ))}
-      </div>
+      </div>}
       {painel === 'regras' && (
         <div className="aa-regras">
           {regras.map((r, i) => {
