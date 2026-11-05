@@ -16,9 +16,10 @@ import {
   whatsappDoBanco, whatsappDeExemplo, janela, textoDaJanela, telefoneBonito, nomeDoContato, conferirArquivo,
   LIMITE_LEGIVEL, QUALIDADE_LEGIVEL, POR_PAGINA,
   type WhatsAppApi, type EstadoWpp, type ContatoWpp, type MensagemWpp, type RespostaPronta, type ModeloWpp, type FichaWpp,
-  type PessoaDaEquipe, type MidiaWpp,
+  type PessoaDaEquipe, type MidiaWpp, type ArquivosDoContato,
 } from '../../core/teeds/whatsapp'
 import { EscolherModelo, NovaConversa, GerirRespostas, Conexao } from './JanelasWpp'
+import { GaleriaDoContato, Visualizador, FaixaDeMidias, NotasDoContato } from './MidiasDoContato'
 import { formatar, soEmoji, rotuloDoTipo, horaCurta, dataCurta, dataEHora, tamanho, duracao, horaOuDia, diaDaMensagem, haQuanto, corDaEtiqueta, EMOJIS, REACOES } from './textoWpp'
 import './central-whatsapp.css'
 
@@ -94,6 +95,9 @@ function Mesa({ api, estado }: { api: WhatsAppApi; estado: EstadoWpp }) {
   const [gerirRespostas, setGerirRespostas] = useState(false)
   const [rascunhos, setRascunhos] = useState<Record<string, string>>({})
   const [naoLidasAoAbrir, setNaoLidasAoAbrir] = useState<Record<string, number>>({})
+  const [visor, setVisor] = useState<{ itens: MensagemWpp[]; inicial: string } | null>(null)
+  const [irPara, setIrPara] = useState<{ id: string; vez: number } | null>(null)
+  const mostrarNaConversa = (m: MensagemWpp) => { setVisor(null); if (typeof window !== 'undefined' && window.innerWidth <= 1320) setDadosAbertos(false); setIrPara({ id: m.id, vez: Date.now() }) }
   const [, setRelogio] = useState(0)
   const abertoRef = useRef<string | null>(null)
   abertoRef.current = aberto
@@ -243,6 +247,7 @@ function Mesa({ api, estado }: { api: WhatsAppApi; estado: EstadoWpp }) {
         ? <Conversa key={contato.id} api={api} estado={estado} contato={contato} mensagens={msgs[contato.id] ?? null} temMais={!tudo[contato.id]}
             equipe={equipe} respostas={respostas} modelos={modelos} nomeDe={nomeDe} naoLidasAoAbrir={naoLidasAoAbrir[contato.id] ?? 0}
             rascunho={rascunhos[contato.id] ?? ''} onRascunho={(t) => setRascunhos((r) => ({ ...r, [contato.id]: t }))}
+            irPara={irPara} onAbrirMidia={(m, itens) => setVisor({ itens, inicial: m.id })}
             onVoltar={() => setAberto(null)} onDados={() => setDadosAbertos((v) => !v)} dadosAbertos={dadosAbertos} onMudar={(x) => mudar(contato.id, x)}
             onMaisAntigas={() => void maisAntigas(contato.id)} onEnviar={(p, f) => void enviar(contato.id, p, f)}
             onNota={async (t) => { const m = await api.nota(contato.id, t); setMsgs((x) => ({ ...x, [contato.id]: (x[contato.id] ?? []).some((y) => y.id === m.id) ? x[contato.id] : [...(x[contato.id] ?? []), m] })) }}
@@ -257,7 +262,9 @@ function Mesa({ api, estado }: { api: WhatsAppApi; estado: EstadoWpp }) {
         : <BoasVindas exemplo={api.exemplo} />}
     </main>
 
-    {contato && dadosAbertos && <DadosDoContato key={contato.id} api={api} contato={contato} equipe={equipe} mensagens={msgs[contato.id] ?? []} onFechar={() => setDadosAbertos(false)} onMudar={(x) => mudar(contato.id, x)} />}
+    {contato && dadosAbertos && <DadosDoContato key={contato.id} api={api} contato={contato} equipe={equipe} mensagens={msgs[contato.id] ?? []} nomeDe={nomeDe}
+      onFechar={() => setDadosAbertos(false)} onMudar={(x) => mudar(contato.id, x)} onAbrirMidia={(m, itens) => setVisor({ itens, inicial: m.id })} onMostrar={mostrarNaConversa} />}
+    {contato && visor && <Visualizador api={api} contato={contato} itens={visor.itens} inicial={visor.inicial} nomeDe={nomeDe} onFechar={() => setVisor(null)} onMostrar={mostrarNaConversa} />}
 
     {novaConversa && <NovaConversa api={api} onFechar={() => setNovaConversa(false)} onCriada={(id) => { setNovaConversa(false); setFiltro('todas'); setBusca(''); void api.contatos().then(setContatos).then(() => void abrir(id)) }} />}
     {gerirRespostas && <GerirRespostas api={api} respostas={respostas} onFechar={() => setGerirRespostas(false)} onMudou={() => void api.respostas().then(setRespostas)} />}
@@ -317,6 +324,7 @@ function Conversa(p: {
   api: WhatsAppApi; estado: EstadoWpp; contato: ContatoWpp; mensagens: MensagemWpp[] | null; temMais: boolean
   equipe: PessoaDaEquipe[]; respostas: RespostaPronta[]; modelos: ModeloWpp[]; nomeDe: (id: string | null) => string | null
   naoLidasAoAbrir: number; rascunho: string; onRascunho: (t: string) => void
+  irPara: { id: string; vez: number } | null; onAbrirMidia: (m: MensagemWpp, itens: MensagemWpp[]) => void
   onVoltar: () => void; onDados: () => void; dadosAbertos: boolean; onMudar: (c: Parameters<WhatsAppApi['mudarContato']>[1]) => void
   onMaisAntigas: () => void; onEnviar: (provisoria: Partial<MensagemWpp>, fazer: () => Promise<unknown>) => void
   onNota: (texto: string) => Promise<void>; onReagir: (m: MensagemWpp, emoji: string) => void
@@ -327,7 +335,6 @@ function Conversa(p: {
   const [escolhendoModelo, setEscolhendoModelo] = useState(false)
   const [arrastando, setArrastando] = useState(false)
   const [soltou, setSoltou] = useState<File | null>(null)
-  const [ampliada, setAmpliada] = useState<string | null>(null)
   const [novasEmbaixo, setNovasEmbaixo] = useState(0)
   const [buscando, setBuscando] = useState(false)
   const [termo, setTermo] = useState('')
@@ -372,6 +379,17 @@ function Conversa(p: {
     }
     return saida
   }, [mensagens])
+
+  // "Mostrar na conversa" (da galeria ou do visualizador): rola até a mensagem e ela pisca;
+  // se ainda não estiver carregada, busca as mais antigas até achar
+  useEffect(() => {
+    if (!p.irPara || !mensagens) return
+    const el = rolagem.current?.querySelector(`[data-msg="${p.irPara.id}"]`) as HTMLElement | null
+    if (el) {
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      el.classList.remove('wz-piscar'); void el.offsetWidth; el.classList.add('wz-piscar')
+    } else if (p.temMais && mensagens.length >= POR_PAGINA) p.onMaisAntigas()
+  }, [p.irPara?.vez, mensagens]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // busca dentro da conversa
   const achados = useMemo(() => {
@@ -451,7 +469,8 @@ function Conversa(p: {
           {b.itens.map((m, i) => <div key={m.id} data-msg={m.id} className={achados[achado] === m.id ? 'wz-achado' : undefined}>
             {m.id === idPrimeiraNaoLida && <div className="wz-marco-nao-lidas">{p.naoLidasAoAbrir} mensage{p.naoLidasAoAbrir > 1 ? 'ns' : 'm'} não lida{p.naoLidasAoAbrir > 1 ? 's' : ''}</div>}
             <Balao m={m} anterior={b.itens[i - 1]} citada={m.citando ? porWamid.get(m.citando) ?? null : null} termo={buscando ? termo.trim() : ''}
-              contato={contato} api={api} janelaAberta={j.aberta} nomeDe={p.nomeDe} onCitar={() => setCitando(m)} onAmpliar={setAmpliada} onRepetir={() => p.onRepetir(m)}
+              contato={contato} api={api} janelaAberta={j.aberta} nomeDe={p.nomeDe} onCitar={() => setCitando(m)} onRepetir={() => p.onRepetir(m)}
+              onAmpliar={() => p.onAbrirMidia(m, (mensagens ?? []).filter((x) => (x.tipo === 'imagem' || x.tipo === 'video' || x.tipo === 'figurinha') && x.midia && !x.enviando))}
               onReagir={(emoji) => p.onReagir(m, emoji)} onIrPara={(w) => rolagem.current?.querySelector(`[data-msg="${porWamid.get(w)?.id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })} />
           </div>)}
         </div>)}
@@ -473,7 +492,6 @@ function Conversa(p: {
 
     {escolhendoModelo && <EscolherModelo api={api} estado={p.estado} contato={contato} modelos={p.modelos} onModelos={p.onModelosMudaram} onFechar={() => setEscolhendoModelo(false)}
       onEnviar={(m, vars, texto) => { setEscolhendoModelo(false); p.onEnviar({ tipo: 'modelo', texto, modelo: { nome: m.nome, idioma: m.idioma } }, () => api.enviarModelo(contato.id, m, vars)) }} />}
-    {ampliada && <div className="wz-lupa" role="dialog" aria-label="Foto ampliada" onClick={() => setAmpliada(null)}><img src={ampliada} alt="" /><button className="wz-lupa-fechar" aria-label="Fechar"><I.x /></button></div>}
   </section>
 }
 
@@ -534,7 +552,7 @@ function Midia({ m, api, onAmpliar }: { m: MensagemWpp; api: WhatsAppApi; onAmpl
   }
   if (m.tipo === 'audio') return <Audio url={url} exemplo={midia.exemplo === 'audio'} duracaoExemplo={midia.duracao} falhou={falhou} voz={midia.voz !== false} sai={m.direcao === 'saida'} />
   if (m.tipo === 'video') {
-    if (url) return <video className="wz-video" controls preload="metadata" src={url} />
+    if (url) return <span className="wz-video-caixa"><video className="wz-video" controls preload="metadata" src={url} /><button className="wz-video-ampliar" onClick={() => onAmpliar(url)} aria-label="Abrir em tela cheia" title="Abrir em tela cheia"><I.ampliar /></button></span>
     return <div className="wz-foto-espera"><I.foto />{falhou ? 'Não consegui abrir o vídeo' : 'Recebendo o vídeo…'}</div>
   }
   const ext = (midia.nome?.split('.').pop() ?? 'doc').slice(0, 4).toUpperCase()
@@ -721,24 +739,28 @@ function Compositor({ contato, janelaAberta, respostas, citando, arquivoSolto, r
 }
 
 /* ================================================================ dados do contato */
-function DadosDoContato({ api, contato, equipe, mensagens, onFechar, onMudar }: {
-  api: WhatsAppApi; contato: ContatoWpp; equipe: PessoaDaEquipe[]; mensagens: MensagemWpp[]
+function DadosDoContato({ api, contato, equipe, mensagens, nomeDe, onFechar, onMudar, onAbrirMidia, onMostrar }: {
+  api: WhatsAppApi; contato: ContatoWpp; equipe: PessoaDaEquipe[]; mensagens: MensagemWpp[]; nomeDe: (id: string | null) => string | null
   onFechar: () => void; onMudar: (c: Parameters<WhatsAppApi['mudarContato']>[1]) => void
+  onAbrirMidia: (m: MensagemWpp, itens: MensagemWpp[]) => void; onMostrar: (m: MensagemWpp) => void
 }) {
   const [ficha, setFicha] = useState<FichaWpp | null | undefined>(undefined)
+  const [arquivos, setArquivos] = useState<ArquivosDoContato | null>(null)
+  const [galeria, setGaleria] = useState<'midia' | 'docs' | 'links' | null>(null)
   const [etiqueta, setEtiqueta] = useState('')
-  const [aba, setAba] = useState<'midia' | 'docs' | 'links'>('midia')
   useEffect(() => { let vivo = true; void api.ficha(contato.id).then((f) => vivo && setFicha(f)).catch(() => vivo && setFicha(null)); return () => { vivo = false } }, [api, contato.id, contato.userId, contato.leadId])
+  // os arquivos vêm do banco (a conversa inteira, não só o que está carregado na tela) e
+  // atualizam quando chega mensagem nova
+  const qtd = mensagens.filter((m) => !m.enviando).length
+  useEffect(() => { let vivo = true; void api.arquivos(contato.id).then((a) => vivo && setArquivos(a)).catch(() => vivo && setArquivos({ midias: [], docs: [], links: [], notas: [] })); return () => { vivo = false } }, [api, contato.id, qtd])
   const k = ficha?.cliente, l = ficha?.lead
   const j = janela(contato)
-  const fotos = mensagens.filter((m) => (m.tipo === 'imagem' || m.tipo === 'video') && m.midia)
-  const docs = mensagens.filter((m) => m.tipo === 'documento' && m.midia)
-  const links = mensagens.flatMap((m) => [...(m.texto ?? '').matchAll(/https?:\/\/[^\s]+/g)].map((x) => ({ id: m.id, url: x[0] })))
   const addEtiqueta = () => {
     const t = etiqueta.trim().replace(/\s+/g, ' ')
     if (!t || contato.etiquetas.includes(t)) { setEtiqueta(''); return }
     onMudar({ etiquetas: [...contato.etiquetas, t].slice(0, 8) }); setEtiqueta('')
   }
+  const midias = arquivos?.midias ?? [], docs = arquivos?.docs ?? [], links = arquivos?.links ?? [], notas = arquivos?.notas ?? []
   return <aside className="wz-dados" aria-label="Dados do contato">
     <header><button className="wz-icone-btn" onClick={onFechar} aria-label="Fechar"><I.x /></button><b>Dados do contato</b></header>
     <div className="wz-dados-rolagem">
@@ -753,6 +775,10 @@ function DadosDoContato({ api, contato, equipe, mensagens, onFechar, onMudar }: 
           <button onClick={() => onMudar({ situacao: contato.situacao === 'aberta' ? 'resolvida' : 'aberta' })}><I.certo /><span>{contato.situacao === 'aberta' ? 'Resolver' : 'Reabrir'}</span></button>
         </div>
       </section>
+
+      {arquivos === null
+        ? <section className="wz-dados-bloco"><span className="wz-dados-titulo">Mídia, links e docs</span><div className="wz-faixa-midias-tira">{[0, 1, 2].map((i) => <span key={i} className="wz-mini grande esqueleto" />)}</div></section>
+        : <FaixaDeMidias api={api} midias={midias} docs={docs} links={links} onAbrirGaleria={setGaleria} onAbrir={(m) => onAbrirMidia(m, midias)} />}
 
       <section className="wz-dados-bloco">
         <span className="wz-dados-titulo">Na plataforma</span>
@@ -796,24 +822,15 @@ function DadosDoContato({ api, contato, equipe, mensagens, onFechar, onMudar }: 
         </div>
       </section>
 
-      <section className="wz-dados-bloco">
-        <div className="wz-dados-abas" role="tablist">
-          <button role="tab" aria-selected={aba === 'midia'} className={aba === 'midia' ? 'on' : ''} onClick={() => setAba('midia')}>Mídia <b>{fotos.length}</b></button>
-          <button role="tab" aria-selected={aba === 'docs'} className={aba === 'docs' ? 'on' : ''} onClick={() => setAba('docs')}>Docs <b>{docs.length}</b></button>
-          <button role="tab" aria-selected={aba === 'links'} className={aba === 'links' ? 'on' : ''} onClick={() => setAba('links')}>Links <b>{links.length}</b></button>
-        </div>
-        {aba === 'midia' && (fotos.length ? <div className="wz-galeria">{fotos.slice(-9).reverse().map((m) => <Miniatura key={m.id} m={m} api={api} />)}</div> : <small className="wz-dados-dica">Nenhuma foto ou vídeo nesta conversa ainda.</small>)}
-        {aba === 'docs' && (docs.length ? <div className="wz-lista-docs">{docs.slice(-8).reverse().map((m) => <span key={m.id}><span className="wz-doc-icone pequeno">{(m.midia?.nome?.split('.').pop() ?? 'doc').slice(0, 4).toUpperCase()}</span><b>{m.midia?.nome ?? 'Arquivo'}</b><small>{dataCurta(m.criadoEm)}</small></span>)}</div> : <small className="wz-dados-dica">Nenhum arquivo nesta conversa ainda.</small>)}
-        {aba === 'links' && (links.length ? <div className="wz-lista-links">{links.slice(-8).reverse().map((x, i) => <a key={`${x.id}-${i}`} href={x.url} target="_blank" rel="noreferrer">{x.url.replace(/^https?:\/\//, '')}</a>)}</div> : <small className="wz-dados-dica">Nenhum link nesta conversa ainda.</small>)}
+      <NotasDoContato notas={notas} nomeDe={nomeDe} onMostrar={onMostrar} />
+
+      <section className="wz-dados-bloco wz-dados-rodape">
+        <div><I.cadeado /><span><b>Conversa protegida</b><small>As mensagens chegam pelo WhatsApp oficial da Meta. Só o administrador geral e o dono do número veem esta conversa.</small></span></div>
       </section>
     </div>
+    {galeria && <GaleriaDoContato api={api} contato={contato} abaInicial={galeria} midias={midias} docs={docs} links={links} carregando={arquivos === null}
+      onVoltar={() => setGaleria(null)} onAbrir={(m) => onAbrirMidia(m, midias)} onMostrar={onMostrar} />}
   </aside>
-}
-
-function Miniatura({ m, api }: { m: MensagemWpp; api: WhatsAppApi }) {
-  const [url, setUrl] = useState<string | null>(m.midia?.exemplo && m.midia.exemplo !== 'audio' ? m.midia.exemplo : null)
-  useEffect(() => { if (url || !m.midia?.caminho) return; let vivo = true; api.abrirArquivo(m.midia).then((u) => vivo && setUrl(u)).catch(() => undefined); return () => { vivo = false } }, [api, m.midia, url])
-  return <span className="wz-mini">{url ? (m.tipo === 'video' ? <video src={url} muted /> : <img src={url} alt="" />) : <I.foto />}</span>
 }
 
 /* ================================================================ peças */
@@ -868,4 +885,5 @@ const I = {
   cima: icone('M7 14l5-5 5 5'),
   baixo: icone('M7 10l5 5 5-5'),
   baixar: icone('M12 4v11M7 10.5l5 5 5-5M5 20h14'),
+  ampliar: icone('M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7'),
 }

@@ -59,6 +59,9 @@ export interface PessoaDaEquipe { id: string; nome: string }
 export interface Parceiro { codigo: string; nome: string }
 export interface DadosDeConexao { phoneNumberId: string; wabaId: string; appId: string; token: string; appSecret: string; parceiro: string | null }
 
+/** Tudo o que a conversa já trocou de arquivo, link e nota (para os Dados do contato). */
+export interface ArquivosDoContato { midias: MensagemWpp[]; docs: MensagemWpp[]; links: MensagemWpp[]; notas: MensagemWpp[] }
+
 export type MudancaWpp = { tipo: 'contato'; item: ContatoWpp } | { tipo: 'mensagem'; item: MensagemWpp; nova: boolean }
 
 export interface WhatsAppApi {
@@ -83,6 +86,7 @@ export interface WhatsAppApi {
   apagarResposta(id: string): Promise<void>
   modelos(): Promise<ModeloWpp[]>
   ficha(contatoId: string): Promise<FichaWpp | null>
+  arquivos(contatoId: string): Promise<ArquivosDoContato>
   equipe(): Promise<PessoaDaEquipe[]>
   parceiros(): Promise<Parceiro[]>
   abrirArquivo(m: MidiaWpp): Promise<string>
@@ -258,6 +262,16 @@ export function whatsappDoBanco(sessao: SessaoTeeds, marca: string): WhatsAppApi
       return (l ?? []).map((m) => ({ nome: m.nome, idioma: m.idioma, categoria: m.categoria ?? null, situacao: m.situacao ?? null, componentes: m.componentes ?? [] }))
     },
     async ficha(contatoId) { return daFicha(await rpc<any>('whatsapp_ficha', { p_contato: contatoId })) },
+    async arquivos(contatoId) {
+      const base = `/whatsapp_mensagens?contato_id=eq.${contatoId}&select=*&order=criado_em.desc`
+      const [midias, docs, links, notas] = await Promise.all([
+        rest<any[]>(`${base}&tipo=in.(imagem,video,figurinha)&limit=300`),
+        rest<any[]>(`${base}&tipo=in.(documento,audio)&limit=200`),
+        rest<any[]>(`${base}&direcao=in.(entrada,saida)&texto=ilike.*http*&limit=200`),
+        rest<any[]>(`${base}&direcao=eq.nota&limit=100`),
+      ])
+      return { midias: (midias ?? []).map(daMensagem), docs: (docs ?? []).map(daMensagem), links: (links ?? []).map(daMensagem), notas: (notas ?? []).map(daMensagem) }
+    },
     async equipe() {
       const l = await rpc<any[]>('equipe_contatos', { p_marca: marca }).catch(() => [])
       return (l ?? []).map((p) => ({ id: p.user_id, nome: String(p.nome ?? '') || 'Equipe' }))
@@ -331,6 +345,11 @@ export function whatsappDeExemplo(base: Partial<EstadoWpp> = {}, euId = 'eu'): W
     msg('c2', 'entrada', 70 * min, 'Oi! Qual a diferença do Gold para o Black?'),
     msg('c2', 'saida', 66 * min, 'Oi, Juliana! No Black você tem as 5 I.A. (com Gulf e Phenom), compartilhamento de só 5% do lucro do mês, 12 h de simulador por dia e a sala ao vivo extra.'),
     msg('c2', 'saida', 65 * min, null, { tipo: 'imagem', midia: { exemplo: '/checkout-globalfly/capa-black.jpg', mime: 'image/jpeg', nome: 'GF Member Black.jpg' }, texto: 'GF Member Black · R$ 997 por ano' }),
+    msg('c2', 'saida', 64 * min, null, { tipo: 'imagem', midia: { exemplo: '/checkout-globalfly/capa-prestige.jpg', mime: 'image/jpeg', nome: 'GF Member Prestige.jpg' }, texto: 'E o Prestige, para quem quer tudo liberado' }),
+    msg('c2', 'saida', 63 * min, 'Aqui você compara os subplanos e assina direto: https://globalflytrade.com/?tela=marketplace'),
+    msg('c2', 'entrada', 50 * min, null, { tipo: 'documento', midia: { exemplo: '/checkout-globalfly/banner-black.jpg', mime: 'image/jpeg', nome: 'Comprovante de depósito.jpg', tamanho: 186_000 } }),
+    msg('c2', 'saida', 48 * min, 'Recebido! Para depositar mais quando quiser, o link da corretora é este: https://home.deriv.com/dashboard/deposit?from=home&depositSheet=1&returnTo=%2Fhome&currency=USD'),
+    msg('c2', 'nota', 47 * min, 'Mandou o comprovante. Quer fechar o Black ainda hoje: acompanhar o pagamento.'),
     msg('c2', 'entrada', 43 * min, 'Perfeito, obrigada! Vou fechar o Black hoje.', { reacao: null }),
     msg('c3', 'entrada', 2 * h + 2 * min, 'Olá, me cadastrei para a live do dia 09'),
     msg('c3', 'entrada', 2 * h, null, { tipo: 'audio', midia: { exemplo: 'audio', mime: 'audio/ogg', voz: true, duracao: 14 } }),
@@ -437,6 +456,16 @@ export function whatsappDeExemplo(base: Partial<EstadoWpp> = {}, euId = 'eu'): W
     async apagarResposta(id) { respostas = respostas.filter((r) => r.id !== id) },
     async modelos() { return modelos },
     async ficha(contatoId) { await espera(120); return fichas[contatoId] ?? { cliente: null, lead: null } },
+    async arquivos(contatoId) {
+      await espera(150)
+      const daqui = mensagens.filter((m) => m.contatoId === contatoId).slice().reverse()
+      return {
+        midias: daqui.filter((m) => ['imagem', 'video', 'figurinha'].includes(m.tipo)),
+        docs: daqui.filter((m) => m.tipo === 'documento' || m.tipo === 'audio'),
+        links: daqui.filter((m) => m.direcao !== 'nota' && /https?:\/\//.test(m.texto ?? '')),
+        notas: daqui.filter((m) => m.direcao === 'nota'),
+      }
+    },
     async equipe() { return [{ id: euId, nome: 'Você' }, { id: 'naor', nome: 'Naor' }, { id: 'saymonn', nome: 'Saymonn' }] },
     async parceiros() { return [{ codigo: 'n', nome: 'Naor' }, { codigo: 'v', nome: 'Victor' }, { codigo: 'd', nome: 'Douglas' }] },
     async abrirArquivo(m) { if (m.exemplo && m.exemplo !== 'audio') return m.exemplo; throw new Error('exemplo') },
