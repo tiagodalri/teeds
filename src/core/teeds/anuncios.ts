@@ -43,6 +43,9 @@ export interface FunilDoBanco {
   porAnuncio: Array<{ id: string; cadastros: number; questionario: number; notificacoes: number; live: number; liberados: number }>
   porDia: Array<{ dia: string; cadastros: number; deAnuncio: number }>
   porOrigem: Array<{ origem: string; cadastros: number }>
+  /** 05/11/2026: só os cadastros que NÃO vieram de anúncio, por origem; e os de anúncio sem o número do anúncio. */
+  foraPorOrigem?: Array<{ origem: string; cadastros: number }>
+  anuncioSemNumero?: number
   servidor: { enviados: number; semChave: number; erros: number }
   /** Passos da página antes do cadastro (parceiro_toques e funil_passos). */
   passos?: { visitas: number; formulario: number; clicou: number; comecou: number }

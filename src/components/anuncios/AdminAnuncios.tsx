@@ -264,6 +264,64 @@ function OrcamentoDoConjunto({ conjunto, campanha, anuncios, valorNovo, moeda, s
 }
 
 /*
+  Cadastros separados (05/11/2026, Tiago: "se marca numa campanha específica, o número de cadastros tem que ser os
+  cadastros daquela campanha especificamente... se teve cadastro por fora, tem que ser contabilizado totalmente
+  separado"). Tudo em pessoas únicas (uma por e-mail), do banco: a campanha escolhida (ou todos os anúncios), as
+  outras campanhas e o que veio por fora dos anúncios, por origem. O número da Meta fica ao lado, só como referência.
+*/
+const ORIGEM_NOME: Record<string, string> = {
+  instagram: 'Instagram', ig: 'Instagram', facebook: 'Facebook', fb: 'Facebook', telegram: 'Telegram', tg: 'Telegram',
+  whatsapp: 'WhatsApp', wa: 'WhatsApp', youtube: 'YouTube', google: 'Google', tiktok: 'TikTok', meta: 'Meta (sem o número do anúncio)',
+  'sem origem': 'Direto ou sem marcação',
+}
+const nomeDaOrigem = (o: string) => ORIGEM_NOME[o] ?? (o.charAt(0).toUpperCase() + o.slice(1))
+function CadastrosSeparados({ funil, linhas, todos, filtro }: { funil: FunilDoBanco | null; linhas: Linha[]; todos: Anuncio[]; filtro: string }) {
+  if (!funil) return null
+  const porAnuncio = new Map(funil.porAnuncio.map((x) => [x.id, x.cadastros]))
+  const naSelecao = new Set(linhas.map((l) => l.a.id))
+  const deAnuncio = funil.anuncio.cadastros
+  // sem filtro, a conta é a de todos os anúncios (com os que chegaram sem o número do anúncio);
+  // com uma campanha ou um conjunto escolhido, só os que vieram pelos anúncios dele
+  const daSelecao = filtro ? [...naSelecao].reduce((s, id) => s + (porAnuncio.get(id) ?? 0), 0) : deAnuncio
+  const outras = Math.max(0, deAnuncio - daSelecao)
+  const fora = Math.max(0, funil.total.cadastros - deAnuncio)
+  const gasto = linhas.reduce((s, l) => s + l.a.m.gasto, 0)
+  const meta = linhas.reduce((s, l) => s + l.a.m.cadastros, 0)
+  // agrupa as origens com o mesmo nome (ig e instagram viram Instagram)
+  const origens = new Map<string, number>()
+  for (const o of funil.foraPorOrigem ?? []) { const n = nomeDaOrigem(o.origem); origens.set(n, (origens.get(n) ?? 0) + o.cadastros) }
+  const listaDeOrigens = [...origens].sort((a, b) => b[1] - a[1])
+  const semNumero = funil.anuncioSemNumero ?? 0
+  void todos
+  return (
+    <section className="aa-cartao aa-separados">
+      <header><div><span className="rot">Pessoas únicas, uma por e-mail</span><h3>De onde vieram os cadastros</h3></div></header>
+      <div className="aa-separados-grade">
+        <div className="principal">
+          <small>{filtro ? `Desta seleção: ${filtro}` : 'Dos anúncios'}</small>
+          <b>{int(daSelecao)}</b>
+          <span>{daSelecao > 0 ? `${custo(gasto, daSelecao)} cada · ${brl(gasto)} investidos` : `${brl(gasto)} investidos`}</span>
+        </div>
+        {filtro ? (
+          <div><small>Outras campanhas e anúncios</small><b>{int(outras)}</b><span>ficam fora desta seleção</span></div>
+        ) : semNumero > 0 ? (
+          <div><small>Desses, sem o número do anúncio</small><b>{int(semNumero)}</b><span>vieram de anúncio, mas não dá para dizer de qual: contam no total, não em uma campanha</span></div>
+        ) : null}
+        <div>
+          <small>Por fora dos anúncios</small><b>{int(fora)}</b>
+          {listaDeOrigens.length ? <ul>{listaDeOrigens.map(([n, q]) => <li key={n}><span>{n}</span><i>{int(q)}</i></li>)}</ul> : <span>nenhum no período</span>}
+        </div>
+        <div className="referencia">
+          <small>No Gerenciador</small><b>{int(meta)}</b>
+          <span>A Meta conta também quem viu o anúncio e chegou por outro caminho. Use como referência.</span>
+        </div>
+      </div>
+      <p className="aa-nota">Direto ou sem marcação: quem abriu o link sem dizer de onde veio, como WhatsApp, Telegram ou o endereço digitado. Para separar esses canais, use um link marcado para cada um em Origens e links.</p>
+    </section>
+  )
+}
+
+/*
   Uma linha da tabela (05/11/2026, "lentidão"): só redesenha quando os números dela mudam. Antes, cada tecla na
   busca, cada abrir de painel e cada leitura do banco redesenhavam as 22 linhas com as 15 colunas.
 */
@@ -586,6 +644,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   // só quem chegou pelo link do anúncio neste aparelho (cadAcompanhados): é a base das etapas seguintes.
   const cadDeAnuncio = total?.cadastros ?? 0
   const cadAcompanhados = funil?.anuncio.cadastros ?? 0
+  const foraDosAnuncios = funil ? Math.max(0, funil.total.cadastros - funil.anuncio.cadastros) : 0
   const qtdAlertas = listaDeAlertas.filter((a) => a.tipo !== 'bom').length
 
   return (
@@ -716,9 +775,15 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
       {total && (
         <p className="aa-resumo">
           <span>{de === ate ? `Em ${dataBr(de)}` : `De ${ddmm(de)} a ${ddmm(ate)}`}, </span>
-          <b>{brl(total.gasto)}</b> investidos trouxeram <b>{int(cadDeAnuncio)} {cadDeAnuncio === 1 ? 'cadastro' : 'cadastros'}</b> pelos anúncios
-          {cadDeAnuncio > 0 && <>, <b>{custo(total.gasto, cadDeAnuncio)}</b> cada</>}, como no Gerenciador.
-          {funil && cadDeAnuncio > 0 && cadAcompanhados !== cadDeAnuncio && <> A plataforma segue {int(cadAcompanhados)} deles pessoa a pessoa até o depósito. <button type="button" onClick={() => setAba('geral')}>Por que não todos?</button></>}
+          {/* 05/11/2026 (Tiago: "tem que ser cadastros únicos, não pode ter duplicidade"): primeiro as pessoas, uma por e-mail */}
+          {funil ? <>
+            <b>{brl(total.gasto)}</b> investidos trouxeram <b>{int(cadAcompanhados)} {cadAcompanhados === 1 ? 'cadastro único' : 'cadastros únicos'}</b> pelos anúncios
+            {cadAcompanhados > 0 && <>, <b>{custo(total.gasto, cadAcompanhados)}</b> cada</>}.
+            {foraDosAnuncios > 0 && <> Por fora dos anúncios vieram mais <b>{int(foraDosAnuncios)}</b>.</>}
+            {cadDeAnuncio !== cadAcompanhados && <> O Gerenciador mostra {int(cadDeAnuncio)}, porque também conta quem viu o anúncio e chegou por outro caminho. <button type="button" onClick={() => setAba('anuncios')}>Ver separado</button></>}
+          </> : <>
+            <b>{brl(total.gasto)}</b> investidos trouxeram <b>{int(cadDeAnuncio)} {cadDeAnuncio === 1 ? 'cadastro' : 'cadastros'}</b> pelos anúncios, pelo Gerenciador.
+          </>}
           {qtdAlertas > 0 && <> <button type="button" onClick={() => setAba('geral')}>{qtdAlertas === 1 ? '1 ponto pede atenção' : `${qtdAlertas} pontos pedem atenção`}</button></>}
         </p>
       )}
@@ -835,6 +900,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
 
       {aba === 'anuncios' && (!painel ? <p className="aa-vazio">{semChave ? 'Os anúncios aparecem quando a conta for conectada.' : 'Carregando…'}</p> : (
         <>
+          <CadastrosSeparados funil={funil} linhas={linhas} todos={painel.anuncios} filtro={campanha ? campanhaDe(campanha) : conjunto ? (conjuntoPorId.get(conjunto)?.nome ?? '') : ''} />
           <section className="aa-cartao">
             <header>
               <div><span className="rot">{int(filtradas.length)} de {int(linhas.length)} {linhas.length === 1 ? 'anúncio' : 'anúncios'} · clique em um para ver tudo dele</span><h3>Cada anúncio</h3></div>
