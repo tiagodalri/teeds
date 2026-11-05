@@ -94,7 +94,8 @@ export function seloDoParceiro(parceiros: OpcaoDeParceiro[], parceiro: string | 
 }
 
 /** O papel de quem está logado nesta marca: admin geral, admin do parceiro (só o /n ou o /v dele) ou nenhum. */
-export interface PapelDoAdmin { admin: boolean; geral: boolean; parceiro: string | null; nomeDoParceiro: string | null }
+/** total: o admin do parceiro com acesso total (05/11/2026) usa todas as abas do geral, vendo só o que é do parceiro dele. */
+export interface PapelDoAdmin { admin: boolean; geral: boolean; parceiro: string | null; nomeDoParceiro: string | null; total: boolean }
 const papeis = new Map<string, Promise<PapelDoAdmin>>()
 export function meuPapel(sessao: SessaoTeeds, marca: string): Promise<PapelDoAdmin> {
   const chave = `${sessao.usuario.id}:${marca}`
@@ -104,14 +105,14 @@ export function meuPapel(sessao: SessaoTeeds, marca: string): Promise<PapelDoAdm
     p = (async () => {
       const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_meu_papel`, { method: 'POST', headers: h, body: JSON.stringify({ p_marca: marca }) })
       if (!r.ok) throw new Error('papel')
-      const d = await r.json() as { admin?: boolean; geral?: boolean; parceiro?: string | null }
+      const d = await r.json() as { admin?: boolean; geral?: boolean; parceiro?: string | null; total?: boolean }
       let nome: string | null = null
       if (d.parceiro) {
         const l = await fetch(`${SUPABASE.url}/rest/v1/parceiros?marca=eq.${encodeURIComponent(marca)}&codigo=eq.${encodeURIComponent(d.parceiro)}&select=nome`, { headers: h })
           .then((x) => (x.ok ? x.json() : [])).catch(() => [])
         nome = l?.[0]?.nome ? String(l[0].nome) : null
       }
-      return { admin: !!d.admin, geral: !!d.geral, parceiro: d.parceiro ?? null, nomeDoParceiro: nome }
+      return { admin: !!d.admin, geral: !!d.geral, parceiro: d.parceiro ?? null, nomeDoParceiro: nome, total: !!d.geral || !!d.total }
     })()
     p.catch(() => papeis.delete(chave))
     papeis.set(chave, p)

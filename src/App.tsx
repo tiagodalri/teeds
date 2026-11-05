@@ -1571,7 +1571,7 @@ export default function App() {
         teeds.sessao ? <Suspense fallback={telaAbrindo('Abrindo o laboratório…')}><LaboratorioIA api={apiDoLaboratorio!} socket={conta.socket} /></Suspense> : null
       ) : tela === 'monitoramento' && admin === true ? (
           teeds.sessao ? <MonitoramentoBoundary><Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o monitoramento…</div></div>}><MonitoramentoPanel key={`${marcaEmFoco}:${parceiroEmFocoAdmin}`} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} /></Suspense></MonitoramentoBoundary> : null
-      ) : tela === 'insights' && admin === true && papelAdmin && !papelAdmin.geral ? (
+      ) : tela === 'insights' && admin === true && papelAdmin && !papelAdmin.geral && !papelAdmin.total ? (
         <div className="ger"><div className="adm-vazio">Os Insights mostram o site inteiro (visitas, origens e todos os alunos). Ficam só com o admin geral.</div></div>
       ) : tela === 'insights' && admin === true ? (
         teeds.sessao ? <Suspense fallback={telaAbrindo('Abrindo os insights…')}><InsightsPanel key={`${marcaEmFoco}:${parceiroEmFocoAdmin}`} sessao={teeds.sessao} mostrarMarkup={mostrarColuna} onMostrarMarkup={alterarColuna} /></Suspense> : null

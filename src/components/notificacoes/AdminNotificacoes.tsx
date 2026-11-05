@@ -46,13 +46,14 @@ const quando = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-
 const nomeDoPublico = (p: string) => p === 'eu' ? 'Teste (meus aparelhos)' : PUBLICOS.find((x) => x.id === p)?.nome ?? p
 const plural = (n: number, um: string, varios: string) => `${n.toLocaleString('pt-BR')} ${n === 1 ? um : varios}`
 
-export function AdminNotificacoes({ sessao }: { sessao: SessaoTeeds }) {
+/** soDoParceiro: o admin do parceiro com acesso total (05/11/2026) dispara só para os clientes do parceiro dele (o banco e a função conferem de novo). */
+export function AdminNotificacoes({ sessao, soDoParceiro }: { sessao: SessaoTeeds; soDoParceiro?: string }) {
   const [titulo, setTitulo] = useState('🔴 A live começou')
   const [corpo, setCorpo] = useState('Toque para assistir. Fique até o fim para liberar o seu acesso.')
   const [destino, setDestino] = useState('inicio')
   const [link, setLink] = useState('')
   const [publico, setPublico] = useState<Publico>('aguardando')
-  const [parceiro, setParceiro] = useState('')
+  const [parceiro, setParceiro] = useState(soDoParceiro ?? '')
   const [contagem, setContagem] = useState<Contagem | null>(null)
   const [historico, setHistorico] = useState<Disparo[]>([])
   const [aparelho, setAparelho] = useState<'iphone' | 'android'>('iphone')
@@ -190,9 +191,11 @@ export function AdminNotificacoes({ sessao }: { sessao: SessaoTeeds }) {
       <section className="admin-card pn-publico">
         <header>
           <div><span className="rot">3 · Público</span><h3>Para quem enviar</h3></div>
-          <select id="pn-parceiro" value={parceiro} onChange={(e) => { setParceiro(e.target.value); setConfirmar(false) }} aria-label="Página de origem">
-            {PARCEIROS.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-          </select>
+          {soDoParceiro
+            ? <span className="pn-so-parceiro">Só os seus clientes ({PARCEIROS.find((p) => p.id === soDoParceiro)?.nome ?? `/${soDoParceiro}`})</span>
+            : <select id="pn-parceiro" value={parceiro} onChange={(e) => { setParceiro(e.target.value); setConfirmar(false) }} aria-label="Página de origem">
+              {PARCEIROS.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+            </select>}
         </header>
         <div className="pn-publicos" role="radiogroup" aria-label="Público">
           {PUBLICOS.map((p) => {

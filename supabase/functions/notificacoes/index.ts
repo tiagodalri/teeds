@@ -245,14 +245,18 @@ async function disparar(req: Request, corpo: Record<string, unknown>) {
   const quem = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SERVICO, Authorization: req.headers.get('Authorization') ?? '' } })
   if (!quem.ok) return json({ erro: 'Entre na sua conta.' }, 401)
   const u = await quem.json()
-  const adm = await rest(`administradores?user_id=eq.${u.id}&parceiro=is.null&or=(marca.eq.${marca},marca.eq.teeds)&select=user_id&limit=1`)
-  if (!adm.ok || !(await adm.json()).length) return json({ erro: 'Só o administrador geral dispara notificações.' }, 403)
+  // o admin geral, ou o admin do parceiro com acesso total, que dispara só para os clientes dele (05/11/2026)
+  const adm = await rest(`administradores?user_id=eq.${u.id}&or=(marca.eq.${marca},marca.eq.teeds)&select=marca,parceiro,acesso_total`)
+  const linhasAdm: Array<{ marca: string; parceiro: string | null; acesso_total: boolean }> = adm.ok ? await adm.json() : []
+  const geral = linhasAdm.some((l) => !l.parceiro)
+  const doParceiro = linhasAdm.find((l) => l.marca === marca && l.parceiro && l.acesso_total)
+  if (!geral && !doParceiro) return json({ erro: 'Só a administração dispara notificações.' }, 403)
 
   const titulo = String(corpo.titulo ?? '').trim().slice(0, 70)
   const texto = String(corpo.corpo ?? '').trim().slice(0, 200)
   const destino = String(corpo.destino ?? 'inicio').trim().slice(0, 500)
   const publico = String(corpo.publico ?? '')
-  const parceiro = PARCEIROS.has(String(corpo.parceiro ?? '')) || corpo.parceiro === 'direto' ? String(corpo.parceiro) : null
+  const parceiro = !geral && doParceiro ? String(doParceiro.parceiro) : PARCEIROS.has(String(corpo.parceiro ?? '')) || corpo.parceiro === 'direto' ? String(corpo.parceiro) : null
   if (!titulo || !texto) return json({ erro: 'Escreva o título e a mensagem.' }, 400)
   if (!['todos', 'aguardando', 'membros', 'ativos', 'eu'].includes(publico)) return json({ erro: 'Escolha para quem enviar.' }, 400)
   if (destino.startsWith('http') && !/^https:\/\//.test(destino)) return json({ erro: 'O link precisa começar com https://' }, 400)

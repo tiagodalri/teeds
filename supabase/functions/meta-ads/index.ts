@@ -22,6 +22,23 @@
 // não gasta o limite de consultas da Meta.
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+
+/**
+ * Quem pede (05/11/2026): o admin geral (pleno, sem parceiro) ou o admin do parceiro com
+ * acesso total (pleno, parceiro = o dele). Se a leitura falhar, nega: nunca vira geral por engano.
+ */
+async function acessoDoAdmin(apikey: string, token: string, marca: string): Promise<{ pleno: boolean; parceiro: string | null }> {
+  const h = { apikey, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+  const corpo = JSON.stringify({ p_marca: marca })
+  const [a, b] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/teeds_admin_pleno_da`, { method: 'POST', headers: h, body: corpo }),
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/teeds_parceiro_forcado`, { method: 'POST', headers: h, body: corpo }),
+  ])
+  if (!a.ok || !b.ok) return { pleno: false, parceiro: null }
+  const pleno = (await a.json()) === true
+  const parceiro = (await b.json()) as string | null
+  return { pleno, parceiro: pleno && parceiro ? String(parceiro) : null }
+}
 const SERVICO = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const GRAPH = 'https://graph.facebook.com/v24.0'
 const CORS = {
@@ -337,13 +354,11 @@ Deno.serve(async (req) => {
   const marca = String(d.marca ?? ''), parceiro = String(d.parceiro ?? '')
   if (!CONTAS[marca]?.[parceiro]) return json({ erro: 'Esse parceiro não tem conta de anúncios ligada.' }, 400)
 
-  // só o admin geral (a mesma regra do banco)
+  // o admin geral, ou o admin do parceiro com acesso total, e este só a conta do próprio parceiro (05/11/2026)
   const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
-  const quem = await fetch(`${SUPABASE_URL}/rest/v1/rpc/teeds_admin_geral_da`, {
-    method: 'POST', headers: { apikey: req.headers.get('apikey') ?? '', Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ p_marca: marca }),
-  })
-  if (!quem.ok || (await quem.json()) !== true) return json({ erro: 'Só o administrador geral vê os anúncios.' }, 403)
+  const acesso = await acessoDoAdmin(req.headers.get('apikey') ?? '', token, marca)
+  if (!acesso.pleno) return json({ erro: 'Só a administração vê os anúncios.' }, 403)
+  if (acesso.parceiro && acesso.parceiro !== parceiro) return json({ erro: 'Esta conta de anúncios é de outro parceiro.' }, 403)
 
   const cfg = (await contaDe(marca, parceiro))!
 

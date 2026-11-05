@@ -91,7 +91,8 @@ function PixelDaMeta({ sessao, marca, codigo, nome, api }: { sessao: SessaoTeeds
   )
 }
 
-export function AdminParceiros({ sessao, marca = MARCA.id, api = DO_BANCO }: { sessao: SessaoTeeds; marca?: string; api?: ApiParceiros }) {
+/** podeTrocar: só o admin geral muda um cliente de parceiro; o admin do parceiro com acesso total vê só a linha dele (05/11/2026). */
+export function AdminParceiros({ sessao, marca = MARCA.id, api = DO_BANCO, podeTrocar = true }: { sessao: SessaoTeeds; marca?: string; api?: ApiParceiros; podeTrocar?: boolean }) {
   const [periodo, setPeriodo] = useState<(typeof PERIODOS)[number]['id']>('tudo')
   const [linhas, setLinhas] = useState<LinhaDoParceiro[] | null>(null)
   const [erro, setErro] = useState<string | null>(null)
@@ -177,7 +178,7 @@ export function AdminParceiros({ sessao, marca = MARCA.id, api = DO_BANCO }: { s
               {grupo.lista.length === 0 ? <p className="ap-vazio">Nenhum cliente ainda.</p> : (
                 <div className="ap-tabela">
                   <table>
-                    <thead><tr><th>Cliente</th><th>Conta criada</th><th>Como entrou</th><th className="num">Operações</th><th className="num">Markup</th><th /></tr></thead>
+                    <thead><tr><th>Cliente</th><th>Conta criada</th><th>Como entrou</th><th className="num">Operações</th><th className="num">Markup</th>{podeTrocar && <th />}</tr></thead>
                     <tbody>
                       {grupo.lista.map((c) => (
                         <tr key={c.userId}>
@@ -186,7 +187,7 @@ export function AdminParceiros({ sessao, marca = MARCA.id, api = DO_BANCO }: { s
                           <td>{c.fonte ? FONTE[c.fonte] ?? c.fonte : '—'}</td>
                           <td className="num">{int(c.operacoes)}</td>
                           <td className="num"><b>{usd(c.markup)}</b></td>
-                          <td className="num"><button type="button" className="ap-trocar" onClick={() => setTroca({ userId: c.userId, nome: c.nome || c.email, para: grupo.codigo === parceiros[0]?.codigo ? parceiros[1]?.codigo ?? '' : parceiros[0]?.codigo ?? '', motivo: '', enviando: false, erro: null })}>Trocar</button></td>
+                          {podeTrocar && <td className="num"><button type="button" className="ap-trocar" onClick={() => setTroca({ userId: c.userId, nome: c.nome || c.email, para: grupo.codigo === parceiros[0]?.codigo ? parceiros[1]?.codigo ?? '' : parceiros[0]?.codigo ?? '', motivo: '', enviando: false, erro: null })}>Trocar</button></td>}
                         </tr>
                       ))}
                     </tbody>

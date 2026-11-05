@@ -25,6 +25,23 @@
 // A conexão pelo login (acima) continua valendo e vem na frente quando existe.
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+
+/**
+ * Quem pede (05/11/2026): o admin geral (pleno, sem parceiro) ou o admin do parceiro com
+ * acesso total (pleno, parceiro = o dele). Se a leitura falhar, nega: nunca vira geral por engano.
+ */
+async function acessoDoAdmin(apikey: string, token: string, marca: string): Promise<{ pleno: boolean; parceiro: string | null }> {
+  const h = { apikey, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+  const corpo = JSON.stringify({ p_marca: marca })
+  const [a, b] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/teeds_admin_pleno_da`, { method: 'POST', headers: h, body: corpo }),
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/teeds_parceiro_forcado`, { method: 'POST', headers: h, body: corpo }),
+  ])
+  if (!a.ok || !b.ok) return { pleno: false, parceiro: null }
+  const pleno = (await a.json()) === true
+  const parceiro = (await b.json()) as string | null
+  return { pleno, parceiro: pleno && parceiro ? String(parceiro) : null }
+}
 const SERVICO = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const GRAPH = 'https://graph.facebook.com/v24.0'
 const VOLTA = `${SUPABASE_URL}/functions/v1/meta-instagram`
@@ -207,11 +224,12 @@ Deno.serve(async (req) => {
   // só o admin geral (a mesma regra do painel)
   const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
   const apikey = req.headers.get('apikey') ?? ''
-  const [quem, usuario] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/rpc/teeds_admin_geral_da`, { method: 'POST', headers: { apikey, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_marca: marca }) }),
+  const [acesso, usuario] = await Promise.all([
+    acessoDoAdmin(apikey, token, marca),
     fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey, Authorization: `Bearer ${token}` } }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
   ])
-  if (!quem.ok || (await quem.json()) !== true) return json({ erro: 'Só o administrador geral liga o Instagram.' }, 403)
+  if (!acesso.pleno) return json({ erro: 'Só a administração liga o Instagram.' }, 403)
+  if (acesso.parceiro && acesso.parceiro !== parceiro) return json({ erro: 'Este Instagram é de outro parceiro.' }, 403)
 
   try {
     const acao = String(d.acao ?? '')

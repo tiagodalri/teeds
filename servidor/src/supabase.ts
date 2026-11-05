@@ -56,6 +56,28 @@ export async function papelDoAdmin(userId: string, marca: string): Promise<{ ger
   return daMarca ? { geral: false, parceiro: String(daMarca.parceiro) } : null
 }
 
+/**
+ * Admin com acesso total (05/11/2026): o geral, ou o admin do parceiro marcado com
+ * administradores.acesso_total. Devolve o parceiro dele para as leituras ficarem só no que é dele.
+ */
+export async function adminPlenoDaMarca(userId: string, marca: string): Promise<{ geral: boolean; parceiro: string | null } | null> {
+  const linhas = await rest<any[]>(`/administradores?user_id=eq.${encodeURIComponent(userId)}&marca=in.(${encodeURIComponent(marca)},teeds)&select=marca,parceiro,acesso_total`)
+  if (!linhas?.length) return null
+  if (linhas.some((l) => !l.parceiro)) return { geral: true, parceiro: null }
+  const daMarca = linhas.find((l) => l.marca === marca && l.parceiro && l.acesso_total === true)
+  return daMarca ? { geral: false, parceiro: String(daMarca.parceiro) } : null
+}
+
+/** Os e-mails (já sem a etiqueta +marca-) dos clientes e leads de um parceiro. */
+export async function emailsDoParceiro(marca: string, codigo: string): Promise<Set<string>> {
+  const limpo = (e: unknown) => String(e ?? '').trim().toLowerCase().replace(/\+marca-[a-z]+@/, '@')
+  const [c, l] = await Promise.all([
+    rest<any[]>(`/clientes?marca=eq.${encodeURIComponent(marca)}&parceiro=eq.${encodeURIComponent(codigo)}&select=email&limit=50000`),
+    rest<any[]>(`/leads_capturados?marca=eq.${encodeURIComponent(marca)}&parceiro=eq.${encodeURIComponent(codigo)}&select=email&limit=50000`),
+  ])
+  return new Set([...(c ?? []), ...(l ?? [])].map((x) => limpo(x.email)).filter(Boolean))
+}
+
 /** O cliente é deste escopo? (a conta veio pelo parceiro, ou operou/conversou na vitrine dele) */
 export async function clienteNoEscopo(marca: string, userId: string, escopo: string): Promise<boolean> {
   const r = await rest<boolean>('/rpc/teeds_cliente_no_escopo', { method: 'POST', body: JSON.stringify({ p_marca: marca, p_user: userId, p_escopo: escopo }) })

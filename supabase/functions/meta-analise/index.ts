@@ -25,6 +25,23 @@ import Anthropic from 'npm:@anthropic-ai/sdk'
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void }
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+
+/**
+ * Quem pede (05/11/2026): o admin geral (pleno, sem parceiro) ou o admin do parceiro com
+ * acesso total (pleno, parceiro = o dele). Se a leitura falhar, nega: nunca vira geral por engano.
+ */
+async function acessoDoAdmin(apikey: string, token: string, marca: string): Promise<{ pleno: boolean; parceiro: string | null }> {
+  const h = { apikey, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+  const corpo = JSON.stringify({ p_marca: marca })
+  const [a, b] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/teeds_admin_pleno_da`, { method: 'POST', headers: h, body: corpo }),
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/teeds_parceiro_forcado`, { method: 'POST', headers: h, body: corpo }),
+  ])
+  if (!a.ok || !b.ok) return { pleno: false, parceiro: null }
+  const pleno = (await a.json()) === true
+  const parceiro = (await b.json()) as string | null
+  return { pleno, parceiro: pleno && parceiro ? String(parceiro) : null }
+}
 const SERVICO = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 /** A chave da I.A.: a colada na tela (config_servicos) ou, sem ela, o segredo das funções. */
 async function chaveIA(): Promise<string> {
@@ -436,11 +453,12 @@ Deno.serve(async (req) => {
   const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
   const apikey = req.headers.get('apikey') ?? ''
   const cab = { apikey, Authorization: `Bearer ${token}` }
-  const [quem, usuario] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/rpc/teeds_admin_geral_da`, { method: 'POST', headers: { ...cab, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_marca: marca }) }),
+  const [acesso, usuario] = await Promise.all([
+    acessoDoAdmin(apikey, token, marca),
     fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: cab }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
   ])
-  if (!quem.ok || (await quem.json()) !== true) return json({ erro: 'Só o administrador geral usa a I.A. dos anúncios.' }, 403)
+  if (!acesso.pleno) return json({ erro: 'Só a administração usa a I.A. dos anúncios.' }, 403)
+  if (acesso.parceiro && acesso.parceiro !== parceiro) return json({ erro: 'Esta conta de anúncios é de outro parceiro.' }, 403)
   const meta = usuario?.user_metadata ?? {}
   const nomeDeQuem = String(meta.nome || meta.full_name || meta.name || String(usuario?.email ?? '').split('@')[0].split('+')[0] || 'Admin')
 
@@ -451,6 +469,8 @@ Deno.serve(async (req) => {
   try {
     // a chave da I.A., colada aqui: só entra depois que a Anthropic a aceitou
     if (acao === 'chave_ia') {
+      // a chave da I.A. é da plataforma inteira: só o admin geral troca
+      if (acesso.parceiro) return json({ erro: 'Só o admin geral troca a chave da I.A.' }, 403)
       const valor = String(d.valor ?? '').trim()
       if (!/^sk-ant-[A-Za-z0-9_-]{20,}$/.test(valor)) return json({ erro: 'Isso não parece uma chave da Anthropic (começa com sk-ant-).' }, 400)
       try { await new Anthropic({ apiKey: valor }).models.list({ limit: 1 }) }

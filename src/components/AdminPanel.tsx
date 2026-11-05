@@ -151,6 +151,11 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
      inteira (e-mails, aulas, I.A., planos, produtos, comissões, estudo). */
   const papel = useMeuPapel(sessao, MARCA.id)
   const doParceiro = !!papel && !papel.geral && !!papel.parceiro
+  /* Acesso total (05/11/2026, Tiago: "ele precisa ter acesso completo ao painel de administrador assim
+     como eu... só não vai ver as informações do Victor"): o admin do parceiro marcado no banco
+     (administradores.acesso_total) usa todas as abas; o banco força o parceiro dele em cada leitura. */
+  const restrito = doParceiro && !papel?.total
+  const pleno = souGeral || (doParceiro && !!papel?.total)
   // trocar o parceiro em foco refaz as leituras (o filtro vale no banco)
   const chaveDoFoco = `${marcaFoco}:${parceiroFoco}`
   const focoAnterior = useRef(parceiroFoco)
@@ -163,7 +168,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
   // o "Atualizar" do topo é o mesmo em toda aba; em Anúncios ele atualiza os anúncios (04/11/2026)
   const [pedidoAnuncios, setPedidoAnuncios] = useState(0)
   const [carregandoAnuncios, setCarregandoAnuncios] = useState(false)
-  useEffect(() => { if (doParceiro && (SO_DO_ADMIN_GERAL as readonly string[]).includes(aba)) setAba('visao') }, [doParceiro, aba])
+  useEffect(() => { if (restrito && (SO_DO_ADMIN_GERAL as readonly string[]).includes(aba)) setAba('visao') }, [restrito, aba])
   const [lista, setLista] = useState<PaginaClientes>(PAGINA_VAZIA)
   const [recentes, setRecentes] = useState<ClienteRegistro[]>([])
   const [topo, setTopo] = useState<Array<{ cliente: ClienteRegistro; comissao: number; operacoes: number }>>([])
@@ -433,9 +438,9 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
   // no suporte o painel vira um app de atendimento: menu só com ícones e a conversa na altura da tela
   /* O menu em grupos (04/11/2026, Tiago: "estou achando confuso o menu dividido dessa forma").
      "Criar acesso" saiu do menu: é o botão "Novo cliente" dentro de Clientes (o menu marca Clientes). */
-  const soGeral = (id: string) => !doParceiro || !(SO_DO_ADMIN_GERAL as readonly string[]).includes(id)
+  const soGeral = (id: string) => !restrito || !(SO_DO_ADMIN_GERAL as readonly string[]).includes(id)
   const item = (id: Aba, nome: string, icone: NomeIcone, selo?: ItemDoMenu['selo']): ItemDoMenu => ({ id, nome, icone, selo, onClick: () => setAba(id) })
-  const naGf = souGeral && marcaFoco === 'globalfly'
+  const naGf = pleno && marcaFoco === 'globalfly'
   const gruposDoMenu: GrupoDoMenu[] = ([
     { id: 'topo', titulo: null, itens: [
       item('visao', 'Visão geral', 'inicio'),
@@ -445,7 +450,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
     { id: 'captacao', titulo: 'Captação', itens: [
       ...(naGf ? [item('anuncios', 'Anúncios', 'megafone')] : []),
       item('leads', 'Leads', 'leads'),
-      ...(souGeral && MARCA.parceiros?.length ? [item('parceiros', 'Parceiros', 'parceiros')] : []),
+      ...(pleno && MARCA.parceiros?.length ? [item('parceiros', 'Parceiros', 'parceiros')] : []),
     ] },
     { id: 'contato', titulo: 'Lançamento e contato', itens: [
       ...(naGf ? [item('lancamento', 'Live de lançamento', 'aovivo')] : []),
@@ -464,7 +469,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
       item('inteligencia', 'Inteligência', 'inteligencia'),
       item('estudo', 'Centro de estudo', 'estudo'),
       item('comissoes', 'Comissões', 'comissoes'),
-      ...(!doParceiro ? [{ id: 'insights', nome: 'Insights', icone: 'insights' as NomeIcone, sai: true, onClick: () => onNavigate('insights') }] : []),
+      ...(!restrito ? [{ id: 'insights', nome: 'Insights', icone: 'insights' as NomeIcone, sai: true, onClick: () => onNavigate('insights') }] : []),
       { id: 'monitoramento', nome: 'Monitoramento ao vivo', icone: 'monitoramento' as NomeIcone, sai: true, onClick: () => onNavigate('monitoramento') },
     ] },
     { id: 'config', titulo: 'Configurações da plataforma', itens: [
@@ -508,12 +513,12 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
       {aba === 'aulas' && !naRede && <AdminAulas key={chaveDoFoco} sessao={sessao} marca={marcaFoco} />}
       {aba === 'resultados' && <RelatorioClientes key={chaveDoFoco} sessao={sessao} />}
       {aba === 'movimentacoes' && <Movimentacoes key={chaveDoFoco} sessao={sessao} />}
-      {aba === 'anuncios' && souGeral && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminAnuncios sessao={sessao} parceiroDoTopo={parceiroFoco} aoTrocarConta={aoTrocarContaAnuncio} seletorNoTopo={parceirosDoFoco.some((p) => contaAnuncio?.codigos.includes(p.codigo))} atualizarPedido={pedidoAnuncios} aoMudarCarregando={setCarregandoAnuncios} /></Suspense>}
+      {aba === 'anuncios' && pleno && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminAnuncios sessao={sessao} parceiroDoTopo={parceiroFoco} soDoParceiro={doParceiro ? papel!.parceiro! : undefined} aoTrocarConta={aoTrocarContaAnuncio} seletorNoTopo={parceirosDoFoco.some((p) => contaAnuncio?.codigos.includes(p.codigo))} atualizarPedido={pedidoAnuncios} aoMudarCarregando={setCarregandoAnuncios} /></Suspense>}
       {aba === 'whatsapp' && marcaFoco === 'globalfly' && !naRede && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><CentralWhatsApp key={chaveDoFoco} sessao={sessao} marca={marcaFoco} pedido={pedidoWpp}
         onAbrirCliente={(id) => { void clientesPorId(sessao, [id], marcaFoco).then((l) => { if (l[0]) abrirCliente(l[0]) }) }} /></Suspense>}
-      {aba === 'notificacoes' && souGeral && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminNotificacoes sessao={sessao} /></Suspense>}
-      {aba === 'lancamento' && souGeral && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminLancamento sessao={sessao} /></Suspense>}
-      {aba === 'parceiros' && !naRede && souGeral && <AdminParceiros key={chaveDoFoco} sessao={sessao} marca={marcaFoco} />}
+      {aba === 'notificacoes' && pleno && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminNotificacoes sessao={sessao} soDoParceiro={doParceiro ? papel!.parceiro! : undefined} /></Suspense>}
+      {aba === 'lancamento' && pleno && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminLancamento sessao={sessao} /></Suspense>}
+      {aba === 'parceiros' && !naRede && pleno && <AdminParceiros key={chaveDoFoco} sessao={sessao} marca={marcaFoco} podeTrocar={souGeral} />}
       {aba === 'comissoes' && <section className="admin-commission" key={chaveDoFoco}>{comissoes}</section>}
     </main>
     {cliente && <div className="adm-modal-fundo" onMouseDown={()=>setCliente(null)}><section className="adm-modal adm-modal-ficha" onMouseDown={e=>e.stopPropagation()}><header><div className="adm-pessoa"><i>{(cliente.nome||cliente.email||'?')[0].toUpperCase()}</i><b>{cliente.nome||'Sem nome'}<small>{cliente.email}</small></b></div><button onClick={()=>setCliente(null)}><IconeFechar /></button></header><PerfilCliente sessao={sessao} userId={cliente.userId} /><div className="adm-detail-kpis adm-detail-antigo"><div><span>Último acesso</span><b>{data(cliente.vistoEm)}</b></div><div><span>Desde o cadastro</span><b>{Math.max(0,Math.floor((Date.now()-Date.parse(cliente.criadoEm))/864e5))} dias</b></div><div><span>Operações · 90d</span><b>{clienteInfo(cliente.userId).movimento.reduce((s,m)=>s+m.operacoes,0).toLocaleString('pt-BR')}</b></div><div><span>Markup real · 90d</span><b>US$ {dec(clienteInfo(cliente.userId).movimento.filter(m=>!m.demo).reduce((s,m)=>s+m.comissao,0))}</b></div></div><div className="adm-contas"><span className="rot">Contas conectadas na corretora</span>{clienteInfo(cliente.userId).contas.length?clienteInfo(cliente.userId).contas.map(c=><div key={c.contaId}><span><b>{c.contaId}</b><small>{c.tipo==='demo'?'Demonstração':'Conta real'} · vista em {data(c.vistaEm)}</small></span><strong>{c.moeda||'USD'} {(c.saldo??0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></div>):<p>Nenhuma conta Deriv conectada.</p>}</div><div className="adm-form"><label><span>Plano</span><select value={clienteForm.planoId} onChange={e=>setClienteForm({...clienteForm,planoId:e.target.value})}>{planos.map(p=><option key={p.id} value={p.id}>{p.nome}</option>)}</select></label><label><span>Status</span><select value={clienteForm.status} onChange={e=>setClienteForm({...clienteForm,status:e.target.value})}><option value="ativo">Ativo</option><option value="suspenso">Suspenso</option><option value="expirado">Expirado</option><option value="cancelado">Cancelado</option></select></label><label><span>Expira em</span><input type="date" value={clienteForm.expira} onChange={e=>setClienteForm({...clienteForm,expira:e.target.value})}/></label>{MARCA.seloCategoria&&<label><span>Categoria</span><select value={clienteForm.categoria} onChange={e=>setClienteForm({...clienteForm,categoria:e.target.value as 'silver'|'gold'|'black'|'prestige'})}><option value="gold">Gold</option><option value="black">Black</option><option value="prestige">Prestige</option>{clienteForm.categoria==='silver'&&<option value="silver">Silver</option>}</select></label>}</div><div className="adm-extras"><span className="rot">Produtos e extras liberados</span>{produtos.filter(p=>p.id!=='simulador-treino').map(p=><label key={p.id}><input type="checkbox" checked={extras.has(p.id)} onChange={()=>setExtras(x=>{const n=new Set(x);n.has(p.id)?n.delete(p.id):n.add(p.id);return n})}/><span><b>{p.nome}</b><small>{categoriaLegivel(p.categoria)}</small></span></label>)}</div><label className="adm-notas"><span>Observações internas</span><textarea value={clienteForm.observacoes} onChange={e=>setClienteForm({...clienteForm,observacoes:e.target.value})}/></label><footer><div className="adm-ficha-perigo"><button className="adm-cancelar" title="Muda o status para Cancelado; vale ao salvar" onClick={()=>setClienteForm({...clienteForm,status:'cancelado'})}>Marcar como cancelado</button>{souGeral&&<button className="adm-cancelar adm-excluir" onClick={()=>setExcluindo(true)}>Excluir cadastro</button>}</div><span>Cadastrado em {data(cliente.criadoEm)}</span><button onClick={()=>void salvarCliente()} disabled={salvando}>{salvando?'Salvando…':'Salvar alterações'}</button></footer></section></div>}

@@ -110,3 +110,5 @@
   .pn-hist-dados { justify-items: start; text-align: left; }
   .pn-acoes > button { width: 100%; }
 }
+/* o admin do parceiro com acesso total: o público é sempre o dele (05/11/2026) */
+.pn-so-parceiro { font-size: 13px; font-weight: 600; color: var(--muted); padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; }

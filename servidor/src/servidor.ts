@@ -5,7 +5,7 @@ import { contaComSenhaPropria, decidirLead, listarPendentes, enviarAprovacoes, e
 import { trocarEmailDoCliente } from './trocar-email'
 import { abrirBilhete, registrarDescadastro, paginaDeSaida } from './descadastro'
 import { catalogo, alterarRobo } from './catalogo'
-import { administradorDaMarca, clienteNoEscopo, papelDoAdmin } from './supabase'
+import { adminPlenoDaMarca, clienteNoEscopo, emailsDoParceiro, papelDoAdmin } from './supabase'
 import { listarEmailsAdmin } from './admin-emails'
 import { receberEventoResend } from './eventos-resend'
 import { lugarDoEndereco } from './regiao'
@@ -912,10 +912,16 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
       if (url.pathname === '/api/admin/emails') {
         const marca = url.searchParams.get('marca') || marcaDaOrigem.id
         if (!marcaConhecida(marca)) return json(400, { erro: 'Plataforma inválida.' })
-        if (!await administradorDaMarca(dono.id, marca) && !await administradorDaMarca(dono.id, 'teeds')) return json(403, { erro: 'Somente administradores desta plataforma.' })
+        // 05/11/2026: o admin do parceiro com acesso total vê só os e-mails que foram para os clientes e leads dele
+        const plenoEmails = await adminPlenoDaMarca(dono.id, marca)
+        if (!plenoEmails) return json(403, { erro: 'Somente administradores desta plataforma.' })
         if (req.method !== 'GET') return json(405, { erro: 'Método não permitido.' })
         res.setHeader('Cache-Control', 'no-store')
-        return json(200, await listarEmailsAdmin(marca, url.searchParams.get('cursor') || ''))
+        const lidos = await listarEmailsAdmin(marca, url.searchParams.get('cursor') || '')
+        if (plenoEmails.geral) return json(200, lidos)
+        const dele = await emailsDoParceiro(marca, plenoEmails.parceiro!)
+        const limpo = (e: string) => (e.match(/<([^<>]+)>/)?.[1] || e).trim().toLowerCase().replace(/\+marca-[a-z]+@/, '@')
+        return json(200, { ...lidos, emails: lidos.emails.filter((e) => e.destinatarios.some((d) => dele.has(limpo(d)))) })
       }
       // ---- ligar
       if (url.pathname === '/api/catalogo-robos') {
@@ -930,7 +936,7 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
           return { ...r, parametros: v.parametros, parametrosVersao: v.versao, testeDemo: emTesteNoDemo(marca, r.id), lossVirtualAjustavel }
         }))
         if (req.method === 'POST') {
-          if (!await administradorDaMarca(dono.id, marca)) return json(403, { erro: 'Somente administradores desta plataforma.' })
+          if (!await adminPlenoDaMarca(dono.id, marca)) return json(403, { erro: 'Somente administradores desta plataforma.' })
           if (typeof corpo.ativo !== 'boolean' || typeof corpo.id !== 'string') return json(400, { erro: 'Dados inválidos.' })
           return json(200, alterarRobo(marca, corpo.id, corpo.ativo))
         }
@@ -947,7 +953,7 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
         */
         const marcaPedida = url.searchParams.get('marca')
         const marca = marcaPedida ? marcaPorId(marcaPedida).id : marcaDaOrigem.id
-        if (!(await administradorDaMarca(dono.id, marca)) && !(await administradorDaMarca(dono.id, 'teeds'))) return json(403, { erro: 'Somente administradores desta plataforma.' })
+        if (!(await adminPlenoDaMarca(dono.id, marca))) return json(403, { erro: 'Somente administradores desta plataforma.' })
         const m = marcaPorId(marca)
         const estrategia = ESTRATEGIAS_LOCAIS.find((e) => e.id === roboId)
         if (!estrategia || !m.robos.includes(roboId)) return json(404, { erro: 'Este robô não pertence a esta plataforma.' })
