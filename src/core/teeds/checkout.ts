@@ -73,8 +73,13 @@ export function linkDoCheckout(
 ): string | null {
   const base = CHECKOUTS[marca]?.[produtoId]
   if (!base) return null
+  return comComprador(base, comprador)
+}
 
-  const url = new URL(base)
+/** Qualquer link de checkout (Kiwify ou Cakto) com e-mail, nome e telefone já preenchidos. */
+export function comComprador(base: string, comprador?: CompradorDoCheckout | null): string {
+  let url: URL
+  try { url = new URL(base) } catch { return base }
   const email = (comprador?.email ?? '').trim().toLowerCase()
   const nome = (comprador?.nome ?? '').trim()
   const telefone = telefoneLimpo(comprador?.telefone)

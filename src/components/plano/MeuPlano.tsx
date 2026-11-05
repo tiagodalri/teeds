@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MARCA } from '../../marca'
 import { abrirSuporte } from '../../core/teeds/suporte'
+import { comComprador, type CompradorDoCheckout } from '../../core/teeds/checkout'
 import { cobrancaLegivel, compartilhamentoLegivel, precoLegivel, simuladorLegivel, type MeuSubplano, type Subplano } from '../../core/teeds/subplanos'
 import './meu-plano.css'
 
@@ -12,7 +13,7 @@ import './meu-plano.css'
 const IAS: Array<[string, string]> = [['goreme', 'GF Raptor'], ['falcon', 'GF Falcon'], ['legacy', 'GF Legacy'], ['superior5', 'GF Gulf'], ['ag2', 'GF Phenom']]
 const tem = (s: Subplano, ia: string) => s.ias == null || s.ias.includes(ia)
 
-export function MeuPlano({ dados, foco, aoFechar }: { dados: MeuSubplano; foco?: string | null; aoFechar: () => void }) {
+export function MeuPlano({ dados, foco, aoFechar, comprador }: { dados: MeuSubplano; foco?: string | null; aoFechar: () => void; comprador?: CompradorDoCheckout | null }) {
   useEffect(() => {
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') aoFechar() }
     window.addEventListener('keydown', esc)
@@ -37,7 +38,7 @@ export function MeuPlano({ dados, foco, aoFechar }: { dados: MeuSubplano; foco?:
     { rot: 'GFT Lab (beta)', v: (s) => (s.lab ? <i className="mpl-sim" aria-label="Incluído">✓</i> : <i className="mpl-nao" aria-label="Não incluído">✕</i>) },
   ]
   const quero = (s: Subplano) => {
-    if (s.checkoutUrl) { window.open(s.checkoutUrl, '_blank', 'noopener'); return }
+    if (s.checkoutUrl) { window.open(comComprador(s.checkoutUrl, comprador), '_blank', 'noopener,noreferrer'); return }
     aoFechar(); abrirSuporte({ mensagem: `Quero passar para o subplano ${s.nome}.` })
   }
   return (

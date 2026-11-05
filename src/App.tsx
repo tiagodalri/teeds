@@ -1521,7 +1521,7 @@ export default function App() {
         </div>
       )}
       {MARCA.aoVivo && !JANELA && treinoAtivo && <Suspense fallback={null}><PlayerDoTreino naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
-      {planoAberto && meuSubplano && <MeuPlano dados={meuSubplano} foco={planoAberto.foco} aoFechar={() => setPlanoAberto(null)} />}
+      {planoAberto && meuSubplano && <MeuPlano dados={meuSubplano} foco={planoAberto.foco} aoFechar={() => setPlanoAberto(null)} comprador={teeds.sessao?.usuario} />}
       {/* 04/11/2026: depois de desconectar, o Conectar pergunta qual conta da Deriv (EscolherContaDeriv) */}
       {conta.escolhaDeConta && <EscolherContaDeriv aoContinuar={conta.continuarConectando} aoFechar={conta.fecharEscolhaDeConta} />}
       {verCarteira && (

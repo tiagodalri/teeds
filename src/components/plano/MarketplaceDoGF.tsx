@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { abrirSuporte } from '../../core/teeds/suporte'
+import { comComprador } from '../../core/teeds/checkout'
 import {
   abrirMeuPlano, carregarMeuSubplano, cobrancaLegivel, compartilhamentoLegivel, precoLegivel, simuladorLegivel, useMeuSubplano, type Subplano,
 } from '../../core/teeds/subplanos'
@@ -37,7 +38,7 @@ export function MarketplaceDoGF({ sessao }: { sessao?: SessaoTeeds | null }) {
   const acima = planos.filter((s) => meu && s.ordem > meu.ordem)
   const vitrine = acima.length ? acima : planos.filter((s) => s.id !== 'gold')
   const quero = (s: Subplano) => {
-    if (s.checkoutUrl) { window.open(s.checkoutUrl, '_blank', 'noopener,noreferrer'); return }
+    if (s.checkoutUrl) { window.open(comComprador(s.checkoutUrl, sessao?.usuario), '_blank', 'noopener,noreferrer'); return }
     abrirSuporte({ mensagem: `Quero passar para o subplano ${s.nome} do GF Member.` })
   }
   // o exemplo do compartilhamento: um mês com US$ 1.000 de lucro na conta real
