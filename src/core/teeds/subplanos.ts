@@ -94,3 +94,6 @@ export const precoLegivel = (v: number | null) => (v == null ? '' : v === 0 ? 'R
 export const cobrancaLegivel = (s: Subplano) => (s.cobranca === 'aquisicao-zero' || s.preco === 0 ? 'Aquisição zero' : `${precoLegivel(s.preco)} ${s.cobranca === 'mensal' ? 'por mês' : 'por ano'}`)
 export const simuladorLegivel = (h: number | null) => (h == null ? 'Ilimitado' : h === 0 ? 'Sem simulador' : `${h.toLocaleString('pt-BR')} h por dia`)
 export const compartilhamentoLegivel = (c: number) => (c > 0 ? `${Math.round(c * 1000) / 10}% do lucro` : 'Sem compartilhamento')
+
+/** Só para o laboratório: finge o subplano da pessoa. */
+export function simularMeuSubplano(d: MeuSubplano) { atual = d; avisar() }

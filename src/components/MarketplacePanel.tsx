@@ -9,6 +9,7 @@ import { Icone } from './Icone'
 import { irParaTela, useRobosBloqueados } from '../core/teeds/robosLiberados'
 import { abrirSuporte } from '../core/teeds/suporte'
 import './marketplace.css'
+import { MarketplaceDoGF } from './plano/MarketplaceDoGF'
 
 type Categoria = 'Todos' | 'Robôs' | 'Mentorias' | 'Ferramentas'
 
@@ -172,7 +173,12 @@ const GARANTIAS_DO_CHECKOUT = [
 const categoriaBanco = (valor: string): Produto['categoria'] => valor === 'robo' ? 'Robôs' : valor === 'mentoria' ? 'Mentorias' : 'Ferramentas'
 const precoBR = (centavos: number) => (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 
+/** 05/11/2026: na GlobalFly o Marketplace são os subplanos do GF Member (plano/MarketplaceDoGF.tsx). */
 export function MarketplacePanel({ sessao }: { sessao?: SessaoTeeds | null }) {
+  return GF ? <MarketplaceDoGF sessao={sessao} /> : <MarketplaceComum sessao={sessao} />
+}
+
+function MarketplaceComum({ sessao }: { sessao?: SessaoTeeds | null }) {
   const [categoria, setCategoria] = useState<Categoria>('Todos')
   const [pagina, setPagina] = useState(0)
   const [selecionado, setSelecionado] = useState<Produto | null>(null)
