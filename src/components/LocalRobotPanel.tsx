@@ -311,7 +311,7 @@ export function LocalRobotPanel({
     const escolhida = ESTRATEGIAS_LOCAIS.find(e => e.id === modelo.id)
     if (!escolhida) { setErro('Modelo indisponível. Escolha outro robô.'); return }
     // I.A. vendida à parte que esta pessoa ainda não tem (GlobalFly): o servidor também barra
-    if (roboBloqueado(escolhida.id)) { setErro(`Esta I.A. é vendida à parte (${ROBOS_A_VENDA[escolhida.id]?.preco ?? 'no Marketplace'}). Desbloqueie no Marketplace para ligar.`); return }
+    if (roboBloqueado(escolhida.id)) { setErro('Esta I.A. faz parte dos subplanos Black e Prestige. Veja em Meu plano, no selo do topo.'); return }
     envioPendente.current = true
     setErro(null)
     setLigando(true)

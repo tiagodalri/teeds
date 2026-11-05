@@ -136,6 +136,7 @@ const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine')
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
 import { DerivDesconectada } from './components/DerivDesconectada'
 import { EscolherContaDeriv } from './components/deriv/EscolherContaDeriv'
+import { MeuPlano as MeuPlanoLab } from './components/plano/MeuPlano'
 import { DigitosFlutuante } from './components/DigitosFlutuante'
 import { Decolagem } from './components/entrada/Decolagem'
 import { Carregando } from './components/entrada/Carregando'
@@ -431,6 +432,12 @@ function Laboratorio() {
   }
   // ?tela=escolher-deriv: a escolha de conta da Deriv ao reconectar
   if (qual === 'escolher-deriv') return <div className="app workspace-app" style={{ minHeight: '100dvh' }}><EscolherContaDeriv aoContinuar={() => undefined} aoFechar={() => undefined} /></div>
+  // ?tela=meu-plano(&sub=black): a janela dos subplanos do GF Member com os números de exemplo
+  if (qual === 'meu-plano') {
+    const sp = (id: string, nome: string, ordem: number, preco: number, ref: number, comp: number, ias: string[] | null, horas: number | null, extra: boolean, top: boolean) => ({ id, nome, ordem, chamada: { gold: 'A entrada no GF Member, com participação nos lucros.', black: 'Todas as I.A., mais simulador e a sala extra.', prestige: 'Tudo liberado, sem compartilhamento, com assessor e GFT Lab.' }[id] ?? '', precoReferencia: ref, preco, cobranca: preco ? 'anual' : 'aquisicao-zero', compartilhamento: comp, ias, simuladorHoras: horas, salaExtra: extra, assessor: top, lab: top, checkoutUrl: null, assessorWhatsapp: null, ativo: true })
+    const dados = { atual: new URLSearchParams(location.search).get('sub') ?? 'gold', admin: false, minutosHoje: 38, subplanos: [sp('gold', 'Gold', 1, 0, 997, 0.1, ['goreme', 'falcon', 'legacy'], 1, false, false), sp('black', 'Black', 2, 997, 1997, 0.05, null, 12, true, false), sp('prestige', 'Prestige', 3, 1997, 2997, 0, null, null, true, true)] }
+    return <div className="app workspace-app" style={{ minHeight: '100dvh' }}><MeuPlanoLab dados={dados} foco="black" aoFechar={() => undefined} /></div>
+  }
   if (qual === 'aulas') return <LabAulas />
   if (qual === 'minicabine') return <Suspense fallback={null}><LabMiniCabine /></Suspense>
   return (

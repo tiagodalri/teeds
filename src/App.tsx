@@ -41,6 +41,8 @@ import { confirmarInscricao } from './core/teeds/notificacoes'
 import { aceiteDoLoginPendente, aceiteGuardado, jaAceitou, limparAceiteDoLogin, registrarAceite } from './core/teeds/termos'
 import { startLogin } from './core/deriv/auth'
 import { EscolherContaDeriv } from './components/deriv/EscolherContaDeriv'
+import { MeuPlano } from './components/plano/MeuPlano'
+import { abrirMeuPlano, carregarMeuSubplano, useMeuSubplano } from './core/teeds/subplanos'
 import type { DigitContract } from './core/deriv/digits'
 import { useCandleSeries, useConnection, useLimitesDuracao, useLiveTick, useProposal, useSymbols } from './hooks/useMarket'
 import { pedeDeposito, traduzirErro } from './core/deriv/erros'
@@ -217,6 +219,16 @@ export default function App() {
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null)
   // Selo Silver/Gold no topo (GlobalFly): vem da ficha, junto com a foto
   const [categoria, setCategoria] = useState<Categoria | null>(null)
+  // 05/11/2026: o subplano do GF Member (Gold, Black, Prestige) e a janela "Meu plano"
+  const meuSubplano = useMeuSubplano()
+  const [planoAberto, setPlanoAberto] = useState<{ foco: string | null } | null>(null)
+  useEffect(() => {
+    if (!MARCA.seloCategoria) return
+    void carregarMeuSubplano(teeds.sessao)
+    const abrir = (e: Event) => { void carregarMeuSubplano(teeds.sessao); setPlanoAberto({ foco: (e as CustomEvent<string | null>).detail ?? null }) }
+    window.addEventListener('plataforma:meu-plano', abrir)
+    return () => window.removeEventListener('plataforma:meu-plano', abrir)
+  }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // suporte (20/10/2026): o botão flutuante do admin abre a caixa de entrada
   const [pedidoCaixa, setPedidoCaixa] = useState(0)
   // as sessões vivas que a tela de robôs busca: a home e a mini-cabine usam as mesmas (21/10/2026)
@@ -1345,7 +1357,7 @@ export default function App() {
             )
           })()}
 
-          {MARCA.seloCategoria && !JANELA && teeds.usuario && categoria && <SeloCategoria categoria={categoria} />}
+          {MARCA.seloCategoria && !JANELA && teeds.usuario && (meuSubplano?.atual || categoria) && <SeloCategoria categoria={(meuSubplano?.atual ?? categoria) as Categoria} aoAbrir={meuSubplano?.subplanos.length ? () => abrirMeuPlano() : undefined} />}
 
           {JANELA && (
             <button type="button" className="js-voltar" onClick={voltarAPlataforma}
@@ -1509,6 +1521,7 @@ export default function App() {
         </div>
       )}
       {MARCA.aoVivo && !JANELA && treinoAtivo && <Suspense fallback={null}><PlayerDoTreino naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
+      {planoAberto && meuSubplano && <MeuPlano dados={meuSubplano} foco={planoAberto.foco} aoFechar={() => setPlanoAberto(null)} />}
       {/* 04/11/2026: depois de desconectar, o Conectar pergunta qual conta da Deriv (EscolherContaDeriv) */}
       {conta.escolhaDeConta && <EscolherContaDeriv aoContinuar={conta.continuarConectando} aoFechar={conta.fecharEscolhaDeConta} />}
       {verCarteira && (

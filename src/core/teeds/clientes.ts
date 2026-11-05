@@ -273,7 +273,7 @@ export interface ClienteRegistro {
   fusoHorario: string | null
   idioma: string | null
   /** Selo Silver/Gold (GlobalFly); null nas outras marcas. */
-  categoria: 'silver' | 'gold' | null
+  categoria: 'silver' | 'gold' | 'black' | 'prestige' | null
   /** Parceiro de divulgação que trouxe o cliente (27/10/2026); null = direto. */
   parceiro?: string | null
 }
@@ -353,7 +353,7 @@ const paraCliente = (l: any): ClienteRegistro => ({
   observacoes: l.observacoes ?? null, totalAcessos: Number(l.total_acessos ?? 0),
   tempoTotalSegundos: Number(l.tempo_total_segundos ?? 0),
   fusoHorario: l.fuso_horario ?? null, idioma: l.idioma ?? null,
-  categoria: l.categoria === 'silver' || l.categoria === 'gold' ? l.categoria : null,
+  categoria: ['silver', 'gold', 'black', 'prestige'].includes(l.categoria) ? l.categoria : null,
   parceiro: l.parceiro ?? null,
 })
 
@@ -497,7 +497,7 @@ export async function listarProdutosClientes(sessao: SessaoTeeds): Promise<Clien
 export async function atualizarAcessoCliente(sessao: SessaoTeeds, userId: string, dados: {
   planoId: string; statusAcesso: ClienteRegistro['statusAcesso']; acessoExpiraEm: string | null; observacoes: string | null
   /** Selo Silver/Gold (GlobalFly). Omitido = não mexe. */
-  categoria?: 'silver' | 'gold'
+  categoria?: 'silver' | 'gold' | 'black' | 'prestige'
 }, marca: string = MARCA.id): Promise<void> {
   if (!planoClienteValido(dados.planoId, MARCAS[marca] ?? MARCA)) throw new Error('Escolha um dos planos da lista.')
   await rest(`/clientes?user_id=eq.${encodeURIComponent(userId)}&marca=eq.${encodeURIComponent(marca)}`, sessao.token, {

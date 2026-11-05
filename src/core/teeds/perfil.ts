@@ -29,7 +29,7 @@ export interface Perfil {
   criadoEm: string | null
   tourVistoEm: string | null
   /** Selo Silver/Gold (GlobalFly); null nas outras marcas. */
-  categoria: 'silver' | 'gold' | null
+  categoria: 'silver' | 'gold' | 'black' | 'prestige' | null
 }
 
 const CAMPOS = 'nome,cpf,telefone,email,end_cep,end_rua,end_numero,end_complemento,end_bairro,end_cidade,end_uf,foto_url,plano_id,status_acesso,acesso_inicio,acesso_expira_em,criado_em,tour_visto_em,categoria'
@@ -80,7 +80,7 @@ export async function lerPerfil(sessao: SessaoTeeds): Promise<Perfil> {
     acessoExpira: l?.acesso_expira_em ?? null,
     criadoEm: l?.criado_em ?? null,
     tourVistoEm: l?.tour_visto_em ?? null,
-    categoria: l?.categoria === 'silver' || l?.categoria === 'gold' ? l.categoria : null,
+    categoria: ['silver', 'gold', 'black', 'prestige'].includes(l?.categoria) ? l.categoria : null,
   }
 }
 

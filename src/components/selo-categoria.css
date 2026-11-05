@@ -38,3 +38,15 @@
   .selo-categoria b { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .selo-categoria svg { width: 13px; height: 13px; }
 }
+
+/* 05/11/2026: os subplanos do GF Member. O selo vira botão que abre "Meu plano". */
+button.selo-categoria { cursor: pointer; font: inherit; font-size: 12px; }
+button.selo-categoria:focus-visible { outline: 2px solid var(--gf-ouro, #B78D39); outline-offset: 2px; }
+.selo-categoria.black {
+  --metal-1: #4a505a; --metal-2: #1d2127; --metal-3: #07080a; --metal-borda: rgba(255, 255, 255, .22);
+  --metal-texto: #f3f0e9; --metal-icone: #d9b465; --metal-sombra: rgba(0, 0, 0, .45);
+}
+.selo-categoria.prestige {
+  --metal-1: #ffffff; --metal-2: #cfdbe7; --metal-3: #7e93aa; --metal-borda: rgba(255, 255, 255, .7);
+  --metal-texto: #051528; --metal-icone: #B78D39; --metal-sombra: rgba(126, 147, 170, .45);
+}

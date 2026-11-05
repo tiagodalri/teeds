@@ -31,6 +31,7 @@ import {
 import './relatorios.css'
 import { NomeDoRobo } from '../NomeDoRobo'
 import { DERIV } from '../../core/deriv/config'
+import { subplanoAtual, useMeuSubplano } from '../../core/teeds/subplanos'
 
 interface Props {
   sessao: SessaoTeeds
@@ -228,7 +229,9 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
   const porHora = new Map(rel?.porHora.map((h) => [h.hora, h]) ?? [])
   const porDow = new Map(rel?.porDiaSemana.map((h) => [h.dow, h]) ?? [])
   const mesNome = rel?.mes.inicio ? MESES[Number(rel.mes.inicio.slice(5, 7)) - 1] : ''
-  const taxa = MARCA.compartilhamento ?? 0
+  // 05/11/2026: a taxa do subplano (Gold 10%, Black 5%, Prestige 0); sem subplano lido, a da marca
+  const meuSub = subplanoAtual(useMeuSubplano())
+  const taxa = meuSub ? meuSub.compartilhamento : MARCA.compartilhamento ?? 0
   const fator = t && t.somaPerdas < 0 ? t.somaGanhos / Math.abs(t.somaPerdas) : null
   const delta = rel && t ? t.resultado - rel.anterior.resultado : 0
 

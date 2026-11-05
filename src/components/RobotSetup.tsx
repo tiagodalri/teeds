@@ -22,6 +22,7 @@ import { LogotipoDaIA, temLogotipo } from './marca/LogotipoDaIA'
 import { fotoDoCartaoAlto } from './marca/fotoDoCartao'
 import { DERIV } from '../core/deriv/config'
 import { irParaTela, useRobosBloqueados } from '../core/teeds/robosLiberados'
+import { abrirMeuPlano } from '../core/teeds/subplanos'
 import { etiquetaDaConta } from './RobotResumo'
 
 interface Props {
@@ -521,7 +522,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
         <button type="button" className="plv-voltar" disabled={ligando} onClick={voltar}>{passo === primeiroPasso ? 'Cancelar' : '← Voltar'}</button>
         <span className="plv-rodape-dica">{ligando && segundos >= 12 ? 'A Deriv está lenta agora. Seguimos tentando. Não clique de novo.' : passo === 'decolar' ? 'Você acompanha a sessão de qualquer tela.' : 'Nada será operado ainda.'}</span>
         {trancada
-          ? <button type="button" className="plv-principal" onClick={() => { onCancelar(); irParaTela('marketplace') }}>Desbloquear no Marketplace<span aria-hidden="true">→</span></button>
+          ? <button type="button" className="plv-principal" onClick={() => { onCancelar(); abrirMeuPlano('black') }}>Liberar no Black<span aria-hidden="true">→</span></button>
           : passo === 'decolar'
           ? <button type="button" className="plv-principal" disabled={ligando || !planoValido || (!isDemo && !confirmaReal)} onClick={iniciar}>
               {ligando ? `Iniciando… ${segundos}s` : <><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6L12.6 8z" fill="currentColor" /></svg>Iniciar robô</>}

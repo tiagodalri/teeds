@@ -6,7 +6,8 @@ import { MARCA } from '../marca'
 import { pedirModeloDaVitrine } from './RobotSetup'
 import './vitrine-robos.css'
 import { LogotipoDaIA, temLogotipo } from './marca/LogotipoDaIA'
-import { irParaTela, ROBOS_A_VENDA, useRobosBloqueados } from '../core/teeds/robosLiberados'
+import { useRobosBloqueados } from '../core/teeds/robosLiberados'
+import { abrirMeuPlano } from '../core/teeds/subplanos'
 
 /**
  * A vitrine da tela Robôs (19/10/2026, GlobalFly): quem ainda não tem robô
@@ -209,7 +210,7 @@ function ModalDoRobo({ i, nome, base, parametros, aoFechar, aoIniciar, trancada 
           </section>
         </div>
         <footer className="vr-modal-rodape">
-          <button type="button" className="vr-iniciar" onClick={aoIniciar}><IconePlay /><span>{trancada ? (ROBOS_A_VENDA[i.id]?.preco ? `Desbloquear o ${nome} · ${ROBOS_A_VENDA[i.id].preco}` : `Desbloquear o ${nome} no Marketplace`) : `Iniciar operações com o ${nome}`}</span></button>
+          <button type="button" className="vr-iniciar" onClick={aoIniciar}><IconePlay /><span>{trancada ? `Liberar o ${nome} no Black` : `Iniciar operações com o ${nome}`}</span></button>
         </footer>
       </div>
     </div>
@@ -278,8 +279,8 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
                 {v?.gancho && <p className="vr-gancho">{v.gancho}</p>}
                 <NaPratica id={i.id} parametros={parametrosDe(i)} frase={regra(i)} aoAbrir={() => setAberto(i.id)} />
                 {trancada ? (
-                  <button type="button" className="vr-iniciar vr-desbloquear" onClick={() => irParaTela('marketplace')}>
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0" /></svg><span>{ROBOS_A_VENDA[i.id]?.preco ? `Desbloquear · ${ROBOS_A_VENDA[i.id].preco}` : 'Desbloquear no Marketplace'}</span>
+                  <button type="button" className="vr-iniciar vr-desbloquear" onClick={() => abrirMeuPlano('black')}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0" /></svg><span>Liberar no Black</span>
                   </button>
                 ) : (
                   <button type="button" className="vr-iniciar" onClick={() => iniciar(i)}>
@@ -293,7 +294,7 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
       </div>
       {doModal && (
         <ModalDoRobo i={doModal} nome={nomeCurto(doModal)} base={base} parametros={parametrosDe(doModal)} trancada={bloqueados.has(doModal.id)}
-          aoFechar={() => setAberto(null)} aoIniciar={() => (bloqueados.has(doModal.id) ? irParaTela('marketplace') : iniciar(doModal))} />
+          aoFechar={() => setAberto(null)} aoIniciar={() => (bloqueados.has(doModal.id) ? abrirMeuPlano('black') : iniciar(doModal))} />
       )}
     </section>
   )

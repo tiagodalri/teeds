@@ -1,0 +1,32 @@
+/* Subplanos do GF Member no painel (05/11/2026) */
+.asp { margin-bottom: 16px; }
+.asp > header small { max-width: 52ch; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.asp-aviso { margin: 12px 20px 0; padding: 10px 14px; border-radius: 10px; background: color-mix(in srgb, var(--up) 12%, transparent); color: var(--text); font-size: 13px; }
+.asp-lista { display: grid; }
+.asp-item { border-top: 1px solid var(--border); }
+.asp-item:first-child { border-top: 0; }
+.asp-cab { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 14px 20px; border: 0; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.asp-cab:hover { background: color-mix(in srgb, var(--text) 3%, transparent); }
+.asp-resumo { display: grid; gap: 2px; min-width: 0; }
+.asp-resumo b { font-size: 14px; }
+.asp-resumo small { font-size: 12px; color: var(--muted); }
+.asp-cab em { font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--primary); }
+.asp-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 4px 20px 18px; }
+.asp-form .largo { grid-column: 1 / -1; }
+.asp-form label { display: grid; gap: 5px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.asp-form input:not([type=checkbox]), .asp-form select { min-height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 14px; }
+.asp-ias > span { font-size: 12px; font-weight: 700; color: var(--muted); }
+.asp-ias > div { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.asp-ias button { min-height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: var(--bg); color: var(--muted); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.asp-ias button.on { border-color: #B78D39; background: color-mix(in srgb, #B78D39 16%, var(--bg)); color: var(--text); }
+.asp-chaves { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.asp-chaves label { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text); font-weight: 600; cursor: pointer; }
+.asp-chaves input { width: 18px; height: 18px; accent-color: #B78D39; }
+.asp-erro { grid-column: 1 / -1; margin: 0; color: var(--down); font-size: 13px; }
+.asp-acoes { display: flex; justify-content: flex-end; gap: 8px; }
+.asp-acoes .admin-secundario { justify-self: auto; }
+@media (max-width: 700px) {
+  .asp-form { grid-template-columns: minmax(0, 1fr); padding: 4px 14px 16px; }
+  .asp-cab { grid-template-columns: auto minmax(0, 1fr); padding: 12px 14px; }
+  .asp-cab em { display: none; }
+}
