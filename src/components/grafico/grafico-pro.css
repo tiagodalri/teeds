@@ -225,9 +225,7 @@
    das últimas velas e do rótulo da mínima. Um pouco mais de altura para o gráfico respirar
    (29/10/2026, revisão visual). */
 @media (max-width: 700px) {
-  .layout-operar > .main:has(.gp) { height: auto; min-height: 0; }
-  .layout-operar > .main:has(.gp) > .chart { flex: none; }
-  .layout-operar .chart .gp-grafico { min-height: 400px; }
+  .layout-operar .chart .gp-grafico { min-height: 260px; }
 }
 
 /* ---------------------------------------------------- tamanho do gráfico (30/10/2026, áudio do Victor)
@@ -243,7 +241,6 @@
   .gp:not(.gp-com-desenhos) .gp-grafico { padding-bottom: 0; }
   .gp:not(.gp-com-desenhos) .gp-kline { bottom: 0; }
   .gp:not(.gp-com-desenhos) .gp-dica { bottom: 8px; }
-  .layout-operar .chart .gp-grafico { min-height: max(380px, calc(100dvh - 330px)); }
 }
 @media (max-width: 700px) {
   /* no celular só o desenho (lápis e setas), para caberem na linha dos Indicadores */
@@ -262,3 +259,11 @@
 .layout-operar .chart .gp-ampliado .gp-grafico, .gp-ampliado .gp-grafico { min-height: 0; }
 body:has(.gp-ampliado) { overflow: hidden; }
 body:has(.gp-ampliado) :is(.barra-inferior, .mcb, .sp-lancador-area, .eq-lancador-area, .app-convite, .av-pilula, #aviso-versao) { display: none !important; }
+
+/* 05/11/2026 (vídeo do Naor no iPhone): no celular o gráfico GF crescia até a barra de baixo
+   e a boleta sumia; no TradingView a boleta aparece embaixo (75 Index, Comprar / Vender).
+   Agora os dois têm a mesma altura: o miolo do Manual fica em 66dvh (mínimo 510 px), como no TV.
+   A pessoa vê onde compra e vende, e arrastar para cima no gráfico desce até a boleta. */
+@media (max-width: 700px) {
+  .layout-operar > .main:has(.gp) > .chart { flex: 1 1 auto; min-height: 0; }
+}

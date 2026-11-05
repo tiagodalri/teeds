@@ -121,6 +121,33 @@ const CORES_DAS_LINHAS = ['#E0B84F', '#4FA3FF', '#C38BFF', '#2FBF8F', '#FF7A59',
 const toque = () => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
 const estreito = (el: HTMLElement | null) => !!el && el.clientWidth > 0 && el.clientWidth < 700
 
+/* 05/11/2026 (vídeo do Naor no iPhone): no gráfico GF o dedo ficava preso nas velas e a
+   pessoa não achava a boleta embaixo; só "bem no cantinho" a página descia. No TradingView
+   desce normal. Agora, no toque: arrastar para cima/baixo rola a página, para os lados anda
+   nas velas, a pinça dá zoom. No eixo de preço (esticar a escala) e com ferramenta de desenho
+   o gráfico continua segurando o arraste. A biblioteca não expõe essa opção, por isso o
+   ajuste é feito por dentro, com guarda: se mudar de versão, fica como era. */
+function liberarRolagemVertical(chart: Chart, el: HTMLElement, prende: () => boolean): () => void {
+  if (!toque()) return () => {}
+  const opcoes = (chart as unknown as { _chartEvent?: { _event?: { _options?: { treatVertDragAsPageScroll?: () => boolean } } } })._chartEvent?._event?._options
+  const casca = el.firstElementChild as HTMLElement | null
+  if (!opcoes || typeof opcoes.treatVertDragAsPageScroll !== 'function' || !casca) return () => {}
+  let noEixo = false
+  const aoTocar = (e: TouchEvent) => {
+    const t = e.touches[0]
+    if (!t) return
+    const r = el.getBoundingClientRect()
+    noEixo = t.clientX > r.right - 64
+  }
+  opcoes.treatVertDragAsPageScroll = () => !prende() && !noEixo
+  // pan-y: o navegador cuida do arraste vertical; overscroll auto: sem isso a rolagem
+  // parava no gráfico (a biblioteca põe overscroll-behavior: none) e a página não descia
+  casca.style.touchAction = 'pan-y'
+  casca.style.overscrollBehavior = 'auto'
+  el.addEventListener('touchstart', aoTocar, { capture: true, passive: true })
+  return () => el.removeEventListener('touchstart', aoTocar, { capture: true })
+}
+
 function estilos(modo: ChartMode, compacto = false): DeepPartial<Styles> {
   const regra = compacto ? 'follow_cross' as const : 'always' as const
   const texto = css('--text', '#e8eef5'), apoio = css('--muted', '#93A6BD'), borda = css('--border', '#1A2D45')
@@ -267,6 +294,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
   const [indicadores, setIndicadores] = useState<IndicadorSalvo[]>(() => carregarIndicadores(sessao, (l) => setIndicadores(l), sinalLiberado))
   const [painel, setPainel] = useState(false)
   const [ferramenta, setFerramenta] = useState<string | null>(null)
+  const ferramentaRef = useRef(ferramenta); ferramentaRef.current = ferramenta
   /*
     30/10/2026 (áudio do Victor: "o gráfico ficou muito pequeno no celular… deixa
     algum campo que a pessoa consegue minimizar, aumentar"): no celular a barra
@@ -297,6 +325,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
     onBlur: () => setDica(null),
   })
   const [selecionado, setSelecionado] = useState<{ id: string; nome: string; d: DesenhoSalvo } | null>(null)
+  const selecionadoRef = useRef(selecionado); selecionadoRef.current = selecionado
   const [estilo, setEstilo] = useState({ cor: CORES[0], espessura: 2, tracejado: false })
   const desenhando = useRef<string | null>(null)
 
@@ -328,7 +357,8 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
       if (c !== compactoRef.current) { compactoRef.current = c; chart.setStyles(estilos(modoRef.current, c)) }
     })
     tamanho.observe(el)
-    return () => { tema.disconnect(); tamanho.disconnect(); dispose(el); chartRef.current = null }
+    const soltarRolagem = liberarRolagemVertical(chart, el, () => !!desenhando.current || !!ferramentaRef.current || !!selecionadoRef.current)
+    return () => { soltarRolagem(); tema.disconnect(); tamanho.disconnect(); dispose(el); chartRef.current = null }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const modoRef = useRef(mode)
