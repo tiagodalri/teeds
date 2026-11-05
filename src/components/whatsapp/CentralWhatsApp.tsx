@@ -725,18 +725,18 @@ function Conexao({ api, estado, onFechar, onMudou }: { api: WhatsAppApi; estado:
           <small>Ficam no Gerenciador do WhatsApp e no painel do aplicativo da Meta. A chave é a de um <i>usuário do sistema</i>, com validade "Nunca" e as permissões <b>whatsapp_business_messaging</b> e <b>whatsapp_business_management</b>.</small>
           <div className="wz-form">
             <div className="wz-form-linha">
-              <label><span>ID do número de telefone</span><input inputMode="numeric" value={d.phoneNumberId} onChange={(e) => setD({ ...d, phoneNumberId: e.target.value.replace(/\D/g, '') })} placeholder="Só números" /></label>
-              <label><span>ID da conta do WhatsApp Business</span><input inputMode="numeric" value={d.wabaId} onChange={(e) => setD({ ...d, wabaId: e.target.value.replace(/\D/g, '') })} placeholder="Só números" /></label>
+              <label><span>ID do número de telefone</span><input inputMode="numeric" name="wz-phone-number-id" autoComplete="off" data-1p-ignore data-lpignore="true" value={d.phoneNumberId} onChange={(e) => setD({ ...d, phoneNumberId: e.target.value.replace(/\D/g, '') })} placeholder="Só números" /></label>
+              <label><span>ID da conta do WhatsApp Business</span><input inputMode="numeric" name="wz-waba-id" autoComplete="off" data-1p-ignore data-lpignore="true" value={d.wabaId} onChange={(e) => setD({ ...d, wabaId: e.target.value.replace(/\D/g, '') })} placeholder="Só números" /></label>
             </div>
             <div className="wz-form-linha">
-              <label><span>ID do aplicativo (opcional)</span><input inputMode="numeric" value={d.appId} onChange={(e) => setD({ ...d, appId: e.target.value.replace(/\D/g, '') })} placeholder="Confere o segredo" /></label>
+              <label><span>ID do aplicativo (opcional)</span><input inputMode="numeric" name="wz-app-id" autoComplete="off" data-1p-ignore data-lpignore="true" value={d.appId} onChange={(e) => setD({ ...d, appId: e.target.value.replace(/\D/g, '') })} placeholder="Confere o segredo" /></label>
               {estado.podeConectar === 'geral' && <label><span>De quem é o número</span><select value={d.parceiro ?? ''} onChange={(e) => setD({ ...d, parceiro: e.target.value })}>
                 <option value="">Da equipe geral</option>
                 {(parceiros.length ? parceiros : [{ codigo: 'n', nome: 'Naor' }]).map((p) => <option key={p.codigo} value={p.codigo}>{p.nome} (/{p.codigo})</option>)}
               </select></label>}
             </div>
-            <label><span>Chave de acesso permanente</span><input type="password" autoComplete="off" value={d.token} onChange={(e) => setD({ ...d, token: e.target.value })} placeholder="Cole a chave do usuário do sistema" /></label>
-            <label><span>Chave secreta do aplicativo</span><input type="password" autoComplete="off" value={d.appSecret} onChange={(e) => setD({ ...d, appSecret: e.target.value })} placeholder="Configurações do app › Básico" /></label>
+            <label><span>Chave de acesso permanente</span><input type="password" name="wz-meta-token" autoComplete="new-password" data-1p-ignore data-lpignore="true" value={d.token} onChange={(e) => setD({ ...d, token: e.target.value })} placeholder="Cole a chave do usuário do sistema" /></label>
+            <label><span>Chave secreta do aplicativo</span><input type="password" name="wz-app-secret" autoComplete="new-password" data-1p-ignore data-lpignore="true" value={d.appSecret} onChange={(e) => setD({ ...d, appSecret: e.target.value })} placeholder="Configurações do app › Básico" /></label>
             {estado.podeConectar === 'geral' && <small className="wz-aviso-mini">Quem vê as conversas: você (admin geral) e os admins do parceiro dono do número.</small>}
           </div>
         </li>}
