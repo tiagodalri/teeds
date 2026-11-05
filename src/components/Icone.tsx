@@ -51,6 +51,8 @@ const TRACOS = {
   sino: 'M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.6 2H4.9l1.6-2zM10 20.5a2 2 0 0 0 4 0',
   // Administração › Central de rastreio (04/11/2026): o radar
   radar: 'M12 3a9 9 0 1 0 9 9M12 7a5 5 0 1 0 5 5M12 12l6.5-6.5M12 11a1 1 0 1 0 0 2',
+  // Administração › WhatsApp (05/11/2026): o balão com o fone, como o do aplicativo
+  whatsapp: 'M4.2 19.8l1.2-3.9A8.2 8.2 0 1 1 8.4 18.7zM9.2 8.4c.2-.5.9-.6 1.2-.1l.8 1.4c.2.3.1.7-.2.9l-.5.4c.5 1.1 1.3 1.9 2.4 2.4l.4-.5c.2-.3.6-.4.9-.2l1.4.8c.5.3.4 1-.1 1.2-2.9 1.3-7.6-3.4-6.3-6.3z',
 } as const
 
 /** Os que se desenham cheios: um "play" vazado parece botão desligado. */

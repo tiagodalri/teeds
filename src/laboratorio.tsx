@@ -145,6 +145,8 @@ import { Carregando } from './components/entrada/Carregando'
 import { decolar, liberarPouso } from './core/decolagem'
 import { CatalogoDeExemplo } from './core/teeds/catalogoRobos'
 import { ligarEscala } from './core/escala'
+import { CentralWhatsApp } from './components/whatsapp/CentralWhatsApp'
+import { whatsappDeExemplo } from './core/teeds/whatsapp'
 
 document.documentElement.dataset.marca = MARCA.id
 // ?tela=central-extras: o banco responde com plataformas e transmissões de exemplo
@@ -435,6 +437,13 @@ function Laboratorio() {
   // ?tela=escolher-deriv: a escolha de conta da Deriv ao reconectar
   if (qual === 'escolher-deriv') return <div className="app workspace-app" style={{ minHeight: '100dvh' }}><EscolherContaDeriv aoContinuar={() => undefined} aoFechar={() => undefined} /></div>
   // ?tela=meu-plano(&sub=black): a janela dos subplanos do GF Member com os números de exemplo
+  // ?tela=whatsapp(&conectado=1): a central do WhatsApp oficial com conversas de exemplo
+  if (qual === 'whatsapp') {
+    const conectado = new URLSearchParams(location.search).has('conectado')
+    const api = whatsappDeExemplo(conectado ? { conectado: true, conta: { marca: 'globalfly', parceiro: 'n', numero: '+55 47 99000-1234', nomeVerificado: 'GlobalFly Trade', qualidade: 'GREEN', limite: 'TIER_1K', situacao: 'conectado', erro: null, ultimoAvisoEm: new Date(Date.now() - 120000).toISOString(), conectadoEm: new Date().toISOString(), phoneNumberId: '123456789012345', wabaId: '987654321098765', appId: '112233445566778' } } : {}, 'lab')
+    const sessao = { token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab' } } as never
+    return <div className="app workspace-app"><div className="admin-shell modo-suporte" style={{ gridTemplateColumns: '1fr' }}><main className="admin-main" style={{ padding: 16 }}><CentralWhatsApp sessao={sessao} marca="globalfly" apiDeTeste={api} /></main></div></div>
+  }
   if (qual === 'meu-plano') {
     const sp = (id: string, nome: string, ordem: number, preco: number, ref: number, comp: number, ias: string[] | null, horas: number | null, extra: boolean, top: boolean) => ({ id, nome, ordem, chamada: { gold: 'A entrada no GF Member, com participação nos lucros.', black: 'Todas as I.A., mais simulador e a sala extra.', prestige: 'Tudo liberado, sem compartilhamento, com assessor e GFT Lab.' }[id] ?? '', precoReferencia: ref, preco, cobranca: preco ? 'anual' : 'aquisicao-zero', compartilhamento: comp, ias, simuladorHoras: horas, salaExtra: extra, assessor: top, lab: top, checkoutUrl: null, assessorWhatsapp: null, ativo: true })
     const dados = { atual: new URLSearchParams(location.search).get('sub') ?? 'gold', admin: false, minutosHoje: 38, subplanos: [sp('gold', 'Gold', 1, 0, 997, 0.1, ['goreme', 'falcon', 'legacy'], 1, false, false), sp('black', 'Black', 2, 997, 1997, 0.05, null, 12, true, false), sp('prestige', 'Prestige', 3, 1997, 2997, 0, null, null, true, true)] }
