@@ -403,3 +403,18 @@
   font-size: 13px; box-shadow: 0 14px 40px -14px rgba(0, 0, 0, .5);
 }
 @media (prefers-reduced-motion: reduce) { .sx-menu { animation: none; } }
+
+/* 04/11/2026: a coluna de ícones do Suporte com o menu em grupos. O título do grupo vira um fio
+   divisor, nenhum grupo fica escondido (não dá para abrir o título sem o texto), a seta de "abre
+   em outra tela" vira um ponto discreto e cada ícone mostra o nome ao passar o mouse (title). */
+@media (min-width: 981px) {
+  .admin-shell.modo-suporte .admin-sidebar nav { gap: 6px; }
+  .admin-shell.modo-suporte .admin-sidebar .adm-grupo { gap: 2px; }
+  .admin-shell.modo-suporte .admin-sidebar .adm-grupo-itens { gap: 2px; }
+  .admin-shell.modo-suporte .admin-sidebar .adm-grupo-itens[data-fechado] { display: grid; }
+  .admin-shell.modo-suporte .admin-sidebar nav .adm-grupo-tit { pointer-events: none; display: block; width: auto; min-height: 0; height: 1px; margin: 6px 12px; padding: 0; border-radius: 0; background: var(--border); font-size: 0; }
+  .admin-shell.modo-suporte .admin-sidebar nav .adm-grupo-tit > * { display: none; }
+  .admin-shell.modo-suporte .admin-sidebar nav button:not(.adm-grupo-tit) { width: 100%; display: grid; place-items: center; }
+  .admin-shell.modo-suporte .admin-sidebar nav button > i { margin: 0; }
+  .admin-shell.modo-suporte .admin-sidebar nav .adm-sai { position: absolute; right: 7px; bottom: 7px; font-size: 9px; opacity: .55; }
+}

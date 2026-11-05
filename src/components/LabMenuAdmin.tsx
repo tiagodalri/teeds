@@ -4,6 +4,7 @@ import { MenuDoAdmin, type GrupoDoMenu } from './MenuDoAdmin'
 import { Icone, type NomeIcone } from './Icone'
 import { SeletorDePlataforma } from './SeletorDePlataforma'
 import './admin-topo.css'
+import './suporte/admin-suporte.css'
 
 export default function LabMenuAdmin() {
   const [aba, setAba] = useState('anuncios')
@@ -19,7 +20,8 @@ export default function LabMenuAdmin() {
     { id: 'config', titulo: 'Configurações da plataforma', itens: [it('aulas', 'Aulas', 'aulas'), it('robos', 'I.A.', 'robos'), it('planos', 'Planos', 'planos'), it('produtos', 'Produtos', 'produtos')] },
   ]
   return (
-    <div className="admin-shell">
+    // como no painel de verdade: a aba Suporte vira o modo de atendimento (coluna de ícones)
+    <div className={`admin-shell${aba === 'suporte' ? ' modo-suporte' : ''}`}>
       <aside className="admin-sidebar">
         <div><span className="rot">Painel de controle</span><h2>Administração</h2><p>Gestão completa da GlobalFly Trade</p></div>
         <MenuDoAdmin grupos={grupos} ativa={aba} />
