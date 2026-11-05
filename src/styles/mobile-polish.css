@@ -568,3 +568,11 @@
   .mc-filtros > button, .cw-filtros > button, .mp-faltam > button, .in-instr-atalhos > button, .bl-unid > button { min-height: 36px; }
   .gp-chip { height: 34px; border-radius: 17px; }
 }
+
+/* Revisão de 04/11/2026: nos filtros em duas colunas (Comissões), o seletor Reais/Demo/Todas
+   cortava o "Todas"; no celular ele ocupa a linha inteira, com os três botões do mesmo tamanho. */
+@media (max-width: 600px) {
+  .filtro:has(> .segmented) { grid-column: 1 / -1; }
+  .filtro > .segmented { display: flex; width: 100%; }
+  .filtro > .segmented > button { flex: 1; }
+}

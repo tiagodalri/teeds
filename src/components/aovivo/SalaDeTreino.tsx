@@ -442,7 +442,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
         {erro && <p className="av-erro cv-app-erro" role="alert">{erro}</p>}
 
         <div className="cv-app-corpo">
-          <Suspense fallback={<section className="es es-carregando"><p>Abrindo o estúdio…</p></section>}><Estudio app /></Suspense>
+          <Suspense fallback={<section className="eo eo-carregando"><p>Abrindo o estúdio…</p></section>}><Estudio app /></Suspense>
           <aside className="cv-app-lado" aria-label="Chat e sala">
             <div className="cv-app-abas" role="tablist" aria-label="Painéis">
               {(['chat', 'sala', 'simulacao', 'historico'] as const).map((a) => (
@@ -521,7 +521,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
         </ol>
       )}
 
-      {comEstudio && <Suspense fallback={<section className="es es-carregando"><p>Abrindo o estúdio…</p></section>}><Estudio /></Suspense>}
+      {comEstudio && <Suspense fallback={<section className="eo eo-carregando"><p>Abrindo o estúdio…</p></section>}><Estudio /></Suspense>}
 
       <div className="cv-numeros" role="group" aria-label="Números da transmissão">
         <div><small>Membros na sala</small><b className="cv-num">{tr.membros}</b><em>reais, sem a simulação</em></div>

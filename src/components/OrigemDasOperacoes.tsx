@@ -125,33 +125,33 @@ export function OrigemDasOperacoes({ sessao, naRede = false }: { sessao: SessaoT
 
         {!!visiveis.length && (
           <>
-            <p className="og-resumo">
+            <p className="oo-resumo">
               <b>{inteiro(total)}</b> {total === 1 ? 'contrato' : 'contratos'} nas contas dos clientes
-              de {janelaEmDatas(janela)}. Receita {naRede ? 'da rede' : 'desta plataforma'}: <b className="og-receita">US$ {cents(receita)}</b>.
+              de {janelaEmDatas(janela)}. Receita {naRede ? 'da rede' : 'desta plataforma'}: <b className="oo-receita">US$ {cents(receita)}</b>.
               O resto é movimento da conta deles — está aqui para conferência, não entra em receita.
             </p>
 
-            <div className="og-cartoes">
+            <div className="oo-cartoes">
               {somados.map((s) => {
                 const r = rotuloDaOrigem(s.origem, naRede)
                 return (
-                  <article key={s.origem} className={`og-cartao ${r.receita ? (eNossa(s.origem) ? 'nossa' : 'irma') : 'fora'}`}>
+                  <article key={s.origem} className={`oo-cartao ${r.receita ? (eNossa(s.origem) ? 'nossa' : 'irma') : 'fora'}`}>
                     <header><b>{r.nome}</b><small>{r.conta}</small></header>
                     <dl>
                       <div><dt>Operações</dt><dd>{inteiro(s.operacoes)}</dd></div>
                       <div><dt>Volume</dt><dd>{num(s.entradas)}</dd></div>
-                      <div><dt>{r.receita ? 'Markup' : 'Markup (não é nosso)'}</dt><dd className={r.receita ? 'og-receita' : 'muted'}>{cents(s.markup)}</dd></div>
+                      <div><dt>{r.receita ? 'Markup' : 'Markup (não é nosso)'}</dt><dd className={r.receita ? 'oo-receita' : 'muted'}>{cents(s.markup)}</dd></div>
                       <div><dt>Resultado do cliente</dt><dd className={s.resultado >= 0 ? 'up' : 'down'}>{assinado(s.resultado)}</dd></div>
                     </dl>
                     <footer>
                       <span>{s.contas.size} {s.contas.size === 1 ? 'conta' : 'contas'}</span>
-                      <span className="og-pistas">
+                      <span className="oo-pistas">
                         {s.porRegistro > 0 && <em title="contratos que a plataforma registrou ao comprar">{inteiro(s.porRegistro)} por registro</em>}
                         {s.porApp > 0 && <em title="app informado pela Deriv no extrato">{inteiro(s.porApp)} pelo app</em>}
                         {s.porHorario > 0 && <em title="comprados durante uma sessão nossa">{inteiro(s.porHorario)} por horário</em>}
                         {s.semPista > 0 && <em title="sem app e fora das nossas sessões">{inteiro(s.semPista)} sem pista</em>}
                       </span>
-                      {!!s.apps.length && <span className="og-apps">apps: {s.apps.join(', ')}</span>}
+                      {!!s.apps.length && <span className="oo-apps">apps: {s.apps.join(', ')}</span>}
                     </footer>
                   </article>
                 )
