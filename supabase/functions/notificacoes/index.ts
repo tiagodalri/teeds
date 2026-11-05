@@ -224,7 +224,7 @@ const PARCEIROS = new Set(['n', 'v', 'd'])
 const TELAS = new Set(['inicio', 'aovivo', 'aulas', 'robos', 'operar', 'relatorios', 'gerenciamento', 'noticias'])
 // as mesmas comunidades de src/marca/marcas.ts (comunidade e comunidadesDosParceiros da GlobalFly)
 const COMUNIDADES: Record<string, string> = {
-  n: 'https://chat.whatsapp.com/FZpOI5S5Hhe2EOYIOul2C2',
+  n: 'https://chat.whatsapp.com/L3ITpIcORkG57tf1aIYnlp',
   v: 'https://chat.whatsapp.com/KWk0g33mPzYL6ZUqU89Xue',
   '': 'https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq',
 }
