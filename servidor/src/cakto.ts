@@ -17,8 +17,9 @@
  *     `secret` que tem de bater com o nosso. Sem nenhuma das duas provas, o
  *     aviso é descartado.
  *
- *  2. O PRODUTO CERTO. A conta da Cakto vende muita coisa. Só os três ids de
- *     produto da GlobalFly viram liberação; qualquer outro é ignorado.
+ *  2. O PRODUTO CERTO. A conta da Cakto vende muita coisa. Só os produtos da
+ *     GlobalFly viram liberação (os três fixos abaixo e os da tabela
+ *     cakto_produtos, como Black e Prestige); qualquer outro é ignorado.
  *
  *  3. REPETIÇÃO. A Cakto reenvia quando não recebe 200. Quem decide se já viu
  *     aquele (pedido, evento) é o banco, na chave primária de compras_cakto.
@@ -47,6 +48,26 @@ export function produtoDaCakto(cktId: string | null): string | null {
     [process.env.CAKTO_PROD_PACK || '11f87fd7-08b6-47e6-911b-5f8c6126ce76']: 'gf-pack',
   }
   return mapa[cktId] ?? null
+}
+
+/**
+ * O mapa acima mais a tabela cakto_produtos do banco (05/11/2026). Produto novo
+ * na Cakto (Black, Prestige...) entra só na tabela, sem atualizar o servidor.
+ */
+export async function produtoDaCaktoNoBanco(cktId: string | null): Promise<string | null> {
+  const fixo = produtoDaCakto(cktId)
+  if (fixo || !cktId) return fixo
+  try {
+    const r = await fetch(`${base()}/rest/v1/rpc/teeds_cakto_produto`, {
+      method: 'POST',
+      signal: AbortSignal.timeout(10_000),
+      headers: { apikey: segredoBanco(), Authorization: `Bearer ${segredoBanco()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_cakto_id: cktId }),
+    })
+    if (!r.ok) return null
+    const v = await r.json()
+    return typeof v === 'string' && v ? v : null
+  } catch { return null }
 }
 
 export interface AvisoCakto {

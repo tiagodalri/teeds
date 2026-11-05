@@ -38,7 +38,7 @@ import { ligarColetorDeExtrato } from './extrato'
 import { ligarSincronizadorDeComissoes } from './comissoes'
 import { ligarFaxinaDoEspelho } from './espelho'
 import { aplicarNoBanco, assinaturaConfere, ehOSimulador, lerAviso, tokenDoGancho } from './kiwify'
-import { aplicarNoBanco as aplicarNoBancoCakto, assinaturaConfere as assinaturaCakto, lerAviso as lerAvisoCakto, produtoDaCakto, segredoDoGancho } from './cakto'
+import { aplicarNoBanco as aplicarNoBancoCakto, assinaturaConfere as assinaturaCakto, lerAviso as lerAvisoCakto, produtoDaCaktoNoBanco, segredoDoGancho } from './cakto'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -533,7 +533,7 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
       console.warn('[cakto] aviso sem pedido, evento ou e-mail — ignorado')
       res.writeHead(200, tipo); return res.end(JSON.stringify({ ok: true, acao: 'ignorado' }))
     }
-    const produtoId = produtoDaCakto(aviso.produtoCaktoId)
+    const produtoId = await produtoDaCaktoNoBanco(aviso.produtoCaktoId)
     if (!produtoId) {
       console.log(`[cakto] ${aviso.pedido} é de outro produto (${aviso.produtoNome ?? aviso.produtoCaktoId ?? 'sem id'}) — ignorado`)
       res.writeHead(200, tipo); return res.end(JSON.stringify({ ok: true, acao: 'outro-produto' }))

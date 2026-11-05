@@ -104,6 +104,64 @@ def cadeado(d, x, y, s):
     d.ellipse([x + s * 0.43, y + s * 0.6, x + s * 0.57, y + s * 0.74], fill=NAVY)
 
 
+def cena_cartao(tipo, w, h):
+    """Black e Prestige não têm foto: o cartão metálico do GF Member, inclinado, sobre o navy com brilho dourado."""
+    W, H = 1600, 1000
+    im = Image.new('RGB', (W, H), NAVY)
+    d = ImageDraw.Draw(im)
+    for y in range(H):
+        t = y / H
+        d.line([(0, y), (W, y)], fill=tuple(int(NAVY2[i] * (1 - t) + NAVY[i] * t) for i in range(3)))
+    brilho = Image.new('L', (W, H), 0)
+    ImageDraw.Draw(brilho).ellipse([W * 0.30, H * 0.05, W * 0.95, H * 0.95], fill=90)
+    brilho = brilho.filter(ImageFilter.GaussianBlur(160))
+    im = Image.composite(Image.new('RGB', (W, H), GOLD), im, brilho)
+    d = ImageDraw.Draw(im)
+    d.line([(W * 0.78, 0), (W * 0.52, H)], fill=(120, 96, 52), width=3)
+
+    def cartao(nome, c1, c2, txt, sub, ang, cx, cy, esc=1.0):
+        cw, ch = int(860 * esc), int(540 * esc)
+        c = Image.new('RGBA', (cw, ch), (0, 0, 0, 0))
+        g = Image.new('RGB', (cw, ch))
+        gd = ImageDraw.Draw(g)
+        for x in range(cw):
+            t = x / cw
+            k = 0.5 + 0.5 * __import__('math').sin(t * 3.1 + 0.4)
+            gd.line([(x, 0), (x, ch)], fill=tuple(int(c1[i] * (1 - k) + c2[i] * k) for i in range(3)))
+        m = Image.new('L', (cw, ch), 0)
+        ImageDraw.Draw(m).rounded_rectangle([0, 0, cw - 1, ch - 1], radius=int(40 * esc), fill=255)
+        c.paste(g, (0, 0), m)
+        cd = ImageDraw.Draw(c)
+        cd.rounded_rectangle([1, 1, cw - 2, ch - 2], radius=int(40 * esc), outline=(255, 255, 255, 60), width=2)
+        fo = ImageFont.truetype(AV, int(26 * esc), index=2)
+        x = int(60 * esc)
+        for chx in 'GF MEMBER':
+            cd.text((x, int(56 * esc)), chx, font=fo, fill=sub)
+            x += cd.textlength(chx, font=fo) + int(7 * esc)
+        cd.rounded_rectangle([cw - int(170 * esc), int(56 * esc), cw - int(70 * esc), int(126 * esc)], radius=int(12 * esc), fill=GOLD_L)
+        cd.line([(cw - int(120 * esc), int(56 * esc)), (cw - int(120 * esc), int(126 * esc))], fill=GOLD, width=2)
+        cd.text((int(60 * esc), ch - int(190 * esc)), nome, font=ImageFont.truetype(AV, int(108 * esc), index=0), fill=txt)
+        sombra = Image.new('RGBA', (cw + 200, ch + 200), (0, 0, 0, 0))
+        ImageDraw.Draw(sombra).rounded_rectangle([100, 130, cw + 100, ch + 130], radius=40, fill=(0, 0, 0, 170))
+        sombra = sombra.filter(ImageFilter.GaussianBlur(40)).rotate(ang, expand=True, resample=Image.BICUBIC)
+        im.paste(sombra, (int(cx - sombra.width / 2), int(cy - sombra.height / 2)), sombra)
+        r = c.rotate(ang, expand=True, resample=Image.BICUBIC)
+        im.paste(r, (int(cx - r.width / 2), int(cy - r.height / 2)), r)
+
+    if tipo == 'black':
+        cartao('Black', (14, 18, 26), (58, 66, 82), CREAM, (200, 170, 110, 255), 9, W * 0.66, H * 0.52)
+    else:
+        cartao('Black', (14, 18, 26), (58, 66, 82), CREAM, (200, 170, 110, 255), 16, W * 0.56, H * 0.62, 0.78)
+        cartao('Prestige', (196, 204, 218), (246, 248, 252), NAVY, (120, 98, 52, 255), 7, W * 0.70, H * 0.46)
+    return cobrir(im, w, h, 0.62)
+
+
+def imagem(prod, w, h, foco=0.5):
+    if prod.get('cartao'):
+        return cena_cartao(prod['cartao'], w, h)
+    return cobrir(foto(prod['foto']), w, h, foco)
+
+
 def fundo_foto(prod, W, H, foco=0.5, ate=None, inicio=0.40):
     """Foto do jato (ou dos dois, no Pack) ocupando a direita, fundindo no navy à esquerda."""
     RW = W - int(W * inicio)
@@ -116,7 +174,7 @@ def fundo_foto(prod, W, H, foco=0.5, ate=None, inicio=0.40):
         reg = a.copy(); reg.paste(b, (0, 0), mask)
         ImageDraw.Draw(reg).line([(corte, 0), (corte - int(H * 0.32), H)], fill=GOLD, width=3 * S)
     else:
-        reg = cobrir(foto(prod['foto']), RW, H, prod.get('foco', foco))
+        reg = imagem(prod, RW, H, prod.get('foco', foco))
     base = Image.new('RGB', (W, H), NAVY)
     m = Image.new('L', (RW, H))
     px = m.load()
@@ -204,7 +262,7 @@ def banner_celular(prod):
     if prod['fotos'] == 2:
         topo = fundo_foto(prod, W, foto_h, inicio=0.0)
     else:
-        topo = cobrir(foto(prod['foto']), W, foto_h, prod.get('foco_lat', 0.5))
+        topo = imagem(prod, W, foto_h, prod.get('foco_lat', 0.5))
     navy = Image.new('RGB', topo.size, NAVY)
     topo = Image.composite(navy, topo, vinheta_baixo(W, foto_h, 0.55, 255))
     im.paste(topo, (0, 0))
@@ -250,7 +308,7 @@ def lateral(prod):
     d.rounded_rectangle([3 * S, 3 * S, W - 3 * S, H - 3 * S], radius=28 * S, outline=(54, 70, 92), width=2 * S)
     # foto pequena no topo
     topo = fundo_foto(prod, W - 12 * S, 300 * S, inicio=0.0) if prod['fotos'] == 2 else \
-        cobrir(foto(prod['foto']), W - 12 * S, 300 * S, prod.get('foco_lat', 0.5))
+        imagem(prod, W - 12 * S, 300 * S, prod.get('foco_lat', 0.5))
     navy = Image.new('RGB', topo.size, NAVY)
     topo = Image.composite(navy, topo, vinheta_baixo(topo.width, topo.height, 0.6, 255))
     mk = Image.new('L', topo.size, 0)
@@ -294,7 +352,7 @@ def lateral(prod):
                       f('medium', 19), W - 2 * x0 - 40 * S):
         d.text((x0 + 20 * S, yy), ln, font=f('medium', 19), fill=(214, 225, 238)); yy += 28 * S
     yc = y + caixa_h + 30 * S
-    for ln in quebrar(d, 'Fotos: ' + prod['credito'], f('regular', 15), W - 2 * x0):
+    for ln in (quebrar(d, 'Fotos: ' + prod['credito'], f('regular', 15), W - 2 * x0) if prod.get('credito') else []):
         d.text((x0, yc), ln, font=f('regular', 15), fill=(110, 132, 158)); yc += 22 * S
     fim = yc + 30 * S
     im = im.crop((0, 0, W, fim))
@@ -328,10 +386,31 @@ PRODUTOS = {
                         'Acesso por 12 meses, liberado sozinho na sua conta GlobalFly',
                         'Você escolhe valor de entrada, meta e limite de perda em cada uma',
                         'Renovação anual; cancele quando quiser']),
+    'black': dict(nome='GF Member Black', cartao='black', fotos=1, selo='GF MEMBER · SUBPLANO',
+                  titulo_capa=['Black'], tam_capa=110, titulo_banner=['GF Member', 'Black'], tam_banner=70,
+                  titulo_celular=['GF Member', 'Black'], tam_celular=104,
+                  frase='As 5 I.A., mais simulador e a sala extra.',
+                  itens=['As 5 I.A.: Raptor, Falcon, Legacy, Gulf e Phenom',
+                         'Compartilhamento de só 5% do lucro do mês',
+                         'Simulador 12 h por dia',
+                         'Sala ao vivo extra todos os dias',
+                         'Liberado sozinho na sua conta GlobalFly assim que o pagamento é confirmado']),
+    'prestige': dict(nome='GF Member Prestige', cartao='prestige', fotos=1, selo='GF MEMBER · SUBPLANO',
+                     titulo_capa=['Prestige'], tam_capa=100, titulo_banner=['GF Member', 'Prestige'], tam_banner=70,
+                     titulo_celular=['GF Member', 'Prestige'], tam_celular=104,
+                     frase='Tudo liberado, sem compartilhamento.',
+                     itens=['As 5 I.A.: Raptor, Falcon, Legacy, Gulf e Phenom',
+                            'Sem compartilhamento de receita: o lucro é todo seu',
+                            'Simulador ilimitado e sala ao vivo extra',
+                            'Assessor particular no WhatsApp e GFT Lab',
+                            'Liberado sozinho na sua conta GlobalFly assim que o pagamento é confirmado']),
 }
 
 if __name__ == '__main__':
+    import sys
+    so = sys.argv[1:]
     for k, p in PRODUTOS.items():
+        if so and k not in so: continue
         capa(p).save(OUT + f'capa-{k}.jpg', quality=88, optimize=True, progressive=True)
         banner(p).save(OUT + f'banner-{k}.jpg', quality=88, optimize=True, progressive=True)
         banner_celular(p).save(OUT + f'banner-celular-{k}.jpg', quality=88, optimize=True, progressive=True)
