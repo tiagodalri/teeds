@@ -15,6 +15,7 @@
 //    desconectar  esquece a chave (as conversas ficam)
 //    atualizar    lê de novo qualidade e limite do número e os modelos aprovados
 //    enviar       texto, arquivo ou modelo para um contato
+//    reagir       a equipe reage (emoji) a uma mensagem do cliente
 //    novo         abre uma conversa com um número (para mandar o primeiro modelo)
 //    ler          zera as não lidas e marca como lida na Meta
 //
@@ -405,6 +406,19 @@ Deno.serve(async (req) => {
       const ru = await rest(`whatsapp_mensagens?contato_id=eq.${contato.id}&direcao=eq.entrada&select=wamid&order=criado_em.desc&limit=1`)
       const ultima = ru.ok ? (await ru.json())[0]?.wamid : null
       if (ultima) await graph(`${conta.phone_number_id}/messages`, token, { method: 'POST', corpo: { messaging_product: 'whatsapp', status: 'read', message_id: ultima } }).catch(() => null)
+      return json({ ok: true })
+    }
+
+    if (acao === 'reagir') {
+      // a equipe reage a uma mensagem do cliente (emoji vazio tira a reação)
+      const wamid = String(d.wamid ?? ''), emoji = String(d.emoji ?? '')
+      const rm = await rest(`whatsapp_mensagens?wamid=eq.${encodeURIComponent(wamid)}&contato_id=eq.${contato.id}&select=id`)
+      const alvo = rm.ok ? (await rm.json())[0] : null
+      if (!alvo) return json({ erro: 'Mensagem não encontrada.' }, 404)
+      const aberta = !!contato.ultima_entrada_em && Date.now() - new Date(contato.ultima_entrada_em).getTime() < JANELA_MS
+      if (!aberta) return json({ erro: 'Com a janela de 24 horas fechada, o WhatsApp não deixa reagir.' }, 409)
+      await graph(`${conta.phone_number_id}/messages`, token, { method: 'POST', corpo: { messaging_product: 'whatsapp', recipient_type: 'individual', to: contato.wa_id, type: 'reaction', reaction: { message_id: wamid, emoji } } })
+      await rest(`whatsapp_mensagens?id=eq.${alvo.id}`, { method: 'PATCH', body: JSON.stringify({ reacao_equipe: emoji || null }) })
       return json({ ok: true })
     }
 

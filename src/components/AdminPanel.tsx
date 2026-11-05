@@ -336,6 +336,17 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
     const t = window.setInterval(() => { if (!document.hidden) ver() }, 30_000)
     return () => { vivo = false; window.clearInterval(t) }
   }, [marcaFoco, naRede]) // eslint-disable-line react-hooks/exhaustive-deps
+  // conversas do WhatsApp esperando resposta (05/11/2026): o selo verde no menu, como no aplicativo
+  const [filaWhatsApp, setFilaWhatsApp] = useState(0)
+  useEffect(() => {
+    if (marcaFoco !== 'globalfly' || naRede) { setFilaWhatsApp(0); return }
+    let vivo = true
+    const ver = () => fetch(`${SUPABASE.url}/rest/v1/whatsapp_contatos?marca=eq.globalfly&nao_lidas=gt.0&situacao=eq.aberta&select=id&limit=99`, { headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}` } })
+      .then((r) => (r.ok ? r.json() : [])).then((l) => vivo && setFilaWhatsApp(Array.isArray(l) ? l.length : 0)).catch(() => undefined)
+    ver()
+    const t = window.setInterval(() => { if (!document.hidden) ver() }, 45_000)
+    return () => { vivo = false; window.clearInterval(t) }
+  }, [marcaFoco, naRede]) // eslint-disable-line react-hooks/exhaustive-deps
   const nomeDoFoco = naRede ? 'Rede' : (MARCAS[marcaFoco]?.prosa ?? marcaFoco)
   const opcoes = opcoesDePlataforma(ehMaster(), MARCA.id)
   const trocarPlataforma = (id: string) => {
@@ -431,7 +442,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
       ...(MARCA.aoVivo ? [{ id: 'central-ao-vivo', nome: 'Central ao vivo', icone: 'aovivo' as NomeIcone, sai: true, onClick: () => { pedirCentral(); onNavigate('aovivo') } }] : []),
       ...(naGf ? [item('notificacoes', 'Notificações', 'sino')] : []),
       // o WhatsApp oficial do Naor (05/11/2026): o admin geral e os admins do parceiro dono do número
-      ...(marcaFoco === 'globalfly' && !naRede ? [item('whatsapp', 'WhatsApp', 'whatsapp')] : []),
+      ...(marcaFoco === 'globalfly' && !naRede ? [item('whatsapp', 'WhatsApp', 'whatsapp', { n: filaWhatsApp, urgente: true, dica: 'Conversas do WhatsApp esperando resposta' })] : []),
       item('emails', 'E-mails', 'emails'),
     ] },
     { id: 'clientes', titulo: 'Clientes', itens: [

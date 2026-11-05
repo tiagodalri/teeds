@@ -113,7 +113,12 @@ const PALETAS: Record<string, Paleta> = {
       // preto de verdade e o Prestige é champanhe; sem isto a paleta puxava os dois para o marinho
       '#3B3B3E', '#151516', '#2C2A26', '#4A4A4D', '#1C1C1E', '#060606',
       '#FBF5E8', '#E3D3AE', '#A98D5C', '#FFFAF0', '#E6D6B2', '#F7F0E1', '#DCCAA2', '#6B5430',
-      '#2A1F10', '#3A2B16', '#8A6A2A', '#D9B465', '#E7C77A', '#FFFDF7', '#ECE3CF', '#BFAE8C'],
+      '#2A1F10', '#3A2B16', '#8A6A2A', '#D9B465', '#E7C77A', '#FFFDF7', '#ECE3CF', '#BFAE8C',
+      // a central do WhatsApp (05/11/2026, Tiago: "layout semelhante ao do whatsapp oficial"): as cores do
+      // aplicativo (papel de parede, balões, tique azul, verde) para a equipe se sentir em casa
+      '#FFFFFE', '#E9EDEF', '#111B21', '#667781', '#EFEAE2', '#D9FDD3', '#00A884', '#53BDEB', '#F5F6F6', '#54656F',
+      '#202C33', '#222D34', '#8696A0', '#0B141A', '#005C4B', '#2A3942', '#AEBAC1', '#FFF5C4', '#3B3420', '#D1D7DB',
+      '#06CF9C', '#E7FCE3', '#182229', '#F7F8FA', '#E2E5E8', '#FCE9A8', '#7A5C00', '#F2D27A', '#027EB5'],
     // 21/10/2026: vermelho e verde vivos, sem o tom exato (antes #C95F5F e #2F8F72,
     // que apagavam até o gráfico); cada cor herdada mantém a luz e ganha a saturação
     vermelho: { h: 356, s: 0.82 },

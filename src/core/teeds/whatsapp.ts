@@ -37,7 +37,7 @@ export interface EstadoWpp {
 export interface ContatoWpp {
   id: string; waId: string; nome: string | null; userId: string | null; leadId: string | null
   ultimaEm: string | null; ultimaTexto: string | null; ultimaDirecao: 'entrada' | 'saida' | 'nota' | null; ultimaEntradaEm: string | null
-  naoLidas: number; responsavel: string | null; situacao: 'aberta' | 'resolvida'; etiquetas: string[]; criadoEm: string
+  naoLidas: number; responsavel: string | null; situacao: 'aberta' | 'resolvida'; etiquetas: string[]; criadoEm: string; fixada: boolean
 }
 export type TipoMsg = 'texto' | 'imagem' | 'audio' | 'video' | 'documento' | 'figurinha' | 'modelo' | 'localizacao' | 'contato' | 'botao' | 'outro'
 export type StatusMsg = 'pendente' | 'enviada' | 'entregue' | 'lida' | 'falhou' | 'recebida'
@@ -45,7 +45,7 @@ export interface MidiaWpp { caminho?: string | null; mime?: string; nome?: strin
 export interface MensagemWpp {
   id: string; contatoId: string; wamid: string | null; direcao: 'entrada' | 'saida' | 'nota'; tipo: TipoMsg
   texto: string | null; midia: MidiaWpp | null; modelo: { nome: string; idioma: string } | null; citando: string | null
-  reacao: string | null; status: StatusMsg; erro: string | null; autor: string | null; criadoEm: string
+  reacao: string | null; reacaoEquipe: string | null; status: StatusMsg; erro: string | null; autor: string | null; criadoEm: string
   /** só na tela: ainda indo, ou não foi */
   enviando?: boolean; falhouAqui?: string
 }
@@ -75,7 +75,8 @@ export interface WhatsAppApi {
   enviarModelo(contatoId: string, m: ModeloWpp, vars: { cabecalho: string[]; corpo: string[] }): Promise<void>
   nota(contatoId: string, texto: string): Promise<MensagemWpp>
   ler(contatoId: string): Promise<void>
-  mudarContato(contatoId: string, campos: Partial<Pick<ContatoWpp, 'responsavel' | 'situacao' | 'etiquetas' | 'nome'>>): Promise<void>
+  mudarContato(contatoId: string, campos: Partial<Pick<ContatoWpp, 'responsavel' | 'situacao' | 'etiquetas' | 'nome' | 'fixada' | 'naoLidas'>>): Promise<void>
+  reagir(contatoId: string, wamid: string, emoji: string): Promise<void>
   novo(numero: string, nome: string): Promise<string>
   respostas(): Promise<RespostaPronta[]>
   salvarResposta(r: Omit<RespostaPronta, 'id'> & { id?: string }): Promise<void>
@@ -152,10 +153,11 @@ export const daContato = (l: any): ContatoWpp => ({
   id: l.id, waId: l.wa_id, nome: l.nome ?? null, userId: l.user_id ?? null, leadId: l.lead_id ?? null, ultimaEm: l.ultima_em ?? null,
   ultimaTexto: l.ultima_texto ?? null, ultimaDirecao: l.ultima_direcao ?? null, ultimaEntradaEm: l.ultima_entrada_em ?? null,
   naoLidas: Number(l.nao_lidas) || 0, responsavel: l.responsavel ?? null, situacao: l.situacao ?? 'aberta', etiquetas: l.etiquetas ?? [], criadoEm: l.criado_em,
+  fixada: !!l.fixada,
 })
 export const daMensagem = (l: any): MensagemWpp => ({
   id: l.id, contatoId: l.contato_id, wamid: l.wamid ?? null, direcao: l.direcao, tipo: l.tipo ?? 'texto', texto: l.texto ?? null,
-  midia: l.midia ?? null, modelo: l.modelo ?? null, citando: l.citando ?? null, reacao: l.reacao ?? null, status: l.status ?? 'pendente',
+  midia: l.midia ?? null, modelo: l.modelo ?? null, citando: l.citando ?? null, reacao: l.reacao ?? null, reacaoEquipe: l.reacao_equipe ?? null, status: l.status ?? 'pendente',
   erro: l.erro ?? null, autor: l.autor ?? null, criadoEm: l.criado_em,
 })
 const daFicha = (j: any): FichaWpp | null => j ? ({
@@ -235,8 +237,11 @@ export function whatsappDoBanco(sessao: SessaoTeeds, marca: string): WhatsAppApi
       if (c.situacao) corpo.situacao = c.situacao
       if (c.etiquetas) corpo.etiquetas = c.etiquetas
       if ('nome' in c) corpo.nome = c.nome ?? null
+      if ('fixada' in c) corpo.fixada = !!c.fixada
+      if ('naoLidas' in c) corpo.nao_lidas = c.naoLidas ?? 0
       await rest(`/whatsapp_contatos?id=eq.${contatoId}`, { method: 'PATCH', body: JSON.stringify(corpo) })
     },
+    async reagir(contatoId, wamid, emoji) { await funcao('reagir', { contatoId, wamid, emoji }) },
     async novo(numero, nome) { const d = await funcao<{ contato: string }>('novo', { numero, nome }); return d.contato },
     async respostas() {
       const l = await rest<any[]>(`/whatsapp_respostas?marca=eq.${marca}&select=id,atalho,titulo,texto&order=atalho`)
@@ -306,15 +311,15 @@ export function whatsappDeExemplo(base: Partial<EstadoWpp> = {}, euId = 'eu'): W
   const agora = Date.now(), min = 60_000, h = 60 * min
   const em = (ms: number) => new Date(agora - ms).toISOString()
   const contatos: ContatoWpp[] = [
-    { id: 'c1', waId: '5547991234567', nome: 'Marcos Andrade', userId: 'u1', leadId: null, ultimaEm: em(3 * min), ultimaTexto: 'E depois disso já consigo ligar a Raptor?', ultimaDirecao: 'entrada', ultimaEntradaEm: em(3 * min), naoLidas: 2, responsavel: null, situacao: 'aberta', etiquetas: ['Conta da corretora'], criadoEm: em(2 * h) },
-    { id: 'c2', waId: '5511987654321', nome: 'Juliana Prado', userId: 'u2', leadId: null, ultimaEm: em(42 * min), ultimaTexto: 'Perfeito, obrigada! Vou fechar o Black hoje.', ultimaDirecao: 'entrada', ultimaEntradaEm: em(42 * min), naoLidas: 0, responsavel: euId, situacao: 'aberta', etiquetas: ['Quer o Black'], criadoEm: em(5 * h) },
-    { id: 'c3', waId: '5521976543210', nome: 'Rafael Costa', userId: null, leadId: 'l3', ultimaEm: em(2 * h), ultimaTexto: '🎤 Áudio', ultimaDirecao: 'entrada', ultimaEntradaEm: em(2 * h), naoLidas: 1, responsavel: null, situacao: 'aberta', etiquetas: [], criadoEm: em(2 * h) },
-    { id: 'c4', waId: '5531965432109', nome: 'Carla Mendes', userId: 'u4', leadId: null, ultimaEm: em(30 * h), ultimaTexto: 'Ok, vou ver e te aviso.', ultimaDirecao: 'entrada', ultimaEntradaEm: em(30 * h), naoLidas: 0, responsavel: null, situacao: 'aberta', etiquetas: [], criadoEm: em(3 * 24 * h) },
-    { id: 'c5', waId: '5548999887766', nome: 'Pedro Henrique', userId: 'u5', leadId: null, ultimaEm: em(26 * h), ultimaTexto: 'Valeu, deu certo!', ultimaDirecao: 'entrada', ultimaEntradaEm: em(26 * h), naoLidas: 0, responsavel: euId, situacao: 'resolvida', etiquetas: ['Acesso'], criadoEm: em(4 * 24 * h) },
+    { id: 'c1', waId: '5547991234567', nome: 'Marcos Andrade', userId: 'u1', leadId: null, ultimaEm: em(3 * min), ultimaTexto: 'E depois disso já consigo ligar a Raptor?', ultimaDirecao: 'entrada', ultimaEntradaEm: em(3 * min), naoLidas: 2, responsavel: null, situacao: 'aberta', etiquetas: ['Conta da corretora'], criadoEm: em(2 * h), fixada: true },
+    { id: 'c2', waId: '5511987654321', nome: 'Juliana Prado', userId: 'u2', leadId: null, ultimaEm: em(42 * min), ultimaTexto: 'Perfeito, obrigada! Vou fechar o Black hoje.', ultimaDirecao: 'entrada', ultimaEntradaEm: em(42 * min), naoLidas: 0, responsavel: euId, situacao: 'aberta', etiquetas: ['Quer o Black'], criadoEm: em(5 * h), fixada: false },
+    { id: 'c3', waId: '5521976543210', nome: 'Rafael Costa', userId: null, leadId: 'l3', ultimaEm: em(2 * h), ultimaTexto: '🎤 Áudio', ultimaDirecao: 'entrada', ultimaEntradaEm: em(2 * h), naoLidas: 1, responsavel: null, situacao: 'aberta', etiquetas: [], criadoEm: em(2 * h), fixada: false },
+    { id: 'c4', waId: '5531965432109', nome: 'Carla Mendes', userId: 'u4', leadId: null, ultimaEm: em(30 * h), ultimaTexto: 'Ok, vou ver e te aviso.', ultimaDirecao: 'entrada', ultimaEntradaEm: em(30 * h), naoLidas: 0, responsavel: null, situacao: 'aberta', etiquetas: [], criadoEm: em(3 * 24 * h), fixada: false },
+    { id: 'c5', waId: '5548999887766', nome: 'Pedro Henrique', userId: 'u5', leadId: null, ultimaEm: em(26 * h), ultimaTexto: 'Valeu, deu certo!', ultimaDirecao: 'entrada', ultimaEntradaEm: em(26 * h), naoLidas: 0, responsavel: euId, situacao: 'resolvida', etiquetas: ['Acesso'], criadoEm: em(4 * 24 * h), fixada: false },
   ]
   let n = 0
   const msg = (contatoId: string, direcao: MensagemWpp['direcao'], ms: number, texto: string | null, extra: Partial<MensagemWpp> = {}): MensagemWpp => ({
-    id: `m${++n}`, contatoId, wamid: `wamid.ex${n}`, direcao, tipo: 'texto', texto, midia: null, modelo: null, citando: null, reacao: null,
+    id: `m${++n}`, contatoId, wamid: `wamid.ex${n}`, direcao, tipo: 'texto', texto, midia: null, modelo: null, citando: null, reacao: null, reacaoEquipe: null,
     status: direcao === 'entrada' ? 'recebida' : 'lida', erro: null, autor: direcao === 'entrada' ? null : euId, criadoEm: em(ms), ...extra,
   })
   const mensagens: MensagemWpp[] = [
@@ -369,6 +374,14 @@ export function whatsappDeExemplo(base: Partial<EstadoWpp> = {}, euId = 'eu'): W
     setTimeout(() => { m.status = 'lida'; avisar({ tipo: 'mensagem', item: { ...m }, nova: false }) }, 3200)
   }
   const espera = (ms = 250) => new Promise((r) => setTimeout(r, ms))
+  let respondeu = false
+  const entrar = (contatoId: string, texto: string) => {
+    const m = msg(contatoId, 'entrada', 0, texto, { criadoEm: new Date().toISOString() })
+    mensagens.push(m)
+    const c = contato(contatoId)
+    Object.assign(c, { ultimaEm: m.criadoEm, ultimaTexto: texto, ultimaDirecao: 'entrada', ultimaEntradaEm: m.criadoEm, naoLidas: c.naoLidas + 1, situacao: 'aberta' })
+    avisar({ tipo: 'mensagem', item: { ...m }, nova: true }); avisar({ tipo: 'contato', item: { ...c } })
+  }
   const estado: EstadoWpp = { podeVer: true, podeConectar: 'geral', dono: 'n', conta: null, conectado: false, webhook: { url: 'https://wonxykovfvfnuhzpqsle.supabase.co/functions/v1/whatsapp?marca=globalfly', senha: 'gf-exemplo' }, ...base, exemplo: true }
 
   return {
@@ -379,7 +392,10 @@ export function whatsappDeExemplo(base: Partial<EstadoWpp> = {}, euId = 'eu'): W
     async atualizar() { return { modelos: modelos.length } },
     async contatos() { await espera(); return contatos.map((c) => ({ ...c })) },
     async mensagens(contatoId) { await espera(150); return mensagens.filter((m) => m.contatoId === contatoId).map((m) => ({ ...m })) },
-    async enviarTexto(contatoId, texto, citando) { await espera(300); sair(contatoId, { texto, citando: citando ?? null }) },
+    async enviarTexto(contatoId, texto, citando) {
+      await espera(300); sair(contatoId, { texto, citando: citando ?? null })
+      if (contatoId === 'c1' && !respondeu) { respondeu = true; setTimeout(() => entrar('c1', 'Show! Obrigado pela ajuda 🙏'), 5200) }
+    },
     async enviarArquivo(contatoId, arquivo, legenda) {
       const erro = conferirArquivo(arquivo); if (erro) throw new Error(erro)
       await espera(500)
@@ -402,11 +418,15 @@ export function whatsappDeExemplo(base: Partial<EstadoWpp> = {}, euId = 'eu'): W
     },
     async ler(contatoId) { const c = contato(contatoId); c.naoLidas = 0; avisar({ tipo: 'contato', item: { ...c } }) },
     async mudarContato(contatoId, campos) { const c = contato(contatoId); Object.assign(c, campos); avisar({ tipo: 'contato', item: { ...c } }) },
+    async reagir(_contatoId, wamid, emoji) {
+      const m = mensagens.find((x) => x.wamid === wamid); if (!m) return
+      m.reacaoEquipe = emoji || null; avisar({ tipo: 'mensagem', item: { ...m }, nova: false })
+    },
     async novo(numero, nome) {
       let d = numero.replace(/\D/g, ''); if (d.length === 10 || d.length === 11) d = '55' + d
       if (d.length < 12) throw new Error('Confira o número: DDD + número.')
       const existe = contatos.find((c) => c.waId === d); if (existe) return existe.id
-      const c: ContatoWpp = { id: `c${Date.now()}`, waId: d, nome: nome.trim() || null, userId: null, leadId: null, ultimaEm: null, ultimaTexto: null, ultimaDirecao: null, ultimaEntradaEm: null, naoLidas: 0, responsavel: euId, situacao: 'aberta', etiquetas: [], criadoEm: new Date().toISOString() }
+      const c: ContatoWpp = { id: `c${Date.now()}`, waId: d, nome: nome.trim() || null, userId: null, leadId: null, ultimaEm: null, ultimaTexto: null, ultimaDirecao: null, ultimaEntradaEm: null, naoLidas: 0, responsavel: euId, situacao: 'aberta', etiquetas: [], criadoEm: new Date().toISOString(), fixada: false }
       contatos.unshift(c); fichas[c.id] = { cliente: null, lead: null }; avisar({ tipo: 'contato', item: { ...c } }); return c.id
     },
     async respostas() { return respostas.map((r) => ({ ...r })) },
