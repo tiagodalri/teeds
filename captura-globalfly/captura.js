@@ -232,6 +232,16 @@ var GF = (function () {
       }).catch(function () {})
     } catch (e) {}
   }
+  /*
+    O código de uma conversão é da PESSOA, não da visita (05/11/2026, Tiago: "tem que ser cadastros
+    únicos, não pode ter duplicidade"). Sai do e-mail: o mesmo e-mail dá sempre o mesmo código, em
+    qualquer navegador, e a Meta junta os repetidos; a meta-conversoes também manda cada código uma vez.
+  */
+  function idDaPessoa(email) {
+    var t = String(email || '').trim().toLowerCase(), a = 0x811c9dc5, b = 0x01000193
+    for (var i = 0; i < t.length; i++) { var c = t.charCodeAt(i); a = Math.imul(a ^ c, 16777619) >>> 0; b = Math.imul(b ^ c, 2246822519) >>> 0 }
+    return a.toString(36) + b.toString(36)
+  }
   function pixel(evento, dadosDoEvento, vezes) {
     if (evento && NA_JORNADA[evento]) rastro(NA_JORNADA[evento])
     var id = PIXELS[DO_ENDERECO || '']
@@ -247,9 +257,13 @@ var GF = (function () {
       if (evento) {
         var chave = 'pixel.' + evento, dados = ler()
         if (vezes !== 'sempre' && dados[chave]) return
-        // as duas conversões também vão pelo servidor, com o mesmo código: a Meta conta uma vez só
-        var pelaApi = PELO_SERVIDOR.indexOf(evento) >= 0 && dados.cad && dados.email
-        var codigo = pelaApi ? evento + '-' + dados.cad : undefined
+        // as duas conversões também vão pelo servidor, com o mesmo código: a Meta conta uma vez só.
+        // E só contam no navegador em que a pessoa se cadastrou: quem abre o obrigado de novo em outro
+        // navegador (o "Abrir no navegador" do Instagram) vê a página, mas não vira um segundo cadastro.
+        var conversao = PELO_SERVIDOR.indexOf(evento) >= 0
+        if (conversao && !(dados.cad && dados.email)) return
+        var pelaApi = conversao
+        var codigo = conversao ? evento + '-' + idDaPessoa(dados.email) : undefined
         var chamada = [PADRAO.indexOf(evento) >= 0 ? 'track' : 'trackCustom', evento, dadosDoEvento || {}]
         // o código só vai quando existe: um quarto argumento vazio faz o pixel engolir o evento
         if (codigo) chamada.push({ eventID: codigo })

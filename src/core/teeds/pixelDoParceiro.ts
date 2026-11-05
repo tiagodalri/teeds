@@ -75,6 +75,15 @@ const cookie = (nome: string) => decodeURIComponent(document.cookie.match(new Re
  * Manda um evento ao pixel do parceiro. `umaVez`: só a primeira vez nesta aba.
  * `email`: o cadastro pelo app, que vai também pelo servidor com o mesmo código.
  */
+/** O código de uma conversão é da pessoa (o mesmo de captura.js, idDaPessoa): um e-mail, um cadastro na Meta. */
+const CONVERSOES = new Set(['Lead', 'CompleteRegistration'])
+export function idDaPessoa(email: string): string {
+  const t = email.trim().toLowerCase()
+  let a = 0x811c9dc5, b = 0x01000193
+  for (let i = 0; i < t.length; i++) { const c = t.charCodeAt(i); a = Math.imul(a ^ c, 16777619) >>> 0; b = Math.imul(b ^ c, 2246822519) >>> 0 }
+  return a.toString(36) + b.toString(36)
+}
+
 export function eventoDoPixel(nome: string, dados?: Record<string, unknown>, umaVez = false, email?: string): void {
   naJornada(nome, dados)
   try {
@@ -82,7 +91,8 @@ export function eventoDoPixel(nome: string, dados?: Record<string, unknown>, uma
     const chave = `${nome}:${JSON.stringify(dados ?? {})}`
     if (umaVez && jaContou.has(chave)) return
     jaContou.add(chave)
-    const codigo = email ? `${nome}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}` : undefined
+    // 05/11/2026: cadastro e inscrição levam o código da pessoa (o mesmo das páginas de cadastro): a Meta junta os repetidos
+    const codigo = email ? (CONVERSOES.has(nome) ? `${nome}-${idDaPessoa(email)}` : `${nome}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`) : undefined
     // o código só vai quando existe: um quarto argumento vazio faz o pixel engolir o evento
     if (codigo) window.fbq(PADRAO.has(nome) ? 'track' : 'trackCustom', nome, dados ?? {}, { eventID: codigo })
     else window.fbq(PADRAO.has(nome) ? 'track' : 'trackCustom', nome, dados ?? {})
