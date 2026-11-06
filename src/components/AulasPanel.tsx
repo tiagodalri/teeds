@@ -4,7 +4,8 @@ import {
   AVISO_GF_MEMBER, AVISO_GF_MEMBER_CURTO, aulasVistas, ehVideoDeExemplo, marcarVista, MODULOS, playerDoVideo, SALA_EM_BREVE, todasAsAulas, usarModulosDaGrade, VIDEO_DEMONSTRACAO,
   type AulaNumerada, type Modulo,
 } from '../core/teeds/aulas'
-import { gradePublicadaEmCache, modulosParaSala, segundosDoTempo, type GradeAulas } from '../core/teeds/gradeAulas'
+import { cursosParaSala, gradePublicadaEmCache, meusCursosEmCache, modulosParaSala, segundosDoTempo, type GradeAulas } from '../core/teeds/gradeAulas'
+import { JanelaDoCursoTrancado, VitrineDeCursos } from './aulas/VitrineDeCursos'
 import { CapaDaAula } from './aulas/CapaDaAula'
 import { listarVideosDasAulas, tamanhoLegivel, type VideoDaAula } from '../core/teeds/aulasVideos'
 import type { SessaoTeeds } from '../core/teeds/conta'
@@ -87,6 +88,14 @@ function Fileira({ children, rotulo }: { children: ReactNode; rotulo: string }) 
       </div>}
     </div>
   )
+}
+
+/** A sala rola por dentro (.ger.aulas): trocar de curso volta ao topo dela e da janela. */
+function subirAoTopo() {
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: 0 })
+    document.querySelectorAll<HTMLElement>('.ger.aulas, .workspace-app > main, .tela-viva').forEach((e) => { if (e.scrollTop) e.scrollTop = 0 })
+  })
 }
 
 /** Por marca, em `core/teeds/modulosAulas.ts` (a GlobalFly abre a vitrine já). */
@@ -187,9 +196,26 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
     gradePublicadaEmCache(sessao).then((g) => { if (vivo) setGrade(g) })
     return () => { vivo = false }
   }, [previa, sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
-  const modulos = useMemo(() => (grade ? modulosParaSala(grade, { plano, admin: previa ? false : admin }) : MODULOS), [grade, plano, admin, previa])
-  // o início, a ficha e os insights leem os mesmos módulos
-  useEffect(() => { if (!previa && grade !== undefined) usarModulosDaGrade(grade ? modulos : null) }, [modulos, grade, previa])
+  // os cursos que a pessoa comprou (06/11/2026); na prévia, ninguém comprou nada
+  const [meusCursos, setMeusCursos] = useState<Set<string> | undefined>(previa !== undefined ? new Set() : undefined)
+  useEffect(() => {
+    if (previa !== undefined) return
+    let vivo = true
+    meusCursosEmCache(sessao).then((m) => { if (vivo) setMeusCursos(m) })
+    return () => { vivo = false }
+  }, [previa, sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const ctxSala = useMemo(() => ({ plano, admin: previa ? false : admin, meusCursos }), [plano, admin, previa, meusCursos])
+  const cursos = useMemo(() => (grade ? cursosParaSala(grade, ctxSala) : null), [grade, ctxSala])
+  // o curso aberto: com um curso só, é ele; com vários, a vitrine escolhe (e lembra o último)
+  const CHAVE_CURSO = `${MARCA.id}.aulas.curso`
+  const [cursoId, setCursoIdBruto] = useState<string | null>(() => { try { return sessionStorage.getItem(CHAVE_CURSO) } catch { return null } })
+  const setCursoId = (id: string | null) => { setCursoIdBruto(id); try { if (id) sessionStorage.setItem(CHAVE_CURSO, id); else sessionStorage.removeItem(CHAVE_CURSO) } catch { /* ok */ } }
+  const [trancadoId, setTrancadoId] = useState<string | null>(null)
+  const variosCursos = (cursos?.length ?? 0) > 1
+  const cursoAtual = cursos ? (variosCursos ? cursos.find((c) => c.id === cursoId) ?? null : cursos[0] ?? null) : null
+  const modulos = useMemo(() => (grade ? (cursoAtual ? cursoAtual.modulos : []) : MODULOS), [grade, cursoAtual])
+  // o início, a ficha e os insights leem os módulos de todos os cursos
+  useEffect(() => { if (!previa && grade !== undefined && meusCursos !== undefined) usarModulosDaGrade(grade ? modulosParaSala(grade, ctxSala) : null) }, [grade, ctxSala, previa, meusCursos])
   const [irPara, setIrPara] = useState<{ segundos: number; vez: number } | null>(null)
   // Os vídeos que o painel gravou no banco. Enquanto não chegam (ou se o
   // banco não responder), a sala abre com o catálogo do código.
@@ -263,7 +289,35 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
   }, [abertaId, despachar])
 
   // a grade do painel ainda chegando: não pisca o catálogo antigo antes da grade nova
-  if (grade === undefined && sessao) return <div className="ger aulas"><div className="adm-vazio">Abrindo as aulas…</div></div>
+  if ((grade === undefined || (grade && meusCursos === undefined)) && sessao) return <div className="ger aulas"><div className="adm-vazio">Abrindo as aulas…</div></div>
+
+  /* -------------------------------------------- a vitrine dos cursos */
+  const trancado = cursos?.find((c) => c.id === trancadoId) ?? null
+  const janelaTrancado = trancado && <JanelaDoCursoTrancado curso={trancado} aoFechar={() => setTrancadoId(null)} aoVerConteudo={() => { setTrancadoId(null); setCursoId(trancado.id); subirAoTopo() }} />
+  if (variosCursos && !cursoAtual && cursos) {
+    return (
+      <div className={`ger aulas${travadas ? ' aulas-travadas' : ''}`}>
+        {/* os cursos primeiro (no celular os destaques ocupavam a primeira tela inteira) */}
+        <VitrineDeCursos cursos={cursos} vistas={vistas} nome={nome} aoAbrir={(id) => { setCursoId(id); subirAoTopo() }} aoVerTrancado={setTrancadoId} />
+        {MARCA.inicio && <Destaques banners={bannersDaMarca({ treino: !!treino, noAr: !!treino?.noAr })} aoIr={aoIr} />}
+        {aoReverTour && <CartaoDoTour aoAbrir={aoReverTour} />}
+        {janelaTrancado}
+      </div>
+    )
+  }
+  if (grade && !cursoAtual) return <div className="ger aulas"><div className="adm-vazio">Nenhum curso disponível por enquanto.</div></div>
+  const migalhaDoCurso = variosCursos && cursoAtual && (
+    <nav className="vc-migalha" aria-label="Curso">
+      <button type="button" className="vc-voltar" onClick={() => { setCursoId(null); subirAoTopo() }}>← Todos os cursos</button>
+      <b>{cursoAtual.titulo}</b><small>{cursoAtual.modulos.length} {cursoAtual.modulos.length === 1 ? 'módulo' : 'módulos'} · {cursoAtual.aulas} aulas</small>
+    </nav>
+  )
+  const faixaTrancado = cursoAtual && !cursoAtual.liberado && (
+    <section className="vc-faixa-trancado" role="status">
+      <span><b>{cursoAtual.motivo}</b><small>Veja o que o curso ensina. As aulas abrem quando o seu acesso for liberado.</small></span>
+      {cursoAtual.checkout && <a className="vc-comprar" href={cursoAtual.checkout} target="_blank" rel="noopener noreferrer">Liberar meu acesso</a>}
+    </section>
+  )
 
   /* ----------------------------------------------------------- player */
   if (aberta) {
@@ -279,7 +333,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
       <div className={`ger aulas cine ${tocando ? 'tocando' : ''}`} style={{ ['--aula' as any]: aberta.modulo.cor }}>
         <div className="cine-topo">
           <button className="aulas-voltar" onClick={() => { setAbertaId(null); setTocando(false) }}>← Todas as aulas</button>
-          <span className="cine-migalha">Módulo {String(numModulo).padStart(2, '0')} · {aberta.modulo.titulo} · Aula {aberta.numero} de {aulas.length}</span>
+          <span className="cine-migalha">{variosCursos && cursoAtual ? `${cursoAtual.titulo} · ` : ''}Módulo {String(numModulo).padStart(2, '0')} · {aberta.modulo.titulo} · Aula {aberta.numero} de {aulas.length}</span>
         </div>
 
         <div className="cine-palco">
@@ -450,7 +504,9 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
         </section>
       )}
       {/* 03/11/2026 (Tiago): os destaques no topo, de ponta a ponta; embaixo, a minha jornada */}
-      {MARCA.inicio && <Destaques banners={bannersDaMarca({ treino: !!treino, noAr: !!treino?.noAr })} aoIr={aoIr} />}
+      {MARCA.inicio && !variosCursos && <Destaques banners={bannersDaMarca({ treino: !!treino, noAr: !!treino?.noAr })} aoIr={aoIr} />}
+      {migalhaDoCurso}
+      {faixaTrancado}
 
       {(() => {
         // a última aula aberta: se não terminou, é de onde a pessoa parou; se terminou, a próxima
@@ -459,7 +515,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
         const seguinteDe = (a: AulaNumerada) => aulas.slice(aulas.indexOf(a) + 1).find((x) => x.video && !vistas.has(x.id)) ?? null
         const parou = ultima && !vistas.has(ultima.id) && (posicoes[ultima.id] ?? 0) > 5 ? ultima : null
         const aula = parou ?? (ultima ? seguinteDe(ultima) : null) ?? destaque
-        if (!aula) return null
+        if (!aula || (cursoAtual && !cursoAtual.liberado)) return null
         const onde = parou ? posicoes[parou.id] ?? 0 : 0
         const total = parou ? duracoes[parou.id] || segundosDe(parou.duracao) : 0
         const fracaoAula = total ? Math.min(1, onde / total) : 0
@@ -554,6 +610,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
         )
       })}
 
+      {janelaTrancado}
       {detalhe && (
         <div className="aula-modal-fundo" role="presentation" onClick={() => setDetalheId(null)}>
           <section className="aula-modal" role="dialog" aria-modal="true" aria-label={detalhe.titulo}

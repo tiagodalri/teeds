@@ -34,6 +34,7 @@ import { parametrosPadrao } from './core/deriv/parametros'
 import type { ConfigEstrategia, EstadoMotor, OperacaoMotor, Registro } from './core/deriv/engine'
 import type { ActiveSymbol } from './core/deriv/types'
 import { RobotLive } from './components/RobotLive'
+import { gradeDoCatalogo, type GradeAulas } from './core/teeds/gradeAulas'
 import { LocalRobotPanel } from './components/LocalRobotPanel'
 import { RobotSetup } from './components/RobotSetup'
 import { DigitsPanel } from './components/DigitsPanel'
@@ -99,6 +100,19 @@ const LabDivulgacao = lazy(() => import('./components/LabDivulgacao'))
 const LabLaboratorio = lazy(() => import('./components/laboratorio/LabLaboratorio'))
 const LabPerfil = lazy(() => import('./components/perfil/LabPerfil'))
 const LabSuporte = lazy(() => import('./components/suporte/LabSuporte'))
+/** &cursos=1: a sala com três cursos (um de todos, um vendido à parte, um de plano), como o aluno sem compra vê. */
+function gradeComCursos(): GradeAulas {
+  const g = gradeDoCatalogo()
+  const [a, b, ...resto] = g.modulos
+  const acesso = (modo: 'todos' | 'planos' | 'compra', extra = {}) => ({ modo, planos: [], cakto: [], checkout: '', vitalicio: true, vitrine: true, ...extra })
+  g.cursos = [
+    { id: 'principal', titulo: `Formação ${MARCA.prosa}`, descricao: 'Do primeiro acesso à operação, passo a passo.', cor: '#B78D39', publicado: true, selo: 'Comece aqui', acesso: acesso('todos') },
+    { id: 'gestao', titulo: 'Gestão inteligente de banca', descricao: 'Risco, meta e stop do jeito profissional.', sobre: 'Como proteger a banca e crescer com consistência: tamanho de entrada, meta e stop por dia, e o emocional depois de uma perda.', cor: '#2F8F72', publicado: true, selo: 'Novo', acesso: acesso('compra', { cakto: ['9df6023b-0000-0000-0000-000000000000'], checkout: 'https://pay.cakto.com.br/exemplo' }) },
+    { id: 'mentoria', titulo: 'Mentoria Prestige', descricao: 'Encontros gravados com a mesa da GlobalFly.', cor: '#5B7C9D', publicado: true, acesso: acesso('planos', { planos: [{ id: 'prestige', nome: 'Prestige' }] }) },
+  ]
+  g.modulos = [{ ...a, curso: 'principal' }, ...resto.map((m) => ({ ...m, curso: 'principal' })), { ...b, curso: 'gestao' }, { ...b, id: `${b.id}-m`, curso: 'mentoria', assuntos: b.assuntos.map((s) => ({ ...s, id: `${s.id}-m`, aulas: s.aulas.map((x) => ({ ...x, id: `${x.id}-m` })) })) }]
+  return g
+}
 function LabAulas() {
   const q = new URLSearchParams(location.search)
   const t = q.get('tema'); if (t) document.documentElement.dataset.tema = t
@@ -106,7 +120,8 @@ function LabAulas() {
     <div className="app workspace-app">
       <WorkspaceNav page="aulas" admin={false} mostrarInicio onNavigate={() => undefined} />
       <header className="topbar"><div className="workspace-heading"><strong>Aulas</strong><span>Seu espaço de trabalho</span></div></header>
-      <AulasPanel nome="Tiago Dal Ri" sessao={null} aoReverTour={() => undefined} aoIr={() => undefined} treino={{ noAr: q.has('aovivo') }} travadas={q.has('membro')} />
+      <AulasPanel nome="Tiago Dal Ri" sessao={null} aoReverTour={() => undefined} aoIr={() => undefined} treino={{ noAr: q.has('aovivo') }} travadas={q.has('membro')}
+        previa={q.has('cursos') ? gradeComCursos() : undefined} />
     </div>
   )
 }
@@ -478,6 +493,8 @@ function Laboratorio() {
       if (url.includes('teeds_aulas_publicar')) return ok(new Date().toISOString())
       if (url.includes('/rest/v1/aulas_videos')) return ok([])
       if (url.includes('teeds_aulas_controle')) return ok([])
+      if (url.includes('teeds_curso_alunos')) return ok([{ user_id: 'u1', nome: 'Marina Costa', email: 'marina@exemplo.com', origem: 'cakto', concedido_em: new Date(Date.now() - 864e5 * 3).toISOString(), expira_em: null, ativo: true }, { user_id: 'u2', nome: 'Paulo Reis', email: 'paulo@exemplo.com', origem: 'manual', concedido_em: new Date(Date.now() - 864e5 * 12).toISOString(), expira_em: new Date(Date.now() + 864e5 * 78).toISOString(), ativo: true }])
+      if (url.includes('teeds_curso_liberar')) { const b = JSON.parse(String(i?.body ?? '{}')); return ok(/@/.test(b.p_email) ? { ok: true, nome: b.p_email.split('@')[0] } : { erro: 'Nenhum cadastro com este e-mail nesta plataforma.' }) }
       if (url.includes('/rest/v1/planos_da_marca')) return ok([{ plano_id: 'treino', nome: 'GF Member', marca: MARCA.id, ativo: true, ordem: 1 }, { plano_id: 'black', nome: 'Black', marca: MARCA.id, ativo: true, ordem: 2 }, { plano_id: 'prestige', nome: 'Prestige', marca: MARCA.id, ativo: true, ordem: 3 }])
       return f(u, i)
     }) as typeof fetch

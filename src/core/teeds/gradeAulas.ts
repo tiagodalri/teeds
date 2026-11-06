@@ -60,6 +60,8 @@ export interface AssuntoGrade { id: string; titulo: string; descricao?: string; 
 
 export interface ModuloGrade {
   id: string
+  /** O curso deste módulo (06/11/2026). Vazio ou curso que sumiu = o primeiro curso. */
+  curso?: string
   titulo: string
   chamada: string
   descricao?: string
@@ -70,7 +72,49 @@ export interface ModuloGrade {
   assuntos: AssuntoGrade[]
 }
 
-export interface GradeAulas { versao: 1; modulos: ModuloGrade[] }
+/**
+ * Cursos (06/11/2026, pedido do Tiago: "área de membros bem profissional").
+ * Curso > Módulo > Aula. Cada curso tem a sua regra de acesso:
+ *  - todos: qualquer aluno da plataforma;
+ *  - planos: só os planos escolhidos;
+ *  - compra: vendido à parte na Cakto. Os IDs dos produtos da Cakto vão para o
+ *    banco quando a grade é publicada (teeds_cursos_sincronizar) e a compra
+ *    libera sozinha, pelo webhook que já existe. `planos` aqui = planos que
+ *    também recebem o curso sem comprar.
+ * Os módulos continuam numa lista só (`modulos`), cada um com o seu `curso`:
+ * assim ids, progresso, versões e o resto da plataforma seguem iguais.
+ */
+export type ModoDoCurso = 'todos' | 'planos' | 'compra'
+export interface AcessoDoCurso {
+  modo: ModoDoCurso
+  planos: PlanoEscolhido[]
+  /** IDs dos produtos na Cakto que liberam este curso. */
+  cakto: string[]
+  /** Link do checkout, para o botão "Liberar acesso" de quem ainda não comprou. */
+  checkout: string
+  /** Compra libera para sempre (senão, 1 ano). */
+  vitalicio: boolean
+  /** Quem não tem acesso vê o curso trancado na vitrine (senão, o curso nem aparece). */
+  vitrine: boolean
+}
+export interface CursoGrade {
+  id: string
+  titulo: string
+  /** Uma linha, no cartão. */
+  descricao: string
+  /** O texto da página do curso (e da janela de quem ainda não tem acesso). */
+  sobre?: string
+  capa?: string
+  capaArquivo?: string | null
+  cor: string
+  /** Selo no canto do cartão: "Novo", "Lançamento", "Bônus"... */
+  selo?: string
+  publicado: boolean
+  liberarEm?: string | null
+  acesso: AcessoDoCurso
+}
+
+export interface GradeAulas { versao: 1; cursos?: CursoGrade[]; modulos: ModuloGrade[] }
 
 export const NIVEIS = ['Iniciante', 'Intermediário', 'Avançado', 'Todos os níveis'] as const
 export const CORES_DA_MARCA: string[] = MARCA.id === 'globalfly'
@@ -87,7 +131,17 @@ export function novoId(titulo: string, existentes: Set<string>): string {
   while (existentes.has(id)) id = `${base}-${Math.random().toString(36).slice(2, 6)}`
   return id
 }
-export const todosOsIds = (g: GradeAulas) => new Set(g.modulos.flatMap((m) => [m.id, ...m.assuntos.flatMap((s) => [s.id, ...s.aulas.map((a) => a.id)])]))
+export const todosOsIds = (g: GradeAulas) => new Set([...(g.cursos ?? []).map((c) => c.id), ...g.modulos.flatMap((m) => [m.id, ...m.assuntos.flatMap((s) => [s.id, ...s.aulas.map((a) => a.id)])])])
+export const ID_DO_CURSO_PADRAO = 'principal'
+export const acessoPadrao = (): AcessoDoCurso => ({ modo: 'todos', planos: [], cakto: [], checkout: '', vitalicio: true, vitrine: true })
+/** O primeiro curso: onde moram as aulas que já existiam antes dos cursos. */
+export const cursoPadrao = (): CursoGrade => ({
+  id: ID_DO_CURSO_PADRAO, titulo: `Formação ${MARCA.prosa}`, descricao: 'O treinamento completo, do primeiro acesso à operação.',
+  cor: CORES_DA_MARCA[0], publicado: true, acesso: acessoPadrao(),
+})
+/** Os módulos de um curso, na ordem da grade. */
+export const modulosDoCurso = (g: GradeAulas, cursoId: string) => g.modulos.filter((m) => m.curso === cursoId)
+export const aulasDoCurso = (g: GradeAulas, cursoId: string) => modulosDoCurso(g, cursoId).reduce((n, m) => n + m.assuntos.reduce((k, s) => k + s.aulas.length, 0), 0)
 export const contarAulas = (g: GradeAulas) => g.modulos.reduce((n, m) => n + m.assuntos.reduce((k, s) => k + s.aulas.length, 0), 0)
 
 /** "3:40", "1:02:10" → segundos (null se não der para ler). */
@@ -105,8 +159,9 @@ const dataCurta = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { d
 export function gradeDoCatalogo(videos: Record<string, VideoDaAula> = {}): GradeAulas {
   return {
     versao: 1,
+    cursos: [cursoPadrao()],
     modulos: MODULOS.map((m) => ({
-      id: m.id, titulo: m.titulo, chamada: m.chamada, cor: m.cor, publicado: true,
+      id: m.id, curso: ID_DO_CURSO_PADRAO, titulo: m.titulo, chamada: m.chamada, cor: m.cor, publicado: true,
       assuntos: [{
         id: `${m.id}-geral`, titulo: '',
         aulas: m.aulas.map((a) => {
@@ -129,10 +184,26 @@ export function normalizarGrade(bruta: unknown): GradeAulas | null {
   const g = bruta as GradeAulas | null
   if (!g || !Array.isArray(g.modulos)) return null
   const txt = (v: unknown) => (typeof v === 'string' ? v : '')
+  const cursos: CursoGrade[] = (Array.isArray(g.cursos) ? g.cursos : []).filter((c) => c && txt(c.id)).map((c) => {
+    const a = (c.acesso ?? {}) as Partial<AcessoDoCurso>
+    const modo: ModoDoCurso = a.modo === 'planos' || a.modo === 'compra' ? a.modo : 'todos'
+    return {
+      id: txt(c.id), titulo: txt(c.titulo), descricao: txt(c.descricao), sobre: txt(c.sobre), capa: txt(c.capa), capaArquivo: c.capaArquivo ?? null,
+      cor: txt(c.cor) || CORES_DA_MARCA[0], selo: txt(c.selo), publicado: c.publicado !== false, liberarEm: c.liberarEm || null,
+      acesso: {
+        modo, planos: Array.isArray(a.planos) ? a.planos.filter((p) => p && p.id) : [],
+        cakto: Array.isArray(a.cakto) ? a.cakto.map((x) => txt(x).trim()).filter(Boolean) : [],
+        checkout: txt(a.checkout).trim(), vitalicio: a.vitalicio !== false, vitrine: a.vitrine !== false,
+      },
+    }
+  })
+  if (!cursos.length) cursos.push(cursoPadrao())
+  const existe = new Set(cursos.map((c) => c.id))
   return {
     versao: 1,
+    cursos,
     modulos: g.modulos.filter(Boolean).map((m) => ({
-      id: txt(m.id), titulo: txt(m.titulo), chamada: txt(m.chamada), descricao: txt(m.descricao), cor: txt(m.cor) || CORES_DA_MARCA[0],
+      id: txt(m.id), curso: existe.has(txt(m.curso)) ? txt(m.curso) : cursos[0].id, titulo: txt(m.titulo), chamada: txt(m.chamada), descricao: txt(m.descricao), cor: txt(m.cor) || CORES_DA_MARCA[0],
       publicado: m.publicado !== false, liberarEm: m.liberarEm || null, planos: Array.isArray(m.planos) ? m.planos : [],
       assuntos: (Array.isArray(m.assuntos) ? m.assuntos : []).filter(Boolean).map((s) => ({
         id: txt(s.id), titulo: txt(s.titulo), descricao: txt(s.descricao),
@@ -154,6 +225,8 @@ export function normalizarGrade(bruta: unknown): GradeAulas | null {
 export interface ContextoDaSala {
   /** O plano da pessoa (clientes.plano_id). */
   plano?: string | null
+  /** Os cursos comprados (teeds_meus_cursos). undefined = ainda não sabido: curso vendido conta como trancado. */
+  meusCursos?: ReadonlySet<string> | null
   /** Admin vê as aulas de qualquer plano e antes da data de liberação. */
   admin?: boolean | null
   agora?: number
@@ -163,16 +236,63 @@ export interface ContextoDaSala {
  * Os módulos que a sala de aula mostra: só o que está publicado; aula de
  * outro plano ou com data futura aparece trancada, com o motivo no cartão.
  */
-export function modulosParaSala(grade: GradeAulas, ctx: ContextoDaSala = {}): Modulo[] {
+export interface CursoNaSala {
+  id: string; titulo: string; descricao: string; sobre: string; capa?: string; cor: string; selo?: string
+  /** Pode assistir. */
+  liberado: boolean
+  /** Por que não pode (para o cartão e a janela). */
+  motivo: string | null
+  /** Vendido à parte e ainda não comprado: o botão de compra. */
+  checkout: string | null
+  modo: ModoDoCurso
+  modulos: Modulo[]
+  aulas: number
+}
+
+/** O acesso ao curso: null = liberado; senão, o motivo. */
+function motivoDoCurso(c: CursoGrade, ctx: ContextoDaSala, agora: number): string | null {
+  if (ctx.admin) return null
+  if (c.liberarEm && Date.parse(c.liberarEm) > agora) return `Disponível em ${dataCurta(c.liberarEm)}`
+  // comprou na Cakto ou o admin liberou à mão: vale em qualquer regra
+  if (c.acesso.modo !== 'todos' && ctx.meusCursos?.has(c.id)) return null
+  const temPlano = !!ctx.plano && c.acesso.planos.some((p) => p.id === ctx.plano)
+  if (c.acesso.modo === 'planos' && c.acesso.planos.length && !temPlano) return `Disponível no plano ${c.acesso.planos.map((p) => p.nome).join(' ou ')}`
+  if (c.acesso.modo === 'compra' && !temPlano && !ctx.meusCursos?.has(c.id)) return 'Curso vendido à parte'
+  return null
+}
+
+/**
+ * Os cursos que a sala mostra, na ordem da grade. Curso oculto não aparece;
+ * curso sem acesso aparece trancado (ou some, se `vitrine` estiver desligada),
+ * com as aulas listadas mas sem tocar.
+ */
+export function cursosParaSala(grade: GradeAulas, ctx: ContextoDaSala = {}): CursoNaSala[] {
   const agora = ctx.agora ?? Date.now()
+  return (grade.cursos ?? []).filter((c) => c.publicado).map((c) => {
+    const motivo = motivoDoCurso(c, ctx, agora)
+    const modulos = modulosParaSala(grade, ctx, c.id)
+    return {
+      id: c.id, titulo: c.titulo, descricao: c.descricao, sobre: c.sobre ?? '', capa: c.capa || undefined, cor: c.cor, selo: c.selo || undefined,
+      liberado: !motivo, motivo, checkout: motivo && c.acesso.modo === 'compra' && c.acesso.checkout ? c.acesso.checkout : null, modo: c.acesso.modo,
+      modulos, aulas: modulos.reduce((n, m) => n + m.aulas.length, 0),
+    }
+  }).filter((c) => c.aulas > 0 && (c.liberado || ctx.admin || (grade.cursos ?? []).find((x) => x.id === c.id)?.acesso.vitrine !== false))
+}
+
+export function modulosParaSala(grade: GradeAulas, ctx: ContextoDaSala = {}, cursoId?: string): Modulo[] {
+  const agora = ctx.agora ?? Date.now()
+  // o curso vale por cima do módulo e da aula: curso oculto some; curso sem acesso tranca tudo
+  const cursos = new Map((grade.cursos ?? []).map((c) => [c.id, c]))
+  const doCurso = (id?: string) => { const c = id ? cursos.get(id) : undefined; return c ? motivoDoCurso(c, ctx, agora) : null }
+  const cursoVisivel = (id?: string) => { const c = id ? cursos.get(id) : undefined; return !c || (c.publicado && (c.acesso.vitrine || !motivoDoCurso(c, ctx, agora))) }
   const motivo = (liberarEm?: string | null, planos?: PlanoEscolhido[]): string | null => {
     if (ctx.admin) return null
     if (liberarEm && Date.parse(liberarEm) > agora) return `Disponível em ${dataCurta(liberarEm)}`
     if (planos?.length && !planos.some((p) => p.id === ctx.plano)) return `Disponível no plano ${planos.map((p) => p.nome).join(' ou ')}`
     return null
   }
-  return grade.modulos.filter((m) => m.publicado).map((m) => {
-    const doModulo = motivo(m.liberarEm, m.planos)
+  return grade.modulos.filter((m) => m.publicado && (cursoId ? m.curso === cursoId : cursoVisivel(m.curso))).map((m) => {
+    const doModulo = doCurso(m.curso) ?? motivo(m.liberarEm, m.planos)
     const assuntos = m.assuntos.map((s) => ({ ...s, aulas: s.aulas.filter((a) => a.publicado) })).filter((s) => s.aulas.length)
     return {
       id: m.id, titulo: m.titulo, chamada: m.chamada, descricao: m.descricao, cor: m.cor, daGrade: true,
@@ -236,10 +356,41 @@ export async function publicarGrade(sessao: SessaoTeeds, grade: GradeAulas, nota
   return rest<string>('/rpc/teeds_aulas_publicar', sessao.token, { method: 'POST', body: JSON.stringify({ p_marca: marca, p_grade: grade, p_nota: nota || null }) })
 }
 
-export interface VersaoDaGrade { id: number; nota: string | null; criadaEm: string; aulas: number; modulos: number; grade: GradeAulas }
+export interface VersaoDaGrade { id: number; nota: string | null; criadaEm: string; aulas: number; modulos: number; cursos: number; grade: GradeAulas }
 export async function versoesDaGrade(sessao: SessaoTeeds, marca: string = MARCA.id): Promise<VersaoDaGrade[]> {
   const linhas = await rest<any[]>(`/aulas_grade_versoes?select=id,nota,criada_em,grade&marca=eq.${encodeURIComponent(marca)}&order=criada_em.desc&limit=30`, sessao.token)
-  return (linhas ?? []).map((l) => { const g = normalizarGrade(l.grade) ?? { versao: 1 as const, modulos: [] }; return { id: l.id, nota: l.nota, criadaEm: l.criada_em, grade: g, aulas: contarAulas(g), modulos: g.modulos.length } })
+  return (linhas ?? []).map((l) => { const g = normalizarGrade(l.grade) ?? { versao: 1 as const, modulos: [] }; return { id: l.id, nota: l.nota, criadaEm: l.criada_em, grade: g, aulas: contarAulas(g), modulos: g.modulos.length, cursos: g.cursos?.length ?? 1 } })
+}
+
+/* --------------------------------------------------------------- cursos */
+
+/** Os cursos que a pessoa comprou (ou que o admin liberou à mão). Falha = nenhum. */
+export async function lerMeusCursos(sessao: SessaoTeeds | null | undefined, marca: string = MARCA.id): Promise<Set<string>> {
+  if (!sessao || !autenticacaoConfigurada()) return new Set()
+  try {
+    const l = await rest<string[]>('/rpc/teeds_meus_cursos', sessao.token, { method: 'POST', body: JSON.stringify({ p_marca: marca }) })
+    return new Set(Array.isArray(l) ? l : [])
+  } catch { return new Set() }
+}
+let cacheCursos: { chave: string; promessa: Promise<Set<string>> } | null = null
+export function meusCursosEmCache(sessao: SessaoTeeds | null | undefined): Promise<Set<string>> {
+  const chave = `${MARCA.id}:${sessao?.usuario.id ?? ''}`
+  if (!cacheCursos || cacheCursos.chave !== chave) cacheCursos = { chave, promessa: lerMeusCursos(sessao) }
+  return cacheCursos.promessa
+}
+
+export interface AlunoDoCurso { userId: string; nome: string; email: string; origem: string; concedidoEm: string; expiraEm: string | null; ativo: boolean }
+export async function alunosDoCurso(sessao: SessaoTeeds, cursoId: string, marca: string = MARCA.id): Promise<AlunoDoCurso[]> {
+  const l = await rest<any[]>('/rpc/teeds_curso_alunos', sessao.token, { method: 'POST', body: JSON.stringify({ p_marca: marca, p_curso: cursoId }) })
+  return (Array.isArray(l) ? l : []).map((x) => ({ userId: x.user_id, nome: x.nome ?? '', email: x.email ?? '', origem: x.origem ?? '', concedidoEm: x.concedido_em, expiraEm: x.expira_em, ativo: Boolean(x.ativo) }))
+}
+/** Libera (ou tira) o curso de alguém pelo e-mail. dias nulo = vitalício. */
+export async function liberarCurso(sessao: SessaoTeeds, curso: { id: string; titulo: string }, email: string, liberar: boolean, dias: number | null, marca: string = MARCA.id): Promise<string> {
+  const r = await rest<{ ok?: boolean; nome?: string; erro?: string }>('/rpc/teeds_curso_liberar', sessao.token, {
+    method: 'POST', body: JSON.stringify({ p_marca: marca, p_curso: curso.id, p_titulo: curso.titulo, p_email: email, p_liberar: liberar, p_dias: dias }),
+  })
+  if (r?.erro) throw new Error(r.erro)
+  return r?.nome ?? email
 }
 
 /* ---------------------------------------------------------------- capas */
@@ -285,7 +436,7 @@ export function gradePublicadaEmCache(sessao: SessaoTeeds | null | undefined): P
   if (!cache || cache.chave !== chave) cache = { chave, promessa: lerGradePublicada(sessao) }
   return cache.promessa
 }
-export const esquecerGradeEmCache = () => { cache = null }
+export const esquecerGradeEmCache = () => { cache = null; cacheCursos = null }
 
 /**
  * Os módulos em uso fora da sala (início, ficha do cliente, insights): lê a
@@ -296,7 +447,7 @@ export function useModulosEmUso(sessao: SessaoTeeds | null | undefined, ctx: Con
   useEffect(() => aoMudarModulos(() => redesenhar((n) => n + 1)), [])
   useEffect(() => {
     let vivo = true
-    void gradePublicadaEmCache(sessao).then((g) => { if (vivo && g) usarModulosDaGrade(modulosParaSala(g, ctx)) })
+    void Promise.all([gradePublicadaEmCache(sessao), meusCursosEmCache(sessao)]).then(([g, meus]) => { if (vivo && g) usarModulosDaGrade(modulosParaSala(g, { ...ctx, meusCursos: meus })) })
     return () => { vivo = false }
   }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
   return modulosEmUso()

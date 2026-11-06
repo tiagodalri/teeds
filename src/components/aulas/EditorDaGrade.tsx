@@ -7,9 +7,10 @@ import {
 } from '../../core/teeds/aulasVideos'
 import {
   contarAulas, CORES_DA_MARCA, enviarCapa, esquecerGradeEmCache, gradeDoCatalogo, lerGradeDoAdmin, NIVEIS, novoId, publicarGrade,
-  quadroDoVideo, salvarRascunho, segundosDoTempo, todosOsIds, versoesDaGrade,
-  type AssuntoGrade, type AulaGrade, type GradeAulas, type ModuloGrade, type PlanoEscolhido, type VersaoDaGrade,
+  quadroDoVideo, salvarRascunho, segundosDoTempo, todosOsIds, versoesDaGrade, acessoPadrao, modulosDoCurso, aulasDoCurso,
+  type AssuntoGrade, type AulaGrade, type CursoGrade, type GradeAulas, type ModuloGrade, type PlanoEscolhido, type VersaoDaGrade,
 } from '../../core/teeds/gradeAulas'
+import { AcessoDoCursoPainel, AlunosDoCurso, CabecalhoDoCurso, InfoDoCurso, ListaDeCursos, type AbaDoCurso } from './EditorDoCurso'
 import { listarPlanos } from '../../core/teeds/clientes'
 import { MARCA } from '../../marca'
 import { DEMONSTRACAO_EM_AULA_SEM_VIDEO } from '../../core/teeds/modulosAulas'
@@ -61,8 +62,9 @@ function localizar(g: GradeAulas, id: string) {
 
 /** A numeração contínua das aulas ("Aula 7"), como na sala. */
 function numeracao(g: GradeAulas) {
-  const n = new Map<string, number>(); let k = 1
-  for (const m of g.modulos) for (const s of m.assuntos) for (const a of s.aulas) n.set(a.id, k++)
+  // cada curso conta as aulas dele, como na sala
+  const n = new Map<string, number>(); const k = new Map<string, number>()
+  for (const m of g.modulos) for (const s of m.assuntos) for (const a of s.aulas) { const c = m.curso ?? ''; const v = (k.get(c) ?? 0) + 1; k.set(c, v); n.set(a.id, v) }
   return n
 }
 
@@ -81,6 +83,10 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
   const [controle, setControle] = useState<AssistiuAula[]>([])
   const [planos, setPlanos] = useState<PlanoEscolhido[]>([])
   const [modal, setModal] = useState<'previa' | 'publicar' | 'historico' | null>(null)
+  // 06/11/2026: a porta é a lista de cursos; cada curso abre com as abas dele
+  const [cursoAberto, setCursoAberto] = useState<string | null>(null)
+  const [abaCurso, setAbaCurso] = useState<AbaDoCurso>('conteudo')
+  const [alunosNoCurso, setAlunosNoCurso] = useState<Record<string, number>>({})
   const arrastando = useRef<string | null>(null)
   const [alvo, setAlvo] = useState<string | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -98,8 +104,6 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
         const base = doBanco.rascunho ?? doBanco.publicada ?? gradeDoCatalogo(videos)
         setGrade(base); setPublicada(doBanco.publicada); setPublicadaEm(doBanco.publicadaEm); setRascunhoEm(doBanco.rascunhoEm)
         setSituacao('salvo')
-        const primeira = base.modulos[0]?.assuntos[0]?.aulas[0]
-        if (primeira) setSel({ tipo: 'aula', id: primeira.id })
       } catch (e) { if (vivo) { setErro((e as Error).message); setSituacao('erro') } }
     })()
     controleDasAulas(sessao, marca).then((c) => { if (vivo) setControle(c) }).catch(() => undefined)
@@ -136,14 +140,16 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
   }
   const naoPublicado = useMemo(() => !!grade && JSON.stringify(grade) !== JSON.stringify(publicada), [grade, publicada])
   const numero = useMemo(() => (grade ? numeracao(grade) : new Map<string, number>()), [grade])
-  const achado = grade && sel ? localizar(grade, sel.id) : null
+  const achadoBruto = grade && sel ? localizar(grade, sel.id) : null
+  const achado = achadoBruto && (!cursoAberto || achadoBruto.m.curso === cursoAberto) ? achadoBruto : null
 
   /* ----------------------------------------------------------- ações */
   const ids = () => (grade ? todosOsIds(grade) : new Set<string>())
   const novaAula = (titulo = 'Nova aula'): AulaGrade => ({ id: novoId(titulo, ids()), titulo, descricao: '', video: '', duracao: '', topicos: [], materiais: [], links: [], publicado: true, nivel: 'Iniciante' })
   const addModulo = () => {
     const usados = ids(); const id = novoId('modulo', usados); const sid = novoId(`${id}-geral`, usados)
-    mudar((g) => g.modulos.push({ id, titulo: 'Novo módulo', chamada: '', cor: CORES_DA_MARCA[g.modulos.length % CORES_DA_MARCA.length], publicado: true, assuntos: [{ id: sid, titulo: '', aulas: [] }] }))
+    const curso = cursoAberto ?? grade?.cursos?.[0]?.id
+    mudar((g) => g.modulos.push({ id, curso, titulo: 'Novo módulo', chamada: '', cor: g.cursos?.find((c) => c.id === curso)?.cor ?? CORES_DA_MARCA[g.modulos.length % CORES_DA_MARCA.length], publicado: true, assuntos: [{ id: sid, titulo: '', aulas: [] }] }))
     setSel({ tipo: 'modulo', id })
   }
   const addAssunto = (mId: string) => {
@@ -158,8 +164,16 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
   }
   const mover = (id: string, d: -1 | 1) => mudar((g) => {
     const l = localizar(g, id); if (!l) return
-    const lista: unknown[] = l.a ? l.s!.aulas : l.s ? l.m.assuntos : g.modulos
-    const i = l.a ? l.ai! : l.s ? l.si! : l.mi
+    if (!l.s) {
+      // módulo: troca com o vizinho do mesmo curso (a lista de módulos é uma só para todos os cursos)
+      const irmaos = g.modulos.map((m, i) => ({ m, i })).filter((x) => x.m.curso === l.m.curso)
+      const k = irmaos.findIndex((x) => x.m.id === id), viz = irmaos[k + d]
+      if (!viz) return
+      ;[g.modulos[l.mi], g.modulos[viz.i]] = [g.modulos[viz.i], g.modulos[l.mi]]
+      return
+    }
+    const lista: unknown[] = l.a ? l.s!.aulas : l.m.assuntos
+    const i = l.a ? l.ai! : l.si!
     const j = i + d; if (j < 0 || j >= lista.length) return
     ;[lista[i], lista[j]] = [lista[j], lista[i]]
   })
@@ -214,12 +228,58 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
     onDrop: (e: DragEvent) => { e.preventDefault(); soltar(id) },
   })
 
+  /* -------------------------------------------------------- cursos */
+  const abrirCurso = (id: string | null, a: AbaDoCurso = 'conteudo') => {
+    setCursoAberto(id); setAbaCurso(a); setBusca('')
+    const primeira = id && grade ? modulosDoCurso(grade, id)[0]?.assuntos[0]?.aulas[0] : null
+    setSel(primeira ? { tipo: 'aula', id: primeira.id } : id && grade ? (modulosDoCurso(grade, id)[0] ? { tipo: 'modulo', id: modulosDoCurso(grade, id)[0].id } : null) : null)
+    window.scrollTo({ top: 0 })
+  }
+  const novoCurso = () => {
+    const usados = ids(); const id = novoId('curso', usados); usados.add(id); const mid = novoId('modulo-1', usados); usados.add(mid); const sid = novoId(`${mid}-geral`, usados)
+    const cor = CORES_DA_MARCA[(grade?.cursos?.length ?? 0) % CORES_DA_MARCA.length]
+    mudar((g) => {
+      g.cursos = g.cursos ?? []
+      g.cursos.push({ id, titulo: 'Novo curso', descricao: '', sobre: '', cor, publicado: false, acesso: acessoPadrao() })
+      g.modulos.push({ id: mid, curso: id, titulo: 'Módulo 1', chamada: '', cor, publicado: true, assuntos: [{ id: sid, titulo: '', aulas: [] }] })
+    })
+    setCursoAberto(id); setAbaCurso('info'); setSel({ tipo: 'modulo', id: mid })
+    setAviso('Curso criado oculto: dê nome, capa e acesso, monte os módulos e mostre quando estiver pronto.')
+  }
+  const duplicarCurso = (cid: string) => {
+    if (!grade) return
+    const usados = ids(); const nid = novoId(`${cid}-copia`, usados); usados.add(nid)
+    const novo = (base: string) => { const n = novoId(base, usados); usados.add(n); return n }
+    mudar((g) => {
+      const c = g.cursos?.find((x) => x.id === cid); if (!c) return
+      const copia: CursoGrade = { ...clone(c), id: nid, titulo: `${c.titulo} (cópia)`, publicado: false, capaArquivo: null, acesso: { ...clone(c.acesso), cakto: [] } }
+      g.cursos!.splice(g.cursos!.indexOf(c) + 1, 0, copia)
+      for (const m of g.modulos.filter((x) => x.curso === cid)) {
+        const cm = clone(m); cm.id = novo(m.titulo || 'modulo'); cm.curso = nid
+        cm.assuntos = cm.assuntos.map((s) => ({ ...s, id: novo(s.titulo || 'assunto'), aulas: s.aulas.map((a) => ({ ...a, id: novo(a.titulo || 'aula') })) }))
+        g.modulos.push(cm)
+      }
+    })
+    setAviso('Cópia criada, oculta e sem produto da Cakto (um produto libera um curso só).')
+  }
+  const removerCurso = (cid: string) => {
+    if (!grade || (grade.cursos?.length ?? 0) < 2) return
+    const c = grade.cursos?.find((x) => x.id === cid); if (!c) return
+    if (!window.confirm(`Excluir o curso "${c.titulo}" com ${modulosDoCurso(grade, cid).length} módulos e ${aulasDoCurso(grade, cid)} aulas? Fica só no rascunho até você publicar, e dá para trazer de volta pelo Histórico. Quem já comprou continua com a liberação guardada.`)) return
+    mudar((g) => { g.cursos = g.cursos!.filter((x) => x.id !== cid); g.modulos = g.modulos.filter((m) => m.curso !== cid) })
+    if (cursoAberto === cid) abrirCurso(null)
+  }
+
   if (situacao === 'carregando' || !grade) {
     return <div className="eg"><div className="adm-vazio">{erro ?? 'Abrindo a grade das aulas…'}</div></div>
   }
 
-  const total = contarAulas(grade)
-  const comVideo = grade.modulos.reduce((n, m) => n + m.assuntos.reduce((k, s) => k + s.aulas.filter((a) => a.video).length, 0), 0)
+  const curso = cursoAberto ? grade.cursos?.find((c) => c.id === cursoAberto) ?? null : null
+  const doEscopo = curso ? modulosDoCurso(grade, curso.id) : grade.modulos
+  const total = curso ? aulasDoCurso(grade, curso.id) : contarAulas(grade)
+  const comVideo = doEscopo.reduce((n, m) => n + m.assuntos.reduce((k, s) => k + s.aulas.filter((a) => a.video).length, 0), 0)
+  const idsDoEscopo = new Set(doEscopo.flatMap((m) => m.assuntos.flatMap((s) => s.aulas.map((a) => a.id))))
+  const mudarCurso = (fn: (c: CursoGrade) => void) => mudar((g) => { const c = g.cursos?.find((x) => x.id === cursoAberto); if (c) fn(c) })
   const termo = busca.trim().toLowerCase()
   const bate = (a: AulaGrade) => !termo || `${a.titulo} ${a.descricao}`.toLowerCase().includes(termo)
 
@@ -228,8 +288,8 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
       {/* ---------------------------------------------------- barra do topo */}
       <header className="eg-topo">
         <div className="eg-topo-texto">
-          <span className="rot">Grade das aulas</span>
-          <h2>Módulos, assuntos e aulas</h2>
+          <span className="rot">Área de membros</span>
+          <h2>Cursos, módulos e aulas</h2>
           <p className={`eg-situacao ${situacao}`}>
             <i aria-hidden="true" />
             {situacao === 'salvando' ? 'Salvando o rascunho…' : situacao === 'pendente' ? 'Alterações ainda não salvas' : situacao === 'erro' ? 'O rascunho não foi salvo' : rascunhoEm ? `Rascunho salvo ${hora(rascunhoEm)}` : 'Nada alterado ainda'}
@@ -241,7 +301,7 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
         </div>
         <div className="eg-topo-acoes">
           <button type="button" className="admin-secundario" onClick={() => setModal('historico')}>Histórico</button>
-          {naoPublicado && publicada && <button type="button" className="admin-secundario" onClick={() => { if (window.confirm('Descartar o rascunho e voltar para o que está publicado?')) mudar((g) => { g.modulos = clone(publicada.modulos) }) }}>Descartar alterações</button>}
+          {naoPublicado && publicada && <button type="button" className="admin-secundario" onClick={() => { if (window.confirm('Descartar o rascunho e voltar para o que está publicado?')) mudar((g) => { g.modulos = clone(publicada.modulos); g.cursos = clone(publicada.cursos ?? []) }) }}>Descartar alterações</button>}
           <button type="button" className="admin-secundario eg-previa-btn" onClick={() => setModal('previa')}>Ver prévia</button>
           <button type="button" className="admin-primary" disabled={!naoPublicado || situacao === 'salvando'} onClick={() => setModal('publicar')}>Publicar para os alunos</button>
         </div>
@@ -249,18 +309,29 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
       {erro && <div className="ger-erro">{erro}<button onClick={() => setErro(null)}><IconeFechar /></button></div>}
       {aviso && <div className="admin-sucesso"><span>{aviso}</span><button onClick={() => setAviso(null)}><IconeFechar /></button></div>}
 
-      <div className="eg-kpis">
-        <article><span>Módulos</span><strong>{grade.modulos.length}</strong></article>
-        <article><span>Aulas</span><strong>{total}</strong></article>
-        <article className={comVideo < total ? 'falta' : 'ok'}><span>Com vídeo</span><strong>{comVideo}</strong><small>{total - comVideo ? `${total - comVideo} sem vídeo` : 'todas com vídeo'}</small></article>
-        <article><span>Alunos que assistiram</span><strong>{new Set(controle.map((c) => c.userId)).size}</strong></article>
-      </div>
+      {!curso && (
+        <div className="eg-kpis">
+          <article><span>Cursos</span><strong>{grade.cursos?.length ?? 1}</strong><small>{(grade.cursos ?? []).filter((c) => c.publicado).length} visíveis</small></article>
+          <article><span>Módulos e aulas</span><strong>{grade.modulos.length} · {total}</strong></article>
+          <article className={comVideo < total ? 'falta' : 'ok'}><span>Com vídeo</span><strong>{comVideo}</strong><small>{total - comVideo ? `${total - comVideo} sem vídeo` : 'todas com vídeo'}</small></article>
+          <article><span>Alunos que assistiram</span><strong>{new Set(controle.map((c) => c.userId)).size}</strong></article>
+        </div>
+      )}
 
-      <div className="eg-corpo">
+      {!curso && <ListaDeCursos grade={grade} mudar={mudar} aoAbrir={(id, a) => abrirCurso(id, a)} aoNovo={novoCurso} aoDuplicar={duplicarCurso} aoRemover={removerCurso} />}
+
+      {curso && (
+        <CabecalhoDoCurso grade={grade} curso={curso} aba={abaCurso} setAba={setAbaCurso} aoVoltar={() => abrirCurso(null)} alunos={alunosNoCurso[curso.id] ?? null} />
+      )}
+      {curso && abaCurso === 'info' && <section className="ec-painel"><InfoDoCurso sessao={sessao} marca={marca} curso={curso} mudar={mudarCurso} setErro={setErro} aoRemover={() => removerCurso(curso.id)} /></section>}
+      {curso && abaCurso === 'acesso' && <section className="ec-painel"><AcessoDoCursoPainel marca={marca} curso={curso} publicado={publicada?.cursos?.find((c) => c.id === curso.id) ?? null} planos={planos} mudar={mudarCurso} /></section>}
+      {curso && abaCurso === 'alunos' && <section className="ec-painel"><AlunosDoCurso sessao={sessao} marca={marca} curso={curso} publicado={!!publicada?.cursos?.some((c) => c.id === curso.id)} aoContar={(n) => setAlunosNoCurso((x) => ({ ...x, [curso.id]: n }))} /></section>}
+
+      {curso && abaCurso === 'conteudo' && <div className="eg-corpo">
         {/* ------------------------------------------------------ a árvore */}
         <nav className="eg-arvore" aria-label="Grade das aulas">
           <input className="eg-busca" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Procurar aula" aria-label="Procurar aula" />
-          {grade.modulos.map((m, mi) => {
+          {doEscopo.map((m, mi) => {
             const fechado = fechados.has(m.id) && !termo
             return (
               <section key={m.id} className={`eg-mod ${sel?.id === m.id ? 'sel' : ''} ${alvo === m.id ? 'alvo' : ''}`} style={{ ['--cor' as string]: m.cor }}>
@@ -272,7 +343,7 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
                   </button>
                   {!m.publicado && <em className="eg-chip oculto">Oculto</em>}
                   {m.liberarEm && <em className="eg-chip agenda" title={`Libera ${hora(m.liberarEm)}`}>Agendado</em>}
-                  <span className="eg-ordem"><button type="button" onClick={() => mover(m.id, -1)} disabled={mi === 0} aria-label="Subir módulo">↑</button><button type="button" onClick={() => mover(m.id, 1)} disabled={mi === grade.modulos.length - 1} aria-label="Descer módulo">↓</button></span>
+                  <span className="eg-ordem"><button type="button" onClick={() => mover(m.id, -1)} disabled={mi === 0} aria-label="Subir módulo">↑</button><button type="button" onClick={() => mover(m.id, 1)} disabled={mi === doEscopo.length - 1} aria-label="Descer módulo">↓</button></span>
                 </div>
                 {!fechado && (
                   <div className="eg-mod-corpo">
@@ -309,6 +380,7 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
               </section>
             )
           })}
+          {!doEscopo.length && <p className="eg-dica">Este curso ainda não tem módulos.</p>}
           <button type="button" className="eg-novo-modulo" onClick={addModulo}>+ Novo módulo</button>
           <p className="eg-dica">Arraste as aulas pela alça ⋮⋮ para mudar a ordem ou levar para outro assunto ou módulo.</p>
         </nav>
@@ -317,7 +389,7 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
         <section className="eg-painel" ref={painel}>
           {!achado && <div className="eg-vazio"><b>Escolha um módulo, assunto ou aula na lista</b><p>Ou crie um módulo novo. Tudo fica no rascunho até você publicar.</p></div>}
           {achado && !achado.s && (
-            <EditorDoModulo m={achado.m} numero={achado.mi + 1} planos={planos} mudar={(fn) => mudar((g) => { const x = localizar(g, achado.m.id); if (x) fn(x.m) })}
+            <EditorDoModulo m={achado.m} numero={doEscopo.findIndex((x) => x.id === achado.m.id) + 1} planos={planos} mudar={(fn) => mudar((g) => { const x = localizar(g, achado.m.id); if (x) fn(x.m) })}
               aoAddAssunto={() => addAssunto(achado.m.id)} aoAddAula={() => addAula(achado.m.assuntos[achado.m.assuntos.length - 1].id)}
               aoDuplicar={() => duplicar(achado.m.id)} aoRemover={() => remover(achado.m.id)} />
           )}
@@ -333,7 +405,7 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
               aoDuplicar={() => duplicar(achado.a!.id)} aoRemover={() => remover(achado.a!.id)} setErro={setErro} />
           )}
         </section>
-      </div>
+      </div>}
 
       {modal === 'previa' && <Previa grade={grade} planos={planos} aoFechar={() => setModal(null)} />}
       {modal === 'publicar' && (
@@ -345,7 +417,7 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
           setAviso('Publicado. A sala de aula já mostra esta versão para os alunos.')
         }} />
       )}
-      {modal === 'historico' && <Historico sessao={sessao} marca={marca} aoFechar={() => setModal(null)} aoRestaurar={(g) => { mudar((x) => { x.modulos = clone(g.modulos) }); setModal(null); setSel(null); setAviso('Versão trazida para o rascunho. Confira na prévia e publique para valer.') }} />}
+      {modal === 'historico' && <Historico sessao={sessao} marca={marca} aoFechar={() => setModal(null)} aoRestaurar={(g) => { mudar((x) => { x.modulos = clone(g.modulos); x.cursos = clone(g.cursos ?? []) }); setModal(null); setSel(null); setCursoAberto(null); setAviso('Versão trazida para o rascunho. Confira na prévia e publique para valer.') }} />}
     </div>
   )
 }
@@ -502,7 +574,7 @@ function EditorDaAula({ sessao, marca, a, m, s, grade, numero, aba, setAba, plan
           <div className="eg-editor-acoes">
             <label className="eg-mover"><span>Mover para</span>
               <select value={s.id} onChange={(e) => aoMoverPara(e.target.value)}>
-                {grade.modulos.map((mm) => <optgroup key={mm.id} label={mm.titulo || 'Módulo sem nome'}>{mm.assuntos.map((ss) => <option key={ss.id} value={ss.id}>{ss.titulo || `${mm.titulo} (sem assunto)`}</option>)}</optgroup>)}
+                {grade.modulos.filter((mm) => mm.curso === m.curso).map((mm) => <optgroup key={mm.id} label={mm.titulo || 'Módulo sem nome'}>{mm.assuntos.map((ss) => <option key={ss.id} value={ss.id}>{ss.titulo || `${mm.titulo} (sem assunto)`}</option>)}</optgroup>)}
               </select>
             </label>
             <button type="button" className="admin-secundario" onClick={aoDuplicar}>Duplicar</button>
@@ -709,17 +781,27 @@ function Publicar({ grade, publicada, aoFechar, aoPublicar }: { grade: GradeAula
   const semVideo = aulas.filter((x) => x.a.publicado && !x.a.video)
   const semTitulo = aulas.filter((x) => !x.a.titulo.trim())
   const linksRuins = aulas.filter((x) => x.a.links.some((l) => !l.nome.trim() || !/^https?:\/\//i.test(l.url)))
-  const bloqueia = semTitulo.length > 0 || linksRuins.length > 0
+  const cursos = grade.cursos ?? []
+  const vendidosSemProduto = cursos.filter((c) => c.acesso.modo === 'compra' && !c.acesso.cakto.length)
+  const vendidosSemCheckout = cursos.filter((c) => c.acesso.modo === 'compra' && c.acesso.vitrine && !/^https:\/\//i.test(c.acesso.checkout))
+  const planosVazios = cursos.filter((c) => c.acesso.modo === 'planos' && !c.acesso.planos.length)
+  const cursoSemNome = cursos.filter((c) => !c.titulo.trim())
+  const bloqueia = semTitulo.length > 0 || linksRuins.length > 0 || cursoSemNome.length > 0
   return (
     <div className="adm-modal-fundo" onMouseDown={aoFechar}>
       <section className="adm-modal eg-publicar" onMouseDown={(e) => e.stopPropagation()}>
         <header><div><span className="rot">Publicar</span><h3>Levar esta grade para os alunos</h3></div><button onClick={aoFechar} aria-label="Fechar"><IconeFechar /></button></header>
         <div className="eg-publicar-corpo">
           <ul className="eg-resumo">
+            <li><b>{cursos.filter((c) => c.publicado).length}</b> {cursos.filter((c) => c.publicado).length === 1 ? 'curso visível' : 'cursos visíveis'}</li>
             <li><b>{grade.modulos.filter((m) => m.publicado).length}</b> módulos visíveis</li>
             <li><b>{aulas.filter((x) => x.a.publicado).length}</b> aulas visíveis</li>
             {publicada ? <><li><b>{novas}</b> aulas novas</li><li><b>{saem}</b> saem da sala</li></> : <li>Primeira publicação: a sala troca o catálogo antigo por esta grade</li>}
           </ul>
+          {cursoSemNome.length > 0 && <p className="eg-alerta">Há curso sem nome. Dê um nome antes de publicar.</p>}
+          {vendidosSemProduto.length > 0 && <div className="eg-aviso-suave"><b>{vendidosSemProduto.map((c) => c.titulo).join(', ')}: à venda sem produto da Cakto</b><small>Ninguém é liberado sozinho até você colar o ID do produto em Acesso e venda. Dá para liberar à mão na aba Alunos.</small></div>}
+          {vendidosSemCheckout.length > 0 && <div className="eg-aviso-suave"><b>{vendidosSemCheckout.map((c) => c.titulo).join(', ')}: sem link do checkout</b><small>O curso aparece trancado sem o botão de compra.</small></div>}
+          {planosVazios.length > 0 && <div className="eg-aviso-suave"><b>{planosVazios.map((c) => c.titulo).join(', ')}: nenhum plano escolhido</b><small>Só os administradores assistem.</small></div>}
           {semTitulo.length > 0 && <p className="eg-alerta">{semTitulo.length} {semTitulo.length === 1 ? 'aula está' : 'aulas estão'} sem título. Dê um nome antes de publicar.</p>}
           {linksRuins.length > 0 && <p className="eg-alerta">Há link sem nome ou sem https:// em: {linksRuins.map((x) => x.a.titulo).join(', ')}.</p>}
           {semVideo.length > 0 && (
@@ -754,7 +836,7 @@ function Historico({ sessao, marca, aoFechar, aoRestaurar }: { sessao: SessaoTee
           {lista && !lista.length && <p className="adm-vazio">Nada publicado por aqui ainda. Cada publicação fica guardada nesta lista.</p>}
           {lista?.map((v, i) => (
             <article key={v.id} className="eg-versao">
-              <div><b>{hora(v.criadaEm)}{i === 0 ? ' · no ar agora' : ''}</b><small>{v.nota || 'Sem anotação'} · {v.modulos} módulos · {v.aulas} aulas</small></div>
+              <div><b>{hora(v.criadaEm)}{i === 0 ? ' · no ar agora' : ''}</b><small>{v.nota || 'Sem anotação'} · {v.cursos} {v.cursos === 1 ? 'curso' : 'cursos'} · {v.modulos} módulos · {v.aulas} aulas</small></div>
               <button type="button" className="admin-secundario" onClick={() => { if (window.confirm('Trazer esta versão para o rascunho? O rascunho atual é substituído (o que já foi publicado continua no histórico).')) aoRestaurar(v.grade) }}>Trazer para o rascunho</button>
             </article>
           ))}
