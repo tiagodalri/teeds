@@ -37,6 +37,9 @@ export function traduzirErro(texto: string): string {
     return 'Muitos pedidos de uma vez. Espere um instante e tente de novo.'
   if (/invalidtoken|authorizationrequired|please log in|not authorized/.test(baixo))
     return 'A autorização da Deriv venceu. Conecte a Deriv de novo.'
+  // a Deriv fora do ar ou em manutenção (06/11/2026: "Service temporarily unavailable. A health probe is in progress.")
+  if (/temporarily unavailable|health probe|service unavailable|bad gateway|gateway time-?out|under maintenance|servicenotavailable|serviceunavailable/.test(baixo))
+    return 'A Deriv está instável agora. A plataforma tenta de novo sozinha em instantes.'
   if (/tempo esgotado/.test(baixo))
     return 'A Deriv demorou para responder. Confira suas posições abertas antes de tentar de novo.'
   // multiplicadores (30/10/2026)

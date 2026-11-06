@@ -60,7 +60,9 @@ export async function call<T>(path: string, session: AuthSession, init: RequestI
     const instavel = res.status >= 500 || res.status === 429
     if (instavel && !ultima) { await pausa(800); continue }
     const first = body?.errors?.[0]
-    if (instavel && !first?.message) throw new ErroDaDeriv(`${AVISO_INSTAVEL} (erro ${res.status})`, res.status)
+    // 06/11/2026 (print do Tiago): na instabilidade a Deriv manda um texto em inglês ("Service temporarily
+    // unavailable. A health probe is in progress."), que ia cru para a faixa vermelha. Instável é sempre o nosso aviso.
+    if (instavel) throw new ErroDaDeriv('A Deriv está instável agora. A plataforma tenta de novo sozinha em instantes.', res.status)
     throw new ErroDaDeriv(first?.message || body?.message || `Erro ${res.status} em ${path}`, res.status)
   }
 }

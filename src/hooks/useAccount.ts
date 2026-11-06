@@ -177,9 +177,13 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
   useEffect(() => {
     if (!session) return
     let alive = true
-    fetchAccounts(session)
+    let espera = 0
+    // 06/11/2026: com a Deriv instável, a lista de contas falhava uma vez e a faixa vermelha ficava até
+    // recarregar a página. Agora tenta de novo sozinha (8 s, 16 s, 24 s…) e a faixa some quando volta.
+    const carregar = (tentativa: number) => fetchAccounts(session)
       .then((list) => {
         if (!alive) return
+        if (tentativa > 1) setError(null)
         setAccounts(list)
         // comeca sempre pela demo: dinheiro ficticio por padrao
         const demo = list.find((a) => a.type === 'demo')
@@ -188,13 +192,18 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
       .catch((e: Error) => {
         if (!alive) return
         setError(e.message)
-        if (/401|token/i.test(e.message)) {
+        const status = (e as { status?: number }).status ?? 0
+        if (/401|token/i.test(e.message) || status === 401) {
           clearSession()
           setSession(null)
           setStatus('deslogado')
+          return
         }
+        const instavel = status >= 500 || status === 429 || /instável/.test(e.message)
+        if (instavel && tentativa < 8) espera = window.setTimeout(() => void carregar(tentativa + 1), 8000 * tentativa)
       })
-    return () => { alive = false }
+    void carregar(1)
+    return () => { alive = false; window.clearTimeout(espera) }
   }, [session])
 
   // --- conexao autenticada da conta escolhida
