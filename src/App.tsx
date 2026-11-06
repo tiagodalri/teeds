@@ -3,6 +3,7 @@ import { useSimulador } from './hooks/useSimulador'
 import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
 import { PositionCard } from './components/PositionCard'
 import { BotaoTelaCheia } from './components/BotaoTelaCheia'
+import { BotoesDeFerramentas } from './components/ferramentas/Ferramentas'
 import { SeletorDeGrafico, graficoGuardado, guardarGrafico, type QualGrafico } from './components/grafico/SeletorDeGrafico'
 import { DigitsPanel } from './components/DigitsPanel'
 import { labDoBanco } from './core/laboratorio/dados'
@@ -1335,6 +1336,9 @@ export default function App() {
               <i aria-hidden="true" />Ao vivo
             </button>
           )}
+
+          {/* conversor de moedas e calculadora (06/11/2026, ideia do Victor): só na GlobalFly */}
+          {!JANELA && MARCA.id === 'globalfly' && <BotoesDeFerramentas />}
 
           {!JANELA && <BotaoTelaCheia />}
 

@@ -3,6 +3,7 @@ import type { Usuario } from '../core/teeds/conta'
 import { MARCA } from '../marca'
 import { alternarSom, useSomLigado } from '../core/som'
 import { alternarMenuAdmin, useMenuAdminOculto } from '../core/menuDeAdmin'
+import { abrirFerramenta, IconeCifrao, IconeCalculadora } from './ferramentas/Ferramentas'
 
 interface Props {
   usuario: Usuario
@@ -80,6 +81,16 @@ export function UserMenu({ usuario, onSair, onPerfil, foto, admin = false }: Pro
             </svg>
             {MARCA.inicio ? 'Meu perfil' : 'Minha conta'}
           </button>
+
+          {/* celular (GlobalFly): o topo não tem espaço para os botões do conversor e da calculadora */}
+          {MARCA.id === 'globalfly' && <>
+            <button className="menu-acao so-celular" role="menuitem" onClick={() => { setAberto(false); abrirFerramenta('cambio') }}>
+              <IconeCifrao />Conversor de moedas
+            </button>
+            <button className="menu-acao so-celular" role="menuitem" onClick={() => { setAberto(false); abrirFerramenta('calculadora') }}>
+              <IconeCalculadora />Calculadora
+            </button>
+          </>}
 
           {/* os sons das operações (play, ganho e loss): liga e desliga neste aparelho */}
           <button className="menu-acao" role="menuitemcheckbox" aria-checked={som} onClick={alternarSom}>

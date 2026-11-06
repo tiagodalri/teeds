@@ -8,6 +8,8 @@ import { InicioPagina } from './InicioPagina'
 import { TourGuiado, passosDoTour } from '../tour/TourGuiado'
 import { BarraInferior } from '../barra/BarraInferior'
 import { RelogioTopo } from '../RelogioTopo'
+import { BotaoTelaCheia } from '../BotaoTelaCheia'
+import { BotoesDeFerramentas } from '../ferramentas/Ferramentas'
 import { TrancaDoLancamento } from '../lancamento/TrancaDoLancamento'
 import { LiveDoLancamento } from '../lancamento/LiveDoLancamento'
 import type { EstadoDaLive } from '../../core/teeds/lancamento'
@@ -96,6 +98,10 @@ export default function LabInicio() {
             <AccountSwitcher contas={[{ accountId: 'DOT90001234', balance: d.conta.saldo ?? 0, currency: 'USD', group: 'row', status: 'active', type: 'demo' }]}
               selecionada="DOT90001234" isDemo saldo={d.conta.saldo} moeda="USD" conectando={false} onTrocar={nada} onRecarregar={nada} onSair={nada} />
           )}
+          {/* a mesma ordem do topo de verdade (App.tsx): conversor, calculadora, tela cheia, tema */}
+          <BotoesDeFerramentas />
+          <BotaoTelaCheia />
+          <button className="tema-btn" onClick={() => { const r = document.documentElement; r.dataset.tema = r.dataset.tema === 'escuro' ? 'claro' : 'escuro' }} aria-label="Alternar tema">◐</button>
           <div className="status status-open so-bolinha" role="status" aria-label="Conectado" title="Conectado"><i /></div>
           {/* &categoria=gold|silver: o selo do topo (GlobalFly) */}
           {(q.get('categoria') === 'gold' || q.get('categoria') === 'silver') && <SeloCategoria categoria={q.get('categoria') as Categoria} />}
