@@ -456,7 +456,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
               {abaLado === 'chat' && chatDaSala}
               {abaLado === 'sala' && <>{naSalaCard}{movimento}</>}
               {abaLado === 'simulacao' && controles}
-              {abaLado === 'historico' && sessao && <HistoricoDasTransmissoes sessao={sessao} noAr={sim.ativa} compacto />}
+              {abaLado === 'historico' && (sessao ? <HistoricoDasTransmissoes sessao={sessao} noAr={sim.ativa} compacto /> : <p className="tr-legenda">Entre na sua conta para ver o histórico das transmissões.</p>)}
             </div>
           </aside>
         </div>
@@ -670,6 +670,7 @@ export function HistoricoDasTransmissoes({ sessao, noAr, compacto = false }: { s
     <section className="cv-card cv-historico" aria-labelledby="cv-hist-titulo">
       <h4 id="cv-hist-titulo">Histórico das transmissões <small>membros reais; o público simulado não entra</small></h4>
       {erro && <p className="av-erro">{erro}</p>}
+      {!lista && !erro && <span className="tr-legenda">Carregando o histórico…</span>}
       {lista && lista.length === 0 && <span className="tr-legenda">A primeira transmissão aparece aqui assim que começar: pessoas, pico, tempo médio e mensagens.</span>}
       {lista && lista.length > 0 && compacto && (
         <ul className="cv-hist-lista">

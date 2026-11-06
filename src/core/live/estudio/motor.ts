@@ -740,7 +740,7 @@ export function iniciarEstudio(): Promise<void> {
     config = { ...config, cenas: config.cenas.map((c) => ({ ...c, fontes: c.fontes.map((f) => (f.tipo === 'texto' && f.nome === 'Live iniciando' && f.texto?.cor.toLowerCase() === '#051528' ? { ...f, texto: { ...f.texto, cor: '#D6AE5B' } } : f)) })) }
     ;[saida, saidaCtx] = tela2d(LARGURA, ALTURA)
     ;[previa, previaCtx] = tela2d(LARGURA / 2, ALTURA / 2)
-    saida.className = 'es-tela'; previa.className = 'es-tela'
+    saida.className = 'eo-tela'; previa.className = 'eo-tela'
     const fluxo = (saida as HTMLCanvasElement & { captureStream(f?: number): MediaStream }).captureStream(0)
     faixaDeVideo = fluxo.getVideoTracks()[0]
     audio()

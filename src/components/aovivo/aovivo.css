@@ -1029,14 +1029,17 @@ body.av-teatro-aberto { overflow: hidden; }
 .cv-hist-quem li { display: flex; justify-content: space-between; gap: 8px; }
 
 /* ---------------------------------------------- estúdio no aplicativo */
+/* 05/11/2026 (print do Naor: "aparece bugado"): os monitores ocupavam a altura que sobrava e, presos pela
+   largura, ficavam com faixas vazias em cima e embaixo. Agora a linha dos monitores tem a altura exata do
+   16:9 (aspect-ratio na área) e o que sobra vai para as docas; em tela baixa os monitores encolhem. */
 .cv-app .eo.eo-app { height: 100%; min-height: 0; box-sizing: border-box; padding: 8px; gap: 6px;
-  grid-template-rows: auto minmax(0, 1fr) auto clamp(210px, 29vh, 300px); }
-.cv-app .eo-app:not(:has(> .eo-aviso)) { grid-template-rows: minmax(0, 1fr) auto clamp(210px, 29vh, 300px); }
+  grid-template-rows: auto minmax(0, auto) auto minmax(clamp(210px, 29vh, 300px), 1fr); }
+.cv-app .eo-app:not(:has(> .eo-aviso)) { grid-template-rows: minmax(0, auto) auto minmax(clamp(210px, 29vh, 300px), 1fr); }
 .cv-app .eo-app .eo-palcos { height: 100%; min-height: 0; align-items: stretch; }
 .cv-app .eo-app .eo-palcos.duplo { grid-template-columns: minmax(0, 1fr) 118px minmax(0, 1fr); }
 .cv-app .eo-app .eo-palcos.unico { max-width: none; }
 .cv-app .eo-app .eo-palco { grid-template-rows: auto minmax(0, 1fr); min-height: 0; height: 100%; }
-.cv-app .eo-app .eo-palco-area { container-type: size; display: grid; place-items: center; min-height: 0; min-width: 0; border-radius: 6px; background: var(--surface-alt); box-shadow: inset 0 0 0 1px var(--cv-linha); }
+.cv-app .eo-app .eo-palco-area { container-type: size; aspect-ratio: 16 / 9; align-self: stretch; display: grid; place-items: center; min-height: 0; min-width: 0; border-radius: 6px; background: var(--surface-alt); box-shadow: inset 0 0 0 1px var(--cv-linha); }
 .cv-app .eo-app .eo-monitor { width: min(100cqw, calc(100cqh * 16 / 9)); border-radius: 2px; }
 .cv-app .eo-app .eo-meio { align-content: center; }
 .cv-app .eo-app .eo-barra-fonte { padding: 4px 8px; border-radius: 6px; font-size: 12px; }
@@ -1045,7 +1048,8 @@ body.av-teatro-aberto { overflow: hidden; }
 .cv-app .eo-app .eo-doca { min-height: 0; max-height: none; border-radius: 6px; background: var(--cv-painel); }
 .cv-app .eo-app .eo-doca h4 { padding: 6px 10px; font-size: 12px; background: var(--surface-alt); }
 .cv-app .eo-app .eo-doca-corpo { padding: 6px; gap: 6px; overflow-x: hidden; }
-.cv-app .eo-app .eo-fontes li { gap: 3px; padding-right: 2px; }
+.cv-app .eo-app .eo-fontes li { gap: 3px; padding-right: 4px; }
+.cv-app .eo-app .eo-cenas li { padding-right: 6px; }
 .cv-app .eo-app .eo-fontes li .eo-ico { width: 24px; }
 .cv-app .eo-app .eo-ligar { padding: 0 7px; font-size: 11px; }
 .cv-app .eo-app .eo-doca li { min-height: 28px; border-radius: 4px; font-size: 12.5px; }
@@ -1053,7 +1057,10 @@ body.av-teatro-aberto { overflow: hidden; }
 .cv-app .eo-app .eo-doca-rodape { padding: 2px 4px; background: var(--surface-alt); }
 .cv-app .eo-app .eo-canal { padding: 6px 8px; border-radius: 6px; }
 @media (max-width: 1500px) {
-  .cv-app .eo-app .eo-docas { grid-template-columns: minmax(0, .75fr) minmax(0, 1.2fr) minmax(0, 1.15fr) minmax(0, 1.1fr) minmax(0, .85fr); }
+  .cv-app .eo-app .eo-docas { grid-template-columns: minmax(0, .85fr) minmax(0, 1.2fr) minmax(0, 1.1fr) minmax(0, 1.05fr) minmax(0, .85fr); }
+  /* o cartão do stinger espremia o nome em "Stinger:…": o botão desce para a linha de baixo */
+  .cv-app .eo-app .eo-stinger-arquivo { grid-template-columns: auto minmax(0, 1fr); }
+  .cv-app .eo-app .eo-stinger-arquivo .eo-botao { grid-column: 1 / -1; }
   .cv-app .eo-app .eo-ligar { max-width: 74px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cv-app-corpo { grid-template-columns: minmax(0, 1fr) 300px; }
   .cv-app .eo-app .eo-controles .eo-nota { display: none; }
