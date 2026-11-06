@@ -247,16 +247,18 @@ export function roboLigou(): void { tocarSom('play') }
  */
 const sessoesRodando = new Set<string>()
 const sessoesTocadas = new Set<string>()
-export function acompanharFimDasSessoes(lista: ReadonlyArray<{ id: string; estado?: { rodando?: boolean; emOperacao?: boolean; motivoParada?: string | null } | null }>): void {
+export function acompanharFimDasSessoes(lista: ReadonlyArray<{ id: string; estado?: { rodando?: boolean; emOperacao?: boolean; motivoParada?: string | null; operacoes?: number } | null }>): void {
   for (const s of lista) {
     const e = s.estado
     if (!e) continue
     if (e.rodando || e.emOperacao) { sessoesRodando.add(s.id); continue }
-    if (!sessoesRodando.has(s.id) || sessoesTocadas.has(s.id)) continue
+    // a mesma marca do aviso da cabine (chaveDoFim): o play de novo continua o número da sessão
+    const fim = `${s.id}:${e.operacoes ?? 0}`
+    if (!sessoesRodando.has(s.id) || sessoesTocadas.has(fim)) continue
     sessoesRodando.delete(s.id)
     const motivo = e.motivoParada ?? ''
-    if (/meta de lucro/i.test(motivo)) sessaoBateuLimite(s.id, 'meta')
-    else if (/limite de perda/i.test(motivo)) sessaoBateuLimite(s.id, 'stop')
+    if (/meta de lucro/i.test(motivo)) sessaoBateuLimite(fim, 'meta')
+    else if (/limite de perda/i.test(motivo)) sessaoBateuLimite(fim, 'stop')
   }
 }
 
@@ -264,7 +266,8 @@ export function acompanharFimDasSessoes(lista: ReadonlyArray<{ id: string; estad
  * A sessão bateu a meta ou o stop: o mesmo momento do aviso "Missão
  * cumprida" / "O stop protegeu sua banca". Uma vez por sessão, venha o
  * aviso da cabine ou da lista do servidor (que tira a sessão da lista assim
- * que ela para, por isso a lista sozinha não basta).
+ * que ela para, por isso a lista sozinha não basta). O `id` é a marca da
+ * parada (sessão:operações), não só o número da sessão — ver chaveDoFim.
  */
 export function sessaoBateuLimite(id: string, tipo: 'meta' | 'stop'): void {
   if (sessoesTocadas.has(id)) return

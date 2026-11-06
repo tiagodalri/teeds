@@ -34,6 +34,7 @@ import { parametrosPadrao } from './core/deriv/parametros'
 import type { ConfigEstrategia, EstadoMotor, OperacaoMotor, Registro } from './core/deriv/engine'
 import type { ActiveSymbol } from './core/deriv/types'
 import { RobotLive } from './components/RobotLive'
+import { LocalRobotPanel } from './components/LocalRobotPanel'
 import { RobotSetup } from './components/RobotSetup'
 import { DigitsPanel } from './components/DigitsPanel'
 import { VitrineDeRobos } from './components/VitrineDeRobos'
@@ -332,6 +333,54 @@ function CabineEspera({ mosaico = false }: { mosaico?: boolean }) {
   )
 }
 
+/**
+ * ?tela=meta-de-novo — a mesma sessão bate a meta duas vezes (06/11/2026,
+ * relato do Victor): o servidor de mentira responde às consultas da cabine;
+ * a primeira volta para na meta, o play de novo CONTINUA a sessão (mesmo
+ * número) e a segunda volta para na meta outra vez. O aviso grande tem de
+ * aparecer nas duas. Nada sai do navegador.
+ */
+function LabMetaDeNovo() {
+  const [pronto, setPronto] = useState(false)
+  useEffect(() => {
+    try { localStorage.removeItem(`${MARCA.id}.limites.avisados`); localStorage.removeItem(`${MARCA.id}.somDasSessoes`) } catch { /* ok */ }
+    const base = { ...estadoRodando, emOperacao: false, emCurso: null, historico: [] as OperacaoMotor[], curva: [0], registros: [] as Registro[] }
+    let ops = 0, resultado = 0, rodando = true, consultas = 0
+    const lab = window as unknown as { __labMeta?: { voltas: number; ligou: number } }
+    lab.__labMeta = { voltas: 1, ligou: 0 }
+    const estado = (): EstadoMotor => ({ ...base, rodando, operacoes: ops, vitorias: ops, derrotas: 0, resultado, curva: [0, ...Array.from({ length: ops }, (_, i) => +((i + 1) * 0.5).toFixed(2))], motivoParada: rodando ? null : `meta de lucro atingida (USD ${resultado.toFixed(2)})` })
+    const resposta = (corpo: unknown) => new Response(JSON.stringify(corpo), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    const original = window.fetch
+    window.fetch = async (url, init) => {
+      const u = String(url)
+      if (!u.includes('/api/sessao')) return original(url, init)
+      if (init?.method === 'POST' && /\/api\/sessao$/.test(u)) {
+        // play de novo: continua a mesma sessão, com o placar acumulado
+        rodando = true; consultas = 0; lab.__labMeta!.ligou++; lab.__labMeta!.voltas++
+        return resposta({ id: 'lab-sessao-1', contaId: 'VRTC1234567', demo: true, moeda: 'USD', estado: estado() })
+      }
+      if (rodando) {
+        consultas++
+        ops++; resultado = +(resultado + 0.5).toFixed(2)
+        if (consultas >= 4) rodando = false
+      }
+      return resposta({ id: 'lab-sessao-1', contaId: 'VRTC1234567', demo: true, moeda: 'USD', estado: estado() })
+    }
+    setPronto(true)
+    return () => { window.fetch = original }
+  }, [])
+  if (!pronto) return null
+  const sessao = { token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab' } } as never
+  return (
+    <CatalogoDeExemplo itens={CATALOGO_LAB.map((i) => ({ id: i.id, ativo: true, parametros: parametrosPadrao(i.id), lossVirtualAjustavel: true }))}>
+      <div className="rob-workspace-board modo-lista">
+        <LocalRobotPanel socket={null} isDemo moeda="USD" symbols={symbols} symbolPadrao="R_75" identidade={ident} titulo="Robô 1"
+          sessaoTeeds={sessao} contaId="VRTC1234567" conexao="open" adotar={{ id: 'lab-sessao-1', config }} />
+      </div>
+    </CatalogoDeExemplo>
+  )
+}
+
 function SemDeriv() {
   const voltas = Number(new URLSearchParams(location.search).get('voltas') ?? '0')
   try {
@@ -459,6 +508,7 @@ function Laboratorio() {
         {qual === 'cockpit' && <div className="rob-workspace-board modo-lista"><Cabine estado={estadoRodando} expandido titulo="Robô 1" /></div>}
         {qual === 'espera' && <div className="rob-workspace-board modo-lista"><CabineEspera /></div>}
         {qual === 'espera-mosaico' && <div className="rob-workspace-board modo-mosaico"><CabineEspera mosaico /></div>}
+        {qual === 'meta-de-novo' && <LabMetaDeNovo />}
         {qual === 'parado' && <div className="rob-workspace-board modo-lista"><Cabine estado={estadoParado} expandido={false} titulo="Robô 1" /></div>}
         {qual === 'preparo' && (
           <CatalogoDeExemplo itens={CATALOGO_LAB.map((i) => ({ id: i.id, ativo: true, parametros: parametrosPadrao(i.id), lossVirtualAjustavel: true }))}>
@@ -562,7 +612,9 @@ function Laboratorio() {
   )
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><Laboratorio /></React.StrictMode>)
+// meta-de-novo sem StrictMode: a montagem dupla do desenvolvimento desliga o acompanhamento da sessão adotada (no site não existe)
+const semModoEstrito = new URLSearchParams(location.search).get('tela') === 'meta-de-novo'
+ReactDOM.createRoot(document.getElementById('root')!).render(semModoEstrito ? <Laboratorio /> : <React.StrictMode><Laboratorio /></React.StrictMode>)
 
 /** A Central ao vivo no laboratório: com &membros=1, membros de mentira entram, saem e escrevem. */
 function LabCentral() {

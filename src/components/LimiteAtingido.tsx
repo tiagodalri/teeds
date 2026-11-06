@@ -25,8 +25,17 @@ export function tipoDeLimite(motivo: string | null | undefined): TipoDeLimite | 
   return null
 }
 
-// Cada sessão avisa uma vez só — inclusive a que bateu o limite enquanto a
-// pessoa estava fora: ela vê o aviso quando volta, e nunca mais.
+// Cada parada por limite avisa uma vez só — inclusive a que aconteceu
+// enquanto a pessoa estava fora: ela vê o aviso quando volta, e nunca mais.
+//
+// 06/11/2026 (relato do Victor Cordeiro): dar play de novo depois da meta
+// CONTINUA a mesma sessão, com o mesmo número. A marca era só o número, então
+// a segunda meta já nascia "avisada" e a I.A. parava em silêncio. Agora a
+// marca é o número mais o total de operações na parada: o total só cresce
+// dentro da sessão, então cada meta (ou stop) depois de um play novo é outra.
+export function chaveDoFim(sessaoId: string, operacoes: number | null | undefined): string {
+  return `${sessaoId}:${operacoes ?? 0}`
+}
 const CHAVE = `${MARCA.id}.limites.avisados`
 function avisados(): string[] {
   try { const v = JSON.parse(localStorage.getItem(CHAVE) || '[]'); return Array.isArray(v) ? v : [] } catch { return [] }

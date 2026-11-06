@@ -7,7 +7,7 @@ import { ESTRATEGIAS_LOCAIS, modoDaConfig, NOME_DO_MODO, temModos } from '../cor
 import type { ActiveSymbol } from '../core/deriv/types'
 import { RobotLive } from './RobotLive'
 import { RobotSetup } from './RobotSetup'
-import { LimiteAtingido, limiteJaAvisado, marcarLimiteAvisado, tipoDeLimite, type TipoDeLimite } from './LimiteAtingido'
+import { LimiteAtingido, chaveDoFim, limiteJaAvisado, marcarLimiteAvisado, tipoDeLimite, type TipoDeLimite } from './LimiteAtingido'
 import type { Identidade } from '../core/deriv/branding'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { acompanharNoServidor, aquecerNoServidor, ligarNoServidor, pararNoServidor, procurarSessaoRecemLigada } from '../core/teeds/servidorRobos'
@@ -190,11 +190,13 @@ export function LocalRobotPanel({
     antesDoLimite.current = { id: idDaSessao, rodando: estado.rodando }
     if (estado.rodando) return
     const tipo = tipoDeLimite(estado.motivoParada)
-    if (!tipo || limiteJaAvisado(idDaSessao)) return
+    // uma marca por parada, não por sessão: o play de novo continua o mesmo número (ver chaveDoFim)
+    const fim = chaveDoFim(idDaSessao, estado.operacoes)
+    if (!tipo || limiteJaAvisado(fim)) return
     const parouAgora = antes.id === idDaSessao && antes.rodando === true
     const chegouParada = antes.id !== idDaSessao
-    if (parouAgora || chegouParada) { marcarLimiteAvisado(idDaSessao); setLimite(tipo); sessaoBateuLimite(idDaSessao, tipo) }
-  }, [estado?.rodando, estado?.motivoParada, idDaSessao]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (parouAgora || chegouParada) { marcarLimiteAvisado(fim); setLimite(tipo); sessaoBateuLimite(fim, tipo) }
+  }, [estado?.rodando, estado?.motivoParada, estado?.operacoes, idDaSessao]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /*
    * Antes, trocar de conta desligava o robô: ele estava preso à conexão do
