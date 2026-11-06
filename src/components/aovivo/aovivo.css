@@ -974,6 +974,11 @@ body.av-teatro-aberto { overflow: hidden; }
 .cv-app-conexao { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .cv-app-conexao.on b { color: var(--text); }
 .cv-app-conexao.erro { color: var(--down); }
+/* 06/11/2026: a sala caiu (rede ou a mesma conta em outra aba): o motivo e o botão para voltar, sempre à vista */
+.cv-app-conexao.erro, .cv-app-conexao.fora { display: inline-flex !important; align-items: center; gap: 8px; min-width: 0; max-width: 520px; }
+.cv-app-conexao-msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cv-app-voltar { flex: none; height: 26px; padding: 0 10px; border: 1px solid currentColor; border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; }
+.cv-app-voltar:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
 .cv-app-destino { position: relative; }
 .cv-app-pill { display: inline-flex; align-items: center; gap: 7px; max-width: 320px; height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cv-app-pill small { color: var(--muted); font-size: 11px; font-weight: 500; }

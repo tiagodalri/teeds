@@ -10,7 +10,7 @@ import { MedidorDeVolume } from './MedidorDeVolume'
 import { MARCA } from '../../marca'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import {
-  alternarFonte, cantoDoTreino, cantoNoTreino, definirVitrinesDoTreino, entrarNoTreino, linkDoTeste, prepararSalaDoAdmin, sairDoTreino,
+  alternarFonte, cantoDoTreino, cantoNoTreino, definirVitrinesDoTreino, entrarNoTreino, linkDoTeste, voltarATreinar, prepararSalaDoAdmin, sairDoTreino,
   trocarFundoDoTreino, trocarTeste, usarEstudioNoTreino, useTreino,
 } from '../../core/live/treino'
 import { listarTransmissoes, plataformasDaMarca, type Transmissao } from '../../core/live/historico'
@@ -95,8 +95,10 @@ export const linkDoTreino = () => `${location.origin}${import.meta.env.BASE_URL}
 /** Cartão para mandar o link da sala de treino para a equipe. */
 export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
   const [copiado, setCopiado] = useState(false)
-  const link = linkDoTreino()
-  const texto = `Sala de treino da ${MARCA.prosa}: transmissão exclusiva do GF Member. Entre com a sua conta por aqui: ${link}`
+  // 06/11/2026: no teste, a aba Sala mostrava o link da sala de sempre (quem abria não via o teste)
+  const { teste } = useTreino()
+  const link = teste ? linkDoTeste(teste) : linkDoTreino()
+  const texto = teste ? `Transmissão de teste da ${MARCA.prosa} (só quem tem este link vê): ${link}` : `Sala de treino da ${MARCA.prosa}: transmissão exclusiva do GF Member. Entre com a sua conta por aqui: ${link}`
   const copiar = async () => {
     try { await navigator.clipboard.writeText(link) } catch {
       const t = document.createElement('textarea'); t.value = link; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove()
@@ -107,7 +109,7 @@ export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
   return (
     <div className={`av-link-live ${compacto ? 'compacto' : ''}`}>
       <div className="av-link-live-texto">
-        <small>Link para os membros assistirem</small>
+        <small>{teste ? 'Link da transmissão de teste' : 'Link para os membros assistirem'}</small>
         <code title={link}>{link.replace(/^https?:\/\//, '')}</code>
       </div>
       <div className="av-link-live-acoes">
@@ -116,7 +118,7 @@ export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
           ? <button className="av-botao-whats" onClick={() => void navigator.share({ text: texto }).catch(() => undefined)}>Compartilhar</button>
           : <a className="av-botao-whats" href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
       </div>
-      <p className="tr-link-nota">Só quem é do GF Member (e os administradores) entra, com a própria conta. Eles assistem ao seu ensaio como alunos, com o selo "GF Streaming" sempre na imagem.</p>
+      <p className="tr-link-nota">{teste ? 'Só quem tem este link vê, com a própria conta (de outra pessoa: com a sua, a Central sai da sala). Ninguém é avisado. Vale 12 horas.' : 'Só quem é do GF Member (e os administradores) entra, com a própria conta. Eles assistem ao seu ensaio como alunos, com o selo "GF Streaming" sempre na imagem.'}</p>
     </div>
   )
 }
@@ -409,8 +411,10 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
             <i aria-hidden />{sim.ativa ? (tr.teste ? 'Teste no ar' : 'Ao vivo') : 'Fora do ar'}{sim.ativa && <b className="cv-num">{relogio(Date.now() - central.noArDesde)}</b>}
           </span>
           {sessao && (
-            <span className={`cv-app-conexao ${tr.fase === 'conectada' ? 'on' : tr.fase === 'erro' ? 'erro' : ''}`} title={tr.fase === 'erro' ? tr.erro ?? undefined : undefined}>
-              {tr.fase === 'conectada' ? <><b className="cv-num">{tr.membros}</b> {tr.membros === 1 ? 'membro na sala' : 'membros na sala'}</> : tr.fase === 'erro' ? 'Sem conexão com a sala' : 'Abrindo a sala…'}
+            <span className={`cv-app-conexao ${tr.fase === 'conectada' ? 'on' : tr.fase === 'erro' ? 'erro' : tr.fase === 'fora' ? 'fora' : ''}`} title={tr.fase === 'erro' ? tr.erro ?? undefined : undefined}>
+              {tr.fase === 'conectada' ? <><b className="cv-num">{tr.membros}</b> {tr.membros === 1 ? 'membro na sala' : 'membros na sala'}</>
+                : tr.fase === 'erro' ? <><span className="cv-app-conexao-msg">{tr.erro ?? 'Sem conexão com a sala'}</span><button type="button" className="cv-app-voltar" onClick={() => void voltarATreinar()}>Voltar à sala</button></>
+                  : tr.fase === 'fora' ? <><span className="cv-app-conexao-msg">Fora da sala</span><button type="button" className="cv-app-voltar" onClick={() => void voltarATreinar()}>Voltar à sala</button></> : 'Abrindo a sala…'}
             </span>
           )}
           {sessao && (

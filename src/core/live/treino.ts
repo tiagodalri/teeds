@@ -20,7 +20,7 @@
  * "Simulação" e o número marcado como simulado.
  */
 import {
-  AudioPresets, LocalAudioTrack, LocalVideoTrack, Participant, RemoteParticipant, Room, RoomEvent, ScreenSharePresets, Track, VideoPresets,
+  AudioPresets, DisconnectReason, LocalAudioTrack, LocalVideoTrack, Participant, RemoteParticipant, Room, RoomEvent, ScreenSharePresets, Track, VideoPresets,
   type LocalTrackPublication, type TrackPublishOptions,
 } from 'livekit-client'
 import { useSyncExternalStore } from 'react'
@@ -261,8 +261,12 @@ function pararDeAnunciar() {
  * Entra na sala de treino: o admin para transmitir, o membro para assistir.
  * Sem conta (fase de testes), vai o nome que a pessoa digitou.
  */
+let ultimaEntrada: { sessao: SessaoTeeds | null; nome: string; comoCentral: boolean } | null = null
+/** A Central volta para a sala depois de uma queda (o botão "Voltar à sala"). */
+export function voltarATreinar(): Promise<void> | void { if (ultimaEntrada && !sala) return entrarNoTreino(ultimaEntrada.sessao, ultimaEntrada.nome, ultimaEntrada.comoCentral) }
 export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = '', comoCentral = false): Promise<void> {
   if (sala && estado.fase !== 'erro') return
+  ultimaEntrada = { sessao, nome, comoCentral }
   await desconectar()
   // a Central usa o teste que ela mesma ligou; quem assiste, o do link que abriu
   testeAtual = comoCentral ? (apresentarNoTeste ? testeAtual : null) : testeDoLink()
@@ -298,7 +302,21 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = '', como
       .on(RoomEvent.Reconnecting, () => mudar({ fase: 'reconectando' }))
       .on(RoomEvent.Reconnected, () => mudar({ fase: 'conectada' }))
       .on(RoomEvent.AudioPlaybackStatusChanged, () => mudar({ somBloqueado: !r.canPlaybackAudio }))
-      .on(RoomEvent.Disconnected, () => { if (sala === r) { sala = null; marcarTreinoAtivo(false); mudar({ fase: 'fora', tela: null, camera: null, audios: [], presente: false }) } })
+      .on(RoomEvent.Disconnected, (motivo?: DisconnectReason) => {
+        if (sala !== r) return
+        sala = null; marcarTreinoAtivo(false)
+        const transmitia = estado.apresentador
+        mudar({ fase: 'fora', tela: null, camera: null, audios: [], presente: false })
+        // 06/11/2026: a Central ficava presa em "Abrindo a sala…" e a transmissão parava sem aviso.
+        // Agora quem transmite vê o motivo e um botão para voltar; queda de rede tenta de novo sozinha.
+        if (!transmitia || motivo === DisconnectReason.CLIENT_INITIATED) return
+        if (motivo === DisconnectReason.DUPLICATE_IDENTITY) {
+          mudar({ fase: 'erro', erro: 'A sua conta entrou na sala em outra aba ou aparelho, e a transmissão parou aqui. Para assistir ao teste, use outra conta.' })
+          return
+        }
+        mudar({ fase: 'erro', erro: 'A conexão com a sala caiu. Tentando de novo…' })
+        window.setTimeout(() => { if (!sala && ultimaEntrada) void entrarNoTreino(ultimaEntrada.sessao, ultimaEntrada.nome, ultimaEntrada.comoCentral) }, 3000)
+      })
       .on(RoomEvent.DataReceived, (dados: Uint8Array, p?: RemoteParticipant, _k?: unknown, topico?: string) => {
         if (topico !== TOPICO || !p) return
         let pacote: Pacote
