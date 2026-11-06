@@ -34,6 +34,8 @@ import { parametrosPadrao } from './core/deriv/parametros'
 import type { ConfigEstrategia, EstadoMotor, OperacaoMotor, Registro } from './core/deriv/engine'
 import type { ActiveSymbol } from './core/deriv/types'
 import { RobotLive } from './components/RobotLive'
+import { Bandeira, Moeda } from './components/ferramentas/Bandeira'
+const MOEDAS_LAB = ['USD', 'BRL', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY', 'CNY', 'ARS', 'MXN', 'CLP', 'BTC']
 import { gradeDoCatalogo, type GradeAulas } from './core/teeds/gradeAulas'
 import { LocalRobotPanel } from './components/LocalRobotPanel'
 import { RobotSetup } from './components/RobotSetup'
@@ -516,6 +518,12 @@ function Laboratorio() {
     if (new URLSearchParams(location.search).has('loja')) { simularMeuSubplano(dados); return <div className="app workspace-app" style={{ minHeight: '100dvh', display: 'block', overflow: 'auto' }}><MarketplaceDoGFLab sessao={null} /></div> }
     return <div className="app workspace-app" style={{ minHeight: '100dvh' }}><MeuPlanoLab dados={dados} foco="black" aoFechar={() => undefined} /></div>
   }
+  // ?tela=moedas: as moedas 3D e as bandeiras do conversor
+  if (qual === 'moedas') return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, padding: 24, background: '#1b1e25', minHeight: '100dvh', alignContent: 'start' }}>
+      {MOEDAS_LAB.map((c) => <div key={c} style={{ display: 'grid', justifyItems: 'center', gap: 6, color: '#fff', font: '600 13px Arimo, sans-serif' }}><Moeda codigo={c} tamanho={72} /><Bandeira codigo={c} tamanho={28} />{c}</div>)}
+    </div>
+  )
   if (qual === 'aulas') return <LabAulas />
   if (qual === 'minicabine') return <Suspense fallback={null}><LabMiniCabine /></Suspense>
   return (

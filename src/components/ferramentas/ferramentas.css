@@ -1,116 +1,248 @@
-/* Conversor de moedas e calculadora (06/11/2026). Cores pelos tokens do tema: valem no claro e no escuro. */
+/*
+  Conversor de moedas e calculadora (06/11/2026, segunda versão).
+  Janelas soltas com visual de instrumento de cabine: vidro azul-noite e ouro,
+  o mesmo nos dois temas de propósito (flutuam por cima de qualquer tela).
+  Cores fixas aqui, não pelos tokens do tema.
+*/
 
-.ferr-janela {
-  --ferr-ouro: var(--gf-ouro, var(--primary, #B78D39));
-  --ferr-ouro-suave: color-mix(in srgb, var(--ferr-ouro) 14%, transparent);
-  padding: 0; border: 0; background: transparent; color: var(--text);
-  max-height: calc(100dvh - 24px); overflow: visible;
+.ferr-flutuante {
+  --f-ouro: #D0AA52; --f-ouro-forte: #B78D39; --f-texto: #F3F0E9; --f-suave: #93A6BD; --f-linha: rgba(255, 255, 255, .07);
+  --f-fundo: #0a1a30;
+  position: fixed; display: flex; flex-direction: column; max-height: calc(100vh - 16px);
+  color: var(--f-texto); font-family: var(--fonte-corpo, 'Arimo', Arial, sans-serif); font-size: 14px;
+  border-radius: 22px; overflow: hidden; isolation: isolate;
+  background:
+    radial-gradient(130% 60% at 50% -10%, rgba(208, 170, 82, .16), transparent 60%),
+    linear-gradient(170deg, #10284a 0%, #0a1a30 45%, #06121f 100%);
+  border: 1px solid rgba(208, 170, 82, .26);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .08) inset, 0 30px 70px -20px rgba(2, 8, 18, .75), 0 10px 24px -12px rgba(2, 8, 18, .6);
+  animation: ferr-entra .22s cubic-bezier(.2, .9, .3, 1.2);
+  outline: none;
 }
-.ferr-janela::backdrop { background: rgba(4, 13, 26, .46); backdrop-filter: blur(3px); }
-.ferr-caixa {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
-  box-shadow: 0 24px 60px rgba(4, 13, 26, .28), 0 2px 6px rgba(4, 13, 26, .12);
-  overflow: hidden; font-family: var(--fonte-corpo, inherit);
-  animation: ferr-entra .18s ease-out;
-}
-@keyframes ferr-entra { from { opacity: 0; transform: translateY(6px) scale(.985); } }
-@media (prefers-reduced-motion: reduce) { .ferr-caixa { animation: none; } }
+.ferr-flutuante:focus-visible { box-shadow: 0 0 0 2px var(--f-ouro), 0 30px 70px -20px rgba(2, 8, 18, .75); }
+.ferr-flutuante.arrastando { box-shadow: 0 1px 0 rgba(255, 255, 255, .08) inset, 0 44px 90px -24px rgba(2, 8, 18, .85); transform: scale(1.012); }
+@keyframes ferr-entra { from { opacity: 0; transform: translateY(8px) scale(.97); } }
 
-.ferr-topo { display: flex; align-items: center; gap: 10px; padding: 14px 14px 12px 18px; border-bottom: 1px solid var(--border); }
-.ferr-topo h2 { margin: 0; flex: 1; font-size: 15px; font-weight: 700; letter-spacing: .01em; color: var(--text); }
-.ferr-selo { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 999px; color: var(--ferr-ouro); background: var(--ferr-ouro-suave); }
-.ferr-fechar { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 18px; cursor: pointer; }
-.ferr-fechar:hover { color: var(--text); border-color: var(--muted); }
-.ferr-corpo { padding: 16px 18px 18px; }
-.ferr-janela :focus-visible { outline: 2px solid var(--ferr-ouro); outline-offset: 2px; }
-
-/* ---------- conversor ---------- */
-.cnv { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
-.cnv-linha { display: grid; gap: 6px; }
-.cnv-rotulo { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.cnv-campo, .cnv-resultado {
-  display: flex; align-items: center; gap: 8px; min-height: 58px; padding: 0 8px 0 14px;
-  border: 1px solid var(--border); border-radius: 12px; background: var(--surface-alt);
+/* a barra do topo: é por onde se arrasta */
+.ferr-barra {
+  flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 10px;
+  cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none;
+  border-bottom: 1px solid var(--f-linha);
 }
-.cnv-campo:focus-within { border-color: var(--ferr-ouro); box-shadow: 0 0 0 3px var(--ferr-ouro-suave); }
-.cnv-simbolo { font-family: var(--fonte-dados, monospace); font-size: 14px; color: var(--muted); }
-.cnv-campo input {
-  flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text);
-  font-family: var(--fonte-dados, monospace); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; padding: 0;
+.ferr-flutuante.arrastando .ferr-barra { cursor: grabbing; }
+.ferr-flutuante.recolhida .ferr-barra { border-bottom-color: transparent; }
+.ferr-alca { display: grid; grid-template-columns: repeat(2, 3px); gap: 3px; padding: 0 3px; opacity: .45; }
+.ferr-alca i { width: 3px; height: 3px; border-radius: 50%; background: var(--f-suave); }
+.ferr-barra:hover .ferr-alca { opacity: .85; }
+.ferr-selo {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: #051528;
+  background: linear-gradient(150deg, #F0D28A, #B78D39); box-shadow: 0 0 0 3px rgba(208, 170, 82, .14), 0 4px 10px -4px rgba(208, 170, 82, .6);
 }
-.cnv-campo input:focus-visible { outline: 0; }
-.cnv-campo input[aria-invalid='true'] { color: var(--down); }
-.cnv-resultado { background: var(--ferr-ouro-suave); border-color: color-mix(in srgb, var(--ferr-ouro) 40%, var(--border)); }
-.cnv-numero { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; overflow: hidden; }
-.cnv-numero strong { font-family: var(--fonte-dados, monospace); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
-
-.cnv-seletor { position: relative; display: inline-flex; flex: none; }
-.cnv-seletor select { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; font-size: 16px; }
-.cnv-seletor-rosto {
-  display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 10px 0 12px; border-radius: 999px;
-  border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 13px; pointer-events: none;
+.ferr-selo svg { width: 14px; height: 14px; }
+.ferr-barra h2 { flex: 1; min-width: 0; margin: 0; font-size: 13.5px; font-weight: 700; letter-spacing: .02em; color: var(--f-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ferr-botao {
+  flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; padding: 0; cursor: pointer;
+  border: 1px solid var(--f-linha); background: rgba(255, 255, 255, .04); color: var(--f-suave); font-size: 16px; transition: background .15s, color .15s;
 }
-.cnv-seletor-rosto b { font-weight: 700; letter-spacing: .04em; }
-.cnv-seletor-rosto svg { color: var(--muted); }
-.cnv-seletor:focus-within .cnv-seletor-rosto { border-color: var(--ferr-ouro); box-shadow: 0 0 0 3px var(--ferr-ouro-suave); }
-.cnv-seletor:hover .cnv-seletor-rosto { border-color: var(--muted); }
+.ferr-botao:hover { background: rgba(255, 255, 255, .1); color: var(--f-texto); }
+.ferr-flutuante :focus-visible { outline: 2px solid var(--f-ouro); outline-offset: 2px; }
+.ferr-conteudo { padding: 14px; overflow-y: auto; overscroll-behavior: contain; }
+.ferr-flutuante button { font-family: inherit; }
 
-.cnv-meio { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; margin: 8px 0; }
-.cnv-meio > span { height: 1px; background: var(--border); }
+/* ===================================================== conversor */
+.cnv { display: grid; gap: 12px; }
+.cnv-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.cnv-pilha { position: relative; display: grid; gap: 6px; }
+
+/* o cartão da moeda: a luz da bandeira sai do canto, como na Deriv */
+.cnv-cartao {
+  --luz: #B78D39;
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 10px;
+  padding: 12px 14px 14px; border-radius: 18px; overflow: hidden;
+  background:
+    radial-gradient(70% 115% at -2% -12%, color-mix(in srgb, var(--luz) 85%, transparent) 0%, color-mix(in srgb, var(--luz) 34%, transparent) 34%, color-mix(in srgb, var(--luz) 8%, transparent) 58%, transparent 74%),
+    linear-gradient(180deg, #161c27, #11161f);
+  border: 1px solid rgba(255, 255, 255, .07);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset;
+  transition: background .35s ease;
+}
+.cnv-rot { position: absolute; top: 10px; right: 12px; padding: 3px 9px; border-radius: 8px; background: rgba(255, 255, 255, .07); font-size: 11px; font-weight: 600; color: rgba(243, 240, 233, .62); }
+.cnv-cartao > .cnv-moeda { margin-top: 14px; }
+.cnv-cartao > .cnv-valor, .cnv-cartao > .cnv-resultado { margin-top: 14px; }
+.cnv-moeda {
+  display: flex; align-items: center; gap: 8px; min-width: 0; padding: 2px 8px 2px 0; border: 0; background: none; color: var(--f-texto); cursor: pointer; text-align: left; border-radius: 14px;
+}
+.cnv-moeda .moeda-3d { flex: none; margin: -4px -2px -6px -4px; transition: transform .25s cubic-bezier(.2, .9, .3, 1.3); }
+.cnv-moeda:hover .moeda-3d { transform: rotate(-8deg) scale(1.06); }
+.cnv-moeda > span { display: grid; min-width: 0; }
+.cnv-moeda b { font-size: 18px; font-weight: 800; letter-spacing: .01em; line-height: 1.1; }
+.cnv-moeda small { font-size: 11px; color: rgba(243, 240, 233, .6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+.cnv-seta { flex: none; color: rgba(243, 240, 233, .55); transition: transform .2s; }
+.cnv-moeda[aria-expanded='true'] .cnv-seta { transform: rotate(180deg); }
+
+.cnv-valor { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; min-width: 0; cursor: text; }
+.cnv-valor em, .cnv-resultado em { font-style: normal; font-family: var(--fonte-dados, monospace); font-size: 14px; color: rgba(243, 240, 233, .5); }
+.ferr-flutuante .cnv-valor input {
+  width: auto; max-width: 100%; min-width: 2ch; padding: 0; border: 0; outline: 0; background: transparent; color: var(--f-texto); text-align: right;
+  font-family: var(--fonte-dados, monospace); font-size: 28px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; caret-color: var(--f-ouro);
+}
+.ferr-flutuante .cnv-valor input:focus-visible { outline: 0; }
+.cnv-valor:focus-within { filter: drop-shadow(0 0 10px rgba(208, 170, 82, .25)); }
+.cnv-valor input[aria-invalid='true'] { color: #FF6B74; }
+.cnv-resultado { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; min-width: 0; padding: 0; border: 0; background: none; cursor: copy; }
+.cnv-resultado strong {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--fonte-dados, monospace); font-size: 28px; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums;
+  background: linear-gradient(180deg, #F6DE9E 0%, #D0AA52 55%, #A9802F 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: cnv-salta .32s cubic-bezier(.2, .9, .3, 1.4);
+}
+@keyframes cnv-salta { from { opacity: .3; transform: translateY(4px); } }
+.cnv-copiado { grid-column: 1 / -1; justify-self: end; margin-top: -2px; font-size: 10.5px; color: rgba(243, 240, 233, .42); }
+
 .cnv-inverter {
-  display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 999px; cursor: pointer;
-  border: 1px solid var(--border); background: var(--surface); color: var(--ferr-ouro); transition: transform .2s, border-color .15s;
+  position: absolute; z-index: 3; left: 50%; top: 50%; width: 42px; height: 42px; margin: -21px 0 0 -21px; border-radius: 50%; padding: 0; cursor: pointer;
+  display: grid; place-items: center; color: #051528; border: 4px solid var(--f-fundo);
+  background: linear-gradient(150deg, #F0D28A, #B78D39);
+  box-shadow: 0 8px 18px -6px rgba(208, 170, 82, .7);
+  transform: rotate(var(--giro, 0deg)); transition: transform .45s cubic-bezier(.2, .9, .3, 1.3), box-shadow .2s;
 }
-.cnv-inverter:hover { border-color: var(--ferr-ouro); transform: rotate(180deg); }
-@media (prefers-reduced-motion: reduce) { .cnv-inverter:hover { transform: none; } }
+.cnv-inverter:hover { box-shadow: 0 10px 24px -6px rgba(208, 170, 82, .95); }
 
-.cnv-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
-.cnv-copiar {
-  height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface);
-  color: var(--text); font-size: 12px; font-weight: 600; cursor: pointer;
+/* a lista das moedas, por cima dos cartões */
+.cnv-lista {
+  position: absolute; z-index: 5; inset: 0; display: grid; gap: 8px; padding: 10px; grid-template-rows: auto minmax(0, 1fr);
+  border-radius: 18px; background: #0b1a2e; border: 1px solid rgba(208, 170, 82, .3); box-shadow: 0 24px 50px -16px rgba(0, 0, 0, .8);
+  animation: ferr-entra .16s ease-out;
 }
-.cnv-copiar:hover { border-color: var(--ferr-ouro); }
-.cnv-outra { font-family: var(--fonte-dados, monospace); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.cnv-outra em { font-style: normal; font-weight: 700; color: var(--text); margin-right: 2px; }
+.ferr-flutuante .cnv-busca {
+  width: 100%; height: 38px; padding: 0 12px; border-radius: 11px; border: 1px solid var(--f-linha); background: rgba(255, 255, 255, .05);
+  color: var(--f-texto); font: inherit; font-size: 13.5px; outline: 0;
+}
+.ferr-flutuante .cnv-busca:focus { border-color: rgba(208, 170, 82, .6); }
+.ferr-flutuante .cnv-busca::placeholder { color: rgba(243, 240, 233, .4); }
+.cnv-lista-itens { display: grid; gap: 2px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.15) transparent; }
+.cnv-lista-itens button {
+  --luz: #B78D39;
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; border-radius: 12px;
+  border: 1px solid transparent; background: transparent; color: var(--f-texto); cursor: pointer; text-align: left;
+}
+.cnv-lista-itens button:hover { background: radial-gradient(90% 140% at 0% 50%, color-mix(in srgb, var(--luz) 26%, transparent), transparent 70%), rgba(255, 255, 255, .03); }
+.cnv-lista-itens button.on { border-color: rgba(208, 170, 82, .45); background: radial-gradient(90% 140% at 0% 50%, color-mix(in srgb, var(--luz) 30%, transparent), transparent 70%), rgba(208, 170, 82, .06); }
+.cnv-lista-itens span { display: grid; min-width: 0; }
+.cnv-lista-itens b { font-size: 13.5px; }
+.cnv-lista-itens small { font-size: 11.5px; color: rgba(243, 240, 233, .58); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cnv-lista-itens em { font-style: normal; font-family: var(--fonte-dados, monospace); font-size: 12px; color: rgba(243, 240, 233, .7); font-variant-numeric: tabular-nums; }
+.cnv-lista-itens p { margin: 8px; color: var(--f-suave); font-size: 13px; text-align: center; }
 
-.cnv-cotacao { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); display: grid; gap: 4px; }
-.cnv-cotacao p { margin: 0; }
-.cnv-taxa { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums; }
-.cnv-taxa b { font-family: var(--fonte-dados, monospace); }
-.cnv-taxa .cnv-sobe { color: var(--up); font-weight: 600; }
-.cnv-taxa .cnv-desce { color: var(--down); font-weight: 600; }
-.cnv-fonte { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 11.5px; color: var(--muted); }
-.cnv-atualizar { flex: none; border: 0; background: none; padding: 4px 0; color: var(--ferr-ouro); font-size: 12px; font-weight: 700; cursor: pointer; }
+/* atalhos de moeda */
+.cnv-rapidas { display: flex; flex-wrap: wrap; gap: 6px; }
+.cnv-rapidas button {
+  display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px 0 6px; border-radius: 99px; cursor: pointer;
+  border: 1px solid var(--f-linha); background: rgba(255, 255, 255, .045); color: rgba(243, 240, 233, .85); font-size: 12px; font-weight: 700; letter-spacing: .02em;
+  transition: background .15s, border-color .15s, transform .15s;
+}
+.cnv-rapidas button:hover { background: rgba(255, 255, 255, .09); transform: translateY(-1px); }
+.cnv-rapidas button.on { border-color: rgba(208, 170, 82, .65); background: rgba(208, 170, 82, .14); color: #F6DE9E; }
+
+/* o mercado: a cotação, a variação e a linha dos últimos dias */
+.cnv-mercado { display: grid; gap: 4px; padding: 11px 12px 9px; border-radius: 16px; background: rgba(255, 255, 255, .035); border: 1px solid var(--f-linha); }
+.cnv-mercado-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.cnv-par { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: rgba(243, 240, 233, .8); font-variant-numeric: tabular-nums; }
+.cnv-par b { font-family: var(--fonte-dados, monospace); color: var(--f-texto); }
+.cnv-par b.ouro { color: #F0D28A; }
+.cnv-var { display: inline-flex; align-items: baseline; gap: 3px; padding: 3px 9px; border-radius: 99px; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cnv-var small { font-weight: 600; opacity: .75; }
+.cnv-var.sobe { color: #34E07F; background: rgba(34, 214, 106, .12); }
+.cnv-var.desce { color: #FF6B74; background: rgba(255, 59, 71, .12); }
+.cnv-linha { position: relative; margin: 6px 0 0; }
+.cnv-linha svg { display: block; width: 100%; height: 56px; overflow: visible; }
+.cnv-linha.vazia { height: 74px; display: grid; place-items: center; }
+.cnv-linha.vazia span { font-size: 11.5px; color: rgba(243, 240, 233, .38); }
+.cnv-ponto { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: #F0D28A; box-shadow: 0 0 0 4px rgba(208, 170, 82, .2), 0 0 14px rgba(208, 170, 82, .9); animation: cnv-pulsa 2s ease-in-out infinite; }
+@keyframes cnv-pulsa { 50% { box-shadow: 0 0 0 7px rgba(208, 170, 82, .06), 0 0 18px rgba(208, 170, 82, .9); } }
+.cnv-linha figcaption { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-size: 10.5px; color: rgba(243, 240, 233, .45); font-variant-numeric: tabular-nums; }
+.cnv-linha figcaption b { font-weight: 700; }
+.cnv-linha figcaption b.sobe { color: #34E07F; }
+.cnv-linha figcaption b.desce { color: #FF6B74; }
+.cnv-cruzado { margin: 2px 0 0; font-size: 11.5px; color: rgba(243, 240, 233, .55); font-family: var(--fonte-dados, monospace); }
+
+.cnv-rodape { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cnv-ao-vivo { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; color: rgba(243, 240, 233, .55); }
+.cnv-ao-vivo i { width: 7px; height: 7px; border-radius: 50%; background: #22D66A; box-shadow: 0 0 0 3px rgba(34, 214, 106, .18); animation: cnv-vivo 1.6s ease-in-out infinite; }
+.cnv-ao-vivo.dia i { background: #D0AA52; box-shadow: 0 0 0 3px rgba(208, 170, 82, .18); animation: none; }
+.cnv-ao-vivo.erro i { background: #FF3B47; box-shadow: 0 0 0 3px rgba(255, 59, 71, .18); animation: none; }
+@keyframes cnv-vivo { 50% { opacity: .35; } }
+.cnv-atualizar { display: inline-flex; align-items: center; gap: 6px; padding: 6px 4px; border: 0; background: none; color: #F0D28A; font-size: 12px; font-weight: 700; cursor: pointer; }
 .cnv-atualizar:disabled { opacity: .6; cursor: default; }
+.cnv-atualizar .gira { animation: cnv-gira .8s linear infinite; }
+@keyframes cnv-gira { to { transform: rotate(360deg); } }
 
-/* ---------- calculadora ---------- */
-.calc { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+/* ===================================================== calculadora */
+.calc { display: grid; gap: 12px; }
 .calc-visor {
-  display: grid; justify-items: end; gap: 2px; padding: 12px 14px; border-radius: 12px; min-width: 0;
-  background: var(--surface-alt); border: 1px solid var(--border);
+  display: grid; justify-items: end; gap: 2px; min-width: 0; padding: 12px 14px 10px; border-radius: 18px;
+  background: radial-gradient(120% 80% at 100% 0%, rgba(208, 170, 82, .1), transparent 60%), linear-gradient(180deg, #071425, #040d18);
+  border: 1px solid rgba(208, 170, 82, .2);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .5) inset, 0 1px 0 rgba(255, 255, 255, .05);
 }
-.calc-conta, .calc-previa { font-family: var(--fonte-dados, monospace); font-size: 13px; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.calc-previa { color: var(--ferr-ouro); min-height: 1.2em; }
+.calc-fita { list-style: none; margin: 0 0 4px; padding: 0 0 6px; width: 100%; display: grid; gap: 1px; border-bottom: 1px dashed rgba(255, 255, 255, .08); }
+.calc-fita button {
+  width: 100%; display: flex; justify-content: flex-end; align-items: baseline; gap: 6px; padding: 1px 0; border: 0; background: none; cursor: pointer;
+  font-family: var(--fonte-dados, monospace); font-size: 11.5px; color: rgba(243, 240, 233, .38); font-variant-numeric: tabular-nums; min-width: 0;
+}
+.calc-fita button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calc-fita button:hover { color: rgba(243, 240, 233, .75); }
+.calc-fita button:hover b { color: #F0D28A; }
+.calc-conta, .calc-previa { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--fonte-dados, monospace); font-size: 13px; color: rgba(243, 240, 233, .5); font-variant-numeric: tabular-nums; }
+.calc-previa { min-height: 1.25em; color: #D0AA52; }
 .calc-valor {
-  font-family: var(--fonte-dados, monospace); font-size: 34px; font-weight: 700; line-height: 1.15; color: var(--text);
-  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; cursor: copy;
+  max-width: 100%; padding: 0; border: 0; background: none; cursor: copy; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--fonte-dados, monospace); font-size: 40px; font-weight: 700; line-height: 1.12; letter-spacing: -.02em; color: var(--f-texto); font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 24px rgba(243, 240, 233, .12);
 }
-.calc-valor.calc-longo { font-size: 24px; }
-.calc-valor.calc-erro { font-size: 16px; color: var(--down); font-family: var(--fonte-corpo, inherit); }
+.calc-valor.calc-m { font-size: 30px; }
+.calc-valor.calc-p { font-size: 22px; }
+.calc-valor.calc-erro { font-size: 15px; font-family: inherit; color: #FF6B74; white-space: normal; text-align: right; }
 .calc-teclas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .calc-tecla {
-  height: 52px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text);
-  font-family: var(--fonte-dados, monospace); font-size: 20px; font-weight: 600; cursor: pointer;
-  display: inline-grid; place-items: center; transition: background .12s, border-color .12s, transform .06s;
+  height: 54px; border-radius: 15px; cursor: pointer; display: inline-grid; place-items: center; padding: 0;
+  font-family: var(--fonte-dados, monospace); font-size: 21px; font-weight: 600; color: var(--f-texto);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .035));
+  border: 1px solid rgba(255, 255, 255, .07);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .09) inset, 0 3px 0 rgba(0, 0, 0, .35), 0 6px 14px -8px rgba(0, 0, 0, .6);
+  transition: transform .06s, background .15s, box-shadow .06s, color .15s;
 }
-.calc-tecla:hover { background: var(--surface-alt); border-color: var(--muted); }
-.calc-tecla:active { transform: scale(.97); }
-.calc-tecla.calc-fn { color: var(--muted); font-size: 17px; background: var(--surface-alt); }
-.calc-tecla.calc-op { color: var(--ferr-ouro); font-size: 22px; background: var(--ferr-ouro-suave); border-color: color-mix(in srgb, var(--ferr-ouro) 30%, var(--border)); }
-.calc-tecla.calc-igual { background: var(--ferr-ouro); border-color: var(--ferr-ouro); color: #051528; font-size: 22px; }
-.calc-tecla.calc-igual:hover { background: color-mix(in srgb, var(--ferr-ouro) 88%, #fff); }
+.calc-tecla:hover { background: linear-gradient(180deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .05)); }
+.calc-tecla:active, .calc-tecla.calc-ativa { transform: translateY(2px); box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset, 0 1px 0 rgba(0, 0, 0, .35); }
+.calc-tecla.calc-fn { color: #B9CDE2; font-size: 18px; background: linear-gradient(180deg, rgba(156, 177, 199, .16), rgba(156, 177, 199, .07)); }
+.calc-tecla.calc-op { color: #F0D28A; font-size: 24px; background: linear-gradient(180deg, rgba(208, 170, 82, .2), rgba(208, 170, 82, .08)); border-color: rgba(208, 170, 82, .26); }
+.calc-tecla.calc-op.calc-pendente { color: #051528; background: linear-gradient(180deg, #F0D28A, #C9A14A); }
+.calc-tecla.calc-igual {
+  color: #051528; font-size: 26px; font-weight: 800; border-color: rgba(240, 210, 138, .6);
+  background: linear-gradient(180deg, #F3D995 0%, #D0AA52 55%, #B08533 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .5) inset, 0 3px 0 #7a5a1c, 0 10px 22px -8px rgba(208, 170, 82, .8);
+}
+.calc-tecla.calc-igual:hover { filter: brightness(1.05); }
 
-/* os dois botões do topo: só no computador (no celular ficam no menu do avatar) */
+/* os botões do topo: aceso quando a janela está aberta */
+.ferramenta-btn[aria-pressed='true'] { color: var(--gf-ouro, #B78D39); border-color: color-mix(in srgb, var(--gf-ouro, #B78D39) 60%, var(--border)); background: color-mix(in srgb, var(--gf-ouro, #B78D39) 12%, var(--surface)); }
 @media (max-width: 900px) { .ferramenta-btn { display: none !important; } }
 .menu-acao.so-celular { display: none; }
 @media (max-width: 900px) { .menu-acao.so-celular { display: flex; } }
+
+@media (max-width: 640px) {
+  .ferr-flutuante { border-radius: 20px; max-height: calc(100dvh - 76px); }
+  .calc-tecla { height: 52px; }
+  .cnv-valor input, .cnv-resultado strong { font-size: 24px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ferr-flutuante, .cnv-lista, .cnv-resultado strong { animation: none; }
+  .cnv-inverter, .cnv-moeda .moeda-3d { transition: none; }
+  .cnv-ponto, .cnv-ao-vivo i, .cnv-atualizar .gira { animation: none; }
+}
+@media (max-width: 640px) {
+  .cnv-rapidas { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -2px; padding-inline: 2px; }
+  .cnv-rapidas::-webkit-scrollbar { display: none; }
+  .cnv-rapidas button { flex: none; }
+}

@@ -105,6 +105,21 @@ export async function buscarCotacoes(): Promise<Cotacoes> {
   return c
 }
 
+/** Os últimos dias da moeda em reais (fechamento de cada dia, do mais antigo ao mais novo). Falha = vazio. */
+const historicos = new Map<string, { quando: number; pontos: Array<{ dia: number; valor: number }> }>()
+export async function historicoEmReais(codigo: string, dias = 15): Promise<Array<{ dia: number; valor: number }>> {
+  if (codigo === 'BRL') return []
+  const guardado = historicos.get(codigo)
+  if (guardado && Date.now() - guardado.quando < 10 * 60_000) return guardado.pontos
+  try {
+    const d = await comPrazo(`https://economia.awesomeapi.com.br/json/daily/${codigo}-BRL/${dias}`) as Array<{ bid?: string; timestamp?: string }>
+    const pontos = (Array.isArray(d) ? d : []).map((x) => ({ dia: Number(x.timestamp) * 1000, valor: Number(x.bid) }))
+      .filter((x) => Number.isFinite(x.valor) && x.valor > 0 && x.dia > 0).sort((a, b) => a.dia - b.dia)
+    historicos.set(codigo, { quando: Date.now(), pontos })
+    return pontos
+  } catch { return guardado?.pontos ?? [] }
+}
+
 export function converter(valor: number, de: string, para: string, c: Cotacoes): number | null {
   const a = c.emReais[de], b = c.emReais[para]
   if (!a || !b) return null
