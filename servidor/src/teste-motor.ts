@@ -243,7 +243,8 @@ async function provasDaDeriv() {
 
     falso([async () => new Response('{}', { status: 524 })])
     erro = ''; try { await fetchAccounts(sessao) } catch (e) { erro = (e as Error).message }
-    conferir('D5 524 nas duas: avisa que a Deriv está instável', /instável/.test(erro) && /524/.test(erro), true)
+    // 06/11/2026 (1fe70a2): o aviso de instabilidade é sempre o nosso texto, sem o código cru da Deriv
+    conferir('D5 524 nas duas: avisa que a Deriv está instável', /instável/.test(erro) && !/524|Service/.test(erro), true)
 
     falso([async () => new Response(JSON.stringify({ errors: [{ message: 'Token inválido' }] }), { status: 401 })])
     erro = ''; try { await fetchAccounts(sessao) } catch (e) { erro = (e as Error).message }

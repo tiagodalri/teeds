@@ -112,6 +112,7 @@ const AulasPanel = lazy(() => import('./components/AulasPanel').then((m) => ({ d
 const MarketplacePanel = lazy(() => import('./components/MarketplacePanel').then((m) => ({ default: m.MarketplacePanel })))
 const OperationalManagementPanel = lazy(() => import('./components/OperationalManagementPanel').then((m) => ({ default: m.OperationalManagementPanel })))
 const RelatoriosPanel = lazy(() => import('./components/relatorios/RelatoriosPanel').then((m) => ({ default: m.RelatoriosPanel })))
+const BotaoSimular = lazy(() => import('./components/relatorios/SimuladorDeRelatorio').then((m) => ({ default: m.BotaoSimular })))
 /** "1.234,56", "2.000", "1234.56" ou "12,5" viram número: vírgula é o decimal; ponto com
     trios depois ("2.000") é milhar, senão é decimal ("12.5"). */
 const lerValor = (t: string) => Number(t.includes(',') || /^[1-9]\d{0,2}(\.\d{3})+$/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t)
@@ -181,6 +182,8 @@ export default function App() {
   */
   const [situacao, setSituacao] = useState<SituacaoDaFicha | null>(null)
   const [admin, setAdmin] = useState<boolean | null>(null)
+  const [pedidoSimulacao, setPedidoSimulacao] = useState(0)
+  const [relatorioSimulado, setRelatorioSimulado] = useState(false)
   /** A conferencia de administrador falhou (rede, token) — diferente de "nao e admin". */
   const [adminFalhou, setAdminFalhou] = useState(false)
   const [adminUserId, setAdminUserId] = useState<string | null>(null)
@@ -1286,6 +1289,10 @@ export default function App() {
           <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span className="js-subtitulo">Janela solta · arraste para onde quiser</span></div>
         ) : <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de operação manual' : tela === 'multiplicadores' ? 'Sem prazo: fecha quando quiser, e a perda para na entrada' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'relatorios' ? 'O seu resultado, com os números da corretora' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'divulgacao' ? 'Seus links para divulgar a plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : tela === 'aulas' ? 'O treinamento completo da plataforma' : tela === 'marketplace' ? 'Estratégias e pacotes para a sua conta' : tela === 'gerenciamento' ? 'Simule entradas, limites e objetivos' : 'Seu espaço de trabalho'}</span></div>}
 
+        {/* 06/11/2026: relatório simulado para as aulas, só administradores da marca */}
+        {!JANELA && tela === 'relatorios' && MARCA.relatorios && admin === true && (
+          <Suspense fallback={null}><BotaoSimular className="rsim-abrir-topo" ativo={relatorioSimulado} aoAbrir={() => setPedidoSimulacao((x) => x + 1)} /></Suspense>
+        )}
         <div className="topbar-right">
           <RelogioTopo />
           {!derivPronta && (
@@ -1570,7 +1577,8 @@ export default function App() {
         <Suspense fallback={telaAbrindo('Abrindo os relatórios…')}>
           <RelatoriosPanel sessao={teeds.sessao} socket={conta.socket} conectada={conta.status === 'logado'} contaDemo={conta.account ? conta.isDemo : null}
             rotulosTrocados={conta.rotulosTrocados} saldo={conta.balance ? conta.balance.amount : null}
-            moeda={conta.balance?.currency ?? conta.account?.currency ?? 'USD'} aoIr={(t) => setTela(t)} />
+            moeda={conta.balance?.currency ?? conta.account?.currency ?? 'USD'} aoIr={(t) => setTela(t)}
+            podeSimular={admin === true} pedidoSimulacao={pedidoSimulacao} aoMudarSimulacao={setRelatorioSimulado} />
         </Suspense>
       ) : tela === 'divulgacao' && linksDeParceiro && teeds.sessao ? (
         <Suspense fallback={telaAbrindo('Abrindo os links…')}><DivulgacaoPanel sessao={teeds.sessao} inicial={linksDeParceiro} /></Suspense>

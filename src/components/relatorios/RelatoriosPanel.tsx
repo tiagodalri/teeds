@@ -29,9 +29,12 @@ import {
   type Dinheiro, type Filtros, type Intervalo, type Periodo, type RelatorioCompleto,
 } from '../../core/teeds/relatorios'
 import './relatorios.css'
+import { GraficoDoResultado, type PontoDoGrafico } from './GraficoDoResultado'
 import { NomeDoRobo } from '../NomeDoRobo'
 import { DERIV } from '../../core/deriv/config'
 import { subplanoAtual, useMeuSubplano } from '../../core/teeds/subplanos'
+import { dinheiroDoCenario, lerCenario, operacoesDoCenario, relatorioDoCenario, CENARIOS_PRONTOS, type Cenario } from '../../core/teeds/relatorioSimulado'
+import { BotaoSimular, EditorDoCenario, FaixaSimulada } from './SimuladorDeRelatorio'
 
 interface Props {
   sessao: SessaoTeeds
@@ -46,6 +49,11 @@ interface Props {
   aoIr: (tela: 'robos' | 'operar') => void
   /** Laboratório: dados de exemplo no lugar do banco e da corretora. */
   exemplo?: { relatorio: RelatorioCompleto; dinheiro?: Dinheiro }
+  /** 06/11/2026: administrador da marca pode montar um relatório simulado para as aulas. */
+  podeSimular?: boolean
+  /** Muda a cada toque no botão "Simular relatório" do topo da página. */
+  pedidoSimulacao?: number
+  aoMudarSimulacao?: (ativa: boolean) => void
 }
 
 const pct = (a: number, b: number) => (b !== 0 ? Math.round((a / b) * 100) : 0)
@@ -62,6 +70,10 @@ const faixaDeHora = (de?: number | null, ate?: number | null) => (de != null && 
 
 /* ---------------------------------------------- guardado neste aparelho */
 const CHAVE = `${MARCA.id}.relatorio.filtros`
+/* o último cenário simulado fica no aparelho; "ligado" só nesta aba (recarregar a página no meio da gravação não derruba a simulação) */
+const CHAVE_SIM = `${MARCA.id}.relatorio.simulado`
+const simLigada = () => { try { return sessionStorage.getItem(`${CHAVE_SIM}.ligado`) === '1' } catch { return false } }
+const periodoDoCenario = (c: Cenario): Periodo => (c.dias === 1 ? 'hoje' : c.dias === 7 ? '7d' : '30d')
 interface Guardado { periodo: Periodo; personalizado: Intervalo | null; filtros: Filtros }
 function lerGuardado(): Guardado {
   try {
@@ -71,51 +83,23 @@ function lerGuardado(): Guardado {
   return { periodo: '30d', personalizado: null, filtros: {} }
 }
 
-/* ------------------------------------------------ a curva do período */
-function Curva({ pontos, rotulos, ocultos, moeda }: { pontos: Array<{ chave: string; valor: number; ops: number }>; rotulos: [string, string, string]; ocultos: boolean; moeda: string }) {
-  // no celular o desenho é mais estreito (mais alto na tela); no computador, largo e baixo
-  const [estreito, setEstreito] = useState(() => typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches)
-  useEffect(() => { const m = matchMedia('(max-width: 700px)'); const f = () => setEstreito(m.matches); m.addEventListener('change', f); return () => m.removeEventListener('change', f) }, [])
-  const W = estreito ? 420 : 960, H = estreito ? 220 : 190, P = 12, base = H - 28
-  const acum: number[] = []
-  pontos.reduce((s, p) => { const v = s + p.valor; acum.push(v); return v }, 0)
-  const maxBar = Math.max(1e-9, ...pontos.map((p) => Math.abs(p.valor)))
-  const minA = Math.min(0, ...acum), maxA = Math.max(0, ...acum), faixa = Math.max(1e-9, maxA - minA)
-  const largura = (W - 2 * P) / Math.max(1, pontos.length)
-  const zeroBar = P + (base - P) / 2
-  const yA = (v: number) => P + (1 - (v - minA) / faixa) * (base - P)
-  const linha = acum.map((v, i) => `${(P + largura * i + largura / 2).toFixed(1)},${yA(v).toFixed(1)}`).join(' ')
-  const fim = acum[acum.length - 1] ?? 0
-  return (
-    <svg className="rel-curva" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Resultado no período: barras e a linha do acumulado">
-      <line className="zero" x1={P} x2={W - P} y1={yA(0)} y2={yA(0)} />
-      {pontos.map((p, i) => {
-        const h = (Math.abs(p.valor) / maxBar) * ((base - P) / 2 - 4)
-        const x = P + largura * i + largura * 0.18
-        return (
-          <rect key={p.chave} className={`barra ${classe(p.valor)}`} x={x} width={Math.max(1.5, largura * 0.64)} rx={Math.min(3, largura * 0.2)}
-            y={p.valor >= 0 ? zeroBar - h : zeroBar} height={Math.max(p.ops ? 1.5 : 0, h)}>
-            <title>{`${p.chave}: ${ocultos ? MASCARA : dinheiroComSinal(p.valor, moeda)} · ${p.ops} ${p.ops === 1 ? 'operação' : 'operações'}`}</title>
-          </rect>
-        )
-      })}
-      {acum.length > 1 && <polyline className={`acum ${classe(fim)}`} points={linha} />}
-      {acum.length > 0 && <circle className={`ponta ${classe(fim)}`} cx={P + largura * (acum.length - 1) + largura / 2} cy={yA(fim)} r="4.5" />}
-      <text className="eixo" x={P} y={H - 8}>{rotulos[0]}</text>
-      <text className="eixo" x={W / 2} y={H - 8} textAnchor="middle">{rotulos[1]}</text>
-      <text className="eixo" x={W - P} y={H - 8} textAnchor="end">{rotulos[2]}</text>
-    </svg>
-  )
-}
-
 /* ================================================================ painel */
 
-export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosTrocados = false, saldo, moeda, aoIr, exemplo }: Props) {
+export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosTrocados = false, saldo, moeda, aoIr, exemplo, podeSimular = false, pedidoSimulacao = 0, aoMudarSimulacao }: Props) {
   const ocultos = useValoresOcultos()
-  const inicial = useMemo(lerGuardado, [])
+  // a simulação: só existe para quem pode simular (o cliente nunca chega aqui, nem com o aparelho mexido)
+  const [cenario, setCenario] = useState<Cenario | null>(() => (simLigada() ? lerCenario(CHAVE_SIM) : null))
+  const [editando, setEditando] = useState(false)
+  const sim = podeSimular ? cenario : null
+  const opsSim = useMemo(() => (sim ? operacoesDoCenario(sim) : null), [sim])
+  const inicial = useMemo(() => {
+    const g = lerGuardado()
+    return cenario ? { ...g, periodo: periodoDoCenario(cenario), personalizado: null, filtros: {} } : g
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [periodo, setPeriodo] = useState<Periodo>(inicial.periodo)
   const [personalizado, setPersonalizado] = useState<Intervalo | null>(inicial.personalizado)
   const [filtros, setFiltros] = useState<Filtros>(inicial.filtros)
+  const antesDaSim = useRef<Guardado | null>(cenario ? lerGuardado() : null)
   const [painelAberto, setPainelAberto] = useState(false)
   const [datasAbertas, setDatasAbertas] = useState(false)
   // 30/10/2026: a conta do filtro só segue a conta conectada quando ela é conhecida
@@ -135,7 +119,27 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
   const umDia = faixa.de === faixa.ate
   const nFiltros = quantosFiltros(filtros)
 
-  useEffect(() => { try { localStorage.setItem(CHAVE, JSON.stringify({ periodo, personalizado, filtros })) } catch { /* sem armazenamento */ } }, [periodo, personalizado, filtros])
+  // na simulação os filtros não sobrescrevem os guardados do relatório de verdade
+  useEffect(() => { if (cenario) return; try { localStorage.setItem(CHAVE, JSON.stringify({ periodo, personalizado, filtros })) } catch { /* sem armazenamento */ } }, [periodo, personalizado, filtros, cenario])
+  // só um toque novo no botão abre o editor (voltar para a aba não reabre)
+  const pedidoVisto = useRef(pedidoSimulacao)
+  useEffect(() => {
+    if (pedidoSimulacao === pedidoVisto.current) return
+    pedidoVisto.current = pedidoSimulacao
+    if (podeSimular) setEditando(true)
+  }, [pedidoSimulacao]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { aoMudarSimulacao?.(!!sim) }, [!!sim]) // eslint-disable-line react-hooks/exhaustive-deps
+  const mostrarCenario = (c: Cenario) => {
+    if (!cenario) antesDaSim.current = { periodo, personalizado, filtros }
+    try { localStorage.setItem(CHAVE_SIM, JSON.stringify(c)); sessionStorage.setItem(`${CHAVE_SIM}.ligado`, '1') } catch { /* sem armazenamento */ }
+    setCenario(c); setEditando(false); setPeriodo(periodoDoCenario(c)); setPersonalizado(null); setFiltros({}); setDatasAbertas(false)
+  }
+  const sairDaSimulacao = () => {
+    try { sessionStorage.removeItem(`${CHAVE_SIM}.ligado`) } catch { /* sem armazenamento */ }
+    const a = antesDaSim.current ?? lerGuardado()
+    antesDaSim.current = null
+    setCenario(null); setEditando(false); setRel(null); setPeriodo(a.periodo); setPersonalizado(a.personalizado); setFiltros(a.filtros)
+  }
   useEffect(() => {
     if (contaDemo === null || contaDemo === contaConhecida.current) return
     contaConhecida.current = contaDemo
@@ -159,7 +163,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
 
   const chaveFiltros = JSON.stringify(filtros)
   useEffect(() => {
-    if (escolhida === null) return
+    if (escolhida === null && !opsSim) return
     let vivo = true
     const chave = `${faixa.de}|${faixa.ate}|${escolhida}|${chaveFiltros}`
     const mesmoFiltro = montadoDe.current === chave
@@ -167,24 +171,27 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
     versaoVista.current = versao
     if (pedido) setCarregando(true)
     setErro(null)
+    // relatório simulado: as contas são feitas aqui, com as operações do cenário; nada vai ao banco
+    if (opsSim) { setRel(relatorioDoCenario(opsSim, { de: faixa.de, ate: faixa.ate, filtros })); setCarregando(false); montadoDe.current = chave; return }
     if (exemplo) { setRel(filtrarExemplo(exemplo.relatorio, filtros)); setCarregando(false); montadoDe.current = chave; return }
     // trocar o filtro mantém os números antigos na tela (esmaecidos) até os novos chegarem
-    relatorioCompleto(sessao, { de: faixa.de, ate: faixa.ate, demo: escolhida, filtros })
+    relatorioCompleto(sessao, { de: faixa.de, ate: faixa.ate, demo: escolhida ?? false, filtros })
       .then((r) => { if (vivo) { setRel(r); montadoDe.current = chave } })
       .catch((e) => { if (vivo && !mesmoFiltro) setErro(/400 dias|data final/.test((e as Error).message) ? (e as Error).message : 'Não foi possível montar o relatório agora. Toque em Atualizar para tentar de novo.') })
       .finally(() => { if (vivo) setCarregando(false) })
     return () => { vivo = false }
-  }, [sessao.token, faixa.de, faixa.ate, escolhida, chaveFiltros, versao, pulso]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sessao.token, faixa.de, faixa.ate, escolhida, chaveFiltros, versao, pulso, opsSim]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // depósitos e saques: ao vivo da Deriv, só quando a conta conectada é a do filtro
-  const contaDoFiltro = !!exemplo?.dinheiro || (conectada && socket && demo === contaDemo)
+  const contaDoFiltro = !!sim || !!exemplo?.dinheiro || (conectada && socket && demo === contaDemo)
   useEffect(() => {
-    setDinheiroP(exemplo?.dinheiro ?? null)
-    if (exemplo || !contaDoFiltro || !socket || demo) return
+    setDinheiroP(sim ? dinheiroDoCenario(sim) : exemplo?.dinheiro ?? null)
+    if (sim || exemplo || !contaDoFiltro || !socket || demo) return
     let vivo = true
     dinheiroDoPeriodo(socket, faixa).then((d) => { if (vivo) setDinheiroP(d) }).catch(() => undefined)
     return () => { vivo = false }
-  }, [contaDoFiltro, faixa.de, faixa.ate, demo, versao]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [contaDoFiltro, faixa.de, faixa.ate, demo, versao, sim]) // eslint-disable-line react-hooks/exhaustive-deps
+  const saldoNaTela = sim ? sim.saldo : saldo
 
   const v = (x: number) => (ocultos ? MASCARA : dinheiro(x, moeda))
   const vs = (x: number) => (ocultos ? MASCARA : dinheiroComSinal(x, moeda))
@@ -197,24 +204,28 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
   const nomeDaEstrategia = (id: string) => rel?.opcoes.estrategias.find((e) => e.id === id)?.nome ?? rel?.porOrigem.find((o) => o.id === id)?.nome ?? id
   const rotuloDoPeriodo = periodo === 'personalizado' ? (umDia ? diaCurto(faixa.de) : `${diaCurto(faixa.de)} a ${diaCurto(faixa.ate)}`) : PERIODOS.find((p) => p.id === periodo)!.rotulo
   const nomeDoAnterior = periodo === 'hoje' ? 'ontem' : periodo === 'ontem' ? 'anteontem' : umDia ? 'o dia anterior' : `os ${diasEntre(faixa.de, faixa.ate)} dias anteriores`
+  // 06/11/2026: "em os 30 dias" e "a os 30 dias" viram "nos" e "aos"; "em ontem" vira "ontem"
+  const relacaoAoAnterior = periodo === 'hoje' || periodo === 'ontem' ? `a ${nomeDoAnterior}` : umDia ? 'ao dia anterior' : `aos ${diasEntre(faixa.de, faixa.ate)} dias anteriores`
+  const semNoAnterior = periodo === 'hoje' || periodo === 'ontem' ? nomeDoAnterior : umDia ? 'no dia anterior' : `nos ${diasEntre(faixa.de, faixa.ate)} dias anteriores`
 
   // a série do gráfico: por hora num dia só, por dia nos outros (com os dias sem operação)
   const serie = useMemo(() => {
-    if (!rel) return { pontos: [], rotulos: ['', '', ''] as [string, string, string] }
+    if (!rel) return { pontos: [] as PontoDoGrafico[] }
     if (umDia) {
       const ph = new Map(rel.porHora.map((h) => [h.hora, h]))
-      const pontos = Array.from({ length: 24 }, (_, h) => ({ chave: `${String(h).padStart(2, '0')}h`, valor: ph.get(h)?.resultado ?? 0, ops: ph.get(h)?.operacoes ?? 0 }))
-      return { pontos, rotulos: ['0h', '12h', '23h'] as [string, string, string] }
+      const pontos: PontoDoGrafico[] = Array.from({ length: 24 }, (_, h) => ({ chave: `${h}h`, longo: `${h}h às ${h}h59`, valor: ph.get(h)?.resultado ?? 0, ops: ph.get(h)?.operacoes ?? 0 }))
+      return { pontos }
     }
     const porDia = new Map(rel.porDia.map((d) => [d.dia, d]))
-    const pontos: Array<{ chave: string; valor: number; ops: number }> = []
+    const pontos: PontoDoGrafico[] = []
     const [a, m, d] = faixa.de.split('-').map(Number)
     for (let dia = new Date(a, m - 1, d); ; dia.setDate(dia.getDate() + 1)) {
       const k = `${dia.getFullYear()}-${String(dia.getMonth() + 1).padStart(2, '0')}-${String(dia.getDate()).padStart(2, '0')}`
-      pontos.push({ chave: `${String(dia.getDate()).padStart(2, '0')}/${String(dia.getMonth() + 1).padStart(2, '0')}`, valor: porDia.get(k)?.resultado ?? 0, ops: porDia.get(k)?.operacoes ?? 0 })
+      const curto = `${String(dia.getDate()).padStart(2, '0')}/${String(dia.getMonth() + 1).padStart(2, '0')}`
+      pontos.push({ chave: curto, longo: `${DIAS[dia.getDay()]}, ${curto}`, valor: porDia.get(k)?.resultado ?? 0, ops: porDia.get(k)?.operacoes ?? 0 })
       if (k >= faixa.ate || pontos.length > 400) break
     }
-    return { pontos, rotulos: [pontos[0]?.chave ?? '', pontos[Math.floor(pontos.length / 2)]?.chave ?? '', pontos[pontos.length - 1]?.chave ?? ''] as [string, string, string] }
+    return { pontos }
   }, [rel, umDia, faixa.de, faixa.ate])
 
   const t = rel?.total
@@ -294,7 +305,10 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
   if (filtros.entradaMin != null || filtros.entradaMax != null) selos.push({ id: 'entrada', texto: `Entrada${filtros.entradaMin != null ? ` de ${simboloMoeda(moeda)} ${filtros.entradaMin}` : ''}${filtros.entradaMax != null ? ` até ${simboloMoeda(moeda)} ${filtros.entradaMax}` : ''}`, tirar: () => mudar({ entradaMin: null, entradaMax: null }) })
 
   return (
-    <div className={`rel ${carregando && rel ? 'lendo' : ''}`}>
+    <div className={`rel ${carregando && rel ? 'lendo' : ''} ${sim ? 'rel-simulado' : ''}`}>
+      {sim && <FaixaSimulada nome={sim.nome} aoEditar={() => setEditando(true)} aoSair={sairDaSimulacao} />}
+      {/* no celular o topo da plataforma não tem espaço: o botão do admin fica aqui */}
+      {podeSimular && !sim && <div className="rsim-linha-celular"><BotaoSimular ativo={false} aoAbrir={() => setEditando(true)} /></div>}
       {/* ------------------------------------------------ barra de filtros */}
       <div className="rel-barra-filtros">
         <div className="rel-faixa">
@@ -351,13 +365,14 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
       {rel && !vazio && t && <>
         {/* ------------------------------------------------ o resultado */}
         <section className={`rel-heroi ${classe(t.resultado)}`}>
+          {sim && <span className="rsim-tag rsim-tag-canto"><i aria-hidden="true" />Relatório simulado</span>}
           <div className="rel-heroi-topo">
             <div className="rel-heroi-txt">
               <span className="rel-rot">Resultado · {rotuloDoPeriodo.toLowerCase()} · conta {rotuloConta(demo).toLowerCase()}{nFiltros ? ` · ${nFiltros} ${nFiltros === 1 ? 'filtro' : 'filtros'}` : ''}</span>
               <b className={`rel-numero ${classe(t.resultado)}`}>{vs(t.resultado)}</b>
               {rel.anterior.operacoes > 0
-                ? <span className={`rel-compara ${classe(delta)}`}><i aria-hidden="true">{delta >= 0 ? '▲' : '▼'}</i>{vs(delta)} <em>em relação a {nomeDoAnterior}</em></span>
-                : <span className="rel-compara"><em>Sem operações em {nomeDoAnterior} para comparar</em></span>}
+                ? <span className={`rel-compara ${classe(delta)}`}><i aria-hidden="true">{delta >= 0 ? '▲' : '▼'}</i>{vs(delta)} <em>em relação {relacaoAoAnterior}</em></span>
+                : <span className="rel-compara"><em>Sem operações {semNoAnterior} para comparar</em></span>}
             </div>
             <dl className="rel-heroi-mini">
               <div><dt>Operações</dt><dd>{t.operacoes.toLocaleString('pt-BR')}</dd><small><em className="sobe">{t.ganhas.toLocaleString('pt-BR')}</em> ganhas · <em className="cai">{(t.operacoes - t.ganhas).toLocaleString('pt-BR')}</em> perdidas</small></div>
@@ -365,7 +380,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
               <div><dt>Fator de lucro</dt><dd className={fator == null || fator >= 1 ? 'sobe' : 'cai'}>{fator == null ? 'Sem perdas' : fator.toLocaleString('pt-BR', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}</dd><small>{v(t.somaGanhos)} em ganhos ÷ {v(Math.abs(t.somaPerdas))} em perdas</small></div>
             </dl>
           </div>
-          <Curva pontos={serie.pontos} rotulos={serie.rotulos} ocultos={ocultos} moeda={moeda} />
+          <GraficoDoResultado pontos={serie.pontos} ocultos={ocultos} moeda={moeda} porHora={umDia} />
         </section>
 
         <div className="rel-kpis cinco">
@@ -482,7 +497,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
           </div>
           {!contaDoFiltro ? <p className="rel-nota">{conectada ? `Para ver depósitos e saques, escolha a conta ${rotuloConta(false)} no topo da plataforma.` : 'Conecte a corretora para ver o saldo, os depósitos e os saques.'}</p> : <>
             <div className="rel-kpis tres">
-              <div><span>Saldo agora</span><b>{saldo === null ? '—' : v(saldo)}</b><small>Ao vivo da corretora</small></div>
+              <div><span>Saldo agora</span><b>{saldoNaTela === null ? '—' : v(saldoNaTela)}</b><small>{sim ? 'Valor do cenário simulado' : 'Ao vivo da corretora'}</small></div>
               <div><span>Depósitos no período</span><b className="sobe">{dinheiroP ? v(dinheiroP.depositos) : '…'}</b><small>{dinheiroP ? (() => { const k = dinheiroP.movimentos.filter((x) => x.tipo === 'deposit').length; return `${k} ${k === 1 ? 'depósito' : 'depósitos'}` })() : 'Lendo o extrato…'}</small></div>
               <div><span>Saques no período</span><b>{dinheiroP ? v(dinheiroP.saques) : '…'}</b><small>{dinheiroP ? (() => { const k = dinheiroP.movimentos.filter((x) => x.tipo === 'withdrawal').length; return `${k} ${k === 1 ? 'saque' : 'saques'}` })() : 'Lendo o extrato…'}</small></div>
             </div>
@@ -495,10 +510,11 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
         </section>
       )}
 
-      {rel && !vazio && <TabelaDeOperacoes rel={rel} filtros={filtros} mudar={mudar} ocultos={ocultos} moeda={moeda} vs={vs} />}
+      {rel && !vazio && <TabelaDeOperacoes rel={rel} filtros={filtros} mudar={mudar} ocultos={ocultos} moeda={moeda} vs={vs} simulado={!!sim} />}
 
-      <p className="rel-fonte">Números das operações feitas pela {MARCA.prosa}, como a corretora registrou cada contrato. Depósitos, saques e saldo vêm ao vivo da corretora. Valores em dólar. Resultados passados não garantem resultados futuros.</p>
+      {sim ? <p className="rel-fonte"><b>Relatório simulado.</b> Números preenchidos pela equipe da {MARCA.prosa} para as aulas, para mostrar cenários de gerenciamento. Não são operações reais, não foram gravados e não entram em nenhuma cobrança.</p> : <p className="rel-fonte">Números das operações feitas pela {MARCA.prosa}, como a corretora registrou cada contrato. Depósitos, saques e saldo vêm ao vivo da corretora. Valores em dólar. Resultados passados não garantem resultados futuros.</p>}
 
+      {editando && podeSimular && <EditorDoCenario inicial={cenario ?? lerCenario(CHAVE_SIM) ?? structuredClone(CENARIOS_PRONTOS[0].cenario)} aoMostrar={mostrarCenario} aoFechar={() => setEditando(false)} />}
       {painelAberto && rel && <PainelDeFiltros rel={rel} filtros={filtros} moeda={moeda} aoAplicar={(f) => { setFiltros(f); setPainelAberto(false) }} aoFechar={() => setPainelAberto(false)} />}
     </div>
   )
@@ -615,7 +631,7 @@ function PainelDeFiltros({ rel, filtros, moeda, aoAplicar, aoFechar }: { rel: Re
 /* ================================================== a lista de operações */
 
 type Ordem = 'recentes' | 'ganho' | 'perda' | 'entrada'
-function TabelaDeOperacoes({ rel, filtros, mudar, ocultos, moeda, vs }: { rel: RelatorioCompleto; filtros: Filtros; mudar: (p: Partial<Filtros>) => void; ocultos: boolean; moeda: string; vs: (x: number) => string }) {
+function TabelaDeOperacoes({ rel, filtros, mudar, ocultos, moeda, vs, simulado = false }: { rel: RelatorioCompleto; filtros: Filtros; mudar: (p: Partial<Filtros>) => void; ocultos: boolean; moeda: string; vs: (x: number) => string; simulado?: boolean }) {
   const [ordem, setOrdem] = useState<Ordem>('recentes')
   const [mostrar, setMostrar] = useState(15)
   useEffect(() => setMostrar(15), [rel.de, rel.ate, rel.contagem])
@@ -627,13 +643,14 @@ function TabelaDeOperacoes({ rel, filtros, mudar, ocultos, moeda, vs }: { rel: R
     return l
   }, [rel, ordem])
   const exportar = () => {
-    const linhas = [['Data', 'Hora', 'Estratégia', 'Ativo', 'Tipo', 'Entrada', 'Retorno', 'Resultado'].join(';')]
+    const linhas = simulado ? ['"Relatório simulado: números preenchidos pela equipe para as aulas, não são operações reais"'] : []
+    linhas.push(['Data', 'Hora', 'Estratégia', 'Ativo', 'Tipo', 'Entrada', 'Retorno', 'Resultado'].join(';'))
     for (const o of lista) {
       const d = new Date(o.quando)
       linhas.push([d.toLocaleDateString('pt-BR'), d.toLocaleTimeString('pt-BR'), o.nome, o.ativo ? nomeDoSimbolo(o.ativo) : '', nomeDoTipo(o.tipo), o.entrada.toFixed(2).replace('.', ','), o.pagamento.toFixed(2).replace('.', ','), o.resultado.toFixed(2).replace('.', ',')].map((x) => `"${String(x).replace(/"/g, '""')}"`).join(';'))
     }
     const url = URL.createObjectURL(new Blob([`﻿${linhas.join('\n')}`], { type: 'text/csv;charset=utf-8' }))
-    const a = document.createElement('a'); a.href = url; a.download = `relatorio-${rel.de}-a-${rel.ate}.csv`; a.click()
+    const a = document.createElement('a'); a.href = url; a.download = `relatorio-${simulado ? 'simulado-' : ''}${rel.de}-a-${rel.ate}.csv`; a.click()
     setTimeout(() => URL.revokeObjectURL(url), 2000)
   }
   return (

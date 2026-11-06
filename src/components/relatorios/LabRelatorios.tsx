@@ -1,5 +1,7 @@
 /** Laboratório (?tela=relatorios): a aba Relatórios com 30 dias de exemplo, sem banco nem corretora. */
+import { useState } from 'react'
 import { RelatoriosPanel } from './RelatoriosPanel'
+import { BotaoSimular } from './SimuladorDeRelatorio'
 import type { RelatorioCompleto } from '../../core/teeds/relatorios'
 
 function exemplo(): RelatorioCompleto {
@@ -45,12 +47,34 @@ function exemplo(): RelatorioCompleto {
   }
 }
 
+/**
+ * ?tela=relatorios: como o administrador vê (com o botão Simular relatório no topo);
+ * &cliente=1: como o cliente vê (sem o botão).
+ */
+/** &caso=queda: como o print do Tiago (06/11/2026): 3 semanas paradas, um dia de queda grande e dias pequenos depois. */
+function exemploQueda(): RelatorioCompleto {
+  const r = exemplo()
+  const pequenos = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -38.2, 0, 61.5, -8912.3, 0, -54.1, 22.8, 0, -71.4, 18.9, -11.7]
+  const porDia = r.porDia.map((d, i) => ({ ...d, resultado: pequenos[i], operacoes: pequenos[i] ? (i === 22 ? 21000 : 900) : 0, ganhas: pequenos[i] ? (i === 22 ? 12800 : 560) : 0 }))
+  const resultado = Math.round(pequenos.reduce((a, b) => a + b, 0) * 100) / 100
+  return { ...r, porDia, anterior: { ...r.anterior, operacoes: 0, resultado: 0 }, total: { ...r.total, resultado, operacoes: 28760, ganhas: 17749 } }
+}
+
 export default function LabRelatorios() {
-  const relatorio = exemplo()
+  const relatorio = new URLSearchParams(location.search).get('caso') === 'queda' ? exemploQueda() : exemplo()
+  const cliente = new URLSearchParams(location.search).has('cliente')
+  const [pedido, setPedido] = useState(0)
+  const [ativo, setAtivo] = useState(false)
   return (
     <div className="workspace-app" style={{ minHeight: '100vh', display: 'block', overflow: 'auto' }}>
+      <header className="topbar">
+        <div className="workspace-heading"><strong>Relatórios</strong><span>O seu resultado, com os números da corretora</span></div>
+        {!cliente && <BotaoSimular className="rsim-abrir-topo" ativo={ativo} aoAbrir={() => setPedido((x) => x + 1)} />}
+        <div className="topbar-right" />
+      </header>
       <RelatoriosPanel sessao={{ token: 'lab', usuario: { id: 'lab', email: 'ana@exemplo.com', nome: 'Ana' } } as never} socket={null}
         conectada contaDemo={false} saldo={1843.27} moeda="USD" aoIr={() => undefined}
+        podeSimular={!cliente} pedidoSimulacao={pedido} aoMudarSimulacao={setAtivo}
         exemplo={{ relatorio, dinheiro: { depositos: 500, saques: 120, movimentos: [{ tipo: 'deposit', valor: 300, quando: Date.now() / 1000 - 86400 * 3 }, { tipo: 'withdrawal', valor: 120, quando: Date.now() / 1000 - 86400 * 9 }, { tipo: 'deposit', valor: 200, quando: Date.now() / 1000 - 86400 * 20 }] } }} />
     </div>
   )
