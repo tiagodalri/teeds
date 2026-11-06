@@ -128,6 +128,19 @@ export async function meuPlano(sessao: SessaoTeeds): Promise<string | null> {
   } catch { return null }
 }
 
+/**
+ * 06/11/2026 (Tiago): a exceção da live de lançamento, cliente por cliente. Com a marca ligada pelo
+ * administrador (clientes.liberado_antes_da_live), a plataforma e as aulas abrem antes da live.
+ * Se não der para ler, vale a regra de todos (trancado).
+ */
+export async function liberadoAntesDaLive(sessao: SessaoTeeds): Promise<boolean> {
+  if (!autenticacaoConfigurada()) return false
+  try {
+    const linhas = await rest<any[]>(`/clientes?select=liberado_antes_da_live&marca=eq.${MARCA.id}&user_id=eq.${sessao.usuario.id}&limit=1`, sessao.token, { signal: comPrazo(10_000) })
+    return linhas?.[0]?.liberado_antes_da_live === true
+  } catch { return false }
+}
+
 export async function registrarPresenca(sessao: SessaoTeeds, segundos = 0): Promise<void> {
   if (!autenticacaoConfigurada()) return
   const u = sessao.usuario

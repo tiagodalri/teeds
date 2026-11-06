@@ -49,7 +49,7 @@ import { pedeDeposito, traduzirErro } from './core/deriv/erros'
 import { nomeDoAtivo } from './core/deriv/market'
 import { ATIVO_DOS_ROBOS, DERIV, ehSintetico } from './core/deriv/config'
 import { useAccount } from './hooks/useAccount'
-import { meuPlano, minhaSituacao, registrarContaDeriv, registrarPresenca, souAdmin, type SituacaoDaFicha } from './core/teeds/clientes'
+import { liberadoAntesDaLive, meuPlano, minhaSituacao, registrarContaDeriv, registrarPresenca, souAdmin, type SituacaoDaFicha } from './core/teeds/clientes'
 import { marcarPagina, marcarRegiao, ouvirCliques } from './core/teeds/rastro'
 import { entregarAutorizacao } from './core/teeds/servidorRobos'
 import { AssistentePanel } from './components/AssistentePanel'
@@ -573,10 +573,13 @@ export default function App() {
   const [membroTreino, setMembroTreino] = useState<boolean | null>(null)
   // O plano da ficha: o GF Member ('treino') vê as aulas com o aviso de liberação até a live (28/10/2026)
   const [plano, setPlano] = useState<string | null>(null)
+  // 06/11/2026: cliente liberado pelo administrador antes da live (só a Nathalia, por enquanto)
+  const [liberadoAntes, setLiberadoAntes] = useState(false)
   useEffect(() => {
-    if (!teeds.sessao) { setPlano(null); return }
+    if (!teeds.sessao) { setPlano(null); setLiberadoAntes(false); return }
     let vivo = true
     void meuPlano(teeds.sessao).then((p) => { if (vivo) setPlano(p) })
+    if (MARCA.id === 'globalfly') void liberadoAntesDaLive(teeds.sessao).then((l) => { if (vivo) setLiberadoAntes(l) })
     return () => { vivo = false }
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -586,7 +589,7 @@ export default function App() {
     (TrancaDoLancamento). O administrador vê como o inscrito vê com ?ver=inscrito.
   */
   const previaInscrito = MARCA.id === 'globalfly' && admin === true && new URLSearchParams(location.search).get('ver') === 'inscrito'
-  const trancado = previaInscrito || trancadoAteALive(situacao, plano, admin)
+  const trancado = previaInscrito || (!liberadoAntes && trancadoAteALive(situacao, plano, admin))
   // trancada até a live, a plataforma de trás também não diz o nome da corretora (03/11/2026)
   useEffect(() => (trancado ? ligarCorretoraDiscreta() : undefined), [trancado])
   const [live, setLive] = useState<EstadoDaLive | null>(null)
@@ -1554,7 +1557,7 @@ export default function App() {
       ) : tela === 'aulas' ? (
         <Suspense fallback={telaAbrindo('Abrindo as aulas…')}><AulasPanel nome={teeds.usuario?.nome} sessao={teeds.sessao} aoReverTour={MARCA.inicio ? () => setTour('rever') : undefined}
           aoIr={(t) => setTela(t as WorkspacePage)} treino={MARCA.aoVivo && (membroTreino === true || admin === true) ? { noAr: !!treinoAgora } : null}
-          travadas={aulasTravadasParaGfMember(plano, admin)} plano={plano} admin={admin} /></Suspense>
+          travadas={!liberadoAntes && aulasTravadasParaGfMember(plano, admin)} plano={plano} admin={admin} /></Suspense>
       ) : tela === 'marketplace' ? (
         <Suspense fallback={telaAbrindo('Abrindo o marketplace…')}><MarketplacePanel sessao={teeds.sessao} /></Suspense>
       ) : tela === 'gerenciamento' ? (
