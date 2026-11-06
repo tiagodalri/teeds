@@ -57,8 +57,8 @@
 /* o cartão da moeda: a luz da bandeira sai do canto, como na Deriv */
 .cnv-cartao {
   --luz: #B78D39;
-  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 10px;
-  padding: 12px 14px 14px; border-radius: 18px; overflow: hidden;
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px;
+  min-height: 92px; padding: 16px 18px 16px 14px; border-radius: 18px; overflow: hidden;
   background:
     radial-gradient(70% 115% at -2% -12%, color-mix(in srgb, var(--luz) 85%, transparent) 0%, color-mix(in srgb, var(--luz) 34%, transparent) 34%, color-mix(in srgb, var(--luz) 8%, transparent) 58%, transparent 74%),
     linear-gradient(180deg, #161c27, #11161f);
@@ -66,9 +66,7 @@
   box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset;
   transition: background .35s ease;
 }
-.cnv-rot { position: absolute; top: 10px; right: 12px; padding: 3px 9px; border-radius: 8px; background: rgba(255, 255, 255, .07); font-size: 11px; font-weight: 600; color: rgba(243, 240, 233, .62); }
-.cnv-cartao > .cnv-moeda { margin-top: 14px; }
-.cnv-cartao > .cnv-valor, .cnv-cartao > .cnv-resultado { margin-top: 14px; }
+
 .cnv-moeda {
   display: flex; align-items: center; gap: 8px; min-width: 0; padding: 2px 8px 2px 0; border: 0; background: none; color: var(--f-texto); cursor: pointer; text-align: left; border-radius: 14px;
 }
@@ -97,7 +95,10 @@
   animation: cnv-salta .32s cubic-bezier(.2, .9, .3, 1.4);
 }
 @keyframes cnv-salta { from { opacity: .3; transform: translateY(4px); } }
-.cnv-copiado { grid-column: 1 / -1; justify-self: end; margin-top: -2px; font-size: 10.5px; color: rgba(243, 240, 233, .42); }
+.cnv-copiado {
+  position: absolute; right: 14px; bottom: 8px; padding: 2px 8px; border-radius: 99px; font-size: 10.5px; font-weight: 700;
+  color: #051528; background: #F0D28A; animation: ferr-entra .18s ease-out;
+}
 
 .cnv-inverter {
   position: absolute; z-index: 3; left: 50%; top: 50%; width: 42px; height: 42px; margin: -21px 0 0 -21px; border-radius: 50%; padding: 0; cursor: pointer;
@@ -135,9 +136,9 @@
 .cnv-lista-itens p { margin: 8px; color: var(--f-suave); font-size: 13px; text-align: center; }
 
 /* atalhos de moeda */
-.cnv-rapidas { display: flex; flex-wrap: wrap; gap: 6px; }
+.cnv-rapidas { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 .cnv-rapidas button {
-  display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px 0 6px; border-radius: 99px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 0; height: 32px; padding: 0 6px; border-radius: 99px; cursor: pointer;
   border: 1px solid var(--f-linha); background: rgba(255, 255, 255, .045); color: rgba(243, 240, 233, .85); font-size: 12px; font-weight: 700; letter-spacing: .02em;
   transition: background .15s, border-color .15s, transform .15s;
 }
@@ -240,9 +241,4 @@
   .ferr-flutuante, .cnv-lista, .cnv-resultado strong { animation: none; }
   .cnv-inverter, .cnv-moeda .moeda-3d { transition: none; }
   .cnv-ponto, .cnv-ao-vivo i, .cnv-atualizar .gira { animation: none; }
-}
-@media (max-width: 640px) {
-  .cnv-rapidas { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -2px; padding-inline: 2px; }
-  .cnv-rapidas::-webkit-scrollbar { display: none; }
-  .cnv-rapidas button { flex: none; }
 }

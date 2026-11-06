@@ -266,7 +266,6 @@ function ConversorDeMoedas() {
     <div className="cnv">
       <div className="cnv-pilha">
         <div className="cnv-cartao" style={luz(par.de)}>
-          <span className="cnv-rot">Você tem</span>
           {botaoDaMoeda('de')}
           <label className="cnv-valor">
             <span className="cnv-sr">Valor em {moeda(par.de).nome}</span>
@@ -281,13 +280,12 @@ function ConversorDeMoedas() {
         </button>
 
         <div className="cnv-cartao para" style={luz(par.para)}>
-          <span className="cnv-rot">Vira</span>
           {botaoDaMoeda('para')}
           <button type="button" className="cnv-resultado" onClick={copiar} title="Copiar o valor" aria-live="polite">
             <em aria-hidden="true">{moeda(par.para).simbolo}</em>
             <strong key={`${par.para}-${resultado}`}>{resultado == null ? (Number.isFinite(valor) ? '—' : 'Valor inválido') : dinheiro(resultado, par.para)}</strong>
           </button>
-          <span className="cnv-copiado" aria-hidden={!copiado}>{copiado ? 'Copiado' : 'Toque no valor para copiar'}</span>
+          {copiado && <span className="cnv-copiado" role="status">Copiado</span>}
         </div>
 
         {escolhendo && <SeletorDeMoeda atual={par[escolhendo]} lado={escolhendo} cot={cot} aoEscolher={(c) => escolher(escolhendo, c)} aoFechar={() => setEscolhendo(null)} />}
