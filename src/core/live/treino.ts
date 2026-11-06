@@ -504,7 +504,11 @@ async function publicarAgora(qual: 'tela' | 'camera' | 'mic', faixa: LocalVideoT
   // som de música em estéreo, sem cortar silêncio (o stinger e as músicas não podem picotar).
   const doEstudio = !!estudio && (faixa === estudio.video || faixa === estudio.audio || (local as LocalVideoTrack | LocalAudioTrack).mediaStreamTrack === estudio.video || (local as LocalVideoTrack | LocalAudioTrack).mediaStreamTrack === estudio.audio)
   const opcoes: TrackPublishOptions = { source }
-  if (doEstudio && qual === 'tela') Object.assign(opcoes, { screenShareEncoding: { maxBitrate: 3_500_000, maxFramerate: 30 }, screenShareSimulcastLayers: [ScreenSharePresets.h360fps15, ScreenSharePresets.h720fps30], degradationPreference: 'balanced' })
+  // 06/11/2026: com as três camadas (360, 720 e 1080) o servidor recusava a imagem do estúdio ("no trackStreams
+  // found for RID" e "publish time out" no LiveKit): as camadas anunciadas não batiam com as enviadas (a faixa
+  // do canvas informa 0 quadros por segundo). Quem assistia via só "A transmissão começa em instantes".
+  // Agora vai uma camada só, a de 1080p, como o OBS manda para a plataforma.
+  if (doEstudio && qual === 'tela') Object.assign(opcoes, { simulcast: false, screenShareEncoding: { maxBitrate: 3_500_000, maxFramerate: 30 }, degradationPreference: 'balanced' })
   if (doEstudio && qual === 'mic') Object.assign(opcoes, { audioPreset: AudioPresets.musicHighQualityStereo, dtx: false, red: true, forceStereo: true })
   await sala.localParticipant.publishTrack(local, opcoes)
   publicadas[qual] = local
