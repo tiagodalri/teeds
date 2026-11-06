@@ -3,24 +3,22 @@
  * mostrar vários cenários de relatório: quem respeitou o gerenciamento, quem
  * não respeitou, os erros que não pode cometer").
  *
- * Só para administradores da marca. O admin preenche um cenário (o resultado
- * de cada I.A., como o resultado andou, algumas operações específicas) e a
- * aba Relatórios mostra exatamente aquilo, com os mesmos cartões e gráficos.
+ * Só para administradores da marca. O admin responde, em passos, o que o
+ * relatório tem que mostrar e a aba Relatórios mostra exatamente aquilo, com
+ * os mesmos cartões e gráficos.
+ *
+ * 06/11/2026 (2), Tiago: "a experiência de preencher ainda está complicada...
+ * primeiro tem que me perguntar de qual data; depois o resultado geral, a
+ * quantidade de operações, a porcentagem de acerto; e as operações que
+ * definiram o resultado: quantas perdas seguidas no máximo, a maior entrada,
+ * o maior ganho". O cenário agora é feito dessas respostas, e o gerador monta
+ * as operações que fecham com cada uma delas.
  *
  * Tudo acontece neste navegador: as operações são inventadas aqui e as contas
  * do relatório (o que o banco faz no teeds_meu_relatorio_v2) são refeitas
  * aqui. Nada é gravado, nada vai para o banco, nada entra nos 10%.
  */
 import type { Filtros, RelatorioCompleto } from './relatorios'
-
-export type Forma = 'constante' | 'meta' | 'stop' | 'devolveu' | 'insistiu'
-export const FORMAS: Array<{ id: Forma; nome: string; descricao: string }> = [
-  { id: 'meta', nome: 'Bateu a meta e parou', descricao: 'Poucas operações no começo do dia, termina num ganho' },
-  { id: 'stop', nome: 'Bateu o stop e parou', descricao: 'As perdas vêm no fim e o dia para ali' },
-  { id: 'constante', nome: 'Ritmo constante', descricao: 'Ganhos e perdas espalhados ao longo do dia' },
-  { id: 'devolveu', nome: 'Subiu e devolveu', descricao: 'Chega a ganhar bem, não para e devolve com entradas maiores' },
-  { id: 'insistiu', nome: 'Insistiu na perda', descricao: 'Segue operando até a noite, dobrando a entrada depois de cada perda' },
-]
 
 export interface IaDoSimulador { id: string; nome: string; origem: 'ia' | 'manual'; ativo: string; tipo: string }
 /** As I.A. da GlobalFly, com o código que acha o logotipo (NomeDoRobo). */
@@ -34,51 +32,123 @@ export const IAS_DO_SIMULADOR: IaDoSimulador[] = [
 ]
 export const iaDoSimulador = (id: string) => IAS_DO_SIMULADOR.find((x) => x.id === id) ?? IAS_DO_SIMULADOR[0]
 
-export interface LinhaDeIa { ia: string; operacoes: number; acerto: number; resultado: number; entrada: number }
-export interface OperacaoAvulsa { dia: number; hora: string; ia: string; entrada: number; resultado: number }
+export type PeriodoSimulado = { tipo: 'dia'; data: string } | { tipo: 'ultimos'; dias: 7 | 30 } | { tipo: 'intervalo'; de: string; ate: string }
+export type Momento = 'comeco' | 'meio' | 'fim'
+export interface LinhaDeIa { ia: string; operacoes: number; resultado: number }
 export interface Cenario {
+  versao: 2
+  /** O nome que aparece na faixa do relatório simulado. */
   nome: string
-  /** 1 = só hoje; 7 e 30 terminam hoje. */
-  dias: 1 | 7 | 30
-  forma: Forma
+  periodo: PeriodoSimulado
+  /** O número grande do relatório, em dólar (negativo = perda). */
+  resultado: number
+  operacoes: number
+  /** % de operações ganhas. */
+  acerto: number
   ias: LinhaDeIa[]
-  /** Operações escritas uma a uma; contam dentro do total da I.A. escolhida. */
-  avulsas: OperacaoAvulsa[]
+  /** Divide operações e resultado entre as I.A. sozinho (proporcional). */
+  dividirSozinho: boolean
+  /** A entrada de sempre. */
+  entrada: number
+  /** A maior entrada do período (a exposição de risco); vem no fim da pior sequência. */
+  maiorEntrada: number
+  /** A maior sequência de perdas seguidas. */
+  sequencia: number
+  iaDaSequencia: string
+  momento: Momento
+  /** O maior ganho numa operação; null = o gerador escolhe. */
+  maiorGanho: number | null
+  /** O horário em que operou (até = a hora inteira, até :59). */
+  horaDe: number
+  horaAte: number
   saldo: number
   depositos: number
   saques: number
 }
 
-export const CENARIOS_PRONTOS: Array<{ id: string; tom: 'sobe' | 'cai' | 'neutro'; cenario: Cenario }> = [
-  { id: 'respeitou', tom: 'sobe', cenario: {
-    nome: 'Respeitou o gerenciamento', dias: 30, forma: 'constante', saldo: 1284.6, depositos: 1000, saques: 150,
-    ias: [{ ia: 'goreme', operacoes: 420, acerto: 63, resultado: 96.8, entrada: 1 }, { ia: 'falcon', operacoes: 260, acerto: 61, resultado: 50.1, entrada: 1 }],
-    avulsas: [] } },
-  { id: 'meta', tom: 'sobe', cenario: {
-    nome: 'Dia de meta', dias: 1, forma: 'meta', saldo: 1011, depositos: 0, saques: 0,
-    ias: [{ ia: 'goreme', operacoes: 18, acerto: 72, resultado: 7.4, entrada: 1 }, { ia: 'falcon', operacoes: 12, acerto: 67, resultado: 3.6, entrada: 1 }],
-    avulsas: [] } },
-  { id: 'stop', tom: 'neutro', cenario: {
-    nome: 'Dia de stop, respeitado', dias: 1, forma: 'stop', saldo: 993.5, depositos: 0, saques: 0,
-    ias: [{ ia: 'goreme', operacoes: 16, acerto: 38, resultado: -4.3, entrada: 1 }, { ia: 'falcon', operacoes: 10, acerto: 40, resultado: -2.2, entrada: 1 }],
-    avulsas: [] } },
-  { id: 'nao-respeitou', tom: 'cai', cenario: {
-    nome: 'Não respeitou o gerenciamento', dias: 1, forma: 'insistiu', saldo: 812.4, depositos: 0, saques: 0,
-    ias: [{ ia: 'goreme', operacoes: 64, acerto: 52, resultado: -118.6, entrada: 1 }, { ia: 'falcon', operacoes: 38, acerto: 50, resultado: -54.2, entrada: 1 }, { ia: 'manual', operacoes: 6, acerto: 33, resultado: -15, entrada: 5 }],
-    avulsas: [{ dia: 0, hora: '13:47', ia: 'manual', entrada: 20, resultado: -20 }] } },
-  { id: 'devolveu', tom: 'cai', cenario: {
-    nome: 'Bateu a meta e devolveu', dias: 1, forma: 'devolveu', saldo: 955.2, depositos: 0, saques: 0,
-    ias: [{ ia: 'goreme', operacoes: 58, acerto: 57, resultado: -31.6, entrada: 1 }, { ia: 'falcon', operacoes: 30, acerto: 53, resultado: -13.2, entrada: 1 }],
-    avulsas: [] } },
-]
-export const CENARIO_EM_BRANCO: Cenario = { nome: 'Meu cenário', dias: 1, forma: 'constante', saldo: 1000, depositos: 0, saques: 0, ias: [{ ia: 'goreme', operacoes: 20, acerto: 60, resultado: 5, entrada: 1 }], avulsas: [] }
+const r2 = (x: number) => Math.round(x * 100) / 100
+const dataLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const deData = (iso: string) => { const [a, m, d] = iso.split('-').map(Number); return new Date(a, m - 1, d) }
+export const hojeIso = (agora = new Date()) => dataLocal(agora)
+
+/** O intervalo de datas do cenário. */
+export function faixaDoCenario(c: Cenario, agora = new Date()): { de: string; ate: string } {
+  const p = c.periodo
+  if (p.tipo === 'dia') return { de: p.data, ate: p.data }
+  if (p.tipo === 'intervalo') return p.de <= p.ate ? { de: p.de, ate: p.ate } : { de: p.ate, ate: p.de }
+  return { de: dataLocal(new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - (p.dias - 1))), ate: dataLocal(agora) }
+}
+export const diasDoCenario = (c: Cenario, agora = new Date()) => {
+  const { de, ate } = faixaDoCenario(c, agora)
+  return Math.round((deData(ate).getTime() - deData(de).getTime()) / 864e5) + 1
+}
+
+/** Reparte `total` em partes inteiras proporcionais aos pesos (maior resto). */
+function repartir(total: number, pesos: number[]): number[] {
+  const soma = pesos.reduce((s, p) => s + p, 0) || 1
+  const exatos = pesos.map((p) => (total * p) / soma)
+  const partes = exatos.map(Math.floor)
+  let falta = total - partes.reduce((s, x) => s + x, 0)
+  exatos.map((x, i) => ({ i, resto: x - Math.floor(x) })).sort((a, b) => b.resto - a.resto).forEach(({ i }) => { if (falta > 0) { partes[i]++; falta-- } })
+  return partes
+}
+
+/** As I.A. com operações e resultado (divididos sozinhos, se for o caso). */
+export function iasDoCenario(c: Cenario): LinhaDeIa[] {
+  if (!c.dividirSozinho || c.ias.length <= 1) {
+    if (c.ias.length === 1) return [{ ia: c.ias[0].ia, operacoes: Math.round(c.operacoes), resultado: r2(c.resultado) }]
+    return c.ias
+  }
+  const ops = repartir(Math.round(c.operacoes), c.ias.map(() => 1))
+  // a I.A. da pior sequência carrega o que as entradas maiores perderam; o resto é proporcional às operações
+  const S = Math.max(0, Math.round(c.sequencia)), E = Math.max(0.35, c.entrada || 1), Emax = Math.max(E, c.maiorEntrada || E)
+  let extra = 0
+  if (S > 0 && Emax > E) for (let j = 0; j < S; j++) extra += (S === 1 ? Emax : E * (Emax / E) ** (j / (S - 1))) - E
+  if (c.resultado >= 0 || extra > Math.abs(c.resultado)) extra = 0
+  const k = Math.max(0, c.ias.findIndex((l) => l.ia === c.iaDaSequencia))
+  const res = ops.map((o, i) => r2(((c.resultado + extra) * o) / Math.max(1, c.operacoes) - (i === k ? extra : 0)))
+  res[res.length - 1] = r2(c.resultado - res.slice(0, -1).reduce((s, x) => s + x, 0))
+  return c.ias.map((l, i) => ({ ia: l.ia, operacoes: ops[i], resultado: res[i] }))
+}
+
+/* ------------------------------------------------------- cenários prontos */
+
+const base = (p: Partial<Cenario>): Cenario => ({
+  versao: 2, nome: 'Meu cenário', periodo: { tipo: 'dia', data: hojeIso() }, resultado: 10, operacoes: 30, acerto: 63,
+  ias: [{ ia: 'goreme', operacoes: 30, resultado: 10 }], dividirSozinho: true, entrada: 1, maiorEntrada: 1, sequencia: 3, iaDaSequencia: 'goreme', momento: 'meio',
+  maiorGanho: null, horaDe: 9, horaAte: 17, saldo: 1000, depositos: 0, saques: 0, ...p,
+})
+export function cenariosProntos(): Array<{ id: string; tom: 'sobe' | 'cai' | 'neutro'; cenario: Cenario }> {
+  const hoje = hojeIso()
+  return [
+    { id: 'respeitou', tom: 'sobe', cenario: base({
+      nome: 'Respeitou o gerenciamento', periodo: { tipo: 'ultimos', dias: 30 }, resultado: 146.9, operacoes: 680, acerto: 62, horaDe: 9, horaAte: 17,
+      ias: [{ ia: 'goreme', operacoes: 420, resultado: 96.8 }, { ia: 'falcon', operacoes: 260, resultado: 50.1 }], dividirSozinho: false,
+      entrada: 1, maiorEntrada: 1, sequencia: 5, iaDaSequencia: 'falcon', momento: 'meio', saldo: 1284.6, depositos: 1000, saques: 150 }) },
+    { id: 'meta', tom: 'sobe', cenario: base({
+      nome: 'Dia de meta', periodo: { tipo: 'dia', data: hoje }, resultado: 11, operacoes: 30, acerto: 70, horaDe: 9, horaAte: 9,
+      ias: [{ ia: 'goreme', operacoes: 18, resultado: 7.4 }, { ia: 'falcon', operacoes: 12, resultado: 3.6 }], dividirSozinho: false,
+      entrada: 1, maiorEntrada: 1, sequencia: 2, iaDaSequencia: 'falcon', momento: 'meio', saldo: 1011 }) },
+    { id: 'stop', tom: 'neutro', cenario: base({
+      nome: 'Dia de stop, respeitado', periodo: { tipo: 'dia', data: hoje }, resultado: -6.5, operacoes: 26, acerto: 38, horaDe: 9, horaAte: 10,
+      ias: [{ ia: 'goreme', operacoes: 16, resultado: -4.3 }, { ia: 'falcon', operacoes: 10, resultado: -2.2 }], dividirSozinho: false,
+      entrada: 1, maiorEntrada: 1, sequencia: 4, iaDaSequencia: 'falcon', momento: 'fim', saldo: 993.5 }) },
+    { id: 'nao-respeitou', tom: 'cai', cenario: base({
+      nome: 'Não respeitou o gerenciamento', periodo: { tipo: 'dia', data: hoje }, resultado: -1000, operacoes: 120, acerto: 52, horaDe: 9, horaAte: 23,
+      ias: [{ ia: 'goreme', operacoes: 80, resultado: -700 }, { ia: 'falcon', operacoes: 40, resultado: -300 }], dividirSozinho: false,
+      entrada: 5, maiorEntrada: 320, sequencia: 7, iaDaSequencia: 'goreme', momento: 'fim', saldo: 812.4 }) },
+    { id: 'devolveu', tom: 'cai', cenario: base({
+      // sobe uns US$ 26 com entrada de 1 e devolve tudo numa sequência de 7 perdas dobrando até 64
+      nome: 'Bateu a meta e devolveu', periodo: { tipo: 'dia', data: hoje }, resultado: -101, operacoes: 90, acerto: 62, horaDe: 9, horaAte: 19,
+      ias: [{ ia: 'goreme', operacoes: 60, resultado: -108 }, { ia: 'falcon', operacoes: 30, resultado: 7 }], dividirSozinho: false,
+      entrada: 1, maiorEntrada: 64, sequencia: 7, iaDaSequencia: 'goreme', momento: 'fim', saldo: 899 }) },
+  ]
+}
+export const cenarioEmBranco = () => base({})
 
 /* ------------------------------------------------------------ operações */
 
 export type OperacaoSimulada = RelatorioCompleto['ultimas'][number]
-
-const r2 = (x: number) => Math.round(x * 100) / 100
-const dataLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 /** Sorteio repetível: o mesmo cenário desenha sempre a mesma tela (a aula pode ser regravada). */
 function sorteio(semente: number) {
@@ -87,145 +157,198 @@ function sorteio(semente: number) {
 }
 function sementeDe(texto: string) { let h = 2166136261; for (let i = 0; i < texto.length; i++) h = Math.imul(h ^ texto.charCodeAt(i), 16777619); return h >>> 0 }
 
-/** `w` ganhos espalhados em `n` posições (com um tremor para não ficar desenhado). */
-function espalhar(n: number, w: number, rnd: () => number): boolean[] {
-  const s = Array<boolean>(n).fill(false)
-  for (let j = 0; j < w; j++) s[Math.min(n - 1, Math.floor(((j + 0.5) * n) / w))] = true
-  for (let i = 0; i < n - 1; i++) if (rnd() < 0.35) [s[i], s[i + 1]] = [s[i + 1], s[i]]
-  return s
-}
-/** Perdas em sequências de 2 a 4 (quem insiste costuma perder em série). */
-function emSequencias(n: number, w: number, rnd: () => number): boolean[] {
-  const l = n - w, perdas: number[] = []
-  for (let resto = l; resto > 0;) { const k = Math.min(resto, 2 + Math.floor(rnd() * 3)); perdas.push(k); resto -= k }
-  const blocos = perdas.length + 1, ganhos = Array<number>(blocos).fill(0)
-  for (let j = 0; j < w; j++) ganhos[Math.floor(rnd() * blocos)]++
+/**
+ * Um trecho da sequência com `perdas` perdas em séries de no máximo `teto`,
+ * separadas por ganhos. `ganhoNoInicio`/`ganhoNoFim`: o trecho encosta na pior
+ * sequência e precisa de um ganho ali, para não emendar com ela.
+ */
+function trecho(tam: number, perdas: number, teto: number, ganhoNoInicio: boolean, ganhoNoFim: boolean, rnd: () => number): boolean[] {
+  if (tam <= 0) return []
+  const ganhos = tam - perdas
+  if (!perdas) return Array<boolean>(tam).fill(true)
+  if (!ganhos) return Array<boolean>(tam).fill(false)
+  const bordas = (ganhoNoInicio ? 1 : 0) + (ganhoNoFim ? 1 : 0)
+  const minSeries = Math.ceil(perdas / Math.max(1, teto))
+  const maxSeries = Math.max(1, Math.min(perdas, ganhos - bordas + 1))
+  const series = Math.max(1, Math.min(maxSeries, Math.max(minSeries, Math.round(perdas / (1.5 + rnd() * 0.4)))))
+  const tamanhos = Array<number>(series).fill(1)
+  for (let resto = perdas - series, guarda = 0; resto > 0 && guarda < 1e5; guarda++) {
+    const k = Math.floor(rnd() * series)
+    if (tamanhos[k] < teto || tamanhos.every((t) => t >= teto)) { tamanhos[k]++; resto-- }
+  }
+  // os ganhos nos espaços: entre as séries pelo menos 1, e nas bordas pedidas
+  const vaos = Array<number>(series + 1).fill(0)
+  for (let k = 1; k < series; k++) vaos[k] = 1
+  if (ganhoNoInicio) vaos[0] = 1
+  if (ganhoNoFim) vaos[series] = 1
+  let sobra = ganhos - vaos.reduce((s, x) => s + x, 0)
+  while (sobra > 0) { vaos[Math.floor(rnd() * (series + 1))]++; sobra-- }
   const s: boolean[] = []
-  for (let b = 0; b < blocos; b++) { for (let j = 0; j < ganhos[b]; j++) s.push(true); if (b < perdas.length) for (let j = 0; j < perdas[b]; j++) s.push(false) }
+  for (let k = 0; k <= series; k++) { for (let j = 0; j < vaos[k]; j++) s.push(true); if (k < series) for (let j = 0; j < tamanhos[k]; j++) s.push(false) }
   return s
 }
 
-function sequencia(forma: Forma, n: number, w: number, rnd: () => number): boolean[] {
-  const l = n - w
-  if (forma === 'insistiu') return emSequencias(n, w, rnd)
-  if (forma === 'stop') {
-    // termina numa sequência de perdas: foi ali que o stop bateu
-    const fim = Math.min(l, 3)
-    return [...espalhar(n - fim, w, rnd), ...Array<boolean>(fim).fill(false)]
-  }
-  if (forma === 'devolveu') {
-    const corte = Math.round(n * 0.5)
-    const antes = Math.max(w - (n - corte), Math.min(w, corte, Math.round(corte * 0.82)))
-    return [...espalhar(corte, antes, rnd), ...emSequencias(n - corte, w - antes, rnd)]
-  }
-  if (forma === 'constante') {
-    // embaralhado de verdade: num mês aparecem dias de stop, como na vida real
-    const s = Array.from({ length: n }, (_, i) => i < w)
-    for (let i = n - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [s[i], s[j]] = [s[j], s[i]] }
-    return s
-  }
-  const s = espalhar(n, w, rnd)
-  if (forma === 'meta' && w > 0 && !s[n - 1]) { const k = s.lastIndexOf(true); s[k] = false; s[n - 1] = true }
-  return s
-}
-
-/** A janela do dia (em horas) de cada forma: quem insiste opera até a noite. */
-const JANELA: Record<Forma, [number, number]> = { meta: [9, 10.4], stop: [9, 11], constante: [9, 18], devolveu: [9, 20], insistiu: [9, 23.6] }
+interface Rascunho { ia: number; dia: number; ganhou: boolean; entrada: number; resultado: number; fixo: boolean; daSequencia: boolean }
 
 /**
- * As operações do cenário. O total de cada I.A. (operações, acerto e
- * resultado) fecha exatamente com o que foi preenchido, centavo por centavo.
+ * As operações do cenário. Fecham com o que foi respondido: resultado e
+ * operações (no total e de cada I.A.), acerto, maior sequência de perdas,
+ * maior entrada e maior ganho. Quando uma resposta não combina com as outras
+ * (ex.: perder muito com entrada pequena), a prévia do editor avisa.
  */
 export function operacoesDoCenario(c: Cenario, agora = new Date()): OperacaoSimulada[] {
   const rnd = sorteio(sementeDe(JSON.stringify(c)))
-  const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate())
-  const agoraH = (agora.getTime() - hoje.getTime()) / 36e5
-  const [ini, fim] = JANELA[c.forma]
-  const ops: Array<OperacaoSimulada & { pos?: number }> = []
+  const ias = iasDoCenario(c).filter((l) => l.operacoes > 0)
+  const N = ias.reduce((s, l) => s + Math.round(l.operacoes), 0)
+  if (!N) return []
+  const W = Math.min(N, Math.max(0, Math.round((N * Math.min(100, Math.max(0, c.acerto))) / 100)))
+  const L = N - W
+  const S = L ? Math.min(L, Math.max(1, Math.round(c.sequencia || 1))) : 0
+  const E = Math.max(0.35, r2(c.entrada || 1))
+  const Emax = Math.max(E, r2(c.maiorEntrada || E))
 
-  c.ias.forEach((linha, k) => {
-    const ia = iaDoSimulador(linha.ia)
-    const avulsas = c.avulsas.filter((a) => a.ia === linha.ia)
-    const base = Math.max(0.35, linha.entrada || 1)
-    const n = Math.max(0, Math.round(linha.operacoes) - avulsas.length)
-    const totalW = Math.round((Math.round(linha.operacoes) * Math.min(100, Math.max(0, linha.acerto))) / 100)
-    const w = Math.min(n, Math.max(0, totalW - avulsas.filter((a) => a.resultado > 0).length))
-    let R = r2(linha.resultado - avulsas.reduce((s, a) => s + a.resultado, 0))
-    if (!n) return
-    const seq = sequencia(c.forma, n, w, rnd)
-    // a entrada: fixa para quem respeita; dobra depois de cada perda para quem não respeita
-    const dobra = c.forma === 'insistiu' || c.forma === 'devolveu'
-    const desde = c.forma === 'devolveu' ? Math.round(n * 0.5) : 0
-    let serie = 0
-    const entradas = seq.map((ganhou, i) => {
-      const e = dobra && i >= desde ? base * 2 ** Math.min(serie, 3) : base
-      serie = ganhou ? 0 : serie + 1
-      return e
-    })
-    const somaG = seq.reduce((s, g, i) => s + (g ? entradas[i] : 0), 0)
-    let somaP = seq.reduce((s, g, i) => s + (g ? 0 : entradas[i]), 0)
-    let q = 0.95
-    if (!w) {
-      // só perdas: o resultado decide o tamanho delas
-      if (R < 0) { const f = -R / somaP; for (let i = 0; i < n; i++) entradas[i] *= f } else R = r2(-somaP)
-    } else if (!somaP) {
-      q = Math.max(0.05, R / somaG)
-    } else {
-      q = (R + somaP) / somaG
-      // quem respeita mantém a entrada (o retorno se ajusta); quem dobra perde com entradas maiores
-      if (q < (dobra ? 0.35 : 0.08)) {
-        // perdeu mais do que as entradas explicam: as perdas foram com entrada maior
-        q = 0.95; const f = (somaG * q - R) / somaP
-        seq.forEach((g, i) => { if (!g) entradas[i] *= f }); somaP *= f
-      } else if (q > 1.6) {
-        q = 0.95; const f = (R + somaP) / (somaG * q)
-        seq.forEach((g, i) => { if (g) entradas[i] *= f })
+  // os dias e quantas operações em cada um
+  const { de, ate } = faixaDoCenario(c, agora)
+  const dias: Date[] = []
+  for (let d = deData(de); dataLocal(d) <= ate && dias.length < 400; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) dias.push(d)
+  const pesoDia = dias.map(() => (dias.length > 1 ? 0.55 + rnd() * 0.9 : 1))
+
+  // a ordem do dia: cada I.A. opera num bloco; a da pior sequência fica no começo ou no fim, se for o caso
+  let k = ias.findIndex((l) => l.ia === c.iaDaSequencia)
+  if (k < 0) k = ias.reduce((m, l, i) => (l.resultado < ias[m].resultado ? i : m), 0)
+  const ordem = ias.map((_, i) => i).filter((i) => i !== k)
+  if (c.momento === 'comeco') ordem.unshift(k); else if (c.momento === 'fim') ordem.push(k); else ordem.splice(Math.floor(ordem.length / 2), 0, k)
+  const porIaDia = ias.map((l) => repartir(Math.round(l.operacoes), pesoDia))
+  const linha: Array<{ ia: number; dia: number }> = []
+  dias.forEach((_, d) => { for (const i of ordem) for (let j = 0; j < porIaDia[i][d]; j++) linha.push({ ia: i, dia: d }) })
+
+  // onde entra a pior sequência
+  const daK = linha.map((x, p) => (x.ia === k ? p : -1)).filter((p) => p >= 0)
+  let inicio = 0
+  if (S) {
+    if (c.momento === 'fim') inicio = daK.length ? daK[daK.length - 1] - S + 1 : N - S
+    else if (c.momento === 'comeco') inicio = daK.length ? daK[0] + Math.min(2, Math.max(0, daK.length - S)) : 0
+    else inicio = daK.length ? daK[Math.floor(daK.length / 2)] - Math.floor(S / 2) : Math.floor((N - S) / 2)
+    inicio = Math.max(0, Math.min(N - S, inicio))
+  }
+
+  // ganhos e perdas: antes da sequência, a sequência, depois dela
+  const resto = L - S, antesTam = inicio, depoisTam = N - inicio - S
+  let antesP = antesTam + depoisTam ? Math.round((resto * antesTam) / (antesTam + depoisTam)) : 0
+  antesP = Math.min(antesP, Math.max(0, antesTam - 1), resto); antesP = Math.max(antesP, resto - Math.max(0, depoisTam - 1), 0)
+  const depoisP = resto - antesP
+  const teto = Math.max(1, S)
+  const seq: boolean[] = [
+    ...trecho(antesTam, antesP, teto, false, S > 0, rnd),
+    ...Array<boolean>(S).fill(false),
+    ...trecho(depoisTam, depoisP, teto, S > 0, false, rnd),
+  ]
+
+  // cada I.A. com o acerto do total: troca um ganho de quem tem demais por uma perda de quem tem de menos,
+  // sem mexer na pior sequência e sem criar outra maior que ela
+  if (ias.length > 1 && S) {
+    const alvo = repartir(W, ias.map((l) => l.operacoes))
+    const fora = (p: number) => p >= inicio && p < inicio + S
+    const maiorSerie = () => { let m = 0, a = 0; for (const g of seq) { a = g ? 0 : a + 1; if (a > m) m = a } return m }
+    for (let volta = 0; volta < 4 * N; volta++) {
+      const tem = ias.map(() => 0); seq.forEach((g, p) => { if (g) tem[linha[p].ia]++ })
+      const sobra = tem.findIndex((t, i) => t > alvo[i]), falta = tem.findIndex((t, i) => t < alvo[i])
+      if (sobra < 0 || falta < 0) break
+      const ganhos = linha.map((x, p) => (x.ia === sobra && seq[p] && !fora(p) ? p : -1)).filter((p) => p >= 0)
+      const perdas = linha.map((x, p) => (x.ia === falta && !seq[p] && !fora(p) ? p : -1)).filter((p) => p >= 0)
+      let trocou = false
+      for (let t = 0; t < 12 && !trocou && ganhos.length && perdas.length; t++) {
+        const g = ganhos[Math.floor(rnd() * ganhos.length)], l2 = perdas[Math.floor(rnd() * perdas.length)]
+        seq[g] = false; seq[l2] = true
+        if (maiorSerie() <= S) trocou = true; else { seq[g] = true; seq[l2] = false }
       }
+      if (!trocou) break
     }
-    const linhaOps = seq.map((ganhou, i) => {
-      const entrada = r2(entradas[i])
-      const resultado = ganhou ? r2(entrada * q) : -entrada
-      return { ganhou, entrada, resultado }
-    })
-    // o centavo que sobra do arredondamento vai na última operação
-    const sobra = r2(R - linhaOps.reduce((s, o) => s + o.resultado, 0))
-    if (sobra) {
-      const k2 = linhaOps.map((o) => o.ganhou).lastIndexOf(true)
-      if (k2 >= 0) linhaOps[k2].resultado = r2(linhaOps[k2].resultado + sobra)
-      else { const u = linhaOps[n - 1]; u.entrada = r2(u.entrada - sobra); u.resultado = -u.entrada }
-    }
-    linhaOps.forEach((o, i) => ops.push({
-      quando: '', pos: (i + 0.5 + (rnd() - 0.5) * 0.6) / n + k * 1e-6, origem: ia.origem, id: ia.id, nome: ia.nome, ativo: ia.ativo, tipo: ia.tipo,
-      entrada: o.entrada, pagamento: o.ganhou ? r2(o.entrada + o.resultado) : 0, resultado: o.resultado, ganhou: o.ganhou,
-    }))
+  }
+
+  // entradas: a de sempre; na pior sequência ela sobe até a maior entrada
+  const ops: Rascunho[] = linha.map((x, p) => {
+    const naSeq = S > 0 && p >= inicio && p < inicio + S
+    const j = p - inicio
+    const entrada = naSeq && Emax > E ? (S === 1 ? Emax : E * (Emax / E) ** (j / (S - 1))) : E
+    return { ia: x.ia, dia: x.dia, ganhou: seq[p] ?? true, entrada, resultado: 0, fixo: false, daSequencia: naSeq }
   })
 
-  // o horário: a posição na sequência vira dia e hora dentro da janela
-  const quandoDe = (diaAtras: number, horas: number) => {
-    const d = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - diaAtras)
-    return new Date(d.getTime() + Math.max(0, Math.min(23.99, horas)) * 36e5 + Math.floor(rnd() * 50) * 1000)
+  // o maior ganho: uma operação da I.A. que mais ganhou
+  if (c.maiorGanho && c.maiorGanho > 0) {
+    const melhor = ias.reduce((m, l, i) => (l.resultado / l.operacoes > ias[m].resultado / ias[m].operacoes ? i : m), 0)
+    const cands = ops.map((o, p) => (o.ia === melhor && o.ganhou && !o.daSequencia ? p : -1)).filter((p) => p >= 0)
+    if (cands.length) {
+      const o = ops[cands[Math.floor(cands.length * 0.6)]]
+      o.entrada = Math.min(Emax, Math.max(E, c.maiorGanho / 0.95)); o.resultado = r2(c.maiorGanho); o.fixo = true
+    }
   }
-  ops.sort((a, b) => (a.pos ?? 0) - (b.pos ?? 0))
-  ops.forEach((o) => {
-    const p = Math.min(0.9999, Math.max(0, o.pos ?? 0)) * c.dias
-    const diaAtras = c.dias - 1 - Math.floor(p)
-    let [a, b] = [ini, fim]
-    // hoje o dia ainda não acabou: a janela termina agora
-    if (diaAtras === 0 && b > agoraH) { b = Math.max(0.3, agoraH - 0.05); a = Math.min(a, Math.max(0, b - 1)) }
-    o.quando = quandoDe(diaAtras, a + (p - Math.floor(p)) * (b - a)).toISOString()
-    delete o.pos
+
+  // o retorno de cada I.A. fecha o resultado dela; se não der com as entradas, as entradas sobem (até a maior)
+  ias.forEach((l, i) => {
+    const R = r2(l.resultado)
+    const minhas = ops.filter((o) => o.ia === i)
+    const perdas = minhas.filter((o) => !o.ganhou), livres = minhas.filter((o) => o.ganhou && !o.fixo)
+    const fixos = minhas.filter((o) => o.fixo).reduce((s, o) => s + o.resultado, 0)
+    const somaP = () => perdas.reduce((s, o) => s + o.entrada, 0)
+    const somaG = () => livres.reduce((s, o) => s + o.entrada, 0)
+    const subir = (l2: Rascunho[], falta: number) => {
+      const folga = l2.filter((o) => !o.daSequencia).reduce((s, o) => s + (Emax - o.entrada), 0)
+      if (folga <= 0 || falta <= 0) return falta
+      const f = Math.min(1, falta / folga)
+      for (const o of l2) if (!o.daSequencia) o.entrada += (Emax - o.entrada) * f
+      return falta - folga * f
+    }
+    if (!livres.length) {
+      // sem ganhos livres: as perdas pagam o resultado
+      const falta = -(R - fixos) - somaP()
+      if (falta > 0 && perdas.length) { const sobra = subir(perdas, falta); if (sobra > 0.005) { const f = (somaP() + sobra) / somaP(); perdas.forEach((o) => { o.entrada *= f }) } }
+    } else {
+      let q = (R + somaP() - fixos) / somaG()
+      if (q < 0.1 && perdas.length) {
+        subir(perdas, 0.9 * somaG() + fixos - R - somaP())
+        q = (R + somaP() - fixos) / somaG()
+        if (q < 0.05) { const f = (0.9 * somaG() + fixos - R) / somaP(); perdas.forEach((o) => { o.entrada *= f }); q = (R + somaP() - fixos) / somaG() }
+      } else if (q > 2) {
+        subir(livres, (R + somaP() - fixos) / 0.95 - somaG())
+        q = (R + somaP() - fixos) / somaG()
+      }
+      for (const o of livres) { o.entrada = r2(o.entrada); o.resultado = r2(o.entrada * q) }
+    }
+    for (const o of perdas) { o.entrada = r2(o.entrada); o.resultado = -o.entrada }
+    for (const o of minhas) if (o.ganhou && o.fixo) o.entrada = r2(o.entrada)
+    // os centavos do arredondamento: um centavo em cada ganho, sem inflar nenhum
+    let centavos = Math.round((R - minhas.reduce((s, o) => s + o.resultado, 0)) * 100)
+    for (let j = 0; livres.length && centavos !== 0 && j < 100000; j++) {
+      const o = livres[j % livres.length], passo = centavos > 0 ? 1 : -1
+      if (passo < 0 && o.resultado <= 0.02) continue
+      o.resultado = r2(o.resultado + passo / 100); centavos -= passo
+    }
+    const sobra = r2(R - minhas.reduce((s, o) => s + o.resultado, 0))
+    if (sobra) {
+      const alvo = livres.length ? livres[livres.length - 1] : perdas.filter((o) => !o.daSequencia).pop() ?? perdas[perdas.length - 1]
+      if (alvo?.ganhou) alvo.resultado = r2(alvo.resultado + sobra)
+      else if (alvo) { alvo.entrada = r2(alvo.entrada - sobra); alvo.resultado = -alvo.entrada }
+    }
   })
-  for (const av of c.avulsas) {
-    if (!c.ias.some((l) => l.ia === av.ia)) continue
-    const ia = iaDoSimulador(av.ia)
-    const [h, m] = (av.hora || '12:00').split(':').map(Number)
-    const entrada = r2(Math.abs(av.entrada || 1)), resultado = r2(av.resultado)
-    ops.push({
-      quando: quandoDe(Math.min(c.dias - 1, Math.max(0, av.dia)), (h || 0) + (m || 0) / 60).toISOString(), origem: ia.origem, id: ia.id, nome: ia.nome, ativo: ia.ativo, tipo: ia.tipo,
-      entrada, pagamento: resultado > 0 ? r2(entrada + resultado) : 0, resultado, ganhou: resultado > 0,
+
+  // o horário: as operações de cada dia, em ordem, dentro do horário escolhido
+  const hojeIsoStr = dataLocal(agora)
+  const agoraH = agora.getHours() + agora.getMinutes() / 60
+  const porDia = new Map<number, Rascunho[]>()
+  ops.forEach((o) => { const l2 = porDia.get(o.dia) ?? []; l2.push(o); porDia.set(o.dia, l2) })
+  const saida: OperacaoSimulada[] = []
+  porDia.forEach((l2, d) => {
+    let a = Math.max(0, Math.min(23, c.horaDe)), b = Math.max(a, Math.min(23, c.horaAte)) + 0.98
+    if (dataLocal(dias[d]) === hojeIsoStr && b > agoraH) { b = Math.max(0.3, agoraH - 0.05); a = Math.min(a, Math.max(0, b - 1)) }
+    l2.forEach((o, j) => {
+      const h = a + ((j + 0.5) / l2.length) * (b - a)
+      const quando = new Date(dias[d].getTime() + h * 36e5 + Math.floor(rnd() * 20) * 1000)
+      const ia = iaDoSimulador(ias[o.ia].ia)
+      saida.push({ quando: quando.toISOString(), origem: ia.origem, id: ia.id, nome: ia.nome, ativo: ia.ativo, tipo: ia.tipo, entrada: o.entrada, pagamento: o.ganhou ? r2(o.entrada + o.resultado) : 0, resultado: o.resultado, ganhou: o.ganhou })
     })
-  }
-  return ops.sort((a, b) => Date.parse(b.quando) - Date.parse(a.quando))
+  })
+  return saida.sort((x, y) => Date.parse(y.quando) - Date.parse(x.quando))
 }
 
 /* -------------------------------------------- as contas do relatório */
@@ -312,11 +435,36 @@ export function relatorioDoCenario(todas: OperacaoSimulada[], f: { de: string; a
 
 /** Depósitos e saques do cenário, no formato do extrato da corretora. */
 export function dinheiroDoCenario(c: Cenario, agora = new Date()) {
-  const inicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - (c.dias - 1), 8, 40).getTime() / 1000
+  const { de, ate } = faixaDoCenario(c, agora)
+  const inicio = new Date(deData(de).getTime() + 8.6 * 36e5).getTime() / 1000
+  const fim = Math.min(agora.getTime() / 1000 - 600, deData(ate).getTime() / 1000 + 20 * 3600)
   const movimentos: Array<{ tipo: 'deposit' | 'withdrawal'; valor: number; quando: number }> = []
   if (c.depositos > 0) movimentos.push({ tipo: 'deposit', valor: r2(c.depositos), quando: inicio })
-  if (c.saques > 0) movimentos.push({ tipo: 'withdrawal', valor: r2(c.saques), quando: Math.min(agora.getTime() / 1000 - 600, inicio + (c.dias - 0.5) * 86400) })
+  if (c.saques > 0) movimentos.push({ tipo: 'withdrawal', valor: r2(c.saques), quando: Math.max(inicio + 60, fim) })
   return { depositos: r2(Math.max(0, c.depositos)), saques: r2(Math.max(0, c.saques)), movimentos: movimentos.sort((x, y) => y.quando - x.quando) }
+}
+
+/* ------------------------------------------- a prévia do que vai aparecer */
+
+export interface Previa {
+  resultado: number; operacoes: number; ganhas: number; maiorEntrada: number; maiorGanho: number; maiorPerda: number; sequencia: number
+  /** Quanto cada ganho rendeu, em média, sobre a entrada (0,95 = 95%). */
+  retorno: number
+  avisos: string[]
+}
+/** Os números que o relatório vai mostrar, e onde eles não batem com as respostas. */
+export function previaDoCenario(c: Cenario, agora = new Date()): Previa {
+  const ops = operacoesDoCenario(c, agora)
+  const r = relatorioDoCenario(ops, { ...faixaDoCenario(c, agora), filtros: {} }, agora)
+  const ganhos = ops.filter((o) => o.ganhou && o.entrada > 0)
+  const retorno = ganhos.length ? ganhos.reduce((s, o) => s + o.resultado / o.entrada, 0) / ganhos.length : 0
+  const p: Previa = { resultado: r.total.resultado, operacoes: r.total.operacoes, ganhas: r.total.ganhas, maiorEntrada: r.opcoes.entradaMax, maiorGanho: r.total.maiorGanho, maiorPerda: r.total.maiorPerda, sequencia: r.sequencias.perdas, retorno, avisos: [] }
+  const dinheiro = (x: number) => `US$ ${x.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  if (p.maiorEntrada > Math.max(c.entrada, c.maiorEntrada) + 0.01) p.avisos.push(`Para chegar nesse resultado as entradas precisaram passar da maior entrada: foram até ${dinheiro(p.maiorEntrada)}. Aumente a maior entrada ou o número de operações.`)
+  if (c.maiorGanho && Math.abs(p.maiorGanho - c.maiorGanho) > 0.01) p.avisos.push(`O maior ganho ficou em ${dinheiro(p.maiorGanho)}, porque os outros ganhos precisaram ser maiores para fechar o resultado.`)
+  if (p.operacoes - p.ganhas > 0 && p.sequencia !== Math.round(c.sequencia)) p.avisos.push(`A maior sequência de perdas ficou em ${p.sequencia}: com esse acerto ${p.sequencia > c.sequencia ? 'não há ganhos suficientes para separar as perdas' : 'não há perdas suficientes'}.`)
+  if (ganhos.length && (retorno > 1.6 || retorno < 0.1)) p.avisos.push(`Cada ganho rendeu em média ${Math.round(retorno * 100)}% da entrada, o que foge do comum (perto de 95%). Ajuste o acerto, a entrada ou o resultado.`)
+  return p
 }
 
 /* --------------------------------------- o cenário guardado no aparelho */
@@ -324,7 +472,7 @@ export function dinheiroDoCenario(c: Cenario, agora = new Date()) {
 export function lerCenario(chave: string): Cenario | null {
   try {
     const c = JSON.parse(localStorage.getItem(chave) || 'null') as Cenario | null
-    if (c && Array.isArray(c.ias) && [1, 7, 30].includes(c.dias) && FORMAS.some((x) => x.id === c.forma)) return { ...c, avulsas: Array.isArray(c.avulsas) ? c.avulsas : [] }
+    if (c && c.versao === 2 && Array.isArray(c.ias) && c.periodo) return c
   } catch { /* sem armazenamento */ }
   return null
 }

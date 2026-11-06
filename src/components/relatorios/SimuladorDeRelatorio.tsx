@@ -3,12 +3,13 @@
  * "Relatório simulado" e o botão que abre o modo. Só administradores da marca
  * chegam aqui; as contas ficam em core/teeds/relatorioSimulado.ts.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { MARCA } from '../../marca'
-import { dinheiroComSinal } from '../../core/dinheiro'
+import { dinheiro, dinheiroComSinal } from '../../core/dinheiro'
+import { NomeDoRobo } from '../NomeDoRobo'
 import {
-  CENARIO_EM_BRANCO, CENARIOS_PRONTOS, FORMAS, IAS_DO_SIMULADOR, iaDoSimulador,
-  type Cenario, type LinhaDeIa, type OperacaoAvulsa,
+  cenarioEmBranco, cenariosProntos, diasDoCenario, faixaDoCenario, hojeIso, IAS_DO_SIMULADOR, iaDoSimulador, iasDoCenario, previaDoCenario,
+  type Cenario, type LinhaDeIa, type Momento,
 } from '../../core/teeds/relatorioSimulado'
 
 const IA = MARCA.vocabularioIA ? 'I.A.' : 'robô'
@@ -63,20 +64,28 @@ const ler = (t: string) => {
 }
 const mostrar = (x: number) => (Number.isFinite(x) ? String(x).replace('.', ',') : '')
 
-function Numero({ id, rotulo, valor, aoMudar, min = 0, max, sufixo }: { id: string; rotulo: string; valor: number; aoMudar: (x: number) => void; min?: number; max?: number; sufixo?: string }) {
-  const [texto, setTexto] = useState(mostrar(valor))
-  useEffect(() => { if (ler(texto) !== valor) setTexto(mostrar(valor)) }, [valor]) // eslint-disable-line react-hooks/exhaustive-deps
+function Numero({ id, rotulo, valor, aoMudar, min = 0, max, sufixo, dica, vazio, grande = false }: {
+  id: string; rotulo: string; valor: number | null; aoMudar: (x: number | null) => void; min?: number; max?: number; sufixo?: string
+  /** Uma linha de ajuda embaixo do campo. */ dica?: ReactNode
+  /** Campo opcional: vazio vale null e mostra este texto. */ vazio?: string
+  grande?: boolean
+}) {
+  const mostrarV = (v: number | null) => (v == null ? '' : mostrar(v))
+  const [texto, setTexto] = useState(mostrarV(valor))
+  useEffect(() => { if (ler(texto) !== valor) setTexto(mostrarV(valor)) }, [valor]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <label className="rsim-campo">
+    <label className={`rsim-campo ${grande ? 'grande' : ''}`}>
       <span>{rotulo}</span>
       <span className="rsim-entrada">
-        <input id={id} inputMode="decimal" value={texto} onChange={(e) => {
+        <input id={id} inputMode="decimal" value={texto} placeholder={vazio} onChange={(e) => {
           setTexto(e.target.value)
           const x = ler(e.target.value)
           if (x != null) aoMudar(Math.min(max ?? Infinity, Math.max(min, x)))
-        }} onBlur={() => setTexto(mostrar(valor))} />
+          else if (vazio && !e.target.value.trim()) aoMudar(null)
+        }} onBlur={() => setTexto(mostrarV(valor))} />
         {sufixo && <em>{sufixo}</em>}
       </span>
+      {dica && <small className="rsim-dica">{dica}</small>}
     </label>
   )
 }
@@ -90,140 +99,263 @@ function Resultado({ id, valor, aoMudar, rotulo = 'Resultado' }: { id: string; v
         <button type="button" className={!perda ? 'on ganho' : ''} onClick={() => aoMudar(Math.abs(valor))}>Ganho</button>
         <button type="button" className={perda ? 'on perda' : ''} onClick={() => aoMudar(-Math.abs(valor) || -1)}>Perda</button>
       </div>
-      <Numero id={id} rotulo={`${rotulo} (US$)`} valor={Math.abs(valor)} aoMudar={(x) => aoMudar(perda ? -x : x)} />
+      <Numero id={id} rotulo={`${rotulo} (US$)`} valor={Math.abs(valor)} aoMudar={(x) => aoMudar(perda ? -(x ?? 0) : x ?? 0)} />
     </div>
   )
 }
 
 /* ================================================================ editor */
 
+/*
+ * 06/11/2026 (2), Tiago: "a experiência de preencher ainda está muito
+ * complicada". Agora são passos, uma pergunta por vez, na ordem dele:
+ * a data, o resultado geral, as I.A., as operações que fizeram o resultado
+ * e a revisão com a prévia do que vai aparecer.
+ */
+const PASSOS = ['Data', 'Resultado', MARCA.vocabularioIA ? 'I.A.' : 'Robôs', 'Operações', 'Revisão']
+const MOMENTOS: Array<{ id: Momento; nome: string }> = [{ id: 'comeco', nome: 'No começo' }, { id: 'meio', nome: 'No meio' }, { id: 'fim', nome: 'No fim' }]
+const dataCurta = (iso: string) => { const [a, m, d] = iso.split('-'); return `${d}/${m}/${a}` }
+const usd = (x: number) => dinheiro(x, 'USD')
+
+function Passo({ titulo, sub, children }: { titulo: string; sub?: string; children: ReactNode }) {
+  return (
+    <div className="rsim-passo">
+      <h3>{titulo}</h3>
+      {sub && <p className="rsim-sub">{sub}</p>}
+      {children}
+    </div>
+  )
+}
+
 export function EditorDoCenario({ inicial, aoMostrar, aoFechar }: { inicial: Cenario; aoMostrar: (c: Cenario) => void; aoFechar: () => void }) {
   const [c, setC] = useState<Cenario>(inicial)
-  const [pronto, setPronto] = useState<string | null>(null)
+  const [passo, setPasso] = useState(0)
+  const [modelo, setModelo] = useState<string | null>(null)
+  const corpo = useRef<HTMLDivElement>(null)
   const mudar = (p: Partial<Cenario>) => setC((x) => ({ ...x, ...p }))
-  const mudarIa = (i: number, p: Partial<LinhaDeIa>) => setC((x) => ({ ...x, ias: x.ias.map((l, k) => (k === i ? { ...l, ...p } : l)) }))
-  const mudarAvulsa = (i: number, p: Partial<OperacaoAvulsa>) => setC((x) => ({ ...x, avulsas: x.avulsas.map((l, k) => (k === i ? { ...l, ...p } : l)) }))
   useEffect(() => {
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') aoFechar() }
     window.addEventListener('keydown', esc)
     document.body.classList.add('rel-painel-aberto')
     return () => { window.removeEventListener('keydown', esc); document.body.classList.remove('rel-painel-aberto') }
   }, [aoFechar])
+  useEffect(() => { corpo.current?.scrollTo(0, 0) }, [passo])
 
-  const livres = IAS_DO_SIMULADOR.filter((x) => !c.ias.some((l) => l.ia === x.id))
-  const total = c.ias.reduce((s, l) => s + l.resultado, 0)
-  const ops = c.ias.reduce((s, l) => s + Math.round(l.operacoes), 0)
-  const dias = Array.from({ length: c.dias }, (_, i) => i)
-  const nomeDoDia = (d: number) => (d === 0 ? 'Hoje' : d === 1 ? 'Ontem' : `${d} dias atrás`)
-  const falha = !c.ias.length ? `Inclua pelo menos uma ${IA}.` : !ops ? 'Preencha o número de operações.' : ''
+  const hoje = hojeIso()
+  const prontos = useMemo(cenariosProntos, [])
+  const ias = iasDoCenario(c)
+  const somaOps = ias.reduce((s, l) => s + l.operacoes, 0)
+  const somaRes = Math.round(ias.reduce((s, l) => s + l.resultado, 0) * 100) / 100
+  const ganhas = Math.round((c.operacoes * c.acerto) / 100), perdidas = Math.max(0, Math.round(c.operacoes) - ganhas)
+  const dias = diasDoCenario(c)
+  const previa = useMemo(() => (passo >= 3 ? previaDoCenario(c) : null), [c, passo])
+
+  const p = c.periodo
+  const falhas: string[] = [
+    p.tipo === 'dia' ? (!p.data ? 'Escolha o dia.' : p.data > hoje ? 'Escolha um dia até hoje.' : '')
+      : p.tipo === 'intervalo' ? (!p.de || !p.ate ? 'Escolha as duas datas.' : p.ate < p.de ? 'A data final vem antes da inicial.' : p.ate > hoje ? 'Escolha datas até hoje.' : dias > 400 ? 'Escolha até 400 dias.' : '') : '',
+    !c.operacoes ? 'Preencha a quantidade de operações.' : c.acerto < 0 || c.acerto > 100 ? 'O acerto vai de 0 a 100%.' : '',
+    !c.ias.length ? `Escolha pelo menos uma ${IA}.` : !c.dividirSozinho && c.ias.length > 1 && (somaOps !== Math.round(c.operacoes) || Math.abs(somaRes - c.resultado) > 0.005) ? 'A soma das I.A. precisa fechar com o total.' : '',
+    !c.entrada ? 'Preencha a entrada normal.' : c.maiorEntrada < c.entrada ? 'A maior entrada não pode ser menor que a entrada normal.' : perdidas && (c.sequencia < 1 || c.sequencia > perdidas) ? `A sequência de perdas vai de 1 a ${perdidas}.` : c.horaAte < c.horaDe ? 'O horário final vem antes do inicial.' : '',
+    '',
+  ]
+  const falha = falhas[passo]
+  const primeiraFalha = falhas.findIndex((f) => f)
+
+  const escolherIa = (id: string) => setC((x) => {
+    const tem = x.ias.some((l) => l.ia === id)
+    const lista = tem ? x.ias.filter((l) => l.ia !== id) : [...x.ias, { ia: id, operacoes: 0, resultado: 0 }]
+    const iaDaSequencia = lista.some((l) => l.ia === x.iaDaSequencia) ? x.iaDaSequencia : lista[0]?.ia ?? x.iaDaSequencia
+    return { ...x, ias: lista, dividirSozinho: true, iaDaSequencia }
+  })
+  const mudarIa = (i: number, q: Partial<LinhaDeIa>) => setC((x) => {
+    // quem mexe numa I.A. passa a dividir na mão: começa do que estava dividido
+    const atual = iasDoCenario(x)
+    return { ...x, dividirSozinho: false, ias: atual.map((l, k) => (k === i ? { ...l, ...q } : l)) }
+  })
 
   return (
     <div className="rel-painel-fundo" onMouseDown={aoFechar}>
       <section className="rel-painel rsim-painel" role="dialog" aria-modal="true" aria-label="Montar o relatório simulado" onMouseDown={(e) => e.stopPropagation()}>
-        <header><b>Relatório simulado</b><button type="button" onClick={aoFechar} aria-label="Fechar">×</button></header>
-        <div className="rel-painel-corpo">
-          <p className="rsim-aviso">Só os administradores veem. Nada é gravado, nada entra na cobrança, e a tela mostra a tag <b>Relatório simulado</b> o tempo todo.</p>
+        <header>
+          <div className="rsim-cab">
+            <b>Relatório simulado</b>
+            <small>Passo {passo + 1} de {PASSOS.length} · {PASSOS[passo]}</small>
+          </div>
+          <button type="button" onClick={aoFechar} aria-label="Fechar">×</button>
+        </header>
+        <nav className="rsim-passos" aria-label="Passos">
+          {PASSOS.map((nome, i) => (
+            <button key={nome} type="button" className={`${i === passo ? 'on' : ''} ${i < passo ? 'feito' : ''}`} aria-current={i === passo ? 'step' : undefined}
+              disabled={primeiraFalha >= 0 && i > primeiraFalha} onClick={() => setPasso(i)}><i>{i + 1}</i><span>{nome}</span></button>
+          ))}
+        </nav>
 
-          <fieldset>
-            <legend>Cenários prontos <small>Toque para começar dele</small></legend>
-            <div className="rel-fichas">
-              {CENARIOS_PRONTOS.map((p) => (
-                <button key={p.id} type="button" className={`rsim-pronto ${p.tom} ${pronto === p.id ? 'on' : ''}`} onClick={() => { setC(structuredClone(p.cenario)); setPronto(p.id) }}>
-                  <i aria-hidden="true" />{p.cenario.nome}
-                </button>
-              ))}
-              <button type="button" className={`rsim-pronto ${pronto === 'branco' ? 'on' : ''}`} onClick={() => { setC(structuredClone(CENARIO_EM_BRANCO)); setPronto('branco') }}>Em branco</button>
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend>O cenário</legend>
-            <label className="rsim-campo"><span>Nome que aparece na faixa</span>
-              <span className="rsim-entrada"><input id="rsim-nome" value={c.nome} maxLength={60} onChange={(e) => mudar({ nome: e.target.value })} /></span>
-            </label>
-            <div className="rsim-campo"><span>Período</span>
-              <div className="rel-seg cheio">
-                {([[1, 'Só hoje'], [7, '7 dias'], [30, '30 dias']] as const).map(([d, nome]) => (
-                  <button key={d} type="button" className={c.dias === d ? 'on' : ''} onClick={() => mudar({ dias: d, avulsas: c.avulsas.map((a) => ({ ...a, dia: Math.min(a.dia, d - 1) })) })}>{nome}</button>
-                ))}
+        <div className="rel-painel-corpo" ref={corpo}>
+          {passo === 0 && (
+            <Passo titulo="De quando é o relatório?" sub="O relatório vai mostrar este período, como se as operações tivessem acontecido nele.">
+              <div className="rsim-opcoes dois">
+                {([['dia', 'Um dia', p.tipo === 'dia' ? dataCurta(p.data) : 'Hoje ou outro dia'], ['ultimos7', 'Últimos 7 dias', 'Até hoje'], ['ultimos30', 'Últimos 30 dias', 'Até hoje'], ['intervalo', 'Escolher as datas', 'De um dia a outro']] as const).map(([id, nome, sub]) => {
+                  const on = id === 'dia' ? p.tipo === 'dia' : id === 'intervalo' ? p.tipo === 'intervalo' : p.tipo === 'ultimos' && p.dias === (id === 'ultimos7' ? 7 : 30)
+                  return (
+                    <button key={id} type="button" className={on ? 'on' : ''} aria-pressed={on} onClick={() => mudar({
+                      periodo: id === 'dia' ? { tipo: 'dia', data: p.tipo === 'dia' ? p.data : hoje } : id === 'intervalo' ? { tipo: 'intervalo', ...(p.tipo === 'intervalo' ? { de: p.de, ate: p.ate } : { de: `${hoje.slice(0, 8)}01`, ate: hoje }) } : { tipo: 'ultimos', dias: id === 'ultimos7' ? 7 : 30 },
+                    })}><b>{nome}</b><small>{sub}</small></button>
+                  )
+                })}
               </div>
-            </div>
-            <div className="rsim-campo"><span>Como o resultado andou</span>
-              <div className="rsim-formas">
-                {FORMAS.map((f) => (
-                  <button key={f.id} type="button" className={c.forma === f.id ? 'on' : ''} onClick={() => mudar({ forma: f.id })} aria-pressed={c.forma === f.id}>
-                    <b>{f.nome}</b><small>{f.descricao}</small>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend>Resultado por {IA} <small>{ops.toLocaleString('pt-BR')} operações · <em className={total < 0 ? 'cai' : 'sobe'}>{dinheiroComSinal(total, 'USD')}</em></small></legend>
-            {c.ias.map((l, i) => (
-              <div className="rsim-cartao" key={`${l.ia}-${i}`}>
-                <div className="rsim-cartao-topo">
-                  <select id={`rsim-ia-${i}`} aria-label={IA} value={l.ia} onChange={(e) => {
-                    const nova = e.target.value
-                    setC((x) => ({ ...x, ias: x.ias.map((y, k) => (k === i ? { ...y, ia: nova } : y)), avulsas: x.avulsas.map((a) => (a.ia === l.ia ? { ...a, ia: nova } : a)) }))
-                  }}>
-                    {[iaDoSimulador(l.ia), ...livres].map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
-                  </select>
-                  <button type="button" className="rsim-tirar" aria-label={`Tirar ${iaDoSimulador(l.ia).nome}`} onClick={() => setC((x) => ({ ...x, ias: x.ias.filter((_, k) => k !== i), avulsas: x.avulsas.filter((a) => a.ia !== l.ia) }))}>×</button>
-                </div>
-                <div className="rsim-tres">
-                  <Numero id={`rsim-ops-${i}`} rotulo="Operações" valor={l.operacoes} max={5000} aoMudar={(x) => mudarIa(i, { operacoes: Math.round(x) })} />
-                  <Numero id={`rsim-acerto-${i}`} rotulo="Acerto" sufixo="%" valor={l.acerto} max={100} aoMudar={(x) => mudarIa(i, { acerto: x })} />
-                  <Numero id={`rsim-entrada-${i}`} rotulo="Entrada (US$)" valor={l.entrada} max={10000} aoMudar={(x) => mudarIa(i, { entrada: x })} />
-                </div>
-                <Resultado id={`rsim-res-${i}`} valor={l.resultado} aoMudar={(x) => mudarIa(i, { resultado: x })} />
-              </div>
-            ))}
-            {livres.length > 0 && <button type="button" className="rsim-mais" onClick={() => mudar({ ias: [...c.ias, { ia: livres[0].id, operacoes: 20, acerto: 60, resultado: 5, entrada: 1 }] })}>+ Incluir {IA}</button>}
-          </fieldset>
-
-          <fieldset>
-            <legend>Operações específicas <small>{c.avulsas.length ? `${c.avulsas.length} escrita${c.avulsas.length > 1 ? 's' : ''}` : 'Opcional'}</small></legend>
-            <p className="rel-nota">Para mostrar uma operação exata na lista, como a entrada alta depois do stop. Ela conta dentro do total da {IA} escolhida, que continua o que você preencheu acima.</p>
-            {c.avulsas.map((a, i) => (
-              <div className="rsim-cartao" key={i}>
-                <div className="rsim-tres rsim-avulsa-topo">
-                  <label className="rsim-campo"><span>Dia</span><span className="rsim-entrada">
-                    <select id={`rsim-av-dia-${i}`} value={a.dia} onChange={(e) => mudarAvulsa(i, { dia: Number(e.target.value) })}>{dias.map((d) => <option key={d} value={d}>{nomeDoDia(d)}</option>)}</select>
-                  </span></label>
-                  <label className="rsim-campo"><span>Hora</span><span className="rsim-entrada"><input id={`rsim-av-hora-${i}`} type="time" value={a.hora} onChange={(e) => mudarAvulsa(i, { hora: e.target.value })} /></span></label>
-                  <label className="rsim-campo"><span>{MARCA.vocabularioIA ? 'I.A.' : 'Robô'}</span><span className="rsim-entrada">
-                    <select id={`rsim-av-ia-${i}`} value={a.ia} onChange={(e) => mudarAvulsa(i, { ia: e.target.value })}>{c.ias.map((l) => <option key={l.ia} value={l.ia}>{iaDoSimulador(l.ia).nome}</option>)}</select>
-                  </span></label>
-                  <button type="button" className="rsim-tirar" aria-label="Tirar a operação" onClick={() => setC((x) => ({ ...x, avulsas: x.avulsas.filter((_, k) => k !== i) }))}>×</button>
-                </div>
+              {p.tipo === 'dia' && <label className="rsim-campo"><span>Qual dia</span><span className="rsim-entrada"><input id="rsim-dia" type="date" max={hoje} value={p.data} onChange={(e) => mudar({ periodo: { tipo: 'dia', data: e.target.value } })} /></span></label>}
+              {p.tipo === 'intervalo' && (
                 <div className="rsim-duas">
-                  <Numero id={`rsim-av-entrada-${i}`} rotulo="Entrada (US$)" valor={a.entrada} max={10000} aoMudar={(x) => mudarAvulsa(i, { entrada: x, resultado: a.resultado < 0 ? -x : a.resultado })} />
-                  <Resultado id={`rsim-av-res-${i}`} valor={a.resultado} aoMudar={(x) => mudarAvulsa(i, { resultado: x, entrada: x < 0 ? Math.abs(x) : a.entrada })} />
+                  <label className="rsim-campo"><span>De</span><span className="rsim-entrada"><input id="rsim-de" type="date" max={hoje} value={p.de} onChange={(e) => mudar({ periodo: { ...p, de: e.target.value } })} /></span></label>
+                  <label className="rsim-campo"><span>Até</span><span className="rsim-entrada"><input id="rsim-ate" type="date" max={hoje} value={p.ate} onChange={(e) => mudar({ periodo: { ...p, ate: e.target.value } })} /></span></label>
+                </div>
+              )}
+              {!falha && <p className="rsim-ok">{dias === 1 ? `Um dia: ${dataCurta(faixaDoCenario(c).de)}` : `${dias} dias: de ${dataCurta(faixaDoCenario(c).de)} a ${dataCurta(faixaDoCenario(c).ate)}`}</p>}
+
+              <div className="rsim-modelos">
+                <span>Ou comece de um modelo pronto e ajuste:</span>
+                <div className="rel-fichas">
+                  {prontos.map((m) => (
+                    <button key={m.id} type="button" className={`rsim-pronto ${m.tom} ${modelo === m.id ? 'on' : ''}`} onClick={() => { setC(structuredClone(m.cenario)); setModelo(m.id) }}><i aria-hidden="true" />{m.cenario.nome}</button>
+                  ))}
+                  <button type="button" className={`rsim-pronto ${modelo === 'branco' ? 'on' : ''}`} onClick={() => { setC(cenarioEmBranco()); setModelo('branco') }}>Em branco</button>
                 </div>
               </div>
-            ))}
-            {c.ias.length > 0 && <button type="button" className="rsim-mais" onClick={() => {
-              const h = new Date(Date.now() - 20 * 60e3)
-              mudar({ avulsas: [...c.avulsas, { dia: 0, hora: `${String(h.getHours()).padStart(2, '0')}:${String(h.getMinutes()).padStart(2, '0')}`, ia: c.ias[0].ia, entrada: 10, resultado: -10 }] })
-            }}>+ Escrever uma operação</button>}
-          </fieldset>
+            </Passo>
+          )}
 
-          <fieldset>
-            <legend>Na corretora</legend>
-            <div className="rsim-tres">
-              <Numero id="rsim-saldo" rotulo="Saldo (US$)" valor={c.saldo} max={1e7} aoMudar={(x) => mudar({ saldo: x })} />
-              <Numero id="rsim-depositos" rotulo="Depósitos" valor={c.depositos} max={1e7} aoMudar={(x) => mudar({ depositos: x })} />
-              <Numero id="rsim-saques" rotulo="Saques" valor={c.saques} max={1e7} aoMudar={(x) => mudar({ saques: x })} />
-            </div>
-          </fieldset>
+          {passo === 1 && (
+            <Passo titulo="Qual foi o resultado?" sub="O número grande do relatório, a quantidade de operações e o acerto.">
+              <div className="rsim-campo"><span>Resultado do período</span>
+                <div className="rel-seg cheio rsim-sinal" role="group" aria-label="Ganho ou perda">
+                  <button type="button" className={c.resultado >= 0 ? 'on ganho' : ''} onClick={() => mudar({ resultado: Math.abs(c.resultado) })}>Ganho</button>
+                  <button type="button" className={c.resultado < 0 ? 'on perda' : ''} onClick={() => mudar({ resultado: -Math.abs(c.resultado) || -1 })}>Perda</button>
+                </div>
+              </div>
+              <Numero id="rsim-resultado" grande rotulo="Valor (US$)" valor={Math.abs(c.resultado)} max={1e7} aoMudar={(x) => mudar({ resultado: c.resultado < 0 ? -(x ?? 0) : x ?? 0 })} />
+              <div className={`rsim-grande-numero ${c.resultado < 0 ? 'cai' : 'sobe'}`}>{dinheiroComSinal(c.resultado, 'USD')}</div>
+              <div className="rsim-duas">
+                <Numero id="rsim-operacoes" rotulo="Quantidade de operações" valor={c.operacoes} max={20000} aoMudar={(x) => mudar({ operacoes: Math.round(x ?? 0) })} />
+                <Numero id="rsim-acerto" rotulo="Acerto" sufixo="%" valor={c.acerto} max={100} aoMudar={(x) => mudar({ acerto: x ?? 0 })} />
+              </div>
+              {c.operacoes > 0 && <p className="rsim-ok"><b className="sobe">{ganhas.toLocaleString('pt-BR')} ganhas</b> e <b className="cai">{perdidas.toLocaleString('pt-BR')} perdidas</b> · média de {dinheiroComSinal(c.resultado / c.operacoes, 'USD')} por operação</p>}
+            </Passo>
+          )}
+
+          {passo === 2 && (
+            <Passo titulo={`Quais ${IA} operaram?`} sub={`Escolha uma ou mais. Com mais de uma, a divisão é automática, ou você define quanto cada ${IA} fez.`}>
+              <div className="rel-fichas">
+                {IAS_DO_SIMULADOR.map((x) => {
+                  const on = c.ias.some((l) => l.ia === x.id)
+                  return <button key={x.id} type="button" className={`rsim-ia ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => escolherIa(x.id)}>{x.origem === 'manual' ? x.nome : <NomeDoRobo nome={x.nome} id={x.id} />}</button>
+                })}
+              </div>
+              {c.ias.length > 1 && <>
+                <div className="rel-seg cheio">
+                  <button type="button" className={c.dividirSozinho ? 'on' : ''} onClick={() => mudar({ dividirSozinho: true })}>Dividir automaticamente</button>
+                  <button type="button" className={!c.dividirSozinho ? 'on' : ''} onClick={() => setC((x) => ({ ...x, ias: iasDoCenario(x), dividirSozinho: false }))}>Definir cada uma</button>
+                </div>
+                {ias.map((l, i) => (
+                  <div className="rsim-cartao" key={l.ia}>
+                    <b className="rsim-cartao-nome">{iaDoSimulador(l.ia).origem === 'manual' ? 'Manual' : <NomeDoRobo nome={iaDoSimulador(l.ia).nome} id={l.ia} />}</b>
+                    {c.dividirSozinho
+                      ? <p className="rsim-ok">{l.operacoes.toLocaleString('pt-BR')} operações · <b className={l.resultado < 0 ? 'cai' : 'sobe'}>{dinheiroComSinal(l.resultado, 'USD')}</b></p>
+                      : <div className="rsim-duas">
+                        <Numero id={`rsim-ia-ops-${i}`} rotulo="Operações" valor={l.operacoes} max={20000} aoMudar={(x) => mudarIa(i, { operacoes: Math.round(x ?? 0) })} />
+                        <Resultado id={`rsim-ia-res-${i}`} valor={l.resultado} aoMudar={(x) => mudarIa(i, { resultado: x })} />
+                      </div>}
+                  </div>
+                ))}
+                {!c.dividirSozinho && (
+                  <p className={`rsim-soma ${falha ? 'falta' : ''}`}>
+                    Soma: {somaOps.toLocaleString('pt-BR')} de {Math.round(c.operacoes).toLocaleString('pt-BR')} operações · {dinheiroComSinal(somaRes, 'USD')} de {dinheiroComSinal(c.resultado, 'USD')}
+                    {falha ? '' : ' · fechado'}
+                  </p>
+                )}
+              </>}
+              {c.ias.length === 1 && <p className="rsim-ok">{iaDoSimulador(c.ias[0].ia).nome} fez todas as {Math.round(c.operacoes).toLocaleString('pt-BR')} operações e o resultado de {dinheiroComSinal(c.resultado, 'USD')}.</p>}
+            </Passo>
+          )}
+
+          {passo === 3 && (
+            <Passo titulo="Como foram as operações?" sub="O que fez o resultado: o tamanho das entradas, as perdas seguidas e o maior ganho.">
+              <div className="rsim-duas">
+                <Numero id="rsim-entrada" rotulo="Entrada normal (US$)" valor={c.entrada} max={1e5} aoMudar={(x) => mudar({ entrada: x ?? 0, maiorEntrada: Math.max(c.maiorEntrada, x ?? 0) })} dica="O valor de sempre." />
+                <Numero id="rsim-maior-entrada" rotulo="Maior entrada (US$)" valor={c.maiorEntrada} max={1e6} aoMudar={(x) => mudar({ maiorEntrada: x ?? 0 })} dica="A maior exposição de risco. Igual à normal = não aumentou." />
+              </div>
+              <div className="rsim-duas">
+                <Numero id="rsim-sequencia" rotulo="Maior sequência de perdas" valor={c.sequencia} max={Math.max(1, perdidas)} aoMudar={(x) => mudar({ sequencia: Math.round(x ?? 0) })} dica={`Perdas seguidas, no máximo. Até ${perdidas}.`} />
+                {c.ias.length > 1
+                  ? <label className="rsim-campo"><span>Em qual {IA}</span><span className="rsim-entrada">
+                    <select id="rsim-ia-seq" value={c.iaDaSequencia} onChange={(e) => mudar({ iaDaSequencia: e.target.value })}>{c.ias.map((l) => <option key={l.ia} value={l.ia}>{iaDoSimulador(l.ia).nome}</option>)}</select>
+                  </span></label>
+                  : <div />}
+              </div>
+              <div className="rsim-campo"><span>Quando veio essa sequência</span>
+                <div className="rel-seg cheio">{MOMENTOS.map((m) => <button key={m.id} type="button" className={c.momento === m.id ? 'on' : ''} onClick={() => mudar({ momento: m.id })}>{m.nome}</button>)}</div>
+                <small className="rsim-dica">{c.maiorEntrada > c.entrada ? `As entradas sobem durante a sequência até ${usd(c.maiorEntrada)}.` : 'As entradas ficam iguais durante a sequência.'}{c.momento === 'fim' ? ' No fim, o período termina nela.' : ''}</small>
+              </div>
+              <div className="rsim-duas">
+                <Numero id="rsim-maior-ganho" rotulo="Maior ganho numa operação (US$)" valor={c.maiorGanho} vazio="Automático" max={1e6} aoMudar={(x) => mudar({ maiorGanho: x && x > 0 ? x : null })} dica="Vazio: o próprio relatório calcula." />
+                <div className="rsim-campo"><span>Maior perda numa operação</span><span className="rsim-entrada rsim-fixo">{usd(Math.max(c.entrada, c.maiorEntrada))}</span><small className="rsim-dica">Na Deriv, a perda é a própria entrada.</small></div>
+              </div>
+              <div className="rsim-campo"><span>Horário em que operou</span>
+                <div className="rsim-duas">
+                  <span className="rsim-entrada"><select id="rsim-hora-de" aria-label="Das" value={c.horaDe} onChange={(e) => mudar({ horaDe: Number(e.target.value) })}>{Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>Das {h}h</option>)}</select></span>
+                  <span className="rsim-entrada"><select id="rsim-hora-ate" aria-label="Até" value={c.horaAte} onChange={(e) => mudar({ horaAte: Number(e.target.value) })}>{Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>Até {h}h59</option>)}</select></span>
+                </div>
+              </div>
+              {previa && <Previa previa={previa} />}
+            </Passo>
+          )}
+
+          {passo === 4 && (
+            <Passo titulo="Revise e mostre" sub="Confira os números que vão aparecer. Dá para voltar a qualquer passo.">
+              <label className="rsim-campo"><span>Nome que aparece na faixa</span>
+                <span className="rsim-entrada"><input id="rsim-nome" value={c.nome} maxLength={60} onChange={(e) => mudar({ nome: e.target.value })} /></span>
+              </label>
+              {previa && <Previa previa={previa} />}
+              <div className="rsim-campo"><span>Na corretora (opcional)</span>
+                <div className="rsim-tres">
+                  <Numero id="rsim-saldo" rotulo="Saldo (US$)" valor={c.saldo} max={1e7} aoMudar={(x) => mudar({ saldo: x ?? 0 })} />
+                  <Numero id="rsim-depositos" rotulo="Depósitos" valor={c.depositos} max={1e7} aoMudar={(x) => mudar({ depositos: x ?? 0 })} />
+                  <Numero id="rsim-saques" rotulo="Saques" valor={c.saques} max={1e7} aoMudar={(x) => mudar({ saques: x ?? 0 })} />
+                </div>
+              </div>
+              <p className="rsim-aviso">Só os administradores veem. Nada é gravado, nada entra na cobrança, e a tela mostra a tag <b>Relatório simulado</b> o tempo todo.</p>
+            </Passo>
+          )}
         </div>
+
         <footer>
-          <button type="button" className="rel-btn" onClick={aoFechar}>Cancelar</button>
-          <button type="button" className="rel-btn ouro" disabled={!!falha} title={falha || undefined} onClick={() => aoMostrar({ ...c, nome: c.nome.trim() || 'Cenário simulado' })}>{falha || 'Mostrar o relatório'}</button>
+          {falha && <small className="rsim-falha" role="alert">{falha}</small>}
+          <button type="button" className="rel-btn" onClick={() => (passo ? setPasso(passo - 1) : aoFechar())}>{passo ? 'Voltar' : 'Cancelar'}</button>
+          {passo < PASSOS.length - 1
+            ? <button type="button" className="rel-btn ouro" disabled={!!falha} onClick={() => setPasso(passo + 1)}>Continuar</button>
+            : <button type="button" className="rel-btn ouro" disabled={primeiraFalha >= 0} onClick={() => aoMostrar({ ...c, nome: c.nome.trim() || 'Cenário simulado' })}>Mostrar o relatório</button>}
         </footer>
       </section>
     </div>
+  )
+}
+
+/** A prévia: os números que o relatório vai mostrar, e o que não bateu com as respostas. */
+function Previa({ previa: p }: { previa: ReturnType<typeof previaDoCenario> }) {
+  const itens: Array<[string, string, string?]> = [
+    ['Resultado', dinheiroComSinal(p.resultado, 'USD'), p.resultado < 0 ? 'cai' : 'sobe'],
+    ['Operações', `${p.operacoes.toLocaleString('pt-BR')} · ${p.operacoes ? Math.round((p.ganhas / p.operacoes) * 100) : 0}%`],
+    ['Maior entrada', usd(p.maiorEntrada)],
+    ['Perdas seguidas', String(p.sequencia)],
+    ['Maior ganho', dinheiroComSinal(p.maiorGanho, 'USD'), 'sobe'],
+    ['Maior perda', dinheiroComSinal(p.maiorPerda, 'USD'), 'cai'],
+  ]
+  return (
+    <section className={`rsim-previa ${p.avisos.length ? 'com-aviso' : ''}`} aria-live="polite">
+      <h4>Como vai aparecer no relatório</h4>
+      <dl>{itens.map(([n, v, cl]) => <div key={n}><dt>{n}</dt><dd className={cl}>{v}</dd></div>)}</dl>
+      <small>Cada ganho rende em média {Math.round(p.retorno * 100)}% da entrada.</small>
+      {p.avisos.map((a) => <p key={a} className="rsim-previa-aviso">{a}</p>)}
+    </section>
   )
 }

@@ -33,7 +33,7 @@ import { GraficoDoResultado, type PontoDoGrafico } from './GraficoDoResultado'
 import { NomeDoRobo } from '../NomeDoRobo'
 import { DERIV } from '../../core/deriv/config'
 import { subplanoAtual, useMeuSubplano } from '../../core/teeds/subplanos'
-import { dinheiroDoCenario, lerCenario, operacoesDoCenario, relatorioDoCenario, CENARIOS_PRONTOS, type Cenario } from '../../core/teeds/relatorioSimulado'
+import { cenariosProntos, dinheiroDoCenario, faixaDoCenario, hojeIso, lerCenario, operacoesDoCenario, relatorioDoCenario, type Cenario } from '../../core/teeds/relatorioSimulado'
 import { BotaoSimular, EditorDoCenario, FaixaSimulada } from './SimuladorDeRelatorio'
 
 interface Props {
@@ -73,7 +73,13 @@ const CHAVE = `${MARCA.id}.relatorio.filtros`
 /* o último cenário simulado fica no aparelho; "ligado" só nesta aba (recarregar a página no meio da gravação não derruba a simulação) */
 const CHAVE_SIM = `${MARCA.id}.relatorio.simulado`
 const simLigada = () => { try { return sessionStorage.getItem(`${CHAVE_SIM}.ligado`) === '1' } catch { return false } }
-const periodoDoCenario = (c: Cenario): Periodo => (c.dias === 1 ? 'hoje' : c.dias === 7 ? '7d' : '30d')
+/** O período do relatório que mostra o cenário: os botões prontos quando batem, senão as datas do cenário. */
+const periodoDoCenario = (c: Cenario): { periodo: Periodo; personalizado: Intervalo | null } => {
+  if (c.periodo.tipo === 'ultimos') return { periodo: c.periodo.dias === 7 ? '7d' : '30d', personalizado: null }
+  const f = faixaDoCenario(c)
+  if (f.de === f.ate && f.de === hojeIso()) return { periodo: 'hoje', personalizado: null }
+  return { periodo: 'personalizado', personalizado: f }
+}
 interface Guardado { periodo: Periodo; personalizado: Intervalo | null; filtros: Filtros }
 function lerGuardado(): Guardado {
   try {
@@ -94,7 +100,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
   const opsSim = useMemo(() => (sim ? operacoesDoCenario(sim) : null), [sim])
   const inicial = useMemo(() => {
     const g = lerGuardado()
-    return cenario ? { ...g, periodo: periodoDoCenario(cenario), personalizado: null, filtros: {} } : g
+    return cenario ? { ...g, ...periodoDoCenario(cenario), filtros: {} } : g
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [periodo, setPeriodo] = useState<Periodo>(inicial.periodo)
   const [personalizado, setPersonalizado] = useState<Intervalo | null>(inicial.personalizado)
@@ -132,7 +138,8 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
   const mostrarCenario = (c: Cenario) => {
     if (!cenario) antesDaSim.current = { periodo, personalizado, filtros }
     try { localStorage.setItem(CHAVE_SIM, JSON.stringify(c)); sessionStorage.setItem(`${CHAVE_SIM}.ligado`, '1') } catch { /* sem armazenamento */ }
-    setCenario(c); setEditando(false); setPeriodo(periodoDoCenario(c)); setPersonalizado(null); setFiltros({}); setDatasAbertas(false)
+    const pc = periodoDoCenario(c)
+    setCenario(c); setEditando(false); setPeriodo(pc.periodo); setPersonalizado(pc.personalizado); setFiltros({}); setDatasAbertas(false)
   }
   const sairDaSimulacao = () => {
     try { sessionStorage.removeItem(`${CHAVE_SIM}.ligado`) } catch { /* sem armazenamento */ }
@@ -514,7 +521,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
 
       {sim ? <p className="rel-fonte"><b>Relatório simulado.</b> Números preenchidos pela equipe da {MARCA.prosa} para as aulas, para mostrar cenários de gerenciamento. Não são operações reais, não foram gravados e não entram em nenhuma cobrança.</p> : <p className="rel-fonte">Números das operações feitas pela {MARCA.prosa}, como a corretora registrou cada contrato. Depósitos, saques e saldo vêm ao vivo da corretora. Valores em dólar. Resultados passados não garantem resultados futuros.</p>}
 
-      {editando && podeSimular && <EditorDoCenario inicial={cenario ?? lerCenario(CHAVE_SIM) ?? structuredClone(CENARIOS_PRONTOS[0].cenario)} aoMostrar={mostrarCenario} aoFechar={() => setEditando(false)} />}
+      {editando && podeSimular && <EditorDoCenario inicial={cenario ?? lerCenario(CHAVE_SIM) ?? cenariosProntos()[0].cenario} aoMostrar={mostrarCenario} aoFechar={() => setEditando(false)} />}
       {painelAberto && rel && <PainelDeFiltros rel={rel} filtros={filtros} moeda={moeda} aoAplicar={(f) => { setFiltros(f); setPainelAberto(false) }} aoFechar={() => setPainelAberto(false)} />}
     </div>
   )

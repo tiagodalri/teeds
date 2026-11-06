@@ -462,3 +462,66 @@ body.rel-painel-aberto { overflow: hidden; }
   .rgr text { font-size: 10.5px; }
   .rgr-dica { top: 22px; }
 }
+
+/* o editor em passos (06/11/2026, 2ª versão: uma pergunta por vez) */
+.rsim-cab { display: grid; gap: 2px; }
+.rsim-cab small { font-size: 12px; font-weight: 600; color: var(--muted); }
+.rsim-passos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 10px 20px 12px; border-bottom: 1px solid var(--border); }
+.rsim-passos button { display: grid; justify-items: center; gap: 5px; padding: 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: 11.5px; font-weight: 650; cursor: pointer; min-width: 0; }
+.rsim-passos button i { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--border); font-style: normal; font-size: 12px; font-weight: 800; background: var(--bg); }
+.rsim-passos button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rsim-passos button.feito i { border-color: var(--rel-ouro); color: var(--rel-ouro); }
+.rsim-passos button.on { color: var(--text); }
+.rsim-passos button.on i { border-color: var(--rel-ouro); background: var(--rel-ouro); color: #051528; }
+.rsim-passos button:disabled { opacity: .45; cursor: default; }
+.rsim-passo { display: grid; gap: 16px; padding: 18px 0 8px; }
+.rsim-passo h3 { margin: 0; font-size: 19px; letter-spacing: -.01em; }
+.rsim-sub { margin: -10px 0 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.rsim-opcoes { display: grid; gap: 8px; }
+.rsim-opcoes.dois { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rsim-opcoes button { display: grid; gap: 3px; min-height: 64px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.rsim-opcoes button b { font-size: 14px; }
+.rsim-opcoes button small { font-size: 12px; color: var(--muted); }
+.rsim-opcoes button.on { border-color: var(--rel-ouro); background: color-mix(in srgb, var(--rel-ouro) 13%, var(--bg)); box-shadow: inset 0 0 0 1px var(--rel-ouro); }
+.rsim-ok { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.rsim-ok b.sobe, .rsim-soma b.sobe { color: var(--up); } .rsim-ok b.cai { color: var(--down); }
+.rsim-modelos { display: grid; gap: 10px; margin-top: 6px; padding-top: 16px; border-top: 1px solid var(--border); }
+.rsim-modelos > span { font-size: 12.5px; font-weight: 650; color: var(--muted); }
+.rsim-sinal button { min-height: 44px; font-size: 14px; }
+.rsim-sinal button.on.ganho { color: var(--up); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--up) 70%, transparent); background: color-mix(in srgb, var(--up) 11%, var(--surface)); }
+.rsim-sinal button.on.perda { color: var(--down); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--down) 70%, transparent); background: color-mix(in srgb, var(--down) 11%, var(--surface)); }
+.rsim-campo.grande input { min-height: 54px; font-size: 22px; font-weight: 700; font-family: var(--rel-dados); }
+.rsim-grande-numero { margin-top: -6px; font-family: var(--rel-dados); font-size: clamp(28px, 7vw, 38px); font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+.rsim-grande-numero.sobe { color: var(--up); } .rsim-grande-numero.cai { color: var(--down); }
+.rsim-ia { min-height: 44px !important; }
+.rsim-ia.on { border-color: var(--rel-ouro) !important; box-shadow: inset 0 0 0 1px var(--rel-ouro); }
+.rsim-cartao-nome { font-size: 15px; }
+.rsim-soma { margin: 0; padding: 10px 12px; border-radius: 10px; font-size: 13px; font-weight: 650; background: color-mix(in srgb, var(--up) 9%, transparent); color: var(--text); }
+.rsim-soma.falta { background: color-mix(in srgb, var(--down) 10%, transparent); color: var(--down); }
+.rsim-dica { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+.rsim-fixo { min-height: 42px; padding: 0 11px; font-family: var(--rel-dados); font-size: 15px; color: var(--muted); background: color-mix(in srgb, var(--muted) 6%, var(--bg)); }
+.rsim-duas > div:empty { display: none; }
+.rsim-previa { display: grid; gap: 10px; padding: 14px; border: 1px solid color-mix(in srgb, var(--rel-ouro) 45%, var(--border)); border-radius: 12px; background: color-mix(in srgb, var(--rel-ouro) 6%, var(--bg)); }
+.rsim-previa.com-aviso { border-color: color-mix(in srgb, #FB923C 70%, var(--border)); }
+.rsim-previa h4 { margin: 0; font-size: 13.5px; }
+.rsim-previa dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px; margin: 0; }
+.rsim-previa dt { font-size: 11.5px; font-weight: 650; color: var(--muted); }
+.rsim-previa dd { margin: 2px 0 0; font-family: var(--rel-dados); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rsim-previa dd.sobe { color: var(--up); } .rsim-previa dd.cai { color: var(--down); }
+.rsim-previa > small { font-size: 12px; color: var(--muted); }
+.rsim-previa-aviso { margin: 0; padding: 9px 11px; border-radius: 9px; background: color-mix(in srgb, #FB923C 13%, transparent); color: var(--text); font-size: 12.5px; line-height: 1.45; }
+.rsim-painel > footer { flex-wrap: wrap; }
+.rsim-passo .rsim-duas { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 12px; }
+.rsim-passo .rsim-cartao .rsim-duas { align-items: end; }
+.rsim-falha { flex-basis: 100%; font-size: 12.5px; font-weight: 650; color: var(--down); }
+@media (max-width: 600px) {
+  .rsim-passos { padding: 8px 14px 10px; }
+  .rsim-passos button span { font-size: 10.5px; }
+  .rsim-previa dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rsim-opcoes.dois { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .rsim-passo .rsim-duas { grid-template-columns: minmax(0, 1fr); }
+}
+/* a gaveta do simulado tem 4 linhas: topo, passos, conteúdo, rodapé */
+.rel-painel.rsim-painel { grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.rsim-painel .rsim-entrada input:focus-visible, .rsim-painel .rsim-entrada select:focus-visible { outline: none; }
+.rsim-entrada:focus-within { border-color: var(--rel-ouro); box-shadow: 0 0 0 2px color-mix(in srgb, var(--rel-ouro) 35%, transparent); }
