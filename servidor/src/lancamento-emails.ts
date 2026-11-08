@@ -127,13 +127,13 @@ const ETAPAS: Etapa[] = [
   },
   {
     id: 'nao-ficou',
-    // depois da liberação, para quem continua esperando (até 2 dias depois)
+    // depois do botão "Liberar acesso geral", para quem continua esperando (até 2 dias depois)
     aberta: (agora, _p, liberadoEm) => liberadoEm !== null && agora >= liberadoEm + 10 * 6e4 && agora < liberadoEm + 48 * h,
     montar: (marca, p) => ({
       assunto: 'A live de lançamento terminou',
       titulo: 'A live terminou',
-      espia: 'O acesso foi liberado para quem ficou até o fim.',
-      corpo: `${ola(p)}a live de lançamento da ${marca.prosa} terminou, e o acesso foi liberado para quem ficou até o fim. O seu ainda não foi liberado.\n\nOs próximos passos para quem não conseguiu ficar serão avisados na comunidade do WhatsApp. Fique de olho por lá.`,
+      espia: 'O acesso da turma de lançamento foi liberado. O seu ainda não.',
+      corpo: `${ola(p)}a live de lançamento da ${marca.prosa} terminou, e o acesso da turma inscrita foi liberado. O seu ainda não foi liberado.\n\nOs próximos passos serão avisados na comunidade do WhatsApp. Fique de olho por lá.`,
       comunidade: true,
     }),
   },
@@ -200,7 +200,7 @@ export async function enviarEmailsDoLancamento(agora = Date.now()) {
   if (rodando || agora < Date.UTC(2026, 10, 2) || agora > INICIO_DA_LIVE + 4 * 864e5) return
   rodando = true
   try {
-    // 20h30 de 09/11: todos os inscritos viram GF Member (Tiago, 03/11/2026); a live fecha sozinha 3 h depois
+    // a live fecha sozinha 3 h depois; desde 08/11/2026 ninguém é liberado aqui: quem libera é o botão "Liberar acesso geral" (Clientes)
     if (agora >= INICIO_DA_LIVE + 0.5 * h) await banco('/rest/v1/rpc/teeds_lancamento_fechar_sozinha', 'POST', { p_marca: MARCA }).catch(() => undefined)
 
     const marca = marcaPorId(MARCA)
