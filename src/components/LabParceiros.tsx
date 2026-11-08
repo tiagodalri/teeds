@@ -18,9 +18,16 @@ export default function LabParceiros() {
   const api: ApiParceiros = {
     relatorio: async () => { await new Promise((r) => setTimeout(r, 400)); if (erro) throw new Error('Só o admin geral vê o relatório por parceiro.'); return linhas },
     trocar: async () => { await new Promise((r) => setTimeout(r, 400)); return null },
-    pixel: async () => (new URLSearchParams(location.search).has('chave')
-      ? { temChave: true, chaveEm: new Date(Date.now() - 864e5).toISOString(), enviados: 37, semChave: 0, ultimoEnvio: new Date(Date.now() - 600e3).toISOString(), ultimoErro: null }
-      : { temChave: false, chaveEm: null, enviados: 0, semChave: 12, ultimoEnvio: null, ultimoErro: null }),
+    // &chave=1: Naor com chave própria e envios; Victor usando a chave da conta, ainda sem envio. &chave=erro: Meta recusou.
+    pixel: async (_s, codigo) => {
+      const q = new URLSearchParams(location.search).get('chave')
+      if (q === null) return { temChave: false, origemChave: null, chaveEm: null, enviados: 0, semChave: 12, ultimoEnvio: null, ultimoErro: null }
+      const base = { temChave: true, chaveEm: new Date(Date.now() - 864e5).toISOString(), semChave: 0 }
+      if (q === 'erro') return { ...base, origemChave: 'propria' as const, enviados: 3, ultimoEnvio: new Date(Date.now() - 7200e3).toISOString(), ultimoErro: { em: new Date(Date.now() - 600e3).toISOString(), detalhe: 'Invalid OAuth access token' } }
+      return codigo === 'v'
+        ? { ...base, origemChave: 'conta' as const, enviados: 0, ultimoEnvio: null, ultimoErro: null }
+        : { ...base, origemChave: 'propria' as const, enviados: 607, ultimoEnvio: new Date(Date.now() - 600e3).toISOString(), ultimoErro: null }
+    },
     salvarChave: async (_s, _p, chave) => { await new Promise((r) => setTimeout(r, 400)); if (chave && !/^EA/.test(chave)) throw new Error('Essa não parece a chave da Meta. Ela começa com EA e é bem comprida: copie de novo no Gerenciador de Eventos.'); return null },
   }
   const sessao = { token: 'lab', usuario: { id: 'lab' } } as unknown as SessaoTeeds

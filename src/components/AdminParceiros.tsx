@@ -47,6 +47,7 @@ function PixelDaMeta({ sessao, marca, codigo, nome, api }: { sessao: SessaoTeeds
   const [chave, setChave] = useState('')
   const [estado, setEstado] = useState<{ salvando: boolean; erro: string | null; ok: string | null }>({ salvando: false, erro: null, ok: null })
   const [rodada, setRodada] = useState(0)
+  const [trocando, setTrocando] = useState(false)
   useEffect(() => {
     if (!id) return
     let vivo = true
@@ -58,35 +59,57 @@ function PixelDaMeta({ sessao, marca, codigo, nome, api }: { sessao: SessaoTeeds
     setEstado({ salvando: true, erro: null, ok: null })
     try {
       await api.salvarChave(sessao, codigo, valor, marca)
-      setChave(''); setEstado({ salvando: false, erro: null, ok: valor ? 'Chave salva. Os próximos cadastros já vão pelo servidor também.' : 'Chave removida.' }); setRodada((n) => n + 1)
+      setChave(''); setTrocando(false); setEstado({ salvando: false, erro: null, ok: valor ? 'Chave salva. Os próximos cadastros já vão pelo servidor também.' : 'Chave removida.' }); setRodada((n) => n + 1)
     } catch (e) { setEstado({ salvando: false, erro: (e as Error).message, ok: null }) }
   }
   const primeiro = nome.split(' ')[0]
+  // 08/11/2026, Tiago: "se fica esse campo pra preencher a chave eu acho que tem algo pendente". Com a chave ligada,
+  // o cartão diz "Tudo certo", conta de onde vem a chave e esconde o campo atrás de "Trocar chave".
+  const comErro = !!(sit?.temChave && sit.ultimoErro && (!sit.ultimoEnvio || sit.ultimoErro.em > sit.ultimoEnvio))
+  const selo = !sit ? null : !sit.temChave ? { classe: 'falta', texto: 'Falta a chave' } : comErro ? { classe: 'erro', texto: 'Erro no envio' } : { classe: 'ok', texto: 'Tudo certo' }
+  const mostrarCampo = !sit?.temChave || trocando
+  const hora = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  const deOnde = sit?.origemChave === 'conta'
+    ? `Usa a chave da conta de anúncios do ${primeiro} (a mesma de Administração › Anúncios), que tem acesso a este pixel. Não precisa de outra.`
+    : 'Usa a chave da API de Conversões deste pixel.'
+  const envios = !sit ? '' : sit.enviados > 0
+    ? `${sit.enviados.toLocaleString('pt-BR')} ${sit.enviados === 1 ? 'cadastro enviado' : 'cadastros enviados'} à Meta em 7 dias${sit.ultimoEnvio ? `, o último às ${hora(sit.ultimoEnvio)}` : ''}.`
+    : `Pronto: o próximo cadastro do /${codigo} já vai à Meta pelo servidor.`
   return (
     <div className="ap-pixel">
-      <header><h3>Pixel da Meta do {primeiro}</h3><small>{id}</small></header>
+      <header>
+        <h3>Pixel da Meta do {primeiro}</h3>
+        <span className="ap-pixel-topo">
+          {selo && <em className={`ap-selo ${selo.classe}`}>{selo.texto}</em>}
+          <small>{id}</small>
+        </span>
+      </header>
       <ul className="ap-pixel-itens">
         <li className="ok"><b>No site</b><span>Ligado em todas as páginas do /{codigo}: visita, formulário, cadastro, inscrição, cada passo do obrigado e a plataforma.</span></li>
-        <li className={sit?.temChave ? 'ok' : 'falta'}>
+        <li className={!sit ? '' : comErro ? 'erro' : sit.temChave ? 'ok' : 'falta'}>
           <b>Pelo servidor</b>
           <span>{!sit ? 'Conferindo…' : sit.temChave
-            ? `Ligado desde ${quando(sit.chaveEm!)} · ${sit.enviados.toLocaleString('pt-BR')} ${sit.enviados === 1 ? 'conversão enviada' : 'conversões enviadas'} em 7 dias${sit.ultimoEnvio ? ` · última às ${new Date(sit.ultimoEnvio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}`
+            ? <>Ligado desde {quando(sit.chaveEm!)}. {envios}<small>{deOnde}</small></>
             : `Falta a chave do ${primeiro}. Até ela chegar, os cadastros contam só pelo navegador${sit.semChave ? ` (${sit.semChave.toLocaleString('pt-BR')} em 7 dias)` : ''}.`}</span>
         </li>
       </ul>
-      {sit?.temChave && sit.ultimoErro && (!sit.ultimoEnvio || sit.ultimoErro.em > sit.ultimoEnvio) && <div className="ap-erro">A Meta recusou o último envio ({quando(sit.ultimoErro.em)}): {sit.ultimoErro.detalhe ?? 'sem detalhe'}. Confira a chave.</div>}
-      <form className="ap-pixel-chave" onSubmit={(e) => { e.preventDefault(); if (chave.trim()) void salvar(chave) }}>
-        <label htmlFor={`ap-pixel-${codigo}`}>Chave da API de Conversões</label>
-        <div>
-          <input id={`ap-pixel-${codigo}`} type="password" autoComplete="off" spellCheck={false} value={chave} onChange={(e) => setChave(e.target.value)}
-            placeholder={sit?.temChave ? 'Chave salva. Cole outra para trocar' : 'Cole a chave que começa com EA'} />
-          <button type="submit" className="principal" disabled={estado.salvando || !chave.trim()}>{estado.salvando ? 'Salvando…' : 'Salvar chave'}</button>
-          {sit?.temChave && <button type="button" disabled={estado.salvando} onClick={() => void salvar('')}>Remover</button>}
-        </div>
-      </form>
+      {comErro && <div className="ap-erro">A Meta recusou o último envio ({quando(sit!.ultimoErro!.em)}): {sit!.ultimoErro!.detalhe ?? 'sem detalhe'}. Confira a chave.</div>}
+      {sit?.temChave && !trocando && <div className="ap-pixel-acoes"><button type="button" className="ap-trocar" onClick={() => { setTrocando(true); setEstado({ salvando: false, erro: null, ok: null }) }}>Trocar chave</button></div>}
+      {mostrarCampo && sit && <>
+        <form className="ap-pixel-chave" onSubmit={(e) => { e.preventDefault(); if (chave.trim()) void salvar(chave) }}>
+          <label htmlFor={`ap-pixel-${codigo}`}>{sit.temChave ? 'Nova chave da API de Conversões' : 'Chave da API de Conversões'}</label>
+          <div>
+            <input id={`ap-pixel-${codigo}`} type="password" autoComplete="off" spellCheck={false} value={chave} onChange={(e) => setChave(e.target.value)}
+              placeholder="Cole a chave que começa com EA" autoFocus={trocando} />
+            <button type="submit" className="principal" disabled={estado.salvando || !chave.trim()}>{estado.salvando ? 'Salvando…' : 'Salvar chave'}</button>
+            {sit.origemChave === 'propria' && <button type="button" disabled={estado.salvando} onClick={() => void salvar('')}>Remover</button>}
+            {trocando && <button type="button" disabled={estado.salvando} onClick={() => { setTrocando(false); setChave('') }}>Cancelar</button>}
+          </div>
+        </form>
+        <p className="ap-nota">Onde o {primeiro} pega a chave: Gerenciador de Eventos › o pixel acima › Configurações › API de Conversões › Gerar token de acesso. A chave fica guardada no servidor e não aparece de novo nem para quem salvou.</p>
+      </>}
       {estado.erro && <div className="ap-erro">{estado.erro}</div>}
       {estado.ok && <p className="ap-pixel-ok">{estado.ok}</p>}
-      <p className="ap-nota">Onde o {primeiro} pega a chave: Gerenciador de Eventos › o pixel acima › Configurações › API de Conversões › Gerar token de acesso. A chave fica guardada no servidor e não aparece de novo nem para quem salvou.</p>
     </div>
   )
 }

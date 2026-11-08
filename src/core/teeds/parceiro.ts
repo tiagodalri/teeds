@@ -166,7 +166,8 @@ export const trocarParceiro = (sessao: SessaoTeeds, userId: string, codigo: stri
 /* ------------------------------------------------------------------ pixel da Meta pelo servidor (02/11/2026) */
 
 /** Envio do pixel pela API de Conversões (supabase/functions/meta-conversoes). A chave nunca volta do banco. */
-export interface SituacaoDoPixel { temChave: boolean; chaveEm: string | null; enviados: number; semChave: number; ultimoEnvio: string | null; ultimoErro: { em: string; detalhe: string | null } | null }
+/** origemChave (08/11/2026): 'propria' = chave do Gerenciador de Eventos; 'conta' = a mesma de Administração › Anúncios. */
+export interface SituacaoDoPixel { temChave: boolean; origemChave?: 'propria' | 'conta' | null; chaveEm: string | null; enviados: number; semChave: number; ultimoEnvio: string | null; ultimoErro: { em: string; detalhe: string | null } | null }
 export const situacaoDoPixel = (sessao: SessaoTeeds, parceiro: string, marca: string = MARCA.id) =>
   rpc<SituacaoDoPixel>(sessao, 'teeds_meta_situacao', { p_marca: marca, p_parceiro: parceiro })
 /** Guarda a chave do parceiro; chave vazia apaga. */
