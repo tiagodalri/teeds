@@ -36,6 +36,32 @@ const segredoBanco = () => process.env.SUPABASE_SECRET || process.env.SUPABASE_S
 export const segredoDoGancho = () => process.env.CAKTO_WEBHOOK_SECRET ?? ''
 
 /**
+ * Cada conta da Cakto que vende a GlobalFly tem o seu webhook, e cada webhook o
+ * seu segredo (08/11/2026): a do Victor em CAKTO_WEBHOOK_SECRET e a do Naor em
+ * CAKTO_WEBHOOK_SECRET_NAOR. O aviso vale se bater com qualquer um deles.
+ */
+export function segredosDoGancho(): { conta: string; segredo: string }[] {
+  return [
+    { conta: 'victor', segredo: process.env.CAKTO_WEBHOOK_SECRET ?? '' },
+    { conta: 'naor', segredo: process.env.CAKTO_WEBHOOK_SECRET_NAOR ?? '' },
+  ].filter((c) => c.segredo)
+}
+
+/**
+ * De qual conta veio o aviso: a assinatura do cabeçalho ou, na falta dela, o
+ * `secret` do corpo tem de bater com o segredo de alguma conta. null = nenhuma.
+ */
+export function contaDoAviso(corpoCru: string, assinatura: string, timestamp: string, segredoNoCorpo: string | null): string | null {
+  for (const c of segredosDoGancho()) {
+    if (assinaturaConfere(corpoCru, assinatura, timestamp, c.segredo)) return c.conta
+  }
+  for (const c of segredosDoGancho()) {
+    if (segredoNoCorpo && segredoNoCorpo === c.segredo) return c.conta
+  }
+  return null
+}
+
+/**
  * De qual produto da Cakto é cada robô. Os ids são os UUID dos produtos
  * criados na conta (23/10/2026). Vêm do ambiente para não prender o código a
  * uma conta; sem o ambiente, caem nos ids criados nesta conta.

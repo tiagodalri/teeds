@@ -38,7 +38,7 @@ import { ligarColetorDeExtrato } from './extrato'
 import { ligarSincronizadorDeComissoes } from './comissoes'
 import { ligarFaxinaDoEspelho } from './espelho'
 import { aplicarNoBanco, assinaturaConfere, ehOSimulador, lerAviso, tokenDoGancho } from './kiwify'
-import { aplicarNoBanco as aplicarNoBancoCakto, assinaturaConfere as assinaturaCakto, lerAviso as lerAvisoCakto, produtoDaCaktoNoBanco, segredoDoGancho } from './cakto'
+import { aplicarNoBanco as aplicarNoBancoCakto, contaDoAviso, lerAviso as lerAvisoCakto, produtoDaCaktoNoBanco, segredosDoGancho } from './cakto'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -503,8 +503,8 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
   if (url.pathname === '/cakto/compra') {
     const tipo = { 'content-type': 'application/json; charset=utf-8' }
     if (req.method !== 'POST') { res.writeHead(405, tipo); return res.end(JSON.stringify({ erro: 'use POST' })) }
-    if (!segredoDoGancho()) {
-      console.error('[cakto] chegou aviso e o servidor não tem CAKTO_WEBHOOK_SECRET — nada foi aplicado')
+    if (!segredosDoGancho().length) {
+      console.error('[cakto] chegou aviso e o servidor não tem CAKTO_WEBHOOK_SECRET(_NAOR) — nada foi aplicado')
       res.writeHead(503, tipo); return res.end(JSON.stringify({ erro: 'gancho não configurado' }))
     }
 
@@ -522,9 +522,9 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
     try { aviso = lerAvisoCakto(JSON.parse(cru)) } catch { /* corpo que não é JSON cai no mesmo lugar */ }
 
     // Assinatura pelo cabeçalho; sem ela, aceita só se o `secret` do corpo bate.
-    const porCabecalho = assinaturaCakto(cru, assinatura, timestamp)
-    const porCorpo = !!aviso?.segredoNoCorpo && aviso.segredoNoCorpo === segredoDoGancho()
-    if (!porCabecalho && !porCorpo) {
+    // Vale o segredo de qualquer conta da Cakto que vende a GF (Victor, Naor).
+    const conta = contaDoAviso(cru, assinatura, timestamp, aviso?.segredoNoCorpo ?? null)
+    if (!conta) {
       console.warn('[cakto] assinatura não confere — aviso descartado')
       res.writeHead(401, tipo); return res.end(JSON.stringify({ erro: 'assinatura inválida' }))
     }
@@ -544,7 +544,7 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
       const quem = aviso.email.replace(/(.{2}).*(@.*)/, '$1***$2')
       if (r.repetido) console.log(`[cakto] ${aviso.pedido}/${aviso.evento} já tinha sido aplicado — nada a fazer`)
       else if (r.achou === false) console.warn(`[cakto] ${aviso.pedido}: ${quem} pagou e NÃO tem cadastro na GlobalFly — liberar à mão`)
-      else console.log(`[cakto] ${aviso.pedido}/${aviso.evento}: ${r.acao} ${r.produto} para ${quem}`)
+      else console.log(`[cakto:${conta}] ${aviso.pedido}/${aviso.evento}: ${r.acao} ${r.produto} para ${quem}`)
       res.writeHead(200, tipo); return res.end(JSON.stringify({ ok: true, ...r }))
     } catch (e) {
       console.error(`[cakto] ${aviso.pedido}: não consegui aplicar — ${(e as Error).message}`)
