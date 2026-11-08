@@ -525,3 +525,19 @@ body.rel-painel-aberto { overflow: hidden; }
 .rel-painel.rsim-painel { grid-template-rows: auto auto minmax(0, 1fr) auto; }
 .rsim-painel .rsim-entrada input:focus-visible, .rsim-painel .rsim-entrada select:focus-visible { outline: none; }
 .rsim-entrada:focus-within { border-color: var(--rel-ouro); box-shadow: 0 0 0 2px color-mix(in srgb, var(--rel-ouro) 35%, transparent); }
+/* a escada do gale e o quadro de risco (08/11/2026) */
+.rsim-escada { display: flex; flex-wrap: wrap; gap: 6px; }
+.rsim-escada span { display: grid; gap: 1px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); min-width: 0; }
+.rsim-escada small { font-size: 10.5px; font-weight: 650; color: var(--muted); }
+.rsim-escada b { font-family: var(--rel-dados); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.rsim-escada span.usada { border-color: color-mix(in srgb, var(--down) 50%, var(--border)); background: color-mix(in srgb, var(--down) 8%, var(--bg)); }
+.rsim-risco { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; padding: 13px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.rsim-risco.alto { border-color: color-mix(in srgb, #FB923C 65%, var(--border)); background: color-mix(in srgb, #FB923C 8%, var(--bg)); }
+.rsim-risco > div { display: grid; gap: 3px; min-width: 0; }
+.rsim-risco small { font-size: 11.5px; font-weight: 650; color: var(--muted); }
+.rsim-risco b { font-family: var(--rel-dados); font-size: 20px; font-variant-numeric: tabular-nums; }
+.rsim-risco b.cai { color: var(--down); }
+.rsim-risco p { grid-column: 1 / -1; margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.rsim-previa-acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+.rsim-previa-acoes .rel-btn { min-height: 40px; padding: 0 14px; font-size: 13px; flex: 1 1 auto; }
+@media (max-width: 600px) { .rsim-risco b { font-size: 17px; } }

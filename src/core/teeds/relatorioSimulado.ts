@@ -36,7 +36,7 @@ export type PeriodoSimulado = { tipo: 'dia'; data: string } | { tipo: 'ultimos';
 export type Momento = 'comeco' | 'meio' | 'fim'
 export interface LinhaDeIa { ia: string; operacoes: number; resultado: number }
 export interface Cenario {
-  versao: 2
+  versao: 3
   /** O nome que aparece na faixa do relatório simulado. */
   nome: string
   periodo: PeriodoSimulado
@@ -48,16 +48,19 @@ export interface Cenario {
   ias: LinhaDeIa[]
   /** Divide operações e resultado entre as I.A. sozinho (proporcional). */
   dividirSozinho: boolean
-  /** A entrada de sempre. */
+  /** A entrada inicial (o nível 0 do gale). */
   entrada: number
-  /** A maior entrada do período (a exposição de risco); vem no fim da pior sequência. */
-  maiorEntrada: number
+  /** Quanto o ganho paga sobre a entrada, em % (95 = ganha US$ 0,95 a cada US$ 1). */
+  payout: number
+  /** Martingale: depois de cada perda a entrada é a anterior × multiplicador, até `gales` vezes; ganhou, volta à inicial. */
+  gale: boolean
+  multiplicador: number
+  /** Até quantos gales. Perdeu no último, aceita a perda e volta à entrada inicial. */
+  gales: number
   /** A maior sequência de perdas seguidas. */
   sequencia: number
   iaDaSequencia: string
   momento: Momento
-  /** O maior ganho numa operação; null = o gerador escolhe. */
-  maiorGanho: number | null
   /** O horário em que operou (até = a hora inteira, até :59). */
   horaDe: number
   horaAte: number
@@ -94,6 +97,23 @@ function repartir(total: number, pesos: number[]): number[] {
 }
 
 /** As I.A. com operações e resultado (divididos sozinhos, se for o caso). */
+/**
+ * A escada do martingale: a entrada de cada nível (0 = a inicial, 1 = 1º gale…),
+ * cada uma = a anterior × multiplicador, arredondada a centavos como a Deriv exige.
+ */
+export function escadaDoGale(c: Pick<Cenario, 'entrada' | 'gale' | 'multiplicador' | 'gales'>): number[] {
+  const E = Math.max(0.35, r2(c.entrada || 1))
+  const G = c.gale ? Math.max(0, Math.min(15, Math.round(c.gales))) : 0
+  const m = Math.max(1, c.multiplicador || 1)
+  const escada = [E]
+  for (let k = 1; k <= G; k++) escada.push(Math.max(0.35, r2(escada[k - 1] * m)))
+  return escada
+}
+/** A entrada de cada perda de uma sequência de `n` perdas (perdeu no último gale, volta à inicial). */
+export const entradasDaSequencia = (escada: number[], n: number) => Array.from({ length: Math.max(0, n) }, (_, j) => escada[j % escada.length])
+/** A maior entrada que o relatório vai mostrar: o degrau mais alto que a pior sequência alcança. */
+export const maiorEntradaDoCenario = (c: Cenario) => Math.max(...entradasDaSequencia(escadaDoGale(c), Math.max(1, Math.round(c.sequencia))))
+
 export function iasDoCenario(c: Cenario): LinhaDeIa[] {
   if (!c.dividirSozinho || c.ias.length <= 1) {
     if (c.ias.length === 1) return [{ ia: c.ias[0].ia, operacoes: Math.round(c.operacoes), resultado: r2(c.resultado) }]
@@ -101,9 +121,9 @@ export function iasDoCenario(c: Cenario): LinhaDeIa[] {
   }
   const ops = repartir(Math.round(c.operacoes), c.ias.map(() => 1))
   // a I.A. da pior sequência carrega o que as entradas maiores perderam; o resto é proporcional às operações
-  const S = Math.max(0, Math.round(c.sequencia)), E = Math.max(0.35, c.entrada || 1), Emax = Math.max(E, c.maiorEntrada || E)
-  let extra = 0
-  if (S > 0 && Emax > E) for (let j = 0; j < S; j++) extra += (S === 1 ? Emax : E * (Emax / E) ** (j / (S - 1))) - E
+  const escada = escadaDoGale(c)
+  const S = Math.max(0, Math.round(c.sequencia))
+  let extra = entradasDaSequencia(escada, S).reduce((s, e) => s + e - escada[0], 0)
   if (c.resultado >= 0 || extra > Math.abs(c.resultado)) extra = 0
   const k = Math.max(0, c.ias.findIndex((l) => l.ia === c.iaDaSequencia))
   const res = ops.map((o, i) => r2(((c.resultado + extra) * o) / Math.max(1, c.operacoes) - (i === k ? extra : 0)))
@@ -114,34 +134,34 @@ export function iasDoCenario(c: Cenario): LinhaDeIa[] {
 /* ------------------------------------------------------- cenários prontos */
 
 const base = (p: Partial<Cenario>): Cenario => ({
-  versao: 2, nome: 'Meu cenário', periodo: { tipo: 'dia', data: hojeIso() }, resultado: 10, operacoes: 30, acerto: 63,
-  ias: [{ ia: 'goreme', operacoes: 30, resultado: 10 }], dividirSozinho: true, entrada: 1, maiorEntrada: 1, sequencia: 3, iaDaSequencia: 'goreme', momento: 'meio',
-  maiorGanho: null, horaDe: 9, horaAte: 17, saldo: 1000, depositos: 0, saques: 0, ...p,
+  versao: 3, nome: 'Meu cenário', periodo: { tipo: 'dia', data: hojeIso() }, resultado: 10, operacoes: 30, acerto: 63,
+  ias: [{ ia: 'goreme', operacoes: 30, resultado: 10 }], dividirSozinho: true, entrada: 1, payout: 95, gale: false, multiplicador: 2.1, gales: 2,
+  sequencia: 3, iaDaSequencia: 'goreme', momento: 'meio', horaDe: 9, horaAte: 17, saldo: 1000, depositos: 0, saques: 0, ...p,
 })
 export function cenariosProntos(): Array<{ id: string; tom: 'sobe' | 'cai' | 'neutro'; cenario: Cenario }> {
   const hoje = hojeIso()
   return [
     { id: 'respeitou', tom: 'sobe', cenario: base({
-      nome: 'Respeitou o gerenciamento', periodo: { tipo: 'ultimos', dias: 30 }, resultado: 146.9, operacoes: 680, acerto: 62, horaDe: 9, horaAte: 17,
-      ias: [{ ia: 'goreme', operacoes: 420, resultado: 96.8 }, { ia: 'falcon', operacoes: 260, resultado: 50.1 }], dividirSozinho: false,
-      entrada: 1, maiorEntrada: 1, sequencia: 5, iaDaSequencia: 'falcon', momento: 'meio', saldo: 1284.6, depositos: 1000, saques: 150 }) },
+      nome: 'Respeitou o gerenciamento', periodo: { tipo: 'ultimos', dias: 30 }, resultado: 142.9, operacoes: 680, acerto: 62, horaDe: 9, horaAte: 17,
+      ias: [{ ia: 'goreme', operacoes: 420, resultado: 88.95 }, { ia: 'falcon', operacoes: 260, resultado: 53.95 }], dividirSozinho: false,
+      entrada: 1, sequencia: 5, iaDaSequencia: 'falcon', momento: 'meio', saldo: 1284.6, depositos: 1000, saques: 150 }) },
     { id: 'meta', tom: 'sobe', cenario: base({
-      nome: 'Dia de meta', periodo: { tipo: 'dia', data: hoje }, resultado: 11, operacoes: 30, acerto: 70, horaDe: 9, horaAte: 9,
-      ias: [{ ia: 'goreme', operacoes: 18, resultado: 7.4 }, { ia: 'falcon', operacoes: 12, resultado: 3.6 }], dividirSozinho: false,
-      entrada: 1, maiorEntrada: 1, sequencia: 2, iaDaSequencia: 'falcon', momento: 'meio', saldo: 1011 }) },
+      nome: 'Dia de meta', periodo: { tipo: 'dia', data: hoje }, resultado: 10.95, operacoes: 30, acerto: 70, horaDe: 9, horaAte: 9,
+      ias: [{ ia: 'goreme', operacoes: 18, resultado: 7.35 }, { ia: 'falcon', operacoes: 12, resultado: 3.6 }], dividirSozinho: false,
+      entrada: 1, sequencia: 2, iaDaSequencia: 'falcon', momento: 'meio', saldo: 1011 }) },
     { id: 'stop', tom: 'neutro', cenario: base({
       nome: 'Dia de stop, respeitado', periodo: { tipo: 'dia', data: hoje }, resultado: -6.5, operacoes: 26, acerto: 38, horaDe: 9, horaAte: 10,
       ias: [{ ia: 'goreme', operacoes: 16, resultado: -4.3 }, { ia: 'falcon', operacoes: 10, resultado: -2.2 }], dividirSozinho: false,
-      entrada: 1, maiorEntrada: 1, sequencia: 4, iaDaSequencia: 'falcon', momento: 'fim', saldo: 993.5 }) },
+      entrada: 1, sequencia: 4, iaDaSequencia: 'falcon', momento: 'fim', saldo: 993.5 }) },
     { id: 'nao-respeitou', tom: 'cai', cenario: base({
-      nome: 'Não respeitou o gerenciamento', periodo: { tipo: 'dia', data: hoje }, resultado: -1000, operacoes: 120, acerto: 52, horaDe: 9, horaAte: 23,
-      ias: [{ ia: 'goreme', operacoes: 80, resultado: -700 }, { ia: 'falcon', operacoes: 40, resultado: -300 }], dividirSozinho: false,
-      entrada: 5, maiorEntrada: 320, sequencia: 7, iaDaSequencia: 'goreme', momento: 'fim', saldo: 812.4 }) },
+      nome: 'Não respeitou o gerenciamento', periodo: { tipo: 'dia', data: hoje }, resultado: -1552.94, operacoes: 120, acerto: 52, horaDe: 9, horaAte: 23,
+      ias: [{ ia: 'goreme', operacoes: 80, resultado: -1268.31 }, { ia: 'falcon', operacoes: 40, resultado: -284.63 }], dividirSozinho: false,
+      entrada: 2, gale: true, multiplicador: 2.1, gales: 8, sequencia: 9, iaDaSequencia: 'goreme', momento: 'fim', saldo: 812.4 }) },
     { id: 'devolveu', tom: 'cai', cenario: base({
-      // sobe uns US$ 26 com entrada de 1 e devolve tudo numa sequência de 7 perdas dobrando até 64
-      nome: 'Bateu a meta e devolveu', periodo: { tipo: 'dia', data: hoje }, resultado: -101, operacoes: 90, acerto: 62, horaDe: 9, horaAte: 19,
-      ias: [{ ia: 'goreme', operacoes: 60, resultado: -108 }, { ia: 'falcon', operacoes: 30, resultado: 7 }], dividirSozinho: false,
-      entrada: 1, maiorEntrada: 64, sequencia: 7, iaDaSequencia: 'goreme', momento: 'fim', saldo: 899 }) },
+      // sobe com o gale recuperando e devolve tudo numa sequência de 7 perdas com gale até o 6º
+      nome: 'Bateu a meta e devolveu', periodo: { tipo: 'dia', data: hoje }, resultado: -109.42, operacoes: 90, acerto: 62, horaDe: 9, horaAte: 19,
+      ias: [{ ia: 'goreme', operacoes: 60, resultado: -120.36 }, { ia: 'falcon', operacoes: 30, resultado: 10.94 }], dividirSozinho: false,
+      entrada: 1, gale: true, multiplicador: 2.1, gales: 6, sequencia: 7, iaDaSequencia: 'goreme', momento: 'fim', saldo: 899 }) },
   ]
 }
 export const cenarioEmBranco = () => base({})
@@ -188,7 +208,7 @@ function trecho(tam: number, perdas: number, teto: number, ganhoNoInicio: boolea
   return s
 }
 
-interface Rascunho { ia: number; dia: number; ganhou: boolean; entrada: number; resultado: number; fixo: boolean; daSequencia: boolean }
+interface Rascunho { ia: number; dia: number; ganhou: boolean; entrada: number; resultado: number; daSequencia: boolean }
 
 /**
  * As operações do cenário. Fecham com o que foi respondido: resultado e
@@ -197,15 +217,14 @@ interface Rascunho { ia: number; dia: number; ganhou: boolean; entrada: number; 
  * (ex.: perder muito com entrada pequena), a prévia do editor avisa.
  */
 export function operacoesDoCenario(c: Cenario, agora = new Date()): OperacaoSimulada[] {
-  const rnd = sorteio(sementeDe(JSON.stringify(c)))
   const ias = iasDoCenario(c).filter((l) => l.operacoes > 0)
+  // o sorteio depende só da estrutura (não do resultado pedido): mudar o alvo não embaralha a tela de novo
+  const rnd = sorteio(sementeDe(JSON.stringify([c.periodo, c.operacoes, c.acerto, ias.map((l) => [l.ia, l.operacoes]), c.sequencia, c.iaDaSequencia, c.momento, c.horaDe, c.horaAte, c.entrada, c.payout, c.gale, c.multiplicador, c.gales])))
   const N = ias.reduce((s, l) => s + Math.round(l.operacoes), 0)
   if (!N) return []
   const W = Math.min(N, Math.max(0, Math.round((N * Math.min(100, Math.max(0, c.acerto))) / 100)))
   const L = N - W
   const S = L ? Math.min(L, Math.max(1, Math.round(c.sequencia || 1))) : 0
-  const E = Math.max(0.35, r2(c.entrada || 1))
-  const Emax = Math.max(E, r2(c.maiorEntrada || E))
 
   // os dias e quantas operações em cada um
   const { de, ate } = faixaDoCenario(c, agora)
@@ -266,70 +285,51 @@ export function operacoesDoCenario(c: Cenario, agora = new Date()): OperacaoSimu
     }
   }
 
-  // entradas: a de sempre; na pior sequência ela sobe até a maior entrada
-  const ops: Rascunho[] = linha.map((x, p) => {
-    const naSeq = S > 0 && p >= inicio && p < inicio + S
-    const j = p - inicio
-    const entrada = naSeq && Emax > E ? (S === 1 ? Emax : E * (Emax / E) ** (j / (S - 1))) : E
-    return { ia: x.ia, dia: x.dia, ganhou: seq[p] ?? true, entrada, resultado: 0, fixo: false, daSequencia: naSeq }
-  })
-
-  // o maior ganho: uma operação da I.A. que mais ganhou
-  if (c.maiorGanho && c.maiorGanho > 0) {
-    const melhor = ias.reduce((m, l, i) => (l.resultado / l.operacoes > ias[m].resultado / ias[m].operacoes ? i : m), 0)
-    const cands = ops.map((o, p) => (o.ia === melhor && o.ganhou && !o.daSequencia ? p : -1)).filter((p) => p >= 0)
-    if (cands.length) {
-      const o = ops[cands[Math.floor(cands.length * 0.6)]]
-      o.entrada = Math.min(Emax, Math.max(E, c.maiorGanho / 0.95)); o.resultado = r2(c.maiorGanho); o.fixo = true
+  // ---------- o gerenciamento de verdade: payout e martingale, I.A. por I.A.
+  // cada I.A. tem o seu gale: perdeu, a próxima entrada é a anterior × multiplicador; ganhou, volta à inicial;
+  // perdeu no último gale, aceita a perda e volta à inicial. Cada dia começa na entrada inicial.
+  const escada = escadaDoGale(c)
+  const G = escada.length - 1
+  const p = Math.max(0.01, (c.payout || 95) / 100)
+  const posIa: number[][] = ias.map(() => [])
+  linha.forEach((x, pos) => posIa[x.ia].push(pos))
+  const naSequencia = (pos: number) => S > 0 && pos >= inicio && pos < inicio + S
+  const entradasDe = (i: number) => {
+    const e: number[] = []
+    let nivel = 0, dia = -1
+    for (const pos of posIa[i]) {
+      if (linha[pos].dia !== dia) { dia = linha[pos].dia; nivel = 0 }
+      e.push(escada[nivel])
+      nivel = seq[pos] ? 0 : nivel >= G ? 0 : nivel + 1
     }
+    return e
   }
+  const resultadoDe = (i: number) => r2(entradasDe(i).reduce((s, e, j) => s + (seq[posIa[i][j]] ? r2(e * p) : -e), 0))
+  const maiorSerie = () => { let m = 0, a = 0; for (const g of seq) { a = g ? 0 : a + 1; if (a > m) m = a } return m }
 
-  // o retorno de cada I.A. fecha o resultado dela; se não der com as entradas, as entradas sobem (até a maior)
+  // o resultado de cada I.A. sai da ordem dos ganhos e perdas (com gale, onde caem as perdas muda tudo):
+  // troca um ganho e uma perda de lugar (fora da pior sequência, sem criar sequência maior) enquanto isso
+  // aproximar do resultado pedido. O payout não muda: cada ganho paga entrada × payout, em centavos.
   ias.forEach((l, i) => {
     const R = r2(l.resultado)
-    const minhas = ops.filter((o) => o.ia === i)
-    const perdas = minhas.filter((o) => !o.ganhou), livres = minhas.filter((o) => o.ganhou && !o.fixo)
-    const fixos = minhas.filter((o) => o.fixo).reduce((s, o) => s + o.resultado, 0)
-    const somaP = () => perdas.reduce((s, o) => s + o.entrada, 0)
-    const somaG = () => livres.reduce((s, o) => s + o.entrada, 0)
-    const subir = (l2: Rascunho[], falta: number) => {
-      const folga = l2.filter((o) => !o.daSequencia).reduce((s, o) => s + (Emax - o.entrada), 0)
-      if (folga <= 0 || falta <= 0) return falta
-      const f = Math.min(1, falta / folga)
-      for (const o of l2) if (!o.daSequencia) o.entrada += (Emax - o.entrada) * f
-      return falta - folga * f
+    let dist = Math.abs(R - resultadoDe(i))
+    const ganhos = () => posIa[i].filter((pos) => seq[pos] && !naSequencia(pos))
+    const perdas = () => posIa[i].filter((pos) => !seq[pos] && !naSequencia(pos))
+    for (let volta = 0, parado = 0; volta < 3000 && parado < 400; volta++) {
+      if (dist < 0.005) break
+      const g = ganhos(), pe = perdas()
+      if (!g.length || !pe.length) break
+      const a = g[Math.floor(rnd() * g.length)], b = pe[Math.floor(rnd() * pe.length)]
+      seq[a] = false; seq[b] = true
+      const nova = maiorSerie() <= S ? Math.abs(R - resultadoDe(i)) : Infinity
+      if (nova < dist) { dist = nova; parado = 0 } else { seq[a] = true; seq[b] = false; parado++ }
     }
-    if (!livres.length) {
-      // sem ganhos livres: as perdas pagam o resultado
-      const falta = -(R - fixos) - somaP()
-      if (falta > 0 && perdas.length) { const sobra = subir(perdas, falta); if (sobra > 0.005) { const f = (somaP() + sobra) / somaP(); perdas.forEach((o) => { o.entrada *= f }) } }
-    } else {
-      let q = (R + somaP() - fixos) / somaG()
-      if (q < 0.1 && perdas.length) {
-        subir(perdas, 0.9 * somaG() + fixos - R - somaP())
-        q = (R + somaP() - fixos) / somaG()
-        if (q < 0.05) { const f = (0.9 * somaG() + fixos - R) / somaP(); perdas.forEach((o) => { o.entrada *= f }); q = (R + somaP() - fixos) / somaG() }
-      } else if (q > 2) {
-        subir(livres, (R + somaP() - fixos) / 0.95 - somaG())
-        q = (R + somaP() - fixos) / somaG()
-      }
-      for (const o of livres) { o.entrada = r2(o.entrada); o.resultado = r2(o.entrada * q) }
-    }
-    for (const o of perdas) { o.entrada = r2(o.entrada); o.resultado = -o.entrada }
-    for (const o of minhas) if (o.ganhou && o.fixo) o.entrada = r2(o.entrada)
-    // os centavos do arredondamento: um centavo em cada ganho, sem inflar nenhum
-    let centavos = Math.round((R - minhas.reduce((s, o) => s + o.resultado, 0)) * 100)
-    for (let j = 0; livres.length && centavos !== 0 && j < 100000; j++) {
-      const o = livres[j % livres.length], passo = centavos > 0 ? 1 : -1
-      if (passo < 0 && o.resultado <= 0.02) continue
-      o.resultado = r2(o.resultado + passo / 100); centavos -= passo
-    }
-    const sobra = r2(R - minhas.reduce((s, o) => s + o.resultado, 0))
-    if (sobra) {
-      const alvo = livres.length ? livres[livres.length - 1] : perdas.filter((o) => !o.daSequencia).pop() ?? perdas[perdas.length - 1]
-      if (alvo?.ganhou) alvo.resultado = r2(alvo.resultado + sobra)
-      else if (alvo) { alvo.entrada = r2(alvo.entrada - sobra); alvo.resultado = -alvo.entrada }
-    }
+  })
+
+  const ops: Rascunho[] = linha.map((x, pos) => ({ ia: x.ia, dia: x.dia, ganhou: seq[pos] ?? true, entrada: 0, resultado: 0, daSequencia: naSequencia(pos) }))
+  ias.forEach((_, i) => {
+    const e = entradasDe(i)
+    posIa[i].forEach((pos, j) => { const o = ops[pos]; o.entrada = e[j]; o.resultado = o.ganhou ? r2(e[j] * p) : -e[j] })
   })
 
   // o horário: as operações de cada dia, em ordem, dentro do horário escolhido
@@ -450,6 +450,12 @@ export interface Previa {
   resultado: number; operacoes: number; ganhas: number; maiorEntrada: number; maiorGanho: number; maiorPerda: number; sequencia: number
   /** Quanto cada ganho rendeu, em média, sobre a entrada (0,95 = 95%). */
   retorno: number
+  /** O resultado que cada I.A. fez de verdade com essas regras. */
+  porIa: LinhaDeIa[]
+  /** O resultado pedido não fecha com payout e gale: o mais perto é `resultado`. */
+  naoFechou: boolean
+  /** Sem gale, o acerto que daria o resultado pedido (null = já fecha ou não existe). */
+  acertoSugerido: number | null
   avisos: string[]
 }
 /** Os números que o relatório vai mostrar, e onde eles não batem com as respostas. */
@@ -458,12 +464,21 @@ export function previaDoCenario(c: Cenario, agora = new Date()): Previa {
   const r = relatorioDoCenario(ops, { ...faixaDoCenario(c, agora), filtros: {} }, agora)
   const ganhos = ops.filter((o) => o.ganhou && o.entrada > 0)
   const retorno = ganhos.length ? ganhos.reduce((s, o) => s + o.resultado / o.entrada, 0) / ganhos.length : 0
-  const p: Previa = { resultado: r.total.resultado, operacoes: r.total.operacoes, ganhas: r.total.ganhas, maiorEntrada: r.opcoes.entradaMax, maiorGanho: r.total.maiorGanho, maiorPerda: r.total.maiorPerda, sequencia: r.sequencias.perdas, retorno, avisos: [] }
-  const dinheiro = (x: number) => `US$ ${x.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-  if (p.maiorEntrada > Math.max(c.entrada, c.maiorEntrada) + 0.01) p.avisos.push(`Para chegar nesse resultado as entradas precisaram passar da maior entrada: foram até ${dinheiro(p.maiorEntrada)}. Aumente a maior entrada ou o número de operações.`)
-  if (c.maiorGanho && Math.abs(p.maiorGanho - c.maiorGanho) > 0.01) p.avisos.push(`O maior ganho ficou em ${dinheiro(p.maiorGanho)}, porque os outros ganhos precisaram ser maiores para fechar o resultado.`)
+  const porIa = iasDoCenario(c).filter((l) => l.operacoes > 0).map((l) => ({ ia: l.ia, operacoes: ops.filter((o) => o.id === l.ia).length, resultado: r2(ops.filter((o) => o.id === l.ia).reduce((s, o) => s + o.resultado, 0)) }))
+  const naoFechou = Math.abs(r.total.resultado - c.resultado) > 0.005 || porIa.some((l, i) => Math.abs(l.resultado - iasDoCenario(c).filter((x) => x.operacoes > 0)[i].resultado) > 0.005)
+  const p: Previa = { resultado: r.total.resultado, operacoes: r.total.operacoes, ganhas: r.total.ganhas, maiorEntrada: r.opcoes.entradaMax, maiorGanho: r.total.maiorGanho, maiorPerda: r.total.maiorPerda, sequencia: r.sequencias.perdas, retorno, porIa, naoFechou, acertoSugerido: null, avisos: [] }
+  const dinheiro = (x: number) => `${x < 0 ? '−' : ''}US$ ${Math.abs(x).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  if (naoFechou) {
+    // sem gale o resultado é conta direta: ganhas × entrada × payout − perdidas × entrada
+    if (!c.gale) {
+      const E = escadaDoGale(c)[0], pg = (c.payout || 95) / 100, N = Math.round(c.operacoes)
+      const w = (c.resultado / E + N) / (1 + pg)
+      if (w >= 0 && w <= N) p.acertoSugerido = Math.round((w / N) * 1000) / 10
+    }
+    p.avisos.push(`Com payout de ${c.payout}%${c.gale ? `, gale × ${String(c.multiplicador).replace('.', ',')} até ${c.gales} ${c.gales === 1 ? 'vez' : 'vezes'}` : ' e entrada fixa'}, o resultado mais perto de ${dinheiro(c.resultado)} é ${dinheiro(p.resultado)}.`
+      + (c.gale ? ' Mude o acerto, a quantidade de operações, os gales ou a entrada, ou use o resultado calculado.' : p.acertoSugerido != null ? ` Para chegar em ${dinheiro(c.resultado)} o acerto precisa ser perto de ${String(p.acertoSugerido).replace('.', ',')}%.` : ' Mude o acerto ou a entrada, ou use o resultado calculado.'))
+  }
   if (p.operacoes - p.ganhas > 0 && p.sequencia !== Math.round(c.sequencia)) p.avisos.push(`A maior sequência de perdas ficou em ${p.sequencia}: com esse acerto ${p.sequencia > c.sequencia ? 'não há ganhos suficientes para separar as perdas' : 'não há perdas suficientes'}.`)
-  if (ganhos.length && (retorno > 1.6 || retorno < 0.1)) p.avisos.push(`Cada ganho rendeu em média ${Math.round(retorno * 100)}% da entrada, o que foge do comum (perto de 95%). Ajuste o acerto, a entrada ou o resultado.`)
   return p
 }
 
@@ -472,7 +487,7 @@ export function previaDoCenario(c: Cenario, agora = new Date()): Previa {
 export function lerCenario(chave: string): Cenario | null {
   try {
     const c = JSON.parse(localStorage.getItem(chave) || 'null') as Cenario | null
-    if (c && c.versao === 2 && Array.isArray(c.ias) && c.periodo) return c
+    if (c && c.versao === 3 && Array.isArray(c.ias) && c.periodo) return c
   } catch { /* sem armazenamento */ }
   return null
 }
