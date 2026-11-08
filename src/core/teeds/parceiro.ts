@@ -142,7 +142,10 @@ const rpc = async <T>(sessao: SessaoTeeds, nome: string, corpo: unknown): Promis
     body: JSON.stringify(corpo),
   })
   if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(String(e?.message || `Não consegui falar com o banco agora (${r.status}).`)) }
-  return r.json() as Promise<T>
+  // 08/11/2026: função do banco que não devolve nada (salvar a chave do pixel, apagar link) responde vazio;
+  // ler isso como JSON dava "Unexpected end of JSON input" mesmo com tudo salvo
+  const texto = await r.text()
+  return (texto ? JSON.parse(texto) : null) as T
 }
 
 export const souAdminGeral = (sessao: SessaoTeeds) => rpc<boolean>(sessao, 'teeds_sou_admin_geral', {}).catch(() => false)
