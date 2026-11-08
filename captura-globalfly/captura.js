@@ -183,7 +183,7 @@ var GF = (function () {
 
   // Pixel da Meta (30/10/2026, pendente desde 26/10): cada vitrine com o pixel do parceiro que paga o
   // anúncio. /n = conta de anúncios do Naor; /v = do Victor Cordeiro (03/11/2026). O direto fica sem pixel.
-  var PIXELS = { n: '1625935188283999', v: '2208036990064467' }
+  var PIXELS = { n: '1625935188283999', v: '1104312792216322' }
   var pixelPronto = false
   // Os eventos padrão da Meta (o resto vai como evento próprio, com trackCustom)
   var PADRAO = ['PageView', 'ViewContent', 'Lead', 'CompleteRegistration', 'Contact', 'Schedule', 'Subscribe', 'InitiateCheckout', 'SubmitApplication', 'StartTrial', 'Search', 'FindLocation', 'CustomizeProduct', 'Donate', 'AddToCart', 'AddToWishlist', 'AddPaymentInfo', 'Purchase']

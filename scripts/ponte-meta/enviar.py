@@ -27,7 +27,7 @@ from datetime import datetime, timedelta, timezone
 MARCA = 'globalfly'
 CONTAS = {
     'n': {'id': '977357031377237', 'nome': 'CA - NAOR BEZERRA', 'moeda': 'BRL', 'status': 1, 'fuso': 'America/Sao_Paulo'},
-    'v': {'id': '854985874324156', 'nome': 'CA Victor Cordeiro Real', 'moeda': 'BRL', 'status': 1, 'fuso': 'America/Sao_Paulo'},
+    'v': {'id': '1431777775778359', 'nome': 'GF Victor', 'moeda': 'BRL', 'status': 1, 'fuso': 'America/Sao_Paulo'},
 }
 PARCEIRO = sys.argv[2] if len(sys.argv) > 2 else 'n'
 if PARCEIRO not in CONTAS:

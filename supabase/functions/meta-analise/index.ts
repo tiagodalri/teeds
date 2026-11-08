@@ -62,7 +62,7 @@ const CORS = {
 const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
 const CONTAS: Record<string, Record<string, { conta: string; pixel: string }>> = {
-  globalfly: { n: { conta: '977357031377237', pixel: '1625935188283999' }, v: { conta: '854985874324156', pixel: '2208036990064467' } },
+  globalfly: { n: { conta: '977357031377237', pixel: '1625935188283999' }, v: { conta: '1431777775778359', pixel: '1104312792216322' } },
 }
 const rest = (caminho: string, init: RequestInit = {}) => fetch(`${SUPABASE_URL}/rest/v1/${caminho}`, {
   ...init, headers: { apikey: SERVICO, Authorization: `Bearer ${SERVICO}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },

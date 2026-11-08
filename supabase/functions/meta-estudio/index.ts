@@ -63,7 +63,7 @@ const CONTAS: Record<string, Record<string, { conta: string; pixel: string; pagi
   globalfly: {
     n: { conta: '977357031377237', pixel: '1625935188283999', pagina: '483727028157678', paginaNome: 'Naor Bezzera', instagram: '17841406873438157', usuario: 'naorbezerra_', link: 'https://globalflytrade.com/n/cadastro/' },
     // Victor: a conta não tem Instagram ligado; o estúdio procura o da página e, sem ele, o anúncio sai com a página
-    v: { conta: '854985874324156', pixel: '2208036990064467', pagina: '100283049512812', paginaNome: 'Victor Cordeiroi', instagram: '', usuario: '', link: 'https://globalflytrade.com/v/cadastro/' },
+    v: { conta: '1431777775778359', pixel: '1104312792216322', pagina: '1476829382177343', paginaNome: 'Victor Cordeiro', instagram: '', usuario: '', link: 'https://globalflytrade.com/v/cadastro/' },
   },
 }
 // 03/11/2026: a conta escolhida em Administração › Anúncios (META_CONTA_<MARCA>_<PARCEIRO>) vale por cima desta

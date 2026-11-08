@@ -116,8 +116,8 @@ export interface ContaDeAnuncio { codigo: string; nome: string; conta: string; c
 export const CONTAS_DE_ANUNCIO: Partial<Record<string, ContaDeAnuncio[]>> = {
   globalfly: [
     { codigo: 'n', nome: 'Naor', conta: '977357031377237', contaNome: 'CA - NAOR BEZERRA', pixelNome: 'PIXEL - NAOR BEZERRA OFICIAL', negocio: '1170351821880082' },
-    // 03/11/2026: o login Daniel Campione travou na verificação em duas etapas; volta a CA Victor Cordeiro Real
-    // (livre: sem campanha ativa e sem gasto desde outubro, pagamento em dia), do mesmo gerenciador do Naor
-    { codigo: 'v', nome: 'Victor', conta: '854985874324156', contaNome: 'CA Victor Cordeiro Real', pixelNome: 'Pixel Victor Cordeiro ATIVO', negocio: '1170351821880082' },
+    // 08/11/2026: conta nova do Victor, GF Victor, no portfólio Multichapas (login da Melissa), com chave própria;
+    // a CA Victor Cordeiro Real (854985874324156, BM Regina Fonseca) saiu
+    { codigo: 'v', nome: 'Victor', conta: '1431777775778359', contaNome: 'GF Victor', pixelNome: 'GF Victor - Pixel', negocio: '950280391227050' },
   ],
 }

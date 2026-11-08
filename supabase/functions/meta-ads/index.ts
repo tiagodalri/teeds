@@ -53,7 +53,8 @@ const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo
 // 03/11/2026: a conta antiga do Victor (CA Victor Cordeiro Real) era de ações passadas; a nova vem de um
 // login novo e é escolhida na tela (contaDe). Sem ela, o /v não mostra os números da ponte da conta antiga.
 const CONTAS: Record<string, Record<string, { conta: string; pixel: string; semPonte?: boolean }>> = {
-  globalfly: { n: { conta: '977357031377237', pixel: '1625935188283999' }, v: { conta: '854985874324156', pixel: '2208036990064467', semPonte: true } },
+  // 08/11/2026: o /v novo é a GF Victor (portfólio Multichapas, login da Melissa); sem chave, lê a ponte do conector "Meta ADS - Victor"
+  globalfly: { n: { conta: '977357031377237', pixel: '1625935188283999' }, v: { conta: '1431777775778359', pixel: '1104312792216322' } },
 }
 
 // A conta do Naor tem outras campanhas (o quiz da Universidade Trading): só entram as da GlobalFly

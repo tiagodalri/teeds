@@ -54,7 +54,7 @@ const CORS = {
 const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 const PARCEIROS: Record<string, string[]> = { globalfly: ['n', 'v', 'd'] }
 // a página que assina os anúncios de cada parceiro: se o login alcançar várias, é ela que vale
-const PAGINA_PREFERIDA: Record<string, string> = { 'globalfly:n': '483727028157678', 'globalfly:v': '100283049512812' }
+const PAGINA_PREFERIDA: Record<string, string> = { 'globalfly:n': '483727028157678', 'globalfly:v': '1476829382177343' }
 const ESCOPOS = ['instagram_basic', 'instagram_manage_insights', 'pages_show_list', 'pages_read_engagement', 'business_management',
   'instagram_manage_comments', 'instagram_manage_messages', 'instagram_content_publish']
 

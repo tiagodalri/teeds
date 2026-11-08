@@ -18,7 +18,7 @@ import { SUPABASE } from './config'
 import { vitrine } from './parceiro'
 
 const PIXELS: Partial<Record<string, Record<string, string>>> = {
-  globalfly: { n: '1625935188283999', v: '2208036990064467' },
+  globalfly: { n: '1625935188283999', v: '1104312792216322' },
 }
 /** O número do pixel do parceiro nesta plataforma, se ele tiver um. */
 export const pixelDoParceiro = (marca: string, codigo: string): string | null => PIXELS[marca]?.[codigo] ?? null

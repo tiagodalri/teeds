@@ -24,7 +24,7 @@ const CORS = {
 const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
 // O mesmo mapa de captura.js e src/core/teeds/pixelDoParceiro.ts
-const PIXELS: Record<string, Record<string, string>> = { globalfly: { n: '1625935188283999', v: '2208036990064467' } }
+const PIXELS: Record<string, Record<string, string>> = { globalfly: { n: '1625935188283999', v: '1104312792216322' } }
 const SITES: Record<string, string> = { globalfly: 'https://globalflytrade.com/' }
 const EVENTOS = new Set(['Lead', 'CompleteRegistration'])
 
