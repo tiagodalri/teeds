@@ -266,7 +266,7 @@ export function InsightsPanel({ sessao, mostrarMarkup = false, onMostrarMarkup }
                 const x = porAula.get(a.id)
                 return (
                   <div key={a.id} className={`ins-linha ${x ? '' : 'vazia'}`}>
-                    <span className="ins-aula-nome"><i>{String(a.numero).padStart(2, '0')}</i><b>{a.titulo}</b>{ehVideoDeExemplo(a.video) && <small>Sem vídeo próprio</small>}</span>
+                    <span className="ins-aula-nome"><i>{String(a.numero).padStart(2, '0')}</i><b>{a.titulo}</b>{(!a.video || ehVideoDeExemplo(a.video)) && <small>Sem vídeo próprio</small>}</span>
                     <span>{x ? inteiro(x.pessoas) : '—'}</span>
                     <span>{x ? inteiro(x.aberturas) : '—'}</span>
                     <span>{x ? horasLegiveis(x.segundos) : '—'}</span>

@@ -206,7 +206,8 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
   const aula = useMemo(() => {
     const vistas = aulasVistas()
     for (const m of modulos) {
-      const i = m.aulas.findIndex((a) => !vistas.has(a.id))
+      // na grade publicada, só aula que abre de verdade (com vídeo e sem trava); "Em breve" não é a próxima
+      const i = m.aulas.findIndex((a) => !vistas.has(a.id) && (!m.daGrade || (!!a.video && !a.bloqueio)))
       if (i >= 0) {
         const n = modulos.indexOf(m) + 1, a = m.aulas[i]
         // capa: a enviada no painel, a do código, ou nenhuma (o cartão desenha uma na cor do módulo)

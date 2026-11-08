@@ -8,7 +8,9 @@ import type { Aula, Modulo } from './aulas'
    downloads e o controle de quem assistiu funcionando. Quando o vídeo de
    verdade é publicado no painel, ele toma o lugar do exemplo. */
 export const SALA_EM_BREVE = false
-export const DEMONSTRACAO_EM_AULA_SEM_VIDEO = true
+// 08/11/2026: as aulas de verdade chegaram (YouTube). Aula sem vídeo agora aparece "Em breve";
+// o trailer de exemplo estava abrindo para os alunos nas 3 aulas ainda sem vídeo.
+export const DEMONSTRACAO_EM_AULA_SEM_VIDEO = false
 export const VIDEOS_DE_EXEMPLO: string[] = ['https://download.blender.org/durian/trailer/sintel_trailer-480p.mp4']
 export const MATERIAIS_DE_EXEMPLO: Array<{ nome: string; url: string; tipo?: string; tamanho?: number }> = [
   { nome: 'Material de apoio da aula (exemplo)', url: `${import.meta.env.BASE_URL}aulas-globalfly/material-de-exemplo.pdf`, tipo: 'PDF' },

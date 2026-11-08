@@ -28,7 +28,7 @@ function BuscaDeAluno({ sessao, marca }: { sessao: SessaoTeeds; marca: string })
   const modulos = useModulosEmUso(sessao, { admin: true })
   useEffect(() => { controleDasAulas(sessao, marca).then(setControle).catch(() => undefined) }, [sessao, marca])
   const catalogo = todasAsAulas({}, modulos)
-  const tituloDaAula = (id: string) => catalogo.find((a) => a.id === id)?.titulo ?? id
+  const tituloDaAula = (id: string) => catalogo.find((a) => a.id === id)?.titulo ?? (id === 'boas-vindas' ? 'Vídeo de boas-vindas (pop-up)' : id)
   const termo = busca.trim().toLowerCase()
   const achados = termo.length >= 2 ? controle.filter((c) => c.nome.toLowerCase().includes(termo) || c.email.toLowerCase().includes(termo)) : []
   const pct = (f: number) => `${Math.round(f * 100)}%`

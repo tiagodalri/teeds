@@ -35,6 +35,8 @@ export interface Aula {
   bloqueio?: string | null
   /** O vídeo volta ao começo sozinho quando termina (08/11/2026: depoimentos). */
   repetir?: boolean
+  /** Vídeo em pé (9:16): o player corta as laterais do YouTube, não o topo. */
+  vertical?: boolean
 }
 
 /** Um tópico da aula: o que ela cobre e, se houver, o minuto no vídeo ("3:40"). */

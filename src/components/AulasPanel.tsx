@@ -341,7 +341,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
             <div className="cine-video">
               {player?.tipo === 'mp4' || (player?.tipo === 'youtube' && player.id) ? (
                 <PlayerAula key={aberta.id} src={player.tipo === 'mp4' ? player.src : ''} youtube={player.tipo === 'youtube' ? player.id : undefined}
-                  repetir={!!aberta.repetir} titulo={aberta.titulo} posicaoInicial={posicao}
+                  repetir={!!aberta.repetir} vertical={!!aberta.vertical} titulo={aberta.titulo} posicaoInicial={posicao}
                   aoAvancar={aoAvancar} aoTocar={setTocando} pularPara={irPara}
                   proxima={seguinte ? { titulo: seguinte.titulo, abrir: () => abrir(seguinte) } : null} />
               ) : player ? (
@@ -362,7 +362,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
                 <p>{aberta.descricao}</p>
                 <div className="cine-chips">
                   <span>{aberta.nivel || 'Iniciante'}</span>
-                  {!ehVideoDeExemplo(aberta.video) && <span>{aberta.duracao}</span>}
+                  {!ehVideoDeExemplo(aberta.video) && aberta.duracao && <span>{aberta.duracao}</span>}
                   {ehVideoDeExemplo(aberta.video) && <span className="demo">Vídeo de exemplo</span>}
                 </div>
               </div>
@@ -385,7 +385,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
                 <ol>
                   {aberta.topicos.map((t, i) => {
                     const seg = segundosDoTempo(t.tempo)
-                    const pula = seg != null && player?.tipo === 'mp4'
+                    const pula = seg != null && (player?.tipo === 'mp4' || (player?.tipo === 'youtube' && !!player.id))
                     return (
                       <li key={i}>
                         {pula
@@ -490,7 +490,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
                 )
               })}
             </div>
-            {player?.tipo === 'mp4' && <p className="cine-atalhos">Atalhos: <kbd>espaço</kbd> tocar ou pausar · <kbd>←</kbd> <kbd>→</kbd> 10 s · <kbd>F</kbd> tela cheia</p>}
+            {(player?.tipo === 'mp4' || (player?.tipo === 'youtube' && !!player.id)) && <p className="cine-atalhos">Atalhos: <kbd>espaço</kbd> tocar ou pausar · <kbd>←</kbd> <kbd>→</kbd> 10 s · <kbd>F</kbd> tela cheia</p>}
           </aside>
         </div>
       </div>

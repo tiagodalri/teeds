@@ -45,3 +45,13 @@
   .bvv-pe > div, .bvv-pe button { width: 100%; }
   .bvv-aulas { order: -1; }
 }
+
+/* celular deitado: a janela 16:9 passava da altura da tela e os botões só apareciam rolando */
+@media (max-height: 520px) and (orientation: landscape) {
+  .bvv-fundo { padding: 8px; }
+  .bvv-janela { width: min(880px, calc((100dvh - 150px) * 16 / 9 + 28px)); padding: 10px 14px; gap: 8px; }
+  .bvv-x { top: 2px; right: 2px; }
+  .bvv-cab p, .bvv-mono, .bvv-pe > b { display: none; }
+  .bvv-cab h2 { font-size: 17px; margin: 0; }
+  .bvv-pe button { min-height: 36px; }
+}

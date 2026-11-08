@@ -28,6 +28,8 @@ interface Props {
   youtube?: string
   /** Volta ao começo sozinho quando termina (ex.: depoimentos). */
   repetir?: boolean
+  /** Vídeo em pé (9:16): o corte que esconde os botões do YouTube vai para as laterais. */
+  vertical?: boolean
   titulo: string
   /** Onde a pessoa parou da última vez (segundos); 0 = do começo. */
   posicaoInicial?: number
@@ -101,7 +103,7 @@ const fmt = (s: number) => {
   return h ? `${h}:${String(m % 60).padStart(2, '0')}:${String(r).padStart(2, '0')}` : `${m}:${String(r).padStart(2, '0')}`
 }
 
-export function PlayerAula({ src, youtube, repetir = false, textoDoFim = 'Você chegou ao fim do curso.', titulo, posicaoInicial = 0, aoAvancar, aoTocar, proxima, pularPara }: Props) {
+export function PlayerAula({ src, youtube, repetir = false, vertical = false, textoDoFim = 'Você chegou ao fim do curso.', titulo, posicaoInicial = 0, aoAvancar, aoTocar, proxima, pularPara }: Props) {
   const caixa = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
   const quadroYT = useRef<HTMLDivElement>(null)
@@ -406,7 +408,7 @@ export function PlayerAula({ src, youtube, repetir = false, textoDoFim = 'Você 
   const pctCarregado = duracao ? (carregado / duracao) * 100 : 0
 
   return (
-    <div ref={caixa} className={`cine-player ${visivel || !tocando ? 'com-controles' : 'sem-controles'} ${cheia || cheiaFalsa ? 'cheia' : ''}${cheiaFalsa ? ' cheia-falsa' : ''}${ehYT ? ' yt' : ''}`}
+    <div ref={caixa} className={`cine-player ${visivel || !tocando ? 'com-controles' : 'sem-controles'} ${cheia || cheiaFalsa ? 'cheia' : ''}${cheiaFalsa ? ' cheia-falsa' : ''}${ehYT ? ' yt' : ''}${ehYT && vertical ? ' yt-vertical' : ''}`}
       onMouseMove={acordar} onMouseLeave={() => { if (tocando) setVisivel(false) }} onClick={(e) => { if (e.target === e.currentTarget) alternar() }}>
       {ehYT ? (
         <>

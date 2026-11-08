@@ -13,7 +13,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { playerDoVideo, type Aula } from '../../core/teeds/aulas'
+import { marcarVista, playerDoVideo, type Aula } from '../../core/teeds/aulas'
 import { gradePublicadaEmCache, modulosParaSala, type GradeAulas } from '../../core/teeds/gradeAulas'
 import { registrarAula } from '../../core/teeds/insights'
 import { PlayerAula } from '../PlayerAula'
@@ -77,7 +77,11 @@ export function BoasVindasEmVideo({ sessao, nome, plano, admin, aoFechar, aoSemV
     t.ultimo = segundos
     if (fracao > 0.02 && !t.duracao) t.duracao = Math.round(segundos / fracao)
     if (t.acumulado >= 20) enviar(fracao)
-    if (fracao >= 0.9 && !t.concluida) { t.concluida = true; enviar(fracao, true) }
+    if (fracao >= 0.9 && !t.concluida) {
+      t.concluida = true; enviar(fracao, true)
+      // a aula do curso vista no pop-up já conta como assistida na sala
+      if (aula && !aula.proprio) marcarVista(aula.id, true)
+    }
   }
   const fechar = (irParaAulas: boolean) => { enviar(0); aoFechar(irParaAulas) }
 

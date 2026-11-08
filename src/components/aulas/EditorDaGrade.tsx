@@ -651,6 +651,7 @@ function EditorDaAula({ sessao, marca, a, m, s, grade, numero, aba, setAba, plan
           </div>
           <label className="largo"><span>Ou cole um link</span><input value={a.video} placeholder="https://youtube.com/…, https://vimeo.com/… ou …/aula.mp4" onChange={(e) => mudar((x) => { x.video = e.target.value; x.arquivo = ehArquivoNosso(e.target.value) ? x.arquivo : null })} /><small>{a.video ? `${origemDoVideo(a.video)}. ${mp4 || player?.tipo === 'youtube' ? 'Toca no player da plataforma e mede quanto cada aluno assistiu de fato.' : 'Com Vimeo não dá para medir quanto cada aluno assistiu: prefira YouTube (não listado) ou MP4.'}` : 'YouTube (não listado) ou MP4: nos dois medimos quanto cada aluno assistiu.'}</small></label>
           <label className="largo eg-chave"><input type="checkbox" checked={!!a.repetir} onChange={(e) => mudar((x) => { x.repetir = e.target.checked || undefined })} /><span><b>Repetir sem parar</b><small>O vídeo volta ao começo sozinho quando termina (bom para depoimentos).</small></span></label>
+          <label className="largo eg-chave"><input type="checkbox" checked={!!a.vertical} onChange={(e) => mudar((x) => { x.vertical = e.target.checked || undefined })} /><span><b>Vídeo em pé (vertical)</b><small>Marque quando o vídeo foi gravado em pé, como no celular: assim nada da imagem é cortado.</small></span></label>
           <div className="largo">{reprodutor()}</div>
           {mp4 && (
             <div className="largo eg-video-acoes">

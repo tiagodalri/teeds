@@ -56,6 +56,8 @@ export interface AulaGrade {
   nivel?: string
   /** O vídeo volta ao começo sozinho quando termina (ex.: depoimentos). */
   repetir?: boolean
+  /** Vídeo em pé (9:16, como os depoimentos): o player corta as laterais, não o topo. */
+  vertical?: boolean
 }
 
 export interface AssuntoGrade { id: string; titulo: string; descricao?: string; aulas: AulaGrade[] }
@@ -223,6 +225,7 @@ export function normalizarGrade(bruta: unknown): GradeAulas | null {
           links: Array.isArray(a.links) ? a.links.filter((x) => x && x.url && x.nome) : [],
           publicado: a.publicado !== false, liberarEm: a.liberarEm || null, planos: Array.isArray(a.planos) ? a.planos : [], nivel: txt(a.nivel),
           repetir: a.repetir === true || undefined,
+          vertical: a.vertical === true || undefined,
         })),
       })),
     })),
@@ -308,7 +311,7 @@ export function modulosParaSala(grade: GradeAulas, ctx: ContextoDaSala = {}, cur
       assuntos: assuntos.map((s) => ({ id: s.id, titulo: s.titulo, descricao: s.descricao })),
       aulas: assuntos.flatMap((s) => s.aulas.map((a) => ({
         id: a.id, titulo: a.titulo, descricao: a.descricao, video: a.video, duracao: a.duracao,
-        materiais: a.materiais, links: a.links, capa: a.capa || undefined, nivel: a.nivel || undefined, repetir: a.repetir || undefined,
+        materiais: a.materiais, links: a.links, capa: a.capa || undefined, nivel: a.nivel || undefined, repetir: a.repetir || undefined, vertical: a.vertical || undefined,
         topicos: a.topicos.map((t) => ({ titulo: t.titulo, tempo: t.tempo || undefined })),
         assunto: { id: s.id, titulo: s.titulo },
         bloqueio: doModulo ?? motivo(a.liberarEm, a.planos),

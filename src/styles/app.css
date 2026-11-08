@@ -5248,6 +5248,10 @@ input, select, textarea, button { vertical-align: middle; }
 .cine-player.yt { overflow: hidden; }
 /* em tela cheia a tela pode ser mais larga que o vídeo (celular deitado): ali o corte comeria o vídeo */
 .cine-player.yt.cheia .cine-yt > div, .cine-player.yt.cheia .cine-yt iframe { top: 0; height: 100%; }
+/* vídeo em pé (9:16): ele ocupa a altura toda e sobra preto dos lados; o corte vai para as laterais,
+   onde ficam o título, o copiar link e o logo, e o vídeo segue inteiro no meio */
+.cine-player.yt-vertical .cine-yt > div, .cine-player.yt-vertical .cine-yt iframe { top: 0; height: 100%; left: -30%; width: 160%; }
+.cine-player.yt-vertical.cheia .cine-yt > div, .cine-player.yt-vertical.cheia .cine-yt iframe { left: 0; width: 100%; }
 /* a película por cima do YouTube: o clique fica com a aula (play/pausa, toque duplo = tela cheia) */
 .cine-player .cine-escudo { position: absolute; inset: 0; cursor: pointer; background: transparent; }
 .cine-player.yt .cine-fim { background: rgba(6,7,10,.96); }
