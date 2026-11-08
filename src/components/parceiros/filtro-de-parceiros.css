@@ -44,7 +44,6 @@
 .fp-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .fp-av b { font-size: inherit; line-height: 1; }
 .fp-icone { color: var(--muted); background: color-mix(in srgb, var(--text) 8%, var(--surface)); }
-.fp > button:not([aria-pressed='true']) .fp-av:not(.fp-icone) { filter: saturate(.85) brightness(.96); }
 .fp > button:hover .fp-av { transform: translateY(-1px) scale(1.06); }
 .fp > button[aria-pressed='true'] .fp-av {
   box-shadow: 0 0 0 2px #0a1d36, 0 0 0 3.5px var(--fp-ouro), 0 0 12px color-mix(in srgb, var(--fp-ouro) 70%, transparent);
