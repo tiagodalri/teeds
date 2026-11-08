@@ -166,7 +166,7 @@
 .tv.tv-cockpit .tv-tabela-enxuta th:first-child { width: auto; }
 .tv.tv-cockpit .tv-tabela-enxuta td { padding-block: 7px; height: auto; }
 .tv.tv-cockpit .tv-tabela-enxuta th { padding-block: 8px; }
-.tv.tv-cockpit .tv-tabela-enxuta td:nth-child(3), .tv.tv-cockpit .tv-tabela-enxuta th:nth-child(3) { text-align: center; }
+.tv.tv-cockpit .tv-tabela-enxuta td.tv-preco, .tv.tv-cockpit .tv-tabela-enxuta th.tv-preco { text-align: center; }
 .tv.tv-cockpit .tv-tabela-enxuta .tv-chip { margin: 0; }
 .tv.tv-cockpit .tv-soma { position: sticky; bottom: 0; z-index: 2; }
 .tv.tv-cockpit .tv-soma th, .tv.tv-cockpit .tv-soma td { padding: 9px 10px; background: var(--surface); border-top: 1px solid var(--border); font-weight: 650; }
@@ -254,6 +254,8 @@
   .tv.tv-cockpit .tv-tabela tr {
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas: 'preco preco res' 'hora valor res' 'markup markup markup';
+  }
+  .tv.tv-cockpit .tv-tabela tr:not(:has(td.tv-hora)) { grid-template-areas: 'preco preco res' 'valor valor res' 'markup markup markup';
     gap: 3px 10px; align-items: center; padding: 11px 16px;
   }
   .tv.tv-cockpit .tv-tabela tr.ganhou { box-shadow: inset 3px 0 0 var(--up); }
@@ -266,6 +268,7 @@
   .tv.tv-cockpit .tv-tabela td.tv-hora { grid-area: hora; font-size: 11.5px; color: var(--muted); }
   .tv.tv-cockpit .tv-tabela td[data-label='Valor'] { grid-area: valor; font-size: 11.5px; color: var(--muted); }
   .tv.tv-cockpit .tv-tabela td[data-label='Valor']::before { content: '· Valor '; font-family: var(--fonte-corpo, system-ui, sans-serif); }
+  .tv.tv-cockpit .tv-tabela td[data-label='Valor']:first-child::before { content: 'Valor '; }
   .tv.tv-cockpit .tv-tabela td.tv-preco { grid-area: preco; text-align: left; }
   .tv.tv-cockpit .tv-tabela td.tv-preco .pcd { font-size: 13.5px; }
   .tv.tv-cockpit .tv-tabela td[data-label='Resultado'] { grid-area: res; padding: 0; border: 0; text-align: right; font-size: 15px; }

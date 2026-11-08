@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { MARCA } from '../marca'
 
 /**
  * Data e hora, ao vivo (22/10/2026, pedido do Tiago): no topo do computador,
@@ -6,7 +7,15 @@ import { useEffect, useState } from 'react'
  * fuso do aparelho de quem usa, sem o rótulo "Brasília".
  */
 
+/** 08/11/2026 (Tiago): "por enquanto" a GF sem data e hora no topo. Para voltar, troque para true. */
+const MOSTRAR_RELOGIO = MARCA.id !== 'globalfly'
+
 export function RelogioTopo({ className = '' }: { className?: string }) {
+  if (!MOSTRAR_RELOGIO) return null
+  return <Relogio className={className} />
+}
+
+function Relogio({ className }: { className: string }) {
   const [agora, setAgora] = useState(() => new Date())
   useEffect(() => {
     // o tique cai na virada do segundo, para o relógio não andar "atrasado"

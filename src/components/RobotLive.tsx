@@ -13,6 +13,9 @@ import { simboloMoeda } from '../core/dinheiro'
 import { DERIV } from '../core/deriv/config'
 import { motivoLegivel } from './RobotResumo'
 
+/** 08/11/2026 (Tiago): "por enquanto" a tabela de operações da GF sem a hora. Para voltar, troque para true. */
+const MOSTRAR_HORA = MARCA.id !== 'globalfly'
+
 /**
  * O preço só aparece com o dígito destacado quando vem com as casas certas e o
  * último dígito bate com o que decidiu a operação; senão fica só o dígito.
@@ -437,18 +440,18 @@ export function RobotLive({
             <table className="tv-tabela tv-tabela-enxuta">
               <thead>
                 <tr>
-                  <th>Hora</th><th>Valor</th><th>Preço</th><th>Resultado</th>
+                  {MOSTRAR_HORA && <th>Hora</th>}<th>Valor</th><th className="tv-preco">Preço</th><th>Resultado</th>
                   {mostrarMarkup && <th>Markup</th>}
                 </tr>
               </thead>
               <tbody>
-                {historicoVisivel.length === 0 && <tr><td colSpan={mostrarMarkup ? 5 : 4}>Nenhuma operação neste filtro.</td></tr>}
+                {historicoVisivel.length === 0 && <tr><td colSpan={(mostrarMarkup ? 5 : 4) - (MOSTRAR_HORA ? 0 : 1)}>Nenhuma operação neste filtro.</td></tr>}
                 {historicoVisivel.map(o => {
                   // O preço de entrada e o de saída continuam à mão: passando o mouse no dígito.
                   const preco = (v: number | null) => v === null ? '—' : o.pipSize !== undefined ? v.toFixed(o.pipSize) : String(v)
                   return (
                     <tr key={o.contractId} className={`${o.ganhou ? 'ganhou' : 'perdeu'} ${o.contractId === estado.historico[0]?.contractId ? 'recente' : ''}`}>
-                      <td className="tv-hora" data-label="Hora">{relogio(o.quando)}</td>
+                      {MOSTRAR_HORA && <td className="tv-hora" data-label="Hora">{relogio(o.quando)}</td>}
                       <td data-label="Valor">{num(o.valor)}</td>
                       {/* um preço só (as operações dos robôs são de 1 tick): o que fechou, com o último dígito, que decide, destacado */}
                       <td data-label="Preço" className="tv-preco" title={`Entrada ${preco(o.entrada)} · saída ${preco(o.saida)} · operação nº ${o.n}`}>
@@ -473,7 +476,7 @@ export function RobotLive({
                   )
                 })}
                 {filtroHistorico === 'todas' && estado.historico.length > 0 && (
-                  <tr className="tv-inicio"><td colSpan={mostrarMarkup ? 5 : 4}>Primeira operação da sessão · {relogio(estado.historico[estado.historico.length - 1].quando)}</td></tr>
+                  <tr className="tv-inicio"><td colSpan={(mostrarMarkup ? 5 : 4) - (MOSTRAR_HORA ? 0 : 1)}>Primeira operação da sessão{MOSTRAR_HORA && <> · {relogio(estado.historico[estado.historico.length - 1].quando)}</>}</td></tr>
                 )}
               </tbody>
               {/* A soma do markup só existe quando a coluna está à vista
@@ -482,7 +485,7 @@ export function RobotLive({
               {mostrarMarkup && historicoVisivel.length > 0 && (
                 <tfoot className="tv-soma">
                   <tr>
-                    <th colSpan={3} scope="row">Markup {filtroHistorico === 'todas' ? 'da sessão' : filtroHistorico === 'ganhos' ? 'das positivas' : 'das negativas'}</th>
+                    <th colSpan={MOSTRAR_HORA ? 3 : 2} scope="row">Markup {filtroHistorico === 'todas' ? 'da sessão' : filtroHistorico === 'ganhos' ? 'das positivas' : 'das negativas'}</th>
                     <td>{historicoVisivel.length} {historicoVisivel.length === 1 ? 'operação' : 'operações'}</td>
                     <td className="tv-markup" title="Soma dos valores exatos. Cada linha aparece arredondada em centavos, então somar o que está na tela pode dar alguns centavos a menos.">{num(historicoVisivel.reduce((t, o) => t + markupDe(o), 0))}</td>
                   </tr>
