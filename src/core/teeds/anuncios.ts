@@ -17,6 +17,8 @@ export interface Campanha { id: string; nome: string; status: string; objetivo: 
 export interface Conjunto { id: string; nome: string; status: string; campanhaId: string; orcDia: number; orcTotal: number; inicio?: string | null; fim?: string | null; otimizacao: string; publico: string; m: Metricas }
 export interface Anuncio {
   id: string; nome: string; status: string; campanhaId: string; conjuntoId: string; criadoEm: string
+  /** 08/11/2026: o começo do conjunto do anúncio (vem da lista de conjuntos), para a coluna Início */
+  inicioConjunto?: string | null
   criativo: { miniatura: string | null; imagem: string | null; titulo: string; texto: string; tipo: 'video' | 'imagem' | 'carrossel'; cta: string; marcacoes: string | null }
   ranking: { qualidade: Ranking; engajamento: Ranking; conversao: Ranking }
   m: Metricas

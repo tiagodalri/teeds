@@ -468,7 +468,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const nossoPorAnuncio = useMemo(() => new Map((funil?.porAnuncio ?? []).map((a) => [a.id, a])), [funil])
   const linhas: Linha[] = useMemo(() => (painel?.anuncios ?? [])
     .filter((a) => (!campanha || a.campanhaId === campanha) && (!conjunto || a.conjuntoId === conjunto))
-    .map((a) => ({ a, real: nossoPorAnuncio.get(a.id) })), [painel, campanha, conjunto, nossoPorAnuncio])
+    .map((a) => ({ a: { ...a, inicioConjunto: painel?.conjuntos.find((c) => c.id === a.conjuntoId)?.inicio ?? null }, real: nossoPorAnuncio.get(a.id) })), [painel, campanha, conjunto, nossoPorAnuncio])
   // as médias dos atalhos são as de todos os anúncios; a situação só escolhe quais aparecem
   const ctxDosAtalhos = useMemo(() => contexto(linhas), [linhas])
   const contagemDaSituacao = useMemo(() => new Map(SITUACOES.map((x) => [x.id, linhas.filter((l) => x.passa(l.a.status)).length])), [linhas])
@@ -890,7 +890,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
                     </td>{colunas.map((id) => {
                       const m = METRICA.get(id)!
                       const daMeta = totalDaMeta ? { ...somaFiltrada, a: { ...somaFiltrada.a, m: totalDaMeta } } : null
-                      return <td key={id} className="num">{daMeta ? formatar(m.formato, m.valor(daMeta)) : id === 'frequencia' || id === 'alcance' ? '—' : formatar(m.formato, m.valor(somaFiltrada))}</td>
+                      return <td key={id} className="num">{m.formato === 'data' ? '—' : daMeta ? formatar(m.formato, m.valor(daMeta)) : id === 'frequencia' || id === 'alcance' ? '—' : formatar(m.formato, m.valor(somaFiltrada))}</td>
                     })}<td /></tr></tfoot>
                   )}
                 </table>

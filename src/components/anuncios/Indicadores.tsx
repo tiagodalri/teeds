@@ -22,11 +22,12 @@ const div = (a: number, b: number) => (b > 0 ? a / b : null)
 
 type Real = FunilDoBanco['porAnuncio'][number] | undefined
 export interface Linha { a: Anuncio; real: Real }
-type Formato = 'brl' | 'int' | 'pct' | 'dec'
+type Formato = 'brl' | 'int' | 'pct' | 'dec' | 'data'
 export interface Metrica { id: string; nome: string; curto: string; formato: Formato; menorMelhor?: boolean; dica?: string; valor: (l: Linha) => number | null }
 
 /** Todas as métricas de um anúncio. `null` = não se aplica (sem base para a conta). */
 export const METRICAS: Metrica[] = [
+  { id: 'inicio', nome: 'Início', curto: 'Início', formato: 'data', dica: 'Quando o anúncio começou a valer: a criação do anúncio ou o começo do conjunto, o que vier depois. Pausar e religar não muda.', valor: ({ a }) => inicioDe(a) },
   { id: 'gasto', nome: 'Valor gasto', curto: 'Valor gasto', formato: 'brl', valor: ({ a }) => a.m.gasto },
   { id: 'impressoes', nome: 'Impressões', curto: 'Impressões', formato: 'int', valor: ({ a }) => a.m.impressoes },
   { id: 'alcance', nome: 'Alcance', curto: 'Alcance', formato: 'int', valor: ({ a }) => a.m.alcance },
@@ -65,9 +66,22 @@ export const METRICAS: Metrica[] = [
   { id: 'custoGfm', nome: 'Custo por GF Member', curto: 'R$/GF Member', formato: 'brl', menorMelhor: true, valor: ({ a, real }) => div(a.m.gasto, real?.liberados ?? 0) },
 ]
 export const METRICA = new Map(METRICAS.map((m) => [m.id, m]))
+/** as métricas que dá para comparar com um número nas Condições (a data de início fica de fora) */
+const COMPARAVEIS = METRICAS.filter((m) => m.formato !== 'data')
 // a ordem do Gerenciador: Resultados, Alcance, Frequência, Custo por resultado, Valor gasto; depois o resto
-export const COLUNAS_PADRAO = ['cadMeta', 'alcance', 'frequencia', 'custoCadMeta', 'gasto', 'impressoes', 'ctrLink', 'cpcLink', 'cpm', 'lpv', 'custoLpv', 'custoInscricao', 'liberados', 'gancho', 'retencao']
-export const formatar = (f: Formato, v: number | null) => (v == null || !Number.isFinite(v) ? '—' : f === 'brl' ? brl(v) : f === 'int' ? int(v) : f === 'pct' ? pc(v, v < 10 ? 2 : 1) : dec(v))
+export const COLUNAS_PADRAO = ['inicio', 'cadMeta', 'alcance', 'frequencia', 'custoCadMeta', 'gasto', 'impressoes', 'ctrLink', 'cpcLink', 'cpm', 'lpv', 'custoLpv', 'custoInscricao', 'liberados', 'gancho', 'retencao']
+export const formatar = (f: Formato, v: number | null) => (v == null || !Number.isFinite(v) ? '—' : f === 'data' ? dataHora(v) : f === 'brl' ? brl(v) : f === 'int' ? int(v) : f === 'pct' ? pc(v, v < 10 ? 2 : 1) : dec(v))
+const dataHora = (ms: number) => new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '')
+/*
+  Início (08/11/2026, Tiago: "uma coluna Início, com a data e horário que aquele anúncio passou a estar ativo").
+  A Meta não guarda a hora em que cada anúncio foi ligado; o que ela dá é quando o anúncio foi criado e quando o
+  conjunto dele começa. O início é o que vier depois dos dois (anúncio novo num conjunto antigo começa ao ser
+  criado; conjunto agendado começa na data dele). Pausar e religar não muda essa data.
+*/
+export const inicioDe = (a: Anuncio): number | null => {
+  const t = [Date.parse(a.criadoEm), Date.parse(a.inicioConjunto ?? '')].filter(Number.isFinite)
+  return t.length ? Math.max(...t) : null
+}
 
 /** Uma linha que soma várias (para o total da tabela): as taxas são refeitas a partir das somas. */
 export function somarLinhas(linhas: Linha[]): Linha {
@@ -184,6 +198,10 @@ export function useColunas(): [string[], (c: string[]) => void] {
     let jaEspelho = false
     try { jaEspelho = localStorage.getItem(`${CHAVE_COLUNAS}.espelho`) === '1'; localStorage.setItem(`${CHAVE_COLUNAS}.espelho`, '1') } catch { /* segue sem lembrar */ }
     if (!jaEspelho) { gravar(CHAVE_COLUNAS, COLUNAS_PADRAO); return COLUNAS_PADRAO }
+    // 08/11/2026: a coluna Início entra uma vez na frente das colunas de quem já tinha escolhido as suas
+    let jaInicio = false
+    try { jaInicio = localStorage.getItem(`${CHAVE_COLUNAS}.inicio`) === '1'; localStorage.setItem(`${CHAVE_COLUNAS}.inicio`, '1') } catch { /* segue sem lembrar */ }
+    if (!jaInicio && !lista.includes('inicio')) { lista = ['inicio', ...lista]; gravar(CHAVE_COLUNAS, lista) }
     if (!jaUnicos) {
       const sem = lista.filter((id) => id !== 'cadReal' && id !== 'custoCadReal' && id !== 'custoCadMeta')
       const onde = sem.indexOf('cadMeta')
@@ -256,7 +274,7 @@ export function Filtros({ linhas, ctx, busca, setBusca, atalhos, setAtalhos, reg
             return (
               <div key={i} className="aa-regra">
                 <select value={r.metrica} onChange={(e) => setRegras(regras.map((x, k) => (k === i ? { ...x, metrica: e.target.value } : x)))} aria-label="Métrica">
-                  {METRICAS.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+                  {COMPARAVEIS.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
                 </select>
                 <select value={r.op} onChange={(e) => setRegras(regras.map((x, k) => (k === i ? { ...x, op: e.target.value as Regra['op'] } : x)))} aria-label="Condição">
                   <option value=">">maior que</option><option value="<">menor que</option><option value="=">igual a</option>
@@ -402,7 +420,7 @@ export function Relatorio({ fechar, periodo, total, banco, linhas, colunas, list
   const planilha = () => {
     const cols = ['Anúncio', 'Número', 'Status', ...METRICAS.map((m) => m.nome)]
     const cel = (v: string) => `"${v.replace(/"/g, '""')}"`
-    const num = (m: Metrica, l: Linha) => { const v = m.valor(l); return v == null || !Number.isFinite(v) ? '' : String(Math.round(v * 100) / 100).replace('.', ',') }
+    const num = (m: Metrica, l: Linha) => { const v = m.valor(l); return v == null || !Number.isFinite(v) ? '' : m.formato === 'data' ? dataHora(v) : String(Math.round(v * 100) / 100).replace('.', ',') }
     const corpo = linhas.map((l) => [cel(l.a.nome), cel(l.a.id), cel(l.a.status), ...METRICAS.map((m) => num(m, l))].join(';'))
     const blob = new Blob([`﻿${cols.map(cel).join(';')}\n${corpo.join('\n')}`], { type: 'text/csv;charset=utf-8' })
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `anuncios-globalfly-${periodo.replace(/[^0-9a-z]+/gi, '-')}.csv`; a.click()
