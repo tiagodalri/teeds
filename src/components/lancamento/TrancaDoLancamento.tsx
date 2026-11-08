@@ -169,7 +169,7 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
           <span className="tl-selo"><Cadeado tamanho={14} />A live terminou</span>
           <h2>{estado?.liberadoEm ? 'Seu acesso ainda não foi liberado' : 'Liberando os acessos'}</h2>
           <p>{estado?.liberadoEm
-            ? 'A plataforma foi liberada para quem ficou na live até o fim. Os próximos passos para quem não conseguiu ficar serão avisados na comunidade do WhatsApp.'
+            ? 'O acesso da turma de lançamento já foi liberado. Os próximos passos para quem ainda não tem acesso serão avisados na comunidade do WhatsApp.'
             : 'A equipe está liberando os acessos. Esta tela abre a plataforma sozinha assim que o seu for liberado.'}</p>
         </div>
         <div className="tl-acoes">

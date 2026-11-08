@@ -8,8 +8,8 @@
  *   e a contagem regressiva fica à vista (TrancaDoLancamento).
  * - A live passa dentro da GlobalFly (YouTube não listado mostrado no app) e a
  *   presença é marcada sozinha a cada 30 s enquanto o vídeo toca.
- * - No fim, quem ficou até o fim vira GF Member sozinho (banco:
- *   teeds_lancamento_controlar 'encerrar', ou o servidor 3 h depois).
+ * - A liberação é o botão "Liberar acesso geral" (Clientes, 08/11/2026): todos
+ *   os inscritos viram GF Member (banco: teeds_lancamento_controlar 'liberar_geral').
  */
 import { MARCA } from '../../marca'
 import { SUPABASE } from './config'
