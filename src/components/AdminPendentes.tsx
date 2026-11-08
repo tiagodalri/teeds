@@ -64,7 +64,30 @@ interface Pendente {
   admin geral (useParceirosDaMarca); para os outros a escolha nem aparece, e o
   banco confere de novo (teeds_parceiro_na_aprovacao).
 */
-export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parceiros = [] }: {sessao:SessaoTeeds; marca:string; versao:number; onAprovado:()=>void; planos?: PlanoRegistro[]; parceiros?: OpcaoDeParceiro[]}) {
+/*
+  FILTROS (08/11/2026, Tiago com o print da aba: "preciso de filtros aqui, melhore"). Uma barra só, na ordem em
+  que se procura alguém: busca, período, parceiro, questionário, temperatura, produto que já usou, recadastro
+  e a ordem da lista. Cada opção diz quantos cadastros tem. Os números do resumo também filtram (o "+N hoje",
+  as três faixas do questionário e os produtos mais citados), os filtros ligados aparecem como etiquetas que
+  se tiram com um toque, e a lista filtrada sai em planilha.
+*/
+type Periodo = '' | 'hoje' | 'ontem' | '7' | '30'
+type Ordem = 'recentes' | 'antigos' | 'nome' | 'tempo'
+const PERIODOS: Array<[Periodo, string]> = [['', 'Qualquer data'], ['hoje', 'Hoje'], ['ontem', 'Ontem'], ['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias']]
+const TEMPERATURAS: Array<[string, string]> = [['quente', 'Quente'], ['morno', 'Morno'], ['frio', 'Frio'], ['sem', 'Sem temperatura']]
+const ORDENS: Array<[Ordem, string]> = [['recentes', 'Mais recentes primeiro'], ['antigos', 'Mais antigos primeiro'], ['nome', 'Nome (A a Z)'], ['tempo', 'Mais tempo na página']]
+const RESPOSTAS: Array<[Tipo, string]> = [['ex', 'Já foram clientes'], ['novo', 'Nunca foram clientes'], ['sem', 'Não responderam']]
+const nomeDoGrupo = (pr: string) => nomeDoProduto(pr.startsWith('outro: ') ? 'outro' : pr)
+const noPeriodo = (quando: Date, f: Periodo) => {
+  if (!f) return true
+  const agora = new Date()
+  if (f === 'hoje') return mesmoDia(quando, agora)
+  if (f === 'ontem') { const o = new Date(agora); o.setDate(o.getDate() - 1); return mesmoDia(quando, o) }
+  const ini = new Date(agora); ini.setHours(0, 0, 0, 0); ini.setDate(ini.getDate() - (Number(f) - 1))
+  return quando >= ini
+}
+
+export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parceiros = [], exemplo = false }: {sessao:SessaoTeeds; marca:string; versao:number; onAprovado:()=>void; planos?: PlanoRegistro[]; parceiros?: OpcaoDeParceiro[]; /** só o laboratório: cadastros de mentira, sem ler o banco */ exemplo?: boolean}) {
   // os planos disponíveis desta marca (Administração > Planos); sem eles ainda, os de reserva
   const opcoesDePlano = planos?.length ? planos.filter(p => p.ativo) : PLANOS_CLIENTE
   const planoPadrao = planos?.find(p => p.padrao && p.ativo)?.id ?? 'essencial'
@@ -74,6 +97,11 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
   const [busca,setBusca]=useState('')
   const [filtroParceiro,setFiltroParceiro]=useState('')
   const [filtroResp,setFiltroResp]=useState<''|Tipo>('')
+  const [periodo,setPeriodo]=useState<Periodo>('')
+  const [temperatura,setTemperatura]=useState('')
+  const [produto,setProduto]=useState('')
+  const [recadastro,setRecadastro]=useState<''|'sim'|'nao'>('')
+  const [ordem,setOrdem]=useState<Ordem>('recentes')
   const [contagem,setContagem]=useState<Record<string,number>>({})
   // visão geral: todas as abas, uma pessoa por e-mail (vale o cadastro mais recente)
   const [geral,setGeral]=useState<{total:number;porParceiro:Record<string,number>;porStatus:Record<string,number>}|null>(null)
@@ -93,6 +121,7 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
   const [respostas,setRespostas]=useState<Map<string,Resposta>|null>(null)
   useEffect(()=>{
     setRespostas(null)
+    if(exemplo){ void import('./pendentesDeExemplo').then(m=>setRespostas(m.respostasDeExemplo(lista))); return }
     const emails=[...new Set(lista.map(p=>p.email.trim().toLowerCase()).filter(Boolean))]
     if(!emails.length)return
     const c=new AbortController()
@@ -117,7 +146,7 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
         setRespostas(m)
       }).catch(()=>{ if(!c.signal.aborted)setRespostas(new Map()) })
     return()=>c.abort()
-  },[lista,marca,sessao.token])
+  },[lista,marca,sessao.token,exemplo])
   async function consultar(path: string, body?: unknown, signal?: AbortSignal) {
     // A marca vai nos dois sentidos: na busca e na decisão. Aprovar é o que
     // cria conta e dispara e-mail — não pode depender de qual site está aberto.
@@ -157,6 +186,10 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
   useEffect(()=>{
     const c=new AbortController()
     setCarregando(true);setErro('');setLista([])
+    if(exemplo){
+      void import('./pendentesDeExemplo').then(m=>{const l=m.pendentesDeExemplo(status);setLista(l);setContagem({pendente:639,processando:1,aprovado:37,recusado:7,[status]:l.length});setGeral({total:671,porParceiro:{n:331,v:324,d:1,direto:15},porStatus:{pendente:639,aprovado:25,processando:1,recusado:6}});setCarregando(false)})
+      return()=>c.abort()
+    }
     lerTodos(status,c.signal).catch(e=>{if(c.signal.aborted)throw e;return lerPeloServidor(status,c.signal)})
       .then(l=>{setLista(l);setContagem(v=>({...v,[status]:l.length}))}).catch(e=>{if(!c.signal.aborted)setErro(e.message)})
       .finally(()=>{if(!c.signal.aborted)setCarregando(false)})
@@ -219,9 +252,50 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
   const base=lista.filter(p=>doParceiro(p,mostraParceiros?filtroParceiro:''))
   const termo=semAcento(busca.trim()),digitos=busca.replace(/\D/g,'')
   const casa=(p:Pendente)=>!termo||semAcento(p.nome).includes(termo)||p.email.toLowerCase().includes(termo)||(digitos.length>=3&&p.telefone.replace(/\D/g,'').includes(digitos))
-  const visiveis=base.filter(p=>(!filtroResp||(respostas!==null&&tipoDe(p)===filtroResp))&&casa(p))
-  const filtrando=!!(busca.trim()||filtroResp||(mostraParceiros&&filtroParceiro))
-  const limpar=()=>{setBusca('');setFiltroResp('');setFiltroParceiro('');setMostrar(POR_VEZ)}
+  const quandoDe=(p:Pendente)=>new Date(p.ultima_inscricao_em||p.criado_em)
+  const respDe=(p:Pendente)=>respostas?.get(chaveDe(p))
+  const temperaturaDe=(p:Pendente)=>respDe(p)?.temperatura||'sem'
+  const produtosDe=(p:Pendente)=>(respDe(p)?.produtos??[]).map(nomeDoGrupo)
+  // cada filtro, separado, para as opções contarem quantos sobram mexendo só nele
+  const filtros={
+    periodo:(p:Pendente)=>noPeriodo(quandoDe(p),periodo),
+    resp:(p:Pendente)=>!filtroResp||(respostas!==null&&tipoDe(p)===filtroResp),
+    temperatura:(p:Pendente)=>!temperatura||(respostas!==null&&temperaturaDe(p)===temperatura),
+    produto:(p:Pendente)=>!produto||(respostas!==null&&produtosDe(p).includes(produto)),
+    recadastro:(p:Pendente)=>!recadastro||(recadastro==='sim')===!!p.recadastro,
+    busca:casa,
+  }
+  type Filtro=keyof typeof filtros
+  const passa=(p:Pendente,menos?:Filtro)=>(Object.keys(filtros) as Filtro[]).every(f=>f===menos||filtros[f](p))
+  const contar=(menos:Filtro,igual:(p:Pendente)=>boolean)=>base.filter(p=>passa(p,menos)&&igual(p)).length
+  const ordenar=(l:Pendente[])=>ordem==='recentes'?l:ordem==='antigos'?[...l].reverse()
+    :ordem==='nome'?[...l].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'))
+    :[...l].sort((a,b)=>(respDe(b)?.tempo??-1)-(respDe(a)?.tempo??-1))
+  const visiveis=ordenar(base.filter(p=>passa(p)))
+  const filtrando=!!(busca.trim()||filtroResp||periodo||temperatura||produto||recadastro||(mostraParceiros&&filtroParceiro))
+  const limpar=()=>{setBusca('');setFiltroResp('');setFiltroParceiro('');setPeriodo('');setTemperatura('');setProduto('');setRecadastro('');setMostrar(POR_VEZ)}
+  const mudar=<T,>(f:(v:T)=>void)=>(v:T)=>{f(v);setMostrar(POR_VEZ)}
+  // os produtos que aparecem nas respostas desta aba, do mais citado ao menos
+  const produtosDaAba=(()=>{const m=new Map<string,number>();for(const p of base)for(const x of new Set(produtosDe(p)))m.set(x,(m.get(x)??0)+1);return [...m].sort((a,b)=>b[1]-a[1]).map(([n])=>n)})()
+  const nomeDoParceiroNoFiltro=(id:string)=>id==='direto'?'Direto':(parceiros.find(o=>o.codigo===id)?.nome.split(' ')[0]??NOME_DO_PARCEIRO[id]??id)
+  const ligados:Array<[string,()=>void]>=[
+    ...(mostraParceiros&&filtroParceiro?[[`Parceiro: ${nomeDoParceiroNoFiltro(filtroParceiro)}`,()=>setFiltroParceiro('')] as [string,()=>void]]:[]),
+    ...(periodo?[[PERIODOS.find(([v])=>v===periodo)![1],()=>setPeriodo('')] as [string,()=>void]]:[]),
+    ...(filtroResp?[[RESPOSTAS.find(([v])=>v===filtroResp)![1],()=>setFiltroResp('')] as [string,()=>void]]:[]),
+    ...(temperatura?[[`Lead ${TEMPERATURAS.find(([v])=>v===temperatura)![1].toLowerCase()}`,()=>setTemperatura('')] as [string,()=>void]]:[]),
+    ...(produto?[[`Já usou: ${produto}`,()=>setProduto('')] as [string,()=>void]]:[]),
+    ...(recadastro?[[recadastro==='sim'?'Só recadastros':'Sem recadastros',()=>setRecadastro('')] as [string,()=>void]]:[]),
+    ...(busca.trim()?[[`Busca: ${busca.trim()}`,()=>setBusca('')] as [string,()=>void]]:[]),
+  ]
+  const baixar=()=>{
+    const cel=(v:unknown)=>`"${String(v??'').replace(/"/g,'""')}"`
+    const linhas=visiveis.map(p=>{const r=respDe(p),t=respostas?tipoDe(p):'sem'
+      return [p.nome,p.email,p.telefone,p.parceiro?`${NOME_DO_PARCEIRO[p.parceiro]??p.parceiro} /${p.parceiro}`:'Direto',quandoDe(p).toLocaleString('pt-BR'),
+        t==='ex'?'Já foi cliente':t==='novo'?'Nunca foi cliente':'Não respondeu',(r?.produtos??[]).map(nomeDoProduto).join(', '),r?.tempo?duracao(r.tempo):'',r?.temperatura?TEMPERATURA[r.temperatura]??r.temperatura:'',p.recadastro?'Sim':'Não'].map(cel).join(';')})
+    const cab=['Nome','E-mail','Telefone','Parceiro','Último cadastro','Questionário','Produtos que já usou','Tempo na página','Temperatura','Recadastro'].map(cel).join(';')
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([`\ufeff${cab}\n${linhas.join('\n')}`],{type:'text/csv;charset=utf-8'}))
+    a.download=`cadastros-${marca}-${status}-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)
+  }
   const resumo=(()=>{
     const n={ex:0,novo:0,sem:0} as Record<Tipo,number>
     const conta=new Map<string,number>()
@@ -250,19 +324,55 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
     {erro&&<p role="alert">{erro}</p>}{aviso&&<p role="status">{aviso}</p>}
     {!carregando&&lista.length>0&&<div className="pdq-painel" aria-label="Resumo de todos os cadastros desta aba">
       <div className="pdq-topo">
-        <p className="pdq-total"><b>{base.length}</b><span>{rotuloDoTotal(base.length)}</span>{resumo.hoje>0&&<em>+{resumo.hoje} hoje</em>}</p>
+        <p className="pdq-total"><b>{base.length}</b><span>{rotuloDoTotal(base.length)}</span>{resumo.hoje>0&&<button type="button" className="pdq-hoje" aria-pressed={periodo==='hoje'} title="Ver só os de hoje" onClick={()=>mudar(setPeriodo)(periodo==='hoje'?'':'hoje')}>+{resumo.hoje} hoje</button>}</p>
         {chipsDeParceiro.length>2&&<div className="pdq-chips" role="group" aria-label="Filtrar por parceiro">{chipsDeParceiro.map(([id,nome,q])=><button key={id||'todos'} aria-pressed={filtroParceiro===id} onClick={()=>{setFiltroParceiro(id);setMostrar(POR_VEZ)}}>{nome}<b>{q}</b></button>)}</div>}
       </div>
       {respostas?<>
         <div className="pdq-barra" aria-hidden="true">{(['ex','novo','sem'] as Tipo[]).map(t=>resumo.n[t]>0&&<i key={t} className={t} style={{flexGrow:resumo.n[t]}}/>)}</div>
         <div className="pdq-legenda" role="group" aria-label="Filtrar pela resposta do questionário">{([['ex','Já foram clientes'],['novo','Nunca foram clientes'],['sem','Não responderam']] as Array<[Tipo,string]>).map(([t,nome])=><button key={t} className={t} aria-pressed={filtroResp===t} disabled={!resumo.n[t]&&filtroResp!==t} onClick={()=>{setFiltroResp(v=>v===t?'':t);setMostrar(POR_VEZ)}}><i aria-hidden="true"/><b>{resumo.n[t]}</b>{nome}<small>{pct(resumo.n[t],base.length)}%</small></button>)}</div>
-        {resumo.top.length>0&&<div className="pdq-top"><span>Mais citados por quem já foi cliente</span><div>{resumo.top.map(([n,q])=><i key={n}>{n}<b>{q}</b></i>)}</div></div>}
+        {resumo.top.length>0&&<div className="pdq-top"><span>Mais citados por quem já foi cliente · toque para filtrar</span><div>{resumo.top.map(([n,q])=><button type="button" key={n} aria-pressed={produto===n} onClick={()=>mudar(setProduto)(produto===n?'':n)}>{n}<b>{q}</b></button>)}</div></div>}
       </>:<p className="pdq-lendo">Lendo as respostas do questionário…</p>}
     </div>}
-    {!carregando&&lista.length>0&&<div className="pdq-busca">
-      <input id="pendentes-busca" type="search" value={busca} placeholder="Buscar: nome, e-mail ou telefone" aria-label="Buscar cadastro por nome, e-mail ou telefone" onChange={e=>{setBusca(e.target.value);setMostrar(POR_VEZ)}}/>
-      {filtrando&&<button onClick={limpar}>Limpar filtros</button>}
-      <span aria-live="polite">{visiveis.length!==base.length?`${visiveis.length} de ${base.length}`:`${base.length} no total`}</span>
+    {!carregando&&lista.length>0&&<div className="pdq-filtros" role="search" aria-label="Filtrar cadastros">
+      <div className="pdq-busca">
+        <input id="pendentes-busca" type="search" value={busca} placeholder="Buscar: nome, e-mail ou telefone" aria-label="Buscar cadastro por nome, e-mail ou telefone" onChange={e=>{setBusca(e.target.value);setMostrar(POR_VEZ)}}/>
+      </div>
+      <div className="pdq-seletores">
+        <label><span>Período</span><select className={periodo?'on':''} value={periodo} onChange={e=>mudar(setPeriodo)(e.target.value as Periodo)}>
+          {PERIODOS.map(([v,n])=><option key={v||'todos'} value={v}>{n}{v?` (${contar('periodo',p=>noPeriodo(quandoDe(p),v))})`:''}</option>)}
+        </select></label>
+        {mostraParceiros&&<label><span>Parceiro</span><select className={filtroParceiro?'on':''} value={filtroParceiro} onChange={e=>mudar(setFiltroParceiro)(e.target.value)}>
+          {chipsDeParceiro.map(([id,nome,q])=><option key={id||'todos'} value={id}>{id?`${nome} (${q})`:`Todos os parceiros (${q})`}</option>)}
+        </select></label>}
+        <label><span>Questionário</span><select className={filtroResp?'on':''} value={filtroResp} disabled={!respostas} onChange={e=>mudar(setFiltroResp)(e.target.value as ''|Tipo)}>
+          <option value="">Todas as respostas</option>
+          {RESPOSTAS.map(([v,n])=><option key={v} value={v}>{n} ({contar('resp',p=>tipoDe(p)===v)})</option>)}
+        </select></label>
+        <label><span>Temperatura</span><select className={temperatura?'on':''} value={temperatura} disabled={!respostas} onChange={e=>mudar(setTemperatura)(e.target.value)}>
+          <option value="">Qualquer temperatura</option>
+          {TEMPERATURAS.map(([v,n])=><option key={v} value={v}>{n} ({contar('temperatura',p=>temperaturaDe(p)===v)})</option>)}
+        </select></label>
+        <label><span>Já usou</span><select className={produto?'on':''} value={produto} disabled={!respostas||!produtosDaAba.length} onChange={e=>mudar(setProduto)(e.target.value)}>
+          <option value="">Qualquer produto</option>
+          {produtosDaAba.map(n=><option key={n} value={n}>{n} ({contar('produto',p=>produtosDe(p).includes(n))})</option>)}
+        </select></label>
+        <label><span>Recadastro</span><select className={recadastro?'on':''} value={recadastro} onChange={e=>mudar(setRecadastro)(e.target.value as ''|'sim'|'nao')}>
+          <option value="">Todos</option>
+          <option value="sim">Só recadastros ({contar('recadastro',p=>!!p.recadastro)})</option>
+          <option value="nao">Sem recadastros ({contar('recadastro',p=>!p.recadastro)})</option>
+        </select></label>
+        <label><span>Ordem</span><select value={ordem} onChange={e=>setOrdem(e.target.value as Ordem)}>
+          {ORDENS.map(([v,n])=><option key={v} value={v}>{n}</option>)}
+        </select></label>
+      </div>
+      <div className="pdq-rodape-filtros">
+        <span className="pdq-contagem" aria-live="polite"><b>{visiveis.length}</b> {visiveis.length!==base.length?`de ${base.length} cadastros`:visiveis.length===1?'cadastro':'cadastros'}</span>
+        {ligados.length>0&&<div className="pdq-ligados">{ligados.map(([n,tirar])=><button type="button" key={n} onClick={()=>{tirar();setMostrar(POR_VEZ)}} aria-label={`Tirar o filtro ${n}`}>{n}<i aria-hidden="true">×</i></button>)}</div>}
+        <div className="pdq-acoes-filtros">
+          {filtrando&&<button type="button" onClick={limpar}>Limpar filtros</button>}
+          <button type="button" disabled={!visiveis.length} onClick={baixar}>Baixar lista</button>
+        </div>
+      </div>
     </div>}
     {carregando?<p>Carregando cadastros…</p>:lista.length===0&&!erro?<p>Nenhum cadastro nesta situação.</p>:visiveis.length===0?<p className="pdq-nada">Nenhum cadastro com esses filtros. <button onClick={limpar}>Limpar filtros</button></p>:visiveis.slice(0,mostrar).map(p=><article key={p.id} className="pendente-linha">
       <div><b>{p.nome}</b><span>{p.email}</span><span>{p.telefone}</span>

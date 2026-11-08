@@ -91,3 +91,38 @@
   .pendente-linha>.pendente-acoes{justify-content:flex-end}
 }
 @media(max-width:700px){.pendente-linha{grid-template-columns:minmax(0,1fr)}}
+
+/* 08/11/2026 (Tiago: "preciso de filtros aqui, melhore"): a barra de filtros. Busca em cima, os seletores numa
+   grade que se acomoda (7 no computador, 2 por linha no celular), e embaixo a contagem, as etiquetas dos filtros
+   ligados (tiram com um toque) e as ações. */
+.pdq-filtros{display:grid;gap:10px;margin:0 0 10px;padding:14px;border:1px solid var(--border,#30343e);border-radius:12px;background:color-mix(in srgb,currentColor 2%,transparent)}
+.pdq-filtros .pdq-busca{margin:0}
+.pdq-busca input{padding-left:38px;background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a93a3' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 13px center}
+.pdq-seletores{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.pdq-seletores label{display:grid;gap:4px;min-width:0}
+.pdq-seletores label>span{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#9298a3)}
+.pdq-seletores select{width:100%;min-width:0;min-height:38px;padding:0 30px 0 10px;border:1px solid var(--border,#343842);border-radius:9px;background:transparent;color:inherit;font:inherit;font-size:13px;font-weight:600;text-overflow:ellipsis;cursor:pointer;appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a93a3' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.pdq-seletores select.on{border-color:var(--primary,#cfa94f);box-shadow:0 0 0 1px var(--primary,#cfa94f) inset}
+.pdq-seletores select:disabled{opacity:.5;cursor:not-allowed}
+.pdq-seletores select:focus-visible{outline:2px solid var(--primary,#cfa94f);outline-offset:2px}
+.pdq-seletores option{color:#111;background:#fff}
+.pdq-rodape-filtros{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.pdq-contagem{font-size:13px;color:var(--muted,#9298a3);font-variant-numeric:tabular-nums}
+.pdq-contagem b{font-size:15px;color:var(--text,inherit)}
+.pdq-ligados{display:flex;flex-wrap:wrap;gap:6px}
+.admin-pendentes .pdq-ligados button{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:3px 6px 3px 10px;border:1px solid color-mix(in srgb,var(--primary,#cfa94f) 55%,transparent);border-radius:999px;background:color-mix(in srgb,var(--primary,#cfa94f) 12%,transparent);color:inherit;font-size:12px;font-weight:600}
+.pdq-ligados i{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:color-mix(in srgb,currentColor 12%,transparent);font-style:normal;font-size:13px;line-height:1}
+.pdq-acoes-filtros{display:flex;gap:8px;margin-left:auto}
+.admin-pendentes .pdq-acoes-filtros button{min-height:32px;padding:0 12px;border-radius:9px;font-size:12.5px;font-weight:700}
+/* os números do resumo que filtram: "+N hoje" e os produtos mais citados */
+.admin-pendentes .pdq-hoje{min-height:0;padding:3px 9px;border:1px solid transparent;border-radius:999px;background:color-mix(in srgb,var(--up,#2fb67c) 14%,transparent);color:var(--up,#2fb67c);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer}
+.admin-pendentes .pdq-hoje[aria-pressed=true]{border-color:var(--up,#2fb67c)}
+.admin-pendentes .pdq-top button{display:inline-flex;align-items:center;gap:8px;min-height:30px;padding:4px 10px;border:1px solid transparent;border-radius:7px;background:color-mix(in srgb,currentColor 7%,transparent);color:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
+.admin-pendentes .pdq-top button b{font-variant-numeric:tabular-nums;color:var(--primary,#cfa94f)}
+.admin-pendentes .pdq-top button[aria-pressed=true]{border-color:var(--primary,#cfa94f);background:color-mix(in srgb,var(--primary,#cfa94f) 14%,transparent)}
+@media(max-width:700px){
+  .pdq-seletores{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pdq-acoes-filtros{margin-left:0;width:100%}
+  .admin-pendentes .pdq-acoes-filtros button{flex:1}
+}
