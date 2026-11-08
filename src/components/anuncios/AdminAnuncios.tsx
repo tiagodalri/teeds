@@ -1004,6 +1004,26 @@ function FragmentoCampanha({ c, conjuntos }: { c: PainelDaMeta['campanhas'][numb
   Stories do Instagram é pedido primeiro e os outros formatos vêm por trás, um de cada vez. O que já veio fica
   guardado neste aparelho (45 min) e no servidor (50 min), então trocar de aba e reabrir o anúncio é imediato.
 */
+// 08/11/2026 (Tiago: "quero o logotipo das redes aqui, insta e face"): os logos nas cores de cada rede
+function LogoInstagram() {
+  return (
+    <svg className="aa-logo-rede" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+      <defs><radialGradient id="aa-ig-cor" cx="30%" cy="107%" r="150%"><stop offset="0" stopColor="#fdf497" /><stop offset=".05" stopColor="#fdf497" /><stop offset=".45" stopColor="#fd5949" /><stop offset=".6" stopColor="#d6249f" /><stop offset=".9" stopColor="#285AEB" /></radialGradient></defs>
+      <rect x="1" y="1" width="22" height="22" rx="6.5" fill="url(#aa-ig-cor)" />
+      <rect x="5.5" y="5.5" width="13" height="13" rx="4" fill="none" stroke="#fff" strokeWidth="1.9" />
+      <circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" strokeWidth="1.9" />
+      <circle cx="16.4" cy="7.6" r="1.05" fill="#fff" />
+    </svg>
+  )
+}
+function LogoFacebook() {
+  return (
+    <svg className="aa-logo-rede" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+      <circle cx="12" cy="12" r="11" fill="#1877F2" />
+      <path d="M13.4 19.5v-6h2l.3-2.4h-2.3V9.6c0-.7.2-1.2 1.2-1.2h1.2V6.3a16 16 0 0 0-1.8-.1c-1.8 0-3 1.1-3 3.1v1.8H9v2.4h2v6z" fill="#fff" />
+    </svg>
+  )
+}
 type Plataforma = 'ig' | 'fb'
 type Posicao = 'stories' | 'reels' | 'feed'
 const FORMATO_DE: Record<Plataforma, Record<Posicao, string>> = {
@@ -1099,7 +1119,7 @@ function VitrineDoCriativo({ a, api, sessao, parceiro }: { a: Anuncio; api: ApiA
       <div className="aa-vitrine-controles">
         <div className="aa-vitrine-troca" role="group" aria-label="Rede">
           {([['ig', 'Instagram'], ['fb', 'Facebook']] as const).map(([id, nome]) => (
-            <button key={id} type="button" className={!verVideo && plataforma === id ? 'on' : ''} onClick={() => { setVerVideo(false); setPlataforma(id) }}>{nome}</button>
+            <button key={id} type="button" className={!verVideo && plataforma === id ? 'on' : ''} onClick={() => { setVerVideo(false); setPlataforma(id) }}>{id === 'ig' ? <LogoInstagram /> : <LogoFacebook />}{nome}</button>
           ))}
           {video && <button type="button" className={verVideo ? 'on' : ''} onClick={() => setVerVideo(true)}>Vídeo</button>}
         </div>
@@ -1139,6 +1159,53 @@ function VitrineDoCriativo({ a, api, sessao, parceiro }: { a: Anuncio; api: ApiA
   )
 }
 
+/*
+  O texto do anúncio ao lado do celular (08/11/2026, Tiago: "melhorar esse layout aqui do preview"). Antes era texto
+  corrido sem hierarquia; agora é um cartão com rótulos curtos (Título, Texto principal, Botão, Marcações no link),
+  o texto em tamanho de leitura com as quebras de linha de quem escreveu e um Copiar em cada parte.
+*/
+function Copiar({ texto }: { texto: string }) {
+  const [ok, setOk] = useState(false)
+  return (
+    <button type="button" className="aa-copiar" onClick={() => { void navigator.clipboard?.writeText(texto).then(() => { setOk(true); setTimeout(() => setOk(false), 1600) }) }}>
+      {ok ? 'Copiado' : 'Copiar'}
+    </button>
+  )
+}
+function TextoDoAnuncio({ a, marcado }: { a: Anuncio; marcado: boolean }) {
+  const c = a.criativo
+  const botao = c.cta ? BOTAO[c.cta] ?? c.cta.replace(/_/g, ' ').toLowerCase() : ''
+  return (
+    <div className="aa-texto-anuncio">
+      <div className="aa-ta-tipo"><span>{c.tipo === 'video' ? 'Vídeo' : c.tipo === 'carrossel' ? 'Carrossel' : 'Imagem'}</span></div>
+      {c.titulo && (
+        <section>
+          <header><small>Título</small><Copiar texto={c.titulo} /></header>
+          <h4>{c.titulo}</h4>
+        </section>
+      )}
+      {c.texto && (
+        <section>
+          <header><small>Texto principal</small><Copiar texto={c.texto} /></header>
+          <p>{c.texto}</p>
+        </section>
+      )}
+      {botao && (
+        <section className="aa-ta-linha">
+          <small>Botão</small><span className="aa-ta-botao">{botao}</span>
+        </section>
+      )}
+      {c.marcacoes != null && (
+        <section>
+          <header><small>Marcações no link</small>{c.marcacoes ? <Copiar texto={c.marcacoes} /> : null}</header>
+          {c.marcacoes ? <code>{c.marcacoes.split('&').map((par, i) => <span key={i}>{i ? '&' : ''}{par}</span>)}</code> : <em className="aa-mudo">Sem marcação no link</em>}
+        </section>
+      )}
+      {!marcado && <p className="aa-aviso">Este anúncio não tem a marcação utm_content={'{{ad.id}}'} no link: os cadastros dele contam (são os da Meta), mas a plataforma não consegue seguir essas pessoas até o depósito.</p>}
+    </div>
+  )
+}
+
 function AnuncioAberto({ a, fechar, sessao, api, parceiro, de, ate, nosso, campanha, conjunto }: {
   a: Anuncio; fechar: () => void; sessao: SessaoTeeds; api: ApiAnuncios; parceiro: string; de: string; ate: string
   nosso?: FunilDoBanco['porAnuncio'][number]; campanha: string; conjunto: string
@@ -1168,12 +1235,7 @@ function AnuncioAberto({ a, fechar, sessao, api, parceiro, de, ate, nosso, campa
             o celular com a prévia da própria Meta em cada posicionamento; o texto do anúncio ao lado */}
         <div className="aa-criativo com-previa">
           <VitrineDoCriativo a={a} api={api} sessao={sessao} parceiro={parceiro} />
-          <div>
-            <small>{a.criativo.tipo === 'video' ? 'Vídeo' : a.criativo.tipo === 'carrossel' ? 'Carrossel' : 'Imagem'}{a.criativo.cta ? ` · botão “${BOTAO[a.criativo.cta] ?? a.criativo.cta.replace(/_/g, ' ').toLowerCase()}”` : ''}</small>
-            {a.criativo.titulo && <b>{a.criativo.titulo}</b>}
-            {a.criativo.texto && <p>{a.criativo.texto}</p>}
-            {!marcado && <p className="aa-aviso">Este anúncio não tem a marcação utm_content={'{{ad.id}}'} no link: os cadastros dele contam (são os da Meta), mas a plataforma não consegue seguir essas pessoas até o depósito.</p>}
-          </div>
+          <TextoDoAnuncio a={a} marcado={marcado} />
         </div>
         <div className="aa-kpis mini">
           <div><small>Investido</small><b>{brl(m.gasto)}</b></div>

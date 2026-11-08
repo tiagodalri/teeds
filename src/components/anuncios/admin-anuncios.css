@@ -508,3 +508,22 @@
 @media (max-width: 640px) {
   .aa-criativo.com-previa { grid-template-columns: minmax(0, 1fr); }
 }
+/* os logos do Instagram e do Facebook nos botões da rede (08/11/2026) */
+.aa-vitrine-troca:first-child button { display: inline-flex; align-items: center; gap: 6px; }
+.aa-logo-rede { flex: none; display: block; }
+/* o texto do anúncio ao lado do celular, em cartão (08/11/2026) */
+.aa-texto-anuncio { display: grid; gap: 0; align-content: start; min-width: 0; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; }
+.aa-texto-anuncio > section { display: grid; gap: 6px; padding: 12px 14px; border-top: 1px solid var(--border); min-width: 0; }
+.aa-texto-anuncio > section > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.aa-texto-anuncio small { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.aa-texto-anuncio h4 { margin: 0; font-size: 16px; line-height: 1.35; }
+.aa-criativo.com-previa .aa-texto-anuncio p { margin: 0; font-size: 14.5px; line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; }
+.aa-ta-tipo { padding: 10px 14px; }
+.aa-ta-tipo span { display: inline-block; padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--aa-ouro) 16%, transparent); color: var(--aa-ouro); font-size: 11.5px; font-weight: 800; }
+.aa-texto-anuncio .aa-ta-linha { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.aa-ta-botao { display: inline-flex; align-items: center; height: 30px; padding: 0 14px; border-radius: 8px; background: #1877F2; color: #fff; font-size: 13px; font-weight: 700; }
+.aa-texto-anuncio code { display: flex; flex-wrap: wrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; line-height: 1.6; color: var(--text); overflow-wrap: anywhere; }
+.aa-texto-anuncio em { font-size: 12.5px; font-style: normal; }
+.aa-texto-anuncio .aa-aviso { margin: 0 14px 14px; }
+.aa-copiar { height: 24px; padding: 0 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--muted); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.aa-copiar:hover { color: var(--text); }
