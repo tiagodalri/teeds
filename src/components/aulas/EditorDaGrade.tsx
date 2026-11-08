@@ -301,7 +301,7 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
         </div>
         <div className="eg-topo-acoes">
           <button type="button" className="admin-secundario" onClick={() => setModal('historico')}>Histórico</button>
-          {naoPublicado && publicada && <button type="button" className="admin-secundario" onClick={() => { if (window.confirm('Descartar o rascunho e voltar para o que está publicado?')) mudar((g) => { g.modulos = clone(publicada.modulos); g.cursos = clone(publicada.cursos ?? []) }) }}>Descartar alterações</button>}
+          {naoPublicado && publicada && <button type="button" className="admin-secundario" onClick={() => { if (window.confirm('Descartar o rascunho e voltar para o que está publicado?')) mudar((g) => { g.modulos = clone(publicada.modulos); g.cursos = clone(publicada.cursos ?? []); if (publicada.boasVindas) g.boasVindas = clone(publicada.boasVindas); else delete g.boasVindas }) }}>Descartar alterações</button>}
           <button type="button" className="admin-secundario eg-previa-btn" onClick={() => setModal('previa')}>Ver prévia</button>
           <button type="button" className="admin-primary" disabled={!naoPublicado || situacao === 'salvando'} onClick={() => setModal('publicar')}>Publicar para os alunos</button>
         </div>
@@ -317,6 +317,22 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
           <article><span>Alunos que assistiram</span><strong>{new Set(controle.map((c) => c.userId)).size}</strong></article>
         </div>
       )}
+
+      {!curso && marca === 'globalfly' && (() => {
+        const v = grade.boasVindas?.video ?? ''
+        const p = playerDoVideo(v)
+        const ok = !v || p?.tipo === 'mp4' || (p?.tipo === 'youtube' && !!p.id)
+        return (
+          <section className="eg-boas-vindas">
+            <label>
+              <span>Vídeo de boas-vindas <small>abre sozinho no primeiro acesso, antes do tour</small></span>
+              <input value={v} placeholder="https://youtu.be/…  (vazio = a primeira aula do curso)"
+                onChange={(e) => mudar((g) => { const x = e.target.value; if (x.trim()) g.boasVindas = { video: x }; else delete g.boasVindas })} />
+              <small className={ok ? '' : 'falta'}>{!v ? 'Sem link próprio: o pop-up mostra a primeira aula com vídeo.' : ok ? `${origemDoVideo(v)}. Vale para os alunos depois de publicar.` : 'Esse link não é um vídeo do YouTube nem um MP4.'}</small>
+            </label>
+          </section>
+        )
+      })()}
 
       {!curso && <ListaDeCursos grade={grade} mudar={mudar} aoAbrir={(id, a) => abrirCurso(id, a)} aoNovo={novoCurso} aoDuplicar={duplicarCurso} aoRemover={removerCurso} />}
 

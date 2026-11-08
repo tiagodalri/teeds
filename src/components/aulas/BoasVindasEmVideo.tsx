@@ -35,7 +35,7 @@ export function BoasVindasEmVideo({ sessao, nome, plano, admin, aoFechar, aoSemV
   /** Laboratório: a grade vem pronta (e nada vai para o banco). */
   grade?: GradeAulas
 }) {
-  const [aula, setAula] = useState<(Aula & { cor: string }) | null | undefined>(undefined)
+  const [aula, setAula] = useState<(Aula & { cor: string; proprio?: boolean }) | null | undefined>(undefined)
   const conta = useRef({ acumulado: 0, ultimo: -1, duracao: 0, concluida: false })
 
   useEffect(() => {
@@ -44,6 +44,11 @@ export function BoasVindasEmVideo({ sessao, nome, plano, admin, aoFechar, aoSemV
       if (!vivo) return
       if (!g) { setAula(null); return }
       const modulos = modulosParaSala(g, { plano, admin })
+      // um vídeo próprio do pop-up, escolhido no painel (08/11/2026)
+      if (g.boasVindas?.video) {
+        setAula({ id: 'boas-vindas', titulo: 'Vídeo de boas-vindas', descricao: '', video: g.boasVindas.video, duracao: '', cor: modulos[0]?.cor ?? 'var(--primary)', proprio: true })
+        return
+      }
       for (const m of modulos) {
         const a = m.aulas.find((x) => x.video && !x.bloqueio)
         if (a) { setAula({ ...a, cor: m.cor }); return }
@@ -95,7 +100,7 @@ export function BoasVindasEmVideo({ sessao, nome, plano, admin, aoFechar, aoSemV
         <header className="bvv-cab">
           <Monograma tamanho={34} className="bvv-mono" />
           <div>
-            <span className="bvv-rot">Comece aqui · Aula 1</span>
+            <span className="bvv-rot">{aula.proprio ? 'Comece aqui' : 'Comece aqui · Aula 1'}</span>
             <h2 id="bvv-titulo">{primeiro ? `Boas-vindas, ${primeiro}!` : 'Boas-vindas!'}</h2>
             <p>Antes de tudo, assista a este vídeo curto: ele mostra por onde começar.</p>
           </div>

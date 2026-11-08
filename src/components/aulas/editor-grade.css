@@ -234,3 +234,12 @@
   .eg-item.link input:first-child { grid-column: 1 / -1; }
   .eg-capa-linha { flex-direction: column; }
 }
+
+/* 08/11/2026 (GF): o vídeo do pop-up do primeiro acesso */
+.eg-boas-vindas { padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); }
+.eg-boas-vindas label { display: grid; gap: 6px; }
+.eg-boas-vindas label > span { font-size: 13px; font-weight: 700; }
+.eg-boas-vindas label > span small { margin-left: 6px; font-weight: 500; color: var(--muted); }
+.eg-boas-vindas input { width: 100%; box-sizing: border-box; min-height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; }
+.eg-boas-vindas > label > small { font-size: 12px; color: var(--muted); }
+.eg-boas-vindas > label > small.falta { color: var(--danger, #c0392b); }

@@ -116,7 +116,11 @@ export interface CursoGrade {
   acesso: AcessoDoCurso
 }
 
-export interface GradeAulas { versao: 1; cursos?: CursoGrade[]; modulos: ModuloGrade[] }
+export interface GradeAulas {
+  versao: 1; cursos?: CursoGrade[]; modulos: ModuloGrade[]
+  /** O vídeo do pop-up do primeiro acesso (GlobalFly, 08/11/2026). Vazio = a primeira aula com vídeo. */
+  boasVindas?: { video: string }
+}
 
 export const NIVEIS = ['Iniciante', 'Intermediário', 'Avançado', 'Todos os níveis'] as const
 export const CORES_DA_MARCA: string[] = MARCA.id === 'globalfly'
@@ -201,8 +205,10 @@ export function normalizarGrade(bruta: unknown): GradeAulas | null {
   })
   if (!cursos.length) cursos.push(cursoPadrao())
   const existe = new Set(cursos.map((c) => c.id))
+  const videoDeBoasVindas = txt((g as { boasVindas?: { video?: unknown } }).boasVindas?.video).trim()
   return {
     versao: 1,
+    ...(videoDeBoasVindas ? { boasVindas: { video: videoDeBoasVindas } } : {}),
     cursos,
     modulos: g.modulos.filter(Boolean).map((m) => ({
       id: txt(m.id), curso: existe.has(txt(m.curso)) ? txt(m.curso) : cursos[0].id, titulo: txt(m.titulo), chamada: txt(m.chamada), descricao: txt(m.descricao), cor: txt(m.cor) || CORES_DA_MARCA[0],
