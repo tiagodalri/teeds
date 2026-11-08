@@ -11,6 +11,7 @@
  * (Desenho combinado com o Tiago em 16/09/2026: lista como padrão, mosaico
  * como segunda vista, foco só troca no clique.)
  */
+import { MARCA } from '../marca'
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { markupDaOperacao } from '../core/deriv/markup'
 import { NomeDoRobo } from './NomeDoRobo'
@@ -163,7 +164,7 @@ function Quem({ p, fase }: { p: ResumoProps; fase: ReturnType<typeof faseDoEstad
         <b><span className="rs-nome"><NomeDoRobo nome={p.nome} /></span><Chip fase={fase} />{p.modo && <SeloDoModo modo={p.modo} />}</b>
         <small>
           {p.numero}
-          {p.inicio ? ` · ${hora(p.inicio)}` : ''}
+          {p.inicio && MARCA.id !== 'globalfly' ? ` · ${hora(p.inicio)}` : '' /* 08/11/2026: a GF sem a hora, por enquanto */}
           {conta && <> · <em className={conta === 'Real' ? 'real' : 'demo'}>{conta}</em></>}
           <span className="rs-contadores"> · <em className="up">{p.estado.vitorias} positivas</em> · <em className="down">{p.estado.derrotas} negativas</em></span>
         </small>
