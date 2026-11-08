@@ -9,6 +9,8 @@ import './admin-subplanos.css'
  * simulador, sala extra, assessor, GFT Lab e o link do checkout. Vale na hora
  * (as travas são conferidas pelo banco quando a I.A. liga).
  */
+/** Parceiros de divulgação que podem ter checkout próprio (08/11/2026: o Naor vende na Cakto dele). */
+const PARCEIROS_CHECKOUT: Array<[string, string]> = [['n', 'Naor (/n)'], ['v', 'Victor (/v)']]
 const IAS: Array<[string, string]> = [['goreme', 'Raptor'], ['falcon', 'Falcon'], ['legacy', 'Legacy'], ['superior5', 'Gulf'], ['ag2', 'Phenom']]
 
 export function AdminSubplanos({ sessao, marca }: { sessao: SessaoTeeds; marca: string }) {
@@ -27,6 +29,7 @@ export function AdminSubplanos({ sessao, marca }: { sessao: SessaoTeeds; marca: 
   const salvar = async () => {
     if (!form) return
     if (form.checkoutUrl && !/^https:\/\//.test(form.checkoutUrl)) { setErro('O link do checkout precisa começar com https://'); return }
+    if (Object.values(form.checkoutPorParceiro ?? {}).some((u) => u && !/^https:\/\//.test(u))) { setErro('O link do checkout do parceiro precisa começar com https://'); return }
     setSalvando(true); setErro(null)
     try { await salvarSubplano(sessao, form, marca); await ler(); void carregarMeuSubplano(sessao); setAviso(`${form.nome} salvo. Já vale para os clientes.`); setAberto(null); setForm(null) }
     catch (e) { setErro((e as Error).message) } finally { setSalvando(false) }
@@ -68,7 +71,10 @@ export function AdminSubplanos({ sessao, marca }: { sessao: SessaoTeeds; marca: 
                   <label><input type="checkbox" checked={form.lab} onChange={(e) => mudar({ lab: e.target.checked })} /> GFT Lab (beta)</label>
                 </div>
                 {form.assessor && <label><span>WhatsApp do assessor</span><input inputMode="tel" value={form.assessorWhatsapp ?? ''} placeholder="55 11 99999-9999" onChange={(e) => mudar({ assessorWhatsapp: e.target.value || null })} /></label>}
-                <label className="largo"><span>Link do checkout</span><input value={form.checkoutUrl ?? ''} placeholder="https://pay.cakto.com.br/…  (vazio = o botão abre o suporte)" onChange={(e) => mudar({ checkoutUrl: e.target.value.trim() || null })} /></label>
+                <label className="largo"><span>Link do checkout (padrão)</span><input value={form.checkoutUrl ?? ''} placeholder="https://pay.cakto.com.br/…  (vazio = o botão abre o suporte)" onChange={(e) => mudar({ checkoutUrl: e.target.value.trim() || null })} /></label>
+                {PARCEIROS_CHECKOUT.map(([cod, nome]) => (
+                  <label key={cod}><span>Checkout para quem veio do {nome}</span><input value={form.checkoutPorParceiro?.[cod] ?? ''} placeholder="Vazio = usa o padrão" onChange={(e) => { const v = e.target.value.trim(); const m = { ...(form.checkoutPorParceiro ?? {}) }; if (v) m[cod] = v; else delete m[cod]; mudar({ checkoutPorParceiro: m }) }} /></label>
+                ))}
                 {erro && <p className="asp-erro">{erro}</p>}
                 <div className="asp-acoes largo"><button type="button" className="admin-secundario" onClick={() => { setAberto(null); setForm(null) }}>Cancelar</button><button type="button" className="admin-primary" disabled={salvando || !form.nome.trim()} onClick={() => void salvar()}>{salvando ? 'Salvando…' : 'Salvar'}</button></div>
               </div>

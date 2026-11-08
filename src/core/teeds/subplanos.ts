@@ -32,6 +32,8 @@ export interface Subplano {
   assessor: boolean
   lab: boolean
   checkoutUrl: string | null
+  /** Link do checkout por parceiro de divulgação ({ n: 'https://…' }). Vazio = usa o padrão. */
+  checkoutPorParceiro: Record<string, string>
   assessorWhatsapp: string | null
   ativo: boolean
 }
@@ -42,12 +44,12 @@ const daLinha = (l: any): Subplano => ({
   precoReferencia: l.preco_referencia == null ? null : Number(l.preco_referencia), preco: l.preco == null ? null : Number(l.preco),
   cobranca: l.cobranca ?? 'anual', compartilhamento: Number(l.compartilhamento ?? 0), ias: Array.isArray(l.ias) ? l.ias : null,
   simuladorHoras: l.simulador_horas == null ? null : Number(l.simulador_horas), salaExtra: !!l.sala_extra, assessor: !!l.assessor, lab: !!l.lab,
-  checkoutUrl: l.checkout_url || null, assessorWhatsapp: l.assessor_whatsapp || null, ativo: l.ativo !== false,
+  checkoutUrl: l.checkout_url || null, checkoutPorParceiro: (l.checkout_por_parceiro && typeof l.checkout_por_parceiro === 'object') ? l.checkout_por_parceiro : {}, assessorWhatsapp: l.assessor_whatsapp || null, ativo: l.ativo !== false,
 })
 const paraLinha = (s: Subplano, marca: string) => ({
   marca, id: s.id, nome: s.nome, ordem: s.ordem, chamada: s.chamada, preco_referencia: s.precoReferencia, preco: s.preco, cobranca: s.cobranca,
   compartilhamento: s.compartilhamento, ias: s.ias, simulador_horas: s.simuladorHoras, sala_extra: s.salaExtra, assessor: s.assessor, lab: s.lab,
-  checkout_url: s.checkoutUrl, assessor_whatsapp: s.assessorWhatsapp, ativo: s.ativo, atualizado_em: new Date().toISOString(),
+  checkout_url: s.checkoutUrl, checkout_por_parceiro: s.checkoutPorParceiro ?? {}, assessor_whatsapp: s.assessorWhatsapp, ativo: s.ativo, atualizado_em: new Date().toISOString(),
 })
 
 let atual: MeuSubplano | null = null
