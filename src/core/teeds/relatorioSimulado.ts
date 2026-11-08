@@ -341,9 +341,13 @@ export function operacoesDoCenario(c: Cenario, agora = new Date()): OperacaoSimu
   porDia.forEach((l2, d) => {
     let a = Math.max(0, Math.min(23, c.horaDe)), b = Math.max(a, Math.min(23, c.horaAte)) + 0.98
     if (dataLocal(dias[d]) === hojeIsoStr && b > agoraH) { b = Math.max(0.3, agoraH - 0.05); a = Math.min(a, Math.max(0, b - 1)) }
+    // 08/11/2026 (print do Tiago, "erro de cálculo no gale"): o tremor de até 20 s trocava a ordem quando as
+    // operações ficavam a ~1 s uma da outra, e a escada do gale aparecia quebrada no relatório. Agora o tremor
+    // é menor que a metade do intervalo: a ordem do horário é sempre a ordem em que o gale foi calculado.
+    const passoMs = ((b - a) * 36e5) / l2.length
     l2.forEach((o, j) => {
       const h = a + ((j + 0.5) / l2.length) * (b - a)
-      const quando = new Date(dias[d].getTime() + h * 36e5 + Math.floor(rnd() * 20) * 1000)
+      const quando = new Date(dias[d].getTime() + h * 36e5 + Math.floor(rnd() * Math.min(20000, passoMs * 0.45)))
       const ia = iaDoSimulador(ias[o.ia].ia)
       saida.push({ quando: quando.toISOString(), origem: ia.origem, id: ia.id, nome: ia.nome, ativo: ia.ativo, tipo: ia.tipo, entrada: o.entrada, pagamento: o.ganhou ? r2(o.entrada + o.resultado) : 0, resultado: o.resultado, ganhou: o.ganhou })
     })
