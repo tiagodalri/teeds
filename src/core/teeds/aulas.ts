@@ -88,14 +88,13 @@ export const ehVideoDeExemplo = (video: string) => video === VIDEO_DEMONSTRACAO 
  * As aulas do GF Member (plano 'treino') abrem depois da live de lançamento
  * (28/10/2026, Tiago: "Disponível em 09 de novembro de 2026 após a live").
  * Até lá a sala mostra o catálogo com o aviso e nenhum vídeo toca. Se o
- * Tiago não liberar antes, abrem sozinhas às 20h30 de 09/11, junto com a liberação de todos.
+ * Tiago não liberar antes, abrem junto com o botão "Liberar acesso geral" (08/11/2026: não abrem mais sozinhas às 20h30).
  */
 export const AVISO_GF_MEMBER = 'Disponível em 09/11, após a live'
 export const AVISO_GF_MEMBER_CURTO = 'Disponível em 09/11'
-// 09/11, 20h30 de Brasília: a hora em que todos os inscritos viram GF Member (Tiago, 03/11/2026)
-const GF_MEMBER_LIBERA_EM = Date.parse('2026-11-09T23:30:00Z')
-export const aulasTravadasParaGfMember = (plano: string | null, admin: boolean | null) =>
-  plano === 'treino' && admin !== true && Date.now() < GF_MEMBER_LIBERA_EM
+// abrem quando um administrador aperta "Liberar acesso geral" (liberadoGeral)
+export const aulasTravadasParaGfMember = (plano: string | null, admin: boolean | null, liberadoGeral: boolean) =>
+  plano === 'treino' && admin !== true && !liberadoGeral
 
 /* -------------------------------------------- a grade em uso na sala */
 

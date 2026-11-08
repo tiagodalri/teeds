@@ -5,9 +5,9 @@
  * plataforma, começar, encerrar e liberar, e os números ao vivo (inscritos
  * esperando, assistindo agora, quem já está "até o fim"). Só o admin geral.
  *
- * Encerrar = marcar o fim da live e liberar na hora quem ficou até o fim (GF
- * Member, sem aprovação manual). Se ninguém encerrar, o servidor fecha sozinho
- * 3 horas depois do horário marcado.
+ * Encerrar = só marcar o fim da live. A liberação é o botão "Liberar acesso
+ * geral", em Administração › Clientes (08/11/2026, Tiago). Se ninguém
+ * encerrar, o servidor fecha a live sozinho 3 horas depois do horário marcado.
  */
 import { useEffect, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
@@ -37,7 +37,7 @@ export function AdminLancamento({ sessao }: { sessao: SessaoTeeds }) {
     setOcupado(acao); setRecado(null); setErro(null)
     try {
       const r = await controlarLive(sessao, acao, valor)
-      if (acao === 'encerrar' || acao === 'liberar') setRecado(`${r.liberados ?? 0} ${r.liberados === 1 ? 'pessoa liberada' : 'pessoas liberadas'} como GF Member. O e-mail de acesso liberado sai em instantes.`)
+      if (acao === 'encerrar') setRecado('Live encerrada. Para liberar o acesso, use "Liberar acesso geral" em Clientes.')
       if (acao === 'youtube') setRecado(valor ? 'Link salvo. Ele aparece na plataforma assim que a live estiver no ar.' : 'Link removido.')
       if (acao === 'comecar') setRecado('Live no ar: o aviso abriu para todos os inscritos e a presença começou a contar.')
       setConfirmar(false)
@@ -79,19 +79,18 @@ export function AdminLancamento({ sessao }: { sessao: SessaoTeeds }) {
           <div><dt>Liberação</dt><dd>{hora(p?.liberadoEm ?? null)}</dd></div>
           <div><dt>Até o fim é</dt><dd>{p?.minimoPct ?? 80}% da live, com os últimos 10&nbsp;min</dd></div>
         </dl>
-        <p className="adm-lanc-texto">Às 20h de 09/11 a live entra no ar sozinha. Use <b>Começar agora</b> se for abrir antes. Às <b>20h30</b>, todos os inscritos viram GF Member sozinhos, com acesso até 09/11/2027, mesmo quem não assistiu, e a live continua no ar para quem está vendo. <b>Encerrar e liberar</b> faz o mesmo na hora e marca o fim da live.</p>
+        <p className="adm-lanc-texto">Às 20h de 09/11 a live entra no ar sozinha. Use <b>Começar agora</b> se for abrir antes. <b>Ninguém é liberado sozinho:</b> o acesso abre quando um administrador aperta <b>Liberar acesso geral</b>, em Clientes. Aí todos os inscritos viram GF Member, com acesso até 09/11/2027, mesmo quem não assistiu, e a live continua no ar para quem está vendo. <b>Encerrar a live</b> só marca o fim, sem liberar ninguém.</p>
         <div className="adm-lanc-botoes">
           {!p?.noAr && <button className="admin-primary" disabled={ocupado !== null} onClick={() => void fazer('comecar')}>{ocupado === 'comecar' ? 'Abrindo…' : encerrada ? 'Começar de novo' : 'Começar agora'}</button>}
-          {p?.noAr && !confirmar && <button className="admin-primary" disabled={ocupado !== null} onClick={() => setConfirmar(true)}>Encerrar e liberar</button>}
+          {p?.noAr && !confirmar && <button className="admin-primary" disabled={ocupado !== null} onClick={() => setConfirmar(true)}>Encerrar a live</button>}
           {p?.noAr && confirmar && (
             <span className="adm-lanc-confirma">
-              <b>Encerrar agora libera os {p.aguardando} {p.aguardando === 1 ? 'inscrito' : 'inscritos'} como GF Member.</b>
-              <button className="admin-primary" disabled={ocupado !== null} onClick={() => void fazer('encerrar')}>{ocupado === 'encerrar' ? 'Liberando…' : 'Confirmar'}</button>
+              <b>Encerrar tira a live do ar para todos. Não libera ninguém.</b>
+              <button className="admin-primary" disabled={ocupado !== null} onClick={() => void fazer('encerrar')}>{ocupado === 'encerrar' ? 'Encerrando…' : 'Confirmar'}</button>
               <button onClick={() => setConfirmar(false)}>Cancelar</button>
             </span>
           )}
-          {encerrada && <button disabled={ocupado !== null} onClick={() => void fazer('liberar')}>{ocupado === 'liberar' ? 'Liberando…' : 'Liberar de novo os inscritos'}</button>}
-          {encerrada && !p?.liberadoEm && <button disabled={ocupado !== null} onClick={() => void fazer('retomar')}>Voltar ao ar</button>}
+          {encerrada && <button disabled={ocupado !== null} onClick={() => void fazer('retomar')}>Voltar ao ar</button>}
         </div>
       </section>
 

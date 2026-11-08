@@ -177,6 +177,7 @@ function LabLogin() {
 }
 import { BoasVindasEmVideo as BoasVindasLab } from './components/aulas/BoasVindasEmVideo'
 const AdminAulasLab = lazy(() => import('./components/AdminAulas').then((m) => ({ default: m.AdminAulas })))
+const LiberarAcessoGeralLab = lazy(() => import('./components/lancamento/LiberarAcessoGeral').then((m) => ({ default: m.LiberarAcessoGeral })))
 const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine'))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
 import { DerivDesconectada } from './components/DerivDesconectada'
@@ -476,6 +477,8 @@ function Laboratorio() {
   if (qual === 'painel-comando') return <Suspense fallback={null}><LabPainelDeComando /></Suspense>
   // ?tela=pendentes: a aprovação de clientes como o admin geral vê (com a escolha do parceiro); a lista vem do servidor
   if (qual === 'pendentes') return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><AdminPendentesLab sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab', telefone: null, cpf: null, criadoEm: '', trocarSenha: false } } as never} marca="globalfly" versao={0} onAprovado={() => undefined} parceiros={[{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }, { codigo: 'd', nome: 'Douglas' }]} exemplo={!new URLSearchParams(location.search).has('real')} /></div></Suspense>
+  // ?tela=liberar-geral: o botão "Liberar acesso geral" de Clientes (08/11/2026); sem banco, mostra o estado trancado
+  if (qual === 'liberar-geral') return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><LiberarAcessoGeralLab sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab' } } as never} geral /></div></Suspense>
   if (qual === 'login') return <LabLogin />
   // ?tela=excluir: o rodapé da ficha do cliente com "Excluir cadastro" e a confirmação aberta
   if (qual === 'excluir') return (

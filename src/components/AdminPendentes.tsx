@@ -240,8 +240,9 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
     Lançamento da GF (03/11/2026, Tiago: "achei que eu precisasse aprovar para ela receber que o
     cadastro está ok"): até o fim da live o cadastro já é a conta. A pessoa recebeu "Inscrição
     confirmada" com o acesso, entra com a senha que criou e vê a plataforma trancada; o acesso abre
-    sozinho às 20h30 de 09/11. Aprovar antes só mandaria "cadastro aprovado" (até 20h30 todo cliente que
-    não é administrador fica trancado), então o botão sai da frente.
+    com o botão "Liberar acesso geral" (08/11/2026: não abre mais sozinho às 20h30). Aprovar antes só
+    mandaria "cadastro aprovado" (até a liberação todo cliente que não é administrador fica trancado),
+    então o botão sai da frente.
   */
   const naLive = marca === 'globalfly' && Date.now() < FIM_DA_LIVE
   // filtros: parceiro (só o admin geral, sem parceiro em foco no topo), resposta do questionário e busca
@@ -313,7 +314,7 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
   const chipsDeParceiro:Chip[]=!mostraParceiros?[]:([['','Todos',lista.length] as Chip,...parceiros.map((o):Chip=>[o.codigo,o.nome.split(' ')[0],lista.filter(p=>p.parceiro===o.codigo).length]),['direto','Direto',lista.filter(p=>!p.parceiro).length] as Chip]).filter(([id,,q])=>id===''||q>0)
   return <section className="admin-card admin-pendentes">
     <header><div><span className="rot">Cadastros pelo formulário</span><h3>Aprovação de clientes <em className="pendente-marca">{NOME_DA_MARCA[marca] ?? marca}</em></h3><p>{naLive
-      ? 'Até a live de 09/11 não precisa aprovar ninguém. Quem se inscreve já recebe a confirmação por e‑mail, entra com a senha que criou e vê a plataforma trancada, com a contagem. Em 09/11, às 20h30, todos viram GF Member sozinhos, com acesso até 09/11/2027.'
+      ? 'Até a live de 09/11 não precisa aprovar ninguém. Quem se inscreve já recebe a confirmação por e‑mail, entra com a senha que criou e vê a plataforma trancada, com a contagem. Todos viram GF Member, com acesso até 09/11/2027, quando um administrador apertar \u201cLiberar acesso geral\u201d, logo acima.'
       : 'Novos cadastros e recadastros aguardam sua aprovação. Cada marca tem a sua conta: quem já é cliente de outra plataforma ganha uma conta nova aqui, com senha própria.'}</p></div><button disabled={!!ocupado||carregando} onClick={()=>setRevisao(v=>v+1)}>Atualizar</button></header>
     {geral&&geral.total>0&&<div className="pdq-geral" aria-label="Visão geral de todas as abas">
       <p><b>{geral.total}</b> {geral.total===1?'pessoa inscrita':'pessoas inscritas'} no total</p>
@@ -391,7 +392,7 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
       })()}
       <div><small>Último cadastro: {new Date(p.ultima_inscricao_em||p.criado_em).toLocaleString('pt-BR')}</small><span>{p.status==='aprovado'?(p.email_enviado_em?'E-mail enviado':'E-mail na fila de envio'):p.status==='processando'?'Aprovação iniciada; pode ser retomada após dois minutos.':p.status==='recusado'?'Recusado':naLive?'Inscrito na live · confirmação enviada':'Pendente de aprovação'}</span></div>
       {['pendente','processando'].includes(p.status)&&confirmar?.p.id!==p.id&&<div className="pendente-acoes">{naLive&&p.status==='pendente'
-        ? <span className="pendente-na-live">Libera sozinho em 09/11, 20h30</span>
+        ? <span className="pendente-na-live">Libera no botão Liberar acesso geral</span>
         : <button disabled={!!ocupado} className="admin-primary" onClick={()=>setConfirmar({p,acao:'aprovar'})}>{p.status==='processando'?'Retomar aprovação':'Aprovar'}</button>}{p.status==='pendente'&&<button disabled={!!ocupado} onClick={()=>setConfirmar({p,acao:'recusar'})}>Recusar</button>}</div>}
       {/* A confirmação nasce na linha do próprio cadastro (29/10/2026): no topo
           da lista, quem clicava no 30º cadastro não via a pergunta. */}

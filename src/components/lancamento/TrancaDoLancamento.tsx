@@ -170,7 +170,7 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
           <h2>{estado?.liberadoEm ? 'Seu acesso ainda não foi liberado' : 'Liberando os acessos'}</h2>
           <p>{estado?.liberadoEm
             ? 'A plataforma foi liberada para quem ficou na live até o fim. Os próximos passos para quem não conseguiu ficar serão avisados na comunidade do WhatsApp.'
-            : 'Quem ficou na live até o fim é liberado em instantes. Esta tela abre a plataforma sozinha.'}</p>
+            : 'A equipe está liberando os acessos. Esta tela abre a plataforma sozinha assim que o seu for liberado.'}</p>
         </div>
         <div className="tl-acoes">
           {comunidadeDaVitrine() && <a className="tl-botao" href={comunidadeDaVitrine()} target="_blank" rel="noopener noreferrer">Abrir a comunidade</a>}

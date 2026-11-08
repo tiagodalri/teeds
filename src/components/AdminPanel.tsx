@@ -52,6 +52,7 @@ const AdminNotificacoes = lazy(() => import('./notificacoes/AdminNotificacoes').
 const CentralWhatsApp = lazy(() => import('./whatsapp/CentralWhatsApp').then((m) => ({ default: m.CentralWhatsApp })))
 const AdminAnuncios = lazy(() => import('./anuncios/AdminAnuncios').then((m) => ({ default: m.AdminAnuncios })))
 const AdminLancamento = lazy(() => import('./lancamento/AdminLancamento').then((m) => ({ default: m.AdminLancamento })))
+const LiberarAcessoGeral = lazy(() => import('./lancamento/LiberarAcessoGeral').then((m) => ({ default: m.LiberarAcessoGeral })))
 const Organizacao = lazy(() => import('./organizacao/Organizacao').then((m) => ({ default: m.Organizacao })))
 
 type Aba = 'anuncios' | 'notificacoes' | 'whatsapp' | 'lancamento' | 'organizacao' | 'suporte' | 'emails' | 'estudo' | 'visao' | 'inteligencia' | 'leads' | 'clientes' | 'resultados' | 'movimentacoes' | 'acessos' | 'aulas' | 'planos' | 'produtos' | 'comissoes' | 'robos' | 'parceiros'
@@ -503,6 +504,8 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
           cara dela. Em "Rede" não há marca para aprovar, então o cartão sai do
           ar em vez de mostrar a lista de alguma marca por acaso. A lista de
           clientes abaixo continua, porque consultar a rede inteira faz sentido. */}
+      {/* 08/11/2026: a liberação do lançamento é este botão, não mais às 20h30 sozinha */}
+      {aba === 'clientes' && !naRede && naGf && <Suspense fallback={null}><LiberarAcessoGeral sessao={sessao} geral={souGeral} /></Suspense>}
       {aba === 'clientes' && !naRede && <AdminPendentes key={chaveDoFoco} sessao={sessao} marca={marcaFoco} versao={versao} planos={planos} parceiros={souGeral ? parceirosDoFoco : []} onAprovado={()=>void recarregar()} />}
       {aba === 'clientes' && naRede && <section className="admin-card adm-pede-marca"><div><span className="rot">Aprovação de clientes</span><h3>Escolha uma plataforma para aprovar</h3><p>A conta nasce dentro de uma marca e o e-mail sai com a identidade dela. Na visão de Rede não há a quem aprovar — troque para {Object.values(MARCAS).map(m=>m.prosa).join(', ').replace(/, ([^,]*)$/, ' ou $1')} no topo.</p></div></section>}
       {aba === 'clientes' && <section className="admin-card full adm-base-clientes"><header><div><span className="rot">Base completa</span><h3>{totalClientes.toLocaleString('pt-BR')} clientes cadastrados</h3></div><button className="admin-primary" onClick={()=>setAba('acessos')}><Icone nome="mais" />Novo cliente</button></header>{tabelaClientes}</section>}

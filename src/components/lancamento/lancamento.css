@@ -186,3 +186,33 @@ body:has(.tl-fundo, .tl-live) .barra-inferior { display: none !important; }
 .adm-lanc-ok { margin: 0; padding: 10px 14px; border-radius: 10px; background: color-mix(in srgb, var(--up) 12%, transparent); color: var(--text); font-size: 13.5px; }
 .adm-lanc-lista { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
 .adm-lanc-lista b { color: var(--text); }
+
+/* "Liberar acesso geral" em Clientes (08/11/2026). Prefixo lag-. */
+.admin-card.lag {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 16px; padding: 20px 22px; border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: linear-gradient(120deg, color-mix(in srgb, var(--primary) 9%, var(--surface)), var(--surface) 60%);
+}
+.admin-card.lag.lag-feito { border-color: color-mix(in srgb, var(--up) 40%, var(--border)); background: var(--surface); }
+.lag-texto { display: grid; gap: 6px; min-width: 0; max-width: 760px; }
+.lag-texto h3 { margin: 0; font-size: 18px; }
+.lag-texto p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; text-wrap: pretty; }
+.lag-texto p b { color: var(--text); }
+.lag-feito .lag-texto h3::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 9px; border-radius: 50%; background: var(--up); vertical-align: 2px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--up) 18%, transparent); }
+.lag-texto .lag-ok { margin-top: 4px; padding: 9px 12px; border-radius: 10px; background: color-mix(in srgb, var(--up) 12%, transparent); color: var(--text); }
+.lag-botao { flex: none; display: inline-flex; align-items: center; gap: 9px; min-height: 48px; padding: 0 22px; font-size: 14.5px; white-space: nowrap; }
+.lag-de-novo { flex: none; min-height: 40px; padding: 0 16px; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--text); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; white-space: nowrap; }
+.lag-de-novo:hover { border-color: var(--primary); }
+.adm-modal.lag-modal { width: min(560px, 100%); }
+.adm-modal.lag-modal > header h3 { margin: 0; font-size: 18px; }
+.lag-lista { display: grid; gap: 10px; margin: 0; padding: 20px 22px 4px 42px; color: var(--text); font-size: 14px; line-height: 1.55; }
+.lag-aviso { margin: 10px 22px 16px; color: var(--muted); font-size: 13px; }
+.lag-erro { margin: 0 22px 14px; color: var(--down); font-size: 13px; }
+.adm-modal.lag-modal > footer { justify-content: flex-end; }
+.adm-modal.lag-modal > footer button { min-height: 44px; padding: 0 20px; font-size: 14px; }
+:root .adm-modal.lag-modal > footer button.lag-cancelar,
+:root[data-marca] .adm-modal.lag-modal > footer button.lag-cancelar { border: 1px solid var(--border); background: transparent; color: var(--text); font-weight: 650; box-shadow: none; }
+@media (max-width: 700px) {
+  .admin-card.lag { flex-direction: column; align-items: stretch; }
+  .lag-botao, .lag-de-novo { width: 100%; justify-content: center; }
+}

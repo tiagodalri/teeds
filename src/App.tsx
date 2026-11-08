@@ -32,7 +32,7 @@ import { definirDonoDoPlano } from './core/teeds/planoDoDia'
 import { NovaSenha } from './components/NovaSenha'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 import { PreAcesso } from './components/PreAcesso'
-import { emPreAcesso, estadoDaLive, idDoYoutube, INICIO_DA_LIVE, PLANO_AGUARDANDO, trancadoAteALive, type EstadoDaLive } from './core/teeds/lancamento'
+import { emPreAcesso, estadoDaLive, guardarLiberacaoGeral, idDoYoutube, INICIO_DA_LIVE, liberacaoGeralGuardada, PLANO_AGUARDANDO, trancadoAteALive, type EstadoDaLive } from './core/teeds/lancamento'
 import { TrancaDoLancamento } from './components/lancamento/TrancaDoLancamento'
 import { ligarCorretoraDiscreta } from './marca/corretoraDiscreta'
 import { eventoDoPixel, iniciarPixelDoParceiro } from './core/teeds/pixelDoParceiro'
@@ -596,10 +596,17 @@ export default function App() {
     (TrancaDoLancamento). O administrador vê como o inscrito vê com ?ver=inscrito.
   */
   const previaInscrito = MARCA.id === 'globalfly' && admin === true && new URLSearchParams(location.search).get('ver') === 'inscrito'
-  const trancado = previaInscrito || (!liberadoAntes && trancadoAteALive(situacao, plano, admin))
+  const [live, setLive] = useState<EstadoDaLive | null>(null)
+  /*
+    08/11/2026 (Tiago): ninguém é liberado sozinho às 20h30; vale o botão "Liberar acesso geral"
+    (Administração › Clientes), que marca liberadoEm no banco. Enquanto o banco não responde, vale
+    o que o aparelho já sabe; sem isso, só a partir das 20h de 09/11 a plataforma abre na dúvida.
+  */
+  const liberadoGeral = MARCA.id !== 'globalfly' || (live ? !!live.liberadoEm : liberacaoGeralGuardada() || Date.now() >= INICIO_DA_LIVE)
+  useEffect(() => { if (live) guardarLiberacaoGeral(live.liberadoEm) }, [live?.liberadoEm]) // eslint-disable-line react-hooks/exhaustive-deps
+  const trancado = previaInscrito || (!liberadoAntes && trancadoAteALive(situacao, plano, admin, liberadoGeral))
   // trancada até a live, a plataforma de trás também não diz o nome da corretora (03/11/2026)
   useEffect(() => (trancado ? ligarCorretoraDiscreta() : undefined), [trancado])
-  const [live, setLive] = useState<EstadoDaLive | null>(null)
   const [assistindoLive, setAssistindoLive] = useState(false)
   useEffect(() => {
     const sessao = teeds.sessao
@@ -630,7 +637,7 @@ export default function App() {
     if (estavaTrancado.current && !trancado && situacao === 'ativo') {
       setAviso({ tipo: 'ok', texto: `Acesso liberado. Bem-vindo à ${MARCA.prosa}, GF Member.` })
       eventoDoPixel('AcessoLiberado', undefined, true)
-      // liberado com a live ainda no ar (20h30): a live continua aberta, agora por cima da plataforma
+      // liberado com a live ainda no ar: a live continua aberta, agora por cima da plataforma
       if (live?.noAr) setAssistindoLive(true)
     }
     estavaTrancado.current = trancado
@@ -687,7 +694,7 @@ export default function App() {
   const mostrarAoVivo = LIVES_AO_VIVO || admin === true || membroTreino === true
   // nunca por cima da live (na liberação de 09/11 a live abre sozinha para quem acabou de ser liberado)
   const mostrarVideoInicio = !videoInicioVisto && !videoInicioDispensado && !JANELA && !!teeds.sessao && !trancado && planoLido && admin !== null
-    && (liberadoAntes || !aulasTravadasParaGfMember(plano, admin)) && !assistindoLive && !live?.noAr
+    && (liberadoAntes || !aulasTravadasParaGfMember(plano, admin, liberadoGeral)) && !assistindoLive && !live?.noAr
   // enquanto não se sabe se o vídeo vai abrir, o tour espera (senão ele abre e some no meio)
   const decidindoVideoInicio = !videoInicioVisto && !videoInicioDispensado && (!planoLido || admin === null)
   useEffect(() => {
@@ -1599,7 +1606,7 @@ export default function App() {
       ) : tela === 'aulas' ? (
         <Suspense fallback={telaAbrindo('Abrindo as aulas…')}><AulasPanel nome={teeds.usuario?.nome} sessao={teeds.sessao} aoReverTour={MARCA.inicio ? () => setTour('rever') : undefined}
           aoIr={(t) => setTela(t as WorkspacePage)} treino={MARCA.aoVivo && (membroTreino === true || admin === true) ? { noAr: !!treinoAgora } : null}
-          travadas={!liberadoAntes && aulasTravadasParaGfMember(plano, admin)} plano={plano} admin={admin} /></Suspense>
+          travadas={!liberadoAntes && aulasTravadasParaGfMember(plano, admin, liberadoGeral)} plano={plano} admin={admin} /></Suspense>
       ) : tela === 'marketplace' ? (
         <Suspense fallback={telaAbrindo('Abrindo o marketplace…')}><MarketplacePanel sessao={teeds.sessao} /></Suspense>
       ) : tela === 'gerenciamento' ? (
