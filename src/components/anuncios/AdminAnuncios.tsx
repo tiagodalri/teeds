@@ -13,7 +13,7 @@
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { MARCA } from '../../marca'
-import { API_DO_BANCO, CONTAS_DE_ANUNCIO, type ApiAnuncios, type Descoberta, type Anuncio, type Campanha, type Conjunto, type DetalheDoAnuncio, type FunilDoBanco, type Horarios as DadosDeHorario, type Metricas, type PainelDaMeta, type Quebra, type RespostaDaMeta } from '../../core/teeds/anuncios'
+import { API_DO_BANCO, CONTAS_DE_ANUNCIO, type ApiAnuncios, type Descoberta, type Anuncio, type Campanha, type Conjunto, type DetalheDoAnuncio, type PreviaDoAnuncio, type FunilDoBanco, type Horarios as DadosDeHorario, type Metricas, type PainelDaMeta, type Quebra, type RespostaDaMeta } from '../../core/teeds/anuncios'
 import { Alertas, Custos, Filtros, Horarios, METRICA, Relatorio, alertas, aplicar, contexto, formatar, somarLinhas, useColunas, type Base, type Linha, type Regra } from './Indicadores'
 import { Funil3D, type EtapaDoFunil } from './Funil3D'
 import { EstudioDeAnuncios } from './estudio/Estudio'
@@ -997,6 +997,84 @@ function FragmentoCampanha({ c, conjuntos }: { c: PainelDaMeta['campanhas'][numb
   )
 }
 
+/*
+  O criativo como a pessoa vê (08/11/2026). A Meta monta a prévia de cada posicionamento num iframe assinado
+  (o vídeo toca dentro dele); a tela só põe a moldura do celular em volta e deixa trocar entre Stories, Reels e
+  Feed. Quando a chave alcança o arquivo do vídeo (vídeos subidos na conta), aparece também a aba "Vídeo".
+*/
+const PREVIA_CURTA: Record<string, string> = {
+  INSTAGRAM_STORY: 'Stories IG', INSTAGRAM_REELS: 'Reels IG', INSTAGRAM_STANDARD: 'Feed IG',
+  MOBILE_FEED_STANDARD: 'Feed FB', FACEBOOK_STORY_MOBILE: 'Stories FB', FACEBOOK_REELS_MOBILE: 'Reels FB',
+}
+const PREVIA_SEGURA = /^(https:\/\/(business|www)\.facebook\.com\/ads\/api\/preview_iframe\.php\?|data:text\/html)/
+function VitrineDoCriativo({ a, api, sessao, parceiro }: { a: Anuncio; api: ApiAnuncios; sessao: SessaoTeeds; parceiro: string }) {
+  const [previa, setPrevia] = useState<PreviaDoAnuncio | null>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const [aba, setAba] = useState('')
+  const [largura, setLargura] = useState(320)
+  const caixa = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    let vivo = true
+    setPrevia(null); setAviso(null); setAba('')
+    api.previa(sessao, parceiro, a.id).then((r) => {
+      if (!vivo) return
+      if ('semChave' in r) { setAviso('A prévia aparece quando a conta de anúncios estiver ligada pela chave.'); return }
+      if ('chaveInvalida' in r) { setAviso(r.erro); return }
+      const previas = r.previas.filter((p) => PREVIA_SEGURA.test(p.src))
+      setPrevia({ ...r, previas })
+      setAba(previas.find((p) => p.formato === 'INSTAGRAM_STORY')?.formato ?? previas[0]?.formato ?? (r.video ? 'video' : ''))
+      if (!previas.length && !r.video) setAviso('A Meta não devolveu prévia para este anúncio.')
+    }).catch((e) => vivo && setAviso((e as Error).message))
+    return () => { vivo = false }
+  }, [a.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // o celular encolhe para caber na gaveta (no celular de verdade, a gaveta tem uns 330 px)
+  useEffect(() => {
+    const el = caixa.current
+    if (!el) return
+    const medir = () => setLargura(el.clientWidth)
+    medir()
+    const ro = new ResizeObserver(medir)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [previa])
+  const capa = a.criativo.imagem || a.criativo.miniatura
+  if (!previa) {
+    return (
+      <div className="aa-vitrine">
+        {capa ? <img className="aa-vitrine-capa" src={capa} alt="Criativo do anúncio" /> : <span className="aa-sem-img grande" />}
+        <small className="aa-mudo">{aviso ?? 'Montando a prévia da Meta…'}</small>
+      </div>
+    )
+  }
+  const atual = previa.previas.find((p) => p.formato === aba)
+  const BORDA = 10
+  const escala = atual ? Math.min(1, (largura - BORDA * 2) / atual.largura) : 1
+  return (
+    <div className="aa-vitrine" ref={caixa}>
+      <div className="aa-vitrine-abas" role="tablist" aria-label="Como o anúncio aparece">
+        {previa.video && <button type="button" role="tab" aria-selected={aba === 'video'} className={aba === 'video' ? 'on' : ''} onClick={() => setAba('video')}>Vídeo</button>}
+        {previa.previas.map((p) => (
+          <button key={p.formato} type="button" role="tab" aria-selected={aba === p.formato} title={p.nome} className={aba === p.formato ? 'on' : ''} onClick={() => setAba(p.formato)}>{PREVIA_CURTA[p.formato] ?? p.nome}</button>
+        ))}
+      </div>
+      {aba === 'video' && previa.video ? (
+        <div className="aa-celular video">
+          <video src={previa.video.url} poster={previa.video.capa ?? capa ?? undefined} controls playsInline preload="metadata" />
+        </div>
+      ) : atual ? (
+        <div className="aa-celular" style={{ width: atual.largura * escala + BORDA * 2 }}>
+          <div className="aa-celular-tela" style={{ width: atual.largura * escala, height: atual.altura * escala }}>
+            <iframe key={atual.src} src={atual.src} title={`Prévia: ${atual.nome}`} width={atual.largura} height={atual.altura} loading="lazy"
+              allow="autoplay; encrypted-media; fullscreen" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+              style={{ transform: `scale(${escala})` }} />
+          </div>
+        </div>
+      ) : null}
+      <small className="aa-mudo">{aba === 'video' ? 'O arquivo do vídeo, como foi subido.' : `${atual?.nome ?? ''}: prévia da própria Meta, como aparece no celular.`}</small>
+    </div>
+  )
+}
+
 function AnuncioAberto({ a, fechar, sessao, api, parceiro, de, ate, nosso, campanha, conjunto }: {
   a: Anuncio; fechar: () => void; sessao: SessaoTeeds; api: ApiAnuncios; parceiro: string; de: string; ate: string
   nosso?: FunilDoBanco['porAnuncio'][number]; campanha: string; conjunto: string
@@ -1022,8 +1100,10 @@ function AnuncioAberto({ a, fechar, sessao, api, parceiro, de, ate, nosso, campa
           <div><span className="rot">{campanha}{conjunto ? ` › ${conjunto}` : ''}</span><h3 id="aa-gaveta-titulo">{a.nome}</h3><Status s={a.status} /></div>
           <button type="button" onClick={fechar} aria-label="Fechar">×</button>
         </header>
-        <div className="aa-criativo">
-          {a.criativo.imagem || a.criativo.miniatura ? <img src={a.criativo.imagem || a.criativo.miniatura!} alt="Criativo do anúncio" /> : <span className="aa-sem-img grande" />}
+        {/* 08/11/2026 (Tiago: "ver o criativo, assistir o vídeo, ver o mock-up de como aparece no celular, nos stories"):
+            o celular com a prévia da própria Meta em cada posicionamento; o texto do anúncio ao lado */}
+        <div className="aa-criativo com-previa">
+          <VitrineDoCriativo a={a} api={api} sessao={sessao} parceiro={parceiro} />
           <div>
             <small>{a.criativo.tipo === 'video' ? 'Vídeo' : a.criativo.tipo === 'carrossel' ? 'Carrossel' : 'Imagem'}{a.criativo.cta ? ` · botão “${BOTAO[a.criativo.cta] ?? a.criativo.cta.replace(/_/g, ' ').toLowerCase()}”` : ''}</small>
             {a.criativo.titulo && <b>{a.criativo.titulo}</b>}

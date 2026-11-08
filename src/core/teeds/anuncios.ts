@@ -36,6 +36,11 @@ export interface PainelDaMeta {
 }
 export type RespostaDaMeta = PainelDaMeta | { semChave: true } | { chaveInvalida: true; erro: string }
 export interface DetalheDoAnuncio { porDia: Array<Metricas & { dia: string }>; idadeGenero: Quebra[]; posicionamento: Quebra[] }
+/** 08/11/2026: o criativo como aparece em cada posicionamento (prévia da Meta) e o vídeo, quando a chave alcança o arquivo. */
+export interface PreviaDoAnuncio {
+  previas: Array<{ formato: string; nome: string; src: string; largura: number; altura: number }>
+  video: { url: string; capa: string | null; duracao: number } | null
+}
 
 interface Etapas { cadastros: number; questionario: number; contas: number; notificacoes: number; live: number; liberados: number }
 export interface FunilDoBanco {
@@ -78,6 +83,7 @@ export interface ApiAnuncios {
   painel: (sessao: SessaoTeeds, parceiro: string, de: string, ate: string, forcar?: boolean) => Promise<RespostaDaMeta>
   resumo: (sessao: SessaoTeeds, parceiro: string, de: string, ate: string) => Promise<{ total: Metricas; em: string } | { semChave: true } | { chaveInvalida: true; erro: string }>
   anuncio: (sessao: SessaoTeeds, parceiro: string, id: string, de: string, ate: string) => Promise<DetalheDoAnuncio>
+  previa: (sessao: SessaoTeeds, parceiro: string, id: string) => Promise<PreviaDoAnuncio | { semChave: true } | { chaveInvalida: true; erro: string }>
   funil: (sessao: SessaoTeeds, parceiro: string, de: string, ate: string) => Promise<FunilDoBanco>
   salvarChave: (sessao: SessaoTeeds, parceiro: string, chave: string) => Promise<unknown>
   /** copia, no servidor, a chave de um parceiro para outro do mesmo gerenciador de negócios */
@@ -98,6 +104,7 @@ export const API_DO_BANCO: ApiAnuncios = {
   painel: (s, parceiro, de, ate, forcar) => funcao(s, { acao: 'painel', parceiro, de, ate, forcar: !!forcar }),
   resumo: (s, parceiro, de, ate) => funcao(s, { acao: 'resumo', parceiro, de, ate }),
   anuncio: (s, parceiro, id, de, ate) => funcao(s, { acao: 'anuncio', parceiro, id, de, ate }),
+  previa: (s, parceiro, id) => funcao(s, { acao: 'previa', parceiro, id }),
   funil: (s, parceiro, de, ate) => rpc(s, 'teeds_meta_funil', { p_marca: MARCA.id, p_parceiro: parceiro, p_de: de, p_ate: ate }),
   salvarChave: (s, parceiro, chave) => rpc(s, 'teeds_meta_ads_chave_salvar', { p_marca: MARCA.id, p_parceiro: parceiro, p_chave: chave }),
   copiarChave: (s, de, para) => rpc(s, 'teeds_meta_ads_chave_copiar', { p_marca: MARCA.id, p_de: de, p_para: para }),

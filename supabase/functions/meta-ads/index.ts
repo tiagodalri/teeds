@@ -10,6 +10,8 @@
 // que lê a conta pela integração Meta Ads). Só campanhas com o nome começando em "GF |".
 // POST { acao: 'anuncio', marca, parceiro, id, de, ate }
 //   um anúncio: dia a dia, idade/gênero e posicionamento.
+// POST { acao: 'previa', marca, parceiro, id }
+//   o criativo de um anúncio: a prévia pronta da Meta em cada posicionamento (Stories, Reels, Feed) e o vídeo.
 // POST { acao: 'descobrir', marca, parceiro }
 //   as contas de anúncios (com os pixels) e as páginas que a chave guardada enxerga.
 // POST { acao: 'escolher', marca, parceiro, conta, pixel, pagina? }
@@ -400,6 +402,44 @@ Deno.serve(async (req) => {
     }
   }
 
+  // 08/11/2026, Tiago: "quando eu clicar nos anúncios, quero ver o criativo, assistir o vídeo, ver o mock-up de
+  // como aparece no celular, nos stories...". A Meta devolve a prévia pronta de cada posicionamento (um iframe
+  // assinado, que toca o vídeo). O arquivo do vídeo só sai para os vídeos subidos na conta de anúncios; o de um
+  // post da página a chave não alcança, e aí o vídeo toca pela prévia.
+  if (d.acao === 'previa') {
+    const id = String(d.id ?? '')
+    if (!/^\d{5,30}$/.test(id)) return json({ erro: 'Anúncio inválido.' }, 400)
+    const k = await rest(`config_servicos?chave=eq.META_ADS_${marca.toUpperCase()}_${parceiro.toUpperCase()}&select=valor`)
+    const chaveP = k.ok ? (await k.json())[0]?.valor as string | undefined : undefined
+    if (!chaveP) return json({ semChave: true })
+    const FORMATOS: Array<[string, string]> = [
+      ['INSTAGRAM_STORY', 'Stories do Instagram'], ['INSTAGRAM_REELS', 'Reels do Instagram'], ['INSTAGRAM_STANDARD', 'Feed do Instagram'],
+      ['MOBILE_FEED_STANDARD', 'Feed do Facebook'], ['FACEBOOK_STORY_MOBILE', 'Stories do Facebook'], ['FACEBOOK_REELS_MOBILE', 'Reels do Facebook'],
+    ]
+    try {
+      const [ad] = await graph(chaveP, id, { fields: 'creative{video_id,object_type}' }, 1)
+      const previas = (await Promise.all(FORMATOS.map(async ([formato, nome]) => {
+        const l = await graph(chaveP, `${id}/previews`, { ad_format: formato }, 1).catch(() => [])
+        const corpo = String(l[0]?.body ?? '')
+        const src = (/src="([^"]+)"/.exec(corpo)?.[1] ?? '').replace(/&amp;/g, '&')
+        // só o endereço de prévia da própria Meta vai para a tela
+        if (!/^https:\/\/(business|www)\.facebook\.com\/ads\/api\/preview_iframe\.php\?/.test(src)) return null
+        const largura = Number(/width="(\d+)"/.exec(corpo)?.[1] ?? 320), altura = Number(/height="(\d+)"/.exec(corpo)?.[1] ?? 568)
+        return { formato, nome, src, largura, altura }
+      }))).filter(Boolean)
+      const vid = ad?.creative?.video_id ? String(ad.creative.video_id) : ''
+      const video = vid
+        ? await graph(chaveP, vid, { fields: 'source,picture,length' }, 1)
+          .then((l) => (/^https:\/\/[a-z0-9.-]+\.fbcdn\.net\//.test(String(l[0]?.source ?? '')) ? { url: String(l[0].source), capa: l[0].picture ?? null, duracao: n(l[0].length) } : null))
+          .catch(() => null)
+        : null
+      return json({ previas, video, tipo: ad?.creative?.object_type ?? null })
+    } catch (e) {
+      if (e instanceof ErroDaMeta && e.codigo === 190) return json({ chaveInvalida: true, erro: 'A Meta não aceitou a chave (venceu ou foi trocada). Cole uma nova.' })
+      return json({ erro: e instanceof ErroDaMeta ? `A Meta não mostrou a prévia: ${e.message}` : (e as Error).message }, 502)
+    }
+  }
+
   const data = /^\d{4}-\d{2}-\d{2}$/
   const de = String(d.de ?? ''), ate = String(d.ate ?? '')
   if (!data.test(de) || !data.test(ate) || de > ate) return json({ erro: 'Período inválido.' }, 400)
@@ -421,6 +461,8 @@ Deno.serve(async (req) => {
     return json(ponte)
   }
   const chave = linha.valor as string
+  // chave guardada, conta ainda não escolhida (o /v novo): a tela abre a escolha
+  if (!cfg.conta) return json({ escolherConta: true })
 
   try {
     // o funil ao vivo: só o total do período, uma consulta (a tela pede a cada minuto)
