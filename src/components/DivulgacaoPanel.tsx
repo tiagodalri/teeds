@@ -1,3 +1,4 @@
+import { FiltroDeParceiros } from './parceiros/FiltroDeParceiros'
 import { useState } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA } from '../marca'
@@ -79,9 +80,8 @@ export function DivulgacaoPanel({ sessao, inicial }: { sessao: SessaoTeeds; inic
           <p>Use estes links para divulgar. Quem chegar por eles fica registrado como cliente {dados.geral ? `de ${p.nome.split(' ')[0]}` : 'seu'}.</p>
         </div>
         {dados.parceiros.length > 1 && (
-          <div className="dv-seg" role="tablist" aria-label="Parceiro">
-            {dados.parceiros.map((x) => <button key={x.codigo} type="button" role="tab" aria-selected={x.codigo === p.codigo} className={x.codigo === p.codigo ? 'on' : ''} onClick={() => { setQual(x.codigo); setEditando(null); setConfig(null) }}>{x.nome.split(' ')[0]} <small>/{x.codigo}</small></button>)}
-          </div>
+          <FiltroDeParceiros valor={p.codigo} onTrocar={(c) => { setQual(c); setEditando(null); setConfig(null) }}
+            opcoes={dados.parceiros.map((x) => ({ id: x.codigo, nome: x.nome.split(' ')[0], codigo: x.codigo, titulo: x.nome }))} />
         )}
       </header>
 

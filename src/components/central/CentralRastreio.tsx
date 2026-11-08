@@ -11,6 +11,7 @@
  * links marcados para Telegram, stories, WhatsApp...). Dados: teeds_central_* (banco) e a
  * função meta-ads (a mesma da aba Anúncios).
  */
+import { FiltroDeParceiros } from '../parceiros/FiltroDeParceiros'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { API_DO_BANCO, CONTAS_DE_ANUNCIO, type Anuncio, type ApiAnuncios, type Metricas, type PainelDaMeta } from '../../core/teeds/anuncios'
@@ -270,9 +271,8 @@ export function CentralRastreio({ sessao, api = API_DA_CENTRAL, apiAnuncios = AP
   return (
     <div className="aa cr">
       <div className="aa-topo cr-topo">
-        <div className="aa-troca" role="group" aria-label="Parceiro">
-          {PARCEIROS.map((x) => <button key={x.id} type="button" className={parceiro === x.id ? 'on' : ''} onClick={() => setParceiro(x.id)}>{x.nome}</button>)}
-        </div>
+        <FiltroDeParceiros valor={parceiro} onTrocar={setParceiro}
+          opcoes={PARCEIROS.map((x) => (x.id ? { id: x.id, nome: x.nome.split(' ')[0], codigo: x.id } : { id: '', nome: 'Todos' }))} />
         {aba !== 'aovivo' && aba !== 'links' && (
           <div className="aa-periodo" role="group" aria-label="Período">
             {PERIODOS.map((x) => <button key={x.id} type="button" className={periodo === x.id ? 'on' : ''} onClick={() => setPeriodo(x.id)}>{x.nome}</button>)}

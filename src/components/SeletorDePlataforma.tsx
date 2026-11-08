@@ -12,6 +12,7 @@
  */
 import { MARCAS } from '../marca/marcas'
 import { REDE } from '../core/teeds/clientes'
+import { FiltroDeParceiros } from './parceiros/FiltroDeParceiros'
 
 export interface OpcaoDePlataforma {
   id: string
@@ -75,15 +76,12 @@ export function SeletorDePlataforma({ valor, opcoes, onTrocar, parceiros = [], p
     {parceiros.length > 0 && onParceiro && (
       <div className="sel-parc" role="group" aria-label={soParceiros ? 'Conta de anúncios do parceiro' : 'Parceiro de divulgação'}>
         <span className="sel-plat-rot">Parceiro</span>
-        <div className="sel-parc-opcoes">
-          {!soParceiros && <button type="button" aria-pressed={!parceiro} onClick={() => { if (parceiro) onParceiro('') }}>Todos</button>}
-          {parceiros.map((p) => (
-            <button key={p.codigo} type="button" aria-pressed={parceiro === p.codigo} onClick={() => { if (parceiro !== p.codigo) onParceiro(p.codigo) }} title={soParceiros ? `A conta de anúncios do ${p.nome.split(' ')[0]}` : `${nomeDaMarca} · ${p.nome}`}>
-              {opcoes.length > 1 ? `${nomeDaMarca} ` : ''}{p.nome.split(' ')[0]} <small>/{p.codigo}</small>
-            </button>
-          ))}
-          {!soParceiros && <button type="button" aria-pressed={parceiro === 'direto'} onClick={() => { if (parceiro !== 'direto') onParceiro('direto') }} title="Quem chegou sem link de parceiro">Direto</button>}
-        </div>
+        <FiltroDeParceiros rotulo={soParceiros ? 'Conta de anúncios do parceiro' : 'Parceiro de divulgação'} valor={parceiro} onTrocar={onParceiro}
+          opcoes={[
+            ...(soParceiros ? [] : [{ id: '', nome: 'Todos', titulo: 'Todos os parceiros e quem chegou direto' }]),
+            ...parceiros.map((p) => ({ id: p.codigo, pessoa: p.nome, nome: `${opcoes.length > 1 ? `${nomeDaMarca} ` : ''}${p.nome.split(' ')[0]}`, codigo: p.codigo, titulo: soParceiros ? `A conta de anúncios do ${p.nome.split(' ')[0]}` : `${nomeDaMarca} · ${p.nome}` })),
+            ...(soParceiros ? [] : [{ id: 'direto', nome: 'Direto', titulo: 'Quem chegou sem link de parceiro' }]),
+          ]} />
       </div>
     )}
     </>
