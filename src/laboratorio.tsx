@@ -36,7 +36,7 @@ import type { ActiveSymbol } from './core/deriv/types'
 import { RobotLive } from './components/RobotLive'
 import { Bandeira, Moeda } from './components/ferramentas/Bandeira'
 const MOEDAS_LAB = ['USD', 'BRL', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY', 'CNY', 'ARS', 'MXN', 'CLP', 'BTC']
-import { gradeDoCatalogo, type GradeAulas } from './core/teeds/gradeAulas'
+import { gradeDoCatalogo, normalizarGrade, type GradeAulas } from './core/teeds/gradeAulas'
 import { LocalRobotPanel } from './components/LocalRobotPanel'
 import { RobotSetup } from './components/RobotSetup'
 import { DigitsPanel } from './components/DigitsPanel'
@@ -118,13 +118,38 @@ function gradeComCursos(): GradeAulas {
 function LabAulas() {
   const q = new URLSearchParams(location.search)
   const t = q.get('tema'); if (t) document.documentElement.dataset.tema = t
+  // &grade=/lab-grade-gf.json: a sala com uma grade de verdade (JSON em public/), para testar antes de publicar
+  const [gradeDoArquivo, setGradeDoArquivo] = useState<GradeAulas | null | undefined>(q.get('grade') ? undefined : null)
+  useEffect(() => {
+    const url = q.get('grade'); if (!url) return
+    void fetch(url).then((r) => r.json()).then((g) => setGradeDoArquivo(normalizarGrade(g))).catch(() => setGradeDoArquivo(null))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  if (gradeDoArquivo === undefined) return <Carregando />
   return (
     <div className="app workspace-app">
       <WorkspaceNav page="aulas" admin={false} mostrarInicio onNavigate={() => undefined} />
       <header className="topbar"><div className="workspace-heading"><strong>Aulas</strong><span>Seu espaço de trabalho</span></div></header>
       <AulasPanel nome="Tiago Dal Ri" sessao={null} aoReverTour={() => undefined} aoIr={() => undefined} treino={{ noAr: q.has('aovivo') }} travadas={q.has('membro')}
-        previa={q.has('cursos') ? gradeComCursos() : undefined} />
+        previa={gradeDoArquivo ?? (q.has('cursos') ? gradeComCursos() : undefined)} />
     </div>
+  )
+}
+/** ?tela=boasvindas&grade=/lab-grade-gf.json (arquivo local, fora do git): o vídeo do primeiro acesso por cima do início. */
+function LabBoasVindas() {
+  const q = new URLSearchParams(location.search)
+  const [grade, setGrade] = useState<GradeAulas | null>(null)
+  const [aberto, setAberto] = useState(true)
+  // a grade de teste fica fora do repositório (os links não listados não vão para o site): sem &grade=, o catálogo
+  useEffect(() => {
+    const url = q.get('grade')
+    if (!url) { setGrade(gradeDoCatalogo()); return }
+    void fetch(url).then((r) => r.json()).then((g) => setGrade(normalizarGrade(g))).catch(() => setGrade(gradeDoCatalogo()))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <>
+      <Suspense fallback={<Carregando />}><LabInicio /></Suspense>
+      {aberto && grade && <BoasVindasLab sessao={null} nome="Tiago Dal Ri" plano={null} admin={false} grade={grade} aoFechar={() => setAberto(false)} />}
+    </>
   )
 }
 function LabLogin() {
@@ -149,6 +174,7 @@ function LabLogin() {
     </>
   )
 }
+import { BoasVindasEmVideo as BoasVindasLab } from './components/aulas/BoasVindasEmVideo'
 const AdminAulasLab = lazy(() => import('./components/AdminAulas').then((m) => ({ default: m.AdminAulas })))
 const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine'))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
@@ -525,6 +551,7 @@ function Laboratorio() {
     </div>
   )
   if (qual === 'aulas') return <LabAulas />
+  if (qual === 'boasvindas') return <LabBoasVindas />
   if (qual === 'minicabine') return <Suspense fallback={null}><LabMiniCabine /></Suspense>
   return (
     <div className="app workspace-app" data-laboratorio={qual}>

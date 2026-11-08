@@ -69,7 +69,7 @@ import { RelogioTopo } from './components/RelogioTopo'
 import { SeloCategoria, type Categoria } from './components/SeloCategoria'
 import { dinheiro, simboloMoeda } from './core/dinheiro'
 import { usePeriodos } from './core/chart/periodos'
-import { aulasTravadasParaGfMember } from './core/teeds/aulas'
+import { aulasTravadasParaGfMember, aulasVistas } from './core/teeds/aulas'
 import { conviteRecebido, liveNoAr, podeTreinar, treinoNoAr, treinoPedido, type Live, type TreinoNoAr } from './core/live/api'
 import { IconeAtivo } from './components/IconeAtivo'
 import { usePlayerAtivo, useTreinoAtivo } from './core/live/presenca'
@@ -91,6 +91,7 @@ import { carregarRobosBloqueados } from './core/teeds/robosLiberados'
 // quando a pessoa abre a página ou entra numa live.
 const AoVivoPage = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.AoVivoPage })))
 const MercadoPanel = lazy(() => import('./components/MercadoPanel').then((m) => ({ default: m.MercadoPanel })))
+const BoasVindasEmVideo = lazy(() => import('./components/aulas/BoasVindasEmVideo').then((m) => ({ default: m.BoasVindasEmVideo })))
 const DivulgacaoPanel = lazy(() => import('./components/DivulgacaoPanel').then((m) => ({ default: m.DivulgacaoPanel })))
 const CarteiraDeriv = lazy(() => import('./components/CarteiraDeriv').then((m) => ({ default: m.CarteiraDeriv })))
 const LaboratorioIA = lazy(() => import('./components/laboratorio/LaboratorioIA').then((m) => ({ default: m.LaboratorioIA })))
@@ -579,10 +580,12 @@ export default function App() {
   const [plano, setPlano] = useState<string | null>(null)
   // 06/11/2026: cliente liberado pelo administrador antes da live (só a Nathalia, por enquanto)
   const [liberadoAntes, setLiberadoAntes] = useState(false)
+  const [planoLido, setPlanoLido] = useState(false)
   useEffect(() => {
+    setPlanoLido(false)
     if (!teeds.sessao) { setPlano(null); setLiberadoAntes(false); return }
     let vivo = true
-    void meuPlano(teeds.sessao).then((p) => { if (vivo) setPlano(p) })
+    void meuPlano(teeds.sessao).then((p) => { if (vivo) { setPlano(p); setPlanoLido(true) } })
     if (MARCA.id === 'globalfly') void liberadoAntesDaLive(teeds.sessao).then((l) => { if (vivo) setLiberadoAntes(l) })
     return () => { vivo = false }
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -637,6 +640,22 @@ export default function App() {
   // do usuário, e quem nunca fez o tour faz agora (obrigatório na 1ª vez).
   // O "visto" fica na ficha (vale em qualquer aparelho) e neste aparelho.
   const [tour, setTour] = useState<null | 'obrigatorio' | 'rever'>(null)
+  // 08/11/2026 (GlobalFly): no primeiro acesso abre sozinha a aula de introdução, antes do tour
+  const chaveVideoInicio = teeds.sessao && MARCA.id === 'globalfly' ? `globalfly.boasvindas.video.${teeds.sessao.usuario.id}` : ''
+  const [videoInicioVisto, setVideoInicioVisto] = useState(true)
+  // sem vídeo publicado (ou o banco não respondeu): some só nesta visita, sem marcar como visto
+  const [videoInicioDispensado, setVideoInicioDispensado] = useState(false)
+  useEffect(() => {
+    if (!chaveVideoInicio) { setVideoInicioVisto(true); return }
+    let visto = false
+    try { visto = !!localStorage.getItem(chaveVideoInicio) || aulasVistas().has('introducao') } catch { visto = false }
+    setVideoInicioVisto(visto)
+  }, [chaveVideoInicio])
+  const fecharVideoInicio = useCallback((irParaAulas: boolean) => {
+    try { if (chaveVideoInicio) localStorage.setItem(chaveVideoInicio, new Date().toISOString()) } catch { /* só nesta sessão */ }
+    setVideoInicioVisto(true)
+    if (irParaAulas) { setTour((t) => (t === 'obrigatorio' ? null : t)); setTela('aulas') }
+  }, [chaveVideoInicio]) // eslint-disable-line react-hooks/exhaustive-deps
   const chaveTour = teeds.sessao ? `${MARCA.id}.tour.visto.${teeds.sessao.usuario.id}` : ''
   useEffect(() => {
     const sessao = teeds.sessao
@@ -666,6 +685,11 @@ export default function App() {
     return () => { vivo = false }
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const mostrarAoVivo = LIVES_AO_VIVO || admin === true || membroTreino === true
+  // nunca por cima da live (na liberação de 09/11 a live abre sozinha para quem acabou de ser liberado)
+  const mostrarVideoInicio = !videoInicioVisto && !videoInicioDispensado && !JANELA && !!teeds.sessao && !trancado && planoLido && admin !== null
+    && (liberadoAntes || !aulasTravadasParaGfMember(plano, admin)) && !assistindoLive && !live?.noAr
+  // enquanto não se sabe se o vídeo vai abrir, o tour espera (senão ele abre e some no meio)
+  const decidindoVideoInicio = !videoInicioVisto && !videoInicioDispensado && (!planoLido || admin === null)
   useEffect(() => {
     // quem abriu um link de transmissão de teste (31/10/2026) vê a sala mesmo sem ser GF Member
     let comTeste = false
@@ -1429,7 +1453,14 @@ export default function App() {
         <LiveDoLancamento sessao={teeds.sessao} estado={live} aoFechar={() => setAssistindoLive(false)} />
       )}
 
-      {tour && !JANELA && teeds.sessao && !trancado && (
+      {/* o vídeo de boas-vindas vem antes do tour; GF Member só depois da live (as aulas ainda estão travadas) */}
+      {mostrarVideoInicio && teeds.sessao && (
+        <Suspense fallback={null}>
+          <BoasVindasEmVideo sessao={teeds.sessao} nome={teeds.usuario?.nome || ''} plano={plano} admin={admin} aoFechar={fecharVideoInicio} aoSemVideo={() => setVideoInicioDispensado(true)} />
+        </Suspense>
+      )}
+
+      {tour && !JANELA && teeds.sessao && !trancado && !mostrarVideoInicio && !decidindoVideoInicio && (
         <TourGuiado passos={passosDoTour({ nome: teeds.usuario?.nome || '', treino: !!MARCA.aoVivo && (membroTreino === true || admin === true) })}
           obrigatorio={tour === 'obrigatorio'} telaAtual={tela} irPara={setTela}
           aoTerminar={(destino) => fimDoTour(destino)} aoFechar={() => (tour === 'obrigatorio' ? fimDoTour() : setTour(null))} />

@@ -10,14 +10,24 @@ import './aulas/sala-de-aula.css'
  * sabe o que uma aula precisa: retomar de onde parou, avisar quando foi
  * assistida e puxar a próxima quando termina.
  *
- * Só vale para vídeo em arquivo (.mp4). YouTube e Vimeo vêm em iframe e
- * trazem os controles deles.
+ * 08/11/2026 (Tiago subiu as aulas da GlobalFly no YouTube): o mesmo player
+ * toca YouTube. Os controles do YouTube ficam escondidos (controls=0) e os
+ * nossos mandam no vídeo pela API do player; uma película por cima do
+ * quadro segura o clique, para ninguém sair da aula para o YouTube. Como a
+ * API diz o tempo a cada instante, a medição de quem assistiu (segundos de
+ * verdade, até onde chegou, concluída) vale igual ao MP4.
+ * Vimeo continua em iframe com os controles dele.
  */
 
 export interface ProximaAula { titulo: string; abrir: () => void }
 
 interface Props {
+  /** O arquivo (.mp4). Com `youtube`, fica vazio. */
   src: string
+  /** O id do vídeo no YouTube: toca pelo YouTube com os nossos controles. */
+  youtube?: string
+  /** Volta ao começo sozinho quando termina (ex.: depoimentos). */
+  repetir?: boolean
   titulo: string
   /** Onde a pessoa parou da última vez (segundos); 0 = do começo. */
   posicaoInicial?: number
@@ -25,6 +35,8 @@ interface Props {
   aoAvancar?: (fracao: number, segundos: number) => void
   aoTocar?: (tocando: boolean) => void
   proxima?: ProximaAula | null
+  /** O texto do quadro final quando não há próxima aula (padrão: fim do curso). */
+  textoDoFim?: string
   /** Pular para um ponto do vídeo (os tópicos da aula). `vez` muda a cada clique, para repetir o mesmo ponto. */
   pularPara?: { segundos: number; vez: number } | null
 }
@@ -37,6 +49,51 @@ type VideoSafari = HTMLVideoElement & {
   webkitDisplayingFullscreen?: boolean
 }
 
+/** O que os controles pedem ao vídeo, seja o <video> ou o player do YouTube. */
+interface Motor {
+  tocar(): void
+  pausar(): void
+  parado(): boolean
+  terminou(): boolean
+  tempo(): number
+  duracao(): number
+  ir(segundos: number): void
+  mudo(): boolean
+  silenciar(m: boolean): void
+  velocidade(x: number): void
+}
+
+interface PlayerYT {
+  playVideo(): void; pauseVideo(): void; seekTo(s: number, longe: boolean): void
+  getCurrentTime(): number; getDuration(): number; getPlayerState(): number; getVideoLoadedFraction(): number
+  mute(): void; unMute(): void; isMuted(): boolean; setPlaybackRate(x: number): void; destroy(): void
+}
+// sem "Window &": a live de lançamento já declara um YT mais curto na janela
+type JanelaComYT = {
+  YT?: { Player: new (el: HTMLElement, op: Record<string, unknown>) => PlayerYT }
+  onYouTubeIframeAPIReady?: () => void
+}
+let apiDoYoutube: Promise<boolean> | null = null
+function carregarApiDoYoutube(): Promise<boolean> {
+  const w = window as unknown as JanelaComYT
+  if (w.YT?.Player) return Promise.resolve(true)
+  apiDoYoutube ??= new Promise<boolean>((pronto) => {
+    const antes = w.onYouTubeIframeAPIReady
+    w.onYouTubeIframeAPIReady = () => { antes?.(); pronto(true) }
+    if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+      const s = document.createElement('script')
+      s.src = 'https://www.youtube.com/iframe_api'
+      s.async = true
+      s.onerror = () => { apiDoYoutube = null; s.remove(); pronto(false) }
+      document.head.appendChild(s)
+    }
+    window.setTimeout(() => { if (!w.YT?.Player) apiDoYoutube = null; pronto(!!w.YT?.Player) }, 15_000)
+  })
+  return apiDoYoutube
+}
+// estados do player do YouTube
+const YT_FIM = 0, YT_TOCANDO = 1, YT_PAUSADO = 2, YT_CARREGANDO = 3
+
 const fmt = (s: number) => {
   if (!Number.isFinite(s) || s < 0) s = 0
   const m = Math.floor(s / 60), r = Math.floor(s % 60)
@@ -44,9 +101,15 @@ const fmt = (s: number) => {
   return h ? `${h}:${String(m % 60).padStart(2, '0')}:${String(r).padStart(2, '0')}` : `${m}:${String(r).padStart(2, '0')}`
 }
 
-export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar, proxima, pularPara }: Props) {
+export function PlayerAula({ src, youtube, repetir = false, textoDoFim = 'Você chegou ao fim do curso.', titulo, posicaoInicial = 0, aoAvancar, aoTocar, proxima, pularPara }: Props) {
   const caixa = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
+  const quadroYT = useRef<HTMLDivElement>(null)
+  const yt = useRef<PlayerYT | null>(null)
+  const ehYT = !!youtube
+  const [jaTocou, setJaTocou] = useState(false)
+  const [erroVideo, setErroVideo] = useState('')
+  const [cheiaFalsa, setCheiaFalsa] = useState(false)
   const barra = useRef<HTMLDivElement>(null)
   const [tocando, setTocando] = useState(false)
   const [tempo, setTempo] = useState(0)
@@ -65,41 +128,92 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
   const sumir = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retomou = useRef(false)
 
+  /* ------------------------------------- o motor: <video> ou YouTube */
+  const motor = useRef<Motor | null>(null)
+  if (!ehYT) {
+    motor.current = {
+      tocar: () => { const v = video.current; if (v) void v.play().catch(() => undefined) },
+      pausar: () => video.current?.pause(),
+      parado: () => video.current?.paused ?? true,
+      terminou: () => video.current?.ended ?? false,
+      tempo: () => video.current?.currentTime ?? 0,
+      duracao: () => video.current?.duration || 0,
+      ir: (x) => { const v = video.current; if (v) v.currentTime = x },
+      mudo: () => video.current?.muted ?? false,
+      silenciar: (m) => { const v = video.current; if (v) v.muted = m },
+      velocidade: (x) => { const v = video.current; if (v) v.playbackRate = x },
+    }
+  } else {
+    // yt.current só existe depois do onReady: antes disso os comandos não fazem nada
+    const p = () => yt.current
+    motor.current = {
+      tocar: () => p()?.playVideo?.(),
+      pausar: () => p()?.pauseVideo?.(),
+      parado: () => { const e = p()?.getPlayerState?.(); return e !== YT_TOCANDO && e !== YT_CARREGANDO },
+      terminou: () => p()?.getPlayerState?.() === YT_FIM,
+      tempo: () => p()?.getCurrentTime?.() ?? 0,
+      duracao: () => p()?.getDuration?.() || 0,
+      // pausado, o relógio não lê o tempo: a barra acompanha o pulo aqui
+      ir: (x) => { const y = p(); if (!y?.seekTo) return; y.seekTo(x, true); setTempo(x) },
+      mudo: () => p()?.isMuted?.() ?? false,
+      silenciar: (m) => { const y = p(); if (y) { if (m) y.mute?.(); else y.unMute?.() } },
+      velocidade: (x) => p()?.setPlaybackRate?.(x),
+    }
+  }
+
   // um tópico da aula foi clicado: o vídeo vai até ele e toca
   useEffect(() => {
-    const v = video.current
-    if (!v || !pularPara) return
-    v.currentTime = Math.max(0, pularPara.segundos)
-    void v.play().catch(() => undefined)
+    const m = motor.current
+    if (!m || !pularPara) return
+    m.ir(Math.max(0, pularPara.segundos))
+    m.tocar()
   }, [pularPara])
 
   /* ------------------------------------------------ controles somem sozinhos */
   const acordar = useCallback(() => {
     setVisivel(true)
     if (sumir.current) clearTimeout(sumir.current)
-    sumir.current = setTimeout(() => { if (video.current && !video.current.paused) setVisivel(false) }, 2600)
+    sumir.current = setTimeout(() => { if (motor.current && !motor.current.parado()) setVisivel(false) }, 2600)
   }, [])
   useEffect(() => () => { if (sumir.current) clearTimeout(sumir.current) }, [])
 
   /* ------------------------------------------------------------- ações */
   const alternar = useCallback(() => {
-    const v = video.current; if (!v) return
-    if (v.ended) { v.currentTime = 0 }
-    if (v.paused) void v.play().catch(() => {}); else v.pause()
+    const m = motor.current; if (!m) return
+    if (m.terminou()) m.ir(0)
+    if (m.parado()) m.tocar(); else m.pausar()
     acordar()
   }, [acordar])
   const pular = useCallback((s: number) => {
-    const v = video.current; if (!v) return
-    v.currentTime = Math.min(Math.max(0, v.currentTime + s), v.duration || v.currentTime + s); acordar()
+    const m = motor.current; if (!m) return
+    const d = m.duracao()
+    m.ir(Math.min(Math.max(0, m.tempo() + s), d || m.tempo() + s)); acordar()
   }, [acordar])
   const irPara = (fracao: number) => {
-    const v = video.current; if (!v || !v.duration) return
-    v.currentTime = Math.min(Math.max(0, fracao), 1) * v.duration
-    setTempo(v.currentTime)
+    const m = motor.current; if (!m) return
+    const d = m.duracao(); if (!d) return
+    const x = Math.min(Math.max(0, fracao), 1) * d
+    m.ir(x)
+    setTempo(x)
   }
+  const rever = () => { const m = motor.current; if (m) { m.ir(0); m.tocar() } }
   const telaCheia = useCallback(async () => {
-    const c = caixa.current, v = video.current as VideoSafari | null
-    if (!c || !v) return
+    const c = caixa.current
+    if (!c) return
+    if (ehYT) {
+      // YouTube: a caixa inteira vai para a tela cheia (os nossos controles juntos).
+      // iPhone não deixa um elemento qualquer ir para a tela cheia: ocupa a janela toda.
+      setErroCheia('')
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen()
+        else if (cheiaFalsa) setCheiaFalsa(false)
+        else if (c.requestFullscreen && document.fullscreenEnabled) await c.requestFullscreen()
+        else setCheiaFalsa(true)
+      } catch { setCheiaFalsa((x) => !x) }
+      return
+    }
+    const v = video.current as VideoSafari | null
+    if (!v) return
     setErroCheia('')
     try {
       if (v.webkitDisplayingFullscreen && v.webkitExitFullscreen) v.webkitExitFullscreen()
@@ -115,29 +229,54 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
       setErroCheia('Não foi possível abrir a tela cheia. Inicie o vídeo e tente novamente pelos controles do vídeo.')
       setVisivel(true)
     }
-  }, [])
-  const mudar = useCallback(() => { const v = video.current; if (v) { v.muted = !v.muted; setMudo(v.muted) } }, [])
-  const trocarVelocidade = (x: number) => { const v = video.current; if (v) v.playbackRate = x; setVelocidade(x); setMenuVel(false) }
+  }, [ehYT, cheiaFalsa])
+  const mudar = useCallback(() => { const m = motor.current; if (m) { const novo = !m.mudo(); m.silenciar(novo); setMudo(novo) } }, [])
+  const trocarVelocidade = (x: number) => { motor.current?.velocidade(x); setVelocidade(x); setMenuVel(false) }
 
-  /* ---------------------------------------------- eventos do <video> */
+  /* -------------------------------------------- eventos (os dois motores) */
+  // Os avisos do vídeo chamam sempre a versão atual destas funções: o player do
+  // YouTube não pode nascer de novo a cada desenho da tela.
+  const retomar = () => {
+    const m = motor.current, d = m?.duracao() ?? 0
+    // Retoma de onde parou, mas não se a pessoa já tinha praticamente terminado.
+    if (m && !retomou.current && d && posicaoInicial > 5 && posicaoInicial < d * 0.95) m.ir(posicaoInicial)
+    if (d) retomou.current = true
+  }
+  const ev = useRef({ tempo: () => {}, meta: () => {}, carregou: (_s: number) => {}, tocar: () => {}, pausar: () => {}, fim: () => {}, esperar: () => {}, seguir: () => {} })
+  ev.current = {
+    tempo: () => {
+      const m = motor.current; if (!m) return
+      const t = m.tempo(), d = m.duracao()
+      setTempo(t)
+      if (d) aoAvancar?.(t / d, t)
+    },
+    meta: () => { const d = motor.current?.duracao() ?? 0; if (d) setDuracao(d); if (!ehYT) retomar() },
+    carregou: (seg: number) => setCarregado(seg),
+    tocar: () => {
+      setTocando(true); setJaTocou(true); setAcabou(false); setContagem(null); setEsperando(false); aoTocar?.(true); acordar()
+      if (ehYT) { const d = motor.current?.duracao() ?? 0; if (d) setDuracao(d); retomar() }
+    },
+    pausar: () => { setTocando(false); setVisivel(true); aoTocar?.(false) },
+    fim: () => {
+      if (repetir) { motor.current?.ir(0); motor.current?.tocar(); return }
+      setTocando(false); setAcabou(true); setVisivel(true); aoTocar?.(false); if (proxima) setContagem(CONTAGEM)
+    },
+    esperar: () => setEsperando(true),
+    seguir: () => setEsperando(false),
+  }
+
+  // MP4: os eventos do <video>
   useEffect(() => {
-    const v = video.current; if (!v) return
-    const aoTempo = () => {
-      setTempo(v.currentTime)
-      if (v.duration) aoAvancar?.(v.currentTime / v.duration, v.currentTime)
-    }
-    const aoMeta = () => {
-      setDuracao(v.duration)
-      // Retoma de onde parou, mas não se a pessoa já tinha praticamente terminado.
-      if (!retomou.current && posicaoInicial > 5 && posicaoInicial < v.duration * 0.95) v.currentTime = posicaoInicial
-      retomou.current = true
-    }
-    const aoProgresso = () => { try { if (v.buffered.length) setCarregado(v.buffered.end(v.buffered.length - 1)) } catch { /* nada */ } }
-    const aoTocar_ = () => { setTocando(true); setAcabou(false); setContagem(null); aoTocar?.(true); acordar() }
-    const aoPausar = () => { setTocando(false); setVisivel(true); aoTocar?.(false) }
-    const aoFim = () => { setAcabou(true); setVisivel(true); aoTocar?.(false); if (proxima) setContagem(CONTAGEM) }
-    const aoEsperar = () => setEsperando(true)
-    const aoSeguir = () => setEsperando(false)
+    const v = video.current; if (!v || ehYT) return
+    const e = () => ev.current
+    const aoTempo = () => e().tempo()
+    const aoMeta = () => e().meta()
+    const aoProgresso = () => { try { if (v.buffered.length) e().carregou(v.buffered.end(v.buffered.length - 1)) } catch { /* nada */ } }
+    const aoTocar_ = () => e().tocar()
+    const aoPausar = () => { if (!v.ended) e().pausar() }
+    const aoFim = () => e().fim()
+    const aoEsperar = () => e().esperar()
+    const aoSeguir = () => e().seguir()
     v.addEventListener('timeupdate', aoTempo); v.addEventListener('loadedmetadata', aoMeta); v.addEventListener('durationchange', aoMeta)
     v.addEventListener('progress', aoProgresso); v.addEventListener('play', aoTocar_); v.addEventListener('pause', aoPausar)
     v.addEventListener('ended', aoFim); v.addEventListener('waiting', aoEsperar); v.addEventListener('playing', aoSeguir); v.addEventListener('canplay', aoSeguir)
@@ -146,10 +285,69 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
       v.removeEventListener('progress', aoProgresso); v.removeEventListener('play', aoTocar_); v.removeEventListener('pause', aoPausar)
       v.removeEventListener('ended', aoFim); v.removeEventListener('waiting', aoEsperar); v.removeEventListener('playing', aoSeguir); v.removeEventListener('canplay', aoSeguir)
     }
-  }, [src, posicaoInicial, aoAvancar, aoTocar, proxima, acordar])
+  }, [src, ehYT])
+
+  // YouTube: o player da API, com os controles dele escondidos; o tempo é lido 4x por segundo
+  useEffect(() => {
+    if (!youtube || !quadroYT.current) return
+    let vivo = true
+    let relogio = 0
+    let criado: PlayerYT | null = null
+    const alvo = document.createElement('div')
+    quadroYT.current.replaceChildren(alvo)
+    setErroVideo('')
+    void carregarApiDoYoutube().then((ok) => {
+      const w = window as unknown as JanelaComYT
+      if (!vivo) return
+      if (!ok || !w.YT?.Player) { setErroVideo('O vídeo não carregou. Confira a sua internet e abra a aula de novo.'); return }
+      criado = new w.YT.Player(alvo, {
+        videoId: youtube, width: '100%', height: '100%',
+        host: 'https://www.youtube-nocookie.com',
+        playerVars: { autoplay: 1, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1, playsinline: 1, rel: 0, cc_load_policy: 0, origin: window.location.origin },
+        events: {
+          onReady: (e: { target: PlayerYT }) => {
+            if (!vivo) return
+            yt.current = e.target
+            ev.current.meta()
+            relogio = window.setInterval(() => {
+              const p = yt.current; if (!p?.getPlayerState) return
+              const d = p.getDuration?.() || 0
+              if (d) { setDuracao(d); ev.current.carregou((p.getVideoLoadedFraction?.() || 0) * d) }
+              if (p.getPlayerState() === YT_TOCANDO) ev.current.tempo()
+            }, 250)
+          },
+          onStateChange: (e: { data: number }) => {
+            if (!vivo) return
+            if (e.data === YT_TOCANDO) ev.current.tocar()
+            else if (e.data === YT_PAUSADO) { ev.current.seguir(); ev.current.pausar() }
+            else if (e.data === YT_FIM) { ev.current.seguir(); ev.current.tempo(); ev.current.fim() }
+            else if (e.data === YT_CARREGANDO) ev.current.esperar()
+          },
+          onError: () => { if (vivo) setErroVideo('Este vídeo não abriu agora. Recarregue a página ou fale com o suporte.') },
+        },
+      })
+    })
+    return () => {
+      vivo = false
+      window.clearInterval(relogio)
+      try { (yt.current ?? criado)?.destroy() } catch { /* já fechou */ }
+      yt.current = null
+    }
+  }, [youtube])
 
   // Trocou de aula: zera o estado e deixa o novo vídeo retomar a própria posição.
-  useEffect(() => { retomou.current = false; setAcabou(false); setContagem(null); setTempo(0); setCarregado(0); setEsperando(false) }, [src])
+  useEffect(() => { retomou.current = false; setAcabou(false); setContagem(null); setTempo(0); setCarregado(0); setEsperando(false); setJaTocou(false) }, [src, youtube])
+
+  // tela cheia de mentira (iPhone com YouTube): Esc sai e a página não rola por baixo
+  useEffect(() => {
+    if (!cheiaFalsa) return
+    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') setCheiaFalsa(false) }
+    const antes = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.body.classList.add('com-cheia-falsa')
+    document.addEventListener('keydown', tecla)
+    return () => { document.body.style.overflow = antes; document.body.classList.remove('com-cheia-falsa'); document.removeEventListener('keydown', tecla) }
+  }, [cheiaFalsa])
 
   useEffect(() => {
     const v = video.current
@@ -208,14 +406,24 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
   const pctCarregado = duracao ? (carregado / duracao) * 100 : 0
 
   return (
-    <div ref={caixa} className={`cine-player ${visivel || !tocando ? 'com-controles' : 'sem-controles'} ${cheia ? 'cheia' : ''}`}
+    <div ref={caixa} className={`cine-player ${visivel || !tocando ? 'com-controles' : 'sem-controles'} ${cheia || cheiaFalsa ? 'cheia' : ''}${cheiaFalsa ? ' cheia-falsa' : ''}${ehYT ? ' yt' : ''}`}
       onMouseMove={acordar} onMouseLeave={() => { if (tocando) setVisivel(false) }} onClick={(e) => { if (e.target === e.currentTarget) alternar() }}>
-      <video ref={video} src={src} playsInline preload="metadata" autoPlay onClick={alternar} onDoubleClick={telaCheia} />
+      {ehYT ? (
+        <>
+          <div ref={quadroYT} className="cine-yt" />
+          {/* antes do primeiro play o toque vai para o próprio YouTube (o iPhone só deixa tocar assim);
+              depois, a película segura o clique: ninguém sai da aula para o YouTube */}
+          {jaTocou && <div className="cine-escudo" onClick={alternar} onDoubleClick={telaCheia} aria-hidden />}
+        </>
+      ) : (
+        <video ref={video} src={src} playsInline preload="metadata" autoPlay onClick={alternar} onDoubleClick={telaCheia} />
+      )}
       {erroCheia && <p className="cine-erro-cheia" role="status">{erroCheia}</p>}
+      {erroVideo && <p className="cine-erro-cheia" role="alert">{erroVideo}</p>}
 
-      {esperando && !acabou && <div className="cine-carregando" aria-hidden><i /></div>}
+      {esperando && !acabou && jaTocou && <div className="cine-carregando" aria-hidden><i /></div>}
 
-      {!tocando && !acabou && (
+      {!tocando && !acabou && (!ehYT || jaTocou) && (
         <button className="cine-play-grande" onClick={alternar} aria-label="Reproduzir">
           <svg viewBox="0 0 24 24" width="34" height="34" fill="currentColor"><path d="M8 5.5v13l11-6.5z" /></svg>
         </button>
@@ -230,15 +438,15 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
               {contagem != null ? <p>Começa em <b>{contagem}</b> s</p> : <p>&nbsp;</p>}
               <div>
                 <button className="cine-fim-ir" onClick={() => { setContagem(null); proxima.abrir() }}>Assistir agora →</button>
-                <button className="cine-fim-ficar" onClick={() => { setContagem(null); const v = video.current; if (v) { v.currentTime = 0; void v.play() } }}>Rever esta aula</button>
+                <button className="cine-fim-ficar" onClick={() => { setContagem(null); rever() }}>Rever esta aula</button>
                 {contagem != null && <button className="cine-fim-ficar cine-fim-cancelar" onClick={() => setContagem(null)}>Cancelar</button>}
               </div>
             </>
           ) : (
             <>
               <h3>{titulo}</h3>
-              <p>Você chegou ao fim do curso.</p>
-              <div><button className="cine-fim-ir" onClick={() => { const v = video.current; if (v) { v.currentTime = 0; void v.play() } }}>Rever esta aula</button></div>
+              <p>{textoDoFim}</p>
+              <div><button className="cine-fim-ir" onClick={rever}>Rever esta aula</button></div>
             </>
           )}
         </div>
@@ -248,11 +456,11 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
       {!acabou && <div className="cine-controles" onClick={(e) => e.stopPropagation()}>
         <div ref={barra} className={`cine-barra ${arrastando ? 'arrastando' : ''}`} onPointerDown={iniciarArraste} role="slider" tabIndex={0} aria-label="Progresso" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} aria-valuetext={`${fmt(tempo)} de ${fmt(duracao)}`}
           onKeyDown={e => {
-            const v = video.current
-            if (!v || !Number.isFinite(v.duration)) return
+            const m = motor.current, d = m?.duracao() ?? 0
+            if (!m || !Number.isFinite(d) || !d) return
             if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return
             e.preventDefault(); e.stopPropagation()
-            v.currentTime = e.key === 'Home' ? 0 : e.key === 'End' ? v.duration : Math.max(0, Math.min(v.duration, v.currentTime + (e.key === 'ArrowRight' ? 5 : -5)))
+            m.ir(e.key === 'Home' ? 0 : e.key === 'End' ? d : Math.max(0, Math.min(d, m.tempo() + (e.key === 'ArrowRight' ? 5 : -5))))
             acordar()
           }}>
           <i className="cine-barra-carregado" style={{ width: `${pctCarregado}%` }} />
@@ -276,8 +484,8 @@ export function PlayerAula({ src, titulo, posicaoInicial = 0, aoAvancar, aoTocar
             <button onClick={() => setMenuVel((m) => !m)} aria-haspopup="menu" aria-expanded={menuVel}>{velocidade}x</button>
             {menuVel && <div role="menu">{VELOCIDADES.map((x) => <button key={x} role="menuitem" className={x === velocidade ? 'on' : ''} onClick={() => trocarVelocidade(x)}>{x}x{x === 1 ? ' · normal' : ''}</button>)}</div>}
           </div>
-          <button onClick={telaCheia} aria-label={cheia ? 'Sair da tela cheia' : 'Tela cheia'}>
-            {cheia ? <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg>
+          <button onClick={telaCheia} aria-label={cheia || cheiaFalsa ? 'Sair da tela cheia' : 'Tela cheia'}>
+            {cheia || cheiaFalsa ? <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg>
               : <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>}
           </button>
         </div>

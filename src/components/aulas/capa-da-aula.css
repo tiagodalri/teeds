@@ -16,3 +16,6 @@
 .aula-cartao-capa .capa-desenhada { justify-content: flex-start; padding-top: 34%; }
 .aula-cartao-capa .capa-desenhada-titulo { display: none; }
 .aula-cartao-capa .capa-desenhada-num { font-size: clamp(40px, 5vw, 72px); }
+/* 08/11/2026: no cartão, o selo da duração fica no canto de cima e cobria a marca; ela desce para cima do número */
+.aula-cartao-capa .capa-desenhada { padding-top: 27%; }
+.aula-cartao-capa .capa-desenhada-marca { position: static; margin-bottom: 2px; }

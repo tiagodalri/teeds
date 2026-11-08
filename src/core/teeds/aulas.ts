@@ -33,6 +33,8 @@ export interface Aula {
   nivel?: string
   /** Por que a aula ainda não abre ("Disponível em 12/11"); nulo = abre. */
   bloqueio?: string | null
+  /** O vídeo volta ao começo sozinho quando termina (08/11/2026: depoimentos). */
+  repetir?: boolean
 }
 
 /** Um tópico da aula: o que ela cobre e, se houver, o minuto no vídeo ("3:40"). */
@@ -167,7 +169,8 @@ export function todasAsAulas(videos: Record<string, SobreposicaoDaAula> = {}, mo
 /* ------------------------------------------------------------- player */
 
 export type Player =
-  | { tipo: 'youtube' | 'vimeo'; src: string }
+  | { tipo: 'youtube'; src: string; id?: string }
+  | { tipo: 'vimeo'; src: string }
   | { tipo: 'mp4'; src: string }
   | null
 
@@ -178,7 +181,7 @@ export function playerDoVideo(url: string): Player {
   const yt = u.match(
     /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{6,})/,
   )
-  if (yt) return { tipo: 'youtube', src: `https://www.youtube-nocookie.com/embed/${yt[1]}?rel=0` }
+  if (yt) return { tipo: 'youtube', src: `https://www.youtube-nocookie.com/embed/${yt[1]}?rel=0`, id: yt[1] }
   const vm = u.match(/vimeo\.com\/(?:video\/)?(\d+)/)
   if (vm) return { tipo: 'vimeo', src: `https://player.vimeo.com/video/${vm[1]}` }
   if (/\.(mp4|webm|m3u8)(\?|$)/i.test(u)) return { tipo: 'mp4', src: u }

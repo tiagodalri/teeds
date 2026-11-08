@@ -5241,6 +5241,16 @@ input, select, textarea, button { vertical-align: middle; }
 .cine-player { position: absolute; inset: 0; color: #fff; user-select: none; }
 .cine-player video { position: absolute; inset: 0; width: 100%; height: 100%; background: #000; cursor: pointer; }
 .cine-player.cheia video { object-fit: contain; }
+.cine-player .cine-yt, .cine-player .cine-yt > div, .cine-player .cine-yt iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+/* a película por cima do YouTube: o clique fica com a aula (play/pausa, toque duplo = tela cheia) */
+.cine-player .cine-escudo { position: absolute; inset: 0; cursor: pointer; background: transparent; }
+.cine-player.yt .cine-fim { background: rgba(6,7,10,.96); }
+/* iPhone com YouTube: sem tela cheia de verdade, o player ocupa a janela toda */
+.cine-player.cheia-falsa { position: fixed; inset: 0; z-index: 2147483000; background: #000; border-radius: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+/* o palco da aula tem z-index próprio, que prenderia o player abaixo da barra do topo; e as barras fixas saem de cena */
+body.com-cheia-falsa :is(.cine-principal, .cine-palco, .cine-video, .ger.aulas) { z-index: auto !important; transform: none !important; }
+body.com-cheia-falsa :is(.topbar, .barra-inferior, .workspace-mobile-toggle) { visibility: hidden !important; }
 .cine-player.sem-controles { cursor: none; }
 .cine-carregando { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
 .cine-carregando i { width: 46px; height: 46px; border-radius: 50%; border: 3px solid rgba(255,255,255,.25); border-top-color: #fff; animation: cine-gira .8s linear infinite; }

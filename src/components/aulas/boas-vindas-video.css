@@ -1,0 +1,47 @@
+/* Vídeo de boas-vindas do primeiro acesso (GlobalFly, 08/11/2026). Mesma
+   linguagem do tour guiado: fundo escuro, cartão da superfície, contorno ouro. */
+.bvv-fundo {
+  --bvv-ouro: var(--gf-ouro, var(--primary));
+  position: fixed; inset: 0; z-index: 1450; display: grid; place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: rgba(2, 8, 22, .78); backdrop-filter: blur(6px);
+  animation: bvv-aparece .25s ease-out;
+}
+@keyframes bvv-aparece { from { opacity: 0; } }
+.bvv-janela {
+  position: relative; box-sizing: border-box; width: min(880px, 100%); max-height: 100%; overflow: auto;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 22px 22px 18px;
+  border: 1px solid color-mix(in srgb, var(--bvv-ouro) 45%, var(--border)); border-radius: 22px;
+  background: var(--surface); color: var(--text); box-shadow: 0 30px 80px rgba(0, 0, 0, .5);
+  animation: bvv-entra .3s cubic-bezier(.2, .8, .2, 1);
+}
+@keyframes bvv-entra { from { opacity: 0; transform: translateY(12px) scale(.985); } }
+.bvv-x {
+  position: absolute; top: 10px; right: 10px; z-index: 1; display: grid; place-items: center; width: 44px; height: 44px;
+  border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 26px; line-height: 1; cursor: pointer;
+}
+.bvv-x:hover { background: var(--surface-alt); color: var(--text); }
+.bvv-cab { display: flex; align-items: center; gap: 14px; padding-right: 40px; }
+.bvv-mono { flex: none; }
+.bvv-rot { display: block; color: var(--bvv-ouro); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.bvv-cab h2 { margin: 3px 0 2px; font-size: clamp(20px, 2.6vw, 26px); letter-spacing: -.01em; line-height: 1.15; }
+.bvv-cab p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
+.bvv-video.cine-video { border-radius: 14px; }
+.bvv-pe { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.bvv-pe > b { font-size: 14px; color: var(--muted); font-weight: 600; }
+.bvv-pe > div { display: flex; gap: 10px; flex-wrap: wrap; }
+.bvv-pe button { min-height: 44px; padding: 0 18px; border-radius: 12px; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+.bvv-depois { border: 1px solid var(--border); background: transparent; color: var(--text); }
+.bvv-depois:hover { background: var(--surface-alt); }
+.bvv-aulas { border: 0; background: var(--bvv-ouro); color: #0b1424; }
+.bvv-aulas:hover { filter: brightness(1.06); }
+
+@media (max-width: 640px) {
+  .bvv-fundo { padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); }
+  .bvv-janela { padding: 16px 14px 14px; gap: 12px; border-radius: 18px; }
+  .bvv-cab { gap: 10px; }
+  .bvv-cab p { font-size: 13px; }
+  .bvv-pe > b { display: none; }
+  .bvv-pe > div, .bvv-pe button { width: 100%; }
+  .bvv-aulas { order: -1; }
+}

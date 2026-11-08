@@ -16,3 +16,4 @@ docs-globalfly/
 # gerado por 'npm run emails' — previa dos e-mails, nao e fonte
 previa-emails/
 servidor/.robos-config.json*
+public/lab-grade-*.json

@@ -339,8 +339,9 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
         <div className="cine-palco">
           <div className="cine-principal">
             <div className="cine-video">
-              {player?.tipo === 'mp4' ? (
-                <PlayerAula key={aberta.id} src={player.src} titulo={aberta.titulo} posicaoInicial={posicao}
+              {player?.tipo === 'mp4' || (player?.tipo === 'youtube' && player.id) ? (
+                <PlayerAula key={aberta.id} src={player.tipo === 'mp4' ? player.src : ''} youtube={player.tipo === 'youtube' ? player.id : undefined}
+                  repetir={!!aberta.repetir} titulo={aberta.titulo} posicaoInicial={posicao}
                   aoAvancar={aoAvancar} aoTocar={setTocando} pularPara={irPara}
                   proxima={seguinte ? { titulo: seguinte.titulo, abrir: () => abrir(seguinte) } : null} />
               ) : player ? (
