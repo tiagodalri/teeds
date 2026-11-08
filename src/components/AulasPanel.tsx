@@ -399,14 +399,21 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
             )}
 
             {(() => {
-              // os links relacionados: os padrões da marca e os extras que o painel cadastrou nesta aula
+              // os links relacionados: os padrões da marca e os extras que o painel cadastrou nesta aula.
+              // GlobalFly (08/11/2026, Victor): os três atalhos embaixo de TODA aula pareciam outras aulas
+              // misturadas ("por card, tinha que ser uma aula"). Lá cada atalho só aparece na aula do assunto.
+              const soNaAula = MARCA.id === 'globalfly'
+              const abrirConta = afiliadoDaDeriv() && (!soNaAula || aberta.id === 'conta-deriv')
+              const depositar = !soNaAula || aberta.id === 'primeiro-deposito'
+              const comunidade = MARCA.comunidade && !soNaAula
               const links: Array<{ nome: string; url: string; dica?: string }> = [
-                ...(afiliadoDaDeriv() ? [{ nome: 'Abrir conta na Deriv', url: afiliadoDaDeriv(), dica: 'Gratuito, em poucos minutos' }] : []),
-                { nome: 'Depositar na Deriv', url: DERIV.deposito, dica: 'Pela área Caixa da sua conta' },
-                ...(MARCA.comunidade ? [{ nome: 'Comunidade no WhatsApp', url: comunidadeDaVitrine()!, dica: 'Avisos e agenda das transmissões' }] : []),
+                ...(abrirConta ? [{ nome: 'Abrir conta na Deriv', url: afiliadoDaDeriv(), dica: 'Gratuito, em poucos minutos' }] : []),
+                ...(depositar ? [{ nome: 'Depositar na Deriv', url: DERIV.deposito, dica: 'Pela área Caixa da sua conta' }] : []),
+                ...(comunidade ? [{ nome: 'Comunidade no WhatsApp', url: comunidadeDaVitrine()!, dica: 'Avisos e agenda das transmissões' }] : []),
                 ...(aberta.links ?? []).filter((l) => !/deriv\.com\/dashboard\/deposit/.test(l.url)),
               ]
               const materiais = aberta.materiais ?? []
+              if (!links.length && !materiais.length) return null
               return (
                 <div className={`cine-extras ${materiais.length ? '' : 'so-links'}`}>
                   {materiais.length > 0 && (
@@ -423,7 +430,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
                       </div>
                     </section>
                   )}
-                  <section className="cine-materiais cine-links" aria-label="Links relacionados">
+                  {links.length > 0 && <section className="cine-materiais cine-links" aria-label="Links relacionados">
                     <h3>Links relacionados</h3>
                     <div className="cine-materiais-lista">
                       {links.map((l) => (
@@ -434,7 +441,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
                         </a>
                       ))}
                     </div>
-                  </section>
+                  </section>}
                 </div>
               )
             })()}
