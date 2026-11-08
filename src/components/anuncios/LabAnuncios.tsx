@@ -283,13 +283,16 @@ export default function LabAnuncios() {
     resumo: () => espera(semChave ? { semChave: true as const } : { total: { ...total, impressoes: total.impressoes + vivos * 40, cliquesLink: total.cliquesLink + vivos }, em: new Date().toISOString() }),
     anuncio: (_s, _p, id, de, ate) => espera({ porDia: painel(de, ate).porDia.map((d) => ({ ...d, gasto: d.gasto / 3 })), idadeGenero: painel(de, ate).quebras.idadeGenero, posicionamento: painel(de, ate).quebras.posicionamento }, 500 + id.length),
     // a prévia de verdade é um iframe da Meta; aqui, telinhas de mentira do mesmo tamanho
-    previa: () => espera({
-      video: q.has('sem-video') ? null : { url: '/estudio-globalfly/encerramento.mp4', capa: null, duracao: 12 },
-      previas: ([['INSTAGRAM_STORY', 'Stories do Instagram', 320, 567], ['INSTAGRAM_REELS', 'Reels do Instagram', 320, 567], ['INSTAGRAM_STANDARD', 'Feed do Instagram', 320, 520],
-        ['MOBILE_FEED_STANDARD', 'Feed do Facebook', 335, 540], ['FACEBOOK_STORY_MOBILE', 'Stories do Facebook', 320, 567], ['FACEBOOK_REELS_MOBILE', 'Reels do Facebook', 274, 487]] as const)
-        .map(([formato, nome, largura, altura]) => ({ formato, nome, largura, altura,
-          src: `data:text/html;charset=utf-8,${encodeURIComponent(`<body style="margin:0;font:600 15px system-ui;color:#fff;background:linear-gradient(160deg,#20304d,#b8913a);height:100vh;display:grid;place-items:center;text-align:center">Prévia de mentira<br>${nome}<br>${largura} x ${altura}</body>`)}` })),
-    }, 700),
+    previa: (_s, _p, _id, formato) => {
+      if (formato === 'video') return espera({ video: q.has('sem-video') ? null : { url: '/estudio-globalfly/encerramento.mp4', capa: null, duracao: 12 } }, 900)
+      const tam: Record<string, [string, number, number]> = { INSTAGRAM_STORY: ['Stories do Instagram', 320, 567], INSTAGRAM_REELS: ['Reels do Instagram', 320, 567], INSTAGRAM_STANDARD: ['Feed do Instagram', 320, 520],
+        MOBILE_FEED_STANDARD: ['Feed do Facebook', 335, 540], FACEBOOK_STORY_MOBILE: ['Stories do Facebook', 320, 567], FACEBOOK_REELS_MOBILE: ['Reels do Facebook', 274, 487] }
+      const [nome, largura, altura] = tam[formato] ?? ['?', 320, 567]
+      // o Reels do Facebook às vezes não tem prévia: o laboratório imita isso
+      if (formato === 'FACEBOOK_REELS_MOBILE') return espera({ previa: null }, 600)
+      return espera({ previa: { formato, nome, largura, altura,
+        src: `data:text/html;charset=utf-8,${encodeURIComponent(`<body style="margin:0;font:600 15px system-ui;color:#fff;background:linear-gradient(160deg,#20304d,#b8913a);height:100vh;display:grid;place-items:center;text-align:center">Prévia de mentira<br>${nome}<br>${largura} x ${altura}</body>`)}` } }, 700)
+    },
     funil: () => espera(funil()),
     salvarChave: () => espera(null),
     copiarChave: () => espera(null),

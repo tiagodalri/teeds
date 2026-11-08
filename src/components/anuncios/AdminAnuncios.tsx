@@ -13,7 +13,7 @@
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { MARCA } from '../../marca'
-import { API_DO_BANCO, CONTAS_DE_ANUNCIO, type ApiAnuncios, type Descoberta, type Anuncio, type Campanha, type Conjunto, type DetalheDoAnuncio, type PreviaDoAnuncio, type FunilDoBanco, type Horarios as DadosDeHorario, type Metricas, type PainelDaMeta, type Quebra, type RespostaDaMeta } from '../../core/teeds/anuncios'
+import { API_DO_BANCO, CONTAS_DE_ANUNCIO, type ApiAnuncios, type Descoberta, type Anuncio, type Campanha, type Conjunto, type DetalheDoAnuncio, type PreviaDoFormato, type VideoDoAnuncio, type FunilDoBanco, type Horarios as DadosDeHorario, type Metricas, type PainelDaMeta, type Quebra, type RespostaDaMeta } from '../../core/teeds/anuncios'
 import { Alertas, Custos, Filtros, Horarios, METRICA, Relatorio, alertas, aplicar, contexto, formatar, somarLinhas, useColunas, type Base, type Linha, type Regra } from './Indicadores'
 import { Funil3D, type EtapaDoFunil } from './Funil3D'
 import { EstudioDeAnuncios } from './estudio/Estudio'
@@ -999,35 +999,78 @@ function FragmentoCampanha({ c, conjuntos }: { c: PainelDaMeta['campanhas'][numb
 
 /*
   O criativo como a pessoa vê (08/11/2026). A Meta monta a prévia de cada posicionamento num iframe assinado
-  (o vídeo toca dentro dele); a tela só põe a moldura do celular em volta e deixa trocar entre Stories, Reels e
-  Feed. Quando a chave alcança o arquivo do vídeo (vídeos subidos na conta), aparece também a aba "Vídeo".
+  (o vídeo toca dentro dele); a tela põe a moldura do celular em volta.
+  Tiago, no mesmo dia: "experiência ruim, lento". Agora o celular aparece na hora com a capa do anúncio, o
+  Stories do Instagram é pedido primeiro e os outros formatos vêm por trás, um de cada vez. O que já veio fica
+  guardado neste aparelho (45 min) e no servidor (50 min), então trocar de aba e reabrir o anúncio é imediato.
 */
-const PREVIA_CURTA: Record<string, string> = {
-  INSTAGRAM_STORY: 'Stories IG', INSTAGRAM_REELS: 'Reels IG', INSTAGRAM_STANDARD: 'Feed IG',
-  MOBILE_FEED_STANDARD: 'Feed FB', FACEBOOK_STORY_MOBILE: 'Stories FB', FACEBOOK_REELS_MOBILE: 'Reels FB',
+type Plataforma = 'ig' | 'fb'
+type Posicao = 'stories' | 'reels' | 'feed'
+const FORMATO_DE: Record<Plataforma, Record<Posicao, string>> = {
+  ig: { stories: 'INSTAGRAM_STORY', reels: 'INSTAGRAM_REELS', feed: 'INSTAGRAM_STANDARD' },
+  fb: { stories: 'FACEBOOK_STORY_MOBILE', reels: 'FACEBOOK_REELS_MOBILE', feed: 'MOBILE_FEED_STANDARD' },
+}
+const ORDEM_DE_CARGA = ['INSTAGRAM_STORY', 'INSTAGRAM_REELS', 'INSTAGRAM_STANDARD', 'MOBILE_FEED_STANDARD', 'FACEBOOK_STORY_MOBILE', 'FACEBOOK_REELS_MOBILE']
+// o tamanho de cada formato antes de a Meta responder (para o celular não pular de tamanho)
+const TAMANHO: Record<string, [number, number]> = {
+  INSTAGRAM_STORY: [320, 567], INSTAGRAM_REELS: [320, 567], INSTAGRAM_STANDARD: [320, 540],
+  MOBILE_FEED_STANDARD: [335, 540], FACEBOOK_STORY_MOBILE: [320, 567], FACEBOOK_REELS_MOBILE: [320, 567],
 }
 const PREVIA_SEGURA = /^(https:\/\/(business|www)\.facebook\.com\/ads\/api\/preview_iframe\.php\?|data:text\/html)/
+const ALTURA_MAXIMA = 470
+type EstadoDaPrevia = PreviaDoFormato | null | 'carregando' | 'erro'
+const GUARDADAS = new Map<string, { em: number; valor: PreviaDoFormato | VideoDoAnuncio | null }>()
+const guardada = (chave: string) => { const g = GUARDADAS.get(chave); return g && Date.now() - g.em < 45 * 60e3 ? g : null }
+
 function VitrineDoCriativo({ a, api, sessao, parceiro }: { a: Anuncio; api: ApiAnuncios; sessao: SessaoTeeds; parceiro: string }) {
-  const [previa, setPrevia] = useState<PreviaDoAnuncio | null>(null)
+  const [plataforma, setPlataforma] = useState<Plataforma>('ig')
+  const [posicao, setPosicao] = useState<Posicao>('stories')
+  const [verVideo, setVerVideo] = useState(false)
+  const [previas, setPrevias] = useState<Record<string, EstadoDaPrevia>>({})
+  const [video, setVideo] = useState<VideoDoAnuncio | null | undefined>(undefined)
   const [aviso, setAviso] = useState<string | null>(null)
-  const [aba, setAba] = useState('')
-  const [largura, setLargura] = useState(320)
+  const [abriu, setAbriu] = useState<string | null>(null)
+  const [largura, setLargura] = useState(300)
   const caixa = useRef<HTMLDivElement | null>(null)
-  useEffect(() => {
-    let vivo = true
-    setPrevia(null); setAviso(null); setAba('')
-    api.previa(sessao, parceiro, a.id).then((r) => {
-      if (!vivo) return
+  const pedidos = useRef(new Map<string, Promise<void>>())
+  const vivo = useRef(true)
+
+  const pedir = useCallback((formato: string): Promise<void> => {
+    const chave = `${parceiro}:${a.id}:${formato}`
+    const g = guardada(chave)
+    if (g) {
+      if (formato === 'video') setVideo(g.valor as VideoDoAnuncio | null)
+      else setPrevias((p) => ({ ...p, [formato]: g.valor as PreviaDoFormato | null }))
+      return Promise.resolve()
+    }
+    const ja = pedidos.current.get(chave)
+    if (ja) return ja
+    if (formato !== 'video') setPrevias((p) => ({ ...p, [formato]: p[formato] ?? 'carregando' }))
+    const p = api.previa(sessao, parceiro, a.id, formato).then((r) => {
+      if (!vivo.current) return
       if ('semChave' in r) { setAviso('A prévia aparece quando a conta de anúncios estiver ligada pela chave.'); return }
       if ('chaveInvalida' in r) { setAviso(r.erro); return }
-      const previas = r.previas.filter((p) => PREVIA_SEGURA.test(p.src))
-      setPrevia({ ...r, previas })
-      setAba(previas.find((p) => p.formato === 'INSTAGRAM_STORY')?.formato ?? previas[0]?.formato ?? (r.video ? 'video' : ''))
-      if (!previas.length && !r.video) setAviso('A Meta não devolveu prévia para este anúncio.')
-    }).catch((e) => vivo && setAviso((e as Error).message))
-    return () => { vivo = false }
+      if ('video' in r) { GUARDADAS.set(chave, { em: Date.now(), valor: r.video }); setVideo(r.video); return }
+      const v = r.previa && PREVIA_SEGURA.test(r.previa.src) ? r.previa : null
+      GUARDADAS.set(chave, { em: Date.now(), valor: v })
+      setPrevias((x) => ({ ...x, [formato]: v }))
+    }).catch(() => { if (vivo.current && formato !== 'video') setPrevias((x) => ({ ...x, [formato]: 'erro' })) })
+      .finally(() => { pedidos.current.delete(chave) })
+    pedidos.current.set(chave, p)
+    return p
+  }, [api, sessao, parceiro, a.id])
+
+  // o Stories do Instagram primeiro; depois os outros e o vídeo, um de cada vez, sem pesar
+  useEffect(() => {
+    vivo.current = true
+    setPrevias({}); setVideo(undefined); setAviso(null); setAbriu(null); setVerVideo(false); setPlataforma('ig'); setPosicao('stories')
+    void (async () => {
+      await pedir('INSTAGRAM_STORY')
+      for (const f of [...ORDEM_DE_CARGA.slice(1), 'video']) { if (!vivo.current) return; await pedir(f) }
+    })()
+    return () => { vivo.current = false }
   }, [a.id]) // eslint-disable-line react-hooks/exhaustive-deps
-  // o celular encolhe para caber na gaveta (no celular de verdade, a gaveta tem uns 330 px)
+
   useEffect(() => {
     const el = caixa.current
     if (!el) return
@@ -1036,41 +1079,62 @@ function VitrineDoCriativo({ a, api, sessao, parceiro }: { a: Anuncio; api: ApiA
     const ro = new ResizeObserver(medir)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [previa])
+  }, [])
+
+  const formato = FORMATO_DE[plataforma][posicao]
+  const estado = previas[formato]
+  // a aba que ainda não chegou passa na frente da fila
+  useEffect(() => { if (!verVideo && estado === undefined) void pedir(formato) }, [formato, verVideo, estado, pedir])
+
+  const atual = estado && typeof estado === 'object' ? estado : null
+  const [w, h] = atual ? [atual.largura, atual.altura] : TAMANHO[formato]
+  const BORDA = 8
+  const escala = Math.min(1, (largura - BORDA * 2) / w, ALTURA_MAXIMA / h)
   const capa = a.criativo.imagem || a.criativo.miniatura
-  if (!previa) {
-    return (
-      <div className="aa-vitrine">
-        {capa ? <img className="aa-vitrine-capa" src={capa} alt="Criativo do anúncio" /> : <span className="aa-sem-img grande" />}
-        <small className="aa-mudo">{aviso ?? 'Montando a prévia da Meta…'}</small>
-      </div>
-    )
-  }
-  const atual = previa.previas.find((p) => p.formato === aba)
-  const BORDA = 10
-  const escala = atual ? Math.min(1, (largura - BORDA * 2) / atual.largura) : 1
+  const semPrevia = (f: string) => previas[f] === null || previas[f] === 'erro'
+  const carregado = atual && abriu === atual.src
+
   return (
     <div className="aa-vitrine" ref={caixa}>
-      <div className="aa-vitrine-abas" role="tablist" aria-label="Como o anúncio aparece">
-        {previa.video && <button type="button" role="tab" aria-selected={aba === 'video'} className={aba === 'video' ? 'on' : ''} onClick={() => setAba('video')}>Vídeo</button>}
-        {previa.previas.map((p) => (
-          <button key={p.formato} type="button" role="tab" aria-selected={aba === p.formato} title={p.nome} className={aba === p.formato ? 'on' : ''} onClick={() => setAba(p.formato)}>{PREVIA_CURTA[p.formato] ?? p.nome}</button>
-        ))}
-      </div>
-      {aba === 'video' && previa.video ? (
-        <div className="aa-celular video">
-          <video src={previa.video.url} poster={previa.video.capa ?? capa ?? undefined} controls playsInline preload="metadata" />
+      <div className="aa-vitrine-controles">
+        <div className="aa-vitrine-troca" role="group" aria-label="Rede">
+          {([['ig', 'Instagram'], ['fb', 'Facebook']] as const).map(([id, nome]) => (
+            <button key={id} type="button" className={!verVideo && plataforma === id ? 'on' : ''} onClick={() => { setVerVideo(false); setPlataforma(id) }}>{nome}</button>
+          ))}
+          {video && <button type="button" className={verVideo ? 'on' : ''} onClick={() => setVerVideo(true)}>Vídeo</button>}
         </div>
-      ) : atual ? (
-        <div className="aa-celular" style={{ width: atual.largura * escala + BORDA * 2 }}>
-          <div className="aa-celular-tela" style={{ width: atual.largura * escala, height: atual.altura * escala }}>
-            <iframe key={atual.src} src={atual.src} title={`Prévia: ${atual.nome}`} width={atual.largura} height={atual.altura} loading="lazy"
-              allow="autoplay; encrypted-media; fullscreen" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-              style={{ transform: `scale(${escala})` }} />
+        {!verVideo && (
+          <div className="aa-vitrine-troca menor" role="group" aria-label="Posicionamento">
+            {([['stories', 'Stories'], ['reels', 'Reels'], ['feed', 'Feed']] as const).map(([id, nome]) => (
+              <button key={id} type="button" className={posicao === id ? 'on' : ''} disabled={semPrevia(FORMATO_DE[plataforma][id])}
+                title={semPrevia(FORMATO_DE[plataforma][id]) ? 'A Meta não tem prévia deste posicionamento para este anúncio' : undefined} onClick={() => setPosicao(id)}>{nome}</button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {verVideo && video ? (
+        <div className="aa-celular video" style={{ width: Math.min(largura, Math.round(ALTURA_MAXIMA * 9 / 16) + BORDA * 2) }}>
+          <video src={video.url} poster={video.capa ?? capa ?? undefined} controls playsInline preload="metadata" autoPlay />
+        </div>
+      ) : (
+        <div className="aa-celular" style={{ width: w * escala + BORDA * 2 }}>
+          <div className="aa-celular-tela" style={{ width: w * escala, height: h * escala }}>
+            {/* a capa do anúncio enquanto a Meta monta a prévia: o celular nunca fica vazio */}
+            {!carregado && (
+              <div className="aa-celular-espera" style={capa ? { backgroundImage: `url("${capa}")` } : undefined}>
+                <span>{estado === null || estado === 'erro' ? 'A Meta não tem prévia deste posicionamento.' : aviso ?? 'Abrindo a prévia da Meta…'}</span>
+              </div>
+            )}
+            {atual && (
+              <iframe key={atual.src} src={atual.src} title={`Prévia: ${atual.nome}`} width={atual.largura} height={atual.altura}
+                allow="autoplay; encrypted-media; fullscreen" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                onLoad={() => setAbriu(atual.src)} style={{ transform: `scale(${escala})`, opacity: carregado ? 1 : 0 }} />
+            )}
           </div>
         </div>
-      ) : null}
-      <small className="aa-mudo">{aba === 'video' ? 'O arquivo do vídeo, como foi subido.' : `${atual?.nome ?? ''}: prévia da própria Meta, como aparece no celular.`}</small>
+      )}
+      <small className="aa-mudo">{verVideo ? 'O arquivo do vídeo, como foi subido.' : 'Prévia da própria Meta, como aparece no celular.'}</small>
     </div>
   )
 }

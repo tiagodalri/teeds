@@ -484,19 +484,26 @@
 .aa-campo .aa-periodo-datas { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 @media (max-width: 720px) { .aa-periodo button { white-space: normal; line-height: 1.15; height: auto; min-height: 32px; } }
 
-/* 08/11/2026: o criativo no celular (prévia da Meta por posicionamento) na gaveta do anúncio */
-.aa-criativo.com-previa { grid-template-columns: minmax(0, 340px) minmax(0, 1fr); }
-.aa-vitrine { display: grid; gap: 10px; justify-items: center; min-width: 0; width: 100%; }
-.aa-vitrine-capa { width: 100%; max-width: 220px; aspect-ratio: 9 / 16; height: auto; border-radius: 18px; object-fit: cover; background: var(--surface); }
-.aa-vitrine-abas { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
-.aa-vitrine-abas button { height: 28px; padding: 0 10px; border: 0; border-radius: 8px; background: none; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-.aa-vitrine-abas button.on { background: var(--aa-ouro); color: #051528; }
-.aa-celular { box-sizing: border-box; padding: 26px 10px 18px; border-radius: 34px; background: #0b0d12; border: 1px solid var(--border); box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset, 0 14px 30px rgba(5, 21, 40, .28); position: relative; max-width: 100%; }
-.aa-celular::before { content: ''; position: absolute; top: 10px; left: 50%; width: 64px; height: 6px; margin-left: -32px; border-radius: 6px; background: #2a2e38; }
-.aa-celular-tela { overflow: hidden; border-radius: 14px; background: #000; }
-.aa-celular-tela iframe { display: block; border: 0; transform-origin: 0 0; background: #fff; }
-.aa-celular.video { width: min(300px, 100%); }
-.aa-celular.video video { display: block; width: 100%; aspect-ratio: 9 / 16; border-radius: 14px; background: #000; object-fit: contain; }
+/* 08/11/2026: o criativo no celular (prévia da Meta por posicionamento) na gaveta do anúncio.
+   Mesmo dia, "experiência ruim, lento": celular menor (até 470 px de altura), escolha em dois botões curtos
+   (rede e posicionamento), a capa enquanto a Meta monta a prévia e o texto do anúncio inteiro ao lado. */
+.aa-criativo.com-previa { grid-template-columns: minmax(0, 290px) minmax(0, 1fr); gap: 20px; }
+.aa-criativo.com-previa p { max-height: none; overflow: visible; }
+.aa-vitrine { display: grid; gap: 10px; justify-items: center; align-content: start; min-width: 0; width: 100%; }
+.aa-vitrine-controles { display: grid; gap: 6px; justify-items: center; width: 100%; }
+.aa-vitrine-troca { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); max-width: 100%; }
+.aa-vitrine-troca button { height: 28px; padding: 0 11px; border: 0; border-radius: 7px; background: none; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.aa-vitrine-troca.menor button { height: 24px; padding: 0 9px; font-size: 11.5px; }
+.aa-vitrine-troca button.on { background: var(--aa-ouro); color: #051528; }
+.aa-vitrine-troca button:disabled { opacity: .35; cursor: not-allowed; }
+.aa-celular { box-sizing: border-box; padding: 20px 8px 14px; border-radius: 28px; background: #0b0d12; border: 1px solid var(--border); box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset, 0 12px 26px rgba(5, 21, 40, .24); position: relative; max-width: 100%; }
+.aa-celular::before { content: ''; position: absolute; top: 8px; left: 50%; width: 52px; height: 5px; margin-left: -26px; border-radius: 5px; background: #2a2e38; }
+.aa-celular-tela { position: relative; overflow: hidden; border-radius: 12px; background: #000; }
+.aa-celular-tela iframe { position: absolute; inset: 0 auto auto 0; display: block; border: 0; transform-origin: 0 0; background: #000; transition: opacity .2s ease; }
+.aa-celular-espera { position: absolute; inset: 0; display: grid; place-items: end center; padding: 16px; background: #10131a center / cover no-repeat; }
+.aa-celular-espera::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,21,40,.15), rgba(5,21,40,.75)); }
+.aa-celular-espera span { position: relative; padding: 6px 10px; border-radius: 8px; background: rgba(5,21,40,.7); color: #fff; font-size: 12px; font-weight: 700; text-align: center; }
+.aa-celular.video video { display: block; width: 100%; aspect-ratio: 9 / 16; border-radius: 12px; background: #000; object-fit: contain; }
 .aa-vitrine > small { text-align: center; font-size: 11.5px; }
 @media (max-width: 640px) {
   .aa-criativo.com-previa { grid-template-columns: minmax(0, 1fr); }

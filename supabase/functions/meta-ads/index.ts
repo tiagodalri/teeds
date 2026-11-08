@@ -10,8 +10,9 @@
 // que lê a conta pela integração Meta Ads). Só campanhas com o nome começando em "GF |".
 // POST { acao: 'anuncio', marca, parceiro, id, de, ate }
 //   um anúncio: dia a dia, idade/gênero e posicionamento.
-// POST { acao: 'previa', marca, parceiro, id }
-//   o criativo de um anúncio: a prévia pronta da Meta em cada posicionamento (Stories, Reels, Feed) e o vídeo.
+// POST { acao: 'previa', marca, parceiro, id, formato }
+//   o criativo de um anúncio: a prévia pronta da Meta num posicionamento (INSTAGRAM_STORY, INSTAGRAM_REELS...)
+//   ou, com formato 'video', o arquivo do vídeo. Cada resposta fica 50 min em meta_ads_cache.
 // POST { acao: 'descobrir', marca, parceiro }
 //   as contas de anúncios (com os pixels) e as páginas que a chave guardada enxerga.
 // POST { acao: 'escolher', marca, parceiro, conta, pixel, pagina? }
@@ -416,24 +417,45 @@ Deno.serve(async (req) => {
       ['INSTAGRAM_STORY', 'Stories do Instagram'], ['INSTAGRAM_REELS', 'Reels do Instagram'], ['INSTAGRAM_STANDARD', 'Feed do Instagram'],
       ['MOBILE_FEED_STANDARD', 'Feed do Facebook'], ['FACEBOOK_STORY_MOBILE', 'Stories do Facebook'], ['FACEBOOK_REELS_MOBILE', 'Reels do Facebook'],
     ]
-    try {
+    // 08/11/2026 (Tiago: "experiência ruim, lento"): a tela pede um formato por vez (o primeiro aparece na hora e os
+    // outros vêm por trás), em português, e cada resposta fica 50 min guardada (o endereço da Meta vale algumas horas)
+    const umaPrevia = async (formato: string, nome: string) => {
+      const l = await graph(chaveP, `${id}/previews`, { ad_format: formato, locale: 'pt_BR' }, 1).catch(() => [])
+      const corpo = String(l[0]?.body ?? '')
+      const src = (/src="([^"]+)"/.exec(corpo)?.[1] ?? '').replace(/&amp;/g, '&')
+      // só o endereço de prévia da própria Meta vai para a tela
+      if (!/^https:\/\/(business|www)\.facebook\.com\/ads\/api\/preview_iframe\.php\?/.test(src)) return null
+      const largura = Number(/width="(\d+)"/.exec(corpo)?.[1] ?? 320), altura = Number(/height="(\d+)"/.exec(corpo)?.[1] ?? 568)
+      return { formato, nome, src, largura, altura }
+    }
+    const doVideo = async () => {
       const [ad] = await graph(chaveP, id, { fields: 'creative{video_id,object_type}' }, 1)
-      const previas = (await Promise.all(FORMATOS.map(async ([formato, nome]) => {
-        const l = await graph(chaveP, `${id}/previews`, { ad_format: formato }, 1).catch(() => [])
-        const corpo = String(l[0]?.body ?? '')
-        const src = (/src="([^"]+)"/.exec(corpo)?.[1] ?? '').replace(/&amp;/g, '&')
-        // só o endereço de prévia da própria Meta vai para a tela
-        if (!/^https:\/\/(business|www)\.facebook\.com\/ads\/api\/preview_iframe\.php\?/.test(src)) return null
-        const largura = Number(/width="(\d+)"/.exec(corpo)?.[1] ?? 320), altura = Number(/height="(\d+)"/.exec(corpo)?.[1] ?? 568)
-        return { formato, nome, src, largura, altura }
-      }))).filter(Boolean)
       const vid = ad?.creative?.video_id ? String(ad.creative.video_id) : ''
-      const video = vid
+      return vid
         ? await graph(chaveP, vid, { fields: 'source,picture,length' }, 1)
           .then((l) => (/^https:\/\/[a-z0-9.-]+\.fbcdn\.net\//.test(String(l[0]?.source ?? '')) ? { url: String(l[0].source), capa: l[0].picture ?? null, duracao: n(l[0].length) } : null))
           .catch(() => null)
         : null
-      return json({ previas, video, tipo: ad?.creative?.object_type ?? null })
+    }
+    const guardado = async <T,>(nome: string, fazer: () => Promise<T>): Promise<T> => {
+      const g = await rest(`meta_ads_cache?chave=eq.${encodeURIComponent(nome)}&em=gte.${new Date(Date.now() - 50 * 60e3).toISOString()}&select=dados`)
+      const linha = g.ok ? (await g.json())[0] : null
+      if (linha) return linha.dados as T
+      const dados = await fazer()
+      // "sem prévia" pode ser só um tropeço da Meta: só guarda o que veio
+      if (dados !== null) await rest('meta_ads_cache?on_conflict=chave', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' }, body: JSON.stringify({ chave: nome, dados, em: new Date().toISOString() }) })
+      return dados
+    }
+    try {
+      if (d.formato === 'video') return json({ video: await guardado(`previa:${marca}:${parceiro}:${id}:video`, doVideo) })
+      if (d.formato) {
+        const f = FORMATOS.find(([x]) => x === d.formato)
+        if (!f) return json({ erro: 'Formato inválido.' }, 400)
+        return json({ previa: await guardado(`previa:${marca}:${parceiro}:${id}:${f[0]}`, () => umaPrevia(f[0], f[1])) })
+      }
+      // o pedido antigo (todos os formatos de uma vez)
+      const [previas, video] = await Promise.all([Promise.all(FORMATOS.map(([f, nome]) => umaPrevia(f, nome))), doVideo().catch(() => null)])
+      return json({ previas: previas.filter(Boolean), video })
     } catch (e) {
       if (e instanceof ErroDaMeta && e.codigo === 190) return json({ chaveInvalida: true, erro: 'A Meta não aceitou a chave (venceu ou foi trocada). Cole uma nova.' })
       return json({ erro: e instanceof ErroDaMeta ? `A Meta não mostrou a prévia: ${e.message}` : (e as Error).message }, 502)
