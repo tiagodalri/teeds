@@ -58,7 +58,11 @@ export function useParceiroEmFoco(): [string, (codigo: string) => void] {
 
 export interface OpcaoDeParceiro { codigo: string; nome: string }
 
-/** Os parceiros da marca, só para o admin geral (os outros recebem lista vazia e não veem a linha). */
+/**
+ * Os parceiros da marca para o seletor do topo: o admin geral recebe todos; o admin do parceiro que
+ * também vê outro (08/11/2026: Victor Cordeiro vê o /v e o /n) recebe só os da lista dele, e o foco
+ * começa no dele. Os outros recebem lista vazia e não veem a linha.
+ */
 export function useParceirosDaMarca(sessao: SessaoTeeds | null, marca: string): OpcaoDeParceiro[] {
   const [lista, setLista] = useState<OpcaoDeParceiro[]>([])
   useEffect(() => {
@@ -68,10 +72,18 @@ export function useParceirosDaMarca(sessao: SessaoTeeds | null, marca: string): 
     const h = { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' }
     ;(async () => {
       const geral = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_sou_admin_geral`, { method: 'POST', headers: h, body: '{}' }).then((r) => r.ok ? r.json() : false).catch(() => false)
-      if (!geral) return
+      let ve: string[] = []
+      if (!geral) {
+        const papel = await meuPapel(sessao, marca).catch(() => null)
+        ve = papel && !papel.geral ? papel.ve : []
+        if (ve.length < 2) return
+        // o foco fica sempre num parceiro da lista (nunca "Todos"): começa no dele
+        if (!ve.includes(emFoco)) { emFoco = ve[0]; window.dispatchEvent(new Event(EVENTO)) }
+      }
       const r = await fetch(`${SUPABASE.url}/rest/v1/parceiros?marca=eq.${encodeURIComponent(marca)}&ativo=eq.true&select=codigo,nome&order=codigo`, { headers: h }).catch(() => null)
-      const l = r?.ok ? await r.json() : []
-      if (vivo) setLista((l ?? []).map((p: any) => ({ codigo: String(p.codigo), nome: String(p.nome) })))
+      let l: OpcaoDeParceiro[] = ((r?.ok ? await r.json() : null) ?? []).map((p: any) => ({ codigo: String(p.codigo), nome: String(p.nome) }))
+      if (!geral) l = ve.map((c) => l.find((p) => p.codigo === c)).filter((p): p is OpcaoDeParceiro => !!p)
+      if (vivo) setLista(l)
     })()
     return () => { vivo = false }
   }, [sessao?.token, marca]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -95,7 +107,8 @@ export function seloDoParceiro(parceiros: OpcaoDeParceiro[], parceiro: string | 
 
 /** O papel de quem está logado nesta marca: admin geral, admin do parceiro (só o /n ou o /v dele) ou nenhum. */
 /** total: o admin do parceiro com acesso total (05/11/2026) usa todas as abas do geral, vendo só o que é do parceiro dele. */
-export interface PapelDoAdmin { admin: boolean; geral: boolean; parceiro: string | null; nomeDoParceiro: string | null; total: boolean }
+/** ve: os parceiros que o admin do parceiro pode escolher no topo (o dele primeiro); mais de um = escolhe (08/11/2026). */
+export interface PapelDoAdmin { admin: boolean; geral: boolean; parceiro: string | null; nomeDoParceiro: string | null; total: boolean; ve: string[] }
 const papeis = new Map<string, Promise<PapelDoAdmin>>()
 export function meuPapel(sessao: SessaoTeeds, marca: string): Promise<PapelDoAdmin> {
   const chave = `${sessao.usuario.id}:${marca}`
@@ -105,14 +118,15 @@ export function meuPapel(sessao: SessaoTeeds, marca: string): Promise<PapelDoAdm
     p = (async () => {
       const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_meu_papel`, { method: 'POST', headers: h, body: JSON.stringify({ p_marca: marca }) })
       if (!r.ok) throw new Error('papel')
-      const d = await r.json() as { admin?: boolean; geral?: boolean; parceiro?: string | null; total?: boolean }
+      const d = await r.json() as { admin?: boolean; geral?: boolean; parceiro?: string | null; total?: boolean; ve?: string[] }
       let nome: string | null = null
       if (d.parceiro) {
         const l = await fetch(`${SUPABASE.url}/rest/v1/parceiros?marca=eq.${encodeURIComponent(marca)}&codigo=eq.${encodeURIComponent(d.parceiro)}&select=nome`, { headers: h })
           .then((x) => (x.ok ? x.json() : [])).catch(() => [])
         nome = l?.[0]?.nome ? String(l[0].nome) : null
       }
-      return { admin: !!d.admin, geral: !!d.geral, parceiro: d.parceiro ?? null, nomeDoParceiro: nome, total: !!d.geral || !!d.total }
+      const ve = Array.isArray(d.ve) ? d.ve.map(String) : d.parceiro ? [d.parceiro] : []
+      return { admin: !!d.admin, geral: !!d.geral, parceiro: d.parceiro ?? null, nomeDoParceiro: nome, total: !!d.geral || !!d.total, ve }
     })()
     p.catch(() => papeis.delete(chave))
     papeis.set(chave, p)
@@ -130,6 +144,11 @@ export function useMeuPapel(sessao: SessaoTeeds | null, marca: string): PapelDoA
     return () => { vivo = false }
   }, [sessao?.usuario.id, sessao?.token, marca]) // eslint-disable-line react-hooks/exhaustive-deps
   return papel
+}
+/** O parceiro que o admin do parceiro está olhando agora: o do foco, se a lista dele permite; senão, o dele. */
+export function parceiroDoAdmin(papel: PapelDoAdmin | null, foco: string): string | undefined {
+  if (!papel || papel.geral || !papel.parceiro) return undefined
+  return papel.ve.includes(foco) ? foco : papel.parceiro
 }
 /** O rótulo do parceiro: "Naor /n". */
 export const rotuloDoParceiro = (nome: string | null, codigo: string) => `${(nome ?? codigo).split(' ')[0]} /${codigo}`

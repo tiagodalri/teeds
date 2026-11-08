@@ -892,7 +892,7 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
         const papel = await papelDoAdmin(dono.id, marca)
         if (!papel) return json(403, { erro: 'Somente administradores desta plataforma.' })
         const filtro = url.searchParams.get('parceiro')
-        const escopo = !papel.geral ? papel.parceiro ?? '#' : filtro === 'direto' ? '' : filtro && /^[a-z0-9]{1,20}$/.test(filtro) ? filtro : undefined
+        const escopo = !papel.geral ? (filtro && papel.ve.includes(filtro) ? filtro : papel.parceiro ?? '#') : filtro === 'direto' ? '' : filtro && /^[a-z0-9]{1,20}$/.test(filtro) ? filtro : undefined
         if (req.method === 'GET') return json(200, await listarPendentes(marca, url.searchParams.get('status') || 'pendente', Number(url.searchParams.get('pagina')) || 0, escopo))
         if (req.method === 'POST') return json(200, await decidirLead(String(corpo.id || ''), marca, dono.id, String(corpo.acao || ''), String(corpo.plano || 'essencial')))
         return json(405, { erro: 'Método não permitido.' })
@@ -905,7 +905,7 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
         const papelTroca = await papelDoAdmin(dono.id, marca)
         if (!papelTroca) return json(403, { erro: 'Somente administradores desta plataforma.' })
         // o admin do parceiro troca o e-mail só de cliente dele
-        if (!papelTroca.geral && !await clienteNoEscopo(marca, String(corpo.user_id || ''), papelTroca.parceiro ?? '#')) return json(403, { erro: 'Este cliente não é do seu parceiro.' })
+        if (!papelTroca.geral && !(await Promise.all((papelTroca.ve.length ? papelTroca.ve : [papelTroca.parceiro ?? '#']).map((c) => clienteNoEscopo(marca, String(corpo.user_id || ''), c)))).some(Boolean)) return json(403, { erro: 'Este cliente não é do seu parceiro.' })
         try { return json(200, await trocarEmailDoCliente(String(corpo.user_id || ''), marca, String(corpo.email || ''))) }
         catch (e) { return json(400, { erro: (e as Error).message }) }
       }

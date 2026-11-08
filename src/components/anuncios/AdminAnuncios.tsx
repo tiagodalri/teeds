@@ -294,11 +294,12 @@ const LinhaDoAnuncio = memo(function LinhaDoAnuncio({ l, colunas, ordemCol, conj
  * parceiro com conta e avisa qual conta está mostrando (o topo marca essa). `seletorNoTopo`: o topo já mostra
  * as contas, então os botões Naor/Victor daqui somem (no laboratório, sem topo, eles ficam).
  */
-export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_ESTUDIO, intervalo = 10_000, apiCentral = API_DA_CENTRAL, buscarJornada, parceiroDoTopo, soDoParceiro, aoTrocarConta, seletorNoTopo = false, atualizarPedido = 0, aoMudarCarregando, apiInstagram = API_DO_INSTAGRAM, apiAnalise = API_DA_ANALISE }: { sessao: SessaoTeeds; api?: ApiAnuncios; apiEstudio?: ApiEstudio; intervalo?: number; apiCentral?: ApiCentral; buscarJornada?: typeof jornadaCompleta; parceiroDoTopo?: string; soDoParceiro?: string; aoTrocarConta?: (codigo: string, codigos: string[]) => void; seletorNoTopo?: boolean
+export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_ESTUDIO, intervalo = 10_000, apiCentral = API_DA_CENTRAL, buscarJornada, parceiroDoTopo, soDoParceiro, aoTrocarConta, seletorNoTopo = false, atualizarPedido = 0, aoMudarCarregando, apiInstagram = API_DO_INSTAGRAM, apiAnalise = API_DA_ANALISE }: { sessao: SessaoTeeds; api?: ApiAnuncios; apiEstudio?: ApiEstudio; intervalo?: number; apiCentral?: ApiCentral; buscarJornada?: typeof jornadaCompleta; parceiroDoTopo?: string; soDoParceiro?: string | string[]; aoTrocarConta?: (codigo: string, codigos: string[]) => void; seletorNoTopo?: boolean
   /** O "Atualizar" do topo do painel (cada clique soma 1) e o aviso de quando está lendo: no painel, o botão daqui some. */
   atualizarPedido?: number; aoMudarCarregando?: (indo: boolean) => void; apiInstagram?: ApiInstagram; apiAnalise?: ApiAnalise }) {
   // o admin do parceiro com acesso total (05/11/2026) só vê a conta de anúncios do parceiro dele
-  const contas = (CONTAS_DE_ANUNCIO[MARCA.id] ?? []).filter((c) => !soDoParceiro || c.codigo === soDoParceiro)
+  // o admin do parceiro: só a conta dele; quem vê mais de um parceiro (Victor: /v e /n, 08/11/2026), as da lista
+  const contas = (CONTAS_DE_ANUNCIO[MARCA.id] ?? []).filter((c) => !soDoParceiro || ([] as string[]).concat(soDoParceiro).includes(c.codigo))
   // a conta escolhida (Naor ou Victor) fica lembrada neste aparelho
   const [parceiro, setParceiroAgora] = useState(() => {
     if (parceiroDoTopo && contas.some((c) => c.codigo === parceiroDoTopo)) return parceiroDoTopo

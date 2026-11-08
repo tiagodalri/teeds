@@ -669,7 +669,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
         </div>
         <div className="mon-topo-direita">
           <SeletorDePlataforma valor={marcaFoco} opcoes={opcoesDePlataforma(ehMaster(), MARCA.id)} onTrocar={(id) => { trocarMarca(id); setFoco(null); setReplayDe(null); setSessoes(new Map()); setMarkups(new Map()) }}
-            parceiros={parceiros} parceiro={parceiroFoco} onParceiro={(c) => { trocarParceiro(c); setFoco(null) }} />
+            parceiros={parceiros} parceiro={parceiroFoco} onParceiro={(c) => { trocarParceiro(c); setFoco(null) }} soParceiros={doParceiro} />
           <span className={`mon-canal ${canal}`} role="status"><i aria-hidden />{ROTULO_CANAL[canal]}{rttMs != null && canal === 'ao-vivo' ? ` · ida e volta ~${rttMs} ms` : ''}</span>
           <nav className="mon-abas" role="tablist">
             {(['ao-vivo', 'replay', 'auditoria'] as Aba[]).map((a) => <button key={a} role="tab" aria-selected={aba === a} className={aba === a ? 'on' : ''} onClick={() => { setAba(a); setFoco(null); setReplayDe(null) }}>{a === 'ao-vivo' ? 'Ao vivo' : a === 'replay' ? 'Sessões encerradas' : 'Auditoria'}</button>)}

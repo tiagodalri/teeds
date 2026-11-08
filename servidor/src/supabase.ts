@@ -48,12 +48,15 @@ export async function administradorDaMarca(userId: string, marca: string): Promi
  * O papel de quem pede, nesta marca: geral (vê tudo), do parceiro (só o /n ou
  * o /v dele) ou nenhum. O admin da Teeds (a master) é geral em todas.
  */
-export async function papelDoAdmin(userId: string, marca: string): Promise<{ geral: boolean; parceiro: string | null } | null> {
-  const linhas = await rest<any[]>(`/administradores?user_id=eq.${encodeURIComponent(userId)}&marca=in.(${encodeURIComponent(marca)},teeds)&select=marca,parceiro`)
+export async function papelDoAdmin(userId: string, marca: string): Promise<{ geral: boolean; parceiro: string | null; ve: string[] } | null> {
+  const linhas = await rest<any[]>(`/administradores?user_id=eq.${encodeURIComponent(userId)}&marca=in.(${encodeURIComponent(marca)},teeds)&select=marca,parceiro,ve_parceiros`)
   if (!linhas?.length) return null
-  if (linhas.some((l) => !l.parceiro)) return { geral: true, parceiro: null }
+  if (linhas.some((l) => !l.parceiro)) return { geral: true, parceiro: null, ve: [] }
   const daMarca = linhas.find((l) => l.marca === marca && l.parceiro)
-  return daMarca ? { geral: false, parceiro: String(daMarca.parceiro) } : null
+  if (!daMarca) return null
+  // ve: os parceiros que ele também pode olhar (08/11/2026: Victor Cordeiro vê o /v e o /n)
+  const ve = Array.isArray(daMarca.ve_parceiros) ? daMarca.ve_parceiros.map(String) : []
+  return { geral: false, parceiro: String(daMarca.parceiro), ve: ve.includes(String(daMarca.parceiro)) ? ve : [String(daMarca.parceiro), ...ve] }
 }
 
 /**
