@@ -32,5 +32,15 @@
   .admin-top-acoes .sel-parc-opcoes button { flex: none; white-space: nowrap; }
   .admin-top-acoes:has(.sel-parc) .admin-refresh { flex: none; width: 42px; min-width: 42px; padding: 0; justify-content: center; font-size: 0; gap: 0; }
   .admin-top-acoes:has(.sel-parc) .admin-refresh .icone-traco { width: 18px; height: 18px; }
-  .admin-top-acoes .sel-parc > :not(.sel-parc-opcoes) { flex: none; }
+  .admin-top-acoes .sel-parc { flex-wrap: nowrap; }
+  .admin-top-acoes .sel-parc > .sel-plat-rot { flex: none; }
+  .admin-top-acoes .sel-parc > .fp { flex: 0 1 auto; min-width: 0; }
+}
+
+/* 08/11/2026: no celular, com plataforma E parceiro, a plataforma ocupa a linha de cima;
+   parceiro e Atualizar ficam embaixo (numa linha só, os três se espremiam). */
+@media (max-width: 600px) {
+  .admin-top-acoes:has(.sel-plat):has(.sel-parc) { flex-wrap: wrap; }
+  .admin-top-acoes:has(.sel-parc) > .sel-plat { flex: 1 1 100%; min-width: 0; }
+  .admin-top-acoes:has(.sel-plat) > .sel-parc { flex: 1 1 0; min-width: 0; }
 }

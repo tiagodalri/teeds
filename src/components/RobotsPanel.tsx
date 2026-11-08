@@ -28,6 +28,7 @@ import { DigitosFlutuante } from './DigitosFlutuante'
 import { ATIVO_DOS_ROBOS, ehSintetico } from '../core/deriv/config'
 import './robot-workspace.css'
 import { NomeDoRobo } from './NomeDoRobo'
+import { modeloPedidoDaVitrine, pedirModeloDaVitrine } from './RobotSetup'
 import { BotaoJanelaSolta } from './janela/BotaoJanelaSolta'
 
 interface Props {
@@ -64,6 +65,26 @@ const din = (v: number, m = 'USD') =>
 /** A home pede o preparo de um robô (junto com pedirModeloDaVitrine): a tela de robôs abre o preparo ao montar, ou na hora se já estiver montada. */
 let preparoPedido = false
 export function pedirPreparo(): void { preparoPedido = true; window.dispatchEvent(new Event('robos:preparar')) }
+
+/*
+  A I.A. escolhida na vitrine sem a Deriv (08/11/2026): conectar a Deriv sai do site e volta
+  recarregando, e a escolha se perdia. Ela fica guardada nesta aba por 30 min e, quando a pessoa
+  volta conectada, o preparo abre direto nela.
+*/
+const CHAVE_ESCOLHA = 'gf.vitrine.depois-da-deriv'
+function guardarEscolhaAntesDaDeriv() {
+  const id = modeloPedidoDaVitrine()
+  try { if (id) sessionStorage.setItem(CHAVE_ESCOLHA, JSON.stringify({ id, em: Date.now() })) } catch { /* sem guardar, escolhe de novo */ }
+}
+function retomarEscolhaDepoisDaDeriv() {
+  try {
+    const bruto = sessionStorage.getItem(CHAVE_ESCOLHA)
+    if (!bruto) return
+    sessionStorage.removeItem(CHAVE_ESCOLHA)
+    const { id, em } = JSON.parse(bruto) as { id?: string; em?: number }
+    if (id && em && Date.now() - em < 30 * 6e4) { pedirModeloDaVitrine(id); pedirPreparo() }
+  } catch { /* nada a retomar */ }
+}
 
 export function RobotsPanel({
   socket, logado, isDemo, demoComoReal = false, rotulosTrocados = false, moeda, symbols, symbolPadrao, conexao = 'open',
@@ -132,6 +153,7 @@ export function RobotsPanel({
   const [digitosDe, setDigitosDe] = useState<string | null>(null)
   // sem a Deriv: a janela que pede a conexão, aberta pelo "Iniciar" de uma I.A.
   const [pedindoDeriv, setPedindoDeriv] = useState(false)
+  useEffect(() => { if (logado) { setPedindoDeriv(false); retomarEscolhaDepoisDaDeriv() } }, [logado])
   const alternarDigitos = (chave: string) =>
     setDigitosDe((atual) => (atual === chave ? null : chave))
   const nomeAtivoDosRobos = symbols.find((s) => s.symbol === ATIVO_DOS_ROBOS)?.name
@@ -367,7 +389,7 @@ export function RobotsPanel({
           <div className="rob-workspace-board modo-lista">{paineisDoServidor}</div>
         </>}
         <VitrineDeRobos onConfigurar={() => setPedindoDeriv(true)} aoPrecisarDaDeriv={() => setPedindoDeriv(true)} />
-        {pedindoDeriv && <PedidoDeConexao entrando={entrandoNaDeriv} aoConectar={() => onConectarDeriv?.()} aoFechar={() => setPedindoDeriv(false)} />}
+        {pedindoDeriv && <PedidoDeConexao entrando={entrandoNaDeriv} aoConectar={() => { guardarEscolhaAntesDaDeriv(); onConectarDeriv?.() }} aoFechar={() => setPedindoDeriv(false)} />}
       </div>
     )
   }
@@ -775,7 +797,9 @@ function PedidoDeConexao({ entrando, aoConectar, aoFechar }: { entrando: boolean
   return createPortal(
     <dialog ref={ref} className="rob-pede-deriv" aria-label="Conecte a sua Deriv"
       onCancel={(e) => { e.preventDefault(); aoFechar() }}
-      onMouseDown={(e) => { if (e.target === e.currentTarget) aoFechar() }}>
+      // fechou de fato (ex.: voltar do Android); o close da desmontagem chega com ela já reaberta e é ignorado
+      onClose={() => { if (!ref.current?.open) aoFechar() }}
+      onClick={(e) => { if (e.target === e.currentTarget) aoFechar() }}>
       <div className="rob-pede-deriv-caixa">
         <button type="button" className="rob-pede-deriv-fechar" onClick={aoFechar} aria-label="Fechar"><IconeFechar /></button>
         <DerivDesconectada acao="Para a I.A. operar, falta conectar a corretora."

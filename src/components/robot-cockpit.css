@@ -254,10 +254,10 @@
   .tv.tv-cockpit .tv-tabela tr {
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas: 'preco preco res' 'hora valor res' 'markup markup markup';
-  }
-  .tv.tv-cockpit .tv-tabela tr:not(:has(td.tv-hora)) { grid-template-areas: 'preco preco res' 'valor valor res' 'markup markup markup';
     gap: 3px 10px; align-items: center; padding: 11px 16px;
   }
+  /* GF sem a coluna Hora (08/11/2026) */
+  .tv.tv-cockpit .tv-tabela tr:not(:has(td.tv-hora)) { grid-template-areas: 'preco preco res' 'valor valor res' 'markup markup markup'; }
   .tv.tv-cockpit .tv-tabela tr.ganhou { box-shadow: inset 3px 0 0 var(--up); }
   .tv.tv-cockpit .tv-tabela tr.perdeu { box-shadow: inset 3px 0 0 var(--down); }
   .tv.tv-cockpit .tv-tabela td,
@@ -277,3 +277,8 @@
   .tv.tv-cockpit .tv-tabela td[colspan] { grid-area: auto; grid-column: 1 / -1; text-align: center; }
   .tv.tv-cockpit .tv-tabela tr:has(td[colspan]) { grid-template-areas: none; box-shadow: none; }
 }
+
+/* GF sem a hora no registro da sessão (08/11/2026) */
+.tv.tv-cockpit .tv-registro.sem-hora li { grid-template-columns: minmax(0, 1fr); }
+.tv-registro.sem-hora li { grid-template-columns: minmax(0, 1fr); }
+.tv-palm-aviso:not(:has(time)) { grid-template-columns: minmax(0, 1fr); }

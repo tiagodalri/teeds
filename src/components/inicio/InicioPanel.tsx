@@ -153,7 +153,8 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
             <Monograma tamanho={42} className="in-conta-mono" />
             <div>
               <h1 id="in-ola">{saudacao()}{primeiro ? `, ${primeiro}` : ''}</h1>
-              <span className="in-conta-data">{hojeExtenso()}</span>
+              {/* 08/11/2026: a GF sem data na plataforma, por enquanto */}
+              {MARCA.id !== 'globalfly' && <span className="in-conta-data">{hojeExtenso()}</span>}
             </div>
             {d.conta.conectada && (
               <button type="button" className={`in-olho ${ocultos ? 'fechado' : ''}`} onClick={alternarValores} aria-pressed={ocultos}

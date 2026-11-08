@@ -37,6 +37,8 @@ export interface OpcaoDeParceiro {
   titulo?: string
   /** O nome da pessoa (para as iniciais de quem não tem foto), quando o rótulo leva outra coisa junto. */
   pessoa?: string
+  /** Texto antes do nome (ex.: a plataforma), que some no celular para a fileira caber. */
+  prefixo?: string
 }
 
 export function FiltroDeParceiros({ opcoes, valor, onTrocar, rotulo = 'Parceiro', className = '' }: {
@@ -56,9 +58,13 @@ export function FiltroDeParceiros({ opcoes, valor, onTrocar, rotulo = 'Parceiro'
     // no celular a fileira rola de lado: o escolhido vem para a vista
     const b = el.querySelector<HTMLElement>('button[aria-pressed="true"]')
     if (b && el.scrollWidth > el.clientWidth) el.scrollTo({ left: Math.max(0, b.offsetLeft - (el.clientWidth - b.offsetWidth) / 2), behavior: 'smooth' })
+    // mede de novo quando qualquer botão muda de largura (a fonte carregando, a fileira encolhendo)
     const ro = new ResizeObserver(medir)
     ro.observe(el)
-    return () => ro.disconnect()
+    el.querySelectorAll('button').forEach((b) => ro.observe(b))
+    let vivo = true
+    void document.fonts?.ready.then(() => { if (vivo) medir() })
+    return () => { vivo = false; ro.disconnect() }
   }, [valor, opcoes.length])
   const parceiros = opcoes.filter((o) => o.id && o.id !== 'direto')
 
@@ -79,7 +85,7 @@ export function FiltroDeParceiros({ opcoes, valor, onTrocar, rotulo = 'Parceiro'
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
               </span>
             ) : <AvatarDoParceiro codigo={o.id} nome={o.pessoa ?? o.nome} />}
-            <span className="fp-nome">{o.nome}{o.codigo && <small>/{o.codigo}</small>}</span>
+            <span className="fp-nome"><span>{o.prefixo && <span className="fp-prefixo">{o.prefixo} </span>}{o.nome}</span>{o.codigo && <small>/{o.codigo}</small>}</span>
           </button>
         )
       })}

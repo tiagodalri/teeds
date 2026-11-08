@@ -6384,3 +6384,5 @@ body:has(:is(.aula-modal-fundo, .market-modal-fundo, .cw-fundo, .adm-modal-fundo
 html[data-corretora-discreta] .deriv-logo { display: none !important; }
 /* o botão de abrir conta no Pré-acesso, sem o vermelho da corretora */
 .entrada[data-modo="espera"] .espera-corretora .btn-deriv.btn-corretora { background: var(--primary); color: #fff; box-shadow: none; }
+/* 08/11/2026: a GF sem a coluna Hora no extrato das sessões do servidor */
+.ss-tabela.ss-sem-hora>*{grid-template-columns:.5fr .9fr .6fr 1fr 1fr}

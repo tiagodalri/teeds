@@ -91,6 +91,8 @@ export { ETAPAS_PREPARO, valorDePreparo, OPCOES_DE_MODO, configurarPreparo } fro
 /** O cartão da vitrine pede um robô; o próximo preparo que abrir já começa nele. */
 let modeloDaVitrine: string | null = null
 export const pedirModeloDaVitrine = (id: string) => { modeloDaVitrine = id }
+/** O robô que a vitrine pediu e ainda não foi preparado (para guardar antes de sair para a Deriv). */
+export const modeloPedidoDaVitrine = () => modeloDaVitrine
 
 /* ------------------------------------------------------------------
    O "Plano de voo" (21/10/2026, aprovado em mockup pelo Tiago): o preparo

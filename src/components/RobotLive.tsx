@@ -360,7 +360,7 @@ export function RobotLive({
           <div className="tv-palm-feed" aria-live="polite">
             {analisesPalm.length > 0 ? analisesPalm.map((aviso) => (
               <div key={aviso.id} className="tv-palm-aviso">
-                <time>{relogio(aviso.hora)}</time>
+                {MOSTRAR_HORA && <time>{relogio(aviso.hora)}</time>}
                 <span>{aviso.texto}</span>
               </div>
             )) : (
@@ -500,9 +500,9 @@ export function RobotLive({
           <div className="tv-ops-topo"><span className="tv-rot">Registro da sessão</span><small>{estado.registros.length} {estado.registros.length === 1 ? 'evento' : 'eventos'}</small></div>
           <div className="tv-rolo">
             {estado.registros.length === 0 && <p className="tv-registro-vazio">Os eventos da sessão aparecerão aqui conforme o robô operar.</p>}
-            <ul className="tv-registro">
+            <ul className={`tv-registro${MOSTRAR_HORA ? '' : ' sem-hora'}`}>
               {estado.registros.map((r, i) => (
-                <li key={i} className={r.tipo}><span>{relogio(r.hora * 1000)}</span><b>{r.texto}</b></li>
+                <li key={i} className={r.tipo}>{MOSTRAR_HORA && <span>{relogio(r.hora * 1000)}</span>}<b>{r.texto}</b></li>
               ))}
             </ul>
           </div>

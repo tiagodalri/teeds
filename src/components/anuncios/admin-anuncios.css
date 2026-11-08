@@ -1,5 +1,5 @@
 /* Administração › Anúncios (02/11/2026): o funil 3D ao vivo e o painel completo da Meta. */
-.aa { --aa-ouro: var(--gf-ouro, var(--primary)); display: grid; gap: 16px; min-width: 0; }
+.aa { --aa-ouro: var(--gf-ouro, var(--primary)); display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
 .aa-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .aa-conta { display: flex; align-items: center; gap: 12px; margin-right: auto; min-width: 0; }
 .aa-conta small { display: block; color: var(--muted); font-size: 11.5px; font-weight: 600; }

@@ -79,7 +79,7 @@ export function SeletorDePlataforma({ valor, opcoes, onTrocar, parceiros = [], p
         <FiltroDeParceiros rotulo={soParceiros ? 'Conta de anúncios do parceiro' : 'Parceiro de divulgação'} valor={parceiro} onTrocar={onParceiro}
           opcoes={[
             ...(soParceiros ? [] : [{ id: '', nome: 'Todos', titulo: 'Todos os parceiros e quem chegou direto' }]),
-            ...parceiros.map((p) => ({ id: p.codigo, pessoa: p.nome, nome: `${opcoes.length > 1 ? `${nomeDaMarca} ` : ''}${p.nome.split(' ')[0]}`, codigo: p.codigo, titulo: soParceiros ? `A conta de anúncios do ${p.nome.split(' ')[0]}` : `${nomeDaMarca} · ${p.nome}` })),
+            ...parceiros.map((p) => ({ id: p.codigo, pessoa: p.nome, prefixo: opcoes.length > 1 ? nomeDaMarca : undefined, nome: p.nome.split(' ')[0], codigo: p.codigo, titulo: soParceiros ? `A conta de anúncios do ${p.nome.split(' ')[0]}` : `${nomeDaMarca} · ${p.nome}` })),
             ...(soParceiros ? [] : [{ id: 'direto', nome: 'Direto', titulo: 'Quem chegou sem link de parceiro' }]),
           ]} />
       </div>

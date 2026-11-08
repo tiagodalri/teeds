@@ -5,6 +5,7 @@
   --fp-pilula: linear-gradient(160deg, #143057 0%, #0a1d36 55%, #051528 100%);
   --fp-ativo: #F3F0E9;
   position: relative; isolation: isolate; display: inline-flex; align-items: center; gap: 2px; padding: 4px; min-width: 0;
+  max-width: 100%; overflow-x: auto; scrollbar-width: none;
   border: 1px solid var(--border); border-radius: 999px; background: var(--bg);
   box-shadow: inset 0 1px 2px rgba(5, 21, 40, .06);
 }
@@ -15,6 +16,11 @@
 }
 
 /* a pílula que desliza até o escolhido, com um quique no fim */
+.fp::-webkit-scrollbar { display: none; }
+/* a fileira nunca alarga a página: quem a contém também pode encolher, e ela rola por dentro */
+.sel-parc { min-width: 0; max-width: 100%; }
+.sel-parc > .fp { flex: 0 1 auto; min-width: 0; }
+.admin-top-acoes:has(.fp) { min-width: 0; max-width: 100%; }
 .fp-pilula {
   position: absolute; z-index: 0; left: 0; top: 4px; bottom: 4px; border-radius: 999px; pointer-events: none;
   background: var(--fp-pilula);
@@ -66,8 +72,9 @@
 .fp > button:hover .fp-pilha .fp-av:nth-child(2) { transform: translateX(2px); }
 .fp > button:hover .fp-pilha .fp-av:nth-child(3) { transform: translateX(4px); }
 
+/* o nome da plataforma antes do parceiro só cabe em tela larga (o seletor de plataforma já diz qual é) */
+@media (max-width: 1100px) { .fp-prefixo { display: none; } }
 @media (max-width: 600px) {
-  .fp { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
   .fp::-webkit-scrollbar { display: none; }
   .fp > button { height: 36px; padding: 0 12px 0 5px; gap: 7px; }
 }

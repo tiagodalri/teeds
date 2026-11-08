@@ -48,6 +48,14 @@ export function LiberarAcessoGeral({ sessao, geral }: { sessao: SessaoTeeds; ger
     } catch (e) { setErro((e as Error).message) } finally { setLiberando(false) }
   }
 
+  // Esc fecha a confirmação (menos no meio da liberação)
+  useEffect(() => {
+    if (!aberto) return
+    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape' && !liberando) setAberto(false) }
+    window.addEventListener('keydown', tecla)
+    return () => window.removeEventListener('keydown', tecla)
+  }, [aberto, liberando])
+
   const liberado = !!p?.liberadoEm
   const esperando = p?.aguardando ?? null
 

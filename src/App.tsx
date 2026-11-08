@@ -600,9 +600,9 @@ export default function App() {
   /*
     08/11/2026 (Tiago): ninguém é liberado sozinho às 20h30; vale o botão "Liberar acesso geral"
     (Administração › Clientes), que marca liberadoEm no banco. Enquanto o banco não responde, vale
-    o que o aparelho já sabe; sem isso, só a partir das 20h de 09/11 a plataforma abre na dúvida.
+    o que o aparelho já sabe; sem isso, na dúvida fica trancado (nunca abre sozinho pelo relógio).
   */
-  const liberadoGeral = MARCA.id !== 'globalfly' || (live ? !!live.liberadoEm : liberacaoGeralGuardada() || Date.now() >= INICIO_DA_LIVE)
+  const liberadoGeral = MARCA.id !== 'globalfly' || (live ? !!live.liberadoEm : liberacaoGeralGuardada())
   useEffect(() => { if (live) guardarLiberacaoGeral(live.liberadoEm) }, [live?.liberadoEm]) // eslint-disable-line react-hooks/exhaustive-deps
   const trancado = previaInscrito || (!liberadoAntes && trancadoAteALive(situacao, plano, admin, liberadoGeral))
   // trancada até a live, a plataforma de trás também não diz o nome da corretora (03/11/2026)
@@ -640,8 +640,9 @@ export default function App() {
       // liberado com a live ainda no ar: a live continua aberta, agora por cima da plataforma
       if (live?.noAr) setAssistindoLive(true)
     }
-    estavaTrancado.current = trancado
-  }, [trancado, situacao])
+    // trancado só "na dúvida" (o banco ainda não respondeu) não conta: senão o recado sairia a cada abertura
+    estavaTrancado.current = trancado && (situacao !== 'ativo' || live !== null || previaInscrito)
+  }, [trancado, situacao, live === null]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // "Meu perfil" e tour guiado (GlobalFly, 20/10/2026): a foto vai para o menu
   // do usuário, e quem nunca fez o tour faz agora (obrigatório na 1ª vez).

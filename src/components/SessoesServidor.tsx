@@ -6,6 +6,10 @@ import {
   type OperacaoServidor, type SessaoServidor,
 } from '../core/teeds/sessoesServidor'
 import { NomeDoRobo } from './NomeDoRobo'
+import { MARCA } from '../marca'
+
+/** 08/11/2026 (Tiago): "por enquanto" a GF sem a hora nas operações. */
+const MOSTRAR_HORA = MARCA.id !== 'globalfly'
 
 /**
  * Os robôs que estão rodando no servidor, vistos daqui.
@@ -129,12 +133,12 @@ export function SessoesServidor({ sessao, escondidas = [] }: {
             {!extrato.length ? (
               <p className="ss-vazio">{viva ? 'Esperando a primeira operação fechar…' : 'Nenhuma operação registrada.'}</p>
             ) : (
-              <div className="ss-tabela">
-                <div className="cab"><span>#</span><span>Hora</span><span>Entrada</span><span>Dígito</span><span>Resultado</span><span>Acumulado</span></div>
+              <div className={`ss-tabela${MOSTRAR_HORA ? '' : ' ss-sem-hora'}`}>
+                <div className="cab"><span>#</span>{MOSTRAR_HORA && <span>Hora</span>}<span>Entrada</span><span>Dígito</span><span>Resultado</span><span>Acumulado</span></div>
                 {extrato.map((o) => (
                   <div key={o.contractId}>
                     <span>{o.seq ?? '—'}</span>
-                    <span>{hora(o.executadaEm)}</span>
+                    {MOSTRAR_HORA && <span>{hora(o.executadaEm)}</span>}
                     <span>{din(o.entrada, s.moeda)}</span>
                     <span className={o.ganhou ? 'positivo' : 'negativo'}>{o.digitoSaida ?? '—'}</span>
                     <span className={o.ganhou ? 'positivo' : 'negativo'}>{din(o.resultado, s.moeda, true)}</span>

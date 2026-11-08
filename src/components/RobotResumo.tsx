@@ -268,7 +268,7 @@ export function RobotCartao(p: ResumoProps & { onAbrirNaLista: () => void }) {
         {ultimas.length === 0 && <span className="rc-vazio">{e.rodando ? 'Nenhuma operação ainda' : 'Sem operações nesta sessão'}</span>}
         {ultimas.map((o) => (
           <div key={o.contractId} className="rc-op">
-            <span className="muted">{o.n} · {horaSeg(o.quando)}</span>
+            <span className="muted">{MARCA.id === 'globalfly' ? `Operação ${o.n}` : `${o.n} · ${horaSeg(o.quando)}`}</span>
             <span>{num(o.valor)}{o.pipSize !== undefined && o.digitoSaida !== null && <em className={`rs-dig ${o.ganhou ? 'up' : 'down'}`}>{o.digitoSaida}</em>}</span>
             <b className={o.lucro >= 0 ? 'up' : 'down'}>{assinado(o.lucro)}</b>
             {p.ceo && <em className="rc-markup" title={o.markupDeriv != null ? 'markup medido pela Deriv' : '3% do pagamento'}>{centavos(markupDaOperacao(o))}</em>}

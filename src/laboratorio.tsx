@@ -25,6 +25,7 @@ import './components/workspace.css'
 import { aplicarTema, temaGuardado } from './core/tema'
 import { MARCA } from './marca'
 import { SeletorDePlataforma, opcoesDePlataforma } from './components/SeletorDePlataforma'
+import './components/admin-topo.css'
 import { ligarVocabularioIA } from './marca/vocabularioIA'
 import { LoginScreen } from './components/LoginScreen'
 import { ExcluirCadastro } from './components/ExcluirCadastro'
@@ -91,6 +92,11 @@ function LabSeletor() {
   return <div className="workspace-app" style={{ padding: 32, background: 'var(--bg)', minHeight: '100vh', display: 'grid', gap: 12, alignContent: 'start' }}>
     <SeletorDePlataforma valor={v} opcoes={opcoesDePlataforma(true, 'teeds')} onTrocar={setV} parceiros={v === 'globalfly' ? [{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }, { codigo: 'd', nome: 'Douglas' }] : []} parceiro={p} onParceiro={setP} />
     <small style={{ color: 'var(--muted)' }}>parceiro em foco: {p || 'todos'}</small>
+    {/* o mesmo seletor como fica no topo da Administração (08/11/2026) */}
+    <div className="admin-shell" style={{ display: 'block' }}><main className="admin-main" style={{ padding: 0 }}><header className="admin-top"><div><span className="rot">GlobalFly Trade Admin</span><h1>Gestão de clientes</h1></div><div className="admin-top-acoes">
+      <SeletorDePlataforma valor={v} opcoes={opcoesDePlataforma(true, 'teeds')} onTrocar={setV} parceiros={v === 'globalfly' ? [{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }, { codigo: 'd', nome: 'Douglas' }] : []} parceiro={p} onParceiro={setP} />
+      <button className="admin-refresh">Atualizar</button>
+    </div></header></main></div>
   </div>
 }
 const LabParceiros = lazy(() => import('./components/LabParceiros'))
