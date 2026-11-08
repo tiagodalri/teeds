@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { IconeFechar } from './IconeFechar'
 import type { TeedsSocket } from '../core/deriv/client'
 import { publicSocket } from '../core/deriv/client'
 import {
@@ -128,6 +130,8 @@ export function RobotsPanel({
     robôs rodando ao mesmo tempo não existe "o robô" do painel.
   */
   const [digitosDe, setDigitosDe] = useState<string | null>(null)
+  // sem a Deriv: a janela que pede a conexão, aberta pelo "Iniciar" de uma I.A.
+  const [pedindoDeriv, setPedindoDeriv] = useState(false)
   const alternarDigitos = (chave: string) =>
     setDigitosDe((atual) => (atual === chave ? null : chave))
   const nomeAtivoDosRobos = symbols.find((s) => s.symbol === ATIVO_DOS_ROBOS)?.name
@@ -348,6 +352,25 @@ export function RobotsPanel({
       ))}
     </div>
   )
+
+  if (!logado && MARCA.vitrineDosRobos) {
+    /*
+      08/11/2026 (Tiago): sem a Deriv, a tela das I.A. aparece normalmente,
+      com as fotos e os detalhes de cada uma. Só ao clicar para iniciar é que
+      aparece o pedido de conexão. As sessões que já operam no servidor
+      continuam à vista, com o "Desligar" (29/10/2026).
+    */
+    return (
+      <div className="ger rob robot-workspace">
+        {doChat.length > 0 && <>
+          <div className="ger-topo"><div><h2>Suas sessões</h2></div></div>
+          <div className="rob-workspace-board modo-lista">{paineisDoServidor}</div>
+        </>}
+        <VitrineDeRobos onConfigurar={() => setPedindoDeriv(true)} aoPrecisarDaDeriv={() => setPedindoDeriv(true)} />
+        {pedindoDeriv && <PedidoDeConexao entrando={entrandoNaDeriv} aoConectar={() => onConectarDeriv?.()} aoFechar={() => setPedindoDeriv(false)} />}
+      </div>
+    )
+  }
 
   if (!logado) {
     /*
@@ -738,5 +761,27 @@ export function RobotsPanel({
           aoFechar={() => setDigitosDe(null)} />
       )}
     </div>
+  )
+}
+
+/** A janela que pede a Deriv quando a pessoa escolhe uma I.A. sem a corretora conectada. */
+function PedidoDeConexao({ entrando, aoConectar, aoFechar }: { entrando: boolean; aoConectar: () => void; aoFechar: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    const d = ref.current
+    d?.showModal()
+    return () => d?.close()
+  }, [])
+  return createPortal(
+    <dialog ref={ref} className="rob-pede-deriv" aria-label="Conecte a sua Deriv"
+      onCancel={(e) => { e.preventDefault(); aoFechar() }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) aoFechar() }}>
+      <div className="rob-pede-deriv-caixa">
+        <button type="button" className="rob-pede-deriv-fechar" onClick={aoFechar} aria-label="Fechar"><IconeFechar /></button>
+        <DerivDesconectada acao="Para a I.A. operar, falta conectar a corretora."
+          entrando={entrando} onConectar={aoConectar} />
+      </div>
+    </dialog>,
+    document.body,
   )
 }

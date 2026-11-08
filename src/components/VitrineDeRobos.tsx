@@ -217,7 +217,11 @@ function ModalDoRobo({ i, nome, base, parametros, aoFechar, aoIniciar, trancada 
   )
 }
 
-export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
+export function VitrineDeRobos({ onConfigurar, aoPrecisarDaDeriv }: {
+  onConfigurar: () => void
+  /** Sem a Deriv conectada (08/11/2026): a vitrine aparece igual e o "Iniciar" pede para conectar. */
+  aoPrecisarDaDeriv?: () => void
+}) {
   const disponiveis = useRobosDisponiveis()
   const catalogo = useCatalogoCompleto()
   const falhou = useCatalogoFalhou()
@@ -233,7 +237,13 @@ export function VitrineDeRobos({ onConfigurar }: { onConfigurar: () => void }) {
   }
   // Sem o prefixo da marca: "GF Raptor" (ou "GlobalFly Raptor", antes de 19/10) vira "Raptor".
   const nomeCurto = (i: Identidade) => i.nome.replace(new RegExp(`^(GF|${MARCA.prosa.split(' ')[0]})\\s+`, 'i'), '')
-  const iniciar = (i: Identidade) => { setAberto(null); pedirModeloDaVitrine(i.id); onConfigurar() }
+  const iniciar = (i: Identidade) => {
+    setAberto(null)
+    // sem a corretora: guarda a escolha (o preparo abre nela depois de conectar) e pede a conexão
+    pedirModeloDaVitrine(i.id)
+    if (aoPrecisarDaDeriv) { aoPrecisarDaDeriv(); return }
+    onConfigurar()
+  }
   const base = `${import.meta.env.BASE_URL}robos-${MARCA.id}/`
   const doModal = robos.find((i) => i.id === aberto)
 
