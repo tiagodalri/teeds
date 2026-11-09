@@ -9,7 +9,7 @@ import { dinheiro, dinheiroComSinal } from '../../core/dinheiro'
 import { NomeDoRobo } from '../NomeDoRobo'
 import { useCatalogoCompleto } from '../../core/teeds/catalogoRobos'
 import {
-  cenarioEmBranco, cenariosProntos, definirRegrasDasIas, diasDoCenario, escadaDaIa, escadaDoGale, ehRobo, entradasDaSequenciaNaIa, faixaDoCenario, hojeIso, IAS_DO_SIMULADOR, iaDoSimulador, iasDoCenario, previaDoCenario,
+  cenarioEmBranco, cenariosProntos, comEntrada, definirRegrasDasIas, diasDoCenario, escadaDaIa, escadaDoGale, ehRobo, entradasDaSequenciaNaIa, faixaDoCenario, hojeIso, IAS_DO_SIMULADOR, iaDoSimulador, iasDoCenario, previaDoCenario,
   type Cenario, type LinhaDeIa, type Momento,
 } from '../../core/teeds/relatorioSimulado'
 
@@ -123,6 +123,9 @@ export function EditorDoCenario({ inicial, aoMostrar, aoFechar, aoSair }: { inic
   const robos = c.ias.filter((l) => ehRobo(l.ia)), temManual = c.ias.some((l) => !ehRobo(l.ia))
   const versaoRegras = definirRegrasDasIas(useCatalogoCompleto())
   const previa = useMemo(() => (passo >= 3 ? previaDoCenario(c) : null), [c, passo, versaoRegras])
+  // o cenário com a entrada que ele usa de verdade (a calculada, na automática): escadas e riscos mostram essa
+  const ce = useMemo(() => (passo === 3 ? comEntrada(c) : c), [c, passo, versaoRegras])
+  const entradaAuto = c.entradaAutomatica !== false
 
   const p = c.periodo
   const falhas: string[] = [
@@ -130,7 +133,7 @@ export function EditorDoCenario({ inicial, aoMostrar, aoFechar, aoSair }: { inic
       : p.tipo === 'intervalo' ? (!p.de || !p.ate ? 'Escolha as duas datas.' : p.ate < p.de ? 'A data final vem antes da inicial.' : p.ate > hoje ? 'Escolha datas até hoje.' : dias > 400 ? 'Escolha até 400 dias.' : '') : '',
     !c.operacoes ? 'Preencha a quantidade de operações.' : c.acerto < 0 || c.acerto > 100 ? 'O acerto vai de 0 a 100%.' : '',
     !c.ias.length ? `Escolha pelo menos uma ${IA}.` : !c.dividirSozinho && c.ias.length > 1 && (somaOps !== Math.round(c.operacoes) || Math.abs(somaRes - c.resultado) > 0.005) ? 'A soma das I.A. precisa fechar com o total.' : '',
-    !c.entrada ? 'Preencha a entrada inicial.' : c.entrada < 0.35 ? 'A entrada mínima da Deriv é US$ 0,35.' : temManual && (!c.payout || c.payout > 1000) ? 'Preencha o payout das operações manuais.' : temManual && c.gale && c.multiplicador < 1.01 ? 'O multiplicador do gale precisa ser maior que 1.' : perdidas && (c.sequencia < 1 || c.sequencia > perdidas) ? `A sequência de perdas vai de 1 a ${perdidas}.` : c.horaAte < c.horaDe ? 'O horário final vem antes do inicial.' : '',
+    !entradaAuto && !c.entrada ? 'Preencha a entrada inicial.' : !entradaAuto && c.entrada < 0.35 ? 'A entrada mínima da Deriv é US$ 0,35.' : temManual && (!c.payout || c.payout > 1000) ? 'Preencha o payout das operações manuais.' : temManual && c.gale && c.multiplicador < 1.01 ? 'O multiplicador do gale precisa ser maior que 1.' : perdidas && (c.sequencia < 1 || c.sequencia > perdidas) ? `A sequência de perdas vai de 1 a ${perdidas}.` : c.horaAte < c.horaDe ? 'O horário final vem antes do inicial.' : '',
     '',
   ]
   const falha = falhas[passo]
@@ -144,7 +147,8 @@ export function EditorDoCenario({ inicial, aoMostrar, aoFechar, aoSair }: { inic
   })
   // aceita o que as regras dão: o resultado (e o de cada I.A.) passa a ser o calculado
   // na divisão automática fica automática (o sorteio é o mesmo, então a tela se repete); na mão, as I.A. viram as calculadas
-  const usarCalculado = () => { if (previa) setC((x) => (x.dividirSozinho && x.ias.length > 1 ? { ...x, resultado: previa.resultado } : { ...x, resultado: previa.resultado, ias: previa.porIa, dividirSozinho: x.ias.length > 1 ? false : x.dividirSozinho })) }
+  // a entrada fica a que foi usada (senão a entrada automática recalcularia para o novo total e mudaria a tela)
+  const usarCalculado = () => { if (previa) setC((x) => ({ ...(x.dividirSozinho && x.ias.length > 1 ? { ...x, resultado: previa.resultado } : { ...x, resultado: previa.resultado, ias: previa.porIa, dividirSozinho: x.ias.length > 1 ? false : x.dividirSozinho }), entrada: previa.entrada, entradaAutomatica: false })) }
   const mudarIa = (i: number, q: Partial<LinhaDeIa>) => setC((x) => {
     // quem mexe numa I.A. passa a dividir na mão: começa do que estava dividido
     const atual = iasDoCenario(x)
@@ -269,14 +273,24 @@ export function EditorDoCenario({ inicial, aoMostrar, aoFechar, aoSair }: { inic
             <Passo titulo="Como foram as operações?" sub={robos.length
               ? `Cada ${IA} opera com as regras dela na plataforma: o payout e a escada de recuperação já vêm prontos.${temManual ? ' Só as operações manuais têm payout e gale para preencher.' : ''}`
               : 'O gerenciamento que fez o resultado. Cada ganho paga a entrada × o payout; com martingale, cada perda multiplica a próxima entrada.'}>
-              <div className="rsim-duas">
-                <Numero id="rsim-entrada" rotulo="Entrada inicial (US$)" valor={c.entrada} min={0} max={1e5} aoMudar={(x) => mudar({ entrada: x ?? 0 })} dica="A entrada que o cliente escolheu. Mínimo da Deriv: US$ 0,35." />
-                <div />
+              <div className="rsim-campo"><span>Entrada inicial</span>
+                <div className="rel-seg cheio">
+                  <button type="button" className={entradaAuto ? 'on' : ''} onClick={() => mudar({ entradaAutomatica: true })}>Automática</button>
+                  <button type="button" className={!entradaAuto ? 'on' : ''} onClick={() => mudar({ entradaAutomatica: false, entrada: ce.entrada })}>Definir a entrada</button>
+                </div>
               </div>
+              {entradaAuto
+                ? <p className="rsim-ok">{previa?.sinalTrocado
+                  ? <>Nenhuma entrada fecha em <b className={c.resultado < 0 ? 'cai' : 'sobe'}>{dinheiroComSinal(c.resultado, 'USD')}</b> com esse acerto: veja o aviso abaixo.</>
+                  : <>Entrada de <b>{usd(ce.entrada)}</b>, calculada para as operações fecharem em <b className={c.resultado < 0 ? 'cai' : 'sobe'}>{dinheiroComSinal(c.resultado, 'USD')}</b>.</>}</p>
+                : <div className="rsim-duas">
+                  <Numero id="rsim-entrada" rotulo="Entrada inicial (US$)" valor={c.entrada} min={0} max={1e5} aoMudar={(x) => mudar({ entrada: x ?? 0 })} dica="A entrada que o cliente escolheu. Mínimo da Deriv: US$ 0,35." />
+                  <div />
+                </div>}
               {robos.length > 0 && (
                 <div className="rsim-regras">
                   {robos.map((l) => {
-                    const d = escadaDaIa(c, l.ia)
+                    const d = escadaDaIa(ce, l.ia)
                     const pct = (g?: { valor: number; lucro: number }) => (g && g.valor ? Math.round((g.lucro / g.valor) * 100) : 0)
                     const naEntrada = pct(d[0]), naRecuperacao = pct(d[1])
                     const usadas = l.ia === c.iaDaSequencia ? Math.max(1, c.sequencia) : 0
@@ -300,7 +314,7 @@ export function EditorDoCenario({ inicial, aoMostrar, aoFechar, aoSair }: { inic
               {temManual && <>
                 {robos.length > 0 && <b className="rsim-subtitulo">Operações manuais</b>}
                 <div className="rsim-duas">
-                  <Numero id="rsim-payout" rotulo="Payout" sufixo="%" valor={c.payout} max={1000} aoMudar={(x) => mudar({ payout: x ?? 0 })} dica={`Quanto o ganho paga. Com ${String(c.payout || 95).replace('.', ',')}%, ganhar com ${usd(c.entrada || 1)} rende ${usd(Math.round((c.entrada || 1) * (c.payout || 95)) / 100)}.`} />
+                  <Numero id="rsim-payout" rotulo="Payout" sufixo="%" valor={c.payout} max={1000} aoMudar={(x) => mudar({ payout: x ?? 0 })} dica={`Quanto o ganho paga. Com ${String(c.payout || 95).replace('.', ',')}%, ganhar com ${usd(ce.entrada)} rende ${usd(Math.round(ce.entrada * (c.payout || 95)) / 100)}.`} />
                   <div />
                 </div>
                 <div className="rsim-campo"><span>Martingale (gale)</span>
@@ -314,12 +328,12 @@ export function EditorDoCenario({ inicial, aoMostrar, aoFechar, aoSair }: { inic
                     <Numero id="rsim-multiplicador" rotulo="Multiplicador do gale" sufixo="×" valor={c.multiplicador} min={1} max={10} aoMudar={(x) => mudar({ multiplicador: x ?? 1 })} dica="Depois de cada perda, a próxima entrada é a anterior × este número." />
                     <label className="rsim-campo"><span>Até quantos gales</span><span className="rsim-entrada">
                       <select id="rsim-gales" value={c.gales} onChange={(e) => mudar({ gales: Number(e.target.value) })}>
-                        {Array.from({ length: 12 }, (_, k) => k + 1).map((k) => <option key={k} value={k}>{k} {k === 1 ? 'gale' : 'gales'} · até {usd(escadaDoGale({ ...c, gales: k })[k])}</option>)}
+                        {Array.from({ length: 12 }, (_, k) => k + 1).map((k) => <option key={k} value={k}>{k} {k === 1 ? 'gale' : 'gales'} · até {usd(escadaDoGale({ ...ce, gales: k })[k])}</option>)}
                       </select>
                     </span><small className="rsim-dica">Perdeu no último gale, aceita a perda e volta à entrada inicial.</small></label>
                   </div>
                   <div className="rsim-escada" aria-label="A escada de entradas">
-                    {escadaDoGale(c).map((e, k) => (
+                    {escadaDoGale(ce).map((e, k) => (
                       <span key={k} className={!ehRobo(c.iaDaSequencia) && k <= Math.min(Math.max(1, c.sequencia) - 1, c.gales) ? 'usada' : ''}><small>{k === 0 ? 'Entrada' : `Gale ${k}`}</small><b>{usd(e)}</b></span>
                     ))}
                   </div>
@@ -338,18 +352,18 @@ export function EditorDoCenario({ inicial, aoMostrar, aoFechar, aoSair }: { inic
               </div>
               {(() => {
                 // as perdas da sequência e a entrada seguinte (a que recupera): é ela a maior entrada do relatório
-                const comAQueRecupera = entradasDaSequenciaNaIa(c, c.iaDaSequencia, Math.max(1, c.sequencia) + 1)
+                const comAQueRecupera = entradasDaSequenciaNaIa(ce, c.iaDaSequencia, Math.max(1, c.sequencia) + 1)
                 const doRisco = comAQueRecupera.slice(0, -1)
                 const roboDaSequencia = ehRobo(c.iaDaSequencia)
                 const maior = Math.max(...comAQueRecupera), soma = doRisco.reduce((s, e) => s + e, 0)
                 return (
-                  <div className={`rsim-risco ${maior > (c.entrada || 1) ? 'alto' : ''}`}>
+                  <div className={`rsim-risco ${maior > ce.entrada ? 'alto' : ''}`}>
                     <div><small>Maior entrada (exposição de risco)</small><b>{usd(maior)}</b></div>
                     <div><small>A sequência de {Math.max(1, c.sequencia)} {c.sequencia === 1 ? 'perda' : 'perdas'} custa</small><b className="cai">{dinheiroComSinal(-soma, 'USD')}</b></div>
                     <p>{roboDaSequencia
                       ? `A ${iaDoSimulador(c.iaDaSequencia).nome} sobe a escada de recuperação dela a cada perda e entra com ${usd(maior)} para recuperar.`
                       : c.gale
-                      ? c.sequencia > c.gales + 1 ? `A sequência passa do último gale: perdeu ${c.gales + 1} seguidas, aceita a perda e recomeça em ${usd(c.entrada || 1)}.` : `As entradas sobem a cada perda até ${usd(maior)}.`
+                      ? c.sequencia > c.gales + 1 ? `A sequência passa do último gale: perdeu ${c.gales + 1} seguidas, aceita a perda e recomeça em ${usd(ce.entrada)}.` : `As entradas sobem a cada perda até ${usd(maior)}.`
                       : 'Sem gale, todas as entradas são iguais.'} Na Deriv, a perda de uma operação é a própria entrada.</p>
                   </div>
                 )
