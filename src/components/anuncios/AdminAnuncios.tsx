@@ -26,7 +26,9 @@ import { InstagramDoParceiro } from './Instagram'
 import { API_DA_ANALISE, type ApiAnalise } from '../../core/teeds/analise'
 import { AnaliseIA } from './AnaliseIA'
 import './admin-anuncios.css'
-import { AvisoDePagamento, CobrancaDaConta } from './Cobranca'
+import { AvisoDePagamento, CobrancaDaConta, DE_PAGAMENTO, useCobranca } from './Cobranca'
+import { Financeiro, ResumoFinanceiro } from './Financeiro'
+import { NumerosDoPeriodo } from './NumerosDoPeriodo'
 
 const brl = (v: number, casas = 2) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: casas, maximumFractionDigits: casas })
 const int = (v: number) => Math.round(v).toLocaleString('pt-BR')
@@ -64,7 +66,9 @@ type IdPeriodo = (typeof PERIODOS)[number]['id']
 // a Central de rastreio vive aqui dentro. A home é a jornada do anúncio ao dinheiro.
 const ABAS = [
   { id: 'geral', nome: 'Visão geral' }, { id: 'aovivo', nome: 'Ao vivo' }, { id: 'pessoas', nome: 'Pessoas' }, { id: 'origens', nome: 'Origens e links' }, { id: 'instagram', nome: 'Instagram' },
-  { id: 'criativos', nome: 'Criativos' }, { id: 'anuncios', nome: 'Anúncios' }, { id: 'custos', nome: 'Custos' }, { id: 'publico', nome: 'Público' },
+  { id: 'criativos', nome: 'Criativos' }, { id: 'anuncios', nome: 'Anúncios' }, { id: 'custos', nome: 'Custos' },
+  // 09/11/2026 (Tiago: "não vi a parte do financeiro"): a cobrança da conta ganhou aba própria
+  { id: 'financeiro', nome: 'Financeiro' }, { id: 'publico', nome: 'Público' },
   { id: 'rastreio', nome: 'Pixel' }, { id: 'estudio', nome: 'Estúdio' },
 ] as const
 type IdAba = (typeof ABAS)[number]['id']
@@ -312,6 +316,8 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   useEffect(() => { aoTrocarConta?.(parceiro, contas.map((c) => c.codigo)) }, [parceiro]) // eslint-disable-line react-hooks/exhaustive-deps
   const [periodo, setPeriodo] = useState<IdPeriodo>('lancamento')
   const [meta, setMeta] = useState<RespostaDaMeta | null>(null)
+  // 09/11/2026: a cobrança da conta é lida uma vez e vai para o selo, o resumo do topo e a aba Financeiro
+  const cobranca = useCobranca(sessao, parceiro, api, meta)
   const [funil, setFunil] = useState<FunilDoBanco | null>(null)
   const [aoVivo, setAoVivo] = useState<{ total: Metricas; em: string } | null>(null)
   const [erro, setErro] = useState<string | null>(null)
@@ -596,6 +602,11 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   // só quem chegou pelo link do anúncio neste aparelho (cadAcompanhados): é a base das etapas seguintes.
   const cadDeAnuncio = total?.cadastros ?? 0
   const qtdAlertas = listaDeAlertas.filter((a) => a.tipo !== 'bom').length
+  // a aba Financeiro ganha um "!" com pagamento parado ou recusa depois da última cobrança aprovada
+  const cobrancaLida = cobranca.estado && 'c' in cobranca.estado ? cobranca.estado.c : null
+  const iCobrada = cobrancaLida ? cobrancaLida.eventos.findIndex((e) => e.tipo === 'cobrada') : -1
+  const financeiroComProblema = !!cobrancaLida && (DE_PAGAMENTO.has(cobrancaLida.conta.status) || cobrancaLida.conta.status === 2
+    || cobrancaLida.eventos.slice(0, iCobrada < 0 ? undefined : iCobrada).some((e) => e.tipo === 'recusada'))
 
   return (
     <div className="aa">
@@ -609,8 +620,9 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
           <div><small>Conta de anúncios do {nomeParceiro}</small><b>{painel?.conta.nome || contaAtual?.contaNome || 'Conta ainda não escolhida'}</b>
             {meta && !semChave && !contasDaChave && <button type="button" className="aa-trocar-conta" onClick={() => void abrirEscolha()} disabled={escolhendo.indo}>{escolhendo.indo ? 'Procurando…' : 'Trocar a conta'}</button>}
           </div>
-          {/* 08/11/2026: o selo abre a cobrança da conta (Cobranca.tsx) */}
-          {painel && <CobrancaDaConta sessao={sessao} parceiro={parceiro} api={api} statusDoPainel={painel.conta.status} recarregar={meta} nomeParceiro={nomeParceiro} />}
+          {/* 08/11/2026: o selo abre a cobrança da conta (Cobranca.tsx); 09/11: embaixo, o resumo do financeiro leva à aba */}
+          {painel && <CobrancaDaConta cobranca={cobranca} statusDoPainel={painel.conta.status} nomeParceiro={nomeParceiro} abrirFinanceiro={() => setAba('financeiro')} />}
+          {painel && <ResumoFinanceiro cobranca={cobranca} abrir={() => setAba('financeiro')} />}
         </div>
         <div className="aa-acoes">
           <button type="button" className="aa-atualizar aa-subir" onClick={() => { setAba('estudio'); setPedidoEstudio({ tipo: 'novo', n: Date.now() }) }}><span aria-hidden="true">+</span>Subir anúncio</button>
@@ -726,17 +738,10 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
       {/* o recado de quem acabou de escolher a conta, quando o quadro de conectar não está na tela */}
       {!contasDaChave && !(semChave || chaveRuim || abrirConectar) && (salvando.ok || salvando.erro) && <p className={salvando.erro ? 'aa-erro' : 'aa-ok'} role="status">{salvando.erro ?? salvando.ok}</p>}
 
-      {/* o resumo do período em uma frase, para quem só quer saber se está indo bem */}
+      {/* o resumo do período: antes uma frase, desde 09/11/2026 os cinco números do Gerenciador com a linha de cada dia */}
       {total && (
-        <p className="aa-resumo">
-          <span>{de === ate ? `Em ${dataBr(de)}` : `De ${ddmm(de)} a ${ddmm(ate)}`}, </span>
-          {/* 05/11/2026, noite (Tiago: "preciso que seja tipo um espelho do gerenciador, sem divergências"): primeiro os
-              números do Gerenciador, com os nomes de lá, e só eles ("não temos que ter 2 números diferentes para o mesmo indicador") */}
-          como no Gerenciador: <b>{brl(total.gasto)}</b> de valor gasto, <b>{int(cadDeAnuncio)} {cadDeAnuncio === 1 ? 'resultado' : 'resultados'}</b>
-          {cadDeAnuncio > 0 && <>, <b>{custo(total.gasto, cadDeAnuncio)}</b> por resultado</>}
-          {total.alcance > 0 && <>, alcance de <b>{int(total.alcance)}</b>, frequência <b>{total.frequencia.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></>}.
-          {qtdAlertas > 0 && <> <button type="button" onClick={() => setAba('geral')}>{qtdAlertas === 1 ? '1 ponto pede atenção' : `${qtdAlertas} pontos pedem atenção`}</button></>}
-        </p>
+        <NumerosDoPeriodo total={{ ...total, cadastros: cadDeAnuncio }} porDia={painel?.porDia ?? []} periodo={de === ate ? dataBr(de) : `${ddmm(de)} a ${ddmm(ate)}`}
+          alertas={qtdAlertas} verAlertas={() => setAba('geral')} brl={(v) => brl(v)} int={int} />
       )}
 
       <nav className="aa-abas" role="tablist" aria-label="Partes do painel">
@@ -746,6 +751,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
             {x.id === 'anuncios' && painel ? <i>{int(painel.anuncios.length)}</i> : null}
             {x.id === 'geral' && qtdAlertas ? <i className="alerta">{qtdAlertas}</i> : null}
             {x.id === 'estudio' ? <i className="novo">Novo</i> : null}
+            {x.id === 'financeiro' && financeiroComProblema ? <i className="alerta fn-alerta" title="Pagamento com problema">!</i> : null}
           </button>
         ))}
       </nav>
@@ -918,6 +924,11 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
             )}
           </section>
         </>
+      ))}
+
+      {aba === 'financeiro' && (!painel ? <p className="aa-vazio">{semChave ? 'O financeiro aparece quando a conta for conectada.' : 'Carregando…'}</p> : (
+        <Financeiro cobranca={cobranca} statusDoPainel={painel.conta.status} nomeParceiro={nomeParceiro} contaNome={painel.conta.nome || contaAtual?.contaNome || ''}
+          gastoDoPeriodo={total?.gasto ?? null} periodo={de === ate ? dataBr(de) : `${ddmm(de)} a ${ddmm(ate)}`} />
       ))}
 
       {aba === 'publico' && (!painel ? <p className="aa-vazio">{semChave ? 'O público aparece quando a conta for conectada.' : 'Carregando…'}</p> : (

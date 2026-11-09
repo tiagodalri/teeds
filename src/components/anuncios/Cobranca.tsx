@@ -16,11 +16,11 @@ const NOME_DA_SITUACAO: Record<number, string> = {
 }
 export const nomeDaSituacao = (s: number) => NOME_DA_SITUACAO[s] ?? 'Conta com restrição'
 /** situações em que a Meta para (ou vai parar) os anúncios por pagamento */
-const DE_PAGAMENTO = new Set([3, 8, 9])
+export const DE_PAGAMENTO = new Set([3, 8, 9])
 
-const dinheiro = (v: number, moeda = 'BRL') => v.toLocaleString('pt-BR', { style: 'currency', currency: moeda })
+export const dinheiro = (v: number, moeda = 'BRL') => v.toLocaleString('pt-BR', { style: 'currency', currency: moeda })
 // a Meta manda "2026-11-08T21:41:12-0300"; o Safari só entende o fuso com dois-pontos
-const quando = (iso: string) => {
+export const quando = (iso: string) => {
   const d = new Date(iso.replace(/([+-]\d{2})(\d{2})$/, '$1:$2'))
   if (Number.isNaN(d.getTime())) return iso
   const hoje = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
@@ -42,10 +42,13 @@ function Evento({ e, moeda }: { e: EventoDeCobranca; moeda: string }) {
   )
 }
 
-type Estado = { c: Cobranca } | { aviso: string } | null
+export type Estado = { c: Cobranca } | { aviso: string } | null
 
-/** Lê a cobrança uma vez por parceiro e de novo a cada `recarregar` (o botão Atualizar da tela). */
-function useCobranca(sessao: SessaoTeeds, parceiro: string, api: ApiAnuncios, recarregar: unknown) {
+/**
+ * Lê a cobrança uma vez por parceiro e de novo a cada `recarregar` (o botão Atualizar da tela).
+ * 09/11/2026: a tela lê uma vez só e reparte entre o selo, o resumo do topo e a aba Financeiro.
+ */
+export function useCobranca(sessao: SessaoTeeds, parceiro: string, api: ApiAnuncios, recarregar: unknown) {
   const [estado, setEstado] = useState<Estado>(null)
   const [indo, setIndo] = useState(false)
   const ler = useCallback(() => {
@@ -67,10 +70,12 @@ function useCobranca(sessao: SessaoTeeds, parceiro: string, api: ApiAnuncios, re
  * O selo da conta (botão) + a janelinha da cobrança + a faixa de pagamento pendente.
  * `statusDoPainel` vale enquanto a cobrança não chega (é o mesmo account_status).
  */
-export function CobrancaDaConta({ sessao, parceiro, api, statusDoPainel, recarregar, nomeParceiro }: {
-  sessao: SessaoTeeds; parceiro: string; api: ApiAnuncios; statusDoPainel: number; recarregar: unknown; nomeParceiro: string
+export function CobrancaDaConta({ cobranca, statusDoPainel, nomeParceiro, abrirFinanceiro }: {
+  cobranca: ReturnType<typeof useCobranca>; statusDoPainel: number; nomeParceiro: string
+  /** 09/11/2026 (Tiago: "não vi a parte do financeiro"): a janelinha leva para a aba Financeiro */
+  abrirFinanceiro?: () => void
 }) {
-  const { estado, indo, ler } = useCobranca(sessao, parceiro, api, recarregar)
+  const { estado, indo, ler } = cobranca
   const [aberta, setAberta] = useState(false)
   const caixa = useRef<HTMLDivElement>(null)
   const c = estado && 'c' in estado ? estado.c : null
@@ -117,6 +122,7 @@ export function CobrancaDaConta({ sessao, parceiro, api, statusDoPainel, recarre
             {c.historico && !cobrancas.length && <p className="cb-vazio">Nenhuma cobrança nos últimos 30 dias.</p>}
             {cobrancas.length > 0 && <ul className="cb-lista">{cobrancas.map((e, i) => <Evento key={`${e.em}${i}`} e={e} moeda={moeda} />)}</ul>}
           </>)}
+          {abrirFinanceiro && <button type="button" className="cb-tudo" onClick={() => { setAberta(false); abrirFinanceiro() }}>Ver o financeiro completo <span aria-hidden="true">→</span></button>}
           <footer>
             <button type="button" className="cb-reler" onClick={() => ler()} disabled={indo}>{indo ? 'Lendo…' : 'Ler de novo'}</button>
             <a className="cb-pagar" href={c?.link ?? 'https://business.facebook.com/billing_hub/accounts'} target="_blank" rel="noreferrer">

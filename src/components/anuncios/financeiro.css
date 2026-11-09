@@ -1,0 +1,127 @@
+/* 09/11/2026: a aba Financeiro da conta de anúncios (Financeiro.tsx) */
+.fn { gap: 18px; }
+.fn-topo { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.fn-topo h3 { margin: 2px 0 0; font-size: 20px; }
+.fn-acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+.fn-reler { height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.fn-reler:disabled { opacity: .6; cursor: default; }
+.fn-pagar { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border-radius: 10px; background: var(--aa-ouro); color: #0b1424; font-size: 13px; font-weight: 800; text-decoration: none; }
+.fn-pagar.urgente { background: var(--down); color: #fff; }
+.fn-pagar:hover, .fn-reler:hover:not(:disabled) { filter: brightness(1.06); }
+
+/* carregando: quatro cartões vazios que pulsam no lugar dos de verdade */
+.fn-esqueleto { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.fn-esqueleto i { height: 132px; border-radius: 14px; background: linear-gradient(100deg, var(--surface) 30%, color-mix(in srgb, var(--surface) 60%, var(--bg)) 50%, var(--surface) 70%); background-size: 300% 100%; animation: fn-pulso 1.4s ease-in-out infinite; }
+@keyframes fn-pulso { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .fn-esqueleto i { animation: none; } }
+
+.fn-aviso { margin: 0; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--aa-ouro) 12%, transparent); font-size: 13px; line-height: 1.5; }
+.fn-vazio { margin: 0; color: var(--muted); font-size: 13px; }
+
+/* o B.O.: aparece só quando há recusa em aberto ou a conta parou por pagamento */
+.fn-bo { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 14px; padding: 16px 18px; border: 1px solid color-mix(in srgb, var(--down) 45%, transparent); border-radius: 14px; background: color-mix(in srgb, var(--down) 8%, var(--bg)); }
+.fn-bo-icone { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--down); color: #fff; font-weight: 900; font-size: 17px; box-shadow: 0 0 0 6px color-mix(in srgb, var(--down) 18%, transparent); }
+.fn-bo b { display: block; color: var(--down); font-size: 15px; }
+.fn-bo p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.5; text-wrap: pretty; }
+.fn-bo ol { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 3px; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.fn-bo a { align-self: center; display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border-radius: 10px; background: var(--down); color: #fff; font-size: 13px; font-weight: 800; text-decoration: none; white-space: nowrap; }
+
+/* os quatro cartões */
+.fn-grade { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.fn-cartao { display: grid; align-content: start; gap: 8px; min-width: 0; padding: 16px; border: 1px solid var(--border); border-radius: 14px; background: color-mix(in srgb, var(--text) 2.5%, var(--bg)); }
+.fn-cartao > small { color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.fn-cartao p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.45; text-wrap: pretty; }
+.fn-cartao p b { color: var(--text); font-variant-numeric: tabular-nums; }
+.fn-valor { font-size: 28px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.fn-valor.menor { font-size: 22px; }
+.fn-destaque { border-color: color-mix(in srgb, var(--aa-ouro) 55%, var(--border)); background: linear-gradient(160deg, color-mix(in srgb, var(--aa-ouro) 12%, var(--bg)), color-mix(in srgb, var(--aa-ouro) 3%, var(--bg)) 70%); }
+.fn-destaque .fn-valor { color: var(--aa-ouro); }
+
+.fn-situacao b { display: flex; align-items: center; gap: 9px; font-size: 19px; line-height: 1.2; }
+.fn-situacao b i { width: 11px; height: 11px; flex: none; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 5px color-mix(in srgb, currentColor 18%, transparent); }
+.fn-situacao.ok b { color: var(--up); }
+.fn-situacao.erro b { color: var(--down); }
+.fn-situacao.aviso b { color: var(--aa-ouro); }
+.fn-situacao.ok b i { animation: fn-vivo 2.4s ease-in-out infinite; }
+@keyframes fn-vivo { 50% { box-shadow: 0 0 0 9px color-mix(in srgb, currentColor 0%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .fn-situacao.ok b i { animation: none; } }
+
+/* o cartão de crédito em miniatura */
+.fn-cartao-credito { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 12px; border-radius: 10px; background: linear-gradient(135deg, #1d2a44, #0d1626 60%, #2a2112); color: #f3ecdc; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .08); }
+.fn-cartao-credito b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+.fn-chip { width: 26px; height: 19px; flex: none; border-radius: 4px; background: linear-gradient(135deg, #e3c77a, #a8823a); box-shadow: inset 0 0 0 1px rgb(0 0 0 / .18); }
+
+.fn-limite { height: 7px; border-radius: 99px; background: var(--surface); overflow: hidden; }
+.fn-limite i { display: block; height: 100%; border-radius: inherit; background: var(--aa-ouro); }
+.fn-limite i.quase { background: var(--down); }
+
+/* os 30 dias */
+.fn-30 { display: grid; gap: 14px; padding: 16px; border: 1px solid var(--border); border-radius: 14px; }
+.fn-30 > header { display: grid; gap: 12px; }
+.fn h4 { margin: 0; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.fn-numeros { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.fn-numeros li { display: grid; gap: 2px; padding: 0 16px; min-width: 0; }
+.fn-numeros li + li { border-left: 1px solid var(--border); }
+.fn-numeros li:first-child { padding-left: 0; }
+.fn-numeros small { color: var(--muted); font-size: 12px; }
+.fn-numeros b { font-size: 20px; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.fn-numeros span { color: var(--muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fn-numeros li.ruim b { color: var(--down); }
+
+.fn-barras { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); align-items: end; gap: 4px; height: 120px; padding-bottom: 20px; }
+.fn-barras span { position: relative; height: 100%; display: flex; align-items: flex-end; border-radius: 4px; }
+.fn-barras span:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
+.fn-barras i { display: block; width: 100%; border-radius: 4px 4px 2px 2px; background: linear-gradient(180deg, var(--up), color-mix(in srgb, var(--up) 55%, transparent)); }
+.fn-barras i.zero { height: 2px; background: var(--border); }
+.fn-barras span.hoje i:not(.zero) { box-shadow: 0 0 0 2px color-mix(in srgb, var(--up) 30%, transparent); }
+.fn-barras em { position: absolute; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--down); box-shadow: 0 0 0 3px color-mix(in srgb, var(--down) 20%, transparent); }
+.fn-barras small { position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); color: var(--muted); font-size: 10.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* o histórico, dia a dia, numa linha do tempo */
+.fn-historico { display: grid; gap: 12px; }
+.fn-dia { display: grid; gap: 6px; }
+.fn-dia h5 { display: flex; justify-content: space-between; align-items: baseline; margin: 0; padding-bottom: 6px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.fn-dia h5 small { color: var(--muted); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fn-dia ol { list-style: none; margin: 0; padding: 0; display: grid; }
+.fn-ev { position: relative; display: grid; grid-template-columns: 14px 52px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 7px 4px; font-size: 13.5px; border-radius: 8px; }
+.fn-ev:hover { background: color-mix(in srgb, var(--text) 3%, transparent); }
+.fn-ev > i { width: 9px; height: 9px; border-radius: 50%; justify-self: center; background: var(--muted); }
+.fn-ev:not(:last-child) > i::after { content: ''; position: absolute; left: 10.5px; top: calc(50% + 8px); height: calc(100% - 16px); border-left: 1px dashed var(--border); }
+.fn-ev.ok > i { background: var(--up); }
+.fn-ev.erro > i { background: var(--down); box-shadow: 0 0 0 3px color-mix(in srgb, var(--down) 20%, transparent); }
+.fn-ev time { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.fn-ev.erro span { color: var(--down); font-weight: 700; }
+.fn-ev.situacao span { font-weight: 700; }
+.fn-ev b { font-variant-numeric: tabular-nums; }
+.fn-ev.erro b { color: var(--down); text-decoration: line-through; text-decoration-thickness: 1px; opacity: .85; }
+
+.fn-nota { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+/* o resumo do topo, embaixo do nome da conta */
+.fn-mini { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 6px; padding: 5px 6px 5px 10px; border: 1px solid var(--border); border-radius: 99px; background: color-mix(in srgb, var(--text) 2.5%, var(--bg)); color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; transition: border-color .15s, background-color .15s; }
+.fn-mini b { color: var(--text); font-variant-numeric: tabular-nums; }
+.fn-mini:hover { border-color: var(--aa-ouro); }
+.fn-mini-cartao { padding-left: 10px; border-left: 1px solid var(--border); }
+.fn-mini-recusa { padding: 1px 8px; border-radius: 99px; background: color-mix(in srgb, var(--down) 14%, transparent); color: var(--down); font-weight: 800; }
+.fn-mini-ir { padding: 3px 10px; border-radius: 99px; background: var(--surface); color: var(--text); font-weight: 700; }
+.fn-mini:hover .fn-mini-ir { background: var(--aa-ouro); color: #0b1424; }
+.fn-mini.bo { border-color: color-mix(in srgb, var(--down) 50%, transparent); background: color-mix(in srgb, var(--down) 6%, var(--bg)); }
+
+@media (max-width: 1100px) { .fn-grade, .fn-esqueleto { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) {
+  .fn-numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; }
+  .fn-numeros li:nth-child(3) { padding-left: 0; border-left: 0; }
+  .fn-bo { grid-template-columns: auto minmax(0, 1fr); }
+  .fn-bo a { grid-column: 1 / -1; justify-content: center; }
+}
+@media (max-width: 560px) {
+  .fn-grade, .fn-esqueleto { grid-template-columns: minmax(0, 1fr); }
+  .fn-acoes, .fn-acoes > * { width: 100%; justify-content: center; }
+  .fn-barras { gap: 2px; }
+  .fn-barras small { font-size: 9.5px; }
+  .fn-barras span:not(.hoje) small { display: none; }
+  .fn-barras span:nth-child(10n) small { display: block; }
+}
+
+/* o "!" da aba Financeiro quando o pagamento tem problema */
+.aa-abas i.fn-alerta { background: var(--down); color: #fff; font-weight: 900; }

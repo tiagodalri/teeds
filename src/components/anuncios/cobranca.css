@@ -55,3 +55,7 @@
   .cb-ev { grid-template-columns: 78px 1fr auto; }
   .cb-faixa a { width: 100%; justify-content: center; }
 }
+
+/* 09/11/2026: da janelinha para a aba Financeiro */
+.cb-tudo { display: flex; align-items: center; justify-content: space-between; height: 38px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.cb-tudo:hover { border-color: var(--aa-ouro, #b8913a); color: var(--aa-ouro, #b8913a); }
