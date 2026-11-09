@@ -92,37 +92,108 @@
 }
 @media(max-width:700px){.pendente-linha{grid-template-columns:minmax(0,1fr)}}
 
-/* 08/11/2026 (Tiago: "preciso de filtros aqui, melhore"): a barra de filtros. Busca em cima, os seletores numa
-   grade que se acomoda (7 no computador, 2 por linha no celular), e embaixo a contagem, as etiquetas dos filtros
-   ligados (tiram com um toque) e as ações. */
-.pdq-filtros{display:grid;gap:10px;margin:0 0 10px;padding:14px;border:1px solid var(--border,#30343e);border-radius:12px;background:color-mix(in srgb,currentColor 2%,transparent)}
-.pdq-filtros .pdq-busca{margin:0}
-.pdq-busca input{padding-left:38px;background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a93a3' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 13px center}
-.pdq-seletores{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
-.pdq-seletores label{display:grid;gap:4px;min-width:0}
-.pdq-seletores label>span{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#9298a3)}
-.pdq-seletores select{width:100%;min-width:0;min-height:38px;padding:0 30px 0 10px;border:1px solid var(--border,#343842);border-radius:9px;background:transparent;color:inherit;font:inherit;font-size:13px;font-weight:600;text-overflow:ellipsis;cursor:pointer;appearance:none;-webkit-appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a93a3' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
-.pdq-seletores select.on{border-color:var(--primary,#cfa94f);box-shadow:0 0 0 1px var(--primary,#cfa94f) inset}
-.pdq-seletores select:disabled{opacity:.5;cursor:not-allowed}
-.pdq-seletores select:focus-visible{outline:2px solid var(--primary,#cfa94f);outline-offset:2px}
-.pdq-seletores option{color:#111;background:#fff}
-.pdq-rodape-filtros{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
-.pdq-contagem{font-size:13px;color:var(--muted,#9298a3);font-variant-numeric:tabular-nums}
-.pdq-contagem b{font-size:15px;color:var(--text,inherit)}
-.pdq-ligados{display:flex;flex-wrap:wrap;gap:6px}
-.admin-pendentes .pdq-ligados button{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:3px 6px 3px 10px;border:1px solid color-mix(in srgb,var(--primary,#cfa94f) 55%,transparent);border-radius:999px;background:color-mix(in srgb,var(--primary,#cfa94f) 12%,transparent);color:inherit;font-size:12px;font-weight:600}
-.pdq-ligados i{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:color-mix(in srgb,currentColor 12%,transparent);font-style:normal;font-size:13px;line-height:1}
-.pdq-acoes-filtros{display:flex;gap:8px;margin-left:auto}
-.admin-pendentes .pdq-acoes-filtros button{min-height:32px;padding:0 12px;border-radius:9px;font-size:12.5px;font-weight:700}
 /* os números do resumo que filtram: "+N hoje" e os produtos mais citados */
 .admin-pendentes .pdq-hoje{min-height:0;padding:3px 9px;border:1px solid transparent;border-radius:999px;background:color-mix(in srgb,var(--up,#2fb67c) 14%,transparent);color:var(--up,#2fb67c);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer}
 .admin-pendentes .pdq-hoje[aria-pressed=true]{border-color:var(--up,#2fb67c)}
 .admin-pendentes .pdq-top button{display:inline-flex;align-items:center;gap:8px;min-height:30px;padding:4px 10px;border:1px solid transparent;border-radius:7px;background:color-mix(in srgb,currentColor 7%,transparent);color:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
 .admin-pendentes .pdq-top button b{font-variant-numeric:tabular-nums;color:var(--primary,#cfa94f)}
 .admin-pendentes .pdq-top button[aria-pressed=true]{border-color:var(--primary,#cfa94f);background:color-mix(in srgb,var(--primary,#cfa94f) 14%,transparent)}
+
+
+/* FILTROS 2.0 (08/11/2026, Tiago: "melhore os filtros... datas específicas, ux/ui top"). Prefixo pdq-. */
+.pdq-filtros{--pdq-on:var(--primary,#cfa94f);--pdq-on-texto:var(--bg,#fff);display:grid;gap:14px;margin:0 0 12px;padding:16px 18px;border:1px solid var(--border,#30343e);border-radius:14px;background:color-mix(in srgb,currentColor 2%,transparent)}
+.pdq-rot{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#9298a3)}
+/* GF: escolhido em azul-marinho no claro e em ouro no escuro (igual ao filtro de parceiros) */
+:root[data-marca='globalfly'] .pdq-filtros{--pdq-on:#0a1d36;--pdq-on-texto:#F3F0E9}
+:root[data-marca='globalfly'][data-tema='escuro'] .pdq-filtros{--pdq-on:#D0AA52;--pdq-on-texto:#051528}
+/* busca */
+.pdq-filtros .pdq-busca{position:relative;margin:0}
+.pdq-filtros .pdq-busca input{width:100%;min-height:44px;padding:0 44px 0 40px;border:1px solid var(--border,#343842);border-radius:11px;font-size:14.5px;
+  background:var(--surface,transparent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a93a3' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 14px center}
+.pdq-filtros .pdq-busca input::-webkit-search-cancel-button{display:none}
+.pdq-filtros .pdq-busca input:focus{border-color:var(--primary,#cfa94f);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--primary,#cfa94f) 18%,transparent)}
+.pdq-tecla{position:absolute;right:12px;top:50%;transform:translateY(-50%);min-width:22px;padding:2px 6px;border:1px solid var(--border,#343842);border-radius:6px;color:var(--muted,#9298a3);font:600 11px/1.4 var(--fonte-dados,ui-monospace,monospace);text-align:center;pointer-events:none}
+.admin-pendentes .pdq-busca-limpar{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:28px;height:28px;min-height:0;padding:0;border:0;border-radius:50%;background:color-mix(in srgb,currentColor 9%,transparent);color:inherit;font-size:17px;line-height:1;cursor:pointer}
+/* grupos: rótulo à esquerda, opções à direita */
+.pdq-grupo,.pdq-atalhos{display:grid;grid-template-columns:104px minmax(0,1fr);align-items:start;gap:10px 14px}
+.pdq-grupo>.pdq-rot,.pdq-atalhos>.pdq-rot{padding-top:9px}
+.pdq-quando{display:grid;gap:10px;min-width:0}
+.pdq-pilulas{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.admin-pendentes .pdq-pilula{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 13px;border:1px solid var(--border,#343842);border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.admin-pendentes .pdq-pilula b{font-weight:700;font-size:12px;color:var(--muted,#9298a3);font-variant-numeric:tabular-nums}
+.admin-pendentes .pdq-pilula:hover:not(:disabled){border-color:color-mix(in srgb,var(--primary,#cfa94f) 60%,var(--border,#343842))}
+.admin-pendentes .pdq-pilula[aria-pressed=true]{border-color:var(--pdq-on);background:var(--pdq-on);color:var(--pdq-on-texto)}
+.admin-pendentes .pdq-pilula[aria-pressed=true] b{color:inherit;opacity:.8}
+.admin-pendentes .pdq-pilula:disabled{opacity:.42;cursor:not-allowed}
+.admin-pendentes .pdq-pilula:focus-visible,.admin-pendentes .pdq-dia:focus-visible,.admin-pendentes .pdq-segmento button:focus-visible{outline:2px solid var(--primary,#cfa94f);outline-offset:2px}
+.admin-pendentes .pdq-atalho{border-style:dashed}
+.admin-pendentes .pdq-atalho[aria-pressed=true]{border-style:solid}
+/* temperatura: um ponto da cor */
+.admin-pendentes .pdq-temp i{width:8px;height:8px;border-radius:50%;background:var(--cor);box-shadow:0 0 0 3px color-mix(in srgb,var(--cor) 22%,transparent)}
+.admin-pendentes .pdq-temp[aria-pressed=true]{border-color:var(--cor);background:color-mix(in srgb,var(--cor) 16%,transparent);color:inherit}
+.admin-pendentes .pdq-temp[aria-pressed=true] b{color:var(--cor);opacity:1}
+/* datas */
+.pdq-datas{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 12px;padding:12px;border-radius:11px;background:color-mix(in srgb,var(--pdq-on) 6%,transparent)}
+.pdq-datas label{display:grid;gap:4px}
+.pdq-datas label span{font-size:11px;font-weight:700;color:var(--muted,#9298a3)}
+.pdq-datas input{min-height:38px;padding:0 10px;border:1px solid var(--border,#343842);border-radius:9px;background:var(--surface,transparent);color:inherit;font:inherit;font-size:13.5px;color-scheme:light dark}
+.pdq-datas small{padding-bottom:10px;color:var(--muted,#9298a3);font-size:12.5px;font-variant-numeric:tabular-nums}
+/* gráfico dos últimos 14 dias */
+.pdq-dias{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:4px;align-items:end;height:84px;margin-top:12px}
+.admin-pendentes .pdq-dia,.admin-pendentes .pdq-dia[aria-pressed=true]{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:4px;height:100%;min-height:0;padding:0 0 2px;border:0;border-radius:6px;background:none;box-shadow:none;color:var(--muted,#9298a3);cursor:pointer}
+.admin-pendentes .pdq-dia[aria-pressed=true]{background:color-mix(in srgb,var(--pdq-on) 7%,transparent)}
+.pdq-dia i{position:relative;align-self:end;display:block;width:100%;min-height:0;border-radius:5px 5px 2px 2px;background:color-mix(in srgb,var(--pdq-on) 24%,transparent);transition:background .15s}
+.pdq-dia i em{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);padding-bottom:2px;font-style:normal;font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted,#9298a3)}
+.pdq-dia small{font-size:10px;font-weight:600;font-variant-numeric:tabular-nums;text-align:center;white-space:nowrap}
+.pdq-dia:hover i{background:color-mix(in srgb,var(--pdq-on) 50%,transparent)}
+.pdq-dia.on i{background:var(--pdq-on)}
+.pdq-dia.on i em,.pdq-dia.on small{color:var(--text,inherit)}
+.pdq-dia.hoje small{color:var(--text,inherit)}
+/* mais filtros */
+.pdq-mais{display:grid;gap:12px}
+.admin-pendentes .pdq-mais-botao{justify-self:start;display:inline-flex;align-items:center;gap:8px;min-height:34px;padding:0 12px;border:1px solid var(--border,#343842);border-radius:9px;background:transparent;color:inherit;font:inherit;font-size:13px;font-weight:650;cursor:pointer}
+.pdq-mais-botao b{display:grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--pdq-on);color:var(--pdq-on-texto);font-size:11px}
+.pdq-seta{width:7px;height:7px;margin-left:2px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .2s;opacity:.6}
+.pdq-mais.aberto .pdq-seta{transform:rotate(-135deg) translateY(-1px)}
+.pdq-mais-painel{display:grid;grid-template-columns:repeat(3,minmax(0,auto));justify-content:start;gap:12px 22px;padding:14px;border:1px dashed var(--border,#343842);border-radius:11px}
+.pdq-campo{display:grid;gap:6px;min-width:0}
+.pdq-segmento{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;border:1px solid var(--border,#343842);border-radius:10px}
+.admin-pendentes .pdq-segmento button{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 11px;border:0;border-radius:7px;background:none;color:var(--muted,#9298a3);font:inherit;font-size:12.5px;font-weight:650;white-space:nowrap;cursor:pointer}
+.admin-pendentes .pdq-segmento button b{font-size:11.5px;font-variant-numeric:tabular-nums;opacity:.75}
+.admin-pendentes .pdq-segmento button[aria-pressed=true]{background:color-mix(in srgb,var(--primary,#cfa94f) 16%,transparent);color:var(--text,inherit)}
+.admin-pendentes .pdq-segmento button:disabled{opacity:.45;cursor:not-allowed}
+.pdq-campo select,.pdq-ordem select{min-height:36px;padding:0 30px 0 11px;border:1px solid var(--border,#343842);border-radius:9px;color:inherit;font:inherit;font-size:13px;font-weight:600;cursor:pointer;appearance:none;-webkit-appearance:none;
+  background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a93a3' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center}
+.pdq-campo select.on{border-color:var(--primary,#cfa94f);box-shadow:0 0 0 1px var(--primary,#cfa94f) inset}
+.pdq-campo select option,.pdq-ordem select option{color:#111;background:#fff}
+/* rodapé: contagem, etiquetas, ordem e ações */
+.pdq-rodape-filtros{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-top:12px;border-top:1px solid var(--border,#30343e)}
+.pdq-contagem{font-size:13px;color:var(--muted,#9298a3);font-variant-numeric:tabular-nums}
+.pdq-contagem b{font-size:16px;color:var(--text,inherit)}
+.pdq-ligados{display:flex;flex-wrap:wrap;gap:6px}
+.admin-pendentes .pdq-ligados button{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:3px 6px 3px 10px;border:1px solid color-mix(in srgb,var(--primary,#cfa94f) 55%,transparent);border-radius:999px;background:color-mix(in srgb,var(--primary,#cfa94f) 12%,transparent);color:inherit;font-size:12px;font-weight:600}
+.pdq-ligados i{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:color-mix(in srgb,currentColor 12%,transparent);font-style:normal;font-size:13px;line-height:1}
+.pdq-acoes-filtros{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-left:auto}
+.pdq-ordem{display:inline-flex;align-items:center;gap:8px}
+.pdq-ordem span{font-size:12px;font-weight:600;color:var(--muted,#9298a3)}
+.admin-pendentes .pdq-acoes-filtros button{min-height:36px;padding:0 13px;border-radius:9px;font-size:12.5px;font-weight:700}
+/* contagem dentro do filtro de parceiros */
+.fp-n{margin-left:2px;font-size:11.5px;font-weight:700;opacity:.62;font-variant-numeric:tabular-nums}
+@media(max-width:900px){.pdq-mais-painel{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:700px){
-  .pdq-seletores{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pdq-filtros{padding:14px 12px}
+  .pdq-grupo,.pdq-atalhos{grid-template-columns:minmax(0,1fr);gap:7px}
+  .pdq-grupo>.pdq-rot,.pdq-atalhos>.pdq-rot{padding-top:0}
+  /* as pílulas rolam de lado, numa linha só */
+  .pdq-pilulas{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -12px;padding:0 12px}
+  .pdq-pilulas::-webkit-scrollbar{display:none}
+  .pdq-tecla{display:none}
+  /* no celular, só os últimos 7 dias (14 barras não cabem com os números) */
+  .pdq-dias{grid-template-columns:repeat(7,minmax(0,1fr));height:76px;gap:5px}
+  .admin-pendentes .pdq-dia:nth-child(-n+7){display:none}
+  .pdq-segmento{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
   .pdq-acoes-filtros{margin-left:0;width:100%}
-  .admin-pendentes .pdq-acoes-filtros button{flex:1}
+  .pdq-ordem{flex:1 1 100%}
+  .pdq-ordem select{flex:1}
+  .admin-pendentes .pdq-acoes-filtros>button{flex:1}
 }

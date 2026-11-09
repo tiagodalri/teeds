@@ -39,6 +39,8 @@ export interface OpcaoDeParceiro {
   pessoa?: string
   /** Texto antes do nome (ex.: a plataforma), que some no celular para a fileira caber. */
   prefixo?: string
+  /** Quantos itens esse parceiro tem (aparece depois do nome). */
+  quantidade?: number
 }
 
 export function FiltroDeParceiros({ opcoes, valor, onTrocar, rotulo = 'Parceiro', className = '' }: {
@@ -85,7 +87,7 @@ export function FiltroDeParceiros({ opcoes, valor, onTrocar, rotulo = 'Parceiro'
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
               </span>
             ) : <AvatarDoParceiro codigo={o.id} nome={o.pessoa ?? o.nome} />}
-            <span className="fp-nome"><span>{o.prefixo && <span className="fp-prefixo">{o.prefixo} </span>}{o.nome}</span>{o.codigo && <small>/{o.codigo}</small>}</span>
+            <span className="fp-nome"><span>{o.prefixo && <span className="fp-prefixo">{o.prefixo} </span>}{o.nome}</span>{o.codigo && <small>/{o.codigo}</small>}{o.quantidade != null && <b className="fp-n">{o.quantidade.toLocaleString('pt-BR')}</b>}</span>
           </button>
         )
       })}

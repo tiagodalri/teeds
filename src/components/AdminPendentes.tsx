@@ -1,5 +1,6 @@
 import { parceiroEmFoco, seloDoParceiro, type OpcaoDeParceiro } from '../core/teeds/parceiroEmFoco'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { FiltroDeParceiros } from './parceiros/FiltroDeParceiros'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { SERVIDOR, SUPABASE } from '../core/teeds/config'
 import './admin-pendentes.css'
@@ -71,15 +72,32 @@ interface Pendente {
   as três faixas do questionário e os produtos mais citados), os filtros ligados aparecem como etiquetas que
   se tiram com um toque, e a lista filtrada sai em planilha.
 */
-type Periodo = '' | 'hoje' | 'ontem' | '7' | '30'
+/*
+  FILTROS 2.0 (08/11/2026, Tiago: "melhore os filtros: forma de preencher, layout, usabilidade, inteligência,
+  datas específicas, ux/ui top"). Em vez de sete listas iguais:
+  - Quando: Hoje, Ontem, 7 e 30 dias, "Escolher datas" (de/até) e o gráfico dos últimos 14 dias, em que um
+    clique escolhe o dia e Shift+clique estende até outro dia;
+  - Atalhos: combinações prontas, com a contagem ("Quentes de hoje", "Ex-clientes quentes"...);
+  - Temperatura e Parceiro em botões (com cor e foto); questionário, produto e recadastro em "Mais filtros";
+  - busca com "/" para focar e Esc para limpar; a ordem fica junto da contagem;
+  - tudo fica guardado nesta aba do navegador (voltar para a tela não perde o filtro).
+*/
+type Periodo = '' | 'hoje' | 'ontem' | '7' | '30' | 'datas'
 type Ordem = 'recentes' | 'antigos' | 'nome' | 'tempo'
-const PERIODOS: Array<[Periodo, string]> = [['', 'Qualquer data'], ['hoje', 'Hoje'], ['ontem', 'Ontem'], ['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias']]
+const PERIODOS: Array<[Periodo, string]> = [['', 'Qualquer data'], ['hoje', 'Hoje'], ['ontem', 'Ontem'], ['7', '7 dias'], ['30', '30 dias']]
+const diaISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
+const DIAS_NO_GRAFICO = 14
+const SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+const COR_TEMPERATURA: Record<string, string> = { quente: '#E5533D', morno: '#D99A2B', frio: '#3B82F6', sem: '#8A93A3' }
+interface FiltrosGuardados { periodo?: Periodo; de?: string; ate?: string; temperatura?: string; produto?: string; recadastro?: ''|'sim'|'nao'; filtroResp?: ''|'ex'|'novo'|'sem'; filtroParceiro?: string; ordem?: Ordem }
 const TEMPERATURAS: Array<[string, string]> = [['quente', 'Quente'], ['morno', 'Morno'], ['frio', 'Frio'], ['sem', 'Sem temperatura']]
 const ORDENS: Array<[Ordem, string]> = [['recentes', 'Mais recentes primeiro'], ['antigos', 'Mais antigos primeiro'], ['nome', 'Nome (A a Z)'], ['tempo', 'Mais tempo na página']]
 const RESPOSTAS: Array<[Tipo, string]> = [['ex', 'Já foram clientes'], ['novo', 'Nunca foram clientes'], ['sem', 'Não responderam']]
 const nomeDoGrupo = (pr: string) => nomeDoProduto(pr.startsWith('outro: ') ? 'outro' : pr)
-const noPeriodo = (quando: Date, f: Periodo) => {
+const noPeriodo = (quando: Date, f: Periodo, de = '', ate = '') => {
   if (!f) return true
+  if (f === 'datas') { const d = diaISO(quando); return (!de || d >= de) && (!ate || d <= ate) }
   const agora = new Date()
   if (f === 'hoje') return mesmoDia(quando, agora)
   if (f === 'ontem') { const o = new Date(agora); o.setDate(o.getDate() - 1); return mesmoDia(quando, o) }
@@ -102,6 +120,40 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
   const [produto,setProduto]=useState('')
   const [recadastro,setRecadastro]=useState<''|'sim'|'nao'>('')
   const [ordem,setOrdem]=useState<Ordem>('recentes')
+  const [de,setDe]=useState('')
+  const [ate,setAte]=useState('')
+  const [maisFiltros,setMaisFiltros]=useState(false)
+  const campoBusca=useRef<HTMLInputElement>(null)
+  // os filtros ficam guardados nesta aba do navegador, por marca
+  const chaveFiltros=`pdq.filtros.${marca}`
+  const [filtrosLidos,setFiltrosLidos]=useState(false)
+  useEffect(()=>{
+    try{
+      const f=JSON.parse(sessionStorage.getItem(chaveFiltros)||'{}') as FiltrosGuardados
+      if(f.periodo)setPeriodo(f.periodo);if(f.de)setDe(f.de);if(f.ate)setAte(f.ate);if(f.temperatura)setTemperatura(f.temperatura)
+      if(f.produto)setProduto(f.produto);if(f.recadastro)setRecadastro(f.recadastro);if(f.filtroResp)setFiltroResp(f.filtroResp)
+      if(f.filtroParceiro)setFiltroParceiro(f.filtroParceiro);if(f.ordem)setOrdem(f.ordem)
+      if(f.produto||f.recadastro||f.filtroResp)setMaisFiltros(true)
+    }catch{/* sem filtros guardados */}
+    setFiltrosLidos(true)
+  },[chaveFiltros])
+  useEffect(()=>{
+    if(!filtrosLidos)return
+    const f:FiltrosGuardados={periodo,de,ate,temperatura,produto,recadastro,filtroResp,filtroParceiro,ordem}
+    try{sessionStorage.setItem(chaveFiltros,JSON.stringify(f))}catch{/* só nesta visita */}
+  },[filtrosLidos,chaveFiltros,periodo,de,ate,temperatura,produto,recadastro,filtroResp,filtroParceiro,ordem])
+  // "/" leva para a busca (fora de campos de texto)
+  useEffect(()=>{
+    const tecla=(e:KeyboardEvent)=>{
+      if(e.key!=='/'||e.metaKey||e.ctrlKey||e.altKey)return
+      const alvo=e.target as HTMLElement|null
+      if(alvo&&(alvo.closest('input,textarea,select,[contenteditable="true"]')))return
+      if(!campoBusca.current)return
+      e.preventDefault();campoBusca.current.focus()
+    }
+    window.addEventListener('keydown',tecla)
+    return()=>window.removeEventListener('keydown',tecla)
+  },[])
   const [contagem,setContagem]=useState<Record<string,number>>({})
   // visão geral: todas as abas, uma pessoa por e-mail (vale o cadastro mais recente)
   const [geral,setGeral]=useState<{total:number;porParceiro:Record<string,number>;porStatus:Record<string,number>}|null>(null)
@@ -259,7 +311,7 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
   const produtosDe=(p:Pendente)=>(respDe(p)?.produtos??[]).map(nomeDoGrupo)
   // cada filtro, separado, para as opções contarem quantos sobram mexendo só nele
   const filtros={
-    periodo:(p:Pendente)=>noPeriodo(quandoDe(p),periodo),
+    periodo:(p:Pendente)=>noPeriodo(quandoDe(p),periodo,de,ate),
     resp:(p:Pendente)=>!filtroResp||(respostas!==null&&tipoDe(p)===filtroResp),
     temperatura:(p:Pendente)=>!temperatura||(respostas!==null&&temperaturaDe(p)===temperatura),
     produto:(p:Pendente)=>!produto||(respostas!==null&&produtosDe(p).includes(produto)),
@@ -274,14 +326,46 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
     :[...l].sort((a,b)=>(respDe(b)?.tempo??-1)-(respDe(a)?.tempo??-1))
   const visiveis=ordenar(base.filter(p=>passa(p)))
   const filtrando=!!(busca.trim()||filtroResp||periodo||temperatura||produto||recadastro||(mostraParceiros&&filtroParceiro))
-  const limpar=()=>{setBusca('');setFiltroResp('');setFiltroParceiro('');setPeriodo('');setTemperatura('');setProduto('');setRecadastro('');setMostrar(POR_VEZ)}
+  const limpar=()=>{setBusca('');setFiltroResp('');setFiltroParceiro('');setPeriodo('');setDe('');setAte('');setTemperatura('');setProduto('');setRecadastro('');setMostrar(POR_VEZ)}
+  const escolherPeriodo=(v:Periodo)=>{setPeriodo(v);if(v!=='datas'){setDe('');setAte('')};setMostrar(POR_VEZ)}
+  // o gráfico dos últimos dias: cada barra é um dia (com todos os outros filtros aplicados)
+  const dias=(()=>{
+    const hoje=new Date();hoje.setHours(12,0,0,0)
+    const l=Array.from({length:DIAS_NO_GRAFICO},(_,i)=>{const d=new Date(hoje);d.setDate(d.getDate()-(DIAS_NO_GRAFICO-1-i));return {iso:diaISO(d),d,n:0}})
+    const pos=new Map(l.map((x,i)=>[x.iso,i]))
+    for(const p of base){if(!passa(p,'periodo'))continue;const i=pos.get(diaISO(quandoDe(p)));if(i!=null)l[i].n++}
+    return l
+  })()
+  const maiorDia=Math.max(1,...dias.map(x=>x.n))
+  const tocarDia=(iso:string,estender:boolean)=>{
+    if(periodo==='datas'&&de===iso&&ate===iso){escolherPeriodo('');return}
+    if(estender&&periodo==='datas'&&de){const a=de<iso?de:iso,b=(ate||de)>iso?(ate||de):iso;setDe(a);setAte(b)}
+    else{setPeriodo('datas');setDe(iso);setAte(iso)}
+    setMostrar(POR_VEZ)
+  }
+  const rotuloDasDatas=()=>de&&ate&&de===ate?`Dia ${ddmm(de)}`:de&&ate?`${ddmm(de)} a ${ddmm(ate)}`:de?`Desde ${ddmm(de)}`:ate?`Até ${ddmm(ate)}`:'Escolher datas'
+  // atalhos: combinações que mais se usa, cada uma com quantos cadastros traz
+  const ATALHOS:Array<{id:string;nome:string;f:{periodo?:Periodo;temperatura?:string;filtroResp?:Tipo;recadastro?:'sim'};precisaResp:boolean}>=[
+    {id:'quentes-hoje',nome:'Quentes de hoje',f:{periodo:'hoje',temperatura:'quente'},precisaResp:true},
+    {id:'ex-quentes',nome:'Ex-clientes quentes',f:{filtroResp:'ex',temperatura:'quente'},precisaResp:true},
+    {id:'sem-resposta',nome:'Sem questionário',f:{filtroResp:'sem'},precisaResp:true},
+    {id:'recadastros',nome:'Voltaram (recadastro)',f:{recadastro:'sim'},precisaResp:false},
+  ]
+  const contarAtalho=(f:typeof ATALHOS[number]['f'])=>base.filter(p=>(!f.periodo||noPeriodo(quandoDe(p),f.periodo))&&(!f.temperatura||(respostas!==null&&temperaturaDe(p)===f.temperatura))&&(!f.filtroResp||(respostas!==null&&tipoDe(p)===f.filtroResp))&&(!f.recadastro||!!p.recadastro)).length
+  const atalhoLigado=(f:typeof ATALHOS[number]['f'])=>(f.periodo??'')===periodo&&(f.temperatura??'')===temperatura&&(f.filtroResp??'')===filtroResp&&(f.recadastro??'')===recadastro&&!produto&&!busca.trim()&&!(mostraParceiros&&filtroParceiro)
+  const aplicarAtalho=(f:typeof ATALHOS[number]['f'])=>{
+    if(atalhoLigado(f)){limpar();return}
+    limpar();setPeriodo(f.periodo??'');setTemperatura(f.temperatura??'');setFiltroResp(f.filtroResp??'');setRecadastro(f.recadastro??'')
+    if(f.filtroResp)setMaisFiltros(true)
+  }
+  const escondidosLigados=[filtroResp,produto,recadastro].filter(Boolean).length
   const mudar=<T,>(f:(v:T)=>void)=>(v:T)=>{f(v);setMostrar(POR_VEZ)}
   // os produtos que aparecem nas respostas desta aba, do mais citado ao menos
   const produtosDaAba=(()=>{const m=new Map<string,number>();for(const p of base)for(const x of new Set(produtosDe(p)))m.set(x,(m.get(x)??0)+1);return [...m].sort((a,b)=>b[1]-a[1]).map(([n])=>n)})()
   const nomeDoParceiroNoFiltro=(id:string)=>id==='direto'?'Direto':(parceiros.find(o=>o.codigo===id)?.nome.split(' ')[0]??NOME_DO_PARCEIRO[id]??id)
   const ligados:Array<[string,()=>void]>=[
     ...(mostraParceiros&&filtroParceiro?[[`Parceiro: ${nomeDoParceiroNoFiltro(filtroParceiro)}`,()=>setFiltroParceiro('')] as [string,()=>void]]:[]),
-    ...(periodo?[[PERIODOS.find(([v])=>v===periodo)![1],()=>setPeriodo('')] as [string,()=>void]]:[]),
+    ...(periodo?[[periodo==='datas'?rotuloDasDatas():PERIODOS.find(([v])=>v===periodo)![1],()=>escolherPeriodo('')] as [string,()=>void]]:[]),
     ...(filtroResp?[[RESPOSTAS.find(([v])=>v===filtroResp)![1],()=>setFiltroResp('')] as [string,()=>void]]:[]),
     ...(temperatura?[[`Lead ${TEMPERATURAS.find(([v])=>v===temperatura)![1].toLowerCase()}`,()=>setTemperatura('')] as [string,()=>void]]:[]),
     ...(produto?[[`Já usou: ${produto}`,()=>setProduto('')] as [string,()=>void]]:[]),
@@ -325,7 +409,7 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
     {erro&&<p role="alert">{erro}</p>}{aviso&&<p role="status">{aviso}</p>}
     {!carregando&&lista.length>0&&<div className="pdq-painel" aria-label="Resumo de todos os cadastros desta aba">
       <div className="pdq-topo">
-        <p className="pdq-total"><b>{base.length}</b><span>{rotuloDoTotal(base.length)}</span>{resumo.hoje>0&&<button type="button" className="pdq-hoje" aria-pressed={periodo==='hoje'} title="Ver só os de hoje" onClick={()=>mudar(setPeriodo)(periodo==='hoje'?'':'hoje')}>+{resumo.hoje} hoje</button>}</p>
+        <p className="pdq-total"><b>{base.length}</b><span>{rotuloDoTotal(base.length)}</span>{resumo.hoje>0&&<button type="button" className="pdq-hoje" aria-pressed={periodo==='hoje'} title="Ver só os de hoje" onClick={()=>escolherPeriodo(periodo==='hoje'?'':'hoje')}>+{resumo.hoje} hoje</button>}</p>
         {chipsDeParceiro.length>2&&<div className="pdq-chips" role="group" aria-label="Filtrar por parceiro">{chipsDeParceiro.map(([id,nome,q])=><button key={id||'todos'} aria-pressed={filtroParceiro===id} onClick={()=>{setFiltroParceiro(id);setMostrar(POR_VEZ)}}>{nome}<b>{q}</b></button>)}</div>}
       </div>
       {respostas?<>
@@ -336,40 +420,95 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
     </div>}
     {!carregando&&lista.length>0&&<div className="pdq-filtros" role="search" aria-label="Filtrar cadastros">
       <div className="pdq-busca">
-        <input id="pendentes-busca" type="search" value={busca} placeholder="Buscar: nome, e-mail ou telefone" aria-label="Buscar cadastro por nome, e-mail ou telefone" onChange={e=>{setBusca(e.target.value);setMostrar(POR_VEZ)}}/>
+        <input ref={campoBusca} id="pendentes-busca" type="search" value={busca} placeholder="Nome, e-mail ou telefone" aria-label="Buscar cadastro por nome, e-mail ou telefone"
+          onChange={e=>{setBusca(e.target.value);setMostrar(POR_VEZ)}} onKeyDown={e=>{if(e.key==='Escape'&&busca){e.preventDefault();setBusca('')}}}/>
+        {busca?<button type="button" className="pdq-busca-limpar" aria-label="Limpar a busca" onClick={()=>{setBusca('');campoBusca.current?.focus()}}>×</button>:<kbd className="pdq-tecla" aria-hidden="true">/</kbd>}
       </div>
-      <div className="pdq-seletores">
-        <label><span>Período</span><select className={periodo?'on':''} value={periodo} onChange={e=>mudar(setPeriodo)(e.target.value as Periodo)}>
-          {PERIODOS.map(([v,n])=><option key={v||'todos'} value={v}>{n}{v?` (${contar('periodo',p=>noPeriodo(quandoDe(p),v))})`:''}</option>)}
-        </select></label>
-        {mostraParceiros&&<label><span>Parceiro</span><select className={filtroParceiro?'on':''} value={filtroParceiro} onChange={e=>mudar(setFiltroParceiro)(e.target.value)}>
-          {chipsDeParceiro.map(([id,nome,q])=><option key={id||'todos'} value={id}>{id?`${nome} (${q})`:`Todos os parceiros (${q})`}</option>)}
-        </select></label>}
-        <label><span>Questionário</span><select className={filtroResp?'on':''} value={filtroResp} disabled={!respostas} onChange={e=>mudar(setFiltroResp)(e.target.value as ''|Tipo)}>
-          <option value="">Todas as respostas</option>
-          {RESPOSTAS.map(([v,n])=><option key={v} value={v}>{n} ({contar('resp',p=>tipoDe(p)===v)})</option>)}
-        </select></label>
-        <label><span>Temperatura</span><select className={temperatura?'on':''} value={temperatura} disabled={!respostas} onChange={e=>mudar(setTemperatura)(e.target.value)}>
-          <option value="">Qualquer temperatura</option>
-          {TEMPERATURAS.map(([v,n])=><option key={v} value={v}>{n} ({contar('temperatura',p=>temperaturaDe(p)===v)})</option>)}
-        </select></label>
-        <label><span>Já usou</span><select className={produto?'on':''} value={produto} disabled={!respostas||!produtosDaAba.length} onChange={e=>mudar(setProduto)(e.target.value)}>
-          <option value="">Qualquer produto</option>
-          {produtosDaAba.map(n=><option key={n} value={n}>{n} ({contar('produto',p=>produtosDe(p).includes(n))})</option>)}
-        </select></label>
-        <label><span>Recadastro</span><select className={recadastro?'on':''} value={recadastro} onChange={e=>mudar(setRecadastro)(e.target.value as ''|'sim'|'nao')}>
-          <option value="">Todos</option>
-          <option value="sim">Só recadastros ({contar('recadastro',p=>!!p.recadastro)})</option>
-          <option value="nao">Sem recadastros ({contar('recadastro',p=>!p.recadastro)})</option>
-        </select></label>
-        <label><span>Ordem</span><select value={ordem} onChange={e=>setOrdem(e.target.value as Ordem)}>
-          {ORDENS.map(([v,n])=><option key={v} value={v}>{n}</option>)}
-        </select></label>
+
+      <div className="pdq-atalhos" role="group" aria-label="Atalhos">
+        <span className="pdq-rot">Atalhos</span>
+        <div className="pdq-pilulas">{ATALHOS.map(a=>{const n=contarAtalho(a.f);const lig=atalhoLigado(a.f);return <button type="button" key={a.id} className="pdq-pilula pdq-atalho" aria-pressed={lig} disabled={(a.precisaResp&&!respostas)||(!n&&!lig)} onClick={()=>aplicarAtalho(a.f)}>{a.nome}<b>{a.precisaResp&&!respostas?'…':n}</b></button>})}</div>
       </div>
+
+      <div className="pdq-grupo">
+        <span className="pdq-rot">Quando</span>
+        <div className="pdq-quando">
+          <div className="pdq-pilulas" role="group" aria-label="Período">
+            {PERIODOS.map(([v,n])=><button type="button" key={v||'todos'} className="pdq-pilula" aria-pressed={periodo===v} onClick={()=>escolherPeriodo(v)}>{n}{v&&<b>{contar('periodo',p=>noPeriodo(quandoDe(p),v))}</b>}</button>)}
+            <button type="button" className="pdq-pilula pdq-pilula-datas" aria-pressed={periodo==='datas'} onClick={()=>{if(periodo!=='datas'){setPeriodo('datas');setDe(de||diaISO(new Date()));setAte(ate||diaISO(new Date()));setMostrar(POR_VEZ)}}}>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+              {periodo==='datas'?rotuloDasDatas():'Escolher datas'}
+            </button>
+          </div>
+          {periodo==='datas'&&<div className="pdq-datas">
+            <label><span>De</span><input type="date" value={de} max={ate||diaISO(new Date())} onChange={e=>{setDe(e.target.value);setMostrar(POR_VEZ)}}/></label>
+            <label><span>Até</span><input type="date" value={ate} min={de||undefined} max={diaISO(new Date())} onChange={e=>{setAte(e.target.value);setMostrar(POR_VEZ)}}/></label>
+            <small>{contar('periodo',p=>noPeriodo(quandoDe(p),'datas',de,ate))} cadastros nesse intervalo</small>
+          </div>}
+          <div className="pdq-dias" role="group" aria-label={`Cadastros por dia, últimos ${DIAS_NO_GRAFICO} dias. Toque num dia para filtrar; Shift e clique para escolher um intervalo.`}>
+            {dias.map((x,i)=>{
+              const ligado=!!periodo&&noPeriodo(x.d,periodo,de,ate)
+              const hoje=i===dias.length-1
+              return <button type="button" key={x.iso} className={`pdq-dia${ligado?' on':''}${hoje?' hoje':''}`} aria-pressed={ligado}
+                title={`${SEMANA[x.d.getDay()]}, ${ddmm(x.iso)}: ${x.n} ${x.n===1?'cadastro':'cadastros'}`}
+                onClick={e=>tocarDia(x.iso,e.shiftKey)}>
+                <i style={{height:`${x.n?Math.max(6,Math.round(x.n/maiorDia*100)):0}%`}}><em>{x.n||''}</em></i>
+                <small>{hoje?'hoje':i===dias.length-2?'ontem':`${x.iso.slice(8,10)}`}</small>
+              </button>
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="pdq-grupo">
+        <span className="pdq-rot">Temperatura</span>
+        <div className="pdq-pilulas" role="group" aria-label="Temperatura do lead">
+          {TEMPERATURAS.map(([v,n])=>{const q=respostas?contar('temperatura',p=>temperaturaDe(p)===v):null;return <button type="button" key={v} className="pdq-pilula pdq-temp" style={{['--cor' as string]:COR_TEMPERATURA[v]}} aria-pressed={temperatura===v} disabled={!respostas||(!q&&temperatura!==v)} onClick={()=>mudar(setTemperatura)(temperatura===v?'':v)}><i aria-hidden="true"/>{n}<b>{q??'…'}</b></button>})}
+        </div>
+      </div>
+
+      {mostraParceiros&&chipsDeParceiro.length>1&&<div className="pdq-grupo">
+        <span className="pdq-rot">Parceiro</span>
+        <FiltroDeParceiros rotulo="Filtrar por parceiro" valor={filtroParceiro} onTrocar={(id)=>mudar(setFiltroParceiro)(id)}
+          opcoes={chipsDeParceiro.map(([id,nome,q])=>({id,nome,quantidade:q,codigo:id&&id!=='direto'?id:undefined,pessoa:parceiros.find(o=>o.codigo===id)?.nome}))}/>
+      </div>}
+
+      <div className={`pdq-mais${maisFiltros?' aberto':''}`}>
+        <button type="button" className="pdq-mais-botao" aria-expanded={maisFiltros} onClick={()=>setMaisFiltros(v=>!v)}>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+          Mais filtros{escondidosLigados>0&&<b>{escondidosLigados}</b>}<span className="pdq-seta" aria-hidden="true"/>
+        </button>
+        {maisFiltros&&<div className="pdq-mais-painel">
+          <div className="pdq-campo">
+            <span className="pdq-rot">Questionário</span>
+            <div className="pdq-segmento" role="group" aria-label="Resposta do questionário">
+              <button type="button" aria-pressed={!filtroResp} onClick={()=>mudar(setFiltroResp)('')}>Todos</button>
+              {RESPOSTAS.map(([v,n])=><button type="button" key={v} aria-pressed={filtroResp===v} disabled={!respostas} onClick={()=>mudar(setFiltroResp)(filtroResp===v?'':v)}>{n}<b>{respostas?contar('resp',p=>tipoDe(p)===v):'…'}</b></button>)}
+            </div>
+          </div>
+          <div className="pdq-campo">
+            <span className="pdq-rot">Já usou</span>
+            <select className={produto?'on':''} value={produto} disabled={!respostas||!produtosDaAba.length} onChange={e=>mudar(setProduto)(e.target.value)} aria-label="Produto que já usou">
+              <option value="">Qualquer produto</option>
+              {produtosDaAba.map(n=><option key={n} value={n}>{n} ({contar('produto',p=>produtosDe(p).includes(n))})</option>)}
+            </select>
+          </div>
+          <div className="pdq-campo">
+            <span className="pdq-rot">Recadastro</span>
+            <div className="pdq-segmento" role="group" aria-label="Recadastro">
+              <button type="button" aria-pressed={!recadastro} onClick={()=>mudar(setRecadastro)('')}>Todos</button>
+              <button type="button" aria-pressed={recadastro==='sim'} onClick={()=>mudar(setRecadastro)(recadastro==='sim'?'':'sim')}>Só recadastros<b>{contar('recadastro',p=>!!p.recadastro)}</b></button>
+              <button type="button" aria-pressed={recadastro==='nao'} onClick={()=>mudar(setRecadastro)(recadastro==='nao'?'':'nao')}>Primeiro cadastro<b>{contar('recadastro',p=>!p.recadastro)}</b></button>
+            </div>
+          </div>
+        </div>}
+      </div>
+
       <div className="pdq-rodape-filtros">
         <span className="pdq-contagem" aria-live="polite"><b>{visiveis.length}</b> {visiveis.length!==base.length?`de ${base.length} cadastros`:visiveis.length===1?'cadastro':'cadastros'}</span>
         {ligados.length>0&&<div className="pdq-ligados">{ligados.map(([n,tirar])=><button type="button" key={n} onClick={()=>{tirar();setMostrar(POR_VEZ)}} aria-label={`Tirar o filtro ${n}`}>{n}<i aria-hidden="true">×</i></button>)}</div>}
         <div className="pdq-acoes-filtros">
+          <label className="pdq-ordem"><span>Ordenar</span><select value={ordem} onChange={e=>setOrdem(e.target.value as Ordem)}>{ORDENS.map(([v,n])=><option key={v} value={v}>{n}</option>)}</select></label>
           {filtrando&&<button type="button" onClick={limpar}>Limpar filtros</button>}
           <button type="button" disabled={!visiveis.length} onClick={baixar}>Baixar lista</button>
         </div>
