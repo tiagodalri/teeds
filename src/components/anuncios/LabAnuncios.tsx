@@ -94,7 +94,7 @@ function painel(de: string, ate: string): PainelDaMeta {
   const soma = peso.reduce((a, b) => a + b, 0)
   const q = (lista: Array<[string, string, number]>, chaves: [string, string?]) => lista.map(([a, b, f]) => ({ ...m(total.gasto * f, total.impressoes * f, total.cliquesLink * f, total.lpv * f, total.cadastros * f), [chaves[0]]: a, ...(chaves[1] ? { [chaves[1]]: b } : {}) }))
   return {
-    conta: { id: '977357031377237', nome: 'CA - NAOR BEZERRA', moeda: 'BRL', status: 1, gastoTotal: 16878.4, saldo: 0, limite: 0, fuso: 'America/Sao_Paulo', motivo: 0 },
+    conta: { id: '977357031377237', nome: 'CA - NAOR BEZERRA', moeda: 'BRL', status: Number(new URLSearchParams(location.search).get('conta')) || 1, gastoTotal: 16878.4, saldo: 0, limite: 0, fuso: 'America/Sao_Paulo', motivo: 0 },
     periodo: { de, ate }, total,
     porDia: dias.map((dia, i) => ({ dia, ...m(total.gasto * peso[i] / soma, Math.round(total.impressoes * peso[i] / soma), Math.round(total.cliquesLink * peso[i] / soma), Math.round(total.lpv * peso[i] / soma), Math.round(total.cadastros * peso[i] / soma)) })),
     campanhas: [{ id: 'c1', nome: 'GF | Live 09/11 | Cadastros', status: 'ACTIVE', objetivo: 'OUTCOME_LEADS', orcDia: 0, orcTotal: 0, inicio: '2026-11-02', fim: null, lance: 'LOWEST_COST_WITHOUT_CAP', m: total }],
@@ -292,6 +292,23 @@ export default function LabAnuncios() {
       if (formato === 'FACEBOOK_REELS_MOBILE') return espera({ previa: null }, 600)
       return espera({ previa: { formato, nome, largura, altura,
         src: `data:text/html;charset=utf-8,${encodeURIComponent(`<body style="margin:0;font:600 15px system-ui;color:#fff;background:linear-gradient(160deg,#20304d,#b8913a);height:100vh;display:grid;place-items:center;text-align:center">Prévia de mentira<br>${nome}<br>${largura} x ${altura}</body>`)}` } }, 700)
+    },
+    // &conta=9: carência (a GF Victor em 08/11/2026); &cobranca=sem-historico: a chave não alcança as atividades
+    cobranca: () => {
+      const st = Number(q.get('conta')) || 1
+      const ha = (min: number) => new Date(Date.now() - min * 60e3).toISOString().replace(/\.\d+Z$/, '+0000')
+      return espera({
+        conta: { status: st, motivo: 0, moeda: 'BRL', naoCobrado: st === 9 ? 18.31 : 4.12, gastoTotal: 29.45, limite: 0, prePago: false, cartao: 'MasterCard *1562' },
+        historico: q.get('cobranca') !== 'sem-historico',
+        eventos: q.get('cobranca') === 'sem-historico' ? [] : st === 9
+          ? [{ tipo: 'situacao' as const, em: ha(12), valor: null, de: 1, para: 9 }, { tipo: 'recusada' as const, em: ha(40), valor: 13.17, de: null, para: null },
+            { tipo: 'recusada' as const, em: ha(75), valor: 13.17, de: null, para: null }, { tipo: 'cobrada' as const, em: ha(160), valor: 11.14, de: null, para: null }]
+          : [{ tipo: 'cobrada' as const, em: ha(8), valor: 12.03, de: null, para: null }, { tipo: 'cobrada' as const, em: ha(25), valor: 11.24, de: null, para: null },
+            { tipo: 'cobrada' as const, em: ha(45), valor: 12.10, de: null, para: null }, { tipo: 'situacao' as const, em: ha(75), valor: null, de: 9, para: 1 },
+            { tipo: 'cobrada' as const, em: ha(76), valor: 18.31, de: null, para: null }, { tipo: 'situacao' as const, em: ha(150), valor: null, de: 1, para: 9 },
+            { tipo: 'recusada' as const, em: ha(170), valor: 13.17, de: null, para: null }, { tipo: 'cobrada' as const, em: ha(60 * 26), valor: 11.14, de: null, para: null }],
+        link: 'https://business.facebook.com/billing_hub/accounts/details?asset_id=977357031377237', em: new Date().toISOString(),
+      }, 500)
     },
     funil: () => espera(funil()),
     salvarChave: () => espera(null),

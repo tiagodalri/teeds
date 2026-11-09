@@ -95,7 +95,24 @@ export interface ApiAnuncios {
   descobrir: (sessao: SessaoTeeds, parceiro: string) => Promise<Descoberta | { semChave: true } | { chaveInvalida: true; erro: string }>
   /** a conta, o pixel e a página que o parceiro passa a usar no painel, no Estúdio e no pixel do servidor */
   escolher: (sessao: SessaoTeeds, parceiro: string, conta: string, pixel: string, pagina: string | null) => Promise<unknown>
+  /** 08/11/2026: situação de pagamento da conta e as cobranças dos últimos 30 dias */
+  cobranca?: (sessao: SessaoTeeds, parceiro: string) => Promise<RespostaDaCobranca>
 }
+/**
+ * 08/11/2026: a cobrança da conta de anúncios (função meta-ads, acao 'cobranca'). `status` é o account_status
+ * da Meta: 1 ativa, 2 desativada, 3 pagamento em atraso, 7 em análise, 8 acerto pendente, 9 carência,
+ * 100 fechando, 101 fechada. `naoCobrado` é o gasto que a Meta ainda vai cobrar no cartão.
+ */
+export interface EventoDeCobranca { tipo: 'cobrada' | 'recusada' | 'estorno' | 'contestada' | 'situacao'; em: string; valor: number | null; de: number | null; para: number | null }
+export interface Cobranca {
+  conta: { status: number; motivo: number; moeda: string; naoCobrado: number; gastoTotal: number; limite: number; prePago: boolean; cartao: string | null }
+  eventos: EventoDeCobranca[]
+  /** false: a Meta não deu o histórico (falta permissão); a situação e o saldo continuam valendo */
+  historico: boolean
+  link: string
+  em: string
+}
+export type RespostaDaCobranca = Cobranca | { semChave: true } | { escolherConta: true } | { chaveInvalida: true; erro: string }
 export interface Descoberta {
   atual: { conta: string; pixel: string; pagina: string | null }
   contas: Array<{ id: string; nome: string; status: number; moeda: string; negocio: string; pixels: Array<{ id: string; nome: string }> }>
@@ -113,6 +130,7 @@ export const API_DO_BANCO: ApiAnuncios = {
   horarios: (s, parceiro, de, ate) => rpc(s, 'teeds_meta_horarios', { p_marca: MARCA.id, p_parceiro: parceiro, p_de: de, p_ate: ate }),
   descobrir: (s, parceiro) => funcao(s, { acao: 'descobrir', parceiro, de: '2026-01-01', ate: '2026-01-01' }),
   escolher: (s, parceiro, conta, pixel, pagina) => funcao(s, { acao: 'escolher', parceiro, conta, pixel, pagina, de: '2026-01-01', ate: '2026-01-01' }),
+  cobranca: (s, parceiro) => funcao(s, { acao: 'cobranca', parceiro }),
 }
 
 /**

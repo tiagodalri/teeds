@@ -26,6 +26,7 @@ import { InstagramDoParceiro } from './Instagram'
 import { API_DA_ANALISE, type ApiAnalise } from '../../core/teeds/analise'
 import { AnaliseIA } from './AnaliseIA'
 import './admin-anuncios.css'
+import { AvisoDePagamento, CobrancaDaConta } from './Cobranca'
 
 const brl = (v: number, casas = 2) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: casas, maximumFractionDigits: casas })
 const int = (v: number) => Math.round(v).toLocaleString('pt-BR')
@@ -608,7 +609,8 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
           <div><small>Conta de anúncios do {nomeParceiro}</small><b>{painel?.conta.nome || contaAtual?.contaNome || 'Conta ainda não escolhida'}</b>
             {meta && !semChave && !contasDaChave && <button type="button" className="aa-trocar-conta" onClick={() => void abrirEscolha()} disabled={escolhendo.indo}>{escolhendo.indo ? 'Procurando…' : 'Trocar a conta'}</button>}
           </div>
-          {painel && <span className={`aa-status ${painel.conta.status === 1 ? 'ok' : 'erro'}`}>{painel.conta.status === 1 ? 'Conta ativa' : 'Conta com restrição'}</span>}
+          {/* 08/11/2026: o selo abre a cobrança da conta (Cobranca.tsx) */}
+          {painel && <CobrancaDaConta sessao={sessao} parceiro={parceiro} api={api} statusDoPainel={painel.conta.status} recarregar={meta} nomeParceiro={nomeParceiro} />}
         </div>
         <div className="aa-acoes">
           <button type="button" className="aa-atualizar aa-subir" onClick={() => { setAba('estudio'); setPedidoEstudio({ tipo: 'novo', n: Date.now() }) }}><span aria-hidden="true">+</span>Subir anúncio</button>
@@ -616,6 +618,8 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
           {!aoMudarCarregando && <button type="button" className="aa-atualizar" onClick={() => void carregar(true)} disabled={carregando}>{carregando ? 'Atualizando…' : 'Atualizar agora'}</button>}
         </div>
       </div>
+
+      {painel && <AvisoDePagamento status={painel.conta.status} link={`https://business.facebook.com/billing_hub/accounts/details?asset_id=${painel.conta.id}`} nomeParceiro={nomeParceiro} />}
 
       {/* os dois filtros que valem para a página inteira */}
       <div className="aa-filtro-geral">

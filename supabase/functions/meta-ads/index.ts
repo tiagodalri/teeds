@@ -462,6 +462,55 @@ Deno.serve(async (req) => {
     }
   }
 
+  // 08/11/2026, Tiago: "a api da meta permite puxar os históricos de pagamento? saldo pendente pra pagar etc".
+  // A GF Victor caiu em carência (cartão sem limite, 3 cobranças recusadas) e só vimos pelo selo da conta.
+  // Cobrança: situação, o que ainda não foi cobrado, a forma de pagamento e as cobranças dos últimos 30 dias
+  // (atividades da conta). Pagar continua só na Cobrança da Meta (o link vai junto).
+  if (d.acao === 'cobranca') {
+    const k = await rest(`config_servicos?chave=eq.META_ADS_${marca.toUpperCase()}_${parceiro.toUpperCase()}&select=valor`)
+    const chaveP = k.ok ? (await k.json())[0]?.valor as string | undefined : undefined
+    if (!chaveP) return json({ semChave: true })
+    if (!cfg.conta) return json({ escolherConta: true })
+    const act = `act_${cfg.conta}`
+    const semTravar = <T,>(p: Promise<T>): Promise<T | null> => p.catch((e) => { if (e instanceof ErroDaMeta && e.codigo === 190) throw e; return null })
+    try {
+      const desde = String(Math.floor((Date.now() - 30 * 864e5) / 1000))
+      const [conta, cartao, atividades] = await Promise.all([
+        graph(chaveP, act, { fields: 'currency,account_status,disable_reason,balance,amount_spent,spend_cap,is_prepay_account' }, 1).then((l) => l[0]),
+        // a forma de pagamento pede permissão de cobrança; sem ela, o resto aparece igual
+        semTravar(graph(chaveP, act, { fields: 'funding_source_details' }, 1).then((l) => l[0]?.funding_source_details?.display_string as string | undefined)),
+        semTravar(graph(chaveP, `${act}/activities`, { fields: 'event_type,event_time,extra_data', since: desde, limit: '200' }, 3)),
+      ])
+      const SITUACAO: Record<string, number> = { 'active': 1, 'disabled': 2, 'unsettled': 3, 'pending risk review': 7, 'pending settlement': 8, 'in grace period': 9, 'pending closure': 100, 'closed': 101 }
+      const extra = (x: unknown) => { try { return typeof x === 'string' ? JSON.parse(x) : (x ?? {}) } catch { return {} } }
+      const eventos = (atividades ?? []).flatMap((a: any) => {
+        const t = String(a.event_type ?? ''), x = extra(a.extra_data), em = String(a.event_time ?? '')
+        const valor = x?.type === 'payment_amount' && x.new_value != null ? n(x.new_value) / 100 : null
+        const tipo = t === 'ad_account_billing_charge' ? 'cobrada'
+          : t === 'ad_account_billing_charge_failed' || t === 'ad_account_billing_decline' ? 'recusada'
+          : t === 'ad_account_billing_refund' ? 'estorno'
+          : t.startsWith('ad_account_billing_chargeback') ? 'contestada'
+          : t === 'ad_account_update_status' ? 'situacao' : null
+        if (!tipo) return []
+        if (tipo === 'situacao') {
+          const para = SITUACAO[String(x?.new_value ?? '').toLowerCase()] ?? 0, antes = SITUACAO[String(x?.old_value ?? '').toLowerCase()] ?? 0
+          return [{ tipo, em, valor: null, de: antes, para }]
+        }
+        return [{ tipo, em, valor, de: null, para: null }]
+      }).sort((a: any, b: any) => b.em.localeCompare(a.em))
+      return json({
+        conta: { status: n(conta?.account_status), motivo: n(conta?.disable_reason), moeda: conta?.currency ?? 'BRL',
+          naoCobrado: n(conta?.balance) / 100, gastoTotal: n(conta?.amount_spent) / 100, limite: n(conta?.spend_cap) / 100,
+          prePago: !!conta?.is_prepay_account, cartao: cartao ?? null },
+        eventos, historico: atividades !== null,
+        link: `https://business.facebook.com/billing_hub/accounts/details?asset_id=${cfg.conta}`, em: new Date().toISOString(),
+      })
+    } catch (e) {
+      if (e instanceof ErroDaMeta && e.codigo === 190) return json({ chaveInvalida: true, erro: 'A Meta não aceitou a chave (venceu ou foi trocada). Cole uma nova.' })
+      return json({ erro: e instanceof ErroDaMeta ? `A Meta não mostrou a cobrança: ${e.message}` : (e as Error).message }, 502)
+    }
+  }
+
   const data = /^\d{4}-\d{2}-\d{2}$/
   const de = String(d.de ?? ''), ate = String(d.ate ?? '')
   if (!data.test(de) || !data.test(ate) || de > ate) return json({ erro: 'Período inválido.' }, 400)
