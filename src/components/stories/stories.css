@@ -163,7 +163,11 @@
 /* celular deitado ou tela larga: o story fica 9:16 no meio */
 @media (min-aspect-ratio: 10/16) { .sto-v.cel .sto-card { width: auto; aspect-ratio: 9 / 16; } }
 .sto-v.pc .sto-card { border-radius: 14px; box-shadow: 0 20px 60px rgba(0, 0, 0, .5); }
-.sto-midia-caixa { position: absolute; inset: 0; overflow: hidden; }
+.sto-midia-caixa { position: absolute; inset: 0; overflow: hidden; background: #000; }
+.sto-card { container-type: size; }
+.sto-midia-caixa.sto-camadas { background: none; z-index: 2; pointer-events: none; transition: opacity .2s; }
+.sto-v.segurando .sto-camadas { opacity: 1; }
+.sto-sombra.baixo.leve { height: 22%; }
 .sto-midia { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
 img.sto-midia.anda { animation: sto-ken linear forwards; }
 @keyframes sto-ken { from { scale: 1; } to { scale: 1.08; } }

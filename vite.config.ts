@@ -91,7 +91,9 @@ const PALETAS: Record<string, Paleta> = {
     manter: ['#051528', '#B78D39', '#9CB1C7', '#F3F0E9', '#29445F',
       // o degradê dos Stories (08/11/2026, Tiago: "use o degradê do Instagram mas com a id visual da GF"):
       // champanhe → ouro → bronze → aço → azul-céu; o anel visto; o vermelho da bolinha Ao vivo; o Telegram
-      '#FBE6A6', '#F0C463', '#D6A042', '#8FA8C8', '#5E8FC8', '#3B6FB0', '#F7E3A1', '#EBC46B', '#C99A3E', '#7F9AB8', '#CFC8BA', '#2A3D55', '#FF8A3D', '#C8102E', '#2AABEE', '#0B0D12',
+      '#FBE6A6', '#F0C463', '#D6A042', '#8FA8C8', '#5E8FC8', '#3B6FB0',
+      // o estúdio de stories (09/11/2026): a paleta livre do texto e do desenho, os fundos do modo Texto e o azul do link
+      '#E040A0', '#8B5CF6', '#2563EB', '#8A6420', '#E5E7EB', '#1A1A1A', '#E0DBD0', '#FF6B74', '#02070F', '#F7E3A1', '#EBC46B', '#C99A3E', '#7F9AB8', '#CFC8BA', '#2A3D55', '#FF8A3D', '#C8102E', '#2AABEE', '#0B0D12',
       // verde e vermelho vivos (21/10/2026, pedido do Tiago): escuro/painel azul, claro e velas
       '#22D66A', '#FF3B47', '#0B9E4A', '#DC1F2E', '#16C784', '#EA3943',
       // marinho profundo (21/10/2026, estilo banco privado): página, painel GF, cartões, bordas

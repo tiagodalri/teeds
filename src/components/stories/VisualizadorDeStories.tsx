@@ -5,7 +5,10 @@ import {
   ehMonograma, fotoDoPerfil, haQuanto, registrar, REACOES, BOTAO_PADRAO,
   type Enquadramento, type PerfilDeStories, type Story, type TipoDeEvento,
 } from '../../core/teeds/stories'
+import { CamadasDoStory } from './CamadasDoStory'
+import { carregarFontesDosStories, type Camada } from '../../core/teeds/camadas'
 import './stories.css'
+import './camadas.css'
 
 /**
  * A tela cheia do story, no jeito do Instagram (08/11/2026):
@@ -103,6 +106,9 @@ export function VisualizadorDeStories(props: PropsDoVisualizador) {
   const [voando, setVoando] = useState<Array<{ id: number; e: string; x: number }>>([])
   const [menu, setMenu] = useState(false)
   const [pc, setPc] = useState(() => window.matchMedia('(min-width: 768px) and (pointer: fine)').matches)
+  // a enquete: o voto aparece na hora, sem esperar o banco
+  const [votosLocais, setVotosLocais] = useState<Record<string, { meu: number; votos: Record<string, number> }>>({})
+  useEffect(() => { if (perfis.some((p) => p.itens.some((s) => s.camadas?.length))) carregarFontesDosStories() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const perfil = perfis[pi]
   const story: Story | undefined = perfil?.itens[si]
@@ -160,7 +166,7 @@ export function VisualizadorDeStories(props: PropsDoVisualizador) {
     if (!v || !story || story.tipo !== 'video') return
     if (parado && !carregando) v.pause()
     else if (!parado) {
-      v.muted = mudo
+      v.muted = mudo || !!story.enquadramento?.mudo
       v.play().catch(() => {
         // sem gesto recente o navegador não deixa tocar com som: toca mudo e oferece o som
         if (!v.muted) { v.muted = true; setMudo(true); setPediuSom(true); void v.play().catch(() => undefined) }
@@ -316,6 +322,20 @@ export function VisualizadorDeStories(props: PropsDoVisualizador) {
   }
 
   /* ------------------------------------------------ ações */
+  function votar(i: number) {
+    if (!story) return
+    if (!previa) void registrar(sessao, story.id, 'voto', String(i))
+    const base = { ...(story.votos ?? {}) }
+    base[String(i)] = (base[String(i)] ?? 0) + 1
+    setVotosLocais((v) => ({ ...v, [story.id]: { meu: i, votos: base } }))
+    navigator.vibrate?.(10)
+  }
+  function abrirLink(c: Extract<Camada, { tipo: 'link' }>) {
+    if (!story) return
+    if (!previa) void registrar(sessao, story.id, 'clique', c.id)
+    setPausado(true)
+    aoBotao?.({ ...story, botao: { tipo: c.acao ?? 'link', texto: c.texto, destino: c.url } })
+  }
   function botao() {
     if (!story) return
     if (!previa) void registrar(sessao, story.id, 'clique')
@@ -361,7 +381,7 @@ export function VisualizadorDeStories(props: PropsDoVisualizador) {
   if (!perfil || !story) return null
 
   const media = story.tipo === 'video'
-    ? <video key={story.id} ref={video} className="sto-midia" src={story.midia} poster={story.capa ?? undefined} playsInline muted={mudo} preload="auto"
+    ? <video key={story.id} ref={video} className="sto-midia" src={story.midia} poster={story.capa ?? undefined} playsInline muted={mudo || !!story.enquadramento?.mudo} preload="auto"
         style={estiloDaMidia(story.enquadramento)}
         onLoadedData={() => setCarregando(false)} onCanPlay={() => setCarregando(false)} onWaiting={() => setCarregando(true)} onPlaying={() => setCarregando(false)}
         onEnded={() => { if (!parado) proximo('fim') }} onError={() => { setCarregando(false); avisar('Este vídeo não carregou. Toque para seguir.') }} />
@@ -403,8 +423,20 @@ export function VisualizadorDeStories(props: PropsDoVisualizador) {
         <div ref={card} className="sto-card" style={transformaCard}
           onPointerDown={aoTocar} onPointerMove={aoMover} onPointerUp={aoSoltar} onPointerCancel={() => { toque.current = null; setArrasto(null); setSegurando(false) }}
           onContextMenu={(e) => e.preventDefault()}>
-          <div className="sto-midia-caixa">{media}</div>
-          <i className="sto-sombra cima" /><i className="sto-sombra baixo" />
+          <div className="sto-midia-caixa">
+            <div className="sto-quadro">{media}</div>
+          </div>
+          <i className="sto-sombra cima" /><i className={`sto-sombra baixo ${story.camadas?.length ? 'leve' : ''}`} />
+          {/* as camadas por cima das sombras (as figurinhas ficam com a cor certa) */}
+          {!!story.camadas?.length && (
+            <div className="sto-midia-caixa sto-camadas">
+              <div className="sto-quadro">
+                <CamadasDoStory camadas={story.camadas} modo="ver"
+                  votos={votosLocais[story.id]?.votos ?? story.votos} meuVoto={votosLocais[story.id]?.meu ?? story.meuVoto}
+                  aoVotar={votar} aoLink={abrirLink} />
+              </div>
+            </div>
+          )}
 
           <div className="sto-ui topo">
             <div className="sto-barras">
@@ -421,7 +453,7 @@ export function VisualizadorDeStories(props: PropsDoVisualizador) {
                 {publico && <em className="sto-publico">{publico}</em>}
               </span>
               <span className="sto-acoes">
-                {story.tipo === 'video' && <button type="button" onClick={alternarSom} aria-label={mudo ? 'Ligar o som' : 'Desligar o som'}><Ico d={mudo ? I.somOff : I.somOn} /></button>}
+                {story.tipo === 'video' && !story.enquadramento?.mudo && <button type="button" onClick={alternarSom} aria-label={mudo ? 'Ligar o som' : 'Desligar o som'}><Ico d={mudo ? I.somOff : I.somOn} /></button>}
                 {pc && <button type="button" onClick={() => setPausado((p) => !p)} aria-label={pausado ? 'Continuar' : 'Pausar'}><Ico d={pausado ? I.play : I.pausa} cheio={pausado} /></button>}
                 {equipe && !previa && <button type="button" onClick={() => setMenu((m) => !m)} aria-label="Mais opções"><Ico d={I.mais} /></button>}
                 {!pc && <button type="button" onClick={() => fechar()} aria-label="Fechar"><Ico d={I.fechar} /></button>}

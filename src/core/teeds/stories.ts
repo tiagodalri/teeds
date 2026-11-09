@@ -7,7 +7,7 @@
  * (supabase/migracoes/20261109000000_stories.sql). Os arquivos ficam no
  * bucket público `stories`, na pasta da marca.
  *
- * Vídeo: o painel converte no próprio navegador para 720p H.264 antes de
+ * Vídeo: o painel converte no próprio navegador para 1080p H.264 antes de
  * enviar (Mediabunny, WebCodecs), para o .MOV do iPhone tocar em qualquer
  * aparelho e pesar ~3 MB a cada 15 s. Nada roda no servidor das I.A.
  */
@@ -15,9 +15,11 @@
 import { SUPABASE } from './config'
 import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
+import type { Camada } from './camadas'
 
 export type BotaoTipo = 'aula' | 'ia' | 'deposito' | 'aovivo' | 'gerenciamento' | 'marketplace' | 'link'
-export interface Enquadramento { zoom?: number; x?: number; y?: number }
+/** mudo: o estúdio tirou o som do vídeo (09/11/2026). */
+export interface Enquadramento { zoom?: number; x?: number; y?: number; mudo?: boolean }
 export interface Publico { todos?: boolean; subplanos?: string[]; parceiros?: string[]; so_admins?: boolean }
 
 export interface Story {
@@ -40,6 +42,11 @@ export interface Story {
   botao: { tipo: BotaoTipo; texto: string | null; destino: string | null } | null
   /** Só chega para a equipe (para mostrar no visualizador quem vê). */
   publico?: Publico | null
+  /** O que o estúdio desenhou por cima (texto, figurinhas, desenho). */
+  camadas: Camada[]
+  /** A enquete: contagem por opção (depois de votar) e o voto desta pessoa. */
+  votos: Record<string, number> | null
+  meuVoto: number | null
 }
 
 export interface PerfilDeStories {
@@ -86,11 +93,12 @@ export async function storiesDoCliente(sessao: SessaoTeeds): Promise<PerfilDeSto
       enquadramento: s.enquadramento ?? {}, chip: s.chip ?? null, titulo: s.titulo ?? null, subtitulo: s.subtitulo ?? null,
       quando: s.quando, destaque: !!s.destaque, compartilhar: s.compartilhar !== false, responder: s.responder !== false,
       visto: !!s.visto, reacao: s.reacao ?? null, botao: s.botao ?? null, publico: s.publico ?? null,
+      camadas: Array.isArray(s.camadas) ? s.camadas : [], votos: s.votos ?? null, meuVoto: s.meu_voto ?? null,
     })),
   }))
 }
 
-export type TipoDeEvento = 'visto' | 'progresso' | 'avancou' | 'voltou' | 'saiu' | 'pulou' | 'pausou' | 'clique' | 'reacao' | 'resposta' | 'compartilhou'
+export type TipoDeEvento = 'visto' | 'progresso' | 'voto' | 'avancou' | 'voltou' | 'saiu' | 'pulou' | 'pausou' | 'clique' | 'reacao' | 'resposta' | 'compartilhou'
 
 /** Grava o que a pessoa fez. Nunca atrapalha quem está assistindo: falha em silêncio. */
 export function registrar(sessao: SessaoTeeds | null, story: string, tipo: TipoDeEvento, valor?: string | null, segundos?: number) {
@@ -104,6 +112,7 @@ export function registrar(sessao: SessaoTeeds | null, story: string, tipo: TipoD
 export interface StoryPublico {
   id: string; codigo: string; marca: string; tipo: 'video' | 'imagem'; midia: string; capa: string | null; duracao: number
   enquadramento: Enquadramento; chip: string | null; titulo: string | null; subtitulo: string | null; quando: string
+  camadas?: Camada[]
   perfil: { nome: string; foto: string | null; oficial: boolean; parceiro: string | null }
 }
 export const storyPublico = (codigo: string) => rpc<StoryPublico | null>('teeds_story_publico', { p_codigo: codigo })
@@ -122,6 +131,7 @@ export interface LinhaDoPainel {
     capa_url: string | null; duracao: number; enquadramento: Enquadramento; chip: string | null; titulo: string | null
     subtitulo: string | null; botao_tipo: BotaoTipo | null; botao_texto: string | null; botao_destino: string | null
     publico: Publico; inicia_em: string; expira_em: string | null; destaque: boolean; compartilhar: boolean; responder: boolean
+    camadas?: Camada[]
     status: 'publicado' | 'arquivado'; avisado_em: string | null; criado_por: string | null; criado_por_nome: string | null; criado_em: string
   }
   perfil: { id: string; nome: string; foto: string | null; oficial: boolean; parceiro: string | null }
@@ -174,6 +184,7 @@ export interface NovoStory {
   destaque: boolean
   compartilhar: boolean
   responder: boolean
+  camadas?: Camada[]
 }
 export const salvarStory = (sessao: SessaoTeeds, s: NovoStory) =>
   rpc<LinhaDoPainel['story']>('teeds_story_salvar', { p: { ...s, marca: MARCA.id } }, sessao.token)
@@ -201,6 +212,10 @@ export interface Metricas {
   ultimas_respostas: Array<{ nome: string | null; texto: string; quando: string }>
 }
 export const metricasDoStory = (sessao: SessaoTeeds, id: string) => rpc<Metricas>('teeds_story_metricas', { p_story: id }, sessao.token)
+/** O resultado da enquete e os cliques por figurinha de link (09/11/2026). Sem a migração nova, vem vazio. */
+export const metricasExtras = (sessao: SessaoTeeds, id: string) =>
+  rpc<{ votos: Record<string, number>; cliques_por: Record<string, number> }>('teeds_story_metricas_extra', { p_story: id }, sessao.token)
+    .catch(() => ({ votos: {}, cliques_por: {} }))
 
 /** Avisa no celular pelo painel de notificações que já existe (só quem tem acesso pleno dispara). */
 export async function avisarNoCelular(sessao: SessaoTeeds, storyId: string, titulo: string, corpo: string, parceiro: string | null) {
@@ -276,7 +291,7 @@ async function capaDoVideo(blob: Blob): Promise<Blob | null> {
   try {
     const { video, largura, altura } = await lerVideo(url)
     await new Promise<void>((ok) => { video.onseeked = () => ok(); video.currentTime = Math.min(0.5, (video.duration || 1) / 2) })
-    const escala = Math.min(1, 720 / Math.max(1, Math.min(largura, altura)))
+    const escala = Math.min(1, 1080 / Math.max(1, Math.min(largura, altura)))
     const c = document.createElement('canvas')
     c.width = Math.round(largura * escala); c.height = Math.round(altura * escala)
     c.getContext('2d')!.drawImage(video, 0, 0, c.width, c.height)
@@ -296,12 +311,12 @@ async function prepararImagem(arquivo: File): Promise<MidiaPronta> {
   const c = document.createElement('canvas')
   c.width = Math.round(bmp.width * escala); c.height = Math.round(bmp.height * escala)
   c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height)
-  const jpg = await new Promise<Blob>((ok, falha) => c.toBlob((b) => (b ? ok(b) : falha(new Error('Não consegui ler a foto.'))), 'image/jpeg', 0.86))
+  const jpg = await new Promise<Blob>((ok, falha) => c.toBlob((b) => (b ? ok(b) : falha(new Error('Não consegui ler a foto.'))), 'image/jpeg', 0.92))
   return { tipo: 'imagem', arquivo: jpg, mime: 'image/jpeg', duracao: 6, largura: c.width, altura: c.height, capa: null, convertido: true, cortado: false }
 }
 
 /**
- * Prepara o arquivo escolhido: foto vira JPEG; vídeo vira MP4 720p (lado curto)
+ * Prepara o arquivo escolhido: foto vira JPEG; vídeo vira MP4 1080p (lado curto)
  * com no máximo 60 s. Sem WebCodecs (navegador antigo), vai o original.
  */
 export async function prepararMidia(arquivo: File, aoProgredir?: (f: number) => void): Promise<MidiaPronta> {
@@ -321,14 +336,15 @@ export async function prepararMidia(arquivo: File, aoProgredir?: (f: number) => 
     if (!trilha) throw new Error('Este arquivo não tem vídeo.')
     const lw = trilha.displayWidth, la = trilha.displayHeight
     const curto = Math.min(lw, la)
-    const escala = curto > 720 ? 720 / curto : 1
+    // 1080 no lado curto (09/11/2026, Tiago: "sem perder a qualidade da câmera do iPhone"): o tamanho do story no Instagram
+    const escala = curto > 1080 ? 1080 / curto : 1
     // múltiplo de 2: o H.264 não aceita lado ímpar
     const par = (n: number) => Math.max(2, Math.round(n / 2) * 2)
     const output = new mb.Output({ format: new mb.Mp4OutputFormat({ fastStart: 'in-memory' }), target: new mb.BufferTarget() })
     const cortado = total > LIMITE_SEGUNDOS + 0.5
     const conv = await mb.Conversion.init({
       input, output,
-      video: { width: par(lw * escala), height: par(la * escala), fit: 'fill', codec: 'avc', bitrate: mb.QUALITY_MEDIUM, frameRate: 30, forceTranscode: true },
+      video: { width: par(lw * escala), height: par(la * escala), fit: 'fill', codec: 'avc', bitrate: mb.QUALITY_HIGH, frameRate: 30, forceTranscode: true },
       audio: { codec: 'aac', bitrate: 128_000 },
       ...(cortado ? { trim: { start: 0, end: LIMITE_SEGUNDOS } } : {}),
     })

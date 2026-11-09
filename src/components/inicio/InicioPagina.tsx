@@ -249,7 +249,7 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
       topo={<>
         {/* 09/11/2026 (Tiago): por enquanto só os admins veem os Stories ("cliente ainda não, vamos testar um tempo"),
             e somem junto com os outros itens de admin quando o olhinho do menu do avatar está ligado */}
-        {MARCA.stories && sessao && papel?.admin && !menuAdminOculto && <BarraDeStories sessao={sessao} aoIr={aoIr} equipe aoVivo={!!treino?.noAr} />}
+        {MARCA.stories && sessao && papel?.admin && !menuAdminOculto && <BarraDeStories sessao={sessao} aoIr={aoIr} equipe papel={papel} aoVivo={!!treino?.noAr} />}
         {(MARCA.notificacoes || MARCA.biometria) && sessao ? <ConvitesDoInicio sessao={sessao} aoAbrirPerfil={() => aoIr('perfil')} /> : null}
       </>}
       aoSalvarPlano={(meta, limite) => setPlano(planoSimples(meta, limite, sessao))}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { PerfilDeStories, Story } from '../../core/teeds/stories'
 import { AdminStories } from './AdminStories'
+import { proximaLive, type Camada } from '../../core/teeds/camadas'
 
 /**
  * Laboratório dos Stories (08/11/2026), com dados de EXEMPLO:
@@ -15,11 +16,19 @@ const ha = (min: number) => new Date(agora - min * 60_000).toISOString()
 
 const st = (id: string, f: Partial<Story>): Story => ({
   id, codigo: id, tipo: 'imagem', midia: '', capa: null, duracao: 6, enquadramento: {}, chip: null, titulo: null, subtitulo: null,
-  quando: ha(60), destaque: false, compartilhar: true, responder: true, visto: false, reacao: null, botao: null, ...f,
+  quando: ha(60), destaque: false, compartilhar: true, responder: true, visto: false, reacao: null, botao: null, camadas: [], votos: null, meuVoto: null, ...f,
 })
 
 export const EXEMPLO_DE_STORIES: PerfilDeStories[] = [
   { id: 'gf', nome: 'GlobalFly', foto: '/globalfly-monograma-claro.png', oficial: true, ordem: 0, parceiro: null, itens: [
+    st('a0', { midia: img('operando-na-pratica'), quando: ha(20), duracao: 10, publico: { todos: true }, votos: null, meuVoto: null, camadas: [
+      { id: 'c1', tipo: 'local', texto: 'São Paulo, SP', estilo: 'branco', x: 30, y: 14, escala: 1, rotacao: -4 },
+      { id: 'c2', tipo: 'texto', texto: 'Hoje tem live\ncom as 5 I.A.', fonte: 'forte', cor: '#FFFFFF', fundo: 'nenhum', alinhar: 'center', x: 50, y: 30, escala: 1.15, rotacao: 0 },
+      { id: 'c3', tipo: 'contagem', titulo: 'Live de hoje', ate: proximaLive(), estilo: 'azul', x: 50, y: 50, escala: 1, rotacao: 0 },
+      { id: 'c4', tipo: 'enquete', pergunta: 'Já ligou sua I.A. hoje?', opcoes: ['Sim', 'Ainda não'], x: 50, y: 71, escala: 0.9, rotacao: 0 },
+      { id: 'c5', tipo: 'link', url: 'https://globalflytrade.com', texto: 'Entrar na live', acao: 'aovivo', estilo: 'ouro', x: 50, y: 86, escala: 1, rotacao: 0 },
+      { id: 'c6', tipo: 'emoji', emoji: '✈️', x: 80, y: 22, escala: 0.8, rotacao: 12 },
+    ] as Camada[] }),
     st('a1', { midia: img('boas-vindas'), chip: 'Comece aqui', titulo: 'Bem-vindo a bordo', subtitulo: 'A aula 1 mostra a plataforma em 8 minutos.', botao: { tipo: 'aula', texto: 'Ver aula', destino: null }, quando: ha(120), publico: { todos: true } }),
     st('a2', { midia: img('primeiro-deposito'), chip: 'Passo a passo', titulo: 'Primeiro depósito em 2 minutos', subtitulo: 'Direto no caixa da Deriv, pelo celular.', botao: { tipo: 'deposito', texto: null, destino: null }, quando: ha(300), publico: { subplanos: ['gold'] } }),
   ] },
@@ -121,6 +130,8 @@ function ligarBancoDeMentira() {
     }, 160)
   }
 }
+
+export function ligarLab() { ligarBancoDeMentira() }
 
 export default function LabStories() {
   const [pronto, setPronto] = useState(false)

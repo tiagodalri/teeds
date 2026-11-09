@@ -3,7 +3,10 @@ import { MARCA } from '../../marca'
 import { vitrine } from '../../core/teeds/parceiro'
 import { haQuanto, storyPublico, type StoryPublico as Dados } from '../../core/teeds/stories'
 import { Avatar, estiloDaMidia } from './VisualizadorDeStories'
+import { CamadasDoStory } from './CamadasDoStory'
+import { carregarFontesDosStories } from '../../core/teeds/camadas'
 import './stories.css'
+import './camadas.css'
 import './story-publico.css'
 
 /**
@@ -26,7 +29,7 @@ export default function StoryPublico() {
   useEffect(() => {
     document.title = `Story · ${MARCA.prosa}`
     if (!codigo) { setD(null); return }
-    storyPublico(codigo).then((x) => setD(x ?? null)).catch(() => setD(null))
+    storyPublico(codigo).then((x) => { setD(x ?? null); if (x?.camadas?.length) carregarFontesDosStories() }).catch(() => setD(null))
   }, [codigo])
 
   // foto: a barra anda no tempo do story e recomeça
@@ -61,10 +64,13 @@ export default function StoryPublico() {
       {d && (
         <section className="stp-palco">
           <div className="stp-card">
+            <div className="sto-quadro">
             {d.tipo === 'video'
-              ? <video ref={video} className="sto-midia" src={d.midia} poster={d.capa ?? undefined} autoPlay loop playsInline muted={mudo} style={estiloDaMidia(d.enquadramento)}
-                  onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration) setProgresso(v.currentTime / v.duration) }} />
-              : <img className="sto-midia" src={d.midia} alt="" style={estiloDaMidia(d.enquadramento)} />}
+                ? <video ref={video} className="sto-midia" src={d.midia} poster={d.capa ?? undefined} autoPlay loop playsInline muted={mudo} style={estiloDaMidia(d.enquadramento)}
+                    onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration) setProgresso(v.currentTime / v.duration) }} />
+                : <img className="sto-midia" src={d.midia} alt="" style={estiloDaMidia(d.enquadramento)} />}
+              {!!d.camadas?.length && <CamadasDoStory camadas={d.camadas} modo="ver" aoLink={(c) => { if (c.url) window.open(c.url, '_blank', 'noopener'); else location.href = cadastro }} />}
+            </div>
             <i className="sto-sombra cima" /><i className="sto-sombra baixo" />
             <div className="stp-cab">
               <div className="sto-barras"><i><b style={{ transform: `scaleX(${progresso})` }} /></i></div>

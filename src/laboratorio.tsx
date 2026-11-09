@@ -104,6 +104,7 @@ const LabAnuncios = lazy(() => import('./components/anuncios/LabAnuncios'))
 const LabCentralRastreio = lazy(() => import('./components/central/LabCentral'))
 const LabMenuAdmin = lazy(() => import('./components/LabMenuAdmin'))
 const LabStories = lazy(() => import('./components/stories/LabStories'))
+const LabEstudio = lazy(() => import('./components/stories/LabEstudio'))
 const LabChatDaEquipe = lazy(() => import('./components/equipe/LabChatDaEquipe'))
 const LabGerenciamento = lazy(() => import('./components/OperationalManagementPanel').then((m) => ({ default: m.OperationalManagementPanel })))
 const LabDivulgacao = lazy(() => import('./components/LabDivulgacao'))
@@ -467,6 +468,8 @@ function Laboratorio() {
   if (qual === 'menu-admin') return <Suspense fallback={null}><LabMenuAdmin /></Suspense>
   // ?tela=stories-admin: Administração › Stories com o banco de mentira (08/11/2026)
   if (qual === 'stories-admin') return <Suspense fallback={null}><LabStories /></Suspense>
+  // ?tela=estudio[&foto=1]: o estúdio de stories (câmera, editor, figurinhas) com o banco de mentira
+  if (qual === 'estudio') return <Suspense fallback={null}><LabEstudio /></Suspense>
   if (qual === 'equipe') return <Suspense fallback={null}><LabChatDaEquipe /></Suspense>
   // ?tela=seletor: o seletor de plataforma com a linha dos parceiros (admin geral)
   if (qual === 'seletor') return <LabSeletor />

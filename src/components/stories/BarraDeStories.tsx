@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import type { WorkspacePage } from '../WorkspaceNav'
+import type { PapelDoAdmin } from '../../core/teeds/parceiroEmFoco'
 import { DERIV } from '../../core/deriv/config'
 import { vitrine } from '../../core/teeds/parceiro'
 import { EVENTO_STORIES, linkDoStory, pedirAbaStories, storiesDoCliente, type PerfilDeStories, type Story } from '../../core/teeds/stories'
 import { Avatar, VisualizadorDeStories } from './VisualizadorDeStories'
 import './stories.css'
+
+// o estúdio (câmera e editor) só baixa quando alguém da equipe toca em Publicar
+const EstudioDeStories = lazy(() => import('./EstudioDeStories').then((m) => ({ default: m.EstudioDeStories })))
 
 /**
  * As bolinhas no topo da Início (08/11/2026). Anel com o degradê do Instagram
@@ -21,6 +25,8 @@ interface Props {
   sessao: SessaoTeeds
   aoIr: (tela: WorkspacePage) => void
   equipe?: boolean
+  /** O papel do admin (para o estúdio: parceiro, aviso no celular). */
+  papel?: PapelDoAdmin | null
   aoVivo?: boolean
   /** Dados prontos (laboratório): não lê o banco. */
   exemplo?: PerfilDeStories[]
@@ -39,7 +45,8 @@ function preCarregar(s: Story): Promise<void> {
   })
 }
 
-export function BarraDeStories({ sessao, aoIr, equipe, aoVivo, exemplo }: Props) {
+export function BarraDeStories({ sessao, aoIr, equipe, papel, aoVivo, exemplo }: Props) {
+  const [estudio, setEstudio] = useState(false)
   const [perfis, setPerfis] = useState<PerfilDeStories[] | null>(exemplo ?? null)
   const [aberto, setAberto] = useState<number | null>(null)
   const [girando, setGirando] = useState<string | null>(null)
@@ -132,7 +139,7 @@ export function BarraDeStories({ sessao, aoIr, equipe, aoVivo, exemplo }: Props)
           </button>
         )}
         {equipe && (
-          <button type="button" role="listitem" className="sto-bolha publicar" onClick={() => { pedirAbaStories(); aoIr('gestao') }} aria-label="Publicar um story">
+          <button type="button" role="listitem" className="sto-bolha publicar" onClick={() => setEstudio(true)} aria-label="Publicar um story">
             <span className="sto-anel novo"><span className="sto-mais" aria-hidden="true">+</span></span>
             <span className="sto-nome">Publicar</span>
           </button>
@@ -151,6 +158,7 @@ export function BarraDeStories({ sessao, aoIr, equipe, aoVivo, exemplo }: Props)
       {bordas.esq && <button type="button" className="sto-rolar esq" onClick={() => rolar(-1)} aria-label="Ver anteriores">‹</button>}
       {bordas.dir && <button type="button" className="sto-rolar dir" onClick={() => rolar(1)} aria-label="Ver mais">›</button>}
 
+      {estudio && <Suspense fallback={<div className="sto-v cel"><span className="sto-girando" /></div>}><EstudioDeStories sessao={sessao} papel={papel ?? null} aoFechar={() => setEstudio(false)} /></Suspense>}
       {aberto !== null && (
         <VisualizadorDeStories
           perfis={ordenados}

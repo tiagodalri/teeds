@@ -6,7 +6,7 @@
 .stp-topo img { height: 28px; width: auto; }
 .stp-carregando { position: static; margin: 0; }
 .stp-palco { position: relative; z-index: 1; height: min(100%, 860px); padding: 64px 0 16px; display: flex; align-items: center; }
-.stp-card { position: relative; height: 100%; aspect-ratio: 9 / 16; max-width: 100vw; border-radius: 16px; overflow: hidden; background: #051528; box-shadow: 0 20px 60px rgba(0, 0, 0, .5); }
+.stp-card { container-type: size; position: relative; height: 100%; aspect-ratio: 9 / 16; max-width: 100vw; border-radius: 16px; overflow: hidden; background: #051528; box-shadow: 0 20px 60px rgba(0, 0, 0, .5); }
 .stp-cab { position: absolute; top: 0; left: 0; right: 0; padding: 10px 10px 0; z-index: 2; }
 .stp-quem { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 14px; }
 .stp-quem small { opacity: .75; font-size: 13px; }

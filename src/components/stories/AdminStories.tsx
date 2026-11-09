@@ -1,15 +1,21 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as PE } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as PE } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import type { PapelDoAdmin } from '../../core/teeds/parceiroEmFoco'
 import { useParceirosDaMarca } from '../../core/teeds/parceiroEmFoco'
 import { MARCA } from '../../marca'
 import {
   alcanceDoPublico, avisarNoCelular, BOTAO_PADRAO, enviarArquivo, enviarMidia, EVENTO_STORIES, haQuanto, LIMITE_SEGUNDOS,
-  linkDoStory, metricasDoStory, painelDeStories, perfisDoPainel, prepararMidia, removerStory, salvarPerfil, salvarStory, situacao, storyPedido,
+  linkDoStory, metricasDoStory, metricasExtras, painelDeStories, perfisDoPainel, prepararMidia, removerStory, salvarPerfil, salvarStory, situacao, storyPedido,
   type BotaoTipo, type Enquadramento, type LinhaDoPainel, type Metricas, type NovoStory, type PerfilDoPainel, type Publico, type SituacaoDoStory, type Story,
 } from '../../core/teeds/stories'
 import { Avatar, estiloDaMidia, VisualizadorDeStories } from './VisualizadorDeStories'
 import { AvatarDoParceiro } from '../parceiros/FiltroDeParceiros'
+import { CamadasDoStory } from './CamadasDoStory'
+import { dominio, rotuloDasCamadas, type Camada } from '../../core/teeds/camadas'
+
+// 09/11/2026: o "Novo story" abre o estúdio (câmera, editor e figurinhas); o formulário antigo fica para editar
+const EstudioDeStories = lazy(() => import('./EstudioDeStories').then((m) => ({ default: m.EstudioDeStories })))
+const rotulo = (l: LinhaDoPainel['story']) => l.titulo || l.chip || rotuloDasCamadas(l.camadas) || 'Story sem texto'
 import './stories.css'
 import './admin-stories.css'
 
@@ -57,6 +63,7 @@ function comoCliente(l: LinhaDoPainel['story']): Story {
   return {
     id: l.id, codigo: l.codigo, tipo: l.tipo, midia: l.midia_url, capa: l.capa_url, duracao: Number(l.duracao), enquadramento: l.enquadramento ?? {},
     chip: l.chip, titulo: l.titulo, subtitulo: l.subtitulo, quando: l.inicia_em, destaque: l.destaque, compartilhar: l.compartilhar, responder: l.responder,
+    camadas: l.camadas ?? [], votos: null, meuVoto: null,
     visto: true, reacao: null, botao: l.botao_tipo ? { tipo: l.botao_tipo, texto: l.botao_texto, destino: l.botao_destino } : null, publico: l.publico,
   }
 }
@@ -76,6 +83,7 @@ export function AdminStories({ sessao, papel }: Props) {
   const [aberto, setAberto] = useState<string | null>(() => storyPedido())
   const [compondo, setCompondo] = useState<{ editar?: LinhaDoPainel } | null>(null)
   const [vendo, setVendo] = useState<LinhaDoPainel | null>(null)
+  const [estudio, setEstudio] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [perfilForm, setPerfilForm] = useState<Partial<PerfilDoPainel> | null>(null)
   const parceiros = useParceirosDaMarca(sessao, MARCA.id)
@@ -130,7 +138,7 @@ export function AdminStories({ sessao, papel }: Props) {
             </button>
           ))}
         </div>
-        <button type="button" className="ast-primario" onClick={() => setCompondo({})}><Ico d={IC.mais} />Novo story</button>
+        <button type="button" className="ast-primario" onClick={() => setEstudio(true)}><Ico d={IC.mais} />Novo story</button>
       </div>
 
       {!linhas ? <div className="ast-grade">{[0, 1, 2, 3].map((i) => <div key={i} className="ast-cartao esqueleto" />)}</div>
@@ -139,7 +147,7 @@ export function AdminStories({ sessao, papel }: Props) {
             <span className="sto-anel"><span className="ast-vazio-ico"><Ico d={IC.play} /></span></span>
             <h3>{aba === 'no-ar' ? 'Nenhum story no ar' : aba === 'agendado' ? 'Nenhum story agendado' : aba === 'destaque' ? 'Nenhum destaque fixo' : 'Nada por aqui'}</h3>
             <p>Suba um vídeo vertical ou uma foto. Ele aparece nas bolinhas do topo da Início de quem você escolher.</p>
-            <button type="button" className="ast-primario" onClick={() => setCompondo({})}><Ico d={IC.mais} />Publicar o primeiro</button>
+            <button type="button" className="ast-primario" onClick={() => setEstudio(true)}><Ico d={IC.mais} />Publicar o primeiro</button>
           </div>
         ) : (
           <div className="ast-grade">
@@ -154,7 +162,8 @@ export function AdminStories({ sessao, papel }: Props) {
                     <em className={`ast-sit ${sit}`}><i />{ROTULO_SITUACAO[sit]}</em>
                     {l.story.tipo === 'video' && <em className="ast-dur">{Math.round(l.story.duracao)}s</em>}
                     <span className="ast-thumb-pf"><Avatar foto={l.perfil.foto} nome={l.perfil.nome} tamanho={26} /></span>
-                    <span className="ast-thumb-tx">{l.story.titulo || l.story.chip || 'Sem texto'}</span>
+                    {!!l.story.camadas?.length && <span className="ast-thumb-cam sto-quadro"><CamadasDoStory camadas={l.story.camadas} modo="editar" /></span>}
+                    {!l.story.camadas?.length && <span className="ast-thumb-tx">{rotulo(l.story)}</span>}
                   </span>
                   <span className="ast-cartao-num">
                     <span><b>{n(l.pessoas)}</b>Pessoas</span>
@@ -193,6 +202,7 @@ export function AdminStories({ sessao, papel }: Props) {
           meuParceiro={meuParceiro} pleno={pleno} editar={compondo.editar}
           aoFechar={() => setCompondo(null)} aoPublicar={(id) => { setCompondo(null); mudou(); setAba('todos'); setAberto(id) }} />
       )}
+      {estudio && <Suspense fallback={null}><EstudioDeStories sessao={sessao} papel={papel} aoFechar={() => setEstudio(false)} aoPublicado={(id) => { mudou(); setAba('todos'); setAberto(id) }} /></Suspense>}
       {perfilForm && <FormDePerfil sessao={sessao} inicial={perfilForm} parceiros={parceiros} aoFechar={() => setPerfilForm(null)} aoSalvar={() => { setPerfilForm(null); mudou() }} />}
       {vendo && (
         <VisualizadorDeStories perfis={[{ id: vendo.perfil.id, nome: vendo.perfil.nome, foto: vendo.perfil.foto, oficial: vendo.perfil.oficial, ordem: 0, parceiro: vendo.perfil.parceiro, itens: [comoCliente(vendo.story)] }]}
@@ -210,6 +220,7 @@ function Detalhe({ sessao, linha, parceiros, pleno, aoFechar, aoVer, aoEditar, a
 }) {
   const s = linha.story
   const [m, setM] = useState<Metricas | null>(null)
+  const [extra, setExtra] = useState<{ votos: Record<string, number>; cliques_por: Record<string, number> } | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [busca, setBusca] = useState('')
   const [confirmar, setConfirmar] = useState<'arquivar' | 'apagar' | null>(null)
@@ -219,7 +230,10 @@ function Detalhe({ sessao, linha, parceiros, pleno, aoFechar, aoVer, aoEditar, a
 
   useEffect(() => {
     let vivo = true
-    const ler = () => metricasDoStory(sessao, s.id).then((x) => { if (vivo) { setM(x); setErro(null) } }).catch((e) => vivo && setErro((e as Error).message))
+    const ler = () => {
+      void metricasExtras(sessao, s.id).then((x) => vivo && setExtra(x))
+      return metricasDoStory(sessao, s.id).then((x) => { if (vivo) { setM(x); setErro(null) } }).catch((e) => vivo && setErro((e as Error).message))
+    }
     void ler()
     const t = window.setInterval(() => { if (document.visibilityState === 'visible') void ler() }, 30_000)
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') aoFechar() }
@@ -238,6 +252,9 @@ function Detalhe({ sessao, linha, parceiros, pleno, aoFechar, aoVer, aoEditar, a
 
   const quem = (m?.quem ?? []).filter((q) => !busca.trim() || `${q.nome ?? ''} ${q.email}`.toLowerCase().includes(busca.trim().toLowerCase()))
   const totalReacoes = m ? Object.values(m.reacoes).reduce((a, b) => a + b, 0) : 0
+  const enquete = (s.camadas ?? []).find((c) => c.tipo === 'enquete') as Extract<Camada, { tipo: 'enquete' }> | undefined
+  const links = (s.camadas ?? []).filter((c) => c.tipo === 'link') as Array<Extract<Camada, { tipo: 'link' }>>
+  const totalVotos = Object.values(extra?.votos ?? {}).reduce((a, b) => a + b, 0)
 
   return (
     <div className="ast-cortina" onClick={(e) => { if (e.target === e.currentTarget) aoFechar() }}>
@@ -246,7 +263,7 @@ function Detalhe({ sessao, linha, parceiros, pleno, aoFechar, aoVer, aoEditar, a
           <span className="ast-mini">{s.tipo === 'imagem' || s.capa_url ? <img src={s.capa_url ?? s.midia_url} alt="" style={estiloDaMidia(s.enquadramento)} /> : <video src={s.midia_url} muted preload="metadata" />}</span>
           <div>
             <span className={`ast-sit plano ${sit}`}><i />{ROTULO_SITUACAO[sit]}</span>
-            <h2>{s.titulo || s.chip || 'Story sem texto'}</h2>
+            <h2>{rotulo(s)}</h2>
             <p>{linha.perfil.nome} · publicado {haQuanto(s.inicia_em)}{s.criado_por_nome ? ` por ${s.criado_por_nome}` : ''} · {rotuloDoPublico(s.publico, parceiros)}
               {sit === 'no-ar' && s.expira_em ? ` · ${faltam(s.expira_em)}` : ''}{s.avisado_em ? ' · Aviso no celular enviado' : ''}</p>
           </div>
@@ -305,6 +322,20 @@ function Detalhe({ sessao, linha, parceiros, pleno, aoFechar, aoVer, aoEditar, a
                 <p className="sub">Primeira visualização, por hora</p>
                 <PorHora itens={m.por_hora} />
               </section>
+              {enquete && (
+                <section className="ast-bloco">
+                  <h4>Enquete{enquete.pergunta ? `: ${enquete.pergunta}` : ''}</h4>
+                  <p className="sub">{n(totalVotos)} {totalVotos === 1 ? 'voto' : 'votos'} de clientes</p>
+                  <Barras itens={enquete.opcoes.map((o, i) => [o, extra?.votos[String(i)] ?? 0] as [string, number])} total={totalVotos || undefined} />
+                </section>
+              )}
+              {links.length > 0 && (
+                <section className="ast-bloco">
+                  <h4>Cliques nos links</h4>
+                  <p className="sub">Cada figurinha de link do story</p>
+                  <Barras itens={links.map((c) => [c.texto.trim() || dominio(c.url), extra?.cliques_por[c.id] ?? 0] as [string, number])} />
+                </section>
+              )}
               {m.ultimas_respostas.length > 0 && (
                 <section className="ast-bloco">
                   <h4>Respostas</h4>
@@ -518,11 +549,11 @@ function Compositor({ sessao, perfis, parceiros, meuParceiro, pleno, editar, aoF
   }
 
   const prev: Story = {
-    id: 'previa', codigo: 'previa', tipo: arq?.tipo ?? 'imagem', midia: arq?.local ?? '', capa: null, duracao: arq?.tipo === 'video' ? arq.duracao : 6, enquadramento: enq,
+    id: 'previa', codigo: 'previa', camadas: e?.camadas ?? [], votos: null, meuVoto: null, tipo: arq?.tipo ?? 'imagem', midia: arq?.local ?? '', capa: null, duracao: arq?.tipo === 'video' ? arq.duracao : 6, enquadramento: enq,
     chip: chip.trim() || null, titulo: titulo.trim() || null, subtitulo: subtitulo.trim() || null, quando: new Date().toISOString(), destaque: false,
     compartilhar, responder, visto: false, reacao: null, botao: botaoTipo ? { tipo: botaoTipo, texto: botaoTexto.trim() || null, destino: botaoLink } : null, publico,
   }
-  const progresso = arq?.preparando !== null && arq?.preparando !== undefined ? { rotulo: 'Convertendo para 720p', f: arq.preparando }
+  const progresso = arq?.preparando !== null && arq?.preparando !== undefined ? { rotulo: 'Convertendo para 1080p', f: arq.preparando }
     : arq?.enviando !== null && arq?.enviando !== undefined ? { rotulo: 'Enviando', f: arq.enviando } : null
 
   return (
