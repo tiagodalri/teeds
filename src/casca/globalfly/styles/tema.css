@@ -486,3 +486,147 @@ span.logo-ia { color: inherit !important; }
   --down: #FF3B47; --down-soft: rgba(255, 59, 71, .15); --up: #22D66A;
   --cv-painel: #071427; --cv-linha: rgba(147, 166, 189, .1);
 }
+
+/* ==========================================================================
+   REVISÃO DE DESIGN DAS TELAS DO CLIENTE (08/11/2026, Tiago: "corrigir tudo")
+   Telas do cliente e do GF Member, nos dois temas, no computador e no celular.
+   Só a GlobalFly (este arquivo só entra no build dela).
+   ========================================================================== */
+
+/* ---------------- 1. O topo fica no lugar em todas as telas (computador) */
+/* Antes, nas telas que não rolam por dentro (Início, Relatórios, Notícias,
+   Marketplace, Ajuda, Perfil), a página inteira rolava e o topo subia junto:
+   no Início, 30 px de rolagem já cortavam o título pela metade. Agora o topo
+   é preso, e a moldura do app cresce com o conteúdo para ele acompanhar. */
+@media (min-width: 901px) {
+  :root[data-marca='globalfly'] .workspace-app > .topbar { position: sticky; top: 0; z-index: 60; }
+  :root[data-marca='globalfly'] .workspace-app:not(:has(> .ger, > .tela-viva:not([hidden]) > .ger, > .layout)) { height: auto; min-height: 100%; }
+  /* o topo na cor do fundo da página, com o fio embaixo (era marfim sobre página branca) */
+  :root[data-marca='globalfly']:not([data-tema='escuro']) .workspace-app > .topbar { background: var(--surface); }
+  /* Manual: a folga dos botões flutuantes deixava uma faixa branca embaixo do gráfico */
+  :root[data-marca='globalfly'] body:has(.sp-lancador-area, .mcb) .workspace-app:has(> .layout) { padding-bottom: 0; }
+  /* e a boleta ganha a folga por dentro, para a lista de entradas subir acima deles */
+  :root[data-marca='globalfly'] .layout-operar > aside.trade { padding-bottom: 104px; }
+}
+
+/* ---------------- 2. Uma largura só, um pouco maior (computador) */
+/* 1440 px deixava um terço da tela vazio em monitor grande; todas as telas
+   de conteúdo, o Marketplace incluído (tinha 1180 px), usam a mesma moldura. */
+:root[data-marca='globalfly'] { --pagina-max: 1600px; }
+@media (min-width: 901px) {
+  :root[data-marca='globalfly'] .workspace-app .msp {
+    width: 100%; max-width: var(--pagina-max); margin-inline: auto; box-sizing: border-box;
+    padding: var(--pagina-topo) var(--pagina-lado) var(--pagina-fim);
+  }
+}
+
+/* ---------------- 3. Sem título repetido */
+/* O topo já diz o nome da tela: o título grande de dentro sai. */
+:root[data-marca='globalfly'] .go-consultoria .go-hero h2 { display: none; }
+:root[data-marca='globalfly'] .robot-workspace:not(.tem-acompanhamento) .rob-eyebrow { display: none; }
+/* "Somente simulação" parecia botão: vira um rótulo */
+:root[data-marca='globalfly'] .go-consultoria .go-status { padding: 0; border: 0; background: none; color: var(--muted); font-size: 12px; font-weight: 600; }
+/* o aviso do Gerenciamento no mesmo estilo dos outros cartões, sem o fio solto */
+:root[data-marca='globalfly'] .go-consultoria .go-consultivo { border-color: transparent; background: var(--surface-alt); }
+/* a tabela de etapas sem rolagem própria dentro da página (dois scrolls) */
+:root[data-marca='globalfly'] .go-consultoria .go-consulta-scroll { max-height: none; }
+
+/* ---------------- 4. Botão principal: ouro sobre azul, azul sobre claro */
+/* Em Aulas o "Assistir" era branco: no azul, a ação principal é ouro, como no Início. */
+:root[data-marca='globalfly'] .ger.aulas .aulas-continuar:not(.indisponivel) { background: var(--gf-ouro); color: var(--gf-azul); }
+
+/* ---------------- 5. Fonte de dados só em cotação e valor */
+/* CPF, telefone e CEP são campos de formulário: fonte do texto. */
+:root[data-marca='globalfly'] .mp-campo :is(input, #mp-cpf, #mp-telefone) { font-family: var(--fonte-corpo); }
+
+/* ---------------- 6. Tema escuro: os cartões não somem no fundo */
+:root[data-marca='globalfly'][data-tema='escuro'] .in-painel { border: 1px solid #1F3550; }
+/* I.A.: a caixa mais clara atrás do conteúdo (só no escuro) sai; a página tem um fundo só */
+:root[data-marca='globalfly'] .workspace-app .ger.rob.robot-workspace:not(.tem-acompanhamento) { background: transparent; }
+
+/* ---------------- 7. Início */
+/* "Mercado agora" começa na altura dos cartões da frota, não do título */
+@container inicio (min-width: 1121px) {
+  :root[data-marca='globalfly'] .in-coluna-lado { padding-top: 39px; }
+  /* as duas colunas terminam juntas: o "Para você" estica até o fim das notícias */
+  :root[data-marca='globalfly'] .in-grade { align-items: stretch; }
+  :root[data-marca='globalfly'] .in-coluna-principal { grid-template-rows: auto 1fr; }
+  :root[data-marca='globalfly'] .in-coluna-principal > :last-child { display: flex; flex-direction: column; }
+  :root[data-marca='globalfly'] .in-coluna-principal > :last-child > .in-pv { flex: 1; }
+  :root[data-marca='globalfly'] .in-atalhos { grid-auto-rows: 1fr; align-content: stretch; }
+}
+
+/* ---------------- 7b. Fotos com <picture>: os <source> não podem virar célula da grade */
+/* No cartão "Continue de onde parou" eles caíam numa segunda linha e deixavam
+   uma faixa vazia embaixo da foto. */
+:root[data-marca='globalfly'] picture > source { display: none; }
+
+/* ---------------- 8. I.A.: o plano de voo em lista, um passo por linha */
+:root[data-marca='globalfly'] .vr-rota { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 6px; }
+:root[data-marca='globalfly'] .vr-rota li:not(:last-child)::after { content: none; }
+/* o aviso de confirmação embaixo do texto, não solto à direita */
+:root[data-marca='globalfly'] .vr-cabeca small { flex-basis: 100%; }
+
+/* ---------------- 9. Relatórios: a última leitura sozinha ocupa a linha */
+:root[data-marca='globalfly'] .rel-leituras li:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+/* ---------------- 10. Marketplace */
+/* os botões de compra na mesma altura nos dois cartões */
+:root[data-marca='globalfly'] .msp-plano { display: flex; flex-direction: column; }
+:root[data-marca='globalfly'] .msp-plano > .msp-ias { margin-bottom: auto; }
+/* os três cartões do topo abertos o bastante para ler Gold, Black e Prestige */
+:root[data-marca='globalfly'] .msp-cartao-arte {
+  transform: translate(calc(-50% + (var(--i) - 1) * 62px), calc(-50% + (var(--i) - 1) * -44px)) rotate(calc((var(--i) - 1) * 6deg));
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-marca='globalfly'] .msp-heroi:hover .msp-cartao-arte {
+    transform: translate(calc(-50% + (var(--i) - 1) * 72px), calc(-50% + (var(--i) - 1) * -48px)) rotate(calc((var(--i) - 1) * 8deg));
+  }
+}
+
+/* ---------------- 11. Aulas */
+/* o fim da fileira some num degradê (antes cortava o cartão seco) */
+:root[data-marca='globalfly'] .ger.aulas .aulas-fileira {
+  mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 90px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 90px), transparent 100%);
+}
+/* título da aula em até 3 linhas, sem "…" */
+:root[data-marca='globalfly'] .aula-cartao:not(.continuar) .aula-cartao-corpo > b { -webkit-line-clamp: 3; }
+/* "Em breve • Duração a definir" quebra a linha em vez de ser cortado */
+:root[data-marca='globalfly'] .aula-cartao .aula-card-meta { flex-wrap: wrap; row-gap: 2px; }
+
+/* o selo do destaque ("Sala de treino") legível sobre o azul */
+:root[data-marca='globalfly'] .dq-selo { color: var(--gf-marfim); background: rgba(183, 141, 57, .16); border-color: rgba(183, 141, 57, .45); }
+
+/* ---------------- 12. Meu perfil */
+/* o último cartão sozinho ocupa a linha inteira */
+:root[data-marca='globalfly'] .mp-grade > .mp-cartao:last-child:nth-child(odd) { grid-column: 1 / -1; }
+/* o fio dourado acompanha os cantos do cartão */
+:root[data-marca='globalfly'] .mp-topo { overflow: clip; }
+/* botão desativado legível */
+:root[data-marca='globalfly'] .mp-btn:disabled { opacity: .62; }
+:root[data-marca='globalfly'] .mp-plano .mp-btn { justify-self: start; margin-top: 4px; }
+
+/* ---------------- 13. Meu plano: o ✕ no mesmo tom em todas as colunas */
+:root[data-marca='globalfly'] .mpl-nao { color: var(--muted); opacity: .7; }
+
+/* ---------------- 14. Faixas que rolam de lado: somem num degradê nas pontas */
+:root[data-marca='globalfly'] .mc-faixa {
+  mask-image: linear-gradient(90deg, transparent, #000 48px, #000 calc(100% - 48px), transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 48px, #000 calc(100% - 48px), transparent);
+}
+
+/* ---------------- 15. Celular */
+@media (max-width: 900px) {
+  /* o botão do suporte menor: cobre menos o conteúdo */
+  :root[data-marca='globalfly'] .sp-lancador-circulo { width: 48px; height: 48px; }
+  /* uma margem lateral só (16 px) em todas as telas */
+  :root[data-marca='globalfly'] .workspace-app > :is(.mp, .msp, .mc, .aj, .rel),
+  :root[data-marca='globalfly'] .workspace-app > .go.ger.go-consultoria { padding-left: 16px; padding-right: 16px; }
+  /* períodos e sugestões dos Relatórios: o degradê avisa que dá para arrastar */
+  :root[data-marca='globalfly'] :is(.rel-periodos, .rel-sugestoes) {
+    mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent);
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent);
+  }
+}
+/* ============================ fim da revisão de design */

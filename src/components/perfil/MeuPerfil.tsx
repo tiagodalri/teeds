@@ -14,6 +14,7 @@ import { dataEHora, historicoDeAceites, type HistoricoDeAceites } from '../../co
 import { LeitorDeTermos } from '../termos/Termos'
 import { CartaoDeNotificacoes } from '../notificacoes/Notificacoes'
 import { CartaoDeBiometria } from '../biometria/Biometria'
+import { abrirMeuPlano, subplanoAtual, useMeuSubplano } from '../../core/teeds/subplanos'
 
 /**
  * "Meu Perfil" (20/10/2026, pedido do Tiago: "capricha"): a pessoa vê e
@@ -57,6 +58,7 @@ const Ic = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden="true"
 
 export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConectarDeriv, onMudou }: Props) {
   const [perfil, setPerfil] = useState<Perfil | null>(null)
+  const meuSubplano = useMeuSubplano()
   const [erroCarga, setErroCarga] = useState<string | null>(null)
   const [nome, setNome] = useState('')
   const [cpf, setCpf] = useState('')
@@ -170,6 +172,10 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
   if (!perfil) return <div className="mp"><div className="mp-carregando" aria-busy="true">Abrindo seu perfil…</div></div>
 
   const st = STATUS[perfil.status] ?? { rotulo: perfil.status, cls: 'aviso' }
+  // 08/11/2026 (revisão de design): na marca com subplanos (GF Member Gold/Black/Prestige) o
+  // Perfil mostra o mesmo nome do selo do topo, não o nome técnico do plano ("Sem simulador").
+  const sub = MARCA.seloCategoria ? subplanoAtual(meuSubplano) : null
+  const nomeDoPlano = sub ? `GF Member ${sub.nome}` : perfil.planoNome
   const faltam = perfil.acessoExpira ? Math.ceil((Date.parse(perfil.acessoExpira) - Date.now()) / 86_400_000) : null
   const total = perfil.acessoInicio && perfil.acessoExpira ? Math.max(1, (Date.parse(perfil.acessoExpira) - Date.parse(perfil.acessoInicio)) / 86_400_000) : null
   const usado = total && faltam !== null ? Math.min(100, Math.max(0, ((total - Math.max(0, faltam)) / total) * 100)) : 0
@@ -191,7 +197,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
           <h1>{perfil.nome || 'Complete seu nome'}</h1>
           <p>{perfil.email}</p>
           <div className="mp-selos">
-            <span className="mp-selo plano"><Monograma tamanho={18} />{perfil.planoNome}</span>
+            <span className="mp-selo plano"><Monograma tamanho={18} />{nomeDoPlano}</span>
             <span className={`mp-selo ${st.cls}`}><i aria-hidden="true" />{st.rotulo}</span>
           </div>
           {foto && <button type="button" className="mp-link" onClick={() => void tirarFoto()} disabled={enviandoFoto}>Remover foto</button>}
@@ -215,7 +221,8 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
         <section className="mp-cartao mp-plano">
           <Monograma variante="marca-dagua" tamanho={150} className="mp-plano-marca" />
           <h2><Ic d={I.plano} />Seu plano</h2>
-          <div className="mp-plano-nome"><Monograma tamanho={30} />{perfil.planoNome}</div>
+          <div className="mp-plano-nome"><Monograma tamanho={30} />{nomeDoPlano}</div>
+          {sub && <button type="button" className="mp-btn" onClick={() => abrirMeuPlano()}>Ver o que o meu plano inclui</button>}
           <dl className="mp-fichas">
             <div><dt>Situação</dt><dd className={st.cls}>{st.rotulo}</dd></div>
             <div><dt>Acesso desde</dt><dd>{data(perfil.acessoInicio)}</dd></div>
