@@ -108,25 +108,59 @@
 .aa-g-legenda i.nosso { background: #6ea2ff; }
 .aa-g-legenda b { margin-left: auto; color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
 
-/* tabelas */
-.aa-tabela { overflow-x: auto; margin: 0 -20px; padding: 0 20px; }
-.aa-tabela table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.aa-tabela th { text-align: left; padding: 8px 10px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid var(--border); white-space: nowrap; }
-.aa-tabela th button { padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
+/*
+  Tabelas (08/11/2026, Tiago: "uma linha sutil e discreta separando as colunas... alinha os números"):
+  - moldura própria com cantos arredondados (antes a tabela vazava até a borda do cartão);
+  - divisórias verticais bem fracas entre as colunas e linhas horizontais um pouco mais firmes;
+  - cabeçalho numa faixa, rótulo alinhado com o valor (número à direita, texto à esquerda);
+  - algarismos de mesma largura: as casas decimais e os milhares ficam um embaixo do outro;
+  - 1ª coluna presa ao rolar para o lado (as 16 colunas não cabem na tela);
+  - a coluna que ordena a lista fica marcada de cima a baixo.
+  `border-collapse: separate` porque, colapsada, a borda da coluna presa não acompanha a rolagem.
+  A 1ª célula da linha do anúncio NÃO pode ser flex: vira uma caixa solta dentro de uma célula invisível e a
+  linha de baixo e o fundo do hover param no meio (era o "degrau" embaixo do nome do anúncio).
+*/
+.aa-tabela {
+  --aa-linha: color-mix(in srgb, var(--border) 75%, transparent);
+  --aa-divisoria: color-mix(in srgb, var(--border) 42%, transparent);
+  --aa-cabeca: color-mix(in srgb, var(--text) 4%, var(--bg));
+  --aa-hover: color-mix(in srgb, var(--text) 6%, var(--bg));
+  overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--bg);
+  scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
+}
+.aa-tabela table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums lining-nums; }
+.aa-tabela th, .aa-tabela td { padding: 11px 14px; border-bottom: 1px solid var(--aa-linha); vertical-align: middle; white-space: nowrap; text-align: left; }
+.aa-tabela th + th, .aa-tabela td + td { border-left: 1px solid var(--aa-divisoria); }
+.aa-tabela tr > :nth-child(2) { border-left: 0; }
+.aa-tabela tr:last-child > td { border-bottom: 0; }
+.aa-tabela thead th { padding-block: 10px; background: var(--aa-cabeca); border-bottom-color: var(--border); color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .07em; line-height: 1.2; text-transform: uppercase; }
+.aa-tabela th button { display: inline; vertical-align: top; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; transition: color .15s; }
+.aa-tabela th button:hover, .aa-tabela th button:focus-visible { color: var(--text); outline: none; }
 .aa-tabela th button.on { color: var(--aa-ouro); }
-.aa-tabela td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: middle; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.aa-tabela th:has(> button.on) { background: color-mix(in srgb, var(--aa-ouro) 9%, var(--aa-cabeca)); box-shadow: inset 0 -2px 0 var(--aa-ouro); }
 .aa-tabela .num { text-align: right; }
 .aa-tabela tbody tr { cursor: pointer; }
-.aa-tabela tbody tr:hover td { background: var(--surface); }
+.aa-tabela tbody tr > td { transition: background-color .12s; }
+.aa-tabela tbody tr:not(.jc-detalhe):hover > td { background: var(--aa-hover); }
 .aa-tabela tbody tr:focus-visible { outline: 2px solid var(--aa-ouro); outline-offset: -2px; }
-.aa-ad { display: flex; align-items: center; gap: 10px; min-width: 260px; white-space: normal !important; }
-.aa-ad img, .aa-sem-img { width: 48px; height: 48px; flex: none; border-radius: 8px; object-fit: cover; background: var(--surface); }
-.aa-ad div { display: grid; gap: 2px; justify-items: start; min-width: 0; }
-.aa-ad b { font-size: 13.5px; line-height: 1.3; }
+/* 1ª coluna presa, com uma linha um pouco mais firme separando do resto */
+.aa-tabela tr > :first-child:not([colspan]) { position: sticky; left: 0; z-index: 1; background: var(--bg); border-right: 1px solid var(--border); }
+.aa-tabela thead tr > :first-child:not([colspan]) { z-index: 2; background: var(--aa-cabeca); }
+.aa-tabela tbody tr:not(.jc-detalhe):hover > td:first-child { background: var(--aa-hover); }
+/* o anúncio: miniatura à esquerda, nome em até 2 linhas, campanha numa linha só */
+.aa-tabela td.aa-ad { min-width: 270px; max-width: 330px; white-space: normal; }
+.aa-ad img, .aa-ad .aa-sem-img { display: block; float: left; width: 44px; height: 44px; margin: 1px 12px 0 0; border-radius: 9px; object-fit: cover; background: var(--surface); box-shadow: 0 0 0 1px var(--aa-linha); }
+.aa-ad div { display: grid; gap: 3px; justify-items: start; overflow: hidden; }
+.aa-ad b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13.5px; font-weight: 650; line-height: 1.3; }
+.aa-ad small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .aa-ad small, .aa-camp small, .aa-conj small { display: block; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
-.aa-camp td { background: color-mix(in srgb, var(--surface) 60%, transparent); }
+/* Campanhas e conjuntos: a campanha numa faixa, os conjuntos pendurados nela por um traço */
+.aa-camp td, .aa-tabela tr.aa-camp > td:first-child { background: color-mix(in srgb, var(--surface) 55%, var(--bg)); }
 .aa-camp td:first-child, .aa-conj td:first-child { white-space: normal; min-width: 240px; }
-.aa-conj td:first-child { padding-left: 28px; }
+.aa-conj td:first-child { padding-left: 36px; }
+.aa-conj td:first-child::before { content: ''; position: absolute; left: 19px; top: 0; height: 22px; width: 9px; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); border-bottom-left-radius: 5px; }
+.aa-conj:has(+ .aa-conj) td:first-child::after { content: ''; position: absolute; left: 19px; top: 22px; bottom: 0; border-left: 1px solid var(--border); }
+.aa-camp .aa-status, .aa-conj .aa-status { width: fit-content; }
 .aa-camp b, .aa-conj span { display: block; }
 .aa-status { display: inline-block; margin-top: 3px; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .aa-status.ok { background: color-mix(in srgb, var(--up) 16%, transparent); color: var(--up); }
@@ -200,7 +234,12 @@
 @media (max-width: 900px) { .aa-dupla, .aa-conectar { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 600px) {
   .aa-cartao { padding: 16px 14px 18px; }
-  .aa-tabela { margin: 0 -14px; padding: 0 14px; }
+  /* no celular a coluna presa encolhe para sobrar espaço para os números */
+  .aa-tabela th, .aa-tabela td { padding: 10px 11px; }
+  .aa-tabela td.aa-ad { min-width: 168px; max-width: 190px; }
+  .aa-ad img, .aa-ad .aa-sem-img { width: 34px; height: 34px; margin-right: 9px; border-radius: 8px; }
+  .aa-ad b { font-size: 12.5px; }
+  .aa-camp td:first-child, .aa-conj td:first-child { min-width: 170px; }
   .aa-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .aa-kpis b { font-size: 18px; }
   .aa-kpis.mini { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -301,8 +340,12 @@
 .aa-colunas label { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
 .aa-colunas label input { accent-color: var(--aa-ouro); width: 16px; height: 16px; }
 .aa-colunas button { justify-self: start; }
-.aa-tabela td.aa-ordem { color: var(--aa-ouro); font-weight: 700; }
-.aa-tabela tfoot td { padding: 10px; font-weight: 800; border-top: 2px solid var(--border); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.aa-tabela td.aa-ordem { color: var(--aa-ouro); font-weight: 700; background: color-mix(in srgb, var(--aa-ouro) 5%, transparent); }
+.aa-tabela tbody tr:hover > td.aa-ordem { background: color-mix(in srgb, var(--aa-ouro) 8%, var(--aa-hover)); }
+/* o total: faixa como o cabeçalho, separada da última linha */
+.aa-tabela tfoot td { padding-block: 13px; background: var(--aa-cabeca); border-top: 1px solid var(--border); border-bottom: 0; color: var(--text); font-weight: 750; }
+.aa-tabela tfoot tr > td:first-child { background: var(--aa-cabeca); }
+.aa-tabela tfoot td:first-child { font-size: 12px; letter-spacing: .02em; }
 
 .aa-horarios { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 24px; }
 .aa-horarios h4 { margin: 0 0 10px; font-size: 13px; }
