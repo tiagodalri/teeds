@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { RelatoriosPanel } from './RelatoriosPanel'
 import { BotaoSimular } from './SimuladorDeRelatorio'
+import { useMenuAdminOculto } from '../../core/menuDeAdmin'
 import type { RelatorioCompleto } from '../../core/teeds/relatorios'
 
 function exemplo(): RelatorioCompleto {
@@ -65,11 +66,12 @@ export default function LabRelatorios() {
   const cliente = new URLSearchParams(location.search).has('cliente')
   const [pedido, setPedido] = useState(0)
   const [ativo, setAtivo] = useState(false)
+  const adminOculto = useMenuAdminOculto()
   return (
     <div className="workspace-app" style={{ minHeight: '100vh', display: 'block', overflow: 'auto' }}>
       <header className="topbar">
         <div className="workspace-heading"><strong>Relatórios</strong><span>O seu resultado, com os números da corretora</span></div>
-        {!cliente && <BotaoSimular className="rsim-abrir-topo" ativo={ativo} aoAbrir={() => setPedido((x) => x + 1)} />}
+        {!cliente && !adminOculto && <BotaoSimular className="rsim-abrir-topo" ativo={ativo} aoAbrir={() => setPedido((x) => x + 1)} />}
         <div className="topbar-right" />
       </header>
       <RelatoriosPanel sessao={{ token: 'lab', usuario: { id: 'lab', email: 'ana@exemplo.com', nome: 'Ana' } } as never} socket={null}

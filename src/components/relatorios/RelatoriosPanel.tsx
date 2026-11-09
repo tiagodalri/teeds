@@ -20,6 +20,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import type { TeedsSocket } from '../../core/deriv/client'
 import { MARCA } from '../../marca'
+import { useMenuAdminOculto } from '../../core/menuDeAdmin'
 import { dinheiro, dinheiroComSinal, simboloMoeda } from '../../core/dinheiro'
 import { nomeDoSimbolo } from '../../core/deriv/simbolos'
 import { MASCARA, useValoresOcultos } from '../../core/privacidade'
@@ -96,6 +97,9 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
   // a simulação: só existe para quem pode simular (o cliente nunca chega aqui, nem com o aparelho mexido)
   const [cenario, setCenario] = useState<Cenario | null>(() => (simLigada() ? lerCenario(CHAVE_SIM) : null))
   const [editando, setEditando] = useState(false)
+  // olhinho dos itens de admin (09/11/2026, Tiago): com eles ocultos, o ícone e a tag "Relatório simulado" somem
+  // para a gravação parecer a tela do cliente; a simulação em si continua na tela
+  const adminOculto = useMenuAdminOculto()
   const sim = podeSimular ? cenario : null
   const opsSim = useMemo(() => (sim ? operacoesDoCenario(sim) : null), [sim])
   const inicial = useMemo(() => {
@@ -314,7 +318,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
   return (
     <div className={`rel ${carregando && rel ? 'lendo' : ''} ${sim ? 'rel-simulado' : ''}`}>
       {/* no celular o topo da plataforma não tem espaço: o botão do admin fica aqui (sem faixa desde 09/11/2026: só o ícone) */}
-      {podeSimular && <div className="rsim-linha-celular"><BotaoSimular ativo={!!sim} aoAbrir={() => setEditando(true)} /></div>}
+      {podeSimular && !adminOculto && <div className="rsim-linha-celular"><BotaoSimular ativo={!!sim} aoAbrir={() => setEditando(true)} /></div>}
       {/* ------------------------------------------------ barra de filtros */}
       <div className="rel-barra-filtros">
         <div className="rel-faixa">
@@ -371,7 +375,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
       {rel && !vazio && t && <>
         {/* ------------------------------------------------ o resultado */}
         <section className={`rel-heroi ${classe(t.resultado)}`}>
-          {sim && <span className="rsim-tag rsim-tag-canto"><i aria-hidden="true" />Relatório simulado</span>}
+          {sim && !adminOculto && <span className="rsim-tag rsim-tag-canto"><i aria-hidden="true" />Relatório simulado</span>}
           <div className="rel-heroi-topo">
             <div className="rel-heroi-txt">
               <span className="rel-rot">Resultado · {rotuloDoPeriodo.toLowerCase()} · conta {rotuloConta(demo).toLowerCase()}{nFiltros ? ` · ${nFiltros} ${nFiltros === 1 ? 'filtro' : 'filtros'}` : ''}</span>
@@ -520,7 +524,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
 
       {sim ? <p className="rel-fonte"><b>Relatório simulado.</b> Números preenchidos pela equipe da {MARCA.prosa} para as aulas, para mostrar cenários de gerenciamento. Não são operações reais, não foram gravados e não entram em nenhuma cobrança.</p> : <p className="rel-fonte">Números das operações feitas pela {MARCA.prosa}, como a corretora registrou cada contrato. Depósitos, saques e saldo vêm ao vivo da corretora. Valores em dólar. Resultados passados não garantem resultados futuros.</p>}
 
-      {editando && podeSimular && <EditorDoCenario inicial={cenario ?? lerCenario(CHAVE_SIM) ?? cenariosProntos()[0].cenario} aoMostrar={mostrarCenario} aoFechar={() => setEditando(false)} aoSair={sim ? sairDaSimulacao : undefined} />}
+      {editando && podeSimular && !adminOculto && <EditorDoCenario inicial={cenario ?? lerCenario(CHAVE_SIM) ?? cenariosProntos()[0].cenario} aoMostrar={mostrarCenario} aoFechar={() => setEditando(false)} aoSair={sim ? sairDaSimulacao : undefined} />}
       {painelAberto && rel && <PainelDeFiltros rel={rel} filtros={filtros} moeda={moeda} aoAplicar={(f) => { setFiltros(f); setPainelAberto(false) }} aoFechar={() => setPainelAberto(false)} />}
     </div>
   )

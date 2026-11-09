@@ -1352,8 +1352,8 @@ export default function App() {
           <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span className="js-subtitulo">Janela solta · arraste para onde quiser</span></div>
         ) : <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de operação manual' : tela === 'multiplicadores' ? 'Sem prazo: fecha quando quiser, e a perda para na entrada' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'relatorios' ? 'O seu resultado, com os números da corretora' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'divulgacao' ? 'Seus links para divulgar a plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : tela === 'aulas' ? 'O treinamento completo da plataforma' : tela === 'marketplace' ? 'Estratégias e pacotes para a sua conta' : tela === 'gerenciamento' ? 'Simule entradas, limites e objetivos' : 'Seu espaço de trabalho'}</span></div>}
 
-        {/* 06/11/2026: relatório simulado para as aulas, só administradores da marca */}
-        {!JANELA && tela === 'relatorios' && MARCA.relatorios && admin === true && (
+        {/* 06/11/2026: relatório simulado para as aulas, só administradores da marca; some com o olhinho dos itens de admin (09/11) */}
+        {!JANELA && tela === 'relatorios' && MARCA.relatorios && admin === true && !menuAdminOculto && (
           <Suspense fallback={null}><BotaoSimular className="rsim-abrir-topo" ativo={relatorioSimulado} aoAbrir={() => setPedidoSimulacao((x) => x + 1)} /></Suspense>
         )}
         <div className="topbar-right">
