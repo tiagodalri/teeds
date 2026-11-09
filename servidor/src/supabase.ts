@@ -1122,3 +1122,6 @@ export async function appDoParceiroDoCliente(userId: string, marca: string): Pro
   const p = await rest<any[]>(`/parceiros?marca=eq.${encodeURIComponent(marca)}&codigo=eq.${encodeURIComponent(codigo)}&ativo=eq.true&app_liberado=eq.true&select=deriv_app_id&limit=1`)
   return p?.[0]?.deriv_app_id ? String(p[0].deriv_app_id) : null
 }
+
+/** O acesso ao banco com a chave de serviço, para módulos que guardam as próprias tabelas (afiliados.ts). */
+export { rest as restDoBanco }

@@ -1,0 +1,63 @@
+/* Admin > Parceiros > Afiliado na Deriv (09/11/2026). Segue o desenho dos cartões de parceiro (admin-parceiros.css). */
+.afd { --afd-ouro: var(--gf-ouro, var(--primary)); display: grid; gap: 12px; min-width: 0; padding: 18px; border: 1px solid var(--border); border-radius: 16px; background: color-mix(in srgb, var(--surface) 60%, var(--bg)); }
+.afd-topo { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.afd-topo h3 { margin: 0 0 4px; font-size: 16px; }
+.afd-topo p { margin: 0; max-width: 640px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.afd-topo > button, .afd-acoes button, .afd-erro button { height: 32px; padding: 0 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--text); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.afd-topo > button:hover, .afd-acoes button:hover { border-color: var(--afd-ouro); }
+.afd button:disabled { opacity: .55; cursor: progress; }
+
+.afd-cartoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+/* o admin do parceiro vê um cartão só: não estica na tela inteira */
+.afd-cartoes:has(> :only-child) { grid-template-columns: minmax(0, 480px); }
+.afd-cartao { display: grid; align-content: start; gap: 12px; min-width: 0; padding: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.afd-cartao.direto { background: color-mix(in srgb, var(--surface) 70%, var(--bg)); }
+.afd-cartao > header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.afd-cartao > header b { font-size: 15px; }
+.afd-cartao > header span { display: inline-flex; align-items: center; gap: 6px; }
+.afd-codigo { padding: 2px 8px; border-radius: 99px; background: color-mix(in srgb, var(--afd-ouro) 16%, transparent); color: var(--afd-ouro); font: 700 12px var(--fonte-dados, ui-monospace, monospace); }
+.afd-selo { padding: 2px 8px; border-radius: 99px; font-size: 11px; font-style: normal; font-weight: 700; white-space: nowrap; }
+.afd-selo.ok { background: color-mix(in srgb, var(--up) 14%, transparent); color: var(--up); }
+.afd-selo.falta { background: color-mix(in srgb, var(--afd-ouro) 14%, transparent); color: var(--afd-ouro); }
+.afd-selo.erro { background: color-mix(in srgb, var(--down) 14%, transparent); color: var(--down); }
+
+.afd-comissao { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 6px 16px; }
+.afd-comissao > div { display: grid; gap: 2px; }
+.afd-comissao small { color: var(--muted); font-size: 11.5px; font-weight: 600; }
+.afd-comissao strong { font-size: 26px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--up); }
+.afd-comissao b { font: 700 15px var(--fonte-dados, ui-monospace, monospace); font-variant-numeric: tabular-nums; }
+.afd-funil { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.afd-funil > div { display: grid; gap: 2px; min-width: 0; padding: 8px 10px; }
+.afd-funil > div + div { border-left: 1px solid var(--border); }
+.afd-funil dt { overflow: hidden; color: var(--muted); font-size: 10.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.afd-funil dd { margin: 0; font: 800 16px var(--fonte-dados, ui-monospace, monospace); font-variant-numeric: tabular-nums; }
+
+.afd-barras { display: flex; align-items: flex-end; gap: 2px; height: 44px; padding: 0 2px; }
+.afd-barras i { flex: 1; min-width: 2px; border-radius: 2px 2px 0 0; background: color-mix(in srgb, var(--up) 70%, transparent); }
+.afd-barras i[data-zero] { background: var(--border); }
+
+.afd-cartao footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; }
+.afd-acoes { display: inline-flex; gap: 6px; }
+.afd-sub, .afd-aviso { margin: 0; font-size: 12.5px; line-height: 1.45; }
+.afd-sub { color: var(--muted); }
+.afd-aviso { padding: 8px 10px; border-radius: 9px; background: color-mix(in srgb, var(--afd-ouro) 10%, transparent); color: var(--text); }
+
+.afd-vazio { display: grid; gap: 10px; }
+.afd-vazio p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.afd-vazio p b { color: var(--text); }
+.afd-vazio .principal { justify-self: start; height: 38px; padding: 0 16px; border: 1px solid var(--afd-ouro); border-radius: 10px; background: var(--afd-ouro); color: #051528; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+
+.afd-erro { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--down) 12%, transparent); color: var(--down); font-size: 13px; font-weight: 600; line-height: 1.45; }
+.afd-carregando { padding: 18px; color: var(--muted); font-size: 13px; text-align: center; }
+.afd-nota { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+/* cartão estreito (4 por linha, ou celular): os números em 2 x 2, sem cortar o nome */
+.afd-cartao { container-type: inline-size; }
+@container (max-width: 330px) {
+  .afd-funil { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .afd-funil > div:nth-child(3) { border-left: 0; }
+  .afd-funil > div:nth-child(n + 3) { border-top: 1px solid var(--border); }
+}
+@media (max-width: 560px) {
+  .afd { padding: 14px; }
+}

@@ -36,6 +36,7 @@ import { anotarMarcaPedida, ligarCarteiro, tratarGanchoDeEmail } from './gancho-
 import { somenteDemoDoUsuario } from './supabase'
 import { ligarColetorDeExtrato } from './extrato'
 import { ligarSincronizadorDeComissoes } from './comissoes'
+import { coletarTudo, dataOuPadrao, desvincular, diaUtc, ligarColetorDeAfiliados, painelDeAfiliados, podeVincular, RecusaDeAfiliado, somarDiasA, vincular } from './afiliados'
 import { ligarFaxinaDoEspelho } from './espelho'
 import { aplicarNoBanco, assinaturaConfere, ehOSimulador, lerAviso, tokenDoGancho } from './kiwify'
 import { aplicarNoBanco as aplicarNoBancoCakto, contaDoAviso, lerAviso as lerAvisoCakto, produtoDaCaktoNoBanco, segredosDoGancho } from './cakto'
@@ -923,6 +924,40 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
         const limpo = (e: string) => (e.match(/<([^<>]+)>/)?.[1] || e).trim().toLowerCase().replace(/\+marca-[a-z]+@/, '@')
         return json(200, { ...lidos, emails: lidos.emails.filter((e) => e.destinatarios.some((d) => dele.has(limpo(d)))) })
       }
+      // ---- conta de afiliado da Deriv por parceiro (09/11/2026, afiliados.ts)
+      if (url.pathname.startsWith('/api/afiliados')) {
+        let marca: string
+        try { marca = marcaAdministrada(url.searchParams.get('marca') ?? (req.method === 'POST' ? corpo.marca : null), marcaDaOrigem.id) }
+        catch { return json(400, { erro: 'Plataforma inválida.' }) }
+        const papelAf = await papelDoAdmin(dono.id, marca)
+        if (!papelAf) return json(403, { erro: 'Somente administradores desta plataforma.' })
+        // a mesma regra das outras abas: o geral vê todos (e o Direto); o admin do parceiro, os dele
+        const codigosAf = papelAf.geral ? null : papelAf.ve
+        if (url.pathname === '/api/afiliados' && req.method === 'GET') {
+          res.setHeader('Cache-Control', 'no-store')
+          const ate = dataOuPadrao(url.searchParams.get('ate'), diaUtc())
+          const de = dataOuPadrao(url.searchParams.get('de'), somarDiasA(ate, -29))
+          if (de > ate || Date.parse(ate) - Date.parse(de) > 730 * 86_400_000) return json(400, { erro: 'Período inválido.' })
+          return json(200, { cartoes: await painelDeAfiliados(marca, codigosAf, de, ate, dono.id), geral: papelAf.geral, meuCodigo: papelAf.parceiro })
+        }
+        if (req.method !== 'POST') return json(405, { erro: 'Método não permitido.' })
+        const codigoAf = typeof corpo.parceiro === 'string' && /^[a-z0-9]{0,20}$/.test(corpo.parceiro) ? corpo.parceiro : null
+        if (url.pathname === '/api/afiliados/vincular') {
+          if (codigoAf === null || !podeVincular(papelAf, codigoAf)) return json(403, { erro: 'Você só pode ligar a conta de afiliado do seu próprio link.' })
+          try { return json(200, { ok: true, resumo: await vincular(marca, codigoAf, dono.id) }) }
+          catch (e) { return json(e instanceof RecusaDeAfiliado ? 400 : 500, { erro: (e as Error).message }) }
+        }
+        if (url.pathname === '/api/afiliados/desvincular') {
+          if (codigoAf === null || !podeVincular(papelAf, codigoAf)) return json(403, { erro: 'Você só pode desligar a conta de afiliado do seu próprio link.' })
+          await desvincular(marca, codigoAf)
+          return json(200, { ok: true })
+        }
+        if (url.pathname === '/api/afiliados/atualizar') {
+          const r = await coletarTudo(marca, codigosAf ?? undefined)
+          return json(200, { ok: true, ...r })
+        }
+        return json(404, { erro: 'Rota desconhecida.' })
+      }
       // ---- ligar
       if (url.pathname === '/api/catalogo-robos') {
         const marca = marcaDaOrigem.id
@@ -1314,6 +1349,12 @@ if (supabaseConfigurado() && process.env.EXTRATO_DESLIGADO !== '1') {
   console.log(`Extrato: depósitos e saques coletados a cada ${minutos} min`)
 } else {
   console.log('Extrato: coleta de depósitos e saques desligada')
+}
+
+// Números das contas de afiliado da Deriv de cada parceiro (09/11/2026): a cada 3 h.
+if (supabaseConfigurado() && process.env.AFILIADOS_DESLIGADO !== '1') {
+  ligarColetorDeAfiliados(3 * 60 * 60_000)
+  console.log('Afiliados: números da Deriv de cada parceiro a cada 3 h')
 }
 
 // Comissão calculada (3% do pagamento) e saldo de cada conta real, lidos da

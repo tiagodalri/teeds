@@ -3,6 +3,8 @@ import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA } from '../marca'
 import { relatorioDosParceiros, trocarParceiro, situacaoDoPixel, salvarChaveDoPixel, type LinhaDoParceiro, type SituacaoDoPixel } from '../core/teeds/parceiro'
 import { pixelDoParceiro } from '../core/teeds/pixelDoParceiro'
+import { AfiliadoDaDeriv } from './AfiliadoDaDeriv'
+import type { ApiDeAfiliados } from '../core/teeds/afiliados'
 import './admin-parceiros.css'
 
 /*
@@ -115,7 +117,7 @@ function PixelDaMeta({ sessao, marca, codigo, nome, api }: { sessao: SessaoTeeds
 }
 
 /** podeTrocar: só o admin geral muda um cliente de parceiro; o admin do parceiro com acesso total vê só a linha dele (05/11/2026). */
-export function AdminParceiros({ sessao, marca = MARCA.id, api = DO_BANCO, podeTrocar = true }: { sessao: SessaoTeeds; marca?: string; api?: ApiParceiros; podeTrocar?: boolean }) {
+export function AdminParceiros({ sessao, marca = MARCA.id, api = DO_BANCO, podeTrocar = true, afiliados }: { sessao: SessaoTeeds; marca?: string; api?: ApiParceiros; podeTrocar?: boolean; afiliados?: ApiDeAfiliados }) {
   const [periodo, setPeriodo] = useState<(typeof PERIODOS)[number]['id']>('tudo')
   const [linhas, setLinhas] = useState<LinhaDoParceiro[] | null>(null)
   const [erro, setErro] = useState<string | null>(null)
@@ -194,6 +196,8 @@ export function AdminParceiros({ sessao, marca = MARCA.id, api = DO_BANCO, podeT
           <p className="ap-nota">Markup = o das operações em conta real dos clientes de cada grupo, no período (I.A. e manuais). Demonstração fica fora. Cada cliente pertence a um grupo só: o do primeiro link que usou.</p>
 
           {parceiros.map((p) => <PixelDaMeta key={`pixel-${p.codigo}`} sessao={sessao} marca={marca} codigo={p.codigo} nome={p.nome} api={api} />)}
+
+          <AfiliadoDaDeriv sessao={sessao} marca={marca} de={PERIODOS.find((x) => x.id === periodo)!.de()} ate={iso(new Date())} api={afiliados} />
 
           {grupo && (
             <div className="ap-lista">
