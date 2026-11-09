@@ -29,6 +29,8 @@ import './admin-anuncios.css'
 import { AvisoDePagamento, CobrancaDaConta, DE_PAGAMENTO, useCobranca } from './Cobranca'
 import { Financeiro, ResumoFinanceiro } from './Financeiro'
 import { NumerosDoPeriodo } from './NumerosDoPeriodo'
+import { AvisoDoInterruptor, estaLigado, Interruptor, useLigaDesliga, type TipoDoItem } from './Interruptor'
+import { PublicoDosConjuntos } from './PublicoDosConjuntos'
 
 const brl = (v: number, casas = 2) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: casas, maximumFractionDigits: casas })
 const int = (v: number) => Math.round(v).toLocaleString('pt-BR')
@@ -273,13 +275,16 @@ function OrcamentoDoConjunto({ conjunto, campanha, anuncios, valorNovo, moeda, s
   Uma linha da tabela (05/11/2026, "lentidão"): só redesenha quando os números dela mudam. Antes, cada tecla na
   busca, cada abrir de painel e cada leitura do banco redesenhavam as 22 linhas com as 15 colunas.
 */
-const LinhaDoAnuncio = memo(function LinhaDoAnuncio({ l, colunas, ordemCol, conjunto, campanha, anuncios, valorNovo, moeda, abrir, salvar }: {
+const LinhaDoAnuncio = memo(function LinhaDoAnuncio({ l, colunas, ordemCol, conjunto, campanha, anuncios, valorNovo, moeda, abrir, salvar, ligado, mudando, alternar }: {
   l: Linha; colunas: string[]; ordemCol: string; conjunto: Conjunto | null; campanha: Campanha | null; anuncios: number; valorNovo?: number; moeda: string
   abrir: (a: Anuncio) => void; salvar: (conjuntoId: string, v: number) => Promise<void>
+  /** 09/11/2026: o Off/On do Gerenciador, aqui na frente da miniatura */
+  ligado: boolean; mudando?: boolean; alternar: (tipo: TipoDoItem, id: string, nome: string, ligar: boolean) => void
 }) {
   return (
     <tr onClick={() => abrir(l.a)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') abrir(l.a) }}>
       <td className="aa-ad">
+        <Interruptor ligado={ligado} indo={mudando} tipo="anuncio" nome={l.a.nome} aoMudar={(v) => alternar('anuncio', l.a.id, l.a.nome, v)} />
         {l.a.criativo.miniatura ? <img src={l.a.criativo.miniatura} alt="" loading="lazy" decoding="async" width={48} height={48} /> : <span className="aa-sem-img" />}
         <div><b>{l.a.nome}</b><small>{campanha?.nome ?? ''}</small><Status s={l.a.status} /></div>
       </td>
@@ -498,6 +503,16 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   // é do conjunto (os anúncios do mesmo conjunto dividem); o que acabou de ser salvo aparece na hora, antes da Meta reler
   const [orcNovo, setOrcNovo] = useState<Record<string, number>>({})
   useEffect(() => { setOrcNovo({}) }, [parceiro, meta])
+  // 09/11/2026: o Off/On do Gerenciador (anúncio, conjunto e campanha); depois de mudar, lê a Meta de novo sem o guardado
+  const liga = useLigaDesliga(apiEstudio, sessao, parceiro, () => void carregar(true, true))
+  const alternarItem = useCallback((tipo: TipoDoItem, id: string, nome: string, ligar: boolean) => { void liga.alternar(tipo, id, nome, ligar) }, [liga.alternar])
+  const conferirLiga = liga.conferir
+  useEffect(() => {
+    if (!painel) return
+    const m = new Map<string, boolean>()
+    for (const x of [...painel.campanhas, ...painel.conjuntos, ...painel.anuncios]) m.set(x.id, estaLigado(x.ligado, x.status))
+    conferirLiga(m)
+  }, [painel, conferirLiga])
   const qtdPorConjunto = useMemo(() => {
     const m = new Map<string, number>()
     for (const a of painel?.anuncios ?? []) m.set(a.conjuntoId, (m.get(a.conjuntoId) ?? 0) + 1)
@@ -886,11 +901,12 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
             {!filtradas.length ? <p className="aa-vazio">{!linhas.length ? 'Nenhum anúncio com entrega neste período.' : !linhasNaSituacao.length ? `Nenhum anúncio ${situacao === 'ativos' ? 'no ar' : regraDaSituacao.nome.toLowerCase()} neste período.` : 'Nenhum anúncio passa por esses filtros.'}</p> : (
               <div className="aa-tabela">
                 <table>
-                  <thead><tr><th>Anúncio</th><th className="num" title="O orçamento por dia do conjunto do anúncio, como no Gerenciador. O lápis muda na Meta.">Orçamento/dia</th>{colunas.map(cabecalho)}<th>Qualidade</th></tr></thead>
+                  <thead><tr><th><span className="aa-th-liga" title="Liga e desliga o anúncio na Meta, como o Off/On do Gerenciador">Off/On</span>Anúncio</th><th className="num" title="O orçamento por dia do conjunto do anúncio, como no Gerenciador. O lápis muda na Meta.">Orçamento/dia</th>{colunas.map(cabecalho)}<th>Qualidade</th></tr></thead>
                   <tbody>
                     {filtradas.map((l) => (
                       <LinhaDoAnuncio key={l.a.id} l={l} colunas={colunas} ordemCol={ordem.col} conjunto={conjuntoPorId.get(l.a.conjuntoId) ?? null} campanha={campanhaPorId.get(l.a.campanhaId) ?? null}
-                        anuncios={qtdPorConjunto.get(l.a.conjuntoId) ?? 1} valorNovo={orcNovo[l.a.conjuntoId]} moeda={painel?.conta.moeda ?? 'BRL'} abrir={abrirAnuncio} salvar={salvarOrcamento} />
+                        anuncios={qtdPorConjunto.get(l.a.conjuntoId) ?? 1} valorNovo={orcNovo[l.a.conjuntoId]} moeda={painel?.conta.moeda ?? 'BRL'} abrir={abrirAnuncio} salvar={salvarOrcamento}
+                        ligado={liga.ligadoDe(l.a.id, estaLigado(l.a.ligado, l.a.status))} mudando={liga.indo[l.a.id]} alternar={alternarItem} />
                     ))}
                   </tbody>
                   {somaFiltrada && (
@@ -916,7 +932,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
                   <thead><tr><th>Campanha / conjunto</th><th>Orçamento</th><th>Otimiza para</th><th className="num">Valor gasto</th><th className="num">Impressões</th><th className="num">CTR</th><th className="num">Resultados</th><th className="num">Custo por resultado</th></tr></thead>
                   <tbody>
                     {painel.campanhas.map((c) => (
-                      <FragmentoCampanha key={c.id} c={c} conjuntos={painel.conjuntos.filter((s) => s.campanhaId === c.id)} />
+                      <FragmentoCampanha key={c.id} c={c} conjuntos={painel.conjuntos.filter((s) => s.campanhaId === c.id)} ligadoDe={liga.ligadoDe} indo={liga.indo} alternar={alternarItem} />
                     ))}
                   </tbody>
                 </table>
@@ -932,8 +948,13 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
       ))}
 
       {aba === 'publico' && (!painel ? <p className="aa-vazio">{semChave ? 'O público aparece quando a conta for conectada.' : 'Carregando…'}</p> : (
+        <>
+        <PublicoDosConjuntos conjuntos={painel.conjuntos} campanhas={painel.campanhas} quebras={painel.quebras.porConjunto ?? []} contaId={painel.conta.id}
+          brl={(v) => brl(v)} int={int} nomeDaPosicao={(pl, po) => `${PLATAFORMA[pl] ?? pl} · ${POSICAO[po] ?? po.replace(/_/g, ' ')}`}
+          orcamento={(c) => <OrcamentoDoConjunto conjunto={c} campanha={campanhaPorId.get(c.campanhaId) ?? null} anuncios={qtdPorConjunto.get(c.id) ?? 1} valorNovo={orcNovo[c.id]} moeda={painel.conta.moeda} salvar={(v) => salvarOrcamento(c.id, v)} />}
+          ligadoDe={liga.ligadoDe} indo={liga.indo} alternar={alternarItem} />
         <section className="aa-cartao">
-          <header><div><span className="rot">Quem viu os anúncios</span><h3>Público e posicionamentos</h3></div></header>
+          <header><div><span className="rot">Todos os conjuntos juntos</span><h3>A conta inteira</h3></div></header>
           <div className="aa-quebras">
             <Barras titulo="Idade e gênero" linhas={painel.quebras.idadeGenero} nome={(q) => `${q.age} · ${q.gender === 'male' ? 'Homens' : q.gender === 'female' ? 'Mulheres' : 'Outros'}`} />
             <Barras titulo="Onde apareceu" linhas={painel.quebras.posicionamento} nome={(q) => `${PLATAFORMA[String(q.publisher_platform)] ?? q.publisher_platform} · ${POSICAO[String(q.platform_position)] ?? String(q.platform_position).replace(/_/g, ' ')}`} />
@@ -941,6 +962,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
             <Barras titulo="Estados" linhas={painel.quebras.regiao} nome={(q) => String(q.region)} />
           </div>
         </section>
+        </>
       ))}
 
       {aba === 'rastreio' && (
@@ -984,25 +1006,29 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
       {painel?.avisos.length ? <p className="aa-nota">Algumas partes não vieram da Meta agora: {painel.avisos.join(' · ')}</p> : null}
       {painel && <p className="aa-nota">Números da Meta de {hora(painel.em)}{painel.doCache ? ' (guardados há menos de 5 minutos)' : ''}. A Meta pode levar até algumas horas para fechar os números do dia.</p>}
 
+      <AvisoDoInterruptor aviso={liga.aviso} fechar={liga.fecharAviso} />
       {relatorio && <Relatorio fechar={() => setRelatorio(false)} periodo={nomeDoPeriodo} total={total} banco={etapasDoBanco} linhas={filtradas} colunas={colunas} lista={listaDeAlertas} comecou={comecou} origem={origem} />}
       {aberto && painel && <AnuncioAberto a={aberto} fechar={() => setAberto(null)} sessao={sessao} api={api} parceiro={parceiro} de={de} ate={ate} nosso={nossoPorAnuncio.get(aberto.id)} campanha={campanhaDe(aberto.campanhaId)} conjunto={painel.conjuntos.find((s) => s.id === aberto.conjuntoId)?.nome ?? ''} />}
     </div>
   )
 }
 
-function FragmentoCampanha({ c, conjuntos }: { c: PainelDaMeta['campanhas'][number]; conjuntos: PainelDaMeta['conjuntos'] }) {
+function FragmentoCampanha({ c, conjuntos, ligadoDe, indo, alternar }: { c: PainelDaMeta['campanhas'][number]; conjuntos: PainelDaMeta['conjuntos']
+  ligadoDe: (id: string, daMeta: boolean) => boolean; indo: Record<string, boolean>; alternar: (tipo: TipoDoItem, id: string, nome: string, ligar: boolean) => void }) {
   const orc = (d: number, t: number) => (d ? `${brl(d, 0)}/dia` : t ? `${brl(t, 0)} no total` : 'No conjunto')
   return (
     <>
       <tr className="aa-camp">
-        <td><b>{c.nome}</b><small>{OBJETIVO[c.objetivo] ?? c.objetivo}</small><Status s={c.status} /></td>
+        <td><div className="aa-com-liga"><Interruptor ligado={ligadoDe(c.id, estaLigado(c.ligado, c.status))} indo={indo[c.id]} tipo="campanha" nome={c.nome} aoMudar={(v) => alternar('campanha', c.id, c.nome, v)} />
+          <div><b>{c.nome}</b><small>{OBJETIVO[c.objetivo] ?? c.objetivo}</small><Status s={c.status} /></div></div></td>
         <td>{orc(c.orcDia, c.orcTotal)}</td><td>—</td>
         <td className="num"><b>{brl(c.m.gasto)}</b></td><td className="num">{int(c.m.impressoes)}</td><td className="num">{pc(c.m.ctrLink)}</td>
         <td className="num">{int(c.m.cadastros)}</td><td className="num">{custo(c.m.gasto, c.m.cadastros)}</td>
       </tr>
       {conjuntos.map((s) => (
         <tr key={s.id} className="aa-conj">
-          <td><span>{s.nome}</span>{s.publico && <small>{s.publico}</small>}<Status s={s.status} /></td>
+          <td><div className="aa-com-liga"><Interruptor ligado={ligadoDe(s.id, estaLigado(s.ligado, s.status))} indo={indo[s.id]} tipo="conjunto" nome={s.nome} aoMudar={(v) => alternar('conjunto', s.id, s.nome, v)} />
+            <div><span>{s.nome}</span>{s.publico && <small>{s.publico}</small>}<Status s={s.status} /></div></div></td>
           <td>{s.orcDia || s.orcTotal ? orc(s.orcDia, s.orcTotal) : '—'}</td><td>{OTIMIZA[s.otimizacao] ?? s.otimizacao}</td>
           <td className="num">{brl(s.m.gasto)}</td><td className="num">{int(s.m.impressoes)}</td><td className="num">{pc(s.m.ctrLink)}</td>
           <td className="num">{int(s.m.cadastros)}</td><td className="num">{custo(s.m.gasto, s.m.cadastros)}</td>

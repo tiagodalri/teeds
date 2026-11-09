@@ -1,0 +1,27 @@
+/* 09/11/2026: o liga/desliga dos itens da Meta (Interruptor.tsx), no desenho do Off/On do Gerenciador */
+.ip { position: relative; flex: none; width: 38px; height: 22px; padding: 0; border: 0; border-radius: 99px; background: color-mix(in srgb, var(--muted) 38%, var(--bg)); cursor: pointer; transition: background-color .18s; vertical-align: middle; }
+.ip i { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .3); transition: transform .18s cubic-bezier(.3, .7, .4, 1); }
+.ip.on { background: var(--up); }
+.ip.on i { transform: translateX(16px); }
+.ip:hover:not(:disabled) { filter: brightness(1.08); }
+.ip:focus-visible { outline: 2px solid var(--aa-ouro, #b8913a); outline-offset: 2px; }
+.ip.indo { cursor: progress; opacity: .75; }
+.ip.indo i::after { content: ''; position: absolute; inset: 3px; border: 2px solid color-mix(in srgb, var(--muted) 60%, transparent); border-top-color: transparent; border-radius: 50%; animation: ip-gira .7s linear infinite; }
+@keyframes ip-gira { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ip, .ip i { transition: none; } .ip.indo i::after { animation: none; } }
+
+/* o aviso com Desfazer */
+.ip-aviso { position: fixed; z-index: 80; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; max-width: min(620px, calc(100vw - 32px)); padding: 10px 10px 10px 16px; border-radius: 12px; background: #0e1626; color: #f2efe8; font-size: 13.5px; box-shadow: 0 16px 40px -10px rgb(0 0 0 / .45); animation: ip-sobe .2s ease-out; box-sizing: border-box; }
+.ip-aviso.erro { background: color-mix(in srgb, var(--down) 88%, #000); color: #fff; }
+.ip-aviso span { flex: 1; min-width: 0; line-height: 1.4; }
+.ip-aviso button { flex: none; height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: rgb(255 255 255 / .12); color: inherit; font: inherit; font-weight: 800; cursor: pointer; }
+.ip-aviso button:hover { background: rgb(255 255 255 / .2); }
+.ip-aviso .ip-fechar { width: 32px; padding: 0; font-size: 18px; font-weight: 400; background: none; }
+@keyframes ip-sobe { from { opacity: 0; transform: translate(-50%, 8px); } }
+
+/* onde o botão entra nas tabelas de Anúncios */
+.aa-ad > .ip { float: left; margin: 11px 10px 0 0; }
+.aa-th-liga { display: inline-block; width: 38px; margin-right: 10px; font-size: 9.5px; letter-spacing: .03em; }
+.aa-com-liga { display: flex; align-items: center; gap: 12px; }
+.aa-com-liga > div { display: grid; gap: 2px; justify-items: start; min-width: 0; }
+@media (max-width: 600px) { .aa-th-liga { display: none; } .aa-ad > .ip { margin: 6px 8px 0 0; } }

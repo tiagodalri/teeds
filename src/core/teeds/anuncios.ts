@@ -13,10 +13,23 @@ export interface Metricas {
   video3s: number; videoPlay: number; thruplay: number; p25: number; p50: number; p75: number; p95: number; p100: number
 }
 export type Ranking = '' | 'acima' | 'media' | 'abaixo10' | 'abaixo20' | 'abaixo35'
-export interface Campanha { id: string; nome: string; status: string; objetivo: string; orcDia: number; orcTotal: number; inicio: string | null; fim: string | null; lance: string | null; m: Metricas }
-export interface Conjunto { id: string; nome: string; status: string; campanhaId: string; orcDia: number; orcTotal: number; inicio?: string | null; fim?: string | null; otimizacao: string; publico: string; m: Metricas }
+export interface Campanha { id: string; nome: string; status: string; ligado?: boolean; objetivo: string; orcDia: number; orcTotal: number; inicio: string | null; fim: string | null; lance: string | null; m: Metricas }
+/**
+ * 09/11/2026: a segmentação do conjunto em partes (função meta-ads, alvo()). `advantage`: o público Advantage+
+ * ligado (idade sugerida, públicos e interesses viram sugestão; local, idade mínima e exclusões continuam valendo).
+ */
+export interface Alvo {
+  locais: string[]; tiposDeLocal: string[]; locaisFora: string[]; idade: [number, number]; sugestaoIdade: [number, number] | null
+  generos: 'todos' | 'homens' | 'mulheres'; advantage: boolean
+  incluidos: Array<{ id: string; nome: string }>; excluidos: Array<{ id: string; nome: string }>
+  interesses: Array<{ tipo: string; nome: string }>; exclusoes: Array<{ tipo: string; nome: string }>
+  plataformas: string[] | null; posicoes: string[]; aparelhos: string[]; sistemas: string[]; modelos: string[]; idiomas: number; soWifi: boolean
+}
+/** `ligado`: o botão do próprio item (status), que o Gerenciador mostra no Off/On; `status` é a entrega (effective_status). */
+export interface Conjunto { id: string; nome: string; status: string; ligado?: boolean; campanhaId: string; orcDia: number; orcTotal: number; inicio?: string | null; fim?: string | null; otimizacao: string; publico: string; alvo?: Alvo | null; m: Metricas }
+export interface QuebraDoConjunto { tipo: 'idade' | 'posicao'; conjunto: string; chave: string; gasto: number; impressoes: number; cliquesLink: number; cadastros: number }
 export interface Anuncio {
-  id: string; nome: string; status: string; campanhaId: string; conjuntoId: string; criadoEm: string
+  id: string; nome: string; status: string; ligado?: boolean; campanhaId: string; conjuntoId: string; criadoEm: string
   /** 08/11/2026: o começo do conjunto do anúncio (vem da lista de conjuntos), para a coluna Início */
   inicioConjunto?: string | null
   criativo: { miniatura: string | null; imagem: string | null; titulo: string; texto: string; tipo: 'video' | 'imagem' | 'carrossel'; cta: string; marcacoes: string | null }
@@ -30,7 +43,7 @@ export interface PainelDaMeta {
   total: Metricas
   porDia: Array<Metricas & { dia: string }>
   campanhas: Campanha[]; conjuntos: Conjunto[]; anuncios: Anuncio[]
-  quebras: { idadeGenero: Quebra[]; posicionamento: Quebra[]; aparelho: Quebra[]; regiao: Quebra[] }
+  quebras: { idadeGenero: Quebra[]; posicionamento: Quebra[]; aparelho: Quebra[]; regiao: Quebra[]; porConjunto?: QuebraDoConjunto[] }
   pixel: { id: string; eventos: Array<{ nome: string; total: number }>; porDia: Array<{ dia: string; ev: Record<string, number> }>; desde: string } | { id: string; erro: string }
   avisos: string[]; em: string; chaveEm?: string; doCache?: boolean
   /** Números trazidos pela ponte (a tarefa do Claude com a integração Meta Ads), sem chave própria. */

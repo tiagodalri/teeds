@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AdminAnuncios } from './AdminAnuncios'
-import type { ApiAnuncios, FunilDoBanco, Metricas, PainelDaMeta } from '../../core/teeds/anuncios'
+import type { Alvo, ApiAnuncios, FunilDoBanco, Metricas, PainelDaMeta } from '../../core/teeds/anuncios'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import type { ApiEstudio, ItemDoHistorico, PublicoSalvo, Rascunho } from '../../core/teeds/estudio'
 import type { PessoaDaJornada } from '../../core/teeds/central'
@@ -98,9 +98,16 @@ function painel(de: string, ate: string): PainelDaMeta {
     periodo: { de, ate }, total,
     porDia: dias.map((dia, i) => ({ dia, ...m(total.gasto * peso[i] / soma, Math.round(total.impressoes * peso[i] / soma), Math.round(total.cliquesLink * peso[i] / soma), Math.round(total.lpv * peso[i] / soma), Math.round(total.cadastros * peso[i] / soma)) })),
     campanhas: [{ id: 'c1', nome: 'GF | Live 09/11 | Cadastros', status: 'ACTIVE', objetivo: 'OUTCOME_LEADS', orcDia: 0, orcTotal: 0, inicio: '2026-11-02', fim: null, lance: 'LOWEST_COST_WITHOUT_CAP', m: total }],
-    conjuntos: [{ id: 's1', nome: 'Brasil · 25–55 · aberto', status: 'ACTIVE', campanhaId: 'c1', orcDia: 20, orcTotal: 0, otimizacao: 'OFFSITE_CONVERSIONS', publico: '25–55 anos · Brasil · público Advantage+', m: total },
+    conjuntos: [{ id: 's1', nome: 'Brasil · 25–55 · aberto', status: 'ACTIVE', ligado: true, campanhaId: 'c1', orcDia: 20, orcTotal: 0, otimizacao: 'OFFSITE_CONVERSIONS', publico: '25–55 anos · Brasil · público Advantage+', m: total,
+        alvo: alvoDoLab({ advantage: true, sugestaoIdade: [25, 55], incluidos: [{ id: 'a1', nome: 'GF | Alunos Naor (lista 30/10)' }, { id: 'a2', nome: 'GF | Semelhante 1% Alunos Naor' }], interesses: [{ tipo: 'interests', nome: 'Investimento' }, { tipo: 'interests', nome: 'Mercado de ações' }, { tipo: 'behaviors', nome: 'Usuários de iPhone' }] }) },
       // 05/11/2026: uma cópia de escala com orçamento total até a live (vira ≈ por dia na tela)
-      { id: 's2', nome: 'GF | ESCALA | NB1 | Amplo | Android', status: 'ACTIVE', campanhaId: 'c1', orcDia: 0, orcTotal: 333, inicio: '2026-11-05T07:00:00-0300', fim: '2026-11-09T20:00:00-0300', otimizacao: 'OFFSITE_CONVERSIONS', publico: 'Brasil · Android · público Advantage+', m: total }],
+      { id: 's2', nome: 'GF | ESCALA | NB1 | Amplo | Android', status: 'ACTIVE', ligado: true, campanhaId: 'c1', orcDia: 0, orcTotal: 333, inicio: '2026-11-05T07:00:00-0300', fim: '2026-11-09T20:00:00-0300', otimizacao: 'OFFSITE_CONVERSIONS', publico: 'Brasil · Android · público Advantage+', m: { ...total, gasto: total.gasto * .32, cadastros: Math.round(total.cadastros * .27) },
+        alvo: alvoDoLab({ advantage: true, sugestaoIdade: [40, 65], sistemas: ['Android'], aparelhos: ['mobile'] }) },
+      // 09/11/2026: um remarketing de público fechado (Advantage+ desligado) e um conjunto desligado, para a aba Público
+      { id: 's3', nome: 'GF | REMARKETING | Página do cadastro | NB1', status: 'ACTIVE', ligado: true, campanhaId: 'c1', orcDia: 25, orcTotal: 0, otimizacao: 'OFFSITE_CONVERSIONS', publico: 'Brasil · 1 público personalizado', m: { ...total, gasto: total.gasto * .08, cadastros: Math.round(total.cadastros * .05) },
+        alvo: alvoDoLab({ advantage: false, incluidos: [{ id: 'a3', nome: 'GF | Chegou no /n/cadastro 30d' }], plataformas: ['instagram'], posicoes: ['instagram:stream', 'instagram:story', 'instagram:reels'] }) },
+      { id: 's4', nome: 'GF | NB5 | Aberto 20+', status: 'PAUSED', ligado: false, campanhaId: 'c1', orcDia: 20, orcTotal: 0, otimizacao: 'OFFSITE_CONVERSIONS', publico: '20–65+ anos · Brasil · público Advantage+', m: { ...total, gasto: total.gasto * .1, cadastros: Math.round(total.cadastros * .03) },
+        alvo: alvoDoLab({ advantage: true, idade: [20, 65], generos: 'mulheres' }) }],
     anuncios: ads.map((a, i) => ({
       id: a.id, nome: a.nome, status: SITUACAO_DO_LAB[i] ?? 'ACTIVE', campanhaId: 'c1', conjuntoId: i === 3 ? 's2' : 's1', criadoEm: '2026-11-02T12:00:00Z',
       criativo: { miniatura: miniatura(['#B8862F', '#3a6fd8', '#7a4fd0', '#2F8F72', '#c0563f'][i % 5], ['V01', 'V02', 'IMG', 'V03', 'V04'][i % 5]), imagem: null, titulo: 'Live gratuita 09/11, às 20h', texto: 'A I.A. que opera com você. Inscreva-se e assista à live de lançamento da GlobalFly.', tipo: a.tipo, cta: 'SIGN_UP', marcacoes: i === 2 ? '' : 'utm_source=meta&utm_medium=pago&utm_content={{ad.id}}' },
@@ -110,6 +117,10 @@ function painel(de: string, ate: string): PainelDaMeta {
       idadeGenero: q([['25-34', 'male', .31], ['35-44', 'male', .24], ['25-34', 'female', .12], ['45-54', 'male', .14], ['35-44', 'female', .09], ['18-24', 'male', .06], ['45-54', 'female', .04]], ['age', 'gender']),
       posicionamento: q([['instagram', 'instagram_reels', .38], ['instagram', 'instagram_stories', .22], ['facebook', 'feed', .18], ['instagram', 'feed', .14], ['facebook', 'facebook_reels', .08]], ['publisher_platform', 'platform_position']),
       aparelho: q([['mobile_app', '', .9], ['mobile_web', '', .06], ['desktop', '', .04]], ['device_platform']),
+      porConjunto: ['s1', 's2', 's3', 's4'].flatMap((conjunto, k) => [
+        ...([['25-34|male', .3], ['35-44|male', .22], ['25-34|female', .14], ['45-54|male', .12], ['35-44|female', .1], ['18-24|male', .06]] as const).map(([chave, f], i) => ({ tipo: 'idade' as const, conjunto, chave, gasto: total.gasto * f * (k ? .3 : .6) * (1 + i * .05 * k), impressoes: 1000, cliquesLink: 40, cadastros: Math.round(total.cadastros * f * (k ? .25 : .55)) })),
+        ...([['instagram|instagram_reels', .4], ['instagram|instagram_stories', .25], ['facebook|feed', .2], ['instagram|feed', .15]] as const).map(([chave, f]) => ({ tipo: 'posicao' as const, conjunto, chave, gasto: total.gasto * f * (k ? .3 : .6), impressoes: 1000, cliquesLink: 40, cadastros: Math.round(total.cadastros * f * (k ? .25 : .55)) })),
+      ]),
       regiao: q([['São Paulo', '', .29], ['Minas Gerais', '', .12], ['Rio de Janeiro', '', .1], ['Paraná', '', .08], ['Bahia', '', .07], ['Rio Grande do Sul', '', .06], ['Goiás', '', .05], ['Santa Catarina', '', .04]], ['region']),
     },
     pixel: { id: '1625935188283999', desde: `${de}T03:00:00Z`, porDia: [], eventos: [
@@ -119,6 +130,13 @@ function painel(de: string, ate: string): PainelDaMeta {
     ] },
     avisos: [], em: new Date().toISOString(),
   }
+}
+
+/** 09/11/2026: a segmentação de um conjunto de mentira, com o padrão das campanhas do Naor. */
+function alvoDoLab(x: Partial<Alvo>): Alvo {
+  return { locais: ['Brasil'], tiposDeLocal: ['moram', 'estiveram recentemente', 'frequentam'], locaisFora: [], idade: [20, 65], sugestaoIdade: null, generos: 'todos', advantage: true,
+    incluidos: [], excluidos: [{ id: 'e1', nome: 'GF | Já cadastrados 180d (excluir)' }, { id: 'e2', nome: 'GF | Chegou no obrigado do /n 180d (excluir)' }],
+    interesses: [], exclusoes: [], plataformas: null, posicoes: [], aparelhos: [], sistemas: [], modelos: [], idiomas: 0, soWifi: false, ...x }
 }
 
 let vivos = 0

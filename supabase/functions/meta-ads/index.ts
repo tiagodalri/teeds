@@ -153,6 +153,45 @@ function publico(t: any): string {
   return partes.join(' · ')
 }
 
+// 09/11/2026 (Tiago: "quero mais controles do público, tá muito vago, raso"): a segmentação de cada conjunto
+// por inteiro, em partes, para a aba Público mostrar o que a Meta tem (não só a frase de resumo acima).
+const TIPO_DE_LOCAL: Record<string, string> = { home: 'moram', recent: 'estiveram recentemente', travel_in: 'estão viajando', frequently_in: 'frequentam' }
+function alvo(t: any) {
+  if (!t) return null
+  const g = t.geo_locations ?? {}
+  const pais = (c: string) => (c === 'BR' ? 'Brasil' : c)
+  const locais = [
+    ...(g.countries ?? []).map(pais),
+    ...(g.regions ?? []).map((r: any) => r.name),
+    ...(g.cities ?? []).map((c: any) => `${c.name}${c.region ? ` (${c.region})` : ''}${c.radius ? ` + ${c.radius} ${c.distance_unit === 'kilometer' ? 'km' : 'mi'}` : ''}`),
+    ...(g.zips ?? []).map((z: any) => `CEP ${z.name ?? z.key}`),
+    ...(g.custom_locations ?? []).map((c: any) => c.name ?? `${c.radius} km de um ponto`),
+  ]
+  const ex = t.excluded_geo_locations ?? {}
+  const nomes = (l: any[] | undefined) => (l ?? []).map((x: any) => (typeof x === 'string' ? x : String(x.name ?? x.id)))
+  const flex = (t.flexible_spec ?? []) as any[]
+  const interesses = flex.flatMap((f) => Object.entries(f).flatMap(([k, v]) => (Array.isArray(v) ? (v as any[]).map((x) => ({ tipo: k, nome: String(x.name ?? x.id) })) : [])))
+  const exclusoes = Object.entries(t.exclusions ?? {}).flatMap(([k, v]) => (Array.isArray(v) ? (v as any[]).map((x) => ({ tipo: k, nome: String(x.name ?? x.id) })) : []))
+  const posicoes = [
+    ...(t.facebook_positions ?? []).map((x: string) => `facebook:${x}`), ...(t.instagram_positions ?? []).map((x: string) => `instagram:${x}`),
+    ...(t.messenger_positions ?? []).map((x: string) => `messenger:${x}`), ...(t.audience_network_positions ?? []).map((x: string) => `audience_network:${x}`),
+  ]
+  return {
+    locais, tiposDeLocal: ((g.location_types ?? []) as string[]).map((x) => TIPO_DE_LOCAL[x] ?? x),
+    locaisFora: [...(ex.countries ?? []).map(pais), ...nomes(ex.regions), ...nomes(ex.cities)],
+    idade: [n(t.age_min) || 18, n(t.age_max) || 65] as [number, number],
+    sugestaoIdade: Array.isArray(t.age_range) && t.age_range.length === 2 ? [n(t.age_range[0]), n(t.age_range[1])] as [number, number] : null,
+    generos: Array.isArray(t.genders) && t.genders.length === 1 ? (t.genders[0] === 1 ? 'homens' : 'mulheres') : 'todos',
+    advantage: t.targeting_automation?.advantage_audience === 1,
+    incluidos: (t.custom_audiences ?? []).map((a: any) => ({ id: String(a.id), nome: String(a.name ?? a.id) })),
+    excluidos: (t.excluded_custom_audiences ?? []).map((a: any) => ({ id: String(a.id), nome: String(a.name ?? a.id) })),
+    interesses, exclusoes,
+    plataformas: (t.publisher_platforms ?? null) as string[] | null, posicoes,
+    aparelhos: (t.device_platforms ?? []) as string[], sistemas: (t.user_os ?? []) as string[],
+    modelos: nomes(t.user_device), idiomas: ((t.locales ?? []) as number[]).length, soWifi: (t.wireless_carrier ?? []).includes?.('Wifi') ?? false,
+  }
+}
+
 async function painel(chave: string, cfg: Conta, de: string, ate: string) {
   const act = `act_${cfg.conta}`
   const tr = JSON.stringify({ since: de, until: ate })
@@ -169,17 +208,17 @@ async function painel(chave: string, cfg: Conta, de: string, ate: string) {
   const inicioPixel = Math.max(Date.parse(`${de}T03:00:00Z`), Date.now() - 27 * 864e5)
   const fimPixel = Math.min(Date.parse(`${ate}T03:00:00Z`) + 864e5, Date.now())
 
-  const [conta, total, porDia, porCampanha, porConjunto, porAnuncio, campanhas, conjuntos, anuncios, idadeGenero, posicionamento, aparelho, regiao, pixel] = await Promise.all([
+  const [conta, total, porDia, porCampanha, porConjunto, porAnuncio, campanhas, conjuntos, anuncios, idadeGenero, posicionamento, aparelho, regiao, pixel, idadeConj, posConj] = await Promise.all([
     graph(chave, act, { fields: 'name,currency,account_status,amount_spent,balance,spend_cap,timezone_name,disable_reason' }, 1).then((l) => l[0]),
     ins({ level: 'account' }),
     talvez('Dia a dia', ins({ level: 'account', time_increment: '1' }), []),
     talvez('Campanhas', ins({ level: 'campaign', fields: `${CAMPOS},campaign_id` }), []),
     talvez('Conjuntos', ins({ level: 'adset', fields: `${CAMPOS},adset_id` }), []),
     talvez('Anúncios', ins({ level: 'ad', fields: `${CAMPOS},ad_id,quality_ranking,engagement_rate_ranking,conversion_rate_ranking` }), []),
-    talvez('Lista de campanhas', graph(chave, `${act}/campaigns`, { fields: 'id,name,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time,bid_strategy,created_time', limit: '200', filtering: JSON.stringify([{ field: 'name', operator: 'CONTAIN', value: PREFIXO }]) }, 3), []),
+    talvez('Lista de campanhas', graph(chave, `${act}/campaigns`, { fields: 'id,name,status,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time,bid_strategy,created_time', limit: '200', filtering: JSON.stringify([{ field: 'name', operator: 'CONTAIN', value: PREFIXO }]) }, 3), []),
     // só os da GF: a conta do Naor tem centenas de anúncios de outros produtos, e pedir todos estoura o limite da Meta
-    talvez('Lista de conjuntos', graph(chave, `${act}/adsets`, { fields: 'id,name,effective_status,campaign_id,daily_budget,lifetime_budget,optimization_goal,targeting,start_time,end_time', limit: '100', filtering: SO_GF }, 5), []),
-    talvez('Lista de anúncios', graph(chave, `${act}/ads`, { fields: 'id,name,effective_status,adset_id,campaign_id,created_time,creative{id,thumbnail_url,image_url,title,body,object_type,call_to_action_type,video_id,url_tags}', thumbnail_width: '320', thumbnail_height: '320', limit: '50', filtering: SO_GF }, 8), []),
+    talvez('Lista de conjuntos', graph(chave, `${act}/adsets`, { fields: 'id,name,status,effective_status,campaign_id,daily_budget,lifetime_budget,optimization_goal,targeting,start_time,end_time', limit: '100', filtering: SO_GF }, 5), []),
+    talvez('Lista de anúncios', graph(chave, `${act}/ads`, { fields: 'id,name,status,effective_status,adset_id,campaign_id,created_time,creative{id,thumbnail_url,image_url,title,body,object_type,call_to_action_type,video_id,url_tags}', thumbnail_width: '320', thumbnail_height: '320', limit: '50', filtering: SO_GF }, 8), []),
     talvez('Idade e gênero', ins({ level: 'account', breakdowns: 'age,gender' }), []),
     talvez('Posicionamentos', ins({ level: 'account', breakdowns: 'publisher_platform,platform_position' }), []),
     talvez('Aparelhos', ins({ level: 'account', breakdowns: 'device_platform' }), []),
@@ -188,6 +227,9 @@ async function painel(chave: string, cfg: Conta, de: string, ate: string) {
       ? graph(chave, `${cfg.pixel}/stats`, { aggregation: 'event', start_time: String(Math.floor(inicioPixel / 1000)), end_time: String(Math.floor(fimPixel / 1000)) }, 20)
         .then((l) => ({ ok: true as const, l })).catch((e) => ({ ok: false as const, erro: (e as Error).message }))
       : Promise.resolve({ ok: true as const, l: [] as any[] }),
+    // 09/11/2026: quem viu e quem se cadastrou em cada conjunto (a aba Público abre conjunto por conjunto)
+    talvez('Idade e gênero por conjunto', ins({ level: 'adset', fields: 'adset_id,spend,impressions,inline_link_clicks,actions', breakdowns: 'age,gender' }), []),
+    talvez('Posicionamentos por conjunto', ins({ level: 'adset', fields: 'adset_id,spend,impressions,inline_link_clicks,actions', breakdowns: 'publisher_platform,platform_position' }), []),
   ])
 
   const gf = new Set(campanhas.map((c: any) => c.id))
@@ -218,17 +260,17 @@ async function painel(chave: string, cfg: Conta, de: string, ate: string) {
     total: total[0] ? limpar(metricas(total[0])) : vazio,
     porDia: porDia.map((r: any) => ({ dia: r.date_start, ...limpar(metricas(r)) })),
     campanhas: campanhas.map((c: any) => ({ c, m: mCamp.get(c.id) })).filter(({ c, m }) => doPeriodo(m, c.effective_status, c.created_time)).map(({ c, m }) => ({
-      id: c.id, nome: c.name, status: c.effective_status, objetivo: c.objective, orcDia: n(c.daily_budget) / 100, orcTotal: n(c.lifetime_budget) / 100,
+      id: c.id, nome: c.name, status: c.effective_status, ligado: c.status === 'ACTIVE', objetivo: c.objective, orcDia: n(c.daily_budget) / 100, orcTotal: n(c.lifetime_budget) / 100,
       inicio: c.start_time ?? null, fim: c.stop_time ?? null, lance: c.bid_strategy ?? null, m: m ? limpar(m) : vazio,
     })),
     conjuntos: conjuntosGf.map((c: any) => ({ c, m: mConj.get(c.id) })).filter(({ c, m }) => doPeriodo(m, c.effective_status, c.start_time)).map(({ c, m }) => ({
-      id: c.id, nome: c.name, status: c.effective_status, campanhaId: c.campaign_id, orcDia: n(c.daily_budget) / 100, orcTotal: n(c.lifetime_budget) / 100,
+      id: c.id, nome: c.name, status: c.effective_status, ligado: c.status === 'ACTIVE', campanhaId: c.campaign_id, orcDia: n(c.daily_budget) / 100, orcTotal: n(c.lifetime_budget) / 100,
       // 05/11/2026: o começo e o fim, para o orçamento total virar "por dia" na tela (as cópias de escala)
       inicio: c.start_time ?? null, fim: c.end_time ?? null,
-      otimizacao: c.optimization_goal ?? '', publico: publico(c.targeting), m: m ? limpar(m) : vazio,
+      otimizacao: c.optimization_goal ?? '', publico: publico(c.targeting), alvo: alvo(c.targeting), m: m ? limpar(m) : vazio,
     })),
     anuncios: anunciosGf.map((a: any) => ({ a, m: mAd.get(a.id) })).filter(({ a, m }) => doPeriodo(m, a.effective_status, a.created_time)).map(({ a, m }) => ({
-      id: a.id, nome: a.name, status: a.effective_status, campanhaId: a.campaign_id, conjuntoId: a.adset_id, criadoEm: a.created_time,
+      id: a.id, nome: a.name, status: a.effective_status, ligado: a.status === 'ACTIVE', campanhaId: a.campaign_id, conjuntoId: a.adset_id, criadoEm: a.created_time,
       criativo: { miniatura: a.creative?.thumbnail_url ?? null, imagem: a.creative?.image_url ?? null, titulo: a.creative?.title ?? '', texto: a.creative?.body ?? '',
                   tipo: a.creative?.video_id ? 'video' : a.creative?.object_type === 'SHARE' && !a.creative?.image_url ? 'carrossel' : 'imagem', cta: a.creative?.call_to_action_type ?? '',
                   marcacoes: a.creative?.url_tags ?? '' },
@@ -239,6 +281,11 @@ async function painel(chave: string, cfg: Conta, de: string, ate: string) {
       posicionamento: quebra(posicionamento, ['publisher_platform', 'platform_position']),
       aparelho: quebra(aparelho, ['device_platform']),
       regiao: quebra(regiao, ['region']),
+      // só o que a tela usa por conjunto, para a resposta não crescer demais
+      porConjunto: [...(idadeConj as any[]).map((r) => ({ tipo: 'idade', conjunto: String(r.adset_id), chave: `${r.age}|${r.gender}`, r })),
+        ...(posConj as any[]).map((r) => ({ tipo: 'posicao', conjunto: String(r.adset_id), chave: `${r.publisher_platform}|${r.platform_position}`, r }))]
+        .map(({ tipo, conjunto, chave, r }) => { const m = metricas(r); return { tipo, conjunto, chave, gasto: m.gasto, impressoes: m.impressoes, cliquesLink: m.cliquesLink, cadastros: m.cadastros } })
+        .filter((x) => x.gasto > 0 || x.cadastros > 0),
     },
     pixel: pixel.ok
       ? { id: cfg.pixel, eventos: [...eventos].map(([nome, total]) => ({ nome, total })).sort((a, b) => b.total - a.total),
