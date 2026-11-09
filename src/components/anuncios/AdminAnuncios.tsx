@@ -623,6 +623,24 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
   const financeiroComProblema = !!cobrancaLida && (DE_PAGAMENTO.has(cobrancaLida.conta.status) || cobrancaLida.conta.status === 2
     || cobrancaLida.eventos.slice(0, iCobrada < 0 ? undefined : iCobrada).some((e) => e.tipo === 'recusada'))
 
+  /*
+    09/11/2026 (Tiago: "quando eu troco aquele filtro, todos do /n ou só os de anúncio, não muda nada, os números
+    continuam iguais"): o filtro ficava no topo, colado nos números da Meta (que são sempre só de anúncio e não mudam).
+    Ele age na jornada depois do cadastro: agora aparece só onde age (Visão geral, Pessoas, Custos), com o que muda.
+  */
+  const seletorDeOrigem = (
+    <div className="aa-origem">
+      <div>
+        <b>Quem entra na jornada</b>
+        <small>{origem === 'anuncios' ? 'Só quem chegou pelos anúncios: o cadastro é o da Meta e o resto é de quem a plataforma acompanha.' : `Todos os cadastros do /${parceiro}, de qualquer origem (anúncio, Instagram, link direto…).`}</small>
+      </div>
+      <div className="aa-troca" role="group" aria-label="De onde vieram os cadastros">
+        <button type="button" className={origem === 'anuncios' ? 'on' : ''} onClick={() => setOrigem('anuncios')}>Só os de anúncio</button>
+        <button type="button" className={origem === 'todos' ? 'on' : ''} onClick={() => setOrigem('todos')}>Todos do /{parceiro}</button>
+      </div>
+    </div>
+  )
+
   return (
     <div className="aa">
       <div className="aa-topo">
@@ -648,7 +666,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
 
       {painel && <AvisoDePagamento status={painel.conta.status} link={`https://business.facebook.com/billing_hub/accounts/details?asset_id=${painel.conta.id}`} nomeParceiro={nomeParceiro} />}
 
-      {/* os dois filtros que valem para a página inteira */}
+      {/* o período vale para a página inteira; o filtro de origem foi para onde ele age (09/11/2026, abaixo) */}
       <div className="aa-filtro-geral">
         <div className="aa-campo">
           <small>Período</small>
@@ -663,13 +681,6 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
               <label>Até <input type="date" value={escolha.ate} min={escolha.de} max={iso(new Date())} onChange={(e) => e.target.value && setEscolha((x) => ({ ...x, ate: e.target.value }))} /></label>
             </div>
           )}
-        </div>
-        <div className="aa-campo">
-          <small>Cadastros que entram na conta</small>
-          <div className="aa-troca" role="group" aria-label="De onde vieram os cadastros">
-            <button type="button" className={origem === 'todos' ? 'on' : ''} onClick={() => setOrigem('todos')}>Todos do /{parceiro}</button>
-            <button type="button" className={origem === 'anuncios' ? 'on' : ''} onClick={() => setOrigem('anuncios')}>Só os de anúncio</button>
-          </div>
         </div>
       </div>
 
@@ -776,6 +787,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
           {/* 04/11/2026: a leitura da I.A. vem primeiro ("logo que a gente bate o olho") */}
           <AnaliseIA sessao={sessao} api={apiAnalise} parceiro={parceiro} de={de} ate={ate} nomeDoPeriodo={nomeDoPeriodo} contaNome={painel?.conta.nome || contaAtual?.contaNome || ''}
             totalDiaAtual={totalDiaDaConta} moeda={(v) => naMoedaDaConta(v, painel?.conta.moeda ?? 'BRL')} pronta={!!painel} recarregar={() => void carregar(true)} />
+          {seletorDeOrigem}
           <DoAnuncioAoDinheiro pessoas={jornada.pessoas} total={jornada.total} falha={jornada.falha} gasto={total?.gasto ?? 0} moeda={painel?.conta.moeda ?? 'BRL'} meta={total} anuncios={anunciosDoPainel}
             origem={origem} parceiro={parceiro} aPessoas={irParaPessoas} />
           {listaDeAlertas.length ? (
@@ -822,6 +834,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
             <button type="button" className={quemNasPessoas === 'cadastros' ? 'on' : ''} onClick={() => setQuemNasPessoas('cadastros')}>Cadastros e a jornada completa</button>
             <button type="button" className={quemNasPessoas === 'visitantes' ? 'on' : ''} onClick={() => setQuemNasPessoas('visitantes')}>Todos os visitantes</button>
           </div>
+          {quemNasPessoas === 'cadastros' && seletorDeOrigem}
           {quemNasPessoas === 'cadastros'
             ? <TabelaDaJornada pessoas={jornada.pessoas} falha={jornada.falha} filtroInicial={filtroPessoas} origem={origem} nomeDoAnuncio={nomeDoAnuncio} abrir={setFicha} />
             : <VisitantesDaCentral sessao={sessao} api={apiCentral} parceiro={parceiro} de={de} ate={ate} nomeDoAnuncio={nomeDoAnuncio} nomeDoLink={nomeDoLink} abrir={setFicha} />}
@@ -865,6 +878,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
           )}
           <section className="aa-cartao">
             <header><div><span className="rot">Comparado com {anteriorA(de, ate).de === anteriorA(de, ate).ate ? dataBr(anteriorA(de, ate).de) : `${dataBr(anteriorA(de, ate).de)} a ${dataBr(anteriorA(de, ate).ate)}`}</span><h3>Quanto custa cada passo</h3></div></header>
+            {seletorDeOrigem}
             <Custos atual={{ meta: total, banco: etapasDoBanco, comecou }} anterior={anterior} origem={origem} />
           </section>
         </>

@@ -52,7 +52,8 @@ export function NumerosDoPeriodo({ total, porDia, periodo, alertas, verAlertas, 
   return (
     <section className="np" aria-label="Números do período, como no Gerenciador">
       <header>
-        <span><b>Como no Gerenciador</b> · {periodo}</span>
+        {/* 09/11/2026: só anúncio, sempre (a Meta só conhece quem veio de anúncio); o filtro da jornada não mexe aqui */}
+        <span title="Números da Meta, iguais aos do Gerenciador: só quem veio dos anúncios. O filtro de origem da jornada não muda estes números."><b>Só anúncios · como no Gerenciador</b> · {periodo}</span>
         {alertas > 0 && <button type="button" onClick={verAlertas}><i aria-hidden="true" />{alertas === 1 ? '1 ponto pede atenção' : `${alertas} pontos pedem atenção`}</button>}
       </header>
       <div className="np-cartoes">
