@@ -13,7 +13,7 @@ import { pedirPreparo } from '../RobotsPanel'
 import { aulasVistas, MODULOS } from '../../core/teeds/aulas'
 import { useModulosEmUso } from '../../core/teeds/gradeAulas'
 import { SERVIDOR } from '../../core/teeds/config'
-import { capaDaAula } from '../capasAulas'
+import { capaDaAula, capaEspecial } from '../capasAulas'
 import { MARCA } from '../../marca'
 import { InicioPanel, type DadosDoInicio } from './InicioPanel'
 import { BarraDeStories } from '../stories/BarraDeStories'
@@ -221,7 +221,7 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
       if (i >= 0) {
         const n = modulos.indexOf(m) + 1, a = m.aulas[i]
         // capa: a enviada no painel, a do código, ou nenhuma (o cartão desenha uma na cor do módulo)
-        const capa = a.capa || (MODULOS.some((x) => x.aulas.some((y) => y.id === a.id)) ? capaDaAula(a.id) : '')
+        const capa = capaEspecial(a.id) || a.capa || (MODULOS.some((x) => x.aulas.some((y) => y.id === a.id)) ? capaDaAula(a.id) : '')
         return { modulo: `Módulo ${n} · ${m.titulo}`, titulo: a.titulo, capa, cor: m.cor, feitas: m.aulas.filter((x) => vistas.has(x.id)).length, total: m.aulas.length }
       }
     }

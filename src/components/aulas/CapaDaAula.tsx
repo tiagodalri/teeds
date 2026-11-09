@@ -1,7 +1,7 @@
 import type { ImgHTMLAttributes } from 'react'
 import { MODULOS, type Aula } from '../../core/teeds/aulas'
 import { MARCA } from '../../marca'
-import { capaDaAula } from '../capasAulas'
+import { capaDaAula, capaEspecial } from '../capasAulas'
 import { ResponsiveImage } from '../ResponsiveImage'
 import './capa-da-aula.css'
 
@@ -14,6 +14,9 @@ const COM_CAPA_NO_CODIGO = new Set(MODULOS.flatMap((m) => m.aulas.map((a) => a.i
  * número e o título, para uma aula nova nunca aparecer com imagem quebrada.
  */
 export function CapaDaAula({ aula, cor, numero, ...img }: { aula: Pick<Aula, 'id' | 'titulo' | 'capa'>; cor?: string; numero?: number } & Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'>) {
+  // a capa do parceiro da vitrine (GlobalFly: as do Naor no /n) vale por cima de todas
+  const especial = capaEspecial(aula.id)
+  if (especial) return <ResponsiveImage src={especial} alt={img.alt ?? ''} {...img} />
   if (aula.capa) return <ResponsiveImage src={aula.capa} alt={img.alt ?? ''} {...img} />
   if (COM_CAPA_NO_CODIGO.has(aula.id)) return <ResponsiveImage src={capaDaAula(aula.id)} alt={img.alt ?? ''} {...img} />
   return <CapaDesenhada titulo={aula.titulo} cor={cor} numero={numero} />
