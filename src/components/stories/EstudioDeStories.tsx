@@ -435,7 +435,8 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
  * eu não consigo dar zoom apenas ao arrastar o dedo pra cima ou pra baixo... também não consigo mãos livres"):
  *  - toque = foto; segurar = vídeo; segurando, arrastar para cima/baixo = zoom; arrastar até o cadeado = trava;
  *  - mãos livres (toque começa, toque para) e temporizador de 3 ou 10 s;
- *  - pinça com dois dedos = zoom; toque duplo = trocar frente/trás; lanterna quando o aparelho deixa.
+ *  - pinça com dois dedos = zoom; toque duplo = trocar frente/trás, também no meio da gravação (o vídeo
+ *    continua no mesmo arquivo e o som não para: só a imagem troca de lente); lanterna quando o aparelho deixa.
  * Zoom: o da própria lente (track zoom) quando o aparelho oferece; senão digital, e aí a gravação passa
  * por um canvas para o zoom entrar no vídeo também.
  */
@@ -459,6 +460,11 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
   const [contando, setContando] = useState<number | null>(null)
   const [lanterna, setLanterna] = useState(false)
   const [cap, setCap] = useState<CapacidadesDaCamera>({ zoom: null, lanterna: false })
+  const capRef = useRef(cap)
+  capRef.current = cap
+  // virando a câmera no meio da gravação: o canvas segura o último quadro até a outra lente responder
+  const virando = useRef(false)
+  const [girou, setGirou] = useState(0)
   const [zoom, setZoom] = useState(1)
   const [rotulo, setRotulo] = useState<string | null>(null)
   const zoomRef = useRef(1)
@@ -475,13 +481,48 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
 
   useEffect(() => {
     let vivo = true
+    const restr: MediaTrackConstraints = { facingMode: frente ? 'user' : 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } }
+    // a permissão pode ficar pendurada (navegador embutido, aviso ignorado): em 5 s mostra as outras opções
+    const comPrazo = (c: MediaStreamConstraints) => Promise.race([navigator.mediaDevices.getUserMedia(c), new Promise<never>((_, falha) => window.setTimeout(() => falha(new Error('prazo')), 5000))])
+
+    // toque duplo no meio da gravação (09/11/2026, Tiago: "quando tiver gravando... clica 2x na tela e inverte
+    // da câmera frontal pra traseira"): troca só a imagem; o microfone e o gravador continuam os mesmos
+    if (gravador.current?.state === 'recording' && fluxo.current) {
+      const antigo = fluxo.current
+      const sons = antigo.getAudioTracks()
+      virando.current = true
+      // o iPhone só deixa uma câmera ligada por vez: desliga a imagem atual antes de pedir a outra
+      antigo.getVideoTracks().forEach((t) => t.stop())
+      const trocar = async () => {
+        let s: MediaStream | null = null
+        try { s = await comPrazo({ video: restr }) } catch { s = null }
+        if (!vivo) { s?.getTracks().forEach((t) => t.stop()); return }
+        if (!s) { virando.current = false; mostrarRotulo('Não deu para virar a câmera'); parar(); return }
+        const novo = new MediaStream([...s.getVideoTracks(), ...sons])
+        fluxo.current = novo
+        const trilha = s.getVideoTracks()[0]
+        const c = (trilha?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { zoom?: { min: number; max: number }; torch?: boolean }
+        const nativo = c.zoom && c.zoom.max > c.zoom.min ? { min: c.zoom.min, max: c.zoom.max } : null
+        setCap({ zoom: nativo, lanterna: !!c.torch })
+        zoomRef.current = nativo?.min ?? 1; setZoom(zoomRef.current); setLanterna(false)
+        const v = video.current
+        if (v) {
+          v.srcObject = novo
+          await v.play().catch(() => undefined)
+          // espera o primeiro quadro da outra lente (até 1,5 s) para o vídeo não pegar tela preta
+          const t0 = performance.now()
+          while (vivo && (!v.videoWidth || v.readyState < 2) && performance.now() - t0 < 1500) await new Promise((r) => window.setTimeout(r, 30))
+        }
+        virando.current = false
+      }
+      void trocar()
+      return () => { vivo = false }
+    }
+
     setEstado('abrindo')
     const abrir = async () => {
       fluxo.current?.getTracks().forEach((t) => t.stop())
       if (!navigator.mediaDevices?.getUserMedia) { setEstado('sem'); return }
-      const restr: MediaTrackConstraints = { facingMode: frente ? 'user' : 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } }
-      // a permissão pode ficar pendurada (navegador embutido, aviso ignorado): em 5 s mostra as outras opções
-      const comPrazo = (c: MediaStreamConstraints) => Promise.race([navigator.mediaDevices.getUserMedia(c), new Promise<never>((_, falha) => window.setTimeout(() => falha(new Error('prazo')), 5000))])
       let s: MediaStream | null = null
       let negada = false
       // áudio cru, como uma câmera (09/11/2026, Tiago: "o microfone está muito ruim... qualidade horrível"):
@@ -555,20 +596,29 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
     g.drawImage(v, (v.videoWidth - sw) / 2, (v.videoHeight - sh) / 2, sw, sh, 0, 0, c.width, c.height)
     c.toBlob((b) => { if (b) aoCapturar(b, 'foto.jpg') }, 'image/jpeg', 0.95)
   }
-  /** O vídeo passa por um canvas quando o zoom é digital (o zoom entra na gravação) ou a câmera é a da frente (sai sem espelho). */
+  /**
+   * O vídeo passa por um canvas: assim o zoom digital entra na gravação, a câmera da frente sai sem espelho
+   * e dá para trocar de lente no meio sem parar o gravador (o canvas segue o mesmo; só muda o que se desenha nele).
+   * Sem canvas no navegador, grava direto da câmera (aí o toque duplo não vira no meio).
+   */
   function fluxoParaGravar(): MediaStream | null {
     const s = fluxo.current, v = video.current
     if (!s || !v) return null
     const podeCanvas = typeof HTMLCanvasElement !== 'undefined' && 'captureStream' in HTMLCanvasElement.prototype
-    if (cap.zoom || !podeCanvas) return s
+    if (!podeCanvas || !v.videoWidth) return s
     const c = document.createElement('canvas')
     const escala = Math.min(1, 1920 / Math.max(v.videoWidth, v.videoHeight))
     c.width = Math.round(v.videoWidth * escala); c.height = Math.round(v.videoHeight * escala)
     const g = c.getContext('2d')!
     const quadro = () => {
-      const z = zoomRef.current
-      const sw = v.videoWidth / z, sh = v.videoHeight / z
-      g.drawImage(v, (v.videoWidth - sw) / 2, (v.videoHeight - sh) / 2, sw, sh, 0, 0, c.width, c.height)
+      // durante a troca de lente fica o último quadro (sem tela preta no vídeo)
+      if (!virando.current && v.videoWidth && v.readyState >= 2) {
+        // o zoom da própria lente já vem na imagem; o digital entra aqui. "Cobrir" o canvas, caso a outra lente tenha outra proporção
+        const z = capRef.current.zoom ? 1 : zoomRef.current
+        const k = Math.max(c.width / v.videoWidth, c.height / v.videoHeight) * z
+        const sw = c.width / k, sh = c.height / k
+        g.drawImage(v, (v.videoWidth - sw) / 2, (v.videoHeight - sh) / 2, sw, sh, 0, 0, c.width, c.height)
+      }
       if (desenho.current) desenho.current.raf = requestAnimationFrame(quadro)
     }
     desenho.current = { raf: requestAnimationFrame(quadro), canvas: c }
@@ -649,7 +699,7 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
     pinca.current = p
     if (p.ptrs.size === 1) {
       const agora = performance.now()
-      if (agora - ultimoToque.current < 300 && !gravando) { setFrente((f) => !f); ultimoToque.current = 0 } else ultimoToque.current = agora
+      if (agora - ultimoToque.current < 300) { virarCamera(); ultimoToque.current = 0 } else ultimoToque.current = agora
     }
   }
   function moverImagem(e: PE<HTMLDivElement>) {
@@ -665,6 +715,14 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
     if (!p.ptrs.size) pinca.current = null
   }
 
+  function virarCamera() {
+    if (estado !== 'pronta' || virando.current) return
+    // gravando direto da câmera (navegador sem canvas), trocar a lente cortaria o vídeo: não vira
+    if (gravando && !desenho.current) { mostrarRotulo('Pare a gravação para virar a câmera'); return }
+    setGirou((n) => n + 1)
+    setFrente((f) => !f)
+  }
+
   async function alternarLanterna() {
     const t = fluxo.current?.getVideoTracks()[0]
     const novo = !lanterna
@@ -677,7 +735,7 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
 
   return (
     <div className="est-cam" onPointerDown={tocarImagem} onPointerMove={moverImagem} onPointerUp={soltarImagem} onPointerCancel={soltarImagem}>
-      <video ref={video} className="est-cam-video" playsInline muted autoPlay style={{ transform: transformVideo }} />
+      <video ref={video} className={`est-cam-video ${girou ? `girou-${girou % 2}` : ''}`} playsInline muted autoPlay style={{ transform: transformVideo }} />
       {flash && <i className="est-flash" />}
       {contando !== null && <span className="est-contando" key={contando}>{contando}</span>}
       {(estado === 'sem' || estado === 'negada') && (
@@ -727,7 +785,7 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
           </button>
           {gravando && !travado && !maosLivres && <span className="est-cadeado" aria-hidden="true"><Ico d={I.cadeado} /></span>}
         </div>
-        <button type="button" className="est-bt grande" onClick={() => setFrente((f) => !f)} aria-label="Trocar câmera" disabled={estado !== 'pronta' || gravando} style={{ visibility: gravando ? 'hidden' : undefined }}><Ico d={I.virar} /></button>
+        <button type="button" className="est-bt grande" onClick={virarCamera} aria-label="Trocar câmera" disabled={estado !== 'pronta' || gravando} style={{ visibility: gravando ? 'hidden' : undefined }}><Ico d={I.virar} /></button>
       </div>
       {!gravando && (
         <div className="est-modos">

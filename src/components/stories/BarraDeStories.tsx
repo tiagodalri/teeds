@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import type { WorkspacePage } from '../WorkspaceNav'
 import type { PapelDoAdmin } from '../../core/teeds/parceiroEmFoco'
@@ -7,10 +8,12 @@ import { vitrine } from '../../core/teeds/parceiro'
 import { EVENTO_STORIES, linkDoStory, pedirAbaStories, storiesDoCliente, type PerfilDeStories, type Story } from '../../core/teeds/stories'
 import { Avatar, VisualizadorDeStories } from './VisualizadorDeStories'
 import { tentarDeNovo, useTrabalhos } from '../../core/teeds/publicacaoDeStories'
+import { useArrastarParaCamera } from './useArrastarParaCamera'
 import './stories.css'
 
 // o estúdio (câmera e editor) só baixa quando alguém da equipe toca em Publicar
-const EstudioDeStories = lazy(() => import('./EstudioDeStories').then((m) => ({ default: m.EstudioDeStories })))
+const carregarEstudio = () => import('./EstudioDeStories')
+const EstudioDeStories = lazy(() => carregarEstudio().then((m) => ({ default: m.EstudioDeStories })))
 
 /**
  * As bolinhas no topo da Início (08/11/2026). Anel com o degradê do Instagram
@@ -58,6 +61,8 @@ export function BarraDeStories({ sessao, aoIr, equipe, papel, aoVivo, exemplo }:
   const [ordem, setOrdem] = useState<string[]>([])
   const fila = useRef<HTMLDivElement | null>(null)
   const [bordas, setBordas] = useState({ esq: false, dir: false })
+  // arrastar da esquerda para a direita na Início abre a câmera (só admin: esta fileira só existe para admin)
+  const puxada = useArrastarParaCamera(!estudio && aberto === null, () => setEstudio(true), () => { void carregarEstudio() })
 
   const ler = useCallback(() => {
     if (exemplo) return
@@ -178,6 +183,11 @@ export function BarraDeStories({ sessao, aoIr, equipe, papel, aoVivo, exemplo }:
       {bordas.esq && <button type="button" className="sto-rolar esq" onClick={() => rolar(-1)} aria-label="Ver anteriores">‹</button>}
       {bordas.dir && <button type="button" className="sto-rolar dir" onClick={() => rolar(1)} aria-label="Ver mais">›</button>}
 
+      {typeof document !== 'undefined' && createPortal(
+        <div className="sto-puxa" ref={puxada} aria-hidden="true">
+          <span className="sto-puxa-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 100-8 4 4 0 000 8z" /></svg></span>
+          <b>Story</b>
+        </div>, document.body)}
       {estudio && <Suspense fallback={<div className="sto-v cel"><span className="sto-girando" /></div>}><EstudioDeStories sessao={sessao} papel={papel ?? null} aoFechar={() => setEstudio(false)} /></Suspense>}
       {aberto !== null && (
         <VisualizadorDeStories

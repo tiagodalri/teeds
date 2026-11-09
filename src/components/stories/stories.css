@@ -337,3 +337,19 @@ img.sto-midia.anda { animation: sto-ken linear forwards; }
 .com-teclado .sto-v .sto-ui.pe { padding-bottom: 10px; }
 .sto-v .sto-reacoes { bottom: calc(70px + var(--teclado, 0px) + env(safe-area-inset-bottom, 0px)); }
 .com-teclado .sto-v .sto-reacoes { bottom: calc(64px + var(--teclado, 0px)); }
+
+/* arrastar para a direita na Início: a câmera entra pela esquerda (só admin, só no toque) */
+.sto-puxa {
+  position: fixed; inset: 0; z-index: 2990; visibility: hidden; transform: translate3d(-100%, 0, 0);
+  background: radial-gradient(120% 70% at 100% 50%, #1E3D6E 0%, #051528 45%, #02070F 100%);
+  color: #F3F0E9; pointer-events: none; will-change: transform;
+  box-shadow: 8px 0 32px rgba(0, 0, 0, .35);
+}
+.sto-puxa-ico, .sto-puxa b { position: absolute; right: 22px; top: 50%; }
+.sto-puxa-ico {
+  width: 58px; height: 58px; margin-top: -40px; border-radius: 50%; display: grid; place-items: center;
+  border: 2px solid #B78D39; background: rgba(5, 21, 40, .7);
+  transform: scale(calc(.6 + var(--p, 0) * .4)); opacity: calc(.3 + var(--p, 0) * .7); transition: transform .08s linear;
+}
+.sto-puxa-ico svg { width: 26px; height: 26px; }
+.sto-puxa b { width: 58px; margin-top: 26px; text-align: center; font: 600 13px/1 'Arimo', Arial, sans-serif; letter-spacing: .04em; opacity: var(--p, 0); }

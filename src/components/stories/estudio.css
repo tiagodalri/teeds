@@ -274,3 +274,9 @@
 .est-sugere { position: absolute; left: 0; right: 0; bottom: calc(72px + var(--teclado, 0px) + env(safe-area-inset-bottom, 0px)); z-index: 4; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 6px 12px; }
 .com-teclado .est-sugere { bottom: calc(64px + var(--teclado, 0px)); }
 .est-sugere button { display: flex; align-items: center; gap: 8px; flex: none; border: 0; border-radius: 99px; background: rgba(20, 22, 28, .92); padding: 4px 14px 4px 4px; font-size: 14px; font-weight: 700; }
+
+/* toque duplo vira a câmera (também gravando): um piscar suave enquanto a outra lente acorda */
+.est-cam-video.girou-0 { animation: est-vira-a .45s ease-out; }
+.est-cam-video.girou-1 { animation: est-vira-b .45s ease-out; }
+@keyframes est-vira-a { 0% { filter: blur(14px) brightness(.55); } 100% { filter: none; } }
+@keyframes est-vira-b { 0% { filter: blur(14px) brightness(.55); } 100% { filter: none; } }
