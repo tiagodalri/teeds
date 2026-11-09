@@ -16,6 +16,9 @@ import { SERVIDOR } from '../../core/teeds/config'
 import { capaDaAula } from '../capasAulas'
 import { MARCA } from '../../marca'
 import { InicioPanel, type DadosDoInicio } from './InicioPanel'
+import { BarraDeStories } from '../stories/BarraDeStories'
+import { useMeuPapel } from '../../core/teeds/parceiroEmFoco'
+import { useMenuAdminOculto } from '../../core/menuDeAdmin'
 
 /**
  * A home com os dados de verdade (20/10/2026):
@@ -207,6 +210,9 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
   // a próxima aula: a primeira que ainda não foi assistida
   // 04/11/2026: os módulos da grade publicada no painel (ou os do código, enquanto não houver)
   const modulos = useModulosEmUso(sessao)
+  // a equipe vê a bolinha Publicar e para quem é cada story
+  const papel = useMeuPapel(MARCA.stories ? sessao : null, MARCA.id)
+  const menuAdminOculto = useMenuAdminOculto()
   const aula = useMemo(() => {
     const vistas = aulasVistas()
     for (const m of modulos) {
@@ -240,7 +246,12 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
   }
   return (
     <InicioPanel d={d} aoIr={aoIr} aoConectar={aoConectar} aoAbrirCarteira={aoAbrirCarteira} aoRecarregarMercado={() => setRodadaMercado((n) => n + 1)}
-      topo={(MARCA.notificacoes || MARCA.biometria) && sessao ? <ConvitesDoInicio sessao={sessao} aoAbrirPerfil={() => aoIr('perfil')} /> : null}
+      topo={<>
+        {/* 09/11/2026 (Tiago): por enquanto só os admins veem os Stories ("cliente ainda não, vamos testar um tempo"),
+            e somem junto com os outros itens de admin quando o olhinho do menu do avatar está ligado */}
+        {MARCA.stories && sessao && papel?.admin && !menuAdminOculto && <BarraDeStories sessao={sessao} aoIr={aoIr} equipe aoVivo={!!treino?.noAr} />}
+        {(MARCA.notificacoes || MARCA.biometria) && sessao ? <ConvitesDoInicio sessao={sessao} aoAbrirPerfil={() => aoIr('perfil')} /> : null}
+      </>}
       aoSalvarPlano={(meta, limite) => setPlano(planoSimples(meta, limite, sessao))}
       aoPrepararRobo={(id) => { pedirModeloDaVitrine(id); pedirPreparo(); aoIr('robos') }} />
   )

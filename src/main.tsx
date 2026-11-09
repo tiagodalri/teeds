@@ -89,9 +89,13 @@ if (JANELA) {
 // 04/11/2026: a prévia da sala de aula, aberta pelo painel num quadro (aulas/PreviaDasAulas.tsx)
 const PreviaDasAulas = new URLSearchParams(location.search).get('previa') === 'aulas' && window.parent !== window
   ? lazy(() => import('./components/aulas/PreviaDasAulas')) : null
+// 08/11/2026: o link de compartilhar um story (/n/s/<código> → 404.html → /?story=<código>), aberto sem login
+const StoryPublico = MARCA.stories && new URLSearchParams(location.search).has('story')
+  ? lazy(() => import('./components/stories/StoryPublico')) : null
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   PreviaDasAulas ? <Suspense fallback={null}><PreviaDasAulas /></Suspense> :
+  StoryPublico ? <Suspense fallback={null}><StoryPublico /></Suspense> :
   <React.StrictMode>
     <App />
     {RecursosDeApp && !JANELA && <Suspense fallback={null}><RecursosDeApp /></Suspense>}

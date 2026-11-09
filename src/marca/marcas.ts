@@ -184,6 +184,8 @@ export interface Marca {
   relatorios?: boolean
   /** Notificações no celular (Web Push) ligadas para esta plataforma (27/10/2026). */
   notificacoes?: boolean
+  /** Stories no topo da Início, publicados pela equipe (08/11/2026). */
+  stories?: boolean
   /** Entrar com Face ID / digital (chaves de acesso) nesta plataforma (27/10/2026). */
   biometria?: boolean
   /** O compartilhamento de receita sobre o lucro do mês (0.10 = 10%); aparece nos Relatórios. */
@@ -459,6 +461,7 @@ export const MARCAS: Record<string, Marca> = {
     termos: true,
     relatorios: true,
     notificacoes: true,
+    stories: true,
     biometria: true,
     compartilhamento: 0.10,
     menu: {

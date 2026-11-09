@@ -5,6 +5,8 @@ import { AccountSwitcher } from '../AccountSwitcher'
 import { UserMenu } from '../UserMenu'
 import { InicioPanel, type DadosDoInicio } from './InicioPanel'
 import { InicioPagina } from './InicioPagina'
+import { BarraDeStories } from '../stories/BarraDeStories'
+import { EXEMPLO_DE_STORIES } from '../stories/LabStories'
 import { TourGuiado, passosDoTour } from '../tour/TourGuiado'
 import { BarraInferior } from '../barra/BarraInferior'
 import { RelogioTopo } from '../RelogioTopo'
@@ -111,7 +113,9 @@ export default function LabInicio() {
       {/* &real=1: o componente de verdade (mercado ao vivo, aula seguinte, jornada), sem conta */}
       {q.has('real')
         ? <InicioPagina sessao={null} nome="Tiago Dal Ri" conta={{ conectada: false, demo: true, saldo: null, moeda: 'USD' }} treino={null} aoIr={nada} />
-        : <InicioPanel d={d} aoIr={nada} aoSalvarPlano={(meta, limite) => setPlano({ meta, limite })} aoPrepararRobo={nada} />}
+        : <InicioPanel d={d} aoIr={nada} aoSalvarPlano={(meta, limite) => setPlano({ meta, limite })} aoPrepararRobo={nada}
+            // &stories=1[&equipe=1][&aovivo=1]: as bolinhas dos Stories com dados de exemplo (08/11/2026)
+            topo={q.has('stories') ? <BarraDeStories sessao={{ token: 'lab', usuario: { id: 'lab' } } as never} aoIr={nada} exemplo={EXEMPLO_DE_STORIES} equipe={q.has('equipe')} aoVivo={q.has('aovivo')} /> : undefined} />}
       <BarraInferior tela="inicio" irPara={nada} />
       {/* &tour=1[&passo=N]: o tour guiado por cima da home (os passos de outras telas ficam no centro) */}
       {/* &trancado=antes|no-ar|depois|liberando[&aviso=0]: a plataforma do inscrito até a live; &live=1: a sala da live */}

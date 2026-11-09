@@ -89,6 +89,9 @@ const FUNDO_DA_MARCA: Record<string, string> = { teeds: '#090a0d', omni: '#08152
 const PALETAS: Record<string, Paleta> = {
   globalfly: {
     manter: ['#051528', '#B78D39', '#9CB1C7', '#F3F0E9', '#29445F',
+      // o degradê dos Stories (08/11/2026, Tiago: "use o degradê do Instagram mas com a id visual da GF"):
+      // champanhe → ouro → bronze → aço → azul-céu; o anel visto; o vermelho da bolinha Ao vivo; o Telegram
+      '#FBE6A6', '#F0C463', '#D6A042', '#8FA8C8', '#5E8FC8', '#3B6FB0', '#F7E3A1', '#EBC46B', '#C99A3E', '#7F9AB8', '#CFC8BA', '#2A3D55', '#FF8A3D', '#C8102E', '#2AABEE', '#0B0D12',
       // verde e vermelho vivos (21/10/2026, pedido do Tiago): escuro/painel azul, claro e velas
       '#22D66A', '#FF3B47', '#0B9E4A', '#DC1F2E', '#16C784', '#EA3943',
       // marinho profundo (21/10/2026, estilo banco privado): página, painel GF, cartões, bordas
@@ -415,7 +418,7 @@ export default defineConfig({
         // a primeira parte do caminho vira a tela pedida (?tela=), o app ignora o que não conhece.
         // 27/10/2026: com parceiros, /n/manual abre o Manual guardando o parceiro (parceiro_rota: sem contar clique).
         const parceirosDoSite = JSON.stringify((MARCA.parceiros ?? []).filter((c) => /^[a-z0-9]{1,20}$/.test(c)))
-        writeFileSync(join(SAIDA, '404.html'), `<!doctype html><meta charset="utf-8"><title>${NOME_CURTO[MARCA.id] ?? MARCA.nome}</title><script>(function(){var s=location.pathname.split('/').filter(Boolean);var P=${parceirosDoSite};var r=s.length&&P.indexOf(s[0])>=0?s.shift():'';var p=s[0]||'';var q=location.search?location.search.slice(1):'';var t=/^[a-z][a-z-]*$/.test(p)?'tela='+p:'';var x=r?'parceiro_rota='+r:'';var a=[t,q,x].filter(Boolean);location.replace('/'+(a.length?'?'+a.join('&'):'')+location.hash)})()</script>`)
+        writeFileSync(join(SAIDA, '404.html'), `<!doctype html><meta charset="utf-8"><title>${NOME_CURTO[MARCA.id] ?? MARCA.nome}</title><script>(function(){var s=location.pathname.split('/').filter(Boolean);var P=${parceirosDoSite};var r=s.length&&P.indexOf(s[0])>=0?s.shift():'';var p=s[0]||'';var q=location.search?location.search.slice(1):'';var t=p==='s'&&s[1]?'story='+encodeURIComponent(s[1]):/^[a-z][a-z-]*$/.test(p)?'tela='+p:'';var x=r?'parceiro_rota='+r:'';var a=[t,q,x].filter(Boolean);location.replace('/'+(a.length?'?'+a.join('&'):'')+location.hash)})()</script>`)
         // 02/11/2026: /n/inicio e /v/inicio de verdade (os e-mails do lançamento levam para lá):
         // abrem a tela de ENTRAR guardando o parceiro, com resposta 200 (o /n/ abre o cadastro)
         for (const codigo of MARCA.parceiros ?? []) {
