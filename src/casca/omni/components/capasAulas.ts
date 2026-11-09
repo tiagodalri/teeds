@@ -7,3 +7,6 @@ export const capaDaAula = (id: string): string =>
 
 /** Capa de uma aula só para a vitrine de um parceiro (só a GlobalFly usa). Aqui: nenhuma. */
 export const capaEspecial = (_id: string): string | null => null
+
+/** Arte dos Destaques só para a vitrine de um parceiro (só a GlobalFly usa). Aqui: nenhuma. */
+export const destaqueEspecial = (_id: string): string | null => null

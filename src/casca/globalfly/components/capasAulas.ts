@@ -25,3 +25,8 @@ const DO_NAOR = new Set([
 ])
 export const capaEspecial = (id: string): string | null =>
   vitrine() === 'n' && DO_NAOR.has(id) ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/${id}.jpg` : null
+
+/** As artes dos Destaques com o Naor (09/11/2026), mesma regra da vitrine /n. */
+const DESTAQUES_DO_NAOR = new Set(['ao-vivo', 'comunidade', 'conta', 'deposito', 'apostila'])
+export const destaqueEspecial = (id: string): string | null =>
+  vitrine() === 'n' && DESTAQUES_DO_NAOR.has(id) ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/destaque-${id}.webp` : null

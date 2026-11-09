@@ -176,3 +176,12 @@
 .aula-modal-topicos { margin: 4px 0 12px; padding-left: 18px; font-size: 13.5px; line-height: 1.6; opacity: .85; }
 .aula-modal-topicos li::marker { color: var(--aula); }
 .in-aula-capa-desenhada { position: relative; display: block; align-self: stretch; min-height: 120px; aspect-ratio: 2 / 3; overflow: hidden; border-radius: inherit; }
+
+/* 09/11/2026: capas do Naor (pôsteres com monograma e chamada no alto) em quadros mais largos que 2:3 */
+.ger.aulas .aulas-jornada-capa img[src*="/aulas-globalfly/naor/"] { object-position: 50% 7%; }
+/* a janela de detalhe é bem mais larga: mostra a chamada inteira; o monograma sai todo de cena, nunca pela metade */
+.aula-modal-capa img[src*="/aulas-globalfly/naor/"] { object-position: 50% 19%; }
+/* no celular a janela de detalhe é mais alta (220px): cabem o monograma e a chamada inteiros */
+@media (max-width: 640px) {
+  .aula-modal-capa img[src*="/aulas-globalfly/naor/"] { object-position: 50% 5%; }
+}

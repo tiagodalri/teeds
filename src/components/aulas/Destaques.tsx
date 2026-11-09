@@ -5,6 +5,7 @@ import { DerivLogo } from '../DerivMarca'
 import { Monograma } from '../marca/Monograma'
 import { MARCA } from '../../marca'
 import { DERIV } from '../../core/deriv/config'
+import { destaqueEspecial } from '../capasAulas'
 import './destaques.css'
 
 /**
@@ -82,7 +83,8 @@ export function bannersDaMarca({ treino, noAr }: { treino: boolean; noAr: boolea
     pontos: ['Passo a passo', 'Tudo num arquivo', 'Consulte quando quiser'],
     acao: 'Baixar a apostila', href: MARCA.apostila, imagem: `${BASE}aulas-globalfly/documentos.webp`,
   })
-  return l
+  // a arte do parceiro da vitrine (GlobalFly: as do Naor no /n), com o Naor no terço direito
+  return l.map((b) => { const arte = destaqueEspecial(b.id); return arte ? { ...b, imagem: arte, posicao: '62% center' } : b })
 }
 
 const Seta = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden="true"><path d={d} /></svg>
