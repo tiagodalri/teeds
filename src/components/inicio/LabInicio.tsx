@@ -6,7 +6,7 @@ import { UserMenu } from '../UserMenu'
 import { InicioPanel, type DadosDoInicio } from './InicioPanel'
 import { InicioPagina } from './InicioPagina'
 import { BarraDeStories } from '../stories/BarraDeStories'
-import { EXEMPLO_DE_STORIES } from '../stories/LabStories'
+import { EXEMPLO_DE_STORIES, ligarLab } from '../stories/LabStories'
 import { TourGuiado, passosDoTour } from '../tour/TourGuiado'
 import { BarraInferior } from '../barra/BarraInferior'
 import { RelogioTopo } from '../RelogioTopo'
@@ -88,6 +88,8 @@ export default function LabInicio() {
   const d: DadosDoInicio = { ...base, plano, ...(resultado !== null && base.hoje ? { hoje: { ...base.hoje, resultado: Number(resultado) } } : {}),
     ...(q.get('ia') === '0' ? { frota: NOVO.frota } : {}) }
   useEffect(() => { const t = q.get('tema'); if (t) document.documentElement.dataset.tema = t }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // &stories=1: o estúdio publica no banco de mentira (envio com progresso, salvar)
+  useState(() => { if (q.has('stories')) ligarLab() })
   const nada = () => undefined
   return (
     <div className="app workspace-app">

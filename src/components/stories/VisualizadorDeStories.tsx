@@ -6,6 +6,7 @@ import {
   type Enquadramento, type PerfilDeStories, type Story, type TipoDeEvento,
 } from '../../core/teeds/stories'
 import { CamadasDoStory } from './CamadasDoStory'
+import { useTecladoVirtual, useVoltarFecha } from '../../core/telaDeApp'
 import { carregarFontesDosStories, type Camada } from '../../core/teeds/camadas'
 import './stories.css'
 import './camadas.css'
@@ -130,6 +131,8 @@ export function VisualizadorDeStories(props: PropsDoVisualizador) {
     return () => mq.removeEventListener('change', ver)
   }, [])
 
+  useTecladoVirtual()
+  useVoltarFecha(aoFechar)
   // a página atrás não rola com o story aberto
   useEffect(() => {
     const antes = document.body.style.overflow

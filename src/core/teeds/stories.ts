@@ -243,7 +243,8 @@ export function enviarArquivo(sessao: SessaoTeeds, caminho: string, arquivo: Blo
     xhr.setRequestHeader('apikey', SUPABASE.anonKey)
     xhr.setRequestHeader('Authorization', `Bearer ${sessao.token}`)
     xhr.setRequestHeader('Content-Type', tipo)
-    xhr.setRequestHeader('x-upsert', 'true')
+    // sem x-upsert (09/11/2026): o "substituir" do Storage vira INSERT ... ON CONFLICT, que exige também a
+    // política de leitura do bucket, e o 1º envio do iPhone caiu nisso. Os nomes já são únicos.
     xhr.setRequestHeader('cache-control', 'max-age=31536000')
     xhr.upload.onprogress = (e) => { if (e.lengthComputable) aoProgredir?.(e.loaded / e.total) }
     xhr.onerror = () => rejeitar(new Error('A conexão caiu no meio do envio. Tente de novo.'))
@@ -254,6 +255,8 @@ export function enviarArquivo(sessao: SessaoTeeds, caminho: string, arquivo: Blo
       try { recado = JSON.parse(xhr.responseText)?.message || recado } catch { /* sem detalhe */ }
       if (xhr.status === 413) recado = 'O arquivo passou de 100 MB. Mande um vídeo mais curto.'
       if (xhr.status === 403) recado = 'Sem permissão para enviar: só a equipe da plataforma publica stories.'
+      if (/row-level security|security policy|Unauthorized/i.test(recado)) recado = 'O envio foi recusado pelo servidor. Tente de novo; se repetir, avise o suporte.'
+      if (xhr.status === 409) recado = 'Já existe um arquivo com esse nome. Tente de novo.'
       rejeitar(new Error(recado))
     }
     xhr.send(arquivo)
@@ -344,7 +347,9 @@ export async function prepararMidia(arquivo: File, aoProgredir?: (f: number) => 
     const cortado = total > LIMITE_SEGUNDOS + 0.5
     const conv = await mb.Conversion.init({
       input, output,
-      video: { width: par(lw * escala), height: par(la * escala), fit: 'fill', codec: 'avc', bitrate: mb.QUALITY_HIGH, frameRate: 30, forceTranscode: true },
+      // sem forçar: o vídeo da câmera do estúdio (H.264, até 1080p) só troca de caixa e sobe na hora;
+      // o 4K HEVC do iPhone é recodificado pelo hardware do próprio aparelho
+      video: { width: par(lw * escala), height: par(la * escala), fit: 'fill', codec: 'avc', bitrate: mb.QUALITY_HIGH, hardwareAcceleration: 'prefer-hardware' },
       audio: { codec: 'aac', bitrate: 128_000 },
       ...(cortado ? { trim: { start: 0, end: LIMITE_SEGUNDOS } } : {}),
     })

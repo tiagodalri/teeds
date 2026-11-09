@@ -206,3 +206,39 @@
   .est-pe { border-radius: 0 0 14px 14px; }
   .est-envio { top: 70px; }
 }
+
+/* ------------------------------------------------ câmera 2 (09/11/2026): zoom, mãos livres, temporizador, trava */
+.est-cam { touch-action: none; -webkit-touch-callout: none; }
+.est-cam-video { transform-origin: center; transition: transform .08s linear; }
+.est-trilho { position: absolute; left: max(10px, env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 14px; z-index: 3; }
+.est-trilho button { display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 0; text-align: left; }
+.est-trilho button > svg, .est-trilho button > .est-aa { width: 44px; height: 44px; padding: 10px; border-radius: 50%; background: rgba(0, 0, 0, .3); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-sizing: border-box; display: grid; place-items: center; flex: none; }
+.est-trilho button > .est-aa { font-size: 17px; }
+.est-trilho button span { font-size: 13px; font-weight: 700; text-shadow: 0 1px 4px rgba(0, 0, 0, .6); opacity: 0; transform: translateX(-6px); transition: opacity .2s, transform .2s; pointer-events: none; }
+.est-trilho:hover button span, .est-trilho button.on span { opacity: 1; transform: none; }
+.est-trilho button.on > svg { background: #fff; color: #051528; }
+.est-zoom { position: absolute; left: 50%; bottom: calc(176px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 3; font-family: var(--fonte-dados, monospace); font-size: 14px; font-weight: 800;
+  background: rgba(0, 0, 0, .45); border: 1px solid rgba(255, 255, 255, .25); padding: 6px 12px; border-radius: 99px; pointer-events: none; }
+.est-rotulo { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 4; background: rgba(0, 0, 0, .55); backdrop-filter: blur(8px); padding: 10px 16px; border-radius: 14px; font-size: 14px; font-weight: 700; text-align: center; max-width: 80vw; pointer-events: none; animation: est-abre .15s ease-out; }
+.est-contando { position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 4; font-size: 120px; font-weight: 800; text-shadow: 0 4px 30px rgba(0, 0, 0, .5); animation: est-conta 1s ease-out; pointer-events: none; }
+@keyframes est-conta { from { transform: translate(-50%, -50%) scale(1.6); opacity: 0; } 30% { opacity: 1; } }
+.est-disparo-caixa { position: relative; display: grid; place-items: center; }
+.est-cadeado { position: absolute; left: calc(100% + 18px); top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .2); animation: est-abre .2s ease-out; }
+.est-cadeado svg { width: 20px; height: 20px; }
+.est-disparo.livre i { background: #FF3B47; inset: 14px; }
+.est-disparo.travado i, .est-disparo.livre.gravando i { transform: scale(.42); border-radius: 22%; background: #FF3B47; }
+.est-bt.aceso { background: #fff; color: #051528; }
+.est-dica.fixa { animation: none; bottom: calc(176px + env(safe-area-inset-bottom, 0px)); }
+.est-cam .est-dica.fixa { bottom: calc(222px + env(safe-area-inset-bottom, 0px)); }
+
+/* ------------------------------------------------ PWA (09/11/2026): teclado, toque longo, som */
+.est, .sto-v { -webkit-touch-callout: none; overscroll-behavior: none; }
+.est img, .sto-v img { -webkit-user-drag: none; }
+.est-texto-pe { bottom: var(--teclado, 0px); transition: bottom .18s ease-out; }
+.com-teclado .est-texto-pe { padding-bottom: 10px; }
+.est-texto-caixa { top: min(42%, calc((100% - var(--teclado, 0px)) * .42)); transition: top .18s ease-out; }
+.est-cortina { padding-bottom: var(--teclado, 0px); transition: padding-bottom .18s ease-out; }
+.com-teclado .est-folha { max-height: calc(100% - var(--teclado, 0px) - 40px); }
+.com-teclado .est-folha-corpo { padding-bottom: 14px; }
+.est-pede-som { position: absolute; left: 50%; top: calc(118px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 6px; border: 0; border-radius: 99px; padding: 8px 14px; background: rgba(0, 0, 0, .55); backdrop-filter: blur(8px); color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.est-pede-som svg { width: 16px; height: 16px; }

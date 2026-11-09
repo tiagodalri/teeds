@@ -19,7 +19,7 @@
 .sto-faixa { position: relative; margin: 0 0 4px; min-width: 0; contain: inline-size; }
 .sto-fila {
   display: flex; gap: 14px; overflow-x: auto; overscroll-behavior-x: contain;
-  scrollbar-width: none; padding: 4px 2px 6px; scroll-snap-type: x proximity;
+  scrollbar-width: none; padding: 4px 2px 6px; scroll-snap-type: x proximity; overflow-anchor: none;
 }
 .sto-fila::-webkit-scrollbar { display: none; }
 .sto-bolha {
@@ -320,3 +320,20 @@ img.sto-midia.anda { animation: sto-ken linear forwards; }
 @media (prefers-reduced-motion: reduce) {
   .sto-v, .sto-palco .sto-card, img.sto-midia.anda, .sto-cta, .sto-voa, .sto-anel.girando::before, .sto-ao-vivo-ico i { animation: none !important; }
 }
+
+/* "Seu story" subindo em segundo plano (09/11/2026): o anel enche como no Instagram */
+.sto-anel.progresso { background: conic-gradient(#EBC46B var(--p), rgba(156, 177, 199, .35) 0); }
+.sto-bolha.erro .sto-anel.progresso { background: #FF3B47; }
+.sto-bolha.publicado .sto-anel.progresso { background: var(--sto-degrade); }
+.sto-bolha.enviando .sto-av { position: relative; }
+.sto-bolha.enviando .sto-av img { width: 100%; height: 100%; object-fit: cover; }
+.sto-bolha.preparando .sto-av, .sto-bolha.enviando:not(.publicado):not(.erro) .sto-av { animation: sto-pulsa 1.4s ease-in-out infinite; }
+.sto-ok { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-size: 26px; font-weight: 800; color: #fff; background: rgba(5, 21, 40, .45); }
+.sto-ok.erro { background: rgba(200, 16, 46, .55); }
+.sto-bolha.erro .sto-nome { color: #FF3B47; }
+
+/* o teclado do celular empurra a resposta para cima (09/11/2026) */
+.sto-v .sto-ui.pe { bottom: var(--teclado, 0px); transition: bottom .18s ease-out; }
+.com-teclado .sto-v .sto-ui.pe { padding-bottom: 10px; }
+.sto-v .sto-reacoes { bottom: calc(70px + var(--teclado, 0px) + env(safe-area-inset-bottom, 0px)); }
+.com-teclado .sto-v .sto-reacoes { bottom: calc(64px + var(--teclado, 0px)); }

@@ -6,6 +6,7 @@ import { DERIV } from '../../core/deriv/config'
 import { vitrine } from '../../core/teeds/parceiro'
 import { EVENTO_STORIES, linkDoStory, pedirAbaStories, storiesDoCliente, type PerfilDeStories, type Story } from '../../core/teeds/stories'
 import { Avatar, VisualizadorDeStories } from './VisualizadorDeStories'
+import { tentarDeNovo, useTrabalhos } from '../../core/teeds/publicacaoDeStories'
 import './stories.css'
 
 // o estúdio (câmera e editor) só baixa quando alguém da equipe toca em Publicar
@@ -47,6 +48,10 @@ function preCarregar(s: Story): Promise<void> {
 
 export function BarraDeStories({ sessao, aoIr, equipe, papel, aoVivo, exemplo }: Props) {
   const [estudio, setEstudio] = useState(false)
+  // os stories subindo em segundo plano (o estúdio já fechou): "Seu story" com o anel de progresso
+  const enviando = useTrabalhos().filter((t) => t.publicar)
+  // o "Seu story" aparece no começo da fileira, à vista
+  useEffect(() => { if (enviando.length) fila.current?.scrollTo({ left: 0, behavior: 'smooth' }) }, [enviando.length]) // eslint-disable-line react-hooks/exhaustive-deps
   const [perfis, setPerfis] = useState<PerfilDeStories[] | null>(exemplo ?? null)
   const [aberto, setAberto] = useState<number | null>(null)
   const [girando, setGirando] = useState<string | null>(null)
@@ -138,6 +143,21 @@ export function BarraDeStories({ sessao, aoIr, equipe, papel, aoVivo, exemplo }:
             <span className="sto-nome">Ao vivo</span>
           </button>
         )}
+        {enviando.map((t) => (
+          <button key={t.id} type="button" role="listitem" className={`sto-bolha enviando ${t.fase}`}
+            onClick={() => { if (t.fase === 'erro') tentarDeNovo(t.id) }}
+            aria-label={t.fase === 'erro' ? `O envio falhou: ${t.erro ?? ''}. Toque para tentar de novo` : t.fase === 'publicado' ? 'Story publicado' : `Enviando seu story, ${Math.round(t.total * 100)}%`}
+            title={t.fase === 'erro' ? t.erro ?? undefined : undefined}>
+            <span className="sto-anel progresso" style={{ ['--p' as string]: `${Math.round((t.fase === 'erro' ? 1 : t.total) * 360)}deg` }}>
+              <span className="sto-av" style={{ width: 58, height: 58 }}>
+                {t.miniatura ? <img src={t.miniatura} alt="" /> : <Avatar foto={t.perfil?.foto ?? null} nome={t.perfil?.nome ?? 'S'} tamanho={58} />}
+                {t.fase === 'publicado' && <i className="sto-ok">✓</i>}
+                {t.fase === 'erro' && <i className="sto-ok erro">↻</i>}
+              </span>
+            </span>
+            <span className="sto-nome">{t.fase === 'erro' ? 'Tentar de novo' : t.fase === 'publicado' ? 'Publicado' : 'Enviando…'}</span>
+          </button>
+        ))}
         {equipe && (
           <button type="button" role="listitem" className="sto-bolha publicar" onClick={() => setEstudio(true)} aria-label="Publicar um story">
             <span className="sto-anel novo"><span className="sto-mais" aria-hidden="true">+</span></span>

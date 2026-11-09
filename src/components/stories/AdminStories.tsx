@@ -96,7 +96,13 @@ export function AdminStories({ sessao, papel }: Props) {
       setLinhas(l); setPerfis(p); setErro(null)
     } catch (e) { setErro((e as Error).message); setLinhas((x) => x ?? []) }
   }, [sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { void ler(); const t = window.setInterval(() => void ler(), 60_000); return () => window.clearInterval(t) }, [ler])
+  useEffect(() => {
+    void ler()
+    const t = window.setInterval(() => void ler(), 60_000)
+    const mudou = () => void ler()
+    window.addEventListener(EVENTO_STORIES, mudou)
+    return () => { window.clearInterval(t); window.removeEventListener(EVENTO_STORIES, mudou) }
+  }, [ler])
 
   const contagem = useMemo(() => {
     const c: Record<string, number> = { 'no-ar': 0, agendado: 0, destaque: 0, encerrado: 0, todos: 0 }

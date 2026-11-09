@@ -123,7 +123,7 @@ function ligarBancoDeMentira() {
     if (!this._lab) return enviar.call(this, corpo)
     let p = 0
     const t = setInterval(() => {
-      p = Math.min(1, p + 0.12)
+      p = Math.min(1, p + 0.05)
       const prog = this.upload.onprogress as ((e: unknown) => void) | null
       prog?.({ lengthComputable: true, loaded: p, total: 1 })
       if (p >= 1) { clearInterval(t); Object.defineProperty(this, 'status', { value: 200 }); (this.onload as ((e: unknown) => void) | null)?.(new ProgressEvent('load')) }

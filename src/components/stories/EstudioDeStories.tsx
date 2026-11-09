@@ -8,11 +8,10 @@ import {
   ALTURA_DO_QUADRO, CORES, EMOJIS, FONTES, carregarFontesDosStories, contraste, nova, proximaLive, proximoEstilo, rotuloDasCamadas,
   type Camada, type FonteDoTexto, type FundoDoTexto, type Selo, type Traco,
 } from '../../core/teeds/camadas'
-import {
-  avisarNoCelular, BOTAO_PADRAO, enviarArquivo, enviarMidia, EVENTO_STORIES, perfisDoPainel, prepararMidia, salvarStory, LIMITE_SEGUNDOS,
-  type BotaoTipo, type Enquadramento, type MidiaPronta, type PerfilDoPainel, type Publico,
-} from '../../core/teeds/stories'
+import { BOTAO_PADRAO, perfisDoPainel, LIMITE_SEGUNDOS, type BotaoTipo, type Enquadramento, type PerfilDoPainel, type Publico } from '../../core/teeds/stories'
+import { descartar, iniciarFundo, iniciarMidia, publicar as publicarTrabalho, tentarDeNovo, useTrabalho } from '../../core/teeds/publicacaoDeStories'
 import { CamadasDoStory } from './CamadasDoStory'
+import { useTecladoVirtual, useVoltarFecha } from '../../core/telaDeApp'
 import { Avatar, estiloDaMidia } from './VisualizadorDeStories'
 import './stories.css'
 import './camadas.css'
@@ -45,7 +44,6 @@ interface Props {
 
 type Etapa = 'camera' | 'editar'
 interface Midia { tipo: 'video' | 'imagem' | 'fundo'; local: string; fundo?: number; arquivo?: File | Blob }
-interface Envio { fase: 'preparando' | 'enviando' | 'pronto' | 'erro'; f: number; pronto?: { url: string; caminho: string; capa: string | null }; erro?: string; duracao: number; tipo: 'video' | 'imagem' }
 
 /** Os fundos do modo Texto (a família da GlobalFly). */
 const FUNDOS = [
@@ -84,13 +82,14 @@ const I = {
   alinhar: { center: 'M4 6h16M7 12h10M4 18h16', left: 'M4 6h16M4 12h10M4 18h16', right: 'M4 6h16M10 12h10M4 18h16' } as Record<string, string>,
   pin: 'M12 22s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12z', link: 'M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1',
   relogio: 'M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 2', enquete: 'M5 20V10M12 20V4M19 20v-7', check: 'M5 12.5l4.2 4.2L19 7',
+  maos: 'M8 13V5.5a1.5 1.5 0 013 0V11M11 10.5V4a1.5 1.5 0 013 0v6.5M14 10.5V5.5a1.5 1.5 0 013 0V13M17 11.5a1.5 1.5 0 013 0V15a7 7 0 01-7 7h-1.5a6.5 6.5 0 01-5.6-3.2L4 14.5a1.5 1.5 0 012.6-1.5L8 15',
+  cadeado: 'M6 11h12v10H6zM8.5 11V8a3.5 3.5 0 017 0v3', raio: 'M13 2L4 14h7l-1 8 9-12h-7z',
 }
 
 /* ============================================================== o estúdio */
 export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeExemplo }: Props) {
   const [etapa, setEtapa] = useState<Etapa>(fotoDeExemplo ? 'editar' : 'camera')
   const [midia, setMidia] = useState<Midia | null>(fotoDeExemplo ? { tipo: 'imagem', local: fotoDeExemplo } : null)
-  const [envio, setEnvio] = useState<Envio | null>(null)
   const [camadas, setCamadas] = useState<Camada[]>([])
   const [enq, setEnq] = useState<Enquadramento>({ zoom: 1, x: 50, y: 50 })
   const [semSom, setSemSom] = useState(false)
@@ -114,10 +113,10 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
   const parceiros = useParceirosDaMarca(sessao, MARCA.id)
   const pleno = !!papel && (papel.geral || papel.total)
   const meuParceiro = papel && !papel.geral ? papel.parceiro : null
-  const cancelarEnvio = useRef<(() => void) | null>(null)
-  const publicarDepois = useRef(false)
 
   useEffect(() => { carregarFontesDosStories() }, [])
+  useTecladoVirtual()
+  useVoltarFecha(aoFechar)
   useEffect(() => {
     perfisDoPainel(sessao).then((l) => {
       const meus = l.filter((p) => !meuParceiro || !p.parceiro || p.parceiro === meuParceiro)
@@ -128,93 +127,75 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
   useEffect(() => {
     const antes = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = antes; cancelarEnvio.current?.() }
+    return () => { document.body.style.overflow = antes }
   }, [])
 
   const avisarRapido = useCallback((t: string) => { setRecado(t); window.setTimeout(() => setRecado((r) => (r === t ? null : r)), 2400) }, [])
 
-  /* ------------------------------------------------ mídia: preparar e subir já */
-  async function receber(arquivo: File | Blob, nome = 'story') {
+  /* ------------------------------------------------ mídia: preparar e subir já (em segundo plano) */
+  const [trabalhoId, setTrabalhoId] = useState<string | null>(null)
+  const trabalho = useTrabalho(trabalhoId)
+  const publicado = useRef(false)
+  // fechou sem publicar: o envio em andamento é descartado
+  useEffect(() => () => { if (!publicado.current && trabalhoRef.current) descartar(trabalhoRef.current) }, [])
+  const trabalhoRef = useRef<string | null>(null)
+  useEffect(() => { trabalhoRef.current = trabalhoId }, [trabalhoId])
+  useEffect(() => { if (trabalho?.aviso) avisarRapido(trabalho.aviso) }, [trabalho?.aviso]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function receber(arquivo: File | Blob, nome = 'story') {
     const f = arquivo instanceof File ? arquivo : new File([arquivo], nome, { type: arquivo.type })
     const ehFoto = f.type.startsWith('image/') || /\.(hei[cf]|jpe?g|png|webp)$/i.test(f.name)
-    const local = URL.createObjectURL(f)
-    setMidia({ tipo: ehFoto ? 'imagem' : 'video', local, arquivo: f })
+    if (trabalhoRef.current) descartar(trabalhoRef.current)
+    setMidia({ tipo: ehFoto ? 'imagem' : 'video', local: URL.createObjectURL(f), arquivo: f })
     setEnq({ zoom: 1, x: 50, y: 50 }); setCamadas([]); setSemSom(false)
     setEtapa('editar')
-    setEnvio({ fase: 'preparando', f: 0, duracao: 6, tipo: ehFoto ? 'imagem' : 'video' })
-    cancelarEnvio.current?.()
-    try {
-      const m: MidiaPronta = await prepararMidia(f, (p) => setEnvio((e) => (e && e.fase === 'preparando' ? { ...e, f: p } : e)))
-      if (m.cortado) avisarRapido(`Ficaram os primeiros ${LIMITE_SEGUNDOS} segundos do vídeo.`)
-      setEnvio({ fase: 'enviando', f: 0, duracao: m.duracao, tipo: m.tipo })
-      const e = enviarMidia(sessao, m, (p) => setEnvio((x) => (x && x.fase === 'enviando' ? { ...x, f: p } : x)))
-      cancelarEnvio.current = e.cancelar
-      const pronto = await e.promessa
-      setEnvio({ fase: 'pronto', f: 1, pronto, duracao: m.duracao, tipo: m.tipo })
-    } catch (err) {
-      setEnvio((x) => ({ fase: 'erro', f: 0, erro: (err as Error).message, duracao: x?.duracao ?? 6, tipo: x?.tipo ?? 'imagem' }))
-    }
+    setTrabalhoId(iniciarMidia(sessao, f, nome))
   }
   function modoTexto() {
+    if (trabalhoRef.current) descartar(trabalhoRef.current)
+    setTrabalhoId(null)
     setMidia({ tipo: 'fundo', local: '', fundo: 0 })
-    setEnvio(null); setCamadas([]); setEnq({ zoom: 1, x: 50, y: 50 })
+    setCamadas([]); setEnq({ zoom: 1, x: 50, y: 50 })
     setEtapa('editar')
     window.setTimeout(() => setEditandoTexto(nova.texto('', '#FFFFFF')), 60)
   }
 
   /** O fundo do modo Texto vira uma foto 1080 x 1920 na hora de publicar. */
-  async function fundoComoFoto(i: number): Promise<{ url: string; caminho: string; capa: string | null }> {
-    const c = document.createElement('canvas'); c.width = 1080; c.height = 1920
-    const g = c.getContext('2d')!
-    const [a, b] = PARES_DOS_FUNDOS[i] ?? PARES_DOS_FUNDOS[0]
-    const gr = g.createLinearGradient(0, 0, 1080, 1920); gr.addColorStop(0, a); gr.addColorStop(1, b)
-    g.fillStyle = gr; g.fillRect(0, 0, 1080, 1920)
-    const blob = await new Promise<Blob>((ok, falha) => c.toBlob((x) => (x ? ok(x) : falha(new Error('Não consegui montar o fundo.'))), 'image/jpeg', 0.9))
-    const caminho = `${MARCA.id}/${Date.now().toString(36)}-fundo.jpg`
-    const url = await enviarArquivo(sessao, caminho, blob, 'image/jpeg').promessa
-    return { url, caminho, capa: url }
+  function gerarFundo(i: number) {
+    return () => new Promise<Blob>((ok, falha) => {
+      const c = document.createElement('canvas'); c.width = 1080; c.height = 1920
+      const g = c.getContext('2d')!
+      const [a, b] = PARES_DOS_FUNDOS[i] ?? PARES_DOS_FUNDOS[0]
+      const gr = g.createLinearGradient(0, 0, 1080, 1920); gr.addColorStop(0, a); gr.addColorStop(1, b)
+      g.fillStyle = gr; g.fillRect(0, 0, 1080, 1920)
+      c.toBlob((x) => (x ? ok(x) : falha(new Error('Não consegui montar o fundo.'))), 'image/jpeg', 0.9)
+    })
   }
 
-  /* ------------------------------------------------ publicar */
+  /* ------------------------------------------------ publicar: o estúdio fecha na hora */
   const publico: Publico = paraQuem === 'admins' ? { so_admins: true }
     : subplanos.length || parcs.length || meuParceiro ? { subplanos, parceiros: meuParceiro ? [meuParceiro] : parcs } : { todos: true }
   const perfil = perfis.find((p) => p.id === perfilId)
 
-  async function publicar() {
+  function publicar() {
     if (publicando || !midia) return
     if (!perfilId) { avisarRapido('Escolha a bolinha do story.'); return }
-    if (midia.tipo !== 'fundo' && envio?.fase !== 'pronto') {
-      if (envio?.fase === 'erro') { avisarRapido(envio.erro ?? 'O envio falhou. Tente de novo.'); return }
-      publicarDepois.current = true; setPublicando(true); return
-    }
+    if (trabalho?.fase === 'erro') { tentarDeNovo(trabalho.id); avisarRapido('Tentando de novo…'); return }
+    const id = midia.tipo === 'fundo' ? iniciarFundo(sessao, gerarFundo(midia.fundo ?? 0)) : trabalhoId
+    if (!id) return
     setPublicando(true)
-    try {
-      const pronto = midia.tipo === 'fundo' ? await fundoComoFoto(midia.fundo ?? 0) : envio!.pronto!
-      const tipo = midia.tipo === 'fundo' ? 'imagem' : envio!.tipo
-      const salvo = await salvarStory(sessao, {
-        perfil_id: perfilId, tipo, midia_url: pronto.url, midia_caminho: pronto.caminho, capa_url: pronto.capa,
-        duracao: tipo === 'imagem' ? 6 : Math.max(1, Math.round((envio?.duracao ?? 6) * 10) / 10),
-        enquadramento: { ...enq, ...(semSom ? { mudo: true } : {}) }, camadas,
-        chip: '', titulo: '', subtitulo: '', botao_tipo: '', botao_texto: '', botao_destino: '', publico,
-        inicia_em: quando === 'agendar' ? new Date(inicio).toISOString() : null, expira_em: null, destaque: fixo, compartilhar, responder,
-      })
-      if (avisar && pleno && quando === 'agora' && paraQuem === 'todos') {
-        const parceiro = publico.parceiros?.length === 1 && publico.parceiros[0] !== 'direto' ? publico.parceiros[0] : null
-        await avisarNoCelular(sessao, salvo.id, `${perfil?.nome ?? MARCA.prosa} postou um story`, rotuloDasCamadas(camadas) ?? 'Toque para ver na Início.', parceiro).catch(() => undefined)
-      }
-      window.dispatchEvent(new Event(EVENTO_STORIES))
-      aoPublicado?.(salvo.id)
-      aoFechar()
-    } catch (e) {
-      setPublicando(false); publicarDepois.current = false
-      avisarRapido((e as Error).message)
-    }
+    const parceiro = publico.parceiros?.length === 1 && publico.parceiros[0] !== 'direto' ? publico.parceiros[0] : null
+    publicarTrabalho(id, {
+      perfil_id: perfilId, enquadramento: { ...enq, ...(semSom ? { mudo: true } : {}) }, camadas,
+      chip: '', titulo: '', subtitulo: '', botao_tipo: '', botao_texto: '', botao_destino: '', publico,
+      inicia_em: quando === 'agendar' ? new Date(inicio).toISOString() : null, expira_em: null, destaque: fixo, compartilhar, responder,
+    }, perfil ? { nome: perfil.nome, foto: perfil.foto_url } : null,
+    avisar && pleno && quando === 'agora' && paraQuem === 'todos'
+      ? { titulo: `${perfil?.nome ?? MARCA.prosa} postou um story`, corpo: rotuloDasCamadas(camadas) ?? 'Toque para ver na Início.', parceiro } : null)
+    publicado.current = true
+    aoPublicado?.(id)
+    aoFechar()
   }
-  // publicou antes do vídeo terminar de subir: sai sozinho quando ficar pronto
-  useEffect(() => {
-    if (publicarDepois.current && envio?.fase === 'pronto') { publicarDepois.current = false; setPublicando(false); void publicar() }
-    if (publicarDepois.current && envio?.fase === 'erro') { publicarDepois.current = false; setPublicando(false); avisarRapido(envio.erro ?? 'O envio falhou.') }
-  }, [envio?.fase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ------------------------------------------------ camadas */
   const atualizar = (id: string, patch: Partial<Camada>) => setCamadas((l) => l.map((c) => (c.id === id ? ({ ...c, ...patch } as Camada) : c)))
@@ -246,7 +227,7 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
 
   const conteudo = (
     <div className={`est ${etapa}`} role="dialog" aria-modal="true" aria-label="Criar story">
-      {etapa === 'camera' && <Camera aoCapturar={(b, n) => void receber(b, n)} aoTexto={modoTexto} aoFechar={aoFechar} />}
+      {etapa === 'camera' && <Camera aoCapturar={(b, n) => receber(b, n)} aoTexto={modoTexto} aoFechar={aoFechar} />}
 
       {etapa === 'editar' && midia && (
         <Editor
@@ -268,10 +249,10 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
               </div>
             </div>
           )}
-          {envio && envio.fase !== 'pronto' && !editandoTexto && (
-            <div className={`est-envio ${envio.fase}`}>
-              {envio.fase === 'erro' ? <>{envio.erro}<button type="button" onClick={() => midia.arquivo && void receber(midia.arquivo)}>Tentar de novo</button></>
-                : <><i style={{ ['--f' as string]: `${Math.round(envio.f * 100)}%` }} />{envio.fase === 'preparando' ? (envio.tipo === 'video' ? 'Preparando o vídeo em 1080p' : 'Preparando a foto') : 'Enviando'} · {Math.round(envio.f * 100)}%</>}
+          {trabalho && (trabalho.fase === 'preparando' || trabalho.fase === 'enviando' || trabalho.fase === 'erro') && !editandoTexto && (
+            <div className={`est-envio ${trabalho.fase}`}>
+              {trabalho.fase === 'erro' ? <>{trabalho.erro}<button type="button" onClick={() => tentarDeNovo(trabalho.id)}>Tentar de novo</button></>
+                : <><i style={{ ['--f' as string]: `${Math.round(trabalho.total * 100)}%` }} />{trabalho.fase === 'preparando' ? (trabalho.tipo === 'video' ? 'Preparando o vídeo' : 'Preparando a foto') : 'Subindo'} · {Math.round(trabalho.total * 100)}%</>}
             </div>
           )}
         </Editor>
@@ -300,12 +281,11 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
             <button type="button" className={paraQuem === 'admins' ? 'on' : ''} onClick={() => setParaQuem('admins')}>Só admins</button>
           </div>
           <button type="button" className="est-bt" onClick={() => setPainel('opcoes')} aria-label="Mais opções"><Ico d={I.engrenagem} /></button>
-          <button type="button" className={`est-enviar ${publicando ? 'indo' : ''}`} onClick={() => void publicar()} disabled={publicando} aria-label={quando === 'agendar' ? 'Agendar' : 'Publicar'}>
+          <button type="button" className={`est-enviar ${publicando ? 'indo' : ''}`} onClick={publicar} disabled={publicando} aria-label={quando === 'agendar' ? 'Agendar' : 'Publicar'}>
             {publicando ? <span className="est-gira" /> : <Ico d={I.seta} />}
           </button>
         </div>
       )}
-      {publicando && publicarDepois.current && <div className="est-recado">Publica assim que o vídeo terminar de subir…</div>}
 
       {/* painéis */}
       {painel === 'figurinhas' && (
@@ -368,8 +348,8 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
       {painel === 'sair' && (
         <Folha titulo="Descartar este story?" aoFechar={() => setPainel(null)}>
           <p className="est-nota">O que você fez até aqui será perdido.</p>
-          <button type="button" className="est-perigo" onClick={() => { cancelarEnvio.current?.(); aoFechar() }}>Descartar</button>
-          <button type="button" className="est-pronto claro" onClick={() => { setPainel(null); setEtapa('camera'); setMidia(null); setEnvio(null); setCamadas([]); cancelarEnvio.current?.() }}>Voltar para a câmera</button>
+          <button type="button" className="est-perigo" onClick={() => { if (trabalhoId) descartar(trabalhoId); aoFechar() }}>Descartar</button>
+          <button type="button" className="est-pronto claro" onClick={() => { setPainel(null); setEtapa('camera'); setMidia(null); if (trabalhoId) descartar(trabalhoId); setTrabalhoId(null); setCamadas([]) }}>Voltar para a câmera</button>
           <button type="button" className="est-pronto claro" onClick={() => setPainel(null)}>Continuar editando</button>
         </Folha>
       )}
@@ -380,20 +360,48 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
 }
 
 /* ============================================================== câmera */
+/*
+ * A câmera do estúdio, no jeito do Instagram (09/11/2026, Tiago: "quando eu seguro a bolinha pra gravar
+ * eu não consigo dar zoom apenas ao arrastar o dedo pra cima ou pra baixo... também não consigo mãos livres"):
+ *  - toque = foto; segurar = vídeo; segurando, arrastar para cima/baixo = zoom; arrastar até o cadeado = trava;
+ *  - mãos livres (toque começa, toque para) e temporizador de 3 ou 10 s;
+ *  - pinça com dois dedos = zoom; toque duplo = trocar frente/trás; lanterna quando o aparelho deixa.
+ * Zoom: o da própria lente (track zoom) quando o aparelho oferece; senão digital, e aí a gravação passa
+ * por um canvas para o zoom entrar no vídeo também.
+ */
+interface CapacidadesDaCamera { zoom: { min: number; max: number } | null; lanterna: boolean }
+const ZOOM_DIGITAL_MAX = 4
+
 function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome: string) => void; aoTexto: () => void; aoFechar: () => void }) {
   const video = useRef<HTMLVideoElement | null>(null)
   const fluxo = useRef<MediaStream | null>(null)
   const gravador = useRef<MediaRecorder | null>(null)
   const pedacos = useRef<Blob[]>([])
+  const desenho = useRef<{ raf: number; canvas: HTMLCanvasElement } | null>(null)
   const [frente, setFrente] = useState(false)
-  const [estado, setEstado] = useState<'abrindo' | 'pronta' | 'sem'>('abrindo')
+  const [estado, setEstado] = useState<'abrindo' | 'pronta' | 'sem' | 'negada'>('abrindo')
   const [gravando, setGravando] = useState(false)
+  const [travado, setTravado] = useState(false)
   const [segundos, setSegundos] = useState(0)
   const [flash, setFlash] = useState(false)
-  const segura = useRef<{ t: number; timer: number } | null>(null)
+  const [maosLivres, setMaosLivres] = useState(false)
+  const [temporizador, setTemporizador] = useState<0 | 3 | 10>(0)
+  const [contando, setContando] = useState<number | null>(null)
+  const [lanterna, setLanterna] = useState(false)
+  const [cap, setCap] = useState<CapacidadesDaCamera>({ zoom: null, lanterna: false })
+  const [zoom, setZoom] = useState(1)
+  const [rotulo, setRotulo] = useState<string | null>(null)
+  const zoomRef = useRef(1)
+  const segura = useRef<{ t: number; timer: number; y: number; x: number; z0: number } | null>(null)
+  const pinca = useRef<{ ptrs: Map<number, { x: number; y: number }>; d0: number; z0: number } | null>(null)
+  const ultimoToque = useRef(0)
   const galeria = useRef<HTMLInputElement | null>(null)
   const nativa = useRef<HTMLInputElement | null>(null)
   const celular = toque()
+  const iphone = typeof navigator !== 'undefined' && /iPhone|iPad/.test(navigator.userAgent)
+
+  const zMin = cap.zoom?.min ?? 1
+  const zMax = cap.zoom ? Math.min(cap.zoom.max, 10) : ZOOM_DIGITAL_MAX
 
   useEffect(() => {
     let vivo = true
@@ -401,23 +409,35 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
     const abrir = async () => {
       fluxo.current?.getTracks().forEach((t) => t.stop())
       if (!navigator.mediaDevices?.getUserMedia) { setEstado('sem'); return }
-      const video: MediaTrackConstraints = { facingMode: frente ? 'user' : 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } }
+      const restr: MediaTrackConstraints = { facingMode: frente ? 'user' : 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } }
       // a permissão pode ficar pendurada (navegador embutido, aviso ignorado): em 5 s mostra as outras opções
       const comPrazo = (c: MediaStreamConstraints) => Promise.race([navigator.mediaDevices.getUserMedia(c), new Promise<never>((_, falha) => window.setTimeout(() => falha(new Error('prazo')), 5000))])
       let s: MediaStream | null = null
-      try { s = await comPrazo({ video, audio: { echoCancellation: true, noiseSuppression: true } }) }
-      catch (e) { if ((e as Error).message === 'prazo') s = null; else { try { s = await comPrazo({ video }) } catch { s = null } } }
+      let negada = false
+      try { s = await comPrazo({ video: restr, audio: { echoCancellation: true, noiseSuppression: true } }) }
+      catch (e) {
+        negada = (e as Error).name === 'NotAllowedError'
+        if ((e as Error).message !== 'prazo') { try { s = await comPrazo({ video: restr }) } catch (e2) { negada = negada || (e2 as Error).name === 'NotAllowedError'; s = null } }
+      }
       if (!vivo) { s?.getTracks().forEach((t) => t.stop()); return }
-      if (!s) { setEstado('sem'); return }
+      if (!s) { setEstado(negada ? 'negada' : 'sem'); return }
       fluxo.current = s
-      if (videoEl()) { videoEl()!.srcObject = s; await videoEl()!.play().catch(() => undefined) }
+      const trilha = s.getVideoTracks()[0]
+      const c = (trilha?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { zoom?: { min: number; max: number }; torch?: boolean }
+      const nativo = c.zoom && c.zoom.max > c.zoom.min ? { min: c.zoom.min, max: c.zoom.max } : null
+      setCap({ zoom: nativo, lanterna: !!c.torch })
+      zoomRef.current = nativo?.min ?? 1; setZoom(zoomRef.current); setLanterna(false)
+      if (video.current) { video.current.srcObject = s; await video.current.play().catch(() => undefined) }
       setEstado('pronta')
     }
-    const videoEl = () => video.current
     void abrir()
     return () => { vivo = false }
   }, [frente])
-  useEffect(() => () => { fluxo.current?.getTracks().forEach((t) => t.stop()); if (gravador.current?.state === 'recording') gravador.current.stop() }, [])
+  useEffect(() => () => {
+    fluxo.current?.getTracks().forEach((t) => t.stop())
+    if (gravador.current?.state === 'recording') gravador.current.stop()
+    if (desenho.current) cancelAnimationFrame(desenho.current.raf)
+  }, [])
 
   useEffect(() => {
     if (!gravando) return
@@ -430,6 +450,26 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
     return () => window.clearInterval(t)
   }, [gravando]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const mostrarRotulo = (t: string) => { setRotulo(t); window.setTimeout(() => setRotulo((r) => (r === t ? null : r)), 1400) }
+
+  /* ---------------------------------------------- zoom */
+  const pendente = useRef<number | null>(null)
+  function aplicarZoom(z: number) {
+    const v = Math.min(zMax, Math.max(zMin, z))
+    zoomRef.current = v
+    setZoom(v)
+    if (cap.zoom) {
+      // a lente responde devagar: um pedido por quadro
+      if (pendente.current === null) pendente.current = requestAnimationFrame(() => {
+        pendente.current = null
+        const t = fluxo.current?.getVideoTracks()[0]
+        void t?.applyConstraints({ advanced: [{ zoom: zoomRef.current } as MediaTrackConstraintSet] }).catch(() => undefined)
+      })
+    }
+  }
+  const zoomDigital = !cap.zoom && zoom > 1.001
+
+  /* ---------------------------------------------- foto e vídeo */
   function foto() {
     const v = video.current
     if (!v || !v.videoWidth) return
@@ -437,18 +477,42 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
     const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight
     const g = c.getContext('2d')!
     if (frente) { g.translate(c.width, 0); g.scale(-1, 1) }
-    g.drawImage(v, 0, 0)
+    const z = cap.zoom ? 1 : zoomRef.current
+    const sw = v.videoWidth / z, sh = v.videoHeight / z
+    g.drawImage(v, (v.videoWidth - sw) / 2, (v.videoHeight - sh) / 2, sw, sh, 0, 0, c.width, c.height)
     c.toBlob((b) => { if (b) aoCapturar(b, 'foto.jpg') }, 'image/jpeg', 0.95)
   }
+  /** O vídeo passa por um canvas quando o zoom é digital (o zoom entra na gravação) ou a câmera é a da frente (sai sem espelho). */
+  function fluxoParaGravar(): MediaStream | null {
+    const s = fluxo.current, v = video.current
+    if (!s || !v) return null
+    const podeCanvas = typeof HTMLCanvasElement !== 'undefined' && 'captureStream' in HTMLCanvasElement.prototype
+    if (cap.zoom || !podeCanvas) return s
+    const c = document.createElement('canvas')
+    const escala = Math.min(1, 1920 / Math.max(v.videoWidth, v.videoHeight))
+    c.width = Math.round(v.videoWidth * escala); c.height = Math.round(v.videoHeight * escala)
+    const g = c.getContext('2d')!
+    const quadro = () => {
+      const z = zoomRef.current
+      const sw = v.videoWidth / z, sh = v.videoHeight / z
+      g.drawImage(v, (v.videoWidth - sw) / 2, (v.videoHeight - sh) / 2, sw, sh, 0, 0, c.width, c.height)
+      if (desenho.current) desenho.current.raf = requestAnimationFrame(quadro)
+    }
+    desenho.current = { raf: requestAnimationFrame(quadro), canvas: c }
+    const saida = (c as HTMLCanvasElement & { captureStream: (fps?: number) => MediaStream }).captureStream(30)
+    s.getAudioTracks().forEach((t) => saida.addTrack(t))
+    return saida
+  }
   function gravar() {
-    const s = fluxo.current
+    const s = fluxoParaGravar()
     if (!s || typeof MediaRecorder === 'undefined') { foto(); return }
-    const tipos = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm']
+    const tipos = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm']
     const mime = tipos.find((t) => MediaRecorder.isTypeSupported(t)) ?? ''
     const r = new MediaRecorder(s, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: 10_000_000, audioBitsPerSecond: 160_000 })
     pedacos.current = []
     r.ondataavailable = (e) => { if (e.data.size) pedacos.current.push(e.data) }
     r.onstop = () => {
+      if (desenho.current) { cancelAnimationFrame(desenho.current.raf); desenho.current = null }
       const b = new Blob(pedacos.current, { type: r.mimeType || mime || 'video/webm' })
       if (b.size) aoCapturar(b, /mp4/.test(b.type) ? 'video.mp4' : 'video.webm')
     }
@@ -458,31 +522,98 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
   }
   function parar() {
     if (gravador.current?.state === 'recording') gravador.current.stop()
-    setGravando(false)
+    setGravando(false); setTravado(false)
   }
+  function comecarContagem() {
+    let n = temporizador
+    setContando(n)
+    const t = window.setInterval(() => {
+      n -= 1
+      if (n <= 0) { window.clearInterval(t); setContando(null); gravar(); setTravado(true) }
+      else setContando(n)
+    }, 1000)
+    contagem.current = t
+  }
+  const contagem = useRef<number | null>(null)
+
+  /* ---------------------------------------------- o botão (toque, segurar, arrastar) */
   function apertar(e: PE<HTMLButtonElement>) {
     e.preventDefault()
     if (estado !== 'pronta') { nativa.current?.click(); return }
-    segura.current = { t: performance.now(), timer: window.setTimeout(gravar, 260) }
+    if (contando !== null) { if (contagem.current) window.clearInterval(contagem.current); setContando(null); return }
+    if (gravando && (travado || maosLivres)) { parar(); return }
+    if (maosLivres || temporizador) {
+      if (temporizador) comecarContagem(); else { gravar(); setTravado(true) }
+      return
+    }
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId) } catch { /* já solto */ }
+    segura.current = { t: performance.now(), timer: window.setTimeout(gravar, 260), y: e.clientY, x: e.clientX, z0: zoomRef.current }
+  }
+  function moverNoBotao(e: PE<HTMLButtonElement>) {
+    const s = segura.current
+    if (!s || !gravando || travado) return
+    // para cima = mais zoom; meia tela de arrasto vai do mínimo ao máximo
+    const dy = s.y - e.clientY
+    aplicarZoom(s.z0 + (dy / (window.innerHeight * 0.45)) * (zMax - zMin))
+    // para o lado até o cadeado = trava a gravação
+    if (e.clientX - s.x > 72 && Math.abs(dy) < 90) { setTravado(true); segura.current = null; mostrarRotulo('Gravação travada') }
   }
   function soltar() {
     const s = segura.current
     segura.current = null
     if (!s) return
     window.clearTimeout(s.timer)
-    if (gravando) parar(); else if (performance.now() - s.t < 260) foto()
+    if (gravando && !travado) parar()
+    else if (!gravando && performance.now() - s.t < 260) foto()
   }
+
+  /* ---------------------------------------------- pinça e toque duplo na imagem */
+  function tocarImagem(e: PE<HTMLDivElement>) {
+    if ((e.target as HTMLElement).closest('button, input')) return
+    const p = pinca.current ?? { ptrs: new Map(), d0: 0, z0: zoomRef.current }
+    p.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (p.ptrs.size === 2) { const [a, b] = [...p.ptrs.values()]; p.d0 = Math.hypot(a.x - b.x, a.y - b.y); p.z0 = zoomRef.current }
+    pinca.current = p
+    if (p.ptrs.size === 1) {
+      const agora = performance.now()
+      if (agora - ultimoToque.current < 300 && !gravando) { setFrente((f) => !f); ultimoToque.current = 0 } else ultimoToque.current = agora
+    }
+  }
+  function moverImagem(e: PE<HTMLDivElement>) {
+    const p = pinca.current
+    if (!p || !p.ptrs.has(e.pointerId)) return
+    p.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (p.ptrs.size >= 2 && p.d0) { const [a, b] = [...p.ptrs.values()]; aplicarZoom(p.z0 * (Math.hypot(a.x - b.x, a.y - b.y) / p.d0)) }
+  }
+  function soltarImagem(e: PE<HTMLDivElement>) {
+    const p = pinca.current
+    if (!p) return
+    p.ptrs.delete(e.pointerId)
+    if (!p.ptrs.size) pinca.current = null
+  }
+
+  async function alternarLanterna() {
+    const t = fluxo.current?.getVideoTracks()[0]
+    const novo = !lanterna
+    try { await t?.applyConstraints({ advanced: [{ torch: novo } as MediaTrackConstraintSet] }); setLanterna(novo) } catch { mostrarRotulo('Lanterna indisponível') }
+  }
+
   const escolher = (f: File | undefined) => { if (f) aoCapturar(f, f.name) }
+  const zoomTexto = `${(cap.zoom ? zoom : zoom).toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: zoom % 1 ? 1 : 0 })}×`
+  const transformVideo = `${frente ? 'scaleX(-1) ' : ''}${zoomDigital ? `scale(${zoom})` : ''}`.trim() || undefined
 
   return (
-    <div className="est-cam">
-      <video ref={video} className={`est-cam-video ${frente ? 'espelho' : ''}`} playsInline muted autoPlay />
+    <div className="est-cam" onPointerDown={tocarImagem} onPointerMove={moverImagem} onPointerUp={soltarImagem} onPointerCancel={soltarImagem}>
+      <video ref={video} className="est-cam-video" playsInline muted autoPlay style={{ transform: transformVideo }} />
       {flash && <i className="est-flash" />}
-      {estado === 'sem' && (
+      {contando !== null && <span className="est-contando" key={contando}>{contando}</span>}
+      {(estado === 'sem' || estado === 'negada') && (
         <div className="est-cam-sem">
           <span className="est-cam-sem-ico"><Ico d={I.camera} /></span>
-          <b>Escolha como criar o story</b>
-          <small>Sem acesso à câmera nesta tela. Use a câmera do aparelho ou a galeria.</small>
+          <b>{estado === 'negada' ? 'Libere a câmera para gravar aqui' : 'Escolha como criar o story'}</b>
+          <small>{estado === 'negada'
+            ? (iphone ? 'No iPhone: Ajustes › Safari › Câmera e Microfone › Permitir. Depois feche e abra o app de novo. Enquanto isso, use a câmera do iPhone ou a galeria.' : 'Permita a câmera e o microfone nas configurações do navegador. Enquanto isso, use a câmera do aparelho ou a galeria.')
+            : 'Sem acesso à câmera nesta tela. Use a câmera do aparelho ou a galeria.'}</small>
           <div>
             <button type="button" onClick={() => nativa.current?.click()}><Ico d={I.camera} />Câmera</button>
             <button type="button" onClick={() => galeria.current?.click()}><Ico d={I.galeria} />Galeria</button>
@@ -492,25 +623,47 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
       )}
       <div className="est-cam-topo">
         <button type="button" className="est-bt" onClick={aoFechar} aria-label="Fechar"><Ico d={I.fechar} /></button>
-        {gravando && <span className="est-rec"><i />{String(Math.floor(segundos / 60)).padStart(1, '0')}:{String(Math.floor(segundos % 60)).padStart(2, '0')}</span>}
+        {gravando ? <span className="est-rec"><i />{Math.floor(segundos / 60)}:{String(Math.floor(segundos % 60)).padStart(2, '0')}</span>
+          : cap.lanterna && estado === 'pronta' ? <button type="button" className={`est-bt ${lanterna ? 'aceso' : ''}`} onClick={() => void alternarLanterna()} aria-label="Lanterna"><Ico d={I.raio} cheio={lanterna} /></button> : <span />}
         {celular && !gravando
-          ? <button type="button" className="est-nativa" onClick={() => nativa.current?.click()}><Ico d={I.camera} />{/iPhone|iPad/.test(navigator.userAgent) ? 'Câmera do iPhone' : 'Câmera do celular'}<small>Qualidade máxima</small></button>
+          ? <button type="button" className="est-nativa" onClick={() => nativa.current?.click()}><Ico d={I.camera} />{iphone ? 'Câmera do iPhone' : 'Câmera do celular'}<small>Qualidade máxima</small></button>
           : <span />}
       </div>
+      {/* as ferramentas da câmera, na lateral (como no Instagram) */}
+      {estado === 'pronta' && !gravando && (
+        <div className="est-trilho">
+          <button type="button" onClick={aoTexto}><b className="est-aa">Aa</b><span>Criar</span></button>
+          <button type="button" className={maosLivres ? 'on' : ''} onClick={() => { setMaosLivres((m) => !m); setTemporizador(0); mostrarRotulo(maosLivres ? 'Mãos livres desligado' : 'Mãos livres: toque para gravar e para parar') }}>
+            <Ico d={I.maos} /><span>Mãos livres</span>
+          </button>
+          <button type="button" className={temporizador ? 'on' : ''} onClick={() => { const n = temporizador === 0 ? 3 : temporizador === 3 ? 10 : 0; setTemporizador(n); setMaosLivres(false); mostrarRotulo(n ? `Temporizador: ${n} s` : 'Temporizador desligado') }}>
+            <Ico d={I.relogio} /><span>{temporizador ? `${temporizador} s` : 'Temporizador'}</span>
+          </button>
+        </div>
+      )}
+      {(zoom > zMin + 0.05 || gravando) && estado === 'pronta' && <span className="est-zoom">{zoomTexto}</span>}
+      {rotulo && <span className="est-rotulo">{rotulo}</span>}
       <div className="est-cam-pe">
-        <button type="button" className="est-galeria" onClick={() => galeria.current?.click()} aria-label="Galeria"><Ico d={I.galeria} /></button>
-        <button type="button" className={`est-disparo ${gravando ? 'gravando' : ''}`} onPointerDown={apertar} onPointerUp={soltar} onPointerLeave={() => { if (gravando) soltar() }}
-          onContextMenu={(e) => e.preventDefault()} aria-label="Toque para foto, segure para vídeo">
-          <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" className="trilho" /><circle cx="50" cy="50" r="46" className="anda" style={{ strokeDashoffset: `${289 - 289 * Math.min(1, segundos / LIMITE_SEGUNDOS)}` }} /></svg>
-          <i />
-        </button>
-        <button type="button" className="est-bt grande" onClick={() => setFrente((f) => !f)} aria-label="Trocar câmera" disabled={estado !== 'pronta' || gravando}><Ico d={I.virar} /></button>
+        <button type="button" className="est-galeria" onClick={() => galeria.current?.click()} aria-label="Galeria" style={{ visibility: gravando ? 'hidden' : undefined }}><Ico d={I.galeria} /></button>
+        <div className="est-disparo-caixa">
+          <button type="button" className={`est-disparo ${gravando ? 'gravando' : ''} ${travado ? 'travado' : ''} ${maosLivres || temporizador ? 'livre' : ''}`}
+            onPointerDown={apertar} onPointerMove={moverNoBotao} onPointerUp={soltar} onPointerCancel={soltar}
+            onContextMenu={(e) => e.preventDefault()} aria-label={gravando ? 'Parar' : maosLivres ? 'Toque para gravar' : 'Toque para foto, segure para vídeo'}>
+            <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" className="trilho" /><circle cx="50" cy="50" r="46" className="anda" style={{ strokeDashoffset: `${289 - 289 * Math.min(1, segundos / LIMITE_SEGUNDOS)}` }} /></svg>
+            <i />
+          </button>
+          {gravando && !travado && !maosLivres && <span className="est-cadeado" aria-hidden="true"><Ico d={I.cadeado} /></span>}
+        </div>
+        <button type="button" className="est-bt grande" onClick={() => setFrente((f) => !f)} aria-label="Trocar câmera" disabled={estado !== 'pronta' || gravando} style={{ visibility: gravando ? 'hidden' : undefined }}><Ico d={I.virar} /></button>
       </div>
-      <div className="est-modos">
-        <button type="button" onClick={aoTexto}>Texto</button>
-        <button type="button" className="on">Story</button>
-      </div>
-      {!gravando && estado === 'pronta' && <span className="est-dica">Toque para foto · segure para vídeo</span>}
+      {!gravando && (
+        <div className="est-modos">
+          <button type="button" onClick={aoTexto}>Texto</button>
+          <button type="button" className="on">Story</button>
+        </div>
+      )}
+      {!gravando && estado === 'pronta' && <span className="est-dica">{maosLivres ? 'Toque para começar a gravar' : temporizador ? `Toque: grava em ${temporizador} s` : 'Toque para foto · segure para vídeo'}</span>}
+      {gravando && !travado && !maosLivres && <span className="est-dica fixa">Arraste para cima para zoom · para o lado para travar</span>}
       <input ref={galeria} type="file" accept="image/*,video/*,.heic,.heif,.mov" hidden onChange={(e) => { escolher(e.target.files?.[0]); e.target.value = '' }} />
       <input ref={nativa} type="file" accept="image/*,video/*" capture="environment" hidden onChange={(e) => { escolher(e.target.files?.[0]); e.target.value = '' }} />
     </div>
@@ -526,6 +679,15 @@ interface PropsEditor {
   children: ReactNode
 }
 function Editor({ midia, enq, setEnq, camadas, setCamadas, semSom, escondida, desenhando, aoTocarCamada, aoTocarFundo, aoRemover, children }: PropsEditor) {
+  // o vídeo toca com som no editor (como no Instagram); se o iPhone barrar, oferece "Toque para ouvir"
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [pedirSom, setPedirSom] = useState(false)
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v) return
+    v.muted = semSom
+    void v.play().catch(() => { v.muted = true; if (!semSom) setPedirSom(true); void v.play().catch(() => undefined) })
+  }, [midia.local, semSom])
   const quadro = useRef<HTMLDivElement | null>(null)
   const lixo = useRef<HTMLDivElement | null>(null)
   const g = useRef<{ alvo: string; ptrs: Map<number, { x: number; y: number }>; ini: { p: Array<{ x: number; y: number }>; c?: Camada; e: Enquadramento }; t: number; moveu: boolean } | null>(null)
@@ -616,7 +778,7 @@ function Editor({ midia, enq, setEnq, camadas, setCamadas, semSom, escondida, de
   return (
     <div className="est-palco" onPointerDown={baixar} onPointerMove={mover} onPointerUp={soltar} onPointerCancel={soltar} onWheel={roda} onContextMenu={(e) => e.preventDefault()}>
       <div ref={quadro} className="sto-quadro est-quadro">
-        {midia.tipo === 'video' && <video src={midia.local} autoPlay loop playsInline muted={semSom} style={estiloDaMidia(enq)} className="sto-midia" />}
+        {midia.tipo === 'video' && <video ref={videoRef} src={midia.local} autoPlay loop playsInline muted style={estiloDaMidia(enq)} className="sto-midia" />}
         {midia.tipo === 'imagem' && <img src={midia.local} alt="" draggable={false} style={estiloDaMidia(enq)} className="sto-midia" />}
         {midia.tipo === 'fundo' && <div className="est-fundo" style={{ background: fundo }} />}
         <CamadasDoStory camadas={camadas} modo="editar" escondida={escondida} />
@@ -624,6 +786,7 @@ function Editor({ midia, enq, setEnq, camadas, setCamadas, semSom, escondida, de
         {guias.h && <i className="est-guia h" />}
       </div>
       {children}
+      {pedirSom && !semSom && <button type="button" className="est-pede-som" onClick={() => { const v = videoRef.current; if (v) { v.muted = false; void v.play() } setPedirSom(false) }}><Ico d={I.somOff} />Toque para ouvir</button>}
       {arrastando && <div ref={lixo} className={`est-lixo ${sobreLixo ? 'sobre' : ''}`}><Ico d={I.lixo} /></div>}
     </div>
   )
