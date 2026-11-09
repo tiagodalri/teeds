@@ -1,7 +1,7 @@
 import { mercado } from './mercado'
 import './ambiente'
 import { enviarEmailsDoLancamento } from './lancamento-emails'
-import { contaComSenhaPropria, decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros, marcaAdministrada } from './aprovacao-leads'
+import { contaComSenhaPropria, decidirLead, listarPendentes, enviarAprovacoes, enviarCadastros, marcaAdministrada, enderecoValido } from './aprovacao-leads'
 import { trocarEmailDoCliente } from './trocar-email'
 import { abrirBilhete, registrarDescadastro, paginaDeSaida } from './descadastro'
 import { catalogo, alterarRobo } from './catalogo'
@@ -616,7 +616,7 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
     try { corpo = JSON.parse(Buffer.concat(pedacos).toString('utf8')) } catch { /* corpo torto */ }
     const email = String(corpo.email ?? '').trim().toLowerCase()
     const marcaId = marcaDoSite(origem) ?? (deDesenvolvimento ? marcaConhecida(String(corpo.marca ?? '')) : null)
-    if (!marcaId || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) { res.writeHead(400, headers); return res.end(JSON.stringify({ erro: 'Confira o e-mail.' })) }
+    if (!marcaId || !enderecoValido(email) || email.length > 200) { res.writeHead(400, headers); return res.end(JSON.stringify({ erro: 'Confira o e-mail.' })) }
     const ip = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim()
     if (!permitirPedidoDeSenha(email, ip)) { res.writeHead(429, headers); return res.end(JSON.stringify({ erro: 'Muitos pedidos seguidos. Espere um minuto e tente de novo.' })) }
     const marca = marcaPorId(marcaId)
@@ -778,7 +778,7 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
       const nome = String(d.nome ?? '').trim().replace(/\s+/g, ' ').slice(0, 120)
       const email = String(d.email ?? '').trim().toLowerCase().slice(0, 180)
       const telefone = String(d.telefone ?? '').trim().slice(0, 32)
-      if (!marca || nome.length < 3 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || telefone.replace(/\D/g,'').length < 10 || typeof d.consentiu !== 'boolean') throw new Error('Revise nome, e-mail e celular.')
+      if (!marca || nome.length < 3 || !enderecoValido(email) || telefone.replace(/\D/g,'').length < 10 || typeof d.consentiu !== 'boolean') throw new Error('Revise nome, e-mail e celular.')
       // Senha criada no cadastro (28/10/2026). Opcional: sem ela, vale o fluxo da senha provisória.
       // Nunca vai para tabela nem para log; só para a Auth, e só se a conta ainda não existir.
       const senha = typeof d.senha === 'string' ? d.senha : ''

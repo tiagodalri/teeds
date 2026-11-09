@@ -777,7 +777,7 @@
         var email = form.elements.email.value.trim().toLowerCase()
         var digitos = tel.value.replace(/\D/g, '')
         var ok = erro('nome', nome.split(' ').filter(function (p) { return p.length >= 2 }).length < 2 ? 'Escreva o nome e o sobrenome.' : '')
-        ok = erro('email', /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? '' : 'Confira o e-mail.') && ok
+        ok = erro('email', /^[^\s@<>,;]+@[^\s@<>,;]+\.[a-z]{2,24}$/i.test(email) ? '' : 'Confira o e-mail.') && ok
         ok = erro('telefone', digitos.length < 10 || digitos.length > 11 || /^0/.test(digitos) ? 'Coloque o DDD e o número.' : '') && ok
         var senha = GF.SENHA ? form.elements.senha.value : '', repetir = GF.SENHA ? form.elements.repetir.value : ''
         if (GF.SENHA) {
