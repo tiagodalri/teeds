@@ -91,14 +91,14 @@ const relogio = (ms: number) => {
 
 /** O link que abre a sala de treino direto (cada pessoa ensaia na própria). */
 export const linkDoTreino = () => `${location.origin}${import.meta.env.BASE_URL}?treino=1`
+/** 09/11/2026 (Tiago): o link dos membros é pela plataforma do parceiro, globalflytrade.com/v/aovivo ou /n/aovivo
+ * (a pasta /<código>/aovivo do site leva para ?treino=1 guardando a vitrine; ver vite.config.ts). */
+export const linkDoTreinoDoParceiro = (codigo: string) => `${location.origin}${import.meta.env.BASE_URL}${codigo}/aovivo`
+const NOME_DO_PARCEIRO: Record<string, string> = { v: 'Victor', n: 'Naor', d: 'Douglas' }
 
-/** Cartão para mandar o link da sala de treino para a equipe. */
-export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
+/** Uma linha do cartão: o link, Copiar e Compartilhar. */
+function LinhaDoLink({ rotulo, link, texto }: { rotulo: string; link: string; texto: string }) {
   const [copiado, setCopiado] = useState(false)
-  // 06/11/2026: no teste, a aba Sala mostrava o link da sala de sempre (quem abria não via o teste)
-  const { teste } = useTreino()
-  const link = teste ? linkDoTeste(teste) : linkDoTreino()
-  const texto = teste ? `Transmissão de teste da ${MARCA.prosa} (só quem tem este link vê): ${link}` : `Sala de treino da ${MARCA.prosa}: transmissão exclusiva do GF Member. Entre com a sua conta por aqui: ${link}`
   const copiar = async () => {
     try { await navigator.clipboard.writeText(link) } catch {
       const t = document.createElement('textarea'); t.value = link; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove()
@@ -107,9 +107,9 @@ export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
   }
   const nativo = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
   return (
-    <div className={`av-link-live ${compacto ? 'compacto' : ''}`}>
+    <div className="av-link-live-linha">
       <div className="av-link-live-texto">
-        <small>{teste ? 'Link da transmissão de teste' : 'Link para os membros assistirem'}</small>
+        <small>{rotulo}</small>
         <code title={link}>{link.replace(/^https?:\/\//, '')}</code>
       </div>
       <div className="av-link-live-acoes">
@@ -118,6 +118,26 @@ export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
           ? <button className="av-botao-whats" onClick={() => void navigator.share({ text: texto }).catch(() => undefined)}>Compartilhar</button>
           : <a className="av-botao-whats" href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
       </div>
+    </div>
+  )
+}
+
+/** Cartão para mandar o link da sala de treino para a equipe. */
+export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
+  // 06/11/2026: no teste, a aba Sala mostrava o link da sala de sempre (quem abria não via o teste)
+  const { teste, vitrines } = useTreino()
+  const parceiros = MARCA.parceiros ?? []
+  // um link por plataforma da transmissão ("Para"); para todas, o do Victor e o do Naor
+  const escolhidos = vitrines ? vitrines.filter((c) => parceiros.includes(c)) : ['v', 'n'].filter((c) => parceiros.includes(c))
+  const linhas = teste
+    ? [{ rotulo: 'Link da transmissão de teste', link: linkDoTeste(teste) }]
+    : escolhidos.length
+      ? escolhidos.map((c) => ({ rotulo: `Link para os membros assistirem (${NOME_DO_PARCEIRO[c] ?? c.toUpperCase()})`, link: linkDoTreinoDoParceiro(c) }))
+      : [{ rotulo: 'Link para os membros assistirem', link: linkDoTreino() }]
+  const textoDe = (link: string) => teste ? `Transmissão de teste da ${MARCA.prosa} (só quem tem este link vê): ${link}` : `Sala de treino da ${MARCA.prosa}: transmissão exclusiva do GF Member. Entre com a sua conta por aqui: ${link}`
+  return (
+    <div className={`av-link-live ${compacto ? 'compacto' : ''}`}>
+      {linhas.map((l) => <LinhaDoLink key={l.link} rotulo={l.rotulo} link={l.link} texto={textoDe(l.link)} />)}
       <p className="tr-link-nota">{teste ? 'Só quem tem este link vê, com a própria conta (de outra pessoa: com a sua, a Central sai da sala). Ninguém é avisado. Vale 12 horas.' : 'Só quem é do GF Member (e os administradores) entra, com a própria conta. Eles assistem ao seu ensaio como alunos, com o selo "GF Streaming" sempre na imagem.'}</p>
     </div>
   )

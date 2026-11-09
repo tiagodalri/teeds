@@ -416,6 +416,9 @@ body.aovivo-lado .workspace-app { padding-right: 380px; }
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px;
   padding: 12px 14px; border: 1px dashed color-mix(in srgb, var(--primary) 55%, var(--border)); border-radius: 12px; background: var(--surface);
 }
+/* 09/11/2026: um link por plataforma (/v/aovivo, /n/aovivo), cada um na sua linha */
+.av-link-live-linha { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; min-width: 0; }
+.av-link-live-linha + .av-link-live-linha { padding-top: 10px; border-top: 1px solid var(--border); }
 .av-link-live-texto { display: grid; gap: 3px; min-width: 0; }
 .av-link-live-texto small { color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .av-link-live-texto code {

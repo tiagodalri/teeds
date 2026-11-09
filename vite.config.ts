@@ -427,6 +427,10 @@ export default defineConfig({
           if (!/^[a-z0-9]{1,20}$/.test(codigo)) continue
           mkdirSync(join(SAIDA, codigo, 'inicio'), { recursive: true })
           cpSync(join(SAIDA, '404.html'), join(SAIDA, codigo, 'inicio', 'index.html'))
+          // 09/11/2026 (Tiago): /n/aovivo e /v/aovivo são o link dos membros para a sala de treino da Central:
+          // abrem o "Ao vivo" na sala (?treino=1) guardando a vitrine do parceiro (parceiro_rota: sem contar clique)
+          mkdirSync(join(SAIDA, codigo, 'aovivo'), { recursive: true })
+          writeFileSync(join(SAIDA, codigo, 'aovivo', 'index.html'), `<!doctype html><meta charset="utf-8"><title>${NOME_CURTO[MARCA.id] ?? MARCA.nome}</title><script>(function(){var q=location.search?location.search.slice(1):'';location.replace('/?'+['treino=1',q,'parceiro_rota=${codigo}'].filter(Boolean).join('&')+location.hash)})()</script>`)
         }
 
         // 09/11/2026, dia da live: globalflytrade.com/live leva ao link da transmissão (que é fora da
