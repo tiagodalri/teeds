@@ -34,7 +34,8 @@ export const iaDoSimulador = (id: string) => IAS_DO_SIMULADOR.find((x) => x.id =
 
 export type PeriodoSimulado = { tipo: 'dia'; data: string } | { tipo: 'ultimos'; dias: 7 | 30 } | { tipo: 'intervalo'; de: string; ate: string }
 export type Momento = 'comeco' | 'meio' | 'fim'
-export interface LinhaDeIa { ia: string; operacoes: number; resultado: number }
+/** ganhos: só na divisão automática — quantas operações essa I.A. ganhou (cada uma com o seu acerto). */
+export interface LinhaDeIa { ia: string; operacoes: number; resultado: number; ganhos?: number }
 export interface Cenario {
   versao: 3
   /** O nome que aparece na faixa do relatório simulado. */
@@ -46,8 +47,10 @@ export interface Cenario {
   /** % de operações ganhas. */
   acerto: number
   ias: LinhaDeIa[]
-  /** Divide operações e resultado entre as I.A. sozinho (proporcional). */
+  /** Divide operações e resultado entre as I.A. sozinho (com oscilação: cada uma com o seu acerto). */
   dividirSozinho: boolean
+  /** Muda a cada "Sortear outra divisão": a mesma estrutura com outra divisão entre as I.A. */
+  sorteioDivisao?: number
   /** A entrada inicial (o nível 0 do gale). */
   entrada: number
   /** Quanto o ganho paga sobre a entrada, em % (95 = ganha US$ 0,95 a cada US$ 1). */
@@ -114,21 +117,56 @@ export const entradasDaSequencia = (escada: number[], n: number) => Array.from({
 /** A maior entrada que o relatório vai mostrar: o degrau mais alto que a pior sequência alcança. */
 export const maiorEntradaDoCenario = (c: Cenario) => Math.max(...entradasDaSequencia(escadaDoGale(c), Math.max(1, Math.round(c.sequencia))))
 
+const divisaoLigada = (c: Cenario) => c.dividirSozinho && c.ias.length > 1
+
+/**
+ * A divisão automática (09/11/2026, Tiago: "não pode ser igualzinho, tem que oscilar; às vezes uma dá
+ * prejuízo e as outras fecham positivo, mas o total fecha"): cada I.A. recebe uma fatia diferente das
+ * operações e um acerto próprio em volta do acerto geral. O resultado de cada uma NÃO é sorteado aqui:
+ * sai das operações dela (payout e gale de verdade); o gerador só acerta o total.
+ * O sorteio depende só da estrutura (não do resultado pedido), como no gerador das operações.
+ */
+function divisaoAutomatica(c: Cenario): LinhaDeIa[] {
+  const n = c.ias.length
+  const N = Math.max(0, Math.round(c.operacoes))
+  const rnd = sorteio(sementeDe(JSON.stringify(['divisao', c.ias.map((l) => l.ia), N, c.acerto, c.sequencia, c.iaDaSequencia, c.sorteioDivisao ?? 0])))
+  // operações: fatias diferentes (de ~0,55× a ~1,45× da média), toda I.A. com pelo menos uma
+  let ops = repartir(N, c.ias.map(() => 0.55 + rnd() * 0.9))
+  if (N >= n) ops = ops.map((o) => Math.max(1, o))
+  let sobraOps = ops.reduce((s, x) => s + x, 0) - N
+  for (let i = 0; sobraOps > 0 && i < 4 * n; i++) { const m = ops.indexOf(Math.max(...ops)); ops[m]--; sobraOps-- }
+  // ganhos: cada I.A. com um acerto próprio, até ~35% acima ou abaixo do geral
+  const W = Math.min(N, Math.max(0, Math.round((N * Math.min(100, Math.max(0, c.acerto))) / 100)))
+  const L = N - W
+  const S = L ? Math.min(L, Math.max(1, Math.round(c.sequencia || 1))) : 0
+  const k = Math.max(0, c.ias.findIndex((l) => l.ia === c.iaDaSequencia))
+  const teto = ops.map((o, i) => Math.max(0, o - (i === k ? Math.min(S, o) : 0))) // a I.A. da pior sequência precisa das perdas dela
+  const ganhos = repartir(W, ops.map((o) => o * (0.65 + rnd() * 0.7))).map((g, i) => Math.min(g, teto[i]))
+  let falta = W - ganhos.reduce((s, x) => s + x, 0)
+  for (let volta = 0; falta > 0 && volta < 10 * N + 10; volta++) {
+    const com = ganhos.map((g, i) => (g < teto[i] ? i : -1)).filter((i) => i >= 0)
+    if (!com.length) break
+    ganhos[com[Math.floor(rnd() * com.length)]]++; falta--
+  }
+  return c.ias.map((l, i) => ({ ia: l.ia, operacoes: ops[i], resultado: 0, ganhos: ganhos[i] }))
+}
+
+/** As I.A. com operações e resultado. Na divisão automática, o resultado de cada uma é o das operações geradas. */
+let memoria: { chave: string; valor: LinhaDeIa[] } | null = null
 export function iasDoCenario(c: Cenario): LinhaDeIa[] {
-  if (!c.dividirSozinho || c.ias.length <= 1) {
+  if (!divisaoLigada(c)) {
     if (c.ias.length === 1) return [{ ia: c.ias[0].ia, operacoes: Math.round(c.operacoes), resultado: r2(c.resultado) }]
     return c.ias
   }
-  const ops = repartir(Math.round(c.operacoes), c.ias.map(() => 1))
-  // a I.A. da pior sequência carrega o que as entradas maiores perderam; o resto é proporcional às operações
-  const escada = escadaDoGale(c)
-  const S = Math.max(0, Math.round(c.sequencia))
-  let extra = entradasDaSequencia(escada, S).reduce((s, e) => s + e - escada[0], 0)
-  if (c.resultado >= 0 || extra > Math.abs(c.resultado)) extra = 0
-  const k = Math.max(0, c.ias.findIndex((l) => l.ia === c.iaDaSequencia))
-  const res = ops.map((o, i) => r2(((c.resultado + extra) * o) / Math.max(1, c.operacoes) - (i === k ? extra : 0)))
-  res[res.length - 1] = r2(c.resultado - res.slice(0, -1).reduce((s, x) => s + x, 0))
-  return c.ias.map((l, i) => ({ ia: l.ia, operacoes: ops[i], resultado: res[i] }))
+  const chave = JSON.stringify([c, hojeIso()])
+  if (memoria?.chave === chave) return memoria.valor
+  const ops = operacoesDoCenario(c)
+  const valor = divisaoAutomatica(c).map((l) => {
+    const dela = ops.filter((o) => o.id === iaDoSimulador(l.ia).id)
+    return { ...l, operacoes: dela.length, resultado: r2(dela.reduce((s, o) => s + o.resultado, 0)), ganhos: dela.filter((o) => o.ganhou).length }
+  })
+  memoria = { chave, valor }
+  return valor
 }
 
 /* ------------------------------------------------------- cenários prontos */
@@ -217,7 +255,8 @@ interface Rascunho { ia: number; dia: number; ganhou: boolean; entrada: number; 
  * (ex.: perder muito com entrada pequena), a prévia do editor avisa.
  */
 export function operacoesDoCenario(c: Cenario, agora = new Date()): OperacaoSimulada[] {
-  const ias = iasDoCenario(c).filter((l) => l.operacoes > 0)
+  const automatica = divisaoLigada(c)
+  const ias = (automatica ? divisaoAutomatica(c) : iasDoCenario(c)).filter((l) => l.operacoes > 0)
   // o sorteio depende só da estrutura (não do resultado pedido): mudar o alvo não embaralha a tela de novo
   const rnd = sorteio(sementeDe(JSON.stringify([c.periodo, c.operacoes, c.acerto, ias.map((l) => [l.ia, l.operacoes]), c.sequencia, c.iaDaSequencia, c.momento, c.horaDe, c.horaAte, c.entrada, c.payout, c.gale, c.multiplicador, c.gales])))
   const N = ias.reduce((s, l) => s + Math.round(l.operacoes), 0)
@@ -266,7 +305,10 @@ export function operacoesDoCenario(c: Cenario, agora = new Date()): OperacaoSimu
   // cada I.A. com o acerto do total: troca um ganho de quem tem demais por uma perda de quem tem de menos,
   // sem mexer na pior sequência e sem criar outra maior que ela
   if (ias.length > 1 && S) {
-    const alvo = repartir(W, ias.map((l) => l.operacoes))
+    // divisão automática: cada I.A. com o acerto que a divisão sorteou; na mão, o acerto do total
+    // (também quando a divisão automática foi aceita com "Usar": as linhas guardam os ganhos)
+    const alvo = ias.every((l) => l.ganhos != null && l.ganhos <= l.operacoes) && ias.reduce((t, l) => t + (l.ganhos ?? 0), 0) === W
+      ? ias.map((l) => l.ganhos ?? 0) : repartir(W, ias.map((l) => l.operacoes))
     const fora = (p: number) => p >= inicio && p < inicio + S
     const maiorSerie = () => { let m = 0, a = 0; for (const g of seq) { a = g ? 0 : a + 1; if (a > m) m = a } return m }
     for (let volta = 0; volta < 4 * N; volta++) {
@@ -310,7 +352,31 @@ export function operacoesDoCenario(c: Cenario, agora = new Date()): OperacaoSimu
   // o resultado de cada I.A. sai da ordem dos ganhos e perdas (com gale, onde caem as perdas muda tudo):
   // troca um ganho e uma perda de lugar (fora da pior sequência, sem criar sequência maior) enquanto isso
   // aproximar do resultado pedido. O payout não muda: cada ganho paga entrada × payout, em centavos.
-  ias.forEach((l, i) => {
+  if (automatica && G > 0) {
+    // divisão automática: só o total precisa fechar; cada I.A. fica com o que as operações dela deram.
+    // Sem gale o total é conta fixa (ganhos × entrada × payout − perdas × entrada): trocar de lugar não muda nada.
+    const R = r2(c.resultado)
+    const porIa = ias.map((_, i) => resultadoDe(i))
+    let dist = Math.abs(R - r2(porIa.reduce((s, x) => s + x, 0)))
+    // troca um ganho e uma perda de lugar, na mesma I.A. ou entre duas (o acerto de cada uma oscila junto)
+    const livres = (ganhou: boolean) => seq.map((g, pos) => (g === ganhou && !naSequencia(pos) ? pos : -1)).filter((pos) => pos >= 0)
+    const g = livres(true), pe = livres(false)
+    for (let volta = 0, parado = 0; g.length && pe.length && volta < 3000 * ias.length && parado < 600 * ias.length; volta++) {
+      if (dist < 0.005) break
+      const ga = Math.floor(rnd() * g.length), pb = Math.floor(rnd() * pe.length)
+      const a = g[ga], b = pe[pb], ia = linha[a].ia, ib = linha[b].ia
+      seq[a] = false; seq[b] = true
+      const ok = maiorSerie() <= S
+      const novoA = ok ? resultadoDe(ia) : 0, novoB = ok && ib !== ia ? resultadoDe(ib) : novoA
+      const nova = ok ? Math.abs(R - r2(porIa.reduce((s, x, j) => s + (j === ia ? novoA : j === ib ? novoB : x), 0))) : Infinity
+      // aceita também a troca que empata (anda de lado): perto do alvo, o gale em centavos precisa de espaço para achar o valor exato
+      if (nova <= dist && nova < Infinity) {
+        parado = nova < dist ? 0 : parado + 1
+        dist = nova; porIa[ia] = novoA; porIa[ib] = novoB
+        g[ga] = b; pe[pb] = a
+      } else { seq[a] = true; seq[b] = false; parado++ }
+    }
+  } else if (!automatica) ias.forEach((l, i) => {
     const R = r2(l.resultado)
     let dist = Math.abs(R - resultadoDe(i))
     const ganhos = () => posIa[i].filter((pos) => seq[pos] && !naSequencia(pos))

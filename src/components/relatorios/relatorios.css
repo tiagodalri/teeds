@@ -479,6 +479,10 @@ body.rel-painel-aberto { overflow: hidden; }
 .rsim-ia { min-height: 44px !important; }
 .rsim-ia.on { border-color: var(--rel-ouro) !important; box-shadow: inset 0 0 0 1px var(--rel-ouro); }
 .rsim-cartao-nome { font-size: 15px; }
+.rsim-sortear { justify-self: start; display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: transparent; color: var(--text); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.rsim-sortear svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.rsim-sortear:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
 .rsim-soma { margin: 0; padding: 10px 12px; border-radius: 10px; font-size: 13px; font-weight: 650; background: color-mix(in srgb, var(--up) 9%, transparent); color: var(--text); }
 .rsim-soma.falta { background: color-mix(in srgb, var(--down) 10%, transparent); color: var(--down); }
 .rsim-dica { font-size: 11.5px; color: var(--muted); line-height: 1.4; }

@@ -140,11 +140,13 @@ export function EditorDoCenario({ inicial, aoMostrar, aoFechar, aoSair }: { inic
     return { ...x, ias: lista, dividirSozinho: true, iaDaSequencia }
   })
   // aceita o que as regras dão: o resultado (e o de cada I.A.) passa a ser o calculado
-  const usarCalculado = () => { if (previa) setC((x) => ({ ...x, resultado: previa.resultado, ias: previa.porIa, dividirSozinho: x.ias.length > 1 ? false : x.dividirSozinho })) }
+  // na divisão automática fica automática (o sorteio é o mesmo, então a tela se repete); na mão, as I.A. viram as calculadas
+  const usarCalculado = () => { if (previa) setC((x) => (x.dividirSozinho && x.ias.length > 1 ? { ...x, resultado: previa.resultado } : { ...x, resultado: previa.resultado, ias: previa.porIa, dividirSozinho: x.ias.length > 1 ? false : x.dividirSozinho })) }
   const mudarIa = (i: number, q: Partial<LinhaDeIa>) => setC((x) => {
     // quem mexe numa I.A. passa a dividir na mão: começa do que estava dividido
     const atual = iasDoCenario(x)
-    return { ...x, dividirSozinho: false, ias: atual.map((l, k) => (k === i ? { ...l, ...q } : l)) }
+    // mexeu na mão: os ganhos sorteados da divisão automática deixam de valer
+    return { ...x, dividirSozinho: false, ias: atual.map((l, k) => ({ ...l, ...(k === i ? q : {}), ganhos: undefined })) }
   })
 
   return (
@@ -240,6 +242,15 @@ export function EditorDoCenario({ inicial, aoMostrar, aoFechar, aoSair }: { inic
                       </div>}
                   </div>
                 ))}
+                {c.dividirSozinho && (
+                  <p className="rsim-ok">Soma: {dinheiroComSinal(somaRes, 'USD')}{Math.abs(somaRes - c.resultado) < 0.005 ? ' · fecha com o total' : ` · o total pedido é ${dinheiroComSinal(c.resultado, 'USD')}: a entrada, o payout e o gale do próximo passo mudam a conta, e a revisão mostra como fechar`}</p>
+                )}
+                {c.dividirSozinho && (
+                  <button type="button" className="rsim-sortear" onClick={() => mudar({ sorteioDivisao: (c.sorteioDivisao ?? 0) + 1 })}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 4v4h-4M20 12a8 8 0 0 1-14 5.3M4 20v-4h4" /></svg>
+                    Sortear outra divisão
+                  </button>
+                )}
                 {!c.dividirSozinho && (
                   <p className={`rsim-soma ${falha ? 'falta' : ''}`}>
                     Soma: {somaOps.toLocaleString('pt-BR')} de {Math.round(c.operacoes).toLocaleString('pt-BR')} operações · {dinheiroComSinal(somaRes, 'USD')} de {dinheiroComSinal(c.resultado, 'USD')}
