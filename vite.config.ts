@@ -190,6 +190,26 @@ const FONTES_DA_MARCA: Record<string, string> = {
 }
 
 /**
+ * Prova de dono do domínio para a Deriv (08/11/2026): sem ela o painel de
+ * desenvolvedor avisa que a comissão de markup não é paga. Cada app da Deriv
+ * tem o seu código; o site da GlobalFly atende três apps (GlobalFly Trade, N e D),
+ * então leva os três. Os códigos ficam em developers.deriv.com > Apps > lápis >
+ * Verify domains > HTML file. A raiz do servidor (motor.* e nip.io) leva todos,
+ * no Caddyfile.
+ */
+const VERIFICACAO_DERIV: Record<string, string[]> = {
+  teeds: ['a22f88cd7d3dbdb629f8f4d8b92f660f6268ddda18dd76ab50d58d3f3102a298'],
+  omni: ['0a461757aa7560bbbf63da14fcbab70740bee2a93acb173c20897b36f7d81e06'],
+  globalfly: [
+    '1c7983b806cdbfd072d845ea92fa94a48f81c1b2cedea1440a8fee81c8f89392', // GlobalFly Trade
+    '5ebed82f7b63e2f2296ae5624ccce66d4b562fa99047176960b8da7835474e44', // GlobalFly Trade N
+    '527ccbae0953ab8d835b0e74e86ba18d96fb9fbee9ca7cdc8595a81884cf8faf', // GlobalFly Trade D
+  ],
+}
+const verificacaoDeriv = () =>
+  (VERIFICACAO_DERIV[MARCA.id] ?? []).map((c) => `<meta name="deriv-site-verification" content="${c}" />`).join('\n    ')
+
+/**
  * A escala do computador (src/core/escala.ts) deixa a página em 90%. As
  * medidas pela tela (vh, dvh, vw...) não acompanham: um bloco de 100dvh
  * ficaria com 90% da altura e sobraria uma faixa vazia embaixo. Aqui toda
@@ -254,6 +274,7 @@ export default defineConfig({
             .replaceAll('%NOME%', NOME_CURTO[MARCA.id] ?? MARCA.nome)
             .replace('%FONTES%', FONTES_DA_MARCA[MARCA.id] ?? FONTES_DA_MARCA.teeds)
             .replace('%ABERTURA%', aberturaDoApp())
+            .replace('%VERIFICACAO_DERIV%', verificacaoDeriv())
             .replace('</head>', `${telasDeAbertura()}</head>`),
       },
     },
