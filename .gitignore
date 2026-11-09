@@ -17,3 +17,14 @@ docs-globalfly/
 previa-emails/
 servidor/.robos-config.json*
 public/lab-grade-*.json
+
+# segredos e listas com dados de clientes: nunca no repositório (auditoria de segurança, 09/11/2026)
+.env*
+!.env.example
+**/.env*
+!**/.env.example
+servidor/.chave-cofre*
+servidor/.mcp-segredo*
+servidor/.lote-*
+servidor/fila-*.txt
+servidor/.repescagem.lock
