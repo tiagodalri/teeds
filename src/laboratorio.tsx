@@ -220,6 +220,32 @@ if (new URLSearchParams(location.search).get('tela') === 'central-extras') {
     return original(u, i)
   }
 }
+// ?tela=treino&blocos=1: os blocos de mensagens do chat respondem de exemplo (banco e I.A. de mentira)
+if (new URLSearchParams(location.search).has('blocos')) {
+  const original = window.fetch.bind(window)
+  const json = (d: unknown, ms = 0) => new Promise<Response>((ok) => window.setTimeout(() => ok(new Response(JSON.stringify(d), { status: 200, headers: { 'content-type': 'application/json' } })), ms))
+  let blocos = [
+    { id: 'b1', nome: 'Quem é aluno?', descricao: 'Alunos respondendo que são e que não são alunos, cada um de um jeito', exemplos: '', quantidade: 30, ordem: 0, revisar: [],
+      mensagens: ['sou aluno sim', 'não sou aluno', 'aluno desde o começo', 'ainda não mas quero ser', 'Sou aluno faz 3 meses', 'eu sou', 'não sou ainda', 'sou aluna sim!!', 'aluno aqui de BH', 'quero entrar hj'] },
+    { id: 'b2', nome: 'Bom dia', descricao: 'Bom dia de várias cidades', exemplos: '', quantidade: 20, ordem: 1, revisar: ['bom diaa', 'Bom dia de Curitiba'], mensagens: ['bom dia pessoal', 'bom dia de SP', 'Bom dia família', 'bom diaaa'] },
+    { id: 'b3', nome: 'EU QUERO', descricao: '', exemplos: '', quantidade: 10, ordem: 2, revisar: [], mensagens: [] },
+  ]
+  const geradas = ['bom dia galera', 'bom dia de Recife', 'Bom dia!! primeira vez aqui', 'bom dia, cheguei', 'bom diaa direto do trampo kkk', 'bom dia família GF', 'dia pessoal', 'Bom dia de Goiânia', 'bom dia mestre', 'bom dia, café na mão ☕']
+  window.fetch = (u: RequestInfo | URL, i?: RequestInit) => {
+    const url = String(u)
+    if (url.includes('/functions/v1/chat-blocos')) { const q = JSON.parse(String(i?.body ?? '{}')).quantidade ?? 10; return json({ mensagens: Array.from({ length: q }, (_, k) => geradas[k % geradas.length] + (k >= geradas.length ? ` ${k}` : '')) }, 1400) }
+    if (url.includes('/rest/v1/chat_blocos')) {
+      const metodo = i?.method ?? 'GET'
+      const id = /id=eq\.([^&]+)/.exec(url)?.[1]
+      if (metodo === 'GET') return json(blocos)
+      if (metodo === 'DELETE') { blocos = blocos.filter((b) => b.id !== id); return json(null) }
+      const dados = JSON.parse(String(i?.body ?? '{}'))
+      if (metodo === 'PATCH') { blocos = blocos.map((b) => (b.id === id ? { ...b, ...dados } : b)); return json(blocos.filter((b) => b.id === id), 300) }
+      const novo = { ...dados, id: `b${Date.now()}` }; blocos = [...blocos, novo]; return json([novo], 300)
+    }
+    return original(u, i)
+  }
+}
 // &tema=claro|escuro vale em qualquer tela do laboratório (conferência dos dois temas)
 { const t = new URLSearchParams(location.search).get('tema'); aplicarTema(t === 'claro' || t === 'escuro' ? t : temaGuardado()) }
 // &ig=1: simula o link da comunidade no Instagram (a escolha WhatsApp ou Instagram)
@@ -720,7 +746,9 @@ function LabCentral() {
     let cancelar = () => {}
     return () => { vivo = false; cancelar() }
   }, [])
-  return <SalaDeTreino apresentador="Tiago" aoSair={() => undefined} />
+  // &blocos=1: com uma sessão de mentira, para os blocos de mensagens aparecerem
+  const sessao = new URLSearchParams(location.search).has('blocos') ? { token: 'lab', usuario: { id: 'lab', nome: 'Tiago', email: 'lab@lab' } } as never : null
+  return <SalaDeTreino apresentador="Tiago" aoSair={() => undefined} sessao={sessao} />
 }
 
 function LabMarketplace() {

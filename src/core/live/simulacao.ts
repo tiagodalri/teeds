@@ -23,6 +23,10 @@ import { mensagemDe, novaPessoa, respostaA, soEmoji, type Categoria, type Pessoa
 export type Oscilacao = 'baixa' | 'media' | 'alta'
 export type Ritmo = 'calmo' | 'normal' | 'agitado'
 export type Momento = 'abertura' | 'meta' | 'stop' | 'lateral' | 'perguntas'
+/** Velocidade de um bloco de mensagens no play (Lenta / Normal / Rápida). */
+export type Velocidade = 'lenta' | 'normal' | 'rapida'
+/** O bloco que está tocando: as mensagens aprovadas indo para o chat, uma a uma. */
+export interface BlocoTocando { id: string; nome: string; total: number; enviadas: number }
 
 export interface MensagemSimulada {
   id: string
@@ -53,11 +57,13 @@ export interface EstadoDaSimulacao {
   mensagens: MensagemSimulada[]
   /** O apresentador pode fechar o chat (20/10/2026): ninguém escreve, só ele. */
   chatAberto: boolean
+  velocidade: Velocidade
+  bloco: BlocoTocando | null
 }
 
 let estado: EstadoDaSimulacao = {
   ativa: false, pausada: false, publicoAlvo: 700, publicoAgora: 0, oscilacao: 'media', ritmo: 'normal',
-  apresentador: '', momento: null, mensagens: [], chatAberto: true,
+  apresentador: '', momento: null, mensagens: [], chatAberto: true, velocidade: 'normal', bloco: null,
 }
 const ouvintes = new Set<() => void>()
 const mudar = (p: Partial<EstadoDaSimulacao>) => { estado = { ...estado, ...p }; ouvintes.forEach((f) => f()) }
@@ -179,8 +185,9 @@ function agendarChat() {
   const porMinuto = TAXA[estado.ritmo] * (emMomento ? 2.5 : 1) * Math.min(1.6, Math.max(0.4, estado.publicoAgora / 700))
   const espera = -Math.log(1 - Math.random()) * (60000 / porMinuto) // chegada aleatória, como gente de verdade
   timerChat = window.setTimeout(() => {
-    // chat fechado: o público não escreve (as entradas e saídas continuam)
-    if (!estado.pausada && estado.chatAberto) {
+    // chat fechado: o público não escreve (as entradas e saídas continuam);
+    // com um bloco tocando, o chat é dele: o chat automático espera
+    if (!estado.pausada && estado.chatAberto && !estado.bloco) {
       proximaMensagem()
     }
     agendarChat()
@@ -216,8 +223,9 @@ export function iniciarSimulacao(apresentador: string): void {
 }
 
 export function pararSimulacao(): void {
-  window.clearInterval(timerPublico); window.clearTimeout(timerChat)
-  mudar({ ativa: false, momento: null })
+  window.clearInterval(timerPublico); window.clearTimeout(timerChat); window.clearTimeout(timerBloco)
+  fila = []
+  mudar({ ativa: false, momento: null, bloco: null })
 }
 
 export function ajustar(p: Partial<Pick<EstadoDaSimulacao, 'publicoAlvo' | 'oscilacao' | 'ritmo' | 'pausada'>>): void {
@@ -238,6 +246,92 @@ export function falarComoApresentador(texto: string): void {
 }
 
 export const limparChat = () => mudar({ mensagens: [] })
+
+/* ------------------------------------------------- blocos de mensagens (09/11/2026)
+   O Tiago prepara e aprova as mensagens antes (blocos.ts) e dá o play na hora certa.
+   Elas vão como foram aprovadas, sem mexer no texto, cada uma dita por uma pessoa da
+   sala (nunca a mesma duas vezes seguidas), num intervalo que varia como gente de
+   verdade. Chat pausado ou fechado: o bloco espera e continua de onde parou. */
+
+/** Segundos entre uma mensagem e a próxima (média, mínimo, máximo). */
+const INTERVALO: Record<Velocidade, [number, number, number]> = { lenta: [5, 2.5, 11], normal: [2.4, 1, 5.5], rapida: [0.9, 0.35, 2] }
+let timerBloco: number | undefined
+let fila: string[] = []
+let ultimoNoBloco = ''
+
+/* Quem diz "sou aluna" é ela, quem diz "obrigado" é ele: a frase escolhe a pessoa
+   (o nome do chat precisa combinar com o que a pessoa escreve). */
+const DELA = /(?:^|[^\p{L}])(aluna|obrigada|cansada|animada|ansiosa|preparada|empolgada|sozinha|nova aqui|nova na|grávida|esposa|mãe)(?![\p{L}])/iu
+const DELE = /(?:^|[^\p{L}])(aluno|obrigado|cansado|animado|ansioso|preparado|empolgado|sozinho|novo aqui|novo na|esposo|marido|pai)(?![\p{L}])/iu
+/** Cada mensagem do bloco é de uma pessoa diferente (ninguém diz "sou aluno" e depois "não sou"). */
+const falaramNoBloco = new Set<string>()
+function quemDiz(texto: string): Pessoa {
+  const ela = DELA.test(texto) ? true : DELE.test(texto) ? false : null
+  const serve = (p: Pessoa) => !falaramNoBloco.has(p.nome) && (ela === null || p.ela === ela)
+  const certos = naSala.filter(serve)
+  let p: Pessoa | undefined
+  if (certos.length) {
+    // quem fala muito continua com mais chance, mas só uma vez por bloco
+    const total = certos.reduce((t, x) => t + x.peso, 0)
+    let r = Math.random() * total
+    p = certos.find((x) => (r -= x.peso) <= 0) ?? certos[certos.length - 1]
+  } else {
+    // ninguém assim na sala: alguém de fora entra para falar
+    const i = foraDaSala.findIndex(serve)
+    if (i >= 0) p = foraDaSala.splice(i, 1)[0]
+    else for (let k = 0; k < 12 && !p; k++) { const nova = novaPessoa(usados); if (serve(nova)) p = nova; else foraDaSala.push(nova) }
+    if (p) naSala.push(p)
+  }
+  p ??= quemFala(ultimoNoBloco)
+  falaramNoBloco.add(p.nome)
+  return p
+}
+
+function agendarBloco(primeira = false) {
+  window.clearTimeout(timerBloco)
+  if (!estado.bloco) return
+  const [media, min, max] = INTERVALO[estado.velocidade]
+  const espera = primeira ? 400 : Math.min(max, Math.max(min, -Math.log(1 - Math.random()) * media)) * 1000
+  timerBloco = window.setTimeout(passoDoBloco, espera)
+}
+function passoDoBloco() {
+  const b = estado.bloco
+  if (!b || !estado.ativa) return
+  if (estado.pausada || !estado.chatAberto) { timerBloco = window.setTimeout(passoDoBloco, 1000); return }
+  const texto = fila.shift()
+  if (texto) {
+    const p = quemDiz(texto)
+    ultimoNoBloco = p.nome
+    falar(p, texto, 'reacao')
+    mudar({ bloco: { ...b, enviadas: b.enviadas + 1 } })
+  }
+  if (!fila.length) { mudar({ bloco: null }); agendarChat(); return }
+  agendarBloco()
+}
+
+/** Play: manda as mensagens aprovadas do bloco para o chat (em ordem embaralhada). */
+export function tocarBloco(id: string, nome: string, mensagens: string[]): void {
+  const lista = mensagens.map((m) => m.trim()).filter(Boolean)
+  if (!estado.ativa || !lista.length) return
+  for (let i = lista.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [lista[i], lista[j]] = [lista[j], lista[i]] }
+  fila = lista
+  ultimoNoBloco = ''
+  falaramNoBloco.clear()
+  mudar({ bloco: { id, nome, total: lista.length, enviadas: 0 } })
+  agendarBloco(true)
+}
+
+/** Para o bloco no meio; o chat automático volta. */
+export function pararBloco(): void {
+  window.clearTimeout(timerBloco)
+  fila = []
+  if (estado.bloco) { mudar({ bloco: null }); agendarChat() }
+}
+
+export function mudarVelocidade(v: Velocidade): void {
+  mudar({ velocidade: v })
+  if (estado.bloco) agendarBloco()
+}
 
 /** Abre ou fecha o chat da sala de treino; a sala vê o aviso, como numa live de verdade. */
 export function abrirChatDoTreino(aberto: boolean): void {

@@ -6,6 +6,7 @@ import {
 } from '../../core/live/simulacao'
 import './aovivo.css'
 import { SeletorDeFundo } from './SeletorDeFundo'
+import { BlocosDoChat } from './BlocosDoChat'
 import { MedidorDeVolume } from './MedidorDeVolume'
 import { MARCA } from '../../marca'
 import type { SessaoTeeds } from '../../core/teeds/conta'
@@ -291,9 +292,11 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
 
   const controles = (
     <div className="cv-controles" onPointerDown={() => setAjustou(true)} onKeyDown={() => setAjustou(true)}>
+      <BlocosDoChat sessao={sessao} />
+
       <section className="cv-card">
-        <h4>Tema dos comentários</h4>
-        <span className="tr-legenda">Um toque muda o assunto do chat simulado por alguns segundos, combinando com o momento da live.</span>
+        <h4>Temas automáticos</h4>
+        <span className="tr-legenda">Um toque muda o assunto do chat automático por alguns segundos, sem revisão.</span>
         <div className="tr-momentos-grade">
           {MOMENTOS.map((m) => (
             <button key={m.id} className={sim.momento === m.id ? 'on' : ''} disabled={!sim.ativa} onClick={() => dispararMomento(m.id)}>
@@ -374,7 +377,8 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
         </button>
         <button role="tab" aria-selected={abaChat === 'todos'} className={abaChat === 'todos' ? 'on' : ''} onClick={() => setAbaChat('todos')}>Todos</button>
       </div>
-      {sim.momento && abaChat === 'todos' && <div className="tr-momento">Tema: {MOMENTOS.find((m) => m.id === sim.momento)?.rotulo}</div>}
+      {sim.bloco && abaChat === 'todos' && <div className="tr-momento">Bloco: {sim.bloco.nome || 'Sem nome'} · {sim.bloco.enviadas} de {sim.bloco.total}</div>}
+      {!sim.bloco && sim.momento && abaChat === 'todos' && <div className="tr-momento">Tema: {MOMENTOS.find((m) => m.id === sim.momento)?.rotulo}</div>}
       <div className="av-mensagens" ref={lista} role="log" aria-live="off">
         {mensagensDoChat.length === 0 && (
           <div className="av-chat-vazio tr-chat-vazio">
