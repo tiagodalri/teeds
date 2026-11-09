@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
-import { ALTURA_DO_QUADRO, contraste, dominio, type Camada } from '../../core/teeds/camadas'
+import { ALTURA_DO_QUADRO, IAS, contraste, dominio, fotoDaIA, type Camada } from '../../core/teeds/camadas'
+import { LogotipoDaIA } from '../marca/LogotipoDaIA'
 import './camadas.css'
 
 /**
@@ -71,10 +72,23 @@ export function CamadasDoStory({ camadas, modo, votos, meuVoto, aoVotar, aoLink,
           case 'texto': {
             const fundo = c.fundo === 'cor' ? { background: c.cor, color: contraste(c.cor) } : c.fundo === 'claro' ? { background: 'rgba(255,255,255,.88)', color: c.cor === '#FFFFFF' ? '#051528' : c.cor } : { color: c.cor }
             classe += ` f-${c.fonte} fundo-${c.fundo} a-${c.alinhar}`
-            corpo = <span className="cam-texto-linhas" style={{ ...fundo, ['--cor' as string]: c.cor }}>{c.texto}</span>
+            corpo = <span className="cam-texto-linhas" style={{ ...fundo, ['--cor' as string]: c.cor }}>{c.texto.split(/(@[^\s@]+(?: [A-ZÀ-Ý][^\s@]*)?)/).map((t, i) => (i % 2 ? <span key={i} className="cam-mencao-txt">{t}</span> : t))}</span>
             break
           }
           case 'emoji': corpo = c.emoji; break
+          case 'ia': {
+            const ia = IAS.find((x) => x.id === c.ia) ?? IAS[0]
+            classe += ` i-${c.estilo}`
+            corpo = c.estilo === 'tag'
+              ? <><img src={fotoDaIA(c.ia)} alt="" draggable={false} /><span className="cam-ia-logo"><LogotipoDaIA nome={ia.nome} id={ia.id} sobreFoto /></span></>
+              : <><span className="cam-ia-foto"><img src={fotoDaIA(c.ia)} alt="" draggable={false} /></span><span className="cam-ia-logo"><LogotipoDaIA nome={ia.nome} id={ia.id} sobreFoto fio={c.estilo === 'cartao'} /></span>{c.estilo === 'cartao' && <span className="cam-ia-chamada">{ia.chamada}</span>}</>
+            break
+          }
+          case 'mencao': classe += ` e-${c.estilo}`; corpo = <span>@{c.nome}</span>; break
+          case 'imagem':
+            classe += ` m-${c.moldura}`
+            corpo = <img src={c.local || c.url} alt="" draggable={false} style={{ aspectRatio: c.moldura === 'circulo' ? '1' : String(c.proporcao || 1) }} />
+            break
           case 'local': classe += ` e-${c.estilo}`; corpo = <>{ICONE_PIN}<span>{c.texto}</span></>; break
           case 'hora': classe += ` e-${c.estilo}`; corpo = <>{ICONE_RELOGIO}<span>{c.hora}</span></>; break
           case 'link':

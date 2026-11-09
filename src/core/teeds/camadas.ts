@@ -13,6 +13,17 @@ export type FonteDoTexto = 'classico' | 'forte' | 'elegante' | 'maquina' | 'neon
 export type FundoDoTexto = 'nenhum' | 'cor' | 'claro'
 export type EstiloDaFigurinha = 'branco' | 'ouro' | 'vidro' | 'azul'
 export type Selo = 'gf' | 'aovivo' | 'novidade' | 'ia' | 'gold' | 'black' | 'prestige'
+/** As 5 I.A. da GlobalFly (o código de cada uma no banco e no servidor). */
+export type IdDaIA = 'goreme' | 'falcon' | 'legacy' | 'superior5' | 'ag2'
+export type EstiloDaIA = 'cartao' | 'selo' | 'tag'
+export type Moldura = 'arredondada' | 'circulo' | 'polaroid' | 'sem'
+export const IAS: Array<{ id: IdDaIA; nome: string; chamada: string }> = [
+  { id: 'goreme', nome: 'GF Raptor', chamada: 'Rápida e direta' }, { id: 'falcon', nome: 'GF Falcon', chamada: 'A porta baixa' },
+  { id: 'legacy', nome: 'GF Legacy', chamada: 'A porta alta' }, { id: 'superior5', nome: 'GF Gulf', chamada: 'O analista dos altos' },
+  { id: 'ag2', nome: 'GF Phenom', chamada: 'O espelho' },
+]
+/** A foto do avião de cada I.A. (a mesma dos cartões da frota). */
+export const fotoDaIA = (id: IdDaIA) => `${import.meta.env.BASE_URL}robos-globalfly/${id}-pequena.webp`
 
 interface Base { id: string; x: number; y: number; escala: number; rotacao: number }
 export type Camada = Base & (
@@ -25,6 +36,10 @@ export type Camada = Base & (
   | { tipo: 'enquete'; pergunta: string; opcoes: string[] }
   | { tipo: 'selo'; selo: Selo }
   | { tipo: 'desenho'; tracos: Traco[] }
+  | { tipo: 'ia'; ia: IdDaIA; estilo: EstiloDaIA }
+  | { tipo: 'mencao'; nome: string; userId: string | null; estilo: EstiloDaFigurinha }
+  /** Foto por cima do story (url no Storage; local enquanto sobe). proporcao = largura / altura. */
+  | { tipo: 'imagem'; url: string; local?: string; proporcao: number; moldura: Moldura }
 )
 export interface Traco { cor: string; largura: number; marcador?: boolean; d: string }
 
@@ -36,6 +51,12 @@ export const novoId = () => Math.random().toString(36).slice(2, 10)
 /** As figurinhas que o toque troca de estilo (como no Instagram). */
 export const ESTILOS: EstiloDaFigurinha[] = ['branco', 'ouro', 'vidro', 'azul']
 export const proximoEstilo = (e: EstiloDaFigurinha): EstiloDaFigurinha => ESTILOS[(ESTILOS.indexOf(e) + 1) % ESTILOS.length]
+const ESTILOS_IA: EstiloDaIA[] = ['cartao', 'selo', 'tag']
+export const proximoEstiloIA = (e: EstiloDaIA): EstiloDaIA => ESTILOS_IA[(ESTILOS_IA.indexOf(e) + 1) % ESTILOS_IA.length]
+const MOLDURAS: Moldura[] = ['arredondada', 'circulo', 'polaroid', 'sem']
+export const proximaMoldura = (m: Moldura): Moldura => MOLDURAS[(MOLDURAS.indexOf(m) + 1) % MOLDURAS.length]
+/** A menção mostra nome e sobrenome ("Ana Paula Ribeiro" vira "@Ana Paula"). */
+export const nomeDeMencao = (nome: string) => nome.trim().split(/\s+/).slice(0, 2).join(' ')
 
 /** A paleta do texto e do desenho: a família da GlobalFly primeiro, depois as cores livres. */
 export const CORES = ['#FFFFFF', '#051528', '#B78D39', '#F7E3A1', '#9CB1C7', '#3B6FB0', '#22D66A', '#FF3B47', '#FF8A3D', '#E040A0', '#8B5CF6', '#000000']
@@ -99,6 +120,9 @@ export const nova = {
   enquete: (pergunta: string, opcoes: string[]): Camada => ({ ...base(50, 60), tipo: 'enquete', pergunta, opcoes }),
   selo: (selo: Selo): Camada => ({ ...base(50, 36), tipo: 'selo', selo }),
   desenho: (): Camada => ({ ...base(50, 50), tipo: 'desenho', tracos: [] }),
+  ia: (ia: IdDaIA): Camada => ({ ...base(50, 40), tipo: 'ia', ia, estilo: 'cartao' }),
+  mencao: (nome: string, userId: string | null): Camada => ({ ...base(50, 34), tipo: 'mencao', nome, userId, estilo: 'branco' }),
+  imagem: (url: string, local: string, proporcao: number): Camada => ({ ...base(50, 44), tipo: 'imagem', url, local, proporcao, moldura: 'arredondada' }),
 }
 
 /** A próxima live às 20h30 (hoje, ou amanhã se já passou): o padrão da contagem regressiva. */

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as PE } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as PE, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import {
@@ -36,6 +36,10 @@ export interface PropsDoVisualizador {
   aoMetricas?: (s: Story) => void
   /** Prévia do painel: não grava nada e fica rodando. */
   previa?: boolean
+  /** A prévia do estúdio: no lugar de responder/curtir, os botões de editar e publicar. */
+  rodape?: ReactNode
+  /** Classe extra no fundo (a prévia do estúdio fica por cima dele). */
+  classe?: string
 }
 
 const SOM = 'stories.som'
@@ -89,7 +93,7 @@ const I = {
 }
 
 export function VisualizadorDeStories(props: PropsDoVisualizador) {
-  const { perfis, sessao, aoFechar, aoVer, aoBotao, linkDe, equipe, aoMetricas, previa } = props
+  const { perfis, sessao, aoFechar, aoVer, aoBotao, linkDe, equipe, aoMetricas, previa, rodape, classe } = props
   const [pi, setPi] = useState(props.perfilInicial)
   const [si, setSi] = useState(() => primeiroNaoVisto(perfis[props.perfilInicial]))
   const [pausado, setPausado] = useState(false)
@@ -415,7 +419,7 @@ export function VisualizadorDeStories(props: PropsDoVisualizador) {
   }
 
   const conteudo = (
-    <div className={`sto-v ${pc ? 'pc' : 'cel'} ${saindo ? 'saindo' : ''} ${segurando ? 'segurando' : ''} ${respondendo ? 'respondendo' : ''}`} role="dialog" aria-modal="true" aria-label={`Stories de ${perfil.nome}`}
+    <div className={`sto-v ${pc ? 'pc' : 'cel'} ${saindo ? 'saindo' : ''} ${segurando ? 'segurando' : ''} ${respondendo ? 'respondendo' : ''} ${classe ?? ''}`} role="dialog" aria-modal="true" aria-label={`Stories de ${perfil.nome}`}
       onClick={(e) => { if (pc && e.target === e.currentTarget) fechar() }}>
       {pc && <div className="sto-fundo" aria-hidden="true">{story.tipo === 'imagem' || story.capa ? <img src={story.capa ?? story.midia} alt="" /> : null}</div>}
       {pc && <button type="button" className="sto-fechar-pc" onClick={() => fechar()} aria-label="Fechar"><Ico d={I.fechar} /></button>}
@@ -484,6 +488,7 @@ export function VisualizadorDeStories(props: PropsDoVisualizador) {
 
           {voando.map((v) => <span key={v.id} className="sto-voa" style={{ left: `${v.x}%`, animationDelay: `${(v.id % 1) * 300}ms` }}>{v.e}</span>)}
 
+          {rodape ? <div className="sto-ui pe previa">{rodape}</div> : (
           <div className="sto-ui pe">
             {story.botao && (
               <button type="button" className="sto-cta" onClick={botao}>
@@ -507,6 +512,7 @@ export function VisualizadorDeStories(props: PropsDoVisualizador) {
                 )}
             </div>
           </div>
+          )}
 
           {respondendo && (
             <div className="sto-reacoes" onPointerDown={(e) => e.preventDefault()}>

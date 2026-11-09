@@ -229,6 +229,16 @@ export async function avisarNoCelular(sessao: SessaoTeeds, storyId: string, titu
   return (j.enviados ?? 0) as number
 }
 
+/** Os membros para mencionar com @ (a equipe vê os clientes da marca; o admin do parceiro, os dele). */
+export async function buscarMembros(sessao: SessaoTeeds, termo: string): Promise<Array<{ userId: string; nome: string; foto: string | null }>> {
+  const q = termo.trim().replace(/[*%(),]/g, '')
+  if (q.length < 2) return []
+  const r = await fetch(`${SUPABASE.url}/rest/v1/clientes?marca=eq.${MARCA.id}&nome=ilike.*${encodeURIComponent(q)}*&select=user_id,nome,foto_url&order=nome&limit=12`, { headers: cab(sessao.token) })
+  if (!r.ok) return []
+  const l = (await r.json()) as Array<{ user_id: string; nome: string | null; foto_url: string | null }>
+  return l.filter((x) => x.nome?.trim()).map((x) => ({ userId: x.user_id, nome: x.nome!.trim(), foto: x.foto_url }))
+}
+
 /* -------------------------------------------------------------- arquivos */
 
 const BUCKET = 'stories'

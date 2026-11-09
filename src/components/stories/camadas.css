@@ -91,3 +91,37 @@
 .cam-enq-barra { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, rgba(183, 141, 57, .28), rgba(59, 111, 176, .22)); transition: width .6s cubic-bezier(.2, .8, .2, 1); }
 .cam-enq-op.meu .cam-enq-barra { background: linear-gradient(90deg, rgba(183, 141, 57, .55), rgba(59, 111, 176, .45)); }
 .cam-enq-op:disabled { opacity: 1; }
+
+/* ------------------------------------------------ 09/11/2026: I.A., menção e foto por cima */
+/* as amostras da bandeja do estúdio usam as mesmas regras (ficam fora do .cam) */
+.est .cam-local, .est .cam-link, .est .cam-hora { display: flex; align-items: center; gap: 1.4cqw; font-family: 'Arimo', Arial, sans-serif; font-weight: 800; text-transform: uppercase; }
+.est .e-branco.cam-local svg { stroke: #B78D39; }
+
+.cam-mencao-txt { text-decoration: underline; text-decoration-thickness: .08em; text-underline-offset: .12em; }
+.cam-mencao { display: flex; align-items: center; padding: 1.8cqw 3.4cqw; border-radius: 2.4cqw; font-family: 'Arimo', Arial, sans-serif; font-weight: 800; font-size: 4.6cqw; box-shadow: 0 .8cqw 2.4cqw rgba(0, 0, 0, .22); max-width: 84cqw; }
+.cam-mencao.e-branco span { background: linear-gradient(45deg, #B78D39, #8A6420 40%, #3B6FB0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* as I.A.: o avião certo de cada uma, com o logotipo oficial */
+.cam-ia { font-family: 'Arimo', Arial, sans-serif; color: #F3F0E9; }
+.cam-ia img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.cam-ia .logo-ia { font-size: 5.2cqw; color: #F3F0E9; }
+.cam-ia.i-cartao { width: 56cqw; border-radius: 3cqw; overflow: hidden; background: #051528; box-shadow: 0 0 0 .5cqw #B78D39, 0 1.6cqw 4cqw rgba(0, 0, 0, .4); display: flex; flex-direction: column; }
+.cam-ia.i-cartao .cam-ia-foto { aspect-ratio: 16 / 10; position: relative; background: #051528; }
+.cam-ia.i-cartao .cam-ia-foto::after { content: ''; position: absolute; inset: -1px -1px -3px; background: linear-gradient(transparent 50%, #051528 94%); }
+.cam-ia.i-cartao .cam-ia-logo { padding: 0 3.4cqw; margin-top: -3cqw; position: relative; }
+.cam-ia.i-cartao .cam-ia-chamada { padding: 1.2cqw 3.4cqw 3cqw; font-size: 3cqw; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #C69A45; white-space: nowrap; }
+.cam-ia.i-selo { display: flex; flex-direction: column; align-items: center; gap: 2cqw; }
+.cam-ia.i-selo .cam-ia-foto { width: 30cqw; height: 30cqw; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 1cqw #F7E3A1, 0 0 0 1.7cqw #B78D39, 0 1.6cqw 4cqw rgba(0, 0, 0, .4); }
+.cam-ia.i-selo .cam-ia-logo { background: #051528; padding: 1.6cqw 3cqw; border-radius: 99cqw; box-shadow: inset 0 0 0 .4cqw #B78D39; }
+.cam-ia.i-selo .logo-ia { font-size: 4cqw; }
+.cam-ia.i-tag { display: flex; align-items: center; gap: 2cqw; background: #051528; padding: 1.2cqw 3.4cqw 1.2cqw 1.2cqw; border-radius: 99cqw; box-shadow: inset 0 0 0 .45cqw #B78D39, 0 1cqw 3cqw rgba(0, 0, 0, .35); }
+.cam-ia.i-tag > img { width: 9cqw; height: 9cqw; border-radius: 50%; }
+.cam-ia.i-tag .logo-ia { font-size: 4.4cqw; }
+
+/* foto por cima */
+.cam-imagem { width: 46cqw; }
+.cam-imagem img { display: block; width: 100%; height: auto; object-fit: cover; }
+.cam-imagem.m-arredondada img { border-radius: 3cqw; box-shadow: 0 1.4cqw 4cqw rgba(0, 0, 0, .35); }
+.cam-imagem.m-circulo img { border-radius: 50%; box-shadow: 0 0 0 1cqw #fff, 0 1.4cqw 4cqw rgba(0, 0, 0, .35); }
+.cam-imagem.m-polaroid { background: #fff; padding: 2.4cqw 2.4cqw 8cqw; box-shadow: 0 1.4cqw 4cqw rgba(0, 0, 0, .35); }
+.cam-imagem.m-sem img { border-radius: 0; }

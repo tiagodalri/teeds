@@ -5,14 +5,15 @@ import type { PapelDoAdmin } from '../../core/teeds/parceiroEmFoco'
 import { useParceirosDaMarca } from '../../core/teeds/parceiroEmFoco'
 import { MARCA } from '../../marca'
 import {
-  ALTURA_DO_QUADRO, CORES, EMOJIS, FONTES, carregarFontesDosStories, contraste, nova, proximaLive, proximoEstilo, rotuloDasCamadas,
-  type Camada, type FonteDoTexto, type FundoDoTexto, type Selo, type Traco,
+  ALTURA_DO_QUADRO, CORES, EMOJIS, FONTES, IAS, carregarFontesDosStories, contraste, fotoDaIA, nomeDeMencao, nova, proximaLive, proximaMoldura, proximoEstilo, proximoEstiloIA, rotuloDasCamadas,
+  type Camada, type FonteDoTexto, type FundoDoTexto, type IdDaIA, type Selo, type Traco,
 } from '../../core/teeds/camadas'
-import { BOTAO_PADRAO, perfisDoPainel, LIMITE_SEGUNDOS, type BotaoTipo, type Enquadramento, type PerfilDoPainel, type Publico } from '../../core/teeds/stories'
+import { BOTAO_PADRAO, buscarMembros, enviarArquivo, perfisDoPainel, LIMITE_SEGUNDOS, type BotaoTipo, type Enquadramento, type PerfilDoPainel, type Publico, type Story } from '../../core/teeds/stories'
 import { descartar, iniciarFundo, iniciarMidia, publicar as publicarTrabalho, tentarDeNovo, useTrabalho } from '../../core/teeds/publicacaoDeStories'
 import { CamadasDoStory } from './CamadasDoStory'
+import { LogotipoDaIA } from '../marca/LogotipoDaIA'
 import { useTecladoVirtual, useVoltarFecha } from '../../core/telaDeApp'
-import { Avatar, estiloDaMidia } from './VisualizadorDeStories'
+import { Avatar, estiloDaMidia, VisualizadorDeStories } from './VisualizadorDeStories'
 import './stories.css'
 import './camadas.css'
 import './estudio.css'
@@ -91,9 +92,11 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
   const [etapa, setEtapa] = useState<Etapa>(fotoDeExemplo ? 'editar' : 'camera')
   const [midia, setMidia] = useState<Midia | null>(fotoDeExemplo ? { tipo: 'imagem', local: fotoDeExemplo } : null)
   const [camadas, setCamadas] = useState<Camada[]>([])
+  const camadasRef = useRef<Camada[]>([])
+  camadasRef.current = camadas
   const [enq, setEnq] = useState<Enquadramento>({ zoom: 1, x: 50, y: 50 })
   const [semSom, setSemSom] = useState(false)
-  const [painel, setPainel] = useState<null | 'figurinhas' | 'local' | 'link' | 'contagem' | 'enquete' | 'opcoes' | 'sair'>(null)
+  const [painel, setPainel] = useState<null | 'figurinhas' | 'local' | 'link' | 'contagem' | 'enquete' | 'mencao' | 'opcoes' | 'sair'>(null)
   const [editandoTexto, setEditandoTexto] = useState<Camada | null>(null)
   const [desenhando, setDesenhando] = useState(false)
   const [editandoEnquete, setEditandoEnquete] = useState<string | null>(null)
@@ -177,8 +180,25 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
     : subplanos.length || parcs.length || meuParceiro ? { subplanos, parceiros: meuParceiro ? [meuParceiro] : parcs } : { todos: true }
   const perfil = perfis.find((p) => p.id === perfilId)
 
-  function publicar() {
+  /* ------------------------------------------------ a prévia: como os clientes vão ver, antes de postar */
+  const [previa, setPrevia] = useState<Story | null>(null)
+  async function abrirPrevia() {
+    if (!midia) return
+    if (!perfilId) { avisarRapido('Escolha a bolinha do story.'); return }
+    let url = midia.local
+    if (midia.tipo === 'fundo') { try { url = URL.createObjectURL(await gerarFundo(midia.fundo ?? 0)()) } catch { url = '' } }
+    setPrevia({
+      id: 'previa', codigo: 'previa', tipo: midia.tipo === 'video' ? 'video' : 'imagem', midia: url, capa: null,
+      duracao: midia.tipo === 'video' ? (trabalho?.duracao ?? 15) : 6, enquadramento: { ...enq, ...(semSom ? { mudo: true } : {}) },
+      chip: null, titulo: null, subtitulo: null, quando: new Date().toISOString(), destaque: fixo, compartilhar, responder,
+      visto: false, reacao: null, botao: null, publico, camadas, votos: null, meuVoto: null,
+    })
+  }
+  const rotuloPara = paraQuem === 'admins' ? 'Só admins' : meuParceiro ? 'Meus clientes' : subplanos.length || parcs.length ? 'Público escolhido' : 'Todos'
+
+  async function publicar() {
     if (publicando || !midia) return
+    if (subindoFotos.current.size) { setPublicando(true); await Promise.all(subindoFotos.current.values()); setPublicando(false) }
     if (!perfilId) { avisarRapido('Escolha a bolinha do story.'); return }
     if (trabalho?.fase === 'erro') { tentarDeNovo(trabalho.id); avisarRapido('Tentando de novo…'); return }
     const id = midia.tipo === 'fundo' ? iniciarFundo(sessao, gerarFundo(midia.fundo ?? 0)) : trabalhoId
@@ -186,7 +206,7 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
     setPublicando(true)
     const parceiro = publico.parceiros?.length === 1 && publico.parceiros[0] !== 'direto' ? publico.parceiros[0] : null
     publicarTrabalho(id, {
-      perfil_id: perfilId, enquadramento: { ...enq, ...(semSom ? { mudo: true } : {}) }, camadas,
+      perfil_id: perfilId, enquadramento: { ...enq, ...(semSom ? { mudo: true } : {}) }, camadas: camadasParaSalvar(camadasRef.current),
       chip: '', titulo: '', subtitulo: '', botao_tipo: '', botao_texto: '', botao_destino: '', publico,
       inicia_em: quando === 'agendar' ? new Date(inicio).toISOString() : null, expira_em: null, destaque: fixo, compartilhar, responder,
     }, perfil ? { nome: perfil.nome, foto: perfil.foto_url } : null,
@@ -209,6 +229,31 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
     }
     return [...l.filter((x) => x.tipo !== 'desenho' || c.tipo !== 'desenho'), c]
   })
+  /* foto por cima (como no Instagram): aparece na hora e sobe em segundo plano */
+  const fotoPorCima = useRef<HTMLInputElement | null>(null)
+  const subindoFotos = useRef(new Map<string, Promise<void>>())
+  async function adicionarFoto(f: File | undefined) {
+    if (!f) return
+    try {
+      let fonte: Blob = f
+      if (/heic|heif/i.test(f.type) || /\.hei[cf]$/i.test(f.name)) { const heic2any = (await import('heic2any')).default; fonte = (await heic2any({ blob: f, toType: 'image/jpeg', quality: 0.9 })) as Blob }
+      const bmp = await createImageBitmap(fonte)
+      const esc = Math.min(1, 1080 / Math.max(bmp.width, bmp.height))
+      const c = document.createElement('canvas'); c.width = Math.round(bmp.width * esc); c.height = Math.round(bmp.height * esc)
+      c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height)
+      const jpg = await new Promise<Blob>((ok, falha) => c.toBlob((b) => (b ? ok(b) : falha(new Error('Não consegui ler a foto.'))), 'image/jpeg', 0.88))
+      const camada = nova.imagem('', URL.createObjectURL(jpg), c.width / c.height)
+      adicionar(camada)
+      const envio = enviarArquivo(sessao, `${MARCA.id}/camadas/${Date.now().toString(36)}${camada.id}.jpg`, jpg, 'image/jpeg').promessa
+        .then((url) => { setCamadas((l) => l.map((x) => (x.id === camada.id ? ({ ...x, url } as Camada) : x))) })
+        .catch(() => { avisarRapido('A foto não subiu. Tire e adicione de novo.') })
+        .finally(() => subindoFotos.current.delete(camada.id))
+      subindoFotos.current.set(camada.id, envio)
+    } catch (e) { avisarRapido((e as Error).message) }
+  }
+  /** O que vai para o banco: sem as URLs locais das fotos e sem foto que não subiu. */
+  const camadasParaSalvar = (l: Camada[]) => l.filter((c) => c.tipo !== 'imagem' || !!c.url).map((c) => (c.tipo === 'imagem' ? ({ ...c, local: undefined } as Camada) : c))
+
   function concluirTexto(c: Camada | null) {
     const editando = editandoTexto
     setEditandoTexto(null)
@@ -220,6 +265,9 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
     if (c.tipo === 'texto') setEditandoTexto(c)
     else if (c.tipo === 'local' || c.tipo === 'link' || c.tipo === 'hora' || c.tipo === 'contagem') atualizar(c.id, { estilo: proximoEstilo(c.estilo) })
     else if (c.tipo === 'enquete') { setEditandoEnquete(c.id); setPainel('enquete') }
+    else if (c.tipo === 'ia') atualizar(c.id, { estilo: proximoEstiloIA(c.estilo) } as Partial<Camada>)
+    else if (c.tipo === 'mencao') atualizar(c.id, { estilo: proximoEstilo(c.estilo) } as Partial<Camada>)
+    else if (c.tipo === 'imagem') atualizar(c.id, { moldura: proximaMoldura(c.moldura) } as Partial<Camada>)
   }
 
   const mudou = camadas.length > 0 || !!midia
@@ -258,7 +306,7 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
         </Editor>
       )}
 
-      {etapa === 'editar' && editandoTexto && <EditorDeTexto inicial={editandoTexto} aoConcluir={concluirTexto} />}
+      {etapa === 'editar' && editandoTexto && <EditorDeTexto inicial={editandoTexto} aoConcluir={concluirTexto} buscar={(t) => buscarMembros(sessao, t)} />}
       {etapa === 'editar' && desenhando && (
         <ModoDesenho camadas={camadas} aoConcluir={(tracos) => {
           setDesenhando(false)
@@ -281,7 +329,7 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
             <button type="button" className={paraQuem === 'admins' ? 'on' : ''} onClick={() => setParaQuem('admins')}>Só admins</button>
           </div>
           <button type="button" className="est-bt" onClick={() => setPainel('opcoes')} aria-label="Mais opções"><Ico d={I.engrenagem} /></button>
-          <button type="button" className={`est-enviar ${publicando ? 'indo' : ''}`} onClick={publicar} disabled={publicando} aria-label={quando === 'agendar' ? 'Agendar' : 'Publicar'}>
+          <button type="button" className={`est-enviar ${publicando ? 'indo' : ''}`} onClick={() => void abrirPrevia()} disabled={publicando} aria-label="Ver a prévia">
             {publicando ? <span className="est-gira" /> : <Ico d={I.seta} />}
           </button>
         </div>
@@ -291,13 +339,17 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
       {painel === 'figurinhas' && (
         <Bandeja aoFechar={() => setPainel(null)}
           aoEscolher={(o) => {
-            if (o === 'local' || o === 'link' || o === 'contagem' || o === 'enquete') { setEditandoEnquete(null); setPainel(o); return }
+            if (o === 'local' || o === 'link' || o === 'contagem' || o === 'enquete' || o === 'mencao') { setEditandoEnquete(null); setPainel(o); return }
+            if (o === 'foto') { setPainel(null); fotoPorCima.current?.click(); return }
+            if (o.startsWith('ia:')) { setPainel(null); adicionar(nova.ia(o.slice(3) as IdDaIA)); return }
             setPainel(null)
             if (o === 'hora') adicionar(nova.hora())
             else if (o.startsWith('selo:')) adicionar(nova.selo(o.slice(5) as Selo))
             else adicionar(nova.emoji(o.slice(6)))
           }} />
       )}
+      {painel === 'mencao' && <FormMencao sessao={sessao} aoFechar={() => setPainel(null)} aoConcluir={(nome, id) => { setPainel(null); adicionar(nova.mencao(nome, id)) }} />}
+      <input ref={fotoPorCima} type="file" accept="image/*,.heic,.heif" hidden onChange={(e) => { void adicionarFoto(e.target.files?.[0]); e.target.value = '' }} />
       {painel === 'local' && <FormLocal aoFechar={() => setPainel(null)} aoConcluir={(t) => { setPainel(null); adicionar(nova.local(t)) }} />}
       {painel === 'link' && <FormLink aoFechar={() => setPainel(null)} aoConcluir={(u, t, a) => { setPainel(null); adicionar(nova.link(u, t, a)) }} />}
       {painel === 'contagem' && <FormContagem aoFechar={() => setPainel(null)} aoConcluir={(t, ate) => { setPainel(null); adicionar(nova.contagem(t, ate)) }} />}
@@ -354,6 +406,24 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
         </Folha>
       )}
       {recado && <div className="est-recado" role="status">{recado}</div>}
+      {previa && perfil && (
+        <VisualizadorDeStories
+          perfis={[{ id: perfil.id, nome: perfil.nome, foto: perfil.foto_url, oficial: perfil.oficial, ordem: 0, parceiro: perfil.parceiro, itens: [previa] }]}
+          perfilInicial={0} sessao={null} previa equipe={paraQuem === 'admins'} classe="est-previa" aoFechar={() => setPrevia(null)}
+          rodape={
+            <div className="est-previa-pe">
+              <button type="button" className="est-previa-editar" onClick={() => setPrevia(null)}><Ico d={I.voltar} />Editar</button>
+              <button type="button" className="est-previa-para" onClick={() => { setPrevia(null); setPainel('opcoes') }} title="Mudar quem vê">
+                <span className="sto-anel"><Avatar foto={perfil.foto_url} nome={perfil.nome} tamanho={26} /></span>
+                <span><small>{quando === 'agendar' ? `Agendado · ${new Date(inicio).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : fixo ? 'Fixo' : '24 horas'}</small><b>{rotuloPara}</b></span>
+              </button>
+              <button type="button" className="est-previa-publicar" onClick={() => { setPrevia(null); void publicar() }}>
+                {quando === 'agendar' ? 'Agendar' : 'Publicar'}<Ico d={I.seta} />
+              </button>
+            </div>
+          }
+        />
+      )}
     </div>
   )
   return createPortal(conteudo, document.body)
@@ -414,7 +484,10 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
       const comPrazo = (c: MediaStreamConstraints) => Promise.race([navigator.mediaDevices.getUserMedia(c), new Promise<never>((_, falha) => window.setTimeout(() => falha(new Error('prazo')), 5000))])
       let s: MediaStream | null = null
       let negada = false
-      try { s = await comPrazo({ video: restr, audio: { echoCancellation: true, noiseSuppression: true } }) }
+      // áudio cru, como uma câmera (09/11/2026, Tiago: "o microfone está muito ruim... qualidade horrível"):
+      // cancelamento de eco e redução de ruído ligam no iPhone o processamento de chamada de voz, baixo e abafado
+      const audio: MediaTrackConstraints = { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: { ideal: 2 }, sampleRate: { ideal: 48000 } }
+      try { s = await comPrazo({ video: restr, audio }) }
       catch (e) {
         negada = (e as Error).name === 'NotAllowedError'
         if ((e as Error).message !== 'prazo') { try { s = await comPrazo({ video: restr }) } catch (e2) { negada = negada || (e2 as Error).name === 'NotAllowedError'; s = null } }
@@ -793,8 +866,19 @@ function Editor({ midia, enq, setEnq, camadas, setCamadas, semSom, escondida, de
 }
 
 /* ============================================================== texto */
-function EditorDeTexto({ inicial, aoConcluir }: { inicial: Camada; aoConcluir: (c: Camada | null) => void }) {
+type Membro = { userId: string; nome: string; foto: string | null }
+function EditorDeTexto({ inicial, aoConcluir, buscar }: { inicial: Camada; aoConcluir: (c: Camada | null) => void; buscar?: (termo: string) => Promise<Membro[]> }) {
   const [c, setC] = useState(inicial as Extract<Camada, { tipo: 'texto' }>)
+  // @ no texto: sugere os membros, como no Instagram
+  const termo = c.texto.match(/@([^\s@]{2,})$/)?.[1] ?? null
+  const [sugestoes, setSugestoes] = useState<Membro[]>([])
+  useEffect(() => {
+    if (!termo || !buscar) { setSugestoes([]); return }
+    let vivo = true
+    const t = window.setTimeout(() => { void buscar(termo).then((l) => vivo && setSugestoes(l.slice(0, 8))) }, 250)
+    return () => { vivo = false; window.clearTimeout(t) }
+  }, [termo]) // eslint-disable-line react-hooks/exhaustive-deps
+  const mencionar = (m: Membro) => { setC({ ...c, texto: c.texto.replace(/@[^\s@]*$/, `@${nomeDeMencao(m.nome)} `) }); setSugestoes([]); area.current?.focus() }
   const area = useRef<HTMLTextAreaElement | null>(null)
   useEffect(() => { window.setTimeout(() => area.current?.focus(), 30) }, [])
   useEffect(() => { const a = area.current; if (a) { a.style.height = 'auto'; a.style.height = `${a.scrollHeight}px` } }, [c.texto, c.fonte, c.escala])
@@ -818,6 +902,11 @@ function EditorDeTexto({ inicial, aoConcluir }: { inicial: Camada; aoConcluir: (
             style={{ ...estilo, ['--cor' as string]: c.cor, textAlign: c.alinhar }} aria-label="Texto do story" />
         </div>
       </div>
+      {sugestoes.length > 0 && (
+        <div className="est-sugere" onPointerDown={(e) => e.preventDefault()}>
+          {sugestoes.map((m) => <button key={m.userId} type="button" onClick={() => mencionar(m)}><Avatar foto={m.foto} nome={m.nome} tamanho={28} /><span>{m.nome}</span></button>)}
+        </div>
+      )}
       <div className="est-texto-pe">
         <button type="button" className="est-bt" onClick={() => setC({ ...c, alinhar: alinharSeguinte[c.alinhar] })} aria-label="Alinhamento"><Ico d={I.alinhar[c.alinhar]} /></button>
         <button type="button" className={`est-bt fundo-t ${c.fundo}`} onClick={() => setC({ ...c, fundo: fundoSeguinte[c.fundo] })} aria-label="Fundo do texto"><b>A</b></button>
@@ -887,6 +976,8 @@ function Bandeja({ aoFechar, aoEscolher }: { aoFechar: () => void; aoEscolher: (
     { id: 'link', tag: <span className="cam-link e-branco est-amostra"><svg viewBox="0 0 24 24"><path d={I.link} /></svg><span>Link</span></span> },
     { id: 'contagem', tag: <span className="est-amostra-card"><Ico d={I.relogio} />Contagem</span> },
     { id: 'enquete', tag: <span className="est-amostra-card"><Ico d={I.enquete} />Enquete</span> },
+    { id: 'mencao', tag: <span className="cam-mencao e-branco est-amostra"><span>@Menção</span></span> },
+    { id: 'foto', tag: <span className="est-amostra-card"><Ico d={I.galeria} />Foto</span> },
     { id: 'hora', tag: <span className="cam-hora e-branco est-amostra"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg><span>{agora}</span></span> },
   ]
   const termo = busca.trim().toLowerCase()
@@ -894,6 +985,19 @@ function Bandeja({ aoFechar, aoEscolher }: { aoFechar: () => void; aoEscolher: (
     <Folha titulo="Figurinhas" aoFechar={aoFechar} alta>
       <input className="est-busca" type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar figurinha ou emoji" aria-label="Buscar figurinha" />
       {!termo && <div className="est-especiais">{especiais.map((s) => <button key={s.id} type="button" onClick={() => aoEscolher(s.id)}>{s.tag}</button>)}</div>}
+      {(!termo || 'ia i.a. raptor falcon legacy gulf phenom avião aviao'.includes(termo) || IAS.some((x) => x.nome.toLowerCase().includes(termo))) && (
+        <>
+          <span className="est-grupo">I.A. da GlobalFly</span>
+          <div className="est-ias">
+            {IAS.filter((x) => !termo || x.nome.toLowerCase().includes(termo) || 'ia i.a. avião aviao'.includes(termo)).map((x) => (
+              <button key={x.id} type="button" onClick={() => aoEscolher(`ia:${x.id}`)} aria-label={x.nome}>
+                <img src={fotoDaIA(x.id)} alt="" />
+                <span><LogotipoDaIA nome={x.nome} id={x.id} sobreFoto /></span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
       {(!termo || 'globalfly selo ao vivo novidade gold black prestige ia'.includes(termo)) && (
         <>
           <span className="est-grupo">Selos da GlobalFly</span>
@@ -912,6 +1016,36 @@ function Bandeja({ aoFechar, aoEscolher }: { aoFechar: () => void; aoEscolher: (
           <div className="est-emojis">{g.lista.filter(() => !termo || g.grupo.toLowerCase().includes(termo)).map((e) => <button key={e} type="button" onClick={() => aoEscolher(`emoji:${e}`)}>{e}</button>)}</div>
         </div>
       ))}
+    </Folha>
+  )
+}
+
+function FormMencao({ sessao, aoFechar, aoConcluir }: { sessao: SessaoTeeds; aoFechar: () => void; aoConcluir: (nome: string, userId: string | null) => void }) {
+  const [t, setT] = useState('')
+  const [lista, setLista] = useState<Membro[]>([])
+  const [buscando, setBuscando] = useState(false)
+  useEffect(() => {
+    const q = t.replace(/^@/, '').trim()
+    if (q.length < 2) { setLista([]); return }
+    let vivo = true
+    setBuscando(true)
+    const tm = window.setTimeout(() => { void buscarMembros(sessao, q).then((l) => { if (vivo) { setLista(l); setBuscando(false) } }) }, 250)
+    return () => { vivo = false; window.clearTimeout(tm) }
+  }, [t]) // eslint-disable-line react-hooks/exhaustive-deps
+  const livre = t.replace(/^@/, '').trim()
+  return (
+    <Folha titulo="Mencionar" aoFechar={aoFechar}>
+      <input className="est-campo" value={t} onChange={(e) => setT(e.target.value.slice(0, 40))} placeholder="@ Buscar um membro" autoFocus autoCapitalize="words" aria-label="Buscar membro" />
+      {buscando && <small className="est-nota">Buscando…</small>}
+      <div className="est-membros">
+        {lista.map((m) => (
+          <button key={m.userId} type="button" onClick={() => aoConcluir(nomeDeMencao(m.nome), m.userId)}>
+            <Avatar foto={m.foto} nome={m.nome} tamanho={40} /><span><b>{m.nome}</b><small>Membro da {MARCA.prosa}</small></span>
+          </button>
+        ))}
+        {!buscando && livre.length >= 2 && !lista.length && <small className="est-nota">Ninguém com esse nome. Dá para mencionar assim mesmo.</small>}
+      </div>
+      {livre.length >= 2 && <button type="button" className="est-pronto claro" onClick={() => aoConcluir(livre, null)}>Usar “@{livre}”</button>}
     </Folha>
   )
 }

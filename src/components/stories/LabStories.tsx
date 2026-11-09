@@ -109,6 +109,7 @@ function ligarBancoDeMentira() {
     if (url.includes('/rpc/teeds_sou_admin_geral')) return json(true)
     if (url.includes('/rest/v1/parceiros')) return json([{ codigo: 'n', nome: 'Naor Bueno' }, { codigo: 'v', nome: 'Victor Cordeiro' }])
     if (url.includes('/rest/v1/stories_perfis')) return json(PERFIS)
+    if (url.includes('/rest/v1/clientes')) return json([{ user_id: 'u1', nome: 'Ana Paula Ribeiro', foto_url: null }, { user_id: 'u2', nome: 'Anderson Lima', foto_url: null }, { user_id: 'u3', nome: 'Mariana Costa', foto_url: '/parceiros/n.webp' }])
     if (url.includes('/functions/v1/notificacoes')) return json({ enviados: 214 })
     return original(entrada, opcoes)
   }
