@@ -340,6 +340,20 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
     chartRef.current = chart
     if (import.meta.env.DEV) (window as unknown as { __graficoPro?: Chart }).__graficoPro = chart
     espacoInicial.current = chart.getBarSpace().bar
+    // 08/11/2026 (revisão de design): o horário que cai colado na borda direita saía cortado
+    // ("21:(") pelo eixo de preços; marcas a menos de 28 px das pontas não são desenhadas.
+    chart.overrideXAxis({ createTicks: ({ bounding, defaultTicks }) => defaultTicks.filter((t) => t.coord > 28 && t.coord < bounding.width - 28) })
+    // e a etiqueta do preço atual não fica por cima de um preço do eixo: o preço que cairia embaixo dela some
+    chart.overrideYAxis({
+      paneId: 'candle_pane',
+      createTicks: ({ defaultTicks }) => {
+        const dados = chart.getDataList()
+        const ultimo = dados[dados.length - 1]
+        if (!ultimo) return defaultTicks
+        const y = (chart.convertToPixel({ value: ultimo.close }, { paneId: 'candle_pane' }) as { y?: number }).y
+        return typeof y === 'number' ? defaultTicks.filter((t) => Math.abs(t.coord - y) > 12) : defaultTicks
+      },
+    })
     chart.setDataLoader({
       // uma CÓPIA: a biblioteca guarda a lista que recebe. Com a mesma lista, a vela nova
       // entrava nela antes do aviso, o gráfico achava que era só a última andando, nunca

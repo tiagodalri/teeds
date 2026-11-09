@@ -1,0 +1,50 @@
+import type { WorkspacePage } from '../WorkspaceNav'
+import { abrirSuporte } from '../../core/teeds/suporte'
+import './barra-inferior.css'
+
+/**
+ * A barra de baixo do celular e do app — versão da GlobalFly (08/11/2026).
+ *
+ * Igual à compartilhada (src/components/barra/BarraInferior.tsx), mais o
+ * "Suporte" como sexto botão. Pedido do Tiago na revisão de design: o botão
+ * redondo do suporte flutuava no canto e cobria o conteúdo ao rolar; no
+ * celular ele passa a morar na barra (o redondo some nessa largura, ver o
+ * tema da GF). As mensagens não lidas aparecem como um ponto no ícone.
+ *
+ * Se a barra compartilhada mudar, esta cópia precisa acompanhar.
+ */
+type Id = WorkspacePage | 'mais' | 'suporte'
+const ITENS: Array<{ id: Id; rotulo: string; d: string }> = [
+  { id: 'inicio', rotulo: 'Início', d: 'M3 11l9-7 9 7M5 9.5V20h5v-6h4v6h5V9.5' },
+  { id: 'robos', rotulo: 'I.A.', d: 'M5 7h14v13H5zM12 3v4M8 12h1m6 0h1M9 16h6' },
+  { id: 'operar', rotulo: 'Manual', d: 'M3 17l5-6 4 3 9-11M16 3h5v5' },
+  { id: 'aulas', rotulo: 'Aulas', d: 'M3 5h7l2 2 2-2h7v15h-7l-2 1-2-1H3zM12 7v14' },
+  { id: 'suporte', rotulo: 'Suporte', d: 'M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5zM8.5 9h7M8.5 12h4' },
+  { id: 'mais', rotulo: 'Mais', d: 'M5.5 4h3A1.5 1.5 0 0 1 10 5.5v3A1.5 1.5 0 0 1 8.5 10h-3A1.5 1.5 0 0 1 4 8.5v-3A1.5 1.5 0 0 1 5.5 4zM15.5 4h3A1.5 1.5 0 0 1 20 5.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 14 8.5v-3A1.5 1.5 0 0 1 15.5 4zM5.5 14h3a1.5 1.5 0 0 1 1.5 1.5v3A1.5 1.5 0 0 1 8.5 20h-3A1.5 1.5 0 0 1 4 18.5v-3A1.5 1.5 0 0 1 5.5 14zM15.5 14h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3a1.5 1.5 0 0 1-1.5-1.5v-3a1.5 1.5 0 0 1 1.5-1.5z' },
+]
+const DO_MENU: WorkspacePage[] = ['inicio', 'robos', 'operar', 'aulas']
+
+export function BarraInferior({ tela, irPara, aoVivoAgora = false }: { tela: WorkspacePage; irPara: (t: WorkspacePage) => void; aoVivoAgora?: boolean }) {
+  return (
+    <nav className="barra-inferior com-suporte" aria-label="Navegação rápida">
+      {ITENS.map((i) => {
+        const ativo = i.id === 'mais' ? !DO_MENU.includes(tela) : tela === i.id
+        const tocar = () => {
+          if (i.id === 'mais') window.dispatchEvent(new Event('menu:abrir'))
+          else if (i.id === 'suporte') abrirSuporte()
+          else irPara(i.id)
+        }
+        return (
+          <button key={i.id} type="button" className={`${ativo ? 'ativo' : ''} ${i.id === 'suporte' ? 'barra-suporte' : ''}`.trim()}
+            aria-current={ativo && i.id !== 'mais' && i.id !== 'suporte' ? 'page' : undefined} onClick={tocar}>
+            <span className="barra-icone">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d={i.d} /></svg>
+              {i.id === 'mais' && aoVivoAgora && <i className="barra-ao-vivo" aria-label="Sala ao vivo agora" />}
+            </span>
+            <span className="barra-rotulo">{i.rotulo}</span>
+          </button>
+        )
+      })}
+    </nav>
+  )
+}

@@ -630,3 +630,59 @@ span.logo-ia { color: inherit !important; }
   }
 }
 /* ============================ fim da revisão de design */
+
+/* ==========================================================================
+   REVISÃO DE DESIGN, PARTE 2 (08/11/2026, Tiago: "faça isso. autorizado.")
+   ========================================================================== */
+
+/* ---------------- 1. Sem o traço dourado na diagonal, em todas as telas */
+/* Início (cartão do saldo e "Continue de onde parou"), plano de voo, Marketplace,
+   boleta do Manual, tela de entrada, capas desenhadas e destaques das Aulas. */
+:root[data-marca='globalfly'] :is(.in-eixo, .plv-eixo, .entrada-cena-eixo, .capa-desenhada-luz, .dq-eixo) { display: none !important; }
+:root[data-marca='globalfly'] :is(.in-aula-texto, .msp-heroi, .bl-ativo)::before { content: none; }
+/* destaques das Aulas: a foto entra num degradê, não mais no corte diagonal */
+:root[data-marca='globalfly'] .dq-foto {
+  clip-path: none;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 34%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 34%);
+}
+@media (max-width: 900px) {
+  :root[data-marca='globalfly'] .dq-foto {
+    mask-image: linear-gradient(180deg, #000 62%, transparent 100%);
+    -webkit-mask-image: linear-gradient(180deg, #000 62%, transparent 100%);
+  }
+}
+
+/* ---------------- 2. As setas das aulas na linha do título do módulo */
+@media (min-width: 901px) {
+  :root[data-marca='globalfly'] .ger.aulas .aulas-modulo { position: relative; }
+  :root[data-marca='globalfly'] .ger.aulas .aulas-modulo .aulas-carrossel { position: static; }
+  :root[data-marca='globalfly'] .ger.aulas .aulas-modulo:has(.aulas-fileira-controles) > .aulas-modulo-topo { padding-right: 168px; }
+  :root[data-marca='globalfly'] .ger.aulas .aulas-modulo .aulas-fileira-controles {
+    position: absolute; top: 0; right: 0; height: 42px; margin: 0; padding: 0; display: flex; align-items: center; gap: 8px;
+  }
+}
+
+/* ---------------- 3. O título do topo alinhado com o conteúdo (computador) */
+/* O topo usa a mesma moldura das telas: o título começa onde o conteúdo começa
+   e os botões da direita terminam onde ele termina. As telas que ocupam a tela
+   inteira (Manual, cabine em andamento, Administração) ficam como estavam. */
+@media (min-width: 901px) {
+  :root[data-marca='globalfly'] .workspace-app:not(:has(> .layout, .tem-acompanhamento, .admin-shell, .av-com-palco)) > .topbar {
+    padding-left: max(20px, calc((100% - var(--pagina-max)) / 2 + var(--pagina-lado)));
+    padding-right: max(20px, calc((100% - var(--pagina-max)) / 2 + var(--pagina-lado)));
+  }
+}
+
+/* ---------------- 4. Suporte na barra de baixo (celular) */
+/* A barra da GF tem o sexto botão "Suporte" (casca/globalfly/components/barra);
+   o botão redondo some nessa largura e as não lidas viram um ponto no ícone. */
+@media (max-width: 900px) {
+  :root[data-marca='globalfly'] .barra-inferior.com-suporte { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  :root[data-marca='globalfly'] .barra-inferior.com-suporte .barra-icone { width: 40px; }
+  :root[data-marca='globalfly'] body:has(.barra-inferior.com-suporte) .sp-lancador { display: none; }
+  :root[data-marca='globalfly'] body:has(.sp-lancador.com-selo) .barra-suporte .barra-icone::after {
+    content: ''; position: absolute; top: 1px; right: 6px; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--down); border: 2px solid var(--bg);
+  }
+}
