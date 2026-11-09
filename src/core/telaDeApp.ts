@@ -35,8 +35,15 @@ export function useTecladoVirtual() {
  * Empilha uma entrada no histórico ao abrir; fechar pela tela tira a entrada, a menos que
  * outra tela já tenha empilhado por cima (um botão do story levou para Aulas, por exemplo).
  */
+/** iPhone/iPad (o iPad novo se apresenta como Mac com toque). */
+const IOS = typeof navigator !== 'undefined' && (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
+
 export function useVoltarFecha(fechar: () => void) {
   useEffect(() => {
+    // no iPhone não há botão Voltar, e no app instalado na tela inicial o iOS trata cada pushState/back
+    // como navegação e APAGA a permissão da câmera (WebKit bug 215884): o estúdio pedia a câmera toda vez
+    // (09/11/2026, Tiago: "no PWA ele não está lembrando que eu dei permissão... pedindo literalmente toda vez")
+    if (IOS) return
     const marca = `tela-cheia-${Math.random().toString(36).slice(2)}`
     history.pushState({ ...(history.state ?? {}), telaCheia: marca }, '')
     let saiuPeloVoltar = false

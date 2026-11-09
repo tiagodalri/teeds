@@ -485,9 +485,11 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
     // a permissão pode ficar pendurada (navegador embutido, aviso ignorado): em 5 s mostra as outras opções
     const comPrazo = (c: MediaStreamConstraints) => Promise.race([navigator.mediaDevices.getUserMedia(c), new Promise<never>((_, falha) => window.setTimeout(() => falha(new Error('prazo')), 5000))])
 
-    // toque duplo no meio da gravação (09/11/2026, Tiago: "quando tiver gravando... clica 2x na tela e inverte
-    // da câmera frontal pra traseira"): troca só a imagem; o microfone e o gravador continuam os mesmos
-    if (gravador.current?.state === 'recording' && fluxo.current) {
+    // virar a câmera troca só a imagem: o microfone continua ligado (09/11/2026, Tiago: "quando tiver gravando...
+    // clica 2x na tela e inverte"). Gravando, o gravador segue o mesmo; parado, também evita um novo pedido de
+    // permissão no iPhone, que pergunta de novo quando nada está capturando ("está pedindo toda vez")
+    const gravandoAgora = gravador.current?.state === 'recording'
+    if (fluxo.current && (gravandoAgora || fluxo.current.getAudioTracks().some((t) => t.readyState === 'live'))) {
       const antigo = fluxo.current
       const sons = antigo.getAudioTracks()
       virando.current = true
@@ -497,7 +499,12 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
         let s: MediaStream | null = null
         try { s = await comPrazo({ video: restr }) } catch { s = null }
         if (!vivo) { s?.getTracks().forEach((t) => t.stop()); return }
-        if (!s) { virando.current = false; mostrarRotulo('Não deu para virar a câmera'); parar(); return }
+        if (!s) {
+          virando.current = false
+          if (gravandoAgora) { mostrarRotulo('Não deu para virar a câmera'); parar() }
+          else { sons.forEach((t) => t.stop()); setEstado('sem') }
+          return
+        }
         const novo = new MediaStream([...s.getVideoTracks(), ...sons])
         fluxo.current = novo
         const trilha = s.getVideoTracks()[0]
