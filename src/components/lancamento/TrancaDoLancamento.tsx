@@ -23,7 +23,7 @@ import { MARCA } from '../../marca'
 import { DERIV } from '../../core/deriv/config'
 import { afiliadoDaDeriv, comunidadeDaVitrine } from '../../core/rotas'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { INICIO_DA_LIVE, faltaCurto, idDoYoutube, type EstadoDaLive } from '../../core/teeds/lancamento'
+import { INICIO_DA_LIVE, LIVE_POR_FORA, faltaCurto, idDoYoutube, linkDaLive, type EstadoDaLive } from '../../core/teeds/lancamento'
 import { ChecklistDaLive } from '../PreAcesso'
 import './lancamento.css'
 
@@ -81,7 +81,9 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
   const inicio = estado?.inicioPrevisto ? Date.parse(estado.inicioPrevisto) : INICIO_DA_LIVE
   const fase: Fase = estado?.noAr ? 'no-ar' : estado?.terminouEm || agora >= inicio + 3 * 36e5 ? 'depois' : 'antes'
   const falta = Math.max(0, inicio - agora)
-  const temVideo = !!idDoYoutube(estado?.youtube)
+  // 09/11/2026: a transmissão é fora da plataforma; o botão leva ao link (o aviso de tela cheia também)
+  const linkFora = LIVE_POR_FORA ? linkDaLive(estado?.youtube) : null
+  const temVideo = LIVE_POR_FORA ? !!linkFora : !!idDoYoutube(estado?.youtube)
 
   // a live começou: o aviso abre sozinho com o "Assistir agora"
   const faseAnterior = useRef<Fase | null>(null)
@@ -139,7 +141,7 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
     return () => { vivo = false }
   }, [estado?.liberadoEm, previa])
 
-  const abrirLive = () => { setAviso(null); aoAssistir() }
+  const abrirLive = () => { setAviso(null); if (linkFora) window.open(linkFora, '_blank', 'noopener'); else if (!LIVE_POR_FORA) aoAssistir() }
 
   let conteudo: ReactNode
   if (aviso === 'preparo') {
@@ -170,10 +172,10 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
         <div className="tl-cabeca">
           <span className="tl-selo tl-selo-vivo"><i aria-hidden="true" />Ao vivo agora</span>
           <h2>{primeiroNome ? `${primeiroNome}, a live começou` : 'A live começou'}</h2>
-          <p>Assista aqui dentro, do início ao fim. A liberação da {MARCA.prosa} acontece ao vivo, durante a live.</p>
+          <p>{LIVE_POR_FORA ? 'A transmissão é fora da plataforma. Toque no botão para assistir.' : <>Assista aqui dentro, do início ao fim. A liberação da {MARCA.prosa} acontece ao vivo, durante a live.</>}</p>
         </div>
         <div className="tl-acoes">
-          <button type="button" className="tl-botao" onClick={abrirLive} disabled={!temVideo}>{temVideo ? 'Assistir agora' : 'A transmissão abre em instantes'}</button>
+          <button type="button" className="tl-botao" onClick={abrirLive} disabled={!temVideo}>{temVideo ? (LIVE_POR_FORA ? 'Entrar na live ao vivo' : 'Assistir agora') : 'A transmissão abre em instantes'}</button>
         </div>
       </>
     )

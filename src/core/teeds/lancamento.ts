@@ -40,7 +40,7 @@ export function guardarLiberacaoGeral(liberadoEm: string | null) {
 export const PLANO_AGUARDANDO = 'globalfly-aguardando-live'
 
 export const AGENDA_DA_LIVE = {
-  google: 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=Live%20de%20lan%C3%A7amento%20da%20GlobalFly%20Trade&dates=20261109T230000Z/20261110T010000Z&details=A%20libera%C3%A7%C3%A3o%20do%20acesso%20acontece%20ao%20vivo%2C%20durante%20a%20live.%20A%20live%20passa%20dentro%20da%20GlobalFly%3A%20https%3A%2F%2Fglobalflytrade.com',
+  google: 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=Live%20de%20lan%C3%A7amento%20da%20GlobalFly%20Trade&dates=20261109T230000Z/20261110T010000Z&details=Entre%20na%20live%20por%20este%20link%3A%20https%3A%2F%2Fglobalflytrade.com%2Flive%2F',
   // o mesmo arquivo da página de cadastro (captura-globalfly/live-globalfly.ics)
   arquivo: '/cadastro/live-globalfly.ics',
 }
@@ -145,3 +145,72 @@ export const painelDaLive = (sessao: SessaoTeeds) =>
 export type AcaoDaLive = 'youtube' | 'comecar' | 'retomar' | 'encerrar' | 'liberar_geral' | 'minimo'
 export const controlarLive = (sessao: SessaoTeeds, acao: AcaoDaLive, valor?: string) =>
   rpc<{ liberados?: number }>('teeds_lancamento_controlar', sessao, { p_marca: MARCA_DA_LIVE, p_acao: acao, p_valor: valor ?? null })
+
+/* ------------------------------------------------ a live por fora (09/11/2026) */
+
+/*
+  09/11/2026, dia da live (Tiago): a transmissão passa FORA da plataforma, em outra plataforma de
+  vídeo. O link é colado às 19h40 em Administração › Live de lançamento (o mesmo campo que guardava
+  o YouTube; o banco aceita qualquer endereço). Daí em diante, todo mundo que abre a GlobalFly,
+  menos os administradores, vê o aviso de tela cheia com o botão "Entrar na live ao vivo"
+  (AvisoDaLive). O player de dentro da plataforma não abre mais.
+*/
+export const LIVE_POR_FORA = true
+/** O aviso de tela cheia abre 20 min antes: 19h40 de Brasília. */
+export const AVISO_DA_LIVE_DESDE = INICIO_DA_LIVE - 20 * 6e4
+/** A página que leva ao link da live (e-mails, avisos no celular, agenda): sempre o link do momento. */
+export const PAGINA_DA_LIVE = 'https://globalflytrade.com/live/'
+
+export interface LiveAberta { inicioPrevisto: string | null; link: string | null; terminouEm: string | null }
+
+/** Só um endereço http(s) vale como link da live. */
+export function linkDaLive(link: string | null | undefined): string | null {
+  const t = (link ?? '').trim()
+  if (!t) return null
+  try {
+    const u = new URL(/^https?:\/\//i.test(t) ? t : `https://${t}`)
+    return /^https?:$/.test(u.protocol) && u.hostname.includes('.') ? u.toString() : null
+  } catch { return null }
+}
+
+/**
+ * O link e o horário da live, sem login (banco: teeds_lancamento_publico, liberado para anon).
+ * Sem a consulta no banco, vale o arquivo /live/link.json do site (publicado à mão, plano B).
+ */
+export async function liveAberta(): Promise<LiveAberta | null> {
+  const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_lancamento_publico`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${SUPABASE.anonKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_marca: 'globalfly' }),
+  }).catch(() => null)
+  if (res?.ok) return (await res.json().catch(() => null)) as LiveAberta | null
+  const arq = await fetch(`/live/link.json?t=${Date.now()}`, { cache: 'no-store' }).catch(() => null)
+  const j = arq?.ok ? await arq.json().catch(() => null) as { link?: string | null; terminouEm?: string | null } | null : null
+  if (!j) throw new Error('Sem o link da live')
+  return { inicioPrevisto: null, link: j.link ?? null, terminouEm: j.terminouEm ?? null }
+}
+
+/*
+  Quem está na tela, para o aviso da live: o App conta (visitante na tela de entrar, cliente,
+  administrador). O aviso fica fora do App (main.tsx) para cobrir também a tela de entrar,
+  os termos e a troca de senha.
+*/
+export type QuemVeAvisoDaLive = 'visitante' | 'carregando' | 'cliente' | 'admin'
+let quemVe: QuemVeAvisoDaLive = 'carregando'
+const ouvintes = new Set<() => void>()
+export function informarQuemVeAvisoDaLive(q: QuemVeAvisoDaLive) {
+  if (q === quemVe) return
+  quemVe = q
+  ouvintes.forEach((f) => f())
+}
+export const quemVeAvisoDaLive = () => quemVe
+/** O que o App já leu da live (teeds_lancamento_estado, com login): o link chega por aqui também. */
+let liveDoApp: { link: string | null; terminouEm: string | null } | null = null
+export function informarLiveDoApp(e: { youtube: string | null; terminouEm: string | null } | null) {
+  const novo = e ? { link: e.youtube, terminouEm: e.terminouEm } : null
+  if (JSON.stringify(novo) === JSON.stringify(liveDoApp)) return
+  liveDoApp = novo
+  ouvintes.forEach((f) => f())
+}
+export const liveLidaPeloApp = () => liveDoApp
+export function assinarQuemVeAvisoDaLive(f: () => void) { ouvintes.add(f); return () => { ouvintes.delete(f) } }

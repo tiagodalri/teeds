@@ -90,6 +90,9 @@ if (JANELA) {
 const PreviaDasAulas = new URLSearchParams(location.search).get('previa') === 'aulas' && window.parent !== window
   ? lazy(() => import('./components/aulas/PreviaDasAulas')) : null
 // 08/11/2026: o link de compartilhar um story (/n/s/<código> → 404.html → /?story=<código>), aberto sem login
+// 09/11/2026: o aviso da live de lançamento (transmissão por fora), por cima de tudo, desde 19h40
+const AvisoDaLive = MARCA.id === 'globalfly' && Date.now() < Date.UTC(2026, 10, 10, 3, 0, 0)
+  ? lazy(() => import('./components/lancamento/AvisoDaLive')) : null
 const StoryPublico = MARCA.stories && new URLSearchParams(location.search).has('story')
   ? lazy(() => import('./components/stories/StoryPublico')) : null
 
@@ -100,6 +103,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
     {RecursosDeApp && !JANELA && <Suspense fallback={null}><RecursosDeApp /></Suspense>}
     {Decolagem && !JANELA && <Suspense fallback={null}><Decolagem /></Suspense>}
+    {AvisoDaLive && !JANELA && <Suspense fallback={null}><AvisoDaLive /></Suspense>}
   </React.StrictMode>,
 )
 

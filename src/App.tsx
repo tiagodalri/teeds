@@ -32,7 +32,7 @@ import { definirDonoDoPlano } from './core/teeds/planoDoDia'
 import { NovaSenha } from './components/NovaSenha'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 import { PreAcesso } from './components/PreAcesso'
-import { emPreAcesso, estadoDaLive, guardarLiberacaoGeral, idDoYoutube, INICIO_DA_LIVE, liberacaoGeralGuardada, PLANO_AGUARDANDO, trancadoAteALive, type EstadoDaLive } from './core/teeds/lancamento'
+import { emPreAcesso, estadoDaLive, guardarLiberacaoGeral, idDoYoutube, informarLiveDoApp, informarQuemVeAvisoDaLive, INICIO_DA_LIVE, liberacaoGeralGuardada, LIVE_POR_FORA, PLANO_AGUARDANDO, trancadoAteALive, type EstadoDaLive } from './core/teeds/lancamento'
 import { TrancaDoLancamento } from './components/lancamento/TrancaDoLancamento'
 import { ligarCorretoraDiscreta } from './marca/corretoraDiscreta'
 import { eventoDoPixel, iniciarPixelDoParceiro } from './core/teeds/pixelDoParceiro'
@@ -626,6 +626,16 @@ export default function App() {
   }, [admin, chaveEraAdmin])
   const adminParaTranca = admin ?? (eraAdminNoAparelho ? true : null)
   const trancado = previaInscrito || (!liberadoAntes && trancadoAteALive(situacao, plano, adminParaTranca, liberadoGeral))
+  // o aviso da live por fora (AvisoDaLive, 09/11/2026): quem está na tela; administrador não vê
+  useEffect(() => {
+    if (MARCA.id !== 'globalfly') return
+    informarQuemVeAvisoDaLive(teeds.status === 'deslogado' ? 'visitante'
+      : teeds.status !== 'logado' ? 'carregando'
+      : previaInscrito ? 'cliente'
+      : adminParaTranca === true ? 'admin'
+      : admin === false ? 'cliente' : 'carregando')
+  }, [teeds.status, adminParaTranca, admin, previaInscrito])
+  useEffect(() => { if (MARCA.id === 'globalfly') informarLiveDoApp(live) }, [live?.youtube, live?.terminouEm]) // eslint-disable-line react-hooks/exhaustive-deps
   // trancada até a live, a plataforma de trás também não diz o nome da corretora (03/11/2026)
   useEffect(() => (trancado ? ligarCorretoraDiscreta() : undefined), [trancado])
   const [assistindoLive, setAssistindoLive] = useState(false)
@@ -667,7 +677,7 @@ export default function App() {
       setAviso({ tipo: 'ok', texto: `Acesso liberado. Bem-vindo à ${MARCA.prosa}, GF Member.` })
       eventoDoPixel('AcessoLiberado', undefined, true)
       // liberado com a live ainda no ar: a live continua aberta, agora por cima da plataforma
-      if (live?.noAr) setAssistindoLive(true)
+      if (live?.noAr && !LIVE_POR_FORA) setAssistindoLive(true)
     }
     // trancado só "na dúvida" (o banco ainda não respondeu) não conta: senão o recado sairia a cada abertura
     estavaTrancado.current = trancado && (situacao !== 'ativo' || live !== null || previaInscrito)
@@ -1400,7 +1410,7 @@ export default function App() {
             </button>
           )}
 
-          {!trancado && !JANELA && live?.noAr && idDoYoutube(live.youtube) && (
+          {!trancado && !JANELA && !LIVE_POR_FORA && live?.noAr && idDoYoutube(live.youtube) && (
             <button className="selo-tv" onClick={() => setAssistindoLive(true)} title="Live de lançamento ao vivo agora"
               aria-label="Live de lançamento ao vivo agora. Assistir">
               <i aria-hidden="true" />Ao vivo

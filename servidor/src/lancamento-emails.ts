@@ -28,6 +28,8 @@ const MARCA = 'globalfly'
 const PLANO_AGUARDANDO = 'globalfly-aguardando-live'
 const POR_RODADA = 30
 const h = 36e5
+/** 09/11/2026: a transmissão é fora da plataforma; esta página leva ao link do momento (lido no banco). */
+const PAGINA_DA_LIVE = 'https://globalflytrade.com/live/'
 
 interface Inscrito { email: string; nome: string | null; parceiro: string | null; criado_em: string }
 interface Etapa {
@@ -109,9 +111,11 @@ const ETAPAS: Etapa[] = [
     montar: (marca) => ({
       assunto: 'Falta 1 hora para a live',
       titulo: 'Falta 1 hora',
-      espia: 'Abra a plataforma e deixe tudo pronto.',
-      corpo: `Às 20h a live começa dentro da ${marca.prosa}. Abra a plataforma agora, confira se está entrando na sua conta e deixe o som ligado.\n\nQuando a live começar, o botão **Assistir** aparece na hora.`,
-      botao: 'Abrir a GlobalFly',
+      espia: 'Às 20h, pelo botão deste e-mail.',
+      corpo: `Às **20h** (Brasília) começa a live de lançamento da ${marca.prosa}.\n\nNa hora, toque no botão abaixo para entrar na transmissão. Deixe o som ligado.`,
+      botao: 'Entrar na live',
+      // 09/11/2026: a transmissão é fora da plataforma; a página leva ao link do momento
+      url: PAGINA_DA_LIVE,
     }),
   },
   {
@@ -120,9 +124,10 @@ const ETAPAS: Etapa[] = [
     montar: (marca) => ({
       assunto: 'Estamos ao vivo',
       titulo: 'A live começou',
-      espia: 'Entre agora: o seu acesso é liberado durante a live.',
-      corpo: `A live de lançamento da ${marca.prosa} começou. Entre agora e fique até o fim: a liberação do acesso acontece ao vivo, durante a live.`,
-      botao: 'Assistir agora',
+      espia: 'Estamos ao vivo agora. Toque para assistir.',
+      corpo: `A live de lançamento da ${marca.prosa} começou. Toque no botão abaixo para assistir agora.`,
+      botao: 'Entrar na live ao vivo',
+      url: PAGINA_DA_LIVE,
     }),
   },
   {

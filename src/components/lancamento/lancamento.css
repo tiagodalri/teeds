@@ -216,3 +216,21 @@ body:has(.tl-fundo, .tl-live) .barra-inferior { display: none !important; }
   .admin-card.lag { flex-direction: column; align-items: stretch; }
   .lag-botao, .lag-de-novo { width: 100%; justify-content: center; }
 }
+
+/* ------------------------------------------------ o aviso da live por fora (AvisoDaLive, 09/11/2026) */
+/* por cima de tudo (plataforma, tranca, tela de entrar), sem fechar: a página para enquanto a live passa */
+.alv-fundo { z-index: 2147483000; background: rgba(3, 10, 20, .78); }
+body:has(.alv-fundo) { overflow: hidden; }
+.alv-janela { --tl-noite: #061529; --tl-noite2: #0B2140; --tl-linha: rgba(156, 177, 199, .22);
+  --tl-ouro: #D6AE5B; --tl-ouro-forte: #B78D39; --tl-marfim: #F3F0E9; --tl-aco: #9CB1C7; --tl-vivo: #E5383B;
+  width: min(460px, 100%); padding: 32px 26px 22px; gap: 16px; }
+.alv-janela .tl-cabeca h2 { font-size: 24px; }
+.alv-falta { color: var(--tl-ouro); font-weight: 700; }
+.alv-botao { min-height: 54px; font-size: 16px; border-radius: 14px; white-space: normal; text-align: center; }
+.alv-botao:disabled { opacity: .7; font-size: 14px; }
+.alv-ponto { width: 10px; height: 10px; background: var(--tl-noite); box-shadow: none; animation: tl-pisca 1.2s ease-in-out infinite; }
+.alv-nota { font-size: 12.5px; line-height: 1.5; color: var(--tl-aco); text-wrap: pretty; }
+.alv-equipe { border: 0; background: none; padding: 4px; font: inherit; font-size: 12px; color: var(--tl-aco); opacity: .75; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.alv-equipe:hover { opacity: 1; color: var(--tl-marfim); }
+/* no celular, no meio da tela (o aviso da tranca fica no pé; este é o popup da live) */
+@media (max-width: 900px) { .alv-fundo { align-items: center; padding: 16px; } }

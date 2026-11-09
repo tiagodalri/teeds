@@ -160,9 +160,12 @@ function mensagemDaSessao(s: { id: string; marca: string; robo_nome: string | nu
 */
 const AVISOS_DA_LIVE: Record<string, { titulo: string; corpo: string }> = {
   hoje: { titulo: '✈️ A live é hoje, às 20h', corpo: 'Assista do início ao fim e a GlobalFly é liberada para você, sem pagar nada.' },
-  'uma-hora': { titulo: '⏰ Falta 1 hora para a live', corpo: 'Às 20h, dentro da GlobalFly. Abra o app e deixe tudo pronto.' },
-  'ao-vivo': { titulo: '🔴 A live começou', corpo: 'Toque para assistir. Fique até o fim para liberar o seu acesso.' },
+  'uma-hora': { titulo: '⏰ Falta 1 hora para a live', corpo: 'Às 20h. Toque aqui na hora para entrar na transmissão.' },
+  'ao-vivo': { titulo: '🔴 A live começou', corpo: 'Estamos ao vivo agora. Toque para assistir.' },
 }
+// 09/11/2026, dia da live (Tiago): a transmissão é fora da plataforma e todo aviso leva ao link dela.
+// globalflytrade.com/live lê o link do momento no banco e segue para a transmissão.
+const PAGINA_DA_LIVE = 'https://globalflytrade.com/live/'
 
 interface Aparelho { tabela: 'lancamento_push' | 'push_assinaturas'; chave: string; endpoint: string; p256dh: string; auth: string; parceiro: string | null }
 
@@ -194,7 +197,8 @@ async function avisarALive(etapa: string): Promise<{ enviados: number; falhas: n
   for (let i = 0; i < lista.length; i += 50) {
     await Promise.all(lista.slice(i, i + 50).map(async (a) => {
       // o endereço do parceiro de cada um: /n/inicio, /v/inicio ou a raiz
-      const url = `${SITE[marca]}/${PARCEIROS.has(a.parceiro ?? '') ? `${a.parceiro}/inicio` : ''}`
+      const url = etapa === 'uma-hora' || etapa === 'ao-vivo' ? PAGINA_DA_LIVE
+        : `${SITE[marca]}/${PARCEIROS.has(a.parceiro ?? '') ? `${a.parceiro}/inicio` : ''}`
       try {
         await webpush.sendNotification({ endpoint: a.endpoint, keys: { p256dh: a.p256dh, auth: a.auth } },
           JSON.stringify({ ...texto, tag: `live-${etapa}`, url }), { TTL: etapa === 'ao-vivo' ? 2 * 3600 : 6 * 3600, urgency: 'high', vapidDetails })

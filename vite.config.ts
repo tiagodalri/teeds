@@ -427,6 +427,12 @@ export default defineConfig({
           cpSync(join(SAIDA, '404.html'), join(SAIDA, codigo, 'inicio', 'index.html'))
         }
 
+        // 09/11/2026, dia da live: globalflytrade.com/live leva ao link da transmissão (que é fora da
+        // plataforma); os e-mails, os avisos no celular e a agenda apontam para cá
+        if (MARCA.id === 'globalfly' && existsSync(join(RAIZ, 'live-globalfly'))) {
+          cpSync(join(RAIZ, 'live-globalfly'), join(SAIDA, 'live'), { recursive: true })
+        }
+
         const pwaDir = `pwa-${MARCA.id}`
         const fundo = FUNDO_DA_MARCA[MARCA.id] ?? '#090a0d'
         const curto = NOME_CURTO[MARCA.id] ?? MARCA.prosa

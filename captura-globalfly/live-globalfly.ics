@@ -9,8 +9,8 @@ DTSTAMP:20261030T000000Z
 DTSTART:20261109T230000Z
 DTEND:20261110T010000Z
 SUMMARY:Live de lançamento da GlobalFly Trade
-DESCRIPTION:Assista do início ao fim para liberar o seu acesso. A live passa dentro da GlobalFly: https://globalflytrade.com
-URL:https://globalflytrade.com
+DESCRIPTION:Entre na live por este link: https://globalflytrade.com/live/
+URL:https://globalflytrade.com/live/
 BEGIN:VALARM
 TRIGGER:-PT1H
 ACTION:DISPLAY

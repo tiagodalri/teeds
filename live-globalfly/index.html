@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#061529">
+<title>Live de lançamento · GlobalFly Trade</title>
+<!--
+  globalflytrade.com/live (09/11/2026, dia da live): a transmissão é fora da plataforma. Os e-mails,
+  os avisos no celular e a agenda levam para cá; esta página lê o link do momento no banco
+  (teeds_lancamento_publico, sem login) e segue para a transmissão. Antes do link, espera e se atualiza.
+-->
+<style>
+  :root { color-scheme: dark; --noite: #061529; --noite2: #0B2140; --ouro: #D6AE5B; --marfim: #F3F0E9; --aco: #9CB1C7; --vivo: #E5383B; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--noite); }
+  body { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; color: var(--marfim);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: radial-gradient(120% 70% at 100% 0%, rgba(214, 174, 91, .16), transparent 55%), linear-gradient(160deg, var(--noite2), var(--noite)); }
+  main { width: min(460px, 100%); display: grid; gap: 16px; justify-items: center; text-align: center; padding: 32px 24px 26px; border-radius: 22px;
+    background: rgba(3, 10, 20, .35); border: 1px solid rgba(214, 174, 91, .35); box-shadow: 0 30px 70px -20px rgba(0, 0, 0, .7); }
+  img { width: 150px; height: auto; }
+  .selo { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 99px; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--ouro); background: rgba(214, 174, 91, .12); }
+  .selo.vivo { color: #fff; background: var(--vivo); }
+  .selo.vivo i { width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: pisca 1.2s ease-in-out infinite; }
+  @keyframes pisca { 50% { opacity: .35; } }
+  h1 { margin: 0; font-size: 24px; line-height: 1.2; letter-spacing: -.015em; text-wrap: balance; }
+  p { margin: 0; color: var(--aco); text-wrap: pretty; }
+  .botao { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 54px; padding: 0 18px; border-radius: 14px; border: 0;
+    background: var(--ouro); color: var(--noite); font: inherit; font-size: 16px; font-weight: 750; text-decoration: none; }
+  .botao[aria-disabled="true"] { opacity: .7; font-size: 14px; pointer-events: none; }
+  small { font-size: 12.5px; color: var(--aco); }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; color: var(--ouro); font-weight: 700; }
+  @media (prefers-reduced-motion: reduce) { .selo.vivo i { animation: none; } }
+</style>
+</head>
+<body>
+<main>
+  <img src="/globalfly-marca.png" alt="GlobalFly Trade" width="150" height="48" onerror="this.remove()">
+  <span class="selo" id="selo">Hoje, às 20h</span>
+  <h1 id="titulo">Live de lançamento da GlobalFly Trade</h1>
+  <p id="texto">Começa hoje, 09/11, às 20h (Brasília).</p>
+  <a class="botao" id="botao" aria-disabled="true">O link da live aparece aqui em instantes</a>
+  <small id="nota">Esta página se atualiza sozinha. Não precisa recarregar.</small>
+</main>
+<script>
+(function () {
+  var SUPABASE = 'https://wonxykovfvfnuhzpqsle.supabase.co';
+  var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvbnh5a292ZnZmbnVoenBxc2xlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyMDU3MTgsImV4cCI6MjEwMzc4MTcxOH0.5n9ePaGLNMOHOzitZULblGCsTj3ORJDgsWvc17V_0PU';
+  var INICIO = Date.UTC(2026, 10, 9, 23, 0, 0);
+  var el = function (id) { return document.getElementById(id); };
+  var foi = false;
+  function linkValido(t) {
+    t = (t || '').trim(); if (!t) return null;
+    try { var u = new URL(/^https?:\/\//i.test(t) ? t : 'https://' + t); return /^https?:$/.test(u.protocol) && u.hostname.indexOf('.') > 0 ? u.href : null; } catch (e) { return null; }
+  }
+  function falta(ms) {
+    var t = Math.max(0, ms), h = Math.floor(t / 36e5), m = Math.floor(t / 6e4) % 60, s = Math.floor(t / 1e3) % 60;
+    return h > 0 ? h + 'h ' + String(m).padStart(2, '0') + 'min' : m + 'min ' + String(s).padStart(2, '0') + 's';
+  }
+  function pintar(d) {
+    var agora = Date.now(), link = linkValido(d && d.link), noAr = agora >= INICIO, acabou = d && d.terminouEm;
+    var selo = el('selo'), botao = el('botao');
+    if (acabou) {
+      selo.className = 'selo'; selo.textContent = 'A live terminou';
+      el('titulo').textContent = 'A live de lançamento terminou';
+      el('texto').textContent = 'Obrigado por participar. Os próximos passos são avisados na comunidade e na plataforma.';
+      botao.textContent = 'Entrar na GlobalFly'; botao.href = '/'; botao.removeAttribute('aria-disabled');
+      el('nota').textContent = '';
+      return;
+    }
+    if (noAr) { selo.className = 'selo vivo'; selo.innerHTML = '<i aria-hidden="true"></i>Ao vivo agora'; el('titulo').textContent = 'Estamos ao vivo'; el('texto').textContent = 'A live de lançamento da GlobalFly Trade está acontecendo agora.'; }
+    else { el('texto').innerHTML = 'Começa hoje, 09/11, às 20h (Brasília), em <span class="mono">' + falta(INICIO - agora) + '</span>.'; }
+    if (link) {
+      botao.textContent = 'Entrar na live ao vivo'; botao.href = link; botao.removeAttribute('aria-disabled');
+      el('nota').textContent = 'Abrindo a transmissão…';
+      // segue sozinho para a transmissão (uma vez); o botão fica para quem voltar a esta aba
+      if (!foi) { foi = true; setTimeout(function () { location.href = link; }, 600); }
+    }
+  }
+  var ultimo = null;
+  function ler() {
+    fetch(SUPABASE + '/rest/v1/rpc/teeds_lancamento_publico', {
+      method: 'POST', headers: { apikey: ANON, Authorization: 'Bearer ' + ANON, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_marca: 'globalfly' }), cache: 'no-store'
+    }).then(function (r) { return r.ok ? r.json() : null; }, function () { return null; })
+      // plano B: sem a consulta no banco, o arquivo link.json desta pasta
+      .then(function (d) { return d || fetch('/live/link.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }); })
+      .then(function (d) { if (d) ultimo = d; pintar(ultimo); })
+      .catch(function () { pintar(ultimo); })
+      .then(function () { if (!foi) setTimeout(ler, 15000); });
+  }
+  setInterval(function () { if (!foi) pintar(ultimo); }, 1000);
+  ler();
+})();
+</script>
+</body>
+</html>

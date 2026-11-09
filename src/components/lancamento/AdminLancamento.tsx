@@ -11,7 +11,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { controlarLive, idDoYoutube, painelDaLive, type AcaoDaLive, type PainelDaLive } from '../../core/teeds/lancamento'
+import { controlarLive, idDoYoutube, linkDaLive, LIVE_POR_FORA, painelDaLive, type AcaoDaLive, type PainelDaLive } from '../../core/teeds/lancamento'
 import './lancamento.css'
 
 const hora = (iso: string | null) => iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'
@@ -44,14 +44,15 @@ export function AdminLancamento({ sessao }: { sessao: SessaoTeeds }) {
     try {
       const r = await controlarLive(sessaoRef.current, acao, valor)
       if (acao === 'encerrar') setRecado('Live encerrada. Para liberar o acesso, use "Liberar acesso geral" em Clientes.')
-      if (acao === 'youtube') setRecado(valor ? 'Link salvo. Ele aparece na plataforma assim que a live estiver no ar.' : 'Link removido.')
+      if (acao === 'youtube') setRecado(valor ? (LIVE_POR_FORA ? 'Link salvo. Em até 20 s ele aparece no aviso da live e em globalflytrade.com/live.' : 'Link salvo. Ele aparece na plataforma assim que a live estiver no ar.') : 'Link removido.')
       if (acao === 'comecar') setRecado('Live no ar: o aviso abriu para todos os inscritos e a presença começou a contar.')
       setConfirmar(false)
       await ler()
     } catch (e) { setErro((e as Error).message) } finally { setOcupado(null) }
   }
 
-  const linkValido = !link.trim() || !!idDoYoutube(link)
+  // 09/11/2026: a transmissão é fora da plataforma: vale qualquer endereço http(s)
+  const linkValido = !link.trim() || (LIVE_POR_FORA ? !!linkDaLive(link) : !!idDoYoutube(link))
   const encerrada = !!p?.terminouEm
   // o admin de um parceiro só (ex.: o Naor) acompanha, mas não comanda a live de todos (09/11/2026)
   const pode = p?.podeControlar !== false
@@ -70,13 +71,15 @@ export function AdminLancamento({ sessao }: { sessao: SessaoTeeds }) {
       {recado && <p className="adm-lanc-ok" role="status">{recado}</p>}
 
       <section className="admin-card">
-        <header><div><span className="rot">1 · Transmissão</span><h3>Link da live no YouTube</h3></div></header>
-        <p className="adm-lanc-texto">Crie a live no YouTube como <b>não listada</b> e cole o link aqui. Ela passa dentro da GlobalFly, com o chat, e a presença de cada inscrito é marcada sozinha.</p>
+        <header><div><span className="rot">1 · Transmissão</span><h3>{LIVE_POR_FORA ? 'Link da live' : 'Link da live no YouTube'}</h3></div></header>
+        {LIVE_POR_FORA
+          ? <p className="adm-lanc-texto">A transmissão é <b>fora da plataforma</b>. Cole aqui o link da live e salve: em até 20&nbsp;s ele aparece no aviso de tela cheia que todos (menos os administradores) veem a partir das 19h40, no botão <b>Entrar na live ao vivo</b>, e na página <b>globalflytrade.com/live</b>, para onde vão os e-mails e os avisos no celular. O aviso sai quando você aperta <b>Encerrar a live</b> (ou às 23h). Para ver o aviso como o cliente vê, abra a GlobalFly com <b>?ver=aviso-da-live</b>.</p>
+          : <p className="adm-lanc-texto">Crie a live no YouTube como <b>não listada</b> e cole o link aqui. Ela passa dentro da GlobalFly, com o chat, e a presença de cada inscrito é marcada sozinha.</p>}
         <div className="adm-lanc-linha">
-          <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://www.youtube.com/live/…" aria-label="Link da live no YouTube" aria-invalid={!linkValido} disabled={!pode} />
+          <input value={link} onChange={(e) => setLink(e.target.value)} placeholder={LIVE_POR_FORA ? 'https://…' : 'https://www.youtube.com/live/…'} aria-label="Link da live" aria-invalid={!linkValido} disabled={!pode} />
           <button className="admin-primary" disabled={!pode || !linkValido || ocupado !== null || (link.trim() || null) === (p?.youtube ?? null)} onClick={() => void fazer('youtube', link.trim())}>{ocupado === 'youtube' ? 'Salvando…' : 'Salvar link'}</button>
         </div>
-        {!linkValido && <small className="adm-lanc-erro">Esse link não é de um vídeo do YouTube.</small>}
+        {!linkValido && <small className="adm-lanc-erro">{LIVE_POR_FORA ? 'Esse link não é um endereço válido (comece com https://).' : 'Esse link não é de um vídeo do YouTube.'}</small>}
       </section>
 
       <section className="admin-card">
@@ -106,9 +109,9 @@ export function AdminLancamento({ sessao }: { sessao: SessaoTeeds }) {
       <section className="admin-card">
         <header><div><span className="rot">3 · Cuidados</span><h3>Até a live</h3></div></header>
         <ul className="adm-lanc-lista">
-          <li>Não aprove cadastros da GlobalFly pela aba Clientes: aprovar libera tudo na hora e pula a live.</li>
+          <li>A liberação é o botão <b>Liberar acesso geral</b>, em Clientes: aperte com o filtro do topo em <b>Todos</b>.</li>
           <li>Para ver a plataforma como o inscrito vê, abra a GlobalFly com <b>?ver=inscrito</b> no fim do endereço.</li>
-          <li>Teste o link do YouTube antes com uma live de teste não listada.</li>
+          <li>{LIVE_POR_FORA ? 'Depois de salvar o link, abra globalflytrade.com/live numa aba anônima para conferir que ele leva à transmissão.' : 'Teste o link do YouTube antes com uma live de teste não listada.'}</li>
         </ul>
       </section>
     </div>
