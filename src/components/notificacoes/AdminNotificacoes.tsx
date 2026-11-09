@@ -9,7 +9,7 @@
  * `notificacoes` do Supabase; o histórico fica em push_disparos.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { MARCA } from '../../marca'
+import { marcaPorId } from '../../marca/marcas'
 import { SUPABASE } from '../../core/teeds/config'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import './painel-notificacoes.css'
@@ -34,11 +34,14 @@ const DESTINOS: Array<{ id: string; nome: string }> = [
 ]
 const EMOJIS = ['🔴', '⏰', '✈️', '🔔', '✅', '🎁', '📚', '🚀', '💬', '🔥', '📈', '⚡']
 const MODELOS: Array<{ nome: string; titulo: string; corpo: string; destino: string }> = [
-  { nome: 'Live no ar', titulo: '🔴 A live começou', corpo: 'Toque para assistir. Fique até o fim para liberar o seu acesso.', destino: 'inicio' },
+  { nome: 'Live no ar', titulo: '🔴 A live começou', corpo: 'Toque para assistir. A liberação do acesso acontece durante a live.', destino: 'inicio' },
   { nome: 'Falta 1 hora', titulo: '⏰ Falta 1 hora para a live', corpo: 'Às 20h, dentro da GlobalFly. Abra o app e deixe tudo pronto.', destino: 'inicio' },
   { nome: 'Comunidade', titulo: '💬 Novidade na comunidade', corpo: 'Tem aviso novo no grupo do WhatsApp. Toque para ver.', destino: 'comunidade' },
   { nome: 'Aula nova', titulo: '📚 Aula nova liberada', corpo: 'Uma aula nova acabou de entrar na plataforma. Toque para assistir.', destino: 'aulas' },
 ]
+/* Este painel só abre com a GlobalFly em foco (AdminPanel): no site da Teeds, MARCA.id é 'teeds' e o
+   disparo ia para a base errada (09/11/2026). */
+const MARCA_DAS_NOTIFICACOES = 'globalfly'
 const LIMITE_TITULO = 60
 const LIMITE_CORPO = 180
 
@@ -49,7 +52,7 @@ const plural = (n: number, um: string, varios: string) => `${n.toLocaleString('p
 /** soDoParceiro: o admin do parceiro com acesso total (05/11/2026) dispara só para os clientes do parceiro dele (o banco e a função conferem de novo). */
 export function AdminNotificacoes({ sessao, soDoParceiro }: { sessao: SessaoTeeds; soDoParceiro?: string }) {
   const [titulo, setTitulo] = useState('🔴 A live começou')
-  const [corpo, setCorpo] = useState('Toque para assistir. Fique até o fim para liberar o seu acesso.')
+  const [corpo, setCorpo] = useState('Toque para assistir. A liberação do acesso acontece durante a live.')
   const [destino, setDestino] = useState('inicio')
   const [link, setLink] = useState('')
   const [publico, setPublico] = useState<Publico>('aguardando')
@@ -76,14 +79,14 @@ export function AdminNotificacoes({ sessao, soDoParceiro }: { sessao: SessaoTeed
 
   async function lerContagem() {
     try {
-      const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_push_publicos`, { method: 'POST', headers: cab, body: JSON.stringify({ p_marca: MARCA.id, p_parceiro: parceiro || null }) })
+      const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_push_publicos`, { method: 'POST', headers: cab, body: JSON.stringify({ p_marca: MARCA_DAS_NOTIFICACOES, p_parceiro: parceiro || null }) })
       if (r.ok) setContagem(await r.json())
     } catch { /* tenta de novo ao trocar o filtro */ }
   }
   async function lerHistorico() {
     try {
       // com os números do rastreio: quantos aparelhos mostraram a notificação e quantos tocaram nela
-      const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_push_historico`, { method: 'POST', headers: cab, body: JSON.stringify({ p_marca: MARCA.id }) })
+      const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_push_historico`, { method: 'POST', headers: cab, body: JSON.stringify({ p_marca: MARCA_DAS_NOTIFICACOES }) })
       if (r.ok) setHistorico(await r.json())
     } catch { /* o histórico é só consulta */ }
   }
@@ -101,7 +104,7 @@ export function AdminNotificacoes({ sessao, soDoParceiro }: { sessao: SessaoTeed
     try {
       const r = await fetch(`${SUPABASE.url}/functions/v1/notificacoes`, {
         method: 'POST', headers: cab,
-        body: JSON.stringify({ acao: 'disparo', marca: MARCA.id, titulo: titulo.trim(), corpo: corpo.trim(), destino: destinoFinal, publico: para, parceiro: parceiro || null }),
+        body: JSON.stringify({ acao: 'disparo', marca: MARCA_DAS_NOTIFICACOES, titulo: titulo.trim(), corpo: corpo.trim(), destino: destinoFinal, publico: para, parceiro: parceiro || null }),
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(j.erro || 'Não foi possível enviar agora.')
@@ -176,7 +179,7 @@ export function AdminNotificacoes({ sessao, soDoParceiro }: { sessao: SessaoTeed
               <div className="pn-aviso">
                 <div className="pn-aviso-topo">
                   <img src={`${import.meta.env.BASE_URL}pwa-globalfly/icon-192.png`} alt="" />
-                  <span>{MARCA.prosa.toUpperCase()}</span>
+                  <span>{marcaPorId(MARCA_DAS_NOTIFICACOES).prosa.toUpperCase()}</span>
                   <i>agora</i>
                 </div>
                 <b>{titulo.trim() || 'Título da notificação'}</b>

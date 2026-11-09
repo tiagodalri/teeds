@@ -217,8 +217,14 @@ export function whatsappDoBanco(sessao: SessaoTeeds, marca: string): WhatsAppApi
     async desconectar() { await funcao('desconectar') },
     atualizar: () => funcao('atualizar'),
     async contatos() {
-      const l = await rest<any[]>(`/whatsapp_contatos?marca=eq.${marca}&select=*&order=ultima_em.desc.nullslast&limit=500`)
-      return (l ?? []).map(daContato)
+      // o banco devolve até 1.000 por vez: lê em páginas (antes parava em 500 contatos; 09/11/2026)
+      const todos: any[] = []
+      for (let de = 0; de < 20000; de += 1000) {
+        const l = await rest<any[]>(`/whatsapp_contatos?marca=eq.${marca}&select=*&order=ultima_em.desc.nullslast,id.desc&offset=${de}&limit=1000`)
+        todos.push(...(l ?? []))
+        if (!l || l.length < 1000) break
+      }
+      return todos.map(daContato)
     },
     async mensagens(contatoId, antesDe) {
       const antes = antesDe ? `&criado_em=lt.${encodeURIComponent(antesDe)}` : ''
@@ -284,8 +290,14 @@ export function whatsappDoBanco(sessao: SessaoTeeds, marca: string): WhatsAppApi
     },
     async favoritar(mensagemId, sim) { await rpc('whatsapp_favoritar', { p_mensagem: mensagemId, p_sim: sim }) },
     async todasMensagens(contatoId) {
-      const l = await rest<any[]>(`/whatsapp_mensagens?contato_id=eq.${contatoId}&select=*&order=criado_em.asc&limit=5000`)
-      return (l ?? []).map(daMensagem)
+      // a conversa inteira, em páginas de 1.000 (antes cortava as mais novas; 09/11/2026)
+      const todas: any[] = []
+      for (let de = 0; de < 100000; de += 1000) {
+        const l = await rest<any[]>(`/whatsapp_mensagens?contato_id=eq.${contatoId}&select=*&order=criado_em.asc,id.asc&offset=${de}&limit=1000`)
+        todas.push(...(l ?? []))
+        if (!l || l.length < 1000) break
+      }
+      return todas.map(daMensagem)
     },
     async arquivos(contatoId) {
       const base = `/whatsapp_mensagens?contato_id=eq.${contatoId}&select=*&order=criado_em.desc`

@@ -1,4 +1,5 @@
 import { parceiroEmFoco, seloDoParceiro, type OpcaoDeParceiro } from '../core/teeds/parceiroEmFoco'
+import { celulaCsv, diaDeHoje, telefoneCsv } from '../core/planilha'
 import { useEffect, useRef, useState } from 'react'
 import { FiltroDeParceiros } from './parceiros/FiltroDeParceiros'
 import type { SessaoTeeds } from '../core/teeds/conta'
@@ -373,13 +374,13 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
     ...(busca.trim()?[[`Busca: ${busca.trim()}`,()=>setBusca('')] as [string,()=>void]]:[]),
   ]
   const baixar=()=>{
-    const cel=(v:unknown)=>`"${String(v??'').replace(/"/g,'""')}"`
+    const cel=celulaCsv
     const linhas=visiveis.map(p=>{const r=respDe(p),t=respostas?tipoDe(p):'sem'
-      return [p.nome,p.email,p.telefone,p.parceiro?`${NOME_DO_PARCEIRO[p.parceiro]??p.parceiro} /${p.parceiro}`:'Direto',quandoDe(p).toLocaleString('pt-BR'),
-        t==='ex'?'Já foi cliente':t==='novo'?'Nunca foi cliente':'Não respondeu',(r?.produtos??[]).map(nomeDoProduto).join(', '),r?.tempo?duracao(r.tempo):'',r?.temperatura?TEMPERATURA[r.temperatura]??r.temperatura:'',p.recadastro?'Sim':'Não'].map(cel).join(';')})
+      return [cel(p.nome),cel(p.email),telefoneCsv(p.telefone),...[p.parceiro?`${NOME_DO_PARCEIRO[p.parceiro]??p.parceiro} /${p.parceiro}`:'Direto',quandoDe(p).toLocaleString('pt-BR'),
+        t==='ex'?'Já foi cliente':t==='novo'?'Nunca foi cliente':'Não respondeu',(r?.produtos??[]).map(nomeDoProduto).join(', '),r?.tempo?duracao(r.tempo):'',r?.temperatura?TEMPERATURA[r.temperatura]??r.temperatura:'',p.recadastro?'Sim':'Não'].map(cel)].join(';')})
     const cab=['Nome','E-mail','Telefone','Parceiro','Último cadastro','Questionário','Produtos que já usou','Tempo na página','Temperatura','Recadastro'].map(cel).join(';')
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([`\ufeff${cab}\n${linhas.join('\n')}`],{type:'text/csv;charset=utf-8'}))
-    a.download=`cadastros-${marca}-${status}-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)
+    a.download=`cadastros-${marca}-${status}-${diaDeHoje()}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)
   }
   const resumo=(()=>{
     const n={ex:0,novo:0,sem:0} as Record<Tipo,number>

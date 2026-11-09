@@ -115,7 +115,7 @@ export default function LabInicio() {
       <BarraInferior tela="inicio" irPara={nada} />
       {/* &tour=1[&passo=N]: o tour guiado por cima da home (os passos de outras telas ficam no centro) */}
       {/* &trancado=antes|no-ar|depois|liberando[&aviso=0]: a plataforma do inscrito até a live; &live=1: a sala da live */}
-      {q.has('trancado') && <TrancaDoLancamento sessao={{ token: 'lab' } as never} nome={d.nome} estado={estadoLab(q.get('trancado'))} aoConferir={async () => false} />}
+      {q.has('trancado') && <TrancaDoLancamento sessao={{ token: 'lab' } as never} nome={d.nome} estado={estadoLab(q.get('trancado'))} assistindo={q.has('live')} aoAssistir={nada} aoConferir={async () => false} />}
       {q.has('live') && <LiveDoLancamento sessao={{ token: 'lab' } as never} estado={estadoLab('no-ar')} aoFechar={nada} />}
       {q.has('tour') && <TourGuiado passos={passosDoTour({ nome: d.nome, treino: true })} obrigatorio={q.get('tour') !== 'rever'}
         telaAtual="inicio" irPara={nada} aoTerminar={nada} aoFechar={nada} />}

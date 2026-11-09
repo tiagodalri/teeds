@@ -77,14 +77,14 @@ export function PreAcesso({ sessao, nome, aoConferir, aoSair }: {
         <div className="espera-cabeca">
           <span className="espera-selo pre-selo"><i aria-hidden="true" />Pré-acesso</span>
           <h1>{primeiroNome ? `${primeiroNome}, sua conta está pronta.` : 'Sua conta está pronta.'}</h1>
-          <p>O acesso completo é liberado na live de lançamento, <b>segunda, 09/11, às 20h</b>. Assista do início ao fim e a {MARCA.prosa} fica liberada para você, sem pagar nada.</p>
+          <p>O acesso completo é liberado na live de lançamento, <b>segunda, 09/11, às 20h</b>. É nela que a {MARCA.prosa} é liberada para você, sem pagar nada. Assista do início ao fim.</p>
         </div>
 
         <div className="pre-relogio" role="timer" aria-live="off">
           {noAr ? (
             <div className="pre-noar">
               <b>A live está no ar agora</b>
-              <span>Ela passa dentro da GlobalFly. Fique até o fim para liberar o seu acesso.</span>
+              <span>Ela passa dentro da GlobalFly. A liberação do acesso acontece durante a live.</span>
             </div>
           ) : agora >= FIM_DA_LIVE ? (
             <div className="pre-noar"><b>A live terminou</b><span>A liberação acontece em instantes. Esta tela abre a plataforma sozinha.</span></div>

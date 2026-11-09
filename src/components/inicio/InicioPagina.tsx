@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ConvitesDoInicio } from '../notificacoes/Notificacoes'
 import type { WorkspacePage } from '../WorkspaceNav'
 import type { SessaoTeeds } from '../../core/teeds/conta'
@@ -117,10 +117,13 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
   }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // I.A.s ligadas agora (o mesmo compasso da tela de robôs)
+  // o token mais novo (ele renova a cada hora; os intervalos daqui duram a visita inteira)
+  const sessaoRef = useRef(sessao)
+  sessaoRef.current = sessao
   useEffect(() => {
     if (vivasDeFora) return
     if (!sessao) { setVivas([]); return }
-    return acompanharVivas(sessao, setVivas)
+    return acompanharVivas(() => sessaoRef.current ?? sessao, setVivas)
   }, [sessao?.usuario.id, !!vivasDeFora]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // o dia: sessões de hoje (as que já pararam também contam)
@@ -128,7 +131,8 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
     if (!sessao) return
     let vivo = true
     // desde a meia-noite (com folga de 1 h), e espaço para um dia cheio de sessões
-    const ler = () => listarSessoes(sessao, (Date.now() - inicioDoDia()) / 3600_000 + 1, 300)
+    // sempre o token mais novo: este intervalo dura a visita inteira e o token renova a cada hora
+    const ler = () => listarSessoes(sessaoRef.current ?? sessao, (Date.now() - inicioDoDia()) / 3600_000 + 1, 300)
       .then((l) => {
         const doDia = l.filter((s) => Date.parse(s.criadaEm) >= inicioDoDia())
         guardarDia({ userId: sessao.usuario.id, desde: inicioDoDia(), sessoes: doDia })

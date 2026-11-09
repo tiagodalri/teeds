@@ -33,7 +33,9 @@ export async function carregarRobosBloqueados(sessao: SessaoTeeds | null): Promi
     if (!r.ok) throw new Error(String(r.status))
     const lista = (await r.json()) as string[] | null
     mudar(new Set(lista ?? []))
-  } catch { mudar(new Set()) }
+  } catch {
+    // falhou a leitura (ex.: token vencido): mantém o que já se sabia; antes virava "nada bloqueado" e destravava tudo
+  }
 }
 
 /** As I.A. que a pessoa logada ainda não tem nesta marca. */

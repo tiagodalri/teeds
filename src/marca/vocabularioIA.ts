@@ -41,15 +41,19 @@ const palavrasAntes = [...mapaAntes.keys()].sort((a, b) => b.length - a.length).
 const palavrasDepois = [...new Set(DEPOIS)].sort((a, b) => b.length - a.length).join('|')
 const L = 'A-Za-zÀ-ÖØ-öø-ÿ'
 
+// Sem "lookbehind" (?<!…): o Safari antes do 16.4 (iPhones com iOS 15 e 16.0–16.3) não entende e a
+// página inteira ficava em branco (09/11/2026). A borda da esquerda é o grupo (^|[^letra]), que volta
+// intacto na troca.
+const BORDA = `(^|[^${L}])`
 // "todos os robôs" e "todas as" vêm primeiro: o determinante dobra
-const reTodos = new RegExp(`(?<![${L}])(todos|Todos|TODOS)(\\s+)(os|OS)(\\s+)(${ROBO})(?![${L}])`, 'g')
-const reAntes = new RegExp(`(?<![${L}])(${palavrasAntes})(\\s+)(${ROBO})(?![${L}])`, 'gi')
+const reTodos = new RegExp(`${BORDA}(todos|Todos|TODOS)(\\s+)(os|OS)(\\s+)(${ROBO})(?![${L}])`, 'g')
+const reAntes = new RegExp(`${BORDA}(${palavrasAntes})(\\s+)(${ROBO})(?![${L}])`, 'gi')
 const AUXILIARES = 'a|não|já|foi|foram|for|forem|está|estão|estiver|estava|é|são|será|serão|fica|ficou|ficam|ficar|continua|continuam|segue|seguem|volta|voltam|vai|vão|operar|opera|para|parou|ainda|agora|sempre|ser|estar|ficará'
 const reDepois = new RegExp(`(I\\.A\\.)((?:\\s+(?:${AUXILIARES})){0,3}\\s+)((?:${palavrasDepois})s?)(?![${L}])`, 'gi')
 // dois determinantes seguidos: "seu primeiro robô" vira "seu primeira I.A." na 1ª passada; aqui o primeiro concorda
 const femininos = [...new Set(ANTES.flatMap(([, fs, , fp]) => [fs, fp]))].sort((a, b) => b.length - a.length).join('|')
-const reDupla = new RegExp(`(?<![${L}])(${palavrasAntes})(\\s+)(${femininos})(\\s+)(I\\.A\\.)`, 'gi')
-const reSolto = new RegExp(`(?<![${L}])(${ROBO})(?![${L}])`, 'g')
+const reDupla = new RegExp(`${BORDA}(${palavrasAntes})(\\s+)(${femininos})(\\s+)(I\\.A\\.)`, 'gi')
+const reSolto = new RegExp(`${BORDA}(${ROBO})(?![${L}])`, 'g')
 const temRobo = /rob[ôo]/i
 
 const comCaixa = (modelo: string, palavra: string) =>
@@ -68,15 +72,15 @@ const feminino = (p: string) => {
 /** O texto com "robô" trocado por "I.A.", já com a concordância. */
 export function paraIA(texto: string): string {
   if (!temRobo.test(texto)) return texto
-  let t = texto.replace(reTodos, (_, todos, e1, _os, e2) => `${comCaixa(todos, 'todas')}${e1}${comCaixa(_os, 'as')}${e2}I.A.`)
-  t = t.replace(reAntes, (m, antes: string, espaco: string) => {
+  let t = texto.replace(reTodos, (_, pre: string, todos, e1, _os, e2) => `${pre}${comCaixa(todos, 'todas')}${e1}${comCaixa(_os, 'as')}${e2}I.A.`)
+  t = t.replace(reAntes, (m, pre: string, antes: string, espaco: string) => {
     const f = mapaAntes.get(antes.toLowerCase())
-    return f ? `${comCaixa(antes, f)}${espaco}I.A.` : m
+    return f ? `${pre}${comCaixa(antes, f)}${espaco}I.A.` : m
   })
-  t = t.replace(reSolto, 'I.A.')
-  t = t.replace(reDupla, (m, antes: string, e1: string, fem: string, e2: string) => {
+  t = t.replace(reSolto, '$1I.A.')
+  t = t.replace(reDupla, (m, pre: string, antes: string, e1: string, fem: string, e2: string) => {
     const f = mapaAntes.get(antes.toLowerCase())
-    return f ? `${comCaixa(antes, f)}${e1}${fem}${e2}I.A.` : m
+    return f ? `${pre}${comCaixa(antes, f)}${e1}${fem}${e2}I.A.` : m
   })
   // a I.A. "ligado" → "ligada" (só nas palavras da lista, logo depois de I.A.)
   t = t.replace(reDepois, (_, ia, meio, adj: string) => `${ia}${meio}${feminino(adj)}`)

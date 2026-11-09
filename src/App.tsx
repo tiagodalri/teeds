@@ -170,6 +170,10 @@ export default function App() {
   const connection = useConnection()
   const { symbols, loading: loadingSymbols, error: symbolsError } = useSymbols()
   const teeds = useTeedsAuth()
+  // o token mais novo: a sessão renova sozinha a cada hora, e o que roda em intervalo (a live, a presença,
+  // as I.A. bloqueadas) tem de usar sempre o atual, senão para com 401 depois de 1 hora (09/11/2026)
+  const sessaoAtual = useRef(teeds.sessao)
+  sessaoAtual.current = teeds.sessao
   // o Laboratório de IA fala com o banco com o login de quem é admin (26/10/2026).
   // Fica aqui em cima, com os outros hooks: abaixo dos `return` antecipados da tela
   // (carregando, login) ele mudava a ordem dos hooks e a página ficava em branco.
@@ -241,7 +245,7 @@ export default function App() {
   // as I.A. vendidas à parte (GlobalFly): quais esta pessoa ainda não tem; e o "ir para" do cadeado
   useEffect(() => {
     void carregarRobosBloqueados(teeds.sessao)
-    const recarregar = () => { if (document.visibilityState === 'visible') void carregarRobosBloqueados(teeds.sessao) }
+    const recarregar = () => { if (document.visibilityState === 'visible') void carregarRobosBloqueados(sessaoAtual.current) }
     document.addEventListener('visibilitychange', recarregar)
     return () => document.removeEventListener('visibilitychange', recarregar)
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -522,9 +526,10 @@ export default function App() {
     return () => { vivo = false; window.clearInterval(t) }
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // o token mais novo (a sessão renova sozinha; o aviso da sala não pode morrer com o token velho)
-  const sessaoAtual = useRef(teeds.sessao)
-  sessaoAtual.current = teeds.sessao
+  // Com as lives desligadas, o "Ao vivo" é só a sala de treino: aparece para admin e GF Member
+  const [membroTreino, setMembroTreino] = useState<boolean | null>(null)
+  // O plano da ficha: o GF Member ('treino') vê as aulas com o aviso de liberação até a live (28/10/2026)
+  const [plano, setPlano] = useState<string | null>(null)
   const canalDoTreino = useRef<AssinaturaRealtime | null>(null)
   useEffect(() => { if (teeds.sessao?.token) canalDoTreino.current?.atualizarToken(teeds.sessao.token) }, [teeds.sessao?.token])
   useEffect(() => {
@@ -572,12 +577,8 @@ export default function App() {
       document.removeEventListener('visibilitychange', aoVoltar)
       canalDoTreino.current?.fechar(); canalDoTreino.current = null
     }
-  }, [teeds.sessao?.usuario.id, admin]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [teeds.sessao?.usuario.id, admin, plano]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (tela === 'aovivo') setAvisoTreino(false) }, [tela])
-  // Com as lives desligadas, o "Ao vivo" é só a sala de treino: aparece para admin e GF Member
-  const [membroTreino, setMembroTreino] = useState<boolean | null>(null)
-  // O plano da ficha: o GF Member ('treino') vê as aulas com o aviso de liberação até a live (28/10/2026)
-  const [plano, setPlano] = useState<string | null>(null)
   // 06/11/2026: cliente liberado pelo administrador antes da live (só a Nathalia, por enquanto)
   const [liberadoAntes, setLiberadoAntes] = useState(false)
   const [planoLido, setPlanoLido] = useState(false)
@@ -604,7 +605,27 @@ export default function App() {
   */
   const liberadoGeral = MARCA.id !== 'globalfly' || (live ? !!live.liberadoEm : liberacaoGeralGuardada())
   useEffect(() => { if (live) guardarLiberacaoGeral(live.liberadoEm) }, [live?.liberadoEm]) // eslint-disable-line react-hooks/exhaustive-deps
-  const trancado = previaInscrito || (!liberadoAntes && trancadoAteALive(situacao, plano, admin, liberadoGeral))
+  // na liberação geral o plano de quem já era cliente muda no banco (ex.: Sem simulador → GF Member)
+  useEffect(() => {
+    const s = sessaoAtual.current
+    if (MARCA.id !== 'globalfly' || !live?.liberadoEm || !s) return
+    let vivo = true
+    void meuPlano(s).then((p) => { if (vivo && p) setPlano(p) })
+    return () => { vivo = false }
+  }, [live?.liberadoEm]) // eslint-disable-line react-hooks/exhaustive-deps
+  /*
+    A tranca só abre para administrador confirmado (09/11/2026): enquanto a conferência de admin não
+    responde (ou falha), o cliente que já era ativo fica trancado. Para o administrador não ver a tranca
+    piscar a cada abertura, vale o que este aparelho já sabe dele (só para a tela; o banco confere tudo).
+  */
+  const chaveEraAdmin = usuarioTeedsId && MARCA.id === 'globalfly' ? `${MARCA.id}.era-admin.${usuarioTeedsId}` : ''
+  const eraAdminNoAparelho = useMemo(() => { try { return !!chaveEraAdmin && !!localStorage.getItem(chaveEraAdmin) } catch { return false } }, [chaveEraAdmin])
+  useEffect(() => {
+    if (!chaveEraAdmin || admin === null) return
+    try { if (admin) localStorage.setItem(chaveEraAdmin, '1'); else localStorage.removeItem(chaveEraAdmin) } catch { /* só nesta visita */ }
+  }, [admin, chaveEraAdmin])
+  const adminParaTranca = admin ?? (eraAdminNoAparelho ? true : null)
+  const trancado = previaInscrito || (!liberadoAntes && trancadoAteALive(situacao, plano, adminParaTranca, liberadoGeral))
   // trancada até a live, a plataforma de trás também não diz o nome da corretora (03/11/2026)
   useEffect(() => (trancado ? ligarCorretoraDiscreta() : undefined), [trancado])
   const [assistindoLive, setAssistindoLive] = useState(false)
@@ -614,7 +635,7 @@ export default function App() {
     let vivo = true
     let t = 0
     const ler = () => {
-      void estadoDaLive(sessao).then((e) => { if (vivo) setLive(e) }).catch(() => undefined).finally(() => {
+      void estadoDaLive(sessaoAtual.current ?? sessao).then((e) => { if (vivo) setLive(e) }).catch(() => undefined).finally(() => {
         if (!vivo) return
         // perto e durante a live, de 20 em 20 s; no resto, de 2 em 2 min
         const perto = Math.abs(Date.now() - INICIO_DA_LIVE) < 5 * 36e5
@@ -691,7 +712,8 @@ export default function App() {
     let vivo = true
     void podeTreinar(teeds.sessao).then((m) => { if (vivo) setMembroTreino(m) })
     return () => { vivo = false }
-  }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
+    // o plano muda na liberação da live: quem virou GF Member passa a ver a sala de treino sem recarregar
+  }, [teeds.sessao?.usuario.id, plano]) // eslint-disable-line react-hooks/exhaustive-deps
   const mostrarAoVivo = LIVES_AO_VIVO || admin === true || membroTreino === true
   // nunca por cima da live (na liberação de 09/11 a live abre sozinha para quem acabou de ser liberado)
   const mostrarVideoInicio = !videoInicioVisto && !videoInicioDispensado && !JANELA && !!teeds.sessao && !trancado && planoLido && admin !== null
@@ -749,7 +771,7 @@ export default function App() {
   useEffect(() => {
     if (!teeds.sessao) return
     const inicio = Date.now()
-    const marcar = () => void registrarPresenca(teeds.sessao!, (Date.now() - inicio) / 1000)
+    const marcar = () => { const s = sessaoAtual.current; if (s) void registrarPresenca(s, (Date.now() - inicio) / 1000) }
     marcar()
     // aba escondida não grava a cada minuto (04/11/2026); o tempo conta do início, e a saída grava
     const relogio = window.setInterval(() => { if (!document.hidden) marcar() }, 60_000)
@@ -1243,7 +1265,8 @@ export default function App() {
   }
 
   // Aprovado e ainda com a senha provisória: cria a própria antes de entrar.
-  if (teeds.status === 'logado' && teeds.precisaTrocarSenha && !trancado) {
+  // (09/11/2026: liberado no meio da live, cria a senha depois; a troca não tira a pessoa da live)
+  if (teeds.status === 'logado' && teeds.precisaTrocarSenha && !trancado && !assistindoLive && !live?.noAr) {
     return (
       <NovaSenha ocupado={teeds.ocupado} erro={teeds.erro} onDefinir={teeds.definirNovaSenha}
         obrigatoria onSair={sairDeTudo} />
@@ -1446,18 +1469,23 @@ export default function App() {
 
       {trancado && !JANELA && teeds.sessao && (
         <TrancaDoLancamento sessao={teeds.sessao} nome={teeds.usuario?.nome} estado={live} previa={previaInscrito}
+          assistindo={assistindoLive} aoAssistir={() => setAssistindoLive(true)}
           aoConferir={async () => {
-            const [s, p] = await Promise.all([minhaSituacao(teeds.sessao!), meuPlano(teeds.sessao!)])
+            const sessao = sessaoAtual.current ?? teeds.sessao!
+            const [s, p] = await Promise.all([minhaSituacao(sessao), meuPlano(sessao)])
             // minhaSituacao responde 'ativo' quando a leitura falha: só abre com o plano novo lido do banco
             const liberado = s === 'ativo' && !!p && p !== PLANO_AGUARDANDO
             if (!liberado) return false
+            // quem já era cliente sai da tranca pelo liberadoEm da live: relê na hora (só para esses poucos)
+            if (!live?.liberadoEm) void estadoDaLive(sessao).then((e) => setLive(e)).catch(() => undefined)
             setPlano(p)
             setSituacao(s)
             return true
           }} />
       )}
-      {/* quem já tem a plataforma também assiste à live de lançamento aqui dentro */}
-      {!trancado && assistindoLive && live && teeds.sessao && (
+      {/* a live de lançamento, uma só para o inscrito e para quem já tem a plataforma: na liberação
+          ela continua no mesmo lugar (sem recomeçar o vídeo nem zerar a presença) */}
+      {assistindoLive && live && teeds.sessao && (
         <LiveDoLancamento sessao={teeds.sessao} estado={live} aoFechar={() => setAssistindoLive(false)} />
       )}
 
@@ -1468,7 +1496,8 @@ export default function App() {
         </Suspense>
       )}
 
-      {tour && !JANELA && teeds.sessao && !trancado && !mostrarVideoInicio && !decidindoVideoInicio && (
+      {/* o tour nunca abre por cima da live (na liberação de 09/11 ela continua aberta): espera ela fechar */}
+      {tour && !JANELA && teeds.sessao && !trancado && !mostrarVideoInicio && !decidindoVideoInicio && !assistindoLive && !live?.noAr && (
         <TourGuiado passos={passosDoTour({ nome: teeds.usuario?.nome || '', treino: !!MARCA.aoVivo && (membroTreino === true || admin === true) })}
           obrigatorio={tour === 'obrigatorio'} telaAtual={tela} irPara={setTela}
           aoTerminar={(destino) => fimDoTour(destino)} aoFechar={() => (tour === 'obrigatorio' ? fimDoTour() : setTour(null))} />

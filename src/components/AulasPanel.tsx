@@ -564,7 +564,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
               <CapaDaAula aula={aula} cor={aula.modulo.cor} numero={aula.numero} alt="" />
               {aula.video && !travadas && <span className="aula-play">▶</span>}
               {estado === 'parou' && <span className="aulas-jornada-ondeBarra" aria-hidden="true"><i style={{ width: `${Math.max(3, fracaoAula * 100)}%` }} /></span>}
-              {aula.duracao && !travadas && <span className="aula-dur">{estado === 'parou' && total ? `faltam ${relogio(total - onde)}` : aula.duracao}</span>}
+              {aula.duracao && !travadas && <span className="aula-dur">{estado === 'parou' && total ? `Faltam ${relogio(total - onde)}` : aula.duracao}</span>}
             </button>
           </section>
         )

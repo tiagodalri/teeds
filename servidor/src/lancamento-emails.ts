@@ -97,8 +97,8 @@ const ETAPAS: Etapa[] = [
     montar: (marca, p) => ({
       assunto: 'É hoje, às 20h',
       titulo: 'A live é hoje',
-      espia: 'Assista do início ao fim e o seu acesso é liberado.',
-      corpo: `${ola(p)}hoje, às **20h** (Brasília), a live de lançamento da ${marca.prosa} começa dentro da plataforma.\n\nAssista do início ao fim: é isso que libera o seu acesso, sem pagar nada. Entre alguns minutos antes pelo botão abaixo.`,
+      espia: 'O seu acesso é liberado durante a live.',
+      corpo: `${ola(p)}hoje, às **20h** (Brasília), a live de lançamento da ${marca.prosa} começa dentro da plataforma.\n\nÉ nela que o seu acesso é liberado, sem pagar nada. Assista do início ao fim e entre alguns minutos antes pelo botão abaixo.`,
       botao: 'Entrar na GlobalFly',
       comunidade: true,
     }),
@@ -120,15 +120,16 @@ const ETAPAS: Etapa[] = [
     montar: (marca) => ({
       assunto: 'Estamos ao vivo',
       titulo: 'A live começou',
-      espia: 'Entre agora e fique até o fim para liberar o seu acesso.',
-      corpo: `A live de lançamento da ${marca.prosa} começou. Entre agora e fique até o fim: a sua presença é marcada sozinha e, no fim da live, o acesso é liberado.`,
+      espia: 'Entre agora: o seu acesso é liberado durante a live.',
+      corpo: `A live de lançamento da ${marca.prosa} começou. Entre agora e fique até o fim: a liberação do acesso acontece ao vivo, durante a live.`,
       botao: 'Assistir agora',
     }),
   },
   {
     id: 'nao-ficou',
     // depois do botão "Liberar acesso geral", para quem continua esperando (até 2 dias depois)
-    aberta: (agora, _p, liberadoEm) => liberadoEm !== null && agora >= liberadoEm + 10 * 6e4 && agora < liberadoEm + 48 * h,
+    // só para quem já estava inscrito na hora do botão: quem se inscreve depois não recebe "a live terminou" 30 s após a confirmação
+    aberta: (agora, p, liberadoEm) => liberadoEm !== null && Date.parse(p.criado_em) < liberadoEm && agora >= liberadoEm + 10 * 6e4 && agora < liberadoEm + 48 * h,
     montar: (marca, p) => ({
       assunto: 'A live de lançamento terminou',
       titulo: 'A live terminou',
@@ -194,6 +195,21 @@ async function avisarNoCelular(agora: number, live: { comecou_em: string | null;
   }
 }
 
+/**
+ * Lê a lista inteira, de 1.000 em 1.000 (o limite do banco). Antes vinham só os primeiros 1.000
+ * enviados (de 2.512): o resto parecia "não mandado" e cada rodada tentava de novo, com milhares de
+ * recusas por hora e a rodada lenta (o "Falta 1 hora" podia atrasar). Falhou uma página: lança.
+ */
+async function emPaginas<T>(caminho: string): Promise<T[]> {
+  const todos: T[] = []
+  for (let de = 0; de < 200_000; de += 1000) {
+    const pagina: T[] = await banco(`${caminho}&offset=${de}&limit=1000`) ?? []
+    todos.push(...pagina)
+    if (pagina.length < 1000) break
+  }
+  return todos
+}
+
 let rodando = false
 /** Uma rodada do carteiro: fecha a live sozinha se preciso e manda as etapas abertas. */
 export async function enviarEmailsDoLancamento(agora = Date.now()) {
@@ -208,10 +224,11 @@ export async function enviarEmailsDoLancamento(agora = Date.now()) {
     const [live] = await banco(`/rest/v1/lancamento_live?marca=eq.${MARCA}&select=liberado_em,comecou_em,terminou_em`) ?? []
     const liberadoEm = live?.liberado_em ? Date.parse(live.liberado_em) : null
     if (live) await avisarNoCelular(agora, { comecou_em: live.comecou_em ?? null, terminou_em: live.terminou_em ?? null })
-    const inscritos: Inscrito[] = await banco(`/rest/v1/clientes?marca=eq.${MARCA}&status_acesso=eq.pendente&plano_id=eq.${PLANO_AGUARDANDO}&select=email,nome,parceiro,criado_em&order=criado_em.asc&limit=5000`) ?? []
+    // o banco devolve no máximo 1.000 por vez (09/11/2026): as duas listas vêm em páginas
+    const inscritos: Inscrito[] = await emPaginas(`/rest/v1/clientes?marca=eq.${MARCA}&status_acesso=eq.pendente&plano_id=eq.${PLANO_AGUARDANDO}&select=email,nome,parceiro,criado_em&order=criado_em.asc,user_id.asc`)
     if (!inscritos.length) return
     const sairam = await jaSairam(MARCA)   // sem a lista, não manda (lança e para aqui)
-    const enviados: Array<{ email: string; etapa: string }> = await banco(`/rest/v1/lancamento_emails?marca=eq.${MARCA}&select=email,etapa&limit=50000`) ?? []
+    const enviados: Array<{ email: string; etapa: string }> = await emPaginas(`/rest/v1/lancamento_emails?marca=eq.${MARCA}&select=email,etapa&order=etapa.asc,email.asc`)
     const ja = new Set(enviados.map((x) => `${x.etapa}|${x.email.toLowerCase()}`))
 
     let mandados = 0

@@ -220,7 +220,10 @@ const RESPOSTAS = {
 /* ------------------------------------------------------ jeito de escrever */
 
 /** A palavra inteira, entendendo acentos (o \\b do JavaScript não entende "você"). */
-const palavra = (w: string) => new RegExp(`(?<!\\p{L})${w}(?!\\p{L})`, 'giu')
+// (o Safari antes do 16.4 não entende o (?<!…): lá a borda da esquerda fica de fora, em vez de a tela quebrar)
+const palavra = (w: string) => {
+  try { return new RegExp(`(?<!\\p{L})${w}(?!\\p{L})`, 'giu') } catch { return new RegExp(`${w}(?!\\p{L})`, 'giu') }
+}
 
 const ABREVIACOES: Array<[RegExp, string[]]> = ([
   ['vocês', ['vcs', 'voces']], ['você', ['vc', 'voce']], ['também', ['tb', 'tbm', 'tambem']], ['porque', ['pq']],

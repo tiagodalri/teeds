@@ -242,7 +242,8 @@ export async function procurarSessaoRecemLigada(
  * operação é o acompanhamento de cada bloco, não esta lista.
  */
 export function acompanharVivas(
-  sessao: SessaoTeeds,
+  /** A sessão, ou quem a devolve na hora (o token renova a cada hora; o acompanhamento dura a visita toda). */
+  sessao: SessaoTeeds | (() => SessaoTeeds | null),
   aoAtualizar: (lista: SessaoViva[]) => void,
   intervalo = RITMO_ROBOS,
 ): () => void {
@@ -257,7 +258,9 @@ export function acompanharVivas(
     }
     let lista: SessaoViva[]
     try {
-      lista = await sessoesVivas(sessao)
+      const atual = typeof sessao === 'function' ? sessao() : sessao
+      if (!atual) throw new Error('sem sessão')
+      lista = await sessoesVivas(atual)
     } catch {
       // Silêncio do servidor não é "parou de operar". A tela mantém o que já
       // sabia e a gente pergunta de novo no compasso normal.

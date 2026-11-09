@@ -484,6 +484,13 @@ function Laboratorio() {
   // ?tela=pendentes: a aprovação de clientes como o admin geral vê (com a escolha do parceiro); a lista vem do servidor
   if (qual === 'pendentes') return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><AdminPendentesLab sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab', telefone: null, cpf: null, criadoEm: '', trocarSenha: false } } as never} marca="globalfly" versao={0} onAprovado={() => undefined} parceiros={[{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }, { codigo: 'd', nome: 'Douglas' }]} exemplo={!new URLSearchParams(location.search).has('real')} /></div></Suspense>
   // ?tela=liberar-geral: o botão "Liberar acesso geral" de Clientes (08/11/2026); sem banco, mostra o estado trancado
+  // (&parceiro: como o admin de um parceiro só vê, sem o botão; &esperando: com o número de quem espera)
+  if (qual === 'liberar-geral' && (new URLSearchParams(location.search).has('parceiro') || new URLSearchParams(location.search).has('esperando'))) {
+    const f = window.fetch
+    window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => String(u).includes('teeds_lancamento_painel')
+      ? new Response(JSON.stringify({ inicioPrevisto: '2026-11-09T23:00:00Z', youtube: null, noAr: false, comecouEm: null, terminouEm: null, liberadoEm: null, liberados: null, podeControlar: !new URLSearchParams(location.search).has('parceiro'), minimoPct: 80, aguardando: 757, assistindoAgora: 0, assistiram: 0, ficaram: 0, total: null }), { status: 200 })
+      : f(u, i)) as typeof fetch
+  }
   if (qual === 'liberar-geral') return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><LiberarAcessoGeralLab sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab' } } as never} geral /></div></Suspense>
   if (qual === 'login') return <LabLogin />
   // ?tela=excluir: o rodapé da ficha do cliente com "Excluir cadastro" e a confirmação aberta
@@ -514,7 +521,7 @@ function Laboratorio() {
     // o painel da live com respostas de mentira (o banco de verdade só responde ao admin geral)
     const f = window.fetch
     window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => String(u).includes('teeds_lancamento_')
-      ? new Response(JSON.stringify(String(u).includes('painel') ? { inicioPrevisto: '2026-11-09T23:00:00Z', youtube: null, noAr: new URLSearchParams(location.search).has('noar'), comecouEm: null, terminouEm: null, liberadoEm: null, liberados: null, minimoPct: 80, aguardando: 412, assistindoAgora: 318, assistiram: 356, ficaram: 241, total: 74 } : {}), { status: 200 })
+      ? new Response(JSON.stringify(String(u).includes('painel') ? { inicioPrevisto: '2026-11-09T23:00:00Z', youtube: null, noAr: new URLSearchParams(location.search).has('noar'), comecouEm: null, terminouEm: null, liberadoEm: null, liberados: null, podeControlar: !new URLSearchParams(location.search).has('parceiro'), minimoPct: 80, aguardando: 412, assistindoAgora: 318, assistiram: 356, ficaram: 241, total: 74 } : {}), { status: 200 })
       : f(u, i)) as typeof fetch
     return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><AdminLancamento sessao={{ token: 'lab' } as never} /></div></Suspense>
   }

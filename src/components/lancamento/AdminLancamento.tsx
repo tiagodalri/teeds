@@ -9,7 +9,7 @@
  * geral", em Administração › Clientes (08/11/2026, Tiago). Se ninguém
  * encerrar, o servidor fecha a live sozinho 3 horas depois do horário marcado.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { controlarLive, idDoYoutube, painelDaLive, type AcaoDaLive, type PainelDaLive } from '../../core/teeds/lancamento'
 import './lancamento.css'
@@ -24,8 +24,11 @@ export function AdminLancamento({ sessao }: { sessao: SessaoTeeds }) {
   const [ocupado, setOcupado] = useState<AcaoDaLive | null>(null)
   const [confirmar, setConfirmar] = useState(false)
 
+  // relê de 15 em 15 s: sempre com o token mais novo (ele renova a cada hora)
+  const sessaoRef = useRef(sessao)
+  sessaoRef.current = sessao
   async function ler() {
-    try { const d = await painelDaLive(sessao); setP(d); setErro(null); setLink((l) => l || d.youtube || '') } catch (e) { setErro((e as Error).message) }
+    try { const d = await painelDaLive(sessaoRef.current); setP(d); setErro(null); setLink((l) => l || d.youtube || '') } catch (e) { setErro((e as Error).message) }
   }
   useEffect(() => {
     void ler()
@@ -36,7 +39,7 @@ export function AdminLancamento({ sessao }: { sessao: SessaoTeeds }) {
   async function fazer(acao: AcaoDaLive, valor?: string) {
     setOcupado(acao); setRecado(null); setErro(null)
     try {
-      const r = await controlarLive(sessao, acao, valor)
+      const r = await controlarLive(sessaoRef.current, acao, valor)
       if (acao === 'encerrar') setRecado('Live encerrada. Para liberar o acesso, use "Liberar acesso geral" em Clientes.')
       if (acao === 'youtube') setRecado(valor ? 'Link salvo. Ele aparece na plataforma assim que a live estiver no ar.' : 'Link removido.')
       if (acao === 'comecar') setRecado('Live no ar: o aviso abriu para todos os inscritos e a presença começou a contar.')
@@ -47,6 +50,8 @@ export function AdminLancamento({ sessao }: { sessao: SessaoTeeds }) {
 
   const linkValido = !link.trim() || !!idDoYoutube(link)
   const encerrada = !!p?.terminouEm
+  // o admin de um parceiro só (ex.: o Naor) acompanha, mas não comanda a live de todos (09/11/2026)
+  const pode = p?.podeControlar !== false
 
   return (
     <div className="adm-lanc">
@@ -57,6 +62,7 @@ export function AdminLancamento({ sessao }: { sessao: SessaoTeeds }) {
         <article className="alerta"><span>Ficaram até o fim</span><strong>{p?.ficaram ?? '—'}</strong><small>{p ? `Viraram GF Member: ${p.liberados ?? 0}` : ''}</small></article>
       </div>
 
+      {!pode && <p className="adm-lanc-ok" role="status">Você acompanha os números da live. O link, o começo, o fim e a liberação ficam com o administrador geral.</p>}
       {erro && <p className="adm-lanc-erro" role="alert">{erro}</p>}
       {recado && <p className="adm-lanc-ok" role="status">{recado}</p>}
 
@@ -64,8 +70,8 @@ export function AdminLancamento({ sessao }: { sessao: SessaoTeeds }) {
         <header><div><span className="rot">1 · Transmissão</span><h3>Link da live no YouTube</h3></div></header>
         <p className="adm-lanc-texto">Crie a live no YouTube como <b>não listada</b> e cole o link aqui. Ela passa dentro da GlobalFly, com o chat, e a presença de cada inscrito é marcada sozinha.</p>
         <div className="adm-lanc-linha">
-          <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://www.youtube.com/live/…" aria-label="Link da live no YouTube" aria-invalid={!linkValido} />
-          <button className="admin-primary" disabled={!linkValido || ocupado !== null || (link.trim() || null) === (p?.youtube ?? null)} onClick={() => void fazer('youtube', link.trim())}>{ocupado === 'youtube' ? 'Salvando…' : 'Salvar link'}</button>
+          <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://www.youtube.com/live/…" aria-label="Link da live no YouTube" aria-invalid={!linkValido} disabled={!pode} />
+          <button className="admin-primary" disabled={!pode || !linkValido || ocupado !== null || (link.trim() || null) === (p?.youtube ?? null)} onClick={() => void fazer('youtube', link.trim())}>{ocupado === 'youtube' ? 'Salvando…' : 'Salvar link'}</button>
         </div>
         {!linkValido && <small className="adm-lanc-erro">Esse link não é de um vídeo do YouTube.</small>}
       </section>
@@ -80,7 +86,7 @@ export function AdminLancamento({ sessao }: { sessao: SessaoTeeds }) {
           <div><dt>Até o fim é</dt><dd>{p?.minimoPct ?? 80}% da live, com os últimos 10&nbsp;min</dd></div>
         </dl>
         <p className="adm-lanc-texto">Às 20h de 09/11 a live entra no ar sozinha. Use <b>Começar agora</b> se for abrir antes. <b>Ninguém é liberado sozinho:</b> o acesso abre quando um administrador aperta <b>Liberar acesso geral</b>, em Clientes. Aí todos os inscritos viram GF Member, com acesso até 09/11/2027, mesmo quem não assistiu, e a live continua no ar para quem está vendo. <b>Encerrar a live</b> só marca o fim, sem liberar ninguém.</p>
-        <div className="adm-lanc-botoes">
+        {pode && <div className="adm-lanc-botoes">
           {!p?.noAr && <button className="admin-primary" disabled={ocupado !== null} onClick={() => void fazer('comecar')}>{ocupado === 'comecar' ? 'Abrindo…' : encerrada ? 'Começar de novo' : 'Começar agora'}</button>}
           {p?.noAr && !confirmar && <button className="admin-primary" disabled={ocupado !== null} onClick={() => setConfirmar(true)}>Encerrar a live</button>}
           {p?.noAr && confirmar && (
@@ -91,7 +97,7 @@ export function AdminLancamento({ sessao }: { sessao: SessaoTeeds }) {
             </span>
           )}
           {encerrada && <button disabled={ocupado !== null} onClick={() => void fazer('retomar')}>Voltar ao ar</button>}
-        </div>
+        </div>}
       </section>
 
       <section className="admin-card">

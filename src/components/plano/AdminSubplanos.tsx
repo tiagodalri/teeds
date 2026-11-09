@@ -34,7 +34,6 @@ export function AdminSubplanos({ sessao, marca }: { sessao: SessaoTeeds; marca: 
     try { await salvarSubplano(sessao, form, marca); await ler(); void carregarMeuSubplano(sessao); setAviso(`${form.nome} salvo. Já vale para os clientes.`); setAberto(null); setForm(null) }
     catch (e) { setErro((e as Error).message) } finally { setSalvando(false) }
   }
-  const num = (v: string) => (v.trim() === '' ? null : Number(v.replace(',', '.')))
   return (
     <section className="admin-card full asp">
       <header><div><span className="rot">GF Member</span><h3>Subplanos: o que cada um libera</h3></div><small>O plano de todos é o GF Member; o subplano decide I.A., simulador, compartilhamento e extras. Para mudar o de um cliente, abra a ficha dele em Clientes.</small></header>
@@ -51,10 +50,10 @@ export function AdminSubplanos({ sessao, marca }: { sessao: SessaoTeeds; marca: 
               <div className="asp-form">
                 <label><span>Nome</span><input value={form.nome} maxLength={30} onChange={(e) => mudar({ nome: e.target.value })} /></label>
                 <label className="largo"><span>Frase</span><input value={form.chamada ?? ''} maxLength={140} onChange={(e) => mudar({ chamada: e.target.value })} /></label>
-                <label><span>Preço de referência (riscado)</span><input inputMode="decimal" value={form.precoReferencia ?? ''} onChange={(e) => mudar({ precoReferencia: num(e.target.value) })} placeholder="Ex.: 1997" /></label>
-                <label><span>Preço</span><input inputMode="decimal" value={form.preco ?? ''} onChange={(e) => mudar({ preco: num(e.target.value) })} placeholder="0 = aquisição zero" /></label>
+                <label><span>Preço de referência (riscado)</span><CampoDecimal valor={form.precoReferencia ?? null} aoMudar={(v) => mudar({ precoReferencia: v })} placeholder="Ex.: 1997" /></label>
+                <label><span>Preço</span><CampoDecimal valor={form.preco ?? null} aoMudar={(v) => mudar({ preco: v })} placeholder="0 = aquisição zero" /></label>
                 <label><span>Cobrança</span><select value={form.cobranca} onChange={(e) => mudar({ cobranca: e.target.value })}><option value="aquisicao-zero">Aquisição zero</option><option value="anual">Anual</option><option value="mensal">Mensal</option></select></label>
-                <label><span>Compartilhamento de receita (%)</span><input inputMode="decimal" value={Math.round(form.compartilhamento * 1000) / 10} onChange={(e) => mudar({ compartilhamento: Math.max(0, Math.min(100, num(e.target.value) ?? 0)) / 100 })} /></label>
+                <label><span>Compartilhamento de receita (%)</span><CampoDecimal valor={Math.round(form.compartilhamento * 1000) / 10} aoMudar={(v) => mudar({ compartilhamento: Math.max(0, Math.min(100, v ?? 0)) / 100 })} /></label>
                 <div className="largo asp-ias">
                   <span>I.A. liberadas</span>
                   <div>
@@ -64,7 +63,7 @@ export function AdminSubplanos({ sessao, marca }: { sessao: SessaoTeeds; marca: 
                     ) })}
                   </div>
                 </div>
-                <label><span>Simulador (horas por dia)</span><input inputMode="decimal" value={form.simuladorHoras ?? ''} placeholder="Vazio = ilimitado" onChange={(e) => mudar({ simuladorHoras: num(e.target.value) })} /></label>
+                <label><span>Simulador (horas por dia)</span><CampoDecimal valor={form.simuladorHoras ?? null} placeholder="Vazio = ilimitado" aoMudar={(v) => mudar({ simuladorHoras: v })} /></label>
                 <div className="asp-chaves largo">
                   <label><input type="checkbox" checked={form.salaExtra} onChange={(e) => mudar({ salaExtra: e.target.checked })} /> Sala ao vivo extra</label>
                   <label><input type="checkbox" checked={form.assessor} onChange={(e) => mudar({ assessor: e.target.checked })} /> Assessor no WhatsApp</label>
@@ -83,5 +82,28 @@ export function AdminSubplanos({ sessao, marca }: { sessao: SessaoTeeds; marca: 
         ))}
       </div>
     </section>
+  )
+}
+
+/**
+ * Campo de número com vírgula (09/11/2026): o texto digitado fica como está enquanto a pessoa digita
+ * ("297," e "7,5" não voltam para "297" e "7"); o número vai para o formulário a cada tecla.
+ */
+function CampoDecimal({ valor, aoMudar, placeholder }: { valor: number | null; aoMudar: (v: number | null) => void; placeholder?: string }) {
+  const mostrar = (v: number | null) => (v == null || !Number.isFinite(v) ? '' : String(v).replace('.', ','))
+  const [texto, setTexto] = useState(() => mostrar(valor))
+  const [editando, setEditando] = useState(false)
+  useEffect(() => { if (!editando) setTexto(mostrar(valor)) }, [valor, editando])
+  return (
+    <input inputMode="decimal" value={texto} placeholder={placeholder}
+      onFocus={() => setEditando(true)} onBlur={() => setEditando(false)}
+      onChange={(e) => {
+        const t = e.target.value.replace(/[^\d.,]/g, '')
+        setTexto(t)
+        // vírgula é o decimal (o ponto vira milhar); sem vírgula, "297.50" também vale como decimal
+        const limpo = t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : /^\d+\.\d{1,2}$/.test(t) ? t : t.replace(/\./g, '')
+        const n = t.trim() === '' ? null : Number(limpo)
+        if (n === null || Number.isFinite(n)) aoMudar(n)
+      }} />
   )
 }

@@ -160,6 +160,11 @@ export async function registrarPresenca(sessao: SessaoTeeds, segundos = 0): Prom
         visto_em: new Date().toISOString(),
       }),
     })
+  } catch (e) {
+    console.warn('[teeds] nao consegui gravar a ficha na presenca:', (e as Error).message)
+  }
+  // o registro de acesso (tempo de uso, aparelho) vale mesmo se a ficha acima falhar (09/11/2026)
+  try {
     await rest('/rpc/teeds_registrar_acesso', sessao.token, { method:'POST', body:JSON.stringify({ p_marca:MARCA.id, p_sessao:sessaoDeUso, p_segundos:Math.max(0,Math.round(segundos)), p_fuso:Intl.DateTimeFormat().resolvedOptions().timeZone||null, p_idioma:navigator.language||null, p_dispositivo:dispositivoAtual() }) })
   } catch (e) {
     console.warn('[teeds] nao consegui registrar a presenca:', (e as Error).message)

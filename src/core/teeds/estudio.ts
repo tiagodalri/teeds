@@ -156,7 +156,11 @@ export type Cor = 'vermelho' | 'amarelo' | 'azul'
 export interface Sinal { cor: Cor; trecho: string; motivo: string }
 
 // bordas de palavra que entendem acento (o \b do JavaScript não entende "robô")
-const palavra = (miolo: string) => new RegExp(`(?<!\\p{L})(?:${miolo})(?!\\p{L})`, 'giu')
+// (o Safari antes do 16.4 não entende o (?<!…): lá a borda da esquerda fica de fora, em vez de a tela quebrar)
+const palavra = (miolo: string) => {
+  try { return new RegExp(`(?<!\\p{L})(?:${miolo})(?!\\p{L})`, 'giu') }
+  catch { return new RegExp(`(?:${miolo.replace(/\(\?<!\\p\{L\}\)/g, '')})(?!\\p{L})`, 'giu') }
+}
 /** Vermelho: a marca não usa (a função meta-estudio barra as mesmas). */
 const VERMELHO: Array<[RegExp, string]> = [
   [palavra('apost\\p{L}*'), 'A GlobalFly não fala em aposta.'], // texto-ok: é a lista que barra essas palavras no anúncio

@@ -40,7 +40,7 @@ export function guardarLiberacaoGeral(liberadoEm: string | null) {
 export const PLANO_AGUARDANDO = 'globalfly-aguardando-live'
 
 export const AGENDA_DA_LIVE = {
-  google: 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=Live%20de%20lan%C3%A7amento%20da%20GlobalFly%20Trade&dates=20261109T230000Z/20261110T010000Z&details=Assista%20do%20in%C3%ADcio%20ao%20fim%20para%20liberar%20o%20seu%20acesso.%20A%20live%20passa%20dentro%20da%20GlobalFly%3A%20https%3A%2F%2Fglobalflytrade.com',
+  google: 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=Live%20de%20lan%C3%A7amento%20da%20GlobalFly%20Trade&dates=20261109T230000Z/20261110T010000Z&details=A%20libera%C3%A7%C3%A3o%20do%20acesso%20acontece%20ao%20vivo%2C%20durante%20a%20live.%20A%20live%20passa%20dentro%20da%20GlobalFly%3A%20https%3A%2F%2Fglobalflytrade.com',
   // o mesmo arquivo da página de cadastro (captura-globalfly/live-globalfly.ics)
   arquivo: '/cadastro/live-globalfly.ics',
 }
@@ -59,7 +59,8 @@ export function emPreAcesso(agora = Date.now()): boolean {
 export function trancadoAteALive(situacao: string | null, plano: string | null, admin: boolean | null, liberadoGeral: boolean, agora = Date.now()): boolean {
   if (MARCA.id !== 'globalfly' || admin === true) return false
   // quem já tinha acesso (cliente, não administrador) também espera a liberação (Tiago, 03/11 e 08/11/2026)
-  if (situacao === 'ativo') return admin === false && !liberadoGeral
+  // admin ainda não conferido (null) também fica trancado: na dúvida, não abre (09/11/2026; antes só admin === false)
+  if (situacao === 'ativo') return !liberadoGeral
   if (situacao !== 'pendente') return false
   return plano === PLANO_AGUARDANDO || agora < FIM_DA_LIVE
 }
@@ -100,6 +101,8 @@ export interface EstadoDaLive {
 }
 
 export interface PainelDaLive extends Omit<EstadoDaLive, 'meusMinutos'> {
+  /** Pode liberar, trocar o link e encerrar: o admin geral, ou o admin que enxerga todos os parceiros. */
+  podeControlar?: boolean
   liberados: number | null
   minimoPct: number
   aguardando: number
@@ -129,9 +132,16 @@ export const estadoDaLive = (sessao: SessaoTeeds) =>
 export const marcarPresenca = (sessao: SessaoTeeds) =>
   rpc<boolean>('teeds_lancamento_presente', sessao, { p_marca: MARCA.id })
 
+/*
+  O painel e os comandos da live são sempre da GlobalFly (09/11/2026): no site da Teeds o admin geral
+  escolhe a GF no seletor, e MARCA.id ali é 'teeds'. Com a marca do site, "Liberar acesso geral" rodava
+  para a Teeds (e o banco agora recusa qualquer marca que não seja a GF).
+*/
+const MARCA_DA_LIVE = 'globalfly'
+
 export const painelDaLive = (sessao: SessaoTeeds) =>
-  rpc<PainelDaLive>('teeds_lancamento_painel', sessao, { p_marca: MARCA.id })
+  rpc<PainelDaLive>('teeds_lancamento_painel', sessao, { p_marca: MARCA_DA_LIVE })
 
 export type AcaoDaLive = 'youtube' | 'comecar' | 'retomar' | 'encerrar' | 'liberar_geral' | 'minimo'
 export const controlarLive = (sessao: SessaoTeeds, acao: AcaoDaLive, valor?: string) =>
-  rpc<{ liberados?: number }>('teeds_lancamento_controlar', sessao, { p_marca: MARCA.id, p_acao: acao, p_valor: valor ?? null })
+  rpc<{ liberados?: number }>('teeds_lancamento_controlar', sessao, { p_marca: MARCA_DA_LIVE, p_acao: acao, p_valor: valor ?? null })

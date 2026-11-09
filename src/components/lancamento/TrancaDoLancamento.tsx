@@ -13,6 +13,10 @@
  *
  * Ficam livres só: o menu do avatar (para sair), o botão de tema e o que é
  * desta camada (`.tl-livre`).
+ *
+ * 09/11/2026: a live em si fica no App (uma só para o inscrito e para quem já
+ * tem a plataforma). Na liberação a tranca some e a live continua tocando, sem
+ * recomeçar o vídeo nem zerar a presença.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { MARCA } from '../../marca'
@@ -21,7 +25,6 @@ import { afiliadoDaDeriv, comunidadeDaVitrine } from '../../core/rotas'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { INICIO_DA_LIVE, faltaCurto, idDoYoutube, type EstadoDaLive } from '../../core/teeds/lancamento'
 import { ChecklistDaLive } from '../PreAcesso'
-import { LiveDoLancamento } from './LiveDoLancamento'
 import './lancamento.css'
 
 const LIVRES = '.tl-livre, .avatar-botao, .menu-acao.perigo, .tema-btn'
@@ -52,8 +55,11 @@ function Relogio({ falta }: { falta: number }) {
 
 type Fase = 'antes' | 'no-ar' | 'depois'
 
-export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = false }: {
+export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = false, assistindo, aoAssistir }: {
   sessao: SessaoTeeds
+  /** A live está aberta por cima (quem a mostra é o App). */
+  assistindo: boolean
+  aoAssistir: () => void
   nome?: string | null
   estado: EstadoDaLive | null
   /** Relê a ficha no banco. Devolve true quando o acesso já foi liberado. */
@@ -66,7 +72,6 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
   const [aviso, setAviso] = useState<null | 'aviso' | 'preparo'>(() => {
     try { return sessionStorage.getItem(`${MARCA.id}.tranca.vista`) ? null : 'aviso' } catch { return 'aviso' }
   })
-  const [assistindo, setAssistindo] = useState(false)
   const conferirRef = useRef(aoConferir)
   conferirRef.current = aoConferir
 
@@ -124,7 +129,17 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
     return () => { window.clearInterval(t); document.removeEventListener('visibilitychange', conferir) }
   }, [fase, previa])
 
-  const abrirLive = () => { setAviso(null); setAssistindo(true) }
+  // o botão "Liberar acesso geral" foi apertado: confere na hora (não espera a próxima volta de 20 s)
+  const [conferindo, setConferindo] = useState(false)
+  useEffect(() => {
+    if (previa || !estado?.liberadoEm) return
+    let vivo = true
+    setConferindo(true)
+    void conferirRef.current().catch(() => false).finally(() => { if (vivo) setConferindo(false) })
+    return () => { vivo = false }
+  }, [estado?.liberadoEm, previa])
+
+  const abrirLive = () => { setAviso(null); aoAssistir() }
 
   let conteudo: ReactNode
   if (aviso === 'preparo') {
@@ -155,7 +170,7 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
         <div className="tl-cabeca">
           <span className="tl-selo tl-selo-vivo"><i aria-hidden="true" />Ao vivo agora</span>
           <h2>{primeiroNome ? `${primeiroNome}, a live começou` : 'A live começou'}</h2>
-          <p>Assista aqui dentro, do início ao fim. A sua presença é marcada sozinha e, no fim da live, a {MARCA.prosa} é liberada para você.</p>
+          <p>Assista aqui dentro, do início ao fim. A liberação da {MARCA.prosa} acontece ao vivo, durante a live.</p>
         </div>
         <div className="tl-acoes">
           <button type="button" className="tl-botao" onClick={abrirLive} disabled={!temVideo}>{temVideo ? 'Assistir agora' : 'A transmissão abre em instantes'}</button>
@@ -167,8 +182,8 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
       <>
         <div className="tl-cabeca">
           <span className="tl-selo"><Cadeado tamanho={14} />A live terminou</span>
-          <h2>{estado?.liberadoEm ? 'Seu acesso ainda não foi liberado' : 'Liberando os acessos'}</h2>
-          <p>{estado?.liberadoEm
+          <h2>{estado?.liberadoEm && !conferindo ? 'Seu acesso ainda não foi liberado' : 'Liberando os acessos'}</h2>
+          <p>{estado?.liberadoEm && !conferindo
             ? 'O acesso da turma de lançamento já foi liberado. Os próximos passos para quem ainda não tem acesso serão avisados na comunidade do WhatsApp.'
             : 'A equipe está liberando os acessos. Esta tela abre a plataforma sozinha assim que o seu for liberado.'}</p>
         </div>
@@ -184,7 +199,7 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
         <div className="tl-cadeado" aria-hidden="true"><Cadeado tamanho={26} /></div>
         <div className="tl-cabeca">
           <h2>Liberado na live de 09/11, às 20h</h2>
-          <p>{primeiroNome ? `${primeiroNome}, sua conta está pronta. ` : 'Sua conta está pronta. '}Assista à live do início ao fim e a {MARCA.prosa} fica liberada para você, sem pagar nada.</p>
+          <p>{primeiroNome ? `${primeiroNome}, sua conta está pronta. ` : 'Sua conta está pronta. '}Na live, a {MARCA.prosa} é liberada para você, sem pagar nada. Assista do início ao fim.</p>
         </div>
         <Relogio falta={falta} />
         <div className="tl-acoes">
@@ -204,7 +219,7 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
           <span className="tl-cartao-ico">{fase === 'no-ar' ? <i className="tl-ponto" aria-hidden="true" /> : <Cadeado />}</span>
           <span className="tl-cartao-texto">
             <b>{fase === 'no-ar' ? 'A live está no ar' : fase === 'depois' ? 'A live terminou' : 'Liberado na live de 09/11, às 20h'}</b>
-            <small>{fase === 'no-ar' ? 'Fique até o fim para liberar o seu acesso' : fase === 'depois' ? (estado?.liberadoEm ? 'Seu acesso ainda não foi liberado' : 'Liberando os acessos…') : <>Faltam <span className="tl-mono">{faltaCurto(falta)}</span></>}</small>
+            <small>{fase === 'no-ar' ? 'A liberação acontece durante a live' : fase === 'depois' ? (estado?.liberadoEm && !conferindo ? 'Seu acesso ainda não foi liberado' : 'Liberando os acessos…') : <>Faltam <span className="tl-mono">{faltaCurto(falta)}</span></>}</small>
           </span>
           {fase === 'no-ar'
             ? <button type="button" className="tl-botao" onClick={abrirLive} disabled={!temVideo}>Assistir</button>
@@ -221,10 +236,6 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
             {conteudo}
           </div>
         </div>
-      )}
-
-      {assistindo && estado && (
-        <LiveDoLancamento sessao={sessao} estado={estado} aoFechar={() => setAssistindo(false)} />
       )}
     </>
   )

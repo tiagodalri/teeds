@@ -247,7 +247,7 @@ function emailDeInscricaoNaLive(marca: Marca, email: string, senhaProvisoria: st
     assunto:'Inscrição confirmada · live de 09/11, às 20h',
     titulo:'Sua vaga na live está garantida',
     espia:'Sua conta na GlobalFly já foi criada. A plataforma é liberada na live de 09/11, às 20h.',
-    corpo:`Sua inscrição na live de lançamento da ${marca.prosa} está confirmada: **segunda, 09/11, às 20h** (horário de Brasília), dentro da própria plataforma.\n\nSua conta já foi criada. Entre agora e conheça a plataforma: ela fica trancada até a live, com a contagem regressiva. Assista do início ao fim e o acesso é liberado para você, sem pagar nada.\n\n${acesso}`,
+    corpo:`Sua inscrição na live de lançamento da ${marca.prosa} está confirmada: **segunda, 09/11, às 20h** (horário de Brasília), dentro da própria plataforma.\n\nSua conta já foi criada. Entre agora e conheça a plataforma: ela fica trancada até a live, com a contagem regressiva. Na live, o acesso é liberado para você, sem pagar nada. Assista do início ao fim.\n\n${acesso}`,
     botao:'Entrar na GlobalFly',
     ...(comunidade?{whatsapp:{url:comunidade,texto:'Entrar na comunidade do WhatsApp'}}:{}),
     aviso:'Se não foi você que se inscreveu, pode ignorar este e-mail. Não compartilhe seus dados de acesso.',
@@ -279,9 +279,11 @@ export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: s
   })
 }
 
-export function emailDeAprovacao(marca: Marca, email: string, aindaProvisoria: boolean, senhaPropria = false, parceiro?: string | null) {
-  // liberado na live de lançamento (até 7 dias depois): o e-mail fala da live, não de "cadastro aprovado"
-  const daLive = marca.id === 'globalfly' && Date.now() >= INICIO_DA_LIVE && Date.now() < INICIO_DA_LIVE + 7 * 864e5
+export function emailDeAprovacao(marca: Marca, email: string, aindaProvisoria: boolean, senhaPropria = false, parceiro?: string | null, liberadoNaLive?: boolean) {
+  // liberado na live de lançamento: o e-mail fala da live, não de "cadastro aprovado". Desde 09/11/2026
+  // quem decide é o próprio cadastro (GF Member aprovado no dia da live), não o relógio do envio: antes,
+  // qualquer aprovação da semana dizia "GF Member até 09/11/2027", e o botão antes das 20h mandava o genérico.
+  const daLive = liberadoNaLive ?? (marca.id === 'globalfly' && Date.now() >= INICIO_DA_LIVE && Date.now() < INICIO_DA_LIVE + 7 * 864e5)
   const entrada=senhaPropria
     ? `Seus dados de entrada:\nE-mail: ${email}\nSenha: a que você criou no cadastro.\n\nSe não lembrar a senha, toque em “Esqueci a senha” na tela de entrada e crie uma nova.`
     : aindaProvisoria
@@ -363,7 +365,7 @@ export async function enviarAprovacoes() {
   if (enviando) return
   enviando=true
   try {
-    const lista=await banco('/rest/v1/clientes_pendentes?status=eq.aprovado&email_enviado_em=is.null&select=id,marca,email,user_id,parceiro&order=decidido_em.asc&limit=20')
+    const lista=await banco('/rest/v1/clientes_pendentes?status=eq.aprovado&email_enviado_em=is.null&select=id,marca,email,user_id,parceiro,plano_id,decidido_em&order=decidido_em.asc&limit=20')
     for (const p of lista ?? []) {
       try {
         const marca=marcaPorId(p.marca)
@@ -374,7 +376,9 @@ export async function enviarAprovacoes() {
         const aindaProvisoria=u.user_metadata?.trocar_senha===true
           && u.app_metadata?.aprovacao_lead===p.id
           && u.app_metadata?.senha_aprovacao_versao===VERSAO_SENHA
-        const email=emailDeAprovacao(marca,p.email,aindaProvisoria,u.app_metadata?.senha_propria===true,p.parceiro)
+        const decidido=p.decidido_em?Date.parse(p.decidido_em):0
+        const liberadoNaLive=p.marca==='globalfly'&&p.plano_id==='treino'&&decidido>=INICIO_DA_LIVE-6*36e5&&decidido<INICIO_DA_LIVE+7*864e5
+        const email=emailDeAprovacao(marca,p.email,aindaProvisoria,u.app_metadata?.senha_propria===true,p.parceiro,liberadoNaLive)
         await despachar(marca,p.email,email,`aprovacao-lead-${p.id}`)
         await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}&status=eq.aprovado`,'PATCH',{email_enviado_em:new Date().toISOString()})
       } catch { console.warn('[aprovação] E-mail pendente; será tentado novamente.') }

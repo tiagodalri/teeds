@@ -34,7 +34,8 @@ function carregarApi(): Promise<boolean> {
     s.async = true
     s.onerror = () => { apiDoYoutube = null; pronto(false) }
     document.head.appendChild(s)
-    window.setTimeout(() => pronto(!!window.YT?.Player), 12_000)
+    // demorou demais: segue sem a API agora, mas a próxima abertura tenta carregar de novo
+    window.setTimeout(() => { const ok = !!window.YT?.Player; if (!ok) apiDoYoutube = null; pronto(ok) }, 12_000)
   })
   return apiDoYoutube
 }
@@ -88,10 +89,13 @@ export function LiveDoLancamento({ sessao, estado, aoFechar }: {
     return () => { vivo = false; try { player?.destroy() } catch { /* já fechou */ } }
   }, [video]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // o intervalo nasce uma vez: lê sempre a sessão mais nova (o token renova a cada hora)
+  const sessaoRef = useRef(sessao)
+  sessaoRef.current = sessao
   async function marcar() {
     const vale = comApi.current ? tocando.current : document.visibilityState === 'visible'
     if (!vale) return
-    try { if (await marcarPresenca(sessao)) { setMarcadaEm(Date.now()); eventoDoPixel('AssistiuLive', undefined, true) } } catch { /* tenta de novo em 30 s */ }
+    try { if (await marcarPresenca(sessaoRef.current)) { setMarcadaEm(Date.now()); eventoDoPixel('AssistiuLive', undefined, true) } } catch { /* tenta de novo em 30 s */ }
   }
 
   // a cada 30 s, enquanto a live toca
@@ -129,7 +133,7 @@ export function LiveDoLancamento({ sessao, estado, aoFechar }: {
           {video ? <div className="tl-live-player" ref={caixa} /> : (
             <div className="tl-live-espera"><b>A transmissão abre em instantes</b><span>Deixe esta tela aberta. O vídeo aparece aqui sozinho.</span></div>
           )}
-          <p className="tl-live-nota">Fique até o fim: a {MARCA.prosa} é liberada para quem assistir à live inteira. Com esta tela fechada ou o vídeo pausado, a presença para de ser marcada.</p>
+          <p className="tl-live-nota">Fique até o fim: a liberação da {MARCA.prosa} acontece ao vivo, durante a live. Com esta tela fechada ou o vídeo pausado, a presença para de ser marcada.</p>
         </div>
         {chat && video && (
           <iframe className="tl-live-chat tl-so-pc" title="Chat da live"

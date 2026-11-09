@@ -15,19 +15,21 @@
 const L = 'A-Za-zÀ-ÖØ-öø-ÿ0-9'
 // "conta Deriv" vira "conta da corretora"; o resto, "corretora" (com a caixa do original).
 // Endereço (home.deriv.com) não é tocado: só a palavra solta, sem ponto colado.
-const reConta = new RegExp(`(?<![${L}])(conta|Conta|CONTA)(\\s+)(Deriv|DERIV)(?![${L}]|\\.[a-z])`, 'g')
-const reSolto = new RegExp(`(?<![${L}.\\/])(Deriv|DERIV)(?![${L}]|\\.[a-z])`, 'g')
+// Sem "lookbehind" (?<!…): o Safari antes do 16.4 não entende e a página ficava em branco (09/11/2026).
+// A borda da esquerda é o grupo (^|[^…]), que volta intacto na troca.
+const reConta = new RegExp(`(^|[^${L}])(conta|Conta|CONTA)(\\s+)(Deriv|DERIV)(?![${L}]|\\.[a-z])`, 'g')
+const reSolto = new RegExp(`(^|[^${L}.\\/])(Deriv|DERIV)(?![${L}]|\\.[a-z])`, 'g')
 const temDeriv = /Deriv|DERIV/
 
 export function semNomeDaCorretora(texto: string): string {
   if (!temDeriv.test(texto)) return texto
   return texto
-    .replace(reConta, (_, conta: string, espaco: string, d: string) => `${conta}${espaco}${d === 'DERIV' ? 'DA CORRETORA' : 'da corretora'}`)
-    .replace(reSolto, (d: string, _g: string, offset: number, tudo: string) => {
-      if (d === 'DERIV') return 'CORRETORA'
+    .replace(reConta, (_, pre: string, conta: string, espaco: string, d: string) => `${pre}${conta}${espaco}${d === 'DERIV' ? 'DA CORRETORA' : 'da corretora'}`)
+    .replace(reSolto, (_m: string, pre: string, d: string, offset: number, tudo: string) => {
+      if (d === 'DERIV') return `${pre}CORRETORA`
       // começo de frase: "Corretora"
-      const antes = tudo.slice(0, offset).trimEnd()
-      return !antes || /[.!?:]$/.test(antes) ? 'Corretora' : 'corretora'
+      const antes = tudo.slice(0, offset + pre.length).trimEnd()
+      return pre + (!antes || /[.!?:]$/.test(antes) ? 'Corretora' : 'corretora')
     })
 }
 
