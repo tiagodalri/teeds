@@ -19,6 +19,9 @@
  * aqui. Nada é gravado, nada vai para o banco, nada entra nos 10%.
  */
 import type { Filtros, RelatorioCompleto } from './relatorios'
+import { MARCA } from '../../marca'
+import { escadaDoRobo } from '../deriv/escada'
+import { parametrosPadrao, type ParametrosDoRobo } from '../deriv/parametros'
 
 export interface IaDoSimulador { id: string; nome: string; origem: 'ia' | 'manual'; ativo: string; tipo: string }
 /** As I.A. da GlobalFly, com o código que acha o logotipo (NomeDoRobo). */
@@ -76,6 +79,7 @@ const r2 = (x: number) => Math.round(x * 100) / 100
 const dataLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const deData = (iso: string) => { const [a, m, d] = iso.split('-').map(Number); return new Date(a, m - 1, d) }
 export const hojeIso = (agora = new Date()) => dataLocal(agora)
+const MARCA_IA = MARCA.vocabularioIA ? 'I.A.' : 'robô'
 
 /** O intervalo de datas do cenário. */
 export function faixaDoCenario(c: Cenario, agora = new Date()): { de: string; ate: string } {
@@ -114,8 +118,50 @@ export function escadaDoGale(c: Pick<Cenario, 'entrada' | 'gale' | 'multiplicado
 }
 /** A entrada de cada perda de uma sequência de `n` perdas (perdeu no último gale, volta à inicial). */
 export const entradasDaSequencia = (escada: number[], n: number) => Array.from({ length: Math.max(0, n) }, (_, j) => escada[j % escada.length])
+
+/* -------------------------------------------- como cada I.A. opera de verdade */
+
+/**
+ * 09/11/2026, Tiago: "a gente não faz entrada fixa com o robô; tem que pegar como funciona cada um —
+ * a multiplicação do martingale, o payout que ele já tem na plataforma. Não tenho que preencher isso,
+ * já tem que vir pré-setado. A não ser nas operações manuais."
+ * As I.A. sobem a MESMA escada do motor (escadaDoRobo, com as regras publicadas no painel de controle
+ * dos robôs; sem catálogo, o padrão do código). Só a Manual usa payout e gale preenchidos.
+ */
+export interface DegrauDaIa { valor: number; lucro: number }
+let regrasPublicadas: Record<string, ParametrosDoRobo> = {}
+let versaoDasRegras = 0
+/** O painel passa as regras em vigor (catálogo); devolve um número que muda quando elas mudam. */
+export function definirRegrasDasIas(itens: Array<{ id: string; parametros?: ParametrosDoRobo }> | null): number {
+  const novas: Record<string, ParametrosDoRobo> = {}
+  for (const i of itens ?? []) if (i.parametros) novas[i.id] = i.parametros
+  if (JSON.stringify(novas) !== JSON.stringify(regrasPublicadas)) { regrasPublicadas = novas; versaoDasRegras++ }
+  return versaoDasRegras
+}
+export const ehRobo = (ia: string) => iaDoSimulador(ia).origem !== 'manual'
+const escadas = new Map<string, DegrauDaIa[]>()
+/** A escada de uma I.A.: o degrau 0 é a entrada; cada perda sobe um. Na Manual, payout e gale do cenário. */
+export function escadaDaIa(c: Cenario, ia: string): DegrauDaIa[] {
+  const base = Math.max(0.35, r2(c.entrada || 1))
+  if (!ehRobo(ia)) {
+    const p = Math.max(0.01, (c.payout || 95) / 100)
+    return escadaDoGale(c).map((valor) => ({ valor, lucro: r2(valor * p) }))
+  }
+  const chave = `${ia}|${base}|${versaoDasRegras}`
+  let e = escadas.get(chave)
+  if (!e) {
+    e = escadaDoRobo(ia, base, 40, 'conservador', regrasPublicadas[ia] ?? parametrosPadrao(ia)).filter((d) => !d.esgotada).map((d) => ({ valor: d.valor, lucro: d.lucro }))
+    if (!e.length) e = [{ valor: base, lucro: 0 }]
+    escadas.set(chave, e)
+  }
+  return e
+}
+/** As entradas de uma sequência de `n` perdas numa I.A. (passou do último degrau, volta à entrada). */
+export const entradasDaSequenciaNaIa = (c: Cenario, ia: string, n: number) => entradasDaSequencia(escadaDaIa(c, ia).map((d) => d.valor), n)
 /** A maior entrada que o relatório vai mostrar: o degrau mais alto que a pior sequência alcança. */
-export const maiorEntradaDoCenario = (c: Cenario) => Math.max(...entradasDaSequencia(escadaDoGale(c), Math.max(1, Math.round(c.sequencia))))
+export const maiorEntradaDoCenario = (c: Cenario) => Math.max(...entradasDaSequenciaNaIa(c, c.iaDaSequencia, Math.max(1, Math.round(c.sequencia)) + 1))
+/** Algum robô na lista, ou a Manual com gale: a ordem dos ganhos e perdas muda o resultado. */
+const temEscada = (c: Cenario, ias: LinhaDeIa[]) => ias.some((l) => escadaDaIa(c, l.ia).length > 1)
 
 const divisaoLigada = (c: Cenario) => c.dividirSozinho && c.ias.length > 1
 
@@ -158,7 +204,7 @@ export function iasDoCenario(c: Cenario): LinhaDeIa[] {
     if (c.ias.length === 1) return [{ ia: c.ias[0].ia, operacoes: Math.round(c.operacoes), resultado: r2(c.resultado) }]
     return c.ias
   }
-  const chave = JSON.stringify([c, hojeIso()])
+  const chave = JSON.stringify([c, hojeIso(), versaoDasRegras])
   if (memoria?.chave === chave) return memoria.valor
   const ops = operacoesDoCenario(c)
   const valor = divisaoAutomatica(c).map((l) => {
@@ -178,28 +224,27 @@ const base = (p: Partial<Cenario>): Cenario => ({
 })
 export function cenariosProntos(): Array<{ id: string; tom: 'sobe' | 'cai' | 'neutro'; cenario: Cenario }> {
   const hoje = hojeIso()
+  // 09/11/2026: refeitos com a escada real de cada I.A. (Raptor e Falcon, entrada US$ 1,00) e a divisão
+  // automática; os resultados são os que essas regras dão, então fecham exatos em qualquer dia.
+  // Não respeitou e Devolveu: a sequência cai na Falcon, que sobe ~2,9× por perda.
+  const duas = [{ ia: 'goreme', operacoes: 0, resultado: 0 }, { ia: 'falcon', operacoes: 0, resultado: 0 }]
   return [
     { id: 'respeitou', tom: 'sobe', cenario: base({
-      nome: 'Respeitou o gerenciamento', periodo: { tipo: 'ultimos', dias: 30 }, resultado: 142.9, operacoes: 680, acerto: 62, horaDe: 9, horaAte: 17,
-      ias: [{ ia: 'goreme', operacoes: 420, resultado: 88.95 }, { ia: 'falcon', operacoes: 260, resultado: 53.95 }], dividirSozinho: false,
-      entrada: 1, sequencia: 5, iaDaSequencia: 'falcon', momento: 'meio', saldo: 1284.6, depositos: 1000, saques: 150 }) },
+      nome: 'Respeitou o gerenciamento', periodo: { tipo: 'ultimos', dias: 30 }, resultado: 139.99, operacoes: 680, acerto: 62, horaDe: 9, horaAte: 17,
+      ias: duas, dividirSozinho: true, entrada: 1, sequencia: 3, iaDaSequencia: 'falcon', momento: 'meio', saldo: 1284.6, depositos: 1000, saques: 150 }) },
     { id: 'meta', tom: 'sobe', cenario: base({
-      nome: 'Dia de meta', periodo: { tipo: 'dia', data: hoje }, resultado: 10.95, operacoes: 30, acerto: 70, horaDe: 9, horaAte: 9,
-      ias: [{ ia: 'goreme', operacoes: 18, resultado: 7.35 }, { ia: 'falcon', operacoes: 12, resultado: 3.6 }], dividirSozinho: false,
-      entrada: 1, sequencia: 2, iaDaSequencia: 'falcon', momento: 'meio', saldo: 1011 }) },
+      nome: 'Dia de meta', periodo: { tipo: 'dia', data: hoje }, resultado: 10.06, operacoes: 30, acerto: 70, horaDe: 9, horaAte: 9,
+      ias: duas, dividirSozinho: true, entrada: 1, sequencia: 2, iaDaSequencia: 'falcon', momento: 'meio', saldo: 1011 }) },
     { id: 'stop', tom: 'neutro', cenario: base({
-      nome: 'Dia de stop, respeitado', periodo: { tipo: 'dia', data: hoje }, resultado: -6.5, operacoes: 26, acerto: 38, horaDe: 9, horaAte: 10,
-      ias: [{ ia: 'goreme', operacoes: 16, resultado: -4.3 }, { ia: 'falcon', operacoes: 10, resultado: -2.2 }], dividirSozinho: false,
-      entrada: 1, sequencia: 4, iaDaSequencia: 'falcon', momento: 'fim', saldo: 993.5 }) },
+      nome: 'Dia de stop, respeitado', periodo: { tipo: 'dia', data: hoje }, resultado: -10.36, operacoes: 26, acerto: 38, horaDe: 9, horaAte: 10,
+      ias: duas, dividirSozinho: true, entrada: 1, sequencia: 3, iaDaSequencia: 'falcon', momento: 'fim', saldo: 989.64 }) },
     { id: 'nao-respeitou', tom: 'cai', cenario: base({
-      nome: 'Não respeitou o gerenciamento', periodo: { tipo: 'dia', data: hoje }, resultado: -1552.94, operacoes: 120, acerto: 52, horaDe: 9, horaAte: 23,
-      ias: [{ ia: 'goreme', operacoes: 80, resultado: -1268.31 }, { ia: 'falcon', operacoes: 40, resultado: -284.63 }], dividirSozinho: false,
-      entrada: 2, gale: true, multiplicador: 2.1, gales: 8, sequencia: 9, iaDaSequencia: 'goreme', momento: 'fim', saldo: 812.4 }) },
+      nome: 'Não respeitou o gerenciamento', periodo: { tipo: 'dia', data: hoje }, resultado: -1198.54, operacoes: 120, acerto: 52, horaDe: 9, horaAte: 23,
+      ias: duas, dividirSozinho: true, entrada: 2, sequencia: 7, iaDaSequencia: 'falcon', momento: 'fim', saldo: 812.4 }) },
     { id: 'devolveu', tom: 'cai', cenario: base({
-      // sobe com o gale recuperando e devolve tudo numa sequência de 7 perdas com gale até o 6º
-      nome: 'Bateu a meta e devolveu', periodo: { tipo: 'dia', data: hoje }, resultado: -109.42, operacoes: 90, acerto: 62, horaDe: 9, horaAte: 19,
-      ias: [{ ia: 'goreme', operacoes: 60, resultado: -120.36 }, { ia: 'falcon', operacoes: 30, resultado: 10.94 }], dividirSozinho: false,
-      entrada: 1, gale: true, multiplicador: 2.1, gales: 6, sequencia: 7, iaDaSequencia: 'goreme', momento: 'fim', saldo: 899 }) },
+      // sobe com a recuperação e devolve tudo numa sequência de 6 perdas na Falcon
+      nome: 'Bateu a meta e devolveu', periodo: { tipo: 'dia', data: hoje }, resultado: -165.19, operacoes: 90, acerto: 62, horaDe: 9, horaAte: 19,
+      ias: duas, dividirSozinho: true, entrada: 1, sequencia: 6, iaDaSequencia: 'falcon', momento: 'fim', saldo: 899 }) },
   ]
 }
 export const cenarioEmBranco = () => base({})
@@ -258,7 +303,8 @@ export function operacoesDoCenario(c: Cenario, agora = new Date()): OperacaoSimu
   const automatica = divisaoLigada(c)
   const ias = (automatica ? divisaoAutomatica(c) : iasDoCenario(c)).filter((l) => l.operacoes > 0)
   // o sorteio depende só da estrutura (não do resultado pedido): mudar o alvo não embaralha a tela de novo
-  const rnd = sorteio(sementeDe(JSON.stringify([c.periodo, c.operacoes, c.acerto, ias.map((l) => [l.ia, l.operacoes]), c.sequencia, c.iaDaSequencia, c.momento, c.horaDe, c.horaAte, c.entrada, c.payout, c.gale, c.multiplicador, c.gales])))
+  // o período entra pelo formato (tipo e dias), não pelas datas: um modelo de "hoje" dá a mesma tela amanhã
+  const rnd = sorteio(sementeDe(JSON.stringify([[c.periodo.tipo, diasDoCenario(c, agora)], c.operacoes, c.acerto, ias.map((l) => [l.ia, l.operacoes]), c.sequencia, c.iaDaSequencia, c.momento, c.horaDe, c.horaAte, c.entrada, c.payout, c.gale, c.multiplicador, c.gales])))
   const N = ias.reduce((s, l) => s + Math.round(l.operacoes), 0)
   if (!N) return []
   const W = Math.min(N, Math.max(0, Math.round((N * Math.min(100, Math.max(0, c.acerto))) / 100)))
@@ -327,32 +373,31 @@ export function operacoesDoCenario(c: Cenario, agora = new Date()): OperacaoSimu
     }
   }
 
-  // ---------- o gerenciamento de verdade: payout e martingale, I.A. por I.A.
-  // cada I.A. tem o seu gale: perdeu, a próxima entrada é a anterior × multiplicador; ganhou, volta à inicial;
-  // perdeu no último gale, aceita a perda e volta à inicial. Cada dia começa na entrada inicial.
-  const escada = escadaDoGale(c)
-  const G = escada.length - 1
-  const p = Math.max(0.01, (c.payout || 95) / 100)
+  // ---------- o gerenciamento de verdade, I.A. por I.A.: cada robô sobe a escada de recuperação dele
+  // (a do motor, com o payout que ele compra); a Manual, o gale preenchido. Ganhou, volta à entrada;
+  // passou do último degrau, aceita a perda e volta à entrada. Cada dia começa na entrada.
+  const degraus = ias.map((l) => escadaDaIa(c, l.ia))
   const posIa: number[][] = ias.map(() => [])
   linha.forEach((x, pos) => posIa[x.ia].push(pos))
   const naSequencia = (pos: number) => S > 0 && pos >= inicio && pos < inicio + S
   const entradasDe = (i: number) => {
-    const e: number[] = []
+    const e: DegrauDaIa[] = []
+    const d = degraus[i], G = d.length - 1
     let nivel = 0, dia = -1
     for (const pos of posIa[i]) {
       if (linha[pos].dia !== dia) { dia = linha[pos].dia; nivel = 0 }
-      e.push(escada[nivel])
+      e.push(d[nivel])
       nivel = seq[pos] ? 0 : nivel >= G ? 0 : nivel + 1
     }
     return e
   }
-  const resultadoDe = (i: number) => r2(entradasDe(i).reduce((s, e, j) => s + (seq[posIa[i][j]] ? r2(e * p) : -e), 0))
+  const resultadoDe = (i: number) => r2(entradasDe(i).reduce((s, e, j) => s + (seq[posIa[i][j]] ? e.lucro : -e.valor), 0))
   const maiorSerie = () => { let m = 0, a = 0; for (const g of seq) { a = g ? 0 : a + 1; if (a > m) m = a } return m }
 
   // o resultado de cada I.A. sai da ordem dos ganhos e perdas (com gale, onde caem as perdas muda tudo):
   // troca um ganho e uma perda de lugar (fora da pior sequência, sem criar sequência maior) enquanto isso
   // aproximar do resultado pedido. O payout não muda: cada ganho paga entrada × payout, em centavos.
-  if (automatica && G > 0) {
+  if (automatica && temEscada(c, ias)) {
     // divisão automática: só o total precisa fechar; cada I.A. fica com o que as operações dela deram.
     // Sem gale o total é conta fixa (ganhos × entrada × payout − perdas × entrada): trocar de lugar não muda nada.
     const R = r2(c.resultado)
@@ -395,7 +440,7 @@ export function operacoesDoCenario(c: Cenario, agora = new Date()): OperacaoSimu
   const ops: Rascunho[] = linha.map((x, pos) => ({ ia: x.ia, dia: x.dia, ganhou: seq[pos] ?? true, entrada: 0, resultado: 0, daSequencia: naSequencia(pos) }))
   ias.forEach((_, i) => {
     const e = entradasDe(i)
-    posIa[i].forEach((pos, j) => { const o = ops[pos]; o.entrada = e[j]; o.resultado = o.ganhou ? r2(e[j] * p) : -e[j] })
+    posIa[i].forEach((pos, j) => { const o = ops[pos]; o.entrada = e[j].valor; o.resultado = o.ganhou ? e[j].lucro : -e[j].valor })
   })
 
   // o horário: as operações de cada dia, em ordem, dentro do horário escolhido
@@ -539,14 +584,18 @@ export function previaDoCenario(c: Cenario, agora = new Date()): Previa {
   const p: Previa = { resultado: r.total.resultado, operacoes: r.total.operacoes, ganhas: r.total.ganhas, maiorEntrada: r.opcoes.entradaMax, maiorGanho: r.total.maiorGanho, maiorPerda: r.total.maiorPerda, sequencia: r.sequencias.perdas, retorno, porIa, naoFechou, acertoSugerido: null, avisos: [] }
   const dinheiro = (x: number) => `${x < 0 ? '−' : ''}US$ ${Math.abs(x).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   if (naoFechou) {
-    // sem gale o resultado é conta direta: ganhas × entrada × payout − perdidas × entrada
-    if (!c.gale) {
+    const soManual = c.ias.every((l) => !ehRobo(l.ia))
+    // só Manual e sem gale: o resultado é conta direta (ganhas × entrada × payout − perdidas × entrada)
+    if (soManual && !c.gale) {
       const E = escadaDoGale(c)[0], pg = (c.payout || 95) / 100, N = Math.round(c.operacoes)
       const w = (c.resultado / E + N) / (1 + pg)
       if (w >= 0 && w <= N) p.acertoSugerido = Math.round((w / N) * 1000) / 10
     }
-    p.avisos.push(`Com payout de ${c.payout}%${c.gale ? `, gale × ${String(c.multiplicador).replace('.', ',')} até ${c.gales} ${c.gales === 1 ? 'vez' : 'vezes'}` : ' e entrada fixa'}, o resultado mais perto de ${dinheiro(c.resultado)} é ${dinheiro(p.resultado)}.`
-      + (c.gale ? ' Mude o acerto, a quantidade de operações, os gales ou a entrada, ou use o resultado calculado.' : p.acertoSugerido != null ? ` Para chegar em ${dinheiro(c.resultado)} o acerto precisa ser perto de ${String(p.acertoSugerido).replace('.', ',')}%.` : ' Mude o acerto ou a entrada, ou use o resultado calculado.'))
+    const regras = soManual
+      ? `Com payout de ${c.payout}%${c.gale ? `, gale × ${String(c.multiplicador).replace('.', ',')} até ${c.gales} ${c.gales === 1 ? 'vez' : 'vezes'}` : ' e entrada fixa'}`
+      : `Com a escada de recuperação de cada ${MARCA_IA} e entrada de ${dinheiro(Math.max(0.35, c.entrada || 1)).replace('−', '')}`
+    p.avisos.push(`${regras}, o resultado mais perto de ${dinheiro(c.resultado)} é ${dinheiro(p.resultado)}.`
+      + (p.acertoSugerido != null ? ` Para chegar em ${dinheiro(c.resultado)} o acerto precisa ser perto de ${String(p.acertoSugerido).replace('.', ',')}%.` : ' Mude o acerto, a quantidade de operações ou a entrada, ou use o resultado calculado.'))
   }
   if (p.operacoes - p.ganhas > 0 && p.sequencia !== Math.round(c.sequencia)) p.avisos.push(`A maior sequência de perdas ficou em ${p.sequencia}: com esse acerto ${p.sequencia > c.sequencia ? 'não há ganhos suficientes para separar as perdas' : 'não há perdas suficientes'}.`)
   return p

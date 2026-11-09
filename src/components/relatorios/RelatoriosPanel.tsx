@@ -34,7 +34,8 @@ import { GraficoDoResultado, type PontoDoGrafico } from './GraficoDoResultado'
 import { NomeDoRobo } from '../NomeDoRobo'
 import { DERIV } from '../../core/deriv/config'
 import { subplanoAtual, useMeuSubplano } from '../../core/teeds/subplanos'
-import { cenariosProntos, dinheiroDoCenario, faixaDoCenario, hojeIso, lerCenario, operacoesDoCenario, relatorioDoCenario, type Cenario } from '../../core/teeds/relatorioSimulado'
+import { useCatalogoCompleto } from '../../core/teeds/catalogoRobos'
+import { cenariosProntos, definirRegrasDasIas, dinheiroDoCenario, faixaDoCenario, hojeIso, lerCenario, operacoesDoCenario, relatorioDoCenario, type Cenario } from '../../core/teeds/relatorioSimulado'
 import { BotaoSimular, EditorDoCenario } from './SimuladorDeRelatorio'
 
 interface Props {
@@ -101,7 +102,9 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
   // para a gravação parecer a tela do cliente; a simulação em si continua na tela
   const adminOculto = useMenuAdminOculto()
   const sim = podeSimular ? cenario : null
-  const opsSim = useMemo(() => (sim ? operacoesDoCenario(sim) : null), [sim])
+  // as I.A. do simulador sobem a escada com as regras em vigor (catálogo); sem catálogo, o padrão do código
+  const versaoRegras = definirRegrasDasIas(useCatalogoCompleto())
+  const opsSim = useMemo(() => (sim ? operacoesDoCenario(sim) : null), [sim, versaoRegras])
   const inicial = useMemo(() => {
     const g = lerGuardado()
     return cenario ? { ...g, ...periodoDoCenario(cenario), filtros: {} } : g

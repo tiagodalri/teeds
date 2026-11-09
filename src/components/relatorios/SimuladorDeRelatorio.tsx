@@ -7,8 +7,9 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { MARCA } from '../../marca'
 import { dinheiro, dinheiroComSinal } from '../../core/dinheiro'
 import { NomeDoRobo } from '../NomeDoRobo'
+import { useCatalogoCompleto } from '../../core/teeds/catalogoRobos'
 import {
-  cenarioEmBranco, cenariosProntos, diasDoCenario, escadaDoGale, entradasDaSequencia, faixaDoCenario, hojeIso, IAS_DO_SIMULADOR, iaDoSimulador, iasDoCenario, previaDoCenario,
+  cenarioEmBranco, cenariosProntos, definirRegrasDasIas, diasDoCenario, escadaDaIa, escadaDoGale, ehRobo, entradasDaSequenciaNaIa, faixaDoCenario, hojeIso, IAS_DO_SIMULADOR, iaDoSimulador, iasDoCenario, previaDoCenario,
   type Cenario, type LinhaDeIa, type Momento,
 } from '../../core/teeds/relatorioSimulado'
 
@@ -119,7 +120,9 @@ export function EditorDoCenario({ inicial, aoMostrar, aoFechar, aoSair }: { inic
   const somaRes = Math.round(ias.reduce((s, l) => s + l.resultado, 0) * 100) / 100
   const ganhas = Math.round((c.operacoes * c.acerto) / 100), perdidas = Math.max(0, Math.round(c.operacoes) - ganhas)
   const dias = diasDoCenario(c)
-  const previa = useMemo(() => (passo >= 3 ? previaDoCenario(c) : null), [c, passo])
+  const robos = c.ias.filter((l) => ehRobo(l.ia)), temManual = c.ias.some((l) => !ehRobo(l.ia))
+  const versaoRegras = definirRegrasDasIas(useCatalogoCompleto())
+  const previa = useMemo(() => (passo >= 3 ? previaDoCenario(c) : null), [c, passo, versaoRegras])
 
   const p = c.periodo
   const falhas: string[] = [
@@ -127,7 +130,7 @@ export function EditorDoCenario({ inicial, aoMostrar, aoFechar, aoSair }: { inic
       : p.tipo === 'intervalo' ? (!p.de || !p.ate ? 'Escolha as duas datas.' : p.ate < p.de ? 'A data final vem antes da inicial.' : p.ate > hoje ? 'Escolha datas até hoje.' : dias > 400 ? 'Escolha até 400 dias.' : '') : '',
     !c.operacoes ? 'Preencha a quantidade de operações.' : c.acerto < 0 || c.acerto > 100 ? 'O acerto vai de 0 a 100%.' : '',
     !c.ias.length ? `Escolha pelo menos uma ${IA}.` : !c.dividirSozinho && c.ias.length > 1 && (somaOps !== Math.round(c.operacoes) || Math.abs(somaRes - c.resultado) > 0.005) ? 'A soma das I.A. precisa fechar com o total.' : '',
-    !c.entrada ? 'Preencha a entrada inicial.' : c.entrada < 0.35 ? 'A entrada mínima da Deriv é US$ 0,35.' : !c.payout || c.payout > 1000 ? 'Preencha o payout.' : c.gale && c.multiplicador < 1.01 ? 'O multiplicador do gale precisa ser maior que 1.' : perdidas && (c.sequencia < 1 || c.sequencia > perdidas) ? `A sequência de perdas vai de 1 a ${perdidas}.` : c.horaAte < c.horaDe ? 'O horário final vem antes do inicial.' : '',
+    !c.entrada ? 'Preencha a entrada inicial.' : c.entrada < 0.35 ? 'A entrada mínima da Deriv é US$ 0,35.' : temManual && (!c.payout || c.payout > 1000) ? 'Preencha o payout das operações manuais.' : temManual && c.gale && c.multiplicador < 1.01 ? 'O multiplicador do gale precisa ser maior que 1.' : perdidas && (c.sequencia < 1 || c.sequencia > perdidas) ? `A sequência de perdas vai de 1 a ${perdidas}.` : c.horaAte < c.horaDe ? 'O horário final vem antes do inicial.' : '',
     '',
   ]
   const falha = falhas[passo]
@@ -263,31 +266,64 @@ export function EditorDoCenario({ inicial, aoMostrar, aoFechar, aoSair }: { inic
           )}
 
           {passo === 3 && (
-            <Passo titulo="Como foram as operações?" sub="O gerenciamento que fez o resultado. Cada ganho paga a entrada × o payout; com martingale, cada perda multiplica a próxima entrada.">
+            <Passo titulo="Como foram as operações?" sub={robos.length
+              ? `Cada ${IA} opera com as regras dela na plataforma: o payout e a escada de recuperação já vêm prontos.${temManual ? ' Só as operações manuais têm payout e gale para preencher.' : ''}`
+              : 'O gerenciamento que fez o resultado. Cada ganho paga a entrada × o payout; com martingale, cada perda multiplica a próxima entrada.'}>
               <div className="rsim-duas">
-                <Numero id="rsim-entrada" rotulo="Entrada inicial (US$)" valor={c.entrada} min={0} max={1e5} aoMudar={(x) => mudar({ entrada: x ?? 0 })} dica="A entrada de sempre. Mínimo da Deriv: US$ 0,35." />
-                <Numero id="rsim-payout" rotulo="Payout" sufixo="%" valor={c.payout} max={1000} aoMudar={(x) => mudar({ payout: x ?? 0 })} dica={`Quanto o ganho paga. Com ${String(c.payout || 95).replace('.', ',')}%, ganhar com ${usd(c.entrada || 1)} rende ${usd(Math.round((c.entrada || 1) * (c.payout || 95)) / 100)}.`} />
+                <Numero id="rsim-entrada" rotulo="Entrada inicial (US$)" valor={c.entrada} min={0} max={1e5} aoMudar={(x) => mudar({ entrada: x ?? 0 })} dica="A entrada que o cliente escolheu. Mínimo da Deriv: US$ 0,35." />
+                <div />
               </div>
-              <div className="rsim-campo"><span>Martingale (gale)</span>
-                <div className="rel-seg cheio">
-                  <button type="button" className={!c.gale ? 'on' : ''} onClick={() => mudar({ gale: false })}>Não, entrada fixa</button>
-                  <button type="button" className={c.gale ? 'on' : ''} onClick={() => mudar({ gale: true, gales: Math.max(1, c.gales) })}>Sim, com gale</button>
+              {robos.length > 0 && (
+                <div className="rsim-regras">
+                  {robos.map((l) => {
+                    const d = escadaDaIa(c, l.ia)
+                    const pct = (g?: { valor: number; lucro: number }) => (g && g.valor ? Math.round((g.lucro / g.valor) * 100) : 0)
+                    const naEntrada = pct(d[0]), naRecuperacao = pct(d[1])
+                    const usadas = l.ia === c.iaDaSequencia ? Math.max(1, c.sequencia) : 0
+                    return (
+                      <div className="rsim-regra" key={l.ia}>
+                        <div className="rsim-regra-topo">
+                          <b className="rsim-cartao-nome"><NomeDoRobo nome={iaDoSimulador(l.ia).nome} id={l.ia} /></b>
+                          <small>{d.length > 1 && naRecuperacao !== naEntrada ? `Paga ${naEntrada}% na entrada · recupera pagando ${naRecuperacao}%` : `Paga ${naEntrada}%${d.length > 1 ? ' · recupera desde a 1ª perda' : ''}`}</small>
+                        </div>
+                        <div className="rsim-escada" aria-label={`A escada de recuperação da ${iaDoSimulador(l.ia).nome}`}>
+                          {d.slice(0, Math.max(6, Math.min(usadas, 10))).map((g, k) => (
+                            <span key={k} className={k < usadas ? 'usada' : ''}><small>{k === 0 ? 'Entrada' : `Recup. ${k}`}</small><b>{usd(g.valor)}</b></span>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  <p className="rsim-ok">As regras em vigor na plataforma, as mesmas que o motor usa. Para mudar, só no controle dos robôs.</p>
                 </div>
-              </div>
-              {c.gale && <>
+              )}
+              {temManual && <>
+                {robos.length > 0 && <b className="rsim-subtitulo">Operações manuais</b>}
                 <div className="rsim-duas">
-                  <Numero id="rsim-multiplicador" rotulo="Multiplicador do gale" sufixo="×" valor={c.multiplicador} min={1} max={10} aoMudar={(x) => mudar({ multiplicador: x ?? 1 })} dica="Depois de cada perda, a próxima entrada é a anterior × este número." />
-                  <label className="rsim-campo"><span>Até quantos gales</span><span className="rsim-entrada">
-                    <select id="rsim-gales" value={c.gales} onChange={(e) => mudar({ gales: Number(e.target.value) })}>
-                      {Array.from({ length: 12 }, (_, k) => k + 1).map((k) => <option key={k} value={k}>{k} {k === 1 ? 'gale' : 'gales'} · até {usd(escadaDoGale({ ...c, gales: k })[k])}</option>)}
-                    </select>
-                  </span><small className="rsim-dica">Perdeu no último gale, aceita a perda e volta à entrada inicial.</small></label>
+                  <Numero id="rsim-payout" rotulo="Payout" sufixo="%" valor={c.payout} max={1000} aoMudar={(x) => mudar({ payout: x ?? 0 })} dica={`Quanto o ganho paga. Com ${String(c.payout || 95).replace('.', ',')}%, ganhar com ${usd(c.entrada || 1)} rende ${usd(Math.round((c.entrada || 1) * (c.payout || 95)) / 100)}.`} />
+                  <div />
                 </div>
-                <div className="rsim-escada" aria-label="A escada de entradas">
-                  {escadaDoGale(c).map((e, k) => (
-                    <span key={k} className={k <= Math.min(Math.max(1, c.sequencia) - 1, c.gales) ? 'usada' : ''}><small>{k === 0 ? 'Entrada' : `Gale ${k}`}</small><b>{usd(e)}</b></span>
-                  ))}
+                <div className="rsim-campo"><span>Martingale (gale)</span>
+                  <div className="rel-seg cheio">
+                    <button type="button" className={!c.gale ? 'on' : ''} onClick={() => mudar({ gale: false })}>Não, entrada fixa</button>
+                    <button type="button" className={c.gale ? 'on' : ''} onClick={() => mudar({ gale: true, gales: Math.max(1, c.gales) })}>Sim, com gale</button>
+                  </div>
                 </div>
+                {c.gale && <>
+                  <div className="rsim-duas">
+                    <Numero id="rsim-multiplicador" rotulo="Multiplicador do gale" sufixo="×" valor={c.multiplicador} min={1} max={10} aoMudar={(x) => mudar({ multiplicador: x ?? 1 })} dica="Depois de cada perda, a próxima entrada é a anterior × este número." />
+                    <label className="rsim-campo"><span>Até quantos gales</span><span className="rsim-entrada">
+                      <select id="rsim-gales" value={c.gales} onChange={(e) => mudar({ gales: Number(e.target.value) })}>
+                        {Array.from({ length: 12 }, (_, k) => k + 1).map((k) => <option key={k} value={k}>{k} {k === 1 ? 'gale' : 'gales'} · até {usd(escadaDoGale({ ...c, gales: k })[k])}</option>)}
+                      </select>
+                    </span><small className="rsim-dica">Perdeu no último gale, aceita a perda e volta à entrada inicial.</small></label>
+                  </div>
+                  <div className="rsim-escada" aria-label="A escada de entradas">
+                    {escadaDoGale(c).map((e, k) => (
+                      <span key={k} className={!ehRobo(c.iaDaSequencia) && k <= Math.min(Math.max(1, c.sequencia) - 1, c.gales) ? 'usada' : ''}><small>{k === 0 ? 'Entrada' : `Gale ${k}`}</small><b>{usd(e)}</b></span>
+                    ))}
+                  </div>
+                </>}
               </>}
               <div className="rsim-duas">
                 <Numero id="rsim-sequencia" rotulo="Maior sequência de perdas" valor={c.sequencia} max={Math.max(1, perdidas)} aoMudar={(x) => mudar({ sequencia: Math.round(x ?? 0) })} dica={`Perdas seguidas, no máximo. Até ${perdidas}.`} />
@@ -301,13 +337,18 @@ export function EditorDoCenario({ inicial, aoMostrar, aoFechar, aoSair }: { inic
                 <div className="rel-seg cheio">{MOMENTOS.map((m) => <button key={m.id} type="button" className={c.momento === m.id ? 'on' : ''} onClick={() => mudar({ momento: m.id })}>{m.nome}</button>)}</div>
               </div>
               {(() => {
-                const doRisco = entradasDaSequencia(escadaDoGale(c), Math.max(1, c.sequencia))
-                const maior = Math.max(...doRisco), soma = doRisco.reduce((s, e) => s + e, 0)
+                // as perdas da sequência e a entrada seguinte (a que recupera): é ela a maior entrada do relatório
+                const comAQueRecupera = entradasDaSequenciaNaIa(c, c.iaDaSequencia, Math.max(1, c.sequencia) + 1)
+                const doRisco = comAQueRecupera.slice(0, -1)
+                const roboDaSequencia = ehRobo(c.iaDaSequencia)
+                const maior = Math.max(...comAQueRecupera), soma = doRisco.reduce((s, e) => s + e, 0)
                 return (
                   <div className={`rsim-risco ${maior > (c.entrada || 1) ? 'alto' : ''}`}>
                     <div><small>Maior entrada (exposição de risco)</small><b>{usd(maior)}</b></div>
                     <div><small>A sequência de {Math.max(1, c.sequencia)} {c.sequencia === 1 ? 'perda' : 'perdas'} custa</small><b className="cai">{dinheiroComSinal(-soma, 'USD')}</b></div>
-                    <p>{c.gale
+                    <p>{roboDaSequencia
+                      ? `A ${iaDoSimulador(c.iaDaSequencia).nome} sobe a escada de recuperação dela a cada perda e entra com ${usd(maior)} para recuperar.`
+                      : c.gale
                       ? c.sequencia > c.gales + 1 ? `A sequência passa do último gale: perdeu ${c.gales + 1} seguidas, aceita a perda e recomeça em ${usd(c.entrada || 1)}.` : `As entradas sobem a cada perda até ${usd(maior)}.`
                       : 'Sem gale, todas as entradas são iguais.'} Na Deriv, a perda de uma operação é a própria entrada.</p>
                   </div>
@@ -368,7 +409,7 @@ function Previa({ previa: p, aoUsar, aoAcerto }: { previa: ReturnType<typeof pre
     <section className={`rsim-previa ${p.avisos.length ? 'com-aviso' : ''}`} aria-live="polite">
       <h4>Como vai aparecer no relatório</h4>
       <dl>{itens.map(([n, v, cl]) => <div key={n}><dt>{n}</dt><dd className={cl}>{v}</dd></div>)}</dl>
-      <small>Calculado operação por operação: cada ganho paga a entrada × {Math.round(p.retorno * 1000) / 10}%{p.porIa.length > 1 ? ` · ${p.porIa.map((l) => `${iaDoSimulador(l.ia).nome} ${dinheiroComSinal(l.resultado, 'USD')}`).join(' · ')}` : ''}.</small>
+      <small>Calculado operação por operação{p.porIa.some((l) => ehRobo(l.ia)) ? `, com a escada de recuperação de cada ${IA}` : `: cada ganho paga a entrada × ${Math.round(p.retorno * 1000) / 10}%`}{p.porIa.length > 1 ? ` · ${p.porIa.map((l) => `${iaDoSimulador(l.ia).nome} ${dinheiroComSinal(l.resultado, 'USD')}`).join(' · ')}` : ''}.</small>
       {p.avisos.map((a) => <p key={a} className="rsim-previa-aviso">{a}</p>)}
       {p.naoFechou && (
         <div className="rsim-previa-acoes">

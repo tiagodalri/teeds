@@ -514,6 +514,11 @@ body.rel-painel-aberto { overflow: hidden; }
 .rsim-painel .rsim-entrada input:focus-visible, .rsim-painel .rsim-entrada select:focus-visible { outline: none; }
 .rsim-entrada:focus-within { border-color: var(--rel-ouro); box-shadow: 0 0 0 2px color-mix(in srgb, var(--rel-ouro) 35%, transparent); }
 /* a escada do gale e o quadro de risco (08/11/2026) */
+.rsim-regras { display: grid; gap: 8px; }
+.rsim-regra { display: grid; gap: 8px; padding: 11px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.rsim-regra-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.rsim-regra-topo small { font-size: 12px; font-weight: 650; color: var(--muted); }
+.rsim-subtitulo { font-size: 13.5px; margin-top: 4px; }
 .rsim-escada { display: flex; flex-wrap: wrap; gap: 6px; }
 .rsim-escada span { display: grid; gap: 1px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); min-width: 0; }
 .rsim-escada small { font-size: 10.5px; font-weight: 650; color: var(--muted); }

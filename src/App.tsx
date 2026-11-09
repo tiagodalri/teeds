@@ -1651,10 +1651,13 @@ export default function App() {
         <CatalogoProvider sessao={teeds.sessao}><Suspense fallback={telaAbrindo('Abrindo o gerenciamento…')}><OperationalManagementPanel /></Suspense></CatalogoProvider>
       ) : tela === 'relatorios' && MARCA.relatorios && teeds.sessao ? (
         <Suspense fallback={telaAbrindo('Abrindo os relatórios…')}>
+          {/* o catálogo só para o admin: o relatório simulado usa as regras em vigor de cada I.A. (09/11/2026) */}
+          <CatalogoProvider sessao={admin === true ? teeds.sessao : null}>
           <RelatoriosPanel sessao={teeds.sessao} socket={conta.socket} conectada={conta.status === 'logado'} contaDemo={conta.account ? conta.isDemo : null}
             rotulosTrocados={conta.rotulosTrocados} saldo={conta.balance ? conta.balance.amount : null}
             moeda={conta.balance?.currency ?? conta.account?.currency ?? 'USD'} aoIr={(t) => setTela(t)}
             podeSimular={admin === true} pedidoSimulacao={pedidoSimulacao} aoMudarSimulacao={setRelatorioSimulado} />
+          </CatalogoProvider>
         </Suspense>
       ) : tela === 'divulgacao' && linksDeParceiro && teeds.sessao ? (
         <Suspense fallback={telaAbrindo('Abrindo os links…')}><DivulgacaoPanel sessao={teeds.sessao} inicial={linksDeParceiro} /></Suspense>
