@@ -32,8 +32,11 @@ export function AdminLancamento({ sessao }: { sessao: SessaoTeeds }) {
   }
   useEffect(() => {
     void ler()
-    const t = window.setInterval(() => void ler(), 15_000)
-    return () => window.clearInterval(t)
+    // aba escondida não relê (o painel soma todas as presenças: é uma consulta cara); ao voltar, relê na hora
+    const t = window.setInterval(() => { if (document.visibilityState === 'visible') void ler() }, 15_000)
+    const aoVoltar = () => { if (document.visibilityState === 'visible') void ler() }
+    document.addEventListener('visibilitychange', aoVoltar)
+    return () => { window.clearInterval(t); document.removeEventListener('visibilitychange', aoVoltar) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fazer(acao: AcaoDaLive, valor?: string) {

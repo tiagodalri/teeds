@@ -635,15 +635,21 @@ export default function App() {
     let vivo = true
     let t = 0
     const ler = () => {
+      window.clearTimeout(t)
       void estadoDaLive(sessaoAtual.current ?? sessao).then((e) => { if (vivo) setLive(e) }).catch(() => undefined).finally(() => {
         if (!vivo) return
-        // perto e durante a live, de 20 em 20 s; no resto, de 2 em 2 min
+        // perto e durante a live, de 20 em 20 s; no resto, de 2 em 2 min.
+        // Aba escondida (09/11/2026): de 1 em 1 min — ninguém está olhando, e
+        // ao voltar para a aba a leitura é na hora (abaixo).
         const perto = Math.abs(Date.now() - INICIO_DA_LIVE) < 5 * 36e5
-        t = window.setTimeout(ler, perto ? 20_000 : 120_000)
+        const escondida = document.visibilityState === 'hidden'
+        t = window.setTimeout(ler, perto ? (escondida ? 60_000 : 20_000) : 120_000)
       })
     }
+    const aoVoltar = () => { if (vivo && document.visibilityState === 'visible') ler() }
     ler()
-    return () => { vivo = false; window.clearTimeout(t) }
+    document.addEventListener('visibilitychange', aoVoltar)
+    return () => { vivo = false; window.clearTimeout(t); document.removeEventListener('visibilitychange', aoVoltar) }
   }, [teeds.sessao?.usuario.id, situacao]) // eslint-disable-line react-hooks/exhaustive-deps
   // Pixel do parceiro (02/11/2026): abriu a plataforma, cada tela, entrou na conta
   // o pixel abre quando já se sabe quem está usando (correspondência avançada, 02/11/2026)

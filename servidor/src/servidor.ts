@@ -264,6 +264,28 @@ const servidor = createServer((req, res) => {
   operação continua conferindo no banco, sempre — uma conta recém-conectada
   nunca é recusada por causa desta cópia.
 */
+/*
+  A resposta da cabine, já em texto, presa ao estado do motor (09/11/2026).
+  O motor troca o objeto de estado a cada mudança (tick, operação) e reusa o
+  mesmo entre elas; a tela pergunta a cada 1,2 s e o tick do R_75 vem a cada
+  2 s, então boa parte das perguntas acha o mesmo estado — e montar de novo
+  um resumo com 200 operações e 300 pontos de curva era trabalho jogado fora
+  no mesmo processo que roda os robôs. Config e erro entram na conferência:
+  publicar parâmetros ou registrar erro muda a resposta na hora.
+*/
+const respostaPronta = new WeakMap<object, { config: unknown; erro: unknown; texto: string }>()
+function resumoEmTexto(s: any, resumo: (s: any) => unknown): string {
+  const chave = s.estado
+  if (chave && typeof chave === 'object') {
+    const pronta = respostaPronta.get(chave)
+    if (pronta && pronta.config === s.config && pronta.erro === (s.erro ?? null)) return pronta.texto
+    const texto = JSON.stringify(resumo(s))
+    respostaPronta.set(chave, { config: s.config, erro: s.erro ?? null, texto })
+    return texto
+  }
+  return JSON.stringify(resumo(s))
+}
+
 const contasGuardadas = new Map<string, { quando: number; contas: string[] }>()
 async function contasParaListar(userId: string, marca: string): Promise<string[]> {
   const chave = `${userId}|${marca}`
@@ -1270,7 +1292,8 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
       if (acompanhar && req.method === 'GET') {
         const s = await minhaSessao(dono.id, acompanhar[1])
         if (!s) return json(404, { erro: 'Sessão não encontrada.' })
-        return json(200, resumo(s))
+        res.writeHead(200, cabecalhos)
+        return res.end(resumoEmTexto(s, resumo))
       }
 
       // ---- o que está no ar agora, tenha sido ligado por onde for
@@ -1289,8 +1312,9 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
         const minhas = await contasParaListar(dono.id, marcaDaTela)
         const lista = todas()
           .filter((s) => minhas.includes(s.contaId) && s.estado?.rodando && (s.parametros?.marca ?? 'teeds') === marcaDaTela)
-          .map((s) => resumo(s))
-        return json(200, { sessoes: lista })
+          .map((s) => resumoEmTexto(s, resumo))
+        res.writeHead(200, cabecalhos)
+        return res.end(`{"sessoes":[${lista.join(',')}]}`)
       }
 
       // ---- desligar

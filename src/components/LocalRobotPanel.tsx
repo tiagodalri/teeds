@@ -111,6 +111,8 @@ export function LocalRobotPanel({
   // acontecia quando o motor morava dentro do navegador.
   const sessaoIdRef = useRef<string | null>(null)
   const pararDeOlharRef = useRef<(() => void) | null>(null)
+  /** O aviso que o acompanhamento deu (para tirar só ele quando o servidor voltar). */
+  const avisoDoAcompanhamento = useRef<string | null>(null)
   const [ligando, setLigando] = useState(false)
   const envioPendente = useRef(false)
   const [idDaSessao, setIdDaSessao] = useState<string | null>(null)
@@ -280,7 +282,9 @@ export function LocalRobotPanel({
           setContaDaSessao({ contaId: s.contaId, demo: s.demo, moeda: s.moeda })
         }
       },
-      (msg) => setErro(msg),
+      (msg) => { avisoDoAcompanhamento.current = msg; setErro(msg) },
+      // o servidor voltou: some o aviso que o próprio acompanhamento deu (outro erro fica)
+      () => { const msg = avisoDoAcompanhamento.current; avisoDoAcompanhamento.current = null; setErro((atual) => (atual === msg ? null : atual)) },
     )
   }, [sessaoTeeds?.token]) // eslint-disable-line react-hooks/exhaustive-deps
 

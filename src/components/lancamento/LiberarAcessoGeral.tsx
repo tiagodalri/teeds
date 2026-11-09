@@ -34,8 +34,11 @@ export function LiberarAcessoGeral({ sessao, geral }: { sessao: SessaoTeeds; ger
   const ler = () => painelDaLive(sessaoRef.current).then(setP).catch(() => undefined)
   useEffect(() => {
     void ler()
-    const t = window.setInterval(() => void ler(), 30_000)
-    return () => window.clearInterval(t)
+    // aba escondida não relê (consulta cara, que soma as presenças); ao voltar, relê na hora
+    const t = window.setInterval(() => { if (document.visibilityState === 'visible') void ler() }, 30_000)
+    const aoVoltar = () => { if (document.visibilityState === 'visible') void ler() }
+    document.addEventListener('visibilitychange', aoVoltar)
+    return () => { window.clearInterval(t); document.removeEventListener('visibilitychange', aoVoltar) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function liberar() {

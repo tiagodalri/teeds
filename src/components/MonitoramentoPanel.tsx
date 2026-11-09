@@ -503,11 +503,18 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
     const assinatura = assinarMudancas({
       token: sessao.token, canal: canalId,
       // O filtro do realtime é de igualdade, então a Rede vira uma assinatura
-      // por marca em cada tabela. Com duas marcas são seis, no mesmo canal.
+      // por marca em cada tabela. Com duas marcas são quatro, no mesmo canal.
+      //
+      // Os EVENTOS não vêm mais da marca inteira (09/11/2026, véspera da live):
+      // eram mais da metade dos avisos — ~1 por segundo por robô, para cada
+      // admin com esta tela aberta — e com 200 robôs um admin sozinho chegava
+      // perto do teto de avisos por segundo do Supabase, que desliga quem
+      // passa. A lista anda pelas fotos (que seguem cada evento em até 2 s) e
+      // pelos pulsos (presença e fita); os eventos ao vivo chegam só da cabine
+      // aberta, numa assinatura própria (abaixo).
       tabelas: marcas.flatMap((m) => [
         { tabela: 'sessoes_robos_ao_vivo', filtro: `marca=eq.${m}` },
         { tabela: 'pulsos_robos_ao_vivo', filtro: `marca=eq.${m}` },
-        { tabela: 'eventos_robos_ao_vivo', filtro: `marca=eq.${m}`, evento: 'INSERT' as const },
       ]),
       // Ao (re)entrar no canal, a foto completa vem ANTES de a tela dizer "ao vivo".
       aoEstado: (e) => { if (e === 'ao-vivo') { void carregarTudo().then(() => setCanal('ao-vivo')) } else setCanal(e) },
@@ -528,18 +535,42 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
             queueMicrotask(() => receber({ origem: 'foto', sessao: foto }))
             return mapa
           })
-        } else if (m.tabela === 'eventos_robos_ao_vivo' && m.tipo === 'INSERT') {
-          const ev = paraEvento(m.linha)
-          setEventos((mapa) => { const n = new Map(mapa); n.set(ev.sessaoId, ordenarEventos([...(n.get(ev.sessaoId) ?? []), ev])); return n })
-          receber({ origem: 'evento', evento: ev, recebidoEm })
         }
       },
     })
     return () => assinatura.fechar()
   }, [sessao.token, receber]) // eslint-disable-line react-hooks/exhaustive-deps
 
+
   /* ---------------------------------------------------- foco */
   const [focoAutorizado, setFocoAutorizado] = useState<'pendente' | 'sim' | 'nao'>('sim')
+
+  /* ------------------------------- eventos ao vivo, só da cabine aberta */
+  useEffect(() => {
+    if (!foco || focoAutorizado !== 'sim') return
+    const id = foco
+    let primeiraEntrada = true
+    const assinatura = assinarMudancas({
+      token: sessao.token, canal: `monitor-foco-${id.slice(0, 8)}-${Math.random().toString(36).slice(2, 8)}`,
+      tabelas: [{ tabela: 'eventos_robos_ao_vivo', filtro: `sessao_id=eq.${id}`, evento: 'INSERT' as const }],
+      // Ao religar o canal, o que passou enquanto ele esteve fora vem pela REST.
+      aoEstado: (e) => {
+        if (e !== 'ao-vivo') return
+        if (primeiraEntrada) { primeiraEntrada = false; return }   // a abertura já leu o histórico
+        eventosDaSessao(sessao, id, 0, 500)
+          .then((evs) => setEventos((m) => { const n = new Map(m); n.set(id, ordenarEventos([...(n.get(id) ?? []), ...evs])); return n }))
+          .catch(() => { /* a reconciliação de 20 s e a foto cobrem */ })
+      },
+      aoMudar: (m) => {
+        if (m.tabela !== 'eventos_robos_ao_vivo' || m.tipo !== 'INSERT') return
+        const recebidoEm = Date.now()
+        const ev = paraEvento(m.linha)
+        setEventos((mapa) => { const n = new Map(mapa); n.set(ev.sessaoId, ordenarEventos([...(n.get(ev.sessaoId) ?? []), ev])); return n })
+        receber({ origem: 'evento', evento: ev, recebidoEm })
+      },
+    })
+    return () => assinatura.fechar()
+  }, [foco, focoAutorizado, sessao.token, receber]) // eslint-disable-line react-hooks/exhaustive-deps
   const abrirFoco = useCallback(async (id: string) => {
     focoAnterior.current = document.activeElement as HTMLElement
     const s = sessoes.get(id)

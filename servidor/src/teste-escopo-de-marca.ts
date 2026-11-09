@@ -71,8 +71,13 @@ conferir('e as cabines ao vivo também',
 // cartões de uma plataforma congelarem sem ninguém perceber.
 conferir('o tempo real abre uma assinatura por marca',
   /tabelas: marcas\.flatMap\(\(m\) => \[/.test(monitorPainel), true)
-conferir('e as três tabelas escutam a marca do laço',
-  (monitorPainel.match(/filtro: `marca=eq\.\$\{m\}`/g) ?? []).length, 3)
+// Desde 09/11/2026 a marca inteira leva só fotos e pulsos (os eventos eram mais
+// da metade dos avisos do Realtime); os eventos ao vivo vêm da cabine aberta,
+// filtrados pela sessão — que já pertence a uma marca do laço.
+conferir('e as duas tabelas da lista escutam a marca do laço',
+  (monitorPainel.match(/filtro: `marca=eq\.\$\{m\}`/g) ?? []).length, 2)
+conferir('e os eventos ao vivo escutam a sessão da cabine aberta',
+  /tabela: 'eventos_robos_ao_vivo', filtro: `sessao_id=eq\.\$\{id\}`/.test(monitorPainel), true)
 
 // Na Rede as consultas pedem as duas marcas, e cada cartão diz de onde veio.
 conferir('a Rede consulta a lista de marcas',

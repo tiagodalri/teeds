@@ -139,10 +139,13 @@ export function acompanharNoServidor(
   id: string,
   aoAtualizar: (s: SessaoNoServidor) => void,
   aoFalhar?: (mensagem: string) => void,
+  /** O servidor voltou a responder depois de um aoFalhar: a tela tira o aviso. */
+  aoRecuperar?: () => void,
 ): () => void {
   let vivo = true
   let timer: ReturnType<typeof setTimeout> | null = null
   let falhasSeguidas = 0
+  let avisou = false
 
   const ciclo = async () => {
     if (!vivo) return
@@ -154,6 +157,7 @@ export function acompanharNoServidor(
       const s = await verNoServidor(sessao, id)
       if (!vivo) return
       falhasSeguidas = 0
+      if (avisou) { avisou = false; aoRecuperar?.() }
       aoAtualizar(s)
       // Desligada com contrato aberto ainda conta: segue olhando até ele liquidar.
       if (!s.estado?.rodando && !s.estado?.emOperacao) { vivo = false; return }
@@ -164,9 +168,13 @@ export function acompanharNoServidor(
     } catch (e) {
       if (!vivo) return
       falhasSeguidas += 1
-      // uma consulta perdida é rotina; várias seguidas é problema de verdade
-      if (falhasSeguidas >= 5) { aoFalhar?.((e as Error).message); vivo = false; return }
-      timer = setTimeout(ciclo, 2000)
+      // Uma consulta perdida é rotina; várias seguidas é problema de verdade:
+      // avisa a tela UMA vez, mas continua olhando, mais espaçado. Antes,
+      // depois de 5 falhas (~10 s de soluço do servidor) a tela parava de
+      // acompanhar para sempre e o robô parecia travado até recarregar a
+      // página — num pico de live, vira suporte em massa (09/11/2026).
+      if (falhasSeguidas >= 5 && !avisou) { avisou = true; aoFalhar?.((e as Error).message) }
+      timer = setTimeout(ciclo, falhasSeguidas >= 5 ? 10_000 : 2000)
     }
   }
 
