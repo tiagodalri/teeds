@@ -497,8 +497,10 @@ export async function usuarioDoToken(
 async function conferirNoSupabase(token: string): Promise<{ id: string; email: string; marca?: string } | null> {
   if (!URL_BASE) return null
   try {
+    // com prazo (09/11/2026): sem ele, uma enxurrada de tokens falsos deixava pedidos pendurados no motor
     const res = await fetch(`${URL_BASE}/auth/v1/user`, {
       headers: { apikey: CHAVE, Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(8_000),
     })
     if (!res.ok) return null
     const u = (await res.json()) as any

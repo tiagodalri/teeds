@@ -455,8 +455,8 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
   }
   if (url.pathname === '/gancho/email') {
     if (req.method !== 'POST') { res.writeHead(405); return res.end() }
-    const pedacos: Buffer[] = []
-    for await (const p of req) pedacos.push(p as Buffer)
+    const pedacos = await lerCorpoComTeto(req, 256_000)
+    if (!pedacos) { res.writeHead(413); return res.end() }
     const { status, corpo } = await tratarGanchoDeEmail(
       Buffer.concat(pedacos).toString('utf8'),
       req.headers as Record<string, string | string[] | undefined>,
@@ -902,8 +902,8 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
 
     let corpo: any = {}
     if (req.method === 'POST') {
-      const pedacos: Buffer[] = []
-      for await (const p of req) pedacos.push(p as Buffer)
+      const pedacos = await lerCorpoComTeto(req, 1_000_000)
+      if (!pedacos) return json(413, { erro: 'Pedido grande demais.' })
       const cru = Buffer.concat(pedacos).toString('utf8')
       if (cru) { try { corpo = JSON.parse(cru) } catch { return json(400, { erro: 'Pedido malformado.' }) } }
     }
@@ -1342,8 +1342,8 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
     if (req.method !== 'POST') {
       res.writeHead(405); return res.end()
     }
-    const pedacos: Buffer[] = []
-    for await (const p of req) pedacos.push(p as Buffer)
+    const pedacos = await lerCorpoComTeto(req, 1_000_000)
+    if (!pedacos) { res.writeHead(413); return res.end() }
     let corpo: any
     try {
       corpo = JSON.parse(Buffer.concat(pedacos).toString('utf8'))
@@ -1432,3 +1432,19 @@ servidor.listen(PORTA, '127.0.0.1', () => {
   console.log(`Supabase: ${supabaseConfigurado() ? 'ligado — as sessoes aparecem na tela do cliente' : 'nao configurado (rode servidor/chave.sh)'}`)
   console.log(`\nO endereco do MCP e uma senha: quem tiver ele comanda os robos.\n`)
 })
+
+/**
+ * Lê o corpo do pedido com teto de tamanho (09/11/2026). Passou do teto: para de ler e devolve null
+ * (quem chama responde 413). Sem isso, um único pedido gigante, mesmo sem login, estourava a memória
+ * do motor (1 GB) e derrubava todos os robôs. O Caddy também barra acima de 2 MB.
+ */
+async function lerCorpoComTeto(req: AsyncIterable<unknown>, teto: number): Promise<Buffer[] | null> {
+  const pedacos: Buffer[] = []
+  let total = 0
+  for await (const p of req) {
+    total += (p as Buffer).length
+    if (total > teto) return null
+    pedacos.push(p as Buffer)
+  }
+  return pedacos
+}
