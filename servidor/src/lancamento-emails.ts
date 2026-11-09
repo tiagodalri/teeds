@@ -22,7 +22,7 @@ import { marcaPorId, type Marca } from '../../src/marca/marcas'
 import { DERIV } from '../../src/core/deriv/config'
 import { montarEmail } from './emails'
 import { jaSairam, linkDeDescadastro } from './descadastro'
-import { banco, comunidadeDe, despachar, enderecoDe, INICIO_DA_LIVE } from './aprovacao-leads'
+import { banco, comunidadeDe, despachar, enderecoDe, EnderecoInvalido, INICIO_DA_LIVE } from './aprovacao-leads'
 
 const MARCA = 'globalfly'
 const PLANO_AGUARDANDO = 'globalfly-aguardando-live'
@@ -246,7 +246,9 @@ export async function enviarEmailsDoLancamento(agora = Date.now()) {
         try {
           await despachar(marca, email, emailDoLancamento(marca, etapa.id, p), `lancamento-${etapa.id}-${email}`, linkDeDescadastro(MARCA, email))
           mandados++
-        } catch {
+        } catch (e) {
+          // endereço que nunca vai receber: fica marcado (não tenta de novo) e a fila segue
+          if (e instanceof EnderecoInvalido) { console.warn(`[lançamento] e-mail "${etapa.id}" pulado: ${e.message}`); continue }
           console.warn(`[lançamento] e-mail "${etapa.id}" não saiu agora; tenta de novo.`)
           await banco(`/rest/v1/lancamento_emails?marca=eq.${MARCA}&etapa=eq.${etapa.id}&email=eq.${encodeURIComponent(email)}`, 'DELETE').catch(() => undefined)
           return   // o Resend recusou: para a rodada em vez de queimar a lista

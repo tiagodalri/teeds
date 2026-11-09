@@ -190,6 +190,7 @@ export async function despachar(
   descadastrar?: string,
 ): Promise<void> {
   if (!process.env.RESEND_CHAVE || !marca.email.remetente) throw new Error('Envio indisponível')
+  if (!enderecoValido(para)) throw new EnderecoInvalido(para)
   const r = await fetch('https://api.resend.com/emails', {
     method:'POST', signal:AbortSignal.timeout(20000),
     headers:{Authorization:`Bearer ${process.env.RESEND_CHAVE}`,'Content-Type':'application/json','Idempotency-Key':chaveUnica},
@@ -201,8 +202,22 @@ export async function despachar(
       } } : {}),
     }),
   })
+  // 422 = o Resend recusou ESTE pedido (endereço que ele não aceita): repetir não adianta.
+  if (r.status === 422) throw new EnderecoInvalido(para)
   if (!r.ok) throw new Error('Envio indisponível')
 }
+
+/*
+  Endereço que não pode receber (08/11/2026): um inscrito digitou o telefone
+  grudado no e-mail ("...@gmail.com86995472663"). O Resend recusava com 422 e
+  o carteiro da live, que para a rodada inteira em qualquer recusa, travava
+  nele: ninguém inscrito depois recebia mais nada. Endereço inválido agora é
+  um erro próprio, que quem chama pula, seguindo a fila.
+*/
+export class EnderecoInvalido extends Error {
+  constructor(readonly endereco: string) { super(`Endereço de e-mail inválido: ${endereco}`) }
+}
+export const enderecoValido = (e: string) => /^[^@\s<>,;]+@[^@\s<>,;]+\.[a-z]{2,24}$/i.test((e ?? '').trim())
 
 /**
  * Os dois e-mails do cadastro, em um lugar só.
