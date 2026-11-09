@@ -10,6 +10,12 @@
  * O vídeo é sempre a primeira aula com vídeo da grade publicada: trocou a
  * aula no painel, troca aqui. Fechou, não volta (vale por conta, neste
  * aparelho; e quem já abriu a aula pela sala também não vê de novo).
+ *
+ * 08/11/2026, noite (áudios do Victor): o vídeo é obrigatório. Começa sozinho,
+ * sem pular nem adiantar, e não há como sair até o fim: o X só aparece quando
+ * o vídeo termina (ou se ele não abrir, para ninguém ficar preso). Na janela,
+ * só "Boas-vindas, fulano" e o vídeo. Fechou no X, segue o passo a passo.
+ * Recarregar a página antes do fim traz o vídeo de novo.
  */
 import { useEffect, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
@@ -17,10 +23,9 @@ import { marcarVista, playerDoVideo, type Aula } from '../../core/teeds/aulas'
 import { gradePublicadaEmCache, modulosParaSala, type GradeAulas } from '../../core/teeds/gradeAulas'
 import { registrarAula } from '../../core/teeds/insights'
 import { PlayerAula } from '../PlayerAula'
-import { Monograma } from '../marca/Monograma'
 import './boas-vindas-video.css'
 
-const FIM = 'As próximas aulas estão em Aulas, no menu.'
+const FIM = 'Pronto! Feche no X para ver o seu passo a passo.'
 export const chaveDoVideoDeBoasVindas = (usuarioId: string) => `globalfly.boasvindas.video.${usuarioId}`
 
 export function BoasVindasEmVideo({ sessao, nome, plano, admin, aoFechar, aoSemVideo, grade }: {
@@ -37,6 +42,10 @@ export function BoasVindasEmVideo({ sessao, nome, plano, admin, aoFechar, aoSemV
 }) {
   const [aula, setAula] = useState<(Aula & { cor: string; proprio?: boolean }) | null | undefined>(undefined)
   const conta = useRef({ acumulado: 0, ultimo: -1, duracao: 0, concluida: false })
+  // o X só existe depois do fim do vídeo (ou se o vídeo não abriu)
+  const [podeFechar, setPodeFechar] = useState(false)
+  const botaoX = useRef<HTMLButtonElement>(null)
+  useEffect(() => { if (podeFechar) botaoX.current?.focus() }, [podeFechar])
 
   useEffect(() => {
     let vivo = true
@@ -83,12 +92,12 @@ export function BoasVindasEmVideo({ sessao, nome, plano, admin, aoFechar, aoSemV
       if (aula && !aula.proprio) marcarVista(aula.id, true)
     }
   }
-  const fechar = (irParaAulas: boolean) => { enviar(0); aoFechar(irParaAulas) }
+  const fechar = () => { if (!podeFechar) return; enviar(0); aoFechar(false) }
 
-  // Esc fecha
+  // Esc fecha, mas só depois do fim do vídeo
   useEffect(() => {
     // com o vídeo em tela cheia, o Esc só sai da tela cheia
-    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.fullscreenElement && !document.querySelector('.cheia-falsa')) fechar(false) }
+    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.fullscreenElement && !document.querySelector('.cheia-falsa')) fechar() }
     document.addEventListener('keydown', tecla)
     return () => document.removeEventListener('keydown', tecla)
   }) // sempre a versão atual de fechar
@@ -100,31 +109,19 @@ export function BoasVindasEmVideo({ sessao, nome, plano, admin, aoFechar, aoSemV
   return (
     <div className="bvv-fundo" role="dialog" aria-modal="true" aria-labelledby="bvv-titulo">
       <div className="bvv-janela" style={{ ['--aula' as string]: aula.cor }}>
-        <button type="button" className="bvv-x" onClick={() => fechar(false)} aria-label="Fechar">×</button>
+        {podeFechar && <button ref={botaoX} type="button" className="bvv-x bvv-x-pronto" onClick={fechar} aria-label="Fechar e ver o passo a passo">×</button>}
         <header className="bvv-cab">
-          <Monograma tamanho={34} className="bvv-mono" />
-          <div>
-            <span className="bvv-rot">{aula.proprio ? 'Comece aqui' : 'Comece aqui · Aula 1'}</span>
-            <h2 id="bvv-titulo">{primeiro ? `Boas-vindas, ${primeiro}!` : 'Boas-vindas!'}</h2>
-            <p>Antes de tudo, assista a este vídeo curto: ele mostra por onde começar.</p>
-          </div>
+          <h2 id="bvv-titulo">{primeiro ? `Boas-vindas, ${primeiro}!` : 'Boas-vindas!'}</h2>
         </header>
         <div className="bvv-video cine-video">
           {player?.tipo === 'youtube' && player.id ? (
-            <PlayerAula src="" youtube={player.id} titulo={aula.titulo} aoAvancar={aoAvancar} proxima={null} textoDoFim={FIM} />
+            <PlayerAula src="" youtube={player.id} titulo={aula.titulo} aoAvancar={aoAvancar} proxima={null} textoDoFim={FIM} obrigatorio aoTerminar={() => setPodeFechar(true)} aoErro={() => setPodeFechar(true)} />
           ) : player?.tipo === 'mp4' ? (
-            <PlayerAula src={player.src} titulo={aula.titulo} aoAvancar={aoAvancar} proxima={null} textoDoFim={FIM} />
+            <PlayerAula src={player.src} titulo={aula.titulo} aoAvancar={aoAvancar} proxima={null} textoDoFim={FIM} obrigatorio aoTerminar={() => setPodeFechar(true)} aoErro={() => setPodeFechar(true)} />
           ) : player ? (
-            <iframe src={player.src} title={aula.titulo} allowFullScreen allow="autoplay; encrypted-media; picture-in-picture" />
+            <iframe src={player.src} title={aula.titulo} allowFullScreen allow="autoplay; encrypted-media; picture-in-picture" onLoad={() => setPodeFechar(true)} />
           ) : null}
         </div>
-        <footer className="bvv-pe">
-          <b>{aula.titulo}</b>
-          <div>
-            <button type="button" className="bvv-depois" onClick={() => fechar(false)}>Continuar para a plataforma</button>
-            <button type="button" className="bvv-aulas" onClick={() => fechar(true)}>Ver todas as aulas</button>
-          </div>
-        </footer>
       </div>
     </div>
   )

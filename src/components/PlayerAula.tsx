@@ -41,6 +41,13 @@ interface Props {
   textoDoFim?: string
   /** Pular para um ponto do vídeo (os tópicos da aula). `vez` muda a cada clique, para repetir o mesmo ponto. */
   pularPara?: { segundos: number; vez: number } | null
+  /** Vídeo obrigatório (pop-up de boas-vindas, 08/11/2026, pedido do Victor): começa sozinho
+   *  (sem som se o navegador não deixar, com o aviso para ativar), sem pular, sem adiantar e sem velocidade. */
+  obrigatorio?: boolean
+  /** O vídeo chegou ao fim. */
+  aoTerminar?: () => void
+  /** O vídeo não abriu (quem chama não pode deixar a pessoa presa). */
+  aoErro?: () => void
 }
 
 const VELOCIDADES = [1, 1.25, 1.5, 2]
@@ -103,7 +110,7 @@ const fmt = (s: number) => {
   return h ? `${h}:${String(m % 60).padStart(2, '0')}:${String(r).padStart(2, '0')}` : `${m}:${String(r).padStart(2, '0')}`
 }
 
-export function PlayerAula({ src, youtube, repetir = false, vertical = false, textoDoFim = 'Você chegou ao fim do curso.', titulo, posicaoInicial = 0, aoAvancar, aoTocar, proxima, pularPara }: Props) {
+export function PlayerAula({ src, youtube, repetir = false, vertical = false, textoDoFim = 'Você chegou ao fim do curso.', titulo, posicaoInicial = 0, aoAvancar, aoTocar, proxima, pularPara, obrigatorio = false, aoTerminar, aoErro }: Props) {
   const caixa = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
   const quadroYT = useRef<HTMLDivElement>(null)
@@ -129,6 +136,10 @@ export function PlayerAula({ src, youtube, repetir = false, vertical = false, te
   const [arrastando, setArrastando] = useState(false)
   const sumir = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retomou = useRef(false)
+  // tocou sem som porque o navegador não deixou com som: o aviso "Toque para ativar o som"
+  const [precisaSom, setPrecisaSom] = useState(false)
+  const obrig = useRef(obrigatorio); obrig.current = obrigatorio
+  const pessoaSilenciou = useRef(false)
 
   /* ------------------------------------- o motor: <video> ou YouTube */
   const motor = useRef<Motor | null>(null)
@@ -232,7 +243,8 @@ export function PlayerAula({ src, youtube, repetir = false, vertical = false, te
       setVisivel(true)
     }
   }, [ehYT, cheiaFalsa])
-  const mudar = useCallback(() => { const m = motor.current; if (m) { const novo = !m.mudo(); m.silenciar(novo); setMudo(novo) } }, [])
+  const mudar = useCallback(() => { const m = motor.current; if (m) { const novo = !m.mudo(); m.silenciar(novo); setMudo(novo); pessoaSilenciou.current = novo; if (!novo) setPrecisaSom(false) } }, [])
+  const ativarSom = () => { const m = motor.current; if (!m) return; m.silenciar(false); setMudo(false); setPrecisaSom(false); if (m.parado()) m.tocar(); acordar() }
   const trocarVelocidade = (x: number) => { motor.current?.velocidade(x); setVelocidade(x); setMenuVel(false) }
 
   /* -------------------------------------------- eventos (os dois motores) */
@@ -262,6 +274,12 @@ export function PlayerAula({ src, youtube, repetir = false, vertical = false, te
     fim: () => {
       if (repetir) { motor.current?.ir(0); motor.current?.tocar(); return }
       setTocando(false); setAcabou(true); setVisivel(true); aoTocar?.(false); if (proxima) setContagem(CONTAGEM)
+      if (obrigatorio) {
+        // o botão de fechar aparece fora do vídeo: sai da tela cheia para ele ficar à vista
+        setCheiaFalsa(false)
+        if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined)
+      }
+      aoTerminar?.()
     },
     esperar: () => setEsperando(true),
     seguir: () => setEsperando(false),
@@ -311,11 +329,32 @@ export function PlayerAula({ src, youtube, repetir = false, vertical = false, te
             if (!vivo) return
             yt.current = e.target
             ev.current.meta()
+            if (obrig.current) {
+              // obrigatório: toca sozinho; se o navegador barrar o som, toca mudo e pede o toque para ouvir
+              e.target.playVideo()
+              const conferir = () => {
+                const p = yt.current; if (!vivo || !p?.getPlayerState) return
+                const st = p.getPlayerState()
+                if (st !== YT_TOCANDO && st !== YT_CARREGANDO && st !== YT_FIM) { p.mute(); p.playVideo(); setMudo(true); setPrecisaSom(true) }
+                else if (p.isMuted()) { setMudo(true); setPrecisaSom(true) }
+              }
+              // mais tarde, ainda parado (nem carregando): tenta de novo, mudo
+              const insistir = () => {
+                const p = yt.current; if (!vivo || !p?.getPlayerState) return
+                const st = p.getPlayerState()
+                if (st !== YT_TOCANDO && st !== YT_FIM && st !== YT_PAUSADO) { p.mute(); p.playVideo(); setMudo(true); setPrecisaSom(true) }
+              }
+              window.setTimeout(conferir, 1500); window.setTimeout(conferir, 4000); window.setTimeout(insistir, 9000)
+            }
             relogio = window.setInterval(() => {
               const p = yt.current; if (!p?.getPlayerState) return
               const d = p.getDuration?.() || 0
               if (d) { setDuracao(d); ev.current.carregou((p.getVideoLoadedFraction?.() || 0) * d) }
-              if (p.getPlayerState() === YT_TOCANDO) ev.current.tempo()
+              if (p.getPlayerState() === YT_TOCANDO) {
+                ev.current.tempo()
+                // o próprio YouTube às vezes toca mudo para conseguir começar sozinho: pede o toque para ouvir
+                if (obrig.current && !pessoaSilenciou.current && p.isMuted?.()) { setMudo(true); setPrecisaSom(true) }
+              }
             }, 250)
           },
           onStateChange: (e: { data: number }) => {
@@ -336,6 +375,13 @@ export function PlayerAula({ src, youtube, repetir = false, vertical = false, te
       yt.current = null
     }
   }, [youtube])
+
+  // MP4 obrigatório: o autoPlay com som pode ser barrado; então toca mudo e pede o toque para ouvir
+  useEffect(() => {
+    const v = video.current; if (!v || ehYT || !obrigatorio) return
+    void v.play().catch(() => { v.muted = true; setMudo(true); setPrecisaSom(true); void v.play().catch(() => undefined) })
+  }, [src, ehYT, obrigatorio])
+  useEffect(() => { if (erroVideo) aoErro?.() }, [erroVideo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Trocou de aula: zera o estado e deixa o novo vídeo retomar a própria posição.
   useEffect(() => { retomou.current = false; setAcabou(false); setContagem(null); setTempo(0); setCarregado(0); setEsperando(false); setJaTocou(false) }, [src, youtube])
@@ -382,15 +428,15 @@ export function PlayerAula({ src, youtube, repetir = false, vertical = false, te
       if (e.metaKey || e.ctrlKey || e.altKey) return
       switch (e.key) {
         case ' ': case 'k': e.preventDefault(); alternar(); break
-        case 'ArrowLeft': case 'j': e.preventDefault(); pular(-10); break
-        case 'ArrowRight': case 'l': e.preventDefault(); pular(10); break
+        case 'ArrowLeft': case 'j': if (obrigatorio) return; e.preventDefault(); pular(-10); break
+        case 'ArrowRight': case 'l': if (obrigatorio) return; e.preventDefault(); pular(10); break
         case 'f': e.preventDefault(); telaCheia(); break
         case 'm': e.preventDefault(); mudar(); break
         default: return
       }
     }
     document.addEventListener('keydown', aoTecla); return () => document.removeEventListener('keydown', aoTecla)
-  }, [alternar, pular, telaCheia, mudar])
+  }, [alternar, pular, telaCheia, mudar, obrigatorio])
 
   /* --------------------------------------------- arrastar na barra */
   const fracaoDoEvento = (e: { clientX: number }) => {
@@ -425,6 +471,13 @@ export function PlayerAula({ src, youtube, repetir = false, vertical = false, te
 
       {esperando && !acabou && jaTocou && <div className="cine-carregando" aria-hidden><i /></div>}
 
+      {precisaSom && mudo && !acabou && (
+        <button type="button" className="cine-som" onClick={(e) => { e.stopPropagation(); ativarSom() }}>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5 6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /></svg>
+          Toque para ativar o som
+        </button>
+      )}
+
       {!tocando && !acabou && (!ehYT || jaTocou) && (
         <button className="cine-play-grande" onClick={alternar} aria-label="Reproduzir">
           <svg viewBox="0 0 24 24" width="34" height="34" fill="currentColor"><path d="M8 5.5v13l11-6.5z" /></svg>
@@ -433,7 +486,7 @@ export function PlayerAula({ src, youtube, repetir = false, vertical = false, te
 
       {acabou && (
         <div className="cine-fim">
-          <span className="rot">Aula concluída</span>
+          <span className="rot">{obrigatorio ? 'Vídeo concluído' : 'Aula concluída'}</span>
           {proxima ? (
             <>
               <h3>Próxima: {proxima.titulo}</h3>
@@ -448,7 +501,7 @@ export function PlayerAula({ src, youtube, repetir = false, vertical = false, te
             <>
               <h3>{titulo}</h3>
               <p>{textoDoFim}</p>
-              <div><button className="cine-fim-ir" onClick={rever}>Rever esta aula</button></div>
+              <div><button className="cine-fim-ir" onClick={rever}>{obrigatorio ? 'Rever o vídeo' : 'Rever esta aula'}</button></div>
             </>
           )}
         </div>
@@ -456,10 +509,10 @@ export function PlayerAula({ src, youtube, repetir = false, vertical = false, te
 
       {/* no fim da aula, os controles somem: por cima do quadro "Aula concluída" eles cobriam os botões (29/10/2026) */}
       {!acabou && <div className="cine-controles" onClick={(e) => e.stopPropagation()}>
-        <div ref={barra} className={`cine-barra ${arrastando ? 'arrastando' : ''}`} onPointerDown={iniciarArraste} role="slider" tabIndex={0} aria-label="Progresso" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} aria-valuetext={`${fmt(tempo)} de ${fmt(duracao)}`}
+        <div ref={barra} className={`cine-barra ${arrastando ? 'arrastando' : ''}${obrigatorio ? ' cine-barra-fixa' : ''}`} onPointerDown={obrigatorio ? undefined : iniciarArraste} role="slider" tabIndex={obrigatorio ? -1 : 0} aria-readonly={obrigatorio || undefined} aria-label="Progresso" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} aria-valuetext={`${fmt(tempo)} de ${fmt(duracao)}`}
           onKeyDown={e => {
             const m = motor.current, d = m?.duracao() ?? 0
-            if (!m || !Number.isFinite(d) || !d) return
+            if (obrigatorio || !m || !Number.isFinite(d) || !d) return
             if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return
             e.preventDefault(); e.stopPropagation()
             m.ir(e.key === 'Home' ? 0 : e.key === 'End' ? d : Math.max(0, Math.min(d, m.tempo() + (e.key === 'ArrowRight' ? 5 : -5))))
@@ -474,18 +527,18 @@ export function PlayerAula({ src, youtube, repetir = false, vertical = false, te
             {tocando ? <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z" /></svg>
               : <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5.5v13l11-6.5z" /></svg>}
           </button>
-          <button onClick={() => pular(-10)} aria-label="Voltar 10 segundos" className="cine-pular"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5 6 9l5 4" /><path d="M6 9h8a5 5 0 0 1 0 10h-3" /></svg><small>10</small></button>
-          <button onClick={() => pular(10)} aria-label="Avançar 10 segundos" className="cine-pular"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="m13 5 5 4-5 4" /><path d="M18 9h-8a5 5 0 0 0 0 10h3" /></svg><small>10</small></button>
+          {!obrigatorio && <><button onClick={() => pular(-10)} aria-label="Voltar 10 segundos" className="cine-pular"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5 6 9l5 4" /><path d="M6 9h8a5 5 0 0 1 0 10h-3" /></svg><small>10</small></button>
+          <button onClick={() => pular(10)} aria-label="Avançar 10 segundos" className="cine-pular"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="m13 5 5 4-5 4" /><path d="M18 9h-8a5 5 0 0 0 0 10h3" /></svg><small>10</small></button></>}
           <button onClick={mudar} aria-label={mudo ? 'Ativar som' : 'Silenciar'}>
             {mudo ? <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5 6 9H3v6h3l5 4zM22 9l-6 6M16 9l6 6" /></svg>
               : <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5 6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /></svg>}
           </button>
           <span className="cine-tempo">{fmt(tempo)} <em>/</em> {fmt(duracao)}</span>
           <span className="cine-vao" />
-          <div className="cine-vel">
+          {!obrigatorio && <div className="cine-vel">
             <button onClick={() => setMenuVel((m) => !m)} aria-haspopup="menu" aria-expanded={menuVel}>{velocidade}x</button>
             {menuVel && <div role="menu">{VELOCIDADES.map((x) => <button key={x} role="menuitem" className={x === velocidade ? 'on' : ''} onClick={() => trocarVelocidade(x)}>{x}x{x === 1 ? ' · normal' : ''}</button>)}</div>}
-          </div>
+          </div>}
           <button onClick={telaCheia} aria-label={cheia || cheiaFalsa ? 'Sair da tela cheia' : 'Tela cheia'}>
             {cheia || cheiaFalsa ? <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg>
               : <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>}

@@ -21,10 +21,17 @@
   border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 26px; line-height: 1; cursor: pointer;
 }
 .bvv-x:hover { background: var(--surface-alt); color: var(--text); }
-.bvv-cab { display: flex; align-items: center; gap: 14px; padding-right: 40px; }
+/* o X só aparece no fim do vídeo: entra em ouro, para a pessoa achar onde seguir */
+.bvv-x.bvv-x-pronto { color: #0b1424; background: var(--bvv-ouro); font-weight: 700; animation: bvv-x-entra .35s ease-out, bvv-x-pulsa 1.8s ease-in-out .35s infinite; }
+.bvv-x.bvv-x-pronto:hover { background: var(--bvv-ouro); color: #0b1424; filter: brightness(1.08); }
+.bvv-x.bvv-x-pronto:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+@keyframes bvv-x-entra { from { opacity: 0; transform: scale(.6); } }
+@keyframes bvv-x-pulsa { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--bvv-ouro) 25%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .bvv-x.bvv-x-pronto { animation: none; } }
+.bvv-cab { display: flex; align-items: center; gap: 14px; min-height: 44px; padding-right: 52px; }
 .bvv-mono { flex: none; }
 .bvv-rot { display: block; color: var(--bvv-ouro); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
-.bvv-cab h2 { margin: 3px 0 2px; font-size: clamp(20px, 2.6vw, 26px); letter-spacing: -.01em; line-height: 1.15; }
+.bvv-cab h2 { margin: 0; font-size: clamp(20px, 2.6vw, 26px); letter-spacing: -.01em; line-height: 1.15; }
 .bvv-cab p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
 .bvv-video.cine-video { border-radius: 14px; }
 .bvv-pe { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -49,7 +56,9 @@
 /* celular deitado: a janela 16:9 passava da altura da tela e os botões só apareciam rolando */
 @media (max-height: 520px) and (orientation: landscape) {
   .bvv-fundo { padding: 8px; }
-  .bvv-janela { width: min(880px, calc((100dvh - 150px) * 16 / 9 + 28px)); padding: 10px 14px; gap: 8px; }
+  .bvv-janela { width: min(880px, calc((100dvh - 90px) * 16 / 9 + 28px)); padding: 10px 14px; gap: 8px; }
+  .bvv-cab { min-height: 36px; }
+  .bvv-x { width: 36px; height: 36px; font-size: 22px; }
   .bvv-x { top: 2px; right: 2px; }
   .bvv-cab p, .bvv-mono, .bvv-pe > b { display: none; }
   .bvv-cab h2 { font-size: 17px; margin: 0; }
