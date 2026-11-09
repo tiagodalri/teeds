@@ -339,11 +339,10 @@ body.rel-painel-aberto { overflow: hidden; }
 /* ===================================================== relatório simulado (06/11/2026)
    Só administradores. A tag "Relatório simulado" fica à mostra o tempo todo:
    presa no topo da página (faixa) e no canto do cartão do resultado. */
-.rsim-abrir { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 12px; border: 1px dashed color-mix(in srgb, #FB923C 70%, var(--border)); border-radius: 10px;
-  background: color-mix(in srgb, #FB923C 8%, transparent); color: var(--text); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; flex: none; }
-.rsim-abrir svg { width: 15px; height: 15px; fill: none; stroke: #FB923C; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.rsim-abrir:hover { background: color-mix(in srgb, #FB923C 16%, transparent); }
-.rsim-abrir.on { border-style: solid; }
+/* só o símbolo do gráfico, sem texto e sem moldura (Tiago, 09/11/2026) */
+.rsim-abrir { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: transparent; cursor: pointer; flex: none; transition: background .15s; }
+.rsim-abrir svg { width: 18px; height: 18px; fill: none; stroke: #FB923C; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.rsim-abrir:hover, .rsim-abrir.on { background: color-mix(in srgb, #FB923C 14%, transparent); }
 .rsim-abrir:focus-visible { outline: 2px solid #FB923C; outline-offset: 2px; }
 .rsim-linha-celular { display: none; }
 @media (max-width: 900px) {

@@ -17,9 +17,9 @@ const IA = MARCA.vocabularioIA ? 'I.A.' : 'robô'
 /** O botão pequeno do topo da página. */
 export function BotaoSimular({ ativo, aoAbrir, className = '' }: { ativo: boolean; aoAbrir: () => void; className?: string }) {
   return (
-    <button type="button" className={`rsim-abrir ${ativo ? 'on' : ''} ${className}`} onClick={aoAbrir} title="Montar um relatório simulado para as aulas (só administradores)">
+    <button type="button" className={`rsim-abrir ${ativo ? 'on' : ''} ${className}`} onClick={aoAbrir}
+      aria-label={ativo ? 'Editar simulação' : 'Simular relatório'} title={ativo ? 'Editar simulação' : 'Simular relatório'}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 5-6" /></svg>
-      {ativo ? 'Editar simulação' : 'Simular relatório'}
     </button>
   )
 }
