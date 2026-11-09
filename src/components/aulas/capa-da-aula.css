@@ -19,3 +19,10 @@
 /* 08/11/2026: no cartão, o selo da duração fica no canto de cima e cobria a marca; ela desce para cima do número */
 .aula-cartao-capa .capa-desenhada { padding-top: 27%; }
 .aula-cartao-capa .capa-desenhada-marca { position: static; margin-bottom: 2px; }
+
+/* 09/11/2026: pôsteres especiais (Naor/Victor). O fundo desfocado só aparece em quadro largo. */
+.capa-poster-fundo { display: none !important; }
+:is(.aulas-jornada-capa, .aula-modal-capa, .in-aula) .capa-poster-fundo { display: block !important; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(22px) brightness(.8) saturate(1.15); transform: scale(1.2); }
+:is(.aulas-jornada-capa, .aula-modal-capa) picture:has(> .capa-poster-fundo) { position: absolute; inset: 0; display: block; }
+:is(.aulas-jornada-capa, .aula-modal-capa) .capa-poster-frente { position: relative; z-index: 1; object-fit: contain !important; object-position: center !important; }
+.aula-modal-capa .capa-poster-frente { position: absolute; inset: 0; width: 100%; height: 100%; }

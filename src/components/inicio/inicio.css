@@ -393,4 +393,5 @@
 .in-jato.trancada img { filter: saturate(.55) brightness(.8); }
 
 /* 09/11/2026: as capas do Naor são pôsteres com o monograma e a chamada no alto: num quadro largo, ancora em cima */
-.in-aula img[src*="/aulas-globalfly/naor/"] { object-position: 50% 7%; }
+.in-aula img.capa-poster-frente { object-fit: contain; object-position: center; z-index: 1; }
+.in-aula img.capa-poster-fundo { grid-column: 2; grid-row: 1; filter: blur(18px) brightness(.8); transform: scale(1.2); }
