@@ -97,7 +97,11 @@ export function ligarNoServidor(
   return api<SessaoNoServidor>(sessao, '/sessao', {
     method: 'POST',
     body: JSON.stringify({ ...pedido, marca: MARCA.id, parceiro: vitrine() }),
-  }, 110_000)
+  }, 110_000).then((s) => {
+    // robô novo no ar: a lista das vivas volta ao compasso rápido já
+    conferirVivasAgora()
+    return s
+  })
 }
 
 /**
@@ -153,7 +157,10 @@ export function acompanharNoServidor(
       aoAtualizar(s)
       // Desligada com contrato aberto ainda conta: segue olhando até ele liquidar.
       if (!s.estado?.rodando && !s.estado?.emOperacao) { vivo = false; return }
-      timer = setTimeout(ciclo, 800)
+      // 1,2 s (era 0,8 s, 08/11/2026): o R_75 dá um tick a cada 2 s, então a
+      // tela continua mostrando todo tick, com um terço menos de pedidos ao
+      // servidor — que é o mesmo processo que roda os robôs.
+      timer = setTimeout(ciclo, 1200)
     } catch (e) {
       if (!vivo) return
       falhasSeguidas += 1
@@ -233,6 +240,14 @@ export async function procurarSessaoRecemLigada(
   }
 }
 
+/** Sem robô no ar, de quanto em quanto a tela confere se apareceu algum. */
+export const RITMO_SEM_ROBO = 20_000
+/** Disparado na janela para conferir na hora (ex.: ao abrir a tela das I.A.). */
+export const EVENTO_VIVAS_AGORA = 'teeds:vivas-agora'
+export const conferirVivasAgora = () => {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(EVENTO_VIVAS_AGORA))
+}
+
 /**
  * Fica de olho no que aparece de novo no servidor.
  *
@@ -249,43 +264,66 @@ export function acompanharVivas(
 ): () => void {
   let vivo = true
   let timer: ReturnType<typeof setTimeout> | null = null
+  let temRobo = false
+  let falhas = 0
+  let emVoo = false
+
+  /*
+    Sem robô no ar, a lista só serve para descobrir um robô ligado por OUTRO
+    caminho (chat, celular). Perguntar a cada 2 s era o maior peso da noite
+    da live: todo mundo com a plataforma aberta — até trancado, só assistindo
+    — consultava o servidor dos robôs (e o banco, por trás dele) 30 vezes por
+    minuto para ouvir "nenhum" (teste de carga de 08/11/2026). Agora: no
+    compasso normal com robô no ar; a cada RITMO_SEM_ROBO sem robô; e na hora
+    ao abrir a tela das I.A. ou voltar para a aba.
+  */
+  const proximo = () => (temRobo ? intervalo : Math.max(intervalo, RITMO_SEM_ROBO))
 
   const ciclo = async () => {
     if (!vivo) return
+    if (timer) { clearTimeout(timer); timer = null }
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
       timer = setTimeout(ciclo, 15_000)
       return
     }
+    if (emVoo) return   // já tem uma consulta a caminho; ela agenda a próxima
     let lista: SessaoViva[]
+    emVoo = true
     try {
       const atual = typeof sessao === 'function' ? sessao() : sessao
       if (!atual) throw new Error('sem sessão')
       lista = await sessoesVivas(atual)
+      falhas = 0
     } catch {
+      emVoo = false
       // Silêncio do servidor não é "parou de operar". A tela mantém o que já
-      // sabia e a gente pergunta de novo no compasso normal.
+      // sabia e pergunta de novo — mais espaçado a cada falha seguida, para
+      // não martelar um servidor que já está sofrendo.
       if (!vivo) return
-      timer = setTimeout(ciclo, intervalo)
+      falhas += 1
+      timer = setTimeout(ciclo, Math.min(30_000, proximo() * Math.min(8, 2 ** (falhas - 1))))
       return
     }
+    emVoo = false
     if (!vivo) return
+    temRobo = lista.length > 0
     aoAtualizar(lista)
-    timer = setTimeout(ciclo, intervalo)
+    timer = setTimeout(ciclo, proximo())
   }
 
+  const agora = () => { if (vivo) void ciclo() }
   const aoVoltar = () => {
-    if (document.visibilityState === 'visible' && vivo) {
-      if (timer) clearTimeout(timer)
-      void ciclo()
-    }
+    if (document.visibilityState === 'visible' && vivo) agora()
   }
 
   void ciclo()
   if (typeof document !== 'undefined') document.addEventListener('visibilitychange', aoVoltar)
+  if (typeof window !== 'undefined') window.addEventListener(EVENTO_VIVAS_AGORA, agora)
 
   return () => {
     vivo = false
     if (timer) clearTimeout(timer)
     if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', aoVoltar)
+    if (typeof window !== 'undefined') window.removeEventListener(EVENTO_VIVAS_AGORA, agora)
   }
 }

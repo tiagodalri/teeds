@@ -256,6 +256,26 @@ const servidor = createServer((req, res) => {
   })
 })
 
+/*
+  As contas Deriv de cada pessoa, guardadas por 30 s SÓ para a lista "o que
+  está no ar" (GET /api/sessoes). Essa lista é consultada por toda tela
+  aberta, e cada consulta ia ao banco (teste de carga de 08/11/2026: era a
+  leitura mais frequente da noite da live). Quem liga, para ou autoriza
+  operação continua conferindo no banco, sempre — uma conta recém-conectada
+  nunca é recusada por causa desta cópia.
+*/
+const contasGuardadas = new Map<string, { quando: number; contas: string[] }>()
+async function contasParaListar(userId: string, marca: string): Promise<string[]> {
+  const chave = `${userId}|${marca}`
+  const agora = Date.now()
+  const g = contasGuardadas.get(chave)
+  if (g && agora - g.quando < 30_000) return g.contas
+  const contas = await contasDoUsuario(userId, marca)
+  if (contasGuardadas.size > 20_000) contasGuardadas.clear()
+  contasGuardadas.set(chave, { quando: agora, contas })
+  return contas
+}
+
 async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
   const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
   const responder = (status: number, html: string) => {
@@ -855,6 +875,8 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
     // Leitura (GET) aceita o crachá conferido no último minuto; o que muda algo confere sempre.
     const dono = cracha ? await usuarioDoToken(cracha, { lembrar: req.method === 'GET' }) : null
     if (!dono) return json(401, { erro: `Faça login na ${marcaDaOrigem.prosa} de novo — sua sessão expirou.` })
+    // Qualquer POST pode ter mudado as contas (conectou a Deriv, ligou um robô): a lista volta a ler do banco.
+    if (req.method === 'POST') for (const chave of contasGuardadas.keys()) if (chave.startsWith(`${dono.id}|`)) contasGuardadas.delete(chave)
 
     let corpo: any = {}
     if (req.method === 'POST') {
@@ -1264,7 +1286,7 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
           aparecer operando na OMNI. Sessao antiga sem marca conta como Teeds.
         */
         const marcaDaTela = marcaPorId(url.searchParams.get('marca') ?? 'teeds').id
-        const minhas = await contasDoUsuario(dono.id, marcaDaTela)
+        const minhas = await contasParaListar(dono.id, marcaDaTela)
         const lista = todas()
           .filter((s) => minhas.includes(s.contaId) && s.estado?.rodando && (s.parametros?.marca ?? 'teeds') === marcaDaTela)
           .map((s) => resumo(s))

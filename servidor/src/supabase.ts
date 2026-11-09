@@ -2,6 +2,7 @@ import './ambiente'
 import { createHash } from 'node:crypto'
 import { emailDeDemonstracao } from '../../src/core/deriv/accountAccess'
 import { emailReal, marcaDaConta } from '../../src/core/teeds/emailDaConta'
+import { criarLote } from './lote'
 
 /**
  * Espelha no Supabase tudo que o robô faz.
@@ -994,54 +995,78 @@ export async function anotarColetaDeExtrato(d: {
  * A foto atual de cada sessão e os eventos numerados — o que o painel de
  * monitoramento reconstrói. Só o servidor escreve; falha vira log.
  * ------------------------------------------------------------------ */
-export async function escreverFotoDoEspelho(
-  sessao: SessaoGravada,
-  foto: { seq: number; estado: unknown; config: unknown; emitidoEm: number },
-): Promise<void> {
-  await rest('/sessoes_robos_ao_vivo?on_conflict=sessao_id', {
-    method: 'POST',
-    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({
-      sessao_id: sessao.id,
-      marca: sessao.marca,
-      user_id: sessao.user_id,
-      seq: foto.seq,
-      fase: (foto.estado as { fase?: string })?.fase ?? 'aguardando',
-      estado: foto.estado,
-      config: foto.config,
-      emitido_em: foto.emitidoEm,
-      atualizada_em: new Date().toISOString(),
-    }),
-  })
+type FotoDoEspelho = { seq: number; estado: unknown; config: unknown; emitidoEm: number }
+type EventoDoEspelho = { seq: number; tipo: string; delta: unknown; config?: unknown; emitidoEm: number }
+type PulsoDoEspelho = { seq: number; pulso: unknown; emitidoEm: number }
+
+const linhaDaFoto = (sessao: SessaoGravada, foto: FotoDoEspelho) => ({
+  sessao_id: sessao.id,
+  marca: sessao.marca,
+  user_id: sessao.user_id,
+  seq: foto.seq,
+  fase: (foto.estado as { fase?: string })?.fase ?? 'aguardando',
+  estado: foto.estado,
+  config: foto.config,
+  emitido_em: foto.emitidoEm,
+  atualizada_em: new Date().toISOString(),
+})
+const linhaDoEvento = (sessao: SessaoGravada, ev: EventoDoEspelho) => ({
+  sessao_id: sessao.id, marca: sessao.marca, seq: ev.seq, tipo: ev.tipo, delta: ev.delta,
+  config: ev.config ?? null, emitido_em: ev.emitidoEm,
+})
+const linhaDoPulso = (sessao: SessaoGravada, p: PulsoDoEspelho) => ({
+  sessao_id: sessao.id, marca: sessao.marca, seq: p.seq, pulso: p.pulso, emitido_em: p.emitidoEm,
+  atualizada_em: new Date().toISOString(),
+})
+
+const PRAZO_DO_ESPELHO_MS = 20_000
+const gravarFotos = (linhas: unknown) => rest<void>('/sessoes_robos_ao_vivo?on_conflict=sessao_id', {
+  method: 'POST',
+  headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+  body: JSON.stringify(linhas),
+  signal: AbortSignal.timeout(PRAZO_DO_ESPELHO_MS),
+})
+// A repetição de um evento (mesma sessão e seq) é sucesso: já está gravado.
+const gravarEventos = (linhas: unknown) => rest<void>('/eventos_robos_ao_vivo?on_conflict=sessao_id,seq', {
+  method: 'POST',
+  headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },
+  body: JSON.stringify(linhas),
+  signal: AbortSignal.timeout(PRAZO_DO_ESPELHO_MS),
+})
+const gravarPulsos = (linhas: unknown) => rest<void>('/pulsos_robos_ao_vivo?on_conflict=sessao_id', {
+  method: 'POST',
+  headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+  body: JSON.stringify(linhas),
+  signal: AbortSignal.timeout(PRAZO_DO_ESPELHO_MS),
+})
+
+/*
+  Em lote desde 08/11/2026 (ver lote.ts): uma ida ao banco a cada 250 ms
+  leva as gravações de todas as sessões. ESPELHO_EM_LOTE=0 volta ao jeito
+  antigo, uma ida por gravação, sem mexer no código.
+*/
+const EM_LOTE = process.env.ESPELHO_EM_LOTE !== '0'
+type Linha = { sessao_id: string }
+const porSessao = (l: Linha) => l.sessao_id
+const loteDeFotos = criarLote<Linha>({ enviar: gravarFotos, enviarUm: gravarFotos, chave: porSessao })
+const loteDeEventos = criarLote<Linha>({ enviar: gravarEventos, enviarUm: gravarEventos })
+const loteDePulsos = criarLote<Linha>({ enviar: gravarPulsos, enviarUm: gravarPulsos, chave: porSessao })
+export const medidasDosLotes = { fotos: loteDeFotos.medidas, eventos: loteDeEventos.medidas, pulsos: loteDePulsos.medidas }
+
+export async function escreverFotoDoEspelho(sessao: SessaoGravada, foto: FotoDoEspelho): Promise<void> {
+  const linha = linhaDaFoto(sessao, foto)
+  return EM_LOTE ? loteDeFotos(linha) : gravarFotos(linha)
 }
 
-export async function escreverEventoDoEspelho(
-  sessao: SessaoGravada,
-  ev: { seq: number; tipo: string; delta: unknown; config?: unknown; emitidoEm: number },
-): Promise<void> {
-  await rest('/eventos_robos_ao_vivo', {
-    method: 'POST',
-    headers: { Prefer: 'return=minimal' },
-    body: JSON.stringify({
-      sessao_id: sessao.id, marca: sessao.marca, seq: ev.seq, tipo: ev.tipo, delta: ev.delta,
-      config: ev.config ?? null, emitido_em: ev.emitidoEm,
-    }),
-  })
+export async function escreverEventoDoEspelho(sessao: SessaoGravada, ev: EventoDoEspelho): Promise<void> {
+  const linha = linhaDoEvento(sessao, ev)
+  return EM_LOTE ? loteDeEventos(linha) : gravarEventos(linha)
 }
 
 /** O pulso: pequeno, a cada tick (coalescido) e no batimento de presença. */
-export async function escreverPulsoDoEspelho(
-  sessao: SessaoGravada,
-  p: { seq: number; pulso: unknown; emitidoEm: number },
-): Promise<void> {
-  await rest('/pulsos_robos_ao_vivo?on_conflict=sessao_id', {
-    method: 'POST',
-    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({
-      sessao_id: sessao.id, marca: sessao.marca, seq: p.seq, pulso: p.pulso, emitido_em: p.emitidoEm,
-      atualizada_em: new Date().toISOString(),
-    }),
-  })
+export async function escreverPulsoDoEspelho(sessao: SessaoGravada, p: PulsoDoEspelho): Promise<void> {
+  const linha = linhaDoPulso(sessao, p)
+  return EM_LOTE ? loteDePulsos(linha) : gravarPulsos(linha)
 }
 
 /** Apaga eventos e fotos velhos, pela função do banco (só a chave de serviço chama). */

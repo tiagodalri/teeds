@@ -78,7 +78,7 @@ import { lerPerfil, marcarTourVisto } from './core/teeds/perfil'
 import { TourGuiado, passosDoTour } from './components/tour/TourGuiado'
 import { BarraInferior } from './components/barra/BarraInferior'
 import { MiniCabine } from './components/minicabine/MiniCabine'
-import { pararNoServidor, type SessaoViva } from './core/teeds/servidorRobos'
+import { conferirVivasAgora, pararNoServidor, type SessaoViva } from './core/teeds/servidorRobos'
 import { sinalGFLiberado, tipoNaTela } from './core/deriv/accountAccess'
 import { acompanharFimDasSessoes, contratoManual, entradaManual } from './core/som'
 import { JANELA, TELA_DA_JANELA, irNaPlataforma, useIrPelasJanelas, voltarAPlataforma } from './core/janelaSolta'
@@ -652,6 +652,8 @@ export default function App() {
   useEffect(() => { if (teeds.status === 'logado') eventoDoPixel('Entrou', undefined, true) }, [teeds.status])
   // trancado, só o Início
   useEffect(() => { if (trancado && tela !== 'inicio' && MARCA.inicio) setTela('inicio') }, [trancado, tela]) // eslint-disable-line react-hooks/exhaustive-deps
+  // abriu a tela das I.A.: confere na hora o que está no ar (sem robô, a consulta é espaçada)
+  useEffect(() => { if (tela === 'robos' && !trancado) conferirVivasAgora() }, [tela, trancado])
   // liberado na live: a plataforma abre com um recado
   const estavaTrancado = useRef(false)
   useEffect(() => {

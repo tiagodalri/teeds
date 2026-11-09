@@ -218,6 +218,25 @@ function compactarOperacao(o: OperacaoMotor): OperacaoEspelho {
   }
 }
 
+/*
+  O markup da sessão soma o histórico INTEIRO, que cresce sem teto (uma
+  sessão longa passa de mil operações). resumirEstado roda a cada estado do
+  motor, isto é, a cada tick de cada robô; refazer a soma toda vez era o
+  maior custo do monitoramento em sessões longas (teste de carga de
+  08/11/2026). O motor troca o array do histórico a cada operação e reusa o
+  mesmo entre os ticks, então guardar a soma por array dá o mesmo número
+  com uma soma por operação, e não uma por tick.
+*/
+const markupPorHistorico = new WeakMap<readonly OperacaoMotor[], number>()
+function markupDoHistorico(h: readonly OperacaoMotor[] | undefined): number {
+  if (!h || h.length === 0) return 0
+  const guardado = markupPorHistorico.get(h)
+  if (guardado !== undefined) return guardado
+  const total = arred(h.reduce((soma, op) => soma + calcularMarkup(op.payout), 0), 4)
+  markupPorHistorico.set(h, total)
+  return total
+}
+
 /** A foto compacta: o que a cabine precisa, e só isso. Nunca o objeto bruto. */
 export function resumirEstado(e: EstadoMotor, conexao = 'open'): EstadoEspelho {
   return {
@@ -230,7 +249,7 @@ export function resumirEstado(e: EstadoMotor, conexao = 'open'): EstadoEspelho {
     perdasSeguidas: e.perdasSeguidas ?? 0,
     resultado: arred(e.resultado ?? 0),
     movimentado: arred(e.movimentado ?? 0),
-    markupCalculado: arred((e.historico ?? []).reduce((total, op) => total + calcularMarkup(op.payout), 0), 4),
+    markupCalculado: markupDoHistorico(e.historico),
     valorAtual: arred(e.valorAtual ?? 0),
     aguardando: e.aguardando ?? '',
     condicao: e.condicao ?? null,

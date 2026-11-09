@@ -72,6 +72,10 @@ function lerOrigens(): Mapa {
 
 /** Anota que este contrato foi comprado por um robo da Teeds. */
 export function marcarOrigem(contractId: number, nome: string): void {
+  // No servidor (Node) não existe localStorage: cada compra lançava e
+  // engolia dois erros só para não anotar nada (3% do processador do motor
+  // no teste de carga de 08/11/2026). Sem armazenamento, não há o que anotar.
+  if (typeof localStorage === 'undefined') return
   const m = lerOrigens()
   m[String(contractId)] = nome
   // mantem o arquivo pequeno: so os mais recentes interessam
