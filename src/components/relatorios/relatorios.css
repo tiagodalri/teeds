@@ -356,26 +356,10 @@ body.rel-painel-aberto { overflow: hidden; }
 @keyframes rsim-pulso { 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .rsim-tag i { animation: none; } }
 
-.rsim-faixa { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 14px; padding: 10px 12px 10px 16px;
-  border: 1.5px solid #FB923C; border-radius: 14px; background: color-mix(in srgb, #FB923C 11%, var(--surface)); box-shadow: 0 10px 30px -18px #000a; }
-.rsim-faixa-txt { display: grid; gap: 2px; min-width: 0; }
-.rsim-faixa-txt b { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rsim-faixa-txt small { font-size: 12px; color: var(--muted); }
-.rsim-faixa-acoes { display: flex; gap: 8px; }
-.rsim-faixa-acoes .rel-btn { min-height: 38px; padding: 0 13px; font-size: 13px; }
-.rsim-faixa .rsim-tag { grid-column: 3; grid-row: 1; }
 .rel-simulado .rel-heroi { position: relative; }
-.rsim-tag-flutuante { position: fixed; z-index: 75; top: 88px; right: 24px; animation: rsim-entra .18s ease-out; }
-@keyframes rsim-entra { from { opacity: 0; transform: translateY(-6px); } }
 .rsim-tag-canto { position: absolute; top: -13px; right: 18px; z-index: 2; padding: 6px 11px; font-size: 12px; }
 @media (max-width: 900px) {
-  .rsim-faixa { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; padding: 10px 10px 10px 13px; }
-  .rsim-faixa .rsim-tag { grid-column: 2; }
-  .rsim-faixa-acoes { grid-column: 1 / -1; }
-  .rsim-faixa-acoes .rel-btn { flex: 1; }
-  .rsim-faixa-txt small { display: none; }
   .rsim-tag-canto { right: 12px; }
-  .rsim-tag-flutuante { top: calc(var(--topo-h, 56px) + 8px); right: max(12px, var(--sar, 0px)); }
 }
 
 /* o editor do cenário (a mesma gaveta dos filtros, um pouco mais larga) */
@@ -510,6 +494,7 @@ body.rel-painel-aberto { overflow: hidden; }
 .rsim-previa > small { font-size: 12px; color: var(--muted); }
 .rsim-previa-aviso { margin: 0; padding: 9px 11px; border-radius: 9px; background: color-mix(in srgb, #FB923C 13%, transparent); color: var(--text); font-size: 12.5px; line-height: 1.45; }
 .rsim-painel > footer { flex-wrap: wrap; }
+.rsim-painel > footer .rsim-sair { flex: 0 0 100%; order: 9; border-color: color-mix(in srgb, #FB923C 55%, var(--border)); }
 .rsim-passo .rsim-duas { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 12px; }
 .rsim-passo .rsim-cartao .rsim-duas { align-items: end; }
 .rsim-falha { flex-basis: 100%; font-size: 12.5px; font-weight: 650; color: var(--down); }

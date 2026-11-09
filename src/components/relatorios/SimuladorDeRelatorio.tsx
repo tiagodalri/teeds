@@ -24,36 +24,6 @@ export function BotaoSimular({ ativo, aoAbrir, className = '' }: { ativo: boolea
   )
 }
 
-/** A faixa que fica presa no topo do relatório durante toda a simulação. */
-export function FaixaSimulada({ nome, aoEditar, aoSair }: { nome: string; aoEditar: () => void; aoSair: () => void }) {
-  // quando a faixa sai da tela (rolou para baixo), uma tag fica fixa no canto: a simulação nunca fica sem aviso
-  const ref = useRef<HTMLDivElement>(null)
-  const [fora, setFora] = useState(false)
-  useEffect(() => {
-    const el = ref.current
-    if (!el || typeof IntersectionObserver !== 'function') return
-    const o = new IntersectionObserver(([e]) => setFora(!e.isIntersecting), { threshold: 0, rootMargin: '-60px 0px 0px 0px' })
-    o.observe(el)
-    return () => o.disconnect()
-  }, [])
-  return (
-    <>
-    {fora && <span className="rsim-tag rsim-tag-flutuante" role="status"><i aria-hidden="true" />Relatório simulado</span>}
-    <div ref={ref} className="rsim-faixa" role="status" aria-label={`Relatório simulado: ${nome}`}>
-      <div className="rsim-faixa-txt">
-        <b>{nome}</b>
-        <small>Números preenchidos pela equipe para a aula. Não são operações reais.</small>
-      </div>
-      <div className="rsim-faixa-acoes">
-        <button type="button" className="rel-btn" onClick={aoEditar}>Editar cenário</button>
-        <button type="button" className="rel-btn" onClick={aoSair}>Sair da simulação</button>
-      </div>
-      <span className="rsim-tag" aria-hidden="true"><i />Relatório simulado</span>
-    </div>
-    </>
-  )
-}
-
 /* ------------------------------------------------------- campos de número */
 
 const ler = (t: string) => {
@@ -127,7 +97,8 @@ function Passo({ titulo, sub, children }: { titulo: string; sub?: string; childr
   )
 }
 
-export function EditorDoCenario({ inicial, aoMostrar, aoFechar }: { inicial: Cenario; aoMostrar: (c: Cenario) => void; aoFechar: () => void }) {
+/** aoSair: só quando já há simulação na tela — sem a faixa (09/11/2026), é por aqui que se volta ao relatório real. */
+export function EditorDoCenario({ inicial, aoMostrar, aoFechar, aoSair }: { inicial: Cenario; aoMostrar: (c: Cenario) => void; aoFechar: () => void; aoSair?: () => void }) {
   const [c, setC] = useState<Cenario>(inicial)
   const [passo, setPasso] = useState(0)
   const [modelo, setModelo] = useState<string | null>(null)
@@ -354,13 +325,14 @@ export function EditorDoCenario({ inicial, aoMostrar, aoFechar }: { inicial: Cen
                   <Numero id="rsim-saques" rotulo="Saques" valor={c.saques} max={1e7} aoMudar={(x) => mudar({ saques: x ?? 0 })} />
                 </div>
               </div>
-              <p className="rsim-aviso">Só os administradores veem. Nada é gravado, nada entra na cobrança, e a tela mostra a tag <b>Relatório simulado</b> o tempo todo.</p>
+              <p className="rsim-aviso">Só os administradores veem. Nada é gravado, nada entra na cobrança, e o resultado mostra a tag <b>Relatório simulado</b>.</p>
             </Passo>
           )}
         </div>
 
         <footer>
           {falha && <small className="rsim-falha" role="alert">{falha}</small>}
+          {aoSair && <button type="button" className="rel-btn rsim-sair" onClick={aoSair}>Sair da simulação</button>}
           <button type="button" className="rel-btn" onClick={() => (passo ? setPasso(passo - 1) : aoFechar())}>{passo ? 'Voltar' : 'Cancelar'}</button>
           {passo < PASSOS.length - 1
             ? <button type="button" className="rel-btn ouro" disabled={!!falha} onClick={() => setPasso(passo + 1)}>Continuar</button>

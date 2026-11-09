@@ -34,7 +34,7 @@ import { NomeDoRobo } from '../NomeDoRobo'
 import { DERIV } from '../../core/deriv/config'
 import { subplanoAtual, useMeuSubplano } from '../../core/teeds/subplanos'
 import { cenariosProntos, dinheiroDoCenario, faixaDoCenario, hojeIso, lerCenario, operacoesDoCenario, relatorioDoCenario, type Cenario } from '../../core/teeds/relatorioSimulado'
-import { BotaoSimular, EditorDoCenario, FaixaSimulada } from './SimuladorDeRelatorio'
+import { BotaoSimular, EditorDoCenario } from './SimuladorDeRelatorio'
 
 interface Props {
   sessao: SessaoTeeds
@@ -313,9 +313,8 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
 
   return (
     <div className={`rel ${carregando && rel ? 'lendo' : ''} ${sim ? 'rel-simulado' : ''}`}>
-      {sim && <FaixaSimulada nome={sim.nome} aoEditar={() => setEditando(true)} aoSair={sairDaSimulacao} />}
-      {/* no celular o topo da plataforma não tem espaço: o botão do admin fica aqui */}
-      {podeSimular && !sim && <div className="rsim-linha-celular"><BotaoSimular ativo={false} aoAbrir={() => setEditando(true)} /></div>}
+      {/* no celular o topo da plataforma não tem espaço: o botão do admin fica aqui (sem faixa desde 09/11/2026: só o ícone) */}
+      {podeSimular && <div className="rsim-linha-celular"><BotaoSimular ativo={!!sim} aoAbrir={() => setEditando(true)} /></div>}
       {/* ------------------------------------------------ barra de filtros */}
       <div className="rel-barra-filtros">
         <div className="rel-faixa">
@@ -521,7 +520,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
 
       {sim ? <p className="rel-fonte"><b>Relatório simulado.</b> Números preenchidos pela equipe da {MARCA.prosa} para as aulas, para mostrar cenários de gerenciamento. Não são operações reais, não foram gravados e não entram em nenhuma cobrança.</p> : <p className="rel-fonte">Números das operações feitas pela {MARCA.prosa}, como a corretora registrou cada contrato. Depósitos, saques e saldo vêm ao vivo da corretora. Valores em dólar. Resultados passados não garantem resultados futuros.</p>}
 
-      {editando && podeSimular && <EditorDoCenario inicial={cenario ?? lerCenario(CHAVE_SIM) ?? cenariosProntos()[0].cenario} aoMostrar={mostrarCenario} aoFechar={() => setEditando(false)} />}
+      {editando && podeSimular && <EditorDoCenario inicial={cenario ?? lerCenario(CHAVE_SIM) ?? cenariosProntos()[0].cenario} aoMostrar={mostrarCenario} aoFechar={() => setEditando(false)} aoSair={sim ? sairDaSimulacao : undefined} />}
       {painelAberto && rel && <PainelDeFiltros rel={rel} filtros={filtros} moeda={moeda} aoAplicar={(f) => { setFiltros(f); setPainelAberto(false) }} aoFechar={() => setPainelAberto(false)} />}
     </div>
   )
