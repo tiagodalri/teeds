@@ -12,7 +12,12 @@ import { nomeDaOperacao } from '../PositionCard'
 const nomeCurto = (c: OpenContract) => nomeDaOperacao(c.contractType, c.barrier)
 const hora = (epoch: number) => new Date(epoch * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
 
+/** Quantas entradas a tabela mostra; o placar de cima soma todas as da sessão. */
+const NA_TABELA = 10
+
 export function UltimasEntradas({ operacoes, nomeDoAtivo, markupDe }: { operacoes: OpenContract[]; nomeDoAtivo: (simbolo: string) => string; markupDe?: (c: OpenContract) => number }) {
+  // `operacoes` é a sessão inteira, da mais recente para a mais antiga (10/11/2026)
+  const naTabela = operacoes.slice(0, NA_TABELA)
   // modo CEO: o markup de cada entrada e o total da lista
   const totalMarkup = markupDe ? operacoes.reduce((t, c) => t + markupDe(c), 0) : 0
   // 26/10/2026 (Tiago: "uma tabelinha bem intuitiva, pras infos não ficarem jogadas"):
@@ -22,7 +27,7 @@ export function UltimasEntradas({ operacoes, nomeDoAtivo, markupDe }: { operacoe
   const moeda = operacoes[0]?.currency ?? 'USD'
   return (
     <section className="bl-ultimas" aria-label="Suas últimas entradas">
-      <header><span className="bl-rot">Suas últimas entradas</span>{markupDe && <small className="bl-ult-markup-total" title="Markup gerado por estas entradas">Markup {dinheiro(totalMarkup, moeda)}</small>}</header>
+      <header><span className="bl-rot">Suas últimas entradas</span>{markupDe && <small className="bl-ult-markup-total" title="Markup gerado pelas entradas desta sessão">Markup {dinheiro(totalMarkup, moeda)}</small>}</header>
       <dl className="bl-ult-resumo">
         <div><dt>Entradas</dt><dd>{operacoes.length}</dd></div>
         <div><dt>Ganhos</dt><dd className="ganho">{ganhos}</dd></div>
@@ -33,7 +38,7 @@ export function UltimasEntradas({ operacoes, nomeDoAtivo, markupDe }: { operacoe
         <table>
           <thead><tr><th scope="col">Operação</th><th scope="col" className="num" title="Preço de saída: o último dígito é o que valeu">Saída</th><th scope="col" className="num">Resultado</th></tr></thead>
           <tbody>
-            {operacoes.map((c) => {
+            {naTabela.map((c) => {
               const subiu = /^(CALL|HIGHER|MULTUP)$/.test(c.contractType)
               const comDirecao = /^(CALL|PUT|HIGHER|LOWER|MULTUP|MULTDOWN)$/.test(c.contractType)
               const ganhou = c.profit >= 0
@@ -53,6 +58,7 @@ export function UltimasEntradas({ operacoes, nomeDoAtivo, markupDe }: { operacoe
             })}
           </tbody>
         </table>
+        {operacoes.length > naTabela.length && <p className="bl-ult-mais">Mostrando as {naTabela.length} mais recentes de {operacoes.length} entradas. O placar acima soma todas.</p>}
       </div>
     </section>
   )

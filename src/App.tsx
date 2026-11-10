@@ -991,6 +991,8 @@ export default function App() {
   */
   const [encerradas, setEncerradas] = useState<Array<{ c: (typeof minhas)[number]; ate: number }>>([])
   const [ultimasManuais, setUltimasManuais] = useState<Array<(typeof minhas)[number]>>([])
+  // o placar é da conta em uso: trocar de conta (demo ↔ real) começa outro, sem misturar resultados
+  useEffect(() => { setUltimasManuais([]) }, [conta.accountId])
   /*
     O markup das operações manuais (23/10/2026, modo CEO): o oficial da Deriv
     quando a proposta informa; senão, 3% do pagamento potencial (a regra da
@@ -1021,10 +1023,16 @@ export default function App() {
       const novas = finais.map((c) => ({ c, ate: antes.find((e) => e.c.contractId === c.contractId)?.ate ?? Date.now() + 120_000 }))
       return [...novas, ...outras].slice(0, 6)
     })
-    // a lista "Suas últimas entradas" da coluna do Operar: fica a sessão inteira (as 10 últimas)
+    /*
+      "Suas últimas entradas" da coluna do Operar: guarda a sessão inteira
+      desta conta. 10/11/2026 (Victor Dias: "quando eu encerro antes a
+      operação ela não computa"): a lista era cortada em 10 e o placar somava
+      só essas — a 11ª entrava e a mais antiga saía, e o contador parecia
+      parado. Agora o placar soma tudo e a tabela mostra as 10 mais recentes.
+    */
     setUltimasManuais((antes) => {
       const outras = antes.filter((u) => !finais.some((f) => f.contractId === u.contractId))
-      return [...finais, ...outras].sort((a, b) => b.startTime - a.startTime).slice(0, 10)
+      return [...finais, ...outras].sort((a, b) => b.startTime - a.startTime).slice(0, 5000)
     })
   }, [minhasTodas])
   // tira do gráfico as que passaram dos 2 minutos

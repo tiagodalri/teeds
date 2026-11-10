@@ -81,6 +81,8 @@ export default function LabOperar() {
           { ...contrato(13, 'DIGITOVER', 8.5, 0, 'won'), exitSpot: 1090.2236, contractType: 'DIGITOVER' },
           { ...contrato(14, 'DIGITUNDER', -10, 0, 'lost'), exitSpot: 1089.9518, contractType: 'DIGITUNDER' },
           { ...contrato(15, 'CALL', 7.84, 0, 'won'), exitSpot: 1089.3302 },
+          // &muitas=1: a sessão passa de 10 entradas (o placar soma todas; a tabela mostra 10)
+          ...(p.has('muitas') ? Array.from({ length: 9 }, (_, i) => ({ ...contrato(16 + i, i % 3 ? 'CALL' : 'PUT', i % 3 ? 3.28 : -10, 0, i % 3 ? 'won' : 'lost'), exitSpot: 1088.5 - i / 10 })) : []),
         ]} />}
       </aside>
     </div>
