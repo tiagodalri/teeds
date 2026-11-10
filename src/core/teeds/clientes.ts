@@ -280,6 +280,9 @@ export async function souAdmin(sessao: SessaoTeeds, propagarFalha = false): Prom
 
 export interface ClienteRegistro {
   userId: string
+  /** 10/11/2026: markup gerado (conta real, contagem interna), desde sempre e hoje. Só vem na Base de clientes. */
+  markupTotal?: number | null
+  markupHoje?: number | null
   nome: string | null
   email: string | null
   telefone: string | null
@@ -378,6 +381,8 @@ const paraCliente = (l: any): ClienteRegistro => ({
   fusoHorario: l.fuso_horario ?? null, idioma: l.idioma ?? null,
   categoria: ['silver', 'gold', 'black', 'prestige'].includes(l.categoria) ? l.categoria : null,
   parceiro: l.parceiro ?? null,
+  markupTotal: l.markup_total == null ? null : Number(l.markup_total),
+  markupHoje: l.markup_hoje == null ? null : Number(l.markup_hoje),
 })
 
 export interface PaginaClientes {
@@ -401,6 +406,7 @@ export interface PaginaClientes {
 export type OrdemClientes =
   | 'cadastro' | 'cadastro-asc' | 'acesso' | 'acesso-asc' | 'saldo' | 'saldo-asc'
   | 'nome' | 'nome-desc' | 'status' | 'status-desc' | 'plano' | 'plano-desc'
+  | 'markup' | 'markup-asc'
   | 'acessos'
 
 export interface FiltroClientes {

@@ -18,5 +18,15 @@
   .adm-base-clientes .adm-tabela > button.adm-linha > span:nth-child(3)::before { content: 'Status'; }
   .adm-base-clientes .adm-tabela > button.adm-linha > span:nth-child(4)::before { content: 'Último acesso'; }
   .adm-base-clientes .adm-tabela > button.adm-linha > span:nth-child(5)::before { content: 'Saldo real Deriv'; }
-  .adm-base-clientes .adm-tabela > button.adm-linha > span:nth-child(6)::before { content: 'Cadastro'; }
+  .adm-base-clientes .adm-tabela > button.adm-linha > span:nth-child(6)::before { content: 'Markup gerado'; }
+  .adm-base-clientes .adm-tabela > button.adm-linha > span:nth-child(7)::before { content: 'Cadastro'; }
+}
+
+/* 10/11/2026: a coluna "Markup gerado" (oito colunas só nesta tabela; a .adm-linha é dividida com outras telas) */
+.adm-base-clientes .adm-tabela .adm-linha { grid-template-columns: 2fr .8fr .7fr .9fr .8fr .8fr .7fr 20px; }
+.adm-base-clientes .adm-markup b { display: block; font-weight: 650; color: var(--text); font-variant-numeric: tabular-nums; }
+.adm-base-clientes .adm-markup small { display: block; margin-top: 2px; color: var(--up); font-size: 9.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+@media (max-width: 900px) and (min-width: 701px) {
+  .adm-base-clientes .adm-tabela .adm-linha { grid-template-columns: 1.7fr .8fr .8fr 20px; }
+  .adm-base-clientes .adm-tabela .adm-linha > :nth-child(7) { display: none; }
 }
