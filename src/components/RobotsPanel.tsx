@@ -428,6 +428,15 @@ export function RobotsPanel({
         <div className="rob-workspace-actions">
           {/* a cabine numa janela própria, que a pessoa arrasta para onde quiser (29/10/2026) */}
           <BotaoJanelaSolta qual="cabine" />
+          {/* 10/11/2026 (pedido do Victor): ver os dígitos ANTES de ligar uma I.A.; com I.A. ligada
+              o mesmo botão fica na barra de acompanhamento, logo abaixo */}
+          {!temAcompanhamento && (
+            <button type="button" className={`rob-ampliar-digitos ${digitosDe ? 'on' : ''}`} aria-expanded={!!digitosDe}
+              onClick={() => setDigitosDe((atual) => (atual ? null : 'geral'))}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">{digitosDe ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zM15.5 15.5L20 20M10.5 7.5v6M7.5 10.5h6" />}</svg>
+              {digitosDe ? 'Fechar dígitos' : 'Ver dígitos'}
+            </button>
+          )}
           <button className="rob-new-button" onClick={abrirBloco} disabled={blocos.length >= MAX_BLOCOS && !temPreparoDisponivel}
             title={blocos.length >= MAX_BLOCOS && !temPreparoDisponivel ? `Limite de ${MAX_BLOCOS} robôs ao mesmo tempo` : undefined}>+ Novo robô</button>
         </div>

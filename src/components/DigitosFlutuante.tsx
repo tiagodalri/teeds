@@ -110,6 +110,10 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
     return (JANELAS as readonly number[]).includes(j) ? j : 25
   })
   const estat = useDigits(ATIVO_DOS_ROBOS, 2, janela)
+  // 10/11/2026: um número que sobe a cada tick novo (anima o último dígito e a entrada na fita)
+  const ticks = useRef(0)
+  const anterior = useRef(estat.digitos)
+  if (anterior.current !== estat.digitos) { if (anterior.current.length && estat.digitos.length) ticks.current += 1; anterior.current = estat.digitos }
 
   // ----------------------------------------------- quem está fora da média
   // Um número por dígito: quantos desvios ele está acima (ou abaixo) dos 10%.
@@ -142,7 +146,7 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
   // medidas da janela e do ponteiro em px da página (escala do computador: core/escala.ts)
   const larguraMaxima = () => Math.max(LARGURA_MIN, Math.min(LARGURA_MAX, naPagina(window.innerWidth) - 24))
   const [largura, setLargura] = useState<number>(() => {
-    const l = ler<number>(CHAVE_LARGURA, LARGURA)
+    const l = ler<number>(CHAVE_LARGURA, 330)
     return Number.isFinite(l) ? Math.min(Math.max(LARGURA_MIN, l), larguraMaxima()) : LARGURA
   })
   const escala = largura / LARGURA
@@ -238,9 +242,8 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
       style={movel ? undefined : { left: pos.x, top: pos.y, width: largura, ['--pd-escala' as string]: escala }}>
       <div className="pd-topo" onPointerDown={comecar} onPointerMove={mover} onPointerUp={soltar} onPointerCancel={soltar}>
         {!movel && <span className="pd-grip" aria-hidden="true">⋮⋮</span>}
-        <b>Dígitos ao vivo</b>
-        <span className="pd-ativo">{ativoCurto}</span>
-        <span className="pd-ultimo" title="Último dígito que chegou">{estat.ultimo ?? '—'}</span>
+        <span className="pd-titulo"><b>Dígitos ao vivo</b><span className="pd-ativo"><i className="pd-vivo" aria-hidden="true" />{ativoCurto}</span></span>
+        <span className="pd-ultimo-caixa"><small>Último</small><span key={ticks.current} className="pd-ultimo" title="Último dígito que chegou">{estat.ultimo ?? '—'}</span></span>
         <button className="pd-fechar" onClick={aoFechar} aria-label="Fechar"><IconeFechar /></button>
       </div>
 
@@ -260,7 +263,7 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
         <div className="pd-area">
           {estat.total > 0 && (
             <span className="pd-esperado" style={{ bottom: `${Math.min(100, (ESPERADO / maxPct) * 100)}%` }}
-              title={`Esperado: ${ESPERADO}% para cada dígito`} aria-hidden="true" />
+              title={`Esperado: ${ESPERADO}% para cada dígito`} aria-hidden="true"><small>10%</small></span>
           )}
           {estat.pct.map((pct, d) => {
             const z = desvios[d]
@@ -283,9 +286,10 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
         </div>
       </div>
 
+      <span className="pd-secao">Últimos 12 que saíram</span>
       <div className="pd-fita" aria-label="Últimos dígitos">
         {estat.recentes.slice(-12).map((d, i, arr) => (
-          <span key={i} className={`${desvios[d] >= ACENDE ? 'alta' : ''} ${i === arr.length - 1 ? 'ultimo' : ''}`}>{d}</span>
+          <span key={ticks.current - (arr.length - 1 - i)} className={`${desvios[d] >= ACENDE ? 'alta' : ''} ${i === arr.length - 1 ? 'ultimo' : ''}`}>{d}</span>
         ))}
       </div>
 
