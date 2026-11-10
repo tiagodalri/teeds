@@ -15,8 +15,10 @@ export const capaDaAula = (id: string): string =>
  * mesma regra da comunidade e do afiliado do parceiro (core/teeds/parceiro.ts).
  * Arquivos em public/aulas-globalfly/naor/ (.jpg, .webp e -mobile.webp).
  */
+// 10/11/2026: 'transferir-saldo' (aula extra: depois do PIX, passar o saldo da Wallet da Deriv
+// para a conta de Options em Portfólio, senão o saldo da plataforma fica zerado).
 const DO_NAOR = new Set([
-  'introducao', 'visao-geral', 'conta-deriv', 'primeiro-deposito', 'saldo-demo-real',
+  'introducao', 'visao-geral', 'conta-deriv', 'primeiro-deposito', 'transferir-saldo', 'saldo-demo-real',
   'documentos', 'autenticador', 'deriv-confiavel', 'quem-e-victor-cordeiro', 'o-que-sao-as-ias',
   'robo-raptor', 'robo-gulf', 'robo-falcon', 'robo-legacy', 'robo-phenom',
   'operando-na-pratica', 'dicas', 'gerenciamento', 'gestao-na-pratica', 'day-trade',
