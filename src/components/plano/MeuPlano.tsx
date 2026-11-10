@@ -71,7 +71,9 @@ export function MeuPlano({ dados, foco, aoFechar, comprador }: { dados: MeuSubpl
               </th>
             ))}</tr></thead>
             <tbody>{linhas.map((l) => <tr key={l.rot}><th scope="row">{l.rot}</th>{planos.map((s) => <td key={s.id} className={col(s)}>{l.v(s)}</td>)}</tr>)}</tbody>
-            {!dados.admin && <tfoot><tr><th />{planos.map((s) => <td key={s.id} className={col(s)}>{s.ordem > meu.ordem ? <button type="button" className="mpl-quero" onClick={() => quero(s)}>Quero o {s.nome}</button> : s.id === meu.id ? <span className="mpl-ativo">Ativo</span> : null}</td>)}</tr></tfoot>}
+            {/* 10/11/2026 (Tiago): o botão de upgrade aparece também para o
+                administrador, que vê a mesma janela que o cliente. */}
+            <tfoot><tr><th />{planos.map((s) => <td key={s.id} className={col(s)}>{s.ordem > meu.ordem ? <button type="button" className="mpl-quero" onClick={() => quero(s)} aria-label={`Fazer upgrade para o ${s.nome}`}>Fazer upgrade</button> : s.id === meu.id ? <span className="mpl-ativo">Ativo</span> : null}</td>)}</tr></tfoot>
           </table>
         </div>
         {meu.assessor && meu.assessorWhatsapp && !dados.admin && (
