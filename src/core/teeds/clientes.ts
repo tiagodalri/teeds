@@ -642,6 +642,10 @@ export async function saldosDosClientes(sessao: SessaoTeeds, ids: string[]): Pro
     // a mais recente de cada tipo (a lista vem da mais recente para a mais antiga)
     if (!atual[tipo]) atual[tipo] = { saldo: Number(l.saldo), moeda: l.moeda ?? 'USD', vistaEm: l.vista_em }
     mapa.set(chave, atual)
+    // e por pessoa, sem a marca: a sessão ao vivo nem sempre traz a marca preenchida
+    const geral = mapa.get(`${l.user_id}|*`) ?? { real: null, demo: null }
+    if (!geral[tipo]) geral[tipo] = { saldo: Number(l.saldo), moeda: l.moeda ?? 'USD', vistaEm: l.vista_em }
+    mapa.set(`${l.user_id}|*`, geral)
   }
   return mapa
 }

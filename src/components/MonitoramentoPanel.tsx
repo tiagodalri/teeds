@@ -476,7 +476,8 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   /* ------------------------------------------- saldo real e demo de cada cliente */
   // Uma leitura por minuto (com a aba à mostra) para quem está no mosaico; a conta em uso já vem ao vivo pelo espelho.
   const [saldos, setSaldos] = useState<Map<string, SaldosDoCliente>>(new Map())
-  const idsComSaldo = useMemo(() => [...new Set([...sessoes.values()].map((s) => s.userId))].sort().join(','), [sessoes])
+  // só de quem está operando agora (o mapa guarda também as sessões já paradas do período, e a lista ficava enorme)
+  const idsComSaldo = useMemo(() => [...new Set([...sessoes.values()].filter((s) => s.situacao === 'rodando' && s.estado.rodando !== false).map((s) => s.userId))].sort().join(','), [sessoes])
   useEffect(() => {
     if (!idsComSaldo) return
     let vivo = true
@@ -876,7 +877,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
             clientes={clientes} garantirClientes={garantirClientes} aoContar={contarManuais} doFoco={doFoco} selo={seloDe} />
           <h3 className="mon-titulo-bloco"><span className="mon-tag ia">I.A.</span> {MARCA.vocabularioIA ? 'Sessões automáticas' : 'Robôs'}</h3>
           <div className={`mon-mosaico ${visao}`}>
-            {lista.slice(0, limite).map((s) => <Cartao key={s.sessaoId} s={s} cliente={clientes.get(s.userId)} saude={saudes.get(s.sessaoId) ?? 'desatualizado'} visao={visao} mostrarMarca={naRede} selo={seloDe(s.userId, s.parceiro)} saldos={saldos.get(`${s.userId}|${s.marca}`)} aoAbrir={abrirFoco} />)}
+            {lista.slice(0, limite).map((s) => <Cartao key={s.sessaoId} s={s} cliente={clientes.get(s.userId)} saude={saudes.get(s.sessaoId) ?? 'desatualizado'} visao={visao} mostrarMarca={naRede} selo={seloDe(s.userId, s.parceiro)} saldos={saldos.get(`${s.userId}|${s.marca}`) ?? saldos.get(`${s.userId}|*`)} aoAbrir={abrirFoco} />)}
             {!lista.length && <div className="mon-estado">{sessoes.size ? <><b>Nenhuma sessão passa pelos filtros.</b>Ajuste o período ou os filtros acima.</> : <><b>Nenhum robô operando nesta marca agora.</b>Quando um cliente ligar um robô, a cabine aparece aqui sozinha.</>}</div>}
           </div>
           {lista.length > limite && <button className="mon-mais" onClick={() => setLimite((l) => l + 60)}>Mostrar mais {Math.min(60, lista.length - limite)} de {lista.length - limite} restantes</button>}
@@ -891,7 +892,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
       {tela === 'pronto' && aba === 'ao-vivo' && emFoco && focoAutorizado === 'pendente' && <div className="mon-estado" role="status"><b>Registrando o acesso…</b></div>}
       {tela === 'pronto' && aba === 'ao-vivo' && emFoco && focoAutorizado === 'nao' && <div className="mon-estado erro" role="alert"><b>Cabine não aberta</b>Não foi possível registrar a auditoria deste acesso. Sem registro, a cabine não é exibida.<button onClick={() => setFoco(null)}>Voltar ao mosaico</button></div>}
       {tela === 'pronto' && aba === 'ao-vivo' && emFoco && focoAutorizado === 'sim' && (
-        <CabineEspelho s={emFoco} estado={emFoco.estado} cliente={clientes.get(emFoco.userId)} selo={seloDe(emFoco.userId, emFoco.parceiro)} saldos={saldos.get(`${emFoco.userId}|${emFoco.marca}`)} modo="ao-vivo"
+        <CabineEspelho s={emFoco} estado={emFoco.estado} cliente={clientes.get(emFoco.userId)} selo={seloDe(emFoco.userId, emFoco.parceiro)} saldos={saldos.get(`${emFoco.userId}|${emFoco.marca}`) ?? saldos.get(`${emFoco.userId}|*`)} modo="ao-vivo"
           saude={saudeDoSinal(emFoco, agora)} idade={idadeDaAtualizacao(emFoco, agora)} rtt={rttMs} desvio={desvioS} eventos={eventos.get(emFoco.sessaoId) ?? []} aoFechar={fecharFoco} mostrarMarkup={mostrarMarkup} />
       )}
 
