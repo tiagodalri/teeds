@@ -12,7 +12,7 @@ import { ATIVO_DOS_ROBOS } from '../core/deriv/config'
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
 import { IDENTIDADES, nomeDaEstrategia } from '../core/deriv/branding'
 import {
-  analiseOperacoes, enviarComissoes, enviarMarkupOficial, listarComissoes, vendoARede,
+  analiseOperacoes, enviarComissoes, enviarMarkupOficial, listarComissoes, marcaAdmin, vendoARede,
   type AnaliseOperacoes, type ComissaoDia,
 } from '../core/teeds/clientes'
 import type { SessaoTeeds } from '../core/teeds/conta'
@@ -22,6 +22,8 @@ import { MARCA } from '../marca'
 import { nomeDoAtivo } from '../core/deriv/market'
 import { MARCAS } from '../marca/marcas'
 import { NomeDoRobo } from './NomeDoRobo'
+import { haQuantoTempo, useMarkupInterno, RELEITURA_MARKUP_MS } from '../core/teeds/markupInterno'
+import { useParceiroEmFoco } from '../core/teeds/parceiroEmFoco'
 
 interface Props {
   session: AuthSession | null
@@ -258,52 +260,19 @@ export function ManagementPanel({
   }, [socket, pulso, lerHoje])
 
   /**
-   * Comissao do negocio: SO CONTAS REAIS, de todos os clientes da marca.
-   *
-   * Vem de `comissoes_diarias`, que o servidor recalcula a cada 5 minutos a
-   * partir da tabela de lucros da Deriv. Demo nao entra: dinheiro ficticio
-   * nao gera markup — e um robo de martingale na demo faria o numero parecer
-   * uma fortuna. A conta escolhida, se for real, entra pela leitura ao vivo
-   * (mais fresca que a do servidor).
+   * Comissão do negócio (10/11/2026): a contagem interna única, a mesma da Visão geral. Cada contrato
+   * que a plataforma registra (I.A. e manual), só contas reais, 3% do pagamento, dia de Brasília, equipe
+   * fora e o parceiro do topo. Relida a cada 15 s com a tela à vista — sem a espera do servidor.
    */
-  const [reais, setReais] = useState<ComissaoDia[] | null>(null)
-  useEffect(() => {
-    if (!sessaoTeeds) { setReais(null); return }
-    let vivo = true
-    const ler = () => listarComissoes(sessaoTeeds, diasAteHoje)
-      .then((l) => { if (vivo) setReais(l.filter((x) => !x.demo)) })
-      .catch(() => { /* sem banco agora: fica o que ja tinha */ })
-    void ler()
-    const id = setInterval(() => { void ler() }, 60_000)
-    return () => { vivo = false; clearInterval(id) }
-  }, [sessaoTeeds, diasAteHoje])
-
+  const [parceiroFoco] = useParceiroEmFoco()
+  const interno = useMarkupInterno(sessaoTeeds, marcaAdmin(), intervalo.de, intervalo.ate, parceiroFoco)
+  const [agoraMs, setAgoraMs] = useState(Date.now())
+  useEffect(() => { const t = window.setInterval(() => setAgoraMs(Date.now()), 5000); return () => window.clearInterval(t) }, [])
   const hojeIso = diasDoPeriodo(1)[0]
   const noPeriodo = useCallback(
     (dia: string) => dia >= intervalo.de && dia <= intervalo.ate,
     [intervalo.de, intervalo.ate],
   )
-  const negocio = useMemo(() => {
-    if (!reais) return null
-    // a mesma conta Deriv pode estar em dois cadastros: uma linha por conta e dia
-    const porChave = new Map<string, ComissaoDia>()
-    for (const r of reais) {
-      if (!noPeriodo(r.dia)) continue
-      const k = `${r.contaId}:${r.dia}`
-      const j = porChave.get(k)
-      if (!j || Date.parse(r.atualizadoEm ?? '') > Date.parse(j.atualizadoEm ?? '')) porChave.set(k, r)
-    }
-    let comissao = 0, operacoes = 0, pagamentos = 0, movimentado = 0
-    const aoVivoAqui = !!hoje && !isDemo && !!contaId && noPeriodo(hojeIso)
-    for (const r of porChave.values()) {
-      if (aoVivoAqui && r.contaId === contaId && r.dia === hojeIso) continue
-      comissao += r.comissao; operacoes += r.operacoes; pagamentos += r.pagamentos; movimentado += r.entradas
-    }
-    if (aoVivoAqui && hoje) {
-      comissao += hoje.comissao; operacoes += hoje.operacoes; pagamentos += hoje.pagamentos; movimentado += hoje.entradas
-    }
-    return { comissao, operacoes, pagamentos, movimentado, aoVivoAqui }
-  }, [reais, hoje, isDemo, contaId, hojeIso, noPeriodo])
 
   /**
    * Analise das operacoes dos robos, com os filtros finos. O banco filtra e
@@ -318,14 +287,14 @@ export function ManagementPanel({
       setAnaliseCarregando(true)
       const r = await analiseOperacoes(sessaoTeeds, {
         de: inicioDoDia(intervalo.de), ate: inicioDoDia(diaSeguinte(intervalo.ate)),
-        horaDe, horaAte, robo: roboFiltro || null, demo: demoFiltro,
+        horaDe, horaAte, robo: roboFiltro || null, demo: demoFiltro, semEquipe: true, parceiro: parceiroFoco,
       })
       if (vivo) { setAnalise(r); setAnaliseCarregando(false) }
     }
     const primeira = setTimeout(() => { void ler() }, 250)
     const id = setInterval(() => { void ler() }, 60_000)
     return () => { vivo = false; clearTimeout(primeira); clearInterval(id) }
-  }, [sessaoTeeds, intervalo.de, intervalo.ate, horaDe, horaAte, roboFiltro, demoFiltro])
+  }, [sessaoTeeds, intervalo.de, intervalo.ate, horaDe, horaAte, roboFiltro, demoFiltro, parceiroFoco])
 
   const rotuloFiltro = [
     dias === 1 ? dataCurta(intervalo.de) : `${dataCurta(intervalo.de)} a ${dataCurta(intervalo.ate)}`,
@@ -366,8 +335,10 @@ export function ManagementPanel({
     }
   }, [sim, hoje, hojeIso, noPeriodo, dias])
   // sem sessao Teeds nao ha banco: cai no numero desta conta, se ela for real
-  const topo = negocio
-    ? { comissao: negocio.comissao, operacoes: negocio.operacoes, pronto: true }
+  const topo = interno.dados
+    ? { comissao: interno.dados.markup, operacoes: interno.dados.operacoes, pronto: true }
+    : sessaoTeeds
+      ? { comissao: 0, operacoes: 0, pronto: false }
     : isDemo
       ? { comissao: 0, operacoes: 0, pronto: true }
       : { comissao: vivo.comissao, operacoes: vivo.operacoes, pronto: vivo.pronto }
@@ -549,9 +520,10 @@ export function ManagementPanel({
           <span className="rot"><i className="ponto-vivo" aria-hidden />Sua comissão · calculada ao vivo</span>
           <strong>{topo.pronto ? dinheiro(topo.comissao, 'USD') : '…'}</strong>
           <span className="kpi-nota">
-            3% do pagamento · só contas reais · {topo.operacoes.toLocaleString('pt-BR')} operações · {dataCurta(intervalo.de)} a {dataCurta(intervalo.ate)}
-            {negocio
-              ? (negocio.aoVivoAqui ? ' · sobe a cada contrato desta conta' : ' · o servidor recalcula a cada 5 min')
+            3% do pagamento · só contas reais · {topo.operacoes.toLocaleString('pt-BR')} operações · {dataCurta(intervalo.de)} a {dataCurta(intervalo.ate)} (horário de Brasília)
+            {interno.dados
+              ? ` · I.A. e manual, sem a equipe · última operação ${interno.dados.ultimaEm ? haQuantoTempo(Date.parse(interno.dados.ultimaEm), agoraMs) : '—'} · relê a cada ${RELEITURA_MARKUP_MS / 1000} s`
+              : interno.erro ? ` · ${interno.erro}`
               : isDemo
                 ? ' · você está na demo, que não gera comissão'
                 : vivo.parcial ? ' · dias anteriores ainda somando' : ''}
@@ -597,7 +569,8 @@ export function ManagementPanel({
           {isDemo && <span className="ger-tag">conta demo · simulação</span>}
         </div>
         <p className="ger-texto">
-          Calculado operação por operação, com a regra real da Deriv: <b>3% do pagamento</b> de
+          Só a conta da corretora conectada agora nesta tela, não a soma da casa (essa é a do topo).
+          {' '}Calculado operação por operação, com a regra real da Deriv: <b>3% do pagamento</b> de
           cada contrato comprado pela {MARCA.prosa}. {isDemo && 'Como a conta é demo, o dinheiro é fictício — mas o cálculo é o mesmo que valeria numa conta real.'}
           {' '}O período é o mesmo que você escolheu aí em cima.
         </p>

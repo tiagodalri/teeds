@@ -707,6 +707,9 @@ export interface FiltroAnalise {
   robo?: string | null
   /** true = só demo, false = só real, null = as duas. */
   demo?: boolean | null
+  /** A régua do markup interno (10/11/2026): parceiro do topo ('' = todos, 'direto') e equipe fora. */
+  parceiro?: string | null
+  semEquipe?: boolean
   conta?: string | null
 }
 
@@ -737,6 +740,7 @@ export async function analiseOperacoes(sessao: SessaoTeeds, f: FiltroAnalise): P
         p_hora_de: f.horaDe ?? 0, p_hora_ate: f.horaAte ?? 23,
         p_fuso: f.fuso ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'America/Sao_Paulo',
         p_robo: f.robo ?? null, p_demo: f.demo === undefined ? false : f.demo, p_conta: f.conta ?? null,
+        ...(f.semEquipe ? { p_sem_equipe: true, p_parceiro: f.parceiro || null } : {}),
       }),
     })
     if (!r || !r.total) return null

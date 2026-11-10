@@ -10,20 +10,23 @@
  *  2. Dinheiro: a banca de todos os clientes em conta real (com as faixas), o markup (hoje, 7 e 30 dias, o
  *     ritmo do mês e os 30 dias em barras) e o que aconteceu hoje em conta real.
  *  3. Movimento: depósitos contra saques, o funil da base e as maiores bancas.
- * Uma leitura só no banco (teeds_painel_visao_geral, 38 ms), no escopo de cada admin, a cada 30 s.
+ * Uma leitura só no banco (teeds_painel_visao_geral, 38 ms), no escopo de cada admin, a cada 15 s.
+ * O markup sai da contagem interna única (teeds_markup_dias, 10/11/2026), a mesma da aba Comissões:
+ * cada contrato registrado, só conta real, dia de Brasília, equipe fora, parceiro do topo.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { SUPABASE } from '../../core/teeds/config'
 import { dinheiro } from '../../core/dinheiro'
 import { MARCA } from '../../marca'
+import { haQuantoTempo } from '../../core/teeds/markupInterno'
 import './visao-geral.css'
 
 interface Painel {
   agora: { na_plataforma: number; operando_real: number; operando_demo: number; banca_operando_real: number; ias_real: number; ias_demo: number; manuais_real: number }
   banca: { total: number; clientes_com_saldo: number; contas_reais: number; maior: number; faixas: Array<{ rotulo: string; clientes: number; soma: number }>
     top: Array<{ user_id: string; nome: string | null; foto_url: string | null; parceiro: string | null; saldo: number; operando: boolean; online: boolean }> }
-  markup: { hoje: number; d7: number; d30: number; mes: number; serie: Array<{ dia: string; markup: number; operacoes: number }> }
+  markup: { hoje: number; d7: number; d30: number; mes: number; ultima_em?: string | null; serie: Array<{ dia: string; markup: number; operacoes: number }> }
   hoje: { operacoes: number; volume: number; resultado: number; operaram: number }
   funil: { cadastrados: number; ativos: number; conectaram: number; conta_real: number; com_saldo: number; operaram_real: number; ativos_24h: number }
   dinheiro: { depositos_7d: number; saques_7d: number; depositos_30d: number; saques_30d: number; depositantes_30d: number }
@@ -51,6 +54,8 @@ const int = (n: number) => (Number(n) || 0).toLocaleString('pt-BR')
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0)
 const pessoas = (n: number) => `${int(n)} ${n === 1 ? 'pessoa' : 'pessoas'}`
 const iniciais = (nome: string | null) => (nome ?? '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0] ?? '').join('').toUpperCase() || '?'
+/** AAAA-MM-DD → dd/mm. */
+const diaMes = (dia?: string) => (dia ? `${dia.slice(8, 10)}/${dia.slice(5, 7)}` : '—')
 const PARCEIRO: Record<string, string> = { n: 'Naor', v: 'Victor', d: 'Douglas' }
 
 /** O número que sobe até o valor quando muda (a 1ª leitura e cada atualização). */
@@ -102,7 +107,7 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr }: {
       void lerPainel(sessaoRef.current, marca, parceiro)
         .then((d) => { if (vivo) { setP(d); setErro(null); setLidoEm(Date.now()) } })
         .catch((e) => { if (vivo) setErro((e as Error).message) })
-        .finally(() => { if (vivo) t = window.setTimeout(ler, document.visibilityState === 'hidden' ? 120_000 : 30_000) })
+        .finally(() => { if (vivo) t = window.setTimeout(ler, document.visibilityState === 'hidden' ? 120_000 : 15_000) })
     }
     ler()
     return () => { vivo = false; window.clearTimeout(t) }
@@ -124,6 +129,7 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr }: {
   }
 
   const a = p.agora
+  const mesAtual = new Date().toLocaleDateString('pt-BR', { month: 'long' }).replace(/^./, (c) => c.toUpperCase())
   const emOperacaoPct = pct(Number(a.banca_operando_real), Number(p.banca.total))
   const serie = p.markup.serie
   const maxSerie = Math.max(...serie.map((d) => Number(d.markup)), 0.0001)
@@ -192,7 +198,7 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr }: {
         <button type="button" className="vg-card vg-markup" onClick={() => aoIr('comissoes')}>
           <span className="vg-rot">Markup em conta real</span>
           <strong className="vg-grande ouro"><Contador valor={Number(p.markup.hoje)} formato={usd} /></strong>
-          <small>hoje · <b>{usd(p.markup.d7)}</b> em 7 dias · <b>{usd(p.markup.d30)}</b> em 30 dias</small>
+          <small>hoje ({diaMes(serie[serie.length - 1]?.dia)}) · <b>{usd(p.markup.d7)}</b> em 7 dias · <b>{usd(p.markup.d30)}</b> em 30 dias ({diaMes(serie[0]?.dia)} a {diaMes(serie[serie.length - 1]?.dia)})</small>
           <div className="vg-barras" onMouseLeave={() => setDiaFoco(null)} role="img" aria-label="Markup de cada dia, últimos 30 dias">
             {serie.map((d, i) => (
               <span key={d.dia} className={i === serie.length - 1 ? 'hoje' : ''} onMouseEnter={() => setDiaFoco(i)}
@@ -201,7 +207,8 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr }: {
           </div>
           <small className="vg-barras-leg">{focoDia
             ? <>{new Date(`${focoDia.dia}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}: <b>{usd(focoDia.markup)}</b> · {int(focoDia.operacoes)} operações</>
-            : <>Ritmo do mês: <b>{ritmo != null ? usd(ritmo) : '—'}</b> · {usd(p.markup.mes)} até hoje</>}</small>
+            : <>{mesAtual} até hoje: <b>{usd(p.markup.mes)}</b> · ritmo do mês <b>{ritmo != null ? usd(ritmo) : '—'}</b></>}</small>
+          <small className="vg-barras-leg">Horário de Brasília · I.A. e manual · última operação {p.markup.ultima_em ? haQuantoTempo(Date.parse(p.markup.ultima_em), agora) : '—'}</small>
         </button>
 
         <div className="vg-card vg-hoje">
