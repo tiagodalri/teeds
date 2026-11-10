@@ -32,6 +32,18 @@ const usd = (v: number) => `${v < 0 ? '−' : ''}US$ ${Math.abs(v).toLocaleStrin
 const hora = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 const SITUACAO: Record<string, string> = { aberta: 'Aberta', ganhou: 'Ganhou', perdeu: 'Perdeu', vendida: 'Encerrada antes', encerrada: 'Encerrada' }
 
+/*
+  Aberta DE VERDADE (10/11/2026). Quem grava o fim da operação é o navegador do cliente: se ele fecha o
+  app antes do vencimento, a linha fica "aberta" para sempre. Antes isso contava como operando agora
+  (o Monitoramento chegou a dizer 29 abertas quando havia 2) e enterrava a única operação real no meio
+  de dezenas de demo "Aberta · 00:00". A regra é a mesma do card da Visão geral
+  (teeds_painel_visao_geral): aberta e com o vencimento ainda no futuro; sem vencimento, 1 h da compra.
+*/
+const vencimento = (o: OpManual) => (o.expiraEm ? Date.parse(o.expiraEm) : Date.parse(o.compradaEm) + 3600_000)
+const estaAberta = (o: OpManual, agora: number) => o.situacao === 'aberta' && vencimento(o) > agora
+/** Venceu e o resultado ainda não chegou: até 1 min é a apuração normal; depois, o aparelho não mandou. */
+const semRetorno = (o: OpManual, agora: number) => o.situacao === 'aberta' && vencimento(o) <= agora
+
 export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarMarkup, clientes, garantirClientes, aoContar, doFoco, selo }: {
   sessao: SessaoTeeds
   marcas: string[]
@@ -41,8 +53,8 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
   mostrarMarkup: boolean
   clientes: Map<string, ClienteRegistro>
   garantirClientes: (ids: string[]) => void | Promise<void>
-  /** Para os números do topo: quantas abertas agora e quantos clientes operando no manual. */
-  aoContar?: (abertas: number, clientesOperando: string[]) => void
+  /** Para os números do topo: quantas abertas agora, quantos clientes operando no manual e, deles, quem em conta real. */
+  aoContar?: (abertas: number, clientesOperando: string[], clientesEmReal: string[]) => void
   /** A operação entra na visualização? (a vitrine em foco: /n, /v, Direto) */
   doFoco?: (userId: string, parceiro: string | null) => boolean
   /** O selo da vitrine da operação, quando a marca tem parceiros. */
@@ -92,12 +104,19 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
       const c = clientes.get(o.userId)
       return [c?.nome, c?.email, o.ativo, nomeDoAtivo(o.ativo)].some((x) => (x ?? '').toLowerCase().includes(termo))
     })
-    .sort((a, b) => Number(b.situacao === 'aberta') - Number(a.situacao === 'aberta') || Date.parse(b.compradaEm) - Date.parse(a.compradaEm)),
-  [ops, conta, termo, clientes, doFoco])
+    // Abertas de verdade primeiro e, entre elas, as de conta real.
+    .sort((a, b) => Number(estaAberta(b, agora)) - Number(estaAberta(a, agora)) || Number(!b.demo && estaAberta(b, agora)) - Number(!a.demo && estaAberta(a, agora))
+      || Date.parse(b.compradaEm) - Date.parse(a.compradaEm)),
+  // `agora` anda de 1 em 1 s; o vencimento só muda a ordem na virada do segundo, então reordenar junto basta.
+  [ops, conta, termo, clientes, doFoco, agora])
 
-  const abertas = lista.filter((o) => o.situacao === 'aberta')
-  useEffect(() => { aoContar?.(abertas.length, [...new Set(abertas.map((o) => o.userId))]) }, [abertas.length, aoContar]) // eslint-disable-line react-hooks/exhaustive-deps
+  const abertas = lista.filter((o) => estaAberta(o, agora))
+  const chaveAbertas = abertas.map((o) => `${chave(o)}:${o.demo ? 'd' : 'r'}`).join(',')
+  useEffect(() => {
+    aoContar?.(abertas.length, [...new Set(abertas.map((o) => o.userId))], [...new Set(abertas.filter((o) => !o.demo).map((o) => o.userId))])
+  }, [chaveAbertas, aoContar]) // eslint-disable-line react-hooks/exhaustive-deps
   const reais = lista.filter((o) => !o.demo && o.situacao !== 'aberta')
+  const semRetornoN = lista.filter((o) => semRetorno(o, agora) && agora - vencimento(o) > 60_000).length
   const resultadoReal = reais.reduce((t, o) => t + o.resultado, 0)
   const markupReal = lista.filter((o) => !o.demo).reduce((t, o) => t + o.markup, 0)
 
@@ -106,7 +125,7 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
       <header className="mm-cab">
         <div>
           <h3><span className="mon-tag manual">Manual</span> Operações manuais</h3>
-          <p>{abertas.length === 0 ? 'Nenhuma aberta agora' : `${abertas.length} ${abertas.length === 1 ? 'aberta agora' : 'abertas agora'}`} · {lista.length} {lista.length === 1 ? 'operação' : 'operações'} no período</p>
+          <p>{abertas.length === 0 ? 'Nenhuma aberta agora' : `${abertas.length} ${abertas.length === 1 ? 'aberta agora' : 'abertas agora'}`}{abertas.length > 0 && ` (${abertas.filter((o) => !o.demo).length} em conta real)`} · {lista.length} {lista.length === 1 ? 'operação' : 'operações'} no período{semRetornoN > 0 && ` · ${semRetornoN} sem resultado gravado`}</p>
         </div>
         <dl className="mm-somas">
           <div><dt>Resultado em conta real</dt><dd className={resultadoReal > 0 ? 'mm-ganho' : resultadoReal < 0 ? 'mm-perda' : ''}>{usd(resultadoReal)}</dd></div>
@@ -118,16 +137,21 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
           <thead><tr><th>Hora</th><th>Cliente</th><th>Ativo</th><th>Contrato</th><th>Conta</th><th className="dir">Entrada</th><th>Situação</th><th className="dir">Resultado</th>{mostrarMarkup && <th className="dir">Markup</th>}</tr></thead>
           <tbody>{lista.slice(0, 120).map((o) => {
             const c = clientes.get(o.userId)
-            const falta = o.situacao === 'aberta' && o.expiraEm ? Math.max(0, Math.round((Date.parse(o.expiraEm) - agora) / 1000)) : null
+            const aberta = estaAberta(o, agora)
+            const falta = aberta && o.expiraEm ? Math.max(0, Math.round((Date.parse(o.expiraEm) - agora) / 1000)) : null
+            const vencida = semRetorno(o, agora)
+            const apurando = vencida && agora - vencimento(o) <= 60_000
             return (
-              <tr key={chave(o)} className={o.situacao === 'aberta' ? 'mm-aberta' : ''}>
+              <tr key={chave(o)} className={aberta ? `mm-aberta${o.demo ? '' : ' mm-real'}` : ''}>
                 <td className="num">{hora(o.compradaEm)}</td>
                 <td className="mm-cliente"><b>{c?.nome || c?.email || 'Cliente'}{(() => { const x = selo?.(o.userId, o.parceiro); return x ? <em className={`mon-selo parceiro ${x.codigo}`}>{x.texto}</em> : null })()}</b>{c?.nome && c?.email && <small>{c.email}</small>}</td>
                 <td>{nomeDoAtivo(o.ativo)}</td>
                 <td>{NOMES_DE_CONTRATO[o.tipo] ?? o.tipo}</td>
                 <td><span className={`mon-conta ${o.demo ? 'demo' : 'real'}`}>{o.demo ? 'Demo' : 'Real'}</span></td>
                 <td className="num dir">{usd(o.entrada)}</td>
-                <td><span className={`mon-sit ${o.situacao}`}>{o.situacao === 'aberta' && <i aria-hidden="true" />}{SITUACAO[o.situacao] ?? o.situacao}{falta !== null && ` · ${String(Math.floor(falta / 60)).padStart(2, '0')}:${String(falta % 60).padStart(2, '0')}`}</span></td>
+                <td>{vencida
+                  ? <span className={`mon-sit ${apurando ? 'apurando' : 'sem-resultado'}`} title={apurando ? 'Venceu agora; o resultado está chegando' : 'Venceu e o aparelho do cliente não mandou o resultado (o app foi fechado antes do fim). Não conta como aberta.'}>{apurando ? 'Apurando…' : 'Sem resultado'}</span>
+                  : <span className={`mon-sit ${o.situacao}`}>{aberta && <i aria-hidden="true" />}{SITUACAO[o.situacao] ?? o.situacao}{falta !== null && ` · ${String(Math.floor(falta / 60)).padStart(2, '0')}:${String(falta % 60).padStart(2, '0')}`}</span>}</td>
                 <td className={`num dir ${o.situacao === 'aberta' ? '' : o.resultado > 0 ? 'mm-ganho' : o.resultado < 0 ? 'mm-perda' : ''}`}>{o.situacao === 'aberta' ? '—' : `${o.resultado > 0 ? '+' : ''}${usd(o.resultado)}`}</td>
                 {mostrarMarkup && <td className="num dir mm-ouro">{usd(o.markup)}{o.demo && <small>Estimado</small>}</td>}
               </tr>

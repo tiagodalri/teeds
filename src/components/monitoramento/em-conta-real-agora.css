@@ -1,0 +1,27 @@
+/* "Em conta real agora" no topo do Monitoramento (prefixo mra-). */
+.mra {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface);
+}
+.mra.com-real { border-color: color-mix(in srgb, var(--up) 45%, var(--border)); background: color-mix(in srgb, var(--up) 8%, var(--surface)); }
+.mra-ponto { width: 9px; height: 9px; flex: none; border-radius: 50%; background: var(--muted); }
+.mra.com-real .mra-ponto { background: var(--up); box-shadow: 0 0 0 0 color-mix(in srgb, var(--up) 60%, transparent); animation: mra-pulso 1.8s ease-out infinite; }
+@keyframes mra-pulso { to { box-shadow: 0 0 0 9px transparent; } }
+@media (prefers-reduced-motion: reduce) { .mra.com-real .mra-ponto { animation: none; } }
+.mra p { display: grid; gap: 2px; flex: 1 1 260px; min-width: 0; margin: 0; font-size: 14px; }
+.mra p b { font-weight: 700; }
+.mra.com-real p b { color: var(--up); }
+.mra p em { font-style: normal; font-weight: 700; color: var(--primary); }
+.mra p small { font-size: 12px; color: var(--muted); }
+.mra button {
+  min-height: 36px; padding: 0 14px; border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); background: var(--bg); font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; white-space: nowrap;
+}
+.mra button.mra-ver { border-color: transparent; color: var(--bg); background: var(--up); }
+.mra button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+@media (max-width: 560px) { .mra button { width: 100%; } }
+
+/* Operações manuais (OperacoesManuais.tsx): vencida sem resultado não é aberta; a aberta em real se destaca. */
+.mon-sit.sem-resultado, .mon-sit.apurando { color: var(--muted); font-weight: 600; cursor: help; }
+.mon-manuais tr.mm-aberta.mm-real td { background: color-mix(in srgb, var(--up) 10%, transparent); }
+.mon-manuais tr.mm-aberta.mm-real td:first-child { box-shadow: inset 3px 0 0 var(--up); }

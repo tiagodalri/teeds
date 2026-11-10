@@ -26,6 +26,7 @@ const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MA
 import { RobotLive } from './RobotLive'
 import { IconeFechar } from './IconeFechar'
 import { OperacoesManuais } from './monitoramento/OperacoesManuais'
+import { EmContaRealAgora } from './monitoramento/EmContaRealAgora'
 import { QuemEstaOnline, lerQuemEstaOnline, type Operando } from './monitoramento/QuemEstaOnline'
 import { NomeDoRobo } from './NomeDoRobo'
 import { FiltroDePeriodo, TotaisDasEncerradas, TEMPO_PADRAO, noPeriodo, rotuloDoPeriodo, comoTerminou, ROTULO_DO_FIM, type FiltroDeTempo } from './monitoramento/PeriodoDasEncerradas'
@@ -693,8 +694,17 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   const online = [...sessoes.values()].filter((s) => s.situacao === 'rodando' && s.estado.rodando !== false
     && (!filtrandoParceiro || noFoco(parceiroFoco, vitrineDoRegistro(s.parceiro, s.userId))))
   // quem está operando agora: nos robôs e no manual (as manuais abertas vêm do bloco de operações manuais)
-  const [manuaisAbertas, setManuaisAbertas] = useState<{ n: number; clientes: string[] }>({ n: 0, clientes: [] })
-  const contarManuais = useCallback((n: number, ids: string[]) => setManuaisAbertas({ n, clientes: ids }), [])
+  const [manuaisAbertas, setManuaisAbertas] = useState<{ n: number; clientes: string[]; emReal: string[] }>({ n: 0, clientes: [], emReal: [] })
+  const contarManuais = useCallback((n: number, ids: string[], emReal: string[]) => setManuaisAbertas({ n, clientes: ids, emReal }), [])
+  /* Em conta real agora (10/11/2026): o que o Monitoramento vê ao vivo, para a faixa do topo reler o banco
+     na hora em que algo muda em real e para quando a leitura do banco não é permitida. */
+  const iasEmReal = online.filter((s) => !s.demo)
+  const sinalReal = `${iasEmReal.map((s) => s.sessaoId).sort().join(',')}|${[...manuaisAbertas.emReal].sort().join(',')}`
+  const localReal = { pessoas: new Set([...iasEmReal.map((s) => s.userId), ...manuaisAbertas.emReal]).size, ias: iasEmReal.length, manuais: manuaisAbertas.emReal.length }
+  const verQuemEmReal = () => {
+    setFiltroConta('real'); setFiltroOnline('online')
+    window.setTimeout(() => document.querySelector(manuaisAbertas.emReal.length && !iasEmReal.length ? '.mon-manuais' : '.mon-filtros')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
   const clientesOnline = new Set([...online.map((s) => s.userId), ...manuaisAbertas.clientes]).size
   // 10/11/2026: o cartão "Clientes online" abre a lista de quem está na plataforma e de quem está operando
   const [verOnline, setVerOnline] = useState(false)
@@ -760,6 +770,8 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
 
       {tela === 'pronto' && aba === 'ao-vivo' && !emFoco && (
         <>
+          <EmContaRealAgora sessao={sessao} marcas={marcas} parceiro={parceiroDoPainel} sinal={sinalReal} local={localReal}
+            soReal={filtroConta === 'real'} onVerQuem={verQuemEmReal} onVerTodas={() => setFiltroConta('todas')} />
           <div className="adm-kpis mon-kpis">
             <article className="ok mon-kpi-clicavel" role="button" tabIndex={0} aria-haspopup="dialog" title="Ver quem está online"
               onClick={() => setVerOnline(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVerOnline(true) } }}>
