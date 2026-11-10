@@ -65,6 +65,8 @@ const SELOS: Array<{ id: Selo; nome: string }> = [
   { id: 'gf', nome: 'GlobalFly' }, { id: 'aovivo', nome: 'Ao vivo' }, { id: 'novidade', nome: 'Novidade' }, { id: 'ia', nome: 'I.A. no ar' },
   { id: 'gold', nome: 'Gold' }, { id: 'black', nome: 'Black' }, { id: 'prestige', nome: 'Prestige' },
 ]
+/** Quantos da galeria de uma vez. */
+const MAX_DE_UMA_VEZ = 10
 const SUBPLANOS = [{ id: 'gold', nome: 'Gold' }, { id: 'black', nome: 'Black' }, { id: 'prestige', nome: 'Prestige' }]
 
 const toque = () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
@@ -154,6 +156,33 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
     setEtapa('editar')
     setTrabalhoId(iniciarMidia(sessao, f, nome))
   }
+  /*
+   * Vários da galeria de uma vez (10/11/2026, lista do Victor: "publicação de vários stories em sequência"):
+   * um de cada vez no editor, na ordem escolhida; Publicar sobe o atual e já abre o próximo, com a mesma
+   * bolinha e o mesmo público. "Publicar todos" manda o atual e os que faltam sem editar.
+   * A ordem fica garantida pela hora de entrada (inicia_em), não pela ordem em que os envios terminam.
+   */
+  const [fila, setFila] = useState<File[]>([])
+  const [sequencia, setSequencia] = useState<{ atual: number; total: number } | null>(null)
+  const avisouNaSequencia = useRef(false)
+  function receberVarios(fs: File[]) {
+    const l = fs.slice(0, MAX_DE_UMA_VEZ)
+    if (fs.length > MAX_DE_UMA_VEZ) avisarRapido(`Até ${MAX_DE_UMA_VEZ} de uma vez: peguei os ${MAX_DE_UMA_VEZ} primeiros.`)
+    if (l.length > 1) { setFila(l.slice(1)); setSequencia({ atual: 1, total: l.length }); avisouNaSequencia.current = false }
+    receber(l[0], l[0].name)
+  }
+  function proximoDaFila() {
+    const [f, ...resto] = fila
+    // o anterior já foi para a publicação: não pode ser descartado ao receber o próximo
+    trabalhoRef.current = null; setTrabalhoId(null)
+    setFila(resto)
+    const atual = (sequencia?.atual ?? 1) + 1
+    setSequencia((sq) => (sq ? { ...sq, atual } : sq))
+    setPublicando(false)
+    receber(f, f.name)
+    avisarRapido(`Publicado. Agora o ${atual}º de ${sequencia?.total ?? atual}.`)
+  }
+
   function modoTexto() {
     if (trabalhoRef.current) descartar(trabalhoRef.current)
     setTrabalhoId(null)
@@ -196,7 +225,7 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
   }
   const rotuloPara = paraQuem === 'admins' ? 'Só admins' : meuParceiro ? 'Meus clientes' : subplanos.length || parcs.length ? 'Público escolhido' : 'Todos'
 
-  async function publicar() {
+  async function publicar(todos = false) {
     if (publicando || !midia) return
     if (subindoFotos.current.size) { setPublicando(true); await Promise.all(subindoFotos.current.values()); setPublicando(false) }
     if (!perfilId) { avisarRapido('Escolha a bolinha do story.'); return }
@@ -205,15 +234,28 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
     if (!id) return
     setPublicando(true)
     const parceiro = publico.parceiros?.length === 1 && publico.parceiros[0] !== 'direto' ? publico.parceiros[0] : null
+    // na sequência, a hora de entrada segue a ordem escolhida (um segundo entre cada um, nos agendados)
+    const entrada = (k: number) => quando === 'agendar' ? new Date(Date.parse(new Date(inicio).toISOString()) + (sequencia ? (sequencia.atual - 1 + k) * 1000 : 0)).toISOString()
+      : sequencia ? new Date(Date.now() + k * 1000).toISOString() : null
+    const base = {
+      perfil_id: perfilId, chip: '', titulo: '', subtitulo: '', botao_tipo: '' as const, botao_texto: '', botao_destino: '', publico,
+      expira_em: null, destaque: fixo, compartilhar, responder,
+    }
+    const quem = perfil ? { nome: perfil.nome, foto: perfil.foto_url } : null
+    // o aviso no celular sai uma vez só por sequência
+    const aviso = avisar && pleno && quando === 'agora' && paraQuem === 'todos' && !avisouNaSequencia.current
+      ? { titulo: `${perfil?.nome ?? MARCA.prosa} postou ${sequencia ? 'stories' : 'um story'}`, corpo: rotuloDasCamadas(camadas) ?? 'Toque para ver na Início.', parceiro } : null
+    if (aviso && sequencia) avisouNaSequencia.current = true
     publicarTrabalho(id, {
-      perfil_id: perfilId, enquadramento: { ...enq, ...(semSom ? { mudo: true } : {}) }, camadas: camadasParaSalvar(camadasRef.current),
-      chip: '', titulo: '', subtitulo: '', botao_tipo: '', botao_texto: '', botao_destino: '', publico,
-      inicia_em: quando === 'agendar' ? new Date(inicio).toISOString() : null, expira_em: null, destaque: fixo, compartilhar, responder,
-    }, perfil ? { nome: perfil.nome, foto: perfil.foto_url } : null,
-    avisar && pleno && quando === 'agora' && paraQuem === 'todos'
-      ? { titulo: `${perfil?.nome ?? MARCA.prosa} postou um story`, corpo: rotuloDasCamadas(camadas) ?? 'Toque para ver na Início.', parceiro } : null)
-    publicado.current = true
+      ...base, enquadramento: { ...enq, ...(semSom ? { mudo: true } : {}) }, camadas: camadasParaSalvar(camadasRef.current), inicia_em: entrada(0),
+    }, quem, aviso)
     aoPublicado?.(id)
+    if (fila.length && !todos) { proximoDaFila(); return }
+    if (todos) fila.forEach((f, k) => {
+      const outro = iniciarMidia(sessao, f, f.name)
+      publicarTrabalho(outro, { ...base, enquadramento: { zoom: 1, x: 50, y: 50 }, camadas: [], inicia_em: entrada(k + 1) }, quem, null)
+    })
+    publicado.current = true
     aoFechar()
   }
 
@@ -275,7 +317,7 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
 
   const conteudo = (
     <div className={`est ${etapa}`} role="dialog" aria-modal="true" aria-label="Criar story">
-      {etapa === 'camera' && <Camera aoCapturar={(b, n) => receber(b, n)} aoTexto={modoTexto} aoFechar={aoFechar} />}
+      {etapa === 'camera' && <Camera aoCapturar={(b, n) => receber(b, n)} aoVarios={receberVarios} aoTexto={modoTexto} aoFechar={aoFechar} />}
 
       {etapa === 'editar' && midia && (
         <Editor
@@ -296,6 +338,14 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
                 <button type="button" className="est-bt" onClick={() => setDesenhando(true)} aria-label="Desenhar"><Ico d={I.caneta} /></button>
               </div>
             </div>
+          )}
+          {/* vários da galeria: "2 de 3" acima da barra de publicar */}
+          {sequencia && !editandoTexto && !desenhando && (
+            <span className="est-seq" aria-label={`Story ${sequencia.atual} de ${sequencia.total}`}>
+              <span className="est-seq-pontos" aria-hidden="true">{Array.from({ length: sequencia.total }, (_, i) => <i key={i} className={i + 1 < sequencia.atual ? 'feito' : i + 1 === sequencia.atual ? 'agora' : ''} />)}</span>
+              {sequencia.atual} de {sequencia.total}
+              {fila.length > 0 && <button type="button" onClick={() => void publicar(true)} disabled={publicando}>Publicar todos</button>}
+            </span>
           )}
           {trabalho && (trabalho.fase === 'preparando' || trabalho.fase === 'enviando' || trabalho.fase === 'erro') && !editandoTexto && (
             <div className={`est-envio ${trabalho.fase}`}>
@@ -443,7 +493,7 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
 interface CapacidadesDaCamera { zoom: { min: number; max: number } | null; lanterna: boolean }
 const ZOOM_DIGITAL_MAX = 4
 
-function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome: string) => void; aoTexto: () => void; aoFechar: () => void }) {
+function Camera({ aoCapturar, aoVarios, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome: string) => void; aoVarios?: (fs: File[]) => void; aoTexto: () => void; aoFechar: () => void }) {
   const video = useRef<HTMLVideoElement | null>(null)
   const fluxo = useRef<MediaStream | null>(null)
   const gravador = useRef<MediaRecorder | null>(null)
@@ -802,7 +852,11 @@ function Camera({ aoCapturar, aoTexto, aoFechar }: { aoCapturar: (b: Blob, nome:
       )}
       {!gravando && estado === 'pronta' && <span className="est-dica">{maosLivres ? 'Toque para começar a gravar' : temporizador ? `Toque: grava em ${temporizador} s` : 'Toque para foto · segure para vídeo'}</span>}
       {gravando && !travado && !maosLivres && <span className="est-dica fixa">Arraste para cima para zoom · para o lado para travar</span>}
-      <input ref={galeria} type="file" accept="image/*,video/*,.heic,.heif,.mov" hidden onChange={(e) => { escolher(e.target.files?.[0]); e.target.value = '' }} />
+      <input ref={galeria} type="file" accept="image/*,video/*,.heic,.heif,.mov" multiple={!!aoVarios} hidden onChange={(e) => {
+        const fs = Array.from(e.target.files ?? [])
+        if (fs.length > 1 && aoVarios) aoVarios(fs); else escolher(fs[0])
+        e.target.value = ''
+      }} />
       <input ref={nativa} type="file" accept="image/*,video/*" capture="environment" hidden onChange={(e) => { escolher(e.target.files?.[0]); e.target.value = '' }} />
     </div>
   )

@@ -21,7 +21,7 @@ const st = (id: string, f: Partial<Story>): Story => ({
 
 export const EXEMPLO_DE_STORIES: PerfilDeStories[] = [
   { id: 'gf', nome: 'GlobalFly', foto: '/globalfly-monograma-claro.png', oficial: true, ordem: 0, parceiro: null, itens: [
-    st('a0', { midia: img('operando-na-pratica'), quando: ha(20), duracao: 10, publico: { todos: true }, votos: null, meuVoto: null, camadas: [
+    st('a0', { midia: img('operando-na-pratica'), quando: ha(20), duracao: 10, publico: { todos: true }, pessoas: 1284, votos: null, meuVoto: null, camadas: [
       { id: 'c1', tipo: 'local', texto: 'São Paulo, SP', estilo: 'branco', x: 30, y: 14, escala: 1, rotacao: -4 },
       { id: 'c2', tipo: 'texto', texto: 'Hoje tem live\ncom as 5 I.A.', fonte: 'forte', cor: '#FFFFFF', fundo: 'nenhum', alinhar: 'center', x: 50, y: 30, escala: 1.15, rotacao: 0 },
       { id: 'c3', tipo: 'contagem', titulo: 'Live de hoje', ate: proximaLive(), estilo: 'azul', x: 50, y: 50, escala: 1, rotacao: 0 },
@@ -29,7 +29,7 @@ export const EXEMPLO_DE_STORIES: PerfilDeStories[] = [
       { id: 'c5', tipo: 'link', url: 'https://globalflytrade.com', texto: 'Entrar na live', acao: 'aovivo', estilo: 'ouro', x: 50, y: 86, escala: 1, rotacao: 0 },
       { id: 'c6', tipo: 'emoji', emoji: '✈️', x: 80, y: 22, escala: 0.8, rotacao: 12 },
     ] as Camada[] }),
-    st('a1', { midia: img('boas-vindas'), chip: 'Comece aqui', titulo: 'Bem-vindo a bordo', subtitulo: 'A aula 1 mostra a plataforma em 8 minutos.', botao: { tipo: 'aula', texto: 'Ver aula', destino: null }, quando: ha(120), publico: { todos: true } }),
+    st('a1', { midia: img('boas-vindas'), chip: 'Comece aqui', titulo: 'Bem-vindo a bordo', subtitulo: 'A aula 1 mostra a plataforma em 8 minutos.', botao: { tipo: 'aula', texto: 'Ver aula', destino: null }, quando: ha(120), publico: { todos: true }, pessoas: 942 }),
     st('a2', { midia: img('primeiro-deposito'), chip: 'Passo a passo', titulo: 'Primeiro depósito em 2 minutos', subtitulo: 'Direto no caixa da Deriv, pelo celular.', botao: { tipo: 'deposito', texto: null, destino: null }, quando: ha(300), publico: { subplanos: ['gold'] } }),
   ] },
   { id: 'v', nome: 'Victor', foto: '/parceiros/v.webp', oficial: true, ordem: 10, parceiro: 'v', itens: [
@@ -81,14 +81,17 @@ function metricas(id: string) {
   return {
     vistas: l.vistas, pessoas: p, completos: fim, publico: 2140, cliques: Math.round(p * 0.16), pessoas_clique: Math.round(p * 0.13),
     compartilhamentos: Math.round(p * 0.04), visitas_link: Math.round(p * 0.09), cadastros_link: Math.round(p * 0.012), respostas: 4,
-    reacoes: { '🔥': Math.round(p * 0.04), '👏': Math.round(p * 0.02), '💛': Math.round(p * 0.03), '✈️': 6 },
+    curtidas: Math.round(p * 0.11),
+    reacoes: { '🔥': Math.round(p * 0.04), '👏': Math.round(p * 0.02), '❤️': Math.round(p * 0.03), '😮': 6 },
     navegacao: { avancou: Math.round(p * 0.21), voltou: Math.round(p * 0.04), saiu: Math.round(p * 0.11), pulou: Math.round(p * 0.07), pausou: Math.round(p * 0.05) },
     retencao: ret, por_subplano: { gold: Math.round(p * 0.74), black: Math.round(p * 0.2), prestige: Math.round(p * 0.06) },
     por_parceiro: { v: Math.round(p * 0.61), n: Math.round(p * 0.37), direto: Math.round(p * 0.02) },
     por_hora: Array.from({ length: 10 }, (_, i) => ({ hora: new Date(agora - (9 - i) * 3600_000).toISOString(), n: Math.round(p * [0.3, 0.18, 0.12, 0.09, 0.07, 0.06, 0.05, 0.05, 0.04, 0.04][i]) })),
     quem: nomes.map((nome, i) => ({ user_id: `u${i}`, nome, email: `${nome.split(' ')[0].toLowerCase()}@exemplo.com`, parceiro: i % 3 ? 'v' : 'n', subplano: i === 3 ? 'prestige' : i % 4 === 1 ? 'black' : 'gold',
-      segundos: [6, 6, 3.4, 6, 1.8, 6, 5.2, 6][i], completo: [1, 1, 0, 1, 0, 1, 0, 1][i] === 1, vezes: [2, 1, 1, 3, 1, 1, 1, 2][i], reacao: ['🔥', null, null, '👏', null, '💛', null, null][i],
-      quando: ha(4 + i * 7), clicou: [1, 0, 0, 1, 0, 1, 0, 0][i] === 1, compartilhou: i === 3 })),
+      segundos: [6, 6, 3.4, 6, 1.8, 6, 5.2, 6][i], completo: [1, 1, 0, 1, 0, 1, 0, 1][i] === 1, vezes: [2, 1, 1, 3, 1, 1, 1, 2][i], reacao: ['🔥', null, null, '👏', null, '❤️', null, null][i],
+      foto: i === 1 ? `${B}parceiros/v.webp` : i === 3 ? `${B}parceiros/n.webp` : null,
+      curtiu: [1, 1, 0, 1, 0, 0, 1, 0][i] === 1, curtiu_em: ha(3 + i * 7), respondeu: i === 2 || i === 3,
+      primeira: ha(4 + i * 7 + (i === 3 ? 60 * 26 : 0)), quando: ha(4 + i * 7 + (i > 5 ? 60 * 30 : 0)), clicou: [1, 0, 0, 1, 0, 1, 0, 0][i] === 1, compartilhou: i === 3 })),
     ultimas_respostas: [{ nome: 'Juliana Souza', texto: 'Consegui depositar pelo Pix, obrigada!', quando: ha(12) }, { nome: 'Rafael Martins', texto: 'Vai ter gravação da live?', quando: ha(40) }],
   }
 }

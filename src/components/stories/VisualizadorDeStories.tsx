@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 import { createPortal } from 'react-dom'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import {
-  ehMonograma, fotoDoPerfil, haQuanto, registrar, REACOES, BOTAO_PADRAO,
+  ehMonograma, fotoDoPerfil, haQuanto, registrar, REACOES, REACOES_EXTRAS, BOTAO_PADRAO,
   type Enquadramento, type PerfilDeStories, type Story, type TipoDeEvento,
 } from '../../core/teeds/stories'
 import { CamadasDoStory } from './CamadasDoStory'
@@ -90,6 +90,7 @@ const I = {
   mais: 'M5 12h.01M12 12h.01M19 12h.01',
   grafico: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
   copiar: 'M9 9h11v11H9zM5 15H4V4h11v1',
+  olho: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 100-6 3 3 0 000 6z',
 }
 
 export function VisualizadorDeStories(props: PropsDoVisualizador) {
@@ -349,6 +350,26 @@ export function VisualizadorDeStories(props: PropsDoVisualizador) {
     setPausado(true)
     aoBotao?.(story)
   }
+  // curtir (o coração do rodapé): liga e desliga, separado das reações, como no Instagram (10/11/2026, lista do Victor)
+  const ultimaCurtida = useRef(0)
+  function curtir() {
+    if (!story) return
+    // dois toques sem querer viram curtir e descurtir: o segundo, em menos de 0,4 s, não conta
+    const agora = Date.now()
+    if (agora - ultimaCurtida.current < 400) return
+    ultimaCurtida.current = agora
+    const novo = !story.curti
+    story.curti = novo
+    if (!previa) void registrar(sessao, story.id, 'curtir', novo ? '1' : '0')
+    if (novo) {
+      const id = agora + Math.random()
+      setVoando((v) => [...v, ...Array.from({ length: 4 }, (_, i) => ({ id: id + i, e: '❤️', x: 70 + Math.random() * 22 }))])
+      window.setTimeout(() => setVoando((v) => v.filter((x) => x.id < id || x.id > id + 4)), 1500)
+      avisar('Você curtiu')
+    } else {
+      setVoando((v) => [...v]) // redesenha o coração vazio
+    }
+  }
   function reagir(emoji: string) {
     if (!story) return
     if (!previa) void registrar(sessao, story.id, 'reacao', emoji)
@@ -490,6 +511,12 @@ export function VisualizadorDeStories(props: PropsDoVisualizador) {
 
           {rodape ? <div className="sto-ui pe previa">{rodape}</div> : (
           <div className="sto-ui pe">
+            {/* "Visto por", só para a equipe, como no Instagram nos próprios stories; toque abre as métricas */}
+            {equipe && typeof story.pessoas === 'number' && (
+              <button type="button" className="sto-vistos" onClick={() => aoMetricas?.(story)} disabled={!aoMetricas} aria-label={`Visto por ${story.pessoas} ${story.pessoas === 1 ? 'pessoa' : 'pessoas'}. Ver métricas`}>
+                <Ico d={I.olho} /><span>Visto por <b>{story.pessoas.toLocaleString('pt-BR')}</b></span>
+              </button>
+            )}
             {story.botao && (
               <button type="button" className="sto-cta" onClick={botao}>
                 {story.botao.texto || BOTAO_PADRAO[story.botao.tipo]}<Ico d={I.seta} />
@@ -506,7 +533,7 @@ export function VisualizadorDeStories(props: PropsDoVisualizador) {
                 ) : <span className="sto-resp vazio" />}
                 {!respondendo && (
                   <>
-                    <button type="button" className={`sto-icone ${story.reacao ? 'reagiu' : ''}`} onClick={() => reagir('💛')} aria-label="Curtir"><Ico d={I.coracao} cheio={!!story.reacao} /></button>
+                    <button type="button" className={`sto-icone ${story.curti ? 'curtiu' : ''}`} onClick={curtir} aria-label={story.curti ? 'Descurtir' : 'Curtir'} aria-pressed={!!story.curti}><Ico d={I.coracao} cheio={!!story.curti} /></button>
                     {story.compartilhar && <button type="button" className="sto-icone" onClick={() => void compartilhar()} aria-label="Compartilhar"><Ico d={I.enviar} /></button>}
                   </>
                 )}
@@ -517,7 +544,7 @@ export function VisualizadorDeStories(props: PropsDoVisualizador) {
           {respondendo && (
             <div className="sto-reacoes" onPointerDown={(e) => e.preventDefault()}>
               <span>Reações rápidas</span>
-              <div>{[...REACOES, '😍', '🚀'].map((r) => <button key={r} type="button" onClick={() => reagir(r)}>{r}</button>)}</div>
+              <div>{[...REACOES, ...REACOES_EXTRAS].map((r) => <button key={r} type="button" className={story.reacao === r ? 'escolhida' : undefined} onClick={() => reagir(r)} aria-label={`Reagir com ${r}`}>{r}</button>)}</div>
             </div>
           )}
 

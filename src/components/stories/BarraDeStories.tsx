@@ -9,6 +9,8 @@ import { EVENTO_STORIES, linkDoStory, pedirAbaStories, storiesDoCliente, type Pe
 import { Avatar, VisualizadorDeStories } from './VisualizadorDeStories'
 import { tentarDeNovo, useTrabalhos } from '../../core/teeds/publicacaoDeStories'
 import { useArrastarParaCamera } from './useArrastarParaCamera'
+import { assinarMudancas } from '../../core/teeds/realtime'
+import { MARCA } from '../../marca'
 import './stories.css'
 
 // o estúdio (câmera e editor) só baixa quando alguém da equipe toca em Publicar
@@ -77,6 +79,28 @@ export function BarraDeStories({ sessao, aoIr, equipe, papel, aoVivo, exemplo }:
     document.addEventListener('visibilitychange', voltou)
     return () => { window.clearInterval(t); window.removeEventListener(EVENTO_STORIES, ler); document.removeEventListener('visibilitychange', voltou) }
   }, [ler])
+
+  // story novo na hora (10/11/2026, lista do Victor: "atualização automática para alunos conectados"): o banco toca
+  // stories_sinal a cada mudança e a fileira pergunta de novo. Com um story aberto, espera fechar para não trocar
+  // a fila embaixo de quem assiste. Os 5 min acima ficam de reserva (e cobrem os agendados).
+  const abertoRef = useRef(false)
+  abertoRef.current = aberto !== null || estudio
+  const pendente = useRef(false)
+  useEffect(() => {
+    if (exemplo || !sessao.token) return
+    let espera: number | undefined
+    const canal = assinarMudancas({
+      token: sessao.token, canal: `stories-sinal-${MARCA.id}`,
+      tabelas: [{ tabela: 'stories_sinal', filtro: `marca=eq.${MARCA.id}` }],
+      aoMudar: () => {
+        if (abertoRef.current) { pendente.current = true; return }
+        window.clearTimeout(espera)
+        espera = window.setTimeout(ler, 600) // várias mudanças juntas viram uma leitura só
+      },
+    })
+    return () => { window.clearTimeout(espera); canal.fechar() }
+  }, [sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (aberto === null && !estudio && pendente.current) { pendente.current = false; ler() } }, [aberto, estudio]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // a ordem só muda com o story fechado: não visto primeiro (na ordem da casa), visto depois
   useEffect(() => {

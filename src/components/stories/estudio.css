@@ -280,3 +280,22 @@
 .est-cam-video.girou-1 { animation: est-vira-b .45s ease-out; }
 @keyframes est-vira-a { 0% { filter: blur(14px) brightness(.55); } 100% { filter: none; } }
 @keyframes est-vira-b { 0% { filter: blur(14px) brightness(.55); } 100% { filter: none; } }
+
+/* vários da galeria em sequência (10/11/2026): "2 de 3" no topo, com os pontinhos e o Publicar todos */
+.est-seq {
+  position: absolute; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 6;
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 6px 0 12px; border-radius: 99px;
+  background: rgba(5, 21, 40, .62); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  font: 600 13px/1 'Arimo', Arial, sans-serif; color: #F3F0E9; white-space: nowrap;
+}
+.est-seq:not(:has(button)) { padding-right: 12px; }
+.est-seq-pontos { display: inline-flex; gap: 3px; }
+.est-seq-pontos i { width: 6px; height: 6px; border-radius: 50%; background: rgba(243, 240, 233, .35); }
+.est-seq-pontos i.feito { background: #EBC46B; }
+.est-seq-pontos i.agora { background: #F3F0E9; width: 14px; border-radius: 99px; }
+.est-seq button {
+  height: 26px; padding: 0 10px; border: 0; border-radius: 99px; background: #F3F0E9; color: #051528;
+  font: 700 12px/1 'Arimo', Arial, sans-serif; cursor: pointer;
+}
+.est-seq button:disabled { opacity: .5; }
+@media (max-width: 380px) { .est-seq-pontos { display: none; } }

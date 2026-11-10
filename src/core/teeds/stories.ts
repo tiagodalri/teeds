@@ -39,6 +39,10 @@ export interface Story {
   responder: boolean
   visto: boolean
   reacao: string | null
+  /** Curtiu (o coração): separado das reações, liga e desliga. */
+  curti?: boolean
+  /** Só para a equipe: quantos clientes viram (sem admins, no escopo do parceiro). */
+  pessoas?: number | null
   botao: { tipo: BotaoTipo; texto: string | null; destino: string | null } | null
   /** Só chega para a equipe (para mostrar no visualizador quem vê). */
   publico?: Publico | null
@@ -92,13 +96,13 @@ export async function storiesDoCliente(sessao: SessaoTeeds): Promise<PerfilDeSto
       id: s.id, codigo: s.codigo, tipo: s.tipo, midia: s.midia, capa: s.capa ?? null, duracao: Number(s.duracao) || 6,
       enquadramento: s.enquadramento ?? {}, chip: s.chip ?? null, titulo: s.titulo ?? null, subtitulo: s.subtitulo ?? null,
       quando: s.quando, destaque: !!s.destaque, compartilhar: s.compartilhar !== false, responder: s.responder !== false,
-      visto: !!s.visto, reacao: s.reacao ?? null, botao: s.botao ?? null, publico: s.publico ?? null,
+      visto: !!s.visto, reacao: s.reacao ?? null, curti: !!s.curti, pessoas: s.pessoas ?? null, botao: s.botao ?? null, publico: s.publico ?? null,
       camadas: Array.isArray(s.camadas) ? s.camadas : [], votos: s.votos ?? null, meuVoto: s.meu_voto ?? null,
     })),
   }))
 }
 
-export type TipoDeEvento = 'visto' | 'progresso' | 'voto' | 'avancou' | 'voltou' | 'saiu' | 'pulou' | 'pausou' | 'clique' | 'reacao' | 'resposta' | 'compartilhou'
+export type TipoDeEvento = 'visto' | 'progresso' | 'voto' | 'curtir' | 'avancou' | 'voltou' | 'saiu' | 'pulou' | 'pausou' | 'clique' | 'reacao' | 'resposta' | 'compartilhou'
 
 /** Grava o que a pessoa fez. Nunca atrapalha quem está assistindo: falha em silêncio. */
 export function registrar(sessao: SessaoTeeds | null, story: string, tipo: TipoDeEvento, valor?: string | null, segundos?: number) {
@@ -201,6 +205,8 @@ export async function removerStory(sessao: SessaoTeeds, id: string, apagar: bool
 
 export interface Metricas {
   vistas: number; pessoas: number; completos: number; publico: number
+  /** Curtidas (o coração), à parte das reações. Antes da migração de 10/11, não vem. */
+  curtidas?: number
   cliques: number; pessoas_clique: number; compartilhamentos: number; visitas_link: number; cadastros_link: number
   respostas: number; reacoes: Record<string, number>
   navegacao: { avancou: number; voltou: number; saiu: number; pulou: number; pausou: number }
@@ -208,7 +214,14 @@ export interface Metricas {
   por_subplano: Record<string, number>
   por_parceiro: Record<string, number>
   por_hora: Array<{ hora: string; n: number }>
-  quem: Array<{ user_id: string; nome: string | null; email: string; parceiro: string; subplano: string; segundos: number; completo: boolean; vezes: number; reacao: string | null; quando: string; clicou: boolean; compartilhou: boolean }>
+  quem: Array<{
+    user_id: string; nome: string | null; email: string; foto?: string | null; parceiro: string; subplano: string
+    segundos: number; completo: boolean; vezes: number; reacao: string | null
+    curtiu?: boolean; curtiu_em?: string | null; respondeu?: boolean
+    /** A primeira vez que viu e a última. */
+    primeira?: string; quando: string
+    clicou: boolean; compartilhou: boolean
+  }>
   ultimas_respostas: Array<{ nome: string | null; texto: string; quando: string }>
 }
 export const metricasDoStory = (sessao: SessaoTeeds, id: string) => rpc<Metricas>('teeds_story_metricas', { p_story: id }, sessao.token)
@@ -410,7 +423,10 @@ export function haQuanto(iso: string): string {
   return m < 1 ? 'agora' : m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.floor(m / 60)} h` : `há ${Math.floor(m / 1440)} d`
 }
 
-export const REACOES = ['🔥', '👏', '✈️', '💛'] as const
+// as reações rápidas da lista do Victor (10/11/2026); o curtir é o coração do rodapé, à parte
+export const REACOES = ['❤️', '🔥', '👏', '😂', '😮'] as const
+/** Mais duas no fim da fileira, com a cara da GF. */
+export const REACOES_EXTRAS = ['✈️', '🚀'] as const
 
 /** O texto do botão quando o admin não escreve um. */
 export const BOTAO_PADRAO: Record<BotaoTipo, string> = {

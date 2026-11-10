@@ -45,14 +45,21 @@ export function useVoltarFecha(fechar: () => void) {
     // (09/11/2026, Tiago: "no PWA ele não está lembrando que eu dei permissão... pedindo literalmente toda vez")
     if (IOS) return
     const marca = `tela-cheia-${Math.random().toString(36).slice(2)}`
-    history.pushState({ ...(history.state ?? {}), telaCheia: marca }, '')
     let saiuPeloVoltar = false
+    let empilhou = false
     const voltar = () => { if (history.state?.telaCheia !== marca) { saiuPeloVoltar = true; fechar() } }
-    window.addEventListener('popstate', voltar)
+    // empilha só depois que a tela ficou de pé: a montagem dupla do React (modo de desenvolvimento) deixava uma
+    // entrada sobrando, e fechar a tela de cima (a prévia do estúdio) fechava a de baixo junto (10/11/2026)
+    const t = window.setTimeout(() => {
+      history.pushState({ ...(history.state ?? {}), telaCheia: marca }, '')
+      empilhou = true
+      window.addEventListener('popstate', voltar)
+    }, 0)
     return () => {
+      window.clearTimeout(t)
       window.removeEventListener('popstate', voltar)
-      // depois do quadro: se outra tela cheia já empilhou por cima (ou o React remontou), não volta
-      if (!saiuPeloVoltar) window.setTimeout(() => { if (history.state?.telaCheia === marca) history.back() }, 0)
+      // depois do quadro: se outra tela cheia já empilhou por cima, não volta
+      if (empilhou && !saiuPeloVoltar) window.setTimeout(() => { if (history.state?.telaCheia === marca) history.back() }, 0)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 }

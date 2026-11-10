@@ -44,6 +44,17 @@ const BOTOES: Array<{ id: BotaoTipo | ''; nome: string }> = [
 const n = (v: number) => v.toLocaleString('pt-BR')
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0)
 const dataHora = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+/** "Hoje 14:32", "Ontem 09:10" ou "08/11 14:32": a hora exata de quem viu (10/11/2026, lista do Victor). */
+function dataHoraCurta(iso: string): string {
+  const d = new Date(iso)
+  const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  const dia = (x: Date) => x.toLocaleDateString('pt-BR')
+  const hoje = new Date(), ontem = new Date(Date.now() - 86_400_000)
+  if (dia(d) === dia(hoje)) return `Hoje ${hora}`
+  if (dia(d) === dia(ontem)) return `Ontem ${hora}`
+  return `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${hora}`
+}
 const paraInput = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
 const faltam = (iso: string) => {
   const m = Math.round((Date.parse(iso) - Date.now()) / 60000)
@@ -229,6 +240,8 @@ function Detalhe({ sessao, linha, parceiros, pleno, aoFechar, aoVer, aoEditar, a
   const [extra, setExtra] = useState<{ votos: Record<string, number>; cliques_por: Record<string, number> } | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [busca, setBusca] = useState('')
+  // filtro de "Quem viu" (10/11/2026, lista do Victor: quem curtiu, quem reagiu e com o quê, quem respondeu)
+  const [filtro, setFiltro] = useState<string>('todos')
   const [confirmar, setConfirmar] = useState<'arquivar' | 'apagar' | null>(null)
   const [recado, setRecado] = useState<string | null>(null)
   const souDono = pleno || s.criado_por === sessao.usuario.id
@@ -256,8 +269,23 @@ function Detalhe({ sessao, linha, parceiros, pleno, aoFechar, aoVer, aoEditar, a
     try { await navigator.clipboard.writeText(url); setRecado('Link copiado') } catch { setRecado(url) }
   }
 
-  const quem = (m?.quem ?? []).filter((q) => !busca.trim() || `${q.nome ?? ''} ${q.email}`.toLowerCase().includes(busca.trim().toLowerCase()))
+  const passa = (q: Metricas['quem'][number], f: string) =>
+    f === 'todos' ? true : f === 'curtiram' ? !!q.curtiu : f === 'reagiram' ? !!q.reacao : f === 'responderam' ? !!q.respondeu
+      : f === 'fim' ? q.completo : f === 'clicaram' ? q.clicou : f.startsWith('r:') ? q.reacao === f.slice(2) : true
+  const termo = semAcento(busca.trim())
+  const quem = (m?.quem ?? []).filter((q) => passa(q, filtro) && (!termo || semAcento(`${q.nome ?? ''} ${q.email}`).includes(termo)))
   const totalReacoes = m ? Object.values(m.reacoes).reduce((a, b) => a + b, 0) : 0
+  const curtidas = m?.curtidas ?? (m?.quem ?? []).filter((q) => q.curtiu).length
+  const reacoesOrdenadas = m ? Object.entries(m.reacoes).sort((a, b) => b[1] - a[1]) : []
+  const filtros: Array<[string, string, number]> = m ? ([
+    ['todos', 'Todos', m.quem.length],
+    ['curtiram', '❤ Curtiram', m.quem.filter((q) => q.curtiu).length],
+    ['reagiram', 'Reagiram', m.quem.filter((q) => q.reacao).length],
+    ...reacoesOrdenadas.map(([e]) => [`r:${e}`, e, m.quem.filter((q) => q.reacao === e).length] as [string, string, number]),
+    ['responderam', 'Responderam', m.quem.filter((q) => q.respondeu).length],
+    ['fim', 'Até o fim', m.quem.filter((q) => q.completo).length],
+    ...(s.botao_tipo || (s.camadas ?? []).some((c) => c.tipo === 'link') ? [['clicaram', 'Clicaram', m.quem.filter((q) => q.clicou).length] as [string, string, number]] : []),
+  ] as Array<[string, string, number]>).filter(([id, , q]) => id === 'todos' || q > 0 || id === filtro) : []
   const enquete = (s.camadas ?? []).find((c) => c.tipo === 'enquete') as Extract<Camada, { tipo: 'enquete' }> | undefined
   const links = (s.camadas ?? []).filter((c) => c.tipo === 'link') as Array<Extract<Camada, { tipo: 'link' }>>
   const totalVotos = Object.values(extra?.votos ?? {}).reduce((a, b) => a + b, 0)
@@ -300,7 +328,9 @@ function Detalhe({ sessao, linha, parceiros, pleno, aoFechar, aoVer, aoEditar, a
               <div><span>Assistiram até o fim</span><b>{m.pessoas ? `${pct(m.completos, m.pessoas)}%` : '–'}</b><small>{n(m.completos)} pessoas</small></div>
               <div><span>Cliques no botão</span><b>{n(m.cliques)}</b><small>{s.botao_tipo ? (m.pessoas ? `${pct(m.pessoas_clique, m.pessoas)}% de quem viu` : '–') : 'Story sem botão'}</small></div>
               <div><span>Compartilhamentos</span><b>{n(m.compartilhamentos)}</b><small>{n(m.visitas_link)} abriram o link · {n(m.cadastros_link)} cadastros</small></div>
-              <div><span>Reações e respostas</span><b>{n(totalReacoes + m.respostas)}</b><small>{Object.entries(m.reacoes).sort((a, b) => b[1] - a[1]).map(([e, q]) => `${e} ${q}`).join('  ') || 'Nenhuma ainda'}{m.respostas ? ` · ${m.respostas} resp.` : ''}</small></div>
+              <div><span>Curtidas</span><b>{n(curtidas)}</b><small>{m.pessoas ? `${pct(curtidas, m.pessoas)}% de quem viu` : 'Nenhuma ainda'}</small></div>
+              <div><span>Reações</span><b>{n(totalReacoes)}</b><small>{reacoesOrdenadas.map(([e, q]) => `${e} ${q}`).join('   ') || 'Nenhuma ainda'}</small></div>
+              <div><span>Respostas</span><b>{n(m.respostas)}</b><small>{m.respostas ? 'Chegam no Suporte' : 'Nenhuma ainda'}</small></div>
             </div>
 
             <div className="ast-blocos">
@@ -353,28 +383,44 @@ function Detalhe({ sessao, linha, parceiros, pleno, aoFechar, aoVer, aoEditar, a
 
             <section className="ast-bloco largo">
               <div className="ast-quem-cab">
-                <div><h4>Quem viu</h4><p className="sub">{n(m.pessoas)} pessoas{m.quem.length < m.pessoas ? `, as ${m.quem.length} mais recentes` : ''}. Admins não entram na conta.</p></div>
+                <div><h4>Quem viu</h4><p className="sub">{n(m.pessoas)} {m.pessoas === 1 ? 'pessoa' : 'pessoas'}{m.quem.length < m.pessoas ? `, as ${n(m.quem.length)} mais recentes` : ''}. Admins não entram na conta.</p></div>
                 <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome ou e-mail" aria-label="Buscar quem viu" />
               </div>
+              {m.quem.length > 0 && (
+                <div className="ast-filtros" role="group" aria-label="Filtrar quem viu">
+                  {filtros.map(([id, rotulo, q]) => (
+                    <button key={id} type="button" className={filtro === id ? 'ativo' : ''} aria-pressed={filtro === id} onClick={() => setFiltro(id)}>{rotulo}<i>{n(q)}</i></button>
+                  ))}
+                </div>
+              )}
               {quem.length ? (
                 <div className="ast-tabela"><table>
-                  <thead><tr><th>Cliente</th><th>Plano</th><th>Parceiro</th><th>Assistiu</th><th>Vezes</th><th>Fez</th><th>Quando</th></tr></thead>
+                  <thead><tr><th>Cliente</th><th>Plano</th><th>Parceiro</th><th>Assistiu</th><th>Vezes</th><th>Fez</th><th>Quando viu</th></tr></thead>
                   <tbody>{quem.map((q) => {
                     const p = q.completo ? 100 : pct(q.segundos, Number(s.duracao))
                     return (
                       <tr key={q.user_id}>
-                        <td><span className="ast-pessoa"><i>{(q.nome || q.email).slice(0, 1).toUpperCase()}</i><span><b>{q.nome || 'Sem nome'}</b><small>{q.email}</small></span></span></td>
+                        <td><span className="ast-pessoa">{q.foto ? <img src={q.foto} alt="" loading="lazy" /> : <i>{(q.nome || q.email).slice(0, 1).toUpperCase()}</i>}<span><b>{q.nome || 'Sem nome'}</b><small>{q.email}</small></span></span></td>
                         <td><span className={`ast-plano ${q.subplano}`}>{SUBPLANOS.find((x) => x.id === q.subplano)?.nome ?? q.subplano}</span></td>
                         <td>{q.parceiro === 'direto' ? 'Direto' : `/${q.parceiro}`}</td>
                         <td><span className="ast-assistiu"><i><b style={{ width: `${p}%` }} /></i>{p}%</span></td>
                         <td className="num">{q.vezes}</td>
-                        <td className="ast-fez">{q.reacao && <span title="Reagiu">{q.reacao}</span>}{q.clicou && <span title="Clicou no botão">Clicou</span>}{q.compartilhou && <span title="Compartilhou">Compart.</span>}{!q.reacao && !q.clicou && !q.compartilhou && '–'}</td>
-                        <td>{haQuanto(q.quando)}</td>
+                        <td className="ast-fez">
+                          {q.curtiu && <span className="curtiu" title={q.curtiu_em ? `Curtiu ${dataHoraCurta(q.curtiu_em)}` : 'Curtiu'}>❤</span>}
+                          {q.reacao && <span title="Reagiu">{q.reacao}</span>}
+                          {q.respondeu && <span title="Respondeu (a mensagem está no Suporte)">Respondeu</span>}
+                          {q.clicou && <span title="Clicou no botão">Clicou</span>}
+                          {q.compartilhou && <span title="Compartilhou">Compart.</span>}
+                          {!q.curtiu && !q.reacao && !q.respondeu && !q.clicou && !q.compartilhou && '–'}
+                        </td>
+                        <td className="ast-quando" title={q.primeira && q.primeira !== q.quando ? `Primeira vez: ${dataHoraCurta(q.primeira)}` : undefined}>
+                          <b>{dataHoraCurta(q.quando)}</b><small>{haQuanto(q.quando)}</small>
+                        </td>
                       </tr>
                     )
                   })}</tbody>
                 </table></div>
-              ) : <div className="ast-vazio-tab">{busca ? 'Ninguém com esse nome.' : 'Ninguém viu ainda. Os números aparecem aqui assim que os clientes abrirem.'}</div>}
+              ) : <div className="ast-vazio-tab">{busca ? 'Ninguém com esse nome.' : filtro !== 'todos' ? 'Ninguém neste filtro.' : 'Ninguém viu ainda. Os números aparecem aqui assim que os clientes abrirem.'}</div>}
             </section>
           </div>
         )}
