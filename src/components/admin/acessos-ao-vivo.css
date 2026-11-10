@@ -8,9 +8,6 @@
 .aov-vivo.erro i { background: var(--down); animation: none; }
 @keyframes aov-pulsar { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--up) 55%, transparent); } 70% { box-shadow: 0 0 0 8px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
 @media (prefers-reduced-motion: reduce) { .aov-vivo i, .aov-pulso { animation: none; } }
-.aov-atualizar { height: 36px; padding: 0 14px; border: 1px solid var(--border); border-radius: 10px; color: var(--text); background: var(--bg); font-size: 11px; font-weight: 700; cursor: pointer; }
-.aov-atualizar:hover:not(:disabled) { border-color: var(--primary); }
-.aov-atualizar:disabled { opacity: .55; cursor: default; }
 
 .aov-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
 .aov-kpi { display: grid; align-content: start; gap: 6px; min-width: 0; padding: 16px; border: 1px solid var(--border); border-radius: 12px; color: var(--text); background: var(--bg); font: inherit; text-align: left; }

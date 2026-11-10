@@ -102,8 +102,9 @@ function Quem({ p, agora, abrir }: { p: { user_id: string; nome: string | null; 
   </button>
 }
 
-export function AcessosAoVivo({ sessao, marca, parceiro, onAbrirCliente }: {
-  sessao: SessaoTeeds; marca: string; parceiro: string | null; onAbrirCliente?: (userId: string) => void
+export function AcessosAoVivo({ sessao, marca, parceiro, pedido = 0, onAbrirCliente }: {
+  /** Sobe quando o Atualizar do topo do Admin é clicado: relê na hora. */
+  sessao: SessaoTeeds; marca: string; parceiro: string | null; pedido?: number; onAbrirCliente?: (userId: string) => void
 }) {
   const [painel, setPainel] = useState<Painel | null>(null)
   const [erro, setErro] = useState<string | null>(null)
@@ -130,6 +131,7 @@ export function AcessosAoVivo({ sessao, marca, parceiro, onAbrirCliente }: {
     return () => window.clearInterval(t)
   }, [ler])
   useEffect(() => { const t = window.setInterval(() => setAgora(Date.now()), 15_000); return () => window.clearInterval(t) }, [])
+  useEffect(() => { if (pedido) void ler() }, [pedido]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const corte = agora - janela * 3_600_000
   const filtrar = <T extends { nome: string | null; email: string | null; dispositivo: string | null; criado_em: string | null }>(l: T[]) => {
@@ -174,7 +176,6 @@ export function AcessosAoVivo({ sessao, marca, parceiro, onAbrirCliente }: {
     <div className="aov-status">
       <span className={`aov-vivo ${erro ? 'erro' : ''}`}><i />{erro ? 'Sem conexão com o banco' : 'Ao vivo'}</span>
       <span>{carregando && !p ? 'Lendo os acessos…' : lidoEm ? `Atualiza sozinho a cada 30 s · lido ${segDesdeLeitura < 20 ? 'agora' : `há ${segDesdeLeitura} s`}` : ''}</span>
-      <button className="aov-atualizar" onClick={() => void ler()} disabled={carregando}>{carregando ? 'Lendo…' : 'Atualizar'}</button>
     </div>
 
     <div className="aov-kpis">
