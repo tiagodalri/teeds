@@ -220,9 +220,11 @@ async function minhaSessao(userId: string, id: string) {
   const s = ver(id)
   if (!s) return null
   // A sessão sabe quem a abriu: não precisa ir ao banco para responder a
-  // quem clicou em Desligar. O banco fica para sessões antigas sem dono
-  // registrado (ou abertas por outro login da mesma conta).
-  if (s.parametros.userId && s.parametros.userId === userId) return s
+  // quem clicou em Desligar. 10/11/2026: e é SÓ quem a abriu. A mesma conta da
+  // Deriv chegou a ficar registrada para várias pessoas (logins em computador
+  // compartilhado) e uma via e desligava a I.A. da outra. O banco fica só para
+  // sessões antigas sem dono registrado.
+  if (s.parametros.userId) return s.parametros.userId === userId ? s : null
   const minhas = await contasDoUsuario(userId)
   return minhas.includes(s.contaId) ? s : null
 }
@@ -1326,7 +1328,8 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
         const marcaDaTela = marcaPorId(url.searchParams.get('marca') ?? 'teeds').id
         const minhas = await contasParaListar(dono.id, marcaDaTela)
         const lista = todas()
-          .filter((s) => minhas.includes(s.contaId) && s.estado?.rodando && (s.parametros?.marca ?? 'teeds') === marcaDaTela)
+          // 10/11/2026: só as I.A. que ESTA pessoa ligou (a conta registrada vale só para sessões antigas sem dono)
+          .filter((s) => (s.parametros?.userId ? s.parametros.userId === dono.id : minhas.includes(s.contaId)) && s.estado?.rodando && (s.parametros?.marca ?? 'teeds') === marcaDaTela)
           .map((s) => resumoEmTexto(s, resumo))
         res.writeHead(200, cabecalhos)
         return res.end(`{"sessoes":[${lista.join(',')}]}`)

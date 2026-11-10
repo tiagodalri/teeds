@@ -165,9 +165,12 @@ async function contasDele(dono: Dono) {
 async function sessaoDele(dono: Dono, id: string) {
   const s = ver(id)
   if (!s) return null
+  // 10/11/2026: só quem ligou (ver minhaSessao em servidor.ts); a conta vale para sessões sem dono
+  if (s.parametros?.userId) return s.parametros.userId === dono.id ? s : null
   const minhas = await contasDoUsuario(dono.id)
   return minhas.includes(s.contaId) ? s : null
 }
+const dele = (dono: Dono, minhas: string[]) => (s: any) => (s.parametros?.userId ? s.parametros.userId === dono.id : minhas.includes(s.contaId))
 
 async function limitesDe(dono: Dono): Promise<Limites> {
   const ajuste = await limitesDoCliente(dono.id)
@@ -177,7 +180,7 @@ async function limitesDe(dono: Dono): Promise<Limites> {
 /** Quantos robôs deste cliente estão operando agora. */
 async function robosAtivos(dono: Dono): Promise<number> {
   const minhas = await contasDoUsuario(dono.id)
-  return todas().filter((s) => minhas.includes(s.contaId) && s.estado?.rodando).length
+  return todas().filter((s) => dele(dono, minhas)(s) && s.estado?.rodando).length
 }
 
 async function executar(
@@ -202,7 +205,7 @@ async function executar(
 
     case 'sessoes': {
       const minhas = await contasDoUsuario(dono.id)
-      return { sessoes: todas().filter((s) => minhas.includes(s.contaId)).map(resumir) }
+      return { sessoes: todas().filter(dele(dono, minhas)).map(resumir) }
     }
 
     case 'status_sessao': {
