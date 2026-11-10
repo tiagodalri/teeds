@@ -11,6 +11,8 @@
 //                                      da live de 09/11 ('hoje', 'uma-hora', 'ao-vivo')
 //   { acao: 'disparo', ... }          do painel (Administração › Notificações), com o
 //                                      token do admin geral: título, texto, destino, público
+//   { acao: 'operacao_real', ... }    do gatilho do banco (x-gatilho): um cliente ligou uma I.A. ou
+//                                      abriu uma operação manual em conta real; avisa a administração
 //
 // A chave VAPID de cada plataforma nasce aqui na primeira vez e fica em
 // config_servicos (VAPID_<MARCA>), que só a chave de serviço lê. O segredo do
@@ -325,6 +327,52 @@ async function sha256(texto: string): Promise<string> {
   return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
+/* ------------------------------------------- operação em conta real (admins) */
+
+/*
+  09/11/2026, depois da live (Tiago: "cada vez que algum cliente operar em conta real, chegue uma
+  notificação no nosso celular. Atenção, uma comissão está sendo gerada. O cliente tal, que tem tantos
+  dólares na banca, entrou numa operação"). Quem chama é o gatilho do banco (teeds_avisar_operacao_real),
+  no máximo 1 vez por cliente a cada 10 min. Recebe a administração da GF, cada um no seu escopo: o admin
+  geral vê todos; o admin do parceiro, os clientes do parceiro dele (e os que ele enxerga, ve_parceiros).
+*/
+const NOME_DO_PARCEIRO: Record<string, string> = { n: 'Naor (/n)', v: 'Victor (/v)', d: 'Douglas (/d)' }
+
+async function avisarOperacaoReal(corpo: Record<string, unknown>) {
+  const userId = String(corpo.user_id ?? '')
+  if (!/^[0-9a-f-]{36}$/i.test(userId)) return json({ erro: 'sem cliente' }, 400)
+  const marca = 'globalfly'
+  const contaId = String(corpo.conta_id ?? '')
+  const origem = corpo.origem === 'manual' ? 'manual' : 'ia'
+  const [rc, rk] = await Promise.all([
+    rest(`clientes?user_id=eq.${userId}&marca=eq.${marca}&select=nome,parceiro`),
+    rest(`contas_deriv?user_id=eq.${userId}&marca=eq.${marca}${contaId ? `&conta_id=eq.${encodeURIComponent(contaId)}` : '&tipo=neq.demo'}&select=saldo,moeda,vista_em&order=vista_em.desc.nullslast&limit=1`),
+  ])
+  const cliente: { nome: string | null; parceiro: string | null } | undefined = rc.ok ? (await rc.json())[0] : undefined
+  const conta: { saldo: number | null; moeda: string | null } | undefined = rk.ok ? (await rk.json())[0] : undefined
+  const nome = (cliente?.nome ?? '').trim().split(/\s+/).slice(0, 2).join(' ') || 'Um cliente'
+  const parceiro = cliente?.parceiro ?? null
+  const banca = conta?.saldo != null ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: conta.moeda || 'USD' }).format(Number(conta.saldo)) : null
+  const robo = String(corpo.robo ?? '').trim()
+  const entrada = Number(corpo.entrada ?? 0)
+  const acao = origem === 'manual'
+    ? `entrou numa operação manual${entrada > 0 ? ` de ${dinheiro(entrada, conta?.moeda ?? 'USD').replace('+', '')}` : ''}`
+    : robo ? `ligou a I.A. ${robo}` : 'ligou uma I.A.'
+  const aviso: Aviso = {
+    titulo: '💰 Atenção: uma comissão está sendo gerada',
+    corpo: `${nome}${banca ? `, com ${banca} na banca,` : ''} ${acao} em conta real.\nCliente ${parceiro && NOME_DO_PARCEIRO[parceiro] ? `do ${NOME_DO_PARCEIRO[parceiro]}` : 'direto'}.`,
+    tag: `operacao-real-${userId}`, url: './',
+  }
+  // quem recebe: a administração da GF, cada um no seu escopo
+  const ra = await rest(`administradores?marca=eq.${marca}&select=user_id,parceiro,ve_parceiros`)
+  const admins: Array<{ user_id: string; parceiro: string | null; ve_parceiros: string[] | null }> = ra.ok ? await ra.json() : []
+  const destino = [...new Set(admins.filter((a) => !a.parceiro || (parceiro && (a.parceiro === parceiro || (a.ve_parceiros ?? []).includes(parceiro)))).map((a) => a.user_id))]
+  let enviados = 0
+  for (const id of destino) enviados += (await enviar(id, marca, aviso)).enviados
+  console.log('operacao_real', origem, parceiro, { admins: destino.length, enviados })
+  return json({ admins: destino.length, enviados })
+}
+
 /* ------------------------------------------------------------------ entrada */
 
 Deno.serve(async (req) => {
@@ -361,6 +409,12 @@ Deno.serve(async (req) => {
     const r = await avisarALive(etapa)
     console.log('lancamento', etapa, r)
     return json(r)
+  }
+
+  if (corpo.acao === 'operacao_real') {
+    const segredo = await lerConfig('PUSH_GATILHO')
+    if (!segredo || req.headers.get('x-gatilho') !== segredo) return json({ erro: 'não autorizado' }, 401)
+    return avisarOperacaoReal(corpo as Record<string, unknown>)
   }
 
   if (corpo.acao === 'sessao') {
