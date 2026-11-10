@@ -343,7 +343,12 @@ function LabVitrine() {
 
 const nada = () => {}
 
-function Cabine({ estado, expandido, titulo }: { estado: EstadoMotor; expandido: boolean; titulo: string }) {
+function Cabine({ estado: estadoBase, expandido, titulo }: { estado: EstadoMotor; expandido: boolean; titulo: string }) {
+  // &markup=1: Modo CEO (coluna e soma do markup). &cortada=1: a lista chega
+  // cortada, como no Monitoramento (só as últimas), e a soma vem da sessão inteira.
+  const busca = new URLSearchParams(location.search)
+  const comMarkup = busca.has('markup')
+  const estado: EstadoMotor = busca.has('cortada') ? { ...estadoBase, operacoes: 161, markupDaSessao: 3.4719 } : estadoBase
   return (
     <div className={`cabine-caixa aberta ${expandido ? 'expandido' : ''} ${estado.rodando ? 'rodando' : 'parado'}`}
       style={{ ['--robo' as string]: ident.cor, ['--robo-suave' as string]: ident.corSuave } as React.CSSProperties}>
@@ -353,7 +358,7 @@ function Cabine({ estado, expandido, titulo }: { estado: EstadoMotor; expandido:
         estrategiaId={ident.id} nomeEstrategia={ident.nome} ativo="Volatility 75 Index"
         titulo={titulo} regra="menor que 5" cor={ident.cor} ganhaCom={(d) => d < 5}
         parametros={parametros} conexao="open" expandido={expandido} onExpandir={nada}
-        onDigitos={nada} digitosAberto={false} mostrarMarkup={false}
+        onDigitos={nada} digitosAberto={false} mostrarMarkup={comMarkup}
         onDesligar={estado.rodando ? nada : undefined} desligando={false}
         onLigarDeNovo={!estado.rodando ? nada : undefined} onRemover={nada}
       />

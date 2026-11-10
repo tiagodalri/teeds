@@ -689,5 +689,7 @@ export function paraEstadoMotor(e: EstadoEspelho): EstadoMotor {
     historico: (e.historico ?? []).map((o) => ({ ...o, markupDeriv: null, esperou: 0 })),
     emCurso: e.emCurso, ticksAnalisados: e.ticksAnalisados, latenciaMedia: e.latenciaMedia, falha: e.falha,
     estrategia: e.estrategia,
+    // A foto traz só as últimas 30 operações; o total vem do motor inteiro.
+    markupDaSessao: Number.isFinite(e.markupCalculado) ? e.markupCalculado : undefined,
   }
 }

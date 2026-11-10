@@ -165,6 +165,16 @@ export function RobotLive({
     3% do pagamento — a mesma conta que a célula mostra.
   */
   const markupDe = markupDaOperacao
+  /*
+    10/11/2026: a cabine do Monitoramento recebe só as últimas 30 operações
+    (o servidor manda até 200), e a soma do rodapé saía só delas. Quando a
+    lista vem cortada, a contagem e a soma da sessão vêm de quem tem a
+    sessão inteira (markupDaSessao); a lista continua a mesma.
+  */
+  const totalDeOperacoes = Math.max(estado.operacoes ?? 0, estado.historico.length)
+  const listaCortada = totalDeOperacoes > estado.historico.length
+  const somaDaLista = (lista: typeof estado.historico) => lista.reduce((t, o) => t + markupDe(o), 0)
+  const somaDaSessao = estado.markupDaSessao != null && Number.isFinite(estado.markupDaSessao) ? estado.markupDaSessao : listaCortada ? null : somaDaLista(estado.historico)
   const emCurso = estado.emCurso
 
   useEffect(() => {
@@ -415,7 +425,7 @@ export function RobotLive({
         <div className="tv-ops-topo">
           {/* A lista inteira fica na tabela, que rola: antes só as 5 últimas
               apareciam e o resto dependia de um botão que pouca gente via. */}
-          <span className="tv-rot">Operações da sessão{estado.historico.length > 0 ? ` (${estado.historico.length})` : ''}</span>
+          <span className="tv-rot">Operações da sessão{estado.historico.length > 0 ? ` (${totalDeOperacoes})` : ''}</span>
           {/* 29/10/2026: era um <select>; no celular ele herda 16 px (contra o
               zoom do iPhone) e ficava maior que o título. Três botões pequenos. */}
           {estado.historico.length > 0 && (
@@ -477,7 +487,9 @@ export function RobotLive({
                   )
                 })}
                 {filtroHistorico === 'todas' && estado.historico.length > 0 && (
-                  <tr className="tv-inicio"><td colSpan={(mostrarMarkup ? 5 : 4) - (MOSTRAR_HORA ? 0 : 1)}>Primeira operação da sessão{MOSTRAR_HORA && <> · {relogio(estado.historico[estado.historico.length - 1].quando)}</>}</td></tr>
+                  <tr className="tv-inicio"><td colSpan={(mostrarMarkup ? 5 : 4) - (MOSTRAR_HORA ? 0 : 1)}>{listaCortada
+                    ? <>Mostrando as {estado.historico.length} mais recentes de {totalDeOperacoes} operações</>
+                    : <>Primeira operação da sessão{MOSTRAR_HORA && <> · {relogio(estado.historico[estado.historico.length - 1].quando)}</>}</>}</td></tr>
                 )}
               </tbody>
               {/* A soma do markup só existe quando a coluna está à vista
@@ -486,9 +498,18 @@ export function RobotLive({
               {mostrarMarkup && historicoVisivel.length > 0 && (
                 <tfoot className="tv-soma">
                   <tr>
-                    <th colSpan={MOSTRAR_HORA ? 3 : 2} scope="row">Markup {filtroHistorico === 'todas' ? 'da sessão' : filtroHistorico === 'ganhos' ? 'das positivas' : 'das negativas'}</th>
-                    <td>{historicoVisivel.length} {historicoVisivel.length === 1 ? 'operação' : 'operações'}</td>
-                    <td className="tv-markup" title="Soma dos valores exatos. Cada linha aparece arredondada em centavos, então somar o que está na tela pode dar alguns centavos a menos.">{num(historicoVisivel.reduce((t, o) => t + markupDe(o), 0))}</td>
+                    {filtroHistorico === 'todas' && somaDaSessao != null ? <>
+                      <th colSpan={MOSTRAR_HORA ? 3 : 2} scope="row">Markup da sessão</th>
+                      <td>{totalDeOperacoes} {totalDeOperacoes === 1 ? 'operação' : 'operações'}</td>
+                      <td className="tv-markup" title={listaCortada
+                        ? `Soma da sessão inteira (${totalDeOperacoes} operações), não só das ${estado.historico.length} da lista.`
+                        : 'Soma dos valores exatos. Cada linha aparece arredondada em centavos, então somar o que está na tela pode dar alguns centavos a menos.'}>{num(somaDaSessao)}</td>
+                    </> : <>
+                      {/* Com a lista cortada, "Ganhos" e "Perdas" somam só o que está na lista, e o rótulo diz isso. */}
+                      <th colSpan={MOSTRAR_HORA ? 3 : 2} scope="row">Markup {filtroHistorico === 'todas' ? `das últimas ${estado.historico.length}` : filtroHistorico === 'ganhos' ? 'das positivas' : 'das negativas'}{listaCortada && filtroHistorico !== 'todas' ? ` (nas últimas ${estado.historico.length})` : ''}</th>
+                      <td>{historicoVisivel.length} {historicoVisivel.length === 1 ? 'operação' : 'operações'}</td>
+                      <td className="tv-markup" title="Soma dos valores exatos. Cada linha aparece arredondada em centavos, então somar o que está na tela pode dar alguns centavos a menos.">{num(somaDaLista(historicoVisivel))}</td>
+                    </>}
                   </tr>
                 </tfoot>
               )}

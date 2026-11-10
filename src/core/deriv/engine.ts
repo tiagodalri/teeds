@@ -236,6 +236,13 @@ export interface EstadoMotor {
   ultimoLucro: number | null
   /** Operacoes encerradas, da mais recente para a mais antiga. */
   historico: OperacaoMotor[]
+  /**
+   * Markup da sessao inteira, quando quem entrega o estado corta o historico
+   * (o espelho manda so as ultimas 30; o servidor, as ultimas 200). Sem ele,
+   * a cabine soma o historico que tem. O motor local nao preenche: la o
+   * historico e completo.
+   */
+  markupDaSessao?: number
   /** A operacao em andamento, quando ha uma. */
   emCurso: EmCurso | null
   /** Ticks analisados desde a ultima entrada — mostra que o robo esta vivo. */

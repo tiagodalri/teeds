@@ -276,6 +276,18 @@
   .tv.tv-cockpit .tv-tabela td[data-label='Markup']::before { content: 'Markup '; font-family: var(--fonte-corpo, system-ui, sans-serif); }
   .tv.tv-cockpit .tv-tabela td[colspan] { grid-area: auto; grid-column: 1 / -1; text-align: center; }
   .tv.tv-cockpit .tv-tabela tr:has(td[colspan]) { grid-template-areas: none; box-shadow: none; }
+  /* 10/11/2026: a soma do markup herdava o cartão das linhas (três áreas,
+     fundo só nas células) e as operações apareciam por trás. Uma faixa só,
+     de fundo cheio: rótulo, quantas operações e o total. */
+  .tv.tv-cockpit .tv-soma { display: block; }
+  .tv.tv-cockpit .tv-soma tr { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: none; align-items: baseline; gap: 10px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); border-bottom: 0; box-shadow: none; }
+  .tv.tv-cockpit .tv-soma th,
+  .tv.tv-cockpit .tv-soma td,
+  .tv.tv-cockpit .tv-soma td:first-of-type,
+  .tv.tv-cockpit .tv-soma td:last-child { display: block; position: static; padding: 0; border: 0; background: none; box-shadow: none; }
+  .tv.tv-cockpit .tv-soma th { font-size: 11px; min-width: 0; }
+  .tv.tv-cockpit .tv-soma td:first-of-type { font-size: 11.5px; text-align: right; }
+  .tv.tv-cockpit .tv-soma td:last-child { font-size: 14px; text-align: right; }
 }
 
 /* GF sem a hora no registro da sessão (08/11/2026) */

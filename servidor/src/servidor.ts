@@ -75,6 +75,8 @@ import { aplicarNoBanco as aplicarNoBancoCakto, contaDoAviso, lerAviso as lerAvi
  * lista de contas, endereço de operação e lista de ativos. Nada foi criado
  * quando o erro chega aqui.
  */
+/** Soma do markup por array de histórico (ver `enxuto`). */
+const markupPorHistorico = new WeakMap<object, number>()
 const ENGASGO_DA_DERIV = /não respondeu a tempo|não abriu a conexão|instável/i
 async function ligarInsistindo(quem: string, auth: Parameters<typeof iniciar>[0], p: Parameters<typeof iniciar>[1]) {
   try {
@@ -836,12 +838,25 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
       erro: s.erro ?? null,
       estado: enxuto(s.estado),
     })
+    // O motor troca o array do histórico a cada operação e reusa entre os
+    // ticks: a soma fica guardada por array, uma conta por operação.
+    const markupDoHistoricoInteiro = (h: any[] | undefined) => {
+      if (!h || h.length === 0) return 0
+      const guardado = markupPorHistorico.get(h)
+      if (guardado !== undefined) return guardado
+      const total = h.reduce((t: number, o: any) => t + (o.markupDeriv ?? (o.payout ? o.payout * 0.03 : 0)), 0)
+      markupPorHistorico.set(h, total)
+      return total
+    }
     const enxuto = (e: any) => !e ? e : ({
       ...e,
       // A telemetria interna da estratégia é do espelho administrativo; a
       // tela do cliente não a usa e continua recebendo o mesmo de sempre.
       estrategia: undefined,
       historico: (e.historico ?? []).slice(0, 200),
+      // A lista vai cortada em 200; a soma do markup (Modo CEO) é da sessão
+      // inteira, pela mesma conta de cada linha da cabine.
+      markupDaSessao: markupDoHistoricoInteiro(e.historico),
       registros: (e.registros ?? []).slice(0, 60),
       curva: (e.curva ?? []).slice(-300),
       digitos: (e.digitos ?? []).slice(-60),
