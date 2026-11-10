@@ -36,6 +36,7 @@ import { anotarMarcaPedida, ligarCarteiro, tratarGanchoDeEmail } from './gancho-
 import { somenteDemoDoUsuario } from './supabase'
 import { ligarColetorDeExtrato } from './extrato'
 import { ligarSincronizadorDeComissoes } from './comissoes'
+import { ligarFechamentoDasManuais } from './manuais-vencidas'
 import { coletarTudo, dataOuPadrao, desvincular, diaUtc, ligarColetorDeAfiliados, painelDeAfiliados, podeVincular, RecusaDeAfiliado, somarDiasA, vincular } from './afiliados'
 import { ligarFaxinaDoEspelho } from './espelho'
 import { aplicarNoBanco, assinaturaConfere, ehOSimulador, lerAviso, tokenDoGancho } from './kiwify'
@@ -1430,6 +1431,13 @@ if (supabaseConfigurado() && process.env.COMISSOES_DESLIGADO !== '1') {
   console.log(`Comissões: calculadas e saldos atualizados a cada ${minutos} min`)
 } else {
   console.log('Comissões: sincronia desligada')
+}
+
+// Operações manuais que ficaram "abertas" depois do vencimento (o app do cliente fechou antes do fim):
+// o resultado verdadeiro vem da Deriv, com a autorização do próprio cliente. A cada 5 min, poucas por vez.
+if (supabaseConfigurado() && process.env.MANUAIS_VENCIDAS_DESLIGADO !== '1') {
+  ligarFechamentoDasManuais(5 * 60_000)
+  console.log('Manuais vencidas: resultado buscado na Deriv a cada 5 min')
 }
 
 // O espelho operacional guarda eventos por 30 dias e fotos/pulsos de sessões

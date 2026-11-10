@@ -1160,3 +1160,32 @@ export async function appDoParceiroDoCliente(userId: string, marca: string): Pro
 
 /** O acesso ao banco com a chave de serviço, para módulos que guardam as próprias tabelas (afiliados.ts). */
 export { rest as restDoBanco }
+
+/* ------------------------------------------------------------------ *
+ * Operações manuais vencidas sem resultado (10/11/2026) — ver manuais-vencidas.ts.
+ * ------------------------------------------------------------------ */
+export interface ManualVencida { userId: string; contractId: number; contaId: string; marca: string; demo: boolean }
+
+/** As `aberta` já vencidas há 2 min (sem vencimento: 1 h da gravação), compradas nos últimos `dias` (3 na rotina). */
+export async function manuaisVencidasAbertas(limite: number, dias = 3): Promise<ManualVencida[]> {
+  const agora = Date.now()
+  const venceu = new Date(agora - 2 * 60_000).toISOString()
+  const semVencimento = new Date(agora - 62 * 60_000).toISOString()
+  const desde = new Date(agora - Math.max(1, Math.min(60, dias)) * 86_400_000).toISOString()
+  const linhas = await rest<any[]>(
+    `/operacoes_manuais?select=user_id,contract_id,conta_id,marca,demo&situacao=eq.aberta` +
+    `&comprada_em=gte.${encodeURIComponent(desde)}` +
+    `&or=(expira_em.lt.${encodeURIComponent(venceu)},and(expira_em.is.null,criado_em.lt.${encodeURIComponent(semVencimento)}))` +
+    `&order=comprada_em.desc&limit=${Math.max(1, Math.min(200, limite))}`)
+  return (linhas ?? []).filter((l) => l.conta_id && l.contract_id).map((l) => ({
+    userId: String(l.user_id), contractId: Number(l.contract_id), contaId: String(l.conta_id), marca: String(l.marca ?? ''), demo: Boolean(l.demo),
+  }))
+}
+
+/** Grava o fim. Só se ainda estiver `aberta`: o que o app do cliente gravou antes nunca é sobrescrito. */
+export async function fecharManualVencida(userId: string, contractId: number, fim: { situacao: string; resultado: number; encerrada_em: string }): Promise<void> {
+  await rest(`/operacoes_manuais?user_id=eq.${encodeURIComponent(userId)}&contract_id=eq.${contractId}&situacao=eq.aberta`, {
+    method: 'PATCH', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({ situacao: fim.situacao, resultado: fim.resultado, encerrada_em: fim.encerrada_em, atualizado_em: new Date().toISOString() }),
+  })
+}
