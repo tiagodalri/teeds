@@ -635,7 +635,47 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
       return true
     })
   }, [encerradas, clientes, busca, filtroConta, filtroRobo, filtroResultado, filtrandoParceiro, parceiroFoco, tempo, filtroFim])
-  useEffect(() => { setLimiteEncerradas(40) }, [busca, filtroConta, filtroRobo, filtroResultado, tempo, filtroFim])
+  /*
+    Ordenar as encerradas pelos títulos das colunas (10/11/2026, Tiago: "clicar no título das colunas
+    pra ordenar: maior, menor, recente, antigo, ordem alfabética"). O 1º clique usa a ordem que faz
+    sentido para a coluna (nome de A a Z; números do maior para o menor; mais recente primeiro); o 2º
+    inverte. No celular, onde as colunas somem, o mesmo vem num seletor.
+  */
+  type ColunaEncerradas = 'cliente' | 'plataforma' | 'robo' | 'conta' | 'operacoes' | 'resultado' | 'markup' | 'encerrada'
+  const [ordemEnc, setOrdemEnc] = useState<{ col: ColunaEncerradas; desc: boolean }>({ col: 'encerrada', desc: true })
+  const PRIMEIRO_DESC: Record<ColunaEncerradas, boolean> = { cliente: false, plataforma: false, robo: false, conta: false, operacoes: true, resultado: true, markup: true, encerrada: true }
+  const ordenarEncerradas = (col: ColunaEncerradas) => setOrdemEnc((o) => ({ col, desc: o.col === col ? !o.desc : PRIMEIRO_DESC[col] }))
+  const encerradasOrdenadas = useMemo(() => {
+    const texto = (v: string) => v.trim().toLocaleLowerCase('pt-BR')
+    const chave = (s: (typeof encerradasFiltradas)[number]): string | number | null => {
+      switch (ordemEnc.col) {
+        case 'cliente': { const c = clientes.get(s.userId); return texto(c?.nome || c?.email || '') || null }
+        case 'plataforma': return texto(NOME_DA_MARCA[s.marca] ?? s.marca ?? '')
+        case 'robo': return texto(s.roboNome ?? '')
+        // real antes de demo (A→Z), e dentro de cada uma pela conta
+        case 'conta': return `${s.demo ? 1 : 0}${s.contaId}`
+        case 'operacoes': return s.operacoes
+        case 'resultado': return s.resultado
+        case 'markup': { const m = markups.get(s.id); return m ? m.markup : null }
+        case 'encerrada': return s.encerradaEm ? Date.parse(s.encerradaEm) : null
+      }
+    }
+    const sinal = ordemEnc.desc ? -1 : 1
+    return encerradasFiltradas.map((s) => ({ s, k: chave(s) })).sort((a, b) => {
+      // sem valor (sem nome, markup que não veio) fica sempre no fim
+      if (a.k === null || a.k === '') return b.k === null || b.k === '' ? 0 : 1
+      if (b.k === null || b.k === '') return -1
+      const d = typeof a.k === 'number' && typeof b.k === 'number' ? a.k - b.k : String(a.k).localeCompare(String(b.k), 'pt-BR')
+      return d * sinal || (Date.parse(b.s.encerradaEm ?? '') || 0) - (Date.parse(a.s.encerradaEm ?? '') || 0)
+    }).map((x) => x.s)
+  }, [encerradasFiltradas, ordemEnc, clientes, markups])
+  const tituloEnc = (col: ColunaEncerradas, rotulo: string) => {
+    const on = ordemEnc.col === col
+    return <span key={col}><button type="button" className={on ? 'on' : ''} onClick={() => ordenarEncerradas(col)}
+      aria-label={`Ordenar por ${rotulo.toLowerCase()}${on ? (ordemEnc.desc ? ', agora do maior para o menor' : ', agora do menor para o maior') : ''}`}
+      title={`Ordenar por ${rotulo.toLowerCase()}`}>{rotulo}<i aria-hidden="true">{on ? (ordemEnc.desc ? '↓' : '↑') : '↕'}</i></button></span>
+  }
+  useEffect(() => { setLimiteEncerradas(40) }, [busca, filtroConta, filtroRobo, filtroResultado, tempo, filtroFim, ordemEnc])
   const outrosFiltrosEncerradas = !!busca.trim() || filtroConta !== 'todas' || filtroRobo !== 'todos' || filtroResultado !== 'todos' || filtroFim !== 'todos'
   const limparFiltrosEncerradas = () => { setBusca(''); setFiltroConta('todas'); setFiltroRobo('todos'); setFiltroResultado('todos'); setFiltroFim('todos'); setTempo(TEMPO_PADRAO) }
 
@@ -840,13 +880,22 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
               <select value={filtroConta} onChange={(e) => setFiltroConta(e.target.value as any)} aria-label="Tipo de conta"><option value="todas">Demo e real</option><option value="real">Só real</option><option value="demo">Só demo</option></select>
               <select value={filtroRobo} onChange={(e) => setFiltroRobo(e.target.value)} aria-label="Robô"><option value="todos">Todos os robôs</option>{robos.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}</select>
               <select value={filtroResultado} onChange={(e) => setFiltroResultado(e.target.value as any)} aria-label="Resultado"><option value="todos">Qualquer resultado</option><option value="positivo">Positivo</option><option value="negativo">Negativo</option></select>
+              <select className="mse-ordem-celular" value={`${ordemEnc.col}:${ordemEnc.desc ? 'desc' : 'asc'}`} aria-label="Ordenar por"
+                onChange={(e) => { const [col, dir] = e.target.value.split(':'); setOrdemEnc({ col: col as ColunaEncerradas, desc: dir === 'desc' }) }}>
+                <option value="encerrada:desc">Mais recentes</option><option value="encerrada:asc">Mais antigas</option>
+                <option value="resultado:desc">Maior resultado</option><option value="resultado:asc">Menor resultado</option>
+                <option value="operacoes:desc">Mais operações</option><option value="operacoes:asc">Menos operações</option>
+                {mostrarMarkup && <><option value="markup:desc">Maior markup</option><option value="markup:asc">Menor markup</option></>}
+                <option value="cliente:asc">Cliente de A a Z</option><option value="cliente:desc">Cliente de Z a A</option>
+                <option value="robo:asc">Robô de A a Z</option><option value="conta:asc">Real primeiro</option><option value="conta:desc">Demo primeiro</option>
+              </select>
               <select value={filtroFim} onChange={(e) => setFiltroFim(e.target.value as any)} aria-label="Como a sessão terminou"><option value="todos">Qualquer encerramento</option>{(Object.keys(ROTULO_DO_FIM) as Array<keyof typeof ROTULO_DO_FIM>).map((k) => <option key={k} value={k}>{ROTULO_DO_FIM[k]}</option>)}</select>
             </div>
             <FiltroDePeriodo valor={tempo} onTrocar={setTempo} />
           </div>
           <div className="ins-tabela mon-tabela">
-            <div className="cab"><span>Cliente</span>{naRede && <span>Plataforma</span>}<span>Robô</span><span>Conta</span><span>Operações</span><span>Resultado</span>{mostrarMarkup && <span>Markup</span>}<span>Encerrada</span><span /></div>
-            {encerradasFiltradas.slice(0, limiteEncerradas).map((s) => { const c = clientes.get(s.userId); return (
+            <div className="cab adm-cab-ordem">{tituloEnc('cliente', 'Cliente')}{naRede && tituloEnc('plataforma', 'Plataforma')}{tituloEnc('robo', 'Robô')}{tituloEnc('conta', 'Conta')}{tituloEnc('operacoes', 'Operações')}{tituloEnc('resultado', 'Resultado')}{mostrarMarkup && tituloEnc('markup', 'Markup')}{tituloEnc('encerrada', 'Encerrada')}<span /></div>
+            {encerradasOrdenadas.slice(0, limiteEncerradas).map((s) => { const c = clientes.get(s.userId); return (
               <button key={s.id} className="ins-linha mon-linha" onClick={() => setReplayDe(s)}>
                 <span className="adm-pessoa"><i>{(c?.nome || c?.email || '?')[0].toUpperCase()}</i><b>{c?.nome || 'Sem nome'}{(() => { const x = seloDe(s.userId, s.parceiro); return x ? <em className={`mon-selo parceiro ${x.codigo}`}>{x.texto}</em> : null })()}<small>{mascararEmail(c?.email)}</small></b></span>
                 {naRede && <span><em className={`mon-selo plataforma ${s.marca}`}>{NOME_DA_MARCA[s.marca] ?? s.marca}</em></span>}

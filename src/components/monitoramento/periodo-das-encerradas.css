@@ -128,6 +128,12 @@
    linha ganha um resumo embaixo do nome, e os totais do filtro sobem para cima da
    lista (antes ficavam depois de 40 linhas). No computador nada muda. */
 .mon-linha-resumo { display: none; }
+/* ordenar pelos títulos (10/11/2026): o padrão de Clientes (adm-cab-ordem), sem mudar o tamanho do título */
+.mon-encerradas .mon-tabela > .cab.adm-cab-ordem button { font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit; }
+.mon-encerradas .mon-tabela > .cab.adm-cab-ordem button.on { font-weight: 800; }
+/* o seletor de ordem só aparece no celular, onde as colunas somem */
+.mse-ordem-celular { display: none; }
+@media (max-width: 720px) { .mse-ordem-celular { display: block; } }
 /* a coluna Resultado das sessões encerradas: positivo verde, negativo vermelho (10/11/2026) */
 .mon-tabela .ins-linha.mon-linha > span.mon-res { font-variant-numeric: tabular-nums; font-weight: 700; }
 .mon-tabela .ins-linha.mon-linha > span.mon-res.up { color: var(--up); }
