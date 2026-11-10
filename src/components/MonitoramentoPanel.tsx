@@ -850,7 +850,8 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
                 {naRede && <span><em className={`mon-selo plataforma ${s.marca}`}>{NOME_DA_MARCA[s.marca] ?? s.marca}</em></span>}
                 <span><NomeDoRobo nome={s.roboNome} id={s.roboId} /></span><span>{mascararConta(s.contaId)} <em className={`mon-tipo ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'demo' : 'real'}</em></span>
                 <span>{s.operacoes} <small className="up">{s.ganhas}</small> <small className="down">{s.perdidas}</small></span>
-                <span className={s.resultado >= 0 ? 'up' : 'down'}>{assinado(s.resultado)} {s.moeda}</span>
+                {/* 10/11/2026 (Tiago): positivo em verde, negativo em vermelho; zero sem cor */}
+                <span className={`mon-res ${s.resultado > 0 ? 'up' : s.resultado < 0 ? 'down' : ''}`}>{assinado(s.resultado)} {s.moeda}</span>
                 {mostrarMarkup && <span className={`mon-markup ${s.demo ? 'simulado' : ''}`}>{(() => {
                   const m = markups.get(s.id)
                   // Sem número é diferente de zero: a soma pode não ter vindo.
@@ -862,7 +863,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
                 <span className="mon-linha-resumo">
                   <em className={`mon-tipo ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'Demo' : 'Real'}</em>
                   <span>Operações <b>{s.operacoes}</b> <small className="up">{s.ganhas}</small> <small className="down">{s.perdidas}</small></span>
-                  <span>Resultado <b className={s.resultado >= 0 ? 'up' : 'down'}>{assinado(s.resultado)} {s.moeda}</b></span>
+                  <span>Resultado <b className={s.resultado > 0 ? 'up' : s.resultado < 0 ? 'down' : ''}>{assinado(s.resultado)} {s.moeda}</b></span>
                   {mostrarMarkup && <span>Markup <b className="mon-markup-valor">{(() => { const m = markups.get(s.id); return m ? `${m.markup.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${s.moeda}${s.demo ? ' (simulado)' : ''}` : '—' })()}</b></span>}
                   <span>{s.encerradaEm ? dataHora(s.encerradaEm) : '—'}</span>
                 </span>
