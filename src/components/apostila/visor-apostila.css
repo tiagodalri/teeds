@@ -1,0 +1,27 @@
+/* Visor da apostila no celular (10/11/2026): o Fechar sempre visível no topo. */
+.vap { position: fixed; inset: 0; z-index: 9800; display: grid; grid-template-rows: auto 1fr; background: #040D1A; color: #F3F0E9; }
+.vap-topo {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px; background: #051528; border-bottom: 1px solid #1A2D45;
+}
+.vap-fechar, .vap-baixar {
+  display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px; border-radius: 12px;
+  font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; white-space: nowrap;
+}
+.vap-fechar { border: 0; background: #F3F0E9; color: #051528; }
+.vap-baixar { border: 1px solid #29445F; background: transparent; color: #F3F0E9; }
+.vap-fechar svg, .vap-baixar svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.vap-fechar:focus-visible, .vap-baixar:focus-visible { outline: 2px solid #D9B465; outline-offset: 2px; }
+.vap-titulo { min-width: 0; text-align: center; font-size: 14px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vap-titulo small { display: block; font-size: 11.5px; font-weight: 400; color: #9CB1C7; }
+.vap-corpo { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 10px 10px calc(env(safe-area-inset-bottom, 0px) + 24px); }
+.vap-folha { width: 100%; max-width: 900px; margin: 0 auto 10px; }
+/* o espaço da página é reservado pela largura (padding em %), que funciona em qualquer aparelho */
+.vap-pagina { position: relative; width: 100%; height: 0; background: #FFFFFE; border-radius: 4px; overflow: hidden; box-shadow: 0 6px 20px rgba(4, 13, 26, .5); }
+.vap-pagina .vap-desenho { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.vap-carregando { justify-content: center; display: flex; align-items: center; gap: 10px; padding: 40px 0; color: #9CB1C7; font-size: 14px; }
+.vap-carregando i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #29445F; border-top-color: #D9B465; animation: vap-gira .8s linear infinite; }
+@keyframes vap-gira { to { transform: rotate(360deg); } }
+.vap-erro { display: grid; gap: 14px; justify-items: center; padding: 40px 16px; text-align: center; color: #9CB1C7; }
+.vap-baixar.grande { height: 46px; padding: 0 20px; background: #B78D39; border-color: #B78D39; color: #051528; }
+@media (max-width: 380px) { .vap-baixar span { display: none; } .vap-baixar { padding: 0 11px; } }

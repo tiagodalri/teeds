@@ -68,6 +68,7 @@ import { IconeFechar } from './components/IconeFechar'
 import { RelogioTopo } from './components/RelogioTopo'
 import { SeloCategoria, type Categoria } from './components/SeloCategoria'
 import { LimiteDoSimulador } from './components/plano/LimiteDoSimulador'
+import { VisorDaApostila } from './components/apostila/VisorDaApostila'
 import { dinheiro, simboloMoeda } from './core/dinheiro'
 import { usePeriodos } from './core/chart/periodos'
 import { aulasTravadasParaGfMember, aulasVistas } from './core/teeds/aulas'
@@ -1653,6 +1654,7 @@ export default function App() {
         </div>
       )}
       {MARCA.aoVivo && !JANELA && treinoAtivo && <Suspense fallback={null}><PlayerDoTreino naPagina={tela === 'aovivo'} abrirPagina={() => setTela('aovivo')} /></Suspense>}
+      {MARCA.apostila && !JANELA && <VisorDaApostila />}
       {planoAberto && meuSubplano && <MeuPlano dados={meuSubplano} foco={planoAberto.foco} aoFechar={() => setPlanoAberto(null)} comprador={teeds.sessao?.usuario} />}
       {/* 04/11/2026: depois de desconectar, o Conectar pergunta qual conta da Deriv (EscolherContaDeriv) */}
       {conta.escolhaDeConta && <EscolherContaDeriv aoContinuar={conta.continuarConectando} aoFechar={conta.fecharEscolhaDeConta} />}

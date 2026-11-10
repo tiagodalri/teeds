@@ -1,3 +1,4 @@
+import { abrirApostila } from '../apostila/VisorDaApostila'
 import { afiliadoDaDeriv, comunidadeDaVitrine, comunidadeInstagramDaVitrine } from '../../core/rotas'
 import { useComunidade } from '../comunidade/EscolherComunidade'
 import { useEffect, useRef, useState } from 'react'
@@ -124,7 +125,7 @@ export function Destaques({ banners, aoIr }: { banners: Banner[]; aoIr?: (tela: 
   }, [atual, parado, banners.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!banners.length) return null
-  const abrir = (b: Banner) => (b.comunidade ? comunidade.abrir() : b.href ? window.open(b.href, '_blank', 'noopener') : b.tela && aoIr?.(b.tela))
+  const abrir = (b: Banner) => (b.id === 'apostila' && abrirApostila() ? undefined : b.comunidade ? comunidade.abrir() : b.href ? window.open(b.href, '_blank', 'noopener') : b.tela && aoIr?.(b.tela))
 
   return (
     <section className="dq" aria-roledescription="carrossel" aria-label="Destaques"

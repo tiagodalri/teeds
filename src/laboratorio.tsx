@@ -12,6 +12,7 @@
  * Só desenvolvimento: o Vite monta apenas o `index.html` na publicação, então
  * este arquivo nunca chega ao site. Não há rede nem conta envolvida.
  */
+import { VisorDaApostila } from './components/apostila/VisorDaApostila'
 import { createPortal } from 'react-dom'
 import { RelogioDoSimulador, JanelaSemTempo } from './components/plano/LimiteDoSimulador'
 import React from 'react'
@@ -601,6 +602,8 @@ function Laboratorio() {
     return <div className="app workspace-app"><div className="admin-shell modo-suporte" style={{ gridTemplateColumns: '1fr' }}><main className="admin-main" style={{ padding: 16 }}><CentralWhatsApp sessao={sessao} marca="globalfly" apiDeTeste={api} /></main></div></div>
   }
   // ?tela=limite-simulador(&sub=black)(&resta=600): o relógio do simulador nos estados e a janela de quando acaba
+  // ?tela=apostila: o visor da apostila do celular, já aberto
+  if (qual === 'apostila') { setTimeout(() => window.dispatchEvent(new CustomEvent('plataforma:apostila')), 300); return <div className="app workspace-app" style={{ minHeight: '100dvh' }}><VisorDaApostila /></div> }
   if (qual === 'limite-simulador') {
     const q = new URLSearchParams(location.search)
     const sp = (id: string, nome: string, ordem: number, preco: number, ref: number, comp: number, ias: string[] | null, horas: number | null, extra: boolean, top: boolean) => ({ id, nome, ordem, chamada: '', precoReferencia: ref, preco, cobranca: preco ? 'anual' : 'aquisicao-zero', compartilhamento: comp, ias, simuladorHoras: horas, salaExtra: extra, assessor: top, lab: top, checkoutUrl: 'https://pay.cakto.com.br/exemplo', checkoutPorParceiro: {}, assessorWhatsapp: null, ativo: true })

@@ -1,3 +1,4 @@
+import { abrirApostila } from '../apostila/VisorDaApostila'
 import type { ReactNode } from 'react'
 import { afiliadoDaDeriv } from '../../core/rotas'
 import { useComunidade } from '../comunidade/EscolherComunidade'
@@ -309,7 +310,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                   <Icone d={ICONE.externo} />
                 </a>
                 {MARCA.apostila && (
-                  <a className="in-atalho" href={MARCA.apostila} download={`Apostila ${MARCA.nome}.pdf`} target="_blank" rel="noopener">
+                  <a className="in-atalho" href={MARCA.apostila} download={`Apostila ${MARCA.nome}.pdf`} target="_blank" rel="noopener" onClick={(e) => { abrirApostila(e) }}>
                     <span className="in-atalho-icone"><Icone d={ICONE.apostila} /></span>
                     <span><b>Baixar Apostila</b><small>Material de estudo em PDF</small></span>
                     <Icone d={ICONE.baixar} />
