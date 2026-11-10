@@ -192,14 +192,23 @@
 .bp-relogio.urgente b { color: var(--down); }
 .bp-relogio.ganhou .arco { stroke: var(--up); } .bp-relogio.ganhou b { color: var(--up); }
 .bp-relogio.perdeu .arco { stroke: var(--down); } .bp-relogio.perdeu b { color: var(--down); }
-.bp-id { flex: 1; min-width: 0; display: grid; gap: 2px; }
-.bp-id b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bp-id b i { font-style: normal; }
-.bp-id b.sobe i { color: var(--up); } .bp-id b.desce i { color: var(--down); }
-.bp-ativo { color: var(--text); }
-.bp-id small { display: grid; color: var(--muted); font-size: 12px; }
-.bp-investido { display: none; white-space: nowrap; }
-.bp-investido em { font-style: normal; font-family: var(--bp-dados); white-space: nowrap; }
+.bp-id { flex: 1; min-width: 0; display: grid; gap: 3px; }
+/* 10/11/2026: o ativo em cima (era escondido no celular) e a direção embaixo */
+.bp-ativo { font-size: 15px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bp-dir { display: inline-flex; align-items: center; gap: 5px; min-width: 0; color: var(--muted); font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bp-dir i { font-style: normal; font-size: 11px; }
+.bp-dir.sobe { color: var(--up); } .bp-dir.desce { color: var(--down); }
+/* ampliar / ocultar os detalhes */
+.bp-alternar {
+  display: grid; place-items: center; flex: none; width: 32px; height: 32px; margin-right: -6px; padding: 0;
+  border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--muted); cursor: pointer;
+}
+.bp-alternar svg { width: 16px; height: 16px; transition: transform .18s ease; }
+.bp:not(.recolhida) .bp-alternar svg { transform: rotate(180deg); }
+.bp-alternar:hover { color: var(--text); border-color: var(--border); }
+.bp-alternar:focus-visible { outline: 2px solid var(--bp-ouro); outline-offset: 1px; }
+.bp-detalhes { display: grid; gap: 12px; min-width: 0; }
+.bp-legenda { margin: -4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
 .bp-res { display: grid; justify-items: end; text-align: right; }
 .bp-res b { font: 800 19px var(--bp-dados); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .bp-res small { font: 700 11.5px var(--bp-dados); }
@@ -226,7 +235,7 @@
 
 /* cartão estreito (coluna curta do notebook): só a direção no título; o relógio já diz o tempo */
 @container posicao (max-width: 340px) {
-  .bp-ativo, .bp-legenda, .bp-seta { display: none; }
+  .bp-seta { display: none; }
   .bp-spots { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; }
   .bp-spots .bp-dif { grid-row: 1 / 3; grid-column: 2; align-self: center; }
   .bp-res b { font-size: 17px; }
@@ -258,15 +267,14 @@
   .bl-atalho { display: none; }
   .bp { padding: 12px 14px 14px; gap: 10px; }
   .bp-relogio { width: 50px; height: 50px; }
-  .bp-ativo, .bp-legenda, .bp-nums { display: none; }
-  /* a linha dos preços fica no celular: é nela que o cliente confere o último dígito */
+  /* 10/11/2026: o ativo e os números voltam no celular; quem quiser o cartão curto recolhe pela seta */
+  .bp-detalhes { gap: 10px; }
   .bp-spots { padding: 8px 10px; font-size: 11.5px; gap: 6px; }
-  .bp-investido { display: block; }
 }
 @media (max-width: 900px) { .bl-atalho { display: none; } }
 @media (prefers-reduced-motion: reduce) {
   .bl-ativo-preco small i.vivo { animation: none; }
-  .bl-botao > strong, .bp-relogio .arco { transition: none; }
+  .bl-botao > strong, .bp-relogio .arco, .bp-alternar svg { transition: none; }
 }
 
 /* ------------------------------------------------ computador: a coluna em pé

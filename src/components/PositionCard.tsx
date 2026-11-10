@@ -4,6 +4,32 @@ import './operar/boleta.css'
 import { useClock } from '../hooks/useClock'
 import { dinheiro as emDinheiro, dinheiroComSinal } from '../core/dinheiro'
 import { PrecoComDigito } from './preco/PrecoComDigito'
+import { MARCA } from '../marca'
+
+/*
+  Ampliar ou ocultar os detalhes da posição (10/11/2026, Victor Dias / Tiago): a escolha vale para
+  todos os cartões e fica guardada no aparelho. Recolhido: o relógio, o ativo, a direção, o resultado
+  e o "Encerrar agora". Ampliado: também os preços de entrada e agora, o investido e o pagamento.
+*/
+const CHAVE_RECOLHIDA = `${MARCA.id}.posicao-recolhida`
+const EVENTO_RECOLHIDA = 'teeds:posicao-recolhida'
+const lerRecolhida = () => { try { return localStorage.getItem(CHAVE_RECOLHIDA) === '1' } catch { return false } }
+function useRecolhida(): [boolean, () => void] {
+  const [recolhida, setRecolhida] = useState(lerRecolhida)
+  useEffect(() => {
+    const seguir = () => setRecolhida(lerRecolhida())
+    window.addEventListener(EVENTO_RECOLHIDA, seguir)
+    window.addEventListener('storage', seguir)
+    return () => { window.removeEventListener(EVENTO_RECOLHIDA, seguir); window.removeEventListener('storage', seguir) }
+  }, [])
+  const trocar = () => {
+    const nova = !lerRecolhida()
+    try { localStorage.setItem(CHAVE_RECOLHIDA, nova ? '1' : '0') } catch { /* sem armazenamento: vale só nesta tela */ }
+    setRecolhida(nova)
+    window.dispatchEvent(new Event(EVENTO_RECOLHIDA))
+  }
+  return [recolhida, trocar]
+}
 
 /** Contagem regressiva ate a expiracao, atualizada a cada segundo. */
 export function useCountdown(expiryEpoch: number) {
@@ -93,6 +119,7 @@ export function porQueNaoEncerra(motivo: string | null): string {
 export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, markup, real = false }: Props) {
   // conta real: o primeiro toque arma, o segundo encerra; desarma sozinho em 8 s
   const [armado, setArmado] = useState(false)
+  const [recolhida, trocarRecolhida] = useRecolhida()
   useEffect(() => {
     if (!armado) return
     const t = window.setTimeout(() => setArmado(false), 8_000)
@@ -146,7 +173,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, m
   // o arco do relógio: 2πr com r = 24 (viewBox 56)
   const CIRC = 150.8
   return (
-    <article className={['bp', ganhando ? 'ganhando' : 'perdendo', concluido ? `concluida ${c.status}` : '', liquidando ? 'liquidando' : ''].join(' ')}>
+    <article className={['bp', ganhando ? 'ganhando' : 'perdendo', concluido ? `concluida ${c.status}` : '', liquidando ? 'liquidando' : '', recolhida ? 'recolhida' : ''].join(' ')}>
       <div className="bp-cab">
         <div className={`bp-relogio ${tom} ${concluido || (ticks && !liquidandoNaTela) ? 'palavra' : ''}`} role="timer" aria-label={concluido ? (selo ?? '') : ticks ? `Fecha após ${ticks} ${ticks === '1' ? 'cotação' : 'cotações'}` : `Faltam ${texto}`}>
           <svg viewBox="0 0 56 56" aria-hidden="true">
@@ -156,15 +183,20 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, m
           <b>{centro}</b>
         </div>
         <div className="bp-id">
-          <b className={comDirecao ? (subiu ? 'sobe' : 'desce') : ''}>{comDirecao && <><i aria-hidden="true">{subiu ? '▲' : '▼'}</i> </>}{nomeDaOperacao(c.contractType, c.barrier)}<span className="bp-ativo"> · {nomeAtivo}</span></b>
-          <small><span className="bp-investido">Investido <em>{dinheiro(c.buyPrice)}</em></span><span className="bp-legenda">{legenda}</span></small>
+          <b className="bp-ativo" title={nomeAtivo}>{nomeAtivo}</b>
+          <span className={`bp-dir ${comDirecao ? (subiu ? 'sobe' : 'desce') : ''}`}>{comDirecao && <i aria-hidden="true">{subiu ? '▲' : '▼'}</i>}{nomeDaOperacao(c.contractType, c.barrier)}</span>
         </div>
         <div className={`bp-res ${ganhando ? 'ganho' : 'perda'}`}>
           <b>{dinheiroComSinal(c.profit, c.currency)}</b>
           <small>{pct}</small>
         </div>
+        <button type="button" className="bp-alternar" onClick={trocarRecolhida} aria-expanded={!recolhida}
+          aria-label={recolhida ? 'Mostrar os detalhes da posição' : 'Ocultar os detalhes da posição'} title={recolhida ? 'Mostrar detalhes' : 'Ocultar detalhes'}>
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </button>
       </div>
 
+      {!recolhida && <div className="bp-detalhes">
       <div className="bp-spots">
         {/* o último dígito em destaque: nas operações de dígitos é ele que decide */}
         <span>Entrada <PrecoComDigito valor={c.entrySpot} casas={c.pipSize} /></span>
@@ -180,6 +212,8 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, m
         <div><small>{concluido ? 'Pagou' : 'Se ganhar'}</small><b>{dinheiro(concluido ? c.bidPrice : c.payout)}</b></div>
         {markup !== undefined && <div className="bp-markup"><small>Markup</small><b>{dinheiro(markup)}</b></div>}
       </div>
+      <p className="bp-legenda">{legenda}</p>
+      </div>}
 
       <button type="button" className={`bp-encerrar ${armado ? 'armado' : ''}`}
         disabled={concluido || liquidando || !c.isValidToSell || encerrando}
