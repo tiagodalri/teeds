@@ -1092,6 +1092,34 @@ export async function movimentacoesRecentes(sessao: SessaoTeeds, dias = 30, limi
   } catch { return [] }
 }
 
+/** Uma movimentação do período, com o cliente e o parceiro dele (10/11/2026). */
+export interface MovimentacaoDoPeriodo extends MovimentacaoRegistro {
+  parceiro: string | null; parceiroNome: string | null
+}
+
+/**
+ * Todas as movimentações de conta real entre `inicio` e `fim` (dias UTC, AAAA-MM-DD),
+ * da mais recente para a mais antiga. A tela filtra, ordena e agrupa por dia e por
+ * cliente a partir desta lista. O banco aplica o escopo: o admin do parceiro só
+ * recebe os clientes dele. Diferente das outras leituras daqui, a falha SOBE:
+ * a tela mostra "não conseguimos ler" em vez de um vazio que parece verdade.
+ */
+export async function movimentacoesDoPeriodo(sessao: SessaoTeeds, inicio: string, fim: string, limite = 5000): Promise<MovimentacaoDoPeriodo[]> {
+  const linhas = await rest<any[]>('/rpc/teeds_movimentacoes_periodo', sessao.token, {
+    method: 'POST', body: JSON.stringify({ p_marca: marcaAdmin(), p_inicio: inicio, p_fim: fim, p_limite: limite }),
+  })
+  return (linhas ?? []).map((l) => ({
+    userId: l.user_id, nome: textoLegivel(l.nome), email: l.email,
+    parceiro: l.parceiro ?? null, parceiroNome: l.parceiro_nome ?? null,
+    contaId: l.conta_id, transacaoId: Number(l.transacao_id),
+    tipo: l.tipo === 'withdrawal' ? 'withdrawal' : 'deposit',
+    valor: Number(l.valor), moeda: l.moeda ?? 'USD',
+    saldoDepois: l.saldo_depois === null || l.saldo_depois === undefined ? null : Number(l.saldo_depois),
+    descricao: l.descricao ?? null,
+    ocorridaEm: l.ocorrida_em,
+  }))
+}
+
 /** A coleta está viva? Uma linha por conta real conectada. */
 export async function coletasDeExtrato(sessao: SessaoTeeds): Promise<ColetaExtrato[]> {
   try {
