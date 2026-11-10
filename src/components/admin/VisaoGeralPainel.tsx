@@ -137,7 +137,6 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr }: {
   const maxFaixa = Math.max(...p.banca.faixas.map((f) => f.clientes), 1)
   const entrou = Number(p.dinheiro.depositos_7d), saiu = Number(p.dinheiro.saques_7d), liquido = entrou - saiu
   const maxFluxo = Math.max(entrou, saiu, 1)
-  const ia = MARCA.vocabularioIA ? 'I.A.' : 'robôs'
   const f = p.funil
   const etapas: Array<{ rotulo: string; n: number; dica: string }> = [
     { rotulo: 'Cadastrados', n: f.cadastrados, dica: 'Toda a base' },
@@ -164,7 +163,7 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr }: {
           <div className="vg-etiquetas">
             <span className="vg-tag demo"><i aria-hidden="true" />{int(a.operando_demo)} em conta demo</span>
             <span className="vg-tag"><i aria-hidden="true" className="on" />{int(a.na_plataforma)} na plataforma agora</span>
-            {a.operando_real > 0 && <span className="vg-tag">{int(a.ias_real)} {ia} em real · {int(a.manuais_real)} manuais</span>}
+            {a.operando_real > 0 && <span className="vg-tag">{int(a.ias_real)} {MARCA.vocabularioIA ? 'I.A.' : a.ias_real === 1 ? 'robô' : 'robôs'} em real · {int(a.manuais_real)} {a.manuais_real === 1 ? 'manual' : 'manuais'}</span>}
             <span className="vg-tag">{int(f.ativos_24h)} entraram nas últimas 24 h</span>
           </div>
         </div>
