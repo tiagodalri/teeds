@@ -32,3 +32,7 @@
   }
   .admin-sidebar nav .adm-grupo-tit svg { display: none; }
 }
+
+/* grupo que não fecha (Clientes): o mesmo título, sem a seta e sem clique */
+.admin-sidebar nav .adm-grupo-fixo { cursor: default; }
+.admin-sidebar nav .adm-grupo-fixo:hover { color: color-mix(in srgb, var(--muted) 85%, transparent); }

@@ -31,6 +31,8 @@ export interface GrupoDoMenu { id: string; titulo: string | null; itens: ItemDoM
 
 const GUARDADO = 'adm-menu-fechados'
 const FECHADOS_DE_INICIO = ['config']
+/** Grupos que não fecham (09/11/2026, Tiago: "cadê o menu dos clientes?" — o grupo tinha sido fechado sem querer). */
+const SEMPRE_ABERTOS = ['clientes']
 
 function lerFechados(): string[] {
   try {
@@ -54,10 +56,12 @@ export function MenuDoAdmin({ grupos, ativa, navRef }: { grupos: GrupoDoMenu[]; 
   return (
     <nav ref={navRef as RefObject<HTMLElement>} aria-label="Menu da administração">
       {grupos.filter((g) => g.itens.length).map((g) => {
-        const fechado = !!g.titulo && fechados.includes(g.id)
+        const fixo = SEMPRE_ABERTOS.includes(g.id)
+        const fechado = !!g.titulo && !fixo && fechados.includes(g.id)
         return (
           <div key={g.id} className={`adm-grupo${g.titulo ? '' : ' adm-grupo-topo'}`}>
-            {g.titulo && (
+            {g.titulo && fixo && <div className="adm-grupo-tit adm-grupo-fixo"><span>{g.titulo}</span></div>}
+            {g.titulo && !fixo && (
               <button type="button" className="adm-grupo-tit" aria-expanded={!fechado} onClick={() => alternar(g.id)}
                 title={fechado ? `Mostrar ${g.titulo}` : `Esconder ${g.titulo}`}>
                 <span>{g.titulo}</span>
