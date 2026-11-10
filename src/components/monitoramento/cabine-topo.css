@@ -117,9 +117,15 @@
 .cbt-saldo small { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
 .cbt-saldo b { font-size: 16px; font-weight: 750; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text); }
 .cbt-saldo b span { font-size: 11.5px; font-weight: 650; color: var(--muted); }
+/* saldo real e saldo demo lado a lado (10/11/2026); a conta em uso em destaque, a outra mais apagada */
+.cbt-saldos { display: flex; gap: 8px; flex: none; }
+.cbt-saldo.outro b { color: var(--muted); font-weight: 650; }
+.cbt-saldo.em-uso { border-color: color-mix(in srgb, var(--text) 22%, var(--border)); }
 /* Celular: o saldo numa linha própria, logo abaixo de quem é (voltar e fechar ficam juntos em cima). */
 @media (max-width: 600px) {
   .cbt-saldo { order: 2; flex: 1 1 100%; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 12px; min-height: 0; }
+  .cbt-saldos { order: 2; flex: 1 1 100%; display: grid; grid-template-columns: 1fr 1fr; }
+  .cbt-saldos .cbt-saldo { display: grid; gap: 1px; }
   .cbt-quem { order: 1; }
   .cbt-fechar { order: 0; }
   .cbt-status { order: 3; }

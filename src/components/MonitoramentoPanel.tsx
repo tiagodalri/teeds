@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
-import { clientesPorId, ehMaster, type ClienteRegistro } from '../core/teeds/clientes'
+import { clientesPorId, ehMaster, saldosDosClientes, type ClienteRegistro, type SaldosDoCliente } from '../core/teeds/clientes'
 import {
   EstimadorDeDesvio, MedidorDeRtt, ROTULO_EVENTO, ROTULO_FASE, aplicarMensagem, descreverEvento, idadeDaAtualizacao, integridadeDoHistorico,
   marcadorDoEvento, mascararConta, mascararEmail, ordenarEventos, paraEstadoMotor, reconstruir, saudeDoSinal, semaforo,
@@ -104,8 +104,22 @@ function mensagemDoErro(e: unknown): { estado: EstadoDaTela; texto: string } {
 
 /* ============================================================ cartão */
 
-export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMarca = false, selo = null, aoAbrir }: { s: SessaoEspelho; cliente?: ClienteRegistro; saude: Saude; visao: Visao; mostrarMarca?: boolean; selo?: { texto: string; codigo: string } | null; aoAbrir: (id: string) => void }) {
+/** Saldo real e demo do cartão e da cabine: a conta em uso, ao vivo pelo espelho; a outra, o último que o app do cliente leu. */
+function doisSaldos(s: SessaoEspelho, saldo: number | null | undefined, guardados?: SaldosDoCliente) {
+  const vivo = typeof saldo === 'number' ? saldo : null
+  return {
+    real: !s.demo && vivo !== null ? vivo : guardados?.real?.saldo ?? null,
+    demo: s.demo && vivo !== null ? vivo : guardados?.demo?.saldo ?? null,
+    vistoReal: !s.demo && vivo !== null ? null : guardados?.real?.vistaEm ?? null,
+    vistoDemo: s.demo && vivo !== null ? null : guardados?.demo?.vistaEm ?? null,
+  }
+}
+const dicaDoSaldo = (emUso: boolean, visto: string | null) => emUso ? 'Conta em que a I.A. está operando: saldo ao vivo da Deriv'
+  : visto ? `Último saldo que o app do cliente leu (${new Date(visto).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })})` : 'Sem conta deste tipo conectada'
+
+export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMarca = false, selo = null, saldos, aoAbrir }: { s: SessaoEspelho; cliente?: ClienteRegistro; saude: Saude; visao: Visao; mostrarMarca?: boolean; selo?: { texto: string; codigo: string } | null; saldos?: SaldosDoCliente; aoAbrir: (id: string) => void }) {
   const e = s.estado
+  const ds = doisSaldos(s, e.saldo, saldos)
   const cor = semaforo(s, saude === 'ao-vivo' ? s.recebidoEm : saude === 'atencao' ? s.recebidoEm + 3000 : s.recebidoEm + 10_000)
   const { cor: corRobo } = regrasDoRobo(s.roboId)
   const nome = cliente?.nome || mascararEmail(cliente?.email)
@@ -136,8 +150,11 @@ export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMa
         {selo && <em className={`mon-selo parceiro ${selo.codigo}`}>{selo.texto}</em>}
         <em className={`mon-selo conta ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'Conta demo' : 'Conta real'}</em>
         {modo && <em className={`mon-selo modo ${modo}`}>{NOME_DO_MODO[modo]}</em>}
-        {/* o saldo da conta Deriv, ao vivo (vem no espelho desde 10/11/2026; sessão antiga não tem) */}
-        {typeof e.saldo === 'number' && <span className="mon-cartao-saldo" title="Saldo da conta na Deriv agora"><i>Saldo</i><b>{din(e.saldo, s.moeda)}</b></span>}
+        {/* Saldo real e saldo demo, sempre os dois (10/11/2026); a conta em uso fica em destaque */}
+        {(ds.real !== null || ds.demo !== null) && <span className="mon-cartao-saldos">
+          <span className={`real ${s.demo ? '' : 'em-uso'}`} title={dicaDoSaldo(!s.demo, ds.vistoReal)}><i>Saldo real</i><b>{ds.real !== null ? din(ds.real, s.moeda) : '—'}</b></span>
+          <span className={`demo ${s.demo ? 'em-uso' : ''}`} title={dicaDoSaldo(s.demo, ds.vistoDemo)}><i>Saldo demo</i><b>{ds.demo !== null ? din(ds.demo, s.moeda) : '—'}</b></span>
+        </span>}
       </div>
       <div className="mon-cartao-robo">
         <span><b><NomeDoRobo nome={s.roboNome} id={s.roboId} /></b><small>{NOME_DO_ATIVO[s.ativo] ?? s.ativo}</small></span>
@@ -167,8 +184,10 @@ export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMa
 
 /* ===================================================== cabine espelho */
 
-function CabineEspelho({ s, estado, cliente, selo, modo, saude, idade, rtt, desvio, eventos, aoFechar, passo, integridade, mostrarMarkup = false }: {
+function CabineEspelho({ s, estado, cliente, selo, saldos, modo, saude, idade, rtt, desvio, eventos, aoFechar, passo, integridade, mostrarMarkup = false }: {
   mostrarMarkup?: boolean
+  /** Ao vivo: o saldo real e o demo do cliente (a conta em uso pelo espelho, a outra pelo app dele). */
+  saldos?: SaldosDoCliente
   selo?: { texto: string; codigo: string } | null
   s: SessaoEspelho; estado: EstadoEspelho; cliente?: ClienteRegistro; modo: 'ao-vivo' | 'replay'; saude: Saude; idade: number | null; rtt: number | null; desvio: number | null
   eventos: EventoEspelho[]; aoFechar: () => void; passo?: { indice: number; total: number; horaOriginal: number; lacuna: number }; integridade?: Integridade
@@ -196,7 +215,7 @@ function CabineEspelho({ s, estado, cliente, selo, modo, saude, idade, rtt, desv
   return (
     <section className={`mon-foco ${modo}`} role="region" aria-label={`Cabine espelho de ${nome}, somente visualização`}>
       <CabecalhoDaCabine refVoltar={titulo} aoFechar={aoFechar} nome={nome} selo={selo} email={cliente?.email} contaId={s.contaId} demo={s.demo}
-        moeda={s.moeda} saldo={estado.saldo} modo={modo} saude={saude} idade={idade} rtt={rtt} desvio={desvio} passo={passo} integridade={integridade} />
+        moeda={s.moeda} saldo={estado.saldo} dois={modo === 'ao-vivo' ? doisSaldos(s, estado.saldo, saldos) : undefined} modo={modo} saude={saude} idade={idade} rtt={rtt} desvio={desvio} passo={passo} integridade={integridade} />
 
       <div className={`cabine-caixa expandido ${estado.rodando ? 'rodando' : 'parado'} mon-somente-leitura`} style={{ ['--robo' as any]: cor, ['--robo-suave' as any]: corSuave }}>
         {/* Sem onDesligar, onLigarDeNovo, onRemover, onDigitos, onExpandir: a cabine não desenha botão nenhum (a barra de ações fica vazia — não é escondida por CSS). */}
@@ -453,6 +472,22 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
     if (m.estado === 'sem-permissao') { setTela('sem-permissao'); void auditarNegado(sessao, marcaDoRegistro) }
     else if (m.estado === 'indisponivel') setTela((t) => (t === 'carregando' ? 'indisponivel' : t))
   }, [sessao])
+
+  /* ------------------------------------------- saldo real e demo de cada cliente */
+  // Uma leitura por minuto (com a aba à mostra) para quem está no mosaico; a conta em uso já vem ao vivo pelo espelho.
+  const [saldos, setSaldos] = useState<Map<string, SaldosDoCliente>>(new Map())
+  const idsComSaldo = useMemo(() => [...new Set([...sessoes.values()].map((s) => s.userId))].sort().join(','), [sessoes])
+  useEffect(() => {
+    if (!idsComSaldo) return
+    let vivo = true
+    const ler = () => {
+      if (document.visibilityState === 'hidden') return
+      saldosDosClientes(sessao, idsComSaldo.split(',')).then((m) => { if (vivo) setSaldos(m) }).catch(() => undefined)
+    }
+    ler()
+    const t = window.setInterval(ler, 60_000)
+    return () => { vivo = false; window.clearInterval(t) }
+  }, [idsComSaldo, sessao])
 
   /* ------------------------------------------------ fichas dos clientes */
   const garantirClientes = useCallback(async (ids: string[]) => {
@@ -841,7 +876,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
             clientes={clientes} garantirClientes={garantirClientes} aoContar={contarManuais} doFoco={doFoco} selo={seloDe} />
           <h3 className="mon-titulo-bloco"><span className="mon-tag ia">I.A.</span> {MARCA.vocabularioIA ? 'Sessões automáticas' : 'Robôs'}</h3>
           <div className={`mon-mosaico ${visao}`}>
-            {lista.slice(0, limite).map((s) => <Cartao key={s.sessaoId} s={s} cliente={clientes.get(s.userId)} saude={saudes.get(s.sessaoId) ?? 'desatualizado'} visao={visao} mostrarMarca={naRede} selo={seloDe(s.userId, s.parceiro)} aoAbrir={abrirFoco} />)}
+            {lista.slice(0, limite).map((s) => <Cartao key={s.sessaoId} s={s} cliente={clientes.get(s.userId)} saude={saudes.get(s.sessaoId) ?? 'desatualizado'} visao={visao} mostrarMarca={naRede} selo={seloDe(s.userId, s.parceiro)} saldos={saldos.get(`${s.userId}|${s.marca}`)} aoAbrir={abrirFoco} />)}
             {!lista.length && <div className="mon-estado">{sessoes.size ? <><b>Nenhuma sessão passa pelos filtros.</b>Ajuste o período ou os filtros acima.</> : <><b>Nenhum robô operando nesta marca agora.</b>Quando um cliente ligar um robô, a cabine aparece aqui sozinha.</>}</div>}
           </div>
           {lista.length > limite && <button className="mon-mais" onClick={() => setLimite((l) => l + 60)}>Mostrar mais {Math.min(60, lista.length - limite)} de {lista.length - limite} restantes</button>}
@@ -856,7 +891,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
       {tela === 'pronto' && aba === 'ao-vivo' && emFoco && focoAutorizado === 'pendente' && <div className="mon-estado" role="status"><b>Registrando o acesso…</b></div>}
       {tela === 'pronto' && aba === 'ao-vivo' && emFoco && focoAutorizado === 'nao' && <div className="mon-estado erro" role="alert"><b>Cabine não aberta</b>Não foi possível registrar a auditoria deste acesso. Sem registro, a cabine não é exibida.<button onClick={() => setFoco(null)}>Voltar ao mosaico</button></div>}
       {tela === 'pronto' && aba === 'ao-vivo' && emFoco && focoAutorizado === 'sim' && (
-        <CabineEspelho s={emFoco} estado={emFoco.estado} cliente={clientes.get(emFoco.userId)} selo={seloDe(emFoco.userId, emFoco.parceiro)} modo="ao-vivo"
+        <CabineEspelho s={emFoco} estado={emFoco.estado} cliente={clientes.get(emFoco.userId)} selo={seloDe(emFoco.userId, emFoco.parceiro)} saldos={saldos.get(`${emFoco.userId}|${emFoco.marca}`)} modo="ao-vivo"
           saude={saudeDoSinal(emFoco, agora)} idade={idadeDaAtualizacao(emFoco, agora)} rtt={rttMs} desvio={desvioS} eventos={eventos.get(emFoco.sessaoId) ?? []} aoFechar={fecharFoco} mostrarMarkup={mostrarMarkup} />
       )}
 

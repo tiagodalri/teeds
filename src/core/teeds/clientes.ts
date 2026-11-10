@@ -622,6 +622,30 @@ export async function idsDoParceiro(sessao: SessaoTeeds, parceiro: string): Prom
   return new Set((linhas ?? []).map((l) => String(l.user_id)))
 }
 
+/*
+  Saldo real e saldo demo de cada cliente (10/11/2026, Tiago: "quero que apareçam 2 saldos, Saldo
+  Real e Saldo Demo, independente se esteja operando na demo ou real"). É o último saldo que o app do
+  cliente leu de cada conta (contas_deriv.saldo, gravado a cada poucos minutos); a conta em que a I.A.
+  opera tem o número ao vivo pelo espelho, e a tela prefere esse. Chave: `${userId}|${marca}`.
+*/
+export interface SaldoGuardado { saldo: number; moeda: string; vistaEm: string }
+export interface SaldosDoCliente { real: SaldoGuardado | null; demo: SaldoGuardado | null }
+export async function saldosDosClientes(sessao: SessaoTeeds, ids: string[]): Promise<Map<string, SaldosDoCliente>> {
+  const lista = [...new Set(ids)].filter(Boolean)
+  const mapa = new Map<string, SaldosDoCliente>()
+  if (!lista.length) return mapa
+  const linhas = await rest<any[]>(`/contas_deriv?select=user_id,marca,tipo,saldo,moeda,vista_em&user_id=in.(${lista.join(',')})&saldo=not.is.null&order=vista_em.desc`, sessao.token)
+  for (const l of linhas ?? []) {
+    const chave = `${l.user_id}|${l.marca}`
+    const atual = mapa.get(chave) ?? { real: null, demo: null }
+    const tipo: 'real' | 'demo' = l.tipo === 'demo' ? 'demo' : 'real'
+    // a mais recente de cada tipo (a lista vem da mais recente para a mais antiga)
+    if (!atual[tipo]) atual[tipo] = { saldo: Number(l.saldo), moeda: l.moeda ?? 'USD', vistaEm: l.vista_em }
+    mapa.set(chave, atual)
+  }
+  return mapa
+}
+
 export async function listarContasDeriv(sessao: SessaoTeeds): Promise<ContaDerivRegistro[]> {
   const linhas = await rest<any[]>(`/contas_deriv?select=*&${filtroMarca()}&order=vista_em.desc`, sessao.token)
   return (linhas ?? []).map((l) => ({

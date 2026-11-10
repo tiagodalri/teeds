@@ -19,7 +19,7 @@ const segundos = (s: number) => s.toLocaleString('pt-BR', { minimumFractionDigit
 export const iniciaisDe = (nome?: string | null) =>
   (nome ?? '').replace(/[^\p{L}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || '?'
 
-export function CabecalhoDaCabine({ refVoltar, aoFechar, rotuloVoltar = 'Mosaico', nome, selo, email, contaId, demo, moeda, saldo, modo, saude, idade, rtt, desvio, passo, integridade }: {
+export function CabecalhoDaCabine({ refVoltar, aoFechar, rotuloVoltar = 'Mosaico', nome, selo, email, contaId, demo, moeda, saldo, dois, modo, saude, idade, rtt, desvio, passo, integridade }: {
   refVoltar?: RefObject<HTMLButtonElement>
   aoFechar: () => void
   /** O texto do botão de voltar (a cabine da manual volta para "Operações manuais"). */
@@ -33,6 +33,8 @@ export function CabecalhoDaCabine({ refVoltar, aoFechar, rotuloVoltar = 'Mosaico
   moeda: string
   /** Saldo da conta Deriv (o espelho traz desde 10/11/2026). Sem número, o bloco não aparece. */
   saldo?: number | null
+  /** Ao vivo (10/11/2026): saldo real e saldo demo juntos; a conta em uso fica em destaque. */
+  dois?: { real: number | null; demo: number | null }
   modo: 'ao-vivo' | 'replay'
   saude: Saude
   idade: number | null
@@ -63,7 +65,17 @@ export function CabecalhoDaCabine({ refVoltar, aoFechar, rotuloVoltar = 'Mosaico
           </ul>
         </div>
       </div>
-      {typeof saldo === 'number' && (
+      {dois && (dois.real !== null || dois.demo !== null) ? (
+        <div className="cbt-saldos">
+          {(['real', 'demo'] as const).map((t) => (
+            <div key={t} className={`cbt-saldo ${t} ${(t === 'demo') === demo ? 'em-uso' : 'outro'}`}
+              title={(t === 'demo') === demo ? 'Conta em que a I.A. está operando: saldo ao vivo da Deriv' : 'Último saldo que o app do cliente leu desta conta'}>
+              <small>{t === 'real' ? 'Saldo real' : 'Saldo demo'}</small>
+              <b>{dois[t] !== null ? <>{dois[t]!.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span>{moeda}</span></> : '—'}</b>
+            </div>
+          ))}
+        </div>
+      ) : typeof saldo === 'number' && (
         <div className={`cbt-saldo ${demo ? 'demo' : 'real'}`} title="Saldo da conta na Deriv">
           <small>{modo === 'replay' ? 'Saldo neste momento' : 'Saldo da conta'}</small>
           <b>{saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span>{moeda}</span></b>
