@@ -339,7 +339,8 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
   useEffect(() => {
     registrarTudo()
     const el = caixa.current!
-    compactoRef.current = estreito(el)
+    // o gráfico de um quadro da Multitela mostra a legenda só com o mouse em cima (como o do celular)
+    compactoRef.current = compacto || estreito(el)
     // números no formato brasileiro no eixo, na dica e nas marcas ("1.234,567"), iguais à boleta
     const chart = init(el, { locale: 'pt-BR', styles: estilos(mode, compactoRef.current), thousandsSeparator: { sign: '.', format: textoBR } })
     if (!chart) return
@@ -373,7 +374,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
     tema.observe(document.documentElement, { attributes: true, attributeFilter: ['data-tema'] })
     const tamanho = new ResizeObserver(() => {
       chart.resize(); medirPainel()
-      const c = estreito(el)
+      const c = compacto || estreito(el)
       if (c !== compactoRef.current) { compactoRef.current = c; chart.setStyles(estilos(modoRef.current, c)) }
     })
     tamanho.observe(el)
