@@ -1043,16 +1043,24 @@ const gravarPulsos = (linhas: unknown) => rest<void>('/pulsos_robos_ao_vivo?on_c
 })
 
 /*
-  Em lote desde 08/11/2026 (ver lote.ts): uma ida ao banco a cada 250 ms
+  Em lote desde 08/11/2026 (ver lote.ts): uma ida ao banco a cada 40 ms (era 250 até 10/11)
   leva as gravações de todas as sessões. ESPELHO_EM_LOTE=0 volta ao jeito
   antigo, uma ida por gravação, sem mexer no código.
 */
 const EM_LOTE = process.env.ESPELHO_EM_LOTE !== '0'
 type Linha = { sessao_id: string }
 const porSessao = (l: Linha) => l.sessao_id
-const loteDeFotos = criarLote<Linha>({ enviar: gravarFotos, enviarUm: gravarFotos, chave: porSessao })
-const loteDeEventos = criarLote<Linha>({ enviar: gravarEventos, enviarUm: gravarEventos })
-const loteDePulsos = criarLote<Linha>({ enviar: gravarPulsos, enviarUm: gravarPulsos, chave: porSessao })
+/*
+  10/11/2026 (Tiago no Monitoramento: cartões "Desatualizado" com a I.A. operando): a espera de 250 ms
+  se somava à ida ao banco (~120 ms) em CADA gravação, e cada sessão grava em fila (eventos, depois a
+  foto, depois o pulso). Uma I.A. operando rápido acumulava eventos e o pulso ficava 10 a 70 s para
+  trás. Com 40 ms o pacote ainda junta as sessões (bem menos idas que uma por gravação) e a fila de cada
+  sessão anda no ritmo do batimento. ESPELHO_LOTE_MS ajusta sem mexer no código.
+*/
+const ESPERA_DO_LOTE = Math.max(0, Number(process.env.ESPELHO_LOTE_MS ?? 40) || 0)
+const loteDeFotos = criarLote<Linha>({ enviar: gravarFotos, enviarUm: gravarFotos, chave: porSessao, esperaMs: ESPERA_DO_LOTE })
+const loteDeEventos = criarLote<Linha>({ enviar: gravarEventos, enviarUm: gravarEventos, esperaMs: ESPERA_DO_LOTE })
+const loteDePulsos = criarLote<Linha>({ enviar: gravarPulsos, enviarUm: gravarPulsos, chave: porSessao, esperaMs: ESPERA_DO_LOTE })
 export const medidasDosLotes = { fotos: loteDeFotos.medidas, eventos: loteDeEventos.medidas, pulsos: loteDePulsos.medidas }
 
 export async function escreverFotoDoEspelho(sessao: SessaoGravada, foto: FotoDoEspelho): Promise<void> {
