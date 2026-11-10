@@ -169,6 +169,9 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
   const c = ficha.cliente
   const reais = ficha.contas.filter((x) => x.tipo !== 'demo')
   const saldo = reais.reduce((s, x) => s + x.saldo, 0)
+  // 10/11/2026: quando o saldo foi lido (a leitura mais recente das contas reais) e se há I.A. em conta real agora
+  const saldoLidoEm = reais.reduce<string | null>((m, x) => (x.vistaEm && (!m || x.vistaEm > m) ? x.vistaEm : m), null)
+  const operandoReal = ficha.robos.ultimas.some((r) => r.situacao === 'rodando' && !r.demo)
   const lugar = c.fusoHorario ? lugarDoFuso(c.fusoHorario) : null
   const sessaoMedia = c.totalAcessos ? c.tempoTotalSegundos / c.totalAcessos : 0
   const ops = ficha.operacoes.resumo
@@ -197,7 +200,9 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
         <div className="fc-kpis">
           <div><span>Último acesso</span><b>{dataHora(c.vistoEm)}</b><small>{haQuantoTempo(c.vistoEm)}</small></div>
           <div><span>Tempo na plataforma</span><b>{horasLegiveis(c.tempoTotalSegundos)}</b><small>{n(c.totalAcessos)} acesso{c.totalAcessos === 1 ? '' : 's'} · média de {horasLegiveis(sessaoMedia)}</small></div>
-          <div className={saldo > 0 ? 'ok' : ''}><span>Saldo real</span><b>{reais.length ? usd(saldo) : '—'}</b><small>{reais.length ? `${reais.length} conta${reais.length === 1 ? '' : 's'} real${reais.length === 1 ? '' : 'is'}` : 'Sem conta conectada'}</small></div>
+          <div className={saldo > 0 ? 'ok' : ''}><span>Saldo real</span><b>{reais.length ? usd(saldo) : '—'}</b><small>{reais.length
+            ? `${reais.length} conta${reais.length === 1 ? '' : 's'} real${reais.length === 1 ? '' : 'is'} · lido ${haQuantoTempo(saldoLidoEm)}`
+            : 'Sem conta conectada'}</small>{operandoReal && <small className="fc-saldo-vivo">Operando em conta real agora: o saldo muda a cada operação</small>}</div>
           <div className={mk.comissaoReal > 0 ? 'ok' : ''}><span>Markup real</span><b>{usd4(mk.comissaoReal)}</b><small>O que a casa ganhou com o cliente</small></div>
         </div>
 

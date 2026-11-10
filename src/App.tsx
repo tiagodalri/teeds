@@ -865,6 +865,31 @@ export default function App() {
   }, [usuarioTeedsId, conta.account?.accountId])
 
   /*
+    O saldo da ficha acompanha a conta (10/11/2026, Tiago: "por que mostra US$ 0,00 na conta real
+    se ele está operando agora?"). Antes o saldo só era gravado ao entrar na conta e na leitura do
+    servidor a cada 30 min: quem depositava e ligava a I.A. logo depois aparecia zerado no Admin.
+    Agora toda mudança do saldo que a Deriv empurra vai para o banco, no máximo uma vez por minuto
+    (a última mudança sempre chega, um minuto depois). Só o saldo da conta que está aberta.
+  */
+  const saldoGravado = useRef<{ conta: string; valor: number; em: number } | null>(null)
+  useEffect(() => {
+    const s = teeds.sessao, a = conta.account, b = conta.balance
+    // o saldo volta a null quando a conta troca; o loginid, quando vem, tem de ser o da conta aberta
+    if (!s || !a || !b || (b.loginId && b.loginId !== a.accountId) || !Number.isFinite(b.amount)) return
+    const ultimo = saldoGravado.current
+    if (ultimo && ultimo.conta === a.accountId && Math.abs(ultimo.valor - b.amount) < 0.005) return
+    const gravar = () => {
+      saldoGravado.current = { conta: a.accountId, valor: b.amount, em: Date.now() }
+      void registrarContaDeriv(s, { ...a, balance: b.amount })
+    }
+    const espera = ultimo && ultimo.conta === a.accountId ? Math.max(0, 60_000 - (Date.now() - ultimo.em)) : 0
+    if (!espera) { gravar(); return }
+    const t = window.setTimeout(gravar, espera)
+    return () => window.clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioTeedsId, conta.account?.accountId, conta.balance?.amount, conta.balance?.loginId])
+
+  /*
     A autorização da Deriv sobe para o servidor.
 
     Acontece quando os dois logins existem ao mesmo tempo — o da Teeds e o da
