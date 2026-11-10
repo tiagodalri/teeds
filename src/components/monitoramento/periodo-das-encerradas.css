@@ -95,6 +95,8 @@
   .mse-totais-grade, .mse-totais-grade.com-markup { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 720px) {
+  /* No celular os seletores da plataforma têm 44 px (alvo de toque): o resto acompanha. */
+  .mon-encerradas { --mse-h: 44px; }
   .mon-encerradas > header.mse-cab { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 8px; text-align: left; }
   .mse-periodo { gap: 12px; }
   .mse-grupo { width: 100%; }
