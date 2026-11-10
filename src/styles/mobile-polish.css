@@ -576,3 +576,21 @@
   .filtro > .segmented { display: flex; width: 100%; }
   .filtro > .segmented > button { flex: 1; }
 }
+
+/* ==========================================================================
+   iPhone com iOS 26, app instalado (10/11/2026): depois que o teclado ou um
+   seletor fecha, o iOS às vezes deixa os fixos deslocados (barra de baixo no
+   meio da tela, topo fora dela). A classe e o tamanho do desvio vêm de
+   src/core/iphoneDesalinhado.ts; só existem enquanto o defeito está na tela.
+   A propriedade `translate` soma com o `transform` que o elemento já tenha.
+   ========================================================================== */
+html.vv-desalinhado .barra-inferior,
+html.vv-desalinhado .sp-lancador-area,
+html.vv-desalinhado .sp-painel,
+html.vv-desalinhado .mcb,
+html.vv-desalinhado .av-pilula,
+html.vv-desalinhado .app-convite,
+html.vv-desalinhado .mon-replay-controles { translate: 0 var(--vv-baixo, 0px); }
+html.vv-desalinhado .workspace-app .topbar,
+html.vv-desalinhado .workspace-app .workspace-mobile-toggle,
+html.vv-desalinhado body::before { translate: 0 var(--vv-cima, 0px); }

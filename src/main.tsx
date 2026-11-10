@@ -17,6 +17,7 @@ import { haTrocaEmAndamento } from './core/trocaEmAndamento'
 // Guarda o pedido de instalação do Chrome assim que ele chega (ver o arquivo).
 import './core/appNativo'
 import { ligarEscala } from './core/escala'
+import { ligarCorrecaoDoIphone } from './core/iphoneDesalinhado'
 import { ligarVocabularioIA } from './marca/vocabularioIA'
 import { JANELA, ligarJanelaSolta } from './core/janelaSolta'
 
@@ -90,6 +91,8 @@ if (matchMedia('(display-mode: standalone)').matches || (navigator as unknown as
 aplicarTema(temaGuardado())
 // no computador a página nasce em 90% (ver core/escala.ts)
 ligarEscala()
+// iOS 26 no app instalado: fixos deslocados depois do teclado (ver o arquivo)
+ligarCorrecaoDoIphone()
 if (MARCA.vocabularioIA) ligarVocabularioIA()
 
 // Quem abriu o site, e por qual caminho chegou. Fora do React de propósito:

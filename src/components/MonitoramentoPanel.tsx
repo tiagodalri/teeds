@@ -858,6 +858,14 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
                   return <>{m.markup.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {s.moeda}{s.demo && <small>Simulado</small>}</>
                 })()}</span>}
                 <span>{s.encerradaEm ? dataHora(s.encerradaEm) : '—'}<small>{s.motivoDaParada ?? s.situacao}</small></span>
+                {/* no celular as colunas acima somem: o resumo da linha aparece embaixo do nome (10/11/2026) */}
+                <span className="mon-linha-resumo">
+                  <em className={`mon-tipo ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'Demo' : 'Real'}</em>
+                  <span>Operações <b>{s.operacoes}</b> <small className="up">{s.ganhas}</small> <small className="down">{s.perdidas}</small></span>
+                  <span>Resultado <b className={s.resultado >= 0 ? 'up' : 'down'}>{assinado(s.resultado)} {s.moeda}</b></span>
+                  {mostrarMarkup && <span>Markup <b className="mon-markup-valor">{(() => { const m = markups.get(s.id); return m ? `${m.markup.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${s.moeda}${s.demo ? ' (simulado)' : ''}` : '—' })()}</b></span>}
+                  <span>{s.encerradaEm ? dataHora(s.encerradaEm) : '—'}</span>
+                </span>
                 <span className="adm-seta">▶</span>
               </button>
             ) })}
