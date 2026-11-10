@@ -584,13 +584,16 @@
    src/core/iphoneDesalinhado.ts; só existem enquanto o defeito está na tela.
    A propriedade `translate` soma com o `transform` que o elemento já tenha.
    ========================================================================== */
-html.vv-desalinhado .barra-inferior,
-html.vv-desalinhado .sp-lancador-area,
-html.vv-desalinhado .sp-painel,
-html.vv-desalinhado .mcb,
-html.vv-desalinhado .av-pilula,
-html.vv-desalinhado .app-convite,
-html.vv-desalinhado .mon-replay-controles { translate: 0 var(--vv-baixo, 0px); }
-html.vv-desalinhado .workspace-app .topbar,
-html.vv-desalinhado .workspace-app .workspace-mobile-toggle,
-html.vv-desalinhado body::before { translate: 0 var(--vv-cima, 0px); }
+/* dentro do @media do celular: a prova do celular (teste-celular.ts) não aceita regra nova solta; o iPhone sempre é (pointer: coarse) */
+@media (max-width: 900px), (pointer: coarse) {
+  html.vv-desalinhado .barra-inferior,
+  html.vv-desalinhado .sp-lancador-area,
+  html.vv-desalinhado .sp-painel,
+  html.vv-desalinhado .mcb,
+  html.vv-desalinhado .av-pilula,
+  html.vv-desalinhado .app-convite,
+  html.vv-desalinhado .mon-replay-controles { translate: 0 var(--vv-baixo, 0px); }
+  html.vv-desalinhado .workspace-app .topbar,
+  html.vv-desalinhado .workspace-app .workspace-mobile-toggle,
+  html.vv-desalinhado body::before { translate: 0 var(--vv-cima, 0px); }
+}
