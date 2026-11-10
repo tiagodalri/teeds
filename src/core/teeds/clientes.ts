@@ -169,6 +169,11 @@ export async function registrarPresenca(sessao: SessaoTeeds, segundos = 0): Prom
   } catch (e) {
     console.warn('[teeds] nao consegui registrar a presenca:', (e as Error).message)
   }
+  // cada visita (início, último sinal, duração, aparelho) para Admin › Acessos ao vivo (10/11/2026).
+  // Função à parte: se falhar, a presença acima já foi gravada.
+  try {
+    await rest('/rpc/teeds_registrar_visita', sessao.token, { method:'POST', body:JSON.stringify({ p_marca:MARCA.id, p_sessao:sessaoDeUso, p_segundos:Math.max(0,Math.round(segundos)), p_dispositivo:dispositivoAtual() }) })
+  } catch { /* só o painel de acessos sente */ }
 }
 
 /** A conta Deriv que a pessoa conectou agora. */
