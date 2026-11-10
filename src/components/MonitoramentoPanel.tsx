@@ -25,6 +25,7 @@ import { MARCAS } from '../marca/marcas'
 const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MARCAS).map(m=>[m.id,m.prosa]))
 import { RobotLive } from './RobotLive'
 import { IconeFechar } from './IconeFechar'
+import { CabecalhoDaCabine } from './monitoramento/CabecalhoDaCabine'
 import { OperacoesManuais } from './monitoramento/OperacoesManuais'
 import { EmContaRealAgora } from './monitoramento/EmContaRealAgora'
 import { QuemEstaOnline, lerQuemEstaOnline, type Operando } from './monitoramento/QuemEstaOnline'
@@ -191,18 +192,8 @@ function CabineEspelho({ s, estado, cliente, modo, saude, idade, rtt, desvio, ev
   }, [eventos])
   return (
     <section className={`mon-foco ${modo}`} role="region" aria-label={`Cabine espelho de ${nome}, somente visualização`}>
-      <header className="mon-foco-topo">
-        <button ref={titulo} className="mon-voltar" onClick={aoFechar}>← Mosaico</button>
-        <div className="mon-foco-quem">
-          <b>{nome}</b>
-          <small>{mascararEmail(cliente?.email)} · conta {mascararConta(s.contaId)} · <em className={s.demo ? 'demo' : 'real'}>{s.demo ? 'demo' : 'real'}</em> · {s.moeda} · {MARCA.prosa}</small>
-        </div>
-        {modo === 'replay'
-          ? <span className="mon-selo replay">REPLAY{passo ? ` · ${hora(passo.horaOriginal)} · evento ${passo.indice + 1}/${passo.total}${passo.lacuna ? ` · lacuna de ${passo.lacuna}` : ''}` : ''}{integridade ? ` · ${ROTULO_INTEGRIDADE[integridade]}` : ''}</span>
-          : <span className={`mon-selo ${saude}`} role="status"><i aria-hidden />{ROTULO_SAUDE[saude]}{idade != null && saude !== 'encerrada' ? ` · atualizado há ${segundos(idade)} s` : ''}{rtt != null ? ` · canal ~${rtt} ms` : ''}{desvio != null && Math.abs(desvio) >= 2 ? ` · relógio do servidor ≈ ${desvio > 0 ? '−' : '+'}${segundos(Math.abs(desvio))} s` : ''}</span>}
-        <span className="mon-selo leitura" aria-label="Somente visualização">Somente visualização</span>
-        <button className="mon-fechar" onClick={aoFechar} aria-label="Fechar a cabine espelho"><IconeFechar /></button>
-      </header>
+      <CabecalhoDaCabine refVoltar={titulo} aoFechar={aoFechar} nome={nome} email={cliente?.email} contaId={s.contaId} demo={s.demo}
+        moeda={s.moeda} modo={modo} saude={saude} idade={idade} rtt={rtt} desvio={desvio} passo={passo} integridade={integridade} />
 
       <div className={`cabine-caixa expandido ${estado.rodando ? 'rodando' : 'parado'} mon-somente-leitura`} style={{ ['--robo' as any]: cor, ['--robo-suave' as any]: corSuave }}>
         {/* Sem onDesligar, onLigarDeNovo, onRemover, onDigitos, onExpandir: a cabine não desenha botão nenhum (a barra de ações fica vazia — não é escondida por CSS). */}

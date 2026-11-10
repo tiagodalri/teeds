@@ -92,21 +92,31 @@ export function EmContaRealAgora({ sessao, marcas, parceiro, sinal, local, soRea
   const pessoas = n.pessoas
   const ia = MARCA.vocabularioIA ? 'I.A.' : n.ias === 1 ? 'robô' : 'robôs'
 
+  const banca = agora && !semLeitura && pessoas > 0 ? Number(agora.banca_operando_real) || 0 : null
+  const detalhe = pessoas > 0
+    ? `${int(n.ias)} ${ia} em real · ${int(n.manuais)} ${n.manuais === 1 ? 'manual' : 'manuais'}${semLeitura ? '' : ' · Sem contar a equipe'}`
+    : semLeitura ? 'Pelo que o Monitoramento vê ao vivo' : 'Sem contar a equipe'
+
   return (
     <div className={`mra${pessoas > 0 ? ' com-real' : ''}`} role="status" aria-live="polite">
-      <i className="mra-ponto" aria-hidden="true" />
-      {pessoas > 0 ? (
-        <p>
-          <b>{int(pessoas)} {pessoas === 1 ? 'pessoa operando' : 'pessoas operando'} em conta real agora</b>
-          {agora && !semLeitura && <>, somando <em>{dinheiro(agora.banca_operando_real, 'USD')}</em> de banca</>}
-          <small>{int(n.ias)} {ia} em real · {int(n.manuais)} {n.manuais === 1 ? 'manual' : 'manuais'}{semLeitura ? '' : ' · Sem contar a equipe'}</small>
+      <span className="mra-ponto" aria-hidden="true"><i /></span>
+      <div className="mra-txt">
+        <p className="mra-titulo">
+          {pessoas > 0
+            ? <><b>{int(pessoas)} {pessoas === 1 ? 'pessoa' : 'pessoas'}</b> operando em conta real agora</>
+            : <>Ninguém operando em conta real neste minuto</>}
         </p>
-      ) : (
-        <p><b>Ninguém operando em conta real neste minuto</b><small>{semLeitura ? 'Pelo que o Monitoramento vê ao vivo' : 'Sem contar a equipe'}</small></p>
+        <p className="mra-detalhe">{detalhe}</p>
+      </div>
+      {banca != null && (
+        <div className="mra-banca">
+          <span>Banca em operação</span>
+          <strong>{dinheiro(banca, 'USD')}</strong>
+        </div>
       )}
       {soReal
         ? <button type="button" onClick={onVerTodas}>Mostrar demo também</button>
-        : pessoas > 0 && <button type="button" className="mra-ver" onClick={onVerQuem}>Ver quem ›</button>}
+        : pessoas > 0 && <button type="button" className="mra-ver" onClick={onVerQuem}>Ver quem <span aria-hidden="true">›</span></button>}
     </div>
   )
 }

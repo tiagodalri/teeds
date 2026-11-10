@@ -191,6 +191,7 @@ const AdminAulasLab = lazy(() => import('./components/AdminAulas').then((m) => (
 const LabQuemEstaOnline = lazy(() => import('./components/monitoramento/LabQuemEstaOnline'))
 const LabEncerradas = lazy(() => import('./components/monitoramento/LabEncerradas'))
 const LabVisaoGeral = lazy(() => import('./components/admin/LabVisaoGeral'))
+const LabCabineTopo = lazy(() => import('./components/monitoramento/LabCabineTopo'))
 const LiberarAcessoGeralLab = lazy(() => import('./components/lancamento/LiberarAcessoGeral').then((m) => ({ default: m.LiberarAcessoGeral })))
 const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine'))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
@@ -534,6 +535,8 @@ function Laboratorio() {
   if (qual === 'encerradas') return <Suspense fallback={null}><LabEncerradas /></Suspense>
   // ?tela=visao-geral(&cenario=real|vazio): a Visão geral da Administração com números de exemplo
   if (qual === 'visao-geral') return <Suspense fallback={null}><LabVisaoGeral /></Suspense>
+  // ?tela=cabine-topo(&vazio): cabeçalho da cabine espelho e o aviso "Em conta real agora", com exemplo
+  if (qual === 'cabine-topo') return <Suspense fallback={null}><LabCabineTopo /></Suspense>
   if (qual === 'liberar-geral' && (new URLSearchParams(location.search).has('parceiro') || new URLSearchParams(location.search).has('esperando'))) {
     const f = window.fetch
     window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => String(u).includes('teeds_lancamento_painel')

@@ -1,0 +1,98 @@
+/* Cabeçalho da cabine espelho (Monitoramento › Mosaico › cliente), prefixo mcb-.
+   10/11/2026 (Tiago: "sem layout sem design sem nada, infos jogadas"). O mesmo padrão das Sessões
+   encerradas: controles de 40 px, cantos de 10 px, fonte 13 px, 20 px de respiro nas bordas.
+   À esquerda quem é (voltar, iniciais, nome e a ficha da conta); à direita o estado (ao vivo, somente
+   visualização e fechar), tudo numa linha alinhada pelo centro. */
+.mcb {
+  --mcb-h: 40px; --mcb-raio: 10px;
+  /* âmbar e roxo legíveis no claro; no escuro, os tons mais vivos (abaixo) */
+  --mcb-ambar: #a9742a; --mcb-roxo: #5b3fbf;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 16px 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg);
+}
+
+.mcb-voltar {
+  display: inline-flex; align-items: center; gap: 6px; flex: none; box-sizing: border-box;
+  height: var(--mcb-h); padding: 0 14px 0 10px; border: 1px solid var(--border); border-radius: var(--mcb-raio);
+  color: var(--text); background: var(--surface); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.mcb-voltar svg { width: 16px; height: 16px; }
+.mcb-voltar:hover { border-color: color-mix(in srgb, var(--text) 30%, var(--border)); }
+
+.mcb-quem { display: flex; align-items: center; gap: 12px; flex: 1 1 auto; min-width: 0; }
+.mcb-avatar {
+  display: grid; place-items: center; flex: none; width: var(--mcb-h); height: var(--mcb-h); border-radius: 50%;
+  font-size: 13px; font-weight: 800; letter-spacing: .02em; color: var(--text);
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface)); border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+.mcb-nome { display: grid; gap: 4px; min-width: 0; }
+.mcb-nome h2 { margin: 0; font-size: 16px; line-height: 1.25; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mcb-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; margin: 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--muted); }
+.mcb-meta li { display: inline-flex; align-items: center; white-space: nowrap; }
+.mcb-meta li + li::before { content: ''; width: 3px; height: 3px; margin: 0 8px; border-radius: 50%; background: currentColor; opacity: .6; }
+.mcb-meta .mcb-conta + li::before { display: none; }
+.mcb-conta { margin-right: 8px; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; }
+.mcb-conta.real { color: var(--up); background: color-mix(in srgb, var(--up) 14%, transparent); }
+.mcb-conta.demo { color: var(--mcb-ambar); background: color-mix(in srgb, #e0a13a 14%, transparent); }
+
+.mcb-estado { display: flex; align-items: center; gap: 10px; flex: none; }
+.mcb-status {
+  display: inline-flex; align-items: center; gap: 8px; box-sizing: border-box; height: var(--mcb-h);
+  padding: 0 14px; border: 1px solid var(--border); border-radius: var(--mcb-raio);
+  font-size: 13px; color: var(--muted); background: var(--surface); white-space: nowrap;
+}
+.mcb-status i { width: 8px; height: 8px; flex: none; border-radius: 50%; background: currentColor; }
+.mcb-status b { font-weight: 700; color: currentColor; }
+.mcb-status small { display: inline-flex; align-items: center; font-size: 12.5px; color: var(--muted); }
+.mcb-status small::before { content: ''; width: 3px; height: 3px; margin-right: 8px; border-radius: 50%; background: currentColor; opacity: .6; }
+/* o número que muda a cada segundo não empurra o resto */
+.mcb-num { font-variant-numeric: tabular-nums; }
+.mcb-status.ao-vivo { color: var(--up); border-color: color-mix(in srgb, var(--up) 40%, var(--border)); background: color-mix(in srgb, var(--up) 9%, var(--surface)); }
+.mcb-status.ao-vivo i { animation: mcb-pisca 1.4s ease-in-out infinite; }
+.mcb-status.atencao { color: var(--mcb-ambar); border-color: color-mix(in srgb, #e0a13a 40%, var(--border)); }
+.mcb-status.desatualizado, .mcb-status.encerrada { color: var(--down); border-color: color-mix(in srgb, var(--down) 40%, var(--border)); }
+.mcb-status.replay { color: var(--mcb-roxo); border-color: color-mix(in srgb, #5b3fbf 60%, var(--border)); background: color-mix(in srgb, #5b3fbf 16%, var(--surface)); }
+@keyframes mcb-pisca { 50% { opacity: .35; } }
+
+.mcb-leitura {
+  display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; height: var(--mcb-h);
+  padding: 0 12px; border-radius: var(--mcb-raio); font-size: 13px; color: var(--muted); white-space: nowrap; cursor: help;
+}
+.mcb-leitura svg { width: 16px; height: 16px; flex: none; }
+
+.mcb-fechar {
+  display: grid; place-items: center; flex: none; box-sizing: border-box; width: var(--mcb-h); height: var(--mcb-h);
+  padding: 0; border: 1px solid var(--border); border-radius: var(--mcb-raio);
+  color: var(--muted); background: var(--surface); cursor: pointer;
+}
+.mcb-fechar svg { width: 14px; height: 14px; }
+.mcb-fechar:hover, .mcb-fechar:focus-visible { color: var(--text); }
+.mcb button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+:root[data-tema='escuro'] .mcb { --mcb-ambar: #e0a13a; --mcb-roxo: #b9a6ff; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema='claro']) .mcb { --mcb-ambar: #e0a13a; --mcb-roxo: #b9a6ff; } }
+@media (prefers-reduced-motion: reduce) { .mcb-status.ao-vivo i { animation: none; } }
+
+/* Telas médias: o estado desce para a linha de baixo, inteiro e alinhado à esquerda. */
+@media (max-width: 1100px) {
+  .mcb { flex-wrap: wrap; }
+  .mcb-quem { flex: 1 1 calc(100% - 140px); }
+  .mcb-estado { flex: 1 1 100%; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--border); }
+  .mcb-fechar { margin-left: auto; }
+}
+/* Celular: voltar e fechar na linha de cima; quem é no meio; o estado embaixo. Sem pontinhos
+   separadores (no começo de uma linha quebrada eles ficam soltos): só o espaço entre os itens. */
+@media (max-width: 600px) {
+  /* 44 px no celular, como os outros controles da plataforma */
+  .mcb { --mcb-h: 44px; gap: 12px; padding: 14px 16px; }
+  .mcb-estado { display: contents; }
+  .mcb-voltar { order: 0; }
+  .mcb-fechar { order: 1; margin-left: auto; }
+  .mcb-quem { order: 2; flex: 1 1 100%; align-items: flex-start; }
+  .mcb-status { order: 3; flex: 1 1 100%; height: auto; min-height: var(--mcb-h); padding: 8px 12px; flex-wrap: wrap; white-space: normal; gap: 4px 12px; }
+  .mcb-status small::before { display: none; }
+  .mcb-leitura { order: 4; height: auto; padding: 0 2px; }
+  .mcb-meta { gap: 6px 12px; }
+  .mcb-meta li + li::before { display: none; }
+  .mcb-conta { margin-right: 0; }
+}
