@@ -28,7 +28,7 @@ export interface PessoaOnline {
   dispositivo: string | null; segundos_hoje: number; acessos_hoje: number
   real: { saldo: number | null; moeda: string | null; conta: string } | null; tem_demo: boolean; ias: IaNoAr[]
 }
-type Aba = 'plataforma' | 'operando'
+type Aba = 'plataforma' | 'operando' | 'saldo'
 type Ordem = 'recente' | 'banca' | 'tempo'
 
 const ia = MARCA.vocabularioIA ? 'I.A.' : 'Robô'
@@ -134,6 +134,10 @@ export function QuemEstaOnline({ sessao, marcas, parceiro, operando, clientes, s
     else if (ordem === 'tempo') l.sort((a, b) => b.segundos_hoje - a.segundos_hoje)
     return l
   }, [pessoas, q, ordem]) // eslint-disable-line react-hooks/exhaustive-deps
+  // 10/11/2026 (Tiago): o 3º cartão também abre a lista — quem está na plataforma com saldo na conta real, maior banca primeiro
+  const listaSaldo = useMemo(() => (pessoas ?? [])
+    .filter((p) => Number(p.real?.saldo ?? 0) > 0 && bate(p.nome, p.email))
+    .sort((a, b) => Number(b.real?.saldo ?? 0) - Number(a.real?.saldo ?? 0)), [pessoas, q]) // eslint-disable-line react-hooks/exhaustive-deps
   const listaOperando = useMemo(() => operando
     .filter((o) => bate(clientes.get(o.userId)?.nome ?? porId.get(o.userId)?.nome, clientes.get(o.userId)?.email ?? porId.get(o.userId)?.email))
     .sort((a, b) => Number(b.sessoes.some((s) => !s.demo)) - Number(a.sessoes.some((s) => !s.demo))), [operando, clientes, porId, q]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -223,7 +227,9 @@ export function QuemEstaOnline({ sessao, marcas, parceiro, operando, clientes, s
           <button type="button" className={aba === 'operando' ? 'on' : ''} onClick={() => setAba('operando')}>
             <strong>{operando.length}</strong><span>Operando</span>
           </button>
-          <div><strong>{pessoas ? comReal : '—'}</strong><span>Com saldo real</span></div>
+          <button type="button" className={aba === 'saldo' ? 'on' : ''} onClick={() => setAba('saldo')}>
+            <strong>{pessoas ? comReal : '—'}</strong><span>Com saldo real</span>
+          </button>
         </div>
 
         <div className="qeo-filtros">
@@ -245,6 +251,14 @@ export function QuemEstaOnline({ sessao, marcas, parceiro, operando, clientes, s
                   const o = operando.find((x) => x.userId === p.user_id)
                   return pessoa({ id: p.user_id, p, sessoes: o?.sessoes, manual: o?.manual })
                 })}</ul>)}
+          {aba === 'saldo' && (pessoas === null
+            ? <div className="qeo-vazio"><b>Lendo quem está na plataforma…</b></div>
+            : listaSaldo.length
+              ? <ul>{listaSaldo.map((p) => {
+                  const o = operando.find((x) => x.userId === p.user_id)
+                  return pessoa({ id: p.user_id, p, sessoes: o?.sessoes, manual: o?.manual })
+                })}</ul>
+              : <div className="qeo-vazio"><b>{q ? 'Ninguém com esse nome ou e-mail.' : 'Ninguém com saldo na conta real agora.'}</b><span>Mostra quem está na plataforma com dinheiro na conta real, da maior banca para a menor.</span></div>)}
           {aba === 'operando' && (listaOperando.length
             ? <ul>{listaOperando.map((o) => pessoa({ id: o.userId, p: porId.get(o.userId), sessoes: o.sessoes, manual: o.manual }))}</ul>
             : <div className="qeo-vazio"><b>{q ? 'Ninguém com esse nome ou e-mail.' : `Ninguém operando agora.`}</b><span>Quando alguém ligar {MARCA.vocabularioIA ? 'uma I.A.' : 'um robô'} ou abrir uma operação manual, aparece aqui na hora.</span></div>)}
