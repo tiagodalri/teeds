@@ -82,6 +82,7 @@ const LabGraficoPro = lazy(() => import('./components/grafico/LabGraficoPro'))
 const LabOperar = lazy(() => import('./components/operar/LabOperar'))
 const LabRelatorios = lazy(() => import('./components/relatorios/LabRelatorios'))
 const LabMultiplicador = lazy(() => import('./components/operar/LabMultiplicador'))
+const LabMultitela = lazy(() => import('./components/operar/multitela/LabMultitela'))
 const LabPainelDeComando = lazy(() => import('./components/grafico/LabPainelDeComando'))
 const AdminPendentesLab = lazy(() => import('./components/AdminPendentes').then((m) => ({ default: m.AdminPendentes })))
 const LabAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.LabAoVivo })))
@@ -525,6 +526,8 @@ function Laboratorio() {
   // ?tela=painel-comando: o painel flutuante da tela cheia do TradingView, com posições de exemplo
   // ?tela=multiplicador(&ativo=frxEURUSD): a boleta do multiplicador com cotações reais da Deriv
   if (qual === 'multiplicador') return <Suspense fallback={null}><LabMultiplicador /></Suspense>
+  // ?tela=multitela(&n=2|4|6)(&real=1)(&sem-deriv): a grade de vários ativos com cotações reais e compras de mentira
+  if (qual === 'multitela') return <Suspense fallback={null}><LabMultitela /></Suspense>
   if (qual === 'painel-comando') return <Suspense fallback={null}><LabPainelDeComando /></Suspense>
   // ?tela=pendentes: a aprovação de clientes como o admin geral vê (com a escolha do parceiro); a lista vem do servidor
   if (qual === 'pendentes') return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><AdminPendentesLab sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab', telefone: null, cpf: null, criadoEm: '', trocarSenha: false } } as never} marca="globalfly" versao={0} onAprovado={() => undefined} parceiros={[{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }, { codigo: 'd', nome: 'Douglas' }]} exemplo={!new URLSearchParams(location.search).has('real')} /></div></Suspense>

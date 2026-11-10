@@ -267,3 +267,8 @@ body:has(.gp-ampliado) :is(.barra-inferior, .mcb, .sp-lancador-area, .eq-lancado
 @media (max-width: 700px) {
   .layout-operar > .main:has(.gp) > .chart { flex: 1 1 auto; min-height: 0; }
 }
+
+/* Multitela (10/11/2026): o gráfico de cada quadro, enxuto — sem a barra de indicadores,
+   sem as ferramentas de desenho e sem os botões de zoom (a roda do mouse e o arrastar continuam) */
+.gp-compacto .gp-barra, .gp-compacto .gp-ferramentas, .gp-compacto .chart-zoom { display: none; }
+.gp-compacto .gp-grafico { min-height: 0; }

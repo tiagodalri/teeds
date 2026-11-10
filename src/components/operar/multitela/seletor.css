@@ -1,0 +1,23 @@
+/* O seletor de quadros da Multitela (10/11/2026). Fica num arquivo à parte porque aparece
+   também no Operar de 1 ativo, antes de a grade (carregada sob demanda) existir. */
+.mtl-seletor {
+  --mtl-ouro: var(--gf-ouro, var(--primary));
+  --mtl-ouro-texto: color-mix(in srgb, var(--mtl-ouro) 75%, #fff);
+  --mtl-veu: color-mix(in srgb, var(--mtl-ouro) 15%, transparent);
+  --mtl-campo: color-mix(in srgb, var(--bg) 70%, var(--surface));
+}
+:root:not([data-tema='escuro']) .mtl-seletor { --mtl-ouro-texto: color-mix(in srgb, var(--mtl-ouro) 78%, #000); }
+.mtl-seletor { display: inline-flex; align-items: center; gap: 10px; }
+.mtl-seletor-rot { color: var(--muted); font-size: 12.5px; font-weight: 700; }
+.mtl-layouts { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--mtl-campo); border: 1px solid var(--border); }
+.mtl-layouts button { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 11px 0 9px; border: 0; border-radius: 8px; background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s, color .15s; }
+.mtl-layouts button svg { width: 18px; height: 14px; flex: none; }
+.mtl-layouts button rect { fill: none; stroke: currentColor; stroke-width: 1.4; }
+.mtl-layouts button:hover:not(:disabled) { color: var(--text); }
+.mtl-layouts button.on { background: var(--mtl-veu); color: var(--mtl-ouro-texto); }
+.mtl-layouts button.on rect { fill: color-mix(in srgb, var(--mtl-ouro) 24%, transparent); }
+.mtl-layouts button:disabled { opacity: .35; cursor: not-allowed; }
+.mtl-layouts button:focus-visible { outline: 2px solid var(--mtl-ouro); outline-offset: 1px; }
+/* no Operar de 1 ativo, o seletor fica junto dos tempos (mesma altura dos outros controles) */
+.chart-head .mtl-seletor .mtl-layouts button { height: 30px; }
+

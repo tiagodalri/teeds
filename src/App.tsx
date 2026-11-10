@@ -85,6 +85,9 @@ import { sinalGFLiberado, tipoNaTela } from './core/deriv/accountAccess'
 import { acompanharFimDasSessoes, contratoManual, entradaManual } from './core/som'
 import { JANELA, TELA_DA_JANELA, irNaPlataforma, useIrPelasJanelas, voltarAPlataforma } from './core/janelaSolta'
 import { BotaoJanelaSolta } from './components/janela/BotaoJanelaSolta'
+import { SeletorDeQuadros } from './components/operar/multitela/SeletorDeQuadros'
+import { useMultitela } from './components/operar/multitela/estado'
+import type { ContaDaMultitela } from './components/operar/multitela/Quadro'
 import { registrarOperacaoManual, registrarPrecosDaManual } from './core/teeds/clientes'
 import { caminhoDaTela, telaDoCaminho, telaDoNome } from './core/rotas'
 import { carregarRobosBloqueados } from './core/teeds/robosLiberados'
@@ -126,6 +129,8 @@ const PlayerAoVivo = lazy(() => import('./components/aovivo/AoVivo').then((m) =>
 const GraficoPro = lazy(() => import('./components/grafico/GraficoPro').then((m) => ({ default: m.GraficoPro })))
 // O gráfico do TradingView (30/10/2026): só baixa para quem escolhe ele no seletor.
 const PainelDeComando = lazy(() => import('./components/grafico/PainelDeComando').then((m) => ({ default: m.PainelDeComando })))
+// Multitela (10/11/2026): a grade de 2, 4 ou 6 ativos, carregada só quando alguém usa
+const Multitela = lazy(() => import('./components/operar/multitela/Multitela').then((m) => ({ default: m.Multitela })))
 const GraficoTradingView = lazy(() => import('./components/grafico/GraficoTradingView').then((m) => ({ default: m.GraficoTradingView })))
 // Quem chega pelo link da live sem conta (fase de testes, com o link público ligado).
 const Convidado = lazy(() => import('./components/aovivo/Convidado').then((m) => ({ default: m.Convidado })))
@@ -291,6 +296,8 @@ export default function App() {
   const [confirmar, setConfirmar] = useState<string | null>(null)
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
+  // Multitela (10/11/2026, ideia do Victor Dias): por enquanto só administradores da GlobalFly
+  const [multitela, mudarMultitela] = useMultitela()
   // GlobalFly abre na home (20/10/2026); as outras marcas, no terminal manual
   // F5 / app voltando do segundo plano: continua na tela em que a pessoa estava (só as telas de cliente)
   const [tela, setTelaEscolhida] = useState<WorkspacePage>(() => {
@@ -1093,6 +1100,8 @@ export default function App() {
     ficava ativo e o pedido entrava numa fila para disparar sozinho depois.
   */
   const linhaAberta = conta.conexao === 'open'
+  const podeMultitela = MARCA.id === 'globalfly' && adminConfirmado
+  const multitelaAtiva = podeMultitela && tela === 'operar' && multitela.n > 1
   // 29/10/2026: valor acima do saldo também trava a compra (antes o botão seguia ativo e a Deriv recusava)
   const acimaDoSaldo = !!conta.balance && stake > conta.balance.amount
   const podeOperar = conta.status === 'logado' && !!conta.socket && !conta.connecting && linhaAberta && !!symbolCode && mercadoAberto && !acimaDoSaldo
@@ -1134,7 +1143,7 @@ export default function App() {
   const atalhoRef = useRef<(e: KeyboardEvent) => void>(() => {})
   atalhoRef.current = (e: KeyboardEvent) => {
     // tecla segurada repete o evento: a repetição nunca conta (senão armava e confirmava a conta real num gesto só)
-    if (e.repeat || tela !== 'operar' || modo !== 'direcao' || e.ctrlKey || e.metaKey || e.altKey) return
+    if (e.repeat || tela !== 'operar' || modo !== 'direcao' || multitelaAtiva || e.ctrlKey || e.metaKey || e.altKey) return
     const alvo = e.target as HTMLElement | null
     if (alvo && (alvo.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName))) return
     if (document.querySelector('dialog[open], [role="dialog"][aria-modal="true"], .ativo-menu')) return
@@ -1158,6 +1167,39 @@ export default function App() {
     return () => window.removeEventListener('keydown', ouvir)
   }, [])
 
+  /*
+    A compra manual de verdade: cota de novo, compra, marca como manual (lista,
+    som da entrada), guarda o markup e registra em operacoes_manuais. O ativo
+    e o valor vêm de fora: a boleta de sempre e cada quadro da Multitela
+    (10/11/2026) compram pelo mesmo caminho.
+  */
+  async function comprarNaDeriv(
+    simbolo: string, tipo: string, valor: number,
+    extra: { duration: number; durationUnit: string; barrier?: string },
+  ) {
+    if (!conta.socket) throw new Error('[LinhaFechada] sem conexão da conta')
+    const p = await requestProposal(conta.socket, {
+      symbol: simbolo, contractType: tipo, amount: valor, currency: moeda, ...extra,
+    })
+    const r = await buyFromProposal(conta.socket, p.id, p.askPrice).catch((e: Error) => {
+      // "[LinhaFechada]" e a unica recusa em que NADA foi enviado. Qualquer
+      // outra falha depois do envio pode ter comprado: fica de olho.
+      if (!/LinhaFechada/.test(e.message)) setCompraPendente({ valor, desde: Date.now() })
+      throw e
+    })
+    marcarManual(r.contractId)
+    entradaManual()
+    if (p.appMarkup !== null) markupOficial.current.set(r.contractId, p.appMarkup)
+    // a operação aparece no Monitoramento ao vivo desde a compra (e é atualizada quando fecha)
+    if (teeds.sessao && conta.accountId) void registrarOperacaoManual(teeds.sessao, {
+      contractId: r.contractId, contaId: conta.accountId, demo: conta.isDemo, ativo: simbolo, tipoContrato: tipo, moeda,
+      entrada: r.buyPrice, pagamento: r.payout, resultado: 0, markup: p.appMarkup ?? Number((r.payout * 0.03).toFixed(4)), markupOficial: p.appMarkup !== null,
+      compradaEm: new Date().toISOString(), encerradaEm: null, situacao: 'aberta',
+      expiraEm: new Date(Date.now() + (extra.durationUnit === 't' ? extra.duration * 2 : extra.durationUnit === 's' ? extra.duration : extra.durationUnit === 'm' ? extra.duration * 60 : extra.durationUnit === 'h' ? extra.duration * 3600 : extra.duration * 86400) * 1000).toISOString(),
+    })
+    return r
+  }
+
   async function executar(
     tipo: string,
     extra: { duration: number; durationUnit: string; barrier?: string },
@@ -1166,25 +1208,7 @@ export default function App() {
     setComprando(tipo)
     setAviso(null)
     try {
-      const p = await requestProposal(conta.socket, {
-        symbol: symbolCode, contractType: tipo, amount: stake, currency: moeda, ...extra,
-      })
-      const r = await buyFromProposal(conta.socket, p.id, p.askPrice).catch((e: Error) => {
-        // "[LinhaFechada]" e a unica recusa em que NADA foi enviado. Qualquer
-        // outra falha depois do envio pode ter comprado: fica de olho.
-        if (!/LinhaFechada/.test(e.message)) setCompraPendente({ valor: stake, desde: Date.now() })
-        throw e
-      })
-      marcarManual(r.contractId)
-      entradaManual()
-      if (p.appMarkup !== null) markupOficial.current.set(r.contractId, p.appMarkup)
-      // a operação aparece no Monitoramento ao vivo desde a compra (e é atualizada quando fecha)
-      if (teeds.sessao && conta.accountId) void registrarOperacaoManual(teeds.sessao, {
-        contractId: r.contractId, contaId: conta.accountId, demo: conta.isDemo, ativo: symbolCode, tipoContrato: tipo, moeda,
-        entrada: r.buyPrice, pagamento: r.payout, resultado: 0, markup: p.appMarkup ?? Number((r.payout * 0.03).toFixed(4)), markupOficial: p.appMarkup !== null,
-        compradaEm: new Date().toISOString(), encerradaEm: null, situacao: 'aberta',
-        expiraEm: new Date(Date.now() + (extra.durationUnit === 't' ? extra.duration * 2 : extra.durationUnit === 's' ? extra.duration : extra.durationUnit === 'm' ? extra.duration * 60 : extra.durationUnit === 'h' ? extra.duration * 3600 : extra.duration * 86400) * 1000).toISOString(),
-      })
+      const r = await comprarNaDeriv(symbolCode, tipo, stake, extra)
       setAviso({
         tipo: 'ok',
         texto: `Entrada feita: ${dinheiro(r.buyPrice, moeda)} · se ganhar, recebe ${dinheiro(r.payout, moeda)}.`,
@@ -1394,6 +1418,27 @@ export default function App() {
         aoComprar={() => comprar('PUT')} />
     </div>
   )
+  const contaDaMultitela: ContaDaMultitela = {
+    pronta: derivPronta, conectando: conta.status === 'entrando', aoConectar: conta.login,
+    motivoDaConta: conta.status !== 'logado' ? 'Conecte a Deriv para operar'
+      : conta.connecting ? 'Conectando à sua conta…'
+      : !linhaAberta ? 'Reconectando à Deriv…'
+      : !conta.socket ? 'Indisponível agora' : null,
+    real: !conta.isDemo, semDizerReal: conta.rotulosTrocados, tipoNaTela: derivPronta ? (demoNaTela ? 'demo' : 'real') : null,
+    saldo: conta.balance ? conta.balance.amount : null, moeda, socket: conta.socket,
+    contratos: minhasTodas.filter((c) => !ehMultiplicador(c)),
+    encerradas: encerradas.map((e) => e.c).filter((c) => !ehMultiplicador(c)),
+    comprar: async (simbolo, tipo, valor, duracao, unidade) => {
+      try { return await comprarNaDeriv(simbolo, tipo, valor, { duration: duracao, durationUnit: unidade }) }
+      catch (e) { throw new Error(traduzirErro((e as Error).message)) }
+    },
+    encerrar: (id) => { void encerrar(id) }, vendendo, aviso,
+  }
+  // entrar na grade leva junto o ativo que está no gráfico (ele vira o quadro 1)
+  const trocarQuadros = (n: 1 | 2 | 4 | 6) => mudarMultitela((e) => ({
+    ...e, n,
+    ativos: n > 1 && e.n === 1 && symbolCode ? [symbolCode, ...e.ativos.filter((x) => x !== symbolCode)].slice(0, 6) : e.ativos,
+  }))
   const resumoDaCompra = <ResumoDaCompra payouts={[call.payout, put.payout]} stake={stake} moeda={moeda} duracao={duration} unidade={unidade} />
   // gráfico profissional: na GlobalFly, por enquanto só para administradores
   const usarGraficoPro = MARCA.graficoPro === 'todos' || (MARCA.graficoPro === 'admin' && admin === true)
@@ -1750,6 +1795,18 @@ export default function App() {
           payoutBase={payoutBase} moeda={conta.account?.currency ?? 'USD'} pulso={conta.pulso}
           entrandoNaDeriv={conta.status === 'entrando'} onConectarDeriv={conta.login}
         /></Suspense>} onNavigate={setTela} /></Suspense> : null
+      ) : multitelaAtiva ? (
+        <div className="layout-multitela">
+          {!derivPronta && (
+            <div className="mtl-sem-deriv">
+              <DerivDesconectada compacto acao="Para comprar, conecte a sua conta da Deriv." entrando={conta.status === 'entrando'} onConectar={conta.login} />
+            </div>
+          )}
+          <Suspense fallback={telaAbrindo('Abrindo os quadros…')}>
+            <Multitela conta={contaDaMultitela} ativos={symbols} sessao={teeds.sessao} ativoInicial={symbolCode}
+              extraNaBarra={<BotaoJanelaSolta qual="manual" />} />
+          </Suspense>
+        </div>
       ) : (
       <div className="layout layout-operar">
         <main className="main">
@@ -1811,6 +1868,10 @@ export default function App() {
                 </button>
               </div>
               {/* a operação manual numa janela própria, que a pessoa arrasta para onde quiser (29/10/2026) */}
+              {podeMultitela && !naTelaMult && (
+                <SeletorDeQuadros valor={1} aoTrocar={trocarQuadros} rotulo={false}
+                  opcoes={typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches ? [1, 2, 4] : undefined} />
+              )}
               <BotaoJanelaSolta qual="manual" />
             </div>
           </div>

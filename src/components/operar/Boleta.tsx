@@ -7,7 +7,7 @@
  * Só a apresentação mora aqui. Cotação, compra, confirmação na conta real e
  * limites da Deriv continuam no App, iguais a antes.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useClock } from '../../hooks/useClock'
 import { dinheiro, simboloMoeda } from '../../core/dinheiro'
 import { dataComHora } from '../../core/datas'
@@ -61,13 +61,15 @@ export function MostradorValor({ stake, texto, moeda, alerta, saldo = null, cont
   conta?: 'real' | 'demo' | null
   aoMudarTexto: (t: string) => void; aoMudar: (v: number) => void; aoSair: () => void
 }) {
+  // id único: a Multitela põe duas boletas lado a lado (10/11/2026)
+  const rotulo = `bl-valor-rot${useId().replace(/[^a-z0-9]/gi, '')}`
   const visto = texto ?? stake.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })
   // digitando um valor abaixo do mínimo: diz na hora, em vez de corrigir calado ao sair do campo
   const abaixo = texto !== null && texto.trim() !== '' && Number.isFinite(lerTexto(texto)) && lerTexto(texto) < minimo
   return (
     <div className={`bl-most ${alerta || abaixo ? 'alerta' : ''}`}>
       <div className="bl-most-cab">
-        <span className="bl-rot" id="bl-valor-rot">Valor da entrada</span>
+        <span className="bl-rot" id={rotulo}>Valor da entrada</span>
         {(saldo !== null || conta) && (
           <span className="bl-saldo">
             {conta && <i className={`bl-conta ${conta}`}>{conta === 'real' ? 'Conta real' : 'Conta demo'}</i>}
@@ -79,7 +81,7 @@ export function MostradorValor({ stake, texto, moeda, alerta, saldo = null, cont
         <button type="button" className="bl-campo-pm" aria-label="Diminuir o valor" disabled={stake <= minimo} onClick={() => aoMudar(Math.max(minimo, proximo(stake, false)))}>−</button>
         <label className="bl-campo-valor">
           <small>{simboloMoeda(moeda)}</small>
-          <input type="text" inputMode="decimal" autoComplete="off" aria-labelledby="bl-valor-rot" aria-invalid={abaixo || undefined} value={visto}
+          <input type="text" inputMode="decimal" autoComplete="off" aria-labelledby={rotulo} aria-invalid={abaixo || undefined} value={visto}
             style={{ width: `${Math.max(3, visto.length) + 0.3}ch` }}
             onFocus={(e) => e.currentTarget.select()}
             onChange={(e) => aoMudarTexto(e.target.value.replace(/[^\d.,]/g, ''))}
@@ -110,12 +112,13 @@ export function MostradorDuracao({ duracao, unidade, faixa, disponiveis, aoMudar
 }) {
   const [min, max] = faixa ?? [1, 1440]
   const passo = unidade === 's' ? 5 : 1
+  const rotulo = `bl-dur-rot${useId().replace(/[^a-z0-9]/gi, '')}`
   const atalhos = ATALHOS[unidade].filter((v) => v >= min && v <= max)
   const nome = NOME_UNIDADE[unidade][duracao === 1 ? 0 : 1]
   return (
     <div className="bl-most">
       <div className="bl-most-cab">
-        <span className="bl-rot" id="bl-dur-rot">Duração</span>
+        <span className="bl-rot" id={rotulo}>Duração</span>
         <span className="bl-unid" role="group" aria-label="Unidade da duração">
           {(['t', 's', 'm'] as const).map((u) => (
             <button key={u} type="button" disabled={!disponiveis[u]} className={unidade === u ? 'on' : ''}
@@ -127,7 +130,7 @@ export function MostradorDuracao({ duracao, unidade, faixa, disponiveis, aoMudar
       <div className="bl-campo">
         <button type="button" className="bl-campo-pm" aria-label="Diminuir a duração" disabled={duracao <= min} onClick={() => aoMudar(Math.max(min, duracao - passo))}>−</button>
         <label className="bl-campo-valor">
-          <input type="text" inputMode="numeric" autoComplete="off" aria-labelledby="bl-dur-rot" value={duracao || ''}
+          <input type="text" inputMode="numeric" autoComplete="off" aria-labelledby={rotulo} value={duracao || ''}
             style={{ width: `${Math.max(1, String(duracao || '').length) + 0.3}ch` }}
             onFocus={(e) => e.currentTarget.select()}
             onChange={(e) => aoMudar(Number(e.target.value.replace(/\D/g, '')) || 0)}

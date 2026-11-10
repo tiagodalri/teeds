@@ -43,6 +43,12 @@ interface Props {
   aoTentarDeNovo?: () => void
   /** O seletor GlobalFly | TradingView, na barra de cima (30/10/2026). */
   barraExtra?: ReactNode
+  /**
+   * Multitela (10/11/2026): o gráfico de um quadro, sem a barra de indicadores e sem as
+   * ferramentas de desenho (os indicadores e desenhos salvos continuam aparecendo). Também
+   * não escuta Delete/Esc na janela: com vários quadros, a tecla não é deste gráfico.
+   */
+  compacto?: boolean
 }
 
 /* ------------------------------------------------------------- registro */
@@ -245,7 +251,7 @@ function estiloDoDesenho(d: Pick<DesenhoSalvo, 'cor' | 'espessura' | 'tracejado'
 
 /* =================================================================== */
 
-export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granularity, loading, markers = [], sessao, sinalLiberado = false, moeda = 'USD', erro = null, aoTentarDeNovo, barraExtra }: Props) {
+export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granularity, loading, markers = [], sessao, sinalLiberado = false, moeda = 'USD', erro = null, aoTentarDeNovo, barraExtra, compacto = false }: Props) {
   const compactoRef = useRef(false)
   const caixa = useRef<HTMLDivElement>(null)
   const chartRef = useRef<Chart | null>(null)
@@ -507,6 +513,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
 
   // teclado: Delete apaga o desenho selecionado; Esc larga a ferramenta
   useEffect(() => {
+    if (compacto) return
     const tecla = (e: KeyboardEvent) => {
       if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement)?.tagName ?? '')) return
       if ((e.key === 'Delete' || e.key === 'Backspace') && selecionado) { e.preventDefault(); apagarSelecionado() }
@@ -561,7 +568,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
   /* ============================================================ tela */
   const ativos = indicadores.map((i) => ({ salvo: i, def: definicao(i.id) })).filter((x) => x.def)
   return (
-    <div className={`gp${ampliado ? ' gp-ampliado' : ''}${desenhosAbertos || ferramenta ? ' gp-com-desenhos' : ''}`}>
+    <div className={`gp${ampliado ? ' gp-ampliado' : ''}${desenhosAbertos || ferramenta ? ' gp-com-desenhos' : ''}${compacto ? ' gp-compacto' : ''}`}>
       <div className="gp-barra">
         <button type="button" className={`gp-botao-ind ${painel ? 'on' : ''}`} onClick={() => setPainel(true)}>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M3 17l5-6 4 3 8-9M3 21h18" /></svg>
