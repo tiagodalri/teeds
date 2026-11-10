@@ -101,6 +101,11 @@ export function ligarNoServidor(
     // robô novo no ar: a lista das vivas volta ao compasso rápido já
     conferirVivasAgora()
     return s
+  }, (e: unknown) => {
+    // 10/11/2026: o servidor recusa ligar a demo quando o tempo de simulador do dia acabou;
+    // a tela abre a janela de upgrade (ela mesma confere no banco se o tempo acabou mesmo)
+    if (/acesso ao simulador/i.test(String((e as Error)?.message ?? ''))) window.dispatchEvent(new CustomEvent('plataforma:simulador-sem-tempo'))
+    throw e
   })
 }
 

@@ -67,6 +67,7 @@ import { LIVES_AO_VIVO, MARCA } from './marca'
 import { IconeFechar } from './components/IconeFechar'
 import { RelogioTopo } from './components/RelogioTopo'
 import { SeloCategoria, type Categoria } from './components/SeloCategoria'
+import { LimiteDoSimulador } from './components/plano/LimiteDoSimulador'
 import { dinheiro, simboloMoeda } from './core/dinheiro'
 import { usePeriodos } from './core/chart/periodos'
 import { aulasTravadasParaGfMember, aulasVistas } from './core/teeds/aulas'
@@ -1449,6 +1450,7 @@ export default function App() {
             )
           })()}
 
+          {MARCA.seloCategoria && !JANELA && teeds.usuario && <LimiteDoSimulador sessao={teeds.sessao} vivas={vivasRobos} contaDemo={conta.status === 'logado' ? conta.isDemo : undefined} comprador={teeds.sessao?.usuario} />}
           {MARCA.seloCategoria && !JANELA && teeds.usuario && (meuSubplano?.atual || categoria) && <SeloCategoria categoria={(meuSubplano?.admin || adminParaTranca === true ? 'prestige' : meuSubplano?.atual ?? categoria) as Categoria} aoAbrir={meuSubplano?.subplanos.length ? () => abrirMeuPlano() : undefined} />}
 
           {JANELA && (

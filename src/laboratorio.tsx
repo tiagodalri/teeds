@@ -12,6 +12,8 @@
  * Só desenvolvimento: o Vite monta apenas o `index.html` na publicação, então
  * este arquivo nunca chega ao site. Não há rede nem conta envolvida.
  */
+import { createPortal } from 'react-dom'
+import { RelogioDoSimulador, JanelaSemTempo } from './components/plano/LimiteDoSimulador'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './styles/app.css'
@@ -597,6 +599,27 @@ function Laboratorio() {
     const api = whatsappDeExemplo(conectado ? { conectado: true, conta: { marca: 'globalfly', parceiro: 'n', numero: '+55 47 99000-1234', nomeVerificado: 'GlobalFly Trade', qualidade: 'GREEN', limite: 'TIER_1K', situacao: 'conectado', erro: null, ultimoAvisoEm: new Date(Date.now() - 120000).toISOString(), conectadoEm: new Date().toISOString(), phoneNumberId: '123456789012345', wabaId: '987654321098765', appId: '112233445566778' } } : {}, 'lab')
     const sessao = { token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab' } } as never
     return <div className="app workspace-app"><div className="admin-shell modo-suporte" style={{ gridTemplateColumns: '1fr' }}><main className="admin-main" style={{ padding: 16 }}><CentralWhatsApp sessao={sessao} marca="globalfly" apiDeTeste={api} /></main></div></div>
+  }
+  // ?tela=limite-simulador(&sub=black)(&resta=600): o relógio do simulador nos estados e a janela de quando acaba
+  if (qual === 'limite-simulador') {
+    const q = new URLSearchParams(location.search)
+    const sp = (id: string, nome: string, ordem: number, preco: number, ref: number, comp: number, ias: string[] | null, horas: number | null, extra: boolean, top: boolean) => ({ id, nome, ordem, chamada: '', precoReferencia: ref, preco, cobranca: preco ? 'anual' : 'aquisicao-zero', compartilhamento: comp, ias, simuladorHoras: horas, salaExtra: extra, assessor: top, lab: top, checkoutUrl: 'https://pay.cakto.com.br/exemplo', checkoutPorParceiro: {}, assessorWhatsapp: null, ativo: true })
+    const subs = [sp('gold', 'Gold', 1, 0, 997, 0.1, ['goreme', 'falcon', 'legacy'], 1, false, false), sp('black', 'Black', 2, 997, 1997, 0.05, null, 12, true, false), sp('prestige', 'Prestige', 3, 1997, 2997, 0, null, null, true, true)]
+    const atual = subs.find((x) => x.id === (q.get('sub') ?? 'gold')) ?? subs[0]
+    const dados = { atual: atual.id, admin: false, minutosHoje: (atual.simuladorHoras ?? 1) * 60, subplanos: subs }
+    const total = (atual.simuladorHoras ?? 1) * 3600
+    return (
+      <div className="app workspace-app" style={{ minHeight: '100dvh', display: 'block', padding: 16 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', padding: 12, borderRadius: 12, border: '1px solid #1A2D45' }}>
+          <RelogioDoSimulador restante={2832} total={total} correndo={false} aoAbrir={() => undefined} />
+          <RelogioDoSimulador restante={2832} total={total} correndo aoAbrir={() => undefined} />
+          <RelogioDoSimulador restante={540} total={total} correndo aoAbrir={() => undefined} />
+          <RelogioDoSimulador restante={90} total={total} correndo aoAbrir={() => undefined} />
+          <RelogioDoSimulador restante={0} total={total} correndo={false} aoAbrir={() => undefined} />
+        </div>
+        {!q.has('sem-janela') && createPortal(<JanelaSemTempo dados={dados} atual={atual} aoFechar={() => undefined} />, document.body)}
+      </div>
+    )
   }
   if (qual === 'meu-plano') {
     const sp = (id: string, nome: string, ordem: number, preco: number, ref: number, comp: number, ias: string[] | null, horas: number | null, extra: boolean, top: boolean) => ({ id, nome, ordem, chamada: { gold: 'A entrada no GF Member, com participação nos lucros.', black: 'Todas as I.A., mais simulador e a sala extra.', prestige: 'Tudo liberado, sem compartilhamento, com assessor e GFT Lab.' }[id] ?? '', precoReferencia: ref, preco, cobranca: preco ? 'anual' : 'aquisicao-zero', compartilhamento: comp, ias, simuladorHoras: horas, salaExtra: extra, assessor: top, lab: top, checkoutUrl: null, checkoutPorParceiro: {}, assessorWhatsapp: null, ativo: true })

@@ -1,0 +1,125 @@
+/* Tempo de simulador do dia (GlobalFly, 10/11/2026): só a conta demo.
+   Cores só da paleta protegida (vite.config.ts, PALETAS.globalfly.manter). */
+
+/* o relógio do topo: discreto, ao lado do selo */
+.lsim-relogio {
+  --lsim-cor: #9CB1C7;
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  height: 26px; padding: 0 9px 0 6px; border-radius: 999px;
+  border: 1px solid rgba(156, 177, 199, .28); background: transparent;
+  color: #F3F0E9; font: inherit; font-size: 12px; line-height: 1; cursor: pointer;
+  transition: border-color .3s, background .3s;
+}
+.lsim-relogio:hover { border-color: rgba(217, 180, 101, .6); }
+.lsim-relogio:focus-visible { outline: 2px solid #D9B465; outline-offset: 2px; }
+.lsim-relogio svg { width: 14px; height: 14px; transform: rotate(-90deg); flex: none; }
+.lsim-relogio svg .t { fill: none; stroke: rgba(156, 177, 199, .25); stroke-width: 2.2; }
+.lsim-relogio svg .p { fill: none; stroke: var(--lsim-cor); stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 40.84; transition: stroke-dashoffset 1s linear, stroke .3s; }
+.lsim-relogio b { font-family: var(--fonte-dados, Menlo, monospace); font-weight: 600; font-size: 12px; letter-spacing: .02em; color: var(--lsim-cor); font-variant-numeric: tabular-nums; }
+.lsim-relogio.correndo { --lsim-cor: #D9B465; }
+.lsim-relogio.pouco { --lsim-cor: #F0C463; border-color: rgba(240, 196, 99, .5); }
+.lsim-relogio.acabando, .lsim-relogio.zerado { --lsim-cor: #FF3B47; border-color: rgba(255, 59, 71, .5); }
+.lsim-relogio.acabando { animation: lsim-pulso 1.2s ease-in-out infinite; }
+@keyframes lsim-pulso { 50% { box-shadow: 0 0 0 3px rgba(255, 59, 71, .14); } }
+:root:not([data-tema='escuro']) .lsim-relogio { color: #051528; border-color: rgba(41, 68, 95, .3); }
+:root:not([data-tema='escuro']) .lsim-relogio:not(.correndo):not(.pouco):not(.acabando):not(.zerado) { --lsim-cor: #29445F; }
+:root:not([data-tema='escuro']) .lsim-relogio.correndo { --lsim-cor: #B78D39; }
+@media (max-width: 520px) {
+  .lsim-relogio { height: 24px; padding: 0 7px 0 5px; gap: 4px; }
+  .lsim-relogio b { font-size: 11px; }
+}
+
+/* aviso dos 10 minutos finais */
+.lsim-aviso {
+  position: fixed; z-index: 9000; right: 18px; top: 74px; width: min(340px, calc(100vw - 32px));
+  display: grid; gap: 5px; padding: 14px 34px 13px 16px; border-radius: 14px;
+  background: #051528; border: 1px solid #B78D39; color: #F3F0E9;
+  box-shadow: 0 16px 44px rgba(4, 13, 26, .55); animation: lsim-desce .5s cubic-bezier(.2, .85, .25, 1) both;
+}
+.lsim-aviso b { font-size: 14px; }
+.lsim-aviso span { font-size: 12.5px; color: #9CB1C7; line-height: 1.4; }
+.lsim-aviso-ver { justify-self: start; margin-top: 3px; padding: 0; border: 0; background: none; color: #D9B465; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.lsim-aviso-x { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border: 0; border-radius: 50%; background: none; color: #9CB1C7; font-size: 16px; cursor: pointer; }
+@keyframes lsim-desce { from { opacity: 0; transform: translateY(-10px); } }
+
+/* a janela de quando o tempo acaba */
+.lsim-fundo { position: fixed; inset: 0; z-index: 9500; display: grid; place-items: center; padding: 18px 16px; overflow-y: auto; background: rgba(4, 13, 26, .72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: lsim-aparece .35s ease both; }
+@keyframes lsim-aparece { from { opacity: 0; } }
+.lsim-caixa { position: relative; width: min(860px, 100%); display: grid; gap: 22px; padding: 32px 32px 24px; border-radius: 24px; color: #F3F0E9; background: radial-gradient(120% 70% at 50% -10%, #172C47 0%, #08172B 55%, #040D1A 100%); border: 1px solid #29445F; box-shadow: 0 40px 110px rgba(4, 13, 26, .7); animation: lsim-sobe .6s cubic-bezier(.2, .85, .25, 1) both; }
+@keyframes lsim-sobe { from { opacity: 0; transform: translateY(18px) scale(.98); } }
+.lsim-fechar { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #29445F; background: transparent; color: #9CB1C7; font-size: 18px; line-height: 1; cursor: pointer; }
+.lsim-fechar:hover { color: #F3F0E9; }
+.lsim-fechar:focus-visible, .lsim-cta:focus-visible, .lsim-link:focus-visible { outline: 2px solid #D9B465; outline-offset: 3px; }
+.lsim-cabeca { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center; }
+.lsim-anel { position: relative; width: 100px; height: 100px; }
+.lsim-anel svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.lsim-anel .t { fill: none; stroke: rgba(156, 177, 199, .15); stroke-width: 7; }
+.lsim-anel .p { fill: none; stroke: #D9B465; stroke-width: 7; stroke-linecap: round; stroke-dasharray: 289; stroke-dashoffset: 289; animation: lsim-gasta 1.5s cubic-bezier(.3, .6, .2, 1) .3s forwards; }
+@keyframes lsim-gasta { to { stroke-dashoffset: 0; } }
+.lsim-anel > div { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.lsim-anel b { font-size: 22px; font-weight: 700; line-height: 1; }
+.lsim-anel span { font-size: 10.5px; color: #9CB1C7; margin-top: 3px; }
+.lsim-atencao { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #D9B465; }
+.lsim-atencao i { width: 7px; height: 7px; border-radius: 50%; background: #D9B465; }
+.lsim-cabeca h2 { margin: 8px 0; font-size: clamp(20px, 2.5vw, 27px); line-height: 1.2; text-wrap: balance; max-width: 30ch; color: #F3F0E9; }
+.lsim-cabeca h2 em { font-style: normal; color: #D9B465; }
+.lsim-cabeca p { margin: 0; font-size: 15px; color: #9CB1C7; line-height: 1.5; }
+.lsim-cabeca p b { color: #F3F0E9; }
+
+.lsim-planos { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.lsim-planos.um { grid-template-columns: minmax(0, 420px); justify-content: center; }
+.lsim-plano { position: relative; display: grid; gap: 13px; align-content: start; padding: 22px 22px 20px; border-radius: 20px; overflow: hidden; animation: lsim-entra .6s cubic-bezier(.2, .85, .25, 1) .45s both; }
+.lsim-plano:nth-child(2) { animation-delay: .6s; }
+@keyframes lsim-entra { from { opacity: 0; transform: translateY(14px); } }
+.lsim-plano.black { color: #F3F0E9; background: linear-gradient(155deg, #3B3B3E 0%, #151516 45%, #060606 100%); border: 1px solid rgba(217, 180, 101, .3); }
+.lsim-plano.prestige { color: #2A1F10; background: linear-gradient(155deg, #FFFAF0 0%, #E3D3AE 55%, #A98D5C 100%); border: 1px solid rgba(255, 250, 240, .7); }
+.lsim-plano-topo { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.lsim-nome { display: flex; align-items: center; gap: 8px; }
+.lsim-nome svg { width: 14px; height: 14px; }
+.lsim-nome b { font-size: 12.5px; letter-spacing: .13em; text-transform: uppercase; }
+.black .lsim-nome svg { fill: #D9B465; } .black .lsim-nome b { color: #D9B465; }
+.prestige .lsim-nome svg { fill: #8A6A2A; } .prestige .lsim-nome b { color: #3A2B16; }
+.lsim-tag { font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 999px; white-space: nowrap; }
+.black .lsim-tag { color: #D9B465; border: 1px solid rgba(217, 180, 101, .4); }
+.prestige .lsim-tag { color: #FFFAF0; background: #2A1F10; }
+.lsim-preco { display: grid; gap: 2px; }
+.lsim-preco s { font-size: 13px; opacity: .65; }
+.lsim-preco strong { font-size: 32px; line-height: 1; }
+.lsim-preco strong small { font-size: 15px; font-weight: 600; opacity: .75; margin-left: 2px; }
+.lsim-destaque { padding: 11px 13px; border-radius: 12px; font-size: 14px; }
+.lsim-destaque b { font-size: 17px; }
+.black .lsim-destaque { background: rgba(217, 180, 101, .1); border: 1px solid rgba(217, 180, 101, .25); }
+.black .lsim-destaque b { color: #D9B465; }
+.prestige .lsim-destaque { background: rgba(42, 31, 16, .08); border: 1px solid rgba(42, 31, 16, .16); }
+.lsim-plano ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; font-size: 13.5px; }
+.lsim-plano li { display: flex; gap: 9px; align-items: flex-start; line-height: 1.35; }
+.lsim-plano li::before { content: ''; flex: none; width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; }
+.black .lsim-plano li::before, .lsim-plano.black li::before { background: #D9B465; }
+.lsim-plano.prestige li::before { background: #8A6A2A; }
+.lsim-cta { margin-top: 3px; width: 100%; height: 46px; border: 0; border-radius: 12px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: filter .2s; }
+.lsim-cta:hover { filter: brightness(1.08); }
+.lsim-cta:disabled { opacity: .6; cursor: default; }
+.black .lsim-cta { background: linear-gradient(180deg, #E7C77A, #B78D39); color: #060606; }
+.prestige .lsim-cta { background: #2A1F10; color: #F7F0E1; }
+.lsim-rodape { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid #1A2D45; font-size: 13px; color: #9CB1C7; }
+.lsim-rodape b { color: #F3F0E9; font-family: var(--fonte-dados, Menlo, monospace); }
+.lsim-real { display: inline-flex; align-items: center; gap: 7px; }
+.lsim-real i { width: 7px; height: 7px; border-radius: 50%; background: #22D66A; }
+.lsim-link { padding: 2px 0; border: 0; background: none; color: #9CB1C7; font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.lsim-link:hover { color: #F3F0E9; }
+
+@media (max-width: 720px) {
+  .lsim-fundo { place-items: start center; }
+  .lsim-caixa { padding: 24px 16px 18px; gap: 18px; }
+  .lsim-cabeca { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 12px; }
+  .lsim-cabeca h2 { margin-inline: auto; }
+  .lsim-anel { width: 84px; height: 84px; }
+  .lsim-planos { grid-template-columns: 1fr; }
+  .lsim-plano.prestige { order: -1; }
+  .lsim-rodape { justify-content: center; text-align: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lsim-fundo, .lsim-caixa, .lsim-plano, .lsim-aviso { animation: none; }
+  .lsim-anel .p { animation: none; stroke-dashoffset: 0; }
+  .lsim-relogio.acabando { animation: none; }
+}
