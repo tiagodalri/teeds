@@ -151,14 +151,27 @@ export interface SessaoEncerrada {
   parceiro: string | null
 }
 
-/** Sessões encerradas desta marca, para o replay. O padrão cobre a retenção inteira dos eventos. */
-export async function listarEncerradas(sessao: SessaoTeeds, dias: number = LIMITES.retencaoEventosDias, limite = 300, signal?: AbortSignal, marca: Marcas = MARCA.id): Promise<SessaoEncerrada[]> {
+/**
+ * Sessões encerradas desta marca, para o replay. O padrão cobre a retenção inteira dos eventos.
+ *
+ * Vem TUDO do período, em páginas de 1000 (10/11/2026). Antes eram só as 300
+ * mais recentes: a GF passou de 1.700 sessões em 30 dias, e os filtros e a
+ * soma do rodapé valiam só para o pedaço que coube — "Só real" mostrava 45 de
+ * 119. `limite` fica como teto de segurança, não como corte normal.
+ */
+export async function listarEncerradas(sessao: SessaoTeeds, dias: number = LIMITES.retencaoEventosDias, limite = 20000, signal?: AbortSignal, marca: Marcas = MARCA.id): Promise<SessaoEncerrada[]> {
   const corte = new Date(Date.now() - dias * 86400_000).toISOString()
-  const linhas = await rest<any[]>(
-    `/sessoes_robos?select=id,sessao_ref,marca,user_id,conta_id,demo,moeda,robo_id,robo_nome,ativo,situacao,operacoes,ganhas,perdidas,resultado,motivo_da_parada,criada_em,encerrada_em,parceiro&${filtroDeMarca(marca)}&situacao=neq.rodando&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc&limit=${limite}`,
-    sessao.token, { signal },
-  )
-  return (linhas ?? []).map((l) => ({
+  const pagina = 1000
+  const linhas: any[] = []
+  for (let desde = 0; desde < limite; desde += pagina) {
+    const lote = await rest<any[]>(
+      `/sessoes_robos?select=id,sessao_ref,marca,user_id,conta_id,demo,moeda,robo_id,robo_nome,ativo,situacao,operacoes,ganhas,perdidas,resultado,motivo_da_parada,criada_em,encerrada_em,parceiro&${filtroDeMarca(marca)}&situacao=neq.rodando&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc,id.desc&limit=${Math.min(pagina, limite - desde)}&offset=${desde}`,
+      sessao.token, { signal },
+    )
+    linhas.push(...(lote ?? []))
+    if (!lote || lote.length < Math.min(pagina, limite - desde)) break
+  }
+  return linhas.map((l) => ({
     id: l.id, sessaoRef: l.sessao_ref ?? '', marca: l.marca ?? '', userId: l.user_id, contaId: l.conta_id, demo: Boolean(l.demo), moeda: l.moeda,
     roboId: l.robo_id, roboNome: l.robo_nome, ativo: l.ativo, situacao: l.situacao, operacoes: l.operacoes ?? 0, ganhas: l.ganhas ?? 0,
     perdidas: l.perdidas ?? 0, resultado: Number(l.resultado ?? 0), motivoDaParada: l.motivo_da_parada, criadaEm: l.criada_em, encerradaEm: l.encerrada_em,
@@ -183,6 +196,8 @@ export interface MarkupDaSessao { operacoes: number; markup: number; markupDeriv
 
 export async function markupDasSessoes(
   sessao: SessaoTeeds, ids: string[], signal?: AbortSignal, marca: Marcas = MARCA.id,
+  /** A marca de cada id (Rede): sem ela, quem não voltou não vira zero. */
+  donos: Map<string, string> = new Map(),
 ): Promise<Map<string, MarkupDaSessao>> {
   const mapa = new Map<string, MarkupDaSessao>()
   if (!ids.length) return mapa
@@ -191,9 +206,23 @@ export async function markupDasSessoes(
   // O RPC soma por marca. Na Rede são duas chamadas (uma por plataforma) e os
   // resultados se juntam: ids de uma marca não aparecem na outra, então não há
   // como uma sobrescrever a outra.
+  // Com a lista inteira do período (1.700+ sessões na GF) são vários lotes;
+  // eles vão juntos, quatro por vez, para a soma do rodapé não demorar.
+  const unica = comoLista(marca).length === 1
+  const pedidos: Array<{ umaMarca: string; lote: string[] }> = []
   for (const umaMarca of comoLista(marca))
-  for (let i = 0; i < ids.length; i += 300) {
-    const lote = ids.slice(i, i + 300)
+    for (let i = 0; i < ids.length; i += 300) pedidos.push({ umaMarca, lote: ids.slice(i, i + 300) })
+  let proximo = 0
+  async function trabalhar() {
+    while (proximo < pedidos.length) {
+      const { umaMarca, lote } = pedidos[proximo++]
+      await umLote(umaMarca, lote)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(4, pedidos.length) }, trabalhar))
+  return mapa
+
+  async function umLote(umaMarca: string, lote: string[]) {
     try {
       const linhas = await rest<any[]>('/rpc/teeds_markup_das_sessoes', sessao.token, {
         method: 'POST', signal,
@@ -206,11 +235,15 @@ export async function markupDasSessoes(
           markupDeriv: l.markup_deriv === null || l.markup_deriv === undefined ? null : Number(l.markup_deriv),
         })
       }
+      // Sessão do lote que não voltou não teve operação: o markup dela é zero
+      // de verdade. Assim "sem número" no mapa passa a querer dizer só "a soma
+      // falhou", e o rodapé consegue avisar isso em vez de somar menos calado.
+      // Os ids são de várias marcas na Rede; só marca zero quem é desta.
+      for (const id of lote) if (!mapa.has(id) && (unica || donos.get(id) === umaMarca)) mapa.set(id, { operacoes: 0, markup: 0, markupDeriv: null })
     } catch (e) {
       console.error('[monitoramento] markup das sessões falhou:', (e as Error).message)
     }
   }
-  return mapa
 }
 
 /* ------------------------------------------------------------ auditoria */

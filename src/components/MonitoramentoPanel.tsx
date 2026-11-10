@@ -28,6 +28,7 @@ import { IconeFechar } from './IconeFechar'
 import { OperacoesManuais } from './monitoramento/OperacoesManuais'
 import { QuemEstaOnline, lerQuemEstaOnline, type Operando } from './monitoramento/QuemEstaOnline'
 import { NomeDoRobo } from './NomeDoRobo'
+import { FiltroDePeriodo, TotaisDasEncerradas, TEMPO_PADRAO, noPeriodo, rotuloDoPeriodo, comoTerminou, ROTULO_DO_FIM, type FiltroDeTempo } from './monitoramento/PeriodoDasEncerradas'
 
 /**
  * Monitoramento ao vivo — a central administrativa.
@@ -437,6 +438,10 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   const [replayDe, setReplayDe] = useState<SessaoEncerrada | null>(null)
   /* Markup por sessão, buscado à parte: `sessoes_robos` não guarda markup. */
   const [markups, setMarkups] = useState<Map<string, MarkupDaSessao>>(new Map())
+  const [somandoMarkup, setSomandoMarkup] = useState(false)
+  /* Dia, horário e como terminou (10/11/2026): só na lista de encerradas. */
+  const [tempo, setTempo] = useState<FiltroDeTempo>(TEMPO_PADRAO)
+  const [filtroFim, setFiltroFim] = useState<'todos' | ReturnType<typeof comoTerminou>>('todos')
   const [auditoria, setAuditoria] = useState<RegistroAuditoria[]>([])
   const rtt = useRef(new MedidorDeRtt())
   const desvio = useRef(new EstimadorDeDesvio())
@@ -600,7 +605,9 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
       void garantirClientes(l.map((x) => x.userId))
       // O markup vem depois e sem travar a lista: se falhar, as sessões
       // aparecem do mesmo jeito e só a coluna fica sem número.
-      void markupDasSessoes(sessao, l.map((x) => x.id), aborto.signal, marca).then(setMarkups)
+      setSomandoMarkup(true)
+      void markupDasSessoes(sessao, l.map((x) => x.id), aborto.signal, marca, new Map(l.map((x) => [x.id, x.marca])))
+        .then((m) => { if (!aborto.signal.aborted) { setMarkups(m); setSomandoMarkup(false) } })
     }).catch(falhar)
     if (aba === 'auditoria') listarAuditoria(sessao, undefined, aborto.signal, marca).then((l) => { setAuditoria(l); void garantirClientes(l.flatMap((x) => [x.clienteId, x.adminId].filter(Boolean) as string[])) }).catch(falhar)
     return () => aborto.abort()
@@ -616,8 +623,11 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   /* Encerradas: os mesmos filtros de busca, conta e robô da aba ao vivo. */
   const encerradasFiltradas = useMemo(() => {
     const termo = busca.trim().toLowerCase()
+    const dentro = noPeriodo(tempo)
     return encerradas.filter((s) => {
       const c = clientes.get(s.userId)
+      if (!dentro(s)) return false
+      if (filtroFim !== 'todos' && comoTerminou(s) !== filtroFim) return false
       if (filtrandoParceiro && !noFoco(parceiroFoco, vitrineDoRegistro(s.parceiro, s.userId))) return false
       if (filtroConta === 'demo' && !s.demo) return false
       if (filtroConta === 'real' && s.demo) return false
@@ -627,8 +637,10 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
       if (termo && !`${c?.nome ?? ''} ${c?.email ?? ''} ${mascararConta(s.contaId)} ${s.contaId.slice(-4)} ${s.roboNome}`.toLowerCase().includes(termo)) return false
       return true
     })
-  }, [encerradas, clientes, busca, filtroConta, filtroRobo, filtroResultado, filtrandoParceiro, parceiroFoco])
-  useEffect(() => { setLimiteEncerradas(40) }, [busca, filtroConta, filtroRobo, filtroResultado])
+  }, [encerradas, clientes, busca, filtroConta, filtroRobo, filtroResultado, filtrandoParceiro, parceiroFoco, tempo, filtroFim])
+  useEffect(() => { setLimiteEncerradas(40) }, [busca, filtroConta, filtroRobo, filtroResultado, tempo, filtroFim])
+  const outrosFiltrosEncerradas = !!busca.trim() || filtroConta !== 'todas' || filtroRobo !== 'todos' || filtroResultado !== 'todos' || filtroFim !== 'todos'
+  const limparFiltrosEncerradas = () => { setBusca(''); setFiltroConta('todas'); setFiltroRobo('todos'); setFiltroResultado('todos'); setFiltroFim('todos'); setTempo(TEMPO_PADRAO) }
 
   /* ------------------------------------------------- filtros e ordem */
   const saudes = useMemo(() => { const m = new Map<string, Saude>(); for (const s of sessoes.values()) m.set(s.sessaoId, saudeDoSinal(s, agora)); return m }, [sessoes, agora])
@@ -802,13 +814,15 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
 
       {tela === 'pronto' && aba === 'replay' && !replayDe && (
         <section className="admin-card full mon-encerradas">
-          <header><div><span className="rot">Últimos 30 dias</span><h3>Sessões encerradas</h3></div><small>{encerradasFiltradas.length === encerradas.length ? `${encerradas.length} ${encerradas.length === 1 ? 'sessão' : 'sessões'}` : `${encerradasFiltradas.length} de ${encerradas.length} sessões`}</small></header>
+          <header><div><span className="rot">{rotuloDoPeriodo(tempo)}</span><h3>Sessões encerradas</h3></div><small>{encerradasFiltradas.length === encerradas.length ? `${encerradas.length.toLocaleString('pt-BR')} ${encerradas.length === 1 ? 'sessão' : 'sessões'}` : `${encerradasFiltradas.length.toLocaleString('pt-BR')} de ${encerradas.length.toLocaleString('pt-BR')} sessões`}</small></header>
           <div className="mon-filtros">
             <label className="mon-busca">⌕<input placeholder="Buscar nome, e-mail, conta ou robô" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar nas sessões encerradas" /></label>
             <select value={filtroConta} onChange={(e) => setFiltroConta(e.target.value as any)} aria-label="Tipo de conta"><option value="todas">Demo e real</option><option value="real">Só real</option><option value="demo">Só demo</option></select>
             <select value={filtroRobo} onChange={(e) => setFiltroRobo(e.target.value)} aria-label="Robô"><option value="todos">Todos os robôs</option>{robos.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}</select>
             <select value={filtroResultado} onChange={(e) => setFiltroResultado(e.target.value as any)} aria-label="Resultado"><option value="todos">Qualquer resultado</option><option value="positivo">Positivo</option><option value="negativo">Negativo</option></select>
+            <select value={filtroFim} onChange={(e) => setFiltroFim(e.target.value as any)} aria-label="Como a sessão terminou"><option value="todos">Qualquer encerramento</option>{(Object.keys(ROTULO_DO_FIM) as Array<keyof typeof ROTULO_DO_FIM>).map((k) => <option key={k} value={k}>{ROTULO_DO_FIM[k]}</option>)}</select>
           </div>
+          <FiltroDePeriodo valor={tempo} onTrocar={setTempo} temOutrosFiltros={outrosFiltrosEncerradas} onLimpar={limparFiltrosEncerradas} />
           <div className="ins-tabela mon-tabela">
             <div className="cab"><span>Cliente</span>{naRede && <span>Plataforma</span>}<span>Robô</span><span>Conta</span><span>Operações</span><span>Resultado</span>{mostrarMarkup && <span>Markup</span>}<span>Encerrada</span><span /></div>
             {encerradasFiltradas.slice(0, limiteEncerradas).map((s) => { const c = clientes.get(s.userId); return (
@@ -829,13 +843,14 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
               </button>
             ) })}
             {!encerradas.length && <div className="mon-estado"><b>Nenhuma sessão encerrada nos últimos 30 dias.</b></div>}
-            {!!encerradas.length && !encerradasFiltradas.length && <div className="mon-estado"><b>Nenhuma sessão passa pelos filtros.</b>Ajuste a busca ou o tipo de conta.</div>}
+            {!!encerradas.length && !encerradasFiltradas.length && <div className="mon-estado"><b>Nenhuma sessão passa pelos filtros.</b>Ajuste o dia, o horário, a busca ou o tipo de conta.</div>}
           </div>
           {encerradasFiltradas.length > limiteEncerradas && (
             <button className="mon-mais" onClick={() => setLimiteEncerradas((l) => l + 40)}>
-              Mostrar mais {Math.min(40, encerradasFiltradas.length - limiteEncerradas)} de {encerradasFiltradas.length - limiteEncerradas} restantes
+              Mostrar mais {Math.min(40, encerradasFiltradas.length - limiteEncerradas)} de {(encerradasFiltradas.length - limiteEncerradas).toLocaleString('pt-BR')} restantes
             </button>
           )}
+          <TotaisDasEncerradas lista={encerradasFiltradas} markups={markups} somandoMarkup={somandoMarkup} mostrarMarkup={mostrarMarkup} />
         </section>
       )}
       {tela === 'pronto' && aba === 'replay' && replayDe && <Replay key={`${marca}-${replayDe.id}`} sessao={sessao} encerrada={replayDe} clientes={clientes} marca={replayDe.marca || marcaDoRegistro} aoFechar={() => setReplayDe(null)} aoErro={falhar} mostrarMarkup={mostrarMarkup} />}
