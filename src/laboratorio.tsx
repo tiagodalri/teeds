@@ -186,6 +186,7 @@ function LabLogin() {
 import { BoasVindasEmVideo as BoasVindasLab } from './components/aulas/BoasVindasEmVideo'
 const AdminAulasLab = lazy(() => import('./components/AdminAulas').then((m) => ({ default: m.AdminAulas })))
 const LabQuemEstaOnline = lazy(() => import('./components/monitoramento/LabQuemEstaOnline'))
+const LabVisaoGeral = lazy(() => import('./components/admin/LabVisaoGeral'))
 const LiberarAcessoGeralLab = lazy(() => import('./components/lancamento/LiberarAcessoGeral').then((m) => ({ default: m.LiberarAcessoGeral })))
 const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine'))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
@@ -520,6 +521,8 @@ function Laboratorio() {
   // (&parceiro: como o admin de um parceiro só vê, sem o botão; &esperando: com o número de quem espera)
   // ?tela=quem-online(&aba=operando)(&vazio): a gaveta "Quem está online" do Monitoramento, com gente de exemplo
   if (qual === 'quem-online') return <Suspense fallback={null}><LabQuemEstaOnline /></Suspense>
+  // ?tela=visao-geral(&cenario=real|vazio): a Visão geral da Administração com números de exemplo
+  if (qual === 'visao-geral') return <Suspense fallback={null}><LabVisaoGeral /></Suspense>
   if (qual === 'liberar-geral' && (new URLSearchParams(location.search).has('parceiro') || new URLSearchParams(location.search).has('esperando'))) {
     const f = window.fetch
     window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => String(u).includes('teeds_lancamento_painel')
