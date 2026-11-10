@@ -189,6 +189,7 @@ function LabLogin() {
 import { BoasVindasEmVideo as BoasVindasLab } from './components/aulas/BoasVindasEmVideo'
 const AdminAulasLab = lazy(() => import('./components/AdminAulas').then((m) => ({ default: m.AdminAulas })))
 const LabQuemEstaOnline = lazy(() => import('./components/monitoramento/LabQuemEstaOnline'))
+const LabManualAoVivo = lazy(() => import('./components/monitoramento/LabManualAoVivo'))
 const LabEncerradas = lazy(() => import('./components/monitoramento/LabEncerradas'))
 const LabVisaoGeral = lazy(() => import('./components/admin/LabVisaoGeral'))
 const LabCabineTopo = lazy(() => import('./components/monitoramento/LabCabineTopo'))
@@ -531,6 +532,8 @@ function Laboratorio() {
   // (&parceiro: como o admin de um parceiro só vê, sem o botão; &esperando: com o número de quem espera)
   // ?tela=quem-online(&aba=operando)(&vazio): a gaveta "Quem está online" do Monitoramento, com gente de exemplo
   if (qual === 'quem-online') return <Suspense fallback={null}><LabQuemEstaOnline /></Suspense>
+  // ?tela=manual-ao-vivo(&tipo=PUT|DIGITOVER&barreira=4)(&fim=ganhou)(&real=1)(&markup=1): a cabine ao vivo de uma operação manual, com o preço real da Deriv
+  if (qual === 'manual-ao-vivo') return <Suspense fallback={null}><LabManualAoVivo /></Suspense>
   // ?tela=encerradas(&conta=real)(&normal)(&somando): filtro de dia/horário e totais das sessões encerradas, com exemplo
   if (qual === 'encerradas') return <Suspense fallback={null}><LabEncerradas /></Suspense>
   // ?tela=visao-geral(&cenario=real|vazio): a Visão geral da Administração com números de exemplo

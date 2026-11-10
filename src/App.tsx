@@ -85,7 +85,7 @@ import { sinalGFLiberado, tipoNaTela } from './core/deriv/accountAccess'
 import { acompanharFimDasSessoes, contratoManual, entradaManual } from './core/som'
 import { JANELA, TELA_DA_JANELA, irNaPlataforma, useIrPelasJanelas, voltarAPlataforma } from './core/janelaSolta'
 import { BotaoJanelaSolta } from './components/janela/BotaoJanelaSolta'
-import { registrarOperacaoManual } from './core/teeds/clientes'
+import { registrarOperacaoManual, registrarPrecosDaManual } from './core/teeds/clientes'
 import { caminhoDaTela, telaDoCaminho, telaDoNome } from './core/rotas'
 import { carregarRobosBloqueados } from './core/teeds/robosLiberados'
 
@@ -1002,6 +1002,25 @@ export default function App() {
   const markupOficial = useRef(new Map<number, number>())
   const manuaisRegistradas = useRef(new Set<number>())
   const markupDaManual = (c: { contractId: number; payout: number }) => markupOficial.current.get(c.contractId) ?? Number((c.payout * 0.03).toFixed(4))
+  /*
+    Os preços de cada manual para a cabine ao vivo do Monitoramento (10/11/2026): a entrada e a
+    barreira uma vez, assim que a Deriv informa; a saída uma vez, no fim. Dois envios por operação.
+  */
+  const precosEnviados = useRef(new Map<number, 'entrada' | 'fim'>())
+  useEffect(() => {
+    if (!teeds.sessao) return
+    for (const c of minhasTodas) {
+      const fim = /^(won|lost|sold|cancelled)$/.test(c.status)
+      const ja = precosEnviados.current.get(c.contractId)
+      if (fim && ja !== 'fim' && c.exitSpot != null) {
+        precosEnviados.current.set(c.contractId, 'fim')
+        void registrarPrecosDaManual(teeds.sessao, { contractId: c.contractId, precoEntrada: c.entrySpot, precoSaida: c.exitSpot, barreira: c.barrier })
+      } else if (!fim && !ja && c.entrySpot != null) {
+        precosEnviados.current.set(c.contractId, 'entrada')
+        void registrarPrecosDaManual(teeds.sessao, { contractId: c.contractId, precoEntrada: c.entrySpot, barreira: c.barrier })
+      }
+    }
+  }, [minhasTodas]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     // todas as manuais, das duas telas: a que fechou enquanto a pessoa estava na outra também é registrada
     const finais = minhasTodas.filter((c) => /^(won|lost|sold|cancelled)$/.test(c.status))

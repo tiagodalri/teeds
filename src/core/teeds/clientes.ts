@@ -675,6 +675,30 @@ export async function registrarOperacaoManual(sessao: SessaoTeeds, op: OperacaoM
     })
   } catch (e) { console.warn('[teeds] registro da operação manual indisponível:', (e as Error).message) }
 }
+/*
+  Os preços da operação manual (10/11/2026): a cabine ao vivo do Monitoramento desenha o preço pela
+  cotação pública da Deriv e precisa da entrada, da barreira e, no fim, da saída. Vai num PATCH à
+  parte, que só toca nessas colunas: o registro da operação (acima) nunca depende dele, e o fim gravado
+  pelo upsert não é desfeito. Sem as colunas no banco, a primeira recusa desliga o envio nesta aba.
+*/
+let precosDaManualIndisponiveis = false
+export async function registrarPrecosDaManual(sessao: SessaoTeeds, p: { contractId: number; precoEntrada?: number | null; precoSaida?: number | null; barreira?: number | null }): Promise<void> {
+  if (precosDaManualIndisponiveis) return
+  const corpo: Record<string, number> = {}
+  if (p.precoEntrada != null && Number.isFinite(p.precoEntrada)) corpo.preco_entrada = p.precoEntrada
+  if (p.precoSaida != null && Number.isFinite(p.precoSaida)) corpo.preco_saida = p.precoSaida
+  if (p.barreira != null && Number.isFinite(p.barreira)) corpo.barreira = p.barreira
+  if (!Object.keys(corpo).length) return
+  try {
+    await rest(`/operacoes_manuais?user_id=eq.${sessao.usuario.id}&contract_id=eq.${p.contractId}`, sessao.token, {
+      method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(corpo),
+    })
+  } catch (e) {
+    const msg = (e as Error).message
+    if (/preco_|barreira|column|schema cache/i.test(msg)) precosDaManualIndisponiveis = true
+    console.warn('[teeds] preços da operação manual não gravados:', msg)
+  }
+}
 /** O resumo do markup manual por ativo (admin). */
 export async function resumoMarkupManual(sessao: SessaoTeeds, dias = 30): Promise<Array<{ ativo: string; demo: boolean; operacoes: number; clientes: number; entradas: number; pagamentos: number; resultado: number; markup: number; oficiais: number }>> {
   try {

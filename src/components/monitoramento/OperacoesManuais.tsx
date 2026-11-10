@@ -5,6 +5,7 @@ import type { ClienteRegistro } from '../../core/teeds/clientes'
 import { assinarMudancas } from '../../core/teeds/realtime'
 import { nomeDoSimbolo as nomeDoAtivo } from '../../core/deriv/simbolos'
 import { NOMES_DE_CONTRATO } from '../PositionCard'
+import { CabineDaManual } from './CabineDaManual'
 
 /**
  * As operações manuais no Monitoramento ao vivo (23/10/2026, Tiago: "tem que
@@ -15,17 +16,21 @@ import { NOMES_DE_CONTRATO } from '../PositionCard'
  * do período chega pelo REST e as mudanças pelo Realtime, sem recarregar.
  */
 interface OpManual {
-  userId: string; contractId: number; marca: string; demo: boolean; ativo: string; tipo: string; moeda: string
+  userId: string; contractId: number; marca: string; contaId: string; demo: boolean; ativo: string; tipo: string; moeda: string
   entrada: number; pagamento: number; resultado: number; markup: number; situacao: string
   compradaEm: string; expiraEm: string | null; encerradaEm: string | null
   /** A vitrine da compra ('n', 'v', '' direto); null = operação de antes desta regra. */
   parceiro: string | null
+  /** Gravados pelo app do cliente desde 10/11/2026 (a cabine ao vivo); antes disso, null. */
+  precoEntrada: number | null; precoSaida: number | null; barreira: number | null
 }
+const numOuNulo = (v: unknown) => (v === null || v === undefined || v === '' ? null : Number(v))
 const daLinha = (l: Record<string, any>): OpManual => ({
-  userId: l.user_id, contractId: Number(l.contract_id), marca: l.marca, demo: Boolean(l.demo), ativo: l.ativo ?? '', tipo: l.tipo_contrato ?? '', moeda: l.moeda ?? 'USD',
+  userId: l.user_id, contractId: Number(l.contract_id), marca: l.marca, contaId: l.conta_id ?? '', demo: Boolean(l.demo), ativo: l.ativo ?? '', tipo: l.tipo_contrato ?? '', moeda: l.moeda ?? 'USD',
   entrada: Number(l.entrada ?? 0), pagamento: Number(l.pagamento ?? 0), resultado: Number(l.resultado ?? 0), markup: Number(l.markup ?? 0), situacao: l.situacao ?? 'encerrada',
   compradaEm: l.comprada_em, expiraEm: l.expira_em ?? null, encerradaEm: l.encerrada_em ?? null,
   parceiro: l.parceiro ?? null,
+  precoEntrada: numOuNulo(l.preco_entrada), precoSaida: numOuNulo(l.preco_saida), barreira: numOuNulo(l.barreira),
 })
 const chave = (o: Pick<OpManual, 'userId' | 'contractId'>) => `${o.userId}:${o.contractId}`
 const usd = (v: number) => `${v < 0 ? '−' : ''}US$ ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -62,6 +67,8 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
 }) {
   const [ops, setOps] = useState<Map<string, OpManual>>(new Map())
   const [agora, setAgora] = useState(Date.now())
+  // a operação aberta na cabine ao vivo (10/11/2026): a chave, para a janela seguir a linha que o Realtime atualiza
+  const [vendo, setVendo] = useState<string | null>(null)
   useEffect(() => { const t = window.setInterval(() => setAgora(Date.now()), 1000); return () => window.clearInterval(t) }, [])
 
   // a foto do período
@@ -142,7 +149,9 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
             const vencida = semRetorno(o, agora)
             const apurando = vencida && agora - vencimento(o) <= 60_000
             return (
-              <tr key={chave(o)} className={aberta ? `mm-aberta${o.demo ? '' : ' mm-real'}` : ''}>
+              <tr key={chave(o)} className={`mm-clicavel${aberta ? ` mm-aberta${o.demo ? '' : ' mm-real'}` : ''}`} tabIndex={0}
+                aria-label={`Abrir a operação de ${c?.nome || c?.email || 'cliente'} ao vivo`}
+                onClick={() => setVendo(chave(o))} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVendo(chave(o)) } }}>
                 <td className="num">{hora(o.compradaEm)}</td>
                 <td className="mm-cliente"><b>{c?.nome || c?.email || 'Cliente'}{(() => { const x = selo?.(o.userId, o.parceiro); return x ? <em className={`mon-selo parceiro ${x.codigo}`}>{x.texto}</em> : null })()}</b>{c?.nome && c?.email && <small>{c.email}</small>}</td>
                 <td>{nomeDoAtivo(o.ativo)}</td>
@@ -159,6 +168,13 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
           })}</tbody>
         </table></div>
       )}
+      {(() => {
+        const o = vendo ? ops.get(vendo) : undefined
+        if (!o) return null
+        const c = clientes.get(o.userId)
+        return <CabineDaManual op={o} nome={c?.nome || c?.email || 'Cliente'} email={c?.email} selo={selo?.(o.userId, o.parceiro) ?? null}
+          mostrarMarkup={mostrarMarkup} aoFechar={() => setVendo(null)} />
+      })()}
     </section>
   )
 }

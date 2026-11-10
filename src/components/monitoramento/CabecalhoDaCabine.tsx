@@ -19,9 +19,11 @@ const segundos = (s: number) => s.toLocaleString('pt-BR', { minimumFractionDigit
 export const iniciaisDe = (nome?: string | null) =>
   (nome ?? '').replace(/[^\p{L}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || '?'
 
-export function CabecalhoDaCabine({ refVoltar, aoFechar, nome, email, contaId, demo, moeda, modo, saude, idade, rtt, desvio, passo, integridade }: {
+export function CabecalhoDaCabine({ refVoltar, aoFechar, rotuloVoltar = 'Mosaico', nome, email, contaId, demo, moeda, modo, saude, idade, rtt, desvio, passo, integridade }: {
   refVoltar?: RefObject<HTMLButtonElement>
   aoFechar: () => void
+  /** O texto do botão de voltar (a cabine da manual volta para "Operações manuais"). */
+  rotuloVoltar?: string
   nome: string
   email?: string | null
   contaId: string
@@ -39,7 +41,7 @@ export function CabecalhoDaCabine({ refVoltar, aoFechar, nome, email, contaId, d
     <header className="mcb">
       <button ref={refVoltar} className="mcb-voltar" onClick={aoFechar}>
         <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M10 3.5 5.5 8l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        Mosaico
+        {rotuloVoltar}
       </button>
       <div className="mcb-quem">
         <span className="mcb-avatar" aria-hidden="true">{iniciaisDe(nome)}</span>

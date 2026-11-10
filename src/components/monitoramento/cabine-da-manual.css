@@ -1,0 +1,86 @@
+/* A cabine ao vivo da operação manual (Monitoramento › Operações manuais › clicar), prefixo cdm-.
+   10/11/2026. O cabeçalho é o da cabine dos robôs (mcb-); o resto no mesmo padrão: cartões de 14 px
+   de canto, 20 px de respiro, números em fonte de dados. */
+.cdm-fundo {
+  position: fixed; inset: 0; z-index: 80; overflow-y: auto; overscroll-behavior: contain;
+  padding: 24px 16px; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(6px);
+}
+.cdm { display: grid; gap: 14px; width: min(1100px, 100%); margin: 0 auto; }
+
+.cdm-faixa {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 14px 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface);
+}
+.cdm-op { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; min-width: 0; font-size: 14px; }
+.cdm-op b { font-size: 16px; }
+.cdm-op > span:not(.mon-tag) { color: var(--muted); }
+.cdm-op small { flex-basis: 100%; color: var(--muted); font-size: 12.5px; }
+.cdm-estado {
+  display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 10px;
+  font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; border: 1px solid var(--border); background: var(--bg);
+}
+.cdm-estado.aberta { color: var(--gf-ouro, var(--primary)); border-color: color-mix(in srgb, var(--gf-ouro, var(--primary)) 45%, var(--border)); }
+.cdm-estado.aberta i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: mon-pulsa 1.4s ease-in-out infinite; }
+.cdm-estado.ganhou { color: var(--up); } .cdm-estado.perdeu { color: var(--down); }
+.cdm-estado.vendida, .cdm-estado.encerrada, .cdm-estado.apurando, .cdm-estado.sem-resultado { color: var(--muted); }
+
+.cdm-rumo {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap;
+  padding: 16px 20px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface);
+}
+.cdm-rumo b { font-size: 20px; }
+.cdm-rumo span { color: var(--muted); font-size: 14px; }
+.cdm-rumo strong { color: var(--text); font: 800 18px var(--fonte-dados, ui-monospace, monospace); font-variant-numeric: tabular-nums; }
+.cdm-rumo.ganhando { border-color: color-mix(in srgb, var(--up) 45%, var(--border)); background: color-mix(in srgb, var(--up) 9%, var(--surface)); }
+.cdm-rumo.ganhando b, .cdm-rumo.ganhando strong { color: var(--up); }
+.cdm-rumo.perdendo { border-color: color-mix(in srgb, var(--down) 45%, var(--border)); background: color-mix(in srgb, var(--down) 9%, var(--surface)); }
+.cdm-rumo.perdendo b, .cdm-rumo.perdendo strong { color: var(--down); }
+
+.cdm-fatos {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin: 0;
+  border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden;
+}
+.cdm-fatos > div { display: grid; gap: 4px; padding: 12px 16px; border-right: 1px solid var(--border); min-width: 0; }
+.cdm-fatos > div:last-child { border-right: 0; }
+.cdm-fatos dt { color: var(--muted); font-size: 12px; font-weight: 600; }
+.cdm-fatos dt small { font-weight: 500; }
+.cdm-fatos dd { margin: 0; font: 800 15px var(--fonte-dados, ui-monospace, monospace); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cdm-fatos dd small { color: var(--muted); font: 500 11.5px var(--fonte-corpo, system-ui, sans-serif); }
+.cdm-ouro { color: var(--gf-ouro, var(--primary)); }
+
+.cdm-grafico {
+  --cdm-cor: var(--text);
+  position: relative; min-height: 220px; padding: 8px 0; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden;
+}
+.cdm-grafico.ganhando { --cdm-cor: var(--up); } .cdm-grafico.perdendo { --cdm-cor: var(--down); }
+.cdm-grafico svg { display: block; }
+.cdm-grafico-vazio { display: grid; place-items: center; min-height: 220px; margin: 0; color: var(--muted); font-size: 14px; }
+.cdm-grade line { stroke: var(--border); stroke-width: 1; }
+.cdm-grade text, .cdm-marco-rot { fill: var(--muted); font: 500 11px var(--fonte-dados, ui-monospace, monospace); }
+.cdm-marco { stroke: color-mix(in srgb, var(--muted) 60%, transparent); stroke-width: 1; stroke-dasharray: 3 4; }
+.cdm-marco.vence { stroke: var(--gf-ouro, var(--primary)); }
+.cdm-entrada { stroke: var(--gf-ouro, var(--primary)); stroke-width: 1.2; stroke-dasharray: 6 5; }
+.cdm-entrada.barreira { stroke: var(--muted); }
+.cdm-linha { fill: none; stroke: var(--cdm-cor); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.cdm-ponto { fill: var(--cdm-cor); stroke: var(--surface); stroke-width: 2; }
+.cdm-etq.entrada { fill: color-mix(in srgb, var(--gf-ouro, var(--primary)) 22%, var(--surface)); }
+.cdm-etq.agora { fill: var(--cdm-cor); }
+.cdm-etq-txt { fill: var(--text); font: 700 11px var(--fonte-dados, ui-monospace, monospace); }
+.cdm-etq-txt.agora { fill: var(--surface); }
+
+.cdm-nota { margin: 0; color: var(--muted); font-size: 12.5px; text-align: center; }
+
+/* a linha da tabela abre a cabine */
+.mon-manuais-tabela tbody tr.mm-clicavel { cursor: pointer; }
+.mon-manuais-tabela tbody tr.mm-clicavel:hover td { background: color-mix(in srgb, var(--text) 4%, transparent); }
+.mon-manuais-tabela tbody tr.mm-clicavel:focus-visible { outline: 2px solid var(--gf-ouro, var(--primary)); outline-offset: -2px; }
+
+@media (max-width: 560px) {
+  .cdm-fundo { padding: 12px; }
+  .cdm-faixa, .cdm-rumo { padding: 12px 14px; }
+  .cdm-rumo b { font-size: 18px; }
+  .cdm-fatos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cdm-fatos > div { border-right: 0; border-bottom: 1px solid var(--border); }
+  .cdm-fatos > div:nth-child(odd) { border-right: 1px solid var(--border); }
+}
+@media (prefers-reduced-motion: reduce) { .cdm-estado.aberta i { animation: none; } }
