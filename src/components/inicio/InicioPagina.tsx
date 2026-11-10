@@ -247,9 +247,10 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
   return (
     <InicioPanel d={d} aoIr={aoIr} aoConectar={aoConectar} aoAbrirCarteira={aoAbrirCarteira} aoRecarregarMercado={() => setRodadaMercado((n) => n + 1)}
       topo={<>
-        {/* 09/11/2026 (Tiago): por enquanto só os admins veem os Stories ("cliente ainda não, vamos testar um tempo"),
-            e somem junto com os outros itens de admin quando o olhinho do menu do avatar está ligado */}
-        {MARCA.stories && sessao && papel?.admin && !menuAdminOculto && <BarraDeStories sessao={sessao} aoIr={aoIr} equipe papel={papel} aoVivo={!!treino?.noAr} />}
+        {/* Stories para todos desde 10/11/2026 (Tiago: "pode liberar pros alunos"). O que é de admin (Publicar, "Visto por",
+            arrastar para a câmera, métricas) só aparece para a equipe, e some com o olhinho dos itens de admin: aí o admin
+            vê a fileira como um aluno vê. Sem story nenhum para a pessoa, a fileira nem aparece. */}
+        {MARCA.stories && sessao && <BarraDeStories sessao={sessao} aoIr={aoIr} equipe={!!papel?.admin && !menuAdminOculto} papel={papel} aoVivo={!!treino?.noAr} />}
         {(MARCA.notificacoes || MARCA.biometria) && sessao ? <ConvitesDoInicio sessao={sessao} aoAbrirPerfil={() => aoIr('perfil')} /> : null}
       </>}
       aoSalvarPlano={(meta, limite) => setPlano(planoSimples(meta, limite, sessao))}

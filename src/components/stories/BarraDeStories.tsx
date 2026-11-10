@@ -64,7 +64,7 @@ export function BarraDeStories({ sessao, aoIr, equipe, papel, aoVivo, exemplo }:
   const fila = useRef<HTMLDivElement | null>(null)
   const [bordas, setBordas] = useState({ esq: false, dir: false })
   // arrastar da esquerda para a direita na Início abre a câmera (só admin: esta fileira só existe para admin)
-  const puxada = useArrastarParaCamera(!estudio && aberto === null, () => setEstudio(true), () => { void carregarEstudio() })
+  const puxada = useArrastarParaCamera(!!equipe && !estudio && aberto === null, () => setEstudio(true), () => { void carregarEstudio() })
 
   const ler = useCallback(() => {
     if (exemplo) return
@@ -95,7 +95,8 @@ export function BarraDeStories({ sessao, aoIr, equipe, papel, aoVivo, exemplo }:
       aoMudar: () => {
         if (abertoRef.current) { pendente.current = true; return }
         window.clearTimeout(espera)
-        espera = window.setTimeout(ler, 600) // várias mudanças juntas viram uma leitura só
+        // várias mudanças juntas viram uma leitura só; os alunos se espalham em até 4 s para não baterem todos juntos no banco
+        espera = window.setTimeout(ler, equipe ? 600 : 600 + Math.random() * 4000)
       },
     })
     return () => { window.clearTimeout(espera); canal.fechar() }
