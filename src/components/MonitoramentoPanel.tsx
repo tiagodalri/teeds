@@ -29,7 +29,7 @@ import { OperacoesManuais } from './monitoramento/OperacoesManuais'
 import { EmContaRealAgora } from './monitoramento/EmContaRealAgora'
 import { QuemEstaOnline, lerQuemEstaOnline, type Operando } from './monitoramento/QuemEstaOnline'
 import { NomeDoRobo } from './NomeDoRobo'
-import { FiltroDePeriodo, TotaisDasEncerradas, TEMPO_PADRAO, noPeriodo, rotuloDoPeriodo, comoTerminou, ROTULO_DO_FIM, type FiltroDeTempo } from './monitoramento/PeriodoDasEncerradas'
+import { FiltroDePeriodo, LimparFiltros, filtrosMudaram, TotaisDasEncerradas, TEMPO_PADRAO, noPeriodo, rotuloDoPeriodo, comoTerminou, ROTULO_DO_FIM, type FiltroDeTempo } from './monitoramento/PeriodoDasEncerradas'
 
 /**
  * Monitoramento ao vivo — a central administrativa.
@@ -826,15 +826,28 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
 
       {tela === 'pronto' && aba === 'replay' && !replayDe && (
         <section className="admin-card full mon-encerradas">
-          <header><div><span className="rot">{rotuloDoPeriodo(tempo)}</span><h3>Sessões encerradas</h3></div><small>{encerradasFiltradas.length === encerradas.length ? `${encerradas.length.toLocaleString('pt-BR')} ${encerradas.length === 1 ? 'sessão' : 'sessões'}` : `${encerradasFiltradas.length.toLocaleString('pt-BR')} de ${encerradas.length.toLocaleString('pt-BR')} sessões`}</small></header>
-          <div className="mon-filtros">
-            <label className="mon-busca">⌕<input placeholder="Buscar nome, e-mail, conta ou robô" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar nas sessões encerradas" /></label>
-            <select value={filtroConta} onChange={(e) => setFiltroConta(e.target.value as any)} aria-label="Tipo de conta"><option value="todas">Demo e real</option><option value="real">Só real</option><option value="demo">Só demo</option></select>
-            <select value={filtroRobo} onChange={(e) => setFiltroRobo(e.target.value)} aria-label="Robô"><option value="todos">Todos os robôs</option>{robos.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}</select>
-            <select value={filtroResultado} onChange={(e) => setFiltroResultado(e.target.value as any)} aria-label="Resultado"><option value="todos">Qualquer resultado</option><option value="positivo">Positivo</option><option value="negativo">Negativo</option></select>
-            <select value={filtroFim} onChange={(e) => setFiltroFim(e.target.value as any)} aria-label="Como a sessão terminou"><option value="todos">Qualquer encerramento</option>{(Object.keys(ROTULO_DO_FIM) as Array<keyof typeof ROTULO_DO_FIM>).map((k) => <option key={k} value={k}>{ROTULO_DO_FIM[k]}</option>)}</select>
+          <header className="mse-cab">
+            <div><span className="rot">{rotuloDoPeriodo(tempo)}</span><h3>Sessões encerradas</h3></div>
+            <div className="mse-cab-dir">
+            <LimparFiltros visivel={filtrosMudaram(tempo, outrosFiltrosEncerradas)} onLimpar={limparFiltrosEncerradas} />
+            <p className="mse-contagem">{encerradasFiltradas.length === encerradas.length
+              ? <><b>{encerradas.length.toLocaleString('pt-BR')}</b> {encerradas.length === 1 ? 'sessão' : 'sessões'}</>
+              : <><b>{encerradasFiltradas.length.toLocaleString('pt-BR')}</b> de {encerradas.length.toLocaleString('pt-BR')} sessões</>}</p>
+            </div>
+          </header>
+          <div className="mse-filtros">
+            <div className="mse-linha">
+              <label className="mse-busca">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="m16 16 4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+                <input placeholder="Buscar nome, e-mail, conta ou robô" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar nas sessões encerradas" />
+              </label>
+              <select value={filtroConta} onChange={(e) => setFiltroConta(e.target.value as any)} aria-label="Tipo de conta"><option value="todas">Demo e real</option><option value="real">Só real</option><option value="demo">Só demo</option></select>
+              <select value={filtroRobo} onChange={(e) => setFiltroRobo(e.target.value)} aria-label="Robô"><option value="todos">Todos os robôs</option>{robos.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}</select>
+              <select value={filtroResultado} onChange={(e) => setFiltroResultado(e.target.value as any)} aria-label="Resultado"><option value="todos">Qualquer resultado</option><option value="positivo">Positivo</option><option value="negativo">Negativo</option></select>
+              <select value={filtroFim} onChange={(e) => setFiltroFim(e.target.value as any)} aria-label="Como a sessão terminou"><option value="todos">Qualquer encerramento</option>{(Object.keys(ROTULO_DO_FIM) as Array<keyof typeof ROTULO_DO_FIM>).map((k) => <option key={k} value={k}>{ROTULO_DO_FIM[k]}</option>)}</select>
+            </div>
+            <FiltroDePeriodo valor={tempo} onTrocar={setTempo} />
           </div>
-          <FiltroDePeriodo valor={tempo} onTrocar={setTempo} temOutrosFiltros={outrosFiltrosEncerradas} onLimpar={limparFiltrosEncerradas} />
           <div className="ins-tabela mon-tabela">
             <div className="cab"><span>Cliente</span>{naRede && <span>Plataforma</span>}<span>Robô</span><span>Conta</span><span>Operações</span><span>Resultado</span>{mostrarMarkup && <span>Markup</span>}<span>Encerrada</span><span /></div>
             {encerradasFiltradas.slice(0, limiteEncerradas).map((s) => { const c = clientes.get(s.userId); return (

@@ -1,45 +1,69 @@
 /* Filtro de dia/horário e totais das sessões encerradas (prefixo mse-). */
 
-.mse-periodo {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px;
-  padding: 0 20px 14px;
+/* ---- Cabeçalho e filtros (10/11/2026, Tiago: "desalinhado, sem padrão de espaçamentos").
+   Um padrão só para tudo: controles de 40 px, cantos de 10 px, fonte 13 px, 10 px entre itens,
+   12 px entre as linhas e 20 px de respiro nas bordas, o mesmo das linhas da tabela. */
+.mon-encerradas { --mse-h: 40px; --mse-raio: 10px; --mse-borda: 20px; }
+.mon-encerradas > header.mse-cab {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  min-height: 0; padding: 18px var(--mse-borda) 16px;
 }
-.mse-grupo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
-.mse-rot { font-size: 10.5px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.mse-atalhos {
-  display: inline-flex; gap: 2px; padding: 3px;
-  border: 1px solid var(--border); border-radius: 11px; background: var(--bg);
+.mon-encerradas > header.mse-cab h3 { margin: 4px 0 0; }
+.mse-cab-dir { display: flex; align-items: center; gap: 14px; }
+.mse-contagem { margin: 0; font-size: 13px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mse-contagem b { color: var(--text); font-weight: 700; }
+
+.mse-filtros {
+  display: grid; gap: 12px;
+  padding: 16px var(--mse-borda);
+  border-bottom: 1px solid var(--border);
 }
+.mse-linha {
+  display: grid; gap: 10px; align-items: center;
+  grid-template-columns: minmax(240px, 1fr) repeat(4, minmax(150px, 200px));
+}
+.mse-busca, .mse-filtros select, .mse-datas input, .mse-atalhos, .mse-limpar {
+  box-sizing: border-box; height: var(--mse-h); min-height: var(--mse-h);
+  border: 1px solid var(--border); border-radius: var(--mse-raio);
+  color: var(--text); background: var(--bg); font: inherit; font-size: 13px;
+}
+.mse-filtros select, .mse-datas input { width: 100%; min-width: 0; padding: 0 12px; }
+.mse-busca { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 0 12px; color: var(--muted); }
+.mse-busca svg { flex: none; }
+.mse-busca input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; }
+.mse-busca:focus-within, .mse-filtros select:focus-visible, .mse-datas input:focus-visible { border-color: var(--primary); outline: 0; }
+
+.mse-periodo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; }
+.mse-grupo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
+.mse-grupo > select { width: 200px; }
+.mse-rot { min-width: 0; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.mse-atalhos { display: inline-flex; align-items: stretch; gap: 2px; padding: 3px; }
 .mse-atalhos button {
-  min-height: 32px; padding: 0 12px; border: 0; border-radius: 8px;
-  color: var(--muted); background: transparent; font: inherit; font-size: 12.5px; font-weight: 600;
+  padding: 0 12px; border: 0; border-radius: calc(var(--mse-raio) - 3px);
+  color: var(--muted); background: transparent; font: inherit; font-size: 13px; font-weight: 600;
   cursor: pointer; white-space: nowrap; transition: background .15s, color .15s;
 }
 .mse-atalhos button:hover { color: var(--text); }
 .mse-curto { display: none; }
 .mse-atalhos button.on { color: var(--bg); background: var(--primary); }
 .mse-atalhos button:focus-visible, .mse-limpar:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-.mse-grupo > select,
-.mse-datas input, .mse-datas select {
-  min-height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 10px;
-  color: var(--text); background: var(--bg); font: inherit; font-size: 12.5px;
-}
-.mse-datas { display: inline-flex; flex-wrap: wrap; gap: 8px; }
-.mse-datas label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-.mse-datas input { min-width: 0; }
-.mse-limpar {
-  margin-left: auto; min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px;
-  color: var(--text); background: transparent; font: inherit; font-size: 12.5px; cursor: pointer;
-}
+.mse-datas { display: inline-flex; flex-wrap: wrap; gap: 10px; }
+.mse-datas label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.mse-datas input { width: 150px; }
+.mse-datas select { width: 92px; }
+.mse-limpar { height: 34px; min-height: 34px; padding: 0 12px; background: transparent; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .mse-limpar:hover { border-color: var(--primary); color: var(--primary); }
 
-/* A linha de filtros de cima ganhou "Como terminou": cinco itens numa linha. */
-@media (max-width: 1500px) and (min-width: 1101px) {
-  .mon-encerradas .mon-filtros { grid-template-columns: minmax(220px, 1fr) repeat(4, minmax(120px, auto)); }
+/* A tabela começa com o mesmo respiro do bloco de filtros. */
+.mon-encerradas .mon-tabela > .cab { padding-top: 14px; padding-bottom: 10px; }
+
+@media (max-width: 1100px) {
+  .mse-linha { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mse-busca { grid-column: 1 / -1; }
 }
 
 /* ---- Totais ------------------------------------------------------------ */
-.mse-totais { margin: 4px 20px 20px; padding: 16px 18px 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.mse-totais { margin: 4px var(--mse-borda, 20px) 20px; padding: 16px 18px 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
 .mse-totais-cab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 14px; }
 .mse-totais-cab b { font-size: 14px; }
 .mse-totais-cab small { font-size: 11.5px; color: var(--muted); }
@@ -71,21 +95,26 @@
   .mse-totais-grade, .mse-totais-grade.com-markup { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 720px) {
-  .mse-periodo { padding: 0 16px 14px; gap: 12px; }
+  .mon-encerradas > header.mse-cab { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 8px; text-align: left; }
+  .mse-periodo { gap: 12px; }
   .mse-grupo { width: 100%; }
   .mse-rot { width: 100%; }
   .mse-atalhos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); width: 100%; }
-  .mse-atalhos button { padding: 0 4px; font-size: 12px; }
+  .mse-atalhos button { padding: 0 4px; font-size: 12.5px; }
   .mse-longo { display: none; }
   .mse-curto { display: inline; }
-  .mse-grupo > select { flex: 1 1 100%; }
+  .mse-grupo > select { flex: 1 1 100%; width: 100%; }
   .mse-datas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
   .mse-datas label { display: grid; gap: 4px; min-width: 0; }
   .mse-datas input, .mse-datas select { width: 100%; }
-  .mse-limpar { margin-left: 0; width: 100%; }
-  .mse-totais { margin: 4px 12px 16px; padding: 14px 12px; }
+  .mse-datas label > input, .mse-datas label > select { min-width: 0; }
+  .mse-cab-dir { width: 100%; justify-content: space-between; flex-direction: row-reverse; }
+  .mse-totais { margin: 4px var(--mse-borda, 16px) 16px; padding: 14px 12px; }
   .mse-totais-grade article { padding: 12px; }
   .mse-totais-grade strong { font-size: 18px; }
+}
+@media (max-width: 560px) {
+  .mse-linha { grid-template-columns: 1fr; }
 }
 @media (max-width: 420px) {
   .mse-totais-grade, .mse-totais-grade.com-markup { grid-template-columns: 1fr; }

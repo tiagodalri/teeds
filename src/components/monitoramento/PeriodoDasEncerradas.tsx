@@ -98,16 +98,22 @@ export function rotuloDoPeriodo(t: FiltroDeTempo): string {
 
 const h = (n: number) => `${String(n).padStart(2, '0')}h`
 
-export function FiltroDePeriodo({ valor, onTrocar, temOutrosFiltros, onLimpar }: {
+/** Algum filtro fora do padrão (o botão "Limpar filtros" só aparece aí). */
+export const filtrosMudaram = (t: FiltroDeTempo, temOutrosFiltros: boolean) =>
+  temOutrosFiltros || t.dia !== TEMPO_PADRAO.dia || t.horario !== TEMPO_PADRAO.horario
+
+/** "Limpar filtros", no canto do cabeçalho, ao lado da contagem. */
+export function LimparFiltros({ visivel, onLimpar }: { visivel: boolean; onLimpar: () => void }) {
+  return visivel ? <button type="button" className="mse-limpar" onClick={onLimpar}>Limpar filtros</button> : null
+}
+
+export function FiltroDePeriodo({ valor, onTrocar }: {
   valor: FiltroDeTempo; onTrocar: (t: FiltroDeTempo) => void
-  /** Algum outro filtro da lista (busca, conta, I.A., resultado…) fora do padrão. */
-  temOutrosFiltros: boolean; onLimpar: () => void
 }) {
   const agora = new Date()
   const hoje = diaLocal(agora)
   const minimo = diaLocal(somarDias(agora, -29))
   const t = valor
-  const mudou = temOutrosFiltros || t.dia !== TEMPO_PADRAO.dia || t.horario !== TEMPO_PADRAO.horario
   const escolher = (dia: AtalhoDeDia) => onTrocar(dia === 'datas'
     ? { ...t, dia, de: t.de || diaLocal(somarDias(agora, -6)), ate: t.ate || hoje }
     : { ...t, dia })
@@ -147,7 +153,6 @@ export function FiltroDePeriodo({ valor, onTrocar, temOutrosFiltros, onLimpar }:
           </div>
         )}
       </div>
-      {mudou && <button type="button" className="mse-limpar" onClick={onLimpar}>Limpar filtros</button>}
     </div>
   )
 }

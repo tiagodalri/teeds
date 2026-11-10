@@ -1,7 +1,7 @@
 /** Laboratório (?tela=encerradas): filtro de dia/horário e totais das sessões encerradas, com sessões de exemplo, sem banco. */
 import { useMemo, useState } from 'react'
 import type { MarkupDaSessao, SessaoEncerrada } from '../../core/teeds/monitoramento'
-import { FiltroDePeriodo, TotaisDasEncerradas, TEMPO_PADRAO, noPeriodo, rotuloDoPeriodo, type FiltroDeTempo } from './PeriodoDasEncerradas'
+import { FiltroDePeriodo, LimparFiltros, filtrosMudaram, TotaisDasEncerradas, TEMPO_PADRAO, noPeriodo, rotuloDoPeriodo, type FiltroDeTempo } from './PeriodoDasEncerradas'
 
 const MOTIVOS = ['meta de lucro atingida (USD 5.11)', 'limite de perda atingido (USD -9.00)', 'você pediu para parar', 'limite de perda protegido (USD 5.00)', 'limite de 200 operações']
 const agora = Date.now()
@@ -25,15 +25,18 @@ export default function LabEncerradas() {
   return (
     <div className="monitoramento" style={{ padding: 24 }}>
       <section className="admin-card full mon-encerradas">
-        <header><div><span className="rot">{rotuloDoPeriodo(tempo)}</span><h3>Sessões encerradas</h3></div><small>{lista.length} de {SESSOES.length} sessões</small></header>
-        <div className="mon-filtros">
-          <label className="mon-busca">⌕<input placeholder="Buscar nome, e-mail, conta ou I.A." /></label>
-          <select value={conta} onChange={(e) => setConta(e.target.value)}><option value="todas">Demo e real</option><option value="real">Só real</option><option value="demo">Só demo</option></select>
-          <select><option>Todas as I.A.</option></select>
-          <select><option>Qualquer resultado</option></select>
-          <select><option>Qualquer encerramento</option></select>
+        <header className="mse-cab"><div><span className="rot">{rotuloDoPeriodo(tempo)}</span><h3>Sessões encerradas</h3></div><div className="mse-cab-dir"><LimparFiltros visivel={filtrosMudaram(tempo, conta !== 'todas')} onLimpar={() => { setTempo(TEMPO_PADRAO); setConta('todas') }} /><p className="mse-contagem"><b>{lista.length}</b> de {SESSOES.length} sessões</p></div></header>
+        <div className="mse-filtros">
+          <div className="mse-linha">
+            <label className="mse-busca"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="m16 16 4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg><input placeholder="Buscar nome, e-mail, conta ou I.A." /></label>
+            <select value={conta} onChange={(e) => setConta(e.target.value)}><option value="todas">Demo e real</option><option value="real">Só real</option><option value="demo">Só demo</option></select>
+            <select><option>Todas as I.A.</option></select>
+            <select><option>Qualquer resultado</option></select>
+            <select><option>Qualquer encerramento</option></select>
+          </div>
+          <FiltroDePeriodo valor={tempo} onTrocar={setTempo} />
         </div>
-        <FiltroDePeriodo valor={tempo} onTrocar={setTempo} temOutrosFiltros={conta !== 'todas'} onLimpar={() => { setTempo(TEMPO_PADRAO); setConta('todas') }} />
+        <div className="ins-tabela mon-tabela"><div className="cab"><span>Cliente</span><span>I.A.</span><span>Conta</span><span>Operações</span><span>Resultado</span><span>Markup</span><span>Encerrada</span><span /></div></div>
         <TotaisDasEncerradas lista={lista} markups={MARKUPS} somandoMarkup={q.has('somando')} mostrarMarkup={!q.has('normal')} />
       </section>
     </div>
