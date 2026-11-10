@@ -294,3 +294,32 @@
 .tv.tv-cockpit .tv-registro.sem-hora li { grid-template-columns: minmax(0, 1fr); }
 .tv-registro.sem-hora li { grid-template-columns: minmax(0, 1fr); }
 .tv-palm-aviso:not(:has(time)) { grid-template-columns: minmax(0, 1fr); }
+
+/* ------------------------------------------------------------------
+   Rodapé da cabine (10/11/2026, Tiago no Monitoramento: "layout feio ali
+   embaixo"). A assinatura "ENGINE" era desenhada solta no canto de baixo
+   e caía por cima de "Detalhes da estratégia" e "Registro". Agora ela vira
+   a última linha, discreta e sem cruzar nada, e os dois atalhos viram
+   botões de verdade, à direita do selo "Acompanhamento ao vivo".
+   (Na tela das I.A. a assinatura segue escondida: robot-workspace.css.)
+   ------------------------------------------------------------------ */
+.tv .tv-assinatura {
+  position: static; order: 21; grid-column: 1 / -1; justify-self: end;
+  margin: 0 18px 12px; gap: 6px; font-size: 9px; letter-spacing: .2em;
+}
+.tv .tv-assinatura img { width: 18px; height: 18px; }
+.tv .tv-atalhos { gap: 8px; padding: 10px 16px; }
+.tv .tv-atalhos button {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  color: var(--muted); font-size: 11.5px; font-weight: 650; line-height: 1;
+  transition: color .2s, border-color .2s, background .2s; box-shadow: none;
+}
+.tv .tv-atalhos button i { font-style: normal; font-size: 12px; opacity: .8; }
+.tv .tv-atalhos button:hover { color: var(--text); border-color: color-mix(in srgb, var(--robo, var(--primary)) 55%, var(--border)); }
+.tv .tv-atalhos button.on {
+  color: var(--text); border-color: var(--robo, var(--primary));
+  background: color-mix(in srgb, var(--robo, var(--primary)) 14%, transparent); box-shadow: none;
+}
+.tv .tv-atalhos button:focus-visible { outline: 2px solid var(--robo, var(--primary)); outline-offset: 2px; }
