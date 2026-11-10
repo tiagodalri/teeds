@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { MARCA } from '../marca'
 
 /**
  * Data e hora, ao vivo (22/10/2026, pedido do Tiago): no topo do computador,
@@ -8,7 +7,8 @@ import { MARCA } from '../marca'
  */
 
 /** 08/11/2026 (Tiago): "por enquanto" a GF sem data e hora no topo. Para voltar, troque para true. */
-const MOSTRAR_RELOGIO = MARCA.id !== 'globalfly'
+// 09/11/2026 (Tiago): o relógio do topo volta também na GlobalFly
+const MOSTRAR_RELOGIO = true
 
 export function RelogioTopo({ className = '' }: { className?: string }) {
   if (!MOSTRAR_RELOGIO) return null

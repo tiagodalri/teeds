@@ -14,7 +14,8 @@ import { DERIV } from '../core/deriv/config'
 import { motivoLegivel } from './RobotResumo'
 
 /** 08/11/2026 (Tiago): "por enquanto" a tabela de operações da GF sem a hora. Para voltar, troque para true. */
-const MOSTRAR_HORA = MARCA.id !== 'globalfly'
+// 09/11/2026 (Tiago): a coluna Hora das operações volta também na GlobalFly
+const MOSTRAR_HORA = true
 
 /**
  * O preço só aparece com o dígito destacado quando vem com as casas certas e o
