@@ -108,7 +108,8 @@ function conteudo(tipo: TipoDeEmail, prosa: string): Conteudo {
         assunto: `Redefinir a sua senha · ${prosa}`,
         titulo: 'Escolha uma nova senha',
         espia: 'Um link para você criar uma senha nova.',
-        corpo: `Alguém pediu para redefinir a senha desta conta na ${prosa}. Se foi você, use o botão abaixo. O link vale por uma hora.`,
+        // 10/11/2026: clientes tocavam no link de um e-mail antigo ou já usado e achavam que o botão não funcionava
+        corpo: `Alguém pediu para redefinir a senha desta conta na ${prosa}. Se foi você, use o botão abaixo.\n\nO link vale **uma única vez**, por uma hora, e só funciona o deste e-mail: se você pedir outro, este deixa de valer. Depois de criar a senha nova, entre normalmente com o seu e-mail e essa senha.`,
         botao: 'Definir nova senha',
         aviso: 'Se não foi você, ignore este e-mail — a sua senha atual continua valendo.',
       }
