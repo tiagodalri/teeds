@@ -75,9 +75,22 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
   useEffect(() => {
     const corte = new Date(Date.now() - horas * 3600_000).toISOString()
     let vivo = true
-    void fetch(`${SUPABASE.url}/rest/v1/operacoes_manuais?select=*&marca=in.(${marcas.join(',')})&comprada_em=gte.${encodeURIComponent(corte)}&order=comprada_em.desc&limit=300`, {
-      headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}` },
-    }).then((r) => (r.ok ? r.json() : [])).then((linhas: any[]) => {
+    // Tudo do período (10/11/2026: parava em 300 e a GF já tem ~450 em 12 h), em páginas de 1000.
+    const pagina = 1000
+    const lerTudo = async (): Promise<any[]> => {
+      const todas: any[] = []
+      for (let desde = 0; desde < 10_000; desde += pagina) {
+        const r = await fetch(`${SUPABASE.url}/rest/v1/operacoes_manuais?select=*&marca=in.(${marcas.join(',')})&comprada_em=gte.${encodeURIComponent(corte)}&order=comprada_em.desc,contract_id.desc&limit=${pagina}&offset=${desde}`, {
+          headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}` },
+        })
+        if (!r.ok) break
+        const lote: any[] = await r.json()
+        todas.push(...lote)
+        if (lote.length < pagina) break
+      }
+      return todas
+    }
+    void lerTudo().then((linhas: any[]) => {
       if (!vivo) return
       const m = new Map<string, OpManual>()
       for (const l of linhas ?? []) { const o = daLinha(l); m.set(chave(o), o) }
