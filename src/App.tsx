@@ -318,6 +318,8 @@ export default function App() {
   useIrPelasJanelas(setTela)
   const telaAgora = useRef(tela)
   telaAgora.current = tela
+  // saiu do Manual: na volta ele abre de novo com um ativo só (pedido do Tiago, 10/11/2026: "pra não dar confusão")
+  useEffect(() => { if (tela !== 'operar' && multitela.n !== 1) mudarMultitela((e) => ({ ...e, n: 1 })) }, [tela]) // eslint-disable-line react-hooks/exhaustive-deps
   const [pedirCodigoAssistente, setPedirCodigoAssistente] = useState(false)
   const [assistenteLiberado, setAssistenteLiberado] = useState(assistenteBetaJaLiberado)
   const [payoutBase, setPayoutBase] = useState(19.55)

@@ -43,7 +43,9 @@ function ler(): EstadoMultitela {
     const seis = <T,>(l: unknown, padrao: T[], ok: (v: unknown) => boolean) =>
       padrao.map((p, i) => (Array.isArray(l) && ok(l[i]) ? (l[i] as T) : p))
     return {
-      n: OPCOES_DE_QUADROS.includes(d.n as Quadros) ? (d.n as Quadros) : 1,
+      // 10/11/2026 (Tiago): o Manual SEMPRE abre com um ativo só; mais quadros só clicando no seletor.
+      // Os ativos, valores e durações de cada quadro continuam guardados para quando ele abrir a grade.
+      n: 1,
       ativos: seis(d.ativos, PADRAO.ativos, (v) => typeof v === 'string'),
       valores: seis(d.valores, PADRAO.valores, (v) => typeof v === 'number' && v >= 0.35 && v <= 100000),
       tempos: seis(d.tempos, PADRAO.tempos, (v) => typeof v === 'number' && v > 0),
@@ -63,7 +65,8 @@ function gravar(novo: EstadoMultitela) {
   ouvintes.forEach((f) => f())
 }
 // outra aba (ou a janela solta) mudou: acompanha
-if (typeof window !== 'undefined') window.addEventListener('storage', (e) => { if (e.key === CHAVE) { atual = ler(); ouvintes.forEach((f) => f()) } })
+// (cada janela mantém o próprio número de quadros: o de outra aba nunca abre a grade nesta)
+if (typeof window !== 'undefined') window.addEventListener('storage', (e) => { if (e.key === CHAVE) { atual = { ...ler(), n: atual.n }; ouvintes.forEach((f) => f()) } })
 
 export function useMultitela(): [EstadoMultitela, (mudar: (e: EstadoMultitela) => EstadoMultitela) => void] {
   const estado = useSyncExternalStore((f) => { ouvintes.add(f); return () => ouvintes.delete(f) }, () => atual, () => atual)
