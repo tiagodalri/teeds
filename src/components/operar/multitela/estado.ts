@@ -11,6 +11,7 @@ import type { Granularity } from '../../../core/deriv/types'
 import { MARCA } from '../../../marca'
 
 export type Quadros = 1 | 2 | 4 | 6
+export type Unidade = 't' | 's' | 'm'
 export const OPCOES_DE_QUADROS: Quadros[] = [1, 2, 4, 6]
 /** No celular, no máximo 4 ativos (em abas), 1 ou 2 visíveis. */
 export const MAXIMO_NO_CELULAR = 4
@@ -21,6 +22,9 @@ export interface EstadoMultitela {
   ativos: string[]
   valores: number[]
   tempos: Granularity[]
+  /** A duração de cada quadro (fica guardada: trocar de aba, ampliar ou mudar o layout não a perde). */
+  duracoes: number[]
+  unidades: Unidade[]
   mesmoValor: boolean
   /** Celular: quantos ativos aparecem de uma vez. */
   porVez: 1 | 2
@@ -28,7 +32,8 @@ export interface EstadoMultitela {
 
 const CHAVE = `${MARCA.id}.multitela`
 const PADRAO: EstadoMultitela = {
-  n: 1, ativos: ['', '', '', '', '', ''], valores: [10, 10, 10, 10, 10, 10], tempos: [60, 60, 60, 60, 60, 60], mesmoValor: false, porVez: 1,
+  n: 1, ativos: ['', '', '', '', '', ''], valores: [10, 10, 10, 10, 10, 10], tempos: [60, 60, 60, 60, 60, 60],
+  duracoes: [5, 5, 5, 5, 5, 5], unidades: ['m', 'm', 'm', 'm', 'm', 'm'], mesmoValor: false, porVez: 1,
 }
 
 function ler(): EstadoMultitela {
@@ -42,6 +47,8 @@ function ler(): EstadoMultitela {
       ativos: seis(d.ativos, PADRAO.ativos, (v) => typeof v === 'string'),
       valores: seis(d.valores, PADRAO.valores, (v) => typeof v === 'number' && v >= 0.35 && v <= 100000),
       tempos: seis(d.tempos, PADRAO.tempos, (v) => typeof v === 'number' && v > 0),
+      duracoes: seis(d.duracoes, PADRAO.duracoes, (v) => typeof v === 'number' && v >= 1 && v <= 100000),
+      unidades: seis(d.unidades, PADRAO.unidades, (v) => v === 't' || v === 's' || v === 'm'),
       mesmoValor: d.mesmoValor === true,
       porVez: d.porVez === 2 ? 2 : 1,
     }
@@ -64,3 +71,20 @@ export function useMultitela(): [EstadoMultitela, (mudar: (e: EstadoMultitela) =
 }
 
 export const trocarItem = <T,>(lista: T[], i: number, v: T) => lista.map((x, j) => (j === i ? v : x))
+
+/**
+ * Entrar na grade com o ativo do gráfico no quadro 1: ele vai para a frente LEVANDO junto
+ * o valor, o tempo e a duração do quadro onde já estava (os outros só descem uma casa).
+ */
+export function comAtivoNaFrente(e: EstadoMultitela, simbolo: string): EstadoMultitela {
+  const i = e.ativos.indexOf(simbolo)
+  const frente = <T,>(lista: T[], novo: T) => (i >= 0 ? [lista[i], ...lista.filter((_, j) => j !== i)] : [novo, ...lista.slice(0, 5)])
+  return {
+    ...e,
+    ativos: frente(e.ativos, simbolo),
+    valores: frente(e.valores, e.valores[0] ?? 10),
+    tempos: frente(e.tempos, PADRAO.tempos[0]),
+    duracoes: frente(e.duracoes, PADRAO.duracoes[0]),
+    unidades: frente(e.unidades, PADRAO.unidades[0]),
+  }
+}

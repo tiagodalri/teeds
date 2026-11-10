@@ -86,7 +86,7 @@ import { acompanharFimDasSessoes, contratoManual, entradaManual } from './core/s
 import { JANELA, TELA_DA_JANELA, irNaPlataforma, useIrPelasJanelas, voltarAPlataforma } from './core/janelaSolta'
 import { BotaoJanelaSolta } from './components/janela/BotaoJanelaSolta'
 import { SeletorDeQuadros } from './components/operar/multitela/SeletorDeQuadros'
-import { useMultitela } from './components/operar/multitela/estado'
+import { comAtivoNaFrente, useMultitela } from './components/operar/multitela/estado'
 import type { ContaDaMultitela } from './components/operar/multitela/Quadro'
 import { registrarOperacaoManual, registrarPrecosDaManual } from './core/teeds/clientes'
 import { caminhoDaTela, telaDoCaminho, telaDoNome } from './core/rotas'
@@ -296,7 +296,7 @@ export default function App() {
   const [confirmar, setConfirmar] = useState<string | null>(null)
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
-  // Multitela (10/11/2026, ideia do Victor Dias): por enquanto só administradores da GlobalFly
+  // Multitela (10/11/2026, ideia do Victor Dias): na GlobalFly
   const [multitela, mudarMultitela] = useMultitela()
   // GlobalFly abre na home (20/10/2026); as outras marcas, no terminal manual
   // F5 / app voltando do segundo plano: continua na tela em que a pessoa estava (só as telas de cliente)
@@ -971,19 +971,35 @@ export default function App() {
     via vazio e comprava de novo, em dobro. Agora a tela fica de olho por
     90 s e adota a proxima compra com aquele valor.
   */
-  const [compraPendente, setCompraPendente] = useState<{ valor: number; desde: number } | null>(null)
+  /*
+    10/11/2026 (Multitela): uma LISTA de compras pendentes, cada uma com o ativo. Com vários
+    quadros comprando ao mesmo tempo, guardar só a última perdia a do outro quadro, e
+    comparar só o valor podia adotar a compra de um quadro como a de outro. Agora a tela só
+    adota quando o contrato já é conhecido e é do mesmo ativo (o fluxo da conta traz o ativo).
+  */
+  const [comprasPendentes, setComprasPendentes] = useState<Array<{ valor: number; desde: number; simbolo: string }>>([])
+  const setCompraPendente = (p: { valor: number; desde: number; simbolo: string }) => setComprasPendentes((l) => [...l, p])
   useEffect(() => {
-    if (!compraPendente) return
-    if (Date.now() - compraPendente.desde > 90_000) { setCompraPendente(null); return }
-    const achada = conta.comprasRecentes.find((c) =>
-      c.quando >= compraPendente.desde - 2_000 && Math.abs(c.valor - compraPendente.valor) < 0.005 && !manuais.includes(c.contractId))
-    if (achada) {
+    if (!comprasPendentes.length) return
+    const agora = Date.now()
+    const vivas = comprasPendentes.filter((p) => agora - p.desde <= 90_000)
+    const usados = new Set<number>()
+    const restantes = vivas.filter((p) => {
+      const achada = conta.comprasRecentes.find((c) => {
+        if (usados.has(c.contractId) || manuais.includes(c.contractId)) return false
+        if (c.quando < p.desde - 2_000 || Math.abs(c.valor - p.valor) >= 0.005) return false
+        const simbolo = conta.contracts.find((x) => x.contractId === c.contractId)?.symbol
+        return simbolo === p.simbolo
+      })
+      if (!achada) return true
+      usados.add(achada.contractId)
       marcarManual(achada.contractId)
-      setCompraPendente(null)
-      setAviso({ tipo: 'ok', texto: `A entrada de ${dinheiro(achada.valor, moeda)} foi confirmada e está na lista abaixo da boleta.` })
-    }
+      setAviso({ tipo: 'ok', texto: `A entrada de ${dinheiro(achada.valor, moeda)} foi confirmada e está na lista de posições.` })
+      return false
+    })
+    if (restantes.length !== comprasPendentes.length) setComprasPendentes(restantes)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conta.comprasRecentes, compraPendente, manuais])
+  }, [conta.comprasRecentes, conta.contracts, comprasPendentes, manuais])
   const idsManuais = useMemo(() => new Set(manuais), [manuais])
   const minhasTodas = useMemo(
     () => conta.contracts.filter((c) => idsManuais.has(c.contractId)),
@@ -1050,7 +1066,8 @@ export default function App() {
     setEncerradas((antes) => {
       const outras = antes.filter((e) => !finais.some((f) => f.contractId === e.c.contractId))
       const novas = finais.map((c) => ({ c, ate: antes.find((e) => e.c.contractId === c.contractId)?.ate ?? Date.now() + 120_000 }))
-      return [...novas, ...outras].slice(0, 6)
+      // 24 (antes 6): com a Multitela, vários ativos encerram ao mesmo tempo e cada marca fica os 2 minutos
+      return [...novas, ...outras].slice(0, 24)
     })
     /*
       "Suas últimas entradas" da coluna do Operar: guarda a sessão inteira
@@ -1100,7 +1117,8 @@ export default function App() {
     ficava ativo e o pedido entrava numa fila para disparar sozinho depois.
   */
   const linhaAberta = conta.conexao === 'open'
-  const podeMultitela = MARCA.id === 'globalfly' && adminConfirmado
+  // liberada para todos da GlobalFly em 10/11/2026 ("revise… e libere!"); antes, só administradores
+  const podeMultitela = MARCA.id === 'globalfly'
   const multitelaAtiva = podeMultitela && tela === 'operar' && multitela.n > 1
   // 29/10/2026: valor acima do saldo também trava a compra (antes o botão seguia ativo e a Deriv recusava)
   const acimaDoSaldo = !!conta.balance && stake > conta.balance.amount
@@ -1184,7 +1202,7 @@ export default function App() {
     const r = await buyFromProposal(conta.socket, p.id, p.askPrice).catch((e: Error) => {
       // "[LinhaFechada]" e a unica recusa em que NADA foi enviado. Qualquer
       // outra falha depois do envio pode ter comprado: fica de olho.
-      if (!/LinhaFechada/.test(e.message)) setCompraPendente({ valor, desde: Date.now() })
+      if (!/LinhaFechada/.test(e.message)) setCompraPendente({ valor, desde: Date.now(), simbolo })
       throw e
     })
     marcarManual(r.contractId)
@@ -1237,7 +1255,7 @@ export default function App() {
         takeProfit: pedido.takeProfit, stopLoss: pedido.stopLoss, cancellation: pedido.cancelamento,
       })
       const r = await buyFromProposal(conta.socket, p.id, p.askPrice).catch((e: Error) => {
-        if (!/LinhaFechada/.test(e.message)) setCompraPendente({ valor: p.askPrice, desde: Date.now() })
+        if (!/LinhaFechada/.test(e.message)) setCompraPendente({ valor: p.askPrice, desde: Date.now(), simbolo: symbolCode })
         throw e
       })
       marcarManual(r.contractId)
@@ -1435,10 +1453,7 @@ export default function App() {
     encerrar: (id) => { void encerrar(id) }, vendendo, aviso,
   }
   // entrar na grade leva junto o ativo que está no gráfico (ele vira o quadro 1)
-  const trocarQuadros = (n: 1 | 2 | 4 | 6) => mudarMultitela((e) => ({
-    ...e, n,
-    ativos: n > 1 && e.n === 1 && symbolCode ? [symbolCode, ...e.ativos.filter((x) => x !== symbolCode)].slice(0, 6) : e.ativos,
-  }))
+  const trocarQuadros = (n: 1 | 2 | 4 | 6) => mudarMultitela((e) => ({ ...(n > 1 && e.n === 1 && symbolCode ? comAtivoNaFrente(e, symbolCode) : e), n }))
   const resumoDaCompra = <ResumoDaCompra payouts={[call.payout, put.payout]} stake={stake} moeda={moeda} duracao={duration} unidade={unidade} />
   // gráfico profissional: na GlobalFly, por enquanto só para administradores
   const usarGraficoPro = MARCA.graficoPro === 'todos' || (MARCA.graficoPro === 'admin' && admin === true)

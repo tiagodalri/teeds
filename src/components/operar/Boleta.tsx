@@ -184,6 +184,8 @@ export function BotaoCompra({ tipo, payout, moeda, carregando, erro, podeOperar,
   return (
     <button type="button" className={`bl-botao ${tipo} ${confirmando ? 'confirmando' : ''}`}
       disabled={travado} onClick={aoComprar}
+      // Enter segurado repete o clique: o 1º armaria e a repetição compraria na conta real (10/11/2026)
+      onKeyDown={(e) => { if (e.repeat && (e.key === 'Enter' || e.key === ' ')) e.preventDefault() }}
       aria-label={comprando ? `${titulo}: enviando` : motivoBloqueio ? `${titulo}: ${motivoBloqueio}` : erro ? `${titulo}: ${erro}`
         : confirmando ? `Confirmar ${titulo} de ${dinheiro(stake, moeda)}${semDizerReal ? '' : ' com dinheiro real'}` : `${titulo}${valor !== null ? `, recebe ${dinheiro(valor, moeda)} se acertar` : ''}`}>
       <span className="bl-botao-lin">

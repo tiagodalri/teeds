@@ -16,7 +16,7 @@ import { naPagina } from '../../../core/escala'
 import { PositionCard } from '../../PositionCard'
 import { IconeAtivo } from '../../IconeAtivo'
 import { MARCA } from '../../../marca'
-import { MAXIMO_NO_CELULAR, trocarItem, useMultitela, type Quadros } from './estado'
+import { MAXIMO_NO_CELULAR, trocarItem, useMultitela, type Quadros, type Unidade } from './estado'
 import { SeletorDeQuadros } from './SeletorDeQuadros'
 import { Quadro, type AtalhosDoQuadro, type ContaDaMultitela } from './Quadro'
 import './multitela.css'
@@ -104,6 +104,7 @@ export function Multitela({ conta, ativos, sessao, ativoInicial, extraNaBarra }:
   const ampliar = (i: number) => comTransicao(() => setAmpliado((a) => (a === i ? null : i)))
   const mudarValor = (i: number, v: number) => mudar((e) => ({ ...e, valores: e.mesmoValor ? e.valores.map(() => v) : trocarItem(e.valores, i, v) }))
   const mudarTempo = (i: number, g: Granularity) => mudar((e) => ({ ...e, tempos: trocarItem(e.tempos, i, g) }))
+  const mudarDuracao = (i: number, d: number, u: Unidade) => mudar((e) => ({ ...e, duracoes: trocarItem(e.duracoes, i, d), unidades: trocarItem(e.unidades, i, u) }))
   const ondeEsta = (simbolo: string) => {
     const j = lista.slice(0, n).indexOf(simbolo)
     return j >= 0 ? j + 1 : null
@@ -181,7 +182,7 @@ export function Multitela({ conta, ativos, sessao, ativoInicial, extraNaBarra }:
             const q = ondeEsta(c.symbol)
             return (
               <div key={c.contractId} className="mtl-pos-item">
-                <button type="button" className="mtl-pos-ir" disabled={!q} onClick={() => { if (q) { if (celular) setAba(q - 1); else setFoco(q - 1); setListaAberta(false) } }}>
+                <button type="button" className="mtl-pos-ir" disabled={!q} onClick={() => { if (q) { if (celular) setAba(q - 1); else { setFoco(q - 1); setAmpliado((a) => (a === null ? null : q - 1)) } setListaAberta(false) } }}>
                   {q ? `Ir ao quadro ${q}` : 'Fora da tela'}
                 </button>
                 <PositionCard contrato={c} nomeAtivo={nomeDe(c.symbol)} onEncerrar={conta.encerrar} real={conta.real} encerrando={conta.vendendo === c.contractId} />
@@ -203,6 +204,7 @@ export function Multitela({ conta, ativos, sessao, ativoInicial, extraNaBarra }:
     <div key={`q${i}`} className={`mtl-celula${piscando === i ? ' mtl-piscando' : ''}`} style={celular ? undefined : { viewTransitionName: `mtl-q${i}` } as CSSProperties}>
       <Quadro numero={i + 1} simbolo={lista[i]} ativos={ativos} conta={conta} sessao={sessao}
         stake={estado.valores[i]} aoMudarStake={(v) => mudarValor(i, v)} tempo={estado.tempos[i]} aoMudarTempo={(g) => mudarTempo(i, g)}
+        duracao={estado.duracoes[i]} unidade={estado.unidades[i]} aoMudarDuracao={(d, u) => mudarDuracao(i, d, u)}
         variante={variante} emFoco={!celular && foco === i} aoFocar={() => setFoco(i)} semNumero={celular}
         ondeEsta={ondeEsta} aoEscolherAtivo={(s) => escolherAtivo(i, s)}
         ampliado={ampliado === i} aoAmpliar={celular ? undefined : () => ampliar(i)}
@@ -264,7 +266,7 @@ export function Multitela({ conta, ativos, sessao, ativoInicial, extraNaBarra }:
         </button>
         {extraNaBarra}
         {avisoGeral}
-        <span className="mtl-dica" aria-hidden="true"><kbd>1</kbd>–<kbd>{n}</kbd> quadro · <kbd>Shift</kbd><kbd>↑</kbd> Comprar · <kbd>Shift</kbd><kbd>↓</kbd> Vender</span>
+        <span className="mtl-dica" aria-hidden="true">Atalhos: <kbd>1</kbd>–<kbd>{n}</kbd> Quadro · <kbd>Shift</kbd><kbd>↑</kbd> Comprar · <kbd>Shift</kbd><kbd>↓</kbd> Vender</span>
         {posicoes}
       </div>
       <div className="mtl-grade" ref={grade} data-n={ampliado !== null ? 1 : n} style={altura ? { height: altura } : undefined}>

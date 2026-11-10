@@ -28,7 +28,7 @@ import { MARCA } from '../../../marca'
 
 const GraficoPro = lazy(() => import('../../grafico/GraficoPro').then((m) => ({ default: m.GraficoPro })))
 
-type Unidade = 't' | 's' | 'm'
+import type { Unidade } from './estado'
 export type Variante = 'coluna' | 'faixa' | 'celular'
 
 /** O que a conta (no App) oferece a todos os quadros. */
@@ -83,6 +83,9 @@ export function Quadro(p: {
   aoMudarStake: (v: number) => void
   tempo: Granularity
   aoMudarTempo: (g: Granularity) => void
+  duracao: number
+  unidade: Unidade
+  aoMudarDuracao: (d: number, u: Unidade) => void
   variante: Variante
   emFoco: boolean
   aoFocar: () => void
@@ -96,7 +99,8 @@ export function Quadro(p: {
 }) {
   const { simbolo, conta, stake, variante } = p
   const ativo = p.ativos.find((a) => a.symbol === simbolo) ?? null
-  const nome = ativo ? nomeDoAtivo(ativo.name) : simbolo
+  // a lista de ativos ainda chegando: o quadro diz isso em vez de ficar sem nome
+  const nome = ativo ? nomeDoAtivo(ativo.name) : simbolo || 'Carregando ativo…'
   const sintetico = ehSintetico(ativo)
   const aberto = !ativo || (ativo.isOpen && !ativo.isSuspended)
   const moeda = conta.moeda
@@ -108,12 +112,16 @@ export function Quadro(p: {
   const preco = tick?.quote ?? (candles.length ? candles[candles.length - 1].close : null)
 
   // duração: obedece ao que a Deriv aceita neste ativo, na unidade escolhida (igual ao Operar)
-  const [duracao, setDuracao] = useState(5)
-  const [unidade, setUnidade] = useState<Unidade>('m')
+  // guardadas na Multitela (estado.ts): o quadro que sai da tela e volta não perde a duração
+  const { duracao, unidade } = p
+  const setDuracao = (v: number | ((d: number) => number)) => {
+    const nova = typeof v === 'function' ? v(p.duracao) : v
+    if (nova !== p.duracao) p.aoMudarDuracao(nova, p.unidade)
+  }
   const faixa = unidade === 't' ? limites.ticks : unidade === 's' ? limites.segundos : limites.minutos
   const dentroDaFaixa = (d: number) => faixa ? Math.min(faixa[1], Math.max(faixa[0], Math.round(d) || faixa[0])) : Math.max(1, Math.round(d) || 1)
   useEffect(() => { setDuracao(dentroDaFaixa) }, [faixa]) // eslint-disable-line react-hooks/exhaustive-deps
-  const trocarUnidade = (u: Unidade) => { setUnidade(u); setDuracao(u === 't' ? 5 : u === 's' ? 60 : 5) }
+  const trocarUnidade = (u: Unidade) => p.aoMudarDuracao(u === 't' ? 5 : u === 's' ? 60 : 5, u)
   useEffect(() => {
     if (unidade === 't' ? limites.ticks : unidade === 's' ? limites.segundos : limites.minutos) return
     const outra = limites.minutos ? 'm' : limites.segundos ? 's' : limites.ticks ? 't' : null
@@ -295,7 +303,12 @@ function MenuDeAtivos({ ativos, atual, ondeEsta, aoEscolher, aoFechar }: {
   const [busca, setBusca] = useState('')
   const caixa = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    const fora = (e: PointerEvent) => { if (caixa.current && !caixa.current.contains(e.target as Node) && !(e.target as HTMLElement).closest?.('.mtl-ativo')) aoFechar() }
+    // clicar fora fecha; o botão de ativo do PRÓPRIO quadro não conta (ele mesmo fecha), o de outro quadro sim
+    const fora = (e: PointerEvent) => {
+      const alvo = e.target as Node
+      const proprio = caixa.current?.parentElement?.querySelector('.mtl-ativo')
+      if (caixa.current && !caixa.current.contains(alvo) && !proprio?.contains(alvo)) aoFechar()
+    }
     const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); aoFechar() } }
     document.addEventListener('pointerdown', fora); document.addEventListener('keydown', tecla, true)
     return () => { document.removeEventListener('pointerdown', fora); document.removeEventListener('keydown', tecla, true) }

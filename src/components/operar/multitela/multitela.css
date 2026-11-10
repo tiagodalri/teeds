@@ -57,7 +57,9 @@
 .mtl-grade[data-n='2'] { grid-template: minmax(0, 1fr) / repeat(2, minmax(0, 1fr)); }
 .mtl-grade[data-n='4'] { grid-template: repeat(2, minmax(0, 1fr)) / repeat(2, minmax(0, 1fr)); }
 .mtl-grade[data-n='6'] { grid-template: repeat(2, minmax(0, 1fr)) / repeat(3, minmax(0, 1fr)); }
-.mtl-celula { display: flex; min-width: 0; min-height: 0; border-radius: 14px; }
+.mtl-celula { position: relative; display: flex; min-width: 0; min-height: 0; border-radius: 14px; }
+/* cada célula é uma camada (view-transition-name): a do menu de ativos aberto sobe por cima das vizinhas */
+.mtl-celula:has(.mtl-menu) { z-index: 30; }
 .mtl-celula.mtl-piscando { animation: mtl-pisca .9s ease-out; }
 @keyframes mtl-pisca { 0% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--mtl-ouro) 50%, transparent); } 100% { box-shadow: 0 0 0 0 transparent; } }
 
@@ -171,8 +173,9 @@
 .mtl-faixa .bl-pct { padding: 1px 6px; font-size: 10.5px; }
 .mtl-faixa .bl-botao > small { margin-top: 0; font-size: 11px; }
 .mtl-faixa .bl-botao > strong { font-size: 13.5px; }
-.mtl-faixa .bl-estado { grid-column: 1 / -1; margin-top: 1px; font-size: 11px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.mtl-faixa .bl-estado small { display: none; }
+/* o estado do botão (recusa da Deriv, "Clique de novo para confirmar" e "Dinheiro real") aparece inteiro: o botão cresce o que precisar */
+.mtl-faixa .bl-estado { grid-column: 1 / -1; margin-top: 1px; font-size: 11px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mtl-faixa .bl-estado small { font-size: 10.5px; }
 /* quadro estreito (6 na tela, celular): duas linhas, valor e duração em cima, os botões embaixo */
 @container mtlq (max-width: 540px) {
   .mtl-faixa { grid-template-columns: repeat(2, minmax(0, 1fr)); }

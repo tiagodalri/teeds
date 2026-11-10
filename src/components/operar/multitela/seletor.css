@@ -20,4 +20,9 @@
 .mtl-layouts button:focus-visible { outline: 2px solid var(--mtl-ouro); outline-offset: 1px; }
 /* no Operar de 1 ativo, o seletor fica junto dos tempos (mesma altura dos outros controles) */
 .chart-head .mtl-seletor .mtl-layouts button { height: 30px; }
+/* celular: uma linha inteira, botões do mesmo tamanho, como os tempos logo acima */
+@media (max-width: 900px) {
+  .chart-head .mtl-seletor, .chart-head .mtl-seletor .mtl-layouts { display: flex; width: 100%; box-sizing: border-box; }
+  .chart-head .mtl-seletor .mtl-layouts button { flex: 1 1 0; justify-content: center; height: 40px; }
+}
 
