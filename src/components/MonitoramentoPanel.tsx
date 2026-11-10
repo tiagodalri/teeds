@@ -165,8 +165,9 @@ export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMa
 
 /* ===================================================== cabine espelho */
 
-function CabineEspelho({ s, estado, cliente, modo, saude, idade, rtt, desvio, eventos, aoFechar, passo, integridade, mostrarMarkup = false }: {
+function CabineEspelho({ s, estado, cliente, selo, modo, saude, idade, rtt, desvio, eventos, aoFechar, passo, integridade, mostrarMarkup = false }: {
   mostrarMarkup?: boolean
+  selo?: { texto: string; codigo: string } | null
   s: SessaoEspelho; estado: EstadoEspelho; cliente?: ClienteRegistro; modo: 'ao-vivo' | 'replay'; saude: Saude; idade: number | null; rtt: number | null; desvio: number | null
   eventos: EventoEspelho[]; aoFechar: () => void; passo?: { indice: number; total: number; horaOriginal: number; lacuna: number }; integridade?: Integridade
 }) {
@@ -192,7 +193,7 @@ function CabineEspelho({ s, estado, cliente, modo, saude, idade, rtt, desvio, ev
   }, [eventos])
   return (
     <section className={`mon-foco ${modo}`} role="region" aria-label={`Cabine espelho de ${nome}, somente visualização`}>
-      <CabecalhoDaCabine refVoltar={titulo} aoFechar={aoFechar} nome={nome} email={cliente?.email} contaId={s.contaId} demo={s.demo}
+      <CabecalhoDaCabine refVoltar={titulo} aoFechar={aoFechar} nome={nome} selo={selo} email={cliente?.email} contaId={s.contaId} demo={s.demo}
         moeda={s.moeda} modo={modo} saude={saude} idade={idade} rtt={rtt} desvio={desvio} passo={passo} integridade={integridade} />
 
       <div className={`cabine-caixa expandido ${estado.rodando ? 'rodando' : 'parado'} mon-somente-leitura`} style={{ ['--robo' as any]: cor, ['--robo-suave' as any]: corSuave }}>
@@ -251,7 +252,7 @@ const VELOCIDADES = [0.25, 0.5, 1, 2, 4]
 /** Um intervalo maior que isto entre eventos é inatividade: o replay salta e avisa. */
 const INATIVIDADE_MS = 8000
 
-function Replay({ sessao, encerrada, clientes, marca, aoFechar, aoErro, mostrarMarkup = false }: { sessao: SessaoTeeds; encerrada: SessaoEncerrada; clientes: Map<string, ClienteRegistro>; marca: string; aoFechar: () => void; aoErro: (e: unknown) => void; mostrarMarkup?: boolean }) {
+function Replay({ sessao, encerrada, clientes, selo, marca, aoFechar, aoErro, mostrarMarkup = false }: { sessao: SessaoTeeds; encerrada: SessaoEncerrada; clientes: Map<string, ClienteRegistro>; selo?: { texto: string; codigo: string } | null; marca: string; aoFechar: () => void; aoErro: (e: unknown) => void; mostrarMarkup?: boolean }) {
   const [passos, setPassos] = useState<PassoReplay[]>([])
   const [eventos, setEventos] = useState<EventoEspelho[]>([])
   const [cabecalho, setCabecalho] = useState<SessaoEspelho | null>(null)
@@ -343,7 +344,7 @@ function Replay({ sessao, encerrada, clientes, marca, aoFechar, aoErro, mostrarM
       {autorizado && carregando && <div className="mon-estado" role="status"><b>Carregando histórico…</b>{carregados ? `${carregados} eventos lidos` : 'Lendo a sessão'}<button onClick={aoFechar}>Cancelar</button></div>}
       {autorizado && !carregando && !passos.length && <div className="mon-estado" role="status"><b>Histórico indisponível</b>Esta sessão não tem eventos guardados: é anterior ao espelho, ou os eventos já passaram da retenção.<button onClick={aoFechar}>Voltar</button></div>}
       {cabecalho && passo && (
-        <CabineEspelho s={cabecalho} estado={passo.estado} cliente={clientes.get(encerrada.userId)} modo="replay" saude="encerrada" idade={null} rtt={null} desvio={null}
+        <CabineEspelho s={cabecalho} estado={passo.estado} cliente={clientes.get(encerrada.userId)} selo={selo} modo="replay" saude="encerrada" idade={null} rtt={null} desvio={null}
           eventos={passos.slice(0, indice + 1).map((p) => p.evento)} aoFechar={aoFechar} integridade={integridade}
           passo={{ indice, total: passos.length, horaOriginal: passo.evento.emitidoEm, lacuna: passo.lacuna }} mostrarMarkup={mostrarMarkup} />
       )}
@@ -813,7 +814,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
       {tela === 'pronto' && aba === 'ao-vivo' && emFoco && focoAutorizado === 'pendente' && <div className="mon-estado" role="status"><b>Registrando o acesso…</b></div>}
       {tela === 'pronto' && aba === 'ao-vivo' && emFoco && focoAutorizado === 'nao' && <div className="mon-estado erro" role="alert"><b>Cabine não aberta</b>Não foi possível registrar a auditoria deste acesso. Sem registro, a cabine não é exibida.<button onClick={() => setFoco(null)}>Voltar ao mosaico</button></div>}
       {tela === 'pronto' && aba === 'ao-vivo' && emFoco && focoAutorizado === 'sim' && (
-        <CabineEspelho s={emFoco} estado={emFoco.estado} cliente={clientes.get(emFoco.userId)} modo="ao-vivo"
+        <CabineEspelho s={emFoco} estado={emFoco.estado} cliente={clientes.get(emFoco.userId)} selo={seloDe(emFoco.userId, emFoco.parceiro)} modo="ao-vivo"
           saude={saudeDoSinal(emFoco, agora)} idade={idadeDaAtualizacao(emFoco, agora)} rtt={rttMs} desvio={desvioS} eventos={eventos.get(emFoco.sessaoId) ?? []} aoFechar={fecharFoco} mostrarMarkup={mostrarMarkup} />
       )}
 
@@ -871,7 +872,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
           <TotaisDasEncerradas lista={encerradasFiltradas} markups={markups} somandoMarkup={somandoMarkup} mostrarMarkup={mostrarMarkup} />
         </section>
       )}
-      {tela === 'pronto' && aba === 'replay' && replayDe && <Replay key={`${marca}-${replayDe.id}`} sessao={sessao} encerrada={replayDe} clientes={clientes} marca={replayDe.marca || marcaDoRegistro} aoFechar={() => setReplayDe(null)} aoErro={falhar} mostrarMarkup={mostrarMarkup} />}
+      {tela === 'pronto' && aba === 'replay' && replayDe && <Replay key={`${marca}-${replayDe.id}`} sessao={sessao} encerrada={replayDe} clientes={clientes} selo={seloDe(replayDe.userId, replayDe.parceiro)} marca={replayDe.marca || marcaDoRegistro} aoFechar={() => setReplayDe(null)} aoErro={falhar} mostrarMarkup={mostrarMarkup} />}
 
       {tela === 'pronto' && aba === 'auditoria' && (
         <section className="admin-card full">

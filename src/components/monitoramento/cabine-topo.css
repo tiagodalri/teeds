@@ -1,98 +1,110 @@
-/* Cabeçalho da cabine espelho (Monitoramento › Mosaico › cliente), prefixo mcb-.
+/* Cabeçalho da cabine espelho (Monitoramento › Mosaico › cliente), prefixo cbt-.
+   NÃO usar mcb-: .mcb é o botão da mini-cabine e várias telas o escondem com display:none
+   (o cabeçalho sumia junto, com o nome do cliente — 10/11/2026).
    10/11/2026 (Tiago: "sem layout sem design sem nada, infos jogadas"). O mesmo padrão das Sessões
    encerradas: controles de 40 px, cantos de 10 px, fonte 13 px, 20 px de respiro nas bordas.
    À esquerda quem é (voltar, iniciais, nome e a ficha da conta); à direita o estado (ao vivo, somente
    visualização e fechar), tudo numa linha alinhada pelo centro. */
-.mcb {
-  --mcb-h: 40px; --mcb-raio: 10px;
+.cbt {
+  --cbt-h: 40px; --cbt-raio: 10px;
   /* âmbar e roxo legíveis no claro; no escuro, os tons mais vivos (abaixo) */
-  --mcb-ambar: #a9742a; --mcb-roxo: #5b3fbf;
+  --cbt-ambar: #a9742a; --cbt-roxo: #5b3fbf;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   padding: 16px 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg);
 }
 
-.mcb-voltar {
+.cbt-voltar {
   display: inline-flex; align-items: center; gap: 6px; flex: none; box-sizing: border-box;
-  height: var(--mcb-h); padding: 0 14px 0 10px; border: 1px solid var(--border); border-radius: var(--mcb-raio);
+  height: var(--cbt-h); padding: 0 14px 0 10px; border: 1px solid var(--border); border-radius: var(--cbt-raio);
   color: var(--text); background: var(--surface); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
 }
-.mcb-voltar svg { width: 16px; height: 16px; }
-.mcb-voltar:hover { border-color: color-mix(in srgb, var(--text) 30%, var(--border)); }
+.cbt-voltar svg { width: 16px; height: 16px; }
+.cbt-voltar:hover { border-color: color-mix(in srgb, var(--text) 30%, var(--border)); }
 
-.mcb-quem { display: flex; align-items: center; gap: 12px; flex: 1 1 auto; min-width: 0; }
-.mcb-avatar {
-  display: grid; place-items: center; flex: none; width: var(--mcb-h); height: var(--mcb-h); border-radius: 50%;
+.cbt-quem { display: flex; align-items: center; gap: 12px; flex: 1 1 auto; min-width: 0; }
+.cbt-avatar {
+  display: grid; place-items: center; flex: none; width: var(--cbt-h); height: var(--cbt-h); border-radius: 50%;
   font-size: 13px; font-weight: 800; letter-spacing: .02em; color: var(--text);
   background: color-mix(in srgb, var(--primary) 18%, var(--surface)); border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
 }
-.mcb-nome { display: grid; gap: 4px; min-width: 0; }
-.mcb-nome h2 { margin: 0; font-size: 16px; line-height: 1.25; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mcb-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; margin: 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--muted); }
-.mcb-meta li { display: inline-flex; align-items: center; white-space: nowrap; }
-.mcb-meta li + li::before { content: ''; width: 3px; height: 3px; margin: 0 8px; border-radius: 50%; background: currentColor; opacity: .6; }
-.mcb-meta .mcb-conta + li::before { display: none; }
-.mcb-conta { margin-right: 8px; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; }
-.mcb-conta.real { color: var(--up); background: color-mix(in srgb, var(--up) 14%, transparent); }
-.mcb-conta.demo { color: var(--mcb-ambar); background: color-mix(in srgb, #e0a13a 14%, transparent); }
+.cbt-nome { display: grid; gap: 4px; min-width: 0; }
+.cbt-nome h2 { margin: 0; font-size: 16px; line-height: 1.25; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cbt-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; margin: 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--muted); }
+.cbt-meta li { display: inline-flex; align-items: center; white-space: nowrap; }
+.cbt-meta li + li::before { content: ''; width: 3px; height: 3px; margin: 0 8px; border-radius: 50%; background: currentColor; opacity: .6; }
+.cbt-meta .cbt-conta + li::before { display: none; }
+.cbt-conta { margin-right: 8px; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; }
+.cbt-conta.real { color: var(--up); background: color-mix(in srgb, var(--up) 14%, transparent); }
+.cbt-conta.demo { color: var(--cbt-ambar); background: color-mix(in srgb, #e0a13a 14%, transparent); }
 
-.mcb-estado { display: flex; align-items: center; gap: 10px; flex: none; }
-.mcb-status {
-  display: inline-flex; align-items: center; gap: 8px; box-sizing: border-box; height: var(--mcb-h);
-  padding: 0 14px; border: 1px solid var(--border); border-radius: var(--mcb-raio);
+.cbt-estado { display: flex; align-items: center; gap: 10px; flex: none; }
+.cbt-status {
+  display: inline-flex; align-items: center; gap: 8px; box-sizing: border-box; height: var(--cbt-h);
+  padding: 0 14px; border: 1px solid var(--border); border-radius: var(--cbt-raio);
   font-size: 13px; color: var(--muted); background: var(--surface); white-space: nowrap;
 }
-.mcb-status i { width: 8px; height: 8px; flex: none; border-radius: 50%; background: currentColor; }
-.mcb-status b { font-weight: 700; color: currentColor; }
-.mcb-status small { display: inline-flex; align-items: center; font-size: 12.5px; color: var(--muted); }
-.mcb-status small::before { content: ''; width: 3px; height: 3px; margin-right: 8px; border-radius: 50%; background: currentColor; opacity: .6; }
+.cbt-status i { width: 8px; height: 8px; flex: none; border-radius: 50%; background: currentColor; }
+.cbt-status b { font-weight: 700; color: currentColor; }
+.cbt-status small { display: inline-flex; align-items: center; font-size: 12.5px; color: var(--muted); }
+.cbt-status small::before { content: ''; width: 3px; height: 3px; margin-right: 8px; border-radius: 50%; background: currentColor; opacity: .6; }
 /* o número que muda a cada segundo não empurra o resto */
-.mcb-num { font-variant-numeric: tabular-nums; }
-.mcb-status.ao-vivo { color: var(--up); border-color: color-mix(in srgb, var(--up) 40%, var(--border)); background: color-mix(in srgb, var(--up) 9%, var(--surface)); }
-.mcb-status.ao-vivo i { animation: mcb-pisca 1.4s ease-in-out infinite; }
-.mcb-status.atencao { color: var(--mcb-ambar); border-color: color-mix(in srgb, #e0a13a 40%, var(--border)); }
-.mcb-status.desatualizado, .mcb-status.encerrada { color: var(--down); border-color: color-mix(in srgb, var(--down) 40%, var(--border)); }
-.mcb-status.replay { color: var(--mcb-roxo); border-color: color-mix(in srgb, #5b3fbf 60%, var(--border)); background: color-mix(in srgb, #5b3fbf 16%, var(--surface)); }
-@keyframes mcb-pisca { 50% { opacity: .35; } }
+.cbt-num { font-variant-numeric: tabular-nums; }
+.cbt-status.ao-vivo { color: var(--up); border-color: color-mix(in srgb, var(--up) 40%, var(--border)); background: color-mix(in srgb, var(--up) 9%, var(--surface)); }
+.cbt-status.ao-vivo i { animation: cbt-pisca 1.4s ease-in-out infinite; }
+.cbt-status.atencao { color: var(--cbt-ambar); border-color: color-mix(in srgb, #e0a13a 40%, var(--border)); }
+.cbt-status.desatualizado, .cbt-status.encerrada { color: var(--down); border-color: color-mix(in srgb, var(--down) 40%, var(--border)); }
+.cbt-status.replay { color: var(--cbt-roxo); border-color: color-mix(in srgb, #5b3fbf 60%, var(--border)); background: color-mix(in srgb, #5b3fbf 16%, var(--surface)); }
+@keyframes cbt-pisca { 50% { opacity: .35; } }
 
-.mcb-leitura {
-  display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; height: var(--mcb-h);
-  padding: 0 12px; border-radius: var(--mcb-raio); font-size: 13px; color: var(--muted); white-space: nowrap; cursor: help;
+.cbt-leitura {
+  display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; height: var(--cbt-h);
+  padding: 0 12px; border-radius: var(--cbt-raio); font-size: 13px; color: var(--muted); white-space: nowrap; cursor: help;
 }
-.mcb-leitura svg { width: 16px; height: 16px; flex: none; }
+.cbt-leitura svg { width: 16px; height: 16px; flex: none; }
 
-.mcb-fechar {
-  display: grid; place-items: center; flex: none; box-sizing: border-box; width: var(--mcb-h); height: var(--mcb-h);
-  padding: 0; border: 1px solid var(--border); border-radius: var(--mcb-raio);
+.cbt-fechar {
+  display: grid; place-items: center; flex: none; box-sizing: border-box; width: var(--cbt-h); height: var(--cbt-h);
+  padding: 0; border: 1px solid var(--border); border-radius: var(--cbt-raio);
   color: var(--muted); background: var(--surface); cursor: pointer;
 }
-.mcb-fechar svg { width: 14px; height: 14px; }
-.mcb-fechar:hover, .mcb-fechar:focus-visible { color: var(--text); }
-.mcb button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.cbt-fechar svg { width: 14px; height: 14px; }
+.cbt-fechar:hover, .cbt-fechar:focus-visible { color: var(--text); }
+.cbt button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
-:root[data-tema='escuro'] .mcb { --mcb-ambar: #e0a13a; --mcb-roxo: #b9a6ff; }
-@media (prefers-color-scheme: dark) { :root:not([data-tema='claro']) .mcb { --mcb-ambar: #e0a13a; --mcb-roxo: #b9a6ff; } }
-@media (prefers-reduced-motion: reduce) { .mcb-status.ao-vivo i { animation: none; } }
+:root[data-tema='escuro'] .cbt { --cbt-ambar: #e0a13a; --cbt-roxo: #b9a6ff; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema='claro']) .cbt { --cbt-ambar: #e0a13a; --cbt-roxo: #b9a6ff; } }
+@media (prefers-reduced-motion: reduce) { .cbt-status.ao-vivo i { animation: none; } }
 
 /* Telas médias: o estado desce para a linha de baixo, inteiro e alinhado à esquerda. */
 @media (max-width: 1100px) {
-  .mcb { flex-wrap: wrap; }
-  .mcb-quem { flex: 1 1 calc(100% - 140px); }
-  .mcb-estado { flex: 1 1 100%; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--border); }
-  .mcb-fechar { margin-left: auto; }
+  .cbt { flex-wrap: wrap; }
+  .cbt-quem { flex: 1 1 calc(100% - 140px); }
+  .cbt-estado { flex: 1 1 100%; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--border); }
+  .cbt-fechar { margin-left: auto; }
 }
 /* Celular: voltar e fechar na linha de cima; quem é no meio; o estado embaixo. Sem pontinhos
    separadores (no começo de uma linha quebrada eles ficam soltos): só o espaço entre os itens. */
 @media (max-width: 600px) {
   /* 44 px no celular, como os outros controles da plataforma */
-  .mcb { --mcb-h: 44px; gap: 12px; padding: 14px 16px; }
-  .mcb-estado { display: contents; }
-  .mcb-voltar { order: 0; }
-  .mcb-fechar { order: 1; margin-left: auto; }
-  .mcb-quem { order: 2; flex: 1 1 100%; align-items: flex-start; }
-  .mcb-status { order: 3; flex: 1 1 100%; height: auto; min-height: var(--mcb-h); padding: 8px 12px; flex-wrap: wrap; white-space: normal; gap: 4px 12px; }
-  .mcb-status small::before { display: none; }
-  .mcb-leitura { order: 4; height: auto; padding: 0 2px; }
-  .mcb-meta { gap: 6px 12px; }
-  .mcb-meta li + li::before { display: none; }
-  .mcb-conta { margin-right: 0; }
+  .cbt { --cbt-h: 44px; gap: 12px; padding: 14px 16px; }
+  .cbt-estado { display: contents; }
+  .cbt-voltar { order: 0; }
+  .cbt-fechar { order: 1; margin-left: auto; }
+  .cbt-quem { order: 2; flex: 1 1 100%; align-items: flex-start; }
+  .cbt-status { order: 3; flex: 1 1 100%; height: auto; min-height: var(--cbt-h); padding: 8px 12px; flex-wrap: wrap; white-space: normal; gap: 4px 12px; }
+  .cbt-status small::before { display: none; }
+  .cbt-leitura { order: 4; height: auto; padding: 0 2px; }
+  .cbt-meta { gap: 6px 12px; }
+  .cbt-meta li + li::before { display: none; }
+  .cbt-conta { margin-right: 0; }
+}
+
+/* O parceiro do cliente ao lado do nome, como na lista das Sessões encerradas. */
+.cbt-titulo { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cbt-titulo h2 { min-width: 0; }
+.cbt-titulo .mon-selo.parceiro { flex: none; padding: 2px 8px; font-size: 11.5px; }
+@media (max-width: 600px) {
+  /* no celular o nome nunca corta: quebra a linha, e o selo do parceiro desce se não couber */
+  .cbt-titulo { flex-wrap: wrap; row-gap: 4px; }
+  .cbt-nome h2 { white-space: normal; overflow: visible; }
 }

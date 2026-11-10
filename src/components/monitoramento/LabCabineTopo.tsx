@@ -29,14 +29,16 @@ export default function LabCabineTopo() {
   const voltar = useRef<HTMLButtonElement>(null)
   const base = { aoFechar: nada, contaId: 'ROTN843639', moeda: 'USD', idade: 0.04, rtt: 50, desvio: null }
   return (
-    <div className="monitoramento" style={{ padding: 24, display: 'grid', gap: 24, maxWidth: 1440, margin: '0 auto' }}>
+    <div className="monitoramento" data-lab-cabine style={{ padding: 24, display: 'grid', gap: 24, maxWidth: 1440, margin: '0 auto' }}>
+      {/* a mesma regra que escondia o botão da mini-cabine (.mcb) em várias telas: o cabeçalho não pode sumir com ela */}
+      <style>{'[data-lab-cabine] .mcb { display: none !important; }'}</style>
       <EmContaRealAgora sessao={sessao} marcas={['globalfly']} parceiro="" sinal="" local={{ pessoas: 1, ias: 0, manuais: 1 }}
         soReal={false} onVerQuem={nada} onVerTodas={nada} />
-      <CabecalhoDaCabine {...base} refVoltar={voltar} nome="Joao Carlos Gomes Ribeiro" email="carlos.ribeiro@gmail.com" demo={false}
+      <CabecalhoDaCabine {...base} refVoltar={voltar} nome="Joao Carlos Gomes Ribeiro" selo={{ texto: 'Victor /v', codigo: 'v' }} email="carlos.ribeiro@gmail.com" demo={false}
         modo="ao-vivo" saude="ao-vivo" />
-      <CabecalhoDaCabine {...base} nome="Maria Eduarda Souza" email="maria@gmail.com" demo modo="ao-vivo" saude="atencao" idade={6.2} rtt={180} />
-      <CabecalhoDaCabine {...base} nome="Pedro Henrique" email={null} demo={false} modo="ao-vivo" saude="desatualizado" idade={42} rtt={null} desvio={3.4} />
-      <CabecalhoDaCabine {...base} nome="Joao Carlos Gomes Ribeiro" email="carlos.ribeiro@gmail.com" demo={false} modo="replay" saude="encerrada"
+      <CabecalhoDaCabine {...base} nome="Maria Eduarda Souza" selo={{ texto: 'Naor /n', codigo: 'n' }} email="maria@gmail.com" demo modo="ao-vivo" saude="atencao" idade={6.2} rtt={180} />
+      <CabecalhoDaCabine {...base} nome="Pedro Henrique" selo={{ texto: 'Direto', codigo: 'direto' }} email={null} demo={false} modo="ao-vivo" saude="desatualizado" idade={42} rtt={null} desvio={3.4} />
+      <CabecalhoDaCabine {...base} nome="Joao Carlos Gomes Ribeiro" email="carlos.ribeiro@gmail.com" selo={{ texto: 'Victor /v', codigo: 'v' }} demo={false} modo="replay" saude="encerrada"
         passo={{ indice: 41, total: 318, horaOriginal: Date.now() - 3_600_000, lacuna: 0 }} integridade="completo" />
     </div>
   )

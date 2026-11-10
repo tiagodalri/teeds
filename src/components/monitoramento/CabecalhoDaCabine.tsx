@@ -19,12 +19,14 @@ const segundos = (s: number) => s.toLocaleString('pt-BR', { minimumFractionDigit
 export const iniciaisDe = (nome?: string | null) =>
   (nome ?? '').replace(/[^\p{L}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || '?'
 
-export function CabecalhoDaCabine({ refVoltar, aoFechar, rotuloVoltar = 'Mosaico', nome, email, contaId, demo, moeda, modo, saude, idade, rtt, desvio, passo, integridade }: {
+export function CabecalhoDaCabine({ refVoltar, aoFechar, rotuloVoltar = 'Mosaico', nome, selo, email, contaId, demo, moeda, modo, saude, idade, rtt, desvio, passo, integridade }: {
   refVoltar?: RefObject<HTMLButtonElement>
   aoFechar: () => void
   /** O texto do botão de voltar (a cabine da manual volta para "Operações manuais"). */
   rotuloVoltar?: string
   nome: string
+  /** O parceiro do cliente (Naor /n, Victor /v, Direto), como na lista das Sessões encerradas. */
+  selo?: { texto: string; codigo: string } | null
   email?: string | null
   contaId: string
   demo: boolean
@@ -38,17 +40,20 @@ export function CabecalhoDaCabine({ refVoltar, aoFechar, rotuloVoltar = 'Mosaico
   integridade?: Integridade
 }) {
   return (
-    <header className="mcb">
-      <button ref={refVoltar} className="mcb-voltar" onClick={aoFechar}>
+    <header className="cbt">
+      <button ref={refVoltar} className="cbt-voltar" onClick={aoFechar}>
         <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M10 3.5 5.5 8l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
         {rotuloVoltar}
       </button>
-      <div className="mcb-quem">
-        <span className="mcb-avatar" aria-hidden="true">{iniciaisDe(nome)}</span>
-        <div className="mcb-nome">
-          <h2>{nome}</h2>
-          <ul className="mcb-meta">
-            <li className={`mcb-conta ${demo ? 'demo' : 'real'}`}>{demo ? 'Conta demo' : 'Conta real'}</li>
+      <div className="cbt-quem">
+        <span className="cbt-avatar" aria-hidden="true">{iniciaisDe(nome)}</span>
+        <div className="cbt-nome">
+          <div className="cbt-titulo">
+            <h2 title={nome}>{nome}</h2>
+            {selo && <em className={`mon-selo parceiro ${selo.codigo}`}>{selo.texto}</em>}
+          </div>
+          <ul className="cbt-meta">
+            <li className={`cbt-conta ${demo ? 'demo' : 'real'}`}>{demo ? 'Conta demo' : 'Conta real'}</li>
             {email && <li>{mascararEmail(email)}</li>}
             <li>Conta {mascararConta(contaId)}</li>
             <li>{moeda}</li>
@@ -56,24 +61,24 @@ export function CabecalhoDaCabine({ refVoltar, aoFechar, rotuloVoltar = 'Mosaico
           </ul>
         </div>
       </div>
-      <div className="mcb-estado">
+      <div className="cbt-estado">
         {modo === 'replay'
-          ? <span className="mcb-status replay"><i aria-hidden="true" /><b>Replay</b>
+          ? <span className="cbt-status replay"><i aria-hidden="true" /><b>Replay</b>
               {passo && <small>{hora(passo.horaOriginal)}</small>}
               {passo && <small>Evento {passo.indice + 1}/{passo.total}</small>}
               {passo?.lacuna ? <small>Lacuna de {passo.lacuna}</small> : null}
               {integridade && <small>{ROTULO_INTEGRIDADE[integridade]}</small>}
             </span>
-          : <span className={`mcb-status ${saude}`} role="status"><i aria-hidden="true" /><b>{ROTULO_SAUDE[saude]}</b>
-              {idade != null && saude !== 'encerrada' && <small className="mcb-num">Atualizado há {segundos(idade)} s</small>}
-              {rtt != null && <small className="mcb-num">Canal ~{rtt} ms</small>}
+          : <span className={`cbt-status ${saude}`} role="status"><i aria-hidden="true" /><b>{ROTULO_SAUDE[saude]}</b>
+              {idade != null && saude !== 'encerrada' && <small className="cbt-num">Atualizado há {segundos(idade)} s</small>}
+              {rtt != null && <small className="cbt-num">Canal ~{rtt} ms</small>}
               {desvio != null && Math.abs(desvio) >= 2 && <small>Relógio do servidor ≈ {desvio > 0 ? '−' : '+'}{segundos(Math.abs(desvio))} s</small>}
             </span>}
-        <span className="mcb-leitura" title="Você só acompanha: nada aqui mexe na cabine do cliente">
+        <span className="cbt-leitura" title="Você só acompanha: nada aqui mexe na cabine do cliente">
           <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8Z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /><circle cx="8" cy="8" r="2" fill="none" stroke="currentColor" strokeWidth="1.4" /></svg>
           Somente visualização
         </span>
-        <button className="mcb-fechar" onClick={aoFechar} aria-label="Fechar a cabine espelho"><IconeFechar /></button>
+        <button className="cbt-fechar" onClick={aoFechar} aria-label="Fechar a cabine espelho"><IconeFechar /></button>
       </div>
     </header>
   )
