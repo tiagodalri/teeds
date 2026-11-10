@@ -6,6 +6,7 @@ import {
 } from '../core/teeds/clientes'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
+import { AvatarDoParceiro } from './parceiros/FiltroDeParceiros'
 import './movimentacoes.css'
 
 /**
@@ -19,8 +20,10 @@ import './movimentacoes.css'
  * por dia, por cliente ou uma a uma. Clicar num dia ou num cliente abre o
  * detalhe; clicar no nome do cliente abre a ficha dele.
  *
- * O dia é contado em UTC, igual aos outros relatórios — senão o mesmo
- * depósito cairia num dia aqui e noutro na conferência de comissão.
+ * Tudo em horário de Brasília (10/11/2026, Tiago: "quero sempre horário de
+ * Brasília"): a hora de cada movimentação, o "hoje" dos cartões e a quebra
+ * por dia. Os outros relatórios seguem em UTC; por isso um depósito feito
+ * entre 21h e meia-noite cai aqui no dia de Brasília e lá no dia seguinte.
  */
 
 const usd = (v: number, sinal = false) =>
@@ -28,11 +31,13 @@ const usd = (v: number, sinal = false) =>
 const inteiro = (v: number) => v.toLocaleString('pt-BR')
 const diaBr = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' })
 const diaLongo = (iso: string) => { const t = new Date(`${iso}T12:00:00Z`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }); return t.charAt(0).toUpperCase() + t.slice(1) }
+const FUSO = 'America/Sao_Paulo'
+const horaSp = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: FUSO })
 const horaUtc = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
-const horaBrasilia = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
-const diaUtc = (iso: string) => new Date(iso).toISOString().slice(0, 10)
+/** O dia de Brasília (AAAA-MM-DD) em que aconteceu. */
+const diaSp = (iso: string | number) => new Date(iso).toLocaleDateString('en-CA', { timeZone: FUSO })
 const classe = (v: number) => v > 0 ? 'positivo' : v < 0 ? 'negativo' : ''
-const hojeUtc = () => new Date().toISOString().slice(0, 10)
+const hojeSp = () => diaSp(Date.now())
 const menosDias = (iso: string, n: number) => new Date(Date.parse(`${iso}T12:00:00Z`) - n * 864e5).toISOString().slice(0, 10)
 const semAcento = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 const numero = (t: string): number | null => {
@@ -69,6 +74,16 @@ interface Cliente {
 type ColDia = 'dia' | 'depositos' | 'qtdDepositos' | 'saques' | 'qtdSaques' | 'liquido' | 'clientes'
 type ColCliente = 'nome' | 'parceiro' | 'depositos' | 'qtdDepositos' | 'saques' | 'qtdSaques' | 'liquido' | 'ultima'
 type ColMov = 'quando' | 'cliente' | 'valor'
+
+/** A tag do parceiro: a foto (a mesma do filtro do topo) e o primeiro nome; "Direto" leva a seta. */
+function TagParceiro({ codigo, nome }: { codigo: string | null; nome: string | null }) {
+  const primeiro = codigo ? (nome ?? codigo).split(' ')[0] : 'Direto'
+  return <em className={`dps-tag ${codigo ? '' : 'direto'}`} title={codigo ? `Cliente do ${nome ?? codigo} (/${codigo})` : 'Veio sem link de parceiro'}>
+    {codigo ? <AvatarDoParceiro codigo={codigo} nome={nome ?? codigo} tamanho={18} />
+      : <span className="fp-av fp-icone" style={{ width: 18, height: 18 }} aria-hidden="true"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></span>}
+    {primeiro}
+  </em>
+}
 
 /** "Naor /n", "Victor /v" ou "Direto". */
 const seloParceiro = (m: { parceiro: string | null; parceiroNome: string | null }) =>
@@ -111,14 +126,14 @@ function OrdemNoCelular<C extends string>({ opcoes, ordem, mudar }: { opcoes: Ar
 }
 
 function Pessoa({ m, abrir }: { m: { userId: string; nome: string | null; email: string | null; parceiro: string | null; parceiroNome: string | null }; abrir?: (id: string) => void }) {
-  const corpo = <span className="adm-pessoa"><i>{(m.nome || m.email || '?')[0].toUpperCase()}</i><b>{m.nome || 'Sem nome'}<small>{m.email ?? 'sem e-mail'} · {seloParceiro(m)}</small></b></span>
+  const corpo = <span className="adm-pessoa"><i>{(m.nome || m.email || '?')[0].toUpperCase()}</i><b><span className="dps-nome"><span>{m.nome || 'Sem nome'}</span><TagParceiro codigo={m.parceiro} nome={m.parceiroNome} /></span><small>{m.email ?? 'sem e-mail'}</small></b></span>
   return abrir ? <button type="button" className="dps-quem" onClick={(e) => { e.stopPropagation(); abrir(m.userId) }} title="Abrir a ficha do cliente">{corpo}</button> : corpo
 }
 
 export function Movimentacoes({ sessao, onAbrirCliente }: { sessao: SessaoTeeds; onAbrirCliente?: (userId: string) => void }) {
   const [periodo, setPeriodo] = useState<Periodo>(30)
-  const [de, setDe] = useState(() => menosDias(hojeUtc(), 29))
-  const [ate, setAte] = useState(hojeUtc)
+  const [de, setDe] = useState(() => menosDias(hojeSp(), 29))
+  const [ate, setAte] = useState(hojeSp)
   const [lista, setLista] = useState<MovimentacaoDoPeriodo[]>([])
   const [coletas, setColetas] = useState<ColetaExtrato[]>([])
   const [carregando, setCarregando] = useState(false)
@@ -136,7 +151,7 @@ export function Movimentacoes({ sessao, onAbrirCliente }: { sessao: SessaoTeeds;
   const [diaAberto, setDiaAberto] = useState<string | null>(null)
   const [clienteAberto, setClienteAberto] = useState<string | null>(null)
 
-  const hoje = hojeUtc()
+  const hoje = hojeSp()
   const janela = useMemo(() => periodo === 'personalizado'
     ? { inicio: de <= ate ? de : ate, fim: de <= ate ? ate : de }
     : { inicio: menosDias(hoje, periodo - 1), fim: hoje }, [periodo, de, ate, hoje])
@@ -171,7 +186,7 @@ export function Movimentacoes({ sessao, onAbrirCliente }: { sessao: SessaoTeeds;
       const dep = m.tipo === 'deposit'
       if (dep) { t.depositos += m.valor; t.qtdDepositos++ } else { t.saques += m.valor; t.qtdSaques++ }
       t.clientes.add(m.userId)
-      if (diaUtc(m.ocorridaEm) === hoje) {
+      if (diaSp(m.ocorridaEm) === hoje) {
         if (dep) { t.hojeDep += m.valor; t.hojeQtdDep++ } else { t.hojeSaq += m.valor; t.hojeQtdSaq++ }
         t.hojeClientes.add(m.userId)
       }
@@ -185,7 +200,7 @@ export function Movimentacoes({ sessao, onAbrirCliente }: { sessao: SessaoTeeds;
   const porDia = useMemo(() => {
     const mapa = new Map<string, Dia & { quem: Set<string> }>()
     for (const m of filtrada) {
-      const d = diaUtc(m.ocorridaEm)
+      const d = diaSp(m.ocorridaEm)
       let x = mapa.get(d)
       if (!x) { x = { dia: d, depositos: 0, qtdDepositos: 0, saques: 0, qtdSaques: 0, liquido: 0, clientes: 0, quem: new Set() }; mapa.set(d, x) }
       if (m.tipo === 'deposit') { x.depositos += m.valor; x.qtdDepositos++ } else { x.saques += m.valor; x.qtdSaques++ }
@@ -216,7 +231,7 @@ export function Movimentacoes({ sessao, onAbrirCliente }: { sessao: SessaoTeeds;
   }, [coletas])
 
   const abrirFicha = onAbrirCliente
-  const doDia = diaAberto ? filtrada.filter((m) => diaUtc(m.ocorridaEm) === diaAberto) : []
+  const doDia = diaAberto ? filtrada.filter((m) => diaSp(m.ocorridaEm) === diaAberto) : []
   const doCliente = clienteAberto ? filtrada.filter((m) => m.userId === clienteAberto) : []
   const rotuloPeriodo = periodo === 'personalizado' ? `${diaBr(janela.inicio)} a ${diaBr(janela.fim)}` : `${periodo} dias`
   const vazio = !carregando && !falhou && filtrada.length === 0
@@ -238,8 +253,8 @@ export function Movimentacoes({ sessao, onAbrirCliente }: { sessao: SessaoTeeds;
     </div>
 
     <div className="adm-kpis admin-kpis-click dps-kpis">
-      <button className="ok" disabled={!hojeNaJanela || !totais.hojeQtdDep} onClick={() => setDiaAberto(hoje)}><span>Depositado hoje (UTC)</span><strong>{usd(totais.hojeDep)}</strong><small>{totais.hojeQtdDep} {totais.hojeQtdDep === 1 ? 'depósito' : 'depósitos'}{totais.hojeQtdDep ? ' · ver detalhe →' : ''}</small></button>
-      <button className="perigo" disabled={!hojeNaJanela || !totais.hojeQtdSaq} onClick={() => setDiaAberto(hoje)}><span>Sacado hoje (UTC)</span><strong>{usd(totais.hojeSaq)}</strong><small>{totais.hojeQtdSaq} {totais.hojeQtdSaq === 1 ? 'saque' : 'saques'}{totais.hojeQtdSaq ? ' · ver detalhe →' : ''}</small></button>
+      <button className="ok" disabled={!hojeNaJanela || !totais.hojeQtdDep} onClick={() => setDiaAberto(hoje)}><span>Depositado hoje</span><strong>{usd(totais.hojeDep)}</strong><small>{totais.hojeQtdDep} {totais.hojeQtdDep === 1 ? 'depósito' : 'depósitos'}{totais.hojeQtdDep ? ' · ver detalhe →' : ''}</small></button>
+      <button className="perigo" disabled={!hojeNaJanela || !totais.hojeQtdSaq} onClick={() => setDiaAberto(hoje)}><span>Sacado hoje</span><strong>{usd(totais.hojeSaq)}</strong><small>{totais.hojeQtdSaq} {totais.hojeQtdSaq === 1 ? 'saque' : 'saques'}{totais.hojeQtdSaq ? ' · ver detalhe →' : ''}</small></button>
       <button className={liquidoHoje >= 0 ? 'ok' : 'perigo'} disabled={!totais.hojeClientes.size} onClick={() => setDiaAberto(hoje)}><span>Líquido hoje</span><strong>{usd(liquidoHoje, true)}</strong><small>{totais.hojeClientes.size} {totais.hojeClientes.size === 1 ? 'cliente movimentou' : 'clientes movimentaram'}</small></button>
       <button className="alerta" disabled={!totais.clientes.size} onClick={() => setVista('cliente')}><span>Líquido · {rotuloPeriodo}</span><strong>{usd(liquidoPeriodo, true)}</strong><small>{usd(totais.depositos)} entrou · {usd(totais.saques)} saiu</small></button>
     </div>
@@ -298,14 +313,14 @@ export function Movimentacoes({ sessao, onAbrirCliente }: { sessao: SessaoTeeds;
           colunas={[['nome', 'Cliente'], ['parceiro', 'Parceiro'], ['depositos', 'Depósitos'], ['qtdDepositos', 'Qtd'], ['saques', 'Saques'], ['qtdSaques', 'Qtd'], ['liquido', 'Líquido'], ['ultima', 'Última']]} />
         {porCliente.map((x) => (
           <button key={x.userId} onClick={() => setClienteAberto(x.userId)} title="Ver as movimentações deste cliente">
-            <span className="adm-pessoa"><i>{(x.nome || x.email || '?')[0].toUpperCase()}</i><b>{x.nome || 'Sem nome'}<small>{x.email ?? 'sem e-mail'}<em className="dps-qtd-cel"> · {seloParceiro(x)}</em></small></b></span>
-            <span className="dps-qtd">{seloParceiro(x)}</span>
+            <span className="adm-pessoa"><i>{(x.nome || x.email || '?')[0].toUpperCase()}</i><b><span className="dps-nome"><span>{x.nome || 'Sem nome'}</span><span className="dps-qtd-cel"><TagParceiro codigo={x.parceiro} nome={x.parceiroNome} /></span></span><small>{x.email ?? 'sem e-mail'}</small></b></span>
+            <span className="dps-qtd"><TagParceiro codigo={x.parceiro} nome={x.parceiroNome} /></span>
             <span className="positivo">{usd(x.depositos)}<small className="dps-qtd-cel">{inteiro(x.qtdDepositos)} {x.qtdDepositos === 1 ? 'depósito' : 'depósitos'}</small></span>
             <span className="dps-qtd">{inteiro(x.qtdDepositos)}</span>
             <span className="negativo">{usd(x.saques)}<small className="dps-qtd-cel">{inteiro(x.qtdSaques)} {x.qtdSaques === 1 ? 'saque' : 'saques'}</small></span>
             <span className="dps-qtd">{inteiro(x.qtdSaques)}</span>
             <strong className={classe(x.liquido)}>{usd(x.liquido, true)}</strong>
-            <span className="dps-ver">{diaBr(diaUtc(x.ultima))}<i aria-hidden>Ver →</i></span>
+            <span className="dps-ver">{diaBr(diaSp(x.ultima))}<i aria-hidden>Ver →</i></span>
           </button>
         ))}
       </div>}
@@ -337,7 +352,7 @@ export function Movimentacoes({ sessao, onAbrirCliente }: { sessao: SessaoTeeds;
     </details>}
 
     {diaAberto && <Detalhe fechar={() => setDiaAberto(null)} movs={doDia} filtrando={filtrando}
-      titulo={<div><span className="rot">Dia em UTC · só conta real</span><h3 className="dps-titulo-dia">{diaLongo(diaAberto)}</h3></div>}
+      titulo={<div><span className="rot">Horário de Brasília · só conta real</span><h3 className="dps-titulo-dia">{diaLongo(diaAberto)}</h3></div>}
       comCliente abrirFicha={abrirFicha} />}
     {clienteAberto && doCliente[0] && <Detalhe fechar={() => setClienteAberto(null)} movs={doCliente} filtrando={filtrando}
       titulo={<Pessoa m={doCliente[0]} />}
@@ -356,7 +371,7 @@ function TabelaDeMovs({ movs, ordem, mudar, comCliente, comDia, abrirFicha }: {
 }) {
   const colunas: Array<[ColMov | null, string]> = [
     ...(comCliente ? [['cliente', 'Cliente'] as [ColMov, string]] : []),
-    ['quando', comDia ? 'Quando (UTC)' : 'Horário (UTC)'], [null, 'Conta'], [null, 'Tipo'], ['valor', 'Valor'], [null, 'Saldo depois'],
+    ['quando', 'Horário (Brasília)'], [null, 'Conta'], [null, 'Tipo'], ['valor', 'Valor'], [null, 'Saldo depois'],
   ]
   return <div className={`rc-tabela dps-lista ${comCliente ? 'com-cliente' : ''}`}>
     <Cabecalho colunas={colunas} ordem={ordem} mudar={(c) => mudar(alternar(ordem, c, ['cliente']))} />
@@ -364,7 +379,7 @@ function TabelaDeMovs({ movs, ordem, mudar, comCliente, comDia, abrirFicha }: {
       const dep = m.tipo === 'deposit'
       return <div key={`${m.contaId}-${m.transacaoId}`}>
         {comCliente && <span><Pessoa m={m} abrir={abrirFicha} /></span>}
-        <span>{comDia ? `${diaBr(diaUtc(m.ocorridaEm))} · ` : ''}{horaUtc(m.ocorridaEm)}<small>{horaBrasilia(m.ocorridaEm)} em Brasília</small></span>
+        <span title={`${horaUtc(m.ocorridaEm)} em UTC`}><b className="dps-hora">{horaSp(m.ocorridaEm)}</b><small>{diaBr(diaSp(m.ocorridaEm))}</small></span>
         <span>{m.contaId}<small>{m.moeda}</small></span>
         <span><em className={`dps-tipo-selo ${dep ? 'dep' : 'saq'}`}>{dep ? 'Depósito' : 'Saque'}</em>{m.descricao && <small title={m.descricao}>{m.descricao}</small>}</span>
         <strong className={dep ? 'positivo' : 'negativo'}>{dep ? '+' : '−'}{usd(m.valor)}</strong>

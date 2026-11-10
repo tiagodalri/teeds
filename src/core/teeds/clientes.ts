@@ -1103,7 +1103,7 @@ export interface MovimentacaoDoPeriodo extends MovimentacaoRegistro {
 }
 
 /**
- * Todas as movimentações de conta real entre `inicio` e `fim` (dias UTC, AAAA-MM-DD),
+ * Todas as movimentações de conta real entre `inicio` e `fim` (dias de Brasília, AAAA-MM-DD),
  * da mais recente para a mais antiga. A tela filtra, ordena e agrupa por dia e por
  * cliente a partir desta lista. O banco aplica o escopo: o admin do parceiro só
  * recebe os clientes dele. Diferente das outras leituras daqui, a falha SOBE:
@@ -1111,7 +1111,7 @@ export interface MovimentacaoDoPeriodo extends MovimentacaoRegistro {
  */
 export async function movimentacoesDoPeriodo(sessao: SessaoTeeds, inicio: string, fim: string, limite = 5000): Promise<MovimentacaoDoPeriodo[]> {
   const linhas = await rest<any[]>('/rpc/teeds_movimentacoes_periodo', sessao.token, {
-    method: 'POST', body: JSON.stringify({ p_marca: marcaAdmin(), p_inicio: inicio, p_fim: fim, p_limite: limite }),
+    method: 'POST', body: JSON.stringify({ p_marca: marcaAdmin(), p_inicio: inicio, p_fim: fim, p_limite: limite, p_fuso: 'America/Sao_Paulo' }),
   })
   return (linhas ?? []).map((l) => ({
     userId: l.user_id, nome: textoLegivel(l.nome), email: l.email,
