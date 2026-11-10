@@ -26,6 +26,7 @@ const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MA
 import { RobotLive } from './RobotLive'
 import { IconeFechar } from './IconeFechar'
 import { OperacoesManuais } from './monitoramento/OperacoesManuais'
+import { QuemEstaOnline, type Operando } from './monitoramento/QuemEstaOnline'
 import { NomeDoRobo } from './NomeDoRobo'
 
 /**
@@ -683,6 +684,14 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   const [manuaisAbertas, setManuaisAbertas] = useState<{ n: number; clientes: string[] }>({ n: 0, clientes: [] })
   const contarManuais = useCallback((n: number, ids: string[]) => setManuaisAbertas({ n, clientes: ids }), [])
   const clientesOnline = new Set([...online.map((s) => s.userId), ...manuaisAbertas.clientes]).size
+  // 10/11/2026: o cartão "Clientes online" abre a lista de quem está na plataforma e de quem está operando
+  const [verOnline, setVerOnline] = useState(false)
+  const operando: Operando[] = useMemo(() => {
+    const m = new Map<string, Operando>()
+    for (const s of online) { const o = m.get(s.userId) ?? { userId: s.userId, sessoes: [], manual: false }; o.sessoes.push(s); m.set(s.userId, o) }
+    for (const id of manuaisAbertas.clientes) { const o = m.get(id) ?? { userId: id, sessoes: [], manual: false }; o.manual = true; m.set(id, o) }
+    return [...m.values()]
+  }, [online.map((s) => `${s.sessaoId}:${s.estado.resultado}`).join(','), manuaisAbertas.clientes.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
   const resultadoTotal = lista.reduce((t, s) => t + (s.estado.resultado ?? 0), 0)
   const alertas = online.filter((s) => semaforo(s, agora) === 'vermelho')
   const desatualizadas = online.filter((s) => saudes.get(s.sessaoId) === 'desatualizado').length
@@ -721,7 +730,11 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
       {tela === 'pronto' && aba === 'ao-vivo' && !emFoco && (
         <>
           <div className="adm-kpis mon-kpis">
-            <article className="ok"><span>Clientes online</span><strong>{clientesOnline}</strong><small>{online.length} {online.length === 1 ? 'robô' : 'robôs'} operando · {manuaisAbertas.n} manua{manuaisAbertas.n === 1 ? 'l aberta' : 'is abertas'}</small></article>
+            <article className="ok mon-kpi-clicavel" role="button" tabIndex={0} aria-haspopup="dialog" title="Ver quem está online"
+              onClick={() => setVerOnline(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVerOnline(true) } }}>
+              <span>Clientes online</span><strong>{clientesOnline}</strong><small>{online.length} {online.length === 1 ? 'robô' : 'robôs'} operando · {manuaisAbertas.n} manua{manuaisAbertas.n === 1 ? 'l aberta' : 'is abertas'}</small>
+              <span className="mon-kpi-ver">Ver quem está online ›</span>
+            </article>
             <article><span>Na visualização</span><strong>{lista.length}</strong><small>de {sessoesNoFoco} {sessoesNoFoco === 1 ? 'sessão' : 'sessões'} no período{filtrandoParceiro ? ` · ${parceiroFoco === 'direto' ? 'Direto' : seloDoParceiro(parceiros, parceiroFoco)?.texto}` : ''}</small></article>
             <article className={resultadoTotal >= 0 ? 'ok' : 'perigo'}><span>Resultado agregado</span><strong>{assinado(resultadoTotal)}</strong><small>das sessões na visualização</small></article>
             <article className={alertas.length ? 'perigo' : ''}><span>Alertas</span><strong>{alertas.length}</strong><small>perto do stop, recusa ou sem sinal{desatualizadas ? ` · ${desatualizadas} sem atualização` : ''}</small></article>
@@ -750,6 +763,11 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
           </div>
           {lista.length > limite && <button className="mon-mais" onClick={() => setLimite((l) => l + 60)}>Mostrar mais {Math.min(60, lista.length - limite)} de {lista.length - limite} restantes</button>}
         </>
+      )}
+
+      {verOnline && (
+        <QuemEstaOnline sessao={sessao} marcas={marcas} parceiro={filtrandoParceiro ? parceiroFoco : ''} operando={operando} clientes={clientes}
+          selo={seloDe} aoFechar={() => setVerOnline(false)} aoAbrirSessao={(id) => { setVerOnline(false); void abrirFoco(id) }} />
       )}
 
       {tela === 'pronto' && aba === 'ao-vivo' && emFoco && focoAutorizado === 'pendente' && <div className="mon-estado" role="status"><b>Registrando o acesso…</b></div>}

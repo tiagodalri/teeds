@@ -185,6 +185,7 @@ function LabLogin() {
 }
 import { BoasVindasEmVideo as BoasVindasLab } from './components/aulas/BoasVindasEmVideo'
 const AdminAulasLab = lazy(() => import('./components/AdminAulas').then((m) => ({ default: m.AdminAulas })))
+const LabQuemEstaOnline = lazy(() => import('./components/monitoramento/LabQuemEstaOnline'))
 const LiberarAcessoGeralLab = lazy(() => import('./components/lancamento/LiberarAcessoGeral').then((m) => ({ default: m.LiberarAcessoGeral })))
 const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine'))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
@@ -517,6 +518,8 @@ function Laboratorio() {
   if (qual === 'pendentes') return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><AdminPendentesLab sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab', telefone: null, cpf: null, criadoEm: '', trocarSenha: false } } as never} marca="globalfly" versao={0} onAprovado={() => undefined} parceiros={[{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }, { codigo: 'd', nome: 'Douglas' }]} exemplo={!new URLSearchParams(location.search).has('real')} /></div></Suspense>
   // ?tela=liberar-geral: o botão "Liberar acesso geral" de Clientes (08/11/2026); sem banco, mostra o estado trancado
   // (&parceiro: como o admin de um parceiro só vê, sem o botão; &esperando: com o número de quem espera)
+  // ?tela=quem-online(&aba=operando)(&vazio): a gaveta "Quem está online" do Monitoramento, com gente de exemplo
+  if (qual === 'quem-online') return <Suspense fallback={null}><LabQuemEstaOnline /></Suspense>
   if (qual === 'liberar-geral' && (new URLSearchParams(location.search).has('parceiro') || new URLSearchParams(location.search).has('esperando'))) {
     const f = window.fetch
     window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => String(u).includes('teeds_lancamento_painel')
