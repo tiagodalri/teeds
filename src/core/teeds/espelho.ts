@@ -82,6 +82,11 @@ export interface EstadoEspelho {
   conexao: string
   /** O que a estratégia expõe de si (fase virtual, análise, troca). */
   estrategia: TelemetriaEstrategia | null
+  /**
+   * Saldo da conta Deriv, do stream de saldo da conexão da conta (10/11/2026).
+   * Opcional: fotos de antes disso e sessões sem o stream não têm.
+   */
+  saldo?: number | null
 }
 
 /** O pulso: o que muda entre eventos, pequeno o bastante para viajar sempre. */
@@ -94,6 +99,8 @@ export interface PulsoEspelho {
   /** O dígito atual do contrato aberto, quando há um. */
   digitoAtual: number | null
   estrategia: TelemetriaEstrategia | null
+  /** O saldo viaja no pulso: muda logo depois da compra e da liquidação. */
+  saldo?: number | null
 }
 
 export type OrigemDaMensagem = 'foto' | 'evento' | 'pulso' | 'lista'
@@ -238,7 +245,7 @@ function markupDoHistorico(h: readonly OperacaoMotor[] | undefined): number {
 }
 
 /** A foto compacta: o que a cabine precisa, e só isso. Nunca o objeto bruto. */
-export function resumirEstado(e: EstadoMotor, conexao = 'open'): EstadoEspelho {
+export function resumirEstado(e: EstadoMotor, conexao = 'open', saldo: number | null = null): EstadoEspelho {
   return {
     rodando: Boolean(e.rodando),
     emOperacao: Boolean(e.emOperacao),
@@ -264,6 +271,7 @@ export function resumirEstado(e: EstadoMotor, conexao = 'open'): EstadoEspelho {
     falha: e.falha ?? null,
     conexao,
     estrategia: e.estrategia ?? null,
+    saldo: saldo != null && Number.isFinite(saldo) ? arred(saldo) : null,
   }
 }
 
@@ -271,7 +279,7 @@ export function resumirEstado(e: EstadoMotor, conexao = 'open'): EstadoEspelho {
 export function pulsoDoEstado(e: EstadoEspelho): PulsoEspelho {
   return {
     fase: e.fase, digitos: e.digitos, ticksAnalisados: e.ticksAnalisados, aguardando: e.aguardando,
-    condicao: e.condicao, digitoAtual: e.emCurso?.digitoAtual ?? null, estrategia: e.estrategia,
+    condicao: e.condicao, digitoAtual: e.emCurso?.digitoAtual ?? null, estrategia: e.estrategia, saldo: e.saldo ?? null,
   }
 }
 
@@ -280,13 +288,15 @@ export function aplicarPulso(base: EstadoEspelho, p: PulsoEspelho): EstadoEspelh
   return {
     ...base, fase: p.fase, digitos: p.digitos, ticksAnalisados: p.ticksAnalisados, aguardando: p.aguardando,
     condicao: p.condicao, estrategia: p.estrategia,
+    // pulso de servidor antigo não traz o saldo: fica o que a foto tinha
+    saldo: p.saldo !== undefined ? p.saldo : base.saldo,
     emCurso: base.emCurso ? { ...base.emCurso, digitoAtual: p.digitoAtual } : base.emCurso,
   }
 }
 
 /** Uma assinatura barata do pulso, para não gravar conteúdo idêntico. */
 export function assinaturaDoPulso(p: PulsoEspelho): string {
-  return `${p.fase}|${p.ticksAnalisados}|${p.digitos.join('')}|${p.aguardando}|${p.digitoAtual ?? ''}|${p.estrategia?.fase ?? ''}`
+  return `${p.fase}|${p.ticksAnalisados}|${p.digitos.join('')}|${p.aguardando}|${p.digitoAtual ?? ''}|${p.estrategia?.fase ?? ''}|${p.saldo ?? ''}`
 }
 
 /* ------------------------------------------------------ significância */
@@ -317,7 +327,7 @@ export function tipoDoEvento(antes: EstadoEspelho | null, agora: EstadoEspelho):
 /** Chaves escalares comparadas por valor; as listas têm comparação própria. */
 const CHAVES = Object.freeze([
   'rodando', 'emOperacao', 'fase', 'operacoes', 'vitorias', 'derrotas', 'perdasSeguidas', 'resultado', 'movimentado',
-  'markupCalculado', 'valorAtual', 'aguardando', 'motivoParada', 'ticksAnalisados', 'latenciaMedia', 'conexao',
+  'markupCalculado', 'valorAtual', 'aguardando', 'motivoParada', 'ticksAnalisados', 'latenciaMedia', 'conexao', 'saldo',
 ] as const)
 
 const rotuloDaCondicao = (c: EstadoMotor['condicao']) => c ? `${c.rotulo}|${c.itens.map((i) => `${i.valor}:${i.ok ? 1 : 0}`).join(',')}` : ''

@@ -20,6 +20,7 @@
  *     telemetria que lança não derruba o motor.
  */
 import { PublicadorEspelho, espelhoHabilitado, type EscritoresDoEspelho } from './espelho'
+import * as espelho from '../../src/core/teeds/espelho'
 import { MotorTeeds, type EstadoMotor, type ConfigEstrategia, type Contexto, type Estrategia } from '../../src/core/deriv/engine'
 import { THE_PALM } from '../../src/core/deriv/strategies'
 import {
@@ -93,6 +94,14 @@ async function provas() {
     conferir('nova entrada é evento', tipoDoEvento(resumirEstado(e2), resumirEstado(e3)), 'entrada')
     const e4 = { ...e3, rodando: false, motivoParada: 'stop' }
     conferir('parada é evento', tipoDoEvento(resumirEstado(e3), resumirEstado(e4)), 'parada')
+    // saldo da conta (10/11/2026): viaja na foto e no pulso, mas sozinho não é evento
+    conferir('saldo entra na foto', resumirEstado(e3, 'open', 1234.567).saldo, 1234.57)
+    conferir('sem saldo fica nulo', resumirEstado(e3).saldo, null)
+    conferir('saldo mudou não é evento', tipoDoEvento(resumirEstado(e3, 'open', 100), resumirEstado(e3, 'open', 99)), null)
+    conferir('saldo vai no delta', delta(resumirEstado(e3, 'open', 100), resumirEstado(e3, 'open', 99)).saldo, 99)
+    conferir('saldo vai no pulso', espelho.pulsoDoEstado(resumirEstado(e3, 'open', 55)).saldo, 55)
+    conferir('pulso muda a assinatura com o saldo', espelho.assinaturaDoPulso(espelho.pulsoDoEstado(resumirEstado(e3, 'open', 1))) !== espelho.assinaturaDoPulso(espelho.pulsoDoEstado(resumirEstado(e3, 'open', 2))), true)
+    { const { saldo: _fora, ...antigo } = espelho.pulsoDoEstado(resumirEstado(e3, 'open', 7)); conferir('pulso antigo sem saldo mantém o da foto', espelho.aplicarPulso(resumirEstado(e3, 'open', 42), antigo).saldo, 42) }
     const e5 = { ...e3, estrategia: { fase: 'recuperacao-real', anterior: 'base-real', motivo: 'x', contrato: 'DIGITUNDER', barreira: 5, virtual: false, detalhes: {} } }
     conferir('troca de estratégia é evento', tipoDoEvento(resumirEstado(e3), resumirEstado(e5)), 'estrategia')
     const dto = resumirEstado({ ...e2, digitos: Array.from({ length: 200 }, (_, i) => i % 10) })

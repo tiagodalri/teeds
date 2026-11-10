@@ -34,11 +34,11 @@ export default function LabCabineTopo() {
       <style>{'[data-lab-cabine] .mcb { display: none !important; }'}</style>
       <EmContaRealAgora sessao={sessao} marcas={['globalfly']} parceiro="" sinal="" local={{ pessoas: 1, ias: 0, manuais: 1 }}
         soReal={false} onVerQuem={nada} onVerTodas={nada} />
-      <CabecalhoDaCabine {...base} refVoltar={voltar} nome="Joao Carlos Gomes Ribeiro" selo={{ texto: 'Victor /v', codigo: 'v' }} email="carlos.ribeiro@gmail.com" demo={false}
+      <CabecalhoDaCabine {...base} refVoltar={voltar} nome="Joao Carlos Gomes Ribeiro" selo={{ texto: 'Victor /v', codigo: 'v' }} email="carlos.ribeiro@gmail.com" demo={false} saldo={1854.68}
         modo="ao-vivo" saude="ao-vivo" />
-      <CabecalhoDaCabine {...base} nome="Maria Eduarda Souza" selo={{ texto: 'Naor /n', codigo: 'n' }} email="maria@gmail.com" demo modo="ao-vivo" saude="atencao" idade={6.2} rtt={180} />
+      <CabecalhoDaCabine {...base} nome="Maria Eduarda Souza" selo={{ texto: 'Naor /n', codigo: 'n' }} email="maria@gmail.com" demo saldo={10044.94} modo="ao-vivo" saude="atencao" idade={6.2} rtt={180} />
       <CabecalhoDaCabine {...base} nome="Pedro Henrique" selo={{ texto: 'Direto', codigo: 'direto' }} email={null} demo={false} modo="ao-vivo" saude="desatualizado" idade={42} rtt={null} desvio={3.4} />
-      <CabecalhoDaCabine {...base} nome="Joao Carlos Gomes Ribeiro" email="carlos.ribeiro@gmail.com" selo={{ texto: 'Victor /v', codigo: 'v' }} demo={false} modo="replay" saude="encerrada"
+      <CabecalhoDaCabine {...base} nome="Joao Carlos Gomes Ribeiro" email="carlos.ribeiro@gmail.com" selo={{ texto: 'Victor /v', codigo: 'v' }} demo={false} saldo={1820.5} modo="replay" saude="encerrada"
         passo={{ indice: 41, total: 318, horaOriginal: Date.now() - 3_600_000, lacuna: 0 }} integridade="completo" />
     </div>
   )

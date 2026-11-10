@@ -136,6 +136,8 @@ export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMa
         {selo && <em className={`mon-selo parceiro ${selo.codigo}`}>{selo.texto}</em>}
         <em className={`mon-selo conta ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'Conta demo' : 'Conta real'}</em>
         {modo && <em className={`mon-selo modo ${modo}`}>{NOME_DO_MODO[modo]}</em>}
+        {/* o saldo da conta Deriv, ao vivo (vem no espelho desde 10/11/2026; sessão antiga não tem) */}
+        {typeof e.saldo === 'number' && <span className="mon-cartao-saldo" title="Saldo da conta na Deriv agora"><i>Saldo</i><b>{din(e.saldo, s.moeda)}</b></span>}
       </div>
       <div className="mon-cartao-robo">
         <span><b><NomeDoRobo nome={s.roboNome} id={s.roboId} /></b><small>{NOME_DO_ATIVO[s.ativo] ?? s.ativo}</small></span>
@@ -194,7 +196,7 @@ function CabineEspelho({ s, estado, cliente, selo, modo, saude, idade, rtt, desv
   return (
     <section className={`mon-foco ${modo}`} role="region" aria-label={`Cabine espelho de ${nome}, somente visualização`}>
       <CabecalhoDaCabine refVoltar={titulo} aoFechar={aoFechar} nome={nome} selo={selo} email={cliente?.email} contaId={s.contaId} demo={s.demo}
-        moeda={s.moeda} modo={modo} saude={saude} idade={idade} rtt={rtt} desvio={desvio} passo={passo} integridade={integridade} />
+        moeda={s.moeda} saldo={estado.saldo} modo={modo} saude={saude} idade={idade} rtt={rtt} desvio={desvio} passo={passo} integridade={integridade} />
 
       <div className={`cabine-caixa expandido ${estado.rodando ? 'rodando' : 'parado'} mon-somente-leitura`} style={{ ['--robo' as any]: cor, ['--robo-suave' as any]: corSuave }}>
         {/* Sem onDesligar, onLigarDeNovo, onRemover, onDigitos, onExpandir: a cabine não desenha botão nenhum (a barra de ações fica vazia — não é escondida por CSS). */}

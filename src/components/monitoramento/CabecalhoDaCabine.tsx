@@ -19,7 +19,7 @@ const segundos = (s: number) => s.toLocaleString('pt-BR', { minimumFractionDigit
 export const iniciaisDe = (nome?: string | null) =>
   (nome ?? '').replace(/[^\p{L}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || '?'
 
-export function CabecalhoDaCabine({ refVoltar, aoFechar, rotuloVoltar = 'Mosaico', nome, selo, email, contaId, demo, moeda, modo, saude, idade, rtt, desvio, passo, integridade }: {
+export function CabecalhoDaCabine({ refVoltar, aoFechar, rotuloVoltar = 'Mosaico', nome, selo, email, contaId, demo, moeda, saldo, modo, saude, idade, rtt, desvio, passo, integridade }: {
   refVoltar?: RefObject<HTMLButtonElement>
   aoFechar: () => void
   /** O texto do botão de voltar (a cabine da manual volta para "Operações manuais"). */
@@ -31,6 +31,8 @@ export function CabecalhoDaCabine({ refVoltar, aoFechar, rotuloVoltar = 'Mosaico
   contaId: string
   demo: boolean
   moeda: string
+  /** Saldo da conta Deriv (o espelho traz desde 10/11/2026). Sem número, o bloco não aparece. */
+  saldo?: number | null
   modo: 'ao-vivo' | 'replay'
   saude: Saude
   idade: number | null
@@ -61,6 +63,12 @@ export function CabecalhoDaCabine({ refVoltar, aoFechar, rotuloVoltar = 'Mosaico
           </ul>
         </div>
       </div>
+      {typeof saldo === 'number' && (
+        <div className={`cbt-saldo ${demo ? 'demo' : 'real'}`} title="Saldo da conta na Deriv">
+          <small>{modo === 'replay' ? 'Saldo neste momento' : 'Saldo da conta'}</small>
+          <b>{saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span>{moeda}</span></b>
+        </div>
+      )}
       <div className="cbt-estado">
         {modo === 'replay'
           ? <span className="cbt-status replay"><i aria-hidden="true" /><b>Replay</b>

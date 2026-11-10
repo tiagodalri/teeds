@@ -108,3 +108,19 @@
   .cbt-titulo { flex-wrap: wrap; row-gap: 4px; }
   .cbt-nome h2 { white-space: normal; overflow: visible; }
 }
+
+/* Saldo da conta Deriv, ao vivo (10/11/2026): entre quem é e o estado, no mesmo padrão de 40 px. */
+.cbt-saldo {
+  display: grid; align-content: center; gap: 1px; flex: none; box-sizing: border-box; min-height: var(--cbt-h);
+  padding: 4px 14px; border: 1px solid var(--border); border-radius: var(--cbt-raio); background: var(--surface);
+}
+.cbt-saldo small { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.cbt-saldo b { font-size: 16px; font-weight: 750; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text); }
+.cbt-saldo b span { font-size: 11.5px; font-weight: 650; color: var(--muted); }
+/* Celular: o saldo numa linha própria, logo abaixo de quem é (voltar e fechar ficam juntos em cima). */
+@media (max-width: 600px) {
+  .cbt-saldo { order: 2; flex: 1 1 100%; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 12px; min-height: 0; }
+  .cbt-quem { order: 1; }
+  .cbt-fechar { order: 0; }
+  .cbt-status { order: 3; }
+}

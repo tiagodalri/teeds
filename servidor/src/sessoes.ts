@@ -7,6 +7,7 @@ import { TeedsSocket } from '../../src/core/deriv/client'
 import { MotorTeeds, type EstadoMotor } from '../../src/core/deriv/engine'
 import { fetchAccounts, fetchTradingSocketUrl, type TradingAccount } from '../../src/core/deriv/account'
 import { fetchActiveSymbols } from '../../src/core/deriv/market'
+import { subscribeBalance } from '../../src/core/deriv/trading'
 import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca, recuperacaoDoRobo, type Modo } from '../../src/core/deriv/strategies'
 import { descrever, recuperacaoDe, temModoAgressivo } from '../../src/core/deriv/parametros'
 import type { ParametrosVigentes } from '../../src/core/deriv/engine'
@@ -387,6 +388,30 @@ async function usarConexao(auth: AuthSession, contaId: string): Promise<{ socket
   return { socket: usada.socket, soltar }
 }
 
+/*
+ * O saldo da conta, ao vivo (10/11/2026, Tiago: "ver o saldo de quem está operando,
+ * atualizado junto com as operações"). Uma assinatura do stream de saldo por
+ * conexão (a conexão é da conta e é dividida pelos robôs dela): assinar duas
+ * vezes no mesmo socket a Deriv recusa (AlreadySubscribed). O valor vai no
+ * espelho; se a assinatura falhar, o robô segue igual e o painel fica sem saldo.
+ */
+const saldosDasConexoes = new WeakMap<TeedsSocket, { valor: number | null }>()
+function saldoDaConexao(socket: TeedsSocket): () => number | null {
+  let guardado = saldosDasConexoes.get(socket)
+  if (!guardado) {
+    const novo: { valor: number | null } = { valor: null }
+    guardado = novo
+    saldosDasConexoes.set(socket, novo)
+    try {
+      subscribeBalance(socket, (b) => { if (Number.isFinite(b.amount)) novo.valor = b.amount })
+    } catch (e) {
+      console.warn(`[saldo] não assinei o saldo da conexão: ${(e as Error).message}`)
+    }
+  }
+  const ref = guardado
+  return () => ref.valor
+}
+
 /** Quantas conexões de operação estão abertas e quantos robôs as usam (para o painel e os testes). */
 export function conexoesDeOperacao(): { conexoes: number; robos: number } {
   let robos = 0
@@ -518,6 +543,7 @@ async function iniciarOuContinuar(auth: AuthSession, p: Parametros): Promise<Ses
   // e escreve no banco sem nunca fazer o motor esperar. Sem sessão gravada
   // (Supabase desligado) não há espelho — e não há erro.
   const espelho = sessao.gravada && espelhoHabilitado() ? new PublicadorEspelho(sessao.gravada, config, () => socket.state, undefined, undefined, sequencias.get(id) ?? 0) : null
+  if (espelho) espelho.lerSaldo = saldoDaConexao(socket)
 
   let jaGravadas = anterior?.estado.historico.length ?? 0
   motor.escutar((e) => {

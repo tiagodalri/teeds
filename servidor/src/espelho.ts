@@ -82,6 +82,9 @@ export class PublicadorEspelho {
   private resolvedoresDaDrenagem: Array<() => void> = []
   readonly medidas: MedidasDoPublicador = { estados: 0, eventos: 0, fotos: 0, pulsos: 0, pulsosIdenticos: 0, coalescidos: 0, tentativas: 0, falhas: 0, podados: 0, pressao: 0, drenagemEstourada: false, pendentesAoEstourar: 0 }
 
+  /** O saldo da conta, quando a conexão tem o stream de saldo (sessoes.ts). */
+  lerSaldo?: () => number | null
+
   constructor(
     private readonly sessao: SessaoGravada,
     private readonly config: ConfigEstrategia,
@@ -107,7 +110,7 @@ export class PublicadorEspelho {
   aoEstado(e: EstadoMotor): void {
     if (this.encerrado || !this.ligado()) return
     this.medidas.estados += 1
-    const agora = resumirEstado(e, this.conexao())
+    const agora = resumirEstado(e, this.conexao(), this.lerSaldo?.() ?? null)
     const tipo = tipoDoEvento(this.ultima, agora)
     const quando = this.agora()
     if (tipo) {
