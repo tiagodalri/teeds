@@ -26,7 +26,7 @@ const NOME_DA_MARCA: Record<string,string> = Object.fromEntries(Object.values(MA
 import { RobotLive } from './RobotLive'
 import { IconeFechar } from './IconeFechar'
 import { OperacoesManuais } from './monitoramento/OperacoesManuais'
-import { QuemEstaOnline, type Operando } from './monitoramento/QuemEstaOnline'
+import { QuemEstaOnline, lerQuemEstaOnline, type Operando } from './monitoramento/QuemEstaOnline'
 import { NomeDoRobo } from './NomeDoRobo'
 
 /**
@@ -686,6 +686,25 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   const clientesOnline = new Set([...online.map((s) => s.userId), ...manuaisAbertas.clientes]).size
   // 10/11/2026: o cartão "Clientes online" abre a lista de quem está na plataforma e de quem está operando
   const [verOnline, setVerOnline] = useState(false)
+  /* Quantos estão na plataforma agora (10/11/2026, Tiago: "ali tá 7 e quando clico os números não batem"):
+     o cartão mostra o mesmo número da janela "Na plataforma", e embaixo quantos estão operando. */
+  const [naPlataforma, setNaPlataforma] = useState<number | null>(null)
+  const sessaoDoPainel = useRef(sessao)
+  sessaoDoPainel.current = sessao
+  const parceiroDoPainel = filtrandoParceiro ? parceiroFoco : ''
+  useEffect(() => {
+    let vivo = true
+    let t = 0
+    const ler = () => {
+      window.clearTimeout(t)
+      void Promise.all(marcas.map((m) => lerQuemEstaOnline(sessaoDoPainel.current, m, parceiroDoPainel)))
+        .then((l) => { if (vivo) setNaPlataforma(l.reduce((n, x) => n + x.length, 0)) })
+        .catch(() => { if (vivo) setNaPlataforma(null) })
+        .finally(() => { if (vivo) t = window.setTimeout(ler, document.visibilityState === 'hidden' ? 120_000 : 30_000) })
+    }
+    ler()
+    return () => { vivo = false; window.clearTimeout(t) }
+  }, [marcas.join(','), parceiroDoPainel]) // eslint-disable-line react-hooks/exhaustive-deps
   const operando: Operando[] = useMemo(() => {
     const m = new Map<string, Operando>()
     for (const s of online) { const o = m.get(s.userId) ?? { userId: s.userId, sessoes: [], manual: false }; o.sessoes.push(s); m.set(s.userId, o) }
@@ -732,7 +751,11 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
           <div className="adm-kpis mon-kpis">
             <article className="ok mon-kpi-clicavel" role="button" tabIndex={0} aria-haspopup="dialog" title="Ver quem está online"
               onClick={() => setVerOnline(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVerOnline(true) } }}>
-              <span>Clientes online</span><strong>{clientesOnline}</strong><small>{online.length} {online.length === 1 ? 'robô' : 'robôs'} operando · {manuaisAbertas.n} manua{manuaisAbertas.n === 1 ? 'l aberta' : 'is abertas'}</small>
+              {naPlataforma !== null
+                ? <><span>Clientes online</span><strong>{naPlataforma}</strong>
+                    <small>na plataforma agora · <b className="mon-kpi-operando">{clientesOnline} operando</b> ({online.length} {MARCA.vocabularioIA ? 'I.A.' : online.length === 1 ? 'robô' : 'robôs'} · {manuaisAbertas.n} {manuaisAbertas.n === 1 ? 'operação manual aberta' : 'operações manuais abertas'})</small></>
+                : <><span>Operando agora</span><strong>{clientesOnline}</strong>
+                    <small>{online.length} {MARCA.vocabularioIA ? 'I.A.' : online.length === 1 ? 'robô' : 'robôs'} · {manuaisAbertas.n} {manuaisAbertas.n === 1 ? 'operação manual aberta' : 'operações manuais abertas'}</small></>}
               <span className="mon-kpi-ver">Ver quem está online ›</span>
             </article>
             <article><span>Na visualização</span><strong>{lista.length}</strong><small>de {sessoesNoFoco} {sessoesNoFoco === 1 ? 'sessão' : 'sessões'} no período{filtrandoParceiro ? ` · ${parceiroFoco === 'direto' ? 'Direto' : seloDoParceiro(parceiros, parceiroFoco)?.texto}` : ''}</small></article>

@@ -33,7 +33,7 @@ type Ordem = 'recente' | 'banca' | 'tempo'
 
 const ia = MARCA.vocabularioIA ? 'I.A.' : 'Robô'
 
-async function lerQuemEstaOnline(sessao: SessaoTeeds, marca: string, parceiro: string | null): Promise<PessoaOnline[]> {
+export async function lerQuemEstaOnline(sessao: SessaoTeeds, marca: string, parceiro: string | null): Promise<PessoaOnline[]> {
   const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_quem_esta_online`, {
     method: 'POST',
     headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
@@ -123,7 +123,8 @@ export function QuemEstaOnline({ sessao, marcas, parceiro, operando, clientes, s
   }, [aoFechar])
 
   const porId = useMemo(() => new Map((pessoas ?? []).map((p) => [p.user_id, p])), [pessoas])
-  const comReal = (pessoas ?? []).filter((p) => p.real).length
+  // só quem tem dinheiro na conta real (conta real zerada não conta: 10/11/2026)
+  const comReal = (pessoas ?? []).filter((p) => Number(p.real?.saldo ?? 0) > 0).length
   const q = busca.trim().toLowerCase()
   const bate = (nome: string | null | undefined, email: string | null | undefined) => !q || `${nome ?? ''} ${email ?? ''}`.toLowerCase().includes(q)
 
@@ -163,7 +164,7 @@ export function QuemEstaOnline({ sessao, marcas, parceiro, operando, clientes, s
           </span>
           <span className="qeo-banca">
             {p?.real?.saldo != null
-              ? <><b>{dinheiro(Number(p.real.saldo), p.real.moeda || 'USD')}</b><small>Conta real</small></>
+              ? <><b className={Number(p.real.saldo) > 0 ? '' : 'qeo-zerada'}>{dinheiro(Number(p.real.saldo), p.real.moeda || 'USD')}</b><small>{Number(p.real.saldo) > 0 ? 'Conta real' : 'Conta real sem saldo'}</small></>
               : <small className="qeo-sem">{p ? (p.tem_demo ? 'Só conta demo' : 'Sem corretora') : ''}</small>}
           </span>
         </button>
@@ -222,7 +223,7 @@ export function QuemEstaOnline({ sessao, marcas, parceiro, operando, clientes, s
           <button type="button" className={aba === 'operando' ? 'on' : ''} onClick={() => setAba('operando')}>
             <strong>{operando.length}</strong><span>Operando</span>
           </button>
-          <div><strong>{pessoas ? comReal : '—'}</strong><span>Com conta real</span></div>
+          <div><strong>{pessoas ? comReal : '—'}</strong><span>Com saldo real</span></div>
         </div>
 
         <div className="qeo-filtros">
@@ -248,7 +249,7 @@ export function QuemEstaOnline({ sessao, marcas, parceiro, operando, clientes, s
             ? <ul>{listaOperando.map((o) => pessoa({ id: o.userId, p: porId.get(o.userId), sessoes: o.sessoes, manual: o.manual }))}</ul>
             : <div className="qeo-vazio"><b>{q ? 'Ninguém com esse nome ou e-mail.' : `Ninguém operando agora.`}</b><span>Quando alguém ligar {MARCA.vocabularioIA ? 'uma I.A.' : 'um robô'} ou abrir uma operação manual, aparece aqui na hora.</span></div>)}
         </div>
-        <footer className="qeo-pe">Na plataforma = app aberto nos últimos 3 minutos. Operando = {ia} ligada ou operação manual aberta, mesmo com o app fechado. A equipe não entra na conta.</footer>
+        <footer className="qeo-pe">Na plataforma = app aberto nos últimos 3 minutos. Operando = {ia} ligada ou operação manual aberta, mesmo com o app fechado (cada pessoa conta uma vez). Com saldo real = conta real com dinheiro. A equipe não entra na conta.</footer>
       </aside>
     </div>
   )
