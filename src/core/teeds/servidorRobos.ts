@@ -216,6 +216,19 @@ export interface SessaoViva {
 }
 
 /** O que está operando agora — tenha sido ligado pelo chat ou pelo botão. */
+/*
+  As contas da Deriv do login aberto NESTE aparelho (10/11/2026, vídeo do Victor Dias). A mesma conta da
+  Deriv ficou registrada para várias pessoas da equipe (logins em computador compartilhado), e o servidor
+  listava por conta registrada: a Nath via, no notebook dela, a I.A. que o Victor ligou na conta dele, com
+  o saldo dela parado. O servidor já foi corrigido para listar por quem ligou, mas só vale depois de
+  reiniciar, e não se reinicia com gente operando. Até lá (e por garantia depois), a tela só mostra I.A.
+  de contas que estão no login da Deriv deste aparelho. Sem login da Deriv aberto, nada é filtrado.
+*/
+let contasDaDerivNesteAparelho: Set<string> | null = null
+export function informarContasDaDeriv(ids: string[]): void {
+  contasDaDerivNesteAparelho = ids.length ? new Set(ids) : null
+}
+
 export async function sessoesVivas(sessao: SessaoTeeds): Promise<SessaoViva[]> {
   // O erro sobe de propósito: devolver lista vazia aqui fazia a tela
   // entender "não há robô operando" toda vez que o servidor demorava a
@@ -227,7 +240,8 @@ export async function sessoesVivas(sessao: SessaoTeeds): Promise<SessaoViva[]> {
     marca de cada sessao, a tela confere de novo por garantia.
   */
   const r = await api<{ sessoes: SessaoViva[] }>(sessao, `/sessoes?marca=${encodeURIComponent(MARCA.id)}`)
-  return (r.sessoes ?? []).filter((s) => !s.marca || s.marca === MARCA.id)
+  const contas = contasDaDerivNesteAparelho
+  return (r.sessoes ?? []).filter((s) => (!s.marca || s.marca === MARCA.id) && (!contas || !s.contaId || contas.has(s.contaId)))
 }
 
 /**

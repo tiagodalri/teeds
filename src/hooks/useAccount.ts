@@ -529,5 +529,7 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
     socket: conexaoDaConta ? socketRef.current : null, connecting, aviso, avisoTipo, setAviso, pulso, conexao,
     comprasRecentes: conexaoDaConta ? comprasRecentes : [],
     login, logout, desconectar, escolhaDeConta, continuarConectando, fecharEscolhaDeConta, recarregarDemo, atualizarContas,
+    /** Todas as contas do login da Deriv (inclusive as que a tela não oferece), para filtrar as I.A. deste aparelho. */
+    todasAsContas: accounts,
   }
 }

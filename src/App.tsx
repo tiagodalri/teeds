@@ -80,7 +80,7 @@ import { lerPerfil, marcarTourVisto } from './core/teeds/perfil'
 import { TourGuiado, passosDoTour } from './components/tour/TourGuiado'
 import { BarraInferior } from './components/barra/BarraInferior'
 import { MiniCabine } from './components/minicabine/MiniCabine'
-import { conferirVivasAgora, pararNoServidor, type SessaoViva } from './core/teeds/servidorRobos'
+import { conferirVivasAgora, informarContasDaDeriv, pararNoServidor, type SessaoViva } from './core/teeds/servidorRobos'
 import { sinalGFLiberado, tipoNaTela } from './core/deriv/accountAccess'
 import { acompanharFimDasSessoes, contratoManual, entradaManual } from './core/som'
 import { JANELA, TELA_DA_JANELA, irNaPlataforma, useIrPelasJanelas, voltarAPlataforma } from './core/janelaSolta'
@@ -945,6 +945,9 @@ export default function App() {
     navegador) e so lista esses. O resto NAO aparece aqui: a tela Operar e
     so da operacao manual; os robos vivem na aba Robos.
   */
+  // as I.A. que aparecem aqui são só as das contas deste login da Deriv (ver informarContasDaDeriv)
+  const contasDoLogin = conta.status === 'logado' ? conta.todasAsContas.map((a) => a.accountId).join(',') : ''
+  useEffect(() => { informarContasDaDeriv(contasDoLogin ? contasDoLogin.split(',') : []); conferirVivasAgora() }, [contasDoLogin])
   const [manuais, setManuais] = useState<number[]>(() => lerManuais(conta.accountId))
   useEffect(() => { setManuais(lerManuais(conta.accountId)) }, [conta.accountId])
   const marcarManual = (id: number) => { contratoManual(id); marcarNaLista(id) }
