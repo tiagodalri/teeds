@@ -490,8 +490,10 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   }, [sessao, marca, periodo, receber, garantirClientes, falhar])
 
   useEffect(() => { setTela('carregando'); void carregarTudo() }, [carregarTudo])
-  // Reconciliação leve, a cada 20 s — o Realtime é o transporte; isto só confere.
-  useEffect(() => { const id = setInterval(() => { if (document.visibilityState === 'visible') void carregarTudo() }, 20_000); return () => clearInterval(id) }, [carregarTudo])
+  // Reconciliação leve, a cada 20 s — o Realtime é o transporte; isto só confere. Pede só o que mudou nos
+  // últimos 2 min (o período inteiro vem uma vez, ao abrir, ao trocar o período e ao reconectar): com
+  // 1.000+ sessões em 12 h, rebaixar tudo a cada 20 s pesaria no banco à toa.
+  useEffect(() => { const id = setInterval(() => { if (document.visibilityState === 'visible') void carregarTudo(2 / 60) }, 20_000); return () => clearInterval(id) }, [carregarTudo])
   useEffect(() => { const id = setInterval(() => setAgora(Date.now()), 1000); return () => clearInterval(id) }, [])
   useEffect(() => { auditar(sessao, { tipo: 'painel', acao: 'abriu', marca: marcaDoRegistro }).catch(falhar); return () => { auditar(sessao, { tipo: 'painel', acao: 'fechou', marca: marcaDoRegistro }).catch(() => { /* a tela já fechou */ }) } }, [sessao, marcaDoRegistro, falhar])
 

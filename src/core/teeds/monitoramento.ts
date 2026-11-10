@@ -85,15 +85,29 @@ const SELECAO = 'sessao_id,marca,user_id,seq,fase,estado,config,emitido_em,atual
   a tela mostra a marca do próprio site — errado para o seletor, mas nunca
   dados de outra plataforma por acidente.
 */
-export async function listarEspelhos(sessao: SessaoTeeds, horas = 12, signal?: AbortSignal, marca: Marcas = MARCA.id): Promise<SessaoEspelho[]> {
+/*
+  Tudo do período, não só as 300 mais recentes (10/11/2026: a GF passou de 1.000 sessões em 12 h e a tela
+  dizia "de 300 sessões no período"). Páginas de 1000 por `sessao_id` (chave estável: uma sessão que se
+  atualiza durante a leitura não muda de lugar, então nada é pulado). `teto` é segurança, não corte normal.
+  A conferência de 20 s do painel pede só os últimos minutos (`horas` pequeno), então isto pesa uma vez.
+*/
+export async function listarEspelhos(sessao: SessaoTeeds, horas = 12, signal?: AbortSignal, marca: Marcas = MARCA.id, teto = 10_000): Promise<SessaoEspelho[]> {
   if (!autenticacaoConfigurada()) return []
   const corte = new Date(Date.now() - horas * 3600_000).toISOString()
-  const linhas = await rest<any[]>(
-    `/sessoes_robos_ao_vivo?select=${encodeURIComponent(SELECAO)}&${filtroDeMarca(marca)}&atualizada_em=gte.${encodeURIComponent(corte)}&order=atualizada_em.desc&limit=300`,
-    sessao.token, { signal },
-  )
+  const pagina = 1000
+  const linhas: any[] = []
+  let depois = ''
+  while (linhas.length < teto) {
+    const lote = await rest<any[]>(
+      `/sessoes_robos_ao_vivo?select=${encodeURIComponent(SELECAO)}&${filtroDeMarca(marca)}&atualizada_em=gte.${encodeURIComponent(corte)}${depois ? `&sessao_id=gt.${depois}` : ''}&order=sessao_id.asc&limit=${pagina}`,
+      sessao.token, { signal },
+    )
+    linhas.push(...(lote ?? []))
+    if (!lote || lote.length < pagina) break
+    depois = lote[lote.length - 1].sessao_id
+  }
   const recebido = Date.now()
-  return (linhas ?? []).map((l) => paraSessaoEspelho(l, null, recebido))
+  return linhas.map((l) => paraSessaoEspelho(l, null, recebido))
 }
 
 /** A foto de uma sessão só (snapshot ao entrar no foco ou ao reconectar). */
