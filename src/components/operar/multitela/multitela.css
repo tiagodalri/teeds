@@ -216,3 +216,10 @@
 /* a troca de layout desliza (Multitela.tsx: comTransicao) */
 ::view-transition-group(mtl-q0), ::view-transition-group(mtl-q1), ::view-transition-group(mtl-q2),
 ::view-transition-group(mtl-q3), ::view-transition-group(mtl-q4), ::view-transition-group(mtl-q5) { animation-duration: .32s; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+
+/* os botões flutuantes (suporte e, para a equipe, o chat) ficam no canto de baixo à direita:
+   o último quadro deixa esse canto livre, e nenhum botão de compra fica embaixo deles */
+@media (min-width: 901px) {
+  .mtl-grade > .mtl-celula:last-child .mtl-faixa { padding-right: 78px; }
+  .mtl-grade > .mtl-celula:last-child .mtl-bl .bl-corpo { padding-bottom: 156px; }
+}

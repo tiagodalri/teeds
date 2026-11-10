@@ -80,8 +80,7 @@ export function Multitela({ conta, ativos, sessao, ativoInicial, extraNaBarra }:
       if (raiz.current) setLargura(naPagina(raiz.current.getBoundingClientRect().width))
       if (!grade.current || celular) { setAltura(null); return }
       const topo = naPagina(grade.current.getBoundingClientRect().top + window.scrollY)
-      // folga de 84 px no pé: o botão do suporte (canto de baixo) nunca cobre o Vender do último quadro
-      setAltura(Math.max(560, Math.round(naPagina(window.innerHeight) - topo - 84)))
+      setAltura(Math.max(560, Math.round(naPagina(window.innerHeight) - topo - 18)))
     }
     medir()
     const ro = new ResizeObserver(medir)
