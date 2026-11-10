@@ -1,7 +1,7 @@
 import { afiliadoDaDeriv } from '../core/rotas'
 import { useEffect, useState } from 'react'
 import {
-  formatarTelefone, telefoneValido,
+  formatarTelefone, telefoneValido, LINK_VENCIDO,
 } from '../core/teeds/conta'
 import { SENHA_NO_CADASTRO, type ContaDoCadastro, type DadosFilaEspera } from '../core/teeds/leads'
 import { Brand } from './Brand'
@@ -102,6 +102,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   const [tentou, setTentou] = useState(false)
 
   const t = TEXTOS[modo]
+  const linkVencido = erro === LINK_VENCIDO && modo === 'entrar'
   const marcar = (campo: string) => () => setTocado((x) => ({ ...x, [campo]: true }))
 
   /** O problema de cada campo; com `vazios`, campo em branco também conta (depois de tocar no botão). */
@@ -183,7 +184,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
       return
     }
     const ok = await onEsqueci(email)
-    if (ok) setRecado(`Se existir uma conta com ${email}, o link está a caminho.`)
+    if (ok) setRecado(`Se existir uma conta com ${email}, o link está a caminho. Use o e-mail mais recente: pedir de novo faz os links anteriores pararem de valer. Confira também o Spam.`)
   }
 
   const campo = (
@@ -226,6 +227,16 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
             <DerivLogo altura={15} />
           </div>
         </header>
+
+        {/* 10/11/2026: link do e-mail já usado ou vencido. O aviso vem no topo (no pé ficava fora da vista no celular) */}
+        {linkVencido && (
+          <div className="entrada-link-vencido" role="alert">
+            <b>Esse link já foi usado ou venceu</b>
+            <p>Cada link para criar a senha vale uma única vez, por 1 hora, e só funciona o do último e-mail que você pediu.</p>
+            <p>Já criou a senha nova? Entre abaixo com o seu e-mail e essa senha. Ainda não? Peça um link novo.</p>
+            <button type="button" className="entrada-btn" onClick={() => trocarModo('esqueci')}>Pedir um link novo</button>
+          </div>
+        )}
 
         <div className="entrada-cabecalho">
           <h1>{t.titulo}</h1>
@@ -289,7 +300,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
           {modo === 'entrar' && <p className="entrada-cadastro">Ainda não tem conta? <button type="button" disabled={ocupado} onClick={() => trocarModo('criar')}>Cadastre-se</button></p>}
         </form>
 
-        {erro && <div className="entrada-erro" role="alert">{erro}</div>}
+        {erro && !linkVencido && <div className="entrada-erro" role="alert">{erro}</div>}
         {recado && <div className="entrada-recado" role="status">{recado}</div>}
 
         {modo !== 'entrar' && <p className="entrada-cadastro entrada-voltar">Já tem conta? <button type="button" onClick={() => trocarModo('entrar')}>Entrar</button></p>}

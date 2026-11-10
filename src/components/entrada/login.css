@@ -57,3 +57,13 @@
   /* a marca e o selo dividem a linha: a assinatura encolhe em vez de empurrar o selo para baixo */
   .entrada[data-modo='espera'] .entrada-topo { flex-wrap: nowrap; }
 }
+
+/* 10/11/2026: o link do e-mail já usado ou vencido, no topo da tela de entrar */
+.entrada-link-vencido {
+  display: grid; gap: 8px; margin: 4px 0 18px; padding: 16px 16px 14px; border-radius: 14px; text-align: left;
+  background: color-mix(in srgb, var(--down, #e5383b) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--down, #e5383b) 40%, transparent);
+}
+.entrada-link-vencido b { font-size: 15px; line-height: 1.3; color: var(--text, inherit); }
+.entrada-link-vencido p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted, inherit); text-wrap: pretty; }
+.entrada-link-vencido .entrada-btn { margin-top: 6px; }

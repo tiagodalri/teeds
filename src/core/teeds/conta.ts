@@ -394,6 +394,13 @@ export function capturarRetorno(): Retorno {
  * no próprio app da marca. O app valida o código na Supabase (verify com
  * token_hash), sem depender da lista de endereços de volta dela.
  */
+/**
+ * O link do e-mail que já foi usado, venceu (1 hora) ou foi trocado por um pedido mais novo
+ * (10/11/2026: clientes tocavam no botão de um e-mail antigo, caíam na tela de entrar e o aviso
+ * ficava no pé da tela do celular, fora da vista: "o botão não redireciona"). A tela de entrar
+ * reconhece esta frase e mostra o aviso no topo, com o atalho para pedir um link novo.
+ */
+export const LINK_VENCIDO = 'Esse link já expirou ou já foi usado. Peça um novo.'
 let confirmacao: Promise<Retorno> | null = null
 export function temConfirmacaoNoEndereco(): boolean {
   return confirmacao !== null || new URLSearchParams(window.location.search).has('confirmar')
@@ -421,7 +428,7 @@ async function validarCodigoDoEndereco(): Promise<Retorno> {
     return { sessao, tipo, erro: null }
   } catch (e) {
     const m = (e as Error).message.toLowerCase()
-    return { sessao: null, tipo, erro: m.includes('expir') || m.includes('invalid') || m.includes('inválid') ? 'Esse link já expirou ou já foi usado. Peça um novo.' : (e as Error).message }
+    return { sessao: null, tipo, erro: m.includes('expir') || m.includes('invalid') || m.includes('inválid') || m.includes('not found') ? LINK_VENCIDO : (e as Error).message }
   }
 }
 
