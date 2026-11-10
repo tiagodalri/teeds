@@ -236,7 +236,12 @@ export default function App() {
     void carregarMeuSubplano(teeds.sessao)
     const abrir = (e: Event) => { void carregarMeuSubplano(teeds.sessao); setPlanoAberto({ foco: (e as CustomEvent<string | null>).detail ?? null }) }
     window.addEventListener('plataforma:meu-plano', abrir)
-    return () => window.removeEventListener('plataforma:meu-plano', abrir)
+    // 10/11/2026: quem compra o Black/Prestige na Cakto volta para a aba da plataforma;
+    // relê o plano ao voltar (no máximo a cada 30 s) para o selo trocar sem recarregar.
+    let ultimaLeitura = Date.now()
+    const aoVoltar = () => { if (document.visibilityState === 'visible' && Date.now() - ultimaLeitura > 30000) { ultimaLeitura = Date.now(); void carregarMeuSubplano(teeds.sessao) } }
+    document.addEventListener('visibilitychange', aoVoltar)
+    return () => { window.removeEventListener('plataforma:meu-plano', abrir); document.removeEventListener('visibilitychange', aoVoltar) }
   }, [teeds.sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // suporte (20/10/2026): o botão flutuante do admin abre a caixa de entrada
   const [pedidoCaixa, setPedidoCaixa] = useState(0)
@@ -1444,7 +1449,7 @@ export default function App() {
             )
           })()}
 
-          {MARCA.seloCategoria && !JANELA && teeds.usuario && (meuSubplano?.atual || categoria) && <SeloCategoria categoria={(meuSubplano?.atual ?? categoria) as Categoria} aoAbrir={meuSubplano?.subplanos.length ? () => abrirMeuPlano() : undefined} />}
+          {MARCA.seloCategoria && !JANELA && teeds.usuario && (meuSubplano?.atual || categoria) && <SeloCategoria categoria={(meuSubplano?.admin || adminParaTranca === true ? 'prestige' : meuSubplano?.atual ?? categoria) as Categoria} aoAbrir={meuSubplano?.subplanos.length ? () => abrirMeuPlano() : undefined} />}
 
           {JANELA && (
             <button type="button" className="js-voltar" onClick={voltarAPlataforma}
