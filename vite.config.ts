@@ -518,7 +518,15 @@ export default defineConfig({
         writeFileSync(join(SAIDA, 'sw.js'), [
           `const CACHE='${MARCA.id}-${assinatura}';`,
           `const SHELL=${JSON.stringify(preCache)};`,
-          `self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).catch(()=>{}));self.skipWaiting()});`,
+          // Só guarda peça que confere com a versão (10/11/2026). Na publicação das 17h50
+          // o CDN entregou, por alguns minutos, uma tela separada da versão anterior com o
+          // endereço da nova; guardada aqui, ela puxava o app velho junto e a página ficava
+          // em branco até a publicação seguinte. Um JS versionado só entra no cache se todas
+          // as referências "?v=" dentro dele forem da mesma versão; senão busca de novo sem
+          // cache e, se ainda vier trocado, entrega sem guardar.
+          `const confere=(r,x)=>{const u=new URL(r.url),v=u.searchParams.get('v');if(!x||!x.ok)return Promise.resolve(false);if(!v||!/\\.js$/.test(u.pathname))return Promise.resolve(true);return x.clone().text().then(t=>(t.match(/\\.(?:js|css)\\?v=[a-f0-9]{12}/g)||[]).every(m=>m.endsWith('='+v))).catch(()=>false)};`,
+          `const buscarConferido=r=>fetch(r).then(x=>confere(r,x).then(ok=>ok?[x,true]:fetch(r.url,{cache:'reload',credentials:'same-origin'}).then(y=>confere(r,y).then(ok2=>[y,ok2])).catch(()=>[x,false])));`,
+          `self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.all(SHELL.map(s=>{const q=new Request(s,{cache:'reload'});return fetch(q).then(x=>confere(q,x).then(ok=>ok&&c.put(q,x))).catch(()=>{})}))).catch(()=>{}));self.skipWaiting()});`,
           // Pré-carga da navegação (31/10/2026): o navegador já pede a página enquanto o
           // service worker acorda, em vez de esperar ele acordar para só então pedir.
           `self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.registration.navigationPreload&&self.registration.navigationPreload.enable().catch(()=>{})).then(()=>self.clients.claim())));`,
@@ -528,7 +536,7 @@ export default defineConfig({
           // (a landing) ou /cadastre-se (o encaminhamento) trocava o app guardado
           // por outra página. Sem rede, qualquer endereço continua caindo no app.
           `if(r.mode==='navigate'){const raiz=u.pathname===new URL('./',self.location).pathname;e.respondWith(Promise.resolve(e.preloadResponse).catch(()=>null).then(p=>p||fetch(r)).then(x=>{if(x.ok&&raiz)caches.open(CACHE).then(c=>c.put('./index.html',x.clone()));return x}).catch(()=>caches.match('./index.html')));return}`,
-          `if(/\\/assets\\/.+\\.(?:js|css)$/.test(u.pathname)&&u.searchParams.has('v')){e.respondWith(caches.match(r).then(h=>h||fetch(r).then(x=>{if(x.ok)caches.open(CACHE).then(c=>c.put(r,x.clone()));return x})));return}`,
+          `if(/\\/assets\\/.+\\.(?:js|css)$/.test(u.pathname)&&u.searchParams.has('v')){e.respondWith(caches.match(r).then(h=>h||buscarConferido(r).then(([x,ok])=>{if(ok)caches.open(CACHE).then(c=>c.put(r,x.clone()));return x})));return}`,
           `if(r.destination==='image'||r.destination==='font'){e.respondWith(caches.match(r).then(h=>{const n=fetch(r).then(x=>{if(x.ok)caches.open(CACHE).then(c=>c.put(r,x.clone()));return x}).catch(()=>h);return h||n}));return}`,
           `e.respondWith(fetch(r).then(x=>{if(x.ok&&!/\\.json$/.test(u.pathname))caches.open(CACHE).then(c=>c.put(r,x.clone()));return x}).catch(()=>caches.match(r)))});`,
           // Notificações (27/10/2026): a função `notificacoes` do Supabase manda {titulo, corpo, tag, url}.

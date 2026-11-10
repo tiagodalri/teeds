@@ -27,18 +27,45 @@ import { JANELA, ligarJanelaSolta } from './core/janelaSolta'
   não sobe: a página recarrega já na versão nova (revisão de 21/10/2026).
 */
 const pagina = window as unknown as { __appNoAr?: boolean }
+const COPIA_VELHA = 'Versão nova publicada: a página recarrega na versão nova.'
+/*
+  Peça trocada guardada no aparelho (10/11/2026, a tela ficou em branco para quem
+  abriu logo depois da publicação das 17h50, até no anônimo): o CDN entregou, por
+  alguns minutos, uma tela separada da versão anterior com o endereço da nova. O
+  navegador e o service worker guardaram essa peça, e recarregar só pegava a mesma
+  de novo. Agora, antes de recarregar, apaga o cache do service worker e busca de
+  novo, sem cache, as peças que esta página baixou. Uma vez a cada 30 s, com marca
+  nova no endereço: nunca vira laço de recarga.
+*/
+function limparPecasVelhasERecarregar(): void {
+  // chave nova: a cópia velha (de antes desta correção) ainda usa a antiga
+  const chave = 'app.limpou-pecas-velhas'
+  try {
+    if (Date.now() - Number(sessionStorage.getItem(chave) ?? 0) < 30_000) return
+    sessionStorage.setItem(chave, String(Date.now()))
+  } catch { return /* sem armazenamento: não recarrega */ }
+  const recarregar = () => { const u = new URL(location.href); u.searchParams.set('v', Date.now().toString(36)); location.replace(u.toString()) }
+  const pecas = performance.getEntriesByType('resource').map((e) => e.name).filter((n) => n.startsWith(`${location.origin}/assets/`))
+  const apagarCache = typeof caches === 'undefined' ? Promise.resolve() : caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k)))).then(() => undefined)
+  const tudo = apagarCache.catch(() => undefined)
+    .then(() => Promise.allSettled(pecas.map((u) => fetch(u, { cache: 'reload', credentials: 'same-origin' }))))
+  // nunca fica esperando: em 8 s recarrega de qualquer jeito
+  Promise.race([tudo, new Promise((ok) => setTimeout(ok, 8000))]).then(recarregar, recarregar)
+}
 if (pagina.__appNoAr) {
-  // uma vez a cada 30 s, com marca nova no endereço (fura o cache do CDN, que
-  // ainda pode entregar a página velha): nunca vira laço de recarga
-  const chave = 'app.recarregou-por-copia'
-  let pode = false
-  try { pode = Date.now() - Number(sessionStorage.getItem(chave) ?? 0) > 30_000; if (pode) sessionStorage.setItem(chave, String(Date.now())) } catch { /* sem armazenamento: não recarrega */ }
-  if (pode) { const u = new URL(location.href); u.searchParams.set('v', Date.now().toString(36)); location.replace(u.toString()) }
-  throw new Error('Versão nova publicada: a página recarrega na versão nova.')
+  limparPecasVelhasERecarregar()
+  throw new Error(COPIA_VELHA)
 }
 pagina.__appNoAr = true
+// A cópia velha pode ter vindo de uma publicação anterior a esta correção (ela só
+// lança o erro): o app que já está na página percebe e faz a limpeza.
+const ehCopiaVelha = (m: unknown) => String((m as { message?: unknown } | null)?.message ?? m ?? '').includes(COPIA_VELHA)
+window.addEventListener('error', (e) => { if (ehCopiaVelha(e.error ?? e.message)) limparPecasVelhasERecarregar() })
+window.addEventListener('unhandledrejection', (e) => { if (ehCopiaVelha(e.reason)) limparPecasVelhasERecarregar() })
 // Falha ao baixar uma tela separada (publicação no meio, rede caiu e voltou): recarrega uma vez.
 window.addEventListener('vite:preloadError', (e) => {
+  // a tela separada puxou a cópia velha do app: limpa as peças guardadas antes de recarregar
+  if (ehCopiaVelha((e as Event & { payload?: unknown }).payload)) { e.preventDefault(); limparPecasVelhasERecarregar(); return }
   const chave = 'app.recarregou-por-tela'
   try {
     if (Date.now() - Number(sessionStorage.getItem(chave) ?? 0) < 30_000) return
