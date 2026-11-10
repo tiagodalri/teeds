@@ -112,15 +112,21 @@ export function QuemEstaOnline({ sessao, marcas, parceiro, operando, clientes, s
   }, [marcas.join(','), parceiro]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { const t = window.setInterval(() => setAgora(Date.now()), 5000); return () => window.clearInterval(t) }, [])
 
-  // Esc fecha; o foco vai para o fechar ao abrir; a página de trás não rola
+  // Esc fecha; o foco vai para o fechar ao abrir; a página de trás não rola.
+  // Só UMA vez, ao abrir (10/11/2026): o Monitoramento passa um aoFechar novo
+  // a cada render (o relógio dele bate de 1 em 1 s). Com [aoFechar] nas
+  // dependências, o foco era puxado para o "fechar" a cada segundo, e o
+  // navegador fechava a lista do "Mais recentes" antes de dar para escolher.
+  const aoFecharRef = useRef(aoFechar)
+  aoFecharRef.current = aoFechar
   useEffect(() => {
     fechar.current?.focus()
-    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') aoFechar() }
+    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') aoFecharRef.current() }
     document.addEventListener('keydown', tecla)
     const antes = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.removeEventListener('keydown', tecla); document.body.style.overflow = antes }
-  }, [aoFechar])
+  }, [])
 
   const porId = useMemo(() => new Map((pessoas ?? []).map((p) => [p.user_id, p])), [pessoas])
   // só quem tem dinheiro na conta real (conta real zerada não conta: 10/11/2026)

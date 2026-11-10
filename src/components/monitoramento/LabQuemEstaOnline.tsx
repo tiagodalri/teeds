@@ -1,5 +1,5 @@
 /** Laboratório (?tela=quem-online): a gaveta "Quem está online" com gente de exemplo, sem banco. */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { QuemEstaOnline, type Operando, type PessoaOnline } from './QuemEstaOnline'
 import type { SessaoEspelho } from '../../core/teeds/espelho'
 
@@ -26,6 +26,10 @@ const OPERANDO: Operando[] = [
 
 export default function LabQuemEstaOnline() {
   const [aberto, setAberto] = useState(true)
+  // Igual ao Monitoramento: a tela de trás redesenha de 1 em 1 s e passa um aoFechar
+  // novo a cada vez. Sem isto, o laboratório não mostrava o filtro que fechava sozinho (10/11/2026).
+  const [, setTique] = useState(0)
+  useEffect(() => { const t = window.setInterval(() => setTique((n) => n + 1), 1000); return () => window.clearInterval(t) }, [])
   // o banco de mentira: a consulta devolve as pessoas de exemplo
   const f = window.fetch
   window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => String(u).includes('teeds_quem_esta_online')
