@@ -22,7 +22,7 @@ button.vg-card:focus-visible, .vg-agora:focus-visible { outline: 2px solid var(-
 .vg-erro { margin: 0; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--down) 12%, transparent); color: var(--down); }
 
 /* carregando: três blocos que respiram */
-.vg-carregando { grid-template-columns: 2fr 1fr 1fr; }
+.vg-carregando { display: grid; gap: 14px; grid-template-columns: 2fr 1fr 1fr; }
 .vg-carregando i { height: 170px; border-radius: 18px; background: var(--surface-alt); animation: vg-respira 1.2s ease-in-out infinite alternate; }
 @keyframes vg-respira { to { opacity: .45; } }
 

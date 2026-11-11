@@ -1,0 +1,66 @@
+/* O seletor de período da Visão geral (11/11/2026, prefixo vgp-). Ver PeriodoDaVisaoGeral.tsx.
+   O mesmo padrão do filtro das Sessões encerradas: controles de 40 px (44 px no celular), cantos de 10 px. */
+.vgp {
+  --vgp-h: 40px; --vgp-raio: 10px;
+  display: grid; gap: 10px; padding: 14px 18px;
+  border: 1px solid var(--border); border-radius: 18px; background: var(--vg-cartao, var(--surface));
+}
+.vgp-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.vgp-rot { font-size: 11.5px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.vgp-atalhos {
+  display: inline-flex; flex-wrap: wrap; align-items: stretch; gap: 2px; padding: 3px;
+  box-sizing: border-box; min-height: var(--vgp-h);
+  border: 1px solid var(--border); border-radius: var(--vgp-raio); background: var(--bg);
+}
+.vgp .vgp-atalhos button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: calc(var(--vgp-h) - 8px); padding: 0 13px; border: 0; border-radius: calc(var(--vgp-raio) - 3px);
+  color: var(--muted); background: transparent; font: inherit; font-size: 13px; font-weight: 650;
+  cursor: pointer; white-space: nowrap; text-align: center; transition: background .15s, color .15s;
+}
+.vgp .vgp-atalhos button:hover { color: var(--text); }
+.vgp .vgp-atalhos button.on { color: var(--bg); background: var(--vg-ouro, var(--primary)); }
+.vgp .vgp-atalhos button:focus-visible, .vgp-datas input:focus-visible { outline: 2px solid var(--vg-ouro, var(--primary)); outline-offset: 2px; }
+/* o ponto verde do tempo real (pulsa só quando Agora está escolhido) */
+.vgp-agora i { width: 8px; height: 8px; border-radius: 50%; background: var(--up); flex: none; }
+.vgp-agora.on i { background: color-mix(in srgb, var(--up) 70%, var(--bg)); animation: vg-pulso 1.8s ease-out infinite; }
+
+.vgp-datas { display: flex; flex-wrap: wrap; gap: 10px 18px; }
+.vgp-campo { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.vgp-campo > span { margin-right: 2px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.vgp-datas input {
+  box-sizing: border-box; height: var(--vgp-h); min-height: var(--vgp-h); padding: 0 12px;
+  border: 1px solid var(--border); border-radius: var(--vgp-raio); background: var(--bg);
+  color: var(--text); font: inherit; font-size: 13px; color-scheme: dark light;
+}
+.vgp-datas input[type='date'] { width: 158px; }
+.vgp-datas input[type='time'] { width: 112px; }
+.vgp-leg { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.vgp-leg b { color: var(--text); font-weight: 700; }
+
+/* os cartões de período: "Agora" nos que continuam sendo retrato do momento, e o esmaecido enquanto lê */
+.vg-chip-agora {
+  display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; padding: 2px 8px; border-radius: 999px; vertical-align: 1px;
+  background: color-mix(in srgb, var(--up) 14%, transparent); color: var(--up); font-size: 10.5px; letter-spacing: .06em;
+}
+.vg-chip-agora::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--up); }
+.vg-lendo { opacity: .55; transition: opacity .2s; }
+.vg-esq { display: block; height: 14px; border-radius: 6px; background: var(--surface-alt); animation: vg-respira 1.2s ease-in-out infinite alternate; }
+.vg-esq.grande { height: 34px; width: 60%; margin: 2px 0 6px; }
+.vg-erro-periodo { margin: 0; font-size: 12.5px; color: var(--down); }
+
+@media (max-width: 720px) {
+  /* no celular, 44 px para o dedo; atalhos em grade de 4 (o Personalizado ocupa o resto da 2ª linha) */
+  .vgp { --vgp-h: 44px; padding: 14px; }
+  .vgp-linha { display: grid; gap: 8px; }
+  .vgp-atalhos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; }
+  .vgp .vgp-atalhos button { min-height: 44px; padding: 0 4px; font-size: 12.5px; }
+  .vgp .vgp-atalhos button:last-child { grid-column: span 2; }
+  .vgp-datas { display: grid; gap: 10px; }
+  .vgp-campo { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 6px 8px; }
+  .vgp-campo > span { grid-column: 1 / -1; }
+  .vgp-datas input[type='date'], .vgp-datas input[type='time'] { width: 100%; min-width: 0; font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vgp-agora.on i, .vg-esq { animation: none; }
+}

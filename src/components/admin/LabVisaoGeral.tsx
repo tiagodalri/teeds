@@ -1,5 +1,6 @@
-/** Laboratório (?tela=visao-geral(&cenario=real|vazio)): a Visão geral com números de exemplo, sem banco. */
+/** Laboratório (?tela=visao-geral(&cenario=real|vazio)(&periodo=hoje|ontem|7|30|mes|personalizado)): a Visão geral com números de exemplo, sem banco. */
 import { VisaoGeralPainel } from './VisaoGeralPainel'
+import { PERIODO_AGORA, type AtalhoDoPeriodo } from './PeriodoDaVisaoGeral'
 
 const hoje = new Date()
 const dia = (n: number) => { const d = new Date(hoje); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10) }
@@ -22,15 +23,48 @@ function exemplo(cenario: string) {
   }
 }
 
+/** O período de exemplo: uma barra por hora (até 48 h) ou por dia, com números que crescem com o tamanho do período. */
+function exemploDoPeriodo(corpo: string, cenario: string) {
+  const { p_de, p_ate } = JSON.parse(corpo || '{}') as { p_de: string; p_ate: string }
+  const de = Date.parse(p_de), ate = Date.parse(p_ate), horas = Math.max(1, (ate - de) / 3_600_000)
+  const escala = horas <= 48 ? 'hora' : 'dia'
+  const passo = escala === 'hora' ? 3_600_000 : 86_400_000
+  const br = (ms: number) => new Date(ms - 3 * 3_600_000).toISOString().slice(0, 16)
+  const ini = escala === 'hora' ? Math.floor((de - 0) / passo) * passo : Date.parse(`${br(de).slice(0, 10)}T00:00:00-03:00`)
+  const serie: Array<{ ini: string; markup: number; operacoes: number }> = []
+  for (let t = ini, i = 0; t < ate && i < 400; t += passo, i++) {
+    const h = Number(br(t).slice(11, 13))
+    const peso = escala === 'hora' ? (h < 6 ? 0.15 : h < 10 ? 0.5 : 1 + Math.sin(h / 3) * 0.4) : 1 + Math.sin(i / 3) * 0.35
+    const markup = cenario === 'vazio' ? 0 : Math.round((escala === 'hora' ? 24 : 520) * peso * 100) / 100
+    serie.push({ ini: br(t), markup, operacoes: Math.round(markup * 26) })
+  }
+  const total = serie.reduce((a, d) => a + d.markup, 0), ops = serie.reduce((a, d) => a + d.operacoes, 0)
+  const dias = horas / 24
+  return {
+    escala, serie,
+    markup: { total, ia: total * 0.9, manual: total * 0.1, ultima_em: new Date(Math.min(ate, Date.now()) - 120_000).toISOString() },
+    operacoes: { total: ops, ia: Math.round(ops * 0.98), manual: Math.round(ops * 0.02), volume: ops * 0.84, resultado: -ops * 0.06, operaram: Math.round(Math.min(160, 60 + dias * 4)) },
+    dinheiro: cenario === 'vazio' ? { depositos: 0, saques: 0, qtd_depositos: 0, qtd_saques: 0, depositantes: 0, sacaram: 0 }
+      : { depositos: Math.round(1450 * Math.max(1, dias) * 100) / 100, saques: Math.round(60 * Math.max(1, dias) * 100) / 100,
+          qtd_depositos: Math.round(18 * Math.max(1, dias)), qtd_saques: Math.round(2 * Math.max(1, dias)), depositantes: Math.round(Math.min(130, 14 * Math.max(1, dias))), sacaram: Math.round(Math.min(9, Math.max(1, dias))) },
+  }
+}
+
 export default function LabVisaoGeral() {
-  const cenario = new URLSearchParams(location.search).get('cenario') ?? ''
+  const busca = new URLSearchParams(location.search)
+  const cenario = busca.get('cenario') ?? ''
+  const periodo = { ...PERIODO_AGORA, atalho: (busca.get('periodo') ?? 'agora') as AtalhoDoPeriodo }
   const f = window.fetch
-  window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => String(u).includes('teeds_painel_visao_geral')
-    ? new Response(JSON.stringify(exemplo(cenario)), { status: 200 }) : f(u, i)) as typeof fetch
+  window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => {
+    const url = String(u)
+    if (url.includes('teeds_painel_visao_geral')) return new Response(JSON.stringify(exemplo(cenario)), { status: 200 })
+    if (url.includes('teeds_painel_periodo')) return new Response(JSON.stringify(exemploDoPeriodo(String(i?.body ?? ''), cenario)), { status: 200 })
+    return f(u, i)
+  }) as typeof fetch
   return (
     <div className="app workspace-app" style={{ minHeight: '100dvh' }}>
       <main className="admin-page" style={{ padding: 24 }}>
-        <VisaoGeralPainel sessao={{ token: 'lab' } as never} marca="globalfly" parceiro="" aoIr={() => undefined} />
+        <VisaoGeralPainel sessao={{ token: 'lab' } as never} marca="globalfly" parceiro="" aoIr={() => undefined} periodoInicial={periodo} />
       </main>
     </div>
   )
