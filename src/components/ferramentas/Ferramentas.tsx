@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent as PE, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { naPagina } from '../../core/escala'
+import { ehCelular } from '../../core/celular'
 import { IconeFechar } from '../IconeFechar'
 import { Bandeira, COR_DA_MOEDA, Moeda } from './Bandeira'
 import { MOEDAS, buscarCotacoes, converter, cotacoesGuardadas, historicoEmReais, type Cotacoes } from './cambio'
@@ -97,6 +98,20 @@ function posGuardada(id: string): Pos | null {
 }
 /** A área visível em px da página (a plataforma roda a 90% no computador: ver escala.ts). */
 const tela = () => ({ w: naPagina(window.innerWidth), h: naPagina(window.innerHeight) })
+/** Onde a janela pode ficar: abaixo do topo da plataforma e acima da barra de baixo do celular
+    (11/11/2026: no celular ela nascia por cima do topo e a calculadora cobria a barra de baixo). */
+function faixaLivre() {
+  const { h } = tela()
+  if (!ehCelular()) return { cima: 8, baixo: h - 8, esq: 8, dir: 8 } // computador: como sempre foi
+  const topo = document.querySelector('.workspace-app .topbar')?.getBoundingClientRect()
+  const barra = document.querySelector('.barra-inferior')?.getBoundingClientRect()
+  const cima = topo && topo.height > 0 ? naPagina(topo.bottom) + 8 : 8
+  const baixo = barra && barra.height > 0 ? naPagina(barra.top) - 8 : h - 8
+  // deitado, a plataforma recua o conteúdo da ilha e da borda arredondada (padding = área segura)
+  const app = document.querySelector('.workspace-app')
+  const cs = app ? getComputedStyle(app) : null
+  return { cima, baixo, esq: 8 + (cs ? parseFloat(cs.paddingLeft) || 0 : 0), dir: 8 + (cs ? parseFloat(cs.paddingRight) || 0 : 0) }
+}
 
 function JanelaFlutuante({ id, titulo, icone, largura, camada, children }: {
   id: Ferramenta; titulo: string; icone: ReactNode; largura: number; camada: number; children: (foco: boolean) => ReactNode
@@ -112,8 +127,8 @@ function JanelaFlutuante({ id, titulo, icone, largura, camada, children }: {
   const prender = useCallback((p: Pos): Pos => {
     const { w, h } = tela()
     const lw = ref.current ? naPagina(ref.current.getBoundingClientRect().width) : largura
-    const m = 8
-    return { x: Math.round(Math.min(Math.max(m, p.x), Math.max(m, w - lw - m))), y: Math.round(Math.min(Math.max(m, p.y), Math.max(m, h - 64))) }
+    const { cima, baixo, esq, dir } = faixaLivre()
+    return { x: Math.round(Math.min(Math.max(esq, p.x), Math.max(esq, w - lw - dir))), y: Math.round(Math.min(Math.max(cima, p.y), Math.max(cima, Math.min(h, baixo) - 64))) }
   }, [largura])
 
   // primeira abertura: embaixo do botão do topo, no computador; embaixo da tela, no celular
@@ -121,10 +136,12 @@ function JanelaFlutuante({ id, titulo, icone, largura, camada, children }: {
     const guardada = posGuardada(id)
     if (guardada) { setPos(prender(guardada)); return }
     const { w, h } = tela()
-    const lw = Math.min(largura, w - 16)
+    // a largura de verdade (o CSS do celular deitado alarga a calculadora)
+    const lw = ehCelular() && ref.current ? naPagina(ref.current.getBoundingClientRect().width) : Math.min(largura, w - 16)
     const alto = ref.current ? naPagina(ref.current.getBoundingClientRect().height) : 520
     // celular: o conversor (alto) logo abaixo do topo; a calculadora encostada embaixo
-    if (w <= 640) { setPos(prender({ x: (w - lw) / 2, y: id === 'cambio' ? 68 : Math.max(68, h - alto - 16) })); return }
+    const { cima, baixo } = faixaLivre()
+    if (w <= 640) { setPos(prender({ x: (w - lw) / 2, y: id === 'cambio' ? cima : Math.max(cima, baixo - alto) })); return }
     // com a outra ferramenta aberta, nasce ao lado dela (à esquerda; se não couber, um degrau abaixo)
     const outra = [...document.querySelectorAll<HTMLElement>('.ferr-flutuante')].find((e) => e !== ref.current)
     if (outra) {
@@ -161,7 +178,7 @@ function JanelaFlutuante({ id, titulo, icone, largura, camada, children }: {
   const janela = (
     <section ref={ref} className={`ferr-flutuante ferr-${id}${arrastando ? ' arrastando' : ''}${recolhida ? ' recolhida' : ''}`}
       role="dialog" aria-label={titulo} tabIndex={-1}
-      style={{ left: pos?.x ?? 0, top: pos?.y ?? 0, visibility: pos ? 'visible' : 'hidden', width: `min(${largura}px, calc(100vw / var(--escala-pagina, 1) - 16px))`, zIndex: 900 + camada }}
+      style={{ ['--ferr-max' as string]: `${Math.max(240, faixaLivre().baixo - (pos?.y ?? faixaLivre().cima))}px`, left: pos?.x ?? 0, top: pos?.y ?? 0, visibility: pos ? 'visible' : 'hidden', width: `min(${largura}px, calc(100vw / var(--escala-pagina, 1) - 16px))`, zIndex: 900 + camada }}
       onPointerDownCapture={() => abrirFerramenta(id)}
       onFocus={() => setFoco(true)} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setFoco(false) }}
       onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); fecharFerramenta(id) } }}>

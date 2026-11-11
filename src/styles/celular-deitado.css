@@ -66,6 +66,15 @@
     border-radius: 0; border-width: 0 0 0 1px; padding-right: var(--sar, 0px); padding-bottom: var(--sab, 0px); box-sizing: border-box;
   }
 
+  /* calculadora deitada: visor à esquerda e teclado à direita, teclas mais baixas — em pé ela tem
+     ~520 px de altura e deitado só aparecia a primeira fileira de teclas */
+  .ferr-flutuante.ferr-calculadora { width: min(600px, calc(100vw - 16px)) !important; }
+  .ferr-calculadora .calc { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); align-items: stretch; }
+  .ferr-calculadora .calc-visor { align-content: end; }
+  .ferr-calculadora .calc-teclas { gap: 6px; }
+  .ferr-calculadora .calc-tecla { height: 34px; border-radius: 12px; font-size: 18px; }
+  .ferr-calculadora .calc-tecla.calc-op { font-size: 20px; }
+
   /* o que flutua no rodapé (mini-cabine, pílula da live, convite do app) desce junto com a barra */
   body:has(.barra-inferior) .mcb:not(.solta) { bottom: calc(56px + var(--sab, 0px)); left: calc(12px + var(--sal, 0px)); }
   body:has(.barra-inferior) :is(.av-pilula, .app-convite) { bottom: calc(56px + var(--sab, 0px)); }

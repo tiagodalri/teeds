@@ -227,12 +227,17 @@
 
 /* os botões do topo: aceso quando a janela está aberta */
 .ferramenta-btn[aria-pressed='true'] { color: var(--gf-ouro, #B78D39); border-color: color-mix(in srgb, var(--gf-ouro, #B78D39) 60%, var(--border)); background: color-mix(in srgb, var(--gf-ouro, #B78D39) 12%, var(--surface)); }
-@media (max-width: 900px) { .ferramenta-btn { display: none !important; } }
+/* 11/11/2026 (Tiago: "no celular não aparecem as ferramentas"): os botões só saem do topo onde ele não tem
+   largura (celular em pé, até 599 px); deitado e no tablet eles ficam. Em pé, os dois estão no menu ☰
+   (Ferramentas) e no menu do avatar. */
+@media (max-width: 599px) { .ferramenta-btn { display: none !important; } }
 .menu-acao.so-celular { display: none; }
 @media (max-width: 900px) { .menu-acao.so-celular { display: flex; } }
 
+/* no celular a janela cabe entre o topo e a barra de baixo (--ferr-max, medido em Ferramentas.tsx) e rola por dentro */
+@media (max-width: 900px) { .ferr-flutuante { max-height: var(--ferr-max, calc(100dvh - 76px)); } }
 @media (max-width: 640px) {
-  .ferr-flutuante { border-radius: 20px; max-height: calc(100dvh - 76px); }
+  .ferr-flutuante { border-radius: 20px; }
   .calc-tecla { height: 52px; }
   .cnv-valor input, .cnv-resultado strong { font-size: 24px !important; }
 }

@@ -5,6 +5,7 @@ import { Brand } from './Brand'
 import { MARCA } from '../marca'
 import './workspace.css'
 import { RelogioTopo } from './RelogioTopo'
+import { abrirFerramenta, IconeCifrao, IconeCalculadora } from './ferramentas/Ferramentas'
 
 export type WorkspacePage = 'inicio' | 'operar' | 'multiplicadores' | 'robos' | 'assistente' | 'gestao' | 'insights' | 'monitoramento' | 'gerenciamento' | 'marketplace' | 'aulas' | 'aovivo' | 'noticias' | 'perfil' | 'ajuda' | 'laboratorio' | 'divulgacao' | 'relatorios'
 export const PAGE_NAMES: Record<WorkspacePage, string> = { inicio: 'Início', operar: 'Manual', multiplicadores: 'Multiplicadores', robos: 'Robôs', assistente: 'Assistente', gestao: 'Administração', insights: 'Insights', monitoramento: 'Monitoramento ao vivo', gerenciamento: 'Gerenciamento', marketplace: 'Marketplace', aulas: 'Aulas', aovivo: 'Ao vivo', noticias: 'Notícias', perfil: 'Meu perfil', ajuda: 'Ajuda', laboratorio: 'Laboratório de I.A.', divulgacao: 'Divulgação', relatorios: 'Relatórios', ...(MARCA.menu?.nomes ?? {}) }
@@ -46,6 +47,12 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mos
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[id]} /></svg>
     <span className="workspace-label">{PAGE_NAMES[id]}</span>{id === 'aovivo' && aoVivoAgora && <i className="workspace-aovivo" aria-label="Transmissão no ar agora" title="Transmissão no ar agora"><b className="workspace-label">ao vivo</b></i>}{id === 'assistente' && <small className="workspace-lock workspace-label" aria-label="Acesso restrito" title="Acesso restrito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></small>}
   </button>
+  /* conversor e calculadora (11/11/2026): no computador ficam no topo; no celular em pé o topo não tem
+     largura, então entram aqui, em Ferramentas (só aparecem no menu do celular: .so-celular) */
+  const ferramentas = MARCA.id === 'globalfly' && <>
+    <button className="workspace-link so-celular" onClick={() => { setOpen(false); abrirFerramenta('cambio') }}><span className="workspace-ferr-icone"><IconeCifrao /></span><span className="workspace-label">Conversor de moedas</span></button>
+    <button className="workspace-link so-celular" onClick={() => { setOpen(false); abrirFerramenta('calculadora') }}><span className="workspace-ferr-icone"><IconeCalculadora /></span><span className="workspace-label">Calculadora</span></button>
+  </>
   return <>
     <button className={`workspace-mobile-toggle ${aoVivoAgora && !open ? 'no-ar' : ''}`} aria-expanded={open} aria-controls="workspace-navigation" aria-label={open ? 'Fechar menu' : 'Abrir menu'} title={open ? 'Fechar menu' : 'Menu'} onClick={() => setOpen(!open)}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">{open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}</svg>
@@ -68,10 +75,10 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mos
             Explorar = Notícias, Marketplace, Ajuda e o Assistente por último (com o cadeado: pede o código).
             O admin (com o olhinho aberto) continua com a ordem de sempre. */}
         {MARCA.menu?.ordemDoCliente && !verAdmin ? <>
-          <p className="workspace-label">Ferramentas</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{item('aulas')}{item('gerenciamento')}{MARCA.relatorios && item('relatorios')}
+          <p className="workspace-label">Ferramentas</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{item('aulas')}{item('gerenciamento')}{MARCA.relatorios && item('relatorios')}{ferramentas}
           <p className="workspace-label">Explorar</p>{MARCA.noticias && item('noticias')}{item('marketplace')}{MARCA.suporte && item('ajuda')}{item('assistente')}
         </> : <>
-          <p className="workspace-label">Ferramentas</p>{MARCA.relatorios && item('relatorios')}{item('gerenciamento')}{mostrarAssistente && item('assistente')}
+          <p className="workspace-label">Ferramentas</p>{MARCA.relatorios && item('relatorios')}{item('gerenciamento')}{mostrarAssistente && item('assistente')}{ferramentas}
           <p className="workspace-label">Explorar</p>{MARCA.aoVivo && mostrarAoVivo && item('aovivo')}{MARCA.noticias && item('noticias')}{item('marketplace')}{item('aulas')}{MARCA.suporte && item('ajuda')}
         </>}
         {/* parceiros de divulgação (27/10/2026): só quem é parceiro, e o admin geral */}

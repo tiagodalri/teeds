@@ -280,3 +280,9 @@
   .workspace-app .topbar-right .avatar-botao { min-width: 44px; min-height: 44px; justify-content: center; padding-inline: 0; }
   .workspace-app .topbar-right .conta-chip { gap: 6px; }
 }
+
+/* conversor e calculadora no menu (11/11/2026): só no celular; no computador estão no topo */
+.workspace-link.so-celular { display: none; }
+@media (max-width: 900px) { .workspace-sidebar .workspace-link.so-celular { display: flex; } }
+.workspace-ferr-icone { display: grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; }
+.workspace-ferr-icone svg { width: 19px; height: 19px; }
