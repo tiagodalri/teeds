@@ -23,6 +23,8 @@ export interface PainelPeriodo {
   /** Cada hora (até 48 h) ou cada dia do período, 'aaaa-mm-ddThh:mm' em Brasília. */
   serie: Array<{ ini: string; markup: number; operacoes: number }>
   dinheiro: { depositos: number; saques: number; qtd_depositos: number; qtd_saques: number; depositantes: number; sacaram: number }
+  /** O relógio do banco na hora da leitura (o markup que entrar depois soma por cima, markupAoVivo). */
+  lido_em?: string
 }
 
 export async function lerPeriodo(sessao: SessaoTeeds, marca: string, parceiro: string, de: number, ate: number): Promise<PainelPeriodo> {

@@ -22,8 +22,9 @@ import { MARCA } from '../marca'
 import { nomeDoAtivo } from '../core/deriv/market'
 import { MARCAS } from '../marca/marcas'
 import { NomeDoRobo } from './NomeDoRobo'
-import { haQuantoTempo, useMarkupInterno, RELEITURA_MARKUP_MS } from '../core/teeds/markupInterno'
+import { haQuantoTempo, useMarkupInterno } from '../core/teeds/markupInterno'
 import { useParceiroEmFoco } from '../core/teeds/parceiroEmFoco'
+import { maisRecente, useMarkupDesde } from '../core/teeds/markupAoVivo'
 
 interface Props {
   session: AuthSession | null
@@ -266,6 +267,8 @@ export function ManagementPanel({
    */
   const [parceiroFoco] = useParceiroEmFoco()
   const interno = useMarkupInterno(sessaoTeeds, marcaAdmin(), intervalo.de, intervalo.ate, parceiroFoco)
+  // o markup a cada operação (11/11/2026): se o período chega até hoje, o que entrou depois da leitura soma por cima a cada 2 s
+  const novo = useMarkupDesde(sessaoTeeds, marcaAdmin(), parceiroFoco, intervalo.ate === hojeLocal ? interno.dados?.lidoNoBanco : null)
   const [agoraMs, setAgoraMs] = useState(Date.now())
   useEffect(() => { const t = window.setInterval(() => setAgoraMs(Date.now()), 5000); return () => window.clearInterval(t) }, [])
   const hojeIso = diasDoPeriodo(1)[0]
@@ -336,7 +339,7 @@ export function ManagementPanel({
   }, [sim, hoje, hojeIso, noPeriodo, dias])
   // sem sessao Teeds nao ha banco: cai no numero desta conta, se ela for real
   const topo = interno.dados
-    ? { comissao: interno.dados.markup, operacoes: interno.dados.operacoes, pronto: true }
+    ? { comissao: interno.dados.markup + novo.markup, operacoes: interno.dados.operacoes + novo.operacoes, pronto: true }
     : sessaoTeeds
       ? { comissao: 0, operacoes: 0, pronto: false }
     : isDemo
@@ -522,7 +525,7 @@ export function ManagementPanel({
           <span className="kpi-nota">
             3% do pagamento · só contas reais · {topo.operacoes.toLocaleString('pt-BR')} operações · {dataCurta(intervalo.de)} a {dataCurta(intervalo.ate)} (horário de Brasília)
             {interno.dados
-              ? ` · I.A. e manual, sem a equipe · última operação ${interno.dados.ultimaEm ? haQuantoTempo(Date.parse(interno.dados.ultimaEm), agoraMs) : '—'} · relê a cada ${RELEITURA_MARKUP_MS / 1000} s`
+              ? ` · I.A. e manual, sem a equipe · última operação ${(() => { const u = maisRecente(interno.dados.ultimaEm, novo.ultimaEm); return u ? haQuantoTempo(Date.parse(u), agoraMs) : '—' })()} · sobe a cada operação`
               : interno.erro ? ` · ${interno.erro}`
               : isDemo
                 ? ' · você está na demo, que não gera comissão'

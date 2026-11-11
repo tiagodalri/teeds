@@ -97,6 +97,19 @@ function exemploDoDetalhe(corpo: string, cenario: string) {
   }
 }
 
+/* &aovivo: uma operação em conta real a cada 1,5 s (US$ 0,04 de markup), para ver o markup subir a cada
+   operação (markupAoVivo): as leituras grandes trazem lido_em e o que entrou até ali; teeds_markup_desde
+   devolve o que entrou depois. */
+const INICIO_DO_LAB = Date.now()
+const OPS_ATE = (ms: number) => Math.max(0, Math.floor((ms - INICIO_DO_LAB) / 1500))
+const MARKUP_POR_OP = 0.04
+function comAoVivo<T extends { markup: any; lido_em?: string }>(d: T, campos: string[]): T {
+  const agora = Date.now(), extra = OPS_ATE(agora) * MARKUP_POR_OP
+  const markup = { ...d.markup }
+  for (const c of campos) markup[c] = Number(markup[c] ?? 0) + extra
+  return { ...d, markup, lido_em: new Date(agora).toISOString() }
+}
+
 export default function LabVisaoGeral() {
   const busca = new URLSearchParams(location.search)
   const cenario = busca.get('cenario') ?? ''
@@ -104,7 +117,13 @@ export default function LabVisaoGeral() {
   const f = window.fetch
   window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => {
     const url = String(u)
-    if (url.includes('teeds_painel_visao_geral')) return new Response(JSON.stringify(exemplo(cenario)), { status: 200 })
+    const aoVivo = busca.has('aovivo')
+    if (url.includes('teeds_painel_visao_geral')) return new Response(JSON.stringify(aoVivo ? comAoVivo(exemplo(cenario) as any, ['hoje', 'd7', 'd30', 'mes']) : exemplo(cenario)), { status: 200 })
+    if (url.includes('teeds_markup_desde')) {
+      const desde = Date.parse(JSON.parse(String(i?.body ?? '{}')).p_desde ?? '') || Date.now()
+      const ops = aoVivo ? OPS_ATE(Date.now()) - OPS_ATE(desde) : 0
+      return new Response(JSON.stringify({ markup: ops * MARKUP_POR_OP, operacoes: ops, ia_markup: ops * MARKUP_POR_OP, manual_markup: 0, ia_operacoes: ops, manual_operacoes: 0, ultima_em: ops ? new Date().toISOString() : null }), { status: 200 })
+    }
     if (url.includes('teeds_metas_painel')) return new Response(JSON.stringify({ parceiro: '', metas: metasDoLab }), { status: 200 })
     if (url.includes('teeds_salvar_meta_painel')) {
       const c = JSON.parse(String(i?.body ?? '{}')) as { p_horizonte: 'dia' | 'semana' | 'mes'; p_deposito: number | null; p_markup: number | null }
@@ -112,7 +131,7 @@ export default function LabVisaoGeral() {
       else metasDoLab[c.p_horizonte] = { deposito: c.p_deposito, markup: c.p_markup }
       return new Response(JSON.stringify({ parceiro: '', metas: metasDoLab }), { status: 200 })
     }
-    if (url.includes('teeds_painel_periodo')) return new Response(JSON.stringify(exemploDoPeriodo(String(i?.body ?? ''), cenario)), { status: 200 })
+    if (url.includes('teeds_painel_periodo')) return new Response(JSON.stringify(aoVivo ? comAoVivo(exemploDoPeriodo(String(i?.body ?? ''), cenario) as any, ['total', 'ia']) : exemploDoPeriodo(String(i?.body ?? ''), cenario)), { status: 200 })
     if (url.includes('teeds_markup_mapa_detalhe')) return new Response(JSON.stringify(exemploDoDetalhe(String(i?.body ?? ''), cenario)), { status: 200 })
     if (url.includes('teeds_markup_mapa')) return new Response(JSON.stringify(exemploDoMapa(cenario)), { status: 200 })
     return f(u, i)

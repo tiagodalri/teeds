@@ -20,6 +20,7 @@ import { SUPABASE } from '../../core/teeds/config'
 import { dinheiro } from '../../core/dinheiro'
 import { MARCA } from '../../marca'
 import { haQuantoTempo } from '../../core/teeds/markupInterno'
+import { maisRecente, useMarkupDesde, type MarkupNovo } from '../../core/teeds/markupAoVivo'
 import { PERIODO_AGORA, SeletorDePeriodo, janelaDoPeriodo, ddmm, lerPeriodo, type PeriodoDaVisao, type PainelPeriodo } from './PeriodoDaVisaoGeral'
 import { MapaDoMarkup } from './MapaDoMarkup'
 import { MetasDaVisaoGeral } from './MetasDaVisaoGeral'
@@ -34,6 +35,8 @@ interface Painel {
   funil: { cadastrados: number; ativos: number; conectaram: number; conta_real: number; com_saldo: number; operaram_real: number; ativos_24h: number }
   dinheiro: { depositos_7d: number; saques_7d: number; depositos_30d: number; saques_30d: number; depositantes_30d: number }
   alertas: { expirados: number; vencem_7d: number }
+  /** O relógio do banco na hora da leitura: o markup que entrar depois soma por cima (markupAoVivo). */
+  lido_em?: string
 }
 
 export async function lerPainel(sessao: SessaoTeeds, marca: string, parceiro: string): Promise<Painel> {
@@ -89,6 +92,33 @@ function haQuanto(ms: number, agora: number) {
   return s < 10 ? 'agora' : s < 60 ? `há ${s} s` : `há ${Math.round(s / 60)} min`
 }
 
+/** O painel de agora com o markup que entrou depois da leitura (hoje, 7 e 30 dias, mês, a barra de hoje e as operações de hoje). */
+function somarAoPainel(p: Painel, n: MarkupNovo): Painel {
+  if (!n.operacoes) return p
+  const serie = p.markup.serie.map((d, i, l) => (i === l.length - 1 ? { ...d, markup: Number(d.markup) + n.markup, operacoes: Number(d.operacoes) + n.operacoes } : d))
+  return {
+    ...p,
+    markup: {
+      ...p.markup, serie,
+      hoje: Number(p.markup.hoje) + n.markup, d7: Number(p.markup.d7) + n.markup,
+      d30: Number(p.markup.d30) + n.markup, mes: Number(p.markup.mes) + n.markup,
+      ultima_em: maisRecente(p.markup.ultima_em, n.ultimaEm),
+    },
+    hoje: { ...p.hoje, operacoes: Number(p.hoje.operacoes) + n.operacoes },
+  }
+}
+
+/** O período que chega até agora com o markup que entrou depois da leitura (total, I.A., manual, operações e a última barra). */
+function somarAoPeriodo(d: PainelPeriodo, n: MarkupNovo | null): PainelPeriodo {
+  if (!n || !n.operacoes) return d
+  const serie = d.serie.map((b, i, l) => (i === l.length - 1 ? { ...b, markup: Number(b.markup) + n.markup, operacoes: Number(b.operacoes) + n.operacoes } : b))
+  return {
+    ...d, serie,
+    markup: { ...d.markup, total: Number(d.markup.total) + n.markup, ia: Number(d.markup.ia) + n.iaMarkup, manual: Number(d.markup.manual) + n.manualMarkup, ultima_em: maisRecente(d.markup.ultima_em, n.ultimaEm) },
+    operacoes: { ...d.operacoes, total: Number(d.operacoes.total) + n.operacoes, ia: Number(d.operacoes.ia) + n.iaOperacoes, manual: Number(d.operacoes.manual) + n.manualOperacoes },
+  }
+}
+
 export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial = PERIODO_AGORA }: {
   sessao: SessaoTeeds
   marca: string
@@ -98,7 +128,7 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
   /** Só o laboratório usa: abrir já num período. */
   periodoInicial?: PeriodoDaVisao
 }) {
-  const [p, setP] = useState<Painel | null>(null)
+  const [pBase, setP] = useState<Painel | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [lidoEm, setLidoEm] = useState(0)
   const [agora, setAgora] = useState(Date.now())
@@ -148,6 +178,11 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
   }, [chavePeriodo])
   const janela = useMemo(() => janelaDoPeriodo(periodo, agora), [periodo, agora])
 
+  /* O markup a cada operação (11/11/2026): a cada 2 s, o que entrou depois da última leitura grande soma por cima. */
+  const novoAgora = useMarkupDesde(sessao, marca, parceiro, pBase?.lido_em)
+  const p = useMemo(() => (pBase ? somarAoPainel(pBase, novoAgora) : null), [pBase, novoAgora])
+  const novoPeriodo = useMarkupDesde(sessao, marca, parceiro, janela?.aoVivo && pp?.chave === chavePeriodo ? pp.dados.lido_em : null)
+
   const ritmo = useMemo(() => {
     if (!p) return null
     const hoje = new Date(), dia = hoje.getDate(), dias = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate()
@@ -173,7 +208,7 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
   }
 
   const a = p.agora
-  const dp = janela && pp ? pp.dados : null
+  const dp = janela && pp ? somarAoPeriodo(pp.dados, janela.aoVivo ? novoPeriodo : null) : null
   const lendo = janela != null && pp?.chave !== chavePeriodo
   const nomeIA = MARCA.vocabularioIA ? 'I.A.' : 'Robôs'
   const serieP = dp?.serie ?? []

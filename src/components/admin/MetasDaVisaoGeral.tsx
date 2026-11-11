@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { SUPABASE } from '../../core/teeds/config'
 import { dinheiro } from '../../core/dinheiro'
+import { useMarkupDesde } from '../../core/teeds/markupAoVivo'
 import { diaDeBrasilia, instanteEmBrasilia, somarDias, ddmm, lerPeriodo, type AtalhoDoPeriodo, type PainelPeriodo } from './PeriodoDaVisaoGeral'
 import './metas-visao-geral.css'
 
@@ -215,11 +216,13 @@ export function MetasDaVisaoGeral({ sessao, marca, parceiro, nomeDoEscopo, atalh
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chave])
 
+  // o markup a cada operação (11/11/2026): o que entrou depois da última leitura soma por cima, a cada 2 s
+  const novo = useMarkupDesde(sessao, marca, parceiro, feito?.chave === chave ? feito.dados.lido_em : null)
   const j = janelaDaMeta(horizonte, agora)
   const frac = Math.min(1, Math.max(0, (agora - j.de) / (j.fim - j.de)))
   const meta = metas?.[horizonte]
   const d = feito?.chave === chave ? feito.dados : null
-  const dep = Number(d?.dinheiro.depositos ?? 0), mk = Number(d?.markup.total ?? 0)
+  const dep = Number(d?.dinheiro.depositos ?? 0), mk = Number(d?.markup.total ?? 0) + (d ? novo.markup : 0)
 
   const abrir = () => { setCampos({ deposito: paraCampo(meta?.deposito), markup: paraCampo(meta?.markup) }); setEditando(true) }
   const salvar = async () => {

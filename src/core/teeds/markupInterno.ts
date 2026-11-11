@@ -25,6 +25,8 @@ export interface MarkupInterno {
   ultimaEm: string | null
   porDia: Array<{ dia: string; markup: number; operacoes: number }>
   lidoEm: number
+  /** O relógio do banco na hora da leitura: o markup que entrar depois soma por cima (markupAoVivo). */
+  lidoNoBanco: string | null
 }
 
 /** Intervalo da releitura com a tela à vista. */
@@ -49,6 +51,7 @@ export async function lerMarkupInterno(
     ultimaEm: d.ultima_em ?? null,
     porDia: (d.por_dia ?? []).map((x: any) => ({ dia: String(x.dia), markup: n(x.markup), operacoes: n(x.operacoes) })),
     lidoEm: Date.now(),
+    lidoNoBanco: d.lido_em ?? null,
   }
 }
 
