@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#051528" />
+  <meta name="robots" content="noindex" />
+  <title>GlobalFly Trade · Inscrição confirmada</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/pwa-globalfly/favicon-32.png" />
+  <link rel="apple-touch-icon" href="/pwa-globalfly/icon-180.png" />
+  <!-- 02/11/2026: "Baixar o app" daqui. O manifesto do parceiro (o app instalado abre com o /n ou o /v);
+       aberto pelo ícone, esta página leva direto para a plataforma -->
+  <script>
+    (function () {
+      var p = (location.pathname.split('/')[1] || '').toLowerCase(), parceiro = ['n', 'v', 'd'].indexOf(p) >= 0 ? p : ''
+      if (matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) { location.replace(parceiro ? '/' + parceiro + '/inicio' : '/'); return }
+      var l = document.createElement('link'); l.rel = 'manifest'; l.href = '/manifest' + (parceiro ? '-' + parceiro : '') + '.webmanifest'
+      document.head.appendChild(l)
+    })()
+  </script>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="GlobalFly" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../estilo.css" />
+</head>
+<body>
+  <div class="pagina">
+    <header class="topo">
+      <img src="/globalfly-assinatura.png" alt="GlobalFly Trade" width="900" height="283" />
+    </header>
+
+    <main class="centro">
+      <section class="cartao obrigado">
+        <div class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+        <h1 data-titulo>Sua inscrição na live está confirmada!</h1>
+        <!-- 02/11/2026: o mesmo indicador de etapas do questionário -->
+        <ol class="quiz-etapas obrigado-etapas" aria-label="Sua inscrição">
+          <li class="feito"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i><span>Cadastro</span></li>
+          <li class="feito" data-etapa-questionario><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i><span>Uma pergunta</span></li>
+          <li class="agora" aria-current="step"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></i><span>Live de 09/11</span></li>
+        </ol>
+        <!-- 30/10/2026: a conta nasce no cadastro e a live libera o acesso. Daqui a pessoa sai com três
+             coisas feitas, cada uma é um caminho para a gente chamá-la no dia 09/11 (Naor: "vamos ficar o dia
+             inteiro mandando notificação"). -->
+        <p class="chamada">Sua vaga na live de <b>segunda, 09/11, às 20h</b> está garantida e a sua conta já foi criada. Assista do início ao fim: é a live que libera o seu acesso, de&nbsp;graça.</p>
+        <p class="ultimo">Para não perder a live</p>
+        <ol class="o-passos">
+          <li>
+            <span class="o-n">1</span>
+            <div><strong>Entre na comunidade do&nbsp;WhatsApp</strong><span>Os avisos do lançamento chegam por&nbsp;lá.</span></div>
+            <a class="botao o-botao" id="comunidade" href="https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq" target="_blank" rel="noopener">Entrar na comunidade</a>
+          </li>
+          <li>
+            <span class="o-n">2</span>
+            <div><strong>Salve na sua agenda</strong><span>Segunda, 09/11, às 20h (Brasília).</span></div>
+            <!-- 02/11/2026 (Tiago): um botão só; o aparelho decide (Apple: arquivo da agenda; o resto: Google Agenda) -->
+            <a class="botao o-botao o-claro" id="agenda" href="https://calendar.google.com/calendar/render?action=TEMPLATE&amp;text=Live%20de%20lan%C3%A7amento%20da%20GlobalFly%20Trade&amp;dates=20261109T230000Z/20261110T010000Z&amp;details=Entre%20na%20live%20por%20este%20link%3A%20https%3A%2F%2Fglobalflytrade.com%2Flive%2F" target="_blank" rel="noopener">Adicionar ao calendário</a>
+          </li>
+          <li id="passo-app">
+            <span class="o-n" data-app-n>3</span>
+            <div><strong data-app-titulo>Baixe o app</strong><span data-app-texto>A GlobalFly fica na tela do seu celular, a um toque, como um aplicativo.</span>
+              <ol class="o-ios" data-app-passos hidden></ol>
+            </div>
+            <button class="botao o-botao" type="button" id="app">Baixar o app</button>
+          </li>
+          <li id="passo-avisos">
+            <span class="o-n" data-avisos-n>4</span>
+            <div><strong data-avisos-titulo>Ative as notificações</strong><span data-avisos-texto>A gente te chama no dia 09/11, antes de a live começar, mesmo com o celular bloqueado.</span>
+            </div>
+            <button class="botao o-botao" type="button" id="avisos">Ativar notificações</button>
+          </li>
+          <li>
+            <span class="o-n">5</span>
+            <div><strong>Entre na GlobalFly</strong><span data-acesso-curto>Use o e-mail do cadastro e a senha que você criou. Você já vê a plataforma, trancada até a&nbsp;live.</span></div>
+            <a class="botao o-botao o-claro" id="plataforma" href="/">Entrar na GlobalFly</a>
+          </li>
+        </ol>
+        <div class="acesso">
+          <strong>Seu acesso</strong>
+          <!-- O texto segue o que o servidor fez com a conta (28/10/2026): criada com a senha da pessoa,
+               já existente, ou (fallback e cadastros antigos) com a senha provisória por e-mail. -->
+          <div data-acesso="criada" hidden>
+            <p>Sua conta está criada. Entre com o <b>e-mail do cadastro</b> e a <b>senha que você acabou de criar</b>.</p>
+            <p>Até a live, a plataforma fica <b>trancada, com a contagem regressiva</b>: você entra, conhece tudo e prepara o celular. A live passa lá dentro e libera o acesso. Esqueceu a senha? Toque em <b>“Esqueci a senha”</b> na tela de&nbsp;entrada.</p>
+          </div>
+          <div data-acesso="existente" hidden>
+            <p>Você já tinha conta com este e-mail, e ela continua valendo. Entre com a <b>sua senha atual</b>.</p>
+            <p>Não lembra? Toque em <b>“Esqueci a senha”</b> na tela de entrada e crie uma nova.</p>
+          </div>
+          <div data-acesso="provisoria" hidden>
+            <p>Enviamos a <b>senha de entrada</b> para o seu e-mail (assunto: <b>“Inscrição confirmada · live de 09/11, às 20h”</b>). Não encontrou? Confira o <b>Spam</b> ou o <b>Lixo eletrônico</b>.</p>
+            <p>Entre com o e-mail do cadastro e essa senha. No primeiro acesso, você escolhe a&nbsp;sua.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="rodape">
+      <span>© 2026 GlobalFly Trade</span>
+      <span>Operar envolve risco de perda. Resultados passados não garantem resultados futuros.</span>
+    </footer>
+  </div>
+
+  <script src="../captura.js"></script>
+  <script>
+    (function () {
+      var dados = GF.ler()
+      // textContent: o nome nunca entra como HTML
+      if (dados.nome) document.querySelector('[data-titulo]').textContent = dados.nome + ', sua inscrição na live está confirmada!'
+      document.getElementById('comunidade').href = GF.COMUNIDADE
+      // a tela de ENTRAR guardando o parceiro (/n/inicio); o /n/ sozinho abriria o formulário de cadastro
+      document.getElementById('plataforma').href = GF.parceiro() ? '/' + GF.parceiro() + '/inicio' : '/'
+      // quem se cadastrou pelo app não passou pelo questionário: a etapa não aparece como feita
+      if (!dados.respondeu) document.querySelector('[data-etapa-questionario]').remove()
+
+      // Calendário (02/11/2026): iPhone, iPad e Safari do Mac abrem o arquivo da agenda (a Apple pergunta onde salvar);
+      // os outros, o Google Agenda já preenchido
+      var ua = navigator.userAgent
+      var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      var safariMac = /Macintosh/.test(ua) && /Safari\//.test(ua) && !/Chrome|Chromium|CriOS|Edg|Firefox|FxiOS|OPR/.test(ua)
+      var agenda = document.getElementById('agenda')
+      if (ios || safariMac) { agenda.href = '../live-globalfly.ics'; agenda.removeAttribute('target') }
+
+      // Baixar o app (02/11/2026, Tiago: "um botão pra pessoa já baixar o app"). Cada aparelho do seu jeito:
+      // Chrome/Android instala num toque; iPhone pelo Compartilhar do Safari; dentro do Instagram ou do
+      // Facebook (de onde vem o anúncio) não se instala nada: primeiro abre no navegador.
+      var passoAvisosFora = false
+      var parceiroApp = GF.parceiro(), naPlataforma = parceiroApp ? '/' + parceiroApp + '/inicio' : '/'
+      var embutido = /FBAN|FBAV|Instagram|Line\/|TikTok|Twitter|LinkedInApp|WhatsApp/i.test(ua)
+      var android = /Android/i.test(ua)
+      var botaoApp = document.getElementById('app'), passoApp = document.getElementById('passo-app')
+      var textoApp = document.querySelector('[data-app-texto]'), listaApp = document.querySelector('[data-app-passos]')
+      var pedidoApp = null
+      function passos(itens) { listaApp.innerHTML = itens.map(function (t) { return '<li>' + t + '</li>' }).join(''); listaApp.hidden = false; botaoApp.hidden = true }
+      if ('serviceWorker' in navigator && !embutido) navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {})
+      window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); pedidoApp = e })
+      window.addEventListener('appinstalled', function () { appInstalado() })
+      function appInstalado() {
+        passoApp.classList.add('feito'); botaoApp.hidden = true; listaApp.hidden = true
+        document.querySelector('[data-app-n]').textContent = '✓'
+        document.querySelector('[data-app-titulo]').textContent = 'App instalado'
+        textoApp.textContent = 'A GlobalFly já está na tela do seu celular. Abra pelo ícone.'
+      }
+      if (embutido && android) {
+        textoApp.textContent = 'Daqui de dentro do aplicativo não dá para instalar. Abra no Chrome e baixe por lá.'
+        botaoApp.outerHTML = '<a class="botao o-botao" id="app" href="intent://' + location.host + naPlataforma + '#Intent;scheme=https;package=com.android.chrome;end">Abrir no Chrome</a>'
+      } else if (embutido) {
+        textoApp.textContent = 'Daqui de dentro do aplicativo não dá para instalar. São três toques:'
+        passos(['Toque em <b>···</b> no canto da tela e em <b>Abrir no navegador</b>.', 'Lá, toque em <b>Entrar na GlobalFly</b> e entre na sua conta.', 'Toque em <b>Compartilhar</b> e em <b>Adicionar à Tela de Início</b>.'])
+      } else if (ios) {
+        // no iPhone, o app e as notificações vêm juntos: o passo das notificações sai e entra aqui
+        document.querySelector('[data-app-titulo]').textContent = 'Baixe o app e ative as notificações'
+        textoApp.textContent = 'No iPhone, o app fica na tela de início e é por ele que chegam as notificações. São três toques:'
+        botaoApp.textContent = 'Como baixar no iPhone'
+        botaoApp.addEventListener('click', function () {
+          passos(['Toque em <b>Compartilhar</b> na barra do&nbsp;Safari.', 'Toque em <b>Adicionar à Tela de Início</b> e depois em <b>Adicionar</b>.', 'Abra a GlobalFly pelo ícone, entre na sua conta e toque em <b>Ativar avisos</b>.'])
+        })
+        passoAvisosFora = true
+      } else {
+        botaoApp.addEventListener('click', function () {
+          if (pedidoApp) {
+            pedidoApp.prompt()
+            pedidoApp.userChoice.then(function (r) { if (r.outcome === 'accepted') { appInstalado(); GF.pixel('BaixouApp') } })
+            pedidoApp = null
+            return
+          }
+          // o Chrome ainda não ofereceu a instalação (ou é outro navegador): pelo menu
+          textoApp.textContent = android ? 'Pelo menu do navegador:' : 'Pela barra de endereço do navegador:'
+          passos(android
+            ? ['Toque em <b>⋮</b> no canto de cima.', 'Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.']
+            : ['Clique no ícone de <b>instalar</b> no fim da barra de endereço.', 'Confirme em <b>Instalar</b>.'])
+        })
+      }
+
+      // Notificações (02/11/2026, Tiago: "Ative as notificações... já pro cadastro dessa pessoa"):
+      // o aparelho fica guardado pelo e-mail do cadastro e recebe os avisos do dia da live
+      var botaoAvisos = document.getElementById('avisos'), passoAvisos = document.getElementById('passo-avisos')
+      var textoAvisos = document.querySelector('[data-avisos-texto]'), tituloAvisos = document.querySelector('[data-avisos-titulo]')
+      var instalado = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+      var suporte = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
+      function avisosLigados() {
+        passoAvisos.classList.add('feito'); botaoAvisos.hidden = true
+        document.querySelector('[data-avisos-n]').textContent = '✓'
+        tituloAvisos.textContent = 'Notificações ativadas'
+        textoAvisos.textContent = 'Pronto: a gente te chama neste aparelho no dia 09/11, antes de a live começar.'
+      }
+      if (passoAvisosFora || embutido) {
+        // iPhone: as notificações vêm com o app (passo de cima). Instagram/Facebook: só no navegador.
+        passoAvisos.hidden = true
+      } else if (!suporte) {
+        textoAvisos.textContent = 'Este navegador não recebe notificações. Abra a GlobalFly pelo celular e ative lá dentro.'
+        botaoAvisos.hidden = true
+      } else if (Notification.permission === 'denied') {
+        textoAvisos.textContent = 'As notificações estão bloqueadas neste navegador. Libere nos ajustes do site e toque de novo.'
+      }
+      if (suporte && !passoAvisos.hidden) {
+        botaoAvisos.addEventListener('click', function () {
+          if (botaoAvisos.disabled) return
+          botaoAvisos.disabled = true; botaoAvisos.textContent = 'Ativando…'
+          // o pedido de permissão nasce do toque, sem espera antes (o iPhone exige)
+          Notification.requestPermission().then(function (permissao) {
+            if (permissao !== 'granted') throw new Error('negada')
+            return Promise.all([
+              navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(function () { return navigator.serviceWorker.ready }),
+              fetch(GF.SUPABASE + '/functions/v1/notificacoes', { method: 'POST', headers: { 'content-type': 'application/json', apikey: GF.CHAVE }, body: JSON.stringify({ acao: 'chave', marca: 'globalfly' }) }).then(function (r) { return r.json() }),
+            ])
+          }).then(function (r) {
+            var reg = r[0], b64 = r[1].chave.replace(/-/g, '+').replace(/_/g, '/')
+            var chave = Uint8Array.from(atob(b64 + '='.repeat((4 - b64.length % 4) % 4)), function (c) { return c.charCodeAt(0) })
+            return reg.pushManager.getSubscription().then(function (s) { return s || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chave }) })
+              .then(function (sub) {
+                var j = sub.toJSON()
+                return fetch(GF.SUPABASE + '/rest/v1/rpc/gf_avisos_da_live', {
+                  method: 'POST', headers: { 'content-type': 'application/json', apikey: GF.CHAVE, authorization: 'Bearer ' + GF.CHAVE },
+                  body: JSON.stringify({ p_email: dados.email, p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_parceiro: GF.parceiro() }),
+                }).then(function (x) { return x.json() }).then(function (ok) {
+                  if (ok !== true) throw new Error('nao gravou')
+                  reg.showNotification('🔔 Notificações ativadas', { body: 'A gente te chama no dia 09/11, antes de a live começar.', icon: '/pwa-globalfly/icon-192.png', badge: '/pwa-globalfly/badge-96.png', tag: 'live-confirmacao' })
+                  avisosLigados()
+                  GF.pixel('AtivouNotificacoes')
+                })
+              })
+          }).catch(function (e) {
+            botaoAvisos.disabled = false; botaoAvisos.textContent = 'Tentar de novo'
+            textoAvisos.textContent = String(e && e.message) === 'negada'
+              ? 'O aparelho não deixou ativar. Toque de novo e escolha “Permitir”.'
+              : 'Não deu para ativar agora. Toque de novo em instantes.'
+          })
+        })
+      }
+      var conta = dados.conta === 'criada' || dados.conta === 'existente' ? dados.conta : 'provisoria'
+      document.querySelector('[data-acesso="' + conta + '"]').hidden = false
+      if (conta !== 'criada') document.querySelector('[data-acesso-curto]').textContent = 'Os dados de entrada estão logo abaixo.'
+      // os números seguem só os passos que aparecem neste aparelho
+      var n = 0
+      Array.prototype.forEach.call(document.querySelectorAll('.o-passos > li'), function (li) {
+        if (li.hidden) return
+        n++
+        var bola = li.querySelector('.o-n'); if (bola && bola.textContent !== '✓') bola.textContent = n
+      })
+      GF.pixel('CompleteRegistration')
+      if (dados.respondeu) GF.pixel('RespondeuQuestionario')
+      // cada passo do obrigado também conta no pixel (02/11/2026)
+      document.getElementById('comunidade').addEventListener('click', function () { GF.pixel('Contact', { content_name: 'comunidade-whatsapp' }) })
+      document.getElementById('agenda').addEventListener('click', function () { GF.pixel('Schedule', { content_name: 'live-09-11' }) })
+      document.getElementById('plataforma').addEventListener('click', function () { GF.pixel('EntrouNaPlataforma') })
+    })()
+  </script>
+</body>
+</html>

@@ -34,6 +34,7 @@ import '../../casca/globalfly/styles/cadastro-como-funciona.css'
 import '../../casca/globalfly/styles/cadastro-iphone.css'
 import { ComoFunciona, MiniCartao, SimuladorDoLucro, useRevelar } from './SecoesDoCadastro'
 import { eventoDoPixel } from '../../core/teeds/pixelDoParceiro'
+import { acompanharCadastro, rastroDoCadastro } from '../../core/teeds/rastroDoCadastro'
 
 interface Props {
   ocupado: boolean
@@ -203,6 +204,20 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
 
   // ---------- pixel do parceiro (/v e /n): cada passo da página vai para a Meta
   useEffect(() => { eventoDoPixel('ViewContent', { content_name: 'cadastro-planos' }, true) }, [])
+  // a jornada na central de rastreio (os mesmos passos da landing antiga do /cadastro)
+  useEffect(() => (raiz.current ? acompanharCadastro(raiz.current) : undefined), []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (etapa !== 'dados') return
+    rastroDoCadastro('formulario', { plano: sel }, undefined, '/dados')
+    eventoDoPixel('ViewContent', { content_name: 'cadastro-formulario', plano: sel }, true)
+  }, [etapa]) // eslint-disable-line react-hooks/exhaustive-deps
+  const comecou = useRef(false)
+  const aoComecar = () => {
+    if (comecou.current) return
+    comecou.current = true
+    rastroDoCadastro('comecou', { plano: sel }, undefined, '/dados')
+    eventoDoPixel('ComecouCadastro', { plano: sel }, true)
+  }
 
   // ---------- rolagem: topo com vidro, véu sobre o céu e barra fixa
   const raiz = useRef<HTMLDivElement>(null)
@@ -234,8 +249,8 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
     return () => removeEventListener('popstate', aoVoltar)
   }, [])
   function irParaDados(id: IdDoPlano) {
-    eventoDoPixel('ViewContent', { content_name: 'cadastro-formulario', plano: id }, true)
-    eventoDoPixel('ComecouCadastro', { plano: id }, true)
+    eventoDoPixel('ClicouCadastrar', { plano: id }, true)
+    rastroDoCadastro('clicou', { plano: id })
     setSel(id); setEtapa('dados'); limparErro()
     try { history.pushState({ ...(history.state ?? {}), cplDados: true }, '') } catch { /* sem histórico: segue */ }
     scrollTo({ top: 0, behavior: 'auto' })
@@ -308,6 +323,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
     e.preventDefault()
     if (ocupado) return
     if (!valido) {
+      rastroDoCadastro('erro-campos', { campos: CAMPOS.filter((c) => problemas[c] || !({ nome, email, telefone, senha, repetir } as Record<string, string>)[c]).join(',') }, undefined, '/dados')
       setTentou(true)
       setTocado(Object.fromEntries(CAMPOS.map((c) => [c, true])))
       const primeiro = CAMPOS.find((c) => {
@@ -320,8 +336,10 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
       document.getElementById(`cpl-${primeiro}`)?.focus()
       return
     }
+    rastroDoCadastro('enviou', { plano: plano.id }, undefined, '/dados')
     const r = await onCadastrar({ nome, email, telefone, consentiu: false, ...(SENHA_NO_CADASTRO ? { senha } : {}) })
-    if (!r.ok) return
+    if (!r.ok) { rastroDoCadastro('erro-cadastro', { plano: plano.id }, undefined, '/dados'); return }
+    rastroDoCadastro('cadastro', { conta: r.conta ?? 'provisoria', plano: plano.id }, email.trim().toLowerCase(), '/dados')
     setSenha(''); setRepetir(''); setGiro((g) => g + 1)
     // o obrigado da GlobalFly diz como entrar conforme o que o servidor fez com a conta
     try {
@@ -332,6 +350,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
     // Black e Prestige: direto para o pagamento, com os dados já preenchidos (o e-mail liga a compra à conta)
     const checkout = plano.preco > 0 ? checkoutDoPlano(plano) : null
     if (checkout) {
+      rastroDoCadastro('checkout', { plano: plano.id }, undefined, '/dados')
       eventoDoPixel('InitiateCheckout', { value: plano.preco, currency: 'BRL', content_name: `gf-${plano.id}`, content_ids: [`gf-${plano.id}`], num_items: 1 }, true)
       const destino = comComprador(checkout, { email: email.trim().toLowerCase(), nome: nome.trim(), telefone })
       // um instante para o pixel enviar antes de trocar de página
@@ -557,7 +576,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
               <button type="button" className="cpl-voltar" onClick={voltarAosPlanos}>← Ver todos os planos</button>
             </div>
 
-            <form className="cpl-form" onSubmit={enviar} noValidate aria-busy={ocupado}>
+            <form className="cpl-form" onSubmit={enviar} onFocus={aoComecar} noValidate aria-busy={ocupado}>
               <h1>Garanta o seu cartão de membro</h1>
               <p className="cpl-lead">Depois é só entrar com o e-mail e a senha que você criar aqui.</p>
               {campo('nome', 'Nome completo', nome, setNome, 'user', { auto: 'name', dica: 'Como está no documento' })}

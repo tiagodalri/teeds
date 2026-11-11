@@ -34,47 +34,40 @@
     <main class="centro">
       <section class="cartao obrigado">
         <div class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
-        <h1 data-titulo>Sua inscrição na live está confirmada!</h1>
+        <h1 data-titulo>Sua conta está criada!</h1>
         <!-- 02/11/2026: o mesmo indicador de etapas do questionário -->
-        <ol class="quiz-etapas obrigado-etapas" aria-label="Sua inscrição">
+        <ol class="quiz-etapas obrigado-etapas" aria-label="Seu cadastro">
           <li class="feito"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i><span>Cadastro</span></li>
           <li class="feito" data-etapa-questionario><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i><span>Uma pergunta</span></li>
-          <li class="agora" aria-current="step"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></i><span>Live de 09/11</span></li>
+          <li class="agora" aria-current="step"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></i><span>Primeiro acesso</span></li>
         </ol>
-        <!-- 30/10/2026: a conta nasce no cadastro e a live libera o acesso. Daqui a pessoa sai com três
-             coisas feitas, cada uma é um caminho para a gente chamá-la no dia 09/11 (Naor: "vamos ficar o dia
-             inteiro mandando notificação"). -->
-        <p class="chamada">Sua vaga na live de <b>segunda, 09/11, às 20h</b> está garantida e a sua conta já foi criada. Assista do início ao fim: é a live que libera o seu acesso, de&nbsp;graça.</p>
-        <p class="ultimo">Para não perder a live</p>
+        <!-- 11/11/2026: o obrigado do cadastro com planos (o do lançamento de 09/11 está em
+             arquivo/landing-lancamento-09-11/obrigado/). A conta nasce no cadastro e já entra. -->
+        <p class="chamada" data-chamada>Bem-vindo a bordo. Sua conta na GlobalFly está pronta: entre com o e-mail e a senha que você criou e conheça as I.A., as aulas e as salas ao&nbsp;vivo.</p>
+        <p class="ultimo">Para começar com tudo pronto</p>
         <ol class="o-passos">
           <li>
             <span class="o-n">1</span>
-            <div><strong>Entre na comunidade do&nbsp;WhatsApp</strong><span>Os avisos do lançamento chegam por&nbsp;lá.</span></div>
-            <a class="botao o-botao" id="comunidade" href="https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq" target="_blank" rel="noopener">Entrar na comunidade</a>
-          </li>
-          <li>
-            <span class="o-n">2</span>
-            <div><strong>Salve na sua agenda</strong><span>Segunda, 09/11, às 20h (Brasília).</span></div>
-            <!-- 02/11/2026 (Tiago): um botão só; o aparelho decide (Apple: arquivo da agenda; o resto: Google Agenda) -->
-            <a class="botao o-botao o-claro" id="agenda" href="https://calendar.google.com/calendar/render?action=TEMPLATE&amp;text=Live%20de%20lan%C3%A7amento%20da%20GlobalFly%20Trade&amp;dates=20261109T230000Z/20261110T010000Z&amp;details=Entre%20na%20live%20por%20este%20link%3A%20https%3A%2F%2Fglobalflytrade.com%2Flive%2F" target="_blank" rel="noopener">Adicionar ao calendário</a>
+            <div><strong>Entre na GlobalFly</strong><span data-acesso-curto>Use o e-mail do cadastro e a senha que você&nbsp;criou.</span></div>
+            <a class="botao o-botao" id="plataforma" href="/">Entrar na GlobalFly</a>
           </li>
           <li id="passo-app">
-            <span class="o-n" data-app-n>3</span>
+            <span class="o-n" data-app-n>2</span>
             <div><strong data-app-titulo>Baixe o app</strong><span data-app-texto>A GlobalFly fica na tela do seu celular, a um toque, como um aplicativo.</span>
               <ol class="o-ios" data-app-passos hidden></ol>
             </div>
-            <button class="botao o-botao" type="button" id="app">Baixar o app</button>
+            <button class="botao o-botao o-claro" type="button" id="app">Baixar o app</button>
           </li>
           <li id="passo-avisos">
-            <span class="o-n" data-avisos-n>4</span>
-            <div><strong data-avisos-titulo>Ative as notificações</strong><span data-avisos-texto>A gente te chama no dia 09/11, antes de a live começar, mesmo com o celular bloqueado.</span>
+            <span class="o-n" data-avisos-n>3</span>
+            <div><strong data-avisos-titulo>Ative as notificações</strong><span data-avisos-texto>A gente te avisa quando a sala ao vivo começar e quando a sua I.A. terminar a sessão, mesmo com o celular bloqueado.</span>
             </div>
-            <button class="botao o-botao" type="button" id="avisos">Ativar notificações</button>
+            <button class="botao o-botao o-claro" type="button" id="avisos">Ativar notificações</button>
           </li>
           <li>
-            <span class="o-n">5</span>
-            <div><strong>Entre na GlobalFly</strong><span data-acesso-curto>Use o e-mail do cadastro e a senha que você criou. Você já vê a plataforma, trancada até a&nbsp;live.</span></div>
-            <a class="botao o-botao o-claro" id="plataforma" href="/">Entrar na GlobalFly</a>
+            <span class="o-n">4</span>
+            <div><strong>Entre na comunidade do&nbsp;WhatsApp</strong><span>Avisos, novidades e os horários das salas ao vivo chegam por&nbsp;lá.</span></div>
+            <a class="botao o-botao o-claro" id="comunidade" href="https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq" target="_blank" rel="noopener">Entrar na comunidade</a>
           </li>
         </ol>
         <div class="acesso">
@@ -83,14 +76,14 @@
                já existente, ou (fallback e cadastros antigos) com a senha provisória por e-mail. -->
           <div data-acesso="criada" hidden>
             <p>Sua conta está criada. Entre com o <b>e-mail do cadastro</b> e a <b>senha que você acabou de criar</b>.</p>
-            <p>Até a live, a plataforma fica <b>trancada, com a contagem regressiva</b>: você entra, conhece tudo e prepara o celular. A live passa lá dentro e libera o acesso. Esqueceu a senha? Toque em <b>“Esqueci a senha”</b> na tela de&nbsp;entrada.</p>
+            <p>Esqueceu a senha? Toque em <b>“Esqueci a senha”</b> na tela de&nbsp;entrada.</p>
           </div>
           <div data-acesso="existente" hidden>
             <p>Você já tinha conta com este e-mail, e ela continua valendo. Entre com a <b>sua senha atual</b>.</p>
             <p>Não lembra? Toque em <b>“Esqueci a senha”</b> na tela de entrada e crie uma nova.</p>
           </div>
           <div data-acesso="provisoria" hidden>
-            <p>Enviamos a <b>senha de entrada</b> para o seu e-mail (assunto: <b>“Inscrição confirmada · live de 09/11, às 20h”</b>). Não encontrou? Confira o <b>Spam</b> ou o <b>Lixo eletrônico</b>.</p>
+            <p>Enviamos a <b>senha de entrada</b> para o seu e-mail . Não encontrou? Confira o <b>Spam</b> ou o <b>Lixo eletrônico</b>.</p>
             <p>Entre com o e-mail do cadastro e essa senha. No primeiro acesso, você escolhe a&nbsp;sua.</p>
           </div>
         </div>
@@ -108,20 +101,18 @@
     (function () {
       var dados = GF.ler()
       // textContent: o nome nunca entra como HTML
-      if (dados.nome) document.querySelector('[data-titulo]').textContent = dados.nome + ', sua inscrição na live está confirmada!'
+      if (dados.nome) document.querySelector('[data-titulo]').textContent = dados.nome + ', sua conta está criada!'
+      // o plano escolhido no cadastro (Gold): o nome aparece na chamada
+      var PLANOS = { gold: 'Gold', black: 'Black', prestige: 'Prestige' }
+      if (PLANOS[dados.plano]) document.querySelector('[data-chamada]').innerHTML = 'Bem-vindo a bordo. Seu <b>GF Member ' + PLANOS[dados.plano] + '</b> está pronto: entre com o e-mail e a senha que você criou e conheça as I.A., as aulas e as salas ao&nbsp;vivo.'
       document.getElementById('comunidade').href = GF.COMUNIDADE
       // a tela de ENTRAR guardando o parceiro (/n/inicio); o /n/ sozinho abriria o formulário de cadastro
       document.getElementById('plataforma').href = GF.parceiro() ? '/' + GF.parceiro() + '/inicio' : '/'
       // quem se cadastrou pelo app não passou pelo questionário: a etapa não aparece como feita
       if (!dados.respondeu) document.querySelector('[data-etapa-questionario]').remove()
 
-      // Calendário (02/11/2026): iPhone, iPad e Safari do Mac abrem o arquivo da agenda (a Apple pergunta onde salvar);
-      // os outros, o Google Agenda já preenchido
       var ua = navigator.userAgent
       var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-      var safariMac = /Macintosh/.test(ua) && /Safari\//.test(ua) && !/Chrome|Chromium|CriOS|Edg|Firefox|FxiOS|OPR/.test(ua)
-      var agenda = document.getElementById('agenda')
-      if (ios || safariMac) { agenda.href = '../live-globalfly.ics'; agenda.removeAttribute('target') }
 
       // Baixar o app (02/11/2026, Tiago: "um botão pra pessoa já baixar o app"). Cada aparelho do seu jeito:
       // Chrome/Android instala num toque; iPhone pelo Compartilhar do Safari; dentro do Instagram ou do
@@ -184,7 +175,7 @@
         passoAvisos.classList.add('feito'); botaoAvisos.hidden = true
         document.querySelector('[data-avisos-n]').textContent = '✓'
         tituloAvisos.textContent = 'Notificações ativadas'
-        textoAvisos.textContent = 'Pronto: a gente te chama neste aparelho no dia 09/11, antes de a live começar.'
+        textoAvisos.textContent = 'Pronto: os avisos chegam neste aparelho.'
       }
       if (passoAvisosFora || embutido) {
         // iPhone: as notificações vêm com o app (passo de cima). Instagram/Facebook: só no navegador.
@@ -217,7 +208,7 @@
                   body: JSON.stringify({ p_email: dados.email, p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_parceiro: GF.parceiro() }),
                 }).then(function (x) { return x.json() }).then(function (ok) {
                   if (ok !== true) throw new Error('nao gravou')
-                  reg.showNotification('🔔 Notificações ativadas', { body: 'A gente te chama no dia 09/11, antes de a live começar.', icon: '/pwa-globalfly/icon-192.png', badge: '/pwa-globalfly/badge-96.png', tag: 'live-confirmacao' })
+                  reg.showNotification('🔔 Notificações ativadas', { body: 'A gente te avisa por aqui das salas ao vivo e das suas sessões.', icon: '/pwa-globalfly/icon-192.png', badge: '/pwa-globalfly/badge-96.png', tag: 'live-confirmacao' })
                   avisosLigados()
                   GF.pixel('AtivouNotificacoes')
                 })
@@ -244,7 +235,6 @@
       if (dados.respondeu) GF.pixel('RespondeuQuestionario')
       // cada passo do obrigado também conta no pixel (02/11/2026)
       document.getElementById('comunidade').addEventListener('click', function () { GF.pixel('Contact', { content_name: 'comunidade-whatsapp' }) })
-      document.getElementById('agenda').addEventListener('click', function () { GF.pixel('Schedule', { content_name: 'live-09-11' }) })
       document.getElementById('plataforma').addEventListener('click', function () { GF.pixel('EntrouNaPlataforma') })
     })()
   </script>

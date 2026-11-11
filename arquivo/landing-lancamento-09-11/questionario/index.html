@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#051528" />
+  <meta name="robots" content="noindex" />
+  <title>GlobalFly Trade · Falta pouco</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/pwa-globalfly/favicon-32.png" />
+  <link rel="apple-touch-icon" href="/pwa-globalfly/icon-180.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../estilo.css" />
+</head>
+<body>
+  <div class="pagina">
+    <header class="topo">
+      <img src="/globalfly-assinatura.png" alt="GlobalFly Trade" width="900" height="283" />
+    </header>
+
+    <main class="centro">
+      <form class="cartao quiz" id="form" novalidate>
+        <!-- 02/11/2026 (Tiago: "melhorar o layout desse quiz... padrão top igual o resto"): as três etapas com nome -->
+        <ol class="quiz-etapas" aria-label="Sua inscrição">
+          <li class="feito"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i><span>Cadastro</span></li>
+          <li class="agora" aria-current="step"><i aria-hidden="true">2</i><span>Uma pergunta</span></li>
+          <li><i aria-hidden="true">3</i><span>Live de 09/11</span></li>
+        </ol>
+        <p class="quiz-ola" data-ola>Falta só uma pergunta</p>
+        <fieldset style="border: 0; margin: 0; padding: 0; min-width: 0">
+          <legend class="pergunta" data-pergunta>Você já foi cliente do ecossistema do Victor Cordeiro?</legend>
+          <p class="quiz-sub">Assim a equipe prepara a live pensando em quem já conhece o trabalho e em quem está chegando agora.</p>
+          <div class="opcoes">
+            <label class="opcao"><input type="radio" name="cliente" value="sim" id="cliente-sim" /><i></i><span><b>Sim</b><small>Já fui cliente de algum&nbsp;produto</small></span></label>
+            <label class="opcao"><input type="radio" name="cliente" value="nao" id="cliente-nao" /><i></i><span><b>Não</b><small>Primeira vez aqui</small></span></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="produtos" id="produtos" hidden style="border-left: 0; border-right: 0; border-bottom: 0; margin: 26px 0 0; padding: 22px 0 0; min-width: 0">
+          <h3>De quais produtos você já foi cliente?</h3>
+          <p>Marque todos que se aplicam.</p>
+          <div class="lista-produtos" id="lista-produtos">
+            <label class="produto"><input type="checkbox" name="produto" value="b3" id="p-b3" /><i></i>B3</label>
+            <label class="produto"><input type="checkbox" name="produto" value="fast" id="p-fast" /><i></i>Universidade Trading (Fast)</label>
+            <label class="produto"><input type="checkbox" name="produto" value="calculadora_fast" id="p-calculadora" /><i></i>Calculadora Fast</label>
+            <label class="produto"><input type="checkbox" name="produto" value="stark" id="p-stark" /><i></i>Stark / Starkbot</label>
+            <label class="produto"><input type="checkbox" name="produto" value="plano_socio" id="p-socio" /><i></i>Plano Sócio</label>
+            <label class="produto"><input type="checkbox" name="produto" value="mentoria" id="p-mentoria" /><i></i>Mentoria</label>
+            <label class="produto"><input type="checkbox" name="produto" value="grande_revolucao" id="p-revolucao" /><i></i>A Grande Revolução</label>
+            <label class="produto"><input type="checkbox" name="produto" value="outro" id="p-outro" /><i></i>Outro</label>
+          </div>
+          <label class="campo qual" id="qual" hidden>Qual?
+            <input id="outro" name="outro" maxlength="60" placeholder="Nome do produto" autocomplete="off" />
+          </label>
+        </fieldset>
+        <!-- 02/11/2026 (Tiago): no /n a pergunta é sobre o ecossistema do Naor, com os produtos dele.
+             Os códigos com "n_" ficam separados dos do Victor (gf_responder_questionario e leads.ts). -->
+        <template id="produtos-naor">
+          <label class="produto"><input type="checkbox" name="produto" value="n_compartilhamento" id="p-n-compartilhamento" /><i></i>Compartilhamento de Receita</label>
+          <label class="produto"><input type="checkbox" name="produto" value="n_sala_b3" id="p-n-sala-b3" /><i></i>Sala ao vivo B3</label>
+          <label class="produto"><input type="checkbox" name="produto" value="n_clube_3" id="p-n-clube" /><i></i>Clube dos 3%</label>
+          <label class="produto"><input type="checkbox" name="produto" value="n_mentoria_gps" id="p-n-gps" /><i></i>Mentoria GPS</label>
+          <label class="produto"><input type="checkbox" name="produto" value="n_rtp" id="p-n-rtp" /><i></i>Indicador RTP</label>
+          <label class="produto"><input type="checkbox" name="produto" value="n_goatwin" id="p-n-goatwin" /><i></i>Indicador GoatWin</label>
+          <label class="produto"><input type="checkbox" name="produto" value="outro" id="p-outro" /><i></i>Outro</label>
+        </template>
+        <!-- 04/11/2026: no /d, o ecossistema do Douglas. Enquanto a lista de produtos dele não chega, a pessoa
+             escreve qual foi (grava como "outro: …", que o painel já mostra). -->
+        <template id="produtos-douglas">
+          <label class="produto"><input type="checkbox" name="produto" value="outro" id="p-outro" checked /><i></i>Produto do Douglas</label>
+        </template>
+
+        <div class="acoes">
+          <button class="botao" type="submit" disabled>Concluir inscrição <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <p class="mensagem" role="status" aria-live="polite"></p>
+        </div>
+        <div class="quiz-ingresso">
+          <span class="quiz-data"><b>09</b><small>nov</small></span>
+          <span><strong>Sua vaga na live de lançamento</strong><small>Segunda, às 20h (Brasília), dentro da&nbsp;GlobalFly</small></span>
+        </div>
+      </form>
+    </main>
+
+    <footer class="rodape">
+      <span>© 2026 GlobalFly Trade</span>
+      <span>Operar envolve risco de perda. Resultados passados não garantem resultados futuros.</span>
+    </footer>
+  </div>
+
+  <script src="../captura.js"></script>
+  <script>
+    (function () {
+      var dados = GF.ler()
+      // o cadastro acabou de ser gravado (o motor confirmou antes de trazer a pessoa para cá)
+      if (dados.email) GF.pixel('Lead')
+      // Sem o cadastro (abriu o link direto), volta para o passo 1
+      if (!dados.email) { location.replace(GF.proxima('../')); return }
+      if (dados.nome) document.querySelector('[data-ola]').textContent = dados.nome + ', falta só uma pergunta'
+
+      // no /n, o ecossistema do Naor: outra pergunta e os produtos dele
+      if (GF.parceiro() === 'n') {
+        document.querySelector('[data-pergunta]').textContent = 'Você já foi cliente do ecossistema do Naor Bezerra?'
+        document.getElementById('lista-produtos').replaceChildren(document.getElementById('produtos-naor').content.cloneNode(true))
+      }
+      if (GF.parceiro() === 'd') {
+        document.querySelector('[data-pergunta]').textContent = 'Você já foi cliente do ecossistema do Douglas?'
+        document.querySelector('#produtos h3').textContent = 'De qual produto você já foi cliente?'
+        document.querySelector('#produtos > p').textContent = 'Escreva o nome abaixo.'
+        document.getElementById('lista-produtos').replaceChildren(document.getElementById('produtos-douglas').content.cloneNode(true))
+      }
+
+      var form = document.getElementById('form'), botao = form.querySelector('.botao'), mensagem = form.querySelector('.mensagem')
+      var produtos = document.getElementById('produtos'), qual = document.getElementById('qual')
+
+      function resposta() { var r = form.querySelector('input[name="cliente"]:checked'); return r ? r.value : null }
+      function marcados() { return Array.prototype.map.call(form.querySelectorAll('input[name="produto"]:checked'), function (c) { return c.value }) }
+      function atualizar() {
+        var r = resposta(), lista = marcados()
+        produtos.hidden = r !== 'sim'
+        qual.hidden = lista.indexOf('outro') < 0
+        botao.disabled = !r || (r === 'sim' && lista.length === 0)
+      }
+      form.addEventListener('change', function (ev) {
+        atualizar()
+        if (ev.target.id === 'cliente-sim') produtos.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        if (ev.target.id === 'p-outro' && ev.target.checked) document.getElementById('outro').focus()
+      })
+
+      form.addEventListener('submit', function (ev) {
+        ev.preventDefault()
+        var r = resposta(); if (!r || botao.disabled) return
+        var lista = r === 'sim' ? marcados() : []
+        botao.disabled = true; botao.textContent = 'Enviando…'; mensagem.textContent = ''
+        GF.rastro('respondeu', { exCliente: r === 'sim', produtos: lista.join(',') || undefined })
+        var seguir = function () { GF.guardar({ respondeu: true }); location.assign(GF.proxima('../obrigado/')) }
+        fetch(GF.SUPABASE + '/rest/v1/rpc/gf_responder_questionario', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', apikey: GF.CHAVE, authorization: 'Bearer ' + GF.CHAVE },
+          body: JSON.stringify({ p_email: dados.email, p_ex_cliente: r === 'sim', p_produtos: lista, p_outro: document.getElementById('outro').value || null }),
+        })
+          // O cadastro já está garantido no passo 1: se a resposta não gravar, a pessoa segue mesmo assim
+          .then(seguir, seguir)
+      })
+    })()
+  </script>
+</body>
+</html>
