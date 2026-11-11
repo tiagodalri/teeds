@@ -18,6 +18,7 @@ const EstudioDeStories = lazy(() => import('./EstudioDeStories').then((m) => ({ 
 const rotulo = (l: LinhaDoPainel['story']) => l.titulo || l.chip || rotuloDasCamadas(l.camadas) || 'Story sem texto'
 import './stories.css'
 import './admin-stories.css'
+import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 
 /**
  * Administração › Stories (08/11/2026). Três partes:
@@ -402,7 +403,7 @@ function Detalhe({ sessao, linha, parceiros, pleno, aoFechar, aoVer, aoEditar, a
                       <tr key={q.user_id}>
                         <td><span className="ast-pessoa">{q.foto ? <img src={q.foto} alt="" loading="lazy" /> : <i>{(q.nome || q.email).slice(0, 1).toUpperCase()}</i>}<span><b>{q.nome || 'Sem nome'}</b><small>{q.email}</small></span></span></td>
                         <td><span className={`ast-plano ${q.subplano}`}>{SUBPLANOS.find((x) => x.id === q.subplano)?.nome ?? q.subplano}</span></td>
-                        <td>{q.parceiro === 'direto' ? 'Direto' : `/${q.parceiro}`}</td>
+                        <td><SeloDoParceiro codigo={q.parceiro} nome={parceiros.find((x) => x.codigo === q.parceiro)?.nome} /></td>
                         <td><span className="ast-assistiu"><i><b style={{ width: `${p}%` }} /></i>{p}%</span></td>
                         <td className="num">{q.vezes}</td>
                         <td className="ast-fez">

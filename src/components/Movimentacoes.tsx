@@ -6,8 +6,8 @@ import {
 } from '../core/teeds/clientes'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
-import { AvatarDoParceiro } from './parceiros/FiltroDeParceiros'
 import './movimentacoes.css'
+import { SeloDoParceiro } from './parceiros/SeloDoParceiro'
 
 /**
  * Depósitos e saques — quanto entrou e quanto saiu das contas reais dos
@@ -75,14 +75,9 @@ type ColDia = 'dia' | 'depositos' | 'qtdDepositos' | 'saques' | 'qtdSaques' | 'l
 type ColCliente = 'nome' | 'parceiro' | 'depositos' | 'qtdDepositos' | 'saques' | 'qtdSaques' | 'liquido' | 'ultima'
 type ColMov = 'quando' | 'cliente' | 'valor'
 
-/** A tag do parceiro: a foto (a mesma do filtro do topo) e o primeiro nome; "Direto" leva a seta. */
+/** A tag do parceiro: o Selo do Parceiro (11/11/2026), igual em toda a plataforma. */
 function TagParceiro({ codigo, nome }: { codigo: string | null; nome: string | null }) {
-  const primeiro = codigo ? (nome ?? codigo).split(' ')[0] : 'Direto'
-  return <em className={`dps-tag ${codigo ? '' : 'direto'}`} title={codigo ? `Cliente do ${nome ?? codigo} (/${codigo})` : 'Veio sem link de parceiro'}>
-    {codigo ? <AvatarDoParceiro codigo={codigo} nome={nome ?? codigo} tamanho={18} />
-      : <span className="fp-av fp-icone" style={{ width: 18, height: 18 }} aria-hidden="true"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></span>}
-    {primeiro}
-  </em>
+  return <SeloDoParceiro codigo={codigo} nome={nome} />
 }
 
 /** "Naor /n", "Victor /v" ou "Direto". */

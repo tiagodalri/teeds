@@ -25,6 +25,7 @@ import { PERIODO_AGORA, SeletorDePeriodo, janelaDoPeriodo, ddmm, lerPeriodo, typ
 import { MapaDoMarkup } from './MapaDoMarkup'
 import { MetasDaVisaoGeral } from './MetasDaVisaoGeral'
 import './visao-geral.css'
+import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 
 interface Painel {
   agora: { na_plataforma: number; operando_real: number; operando_demo: number; banca_operando_real: number; ias_real: number; ias_demo: number; manuais_real: number }
@@ -400,7 +401,7 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
                 <li key={c.user_id}>
                   <span className="vg-pos">{i + 1}</span>
                   <span className={`vg-av${c.online ? ' online' : ''}`} aria-hidden="true">{c.foto_url ? <img src={c.foto_url} alt="" loading="lazy" /> : iniciais(c.nome)}</span>
-                  <span className="vg-top-nome"><b>{c.nome || 'Cliente'}</b><small>{c.parceiro ? PARCEIRO[c.parceiro] ?? `/${c.parceiro}` : 'Direto'}{c.operando ? ' · operando agora' : c.online ? ' · online' : ''}</small></span>
+                  <span className="vg-top-nome"><b>{c.nome || 'Cliente'}</b><small><SeloDoParceiro codigo={c.parceiro} nome={PARCEIRO[c.parceiro ?? '']} />{c.operando ? ' · operando agora' : c.online ? ' · online' : ''}</small></span>
                   <strong>{usdCurto(c.saldo)}</strong>
                 </li>
               ))}

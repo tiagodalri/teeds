@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { SUPABASE } from '../../core/teeds/config'
 import './acessos-ao-vivo.css'
+import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 
 /**
  * Acessos ao vivo (10/11/2026, Tiago: "qtd de pessoas acessando nos últimos minutos, visitas
@@ -97,8 +98,8 @@ function Quem({ p, agora, abrir }: { p: { user_id: string; nome: string | null; 
   const online = !!p.visto_em && agora - Date.parse(p.visto_em) < ONLINE_MS
   return <button type="button" className="aov-quem" onClick={() => abrir?.(p.user_id)} disabled={!abrir} title="Abrir a ficha do cliente">
     <i className={online ? 'on' : ''}>{(p.nome || p.email || '?')[0].toUpperCase()}</i>
-    <b><span className="aov-nome"><span>{p.nome || 'Sem nome'}</span>{ehNovo(p.criado_em, agora) && <em className="aov-novo">Novo</em>}</span>
-      <small>{p.email ?? 'sem e-mail'} · {seloParceiro(p.parceiro)}</small></b>
+    <b><span className="aov-nome"><span>{p.nome || 'Sem nome'}</span>{ehNovo(p.criado_em, agora) && <em className="aov-novo">Novo</em>}<SeloDoParceiro codigo={p.parceiro} /></span>
+      <small>{p.email ?? 'sem e-mail'}</small></b>
   </button>
 }
 

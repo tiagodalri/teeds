@@ -524,7 +524,7 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
         const r=respostas?.get(p.email.trim().toLowerCase())
         const tipo=!respostas?'carregando':tipoDe(p)
         return <div className="pdq">
-          <span className={`pdq-dono ${p.parceiro??'direto'}`}>{dono?`Cliente do ${dono}`:'Direto, sem parceiro'}{p.parceiro&&<small>/{p.parceiro}</small>}</span>
+          <span className={`pdq-dono ${p.parceiro??'direto'}`}>{dono?`Cliente do ${dono}`:'Direto, sem parceiro'}</span>
           <span className={`pdq-resp ${tipo}`}>{tipo==='carregando'?'Lendo o questionário…':tipo==='sem'?'Não respondeu o questionário':tipo==='ex'?`Já foi cliente ${dono?`do ${dono}`:'do ecossistema'}`:'Nunca foi cliente'}</span>
           {r?.em&&r.exCliente&&<span className="pdq-produtos">{r.produtos.length?r.produtos.map(x=><i key={x}>{nomeDoProduto(x)}</i>):<i className="vazio">Sem produto marcado</i>}</span>}
           {r&&<small className="pdq-detalhe">{[r.em&&`Respondeu em ${new Date(r.em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`, r.tempo?`${duracao(r.tempo)} na página`:null, r.temperatura?TEMPERATURA[r.temperatura]??null:null].filter(Boolean).join(' · ')}</small>}

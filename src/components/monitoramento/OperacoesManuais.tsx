@@ -6,6 +6,7 @@ import { assinarMudancas } from '../../core/teeds/realtime'
 import { nomeDoSimbolo as nomeDoAtivo } from '../../core/deriv/simbolos'
 import { NOMES_DE_CONTRATO } from '../PositionCard'
 import { CabineDaManual } from './CabineDaManual'
+import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 
 /**
  * As operações manuais no Monitoramento ao vivo (23/10/2026, Tiago: "tem que
@@ -166,7 +167,7 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
                 aria-label={`Abrir a operação de ${c?.nome || c?.email || 'cliente'} ao vivo`}
                 onClick={() => setVendo(chave(o))} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVendo(chave(o)) } }}>
                 <td className="num">{hora(o.compradaEm)}</td>
-                <td className="mm-cliente"><b>{c?.nome || c?.email || 'Cliente'}{(() => { const x = selo?.(o.userId, o.parceiro); return x ? <em className={`mon-selo parceiro ${x.codigo}`}>{x.texto}</em> : null })()}</b>{c?.nome && c?.email && <small>{c.email}</small>}</td>
+                <td className="mm-cliente"><b>{c?.nome || c?.email || 'Cliente'}{(() => { const x = selo?.(o.userId, o.parceiro); return x ? <SeloDoParceiro codigo={x.codigo} nome={x.texto} /> : null })()}</b>{c?.nome && c?.email && <small>{c.email}</small>}</td>
                 <td>{nomeDoAtivo(o.ativo)}</td>
                 <td>{NOMES_DE_CONTRATO[o.tipo] ?? o.tipo}</td>
                 <td><span className={`mon-conta ${o.demo ? 'demo' : 'real'}`}>{o.demo ? 'Demo' : 'Real'}</span></td>

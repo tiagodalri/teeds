@@ -19,6 +19,7 @@ import { nomeDaOperacao } from '../PositionCard'
 import { PrecoComDigito, formatarPreco } from '../preco/PrecoComDigito'
 import { CabecalhoDaCabine } from './CabecalhoDaCabine'
 import './cabine-da-manual.css'
+import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 
 /** A operação como a tabela de manuais a conhece. */
 export interface ManualAoVivo {
@@ -162,7 +163,7 @@ export function CabineDaManual({ op, nome, email, selo, mostrarMarkup, aoFechar,
             <span className="mon-tag manual">Manual</span>
             <b>{nomeContrato}</b>
             <span>{nomeDoAtivo(op.ativo)}</span>
-            {selo && <em className={`mon-selo parceiro ${selo.codigo}`}>{selo.texto}</em>}
+            {selo && <SeloDoParceiro codigo={selo.codigo} nome={selo.texto} tamanho="m" />}
             <small>Comprada às {hora(compra)}{vence != null ? ` · vence às ${hora(vence)}` : ''}</small>
           </div>
           <span className={`cdm-estado ${estado.cls}`} role="status">{aberta && !vencida && <i aria-hidden="true" />}{estado.txt}</span>

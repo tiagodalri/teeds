@@ -19,6 +19,7 @@ import { SUPABASE } from '../../core/teeds/config'
 import { dinheiro } from '../../core/dinheiro'
 import { MARCA } from '../../marca'
 import './detalhe-do-markup.css'
+import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 
 export type Recorte = { tipo: 'dia'; i: number } | { tipo: 'hora'; i: number }
 
@@ -227,7 +228,7 @@ export function DetalheDoMarkup({ sessao, marca, parceiro, de, ate, rotulo, reco
                     <li key={c.user_id}>
                       <span className="vgd-pos">{i + 1}</span>
                       <span className="vgd-av" aria-hidden="true">{c.foto_url ? <img src={c.foto_url} alt="" loading="lazy" /> : iniciais(c.nome)}</span>
-                      <span className="vgd-pessoa"><b>{c.nome || 'Cliente'}</b><small>{c.parceiro ? PARCEIRO[c.parceiro] ?? `/${c.parceiro}` : 'Direto'} · {int(c.operacoes)} op. · <span className={Number(c.resultado) >= 0 ? 'sobe' : 'cai'}>{comSinal(Number(c.resultado))}</span></small></span>
+                      <span className="vgd-pessoa"><b>{c.nome || 'Cliente'}<SeloDoParceiro codigo={c.parceiro} nome={PARCEIRO[c.parceiro ?? '']} /></b><small>{int(c.operacoes)} op. · <span className={Number(c.resultado) >= 0 ? 'sobe' : 'cai'}>{comSinal(Number(c.resultado))}</span></small></span>
                       <strong>{usd(c.markup)}</strong>
                     </li>
                   ))}

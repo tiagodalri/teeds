@@ -3,6 +3,7 @@ import type { SessaoTeeds } from '../../core/teeds/conta'
 import { SUPABASE } from '../../core/teeds/config'
 import { buscarCotacoes, cotacoesGuardadas } from '../ferramentas/cambio'
 import './compartilhamento.css'
+import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 
 /**
  * Compartilhamento de receita (11/11/2026, Tiago: "quem é do plano Gold tem que pagar 10% do que lucrou
@@ -312,7 +313,7 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
           return <div key={l.user_id} className={`cdr-linha ${s}`}>
             <span><button type="button" className="cdr-quem" disabled={!onAbrirCliente} onClick={() => onAbrirCliente?.(l.user_id)} title="Abrir a ficha do cliente">
               {l.foto_url ? <img src={l.foto_url} alt="" loading="lazy" /> : <i>{(l.nome || l.email || '?')[0].toUpperCase()}</i>}
-              <b>{l.nome || l.email || 'Sem nome'}<small>{l.email} · {seloParceiro(l)}{l.fora_da_base ? ' · Fora da base hoje' : ''}</small></b></button></span>
+              <b>{l.nome || l.email || 'Sem nome'}<SeloDoParceiro codigo={l.parceiro} nome={l.parceiro_nome} /><small>{l.email}{l.fora_da_base ? ' · Fora da base hoje' : ''}</small></b></button></span>
             <span data-rot="Plano"><em className={`cdr-selo ${planoDa(l)}`}>{nomePlano(planoDa(l))}</em><small>{(l.fatura?.percentual ?? l.percentual) > 0 ? pct(l.fatura?.percentual ?? l.percentual) : 'Isento'}</small></span>
             <span data-rot="Operações">{inteiro(l.operacoes)}<small>{l.operacoes ? `${Math.round(l.ganhas / l.operacoes * 100)}% ganhas${l.manuais ? ` · ${inteiro(l.manuais)} manuais` : ''}` : ''}</small></span>
             <span data-rot="Resultado do mês"><b className={l.resultado > 0 ? 'cdr-pos' : l.resultado < 0 ? 'cdr-neg' : ''}>{comSinal(l.resultado)}</b><small>{dolares(l.volume)} em entradas</small></span>

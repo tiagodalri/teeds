@@ -9,6 +9,7 @@ import { mascararConta, mascararEmail, type Integridade, type Saude } from '../.
 import { MARCA } from '../../marca'
 import { IconeFechar } from '../IconeFechar'
 import './cabine-topo.css'
+import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 
 export const ROTULO_SAUDE: Record<Saude, string> = { 'ao-vivo': 'Ao vivo', atencao: 'Atenção', desatualizado: 'Desatualizado', encerrada: 'Encerrada' }
 const ROTULO_INTEGRIDADE: Record<Integridade, string> = { completo: 'Histórico completo', carregando: 'Carregando histórico…', lacunas: 'Histórico com lacunas', indisponivel: 'Histórico indisponível', 'em-andamento': 'Sessão em andamento' }
@@ -54,7 +55,7 @@ export function CabecalhoDaCabine({ refVoltar, aoFechar, rotuloVoltar = 'Mosaico
         <div className="cbt-nome">
           <div className="cbt-titulo">
             <h2 title={nome}>{nome}</h2>
-            {selo && <em className={`mon-selo parceiro ${selo.codigo}`}>{selo.texto}</em>}
+            {selo && <SeloDoParceiro codigo={selo.codigo} nome={selo.texto} tamanho="m" />}
           </div>
           <ul className="cbt-meta">
             <li className={`cbt-conta ${demo ? 'demo' : 'real'}`}>{demo ? 'Conta demo' : 'Conta real'}</li>

@@ -102,7 +102,8 @@ export function seloDoParceiro(parceiros: OpcaoDeParceiro[], parceiro: string | 
   if (!parceiros.length || parceiro === undefined) return null
   if (!parceiro) return { texto: 'Direto', codigo: 'direto' }
   const p = parceiros.find((x) => x.codigo === parceiro)
-  return { texto: `${(p?.nome ?? parceiro).split(' ')[0]} /${parceiro}`, codigo: parceiro }
+  // só o primeiro nome (11/11/2026, Tiago: "pode tirar o /v /n, só o nome")
+  return { texto: (p?.nome ?? parceiro).split(' ')[0], codigo: parceiro }
 }
 
 /** O papel de quem está logado nesta marca: admin geral, admin do parceiro (só o /n ou o /v dele) ou nenhum. */

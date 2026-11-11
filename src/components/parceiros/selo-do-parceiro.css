@@ -1,0 +1,25 @@
+/* O Selo do Parceiro (11/11/2026), prefixo psl-. Cores só da lista `manter` da GF (vite.config.ts):
+   #0B9E4A (Naor), #B78D39 (Victor), #3B6FB0 (Douglas). Outra cor seria recolorida no build da GF. */
+.psl {
+  --c: #B78D39;
+  display: inline-flex; align-items: center; gap: 6px; flex: none; box-sizing: border-box; height: 24px;
+  padding: 0 10px 0 3px; border-radius: 999px; vertical-align: middle; white-space: nowrap; line-height: 1;
+  border: 1px solid color-mix(in srgb, var(--c) 45%, var(--border));
+  background: linear-gradient(100deg, color-mix(in srgb, var(--c) 16%, var(--surface)) 0%, var(--surface) 75%);
+  box-shadow: 0 4px 12px -9px color-mix(in srgb, var(--c) 80%, transparent);
+  color: var(--text); font-style: normal; font-weight: 700; font-size: 11.5px; letter-spacing: .005em; text-transform: none;
+}
+.psl.c-n { --c: #0B9E4A; }
+.psl.c-v { --c: #B78D39; }
+.psl.c-d { --c: #3B6FB0; }
+.psl .fp-av {
+  flex: none; color: #fff; background: var(--c);
+  box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 3px color-mix(in srgb, var(--c) 85%, transparent);
+}
+.psl-nome { font: inherit; color: inherit; }
+.psl.m { height: 32px; gap: 8px; padding: 0 13px 0 4px; font-size: 13px; }
+.psl.direto { --c: #7C8796; background: var(--surface-alt, var(--surface)); box-shadow: none; color: var(--muted); }
+.psl-seta { display: grid; place-items: center; flex: none; width: 18px; height: 18px; border-radius: 50%; box-shadow: 0 0 0 1px var(--border); color: var(--muted); }
+.psl.m .psl-seta { width: 24px; height: 24px; }
+/* dentro de linhas de texto (nome do cliente, e-mail) o selo não quebra a linha nem estica */
+b .psl:not(:first-child), small .psl:not(:first-child) { margin-left: 6px; }

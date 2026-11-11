@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { SUPABASE } from '../../core/teeds/config'
 import './vendas.css'
+import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 
 /**
  * Vendas (10/11/2026, Tiago: "onde eu consigo verificar as vendas? Black, Prestige etc do Victor e
@@ -74,7 +75,6 @@ const ROTULO_EVENTO: Record<string, string> = {
 const plano = (p: Pedido) => p.produto === 'gf-black' ? 'black' : p.produto === 'gf-prestige' ? 'prestige' : 'outro'
 const nomePlano = (p: Pedido) => p.produto === 'gf-black' ? 'Black' : p.produto === 'gf-prestige' ? 'Prestige' : p.produto_nome.replace(/^GF Member /, '')
 const nomeConta = (c: Pedido['conta']) => c === 'naor' ? 'Cakto do Naor' : c === 'victor' ? 'Cakto do Victor' : 'Sem cadastro'
-const seloParceiro = (p: Pedido) => p.parceiro ? `${(p.parceiro_nome ?? p.parceiro).split(' ')[0]} /${p.parceiro}` : p.tem_cadastro ? 'Direto' : 'Sem cadastro'
 
 export function Vendas({ sessao, marca, parceiro, pedido = 0, onAbrirCliente }: {
   sessao: SessaoTeeds; marca: string; parceiro: string | null
@@ -220,7 +220,7 @@ export function Vendas({ sessao, marca, parceiro, pedido = 0, onAbrirCliente }: 
           return <Fragment key={p.pedido}>
             <div className={aberto === p.pedido ? 'aberto' : ''}>
               <span><button type="button" className="vnd-quem" disabled={!p.user_id || !onAbrirCliente} onClick={() => p.user_id && onAbrirCliente?.(p.user_id)} title={p.user_id ? 'Abrir a ficha do cliente' : 'Comprou sem cadastro na plataforma'}>
-                <i>{(p.nome || p.email || '?')[0].toUpperCase()}</i><b>{p.nome || 'Sem cadastro'}<small>{p.email} · {seloParceiro(p)}</small></b></button></span>
+                <i>{(p.nome || p.email || '?')[0].toUpperCase()}</i><b>{p.nome || 'Sem cadastro'}{(p.parceiro || p.tem_cadastro) && <SeloDoParceiro codigo={p.parceiro} nome={p.parceiro_nome} />}<small>{p.email}{!p.parceiro && !p.tem_cadastro ? ' · Sem cadastro' : ''}</small></b></button></span>
               <span><em className={`vnd-selo ${plano(p)}`}>{nomePlano(p)}</em></span>
               <span><b>{p.valor != null ? reais(p.valor) : '—'}</b><small>{pr != null ? (juros > 0.5 ? `preço ${reais(pr)} · ${reais(juros)} de juros` : `preço ${reais(pr)}`) : ''}</small></span>
               <span>{nomeConta(p.conta)}</span>

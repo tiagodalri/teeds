@@ -31,6 +31,7 @@ import { EmContaRealAgora } from './monitoramento/EmContaRealAgora'
 import { QuemEstaOnline, lerQuemEstaOnline, type Operando } from './monitoramento/QuemEstaOnline'
 import { NomeDoRobo } from './NomeDoRobo'
 import { FiltroDePeriodo, LimparFiltros, filtrosMudaram, TotaisDasEncerradas, TEMPO_PADRAO, noPeriodo, rotuloDoPeriodo, comoTerminou, ROTULO_DO_FIM, type FiltroDeTempo } from './monitoramento/PeriodoDasEncerradas'
+import { SeloDoParceiro } from './parceiros/SeloDoParceiro'
 
 /**
  * Monitoramento ao vivo — a central administrativa.
@@ -173,7 +174,7 @@ export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMa
         {/* Só na Rede: com uma plataforma só, repetir a marca em todo cartão
             seria ruído. Na Rede é a informação que falta para ler o mosaico. */}
         {mostrarMarca && <em className={`mon-selo plataforma ${s.marca}`}>{NOME_DA_MARCA[s.marca] ?? s.marca}</em>}
-        {selo && <em className={`mon-selo parceiro ${selo.codigo}`}>{selo.texto}</em>}
+        {selo && <SeloDoParceiro codigo={selo.codigo} nome={selo.texto} />}
         <em className={`mon-selo conta ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'Conta demo' : 'Conta real'}</em>
         {modo && <em className={`mon-selo modo ${modo}`}>{NOME_DO_MODO[modo]}</em>}
         {/* Saldo real e saldo demo, sempre os dois (10/11/2026); a conta em uso fica em destaque */}
@@ -959,7 +960,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
             <div className="cab adm-cab-ordem">{tituloEnc('cliente', 'Cliente')}{naRede && tituloEnc('plataforma', 'Plataforma')}{tituloEnc('robo', 'Robô')}{tituloEnc('conta', 'Conta')}{tituloEnc('operacoes', 'Operações')}{tituloEnc('resultado', 'Resultado')}{mostrarMarkup && tituloEnc('markup', 'Markup')}{tituloEnc('encerrada', 'Encerrada')}<span /></div>
             {encerradasOrdenadas.slice(0, limiteEncerradas).map((s) => { const c = clientes.get(s.userId); return (
               <button key={s.id} className="ins-linha mon-linha" onClick={() => setReplayDe(s)}>
-                <span className="adm-pessoa"><i>{(c?.nome || c?.email || '?')[0].toUpperCase()}</i><b>{c?.nome || 'Sem nome'}{(() => { const x = seloDe(s.userId, s.parceiro); return x ? <em className={`mon-selo parceiro ${x.codigo}`}>{x.texto}</em> : null })()}<small>{mascararEmail(c?.email)}</small></b></span>
+                <span className="adm-pessoa"><i>{(c?.nome || c?.email || '?')[0].toUpperCase()}</i><b>{c?.nome || 'Sem nome'}{(() => { const x = seloDe(s.userId, s.parceiro); return x ? <SeloDoParceiro codigo={x.codigo} nome={x.texto} /> : null })()}<small>{mascararEmail(c?.email)}</small></b></span>
                 {naRede && <span><em className={`mon-selo plataforma ${s.marca}`}>{NOME_DA_MARCA[s.marca] ?? s.marca}</em></span>}
                 <span><NomeDoRobo nome={s.roboNome} id={s.roboId} /></span><span>{mascararConta(s.contaId)} <em className={`mon-tipo ${s.demo ? 'demo' : 'real'}`}>{s.demo ? 'demo' : 'real'}</em></span>
                 <span>{s.operacoes} <small className="up">{s.ganhas}</small> <small className="down">{s.perdidas}</small></span>

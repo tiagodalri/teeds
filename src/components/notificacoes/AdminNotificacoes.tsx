@@ -13,6 +13,7 @@ import { marcaPorId } from '../../marca/marcas'
 import { SUPABASE } from '../../core/teeds/config'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import './painel-notificacoes.css'
+import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 
 type Publico = 'todos' | 'aguardando' | 'membros' | 'ativos'
 type Contagem = Record<Publico | 'eu', { pessoas: number; aparelhos: number }>
@@ -256,7 +257,7 @@ export function AdminNotificacoes({ sessao, soDoParceiro }: { sessao: SessaoTeed
                         <tbody>
                           {quem.map((q, i) => (
                             <tr key={q.pessoa ?? i}>
-                              <td><b>{q.nome || 'Sem nome'}</b><small>{q.email}{q.parceiro ? ` · /${q.parceiro}` : ''}{q.aparelhos > 1 ? ` · ${q.aparelhos} aparelhos` : ''}</small></td>
+                              <td><b>{q.nome || 'Sem nome'}{q.parceiro && <SeloDoParceiro codigo={q.parceiro} nome={PARCEIROS.find((p) => p.id === q.parceiro)?.nome} />}</b><small>{q.email}{q.aparelhos > 1 ? ` · ${q.aparelhos} aparelhos` : ''}</small></td>
                               <td>{q.recebeu_em ? quando(q.recebeu_em) : <span className="pn-nao">Ainda não</span>}</td>
                               <td>{q.abriu_em ? <span className="pn-sim">{quando(q.abriu_em)}</span> : <span className="pn-nao">Não</span>}</td>
                             </tr>
