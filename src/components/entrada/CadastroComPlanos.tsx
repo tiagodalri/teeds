@@ -32,7 +32,8 @@ import {
 import '../../casca/globalfly/styles/cadastro-planos.css'
 import '../../casca/globalfly/styles/cadastro-como-funciona.css'
 import '../../casca/globalfly/styles/cadastro-iphone.css'
-import { FAIXA, secoesComoFunciona, ligarComoFunciona } from '../../casca/globalfly/cadastro/comoFunciona'
+import { ComoFunciona, MiniCartao, SimuladorDoLucro, useRevelar } from './SecoesDoCadastro'
+import { eventoDoPixel } from '../../core/teeds/pixelDoParceiro'
 
 interface Props {
   ocupado: boolean
@@ -80,7 +81,7 @@ function itensDoPlano(p: PlanoDoCadastro): Item[] {
   return [...sim, ...nao].slice(0, 6)
 }
 
-function Icone({ nome }: { nome: 'ok' | 'no' | 'lock' | 'shield' | 'bolt' | 'user' | 'mail' | 'phone' | 'wave' | 'eye' | 'eye-off' }) {
+function Icone({ nome }: { nome: 'ok' | 'no' | 'lock' | 'shield' | 'bolt' | 'user' | 'mail' | 'phone' | 'wave' | 'eye' | 'eye-off' | 'live' | 'manual' | 'aula' | 'livro' }) {
   const d: Record<string, React.ReactNode> = {
     ok: <><circle cx="10" cy="10" r="9" fill="currentColor" opacity=".16" /><path d="M6 10.3l2.6 2.6L14.2 7.4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></>,
     no: <path d="M7 7l6 6M13 7l-6 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />,
@@ -92,6 +93,10 @@ function Icone({ nome }: { nome: 'ok' | 'no' | 'lock' | 'shield' | 'bolt' | 'use
     phone: <><rect x="6" y="2.5" width="8" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M9 15h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></>,
     wave: <path d="M7 6a6 6 0 010 8M10 4a9 9 0 010 12M13 2.5a12 12 0 010 15" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />,
     eye: <path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5S2 10 2 10zM10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" fill="none" stroke="currentColor" strokeWidth="1.5" />,
+    live: <><rect x="2.5" y="4.5" width="15" height="11" rx="2.2" fill="none" stroke="currentColor" strokeWidth="1.6" /><circle cx="6.5" cy="8.5" r="1.6" fill="currentColor" /><path d="M9.5 12.5l2.2-2.4 2 1.6 2-2.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></>,
+    manual: <><path d="M3 14l4-4 3 3 6-7" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /><path d="M13 6h3v3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></>,
+    aula: <><rect x="2.5" y="3.5" width="15" height="10.5" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M8.5 6.6v4.3l3.6-2.15z" fill="currentColor" /><path d="M6 17h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></>,
+    livro: <><path d="M4 3.5h8.5a3 3 0 013 3V17H7a3 3 0 01-3-3z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><path d="M4 14a3 3 0 013-3h8.5M7.5 7h5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></>,
     'eye-off': <path d="M3 3l14 14M8.8 5.1A8 8 0 0110 5c5 0 8 5 8 5a13 13 0 01-2.6 3.2M5.5 5.6C3.3 7 2 10 2 10s3 5 8 5c1.3 0 2.5-.3 3.5-.8M8.2 8.2a2.5 2.5 0 003.6 3.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />,
   }
   return <svg viewBox="0 0 20 20" aria-hidden="true">{d[nome]}</svg>
@@ -186,20 +191,6 @@ function useCeu(canvas: React.RefObject<HTMLCanvasElement>, ativo: React.Mutable
   }, [canvas, ativo])
 }
 
-/** As seções da antiga página /cadastro: o que é, a plataforma por dentro, a cabine com as I.A. operando e o que vem junto. */
-function ComoFunciona() {
-  const caixa = useRef<HTMLDivElement>(null)
-  const base = import.meta.env.BASE_URL
-  const html = useMemo(() => secoesComoFunciona(base), [base])
-  useEffect(() => (caixa.current ? ligarComoFunciona(caixa.current, base) : undefined), [base])
-  return (
-    <div className="cpl-lp">
-      <div dangerouslySetInnerHTML={{ __html: FAIXA }} />
-      <div className="cpl-faixa"><div className="cpl-miolo cpl-lp-corpo" ref={caixa} dangerouslySetInnerHTML={{ __html: html }} /></div>
-    </div>
-  )
-}
-
 export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEntrar }: Props) {
   const [planos, setPlanos] = useState<PlanoDoCadastro[]>(PLANOS_PADRAO)
   useEffect(() => { let vivo = true; void carregarPlanosDoCadastro().then((p) => { if (vivo) setPlanos(p) }); return () => { vivo = false } }, [])
@@ -209,6 +200,9 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
   const [etapa, setEtapa] = useState<'planos' | 'dados'>(doEndereco ? 'dados' : 'planos')
   const plano = planos.find((p) => p.id === sel) ?? planos[0]
   const indice = planos.findIndex((p) => p.id === sel)
+
+  // ---------- pixel do parceiro (/v e /n): cada passo da página vai para a Meta
+  useEffect(() => { eventoDoPixel('ViewContent', { content_name: 'cadastro-planos' }, true) }, [])
 
   // ---------- rolagem: topo com vidro, véu sobre o céu e barra fixa
   const raiz = useRef<HTMLDivElement>(null)
@@ -231,6 +225,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
   }, [etapa])
   const canvas = useRef<HTMLCanvasElement>(null)
   useCeu(canvas, ceuAtivo)
+  useRevelar(raiz, etapa)
 
   // ---------- voltar do formulário para os planos com o botão Voltar do navegador
   useEffect(() => {
@@ -239,6 +234,8 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
     return () => removeEventListener('popstate', aoVoltar)
   }, [])
   function irParaDados(id: IdDoPlano) {
+    eventoDoPixel('ViewContent', { content_name: 'cadastro-formulario', plano: id }, true)
+    eventoDoPixel('ComecouCadastro', { plano: id }, true)
     setSel(id); setEtapa('dados'); limparErro()
     try { history.pushState({ ...(history.state ?? {}), cplDados: true }, '') } catch { /* sem histórico: segue */ }
     scrollTo({ top: 0, behavior: 'auto' })
@@ -256,7 +253,10 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
     if (!c || !el || !noCelular()) return
     c.scrollTo({ left: el.offsetLeft - (c.clientWidth - el.offsetWidth) / 2, behavior: suave && !calma() ? 'smooth' : 'auto' })
   }
-  const selecionar = (id: IdDoPlano, origem: 'carrossel' | 'outro' = 'outro') => { setSel(id); if (origem !== 'carrossel') centralizar(id) }
+  const selecionar = (id: IdDoPlano, origem: 'carrossel' | 'outro' = 'outro') => {
+    setSel(id); if (origem !== 'carrossel') centralizar(id)
+    eventoDoPixel('ViewContent', { content_name: `plano-${id}` }, true)
+  }
   useEffect(() => { if (etapa === 'planos') centralizar(sel, false) }, [etapa]) // eslint-disable-line react-hooks/exhaustive-deps
   const espera = useRef<number>()
   const aoRolarCarrossel = () => {
@@ -277,7 +277,6 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
   const frente = useRef<HTMLDivElement>(null)
 
   // ---------- conta do compartilhamento
-  const [lucro, setLucro] = useState(1000)
 
   // ---------- formulário
   const [nome, setNome] = useState('')
@@ -333,7 +332,10 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
     // Black e Prestige: direto para o pagamento, com os dados já preenchidos (o e-mail liga a compra à conta)
     const checkout = plano.preco > 0 ? checkoutDoPlano(plano) : null
     if (checkout) {
-      location.assign(comComprador(checkout, { email: email.trim().toLowerCase(), nome: nome.trim(), telefone }))
+      eventoDoPixel('InitiateCheckout', { value: plano.preco, currency: 'BRL', content_name: `gf-${plano.id}`, content_ids: [`gf-${plano.id}`], num_items: 1 }, true)
+      const destino = comComprador(checkout, { email: email.trim().toLowerCase(), nome: nome.trim(), telefone })
+      // um instante para o pixel enviar antes de trocar de página
+      window.setTimeout(() => location.assign(destino), 400)
       return
     }
     // Gold: o obrigado de sempre (o do parceiro, na vitrine dele). Só depois de o servidor confirmar; nada pessoal no endereço.
@@ -380,7 +382,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
       <header className={`cpl-topo cpl-faixa ${rolou ? 'cpl-cheio' : ''}`}>
         <div className="cpl-miolo">
           <div className="cpl-marca"><Brand tamanho={40} /></div>
-          <button type="button" className="cpl-entrar" onClick={aoEntrar}><span>Já tem conta?</span><b>Entrar</b></button>
+          <button type="button" className="cpl-entrar" onClick={() => { eventoDoPixel('ClicouEntrar', undefined, true); aoEntrar() }}><span>Já tem conta?</span><b>Entrar</b></button>
         </div>
       </header>
 
@@ -395,7 +397,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
                   <li><i>3</i><span>Pagamento</span></li>
                 </ol>
                 <h1><span className="cpl-l"><span>Escolha como</span></span><span className="cpl-l"><span>você quer <em>voar.</em></span></span></h1>
-                <p>Plataforma, aulas e sala ao vivo em todos os planos. O que muda é o que vem junto: quais I.A., quantas horas de simulador e quanto do lucro fica com você.</p>
+                <p>I.A. que operam por você, operação manual, <b>salas ao vivo todos os dias</b> e um <b>curso completo com apostila</b>. Tudo isso em todos os planos; o que muda é quais I.A., quantas horas de simulador e quanto do lucro fica com você.</p>
                 {abas('cpl-abas-pc')}
                 <div className="cpl-confianca cpl-confianca-pc">
                   <span><Icone nome="lock" />Pagamento seguro</span>
@@ -442,7 +444,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
                     onPointerMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--x', `${e.clientX - r.left}px`); e.currentTarget.style.setProperty('--y', `${e.clientY - r.top}px`) }}
                     onClick={(e) => { if (!(e.target as HTMLElement).closest('button') && !noCelular()) selecionar(p.id) }}>
                     {p.id === 'black' && <span className="cpl-selo">Recomendado</span>}
-                    <div className="cpl-cab"><span className={`cpl-amostra cpl-${p.id}`} aria-hidden="true" /><div><h2>{p.nome}</h2><small>GF Member</small></div></div>
+                    <div className="cpl-cab"><MiniCartao id={p.id} /><div><h2>{p.nome}</h2><small>GF Member</small></div></div>
                     <p className="cpl-chamada">{p.chamada}</p>
                     <div className="cpl-preco">
                       {p.referencia ? <span className="cpl-de">De <s>R$ {brl(p.referencia)}</s> por</span> : <span className="cpl-de">&nbsp;</span>}
@@ -459,6 +461,13 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
               <div className="cpl-pontos">
                 {planos.map((p) => <button key={p.id} type="button" aria-label={p.nome} aria-current={p.id === sel} onClick={() => selecionar(p.id)} />)}
               </div>
+              <ul className="cpl-todos" aria-label="Em todos os planos">
+                <li className="cpl-todos-rot">Em todos os planos</li>
+                <li><Icone nome="live" />Salas ao vivo todos os dias</li>
+                <li><Icone nome="manual" />Operação manual</li>
+                <li><Icone nome="aula" />Curso completo em vídeo</li>
+                <li><Icone nome="livro" />Apostila do aluno</li>
+              </ul>
             </div>
           </section>
 
@@ -467,10 +476,10 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
           <div className="cpl-faixa">
             <div className="cpl-miolo">
               <section className="cpl-secao" aria-labelledby="cpl-t-comparar">
-                <div className="cpl-cab-secao"><span className="cpl-olho">Lado a lado</span><h2 id="cpl-t-comparar">Compare os planos</h2></div>
-                <div className="cpl-tabela">
+                <div className="cpl-cab-secao cpl-revela"><span className="cpl-olho">Lado a lado</span><h2 id="cpl-t-comparar">Compare os planos</h2></div>
+                <div className="cpl-tabela cpl-revela">
                   <table>
-                    <thead><tr><th scope="col">Recurso</th>{planos.map((p) => <th key={p.id} scope="col" className={p.id === sel ? 'cpl-on' : ''}><span className="cpl-pil"><i className={`cpl-amostra cpl-${p.id}`} />{p.nome}</span></th>)}</tr></thead>
+                    <thead><tr><th scope="col">Recurso</th>{planos.map((p) => <th key={p.id} scope="col" className={p.id === sel ? 'cpl-on' : ''}><span className="cpl-pil"><MiniCartao id={p.id} />{p.nome}</span></th>)}</tr></thead>
                     <tbody>
                       <tr className="cpl-grupo"><td colSpan={4}>Inteligências</td></tr>
                       {IAS_DA_GF.map(([id, n]) => <tr key={id}><td>{n}</td>{planos.map((p) => <td key={p.id} className={p.id === sel ? 'cpl-on' : ''}>{temIA(p, id) ? <span className="cpl-ok" aria-label="Incluída">✓</span> : <span className="cpl-no" aria-label="Não incluída">—</span>}</td>)}</tr>)}
@@ -490,35 +499,17 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
               </section>
 
               <section className="cpl-secao" aria-labelledby="cpl-t-conta">
-                <div className="cpl-cab-secao">
+                <div className="cpl-cab-secao cpl-revela">
                   <span className="cpl-olho">Na ponta do lápis</span>
                   <h2 id="cpl-t-conta">Quanto do lucro fica com você</h2>
                   <p>O compartilhamento é uma porcentagem do lucro do mês na conta real. Mês sem lucro, nada a pagar. Arraste para comparar.</p>
                 </div>
-                <div className="cpl-conta">
-                  <div className="cpl-cx cpl-controle">
-                    <label htmlFor="cpl-lucro">Lucro do mês na conta real (exemplo)</label>
-                    <div className="cpl-lucro"><small>US$</small>{brl(lucro)}</div>
-                    <input type="range" id="cpl-lucro" min={0} max={5000} step={100} value={lucro} onChange={(e) => setLucro(+e.target.value)} style={{ ['--p' as string]: `${(lucro / 5000) * 100}%` }} />
-                    <div className="cpl-marcas"><span>US$ 0</span><span>US$ 5.000</span></div>
-                    <p className="cpl-aviso">Exemplo ilustrativo para comparar os planos. Não é previsão de resultado. Operar envolve risco de perda.</p>
-                  </div>
-                  <div className="cpl-cx cpl-barras">
-                    {planos.map((p) => (
-                      <div key={p.id} className={`cpl-barra cpl-barra-${p.id}`}>
-                        <span>{p.nome}</span>
-                        <div className="cpl-trilho"><div className="cpl-enche" style={{ width: `${lucro ? (1 - p.compartilhamento) * 100 : 0}%` }} /></div>
-                        <span className="cpl-val">US$ {brl(Math.round(lucro * (1 - p.compartilhamento)))}<small>{p.compartilhamento ? `compartilha US$ ${brl(Math.round(lucro * p.compartilhamento))}` : 'fica tudo com você'}</small></span>
-                      </div>
-                    ))}
-                    <p className="cpl-aviso">Quanto do lucro do mês fica com você em cada plano.</p>
-                  </div>
-                </div>
+                <SimuladorDoLucro planos={planos} aoMexer={() => eventoDoPixel('SimulouLucro', undefined, true)} />
               </section>
 
               <section className="cpl-secao" aria-labelledby="cpl-t-duvidas">
-                <div className="cpl-cab-secao"><span className="cpl-olho">Antes de embarcar</span><h2 id="cpl-t-duvidas">Dúvidas comuns</h2></div>
-                <div className="cpl-duvidas">
+                <div className="cpl-cab-secao cpl-revela"><span className="cpl-olho">Antes de embarcar</span><h2 id="cpl-t-duvidas">Dúvidas comuns</h2></div>
+                <div className="cpl-duvidas cpl-revela">
                   <details><summary>O Gold tem algum custo de entrada?</summary><p>Não. O Gold é aquisição zero: você cria a conta sem cartão e só compartilha {porcentagem(planos[0].compartilhamento)} do lucro do mês na conta real. Mês sem lucro, nada a pagar.</p></details>
                   <details><summary>Posso começar no Gold e mudar depois?</summary><p>Pode. A mudança para o Black ou o Prestige é feita dentro da plataforma, em Meu plano, na mesma conta. O que você já fez continua lá.</p></details>
                   <details><summary>Quando o Black ou o Prestige é liberado?</summary><p>Assim que o pagamento é confirmado. No cartão costuma ser na hora; no Pix, em poucos minutos. Use no pagamento o mesmo e-mail do cadastro.</p></details>
@@ -538,7 +529,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
           </div>
 
           <div className={`cpl-barra-fixa ${verBarra ? 'cpl-ver' : ''}`} aria-hidden={!verBarra}>
-            <span className={`cpl-amostra cpl-${sel}`} aria-hidden="true" />
+            <MiniCartao id={sel} />
             <div className="cpl-info"><b>GF Member {plano.nome}</b><span>{precoCurto(plano)}</span></div>
             <button type="button" tabIndex={verBarra ? 0 : -1} className={`cpl-btn ${CLASSE_DO_BOTAO[sel] === 'cpl-btn-linha' ? 'cpl-btn-ouro' : CLASSE_DO_BOTAO[sel]}`} onClick={() => irParaDados(sel)}>Continuar <span className="cpl-seta" aria-hidden="true">→</span></button>
           </div>
@@ -583,7 +574,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
               </button>
               {plano.preco > 0 && <p className="cpl-pago"><Icone nome="lock" /><span>Na próxima tela, o pagamento seguro no cartão em até 12x ou no Pix, com os seus dados já preenchidos.</span></p>}
               {!!MARCA.termos && <p className="cpl-termos">Ao continuar, você concorda com os <a href={`${import.meta.env.BASE_URL}termos/`} target="_blank" rel="noopener">Termos de Uso</a> e a <a href={`${import.meta.env.BASE_URL}termos/#politica-de-privacidade`} target="_blank" rel="noopener">Política de Privacidade</a>.</p>}
-              <a className="cpl-caixa-deriv" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">
+              <a className="cpl-caixa-deriv" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer" onClick={() => eventoDoPixel('Contact', { content_name: 'abrir-conta-deriv' }, true)}>
                 <span><DerivLogo altura={16} /><b>Ainda não tem conta na Deriv?</b>Abra grátis, direto no site da Deriv. O seu dinheiro fica na corretora, no seu nome.</span>
                 <IconeSaida tamanho={16} />
               </a>
