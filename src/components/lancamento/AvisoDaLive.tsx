@@ -11,7 +11,7 @@
  *   para o administrador conseguir entrar. Administrador logado não vê.
  * - O administrador confere o aviso com ?ver=aviso-da-live no endereço.
  */
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { MARCA } from '../../marca'
 import {
   assinarQuemVeAvisoDaLive, AVISO_DA_LIVE_DESDE, callNoAr, EVENTO_ABRIR_AVISO_DA_LIVE, FIM_DA_CALL, faltaCurto, FIM_DA_LIVE, INICIO_DA_LIVE, linkDaLive, liveAberta,
@@ -53,6 +53,13 @@ export default function AvisoDaLive() {
   // lê o link a partir de 5 min antes do aviso, enquanto a live não terminou: de 20 em 20 s
   // até o link chegar, depois de 60 em 60 s (só para saber se ela terminou)
   const emCall = callNoAr(terminou, agora)
+  // link novo (trocado no meio da call): o popup volta na tela de todo mundo, inclusive de quem fechou
+  const linkVisto = useRef<string | null>(null)
+  useEffect(() => {
+    if (!emCall || !link) return
+    if (linkVisto.current && linkVisto.current !== link) { setFechado(false); setPedido(true) }
+    linkVisto.current = link
+  }, [emCall, link])
   const ler = ver || emCall || (agora >= AVISO_DA_LIVE_DESDE - 5 * 6e4 && agora < fim)
   useEffect(() => {
     if (!ler) return
@@ -61,14 +68,14 @@ export default function AvisoDaLive() {
     const uma = () => {
       window.clearTimeout(t)
       void liveAberta().then((d) => { if (vivo) setDados(d) }).catch(() => undefined).finally(() => {
-        if (vivo) t = window.setTimeout(uma, document.visibilityState === 'hidden' ? 60_000 : link ? 60_000 : 20_000)
+        if (vivo) t = window.setTimeout(uma, emCall ? 15_000 : document.visibilityState === 'hidden' ? 60_000 : link ? 60_000 : 20_000)
       })
     }
     const aoVoltar = () => { if (document.visibilityState === 'visible') uma() }
     uma()
     document.addEventListener('visibilitychange', aoVoltar)
     return () => { vivo = false; window.clearTimeout(t); document.removeEventListener('visibilitychange', aoVoltar) }
-  }, [ler, !!link]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ler, !!link, emCall]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (MARCA.id !== 'globalfly') return null
   if (emCall) {
