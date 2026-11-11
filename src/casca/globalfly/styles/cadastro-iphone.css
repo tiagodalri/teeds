@@ -1,0 +1,36 @@
+/* =====================================================================================
+   O iPhone das seções antigas, revisto (11/11/2026, Tiago: "as notificações têm que vir de cima para
+   baixo, igual no celular", "sexta-feira com letra minúscula", "cortando o ícone do Wi-Fi").
+   Tela bloqueada no padrão do iOS: título e hora na mesma linha, vidro claro, avisos que chegam por cima
+   (a sequência está em cadastro/comoFunciona.ts). Escopo .cpl .cpl-lp para valer sobre o CSS gerado.
+   ===================================================================================== */
+.cpl .cpl-lp .lp-iphone-status { height: 15cqw; padding: 0 7.4cqw 0 9cqw; font-size: 4.6cqw; font-weight: 600; letter-spacing: -.01em; }
+.cpl .cpl-lp .lp-iphone-icones { gap: 1.7cqw; padding-top: .4cqw; }
+.cpl .cpl-lp .lp-iphone-icones svg { display: block; fill: currentColor; overflow: visible; }
+.cpl .cpl-lp .lp-iphone-icones .lp-ic-sinal { width: 5.6cqw; height: 3.6cqw; }
+.cpl .cpl-lp .lp-iphone-icones .lp-ic-wifi { width: 5.2cqw; height: 3.75cqw; }
+.cpl .cpl-lp .lp-iphone-icones .lp-ic-bateria { width: 8.2cqw; height: 3.8cqw; }
+
+.cpl .cpl-lp .lp-iphone-hora { padding-top: 2.4cqw; }
+.cpl .cpl-lp .lp-iphone-hora span { font-size: 5.3cqw; font-weight: 600; letter-spacing: -.005em; opacity: .9; }
+.cpl .cpl-lp .lp-iphone-hora b { font-size: 27cqw; font-weight: 700; letter-spacing: -.03em; margin-top: 1cqw; }
+
+/* a lista começa logo abaixo do relógio e cresce para baixo (a altura é travada pelo script com os três) */
+.cpl .cpl-lp .lp-iphone .lp-notifs { grid-row: 3; align-self: start; align-content: start; margin-top: 13cqw; gap: 2.2cqw; padding: 0 3.4cqw; }
+.cpl .cpl-lp .lp-iphone .lp-notif { grid-template-columns: 10.6cqw minmax(0, 1fr); gap: 3cqw; align-items: center; padding: 3.2cqw 3.8cqw 3.4cqw 3.2cqw; border-radius: 6.6cqw;
+  background: rgba(246, 246, 248, .66); color: #000; backdrop-filter: blur(22px) saturate(1.8); -webkit-backdrop-filter: blur(22px) saturate(1.8);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .35) inset, 0 8px 22px -12px rgba(0, 0, 0, .55); animation: none; opacity: 1; transform: none; will-change: transform; }
+.cpl .cpl-lp .lp-iphone .lp-notif img { width: 10.6cqw; height: 10.6cqw; border-radius: 2.5cqw; }
+.cpl .cpl-lp .lp-iphone .lp-notif > div { display: grid; gap: .3cqw; min-width: 0; }
+.cpl .cpl-lp .lp-iphone .lp-notif-l1 { margin: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 2cqw; min-width: 0; }
+.cpl .cpl-lp .lp-iphone .lp-notif-l1 b { font-size: 4.1cqw; font-weight: 600; letter-spacing: -.015em; line-height: 1.25; min-width: 0; }
+.cpl .cpl-lp .lp-iphone .lp-notif-l1 em { flex: none; font-style: normal; font-size: 3.5cqw; font-weight: 400; color: rgba(60, 60, 67, .62); }
+.cpl .cpl-lp .lp-iphone .lp-notif > div > span { font-size: 3.9cqw; line-height: 1.28; letter-spacing: -.01em; color: #1C1C1E; }
+
+/* a chegada: desce de cima com um pequeno quique; a saída: some para cima, junto */
+.cpl .cpl-lp .lp-iphone .lp-notif.lp-notif-chega { animation: cpl-notif-chega .7s cubic-bezier(.2, 1.15, .3, 1) both; }
+@keyframes cpl-notif-chega { from { opacity: 0; transform: translateY(-70%) scale(.92); } 60% { opacity: 1; } to { opacity: 1; transform: none; } }
+.cpl .cpl-lp .lp-iphone .lp-notif.lp-notif-sai { animation: cpl-notif-sai .45s ease-in both; }
+@keyframes cpl-notif-sai { to { opacity: 0; transform: translateY(-18%) scale(.97); } }
+@media (prefers-reduced-motion: reduce) { .cpl .cpl-lp .lp-iphone .lp-notif.lp-notif-chega, .cpl .cpl-lp .lp-iphone .lp-notif.lp-notif-sai { animation: none; } }
+.cpl .cpl-lp .lp-iphone-hora b { font-variant-numeric: tabular-nums; }

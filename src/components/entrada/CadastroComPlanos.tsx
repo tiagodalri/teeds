@@ -31,6 +31,7 @@ import {
 } from '../../core/teeds/planosDoCadastro'
 import '../../casca/globalfly/styles/cadastro-planos.css'
 import '../../casca/globalfly/styles/cadastro-como-funciona.css'
+import '../../casca/globalfly/styles/cadastro-iphone.css'
 import { FAIXA, secoesComoFunciona, ligarComoFunciona } from '../../casca/globalfly/cadastro/comoFunciona'
 
 interface Props {

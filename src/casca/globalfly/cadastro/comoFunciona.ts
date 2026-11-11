@@ -61,20 +61,20 @@ export const secoesComoFunciona = (b: string) => `
             <span>GlobalFly</span>
             <i class="lp-iphone-ilha"></i>
             <span class="lp-iphone-icones">
-              <svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
-              <svg viewBox="0 0 16 12"><path d="M8 11.6l2.3-2.6a3.3 3.3 0 00-4.6 0zM4.1 7.5a5.6 5.6 0 017.8 0l1.5-1.7a7.9 7.9 0 00-10.8 0zM.9 4a10.2 10.2 0 0114.2 0L16.6 2.3a12.5 12.5 0 00-17.2 0z"/></svg>
-              <svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.2" fill="none" stroke="currentColor" opacity=".45"/><rect x="2.2" y="2.2" width="17" height="7.6" rx="1.8"/><path d="M25 4.2v3.6a1.9 1.9 0 000-3.6z" opacity=".45"/></svg>
+              <svg class="lp-ic-sinal" viewBox="0 0 17 11"><rect x="0" y="7" width="3" height="4" rx=".9"/><rect x="4.6" y="4.8" width="3" height="6.2" rx=".9"/><rect x="9.2" y="2.4" width="3" height="8.6" rx=".9"/><rect x="13.8" y="0" width="3" height="11" rx=".9"/></svg>
+              <svg class="lp-ic-wifi" viewBox="0 0 16 11.5"><path d="M8 11.5 5.7 9a3.3 3.3 0 0 1 4.6 0z"/><path d="M3.2 6.3a6.8 6.8 0 0 1 9.6 0l-1.5 1.6a4.6 4.6 0 0 0-6.6 0z"/><path d="M.4 3.4a10.8 10.8 0 0 1 15.2 0l-1.5 1.6a8.6 8.6 0 0 0-12.2 0z"/></svg>
+              <svg class="lp-ic-bateria" viewBox="0 0 26 12"><rect x=".6" y=".6" width="22.4" height="10.8" rx="3.3" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".42"/><rect x="2.3" y="2.3" width="17.6" height="7.4" rx="1.9"/><path d="M24.4 4.1v3.8a2 2 0 0 0 0-3.8z" opacity=".42"/></svg>
             </span>
           </div>
           <div class="lp-iphone-hora">
             <svg class="lp-iphone-cadeado" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V8a5 5 0 0110 0v3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><rect x="5" y="11" width="14" height="10" rx="2.6"/></svg>
-            <span>sexta-feira, 30/10</span>
+            <span>Sexta-feira, 30 de outubro</span>
             <b>12:10</b>
           </div>
-          <div class="lp-notifs">
-            <div class="lp-notif"><img src="${b}pwa-globalfly/icon-180.png" alt="" width="34" height="34" /><div><span class="lp-notif-app">GlobalFly <em>12:08</em></span><b>✅ GF Falcon · Meta atingida</b><span>+US$ 62,55 em 46 operações · 30 positivas</span></div></div>
-            <div class="lp-notif"><img src="${b}pwa-globalfly/icon-180.png" alt="" width="34" height="34" /><div><span class="lp-notif-app">GlobalFly <em>11:42</em></span><b>✅ GF Legacy · Meta atingida</b><span>+US$ 10,27 em 74 operações · 45 positivas</span></div></div>
-            <div class="lp-notif"><img src="${b}pwa-globalfly/icon-180.png" alt="" width="34" height="34" /><div><span class="lp-notif-app">GlobalFly <em>08:58</em></span><b>✅ GF Raptor · Meta atingida</b><span>+US$ 100,45 em 628 operações · 473 positivas</span></div></div>
+          <div class="lp-notifs" data-notifs>
+            <div class="lp-notif"><img src="${b}pwa-globalfly/icon-180.png" alt="" width="38" height="38" /><div><p class="lp-notif-l1"><b>✅ GF Falcon · Meta atingida</b><em>12:08</em></p><span>+US$ 62,55 em 46 operações<br />30 positivas</span></div></div>
+            <div class="lp-notif"><img src="${b}pwa-globalfly/icon-180.png" alt="" width="38" height="38" /><div><p class="lp-notif-l1"><b>✅ GF Legacy · Meta atingida</b><em>11:42</em></p><span>+US$ 10,27 em 74 operações<br />45 positivas</span></div></div>
+            <div class="lp-notif"><img src="${b}pwa-globalfly/icon-180.png" alt="" width="38" height="38" /><div><p class="lp-notif-l1"><b>✅ GF Raptor · Meta atingida</b><em>08:58</em></p><span>+US$ 100,45 em 628 operações<br />473 positivas</span></div></div>
           </div>
           <div class="lp-iphone-rodape" aria-hidden="true">
             <i><svg viewBox="0 0 24 24"><path d="M8 2h8v4l-2 3v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V9L8 6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13" r="1.3"/></svg></i>
@@ -207,6 +207,44 @@ export function ligarComoFunciona(raiz: HTMLElement, b: string): () => void {
       '<polygon points="0,' + Y(0) + ' ' + pts + ' 600,' + Y(0) + '" fill="url(#cpl-curva-ouro)"/>' +
       '<polyline class="lp-curva-linha" points="' + pts + '" fill="none" stroke="#5FC48C" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
       '<circle cx="600" cy="' + Y(125.21) + '" r="4" fill="#5FC48C"/>'
+  }
+
+  // ---------- o iPhone: os avisos chegam por cima e empurram os anteriores para baixo, como na tela bloqueada
+  const notifs = raiz.querySelector<HTMLElement>('[data-notifs]')
+  if (notifs && !reduzir && 'IntersectionObserver' in window) {
+    // em repouso ficam os três (a página nunca abre vazia); a fila guarda os três na ordem em que chegaram
+    const chegada = Array.from(notifs.children).reverse().map((c) => c.cloneNode(true)) as HTMLElement[] // modelos intactos
+    let vivo = false, passo: number | undefined, i = 0
+    const travar = () => { notifs.style.height = ''; notifs.style.height = notifs.offsetHeight + 'px' }
+    // o relógio anda junto: cada aviso chega dois minutos antes da hora que aparece na tela
+    const relogio = raiz.querySelector<HTMLElement>('.lp-iphone-hora b')
+    const HORAS = ['09:00', '11:44', '12:10']
+    const chegar = () => {
+      if (relogio) relogio.textContent = HORAS[i] ?? '12:10'
+      const el = chegada[i].cloneNode(true) as HTMLElement
+      // onde cada aviso já na tela está agora, para escorregar até o lugar novo (FLIP)
+      const antes = new Map(Array.from(notifs.children).map((c) => [c, (c as HTMLElement).getBoundingClientRect().top]))
+      el.classList.add('lp-notif-chega')
+      notifs.insertBefore(el, notifs.firstChild)
+      antes.forEach((topo, c) => {
+        const h = c as HTMLElement, dy = topo - h.getBoundingClientRect().top
+        h.style.transition = 'none'; h.style.transform = `translateY(${dy}px)`
+        void h.offsetWidth
+        h.style.transition = 'transform .6s cubic-bezier(.2, .9, .25, 1)'; h.style.transform = ''
+      })
+      i++
+      passo = window.setTimeout(i < chegada.length ? chegar : esvaziar, i < chegada.length ? 1900 : 5200)
+    }
+    const esvaziar = () => {
+      Array.from(notifs.children).forEach((c) => c.classList.add('lp-notif-sai'))
+      passo = window.setTimeout(() => { notifs.innerHTML = ''; i = 0; passo = window.setTimeout(chegar, 700) }, 450)
+    }
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !vivo) { vivo = true; travar(); esvaziar() }
+      else if (!e.isIntersecting && vivo) { vivo = false; clearTimeout(passo); if (relogio) relogio.textContent = '12:10'; notifs.innerHTML = ''; chegada.slice().reverse().forEach((c) => notifs.appendChild(c.cloneNode(true))) }
+    }, { threshold: 0.35 })
+    io.observe(notifs)
+    limpezas.push(() => { io.disconnect(); clearTimeout(passo) })
   }
 
   // ---------- entrada das seções ao rolar (tudo já fica visível sem script)
