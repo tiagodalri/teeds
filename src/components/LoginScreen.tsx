@@ -1,5 +1,5 @@
 import { afiliadoDaDeriv } from '../core/rotas'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import {
   formatarTelefone, telefoneValido, LINK_VENCIDO,
 } from '../core/teeds/conta'
@@ -14,6 +14,9 @@ import { marcarEmbarque } from '../core/decolagem'
 import { marcarAceiteNoLogin } from '../core/teeds/termos'
 import { biometriaDisponivel, biometriaLigadaAqui, rotuloDaBiometria } from '../core/teeds/biometria'
 import './entrada/login.css'
+
+// 11/11/2026: na GlobalFly o cadastro abre com a escolha do plano (peça própria, só baixa nessa marca)
+const CadastroComPlanos = lazy(() => import('./entrada/CadastroComPlanos').then((m) => ({ default: m.CadastroComPlanos })))
 
 type Modo = 'entrar' | 'criar' | 'esqueci'
 
@@ -212,6 +215,14 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
       {tocado[chave] && problemas[chave] && <em id={`entrada-${chave}-erro`}>{problemas[chave]}</em>}
     </label>
   )
+
+  if (MARCA.planosNoCadastro && modo === 'criar') {
+    return (
+      <Suspense fallback={<div className="entrada" />}>
+        <CadastroComPlanos ocupado={ocupado} erro={erro} limparErro={limparErro} onCadastrar={onCadastrar} aoEntrar={() => trocarModo('entrar')} />
+      </Suspense>
+    )
+  }
 
   return (
     <div className={`entrada ${cena ? 'com-cena' : ''}`} data-modo={modo}>

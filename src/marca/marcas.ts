@@ -147,6 +147,8 @@ export interface Marca {
    * as iniciais (GlobalFly, 23/10/2026). Vem da coluna `clientes.categoria`.
    */
   seloCategoria?: boolean
+  /** Cadastro com a escolha do plano antes do formulário (GlobalFly, 11/11/2026): Gold, Black e Prestige. */
+  planosNoCadastro?: boolean
   /** Laboratório de IA (26/10/2026): os admins da marca montam e testam robôs por receita. */
   laboratorioIA?: boolean
   /** A palavra "robô" vira "I.A." em toda a tela, com a concordância (ver vocabularioIA.ts). */
@@ -441,6 +443,8 @@ export const MARCAS: Record<string, Marca> = {
     // 23/10/2026 (Tiago: "tem que ser um gráfico só"): o gráfico profissional para todos
     graficoPro: 'todos',
     seloCategoria: true,
+    // 11/11/2026 (Tiago): o cadastro abre com a escolha do plano, como no ChatGPT
+    planosNoCadastro: true,
     // 26/10/2026 (Tiago): "todos admins da GF devem poder criar"
     laboratorioIA: true,
     // 26/10/2026 (Tiago): "evite sempre a palavra Robôs, vamos trocar tudo por I.A."
