@@ -5537,6 +5537,10 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .mon-saude { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 99px; background: var(--surface); color: var(--muted); font-size: 9.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
 .mon-saude i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .mon-saude.ao-vivo { color: var(--up); } .mon-saude.atencao { color: #e0a13a; } .mon-saude.desatualizado { color: var(--down); }
+/* o relógio de quanto tempo a I.A. está ligada, discreto, embaixo do "Ao vivo" (11/11/2026) */
+.mon-cartao-estado { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
+.mon-duracao { display: inline-flex; align-items: center; gap: 4px; padding-right: 2px; color: var(--muted); font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mon-duracao svg { width: 12px; height: 12px; flex: none; opacity: .8; }
 .mon-cartao-robo { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); } .mon-cartao-robo > span { display: grid; gap: 2px; min-width: 0; } .mon-cartao-robo b { color: var(--robo, var(--primary)); font-size: 12.5px; } .mon-cartao-robo small { color: var(--muted); font-size: 10.5px; } .mon-cartao-robo > em { max-width: 48%; color: var(--muted); font-size: 10px; font-style: normal; text-align: right; }
 .mon-cartao-principais { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: 11px; overflow: hidden; background: color-mix(in srgb, var(--surface) 68%, transparent); }
 .mon-cartao-principais > span { display: grid; align-content: center; gap: 3px; min-width: 0; min-height: 78px; padding: 12px 13px; border-right: 1px solid var(--border); }

@@ -117,6 +117,29 @@ function doisSaldos(s: SessaoEspelho, saldo: number | null | undefined, guardado
 const dicaDoSaldo = (emUso: boolean, visto: string | null) => emUso ? 'Conta em que a I.A. está operando: saldo ao vivo da Deriv'
   : visto ? `Último saldo que o app do cliente leu (${new Date(visto).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })})` : 'Sem conta deste tipo conectada'
 
+/**
+ * Há quanto tempo a I.A. está ligada (11/11/2026, Tiago: "um reloginho contando quanto tempo já tem de duração
+ * a operação em andamento... pode ser discreto"). Conta desde a abertura da sessão no banco e anda sozinho, a
+ * cada segundo, sem redesenhar o cartão inteiro. Some quando a I.A. para.
+ */
+function DuracaoDaSessao({ desde }: { desde: string }) {
+  const ini = Date.parse(desde)
+  const [agora, setAgora] = useState(Date.now())
+  useEffect(() => { const t = window.setInterval(() => setAgora(Date.now()), 1000); return () => window.clearInterval(t) }, [])
+  if (!Number.isFinite(ini)) return null
+  const seg = Math.max(0, Math.floor((agora - ini) / 1000))
+  const h = Math.floor(seg / 3600), m = Math.floor((seg % 3600) / 60), x = seg % 60
+  const dois = (n: number) => String(n).padStart(2, '0')
+  const texto = h ? `${h}:${dois(m)}:${dois(x)}` : `${dois(m)}:${dois(x)}`
+  const falado = h ? `${h} h ${m} min` : `${m} min ${x} s`
+  return (
+    <span className="mon-duracao" title={`Ligada às ${new Date(ini).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`} aria-label={`Ligada há ${falado}`}>
+      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="8" cy="8.5" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M8 5.6v3l2 1.3M6.4 1.8h3.2" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+      {texto}
+    </span>
+  )
+}
+
 export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMarca = false, selo = null, saldos, aoAbrir }: { s: SessaoEspelho; cliente?: ClienteRegistro; saude: Saude; visao: Visao; mostrarMarca?: boolean; selo?: { texto: string; codigo: string } | null; saldos?: SaldosDoCliente; aoAbrir: (id: string) => void }) {
   const e = s.estado
   const ds = doisSaldos(s, e.saldo, saldos)
@@ -140,7 +163,10 @@ export const Cartao = memo(function Cartao({ s, cliente, saude, visao, mostrarMa
       <header>
         <i className="mon-farol" aria-hidden />
         <span className="mon-cartao-quem"><b>{nome}</b><small>{mascararEmail(cliente?.email)} · {mascararConta(s.contaId)}</small></span>
-        <span className={`mon-saude ${saude}`}><i aria-hidden />{ROTULO_SAUDE[saude]}</span>
+        <span className="mon-cartao-estado">
+          <span className={`mon-saude ${saude}`}><i aria-hidden />{ROTULO_SAUDE[saude]}</span>
+          {e.rodando && s.criadaEm && <DuracaoDaSessao desde={s.criadaEm} />}
+        </span>
       </header>
       <div className="mon-selos">
         <span className="mon-tag ia">I.A.</span>
