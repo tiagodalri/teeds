@@ -122,7 +122,8 @@ const PreviaDasAulas = new URLSearchParams(location.search).get('previa') === 'a
 // 08/11/2026: o link de compartilhar um story (/n/s/<código> → 404.html → /?story=<código>), aberto sem login
 // 09/11/2026: o aviso da live de lançamento (transmissão por fora), por cima de tudo, desde 19h40
 // 09/11/2026 22h50 (Tiago): a live acabou, o aviso sai do ar de vez
-const AvisoDaLive = false as boolean
+// 10/11/2026 21h (Tiago): volta para a call pelo Google Meet (só aparece dentro de callNoAr)
+const AvisoDaLive = MARCA.id === 'globalfly'
   ? lazy(() => import('./components/lancamento/AvisoDaLive')) : null
 const StoryPublico = MARCA.stories && new URLSearchParams(location.search).has('story')
   ? lazy(() => import('./components/stories/StoryPublico')) : null
