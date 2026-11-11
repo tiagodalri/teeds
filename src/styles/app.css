@@ -6144,6 +6144,8 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .mon-cartao-saldo b { font-size: 15px; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--text); }
 /* saldo real e saldo demo, sempre os dois (10/11/2026): à direita dos selos, um embaixo do outro; a conta em uso em destaque */
 .mon-cartao-saldos { display: grid; gap: 2px; margin-left: auto; padding-left: 8px; justify-items: end; }
+/* os selos não esticam quando os dois saldos dividem a linha com eles */
+.mon-selos:has(.mon-cartao-saldos) { align-items: center; }
 .mon-cartao-saldos > span { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
 .mon-cartao-saldos i { font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .mon-cartao-saldos b { font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--muted); }
