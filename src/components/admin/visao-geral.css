@@ -93,7 +93,8 @@ button.vg-card:focus-visible, .vg-agora:focus-visible { outline: 2px solid var(-
 .vg-fluxo-barras u.sobe { background: var(--up); } .vg-fluxo-barras u.cai { background: var(--down); }
 .vg-fluxo-barras b { color: var(--text); font-variant-numeric: tabular-nums; }
 .vg-pe { margin-top: 4px; }
-.vg-fluxo { display: flex; flex-direction: column; }
+/* align-items: stretch: o estilo geral dos botões do painel põe flex-start e a barra dos depósitos ficava com largura zero (11/11/2026) */
+.vg-fluxo { display: flex; flex-direction: column; align-items: stretch; }
 .vg-mini { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: auto; padding-top: 14px; }
 .vg-mini > div { display: grid; gap: 2px; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--surface-alt) 60%, transparent); }
 .vg-mini span { font-size: 11.5px; font-weight: 600; color: var(--muted); }
