@@ -84,10 +84,12 @@ export function FinanceiroPainel({ api, pedido = 0, nomeDaPlataforma }: {
   }, [api, trancar])
 
   // destravou: prepara a plataforma (categorias e contas de partida) e lê tudo
+  // (sem acesso a esta plataforma não lê: a sessão das outras plataformas continua valendo)
+  const nesta = acesso ? acesso.nesta !== false : null
   useEffect(() => {
-    if (!aberto) return
+    if (!aberto || !nesta) return
     void (async () => { await api.preparar().catch(() => undefined); await ler() })()
-  }, [aberto]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [aberto, nesta]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (pedido && aberto) void ler() }, [pedido]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 20 minutos sem mexer: tranca
@@ -128,7 +130,7 @@ export function FinanceiroPainel({ api, pedido = 0, nomeDaPlataforma }: {
   }
 
   if (!acesso) return <div className="fin"><div className="fin-carregando">{erro ?? 'Abrindo o financeiro…'}</div></div>
-  if (!aberto) return <div className="fin"><Trava api={api} acesso={acesso} aviso={avisoTrava} aoMudarAcesso={() => void lerAcesso()}
+  if (!aberto || !nesta) return <div className="fin"><Trava api={api} acesso={acesso} aviso={avisoTrava} aoMudarAcesso={() => void lerAcesso()}
     aoDestravar={() => { setAvisoTrava(null); ultimo.current = Date.now(); void lerAcesso(); setAberto(true) }} /></div>
 
   const ABAS: Array<[Aba, string]> = [['resumo', 'Resumo'], ['lancamentos', 'Lançamentos'], ['divisao', 'Divisão'], ['cadastros', 'Cadastros'], ...(souDono ? [['acessos', 'Acessos'] as [Aba, string]] : []), ['historico', 'Histórico']]

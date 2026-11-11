@@ -120,13 +120,14 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
         const lista: NovoLancamento[] = Array.from({ length: serie.n }, (_, i) => {
           const dia = somarMeses(base, i)
           return {
-            ...comum, id: i === 0 ? id : undefined, marca: api.marca, valor: i === serie.n - 1 ? serie.ultima : serie.parcela,
+            ...comum, id: i === 0 ? id : novoId(), marca: api.marca, valor: i === serie.n - 1 ? serie.ultima : serie.parcela,
             descricao: repeticao === 'parcelado' ? `${descricao.trim()} (${i + 1}/${serie.n})` : descricao.trim(),
             vencimento: dia, pago_em: i === 0 && pago ? pagoEm : null, anexos: i === 0 ? todosAnexos : [],
             grupo, parcela: i + 1, parcelas: repeticao === 'parcelado' ? serie.n : null, origem: null, origem_id: null,
           }
         })
-        await api.salvarLancamentos(lista.map(({ id: x, ...r }) => (x ? { id: x, ...r } : r) as NovoLancamento))
+        // todas as linhas com os mesmos campos (o banco recusa um lote misturado)
+        await api.salvarLancamentos(lista)
         aoSalvar(`${serie.n} lançamentos criados.`)
       } else {
         await api.salvarLancamentos([{ ...comum, id, marca: api.marca, valor: valor!, vencimento: base, pago_em: pago ? pagoEm : null, anexos: todosAnexos, grupo: null, parcela: null, parcelas: null, origem: null, origem_id: null }])

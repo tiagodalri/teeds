@@ -31,7 +31,7 @@ export interface Historico { id: number; lancamento_id: string | null; acao: 'cr
 export interface Acesso { email: string; nome: string | null; papel: Papel; marcas: string[]; ativo: boolean; trocar_senha: boolean; bloqueado: boolean; ultimo_acesso: string | null; criado_em: string; eu: boolean }
 export interface Candidato { email: string; nome: string | null; marcas: string[] }
 export interface Pessoa { user_id: string; nome: string; email: string }
-export interface MeuAcesso { admin: boolean; geral?: boolean; tem: boolean; ativo?: boolean; papel?: Papel | null; marcas?: string[]; trocar_senha?: boolean; bloqueado_ate?: string | null }
+export interface MeuAcesso { admin: boolean; geral?: boolean; tem: boolean; nesta?: boolean; ativo?: boolean; papel?: Papel | null; marcas?: string[]; trocar_senha?: boolean; bloqueado_ate?: string | null }
 export type ResultadoEntrada = { token: string; expira_em: string; papel: Papel; marcas: string[]; trocar_senha: boolean } | { erro: 'senha'; restam: number } | { erro: 'bloqueado'; ate: string } | { erro: 'sem-acesso' }
 export type ResultadoTroca = { ok: true } | { erro: 'senha'; restam: number } | { erro: 'bloqueado'; ate: string } | { erro: 'sem-acesso' | 'fraca' | 'igual' }
 
@@ -140,7 +140,7 @@ export function finDoBanco(sessao: SessaoTeeds, marca: string): FinApi {
 
   return {
     marca,
-    meuAcesso: () => rpc<MeuAcesso>('fin_meu_acesso'),
+    meuAcesso: () => rpc<MeuAcesso>('fin_meu_acesso', { p_marca: marca }),
     criarMinhaSenha: async (senha) => { await rpc('fin_criar_minha_senha', { p_senha: senha }) },
     entrar: async (senha) => {
       const r = await rpc<ResultadoEntrada>('fin_entrar', { p_senha: senha })
@@ -184,6 +184,8 @@ export function finDoBanco(sessao: SessaoTeeds, marca: string): FinApi {
     darAcesso: async (email, papel, marcas, senha) => { await rpc('fin_dar_acesso', { p_email: email, p_papel: papel, p_marcas: marcas, p_senha: senha }) },
     tirarAcesso: async (email) => { await rpc('fin_tirar_acesso', { p_email: email }) },
     enviarAnexo: async (lancamentoId, arquivo) => {
+      // o Storage só aceita com a sessão usada há pouco: renova antes de enviar
+      if (!(await rpc<string | null>('fin_sessao'))) throw new FinTrancado()
       const limpo = arquivo.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w.-]+/g, '-').slice(-80) || 'arquivo'
       const path = `${marca}/${lancamentoId}/${Date.now().toString(36)}-${limpo}`
       const r = await fetch(`${base}/storage/v1/object/financeiro/${path}`, {
@@ -269,6 +271,8 @@ export function resumir(d: DadosFin, p: Periodo, hojeDia = hoje()): Resumo {
       else if (l.tipo === 'despesa') saidas += l.valor
       else if (l.tipo === 'aporte') aportes += l.valor
       else retiradas += l.valor
+    } else if (l.vencimento > p.ate) {
+      continue // série que vence depois do período: entra quando chegar a vez dela
     } else if (ehEntrada(l.tipo)) {
       aReceber += l.valor
       if (l.vencimento < hojeDia) { aReceberVencido += l.valor; nReceberVencido++ }

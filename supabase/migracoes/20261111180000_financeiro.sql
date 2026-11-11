@@ -43,7 +43,8 @@ create table if not exists public.fin_sessoes (
   email text not null,
   criada_em timestamptz not null default now(),
   expira_em timestamptz not null,
-  encerrada_em timestamptz
+  encerrada_em timestamptz,
+  ultimo_uso timestamptz not null default now()
 );
 create index if not exists fin_sessoes_user on public.fin_sessoes (user_id);
 create index if not exists fin_sessoes_email on public.fin_sessoes (email);
@@ -87,12 +88,14 @@ returns text[] language sql stable security definer set search_path to 'public' 
   ), '{}'::text[]);
 $$;
 
--- Para o armazenamento dos comprovantes (o Storage não repassa o cabeçalho): sessão aberta deste usuário.
+-- Para o armazenamento dos comprovantes (o Storage não repassa o cabeçalho): sessão aberta deste usuário,
+-- usada nos últimos 30 minutos (fin_sessao renova o último uso a cada leitura e antes de cada envio).
 create or replace function public.fin_usuario_liberado(p_marca text, p_min text default 'leitor')
 returns boolean language sql stable security definer set search_path to 'public' as $$
   select exists (
     select 1 from public.fin_sessoes s join public.fin_credenciais c on c.email = s.email
     where s.user_id = (select auth.uid()) and s.expira_em > now() and s.encerrada_em is null
+      and s.ultimo_uso > now() - interval '30 minutes'
       and c.ativo and not c.trocar_senha and public.fin_nivel(c.papel) >= public.fin_nivel(p_min)
       and ((('*' = any (c.marcas)) and public.teeds_sou_admin_geral()) or (p_marca = any (c.marcas) and public.teeds_sou_equipe_da(p_marca)))
   );
@@ -259,7 +262,7 @@ grant select on public.fin_historico to authenticated;
 -- ── Entrada, senha e acessos ──────────────────────────────────────────────────────────────────────
 
 -- O que a tela precisa saber antes de pedir a senha.
-create or replace function public.fin_meu_acesso()
+create or replace function public.fin_meu_acesso(p_marca text default null)
 returns json language plpgsql stable security definer set search_path to 'public' as $$
 declare v_email text := public.fin_meu_email(); c public.fin_credenciais;
 begin
@@ -271,6 +274,8 @@ begin
     'admin', true, 'geral', public.teeds_sou_admin_geral(), 'tem', c.email is not null,
     'ativo', coalesce(c.ativo, false), 'papel', c.papel, 'marcas', coalesce(to_json(c.marcas), '[]'::json),
     'trocar_senha', coalesce(c.trocar_senha, false),
+    -- a credencial vale para a plataforma aberta? (quem é só da GF e abre a OMNI vê o aviso, não a senha)
+    'nesta', p_marca is null or (c.email is not null and (('*' = any (c.marcas) and public.teeds_sou_admin_geral()) or (p_marca = any (c.marcas) and public.teeds_sou_equipe_da(p_marca)))),
     'bloqueado_ate', case when c.bloqueado_ate > now() then c.bloqueado_ate end);
 end $$;
 
@@ -286,6 +291,8 @@ declare v_email text := public.fin_meu_email();
 begin
   if not public.teeds_sou_admin_geral() then raise exception 'Só o administrador geral cria a primeira senha do financeiro.'; end if;
   if exists (select 1 from public.fin_credenciais where email = v_email) then raise exception 'Você já tem uma senha do financeiro.'; end if;
+  -- só a primeira: depois disso, quem entra é pelo dono (Acessos)
+  if exists (select 1 from public.fin_credenciais where '*' = any (marcas)) then raise exception 'O financeiro já tem um responsável. Peça a ele o seu acesso.'; end if;
   if not public.fin_senha_valida(p_senha) then raise exception 'A senha precisa de 8 caracteres ou mais, com letras e números.'; end if;
   insert into public.fin_credenciais (email, papel, marcas, senha_hash, trocar_senha, criado_por)
   values (v_email, 'dono', array['*'], extensions.crypt(p_senha, extensions.gen_salt('bf', 10)), false, v_email);
@@ -300,6 +307,7 @@ create or replace function public.fin_entrar(p_senha text)
 returns json language plpgsql security definer set search_path to 'public' as $$
 declare v_email text := public.fin_meu_email(); c public.fin_credenciais; v_token text; v_expira timestamptz := now() + interval '12 hours';
 begin
+  if current_setting('transaction_read_only', true) = 'on' then raise exception 'Use POST.'; end if;
   if not exists (select 1 from public.administradores a where a.user_id = (select auth.uid())) then
     return json_build_object('erro', 'sem-acesso');
   end if;
@@ -325,10 +333,17 @@ end $$;
 -- O token desta requisição ainda vale? Devolve o papel (ou null). A tela confere antes de ler: com o token
 -- vencido as tabelas respondem vazio em vez de erro, e a tela mostraria "nenhum lançamento".
 create or replace function public.fin_sessao()
-returns text language sql stable security definer set search_path to 'public' as $$
-  select case when cardinality(public.fin_marcas('leitor')) > 0
-    then (select c.papel from public.fin_credenciais c where c.email = public.fin_meu_email()) end;
-$$;
+returns text language plpgsql security definer set search_path to 'public' as $$
+declare v_papel text;
+begin
+  if cardinality(public.fin_marcas('leitor')) = 0 then return null; end if;
+  if current_setting('transaction_read_only', true) <> 'on' then
+    update public.fin_sessoes set ultimo_uso = now()
+     where token_hash = encode(extensions.digest(coalesce(public.fin_token_pedido(), ''), 'sha256'), 'hex') and user_id = (select auth.uid());
+  end if;
+  select c.papel into v_papel from public.fin_credenciais c where c.email = public.fin_meu_email();
+  return v_papel;
+end $$;
 
 -- Bloquear (o botão do cadeado, ou o tempo parado na tela).
 create or replace function public.fin_sair()
@@ -342,6 +357,10 @@ create or replace function public.fin_trocar_senha(p_atual text, p_nova text)
 returns json language plpgsql security definer set search_path to 'public' as $$
 declare v_email text := public.fin_meu_email(); c public.fin_credenciais;
 begin
+  if current_setting('transaction_read_only', true) = 'on' then raise exception 'Use POST.'; end if;
+  -- a senha nova é conferida ANTES da atual: a resposta não pode servir de "sim/não" para a senha atual
+  if not public.fin_senha_valida(p_nova) then return json_build_object('erro', 'fraca'); end if;
+  if p_nova = p_atual then return json_build_object('erro', 'igual'); end if;
   select * into c from public.fin_credenciais where email = v_email for update;
   if c.email is null or not c.ativo then return json_build_object('erro', 'sem-acesso'); end if;
   if c.bloqueado_ate > now() then return json_build_object('erro', 'bloqueado', 'ate', c.bloqueado_ate); end if;
@@ -353,11 +372,13 @@ begin
     update public.fin_credenciais set falhas = c.falhas + 1 where email = v_email;
     return json_build_object('erro', 'senha', 'restam', 5 - (c.falhas + 1));
   end if;
-  if not public.fin_senha_valida(p_nova) then return json_build_object('erro', 'fraca'); end if;
-  if p_nova = p_atual then return json_build_object('erro', 'igual'); end if;
   update public.fin_credenciais
      set senha_hash = extensions.crypt(p_nova, extensions.gen_salt('bf', 10)), trocar_senha = false, falhas = 0, atualizado_em = now()
    where email = v_email;
+  -- as outras sessões abertas (outro aparelho, outra aba) saem; esta continua
+  update public.fin_sessoes set encerrada_em = now()
+   where email = v_email and encerrada_em is null
+     and token_hash <> encode(extensions.digest(coalesce(public.fin_token_pedido(), ''), 'sha256'), 'hex');
   return json_build_object('ok', true);
 end $$;
 
@@ -375,6 +396,7 @@ begin
          c.papel, c.marcas, c.ativo, c.trocar_senha, coalesce(c.bloqueado_ate > now(), false), c.ultimo_acesso, c.criado_em,
          c.email = public.fin_meu_email()
   from public.fin_credenciais c
+  where '*' = any (public.fin_marcas('dono')) or c.marcas && public.fin_marcas('dono')
   order by c.ativo desc, c.papel = 'dono' desc, c.criado_em;
 end $$;
 
@@ -392,6 +414,7 @@ begin
   from public.administradores a
   join auth.users u on u.id = a.user_id
   left join public.clientes cl on cl.user_id = a.user_id
+  where '*' = any (public.fin_marcas('dono')) or a.marca = any (public.fin_marcas('dono'))
   group by 1
   order by 2 nulls last;
 end $$;
@@ -411,8 +434,23 @@ begin
   if not exists (select 1 from public.administradores a join auth.users u on u.id = a.user_id where lower(public.teeds_email_real(u.email)) = v_email) then
     raise exception 'Essa pessoa não é administradora da plataforma.';
   end if;
-  v_marcas := array(select distinct m from unnest(coalesce(p_marcas, '{}')) m where m <> '*' and ('*' = any (v_minhas) or m = any (v_minhas)));
-  if cardinality(v_marcas) = 0 then raise exception 'Escolha pelo menos uma plataforma.'; end if;
+  /* Dono de uma plataforma só mexe na parte dele: o que a pessoa tem em outras plataformas fica como está.
+     novas = (antigas − minhas) ∪ (pedidas ∩ minhas). */
+  v_marcas := array(
+    select distinct m from (
+      select m from unnest(coalesce((select marcas from public.fin_credenciais where email = v_email), '{}')) m
+       where not ('*' = any (v_minhas)) and not (m = any (v_minhas))
+      union
+      select m from unnest(coalesce(p_marcas, '{}')) m where m <> '*' and ('*' = any (v_minhas) or m = any (v_minhas))
+    ) x);
+  if not exists (select 1 from unnest(coalesce(p_marcas, '{}')) m where m <> '*' and ('*' = any (v_minhas) or m = any (v_minhas))) then
+    raise exception 'Escolha pelo menos uma plataforma.';
+  end if;
+  -- papel e senha valem para todas as plataformas da pessoa: quem não é dono de todas elas não muda
+  if not ('*' = any (v_minhas)) and exists (
+    select 1 from public.fin_credenciais c, unnest(c.marcas) m where c.email = v_email and not (m = any (v_minhas))) then
+    raise exception 'Essa pessoa também tem acesso a outra plataforma. Só o administrador geral muda esse acesso.';
+  end if;
   if exists (select 1 from public.fin_credenciais where email = v_email and '*' = any (marcas)) then
     raise exception 'O acesso do administrador geral não pode ser mudado por aqui.';
   end if;
@@ -441,6 +479,10 @@ begin
   if v_email = public.fin_meu_email() then raise exception 'Você não pode tirar o seu próprio acesso.'; end if;
   if exists (select 1 from public.fin_credenciais where email = v_email and '*' = any (marcas)) then
     raise exception 'O acesso do administrador geral não pode ser tirado.';
+  end if;
+  if not ('*' = any (public.fin_marcas('dono'))) and exists (
+    select 1 from public.fin_credenciais c, unnest(c.marcas) m where c.email = v_email and not (m = any (public.fin_marcas('dono')))) then
+    raise exception 'Essa pessoa também tem acesso a outra plataforma. Só o administrador geral tira esse acesso.';
   end if;
   update public.fin_credenciais set ativo = false, atualizado_em = now() where email = v_email;
   update public.fin_sessoes set encerrada_em = now() where email = v_email and encerrada_em is null;
@@ -489,10 +531,10 @@ begin
   end if;
 end $$;
 
-revoke all on function public.fin_meu_acesso(), public.fin_sessao(), public.fin_criar_minha_senha(text), public.fin_entrar(text), public.fin_sair(),
+revoke all on function public.fin_meu_acesso(text), public.fin_sessao(), public.fin_criar_minha_senha(text), public.fin_entrar(text), public.fin_sair(),
   public.fin_trocar_senha(text, text), public.fin_acessos(), public.fin_candidatos(), public.fin_dar_acesso(text, text, text[], text),
   public.fin_tirar_acesso(text), public.fin_pessoas(uuid[]), public.fin_preparar(text) from anon, public;
-grant execute on function public.fin_meu_acesso(), public.fin_sessao(), public.fin_criar_minha_senha(text), public.fin_entrar(text), public.fin_sair(),
+grant execute on function public.fin_meu_acesso(text), public.fin_sessao(), public.fin_criar_minha_senha(text), public.fin_entrar(text), public.fin_sair(),
   public.fin_trocar_senha(text, text), public.fin_acessos(), public.fin_candidatos(), public.fin_dar_acesso(text, text, text[], text),
   public.fin_tirar_acesso(text), public.fin_pessoas(uuid[]), public.fin_preparar(text) to authenticated;
 

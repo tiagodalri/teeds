@@ -108,6 +108,11 @@ export function Trava({ api, acesso, aviso, aoDestravar, aoMudarAcesso }: {
       <h2>Sem acesso ao financeiro</h2>
       <p>O financeiro tem senha própria. Peça ao responsável pelo financeiro para liberar o seu acesso.</p>
     </div>
+  } else if (acesso.nesta === false) {
+    conteudo = <div>
+      <h2>Sem acesso nesta plataforma</h2>
+      <p>A sua senha do financeiro vale para outra plataforma. Troque a plataforma no topo, ou peça ao responsável pelo financeiro para liberar esta.</p>
+    </div>
   } else if (provisoria) {
     conteudo = <form onSubmit={trocar}>
       <h2>Crie a sua senha pessoal</h2>
