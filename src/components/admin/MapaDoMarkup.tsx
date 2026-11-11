@@ -1,14 +1,18 @@
 /**
  * Quando o markup acontece (11/11/2026, Tiago: "enxergar por dia da semana, por horário... organiza pra mim").
  *
- * Um mapa de calor da Visão geral: 7 linhas (segunda a domingo) × 24 colunas (as horas de Brasília), cada
- * quadrado mais dourado quanto mais markup aquele horário gerou. Em cima, a soma de cada hora; à direita, a
- * de cada dia da semana; no topo, o melhor dia, o melhor horário e o pico da semana. Dá para ver o total ou a
- * média por dia (o período pode ter 5 terças e 4 domingos: a média compara de igual para igual).
+ * 2ª versão (11/11/2026, Tiago: "não gostei desse estilo de gráfico, difícil de bater o olho e entender"):
+ * saiu o mapa de calor 7 × 24. Agora são dois gráficos de barras comuns, lado a lado, e uma frase no topo que
+ * já diz a conclusão:
+ *  - Por dia da semana: 7 barras deitadas, com o valor escrito em cada uma; o melhor dia em dourado cheio.
+ *  - Por horário: 24 barras em pé (0h a 23h); as 3 melhores horas em dourado cheio, o valor escrito na melhor
+ *    (3 rótulos em horas vizinhas se atropelavam).
+ * Passar o mouse (ou tocar) numa barra mostra o valor, as operações e a fatia do total. "Média por dia" divide
+ * cada dia da semana pelas vezes que ele aparece no período (5 terças e 4 domingos comparam de igual para igual).
  *
  * Os números saem de teeds_markup_mapa: a mesma contagem do resto do painel (só conta real, um contrato uma
  * vez, equipe fora, parceiro do topo). O período é o escolhido no topo da Visão geral; com "Agora", "Hoje" ou
- * "Ontem" (um dia só não forma semana) o mapa usa os últimos 30 dias.
+ * "Ontem" (um dia só não forma semana) usa os últimos 30 dias.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
@@ -31,20 +35,19 @@ async function lerMapa(sessao: SessaoTeeds, marca: string, parceiro: string, de:
     headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ p_marca: marca, p_de: new Date(de).toISOString(), p_ate: new Date(ate).toISOString(), p_parceiro: parceiro || null }),
   })
-  if (!r.ok) throw new Error('Não foi possível ler o mapa do markup agora.')
+  if (!r.ok) throw new Error('Não foi possível ler o markup por dia e horário agora.')
   return r.json()
 }
 
 const DIAS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
-const DIAS_CURTOS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 const HORAS = Array.from({ length: 24 }, (_, h) => h)
 const usd = (v: number) => dinheiro(Number(v) || 0, 'USD')
 const int = (n: number) => (Number(n) || 0).toLocaleString('pt-BR')
-const faixa = (h: number) => `${String(h).padStart(2, '0')}h–${String((h + 1) % 24).padStart(2, '0')}h`
-/** Raiz: um pico não apaga o resto do mapa (os horários médios continuam visíveis). */
-const forca = (v: number, max: number) => (max > 0 && v > 0 ? Math.max(0.12, Math.sqrt(v / max)) : 0)
+const hh = (h: number) => `${String(h % 24).padStart(2, '0')}h`
+const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0)
 
 type Modo = 'total' | 'media'
+type Foco = { tipo: 'dia'; i: number } | { tipo: 'hora'; i: number } | null
 
 export function MapaDoMarkup({ sessao, marca, parceiro, janela }: { sessao: SessaoTeeds; marca: string; parceiro: string; janela: JanelaDoPeriodo | null }) {
   const sessaoRef = useRef(sessao)
@@ -61,7 +64,7 @@ export function MapaDoMarkup({ sessao, marca, parceiro, janela }: { sessao: Sess
   const [mapa, setMapa] = useState<{ chave: string; dados: Mapa } | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [modo, setModo] = useState<Modo>('total')
-  const [foco, setFoco] = useState<{ d: number; h: number } | null>(null)
+  const [foco, setFoco] = useState<Foco>(null)
 
   useEffect(() => {
     let vivo = true
@@ -84,40 +87,53 @@ export function MapaDoMarkup({ sessao, marca, parceiro, janela }: { sessao: Sess
   const lendo = mapa?.chave !== chave
 
   const conta = useMemo(() => {
-    const grade = Array.from({ length: 7 }, () => HORAS.map(() => ({ markup: 0, operacoes: 0 })))
-    for (const c of dados?.celulas ?? []) {
-      if (c.d >= 1 && c.d <= 7 && c.h >= 0 && c.h <= 23) grade[c.d - 1][c.h] = { markup: Number(c.markup) || 0, operacoes: Number(c.operacoes) || 0 }
-    }
     const vezes = (d: number) => Math.max(1, Number(dados?.dias?.[String(d + 1)] ?? 0))
-    const valor = (d: number, h: number) => (modo === 'media' ? grade[d][h].markup / vezes(d) : grade[d][h].markup)
-    const porDia = grade.map((linha, d) => {
-      const m = linha.reduce((a, c) => a + c.markup, 0)
-      return modo === 'media' ? m / vezes(d) : m
-    })
-    // por hora: no modo média, a média de um dia qualquer naquela hora (soma das médias de cada dia ÷ 7)
-    const porHora = HORAS.map((h) => grade.reduce((a, _, d) => a + valor(d, h), 0) / (modo === 'media' ? 7 : 1))
-    let max = 0, pico: { d: number; h: number; v: number } | null = null
-    for (let d = 0; d < 7; d++) for (const h of HORAS) {
-      const v = valor(d, h)
-      if (v > max) max = v
-      if (v > 0 && (!pico || v > pico.v)) pico = { d, h, v }
+    const dia = DIAS.map(() => ({ markup: 0, operacoes: 0 }))
+    const hora = HORAS.map(() => ({ markup: 0, operacoes: 0 }))
+    for (const c of dados?.celulas ?? []) {
+      if (c.d < 1 || c.d > 7 || c.h < 0 || c.h > 23) continue
+      const m = Number(c.markup) || 0, o = Number(c.operacoes) || 0
+      dia[c.d - 1].markup += m; dia[c.d - 1].operacoes += o
+      // na média por dia, cada hora soma a média de cada dia da semana e divide por 7 (um dia qualquer)
+      hora[c.h].markup += modo === 'media' ? m / vezes(c.d - 1) / 7 : m
+      hora[c.h].operacoes += o
     }
-    const melhor = <T,>(lista: T[], v: (x: T) => number) => lista.reduce<{ i: number; v: number } | null>((m, x, i) => (v(x) > (m?.v ?? 0) ? { i, v: v(x) } : m), null)
+    const valorDia = (d: number) => (modo === 'media' ? dia[d].markup / vezes(d) : dia[d].markup)
+    const valoresDia = DIAS.map((_, d) => valorDia(d))
+    const valoresHora = hora.map((h) => h.markup)
+    const totalHoras = valoresHora.reduce((a, v) => a + v, 0)
+    const melhorDia = valoresDia.reduce((m, v, i) => (v > (valoresDia[m] ?? 0) ? i : m), 0)
+    // as 3 melhores horas (com markup) ganham dourado cheio e o valor escrito
+    const ordem = [...HORAS].filter((h) => valoresHora[h] > 0).sort((a, b) => valoresHora[b] - valoresHora[a])
+    const top3 = new Set(ordem.slice(0, 3))
+    const melhorHora = ordem[0] ?? null
+    // a faixa de 3 horas seguidas que mais rende: o que se lê de primeira
+    let faixa = { ini: 0, soma: 0 }
+    for (const h of HORAS) {
+      const soma = valoresHora[h] + valoresHora[(h + 1) % 24] + valoresHora[(h + 2) % 24]
+      if (soma > faixa.soma) faixa = { ini: h, soma }
+    }
     return {
-      grade, valor, vezes, porDia, porHora, max, pico,
-      maxDia: Math.max(...porDia, 0.0001), maxHora: Math.max(...porHora, 0.0001),
-      melhorDia: melhor(porDia, (x) => x), melhorHora: melhor(porHora, (x) => x),
+      dia, hora, vezes, valoresDia, valoresHora, top3, melhorHora, faixa, totalHoras,
+      melhorDia: valoresDia[melhorDia] > 0 ? melhorDia : null,
+      maxDia: Math.max(...valoresDia, 0.0001), maxHora: Math.max(...valoresHora, 0.0001),
+      totalDias: valoresDia.reduce((a, v) => a + v, 0),
     }
   }, [dados, modo])
 
   const sufixo = modo === 'media' ? ' por dia' : ''
+  const temDados = (dados?.total ?? 0) > 0
   const legenda = (() => {
-    if (foco) {
-      const c = conta.grade[foco.d][foco.h]
-      return <>{DIAS[foco.d]}, {faixa(foco.h)}: <b>{usd(c.markup)}</b> em {int(c.operacoes)} {c.operacoes === 1 ? 'operação' : 'operações'}
-        {' · '}média <b>{usd(c.markup / conta.vezes(foco.d))}</b> por {DIAS[foco.d].toLowerCase()} ({conta.vezes(foco.d)} no período)</>
+    if (foco?.tipo === 'dia') {
+      const d = foco.i, c = conta.dia[d]
+      return <><b>{DIAS[d]}</b>: {usd(c.markup)} em {int(c.operacoes)} {c.operacoes === 1 ? 'operação' : 'operações'} · {pct(c.markup, Number(dados?.total))}% do markup
+        {' · '}média <b>{usd(c.markup / conta.vezes(d))}</b> por {DIAS[d].toLowerCase()} ({conta.vezes(d)} no período)</>
     }
-    return <>Passe o mouse (ou toque) num quadrado para ver o horário · Horário de Brasília · I.A. e manual, só conta real</>
+    if (foco?.tipo === 'hora') {
+      const h = foco.i, c = conta.hora[h]
+      return <><b>Das {hh(h)} às {hh(h + 1)}</b>: {usd(c.markup)}{sufixo} · {int(c.operacoes)} {c.operacoes === 1 ? 'operação' : 'operações'} · {pct(c.markup, conta.totalHoras)}% do markup</>
+    }
+    return <>Passe o mouse (ou toque) numa barra para ver o valor · Horário de Brasília · I.A. e manual, só conta real</>
   })()
 
   return (
@@ -132,64 +148,61 @@ export function MapaDoMarkup({ sessao, marca, parceiro, janela }: { sessao: Sess
 
       {erro && !dados ? <p className="vg-erro" role="alert">{erro}</p> : !dados ? (
         <div className="vgm-esq"><i className="vg-esq grande" /><i className="vg-esq" /></div>
+      ) : !temDados ? (
+        <p className="vg-vazio">Nenhum markup em conta real neste período.</p>
       ) : (
         <>
-          <div className="vgm-destaques">
-            <div><span>Melhor dia da semana</span>
-              <b>{conta.melhorDia ? DIAS[conta.melhorDia.i] : '—'}</b>
-              <small>{conta.melhorDia ? `${usd(conta.melhorDia.v)}${sufixo}` : 'Sem markup no período'}</small></div>
-            <div><span>Melhor horário</span>
-              <b>{conta.melhorHora ? faixa(conta.melhorHora.i) : '—'}</b>
-              <small>{conta.melhorHora ? `${usd(conta.melhorHora.v)}${modo === 'media' ? ' por dia' : ' no período'}` : '—'}</small></div>
-            <div><span>Pico da semana</span>
-              <b>{conta.pico ? `${DIAS_CURTOS[conta.pico.d]}, ${faixa(conta.pico.h)}` : '—'}</b>
-              <small>{conta.pico ? `${usd(conta.pico.v)}${sufixo}` : '—'}</small></div>
-            <div><span>Markup no mapa</span>
-              <b className="ouro">{usd(dados.total)}</b>
-              <small>{int(dados.operacoes)} operações</small></div>
+          {/* a conclusão, escrita: o que se lê de primeira */}
+          <p className="vgm-frase">
+            {conta.melhorDia != null && <><b>{DIAS[conta.melhorDia]}</b> é o dia mais forte ({usd(conta.valoresDia[conta.melhorDia])}{sufixo})</>}
+            {conta.melhorDia != null && conta.faixa.soma > 0 && ' e '}
+            {conta.faixa.soma > 0 && <>o markup se concentra <b>das {hh(conta.faixa.ini)} às {hh(conta.faixa.ini + 3)}</b> ({pct(conta.faixa.soma, conta.totalHoras)}% do total)</>}.
+            <span className="vgm-total">Total no período <b>{usd(dados.total)}</b> · {int(dados.operacoes)} operações</span>
+          </p>
+
+          <div className="vgm-dois">
+            <section className="vgm-bloco" aria-label="Markup por dia da semana">
+              <h4>Por dia da semana</h4>
+              <ol className="vgm-dias" onMouseLeave={() => setFoco(null)}>
+                {DIAS.map((nome, d) => {
+                  const v = conta.valoresDia[d]
+                  return (
+                    <li key={nome}>
+                      <button type="button" className={`vgm-dia${conta.melhorDia === d ? ' melhor' : ''}${foco?.tipo === 'dia' && foco.i === d ? ' vgm-foco' : ''}`}
+                        onMouseEnter={() => setFoco({ tipo: 'dia', i: d })} onFocus={() => setFoco({ tipo: 'dia', i: d })} onClick={() => setFoco({ tipo: 'dia', i: d })}
+                        aria-label={`${nome}: ${usd(v)}${sufixo}`}>
+                        <span className="vgm-dia-nome">{nome}</span>
+                        <span className="vgm-dia-trilho"><u style={{ width: `${v > 0 ? Math.max(2, (v / conta.maxDia) * 100) : 0}%` }} /></span>
+                        <span className="vgm-dia-valor">{v > 0 ? usd(v) : '—'}</span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ol>
+            </section>
+
+            <section className="vgm-bloco" aria-label="Markup por horário">
+              <h4>Por horário <small>as 3 melhores horas em dourado</small></h4>
+              <div className="vgm-horas" onMouseLeave={() => setFoco(null)}>
+                {HORAS.map((h) => {
+                  const v = conta.valoresHora[h]
+                  const top = conta.top3.has(h)
+                  return (
+                    <button key={h} type="button" className={`vgm-hora${top ? ' top' : ''}${foco?.tipo === 'hora' && foco.i === h ? ' vgm-foco' : ''}`}
+                      onMouseEnter={() => setFoco({ tipo: 'hora', i: h })} onFocus={() => setFoco({ tipo: 'hora', i: h })} onClick={() => setFoco({ tipo: 'hora', i: h })}
+                      aria-label={`Das ${hh(h)} às ${hh(h + 1)}: ${usd(v)}${sufixo}`}>
+                      <u style={{ height: `${v > 0 ? Math.max(3, (v / conta.maxHora) * 100) : 0}%` }}>{conta.melhorHora === h && <em>{usd(v)}</em>}</u>
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="vgm-eixo" aria-hidden="true">
+                {HORAS.map((h) => <span key={h}>{h % 3 === 0 ? `${h}h` : ''}</span>)}
+              </div>
+            </section>
           </div>
 
-          <div className="vgm-rolagem">
-            <div className="vgm-grade" onMouseLeave={() => setFoco(null)} role="grid" aria-label={`Markup por dia da semana e hora, ${rotulo}`}>
-              {/* a soma de cada hora, em cima */}
-              <span className="vgm-canto" aria-hidden="true" />
-              {HORAS.map((h) => (
-                <span key={`t${h}`} className={`vgm-topo${foco?.h === h ? ' vgm-foco' : ''}`} aria-hidden="true">
-                  <u style={{ height: `${(conta.porHora[h] / conta.maxHora) * 100}%` }} />
-                </span>
-              ))}
-              <span className="vgm-canto" aria-hidden="true" />
-
-              {DIAS_CURTOS.map((nome, d) => (
-                <div key={nome} className="vgm-linha" role="row">
-                  <span className={`vgm-dia${foco?.d === d ? ' vgm-foco' : ''}`} role="rowheader">{nome}</span>
-                  {HORAS.map((h) => {
-                    const v = conta.valor(d, h)
-                    const f = forca(v, conta.max)
-                    const ehPico = conta.pico?.d === d && conta.pico?.h === h
-                    return (
-                      <button key={h} type="button" role="gridcell"
-                        className={`vgm-q${v > 0 ? '' : ' zero'}${ehPico ? ' pico' : ''}${foco?.d === d && foco?.h === h ? ' vgm-foco' : ''}`}
-                        style={v > 0 ? { ['--f' as string]: `${Math.round(f * 100)}%` } : undefined}
-                        onMouseEnter={() => setFoco({ d, h })} onFocus={() => setFoco({ d, h })} onClick={() => setFoco({ d, h })}
-                        aria-label={`${DIAS[d]}, ${faixa(h)}: ${usd(v)}${sufixo}`} />
-                    )
-                  })}
-                  {/* a soma do dia, à direita */}
-                  <span className="vgm-lado" aria-hidden="true"><u style={{ width: `${(conta.porDia[d] / conta.maxDia) * 100}%` }} /></span>
-                </div>
-              ))}
-
-              <span className="vgm-canto" aria-hidden="true" />
-              {HORAS.map((h) => <span key={`e${h}`} className="vgm-eixo" aria-hidden="true">{h % 3 === 0 ? `${h}h` : ''}</span>)}
-              <span className="vgm-canto" aria-hidden="true" />
-            </div>
-          </div>
-
-          <div className="vgm-pe">
-            <small className="vg-barras-leg">{legenda}</small>
-            <span className="vgm-escala" aria-hidden="true">Menos<i style={{ ['--f' as string]: '12%' }} /><i style={{ ['--f' as string]: '40%' }} /><i style={{ ['--f' as string]: '70%' }} /><i style={{ ['--f' as string]: '100%' }} />Mais</span>
-          </div>
+          <small className="vg-barras-leg vgm-leg">{legenda}</small>
         </>
       )}
     </div>

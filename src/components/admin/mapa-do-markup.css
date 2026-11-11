@@ -1,6 +1,7 @@
-/* Quando o markup acontece (Visão geral, 11/11/2026), prefixo vgm-. Dourado só por color-mix de --vg-ouro:
-   nenhuma cor nova (a paleta da GF recolore as cores que não estão em `manter`). */
-.vgm { display: grid; gap: 14px; }
+/* Quando o markup acontece (Visão geral, 11/11/2026, 2ª versão: duas barras simples), prefixo vgm-.
+   Dourado só por color-mix de --vg-ouro: nenhuma cor nova (a paleta da GF recolore as cores fora de `manter`).
+   NÃO usar a classe solta `foco`: colide com uma regra global (a linha virava um bloco escuro). */
+.vgm { display: grid; gap: 16px; }
 .vgm-cab { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
 .vgm-modo { display: inline-flex; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
 .vgm-modo button {
@@ -10,61 +11,67 @@
 .vgm-modo button.ativo { background: color-mix(in srgb, var(--vg-ouro) 18%, var(--surface)); color: var(--text); }
 .vgm-modo button:focus-visible { outline: 2px solid var(--vg-ouro); outline-offset: 1px; }
 
-.vgm-destaques { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.vgm-destaques > div { display: grid; gap: 2px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); min-width: 0; }
-.vgm-destaques span { font-size: 10.5px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.vgm-destaques b { font-size: 17px; font-weight: 750; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.vgm-destaques b.ouro { color: var(--vg-ouro); }
-.vgm-destaques small { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* a frase com a conclusão */
+.vgm-frase { margin: 0; font-size: 15px; line-height: 1.5; color: var(--text); text-wrap: pretty; }
+.vgm-frase b { color: var(--vg-ouro); font-weight: 750; }
+.vgm-total { display: block; margin-top: 2px; font-size: 12.5px; color: var(--muted); }
+.vgm-total b { color: var(--text); }
 
-.vgm-rolagem { overflow-x: auto; padding-bottom: 2px; }
-/* 26 colunas: o nome do dia, as 24 horas e a soma do dia */
-.vgm-grade {
-  display: grid; grid-template-columns: 40px repeat(24, minmax(14px, 1fr)) 72px; gap: 3px;
-  min-width: 560px; align-items: stretch;
-}
-.vgm-linha { display: contents; }
-.vgm-canto { display: block; }
-.vgm-topo { display: flex; align-items: flex-end; height: 34px; }
-.vgm-topo u { display: block; width: 100%; min-height: 1px; border-radius: 3px 3px 0 0; background: color-mix(in srgb, var(--vg-ouro) 45%, transparent); transition: height .5s cubic-bezier(.2, .8, .2, 1); }
-.vgm-topo.vgm-foco u { background: var(--vg-ouro); }
-.vgm-dia { display: flex; align-items: center; font-size: 12px; font-weight: 700; color: var(--muted); }
-.vgm-dia.vgm-foco { color: var(--text); }
-.vgm-q {
-  height: 24px; min-width: 0; padding: 0; border: 1px solid transparent; border-radius: 4px; cursor: pointer;
-  background: color-mix(in srgb, var(--vg-ouro) var(--f, 0%), color-mix(in srgb, var(--text) 4%, transparent));
-  transition: transform .12s, border-color .12s;
-}
-.vgm-q.zero { background: color-mix(in srgb, var(--text) 4%, transparent); }
-.vgm-q:hover, .vgm-q.vgm-foco, .vgm-q:focus-visible { border-color: var(--text); transform: scale(1.12); outline: none; position: relative; z-index: 1; }
-.vgm-q.pico { box-shadow: 0 0 0 2px color-mix(in srgb, var(--vg-ouro) 55%, transparent); }
-.vgm-lado { display: flex; align-items: center; padding-left: 6px; }
-.vgm-lado u { display: block; height: 10px; min-width: 1px; border-radius: 999px; background: color-mix(in srgb, var(--vg-ouro) 60%, transparent); transition: width .5s cubic-bezier(.2, .8, .2, 1); }
-.vgm-eixo { font-size: 10.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.vgm-dois { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px; }
+.vgm-bloco { display: grid; align-content: start; gap: 10px; min-width: 0; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.vgm-bloco h4 { margin: 0; font-size: 13px; font-weight: 750; }
+.vgm-bloco h4 small { margin-left: 6px; font-size: 11.5px; font-weight: 500; color: var(--muted); }
 
-.vgm-pe { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 16px; }
-.vgm-pe .vg-barras-leg { flex: 1 1 320px; }
-.vgm-escala { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
-.vgm-escala i { width: 12px; height: 12px; border-radius: 3px; background: color-mix(in srgb, var(--vg-ouro) var(--f), color-mix(in srgb, var(--text) 4%, transparent)); }
+/* por dia da semana: barras deitadas com o valor escrito */
+.vgm-dias { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.vgm-dia {
+  display: grid; grid-template-columns: 74px minmax(0, 1fr) 92px; align-items: center; gap: 10px; width: 100%;
+  min-height: 30px; padding: 2px 6px; border: 0; border-radius: 8px; background: transparent; color: var(--text);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.vgm-dia:hover, .vgm-dia.vgm-foco, .vgm-dia:focus-visible { background: color-mix(in srgb, var(--vg-ouro) 8%, transparent); outline: none; }
+.vgm-dia-nome { font-size: 13px; color: var(--muted); }
+.vgm-dia-trilho { display: block; height: 14px; border-radius: 999px; background: color-mix(in srgb, var(--text) 5%, transparent); overflow: hidden; }
+.vgm-dia-trilho u { display: block; height: 100%; border-radius: 999px; background: color-mix(in srgb, var(--vg-ouro) 45%, transparent); transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+.vgm-dia-valor { font-size: 13px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vgm-dia.melhor .vgm-dia-nome { color: var(--text); font-weight: 750; }
+.vgm-dia.melhor .vgm-dia-trilho u { background: var(--vg-ouro); }
+.vgm-dia.melhor .vgm-dia-valor { color: var(--vg-ouro); }
+
+/* por horário: 24 barras em pé; o valor das 3 melhores fica logo acima da barra */
+.vgm-horas { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; align-items: end; height: 176px; padding-top: 18px; border-bottom: 1px solid var(--border); }
+.vgm-hora {
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; min-width: 0;
+  padding: 0; border: 0; background: transparent; cursor: pointer;
+}
+.vgm-hora u { display: block; width: 100%; border-radius: 4px 4px 0 0; background: color-mix(in srgb, var(--vg-ouro) 38%, transparent); transition: height .6s cubic-bezier(.2, .8, .2, 1), background .15s; }
+.vgm-hora.top u { background: var(--vg-ouro); }
+.vgm-hora:hover u, .vgm-hora.vgm-foco u, .vgm-hora:focus-visible u { background: color-mix(in srgb, var(--vg-ouro) 80%, var(--text)); }
+.vgm-hora:focus-visible { outline: none; }
+.vgm-hora u { position: relative; }
+/* o valor da melhor hora preso no topo da barra (dentro do fluxo ele encolhia a barra) */
+.vgm-hora em {
+  position: absolute; bottom: calc(100% + 3px); left: 50%; translate: -50% 0; white-space: nowrap; font-style: normal; font-size: 10.5px; font-weight: 750;
+  color: var(--vg-ouro); font-variant-numeric: tabular-nums; pointer-events: none;
+}
+.vgm-eixo { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; margin-top: -4px; }
+.vgm-eixo span { font-size: 10.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.vgm-leg { display: block; }
 .vgm-esq { display: grid; gap: 10px; }
 
-@media (max-width: 900px) {
-  .vgm-destaques { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 1100px) {
+  .vgm-dois { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 720px) {
-  /* no celular as 24 horas cabem na largura (sem rolar de lado); a soma do dia some, o resto fica */
-  .vgm-rolagem { overflow-x: visible; }
-  .vgm-grade { grid-template-columns: 30px repeat(24, minmax(0, 1fr)) 0px; gap: 2px; min-width: 0; }
-  .vgm-lado { padding: 0; overflow: hidden; }
-  .vgm-lado u { display: none; }
-  .vgm-q { height: 20px; border-radius: 3px; }
-  .vgm-q:hover, .vgm-q.vgm-foco, .vgm-q:focus-visible { transform: none; }
-  .vgm-topo { height: 26px; }
-  .vgm-dia { font-size: 11px; }
-  .vgm-eixo { font-size: 9.5px; }
-  .vgm-destaques b { font-size: 15px; }
+  .vgm-frase { font-size: 14px; }
   .vgm-modo button { height: 36px; }
+  .vgm-bloco { padding: 12px; }
+  .vgm-dia { grid-template-columns: 64px minmax(0, 1fr) 82px; gap: 8px; min-height: 34px; }
+  .vgm-horas { gap: 2px; height: 150px; }
+  .vgm-eixo { gap: 2px; }
+  .vgm-hora em { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .vgm-q, .vgm-topo u, .vgm-lado u { transition: none; }
+  .vgm-dia-trilho u, .vgm-hora u { transition: none; }
 }
