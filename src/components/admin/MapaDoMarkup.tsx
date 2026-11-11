@@ -10,6 +10,10 @@
  * Passar o mouse (ou tocar) numa barra mostra o valor, as operações e a fatia do total. "Média por dia" divide
  * cada dia da semana pelas vezes que ele aparece no período (5 terças e 4 domingos comparam de igual para igual).
  *
+ * 3ª versão (11/11/2026, Tiago: "quero mais dados, os valores. quero poder clicar em cada barrinha do gráfico e
+ * ver o detalhamento"): todas as horas mostram o valor em cima da barra (no computador), cada dia mostra a fatia
+ * do total, e clicar numa barra abre o detalhe logo abaixo (DetalheDoMarkup.tsx).
+ *
  * Os números saem de teeds_markup_mapa: a mesma contagem do resto do painel (só conta real, um contrato uma
  * vez, equipe fora, parceiro do topo). O período é o escolhido no topo da Visão geral; com "Agora", "Hoje" ou
  * "Ontem" (um dia só não forma semana) usa os últimos 30 dias.
@@ -19,6 +23,7 @@ import type { SessaoTeeds } from '../../core/teeds/conta'
 import { SUPABASE } from '../../core/teeds/config'
 import { dinheiro } from '../../core/dinheiro'
 import type { JanelaDoPeriodo } from './PeriodoDaVisaoGeral'
+import { DetalheDoMarkup, type Recorte } from './DetalheDoMarkup'
 import './mapa-do-markup.css'
 
 interface Mapa {
@@ -45,6 +50,9 @@ const usd = (v: number) => dinheiro(Number(v) || 0, 'USD')
 const int = (n: number) => (Number(n) || 0).toLocaleString('pt-BR')
 const hh = (h: number) => `${String(h % 24).padStart(2, '0')}h`
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0)
+/** O valor curto em cima de cada barra: 130 · 9,4 · 1,2k (o "US$" vai no título do gráfico). */
+const curto = (v: number) => (v >= 1000 ? `${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}k`
+  : v >= 10 ? Math.round(v).toLocaleString('pt-BR') : v.toLocaleString('pt-BR', { maximumFractionDigits: 1 }))
 
 type Modo = 'total' | 'media'
 type Foco = { tipo: 'dia'; i: number } | { tipo: 'hora'; i: number } | null
@@ -65,6 +73,11 @@ export function MapaDoMarkup({ sessao, marca, parceiro, janela }: { sessao: Sess
   const [erro, setErro] = useState<string | null>(null)
   const [modo, setModo] = useState<Modo>('total')
   const [foco, setFoco] = useState<Foco>(null)
+  // o detalhe aberto (clique numa barra), com o fim do período fixado na hora em que abriu
+  const [aberto, setAberto] = useState<{ r: Recorte; ate: number } | null>(null)
+  useEffect(() => setAberto(null), [chave])
+  const abrir = (r: Recorte) => setAberto((a) => (a && a.r.tipo === r.tipo && a.r.i === r.i ? null : { r, ate: a?.ate ?? (aoVivo ? Date.now() : ate) }))
+  const estaAberto = (tipo: Recorte['tipo'], i: number) => aberto?.r.tipo === tipo && aberto.r.i === i
 
   useEffect(() => {
     let vivo = true
@@ -133,7 +146,7 @@ export function MapaDoMarkup({ sessao, marca, parceiro, janela }: { sessao: Sess
       const h = foco.i, c = conta.hora[h]
       return <><b>Das {hh(h)} às {hh(h + 1)}</b>: {usd(c.markup)}{sufixo} · {int(c.operacoes)} {c.operacoes === 1 ? 'operação' : 'operações'} · {pct(c.markup, conta.totalHoras)}% do markup</>
     }
-    return <>Passe o mouse (ou toque) numa barra para ver o valor · Horário de Brasília · I.A. e manual, só conta real</>
+    return <><b>Clique numa barra</b> para ver o detalhe: quem operou, cada I.A., o dia a dia · Horário de Brasília · só conta real</>
   })()
 
   return (
@@ -168,12 +181,12 @@ export function MapaDoMarkup({ sessao, marca, parceiro, janela }: { sessao: Sess
                   const v = conta.valoresDia[d]
                   return (
                     <li key={nome}>
-                      <button type="button" className={`vgm-dia${conta.melhorDia === d ? ' melhor' : ''}${foco?.tipo === 'dia' && foco.i === d ? ' vgm-foco' : ''}`}
-                        onMouseEnter={() => setFoco({ tipo: 'dia', i: d })} onFocus={() => setFoco({ tipo: 'dia', i: d })} onClick={() => setFoco({ tipo: 'dia', i: d })}
-                        aria-label={`${nome}: ${usd(v)}${sufixo}`}>
+                      <button type="button" className={`vgm-dia${conta.melhorDia === d ? ' melhor' : ''}${foco?.tipo === 'dia' && foco.i === d ? ' vgm-foco' : ''}${estaAberto('dia', d) ? ' vgm-aberto' : ''}`}
+                        onMouseEnter={() => setFoco({ tipo: 'dia', i: d })} onFocus={() => setFoco({ tipo: 'dia', i: d })} onClick={() => abrir({ tipo: 'dia', i: d })}
+                        aria-expanded={estaAberto('dia', d)} aria-label={`${nome}: ${usd(v)}${sufixo}. Abrir o detalhe`}>
                         <span className="vgm-dia-nome">{nome}</span>
                         <span className="vgm-dia-trilho"><u style={{ width: `${v > 0 ? Math.max(2, (v / conta.maxDia) * 100) : 0}%` }} /></span>
-                        <span className="vgm-dia-valor">{v > 0 ? usd(v) : '—'}</span>
+                        <span className="vgm-dia-valor">{v > 0 ? <>{usd(v)}<small>{pct(v, conta.totalDias)}% · {int(conta.dia[d].operacoes)} op.</small></> : '—'}</span>
                       </button>
                     </li>
                   )
@@ -182,16 +195,16 @@ export function MapaDoMarkup({ sessao, marca, parceiro, janela }: { sessao: Sess
             </section>
 
             <section className="vgm-bloco" aria-label="Markup por horário">
-              <h4>Por horário <small>as 3 melhores horas em dourado</small></h4>
+              <h4>Por horário <small>valores em US${sufixo} · as 3 melhores horas em dourado</small></h4>
               <div className="vgm-horas" onMouseLeave={() => setFoco(null)}>
                 {HORAS.map((h) => {
                   const v = conta.valoresHora[h]
                   const top = conta.top3.has(h)
                   return (
-                    <button key={h} type="button" className={`vgm-hora${top ? ' top' : ''}${foco?.tipo === 'hora' && foco.i === h ? ' vgm-foco' : ''}`}
-                      onMouseEnter={() => setFoco({ tipo: 'hora', i: h })} onFocus={() => setFoco({ tipo: 'hora', i: h })} onClick={() => setFoco({ tipo: 'hora', i: h })}
-                      aria-label={`Das ${hh(h)} às ${hh(h + 1)}: ${usd(v)}${sufixo}`}>
-                      <u style={{ height: `${v > 0 ? Math.max(3, (v / conta.maxHora) * 100) : 0}%` }}>{conta.melhorHora === h && <em>{usd(v)}</em>}</u>
+                    <button key={h} type="button" className={`vgm-hora${top ? ' top' : ''}${foco?.tipo === 'hora' && foco.i === h ? ' vgm-foco' : ''}${estaAberto('hora', h) ? ' vgm-aberto' : ''}`}
+                      onMouseEnter={() => setFoco({ tipo: 'hora', i: h })} onFocus={() => setFoco({ tipo: 'hora', i: h })} onClick={() => abrir({ tipo: 'hora', i: h })}
+                      aria-expanded={estaAberto('hora', h)} aria-label={`Das ${hh(h)} às ${hh(h + 1)}: ${usd(v)}${sufixo}. Abrir o detalhe`}>
+                      <u style={{ height: `${v > 0 ? Math.max(3, (v / conta.maxHora) * 100) : 0}%` }}>{v > 0 && <em>{curto(v)}</em>}</u>
                     </button>
                   )
                 })}
@@ -203,6 +216,11 @@ export function MapaDoMarkup({ sessao, marca, parceiro, janela }: { sessao: Sess
           </div>
 
           <small className="vg-barras-leg vgm-leg">{legenda}</small>
+
+          {aberto && (
+            <DetalheDoMarkup sessao={sessao} marca={marca} parceiro={parceiro} de={de} ate={aberto.ate} rotulo={rotulo}
+              recorte={aberto.r} vezes={conta.vezes} onTrocar={(r) => setAberto((a) => (a ? { ...a, r } : a))} onFechar={() => setAberto(null)} />
+          )}
         </>
       )}
     </div>

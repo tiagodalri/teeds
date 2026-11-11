@@ -25,21 +25,22 @@
 /* por dia da semana: barras deitadas com o valor escrito */
 .vgm-dias { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .vgm-dia {
-  display: grid; grid-template-columns: 74px minmax(0, 1fr) 92px; align-items: center; gap: 10px; width: 100%;
-  min-height: 30px; padding: 2px 6px; border: 0; border-radius: 8px; background: transparent; color: var(--text);
+  display: grid; grid-template-columns: 74px minmax(0, 1fr) 118px; align-items: center; gap: 10px; width: 100%;
+  min-height: 38px; padding: 2px 6px; border: 0; border-radius: 8px; background: transparent; color: var(--text);
   font: inherit; text-align: left; cursor: pointer;
 }
 .vgm-dia:hover, .vgm-dia.vgm-foco, .vgm-dia:focus-visible { background: color-mix(in srgb, var(--vg-ouro) 8%, transparent); outline: none; }
 .vgm-dia-nome { font-size: 13px; color: var(--muted); }
 .vgm-dia-trilho { display: block; height: 14px; border-radius: 999px; background: color-mix(in srgb, var(--text) 5%, transparent); overflow: hidden; }
 .vgm-dia-trilho u { display: block; height: 100%; border-radius: 999px; background: color-mix(in srgb, var(--vg-ouro) 45%, transparent); transition: width .6s cubic-bezier(.2, .8, .2, 1); }
-.vgm-dia-valor { font-size: 13px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vgm-dia-valor { display: grid; justify-items: end; font-size: 13px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vgm-dia-valor small { font-size: 10.5px; font-weight: 500; color: var(--muted); }
 .vgm-dia.melhor .vgm-dia-nome { color: var(--text); font-weight: 750; }
 .vgm-dia.melhor .vgm-dia-trilho u { background: var(--vg-ouro); }
 .vgm-dia.melhor .vgm-dia-valor { color: var(--vg-ouro); }
 
 /* por horário: 24 barras em pé; o valor das 3 melhores fica logo acima da barra */
-.vgm-horas { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; align-items: end; height: 176px; padding-top: 18px; border-bottom: 1px solid var(--border); }
+.vgm-horas { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; align-items: end; height: 186px; padding-top: 20px; border-bottom: 1px solid var(--border); }
 .vgm-hora {
   display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; min-width: 0;
   padding: 0; border: 0; background: transparent; cursor: pointer;
@@ -51,9 +52,14 @@
 .vgm-hora u { position: relative; }
 /* o valor da melhor hora preso no topo da barra (dentro do fluxo ele encolhia a barra) */
 .vgm-hora em {
-  position: absolute; bottom: calc(100% + 3px); left: 50%; translate: -50% 0; white-space: nowrap; font-style: normal; font-size: 10.5px; font-weight: 750;
-  color: var(--vg-ouro); font-variant-numeric: tabular-nums; pointer-events: none;
+  position: absolute; bottom: calc(100% + 3px); left: 50%; translate: -50% 0; white-space: nowrap; font-style: normal; font-size: 10px; font-weight: 650;
+  color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: -.02em; pointer-events: none;
 }
+.vgm-hora.top em, .vgm-hora.vgm-aberto em, .vgm-hora:hover em { color: var(--vg-ouro); font-weight: 800; }
+/* a barra aberta no detalhe (3ª versão): fica marcada enquanto o detalhe está aberto */
+.vgm-dia.vgm-aberto { background: color-mix(in srgb, var(--vg-ouro) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--vg-ouro) 55%, transparent); }
+.vgm-dia.vgm-aberto .vgm-dia-trilho u { background: var(--vg-ouro); }
+.vgm-hora.vgm-aberto u { background: var(--vg-ouro); box-shadow: 0 0 0 2px color-mix(in srgb, var(--vg-ouro) 45%, transparent); }
 .vgm-eixo { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; margin-top: -4px; }
 .vgm-eixo span { font-size: 10.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
@@ -67,7 +73,7 @@
   .vgm-frase { font-size: 14px; }
   .vgm-modo button { height: 36px; }
   .vgm-bloco { padding: 12px; }
-  .vgm-dia { grid-template-columns: 64px minmax(0, 1fr) 82px; gap: 8px; min-height: 34px; }
+  .vgm-dia { grid-template-columns: 64px minmax(0, 1fr) 104px; gap: 8px; min-height: 44px; }
   .vgm-horas { gap: 2px; height: 150px; }
   .vgm-eixo { gap: 2px; }
   .vgm-hora em { display: none; }

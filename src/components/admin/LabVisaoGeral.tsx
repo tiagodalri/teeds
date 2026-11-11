@@ -69,6 +69,34 @@ const metasDoLab: Record<string, { deposito: number | null; markup: number | nul
     dia: { deposito: 1200, markup: 600 }, semana: { deposito: 15000, markup: 3500 }, mes: { deposito: 60000, markup: 15000 },
   }
 
+/** O detalhe de uma barra do mapa: monta a partir das células de exemplo, para bater com o gráfico. */
+function exemploDoDetalhe(corpo: string, cenario: string) {
+  const { p_de, p_ate, p_dia, p_hora } = JSON.parse(corpo || '{}') as { p_de: string; p_ate: string; p_dia: number | null; p_hora: number | null }
+  const mapa = exemploDoMapa(cenario)
+  const cel = mapa.celulas.filter((c) => (p_dia == null || c.d === p_dia) && (p_hora == null || c.h === p_hora))
+  const markup = cel.reduce((a, c) => a + c.markup, 0), operacoes = cel.reduce((a, c) => a + c.operacoes, 0)
+  const de = Date.parse(p_de), ate = Date.parse(p_ate)
+  const por_data: Array<{ dia: string; markup: number; operacoes: number }> = []
+  for (let t = de; t < ate; t += 86_400_000) {
+    const dia = new Date(t - 3 * 3_600_000).toISOString().slice(0, 10)
+    const dow = (new Date(`${dia}T12:00:00Z`).getUTCDay() + 6) % 7 + 1
+    if (p_dia != null && dow !== p_dia) continue
+    const base = cel.filter((c) => c.d === dow).reduce((a, c) => a + c.markup, 0) / Math.max(1, mapa.dias[dow as 1] ?? 1)
+    const m = Math.round(base * (0.6 + ((t / 86_400_000) % 7) / 8) * 100) / 100
+    por_data.push({ dia, markup: m, operacoes: Math.round(m * 23) })
+  }
+  const nomes = ['Marcos Vinícius Andrade', 'Patrícia Lemos', 'Rafael Costa', 'Juliana Prado', 'Eduardo Nunes', 'Bruna Teixeira']
+  return {
+    total_periodo: mapa.total, markup, operacoes, volume: operacoes * 0.85, resultado: -operacoes * 0.05, clientes: Math.max(1, Math.round(operacoes / 120)),
+    ia: { markup: markup * 0.88, operacoes: Math.round(operacoes * 0.97) }, manual: { markup: markup * 0.12, operacoes: Math.round(operacoes * 0.03) },
+    por_data,
+    por_hora: Array.from({ length: 24 }, (_, h) => ({ h, markup: cel.filter((c) => c.h === h).reduce((a, c) => a + c.markup, 0), operacoes: cel.filter((c) => c.h === h).reduce((a, c) => a + c.operacoes, 0) })).filter((x) => x.markup > 0),
+    por_dia_semana: Array.from({ length: 7 }, (_, i) => ({ d: i + 1, markup: cel.filter((c) => c.d === i + 1).reduce((a, c) => a + c.markup, 0), operacoes: cel.filter((c) => c.d === i + 1).reduce((a, c) => a + c.operacoes, 0) })).filter((x) => x.markup > 0),
+    por_ia: [['GF Raptor', 0.42], ['GF Falcon', 0.27], ['GF Legacy', 0.16], ['GF Phenom', 0.02], ['GF Gulf', 0.01]].map(([nome, f], k) => ({ nome, markup: markup * (f as number), operacoes: Math.round(operacoes * (f as number)), clientes: 30 - k * 6 })),
+    clientes_top: nomes.map((nome, k) => ({ user_id: `c${k}`, nome, foto_url: null, parceiro: ['n', 'v', null, 'n', 'v', 'n'][k], markup: markup * [0.18, 0.12, 0.09, 0.07, 0.05, 0.04][k], operacoes: Math.round(operacoes * [0.18, 0.12, 0.09, 0.07, 0.05, 0.04][k]), resultado: [-42.1, 18.3, -9.9, 4.2, -15, 2][k] })),
+  }
+}
+
 export default function LabVisaoGeral() {
   const busca = new URLSearchParams(location.search)
   const cenario = busca.get('cenario') ?? ''
@@ -85,6 +113,7 @@ export default function LabVisaoGeral() {
       return new Response(JSON.stringify({ parceiro: '', metas: metasDoLab }), { status: 200 })
     }
     if (url.includes('teeds_painel_periodo')) return new Response(JSON.stringify(exemploDoPeriodo(String(i?.body ?? ''), cenario)), { status: 200 })
+    if (url.includes('teeds_markup_mapa_detalhe')) return new Response(JSON.stringify(exemploDoDetalhe(String(i?.body ?? ''), cenario)), { status: 200 })
     if (url.includes('teeds_markup_mapa')) return new Response(JSON.stringify(exemploDoMapa(cenario)), { status: 200 })
     return f(u, i)
   }) as typeof fetch
