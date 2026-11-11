@@ -21,6 +21,7 @@ import { dinheiro } from '../../core/dinheiro'
 import { MARCA } from '../../marca'
 import { haQuantoTempo } from '../../core/teeds/markupInterno'
 import { PERIODO_AGORA, SeletorDePeriodo, janelaDoPeriodo, ddmm, type PeriodoDaVisao } from './PeriodoDaVisaoGeral'
+import { MapaDoMarkup } from './MapaDoMarkup'
 import './visao-geral.css'
 
 interface Painel {
@@ -331,6 +332,9 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
           </div>
         )}
       </div>
+
+      {/* ------------------------------------------------ quando o markup acontece (dia da semana × hora, 11/11/2026) */}
+      <MapaDoMarkup sessao={sessao} marca={marca} parceiro={parceiro} janela={janela} />
 
       {/* ------------------------------------------------ 3. movimento */}
       <div className="vg-duo">

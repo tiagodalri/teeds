@@ -50,6 +50,19 @@ function exemploDoPeriodo(corpo: string, cenario: string) {
   }
 }
 
+/** O mapa dia da semana × hora: noites e começo de semana mais fortes, madrugada fraca (só o desenho). */
+function exemploDoMapa(cenario: string) {
+  if (cenario === 'vazio') return { total: 0, operacoes: 0, celulas: [], dias: { 1: 5, 2: 5, 3: 4, 4: 4, 5: 4, 6: 4, 7: 4 } }
+  const celulas: Array<{ d: number; h: number; markup: number; operacoes: number }> = []
+  for (let d = 1; d <= 7; d++) for (let h = 0; h < 24; h++) {
+    const noite = Math.exp(-((h - 20.5) ** 2) / 8), tarde = 0.45 * Math.exp(-((h - 15) ** 2) / 6), madrugada = h < 7 ? 0.05 : 0
+    const dia = [1.15, 1.25, 1.05, 1, 0.85, 0.5, 0.6][d - 1]
+    const m = Math.round((noite + tarde + madrugada) * dia * 9 * (0.8 + ((d * 7 + h * 13) % 10) / 25) * 100) / 100
+    if (m > 0.03) celulas.push({ d, h, markup: m, operacoes: Math.round(m * 23) })
+  }
+  return { total: celulas.reduce((a, c) => a + c.markup, 0), operacoes: celulas.reduce((a, c) => a + c.operacoes, 0), celulas, dias: { 1: 5, 2: 5, 3: 4, 4: 4, 5: 4, 6: 4, 7: 4 } }
+}
+
 export default function LabVisaoGeral() {
   const busca = new URLSearchParams(location.search)
   const cenario = busca.get('cenario') ?? ''
@@ -59,6 +72,7 @@ export default function LabVisaoGeral() {
     const url = String(u)
     if (url.includes('teeds_painel_visao_geral')) return new Response(JSON.stringify(exemplo(cenario)), { status: 200 })
     if (url.includes('teeds_painel_periodo')) return new Response(JSON.stringify(exemploDoPeriodo(String(i?.body ?? ''), cenario)), { status: 200 })
+    if (url.includes('teeds_markup_mapa')) return new Response(JSON.stringify(exemploDoMapa(cenario)), { status: 200 })
     return f(u, i)
   }) as typeof fetch
   return (
