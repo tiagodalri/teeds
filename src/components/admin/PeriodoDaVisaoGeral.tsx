@@ -150,7 +150,7 @@ export function SeletorDePeriodo({ valor, onTrocar, janela }: {
       <p className="vgp-leg" aria-live="polite">
         {janela
           ? <><b>{janela.rotulo}</b> · horário de Brasília{janela.aoVivo ? ' · atualiza sozinho' : ''}. O Ao vivo, o dinheiro dos clientes e as maiores bancas continuam mostrando o momento de agora.</>
-          : <><b>Tempo real</b> · os números se atualizam sozinhos a cada 15 segundos.</>}
+          : <><b>Tempo real</b> · o markup sobe a cada segundo; os outros números se atualizam a cada 15 segundos.</>}
       </p>
     </div>
   )

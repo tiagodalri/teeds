@@ -267,7 +267,7 @@ export function ManagementPanel({
    */
   const [parceiroFoco] = useParceiroEmFoco()
   const interno = useMarkupInterno(sessaoTeeds, marcaAdmin(), intervalo.de, intervalo.ate, parceiroFoco)
-  // o markup a cada operação (11/11/2026): se o período chega até hoje, o que entrou depois da leitura soma por cima a cada 2 s
+  // o markup a cada operação (11/11/2026): se o período chega até hoje, o que entrou depois da leitura soma por cima a cada 1 s
   const novo = useMarkupDesde(sessaoTeeds, marcaAdmin(), parceiroFoco, intervalo.ate === hojeLocal ? interno.dados?.lidoNoBanco : null)
   const [agoraMs, setAgoraMs] = useState(Date.now())
   useEffect(() => { const t = window.setInterval(() => setAgoraMs(Date.now()), 5000); return () => window.clearInterval(t) }, [])

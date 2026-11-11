@@ -3,7 +3,8 @@
  * 100% em tempo real... cada vez que um markup é gerado... igual lá nos cards do monitoramento ao vivo").
  *
  * As leituras grandes da Visão geral (painel, período, metas, Comissões) seguem a cada 15 s e trazem `lido_em`
- * (o relógio do banco na hora da leitura). Este gancho pergunta a cada 2 s, com a tela à vista, só "quanto
+ * (o relógio do banco na hora da leitura). Este gancho pergunta a cada 1 s (era 2 s; 11/11, Tiago: "tem como ser
+ * tipo em tempo real mesmo? a cada 1 segundo"), com a tela à vista, só "quanto
  * markup entrou DEPOIS dessa leitura" (teeds_markup_desde, ~5 ms) e a tela soma por cima. Quando a próxima
  * leitura grande chega, ela já traz essas operações, `lido_em` muda e a soma por cima recomeça do zero —
  * nada é contado duas vezes. Mesma regra da contagem única do markup.
@@ -26,7 +27,7 @@ export interface MarkupNovo {
 export const NADA_NOVO: MarkupNovo = { markup: 0, operacoes: 0, iaMarkup: 0, manualMarkup: 0, iaOperacoes: 0, manualOperacoes: 0, ultimaEm: null }
 
 /** De quanto em quanto tempo a tela pergunta se entrou markup novo. */
-export const PULSO_DO_MARKUP_MS = 2_000
+export const PULSO_DO_MARKUP_MS = 1_000
 
 async function lerDesde(sessao: SessaoTeeds, marca: string, parceiro: string, desde: string): Promise<MarkupNovo> {
   const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_markup_desde`, {
@@ -64,7 +65,7 @@ export function useMarkupDesde(sessao: SessaoTeeds | null, marca: string, parcei
       if (!vivo || !s || lendo || document.visibilityState === 'hidden') return
       lendo = true
       void lerDesde(s, marca, parceiro, desde)
-        // só troca o estado quando muda de verdade (evita redesenhar a tela a cada 2 s à toa)
+        // só troca o estado quando muda de verdade (evita redesenhar a tela a cada segundo à toa)
         .then((d) => { if (vivo) setNovo((v) => (v.operacoes === d.operacoes && v.markup === d.markup && v.ultimaEm === d.ultimaEm ? v : d)) })
         .catch(() => { /* a próxima pergunta tenta de novo; a leitura grande de 15 s segue valendo */ })
         .finally(() => { lendo = false; if (vivo) t = window.setTimeout(ler, PULSO_DO_MARKUP_MS) })

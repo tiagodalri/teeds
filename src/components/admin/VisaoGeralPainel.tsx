@@ -179,7 +179,7 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
   }, [chavePeriodo])
   const janela = useMemo(() => janelaDoPeriodo(periodo, agora), [periodo, agora])
 
-  /* O markup a cada operação (11/11/2026): a cada 2 s, o que entrou depois da última leitura grande soma por cima. */
+  /* O markup a cada operação (11/11/2026): a cada 1 s, o que entrou depois da última leitura grande soma por cima. */
   const novoAgora = useMarkupDesde(sessao, marca, parceiro, pBase?.lido_em)
   const p = useMemo(() => (pBase ? somarAoPainel(pBase, novoAgora) : null), [pBase, novoAgora])
   const novoPeriodo = useMarkupDesde(sessao, marca, parceiro, janela?.aoVivo && pp?.chave === chavePeriodo ? pp.dados.lido_em : null)
