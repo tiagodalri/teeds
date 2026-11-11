@@ -30,6 +30,8 @@ import {
   type IdDoPlano, type PlanoDoCadastro,
 } from '../../core/teeds/planosDoCadastro'
 import '../../casca/globalfly/styles/cadastro-planos.css'
+import '../../casca/globalfly/styles/cadastro-como-funciona.css'
+import { FAIXA, secoesComoFunciona, ligarComoFunciona } from '../../casca/globalfly/cadastro/comoFunciona'
 
 interface Props {
   ocupado: boolean
@@ -181,6 +183,20 @@ function useCeu(canvas: React.RefObject<HTMLCanvasElement>, ativo: React.Mutable
     addEventListener('resize', aoRedimensionar)
     return () => { cancelAnimationFrame(quadro); removeEventListener('resize', aoRedimensionar) }
   }, [canvas, ativo])
+}
+
+/** As seções da antiga página /cadastro: o que é, a plataforma por dentro, a cabine com as I.A. operando e o que vem junto. */
+function ComoFunciona() {
+  const caixa = useRef<HTMLDivElement>(null)
+  const base = import.meta.env.BASE_URL
+  const html = useMemo(() => secoesComoFunciona(base), [base])
+  useEffect(() => (caixa.current ? ligarComoFunciona(caixa.current, base) : undefined), [base])
+  return (
+    <div className="cpl-lp">
+      <div dangerouslySetInnerHTML={{ __html: FAIXA }} />
+      <div className="cpl-faixa"><div className="cpl-miolo cpl-lp-corpo" ref={caixa} dangerouslySetInnerHTML={{ __html: html }} /></div>
+    </div>
+  )
 }
 
 export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEntrar }: Props) {
@@ -362,7 +378,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
 
       <header className={`cpl-topo cpl-faixa ${rolou ? 'cpl-cheio' : ''}`}>
         <div className="cpl-miolo">
-          <div className="cpl-marca"><Brand tamanho={40} /><span className="cpl-deriv">Opera com <DerivLogo altura={13} /></span></div>
+          <div className="cpl-marca"><Brand tamanho={40} /></div>
           <button type="button" className="cpl-entrar" onClick={aoEntrar}><span>Já tem conta?</span><b>Entrar</b></button>
         </div>
       </header>
@@ -445,6 +461,8 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
             </div>
           </section>
 
+          <ComoFunciona />
+
           <div className="cpl-faixa">
             <div className="cpl-miolo">
               <section className="cpl-secao" aria-labelledby="cpl-t-comparar">
@@ -504,7 +522,9 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
                   <details><summary>Posso começar no Gold e mudar depois?</summary><p>Pode. A mudança para o Black ou o Prestige é feita dentro da plataforma, em Meu plano, na mesma conta. O que você já fez continua lá.</p></details>
                   <details><summary>Quando o Black ou o Prestige é liberado?</summary><p>Assim que o pagamento é confirmado. No cartão costuma ser na hora; no Pix, em poucos minutos. Use no pagamento o mesmo e-mail do cadastro.</p></details>
                   <details><summary>Como funciona o compartilhamento de receita?</summary><p>É uma porcentagem do lucro do mês na conta real, operando pela plataforma, apurada no início do mês seguinte. Você acompanha tudo na aba Relatórios.</p></details>
-                  <details><summary>Preciso ter conta na Deriv?</summary><p>Sim. A Deriv é a corretora oficial: o seu dinheiro fica lá, no seu nome. Se ainda não tem, dá para abrir grátis direto no site da Deriv.</p></details>
+                  <details><summary>Preciso ter conta na corretora?</summary><p>Para operar com dinheiro real, sim: a GlobalFly opera numa corretora internacional, com o dinheiro sempre no seu nome. Dentro da plataforma, as aulas mostram como abrir a conta e fazer o primeiro depósito. Antes disso, você treina com US$ 10.000 virtuais no simulador.</p></details>
+                  <details><summary>Funciona no celular?</summary><p>Sim. Dentro da plataforma você instala o app e ativa os avisos: cada sessão que termina na meta ou no limite chega como notificação no seu celular.</p></details>
+                  <details><summary>Já tenho conta na GlobalFly. Preciso me cadastrar?</summary><p>Não precisa. Toque em Entrar, no topo, e use o seu e-mail e a sua senha. Para mudar de plano, é em Meu plano, dentro da plataforma.</p></details>
                 </div>
               </section>
 

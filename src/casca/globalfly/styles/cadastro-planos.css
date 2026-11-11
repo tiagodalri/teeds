@@ -341,3 +341,11 @@
 @media (prefers-reduced-motion: reduce) {
   .cpl *, .cpl *::before, .cpl *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- seções da antiga /cadastro (estilo em cadastro-como-funciona.css, escopo .cpl-lp) */
+.cpl-lp { position: relative; margin-top: 90px; font-size: 16px; line-height: 1.55; }
+.cpl-lp-corpo { display: grid; gap: 110px; padding-top: 100px; }
+.cpl-lp .lp-faixa { margin: 0 -2%; }
+@media (max-width: 560px) { .cpl-lp { margin-top: 60px; } .cpl-lp-corpo { gap: 80px; padding-top: 70px; } }
+/* a classe .pos do app (cartão de posição aberta) vazava nos números positivos das seções antigas */
+.cpl-lp .pos { border: 0; border-radius: 0; background: none; padding: 0; box-shadow: none; height: auto; min-height: 0; display: revert; grid-template-rows: none; overflow: visible; contain: none; }
