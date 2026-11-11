@@ -12,7 +12,7 @@
  */
 import { MARCA } from '../../marca'
 import { SUPABASE } from './config'
-import type { SessaoTeeds } from './conta'
+import { sessaoGuardada, type SessaoTeeds } from './conta'
 
 export interface PlanoDoDia {
   banca: string
@@ -101,6 +101,10 @@ export async function sincronizarPlanoDoDia(sessao: SessaoTeeds): Promise<PlanoD
     const r = await fetch(`${SUPABASE.url}/auth/v1/user`, { headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}` } })
     if (!r.ok) return planoDoDia()
     const u = await r.json() as { user_metadata?: Record<string, unknown> }
+    // outra pessoa entrou neste aparelho enquanto a resposta vinha: os dados não são dela
+    if (dono !== sessao.usuario.id) return planoDoDia()
+    // a última meta e o último limite de cada I.A. vêm na mesma leitura
+    juntarComAConta(u.user_metadata?.[CAMPO_ULTIMOS], sessao)
     const daConta = u.user_metadata?.[CAMPO_NA_CONTA]
     const aqui = planoDoDia()
     if (valido(daConta) && (!aqui || Date.parse(daConta.em) > Date.parse(aqui.em))) { guardarAqui(daConta); return daConta }
@@ -108,4 +112,125 @@ export async function sincronizarPlanoDoDia(sessao: SessaoTeeds): Promise<PlanoD
     if (aqui && (!valido(daConta) || Date.parse(aqui.em) > Date.parse(daConta.em))) enviarParaAConta(aqui, sessao)
     return aqui
   } catch { return planoDoDia() }
+}
+
+/* ------------------------------------------------------------------
+  A última meta e o último limite usados (11/11/2026, pedido do Tiago:
+  "pausei, liguei de novo e voltou para o plano do dia").
+
+  Antes, o preparo SEMPRE punha o plano do dia por cima. Agora:
+  - cada I.A. lembra a meta e o limite com que foi ligada pela última vez,
+    separado por conta demo e conta real (o da demo nunca vai para a real);
+  - vale o mais novo: um plano do dia definido depois do último uso ganha
+    (a 1ª operação depois do plano usa o plano); um uso depois do plano ganha
+    (a próxima vem com o último valor);
+  - fica neste aparelho e nos dados da conta (`user_metadata`, ao lado do
+    plano), para o celular abrir igual ao computador. Sem tabela nova.
+  A entrada (stake) não entra aqui: segue o último preparo, como antes.
+  ------------------------------------------------------------------ */
+export interface MetaEStop { meta: number; limite: number; em: string }
+type Ultimos = { demo: Record<string, MetaEStop>; real: Record<string, MetaEStop> }
+const CAMPO_ULTIMOS = `meta_stop_${MARCA.id}`
+const chaveUltimos = () => (dono ? `${MARCA.id}.meta-stop.${dono}` : null)
+/** Sem plano e sem uso anterior nesta I.A. e nesta conta: os valores de fábrica do painel. */
+export const META_PADRAO = 5
+export const LIMITE_PADRAO = 10
+
+const registroValido = (x: unknown): x is MetaEStop => {
+  const r = x as MetaEStop | null
+  return !!r && Number.isFinite(r.meta) && r.meta >= 0 && Number.isFinite(r.limite) && r.limite >= 0 && typeof r.em === 'string' && Number.isFinite(Date.parse(r.em))
+}
+function limpar(x: unknown): Ultimos {
+  const o = (x && typeof x === 'object' ? x : {}) as Record<string, unknown>
+  const lado = (v: unknown) => {
+    const saida: Record<string, MetaEStop> = {}
+    if (v && typeof v === 'object' && !Array.isArray(v)) for (const [id, r] of Object.entries(v)) if (registroValido(r)) saida[id] = { meta: r.meta, limite: r.limite, em: r.em }
+    return saida
+  }
+  return { demo: lado(o.demo), real: lado(o.real) }
+}
+function lerUltimos(): Ultimos {
+  const k = chaveUltimos()
+  if (!k) return { demo: {}, real: {} }
+  try { return limpar(JSON.parse(localStorage.getItem(k) || 'null')) } catch { return { demo: {}, real: {} } }
+}
+function guardarUltimosAqui(u: Ultimos) {
+  const k = chaveUltimos()
+  if (!k) return
+  try { localStorage.setItem(k, JSON.stringify(u)) } catch { /* sem armazenamento: vale só a conta */ }
+}
+/** Junta dois registros: em cada I.A. e conta, fica o uso mais novo. */
+function juntar(a: Ultimos, b: Ultimos): Ultimos {
+  const lado = (x: Record<string, MetaEStop>, y: Record<string, MetaEStop>) => {
+    const saida = { ...x }
+    for (const [id, r] of Object.entries(y)) if (!saida[id] || Date.parse(r.em) > Date.parse(saida[id].em)) saida[id] = r
+    return saida
+  }
+  return { demo: lado(a.demo, b.demo), real: lado(a.real, b.real) }
+}
+/** Este aparelho sabe de algum uso que a conta ainda não tem? */
+const temNovidade = (junto: Ultimos, conta: Ultimos) =>
+  (['demo', 'real'] as const).some((l) => Object.entries(junto[l]).some(([id, r]) => conta[l][id]?.em !== r.em))
+
+/** O que veio da conta entra aqui; se este aparelho tem algo mais novo, sobe para a conta. */
+function juntarComAConta(daConta: unknown, sessao: SessaoTeeds): void {
+  // a resposta chegou depois de outra pessoa entrar neste aparelho: não mistura as duas
+  if (dono !== sessao.usuario.id) return
+  const conta = limpar(daConta)
+  const aqui = lerUltimos()
+  const junto = juntar(aqui, conta)
+  guardarUltimosAqui(junto)
+  if (temNovidade(junto, conta)) enviarUltimos(junto, sessao)
+}
+function enviarUltimos(u: Ultimos, sessao: SessaoTeeds) {
+  void fetch(`${SUPABASE.url}/auth/v1/user`, {
+    method: 'PUT', headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data: { [CAMPO_ULTIMOS]: u } }),
+  }).catch(() => undefined)
+}
+/** A sessão guardada, só se for de quem é dono dos dados deste aparelho agora. */
+function sessaoDoDono(): SessaoTeeds | null {
+  const s = sessaoGuardada()
+  return s && dono && s.usuario.id === dono ? s : null
+}
+
+export type OrigemDaMetaEStop = 'plano' | 'ultimo' | 'padrao'
+/**
+ * A meta e o limite com que o preparo abre para esta I.A. nesta conta:
+ * o mais novo entre o plano do dia e o último uso desta I.A. nesta conta.
+ */
+export function metaEStopDoPreparo(roboId: string, demo: boolean, daSessao?: { meta: number; limite: number } | null): { meta: number; limite: number; origem: OrigemDaMetaEStop } {
+  const p = planoDoDia()
+  const plano = p && p.metaUsd > 0 && p.limiteUsd > 0 ? p : null
+  const ultimo = lerUltimos()[demo ? 'demo' : 'real'][roboId]
+  if (ultimo && (!plano || !(Date.parse(plano.em) > Date.parse(ultimo.em)))) return { meta: ultimo.meta, limite: ultimo.limite, origem: 'ultimo' }
+  if (plano) return { meta: plano.metaUsd, limite: plano.limiteUsd, origem: 'plano' }
+  // "Continuar" de uma sessão ligada antes desta memória existir: os valores dela (mesma conta)
+  if (daSessao && Number.isFinite(daSessao.meta) && Number.isFinite(daSessao.limite)) return { meta: daSessao.meta, limite: daSessao.limite, origem: 'ultimo' }
+  return { meta: META_PADRAO, limite: LIMITE_PADRAO, origem: 'padrao' }
+}
+
+/**
+ * A I.A. LIGOU (o servidor aceitou): estes passam a ser os valores dela nesta
+ * conta, aqui e na conta da pessoa. `demo` é o que o servidor respondeu.
+ */
+export function lembrarMetaEStop(roboId: string, demo: boolean, meta: number, limite: number): void {
+  if (!Number.isFinite(meta) || !Number.isFinite(limite)) return
+  const u = lerUltimos()
+  u[demo ? 'demo' : 'real'][roboId] = { meta, limite, em: new Date().toISOString() }
+  guardarUltimosAqui(u)
+  const sessao = sessaoDoDono()
+  if (!sessao) return
+  // lê a conta antes de gravar: o outro aparelho pode ter lembrado outra I.A. nesse meio-tempo
+  void fetch(`${SUPABASE.url}/auth/v1/user`, { headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}` } })
+    .then((r) => (r.ok ? r.json() as Promise<{ user_metadata?: Record<string, unknown> }> : null))
+    // sem ler a conta, não grava por cima: apagaria o que outro aparelho guardou (sobe na próxima sincronização)
+    .then((d) => { if (d) juntarComAConta(d.user_metadata?.[CAMPO_ULTIMOS], sessao) })
+    .catch(() => undefined)
+}
+
+/** Ao abrir o preparo: traz o plano e os últimos valores da conta (feitos em outro aparelho). */
+export async function sincronizarParaOPreparo(): Promise<void> {
+  const sessao = sessaoDoDono()
+  if (sessao) await sincronizarPlanoDoDia(sessao)
 }

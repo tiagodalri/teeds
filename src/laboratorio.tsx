@@ -214,6 +214,9 @@ import { CatalogoDeExemplo } from './core/teeds/catalogoRobos'
 import { ligarEscala } from './core/escala'
 import { CentralWhatsApp } from './components/whatsapp/CentralWhatsApp'
 import { whatsappDeExemplo } from './core/teeds/whatsapp'
+import { definirDonoDoPlano, lembrarMetaEStop } from './core/teeds/planoDoDia'
+// ?tela=preparo: um dono fictício para o plano do dia e a última meta/limite de cada I.A. (ficam no localStorage deste navegador)
+if (new URLSearchParams(location.search).get('tela') === 'preparo') definirDonoDoPlano('lab')
 
 document.documentElement.dataset.marca = MARCA.id
 // ?tela=central-extras: o banco responde com plataformas e transmissões de exemplo
@@ -673,7 +676,11 @@ function Laboratorio() {
           <div className="rob-workspace-board modo-lista"><div className="cabine-caixa cartao parado">
             <RobotSetup identidade={ident} nomeEstrategia={ident.nome} symbols={symbols} symbolInicial="R_75"
               configInicial={config} moeda="USD" isDemo={!new URLSearchParams(location.search).has('real')} contaId="VRTC1234567" escolherModelo
-              onCancelar={nada} onLigar={(cfg) => { (window as unknown as { __cfgLigado?: unknown }).__cfgLigado = cfg }} ligando={false} erro={null} />
+              onCancelar={nada} onLigar={(cfg, _a, m) => {
+                (window as unknown as { __cfgLigado?: unknown }).__cfgLigado = cfg
+                // como o painel faz quando o servidor aceita: lembra a meta e o limite desta I.A. nesta conta
+                lembrarMetaEStop(m?.id ?? ident.id, !new URLSearchParams(location.search).has('real'), cfg.takeProfit, cfg.stopLoss)
+              }} ligando={false} erro={null} />
           </div></div>
           </CatalogoDeExemplo>
         )}

@@ -17,6 +17,7 @@ import { MARCA } from '../marca'
 import { roboBloqueado, ROBOS_A_VENDA } from '../core/teeds/robosLiberados'
 import { NomeDoRobo } from './NomeDoRobo'
 import { simboloMoeda } from '../core/dinheiro'
+import { lembrarMetaEStop } from '../core/teeds/planoDoDia'
 
 interface Props {
   socket: TeedsSocket | null
@@ -325,6 +326,8 @@ export function LocalRobotPanel({
       const continuarId = sessaoIdRef.current && sessaoRef.current?.estrategia.id === escolhida.id ? sessaoIdRef.current : undefined
       const s = await ligarNoServidor(sessaoTeeds, { roboId: escolhida.id, contaId: continuarId ? (contaDaSessao?.contaId ?? contaId) : contaId, config, ...(continuarId ? { continuarId } : {}) })
       roboLigou()
+      // ligou: a próxima vez desta I.A. nesta conta (demo ou real, a que o servidor disse) abre com estes valores
+      lembrarMetaEStop(escolhida.id, s.demo, config.takeProfit, config.stopLoss)
       // Commit the new identity/config only after the server accepts it.
       sessaoRef.current = { estrategia: escolhida, ident: modelo }
       setCfg(config)
@@ -343,6 +346,7 @@ export function LocalRobotPanel({
       */
       const adotada = await procurarSessaoRecemLigada(sessaoTeeds, escolhida.id, contaId)
       if (adotada) {
+        lembrarMetaEStop(escolhida.id, adotada.demo, config.takeProfit, config.stopLoss)
         sessaoRef.current = { estrategia: escolhida, ident: modelo }
         setCfg(config)
         setContaDaSessao({ contaId: adotada.contaId, demo: adotada.demo, moeda: adotada.moeda })
@@ -400,7 +404,7 @@ export function LocalRobotPanel({
   ]
 
   const preparo = (preparando || solicitarPreparo) && <RobotSetup
-    key={`${contaId}:${isDemo}:${moeda}`}
+    key={`${contaDaSessao?.contaId ?? contaId}:${contaDaSessao?.demo ?? isDemo}:${moeda}`}
     identidade={ident}
     nomeEstrategia={ident.nome}
     symbols={symbols}
@@ -412,6 +416,7 @@ export function LocalRobotPanel({
     rotulosTrocados={rotulosTrocados}
     contaId={contaDaSessao?.contaId ?? contaId}
     saldo={saldo}
+    metaDaSessao={contaDaSessao ? { meta: cfg.takeProfit, limite: cfg.stopLoss } : null}
     escolherModelo={solicitarPreparo}
     ligando={ligando}
     erro={erro}

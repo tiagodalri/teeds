@@ -13,7 +13,7 @@ import { RobotDialog } from './RobotDialog'
 import './robot-launch.css'
 import './plano-de-voo.css'
 import { nomeDoAtivo } from '../core/deriv/market'
-import { planoDoDia } from '../core/teeds/planoDoDia'
+import { metaEStopDoPreparo, sincronizarParaOPreparo } from '../core/teeds/planoDoDia'
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { NomeDoRobo } from './NomeDoRobo'
@@ -40,6 +40,8 @@ interface Props {
   contaId?: string | null
   /** Saldo da conta em que a sessão vai rodar (null = ainda não chegou ou é outra conta). */
   saldo?: number | null
+  /** Meta e limite da sessão que este preparo continua (mesma conta); só valem sem plano nem último uso guardado. */
+  metaDaSessao?: { meta: number; limite: number } | null
   escolherModelo?: boolean
   onCancelar: () => void
   onLigar: (cfg: ConfigEstrategia, symbol: string, modelo?: Identidade) => void
@@ -219,7 +221,7 @@ function MostradorDeDigitos({ valor, mudar, max, padrao }: { valor: number; muda
   )
 }
 
-export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, demoComoReal = false, rotulosTrocados = false, saldo = null, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
+export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, demoComoReal = false, rotulosTrocados = false, saldo = null, metaDaSessao = null, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
   const disponiveis = useRobosDisponiveis()
   // I.A. vendida à parte que a pessoa ainda não tem: cadeado já na escolha, não no fim do preparo
   const bloqueados = useRobosBloqueados()
@@ -253,15 +255,51 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
     }
   }, [disponiveis, escolherModelo, modelo.id])
 
-  // os valores: o último preparo; meta e limite do plano do dia da home, quando houver
+  // os valores: a entrada do último preparo (como antes)
   const inicial = useMemo(() => sanear({ ...configInicial, ...lerPreparo().cfg, valorMaximo: 0 }, configInicial), [])
-  const plano = useMemo(() => { const p = planoDoDia(); return p && p.metaUsd > 0 && p.limiteUsd > 0 ? p : null }, [])
+  /*
+    Meta e limite (11/11/2026): o mais novo entre o plano do dia e o último uso
+    DESTA I.A. NESTA CONTA (demo e real separadas). Ver planoDoDia.ts.
+  */
+  const contaDemo = isDemo
+  const sessaoContinuada = modelo.id === identidade.id ? metaDaSessao : null
+  const [origem, setOrigem] = useState(() => metaEStopDoPreparo(modelo.id, contaDemo, sessaoContinuada))
   const [valores, setValores] = useState(() => ({
     valorAoVencer: n2(inicial.valorAoVencer),
-    takeProfit: n2(plano ? plano.metaUsd : inicial.takeProfit),
-    stopLoss: n2(plano ? plano.limiteUsd : inicial.stopLoss),
+    takeProfit: n2(origem.meta),
+    stopLoss: n2(origem.limite),
   }))
-  const mudar = (k: keyof typeof valores) => (v: string) => setValores((x) => ({ ...x, [k]: v }))
+  // a pessoa já mexeu na meta ou no limite aqui: nada de trocar por baixo dela
+  const mexeuMetaOuLimite = useRef(false)
+  const mudar = (k: keyof typeof valores) => (v: string) => {
+    if (k !== 'valorAoVencer') mexeuMetaOuLimite.current = true
+    setValores((x) => ({ ...x, [k]: v }))
+  }
+  const aplicarMetaEStop = (id: string) => {
+    const o = metaEStopDoPreparo(id, contaDemo, id === identidade.id ? metaDaSessao : null)
+    setOrigem(o)
+    setValores((x) => ({ ...x, takeProfit: n2(o.meta), stopLoss: n2(o.limite) }))
+  }
+  // trocou de I.A.: cada uma abre com os valores dela
+  const modeloAntes = useRef(modelo.id)
+  useEffect(() => {
+    if (modeloAntes.current === modelo.id) return
+    modeloAntes.current = modelo.id
+    mexeuMetaOuLimite.current = false
+    aplicarMetaEStop(modelo.id)
+  }, [modelo.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // o que veio de outro aparelho (plano ou último uso) vale aqui, se a pessoa ainda não mexeu
+  // e ainda está escolhendo: na revisão (com "confirmo os valores") nada muda por baixo dela
+  const modeloAtual = useRef(modelo.id)
+  modeloAtual.current = modelo.id
+  const passoAtual = useRef<Passo>('escolha')
+  useEffect(() => {
+    let vivo = true
+    void sincronizarParaOPreparo().then(() => { if (vivo && !mexeuMetaOuLimite.current && !submitted.current && passoAtual.current !== 'decolar') aplicarMetaEStop(modeloAtual.current) })
+    return () => { vivo = false }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // a etiqueta só enquanto o número na tela é o do plano do dia
+  const doPlano = (k: 'takeProfit' | 'stopLoss') => origem.origem === 'plano' && ler(valores[k]) === (k === 'takeProfit' ? origem.meta : origem.limite)
   const [modo, setModo] = useState<Modo>(() => lerPreparo().modo === 'agressivo' ? 'agressivo' : 'conservador')
   const [confirmaReal, setConfirmaReal] = useState(false)
   const submitted = useRef(false)
@@ -302,6 +340,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   const saldoCurto = saldo !== null && (entrada !== null && saldo < entrada || limite !== null && limite > 0 && saldo < limite)
 
   useEffect(() => { corpo.current?.scrollTo({ top: 0 }) }, [passo])
+  passoAtual.current = passo
   useEffect(() => { if (!ligando) submitted.current = false }, [ligando, erro])
   /*
     Os segundos correndo no botão. Quando a Deriv engasga, ligar demora — e
@@ -447,9 +486,9 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
               {comLV && <MostradorDeDigitos valor={lv} mudar={escolherLv} max={LOSS_VIRTUAL_MAXIMO} padrao={lvDoPainel} />}
               <Mostrador id="plv-entrada" rotulo="Entrada" tom="ouro" ajuda="O valor de cada operação." valor={valores.valorAoVencer} mudar={mudar('valorAoVencer')}
                 marcas={[0.35, 1, 5, 25]} faixa={[0.35, 50]} passoMin={0.05} moeda={moeda} erro={erroEntrada} aoEnter={avancar} />
-              <Mostrador id="plv-meta" rotulo="Meta de ganho" tom="verde" etiqueta={plano ? 'do plano do dia' : undefined} ajuda="O robô para ao chegar a este ganho." valor={valores.takeProfit} mudar={mudar('takeProfit')}
+              <Mostrador id="plv-meta" rotulo="Meta de ganho" tom="verde" etiqueta={doPlano('takeProfit') ? 'do plano do dia' : undefined} ajuda="O robô para ao chegar a este ganho." valor={valores.takeProfit} mudar={mudar('takeProfit')}
                 marcas={[10, 25, 100, 500]} faixa={[5, 1000]} passoMin={1} moeda={moeda} erro={erroMeta} aoEnter={avancar} />
-              <Mostrador id="plv-limite" rotulo="Limite de perda" tom="coral" etiqueta={plano ? 'do plano do dia' : undefined} ajuda="O robô para antes de passar desta perda." valor={valores.stopLoss} mudar={mudar('stopLoss')}
+              <Mostrador id="plv-limite" rotulo="Limite de perda" tom="coral" etiqueta={doPlano('stopLoss') ? 'do plano do dia' : undefined} ajuda="O robô para antes de passar desta perda." valor={valores.stopLoss} mudar={mudar('stopLoss')}
                 marcas={[5, 15, 50, 250]} faixa={[2, 1000]} passoMin={1} moeda={moeda} erro={erroLimite} aoEnter={avancar} />
             </section>
           </div>

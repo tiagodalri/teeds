@@ -7,6 +7,7 @@ import { roboLigou } from '../core/som'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import type { Proposta } from '../core/teeds/chat'
 import { NomeDoRobo } from './NomeDoRobo'
+import { lembrarMetaEStop } from '../core/teeds/planoDoDia'
 
 /**
  * O cartão de proposta.
@@ -77,6 +78,8 @@ export function ChatProposta({ proposta, sessao, onLigado, rotulosTrocados = fal
         origem: 'chat',
       })
       roboLigou()
+      // a próxima vez desta I.A. nesta conta abre com a meta e o limite que o chat usou
+      lembrarMetaEStop(proposta.roboId, s.demo, meta, stop)
       setLigado(true)
       onLigado(s.id, config, proposta.roboId, proposta.contaId, proposta.demo, proposta.moeda)
     } catch (e) {
