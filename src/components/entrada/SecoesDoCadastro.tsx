@@ -113,7 +113,11 @@ function AulasEstiloSerie({ aoQuerer }: { aoQuerer?: () => void }) {
           <span className="cpl-olho">Apostila do aluno</span>
           <h3>Um guia para consultar sempre que precisar</h3>
           <p>Do primeiro acesso à sua primeira I.A. no ar: conta na corretora, a plataforma, as cinco I.A., gerenciamento, depósito e saque. Passo a passo, com as telas da plataforma.</p>
-          <ul><li>Para quem nunca operou</li><li>Baixa em PDF, dentro da plataforma</li><li>Acompanha as aulas, módulo a módulo</li></ul>
+          <dl className="cpl-ap-numeros">
+            <div><dt>46</dt><dd>páginas, do zero ao gerenciamento</dd></div>
+            <div><dt>5</dt><dd>I.A. explicadas passo a passo</dd></div>
+            <div><dt>PDF</dt><dd>para baixar dentro da plataforma</dd></div>
+          </dl>
         </div>
       </div>
       {aberta && <JanelaDaAula aula={aberta} aoFechar={fechar} aoQuerer={aoQuerer} />}

@@ -251,16 +251,28 @@ export function CabineDaVitrine({ escolhida, aoTrocar }: { escolhida: number; ao
 }
 
 /* ------------------------------------------------------------------ a apostila folheando */
+/**
+ * O livro em 3D (11/11/2026, Tiago: "dá para melhorar muito essa parte da apostila"): a capa real, a
+ * espessura das páginas e três folhas virando com páginas reais da apostila, desfocadas (a forma da
+ * página aparece, o conteúdo não). Abre, folheia, fecha, em volta.
+ */
 export function ApostilaFolheando() {
   const b = import.meta.env.BASE_URL
+  const pg = (n: number) => ({ backgroundImage: `url(${b}aulas-globalfly/apostila/pagina-${n}.webp)` })
   return (
-    <div className="cpl-livro-palco" aria-hidden="true"><div className="cpl-livro">
-      <div className="cpl-livro-miolo">{[0, 1, 2, 3, 4].map((i) => <i key={i} />)}</div>
-      {[0, 1, 2].map((i) => <div key={i} className={`cpl-livro-folha cpl-folha-${i}`}><span>{[0, 1, 2, 3, 4, 5].map((j) => <i key={j} />)}</span></div>)}
-      <div className="cpl-livro-capa">
-        <img src={`${b}aulas-globalfly/apostila-capa.webp`} alt="" width="600" height="849" loading="lazy" />
-        <span className="cpl-livro-verso" />
+    <div className="cpl-ap-palco" aria-hidden="true">
+      <div className="cpl-ap-brilho" />
+      <div className="cpl-ap-livro">
+        <div className="cpl-ap-base" style={pg(2)} />
+        <div className="cpl-ap-folha cpl-ap-f3"><span className="cpl-ap-frente" style={pg(5)} /><span className="cpl-ap-verso" style={pg(6)} /></div>
+        <div className="cpl-ap-folha cpl-ap-f2"><span className="cpl-ap-frente" style={pg(3)} /><span className="cpl-ap-verso" style={pg(4)} /></div>
+        <div className="cpl-ap-folha cpl-ap-f1"><span className="cpl-ap-frente" style={pg(1)} /><span className="cpl-ap-verso" style={pg(2)} /></div>
+        <div className="cpl-ap-folha cpl-ap-capa">
+          <img className="cpl-ap-frente" src={`${b}aulas-globalfly/apostila-capa.webp`} alt="" width="600" height="849" loading="lazy" />
+          <span className="cpl-ap-verso cpl-ap-guarda" />
+        </div>
       </div>
-    </div></div>
+      <div className="cpl-ap-sombra" />
+    </div>
   )
 }
