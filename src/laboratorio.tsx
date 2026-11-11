@@ -194,6 +194,7 @@ const LabQuemEstaOnline = lazy(() => import('./components/monitoramento/LabQuemE
 const LabManualAoVivo = lazy(() => import('./components/monitoramento/LabManualAoVivo'))
 const LabEncerradas = lazy(() => import('./components/monitoramento/LabEncerradas'))
 const LabVisaoGeral = lazy(() => import('./components/admin/LabVisaoGeral'))
+const LabCompartilhamento = lazy(() => import('./components/admin/LabCompartilhamento'))
 const LabCabineTopo = lazy(() => import('./components/monitoramento/LabCabineTopo'))
 const LiberarAcessoGeralLab = lazy(() => import('./components/lancamento/LiberarAcessoGeral').then((m) => ({ default: m.LiberarAcessoGeral })))
 const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine'))
@@ -544,6 +545,8 @@ function Laboratorio() {
   if (qual === 'encerradas') return <Suspense fallback={null}><LabEncerradas /></Suspense>
   // ?tela=visao-geral(&cenario=real|vazio): a Visão geral da Administração com números de exemplo
   if (qual === 'visao-geral') return <Suspense fallback={null}><LabVisaoGeral /></Suspense>
+  // ?tela=compartilhamento(&parceiro=1)(&vazio): o Compartilhamento de receita com clientes de exemplo; gerar e dar baixa em memória
+  if (qual === 'compartilhamento') return <Suspense fallback={null}><LabCompartilhamento /></Suspense>
   // ?tela=cabine-topo(&vazio): cabeçalho da cabine espelho e o aviso "Em conta real agora", com exemplo
   if (qual === 'cabine-topo') return <Suspense fallback={null}><LabCabineTopo /></Suspense>
   if (qual === 'liberar-geral' && (new URLSearchParams(location.search).has('parceiro') || new URLSearchParams(location.search).has('esperando'))) {

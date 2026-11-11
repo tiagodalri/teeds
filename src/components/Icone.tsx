@@ -28,6 +28,8 @@ const TRACOS = {
   planos: 'M12 3l9 4.5-9 4.5-9-4.5zM3 12l9 4.5 9-4.5M3 16.5l9 4.5 9-4.5',
   produtos: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9',
   comissoes: 'M12 3v18M17 7H9.5a3 3 0 000 6h5a3 3 0 010 6H6',
+  // a fatura do compartilhamento de receita (11/11/2026): um recibo com o picote embaixo
+  fatura: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3',
   monitoramento: 'M3 5h18v11H3zM8 20h8M12 16v4M6 13l3-3 2 2 4-5 3 3',
   // a Central ao vivo: a antena transmitindo (um ponto com duas ondas de cada lado)
   aovivo: 'M12 12h.01M8.5 15.5a5 5 0 010-7M15.5 8.5a5 5 0 010 7M5.6 18.4a9 9 0 010-12.8M18.4 5.6a9 9 0 010 12.8',
