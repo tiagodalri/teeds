@@ -52,7 +52,8 @@ export function Lancamentos({ dados, periodo, rotuloPeriodo, filtroInicial, pode
 
   const totais = useMemo(() => {
     let entra = 0, sai = 0
-    for (const l of lista) { if (ehEntrada(l.tipo)) entra += l.valor; else sai += l.valor }
+    // o que foi pago por fora não passou pelo caixa: fica fora das entradas e saídas
+    for (const l of lista) { if (l.pago_fora) continue; if (ehEntrada(l.tipo)) entra += l.valor; else sai += l.valor }
     return { entra, sai }
   }, [lista])
 
@@ -132,7 +133,7 @@ export function Lancamentos({ dados, periodo, rotuloPeriodo, filtroInicial, pode
               <span role="cell" className="fin-linha-desc"><b>{l.descricao}{l.anexos.length > 0 && <em className="fin-clipe" title={`${l.anexos.length} ${l.anexos.length === 1 ? 'comprovante' : 'comprovantes'}`} aria-label="Com comprovante"><svg viewBox="0 0 24 24"><path d="M20 11.5l-8.2 8.2a5 5 0 01-7.1-7.1l8.5-8.5a3.3 3.3 0 014.7 4.7l-8.5 8.5a1.7 1.7 0 01-2.4-2.4l7.8-7.8" /></svg></em>}</b>
                 <small>{l.tipo === 'aporte' || l.tipo === 'retirada' ? ROTULO_TIPO[l.tipo] : l.contraparte || (l.forma ?? '')}{l.parcelas ? ` · ${l.parcela}/${l.parcelas}` : l.grupo ? ' · mensal' : ''}{l.projeto_id && pro.get(l.projeto_id) ? <em className="fin-de-projeto" style={{ ['--fin-cor' as string]: pro.get(l.projeto_id)!.cor }}>{pro.get(l.projeto_id)!.nome}</em> : null}</small></span>
               <span role="cell">{c ? <em className="fin-chip" style={{ ['--fin-cor' as string]: c.cor }}><i className="fin-ponto" />{c.nome}</em> : l.tipo === 'aporte' || l.tipo === 'retirada' ? <em className="fin-chip socio">Sócio</em> : <em className="fin-sem">Sem categoria</em>}</span>
-              <span role="cell" className="fin-linha-conta">{so && (l.tipo === 'aporte' || l.tipo === 'retirada' || !l.conta_id)
+              <span role="cell" className="fin-linha-conta">{l.pago_fora ? <><b>Por fora</b><small>Só no custo do projeto</small></> : so && (l.tipo === 'aporte' || l.tipo === 'retirada' || !l.conta_id)
                 ? <><b>{so.nome}</b><small>{l.tipo === 'despesa' ? 'Do próprio bolso' : l.tipo === 'receita' ? 'Na conta pessoal' : l.conta_id ? con.get(l.conta_id)?.nome : ''}</small></>
                 : l.conta_id ? <b>{con.get(l.conta_id)?.nome ?? '—'}</b> : <em className="fin-sem">—</em>}</span>
               <span role="cell"><em className={`fin-situacao ${s}`}>{situacaoTxt(l)}</em></span>

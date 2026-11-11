@@ -37,6 +37,7 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
   const contasAtivas = dados.contas.filter((c) => c.ativo || c.id === l?.conta_id)
   const [conta, setConta] = useState(l?.conta_id ?? contasAtivas[0]?.id ?? '')
   const [socio, setSocio] = useState<string>(l?.socio_id ?? rascunho?.socio_id ?? '')
+  const [porFora, setPorFora] = useState(!!l?.pago_fora)
   const [contraparte, setContraparte] = useState(l?.contraparte ?? '')
   const [forma, setForma] = useState(l?.forma ?? '')
   const [obs, setObs] = useState(l?.observacoes ?? '')
@@ -61,6 +62,7 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
   const sociosAtivos = dados.socios.filter((s) => s.ativo || s.id === socio)
   const categorias = dados.categorias.filter((c) => c.tipo === (entrada ? 'entrada' : 'saida') && (c.ativo || c.id === categoria))
   const noBolso = operacional && !!socio
+  const fora = tipo === 'despesa' && porFora
   const contrapartes = useMemo(() => [...new Set(dados.lancamentos.map((x) => x.contraparte).filter((x): x is string => !!x))].sort().slice(0, 300), [dados.lancamentos])
   const doGrupo = l?.grupo ? dados.lancamentos.filter((x) => x.grupo === l.grupo && x.vencimento >= l.vencimento) : []
 
@@ -101,8 +103,9 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
         tipo, descricao: descricao.trim(),
         categoria_id: operacional ? categoria || null : null,
         projeto_id: projeto || null,
-        conta_id: noBolso ? null : conta || null,
-        socio_id: socio || null,
+        conta_id: noBolso || fora ? null : conta || null,
+        socio_id: fora ? null : socio || null,
+        pago_fora: fora,
         contraparte: contraparte.trim() || null, forma: forma || null, observacoes: obs.trim() || null,
       }
       if (l) {
@@ -231,16 +234,19 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
           <div className="fin-campo largo">
             <span className="fin-campo-rot">{tipo === 'despesa' ? 'Quem pagou' : tipo === 'receita' ? 'Onde o dinheiro caiu' : tipo === 'aporte' ? 'Sócio que colocou' : 'Sócio que tirou'}</span>
             <div className="fin-escolha">
-              {operacional && <button type="button" className={!socio ? 'on' : ''} onClick={() => setSocio('')}>
+              {operacional && <button type="button" className={!socio && !fora ? 'on' : ''} onClick={() => { setSocio(''); setPorFora(false) }}>
                 <b>Conta do projeto</b><small>{tipo === 'despesa' ? 'Saiu do caixa do projeto' : 'Entrou no caixa do projeto'}</small></button>}
-              {sociosAtivos.map((s) => <button key={s.id} type="button" className={socio === s.id ? 'on' : ''} onClick={() => setSocio(s.id)} style={{ ['--fin-cor' as string]: s.cor }}>
+              {sociosAtivos.map((s) => <button key={s.id} type="button" className={socio === s.id && !fora ? 'on' : ''} onClick={() => { setSocio(s.id); setPorFora(false) }} style={{ ['--fin-cor' as string]: s.cor }}>
                 <b><i className="fin-ponto" />{s.nome}</b><small>{tipo === 'despesa' ? 'Pagou do próprio bolso' : tipo === 'receita' ? 'Caiu na conta pessoal' : `${s.percentual.toLocaleString('pt-BR')}% do resultado`}</small></button>)}
+              {tipo === 'despesa' && <button type="button" className={fora ? 'on' : ''} onClick={() => { setPorFora(true); setSocio('') }}>
+                <b>Pago por fora</b><small>O parceiro pagou do bolso dele</small></button>}
               {!sociosAtivos.length && !operacional && <p className="fin-aviso-mini">Cadastre os sócios em Cadastros para lançar aportes e retiradas.</p>}
             </div>
-            {noBolso && <small className="fin-campo-dica">Entra no resultado do projeto e no acerto entre os sócios, sem mexer no saldo das contas.</small>}
+            {fora && <small className="fin-campo-dica">Entra só no custo do projeto: não sai do caixa, não entra no resultado da empresa nem no acerto entre os sócios.</small>}
+            {noBolso && !fora && <small className="fin-campo-dica">Entra no resultado do projeto e no acerto entre os sócios, sem mexer no saldo das contas.</small>}
           </div>
 
-          {!noBolso && <Campo rotulo={entrada ? 'Conta que recebeu' : 'Conta que pagou'} largo={!operacional}>
+          {!noBolso && !fora && <Campo rotulo={entrada ? 'Conta que recebeu' : 'Conta que pagou'} largo={!operacional}>
             <select value={conta} onChange={(e) => setConta(e.target.value)}>
               <option value="">Nenhuma conta</option>
               {contasAtivas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}

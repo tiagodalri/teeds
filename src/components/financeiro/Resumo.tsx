@@ -113,9 +113,10 @@ export function Resumo({ dados, todos, projeto, aoProjeto, periodo, rotuloPeriod
             style={{ ['--fin-cor' as string]: x.projeto?.cor ?? '#94A3B8' }} onClick={() => aoProjeto(projeto === id ? '' : id)}
             title={projeto === id ? 'Ver todos os projetos' : `Ver só ${x.projeto?.nome ?? 'o custo geral'}`}>
             <span className="fin-projeto-nome"><i className="fin-ponto" /><b>{x.projeto?.nome ?? 'Custo geral'}</b><small>{x.n ? `${x.n} ${x.n === 1 ? 'lançamento' : 'lançamentos'}` : 'Nada no período'}</small></span>
-            <span className="fin-projeto-num"><small>Despesas</small><b className="fin-sai">{reais(x.despesas)}</b></span>
+            <span className="fin-projeto-num" title={x.porFora ? `${reais(x.porFora)} pagos por fora pelo parceiro` : undefined}><small>Despesas{x.porFora ? ' *' : ''}</small><b className="fin-sai">{reais(x.despesas)}</b></span>
             <span className="fin-projeto-num"><small>Receitas</small><b className="fin-entra">{reais(x.receitas)}</b></span>
             <span className="fin-projeto-num"><small>Resultado</small><b className={x.resultado < 0 ? 'fin-sai' : x.resultado > 0 ? 'fin-entra' : ''}>{reais(x.resultado)}</b></span>
+            {x.porFora > 0 && <small className="fin-projeto-fora">* {reais(x.porFora)} pagos por fora pelo parceiro</small>}
             <span className="fin-projeto-barra" aria-hidden="true"><i style={{ width: `${Math.max(x.despesas ? 2 : 0, x.parte * 100)}%` }} /></span>
           </button>
         })}

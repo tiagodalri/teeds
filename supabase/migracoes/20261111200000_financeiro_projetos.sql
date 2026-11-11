@@ -18,6 +18,9 @@ create table if not exists public.fin_projetos (
 create index if not exists fin_projetos_marca on public.fin_projetos (marca);
 
 alter table public.fin_lancamentos add column if not exists projeto_id uuid references public.fin_projetos (id) on delete set null;
+-- "pago por fora" (11/11/2026, Tiago: o tráfego do Naor foi pago com o cartão dele; conta "só no custo do
+-- projeto"): entra no custo do projeto, mas não sai do caixa, não entra no resultado da empresa nem no acerto.
+alter table public.fin_lancamentos add column if not exists pago_fora boolean not null default false;
 create index if not exists fin_lancamentos_projeto on public.fin_lancamentos (projeto_id) where projeto_id is not null;
 
 alter table public.fin_projetos enable row level security;

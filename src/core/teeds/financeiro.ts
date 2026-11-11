@@ -24,6 +24,8 @@ export interface Lancamento {
   categoria_id: string | null; conta_id: string | null; socio_id: string | null; projeto_id: string | null
   contraparte: string | null; forma: string | null; observacoes: string | null
   grupo: string | null; parcela: number | null; parcelas: number | null
+  /** pago por fora (o parceiro pagou do bolso dele): só no custo do projeto */
+  pago_fora: boolean
   anexos: Anexo[]; origem: string | null; origem_id: string | null
   criado_por: string | null; criado_em: string; atualizado_por: string | null; atualizado_em: string
 }
@@ -272,6 +274,7 @@ export function resumir(d: DadosFin, p: Periodo, hojeDia = hoje()): Resumo {
   let entradas = 0, saidas = 0, aportes = 0, retiradas = 0
   let aReceber = 0, aReceberVencido = 0, nReceberVencido = 0, aPagar = 0, aPagarVencido = 0, nPagarVencido = 0
   for (const l of d.lancamentos) {
+    if (l.pago_fora) continue
     if (l.pago_em) {
       if (l.pago_em < p.de || l.pago_em > p.ate) continue
       if (l.tipo === 'receita') entradas += l.valor
@@ -300,7 +303,7 @@ export function resumir(d: DadosFin, p: Periodo, hojeDia = hoje()): Resumo {
 export function saldosDasContas(d: DadosFin): Array<{ conta: Conta; saldo: number; entradas: number; saidas: number }> {
   const m = new Map(d.contas.map((c) => [c.id, { conta: c, saldo: c.saldo_inicial, entradas: 0, saidas: 0 }]))
   for (const l of d.lancamentos) {
-    if (!l.pago_em || !l.conta_id || (ehOperacional(l.tipo) && l.socio_id)) continue
+    if (l.pago_fora || !l.pago_em || !l.conta_id || (ehOperacional(l.tipo) && l.socio_id)) continue
     const x = m.get(l.conta_id); if (!x) continue
     if (ehEntrada(l.tipo)) { x.saldo += l.valor; x.entradas += l.valor } else { x.saldo -= l.valor; x.saidas += l.valor }
   }
@@ -313,7 +316,7 @@ export function mesAMes(d: DadosFin, ate: string, n = 12): Mes[] {
   const meses: Mes[] = Array.from({ length: n }, (_, i) => ({ mes: mesDe(somarMeses(inicioDoMes(ate), i - n + 1)), entradas: 0, saidas: 0, resultado: 0 }))
   const por = new Map(meses.map((x) => [x.mes, x]))
   for (const l of d.lancamentos) {
-    if (!l.pago_em || !ehOperacional(l.tipo)) continue
+    if (l.pago_fora || !l.pago_em || !ehOperacional(l.tipo)) continue
     const x = por.get(mesDe(l.pago_em)); if (!x) continue
     if (l.tipo === 'receita') x.entradas += l.valor; else x.saidas += l.valor
   }
@@ -328,7 +331,7 @@ export function porCategoria(d: DadosFin, p: Periodo, tipo: 'receita' | 'despesa
   const m = new Map<string, FatiaCategoria>()
   let total = 0
   for (const l of d.lancamentos) {
-    if (l.tipo !== tipo || !l.pago_em || l.pago_em < p.de || l.pago_em > p.ate) continue
+    if (l.pago_fora || l.tipo !== tipo || !l.pago_em || l.pago_em < p.de || l.pago_em > p.ate) continue
     const c = l.categoria_id ? cat.get(l.categoria_id) : undefined
     const chave = c?.id ?? '-'
     const x = m.get(chave) ?? { id: c?.id ?? null, nome: c?.nome ?? 'Sem categoria', cor: c?.cor ?? '#94A3B8', valor: 0, n: 0, parte: 0 }
@@ -361,7 +364,7 @@ export function dividir(d: DadosFin, p: Periodo): { resultadoPeriodo: number; re
   let resultadoPeriodo = 0, resultadoTotal = 0
   const mov = new Map<string, { colocou: number; tirou: number }>()
   for (const l of d.lancamentos) {
-    if (!l.pago_em) continue
+    if (!l.pago_em || l.pago_fora) continue
     if (ehOperacional(l.tipo)) {
       const v = l.tipo === 'receita' ? l.valor : -l.valor
       resultadoTotal += v
@@ -384,7 +387,9 @@ export function dividir(d: DadosFin, p: Periodo): { resultadoPeriodo: number; re
   return { resultadoPeriodo, resultadoTotal, somaPercentual, linhas }
 }
 
-export interface LinhaProjeto { projeto: Projeto | null; receitas: number; despesas: number; resultado: number; n: number; parte: number }
+export interface LinhaProjeto { projeto: Projeto | null; receitas: number; despesas: number; resultado: number; n: number; parte: number
+  /** parte das despesas que o parceiro pagou por fora (está dentro de `despesas`) */
+  porFora: number }
 /**
  * Custo por projeto (11/11/2026, Tiago: "custo por projeto... projeto do Victor, projeto do Naor"): receitas e
  * despesas pagas no período, por projeto; o que não tem projeto é o custo geral. `parte` = fatia das despesas.
@@ -392,13 +397,13 @@ export interface LinhaProjeto { projeto: Projeto | null; receitas: number; despe
 export function porProjeto(d: DadosFin, p: Periodo): LinhaProjeto[] {
   const proj = new Map(d.projetos.map((x) => [x.id, x]))
   const m = new Map<string, LinhaProjeto>()
-  for (const x of d.projetos.filter((y) => y.ativo)) m.set(x.id, { projeto: x, receitas: 0, despesas: 0, resultado: 0, n: 0, parte: 0 })
+  for (const x of d.projetos.filter((y) => y.ativo)) m.set(x.id, { projeto: x, receitas: 0, despesas: 0, resultado: 0, n: 0, parte: 0, porFora: 0 })
   let totalDespesas = 0
   for (const l of d.lancamentos) {
     if (!l.pago_em || !ehOperacional(l.tipo) || l.pago_em < p.de || l.pago_em > p.ate) continue
     const chave = l.projeto_id && proj.has(l.projeto_id) ? l.projeto_id : '-'
-    const x = m.get(chave) ?? { projeto: chave === '-' ? null : proj.get(chave)!, receitas: 0, despesas: 0, resultado: 0, n: 0, parte: 0 }
-    if (l.tipo === 'receita') x.receitas += l.valor; else { x.despesas += l.valor; totalDespesas += l.valor }
+    const x = m.get(chave) ?? { projeto: chave === '-' ? null : proj.get(chave)!, receitas: 0, despesas: 0, resultado: 0, n: 0, parte: 0, porFora: 0 }
+    if (l.tipo === 'receita') x.receitas += l.valor; else { x.despesas += l.valor; totalDespesas += l.valor; if (l.pago_fora) x.porFora += l.valor }
     x.n++
     m.set(chave, x)
   }

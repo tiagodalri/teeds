@@ -42,7 +42,7 @@ function semente(vazio: boolean): DadosFin {
   const h = hoje()
   const l: Lancamento[] = []
   const add = (x: Partial<Lancamento> & Pick<Lancamento, 'tipo' | 'descricao' | 'valor' | 'vencimento'>) => l.push({
-    id: id(), marca: 'globalfly', pago_em: null, categoria_id: null, conta_id: contas[0].id, socio_id: null, projeto_id: null, contraparte: null, forma: null, observacoes: null,
+    id: id(), marca: 'globalfly', pago_em: null, categoria_id: null, conta_id: contas[0].id, socio_id: null, projeto_id: null, pago_fora: false, contraparte: null, forma: null, observacoes: null,
     grupo: null, parcela: null, parcelas: null, anexos: [], origem: null, origem_id: null, criado_por: 'u1', criado_em: new Date().toISOString(), atualizado_por: 'u1', atualizado_em: new Date().toISOString(), ...x,
   })
   // as cobranças do Facebook (as 31 dos prints de 10/11/2026), pagas no cartão do Tiago
@@ -54,7 +54,7 @@ function semente(vazio: boolean): DadosFin {
     add({ tipo: 'despesa', descricao: 'Servidor DigitalOcean', valor: 312.4, vencimento: d, pago_em: m === 0 ? null : d, categoria_id: c('Servidores e tecnologia'), contraparte: 'DigitalOcean', forma: 'Cartão de crédito', grupo: 'g1', parcela: 6 - m })
     add({ tipo: 'despesa', descricao: 'Supabase Pro', valor: 145.9, vencimento: d, pago_em: m === 0 ? null : d, categoria_id: c('Ferramentas e assinaturas'), contraparte: 'Supabase', forma: 'Cartão de crédito' })
     if (m > 0) add({ tipo: 'receita', descricao: 'Vendas Black e Prestige', valor: [0, 2970, 1782, 1485, 891, 594][m], vencimento: d, pago_em: d, categoria_id: c('Vendas de planos'), conta_id: contas[1].id, contraparte: 'Cakto', forma: 'Plataforma', projeto_id: projetos[m % 2].id })
-    add({ tipo: 'despesa', descricao: 'Anúncios do Naor', valor: [0, 640, 520, 410, 300, 180][m] || 220, vencimento: d, pago_em: d, categoria_id: c('Anúncios'), contraparte: 'Meta Platforms', forma: 'Cartão de crédito', projeto_id: projetos[1].id })
+    add({ tipo: 'despesa', descricao: 'Anúncios do Naor', valor: [0, 640, 520, 410, 300, 180][m] || 220, vencimento: d, pago_em: d, categoria_id: c('Anúncios'), conta_id: null, contraparte: 'Meta Platforms', forma: 'Cartão de crédito', projeto_id: projetos[1].id, pago_fora: true })
   }
   add({ tipo: 'despesa', descricao: 'Contabilidade de outubro', valor: 650, vencimento: somarDias(h, -6), categoria_id: c('Contabilidade e jurídico'), contraparte: 'Escritório Alfa', forma: 'Boleto' })
   add({ tipo: 'despesa', descricao: 'Edição dos vídeos da live', valor: 1200, vencimento: somarDias(h, 4), categoria_id: c('Produção de conteúdo'), contraparte: 'Estúdio Norte', forma: 'Pix' })
