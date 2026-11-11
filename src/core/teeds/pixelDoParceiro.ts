@@ -22,7 +22,7 @@ const PIXELS: Partial<Record<string, Record<string, string>>> = {
 }
 /** O número do pixel do parceiro nesta plataforma, se ele tiver um. */
 export const pixelDoParceiro = (marca: string, codigo: string): string | null => PIXELS[marca]?.[codigo] ?? null
-const PADRAO = new Set(['PageView', 'ViewContent', 'Lead', 'CompleteRegistration', 'Contact', 'Schedule', 'Subscribe', 'InitiateCheckout'])
+const PADRAO = new Set(['PageView', 'ViewContent', 'Lead', 'CompleteRegistration', 'Contact', 'Schedule', 'Subscribe', 'InitiateCheckout', 'AddToCart', 'CustomizeProduct', 'StartTrial', 'AddPaymentInfo', 'Purchase', 'Search', 'AddToWishlist', 'SubmitApplication'])
 
 type Fbq = ((...a: unknown[]) => void) & { callMethod?: (...a: unknown[]) => void; queue?: unknown[]; push?: unknown; loaded?: boolean; version?: string }
 declare global { interface Window { fbq?: Fbq; _fbq?: Fbq } }

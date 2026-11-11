@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { buscarCotacoes, cotacoesGuardadas } from '../ferramentas/cambio'
 import { capaDaAula, capaEspecial } from '../capasAulas'
 import { porcentagem, type IdDoPlano, type PlanoDoCadastro } from '../../core/teeds/planosDoCadastro'
+import { eventoDoPixel } from '../../core/teeds/pixelDoParceiro'
 import { FAIXA, SESSOES, secoesComoFunciona, ligarComoFunciona } from '../../casca/globalfly/cadastro/comoFunciona'
 import { ApostilaFolheando, CabineDaVitrine, TelaAoVivo, TelaManual } from './VitrinesAnimadas'
 import { MODULOS } from '../../core/teeds/modulosAulas'
@@ -58,6 +59,7 @@ type AulaAberta = { id: string; titulo: string; modulo: string; n: number; m: nu
 /** A janela de uma aula: capa grande, o que ela ensina e o convite para criar a conta e assistir. */
 function JanelaDaAula({ aula, aoFechar, aoQuerer }: { aula: AulaAberta; aoFechar: () => void; aoQuerer?: () => void }) {
   const fechar = useRef<HTMLButtonElement>(null)
+  useEffect(() => { eventoDoPixel('ViewContent', { content_name: `aula-${aula.id}` }, true) }, [aula.id])
   useEffect(() => {
     fechar.current?.focus()
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') aoFechar() }

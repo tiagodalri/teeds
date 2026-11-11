@@ -250,6 +250,9 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
   }, [])
   function irParaDados(id: IdDoPlano) {
     eventoDoPixel('ClicouCadastrar', { plano: id }, true)
+    const escolhido = planos.find((p) => p.id === id)
+    // escolher o plano é pôr no carrinho: com o valor do plano (o Gold vai com zero)
+    eventoDoPixel('AddToCart', { content_name: `gf-${id}`, content_ids: [`gf-${id}`], content_type: 'product', value: escolhido?.preco ?? 0, currency: 'BRL' }, true)
     rastroDoCadastro('clicou', { plano: id })
     setSel(id); setEtapa('dados'); limparErro()
     try { history.pushState({ ...(history.state ?? {}), cplDados: true }, '') } catch { /* sem histórico: segue */ }
@@ -340,6 +343,8 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
     const r = await onCadastrar({ nome, email, telefone, consentiu: false, ...(SENHA_NO_CADASTRO ? { senha } : {}) })
     if (!r.ok) { rastroDoCadastro('erro-cadastro', { plano: plano.id }, undefined, '/dados'); return }
     rastroDoCadastro('cadastro', { conta: r.conta ?? 'provisoria', plano: plano.id }, email.trim().toLowerCase(), '/dados')
+    eventoDoPixel('Lead', { content_name: `gf-${plano.id}`, value: plano.preco, currency: 'BRL' }, true, email.trim().toLowerCase())
+    if (!plano.preco) eventoDoPixel('StartTrial', { content_name: 'gf-gold', value: 0, currency: 'BRL', predicted_ltv: 0 }, true)
     setSenha(''); setRepetir(''); setGiro((g) => g + 1)
     // o obrigado da GlobalFly diz como entrar conforme o que o servidor fez com a conta
     try {
@@ -567,7 +572,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
                 <div className="cpl-cartao-grande" ref={cartaoGrande} key={`${plano.id}-${giro}`}><Cartao p={plano} titular={titular} /></div>
               </div>
               <div className="cpl-troca" role="group" aria-label="Trocar plano">
-                {planos.map((p) => <button key={p.id} type="button" aria-pressed={p.id === sel} onClick={() => setSel(p.id)}>{p.nome}</button>)}
+                {planos.map((p) => <button key={p.id} type="button" aria-pressed={p.id === sel} onClick={() => { if (p.id !== sel) eventoDoPixel('CustomizeProduct', { content_name: `gf-${p.id}`, de: `gf-${sel}` }); setSel(p.id) }}>{p.nome}</button>)}
               </div>
               <div className="cpl-resumo">
                 <div className="cpl-linha"><b>GF Member {plano.nome}</b><span className="cpl-v">R$ {brl(plano.preco)}<small>{plano.preco ? '/ano' : 'aquisição zero'}</small></span></div>
