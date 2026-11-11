@@ -56,6 +56,8 @@ body {
   color: var(--text);
   font: 14px/1.5 ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* nenhuma palavra sozinha na última linha (11/11/2026, regra do Tiago): o navegador reequilibra a quebra */
+  text-wrap: pretty;
 }
 
 button, input { font: inherit; color: inherit; }

@@ -324,3 +324,13 @@
 .rob-pede-deriv-fechar:hover { color: var(--text); border-color: var(--muted); }
 @keyframes rob-pede-entra { from { opacity: 0; transform: translateY(8px) scale(.98); } }
 @media (prefers-reduced-motion: reduce) { .rob-pede-deriv-caixa { animation: none; } }
+
+/* 11/11/2026 (revisão do celular): a 375 px os rótulos da visão geral saíam cortados
+   ("Resultado das sessõ…", "Em execuç…"). No celular eles quebram em duas linhas e os
+   números continuam alinhados embaixo (a grade já alinha pelo pé). */
+@media (max-width: 540px) {
+  .rob-overview-card { padding: 14px 16px; }
+  .rob-overview-metrics { gap: 12px; }
+  .rob-overview-metrics > div + div { padding-left: 12px; }
+  .rob-overview-metrics dt { white-space: normal; overflow: visible; line-height: 1.3; }
+}

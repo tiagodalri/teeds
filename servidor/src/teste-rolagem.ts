@@ -181,5 +181,22 @@ if (!chrome || !existsSync(CSS_MONTADO)) {
   }
 }
 
+/* ------------------------------------------- o celular deitado é celular (11/11/2026)
+   Print do Victor: iPhone Pro Max deitado (932 x 430) abria com a casca do computador e a
+   tela das I.A. presa na altura, sem rolar. O vite.config.ts (plugin "celular-deitado") dá a
+   todo @media (max-width: 900px) uma irmã para tela de toque baixa, e tira dela as regras de
+   computador (min-width: 901px). Se alguém trocar o plugin ou o CSS montado perder a regra,
+   o defeito volta calado: aqui ele grita. */
+if (existsSync(CSS_MONTADO)) {
+  console.log('\nROLAGEM · CELULAR DEITADO USA A CASCA DO CELULAR\n')
+  const montado = readFileSync(CSS_MONTADO, 'utf8')
+  const consultas = [...montado.matchAll(/@media([^{]+)\{/g)].map((m) => m[1].replace(/\s+/g, ' ').trim())
+  const ate900 = consultas.filter((q) => /max-width:\s*900px/.test(q))
+  const desde901 = consultas.filter((q) => /min-width:\s*90[01]px/.test(q))
+  conferir('o CSS montado tem a casca do celular', ate900.length > 10, true)
+  conferir('toda casca do celular vale também deitado', ate900.filter((q) => !/max-height:\s*500px\)\s*and\s*\(pointer:\s*coarse/.test(q)), [])
+  conferir('regra de computador não vale no celular deitado', desde901.filter((q) => !/min-height:\s*501px/.test(q) || !/pointer:\s*fine/.test(q)), [])
+}
+
 console.log(`\n${passou} certos, ${falhou} errados`)
 process.exit(falhou ? 1 : 0)

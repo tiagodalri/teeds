@@ -253,10 +253,48 @@ const paraSafari = {
   },
 }
 
+/**
+ * Celular deitado é celular (11/11/2026, print do Victor no iPhone Pro Max deitado: o app abria
+ * com a casca do computador, porque deitado ele tem 932 px de largura, e a tela das I.A. "cabia
+ * na altura do monitor" — 430 px —, cortada e sem rolar). A casca do celular inteira (menu ☰,
+ * topo fixo, barra de baixo) é escrita como `@media (max-width: 900px)`; aqui cada uma dessas
+ * consultas ganha uma irmã que vale também para tela de toque baixa (celular deitado), e as de
+ * computador (`min-width: 901px`) deixam de valer nela. Computador com mouse não muda nada.
+ * A mesma consulta, para o JS: CONSULTA_CELULAR em src/core/celular.ts.
+ */
+const DEITADO = '(max-height: 500px) and (pointer: coarse)'
+const ATE_900 = /\(\s*max-width:\s*900px\s*\)/
+const DESDE_901 = /\(\s*min-width:\s*90[01]px\s*\)/
+const dividirConsultas = (params: string): string[] => {
+  const partes: string[] = []; let nivel = 0, atual = ''
+  for (const c of params) {
+    if (c === '(') nivel++
+    if (c === ')') nivel--
+    if (c === ',' && nivel === 0) { partes.push(atual.trim()); atual = ''; continue }
+    atual += c
+  }
+  if (atual.trim()) partes.push(atual.trim())
+  return partes
+}
+const celularDeitado = {
+  postcssPlugin: 'teeds:celular-deitado',
+  AtRule: {
+    media(regra: { params: string; _deitado?: boolean }) {
+      if (regra._deitado || !(ATE_900.test(regra.params) || DESDE_901.test(regra.params))) return
+      regra._deitado = true
+      regra.params = dividirConsultas(regra.params).flatMap((q) => {
+        if (ATE_900.test(q)) return [q, q.replace(ATE_900, DEITADO)]
+        if (DESDE_901.test(q)) return [q.replace(DESDE_901, '(min-width: 901px) and (min-height: 501px)'), q.replace(DESDE_901, '(min-width: 901px) and (pointer: fine)')]
+        return [q]
+      }).join(', ')
+    },
+  },
+}
+
 export default defineConfig({
   base: MARCA.base,
   // paraSafari antes: o svh que ele cria também passa pela escala do computador
-  css: { postcss: { plugins: [paraSafari, medidasPelaTela] } },
+  css: { postcss: { plugins: [celularDeitado, paraSafari, medidasPelaTela] } },
   plugins: [
     cascaPorMarca(),
     paletaDaMarca(PALETAS[MARCA.id]),

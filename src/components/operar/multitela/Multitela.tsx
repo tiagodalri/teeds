@@ -20,6 +20,7 @@ import { MAXIMO_NO_CELULAR, trocarItem, useMultitela, type Quadros, type Unidade
 import { SeletorDeQuadros } from './SeletorDeQuadros'
 import { Quadro, type AtalhosDoQuadro, type ContaDaMultitela } from './Quadro'
 import './multitela.css'
+import { CONSULTA_CELULAR } from '../../../core/celular'
 
 /** A ordem de preferência para preencher quadros vazios. */
 const PREFERIDOS = ['R_75', '1HZ100V', '1HZ75V', 'frxEURUSD', '1HZ50V', 'frxXAUUSD', '1HZ10V', '1HZ25V', 'frxGBPUSD', '1HZ90V']
@@ -42,7 +43,7 @@ export function Multitela({ conta, ativos, sessao, ativoInicial, extraNaBarra }:
   extraNaBarra?: ReactNode
 }) {
   const [estado, mudar] = useMultitela()
-  const celular = useTelaEstreita('(max-width: 900px)')
+  const celular = useTelaEstreita(CONSULTA_CELULAR)
   const raiz = useRef<HTMLDivElement>(null)
   const grade = useRef<HTMLDivElement>(null)
   const [largura, setLargura] = useState(1400)

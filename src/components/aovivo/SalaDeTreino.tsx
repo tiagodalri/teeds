@@ -9,6 +9,7 @@ import { SeletorDeFundo } from './SeletorDeFundo'
 import { BlocosDoChat } from './BlocosDoChat'
 import { MedidorDeVolume } from './MedidorDeVolume'
 import { MARCA } from '../../marca'
+import { ehCelular } from '../../core/celular'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import {
   alternarFonte, cantoDoTreino, cantoNoTreino, definirVitrinesDoTreino, entrarNoTreino, linkDoTeste, voltarATreinar, prepararSalaDoAdmin, sairDoTreino,
@@ -182,7 +183,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   const ligar = async (qual: 'tela' | 'camera' | 'mic') => { setErro(null); setErro(await alternarFonte(qual)) }
   // Estúdio de cenas (como o OBS) ou só tela e câmera, como antes (31/10/2026)
   const CHAVE_MODO = `${MARCA.id}.central.modo`
-  const computador = typeof window !== 'undefined' && window.matchMedia('(min-width: 901px)').matches
+  const computador = typeof window !== 'undefined' && !ehCelular()
   const [modo, setModoEstado] = useState<'estudio' | 'simples'>(() => {
     try { const g = localStorage.getItem(CHAVE_MODO); if (g === 'estudio' || g === 'simples') return g } catch { /* sem armazenamento */ }
     return computador ? 'estudio' : 'simples'

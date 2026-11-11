@@ -23,6 +23,8 @@ import './styles/ux-refinements.css'
 import './styles/mobile-polish.css'
 // o padrão de página (largura, margens) vem por último: vale sobre o resto
 import './styles/pagina.css'
+// o celular deitado (ilha do iPhone nas laterais, altura curta) vem depois de tudo
+import './styles/celular-deitado.css'
 import './components/robot-workspace.css'
 import './components/workspace.css'
 import { aplicarTema, temaGuardado } from './core/tema'

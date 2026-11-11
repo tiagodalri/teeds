@@ -272,3 +272,11 @@
   .workspace-app .topbar-right > .tema-btn:not(.tela-cheia-btn) { width: 36px; min-width: 36px; height: 36px; padding: 0; }
   .workspace-app .topbar-right .conta-chip { min-width: 0; }
 }
+/* 11/11/2026 (revisão do celular): a 375 px (iPhone SE, mini e muitos Android) o avatar passava 10 px
+   da borda e a setinha dele ficava cortada. Abaixo de 390 px a setinha sai (o avatar continua abrindo
+   o menu, com toque de 44 px) e o botão da conta aperta o vão entre o selo e o saldo. */
+@media (max-width: 389px) {
+  .workspace-app .topbar-right .avatar-botao .conta-seta { display: none; }
+  .workspace-app .topbar-right .avatar-botao { min-width: 44px; min-height: 44px; justify-content: center; padding-inline: 0; }
+  .workspace-app .topbar-right .conta-chip { gap: 6px; }
+}

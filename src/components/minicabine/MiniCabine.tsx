@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { verNoServidor, type SessaoViva } from '../../core/teeds/servidorRobos'
 import type { SessaoTeeds } from '../../core/teeds/conta'
+import { ehCelular } from '../../core/celular'
 import { MASCARA, useValoresOcultos } from '../../core/privacidade'
 import { NomeDoRobo } from '../NomeDoRobo'
 import { contagemDoEstado } from '../RobotResumo'
@@ -137,7 +138,7 @@ export function MiniCabine({ sessoes, sessao, aoAbrirCabine, aoParar, demo, demo
     const el = raiz.current
     if (!el) return
     if (!pos) { el.style.left = ''; el.style.top = ''; return }
-    const celularAberto = aberta && window.innerWidth <= 900
+    const celularAberto = aberta && ehCelular()
     const a = area(el.offsetWidth, el.offsetHeight)
     el.style.left = celularAberto ? '' : `${a.minX + pos.x * (a.maxX - a.minX)}px`
     el.style.top = `${a.minY + pos.y * (a.maxY - a.minY)}px`

@@ -92,6 +92,7 @@ import type { ContaDaMultitela } from './components/operar/multitela/Quadro'
 import { registrarOperacaoManual, registrarPrecosDaManual } from './core/teeds/clientes'
 import { caminhoDaTela, telaDoCaminho, telaDoNome } from './core/rotas'
 import { carregarRobosBloqueados } from './core/teeds/robosLiberados'
+import { ehCelular } from './core/celular'
 
 // Transmissão ao vivo (marcas com `aoVivo`): a biblioteca de vídeo só baixa
 // quando a pessoa abre a página ou entra numa live.
@@ -1888,7 +1889,7 @@ export default function App() {
               {/* a operação manual numa janela própria, que a pessoa arrasta para onde quiser (29/10/2026) */}
               {podeMultitela && !naTelaMult && (
                 <SeletorDeQuadros valor={1} aoTrocar={trocarQuadros} rotulo={false}
-                  opcoes={typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches ? [1, 2, 4] : undefined} />
+                  opcoes={typeof window !== 'undefined' && ehCelular() ? [1, 2, 4] : undefined} />
               )}
               <BotaoJanelaSolta qual="manual" />
             </div>

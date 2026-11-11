@@ -24,5 +24,7 @@
 @media (max-width: 900px) {
   .chart-head .mtl-seletor, .chart-head .mtl-seletor .mtl-layouts { display: flex; width: 100%; box-sizing: border-box; }
   .chart-head .mtl-seletor .mtl-layouts button { flex: 1 1 0; justify-content: center; height: 40px; }
+  /* 11/11/2026: a linha dos quadros ocupa a largura toda, como as de cima (antes parava na coluna dos tempos) */
+  .chart-head .controls > .mtl-seletor { grid-column: 1 / -1; }
 }
 

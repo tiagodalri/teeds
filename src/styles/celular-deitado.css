@@ -1,0 +1,72 @@
+/* ==========================================================================
+   CELULAR DEITADO (11/11/2026)
+
+   Print do Victor no iPhone Pro Max deitado: a casca do computador (menu largo,
+   topo de 76 px), a tela das I.A. presa na altura de 430 px sem rolar, e a ilha
+   do iPhone por cima do menu. Desde então o celular deitado usa a casca do
+   celular (vite.config.ts, plugin "celular-deitado") e este arquivo cuida do que
+   só existe deitado:
+   - a ilha (Dynamic Island) e as bordas arredondadas ficam nas LATERAIS:
+     o conteúdo, a gaveta e os botões flutuantes respeitam --sal/--sar;
+   - a altura é curta: a barra de baixo fica baixa (ícone ao lado do nome,
+     como a do próprio iPhone deitado) e os botões do canto descem junto.
+
+   Só vale em tela de toque baixa: computador, tablet e celular em pé não mudam.
+   ========================================================================== */
+@media (max-height: 500px) and (pointer: coarse) {
+  /* o conteúdo fica fora da ilha e das bordas; o topo continua de ponta a ponta */
+  .workspace-app.workspace-app { padding-left: var(--sal); padding-right: var(--sar); }
+  .workspace-app.workspace-app > .topbar { margin-left: calc(-1 * var(--sal)); margin-right: calc(-1 * var(--sar)); }
+  /* as telas .ger pintam o fundo delas (--surface): o fundo vai até a borda e só o conteúdo
+     recua (borda transparente = o próprio fundo da tela), sem faixa de outra cor nas laterais */
+  .workspace-app.workspace-app > .ger, .workspace-app.workspace-app > .tela-viva > .ger {
+    width: auto; max-width: none; margin-left: calc(-1 * var(--sal)); margin-right: calc(-1 * var(--sar));
+    border-left: var(--sal) solid transparent; border-right: var(--sar) solid transparent;
+  }
+
+  /* a gaveta do menu abre ao lado da ilha, não por baixo dela */
+  .workspace-sidebar.workspace-sidebar { width: calc(min(300px, 84vw) + var(--sal)); padding-left: calc(14px + var(--sal)); }
+
+  /* barra de baixo baixa: ícone e nome lado a lado; o fio de gestos do iPhone fica abaixo dos botões */
+  .barra-inferior.barra-inferior { padding-top: 3px; padding-bottom: max(3px, calc(var(--sab, 0px) - 6px)); }
+  .barra-inferior.barra-inferior button { grid-auto-flow: column; align-items: center; justify-content: center; gap: 4px; min-height: 44px; padding: 0 4px; }
+  .barra-inferior.barra-inferior .barra-icone { width: 38px; height: 30px; }
+  .barra-inferior.barra-inferior .barra-ao-vivo { top: 0; right: 2px; }
+  body:has(.barra-inferior) .workspace-app.workspace-app { padding-bottom: calc(56px + var(--sab, 0px)); }
+  /* os menus do topo (contas da Deriv, avatar) terminam acima da barra de baixo e rolam por dentro:
+     deitado não há altura para a lista inteira, e o fim dela ficava escondido atrás da barra */
+  .workspace-app .topbar .menu {
+    max-height: calc(100dvh - var(--topo-h, 56px) - 72px - var(--sab, 0px)); overflow-y: auto; overscroll-behavior: contain;
+  }
+
+  /* Manual: deitado há largura para tempos, velas/linha e quadros (1 · 2 · 4) numa linha só;
+     em pé os quadros ocupam a linha de baixo inteira (seletor.css) */
+  .chart-head .controls > .mtl-seletor, .chart-head .controls > .mtl-seletor .mtl-layouts { width: auto; }
+  .chart-head .controls > .mtl-seletor .mtl-layouts button { flex: none; padding-inline: 14px; }
+
+  /* Entrar: deitado, a foto virava uma faixa estreita no alto, o logotipo ficava sob a ilha e o
+     formulário começava abaixo da tela. Como no computador: a foto parada à esquerda, o formulário
+     rolando à direita, longe da ilha e das bordas. */
+  body .entrada.com-cena, body .entrada.com-cena[data-modo="entrar"] {
+    display: grid; grid-template-columns: 44% minmax(0, 1fr); min-height: 100dvh;
+  }
+  .entrada.com-cena .entrada-cena {
+    position: fixed; left: 0; top: 0; bottom: 0; z-index: 0;
+    width: 44%; max-width: none; height: 100dvh; margin: 0; padding: 24px 24px 40px calc(24px + var(--sal, 0px));
+  }
+  body .entrada.com-cena .entrada-caixa, body .entrada.com-cena[data-modo="entrar"] .entrada-caixa {
+    grid-column: 2; grid-row: 1; margin: 0; border-radius: 0; box-shadow: none;
+    padding: 16px calc(20px + var(--sar, 0px)) calc(20px + var(--sab, 0px)) 24px;
+  }
+
+  /* Suporte: o cartão de 392 px ficava por cima do topo (cobria a conta) com 300 px de altura.
+     Deitado ele vira uma folha da altura da tela, presa à direita, longe da borda arredondada. */
+  .sp-painel.sp-painel {
+    top: 0; bottom: 0; right: 0; width: min(440px, 62vw); height: auto; max-height: none;
+    border-radius: 0; border-width: 0 0 0 1px; padding-right: var(--sar, 0px); padding-bottom: var(--sab, 0px); box-sizing: border-box;
+  }
+
+  /* o que flutua no rodapé (mini-cabine, pílula da live, convite do app) desce junto com a barra */
+  body:has(.barra-inferior) .mcb:not(.solta) { bottom: calc(56px + var(--sab, 0px)); left: calc(12px + var(--sal, 0px)); }
+  body:has(.barra-inferior) :is(.av-pilula, .app-convite) { bottom: calc(56px + var(--sab, 0px)); }
+}

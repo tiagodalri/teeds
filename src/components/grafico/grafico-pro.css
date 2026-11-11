@@ -272,3 +272,13 @@ body:has(.gp-ampliado) :is(.barra-inferior, .mcb, .sp-lancador-area, .eq-lancado
    sem as ferramentas de desenho e sem os botões de zoom (a roda do mouse e o arrastar continuam) */
 .gp-compacto .gp-barra, .gp-compacto .gp-ferramentas, .gp-compacto .chart-zoom { display: none; }
 .gp-compacto .gp-grafico { min-height: 0; }
+
+/* 11/11/2026 (revisão do celular): com um indicador ligado, o chip "MA 20 ×" ficava cortado pelo
+   seletor GF | TV (o × nem aparecia). No celular os chips descem para a linha de baixo, inteiros;
+   sem indicador a barra continua numa linha só. O × ganha área de toque de 44 px. */
+@media (max-width: 700px) {
+  .gp-barra:has(.gp-chip) { flex-wrap: wrap; }
+  .gp-barra .gp-chips:has(.gp-chip) { order: 10; flex: 1 0 100%; }
+  .gp-chip-x { position: relative; }
+  .gp-chip-x::after { content: ''; position: absolute; inset: -9px -6px; }
+}
