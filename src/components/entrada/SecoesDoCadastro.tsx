@@ -10,12 +10,12 @@
  * As cores ficam no CSS da casca (cadastro-planos.css); aqui não há cor escrita.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { vitrine } from '../../core/teeds/parceiro'
 import { buscarCotacoes, cotacoesGuardadas } from '../ferramentas/cambio'
 import { capaDaAula, capaEspecial } from '../capasAulas'
 import { porcentagem, type IdDoPlano, type PlanoDoCadastro } from '../../core/teeds/planosDoCadastro'
 import { FAIXA, SESSOES, secoesComoFunciona, ligarComoFunciona } from '../../casca/globalfly/cadastro/comoFunciona'
-import { CabineDeDemonstracao } from './CabineDeDemonstracao'
+import { ApostilaFolheando, CabineDaVitrine, TelaAoVivo, TelaManual } from './VitrinesAnimadas'
+import { MODULOS } from '../../core/teeds/modulosAulas'
 
 const brl = (n: number) => n.toLocaleString('pt-BR')
 const reais = (n: number) => `R$ ${n.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`
@@ -43,43 +43,6 @@ export function MiniCartao({ id, grande }: { id: IdDoPlano; grande?: boolean }) 
 }
 
 /* ------------------------------------------------------------------ muito além das I.A. */
-function quemApresenta(): { nome: string; foto: string } {
-  const b = import.meta.env.BASE_URL
-  return vitrine() === 'n'
-    ? { nome: 'Naor Bezerra', foto: `${b}cadastro/img/naor-rosto.webp` }
-    : { nome: 'Victor Cordeiro', foto: `${b}cadastro/img/victor-rosto.webp` }
-}
-
-/** A sala ao vivo: o gráfico andando, o selo Ao vivo e quem apresenta. */
-function TelaAoVivo() {
-  const q = quemApresenta()
-  return (
-    <div className="cpl-tela-live" aria-hidden="true">
-      <div className="cpl-live-topo"><span className="cpl-live-selo"><i />Ao vivo</span><span className="cpl-live-sala">Sala de operações</span></div>
-      <svg className="cpl-live-grafico" viewBox="0 0 300 120" preserveAspectRatio="none">
-        <path className="cpl-live-area" d="M0 92 L20 86 L40 90 L60 74 L80 78 L100 62 L120 70 L140 52 L160 58 L180 40 L200 48 L220 30 L240 38 L260 22 L280 28 L300 14 L300 120 L0 120 Z" />
-        <path className="cpl-live-linha" d="M0 92 L20 86 L40 90 L60 74 L80 78 L100 62 L120 70 L140 52 L160 58 L180 40 L200 48 L220 30 L240 38 L260 22 L280 28 L300 14" />
-      </svg>
-      <div className="cpl-live-quem"><img src={q.foto} alt="" width="40" height="40" loading="lazy" /><span><b>{q.nome}</b>Operando com a turma</span></div>
-    </div>
-  )
-}
-
-/** A operação manual: o preço andando, Sobe e Desce, e o resultado de um minuto. */
-function TelaManual() {
-  return (
-    <div className="cpl-tela-manual" aria-hidden="true">
-      <div className="cpl-man-topo"><b>Volatility 75</b><span>1 minuto</span></div>
-      <svg className="cpl-man-grafico" viewBox="0 0 300 110" preserveAspectRatio="none">
-        <path className="cpl-man-linha" d="M0 70 C20 66 30 80 50 74 S80 52 100 58 S130 76 150 62 S180 40 200 46 S230 60 250 42 S280 26 300 30" />
-        <circle className="cpl-man-ponto" cx="300" cy="30" r="4" />
-      </svg>
-      <div className="cpl-man-botoes"><span className="cpl-man-sobe">▲ Sobe</span><span className="cpl-man-desce">▼ Desce</span></div>
-      <div className="cpl-man-res"><span>Lucro</span><b>+US$ 78,32</b></div>
-    </div>
-  )
-}
-
 const AULAS_DA_VITRINE: Array<{ modulo: string; aulas: Array<[string, string]> }> = [
   { modulo: 'Comece aqui', aulas: [['introducao', 'Introdução à GlobalFly'], ['visao-geral', 'Conhecendo a plataforma'], ['conta-deriv', 'Abertura de conta'], ['primeiro-deposito', 'Como depositar?'], ['saldo-demo-real', 'Conta demo e conta real'], ['deriv-confiavel', 'A Deriv é confiável?']] },
   { modulo: 'Estratégias de I.A. na prática', aulas: [['o-que-sao-as-ias', 'O que são as I.A. de operações'], ['robo-raptor', 'A estratégia Raptor'], ['robo-gulf', 'A estratégia Gulf'], ['robo-falcon', 'A estratégia Falcon'], ['robo-legacy', 'A estratégia Legacy'], ['robo-phenom', 'A estratégia Phenom'], ['operando-na-pratica', 'Operando na prática']] },
@@ -88,8 +51,41 @@ const AULAS_DA_VITRINE: Array<{ modulo: string; aulas: Array<[string, string]> }
 const capa = (id: string) => (capaEspecial(id) ?? capaDaAula(id)).replace(/\.jpg$/, '-mobile.webp')
 
 /** As aulas como numa plataforma de séries: uma fileira por módulo, capas profissionais, e a apostila. */
-function AulasEstiloSerie() {
-  const b = import.meta.env.BASE_URL
+/** A descrição de cada aula, do mesmo cadastro de aulas da plataforma. */
+const DESCRICAO: Record<string, string> = Object.fromEntries(MODULOS.flatMap((m) => m.aulas.map((a) => [a.id, a.descricao])))
+type AulaAberta = { id: string; titulo: string; modulo: string; n: number; m: number }
+
+/** A janela de uma aula: capa grande, o que ela ensina e o convite para criar a conta e assistir. */
+function JanelaDaAula({ aula, aoFechar, aoQuerer }: { aula: AulaAberta; aoFechar: () => void; aoQuerer?: () => void }) {
+  const fechar = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    fechar.current?.focus()
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') aoFechar() }
+    addEventListener('keydown', esc)
+    const antes = document.body.style.overflow; document.body.style.overflow = 'hidden'
+    return () => { removeEventListener('keydown', esc); document.body.style.overflow = antes }
+  }, [aoFechar])
+  return (
+    <div className="cpl-janela" role="dialog" aria-modal="true" aria-label={aula.titulo} onClick={aoFechar}>
+      <div className="cpl-janela-caixa" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="cpl-janela-x" ref={fechar} onClick={aoFechar} aria-label="Fechar">×</button>
+        <img src={capa(aula.id)} alt="" width="320" height="480" />
+        <div className="cpl-janela-texto">
+          <span className="cpl-olho">Módulo {aula.m} · Aula {aula.n}</span>
+          <h3>{aula.titulo}</h3>
+          <p className="cpl-janela-mod">{aula.modulo}</p>
+          {DESCRICAO[aula.id] && <p>{DESCRICAO[aula.id]}</p>}
+          <button type="button" className="cpl-btn cpl-btn-ouro" onClick={() => { aoFechar(); aoQuerer?.() }}>Criar minha conta e assistir <span className="cpl-seta" aria-hidden="true">→</span></button>
+          <small>As aulas ficam dentro da plataforma, em todos os planos.</small>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AulasEstiloSerie({ aoQuerer }: { aoQuerer?: () => void }) {
+  const [aberta, setAberta] = useState<AulaAberta | null>(null)
+  const fechar = useCallback(() => setAberta(null), [])
   return (
     <section className="cpl-aulas" id="cpl-aulas" aria-labelledby="cpl-t-aulas">
       <div className="cpl-cab-secao cpl-revela">
@@ -102,17 +98,17 @@ function AulasEstiloSerie() {
           <h3><span>Módulo {i + 1}</span>{m.modulo}</h3>
           <div className="cpl-fileira-rolo">
             {m.aulas.map(([id, titulo], j) => (
-              <figure className="cpl-poster" key={id}>
+              <button type="button" className="cpl-poster" key={id} onClick={() => setAberta({ id, titulo, modulo: m.modulo, n: j + 1, m: i + 1 })} aria-label={`Ver a aula ${titulo}`}>
                 <img src={capa(id)} alt="" width="320" height="480" loading="lazy" />
-                <figcaption><span>Aula {j + 1}</span>{titulo}</figcaption>
+                <span className="cpl-poster-leg"><span>Aula {j + 1}</span>{titulo}</span>
                 <i className="cpl-poster-play" aria-hidden="true" />
-              </figure>
+              </button>
             ))}
           </div>
         </div>
       ))}
       <div className="cpl-apostila cpl-revela">
-        <img src={`${b}aulas-globalfly/apostila-capa.webp`} alt="Capa da apostila do aluno GlobalFly" width="600" height="849" loading="lazy" />
+        <ApostilaFolheando />
         <div>
           <span className="cpl-olho">Apostila do aluno</span>
           <h3>Um guia para consultar sempre que precisar</h3>
@@ -120,6 +116,7 @@ function AulasEstiloSerie() {
           <ul><li>Para quem nunca operou</li><li>Baixa em PDF, dentro da plataforma</li><li>Acompanha as aulas, módulo a módulo</li></ul>
         </div>
       </div>
+      {aberta && <JanelaDaAula aula={aberta} aoFechar={fechar} aoQuerer={aoQuerer} />}
     </section>
   )
 }
@@ -173,7 +170,7 @@ function CabineReal() {
           </button>
         ))}
       </div>
-      <div className="cpl-revela"><CabineDeDemonstracao escolhida={i} aoTrocar={trocar} /></div>
+      <div className="cpl-revela"><CabineDaVitrine escolhida={i} aoTrocar={trocar} /></div>
       <p className="cpl-cabine-nota">Reprise da sessão de {SESSOES[i].dia}, gravada na plataforma, operação por operação.</p>
       <div className="cpl-hangar" aria-label="As cinco I.A. da GlobalFly">
         {HANGAR.map((f) => {
@@ -191,7 +188,7 @@ function CabineReal() {
 }
 
 /** As seções da antiga /cadastro, com as novas no meio: o que é, muito além, aulas, por dentro, a cabine real e o que vem junto. */
-export function ComoFunciona() {
+export function ComoFunciona({ aoQuerer }: { aoQuerer?: () => void }) {
   const caixa = useRef<HTMLDivElement>(null)
   const base = import.meta.env.BASE_URL
   const partes = useMemo(() => {
@@ -208,7 +205,7 @@ export function ComoFunciona() {
         <div className="cpl-miolo cpl-lp-corpo" ref={caixa}>
           <div className="cpl-solto" dangerouslySetInnerHTML={{ __html: partes.oque }} />
           <MuitoAlem />
-          <AulasEstiloSerie />
+          <AulasEstiloSerie aoQuerer={aoQuerer} />
           <div className="cpl-solto" dangerouslySetInnerHTML={{ __html: partes.real }} />
           <CabineReal />
           <div className="cpl-solto" dangerouslySetInnerHTML={{ __html: partes.libera }} />
@@ -269,9 +266,9 @@ export function SimuladorDoLucro({ planos, aoMexer }: { planos: PlanoDoCadastro[
             <div key={p.id} className={`cpl-barra cpl-barra-${p.id}`}>
               <span className="cpl-barra-nome"><MiniCartao id={p.id} />{p.nome}</span>
               <div className="cpl-trilho"><div className="cpl-enche" style={{ width: `${lucro ? (1 - p.compartilhamento) * 100 : 0}%` }} /></div>
-              <span className="cpl-val">US$ {brl(fica)}<small>{p.compartilhamento ? `compartilha ${porcentagem(p.compartilhamento)} (US$ ${brl(Math.round(lucro * p.compartilhamento))})` : 'fica tudo com você'}</small></span>
-              {aMais > 0 && dolar ? <span className="cpl-bolso">+{reais(aMais * dolar)} no seu bolso <small>em relação ao Gold</small></span>
-                : aMais > 0 ? <span className="cpl-bolso">+US$ {brl(Math.round(aMais))} no seu bolso <small>em relação ao Gold</small></span> : null}
+              <span className="cpl-val">US$ {brl(fica)}<small>{p.compartilhamento ? `compartilha ${porcentagem(p.compartilhamento)} · US$ ${brl(Math.round(lucro * p.compartilhamento))}` : 'fica tudo com você'}</small></span>
+              {aMais > 0 && dolar ? <span className="cpl-bolso"><b>+{reais(aMais * dolar)}</b> no seu bolso <small>em relação ao Gold</small></span>
+                : aMais > 0 ? <span className="cpl-bolso"><b>+US$ {brl(Math.round(aMais))}</b> no seu bolso <small>em relação ao Gold</small></span> : null}
             </div>
           )
         })}

@@ -490,7 +490,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
             </div>
           </section>
 
-          <ComoFunciona />
+          <ComoFunciona aoQuerer={() => irParaDados(sel)} />
 
           <div className="cpl-faixa">
             <div className="cpl-miolo">
