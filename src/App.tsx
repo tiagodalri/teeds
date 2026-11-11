@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
+import { callNoAr, liveLidaPeloApp } from './core/teeds/lancamento'
 import { useSimulador } from './hooks/useSimulador'
 import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
 import { PositionCard } from './components/PositionCard'
@@ -514,7 +515,7 @@ export default function App() {
   const [avisoTreino, setAvisoTreino] = useState(false)
   // o aviso de "Live iniciada" também sai sozinho (cobria o topo no celular)
   useEffect(() => { if (!avisoTreino) return; const t = window.setTimeout(() => setAvisoTreino(false), 20000); return () => window.clearTimeout(t) }, [avisoTreino])
-  const aoVivoAgora = Boolean(liveAgora) || Boolean(treinoAgora)
+  const aoVivoAgora = Boolean(liveAgora) || Boolean(treinoAgora) || callNoAr(liveLidaPeloApp()?.terminouEm)
   // Convidado que prefere entrar na conta: a tela de login no lugar da porta do convite.
   const [querLogin, setQuerLogin] = useState(false)
   useEffect(() => { if (!avisoLive) return; const t = window.setTimeout(() => setAvisoLive(null), 20000); return () => window.clearTimeout(t) }, [avisoLive])
