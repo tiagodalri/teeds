@@ -10,7 +10,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  FinTrancado, fimDoMes, hoje, inicioDoMes, nomeDoMes, somarMeses,
+  FinTrancado, doProjeto, fimDoMes, hoje, inicioDoMes, nomeDoMes, somarMeses,
   type DadosFin, type FinApi, type Lancamento, type MeuAcesso, type Periodo,
 } from '../../core/teeds/financeiro'
 import { Icone } from '../Icone'
@@ -58,6 +58,8 @@ export function FinanceiroPainel({ api, pedido = 0, nomeDaPlataforma }: {
   const [aviso, setAviso] = useState<string | null>(null)
   const [seguranca, setSeguranca] = useState(false)
   const [trocandoSenha, setTrocandoSenha] = useState(false)
+  // custo por projeto: '' = todos, 'geral' = sem projeto, ou o id do projeto
+  const [projeto, setProjeto] = useState('')
   const papel = acesso?.papel ?? null
   const podeEditar = papel === 'dono' || papel === 'editor'
   const souDono = papel === 'dono'
@@ -116,6 +118,7 @@ export function FinanceiroPainel({ api, pedido = 0, nomeDaPlataforma }: {
   useEffect(() => { if (!aviso) return; const t = window.setTimeout(() => setAviso(null), 3800); return () => window.clearTimeout(t) }, [aviso])
 
   const periodo = useMemo(() => periodoDe(modo, ref, de, ate), [modo, ref, de, ate])
+  const visao = useMemo(() => (dados ? doProjeto(dados, projeto) : null), [dados, projeto])
   const rotuloPeriodo = modo === 'mes' ? nomeDoMes(ref.slice(0, 7)) : modo === 'ano' ? ref.slice(0, 4) : modo === 'tudo' ? 'Desde o início' : `${periodo.de.split('-').reverse().join('/')} a ${periodo.ate.split('-').reverse().join('/')}`
   const andar = (n: number) => setRef((r) => modo === 'ano' ? `${Number(r.slice(0, 4)) + n}-06-15` : somarMeses(inicioDoMes(r), n))
 
@@ -143,7 +146,7 @@ export function FinanceiroPainel({ api, pedido = 0, nomeDaPlataforma }: {
           onClick={() => { setAba(id); if (id === 'lancamentos') { setFiltroInicial(null); setChaveLista((n) => n + 1) } }}>{nome}</button>)}
       </nav>
       <div className="fin-barra-acoes">
-        {podeEditar && <button type="button" className="fin-btn primario" onClick={() => setEditor({ l: null })}><Icone nome="mais" />Novo lançamento</button>}
+        {podeEditar && <button type="button" className="fin-btn primario" onClick={() => setEditor({ l: null, rascunho: { projeto_id: projeto && projeto !== 'geral' ? projeto : null } })}><Icone nome="mais" />Novo lançamento</button>}
         <div className="fin-seguranca">
           <button type="button" className="fin-btn icone" onClick={() => setSeguranca((v) => !v)} aria-expanded={seguranca} aria-label="Segurança do financeiro" title="Segurança"><Icone nome="cadeado" /></button>
           {seguranca && <div className="fin-menu" role="menu">
@@ -166,6 +169,12 @@ export function FinanceiroPainel({ api, pedido = 0, nomeDaPlataforma }: {
         <button type="button" className="fin-btn icone" onClick={() => andar(1)} aria-label={modo === 'mes' ? 'Próximo mês' : 'Próximo ano'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></button>
         {(modo === 'mes' ? ref.slice(0, 7) !== hoje().slice(0, 7) : ref.slice(0, 4) !== hoje().slice(0, 4)) && <button type="button" className="fin-link" onClick={() => setRef(hoje())}>{modo === 'mes' ? 'Este mês' : 'Este ano'}</button>}
       </div>}
+      {aba !== 'divisao' && !!dados?.projetos.length && <label className={`fin-select fin-filtro-projeto${projeto ? ' on' : ''}`}><span>Projeto</span>
+        <select value={projeto} onChange={(e) => setProjeto(e.target.value)}>
+          <option value="">Todos</option>
+          {dados.projetos.filter((p) => p.ativo || p.id === projeto).map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          <option value="geral">Custo geral</option>
+        </select></label>}
       {modo === 'personalizado' && <div className="fin-datas">
         <label><span>De</span><input type="date" value={de} onChange={(e) => setDe(e.target.value)} /></label>
         <label><span>Até</span><input type="date" value={ate} onChange={(e) => setAte(e.target.value)} /></label>
@@ -174,10 +183,10 @@ export function FinanceiroPainel({ api, pedido = 0, nomeDaPlataforma }: {
 
     {erro && <p className="fin-alerta erro" role="alert"><Icone nome="info" /><span>{erro}</span><button type="button" className="fin-link" onClick={() => void ler()}>Tentar de novo</button></p>}
     {!dados ? <div className="fin-carregando">{erro ? '' : 'Carregando os lançamentos…'}</div> : <>
-      {aba === 'resumo' && <Resumo dados={dados} periodo={periodo} rotuloPeriodo={rotuloPeriodo} podeEditar={podeEditar}
-        aoNovo={(t) => setEditor({ l: null, rascunho: { tipo: t } })} aoAbrir={(l) => setEditor({ l })} aoPagar={(l) => void pagar(l)} aoIr={irPara} />}
-      {aba === 'lancamentos' && <Lancamentos key={chaveLista} dados={dados} periodo={periodo} rotuloPeriodo={rotuloPeriodo} filtroInicial={filtroInicial} podeEditar={podeEditar}
-        aoAbrir={(l) => setEditor({ l })} aoPagar={(l) => void pagar(l)} aoNovo={() => setEditor({ l: null })} />}
+      {aba === 'resumo' && <Resumo dados={visao!} todos={dados} projeto={projeto} aoProjeto={setProjeto} periodo={periodo} rotuloPeriodo={rotuloPeriodo} podeEditar={podeEditar}
+        aoNovo={(t) => setEditor({ l: null, rascunho: { tipo: t, projeto_id: projeto && projeto !== 'geral' ? projeto : null } })} aoAbrir={(l) => setEditor({ l })} aoPagar={(l) => void pagar(l)} aoIr={irPara} />}
+      {aba === 'lancamentos' && <Lancamentos key={chaveLista} dados={visao!} periodo={periodo} rotuloPeriodo={rotuloPeriodo} filtroInicial={filtroInicial} podeEditar={podeEditar}
+        aoAbrir={(l) => setEditor({ l })} aoPagar={(l) => void pagar(l)} aoNovo={() => setEditor({ l: null, rascunho: { projeto_id: projeto && projeto !== 'geral' ? projeto : null } })} />}
       {aba === 'divisao' && <Divisao dados={dados} periodo={periodo} rotuloPeriodo={rotuloPeriodo} podeEditar={podeEditar} souDono={souDono}
         aoNovo={(r) => setEditor({ l: null, rascunho: r })} aoAbrir={(l) => setEditor({ l })} aoIr={() => setAba('cadastros')} />}
       {aba === 'cadastros' && <Cadastros api={api} dados={dados} podeEditar={podeEditar} souDono={souDono} aoMudar={depoisDeMudar} />}

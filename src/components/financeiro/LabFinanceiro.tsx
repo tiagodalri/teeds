@@ -5,7 +5,7 @@
  * Senha do laboratório: 'financeiro1'.
  */
 import { useMemo, useState } from 'react'
-import type { Acesso, Anexo, Candidato, Categoria, Conta, DadosFin, FinApi, Historico, Lancamento, MeuAcesso, NovoLancamento, Papel, Socio } from '../../core/teeds/financeiro'
+import type { Acesso, Anexo, Candidato, Categoria, Conta, DadosFin, FinApi, Historico, Lancamento, MeuAcesso, NovoLancamento, Papel, Projeto, Socio } from '../../core/teeds/financeiro'
 import { hoje, somarDias, somarMeses } from '../../core/teeds/financeiro'
 import { FinanceiroPainel } from './FinanceiroPainel'
 import '../admin-topo.css'
@@ -32,30 +32,36 @@ function semente(vazio: boolean): DadosFin {
     { id: id(), marca: 'globalfly', nome: 'Victor Cordeiro', percentual: 25, cor: '#B78D39', ordem: 2, ativo: true },
     { id: id(), marca: 'globalfly', nome: 'Naor Bezerra', percentual: 25, cor: '#0E8C9B', ordem: 3, ativo: true },
   ]
-  if (vazio) return { categorias, contas, socios, lancamentos: [] }
+  const projetos: Projeto[] = [
+    { id: id(), marca: 'globalfly', nome: 'Projeto Victor', cor: '#B78D39', parceiro: 'v', ordem: 1, ativo: true },
+    { id: id(), marca: 'globalfly', nome: 'Projeto Naor', cor: '#0E8C9B', parceiro: 'n', ordem: 2, ativo: true },
+    { id: id(), marca: 'globalfly', nome: 'Projeto Douglas', cor: '#7C5CC4', parceiro: 'd', ordem: 3, ativo: true },
+  ]
+  if (vazio) return { categorias, contas, socios, projetos, lancamentos: [] }
   const c = (n: string) => categorias.find((x) => x.nome === n)!.id
   const h = hoje()
   const l: Lancamento[] = []
   const add = (x: Partial<Lancamento> & Pick<Lancamento, 'tipo' | 'descricao' | 'valor' | 'vencimento'>) => l.push({
-    id: id(), marca: 'globalfly', pago_em: null, categoria_id: null, conta_id: contas[0].id, socio_id: null, contraparte: null, forma: null, observacoes: null,
+    id: id(), marca: 'globalfly', pago_em: null, categoria_id: null, conta_id: contas[0].id, socio_id: null, projeto_id: null, contraparte: null, forma: null, observacoes: null,
     grupo: null, parcela: null, parcelas: null, anexos: [], origem: null, origem_id: null, criado_por: 'u1', criado_em: new Date().toISOString(), atualizado_por: 'u1', atualizado_em: new Date().toISOString(), ...x,
   })
   // as cobranças do Facebook (as 31 dos prints de 10/11/2026), pagas no cartão do Tiago
   const fb = [12.68, 13.7, 12.79, 13.78, 20.83, 13.48, 21.34, 17.11, 13.83, 12.81, 17.51, 13.42, 17.06, 49.5, 42.87, 42.84, 12.76, 12.53, 75.18, 71.37, 44.35, 47.13, 111.51, 114.57, 102.45, 75.25, 63.8, 63.78, 73.27, 80.62, 68.31]
-  fb.forEach((v, i) => { const d = somarDias(h, -Math.floor(i / 4)); add({ tipo: 'despesa', descricao: 'Anúncios do Facebook', valor: v, vencimento: d, pago_em: d, categoria_id: c('Anúncios'), conta_id: null, socio_id: socios[0].id, contraparte: 'Meta Platforms', forma: 'Cartão de crédito', anexos: i === 0 ? [{ path: 'x', nome: 'fatura-meta.pdf', tipo: 'application/pdf', tamanho: 182000 }] : [] }) })
+  fb.forEach((v, i) => { const d = somarDias(h, -Math.floor(i / 4)); add({ tipo: 'despesa', descricao: 'Anúncios do Facebook', valor: v, vencimento: d, pago_em: d, categoria_id: c('Anúncios'), conta_id: null, socio_id: socios[0].id, contraparte: 'Meta Platforms', forma: 'Cartão de crédito', projeto_id: projetos[0].id, anexos: i === 0 ? [{ path: 'x', nome: 'fatura-meta.pdf', tipo: 'application/pdf', tamanho: 182000 }] : [] }) })
   for (let m = 0; m < 6; m++) {
     const d = somarMeses(h, -m)
     add({ tipo: 'receita', descricao: 'Markup da Deriv', valor: [4820.5, 3910.2, 3120, 2280.4, 1650, 980][m], vencimento: d, pago_em: m === 0 ? null : d, categoria_id: c('Markup da Deriv'), contraparte: 'Deriv', forma: 'Transferência' })
     add({ tipo: 'despesa', descricao: 'Servidor DigitalOcean', valor: 312.4, vencimento: d, pago_em: m === 0 ? null : d, categoria_id: c('Servidores e tecnologia'), contraparte: 'DigitalOcean', forma: 'Cartão de crédito', grupo: 'g1', parcela: 6 - m })
     add({ tipo: 'despesa', descricao: 'Supabase Pro', valor: 145.9, vencimento: d, pago_em: m === 0 ? null : d, categoria_id: c('Ferramentas e assinaturas'), contraparte: 'Supabase', forma: 'Cartão de crédito' })
-    if (m > 0) add({ tipo: 'receita', descricao: 'Vendas Black e Prestige', valor: [0, 2970, 1782, 1485, 891, 594][m], vencimento: d, pago_em: d, categoria_id: c('Vendas de planos'), conta_id: contas[1].id, contraparte: 'Cakto', forma: 'Plataforma' })
+    if (m > 0) add({ tipo: 'receita', descricao: 'Vendas Black e Prestige', valor: [0, 2970, 1782, 1485, 891, 594][m], vencimento: d, pago_em: d, categoria_id: c('Vendas de planos'), conta_id: contas[1].id, contraparte: 'Cakto', forma: 'Plataforma', projeto_id: projetos[m % 2].id })
+    add({ tipo: 'despesa', descricao: 'Anúncios do Naor', valor: [0, 640, 520, 410, 300, 180][m] || 220, vencimento: d, pago_em: d, categoria_id: c('Anúncios'), contraparte: 'Meta Platforms', forma: 'Cartão de crédito', projeto_id: projetos[1].id })
   }
   add({ tipo: 'despesa', descricao: 'Contabilidade de outubro', valor: 650, vencimento: somarDias(h, -6), categoria_id: c('Contabilidade e jurídico'), contraparte: 'Escritório Alfa', forma: 'Boleto' })
   add({ tipo: 'despesa', descricao: 'Edição dos vídeos da live', valor: 1200, vencimento: somarDias(h, 4), categoria_id: c('Produção de conteúdo'), contraparte: 'Estúdio Norte', forma: 'Pix' })
   add({ tipo: 'receita', descricao: 'Comissão de afiliado', valor: 860.75, vencimento: somarDias(h, 9), categoria_id: c('Comissão de afiliado'), contraparte: 'Deriv', forma: 'Transferência' })
   add({ tipo: 'retirada', descricao: 'Distribuição de lucro de setembro', valor: 1500, vencimento: somarMeses(h, -1), pago_em: somarMeses(h, -1), socio_id: socios[1].id, forma: 'Pix' })
   add({ tipo: 'aporte', descricao: 'Aporte para os anúncios', valor: 3000, vencimento: somarMeses(h, -2), pago_em: somarMeses(h, -2), socio_id: socios[2].id, forma: 'Pix' })
-  return { categorias, contas, socios, lancamentos: l }
+  return { categorias, contas, socios, projetos, lancamentos: l }
 }
 
 function apiEmMemoria(): FinApi {
@@ -102,6 +108,7 @@ function apiEmMemoria(): FinApi {
     apagarLancamentos: async (ids) => { dados.lancamentos.filter((x) => ids.includes(x.id)).forEach((x) => registrar('apagou', x, null)); dados = { ...dados, lancamentos: dados.lancamentos.filter((x) => !ids.includes(x.id)) } },
     salvarCategoria: async (c) => { const n = { id: c.id ?? id(), marca: 'globalfly', ordem: 99, ativo: true, cor: '#64748B', ...c } as Categoria; dados = { ...dados, categorias: c.id ? dados.categorias.map((x) => x.id === c.id ? { ...x, ...c } : x) : [...dados.categorias, n] }; return n },
     salvarConta: async (c) => { const n = { id: c.id ?? id(), marca: 'globalfly', ordem: 99, ativo: true, tipo: 'banco', saldo_inicial: 0, cor: '#1E3D6E', ...c } as Conta; dados = { ...dados, contas: c.id ? dados.contas.map((x) => x.id === c.id ? { ...x, ...c } : x) : [...dados.contas, n] }; return n },
+    salvarProjeto: async (p) => { const n = { id: p.id ?? id(), marca: 'globalfly', ordem: 99, ativo: true, cor: '#2F6FDB', parceiro: null, ...p } as Projeto; dados = { ...dados, projetos: p.id ? dados.projetos.map((x) => x.id === p.id ? { ...x, ...p } : x) : [...dados.projetos, n] }; return n },
     salvarSocio: async (s) => { const n = { id: s.id ?? id(), marca: 'globalfly', ordem: 99, ativo: true, percentual: 0, cor: '#B78D39', ...s } as Socio; dados = { ...dados, socios: s.id ? dados.socios.map((x) => x.id === s.id ? { ...x, ...s } : x) : [...dados.socios, n] }; return n },
     historico: () => espera(hist),
     pessoas: () => espera([{ user_id: 'u1', nome: 'Tiago Dal Ri', email: 'tiago@exemplo.com' }]),

@@ -9,7 +9,7 @@ import {
 } from '../../core/teeds/financeiro'
 import { Campo, Interruptor, Janela, Segmentado, escreverValor, lerValor } from './ui'
 
-export interface Rascunho { tipo?: TipoLancamento; socio_id?: string | null; valor?: number; descricao?: string }
+export interface Rascunho { tipo?: TipoLancamento; socio_id?: string | null; valor?: number; descricao?: string; projeto_id?: string | null }
 type Repeticao = 'nao' | 'mensal' | 'parcelado'
 
 const novoId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12}).*$/, '$1-$2-$3-$4-$5'))
@@ -33,6 +33,7 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
   const [pago, setPago] = useState(l ? !!l.pago_em : true)
   const [pagoEm, setPagoEm] = useState(l?.pago_em ?? hoje())
   const [categoria, setCategoria] = useState(l?.categoria_id ?? '')
+  const [projeto, setProjeto] = useState(l?.projeto_id ?? rascunho?.projeto_id ?? '')
   const contasAtivas = dados.contas.filter((c) => c.ativo || c.id === l?.conta_id)
   const [conta, setConta] = useState(l?.conta_id ?? contasAtivas[0]?.id ?? '')
   const [socio, setSocio] = useState<string>(l?.socio_id ?? rascunho?.socio_id ?? '')
@@ -99,6 +100,7 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
       const comum = {
         tipo, descricao: descricao.trim(),
         categoria_id: operacional ? categoria || null : null,
+        projeto_id: projeto || null,
         conta_id: noBolso ? null : conta || null,
         socio_id: socio || null,
         contraparte: contraparte.trim() || null, forma: forma || null, observacoes: obs.trim() || null,
@@ -212,7 +214,13 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
               {categorias.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </Campo>}
-          <Campo rotulo="Forma de pagamento" largo={!operacional || (pago && !novo)}>
+          <Campo rotulo="Projeto">
+            <select value={projeto} onChange={(e) => setProjeto(e.target.value)}>
+              <option value="">Custo geral (sem projeto)</option>
+              {dados.projetos.filter((p) => p.ativo || p.id === projeto).map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+            </select>
+          </Campo>
+          <Campo rotulo="Forma de pagamento" largo={((pago && !novo ? 1 : 0) + (operacional ? 1 : 0)) % 2 === 0}>
             <select value={forma} onChange={(e) => setForma(e.target.value)}>
               <option value="">Não informada</option>
               {FORMAS.map((f) => <option key={f} value={f}>{f}</option>)}

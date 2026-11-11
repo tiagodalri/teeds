@@ -1,6 +1,6 @@
 /* Cadastros: sócios (com o percentual de cada um), contas (onde o dinheiro fica) e categorias. */
 import { useState, type ReactNode } from 'react'
-import { reais, saldosDasContas, type Categoria, type Conta, type DadosFin, type FinApi, type Socio } from '../../core/teeds/financeiro'
+import { reais, saldosDasContas, type Categoria, type Conta, type DadosFin, type FinApi, type Projeto, type Socio } from '../../core/teeds/financeiro'
 import { Icone } from '../Icone'
 import { Avatar, Campo, EscolherCor, Janela, PALETA, escreverValor, lerValor } from './ui'
 
@@ -13,6 +13,7 @@ type Editando =
   | { o: 'socio'; v: Partial<Socio> }
   | { o: 'conta'; v: Partial<Conta> }
   | { o: 'categoria'; v: Partial<Categoria> }
+  | { o: 'projeto'; v: Partial<Projeto> }
   | null
 
 export function Cadastros({ api, dados, podeEditar, souDono, aoMudar }: {
@@ -22,10 +23,10 @@ export function Cadastros({ api, dados, podeEditar, souDono, aoMudar }: {
   const [editando, setEditando] = useState<Editando>(null)
   const [verArquivados, setVerArquivados] = useState(false)
   const saldos = new Map(saldosDasContas(dados).map((s) => [s.conta.id, s.saldo]))
-  const usos = (campo: 'categoria_id' | 'conta_id' | 'socio_id', id: string) => dados.lancamentos.filter((l) => l[campo] === id).length
+  const usos = (campo: 'categoria_id' | 'conta_id' | 'socio_id' | 'projeto_id', id: string) => dados.lancamentos.filter((l) => l[campo] === id).length
   const somaPct = dados.socios.filter((s) => s.ativo).reduce((s, x) => s + x.percentual, 0)
   const ver = <T extends { ativo: boolean }>(l: T[]) => l.filter((x) => verArquivados || x.ativo)
-  const arquivados = [...dados.socios, ...dados.contas, ...dados.categorias].filter((x) => !x.ativo).length
+  const arquivados = [...dados.socios, ...dados.contas, ...dados.categorias, ...dados.projetos].filter((x) => !x.ativo).length
 
   const Linha = ({ cor, nome, sub, valor, arquivado, aoEditar }: { cor: string; nome: ReactNode; sub?: ReactNode; valor?: ReactNode; arquivado?: boolean; aoEditar?: () => void }) =>
     <li className={arquivado ? 'arquivado' : ''} style={{ ['--fin-cor' as string]: cor }}>
@@ -55,6 +56,18 @@ export function Cadastros({ api, dados, podeEditar, souDono, aoMudar }: {
       </section>
 
       <section className="fin-cartao">
+        <header><div><span className="fin-rot">Custo por projeto</span><h3>Projetos</h3></div>
+          {podeEditar && <button type="button" className="fin-btn pequeno" onClick={() => setEditando({ o: 'projeto', v: { nome: '', cor: PALETA[(dados.projetos.length + 2) % PALETA.length], ativo: true } })}><Icone nome="mais" />Projeto</button>}</header>
+        <ul className="fin-cad-lista">
+          {ver(dados.projetos).map((p) => <Linha key={p.id} cor={p.cor} nome={p.nome} arquivado={!p.ativo}
+            sub={p.ativo ? contagem(usos('projeto_id', p.id), 'lançamento', 'lançamentos', 'Nenhum lançamento') : 'Arquivado'}
+            aoEditar={podeEditar ? () => setEditando({ o: 'projeto', v: p }) : undefined} />)}
+          {!dados.projetos.length && <li className="fin-cartao-vazio">Nenhum projeto. Crie um para separar o custo de cada um (ex.: Projeto Victor).</li>}
+        </ul>
+        <p className="fin-cad-nota">O que não tem projeto entra como custo geral da plataforma.</p>
+      </section>
+
+      <section className="fin-cartao">
         <header><div><span className="fin-rot">Onde o dinheiro fica</span><h3>Contas</h3></div>
           {podeEditar && <button type="button" className="fin-btn pequeno" onClick={() => setEditando({ o: 'conta', v: { nome: '', tipo: 'banco', saldo_inicial: 0, cor: PALETA[(dados.contas.length + 9) % PALETA.length], ativo: true } })}><Icone nome="mais" />Conta</button>}</header>
         <ul className="fin-cad-lista">
@@ -77,7 +90,7 @@ export function Cadastros({ api, dados, podeEditar, souDono, aoMudar }: {
       </section>
     </div>
 
-    {editando && <EditorCadastro api={api} editando={editando} usos={editando.v.id ? usos(editando.o === 'socio' ? 'socio_id' : editando.o === 'conta' ? 'conta_id' : 'categoria_id', editando.v.id) : 0}
+    {editando && <EditorCadastro api={api} editando={editando} usos={editando.v.id ? usos(editando.o === 'socio' ? 'socio_id' : editando.o === 'conta' ? 'conta_id' : editando.o === 'projeto' ? 'projeto_id' : 'categoria_id', editando.v.id) : 0}
       somaOutros={editando.o === 'socio' ? dados.socios.filter((s) => s.ativo && s.id !== editando.v.id).reduce((s, x) => s + x.percentual, 0) : 0}
       aoFechar={() => setEditando(null)} aoSalvar={(m) => { setEditando(null); aoMudar(m) }} />}
   </div>
@@ -96,8 +109,8 @@ function EditorCadastro({ api, editando, usos, somaOutros, aoFechar, aoSalvar }:
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
   const novo = !v.id
-  const nomeObjeto = editando.o === 'socio' ? 'sócio' : editando.o === 'conta' ? 'conta' : 'categoria'
-  const feminino = editando.o !== 'socio'
+  const nomeObjeto = editando.o === 'socio' ? 'sócio' : editando.o === 'conta' ? 'conta' : editando.o === 'projeto' ? 'projeto' : 'categoria'
+  const feminino = editando.o === 'conta' || editando.o === 'categoria'
   const pctNum = Number(percentual.replace(',', '.'))
 
   const salvar = async (ativo = v.ativo ?? true) => {
@@ -109,6 +122,8 @@ function EditorCadastro({ api, editando, usos, somaOutros, aoFechar, aoSalvar }:
         await api.salvarSocio({ id: v.id, nome: nome.trim(), cor, percentual: Math.round(pctNum * 10000) / 10000, ativo })
       } else if (editando.o === 'conta') {
         await api.salvarConta({ id: v.id, nome: nome.trim(), cor, tipo: tipoConta, saldo_inicial: lerValor(saldoInicial) ?? 0, ativo })
+      } else if (editando.o === 'projeto') {
+        await api.salvarProjeto({ id: v.id, nome: nome.trim(), cor, ativo })
       } else {
         await api.salvarCategoria({ id: v.id, nome: nome.trim(), cor, tipo: tipoCat, ativo })
       }
@@ -126,7 +141,7 @@ function EditorCadastro({ api, editando, usos, somaOutros, aoFechar, aoSalvar }:
     <fieldset className="fin-form" disabled={salvando}>
       <div className="fin-form-grade">
         <Campo rotulo="Nome" largo><input data-foco value={nome} onChange={(e) => setNome(e.target.value)} maxLength={60}
-          placeholder={editando.o === 'socio' ? 'Ex.: Tiago Dal Ri' : editando.o === 'conta' ? 'Ex.: Conta PJ do Itaú' : 'Ex.: Anúncios'} /></Campo>
+          placeholder={editando.o === 'socio' ? 'Ex.: Tiago Dal Ri' : editando.o === 'conta' ? 'Ex.: Conta PJ do Itaú' : editando.o === 'projeto' ? 'Ex.: Projeto Victor' : 'Ex.: Anúncios'} /></Campo>
         {editando.o === 'socio' && <Campo rotulo="Percentual do resultado" largo
           dica={Number.isFinite(pctNum) ? `Com este, os sócios somam ${(somaOutros + pctNum).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%.` : undefined}>
           <span className="fin-input-sufixo"><input inputMode="decimal" value={percentual} onChange={(e) => setPercentual(e.target.value.replace(/[^\d,.]/g, ''))} /><em>%</em></span>

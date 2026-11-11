@@ -5,7 +5,7 @@ import { Avatar, Vazio } from './ui'
 
 const VERBO: Record<Registro['acao'], string> = { criou: 'lançou', editou: 'editou', pagou: 'marcou como pago', reabriu: 'reabriu', apagou: 'apagou' }
 const quando = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
-const CAMPOS: Array<[keyof Lancamento, string]> = [['descricao', 'Descrição'], ['valor', 'Valor'], ['tipo', 'Tipo'], ['vencimento', 'Data'], ['pago_em', 'Pago em'], ['categoria_id', 'Categoria'], ['conta_id', 'Conta'], ['socio_id', 'Sócio'], ['contraparte', 'Fornecedor ou cliente'], ['forma', 'Forma'], ['observacoes', 'Observações']]
+const CAMPOS: Array<[keyof Lancamento, string]> = [['descricao', 'Descrição'], ['valor', 'Valor'], ['tipo', 'Tipo'], ['vencimento', 'Data'], ['pago_em', 'Pago em'], ['categoria_id', 'Categoria'], ['projeto_id', 'Projeto'], ['conta_id', 'Conta'], ['socio_id', 'Sócio'], ['contraparte', 'Fornecedor ou cliente'], ['forma', 'Forma'], ['observacoes', 'Observações']]
 
 export function Historico({ api, dados }: { api: FinApi; dados: DadosFin }) {
   const [lista, setLista] = useState<Registro[] | null>(null)
@@ -30,6 +30,7 @@ export function Historico({ api, dados }: { api: FinApi; dados: DadosFin }) {
     if (campo === 'tipo') return ROTULO_TIPO[v as Lancamento['tipo']] ?? String(v)
     if (campo === 'categoria_id') return dados.categorias.find((c) => c.id === v)?.nome ?? 'categoria apagada'
     if (campo === 'conta_id') return dados.contas.find((c) => c.id === v)?.nome ?? 'conta apagada'
+    if (campo === 'projeto_id') return dados.projetos.find((c) => c.id === v)?.nome ?? 'projeto'
     if (campo === 'socio_id') return dados.socios.find((c) => c.id === v)?.nome ?? 'sócio'
     return String(v)
   }

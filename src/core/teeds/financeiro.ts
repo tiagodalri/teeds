@@ -15,12 +15,13 @@ export type Papel = 'dono' | 'editor' | 'leitor'
 
 export interface Categoria { id: string; marca: string; tipo: 'entrada' | 'saida'; nome: string; cor: string; ordem: number; ativo: boolean }
 export interface Conta { id: string; marca: string; nome: string; tipo: 'banco' | 'caixa' | 'cartao' | 'plataforma' | 'outro'; saldo_inicial: number; cor: string; ordem: number; ativo: boolean }
+export interface Projeto { id: string; marca: string; nome: string; cor: string; parceiro: string | null; ordem: number; ativo: boolean }
 export interface Socio { id: string; marca: string; nome: string; percentual: number; cor: string; ordem: number; ativo: boolean }
 export interface Anexo { path: string; nome: string; tipo: string; tamanho: number }
 export interface Lancamento {
   id: string; marca: string; tipo: TipoLancamento; descricao: string; valor: number
   vencimento: string; pago_em: string | null
-  categoria_id: string | null; conta_id: string | null; socio_id: string | null
+  categoria_id: string | null; conta_id: string | null; socio_id: string | null; projeto_id: string | null
   contraparte: string | null; forma: string | null; observacoes: string | null
   grupo: string | null; parcela: number | null; parcelas: number | null
   anexos: Anexo[]; origem: string | null; origem_id: string | null
@@ -35,7 +36,7 @@ export interface MeuAcesso { admin: boolean; geral?: boolean; tem: boolean; nest
 export type ResultadoEntrada = { token: string; expira_em: string; papel: Papel; marcas: string[]; trocar_senha: boolean } | { erro: 'senha'; restam: number } | { erro: 'bloqueado'; ate: string } | { erro: 'sem-acesso' }
 export type ResultadoTroca = { ok: true } | { erro: 'senha'; restam: number } | { erro: 'bloqueado'; ate: string } | { erro: 'sem-acesso' | 'fraca' | 'igual' }
 
-export interface DadosFin { categorias: Categoria[]; contas: Conta[]; socios: Socio[]; lancamentos: Lancamento[] }
+export interface DadosFin { categorias: Categoria[]; contas: Conta[]; socios: Socio[]; projetos: Projeto[]; lancamentos: Lancamento[] }
 
 /** Tudo o que a tela pede ao banco. O laboratório troca por uma versão em memória. */
 export interface FinApi {
@@ -56,6 +57,7 @@ export interface FinApi {
   salvarCategoria(c: Partial<Categoria> & { tipo: Categoria['tipo']; nome: string }): Promise<Categoria>
   salvarConta(c: Partial<Conta> & { nome: string }): Promise<Conta>
   salvarSocio(s: Partial<Socio> & { nome: string }): Promise<Socio>
+  salvarProjeto(p: Partial<Projeto> & { nome: string }): Promise<Projeto>
   historico(limite?: number): Promise<Historico[]>
   pessoas(ids: string[]): Promise<Pessoa[]>
   acessos(): Promise<Acesso[]>
@@ -153,13 +155,14 @@ export function finDoBanco(sessao: SessaoTeeds, marca: string): FinApi {
     preparar: async () => { await rpc('fin_preparar', { p_marca: marca }) },
     ler: async () => {
       if (!lerToken(sessao.usuario.id) || !(await rpc<string | null>('fin_sessao'))) { guardarToken(null); throw new FinTrancado() }
-      const [categorias, contas, socios, lancamentos] = await Promise.all([
+      const [categorias, contas, socios, projetos, lancamentos] = await Promise.all([
         get<Categoria[]>(`fin_categorias?marca=eq.${m}&order=tipo,ordem,nome`),
         get<Conta[]>(`fin_contas?marca=eq.${m}&order=ordem,nome`),
         get<Socio[]>(`fin_socios?marca=eq.${m}&order=ordem,nome`),
+        get<Projeto[]>(`fin_projetos?marca=eq.${m}&order=ordem,nome`),
         getTodos<Lancamento>(`fin_lancamentos?marca=eq.${m}&order=vencimento.desc,criado_em.desc,id`),
       ])
-      return { categorias, contas: contas.map(num), socios: socios.map(num), lancamentos: lancamentos.map(num) }
+      return { categorias, contas: contas.map(num), socios: socios.map(num), projetos, lancamentos: lancamentos.map(num) }
     },
     salvarLancamentos: async (l) => (await escrever<Lancamento[]>('POST', 'fin_lancamentos', l.map((x) => ({ ...x, marca })))).map(num),
     atualizarLancamento: async (id, campos) => { exigirLinha(await escrever<Lancamento[]>('PATCH', `fin_lancamentos?id=eq.${id}`, campos)) },
@@ -176,6 +179,10 @@ export function finDoBanco(sessao: SessaoTeeds, marca: string): FinApi {
     salvarSocio: async (s) => {
       if (s.id) { const { id, ...resto } = s; return num(exigirLinha(await escrever<Socio[]>('PATCH', `fin_socios?id=eq.${id}`, resto))[0]) }
       return num((await escrever<Socio[]>('POST', 'fin_socios', { ...s, marca }))[0])
+    },
+    salvarProjeto: async (p) => {
+      if (p.id) { const { id, ...resto } = p; return exigirLinha(await escrever<Projeto[]>('PATCH', `fin_projetos?id=eq.${id}`, resto))[0] }
+      return (await escrever<Projeto[]>('POST', 'fin_projetos', { ...p, marca }))[0]
     },
     historico: (limite = 300) => get<Historico[]>(`fin_historico?marca=eq.${m}&order=em.desc&limit=${limite}`),
     pessoas: (ids) => ids.length ? rpc<Pessoa[]>('fin_pessoas', { p_ids: ids }) : Promise.resolve([]),
@@ -377,17 +384,45 @@ export function dividir(d: DadosFin, p: Periodo): { resultadoPeriodo: number; re
   return { resultadoPeriodo, resultadoTotal, somaPercentual, linhas }
 }
 
+export interface LinhaProjeto { projeto: Projeto | null; receitas: number; despesas: number; resultado: number; n: number; parte: number }
+/**
+ * Custo por projeto (11/11/2026, Tiago: "custo por projeto... projeto do Victor, projeto do Naor"): receitas e
+ * despesas pagas no período, por projeto; o que não tem projeto é o custo geral. `parte` = fatia das despesas.
+ */
+export function porProjeto(d: DadosFin, p: Periodo): LinhaProjeto[] {
+  const proj = new Map(d.projetos.map((x) => [x.id, x]))
+  const m = new Map<string, LinhaProjeto>()
+  for (const x of d.projetos.filter((y) => y.ativo)) m.set(x.id, { projeto: x, receitas: 0, despesas: 0, resultado: 0, n: 0, parte: 0 })
+  let totalDespesas = 0
+  for (const l of d.lancamentos) {
+    if (!l.pago_em || !ehOperacional(l.tipo) || l.pago_em < p.de || l.pago_em > p.ate) continue
+    const chave = l.projeto_id && proj.has(l.projeto_id) ? l.projeto_id : '-'
+    const x = m.get(chave) ?? { projeto: chave === '-' ? null : proj.get(chave)!, receitas: 0, despesas: 0, resultado: 0, n: 0, parte: 0 }
+    if (l.tipo === 'receita') x.receitas += l.valor; else { x.despesas += l.valor; totalDespesas += l.valor }
+    x.n++
+    m.set(chave, x)
+  }
+  return [...m.values()].map((x) => ({ ...x, resultado: x.receitas - x.despesas, parte: totalDespesas ? x.despesas / totalDespesas : 0 }))
+    .sort((a, b) => (a.projeto ? 0 : 1) - (b.projeto ? 0 : 1) || b.despesas - a.despesas || (a.projeto?.ordem ?? 0) - (b.projeto?.ordem ?? 0))
+}
+/** Só os lançamentos de um projeto ('geral' = os sem projeto); o resto dos dados igual. */
+export function doProjeto(d: DadosFin, projeto: string): DadosFin {
+  if (!projeto) return d
+  return { ...d, lancamentos: d.lancamentos.filter((l) => projeto === 'geral' ? !l.projeto_id : l.projeto_id === projeto) }
+}
+
 /** Planilha (CSV com ; e vírgula decimal, que o Excel em português abre direto). */
 export function paraCsv(l: Lancamento[], d: DadosFin): string {
   const cat = new Map(d.categorias.map((c) => [c.id, c.nome]))
   const con = new Map(d.contas.map((c) => [c.id, c.nome]))
   const soc = new Map(d.socios.map((c) => [c.id, c.nome]))
+  const pro = new Map(d.projetos.map((c) => [c.id, c.nome]))
   const q = (s: string | null | undefined) => `"${(s ?? '').replace(/"/g, '""')}"`
-  const linhas = [['Tipo', 'Descrição', 'Valor', 'Vencimento', 'Pago em', 'Situação', 'Categoria', 'Conta', 'Sócio', 'Fornecedor ou cliente', 'Forma', 'Parcela', 'Observações'].join(';')]
+  const linhas = [['Tipo', 'Descrição', 'Valor', 'Vencimento', 'Pago em', 'Situação', 'Categoria', 'Projeto', 'Conta', 'Sócio', 'Fornecedor ou cliente', 'Forma', 'Parcela', 'Observações'].join(';')]
   for (const x of l) {
     const v = (ehEntrada(x.tipo) ? x.valor : -x.valor).toFixed(2).replace('.', ',')
     linhas.push([q(ROTULO_TIPO[x.tipo]), q(x.descricao), v, dataCurta(x.vencimento), x.pago_em ? dataCurta(x.pago_em) : '', q(situacaoDe(x) === 'pago' ? 'Pago' : situacaoDe(x) === 'vencido' ? 'Vencido' : 'Pendente'),
-      q(x.categoria_id ? cat.get(x.categoria_id) : ''), q(x.conta_id ? con.get(x.conta_id) : ''), q(x.socio_id ? soc.get(x.socio_id) : ''),
+      q(x.categoria_id ? cat.get(x.categoria_id) : ''), q(x.projeto_id ? pro.get(x.projeto_id) : 'Custo geral'), q(x.conta_id ? con.get(x.conta_id) : ''), q(x.socio_id ? soc.get(x.socio_id) : ''),
       q(x.contraparte), q(x.forma), x.parcelas ? `${x.parcela}/${x.parcelas}` : '', q(x.observacoes)].join(';'))
   }
   return '﻿' + linhas.join('\r\n')

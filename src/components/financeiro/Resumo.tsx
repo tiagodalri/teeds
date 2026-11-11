@@ -1,7 +1,7 @@
 /* Resumo: os números do período, o mês a mês, para onde foi e de onde veio, o que vence e o saldo das contas. */
 import { useMemo, useState } from 'react'
 import {
-  dataCurta, diasEntre, ehEntrada, hoje, mesAMes, nomeDoMes, porCategoria, reais, reaisCurto, resumir, saldosDasContas, situacaoDe,
+  dataCurta, diasEntre, ehEntrada, hoje, mesAMes, nomeDoMes, porCategoria, porProjeto, reais, reaisCurto, resumir, saldosDasContas, situacaoDe,
   type DadosFin, type Lancamento, type Periodo,
 } from '../../core/teeds/financeiro'
 import { Icone } from '../Icone'
@@ -16,25 +16,32 @@ const compacto = (v: number) => {
 }
 const pct = (v: number) => `${(v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
 
-export function Resumo({ dados, periodo, rotuloPeriodo, podeEditar, aoNovo, aoAbrir, aoPagar, aoIr }: {
+export function Resumo({ dados, todos, projeto, aoProjeto, periodo, rotuloPeriodo, podeEditar, aoNovo, aoAbrir, aoPagar, aoIr }: {
   dados: DadosFin; periodo: Periodo; rotuloPeriodo: string; podeEditar: boolean
+  /** os dados sem o filtro de projeto (saldo das contas e o quadro dos projetos olham tudo) */
+  todos: DadosFin
+  /** o projeto em foco ('' = todos, 'geral' = sem projeto) */
+  projeto: string
+  aoProjeto: (id: string) => void
   aoNovo: (tipo: 'despesa' | 'receita') => void
   aoAbrir: (l: Lancamento) => void
   aoPagar: (l: Lancamento) => void
   aoIr: (aba: 'lancamentos' | 'divisao' | 'cadastros', filtro?: 'pagar' | 'receber' | 'vencidos') => void
 }) {
-  const r = useMemo(() => resumir(dados, periodo), [dados, periodo])
+  // o saldo das contas é sempre o de todas as contas, com ou sem filtro de projeto
+  const r = useMemo(() => ({ ...resumir(dados, periodo), saldoContas: resumir(todos, periodo).saldoContas }), [dados, todos, periodo])
+  const projetos = useMemo(() => porProjeto(todos, periodo), [todos, periodo])
   const meses = useMemo(() => mesAMes(dados, periodo.ate > hoje() ? hoje() : periodo.ate, 12), [dados, periodo.ate])
   const despesas = useMemo(() => porCategoria(dados, periodo, 'despesa'), [dados, periodo])
   const receitas = useMemo(() => porCategoria(dados, periodo, 'receita'), [dados, periodo])
-  const contas = useMemo(() => saldosDasContas(dados).filter((c) => c.conta.ativo), [dados])
+  const contas = useMemo(() => saldosDasContas(todos).filter((c) => c.conta.ativo), [todos])
   const [abertos, setAbertos] = useState<'pagar' | 'receber'>('pagar')
   const hojeDia = hoje()
   const emAberto = useMemo(() => dados.lancamentos.filter((l) => !l.pago_em && ehEntrada(l.tipo) === (abertos === 'receber')).sort((a, b) => a.vencimento.localeCompare(b.vencimento)), [dados.lancamentos, abertos])
   const maxMes = Math.max(1, ...meses.map((m) => Math.max(m.entradas, m.saidas)))
   const temMeses = meses.some((m) => m.entradas || m.saidas)
 
-  if (!dados.lancamentos.length) {
+  if (!todos.lancamentos.length) {
     return <section className="fin-cartao fin-comeco">
       <Vazio icone={<Icone nome="financeiro" />} titulo="Nenhum lançamento ainda"
         texto={<>Comece pelo que já aconteceu: os anúncios pagos, as ferramentas, o markup que entrou. Os números deste resumo aparecem conforme você lança.</>}
@@ -95,6 +102,25 @@ export function Resumo({ dados, periodo, rotuloPeriodo, podeEditar, aoNovo, aoAb
         </ul>
       </section>
     </div>
+
+    {(projetos.length > 1 || projetos.some((x) => x.projeto)) && <section className="fin-cartao">
+      <header><div><span className="fin-rot">Projetos · {rotuloPeriodo}</span><h3>Custo e resultado por projeto</h3></div>
+        {projeto && <button type="button" className="fin-link" onClick={() => aoProjeto('')}>Ver todos os projetos</button>}</header>
+      <div className="fin-projetos" role="list">
+        {projetos.map((x) => {
+          const id = x.projeto?.id ?? 'geral'
+          return <button key={id} type="button" role="listitem" className={`fin-projeto${projeto === id ? ' on' : ''}${projeto && projeto !== id ? ' apagado' : ''}`}
+            style={{ ['--fin-cor' as string]: x.projeto?.cor ?? '#94A3B8' }} onClick={() => aoProjeto(projeto === id ? '' : id)}
+            title={projeto === id ? 'Ver todos os projetos' : `Ver só ${x.projeto?.nome ?? 'o custo geral'}`}>
+            <span className="fin-projeto-nome"><i className="fin-ponto" /><b>{x.projeto?.nome ?? 'Custo geral'}</b><small>{x.n ? `${x.n} ${x.n === 1 ? 'lançamento' : 'lançamentos'}` : 'Nada no período'}</small></span>
+            <span className="fin-projeto-num"><small>Despesas</small><b className="fin-sai">{reais(x.despesas)}</b></span>
+            <span className="fin-projeto-num"><small>Receitas</small><b className="fin-entra">{reais(x.receitas)}</b></span>
+            <span className="fin-projeto-num"><small>Resultado</small><b className={x.resultado < 0 ? 'fin-sai' : x.resultado > 0 ? 'fin-entra' : ''}>{reais(x.resultado)}</b></span>
+            <span className="fin-projeto-barra" aria-hidden="true"><i style={{ width: `${Math.max(x.despesas ? 2 : 0, x.parte * 100)}%` }} /></span>
+          </button>
+        })}
+      </div>
+    </section>}
 
     <div className="fin-grade-2">
       {([['despesa', 'Para onde foi o dinheiro', despesas], ['receita', 'De onde veio o dinheiro', receitas]] as const).map(([t, titulo, lista]) => <section key={t} className="fin-cartao">

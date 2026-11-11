@@ -31,6 +31,7 @@ export function Lancamentos({ dados, periodo, rotuloPeriodo, filtroInicial, pode
   const cat = useMemo(() => new Map(dados.categorias.map((c) => [c.id, c])), [dados.categorias])
   const con = useMemo(() => new Map(dados.contas.map((c) => [c.id, c])), [dados.contas])
   const soc = useMemo(() => new Map(dados.socios.map((c) => [c.id, c])), [dados.socios])
+  const pro = useMemo(() => new Map(dados.projetos.map((c) => [c.id, c])), [dados.projetos])
 
   const lista = useMemo(() => {
     const q = semAcento(busca.trim())
@@ -44,10 +45,10 @@ export function Lancamentos({ dados, periodo, rotuloPeriodo, filtroInicial, pode
       if (situacao === 'vencido' && s !== 'vencido') return false
       if (categoria && l.categoria_id !== categoria) return false
       if (conta && l.conta_id !== conta) return false
-      if (q && !semAcento(`${l.descricao} ${l.contraparte ?? ''} ${l.observacoes ?? ''} ${l.forma ?? ''} ${cat.get(l.categoria_id ?? '')?.nome ?? ''} ${soc.get(l.socio_id ?? '')?.nome ?? ''} ${l.valor.toFixed(2).replace('.', ',')}`).includes(q)) return false
+      if (q && !semAcento(`${l.descricao} ${l.contraparte ?? ''} ${l.observacoes ?? ''} ${l.forma ?? ''} ${cat.get(l.categoria_id ?? '')?.nome ?? ''} ${soc.get(l.socio_id ?? '')?.nome ?? ''} ${pro.get(l.projeto_id ?? '')?.nome ?? ''} ${l.valor.toFixed(2).replace('.', ',')}`).includes(q)) return false
       return true
     }).sort((a, b) => diaDe(b).localeCompare(diaDe(a)) || b.criado_em.localeCompare(a.criado_em))
-  }, [dados.lancamentos, busca, tipo, situacao, categoria, conta, periodo, todoPeriodo, hojeDia, cat, soc])
+  }, [dados.lancamentos, busca, tipo, situacao, categoria, conta, periodo, todoPeriodo, hojeDia, cat, soc, pro])
 
   const totais = useMemo(() => {
     let entra = 0, sai = 0
@@ -129,7 +130,7 @@ export function Lancamentos({ dados, periodo, rotuloPeriodo, filtroInicial, pode
               onKeyDown={(ev) => { if (ev.key === 'Enter' && ev.target === ev.currentTarget) aoAbrir(l) }} tabIndex={0}>
               <span role="cell" className="fin-linha-dia"><b>{diaDe(l).slice(8)}</b><small>{nomeDoMes(diaDe(l).slice(0, 7), true).split(' ')[0]}</small></span>
               <span role="cell" className="fin-linha-desc"><b>{l.descricao}{l.anexos.length > 0 && <em className="fin-clipe" title={`${l.anexos.length} ${l.anexos.length === 1 ? 'comprovante' : 'comprovantes'}`} aria-label="Com comprovante"><svg viewBox="0 0 24 24"><path d="M20 11.5l-8.2 8.2a5 5 0 01-7.1-7.1l8.5-8.5a3.3 3.3 0 014.7 4.7l-8.5 8.5a1.7 1.7 0 01-2.4-2.4l7.8-7.8" /></svg></em>}</b>
-                <small>{l.tipo === 'aporte' || l.tipo === 'retirada' ? ROTULO_TIPO[l.tipo] : l.contraparte || (l.forma ?? '')}{l.parcelas ? ` · ${l.parcela}/${l.parcelas}` : l.grupo ? ' · mensal' : ''}</small></span>
+                <small>{l.tipo === 'aporte' || l.tipo === 'retirada' ? ROTULO_TIPO[l.tipo] : l.contraparte || (l.forma ?? '')}{l.parcelas ? ` · ${l.parcela}/${l.parcelas}` : l.grupo ? ' · mensal' : ''}{l.projeto_id && pro.get(l.projeto_id) ? <em className="fin-de-projeto" style={{ ['--fin-cor' as string]: pro.get(l.projeto_id)!.cor }}>{pro.get(l.projeto_id)!.nome}</em> : null}</small></span>
               <span role="cell">{c ? <em className="fin-chip" style={{ ['--fin-cor' as string]: c.cor }}><i className="fin-ponto" />{c.nome}</em> : l.tipo === 'aporte' || l.tipo === 'retirada' ? <em className="fin-chip socio">Sócio</em> : <em className="fin-sem">Sem categoria</em>}</span>
               <span role="cell" className="fin-linha-conta">{so && (l.tipo === 'aporte' || l.tipo === 'retirada' || !l.conta_id)
                 ? <><b>{so.nome}</b><small>{l.tipo === 'despesa' ? 'Do próprio bolso' : l.tipo === 'receita' ? 'Na conta pessoal' : l.conta_id ? con.get(l.conta_id)?.nome : ''}</small></>
