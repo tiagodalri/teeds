@@ -648,3 +648,24 @@ button.fin-kpi:hover { border-color: color-mix(in srgb, var(--primary) 55%, var(
   .fin-cad-nota { padding: 12px 16px 14px; }
   .fin-grade-3 { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ── fonte pagadora e devoluções (11/11/2026) ───────────────────────────────── */
+.fin-efeito { margin: 2px 0 0; padding: 10px 12px; border-radius: var(--fin-raio-ctl); background: var(--fin-campo); color: var(--muted); font-size: 12.5px; line-height: 1.5; border-left: 3px solid var(--border); }
+.fin-efeito b { color: var(--text); }
+.fin-efeito.plataforma-devolve { border-left-color: var(--fin-socio); }
+.fin-efeito.parceiro-devolve { border-left-color: var(--primary); }
+.fin-efeito.bolso-do-parceiro { border-left-color: var(--muted); }
+.fin-linha-valor.fora { color: var(--muted); }
+.fin-devolucoes { margin: 0; padding: 0; list-style: none; }
+.fin-devolucoes li { display: flex; align-items: center; gap: 14px; min-height: 68px; padding: 12px 20px; border-top: 1px solid var(--border); }
+.fin-devolucoes li:first-child { border-top: 0; }
+.fin-devolucoes-quem { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fin-devolucoes-quem > i { color: var(--muted); font-style: normal; font-weight: 800; }
+.fin-devolucoes-quem > span { display: grid; gap: 3px; min-width: 0; margin-left: 6px; }
+.fin-devolucoes-quem b { font-size: 13.5px; }
+.fin-devolucoes-quem small { color: var(--muted); font-size: 11.5px; }
+.fin-devolucoes li > strong { font-size: 15px; white-space: nowrap; }
+@media (max-width: 760px) {
+  .fin-devolucoes li { flex-wrap: wrap; padding: 12px 16px; }
+  .fin-devolucoes li > .fin-btn { width: 100%; }
+}

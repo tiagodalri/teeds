@@ -194,7 +194,7 @@ export function FinanceiroPainel({ api, pedido = 0, nomeDaPlataforma }: {
       {aba === 'historico' && <Historico api={api} dados={dados} />}
     </>}
 
-    {editor && dados && <EditorLancamento key={editor.l?.id ?? 'novo'} api={api} dados={dados} lancamento={editor.l} rascunho={editor.rascunho} podeEditar={podeEditar}
+    {editor && dados && <EditorLancamento key={editor.l?.id ?? 'novo'} api={api} dados={dados} nomeDoCaixa={`Caixa da ${nomeDaPlataforma.replace(/ Trade$/, '')}`} lancamento={editor.l} rascunho={editor.rascunho} podeEditar={podeEditar}
       aoFechar={() => setEditor(null)} aoSalvar={depoisDeMudar} />}
     {trocandoSenha && <TrocarSenha api={api} aoFechar={() => setTrocandoSenha(false)} aoTrocar={() => { setTrocandoSenha(false); setAviso('Senha trocada.') }} />}
     {aviso && <div className="fin-toast" role="status"><Icone nome="certo" />{aviso}</div>}

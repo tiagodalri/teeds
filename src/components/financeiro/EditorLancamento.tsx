@@ -4,19 +4,21 @@
 */
 import { useMemo, useRef, useState } from 'react'
 import {
-  FORMAS, ROTULO_TIPO, dataCurta, ehEntrada, ehOperacional, hoje, reais, somarMeses,
+  FORMAS, ROTULO_TIPO, dataCurta, ehEntrada, ehOperacional, fonteDe, fontesPagadoras, hoje, reais, regraDoPagamento, somarMeses,
   type Anexo, type DadosFin, type FinApi, type Lancamento, type NovoLancamento, type TipoLancamento,
 } from '../../core/teeds/financeiro'
 import { Campo, Interruptor, Janela, Segmentado, escreverValor, lerValor } from './ui'
 
-export interface Rascunho { tipo?: TipoLancamento; socio_id?: string | null; valor?: number; descricao?: string; projeto_id?: string | null }
+export interface Rascunho { tipo?: TipoLancamento; socio_id?: string | null; valor?: number; descricao?: string; projeto_id?: string | null; pago_por?: string | null }
 type Repeticao = 'nao' | 'mensal' | 'parcelado'
 
 const novoId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12}).*$/, '$1-$2-$3-$4-$5'))
 const tamanho = (b: number) => b > 1e6 ? `${(b / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(b / 1e3))} kB`
 
-export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar, aoFechar, aoSalvar }: {
+export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar, aoFechar, aoSalvar, nomeDoCaixa = 'Caixa da plataforma' }: {
   api: FinApi; dados: DadosFin
+  /** "Caixa da GlobalFly": o nome do caixa na lista de fontes pagadoras */
+  nomeDoCaixa?: string
   /** Editando um que já existe. */
   lancamento?: Lancamento | null
   /** Lançamento novo com alguns campos já escolhidos (Registrar retirada, Nova receita…). */
@@ -37,7 +39,10 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
   const contasAtivas = dados.contas.filter((c) => c.ativo || c.id === l?.conta_id)
   const [conta, setConta] = useState(l?.conta_id ?? contasAtivas[0]?.id ?? '')
   const [socio, setSocio] = useState<string>(l?.socio_id ?? rascunho?.socio_id ?? '')
-  const [porFora, setPorFora] = useState(!!l?.pago_fora)
+  // fonte pagadora da despesa: 'caixa', 's:<sócio>' ou 'p:<parceiro>' (as regras estão em regraDoPagamento)
+  const [fonte, setFonte] = useState(l && l.tipo === 'despesa' ? fonteDe(l) : 'caixa')
+  // devolução: o parceiro que devolveu
+  const [devolveu, setDevolveu] = useState(l?.pago_por ?? rascunho?.pago_por ?? '')
   const [contraparte, setContraparte] = useState(l?.contraparte ?? '')
   const [forma, setForma] = useState(l?.forma ?? '')
   const [obs, setObs] = useState(l?.observacoes ?? '')
@@ -61,8 +66,13 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
   const operacional = ehOperacional(tipo)
   const sociosAtivos = dados.socios.filter((s) => s.ativo || s.id === socio)
   const categorias = dados.categorias.filter((c) => c.tipo === (entrada ? 'entrada' : 'saida') && (c.ativo || c.id === categoria))
-  const noBolso = operacional && !!socio
-  const fora = tipo === 'despesa' && porFora
+  const fontes = useMemo(() => fontesPagadoras(dados, nomeDoCaixa), [dados, nomeDoCaixa])
+  const regra = regraDoPagamento(dados, fonte, projeto || null)
+  const nomeDaFonte = fontes.find((f) => f.id === fonte)?.nome ?? ''
+  const parceirosQueDevolvem = fontes.filter((f) => f.tipo === 'parceiro')
+  // despesa: quem pagou decide; receita: sócio = caiu na conta pessoal
+  const noBolso = tipo === 'despesa' ? regra.efeito === 'plataforma-devolve' : tipo === 'receita' && !!socio
+  const fora = tipo === 'despesa' ? regra.pago_fora : tipo === 'devolucao'
   const contrapartes = useMemo(() => [...new Set(dados.lancamentos.map((x) => x.contraparte).filter((x): x is string => !!x))].sort().slice(0, 300), [dados.lancamentos])
   const doGrupo = l?.grupo ? dados.lancamentos.filter((x) => x.grupo === l.grupo && x.vencimento >= l.vencimento) : []
 
@@ -88,6 +98,7 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
     if (!base) return 'Informe a data.'
     if (pago && !pagoEm) return 'Informe a data do pagamento.'
     if (!operacional && !socio) return 'Escolha o sócio.'
+    if (tipo === 'devolucao' && !devolveu) return 'Escolha quem devolveu.'
     return null
   }
 
@@ -104,8 +115,9 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
         categoria_id: operacional ? categoria || null : null,
         projeto_id: projeto || null,
         conta_id: noBolso || fora ? null : conta || null,
-        socio_id: fora ? null : socio || null,
+        socio_id: tipo === 'despesa' ? regra.socio_id : socio || null,
         pago_fora: fora,
+        pago_por: tipo === 'despesa' ? regra.pago_por : tipo === 'devolucao' ? devolveu || null : null,
         contraparte: contraparte.trim() || null, forma: forma || null, observacoes: obs.trim() || null,
       }
       if (l) {
@@ -169,7 +181,13 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
   }
 
   const tom = !operacional ? 'socio' : entrada ? 'entrada' : 'saida'
-  const titulo = novo ? (tipo === 'despesa' ? 'Nova despesa' : tipo === 'receita' ? 'Nova receita' : tipo === 'aporte' ? 'Novo aporte de sócio' : 'Nova retirada de sócio') : 'Editar lançamento'
+  const titulo = novo ? (tipo === 'despesa' ? 'Nova despesa' : tipo === 'receita' ? 'Nova receita' : tipo === 'aporte' ? 'Novo aporte de sócio' : tipo === 'devolucao' ? 'Nova devolução de parceiro' : 'Nova retirada de sócio') : 'Editar lançamento'
+  const v = valor ? reais(valor) : 'o valor'
+  const efeito = tipo !== 'despesa' ? null
+    : regra.efeito === 'caixa' ? <>Sai do caixa da plataforma, pela conta escolhida abaixo.</>
+    : regra.efeito === 'plataforma-devolve' ? <>A plataforma devolve <b>{v}</b> a <b>{nomeDaFonte}</b>. Entra no resultado e no acerto entre os sócios, sem mexer no saldo das contas.</>
+    : regra.efeito === 'parceiro-devolve' ? <><b>{regra.parceiro!.nome}</b> devolve <b>{v}</b> a <b>{nomeDaFonte}</b>, porque o gasto é do projeto dele. Fica fora do caixa e do resultado da plataforma; entra no custo do projeto.</>
+    : <>Custo do bolso de <b>{nomeDaFonte}</b>: ninguém devolve. Entra só no custo do projeto, fora do caixa e do resultado da plataforma.</>
   const somenteLeitura = !podeEditar
 
   return (
@@ -187,6 +205,7 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
         <Segmentado rotulo="Tipo" className="fin-seg-tipo" valor={tipo} aoMudar={trocarTipo} opcoes={[
           { id: 'despesa', nome: 'Despesa', tom: 'saida' }, { id: 'receita', nome: 'Receita', tom: 'entrada' },
           { id: 'retirada', nome: 'Retirada', tom: 'socio', dica: 'Dinheiro que um sócio tirou do projeto' }, { id: 'aporte', nome: 'Aporte', tom: 'socio', dica: 'Dinheiro que um sócio colocou no projeto' },
+          ...(tipo === 'devolucao' ? [{ id: 'devolucao' as TipoLancamento, nome: 'Devolução', tom: 'socio', dica: 'Um parceiro devolveu a um sócio o que o sócio pagou pelo projeto dele' }] : []),
         ]} />
 
         <div className="fin-form-grade">
@@ -217,13 +236,13 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
               {categorias.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </Campo>}
-          <Campo rotulo="Projeto">
+          {tipo !== 'devolucao' && <Campo rotulo="Projeto">
             <select value={projeto} onChange={(e) => setProjeto(e.target.value)}>
               <option value="">Custo geral (sem projeto)</option>
               {dados.projetos.filter((p) => p.ativo || p.id === projeto).map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
             </select>
-          </Campo>
-          <Campo rotulo="Forma de pagamento" largo={((pago && !novo ? 1 : 0) + (operacional ? 1 : 0)) % 2 === 0}>
+          </Campo>}
+          <Campo rotulo="Forma de pagamento" largo={((pago && !novo ? 1 : 0) + (operacional ? 1 : 0) + (tipo === 'devolucao' ? 0 : 1)) % 2 === 0}>
             <select value={forma} onChange={(e) => setForma(e.target.value)}>
               <option value="">Não informada</option>
               {FORMAS.map((f) => <option key={f} value={f}>{f}</option>)}
@@ -231,20 +250,42 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
             </select>
           </Campo>
 
-          <div className="fin-campo largo">
-            <span className="fin-campo-rot">{tipo === 'despesa' ? 'Quem pagou' : tipo === 'receita' ? 'Onde o dinheiro caiu' : tipo === 'aporte' ? 'Sócio que colocou' : 'Sócio que tirou'}</span>
+          {tipo === 'despesa' && <div className="fin-campo largo">
+            <Campo rotulo="Fonte pagadora">
+              <select value={fonte} onChange={(e) => {
+                const f = e.target.value
+                setFonte(f)
+                // o parceiro pagou: o lançamento é do projeto dele (se ainda não tem projeto)
+                if (f.startsWith('p:') && !projeto) { const p = dados.projetos.find((x) => x.parceiro === f.slice(2) && x.ativo); if (p) setProjeto(p.id) }
+              }}>
+                {fontes.filter((f) => f.tipo === 'caixa').map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                {fontes.some((f) => f.tipo === 'socio') && <optgroup label="Sócios">{fontes.filter((f) => f.tipo === 'socio').map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</optgroup>}
+                {parceirosQueDevolvem.length > 0 && <optgroup label="Parceiros">{parceirosQueDevolvem.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</optgroup>}
+                {!fontes.some((f) => f.id === fonte) && <option value={fonte}>Fonte arquivada</option>}
+              </select>
+            </Campo>
+            <p className={`fin-efeito ${regra.efeito}`}>{efeito}</p>
+          </div>}
+
+          {tipo === 'devolucao' && <Campo rotulo="Parceiro que devolveu" largo>
+            <select value={devolveu} onChange={(e) => setDevolveu(e.target.value)}>
+              <option value="">Escolha o parceiro</option>
+              {parceirosQueDevolvem.map((f) => <option key={f.id} value={f.parceiro}>{f.nome}</option>)}
+            </select>
+          </Campo>}
+
+          {tipo !== 'despesa' && <div className="fin-campo largo">
+            <span className="fin-campo-rot">{tipo === 'receita' ? 'Onde o dinheiro caiu' : tipo === 'aporte' ? 'Sócio que colocou' : tipo === 'devolucao' ? 'Sócio que recebeu' : 'Sócio que tirou'}</span>
             <div className="fin-escolha">
-              {operacional && <button type="button" className={!socio && !fora ? 'on' : ''} onClick={() => { setSocio(''); setPorFora(false) }}>
-                <b>Conta do projeto</b><small>{tipo === 'despesa' ? 'Saiu do caixa do projeto' : 'Entrou no caixa do projeto'}</small></button>}
-              {sociosAtivos.map((s) => <button key={s.id} type="button" className={socio === s.id && !fora ? 'on' : ''} onClick={() => { setSocio(s.id); setPorFora(false) }} style={{ ['--fin-cor' as string]: s.cor }}>
-                <b><i className="fin-ponto" />{s.nome}</b><small>{tipo === 'despesa' ? 'Pagou do próprio bolso' : tipo === 'receita' ? 'Caiu na conta pessoal' : `${s.percentual.toLocaleString('pt-BR')}% do resultado`}</small></button>)}
-              {tipo === 'despesa' && <button type="button" className={fora ? 'on' : ''} onClick={() => { setPorFora(true); setSocio('') }}>
-                <b>Pago por fora</b><small>O parceiro pagou do bolso dele</small></button>}
-              {!sociosAtivos.length && !operacional && <p className="fin-aviso-mini">Cadastre os sócios em Cadastros para lançar aportes e retiradas.</p>}
+              {operacional && <button type="button" className={!socio ? 'on' : ''} onClick={() => setSocio('')}>
+                <b>Conta do projeto</b><small>Entrou no caixa do projeto</small></button>}
+              {sociosAtivos.map((s) => <button key={s.id} type="button" className={socio === s.id ? 'on' : ''} onClick={() => setSocio(s.id)} style={{ ['--fin-cor' as string]: s.cor }}>
+                <b><i className="fin-ponto" />{s.nome}</b><small>{tipo === 'receita' ? 'Caiu na conta pessoal' : tipo === 'devolucao' ? 'Recebeu a devolução' : `${s.percentual.toLocaleString('pt-BR')}% do resultado`}</small></button>)}
+              {!sociosAtivos.length && !operacional && <p className="fin-aviso-mini">Cadastre os sócios em Cadastros.</p>}
             </div>
-            {fora && <small className="fin-campo-dica">Entra só no custo do projeto: não sai do caixa, não entra no resultado da empresa nem no acerto entre os sócios.</small>}
-            {noBolso && !fora && <small className="fin-campo-dica">Entra no resultado do projeto e no acerto entre os sócios, sem mexer no saldo das contas.</small>}
-          </div>
+            {noBolso && <small className="fin-campo-dica">Entra no resultado e no acerto entre os sócios, sem mexer no saldo das contas.</small>}
+            {tipo === 'devolucao' && <small className="fin-campo-dica">Abate o que o parceiro deve ao sócio. Fica fora do caixa e do resultado da plataforma.</small>}
+          </div>}
 
           {!noBolso && !fora && <Campo rotulo={entrada ? 'Conta que recebeu' : 'Conta que pagou'} largo={!operacional}>
             <select value={conta} onChange={(e) => setConta(e.target.value)}>
@@ -252,7 +293,7 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
               {contasAtivas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </Campo>}
-          {operacional && <Campo rotulo={entrada ? 'Cliente ou origem' : 'Fornecedor'} largo={!!noBolso}>
+          {operacional && <Campo rotulo={entrada ? 'Cliente ou origem' : 'Fornecedor'} largo={noBolso || fora}>
             <input value={contraparte} onChange={(e) => setContraparte(e.target.value)} list="fin-contrapartes" maxLength={120} placeholder={entrada ? 'Ex.: Deriv' : 'Ex.: Meta Platforms'} />
             <datalist id="fin-contrapartes">{contrapartes.map((c) => <option key={c} value={c} />)}</datalist>
           </Campo>}

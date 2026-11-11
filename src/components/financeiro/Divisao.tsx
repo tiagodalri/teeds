@@ -1,6 +1,6 @@
 /* Divisão: como o resultado se divide entre os sócios e o acerto de cada um desde o início. */
 import { useMemo } from 'react'
-import { ROTULO_TIPO, dataCurta, diaDe, dividir, reais, type DadosFin, type Lancamento, type Periodo } from '../../core/teeds/financeiro'
+import { ROTULO_TIPO, dataCurta, devolucoes, diaDe, dividir, reais, type DadosFin, type Lancamento, type Periodo } from '../../core/teeds/financeiro'
 import { Icone } from '../Icone'
 import { Avatar, Vazio } from './ui'
 import type { Rascunho } from './EditorLancamento'
@@ -14,6 +14,7 @@ export function Divisao({ dados, periodo, rotuloPeriodo, podeEditar, souDono, ao
   aoIr: () => void
 }) {
   const d = useMemo(() => dividir(dados, periodo), [dados, periodo])
+  const devol = useMemo(() => devolucoes(dados), [dados])
   const movimentos = useMemo(() => dados.lancamentos.filter((l) => l.socio_id).sort((a, b) => diaDe(b).localeCompare(diaDe(a))), [dados.lancamentos])
   const soc = new Map(dados.socios.map((s) => [s.id, s]))
   const ativos = d.linhas.filter((l) => l.socio.ativo)
@@ -72,15 +73,28 @@ export function Divisao({ dados, periodo, rotuloPeriodo, podeEditar, souDono, ao
     <p className="fin-explica"><Icone nome="info" />
       <span>O acerto supõe que todo o resultado é dividido. <b>Tem a receber</b> = parte acumulada + o que colocou − o que já tirou. Despesa paga do próprio bolso conta como dinheiro colocado; receita que caiu na conta pessoal conta como dinheiro já tirado.</span></p>
 
+    {devol.length > 0 && <section className="fin-cartao">
+      <header><div><span className="fin-rot">Gastos de projetos de parceiros pagos por sócios</span><h3>Parceiros devem aos sócios</h3></div></header>
+      <ul className="fin-devolucoes">
+        {devol.map((x) => <li key={`${x.parceiro.codigo}-${x.socio.id}`}>
+          <span className="fin-devolucoes-quem"><Avatar nome={x.parceiro.nome} cor={x.parceiro.cor} tamanho={34} /><i aria-hidden="true">→</i><Avatar nome={x.socio.nome} cor={x.socio.cor} tamanho={34} />
+            <span><b>{x.parceiro.nome.split(' ')[0]} deve a {x.socio.nome.split(' ')[0]}</b><small>Pagou {reais(x.devido)} · já devolveu {reais(x.devolvido)}</small></span></span>
+          <strong className={x.saldo > 0.004 ? 'fin-sai' : 'fin-entra'}>{x.saldo > 0.004 ? reais(x.saldo) : 'Em dia'}</strong>
+          {podeEditar && x.saldo > 0.004 && <button type="button" className="fin-btn pequeno" onClick={() => aoNovo({ tipo: 'devolucao', socio_id: x.socio.id, pago_por: x.parceiro.codigo, valor: x.saldo, descricao: `Devolução de ${x.parceiro.nome.split(' ')[0]} a ${x.socio.nome.split(' ')[0]}` })}>Registrar devolução</button>}
+        </li>)}
+      </ul>
+    </section>}
+
     <section className="fin-cartao">
       <header><div><span className="fin-rot">Desde o início</span><h3>Movimentos dos sócios</h3></div><small>{movimentos.length} {movimentos.length === 1 ? 'movimento' : 'movimentos'}</small></header>
       {movimentos.length ? <ul className="fin-movimentos">
         {movimentos.slice(0, 60).map((m) => {
           const s = m.socio_id ? soc.get(m.socio_id) : null
           const colocou = m.tipo === 'aporte' || m.tipo === 'despesa'
+          const legenda = m.tipo === 'devolucao' ? 'Recebeu devolução de parceiro' : m.tipo === 'despesa' && m.pago_fora ? 'Pagou gasto de projeto de parceiro' : m.tipo === 'despesa' ? 'Pagou do bolso' : m.tipo === 'receita' ? 'Recebeu na conta pessoal' : ROTULO_TIPO[m.tipo]
           return <li key={m.id}><button type="button" onClick={() => aoAbrir(m)}>
             <Avatar nome={s?.nome ?? '?'} cor={s?.cor} tamanho={32} />
-            <span><b>{m.descricao}</b><small>{s?.nome} · {m.tipo === 'despesa' ? 'Pagou do bolso' : m.tipo === 'receita' ? 'Recebeu na conta pessoal' : ROTULO_TIPO[m.tipo]} · {m.pago_em ? dataCurta(m.pago_em) : `Previsto ${dataCurta(m.vencimento)}`}</small></span>
+            <span><b>{m.descricao}</b><small>{s?.nome} · {legenda} · {m.pago_em ? dataCurta(m.pago_em) : `Previsto ${dataCurta(m.vencimento)}`}</small></span>
             <strong className={colocou ? 'fin-entra' : 'fin-sai'}>{colocou ? '+' : '−'} {reais(m.valor)}</strong>
           </button></li>
         })}

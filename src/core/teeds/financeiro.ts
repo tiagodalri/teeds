@@ -10,13 +10,15 @@
 import type { SessaoTeeds } from './conta'
 import { SUPABASE } from './config'
 
-export type TipoLancamento = 'receita' | 'despesa' | 'aporte' | 'retirada'
+export type TipoLancamento = 'receita' | 'despesa' | 'aporte' | 'retirada' | 'devolucao'
 export type Papel = 'dono' | 'editor' | 'leitor'
 
 export interface Categoria { id: string; marca: string; tipo: 'entrada' | 'saida'; nome: string; cor: string; ordem: number; ativo: boolean }
 export interface Conta { id: string; marca: string; nome: string; tipo: 'banco' | 'caixa' | 'cartao' | 'plataforma' | 'outro'; saldo_inicial: number; cor: string; ordem: number; ativo: boolean }
-export interface Projeto { id: string; marca: string; nome: string; cor: string; parceiro: string | null; ordem: number; ativo: boolean }
-export interface Socio { id: string; marca: string; nome: string; percentual: number; cor: string; ordem: number; ativo: boolean }
+export interface Projeto { id: string; marca: string; nome: string; cor: string; parceiro: string | null; responsavel: string | null; ordem: number; ativo: boolean }
+export interface Socio { id: string; marca: string; nome: string; percentual: number; cor: string; ordem: number; ativo: boolean
+  /** o código de parceiro de divulgação desta pessoa, quando o sócio também é parceiro (Victor = 'v') */
+  parceiro: string | null }
 export interface Anexo { path: string; nome: string; tipo: string; tamanho: number }
 export interface Lancamento {
   id: string; marca: string; tipo: TipoLancamento; descricao: string; valor: number
@@ -26,6 +28,8 @@ export interface Lancamento {
   grupo: string | null; parcela: number | null; parcelas: number | null
   /** pago por fora (o parceiro pagou do bolso dele): só no custo do projeto */
   pago_fora: boolean
+  /** o parceiro (não sócio) que pagou do bolso, ou que fez a devolução: código n, d… */
+  pago_por: string | null
   anexos: Anexo[]; origem: string | null; origem_id: string | null
   criado_por: string | null; criado_em: string; atualizado_por: string | null; atualizado_em: string
 }
@@ -257,7 +261,7 @@ export const diaDe = (l: Lancamento) => l.pago_em ?? l.vencimento
 export type Situacao = 'pago' | 'pendente' | 'vencido'
 export const situacaoDe = (l: Lancamento, hojeDia = hoje()): Situacao => l.pago_em ? 'pago' : l.vencimento < hojeDia ? 'vencido' : 'pendente'
 
-export const ROTULO_TIPO: Record<TipoLancamento, string> = { receita: 'Receita', despesa: 'Despesa', aporte: 'Aporte de sócio', retirada: 'Retirada de sócio' }
+export const ROTULO_TIPO: Record<TipoLancamento, string> = { receita: 'Receita', despesa: 'Despesa', aporte: 'Aporte de sócio', retirada: 'Retirada de sócio', devolucao: 'Devolução de parceiro' }
 export const FORMAS = ['Pix', 'Cartão de crédito', 'Boleto', 'Transferência', 'Débito automático', 'Dinheiro', 'Plataforma'] as const
 
 export interface Periodo { de: string; ate: string }
@@ -385,6 +389,75 @@ export function dividir(d: DadosFin, p: Periodo): { resultadoPeriodo: number; re
     return { socio: s, parte: resultadoPeriodo * pct, parteTotal, colocou: x.colocou, tirou: x.tirou, saldo: parteTotal + x.colocou - x.tirou }
   })
   return { resultadoPeriodo, resultadoTotal, somaPercentual, linhas }
+}
+
+// ── Fonte pagadora (11/11/2026) ───────────────────────────────────────────────────────────────────
+export interface FontePagadora { id: string; nome: string; tipo: 'caixa' | 'socio' | 'parceiro'; cor: string; socio?: Socio; parceiro?: string }
+/** Caixa da plataforma, os sócios e os parceiros que não são sócios (os responsáveis pelos projetos). */
+export function fontesPagadoras(d: DadosFin, nomeDoCaixa: string): FontePagadora[] {
+  const socios = d.socios.filter((s) => s.ativo)
+  const codigosDeSocio = new Set(socios.map((s) => s.parceiro).filter(Boolean))
+  const parceiros = new Map<string, FontePagadora>()
+  for (const p of d.projetos) {
+    if (!p.parceiro || !p.responsavel || codigosDeSocio.has(p.parceiro) || parceiros.has(p.parceiro)) continue
+    parceiros.set(p.parceiro, { id: `p:${p.parceiro}`, nome: p.responsavel, tipo: 'parceiro', cor: p.cor, parceiro: p.parceiro })
+  }
+  return [
+    { id: 'caixa', nome: nomeDoCaixa, tipo: 'caixa', cor: '#1E3D6E' },
+    ...socios.map((s) => ({ id: `s:${s.id}`, nome: s.nome, tipo: 'socio' as const, cor: s.cor, socio: s })),
+    ...parceiros.values(),
+  ]
+}
+/** O parceiro (não sócio) dono do projeto, ou null quando o projeto é de um sócio ou da plataforma. */
+export function parceiroDoProjeto(d: DadosFin, projetoId: string | null): { codigo: string; nome: string } | null {
+  const p = projetoId ? d.projetos.find((x) => x.id === projetoId) : null
+  if (!p?.parceiro || d.socios.some((s) => s.ativo && s.parceiro === p.parceiro)) return null
+  return { codigo: p.parceiro, nome: p.responsavel ?? p.nome }
+}
+export type Efeito = 'caixa' | 'plataforma-devolve' | 'parceiro-devolve' | 'bolso-do-parceiro'
+/**
+ * As regras do Tiago para quem pagou uma despesa:
+ *   caixa → sai do caixa;
+ *   sócio + projeto da plataforma, de um sócio ou sem projeto → a plataforma devolve ao sócio (acerto);
+ *   sócio + projeto de um parceiro → o parceiro devolve ao sócio (fora do caixa e do resultado);
+ *   parceiro → custo do bolso dele, ninguém devolve.
+ */
+export function regraDoPagamento(d: DadosFin, fonte: string, projetoId: string | null): { socio_id: string | null; pago_fora: boolean; pago_por: string | null; efeito: Efeito; parceiro: { codigo: string; nome: string } | null } {
+  if (fonte.startsWith('p:')) return { socio_id: null, pago_fora: true, pago_por: fonte.slice(2), efeito: 'bolso-do-parceiro', parceiro: null }
+  if (fonte.startsWith('s:')) {
+    const dono = parceiroDoProjeto(d, projetoId)
+    return dono
+      ? { socio_id: fonte.slice(2), pago_fora: true, pago_por: null, efeito: 'parceiro-devolve', parceiro: dono }
+      : { socio_id: fonte.slice(2), pago_fora: false, pago_por: null, efeito: 'plataforma-devolve', parceiro: null }
+  }
+  return { socio_id: null, pago_fora: false, pago_por: null, efeito: 'caixa', parceiro: null }
+}
+/** A fonte pagadora de um lançamento já gravado (o caminho inverso de regraDoPagamento). */
+export const fonteDe = (l: Pick<Lancamento, 'socio_id' | 'pago_por' | 'pago_fora'>) => l.pago_por ? `p:${l.pago_por}` : l.socio_id ? `s:${l.socio_id}` : 'caixa'
+
+export interface LinhaDevolucao { parceiro: { codigo: string; nome: string; cor: string }; socio: Socio; devido: number; devolvido: number; saldo: number }
+/** O que cada parceiro deve devolver a cada sócio: despesas do projeto do parceiro que o sócio pagou − devoluções. */
+export function devolucoes(d: DadosFin): LinhaDevolucao[] {
+  const soc = new Map(d.socios.map((s) => [s.id, s]))
+  const m = new Map<string, LinhaDevolucao>()
+  const linha = (codigo: string, socioId: string) => {
+    const s = soc.get(socioId); if (!s) return null
+    const chave = `${codigo}|${socioId}`
+    if (!m.has(chave)) {
+      const p = d.projetos.find((x) => x.parceiro === codigo)
+      m.set(chave, { parceiro: { codigo, nome: p?.responsavel ?? p?.nome ?? codigo, cor: p?.cor ?? '#94A3B8' }, socio: s, devido: 0, devolvido: 0, saldo: 0 })
+    }
+    return m.get(chave)!
+  }
+  for (const l of d.lancamentos) {
+    if (!l.pago_em || !l.socio_id) continue
+    if (l.tipo === 'devolucao' && l.pago_por) { const x = linha(l.pago_por, l.socio_id); if (x) x.devolvido += l.valor; continue }
+    if (l.tipo !== 'despesa' || !l.pago_fora) continue
+    const dono = parceiroDoProjeto(d, l.projeto_id)
+    if (!dono) continue
+    const x = linha(dono.codigo, l.socio_id); if (x) x.devido += l.valor
+  }
+  return [...m.values()].map((x) => ({ ...x, saldo: Math.round((x.devido - x.devolvido) * 100) / 100 })).sort((a, b) => b.saldo - a.saldo)
 }
 
 export interface LinhaProjeto { projeto: Projeto | null; receitas: number; despesas: number; resultado: number; n: number; parte: number

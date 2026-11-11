@@ -92,17 +92,22 @@ export function Cadastros({ api, dados, podeEditar, souDono, aoMudar }: {
 
     {editando && <EditorCadastro api={api} editando={editando} usos={editando.v.id ? usos(editando.o === 'socio' ? 'socio_id' : editando.o === 'conta' ? 'conta_id' : editando.o === 'projeto' ? 'projeto_id' : 'categoria_id', editando.v.id) : 0}
       somaOutros={editando.o === 'socio' ? dados.socios.filter((s) => s.ativo && s.id !== editando.v.id).reduce((s, x) => s + x.percentual, 0) : 0}
+      parceiros={dados.projetos.filter((p) => p.parceiro).map((p) => ({ codigo: p.parceiro!, nome: p.responsavel ?? p.nome }))}
       aoFechar={() => setEditando(null)} aoSalvar={(m) => { setEditando(null); aoMudar(m) }} />}
   </div>
 }
 
-function EditorCadastro({ api, editando, usos, somaOutros, aoFechar, aoSalvar }: {
-  api: FinApi; editando: NonNullable<Editando>; usos: number; somaOutros: number; aoFechar: () => void; aoSalvar: (m: string) => void
+function EditorCadastro({ api, editando, usos, somaOutros, parceiros, aoFechar, aoSalvar }: {
+  api: FinApi; editando: NonNullable<Editando>; usos: number; somaOutros: number
+  /** os parceiros de divulgação (dos projetos), para ligar o sócio que também é parceiro */
+  parceiros: Array<{ codigo: string; nome: string }>
+  aoFechar: () => void; aoSalvar: (m: string) => void
 }) {
   const v = editando.v
   const [nome, setNome] = useState(v.nome ?? '')
   const [cor, setCor] = useState(v.cor ?? PALETA[0])
   const [percentual, setPercentual] = useState(editando.o === 'socio' ? String((editando.v as Partial<Socio>).percentual ?? 0).replace('.', ',') : '')
+  const [parceiro, setParceiro] = useState(editando.o === 'socio' ? (editando.v as Partial<Socio>).parceiro ?? '' : '')
   const [tipoConta, setTipoConta] = useState<Conta['tipo']>(editando.o === 'conta' ? (editando.v as Partial<Conta>).tipo ?? 'banco' : 'banco')
   const [saldoInicial, setSaldoInicial] = useState(editando.o === 'conta' ? escreverValor((editando.v as Partial<Conta>).saldo_inicial ?? 0) : '')
   const [tipoCat, setTipoCat] = useState<Categoria['tipo']>(editando.o === 'categoria' ? (editando.v as Partial<Categoria>).tipo ?? 'saida' : 'saida')
@@ -119,7 +124,7 @@ function EditorCadastro({ api, editando, usos, somaOutros, aoFechar, aoSalvar }:
     try {
       if (editando.o === 'socio') {
         if (!Number.isFinite(pctNum) || pctNum < 0 || pctNum > 100) { setErro('O percentual vai de 0 a 100.'); setSalvando(false); return }
-        await api.salvarSocio({ id: v.id, nome: nome.trim(), cor, percentual: Math.round(pctNum * 10000) / 10000, ativo })
+        await api.salvarSocio({ id: v.id, nome: nome.trim(), cor, percentual: Math.round(pctNum * 10000) / 10000, ativo, parceiro: parceiro || null })
       } else if (editando.o === 'conta') {
         await api.salvarConta({ id: v.id, nome: nome.trim(), cor, tipo: tipoConta, saldo_inicial: lerValor(saldoInicial) ?? 0, ativo })
       } else if (editando.o === 'projeto') {
@@ -145,6 +150,13 @@ function EditorCadastro({ api, editando, usos, somaOutros, aoFechar, aoSalvar }:
         {editando.o === 'socio' && <Campo rotulo="Percentual do resultado" largo
           dica={Number.isFinite(pctNum) ? `Com este, os sócios somam ${(somaOutros + pctNum).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%.` : undefined}>
           <span className="fin-input-sufixo"><input inputMode="decimal" value={percentual} onChange={(e) => setPercentual(e.target.value.replace(/[^\d,.]/g, ''))} /><em>%</em></span>
+        </Campo>}
+        {editando.o === 'socio' && parceiros.length > 0 && <Campo rotulo="Também é parceiro de divulgação?" largo
+          dica="Ligado ao parceiro, o projeto dele conta como projeto de sócio: quando um sócio paga algo desse projeto, a plataforma devolve.">
+          <select value={parceiro} onChange={(e) => setParceiro(e.target.value)}>
+            <option value="">Não</option>
+            {parceiros.map((p) => <option key={p.codigo} value={p.codigo}>Sim, {p.nome}</option>)}
+          </select>
         </Campo>}
         {editando.o === 'conta' && <>
           <Campo rotulo="Tipo"><select value={tipoConta} onChange={(e) => setTipoConta(e.target.value as Conta['tipo'])}>
