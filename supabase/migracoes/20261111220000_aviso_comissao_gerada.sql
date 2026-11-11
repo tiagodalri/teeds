@@ -51,7 +51,9 @@ begin
     perform net.http_post(
       url := 'https://wonxykovfvfnuhzpqsle.supabase.co/functions/v1/notificacoes',
       headers := jsonb_build_object('Content-Type', 'application/json', 'x-gatilho', segredo),
-      body := v_corpo
+      body := v_corpo,
+      -- a função espera 8 s pelas últimas operações da sessão: o padrão de 5 s cortava a chamada
+      timeout_milliseconds := 20000
     );
   exception when others then
     -- o aviso nunca atrapalha a gravação da operação
