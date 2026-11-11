@@ -11,8 +11,9 @@
 //                                      da live de 09/11 ('hoje', 'uma-hora', 'ao-vivo')
 //   { acao: 'disparo', ... }          do painel (Administração › Notificações), com o
 //                                      token do admin geral: título, texto, destino, público
-//   { acao: 'operacao_real', ... }    do gatilho do banco (x-gatilho): um cliente ligou uma I.A. ou
-//                                      abriu uma operação manual em conta real; avisa a administração
+//   { acao: 'comissao', ... }         do gatilho do banco (x-gatilho): uma sessão de I.A. ou uma operação
+//                                      manual em conta real encerrou; avisa SÓ a administração a comissão gerada
+//                                      (11/11/2026, substitui o antigo 'operacao_real')
 //
 // A chave VAPID de cada plataforma nasce aqui na primeira vez e fica em
 // config_servicos (VAPID_<MARCA>), que só a chave de serviço lê. O segredo do
@@ -327,50 +328,82 @@ async function sha256(texto: string): Promise<string> {
   return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-/* ------------------------------------------- operação em conta real (admins) */
+/* ------------------------------------------- comissão gerada (só administração) */
 
 /*
-  09/11/2026, depois da live (Tiago: "cada vez que algum cliente operar em conta real, chegue uma
-  notificação no nosso celular. Atenção, uma comissão está sendo gerada. O cliente tal, que tem tantos
-  dólares na banca, entrou numa operação"). Quem chama é o gatilho do banco (teeds_avisar_operacao_real),
-  no máximo 1 vez por cliente a cada 10 min. Recebe a administração da GF, cada um no seu escopo: o admin
-  geral vê todos; o admin do parceiro, os clientes do parceiro dele (e os que ele enxerga, ve_parceiros).
-*/
-const NOME_DO_PARCEIRO: Record<string, string> = { n: 'Naor (/n)', v: 'Victor (/v)', d: 'Douglas (/d)' }
+  11/11/2026 (Tiago: "a notificação que a gente tem que receber é bem simples. Comissão gerada, cliente tal,
+  tantos dólares gerados de markup... nenhum cliente pode receber esse tipo de notificação"). Substitui o aviso
+  de 09/11 ("uma comissão está sendo gerada", ao ligar). Agora avisa quando a operação ENCERRA: cada sessão de
+  I.A. e cada operação manual em conta real, uma notificação por encerramento (ele escolheu assim sabendo que
+  são ~600 por dia). Quem chama é o gatilho do banco (teeds_avisar_comissao), uma vez por encerramento.
 
-async function avisarOperacaoReal(corpo: Record<string, unknown>) {
+  O markup é o mesmo da contagem oficial (teeds_markup_operacoes): na I.A., a soma de operacoes_robos.markup
+  da sessão (só o que entrou depois do último aviso dela, se a sessão foi continuada); na manual, o markup da
+  operação. Sem markup, sem aviso.
+
+  QUEM RECEBE: só linhas de `administradores` da GF, cada um no seu escopo (o geral vê todos; o do parceiro, os
+  clientes do parceiro dele e os de ve_parceiros). Nenhum cliente entra na lista: ela nasce da tabela de admins.
+*/
+const NOME_DO_PARCEIRO: Record<string, string> = { n: 'Naor', v: 'Victor', d: 'Douglas' }
+const UUID = /^[0-9a-f-]{36}$/i
+const usdComissao = (v: number, moeda: string) => new Intl.NumberFormat('pt-BR', {
+  style: 'currency', currency: moeda || 'USD', minimumFractionDigits: 2, maximumFractionDigits: v > 0 && v < 0.01 ? 4 : 2,
+}).format(v)
+
+async function avisarComissao(corpo: Record<string, unknown>) {
   const userId = String(corpo.user_id ?? '')
-  if (!/^[0-9a-f-]{36}$/i.test(userId)) return json({ erro: 'sem cliente' }, 400)
+  if (!UUID.test(userId)) return json({ erro: 'sem cliente' }, 400)
   const marca = 'globalfly'
-  const contaId = String(corpo.conta_id ?? '')
   const origem = corpo.origem === 'manual' ? 'manual' : 'ia'
-  const [rc, rk] = await Promise.all([
-    rest(`clientes?user_id=eq.${userId}&marca=eq.${marca}&select=nome,parceiro`),
-    rest(`contas_deriv?user_id=eq.${userId}&marca=eq.${marca}${contaId ? `&conta_id=eq.${encodeURIComponent(contaId)}` : '&tipo=neq.demo'}&select=saldo,moeda,vista_em&order=vista_em.desc.nullslast&limit=1`),
-  ])
+  let markup = 0, operacoes = 0
+  let moeda = String(corpo.moeda ?? 'USD') || 'USD'
+  let chave = ''
+  if (origem === 'manual') {
+    markup = Number(corpo.markup ?? 0)
+    operacoes = 1
+    chave = `m-${String(corpo.contract_id ?? Date.now())}`
+  } else {
+    const sessao = String(corpo.sessao_id ?? '')
+    if (!UUID.test(sessao)) return json({ erro: 'sem sessão' }, 400)
+    chave = `s-${sessao}-${Date.now()}`
+    // as últimas operações da sessão são gravadas logo depois do encerramento: espera elas chegarem
+    await new Promise((ok) => setTimeout(ok, 8000))
+    // sessão continuada: conta só o que entrou depois do último aviso dela
+    const rb = await rest(`avisos_comissao?chave=eq.${encodeURIComponent(`base:${sessao}`)}&select=avisado_em`)
+    const base: string | null = rb.ok ? (await rb.json())[0]?.avisado_em ?? null : null
+    const ro = await rest(`operacoes_robos?sessao_id=eq.${sessao}&demo=is.false&select=markup,moeda${base ? `&executada_em=gt.${encodeURIComponent(base)}` : ''}&limit=20000`)
+    const ops: Array<{ markup: number | null; moeda: string | null }> = ro.ok ? await ro.json() : []
+    markup = ops.reduce((t, o) => t + (Number(o.markup) || 0), 0)
+    operacoes = ops.length
+    if (ops[0]?.moeda) moeda = ops[0].moeda
+    await rest('avisos_comissao?on_conflict=chave', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ chave: `base:${sessao}`, avisado_em: new Date().toISOString() }) })
+  }
+  if (!(markup > 0)) { console.log('comissao', origem, 'sem markup'); return json({ enviados: 0, motivo: 'sem markup' }) }
+
+  const rc = await rest(`clientes?user_id=eq.${userId}&marca=eq.${marca}&select=nome,parceiro`)
   const cliente: { nome: string | null; parceiro: string | null } | undefined = rc.ok ? (await rc.json())[0] : undefined
-  const conta: { saldo: number | null; moeda: string | null } | undefined = rk.ok ? (await rk.json())[0] : undefined
   const nome = (cliente?.nome ?? '').trim().split(/\s+/).slice(0, 2).join(' ') || 'Um cliente'
   const parceiro = cliente?.parceiro ?? null
-  const banca = conta?.saldo != null ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: conta.moeda || 'USD' }).format(Number(conta.saldo)) : null
   const robo = String(corpo.robo ?? '').trim()
-  const entrada = Number(corpo.entrada ?? 0)
-  const acao = origem === 'manual'
-    ? `entrou numa operação manual${entrada > 0 ? ` de ${dinheiro(entrada, conta?.moeda ?? 'USD').replace('+', '')}` : ''}`
-    : robo ? `ligou a I.A. ${robo}` : 'ligou uma I.A.'
+  const deOnde = origem === 'manual'
+    ? 'Operação manual'
+    : `${robo ? `I.A. ${robo.replace(/^GF\s+/i, 'GF ')}` : 'I.A.'} · ${operacoes} ${operacoes === 1 ? 'operação' : 'operações'}`
   const aviso: Aviso = {
-    titulo: '💰 Atenção: uma comissão está sendo gerada',
-    corpo: `${nome}${banca ? `, com ${banca} na banca,` : ''} ${acao} em conta real.\nCliente ${parceiro && NOME_DO_PARCEIRO[parceiro] ? `do ${NOME_DO_PARCEIRO[parceiro]}` : 'direto'}.`,
-    tag: `operacao-real-${userId}`, url: './',
+    titulo: '💰 Comissão gerada',
+    corpo: `${nome} · ${usdComissao(markup, moeda)} de comissão\n${deOnde} · ${parceiro && NOME_DO_PARCEIRO[parceiro] ? `Cliente do ${NOME_DO_PARCEIRO[parceiro]}` : 'Cliente direto'}`,
+    tag: `comissao-${chave}`, url: './',
   }
-  // quem recebe: a administração da GF, cada um no seu escopo
+  // quem recebe: SÓ a administração da GF, cada um no seu escopo
   const ra = await rest(`administradores?marca=eq.${marca}&select=user_id,parceiro,ve_parceiros`)
   const admins: Array<{ user_id: string; parceiro: string | null; ve_parceiros: string[] | null }> = ra.ok ? await ra.json() : []
-  const destino = [...new Set(admins.filter((a) => !a.parceiro || (parceiro && (a.parceiro === parceiro || (a.ve_parceiros ?? []).includes(parceiro)))).map((a) => a.user_id))]
+  let destino = [...new Set(admins.filter((a) => !a.parceiro || (parceiro && (a.parceiro === parceiro || (a.ve_parceiros ?? []).includes(parceiro)))).map((a) => a.user_id))]
+  // teste: só para um admin (o pedido precisa vir com o segredo do gatilho, e a pessoa precisa estar na lista)
+  const soPara = String(corpo.so_para ?? '')
+  if (soPara) destino = destino.filter((id) => id === soPara)
   let enviados = 0
   for (const id of destino) enviados += (await enviar(id, marca, aviso)).enviados
-  console.log('operacao_real', origem, parceiro, { admins: destino.length, enviados })
-  return json({ admins: destino.length, enviados })
+  console.log('comissao', origem, parceiro, markup.toFixed(4), { admins: destino.length, enviados })
+  return json({ admins: destino.length, enviados, markup })
 }
 
 /* ------------------------------------------------------------------ entrada */
@@ -411,10 +444,10 @@ Deno.serve(async (req) => {
     return json(r)
   }
 
-  if (corpo.acao === 'operacao_real') {
+  if (corpo.acao === 'comissao') {
     const segredo = await lerConfig('PUSH_GATILHO')
     if (!segredo || req.headers.get('x-gatilho') !== segredo) return json({ erro: 'não autorizado' }, 401)
-    return avisarOperacaoReal(corpo as Record<string, unknown>)
+    return avisarComissao(corpo as Record<string, unknown>)
   }
 
   if (corpo.acao === 'sessao') {
