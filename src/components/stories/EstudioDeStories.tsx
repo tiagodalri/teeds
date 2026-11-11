@@ -420,7 +420,7 @@ export function EstudioDeStories({ sessao, papel, aoFechar, aoPublicado, fotoDeE
               <div className="est-chips">{SUBPLANOS.map((s) => <button key={s.id} type="button" className={subplanos.includes(s.id) ? 'on' : ''} onClick={() => setSubplanos((l) => (l.includes(s.id) ? l.filter((x) => x !== s.id) : [...l, s.id]))}>{s.nome}</button>)}</div>
               {!meuParceiro && parceiros.length > 0 && (
                 <div className="est-chips">
-                  {parceiros.map((p) => <button key={p.codigo} type="button" className={parcs.includes(p.codigo) ? 'on' : ''} onClick={() => setParcs((l) => (l.includes(p.codigo) ? l.filter((x) => x !== p.codigo) : [...l, p.codigo]))}>{p.nome.split(' ')[0]} /{p.codigo}</button>)}
+                  {parceiros.map((p) => <button key={p.codigo} type="button" className={parcs.includes(p.codigo) ? 'on' : ''} onClick={() => setParcs((l) => (l.includes(p.codigo) ? l.filter((x) => x !== p.codigo) : [...l, p.codigo]))}>{p.nome.split(' ')[0]}</button>)}
                   <button type="button" className={parcs.includes('direto') ? 'on' : ''} onClick={() => setParcs((l) => (l.includes('direto') ? l.filter((x) => x !== 'direto') : [...l, 'direto']))}>Direto</button>
                 </div>
               )}

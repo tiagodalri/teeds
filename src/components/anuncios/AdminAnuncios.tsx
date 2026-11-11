@@ -647,7 +647,7 @@ export function AdminAnuncios({ sessao, api = API_DO_BANCO, apiEstudio = API_DO_
         <div className="aa-conta">
           {contas.length > 1 && !seletorNoTopo && (
             <div className="aa-troca aa-contas" role="tablist" aria-label="Conta de anúncios">
-              {contas.map((c) => <button key={c.codigo} type="button" role="tab" aria-selected={parceiro === c.codigo} className={parceiro === c.codigo ? 'on' : ''} onClick={() => setParceiro(c.codigo)}>{c.nome}<small>/{c.codigo}</small></button>)}
+              {contas.map((c) => <button key={c.codigo} type="button" role="tab" aria-selected={parceiro === c.codigo} className={parceiro === c.codigo ? 'on' : ''} onClick={() => setParceiro(c.codigo)}>{c.nome}</button>)}
             </div>
           )}
           <div><small>Conta de anúncios do {nomeParceiro}</small><b>{painel?.conta.nome || contaAtual?.contaNome || 'Conta ainda não escolhida'}</b>

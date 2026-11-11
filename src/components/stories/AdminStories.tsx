@@ -726,7 +726,7 @@ function Compositor({ sessao, perfis, parceiros, meuParceiro, pleno, editar, aoF
                     <span>Parceiros <small>Nenhum marcado = todos</small></span>
                     <div className="ast-chips">
                       {parceiros.map((p) => <button key={p.codigo} type="button" className={parcs.includes(p.codigo) ? 'on' : ''} onClick={() => setParcs((l) => (l.includes(p.codigo) ? l.filter((x) => x !== p.codigo) : [...l, p.codigo]))}>
-                        <AvatarDoParceiro codigo={p.codigo} nome={p.nome} tamanho={20} />{p.nome.split(' ')[0]} /{p.codigo}</button>)}
+                        <AvatarDoParceiro codigo={p.codigo} nome={p.nome} tamanho={20} />{p.nome.split(' ')[0]}</button>)}
                       <button type="button" className={parcs.includes('direto') ? 'on' : ''} onClick={() => setParcs((l) => (l.includes('direto') ? l.filter((x) => x !== 'direto') : [...l, 'direto']))}>Direto</button>
                     </div>
                   </>}
