@@ -11,7 +11,29 @@
  * tem horário de verão desde 2019, então Brasília é sempre UTC−3. Mesmo jeito do filtro das Sessões
  * encerradas (PeriodoDasEncerradas.tsx): atalhos num grupo só e, no Personalizado, os campos logo abaixo.
  */
+import type { SessaoTeeds } from '../../core/teeds/conta'
+import { SUPABASE } from '../../core/teeds/config'
 import './periodo-visao-geral.css'
+
+/** Os blocos de período (11/11/2026): o mesmo markup de sempre (teeds_markup_operacoes), entre dois instantes. */
+export interface PainelPeriodo {
+  escala: 'hora' | 'dia'
+  markup: { total: number; ia: number; manual: number; ultima_em: string | null }
+  operacoes: { total: number; ia: number; manual: number; volume: number; resultado: number; operaram: number }
+  /** Cada hora (até 48 h) ou cada dia do período, 'aaaa-mm-ddThh:mm' em Brasília. */
+  serie: Array<{ ini: string; markup: number; operacoes: number }>
+  dinheiro: { depositos: number; saques: number; qtd_depositos: number; qtd_saques: number; depositantes: number; sacaram: number }
+}
+
+export async function lerPeriodo(sessao: SessaoTeeds, marca: string, parceiro: string, de: number, ate: number): Promise<PainelPeriodo> {
+  const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_painel_periodo`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_marca: marca, p_de: new Date(de).toISOString(), p_ate: new Date(ate).toISOString(), p_parceiro: parceiro || null }),
+  })
+  if (!r.ok) throw new Error('Não foi possível ler os números desse período agora.')
+  return r.json()
+}
 
 export type AtalhoDoPeriodo = 'agora' | 'hoje' | 'ontem' | '7' | '30' | 'mes' | 'personalizado'
 export interface PeriodoDaVisao {

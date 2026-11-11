@@ -20,8 +20,9 @@ import { SUPABASE } from '../../core/teeds/config'
 import { dinheiro } from '../../core/dinheiro'
 import { MARCA } from '../../marca'
 import { haQuantoTempo } from '../../core/teeds/markupInterno'
-import { PERIODO_AGORA, SeletorDePeriodo, janelaDoPeriodo, ddmm, type PeriodoDaVisao } from './PeriodoDaVisaoGeral'
+import { PERIODO_AGORA, SeletorDePeriodo, janelaDoPeriodo, ddmm, lerPeriodo, type PeriodoDaVisao, type PainelPeriodo } from './PeriodoDaVisaoGeral'
 import { MapaDoMarkup } from './MapaDoMarkup'
+import { MetasDaVisaoGeral } from './MetasDaVisaoGeral'
 import './visao-geral.css'
 
 interface Painel {
@@ -42,26 +43,6 @@ export async function lerPainel(sessao: SessaoTeeds, marca: string, parceiro: st
     body: JSON.stringify({ p_marca: marca, p_parceiro: parceiro || null }),
   })
   if (!r.ok) throw new Error('Não foi possível ler os números agora.')
-  return r.json()
-}
-
-/** Os blocos de período (11/11/2026): o mesmo markup de sempre (teeds_markup_operacoes), entre dois instantes. */
-interface PainelPeriodo {
-  escala: 'hora' | 'dia'
-  markup: { total: number; ia: number; manual: number; ultima_em: string | null }
-  operacoes: { total: number; ia: number; manual: number; volume: number; resultado: number; operaram: number }
-  /** Cada hora (até 48 h) ou cada dia do período, 'aaaa-mm-ddThh:mm' em Brasília. */
-  serie: Array<{ ini: string; markup: number; operacoes: number }>
-  dinheiro: { depositos: number; saques: number; qtd_depositos: number; qtd_saques: number; depositantes: number; sacaram: number }
-}
-
-export async function lerPeriodo(sessao: SessaoTeeds, marca: string, parceiro: string, de: number, ate: number): Promise<PainelPeriodo> {
-  const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_painel_periodo`, {
-    method: 'POST',
-    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ p_marca: marca, p_de: new Date(de).toISOString(), p_ate: new Date(ate).toISOString(), p_parceiro: parceiro || null }),
-  })
-  if (!r.ok) throw new Error('Não foi possível ler os números desse período agora.')
   return r.json()
 }
 
@@ -252,6 +233,10 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
         </div>
         <span className="vg-ir" aria-hidden="true">Monitoramento ›</span>
       </button>
+
+      {/* ------------------------------------------------ metas (11/11/2026) */}
+      <MetasDaVisaoGeral sessao={sessao} marca={marca} parceiro={parceiro} atalho={periodo.atalho}
+        nomeDoEscopo={!parceiro ? 'Geral' : parceiro === 'direto' ? 'Direto' : `${PARCEIRO[parceiro] ?? 'Parceiro'} /${parceiro}`} />
 
       {/* ------------------------------------------------ 2. dinheiro */}
       <div className="vg-trio">

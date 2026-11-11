@@ -1,4 +1,4 @@
-/** Laboratório (?tela=visao-geral(&cenario=real|vazio)(&periodo=hoje|ontem|7|30|mes|personalizado)): a Visão geral com números de exemplo, sem banco. */
+/** Laboratório (?tela=visao-geral(&cenario=real|vazio)(&periodo=hoje|ontem|7|30|mes|personalizado)(&metas=nenhuma)): a Visão geral com números de exemplo, sem banco. */
 import { VisaoGeralPainel } from './VisaoGeralPainel'
 import { PERIODO_AGORA, type AtalhoDoPeriodo } from './PeriodoDaVisaoGeral'
 
@@ -63,6 +63,12 @@ function exemploDoMapa(cenario: string) {
   return { total: celulas.reduce((a, c) => a + c.markup, 0), operacoes: celulas.reduce((a, c) => a + c.operacoes, 0), celulas, dias: { 1: 5, 2: 5, 3: 4, 4: 4, 5: 4, 6: 4, 7: 4 } }
 }
 
+/** As metas de exemplo (&metas=nenhuma para começar sem nenhuma): a do depósito do dia já batida, para ver o confete. */
+const metasDoLab: Record<string, { deposito: number | null; markup: number | null }> =
+  new URLSearchParams(location.search).get('metas') === 'nenhuma' ? {} : {
+    dia: { deposito: 1200, markup: 600 }, semana: { deposito: 15000, markup: 3500 }, mes: { deposito: 60000, markup: 15000 },
+  }
+
 export default function LabVisaoGeral() {
   const busca = new URLSearchParams(location.search)
   const cenario = busca.get('cenario') ?? ''
@@ -71,6 +77,13 @@ export default function LabVisaoGeral() {
   window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => {
     const url = String(u)
     if (url.includes('teeds_painel_visao_geral')) return new Response(JSON.stringify(exemplo(cenario)), { status: 200 })
+    if (url.includes('teeds_metas_painel')) return new Response(JSON.stringify({ parceiro: '', metas: metasDoLab }), { status: 200 })
+    if (url.includes('teeds_salvar_meta_painel')) {
+      const c = JSON.parse(String(i?.body ?? '{}')) as { p_horizonte: 'dia' | 'semana' | 'mes'; p_deposito: number | null; p_markup: number | null }
+      if (!c.p_deposito && !c.p_markup) delete metasDoLab[c.p_horizonte]
+      else metasDoLab[c.p_horizonte] = { deposito: c.p_deposito, markup: c.p_markup }
+      return new Response(JSON.stringify({ parceiro: '', metas: metasDoLab }), { status: 200 })
+    }
     if (url.includes('teeds_painel_periodo')) return new Response(JSON.stringify(exemploDoPeriodo(String(i?.body ?? ''), cenario)), { status: 200 })
     if (url.includes('teeds_markup_mapa')) return new Response(JSON.stringify(exemploDoMapa(cenario)), { status: 200 })
     return f(u, i)
