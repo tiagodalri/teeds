@@ -16,16 +16,30 @@ import './divulgacao.css'
   configura o login e o app da Deriv de cada parceiro.
 */
 
+/*
+  11/11/2026 (Tiago: "no menu de divulgação está tudo certinho, com utm para trackearmos tudo?"):
+  todo link sai marcado. utm_source = a rede, utm_medium = onde no post (bio, stories, post…),
+  utm_campaign = cadastro-planos e, nos links de um plano, utm_content = plano-<id>. A central de
+  rastreio (Administração › Anúncios) e o cadastro gravam essas marcações.
+*/
 const REDES = [
-  { id: '', nome: 'Sem marcação' }, { id: 'instagram', nome: 'Instagram' }, { id: 'youtube', nome: 'YouTube' },
-  { id: 'whatsapp', nome: 'WhatsApp' }, { id: 'telegram', nome: 'Telegram' }, { id: 'tiktok', nome: 'TikTok' },
+  { id: 'instagram', nome: 'Instagram' }, { id: 'whatsapp', nome: 'WhatsApp' }, { id: 'youtube', nome: 'YouTube' },
+  { id: 'tiktok', nome: 'TikTok' }, { id: 'telegram', nome: 'Telegram' }, { id: '', nome: 'Sem marcação' },
 ]
+const FORMATOS = [
+  { id: 'bio', nome: 'Link da bio' }, { id: 'stories', nome: 'Stories' }, { id: 'post', nome: 'Post ou Reels' },
+  { id: 'direct', nome: 'Direct ou conversa' }, { id: 'grupo', nome: 'Grupo ou comunidade' },
+]
+const CAMPANHA = 'cadastro-planos'
 const site = () => new URL(MARCA.redirectUri).origin
 
-function comRede(url: string, rede: string): string {
-  if (!rede) return url
+function comRede(url: string, rede: string, formato = '', conteudo = ''): string {
   const u = new URL(url)
+  if (!rede) return u.toString()
   u.searchParams.set('utm_source', rede)
+  if (formato) u.searchParams.set('utm_medium', formato)
+  u.searchParams.set('utm_campaign', CAMPANHA)
+  if (conteudo) u.searchParams.set('utm_content', conteudo)
   return u.toString()
 }
 
@@ -51,7 +65,8 @@ function LinhaDeLink({ titulo, descricao, url, principal = false, acoes }: { tit
 export function DivulgacaoPanel({ sessao, inicial }: { sessao: SessaoTeeds; inicial: MeusLinks }) {
   const [dados, setDados] = useState(inicial)
   const [qual, setQual] = useState(inicial.parceiros[0]?.codigo ?? '')
-  const [rede, setRede] = useState('')
+  const [rede, setRede] = useState('instagram')
+  const [formato, setFormato] = useState('bio')
   const [editando, setEditando] = useState<{ id?: string; titulo: string; url: string; descricao: string; ordem: number } | null>(null)
   const [config, setConfig] = useState<{ email: string; app: string } | null>(null)
   const [ocupado, setOcupado] = useState(false)
@@ -65,8 +80,8 @@ export function DivulgacaoPanel({ sessao, inicial }: { sessao: SessaoTeeds; inic
   }
 
   if (!p) return <div className="dv"><p className="dv-vazio">Nenhum parceiro configurado.</p></div>
-  const cadastro = comRede(`${site()}/${p.codigo}`, rede)
-  const landing = comRede(`${site()}/${p.codigo}/cadastro/`, rede)
+  const cadastro = comRede(`${site()}/${p.codigo}`, rede, formato)
+  const doPlano = (id: string) => { const u = new URL(`${site()}/${p.codigo}`); u.searchParams.set('plano', id); return comRede(u.toString(), rede, formato, `plano-${id}`) }
   const situacaoDoApp = !p.derivAppId ? { cls: 'neutro', txt: `Sem app próprio: os clientes conectam pelo app da ${MARCA.prosa}` }
     : p.appLiberado ? { cls: 'ok', txt: 'App próprio em uso: o markup dos clientes cai nele' }
     : { cls: 'espera', txt: 'App cadastrado, aguardando liberação no servidor' }
@@ -92,12 +107,20 @@ export function DivulgacaoPanel({ sessao, inicial }: { sessao: SessaoTeeds; inic
             <span>Onde vai postar?</span>
             {REDES.map((r) => <button key={r.id} type="button" role="radio" aria-checked={rede === r.id} className={rede === r.id ? 'on' : ''} onClick={() => setRede(r.id)}>{r.nome}</button>)}
           </div>
+          {rede && <div className="dv-redes" role="radiogroup" aria-label="Onde no post">
+            <span>Onde no post?</span>
+            {FORMATOS.map((f) => <button key={f.id} type="button" role="radio" aria-checked={formato === f.id} className={formato === f.id ? 'on' : ''} onClick={() => setFormato(f.id)}>{f.nome}</button>)}
+          </div>}
         </div>
         <ul className="dv-lista">
-          <LinhaDeLink principal titulo="Cadastro na plataforma" descricao="Abre direto o cadastro. É o link principal." url={cadastro} />
-          <LinhaDeLink titulo="Página do lançamento" descricao="A página de captação, com o questionário e o grupo no final." url={landing} />
+          <LinhaDeLink principal titulo="Cadastro com os planos" descricao="A página com o Gold, o Black e o Prestige. É o link principal." url={cadastro} />
+          <LinhaDeLink titulo="Direto no Gold" descricao="Abre o formulário já no Gold (sem custo de entrada)." url={doPlano('gold')} />
+          <LinhaDeLink titulo="Direto no Black" descricao="Abre o formulário já no Black; depois do cadastro, vai para o pagamento." url={doPlano('black')} />
+          <LinhaDeLink titulo="Direto no Prestige" descricao="Abre o formulário já no Prestige; depois do cadastro, vai para o pagamento." url={doPlano('prestige')} />
         </ul>
-        {rede && <p className="dv-dica">Com a rede escolhida, dá para saber de onde veio cada cadastro. Continua contando para {dados.geral ? p.nome.split(' ')[0] : 'você'}.</p>}
+        <p className="dv-dica">{rede
+          ? <>Cada link leva a rede, o lugar do post e a campanha: na central de rastreio dá para ver de onde veio cada visita, cadastro e venda. Continua contando para {dados.geral ? p.nome.split(' ')[0] : 'você'}.</>
+          : <>Sem marcação, o link conta para {dados.geral ? p.nome.split(' ')[0] : 'você'}, mas não dá para saber de qual rede veio. Escolha a rede antes de copiar.</>}</p>
       </section>
 
       <section className="dv-bloco">
