@@ -186,7 +186,7 @@ export function MapaDoMarkup({ sessao, marca, parceiro, janela }: { sessao: Sess
                         aria-expanded={estaAberto('dia', d)} aria-label={`${nome}: ${usd(v)}${sufixo}. Abrir o detalhe`}>
                         <span className="vgm-dia-nome">{nome}</span>
                         <span className="vgm-dia-trilho"><u style={{ width: `${v > 0 ? Math.max(2, (v / conta.maxDia) * 100) : 0}%` }} /></span>
-                        <span className="vgm-dia-valor">{v > 0 ? <>{usd(v)}<small>{pct(v, conta.totalDias)}% · {int(conta.dia[d].operacoes)} op.</small></> : '—'}</span>
+                        <span className="vgm-dia-valor">{v > 0 ? <>{usd(v)}<small>{v > 0 && pct(v, conta.totalDias) < 1 ? '<1' : pct(v, conta.totalDias)}% · {int(conta.dia[d].operacoes)} op.</small></> : '—'}</span>
                       </button>
                     </li>
                   )
