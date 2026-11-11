@@ -69,4 +69,9 @@
   /* o que flutua no rodapé (mini-cabine, pílula da live, convite do app) desce junto com a barra */
   body:has(.barra-inferior) .mcb:not(.solta) { bottom: calc(56px + var(--sab, 0px)); left: calc(12px + var(--sal, 0px)); }
   body:has(.barra-inferior) :is(.av-pilula, .app-convite) { bottom: calc(56px + var(--sab, 0px)); }
+  /* o chat da equipe (admin) cobria o "Atualizar" de todas as abas: desce junto da barra, longe da borda */
+  body:has(.barra-inferior) .eq-lancador-area.eq-lancador-area { bottom: calc(56px + var(--sab, 0px)); right: calc(12px + var(--sar, 0px)); }
+  /* deitado a tela é baixa e o botão cobria o que estivesse na direita (o "Atualizar" de cada aba):
+     o painel do admin reserva a faixa da direita para ele */
+  body:has(.eq-lancador-area) :is(.admin-shell .admin-main, .workspace-app > .ger.monitoramento, .workspace-app > .ger.insights) { padding-right: 72px; }
 }

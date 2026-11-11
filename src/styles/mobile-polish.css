@@ -597,3 +597,53 @@
   html.vv-desalinhado .workspace-app .workspace-mobile-toggle,
   html.vv-desalinhado body::before { translate: 0 var(--vv-cima, 0px); }
 }
+
+/* ==========================================================================
+   REVISÃO DO CELULAR, PARTE 2 (11/11/2026) — cliente e administração
+   ========================================================================== */
+@media (max-width: 900px) {
+  /* Admin: em aba com pouco conteúdo (Planos, Produtos, WhatsApp) a grade dava a sobra da altura
+     da tela à faixa das abas, e abria um vão de ~100 px entre as abas e o título. */
+  .admin-shell { align-content: start; }
+  /* Convite "Instale o app" (navegador): a pílula das I.A. (e a da live) ficava por cima do texto dele
+     a 375 px. Elas sobem a altura medida do convite (--convite-h, RecursosDeApp.tsx) + 10 px. */
+  body:has(.barra-inferior):has(.app-convite) .mcb.mcb:not(.solta),
+  body:has(.barra-inferior):has(.app-convite) .av-pilula.av-pilula { bottom: calc(76px + var(--convite-h, 140px) + 10px + var(--sab, 0px)); }
+  body:has(.barra-inferior):has(.app-convite) .sp-lancador-area.sp-lancador-area,
+  body:has(.barra-inferior):has(.app-convite) .eq-lancador-area.eq-lancador-area { bottom: calc(76px + var(--convite-h, 140px) + 10px + var(--sab, 0px)); }
+  /* o chat da equipe (admin) subia 146 px para dar lugar ao botão do suporte, que no celular nem aparece
+     (o suporte está na barra de baixo): fica logo acima da barra, na mesma altura da pílula das I.A. */
+  body:has(.barra-inferior.com-suporte):not(:has(.app-convite)) .eq-lancador-area.eq-lancador-area { bottom: calc(76px + var(--sab, 0px)); }
+  /* a pílula fica à esquerda e os botões redondos à direita: lado a lado, sem empilhar */
+  /* o rótulo do chat da equipe ("Chat da equipe") só aparece no passar do mouse, mas invisível ele ocupava
+     116 px à esquerda do botão: no celular um toque no "Atualizar" (ou em um dia da Organização) abria o chat.
+     Sem mouse, o rótulo sai do caminho. */
+  .eq-lancador-rotulo, .sp-lancador-rotulo { display: none; }
+  /* Admin › Comissões (e outras com o mesmo filtro): "30 dias" e "90 dias" quebravam em duas linhas
+     dentro do seletor. Os rótulos ficam numa linha e o seletor rola de lado quando não cabe. */
+  .ger-filtros .segmented { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .ger-filtros .segmented::-webkit-scrollbar { display: none; }
+  .ger-filtros .segmented > button { white-space: nowrap; flex: 0 0 auto; }
+  /* Admin › Depósitos e saques: "A coleta ainda não rodou" ficava espremido numa coluna de 50 px ao
+     lado dos períodos. Desce para a linha de baixo, inteiro. */
+  .rc-filtros.dps-topo { flex-wrap: wrap; row-gap: 8px; }
+  .rc-filtros.dps-topo > .rc-carregando { flex: 1 1 100%; order: 9; }
+  /* campos de busca: o texto de exemplo longo ("Buscar nome, e-mail, telefone ou C") acaba em reticências, não cortado */
+  input:is([type=search], [type=text], [type=url], [type=email], :not([type])) { text-overflow: ellipsis; }
+  /* alvos de toque de 44 px (regra do Tiago) onde ainda havia 26 a 40 px. Onde o chip não pode crescer
+     sem mudar o desenho, ganha uma área invisível em volta (o mesmo recurso de 27/10/2026). */
+  .in-instr-atalhos > button, .mp-faltam > button, .workspace-app .topbar-right > .tema-btn { position: relative; }
+  .in-instr-atalhos > button::after, .mp-faltam > button::after { content: ''; position: absolute; inset: -4px -2px; }
+  .workspace-app .topbar-right > .tema-btn::after { content: ''; position: absolute; inset: -4px 0; }
+  .rel-seg > button, .rel-filtros-btn, .mc-filtros > button { min-height: 44px; }
+  .rel-atualizar { min-width: 44px; min-height: 44px; }
+  .chart-head .controls .segmented > button { min-height: 44px; }
+}
+@media (max-width: 540px) {
+  /* Aulas: no cartão estreito "Em breve • Duração a d" saía cortado no meio da palavra. O
+     "Duração a definir" (só aparece quando a aula ainda não tem duração) sai no celular. */
+  .ger.aulas .aulas-modulo .aula-cartao .aula-card-meta i + i { display: none; }
+  /* Gerenciamento: a tabela de seis colunas rola de lado, mas parava cortada em "Sal…" sem sinal de
+     que havia mais. A borda direita esmaece, como em toda lista que continua para o lado. */
+  .go-consultoria .go-consulta-scroll { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent); }
+}

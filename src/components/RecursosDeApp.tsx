@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MARCA } from '../marca'
 import {
   comoInstalar, conviteRecusado, instalar, lembrarRecusa, ouvirInstalacao, type ComoInstalar,
@@ -56,6 +56,18 @@ function ConviteInstalar() {
     document.documentElement.classList.toggle('com-convite-app', visivel)
     return () => document.documentElement.classList.remove('com-convite-app')
   }, [visivel])
+  /* a altura do convite vai para o CSS (--convite-h): a pílula das I.A., a da live e o suporte sobem
+     exatamente acima dele (11/11/2026: a 375 px a pílula cobria o texto do convite) */
+  const caixa = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const el = caixa.current
+    if (!visivel || !el || typeof ResizeObserver === 'undefined') return
+    const raiz = document.documentElement
+    const medir = () => raiz.style.setProperty('--convite-h', `${Math.ceil(el.getBoundingClientRect().height)}px`)
+    medir()
+    const ro = new ResizeObserver(medir); ro.observe(el)
+    return () => { ro.disconnect(); raiz.style.removeProperty('--convite-h') }
+  }, [visivel, como])
 
   if (!aberto || !como) return null
 
@@ -63,7 +75,7 @@ function ConviteInstalar() {
 
   return (
     <>
-      <aside className="app-convite" role="dialog" aria-label={`Instalar o app ${MARCA.prosa}`}>
+      <aside ref={caixa} className="app-convite" role="dialog" aria-label={`Instalar o app ${MARCA.prosa}`}>
         <img className="app-convite-icone" src={`${base}pwa-${MARCA.id}/icon-192.png`} alt="" width="44" height="44" />
         <div className="app-convite-texto">
           <b>Instale o app {MARCA.prosa}</b>
