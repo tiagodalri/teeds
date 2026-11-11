@@ -55,6 +55,9 @@ const TRACOS = {
   radar: 'M12 3a9 9 0 1 0 9 9M12 7a5 5 0 1 0 5 5M12 12l6.5-6.5M12 11a1 1 0 1 0 0 2',
   // Administração › WhatsApp (05/11/2026): o balão com o fone, como o do aplicativo
   whatsapp: 'M4.2 19.8l1.2-3.9A8.2 8.2 0 1 1 8.4 18.7zM9.2 8.4c.2-.5.9-.6 1.2-.1l.8 1.4c.2.3.1.7-.2.9l-.5.4c.5 1.1 1.3 1.9 2.4 2.4l.4-.5c.2-.3.6-.4.9-.2l1.4.8c.5.3.4 1-.1 1.2-2.9 1.3-7.6-3.4-6.3-6.3z',
+  // Administração › Financeiro (11/11/2026): a carteira e o cadeado da senha do financeiro
+  financeiro: 'M4 7.5A2.5 2.5 0 0 1 6.5 5H17v3M4 7.5V17a2 2 0 0 0 2 2h14V8H6.5A2.5 2.5 0 0 1 4 5.5M16 13.5h.01',
+  cadeado: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3M12 14.5v2.5',
 } as const
 
 /** Os que se desenham cheios: um "play" vazado parece botão desligado. */
