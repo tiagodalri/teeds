@@ -183,6 +183,18 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
     const carregar = (tentativa: number) => fetchAccounts(session)
       .then((list) => {
         if (!alive) return
+        /*
+          11/11/2026 (vídeo do Victor, Deriv instável das 10h às 10h53): a lista veio SEM a conta
+          virtual ("Account not found"). Sobrava só a real, a tela escolhia ela sozinha (saldo 0,
+          e no acesso com rótulos trocados aparecia como "Conta demo") e nada operava. Toda conta
+          da Deriv tem a virtual: lista sem ela é a Deriv falhando. Espera e pede de novo
+          (5 s, 10 s, 15 s…) em vez de escolher a real; depois de 6 tentativas segue com o que veio.
+        */
+        if (list.length && !list.some((a) => a.type === 'demo') && tentativa < 6) {
+          setError('A Deriv não devolveu a sua conta virtual agora (instabilidade dela). Tentando de novo…')
+          espera = window.setTimeout(() => void carregar(tentativa + 1), 5000 * tentativa)
+          return
+        }
         if (tentativa > 1) setError(null)
         setAccounts(list)
         // comeca sempre pela demo: dinheiro ficticio por padrao
@@ -367,7 +379,12 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
     if (!session) return
     try {
       const lista = await fetchAccounts(session)
-      if (lista.length) setAccounts(lista)
+      // conta que sumiu da lista na mesma sessão é a Deriv oscilando (11/11/2026): fica a de antes,
+      // senão a escolhida some e a tela fica sem conta (ou numa conta que a pessoa não escolheu)
+      if (lista.length) setAccounts((antes) => {
+        const sumiram = antes.filter((a) => !lista.some((n) => n.accountId === a.accountId))
+        return sumiram.length ? [...lista, ...sumiram] : lista
+      })
     } catch { /* sem resposta agora: a lista fica como esta e tenta de novo depois */ }
   }, [session])
   useEffect(() => {
