@@ -549,7 +549,7 @@ export function planejar(r: Roteiro): Plano {
       let s = 0, maior = 0
       dele.forEach((o) => { s = o.ganhou ? 0 : s + 1; maior = Math.max(maior, s) })
       const nota = (fim.tipo === t.fim ? 0 : 10_000) + Math.abs(dele.length - N) * 20 + Math.abs(maior - S) * 50
-        + (t.fim === 'desligou' ? Math.abs(fim.resultado - t.resultado) * 10 : 0) + notaDoAcerto(dele, t)
+        + (t.fim === 'desligou' ? Math.abs(fim.resultado - t.resultado) * 100 : 0) + notaDoAcerto(dele, t)
       if (!melhor || nota < melhor.nota) melhor = { lista, nota, resultado: fim.resultado }
       if (nota < 0.05) break
     }
@@ -562,7 +562,7 @@ export function planejar(r: Roteiro): Plano {
         const dele = corrida.ops.filter((o) => o.trecho === k)
         let sq = 0, mx = 0
         dele.forEach((o) => { sq = o.ganhou ? 0 : sq + 1; mx = Math.max(mx, sq) })
-        const nota = (fim.tipo === t.fim ? 0 : 10_000) + Math.abs(dele.length - N) * 20 + Math.abs(mx - S) * 50 + (t.fim === 'desligou' ? Math.abs(fim.resultado - t.resultado) * 10 : 0) + notaDoAcerto(dele, t)
+        const nota = (fim.tipo === t.fim ? 0 : 10_000) + Math.abs(dele.length - N) * 20 + Math.abs(mx - S) * 50 + (t.fim === 'desligou' ? Math.abs(fim.resultado - t.resultado) * 100 : 0) + notaDoAcerto(dele, t)
         return { nota, resultado: fim.resultado }
       }
       const rnd = sorteio(sementeDe(JSON.stringify(['reparo', r.ia, k, t, r.semente])))
@@ -608,6 +608,9 @@ export interface Previa {
 /** Segundos entre um tick e outro no ativo das I.A. (R_75: um a cada 2 s). */
 export const SEGUNDOS_POR_TICK = 2
 
+/** O pagamento sai em centavos da escada: até 1% do pedido (no máximo uma entrada) é o mesmo resultado. */
+export const folgaDoResultado = (r: Roteiro, pedido: number) => Math.max(0.004, Math.min(Math.abs(pedido) * 0.01, Math.max(ENTRADA_MINIMA, r.entrada)))
+
 export function previaDoRoteiro(r: Roteiro): Previa {
   const plano = planejar(r)
   const corrida = correr(r, plano.resultados)
@@ -633,7 +636,7 @@ export function previaDoRoteiro(r: Roteiro): Previa {
       diferencas.push({ trecho: k, campo: 'fim', pedido: t.fim, saiu: `Com estes números a sessão ${como} na operação ${fimK.operacoes} (${din(fimK.resultado)}).` })
     }
     if (dele.length !== pedidoOps && !r.fita) diferencas.push({ trecho: k, campo: 'operacoes', pedido: String(pedidoOps), saiu: String(dele.length), usar: { operacoes: dele.length } })
-    if (t.fim === 'desligou' && Math.abs(fimK.resultado - t.resultado) > 0.004 && !r.fita) diferencas.push({ trecho: k, campo: 'resultado', pedido: din(t.resultado), saiu: din(fimK.resultado), usar: { resultado: fimK.resultado } })
+    if (t.fim === 'desligou' && Math.abs(fimK.resultado - t.resultado) > folgaDoResultado(r, t.resultado) && !r.fita) diferencas.push({ trecho: k, campo: 'resultado', pedido: din(t.resultado), saiu: din(fimK.resultado), usar: { resultado: fimK.resultado } })
     let s = 0, maior = 0
     dele.forEach((o) => { s = o.ganhou ? 0 : s + 1; maior = Math.max(maior, s) })
     if (t.acerto !== undefined && t.acerto !== null && dele.length && !r.fita) {
@@ -1018,7 +1021,8 @@ export function ensaioAte(r: Roteiro, plano: boolean[][], partida: PontoDePartid
  * bater a meta (ou o stop), e devolve quantas operações levou e a pior sequência. Com eles o gerador
  * fecha exatamente. Para "desligou", uns 30 a 60 operações naturais e o resultado em que parou.
  */
-export function sugerirTrecho(r: Roteiro, k: number, fim: Fim, semente = 1): Pick<Trecho, 'operacoes' | 'sequencia' | 'momento' | 'resultado' | 'natural'> | null {
+export function sugerirTrecho(r: Roteiro, k: number, fim: Fim, semente = 1, resultadoPedido: number | null = null): Pick<Trecho, 'operacoes' | 'sequencia' | 'momento' | 'resultado' | 'natural'> | null {
+  if (fim === 'desligou' && resultadoPedido !== null) return sugerirAteOResultado(r, k, resultadoPedido, semente)
   const q = chanceDePerder(r.ia)
   const anteriores = correr({ ...r, trechos: r.trechos.slice(0, k) }, planejar({ ...r, trechos: r.trechos.slice(0, k) }).resultados)
   const t = r.trechos[k]
@@ -1061,6 +1065,123 @@ export function sugerirTrecho(r: Roteiro, k: number, fim: Fim, semente = 1): Pic
     if (Math.abs(pct - alvo) < 0.5) break
   }
   return escolhida?.volta ?? null
+}
+
+/* ============================================ o resultado pedido manda */
+
+/** Operações a mais que uma sessão de aula aguenta antes de a entrada precisar subir (≈ 20 min a 4 s). */
+const OPERACOES_CONFORTAVEIS = 300
+const OPERACOES_NO_MAXIMO = 3000
+
+/**
+ * Quanto a I.A. deixa por operação com esta entrada (12/11/2026, Tiago: "eu coloco US$ 200 e aparece
+ * US$ 15" / "não levaria 5 horas, porque tem as entradas maiores que alavancam no meio"):
+ *  - natural: a média das sessões como ela erra de verdade;
+ *  - alavancado: o melhor ciclo de recuperação (perde m, recupera) que cabe na sequência pedida e no
+ *    saldo — é o que o gerador usa para chegar ao resultado sem subir a entrada.
+ */
+export function ritmoDeLucro(r: Roteiro, k = 0): { natural: number; alavancado: number } {
+  const q = chanceDePerder(r.ia)
+  const tab = tabelaDosCiclos(r, 40)
+  const rnd = sorteio(sementeDe(JSON.stringify(['ritmo', r.ia, r.entrada, r.modo ?? null, r.lossVirtual ?? null, r.valorMaximo ?? 0, k])))
+  let lucro = 0, feitas = 0
+  for (let i = 0; i < 4000; i++) { const m = sortearCiclo(rnd, q, 12); if (!Number.isFinite(tab.liquido[m])) continue; lucro += tab.liquido[m]; feitas += m + 1 }
+  const S = Math.max(1, Math.round(r.trechos[k]?.sequencia ?? 4))
+  let alavancado = 0
+  for (let m = 0; m < S; m++) {
+    if (!Number.isFinite(tab.liquido[m]) || tab.custo[m + 1] > r.saldo * 0.9) continue
+    alavancado = Math.max(alavancado, tab.liquido[m] / (m + 1))
+  }
+  return { natural: feitas ? lucro / feitas : 0, alavancado }
+}
+
+/** Arredonda a entrada para cima num valor redondo. */
+function entradaRedonda(x: number): number {
+  const passo = x < 2 ? 0.05 : x < 10 ? 0.5 : x < 50 ? 1 : x < 200 ? 5 : 10
+  return r2(Math.ceil(x / passo - 1e-9) * passo)
+}
+
+/**
+ * Quantas operações a sessão leva para sair do placar `de` e chegar a `alvo`: o ritmo natural da
+ * I.A. se couber numa aula; se não, puxando pelas recuperações (sem passar de um terço do melhor
+ * ritmo, para a fita continuar com cara de sessão). `null` = nem assim chega.
+ */
+function operacoesAte(r: Roteiro, k: number, falta: number): number | null {
+  if (falta <= 0) return null
+  const { natural, alavancado } = ritmoDeLucro(r, k)
+  const nNatural = natural > 0 ? falta / natural : Infinity
+  const nAlavancado = alavancado > 0 ? falta / (alavancado * 0.6) : Infinity
+  const n = Math.min(nNatural, Math.max(OPERACOES_CONFORTAVEIS, nAlavancado))
+  return Number.isFinite(n) ? Math.max(8, Math.ceil(n)) : null
+}
+
+/**
+ * Sugestão (opcional) para a sessão ficar mais curta: a entrada com que o resultado sai em umas 300
+ * operações. `null` = já cabe (ou o resultado é negativo: aí quem manda é a sequência, não a entrada).
+ */
+export function entradaParaEncurtar(r: Roteiro, k: number, alvo: number): { entrada: number; operacoes: number; operacoesAgora: number } | null {
+  const antes = k ? correr({ ...r, trechos: r.trechos.slice(0, k) }, planejar({ ...r, trechos: r.trechos.slice(0, k) }).resultados).trechos[k - 1]?.resultado ?? 0 : 0
+  const agora = operacoesAte(r, k, alvo - antes)
+  if (agora === null || agora <= OPERACOES_CONFORTAVEIS * 1.5) return null
+  const entrada = entradaRedonda(Math.max(ENTRADA_MINIMA, r.entrada || 1) * (agora / OPERACOES_CONFORTAVEIS))
+  const operacoes = operacoesAte({ ...r, entrada }, k, alvo - antes)
+  return entrada > r.entrada && operacoes !== null ? { entrada, operacoes, operacoesAgora: agora } : null
+}
+
+/**
+ * Desligada num resultado pedido: a I.A. roda do jeito dela até a sessão chegar nele (no ganho, o
+ * ganho que passa do pedido; na perda, no meio da sequência que leva até lá). Se do jeito dela
+ * demoraria demais, o gerador puxa pelas recuperações. O resultado é o pedido, exato.
+ */
+function sugerirAteOResultado(r: Roteiro, k: number, alvo: number, semente: number): Pick<Trecho, 'operacoes' | 'sequencia' | 'momento' | 'resultado' | 'natural'> | null {
+  const q = chanceDePerder(r.ia)
+  const anteriores = correr({ ...r, trechos: r.trechos.slice(0, k) }, planejar({ ...r, trechos: r.trechos.slice(0, k) }).resultados)
+  const t = r.trechos[k]
+  const R0 = anteriores.trechos[k - 1]?.resultado ?? 0
+  const subir = alvo >= R0
+  const acerto = t.acerto ?? null
+  const planejadas = subir ? operacoesAte(r, k, alvo - R0) : null
+  const teto = subir ? Math.min(OPERACOES_NO_MAXIMO, Math.ceil((planejadas ?? OPERACOES_CONFORTAVEIS) * 1.3)) : OPERACOES_NO_MAXIMO
+  const folga = folgaDoResultado(r, alvo)
+  type Candidata = { nota: number; perto: boolean; numeros: { operacoes: number; sequencia: number; momento: Momento }; lista: boolean[] }
+  let escolhida: Candidata | null = null
+  for (let tentativa = 0; tentativa < (subir ? 60 : 240); tentativa++) {
+    const rnd = sorteio(sementeDe(JSON.stringify(['ate', r.ia, r.entrada, k, alvo, t.meta, t.stop, semente, tentativa])))
+    const cx = new Caixa(r.ia, r.saldo)
+    cx.resultado = R0
+    cx.saldo = anteriores.ops.length ? anteriores.ops[anteriores.ops.length - 1].saldo : r.saldo
+    cx.ligar(configDoTrecho(r, t))
+    let seq = 0, maior = 0, onde = 0, n = 0, ganhas = 0, chegou = false
+    const lista: boolean[] = []
+    while (cx.rodando && n < teto) {
+      const c = cx.comprar()
+      if (!c) break
+      const ganhou = rnd() >= (cx.perdasSeguidas === 0 ? q.entrada : q.recuperacao)
+      cx.liquidar(c, ganhou, null)
+      lista.push(ganhou)
+      n++
+      if (ganhou) ganhas++
+      seq = ganhou ? 0 : seq + 1
+      if (seq > maior) { maior = seq; onde = n }
+      if (subir ? cx.resultado >= alvo - 0.004 : cx.resultado <= alvo + 0.004) { chegou = true; break }
+    }
+    if (!chegou || !cx.rodando || n === 0) continue
+    const numeros = { operacoes: n, sequencia: maior, momento: (onde < n * 0.33 ? 'comeco' : onde < n * 0.7 ? 'meio' : 'fim') as Momento }
+    const longe = Math.abs(cx.resultado - alvo)
+    const pct = (ganhas / n) * 100
+    const nota = (longe <= folga ? 0 : 1000 + longe) + (acerto === null ? 0 : Math.abs(pct - acerto))
+    if (!escolhida || nota < escolhida.nota) escolhida = { nota, perto: longe <= folga, numeros, lista }
+    if (escolhida.nota < 0.5) break
+  }
+  if (escolhida?.perto) {
+    // a sessão natural que chegou lá vira o plano (a fita fica exatamente essa)
+    const comNumeros: Roteiro = { ...r, trechos: r.trechos.map((x, i) => (i === k ? { ...x, fim: 'desligou' as Fim, ...escolhida!.numeros, resultado: alvo, natural: undefined } : x)) }
+    return { ...escolhida.numeros, resultado: alvo, natural: { assinatura: assinaturaDoTrecho(comNumeros, k), resultados: escolhida.lista } }
+  }
+  if (escolhida && !subir) return { ...escolhida.numeros, resultado: alvo, natural: undefined }
+  // do jeito dela não chega a tempo: o gerador monta puxando pelas recuperações, com a sequência pedida
+  if (!subir || planejadas === null) return null
+  return { operacoes: Math.min(OPERACOES_NO_MAXIMO, planejadas), sequencia: t.sequencia, momento: t.momento, resultado: alvo, natural: undefined }
 }
 
 /* ===================================================== o tempo da sessão */

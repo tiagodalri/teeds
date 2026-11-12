@@ -144,3 +144,20 @@ body.est-aberto { overflow: hidden; }
   .est-acoes { width: 100%; }
   .est-play { flex: 1; justify-content: center; }
 }
+
+/* 12/11/2026: o resultado manda — resumo ao vivo no topo dos parâmetros, avisos de ajuste e detalhes */
+.est-resumo { position: sticky; top: -16px; z-index: 2; margin: -16px -16px 0; padding: 12px 16px; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 2px 14px;
+  background: var(--surface); border-bottom: 1px solid var(--border); }
+.est-resumo > div { display: grid; grid-row: span 2; gap: 0; }
+.est-resumo small { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.est-resumo b { font-family: var(--est-dados); font-size: 24px; line-height: 1.15; }
+.est-resumo b.sobe { color: var(--up); }
+.est-resumo b.cai { color: var(--down, #F87171); }
+.est-resumo span { font-size: 12.5px; color: var(--text); min-width: 0; }
+.est-resumo em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--up); }
+.est-resumo.atencao em { color: var(--est-l); }
+.est-aviso-info { background: color-mix(in srgb, var(--est-ouro) 10%, transparent) !important; border-color: color-mix(in srgb, var(--est-ouro) 35%, var(--border)) !important; color: var(--text) !important; }
+.est-aviso-info button { background: var(--est-ouro); }
+.est-detalhes { display: grid; gap: 2px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.est-detalhes b { font-size: 13px; }
+.est-detalhes small { font-size: 11.5px; color: var(--muted); line-height: 1.4; }

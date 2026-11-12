@@ -16,7 +16,7 @@ import { useCatalogoCompleto } from '../../core/teeds/catalogoRobos'
 import { NOME_DO_MODO, temModos } from '../../core/deriv/strategies'
 import {
   definirRegrasDaSessao, ensaioAte, estrategiaDa, IAS_DA_SESSAO, nomeDaIa, parametrosDa, previaDoRoteiro, roteirosProntos,
-  sugerirTrecho, tempoDaSessao, digitosQueGanham, escadaDoRoteiro, pagamentoPorDolar,
+  sugerirTrecho, tempoDaSessao, digitosQueGanham, escadaDoRoteiro, pagamentoPorDolar, entradaParaEncurtar,
   type Fim, type Momento, type PontoDePartida, type Roteiro, type Trecho,
 } from '../../core/teeds/sessaoSimulada'
 import { CabineDaSessao } from './CabineDaSessao'
@@ -34,6 +34,8 @@ const FINS: Array<{ id: Fim; nome: string; sub: string }> = [
   { id: 'stop', nome: 'Bate o stop', sub: 'Para sozinha no limite' },
   { id: 'desligou', nome: 'Desligada', sub: 'A pessoa para antes' },
 ]
+/** Um limite que fica acima do resultado pedido, redondo (a I.A. não para nele antes da hora). */
+const acimaDe = (x: number) => { const y = Math.abs(x) * 1.25; const passo = y < 20 ? 1 : y < 200 ? 5 : y < 2000 ? 10 : 50; return Math.ceil(y / passo) * passo }
 const duracaoEmTexto = (s: number) => s < 90 ? `${Math.round(s)} s` : s < 5400 ? `${Math.round(s / 60)} min` : `${Math.floor(s / 3600)} h ${Math.round((s % 3600) / 60)} min`
 const ler = (t: string) => {
   const limpo = t.trim().replace(/\s|US\$|\$|%/g, '')
@@ -129,10 +131,18 @@ export function EstudioDaSessao({ inicial, aoDarPlay, aoFechar }: { inicial: Rot
     a estratégia, os limites, o fim ou o acerto refaz os naturais; mexer num número à mão vira pedido
     e o gerador fecha com ele (o que não der aparece com o "Usar").
   */
-  const naturalizar = (x: Roteiro, aPartir = 0, semente = x.semente): Roteiro => {
+  /*
+    12/11/2026 (Tiago: "eu coloco US$ 200 e aparece US$ 15; tá muito confuso de configurar"): na
+    desligada, o resultado pedido manda. Operações, sequência e acerto saem da I.A. chegando nele
+    (puxando pelas recuperações se do jeito dela demoraria demais); só quando acabou de virar
+    "desligada" (`soltar`) o resultado também é sorteado.
+  */
+  const naturalizar = (x: Roteiro, aPartir = 0, semente = x.semente, soltar: number | null = null): Roteiro => {
     let atual: Roteiro = { ...x, fita: undefined }
     for (let k = aPartir; k < atual.trechos.length; k++) {
-      const sug = sugerirTrecho(atual, k, atual.trechos[k].fim, semente)
+      const t = atual.trechos[k]
+      const pedido = t.fim === 'desligou' && soltar !== k ? t.resultado : null
+      const sug = sugerirTrecho(atual, k, t.fim, semente, pedido)
       if (!sug) continue
       atual = { ...atual, trechos: atual.trechos.map((t, i) => (i === k ? { ...t, ...sug, resultado: t.fim === 'desligou' ? sug.resultado : t.resultado } : t)) }
     }
@@ -140,9 +150,26 @@ export function EstudioDaSessao({ inicial, aoDarPlay, aoFechar }: { inicial: Rot
   }
   const mudar = (p: Partial<Roteiro>) => setR((x) => naturalizar({ ...x, ...p }))
   const mudarTrecho = (k: number, p: Partial<Trecho>, refazer: boolean) => setR((x) => {
+    const virouDesligada = p.fim === 'desligou' && x.trechos[k].fim !== 'desligou'
     const y = { ...x, fita: undefined, trechos: x.trechos.map((t, i) => (i === k ? { ...t, ...p } : t)) }
-    return refazer ? naturalizar(y, k) : y
+    return refazer ? naturalizar(y, k, y.semente, virouDesligada ? k : null) : y
   })
+  /** O resultado em que a pessoa desliga: a meta (ou o stop) que estiver no caminho sobe junto. */
+  const [ajuste, setAjuste] = useState<string | null>(null)
+  const mudarResultado = (k: number, valor: number) => {
+    const t = r.trechos[k]
+    const p: Partial<Trecho> = { resultado: valor }
+    let nota: string | null = null
+    if (valor > 0 && t.meta > 0 && t.meta <= valor) {
+      p.meta = acimaDe(valor)
+      nota = `A meta subiu de ${usd(t.meta)} para ${usd(p.meta)}: com ${usd(t.meta)} a ${IA} pararia sozinha antes de chegar a ${usd(valor)}.`
+    } else if (valor < 0 && t.stop > 0 && t.stop <= -valor) {
+      p.stop = acimaDe(valor)
+      nota = `O limite de perda subiu de ${usd(t.stop)} para ${usd(p.stop)}: com ${usd(t.stop)} a ${IA} pararia sozinha antes de chegar a ${usd(valor)}.`
+    }
+    if (nota) setAjuste(nota)
+    mudarTrecho(k, p, true)
+  }
   const sortear = () => setR((x) => naturalizar({ ...x, semente: x.semente + 1 }, 0, x.semente + 1))
 
   const rd = useDeferredValue(r)
@@ -188,36 +215,63 @@ export function EstudioDaSessao({ inicial, aoDarPlay, aoFechar }: { inicial: Rot
     </div>
   )
 
+  /** Sessão mais curta (opcional): a entrada com que o resultado pedido sai em umas 300 operações. */
+  const encurtar = useMemo(() => rd.trechos.map((t, k) => (t.fim === 'desligou' && t.resultado > 0 ? entradaParaEncurtar(rd, k, t.resultado) : null)),
+    [rd, versao]) // eslint-disable-line react-hooks/exhaustive-deps
+  const segundosPorOp = tempo.porOperacao || 4
+
   const camposDoTrecho = (k: number) => {
     const t = r.trechos[k]
     const fim = fimDe(k)
+    const curta = encurtar[k]
+    const metaNoCaminho = t.fim === 'desligou' && t.resultado > 0 && t.meta > 0 && t.meta <= t.resultado
+    const stopNoCaminho = t.fim === 'desligou' && t.resultado < 0 && t.stop > 0 && t.stop <= -t.resultado
     return (
       <>
-        <div className="est-duas">
-          <Campo rotulo={k ? 'Nova meta de ganho' : 'Meta de ganho'} dica={k ? 'Da sessão inteira, contando o que já foi feito.' : '0 = sem meta'}>
-            <Numero id={`est-meta-${k}`} valor={t.meta} prefixo="US$" passo={1} aoMudar={(x) => mudarTrecho(k, { meta: x ?? 0 }, true)} />
-          </Campo>
-          <Campo rotulo={k ? 'Novo limite de perda' : 'Limite de perda'} dica={k ? 'Da sessão inteira.' : '0 = sem limite'}>
-            <Numero id={`est-stop-${k}`} valor={t.stop} prefixo="US$" passo={1} aoMudar={(x) => mudarTrecho(k, { stop: x ?? 0 }, true)} />
-          </Campo>
-        </div>
-        <Campo rotulo="Como a sessão termina" aviso={difDe(k, 'fim') && <div className="est-aviso" role="status"><span>{difDe(k, 'fim')!.saiu}</span></div>}>
-          <Segmentos rotulo="Como termina" valor={t.fim} opcoes={FINS} aoMudar={(fim) => mudarTrecho(k, { fim }, true)} />
+        <Campo rotulo={k ? 'Como termina depois de religar' : 'Como a sessão termina'} aviso={difDe(k, 'fim') && <div className="est-aviso" role="status"><span>{difDe(k, 'fim')!.saiu}</span></div>}>
+          <Segmentos rotulo="Como termina" valor={t.fim} opcoes={FINS} aoMudar={(fim) => { setAjuste(null); mudarTrecho(k, { fim }, true) }} />
         </Campo>
         {t.fim === 'desligou' && (
-          <Campo rotulo="Resultado quando desliga" dica={t.resultado < 0 ? 'No negativo, a pessoa desliga no meio de uma sequência de perdas, antes de a recuperação fechar.' : 'O resultado da sessão no momento em que a pessoa desliga.'} aviso={avisoDe(difDe(k, 'resultado'))}>
+          <Campo rotulo={k ? 'Resultado da sessão quando desliga (contando o que já foi feito)' : 'Resultado quando desliga'}
+            dica={t.resultado < 0 ? 'No negativo, a pessoa desliga no meio de uma sequência de perdas, antes de a recuperação fechar.' : 'É o resultado final da sessão: operações, sequência e acerto se ajustam sozinhos para chegar nele.'}
+            aviso={<>
+              {avisoDe(difDe(k, 'resultado'))}
+              {ajuste && k === 0 && <div className="est-aviso est-aviso-info" role="status"><span>{ajuste}</span></div>}
+              {curta && (
+                <div className="est-aviso est-aviso-info" role="status">
+                  <span>Com entrada de {usd(r.entrada)}, a {nomeDaIa(r.ia)} chega lá em ~{curta.operacoesAgora} operações (≈ {duracaoEmTexto(curta.operacoesAgora * segundosPorOp)}), puxando pelas recuperações. Quer mais curta?</span>
+                  <button type="button" onClick={() => mudar({ entrada: curta.entrada })}>Entrada {usd(curta.entrada)} · ~{curta.operacoes} op.</button>
+                </div>
+              )}
+            </>}>
             <div className="est-sinal">
               <Segmentos rotulo="Ganho ou perda" valor={t.resultado < 0 ? 'perda' : 'ganho'} opcoes={[{ id: 'ganho', nome: 'Ganho' }, { id: 'perda', nome: 'Perda' }]}
-                aoMudar={(v) => mudarTrecho(k, { resultado: v === 'perda' ? -Math.abs(t.resultado || 1) : Math.abs(t.resultado) }, false)} />
-              <Numero id={`est-res-${k}`} valor={Math.abs(t.resultado)} prefixo="US$" passo={0.5} aoMudar={(x) => mudarTrecho(k, { resultado: t.resultado < 0 ? -(x ?? 0) : x ?? 0 }, false)} />
+                aoMudar={(v) => mudarResultado(k, v === 'perda' ? -Math.abs(t.resultado || 1) : Math.abs(t.resultado))} />
+              <Numero id={`est-res-${k}`} valor={Math.abs(t.resultado)} prefixo="US$" passo={1} aoMudar={(x) => mudarResultado(k, t.resultado < 0 ? -(x ?? 0) : x ?? 0)} />
             </div>
           </Campo>
         )}
         <div className="est-duas">
+          <Campo rotulo={k ? 'Nova meta de ganho' : 'Meta de ganho'}
+            dica={t.fim === 'meta' ? 'A sessão termina aqui.' : k ? 'Da sessão inteira, contando o que já foi feito.' : '0 = sem meta'}
+            aviso={metaNoCaminho && <div className="est-aviso" role="status"><span>Abaixo do resultado: a {IA} para aqui antes.</span><button type="button" onClick={() => mudarTrecho(k, { meta: acimaDe(t.resultado) }, true)}>Subir para {usd(acimaDe(t.resultado))}</button></div>}>
+            <Numero id={`est-meta-${k}`} valor={t.meta} prefixo="US$" passo={1} aoMudar={(x) => mudarTrecho(k, { meta: x ?? 0 }, true)} />
+          </Campo>
+          <Campo rotulo={k ? 'Novo limite de perda' : 'Limite de perda'}
+            dica={t.fim === 'stop' ? 'A sessão termina aqui.' : k ? 'Da sessão inteira.' : '0 = sem limite'}
+            aviso={stopNoCaminho && <div className="est-aviso" role="status"><span>Abaixo da perda pedida: a {IA} para aqui antes.</span><button type="button" onClick={() => mudarTrecho(k, { stop: acimaDe(t.resultado) }, true)}>Subir para {usd(acimaDe(t.resultado))}</button></div>}>
+            <Numero id={`est-stop-${k}`} valor={t.stop} prefixo="US$" passo={1} aoMudar={(x) => mudarTrecho(k, { stop: x ?? 0 }, true)} />
+          </Campo>
+        </div>
+        <div className="est-detalhes">
+          <b>Detalhes da sessão</b>
+          <small>A {IA} preenche sozinha para fechar com o resultado. Mexa só se quiser algo específico.</small>
+        </div>
+        <div className="est-duas">
           <Campo rotulo="Operações" aviso={avisoDe(difDe(k, 'operacoes'))}>
             <Numero id={`est-ops-${k}`} valor={t.operacoes} min={1} max={3000} aoMudar={(x) => mudarTrecho(k, { operacoes: Math.round(x ?? 1) }, false)} />
           </Campo>
-          <Campo rotulo="% de acerto" dica={t.acerto === null || t.acerto === undefined ? `Livre: a ${IA} acerta ${fim ? Math.round((ops.filter((o) => o.trecho === k && o.ganhou).length / Math.max(1, fim.operacoes)) * 100) : 0}%` : 'Operações ganhas sobre o total.'} aviso={avisoDe(difDe(k, 'acerto'))}>
+          <Campo rotulo="% de acerto" dica={t.acerto === null || t.acerto === undefined ? `Livre: a ${IA} acerta ${fim ? Math.round((ops.filter((o) => o.trecho === k && o.ganhou).length / Math.max(1, fim.operacoes)) * 100) : 0}%` : 'Travado. Apague para deixar livre.'} aviso={avisoDe(difDe(k, 'acerto'))}>
             <Numero id={`est-acerto-${k}`} valor={t.acerto ?? null} vazio="Livre" sufixo={t.acerto === null || t.acerto === undefined ? undefined : '%'} min={0} max={100} passo={5}
               aoMudar={(x) => mudarTrecho(k, { acerto: x === null ? null : Math.round(x) }, true)} />
           </Campo>
@@ -231,6 +285,8 @@ export function EstudioDaSessao({ inicial, aoDarPlay, aoFechar }: { inicial: Rot
       </>
     )
   }
+
+  const pontos = difs.length + (previa.corrida.naoReligou ? 1 : 0)
 
   return (
     <div className="est ssim-raiz" role="dialog" aria-modal="true" aria-label="Estúdio da simulação">
@@ -257,6 +313,14 @@ export function EstudioDaSessao({ inicial, aoDarPlay, aoFechar }: { inicial: Rot
 
       <div className="est-corpo">
         <aside className="est-painel" aria-label="Parâmetros">
+          <div className={`est-resumo ${pontos ? 'atencao' : 'ok'}`} role="status" aria-live="polite">
+            <div>
+              <small>Vai terminar em</small>
+              <b className={previa.resultado < 0 ? 'cai' : 'sobe'}>{dinheiroComSinal(previa.resultado, 'USD')}</b>
+            </div>
+            <span>{total} operações · ≈ {duracaoEmTexto(tempo.segundos)} · acerto {total ? Math.round((ganhas / total) * 100) : 0}%</span>
+            <em>{pontos ? `${pontos} ${pontos === 1 ? 'ponto diferente' : 'pontos diferentes'} do pedido: veja os avisos` : '✓ Confere com o pedido'}</em>
+          </div>
           <section className="est-bloco">
             <h3><span>1</span>Conta</h3>
             <Campo rotulo="Saldo antes do play">
@@ -407,7 +471,7 @@ export function EstudioDaSessao({ inicial, aoDarPlay, aoFechar }: { inicial: Rot
           <div><dt>Duração</dt><dd>{duracaoEmTexto(tempo.segundos)} <small>· {Math.round(tempo.porOperacao)} s/op</small></dd></div>
         </dl>
         <div className={`est-status ${conferido ? 'ok' : 'atencao'}`} role="status">
-          {conferido ? <><i aria-hidden="true">✓</i>Tudo confere com o pedido</> : <><i aria-hidden="true">!</i>{difs.length + (previa.corrida.naoReligou ? 1 : 0)} {difs.length + (previa.corrida.naoReligou ? 1 : 0) === 1 ? 'ponto' : 'pontos'} diferente{difs.length + (previa.corrida.naoReligou ? 1 : 0) === 1 ? '' : 's'} do pedido</>}
+          {conferido ? <><i aria-hidden="true">✓</i>Tudo confere com o pedido</> : <><i aria-hidden="true">!</i>{pontos} {pontos === 1 ? 'ponto' : 'pontos'} diferente{pontos === 1 ? '' : 's'} do pedido</>}
         </div>
         <div className="est-acoes">
           <button type="button" className="est-cancelar" onClick={aoFechar}>Cancelar</button>
